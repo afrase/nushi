@@ -4,6 +4,7 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
+
 import "nushi.pb.dart" as nushiv1nushi;
 
 abstract final class NushiService {
@@ -15,5 +16,30 @@ abstract final class NushiService {
     connect.StreamType.unary,
     nushiv1nushi.PingRequest.new,
     nushiv1nushi.PingResponse.new,
+  );
+
+  /// Starts an agent in a folder and opens a chat with it.
+  static const startChat = connect.Spec(
+    '/$name/StartChat',
+    connect.StreamType.unary,
+    nushiv1nushi.StartChatRequest.new,
+    nushiv1nushi.StartChatResponse.new,
+  );
+
+  /// Sends a prompt; the reply arrives as events.
+  static const sendPrompt = connect.Spec(
+    '/$name/SendPrompt',
+    connect.StreamType.unary,
+    nushiv1nushi.SendPromptRequest.new,
+    nushiv1nushi.SendPromptResponse.new,
+  );
+
+  /// Streams every change to every chat from now on. The first message is
+  /// empty: it says the subscription is live.
+  static const events = connect.Spec(
+    '/$name/Events',
+    connect.StreamType.server,
+    nushiv1nushi.EventsRequest.new,
+    nushiv1nushi.EventsResponse.new,
   );
 }

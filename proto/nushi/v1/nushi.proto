@@ -6,6 +6,13 @@ option go_package = "github.com/afrase/nushi/internal/gen/nushi/v1;nushiv1";
 
 service NushiService {
   rpc Ping(PingRequest) returns (PingResponse);
+  // Starts an agent in a folder and opens a chat with it.
+  rpc StartChat(StartChatRequest) returns (StartChatResponse);
+  // Sends a prompt; the reply arrives as events.
+  rpc SendPrompt(SendPromptRequest) returns (SendPromptResponse);
+  // Streams every change to every chat from now on. The first message is
+  // empty: it says the subscription is live.
+  rpc Events(EventsRequest) returns (stream EventsResponse);
 }
 
 message PingRequest {}
@@ -13,4 +20,54 @@ message PingRequest {}
 message PingResponse {
   // Bumped when methods are added; the API only grows (ADR 0004).
   int32 api_version = 1;
+}
+
+message StartChatRequest {
+  string folder = 1;
+}
+
+message StartChatResponse {
+  string chat_id = 1;
+}
+
+message SendPromptRequest {
+  string chat_id = 1;
+  string text = 2;
+}
+
+message SendPromptResponse {}
+
+message EventsRequest {}
+
+message EventsResponse {
+  string chat_id = 1;
+  oneof kind {
+    ItemEvent item = 2;
+    ChatStatus status = 3;
+  }
+}
+
+enum ItemKind {
+  ITEM_KIND_UNSPECIFIED = 0;
+  ITEM_KIND_USER_MESSAGE = 1;
+  ITEM_KIND_AGENT_MESSAGE = 2;
+}
+
+// One entry of a chat's transcript.
+message Item {
+  string id = 1;
+  ItemKind kind = 2;
+  string text = 3;
+}
+
+message ItemEvent {
+  Item item = 1;
+  // The item's text continues with item.text rather than being replaced.
+  bool append = 2;
+}
+
+message ChatStatus {
+  bool busy = 1;
+  // How the last turn failed, if it did.
+  string error = 2;
 }

@@ -13,6 +13,8 @@ dependencies:
   protobuf: ^6.1.0
   uds_transport:
     path: ../packages/uds_transport
+  flutter_markdown_plus: ^1.0.12
+  file_selector: ^1.1.0
 
 dev_dependencies:
   flutter_test:

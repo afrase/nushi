@@ -23,11 +23,23 @@ export 'nushi.pb.dart';
 abstract class NushiServiceBase extends $pb.GeneratedService {
   $async.Future<$0.PingResponse> ping(
       $pb.ServerContext ctx, $0.PingRequest request);
+  $async.Future<$0.StartChatResponse> startChat(
+      $pb.ServerContext ctx, $0.StartChatRequest request);
+  $async.Future<$0.SendPromptResponse> sendPrompt(
+      $pb.ServerContext ctx, $0.SendPromptRequest request);
+  $async.Future<$0.EventsResponse> events(
+      $pb.ServerContext ctx, $0.EventsRequest request);
 
   $pb.GeneratedMessage createRequest($core.String methodName) {
     switch (methodName) {
       case 'Ping':
         return $0.PingRequest();
+      case 'StartChat':
+        return $0.StartChatRequest();
+      case 'SendPrompt':
+        return $0.SendPromptRequest();
+      case 'Events':
+        return $0.EventsRequest();
       default:
         throw $core.ArgumentError('Unknown method: $methodName');
     }
@@ -38,6 +50,12 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
     switch (methodName) {
       case 'Ping':
         return ping(ctx, request as $0.PingRequest);
+      case 'StartChat':
+        return startChat(ctx, request as $0.StartChatRequest);
+      case 'SendPrompt':
+        return sendPrompt(ctx, request as $0.SendPromptRequest);
+      case 'Events':
+        return events(ctx, request as $0.EventsRequest);
       default:
         throw $core.ArgumentError('Unknown method: $methodName');
     }

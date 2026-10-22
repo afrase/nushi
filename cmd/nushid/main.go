@@ -11,11 +11,18 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
+	"github.com/afrase/nushi/acp"
 	"github.com/afrase/nushi/internal/api"
+	"github.com/afrase/nushi/internal/events"
+	"github.com/afrase/nushi/internal/features/chats"
 )
+
+// claudeACP is the pinned Claude Code ACP adapter.
+const claudeACP = "@agentclientprotocol/claude-agent-acp@0.94.0"
 
 func main() {
 	if err := run(); err != nil {
@@ -45,7 +52,9 @@ func run() error {
 	}
 	log.Printf("nushid listening on %s", ln.Addr())
 
-	srv := &http.Server{Handler: api.Handler(token), Protocols: new(http.Protocols)}
+	hub := &events.Hub{}
+	chatSvc := chats.New(launchClaude, hub.Publish)
+	srv := &http.Server{Handler: api.Handler(token, chatSvc, hub), Protocols: new(http.Protocols)}
 	srv.Protocols.SetUnencryptedHTTP2(true)
 	return srv.Serve(ln)
 }
@@ -73,4 +82,12 @@ func listen(path string) (net.Listener, error) {
 	}
 	_ = os.Remove(path)
 	return net.Listen("unix", path)
+}
+
+// launchClaude starts Claude Code's ACP adapter in folder. Its stderr goes to the daemon log.
+func launchClaude(folder string, h acp.Handler) (chats.Agent, error) {
+	cmd := exec.Command("npx", "--yes", claudeACP)
+	cmd.Dir = folder
+	cmd.Stderr = log.Writer()
+	return acp.Start(cmd, h)
 }
