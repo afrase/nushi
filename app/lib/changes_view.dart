@@ -27,6 +27,7 @@ class _ChangesViewState extends State<ChangesView> {
   DiffViewController? _controller;
   DiffThemeData? _theme;
   bool _wasBusy = false;
+  late String _folder = widget.chat.folder;
 
   @override
   void initState() {
@@ -43,7 +44,10 @@ class _ChangesViewState extends State<ChangesView> {
   }
 
   void _chatChanged() {
-    if (_wasBusy && !widget.chat.busy) _load();
+    if (_wasBusy && !widget.chat.busy || _folder != widget.chat.folder) {
+      _folder = widget.chat.folder;
+      _load();
+    }
     _wasBusy = widget.chat.busy;
   }
 

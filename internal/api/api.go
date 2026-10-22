@@ -20,7 +20,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 15
+const Version = 16
 
 type server struct {
 	chats *chats.Service
@@ -80,6 +80,13 @@ func (s *server) StartChat(ctx context.Context, req *connect.Request[nushiv1.Sta
 		return nil, err
 	}
 	return connect.NewResponse(&nushiv1.StartChatResponse{ChatId: id, Config: configProto(s.chats.Config(id))}), nil
+}
+
+func (s *server) MoveChat(ctx context.Context, req *connect.Request[nushiv1.MoveChatRequest]) (*connect.Response[nushiv1.MoveChatResponse], error) {
+	if err := s.chats.Move(ctx, req.Msg.ChatId, req.Msg.Folder); err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	return connect.NewResponse(&nushiv1.MoveChatResponse{}), nil
 }
 
 func (s *server) SendPrompt(_ context.Context, req *connect.Request[nushiv1.SendPromptRequest]) (*connect.Response[nushiv1.SendPromptResponse], error) {
@@ -302,5 +309,5 @@ func configProto(opts []model.ConfigOption) []*nushiv1.ConfigOption {
 
 func chatProto(s model.Session) *nushiv1.Chat {
 	return &nushiv1.Chat{Id: s.ID, Agent: s.Agent, Folder: s.Folder, Title: cmp.Or(s.Name, s.Title), Mode: s.Mode,
-		CreatedUnixMs: s.Created.UnixMilli(), Archived: s.Archived}
+		CreatedUnixMs: s.Created.UnixMilli(), Archived: s.Archived, SessionId: s.SessionID}
 }

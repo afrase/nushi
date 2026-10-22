@@ -21,9 +21,10 @@ class Sidebar extends StatefulWidget {
 }
 
 class _SidebarState extends State<Sidebar> {
-  String? _starting; // the folder a chat is starting in
+  String? _starting; // the folder a chat is starting in ('' for none)
   bool _showArchived = false;
 
+  /// Starts a chat in [folder] ('' for a scratch folder, null to pick one).
   Future<void> _start(String? folder) async {
     folder ??= await getDirectoryPath(confirmButtonText: 'Start chat');
     if (folder == null) return;
@@ -51,8 +52,8 @@ class _SidebarState extends State<Sidebar> {
       for (final c in byNewest)
         if (c.archived) c,
     ];
-    for (final c in byNewest) {
-      if (!c.archived) (groups[c.folder] ??= []).add(c);
+    for (final c in byNewest.where((c) => !c.archived)) {
+      (groups[isScratch(c.folder) ? '' : c.folder] ??= []).add(c);
     }
     if (_starting != null) groups.putIfAbsent(_starting!, () => []);
     return DecoratedBox(
@@ -66,11 +67,15 @@ class _SidebarState extends State<Sidebar> {
           Padding(
             padding: const EdgeInsets.all(10),
             child: Button(
-              label: 'New chat in a folder…',
+              label: widget.daemon.canMove
+                  ? 'New chat'
+                  : 'New chat in a folder…',
               icon: Icons.add,
               kind: ButtonKind.primary,
               height: 28,
-              onPressed: _starting == null ? () => _start(null) : null,
+              onPressed: _starting == null
+                  ? () => _start(widget.daemon.canMove ? '' : null)
+                  : null,
             ),
           ),
           Expanded(
@@ -192,6 +197,8 @@ class _OutdatedState extends State<_Outdated> {
   }
 }
 
+/// A group's header: the folder's name and path, or "No folder" ('') for
+/// chats in scratch folders.
 class _FolderHeader extends StatelessWidget {
   const _FolderHeader(this.folder, {required this.onNew});
 
@@ -211,17 +218,18 @@ class _FolderHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  folder.split('/').last,
+                  folder.isEmpty ? 'No folder' : folder.split('/').last,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.ui(t.text, weight: FontWeight.w600),
                 ),
-                Text(
-                  folder,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.code(t.textMuted, size: 11),
-                ),
+                if (folder.isNotEmpty)
+                  Text(
+                    folder,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.code(t.textMuted, size: 11),
+                  ),
               ],
             ),
           ),
@@ -315,7 +323,7 @@ class _ChatRowState extends State<_ChatRow> {
                   ),
                   if (chat.waiting)
                     Text('needs you', style: theme.ui(t.needs, size: 11.5)),
-                  if (chat.archived)
+                  if (chat.archived && !isScratch(chat.folder))
                     Text(
                       chat.folder.split('/').last,
                       style: theme.ui(t.textMuted, size: 11.5),

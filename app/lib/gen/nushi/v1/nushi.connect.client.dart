@@ -81,6 +81,27 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Moves a chat to another folder. A chat without messages starts a new
+  /// session there; one with messages keeps its session and history, reopened
+  /// in the new folder. Refused while the chat is busy. If the move fails the
+  /// chat stays where it was, with a notice saying why.
+  Future<nushiv1nushi.MoveChatResponse> moveChat(
+    nushiv1nushi.MoveChatRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.moveChat,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Sends a prompt; the reply arrives as events.
   Future<nushiv1nushi.SendPromptResponse> sendPrompt(
     nushiv1nushi.SendPromptRequest input, {

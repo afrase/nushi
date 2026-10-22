@@ -41,11 +41,11 @@ func (c *chat) CreateElicitation(ctx context.Context, req acp.CreateElicitationR
 }
 
 func (c *chat) route(session acp.SessionID) *chat {
-	if session == "" || string(session) == c.id {
-		return c
-	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if session == "" || string(session) == c.sid {
+		return c
+	}
 	return c.sides[string(session)]
 }
 
@@ -56,19 +56,20 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 		return "", err
 	}
 	p.mu.Lock()
-	agent, folder := p.agent, p.session.Folder
+	agent, sid, folder := p.agent, p.sid, p.session.Folder
 	can := p.canFork && p.parent == nil
 	p.mu.Unlock()
 	if agent == nil || !can {
 		return "", errors.New("the agent can't fork this chat")
 	}
-	resp, err := agent.ForkSession(ctx, acp.ForkSessionRequest{SessionID: acp.SessionID(chatID), Cwd: folder, MCPServers: []acp.MCPServer{}})
+	resp, err := agent.ForkSession(ctx, acp.ForkSessionRequest{SessionID: acp.SessionID(sid), Cwd: folder, MCPServers: []acp.MCPServer{}})
 	if err != nil {
 		return "", err
 	}
 	side := s.newChat()
 	side.id, side.agent, side.parent = string(resp.SessionID), agent, p
-	side.session = model.Session{ID: side.id, Agent: s.agent, Folder: folder, Title: "Side question", Created: time.Now()}
+	side.sid = side.id
+	side.session = model.Session{ID: side.id, SessionID: side.sid, Agent: s.agent, Folder: folder, Title: "Side question", Created: time.Now()}
 	p.mu.Lock()
 	p.sides[side.id] = side
 	p.mu.Unlock()

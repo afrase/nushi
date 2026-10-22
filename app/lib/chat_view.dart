@@ -27,9 +27,24 @@ class _ChatViewState extends State<ChatView> {
   final _sideQuote = ValueNotifier<String?>(null);
   ChatState? _side;
   bool _forking = false;
+  late String _folder = widget.chat.folder;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.chat.addListener(_moved);
+  }
+
+  /// A side question ends when the chat moves: it ran on the old agent.
+  void _moved() {
+    if (_folder == widget.chat.folder) return;
+    _folder = widget.chat.folder;
+    setState(_closeSide);
+  }
 
   @override
   void dispose() {
+    widget.chat.removeListener(_moved);
     _closeSide();
     _quote.dispose();
     _sideQuote.dispose();

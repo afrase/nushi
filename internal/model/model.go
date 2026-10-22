@@ -6,13 +6,16 @@ import "time"
 // Session is what Nushi keeps of a chat, to list and reopen it. The agent
 // keeps the rest.
 type Session struct {
-	ID      string // the agent's session id
-	Agent   string
-	Folder  string
-	Title   string // the agent's title, or else the first prompt's first line
-	Name    string // the title the user set, which wins over Title
-	Mode    string // the mode it was last in
-	Created time.Time
+	ID string // Nushi's id for the chat
+	// SessionID is the agent's session id. It changes when a chat without
+	// messages moves to another folder (a new session starts there).
+	SessionID string
+	Agent     string
+	Folder    string
+	Title     string // the agent's title, or else the first prompt's first line
+	Name      string // the title the user set, which wins over Title
+	Mode      string // the mode it was last in
+	Created   time.Time
 	// Archived chats have no agent running; they reopen when unarchived.
 	Archived bool
 }

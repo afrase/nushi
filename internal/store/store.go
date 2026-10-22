@@ -101,6 +101,9 @@ func (s *Store) Sessions() ([]model.Session, error) {
 		if err := json.Unmarshal(b, &sess); err != nil {
 			return nil, fmt.Errorf("%s: %w", f, err)
 		}
+		if sess.SessionID == "" { // stored before step 22, when the ids were one
+			sess.SessionID = sess.ID
+		}
 		out = append(out, sess)
 	}
 	return out, nil

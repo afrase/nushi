@@ -78,7 +78,7 @@ Future<bool> _confirmRemove(BuildContext context, ChatState chat) async {
             child: Text(
               'Nushi forgets the chat and stops its agent. Claude keeps its '
               'own history of the session, so you can still resume it in a '
-              'terminal in its folder: claude --resume ${chat.id}',
+              'terminal in its folder: claude --resume ${chat.sessionId}',
               style: theme.ui(t.textSecondary),
             ),
           ),
