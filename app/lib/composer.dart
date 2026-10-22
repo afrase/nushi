@@ -8,7 +8,6 @@ import 'pickers.dart';
 import 'theme/theme.dart';
 import 'thinking.dart';
 import 'composer_parts.dart';
-import 'usage.dart';
 
 /// Stops the chat's running turn.
 Future<void> stopTurn(
@@ -28,7 +27,7 @@ Future<void> stopTurn(
 
 /// The prompt box: "+" on its left starts an @ mention, and on its right
 /// a send button once there is text, or a stop button while a turn runs.
-/// Under it, the agent's pickers and the context ring. Enter sends,
+/// Under it, the agent's pickers. Enter sends,
 /// Shift-Enter starts a line; `/` completes the agent's commands and `@`
 /// the folder's files (sent as links); Up in an empty box brings back the
 /// last prompt.
@@ -334,7 +333,6 @@ class _ComposerState extends State<Composer> {
             options: chat.config,
             onPick: (id, value) =>
                 widget.daemon.setConfigOption(chat.id, id, value),
-            trailing: ContextMeter(chat.usage, ring: true),
           ),
         ],
       ),
