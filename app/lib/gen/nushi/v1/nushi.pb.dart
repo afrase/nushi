@@ -224,6 +224,7 @@ class Chat extends $pb.GeneratedMessage {
     $core.String? mode,
     $fixnum.Int64? createdUnixMs,
     ChatStatus? status,
+    $core.bool? archived,
   }) {
     final result = Chat._();
     if (id != null) result.id = id;
@@ -233,6 +234,7 @@ class Chat extends $pb.GeneratedMessage {
     if (mode != null) result.mode = mode;
     if (createdUnixMs != null) result.createdUnixMs = createdUnixMs;
     if (status != null) result.status = status;
+    if (archived != null) result.archived = archived;
     return result;
   }
 
@@ -257,6 +259,7 @@ class Chat extends $pb.GeneratedMessage {
     ..aInt64(6, _omitFieldNames ? '' : 'createdUnixMs')
     ..aOM<ChatStatus>(7, _omitFieldNames ? '' : 'status',
         subBuilder: ChatStatus.$_createMessage)
+    ..aOB(8, _omitFieldNames ? '' : 'archived')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -307,6 +310,7 @@ class Chat extends $pb.GeneratedMessage {
   @$pb.TagNumber(3)
   void clearFolder() => $_clearField(3);
 
+  /// The title the user set, or else the agent's.
   @$pb.TagNumber(4)
   $core.String get title => $_getSZ(3);
   @$pb.TagNumber(4)
@@ -346,6 +350,16 @@ class Chat extends $pb.GeneratedMessage {
   void clearStatus() => $_clearField(7);
   @$pb.TagNumber(7)
   ChatStatus ensureStatus() => $_ensure(6);
+
+  /// Archived chats have no agent running and take no prompts.
+  @$pb.TagNumber(8)
+  $core.bool get archived => $_getBF(7);
+  @$pb.TagNumber(8)
+  set archived($core.bool value) => $_setBool(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasArchived() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearArchived() => $_clearField(8);
 }
 
 class GetChatRequest extends $pb.GeneratedMessage {
@@ -1312,6 +1326,326 @@ class CloseSideChatResponse extends $pb.GeneratedMessage {
   static CloseSideChatResponse? _defaultInstance;
 }
 
+class RenameChatRequest extends $pb.GeneratedMessage {
+  factory RenameChatRequest({
+    $core.String? chatId,
+    $core.String? title,
+  }) {
+    final result = RenameChatRequest._();
+    if (chatId != null) result.chatId = chatId;
+    if (title != null) result.title = title;
+    return result;
+  }
+
+  RenameChatRequest._();
+
+  factory RenameChatRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RenameChatRequest()..mergeFromBuffer(data, registry);
+  factory RenameChatRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RenameChatRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RenameChatRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RenameChatRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOS(2, _omitFieldNames ? '' : 'title')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RenameChatRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RenameChatRequest copyWith(void Function(RenameChatRequest) updates) =>
+      super.copyWith((message) => updates(message as RenameChatRequest))
+          as RenameChatRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use RenameChatRequest() / RenameChatRequest.new instead')
+  static RenameChatRequest create() => RenameChatRequest._();
+  static $pb.GeneratedMessage $_createMessage() => RenameChatRequest._();
+  @$core.override
+  RenameChatRequest createEmptyInstance() => RenameChatRequest._();
+  @$core.pragma('dart2js:noInline')
+  static RenameChatRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<RenameChatRequest>(
+          RenameChatRequest.$_createMessage);
+  static RenameChatRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get title => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set title($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasTitle() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearTitle() => $_clearField(2);
+}
+
+class RenameChatResponse extends $pb.GeneratedMessage {
+  factory RenameChatResponse() => RenameChatResponse._();
+
+  RenameChatResponse._();
+
+  factory RenameChatResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RenameChatResponse()..mergeFromBuffer(data, registry);
+  factory RenameChatResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RenameChatResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RenameChatResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RenameChatResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RenameChatResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RenameChatResponse copyWith(void Function(RenameChatResponse) updates) =>
+      super.copyWith((message) => updates(message as RenameChatResponse))
+          as RenameChatResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use RenameChatResponse() / RenameChatResponse.new instead')
+  static RenameChatResponse create() => RenameChatResponse._();
+  static $pb.GeneratedMessage $_createMessage() => RenameChatResponse._();
+  @$core.override
+  RenameChatResponse createEmptyInstance() => RenameChatResponse._();
+  @$core.pragma('dart2js:noInline')
+  static RenameChatResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RenameChatResponse>(
+          RenameChatResponse.$_createMessage);
+  static RenameChatResponse? _defaultInstance;
+}
+
+class ArchiveChatRequest extends $pb.GeneratedMessage {
+  factory ArchiveChatRequest({
+    $core.String? chatId,
+    $core.bool? archived,
+  }) {
+    final result = ArchiveChatRequest._();
+    if (chatId != null) result.chatId = chatId;
+    if (archived != null) result.archived = archived;
+    return result;
+  }
+
+  ArchiveChatRequest._();
+
+  factory ArchiveChatRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ArchiveChatRequest()..mergeFromBuffer(data, registry);
+  factory ArchiveChatRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ArchiveChatRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ArchiveChatRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ArchiveChatRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOB(2, _omitFieldNames ? '' : 'archived')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ArchiveChatRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ArchiveChatRequest copyWith(void Function(ArchiveChatRequest) updates) =>
+      super.copyWith((message) => updates(message as ArchiveChatRequest))
+          as ArchiveChatRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ArchiveChatRequest() / ArchiveChatRequest.new instead')
+  static ArchiveChatRequest create() => ArchiveChatRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ArchiveChatRequest._();
+  @$core.override
+  ArchiveChatRequest createEmptyInstance() => ArchiveChatRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ArchiveChatRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ArchiveChatRequest>(
+          ArchiveChatRequest.$_createMessage);
+  static ArchiveChatRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  /// False unarchives it.
+  @$pb.TagNumber(2)
+  $core.bool get archived => $_getBF(1);
+  @$pb.TagNumber(2)
+  set archived($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasArchived() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearArchived() => $_clearField(2);
+}
+
+class ArchiveChatResponse extends $pb.GeneratedMessage {
+  factory ArchiveChatResponse() => ArchiveChatResponse._();
+
+  ArchiveChatResponse._();
+
+  factory ArchiveChatResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ArchiveChatResponse()..mergeFromBuffer(data, registry);
+  factory ArchiveChatResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ArchiveChatResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ArchiveChatResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ArchiveChatResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ArchiveChatResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ArchiveChatResponse copyWith(void Function(ArchiveChatResponse) updates) =>
+      super.copyWith((message) => updates(message as ArchiveChatResponse))
+          as ArchiveChatResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use ArchiveChatResponse() / ArchiveChatResponse.new instead')
+  static ArchiveChatResponse create() => ArchiveChatResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ArchiveChatResponse._();
+  @$core.override
+  ArchiveChatResponse createEmptyInstance() => ArchiveChatResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ArchiveChatResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ArchiveChatResponse>(
+          ArchiveChatResponse.$_createMessage);
+  static ArchiveChatResponse? _defaultInstance;
+}
+
+class RemoveChatRequest extends $pb.GeneratedMessage {
+  factory RemoveChatRequest({
+    $core.String? chatId,
+  }) {
+    final result = RemoveChatRequest._();
+    if (chatId != null) result.chatId = chatId;
+    return result;
+  }
+
+  RemoveChatRequest._();
+
+  factory RemoveChatRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemoveChatRequest()..mergeFromBuffer(data, registry);
+  factory RemoveChatRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemoveChatRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RemoveChatRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RemoveChatRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemoveChatRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemoveChatRequest copyWith(void Function(RemoveChatRequest) updates) =>
+      super.copyWith((message) => updates(message as RemoveChatRequest))
+          as RemoveChatRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use RemoveChatRequest() / RemoveChatRequest.new instead')
+  static RemoveChatRequest create() => RemoveChatRequest._();
+  static $pb.GeneratedMessage $_createMessage() => RemoveChatRequest._();
+  @$core.override
+  RemoveChatRequest createEmptyInstance() => RemoveChatRequest._();
+  @$core.pragma('dart2js:noInline')
+  static RemoveChatRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<RemoveChatRequest>(
+          RemoveChatRequest.$_createMessage);
+  static RemoveChatRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+}
+
+class RemoveChatResponse extends $pb.GeneratedMessage {
+  factory RemoveChatResponse() => RemoveChatResponse._();
+
+  RemoveChatResponse._();
+
+  factory RemoveChatResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemoveChatResponse()..mergeFromBuffer(data, registry);
+  factory RemoveChatResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemoveChatResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RemoveChatResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RemoveChatResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemoveChatResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemoveChatResponse copyWith(void Function(RemoveChatResponse) updates) =>
+      super.copyWith((message) => updates(message as RemoveChatResponse))
+          as RemoveChatResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use RemoveChatResponse() / RemoveChatResponse.new instead')
+  static RemoveChatResponse create() => RemoveChatResponse._();
+  static $pb.GeneratedMessage $_createMessage() => RemoveChatResponse._();
+  @$core.override
+  RemoveChatResponse createEmptyInstance() => RemoveChatResponse._();
+  @$core.pragma('dart2js:noInline')
+  static RemoveChatResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RemoveChatResponse>(
+          RemoveChatResponse.$_createMessage);
+  static RemoveChatResponse? _defaultInstance;
+}
+
 class AnswerPermissionRequest extends $pb.GeneratedMessage {
   factory AnswerPermissionRequest({
     $core.String? chatId,
@@ -2023,7 +2357,15 @@ class EventsRequest extends $pb.GeneratedMessage {
   static EventsRequest? _defaultInstance;
 }
 
-enum EventsResponse_Kind { item, status, config, chat, commands, notSet }
+enum EventsResponse_Kind {
+  item,
+  status,
+  config,
+  chat,
+  commands,
+  removed,
+  notSet
+}
 
 class EventsResponse extends $pb.GeneratedMessage {
   factory EventsResponse({
@@ -2034,6 +2376,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     Chat? chat,
     $fixnum.Int64? seq,
     ChatCommands? commands,
+    $core.bool? removed,
   }) {
     final result = EventsResponse._();
     if (chatId != null) result.chatId = chatId;
@@ -2043,6 +2386,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     if (chat != null) result.chat = chat;
     if (seq != null) result.seq = seq;
     if (commands != null) result.commands = commands;
+    if (removed != null) result.removed = removed;
     return result;
   }
 
@@ -2062,13 +2406,14 @@ class EventsResponse extends $pb.GeneratedMessage {
     4: EventsResponse_Kind.config,
     5: EventsResponse_Kind.chat,
     7: EventsResponse_Kind.commands,
+    8: EventsResponse_Kind.removed,
     0: EventsResponse_Kind.notSet
   };
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'EventsResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: EventsResponse.$_createMessage)
-    ..oo(0, [2, 3, 4, 5, 7])
+    ..oo(0, [2, 3, 4, 5, 7, 8])
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
     ..aOM<ItemEvent>(2, _omitFieldNames ? '' : 'item',
         subBuilder: ItemEvent.$_createMessage)
@@ -2081,6 +2426,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     ..aInt64(6, _omitFieldNames ? '' : 'seq')
     ..aOM<ChatCommands>(7, _omitFieldNames ? '' : 'commands',
         subBuilder: ChatCommands.$_createMessage)
+    ..aOB(8, _omitFieldNames ? '' : 'removed')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -2110,6 +2456,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(4)
   @$pb.TagNumber(5)
   @$pb.TagNumber(7)
+  @$pb.TagNumber(8)
   EventsResponse_Kind whichKind() =>
       _EventsResponse_KindByTag[$_whichOneof(0)]!;
   @$pb.TagNumber(2)
@@ -2117,6 +2464,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(4)
   @$pb.TagNumber(5)
   @$pb.TagNumber(7)
+  @$pb.TagNumber(8)
   void clearKind() => $_clearField($_whichOneof(0));
 
   @$pb.TagNumber(1)
@@ -2161,7 +2509,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(4)
   ChatConfig ensureConfig() => $_ensure(3);
 
-  /// The chat was opened, or its title or mode changed.
+  /// The chat was opened, or its title, mode or archived state changed.
   @$pb.TagNumber(5)
   Chat get chat => $_getN(4);
   @$pb.TagNumber(5)
@@ -2194,6 +2542,16 @@ class EventsResponse extends $pb.GeneratedMessage {
   void clearCommands() => $_clearField(7);
   @$pb.TagNumber(7)
   ChatCommands ensureCommands() => $_ensure(6);
+
+  /// The chat was removed (RemoveChat).
+  @$pb.TagNumber(8)
+  $core.bool get removed => $_getBF(7);
+  @$pb.TagNumber(8)
+  set removed($core.bool value) => $_setBool(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasRemoved() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearRemoved() => $_clearField(8);
 }
 
 /// A chat's config options, all of them.
@@ -3153,6 +3511,27 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, CloseSideChatRequest request) =>
       _client.invoke<CloseSideChatResponse>(ctx, 'NushiService',
           'CloseSideChat', request, CloseSideChatResponse());
+
+  /// Sets the chat's title; it wins over the agent's. An empty title goes
+  /// back to the agent's.
+  $async.Future<RenameChatResponse> renameChat(
+          $pb.ClientContext? ctx, RenameChatRequest request) =>
+      _client.invoke<RenameChatResponse>(
+          ctx, 'NushiService', 'RenameChat', request, RenameChatResponse());
+
+  /// Archives a chat: its turn is cancelled and its agent stops; it stays
+  /// listed, read-only. Unarchiving reopens it (ACP session/load).
+  $async.Future<ArchiveChatResponse> archiveChat(
+          $pb.ClientContext? ctx, ArchiveChatRequest request) =>
+      _client.invoke<ArchiveChatResponse>(
+          ctx, 'NushiService', 'ArchiveChat', request, ArchiveChatResponse());
+
+  /// Forgets a chat: its turn is cancelled, its agent stops, and Nushi's
+  /// record of it goes. The agent's own history of the session stays.
+  $async.Future<RemoveChatResponse> removeChat(
+          $pb.ClientContext? ctx, RemoveChatRequest request) =>
+      _client.invoke<RemoveChatResponse>(
+          ctx, 'NushiService', 'RemoveChat', request, RemoveChatResponse());
 
   /// Answers a pending permission prompt with one of its options.
   $async.Future<AnswerPermissionResponse> answerPermission(

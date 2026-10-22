@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'chat.dart';
+import 'chat_menu.dart';
 import 'composer.dart';
 import 'daemon.dart';
 import 'side_panel.dart';
+import 'theme/theme.dart';
 import 'transcript.dart';
+import 'widgets.dart';
 
 /// A chat's transcript with the composer under it, and a side question in a
 /// panel beside them when one is open. Escape stops a running turn.
@@ -80,19 +83,22 @@ class _ChatViewState extends State<ChatView> {
                     child: Transcript(
                       chat: chat,
                       daemon: widget.daemon,
-                      onReply: (s) => _quote.value = s,
-                      onSide: _ask,
+                      onReply: chat.archived ? null : (s) => _quote.value = s,
+                      onSide: chat.archived ? null : _ask,
                     ),
                   ),
                   if (chat.busy || _forking)
                     const LinearProgressIndicator(minHeight: 2),
-                  Composer(chat: chat, daemon: widget.daemon, quote: _quote),
+                  if (chat.archived)
+                    _Archived(chat, widget.daemon)
+                  else
+                    Composer(chat: chat, daemon: widget.daemon, quote: _quote),
                 ],
               ),
             ),
           ),
         ),
-        if (side != null)
+        if (side != null && !chat.archived)
           SidePanel(
             side: side,
             daemon: widget.daemon,
@@ -100,6 +106,48 @@ class _ChatViewState extends State<ChatView> {
             onClose: () => setState(_closeSide),
           ),
       ],
+    );
+  }
+}
+
+/// In place of the composer for an archived chat: it is read-only until
+/// unarchived.
+class _Archived extends StatelessWidget {
+  const _Archived(this.chat, this.daemon);
+
+  final ChatState chat;
+  final Daemon daemon;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    return Container(
+      decoration: BoxDecoration(
+        color: t.raised,
+        border: Border(top: BorderSide(color: t.borderSubtle)),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              chat.items.isEmpty
+                  ? 'Archived. Unarchive it to bring back its history and keep chatting.'
+                  : 'Archived: read-only. Unarchive it to keep chatting.',
+              style: theme.ui(t.textSecondary),
+            ),
+          ),
+          Button(
+            label: 'Unarchive',
+            kind: ButtonKind.primary,
+            onPressed: () => tryOrShow(
+              context,
+              () => daemon.archiveChat(chat.id, archived: false),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

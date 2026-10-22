@@ -37,6 +37,12 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.ForkChatRequest request);
   $async.Future<$0.CloseSideChatResponse> closeSideChat(
       $pb.ServerContext ctx, $0.CloseSideChatRequest request);
+  $async.Future<$0.RenameChatResponse> renameChat(
+      $pb.ServerContext ctx, $0.RenameChatRequest request);
+  $async.Future<$0.ArchiveChatResponse> archiveChat(
+      $pb.ServerContext ctx, $0.ArchiveChatRequest request);
+  $async.Future<$0.RemoveChatResponse> removeChat(
+      $pb.ServerContext ctx, $0.RemoveChatRequest request);
   $async.Future<$0.AnswerPermissionResponse> answerPermission(
       $pb.ServerContext ctx, $0.AnswerPermissionRequest request);
   $async.Future<$0.AnswerQuestionResponse> answerQuestion(
@@ -68,6 +74,12 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.ForkChatRequest();
       case 'CloseSideChat':
         return $0.CloseSideChatRequest();
+      case 'RenameChat':
+        return $0.RenameChatRequest();
+      case 'ArchiveChat':
+        return $0.ArchiveChatRequest();
+      case 'RemoveChat':
+        return $0.RemoveChatRequest();
       case 'AnswerPermission':
         return $0.AnswerPermissionRequest();
       case 'AnswerQuestion':
@@ -104,6 +116,12 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return forkChat(ctx, request as $0.ForkChatRequest);
       case 'CloseSideChat':
         return closeSideChat(ctx, request as $0.CloseSideChatRequest);
+      case 'RenameChat':
+        return renameChat(ctx, request as $0.RenameChatRequest);
+      case 'ArchiveChat':
+        return archiveChat(ctx, request as $0.ArchiveChatRequest);
+      case 'RemoveChat':
+        return removeChat(ctx, request as $0.RemoveChatRequest);
       case 'AnswerPermission':
         return answerPermission(ctx, request as $0.AnswerPermissionRequest);
       case 'AnswerQuestion':

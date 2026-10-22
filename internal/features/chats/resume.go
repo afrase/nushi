@@ -10,32 +10,56 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-// chat returns an open chat. A stored chat whose agent isn't running (the
-// daemon restarted) is reopened in the background through session/load; it
-// is busy until its history has been replayed.
-func (s *Service) chat(id string) (*chat, error) {
+// lookup returns a chat, open or stored, without reopening it.
+func (s *Service) lookup(id string) (*chat, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	c := s.chats[id]
-	if c == nil {
-		stored, err := s.sessions.Sessions()
-		if err != nil {
-			return nil, err
-		}
-		i := slices.IndexFunc(stored, func(sess model.Session) bool { return sess.ID == id })
-		if i < 0 {
-			return nil, fmt.Errorf("no chat %q", id)
-		}
-		c = s.newChat()
-		c.id, c.session = id, stored[i]
-		s.chats[id] = c
+	if c := s.chats[id]; c != nil {
+		return c, nil
+	}
+	stored, err := s.sessions.Sessions()
+	if err != nil {
+		return nil, err
+	}
+	i := slices.IndexFunc(stored, func(sess model.Session) bool { return sess.ID == id })
+	if i < 0 {
+		return nil, fmt.Errorf("no chat %q", id)
+	}
+	c := s.newChat()
+	c.id, c.session = id, stored[i]
+	s.chats[id] = c
+	return c, nil
+}
+
+// open returns a chat. A stored chat whose agent isn't running (the daemon
+// restarted, or the chat was unarchived) is reopened in the background
+// through session/load; it is busy until its history has been replayed.
+// An archived chat stays as it is.
+func (s *Service) open(id string) (*chat, error) {
+	c, err := s.lookup(id)
+	if err != nil {
+		return nil, err
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.agent == nil && !c.busy { // never reopened, or the last try failed
+	if c.agent == nil && !c.busy && !c.session.Archived { // never reopened, or the last try failed
 		c.busy = true
 		c.statusChangedLocked()
 		go s.resume(c)
+	}
+	return c, nil
+}
+
+// chat returns an open chat to work with: not an archived one.
+func (s *Service) chat(id string) (*chat, error) {
+	c, err := s.open(id)
+	if err != nil {
+		return nil, err
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.session.Archived {
+		return nil, errors.New("the chat is archived")
 	}
 	return c, nil
 }

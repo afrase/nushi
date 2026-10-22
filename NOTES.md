@@ -55,6 +55,7 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 16. The composer | 1878 | 722 | 3118 | 650 |
 | 17. Long chats | 1878 | 722 | 3235 | 650 |
 | 18. Ask about a selection | 2009 | 773 | 3559 | 650 |
+| 19. Rename, archive, remove | 2179 | 773 | 3968 | 650 |
 
 Tripwires crossed:
 Lines added per step, code and tests, without generated code (the tripwire is about 500): 1: 533, 2: 1,502, 3: 239, 4: 437, 5: 739, 6: 639, 7: 464, 8: 537, 9: 265, 10: 528, 11: 1,249, 12: 625, 13: 476, 14: 343, 15: 351, 16: 492, 17: 298, 18: 666.
@@ -68,6 +69,7 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 - Step 12 (625): the healer lifted from the POC (300 lines, about half of the POC's) and its tests, the code block builder, and the style mapping.
 - Step 16 (492) and 18 (666): each touched both sides. Step 18 is the fork and close calls in the ACP client (hand-written, `session/fork` isn't in the pinned schema), routing a shared agent's updates to the chat or its side chats, two RPCs, a test, and in the app the selection popover, Reply, and the side panel with its own transcript and composer.
 - Milestone D (steps 11–18) grew the app from 1,402 to 3,559 lines of Dart (limit about 7,000), plus 519 in the new markdown package; the daemon from 1,662 to 2,009 lines of Go and the ACP client from 716 to 773.
+- Step 19 (755 added, 72 removed): both sides again. The daemon's rename/archive/remove (`manage.go`, 114) and their RPCs; an end-to-end test (75); in the app the chat menu, the remove confirmation and the inline rename field (`chat_menu.dart`, 181), the sidebar's archived group and double-click, the header's title and menu, and the archived bar.
 - `acp/internal/acpgen/main.go` reached 407 lines in step 10's trim pass; it was trimmed to 393.
 
 ## Milestone A demo (steps 1–5): one working chat
@@ -123,6 +125,7 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 - `session/cancel` on Claude ends the turn within a second or two with stop reason `cancelled`; the text streamed so far stays. A command Claude runs in the background can finish after the turn and Claude then writes again on its own, outside any prompt (a tool call and a message arrive while the chat is idle).
 - Claude sends `available_commands_update` soon after `session/new` (and after `session/load`): about 80 commands, its own and every installed plugin's and skill's (`/code-review:code-review`). A command goes back as an ordinary prompt starting with `/name`. A `resource_link` to a `file://` URI in the prompt makes Claude read the file.
 - claude-agent-acp 0.94.0 advertises `sessionCapabilities.fork` (and `close`, `resume`, `list`, `delete`). `session/fork` copies the session's transcript into a new session on the same agent process, which then knows the whole conversation; prompting it doesn't touch the original. Updates for the fork arrive on the same connection, tagged with the fork's session id. `session/close` ends it.
+- Replaying (`session/load`) a turn that was cancelled shows a user message "[Request interrupted by user]": Claude stores it in its history.
 - Claude also sends a `tool_call_update` carrying only `_meta.claudeCode.toolResponse` (the raw tool result) before the final one; it changes nothing we show.
 - In `auto` mode Claude asked nothing for `curl -X POST` or `touch`; in Manual (`default`) mode it asks before `touch`, with two options, "Yes" (`allow_once`) and "No" (`reject_once`). A permission request names the tool call it is about (`toolCall.toolCallId`), which was sent just before as a `tool_call`.
 - To test prompts without a mode picker, a folder with `.claude/settings.json` = `{"permissions":{"defaultMode":"default"}}` starts Claude in Manual mode.
@@ -175,6 +178,11 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 - Side questions (step 18) fork the chat's session on its own agent (no new process), so a side chat can't outlive the chat's agent. It isn't stored or listed, and closing the panel, switching chats or the daemon stopping ends it (`session/close`). Only one side question per chat at a time; a second "Side question" adds the new quote to the open one. Its pickers are empty: it runs with the chat's settings.
 - The selection popover shows where the pointer went up, once text is selected (a drag or a double-click), with Reply (quotes the selection as `> ` lines in the composer, cursor after it) and Side question (hidden when the agent can't fork). It works in the side panel too, where it only offers Reply.
 - `session/fork` and `session/close` types in `acp/fork.go` are written by hand (fork is unstable in ACP v1 and not in the pinned schema); the fork capability is read from the raw `initialize` answer.
+
+- Rename, archive, remove (step 19): a title you set is `Name` in the session file and wins over the agent's (`Title`, still updated); renaming to nothing goes back to the agent's. Archiving and removing cancel a running turn and give the agent five seconds to end it before its process stops; both refuse while a chat is still reopening (`session/load`), for a moment after a daemon restart.
+- An archived chat keeps its transcript in the daemon's memory, so it reads as it was until the daemon restarts; after a restart it shows no history until unarchived, since showing it would mean starting an agent to replay it. Unarchiving drops the transcript and replays it through `session/load`.
+- Removing deletes only `sessions/<id>.json`. The confirmation names `claude --resume <id>` (in the chat's folder), which was tried after a removal.
+- The sidebar's Archived group is collapsed at each start (not remembered). A click opens a chat right away; a second click within the double-tap time renames it (Flutter's double-tap recognizer would delay every single click). Right-click, or the header's ⋯, opens the menu: Rename, Archive/Unarchive, Remove….
 
 - Connect for Go is v1 (`connectrpc.com/connect` v1.21), not v2: v1 is what the Dart generator's docs and the POC used, and nothing here needs v2.
 - `http2` for Dart stays on 2.x: `connectrpc` 2.0.1 doesn't resolve with `http2` 3.x.

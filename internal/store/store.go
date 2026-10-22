@@ -80,6 +80,11 @@ func (s *Store) SaveSession(sess model.Session) error {
 	return writeJSON(filepath.Join(dir, url.PathEscape(sess.ID)+".json"), sess)
 }
 
+// DeleteSession removes a session's file.
+func (s *Store) DeleteSession(id string) error {
+	return os.Remove(filepath.Join(s.dir, "sessions", url.PathEscape(id)+".json"))
+}
+
 // Sessions reads every stored session.
 func (s *Store) Sessions() ([]model.Session, error) {
 	files, err := filepath.Glob(filepath.Join(s.dir, "sessions", "*.json"))

@@ -78,6 +78,8 @@ func (m *memSessions) SaveSession(s model.Session) error {
 
 func (m *memSessions) Sessions() ([]model.Session, error) { return nil, nil }
 
+func (m *memSessions) DeleteSession(string) error { return nil }
+
 type memModes map[string]string
 
 func (m *memModes) Mode(agent string) string { return (*m)[agent] }

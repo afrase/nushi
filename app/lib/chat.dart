@@ -10,6 +10,7 @@ class ChatState extends ChangeNotifier {
   final String id;
   final String folder;
   String title = '';
+  bool archived = false; // no agent runs; read-only until unarchived
   DateTime created = DateTime.now();
   final List<Item> items = [];
   List<ConfigOption> config = [];
@@ -85,7 +86,9 @@ class ChatState extends ChangeNotifier {
         commands = e.commands.commands;
       case EventsResponse_Kind.status:
         status(e.status);
-      case EventsResponse_Kind.chat || EventsResponse_Kind.notSet:
+      case EventsResponse_Kind.chat ||
+          EventsResponse_Kind.removed ||
+          EventsResponse_Kind.notSet:
         return; // the daemon keeps a chat's title and folder
     }
   }

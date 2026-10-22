@@ -50,6 +50,13 @@ const (
 	// NushiServiceCloseSideChatProcedure is the fully-qualified name of the NushiService's
 	// CloseSideChat RPC.
 	NushiServiceCloseSideChatProcedure = "/nushi.v1.NushiService/CloseSideChat"
+	// NushiServiceRenameChatProcedure is the fully-qualified name of the NushiService's RenameChat RPC.
+	NushiServiceRenameChatProcedure = "/nushi.v1.NushiService/RenameChat"
+	// NushiServiceArchiveChatProcedure is the fully-qualified name of the NushiService's ArchiveChat
+	// RPC.
+	NushiServiceArchiveChatProcedure = "/nushi.v1.NushiService/ArchiveChat"
+	// NushiServiceRemoveChatProcedure is the fully-qualified name of the NushiService's RemoveChat RPC.
+	NushiServiceRemoveChatProcedure = "/nushi.v1.NushiService/RemoveChat"
 	// NushiServiceAnswerPermissionProcedure is the fully-qualified name of the NushiService's
 	// AnswerPermission RPC.
 	NushiServiceAnswerPermissionProcedure = "/nushi.v1.NushiService/AnswerPermission"
@@ -88,6 +95,15 @@ type NushiServiceClient interface {
 	// CloseSideChat. Its items and status come as events like any chat's.
 	ForkChat(context.Context, *connect.Request[v1.ForkChatRequest]) (*connect.Response[v1.ForkChatResponse], error)
 	CloseSideChat(context.Context, *connect.Request[v1.CloseSideChatRequest]) (*connect.Response[v1.CloseSideChatResponse], error)
+	// Sets the chat's title; it wins over the agent's. An empty title goes
+	// back to the agent's.
+	RenameChat(context.Context, *connect.Request[v1.RenameChatRequest]) (*connect.Response[v1.RenameChatResponse], error)
+	// Archives a chat: its turn is cancelled and its agent stops; it stays
+	// listed, read-only. Unarchiving reopens it (ACP session/load).
+	ArchiveChat(context.Context, *connect.Request[v1.ArchiveChatRequest]) (*connect.Response[v1.ArchiveChatResponse], error)
+	// Forgets a chat: its turn is cancelled, its agent stops, and Nushi's
+	// record of it goes. The agent's own history of the session stays.
+	RemoveChat(context.Context, *connect.Request[v1.RemoveChatRequest]) (*connect.Response[v1.RemoveChatResponse], error)
 	// Answers a pending permission prompt with one of its options.
 	AnswerPermission(context.Context, *connect.Request[v1.AnswerPermissionRequest]) (*connect.Response[v1.AnswerPermissionResponse], error)
 	// Answers a pending question, or declines it.
@@ -165,6 +181,24 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("CloseSideChat")),
 			connect.WithClientOptions(opts...),
 		),
+		renameChat: connect.NewClient[v1.RenameChatRequest, v1.RenameChatResponse](
+			httpClient,
+			baseURL+NushiServiceRenameChatProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("RenameChat")),
+			connect.WithClientOptions(opts...),
+		),
+		archiveChat: connect.NewClient[v1.ArchiveChatRequest, v1.ArchiveChatResponse](
+			httpClient,
+			baseURL+NushiServiceArchiveChatProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ArchiveChat")),
+			connect.WithClientOptions(opts...),
+		),
+		removeChat: connect.NewClient[v1.RemoveChatRequest, v1.RemoveChatResponse](
+			httpClient,
+			baseURL+NushiServiceRemoveChatProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("RemoveChat")),
+			connect.WithClientOptions(opts...),
+		),
 		answerPermission: connect.NewClient[v1.AnswerPermissionRequest, v1.AnswerPermissionResponse](
 			httpClient,
 			baseURL+NushiServiceAnswerPermissionProcedure,
@@ -214,6 +248,9 @@ type nushiServiceClient struct {
 	cancelTurn       *connect.Client[v1.CancelTurnRequest, v1.CancelTurnResponse]
 	forkChat         *connect.Client[v1.ForkChatRequest, v1.ForkChatResponse]
 	closeSideChat    *connect.Client[v1.CloseSideChatRequest, v1.CloseSideChatResponse]
+	renameChat       *connect.Client[v1.RenameChatRequest, v1.RenameChatResponse]
+	archiveChat      *connect.Client[v1.ArchiveChatRequest, v1.ArchiveChatResponse]
+	removeChat       *connect.Client[v1.RemoveChatRequest, v1.RemoveChatResponse]
 	answerPermission *connect.Client[v1.AnswerPermissionRequest, v1.AnswerPermissionResponse]
 	answerQuestion   *connect.Client[v1.AnswerQuestionRequest, v1.AnswerQuestionResponse]
 	setConfigOption  *connect.Client[v1.SetConfigOptionRequest, v1.SetConfigOptionResponse]
@@ -260,6 +297,21 @@ func (c *nushiServiceClient) ForkChat(ctx context.Context, req *connect.Request[
 // CloseSideChat calls nushi.v1.NushiService.CloseSideChat.
 func (c *nushiServiceClient) CloseSideChat(ctx context.Context, req *connect.Request[v1.CloseSideChatRequest]) (*connect.Response[v1.CloseSideChatResponse], error) {
 	return c.closeSideChat.CallUnary(ctx, req)
+}
+
+// RenameChat calls nushi.v1.NushiService.RenameChat.
+func (c *nushiServiceClient) RenameChat(ctx context.Context, req *connect.Request[v1.RenameChatRequest]) (*connect.Response[v1.RenameChatResponse], error) {
+	return c.renameChat.CallUnary(ctx, req)
+}
+
+// ArchiveChat calls nushi.v1.NushiService.ArchiveChat.
+func (c *nushiServiceClient) ArchiveChat(ctx context.Context, req *connect.Request[v1.ArchiveChatRequest]) (*connect.Response[v1.ArchiveChatResponse], error) {
+	return c.archiveChat.CallUnary(ctx, req)
+}
+
+// RemoveChat calls nushi.v1.NushiService.RemoveChat.
+func (c *nushiServiceClient) RemoveChat(ctx context.Context, req *connect.Request[v1.RemoveChatRequest]) (*connect.Response[v1.RemoveChatResponse], error) {
+	return c.removeChat.CallUnary(ctx, req)
 }
 
 // AnswerPermission calls nushi.v1.NushiService.AnswerPermission.
@@ -313,6 +365,15 @@ type NushiServiceHandler interface {
 	// CloseSideChat. Its items and status come as events like any chat's.
 	ForkChat(context.Context, *connect.Request[v1.ForkChatRequest]) (*connect.Response[v1.ForkChatResponse], error)
 	CloseSideChat(context.Context, *connect.Request[v1.CloseSideChatRequest]) (*connect.Response[v1.CloseSideChatResponse], error)
+	// Sets the chat's title; it wins over the agent's. An empty title goes
+	// back to the agent's.
+	RenameChat(context.Context, *connect.Request[v1.RenameChatRequest]) (*connect.Response[v1.RenameChatResponse], error)
+	// Archives a chat: its turn is cancelled and its agent stops; it stays
+	// listed, read-only. Unarchiving reopens it (ACP session/load).
+	ArchiveChat(context.Context, *connect.Request[v1.ArchiveChatRequest]) (*connect.Response[v1.ArchiveChatResponse], error)
+	// Forgets a chat: its turn is cancelled, its agent stops, and Nushi's
+	// record of it goes. The agent's own history of the session stays.
+	RemoveChat(context.Context, *connect.Request[v1.RemoveChatRequest]) (*connect.Response[v1.RemoveChatResponse], error)
 	// Answers a pending permission prompt with one of its options.
 	AnswerPermission(context.Context, *connect.Request[v1.AnswerPermissionRequest]) (*connect.Response[v1.AnswerPermissionResponse], error)
 	// Answers a pending question, or declines it.
@@ -386,6 +447,24 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("CloseSideChat")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceRenameChatHandler := connect.NewUnaryHandler(
+		NushiServiceRenameChatProcedure,
+		svc.RenameChat,
+		connect.WithSchema(nushiServiceMethods.ByName("RenameChat")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceArchiveChatHandler := connect.NewUnaryHandler(
+		NushiServiceArchiveChatProcedure,
+		svc.ArchiveChat,
+		connect.WithSchema(nushiServiceMethods.ByName("ArchiveChat")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceRemoveChatHandler := connect.NewUnaryHandler(
+		NushiServiceRemoveChatProcedure,
+		svc.RemoveChat,
+		connect.WithSchema(nushiServiceMethods.ByName("RemoveChat")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceAnswerPermissionHandler := connect.NewUnaryHandler(
 		NushiServiceAnswerPermissionProcedure,
 		svc.AnswerPermission,
@@ -440,6 +519,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceForkChatHandler.ServeHTTP(w, r)
 		case NushiServiceCloseSideChatProcedure:
 			nushiServiceCloseSideChatHandler.ServeHTTP(w, r)
+		case NushiServiceRenameChatProcedure:
+			nushiServiceRenameChatHandler.ServeHTTP(w, r)
+		case NushiServiceArchiveChatProcedure:
+			nushiServiceArchiveChatHandler.ServeHTTP(w, r)
+		case NushiServiceRemoveChatProcedure:
+			nushiServiceRemoveChatHandler.ServeHTTP(w, r)
 		case NushiServiceAnswerPermissionProcedure:
 			nushiServiceAnswerPermissionHandler.ServeHTTP(w, r)
 		case NushiServiceAnswerQuestionProcedure:
@@ -491,6 +576,18 @@ func (UnimplementedNushiServiceHandler) ForkChat(context.Context, *connect.Reque
 
 func (UnimplementedNushiServiceHandler) CloseSideChat(context.Context, *connect.Request[v1.CloseSideChatRequest]) (*connect.Response[v1.CloseSideChatResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.CloseSideChat is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) RenameChat(context.Context, *connect.Request[v1.RenameChatRequest]) (*connect.Response[v1.RenameChatResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.RenameChat is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ArchiveChat(context.Context, *connect.Request[v1.ArchiveChatRequest]) (*connect.Response[v1.ArchiveChatResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ArchiveChat is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) RemoveChat(context.Context, *connect.Request[v1.RemoveChatRequest]) (*connect.Response[v1.RemoveChatResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.RemoveChat is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) AnswerPermission(context.Context, *connect.Request[v1.AnswerPermissionRequest]) (*connect.Response[v1.AnswerPermissionResponse], error) {

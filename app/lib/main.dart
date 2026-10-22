@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'changes_view.dart';
 import 'chat.dart';
+import 'chat_menu.dart';
 import 'chat_view.dart';
 import 'daemon.dart';
 import 'sidebar.dart';
@@ -121,6 +122,7 @@ class _ChatPaneState extends State<_ChatPane> {
         listenable: widget.chat,
         builder: (context, _) => _Header(
           widget.chat,
+          widget.daemon,
           changes: _changes,
           onChanges: (v) => setState(() => _changes = v),
         ),
@@ -134,35 +136,71 @@ class _ChatPaneState extends State<_ChatPane> {
   );
 }
 
-/// The chat's header: the agent, its model and status, the folder, and
-/// the Chat | Changes switch.
-class _Header extends StatelessWidget {
-  const _Header(this.chat, {required this.changes, required this.onChanges});
+/// The chat's header: its title (double-click renames it), the agent, its
+/// model and status, the folder, the Chat | Changes switch and the chat's
+/// menu.
+class _Header extends StatefulWidget {
+  const _Header(
+    this.chat,
+    this.daemon, {
+    required this.changes,
+    required this.onChanges,
+  });
 
   final ChatState chat;
+  final Daemon daemon;
   final bool changes;
   final ValueChanged<bool> onChanges;
+
+  @override
+  State<_Header> createState() => _HeaderState();
+}
+
+class _HeaderState extends State<_Header> {
+  bool _renaming = false;
 
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
+    final chat = widget.chat;
     final meta = theme.ui(t.textSecondary, size: 12);
     final model = chat.config.where((o) => o.category == 'model').firstOrNull;
     final modelName = model?.values
         .where((v) => v.value == model.current)
         .firstOrNull
         ?.name;
+    final titleStyle = theme.ui(t.text, size: 13, weight: FontWeight.w600);
     return Container(
       height: 34,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.only(left: 20, right: 8),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: t.borderSubtle)),
       ),
       child: Row(
         children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 320),
+            child: _renaming
+                ? RenameField(
+                    chat: chat,
+                    daemon: widget.daemon,
+                    style: titleStyle,
+                    onDone: () => setState(() => _renaming = false),
+                  )
+                : GestureDetector(
+                    onDoubleTap: () => setState(() => _renaming = true),
+                    child: Text(
+                      chat.title.isEmpty ? 'New chat' : chat.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: titleStyle,
+                    ),
+                  ),
+          ),
+          const SizedBox(width: 14),
           const AgentMonogram(),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Text(
             'Claude',
             style: theme.ui(t.text, size: 12, weight: FontWeight.w500),
@@ -172,9 +210,13 @@ class _Header extends StatelessWidget {
             Text(modelName, style: meta),
           ],
           const SizedBox(width: 10),
-          ChatDot(chat: chat),
-          const SizedBox(width: 5),
-          ChatStatusWord(chat, style: meta),
+          if (chat.archived)
+            Text('archived', style: meta)
+          else ...[
+            ChatDot(chat: chat),
+            const SizedBox(width: 5),
+            ChatStatusWord(chat, style: meta),
+          ],
           const SizedBox(width: 16),
           Expanded(
             child: Text(
@@ -187,9 +229,29 @@ class _Header extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Segmented(
-            value: changes,
+            value: widget.changes,
             segments: const [(false, 'Chat'), (true, 'Changes')],
-            onChanged: onChanges,
+            onChanged: widget.onChanges,
+          ),
+          const SizedBox(width: 4),
+          Builder(
+            builder: (context) => IconButton(
+              tooltip: 'Chat menu',
+              iconSize: 16,
+              color: t.textSecondary,
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.more_horiz),
+              onPressed: () {
+                final box = context.findRenderObject()! as RenderBox;
+                showChatMenu(
+                  context,
+                  box.localToGlobal(box.size.bottomLeft(Offset.zero)),
+                  chat,
+                  widget.daemon,
+                  onRename: () => setState(() => _renaming = true),
+                );
+              },
+            ),
           ),
         ],
       ),

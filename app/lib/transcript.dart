@@ -46,7 +46,9 @@ class Transcript extends StatefulWidget {
 
   final ChatState chat;
   final Daemon daemon;
-  final void Function(String selection) onReply;
+
+  /// Quotes the selection in the composer; null hides the action.
+  final void Function(String selection)? onReply;
 
   /// Opens a side question about the selection; null hides the action.
   final void Function(String selection)? onSide;
@@ -111,7 +113,12 @@ class _TranscriptState extends State<Transcript> {
     final chat = widget.chat;
     final entries = _entries(chat.items);
     _stick();
-    final onSide = widget.onSide;
+    final onReply = widget.onReply, onSide = widget.onSide;
+    final actions = {
+      if (onReply != null) 'Reply': () => onReply(_selected),
+      if (onSide != null && chat.canFork)
+        'Side question': () => onSide(_selected),
+    };
     return LayoutBuilder(
       builder: (context, box) => Stack(
         children: [
@@ -166,16 +173,12 @@ class _TranscriptState extends State<Transcript> {
               ),
             ),
           ),
-          if (_popover case final at?)
+          if (_popover case final at? when actions.isNotEmpty)
             Positioned(
               left: at.dx.clamp(8, box.maxWidth - 240),
               top: at.dy + 10,
               child: _Popover(
-                actions: {
-                  'Reply': () => widget.onReply(_selected),
-                  if (onSide != null && widget.chat.canFork)
-                    'Side question': () => onSide(_selected),
-                },
+                actions: actions,
                 onDone: () => setState(() => _popover = null),
               ),
             ),

@@ -41,6 +41,7 @@ type Launch func(h acp.Handler) (Agent, error)
 type Sessions interface {
 	SaveSession(model.Session) error
 	Sessions() ([]model.Session, error)
+	DeleteSession(id string) error
 }
 
 // Service holds the open chats, all with one agent.
@@ -77,7 +78,8 @@ type chat struct {
 	sides     map[string]*chat // the chat's side chats, by session id
 	parent    *chat            // a side chat's chat
 	started   time.Time        // when the running turn started
-	seq       int64     // the last event's number
+	done      chan struct{}    // closed when the running turn ends
+	seq       int64            // the last event's number
 }
 
 // emitLocked numbers and publishes one of the chat's events. Holding the
@@ -90,19 +92,19 @@ func (c *chat) emitLocked(e model.Event) {
 
 // Get returns a snapshot of a chat.
 func (s *Service) Get(chatID string) (model.Chat, error) {
-	c, err := s.chat(chatID)
+	c, err := s.open(chatID)
 	if err != nil {
 		return model.Chat{}, err
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return model.Chat{
-		Session: c.session,
-		Items:   slices.Clone(c.items),
+		Session:  c.session,
+		Items:    slices.Clone(c.items),
 		Config:   slices.Clone(c.config),
 		Commands: slices.Clone(c.commands),
-		Status:  c.statusLocked(),
-		Seq:     c.seq,
+		Status:   c.statusLocked(),
+		Seq:      c.seq,
 	}, nil
 }
 
@@ -239,7 +241,7 @@ func (s *Service) Prompt(chatID, text string, files []string) error {
 	if c.busy {
 		return errors.New("the agent is still working on the last prompt")
 	}
-	c.busy, c.started = true, time.Now()
+	c.busy, c.started, c.done = true, time.Now(), make(chan struct{})
 	c.addLocked(model.Item{Kind: model.UserMessage, Text: text})
 	c.saveLocked(func(s *model.Session) {
 		if s.Title == "" {
@@ -271,6 +273,7 @@ func (c *chat) run(prompt []acp.ContentBlock) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.busy, c.started = false, time.Time{}
+	close(c.done)
 	switch {
 	case err != nil:
 		c.noticeLocked("error", "The turn failed: "+err.Error())

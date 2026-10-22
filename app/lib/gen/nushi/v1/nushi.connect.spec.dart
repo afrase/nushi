@@ -78,6 +78,33 @@ abstract final class NushiService {
     nushiv1nushi.CloseSideChatResponse.new,
   );
 
+  /// Sets the chat's title; it wins over the agent's. An empty title goes
+  /// back to the agent's.
+  static const renameChat = connect.Spec(
+    '/$name/RenameChat',
+    connect.StreamType.unary,
+    nushiv1nushi.RenameChatRequest.new,
+    nushiv1nushi.RenameChatResponse.new,
+  );
+
+  /// Archives a chat: its turn is cancelled and its agent stops; it stays
+  /// listed, read-only. Unarchiving reopens it (ACP session/load).
+  static const archiveChat = connect.Spec(
+    '/$name/ArchiveChat',
+    connect.StreamType.unary,
+    nushiv1nushi.ArchiveChatRequest.new,
+    nushiv1nushi.ArchiveChatResponse.new,
+  );
+
+  /// Forgets a chat: its turn is cancelled, its agent stops, and Nushi's
+  /// record of it goes. The agent's own history of the session stays.
+  static const removeChat = connect.Spec(
+    '/$name/RemoveChat',
+    connect.StreamType.unary,
+    nushiv1nushi.RemoveChatRequest.new,
+    nushiv1nushi.RemoveChatResponse.new,
+  );
+
   /// Answers a pending permission prompt with one of its options.
   static const answerPermission = connect.Spec(
     '/$name/AnswerPermission',

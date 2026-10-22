@@ -128,6 +128,7 @@ const Chat$json = {
       '6': '.nushi.v1.ChatStatus',
       '10': 'status'
     },
+    {'1': 'archived', '3': 8, '4': 1, '5': 8, '10': 'archived'},
   ],
 };
 
@@ -136,7 +137,8 @@ final $typed_data.Uint8List chatDescriptor = $convert.base64Decode(
     'CgRDaGF0Eg4KAmlkGAEgASgJUgJpZBIUCgVhZ2VudBgCIAEoCVIFYWdlbnQSFgoGZm9sZGVyGA'
     'MgASgJUgZmb2xkZXISFAoFdGl0bGUYBCABKAlSBXRpdGxlEhIKBG1vZGUYBSABKAlSBG1vZGUS'
     'JgoPY3JlYXRlZF91bml4X21zGAYgASgDUg1jcmVhdGVkVW5peE1zEiwKBnN0YXR1cxgHIAEoCz'
-    'IULm51c2hpLnYxLkNoYXRTdGF0dXNSBnN0YXR1cw==');
+    'IULm51c2hpLnYxLkNoYXRTdGF0dXNSBnN0YXR1cxIaCghhcmNoaXZlZBgIIAEoCFIIYXJjaGl2'
+    'ZWQ=');
 
 @$core.Deprecated('Use getChatRequestDescriptor instead')
 const GetChatRequest$json = {
@@ -382,6 +384,73 @@ const CloseSideChatResponse$json = {
 final $typed_data.Uint8List closeSideChatResponseDescriptor =
     $convert.base64Decode('ChVDbG9zZVNpZGVDaGF0UmVzcG9uc2U=');
 
+@$core.Deprecated('Use renameChatRequestDescriptor instead')
+const RenameChatRequest$json = {
+  '1': 'RenameChatRequest',
+  '2': [
+    {'1': 'chat_id', '3': 1, '4': 1, '5': 9, '10': 'chatId'},
+    {'1': 'title', '3': 2, '4': 1, '5': 9, '10': 'title'},
+  ],
+};
+
+/// Descriptor for `RenameChatRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List renameChatRequestDescriptor = $convert.base64Decode(
+    'ChFSZW5hbWVDaGF0UmVxdWVzdBIXCgdjaGF0X2lkGAEgASgJUgZjaGF0SWQSFAoFdGl0bGUYAi'
+    'ABKAlSBXRpdGxl');
+
+@$core.Deprecated('Use renameChatResponseDescriptor instead')
+const RenameChatResponse$json = {
+  '1': 'RenameChatResponse',
+};
+
+/// Descriptor for `RenameChatResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List renameChatResponseDescriptor =
+    $convert.base64Decode('ChJSZW5hbWVDaGF0UmVzcG9uc2U=');
+
+@$core.Deprecated('Use archiveChatRequestDescriptor instead')
+const ArchiveChatRequest$json = {
+  '1': 'ArchiveChatRequest',
+  '2': [
+    {'1': 'chat_id', '3': 1, '4': 1, '5': 9, '10': 'chatId'},
+    {'1': 'archived', '3': 2, '4': 1, '5': 8, '10': 'archived'},
+  ],
+};
+
+/// Descriptor for `ArchiveChatRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List archiveChatRequestDescriptor = $convert.base64Decode(
+    'ChJBcmNoaXZlQ2hhdFJlcXVlc3QSFwoHY2hhdF9pZBgBIAEoCVIGY2hhdElkEhoKCGFyY2hpdm'
+    'VkGAIgASgIUghhcmNoaXZlZA==');
+
+@$core.Deprecated('Use archiveChatResponseDescriptor instead')
+const ArchiveChatResponse$json = {
+  '1': 'ArchiveChatResponse',
+};
+
+/// Descriptor for `ArchiveChatResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List archiveChatResponseDescriptor =
+    $convert.base64Decode('ChNBcmNoaXZlQ2hhdFJlc3BvbnNl');
+
+@$core.Deprecated('Use removeChatRequestDescriptor instead')
+const RemoveChatRequest$json = {
+  '1': 'RemoveChatRequest',
+  '2': [
+    {'1': 'chat_id', '3': 1, '4': 1, '5': 9, '10': 'chatId'},
+  ],
+};
+
+/// Descriptor for `RemoveChatRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List removeChatRequestDescriptor = $convert.base64Decode(
+    'ChFSZW1vdmVDaGF0UmVxdWVzdBIXCgdjaGF0X2lkGAEgASgJUgZjaGF0SWQ=');
+
+@$core.Deprecated('Use removeChatResponseDescriptor instead')
+const RemoveChatResponse$json = {
+  '1': 'RemoveChatResponse',
+};
+
+/// Descriptor for `RemoveChatResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List removeChatResponseDescriptor =
+    $convert.base64Decode('ChJSZW1vdmVDaGF0UmVzcG9uc2U=');
+
 @$core.Deprecated('Use answerPermissionRequestDescriptor instead')
 const AnswerPermissionRequest$json = {
   '1': 'AnswerPermissionRequest',
@@ -589,6 +658,7 @@ const EventsResponse$json = {
       '9': 0,
       '10': 'commands'
     },
+    {'1': 'removed', '3': 8, '4': 1, '5': 8, '9': 0, '10': 'removed'},
   ],
   '8': [
     {'1': 'kind'},
@@ -602,7 +672,7 @@ final $typed_data.Uint8List eventsResponseDescriptor = $convert.base64Decode(
     'cxgDIAEoCzIULm51c2hpLnYxLkNoYXRTdGF0dXNIAFIGc3RhdHVzEi4KBmNvbmZpZxgEIAEoCz'
     'IULm51c2hpLnYxLkNoYXRDb25maWdIAFIGY29uZmlnEiQKBGNoYXQYBSABKAsyDi5udXNoaS52'
     'MS5DaGF0SABSBGNoYXQSNAoIY29tbWFuZHMYByABKAsyFi5udXNoaS52MS5DaGF0Q29tbWFuZH'
-    'NIAFIIY29tbWFuZHNCBgoEa2luZA==');
+    'NIAFIIY29tbWFuZHMSGgoHcmVtb3ZlZBgIIAEoCEgAUgdyZW1vdmVkQgYKBGtpbmQ=');
 
 @$core.Deprecated('Use chatConfigDescriptor instead')
 const ChatConfig$json = {
@@ -869,6 +939,21 @@ const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
       '3': '.nushi.v1.CloseSideChatResponse'
     },
     {
+      '1': 'RenameChat',
+      '2': '.nushi.v1.RenameChatRequest',
+      '3': '.nushi.v1.RenameChatResponse'
+    },
+    {
+      '1': 'ArchiveChat',
+      '2': '.nushi.v1.ArchiveChatRequest',
+      '3': '.nushi.v1.ArchiveChatResponse'
+    },
+    {
+      '1': 'RemoveChat',
+      '2': '.nushi.v1.RemoveChatRequest',
+      '3': '.nushi.v1.RemoveChatResponse'
+    },
+    {
       '1': 'AnswerPermission',
       '2': '.nushi.v1.AnswerPermissionRequest',
       '3': '.nushi.v1.AnswerPermissionResponse'
@@ -931,6 +1016,12 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.ForkChatResponse': ForkChatResponse$json,
   '.nushi.v1.CloseSideChatRequest': CloseSideChatRequest$json,
   '.nushi.v1.CloseSideChatResponse': CloseSideChatResponse$json,
+  '.nushi.v1.RenameChatRequest': RenameChatRequest$json,
+  '.nushi.v1.RenameChatResponse': RenameChatResponse$json,
+  '.nushi.v1.ArchiveChatRequest': ArchiveChatRequest$json,
+  '.nushi.v1.ArchiveChatResponse': ArchiveChatResponse$json,
+  '.nushi.v1.RemoveChatRequest': RemoveChatRequest$json,
+  '.nushi.v1.RemoveChatResponse': RemoveChatResponse$json,
   '.nushi.v1.AnswerPermissionRequest': AnswerPermissionRequest$json,
   '.nushi.v1.AnswerPermissionResponse': AnswerPermissionResponse$json,
   '.nushi.v1.AnswerQuestionRequest': AnswerQuestionRequest$json,
@@ -961,6 +1052,10 @@ final $typed_data.Uint8List nushiServiceDescriptor = $convert.base64Decode(
     'QaHC5udXNoaS52MS5DYW5jZWxUdXJuUmVzcG9uc2USQQoIRm9ya0NoYXQSGS5udXNoaS52MS5G'
     'b3JrQ2hhdFJlcXVlc3QaGi5udXNoaS52MS5Gb3JrQ2hhdFJlc3BvbnNlElAKDUNsb3NlU2lkZU'
     'NoYXQSHi5udXNoaS52MS5DbG9zZVNpZGVDaGF0UmVxdWVzdBofLm51c2hpLnYxLkNsb3NlU2lk'
+    'ZUNoYXRSZXNwb25zZRJHCgpSZW5hbWVDaGF0EhsubnVzaGkudjEuUmVuYW1lQ2hhdFJlcXVlc3'
+    'QaHC5udXNoaS52MS5SZW5hbWVDaGF0UmVzcG9uc2USSgoLQXJjaGl2ZUNoYXQSHC5udXNoaS52'
+    'MS5BcmNoaXZlQ2hhdFJlcXVlc3QaHS5udXNoaS52MS5BcmNoaXZlQ2hhdFJlc3BvbnNlEkcKCl'
+    'JlbW92ZUNoYXQSGy5udXNoaS52MS5SZW1vdmVDaGF0UmVxdWVzdBocLm51c2hpLnYxLlJlbW92'
     'ZUNoYXRSZXNwb25zZRJZChBBbnN3ZXJQZXJtaXNzaW9uEiEubnVzaGkudjEuQW5zd2VyUGVybW'
     'lzc2lvblJlcXVlc3QaIi5udXNoaS52MS5BbnN3ZXJQZXJtaXNzaW9uUmVzcG9uc2USUwoOQW5z'
     'd2VyUXVlc3Rpb24SHy5udXNoaS52MS5BbnN3ZXJRdWVzdGlvblJlcXVlc3QaIC5udXNoaS52MS'

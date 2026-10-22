@@ -86,6 +86,10 @@ class Daemon extends ChangeNotifier {
             } else if (e.hasChat()) {
               _chat(e.chat);
               notifyListeners();
+            } else if (e.removed) {
+              chats.remove(e.chatId);
+              if (selectedId == e.chatId) selectedId = null;
+              notifyListeners();
             } else {
               chats[e.chatId]?.apply(e);
             }
@@ -120,10 +124,19 @@ class Daemon extends ChangeNotifier {
     }
   }
 
-  ChatState _chat(Chat c) => (chats[c.id] ??= ChatState(c.id, c.folder))
-    ..title = c.title
-    ..created = DateTime.fromMillisecondsSinceEpoch(c.createdUnixMs.toInt())
-    ..status(c.status);
+  ChatState _chat(Chat c) {
+    final chat = chats[c.id] ??= ChatState(c.id, c.folder);
+    if (chat.archived && !c.archived) {
+      // Unarchived: the daemon replays it from scratch.
+      chat.unload();
+      if (chat.id == selectedId) unawaited(_load(chat));
+    }
+    return chat
+      ..title = c.title
+      ..archived = c.archived
+      ..created = DateTime.fromMillisecondsSinceEpoch(c.createdUnixMs.toInt())
+      ..status(c.status);
+  }
 
   void select(String chatId) {
     selectedId = chatId;
@@ -137,6 +150,15 @@ class Daemon extends ChangeNotifier {
     chats[resp.chatId] ??= ChatState(resp.chatId, folder);
     select(resp.chatId);
   }
+
+  Future<void> renameChat(String chatId, String title) =>
+      client.renameChat(RenameChatRequest(chatId: chatId, title: title));
+
+  Future<void> archiveChat(String chatId, {required bool archived}) => client
+      .archiveChat(ArchiveChatRequest(chatId: chatId, archived: archived));
+
+  Future<void> removeChat(String chatId) =>
+      client.removeChat(RemoveChatRequest(chatId: chatId));
 
   Future<void> sendPrompt(String chatId, String text, List<String> files) =>
       client.sendPrompt(

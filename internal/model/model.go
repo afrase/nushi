@@ -9,9 +9,12 @@ type Session struct {
 	ID      string // the agent's session id
 	Agent   string
 	Folder  string
-	Title   string
+	Title   string // the agent's title, or else the first prompt's first line
+	Name    string // the title the user set, which wins over Title
 	Mode    string // the mode it was last in
 	Created time.Time
+	// Archived chats have no agent running; they reopen when unarchived.
+	Archived bool
 }
 
 type ItemKind int
@@ -94,8 +97,8 @@ type Field struct {
 	Values                 []string
 }
 
-// Event is a change to one chat. Exactly one of Item, Status, Config and
-// Session is set.
+// Event is a change to one chat. Exactly one of Item, Status, Config,
+// Session, Commands and Removed is set.
 type Event struct {
 	ChatID string
 	// Seq numbers the chat's events from 1; a Chat snapshot says which
@@ -110,6 +113,7 @@ type Event struct {
 	Config []ConfigOption
 	// Commands, when not nil, are the agent's slash commands, all of them.
 	Commands []Command
+	Removed  bool // the chat was removed
 }
 
 // Command is a slash command the agent offers.
@@ -132,8 +136,8 @@ type ConfigValue struct {
 
 // Chat is a snapshot of a chat: everything its events have built so far.
 type Chat struct {
-	Session Session
-	Items   []Item
+	Session  Session
+	Items    []Item
 	Config   []ConfigOption
 	Commands []Command
 	Status   Status

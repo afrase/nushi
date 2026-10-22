@@ -156,6 +156,63 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Sets the chat's title; it wins over the agent's. An empty title goes
+  /// back to the agent's.
+  Future<nushiv1nushi.RenameChatResponse> renameChat(
+    nushiv1nushi.RenameChatRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.renameChat,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Archives a chat: its turn is cancelled and its agent stops; it stays
+  /// listed, read-only. Unarchiving reopens it (ACP session/load).
+  Future<nushiv1nushi.ArchiveChatResponse> archiveChat(
+    nushiv1nushi.ArchiveChatRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.archiveChat,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Forgets a chat: its turn is cancelled, its agent stops, and Nushi's
+  /// record of it goes. The agent's own history of the session stays.
+  Future<nushiv1nushi.RemoveChatResponse> removeChat(
+    nushiv1nushi.RemoveChatRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.removeChat,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Answers a pending permission prompt with one of its options.
   Future<nushiv1nushi.AnswerPermissionResponse> answerPermission(
     nushiv1nushi.AnswerPermissionRequest input, {

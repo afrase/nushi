@@ -2,6 +2,7 @@
 package api
 
 import (
+	"cmp"
 	"context"
 	"crypto/subtle"
 	"fmt"
@@ -19,7 +20,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 13
+const Version = 14
 
 type server struct {
 	chats *chats.Service
@@ -108,6 +109,27 @@ func (s *server) CloseSideChat(ctx context.Context, req *connect.Request[nushiv1
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 	return connect.NewResponse(&nushiv1.CloseSideChatResponse{}), nil
+}
+
+func (s *server) RenameChat(_ context.Context, req *connect.Request[nushiv1.RenameChatRequest]) (*connect.Response[nushiv1.RenameChatResponse], error) {
+	if err := s.chats.Rename(req.Msg.ChatId, req.Msg.Title); err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, err)
+	}
+	return connect.NewResponse(&nushiv1.RenameChatResponse{}), nil
+}
+
+func (s *server) ArchiveChat(_ context.Context, req *connect.Request[nushiv1.ArchiveChatRequest]) (*connect.Response[nushiv1.ArchiveChatResponse], error) {
+	if err := s.chats.Archive(req.Msg.ChatId, req.Msg.Archived); err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	return connect.NewResponse(&nushiv1.ArchiveChatResponse{}), nil
+}
+
+func (s *server) RemoveChat(_ context.Context, req *connect.Request[nushiv1.RemoveChatRequest]) (*connect.Response[nushiv1.RemoveChatResponse], error) {
+	if err := s.chats.Remove(req.Msg.ChatId); err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	return connect.NewResponse(&nushiv1.RemoveChatResponse{}), nil
 }
 
 func (s *server) AnswerPermission(_ context.Context, req *connect.Request[nushiv1.AnswerPermissionRequest]) (*connect.Response[nushiv1.AnswerPermissionResponse], error) {
@@ -208,6 +230,8 @@ func toProto(e model.Event) *nushiv1.EventsResponse {
 		out.Kind = &nushiv1.EventsResponse_Config{Config: &nushiv1.ChatConfig{Options: configProto(e.Config)}}
 	case e.Status != nil:
 		out.Kind = &nushiv1.EventsResponse_Status{Status: statusProto(*e.Status)}
+	case e.Removed:
+		out.Kind = &nushiv1.EventsResponse_Removed{Removed: true}
 	case e.Commands != nil:
 		out.Kind = &nushiv1.EventsResponse_Commands{Commands: &nushiv1.ChatCommands{Commands: commandsProto(e.Commands)}}
 	}
@@ -270,5 +294,6 @@ func configProto(opts []model.ConfigOption) []*nushiv1.ConfigOption {
 }
 
 func chatProto(s model.Session) *nushiv1.Chat {
-	return &nushiv1.Chat{Id: s.ID, Agent: s.Agent, Folder: s.Folder, Title: s.Title, Mode: s.Mode, CreatedUnixMs: s.Created.UnixMilli()}
+	return &nushiv1.Chat{Id: s.ID, Agent: s.Agent, Folder: s.Folder, Title: cmp.Or(s.Name, s.Title), Mode: s.Mode,
+		CreatedUnixMs: s.Created.UnixMilli(), Archived: s.Archived}
 }

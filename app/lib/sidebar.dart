@@ -1,13 +1,16 @@
 import 'package:file_selector/file_selector.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import 'chat.dart';
+import 'chat_menu.dart';
 import 'daemon.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
 
 /// The chats, grouped by folder: the folder with the newest chat first, and
-/// in each folder the newest chat first.
+/// in each folder the newest chat first. Archived chats are in a collapsed
+/// group at the bottom.
 class Sidebar extends StatefulWidget {
   const Sidebar({super.key, required this.daemon});
 
@@ -19,6 +22,7 @@ class Sidebar extends StatefulWidget {
 
 class _SidebarState extends State<Sidebar> {
   String? _starting; // the folder a chat is starting in
+  bool _showArchived = false;
 
   Future<void> _start(String? folder) async {
     folder ??= await getDirectoryPath(confirmButtonText: 'Start chat');
@@ -43,8 +47,12 @@ class _SidebarState extends State<Sidebar> {
     final groups = <String, List<ChatState>>{};
     final byNewest = widget.daemon.chats.values.toList()
       ..sort((a, b) => b.created.compareTo(a.created));
+    final archived = [
+      for (final c in byNewest)
+        if (c.archived) c,
+    ];
     for (final c in byNewest) {
-      (groups[c.folder] ??= []).add(c);
+      if (!c.archived) (groups[c.folder] ??= []).add(c);
     }
     if (_starting != null) groups.putIfAbsent(_starting!, () => []);
     return DecoratedBox(
@@ -84,6 +92,41 @@ class _SidebarState extends State<Sidebar> {
                       ),
                     ),
                   for (final c in chats) _ChatRow(c, daemon: widget.daemon),
+                ],
+                if (archived.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(6, 12, 6, 2),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(NushiTheme.control),
+                      onTap: () =>
+                          setState(() => _showArchived = !_showArchived),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 4,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              _showArchived
+                                  ? Icons.expand_more
+                                  : Icons.chevron_right,
+                              size: 16,
+                              color: t.textMuted,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Archived  ${archived.length}',
+                              style: theme.ui(t.textSecondary, size: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (_showArchived)
+                    for (final c in archived)
+                      _ChatRow(c, daemon: widget.daemon),
                 ],
               ],
             ),
@@ -141,16 +184,37 @@ class _FolderHeader extends StatelessWidget {
   }
 }
 
-class _ChatRow extends StatelessWidget {
+/// A chat in the list: click opens it, double-click renames it, and a
+/// right-click opens its menu.
+class _ChatRow extends StatefulWidget {
   const _ChatRow(this.chat, {required this.daemon});
 
   final ChatState chat;
   final Daemon daemon;
 
   @override
+  State<_ChatRow> createState() => _ChatRowState();
+}
+
+class _ChatRowState extends State<_ChatRow> {
+  bool _renaming = false;
+  DateTime _lastTap = DateTime(0);
+
+  void _tap() {
+    final now = DateTime.now();
+    if (now.difference(_lastTap) < kDoubleTapTimeout) {
+      setState(() => _renaming = true);
+    }
+    _lastTap = now;
+    widget.daemon.select(widget.chat.id);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
+    final chat = widget.chat;
+    final daemon = widget.daemon;
     return ListenableBuilder(
       listenable: chat,
       builder: (context, _) => Padding(
@@ -160,23 +224,46 @@ class _ChatRow extends StatelessWidget {
           borderRadius: BorderRadius.circular(NushiTheme.control),
           child: InkWell(
             borderRadius: BorderRadius.circular(NushiTheme.control),
-            onTap: () => daemon.select(chat.id),
+            onTap: _tap,
+            onSecondaryTapUp: (d) => showChatMenu(
+              context,
+              d.globalPosition,
+              chat,
+              daemon,
+              onRename: () => setState(() => _renaming = true),
+            ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+              padding: EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: _renaming ? 1 : 5,
+              ),
               child: Row(
                 children: [
                   ChatDot(chat: chat),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
-                      chat.title.isEmpty ? 'New chat' : chat.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.ui(t.text),
-                    ),
+                    child: _renaming
+                        ? RenameField(
+                            chat: chat,
+                            daemon: daemon,
+                            onDone: () => setState(() => _renaming = false),
+                          )
+                        : Text(
+                            chat.title.isEmpty ? 'New chat' : chat.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.ui(
+                              chat.archived ? t.textSecondary : t.text,
+                            ),
+                          ),
                   ),
                   if (chat.waiting)
                     Text('needs you', style: theme.ui(t.needs, size: 11.5)),
+                  if (chat.archived)
+                    Text(
+                      chat.folder.split('/').last,
+                      style: theme.ui(t.textMuted, size: 11.5),
+                    ),
                 ],
               ),
             ),

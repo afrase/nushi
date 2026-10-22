@@ -292,3 +292,68 @@ func TestStopCancelsAWaitingPrompt(t *testing.T) {
 		t.Errorf("items = %v, status = %v\nwant %s", got, snap.Status, want)
 	}
 }
+
+func TestRenameArchiveAndRemove(t *testing.T) {
+	ctx := context.Background()
+	dataDir, history := t.TempDir(), &acptest.History{}
+	d := startDaemon(t, dataDir, history)
+	a := open(t, d)
+	start := func() string {
+		id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
+		must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "hello"})))
+		a.waitFor("the reply", idle)
+		return id
+	}
+	list := func() map[string]*nushiv1.Chat {
+		out := map[string]*nushiv1.Chat{}
+		for _, c := range must(a.c.ListChats(ctx, connect.NewRequest(&nushiv1.ListChatsRequest{}))).Chats {
+			out[c.Id] = c
+		}
+		return out
+	}
+	kept, gone := start(), start()
+	must(a.c.RenameChat(ctx, connect.NewRequest(&nushiv1.RenameChatRequest{ChatId: kept, Title: "Greeting"})))
+
+	// Archiving cancels the turn waiting on the user and stops the agent;
+	// the transcript stays readable, but takes no prompts.
+	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: kept, Text: "ask permission"})))
+	a.waitFor("the permission prompt", pendingPermission)
+	must(a.c.ArchiveChat(ctx, connect.NewRequest(&nushiv1.ArchiveChatRequest{ChatId: kept, Archived: true})))
+	if c := list()[kept]; !c.Archived || c.Title != "Greeting" || c.Status.Busy {
+		t.Fatalf("archived chat = %v", c)
+	}
+	snap := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: kept})))
+	if !strings.HasSuffix(transcript(snap.Items), "PERMISSION::cancelled\nNOTICE:Stopped:cancelled") || snap.Status.Busy {
+		t.Fatalf("archived transcript:\n%s", transcript(snap.Items))
+	}
+	if _, err := a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: kept, Text: "hi"})); err == nil {
+		t.Error("an archived chat took a prompt")
+	}
+
+	// Removing forgets the chat in Nushi.
+	must(a.c.RemoveChat(ctx, connect.NewRequest(&nushiv1.RemoveChatRequest{ChatId: gone})))
+	a.waitFor("the removal", func(e *nushiv1.EventsResponse) bool { return e.ChatId == gone && e.GetRemoved() })
+	if _, ok := list()[gone]; ok {
+		t.Error("the removed chat is still listed")
+	}
+
+	// After a restart the chat is still archived and renamed; unarchived,
+	// it is replayed and carries on.
+	d.stop()
+	d = startDaemon(t, dataDir, history)
+	a = open(t, d)
+	if c := list(); len(c) != 1 || !c[kept].Archived || c[kept].Title != "Greeting" {
+		t.Fatalf("chats after restart = %v", c)
+	}
+	must(a.c.ArchiveChat(ctx, connect.NewRequest(&nushiv1.ArchiveChatRequest{ChatId: kept, Archived: false})))
+	items := a.follow(kept, must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: kept}))))
+	if !strings.HasPrefix(transcript(items), "USER_MESSAGE:hello:\nAGENT_MESSAGE:You said: hello:") {
+		t.Errorf("unarchived transcript:\n%s", transcript(items))
+	}
+	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: kept, Text: "again"})))
+	a.waitFor("the reply after unarchiving", idle)
+	must(a.c.RenameChat(ctx, connect.NewRequest(&nushiv1.RenameChatRequest{ChatId: kept})))
+	if c := list()[kept]; c.Archived || c.Title != "hello" {
+		t.Errorf("chat = %v, want the first prompt's title back", c)
+	}
+}

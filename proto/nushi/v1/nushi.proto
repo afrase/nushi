@@ -24,6 +24,15 @@ service NushiService {
   // CloseSideChat. Its items and status come as events like any chat's.
   rpc ForkChat(ForkChatRequest) returns (ForkChatResponse);
   rpc CloseSideChat(CloseSideChatRequest) returns (CloseSideChatResponse);
+  // Sets the chat's title; it wins over the agent's. An empty title goes
+  // back to the agent's.
+  rpc RenameChat(RenameChatRequest) returns (RenameChatResponse);
+  // Archives a chat: its turn is cancelled and its agent stops; it stays
+  // listed, read-only. Unarchiving reopens it (ACP session/load).
+  rpc ArchiveChat(ArchiveChatRequest) returns (ArchiveChatResponse);
+  // Forgets a chat: its turn is cancelled, its agent stops, and Nushi's
+  // record of it goes. The agent's own history of the session stays.
+  rpc RemoveChat(RemoveChatRequest) returns (RemoveChatResponse);
   // Answers a pending permission prompt with one of its options.
   rpc AnswerPermission(AnswerPermissionRequest) returns (AnswerPermissionResponse);
   // Answers a pending question, or declines it.
@@ -61,12 +70,15 @@ message Chat {
   string id = 1;
   string agent = 2;
   string folder = 3;
+  // The title the user set, or else the agent's.
   string title = 4;
   // The mode it was last in.
   string mode = 5;
   int64 created_unix_ms = 6;
   // Whether it works or waits on the user, for a list of chats.
   ChatStatus status = 7;
+  // Archived chats have no agent running and take no prompts.
+  bool archived = 8;
 }
 
 message GetChatRequest {
@@ -147,6 +159,27 @@ message CloseSideChatRequest {
 
 message CloseSideChatResponse {}
 
+message RenameChatRequest {
+  string chat_id = 1;
+  string title = 2;
+}
+
+message RenameChatResponse {}
+
+message ArchiveChatRequest {
+  string chat_id = 1;
+  // False unarchives it.
+  bool archived = 2;
+}
+
+message ArchiveChatResponse {}
+
+message RemoveChatRequest {
+  string chat_id = 1;
+}
+
+message RemoveChatResponse {}
+
 message AnswerPermissionRequest {
   string chat_id = 1;
   string item_id = 2;
@@ -212,10 +245,12 @@ message EventsResponse {
     ItemEvent item = 2;
     ChatStatus status = 3;
     ChatConfig config = 4;
-    // The chat was opened, or its title or mode changed.
+    // The chat was opened, or its title, mode or archived state changed.
     Chat chat = 5;
     // The agent's slash commands, all of them.
     ChatCommands commands = 7;
+    // The chat was removed (RemoveChat).
+    bool removed = 8;
   }
 }
 
