@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
 	"sync"
 
@@ -20,8 +22,8 @@ type Agent interface {
 	Close() error
 }
 
-// Launch starts an agent in folder; its session updates go to h.
-type Launch func(folder string, h acp.Handler) (Agent, error)
+// Launch starts an agent; its session updates go to h.
+type Launch func(h acp.Handler) (Agent, error)
 
 // Service holds the open chats.
 type Service struct {
@@ -49,8 +51,11 @@ type chat struct {
 
 // Start launches an agent in folder and opens a session there.
 func (s *Service) Start(ctx context.Context, folder string) (string, error) {
+	if fi, err := os.Stat(folder); err != nil || !fi.IsDir() || !filepath.IsAbs(folder) {
+		return "", fmt.Errorf("%q is not an absolute path to a folder", folder)
+	}
 	c := &chat{publish: s.publish}
-	agent, err := s.launch(folder, c)
+	agent, err := s.launch(c)
 	if err != nil {
 		return "", fmt.Errorf("start agent: %w", err)
 	}
@@ -112,27 +117,14 @@ func (c *chat) run(text string) {
 	c.mu.Unlock()
 }
 
-// SessionUpdate turns the agent's updates into transcript items.
-func (c *chat) SessionUpdate(n acp.SessionNotification) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	u := n.Update
-	if u.SessionUpdate != "agent_message_chunk" || u.AgentMessageChunk.Content.Text == nil {
-		return
-	}
-	text := u.AgentMessageChunk.Content.Text.Text
-	id := string(u.AgentMessageChunk.MessageID)
-	if id == "" {
-		id = c.lastID
-	}
+// itemLocked returns the item with id, or nil.
+func (c *chat) itemLocked(id string) *model.Item {
 	for i := range c.items {
 		if c.items[i].ID == id {
-			c.items[i].Text += text
-			c.publish(model.Event{ChatID: c.id, Item: &model.Item{ID: id, Kind: model.AgentMessage, Text: text}, Append: true})
-			return
+			return &c.items[i]
 		}
 	}
-	c.lastID = c.addLocked(model.Item{ID: id, Kind: model.AgentMessage, Text: text})
+	return nil
 }
 
 // addLocked appends an item, giving it an id if it has none, and publishes it.

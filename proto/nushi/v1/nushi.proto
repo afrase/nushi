@@ -51,13 +51,20 @@ enum ItemKind {
   ITEM_KIND_UNSPECIFIED = 0;
   ITEM_KIND_USER_MESSAGE = 1;
   ITEM_KIND_AGENT_MESSAGE = 2;
+  ITEM_KIND_TOOL_CALL = 3;
 }
 
 // One entry of a chat's transcript.
 message Item {
   string id = 1;
   ItemKind kind = 2;
+  // The message, or a tool call's output as markdown.
   string text = 3;
+  // A tool call's title, kind and status, as ACP names them ("execute",
+  // "completed", ...).
+  string title = 4;
+  string tool_kind = 5;
+  string status = 6;
 }
 
 message ItemEvent {

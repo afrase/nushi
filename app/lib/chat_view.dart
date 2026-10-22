@@ -22,8 +22,10 @@ class ChatView extends StatelessWidget {
             reverse: true, // keeps the newest item in view while it streams
             padding: const EdgeInsets.all(16),
             itemCount: chat.items.length,
-            itemBuilder: (context, i) =>
-                _ItemView(chat.items[chat.items.length - 1 - i]),
+            itemBuilder: (context, i) {
+              final item = chat.items[chat.items.length - 1 - i];
+              return _ItemView(item, key: ValueKey(item.id));
+            },
           ),
         ),
         if (chat.error.isNotEmpty)
@@ -42,14 +44,14 @@ class ChatView extends StatelessWidget {
 }
 
 class _ItemView extends StatelessWidget {
-  const _ItemView(this.item);
+  const _ItemView(this.item, {super.key});
 
   final Item item;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     if (item.kind == ItemKind.ITEM_KIND_USER_MESSAGE) {
+      final scheme = Theme.of(context).colorScheme;
       return Align(
         alignment: Alignment.centerRight,
         child: Container(
@@ -64,20 +66,90 @@ class _ItemView extends StatelessWidget {
         ),
       );
     }
-    final theme = Theme.of(context);
+    if (item.kind == ItemKind.ITEM_KIND_TOOL_CALL) return _ToolCallView(item);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      child: MarkdownBody(
-        data: item.text,
-        selectable: true,
-        styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
-          code: const TextStyle(fontFamily: 'Menlo', fontSize: 13),
-          codeblockDecoration: BoxDecoration(
-            color: scheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(6),
-          ),
+      child: _Markdown(item.text),
+    );
+  }
+}
+
+class _Markdown extends StatelessWidget {
+  const _Markdown(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return MarkdownBody(
+      data: text,
+      selectable: true,
+      styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
+        code: const TextStyle(fontFamily: 'Menlo', fontSize: 13),
+        codeblockDecoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(6),
         ),
       ),
+    );
+  }
+}
+
+/// A tool call: one line with its kind, title and status, and its output
+/// when expanded.
+class _ToolCallView extends StatelessWidget {
+  const _ToolCallView(this.item);
+
+  final Item item;
+
+  static const _icons = {
+    'read': Icons.description_outlined,
+    'edit': Icons.edit_outlined,
+    'delete': Icons.delete_outline,
+    'move': Icons.drive_file_move_outline,
+    'search': Icons.search,
+    'execute': Icons.terminal,
+    'think': Icons.psychology_outlined,
+    'fetch': Icons.language,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final status = switch (item.status) {
+      'completed' => Icon(Icons.check, size: 16, color: scheme.primary),
+      'failed' => Icon(Icons.close, size: 16, color: scheme.error),
+      _ => const SizedBox.square(
+        dimension: 12,
+        child: CircularProgressIndicator(strokeWidth: 1.5),
+      ),
+    };
+    return ExpansionTile(
+      dense: true,
+      tilePadding: EdgeInsets.zero,
+      childrenPadding: const EdgeInsets.only(left: 32, bottom: 8),
+      expandedAlignment: Alignment.centerLeft,
+      shape: const Border(),
+      leading: Icon(_icons[item.toolKind] ?? Icons.build_outlined, size: 18),
+      title: Row(
+        children: [
+          Flexible(
+            child: Text(
+              item.title,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontFamily: 'Menlo', fontSize: 13),
+            ),
+          ),
+          const SizedBox(width: 8),
+          status,
+        ],
+      ),
+      children: [
+        item.text.isEmpty
+            ? Text('No output', style: TextStyle(color: scheme.outline))
+            : _Markdown(item.text),
+      ],
     );
   }
 }

@@ -53,9 +53,9 @@ func TestPromptStreamsTheReply(t *testing.T) {
 		}
 	}
 	agent := &fakeAgent{updates: []acp.SessionUpdate{chunk("m1", "Hel"), chunk("m1", "lo"), chunk("", "!"), chunk("m2", "Bye")}}
-	svc := New(func(_ string, h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, publish)
+	svc := New(func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, publish)
 
-	id, err := svc.Start(context.Background(), "/tmp")
+	id, err := svc.Start(context.Background(), t.TempDir())
 	if err != nil || id != "s1" {
 		t.Fatalf("Start = %q, %v", id, err)
 	}
@@ -81,5 +81,29 @@ func TestPromptStreamsTheReply(t *testing.T) {
 	}
 	if len(got) != 7 || appends != 2 || !got[1].Status.Busy {
 		t.Errorf("events = %+v", got)
+	}
+}
+
+func TestToolCallUpdatesMergeIntoOneItem(t *testing.T) {
+	text := func(s string) []acp.ToolCallContent {
+		return []acp.ToolCallContent{{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: s}}}}}
+	}
+	c := &chat{id: "s1", publish: func(model.Event) {}}
+	for _, u := range []acp.SessionUpdate{
+		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "Terminal", Kind: "execute", Status: "pending"}},
+		{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Title: "ls -la", Content: text("List files")}},
+		{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed", Content: text("a.txt")}},
+		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t2", Title: "Edit", Kind: "edit", Content: []acp.ToolCallContent{
+			{Type: "diff", Diff: &acp.Diff{Path: "a.txt", OldText: "one\ntwo\n", NewText: "three"}},
+		}}},
+	} {
+		c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: u})
+	}
+	want := []model.Item{
+		{ID: "t1", Kind: model.ToolCall, Title: "ls -la", ToolKind: "execute", Status: "completed", Text: "a.txt"},
+		{ID: "t2", Kind: model.ToolCall, Title: "Edit", ToolKind: "edit", Text: "`a.txt`\n\n```diff\n-one\n-two\n+three\n```"},
+	}
+	if !slices.Equal(c.items, want) {
+		t.Errorf("items = %+v\nwant %+v", c.items, want)
 	}
 }

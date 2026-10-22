@@ -74,6 +74,7 @@ func (s *server) Events(ctx context.Context, _ *connect.Request[nushiv1.EventsRe
 var itemKinds = map[model.ItemKind]nushiv1.ItemKind{
 	model.UserMessage:  nushiv1.ItemKind_ITEM_KIND_USER_MESSAGE,
 	model.AgentMessage: nushiv1.ItemKind_ITEM_KIND_AGENT_MESSAGE,
+	model.ToolCall:     nushiv1.ItemKind_ITEM_KIND_TOOL_CALL,
 }
 
 func toProto(e model.Event) *nushiv1.EventsResponse {
@@ -81,7 +82,8 @@ func toProto(e model.Event) *nushiv1.EventsResponse {
 	switch {
 	case e.Item != nil:
 		out.Kind = &nushiv1.EventsResponse_Item{Item: &nushiv1.ItemEvent{
-			Item:   &nushiv1.Item{Id: e.Item.ID, Kind: itemKinds[e.Item.Kind], Text: e.Item.Text},
+			Item: &nushiv1.Item{Id: e.Item.ID, Kind: itemKinds[e.Item.Kind], Text: e.Item.Text,
+				Title: e.Item.Title, ToolKind: e.Item.ToolKind, Status: e.Item.Status},
 			Append: e.Append,
 		}}
 	case e.Status != nil:

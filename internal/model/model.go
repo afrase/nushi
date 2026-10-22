@@ -6,13 +6,20 @@ type ItemKind int
 const (
 	UserMessage ItemKind = iota + 1
 	AgentMessage
+	ToolCall
 )
 
 // Item is one entry of a chat's transcript.
 type Item struct {
 	ID   string
 	Kind ItemKind
+	// Text is the message, or a tool call's output as markdown.
 	Text string
+	// Title, ToolKind and Status describe a tool call, in the agent's words
+	// (ToolKind and Status use ACP's values, such as "execute" and "completed").
+	Title    string
+	ToolKind string
+	Status   string
 }
 
 // Event is a change to one chat. Exactly one of Item and Status is set.

@@ -21,15 +21,18 @@ class ItemKind extends $pb.ProtobufEnum {
       ItemKind._(1, _omitEnumNames ? '' : 'ITEM_KIND_USER_MESSAGE');
   static const ItemKind ITEM_KIND_AGENT_MESSAGE =
       ItemKind._(2, _omitEnumNames ? '' : 'ITEM_KIND_AGENT_MESSAGE');
+  static const ItemKind ITEM_KIND_TOOL_CALL =
+      ItemKind._(3, _omitEnumNames ? '' : 'ITEM_KIND_TOOL_CALL');
 
   static const $core.List<ItemKind> values = <ItemKind>[
     ITEM_KIND_UNSPECIFIED,
     ITEM_KIND_USER_MESSAGE,
     ITEM_KIND_AGENT_MESSAGE,
+    ITEM_KIND_TOOL_CALL,
   ];
 
   static final $core.List<ItemKind?> _byValue =
-      $pb.ProtobufEnum.$_initByValueList(values, 2);
+      $pb.ProtobufEnum.$_initByValueList(values, 3);
   static ItemKind? valueOf($core.int value) =>
       value < 0 || value >= _byValue.length ? null : _byValue[value];
 

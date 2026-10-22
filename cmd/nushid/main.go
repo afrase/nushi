@@ -53,7 +53,7 @@ func run() error {
 	log.Printf("nushid listening on %s", ln.Addr())
 
 	hub := &events.Hub{}
-	chatSvc := chats.New(launchClaude, hub.Publish)
+	chatSvc := chats.New(func(h acp.Handler) (chats.Agent, error) { return launchClaude(dir, h) }, hub.Publish)
 	srv := &http.Server{Handler: api.Handler(token, chatSvc, hub), Protocols: new(http.Protocols)}
 	srv.Protocols.SetUnencryptedHTTP2(true)
 	return srv.Serve(ln)
@@ -84,10 +84,13 @@ func listen(path string) (net.Listener, error) {
 	return net.Listen("unix", path)
 }
 
-// launchClaude starts Claude Code's ACP adapter in folder. Its stderr goes to the daemon log.
-func launchClaude(folder string, h acp.Handler) (chats.Agent, error) {
+// launchClaude starts Claude Code's ACP adapter. It runs in the daemon's own
+// folder, so npx never resolves the adapter or npm settings from a project;
+// the chat's folder reaches the agent only as the session's cwd. Its stderr
+// goes to the daemon log.
+func launchClaude(dir string, h acp.Handler) (chats.Agent, error) {
 	cmd := exec.Command("npx", "--yes", claudeACP)
-	cmd.Dir = folder
+	cmd.Dir = dir
 	cmd.Stderr = log.Writer()
 	return acp.Start(cmd, h)
 }

@@ -22,13 +22,15 @@ const ItemKind$json = {
     {'1': 'ITEM_KIND_UNSPECIFIED', '2': 0},
     {'1': 'ITEM_KIND_USER_MESSAGE', '2': 1},
     {'1': 'ITEM_KIND_AGENT_MESSAGE', '2': 2},
+    {'1': 'ITEM_KIND_TOOL_CALL', '2': 3},
   ],
 };
 
 /// Descriptor for `ItemKind`. Decode as a `google.protobuf.EnumDescriptorProto`.
 final $typed_data.Uint8List itemKindDescriptor = $convert.base64Decode(
     'CghJdGVtS2luZBIZChVJVEVNX0tJTkRfVU5TUEVDSUZJRUQQABIaChZJVEVNX0tJTkRfVVNFUl'
-    '9NRVNTQUdFEAESGwoXSVRFTV9LSU5EX0FHRU5UX01FU1NBR0UQAg==');
+    '9NRVNTQUdFEAESGwoXSVRFTV9LSU5EX0FHRU5UX01FU1NBR0UQAhIXChNJVEVNX0tJTkRfVE9P'
+    'TF9DQUxMEAM=');
 
 @$core.Deprecated('Use pingRequestDescriptor instead')
 const PingRequest$json = {
@@ -156,13 +158,17 @@ const Item$json = {
       '10': 'kind'
     },
     {'1': 'text', '3': 3, '4': 1, '5': 9, '10': 'text'},
+    {'1': 'title', '3': 4, '4': 1, '5': 9, '10': 'title'},
+    {'1': 'tool_kind', '3': 5, '4': 1, '5': 9, '10': 'toolKind'},
+    {'1': 'status', '3': 6, '4': 1, '5': 9, '10': 'status'},
   ],
 };
 
 /// Descriptor for `Item`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List itemDescriptor = $convert.base64Decode(
     'CgRJdGVtEg4KAmlkGAEgASgJUgJpZBImCgRraW5kGAIgASgOMhIubnVzaGkudjEuSXRlbUtpbm'
-    'RSBGtpbmQSEgoEdGV4dBgDIAEoCVIEdGV4dA==');
+    'RSBGtpbmQSEgoEdGV4dBgDIAEoCVIEdGV4dBIUCgV0aXRsZRgEIAEoCVIFdGl0bGUSGwoJdG9v'
+    'bF9raW5kGAUgASgJUgh0b29sS2luZBIWCgZzdGF0dXMYBiABKAlSBnN0YXR1cw==');
 
 @$core.Deprecated('Use itemEventDescriptor instead')
 const ItemEvent$json = {

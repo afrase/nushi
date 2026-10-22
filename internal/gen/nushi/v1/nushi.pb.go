@@ -27,6 +27,7 @@ const (
 	ItemKind_ITEM_KIND_UNSPECIFIED   ItemKind = 0
 	ItemKind_ITEM_KIND_USER_MESSAGE  ItemKind = 1
 	ItemKind_ITEM_KIND_AGENT_MESSAGE ItemKind = 2
+	ItemKind_ITEM_KIND_TOOL_CALL     ItemKind = 3
 )
 
 // Enum value maps for ItemKind.
@@ -35,11 +36,13 @@ var (
 		0: "ITEM_KIND_UNSPECIFIED",
 		1: "ITEM_KIND_USER_MESSAGE",
 		2: "ITEM_KIND_AGENT_MESSAGE",
+		3: "ITEM_KIND_TOOL_CALL",
 	}
 	ItemKind_value = map[string]int32{
 		"ITEM_KIND_UNSPECIFIED":   0,
 		"ITEM_KIND_USER_MESSAGE":  1,
 		"ITEM_KIND_AGENT_MESSAGE": 2,
+		"ITEM_KIND_TOOL_CALL":     3,
 	}
 )
 
@@ -455,10 +458,16 @@ func (*EventsResponse_Status) isEventsResponse_Kind() {}
 
 // One entry of a chat's transcript.
 type Item struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Kind          ItemKind               `protobuf:"varint,2,opt,name=kind,proto3,enum=nushi.v1.ItemKind" json:"kind,omitempty"`
-	Text          string                 `protobuf:"bytes,3,opt,name=text,proto3" json:"text,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Kind  ItemKind               `protobuf:"varint,2,opt,name=kind,proto3,enum=nushi.v1.ItemKind" json:"kind,omitempty"`
+	// The message, or a tool call's output as markdown.
+	Text string `protobuf:"bytes,3,opt,name=text,proto3" json:"text,omitempty"`
+	// A tool call's title, kind and status, as ACP names them ("execute",
+	// "completed", ...).
+	Title         string `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
+	ToolKind      string `protobuf:"bytes,5,opt,name=tool_kind,json=toolKind,proto3" json:"tool_kind,omitempty"`
+	Status        string `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -510,6 +519,27 @@ func (x *Item) GetKind() ItemKind {
 func (x *Item) GetText() string {
 	if x != nil {
 		return x.Text
+	}
+	return ""
+}
+
+func (x *Item) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *Item) GetToolKind() string {
+	if x != nil {
+		return x.ToolKind
+	}
+	return ""
+}
+
+func (x *Item) GetStatus() string {
+	if x != nil {
+		return x.Status
 	}
 	return ""
 }
@@ -642,22 +672,26 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\achat_id\x18\x01 \x01(\tR\x06chatId\x12)\n" +
 	"\x04item\x18\x02 \x01(\v2\x13.nushi.v1.ItemEventH\x00R\x04item\x12.\n" +
 	"\x06status\x18\x03 \x01(\v2\x14.nushi.v1.ChatStatusH\x00R\x06statusB\x06\n" +
-	"\x04kind\"R\n" +
+	"\x04kind\"\x9d\x01\n" +
 	"\x04Item\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12&\n" +
 	"\x04kind\x18\x02 \x01(\x0e2\x12.nushi.v1.ItemKindR\x04kind\x12\x12\n" +
-	"\x04text\x18\x03 \x01(\tR\x04text\"G\n" +
+	"\x04text\x18\x03 \x01(\tR\x04text\x12\x14\n" +
+	"\x05title\x18\x04 \x01(\tR\x05title\x12\x1b\n" +
+	"\ttool_kind\x18\x05 \x01(\tR\btoolKind\x12\x16\n" +
+	"\x06status\x18\x06 \x01(\tR\x06status\"G\n" +
 	"\tItemEvent\x12\"\n" +
 	"\x04item\x18\x01 \x01(\v2\x0e.nushi.v1.ItemR\x04item\x12\x16\n" +
 	"\x06append\x18\x02 \x01(\bR\x06append\"6\n" +
 	"\n" +
 	"ChatStatus\x12\x12\n" +
 	"\x04busy\x18\x01 \x01(\bR\x04busy\x12\x14\n" +
-	"\x05error\x18\x02 \x01(\tR\x05error*^\n" +
+	"\x05error\x18\x02 \x01(\tR\x05error*w\n" +
 	"\bItemKind\x12\x19\n" +
 	"\x15ITEM_KIND_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16ITEM_KIND_USER_MESSAGE\x10\x01\x12\x1b\n" +
-	"\x17ITEM_KIND_AGENT_MESSAGE\x10\x022\x93\x02\n" +
+	"\x17ITEM_KIND_AGENT_MESSAGE\x10\x02\x12\x17\n" +
+	"\x13ITEM_KIND_TOOL_CALL\x10\x032\x93\x02\n" +
 	"\fNushiService\x125\n" +
 	"\x04Ping\x12\x15.nushi.v1.PingRequest\x1a\x16.nushi.v1.PingResponse\x12D\n" +
 	"\tStartChat\x12\x1a.nushi.v1.StartChatRequest\x1a\x1b.nushi.v1.StartChatResponse\x12G\n" +

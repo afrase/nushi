@@ -495,11 +495,17 @@ class Item extends $pb.GeneratedMessage {
     $core.String? id,
     ItemKind? kind,
     $core.String? text,
+    $core.String? title,
+    $core.String? toolKind,
+    $core.String? status,
   }) {
     final result = Item._();
     if (id != null) result.id = id;
     if (kind != null) result.kind = kind;
     if (text != null) result.text = text;
+    if (title != null) result.title = title;
+    if (toolKind != null) result.toolKind = toolKind;
+    if (status != null) result.status = status;
     return result;
   }
 
@@ -520,6 +526,9 @@ class Item extends $pb.GeneratedMessage {
     ..aE<ItemKind>(2, _omitFieldNames ? '' : 'kind',
         enumValues: ItemKind.values)
     ..aOS(3, _omitFieldNames ? '' : 'text')
+    ..aOS(4, _omitFieldNames ? '' : 'title')
+    ..aOS(5, _omitFieldNames ? '' : 'toolKind')
+    ..aOS(6, _omitFieldNames ? '' : 'status')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -560,6 +569,7 @@ class Item extends $pb.GeneratedMessage {
   @$pb.TagNumber(2)
   void clearKind() => $_clearField(2);
 
+  /// The message, or a tool call's output as markdown.
   @$pb.TagNumber(3)
   $core.String get text => $_getSZ(2);
   @$pb.TagNumber(3)
@@ -568,6 +578,35 @@ class Item extends $pb.GeneratedMessage {
   $core.bool hasText() => $_has(2);
   @$pb.TagNumber(3)
   void clearText() => $_clearField(3);
+
+  /// A tool call's title, kind and status, as ACP names them ("execute",
+  /// "completed", ...).
+  @$pb.TagNumber(4)
+  $core.String get title => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set title($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasTitle() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearTitle() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get toolKind => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set toolKind($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasToolKind() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearToolKind() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get status => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set status($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasStatus() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearStatus() => $_clearField(6);
 }
 
 class ItemEvent extends $pb.GeneratedMessage {
