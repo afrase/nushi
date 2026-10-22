@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'markdown.dart';
 import 'theme/theme.dart';
+import 'tool_calls.dart';
 import 'widgets.dart';
 
 /// A card for something the agent waits on: amber while it waits.
@@ -97,6 +98,7 @@ class PermissionCard extends StatelessWidget {
       waiting: pending,
       children: [
         CardTitle('Permission', detail: item.title, waiting: pending),
+        for (final d in item.diffs) EditDiff(d),
         if (item.text.isNotEmpty) AgentMarkdown(item.text),
         if (pending)
           Wrap(

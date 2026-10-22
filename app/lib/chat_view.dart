@@ -9,6 +9,7 @@ import 'markdown.dart';
 import 'pickers.dart';
 import 'question_card.dart';
 import 'theme/theme.dart';
+import 'tool_calls.dart';
 import 'widgets.dart';
 
 /// A chat's transcript with the composer under it.
@@ -18,43 +19,67 @@ class ChatView extends StatelessWidget {
   final ChatState chat;
   final Daemon daemon;
 
+  /// The items, with each run of tool calls as one list.
+  static List<Object> _entries(List<Item> items) {
+    final out = <Object>[];
+    for (final it in items) {
+      final last = out.lastOrNull;
+      if (it.kind == ItemKind.ITEM_KIND_TOOL_CALL) {
+        if (last is List<Item>) {
+          last.add(it);
+          continue;
+        }
+        if (last is Item && last.kind == ItemKind.ITEM_KIND_TOOL_CALL) {
+          out.last = [last, it];
+          continue;
+        }
+      }
+      out.add(it);
+    }
+    return out;
+  }
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: chat,
-    builder: (context, _) => Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(
-          // One selection across the transcript, messages included whole.
-          child: SelectionArea(
-            child: ListView.builder(
-              reverse: true, // keeps the newest item in view while it streams
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
-              itemCount: chat.items.length,
-              itemBuilder: (context, i) {
-                final item = chat.items[chat.items.length - 1 - i];
-                return Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: _ItemView(
-                    item,
-                    chat.id,
-                    daemon,
-                    key: ValueKey(item.id),
-                  ),
-                );
-              },
+    builder: (context, _) {
+      final entries = _entries(chat.items);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            // One selection across the transcript, messages included whole.
+            child: SelectionArea(
+              child: ListView.builder(
+                reverse: true, // keeps the newest item in view while it streams
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
+                itemCount: entries.length,
+                itemBuilder: (context, i) {
+                  final e = entries[entries.length - 1 - i];
+                  // Keyed here, the item's state follows it as items arrive.
+                  return Padding(
+                    key: ValueKey(
+                      e is List<Item> ? 'group ${e.first.id}' : (e as Item).id,
+                    ),
+                    padding: const EdgeInsets.only(top: 12),
+                    child: e is List<Item>
+                        ? ToolGroupView(e)
+                        : _ItemView(e as Item, chat.id, daemon),
+                  );
+                },
+              ),
             ),
           ),
-        ),
-        if (chat.busy) const LinearProgressIndicator(minHeight: 2),
-        _Composer(chat: chat, daemon: daemon),
-      ],
-    ),
+          if (chat.busy) const LinearProgressIndicator(minHeight: 2),
+          _Composer(chat: chat, daemon: daemon),
+        ],
+      );
+    },
   );
 }
 
 class _ItemView extends StatelessWidget {
-  const _ItemView(this.item, this.chatId, this.daemon, {super.key});
+  const _ItemView(this.item, this.chatId, this.daemon);
 
   final Item item;
   final String chatId;
@@ -83,7 +108,7 @@ class _ItemView extends StatelessWidget {
           ],
         );
       case ItemKind.ITEM_KIND_TOOL_CALL:
-        return _ToolCallView(item);
+        return ToolCallView(item);
       case ItemKind.ITEM_KIND_QUESTION:
         return QuestionCard(
           item,
@@ -120,99 +145,6 @@ class _Who extends StatelessWidget {
     return Text(
       name,
       style: theme.ui(theme.t.textSecondary, size: 12, weight: FontWeight.w600),
-    );
-  }
-}
-
-/// A tool call: a one-line header with its kind, title and status, and
-/// its output when opened.
-class _ToolCallView extends StatefulWidget {
-  const _ToolCallView(this.item);
-
-  final Item item;
-
-  @override
-  State<_ToolCallView> createState() => _ToolCallViewState();
-}
-
-class _ToolCallViewState extends State<_ToolCallView> {
-  bool _open = false;
-
-  static const _icons = {
-    'read': Icons.description_outlined,
-    'edit': Icons.edit_outlined,
-    'delete': Icons.delete_outline,
-    'move': Icons.drive_file_move_outline,
-    'search': Icons.search,
-    'execute': Icons.terminal,
-    'think': Icons.psychology_outlined,
-    'fetch': Icons.public,
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final item = widget.item;
-    final meta = theme.ui(t.textMuted, size: 12);
-    final status = switch (item.status) {
-      'completed' => Text('done', style: meta),
-      'failed' => Text('failed', style: meta.copyWith(color: t.crashed)),
-      'pending' => Text('pending', style: meta),
-      _ => Text('running…', style: meta),
-    };
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        border: Border.all(color: t.borderSubtle),
-        borderRadius: BorderRadius.circular(NushiTheme.card),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          InkWell(
-            onTap: () => setState(() => _open = !_open),
-            child: Container(
-              height: 28,
-              color: t.raised,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Row(
-                children: [
-                  Icon(
-                    _open ? Icons.expand_more : Icons.chevron_right,
-                    size: 14,
-                    color: t.textSecondary,
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(
-                    _icons[item.toolKind] ?? Icons.build_outlined,
-                    size: 13,
-                    color: t.textSecondary,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      item.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.code(t.text, size: 12).copyWith(height: 1.2),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  status,
-                ],
-              ),
-            ),
-          ),
-          if (_open)
-            Padding(
-              padding: const EdgeInsets.all(10),
-              child: item.text.isEmpty
-                  ? Text('No output', style: meta)
-                  : AgentMarkdown(item.text),
-            ),
-        ],
-      ),
     );
   }
 }

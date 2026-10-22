@@ -1873,6 +1873,8 @@ class Item extends $pb.GeneratedMessage {
     $core.Iterable<Option>? options,
     $core.String? answer,
     $core.Iterable<Field>? fields,
+    $core.Iterable<$core.String>? paths,
+    $core.Iterable<FileChange>? diffs,
   }) {
     final result = Item._();
     if (id != null) result.id = id;
@@ -1884,6 +1886,8 @@ class Item extends $pb.GeneratedMessage {
     if (options != null) result.options.addAll(options);
     if (answer != null) result.answer = answer;
     if (fields != null) result.fields.addAll(fields);
+    if (paths != null) result.paths.addAll(paths);
+    if (diffs != null) result.diffs.addAll(diffs);
     return result;
   }
 
@@ -1912,6 +1916,9 @@ class Item extends $pb.GeneratedMessage {
     ..aOS(8, _omitFieldNames ? '' : 'answer')
     ..pPM<Field>(9, _omitFieldNames ? '' : 'fields',
         subBuilder: Field.$_createMessage)
+    ..pPS(10, _omitFieldNames ? '' : 'paths')
+    ..pPM<FileChange>(11, _omitFieldNames ? '' : 'diffs',
+        subBuilder: FileChange.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1952,7 +1959,7 @@ class Item extends $pb.GeneratedMessage {
   @$pb.TagNumber(2)
   void clearKind() => $_clearField(2);
 
-  /// The message, or a tool call's output as markdown.
+  /// The message, or a tool call's output as markdown (its diffs apart).
   @$pb.TagNumber(3)
   $core.String get text => $_getSZ(2);
   @$pb.TagNumber(3)
@@ -2007,6 +2014,14 @@ class Item extends $pb.GeneratedMessage {
   /// A question's form, in the agent's order.
   @$pb.TagNumber(9)
   $pb.PbList<Field> get fields => $_getList(8);
+
+  /// The files a tool call works on, relative to the chat's folder when
+  /// inside it, and the edits it makes (path, old_text, new_text).
+  @$pb.TagNumber(10)
+  $pb.PbList<$core.String> get paths => $_getList(9);
+
+  @$pb.TagNumber(11)
+  $pb.PbList<FileChange> get diffs => $_getList(10);
 }
 
 /// A choice the agent offers.

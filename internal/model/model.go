@@ -40,6 +40,10 @@ type Item struct {
 	Title    string
 	ToolKind string
 	Status   string
+	// Paths are the files a tool call works on, relative to the chat's
+	// folder when inside it, and Diffs the edits it makes (Path, Old, New).
+	Paths []string
+	Diffs []FileChange
 	// Options are a permission prompt's choices, and Answer the ID of the one picked.
 	Options []Option
 	Answer  string

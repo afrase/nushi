@@ -543,6 +543,15 @@ const Item$json = {
       '6': '.nushi.v1.Field',
       '10': 'fields'
     },
+    {'1': 'paths', '3': 10, '4': 3, '5': 9, '10': 'paths'},
+    {
+      '1': 'diffs',
+      '3': 11,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.FileChange',
+      '10': 'diffs'
+    },
   ],
 };
 
@@ -552,7 +561,8 @@ final $typed_data.Uint8List itemDescriptor = $convert.base64Decode(
     'RSBGtpbmQSEgoEdGV4dBgDIAEoCVIEdGV4dBIUCgV0aXRsZRgEIAEoCVIFdGl0bGUSGwoJdG9v'
     'bF9raW5kGAUgASgJUgh0b29sS2luZBIWCgZzdGF0dXMYBiABKAlSBnN0YXR1cxIqCgdvcHRpb2'
     '5zGAcgAygLMhAubnVzaGkudjEuT3B0aW9uUgdvcHRpb25zEhYKBmFuc3dlchgIIAEoCVIGYW5z'
-    'd2VyEicKBmZpZWxkcxgJIAMoCzIPLm51c2hpLnYxLkZpZWxkUgZmaWVsZHM=');
+    'd2VyEicKBmZpZWxkcxgJIAMoCzIPLm51c2hpLnYxLkZpZWxkUgZmaWVsZHMSFAoFcGF0aHMYCi'
+    'ADKAlSBXBhdGhzEioKBWRpZmZzGAsgAygLMhQubnVzaGkudjEuRmlsZUNoYW5nZVIFZGlmZnM=');
 
 @$core.Deprecated('Use optionDescriptor instead')
 const Option$json = {
@@ -698,6 +708,7 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.Item': Item$json,
   '.nushi.v1.Option': Option$json,
   '.nushi.v1.Field': Field$json,
+  '.nushi.v1.FileChange': FileChange$json,
   '.nushi.v1.ConfigOption': ConfigOption$json,
   '.nushi.v1.ConfigValue': ConfigValue$json,
   '.nushi.v1.ChatStatus': ChatStatus$json,
@@ -714,7 +725,6 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.SetConfigOptionResponse': SetConfigOptionResponse$json,
   '.nushi.v1.GetDiffRequest': GetDiffRequest$json,
   '.nushi.v1.GetDiffResponse': GetDiffResponse$json,
-  '.nushi.v1.FileChange': FileChange$json,
   '.nushi.v1.EventsRequest': EventsRequest$json,
   '.nushi.v1.EventsResponse': EventsResponse$json,
   '.nushi.v1.ItemEvent': ItemEvent$json,

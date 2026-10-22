@@ -144,20 +144,21 @@ func TestToolCallUpdatesMergeIntoOneItem(t *testing.T) {
 	text := func(s string) []acp.ToolCallContent {
 		return []acp.ToolCallContent{{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: s}}}}}
 	}
-	c := &chat{id: "s1", publish: func(model.Event) {}}
+	c := &chat{id: "s1", publish: func(model.Event) {}, session: model.Session{Folder: "/w"}}
 	for _, u := range []acp.SessionUpdate{
 		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "Terminal", Kind: "execute", Status: "pending"}},
 		{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Title: "ls -la", Content: text("List files")}},
 		{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed", Content: text("a.txt")}},
 		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t2", Title: "Edit", Kind: "edit", Content: []acp.ToolCallContent{
-			{Type: "diff", Diff: &acp.Diff{Path: "a.txt", OldText: "one\ntwo\n", NewText: "three"}},
-		}}},
+			{Type: "diff", Diff: &acp.Diff{Path: "/w/a.txt", OldText: "one\ntwo\n", NewText: "three"}},
+		}, Locations: []acp.ToolCallLocation{{Path: "/w/a.txt"}, {Path: "/elsewhere/b.txt"}}}},
 	} {
 		c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: u})
 	}
 	want := []model.Item{
 		{ID: "t1", Kind: model.ToolCall, Title: "ls -la", ToolKind: "execute", Status: "completed", Text: "a.txt"},
-		{ID: "t2", Kind: model.ToolCall, Title: "Edit", ToolKind: "edit", Text: "```diff\n--- a.txt\n+++ a.txt\n-one\n-two\n+three\n```"},
+		{ID: "t2", Kind: model.ToolCall, Title: "Edit", ToolKind: "edit", Paths: []string{"a.txt", "/elsewhere/b.txt"},
+			Diffs: []model.FileChange{{Path: "a.txt", Status: "modified", Old: "one\ntwo\n", New: "three"}}},
 	}
 	if !reflect.DeepEqual(c.items, want) {
 		t.Errorf("items = %+v\nwant %+v", c.items, want)
@@ -227,11 +228,5 @@ func TestPermissionWaitsForTheUsersPick(t *testing.T) {
 	}
 	if final := c.itemLocked(it.ID); final.Status != "cancelled" {
 		t.Errorf("item status = %q, want cancelled", final.Status)
-	}
-}
-
-func TestFenceOutlastsBackticksInside(t *testing.T) {
-	if got := fence("diff", "a ``` b ```` c"); got != "`````diff\na ``` b ```` c\n`````" {
-		t.Errorf("fence = %q", got)
 	}
 }

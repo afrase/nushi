@@ -12,7 +12,8 @@ import (
 // RequestPermission shows the agent's permission prompt and waits for the
 // user's answer. Nushi never answers one itself.
 func (c *chat) RequestPermission(ctx context.Context, req acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
-	item := model.Item{Kind: model.Permission, Status: "pending", Title: req.ToolCall.Title, Text: output(req.ToolCall.Content)}
+	item := model.Item{Kind: model.Permission, Status: "pending", Title: req.ToolCall.Title}
+	item.Text, item.Diffs = c.output(req.ToolCall.Content)
 	for _, o := range req.Options {
 		item.Options = append(item.Options, model.Option{ID: string(o.OptionID), Name: o.Name, Kind: string(o.Kind)})
 	}
@@ -22,8 +23,8 @@ func (c *chat) RequestPermission(ctx context.Context, req acp.RequestPermissionR
 		if item.Title == "" {
 			item.Title = call.Title
 		}
-		if item.Text == "" {
-			item.Text = call.Text
+		if item.Text == "" && item.Diffs == nil {
+			item.Text, item.Diffs = call.Text, call.Diffs
 		}
 	}
 	id := c.addLocked(item)

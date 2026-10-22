@@ -1605,7 +1605,7 @@ type Item struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Kind  ItemKind               `protobuf:"varint,2,opt,name=kind,proto3,enum=nushi.v1.ItemKind" json:"kind,omitempty"`
-	// The message, or a tool call's output as markdown.
+	// The message, or a tool call's output as markdown (its diffs apart).
 	Text string `protobuf:"bytes,3,opt,name=text,proto3" json:"text,omitempty"`
 	// A tool call's title, kind and status, as ACP names them ("execute",
 	// "completed", ...).
@@ -1616,7 +1616,11 @@ type Item struct {
 	Options []*Option `protobuf:"bytes,7,rep,name=options,proto3" json:"options,omitempty"`
 	Answer  string    `protobuf:"bytes,8,opt,name=answer,proto3" json:"answer,omitempty"`
 	// A question's form, in the agent's order.
-	Fields        []*Field `protobuf:"bytes,9,rep,name=fields,proto3" json:"fields,omitempty"`
+	Fields []*Field `protobuf:"bytes,9,rep,name=fields,proto3" json:"fields,omitempty"`
+	// The files a tool call works on, relative to the chat's folder when
+	// inside it, and the edits it makes (path, old_text, new_text).
+	Paths         []string      `protobuf:"bytes,10,rep,name=paths,proto3" json:"paths,omitempty"`
+	Diffs         []*FileChange `protobuf:"bytes,11,rep,name=diffs,proto3" json:"diffs,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1710,6 +1714,20 @@ func (x *Item) GetAnswer() string {
 func (x *Item) GetFields() []*Field {
 	if x != nil {
 		return x.Fields
+	}
+	return nil
+}
+
+func (x *Item) GetPaths() []string {
+	if x != nil {
+		return x.Paths
+	}
+	return nil
+}
+
+func (x *Item) GetDiffs() []*FileChange {
+	if x != nil {
+		return x.Diffs
 	}
 	return nil
 }
@@ -2075,7 +2093,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x05value\x18\x01 \x01(\tR\x05value\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x14\n" +
-	"\x05group\x18\x04 \x01(\tR\x05group\"\x8a\x02\n" +
+	"\x05group\x18\x04 \x01(\tR\x05group\"\xcc\x02\n" +
 	"\x04Item\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12&\n" +
 	"\x04kind\x18\x02 \x01(\x0e2\x12.nushi.v1.ItemKindR\x04kind\x12\x12\n" +
@@ -2085,7 +2103,10 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x06status\x18\x06 \x01(\tR\x06status\x12*\n" +
 	"\aoptions\x18\a \x03(\v2\x10.nushi.v1.OptionR\aoptions\x12\x16\n" +
 	"\x06answer\x18\b \x01(\tR\x06answer\x12'\n" +
-	"\x06fields\x18\t \x03(\v2\x0f.nushi.v1.FieldR\x06fields\"b\n" +
+	"\x06fields\x18\t \x03(\v2\x0f.nushi.v1.FieldR\x06fields\x12\x14\n" +
+	"\x05paths\x18\n" +
+	" \x03(\tR\x05paths\x12*\n" +
+	"\x05diffs\x18\v \x03(\v2\x14.nushi.v1.FileChangeR\x05diffs\"b\n" +
 	"\x06Option\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
@@ -2201,34 +2222,35 @@ var file_nushi_v1_nushi_proto_depIdxs = []int32{
 	0,  // 14: nushi.v1.Item.kind:type_name -> nushi.v1.ItemKind
 	29, // 15: nushi.v1.Item.options:type_name -> nushi.v1.Option
 	30, // 16: nushi.v1.Item.fields:type_name -> nushi.v1.Field
-	1,  // 17: nushi.v1.Field.type:type_name -> nushi.v1.FieldType
-	29, // 18: nushi.v1.Field.options:type_name -> nushi.v1.Option
-	28, // 19: nushi.v1.ItemEvent.item:type_name -> nushi.v1.Item
-	2,  // 20: nushi.v1.NushiService.Ping:input_type -> nushi.v1.PingRequest
-	4,  // 21: nushi.v1.NushiService.ListChats:input_type -> nushi.v1.ListChatsRequest
-	7,  // 22: nushi.v1.NushiService.GetChat:input_type -> nushi.v1.GetChatRequest
-	9,  // 23: nushi.v1.NushiService.StartChat:input_type -> nushi.v1.StartChatRequest
-	11, // 24: nushi.v1.NushiService.SendPrompt:input_type -> nushi.v1.SendPromptRequest
-	13, // 25: nushi.v1.NushiService.AnswerPermission:input_type -> nushi.v1.AnswerPermissionRequest
-	15, // 26: nushi.v1.NushiService.AnswerQuestion:input_type -> nushi.v1.AnswerQuestionRequest
-	18, // 27: nushi.v1.NushiService.SetConfigOption:input_type -> nushi.v1.SetConfigOptionRequest
-	20, // 28: nushi.v1.NushiService.GetDiff:input_type -> nushi.v1.GetDiffRequest
-	23, // 29: nushi.v1.NushiService.Events:input_type -> nushi.v1.EventsRequest
-	3,  // 30: nushi.v1.NushiService.Ping:output_type -> nushi.v1.PingResponse
-	5,  // 31: nushi.v1.NushiService.ListChats:output_type -> nushi.v1.ListChatsResponse
-	8,  // 32: nushi.v1.NushiService.GetChat:output_type -> nushi.v1.GetChatResponse
-	10, // 33: nushi.v1.NushiService.StartChat:output_type -> nushi.v1.StartChatResponse
-	12, // 34: nushi.v1.NushiService.SendPrompt:output_type -> nushi.v1.SendPromptResponse
-	14, // 35: nushi.v1.NushiService.AnswerPermission:output_type -> nushi.v1.AnswerPermissionResponse
-	17, // 36: nushi.v1.NushiService.AnswerQuestion:output_type -> nushi.v1.AnswerQuestionResponse
-	19, // 37: nushi.v1.NushiService.SetConfigOption:output_type -> nushi.v1.SetConfigOptionResponse
-	21, // 38: nushi.v1.NushiService.GetDiff:output_type -> nushi.v1.GetDiffResponse
-	24, // 39: nushi.v1.NushiService.Events:output_type -> nushi.v1.EventsResponse
-	30, // [30:40] is the sub-list for method output_type
-	20, // [20:30] is the sub-list for method input_type
-	20, // [20:20] is the sub-list for extension type_name
-	20, // [20:20] is the sub-list for extension extendee
-	0,  // [0:20] is the sub-list for field type_name
+	22, // 17: nushi.v1.Item.diffs:type_name -> nushi.v1.FileChange
+	1,  // 18: nushi.v1.Field.type:type_name -> nushi.v1.FieldType
+	29, // 19: nushi.v1.Field.options:type_name -> nushi.v1.Option
+	28, // 20: nushi.v1.ItemEvent.item:type_name -> nushi.v1.Item
+	2,  // 21: nushi.v1.NushiService.Ping:input_type -> nushi.v1.PingRequest
+	4,  // 22: nushi.v1.NushiService.ListChats:input_type -> nushi.v1.ListChatsRequest
+	7,  // 23: nushi.v1.NushiService.GetChat:input_type -> nushi.v1.GetChatRequest
+	9,  // 24: nushi.v1.NushiService.StartChat:input_type -> nushi.v1.StartChatRequest
+	11, // 25: nushi.v1.NushiService.SendPrompt:input_type -> nushi.v1.SendPromptRequest
+	13, // 26: nushi.v1.NushiService.AnswerPermission:input_type -> nushi.v1.AnswerPermissionRequest
+	15, // 27: nushi.v1.NushiService.AnswerQuestion:input_type -> nushi.v1.AnswerQuestionRequest
+	18, // 28: nushi.v1.NushiService.SetConfigOption:input_type -> nushi.v1.SetConfigOptionRequest
+	20, // 29: nushi.v1.NushiService.GetDiff:input_type -> nushi.v1.GetDiffRequest
+	23, // 30: nushi.v1.NushiService.Events:input_type -> nushi.v1.EventsRequest
+	3,  // 31: nushi.v1.NushiService.Ping:output_type -> nushi.v1.PingResponse
+	5,  // 32: nushi.v1.NushiService.ListChats:output_type -> nushi.v1.ListChatsResponse
+	8,  // 33: nushi.v1.NushiService.GetChat:output_type -> nushi.v1.GetChatResponse
+	10, // 34: nushi.v1.NushiService.StartChat:output_type -> nushi.v1.StartChatResponse
+	12, // 35: nushi.v1.NushiService.SendPrompt:output_type -> nushi.v1.SendPromptResponse
+	14, // 36: nushi.v1.NushiService.AnswerPermission:output_type -> nushi.v1.AnswerPermissionResponse
+	17, // 37: nushi.v1.NushiService.AnswerQuestion:output_type -> nushi.v1.AnswerQuestionResponse
+	19, // 38: nushi.v1.NushiService.SetConfigOption:output_type -> nushi.v1.SetConfigOptionResponse
+	21, // 39: nushi.v1.NushiService.GetDiff:output_type -> nushi.v1.GetDiffResponse
+	24, // 40: nushi.v1.NushiService.Events:output_type -> nushi.v1.EventsResponse
+	31, // [31:41] is the sub-list for method output_type
+	21, // [21:31] is the sub-list for method input_type
+	21, // [21:21] is the sub-list for extension type_name
+	21, // [21:21] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_nushi_v1_nushi_proto_init() }

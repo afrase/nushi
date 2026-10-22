@@ -200,7 +200,7 @@ enum ItemKind {
 message Item {
   string id = 1;
   ItemKind kind = 2;
-  // The message, or a tool call's output as markdown.
+  // The message, or a tool call's output as markdown (its diffs apart).
   string text = 3;
   // A tool call's title, kind and status, as ACP names them ("execute",
   // "completed", ...).
@@ -212,6 +212,10 @@ message Item {
   string answer = 8;
   // A question's form, in the agent's order.
   repeated Field fields = 9;
+  // The files a tool call works on, relative to the chat's folder when
+  // inside it, and the edits it makes (path, old_text, new_text).
+  repeated string paths = 10;
+  repeated FileChange diffs = 11;
 }
 
 // A choice the agent offers.

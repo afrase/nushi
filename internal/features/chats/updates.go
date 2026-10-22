@@ -1,6 +1,7 @@
 package chats
 
 import (
+	"path/filepath"
 	"strings"
 
 	"github.com/afrase/nushi/acp"
@@ -19,7 +20,8 @@ func (c *chat) SessionUpdate(n acp.SessionNotification) {
 	case "tool_call":
 		t := u.ToolCall
 		item := model.Item{ID: string(t.ToolCallID), Kind: model.ToolCall, Title: t.Title,
-			ToolKind: string(t.Kind), Status: string(t.Status), Text: output(t.Content)}
+			ToolKind: string(t.Kind), Status: string(t.Status), Paths: c.paths(t.Locations)}
+		item.Text, item.Diffs = c.output(t.Content)
 		if it := c.itemLocked(item.ID); it != nil { // a repeated tool_call replaces the call
 			*it = item
 			c.publishLocked(item)
@@ -53,8 +55,11 @@ func (c *chat) SessionUpdate(n acp.SessionNotification) {
 		if t.Status != "" {
 			it.Status = string(t.Status)
 		}
+		if t.Locations != nil {
+			it.Paths = c.paths(t.Locations)
+		}
 		if t.Content != nil {
-			it.Text = output(t.Content)
+			it.Text, it.Diffs = c.output(t.Content)
 		}
 		c.publishLocked(*it)
 	}
@@ -83,42 +88,40 @@ func (c *chat) publishLocked(it model.Item) {
 	c.emitLocked(model.Event{ChatID: c.id, Item: &it})
 }
 
-// output renders a tool call's content as markdown.
-func output(content []acp.ToolCallContent) string {
+// output renders a tool call's content as markdown, its diffs apart.
+func (c *chat) output(content []acp.ToolCallContent) (string, []model.FileChange) {
 	var parts []string
+	var diffs []model.FileChange
 	for _, tc := range content {
 		switch {
 		case tc.Content != nil && tc.Content.Content.Text != nil:
 			parts = append(parts, tc.Content.Content.Text.Text)
 		case tc.Diff != nil:
 			d := tc.Diff
-			parts = append(parts, fence("diff", "--- "+d.Path+"\n+++ "+d.Path+"\n"+diffLines("-", d.OldText)+diffLines("+", d.NewText)))
+			status := "modified"
+			if d.OldText == "" {
+				status = "added"
+			}
+			diffs = append(diffs, model.FileChange{Path: c.rel(d.Path), Status: status, Old: d.OldText, New: d.NewText})
 		case tc.Terminal != nil:
 			parts = append(parts, "(terminal "+string(tc.Terminal.TerminalID)+")")
 		}
 	}
-	return strings.Join(parts, "\n\n")
+	return strings.Join(parts, "\n\n"), diffs
 }
 
-func diffLines(prefix, text string) string {
-	if text == "" {
-		return ""
+func (c *chat) paths(locs []acp.ToolCallLocation) []string {
+	var out []string
+	for _, l := range locs {
+		out = append(out, c.rel(l.Path))
 	}
-	return prefix + strings.ReplaceAll(strings.TrimSuffix(text, "\n"), "\n", "\n"+prefix) + "\n"
+	return out
 }
 
-// fence puts text in a fenced code block whose fence is longer than any run
-// of backticks inside it, so the text can't end the block early.
-func fence(lang, text string) string {
-	longest, run := 0, 0
-	for _, r := range text {
-		if r == '`' {
-			run++
-			longest = max(longest, run)
-		} else {
-			run = 0
-		}
+// rel makes path relative to the chat's folder when it is inside it.
+func (c *chat) rel(path string) string {
+	if r, err := filepath.Rel(c.session.Folder, path); err == nil && filepath.IsLocal(r) {
+		return r
 	}
-	f := strings.Repeat("`", max(3, longest+1))
-	return f + lang + "\n" + strings.TrimSuffix(text, "\n") + "\n" + f
+	return path
 }
