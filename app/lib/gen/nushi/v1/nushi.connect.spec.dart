@@ -60,6 +60,24 @@ abstract final class NushiService {
     nushiv1nushi.CancelTurnResponse.new,
   );
 
+  /// Opens a side chat: a session the agent forks from the chat's (ACP
+  /// session/fork, when status.can_fork). It knows the conversation so far
+  /// but doesn't add to it, isn't listed or stored, and ends with
+  /// CloseSideChat. Its items and status come as events like any chat's.
+  static const forkChat = connect.Spec(
+    '/$name/ForkChat',
+    connect.StreamType.unary,
+    nushiv1nushi.ForkChatRequest.new,
+    nushiv1nushi.ForkChatResponse.new,
+  );
+
+  static const closeSideChat = connect.Spec(
+    '/$name/CloseSideChat',
+    connect.StreamType.unary,
+    nushiv1nushi.CloseSideChatRequest.new,
+    nushiv1nushi.CloseSideChatResponse.new,
+  );
+
   /// Answers a pending permission prompt with one of its options.
   static const answerPermission = connect.Spec(
     '/$name/AnswerPermission',

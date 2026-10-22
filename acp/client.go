@@ -25,8 +25,9 @@ type Handler interface {
 
 // Client is a connection to one agent.
 type Client struct {
-	conn *conn
-	cmd  *exec.Cmd
+	conn    *conn
+	cmd     *exec.Cmd
+	canFork bool // initialize advertised session/fork
 }
 
 // Start runs the agent command, in its own process group, and speaks ACP over
@@ -94,8 +95,30 @@ func (c *Client) Close() error {
 }
 
 func (c *Client) Initialize(ctx context.Context, req InitializeRequest) (*InitializeResponse, error) {
+	var raw json.RawMessage
+	if err := c.conn.call(ctx, "initialize", req, &raw); err != nil {
+		return nil, err
+	}
 	var resp InitializeResponse
-	return &resp, c.conn.call(ctx, "initialize", req, &resp)
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return nil, err
+	}
+	var caps struct {
+		AgentCapabilities struct {
+			SessionCapabilities struct {
+				Fork json.RawMessage `json:"fork"`
+			} `json:"sessionCapabilities"`
+		} `json:"agentCapabilities"`
+	}
+	json.Unmarshal(raw, &caps)
+	fork := caps.AgentCapabilities.SessionCapabilities.Fork
+	c.canFork = len(fork) > 0 && string(fork) != "null"
+	return &resp, nil
+}
+
+// CloseSession ends a session the agent keeps (session/close).
+func (c *Client) CloseSession(ctx context.Context, req CloseSessionRequest) error {
+	return c.conn.call(ctx, "session/close", req, nil)
 }
 
 func (c *Client) NewSession(ctx context.Context, req NewSessionRequest) (*NewSessionResponse, error) {

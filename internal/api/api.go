@@ -19,7 +19,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 12
+const Version = 13
 
 type server struct {
 	chats *chats.Service
@@ -93,6 +93,21 @@ func (s *server) CancelTurn(_ context.Context, req *connect.Request[nushiv1.Canc
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
 	return connect.NewResponse(&nushiv1.CancelTurnResponse{}), nil
+}
+
+func (s *server) ForkChat(ctx context.Context, req *connect.Request[nushiv1.ForkChatRequest]) (*connect.Response[nushiv1.ForkChatResponse], error) {
+	id, err := s.chats.Fork(ctx, req.Msg.ChatId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	return connect.NewResponse(&nushiv1.ForkChatResponse{ChatId: id}), nil
+}
+
+func (s *server) CloseSideChat(ctx context.Context, req *connect.Request[nushiv1.CloseSideChatRequest]) (*connect.Response[nushiv1.CloseSideChatResponse], error) {
+	if err := s.chats.CloseSide(ctx, req.Msg.ChatId); err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, err)
+	}
+	return connect.NewResponse(&nushiv1.CloseSideChatResponse{}), nil
 }
 
 func (s *server) AnswerPermission(_ context.Context, req *connect.Request[nushiv1.AnswerPermissionRequest]) (*connect.Response[nushiv1.AnswerPermissionResponse], error) {
@@ -226,7 +241,7 @@ func commandsProto(cmds []model.Command) []*nushiv1.Command {
 }
 
 func statusProto(st model.Status) *nushiv1.ChatStatus {
-	out := &nushiv1.ChatStatus{Busy: st.Busy, Waiting: st.Waiting}
+	out := &nushiv1.ChatStatus{Busy: st.Busy, Waiting: st.Waiting, CanFork: st.CanFork}
 	if !st.Started.IsZero() {
 		out.Started = st.Started.UnixMilli()
 	}

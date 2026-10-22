@@ -33,10 +33,20 @@ typedef _Choice = ({String label, String detail, String insert});
 /// the folder's files (sent as links); Up in an empty box brings back the
 /// last prompt.
 class Composer extends StatefulWidget {
-  const Composer({super.key, required this.chat, required this.daemon});
+  const Composer({
+    super.key,
+    required this.chat,
+    required this.daemon,
+    required this.quote,
+    this.hint = 'Message Claude   @ file   / command   ⏎ send · ⇧⏎ newline',
+  });
 
   final ChatState chat;
   final Daemon daemon;
+
+  /// Text to quote in the box (Reply), cursor after it; taken and cleared.
+  final ValueNotifier<String?> quote;
+  final String hint;
 
   @override
   State<Composer> createState() => _ComposerState();
@@ -57,13 +67,32 @@ class _ComposerState extends State<Composer> {
   void initState() {
     super.initState();
     _text.addListener(_complete);
+    widget.quote.addListener(_quote);
+    _quote(); // one given before the box was built
   }
 
   @override
   void dispose() {
+    widget.quote.removeListener(_quote);
     _text.dispose();
     _focus.dispose();
     super.dispose();
+  }
+
+  void _quote() {
+    final q = widget.quote.value;
+    if (q == null) return;
+    widget.quote.value = null;
+    final quoted = q.trim().split('\n').map((l) => '> $l').join('\n');
+    final before = _text.text.trim().isEmpty
+        ? ''
+        : '${_text.text.trimRight()}\n\n';
+    final text = '$before$quoted\n\n';
+    _text.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+    _focus.requestFocus();
   }
 
   void _complete() {
@@ -234,7 +263,7 @@ class _ComposerState extends State<Composer> {
               style: theme.ui(t.text),
               decoration: InputDecoration(
                 isDense: true,
-                hintText: chat.busy ? 'Claude is working…' : 'Message Claude   @ file   / command   ⏎ send · ⇧⏎ newline',
+                hintText: chat.busy ? 'Claude is working…' : widget.hint,
                 hintStyle: theme.ui(t.textMuted),
                 filled: true,
                 fillColor: t.base,

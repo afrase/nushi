@@ -9,6 +9,7 @@ import 'question_card.dart';
 import 'theme/theme.dart';
 import 'thinking.dart';
 import 'tool_calls.dart';
+import 'widgets.dart';
 
 /// The items, with each run of tool calls as one list.
 List<Object> _entries(List<Item> items) {
@@ -32,12 +33,23 @@ List<Object> _entries(List<Item> items) {
 
 /// A chat's items, built as they scroll into view. It opens at the bottom
 /// and follows it while the agent writes; scrolled up, it stays put and
-/// offers a way back to the latest.
+/// offers a way back to the latest. Selected text gets a popover to reply
+/// with it, or to ask about it on the side.
 class Transcript extends StatefulWidget {
-  const Transcript({super.key, required this.chat, required this.daemon});
+  const Transcript({
+    super.key,
+    required this.chat,
+    required this.daemon,
+    required this.onReply,
+    this.onSide,
+  });
 
   final ChatState chat;
   final Daemon daemon;
+  final void Function(String selection) onReply;
+
+  /// Opens a side question about the selection; null hides the action.
+  final void Function(String selection)? onSide;
 
   @override
   State<Transcript> createState() => _TranscriptState();
@@ -47,6 +59,10 @@ class _TranscriptState extends State<Transcript> {
   final _scroll = ScrollController();
   bool _follow = true; // keep the bottom in view
   bool _jumping = false; // the scroll moves because of us
+  String _selected = '';
+  bool _down = false; // a pointer is down on the transcript
+  Offset _up = Offset.zero; // where it last went up
+  Offset? _popover; // where the selection popover shows
 
   @override
   void initState() {
@@ -77,6 +93,14 @@ class _TranscriptState extends State<Transcript> {
     _jumping = false;
   });
 
+  // The selection is reported a frame after the pointer goes up: offer the
+  // popover once both have happened.
+  void _offer() {
+    if (!_down && _popover == null && _selected.trim().isNotEmpty) {
+      setState(() => _popover = _up);
+    }
+  }
+
   void _latest() {
     setState(() => _follow = true);
     _stick();
@@ -87,47 +111,124 @@ class _TranscriptState extends State<Transcript> {
     final chat = widget.chat;
     final entries = _entries(chat.items);
     _stick();
-    return Stack(
-      children: [
-        NotificationListener<ScrollMetricsNotification>(
-          onNotification: (_) {
-            _stick();
-            return false;
-          },
-          // One selection across the transcript, messages included whole.
-          child: SelectionArea(
-            child: ListView.builder(
-              controller: _scroll,
-              padding: const EdgeInsets.fromLTRB(20, 2, 20, 14),
-              itemCount: entries.length,
-              itemBuilder: (context, i) {
-                final e = entries[i];
-                // Keyed here, the item's state follows it as items arrive.
-                return Padding(
-                  key: ValueKey(
-                    e is List<Item> ? 'group ${e.first.id}' : (e as Item).id,
-                  ),
-                  padding: const EdgeInsets.only(top: 12),
-                  child: e is List<Item>
-                      ? ToolGroupView(e)
-                      : _ItemView(
-                          e as Item,
-                          chat.id,
-                          widget.daemon,
-                          live: chat.busy && i == entries.length - 1,
-                        ),
-                );
+    final onSide = widget.onSide;
+    return LayoutBuilder(
+      builder: (context, box) => Stack(
+        children: [
+          NotificationListener<ScrollMetricsNotification>(
+            onNotification: (_) {
+              _stick();
+              return false;
+            },
+            // One selection across the transcript, messages included whole;
+            // when a drag or double-click leaves text selected, the popover
+            // shows where the pointer went up.
+            child: Listener(
+              onPointerDown: (_) => setState(() {
+                _down = true;
+                _popover = null;
+              }),
+              onPointerUp: (e) {
+                _down = false;
+                _up = e.localPosition;
+                _offer();
               },
+              child: SelectionArea(
+                onSelectionChanged: (c) {
+                  _selected = c?.plainText ?? '';
+                  _offer();
+                },
+                child: ListView.builder(
+                  controller: _scroll,
+                  padding: const EdgeInsets.fromLTRB(20, 2, 20, 14),
+                  itemCount: entries.length,
+                  itemBuilder: (context, i) {
+                    final e = entries[i];
+                    // Keyed here, the item's state follows it as items arrive.
+                    return Padding(
+                      key: ValueKey(
+                        e is List<Item>
+                            ? 'group ${e.first.id}'
+                            : (e as Item).id,
+                      ),
+                      padding: const EdgeInsets.only(top: 12),
+                      child: e is List<Item>
+                          ? ToolGroupView(e)
+                          : _ItemView(
+                              e as Item,
+                              chat.id,
+                              widget.daemon,
+                              live: chat.busy && i == entries.length - 1,
+                            ),
+                    );
+                  },
+                ),
+              ),
             ),
           ),
+          if (_popover case final at?)
+            Positioned(
+              left: at.dx.clamp(8, box.maxWidth - 240),
+              top: at.dy + 10,
+              child: _Popover(
+                actions: {
+                  'Reply': () => widget.onReply(_selected),
+                  if (onSide != null && widget.chat.canFork)
+                    'Side question': () => onSide(_selected),
+                },
+                onDone: () => setState(() => _popover = null),
+              ),
+            ),
+          if (!_follow)
+            Positioned(
+              right: 20,
+              bottom: 12,
+              child: _LatestButton(onPressed: _latest),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A small row of actions on the selection.
+class _Popover extends StatelessWidget {
+  const _Popover({required this.actions, required this.onDone});
+
+  final Map<String, VoidCallback> actions;
+  final VoidCallback onDone;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = NushiTheme.of(context).t;
+    return Material(
+      color: t.raised,
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(NushiTheme.card),
+        side: BorderSide(color: t.borderStrong),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(3),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final MapEntry(key: label, value: run) in actions.entries)
+              Button(
+                label: label,
+                kind: ButtonKind.ghost,
+                height: 24,
+                icon: label == 'Reply'
+                    ? Icons.format_quote
+                    : Icons.forum_outlined,
+                onPressed: () {
+                  onDone();
+                  run();
+                },
+              ),
+          ],
         ),
-        if (!_follow)
-          Positioned(
-            right: 20,
-            bottom: 12,
-            child: _LatestButton(onPressed: _latest),
-          ),
-      ],
+      ),
     );
   }
 }

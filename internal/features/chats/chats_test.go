@@ -46,6 +46,14 @@ func (f *fakeAgent) Close() error { return nil }
 
 func (f *fakeAgent) Cancel(acp.CancelNotification) error { return nil }
 
+func (f *fakeAgent) CanFork() bool { return true }
+
+func (f *fakeAgent) ForkSession(context.Context, acp.ForkSessionRequest) (*acp.ForkSessionResponse, error) {
+	return &acp.ForkSessionResponse{SessionID: "fork1"}, nil
+}
+
+func (f *fakeAgent) CloseSession(context.Context, acp.CloseSessionRequest) error { return nil }
+
 func (f *fakeAgent) SetConfigOption(_ context.Context, req acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error) {
 	f.set = append(f.set, string(req.ConfigID)+"="+string(req.Value))
 	return &acp.SetSessionConfigOptionResponse{}, nil

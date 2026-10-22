@@ -9,8 +9,8 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-// SessionUpdate turns the agent's updates into transcript items.
-func (c *chat) SessionUpdate(n acp.SessionNotification) {
+// update turns the agent's updates into transcript items.
+func (c *chat) update(n acp.SessionNotification) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	switch u := n.Update; u.SessionUpdate {

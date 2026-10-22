@@ -12,9 +12,9 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-// CreateElicitation shows the agent's form as a question and waits for the
+// createElicitation shows the agent's form as a question and waits for the
 // user's answer.
-func (c *chat) CreateElicitation(ctx context.Context, req acp.CreateElicitationRequest) (*acp.CreateElicitationResponse, error) {
+func (c *chat) createElicitation(ctx context.Context, req acp.CreateElicitationRequest) (*acp.CreateElicitationResponse, error) {
 	if req.Mode != "form" || req.RequestedSchema == nil {
 		return nil, fmt.Errorf("unsupported elicitation mode %q", req.Mode)
 	}

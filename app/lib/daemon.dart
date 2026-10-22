@@ -38,6 +38,9 @@ class Daemon extends ChangeNotifier {
 
   /// Every stored chat, by id.
   final chats = <String, ChatState>{};
+
+  /// The open side chats, by id: not stored, not listed.
+  final sides = <String, ChatState>{};
   String? selectedId;
   ChatState? get selected => chats[selectedId];
 
@@ -78,7 +81,9 @@ class Daemon extends ChangeNotifier {
               unawaited(_listChats());
               return;
             }
-            if (e.hasChat()) {
+            if (sides[e.chatId] case final side?) {
+              side.apply(e);
+            } else if (e.hasChat()) {
               _chat(e.chat);
               notifyListeners();
             } else {
@@ -140,6 +145,19 @@ class Daemon extends ChangeNotifier {
 
   Future<List<String>> listFiles(String folder) async =>
       (await client.listFiles(ListFilesRequest(folder: folder))).paths;
+
+  /// Opens a side chat of [chat] (see ForkChat).
+  Future<ChatState> forkChat(ChatState chat) async {
+    final resp = await client.forkChat(ForkChatRequest(chatId: chat.id));
+    final side = sides[resp.chatId] = ChatState(resp.chatId, chat.folder);
+    unawaited(_load(side));
+    return side;
+  }
+
+  Future<void> closeSide(ChatState side) async {
+    sides.remove(side.id);
+    await client.closeSideChat(CloseSideChatRequest(chatId: side.id));
+  }
 
   Future<void> cancelTurn(String chatId) =>
       client.cancelTurn(CancelTurnRequest(chatId: chatId));

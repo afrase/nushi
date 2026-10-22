@@ -1,32 +1,33 @@
 # Notes
 
-## Summary (2026-10-22, after step 10)
+## Summary (2026-10-22, after step 18)
 
-All ten steps are done, one commit each, on `main` (not pushed). `make test` passes: Go unit tests, two end-to-end tests against a fake agent (app quit, daemon restart), the Dart transport tests and a Dart test of the app's snapshot-plus-events logic. Every step was also tried by hand against live Claude (claude-agent-acp 0.94.0, Claude Code 2.1.308) by driving the app.
+Milestone D (steps 11–18) is done, one commit each on `main` (not pushed), on top of steps 1–10. `make test` passes: Go unit tests, three end-to-end tests against the fake agent (app quit, daemon restart, stopping a turn), the transport and markdown package tests, and the app's tests. Every step was looked at in the running app against live Claude (claude-agent-acp 0.94.0, Claude Code 2.1.308), at 1280×800 and 1024×700, dark and light; thoughts and long chats were also tried with the fake agent.
 
-**What works**
-- `make run` starts `nushid` (if it isn't running) and the app. The app connects over a Unix socket with a token, and shows "Daemon not running" when it can't.
-- Chats with Claude in any folder: streaming markdown replies, tool calls as collapsed rows with status and output, permission prompts as cards with Claude's own options, AskUserQuestion as an answerable card (options, multi-select, "Other", digit keys, Enter, Skip).
-- Pickers for every config option Claude sends (Mode, Model, Effort, Fast mode, Agent), one Mode picker; the last mode picked is remembered per agent and new chats start in it.
-- A sidebar of chats grouped by folder; new chats in a picked folder or an existing one; switching keeps each transcript. Chats are stored as small JSON files.
-- Quitting the app leaves agents running; reopening it shows each chat's transcript and any waiting prompt, which can still be answered.
-- Restarting the daemon: a chat is reopened through `session/load` when opened, its transcript rebuilt from Claude's replay, in its last mode.
-- A Changes tab per chat shows the folder's uncommitted changes (against HEAD, untracked files included) side by side with `diff_view` from pub.dev: ribbons, word highlights, folded unchanged lines. It reloads when the agent finishes a turn.
+**What works** (on top of steps 1–10: chats with Claude in any folder, permission prompts and questions as cards, pickers, a sidebar of chats that survive app quits and daemon restarts, and the Changes diff viewer)
+- The POC's look, light and dark: its tokens, bundled fonts, buttons, pickers and status dots; sidebar, chat header, transcript and composer laid out like its views.
+- Markdown that streams cleanly (the POC's healer in front of `flutter_markdown_plus`, in `packages/markdown`): highlighted code blocks with a language label, copy button and sideways scroll; tables, quotes, lists; links open in the browser (http and https); a whole transcript is one selection.
+- Tool calls as one-line summaries by kind (file read, command run, file edited with `+n −m`), runs of calls grouped into one line, failures in red, commands' output in a monospace block, edits as compact side-by-side diffs (`diff_view`).
+- Plans as one checklist per turn that ticks off in place, with the current step above the composer; thoughts as a dim, collapsed Thinking line (fake agent only, see below).
+- Stop (button and Escape, `session/cancel`), a ticking "working · 12s", notices for turns that end otherwise (Stopped, refused, limits, errors), and sidebar marks for chats that work and chats that need you.
+- The composer: Enter/Shift-Enter, grows to ten lines, `/` commands and `@` files with autocomplete (files go as resource links), Up recalls the last prompt.
+- Long chats build lazily, open at the bottom, follow it, stop following when scrolled up, and offer "Jump to latest".
+- Select text for Reply (quoted in the composer) or a side question (a forked session in a panel beside the chat, gone when closed).
 
 **What doesn't (yet)**
-- No way to stop a running turn (`session/cancel`), delete or archive a chat, or rename one.
-- Not shown: the agent's thoughts, plans, usage and cost; terminal output (the client doesn't offer the terminal capability).
-- An agent that crashes while the daemon runs isn't noticed: its chat's next prompt fails with the error, and the chat isn't reopened until the daemon restarts.
-- The sidebar doesn't mark chats that wait on you.
-- Links in agent markdown aren't clickable, and images aren't loaded (on purpose, see the security notes).
-- The diff covers only uncommitted changes in the chat's folder; no branch diff, no review comments. Diffing a large file runs on the UI thread.
-- The app was only run in debug builds (`flutter run`); no packaged `.app`.
+- Claude sends no thoughts: recent models stream thinking "omitted", and no setting tried changed it. The Thinking line is built and tested with the fake agent only.
+- Plans need Claude's todo tools, which nushid turns on with an environment variable (`CLAUDE_CODE_ENABLE_TODO_TOOLS=1`).
+- Copying a selection across several blocks loses the line breaks between them (Flutter's `SelectionArea`).
+- Command output shows when the command ends, not while it runs (Claude sends it at the end; the terminal capability isn't offered).
+- Each streamed chunk re-parses its whole message; fine for normal replies, worth a look for very long ones.
+- Side questions: one per chat at a time, no pickers, and they end when the chat's panel closes or you switch chats.
+- Still not done from milestone C: deleting, archiving or renaming chats; usage and cost; a packaged `.app`.
 
-**Decisions to revisit**: see [the list below](#decisions-to-revisit). The ones most worth a look: chats reopen lazily after a daemon restart; the diff API calls `internal/git` directly (no feature package); `flutter_markdown_plus` instead of the POC's healing renderer; no full-access warning on modes.
+**Decisions to revisit**: see [the list below](#decisions-to-revisit). Most worth a look: turning on Claude's todo tools from nushid; the markdown package being `flutter_markdown_plus` plus the healer rather than the POC's renderer; tool calls collapsed by default, edits included; keeping the native title bar; light/dark following the system rather than the POC's dark default; side chats sharing the chat's agent process.
 
-**Size**: the daemon is 1,662 lines of Go (limit 5,000), the ACP client 716 (limit 2,000, its type generator included), the app 1,402 lines of Dart (limit 6,000), plus 131 in the transport package. The largest hand-written file is `acp/internal/acpgen/main.go` at 393 lines. Six steps went over the ~500-lines-per-step tripwire; what pushed each is under "Tripwires crossed".
+**Size**: the app is 3,559 lines of Dart (limit about 7,000), plus 650 in packages (the transport 131, markdown 519); the daemon is 2,009 lines of Go (limit 5,000) and the ACP client 773 (limit 2,000). The largest hand-written files are `acp/internal/acpgen/main.go` (393) and `app/lib/composer.dart` (376). Steps 11, 12, 16 and 18 went over the ~500-lines-per-step tripwire (11 by the most, 1,249, restyling every view); what pushed each is under "Tripwires crossed".
 
-**Test data left behind**: none in the data folder (`~/Library/Application Support/Nushi Next` has only its token; I removed the test chats and the remembered mode). Claude keeps its own history of the test sessions under `~/.claude/projects/` (folders named after this session's scratch directories).
+**Test data left behind**: none in the data folder (`~/Library/Application Support/Nushi Next` has only its token and log; I removed the test chats and the remembered mode). Claude keeps its own history of the test sessions under `~/.claude/projects/` (folders named after this session's scratch directories).
 
 ## Line counts
 
@@ -53,9 +54,10 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 15. Turn controls | 1807 | 722 | 2911 | 650 |
 | 16. The composer | 1878 | 722 | 3118 | 650 |
 | 17. Long chats | 1878 | 722 | 3235 | 650 |
+| 18. Ask about a selection | 2009 | 773 | 3559 | 650 |
 
 Tripwires crossed:
-Lines added per step, code and tests, without generated code (the tripwire is about 500): 1: 533, 2: 1,502, 3: 239, 4: 437, 5: 739, 6: 639, 7: 464, 8: 537, 9: 265, 10: 528, 11: 1,249, 12: 625, 13: 476, 14: 343, 15: 351, 16: 492, 17: 298.
+Lines added per step, code and tests, without generated code (the tripwire is about 500): 1: 533, 2: 1,502, 3: 239, 4: 437, 5: 739, 6: 639, 7: 464, 8: 537, 9: 265, 10: 528, 11: 1,249, 12: 625, 13: 476, 14: 343, 15: 351, 16: 492, 17: 298, 18: 666.
 - Step 1 (533): the Unix-socket transport package and its tests came with the skeleton.
 - Step 2 (1,502): the whole ACP client landed in this step (JSON-RPC framing, client and the schema-to-Go type generator, about 660 lines), plus the first real chat screen and the daemon's chat feature. None of it is for later steps.
 - Step 5 (739): the question card is the app's biggest widget (267 lines: options, multi-select, Other boxes, digit keys); reading the form in order, and two fixes to the type generator.
@@ -64,6 +66,8 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 - Step 10 (528): the git reader and its test, the Changes view, and the app's first Dart test.
 - Step 11 (1,249 added, 399 removed): the POC's tokens, theme and small widgets (about 470 lines), and every view restyled on them (sidebar, header, transcript, tool calls, cards, composer, pickers, Changes list). Tokens are written as Dart, flat, light and dark; the POC generated them from a JSON file.
 - Step 12 (625): the healer lifted from the POC (300 lines, about half of the POC's) and its tests, the code block builder, and the style mapping.
+- Step 16 (492) and 18 (666): each touched both sides. Step 18 is the fork and close calls in the ACP client (hand-written, `session/fork` isn't in the pinned schema), routing a shared agent's updates to the chat or its side chats, two RPCs, a test, and in the app the selection popover, Reply, and the side panel with its own transcript and composer.
+- Milestone D (steps 11–18) grew the app from 1,402 to 3,559 lines of Dart (limit about 7,000), plus 519 in the new markdown package; the daemon from 1,662 to 2,009 lines of Go and the ACP client from 716 to 773.
 - `acp/internal/acpgen/main.go` reached 407 lines in step 10's trim pass; it was trimmed to 393.
 
 ## Milestone A demo (steps 1–5): one working chat
@@ -93,6 +97,17 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 4. Ask for another change and stay on Changes: the list reloads when the turn ends (or click ↻).
 5. In a folder outside git, Changes says so.
 
+## Milestone D demo (steps 11–18): a chat worth reading
+
+1. `make run`. The app has the POC's look: IBM Plex Sans and JetBrains Mono, a raised sidebar of chats with status dots, a chat header (agent, model, status, folder, Chat | Changes). View ▸ Light/Dark/System Appearance switches the theme.
+2. Start a chat in a git repository. Ask: "Without tools, write a long reply: a heading, a paragraph with a link and **bold**, code in Go, Python (one line over 150 characters) and TypeScript, a table, a quote and lists." It streams without raw `**` or half fences; code blocks have a language label, a copy button, colors and sideways scroll; tables and quotes are styled; links open in the browser. Drag across a whole message to select it.
+3. Ask Claude to explore the repo (read files, run `git log`, run `ls nope`) and make an edit. The tool calls collapse into one line ("Read 3 files, ran 3 commands, edited 1 file"); open it: each call is one line (`Read counter.go`, `$ git log`, `Edit counter.go +4 −0`), the failed one in red; open the edit to see its diff side by side.
+4. Pick Mode ▸ Plan and ask for a plan for a small change, kept as a todo list. Approve it; the Plan checklist ticks off as Claude works, and the current step shows above the composer. (Claude sends no thoughts here; `acp/acptest/fakeagent` shows the Thinking line: see "Decisions to revisit".)
+5. Ask for a 2,000-word essay; while it streams the header counts "working · 8s" and the composer shows Stop. Press Escape: the reply stops and "Stopped" shows. Pick Mode ▸ Manual, ask for `touch y.txt`, and switch to another chat: the first one shows amber "needs you" in the sidebar.
+6. In the composer, type `/re` and pick a command with the arrows and Enter; type `@cou`, Tab to pick `counter.go`, finish the question and send: Claude reads the file. Shift-Enter adds a line; Up in an empty box brings back the last prompt.
+7. Open a long chat (or the fake agent's `many`): it opens at the bottom, follows new text, stops following when you scroll up and shows "Jump to latest".
+8. Select a sentence of a reply: Reply quotes it in the composer. Select another: Side question opens a panel; ask something there, and Claude answers knowing the chat. Close the panel and ask the main chat what you asked last: it never saw the side question.
+
 ## ACP quirks
 
 - `session/new` requires `mcpServers`: send `[]`, never `null`.
@@ -107,6 +122,7 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 - Claude keeps a todo list (ACP `plan` updates, full list each time) only when its todo tools are on: `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` in its environment. Without it, `TodoWrite` and `TaskCreate` aren't there and Claude says so. With it, Claude uses `TodoWrite` or `TaskCreate`/`TaskUpdate` (the adapter hides the task tool calls and sends the plan). In Plan mode Claude writes the plan before asking to leave Plan mode, so the checklist sits above the approval card.
 - `session/cancel` on Claude ends the turn within a second or two with stop reason `cancelled`; the text streamed so far stays. A command Claude runs in the background can finish after the turn and Claude then writes again on its own, outside any prompt (a tool call and a message arrive while the chat is idle).
 - Claude sends `available_commands_update` soon after `session/new` (and after `session/load`): about 80 commands, its own and every installed plugin's and skill's (`/code-review:code-review`). A command goes back as an ordinary prompt starting with `/name`. A `resource_link` to a `file://` URI in the prompt makes Claude read the file.
+- claude-agent-acp 0.94.0 advertises `sessionCapabilities.fork` (and `close`, `resume`, `list`, `delete`). `session/fork` copies the session's transcript into a new session on the same agent process, which then knows the whole conversation; prompting it doesn't touch the original. Updates for the fork arrive on the same connection, tagged with the fork's session id. `session/close` ends it.
 - Claude also sends a `tool_call_update` carrying only `_meta.claudeCode.toolResponse` (the raw tool result) before the final one; it changes nothing we show.
 - In `auto` mode Claude asked nothing for `curl -X POST` or `touch`; in Manual (`default`) mode it asks before `touch`, with two options, "Yes" (`allow_once`) and "No" (`reject_once`). A permission request names the tool call it is about (`toolCall.toolCallId`), which was sent just before as a `tool_call`.
 - To test prompts without a mode picker, a folder with `.claude/settings.json` = `{"permissions":{"defaultMode":"default"}}` starts Claude in Manual mode.
@@ -156,6 +172,10 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 - The transcript (step 17) is a top-down lazy list: it opens at the bottom and sticks to it while the agent writes (re-checking whenever the list's height changes, since lazily built items change it); scrolled up by more than a line, it stays put and shows "Jump to latest". A short chat sits at the top of the pane, as on claude.ai, rather than against the composer.
 - The fake agent's `many` script writes 150 tool calls and messages, to try a long chat.
 
+- Side questions (step 18) fork the chat's session on its own agent (no new process), so a side chat can't outlive the chat's agent. It isn't stored or listed, and closing the panel, switching chats or the daemon stopping ends it (`session/close`). Only one side question per chat at a time; a second "Side question" adds the new quote to the open one. Its pickers are empty: it runs with the chat's settings.
+- The selection popover shows where the pointer went up, once text is selected (a drag or a double-click), with Reply (quotes the selection as `> ` lines in the composer, cursor after it) and Side question (hidden when the agent can't fork). It works in the side panel too, where it only offers Reply.
+- `session/fork` and `session/close` types in `acp/fork.go` are written by hand (fork is unstable in ACP v1 and not in the pinned schema); the fork capability is read from the raw `initialize` answer.
+
 - Connect for Go is v1 (`connectrpc.com/connect` v1.21), not v2: v1 is what the Dart generator's docs and the POC used, and nothing here needs v2.
 - `http2` for Dart stays on 2.x: `connectrpc` 2.0.1 doesn't resolve with `http2` 3.x.
 - The app runs without the macOS App Sandbox, so it can reach the daemon's socket in Application Support.
@@ -171,7 +191,9 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 
 - Agents run as you, with your environment, through `npx --yes @agentclientprotocol/claude-agent-acp@0.94.0` (downloaded from npm on first use, pinned by version, not by hash). npx runs in the daemon's data folder, never the project's, so a project's `node_modules` or `.npmrc` can't swap the adapter (flagged by the automated security review in step 3). The chat's folder must be an absolute path to an existing folder and reaches the agent only as the session's `cwd`.
 - A panic while handling something the agent sent is turned into a JSON-RPC error instead of crashing the daemon, and a malformed elicitation form is refused (automated security review, step 5).
+- `ListFiles` (step 16) lists any absolute folder the client names (with the client token), through `git ls-files` or a directory walk, 20,000 names at most; it reads names, not contents. Mentioned files go to the agent as `file://` links, which Claude reads with its own permissions.
 - `GetDiff` runs `git` in the folder the client names, as you, with `core.fsmonitor` off and `--no-ext-diff`/`--no-textconv`. Clean filters (`filter.<name>.clean`) still run when `git diff` reads the work tree, as they would for your own `git status` there: a filter needs a config entry, which a cloned repository can't carry, so it takes someone who can already write your `.git/config` or global config. The automated review in step 10 suggested going further (an empty attribute source, or diffing blobs without git's work-tree comparison); I left that for you to decide. A symlink in the work tree is shown as its target path (as git sees it), never followed.
+- nushid sets `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` in Claude's environment (step 14), unless it is already set.
 - Agent text is rendered as markdown; the app never loads images it names (an image URL in a tool's output could otherwise leak data to a server). Links open in the default browser on click, http and https only (step 12); a link's text can differ from where it goes, as on any web page. (Both from the automated security review in step 4. Since step 13 diffs are no longer put into markdown, so the fence that guarded them is gone.)
 - The client token (`token`, mode 0600) sits next to the socket in a 0700 folder; any process running as you can read it ([ADR 0005](docs/adr/0005-clients-authenticate.md)).
 

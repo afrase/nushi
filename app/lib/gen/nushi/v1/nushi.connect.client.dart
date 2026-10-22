@@ -118,6 +118,44 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Opens a side chat: a session the agent forks from the chat's (ACP
+  /// session/fork, when status.can_fork). It knows the conversation so far
+  /// but doesn't add to it, isn't listed or stored, and ends with
+  /// CloseSideChat. Its items and status come as events like any chat's.
+  Future<nushiv1nushi.ForkChatResponse> forkChat(
+    nushiv1nushi.ForkChatRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.forkChat,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  Future<nushiv1nushi.CloseSideChatResponse> closeSideChat(
+    nushiv1nushi.CloseSideChatRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.closeSideChat,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Answers a pending permission prompt with one of its options.
   Future<nushiv1nushi.AnswerPermissionResponse> answerPermission(
     nushiv1nushi.AnswerPermissionRequest input, {

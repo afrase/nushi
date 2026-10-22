@@ -145,6 +145,7 @@ type Status struct {
 	Busy    bool
 	Started time.Time // when the running turn started
 	Waiting bool      // a permission prompt or question waits on the user
+	CanFork bool      // the agent can fork the chat into side chats
 }
 
 // FileChange is one file's uncommitted change: its text at HEAD and now.

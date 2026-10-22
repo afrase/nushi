@@ -16,6 +16,7 @@ class ChatState extends ChangeNotifier {
   List<Command> commands = []; // the agent's slash commands
   bool busy = false;
   bool waiting = false; // on the user: a permission prompt or a question
+  bool canFork = false; // the agent can fork it into side chats
   DateTime? started; // when the running turn started
   String error = ''; // why the snapshot didn't load
 
@@ -66,6 +67,7 @@ class ChatState extends ChangeNotifier {
   void status(ChatStatus s) {
     busy = s.busy;
     waiting = s.waiting;
+    canFork = s.canFork;
     started = s.started == 0
         ? null
         : DateTime.fromMillisecondsSinceEpoch(s.started.toInt());

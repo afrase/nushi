@@ -18,6 +18,12 @@ service NushiService {
   // Stops the chat's running turn (ACP session/cancel). The turn ends with a
   // "cancelled" notice, and prompts it was waiting on are cancelled.
   rpc CancelTurn(CancelTurnRequest) returns (CancelTurnResponse);
+  // Opens a side chat: a session the agent forks from the chat's (ACP
+  // session/fork, when status.can_fork). It knows the conversation so far
+  // but doesn't add to it, isn't listed or stored, and ends with
+  // CloseSideChat. Its items and status come as events like any chat's.
+  rpc ForkChat(ForkChatRequest) returns (ForkChatResponse);
+  rpc CloseSideChat(CloseSideChatRequest) returns (CloseSideChatResponse);
   // Answers a pending permission prompt with one of its options.
   rpc AnswerPermission(AnswerPermissionRequest) returns (AnswerPermissionResponse);
   // Answers a pending question, or declines it.
@@ -125,6 +131,21 @@ message CancelTurnRequest {
 }
 
 message CancelTurnResponse {}
+
+message ForkChatRequest {
+  string chat_id = 1;
+}
+
+message ForkChatResponse {
+  // The side chat's id.
+  string chat_id = 1;
+}
+
+message CloseSideChatRequest {
+  string chat_id = 1;
+}
+
+message CloseSideChatResponse {}
 
 message AnswerPermissionRequest {
   string chat_id = 1;
@@ -325,4 +346,6 @@ message ChatStatus {
   int64 started = 3;
   // The agent waits on the user: a permission prompt or a question.
   bool waiting = 4;
+  // The agent can fork the chat (ForkChat).
+  bool can_fork = 5;
 }

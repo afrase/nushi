@@ -45,6 +45,11 @@ const (
 	NushiServiceSendPromptProcedure = "/nushi.v1.NushiService/SendPrompt"
 	// NushiServiceCancelTurnProcedure is the fully-qualified name of the NushiService's CancelTurn RPC.
 	NushiServiceCancelTurnProcedure = "/nushi.v1.NushiService/CancelTurn"
+	// NushiServiceForkChatProcedure is the fully-qualified name of the NushiService's ForkChat RPC.
+	NushiServiceForkChatProcedure = "/nushi.v1.NushiService/ForkChat"
+	// NushiServiceCloseSideChatProcedure is the fully-qualified name of the NushiService's
+	// CloseSideChat RPC.
+	NushiServiceCloseSideChatProcedure = "/nushi.v1.NushiService/CloseSideChat"
 	// NushiServiceAnswerPermissionProcedure is the fully-qualified name of the NushiService's
 	// AnswerPermission RPC.
 	NushiServiceAnswerPermissionProcedure = "/nushi.v1.NushiService/AnswerPermission"
@@ -77,6 +82,12 @@ type NushiServiceClient interface {
 	// Stops the chat's running turn (ACP session/cancel). The turn ends with a
 	// "cancelled" notice, and prompts it was waiting on are cancelled.
 	CancelTurn(context.Context, *connect.Request[v1.CancelTurnRequest]) (*connect.Response[v1.CancelTurnResponse], error)
+	// Opens a side chat: a session the agent forks from the chat's (ACP
+	// session/fork, when status.can_fork). It knows the conversation so far
+	// but doesn't add to it, isn't listed or stored, and ends with
+	// CloseSideChat. Its items and status come as events like any chat's.
+	ForkChat(context.Context, *connect.Request[v1.ForkChatRequest]) (*connect.Response[v1.ForkChatResponse], error)
+	CloseSideChat(context.Context, *connect.Request[v1.CloseSideChatRequest]) (*connect.Response[v1.CloseSideChatResponse], error)
 	// Answers a pending permission prompt with one of its options.
 	AnswerPermission(context.Context, *connect.Request[v1.AnswerPermissionRequest]) (*connect.Response[v1.AnswerPermissionResponse], error)
 	// Answers a pending question, or declines it.
@@ -142,6 +153,18 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("CancelTurn")),
 			connect.WithClientOptions(opts...),
 		),
+		forkChat: connect.NewClient[v1.ForkChatRequest, v1.ForkChatResponse](
+			httpClient,
+			baseURL+NushiServiceForkChatProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ForkChat")),
+			connect.WithClientOptions(opts...),
+		),
+		closeSideChat: connect.NewClient[v1.CloseSideChatRequest, v1.CloseSideChatResponse](
+			httpClient,
+			baseURL+NushiServiceCloseSideChatProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("CloseSideChat")),
+			connect.WithClientOptions(opts...),
+		),
 		answerPermission: connect.NewClient[v1.AnswerPermissionRequest, v1.AnswerPermissionResponse](
 			httpClient,
 			baseURL+NushiServiceAnswerPermissionProcedure,
@@ -189,6 +212,8 @@ type nushiServiceClient struct {
 	startChat        *connect.Client[v1.StartChatRequest, v1.StartChatResponse]
 	sendPrompt       *connect.Client[v1.SendPromptRequest, v1.SendPromptResponse]
 	cancelTurn       *connect.Client[v1.CancelTurnRequest, v1.CancelTurnResponse]
+	forkChat         *connect.Client[v1.ForkChatRequest, v1.ForkChatResponse]
+	closeSideChat    *connect.Client[v1.CloseSideChatRequest, v1.CloseSideChatResponse]
 	answerPermission *connect.Client[v1.AnswerPermissionRequest, v1.AnswerPermissionResponse]
 	answerQuestion   *connect.Client[v1.AnswerQuestionRequest, v1.AnswerQuestionResponse]
 	setConfigOption  *connect.Client[v1.SetConfigOptionRequest, v1.SetConfigOptionResponse]
@@ -225,6 +250,16 @@ func (c *nushiServiceClient) SendPrompt(ctx context.Context, req *connect.Reques
 // CancelTurn calls nushi.v1.NushiService.CancelTurn.
 func (c *nushiServiceClient) CancelTurn(ctx context.Context, req *connect.Request[v1.CancelTurnRequest]) (*connect.Response[v1.CancelTurnResponse], error) {
 	return c.cancelTurn.CallUnary(ctx, req)
+}
+
+// ForkChat calls nushi.v1.NushiService.ForkChat.
+func (c *nushiServiceClient) ForkChat(ctx context.Context, req *connect.Request[v1.ForkChatRequest]) (*connect.Response[v1.ForkChatResponse], error) {
+	return c.forkChat.CallUnary(ctx, req)
+}
+
+// CloseSideChat calls nushi.v1.NushiService.CloseSideChat.
+func (c *nushiServiceClient) CloseSideChat(ctx context.Context, req *connect.Request[v1.CloseSideChatRequest]) (*connect.Response[v1.CloseSideChatResponse], error) {
+	return c.closeSideChat.CallUnary(ctx, req)
 }
 
 // AnswerPermission calls nushi.v1.NushiService.AnswerPermission.
@@ -272,6 +307,12 @@ type NushiServiceHandler interface {
 	// Stops the chat's running turn (ACP session/cancel). The turn ends with a
 	// "cancelled" notice, and prompts it was waiting on are cancelled.
 	CancelTurn(context.Context, *connect.Request[v1.CancelTurnRequest]) (*connect.Response[v1.CancelTurnResponse], error)
+	// Opens a side chat: a session the agent forks from the chat's (ACP
+	// session/fork, when status.can_fork). It knows the conversation so far
+	// but doesn't add to it, isn't listed or stored, and ends with
+	// CloseSideChat. Its items and status come as events like any chat's.
+	ForkChat(context.Context, *connect.Request[v1.ForkChatRequest]) (*connect.Response[v1.ForkChatResponse], error)
+	CloseSideChat(context.Context, *connect.Request[v1.CloseSideChatRequest]) (*connect.Response[v1.CloseSideChatResponse], error)
 	// Answers a pending permission prompt with one of its options.
 	AnswerPermission(context.Context, *connect.Request[v1.AnswerPermissionRequest]) (*connect.Response[v1.AnswerPermissionResponse], error)
 	// Answers a pending question, or declines it.
@@ -333,6 +374,18 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("CancelTurn")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceForkChatHandler := connect.NewUnaryHandler(
+		NushiServiceForkChatProcedure,
+		svc.ForkChat,
+		connect.WithSchema(nushiServiceMethods.ByName("ForkChat")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceCloseSideChatHandler := connect.NewUnaryHandler(
+		NushiServiceCloseSideChatProcedure,
+		svc.CloseSideChat,
+		connect.WithSchema(nushiServiceMethods.ByName("CloseSideChat")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceAnswerPermissionHandler := connect.NewUnaryHandler(
 		NushiServiceAnswerPermissionProcedure,
 		svc.AnswerPermission,
@@ -383,6 +436,10 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceSendPromptHandler.ServeHTTP(w, r)
 		case NushiServiceCancelTurnProcedure:
 			nushiServiceCancelTurnHandler.ServeHTTP(w, r)
+		case NushiServiceForkChatProcedure:
+			nushiServiceForkChatHandler.ServeHTTP(w, r)
+		case NushiServiceCloseSideChatProcedure:
+			nushiServiceCloseSideChatHandler.ServeHTTP(w, r)
 		case NushiServiceAnswerPermissionProcedure:
 			nushiServiceAnswerPermissionHandler.ServeHTTP(w, r)
 		case NushiServiceAnswerQuestionProcedure:
@@ -426,6 +483,14 @@ func (UnimplementedNushiServiceHandler) SendPrompt(context.Context, *connect.Req
 
 func (UnimplementedNushiServiceHandler) CancelTurn(context.Context, *connect.Request[v1.CancelTurnRequest]) (*connect.Response[v1.CancelTurnResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.CancelTurn is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ForkChat(context.Context, *connect.Request[v1.ForkChatRequest]) (*connect.Response[v1.ForkChatResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ForkChat is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) CloseSideChat(context.Context, *connect.Request[v1.CloseSideChatRequest]) (*connect.Response[v1.CloseSideChatResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.CloseSideChat is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) AnswerPermission(context.Context, *connect.Request[v1.AnswerPermissionRequest]) (*connect.Response[v1.AnswerPermissionResponse], error) {

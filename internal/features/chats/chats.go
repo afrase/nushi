@@ -28,6 +28,9 @@ type Agent interface {
 	SetConfigOption(context.Context, acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error)
 	SetMode(context.Context, acp.SetSessionModeRequest) error
 	Cancel(acp.CancelNotification) error
+	CanFork() bool
+	ForkSession(context.Context, acp.ForkSessionRequest) (*acp.ForkSessionResponse, error)
+	CloseSession(context.Context, acp.CloseSessionRequest) error
 	Close() error
 }
 
@@ -70,7 +73,10 @@ type chat struct {
 	config    []model.ConfigOption
 	commands  []model.Command
 	session   model.Session
-	started   time.Time // when the running turn started
+	canFork   bool             // the agent can fork the session into side chats
+	sides     map[string]*chat // the chat's side chats, by session id
+	parent    *chat            // a side chat's chat
+	started   time.Time        // when the running turn started
 	seq       int64     // the last event's number
 }
 
@@ -131,7 +137,8 @@ func (s *Service) Start(ctx context.Context, folder string) (string, error) {
 }
 
 func (s *Service) newChat() *chat {
-	return &chat{publish: s.publish, sessions: s.sessions, waiting: map[string]chan<- string{}, questions: map[string]chan<- []model.Field{}}
+	return &chat{publish: s.publish, sessions: s.sessions, waiting: map[string]chan<- string{},
+		questions: map[string]chan<- []model.Field{}, sides: map[string]*chat{}}
 }
 
 // connect launches the chat's agent and initializes it.
@@ -150,7 +157,7 @@ func (c *chat) connect(ctx context.Context, launch Launch) (*acp.InitializeRespo
 		return nil, err
 	}
 	c.mu.Lock()
-	c.agent = agent
+	c.agent, c.canFork = agent, agent.CanFork()
 	c.mu.Unlock()
 	return init, nil
 }
@@ -170,7 +177,9 @@ func (s *Service) Close() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, c := range s.chats {
-		c.disconnect()
+		if c.parent == nil { // a side chat shares its chat's agent
+			c.disconnect()
+		}
 	}
 }
 
@@ -208,8 +217,10 @@ func (c *chat) saveLocked(change func(*model.Session)) {
 }
 
 func (c *chat) storeLocked() {
-	if err := c.sessions.SaveSession(c.session); err != nil {
-		log.Printf("chat %s: saving: %v", c.id, err)
+	if c.parent == nil { // side chats aren't stored
+		if err := c.sessions.SaveSession(c.session); err != nil {
+			log.Printf("chat %s: saving: %v", c.id, err)
+		}
 	}
 	sess := c.session
 	c.emitLocked(model.Event{ChatID: c.id, Session: &sess})
@@ -280,7 +291,7 @@ func (c *chat) noticeLocked(reason, text string) {
 }
 
 func (c *chat) statusLocked() model.Status {
-	return model.Status{Busy: c.busy, Started: c.started, Waiting: len(c.waiting)+len(c.questions) > 0}
+	return model.Status{Busy: c.busy, Started: c.started, Waiting: len(c.waiting)+len(c.questions) > 0, CanFork: c.canFork}
 }
 
 func (c *chat) statusChangedLocked() {
@@ -295,6 +306,10 @@ func (s *Service) Cancel(chatID string) error {
 	if err != nil {
 		return err
 	}
+	return c.cancel()
+}
+
+func (c *chat) cancel() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.started.IsZero() || c.agent == nil {

@@ -1096,6 +1096,222 @@ class CancelTurnResponse extends $pb.GeneratedMessage {
   static CancelTurnResponse? _defaultInstance;
 }
 
+class ForkChatRequest extends $pb.GeneratedMessage {
+  factory ForkChatRequest({
+    $core.String? chatId,
+  }) {
+    final result = ForkChatRequest._();
+    if (chatId != null) result.chatId = chatId;
+    return result;
+  }
+
+  ForkChatRequest._();
+
+  factory ForkChatRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ForkChatRequest()..mergeFromBuffer(data, registry);
+  factory ForkChatRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ForkChatRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ForkChatRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ForkChatRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ForkChatRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ForkChatRequest copyWith(void Function(ForkChatRequest) updates) =>
+      super.copyWith((message) => updates(message as ForkChatRequest))
+          as ForkChatRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ForkChatRequest() / ForkChatRequest.new instead')
+  static ForkChatRequest create() => ForkChatRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ForkChatRequest._();
+  @$core.override
+  ForkChatRequest createEmptyInstance() => ForkChatRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ForkChatRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ForkChatRequest>(
+          ForkChatRequest.$_createMessage);
+  static ForkChatRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+}
+
+class ForkChatResponse extends $pb.GeneratedMessage {
+  factory ForkChatResponse({
+    $core.String? chatId,
+  }) {
+    final result = ForkChatResponse._();
+    if (chatId != null) result.chatId = chatId;
+    return result;
+  }
+
+  ForkChatResponse._();
+
+  factory ForkChatResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ForkChatResponse()..mergeFromBuffer(data, registry);
+  factory ForkChatResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ForkChatResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ForkChatResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ForkChatResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ForkChatResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ForkChatResponse copyWith(void Function(ForkChatResponse) updates) =>
+      super.copyWith((message) => updates(message as ForkChatResponse))
+          as ForkChatResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ForkChatResponse() / ForkChatResponse.new instead')
+  static ForkChatResponse create() => ForkChatResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ForkChatResponse._();
+  @$core.override
+  ForkChatResponse createEmptyInstance() => ForkChatResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ForkChatResponse getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ForkChatResponse>(
+          ForkChatResponse.$_createMessage);
+  static ForkChatResponse? _defaultInstance;
+
+  /// The side chat's id.
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+}
+
+class CloseSideChatRequest extends $pb.GeneratedMessage {
+  factory CloseSideChatRequest({
+    $core.String? chatId,
+  }) {
+    final result = CloseSideChatRequest._();
+    if (chatId != null) result.chatId = chatId;
+    return result;
+  }
+
+  CloseSideChatRequest._();
+
+  factory CloseSideChatRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CloseSideChatRequest()..mergeFromBuffer(data, registry);
+  factory CloseSideChatRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CloseSideChatRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CloseSideChatRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: CloseSideChatRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CloseSideChatRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CloseSideChatRequest copyWith(void Function(CloseSideChatRequest) updates) =>
+      super.copyWith((message) => updates(message as CloseSideChatRequest))
+          as CloseSideChatRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use CloseSideChatRequest() / CloseSideChatRequest.new instead')
+  static CloseSideChatRequest create() => CloseSideChatRequest._();
+  static $pb.GeneratedMessage $_createMessage() => CloseSideChatRequest._();
+  @$core.override
+  CloseSideChatRequest createEmptyInstance() => CloseSideChatRequest._();
+  @$core.pragma('dart2js:noInline')
+  static CloseSideChatRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<CloseSideChatRequest>(
+          CloseSideChatRequest.$_createMessage);
+  static CloseSideChatRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+}
+
+class CloseSideChatResponse extends $pb.GeneratedMessage {
+  factory CloseSideChatResponse() => CloseSideChatResponse._();
+
+  CloseSideChatResponse._();
+
+  factory CloseSideChatResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CloseSideChatResponse()..mergeFromBuffer(data, registry);
+  factory CloseSideChatResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CloseSideChatResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CloseSideChatResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: CloseSideChatResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CloseSideChatResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CloseSideChatResponse copyWith(
+          void Function(CloseSideChatResponse) updates) =>
+      super.copyWith((message) => updates(message as CloseSideChatResponse))
+          as CloseSideChatResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use CloseSideChatResponse() / CloseSideChatResponse.new instead')
+  static CloseSideChatResponse create() => CloseSideChatResponse._();
+  static $pb.GeneratedMessage $_createMessage() => CloseSideChatResponse._();
+  @$core.override
+  CloseSideChatResponse createEmptyInstance() => CloseSideChatResponse._();
+  @$core.pragma('dart2js:noInline')
+  static CloseSideChatResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<CloseSideChatResponse>(
+          CloseSideChatResponse.$_createMessage);
+  static CloseSideChatResponse? _defaultInstance;
+}
+
 class AnswerPermissionRequest extends $pb.GeneratedMessage {
   factory AnswerPermissionRequest({
     $core.String? chatId,
@@ -2782,12 +2998,14 @@ class ChatStatus extends $pb.GeneratedMessage {
     $core.String? error,
     $fixnum.Int64? started,
     $core.bool? waiting,
+    $core.bool? canFork,
   }) {
     final result = ChatStatus._();
     if (busy != null) result.busy = busy;
     if (error != null) result.error = error;
     if (started != null) result.started = started;
     if (waiting != null) result.waiting = waiting;
+    if (canFork != null) result.canFork = canFork;
     return result;
   }
 
@@ -2808,6 +3026,7 @@ class ChatStatus extends $pb.GeneratedMessage {
     ..aOS(2, _omitFieldNames ? '' : 'error')
     ..aInt64(3, _omitFieldNames ? '' : 'started')
     ..aOB(4, _omitFieldNames ? '' : 'waiting')
+    ..aOB(5, _omitFieldNames ? '' : 'canFork')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -2868,6 +3087,16 @@ class ChatStatus extends $pb.GeneratedMessage {
   $core.bool hasWaiting() => $_has(3);
   @$pb.TagNumber(4)
   void clearWaiting() => $_clearField(4);
+
+  /// The agent can fork the chat (ForkChat).
+  @$pb.TagNumber(5)
+  $core.bool get canFork => $_getBF(4);
+  @$pb.TagNumber(5)
+  set canFork($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasCanFork() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearCanFork() => $_clearField(5);
 }
 
 class NushiServiceApi {
@@ -2911,6 +3140,19 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, CancelTurnRequest request) =>
       _client.invoke<CancelTurnResponse>(
           ctx, 'NushiService', 'CancelTurn', request, CancelTurnResponse());
+
+  /// Opens a side chat: a session the agent forks from the chat's (ACP
+  /// session/fork, when status.can_fork). It knows the conversation so far
+  /// but doesn't add to it, isn't listed or stored, and ends with
+  /// CloseSideChat. Its items and status come as events like any chat's.
+  $async.Future<ForkChatResponse> forkChat(
+          $pb.ClientContext? ctx, ForkChatRequest request) =>
+      _client.invoke<ForkChatResponse>(
+          ctx, 'NushiService', 'ForkChat', request, ForkChatResponse());
+  $async.Future<CloseSideChatResponse> closeSideChat(
+          $pb.ClientContext? ctx, CloseSideChatRequest request) =>
+      _client.invoke<CloseSideChatResponse>(ctx, 'NushiService',
+          'CloseSideChat', request, CloseSideChatResponse());
 
   /// Answers a pending permission prompt with one of its options.
   $async.Future<AnswerPermissionResponse> answerPermission(
