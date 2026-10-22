@@ -8,7 +8,8 @@ class ChatState extends ChangeNotifier {
   ChatState(this.id, this.folder);
 
   final String id;
-  final String folder;
+  String folder; // it can move (MoveChat)
+  String sessionId = ''; // the agent's
   String title = '';
   bool archived = false; // no agent runs; read-only until unarchived
   DateTime created = DateTime.now();
@@ -45,6 +46,12 @@ class ChatState extends ChangeNotifier {
       _apply(e);
     }
     _early.clear();
+    notifyListeners();
+  }
+
+  /// The chat moved to [to]; what shows its folder follows.
+  void moved(String to) {
+    folder = to;
     notifyListeners();
   }
 

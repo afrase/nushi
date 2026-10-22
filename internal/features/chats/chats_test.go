@@ -113,11 +113,11 @@ func TestPromptStreamsTheReply(t *testing.T) {
 		}
 	}
 	agent := &fakeAgent{updates: []acp.SessionUpdate{chunk("m1", "Hel"), chunk("m1", "lo"), chunk("", "!"), chunk("m2", "Bye")}}
-	svc := New("fake", func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, &memModes{}, &memSessions{}, publish)
+	svc := New("fake", func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, &memModes{}, &memSessions{}, nil, "", publish)
 
 	folder := t.TempDir()
 	id, err := svc.Start(context.Background(), folder)
-	if err != nil || id != "s1" {
+	if err != nil || svc.chats[id].sid != "s1" {
 		t.Fatalf("Start = %q, %v", id, err)
 	}
 	if err := svc.Prompt(id, "hi", []string{"a b.go"}); err != nil {
@@ -166,7 +166,7 @@ func TestToolCallUpdatesMergeIntoOneItem(t *testing.T) {
 	text := func(s string) []acp.ToolCallContent {
 		return []acp.ToolCallContent{{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: s}}}}}
 	}
-	c := &chat{id: "s1", publish: func(model.Event) {}, session: model.Session{Folder: "/w"}}
+	c := &chat{id: "s1", sid: "s1", publish: func(model.Event) {}, session: model.Session{Folder: "/w"}}
 	for _, u := range []acp.SessionUpdate{
 		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "Terminal", Kind: "execute", Status: "pending"}},
 		{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Title: "ls -la", Content: text("List files")}},
@@ -189,7 +189,7 @@ func TestToolCallUpdatesMergeIntoOneItem(t *testing.T) {
 
 func TestPermissionWaitsForTheUsersPick(t *testing.T) {
 	events := make(chan model.Event, 100)
-	c := &chat{id: "s1", agent: &fakeAgent{}, publish: func(e model.Event) { events <- e }, waiting: map[string]chan<- string{}}
+	c := &chat{id: "s1", sid: "s1", agent: &fakeAgent{}, publish: func(e model.Event) { events <- e }, waiting: map[string]chan<- string{}}
 	svc := &Service{chats: map[string]*chat{"s1": c}}
 	c.addLocked(model.Item{ID: "t1", Kind: model.ToolCall, Title: "rm -rf build"})
 
@@ -254,7 +254,7 @@ func TestPermissionWaitsForTheUsersPick(t *testing.T) {
 }
 
 func TestPlanUpdatesInPlaceWithinATurn(t *testing.T) {
-	c := &chat{id: "s1", publish: func(model.Event) {}}
+	c := &chat{id: "s1", sid: "s1", publish: func(model.Event) {}}
 	plan := func(statuses ...string) acp.SessionUpdate {
 		var entries []acp.PlanEntry
 		for _, s := range statuses {
@@ -302,7 +302,7 @@ func TestUsageIsWhatTheAgentReported(t *testing.T) {
 		updates: []acp.SessionUpdate{usage(100, &acp.Cost{Amount: 0.5, Currency: "USD"}), usage(120, nil)},
 		usage:   &acp.TurnUsage{InputTokens: 3, OutputTokens: 4, CachedReadTokens: 5, TotalTokens: 12},
 	}
-	svc := New("fake", func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, &memModes{}, &memSessions{}, publish)
+	svc := New("fake", func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, &memModes{}, &memSessions{}, nil, "", publish)
 	id, err := svc.Start(context.Background(), t.TempDir())
 	if err != nil {
 		t.Fatal(err)

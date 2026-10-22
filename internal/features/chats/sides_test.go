@@ -11,7 +11,7 @@ import (
 func TestSideChatKeepsToItself(t *testing.T) {
 	agent := &fakeAgent{}
 	sessions := &memSessions{}
-	svc := New("fake", func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, &memModes{}, sessions, func(model.Event) {})
+	svc := New("fake", func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, &memModes{}, sessions, nil, "", func(model.Event) {})
 	ctx := context.Background()
 	id, err := svc.Start(ctx, t.TempDir())
 	if err != nil {
@@ -27,7 +27,7 @@ func TestSideChatKeepsToItself(t *testing.T) {
 	}
 	say("fork1", "aside")
 	say("unknown", "lost")
-	say(acp.SessionID(id), "main")
+	say("s1", "main")
 
 	main, _ := svc.Get(id)
 	aside, _ := svc.Get(side)

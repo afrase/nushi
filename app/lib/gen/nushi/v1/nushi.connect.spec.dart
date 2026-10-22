@@ -43,6 +43,17 @@ abstract final class NushiService {
     nushiv1nushi.StartChatResponse.new,
   );
 
+  /// Moves a chat to another folder. A chat without messages starts a new
+  /// session there; one with messages keeps its session and history, reopened
+  /// in the new folder. Refused while the chat is busy. If the move fails the
+  /// chat stays where it was, with a notice saying why.
+  static const moveChat = connect.Spec(
+    '/$name/MoveChat',
+    connect.StreamType.unary,
+    nushiv1nushi.MoveChatRequest.new,
+    nushiv1nushi.MoveChatResponse.new,
+  );
+
   /// Sends a prompt; the reply arrives as events.
   static const sendPrompt = connect.Spec(
     '/$name/SendPrompt',

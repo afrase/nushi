@@ -16,7 +16,10 @@ final dataDir =
     '${Platform.environment['HOME']}/Library/Application Support/Nushi Next';
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 15;
+const apiVersion = 16;
+
+/// Whether [folder] is a chat's scratch folder: the chat has no folder yet.
+bool isScratch(String folder) => folder.startsWith('$dataDir/scratch/');
 
 /// The daemon in the app's bundle (`make package`), if the app runs from one.
 final String? bundledDaemon = () {
@@ -68,6 +71,9 @@ class Daemon extends ChangeNotifier {
 
   /// Whether the daemon has rename, archive and remove (API 14).
   bool get canManageChats => daemonApi >= 14;
+
+  /// Whether the daemon starts chats without a folder and moves them (API 16).
+  bool get canMove => daemonApi >= 16;
 
   Future<void> _ping() async {
     var api = 0;
@@ -189,7 +195,9 @@ class Daemon extends ChangeNotifier {
       chat.unload();
       if (chat.id == selectedId) unawaited(_load(chat));
     }
+    if (chat.folder != c.folder) chat.moved(c.folder);
     return chat
+      ..sessionId = c.sessionId.isEmpty ? c.id : c.sessionId
       ..title = c.title
       ..archived = c.archived
       ..created = DateTime.fromMillisecondsSinceEpoch(c.createdUnixMs.toInt())
@@ -203,10 +211,25 @@ class Daemon extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Starts a chat in [folder], or in a scratch folder of its own ('').
   Future<void> startChat(String folder) async {
     final resp = await client.startChat(StartChatRequest(folder: folder));
     chats[resp.chatId] ??= ChatState(resp.chatId, folder);
     select(resp.chatId);
+  }
+
+  Future<void> moveChat(String chatId, String folder) =>
+      client.moveChat(MoveChatRequest(chatId: chatId, folder: folder));
+
+  /// The folders of the chats, the newest chat's first, scratch folders left
+  /// out.
+  List<String> get recentFolders {
+    final byNewest = chats.values.toList()
+      ..sort((a, b) => b.created.compareTo(a.created));
+    return {
+      for (final c in byNewest)
+        if (!isScratch(c.folder)) c.folder,
+    }.toList();
   }
 
   Future<void> renameChat(String chatId, String title) =>

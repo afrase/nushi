@@ -19,6 +19,7 @@ import (
 
 	"github.com/afrase/nushi/acp"
 	"github.com/afrase/nushi/internal/api"
+	"github.com/afrase/nushi/internal/claudehistory"
 	"github.com/afrase/nushi/internal/events"
 	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/store"
@@ -58,7 +59,12 @@ func run() error {
 	hub := &events.Hub{}
 	launch := func(h acp.Handler) (chats.Agent, error) { return launchClaude(dir, h) }
 	st := store.New(dir)
-	chatSvc := chats.New("claude", launch, st, st, hub.Publish)
+	projects, err := claudehistory.Projects()
+	if err != nil {
+		return err
+	}
+	copyHistory := func(id, from, to string) (func() error, error) { return claudehistory.Copy(projects, id, from, to) }
+	chatSvc := chats.New("claude", launch, st, st, copyHistory, filepath.Join(dir, "scratch"), hub.Publish)
 	srv := &http.Server{Handler: api.Handler(token, chatSvc, hub), Protocols: new(http.Protocols)}
 	srv.Protocols.SetUnencryptedHTTP2(true)
 

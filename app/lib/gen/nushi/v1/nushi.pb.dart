@@ -225,6 +225,7 @@ class Chat extends $pb.GeneratedMessage {
     $fixnum.Int64? createdUnixMs,
     ChatStatus? status,
     $core.bool? archived,
+    $core.String? sessionId,
   }) {
     final result = Chat._();
     if (id != null) result.id = id;
@@ -235,6 +236,7 @@ class Chat extends $pb.GeneratedMessage {
     if (createdUnixMs != null) result.createdUnixMs = createdUnixMs;
     if (status != null) result.status = status;
     if (archived != null) result.archived = archived;
+    if (sessionId != null) result.sessionId = sessionId;
     return result;
   }
 
@@ -260,6 +262,7 @@ class Chat extends $pb.GeneratedMessage {
     ..aOM<ChatStatus>(7, _omitFieldNames ? '' : 'status',
         subBuilder: ChatStatus.$_createMessage)
     ..aOB(8, _omitFieldNames ? '' : 'archived')
+    ..aOS(9, _omitFieldNames ? '' : 'sessionId')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -360,6 +363,17 @@ class Chat extends $pb.GeneratedMessage {
   $core.bool hasArchived() => $_has(7);
   @$pb.TagNumber(8)
   void clearArchived() => $_clearField(8);
+
+  /// The agent's session id (claude --resume <id>). It differs from id for
+  /// chats started since API 16.
+  @$pb.TagNumber(9)
+  $core.String get sessionId => $_getSZ(8);
+  @$pb.TagNumber(9)
+  set sessionId($core.String value) => $_setString(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasSessionId() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearSessionId() => $_clearField(9);
 }
 
 class GetChatRequest extends $pb.GeneratedMessage {
@@ -870,6 +884,7 @@ class StartChatRequest extends $pb.GeneratedMessage {
           StartChatRequest.$_createMessage);
   static StartChatRequest? _defaultInstance;
 
+  /// Empty: a scratch folder of the chat's own, in the daemon's data folder.
   @$pb.TagNumber(1)
   $core.String get folder => $_getSZ(0);
   @$pb.TagNumber(1)
@@ -878,6 +893,116 @@ class StartChatRequest extends $pb.GeneratedMessage {
   $core.bool hasFolder() => $_has(0);
   @$pb.TagNumber(1)
   void clearFolder() => $_clearField(1);
+}
+
+class MoveChatRequest extends $pb.GeneratedMessage {
+  factory MoveChatRequest({
+    $core.String? chatId,
+    $core.String? folder,
+  }) {
+    final result = MoveChatRequest._();
+    if (chatId != null) result.chatId = chatId;
+    if (folder != null) result.folder = folder;
+    return result;
+  }
+
+  MoveChatRequest._();
+
+  factory MoveChatRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      MoveChatRequest()..mergeFromBuffer(data, registry);
+  factory MoveChatRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      MoveChatRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'MoveChatRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: MoveChatRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOS(2, _omitFieldNames ? '' : 'folder')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  MoveChatRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  MoveChatRequest copyWith(void Function(MoveChatRequest) updates) =>
+      super.copyWith((message) => updates(message as MoveChatRequest))
+          as MoveChatRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use MoveChatRequest() / MoveChatRequest.new instead')
+  static MoveChatRequest create() => MoveChatRequest._();
+  static $pb.GeneratedMessage $_createMessage() => MoveChatRequest._();
+  @$core.override
+  MoveChatRequest createEmptyInstance() => MoveChatRequest._();
+  @$core.pragma('dart2js:noInline')
+  static MoveChatRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<MoveChatRequest>(
+          MoveChatRequest.$_createMessage);
+  static MoveChatRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get folder => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set folder($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasFolder() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearFolder() => $_clearField(2);
+}
+
+class MoveChatResponse extends $pb.GeneratedMessage {
+  factory MoveChatResponse() => MoveChatResponse._();
+
+  MoveChatResponse._();
+
+  factory MoveChatResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      MoveChatResponse()..mergeFromBuffer(data, registry);
+  factory MoveChatResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      MoveChatResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'MoveChatResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: MoveChatResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  MoveChatResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  MoveChatResponse copyWith(void Function(MoveChatResponse) updates) =>
+      super.copyWith((message) => updates(message as MoveChatResponse))
+          as MoveChatResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use MoveChatResponse() / MoveChatResponse.new instead')
+  static MoveChatResponse create() => MoveChatResponse._();
+  static $pb.GeneratedMessage $_createMessage() => MoveChatResponse._();
+  @$core.override
+  MoveChatResponse createEmptyInstance() => MoveChatResponse._();
+  @$core.pragma('dart2js:noInline')
+  static MoveChatResponse getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<MoveChatResponse>(
+          MoveChatResponse.$_createMessage);
+  static MoveChatResponse? _defaultInstance;
 }
 
 class StartChatResponse extends $pb.GeneratedMessage {
@@ -3665,6 +3790,15 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, StartChatRequest request) =>
       _client.invoke<StartChatResponse>(
           ctx, 'NushiService', 'StartChat', request, StartChatResponse());
+
+  /// Moves a chat to another folder. A chat without messages starts a new
+  /// session there; one with messages keeps its session and history, reopened
+  /// in the new folder. Refused while the chat is busy. If the move fails the
+  /// chat stays where it was, with a notice saying why.
+  $async.Future<MoveChatResponse> moveChat(
+          $pb.ClientContext? ctx, MoveChatRequest request) =>
+      _client.invoke<MoveChatResponse>(
+          ctx, 'NushiService', 'MoveChat', request, MoveChatResponse());
 
   /// Sends a prompt; the reply arrives as events.
   $async.Future<SendPromptResponse> sendPrompt(

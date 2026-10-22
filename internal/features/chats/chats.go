@@ -3,6 +3,7 @@ package chats
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"log"
@@ -50,25 +51,34 @@ type Service struct {
 	launch   Launch
 	modes    Modes
 	sessions Sessions
+	history  CopyHistory
+	scratch  string // the folder that holds chats' scratch folders
 	publish  func(model.Event)
 
 	mu    sync.Mutex
 	chats map[string]*chat
 }
 
-func New(agent string, launch Launch, modes Modes, sessions Sessions, publish func(model.Event)) *Service {
-	return &Service{agent: agent, launch: launch, modes: modes, sessions: sessions, publish: publish, chats: map[string]*chat{}}
+// CopyHistory copies the agent's own record of a session from one folder's
+// history into another's, where the agent can fork it with the other folder
+// as its cwd, and returns a function that removes the copy again.
+type CopyHistory func(sessionID, from, to string) (remove func() error, err error)
+
+func New(agent string, launch Launch, modes Modes, sessions Sessions, history CopyHistory, scratch string, publish func(model.Event)) *Service {
+	return &Service{agent: agent, launch: launch, modes: modes, sessions: sessions, history: history, scratch: scratch,
+		publish: publish, chats: map[string]*chat{}}
 }
 
 type chat struct {
-	id       string // the agent's session id
+	id       string // Nushi's id for the chat
+	sid      string // the agent's session id
 	agent    Agent
 	publish  func(model.Event)
 	sessions Sessions
 
 	mu        sync.Mutex
 	items     []model.Item
-	busy      bool                            // running a turn, or reopening the session
+	busy      bool                            // running a turn, or reopening or moving the session
 	waiting   map[string]chan<- string        // permission prompts by item id, for the picked option
 	questions map[string]chan<- []model.Field // questions by item id, for the answer (nil: declined)
 	config    []model.ConfigOption
@@ -110,23 +120,31 @@ func (s *Service) Get(chatID string) (model.Chat, error) {
 	}, nil
 }
 
-// Start launches an agent in folder and opens a session there.
+// Start opens a chat in folder, or in a new scratch folder of its own when
+// folder is "".
 func (s *Service) Start(ctx context.Context, folder string) (string, error) {
-	if fi, err := os.Stat(folder); err != nil || !fi.IsDir() || !filepath.IsAbs(folder) {
-		return "", fmt.Errorf("%q is not an absolute path to a folder", folder)
-	}
 	c := s.newChat()
-	if _, err := c.connect(ctx, s.launch); err != nil {
+	c.id = rand.Text()
+	scratch := folder == ""
+	if scratch {
+		folder = filepath.Join(s.scratch, c.id)
+		if err := os.MkdirAll(folder, 0o700); err != nil {
+			return "", err
+		}
+	} else if err := checkFolder(folder); err != nil {
 		return "", err
 	}
-	sess, err := c.agent.NewSession(ctx, acp.NewSessionRequest{Cwd: folder, MCPServers: []acp.MCPServer{}})
+	o, err := c.openSession(ctx, s.launch, "", folder, false)
 	if err != nil {
-		c.disconnect()
+		if scratch {
+			os.Remove(folder)
+		}
 		return "", err
 	}
-	c.id = string(sess.SessionID)
-	c.config = configFrom(sess.ConfigOptions, sess.Modes)
-	c.session = model.Session{ID: c.id, Agent: s.agent, Folder: folder, Created: time.Now()}
+	c.mu.Lock()
+	c.useLocked(o)
+	c.session = model.Session{ID: c.id, SessionID: o.sid, Agent: s.agent, Folder: folder, Created: time.Now()}
+	c.mu.Unlock()
 	if err := c.startMode(ctx, s.modes.Mode(s.agent)); err != nil {
 		log.Printf("chat %s: starting mode: %v", c.id, err) // the chat keeps the agent's default
 	}
@@ -140,40 +158,16 @@ func (s *Service) Start(ctx context.Context, folder string) (string, error) {
 	return c.id, nil
 }
 
+func checkFolder(folder string) error {
+	if fi, err := os.Stat(folder); err != nil || !fi.IsDir() || !filepath.IsAbs(folder) {
+		return fmt.Errorf("%q is not an absolute path to a folder", folder)
+	}
+	return nil
+}
+
 func (s *Service) newChat() *chat {
 	return &chat{publish: s.publish, sessions: s.sessions, waiting: map[string]chan<- string{},
 		questions: map[string]chan<- []model.Field{}, sides: map[string]*chat{}}
-}
-
-// connect launches the chat's agent and initializes it.
-func (c *chat) connect(ctx context.Context, launch Launch) (*acp.InitializeResponse, error) {
-	agent, err := launch(c)
-	if err != nil {
-		return nil, fmt.Errorf("start agent: %w", err)
-	}
-	init, err := agent.Initialize(ctx, acp.InitializeRequest{
-		ProtocolVersion:    acp.Version,
-		ClientCapabilities: &acp.ClientCapabilities{Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}}},
-		ClientInfo:         &acp.Implementation{Name: "nushi", Title: "Nushi"},
-	})
-	if err != nil {
-		agent.Close()
-		return nil, err
-	}
-	c.mu.Lock()
-	c.agent, c.canFork = agent, agent.CanFork()
-	c.mu.Unlock()
-	return init, nil
-}
-
-// disconnect stops the chat's agent.
-func (c *chat) disconnect() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.agent != nil {
-		c.agent.Close()
-		c.agent = nil
-	}
 }
 
 // Close stops every chat's agent.
@@ -257,7 +251,7 @@ func (s *Service) Prompt(chatID, text string, files []string) error {
 		prompt = append(prompt, acp.ContentBlock{Type: "resource_link", ResourceLink: &acp.ResourceLink{
 			Name: f, URI: (&url.URL{Scheme: "file", Path: path}).String()}})
 	}
-	go c.run(prompt)
+	go c.run(c.agent, acp.PromptRequest{SessionID: acp.SessionID(c.sid), Prompt: prompt})
 	return nil
 }
 
@@ -270,8 +264,8 @@ func title(prompt string) string {
 	return line
 }
 
-func (c *chat) run(prompt []acp.ContentBlock) {
-	resp, err := c.agent.Prompt(context.Background(), acp.PromptRequest{SessionID: acp.SessionID(c.id), Prompt: prompt})
+func (c *chat) run(agent Agent, req acp.PromptRequest) {
+	resp, err := agent.Prompt(context.Background(), req)
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.busy, c.started = false, time.Time{}
@@ -338,7 +332,7 @@ func (c *chat) cancel() error {
 	}
 	clear(c.waiting)
 	clear(c.questions)
-	return c.agent.Cancel(acp.CancelNotification{SessionID: acp.SessionID(c.id)})
+	return c.agent.Cancel(acp.CancelNotification{SessionID: acp.SessionID(c.sid)})
 }
 
 // itemLocked returns the item with id, or nil.

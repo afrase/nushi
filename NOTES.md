@@ -52,6 +52,7 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 19. Rename, archive, remove | 2179 | 773 | 3968 | 650 |
 | 20. Usage and cost | 2219 | 793 | 4070 | 650 |
 | 21. A packaged app | 2219 | 793 | 4191 | 650 |
+| 22. Chats without a folder, moving a chat | 2489 | 795 | 4383 | 650 |
 
 Tripwires crossed:
 Lines added per step, code and tests, without generated code (the tripwire is about 500): 1: 533, 2: 1,502, 3: 239, 4: 437, 5: 739, 6: 639, 7: 464, 8: 537, 9: 265, 10: 528, 11: 1,249, 12: 625, 13: 476, 14: 343, 15: 351, 16: 492, 17: 298, 18: 666, 19: 755, 20: 223, 21: 146.
@@ -67,6 +68,7 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 - Milestone D (steps 11–18) grew the app from 1,402 to 3,559 lines of Dart (limit about 7,000), plus 519 in the new markdown package; the daemon from 1,662 to 2,009 lines of Go and the ACP client from 716 to 773.
 - Milestone E (steps 19–21) grew the app from 3,559 to 4,191 lines of Dart and the daemon from 2,009 to 2,219 lines of Go; the ACP client from 773 to 793 (the prompt result's unstable `usage`).
 - Step 19 (755 added, 72 removed): both sides again. The daemon's rename/archive/remove (`manage.go`, 114) and their RPCs; an end-to-end test (75); in the app the chat menu, the remove confirmation and the inline rename field (`chat_menu.dart`, 181), the sidebar's archived group and double-click, the header's title and menu, and the archived bar.
+- Step 22 (814 added, 133 removed; 200 of the added are tests): Nushi's chat id split from the agent's session id (every place that spoke ACP for a chat), scratch folders, the move itself (`move.go`, 87), the Claude-specific history copy (`internal/claudehistory`, 93, and its test, 57), the end-to-end move test (134) and the fake agent's fork and `pwd`; in the app the folder control (`folder_button.dart`, 134) and the "No folder" group. `chats.go` passed 400 lines and was split (`agent.go`: launching an agent with a session).
 - `acp/internal/acpgen/main.go` reached 407 lines in step 10's trim pass; it was trimmed to 393.
 
 ## Milestone A demo (steps 1–5): one working chat
@@ -132,6 +134,9 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 - Claude sends `available_commands_update` soon after `session/new` (and after `session/load`): about 80 commands, its own and every installed plugin's and skill's (`/code-review:code-review`). A command goes back as an ordinary prompt starting with `/name`. A `resource_link` to a `file://` URI in the prompt makes Claude read the file.
 - claude-agent-acp 0.94.0 advertises `sessionCapabilities.fork` (and `close`, `resume`, `list`, `delete`). `session/fork` copies the session's transcript into a new session on the same agent process, which then knows the whole conversation; prompting it doesn't touch the original. Updates for the fork arrive on the same connection, tagged with the fork's session id. `session/close` ends it.
 - Replaying (`session/load`) a turn that was cancelled shows a user message "[Request interrupted by user]": Claude stores it in its history.
+- claude-agent-acp 0.94.0's `session/fork` with another `cwd` fails ("Internal error"): it looks for the source session only in the new folder's history (and its git worktrees). The SDK's `forkSession` writes the fork next to the source. A transcript copied into the new folder's history and reopened with `session/load` (same id, new `cwd`) does resume, but the adapter's replay of a loaded session reads whichever copy of that id it finds first across all folders, so the replay can be the old, shorter copy. Hence the fork ([ADR 0014](docs/adr/0014-moving-a-chat-forks-it.md)).
+- Claude names a session's history folder after the session's cwd: the real path (symlinks resolved, `/tmp` is `/private/tmp`), NFC, every UTF-16 unit that isn't an ASCII letter or digit replaced by `-`; past 200 characters it is cut and a base-36 hash of the path added. `CLAUDE_CONFIG_DIR` moves the whole projects folder.
+- After a fork (or a move), the cost Claude reports starts again from about zero.
 - Claude also sends a `tool_call_update` carrying only `_meta.claudeCode.toolResponse` (the raw tool result) before the final one; it changes nothing we show.
 - In `auto` mode Claude asked nothing for `curl -X POST` or `touch`; in Manual (`default`) mode it asks before `touch`, with two options, "Yes" (`allow_once`) and "No" (`reject_once`). A permission request names the tool call it is about (`toolCall.toolCallId`), which was sent just before as a `tool_call`.
 - To test prompts without a mode picker, a folder with `.claude/settings.json` = `{"permissions":{"defaultMode":"default"}}` starts Claude in Manual mode.
@@ -201,6 +206,12 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 - `http2` for Dart stays on 2.x: `connectrpc` 2.0.1 doesn't resolve with `http2` 3.x.
 - The app runs without the macOS App Sandbox, so it can reach the daemon's socket in Application Support.
 
+- Chats without a folder (step 22): New chat starts at once in `scratch/<chat id>` in the data folder; the sidebar groups those chats under "No folder". Scratch folders are never deleted, even when the chat moves out or is removed (the agent may have put files there); an empty one stays behind when a chat moves before its first message.
+- Nushi's chat id is its own now (random, from `crypto/rand.Text`), and the agent's session id is kept beside it (`SessionID` in the session file; for chats from before step 22 the two are the same). The Remove dialog names the session id.
+- Moving a chat (step 22) is the folder in the chat header: recent folders (the chats' folders, newest first, eight at most) or "Choose folder…". A chat without messages (no title yet) gets a new session in the new folder. One with messages gets a fork of its session there, through a copy of Claude's transcript ([ADR 0014](docs/adr/0014-moving-a-chat-forks-it.md)): a new session id, the same conversation; `claude --resume <new id>` works in the new folder, the old id in the old one. This depends on Claude's private file layout (`internal/claudehistory`); drop it when claude-agent-acp's `session/fork` works across folders. The chat keeps its mode; its model and other options are what the fork starts with (Claude's recorded ones). A side question open at the time ends.
+- Moving is refused while a turn runs, a prompt waits or the chat reopens; the control is disabled then. The old agent runs until the new one is ready; a failed move leaves the chat where it was and adds a notice with the error (and the app shows it in a snack bar too).
+- Claude titles a forked session "<title> (fork)"; Nushi ignores that one title change, so a moved chat keeps its title (a Claude-specific rule in the chats feature).
+
 ## Dependencies added
 
 - Go: `connectrpc.com/connect`, `google.golang.org/protobuf` (API), buf through `go run` (codegen only).
@@ -215,6 +226,7 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 - `ListFiles` (step 16) lists any absolute folder the client names (with the client token), through `git ls-files` or a directory walk, 20,000 names at most; it reads names, not contents. Mentioned files go to the agent as `file://` links, which Claude reads with its own permissions.
 - `GetDiff` runs `git` in the folder the client names, as you, with `core.fsmonitor` off and `--no-ext-diff`/`--no-textconv`. Clean filters (`filter.<name>.clean`) still run when `git diff` reads the work tree, as they would for your own `git status` there: a filter needs a config entry, which a cloned repository can't carry, so it takes someone who can already write your `.git/config` or global config. The automated review in step 10 suggested going further (an empty attribute source, or diffing blobs without git's work-tree comparison); I left that for you to decide. A symlink in the work tree is shown as its target path (as git sees it), never followed.
 - Agent text is rendered as markdown; the app never loads images it names (an image URL in a tool's output could otherwise leak data to a server). Links open in the default browser on click, http and https only (step 12); a link's text can differ from where it goes, as on any web page. (Both from the automated security review in step 4. Since step 13 diffs are no longer put into markdown, so the fence that guarded them is gone.)
+- Moving a chat (step 22) writes in Claude's own data: a copy of the session's transcript goes into `~/.claude/projects/<new folder>/` (mode 0600) for the length of the fork, then is removed; Claude writes the fork there. Nushi refuses session ids with path separators and never replaces a transcript already there; the original is only read.
 - The client token (`token`, mode 0600) sits next to the socket in a 0700 folder; any process running as you can read it ([ADR 0005](docs/adr/0005-clients-authenticate.md)).
 
 ## Working notes

@@ -117,11 +117,11 @@ func (c *chat) setConfig(ctx context.Context, id, value string) error {
 	var updated []acp.SessionConfigOption
 	switch {
 	case id == legacyMode:
-		if err := c.agent.SetMode(ctx, acp.SetSessionModeRequest{SessionID: acp.SessionID(c.id), ModeID: acp.SessionModeID(value)}); err != nil {
+		if err := c.agent.SetMode(ctx, acp.SetSessionModeRequest{SessionID: acp.SessionID(c.sid), ModeID: acp.SessionModeID(value)}); err != nil {
 			return err
 		}
 	case opt.Type == "boolean":
-		resp, err := c.agent.SetConfigOption(ctx, acp.SetSessionConfigOptionRequest{SessionID: acp.SessionID(c.id),
+		resp, err := c.agent.SetConfigOption(ctx, acp.SetSessionConfigOptionRequest{SessionID: acp.SessionID(c.sid),
 			ConfigID: acp.SessionConfigID(id), Type: "boolean", Value: json.RawMessage(fmt.Sprint(value == "true"))})
 		if err != nil {
 			return err
@@ -129,7 +129,7 @@ func (c *chat) setConfig(ctx context.Context, id, value string) error {
 		updated = resp.ConfigOptions
 	default:
 		v, _ := json.Marshal(value)
-		resp, err := c.agent.SetConfigOption(ctx, acp.SetSessionConfigOptionRequest{SessionID: acp.SessionID(c.id),
+		resp, err := c.agent.SetConfigOption(ctx, acp.SetSessionConfigOptionRequest{SessionID: acp.SessionID(c.sid),
 			ConfigID: acp.SessionConfigID(id), Value: v})
 		if err != nil {
 			return err

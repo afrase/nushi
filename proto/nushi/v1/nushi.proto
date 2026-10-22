@@ -13,6 +13,11 @@ service NushiService {
   rpc GetChat(GetChatRequest) returns (GetChatResponse);
   // Starts an agent in a folder and opens a chat with it.
   rpc StartChat(StartChatRequest) returns (StartChatResponse);
+  // Moves a chat to another folder. A chat without messages starts a new
+  // session there; one with messages keeps its session and history, reopened
+  // in the new folder. Refused while the chat is busy. If the move fails the
+  // chat stays where it was, with a notice saying why.
+  rpc MoveChat(MoveChatRequest) returns (MoveChatResponse);
   // Sends a prompt; the reply arrives as events.
   rpc SendPrompt(SendPromptRequest) returns (SendPromptResponse);
   // Stops the chat's running turn (ACP session/cancel). The turn ends with a
@@ -79,6 +84,9 @@ message Chat {
   ChatStatus status = 7;
   // Archived chats have no agent running and take no prompts.
   bool archived = 8;
+  // The agent's session id (claude --resume <id>). It differs from id for
+  // chats started since API 16.
+  string session_id = 9;
 }
 
 message GetChatRequest {
@@ -128,8 +136,16 @@ message ChatCommands {
 }
 
 message StartChatRequest {
+  // Empty: a scratch folder of the chat's own, in the daemon's data folder.
   string folder = 1;
 }
+
+message MoveChatRequest {
+  string chat_id = 1;
+  string folder = 2;
+}
+
+message MoveChatResponse {}
 
 message StartChatResponse {
   string chat_id = 1;

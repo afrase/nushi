@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/afrase/nushi/acp"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -26,7 +25,7 @@ func (s *Service) lookup(id string) (*chat, error) {
 		return nil, fmt.Errorf("no chat %q", id)
 	}
 	c := s.newChat()
-	c.id, c.session = id, stored[i]
+	c.id, c.sid, c.session = id, stored[i].SessionID, stored[i]
 	s.chats[id] = c
 	return c, nil
 }
@@ -78,22 +77,15 @@ func (s *Service) resume(c *chat) {
 // load starts the chat's agent and has it replay the session, then puts the
 // session back in the mode it was last in.
 func (c *chat) load(ctx context.Context, launch Launch) error {
-	init, err := c.connect(ctx, launch)
+	c.mu.Lock()
+	sid, folder := c.sid, c.session.Folder
+	c.mu.Unlock()
+	o, err := c.openSession(ctx, launch, sid, folder, false)
 	if err != nil {
-		return err
-	}
-	if init.AgentCapabilities == nil || !init.AgentCapabilities.LoadSession {
-		c.disconnect()
-		return errors.New("the agent can't reopen sessions")
-	}
-	resp, err := c.agent.LoadSession(ctx, acp.LoadSessionRequest{SessionID: acp.SessionID(c.id), Cwd: c.session.Folder, MCPServers: []acp.MCPServer{}})
-	if err != nil {
-		c.disconnect()
 		return err
 	}
 	c.mu.Lock()
-	c.config = configFrom(resp.ConfigOptions, resp.Modes)
-	c.emitLocked(model.Event{ChatID: c.id, Config: slices.Clone(c.config)})
+	c.useLocked(o)
 	c.mu.Unlock()
 	return c.startMode(ctx, c.session.Mode)
 }

@@ -41,6 +41,8 @@ const (
 	NushiServiceGetChatProcedure = "/nushi.v1.NushiService/GetChat"
 	// NushiServiceStartChatProcedure is the fully-qualified name of the NushiService's StartChat RPC.
 	NushiServiceStartChatProcedure = "/nushi.v1.NushiService/StartChat"
+	// NushiServiceMoveChatProcedure is the fully-qualified name of the NushiService's MoveChat RPC.
+	NushiServiceMoveChatProcedure = "/nushi.v1.NushiService/MoveChat"
 	// NushiServiceSendPromptProcedure is the fully-qualified name of the NushiService's SendPrompt RPC.
 	NushiServiceSendPromptProcedure = "/nushi.v1.NushiService/SendPrompt"
 	// NushiServiceCancelTurnProcedure is the fully-qualified name of the NushiService's CancelTurn RPC.
@@ -84,6 +86,11 @@ type NushiServiceClient interface {
 	GetChat(context.Context, *connect.Request[v1.GetChatRequest]) (*connect.Response[v1.GetChatResponse], error)
 	// Starts an agent in a folder and opens a chat with it.
 	StartChat(context.Context, *connect.Request[v1.StartChatRequest]) (*connect.Response[v1.StartChatResponse], error)
+	// Moves a chat to another folder. A chat without messages starts a new
+	// session there; one with messages keeps its session and history, reopened
+	// in the new folder. Refused while the chat is busy. If the move fails the
+	// chat stays where it was, with a notice saying why.
+	MoveChat(context.Context, *connect.Request[v1.MoveChatRequest]) (*connect.Response[v1.MoveChatResponse], error)
 	// Sends a prompt; the reply arrives as events.
 	SendPrompt(context.Context, *connect.Request[v1.SendPromptRequest]) (*connect.Response[v1.SendPromptResponse], error)
 	// Stops the chat's running turn (ACP session/cancel). The turn ends with a
@@ -155,6 +162,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceStartChatProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("StartChat")),
+			connect.WithClientOptions(opts...),
+		),
+		moveChat: connect.NewClient[v1.MoveChatRequest, v1.MoveChatResponse](
+			httpClient,
+			baseURL+NushiServiceMoveChatProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("MoveChat")),
 			connect.WithClientOptions(opts...),
 		),
 		sendPrompt: connect.NewClient[v1.SendPromptRequest, v1.SendPromptResponse](
@@ -244,6 +257,7 @@ type nushiServiceClient struct {
 	listChats        *connect.Client[v1.ListChatsRequest, v1.ListChatsResponse]
 	getChat          *connect.Client[v1.GetChatRequest, v1.GetChatResponse]
 	startChat        *connect.Client[v1.StartChatRequest, v1.StartChatResponse]
+	moveChat         *connect.Client[v1.MoveChatRequest, v1.MoveChatResponse]
 	sendPrompt       *connect.Client[v1.SendPromptRequest, v1.SendPromptResponse]
 	cancelTurn       *connect.Client[v1.CancelTurnRequest, v1.CancelTurnResponse]
 	forkChat         *connect.Client[v1.ForkChatRequest, v1.ForkChatResponse]
@@ -277,6 +291,11 @@ func (c *nushiServiceClient) GetChat(ctx context.Context, req *connect.Request[v
 // StartChat calls nushi.v1.NushiService.StartChat.
 func (c *nushiServiceClient) StartChat(ctx context.Context, req *connect.Request[v1.StartChatRequest]) (*connect.Response[v1.StartChatResponse], error) {
 	return c.startChat.CallUnary(ctx, req)
+}
+
+// MoveChat calls nushi.v1.NushiService.MoveChat.
+func (c *nushiServiceClient) MoveChat(ctx context.Context, req *connect.Request[v1.MoveChatRequest]) (*connect.Response[v1.MoveChatResponse], error) {
+	return c.moveChat.CallUnary(ctx, req)
 }
 
 // SendPrompt calls nushi.v1.NushiService.SendPrompt.
@@ -354,6 +373,11 @@ type NushiServiceHandler interface {
 	GetChat(context.Context, *connect.Request[v1.GetChatRequest]) (*connect.Response[v1.GetChatResponse], error)
 	// Starts an agent in a folder and opens a chat with it.
 	StartChat(context.Context, *connect.Request[v1.StartChatRequest]) (*connect.Response[v1.StartChatResponse], error)
+	// Moves a chat to another folder. A chat without messages starts a new
+	// session there; one with messages keeps its session and history, reopened
+	// in the new folder. Refused while the chat is busy. If the move fails the
+	// chat stays where it was, with a notice saying why.
+	MoveChat(context.Context, *connect.Request[v1.MoveChatRequest]) (*connect.Response[v1.MoveChatResponse], error)
 	// Sends a prompt; the reply arrives as events.
 	SendPrompt(context.Context, *connect.Request[v1.SendPromptRequest]) (*connect.Response[v1.SendPromptResponse], error)
 	// Stops the chat's running turn (ACP session/cancel). The turn ends with a
@@ -421,6 +445,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceStartChatProcedure,
 		svc.StartChat,
 		connect.WithSchema(nushiServiceMethods.ByName("StartChat")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceMoveChatHandler := connect.NewUnaryHandler(
+		NushiServiceMoveChatProcedure,
+		svc.MoveChat,
+		connect.WithSchema(nushiServiceMethods.ByName("MoveChat")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceSendPromptHandler := connect.NewUnaryHandler(
@@ -511,6 +541,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceGetChatHandler.ServeHTTP(w, r)
 		case NushiServiceStartChatProcedure:
 			nushiServiceStartChatHandler.ServeHTTP(w, r)
+		case NushiServiceMoveChatProcedure:
+			nushiServiceMoveChatHandler.ServeHTTP(w, r)
 		case NushiServiceSendPromptProcedure:
 			nushiServiceSendPromptHandler.ServeHTTP(w, r)
 		case NushiServiceCancelTurnProcedure:
@@ -560,6 +592,10 @@ func (UnimplementedNushiServiceHandler) GetChat(context.Context, *connect.Reques
 
 func (UnimplementedNushiServiceHandler) StartChat(context.Context, *connect.Request[v1.StartChatRequest]) (*connect.Response[v1.StartChatResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.StartChat is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) MoveChat(context.Context, *connect.Request[v1.MoveChatRequest]) (*connect.Response[v1.MoveChatResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.MoveChat is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) SendPrompt(context.Context, *connect.Request[v1.SendPromptRequest]) (*connect.Response[v1.SendPromptResponse], error) {

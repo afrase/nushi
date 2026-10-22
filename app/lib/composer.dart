@@ -59,6 +59,7 @@ class _ComposerState extends State<Composer> {
   final _mentions = <String>{}; // files picked with @
   List<String> _lastFiles = []; // the last prompt's, for Up
   List<String>? _files; // the folder's, fetched at the first @
+  String _filesOf = ''; // the folder they are of
   List<_Choice> _choices = [];
   int _picked = 0;
   (int, int)? _token; // where the text being completed starts and ends
@@ -109,10 +110,12 @@ class _ComposerState extends State<Composer> {
       ];
       _token = (0, caret);
     } else if (RegExp(r'(^|\s)@(\S*)$').firstMatch(before) case final m?) {
-      final files = _files;
+      final folder = widget.chat.folder;
+      final files = _filesOf == folder ? _files : null;
       if (files == null) {
         _files = const [];
-        widget.daemon.listFiles(widget.chat.folder).then((f) {
+        _filesOf = folder;
+        widget.daemon.listFiles(folder).then((f) {
           _files = f;
           if (mounted) _complete();
         }, onError: (_) => _files = null);

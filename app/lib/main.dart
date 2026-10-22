@@ -5,6 +5,7 @@ import 'chat.dart';
 import 'chat_menu.dart';
 import 'chat_view.dart';
 import 'daemon.dart';
+import 'folder_button.dart';
 import 'sidebar.dart';
 import 'theme/theme.dart';
 import 'usage.dart';
@@ -90,7 +91,7 @@ class _Shell extends StatelessWidget {
             child: chat == null
                 ? Center(
                     child: Text(
-                      'Start a chat in a folder',
+                      'Start a chat',
                       style: theme.ui(theme.t.textMuted),
                     ),
                   )
@@ -226,12 +227,9 @@ class _HeaderState extends State<_Header> {
           CostLabel(chat.usage, style: meta),
           const SizedBox(width: 16),
           Expanded(
-            child: Text(
-              chat.folder,
-              textAlign: TextAlign.right,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.code(t.textMuted, size: 11.5),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: FolderButton(chat: chat, daemon: widget.daemon),
             ),
           ),
           const SizedBox(width: 12),

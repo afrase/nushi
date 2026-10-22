@@ -14,7 +14,9 @@ type ForkSessionRequest struct {
 }
 
 type ForkSessionResponse struct {
-	SessionID SessionID `json:"sessionId"`
+	SessionID     SessionID             `json:"sessionId"`
+	ConfigOptions []SessionConfigOption `json:"configOptions,omitempty"`
+	Modes         *SessionModeState     `json:"modes,omitempty"`
 }
 
 // CanFork reports whether the agent advertised session/fork when it was

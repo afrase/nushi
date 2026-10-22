@@ -101,6 +101,12 @@ func (s *Service) stop(c *chat) {
 		case <-time.After(5 * time.Second):
 		}
 	}
+	s.dropSides(c)
+	c.disconnect()
+}
+
+// dropSides forgets a chat's side chats, whose agent is about to stop.
+func (s *Service) dropSides(c *chat) {
 	c.mu.Lock()
 	sides := slices.Collect(maps.Keys(c.sides))
 	clear(c.sides)
@@ -110,5 +116,4 @@ func (s *Service) stop(c *chat) {
 		delete(s.chats, id)
 	}
 	s.mu.Unlock()
-	c.disconnect()
 }

@@ -59,7 +59,8 @@ func (c *chat) update(n acp.SessionNotification) {
 		}
 		c.usageChangedLocked()
 	case "session_info_update":
-		if t := u.SessionInfoUpdate.Title; t != "" {
+		// Claude titles a fork "<title> (fork)"; a moved chat keeps its title.
+		if t := u.SessionInfoUpdate.Title; t != "" && t != c.session.Title+" (fork)" {
 			c.saveLocked(func(s *model.Session) { s.Title = t })
 		}
 	case "tool_call_update":

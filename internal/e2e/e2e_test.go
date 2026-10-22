@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -39,7 +40,7 @@ type pipeAgent struct {
 
 func (p pipeAgent) Close() error { return p.toAgent.Close() }
 
-func startDaemon(t *testing.T, dataDir string, history *acptest.History) *daemon {
+func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHistory chats.CopyHistory) *daemon {
 	t.Helper()
 	launch := func(h acp.Handler) (chats.Agent, error) {
 		toAgentR, toAgentW := io.Pipe()
@@ -52,7 +53,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History) *daemon
 	}
 	hub := &events.Hub{}
 	st := store.New(dataDir)
-	svc := chats.New("fake", launch, st, st, hub.Publish)
+	svc := chats.New("fake", launch, st, st, copyHistory, filepath.Join(dataDir, "scratch"), hub.Publish)
 	srv := httptest.NewServer(api.Handler("tok", svc, hub))
 	stop := func() {
 		srv.CloseClientConnections()
@@ -153,7 +154,7 @@ func apply(items []*nushiv1.Item, e *nushiv1.EventsResponse) []*nushiv1.Item {
 
 func TestAppQuitsWhileAPromptWaits(t *testing.T) {
 	ctx := context.Background()
-	d := startDaemon(t, t.TempDir(), &acptest.History{})
+	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
 
 	first := open(t, d)
 	chatID := must(first.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
@@ -230,7 +231,7 @@ func (a *app) follow(chatID string, snap *nushiv1.GetChatResponse) []*nushiv1.It
 func TestDaemonRestartReopensChats(t *testing.T) {
 	ctx := context.Background()
 	dataDir, history := t.TempDir(), &acptest.History{}
-	d := startDaemon(t, dataDir, history)
+	d := startDaemon(t, dataDir, history, nil)
 
 	a := open(t, d)
 	chatID := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
@@ -243,7 +244,7 @@ func TestDaemonRestartReopensChats(t *testing.T) {
 	before := transcript(must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID}))).Items)
 
 	d.stop() // the daemon goes, and its agents with it
-	d = startDaemon(t, dataDir, history)
+	d = startDaemon(t, dataDir, history, nil)
 
 	a = open(t, d)
 	list := must(a.c.ListChats(ctx, connect.NewRequest(&nushiv1.ListChatsRequest{}))).Chats
@@ -274,7 +275,7 @@ func TestDaemonRestartReopensChats(t *testing.T) {
 
 func TestStopCancelsAWaitingPrompt(t *testing.T) {
 	ctx := context.Background()
-	d := startDaemon(t, t.TempDir(), &acptest.History{})
+	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
 	a := open(t, d)
 	chatID := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "ask permission"})))
@@ -296,7 +297,7 @@ func TestStopCancelsAWaitingPrompt(t *testing.T) {
 func TestRenameArchiveAndRemove(t *testing.T) {
 	ctx := context.Background()
 	dataDir, history := t.TempDir(), &acptest.History{}
-	d := startDaemon(t, dataDir, history)
+	d := startDaemon(t, dataDir, history, nil)
 	a := open(t, d)
 	start := func() string {
 		id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
@@ -340,7 +341,7 @@ func TestRenameArchiveAndRemove(t *testing.T) {
 	// After a restart the chat is still archived and renamed; unarchived,
 	// it is replayed and carries on.
 	d.stop()
-	d = startDaemon(t, dataDir, history)
+	d = startDaemon(t, dataDir, history, nil)
 	a = open(t, d)
 	if c := list(); len(c) != 1 || !c[kept].Archived || c[kept].Title != "Greeting" {
 		t.Fatalf("chats after restart = %v", c)

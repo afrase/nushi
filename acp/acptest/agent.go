@@ -9,12 +9,14 @@
 //   - containing "think": its thoughts in a few chunks, then a message;
 //   - containing "plan": a three-step plan, each step ticked off in turn;
 //   - containing "many": 150 messages, each after a tool call, quickly;
+//   - containing "pwd": "cwd: <the session's cwd>";
 //   - anything else: "You said: <text>", streamed in two chunks.
 //
 // Pause slows the "think" and "plan" scripts down, to watch them stream.
 //
-// Sessions are kept in a History, which session/load replays; agents that
-// share a History see each other's sessions, as a restarted agent would.
+// Sessions are kept in a History, which session/load replays and
+// session/fork copies; agents that share a History see each other's
+// sessions, as a restarted agent would. A session takes any cwd.
 package acptest
 
 import (
@@ -44,6 +46,13 @@ func (h *History) add(session string, update any) {
 	h.sessions[session] = append(h.sessions[session], b)
 }
 
+// fork gives session to a copy of session from's history.
+func (h *History) fork(from, to string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.sessions[to] = append(h.sessions[to], h.sessions[from]...)
+}
+
 func (h *History) get(session string) ([]json.RawMessage, bool) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -61,6 +70,7 @@ type Agent struct {
 	mu      sync.Mutex
 	nextID  int
 	pending map[string]chan json.RawMessage
+	cwds    map[string]string // by session: what session/new or session/load said
 }
 
 type frame struct {
@@ -78,6 +88,7 @@ type frame struct {
 func (a *Agent) Serve(r io.Reader, w io.Writer) {
 	a.w = w
 	a.pending = map[string]chan json.RawMessage{}
+	a.cwds = map[string]string{}
 	sc := bufio.NewScanner(r)
 	sc.Buffer(nil, 1<<30)
 	for sc.Scan() {
@@ -131,6 +142,7 @@ func (a *Agent) update(session string, update map[string]any) {
 func (a *Agent) answer(f frame) {
 	var p struct {
 		SessionID string `json:"sessionId"`
+		Cwd       string `json:"cwd"`
 		Prompt    []struct {
 			Text string `json:"text"`
 		} `json:"prompt"`
@@ -139,13 +151,18 @@ func (a *Agent) answer(f frame) {
 	var result any
 	switch f.Method {
 	case "initialize":
-		result = map[string]any{"protocolVersion": 1, "agentCapabilities": map[string]any{"loadSession": true}}
-	case "session/new":
+		result = map[string]any{"protocolVersion": 1, "agentCapabilities": map[string]any{"loadSession": true,
+			"sessionCapabilities": map[string]any{"fork": map[string]any{}}}}
+	case "session/new", "session/fork":
 		a.mu.Lock()
 		a.nextID++
 		id := fmt.Sprintf("fake-%d-%p", a.nextID, a)
+		a.cwds[id] = p.Cwd
 		a.mu.Unlock()
 		a.History.add(id, nil)
+		if f.Method == "session/fork" {
+			a.History.fork(p.SessionID, id)
+		}
 		result = map[string]any{"sessionId": id}
 	case "session/load":
 		updates, ok := a.History.get(p.SessionID)
@@ -155,6 +172,9 @@ func (a *Agent) answer(f frame) {
 			}{"no such session"}})
 			return
 		}
+		a.mu.Lock()
+		a.cwds[p.SessionID] = p.Cwd
+		a.mu.Unlock()
 		for _, u := range updates {
 			if string(u) != "null" {
 				a.send(frame{Method: "session/update", Params: json.RawMessage(`{"sessionId":"` + p.SessionID + `","update":` + string(u) + `}`)})
@@ -211,6 +231,11 @@ func (a *Agent) prompt(session, text string) string {
 			a.update(session, map[string]any{"sessionUpdate": "agent_thought_chunk", "content": map[string]any{"type": "text", "text": t}})
 		}
 		a.say(session, "Done thinking.")
+	case strings.Contains(text, "pwd"):
+		a.mu.Lock()
+		cwd := a.cwds[session]
+		a.mu.Unlock()
+		a.say(session, "cwd: "+cwd)
 	case strings.Contains(text, "many"):
 		for i := range 150 {
 			id := "many-" + strconv.Itoa(i)
