@@ -981,7 +981,9 @@ type SendPromptRequest struct {
 	Text   string                 `protobuf:"bytes,2,opt,name=text,proto3" json:"text,omitempty"`
 	// Files the prompt mentions, relative to the chat's folder; they go to
 	// the agent as resource links after the text.
-	Files         []string `protobuf:"bytes,3,rep,name=files,proto3" json:"files,omitempty"`
+	Files []string `protobuf:"bytes,3,rep,name=files,proto3" json:"files,omitempty"`
+	// Images, after the files; refused unless status.images.
+	Images        []*ImageData `protobuf:"bytes,4,rep,name=images,proto3" json:"images,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1037,6 +1039,66 @@ func (x *SendPromptRequest) GetFiles() []string {
 	return nil
 }
 
+func (x *SendPromptRequest) GetImages() []*ImageData {
+	if x != nil {
+		return x.Images
+	}
+	return nil
+}
+
+// An image in a prompt, a message or a tool call's output.
+type ImageData struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MimeType      string                 `protobuf:"bytes,1,opt,name=mime_type,json=mimeType,proto3" json:"mime_type,omitempty"`
+	Data          []byte                 `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ImageData) Reset() {
+	*x = ImageData{}
+	mi := &file_nushi_v1_nushi_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ImageData) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ImageData) ProtoMessage() {}
+
+func (x *ImageData) ProtoReflect() protoreflect.Message {
+	mi := &file_nushi_v1_nushi_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ImageData.ProtoReflect.Descriptor instead.
+func (*ImageData) Descriptor() ([]byte, []int) {
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *ImageData) GetMimeType() string {
+	if x != nil {
+		return x.MimeType
+	}
+	return ""
+}
+
+func (x *ImageData) GetData() []byte {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
 type ListFilesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Folder        string                 `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
@@ -1046,7 +1108,7 @@ type ListFilesRequest struct {
 
 func (x *ListFilesRequest) Reset() {
 	*x = ListFilesRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[15]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1058,7 +1120,7 @@ func (x *ListFilesRequest) String() string {
 func (*ListFilesRequest) ProtoMessage() {}
 
 func (x *ListFilesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[15]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1071,7 +1133,7 @@ func (x *ListFilesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFilesRequest.ProtoReflect.Descriptor instead.
 func (*ListFilesRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{15}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ListFilesRequest) GetFolder() string {
@@ -1091,7 +1153,7 @@ type ListFilesResponse struct {
 
 func (x *ListFilesResponse) Reset() {
 	*x = ListFilesResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[16]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1103,7 +1165,7 @@ func (x *ListFilesResponse) String() string {
 func (*ListFilesResponse) ProtoMessage() {}
 
 func (x *ListFilesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[16]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1116,7 +1178,7 @@ func (x *ListFilesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFilesResponse.ProtoReflect.Descriptor instead.
 func (*ListFilesResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{16}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ListFilesResponse) GetPaths() []string {
@@ -1134,7 +1196,7 @@ type SendPromptResponse struct {
 
 func (x *SendPromptResponse) Reset() {
 	*x = SendPromptResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[17]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1146,7 +1208,7 @@ func (x *SendPromptResponse) String() string {
 func (*SendPromptResponse) ProtoMessage() {}
 
 func (x *SendPromptResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[17]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1159,7 +1221,7 @@ func (x *SendPromptResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendPromptResponse.ProtoReflect.Descriptor instead.
 func (*SendPromptResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{17}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{18}
 }
 
 type CancelTurnRequest struct {
@@ -1171,7 +1233,7 @@ type CancelTurnRequest struct {
 
 func (x *CancelTurnRequest) Reset() {
 	*x = CancelTurnRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[18]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1183,7 +1245,7 @@ func (x *CancelTurnRequest) String() string {
 func (*CancelTurnRequest) ProtoMessage() {}
 
 func (x *CancelTurnRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[18]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1196,7 +1258,7 @@ func (x *CancelTurnRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelTurnRequest.ProtoReflect.Descriptor instead.
 func (*CancelTurnRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{18}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *CancelTurnRequest) GetChatId() string {
@@ -1214,7 +1276,7 @@ type CancelTurnResponse struct {
 
 func (x *CancelTurnResponse) Reset() {
 	*x = CancelTurnResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[19]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1226,7 +1288,7 @@ func (x *CancelTurnResponse) String() string {
 func (*CancelTurnResponse) ProtoMessage() {}
 
 func (x *CancelTurnResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[19]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1239,7 +1301,7 @@ func (x *CancelTurnResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelTurnResponse.ProtoReflect.Descriptor instead.
 func (*CancelTurnResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{19}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{20}
 }
 
 type ForkChatRequest struct {
@@ -1251,7 +1313,7 @@ type ForkChatRequest struct {
 
 func (x *ForkChatRequest) Reset() {
 	*x = ForkChatRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[20]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1263,7 +1325,7 @@ func (x *ForkChatRequest) String() string {
 func (*ForkChatRequest) ProtoMessage() {}
 
 func (x *ForkChatRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[20]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1276,7 +1338,7 @@ func (x *ForkChatRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForkChatRequest.ProtoReflect.Descriptor instead.
 func (*ForkChatRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{20}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ForkChatRequest) GetChatId() string {
@@ -1296,7 +1358,7 @@ type ForkChatResponse struct {
 
 func (x *ForkChatResponse) Reset() {
 	*x = ForkChatResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[21]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1308,7 +1370,7 @@ func (x *ForkChatResponse) String() string {
 func (*ForkChatResponse) ProtoMessage() {}
 
 func (x *ForkChatResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[21]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1321,7 +1383,7 @@ func (x *ForkChatResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForkChatResponse.ProtoReflect.Descriptor instead.
 func (*ForkChatResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{21}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *ForkChatResponse) GetChatId() string {
@@ -1340,7 +1402,7 @@ type CloseSideChatRequest struct {
 
 func (x *CloseSideChatRequest) Reset() {
 	*x = CloseSideChatRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[22]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1352,7 +1414,7 @@ func (x *CloseSideChatRequest) String() string {
 func (*CloseSideChatRequest) ProtoMessage() {}
 
 func (x *CloseSideChatRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[22]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1365,7 +1427,7 @@ func (x *CloseSideChatRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CloseSideChatRequest.ProtoReflect.Descriptor instead.
 func (*CloseSideChatRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{22}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *CloseSideChatRequest) GetChatId() string {
@@ -1383,7 +1445,7 @@ type CloseSideChatResponse struct {
 
 func (x *CloseSideChatResponse) Reset() {
 	*x = CloseSideChatResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[23]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1395,7 +1457,7 @@ func (x *CloseSideChatResponse) String() string {
 func (*CloseSideChatResponse) ProtoMessage() {}
 
 func (x *CloseSideChatResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[23]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1408,7 +1470,7 @@ func (x *CloseSideChatResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CloseSideChatResponse.ProtoReflect.Descriptor instead.
 func (*CloseSideChatResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{23}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{24}
 }
 
 type RenameChatRequest struct {
@@ -1421,7 +1483,7 @@ type RenameChatRequest struct {
 
 func (x *RenameChatRequest) Reset() {
 	*x = RenameChatRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[24]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1433,7 +1495,7 @@ func (x *RenameChatRequest) String() string {
 func (*RenameChatRequest) ProtoMessage() {}
 
 func (x *RenameChatRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[24]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1446,7 +1508,7 @@ func (x *RenameChatRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RenameChatRequest.ProtoReflect.Descriptor instead.
 func (*RenameChatRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{24}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *RenameChatRequest) GetChatId() string {
@@ -1471,7 +1533,7 @@ type RenameChatResponse struct {
 
 func (x *RenameChatResponse) Reset() {
 	*x = RenameChatResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[25]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1483,7 +1545,7 @@ func (x *RenameChatResponse) String() string {
 func (*RenameChatResponse) ProtoMessage() {}
 
 func (x *RenameChatResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[25]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1496,7 +1558,7 @@ func (x *RenameChatResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RenameChatResponse.ProtoReflect.Descriptor instead.
 func (*RenameChatResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{25}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{26}
 }
 
 type ArchiveChatRequest struct {
@@ -1510,7 +1572,7 @@ type ArchiveChatRequest struct {
 
 func (x *ArchiveChatRequest) Reset() {
 	*x = ArchiveChatRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[26]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1522,7 +1584,7 @@ func (x *ArchiveChatRequest) String() string {
 func (*ArchiveChatRequest) ProtoMessage() {}
 
 func (x *ArchiveChatRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[26]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1535,7 +1597,7 @@ func (x *ArchiveChatRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ArchiveChatRequest.ProtoReflect.Descriptor instead.
 func (*ArchiveChatRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{26}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *ArchiveChatRequest) GetChatId() string {
@@ -1560,7 +1622,7 @@ type ArchiveChatResponse struct {
 
 func (x *ArchiveChatResponse) Reset() {
 	*x = ArchiveChatResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[27]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1572,7 +1634,7 @@ func (x *ArchiveChatResponse) String() string {
 func (*ArchiveChatResponse) ProtoMessage() {}
 
 func (x *ArchiveChatResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[27]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1585,7 +1647,7 @@ func (x *ArchiveChatResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ArchiveChatResponse.ProtoReflect.Descriptor instead.
 func (*ArchiveChatResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{27}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{28}
 }
 
 type RemoveChatRequest struct {
@@ -1597,7 +1659,7 @@ type RemoveChatRequest struct {
 
 func (x *RemoveChatRequest) Reset() {
 	*x = RemoveChatRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[28]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1609,7 +1671,7 @@ func (x *RemoveChatRequest) String() string {
 func (*RemoveChatRequest) ProtoMessage() {}
 
 func (x *RemoveChatRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[28]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1622,7 +1684,7 @@ func (x *RemoveChatRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveChatRequest.ProtoReflect.Descriptor instead.
 func (*RemoveChatRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{28}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *RemoveChatRequest) GetChatId() string {
@@ -1640,7 +1702,7 @@ type RemoveChatResponse struct {
 
 func (x *RemoveChatResponse) Reset() {
 	*x = RemoveChatResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[29]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1652,7 +1714,7 @@ func (x *RemoveChatResponse) String() string {
 func (*RemoveChatResponse) ProtoMessage() {}
 
 func (x *RemoveChatResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[29]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1665,7 +1727,7 @@ func (x *RemoveChatResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveChatResponse.ProtoReflect.Descriptor instead.
 func (*RemoveChatResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{29}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{30}
 }
 
 type AnswerPermissionRequest struct {
@@ -1679,7 +1741,7 @@ type AnswerPermissionRequest struct {
 
 func (x *AnswerPermissionRequest) Reset() {
 	*x = AnswerPermissionRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[30]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1691,7 +1753,7 @@ func (x *AnswerPermissionRequest) String() string {
 func (*AnswerPermissionRequest) ProtoMessage() {}
 
 func (x *AnswerPermissionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[30]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1704,7 +1766,7 @@ func (x *AnswerPermissionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnswerPermissionRequest.ProtoReflect.Descriptor instead.
 func (*AnswerPermissionRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{30}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *AnswerPermissionRequest) GetChatId() string {
@@ -1736,7 +1798,7 @@ type AnswerPermissionResponse struct {
 
 func (x *AnswerPermissionResponse) Reset() {
 	*x = AnswerPermissionResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[31]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1748,7 +1810,7 @@ func (x *AnswerPermissionResponse) String() string {
 func (*AnswerPermissionResponse) ProtoMessage() {}
 
 func (x *AnswerPermissionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[31]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1761,7 +1823,7 @@ func (x *AnswerPermissionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnswerPermissionResponse.ProtoReflect.Descriptor instead.
 func (*AnswerPermissionResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{31}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{32}
 }
 
 type AnswerQuestionRequest struct {
@@ -1778,7 +1840,7 @@ type AnswerQuestionRequest struct {
 
 func (x *AnswerQuestionRequest) Reset() {
 	*x = AnswerQuestionRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[32]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1790,7 +1852,7 @@ func (x *AnswerQuestionRequest) String() string {
 func (*AnswerQuestionRequest) ProtoMessage() {}
 
 func (x *AnswerQuestionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[32]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1803,7 +1865,7 @@ func (x *AnswerQuestionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnswerQuestionRequest.ProtoReflect.Descriptor instead.
 func (*AnswerQuestionRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{32}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *AnswerQuestionRequest) GetChatId() string {
@@ -1844,7 +1906,7 @@ type FieldAnswer struct {
 
 func (x *FieldAnswer) Reset() {
 	*x = FieldAnswer{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[33]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1856,7 +1918,7 @@ func (x *FieldAnswer) String() string {
 func (*FieldAnswer) ProtoMessage() {}
 
 func (x *FieldAnswer) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[33]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1869,7 +1931,7 @@ func (x *FieldAnswer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FieldAnswer.ProtoReflect.Descriptor instead.
 func (*FieldAnswer) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{33}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *FieldAnswer) GetFieldId() string {
@@ -1894,7 +1956,7 @@ type AnswerQuestionResponse struct {
 
 func (x *AnswerQuestionResponse) Reset() {
 	*x = AnswerQuestionResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[34]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1906,7 +1968,7 @@ func (x *AnswerQuestionResponse) String() string {
 func (*AnswerQuestionResponse) ProtoMessage() {}
 
 func (x *AnswerQuestionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[34]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1919,7 +1981,7 @@ func (x *AnswerQuestionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnswerQuestionResponse.ProtoReflect.Descriptor instead.
 func (*AnswerQuestionResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{34}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{35}
 }
 
 type SetConfigOptionRequest struct {
@@ -1934,7 +1996,7 @@ type SetConfigOptionRequest struct {
 
 func (x *SetConfigOptionRequest) Reset() {
 	*x = SetConfigOptionRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[35]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1946,7 +2008,7 @@ func (x *SetConfigOptionRequest) String() string {
 func (*SetConfigOptionRequest) ProtoMessage() {}
 
 func (x *SetConfigOptionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[35]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1959,7 +2021,7 @@ func (x *SetConfigOptionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetConfigOptionRequest.ProtoReflect.Descriptor instead.
 func (*SetConfigOptionRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{35}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *SetConfigOptionRequest) GetChatId() string {
@@ -1991,7 +2053,7 @@ type SetConfigOptionResponse struct {
 
 func (x *SetConfigOptionResponse) Reset() {
 	*x = SetConfigOptionResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[36]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2003,7 +2065,7 @@ func (x *SetConfigOptionResponse) String() string {
 func (*SetConfigOptionResponse) ProtoMessage() {}
 
 func (x *SetConfigOptionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[36]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2016,7 +2078,7 @@ func (x *SetConfigOptionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetConfigOptionResponse.ProtoReflect.Descriptor instead.
 func (*SetConfigOptionResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{36}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{37}
 }
 
 type GetFolderStatusRequest struct {
@@ -2028,7 +2090,7 @@ type GetFolderStatusRequest struct {
 
 func (x *GetFolderStatusRequest) Reset() {
 	*x = GetFolderStatusRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[37]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2040,7 +2102,7 @@ func (x *GetFolderStatusRequest) String() string {
 func (*GetFolderStatusRequest) ProtoMessage() {}
 
 func (x *GetFolderStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[37]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2053,7 +2115,7 @@ func (x *GetFolderStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFolderStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetFolderStatusRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{37}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *GetFolderStatusRequest) GetFolder() string {
@@ -2079,7 +2141,7 @@ type GetFolderStatusResponse struct {
 
 func (x *GetFolderStatusResponse) Reset() {
 	*x = GetFolderStatusResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[38]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2091,7 +2153,7 @@ func (x *GetFolderStatusResponse) String() string {
 func (*GetFolderStatusResponse) ProtoMessage() {}
 
 func (x *GetFolderStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[38]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2104,7 +2166,7 @@ func (x *GetFolderStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFolderStatusResponse.ProtoReflect.Descriptor instead.
 func (*GetFolderStatusResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{38}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *GetFolderStatusResponse) GetGit() bool {
@@ -2152,7 +2214,7 @@ type GetDiffRequest struct {
 
 func (x *GetDiffRequest) Reset() {
 	*x = GetDiffRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[39]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2164,7 +2226,7 @@ func (x *GetDiffRequest) String() string {
 func (*GetDiffRequest) ProtoMessage() {}
 
 func (x *GetDiffRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[39]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2177,7 +2239,7 @@ func (x *GetDiffRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDiffRequest.ProtoReflect.Descriptor instead.
 func (*GetDiffRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{39}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *GetDiffRequest) GetFolder() string {
@@ -2197,7 +2259,7 @@ type GetDiffResponse struct {
 
 func (x *GetDiffResponse) Reset() {
 	*x = GetDiffResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[40]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2209,7 +2271,7 @@ func (x *GetDiffResponse) String() string {
 func (*GetDiffResponse) ProtoMessage() {}
 
 func (x *GetDiffResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[40]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2222,7 +2284,7 @@ func (x *GetDiffResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDiffResponse.ProtoReflect.Descriptor instead.
 func (*GetDiffResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{40}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *GetDiffResponse) GetFiles() []*FileChange {
@@ -2249,7 +2311,7 @@ type FileChange struct {
 
 func (x *FileChange) Reset() {
 	*x = FileChange{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[41]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2261,7 +2323,7 @@ func (x *FileChange) String() string {
 func (*FileChange) ProtoMessage() {}
 
 func (x *FileChange) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[41]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2274,7 +2336,7 @@ func (x *FileChange) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FileChange.ProtoReflect.Descriptor instead.
 func (*FileChange) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{41}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *FileChange) GetPath() string {
@@ -2320,7 +2382,7 @@ type EventsRequest struct {
 
 func (x *EventsRequest) Reset() {
 	*x = EventsRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[42]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2332,7 +2394,7 @@ func (x *EventsRequest) String() string {
 func (*EventsRequest) ProtoMessage() {}
 
 func (x *EventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[42]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2345,7 +2407,7 @@ func (x *EventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventsRequest.ProtoReflect.Descriptor instead.
 func (*EventsRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{42}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{43}
 }
 
 type EventsResponse struct {
@@ -2369,7 +2431,7 @@ type EventsResponse struct {
 
 func (x *EventsResponse) Reset() {
 	*x = EventsResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[43]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2381,7 +2443,7 @@ func (x *EventsResponse) String() string {
 func (*EventsResponse) ProtoMessage() {}
 
 func (x *EventsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[43]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2394,7 +2456,7 @@ func (x *EventsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventsResponse.ProtoReflect.Descriptor instead.
 func (*EventsResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{43}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *EventsResponse) GetChatId() string {
@@ -2541,7 +2603,7 @@ type ChatConfig struct {
 
 func (x *ChatConfig) Reset() {
 	*x = ChatConfig{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[44]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2553,7 +2615,7 @@ func (x *ChatConfig) String() string {
 func (*ChatConfig) ProtoMessage() {}
 
 func (x *ChatConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[44]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2566,7 +2628,7 @@ func (x *ChatConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChatConfig.ProtoReflect.Descriptor instead.
 func (*ChatConfig) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{44}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *ChatConfig) GetOptions() []*ConfigOption {
@@ -2595,7 +2657,7 @@ type ConfigOption struct {
 
 func (x *ConfigOption) Reset() {
 	*x = ConfigOption{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[45]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2607,7 +2669,7 @@ func (x *ConfigOption) String() string {
 func (*ConfigOption) ProtoMessage() {}
 
 func (x *ConfigOption) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[45]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2620,7 +2682,7 @@ func (x *ConfigOption) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfigOption.ProtoReflect.Descriptor instead.
 func (*ConfigOption) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{45}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *ConfigOption) GetId() string {
@@ -2685,7 +2747,7 @@ type ConfigValue struct {
 
 func (x *ConfigValue) Reset() {
 	*x = ConfigValue{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[46]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2697,7 +2759,7 @@ func (x *ConfigValue) String() string {
 func (*ConfigValue) ProtoMessage() {}
 
 func (x *ConfigValue) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[46]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2710,7 +2772,7 @@ func (x *ConfigValue) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfigValue.ProtoReflect.Descriptor instead.
 func (*ConfigValue) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{46}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *ConfigValue) GetValue() string {
@@ -2760,16 +2822,18 @@ type Item struct {
 	Fields []*Field `protobuf:"bytes,9,rep,name=fields,proto3" json:"fields,omitempty"`
 	// The files a tool call works on, relative to the chat's folder when
 	// inside it, and the edits it makes (path, old_text, new_text).
-	Paths         []string      `protobuf:"bytes,10,rep,name=paths,proto3" json:"paths,omitempty"`
-	Diffs         []*FileChange `protobuf:"bytes,11,rep,name=diffs,proto3" json:"diffs,omitempty"`
-	Plan          []*PlanEntry  `protobuf:"bytes,12,rep,name=plan,proto3" json:"plan,omitempty"`
+	Paths []string      `protobuf:"bytes,10,rep,name=paths,proto3" json:"paths,omitempty"`
+	Diffs []*FileChange `protobuf:"bytes,11,rep,name=diffs,proto3" json:"diffs,omitempty"`
+	Plan  []*PlanEntry  `protobuf:"bytes,12,rep,name=plan,proto3" json:"plan,omitempty"`
+	// A message's or a tool call's images.
+	Images        []*ImageData `protobuf:"bytes,13,rep,name=images,proto3" json:"images,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Item) Reset() {
 	*x = Item{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[47]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2781,7 +2845,7 @@ func (x *Item) String() string {
 func (*Item) ProtoMessage() {}
 
 func (x *Item) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[47]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2794,7 +2858,7 @@ func (x *Item) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Item.ProtoReflect.Descriptor instead.
 func (*Item) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{47}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *Item) GetId() string {
@@ -2881,6 +2945,13 @@ func (x *Item) GetPlan() []*PlanEntry {
 	return nil
 }
 
+func (x *Item) GetImages() []*ImageData {
+	if x != nil {
+		return x.Images
+	}
+	return nil
+}
+
 // A step of the agent's plan; status is "pending", "in_progress" or
 // "completed".
 type PlanEntry struct {
@@ -2893,7 +2964,7 @@ type PlanEntry struct {
 
 func (x *PlanEntry) Reset() {
 	*x = PlanEntry{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[48]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2905,7 +2976,7 @@ func (x *PlanEntry) String() string {
 func (*PlanEntry) ProtoMessage() {}
 
 func (x *PlanEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[48]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2918,7 +2989,7 @@ func (x *PlanEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlanEntry.ProtoReflect.Descriptor instead.
 func (*PlanEntry) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{48}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *PlanEntry) GetContent() string {
@@ -2950,7 +3021,7 @@ type Option struct {
 
 func (x *Option) Reset() {
 	*x = Option{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[49]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2962,7 +3033,7 @@ func (x *Option) String() string {
 func (*Option) ProtoMessage() {}
 
 func (x *Option) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[49]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2975,7 +3046,7 @@ func (x *Option) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Option.ProtoReflect.Descriptor instead.
 func (*Option) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{49}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *Option) GetId() string {
@@ -3023,7 +3094,7 @@ type Field struct {
 
 func (x *Field) Reset() {
 	*x = Field{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[50]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3035,7 +3106,7 @@ func (x *Field) String() string {
 func (*Field) ProtoMessage() {}
 
 func (x *Field) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[50]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3048,7 +3119,7 @@ func (x *Field) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Field.ProtoReflect.Descriptor instead.
 func (*Field) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{50}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *Field) GetId() string {
@@ -3111,7 +3182,7 @@ type ItemEvent struct {
 
 func (x *ItemEvent) Reset() {
 	*x = ItemEvent{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[51]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3123,7 +3194,7 @@ func (x *ItemEvent) String() string {
 func (*ItemEvent) ProtoMessage() {}
 
 func (x *ItemEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[51]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3136,7 +3207,7 @@ func (x *ItemEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ItemEvent.ProtoReflect.Descriptor instead.
 func (*ItemEvent) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{51}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *ItemEvent) GetItem() *Item {
@@ -3163,14 +3234,16 @@ type ChatStatus struct {
 	// The agent waits on the user: a permission prompt or a question.
 	Waiting bool `protobuf:"varint,4,opt,name=waiting,proto3" json:"waiting,omitempty"`
 	// The agent can fork the chat (ForkChat).
-	CanFork       bool `protobuf:"varint,5,opt,name=can_fork,json=canFork,proto3" json:"can_fork,omitempty"`
+	CanFork bool `protobuf:"varint,5,opt,name=can_fork,json=canFork,proto3" json:"can_fork,omitempty"`
+	// The agent takes images in prompts.
+	Images        bool `protobuf:"varint,6,opt,name=images,proto3" json:"images,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ChatStatus) Reset() {
 	*x = ChatStatus{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[52]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3182,7 +3255,7 @@ func (x *ChatStatus) String() string {
 func (*ChatStatus) ProtoMessage() {}
 
 func (x *ChatStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[52]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3195,7 +3268,7 @@ func (x *ChatStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChatStatus.ProtoReflect.Descriptor instead.
 func (*ChatStatus) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{52}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *ChatStatus) GetBusy() bool {
@@ -3229,6 +3302,13 @@ func (x *ChatStatus) GetWaiting() bool {
 func (x *ChatStatus) GetCanFork() bool {
 	if x != nil {
 		return x.CanFork
+	}
+	return false
+}
+
+func (x *ChatStatus) GetImages() bool {
+	if x != nil {
+		return x.Images
 	}
 	return false
 }
@@ -3289,11 +3369,15 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x10MoveChatResponse\"\\\n" +
 	"\x11StartChatResponse\x12\x17\n" +
 	"\achat_id\x18\x01 \x01(\tR\x06chatId\x12.\n" +
-	"\x06config\x18\x02 \x03(\v2\x16.nushi.v1.ConfigOptionR\x06config\"V\n" +
+	"\x06config\x18\x02 \x03(\v2\x16.nushi.v1.ConfigOptionR\x06config\"\x83\x01\n" +
 	"\x11SendPromptRequest\x12\x17\n" +
 	"\achat_id\x18\x01 \x01(\tR\x06chatId\x12\x12\n" +
 	"\x04text\x18\x02 \x01(\tR\x04text\x12\x14\n" +
-	"\x05files\x18\x03 \x03(\tR\x05files\"*\n" +
+	"\x05files\x18\x03 \x03(\tR\x05files\x12+\n" +
+	"\x06images\x18\x04 \x03(\v2\x13.nushi.v1.ImageDataR\x06images\"<\n" +
+	"\tImageData\x12\x1b\n" +
+	"\tmime_type\x18\x01 \x01(\tR\bmimeType\x12\x12\n" +
+	"\x04data\x18\x02 \x01(\fR\x04data\"*\n" +
 	"\x10ListFilesRequest\x12\x16\n" +
 	"\x06folder\x18\x01 \x01(\tR\x06folder\")\n" +
 	"\x11ListFilesResponse\x12\x14\n" +
@@ -3385,7 +3469,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x05value\x18\x01 \x01(\tR\x05value\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x14\n" +
-	"\x05group\x18\x04 \x01(\tR\x05group\"\xf5\x02\n" +
+	"\x05group\x18\x04 \x01(\tR\x05group\"\xa2\x03\n" +
 	"\x04Item\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12&\n" +
 	"\x04kind\x18\x02 \x01(\x0e2\x12.nushi.v1.ItemKindR\x04kind\x12\x12\n" +
@@ -3399,7 +3483,8 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x05paths\x18\n" +
 	" \x03(\tR\x05paths\x12*\n" +
 	"\x05diffs\x18\v \x03(\v2\x14.nushi.v1.FileChangeR\x05diffs\x12'\n" +
-	"\x04plan\x18\f \x03(\v2\x13.nushi.v1.PlanEntryR\x04plan\"=\n" +
+	"\x04plan\x18\f \x03(\v2\x13.nushi.v1.PlanEntryR\x04plan\x12+\n" +
+	"\x06images\x18\r \x03(\v2\x13.nushi.v1.ImageDataR\x06images\"=\n" +
 	"\tPlanEntry\x12\x18\n" +
 	"\acontent\x18\x01 \x01(\tR\acontent\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\"b\n" +
@@ -3418,14 +3503,15 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x06values\x18\a \x03(\tR\x06values\"G\n" +
 	"\tItemEvent\x12\"\n" +
 	"\x04item\x18\x01 \x01(\v2\x0e.nushi.v1.ItemR\x04item\x12\x16\n" +
-	"\x06append\x18\x02 \x01(\bR\x06append\"\x85\x01\n" +
+	"\x06append\x18\x02 \x01(\bR\x06append\"\x9d\x01\n" +
 	"\n" +
 	"ChatStatus\x12\x12\n" +
 	"\x04busy\x18\x01 \x01(\bR\x04busy\x12\x14\n" +
 	"\x05error\x18\x02 \x01(\tR\x05error\x12\x18\n" +
 	"\astarted\x18\x03 \x01(\x03R\astarted\x12\x18\n" +
 	"\awaiting\x18\x04 \x01(\bR\awaiting\x12\x19\n" +
-	"\bcan_fork\x18\x05 \x01(\bR\acanFork*\xea\x01\n" +
+	"\bcan_fork\x18\x05 \x01(\bR\acanFork\x12\x16\n" +
+	"\x06images\x18\x06 \x01(\bR\x06images*\xea\x01\n" +
 	"\bItemKind\x12\x19\n" +
 	"\x15ITEM_KIND_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16ITEM_KIND_USER_MESSAGE\x10\x01\x12\x1b\n" +
@@ -3483,7 +3569,7 @@ func file_nushi_v1_nushi_proto_rawDescGZIP() []byte {
 }
 
 var file_nushi_v1_nushi_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_nushi_v1_nushi_proto_msgTypes = make([]protoimpl.MessageInfo, 53)
+var file_nushi_v1_nushi_proto_msgTypes = make([]protoimpl.MessageInfo, 54)
 var file_nushi_v1_nushi_proto_goTypes = []any{
 	(ItemKind)(0),                    // 0: nushi.v1.ItemKind
 	(FieldType)(0),                   // 1: nushi.v1.FieldType
@@ -3502,117 +3588,120 @@ var file_nushi_v1_nushi_proto_goTypes = []any{
 	(*MoveChatResponse)(nil),         // 14: nushi.v1.MoveChatResponse
 	(*StartChatResponse)(nil),        // 15: nushi.v1.StartChatResponse
 	(*SendPromptRequest)(nil),        // 16: nushi.v1.SendPromptRequest
-	(*ListFilesRequest)(nil),         // 17: nushi.v1.ListFilesRequest
-	(*ListFilesResponse)(nil),        // 18: nushi.v1.ListFilesResponse
-	(*SendPromptResponse)(nil),       // 19: nushi.v1.SendPromptResponse
-	(*CancelTurnRequest)(nil),        // 20: nushi.v1.CancelTurnRequest
-	(*CancelTurnResponse)(nil),       // 21: nushi.v1.CancelTurnResponse
-	(*ForkChatRequest)(nil),          // 22: nushi.v1.ForkChatRequest
-	(*ForkChatResponse)(nil),         // 23: nushi.v1.ForkChatResponse
-	(*CloseSideChatRequest)(nil),     // 24: nushi.v1.CloseSideChatRequest
-	(*CloseSideChatResponse)(nil),    // 25: nushi.v1.CloseSideChatResponse
-	(*RenameChatRequest)(nil),        // 26: nushi.v1.RenameChatRequest
-	(*RenameChatResponse)(nil),       // 27: nushi.v1.RenameChatResponse
-	(*ArchiveChatRequest)(nil),       // 28: nushi.v1.ArchiveChatRequest
-	(*ArchiveChatResponse)(nil),      // 29: nushi.v1.ArchiveChatResponse
-	(*RemoveChatRequest)(nil),        // 30: nushi.v1.RemoveChatRequest
-	(*RemoveChatResponse)(nil),       // 31: nushi.v1.RemoveChatResponse
-	(*AnswerPermissionRequest)(nil),  // 32: nushi.v1.AnswerPermissionRequest
-	(*AnswerPermissionResponse)(nil), // 33: nushi.v1.AnswerPermissionResponse
-	(*AnswerQuestionRequest)(nil),    // 34: nushi.v1.AnswerQuestionRequest
-	(*FieldAnswer)(nil),              // 35: nushi.v1.FieldAnswer
-	(*AnswerQuestionResponse)(nil),   // 36: nushi.v1.AnswerQuestionResponse
-	(*SetConfigOptionRequest)(nil),   // 37: nushi.v1.SetConfigOptionRequest
-	(*SetConfigOptionResponse)(nil),  // 38: nushi.v1.SetConfigOptionResponse
-	(*GetFolderStatusRequest)(nil),   // 39: nushi.v1.GetFolderStatusRequest
-	(*GetFolderStatusResponse)(nil),  // 40: nushi.v1.GetFolderStatusResponse
-	(*GetDiffRequest)(nil),           // 41: nushi.v1.GetDiffRequest
-	(*GetDiffResponse)(nil),          // 42: nushi.v1.GetDiffResponse
-	(*FileChange)(nil),               // 43: nushi.v1.FileChange
-	(*EventsRequest)(nil),            // 44: nushi.v1.EventsRequest
-	(*EventsResponse)(nil),           // 45: nushi.v1.EventsResponse
-	(*ChatConfig)(nil),               // 46: nushi.v1.ChatConfig
-	(*ConfigOption)(nil),             // 47: nushi.v1.ConfigOption
-	(*ConfigValue)(nil),              // 48: nushi.v1.ConfigValue
-	(*Item)(nil),                     // 49: nushi.v1.Item
-	(*PlanEntry)(nil),                // 50: nushi.v1.PlanEntry
-	(*Option)(nil),                   // 51: nushi.v1.Option
-	(*Field)(nil),                    // 52: nushi.v1.Field
-	(*ItemEvent)(nil),                // 53: nushi.v1.ItemEvent
-	(*ChatStatus)(nil),               // 54: nushi.v1.ChatStatus
+	(*ImageData)(nil),                // 17: nushi.v1.ImageData
+	(*ListFilesRequest)(nil),         // 18: nushi.v1.ListFilesRequest
+	(*ListFilesResponse)(nil),        // 19: nushi.v1.ListFilesResponse
+	(*SendPromptResponse)(nil),       // 20: nushi.v1.SendPromptResponse
+	(*CancelTurnRequest)(nil),        // 21: nushi.v1.CancelTurnRequest
+	(*CancelTurnResponse)(nil),       // 22: nushi.v1.CancelTurnResponse
+	(*ForkChatRequest)(nil),          // 23: nushi.v1.ForkChatRequest
+	(*ForkChatResponse)(nil),         // 24: nushi.v1.ForkChatResponse
+	(*CloseSideChatRequest)(nil),     // 25: nushi.v1.CloseSideChatRequest
+	(*CloseSideChatResponse)(nil),    // 26: nushi.v1.CloseSideChatResponse
+	(*RenameChatRequest)(nil),        // 27: nushi.v1.RenameChatRequest
+	(*RenameChatResponse)(nil),       // 28: nushi.v1.RenameChatResponse
+	(*ArchiveChatRequest)(nil),       // 29: nushi.v1.ArchiveChatRequest
+	(*ArchiveChatResponse)(nil),      // 30: nushi.v1.ArchiveChatResponse
+	(*RemoveChatRequest)(nil),        // 31: nushi.v1.RemoveChatRequest
+	(*RemoveChatResponse)(nil),       // 32: nushi.v1.RemoveChatResponse
+	(*AnswerPermissionRequest)(nil),  // 33: nushi.v1.AnswerPermissionRequest
+	(*AnswerPermissionResponse)(nil), // 34: nushi.v1.AnswerPermissionResponse
+	(*AnswerQuestionRequest)(nil),    // 35: nushi.v1.AnswerQuestionRequest
+	(*FieldAnswer)(nil),              // 36: nushi.v1.FieldAnswer
+	(*AnswerQuestionResponse)(nil),   // 37: nushi.v1.AnswerQuestionResponse
+	(*SetConfigOptionRequest)(nil),   // 38: nushi.v1.SetConfigOptionRequest
+	(*SetConfigOptionResponse)(nil),  // 39: nushi.v1.SetConfigOptionResponse
+	(*GetFolderStatusRequest)(nil),   // 40: nushi.v1.GetFolderStatusRequest
+	(*GetFolderStatusResponse)(nil),  // 41: nushi.v1.GetFolderStatusResponse
+	(*GetDiffRequest)(nil),           // 42: nushi.v1.GetDiffRequest
+	(*GetDiffResponse)(nil),          // 43: nushi.v1.GetDiffResponse
+	(*FileChange)(nil),               // 44: nushi.v1.FileChange
+	(*EventsRequest)(nil),            // 45: nushi.v1.EventsRequest
+	(*EventsResponse)(nil),           // 46: nushi.v1.EventsResponse
+	(*ChatConfig)(nil),               // 47: nushi.v1.ChatConfig
+	(*ConfigOption)(nil),             // 48: nushi.v1.ConfigOption
+	(*ConfigValue)(nil),              // 49: nushi.v1.ConfigValue
+	(*Item)(nil),                     // 50: nushi.v1.Item
+	(*PlanEntry)(nil),                // 51: nushi.v1.PlanEntry
+	(*Option)(nil),                   // 52: nushi.v1.Option
+	(*Field)(nil),                    // 53: nushi.v1.Field
+	(*ItemEvent)(nil),                // 54: nushi.v1.ItemEvent
+	(*ChatStatus)(nil),               // 55: nushi.v1.ChatStatus
 }
 var file_nushi_v1_nushi_proto_depIdxs = []int32{
 	6,  // 0: nushi.v1.ListChatsResponse.chats:type_name -> nushi.v1.Chat
-	54, // 1: nushi.v1.Chat.status:type_name -> nushi.v1.ChatStatus
+	55, // 1: nushi.v1.Chat.status:type_name -> nushi.v1.ChatStatus
 	6,  // 2: nushi.v1.GetChatResponse.chat:type_name -> nushi.v1.Chat
-	49, // 3: nushi.v1.GetChatResponse.items:type_name -> nushi.v1.Item
-	47, // 4: nushi.v1.GetChatResponse.config:type_name -> nushi.v1.ConfigOption
-	54, // 5: nushi.v1.GetChatResponse.status:type_name -> nushi.v1.ChatStatus
+	50, // 3: nushi.v1.GetChatResponse.items:type_name -> nushi.v1.Item
+	48, // 4: nushi.v1.GetChatResponse.config:type_name -> nushi.v1.ConfigOption
+	55, // 5: nushi.v1.GetChatResponse.status:type_name -> nushi.v1.ChatStatus
 	10, // 6: nushi.v1.GetChatResponse.commands:type_name -> nushi.v1.Command
 	9,  // 7: nushi.v1.GetChatResponse.usage:type_name -> nushi.v1.Usage
 	10, // 8: nushi.v1.ChatCommands.commands:type_name -> nushi.v1.Command
-	47, // 9: nushi.v1.StartChatResponse.config:type_name -> nushi.v1.ConfigOption
-	35, // 10: nushi.v1.AnswerQuestionRequest.answers:type_name -> nushi.v1.FieldAnswer
-	43, // 11: nushi.v1.GetDiffResponse.files:type_name -> nushi.v1.FileChange
-	53, // 12: nushi.v1.EventsResponse.item:type_name -> nushi.v1.ItemEvent
-	54, // 13: nushi.v1.EventsResponse.status:type_name -> nushi.v1.ChatStatus
-	46, // 14: nushi.v1.EventsResponse.config:type_name -> nushi.v1.ChatConfig
-	6,  // 15: nushi.v1.EventsResponse.chat:type_name -> nushi.v1.Chat
-	11, // 16: nushi.v1.EventsResponse.commands:type_name -> nushi.v1.ChatCommands
-	9,  // 17: nushi.v1.EventsResponse.usage:type_name -> nushi.v1.Usage
-	47, // 18: nushi.v1.ChatConfig.options:type_name -> nushi.v1.ConfigOption
-	48, // 19: nushi.v1.ConfigOption.values:type_name -> nushi.v1.ConfigValue
-	0,  // 20: nushi.v1.Item.kind:type_name -> nushi.v1.ItemKind
-	51, // 21: nushi.v1.Item.options:type_name -> nushi.v1.Option
-	52, // 22: nushi.v1.Item.fields:type_name -> nushi.v1.Field
-	43, // 23: nushi.v1.Item.diffs:type_name -> nushi.v1.FileChange
-	50, // 24: nushi.v1.Item.plan:type_name -> nushi.v1.PlanEntry
-	1,  // 25: nushi.v1.Field.type:type_name -> nushi.v1.FieldType
-	51, // 26: nushi.v1.Field.options:type_name -> nushi.v1.Option
-	49, // 27: nushi.v1.ItemEvent.item:type_name -> nushi.v1.Item
-	2,  // 28: nushi.v1.NushiService.Ping:input_type -> nushi.v1.PingRequest
-	4,  // 29: nushi.v1.NushiService.ListChats:input_type -> nushi.v1.ListChatsRequest
-	7,  // 30: nushi.v1.NushiService.GetChat:input_type -> nushi.v1.GetChatRequest
-	12, // 31: nushi.v1.NushiService.StartChat:input_type -> nushi.v1.StartChatRequest
-	13, // 32: nushi.v1.NushiService.MoveChat:input_type -> nushi.v1.MoveChatRequest
-	16, // 33: nushi.v1.NushiService.SendPrompt:input_type -> nushi.v1.SendPromptRequest
-	20, // 34: nushi.v1.NushiService.CancelTurn:input_type -> nushi.v1.CancelTurnRequest
-	22, // 35: nushi.v1.NushiService.ForkChat:input_type -> nushi.v1.ForkChatRequest
-	24, // 36: nushi.v1.NushiService.CloseSideChat:input_type -> nushi.v1.CloseSideChatRequest
-	26, // 37: nushi.v1.NushiService.RenameChat:input_type -> nushi.v1.RenameChatRequest
-	28, // 38: nushi.v1.NushiService.ArchiveChat:input_type -> nushi.v1.ArchiveChatRequest
-	30, // 39: nushi.v1.NushiService.RemoveChat:input_type -> nushi.v1.RemoveChatRequest
-	32, // 40: nushi.v1.NushiService.AnswerPermission:input_type -> nushi.v1.AnswerPermissionRequest
-	34, // 41: nushi.v1.NushiService.AnswerQuestion:input_type -> nushi.v1.AnswerQuestionRequest
-	37, // 42: nushi.v1.NushiService.SetConfigOption:input_type -> nushi.v1.SetConfigOptionRequest
-	41, // 43: nushi.v1.NushiService.GetDiff:input_type -> nushi.v1.GetDiffRequest
-	39, // 44: nushi.v1.NushiService.GetFolderStatus:input_type -> nushi.v1.GetFolderStatusRequest
-	17, // 45: nushi.v1.NushiService.ListFiles:input_type -> nushi.v1.ListFilesRequest
-	44, // 46: nushi.v1.NushiService.Events:input_type -> nushi.v1.EventsRequest
-	3,  // 47: nushi.v1.NushiService.Ping:output_type -> nushi.v1.PingResponse
-	5,  // 48: nushi.v1.NushiService.ListChats:output_type -> nushi.v1.ListChatsResponse
-	8,  // 49: nushi.v1.NushiService.GetChat:output_type -> nushi.v1.GetChatResponse
-	15, // 50: nushi.v1.NushiService.StartChat:output_type -> nushi.v1.StartChatResponse
-	14, // 51: nushi.v1.NushiService.MoveChat:output_type -> nushi.v1.MoveChatResponse
-	19, // 52: nushi.v1.NushiService.SendPrompt:output_type -> nushi.v1.SendPromptResponse
-	21, // 53: nushi.v1.NushiService.CancelTurn:output_type -> nushi.v1.CancelTurnResponse
-	23, // 54: nushi.v1.NushiService.ForkChat:output_type -> nushi.v1.ForkChatResponse
-	25, // 55: nushi.v1.NushiService.CloseSideChat:output_type -> nushi.v1.CloseSideChatResponse
-	27, // 56: nushi.v1.NushiService.RenameChat:output_type -> nushi.v1.RenameChatResponse
-	29, // 57: nushi.v1.NushiService.ArchiveChat:output_type -> nushi.v1.ArchiveChatResponse
-	31, // 58: nushi.v1.NushiService.RemoveChat:output_type -> nushi.v1.RemoveChatResponse
-	33, // 59: nushi.v1.NushiService.AnswerPermission:output_type -> nushi.v1.AnswerPermissionResponse
-	36, // 60: nushi.v1.NushiService.AnswerQuestion:output_type -> nushi.v1.AnswerQuestionResponse
-	38, // 61: nushi.v1.NushiService.SetConfigOption:output_type -> nushi.v1.SetConfigOptionResponse
-	42, // 62: nushi.v1.NushiService.GetDiff:output_type -> nushi.v1.GetDiffResponse
-	40, // 63: nushi.v1.NushiService.GetFolderStatus:output_type -> nushi.v1.GetFolderStatusResponse
-	18, // 64: nushi.v1.NushiService.ListFiles:output_type -> nushi.v1.ListFilesResponse
-	45, // 65: nushi.v1.NushiService.Events:output_type -> nushi.v1.EventsResponse
-	47, // [47:66] is the sub-list for method output_type
-	28, // [28:47] is the sub-list for method input_type
-	28, // [28:28] is the sub-list for extension type_name
-	28, // [28:28] is the sub-list for extension extendee
-	0,  // [0:28] is the sub-list for field type_name
+	48, // 9: nushi.v1.StartChatResponse.config:type_name -> nushi.v1.ConfigOption
+	17, // 10: nushi.v1.SendPromptRequest.images:type_name -> nushi.v1.ImageData
+	36, // 11: nushi.v1.AnswerQuestionRequest.answers:type_name -> nushi.v1.FieldAnswer
+	44, // 12: nushi.v1.GetDiffResponse.files:type_name -> nushi.v1.FileChange
+	54, // 13: nushi.v1.EventsResponse.item:type_name -> nushi.v1.ItemEvent
+	55, // 14: nushi.v1.EventsResponse.status:type_name -> nushi.v1.ChatStatus
+	47, // 15: nushi.v1.EventsResponse.config:type_name -> nushi.v1.ChatConfig
+	6,  // 16: nushi.v1.EventsResponse.chat:type_name -> nushi.v1.Chat
+	11, // 17: nushi.v1.EventsResponse.commands:type_name -> nushi.v1.ChatCommands
+	9,  // 18: nushi.v1.EventsResponse.usage:type_name -> nushi.v1.Usage
+	48, // 19: nushi.v1.ChatConfig.options:type_name -> nushi.v1.ConfigOption
+	49, // 20: nushi.v1.ConfigOption.values:type_name -> nushi.v1.ConfigValue
+	0,  // 21: nushi.v1.Item.kind:type_name -> nushi.v1.ItemKind
+	52, // 22: nushi.v1.Item.options:type_name -> nushi.v1.Option
+	53, // 23: nushi.v1.Item.fields:type_name -> nushi.v1.Field
+	44, // 24: nushi.v1.Item.diffs:type_name -> nushi.v1.FileChange
+	51, // 25: nushi.v1.Item.plan:type_name -> nushi.v1.PlanEntry
+	17, // 26: nushi.v1.Item.images:type_name -> nushi.v1.ImageData
+	1,  // 27: nushi.v1.Field.type:type_name -> nushi.v1.FieldType
+	52, // 28: nushi.v1.Field.options:type_name -> nushi.v1.Option
+	50, // 29: nushi.v1.ItemEvent.item:type_name -> nushi.v1.Item
+	2,  // 30: nushi.v1.NushiService.Ping:input_type -> nushi.v1.PingRequest
+	4,  // 31: nushi.v1.NushiService.ListChats:input_type -> nushi.v1.ListChatsRequest
+	7,  // 32: nushi.v1.NushiService.GetChat:input_type -> nushi.v1.GetChatRequest
+	12, // 33: nushi.v1.NushiService.StartChat:input_type -> nushi.v1.StartChatRequest
+	13, // 34: nushi.v1.NushiService.MoveChat:input_type -> nushi.v1.MoveChatRequest
+	16, // 35: nushi.v1.NushiService.SendPrompt:input_type -> nushi.v1.SendPromptRequest
+	21, // 36: nushi.v1.NushiService.CancelTurn:input_type -> nushi.v1.CancelTurnRequest
+	23, // 37: nushi.v1.NushiService.ForkChat:input_type -> nushi.v1.ForkChatRequest
+	25, // 38: nushi.v1.NushiService.CloseSideChat:input_type -> nushi.v1.CloseSideChatRequest
+	27, // 39: nushi.v1.NushiService.RenameChat:input_type -> nushi.v1.RenameChatRequest
+	29, // 40: nushi.v1.NushiService.ArchiveChat:input_type -> nushi.v1.ArchiveChatRequest
+	31, // 41: nushi.v1.NushiService.RemoveChat:input_type -> nushi.v1.RemoveChatRequest
+	33, // 42: nushi.v1.NushiService.AnswerPermission:input_type -> nushi.v1.AnswerPermissionRequest
+	35, // 43: nushi.v1.NushiService.AnswerQuestion:input_type -> nushi.v1.AnswerQuestionRequest
+	38, // 44: nushi.v1.NushiService.SetConfigOption:input_type -> nushi.v1.SetConfigOptionRequest
+	42, // 45: nushi.v1.NushiService.GetDiff:input_type -> nushi.v1.GetDiffRequest
+	40, // 46: nushi.v1.NushiService.GetFolderStatus:input_type -> nushi.v1.GetFolderStatusRequest
+	18, // 47: nushi.v1.NushiService.ListFiles:input_type -> nushi.v1.ListFilesRequest
+	45, // 48: nushi.v1.NushiService.Events:input_type -> nushi.v1.EventsRequest
+	3,  // 49: nushi.v1.NushiService.Ping:output_type -> nushi.v1.PingResponse
+	5,  // 50: nushi.v1.NushiService.ListChats:output_type -> nushi.v1.ListChatsResponse
+	8,  // 51: nushi.v1.NushiService.GetChat:output_type -> nushi.v1.GetChatResponse
+	15, // 52: nushi.v1.NushiService.StartChat:output_type -> nushi.v1.StartChatResponse
+	14, // 53: nushi.v1.NushiService.MoveChat:output_type -> nushi.v1.MoveChatResponse
+	20, // 54: nushi.v1.NushiService.SendPrompt:output_type -> nushi.v1.SendPromptResponse
+	22, // 55: nushi.v1.NushiService.CancelTurn:output_type -> nushi.v1.CancelTurnResponse
+	24, // 56: nushi.v1.NushiService.ForkChat:output_type -> nushi.v1.ForkChatResponse
+	26, // 57: nushi.v1.NushiService.CloseSideChat:output_type -> nushi.v1.CloseSideChatResponse
+	28, // 58: nushi.v1.NushiService.RenameChat:output_type -> nushi.v1.RenameChatResponse
+	30, // 59: nushi.v1.NushiService.ArchiveChat:output_type -> nushi.v1.ArchiveChatResponse
+	32, // 60: nushi.v1.NushiService.RemoveChat:output_type -> nushi.v1.RemoveChatResponse
+	34, // 61: nushi.v1.NushiService.AnswerPermission:output_type -> nushi.v1.AnswerPermissionResponse
+	37, // 62: nushi.v1.NushiService.AnswerQuestion:output_type -> nushi.v1.AnswerQuestionResponse
+	39, // 63: nushi.v1.NushiService.SetConfigOption:output_type -> nushi.v1.SetConfigOptionResponse
+	43, // 64: nushi.v1.NushiService.GetDiff:output_type -> nushi.v1.GetDiffResponse
+	41, // 65: nushi.v1.NushiService.GetFolderStatus:output_type -> nushi.v1.GetFolderStatusResponse
+	19, // 66: nushi.v1.NushiService.ListFiles:output_type -> nushi.v1.ListFilesResponse
+	46, // 67: nushi.v1.NushiService.Events:output_type -> nushi.v1.EventsResponse
+	49, // [49:68] is the sub-list for method output_type
+	30, // [30:49] is the sub-list for method input_type
+	30, // [30:30] is the sub-list for extension type_name
+	30, // [30:30] is the sub-list for extension extendee
+	0,  // [0:30] is the sub-list for field type_name
 }
 
 func init() { file_nushi_v1_nushi_proto_init() }
@@ -3620,7 +3709,7 @@ func file_nushi_v1_nushi_proto_init() {
 	if File_nushi_v1_nushi_proto != nil {
 		return
 	}
-	file_nushi_v1_nushi_proto_msgTypes[43].OneofWrappers = []any{
+	file_nushi_v1_nushi_proto_msgTypes[44].OneofWrappers = []any{
 		(*EventsResponse_Item)(nil),
 		(*EventsResponse_Status)(nil),
 		(*EventsResponse_Config)(nil),
@@ -3635,7 +3724,7 @@ func file_nushi_v1_nushi_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_nushi_v1_nushi_proto_rawDesc), len(file_nushi_v1_nushi_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   53,
+			NumMessages:   54,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

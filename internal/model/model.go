@@ -70,6 +70,14 @@ type Item struct {
 	Answer  string
 	// Fields are a question's form, in the agent's order.
 	Fields []Field
+	// Images are a message's or a tool call's images.
+	Images []Image
+}
+
+// Image is an image in a message or a tool call's output.
+type Image struct {
+	MimeType string
+	Data     []byte
 }
 
 // Option is a choice the agent offers. Kind is ACP's hint for a permission
@@ -167,6 +175,7 @@ type Status struct {
 	Started time.Time // when the running turn started
 	Waiting bool      // a permission prompt or question waits on the user
 	CanFork bool      // the agent can fork the chat into side chats
+	Images  bool      // the agent takes images in prompts
 }
 
 // FileChange is one file's uncommitted change: its text at HEAD and now.

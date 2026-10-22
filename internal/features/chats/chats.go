@@ -4,6 +4,7 @@ package chats
 import (
 	"context"
 	"crypto/rand"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"log"
@@ -86,6 +87,7 @@ type chat struct {
 	usage     model.Usage
 	session   model.Session
 	canFork   bool             // the agent can fork the session into side chats
+	canImage  bool             // the agent takes images in prompts
 	sides     map[string]*chat // the chat's side chats, by session id
 	parent    *chat            // a side chat's chat
 	started   time.Time        // when the running turn started
@@ -225,9 +227,9 @@ func (c *chat) storeLocked() {
 }
 
 // Prompt sends text to the chat's agent, with links to the files it
-// mentions (relative to the chat's folder). The turn runs in the
+// mentions (relative to the chat's folder) and images. The turn runs in the
 // background; its progress arrives as events.
-func (s *Service) Prompt(chatID, text string, files []string) error {
+func (s *Service) Prompt(chatID, text string, files []string, images []model.Image) error {
 	c, err := s.chat(chatID)
 	if err != nil {
 		return err
@@ -237,8 +239,11 @@ func (s *Service) Prompt(chatID, text string, files []string) error {
 	if c.busy {
 		return errors.New("the agent is still working on the last prompt")
 	}
+	if len(images) > 0 && !c.canImage {
+		return errors.New("the agent doesn't take images")
+	}
 	c.busy, c.started, c.done = true, time.Now(), make(chan struct{})
-	c.addLocked(model.Item{Kind: model.UserMessage, Text: text})
+	c.addLocked(model.Item{Kind: model.UserMessage, Text: text, Images: images})
 	c.saveLocked(func(s *model.Session) {
 		if s.Title == "" {
 			s.Title = title(text)
@@ -250,6 +255,10 @@ func (s *Service) Prompt(chatID, text string, files []string) error {
 		path := filepath.Join(c.session.Folder, f)
 		prompt = append(prompt, acp.ContentBlock{Type: "resource_link", ResourceLink: &acp.ResourceLink{
 			Name: f, URI: (&url.URL{Scheme: "file", Path: path}).String()}})
+	}
+	for _, img := range images {
+		prompt = append(prompt, acp.ContentBlock{Type: "image", Image: &acp.ImageContent{
+			MimeType: img.MimeType, Data: base64.StdEncoding.EncodeToString(img.Data)}})
 	}
 	go c.run(c.agent, acp.PromptRequest{SessionID: acp.SessionID(c.sid), Prompt: prompt})
 	return nil
@@ -300,7 +309,7 @@ func (c *chat) noticeLocked(reason, text string) {
 }
 
 func (c *chat) statusLocked() model.Status {
-	return model.Status{Busy: c.busy, Started: c.started, Waiting: len(c.waiting)+len(c.questions) > 0, CanFork: c.canFork}
+	return model.Status{Busy: c.busy, Started: c.started, Waiting: len(c.waiting)+len(c.questions) > 0, CanFork: c.canFork, Images: c.canImage}
 }
 
 func (c *chat) statusChangedLocked() {

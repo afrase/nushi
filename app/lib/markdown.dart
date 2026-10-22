@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:markdown_view/markdown_view.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'images.dart';
 import 'theme/theme.dart';
 
 /// Agent markdown in the theme's fonts and colors. Links open in the
-/// browser, http and https only.
+/// browser, http and https only; images as [markdownImage] shows them.
 class AgentMarkdown extends StatelessWidget {
   const AgentMarkdown(this.text, {super.key});
 
@@ -27,6 +28,7 @@ class AgentMarkdown extends StatelessWidget {
     return StreamingMarkdown(
       text,
       onTapLink: _open,
+      imageBuilder: markdownImage,
       style: MarkdownStyle(
         body: theme.ui(t.text, size: 13.5).copyWith(height: 1.5),
         code: theme.code(t.text, size: 12.5),

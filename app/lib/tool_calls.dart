@@ -2,6 +2,7 @@ import 'package:diff_view/diff_view.dart';
 import 'package:flutter/material.dart';
 
 import 'gen/nushi/v1/nushi.pb.dart';
+import 'images.dart';
 import 'markdown.dart';
 import 'theme/theme.dart';
 
@@ -157,9 +158,12 @@ class _Status extends StatelessWidget {
 /// One tool call: a one-line summary by kind (the file read or edited, the
 /// command run, `+n −m` for an edit) that opens to its output and diffs.
 class ToolCallView extends StatelessWidget {
-  const ToolCallView(this.item, {super.key});
+  const ToolCallView(this.item, {super.key, this.images = true});
 
   final Item item;
+
+  /// Whether its images show under it (a run of calls shows them itself).
+  final bool images;
 
   @override
   Widget build(BuildContext context) {
@@ -193,50 +197,79 @@ class ToolCallView extends StatelessWidget {
     }
     final failed = it.status == 'failed';
     final hasBody = it.text.isNotEmpty || it.diffs.isNotEmpty;
-    return _Collapsible(
-      failed: failed,
-      header: Row(
-        children: [
-          Icon(
-            _icons[it.toolKind] ?? Icons.build_outlined,
-            size: 13,
-            color: failed ? t.crashed : t.textSecondary,
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text.rich(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+    return _WithImages(
+      [if (images) ...it.images],
+      _Collapsible(
+        failed: failed,
+        header: Row(
+          children: [
+            Icon(
+              _icons[it.toolKind] ?? Icons.build_outlined,
+              size: 13,
+              color: failed ? t.crashed : t.textSecondary,
             ),
-          ),
-          if (it.diffs.isNotEmpty) ...[
-            Text('+$added', style: code.copyWith(fontSize: 11, color: t.done)),
-            const SizedBox(width: 4),
-            Text(
-              '−$removed',
-              style: code.copyWith(fontSize: 11, color: t.crashed),
-            ),
-          ],
-          const SizedBox(width: 8),
-          _Status(running: _running(it), failed: failed ? 'failed' : ''),
-        ],
-      ),
-      body: !hasBody
-          ? null
-          : Padding(
-              padding: const EdgeInsets.all(8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                spacing: 8,
-                children: [
-                  for (final d in it.diffs) EditDiff(d),
-                  if (it.text.isNotEmpty) AgentMarkdown(it.text),
-                ],
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text.rich(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
+            if (it.diffs.isNotEmpty) ...[
+              Text(
+                '+$added',
+                style: code.copyWith(fontSize: 11, color: t.done),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '−$removed',
+                style: code.copyWith(fontSize: 11, color: t.crashed),
+              ),
+            ],
+            const SizedBox(width: 8),
+            _Status(running: _running(it), failed: failed ? 'failed' : ''),
+          ],
+        ),
+        body: !hasBody
+            ? null
+            : Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  spacing: 8,
+                  children: [
+                    for (final d in it.diffs) EditDiff(d),
+                    if (it.text.isNotEmpty) AgentMarkdown(it.text),
+                  ],
+                ),
+              ),
+      ),
     );
   }
+}
+
+/// A tool call, or a run of them, with the images they returned under it.
+class _WithImages extends StatelessWidget {
+  const _WithImages(this.images, this.child);
+
+  final List<ImageData> images;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => images.isEmpty
+      ? child
+      : Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 6,
+          children: [
+            child,
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Thumbnails(images, size: 240),
+            ),
+          ],
+        );
 }
 
 /// A run of tool calls as one line ("Read 4 files, ran 2 commands") that
@@ -251,35 +284,39 @@ class ToolGroupView extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final failed = calls.where((c) => c.status == 'failed').length;
-    return _Collapsible(
-      failed: false, // its failed calls stand out inside, and in the count
-      header: Row(
-        children: [
-          Icon(Icons.layers_outlined, size: 13, color: t.textSecondary),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              groupLabel(calls),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.ui(t.textSecondary),
-            ),
-          ),
-          const SizedBox(width: 8),
-          _Status(
-            running: calls.any(_running),
-            failed: failed == 0 ? '' : '$failed failed',
-          ),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(6),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: 4,
+    return _WithImages(
+      [for (final c in calls) ...c.images],
+      _Collapsible(
+        failed: false, // its failed calls stand out inside, and in the count
+        header: Row(
           children: [
-            for (final c in calls) ToolCallView(c, key: ValueKey(c.id)),
+            Icon(Icons.layers_outlined, size: 13, color: t.textSecondary),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                groupLabel(calls),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.ui(t.textSecondary),
+              ),
+            ),
+            const SizedBox(width: 8),
+            _Status(
+              running: calls.any(_running),
+              failed: failed == 0 ? '' : '$failed failed',
+            ),
           ],
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 4,
+            children: [
+              for (final c in calls)
+                ToolCallView(c, key: ValueKey(c.id), images: false),
+            ],
+          ),
         ),
       ),
     );

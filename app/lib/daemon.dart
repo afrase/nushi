@@ -16,7 +16,7 @@ final dataDir =
     '${Platform.environment['HOME']}/Library/Application Support/Nushi Next';
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 17;
+const apiVersion = 18;
 
 /// Whether [folder] is a chat's scratch folder: the chat has no folder yet.
 bool isScratch(String folder) => folder.startsWith('$dataDir/scratch/');
@@ -244,10 +244,14 @@ class Daemon extends ChangeNotifier {
   Future<void> removeChat(String chatId) =>
       client.removeChat(RemoveChatRequest(chatId: chatId));
 
-  Future<void> sendPrompt(String chatId, String text, List<String> files) =>
-      client.sendPrompt(
-        SendPromptRequest(chatId: chatId, text: text, files: files),
-      );
+  Future<void> sendPrompt(
+    String chatId,
+    String text,
+    List<String> files,
+    List<ImageData> images,
+  ) => client.sendPrompt(
+    SendPromptRequest(chatId: chatId, text: text, files: files, images: images),
+  );
 
   Future<List<String>> listFiles(String folder) async =>
       (await client.listFiles(ListFilesRequest(folder: folder))).paths;

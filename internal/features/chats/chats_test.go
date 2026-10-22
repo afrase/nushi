@@ -22,7 +22,8 @@ type fakeAgent struct {
 }
 
 func (f *fakeAgent) Initialize(context.Context, acp.InitializeRequest) (*acp.InitializeResponse, error) {
-	return &acp.InitializeResponse{ProtocolVersion: acp.Version}, nil
+	return &acp.InitializeResponse{ProtocolVersion: acp.Version,
+		AgentCapabilities: &acp.AgentCapabilities{PromptCapabilities: &acp.PromptCapabilities{Image: true}}}, nil
 }
 
 func (f *fakeAgent) NewSession(context.Context, acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
@@ -120,12 +121,14 @@ func TestPromptStreamsTheReply(t *testing.T) {
 	if err != nil || svc.chats[id].sid != "s1" {
 		t.Fatalf("Start = %q, %v", id, err)
 	}
-	if err := svc.Prompt(id, "hi", []string{"a b.go"}); err != nil {
+	png := model.Image{MimeType: "image/png", Data: []byte("\x89PNG")}
+	if err := svc.Prompt(id, "hi", []string{"a b.go"}, []model.Image{png}); err != nil {
 		t.Fatal(err)
 	}
 	<-done
 
-	if p := agent.prompt; len(p) != 2 || p[0].Text.Text != "hi" || p[1].ResourceLink.Name != "a b.go" ||
+	if p := agent.prompt; len(p) != 3 || p[0].Text.Text != "hi" || p[1].ResourceLink.Name != "a b.go" ||
+		p[2].Image == nil || p[2].Image.Data != "iVBORw==" || p[2].Image.MimeType != "image/png" ||
 		p[1].ResourceLink.URI != "file://"+strings.ReplaceAll(folder, " ", "%20")+"/a%20b.go" {
 		t.Errorf("prompt = %+v %+v", p[0], p[len(p)-1].ResourceLink)
 	}
@@ -135,7 +138,7 @@ func TestPromptStreamsTheReply(t *testing.T) {
 		t.Errorf("title = %q, want the first prompt", c.session.Title)
 	}
 	want := []model.Item{
-		{ID: "item-1", Kind: model.UserMessage, Text: "hi"},
+		{ID: "item-1", Kind: model.UserMessage, Text: "hi", Images: []model.Image{png}},
 		{ID: "m1", Kind: model.AgentMessage, Text: "Hello!"},
 		{ID: "m2", Kind: model.AgentMessage, Text: "Bye"},
 	}
@@ -307,7 +310,7 @@ func TestUsageIsWhatTheAgentReported(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := svc.Prompt(id, "hi", nil); err != nil {
+	if err := svc.Prompt(id, "hi", nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	<-done
@@ -316,5 +319,22 @@ func TestUsageIsWhatTheAgentReported(t *testing.T) {
 	want := model.Usage{Used: 120, Size: 1000, Cost: 0.5, Currency: "USD", Input: 3, Output: 4, CachedRead: 5}
 	if snap.Usage != want {
 		t.Errorf("usage = %+v, want %+v", snap.Usage, want)
+	}
+}
+
+func TestImagesJoinTheirMessageOrToolCall(t *testing.T) {
+	c := &chat{id: "s1", sid: "s1", publish: func(model.Event) {}}
+	img := &acp.ImageContent{MimeType: "image/png", Data: "iVBORw=="}
+	for _, u := range []acp.SessionUpdate{ // as session/load replays a prompt with an image
+		{SessionUpdate: "user_message_chunk", UserMessageChunk: &acp.ContentChunk{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: "look"}}}},
+		{SessionUpdate: "user_message_chunk", UserMessageChunk: &acp.ContentChunk{Content: acp.ContentBlock{Type: "image", Image: img}}},
+		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "Read a.png", Content: []acp.ToolCallContent{
+			{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "image", Image: img}}}}}},
+	} {
+		c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: u})
+	}
+	png := []model.Image{{MimeType: "image/png", Data: []byte("\x89PNG")}}
+	if len(c.items) != 2 || c.items[0].Text != "look" || !reflect.DeepEqual(c.items[0].Images, png) || !reflect.DeepEqual(c.items[1].Images, png) {
+		t.Errorf("items = %+v", c.items)
 	}
 }

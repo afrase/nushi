@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'chat.dart';
+import 'chat_menu.dart';
 import 'daemon.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
+import 'images.dart';
 import 'pickers.dart';
 import 'theme/theme.dart';
 import 'thinking.dart';
@@ -25,9 +27,10 @@ Future<void> stopTurn(
   }
 }
 
-/// The prompt box: "+" on its left starts an @ mention, and on its right
-/// a send button once there is text, or a stop button while a turn runs.
-/// Under it, the agent's pickers. Enter sends,
+/// The prompt box: "+" on its left mentions a file or attaches images
+/// (⌘V and dropping work too), and on its right a send button once there
+/// is something to send, or a stop button while a turn runs. Attached
+/// images show above the text. Under it, the agent's pickers. Enter sends,
 /// Shift-Enter starts a line; `/` completes the agent's commands and `@`
 /// the folder's files (sent as links); Up in an empty box brings back the
 /// last prompt.
@@ -37,6 +40,7 @@ class Composer extends StatefulWidget {
     required this.chat,
     required this.daemon,
     required this.quote,
+    this.attachments,
     this.hint = 'Type / for commands',
   });
 
@@ -45,6 +49,9 @@ class Composer extends StatefulWidget {
 
   /// Text to quote in the box (Reply), cursor after it; taken and cleared.
   final ValueNotifier<String?> quote;
+
+  /// The images to send with the prompt; the box keeps its own if null.
+  final Attachments? attachments;
   final String hint;
 
   @override
@@ -62,17 +69,35 @@ class _ComposerState extends State<Composer> {
   int _picked = 0;
   (int, int)? _token; // where the text being completed starts and ends
   String _dismissed = ''; // the text Escape closed the choices for
+  late final _images = widget.attachments ?? Attachments();
 
   @override
   void initState() {
     super.initState();
+    _images.addListener(_imagesChanged);
     _text.addListener(_complete);
     widget.quote.addListener(_quote);
     _quote(); // one given before the box was built
   }
 
+  void _imagesChanged() => setState(() {});
+
+  /// The "+" menu: mention a file, or attach images.
+  Future<void> _plus(BuildContext button) async {
+    final picked = await plusMenu(button, images: widget.chat.canImages);
+    if (!mounted) return;
+    switch (picked) {
+      case 'file':
+        _mention();
+      case 'image':
+        await tryOrShow(context, _images.pick);
+    }
+  }
+
   @override
   void dispose() {
+    _images.removeListener(_imagesChanged);
+    if (widget.attachments == null) _images.dispose();
     widget.quote.removeListener(_quote);
     _text.dispose();
     _focus.dispose();
@@ -199,6 +224,11 @@ class _ComposerState extends State<Composer> {
       _send();
       return KeyEventResult.handled;
     }
+    if (key == LogicalKeyboardKey.keyV &&
+        HardwareKeyboard.instance.isMetaPressed &&
+        widget.chat.canImages) {
+      tryOrShow(context, _images.paste); // text, if any, pastes as usual
+    }
     if (key == LogicalKeyboardKey.arrowUp && _text.text.isEmpty) {
       final last = widget.chat.items.lastWhere(
         (it) => it.kind == ItemKind.ITEM_KIND_USER_MESSAGE,
@@ -216,18 +246,21 @@ class _ComposerState extends State<Composer> {
 
   Future<void> _send() async {
     final text = _text.text.trim();
-    if (text.isEmpty || widget.chat.busy) return;
+    final images = _images.value;
+    if (text.isEmpty && images.isEmpty || widget.chat.busy) return;
     final files = [
       for (final f in _mentions)
         if (text.contains('@$f')) f,
     ];
     _text.clear();
+    _images.clear();
     _mentions.clear();
     _lastFiles = files;
     try {
-      await widget.daemon.sendPrompt(widget.chat.id, text, files);
+      await widget.daemon.sendPrompt(widget.chat.id, text, files, images);
     } on Object catch (e) {
       _text.text = text;
+      _images.value = images;
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('$e')));
@@ -275,56 +308,77 @@ class _ComposerState extends State<Composer> {
               padding: const EdgeInsets.fromLTRB(4, 4, 6, 4),
               child: child,
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                BoxButton(
-                  tooltip: 'Mention a file',
-                  onPressed: _mention,
-                  child: Icon(Icons.add, size: 18, color: t.textSecondary),
-                ),
-                Expanded(
-                  child: Focus(
-                    onKeyEvent: _onKey,
-                    skipTraversal: true,
-                    child: TextField(
-                      controller: _text,
-                      focusNode: _focus,
-                      autofocus: true,
-                      minLines: 1,
-                      maxLines: 10,
-                      style: theme.ui(t.text),
-                      decoration: InputDecoration(
-                        isDense: true,
-                        hintText: chat.busy
-                            ? 'Claude is working…'
-                            : widget.hint,
-                        hintStyle: theme.ui(t.textMuted),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 6,
+                if (_images.value.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(6, 8, 6, 4),
+                    child: Thumbnails(
+                      _images.value,
+                      onRemove: _images.removeAt,
+                    ),
+                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Builder(
+                      builder: (button) => BoxButton(
+                        tooltip: 'Mention a file or attach an image',
+                        onPressed: () => _plus(button),
+                        child: Icon(
+                          Icons.add,
+                          size: 18,
+                          color: t.textSecondary,
                         ),
                       ),
                     ),
-                  ),
-                ),
-                if (chat.started != null)
-                  BoxButton(
-                    tooltip: 'Stop (esc)',
-                    onPressed: () => stopTurn(context, chat, widget.daemon),
-                    child: StopIcon(color: t.textSecondary),
-                  )
-                else if (_text.text.trim().isNotEmpty && !chat.busy)
-                  BoxButton(
-                    tooltip: 'Send (⏎)',
-                    onPressed: _send,
-                    child: Icon(
-                      Icons.keyboard_return,
-                      size: 16,
-                      color: t.textSecondary,
+                    Expanded(
+                      child: Focus(
+                        onKeyEvent: _onKey,
+                        skipTraversal: true,
+                        child: TextField(
+                          controller: _text,
+                          focusNode: _focus,
+                          autofocus: true,
+                          minLines: 1,
+                          maxLines: 10,
+                          style: theme.ui(t.text),
+                          decoration: InputDecoration(
+                            isDense: true,
+                            hintText: chat.busy
+                                ? 'Claude is working…'
+                                : widget.hint,
+                            hintStyle: theme.ui(t.textMuted),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 6,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                    if (chat.started != null)
+                      BoxButton(
+                        tooltip: 'Stop (esc)',
+                        onPressed: () => stopTurn(context, chat, widget.daemon),
+                        child: StopIcon(color: t.textSecondary),
+                      )
+                    else if ((_text.text.trim().isNotEmpty ||
+                            _images.value.isNotEmpty) &&
+                        !chat.busy)
+                      BoxButton(
+                        tooltip: 'Send (⏎)',
+                        onPressed: _send,
+                        child: Icon(
+                          Icons.keyboard_return,
+                          size: 16,
+                          color: t.textSecondary,
+                        ),
+                      ),
+                  ],
+                ),
               ],
             ),
           ),

@@ -345,13 +345,36 @@ const SendPromptRequest$json = {
     {'1': 'chat_id', '3': 1, '4': 1, '5': 9, '10': 'chatId'},
     {'1': 'text', '3': 2, '4': 1, '5': 9, '10': 'text'},
     {'1': 'files', '3': 3, '4': 3, '5': 9, '10': 'files'},
+    {
+      '1': 'images',
+      '3': 4,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.ImageData',
+      '10': 'images'
+    },
   ],
 };
 
 /// Descriptor for `SendPromptRequest`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List sendPromptRequestDescriptor = $convert.base64Decode(
     'ChFTZW5kUHJvbXB0UmVxdWVzdBIXCgdjaGF0X2lkGAEgASgJUgZjaGF0SWQSEgoEdGV4dBgCIA'
-    'EoCVIEdGV4dBIUCgVmaWxlcxgDIAMoCVIFZmlsZXM=');
+    'EoCVIEdGV4dBIUCgVmaWxlcxgDIAMoCVIFZmlsZXMSKwoGaW1hZ2VzGAQgAygLMhMubnVzaGku'
+    'djEuSW1hZ2VEYXRhUgZpbWFnZXM=');
+
+@$core.Deprecated('Use imageDataDescriptor instead')
+const ImageData$json = {
+  '1': 'ImageData',
+  '2': [
+    {'1': 'mime_type', '3': 1, '4': 1, '5': 9, '10': 'mimeType'},
+    {'1': 'data', '3': 2, '4': 1, '5': 12, '10': 'data'},
+  ],
+};
+
+/// Descriptor for `ImageData`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List imageDataDescriptor = $convert.base64Decode(
+    'CglJbWFnZURhdGESGwoJbWltZV90eXBlGAEgASgJUghtaW1lVHlwZRISCgRkYXRhGAIgASgMUg'
+    'RkYXRh');
 
 @$core.Deprecated('Use listFilesRequestDescriptor instead')
 const ListFilesRequest$json = {
@@ -899,6 +922,14 @@ const Item$json = {
       '6': '.nushi.v1.PlanEntry',
       '10': 'plan'
     },
+    {
+      '1': 'images',
+      '3': 13,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.ImageData',
+      '10': 'images'
+    },
   ],
 };
 
@@ -910,7 +941,8 @@ final $typed_data.Uint8List itemDescriptor = $convert.base64Decode(
     '5zGAcgAygLMhAubnVzaGkudjEuT3B0aW9uUgdvcHRpb25zEhYKBmFuc3dlchgIIAEoCVIGYW5z'
     'd2VyEicKBmZpZWxkcxgJIAMoCzIPLm51c2hpLnYxLkZpZWxkUgZmaWVsZHMSFAoFcGF0aHMYCi'
     'ADKAlSBXBhdGhzEioKBWRpZmZzGAsgAygLMhQubnVzaGkudjEuRmlsZUNoYW5nZVIFZGlmZnMS'
-    'JwoEcGxhbhgMIAMoCzITLm51c2hpLnYxLlBsYW5FbnRyeVIEcGxhbg==');
+    'JwoEcGxhbhgMIAMoCzITLm51c2hpLnYxLlBsYW5FbnRyeVIEcGxhbhIrCgZpbWFnZXMYDSADKA'
+    'syEy5udXNoaS52MS5JbWFnZURhdGFSBmltYWdlcw==');
 
 @$core.Deprecated('Use planEntryDescriptor instead')
 const PlanEntry$json = {
@@ -1000,6 +1032,7 @@ const ChatStatus$json = {
     {'1': 'started', '3': 3, '4': 1, '5': 3, '10': 'started'},
     {'1': 'waiting', '3': 4, '4': 1, '5': 8, '10': 'waiting'},
     {'1': 'can_fork', '3': 5, '4': 1, '5': 8, '10': 'canFork'},
+    {'1': 'images', '3': 6, '4': 1, '5': 8, '10': 'images'},
   ],
 };
 
@@ -1007,7 +1040,7 @@ const ChatStatus$json = {
 final $typed_data.Uint8List chatStatusDescriptor = $convert.base64Decode(
     'CgpDaGF0U3RhdHVzEhIKBGJ1c3kYASABKAhSBGJ1c3kSFAoFZXJyb3IYAiABKAlSBWVycm9yEh'
     'gKB3N0YXJ0ZWQYAyABKANSB3N0YXJ0ZWQSGAoHd2FpdGluZxgEIAEoCFIHd2FpdGluZxIZCghj'
-    'YW5fZm9yaxgFIAEoCFIHY2FuRm9yaw==');
+    'YW5fZm9yaxgFIAEoCFIHY2FuRm9yaxIWCgZpbWFnZXMYBiABKAhSBmltYWdlcw==');
 
 const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
   '1': 'NushiService',
@@ -1123,6 +1156,7 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.Field': Field$json,
   '.nushi.v1.FileChange': FileChange$json,
   '.nushi.v1.PlanEntry': PlanEntry$json,
+  '.nushi.v1.ImageData': ImageData$json,
   '.nushi.v1.ConfigOption': ConfigOption$json,
   '.nushi.v1.ConfigValue': ConfigValue$json,
   '.nushi.v1.Command': Command$json,

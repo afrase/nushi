@@ -162,6 +162,14 @@ message SendPromptRequest {
   // Files the prompt mentions, relative to the chat's folder; they go to
   // the agent as resource links after the text.
   repeated string files = 3;
+  // Images, after the files; refused unless status.images.
+  repeated ImageData images = 4;
+}
+
+// An image in a prompt, a message or a tool call's output.
+message ImageData {
+  string mime_type = 1;
+  bytes data = 2;
 }
 
 message ListFilesRequest {
@@ -378,6 +386,8 @@ message Item {
   repeated string paths = 10;
   repeated FileChange diffs = 11;
   repeated PlanEntry plan = 12;
+  // A message's or a tool call's images.
+  repeated ImageData images = 13;
 }
 
 // A step of the agent's plan; status is "pending", "in_progress" or
@@ -437,4 +447,6 @@ message ChatStatus {
   bool waiting = 4;
   // The agent can fork the chat (ForkChat).
   bool can_fork = 5;
+  // The agent takes images in prompts.
+  bool images = 6;
 }

@@ -21,7 +21,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 17
+const Version = 18
 
 type server struct {
 	chats *chats.Service
@@ -91,7 +91,11 @@ func (s *server) MoveChat(ctx context.Context, req *connect.Request[nushiv1.Move
 }
 
 func (s *server) SendPrompt(_ context.Context, req *connect.Request[nushiv1.SendPromptRequest]) (*connect.Response[nushiv1.SendPromptResponse], error) {
-	if err := s.chats.Prompt(req.Msg.ChatId, req.Msg.Text, req.Msg.Files); err != nil {
+	var images []model.Image
+	for _, img := range req.Msg.Images {
+		images = append(images, model.Image{MimeType: img.MimeType, Data: img.Data})
+	}
+	if err := s.chats.Prompt(req.Msg.ChatId, req.Msg.Text, req.Msg.Files, images); err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
 	return connect.NewResponse(&nushiv1.SendPromptResponse{}), nil
@@ -268,6 +272,9 @@ func itemProto(it *model.Item) *nushiv1.Item {
 		Title: it.Title, ToolKind: it.ToolKind, Status: it.Status, Answer: it.Answer}
 	out.Options = optionsProto(it.Options)
 	out.Paths = it.Paths
+	for _, img := range it.Images {
+		out.Images = append(out.Images, &nushiv1.ImageData{MimeType: img.MimeType, Data: img.Data})
+	}
 	for _, e := range it.Plan {
 		out.Plan = append(out.Plan, &nushiv1.PlanEntry{Content: e.Content, Status: e.Status})
 	}
@@ -295,7 +302,7 @@ func usageProto(u model.Usage) *nushiv1.Usage {
 }
 
 func statusProto(st model.Status) *nushiv1.ChatStatus {
-	out := &nushiv1.ChatStatus{Busy: st.Busy, Waiting: st.Waiting, CanFork: st.CanFork}
+	out := &nushiv1.ChatStatus{Busy: st.Busy, Waiting: st.Waiting, CanFork: st.CanFork, Images: st.Images}
 	if !st.Started.IsZero() {
 		out.Started = st.Started.UnixMilli()
 	}

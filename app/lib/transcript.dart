@@ -4,6 +4,7 @@ import 'cards.dart';
 import 'chat.dart';
 import 'daemon.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
+import 'images.dart';
 import 'markdown.dart';
 import 'question_card.dart';
 import 'theme/theme.dart';
@@ -296,7 +297,15 @@ class _ItemView extends StatelessWidget {
                 border: Border.all(color: t.borderSubtle),
                 borderRadius: BorderRadius.circular(NushiTheme.card),
               ),
-              child: Text(item.text, style: theme.ui(t.text)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: 6,
+                children: [
+                  if (item.images.isNotEmpty) Thumbnails(item.images),
+                  if (item.text.isNotEmpty)
+                    Text(item.text, style: theme.ui(t.text)),
+                ],
+              ),
             ),
           ],
         );
@@ -339,6 +348,7 @@ class _ItemView extends StatelessWidget {
             const _Who('Claude'),
             const SizedBox(height: 4),
             AgentMarkdown(item.text),
+            if (item.images.isNotEmpty) Thumbnails(item.images, size: 240),
           ],
         );
     }
