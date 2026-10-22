@@ -35,6 +35,8 @@ const (
 const (
 	// NushiServicePingProcedure is the fully-qualified name of the NushiService's Ping RPC.
 	NushiServicePingProcedure = "/nushi.v1.NushiService/Ping"
+	// NushiServiceListChatsProcedure is the fully-qualified name of the NushiService's ListChats RPC.
+	NushiServiceListChatsProcedure = "/nushi.v1.NushiService/ListChats"
 	// NushiServiceStartChatProcedure is the fully-qualified name of the NushiService's StartChat RPC.
 	NushiServiceStartChatProcedure = "/nushi.v1.NushiService/StartChat"
 	// NushiServiceSendPromptProcedure is the fully-qualified name of the NushiService's SendPrompt RPC.
@@ -55,6 +57,8 @@ const (
 // NushiServiceClient is a client for the nushi.v1.NushiService service.
 type NushiServiceClient interface {
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
+	// Lists every stored chat.
+	ListChats(context.Context, *connect.Request[v1.ListChatsRequest]) (*connect.Response[v1.ListChatsResponse], error)
 	// Starts an agent in a folder and opens a chat with it.
 	StartChat(context.Context, *connect.Request[v1.StartChatRequest]) (*connect.Response[v1.StartChatResponse], error)
 	// Sends a prompt; the reply arrives as events.
@@ -86,6 +90,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServicePingProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("Ping")),
+			connect.WithClientOptions(opts...),
+		),
+		listChats: connect.NewClient[v1.ListChatsRequest, v1.ListChatsResponse](
+			httpClient,
+			baseURL+NushiServiceListChatsProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ListChats")),
 			connect.WithClientOptions(opts...),
 		),
 		startChat: connect.NewClient[v1.StartChatRequest, v1.StartChatResponse](
@@ -130,6 +140,7 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 // nushiServiceClient implements NushiServiceClient.
 type nushiServiceClient struct {
 	ping             *connect.Client[v1.PingRequest, v1.PingResponse]
+	listChats        *connect.Client[v1.ListChatsRequest, v1.ListChatsResponse]
 	startChat        *connect.Client[v1.StartChatRequest, v1.StartChatResponse]
 	sendPrompt       *connect.Client[v1.SendPromptRequest, v1.SendPromptResponse]
 	answerPermission *connect.Client[v1.AnswerPermissionRequest, v1.AnswerPermissionResponse]
@@ -141,6 +152,11 @@ type nushiServiceClient struct {
 // Ping calls nushi.v1.NushiService.Ping.
 func (c *nushiServiceClient) Ping(ctx context.Context, req *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error) {
 	return c.ping.CallUnary(ctx, req)
+}
+
+// ListChats calls nushi.v1.NushiService.ListChats.
+func (c *nushiServiceClient) ListChats(ctx context.Context, req *connect.Request[v1.ListChatsRequest]) (*connect.Response[v1.ListChatsResponse], error) {
+	return c.listChats.CallUnary(ctx, req)
 }
 
 // StartChat calls nushi.v1.NushiService.StartChat.
@@ -176,6 +192,8 @@ func (c *nushiServiceClient) Events(ctx context.Context, req *connect.Request[v1
 // NushiServiceHandler is an implementation of the nushi.v1.NushiService service.
 type NushiServiceHandler interface {
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
+	// Lists every stored chat.
+	ListChats(context.Context, *connect.Request[v1.ListChatsRequest]) (*connect.Response[v1.ListChatsResponse], error)
 	// Starts an agent in a folder and opens a chat with it.
 	StartChat(context.Context, *connect.Request[v1.StartChatRequest]) (*connect.Response[v1.StartChatResponse], error)
 	// Sends a prompt; the reply arrives as events.
@@ -203,6 +221,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServicePingProcedure,
 		svc.Ping,
 		connect.WithSchema(nushiServiceMethods.ByName("Ping")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceListChatsHandler := connect.NewUnaryHandler(
+		NushiServiceListChatsProcedure,
+		svc.ListChats,
+		connect.WithSchema(nushiServiceMethods.ByName("ListChats")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceStartChatHandler := connect.NewUnaryHandler(
@@ -245,6 +269,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		switch r.URL.Path {
 		case NushiServicePingProcedure:
 			nushiServicePingHandler.ServeHTTP(w, r)
+		case NushiServiceListChatsProcedure:
+			nushiServiceListChatsHandler.ServeHTTP(w, r)
 		case NushiServiceStartChatProcedure:
 			nushiServiceStartChatHandler.ServeHTTP(w, r)
 		case NushiServiceSendPromptProcedure:
@@ -268,6 +294,10 @@ type UnimplementedNushiServiceHandler struct{}
 
 func (UnimplementedNushiServiceHandler) Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.Ping is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ListChats(context.Context, *connect.Request[v1.ListChatsRequest]) (*connect.Response[v1.ListChatsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ListChats is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) StartChat(context.Context, *connect.Request[v1.StartChatRequest]) (*connect.Response[v1.StartChatResponse], error) {

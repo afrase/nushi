@@ -3,13 +3,15 @@ import 'package:flutter/foundation.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 
 /// One chat's transcript and status, kept current from daemon events.
-class Chat extends ChangeNotifier {
-  Chat(this.id, this.folder, this.config);
+class ChatState extends ChangeNotifier {
+  ChatState(this.id, this.folder);
 
   final String id;
   final String folder;
+  String title = '';
+  DateTime created = DateTime.now();
   final List<Item> items = [];
-  List<ConfigOption> config;
+  List<ConfigOption> config = [];
   bool busy = false;
   String error = '';
 
@@ -22,8 +24,8 @@ class Chat extends ChangeNotifier {
       case EventsResponse_Kind.status:
         busy = e.status.busy;
         error = e.status.error;
-      case EventsResponse_Kind.notSet:
-        return;
+      case EventsResponse_Kind.chat || EventsResponse_Kind.notSet:
+        return; // the daemon keeps a chat's title and folder
     }
     notifyListeners();
   }

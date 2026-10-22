@@ -4,10 +4,14 @@ package store
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/afrase/nushi/internal/model"
 )
 
 // Store keeps its files in one folder.
@@ -65,4 +69,34 @@ func writeJSON(path string, v any) error {
 		return err
 	}
 	return os.Rename(tmp, path)
+}
+
+// SaveSession writes a session's file, replacing any earlier one.
+func (s *Store) SaveSession(sess model.Session) error {
+	dir := filepath.Join(s.dir, "sessions")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	return writeJSON(filepath.Join(dir, url.PathEscape(sess.ID)+".json"), sess)
+}
+
+// Sessions reads every stored session.
+func (s *Store) Sessions() ([]model.Session, error) {
+	files, err := filepath.Glob(filepath.Join(s.dir, "sessions", "*.json"))
+	if err != nil {
+		return nil, err
+	}
+	var out []model.Session
+	for _, f := range files {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			return nil, err
+		}
+		var sess model.Session
+		if err := json.Unmarshal(b, &sess); err != nil {
+			return nil, fmt.Errorf("%s: %w", f, err)
+		}
+		out = append(out, sess)
+	}
+	return out, nil
 }

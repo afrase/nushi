@@ -55,7 +55,8 @@ func run() error {
 
 	hub := &events.Hub{}
 	launch := func(h acp.Handler) (chats.Agent, error) { return launchClaude(dir, h) }
-	chatSvc := chats.New("claude", launch, store.New(dir), hub.Publish)
+	st := store.New(dir)
+	chatSvc := chats.New("claude", launch, st, st, hub.Publish)
 	srv := &http.Server{Handler: api.Handler(token, chatSvc, hub), Protocols: new(http.Protocols)}
 	srv.Protocols.SetUnencryptedHTTP2(true)
 	return srv.Serve(ln)

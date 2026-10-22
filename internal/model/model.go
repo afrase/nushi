@@ -1,6 +1,19 @@
 // Package model holds the plain types that features and the API share.
 package model
 
+import "time"
+
+// Session is what Nushi keeps of a chat, to list and reopen it. The agent
+// keeps the rest.
+type Session struct {
+	ID      string // the agent's session id
+	Agent   string
+	Folder  string
+	Title   string
+	Mode    string // the mode it was last in
+	Created time.Time
+}
+
 type ItemKind int
 
 const (
@@ -62,9 +75,11 @@ type Field struct {
 	Values                 []string
 }
 
-// Event is a change to one chat. Exactly one of Item, Status and Config is set.
+// Event is a change to one chat. Exactly one of Item, Status, Config and
+// Session is set.
 type Event struct {
-	ChatID string
+	ChatID  string
+	Session *Session // the chat was opened, or its title or mode changed
 	Item   *Item
 	// Append means Item.Text continues the item's text rather than replacing it.
 	Append bool

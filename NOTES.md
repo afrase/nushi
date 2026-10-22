@@ -14,6 +14,7 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 4. Permission prompts | 646 | 677 | 549 | 131 |
 | 5. Agent questions | 900 | 703 | 839 | 131 |
 | 6. Pickers | 1202 | 723 | 972 | 131 |
+| 7. Many chats | 1340 | 723 | 1105 | 131 |
 
 Tripwires crossed:
 - Step 2 added about 1,500 hand-written lines, tests included (the limit is about 500). What pushed it: the whole ACP client landed in this step (JSON-RPC framing, client and the schema-to-Go type generator, about 660 lines), plus the first real chat screen and the daemon's chat feature. None of it is for later steps.
@@ -33,6 +34,7 @@ Tripwires crossed:
 - claude-agent-acp 0.94.0 puts a `messageId` on every `agent_message_chunk`; chunks are grouped into messages by it (by the last message when it is missing).
 - The adapter logs progress (`[session/create] ...`) on stderr; nushid copies it into its log.
 - Between chunks Claude sends `usage_update` (context size, cost), and the `prompt` result carries a `_meta.quota` usage report. Both are ignored for now.
+- Claude names its sessions itself: soon after the first prompt it sends `session_info_update` with a short title ("Apple" for "Reply with just the word apple."). Nushi uses the first line of the first prompt until then.
 - Claude's tool calls arrive as a `tool_call` with a generic title ("Terminal", "Read File") and empty `rawInput`, then `tool_call_update`s that set the real title (the command, "Read notes.txt"), then content. The first content is the command's description; the final one (with `status: completed`) is the output in a fenced block. Each update's `content` replaces the previous one.
 - Claude also sends a `tool_call_update` carrying only `_meta.claudeCode.toolResponse` (the raw tool result) before the final one; it changes nothing we show.
 - In `auto` mode Claude asked nothing for `curl -X POST` or `touch`; in Manual (`default`) mode it asks before `touch`, with two options, "Yes" (`allow_once`) and "No" (`reject_once`). A permission request names the tool call it is about (`toolCall.toolCallId`), which was sent just before as a `tool_call`.
@@ -46,6 +48,8 @@ Tripwires crossed:
 
 - The remembered mode lives in `agents.json` in the data folder (`{"claude":{"mode":"default"}}`); the agent is named "claude" in code until there's a second one.
 - Modes get no warning styling: claude-agent-acp 0.94.0 doesn't tag its full-access mode (`_meta.kind`), and naming `bypassPermissions` in Nushi would be a per-agent table.
+- Each chat is a file `sessions/<id>.json` in the data folder (id, agent, folder, title, last mode, created). A chat's title is the agent's (`session_info_update`) or else its first prompt's first line.
+- The sidebar groups chats by folder, newest chat first; a folder's "+" opens a new chat there without a dialog.
 - One agent process per chat; the chat's id is the agent's session id.
 - The daemon keeps each chat's transcript in memory (not on disk); events carry an item, and a streamed message sends only the new text (`append`).
 - The `Events` stream's first message is empty, so a client knows its subscription is live (connect-go clients otherwise wait for the first real event).

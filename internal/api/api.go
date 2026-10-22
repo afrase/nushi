@@ -16,7 +16,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 5
+const Version = 6
 
 type server struct {
 	chats *chats.Service
@@ -41,6 +41,18 @@ func Handler(token string, chats *chats.Service, hub *events.Hub) http.Handler {
 
 func (s *server) Ping(context.Context, *connect.Request[nushiv1.PingRequest]) (*connect.Response[nushiv1.PingResponse], error) {
 	return connect.NewResponse(&nushiv1.PingResponse{ApiVersion: Version}), nil
+}
+
+func (s *server) ListChats(context.Context, *connect.Request[nushiv1.ListChatsRequest]) (*connect.Response[nushiv1.ListChatsResponse], error) {
+	sessions, err := s.chats.List()
+	if err != nil {
+		return nil, err
+	}
+	resp := &nushiv1.ListChatsResponse{}
+	for _, sess := range sessions {
+		resp.Chats = append(resp.Chats, chatProto(sess))
+	}
+	return connect.NewResponse(resp), nil
 }
 
 func (s *server) StartChat(ctx context.Context, req *connect.Request[nushiv1.StartChatRequest]) (*connect.Response[nushiv1.StartChatResponse], error) {
@@ -121,6 +133,8 @@ func toProto(e model.Event) *nushiv1.EventsResponse {
 	switch {
 	case e.Item != nil:
 		out.Kind = &nushiv1.EventsResponse_Item{Item: &nushiv1.ItemEvent{Item: itemProto(e.Item), Append: e.Append}}
+	case e.Session != nil:
+		out.Kind = &nushiv1.EventsResponse_Chat{Chat: chatProto(*e.Session)}
 	case e.Config != nil:
 		out.Kind = &nushiv1.EventsResponse_Config{Config: &nushiv1.ChatConfig{Options: configProto(e.Config)}}
 	case e.Status != nil:
@@ -159,4 +173,8 @@ func configProto(opts []model.ConfigOption) []*nushiv1.ConfigOption {
 		out = append(out, co)
 	}
 	return out
+}
+
+func chatProto(s model.Session) *nushiv1.Chat {
+	return &nushiv1.Chat{Id: s.ID, Agent: s.Agent, Folder: s.Folder, Title: s.Title, Mode: s.Mode, CreatedUnixMs: s.Created.UnixMilli()}
 }

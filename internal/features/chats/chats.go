@@ -9,7 +9,9 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/afrase/nushi/acp"
 	"github.com/afrase/nushi/internal/model"
@@ -28,25 +30,33 @@ type Agent interface {
 // Launch starts an agent; its session updates go to h.
 type Launch func(h acp.Handler) (Agent, error)
 
+// Sessions stores what Nushi keeps of each chat.
+type Sessions interface {
+	SaveSession(model.Session) error
+	Sessions() ([]model.Session, error)
+}
+
 // Service holds the open chats, all with one agent.
 type Service struct {
-	agent   string // the agent's name, such as "claude"
-	launch  Launch
-	modes   Modes
-	publish func(model.Event)
+	agent    string // the agent's name, such as "claude"
+	launch   Launch
+	modes    Modes
+	sessions Sessions
+	publish  func(model.Event)
 
 	mu    sync.Mutex
 	chats map[string]*chat
 }
 
-func New(agent string, launch Launch, modes Modes, publish func(model.Event)) *Service {
-	return &Service{agent: agent, launch: launch, modes: modes, publish: publish, chats: map[string]*chat{}}
+func New(agent string, launch Launch, modes Modes, sessions Sessions, publish func(model.Event)) *Service {
+	return &Service{agent: agent, launch: launch, modes: modes, sessions: sessions, publish: publish, chats: map[string]*chat{}}
 }
 
 type chat struct {
-	id      string // the agent's session id
-	agent   Agent
-	publish func(model.Event)
+	id       string // the agent's session id
+	agent    Agent
+	publish  func(model.Event)
+	sessions Sessions
 
 	mu        sync.Mutex
 	items     []model.Item
@@ -55,6 +65,7 @@ type chat struct {
 	waiting   map[string]chan<- string        // permission prompts by item id, for the picked option
 	questions map[string]chan<- []model.Field // questions by item id, for the answer (nil: declined)
 	config    []model.ConfigOption
+	session   model.Session
 }
 
 // Start launches an agent in folder and opens a session there.
@@ -62,7 +73,7 @@ func (s *Service) Start(ctx context.Context, folder string) (string, error) {
 	if fi, err := os.Stat(folder); err != nil || !fi.IsDir() || !filepath.IsAbs(folder) {
 		return "", fmt.Errorf("%q is not an absolute path to a folder", folder)
 	}
-	c := &chat{publish: s.publish, waiting: map[string]chan<- string{}, questions: map[string]chan<- []model.Field{}}
+	c := &chat{publish: s.publish, sessions: s.sessions, waiting: map[string]chan<- string{}, questions: map[string]chan<- []model.Field{}}
 	agent, err := s.launch(c)
 	if err != nil {
 		return "", fmt.Errorf("start agent: %w", err)
@@ -83,13 +94,45 @@ func (s *Service) Start(ctx context.Context, folder string) (string, error) {
 	}
 	c.id = string(sess.SessionID)
 	c.config = configFrom(sess.ConfigOptions, sess.Modes)
+	c.session = model.Session{ID: c.id, Agent: s.agent, Folder: folder, Created: time.Now()}
 	if err := c.startMode(ctx, s.modes.Mode(s.agent)); err != nil {
 		log.Printf("chat %s: starting mode: %v", c.id, err) // the chat keeps the agent's default
 	}
+	c.mu.Lock()
+	c.saveLocked(nil)
+	c.storeLocked()
+	c.mu.Unlock()
 	s.mu.Lock()
 	s.chats[c.id] = c
 	s.mu.Unlock()
 	return c.id, nil
+}
+
+// List returns every stored chat.
+func (s *Service) List() ([]model.Session, error) { return s.sessions.Sessions() }
+
+// saveLocked applies change (if any) to the chat's session, keeps its mode
+// in step with the chat's mode option, and stores it if anything changed.
+func (c *chat) saveLocked(change func(*model.Session)) {
+	next := c.session
+	if change != nil {
+		change(&next)
+	}
+	if i := modeIndex(c.config); i >= 0 {
+		next.Mode = c.config[i].Current
+	}
+	if next != c.session {
+		c.session = next
+		c.storeLocked()
+	}
+}
+
+func (c *chat) storeLocked() {
+	if err := c.sessions.SaveSession(c.session); err != nil {
+		log.Printf("chat %s: saving: %v", c.id, err)
+	}
+	sess := c.session
+	c.publish(model.Event{ChatID: c.id, Session: &sess})
 }
 
 // Prompt sends text to the chat's agent. The turn runs in the background;
@@ -106,9 +149,23 @@ func (s *Service) Prompt(chatID, text string) error {
 	}
 	c.busy = true
 	c.addLocked(model.Item{Kind: model.UserMessage, Text: text})
+	c.saveLocked(func(s *model.Session) {
+		if s.Title == "" {
+			s.Title = title(text)
+		}
+	})
 	c.publish(model.Event{ChatID: c.id, Status: &model.Status{Busy: true}})
 	go c.run(text)
 	return nil
+}
+
+// title makes a chat's title from its first prompt: the first line, cut short.
+func title(prompt string) string {
+	line, _, _ := strings.Cut(strings.TrimSpace(prompt), "\n")
+	if r := []rune(line); len(r) > 80 {
+		return string(r[:79]) + "…"
+	}
+	return line
 }
 
 func (s *Service) chat(id string) (*chat, error) {

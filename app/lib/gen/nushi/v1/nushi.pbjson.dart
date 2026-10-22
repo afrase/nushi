@@ -77,6 +77,54 @@ const PingResponse$json = {
 final $typed_data.Uint8List pingResponseDescriptor = $convert.base64Decode(
     'CgxQaW5nUmVzcG9uc2USHwoLYXBpX3ZlcnNpb24YASABKAVSCmFwaVZlcnNpb24=');
 
+@$core.Deprecated('Use listChatsRequestDescriptor instead')
+const ListChatsRequest$json = {
+  '1': 'ListChatsRequest',
+};
+
+/// Descriptor for `ListChatsRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listChatsRequestDescriptor =
+    $convert.base64Decode('ChBMaXN0Q2hhdHNSZXF1ZXN0');
+
+@$core.Deprecated('Use listChatsResponseDescriptor instead')
+const ListChatsResponse$json = {
+  '1': 'ListChatsResponse',
+  '2': [
+    {
+      '1': 'chats',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.Chat',
+      '10': 'chats'
+    },
+  ],
+};
+
+/// Descriptor for `ListChatsResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listChatsResponseDescriptor = $convert.base64Decode(
+    'ChFMaXN0Q2hhdHNSZXNwb25zZRIkCgVjaGF0cxgBIAMoCzIOLm51c2hpLnYxLkNoYXRSBWNoYX'
+    'Rz');
+
+@$core.Deprecated('Use chatDescriptor instead')
+const Chat$json = {
+  '1': 'Chat',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'agent', '3': 2, '4': 1, '5': 9, '10': 'agent'},
+    {'1': 'folder', '3': 3, '4': 1, '5': 9, '10': 'folder'},
+    {'1': 'title', '3': 4, '4': 1, '5': 9, '10': 'title'},
+    {'1': 'mode', '3': 5, '4': 1, '5': 9, '10': 'mode'},
+    {'1': 'created_unix_ms', '3': 6, '4': 1, '5': 3, '10': 'createdUnixMs'},
+  ],
+};
+
+/// Descriptor for `Chat`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List chatDescriptor = $convert.base64Decode(
+    'CgRDaGF0Eg4KAmlkGAEgASgJUgJpZBIUCgVhZ2VudBgCIAEoCVIFYWdlbnQSFgoGZm9sZGVyGA'
+    'MgASgJUgZmb2xkZXISFAoFdGl0bGUYBCABKAlSBXRpdGxlEhIKBG1vZGUYBSABKAlSBG1vZGUS'
+    'JgoPY3JlYXRlZF91bml4X21zGAYgASgDUg1jcmVhdGVkVW5peE1z');
+
 @$core.Deprecated('Use startChatRequestDescriptor instead')
 const StartChatRequest$json = {
   '1': 'StartChatRequest',
@@ -271,6 +319,15 @@ const EventsResponse$json = {
       '9': 0,
       '10': 'config'
     },
+    {
+      '1': 'chat',
+      '3': 5,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.Chat',
+      '9': 0,
+      '10': 'chat'
+    },
   ],
   '8': [
     {'1': 'kind'},
@@ -282,7 +339,8 @@ final $typed_data.Uint8List eventsResponseDescriptor = $convert.base64Decode(
     'Cg5FdmVudHNSZXNwb25zZRIXCgdjaGF0X2lkGAEgASgJUgZjaGF0SWQSKQoEaXRlbRgCIAEoCz'
     'ITLm51c2hpLnYxLkl0ZW1FdmVudEgAUgRpdGVtEi4KBnN0YXR1cxgDIAEoCzIULm51c2hpLnYx'
     'LkNoYXRTdGF0dXNIAFIGc3RhdHVzEi4KBmNvbmZpZxgEIAEoCzIULm51c2hpLnYxLkNoYXRDb2'
-    '5maWdIAFIGY29uZmlnQgYKBGtpbmQ=');
+    '5maWdIAFIGY29uZmlnEiQKBGNoYXQYBSABKAsyDi5udXNoaS52MS5DaGF0SABSBGNoYXRCBgoE'
+    'a2luZA==');
 
 @$core.Deprecated('Use chatConfigDescriptor instead')
 const ChatConfig$json = {
@@ -476,6 +534,11 @@ const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
   '2': [
     {'1': 'Ping', '2': '.nushi.v1.PingRequest', '3': '.nushi.v1.PingResponse'},
     {
+      '1': 'ListChats',
+      '2': '.nushi.v1.ListChatsRequest',
+      '3': '.nushi.v1.ListChatsResponse'
+    },
+    {
       '1': 'StartChat',
       '2': '.nushi.v1.StartChatRequest',
       '3': '.nushi.v1.StartChatResponse'
@@ -514,6 +577,9 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
     NushiServiceBase$messageJson = {
   '.nushi.v1.PingRequest': PingRequest$json,
   '.nushi.v1.PingResponse': PingResponse$json,
+  '.nushi.v1.ListChatsRequest': ListChatsRequest$json,
+  '.nushi.v1.ListChatsResponse': ListChatsResponse$json,
+  '.nushi.v1.Chat': Chat$json,
   '.nushi.v1.StartChatRequest': StartChatRequest$json,
   '.nushi.v1.StartChatResponse': StartChatResponse$json,
   '.nushi.v1.ConfigOption': ConfigOption$json,
@@ -540,12 +606,13 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
 /// Descriptor for `NushiService`. Decode as a `google.protobuf.ServiceDescriptorProto`.
 final $typed_data.Uint8List nushiServiceDescriptor = $convert.base64Decode(
     'CgxOdXNoaVNlcnZpY2USNQoEUGluZxIVLm51c2hpLnYxLlBpbmdSZXF1ZXN0GhYubnVzaGkudj'
-    'EuUGluZ1Jlc3BvbnNlEkQKCVN0YXJ0Q2hhdBIaLm51c2hpLnYxLlN0YXJ0Q2hhdFJlcXVlc3Qa'
-    'Gy5udXNoaS52MS5TdGFydENoYXRSZXNwb25zZRJHCgpTZW5kUHJvbXB0EhsubnVzaGkudjEuU2'
-    'VuZFByb21wdFJlcXVlc3QaHC5udXNoaS52MS5TZW5kUHJvbXB0UmVzcG9uc2USWQoQQW5zd2Vy'
-    'UGVybWlzc2lvbhIhLm51c2hpLnYxLkFuc3dlclBlcm1pc3Npb25SZXF1ZXN0GiIubnVzaGkudj'
-    'EuQW5zd2VyUGVybWlzc2lvblJlc3BvbnNlElMKDkFuc3dlclF1ZXN0aW9uEh8ubnVzaGkudjEu'
-    'QW5zd2VyUXVlc3Rpb25SZXF1ZXN0GiAubnVzaGkudjEuQW5zd2VyUXVlc3Rpb25SZXNwb25zZR'
-    'JWCg9TZXRDb25maWdPcHRpb24SIC5udXNoaS52MS5TZXRDb25maWdPcHRpb25SZXF1ZXN0GiEu'
-    'bnVzaGkudjEuU2V0Q29uZmlnT3B0aW9uUmVzcG9uc2USPQoGRXZlbnRzEhcubnVzaGkudjEuRX'
-    'ZlbnRzUmVxdWVzdBoYLm51c2hpLnYxLkV2ZW50c1Jlc3BvbnNlMAE=');
+    'EuUGluZ1Jlc3BvbnNlEkQKCUxpc3RDaGF0cxIaLm51c2hpLnYxLkxpc3RDaGF0c1JlcXVlc3Qa'
+    'Gy5udXNoaS52MS5MaXN0Q2hhdHNSZXNwb25zZRJECglTdGFydENoYXQSGi5udXNoaS52MS5TdG'
+    'FydENoYXRSZXF1ZXN0GhsubnVzaGkudjEuU3RhcnRDaGF0UmVzcG9uc2USRwoKU2VuZFByb21w'
+    'dBIbLm51c2hpLnYxLlNlbmRQcm9tcHRSZXF1ZXN0GhwubnVzaGkudjEuU2VuZFByb21wdFJlc3'
+    'BvbnNlElkKEEFuc3dlclBlcm1pc3Npb24SIS5udXNoaS52MS5BbnN3ZXJQZXJtaXNzaW9uUmVx'
+    'dWVzdBoiLm51c2hpLnYxLkFuc3dlclBlcm1pc3Npb25SZXNwb25zZRJTCg5BbnN3ZXJRdWVzdG'
+    'lvbhIfLm51c2hpLnYxLkFuc3dlclF1ZXN0aW9uUmVxdWVzdBogLm51c2hpLnYxLkFuc3dlclF1'
+    'ZXN0aW9uUmVzcG9uc2USVgoPU2V0Q29uZmlnT3B0aW9uEiAubnVzaGkudjEuU2V0Q29uZmlnT3'
+    'B0aW9uUmVxdWVzdBohLm51c2hpLnYxLlNldENvbmZpZ09wdGlvblJlc3BvbnNlEj0KBkV2ZW50'
+    'cxIXLm51c2hpLnYxLkV2ZW50c1JlcXVlc3QaGC5udXNoaS52MS5FdmVudHNSZXNwb25zZTAB');

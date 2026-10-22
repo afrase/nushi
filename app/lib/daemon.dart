@@ -16,7 +16,7 @@ final dataDir =
     '${Platform.environment['HOME']}/Library/Application Support/Nushi Next';
 
 /// The app's link to nushid. [connected] follows a ping every few seconds;
-/// while connected, daemon events update [chat].
+/// while connected, daemon events keep [chats] current.
 class Daemon extends ChangeNotifier {
   Daemon() {
     _timer = Timer.periodic(const Duration(seconds: 2), (_) => _ping());
@@ -35,7 +35,11 @@ class Daemon extends ChangeNotifier {
   late final Timer _timer;
   bool connected = false;
   StreamSubscription<EventsResponse>? _events;
-  Chat? chat;
+
+  /// Every stored chat, by id.
+  final chats = <String, ChatState>{};
+  String? selectedId;
+  ChatState? get selected => chats[selectedId];
 
   connect.AnyFn<I, O> _auth<I extends Object, O extends Object>(
     connect.AnyFn<I, O> next,
@@ -62,39 +66,68 @@ class Daemon extends ChangeNotifier {
   }
 
   void _subscribe() {
+    var live = false;
     _events = client
         .events(EventsRequest())
         .listen(
           (e) {
-            if (e.chatId == chat?.id) chat!.apply(e);
+            if (!live) {
+              // The first message says the subscription is live: now the
+              // list can't miss a chat.
+              live = true;
+              unawaited(_listChats());
+              return;
+            }
+            if (e.hasChat()) {
+              _chat(e.chat);
+              notifyListeners();
+            } else {
+              chats[e.chatId]?.apply(e);
+            }
           },
           onError: (_) => _events = null,
           onDone: () => _events = null,
         );
   }
 
-  Future<void> startChat(String folder) async {
-    final resp = await client.startChat(StartChatRequest(folder: folder));
-    chat = Chat(resp.chatId, folder, resp.config);
+  Future<void> _listChats() async {
+    for (final c in (await client.listChats(ListChatsRequest())).chats) {
+      _chat(c);
+    }
     notifyListeners();
   }
 
-  Future<void> sendPrompt(String text) =>
-      client.sendPrompt(SendPromptRequest(chatId: chat!.id, text: text));
+  ChatState _chat(Chat c) => (chats[c.id] ??= ChatState(c.id, c.folder))
+    ..title = c.title
+    ..created = DateTime.fromMillisecondsSinceEpoch(c.createdUnixMs.toInt());
 
-  Future<void> answerPermission(String itemId, String optionId) =>
-      client.answerPermission(
-        AnswerPermissionRequest(
-          chatId: chat!.id,
-          itemId: itemId,
-          optionId: optionId,
-        ),
-      );
+  void select(String chatId) {
+    selectedId = chatId;
+    notifyListeners();
+  }
 
-  Future<void> setConfigOption(String configId, String value) =>
+  Future<void> startChat(String folder) async {
+    final resp = await client.startChat(StartChatRequest(folder: folder));
+    final chat = chats[resp.chatId] ??= ChatState(resp.chatId, folder);
+    chat.config = resp.config;
+    select(resp.chatId);
+  }
+
+  Future<void> sendPrompt(String chatId, String text) =>
+      client.sendPrompt(SendPromptRequest(chatId: chatId, text: text));
+
+  Future<void> answerPermission(
+    String chatId,
+    String itemId,
+    String optionId,
+  ) => client.answerPermission(
+    AnswerPermissionRequest(chatId: chatId, itemId: itemId, optionId: optionId),
+  );
+
+  Future<void> setConfigOption(String chatId, String configId, String value) =>
       client.setConfigOption(
         SetConfigOptionRequest(
-          chatId: chat!.id,
+          chatId: chatId,
           configId: configId,
           value: value,
         ),
@@ -102,11 +135,12 @@ class Daemon extends ChangeNotifier {
 
   /// Answers a question with values by field id, or declines it (null).
   Future<void> answerQuestion(
+    String chatId,
     String itemId,
     Map<String, List<String>>? answer,
   ) => client.answerQuestion(
     AnswerQuestionRequest(
-      chatId: chat!.id,
+      chatId: chatId,
       itemId: itemId,
       decline: answer == null,
       answers: [

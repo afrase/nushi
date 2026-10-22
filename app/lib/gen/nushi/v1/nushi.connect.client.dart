@@ -26,6 +26,24 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Lists every stored chat.
+  Future<nushiv1nushi.ListChatsResponse> listChats(
+    nushiv1nushi.ListChatsRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.listChats,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Starts an agent in a folder and opens a chat with it.
   Future<nushiv1nushi.StartChatResponse> startChat(
     nushiv1nushi.StartChatRequest input, {

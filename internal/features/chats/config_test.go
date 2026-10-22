@@ -25,7 +25,7 @@ func newChat(t *testing.T, session string, modes *memModes) (*Service, *fakeAgen
 	if err := json.Unmarshal([]byte(session), &agent.session); err != nil {
 		t.Fatal(err)
 	}
-	svc := New("claude", func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, modes, func(model.Event) {})
+	svc := New("claude", func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, modes, &memSessions{}, func(model.Event) {})
 	id, err := svc.Start(context.Background(), t.TempDir())
 	if err != nil {
 		t.Fatal(err)
@@ -68,6 +68,11 @@ func TestOneModePickerAndTheModeIsRemembered(t *testing.T) {
 		CurrentModeUpdate: &acp.CurrentModeUpdate{CurrentModeID: "default"}}})
 	if current(c, "mode") != "default" || (*modes)["claude"] != "plan" {
 		t.Errorf("after the agent's change: mode %q, remembered %q", current(c, "mode"), (*modes)["claude"])
+	}
+
+	// The chat's stored mode follows, whoever changed it.
+	if c.session.Mode != "default" {
+		t.Errorf("stored mode = %q, want default", c.session.Mode)
 	}
 
 	// The next chat starts in the remembered mode.

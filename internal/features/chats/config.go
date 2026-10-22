@@ -144,8 +144,17 @@ func (c *chat) setConfig(ctx context.Context, id, value string) error {
 	} else if i := slices.IndexFunc(c.config, func(o model.ConfigOption) bool { return o.ID == id }); i >= 0 {
 		c.config[i].Current = value
 	}
-	c.publish(model.Event{ChatID: c.id, Config: c.config})
+	c.configChangedLocked()
 	return nil
+}
+
+// configChangedLocked publishes the chat's options, and stores its mode once
+// the chat is stored.
+func (c *chat) configChangedLocked() {
+	c.publish(model.Event{ChatID: c.id, Config: slices.Clone(c.config)})
+	if c.session.ID != "" {
+		c.saveLocked(nil)
+	}
 }
 
 // replaceConfigLocked takes a new set of config options from the agent,

@@ -47,6 +47,20 @@ func (f *fakeAgent) SetMode(_ context.Context, req acp.SetSessionModeRequest) er
 	return nil
 }
 
+type memSessions struct {
+	mu    sync.Mutex
+	saved []model.Session
+}
+
+func (m *memSessions) SaveSession(s model.Session) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.saved = append(m.saved, s)
+	return nil
+}
+
+func (m *memSessions) Sessions() ([]model.Session, error) { return nil, nil }
+
 type memModes map[string]string
 
 func (m *memModes) Mode(agent string) string { return (*m)[agent] }
@@ -79,7 +93,7 @@ func TestPromptStreamsTheReply(t *testing.T) {
 		}
 	}
 	agent := &fakeAgent{updates: []acp.SessionUpdate{chunk("m1", "Hel"), chunk("m1", "lo"), chunk("", "!"), chunk("m2", "Bye")}}
-	svc := New("fake", func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, &memModes{}, publish)
+	svc := New("fake", func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, &memModes{}, &memSessions{}, publish)
 
 	id, err := svc.Start(context.Background(), t.TempDir())
 	if err != nil || id != "s1" {
@@ -91,6 +105,9 @@ func TestPromptStreamsTheReply(t *testing.T) {
 	<-done
 
 	c := svc.chats[id]
+	if c.session.Title != "hi" {
+		t.Errorf("title = %q, want the first prompt", c.session.Title)
+	}
 	want := []model.Item{
 		{ID: "item-1", Kind: model.UserMessage, Text: "hi"},
 		{ID: "m1", Kind: model.AgentMessage, Text: "Hello!"},
@@ -105,7 +122,16 @@ func TestPromptStreamsTheReply(t *testing.T) {
 			appends++
 		}
 	}
-	if len(got) != 7 || appends != 2 || !got[1].Status.Busy {
+	var items, sessions int
+	for _, e := range got {
+		switch {
+		case e.Item != nil:
+			items++
+		case e.Session != nil:
+			sessions++
+		}
+	}
+	if items != 5 || appends != 2 || sessions != 2 {
 		t.Errorf("events = %+v", got)
 	}
 }

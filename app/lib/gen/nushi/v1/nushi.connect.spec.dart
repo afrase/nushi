@@ -18,6 +18,14 @@ abstract final class NushiService {
     nushiv1nushi.PingResponse.new,
   );
 
+  /// Lists every stored chat.
+  static const listChats = connect.Spec(
+    '/$name/ListChats',
+    connect.StreamType.unary,
+    nushiv1nushi.ListChatsRequest.new,
+    nushiv1nushi.ListChatsResponse.new,
+  );
+
   /// Starts an agent in a folder and opens a chat with it.
   static const startChat = connect.Spec(
     '/$name/StartChat',

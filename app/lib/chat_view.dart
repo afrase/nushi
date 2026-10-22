@@ -13,7 +13,7 @@ import 'question_card.dart';
 class ChatView extends StatelessWidget {
   const ChatView({super.key, required this.chat, required this.daemon});
 
-  final Chat chat;
+  final ChatState chat;
   final Daemon daemon;
 
   @override
@@ -28,7 +28,7 @@ class ChatView extends StatelessWidget {
             itemCount: chat.items.length,
             itemBuilder: (context, i) {
               final item = chat.items[chat.items.length - 1 - i];
-              return _ItemView(item, daemon, key: ValueKey(item.id));
+              return _ItemView(item, chat.id, daemon, key: ValueKey(item.id));
             },
           ),
         ),
@@ -41,17 +41,24 @@ class ChatView extends StatelessWidget {
             ),
           ),
         if (chat.busy) const LinearProgressIndicator(minHeight: 2),
-        Pickers(options: chat.config, onPick: daemon.setConfigOption),
-        _Composer(onSend: daemon.sendPrompt, enabled: !chat.busy),
+        Pickers(
+          options: chat.config,
+          onPick: (id, value) => daemon.setConfigOption(chat.id, id, value),
+        ),
+        _Composer(
+          onSend: (text) => daemon.sendPrompt(chat.id, text),
+          enabled: !chat.busy,
+        ),
       ],
     ),
   );
 }
 
 class _ItemView extends StatelessWidget {
-  const _ItemView(this.item, this.daemon, {super.key});
+  const _ItemView(this.item, this.chatId, this.daemon, {super.key});
 
   final Item item;
+  final String chatId;
   final Daemon daemon;
 
   @override
@@ -76,13 +83,13 @@ class _ItemView extends StatelessWidget {
     if (item.kind == ItemKind.ITEM_KIND_QUESTION) {
       return QuestionCard(
         item,
-        onAnswer: (answer) => daemon.answerQuestion(item.id, answer),
+        onAnswer: (answer) => daemon.answerQuestion(chatId, item.id, answer),
       );
     }
     if (item.kind == ItemKind.ITEM_KIND_PERMISSION) {
       return PermissionCard(
         item,
-        onAnswer: (option) => daemon.answerPermission(item.id, option),
+        onAnswer: (option) => daemon.answerPermission(chatId, item.id, option),
       );
     }
     return Padding(
