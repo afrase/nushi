@@ -33,13 +33,11 @@ String cacheUse(Usage u) => [
 ].join(' · ');
 
 /// How full the agent's context is, as a small ring and a percentage, amber
-/// past 70% and red past 90%; with [ring] the ring alone, the counts on
-/// hover. Nothing until the agent reports it.
+/// past 70% and red past 90%. Nothing until the agent reports it.
 class ContextMeter extends StatelessWidget {
-  const ContextMeter(this.usage, {super.key, this.ring = false});
+  const ContextMeter(this.usage, {super.key});
 
   final Usage usage;
-  final bool ring;
 
   @override
   Widget build(BuildContext context) {
@@ -55,26 +53,18 @@ class ContextMeter extends StatelessWidget {
         : fill > 0.7
         ? t.needs
         : t.textSecondary;
-    final circle = SizedBox.square(
-      dimension: 13,
-      child: CircularProgressIndicator(
-        value: fill,
-        strokeWidth: 2,
-        backgroundColor: t.borderStrong,
-        color: color,
-      ),
-    );
-    if (ring) {
-      return Tooltip(
-        message:
-            '${tokens(usage.contextUsed.toInt())} of ${tokens(usage.contextSize.toInt())} tokens in context',
-        child: Padding(padding: const EdgeInsets.all(6), child: circle),
-      );
-    }
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        circle,
+        SizedBox.square(
+          dimension: 13,
+          child: CircularProgressIndicator(
+            value: fill,
+            strokeWidth: 2,
+            backgroundColor: t.borderStrong,
+            color: color,
+          ),
+        ),
         const SizedBox(width: 5),
         Text('${(fill * 100).round()}%', style: theme.ui(color, size: 12)),
       ],

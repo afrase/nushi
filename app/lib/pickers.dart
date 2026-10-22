@@ -8,18 +8,10 @@ import 'theme/theme.dart';
 /// model and effort (`Opus 5.5  High`), with every other option (fast mode,
 /// agent, ...) below them in the same menu.
 class Pickers extends StatelessWidget {
-  const Pickers({
-    super.key,
-    required this.options,
-    required this.onPick,
-    this.trailing,
-  });
+  const Pickers({super.key, required this.options, required this.onPick});
 
   final List<ConfigOption> options;
   final Future<void> Function(String configId, String value) onPick;
-
-  /// After the model menu, at the far right (the context ring).
-  final Widget? trailing;
 
   Future<void> _pick(BuildContext context, String id, String value) async {
     try {
@@ -110,7 +102,6 @@ class Pickers extends StatelessWidget {
                 ),
             ],
           ),
-        ?trailing,
       ],
     );
   }
