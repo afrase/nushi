@@ -75,7 +75,7 @@ class Daemon extends ChangeNotifier {
 
   Future<void> startChat(String folder) async {
     final resp = await client.startChat(StartChatRequest(folder: folder));
-    chat = Chat(resp.chatId, folder);
+    chat = Chat(resp.chatId, folder, resp.config);
     notifyListeners();
   }
 
@@ -88,6 +88,15 @@ class Daemon extends ChangeNotifier {
           chatId: chat!.id,
           itemId: itemId,
           optionId: optionId,
+        ),
+      );
+
+  Future<void> setConfigOption(String configId, String value) =>
+      client.setConfigOption(
+        SetConfigOptionRequest(
+          chatId: chat!.id,
+          configId: configId,
+          value: value,
         ),
       );
 

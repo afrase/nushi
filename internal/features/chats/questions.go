@@ -107,8 +107,8 @@ func check(f model.Field) error {
 // formFields reads the form's properties, in their order.
 func formFields(schema *acp.ElicitationSchema) ([]model.Field, error) {
 	dec := json.NewDecoder(bytes.NewReader(schema.Properties))
-	if _, err := dec.Token(); err != nil { // {
-		return nil, fmt.Errorf("elicitation schema: %w", err)
+	if tok, err := dec.Token(); err != nil || tok != json.Delim('{') {
+		return nil, fmt.Errorf("elicitation schema: properties is not an object (%v)", err)
 	}
 	var fields []model.Field
 	for dec.More() {
@@ -116,11 +116,11 @@ func formFields(schema *acp.ElicitationSchema) ([]model.Field, error) {
 		if err != nil {
 			return nil, fmt.Errorf("elicitation schema: %w", err)
 		}
+		id, _ := tok.(string) // an object's keys are strings
 		var p acp.ElicitationPropertySchema
 		if err := dec.Decode(&p); err != nil {
 			return nil, fmt.Errorf("elicitation schema: %w", err)
 		}
-		id := tok.(string)
 		f := model.Field{ID: id, Required: slices.Contains(schema.Required, id)}
 		switch {
 		case p.String != nil:

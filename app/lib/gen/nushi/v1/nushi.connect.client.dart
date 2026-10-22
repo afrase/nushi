@@ -98,6 +98,25 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Sets one of a chat's config options (mode, model, ...). Picking a mode
+  /// makes new chats with the same agent start in it.
+  Future<nushiv1nushi.SetConfigOptionResponse> setConfigOption(
+    nushiv1nushi.SetConfigOptionRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.setConfigOption,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.
   Stream<nushiv1nushi.EventsResponse> events(

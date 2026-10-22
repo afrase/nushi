@@ -99,10 +99,10 @@ func (c *conn) dispatch(line []byte) {
 			ch <- f
 		}
 	case f.ID == nil: // a notification
-		_, _ = c.handle(c.ctx, f.Method, f.Params)
+		_, _ = c.safeHandle(f.Method, f.Params)
 	default: // a request
 		go func() {
-			result, err := c.handle(c.ctx, f.Method, f.Params)
+			result, err := c.safeHandle(f.Method, f.Params)
 			reply := frame{JSONRPC: "2.0", ID: f.ID}
 			if err != nil {
 				var rpcErr *Error
@@ -116,6 +116,17 @@ func (c *conn) dispatch(line []byte) {
 			_ = c.write(reply)
 		}()
 	}
+}
+
+// safeHandle runs the handler, turning a panic (a handler choking on what
+// the agent sent) into an error, so one bad message can't take the process down.
+func (c *conn) safeHandle(method string, params json.RawMessage) (result any, err error) {
+	defer func() {
+		if p := recover(); p != nil {
+			err = fmt.Errorf("handling %s: %v", method, p)
+		}
+	}()
+	return c.handle(c.ctx, method, params)
 }
 
 func (c *conn) write(f frame) error {

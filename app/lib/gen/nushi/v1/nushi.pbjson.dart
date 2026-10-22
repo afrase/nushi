@@ -94,12 +94,21 @@ const StartChatResponse$json = {
   '1': 'StartChatResponse',
   '2': [
     {'1': 'chat_id', '3': 1, '4': 1, '5': 9, '10': 'chatId'},
+    {
+      '1': 'config',
+      '3': 2,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.ConfigOption',
+      '10': 'config'
+    },
   ],
 };
 
 /// Descriptor for `StartChatResponse`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List startChatResponseDescriptor = $convert.base64Decode(
-    'ChFTdGFydENoYXRSZXNwb25zZRIXCgdjaGF0X2lkGAEgASgJUgZjaGF0SWQ=');
+    'ChFTdGFydENoYXRSZXNwb25zZRIXCgdjaGF0X2lkGAEgASgJUgZjaGF0SWQSLgoGY29uZmlnGA'
+    'IgAygLMhYubnVzaGkudjEuQ29uZmlnT3B0aW9uUgZjb25maWc=');
 
 @$core.Deprecated('Use sendPromptRequestDescriptor instead')
 const SendPromptRequest$json = {
@@ -196,6 +205,31 @@ const AnswerQuestionResponse$json = {
 final $typed_data.Uint8List answerQuestionResponseDescriptor =
     $convert.base64Decode('ChZBbnN3ZXJRdWVzdGlvblJlc3BvbnNl');
 
+@$core.Deprecated('Use setConfigOptionRequestDescriptor instead')
+const SetConfigOptionRequest$json = {
+  '1': 'SetConfigOptionRequest',
+  '2': [
+    {'1': 'chat_id', '3': 1, '4': 1, '5': 9, '10': 'chatId'},
+    {'1': 'config_id', '3': 2, '4': 1, '5': 9, '10': 'configId'},
+    {'1': 'value', '3': 3, '4': 1, '5': 9, '10': 'value'},
+  ],
+};
+
+/// Descriptor for `SetConfigOptionRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List setConfigOptionRequestDescriptor =
+    $convert.base64Decode(
+        'ChZTZXRDb25maWdPcHRpb25SZXF1ZXN0EhcKB2NoYXRfaWQYASABKAlSBmNoYXRJZBIbCgljb2'
+        '5maWdfaWQYAiABKAlSCGNvbmZpZ0lkEhQKBXZhbHVlGAMgASgJUgV2YWx1ZQ==');
+
+@$core.Deprecated('Use setConfigOptionResponseDescriptor instead')
+const SetConfigOptionResponse$json = {
+  '1': 'SetConfigOptionResponse',
+};
+
+/// Descriptor for `SetConfigOptionResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List setConfigOptionResponseDescriptor =
+    $convert.base64Decode('ChdTZXRDb25maWdPcHRpb25SZXNwb25zZQ==');
+
 @$core.Deprecated('Use eventsRequestDescriptor instead')
 const EventsRequest$json = {
   '1': 'EventsRequest',
@@ -228,6 +262,15 @@ const EventsResponse$json = {
       '9': 0,
       '10': 'status'
     },
+    {
+      '1': 'config',
+      '3': 4,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.ChatConfig',
+      '9': 0,
+      '10': 'config'
+    },
   ],
   '8': [
     {'1': 'kind'},
@@ -238,7 +281,72 @@ const EventsResponse$json = {
 final $typed_data.Uint8List eventsResponseDescriptor = $convert.base64Decode(
     'Cg5FdmVudHNSZXNwb25zZRIXCgdjaGF0X2lkGAEgASgJUgZjaGF0SWQSKQoEaXRlbRgCIAEoCz'
     'ITLm51c2hpLnYxLkl0ZW1FdmVudEgAUgRpdGVtEi4KBnN0YXR1cxgDIAEoCzIULm51c2hpLnYx'
-    'LkNoYXRTdGF0dXNIAFIGc3RhdHVzQgYKBGtpbmQ=');
+    'LkNoYXRTdGF0dXNIAFIGc3RhdHVzEi4KBmNvbmZpZxgEIAEoCzIULm51c2hpLnYxLkNoYXRDb2'
+    '5maWdIAFIGY29uZmlnQgYKBGtpbmQ=');
+
+@$core.Deprecated('Use chatConfigDescriptor instead')
+const ChatConfig$json = {
+  '1': 'ChatConfig',
+  '2': [
+    {
+      '1': 'options',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.ConfigOption',
+      '10': 'options'
+    },
+  ],
+};
+
+/// Descriptor for `ChatConfig`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List chatConfigDescriptor = $convert.base64Decode(
+    'CgpDaGF0Q29uZmlnEjAKB29wdGlvbnMYASADKAsyFi5udXNoaS52MS5Db25maWdPcHRpb25SB2'
+    '9wdGlvbnM=');
+
+@$core.Deprecated('Use configOptionDescriptor instead')
+const ConfigOption$json = {
+  '1': 'ConfigOption',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'name', '3': 2, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'description', '3': 3, '4': 1, '5': 9, '10': 'description'},
+    {'1': 'category', '3': 4, '4': 1, '5': 9, '10': 'category'},
+    {'1': 'type', '3': 5, '4': 1, '5': 9, '10': 'type'},
+    {'1': 'current', '3': 6, '4': 1, '5': 9, '10': 'current'},
+    {
+      '1': 'values',
+      '3': 7,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.ConfigValue',
+      '10': 'values'
+    },
+  ],
+};
+
+/// Descriptor for `ConfigOption`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List configOptionDescriptor = $convert.base64Decode(
+    'CgxDb25maWdPcHRpb24SDgoCaWQYASABKAlSAmlkEhIKBG5hbWUYAiABKAlSBG5hbWUSIAoLZG'
+    'VzY3JpcHRpb24YAyABKAlSC2Rlc2NyaXB0aW9uEhoKCGNhdGVnb3J5GAQgASgJUghjYXRlZ29y'
+    'eRISCgR0eXBlGAUgASgJUgR0eXBlEhgKB2N1cnJlbnQYBiABKAlSB2N1cnJlbnQSLQoGdmFsdW'
+    'VzGAcgAygLMhUubnVzaGkudjEuQ29uZmlnVmFsdWVSBnZhbHVlcw==');
+
+@$core.Deprecated('Use configValueDescriptor instead')
+const ConfigValue$json = {
+  '1': 'ConfigValue',
+  '2': [
+    {'1': 'value', '3': 1, '4': 1, '5': 9, '10': 'value'},
+    {'1': 'name', '3': 2, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'description', '3': 3, '4': 1, '5': 9, '10': 'description'},
+    {'1': 'group', '3': 4, '4': 1, '5': 9, '10': 'group'},
+  ],
+};
+
+/// Descriptor for `ConfigValue`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List configValueDescriptor = $convert.base64Decode(
+    'CgtDb25maWdWYWx1ZRIUCgV2YWx1ZRgBIAEoCVIFdmFsdWUSEgoEbmFtZRgCIAEoCVIEbmFtZR'
+    'IgCgtkZXNjcmlwdGlvbhgDIAEoCVILZGVzY3JpcHRpb24SFAoFZ3JvdXAYBCABKAlSBWdyb3Vw');
 
 @$core.Deprecated('Use itemDescriptor instead')
 const Item$json = {
@@ -388,6 +496,11 @@ const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
       '3': '.nushi.v1.AnswerQuestionResponse'
     },
     {
+      '1': 'SetConfigOption',
+      '2': '.nushi.v1.SetConfigOptionRequest',
+      '3': '.nushi.v1.SetConfigOptionResponse'
+    },
+    {
       '1': 'Events',
       '2': '.nushi.v1.EventsRequest',
       '3': '.nushi.v1.EventsResponse',
@@ -403,6 +516,8 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.PingResponse': PingResponse$json,
   '.nushi.v1.StartChatRequest': StartChatRequest$json,
   '.nushi.v1.StartChatResponse': StartChatResponse$json,
+  '.nushi.v1.ConfigOption': ConfigOption$json,
+  '.nushi.v1.ConfigValue': ConfigValue$json,
   '.nushi.v1.SendPromptRequest': SendPromptRequest$json,
   '.nushi.v1.SendPromptResponse': SendPromptResponse$json,
   '.nushi.v1.AnswerPermissionRequest': AnswerPermissionRequest$json,
@@ -410,6 +525,8 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.AnswerQuestionRequest': AnswerQuestionRequest$json,
   '.nushi.v1.FieldAnswer': FieldAnswer$json,
   '.nushi.v1.AnswerQuestionResponse': AnswerQuestionResponse$json,
+  '.nushi.v1.SetConfigOptionRequest': SetConfigOptionRequest$json,
+  '.nushi.v1.SetConfigOptionResponse': SetConfigOptionResponse$json,
   '.nushi.v1.EventsRequest': EventsRequest$json,
   '.nushi.v1.EventsResponse': EventsResponse$json,
   '.nushi.v1.ItemEvent': ItemEvent$json,
@@ -417,6 +534,7 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.Option': Option$json,
   '.nushi.v1.Field': Field$json,
   '.nushi.v1.ChatStatus': ChatStatus$json,
+  '.nushi.v1.ChatConfig': ChatConfig$json,
 };
 
 /// Descriptor for `NushiService`. Decode as a `google.protobuf.ServiceDescriptorProto`.
@@ -428,5 +546,6 @@ final $typed_data.Uint8List nushiServiceDescriptor = $convert.base64Decode(
     'UGVybWlzc2lvbhIhLm51c2hpLnYxLkFuc3dlclBlcm1pc3Npb25SZXF1ZXN0GiIubnVzaGkudj'
     'EuQW5zd2VyUGVybWlzc2lvblJlc3BvbnNlElMKDkFuc3dlclF1ZXN0aW9uEh8ubnVzaGkudjEu'
     'QW5zd2VyUXVlc3Rpb25SZXF1ZXN0GiAubnVzaGkudjEuQW5zd2VyUXVlc3Rpb25SZXNwb25zZR'
-    'I9CgZFdmVudHMSFy5udXNoaS52MS5FdmVudHNSZXF1ZXN0GhgubnVzaGkudjEuRXZlbnRzUmVz'
-    'cG9uc2UwAQ==');
+    'JWCg9TZXRDb25maWdPcHRpb24SIC5udXNoaS52MS5TZXRDb25maWdPcHRpb25SZXF1ZXN0GiEu'
+    'bnVzaGkudjEuU2V0Q29uZmlnT3B0aW9uUmVzcG9uc2USPQoGRXZlbnRzEhcubnVzaGkudjEuRX'
+    'ZlbnRzUmVxdWVzdBoYLm51c2hpLnYxLkV2ZW50c1Jlc3BvbnNlMAE=');

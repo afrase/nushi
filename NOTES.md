@@ -13,6 +13,7 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 3. Tool calls | 524 | 663 | 432 | 131 |
 | 4. Permission prompts | 646 | 677 | 549 | 131 |
 | 5. Agent questions | 900 | 703 | 839 | 131 |
+| 6. Pickers | 1202 | 723 | 972 | 131 |
 
 Tripwires crossed:
 - Step 2 added about 1,500 hand-written lines, tests included (the limit is about 500). What pushed it: the whole ACP client landed in this step (JSON-RPC framing, client and the schema-to-Go type generator, about 660 lines), plus the first real chat screen and the daemon's chat feature. None of it is for later steps.
@@ -38,10 +39,13 @@ Tripwires crossed:
 - To test prompts without a mode picker, a folder with `.claude/settings.json` = `{"permissions":{"defaultMode":"default"}}` starts Claude in Manual mode.
 - AskUserQuestion needs the client to advertise `elicitation.form`. Claude first sends a `tool_call` ("Asking for your input", kind `other`), then `elicitation/create` in form mode, tied to it by `toolCallId`. Each question is a property `question_N`: a `string` with `oneOf` (single choice, options with `const`, `title`, `description`) or an `array` whose `items.anyOf` lists the options (multi-select), followed by an optional free-text `question_N_custom` titled "Other". Nothing is `required`. An accept with empty content reads to Claude as "the user did not answer"; it reads each answered question back as `"question"="answer"`.
 - The form's properties must be read in wire order (they are the questions' order), so the generated types keep maps of typed values as raw JSON.
-- Claude starts new sessions in whatever mode its settings say (`auto` on this machine), and reports modes both as legacy `modes` and as a `mode` config option, as the POC found.
+- Claude starts new sessions in whatever mode its settings say (`auto` on this machine), and reports modes both as legacy `modes` and as a `mode` config option, as the POC found. Nushi shows only the config option.
+- Claude 0.94.0's config options: `mode` (Manual, Accept edits, Plan, Auto, Bypass permissions), `model`, `effort` (category `thought_level`), `fast` (category `model_config`, a select of on/off rather than a boolean) and `agent` (no category: the subagent to run as). `set_config_option` answers with the full new set of options.
 
 ## Decisions to revisit
 
+- The remembered mode lives in `agents.json` in the data folder (`{"claude":{"mode":"default"}}`); the agent is named "claude" in code until there's a second one.
+- Modes get no warning styling: claude-agent-acp 0.94.0 doesn't tag its full-access mode (`_meta.kind`), and naming `bypassPermissions` in Nushi would be a per-agent table.
 - One agent process per chat; the chat's id is the agent's session id.
 - The daemon keeps each chat's transcript in memory (not on disk); events carry an item, and a streamed message sends only the new text (`append`).
 - The `Events` stream's first message is empty, so a client knows its subscription is live (connect-go clients otherwise wait for the first real event).
@@ -61,6 +65,7 @@ Tripwires crossed:
 ## Security notes to look at
 
 - Agents run as you, with your environment, through `npx --yes @agentclientprotocol/claude-agent-acp@0.94.0` (downloaded from npm on first use, pinned by version, not by hash). npx runs in the daemon's data folder, never the project's, so a project's `node_modules` or `.npmrc` can't swap the adapter (flagged by the automated security review in step 3). The chat's folder must be an absolute path to an existing folder and reaches the agent only as the session's `cwd`.
+- A panic while handling something the agent sent is turned into a JSON-RPC error instead of crashing the daemon, and a malformed elicitation form is refused (automated security review, step 5).
 - Agent text is rendered as markdown; the app never loads images it names (an image URL in a tool's output could otherwise leak data to a server), and links are not clickable. A diff in a tool call is fenced with a fence longer than any backtick run inside it (both from the automated security review in step 4).
 - The client token (`token`, mode 0600) sits next to the socket in a 0700 folder; any process running as you can read it ([ADR 0005](docs/adr/0005-clients-authenticate.md)).
 

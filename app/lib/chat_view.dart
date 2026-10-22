@@ -6,6 +6,7 @@ import 'chat.dart';
 import 'daemon.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'markdown.dart';
+import 'pickers.dart';
 import 'question_card.dart';
 
 /// A chat's transcript with a prompt box under it.
@@ -40,6 +41,7 @@ class ChatView extends StatelessWidget {
             ),
           ),
         if (chat.busy) const LinearProgressIndicator(minHeight: 2),
+        Pickers(options: chat.config, onPick: daemon.setConfigOption),
         _Composer(onSend: daemon.sendPrompt, enabled: !chat.busy),
       ],
     ),

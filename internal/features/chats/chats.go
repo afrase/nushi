@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -19,23 +20,27 @@ type Agent interface {
 	Initialize(context.Context, acp.InitializeRequest) (*acp.InitializeResponse, error)
 	NewSession(context.Context, acp.NewSessionRequest) (*acp.NewSessionResponse, error)
 	Prompt(context.Context, acp.PromptRequest) (*acp.PromptResponse, error)
+	SetConfigOption(context.Context, acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error)
+	SetMode(context.Context, acp.SetSessionModeRequest) error
 	Close() error
 }
 
 // Launch starts an agent; its session updates go to h.
 type Launch func(h acp.Handler) (Agent, error)
 
-// Service holds the open chats.
+// Service holds the open chats, all with one agent.
 type Service struct {
+	agent   string // the agent's name, such as "claude"
 	launch  Launch
+	modes   Modes
 	publish func(model.Event)
 
 	mu    sync.Mutex
 	chats map[string]*chat
 }
 
-func New(launch Launch, publish func(model.Event)) *Service {
-	return &Service{launch: launch, publish: publish, chats: map[string]*chat{}}
+func New(agent string, launch Launch, modes Modes, publish func(model.Event)) *Service {
+	return &Service{agent: agent, launch: launch, modes: modes, publish: publish, chats: map[string]*chat{}}
 }
 
 type chat struct {
@@ -49,6 +54,7 @@ type chat struct {
 	lastID    string                          // the agent message that chunks without an id continue
 	waiting   map[string]chan<- string        // permission prompts by item id, for the picked option
 	questions map[string]chan<- []model.Field // questions by item id, for the answer (nil: declined)
+	config    []model.ConfigOption
 }
 
 // Start launches an agent in folder and opens a session there.
@@ -76,6 +82,10 @@ func (s *Service) Start(ctx context.Context, folder string) (string, error) {
 		return "", err
 	}
 	c.id = string(sess.SessionID)
+	c.config = configFrom(sess.ConfigOptions, sess.Modes)
+	if err := c.startMode(ctx, s.modes.Mode(s.agent)); err != nil {
+		log.Printf("chat %s: starting mode: %v", c.id, err) // the chat keeps the agent's default
+	}
 	s.mu.Lock()
 	s.chats[c.id] = c
 	s.mu.Unlock()

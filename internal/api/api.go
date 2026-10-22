@@ -16,7 +16,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 4
+const Version = 5
 
 type server struct {
 	chats *chats.Service
@@ -48,7 +48,7 @@ func (s *server) StartChat(ctx context.Context, req *connect.Request[nushiv1.Sta
 	if err != nil {
 		return nil, err
 	}
-	return connect.NewResponse(&nushiv1.StartChatResponse{ChatId: id}), nil
+	return connect.NewResponse(&nushiv1.StartChatResponse{ChatId: id, Config: configProto(s.chats.Config(id))}), nil
 }
 
 func (s *server) SendPrompt(_ context.Context, req *connect.Request[nushiv1.SendPromptRequest]) (*connect.Response[nushiv1.SendPromptResponse], error) {
@@ -77,6 +77,13 @@ func (s *server) AnswerQuestion(_ context.Context, req *connect.Request[nushiv1.
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
 	return connect.NewResponse(&nushiv1.AnswerQuestionResponse{}), nil
+}
+
+func (s *server) SetConfigOption(ctx context.Context, req *connect.Request[nushiv1.SetConfigOptionRequest]) (*connect.Response[nushiv1.SetConfigOptionResponse], error) {
+	if err := s.chats.SetConfig(ctx, req.Msg.ChatId, req.Msg.ConfigId, req.Msg.Value); err != nil {
+		return nil, err
+	}
+	return connect.NewResponse(&nushiv1.SetConfigOptionResponse{}), nil
 }
 
 func (s *server) Events(ctx context.Context, _ *connect.Request[nushiv1.EventsRequest], stream *connect.ServerStream[nushiv1.EventsResponse]) error {
@@ -114,6 +121,8 @@ func toProto(e model.Event) *nushiv1.EventsResponse {
 	switch {
 	case e.Item != nil:
 		out.Kind = &nushiv1.EventsResponse_Item{Item: &nushiv1.ItemEvent{Item: itemProto(e.Item), Append: e.Append}}
+	case e.Config != nil:
+		out.Kind = &nushiv1.EventsResponse_Config{Config: &nushiv1.ChatConfig{Options: configProto(e.Config)}}
 	case e.Status != nil:
 		out.Kind = &nushiv1.EventsResponse_Status{Status: &nushiv1.ChatStatus{Busy: e.Status.Busy, Error: e.Status.Error}}
 	}
@@ -135,6 +144,19 @@ func optionsProto(opts []model.Option) []*nushiv1.Option {
 	var out []*nushiv1.Option
 	for _, o := range opts {
 		out = append(out, &nushiv1.Option{Id: o.ID, Name: o.Name, Kind: o.Kind, Description: o.Description})
+	}
+	return out
+}
+
+func configProto(opts []model.ConfigOption) []*nushiv1.ConfigOption {
+	var out []*nushiv1.ConfigOption
+	for _, o := range opts {
+		co := &nushiv1.ConfigOption{Id: o.ID, Name: o.Name, Description: o.Description,
+			Category: o.Category, Type: o.Type, Current: o.Current}
+		for _, v := range o.Values {
+			co.Values = append(co.Values, &nushiv1.ConfigValue{Value: v.Value, Name: v.Name, Description: v.Description, Group: v.Group})
+		}
+		out = append(out, co)
 	}
 	return out
 }

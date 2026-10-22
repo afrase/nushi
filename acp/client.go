@@ -107,3 +107,12 @@ func (c *Client) Prompt(ctx context.Context, req PromptRequest) (*PromptResponse
 	var resp PromptResponse
 	return &resp, c.conn.call(ctx, "session/prompt", req, &resp)
 }
+
+func (c *Client) SetConfigOption(ctx context.Context, req SetSessionConfigOptionRequest) (*SetSessionConfigOptionResponse, error) {
+	var resp SetSessionConfigOptionResponse
+	return &resp, c.conn.call(ctx, "session/set_config_option", req, &resp)
+}
+
+func (c *Client) SetMode(ctx context.Context, req SetSessionModeRequest) error {
+	return c.conn.call(ctx, "session/set_mode", req, nil)
+}

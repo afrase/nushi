@@ -4,11 +4,12 @@ import 'gen/nushi/v1/nushi.pb.dart';
 
 /// One chat's transcript and status, kept current from daemon events.
 class Chat extends ChangeNotifier {
-  Chat(this.id, this.folder);
+  Chat(this.id, this.folder, this.config);
 
   final String id;
   final String folder;
   final List<Item> items = [];
+  List<ConfigOption> config;
   bool busy = false;
   String error = '';
 
@@ -16,6 +17,8 @@ class Chat extends ChangeNotifier {
     switch (e.whichKind()) {
       case EventsResponse_Kind.item:
         _applyItem(e.item);
+      case EventsResponse_Kind.config:
+        config = e.config.options;
       case EventsResponse_Kind.status:
         busy = e.status.busy;
         error = e.status.error;

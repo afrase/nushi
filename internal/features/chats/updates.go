@@ -24,6 +24,14 @@ func (c *chat) SessionUpdate(n acp.SessionNotification) {
 			return
 		}
 		c.addLocked(item)
+	case "config_option_update":
+		c.replaceConfigLocked(u.ConfigOptionUpdate.ConfigOptions)
+		c.publish(model.Event{ChatID: c.id, Config: c.config})
+	case "current_mode_update":
+		if i := modeIndex(c.config); i >= 0 {
+			c.config[i].Current = string(u.CurrentModeUpdate.CurrentModeID)
+			c.publish(model.Event{ChatID: c.id, Config: c.config})
+		}
 	case "tool_call_update":
 		t := u.ToolCallUpdate
 		it := c.itemLocked(string(t.ToolCallID))

@@ -14,6 +14,8 @@ import (
 type fakeAgent struct {
 	h       acp.Handler
 	updates []acp.SessionUpdate
+	session acp.NewSessionResponse
+	set     []string // config changes asked for, as id=value
 }
 
 func (f *fakeAgent) Initialize(context.Context, acp.InitializeRequest) (*acp.InitializeResponse, error) {
@@ -21,7 +23,9 @@ func (f *fakeAgent) Initialize(context.Context, acp.InitializeRequest) (*acp.Ini
 }
 
 func (f *fakeAgent) NewSession(context.Context, acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
-	return &acp.NewSessionResponse{SessionID: "s1"}, nil
+	resp := f.session
+	resp.SessionID = "s1"
+	return &resp, nil
 }
 
 func (f *fakeAgent) Prompt(context.Context, acp.PromptRequest) (*acp.PromptResponse, error) {
@@ -32,6 +36,28 @@ func (f *fakeAgent) Prompt(context.Context, acp.PromptRequest) (*acp.PromptRespo
 }
 
 func (f *fakeAgent) Close() error { return nil }
+
+func (f *fakeAgent) SetConfigOption(_ context.Context, req acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error) {
+	f.set = append(f.set, string(req.ConfigID)+"="+string(req.Value))
+	return &acp.SetSessionConfigOptionResponse{}, nil
+}
+
+func (f *fakeAgent) SetMode(_ context.Context, req acp.SetSessionModeRequest) error {
+	f.set = append(f.set, "mode="+string(req.ModeID))
+	return nil
+}
+
+type memModes map[string]string
+
+func (m *memModes) Mode(agent string) string { return (*m)[agent] }
+
+func (m *memModes) SetMode(agent, mode string) error {
+	if *m == nil {
+		*m = memModes{}
+	}
+	(*m)[agent] = mode
+	return nil
+}
 
 func chunk(id, text string) acp.SessionUpdate {
 	return acp.SessionUpdate{SessionUpdate: "agent_message_chunk", AgentMessageChunk: &acp.ContentChunk{
@@ -53,7 +79,7 @@ func TestPromptStreamsTheReply(t *testing.T) {
 		}
 	}
 	agent := &fakeAgent{updates: []acp.SessionUpdate{chunk("m1", "Hel"), chunk("m1", "lo"), chunk("", "!"), chunk("m2", "Bye")}}
-	svc := New(func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, publish)
+	svc := New("fake", func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, &memModes{}, publish)
 
 	id, err := svc.Start(context.Background(), t.TempDir())
 	if err != nil || id != "s1" {

@@ -180,9 +180,11 @@ class StartChatRequest extends $pb.GeneratedMessage {
 class StartChatResponse extends $pb.GeneratedMessage {
   factory StartChatResponse({
     $core.String? chatId,
+    $core.Iterable<ConfigOption>? config,
   }) {
     final result = StartChatResponse._();
     if (chatId != null) result.chatId = chatId;
+    if (config != null) result.config.addAll(config);
     return result;
   }
 
@@ -200,6 +202,8 @@ class StartChatResponse extends $pb.GeneratedMessage {
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: StartChatResponse.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..pPM<ConfigOption>(2, _omitFieldNames ? '' : 'config',
+        subBuilder: ConfigOption.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -232,6 +236,10 @@ class StartChatResponse extends $pb.GeneratedMessage {
   $core.bool hasChatId() => $_has(0);
   @$pb.TagNumber(1)
   void clearChatId() => $_clearField(1);
+
+  /// The chat's config options as it starts; changes arrive as events.
+  @$pb.TagNumber(2)
+  $pb.PbList<ConfigOption> get config => $_getList(1);
 }
 
 class SendPromptRequest extends $pb.GeneratedMessage {
@@ -669,6 +677,133 @@ class AnswerQuestionResponse extends $pb.GeneratedMessage {
   static AnswerQuestionResponse? _defaultInstance;
 }
 
+class SetConfigOptionRequest extends $pb.GeneratedMessage {
+  factory SetConfigOptionRequest({
+    $core.String? chatId,
+    $core.String? configId,
+    $core.String? value,
+  }) {
+    final result = SetConfigOptionRequest._();
+    if (chatId != null) result.chatId = chatId;
+    if (configId != null) result.configId = configId;
+    if (value != null) result.value = value;
+    return result;
+  }
+
+  SetConfigOptionRequest._();
+
+  factory SetConfigOptionRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetConfigOptionRequest()..mergeFromBuffer(data, registry);
+  factory SetConfigOptionRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetConfigOptionRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SetConfigOptionRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SetConfigOptionRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOS(2, _omitFieldNames ? '' : 'configId')
+    ..aOS(3, _omitFieldNames ? '' : 'value')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetConfigOptionRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetConfigOptionRequest copyWith(
+          void Function(SetConfigOptionRequest) updates) =>
+      super.copyWith((message) => updates(message as SetConfigOptionRequest))
+          as SetConfigOptionRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use SetConfigOptionRequest() / SetConfigOptionRequest.new instead')
+  static SetConfigOptionRequest create() => SetConfigOptionRequest._();
+  static $pb.GeneratedMessage $_createMessage() => SetConfigOptionRequest._();
+  @$core.override
+  SetConfigOptionRequest createEmptyInstance() => SetConfigOptionRequest._();
+  @$core.pragma('dart2js:noInline')
+  static SetConfigOptionRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SetConfigOptionRequest>(
+          SetConfigOptionRequest.$_createMessage);
+  static SetConfigOptionRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get configId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set configId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasConfigId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearConfigId() => $_clearField(2);
+
+  /// A select option's value, or "true"/"false" for a boolean.
+  @$pb.TagNumber(3)
+  $core.String get value => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set value($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasValue() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearValue() => $_clearField(3);
+}
+
+class SetConfigOptionResponse extends $pb.GeneratedMessage {
+  factory SetConfigOptionResponse() => SetConfigOptionResponse._();
+
+  SetConfigOptionResponse._();
+
+  factory SetConfigOptionResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetConfigOptionResponse()..mergeFromBuffer(data, registry);
+  factory SetConfigOptionResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetConfigOptionResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SetConfigOptionResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SetConfigOptionResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetConfigOptionResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetConfigOptionResponse copyWith(
+          void Function(SetConfigOptionResponse) updates) =>
+      super.copyWith((message) => updates(message as SetConfigOptionResponse))
+          as SetConfigOptionResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use SetConfigOptionResponse() / SetConfigOptionResponse.new instead')
+  static SetConfigOptionResponse create() => SetConfigOptionResponse._();
+  static $pb.GeneratedMessage $_createMessage() => SetConfigOptionResponse._();
+  @$core.override
+  SetConfigOptionResponse createEmptyInstance() => SetConfigOptionResponse._();
+  @$core.pragma('dart2js:noInline')
+  static SetConfigOptionResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SetConfigOptionResponse>(
+          SetConfigOptionResponse.$_createMessage);
+  static SetConfigOptionResponse? _defaultInstance;
+}
+
 class EventsRequest extends $pb.GeneratedMessage {
   factory EventsRequest() => EventsRequest._();
 
@@ -710,18 +845,20 @@ class EventsRequest extends $pb.GeneratedMessage {
   static EventsRequest? _defaultInstance;
 }
 
-enum EventsResponse_Kind { item, status, notSet }
+enum EventsResponse_Kind { item, status, config, notSet }
 
 class EventsResponse extends $pb.GeneratedMessage {
   factory EventsResponse({
     $core.String? chatId,
     ItemEvent? item,
     ChatStatus? status,
+    ChatConfig? config,
   }) {
     final result = EventsResponse._();
     if (chatId != null) result.chatId = chatId;
     if (item != null) result.item = item;
     if (status != null) result.status = status;
+    if (config != null) result.config = config;
     return result;
   }
 
@@ -738,18 +875,21 @@ class EventsResponse extends $pb.GeneratedMessage {
       _EventsResponse_KindByTag = {
     2: EventsResponse_Kind.item,
     3: EventsResponse_Kind.status,
+    4: EventsResponse_Kind.config,
     0: EventsResponse_Kind.notSet
   };
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'EventsResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: EventsResponse.$_createMessage)
-    ..oo(0, [2, 3])
+    ..oo(0, [2, 3, 4])
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
     ..aOM<ItemEvent>(2, _omitFieldNames ? '' : 'item',
         subBuilder: ItemEvent.$_createMessage)
     ..aOM<ChatStatus>(3, _omitFieldNames ? '' : 'status',
         subBuilder: ChatStatus.$_createMessage)
+    ..aOM<ChatConfig>(4, _omitFieldNames ? '' : 'config',
+        subBuilder: ChatConfig.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -776,10 +916,12 @@ class EventsResponse extends $pb.GeneratedMessage {
 
   @$pb.TagNumber(2)
   @$pb.TagNumber(3)
+  @$pb.TagNumber(4)
   EventsResponse_Kind whichKind() =>
       _EventsResponse_KindByTag[$_whichOneof(0)]!;
   @$pb.TagNumber(2)
   @$pb.TagNumber(3)
+  @$pb.TagNumber(4)
   void clearKind() => $_clearField($_whichOneof(0));
 
   @$pb.TagNumber(1)
@@ -812,6 +954,290 @@ class EventsResponse extends $pb.GeneratedMessage {
   void clearStatus() => $_clearField(3);
   @$pb.TagNumber(3)
   ChatStatus ensureStatus() => $_ensure(2);
+
+  @$pb.TagNumber(4)
+  ChatConfig get config => $_getN(3);
+  @$pb.TagNumber(4)
+  set config(ChatConfig value) => $_setField(4, value);
+  @$pb.TagNumber(4)
+  $core.bool hasConfig() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearConfig() => $_clearField(4);
+  @$pb.TagNumber(4)
+  ChatConfig ensureConfig() => $_ensure(3);
+}
+
+/// A chat's config options, all of them.
+class ChatConfig extends $pb.GeneratedMessage {
+  factory ChatConfig({
+    $core.Iterable<ConfigOption>? options,
+  }) {
+    final result = ChatConfig._();
+    if (options != null) result.options.addAll(options);
+    return result;
+  }
+
+  ChatConfig._();
+
+  factory ChatConfig.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ChatConfig()..mergeFromBuffer(data, registry);
+  factory ChatConfig.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ChatConfig()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ChatConfig',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ChatConfig.$_createMessage)
+    ..pPM<ConfigOption>(1, _omitFieldNames ? '' : 'options',
+        subBuilder: ConfigOption.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ChatConfig clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ChatConfig copyWith(void Function(ChatConfig) updates) =>
+      super.copyWith((message) => updates(message as ChatConfig)) as ChatConfig;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ChatConfig() / ChatConfig.new instead')
+  static ChatConfig create() => ChatConfig._();
+  static $pb.GeneratedMessage $_createMessage() => ChatConfig._();
+  @$core.override
+  ChatConfig createEmptyInstance() => ChatConfig._();
+  @$core.pragma('dart2js:noInline')
+  static ChatConfig getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ChatConfig>(ChatConfig.$_createMessage);
+  static ChatConfig? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<ConfigOption> get options => $_getList(0);
+}
+
+/// One of the agent's session settings.
+class ConfigOption extends $pb.GeneratedMessage {
+  factory ConfigOption({
+    $core.String? id,
+    $core.String? name,
+    $core.String? description,
+    $core.String? category,
+    $core.String? type,
+    $core.String? current,
+    $core.Iterable<ConfigValue>? values,
+  }) {
+    final result = ConfigOption._();
+    if (id != null) result.id = id;
+    if (name != null) result.name = name;
+    if (description != null) result.description = description;
+    if (category != null) result.category = category;
+    if (type != null) result.type = type;
+    if (current != null) result.current = current;
+    if (values != null) result.values.addAll(values);
+    return result;
+  }
+
+  ConfigOption._();
+
+  factory ConfigOption.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ConfigOption()..mergeFromBuffer(data, registry);
+  factory ConfigOption.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ConfigOption()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ConfigOption',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ConfigOption.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'name')
+    ..aOS(3, _omitFieldNames ? '' : 'description')
+    ..aOS(4, _omitFieldNames ? '' : 'category')
+    ..aOS(5, _omitFieldNames ? '' : 'type')
+    ..aOS(6, _omitFieldNames ? '' : 'current')
+    ..pPM<ConfigValue>(7, _omitFieldNames ? '' : 'values',
+        subBuilder: ConfigValue.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ConfigOption clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ConfigOption copyWith(void Function(ConfigOption) updates) =>
+      super.copyWith((message) => updates(message as ConfigOption))
+          as ConfigOption;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ConfigOption() / ConfigOption.new instead')
+  static ConfigOption create() => ConfigOption._();
+  static $pb.GeneratedMessage $_createMessage() => ConfigOption._();
+  @$core.override
+  ConfigOption createEmptyInstance() => ConfigOption._();
+  @$core.pragma('dart2js:noInline')
+  static ConfigOption getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ConfigOption>(
+          ConfigOption.$_createMessage);
+  static ConfigOption? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get name => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set name($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasName() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearName() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get description => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set description($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasDescription() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearDescription() => $_clearField(3);
+
+  /// ACP's category: mode, model, model_config, thought_level, or another.
+  @$pb.TagNumber(4)
+  $core.String get category => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set category($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasCategory() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearCategory() => $_clearField(4);
+
+  /// "select" or "boolean".
+  @$pb.TagNumber(5)
+  $core.String get type => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set type($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasType() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearType() => $_clearField(5);
+
+  /// The current value; "true" or "false" for a boolean.
+  @$pb.TagNumber(6)
+  $core.String get current => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set current($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasCurrent() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearCurrent() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $pb.PbList<ConfigValue> get values => $_getList(6);
+}
+
+class ConfigValue extends $pb.GeneratedMessage {
+  factory ConfigValue({
+    $core.String? value,
+    $core.String? name,
+    $core.String? description,
+    $core.String? group,
+  }) {
+    final result = ConfigValue._();
+    if (value != null) result.value = value;
+    if (name != null) result.name = name;
+    if (description != null) result.description = description;
+    if (group != null) result.group = group;
+    return result;
+  }
+
+  ConfigValue._();
+
+  factory ConfigValue.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ConfigValue()..mergeFromBuffer(data, registry);
+  factory ConfigValue.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ConfigValue()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ConfigValue',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ConfigValue.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'value')
+    ..aOS(2, _omitFieldNames ? '' : 'name')
+    ..aOS(3, _omitFieldNames ? '' : 'description')
+    ..aOS(4, _omitFieldNames ? '' : 'group')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ConfigValue clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ConfigValue copyWith(void Function(ConfigValue) updates) =>
+      super.copyWith((message) => updates(message as ConfigValue))
+          as ConfigValue;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ConfigValue() / ConfigValue.new instead')
+  static ConfigValue create() => ConfigValue._();
+  static $pb.GeneratedMessage $_createMessage() => ConfigValue._();
+  @$core.override
+  ConfigValue createEmptyInstance() => ConfigValue._();
+  @$core.pragma('dart2js:noInline')
+  static ConfigValue getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ConfigValue>(
+          ConfigValue.$_createMessage);
+  static ConfigValue? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get value => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set value($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasValue() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearValue() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get name => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set name($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasName() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearName() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get description => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set description($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasDescription() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearDescription() => $_clearField(3);
+
+  /// The value's group, if the agent groups them.
+  @$pb.TagNumber(4)
+  $core.String get group => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set group($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasGroup() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearGroup() => $_clearField(4);
 }
 
 /// One entry of a chat's transcript.
@@ -1347,6 +1773,13 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, AnswerQuestionRequest request) =>
       _client.invoke<AnswerQuestionResponse>(ctx, 'NushiService',
           'AnswerQuestion', request, AnswerQuestionResponse());
+
+  /// Sets one of a chat's config options (mode, model, ...). Picking a mode
+  /// makes new chats with the same agent start in it.
+  $async.Future<SetConfigOptionResponse> setConfigOption(
+          $pb.ClientContext? ctx, SetConfigOptionRequest request) =>
+      _client.invoke<SetConfigOptionResponse>(ctx, 'NushiService',
+          'SetConfigOption', request, SetConfigOptionResponse());
 
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.

@@ -78,3 +78,11 @@ func TestQuestionGetsExactlyWhatWasChosen(t *testing.T) {
 		t.Errorf("agent got %+v, want a bare decline", resp)
 	}
 }
+
+func TestMalformedFormIsAnError(t *testing.T) {
+	for _, props := range []string{`[1,2]`, `"x"`, ``, `{"a":1}`} {
+		if _, err := formFields(&acp.ElicitationSchema{Properties: json.RawMessage(props)}); err == nil {
+			t.Errorf("properties %s: no error", props)
+		}
+	}
+}

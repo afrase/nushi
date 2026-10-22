@@ -50,6 +50,15 @@ abstract final class NushiService {
     nushiv1nushi.AnswerQuestionResponse.new,
   );
 
+  /// Sets one of a chat's config options (mode, model, ...). Picking a mode
+  /// makes new chats with the same agent start in it.
+  static const setConfigOption = connect.Spec(
+    '/$name/SetConfigOption',
+    connect.StreamType.unary,
+    nushiv1nushi.SetConfigOptionRequest.new,
+    nushiv1nushi.SetConfigOptionResponse.new,
+  );
+
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.
   static const events = connect.Spec(

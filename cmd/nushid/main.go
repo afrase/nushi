@@ -19,6 +19,7 @@ import (
 	"github.com/afrase/nushi/internal/api"
 	"github.com/afrase/nushi/internal/events"
 	"github.com/afrase/nushi/internal/features/chats"
+	"github.com/afrase/nushi/internal/store"
 )
 
 // claudeACP is the pinned Claude Code ACP adapter.
@@ -53,7 +54,8 @@ func run() error {
 	log.Printf("nushid listening on %s", ln.Addr())
 
 	hub := &events.Hub{}
-	chatSvc := chats.New(func(h acp.Handler) (chats.Agent, error) { return launchClaude(dir, h) }, hub.Publish)
+	launch := func(h acp.Handler) (chats.Agent, error) { return launchClaude(dir, h) }
+	chatSvc := chats.New("claude", launch, store.New(dir), hub.Publish)
 	srv := &http.Server{Handler: api.Handler(token, chatSvc, hub), Protocols: new(http.Protocols)}
 	srv.Protocols.SetUnencryptedHTTP2(true)
 	return srv.Serve(ln)

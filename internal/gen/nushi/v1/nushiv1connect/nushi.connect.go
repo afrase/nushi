@@ -45,6 +45,9 @@ const (
 	// NushiServiceAnswerQuestionProcedure is the fully-qualified name of the NushiService's
 	// AnswerQuestion RPC.
 	NushiServiceAnswerQuestionProcedure = "/nushi.v1.NushiService/AnswerQuestion"
+	// NushiServiceSetConfigOptionProcedure is the fully-qualified name of the NushiService's
+	// SetConfigOption RPC.
+	NushiServiceSetConfigOptionProcedure = "/nushi.v1.NushiService/SetConfigOption"
 	// NushiServiceEventsProcedure is the fully-qualified name of the NushiService's Events RPC.
 	NushiServiceEventsProcedure = "/nushi.v1.NushiService/Events"
 )
@@ -60,6 +63,9 @@ type NushiServiceClient interface {
 	AnswerPermission(context.Context, *connect.Request[v1.AnswerPermissionRequest]) (*connect.Response[v1.AnswerPermissionResponse], error)
 	// Answers a pending question, or declines it.
 	AnswerQuestion(context.Context, *connect.Request[v1.AnswerQuestionRequest]) (*connect.Response[v1.AnswerQuestionResponse], error)
+	// Sets one of a chat's config options (mode, model, ...). Picking a mode
+	// makes new chats with the same agent start in it.
+	SetConfigOption(context.Context, *connect.Request[v1.SetConfigOptionRequest]) (*connect.Response[v1.SetConfigOptionResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
 	Events(context.Context, *connect.Request[v1.EventsRequest]) (*connect.ServerStreamForClient[v1.EventsResponse], error)
@@ -106,6 +112,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("AnswerQuestion")),
 			connect.WithClientOptions(opts...),
 		),
+		setConfigOption: connect.NewClient[v1.SetConfigOptionRequest, v1.SetConfigOptionResponse](
+			httpClient,
+			baseURL+NushiServiceSetConfigOptionProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("SetConfigOption")),
+			connect.WithClientOptions(opts...),
+		),
 		events: connect.NewClient[v1.EventsRequest, v1.EventsResponse](
 			httpClient,
 			baseURL+NushiServiceEventsProcedure,
@@ -122,6 +134,7 @@ type nushiServiceClient struct {
 	sendPrompt       *connect.Client[v1.SendPromptRequest, v1.SendPromptResponse]
 	answerPermission *connect.Client[v1.AnswerPermissionRequest, v1.AnswerPermissionResponse]
 	answerQuestion   *connect.Client[v1.AnswerQuestionRequest, v1.AnswerQuestionResponse]
+	setConfigOption  *connect.Client[v1.SetConfigOptionRequest, v1.SetConfigOptionResponse]
 	events           *connect.Client[v1.EventsRequest, v1.EventsResponse]
 }
 
@@ -150,6 +163,11 @@ func (c *nushiServiceClient) AnswerQuestion(ctx context.Context, req *connect.Re
 	return c.answerQuestion.CallUnary(ctx, req)
 }
 
+// SetConfigOption calls nushi.v1.NushiService.SetConfigOption.
+func (c *nushiServiceClient) SetConfigOption(ctx context.Context, req *connect.Request[v1.SetConfigOptionRequest]) (*connect.Response[v1.SetConfigOptionResponse], error) {
+	return c.setConfigOption.CallUnary(ctx, req)
+}
+
 // Events calls nushi.v1.NushiService.Events.
 func (c *nushiServiceClient) Events(ctx context.Context, req *connect.Request[v1.EventsRequest]) (*connect.ServerStreamForClient[v1.EventsResponse], error) {
 	return c.events.CallServerStream(ctx, req)
@@ -166,6 +184,9 @@ type NushiServiceHandler interface {
 	AnswerPermission(context.Context, *connect.Request[v1.AnswerPermissionRequest]) (*connect.Response[v1.AnswerPermissionResponse], error)
 	// Answers a pending question, or declines it.
 	AnswerQuestion(context.Context, *connect.Request[v1.AnswerQuestionRequest]) (*connect.Response[v1.AnswerQuestionResponse], error)
+	// Sets one of a chat's config options (mode, model, ...). Picking a mode
+	// makes new chats with the same agent start in it.
+	SetConfigOption(context.Context, *connect.Request[v1.SetConfigOptionRequest]) (*connect.Response[v1.SetConfigOptionResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
 	Events(context.Context, *connect.Request[v1.EventsRequest], *connect.ServerStream[v1.EventsResponse]) error
@@ -208,6 +229,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("AnswerQuestion")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceSetConfigOptionHandler := connect.NewUnaryHandler(
+		NushiServiceSetConfigOptionProcedure,
+		svc.SetConfigOption,
+		connect.WithSchema(nushiServiceMethods.ByName("SetConfigOption")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceEventsHandler := connect.NewServerStreamHandler(
 		NushiServiceEventsProcedure,
 		svc.Events,
@@ -226,6 +253,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceAnswerPermissionHandler.ServeHTTP(w, r)
 		case NushiServiceAnswerQuestionProcedure:
 			nushiServiceAnswerQuestionHandler.ServeHTTP(w, r)
+		case NushiServiceSetConfigOptionProcedure:
+			nushiServiceSetConfigOptionHandler.ServeHTTP(w, r)
 		case NushiServiceEventsProcedure:
 			nushiServiceEventsHandler.ServeHTTP(w, r)
 		default:
@@ -255,6 +284,10 @@ func (UnimplementedNushiServiceHandler) AnswerPermission(context.Context, *conne
 
 func (UnimplementedNushiServiceHandler) AnswerQuestion(context.Context, *connect.Request[v1.AnswerQuestionRequest]) (*connect.Response[v1.AnswerQuestionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.AnswerQuestion is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) SetConfigOption(context.Context, *connect.Request[v1.SetConfigOptionRequest]) (*connect.Response[v1.SetConfigOptionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.SetConfigOption is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) Events(context.Context, *connect.Request[v1.EventsRequest], *connect.ServerStream[v1.EventsResponse]) error {

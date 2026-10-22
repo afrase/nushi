@@ -62,13 +62,28 @@ type Field struct {
 	Values                 []string
 }
 
-// Event is a change to one chat. Exactly one of Item and Status is set.
+// Event is a change to one chat. Exactly one of Item, Status and Config is set.
 type Event struct {
 	ChatID string
 	Item   *Item
 	// Append means Item.Text continues the item's text rather than replacing it.
 	Append bool
 	Status *Status
+	// Config is the chat's whole set of config options.
+	Config []ConfigOption
+}
+
+// ConfigOption is one of the agent's session settings (mode, model, ...).
+// Category is ACP's ("mode", "model", "thought_level", ...); Type is
+// "select" or "boolean", whose Current is "true" or "false".
+type ConfigOption struct {
+	ID, Name, Description, Category, Type, Current string
+	Values                                         []ConfigValue
+}
+
+// ConfigValue is one value of a select option; Group names its group, if any.
+type ConfigValue struct {
+	Value, Name, Description, Group string
 }
 
 // Status is whether a chat is running a turn, and how the last one ended.
