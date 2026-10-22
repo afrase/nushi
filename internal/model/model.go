@@ -108,6 +108,13 @@ type Event struct {
 	Status *Status
 	// Config is the chat's whole set of config options.
 	Config []ConfigOption
+	// Commands, when not nil, are the agent's slash commands, all of them.
+	Commands []Command
+}
+
+// Command is a slash command the agent offers.
+type Command struct {
+	Name, Description, Hint string
 }
 
 // ConfigOption is one of the agent's session settings (mode, model, ...).
@@ -127,9 +134,10 @@ type ConfigValue struct {
 type Chat struct {
 	Session Session
 	Items   []Item
-	Config  []ConfigOption
-	Status  Status
-	Seq     int64 // the last event the snapshot includes
+	Config   []ConfigOption
+	Commands []Command
+	Status   Status
+	Seq      int64 // the last event the snapshot includes
 }
 
 // Status is whether a chat is running a turn, and how the last one ended.

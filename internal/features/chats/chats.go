@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
@@ -67,6 +68,7 @@ type chat struct {
 	waiting   map[string]chan<- string        // permission prompts by item id, for the picked option
 	questions map[string]chan<- []model.Field // questions by item id, for the answer (nil: declined)
 	config    []model.ConfigOption
+	commands  []model.Command
 	session   model.Session
 	started   time.Time // when the running turn started
 	seq       int64     // the last event's number
@@ -91,7 +93,8 @@ func (s *Service) Get(chatID string) (model.Chat, error) {
 	return model.Chat{
 		Session: c.session,
 		Items:   slices.Clone(c.items),
-		Config:  slices.Clone(c.config),
+		Config:   slices.Clone(c.config),
+		Commands: slices.Clone(c.commands),
 		Status:  c.statusLocked(),
 		Seq:     c.seq,
 	}, nil
@@ -212,9 +215,10 @@ func (c *chat) storeLocked() {
 	c.emitLocked(model.Event{ChatID: c.id, Session: &sess})
 }
 
-// Prompt sends text to the chat's agent. The turn runs in the background;
-// its progress arrives as events.
-func (s *Service) Prompt(chatID, text string) error {
+// Prompt sends text to the chat's agent, with links to the files it
+// mentions (relative to the chat's folder). The turn runs in the
+// background; its progress arrives as events.
+func (s *Service) Prompt(chatID, text string, files []string) error {
 	c, err := s.chat(chatID)
 	if err != nil {
 		return err
@@ -232,7 +236,13 @@ func (s *Service) Prompt(chatID, text string) error {
 		}
 	})
 	c.statusChangedLocked()
-	go c.run(text)
+	prompt := []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: text}}}
+	for _, f := range files {
+		path := filepath.Join(c.session.Folder, f)
+		prompt = append(prompt, acp.ContentBlock{Type: "resource_link", ResourceLink: &acp.ResourceLink{
+			Name: f, URI: (&url.URL{Scheme: "file", Path: path}).String()}})
+	}
+	go c.run(prompt)
 	return nil
 }
 
@@ -245,11 +255,8 @@ func title(prompt string) string {
 	return line
 }
 
-func (c *chat) run(text string) {
-	resp, err := c.agent.Prompt(context.Background(), acp.PromptRequest{
-		SessionID: acp.SessionID(c.id),
-		Prompt:    []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: text}}},
-	})
+func (c *chat) run(prompt []acp.ContentBlock) {
+	resp, err := c.agent.Prompt(context.Background(), acp.PromptRequest{SessionID: acp.SessionID(c.id), Prompt: prompt})
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.busy, c.started = false, time.Time{}

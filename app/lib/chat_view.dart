@@ -2,28 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'cards.dart';
+import 'composer.dart';
 import 'chat.dart';
 import 'daemon.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'markdown.dart';
-import 'pickers.dart';
 import 'question_card.dart';
 import 'theme/theme.dart';
 import 'thinking.dart';
 import 'tool_calls.dart';
-import 'widgets.dart';
-
-/// Stops the chat's running turn.
-Future<void> _stop(BuildContext context, ChatState chat, Daemon daemon) async {
-  if (chat.started == null) return;
-  try {
-    await daemon.cancelTurn(chat.id);
-  } on Object catch (e) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
-    }
-  }
-}
 
 /// A chat's transcript with the composer under it. Escape stops a running
 /// turn.
@@ -61,7 +48,7 @@ class ChatView extends StatelessWidget {
       return CallbackShortcuts(
         bindings: {
           const SingleActivator(LogicalKeyboardKey.escape): () =>
-              _stop(context, chat, daemon),
+              stopTurn(context, chat, daemon),
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -98,7 +85,7 @@ class ChatView extends StatelessWidget {
               ),
             ),
             if (chat.busy) const LinearProgressIndicator(minHeight: 2),
-            _Composer(chat: chat, daemon: daemon),
+            Composer(chat: chat, daemon: daemon),
           ],
         ),
       );
@@ -195,142 +182,6 @@ class _Who extends StatelessWidget {
     return Text(
       name,
       style: theme.ui(theme.t.textSecondary, size: 12, weight: FontWeight.w600),
-    );
-  }
-}
-
-/// The prompt box, with the agent's pickers and Send under it.
-class _Composer extends StatefulWidget {
-  const _Composer({required this.chat, required this.daemon});
-
-  final ChatState chat;
-  final Daemon daemon;
-
-  @override
-  State<_Composer> createState() => _ComposerState();
-}
-
-class _ComposerState extends State<_Composer> {
-  final _text = TextEditingController();
-  final _focus = FocusNode();
-
-  @override
-  void dispose() {
-    _text.dispose();
-    _focus.dispose();
-    super.dispose();
-  }
-
-  Future<void> _send() async {
-    final text = _text.text.trim();
-    if (text.isEmpty || widget.chat.busy) return;
-    _text.clear();
-    try {
-      await widget.daemon.sendPrompt(widget.chat.id, text);
-    } on Object catch (e) {
-      _text.text = text;
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('$e')));
-      }
-    }
-  }
-
-  /// The plan of the current turn (since the last prompt), if any.
-  Item? get _plan {
-    for (final it in widget.chat.items.reversed) {
-      if (it.kind == ItemKind.ITEM_KIND_USER_MESSAGE) return null;
-      if (it.kind == ItemKind.ITEM_KIND_PLAN) return it;
-    }
-    return null;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final chat = widget.chat;
-    OutlineInputBorder border(Color c, double w) => OutlineInputBorder(
-      borderRadius: BorderRadius.circular(NushiTheme.control),
-      borderSide: BorderSide(color: c, width: w),
-    );
-    return Container(
-      decoration: BoxDecoration(
-        color: t.raised,
-        border: Border(top: BorderSide(color: t.borderSubtle)),
-      ),
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (_plan case final plan? when chat.busy) PlanStatus(plan),
-          if (chat.error.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Text(chat.error, style: theme.ui(t.crashed, size: 12)),
-            ),
-          CallbackShortcuts(
-            // Enter sends; Shift+Enter starts a new line.
-            bindings: {const SingleActivator(LogicalKeyboardKey.enter): _send},
-            child: TextField(
-              controller: _text,
-              focusNode: _focus,
-              autofocus: true,
-              minLines: 2,
-              maxLines: 8,
-              style: theme.ui(t.text),
-              decoration: InputDecoration(
-                isDense: true,
-                hintText: chat.busy
-                    ? 'Claude is working…'
-                    : 'Message Claude   ⏎ send · ⇧⏎ newline',
-                hintStyle: theme.ui(t.textMuted),
-                filled: true,
-                fillColor: t.base,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 8,
-                ),
-                enabledBorder: border(t.borderStrong, 1),
-                focusedBorder: border(t.focus, 2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Pickers(
-                    options: chat.config,
-                    onPick: (id, value) =>
-                        widget.daemon.setConfigOption(chat.id, id, value),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              if (chat.started != null)
-                Button(
-                  label: 'Stop',
-                  hint: 'esc',
-                  icon: Icons.stop,
-                  kind: ButtonKind.danger,
-                  height: 24,
-                  onPressed: () => _stop(context, chat, widget.daemon),
-                )
-              else
-                Button(
-                  label: 'Send',
-                  hint: '⏎',
-                  kind: ButtonKind.primary,
-                  height: 24,
-                  onPressed: chat.busy ? null : _send,
-                ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 }

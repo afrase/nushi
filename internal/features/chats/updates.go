@@ -2,6 +2,7 @@ package chats
 
 import (
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/afrase/nushi/acp"
@@ -32,6 +33,16 @@ func (c *chat) SessionUpdate(n acp.SessionNotification) {
 			return
 		}
 		c.addLocked(item)
+	case "available_commands_update":
+		c.commands = []model.Command{}
+		for _, a := range u.AvailableCommandsUpdate.AvailableCommands {
+			cmd := model.Command{Name: a.Name, Description: a.Description}
+			if a.Input != nil {
+				cmd.Hint = a.Input.Hint
+			}
+			c.commands = append(c.commands, cmd)
+		}
+		c.emitLocked(model.Event{ChatID: c.id, Commands: slices.Clone(c.commands)})
 	case "config_option_update":
 		c.replaceConfigLocked(u.ConfigOptionUpdate.ConfigOptions)
 		c.configChangedLocked()

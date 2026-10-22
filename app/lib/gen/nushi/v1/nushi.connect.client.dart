@@ -192,6 +192,25 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Lists a folder's files (up to 20,000) for @-mentions: in a git
+  /// repository the ones git doesn't ignore.
+  Future<nushiv1nushi.ListFilesResponse> listFiles(
+    nushiv1nushi.ListFilesRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.listFiles,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.
   Stream<nushiv1nushi.EventsResponse> events(

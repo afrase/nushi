@@ -94,6 +94,15 @@ abstract final class NushiService {
     nushiv1nushi.GetDiffResponse.new,
   );
 
+  /// Lists a folder's files (up to 20,000) for @-mentions: in a git
+  /// repository the ones git doesn't ignore.
+  static const listFiles = connect.Spec(
+    '/$name/ListFiles',
+    connect.StreamType.unary,
+    nushiv1nushi.ListFilesRequest.new,
+    nushiv1nushi.ListFilesResponse.new,
+  );
+
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.
   static const events = connect.Spec(

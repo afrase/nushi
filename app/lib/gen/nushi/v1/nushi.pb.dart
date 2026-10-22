@@ -412,6 +412,7 @@ class GetChatResponse extends $pb.GeneratedMessage {
     $core.Iterable<ConfigOption>? config,
     ChatStatus? status,
     $fixnum.Int64? seq,
+    $core.Iterable<Command>? commands,
   }) {
     final result = GetChatResponse._();
     if (chat != null) result.chat = chat;
@@ -419,6 +420,7 @@ class GetChatResponse extends $pb.GeneratedMessage {
     if (config != null) result.config.addAll(config);
     if (status != null) result.status = status;
     if (seq != null) result.seq = seq;
+    if (commands != null) result.commands.addAll(commands);
     return result;
   }
 
@@ -444,6 +446,8 @@ class GetChatResponse extends $pb.GeneratedMessage {
     ..aOM<ChatStatus>(4, _omitFieldNames ? '' : 'status',
         subBuilder: ChatStatus.$_createMessage)
     ..aInt64(5, _omitFieldNames ? '' : 'seq')
+    ..pPM<Command>(6, _omitFieldNames ? '' : 'commands',
+        subBuilder: Command.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -505,6 +509,144 @@ class GetChatResponse extends $pb.GeneratedMessage {
   $core.bool hasSeq() => $_has(4);
   @$pb.TagNumber(5)
   void clearSeq() => $_clearField(5);
+
+  /// The agent's slash commands.
+  @$pb.TagNumber(6)
+  $pb.PbList<Command> get commands => $_getList(5);
+}
+
+/// A slash command the agent offers; it is sent as a prompt starting with
+/// "/name".
+class Command extends $pb.GeneratedMessage {
+  factory Command({
+    $core.String? name,
+    $core.String? description,
+    $core.String? hint,
+  }) {
+    final result = Command._();
+    if (name != null) result.name = name;
+    if (description != null) result.description = description;
+    if (hint != null) result.hint = hint;
+    return result;
+  }
+
+  Command._();
+
+  factory Command.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Command()..mergeFromBuffer(data, registry);
+  factory Command.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Command()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'Command',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: Command.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'name')
+    ..aOS(2, _omitFieldNames ? '' : 'description')
+    ..aOS(3, _omitFieldNames ? '' : 'hint')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Command clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Command copyWith(void Function(Command) updates) =>
+      super.copyWith((message) => updates(message as Command)) as Command;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use Command() / Command.new instead')
+  static Command create() => Command._();
+  static $pb.GeneratedMessage $_createMessage() => Command._();
+  @$core.override
+  Command createEmptyInstance() => Command._();
+  @$core.pragma('dart2js:noInline')
+  static Command getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<Command>(Command.$_createMessage);
+  static Command? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get name => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set name($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearName() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get description => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set description($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasDescription() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearDescription() => $_clearField(2);
+
+  /// What to type after the name, if it takes input.
+  @$pb.TagNumber(3)
+  $core.String get hint => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set hint($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasHint() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearHint() => $_clearField(3);
+}
+
+class ChatCommands extends $pb.GeneratedMessage {
+  factory ChatCommands({
+    $core.Iterable<Command>? commands,
+  }) {
+    final result = ChatCommands._();
+    if (commands != null) result.commands.addAll(commands);
+    return result;
+  }
+
+  ChatCommands._();
+
+  factory ChatCommands.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ChatCommands()..mergeFromBuffer(data, registry);
+  factory ChatCommands.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ChatCommands()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ChatCommands',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ChatCommands.$_createMessage)
+    ..pPM<Command>(1, _omitFieldNames ? '' : 'commands',
+        subBuilder: Command.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ChatCommands clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ChatCommands copyWith(void Function(ChatCommands) updates) =>
+      super.copyWith((message) => updates(message as ChatCommands))
+          as ChatCommands;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ChatCommands() / ChatCommands.new instead')
+  static ChatCommands create() => ChatCommands._();
+  static $pb.GeneratedMessage $_createMessage() => ChatCommands._();
+  @$core.override
+  ChatCommands createEmptyInstance() => ChatCommands._();
+  @$core.pragma('dart2js:noInline')
+  static ChatCommands getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ChatCommands>(
+          ChatCommands.$_createMessage);
+  static ChatCommands? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<Command> get commands => $_getList(0);
 }
 
 class StartChatRequest extends $pb.GeneratedMessage {
@@ -633,10 +775,12 @@ class SendPromptRequest extends $pb.GeneratedMessage {
   factory SendPromptRequest({
     $core.String? chatId,
     $core.String? text,
+    $core.Iterable<$core.String>? files,
   }) {
     final result = SendPromptRequest._();
     if (chatId != null) result.chatId = chatId;
     if (text != null) result.text = text;
+    if (files != null) result.files.addAll(files);
     return result;
   }
 
@@ -655,6 +799,7 @@ class SendPromptRequest extends $pb.GeneratedMessage {
       createEmptyInstance: SendPromptRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
     ..aOS(2, _omitFieldNames ? '' : 'text')
+    ..pPS(3, _omitFieldNames ? '' : 'files')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -696,6 +841,120 @@ class SendPromptRequest extends $pb.GeneratedMessage {
   $core.bool hasText() => $_has(1);
   @$pb.TagNumber(2)
   void clearText() => $_clearField(2);
+
+  /// Files the prompt mentions, relative to the chat's folder; they go to
+  /// the agent as resource links after the text.
+  @$pb.TagNumber(3)
+  $pb.PbList<$core.String> get files => $_getList(2);
+}
+
+class ListFilesRequest extends $pb.GeneratedMessage {
+  factory ListFilesRequest({
+    $core.String? folder,
+  }) {
+    final result = ListFilesRequest._();
+    if (folder != null) result.folder = folder;
+    return result;
+  }
+
+  ListFilesRequest._();
+
+  factory ListFilesRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListFilesRequest()..mergeFromBuffer(data, registry);
+  factory ListFilesRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListFilesRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListFilesRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListFilesRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'folder')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListFilesRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListFilesRequest copyWith(void Function(ListFilesRequest) updates) =>
+      super.copyWith((message) => updates(message as ListFilesRequest))
+          as ListFilesRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ListFilesRequest() / ListFilesRequest.new instead')
+  static ListFilesRequest create() => ListFilesRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ListFilesRequest._();
+  @$core.override
+  ListFilesRequest createEmptyInstance() => ListFilesRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ListFilesRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ListFilesRequest>(
+          ListFilesRequest.$_createMessage);
+  static ListFilesRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get folder => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set folder($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasFolder() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearFolder() => $_clearField(1);
+}
+
+class ListFilesResponse extends $pb.GeneratedMessage {
+  factory ListFilesResponse({
+    $core.Iterable<$core.String>? paths,
+  }) {
+    final result = ListFilesResponse._();
+    if (paths != null) result.paths.addAll(paths);
+    return result;
+  }
+
+  ListFilesResponse._();
+
+  factory ListFilesResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListFilesResponse()..mergeFromBuffer(data, registry);
+  factory ListFilesResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListFilesResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListFilesResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListFilesResponse.$_createMessage)
+    ..pPS(1, _omitFieldNames ? '' : 'paths')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListFilesResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListFilesResponse copyWith(void Function(ListFilesResponse) updates) =>
+      super.copyWith((message) => updates(message as ListFilesResponse))
+          as ListFilesResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ListFilesResponse() / ListFilesResponse.new instead')
+  static ListFilesResponse create() => ListFilesResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ListFilesResponse._();
+  @$core.override
+  ListFilesResponse createEmptyInstance() => ListFilesResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ListFilesResponse getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ListFilesResponse>(
+          ListFilesResponse.$_createMessage);
+  static ListFilesResponse? _defaultInstance;
+
+  /// Relative to the folder.
+  @$pb.TagNumber(1)
+  $pb.PbList<$core.String> get paths => $_getList(0);
 }
 
 class SendPromptResponse extends $pb.GeneratedMessage {
@@ -1548,7 +1807,7 @@ class EventsRequest extends $pb.GeneratedMessage {
   static EventsRequest? _defaultInstance;
 }
 
-enum EventsResponse_Kind { item, status, config, chat, notSet }
+enum EventsResponse_Kind { item, status, config, chat, commands, notSet }
 
 class EventsResponse extends $pb.GeneratedMessage {
   factory EventsResponse({
@@ -1558,6 +1817,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     ChatConfig? config,
     Chat? chat,
     $fixnum.Int64? seq,
+    ChatCommands? commands,
   }) {
     final result = EventsResponse._();
     if (chatId != null) result.chatId = chatId;
@@ -1566,6 +1826,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     if (config != null) result.config = config;
     if (chat != null) result.chat = chat;
     if (seq != null) result.seq = seq;
+    if (commands != null) result.commands = commands;
     return result;
   }
 
@@ -1584,13 +1845,14 @@ class EventsResponse extends $pb.GeneratedMessage {
     3: EventsResponse_Kind.status,
     4: EventsResponse_Kind.config,
     5: EventsResponse_Kind.chat,
+    7: EventsResponse_Kind.commands,
     0: EventsResponse_Kind.notSet
   };
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'EventsResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: EventsResponse.$_createMessage)
-    ..oo(0, [2, 3, 4, 5])
+    ..oo(0, [2, 3, 4, 5, 7])
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
     ..aOM<ItemEvent>(2, _omitFieldNames ? '' : 'item',
         subBuilder: ItemEvent.$_createMessage)
@@ -1601,6 +1863,8 @@ class EventsResponse extends $pb.GeneratedMessage {
     ..aOM<Chat>(5, _omitFieldNames ? '' : 'chat',
         subBuilder: Chat.$_createMessage)
     ..aInt64(6, _omitFieldNames ? '' : 'seq')
+    ..aOM<ChatCommands>(7, _omitFieldNames ? '' : 'commands',
+        subBuilder: ChatCommands.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1629,12 +1893,14 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(3)
   @$pb.TagNumber(4)
   @$pb.TagNumber(5)
+  @$pb.TagNumber(7)
   EventsResponse_Kind whichKind() =>
       _EventsResponse_KindByTag[$_whichOneof(0)]!;
   @$pb.TagNumber(2)
   @$pb.TagNumber(3)
   @$pb.TagNumber(4)
   @$pb.TagNumber(5)
+  @$pb.TagNumber(7)
   void clearKind() => $_clearField($_whichOneof(0));
 
   @$pb.TagNumber(1)
@@ -1700,6 +1966,18 @@ class EventsResponse extends $pb.GeneratedMessage {
   $core.bool hasSeq() => $_has(5);
   @$pb.TagNumber(6)
   void clearSeq() => $_clearField(6);
+
+  /// The agent's slash commands, all of them.
+  @$pb.TagNumber(7)
+  ChatCommands get commands => $_getN(6);
+  @$pb.TagNumber(7)
+  set commands(ChatCommands value) => $_setField(7, value);
+  @$pb.TagNumber(7)
+  $core.bool hasCommands() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearCommands() => $_clearField(7);
+  @$pb.TagNumber(7)
+  ChatCommands ensureCommands() => $_ensure(6);
 }
 
 /// A chat's config options, all of them.
@@ -2659,6 +2937,13 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, GetDiffRequest request) =>
       _client.invoke<GetDiffResponse>(
           ctx, 'NushiService', 'GetDiff', request, GetDiffResponse());
+
+  /// Lists a folder's files (up to 20,000) for @-mentions: in a git
+  /// repository the ones git doesn't ignore.
+  $async.Future<ListFilesResponse> listFiles(
+          $pb.ClientContext? ctx, ListFilesRequest request) =>
+      _client.invoke<ListFilesResponse>(
+          ctx, 'NushiService', 'ListFiles', request, ListFilesResponse());
 
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.

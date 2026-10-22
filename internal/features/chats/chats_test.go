@@ -3,6 +3,7 @@ package chats
 import (
 	"context"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 
@@ -16,6 +17,7 @@ type fakeAgent struct {
 	updates []acp.SessionUpdate
 	session acp.NewSessionResponse
 	set     []string // config changes asked for, as id=value
+	prompt  []acp.ContentBlock
 }
 
 func (f *fakeAgent) Initialize(context.Context, acp.InitializeRequest) (*acp.InitializeResponse, error) {
@@ -32,7 +34,8 @@ func (f *fakeAgent) LoadSession(context.Context, acp.LoadSessionRequest) (*acp.L
 	return &acp.LoadSessionResponse{}, nil
 }
 
-func (f *fakeAgent) Prompt(context.Context, acp.PromptRequest) (*acp.PromptResponse, error) {
+func (f *fakeAgent) Prompt(_ context.Context, req acp.PromptRequest) (*acp.PromptResponse, error) {
+	f.prompt = req.Prompt
 	for _, u := range f.updates {
 		f.h.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: u})
 	}
@@ -101,14 +104,20 @@ func TestPromptStreamsTheReply(t *testing.T) {
 	agent := &fakeAgent{updates: []acp.SessionUpdate{chunk("m1", "Hel"), chunk("m1", "lo"), chunk("", "!"), chunk("m2", "Bye")}}
 	svc := New("fake", func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, &memModes{}, &memSessions{}, publish)
 
-	id, err := svc.Start(context.Background(), t.TempDir())
+	folder := t.TempDir()
+	id, err := svc.Start(context.Background(), folder)
 	if err != nil || id != "s1" {
 		t.Fatalf("Start = %q, %v", id, err)
 	}
-	if err := svc.Prompt(id, "hi"); err != nil {
+	if err := svc.Prompt(id, "hi", []string{"a b.go"}); err != nil {
 		t.Fatal(err)
 	}
 	<-done
+
+	if p := agent.prompt; len(p) != 2 || p[0].Text.Text != "hi" || p[1].ResourceLink.Name != "a b.go" ||
+		p[1].ResourceLink.URI != "file://"+strings.ReplaceAll(folder, " ", "%20")+"/a%20b.go" {
+		t.Errorf("prompt = %+v %+v", p[0], p[len(p)-1].ResourceLink)
+	}
 
 	c := svc.chats[id]
 	if c.session.Title != "hi" {

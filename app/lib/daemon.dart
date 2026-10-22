@@ -133,8 +133,13 @@ class Daemon extends ChangeNotifier {
     select(resp.chatId);
   }
 
-  Future<void> sendPrompt(String chatId, String text) =>
-      client.sendPrompt(SendPromptRequest(chatId: chatId, text: text));
+  Future<void> sendPrompt(String chatId, String text, List<String> files) =>
+      client.sendPrompt(
+        SendPromptRequest(chatId: chatId, text: text, files: files),
+      );
+
+  Future<List<String>> listFiles(String folder) async =>
+      (await client.listFiles(ListFilesRequest(folder: folder))).paths;
 
   Future<void> cancelTurn(String chatId) =>
       client.cancelTurn(CancelTurnRequest(chatId: chatId));

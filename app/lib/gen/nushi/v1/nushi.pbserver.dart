@@ -41,6 +41,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.SetConfigOptionRequest request);
   $async.Future<$0.GetDiffResponse> getDiff(
       $pb.ServerContext ctx, $0.GetDiffRequest request);
+  $async.Future<$0.ListFilesResponse> listFiles(
+      $pb.ServerContext ctx, $0.ListFilesRequest request);
   $async.Future<$0.EventsResponse> events(
       $pb.ServerContext ctx, $0.EventsRequest request);
 
@@ -66,6 +68,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.SetConfigOptionRequest();
       case 'GetDiff':
         return $0.GetDiffRequest();
+      case 'ListFiles':
+        return $0.ListFilesRequest();
       case 'Events':
         return $0.EventsRequest();
       default:
@@ -96,6 +100,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return setConfigOption(ctx, request as $0.SetConfigOptionRequest);
       case 'GetDiff':
         return getDiff(ctx, request as $0.GetDiffRequest);
+      case 'ListFiles':
+        return listFiles(ctx, request as $0.ListFilesRequest);
       case 'Events':
         return events(ctx, request as $0.EventsRequest);
       default:

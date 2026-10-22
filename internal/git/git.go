@@ -99,6 +99,30 @@ func worktree(path string) ([]byte, error) {
 // does): a filter only runs if git config defines it, and a repository
 // can't bring config along, so that takes someone who can already write
 // the user's config, as with any git command run there.
+// Files lists up to limit files under folder, relative to it: in a
+// repository, git's tracked and untracked files that aren't ignored;
+// elsewhere, every file outside hidden folders.
+func Files(ctx context.Context, folder string, limit int) ([]string, error) {
+	if out, err := run(ctx, folder, "ls-files", "-z", "--cached", "--others", "--exclude-standard"); err == nil {
+		files := split(out)
+		return files[:min(len(files), limit)], nil
+	}
+	var files []string
+	err := filepath.WalkDir(folder, func(path string, d os.DirEntry, err error) error {
+		switch {
+		case err != nil || len(files) >= limit:
+			return filepath.SkipAll
+		case d.IsDir() && path != folder && strings.HasPrefix(d.Name(), "."):
+			return filepath.SkipDir
+		case !d.IsDir():
+			rel, _ := filepath.Rel(folder, path)
+			files = append(files, rel)
+		}
+		return nil
+	})
+	return files, err
+}
+
 func run(ctx context.Context, dir string, args ...string) ([]byte, error) {
 	cmd := exec.CommandContext(ctx, "git", append([]string{"-c", "core.fsmonitor=false", "-C", dir}, args...)...)
 	cmd.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0")

@@ -180,6 +180,14 @@ const GetChatResponse$json = {
       '10': 'status'
     },
     {'1': 'seq', '3': 5, '4': 1, '5': 3, '10': 'seq'},
+    {
+      '1': 'commands',
+      '3': 6,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.Command',
+      '10': 'commands'
+    },
   ],
 };
 
@@ -188,7 +196,43 @@ final $typed_data.Uint8List getChatResponseDescriptor = $convert.base64Decode(
     'Cg9HZXRDaGF0UmVzcG9uc2USIgoEY2hhdBgBIAEoCzIOLm51c2hpLnYxLkNoYXRSBGNoYXQSJA'
     'oFaXRlbXMYAiADKAsyDi5udXNoaS52MS5JdGVtUgVpdGVtcxIuCgZjb25maWcYAyADKAsyFi5u'
     'dXNoaS52MS5Db25maWdPcHRpb25SBmNvbmZpZxIsCgZzdGF0dXMYBCABKAsyFC5udXNoaS52MS'
-    '5DaGF0U3RhdHVzUgZzdGF0dXMSEAoDc2VxGAUgASgDUgNzZXE=');
+    '5DaGF0U3RhdHVzUgZzdGF0dXMSEAoDc2VxGAUgASgDUgNzZXESLQoIY29tbWFuZHMYBiADKAsy'
+    'ES5udXNoaS52MS5Db21tYW5kUghjb21tYW5kcw==');
+
+@$core.Deprecated('Use commandDescriptor instead')
+const Command$json = {
+  '1': 'Command',
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'description', '3': 2, '4': 1, '5': 9, '10': 'description'},
+    {'1': 'hint', '3': 3, '4': 1, '5': 9, '10': 'hint'},
+  ],
+};
+
+/// Descriptor for `Command`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List commandDescriptor = $convert.base64Decode(
+    'CgdDb21tYW5kEhIKBG5hbWUYASABKAlSBG5hbWUSIAoLZGVzY3JpcHRpb24YAiABKAlSC2Rlc2'
+    'NyaXB0aW9uEhIKBGhpbnQYAyABKAlSBGhpbnQ=');
+
+@$core.Deprecated('Use chatCommandsDescriptor instead')
+const ChatCommands$json = {
+  '1': 'ChatCommands',
+  '2': [
+    {
+      '1': 'commands',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.Command',
+      '10': 'commands'
+    },
+  ],
+};
+
+/// Descriptor for `ChatCommands`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List chatCommandsDescriptor = $convert.base64Decode(
+    'CgxDaGF0Q29tbWFuZHMSLQoIY29tbWFuZHMYASADKAsyES5udXNoaS52MS5Db21tYW5kUghjb2'
+    '1tYW5kcw==');
 
 @$core.Deprecated('Use startChatRequestDescriptor instead')
 const StartChatRequest$json = {
@@ -229,13 +273,38 @@ const SendPromptRequest$json = {
   '2': [
     {'1': 'chat_id', '3': 1, '4': 1, '5': 9, '10': 'chatId'},
     {'1': 'text', '3': 2, '4': 1, '5': 9, '10': 'text'},
+    {'1': 'files', '3': 3, '4': 3, '5': 9, '10': 'files'},
   ],
 };
 
 /// Descriptor for `SendPromptRequest`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List sendPromptRequestDescriptor = $convert.base64Decode(
     'ChFTZW5kUHJvbXB0UmVxdWVzdBIXCgdjaGF0X2lkGAEgASgJUgZjaGF0SWQSEgoEdGV4dBgCIA'
-    'EoCVIEdGV4dA==');
+    'EoCVIEdGV4dBIUCgVmaWxlcxgDIAMoCVIFZmlsZXM=');
+
+@$core.Deprecated('Use listFilesRequestDescriptor instead')
+const ListFilesRequest$json = {
+  '1': 'ListFilesRequest',
+  '2': [
+    {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
+  ],
+};
+
+/// Descriptor for `ListFilesRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listFilesRequestDescriptor = $convert
+    .base64Decode('ChBMaXN0RmlsZXNSZXF1ZXN0EhYKBmZvbGRlchgBIAEoCVIGZm9sZGVy');
+
+@$core.Deprecated('Use listFilesResponseDescriptor instead')
+const ListFilesResponse$json = {
+  '1': 'ListFilesResponse',
+  '2': [
+    {'1': 'paths', '3': 1, '4': 3, '5': 9, '10': 'paths'},
+  ],
+};
+
+/// Descriptor for `ListFilesResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listFilesResponseDescriptor = $convert
+    .base64Decode('ChFMaXN0RmlsZXNSZXNwb25zZRIUCgVwYXRocxgBIAMoCVIFcGF0aHM=');
 
 @$core.Deprecated('Use sendPromptResponseDescriptor instead')
 const SendPromptResponse$json = {
@@ -465,6 +534,15 @@ const EventsResponse$json = {
       '9': 0,
       '10': 'chat'
     },
+    {
+      '1': 'commands',
+      '3': 7,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.ChatCommands',
+      '9': 0,
+      '10': 'commands'
+    },
   ],
   '8': [
     {'1': 'kind'},
@@ -477,7 +555,8 @@ final $typed_data.Uint8List eventsResponseDescriptor = $convert.base64Decode(
     'NzZXESKQoEaXRlbRgCIAEoCzITLm51c2hpLnYxLkl0ZW1FdmVudEgAUgRpdGVtEi4KBnN0YXR1'
     'cxgDIAEoCzIULm51c2hpLnYxLkNoYXRTdGF0dXNIAFIGc3RhdHVzEi4KBmNvbmZpZxgEIAEoCz'
     'IULm51c2hpLnYxLkNoYXRDb25maWdIAFIGY29uZmlnEiQKBGNoYXQYBSABKAsyDi5udXNoaS52'
-    'MS5DaGF0SABSBGNoYXRCBgoEa2luZA==');
+    'MS5DaGF0SABSBGNoYXQSNAoIY29tbWFuZHMYByABKAsyFi5udXNoaS52MS5DaGF0Q29tbWFuZH'
+    'NIAFIIY29tbWFuZHNCBgoEa2luZA==');
 
 @$core.Deprecated('Use chatConfigDescriptor instead')
 const ChatConfig$json = {
@@ -752,6 +831,11 @@ const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
       '3': '.nushi.v1.GetDiffResponse'
     },
     {
+      '1': 'ListFiles',
+      '2': '.nushi.v1.ListFilesRequest',
+      '3': '.nushi.v1.ListFilesResponse'
+    },
+    {
       '1': 'Events',
       '2': '.nushi.v1.EventsRequest',
       '3': '.nushi.v1.EventsResponse',
@@ -778,6 +862,7 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.PlanEntry': PlanEntry$json,
   '.nushi.v1.ConfigOption': ConfigOption$json,
   '.nushi.v1.ConfigValue': ConfigValue$json,
+  '.nushi.v1.Command': Command$json,
   '.nushi.v1.StartChatRequest': StartChatRequest$json,
   '.nushi.v1.StartChatResponse': StartChatResponse$json,
   '.nushi.v1.SendPromptRequest': SendPromptRequest$json,
@@ -793,10 +878,13 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.SetConfigOptionResponse': SetConfigOptionResponse$json,
   '.nushi.v1.GetDiffRequest': GetDiffRequest$json,
   '.nushi.v1.GetDiffResponse': GetDiffResponse$json,
+  '.nushi.v1.ListFilesRequest': ListFilesRequest$json,
+  '.nushi.v1.ListFilesResponse': ListFilesResponse$json,
   '.nushi.v1.EventsRequest': EventsRequest$json,
   '.nushi.v1.EventsResponse': EventsResponse$json,
   '.nushi.v1.ItemEvent': ItemEvent$json,
   '.nushi.v1.ChatConfig': ChatConfig$json,
+  '.nushi.v1.ChatCommands': ChatCommands$json,
 };
 
 /// Descriptor for `NushiService`. Decode as a `google.protobuf.ServiceDescriptorProto`.
@@ -814,5 +902,6 @@ final $typed_data.Uint8List nushiServiceDescriptor = $convert.base64Decode(
     'ZXF1ZXN0GiAubnVzaGkudjEuQW5zd2VyUXVlc3Rpb25SZXNwb25zZRJWCg9TZXRDb25maWdPcH'
     'Rpb24SIC5udXNoaS52MS5TZXRDb25maWdPcHRpb25SZXF1ZXN0GiEubnVzaGkudjEuU2V0Q29u'
     'ZmlnT3B0aW9uUmVzcG9uc2USPgoHR2V0RGlmZhIYLm51c2hpLnYxLkdldERpZmZSZXF1ZXN0Gh'
-    'kubnVzaGkudjEuR2V0RGlmZlJlc3BvbnNlEj0KBkV2ZW50cxIXLm51c2hpLnYxLkV2ZW50c1Jl'
-    'cXVlc3QaGC5udXNoaS52MS5FdmVudHNSZXNwb25zZTAB');
+    'kubnVzaGkudjEuR2V0RGlmZlJlc3BvbnNlEkQKCUxpc3RGaWxlcxIaLm51c2hpLnYxLkxpc3RG'
+    'aWxlc1JlcXVlc3QaGy5udXNoaS52MS5MaXN0RmlsZXNSZXNwb25zZRI9CgZFdmVudHMSFy5udX'
+    'NoaS52MS5FdmVudHNSZXF1ZXN0GhgubnVzaGkudjEuRXZlbnRzUmVzcG9uc2UwAQ==');

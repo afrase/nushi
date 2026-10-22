@@ -51,9 +51,10 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 13. Tool calls | 1677 | 716 | 2579 | 650 |
 | 14. Thinking and plans | 1724 | 716 | 2780 | 650 |
 | 15. Turn controls | 1807 | 722 | 2911 | 650 |
+| 16. The composer | 1878 | 722 | 3118 | 650 |
 
 Tripwires crossed:
-Lines added per step, code and tests, without generated code (the tripwire is about 500): 1: 533, 2: 1,502, 3: 239, 4: 437, 5: 739, 6: 639, 7: 464, 8: 537, 9: 265, 10: 528, 11: 1,249, 12: 625, 13: 476, 14: 343, 15: 351.
+Lines added per step, code and tests, without generated code (the tripwire is about 500): 1: 533, 2: 1,502, 3: 239, 4: 437, 5: 739, 6: 639, 7: 464, 8: 537, 9: 265, 10: 528, 11: 1,249, 12: 625, 13: 476, 14: 343, 15: 351, 16: 492.
 - Step 1 (533): the Unix-socket transport package and its tests came with the skeleton.
 - Step 2 (1,502): the whole ACP client landed in this step (JSON-RPC framing, client and the schema-to-Go type generator, about 660 lines), plus the first real chat screen and the daemon's chat feature. None of it is for later steps.
 - Step 5 (739): the question card is the app's biggest widget (267 lines: options, multi-select, Other boxes, digit keys); reading the form in order, and two fixes to the type generator.
@@ -104,6 +105,7 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 - Claude sends no `agent_thought_chunk`s here: the adapter says recent models stream thinking "omitted" (signature only), and neither `showThinkingSummaries` in the project's settings nor `MAX_THINKING_TOKENS` (Opus, Sonnet, Haiku) changed that. Thoughts are built to ACP and were tried with the fake agent only.
 - Claude keeps a todo list (ACP `plan` updates, full list each time) only when its todo tools are on: `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` in its environment. Without it, `TodoWrite` and `TaskCreate` aren't there and Claude says so. With it, Claude uses `TodoWrite` or `TaskCreate`/`TaskUpdate` (the adapter hides the task tool calls and sends the plan). In Plan mode Claude writes the plan before asking to leave Plan mode, so the checklist sits above the approval card.
 - `session/cancel` on Claude ends the turn within a second or two with stop reason `cancelled`; the text streamed so far stays. A command Claude runs in the background can finish after the turn and Claude then writes again on its own, outside any prompt (a tool call and a message arrive while the chat is idle).
+- Claude sends `available_commands_update` soon after `session/new` (and after `session/load`): about 80 commands, its own and every installed plugin's and skill's (`/code-review:code-review`). A command goes back as an ordinary prompt starting with `/name`. A `resource_link` to a `file://` URI in the prompt makes Claude read the file.
 - Claude also sends a `tool_call_update` carrying only `_meta.claudeCode.toolResponse` (the raw tool result) before the final one; it changes nothing we show.
 - In `auto` mode Claude asked nothing for `curl -X POST` or `touch`; in Manual (`default`) mode it asks before `touch`, with two options, "Yes" (`allow_once`) and "No" (`reject_once`). A permission request names the tool call it is about (`toolCall.toolCallId`), which was sent just before as a `tool_call`.
 - To test prompts without a mode picker, a folder with `.claude/settings.json` = `{"permissions":{"defaultMode":"default"}}` starts Claude in Manual mode.
@@ -146,6 +148,9 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 - Stopping a turn (step 15): the daemon sends `session/cancel` and answers the permission prompts and questions the turn waits on as cancelled, as ACP asks of a client. Escape anywhere in the chat stops it too.
 - A turn that doesn't end normally leaves a notice in the transcript (Stopped, refused, token or request limit, or the error); so does a chat that can't be reopened. `ChatStatus.error` is no longer set (API version 11).
 - A chat's status says when its turn started (the header counts up: "working · 12s") and whether it waits on the user; the sidebar marks it amber with "needs you". The list of chats carries each one's status, so the marks are right when the app starts.
+
+- The composer (step 16): `/` at the start completes the agent's commands, `@` anywhere completes the chat folder's files; the names whose last part starts with what's typed come first, then the shortest, eight at most. Arrows move, Enter or Tab picks, Escape closes. A picked file stays in the text as `@path` and goes to the agent as a resource link (only if `@path` is still in the text when sent). The box grows to ten lines, then scrolls. Up in an empty box brings back the last prompt, with its file links.
+- `ListFiles` returns the folder's files once per composer (20,000 at most): in a git repository `git ls-files` (tracked and untracked, not ignored), else a walk that skips hidden folders. The app filters them as you type. Like `GetDiff`, it calls `internal/git` from the API directly.
 
 - Connect for Go is v1 (`connectrpc.com/connect` v1.21), not v2: v1 is what the Dart generator's docs and the POC used, and nothing here needs v2.
 - `http2` for Dart stays on 2.x: `connectrpc` 2.0.1 doesn't resolve with `http2` 3.x.

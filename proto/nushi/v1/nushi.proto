@@ -28,6 +28,9 @@ service NushiService {
   // Returns a folder's uncommitted changes against HEAD, untracked files
   // included.
   rpc GetDiff(GetDiffRequest) returns (GetDiffResponse);
+  // Lists a folder's files (up to 20,000) for @-mentions: in a git
+  // repository the ones git doesn't ignore.
+  rpc ListFiles(ListFilesRequest) returns (ListFilesResponse);
   // Streams every change to every chat from now on. The first message is
   // empty: it says the subscription is live.
   rpc Events(EventsRequest) returns (stream EventsResponse);
@@ -71,6 +74,21 @@ message GetChatResponse {
   ChatStatus status = 4;
   // The last event this includes: apply only the chat's events after it.
   int64 seq = 5;
+  // The agent's slash commands.
+  repeated Command commands = 6;
+}
+
+// A slash command the agent offers; it is sent as a prompt starting with
+// "/name".
+message Command {
+  string name = 1;
+  string description = 2;
+  // What to type after the name, if it takes input.
+  string hint = 3;
+}
+
+message ChatCommands {
+  repeated Command commands = 1;
 }
 
 message StartChatRequest {
@@ -86,6 +104,18 @@ message StartChatResponse {
 message SendPromptRequest {
   string chat_id = 1;
   string text = 2;
+  // Files the prompt mentions, relative to the chat's folder; they go to
+  // the agent as resource links after the text.
+  repeated string files = 3;
+}
+
+message ListFilesRequest {
+  string folder = 1;
+}
+
+message ListFilesResponse {
+  // Relative to the folder.
+  repeated string paths = 1;
 }
 
 message SendPromptResponse {}
@@ -163,6 +193,8 @@ message EventsResponse {
     ChatConfig config = 4;
     // The chat was opened, or its title or mode changed.
     Chat chat = 5;
+    // The agent's slash commands, all of them.
+    ChatCommands commands = 7;
   }
 }
 

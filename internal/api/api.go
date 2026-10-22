@@ -19,7 +19,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 11
+const Version = 12
 
 type server struct {
 	chats *chats.Service
@@ -66,7 +66,7 @@ func (s *server) GetChat(_ context.Context, req *connect.Request[nushiv1.GetChat
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 	resp := &nushiv1.GetChatResponse{Chat: chatProto(c.Session), Config: configProto(c.Config),
-		Status: statusProto(c.Status), Seq: c.Seq}
+		Status: statusProto(c.Status), Seq: c.Seq, Commands: commandsProto(c.Commands)}
 	for _, it := range c.Items {
 		resp.Items = append(resp.Items, itemProto(&it))
 	}
@@ -82,7 +82,7 @@ func (s *server) StartChat(ctx context.Context, req *connect.Request[nushiv1.Sta
 }
 
 func (s *server) SendPrompt(_ context.Context, req *connect.Request[nushiv1.SendPromptRequest]) (*connect.Response[nushiv1.SendPromptResponse], error) {
-	if err := s.chats.Prompt(req.Msg.ChatId, req.Msg.Text); err != nil {
+	if err := s.chats.Prompt(req.Msg.ChatId, req.Msg.Text, req.Msg.Files); err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
 	return connect.NewResponse(&nushiv1.SendPromptResponse{}), nil
@@ -121,6 +121,17 @@ func (s *server) SetConfigOption(ctx context.Context, req *connect.Request[nushi
 		return nil, err
 	}
 	return connect.NewResponse(&nushiv1.SetConfigOptionResponse{}), nil
+}
+
+func (s *server) ListFiles(ctx context.Context, req *connect.Request[nushiv1.ListFilesRequest]) (*connect.Response[nushiv1.ListFilesResponse], error) {
+	if !filepath.IsAbs(req.Msg.Folder) {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%q is not an absolute path", req.Msg.Folder))
+	}
+	paths, err := git.Files(ctx, req.Msg.Folder, 20000)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	return connect.NewResponse(&nushiv1.ListFilesResponse{Paths: paths}), nil
 }
 
 func (s *server) GetDiff(ctx context.Context, req *connect.Request[nushiv1.GetDiffRequest]) (*connect.Response[nushiv1.GetDiffResponse], error) {
@@ -182,6 +193,8 @@ func toProto(e model.Event) *nushiv1.EventsResponse {
 		out.Kind = &nushiv1.EventsResponse_Config{Config: &nushiv1.ChatConfig{Options: configProto(e.Config)}}
 	case e.Status != nil:
 		out.Kind = &nushiv1.EventsResponse_Status{Status: statusProto(*e.Status)}
+	case e.Commands != nil:
+		out.Kind = &nushiv1.EventsResponse_Commands{Commands: &nushiv1.ChatCommands{Commands: commandsProto(e.Commands)}}
 	}
 	return out
 }
@@ -200,6 +213,14 @@ func itemProto(it *model.Item) *nushiv1.Item {
 	for _, f := range it.Fields {
 		out.Fields = append(out.Fields, &nushiv1.Field{Id: f.ID, Title: f.Title, Description: f.Description,
 			Type: fieldTypes[f.Type], Options: optionsProto(f.Options), Required: f.Required, Values: f.Values})
+	}
+	return out
+}
+
+func commandsProto(cmds []model.Command) []*nushiv1.Command {
+	var out []*nushiv1.Command
+	for _, c := range cmds {
+		out = append(out, &nushiv1.Command{Name: c.Name, Description: c.Description, Hint: c.Hint})
 	}
 	return out
 }

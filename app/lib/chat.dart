@@ -13,6 +13,7 @@ class ChatState extends ChangeNotifier {
   DateTime created = DateTime.now();
   final List<Item> items = [];
   List<ConfigOption> config = [];
+  List<Command> commands = []; // the agent's slash commands
   bool busy = false;
   bool waiting = false; // on the user: a permission prompt or a question
   DateTime? started; // when the running turn started
@@ -30,6 +31,7 @@ class ChatState extends ChangeNotifier {
       ..clear()
       ..addAll(s.items);
     config = s.config;
+    commands = s.commands;
     status(s.status);
     error = '';
     _seq = s.seq.toInt();
@@ -77,6 +79,8 @@ class ChatState extends ChangeNotifier {
         _applyItem(e.item);
       case EventsResponse_Kind.config:
         config = e.config.options;
+      case EventsResponse_Kind.commands:
+        commands = e.commands.commands;
       case EventsResponse_Kind.status:
         status(e.status);
       case EventsResponse_Kind.chat || EventsResponse_Kind.notSet:
