@@ -12,3 +12,4 @@
 - [0010](0010-json-files-for-sessions.md) A JSON file per session until that stops being enough
 - [0011](0011-nushi-next-identity.md) The rebuild runs as "Nushi Next" beside the first build
 - [0012](0012-diff-view-package.md) The diff viewer uses the published diff_view package
+- [0013](0013-app-starts-its-daemon.md) The packaged app starts its own daemon, never stops one on its own

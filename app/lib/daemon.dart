@@ -15,8 +15,19 @@ import 'gen/nushi/v1/nushi.pb.dart';
 final dataDir =
     '${Platform.environment['HOME']}/Library/Application Support/Nushi Next';
 
+/// The API version this app was built with (`internal/api.Version`).
+const apiVersion = 15;
+
+/// The daemon in the app's bundle (`make package`), if the app runs from one.
+final String? bundledDaemon = () {
+  final path = '${File(Platform.resolvedExecutable).parent.path}/nushid';
+  return File(path).existsSync() ? path : null;
+}();
+
 /// The app's link to nushid. [connected] follows a ping every few seconds;
-/// while connected, daemon events keep [chats] current.
+/// while connected, daemon events keep [chats] current. When no daemon
+/// answers, the bundled one is started; a running daemon is only ever
+/// stopped by [restartDaemon].
 class Daemon extends ChangeNotifier {
   Daemon() {
     _timer = Timer.periodic(const Duration(seconds: 2), (_) => _ping());
@@ -34,6 +45,8 @@ class Daemon extends ChangeNotifier {
   );
   late final Timer _timer;
   bool connected = false;
+  int daemonApi = 0; // the daemon's API version
+  DateTime _launched = DateTime(0); // when the bundled daemon was last started
   StreamSubscription<EventsResponse>? _events;
 
   /// Every stored chat, by id.
@@ -53,18 +66,63 @@ class Daemon extends ChangeNotifier {
     return next(req);
   };
 
+  /// Whether the daemon has rename, archive and remove (API 14).
+  bool get canManageChats => daemonApi >= 14;
+
   Future<void> _ping() async {
-    bool ok;
+    var api = 0;
     try {
-      await client.ping(PingRequest());
-      ok = true;
+      api = (await client.ping(PingRequest())).apiVersion;
     } on Object {
-      ok = false;
+      _launch();
     }
+    final ok = api > 0;
     if (ok && _events == null) _subscribe();
-    if (ok != connected) {
+    if (ok != connected || api != daemonApi) {
       connected = ok;
+      daemonApi = api;
       notifyListeners();
+    }
+  }
+
+  /// Starts the bundled daemon, at most every ten seconds. It runs through
+  /// the user's login shell, so it and its agents get the user's PATH, and
+  /// detached, so it outlives the app.
+  void _launch() {
+    final bin = bundledDaemon;
+    if (bin == null ||
+        bin.contains("'") ||
+        DateTime.now().difference(_launched).inSeconds < 10) {
+      return;
+    }
+    _launched = DateTime.now();
+    Directory(dataDir).createSync(recursive: true);
+    Process.start(
+      Platform.environment['SHELL'] ?? '/bin/zsh',
+      ['-l', '-c', "exec '$bin' >>'$dataDir/nushid.log' 2>&1"],
+      workingDirectory: dataDir,
+      mode: ProcessStartMode.detached,
+    ).ignore();
+  }
+
+  /// Stops the running daemon (it stops its agents) and starts the bundled
+  /// one; chats reopen through session/load as they are opened.
+  Future<void> restartDaemon() async {
+    final lsof = await Process.run('lsof', [
+      '-a',
+      '-c',
+      'nushid',
+      '-t',
+      '$dataDir/nushid.sock',
+    ]);
+    for (final pid in '${lsof.stdout}'.split('\n')) {
+      if (int.tryParse(pid) case final pid?) Process.killPid(pid);
+    }
+    // The first ping that fails starts the bundled daemon.
+    _launched = DateTime(0);
+    for (var i = 0; i < 50 && connected; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      await _ping();
     }
   }
 

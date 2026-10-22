@@ -28,10 +28,13 @@ Future<void> showChatMenu(
   required VoidCallback onRename,
 }) async {
   final theme = NushiTheme.of(context);
+  // An older daemon lacks these: they show, unavailable.
+  final can = daemon.canManageChats;
   PopupMenuItem<String> item(String value, String label) => PopupMenuItem(
     value: value,
     height: 30,
-    child: Text(label, style: theme.ui(theme.t.text)),
+    enabled: can,
+    child: Text(label, style: theme.ui(can ? theme.t.text : theme.t.textMuted)),
   );
   final picked = await showMenu<String>(
     context: context,

@@ -2,8 +2,9 @@
 export PATH := $(HOME)/.pub-cache/bin:$(PATH)
 BUF := go run github.com/bufbuild/buf/cmd/buf@v1.75.0
 DATA := $(HOME)/Library/Application Support/Nushi Next
+RELEASE := app/build/macos/Build/Products/Release/Nushi Next.app
 
-.PHONY: run daemon stop app gen test lines
+.PHONY: run daemon stop app package install gen test lines
 
 # Starts the daemon in the background (unless one is running), then the app.
 run: daemon app
@@ -18,6 +19,18 @@ stop:
 
 app:
 	cd app && flutter run -d macos
+
+# A release app with nushid inside, ad-hoc signed. The app starts its
+# nushid when no daemon is running.
+package:
+	cd app && flutter build macos --release
+	go build -o "$(RELEASE)/Contents/MacOS/nushid" ./cmd/nushid
+	codesign --force --deep --sign - "$(RELEASE)"
+
+install: package
+	mkdir -p "$(HOME)/Applications"
+	rm -rf "$(HOME)/Applications/Nushi Next.app"
+	ditto "$(RELEASE)" "$(HOME)/Applications/Nushi Next.app"
 
 gen:
 	$(BUF) lint

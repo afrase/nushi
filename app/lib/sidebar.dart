@@ -131,6 +131,61 @@ class _SidebarState extends State<Sidebar> {
               ],
             ),
           ),
+          if (widget.daemon.daemonApi < apiVersion) _Outdated(widget.daemon),
+        ],
+      ),
+    );
+  }
+}
+
+/// Says the daemon is older than the app, with a way to restart it.
+class _Outdated extends StatefulWidget {
+  const _Outdated(this.daemon);
+
+  final Daemon daemon;
+
+  @override
+  State<_Outdated> createState() => _OutdatedState();
+}
+
+class _OutdatedState extends State<_Outdated> {
+  bool _restarting = false;
+
+  Future<void> _restart() async {
+    setState(() => _restarting = true);
+    await tryOrShow(context, widget.daemon.restartDaemon);
+    if (mounted) setState(() => _restarting = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: t.borderSubtle)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'The daemon is older than this app, so some features are '
+            'unavailable. Restarting it stops running turns; chats reopen '
+            'as you open them.',
+            style: theme.ui(t.textSecondary, size: 12),
+          ),
+          const SizedBox(height: 8),
+          if (bundledDaemon != null)
+            Button(
+              label: _restarting ? 'Restarting…' : 'Restart daemon',
+              onPressed: _restarting ? null : _restart,
+            )
+          else
+            Text(
+              'make stop daemon',
+              style: theme.code(t.textMuted, size: 11.5),
+            ),
         ],
       ),
     );
@@ -202,7 +257,8 @@ class _ChatRowState extends State<_ChatRow> {
 
   void _tap() {
     final now = DateTime.now();
-    if (now.difference(_lastTap) < kDoubleTapTimeout) {
+    if (now.difference(_lastTap) < kDoubleTapTimeout &&
+        widget.daemon.canManageChats) {
       setState(() => _renaming = true);
     }
     _lastTap = now;

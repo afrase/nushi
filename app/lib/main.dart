@@ -74,7 +74,9 @@ class _Shell extends StatelessWidget {
       if (!daemon.connected) {
         return Center(
           child: Text(
-            'Daemon not running',
+            bundledDaemon == null
+                ? 'Daemon not running'
+                : 'Starting the daemon…',
             style: theme.ui(theme.t.textSecondary),
           ),
         );
@@ -190,7 +192,9 @@ class _HeaderState extends State<_Header> {
                     onDone: () => setState(() => _renaming = false),
                   )
                 : GestureDetector(
-                    onDoubleTap: () => setState(() => _renaming = true),
+                    onDoubleTap: widget.daemon.canManageChats
+                        ? () => setState(() => _renaming = true)
+                        : null,
                     child: Text(
                       chat.title.isEmpty ? 'New chat' : chat.title,
                       maxLines: 1,

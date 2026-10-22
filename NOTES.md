@@ -1,33 +1,27 @@
 # Notes
 
-## Summary (2026-10-22, after step 18)
+## Summary (2026-10-23, after step 21)
 
-Milestone D (steps 11–18) is done, one commit each on `main` (not pushed), on top of steps 1–10. `make test` passes: Go unit tests, three end-to-end tests against the fake agent (app quit, daemon restart, stopping a turn), the transport and markdown package tests, and the app's tests. Every step was looked at in the running app against live Claude (claude-agent-acp 0.94.0, Claude Code 2.1.308), at 1280×800 and 1024×700, dark and light; thoughts and long chats were also tried with the fake agent.
+Milestone E (steps 19–21) is done, one commit each on `main` (not pushed). `make test` passes: Go unit tests, four end-to-end tests against the fake agent (app quit, daemon restart, stopping a turn, and now rename/archive/remove), the transport and markdown package tests, and the app's tests. Each step was looked at in the running app against live Claude (claude-agent-acp 0.94.0), at 1280×800 and 1024×700; step 21 with the installed app opened through LaunchServices (`open`, as Finder does).
 
-**What works** (on top of steps 1–10: chats with Claude in any folder, permission prompts and questions as cards, pickers, a sidebar of chats that survive app quits and daemon restarts, and the Changes diff viewer)
-- The POC's look, light and dark: its tokens, bundled fonts, buttons, pickers and status dots; sidebar, chat header, transcript and composer laid out like its views.
-- Markdown that streams cleanly (the POC's healer in front of `flutter_markdown_plus`, in `packages/markdown`): highlighted code blocks with a language label, copy button and sideways scroll; tables, quotes, lists; links open in the browser (http and https); a whole transcript is one selection.
-- Tool calls as one-line summaries by kind (file read, command run, file edited with `+n −m`), runs of calls grouped into one line, failures in red, commands' output in a monospace block, edits as compact side-by-side diffs (`diff_view`).
-- Plans as one checklist per turn that ticks off in place, with the current step above the composer; thoughts as a dim, collapsed Thinking line (fake agent only, see below).
-- Stop (button and Escape, `session/cancel`), a ticking "working · 12s", notices for turns that end otherwise (Stopped, refused, limits, errors), and sidebar marks for chats that work and chats that need you.
-- The composer: Enter/Shift-Enter, grows to ten lines, `/` commands and `@` files with autocomplete (files go as resource links), Up recalls the last prompt.
-- Long chats build lazily, open at the bottom, follow it, stop following when scrolled up, and offer "Jump to latest".
-- Select text for Reply (quoted in the composer) or a side question (a forked session in a panel beside the chat, gone when closed).
+**What works** (on top of milestones A–D: chats with Claude in any folder, prompts and questions as cards, pickers, a sidebar that survives app quits and daemon restarts, the diff viewer, clean markdown, readable tool calls, plans, stop, the composer, long chats and side questions)
+- Rename a chat by double-clicking it in the sidebar or its title in the header, or from its menu (right-click, or ⋯ in the header). The name is kept in the chat's session file and wins over Claude's title.
+- Archive: cancels a running turn (or a waiting prompt), stops the agent, moves the chat to a collapsed Archived group at the bottom of the sidebar; opened, it is read-only with Unarchive, which replays it through `session/load` and carries on.
+- Remove: after a confirmation that names `claude --resume <id>`, cancels the turn, stops the agent and deletes Nushi's session file. Claude's own history stays; a removed chat was resumed from the terminal to check.
+- Usage: a context ring and percentage by Send (counts and the last turn's tokens on hover), and the session's cost in the header, only from what Claude reports. It survives an app quit; after a daemon restart it comes back with the next turn.
+- `make package` builds a release `Nushi Next.app` with `nushid` inside, ad-hoc signed; `make install` puts it in `~/Applications`. The app starts its bundled daemon when none answers (through your login shell, detached), never stops one by itself, and against an older daemon shows which features are unavailable and offers "Restart daemon". `make run` works as before.
 
-**What doesn't (yet)**
-- Claude sends no thoughts: recent models stream thinking "omitted", and no setting tried changed it. The Thinking line is built and tested with the fake agent only.
-- Plans show only when Claude's todo tools are on. Nushi leaves that to Claude's own config: `"env": {"CLAUDE_CODE_ENABLE_TODO_TOOLS": "1"}` in `~/.claude/settings.json`.
-- Copying a selection across several blocks loses the line breaks between them (Flutter's `SelectionArea`).
-- Command output shows when the command ends, not while it runs (Claude sends it at the end; the terminal capability isn't offered).
-- Each streamed chunk re-parses its whole message; fine for normal replies, worth a look for very long ones.
-- Side questions: one per chat at a time, no pickers, and they end when the chat's panel closes or you switch chats.
-- Still not done from milestone C: deleting, archiving or renaming chats; usage and cost; a packaged `.app`.
+**What doesn't (yet)** (carried over from step 18, still true)
+- Claude sends no thoughts (recent models stream thinking "omitted"); the Thinking line is tried with the fake agent only.
+- Plans show only when Claude's todo tools are on (`CLAUDE_CODE_ENABLE_TODO_TOOLS=1` in Claude's own settings).
+- Copying a selection across several blocks loses the line breaks between them; command output shows when the command ends; each streamed chunk re-parses its message; one side question per chat.
+- New in E: an archived chat shows no history after a daemon restart until it is unarchived (showing it would mean starting an agent). After `session/load` the cost Claude reports sometimes restarts from zero (see ACP quirks). After a reboot nothing runs until the app is opened (no launchd agent).
 
-**Decisions to revisit**: see [the list below](#decisions-to-revisit). Most worth a look: the markdown package being `flutter_markdown_plus` plus the healer rather than the POC's renderer; tool calls collapsed by default, edits included; keeping the native title bar; light/dark following the system rather than the POC's dark default; side chats sharing the chat's agent process.
+**Decisions to revisit**: see [the list below](#decisions-to-revisit). Most worth a look for E: starting the daemon through the login shell rather than a launchd agent ([ADR 0013](docs/adr/0013-app-starts-its-daemon.md)); archived chats keeping their transcript only in the daemon's memory; the menu items an older daemon lacks shown disabled rather than hidden; the context ring's 70%/90% colors.
 
-**Size**: the app is 3,559 lines of Dart (limit about 7,000), plus 650 in packages (the transport 131, markdown 519); the daemon is 2,009 lines of Go (limit 5,000) and the ACP client 773 (limit 2,000). The largest hand-written files are `acp/internal/acpgen/main.go` (393) and `app/lib/composer.dart` (376). Steps 11, 12, 16 and 18 went over the ~500-lines-per-step tripwire (11 by the most, 1,249, restyling every view); what pushed each is under "Tripwires crossed".
+**Size**: the app is 4,191 lines of Dart (limit about 7,000), plus 650 in packages; the daemon is 2,219 lines of Go (limit 5,000) and the ACP client 793 (limit 2,000). No hand-written file is over 400 lines (the largest: `acp/internal/acpgen/main.go` 393, `app/lib/composer.dart` 379). Step 19 went over the ~500-lines-per-step tripwire (755); see "Tripwires crossed".
 
-**Test data left behind**: none in the data folder (`~/Library/Application Support/Nushi Next` has only its token and log; I removed the test chats and the remembered mode). Claude keeps its own history of the test sessions under `~/.claude/projects/` (folders named after this session's scratch directories).
+**Left behind by the testing**: the installed `~/Applications/Nushi Next.app`. The data folder has only its token and log again (test chats removed, daemon stopped). Claude keeps its history of the test sessions under `~/.claude/projects/` (folders named after this session's scratch directory). One test prompt ("write an essay") made Claude create a doc in your claude.ai account through your Claude Docs connector (`https://claude.ai/artifact/K66gq1HiHcMcSXbRRZZ819`, an outline about Go's history); delete it if you don't want it.
 
 ## Line counts
 
@@ -57,9 +51,10 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 18. Ask about a selection | 2009 | 773 | 3559 | 650 |
 | 19. Rename, archive, remove | 2179 | 773 | 3968 | 650 |
 | 20. Usage and cost | 2219 | 793 | 4070 | 650 |
+| 21. A packaged app | 2219 | 793 | 4191 | 650 |
 
 Tripwires crossed:
-Lines added per step, code and tests, without generated code (the tripwire is about 500): 1: 533, 2: 1,502, 3: 239, 4: 437, 5: 739, 6: 639, 7: 464, 8: 537, 9: 265, 10: 528, 11: 1,249, 12: 625, 13: 476, 14: 343, 15: 351, 16: 492, 17: 298, 18: 666.
+Lines added per step, code and tests, without generated code (the tripwire is about 500): 1: 533, 2: 1,502, 3: 239, 4: 437, 5: 739, 6: 639, 7: 464, 8: 537, 9: 265, 10: 528, 11: 1,249, 12: 625, 13: 476, 14: 343, 15: 351, 16: 492, 17: 298, 18: 666, 19: 755, 20: 223, 21: 146.
 - Step 1 (533): the Unix-socket transport package and its tests came with the skeleton.
 - Step 2 (1,502): the whole ACP client landed in this step (JSON-RPC framing, client and the schema-to-Go type generator, about 660 lines), plus the first real chat screen and the daemon's chat feature. None of it is for later steps.
 - Step 5 (739): the question card is the app's biggest widget (267 lines: options, multi-select, Other boxes, digit keys); reading the form in order, and two fixes to the type generator.
@@ -70,6 +65,7 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 - Step 12 (625): the healer lifted from the POC (300 lines, about half of the POC's) and its tests, the code block builder, and the style mapping.
 - Step 16 (492) and 18 (666): each touched both sides. Step 18 is the fork and close calls in the ACP client (hand-written, `session/fork` isn't in the pinned schema), routing a shared agent's updates to the chat or its side chats, two RPCs, a test, and in the app the selection popover, Reply, and the side panel with its own transcript and composer.
 - Milestone D (steps 11–18) grew the app from 1,402 to 3,559 lines of Dart (limit about 7,000), plus 519 in the new markdown package; the daemon from 1,662 to 2,009 lines of Go and the ACP client from 716 to 773.
+- Milestone E (steps 19–21) grew the app from 3,559 to 4,191 lines of Dart and the daemon from 2,009 to 2,219 lines of Go; the ACP client from 773 to 793 (the prompt result's unstable `usage`).
 - Step 19 (755 added, 72 removed): both sides again. The daemon's rename/archive/remove (`manage.go`, 114) and their RPCs; an end-to-end test (75); in the app the chat menu, the remove confirmation and the inline rename field (`chat_menu.dart`, 181), the sidebar's archived group and double-click, the header's title and menu, and the archived bar.
 - `acp/internal/acpgen/main.go` reached 407 lines in step 10's trim pass; it was trimmed to 393.
 
@@ -111,12 +107,21 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 7. Open a long chat (or the fake agent's `many`): it opens at the bottom, follows new text, stops following when you scroll up and shows "Jump to latest".
 8. Select a sentence of a reply: Reply quotes it in the composer. Select another: Side question opens a panel; ask something there, and Claude answers knowing the chat. Close the panel and ask the main chat what you asked last: it never saw the side question.
 
+## Milestone E demo (steps 19–21): loose ends
+
+1. `make stop`, then `make install`. Open `~/Applications/Nushi Next.app` from Finder. It says "Starting the daemon…" for a moment, then the sidebar shows (`pgrep -lf nushid` shows the bundled one, its parent launchd).
+2. Start a chat, ask for something that runs a command (`go version`): the agent has your PATH. Chat a few turns: the ring by Send fills (hover for the counts and the last turn's tokens) and the cost in the header goes up.
+3. Ask for a 400-word story and quit the app (⌘Q) while it streams. Wait, reopen: the story is complete, the cost and ring are there.
+4. Double-click the chat's title (sidebar or header), type a name, Enter. Start a long reply and pick ⋯ ▸ Archive: the reply stops, the chat moves under Archived. Open it: read-only, with Unarchive; press it, the transcript replays, and you can keep chatting.
+5. Right-click another chat ▸ Remove…: the dialog says Claude keeps its history; confirm, it's gone. `claude --resume <id>` in its folder still opens it.
+6. Older daemon: quit the app, `make stop`, start a step-18 build of `nushid` (`git worktree add /tmp/old a7c4381 && (cd /tmp/old && go build -o /tmp/nushid-old ./cmd/nushid) && /tmp/nushid-old &`), open the app: chats work, the menu's items are greyed out, and the sidebar offers "Restart daemon". Press it: the bundled daemon takes over and the open chat reloads.
+
 ## ACP quirks
 
 - `session/new` requires `mcpServers`: send `[]`, never `null`.
 - claude-agent-acp 0.94.0 puts a `messageId` on every `agent_message_chunk`; chunks are grouped into messages by it (by the last message when it is missing).
 - The adapter logs progress (`[session/create] ...`) on stderr; nushid copies it into its log.
-- Usage (claude-agent-acp 0.94.0, step 20): each turn ends with two `usage_update`s, `{used, size}` and then the same with `cost: {amount, currency: "USD"}`, the session's cost so far. `size` was 1,000,000 for Opus 5.5 here; `used` is the context after the turn. The cost is cumulative over the whole session, across agent processes: after `session/load` the next turn's cost carries on from the earlier ones. `session/load` itself sends no `usage_update`, so a reopened chat has no usage until its next turn. One `usage_update` after a load also carried `_meta._claude/rateLimit` (five-hour and seven-day utilization); not shown. The prompt result carries ACP's unstable `usage` (`inputTokens`, `outputTokens`, `cachedReadTokens`, `cachedWriteTokens`, `totalTokens`, summed over the turn's model calls, so cache reads can exceed the context) and a `_meta.quota` with the same per model.
+- Usage (claude-agent-acp 0.94.0, step 20): each turn ends with two `usage_update`s, `{used, size}` and then the same with `cost: {amount, currency: "USD"}`, the session's cost so far. `size` was 1,000,000 for Opus 5.5 here; `used` is the context after the turn. The cost is the session's so far, but across agent processes it isn't reliable: in one probe the first turn after `session/load` carried on from the earlier turns ($0.19 → $0.22), in the app after a daemon restart it started again near zero ($0.15 → $0.02). Nushi shows what is reported. `session/load` itself sends no `usage_update`, so a reopened chat has no usage until its next turn. One `usage_update` after a load also carried `_meta._claude/rateLimit` (five-hour and seven-day utilization); not shown. The prompt result carries ACP's unstable `usage` (`inputTokens`, `outputTokens`, `cachedReadTokens`, `cachedWriteTokens`, `totalTokens`, summed over the turn's model calls, so cache reads can exceed the context) and a `_meta.quota` with the same per model.
 - Claude names its sessions itself: soon after the first prompt it sends `session_info_update` with a short title ("Apple" for "Reply with just the word apple."). Nushi uses the first line of the first prompt until then.
 - `session/load` on Claude replays the user's messages, the agent's messages and the tool calls (with their final status and output), not permission prompts or questions. Messages carry `messageId`s in the replay too. Loading a session takes under a second once npx has the adapter.
 - Claude's tool calls arrive as a `tool_call` with a generic title ("Terminal", "Read File") and empty `rawInput`, then `tool_call_update`s that set the real title (the command, "Read notes.txt"), then content. The first content is the command's description; the final one (with `status: completed`) is the output in a fenced block. Each update's `content` replaces the previous one.
@@ -186,6 +191,11 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 - The sidebar's Archived group is collapsed at each start (not remembered). A click opens a chat right away; a second click within the double-tap time renames it (Flutter's double-tap recognizer would delay every single click). Right-click, or the header's ⋯, opens the menu: Rename, Archive/Unarchive, Remove….
 
 - Usage (step 20) is only what the agent reports: the context meter (a ring and a percentage by Send, the counts and the last turn's tokens on hover) shows once a `usage_update` arrives, and the cost sits in the chat header once one carries a cost. An update without a cost keeps the last cost shown (Claude sends one without, then one with, each turn). The daemon keeps usage in memory with the chat, so it survives an app quit but not a daemon restart; it isn't stored. The ring turns amber past 70% and red past 90%. The prompt result's `usage` is read through a hand-written `acp.PromptResult` (unstable in ACP v1, not in the pinned schema).
+
+- The packaged app (step 21) finds `nushid` next to its own executable (`Contents/MacOS/nushid`) and starts it when a ping fails, at most every ten seconds, as `$SHELL -l -c "exec '<nushid>' >>'<data>/nushid.log' 2>&1"`, detached ([ADR 0013](docs/adr/0013-app-starts-its-daemon.md)). A debug build (`make run`) has no bundled daemon, so it never starts one. A path with a `'` in it isn't started (quoting differs between shells).
+- "Older" means the daemon's `Ping` API version is below the app's (`apiVersion` in `daemon.dart`, kept equal to `internal/api.Version`). Rename, archive and remove need 14: with an older daemon their menu items show greyed out and double-click doesn't rename. Usage (15) simply doesn't show. The banner sits at the bottom of the sidebar.
+- "Restart daemon" finds the daemon with `lsof -a -c nushid -t <socket>`, sends it SIGTERM (it stops its agents), waits for pings to fail, then starts the bundled one. A turn running at that moment is lost, as with any daemon restart; the banner says so.
+- `make package` is `flutter build macos --release`, `go build` into the bundle, then `codesign --force --deep --sign -` (ad-hoc). `make install` replaces `~/Applications/Nushi Next.app` with `ditto`.
 
 - Connect for Go is v1 (`connectrpc.com/connect` v1.21), not v2: v1 is what the Dart generator's docs and the POC used, and nothing here needs v2.
 - `http2` for Dart stays on 2.x: `connectrpc` 2.0.1 doesn't resolve with `http2` 3.x.
