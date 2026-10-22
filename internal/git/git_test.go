@@ -33,7 +33,7 @@ func TestChanges(t *testing.T) {
 	if _, err := Changes(ctx, repo); err == nil {
 		t.Error("a folder outside git had changes")
 	}
-	git(t, repo, "init", "-q")
+	git(t, repo, "init", "-q", "-b", "main")
 	write(t, filepath.Join(repo, "sub", "kept.txt"), "one\n")
 	if got, err := Changes(ctx, repo); err != nil || len(got) != 1 || got[0].Status != "added" {
 		t.Errorf("before the first commit: %+v, %v", got, err) // no HEAD yet
@@ -64,5 +64,9 @@ func TestChanges(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("changes =\n%+v\nwant\n%+v", got, want)
+	}
+	st, err := Status(ctx, filepath.Join(repo, "sub"))
+	if want := (model.FolderStatus{Branch: "main", Files: 5, Added: 3, Removed: 1}); err != nil || st != want {
+		t.Errorf("status = %+v, %v; want %+v", st, err, want)
 	}
 }

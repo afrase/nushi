@@ -150,6 +150,15 @@ abstract final class NushiService {
     nushiv1nushi.GetDiffResponse.new,
   );
 
+  /// Sums up a folder's uncommitted changes (as GetDiff lists them) and names
+  /// its branch.
+  static const getFolderStatus = connect.Spec(
+    '/$name/GetFolderStatus',
+    connect.StreamType.unary,
+    nushiv1nushi.GetFolderStatusRequest.new,
+    nushiv1nushi.GetFolderStatusResponse.new,
+  );
+
   /// Lists a folder's files (up to 20,000) for @-mentions: in a git
   /// repository the ones git doesn't ignore.
   static const listFiles = connect.Spec(

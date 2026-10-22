@@ -9,14 +9,20 @@ import 'daemon.dart';
 import 'theme/theme.dart';
 
 /// The chat's folder: its name, then its parent path, dimmed ("No folder"
-/// for a scratch folder). A click offers the recent folders and "Choose
-/// folder…", and moves the chat to the one picked. Not while the agent works
-/// or waits on the user.
+/// for a scratch folder), on one line or, [stacked], on two. A click offers
+/// the recent folders and "Choose folder…", and moves the chat to the one
+/// picked. Not while the agent works or waits on the user.
 class FolderButton extends StatelessWidget {
-  const FolderButton({super.key, required this.chat, required this.daemon});
+  const FolderButton({
+    super.key,
+    required this.chat,
+    required this.daemon,
+    this.stacked = false,
+  });
 
   final ChatState chat;
   final Daemon daemon;
+  final bool stacked;
 
   Future<void> _pick(BuildContext context) async {
     final theme = NushiTheme.of(context);
@@ -50,6 +56,41 @@ class FolderButton extends StatelessWidget {
     await tryOrShow(context, () => daemon.moveChat(chat.id, folder));
   }
 
+  /// The name, and the parent path under it, to the right.
+  Widget _stacked(NushiTheme theme, bool enabled) {
+    final t = theme.t;
+    final folder = chat.folder;
+    final slash = folder.lastIndexOf('/');
+    final scratch = isScratch(folder);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                scratch ? 'No folder' : folder.substring(slash + 1),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.ui(t.text, size: 12, weight: FontWeight.w500),
+              ),
+            ),
+            if (enabled)
+              Icon(Icons.expand_more, size: 14, color: t.textSecondary),
+          ],
+        ),
+        if (!scratch)
+          Text(
+            _home(folder.substring(0, slash)),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.ui(t.textMuted, size: 11.5),
+          ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
@@ -67,19 +108,27 @@ class FolderButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(NushiTheme.control),
         onTap: enabled ? () => _pick(context) : null,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.folder_outlined, size: 14, color: t.textSecondary),
-              const SizedBox(width: 6),
-              Flexible(child: _FolderName(chat.folder, theme: theme)),
-              if (enabled) ...[
-                const SizedBox(width: 2),
-                Icon(Icons.expand_more, size: 14, color: t.textMuted),
-              ],
-            ],
-          ),
+          padding: stacked
+              ? const EdgeInsets.only(left: 6)
+              : const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          child: stacked
+              ? _stacked(theme, enabled)
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.folder_outlined,
+                      size: 14,
+                      color: t.textSecondary,
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(child: _FolderName(chat.folder, theme: theme)),
+                    if (enabled) ...[
+                      const SizedBox(width: 2),
+                      Icon(Icons.expand_more, size: 14, color: t.textMuted),
+                    ],
+                  ],
+                ),
         ),
       ),
     );

@@ -7,7 +7,6 @@ import 'gen/nushi/v1/nushi.pb.dart';
 import 'pickers.dart';
 import 'theme/theme.dart';
 import 'thinking.dart';
-import 'usage.dart';
 import 'widgets.dart';
 
 /// Stops the chat's running turn.
@@ -293,8 +292,6 @@ class _ComposerState extends State<Composer> {
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
-              ContextMeter(chat.usage),
               const SizedBox(width: 10),
               if (chat.started != null)
                 Button(

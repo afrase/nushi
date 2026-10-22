@@ -5,10 +5,10 @@ import 'chat.dart';
 import 'chat_menu.dart';
 import 'chat_view.dart';
 import 'daemon.dart';
+import 'details_panel.dart';
 import 'folder_button.dart';
 import 'sidebar.dart';
 import 'theme/theme.dart';
-import 'usage.dart';
 import 'widgets.dart';
 
 void main() => runApp(NushiApp(daemon: Daemon()));
@@ -119,42 +119,70 @@ class _ChatPaneState extends State<_ChatPane> {
   bool _changes = false;
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      ListenableBuilder(
-        listenable: widget.chat,
-        builder: (context, _) => _Header(
-          widget.chat,
-          widget.daemon,
-          changes: _changes,
-          onChanges: (v) => setState(() => _changes = v),
-        ),
-      ),
-      Expanded(
-        child: _changes
-            ? ChangesView(chat: widget.chat, daemon: widget.daemon)
-            : ChatView(chat: widget.chat, daemon: widget.daemon),
-      ),
-    ],
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) => ValueListenableBuilder(
+      valueListenable: showDetails,
+      builder: (context, show, _) {
+        // The panel goes when the chat would get too narrow.
+        final fits = box.maxWidth >= 820;
+        final panel = show && fits && !_changes;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ListenableBuilder(
+              listenable: widget.chat,
+              builder: (context, _) => _Header(
+                widget.chat,
+                widget.daemon,
+                changes: _changes,
+                onChanges: (v) => setState(() => _changes = v),
+                panel: panel,
+                onPanel: fits && !_changes
+                    ? () => showDetails.value = !show
+                    : null,
+              ),
+            ),
+            Expanded(
+              child: _changes
+                  ? ChangesView(chat: widget.chat, daemon: widget.daemon)
+                  : ChatView(
+                      chat: widget.chat,
+                      daemon: widget.daemon,
+                      details: panel
+                          ? DetailsPanel(
+                              chat: widget.chat,
+                              daemon: widget.daemon,
+                              onChanges: () => setState(() => _changes = true),
+                            )
+                          : null,
+                    ),
+            ),
+          ],
+        );
+      },
+    ),
   );
 }
 
 /// The chat's header: its title (double-click renames it), the agent, its
-/// model and status, the folder, the Chat | Changes switch and the chat's
-/// menu.
+/// model and status, the folder while the details panel is hidden, the
+/// Chat | Changes switch, the panel's button and the chat's menu.
 class _Header extends StatefulWidget {
   const _Header(
     this.chat,
     this.daemon, {
     required this.changes,
     required this.onChanges,
+    required this.panel,
+    required this.onPanel,
   });
 
   final ChatState chat;
   final Daemon daemon;
   final bool changes;
   final ValueChanged<bool> onChanges;
+  final bool panel; // the details panel shows, with the folder in it
+  final VoidCallback? onPanel; // shows or hides it; null when it can't show
 
   @override
   State<_Header> createState() => _HeaderState();
@@ -223,13 +251,16 @@ class _HeaderState extends State<_Header> {
             const SizedBox(width: 5),
             ChatStatusWord(chat, style: meta),
           ],
-          const SizedBox(width: 10),
-          CostLabel(chat.usage, style: meta),
           const SizedBox(width: 16),
           Expanded(
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: FolderButton(chat: chat, daemon: widget.daemon),
+            // The folder, unless the panel has it or there's no room.
+            child: LayoutBuilder(
+              builder: (context, box) => widget.panel || box.maxWidth < 90
+                  ? const SizedBox.shrink()
+                  : Align(
+                      alignment: Alignment.centerRight,
+                      child: FolderButton(chat: chat, daemon: widget.daemon),
+                    ),
             ),
           ),
           const SizedBox(width: 12),
@@ -239,6 +270,18 @@ class _HeaderState extends State<_Header> {
             onChanged: widget.onChanges,
           ),
           const SizedBox(width: 4),
+          IconButton(
+            tooltip: widget.onPanel == null
+                ? 'The window is too narrow for the details panel'
+                : widget.panel
+                ? 'Hide details'
+                : 'Show details',
+            iconSize: 16,
+            color: widget.panel ? t.text : t.textSecondary,
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.view_sidebar_outlined),
+            onPressed: widget.onPanel,
+          ),
           Builder(
             builder: (context) => IconButton(
               tooltip: 'Chat menu',

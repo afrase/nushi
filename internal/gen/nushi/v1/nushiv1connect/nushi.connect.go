@@ -70,6 +70,9 @@ const (
 	NushiServiceSetConfigOptionProcedure = "/nushi.v1.NushiService/SetConfigOption"
 	// NushiServiceGetDiffProcedure is the fully-qualified name of the NushiService's GetDiff RPC.
 	NushiServiceGetDiffProcedure = "/nushi.v1.NushiService/GetDiff"
+	// NushiServiceGetFolderStatusProcedure is the fully-qualified name of the NushiService's
+	// GetFolderStatus RPC.
+	NushiServiceGetFolderStatusProcedure = "/nushi.v1.NushiService/GetFolderStatus"
 	// NushiServiceListFilesProcedure is the fully-qualified name of the NushiService's ListFiles RPC.
 	NushiServiceListFilesProcedure = "/nushi.v1.NushiService/ListFiles"
 	// NushiServiceEventsProcedure is the fully-qualified name of the NushiService's Events RPC.
@@ -121,6 +124,9 @@ type NushiServiceClient interface {
 	// Returns a folder's uncommitted changes against HEAD, untracked files
 	// included.
 	GetDiff(context.Context, *connect.Request[v1.GetDiffRequest]) (*connect.Response[v1.GetDiffResponse], error)
+	// Sums up a folder's uncommitted changes (as GetDiff lists them) and names
+	// its branch.
+	GetFolderStatus(context.Context, *connect.Request[v1.GetFolderStatusRequest]) (*connect.Response[v1.GetFolderStatusResponse], error)
 	// Lists a folder's files (up to 20,000) for @-mentions: in a git
 	// repository the ones git doesn't ignore.
 	ListFiles(context.Context, *connect.Request[v1.ListFilesRequest]) (*connect.Response[v1.ListFilesResponse], error)
@@ -236,6 +242,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("GetDiff")),
 			connect.WithClientOptions(opts...),
 		),
+		getFolderStatus: connect.NewClient[v1.GetFolderStatusRequest, v1.GetFolderStatusResponse](
+			httpClient,
+			baseURL+NushiServiceGetFolderStatusProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("GetFolderStatus")),
+			connect.WithClientOptions(opts...),
+		),
 		listFiles: connect.NewClient[v1.ListFilesRequest, v1.ListFilesResponse](
 			httpClient,
 			baseURL+NushiServiceListFilesProcedure,
@@ -269,6 +281,7 @@ type nushiServiceClient struct {
 	answerQuestion   *connect.Client[v1.AnswerQuestionRequest, v1.AnswerQuestionResponse]
 	setConfigOption  *connect.Client[v1.SetConfigOptionRequest, v1.SetConfigOptionResponse]
 	getDiff          *connect.Client[v1.GetDiffRequest, v1.GetDiffResponse]
+	getFolderStatus  *connect.Client[v1.GetFolderStatusRequest, v1.GetFolderStatusResponse]
 	listFiles        *connect.Client[v1.ListFilesRequest, v1.ListFilesResponse]
 	events           *connect.Client[v1.EventsRequest, v1.EventsResponse]
 }
@@ -353,6 +366,11 @@ func (c *nushiServiceClient) GetDiff(ctx context.Context, req *connect.Request[v
 	return c.getDiff.CallUnary(ctx, req)
 }
 
+// GetFolderStatus calls nushi.v1.NushiService.GetFolderStatus.
+func (c *nushiServiceClient) GetFolderStatus(ctx context.Context, req *connect.Request[v1.GetFolderStatusRequest]) (*connect.Response[v1.GetFolderStatusResponse], error) {
+	return c.getFolderStatus.CallUnary(ctx, req)
+}
+
 // ListFiles calls nushi.v1.NushiService.ListFiles.
 func (c *nushiServiceClient) ListFiles(ctx context.Context, req *connect.Request[v1.ListFilesRequest]) (*connect.Response[v1.ListFilesResponse], error) {
 	return c.listFiles.CallUnary(ctx, req)
@@ -408,6 +426,9 @@ type NushiServiceHandler interface {
 	// Returns a folder's uncommitted changes against HEAD, untracked files
 	// included.
 	GetDiff(context.Context, *connect.Request[v1.GetDiffRequest]) (*connect.Response[v1.GetDiffResponse], error)
+	// Sums up a folder's uncommitted changes (as GetDiff lists them) and names
+	// its branch.
+	GetFolderStatus(context.Context, *connect.Request[v1.GetFolderStatusRequest]) (*connect.Response[v1.GetFolderStatusResponse], error)
 	// Lists a folder's files (up to 20,000) for @-mentions: in a git
 	// repository the ones git doesn't ignore.
 	ListFiles(context.Context, *connect.Request[v1.ListFilesRequest]) (*connect.Response[v1.ListFilesResponse], error)
@@ -519,6 +540,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("GetDiff")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceGetFolderStatusHandler := connect.NewUnaryHandler(
+		NushiServiceGetFolderStatusProcedure,
+		svc.GetFolderStatus,
+		connect.WithSchema(nushiServiceMethods.ByName("GetFolderStatus")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceListFilesHandler := connect.NewUnaryHandler(
 		NushiServiceListFilesProcedure,
 		svc.ListFiles,
@@ -565,6 +592,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceSetConfigOptionHandler.ServeHTTP(w, r)
 		case NushiServiceGetDiffProcedure:
 			nushiServiceGetDiffHandler.ServeHTTP(w, r)
+		case NushiServiceGetFolderStatusProcedure:
+			nushiServiceGetFolderStatusHandler.ServeHTTP(w, r)
 		case NushiServiceListFilesProcedure:
 			nushiServiceListFilesHandler.ServeHTTP(w, r)
 		case NushiServiceEventsProcedure:
@@ -640,6 +669,10 @@ func (UnimplementedNushiServiceHandler) SetConfigOption(context.Context, *connec
 
 func (UnimplementedNushiServiceHandler) GetDiff(context.Context, *connect.Request[v1.GetDiffRequest]) (*connect.Response[v1.GetDiffResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetDiff is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) GetFolderStatus(context.Context, *connect.Request[v1.GetFolderStatusRequest]) (*connect.Response[v1.GetFolderStatusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetFolderStatus is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) ListFiles(context.Context, *connect.Request[v1.ListFilesRequest]) (*connect.Response[v1.ListFilesResponse], error) {

@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/afrase/nushi/internal/model"
@@ -22,12 +23,10 @@ const maxText = 1 << 20
 // files included, with paths relative to the folder. The folder may be
 // anywhere inside a repository.
 func Changes(ctx context.Context, folder string) ([]model.FileChange, error) {
-	if _, err := run(ctx, folder, "rev-parse", "--show-toplevel"); err != nil {
-		return nil, fmt.Errorf("%s is not in a git repository", folder)
+	hasHead, err := repo(ctx, folder)
+	if err != nil {
+		return nil, err
 	}
-	_, err := run(ctx, folder, "rev-parse", "--verify", "-q", "HEAD")
-	hasHead := err == nil
-
 	var changes []model.FileChange
 	if hasHead {
 		out, err := run(ctx, folder, "diff", "HEAD", "--name-status", "-z", "--no-renames", "--relative", "--no-ext-diff", "--no-textconv")
@@ -43,15 +42,11 @@ func Changes(ctx context.Context, folder string) ([]model.FileChange, error) {
 			changes = append(changes, model.FileChange{Path: fields[i+1], Status: status})
 		}
 	}
-	untracked := []string{"ls-files", "-z", "--others", "--exclude-standard"}
-	if !hasHead {
-		untracked = append(untracked, "--cached")
-	}
-	out, err := run(ctx, folder, untracked...)
+	added, err := untracked(ctx, folder, hasHead)
 	if err != nil {
 		return nil, err
 	}
-	for _, p := range split(out) {
+	for _, p := range added {
 		changes = append(changes, model.FileChange{Path: p, Status: "added"})
 	}
 
@@ -81,6 +76,75 @@ func Changes(ctx context.Context, folder string) ([]model.FileChange, error) {
 	return changes, nil
 }
 
+// ErrNotRepository says a folder isn't in a git repository.
+var ErrNotRepository = errors.New("not in a git repository")
+
+// repo checks that folder is in a git repository, and says whether it has
+// a commit checked out.
+func repo(ctx context.Context, folder string) (hasHead bool, err error) {
+	if _, err := run(ctx, folder, "rev-parse", "--show-toplevel"); err != nil {
+		return false, fmt.Errorf("%s is %w", folder, ErrNotRepository)
+	}
+	_, err = run(ctx, folder, "rev-parse", "--verify", "-q", "HEAD")
+	return err == nil, nil
+}
+
+// untracked lists the files that are new to git: untracked ones, and before
+// the first commit every file.
+func untracked(ctx context.Context, folder string, hasHead bool) ([]string, error) {
+	args := []string{"ls-files", "-z", "--others", "--exclude-standard"}
+	if !hasHead {
+		args = append(args, "--cached")
+	}
+	out, err := run(ctx, folder, args...)
+	return split(out), err
+}
+
+// Status sums up the folder's uncommitted changes as Changes lists them
+// (the files, and the lines added and removed; binary and over-large files
+// count no lines), and names the branch checked out, or the commit when
+// none is.
+func Status(ctx context.Context, folder string) (model.FolderStatus, error) {
+	var st model.FolderStatus
+	hasHead, err := repo(ctx, folder)
+	if err != nil {
+		return st, err
+	}
+	if out, err := run(ctx, folder, "symbolic-ref", "--short", "-q", "HEAD"); err == nil {
+		st.Branch = strings.TrimSpace(string(out))
+	} else if out, err := run(ctx, folder, "rev-parse", "--short", "HEAD"); err == nil {
+		st.Branch = strings.TrimSpace(string(out))
+	}
+	if hasHead {
+		out, err := run(ctx, folder, "diff", "HEAD", "--numstat", "-z", "--no-renames", "--relative", "--no-ext-diff", "--no-textconv")
+		if err != nil {
+			return st, err
+		}
+		for _, f := range split(out) { // added, removed ("-" if binary), path
+			added, rest, _ := strings.Cut(f, "\t")
+			removed, _, _ := strings.Cut(rest, "\t")
+			a, _ := strconv.Atoi(added)
+			r, _ := strconv.Atoi(removed)
+			st.Files, st.Added, st.Removed = st.Files+1, st.Added+a, st.Removed+r
+		}
+	}
+	added, err := untracked(ctx, folder, hasHead)
+	if err != nil {
+		return st, err
+	}
+	for _, p := range added {
+		st.Files++
+		b, err := worktree(filepath.Join(folder, p))
+		if err == nil && len(b) <= maxText && bytes.IndexByte(b, 0) < 0 && len(b) > 0 {
+			st.Added += bytes.Count(b, []byte("\n"))
+			if b[len(b)-1] != '\n' {
+				st.Added++
+			}
+		}
+	}
+	return st, nil
+}
+
 // worktree reads a file as git sees it: a symlink is its target's path.
 func worktree(path string) ([]byte, error) {
 	fi, err := os.Lstat(path)
@@ -94,11 +158,6 @@ func worktree(path string) ([]byte, error) {
 	return os.ReadFile(path)
 }
 
-// run runs git in dir, with fsmonitor, external diff and textconv drivers
-// off. Clean filters still run when git compares the work tree (git diff
-// does): a filter only runs if git config defines it, and a repository
-// can't bring config along, so that takes someone who can already write
-// the user's config, as with any git command run there.
 // Files lists up to limit files under folder, relative to it: in a
 // repository, git's tracked and untracked files that aren't ignored;
 // elsewhere, every file outside hidden folders.
@@ -123,6 +182,11 @@ func Files(ctx context.Context, folder string, limit int) ([]string, error) {
 	return files, err
 }
 
+// run runs git in dir, with fsmonitor, external diff and textconv drivers
+// off. Clean filters still run when git compares the work tree (git diff
+// does): a filter only runs if git config defines it, and a repository
+// can't bring config along, so that takes someone who can already write
+// the user's config, as with any git command run there.
 func run(ctx context.Context, dir string, args ...string) ([]byte, error) {
 	cmd := exec.CommandContext(ctx, "git", append([]string{"-c", "core.fsmonitor=false", "-C", dir}, args...)...)
 	cmd.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0")

@@ -10,13 +10,20 @@ import 'theme/theme.dart';
 import 'transcript.dart';
 import 'widgets.dart';
 
-/// A chat's transcript with the composer under it, and a side question in a
-/// panel beside them when one is open. Escape stops a running turn.
+/// A chat's transcript with the composer under it, and beside them a side
+/// question when one is open, or else [details]. Escape stops a running
+/// turn.
 class ChatView extends StatefulWidget {
-  const ChatView({super.key, required this.chat, required this.daemon});
+  const ChatView({
+    super.key,
+    required this.chat,
+    required this.daemon,
+    this.details,
+  });
 
   final ChatState chat;
   final Daemon daemon;
+  final Widget? details;
 
   @override
   State<ChatView> createState() => _ChatViewState();
@@ -119,7 +126,9 @@ class _ChatViewState extends State<ChatView> {
             daemon: widget.daemon,
             quote: _sideQuote,
             onClose: () => setState(_closeSide),
-          ),
+          )
+        else if (widget.details != null)
+          widget.details!,
       ],
     );
   }

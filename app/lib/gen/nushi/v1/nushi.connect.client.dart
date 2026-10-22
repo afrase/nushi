@@ -308,6 +308,25 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Sums up a folder's uncommitted changes (as GetDiff lists them) and names
+  /// its branch.
+  Future<nushiv1nushi.GetFolderStatusResponse> getFolderStatus(
+    nushiv1nushi.GetFolderStatusRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.getFolderStatus,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Lists a folder's files (up to 20,000) for @-mentions: in a git
   /// repository the ones git doesn't ignore.
   Future<nushiv1nushi.ListFilesResponse> listFiles(

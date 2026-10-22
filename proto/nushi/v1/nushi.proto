@@ -48,6 +48,9 @@ service NushiService {
   // Returns a folder's uncommitted changes against HEAD, untracked files
   // included.
   rpc GetDiff(GetDiffRequest) returns (GetDiffResponse);
+  // Sums up a folder's uncommitted changes (as GetDiff lists them) and names
+  // its branch.
+  rpc GetFolderStatus(GetFolderStatusRequest) returns (GetFolderStatusResponse);
   // Lists a folder's files (up to 20,000) for @-mentions: in a git
   // repository the ones git doesn't ignore.
   rpc ListFiles(ListFilesRequest) returns (ListFilesResponse);
@@ -246,6 +249,21 @@ message SetConfigOptionRequest {
 }
 
 message SetConfigOptionResponse {}
+
+message GetFolderStatusRequest {
+  string folder = 1;
+}
+
+message GetFolderStatusResponse {
+  // Whether the folder is in a git repository; nothing else is set if not.
+  bool git = 1;
+  // The branch checked out, or the commit when none is.
+  string branch = 2;
+  int32 files = 3;
+  // Lines added and removed; binary files count none.
+  int32 added = 4;
+  int32 removed = 5;
+}
 
 message GetDiffRequest {
   // An absolute path; it may be anywhere inside a repository.

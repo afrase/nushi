@@ -617,6 +617,37 @@ const SetConfigOptionResponse$json = {
 final $typed_data.Uint8List setConfigOptionResponseDescriptor =
     $convert.base64Decode('ChdTZXRDb25maWdPcHRpb25SZXNwb25zZQ==');
 
+@$core.Deprecated('Use getFolderStatusRequestDescriptor instead')
+const GetFolderStatusRequest$json = {
+  '1': 'GetFolderStatusRequest',
+  '2': [
+    {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
+  ],
+};
+
+/// Descriptor for `GetFolderStatusRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getFolderStatusRequestDescriptor =
+    $convert.base64Decode(
+        'ChZHZXRGb2xkZXJTdGF0dXNSZXF1ZXN0EhYKBmZvbGRlchgBIAEoCVIGZm9sZGVy');
+
+@$core.Deprecated('Use getFolderStatusResponseDescriptor instead')
+const GetFolderStatusResponse$json = {
+  '1': 'GetFolderStatusResponse',
+  '2': [
+    {'1': 'git', '3': 1, '4': 1, '5': 8, '10': 'git'},
+    {'1': 'branch', '3': 2, '4': 1, '5': 9, '10': 'branch'},
+    {'1': 'files', '3': 3, '4': 1, '5': 5, '10': 'files'},
+    {'1': 'added', '3': 4, '4': 1, '5': 5, '10': 'added'},
+    {'1': 'removed', '3': 5, '4': 1, '5': 5, '10': 'removed'},
+  ],
+};
+
+/// Descriptor for `GetFolderStatusResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getFolderStatusResponseDescriptor = $convert.base64Decode(
+    'ChdHZXRGb2xkZXJTdGF0dXNSZXNwb25zZRIQCgNnaXQYASABKAhSA2dpdBIWCgZicmFuY2gYAi'
+    'ABKAlSBmJyYW5jaBIUCgVmaWxlcxgDIAEoBVIFZmlsZXMSFAoFYWRkZWQYBCABKAVSBWFkZGVk'
+    'EhgKB3JlbW92ZWQYBSABKAVSB3JlbW92ZWQ=');
+
 @$core.Deprecated('Use getDiffRequestDescriptor instead')
 const GetDiffRequest$json = {
   '1': 'GetDiffRequest',
@@ -1058,6 +1089,11 @@ const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
       '3': '.nushi.v1.GetDiffResponse'
     },
     {
+      '1': 'GetFolderStatus',
+      '2': '.nushi.v1.GetFolderStatusRequest',
+      '3': '.nushi.v1.GetFolderStatusResponse'
+    },
+    {
       '1': 'ListFiles',
       '2': '.nushi.v1.ListFilesRequest',
       '3': '.nushi.v1.ListFilesResponse'
@@ -1118,6 +1154,8 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.SetConfigOptionResponse': SetConfigOptionResponse$json,
   '.nushi.v1.GetDiffRequest': GetDiffRequest$json,
   '.nushi.v1.GetDiffResponse': GetDiffResponse$json,
+  '.nushi.v1.GetFolderStatusRequest': GetFolderStatusRequest$json,
+  '.nushi.v1.GetFolderStatusResponse': GetFolderStatusResponse$json,
   '.nushi.v1.ListFilesRequest': ListFilesRequest$json,
   '.nushi.v1.ListFilesResponse': ListFilesResponse$json,
   '.nushi.v1.EventsRequest': EventsRequest$json,
@@ -1150,6 +1188,8 @@ final $typed_data.Uint8List nushiServiceDescriptor = $convert.base64Decode(
     'GiAubnVzaGkudjEuQW5zd2VyUXVlc3Rpb25SZXNwb25zZRJWCg9TZXRDb25maWdPcHRpb24SIC'
     '5udXNoaS52MS5TZXRDb25maWdPcHRpb25SZXF1ZXN0GiEubnVzaGkudjEuU2V0Q29uZmlnT3B0'
     'aW9uUmVzcG9uc2USPgoHR2V0RGlmZhIYLm51c2hpLnYxLkdldERpZmZSZXF1ZXN0GhkubnVzaG'
-    'kudjEuR2V0RGlmZlJlc3BvbnNlEkQKCUxpc3RGaWxlcxIaLm51c2hpLnYxLkxpc3RGaWxlc1Jl'
-    'cXVlc3QaGy5udXNoaS52MS5MaXN0RmlsZXNSZXNwb25zZRI9CgZFdmVudHMSFy5udXNoaS52MS'
-    '5FdmVudHNSZXF1ZXN0GhgubnVzaGkudjEuRXZlbnRzUmVzcG9uc2UwAQ==');
+    'kudjEuR2V0RGlmZlJlc3BvbnNlElYKD0dldEZvbGRlclN0YXR1cxIgLm51c2hpLnYxLkdldEZv'
+    'bGRlclN0YXR1c1JlcXVlc3QaIS5udXNoaS52MS5HZXRGb2xkZXJTdGF0dXNSZXNwb25zZRJECg'
+    'lMaXN0RmlsZXMSGi5udXNoaS52MS5MaXN0RmlsZXNSZXF1ZXN0GhsubnVzaGkudjEuTGlzdEZp'
+    'bGVzUmVzcG9uc2USPQoGRXZlbnRzEhcubnVzaGkudjEuRXZlbnRzUmVxdWVzdBoYLm51c2hpLn'
+    'YxLkV2ZW50c1Jlc3BvbnNlMAE=');
