@@ -172,12 +172,9 @@ class _Header extends StatelessWidget {
             Text(modelName, style: meta),
           ],
           const SizedBox(width: 10),
-          ChatDot(busy: chat.busy),
+          ChatDot(chat: chat),
           const SizedBox(width: 5),
-          Text(
-            chat.busy ? 'working' : 'idle',
-            style: meta.copyWith(color: chat.busy ? t.running : t.idle),
-          ),
+          ChatStatusWord(chat, style: meta),
           const SizedBox(width: 16),
           Expanded(
             child: Text(

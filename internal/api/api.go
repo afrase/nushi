@@ -19,7 +19,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 10
+const Version = 11
 
 type server struct {
 	chats *chats.Service
@@ -53,7 +53,9 @@ func (s *server) ListChats(context.Context, *connect.Request[nushiv1.ListChatsRe
 	}
 	resp := &nushiv1.ListChatsResponse{}
 	for _, sess := range sessions {
-		resp.Chats = append(resp.Chats, chatProto(sess))
+		c := chatProto(sess)
+		c.Status = statusProto(s.chats.Status(sess.ID))
+		resp.Chats = append(resp.Chats, c)
 	}
 	return connect.NewResponse(resp), nil
 }
@@ -64,7 +66,7 @@ func (s *server) GetChat(_ context.Context, req *connect.Request[nushiv1.GetChat
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 	resp := &nushiv1.GetChatResponse{Chat: chatProto(c.Session), Config: configProto(c.Config),
-		Status: &nushiv1.ChatStatus{Busy: c.Status.Busy, Error: c.Status.Error}, Seq: c.Seq}
+		Status: statusProto(c.Status), Seq: c.Seq}
 	for _, it := range c.Items {
 		resp.Items = append(resp.Items, itemProto(&it))
 	}
@@ -84,6 +86,13 @@ func (s *server) SendPrompt(_ context.Context, req *connect.Request[nushiv1.Send
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
 	return connect.NewResponse(&nushiv1.SendPromptResponse{}), nil
+}
+
+func (s *server) CancelTurn(_ context.Context, req *connect.Request[nushiv1.CancelTurnRequest]) (*connect.Response[nushiv1.CancelTurnResponse], error) {
+	if err := s.chats.Cancel(req.Msg.ChatId); err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	return connect.NewResponse(&nushiv1.CancelTurnResponse{}), nil
 }
 
 func (s *server) AnswerPermission(_ context.Context, req *connect.Request[nushiv1.AnswerPermissionRequest]) (*connect.Response[nushiv1.AnswerPermissionResponse], error) {
@@ -150,6 +159,7 @@ var itemKinds = map[model.ItemKind]nushiv1.ItemKind{
 	model.Question:     nushiv1.ItemKind_ITEM_KIND_QUESTION,
 	model.Thought:      nushiv1.ItemKind_ITEM_KIND_THOUGHT,
 	model.Plan:         nushiv1.ItemKind_ITEM_KIND_PLAN,
+	model.Notice:       nushiv1.ItemKind_ITEM_KIND_NOTICE,
 }
 
 var fieldTypes = map[model.FieldType]nushiv1.FieldType{
@@ -171,7 +181,7 @@ func toProto(e model.Event) *nushiv1.EventsResponse {
 	case e.Config != nil:
 		out.Kind = &nushiv1.EventsResponse_Config{Config: &nushiv1.ChatConfig{Options: configProto(e.Config)}}
 	case e.Status != nil:
-		out.Kind = &nushiv1.EventsResponse_Status{Status: &nushiv1.ChatStatus{Busy: e.Status.Busy, Error: e.Status.Error}}
+		out.Kind = &nushiv1.EventsResponse_Status{Status: statusProto(*e.Status)}
 	}
 	return out
 }
@@ -190,6 +200,14 @@ func itemProto(it *model.Item) *nushiv1.Item {
 	for _, f := range it.Fields {
 		out.Fields = append(out.Fields, &nushiv1.Field{Id: f.ID, Title: f.Title, Description: f.Description,
 			Type: fieldTypes[f.Type], Options: optionsProto(f.Options), Required: f.Required, Values: f.Values})
+	}
+	return out
+}
+
+func statusProto(st model.Status) *nushiv1.ChatStatus {
+	out := &nushiv1.ChatStatus{Busy: st.Busy, Waiting: st.Waiting}
+	if !st.Started.IsZero() {
+		out.Started = st.Started.UnixMilli()
 	}
 	return out
 }

@@ -2,7 +2,8 @@
 // script, keyed on the prompt's text:
 //
 //   - containing "permission": a tool call that asks permission (options
-//     "allow" and "reject"), then a message naming the option picked;
+//     "allow" and "reject"), then a message naming the option picked, or
+//     the turn ends "cancelled" if the prompt was cancelled;
 //   - containing "question": an elicitation form with one choice field
 //     ("color": red, green or blue), then a message with the answer;
 //   - containing "think": its thoughts in a few chunks, then a message;
@@ -164,8 +165,7 @@ func (a *Agent) answer(f frame) {
 		for _, b := range p.Prompt {
 			text += b.Text
 		}
-		a.prompt(p.SessionID, text)
-		result = map[string]any{"stopReason": "end_turn"}
+		result = map[string]any{"stopReason": a.prompt(p.SessionID, text)}
 	default:
 		result = map[string]any{}
 	}
@@ -177,7 +177,8 @@ func (a *Agent) say(session, text string) {
 	a.update(session, map[string]any{"sessionUpdate": "agent_message_chunk", "content": map[string]any{"type": "text", "text": text}})
 }
 
-func (a *Agent) prompt(session, text string) {
+// prompt runs the script for text and returns the turn's stop reason.
+func (a *Agent) prompt(session, text string) string {
 	a.History.add(session, map[string]any{"sessionUpdate": "user_message_chunk", "content": map[string]any{"type": "text", "text": text}})
 	switch {
 	case strings.Contains(text, "permission"):
@@ -190,6 +191,9 @@ func (a *Agent) prompt(session, text string) {
 			Outcome struct{ Outcome, OptionID string } `json:"outcome"`
 		}
 		json.Unmarshal(res, &r)
+		if r.Outcome.Outcome == "cancelled" { // the client stopped the turn
+			return "cancelled"
+		}
 		a.update(session, map[string]any{"sessionUpdate": "tool_call_update", "toolCallId": "t1", "status": "completed"})
 		a.say(session, "Permission: "+r.Outcome.Outcome+" "+r.Outcome.OptionID)
 	case strings.Contains(text, "question"):
@@ -225,4 +229,5 @@ func (a *Agent) prompt(session, text string) {
 		a.say(session, "You said: ")
 		a.say(session, text)
 	}
+	return "end_turn"
 }

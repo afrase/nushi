@@ -26,6 +26,7 @@ type Agent interface {
 	Prompt(context.Context, acp.PromptRequest) (*acp.PromptResponse, error)
 	SetConfigOption(context.Context, acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error)
 	SetMode(context.Context, acp.SetSessionModeRequest) error
+	Cancel(acp.CancelNotification) error
 	Close() error
 }
 
@@ -67,8 +68,8 @@ type chat struct {
 	questions map[string]chan<- []model.Field // questions by item id, for the answer (nil: declined)
 	config    []model.ConfigOption
 	session   model.Session
-	lastError string // how the last turn failed
-	seq       int64  // the last event's number
+	started   time.Time // when the running turn started
+	seq       int64     // the last event's number
 }
 
 // emitLocked numbers and publishes one of the chat's events. Holding the
@@ -91,7 +92,7 @@ func (s *Service) Get(chatID string) (model.Chat, error) {
 		Session: c.session,
 		Items:   slices.Clone(c.items),
 		Config:  slices.Clone(c.config),
-		Status:  model.Status{Busy: c.busy, Error: c.lastError},
+		Status:  c.statusLocked(),
 		Seq:     c.seq,
 	}, nil
 }
@@ -173,6 +174,20 @@ func (s *Service) Close() {
 // List returns every stored chat.
 func (s *Service) List() ([]model.Session, error) { return s.sessions.Sessions() }
 
+// Status returns whether a chat works or waits on the user, without
+// reopening it.
+func (s *Service) Status(chatID string) model.Status {
+	s.mu.Lock()
+	c := s.chats[chatID]
+	s.mu.Unlock()
+	if c == nil {
+		return model.Status{}
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.statusLocked()
+}
+
 // saveLocked applies change (if any) to the chat's session, keeps its mode
 // in step with the chat's mode option, and stores it if anything changed.
 func (c *chat) saveLocked(change func(*model.Session)) {
@@ -209,14 +224,14 @@ func (s *Service) Prompt(chatID, text string) error {
 	if c.busy {
 		return errors.New("the agent is still working on the last prompt")
 	}
-	c.busy = true
+	c.busy, c.started = true, time.Now()
 	c.addLocked(model.Item{Kind: model.UserMessage, Text: text})
 	c.saveLocked(func(s *model.Session) {
 		if s.Title == "" {
 			s.Title = title(text)
 		}
 	})
-	c.emitLocked(model.Event{ChatID: c.id, Status: &model.Status{Busy: true}})
+	c.statusChangedLocked()
 	go c.run(text)
 	return nil
 }
@@ -231,19 +246,62 @@ func title(prompt string) string {
 }
 
 func (c *chat) run(text string) {
-	_, err := c.agent.Prompt(context.Background(), acp.PromptRequest{
+	resp, err := c.agent.Prompt(context.Background(), acp.PromptRequest{
 		SessionID: acp.SessionID(c.id),
 		Prompt:    []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: text}}},
 	})
-	st := &model.Status{}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.busy, c.started = false, time.Time{}
+	switch {
+	case err != nil:
+		c.noticeLocked("error", "The turn failed: "+err.Error())
+	case resp.StopReason == "cancelled":
+		c.noticeLocked("cancelled", "Stopped")
+	case resp.StopReason == "refusal":
+		c.noticeLocked("refusal", "The agent refused to go on")
+	case resp.StopReason == "max_tokens":
+		c.noticeLocked("max_tokens", "The agent stopped: it reached its token limit")
+	case resp.StopReason == "max_turn_requests":
+		c.noticeLocked("max_turn_requests", "The agent stopped: it reached its limit of requests in one turn")
+	}
+	c.statusChangedLocked()
+}
+
+func (c *chat) noticeLocked(reason, text string) {
+	c.addLocked(model.Item{Kind: model.Notice, Status: reason, Text: text})
+}
+
+func (c *chat) statusLocked() model.Status {
+	return model.Status{Busy: c.busy, Started: c.started, Waiting: len(c.waiting)+len(c.questions) > 0}
+}
+
+func (c *chat) statusChangedLocked() {
+	st := c.statusLocked()
+	c.emitLocked(model.Event{ChatID: c.id, Status: &st})
+}
+
+// Cancel stops the chat's running turn: the agent is told to stop, and the
+// prompts it waits on are cancelled, as ACP asks of a client.
+func (s *Service) Cancel(chatID string) error {
+	c, err := s.chat(chatID)
 	if err != nil {
-		st.Error = err.Error()
+		return err
 	}
 	c.mu.Lock()
-	c.busy = false
-	c.lastError = st.Error
-	c.emitLocked(model.Event{ChatID: c.id, Status: st})
-	c.mu.Unlock()
+	defer c.mu.Unlock()
+	if c.started.IsZero() || c.agent == nil {
+		return nil // no turn runs
+	}
+	for _, answer := range c.waiting {
+		answer <- ""
+	}
+	for _, answer := range c.questions {
+		close(answer)
+	}
+	clear(c.waiting)
+	clear(c.questions)
+	return c.agent.Cancel(acp.CancelNotification{SessionID: acp.SessionID(c.id)})
 }
 
 // itemLocked returns the item with id, or nil.

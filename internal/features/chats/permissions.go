@@ -29,6 +29,7 @@ func (c *chat) RequestPermission(ctx context.Context, req acp.RequestPermissionR
 	}
 	id := c.addLocked(item)
 	c.waiting[id] = answer
+	c.statusChangedLocked()
 	c.mu.Unlock()
 
 	var picked string
@@ -39,6 +40,7 @@ func (c *chat) RequestPermission(ctx context.Context, req acp.RequestPermissionR
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	delete(c.waiting, id)
+	c.statusChangedLocked()
 	it := c.itemLocked(id)
 	if picked == "" {
 		it.Status = "cancelled"

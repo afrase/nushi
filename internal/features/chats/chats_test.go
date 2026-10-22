@@ -41,6 +41,8 @@ func (f *fakeAgent) Prompt(context.Context, acp.PromptRequest) (*acp.PromptRespo
 
 func (f *fakeAgent) Close() error { return nil }
 
+func (f *fakeAgent) Cancel(acp.CancelNotification) error { return nil }
+
 func (f *fakeAgent) SetConfigOption(_ context.Context, req acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error) {
 	f.set = append(f.set, string(req.ConfigID)+"="+string(req.Value))
 	return &acp.SetSessionConfigOptionResponse{}, nil

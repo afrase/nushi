@@ -13,7 +13,20 @@ import 'thinking.dart';
 import 'tool_calls.dart';
 import 'widgets.dart';
 
-/// A chat's transcript with the composer under it.
+/// Stops the chat's running turn.
+Future<void> _stop(BuildContext context, ChatState chat, Daemon daemon) async {
+  if (chat.started == null) return;
+  try {
+    await daemon.cancelTurn(chat.id);
+  } on Object catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+}
+
+/// A chat's transcript with the composer under it. Escape stops a running
+/// turn.
 class ChatView extends StatelessWidget {
   const ChatView({super.key, required this.chat, required this.daemon});
 
@@ -45,40 +58,49 @@ class ChatView extends StatelessWidget {
     listenable: chat,
     builder: (context, _) {
       final entries = _entries(chat.items);
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            // One selection across the transcript, messages included whole.
-            child: SelectionArea(
-              child: ListView.builder(
-                reverse: true, // keeps the newest item in view while it streams
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
-                itemCount: entries.length,
-                itemBuilder: (context, i) {
-                  final e = entries[entries.length - 1 - i];
-                  // Keyed here, the item's state follows it as items arrive.
-                  return Padding(
-                    key: ValueKey(
-                      e is List<Item> ? 'group ${e.first.id}' : (e as Item).id,
-                    ),
-                    padding: const EdgeInsets.only(top: 12),
-                    child: e is List<Item>
-                        ? ToolGroupView(e)
-                        : _ItemView(
-                            e as Item,
-                            chat.id,
-                            daemon,
-                            live: chat.busy && i == 0,
-                          ),
-                  );
-                },
+      return CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.escape): () =>
+              _stop(context, chat, daemon),
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              // One selection across the transcript, messages included whole.
+              child: SelectionArea(
+                child: ListView.builder(
+                  reverse:
+                      true, // keeps the newest item in view while it streams
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
+                  itemCount: entries.length,
+                  itemBuilder: (context, i) {
+                    final e = entries[entries.length - 1 - i];
+                    // Keyed here, the item's state follows it as items arrive.
+                    return Padding(
+                      key: ValueKey(
+                        e is List<Item>
+                            ? 'group ${e.first.id}'
+                            : (e as Item).id,
+                      ),
+                      padding: const EdgeInsets.only(top: 12),
+                      child: e is List<Item>
+                          ? ToolGroupView(e)
+                          : _ItemView(
+                              e as Item,
+                              chat.id,
+                              daemon,
+                              live: chat.busy && i == 0,
+                            ),
+                    );
+                  },
+                ),
               ),
             ),
-          ),
-          if (chat.busy) const LinearProgressIndicator(minHeight: 2),
-          _Composer(chat: chat, daemon: daemon),
-        ],
+            if (chat.busy) const LinearProgressIndicator(minHeight: 2),
+            _Composer(chat: chat, daemon: daemon),
+          ],
+        ),
       );
     },
   );
@@ -127,6 +149,21 @@ class _ItemView extends StatelessWidget {
         return ThoughtView(item, live: live);
       case ItemKind.ITEM_KIND_PLAN:
         return PlanView(item);
+      case ItemKind.ITEM_KIND_NOTICE:
+        final (icon, color) = switch (item.status) {
+          'cancelled' => (Icons.stop_circle_outlined, t.textMuted),
+          'error' => (Icons.error_outline, t.crashed),
+          _ => (Icons.info_outline, t.needs),
+        };
+        return Row(
+          spacing: 6,
+          children: [
+            Icon(icon, size: 14, color: color),
+            Expanded(
+              child: Text(item.text, style: theme.ui(color, size: 12.5)),
+            ),
+          ],
+        );
       case ItemKind.ITEM_KIND_PERMISSION:
         return PermissionCard(
           item,
@@ -273,13 +310,23 @@ class _ComposerState extends State<_Composer> {
                 ),
               ),
               const SizedBox(width: 10),
-              Button(
-                label: 'Send',
-                hint: '⏎',
-                kind: ButtonKind.primary,
-                height: 24,
-                onPressed: chat.busy ? null : _send,
-              ),
+              if (chat.started != null)
+                Button(
+                  label: 'Stop',
+                  hint: 'esc',
+                  icon: Icons.stop,
+                  kind: ButtonKind.danger,
+                  height: 24,
+                  onPressed: () => _stop(context, chat, widget.daemon),
+                )
+              else
+                Button(
+                  label: 'Send',
+                  hint: '⏎',
+                  kind: ButtonKind.primary,
+                  height: 24,
+                  onPressed: chat.busy ? null : _send,
+                ),
             ],
           ),
         ],

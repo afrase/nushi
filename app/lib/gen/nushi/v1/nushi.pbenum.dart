@@ -43,6 +43,12 @@ class ItemKind extends $pb.ProtobufEnum {
   static const ItemKind ITEM_KIND_PLAN =
       ItemKind._(7, _omitEnumNames ? '' : 'ITEM_KIND_PLAN');
 
+  /// How a turn ended when it didn't end normally, or an error: status is
+  /// "cancelled", "refusal", "max_tokens", "max_turn_requests" or "error",
+  /// and text says it in words.
+  static const ItemKind ITEM_KIND_NOTICE =
+      ItemKind._(8, _omitEnumNames ? '' : 'ITEM_KIND_NOTICE');
+
   static const $core.List<ItemKind> values = <ItemKind>[
     ITEM_KIND_UNSPECIFIED,
     ITEM_KIND_USER_MESSAGE,
@@ -52,10 +58,11 @@ class ItemKind extends $pb.ProtobufEnum {
     ITEM_KIND_QUESTION,
     ITEM_KIND_THOUGHT,
     ITEM_KIND_PLAN,
+    ITEM_KIND_NOTICE,
   ];
 
   static final $core.List<ItemKind?> _byValue =
-      $pb.ProtobufEnum.$_initByValueList(values, 7);
+      $pb.ProtobufEnum.$_initByValueList(values, 8);
   static ItemKind? valueOf($core.int value) =>
       value < 0 || value >= _byValue.length ? null : _byValue[value];
 

@@ -26,6 +26,7 @@ func (c *chat) CreateElicitation(ctx context.Context, req acp.CreateElicitationR
 	c.mu.Lock()
 	id := c.addLocked(model.Item{Kind: model.Question, Status: "pending", Text: req.Message, Fields: fields})
 	c.questions[id] = answer
+	c.statusChangedLocked()
 	c.mu.Unlock()
 
 	var answered []model.Field
@@ -37,6 +38,7 @@ func (c *chat) CreateElicitation(ctx context.Context, req acp.CreateElicitationR
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	delete(c.questions, id)
+	c.statusChangedLocked()
 	it := c.itemLocked(id)
 	switch {
 	case !ok:

@@ -31,6 +31,9 @@ const (
 	Thought
 	// Plan is the agent's plan as a checklist (Plan), updated in place.
 	Plan
+	// Notice says how a turn ended when it didn't end normally, or an error.
+	// Status is the reason ("cancelled", "refusal", "error", ...).
+	Notice
 )
 
 // PlanEntry is a step of the agent's plan; Status is ACP's ("pending",
@@ -131,8 +134,9 @@ type Chat struct {
 
 // Status is whether a chat is running a turn, and how the last one ended.
 type Status struct {
-	Busy  bool
-	Error string
+	Busy    bool
+	Started time.Time // when the running turn started
+	Waiting bool      // a permission prompt or question waits on the user
 }
 
 // FileChange is one file's uncommitted change: its text at HEAD and now.

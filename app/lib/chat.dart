@@ -14,7 +14,9 @@ class ChatState extends ChangeNotifier {
   final List<Item> items = [];
   List<ConfigOption> config = [];
   bool busy = false;
-  String error = '';
+  bool waiting = false; // on the user: a permission prompt or a question
+  DateTime? started; // when the running turn started
+  String error = ''; // why the snapshot didn't load
 
   /// Whether the snapshot is in; until then events wait in [_early].
   bool loaded = false;
@@ -28,8 +30,8 @@ class ChatState extends ChangeNotifier {
       ..clear()
       ..addAll(s.items);
     config = s.config;
-    busy = s.status.busy;
-    error = s.status.error;
+    status(s.status);
+    error = '';
     _seq = s.seq.toInt();
     loaded = true;
     loading = false;
@@ -54,9 +56,17 @@ class ChatState extends ChangeNotifier {
     } else if (loading) {
       _early.add(e);
     } else if (e.hasStatus()) {
-      busy = e.status.busy; // for the sidebar
+      status(e.status); // for the sidebar
       notifyListeners();
     }
+  }
+
+  void status(ChatStatus s) {
+    busy = s.busy;
+    waiting = s.waiting;
+    started = s.started == 0
+        ? null
+        : DateTime.fromMillisecondsSinceEpoch(s.started.toInt());
   }
 
   void _apply(EventsResponse e) {
@@ -68,8 +78,7 @@ class ChatState extends ChangeNotifier {
       case EventsResponse_Kind.config:
         config = e.config.options;
       case EventsResponse_Kind.status:
-        busy = e.status.busy;
-        error = e.status.error;
+        status(e.status);
       case EventsResponse_Kind.chat || EventsResponse_Kind.notSet:
         return; // the daemon keeps a chat's title and folder
     }

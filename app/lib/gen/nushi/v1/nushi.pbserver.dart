@@ -31,6 +31,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.StartChatRequest request);
   $async.Future<$0.SendPromptResponse> sendPrompt(
       $pb.ServerContext ctx, $0.SendPromptRequest request);
+  $async.Future<$0.CancelTurnResponse> cancelTurn(
+      $pb.ServerContext ctx, $0.CancelTurnRequest request);
   $async.Future<$0.AnswerPermissionResponse> answerPermission(
       $pb.ServerContext ctx, $0.AnswerPermissionRequest request);
   $async.Future<$0.AnswerQuestionResponse> answerQuestion(
@@ -54,6 +56,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.StartChatRequest();
       case 'SendPrompt':
         return $0.SendPromptRequest();
+      case 'CancelTurn':
+        return $0.CancelTurnRequest();
       case 'AnswerPermission':
         return $0.AnswerPermissionRequest();
       case 'AnswerQuestion':
@@ -82,6 +86,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return startChat(ctx, request as $0.StartChatRequest);
       case 'SendPrompt':
         return sendPrompt(ctx, request as $0.SendPromptRequest);
+      case 'CancelTurn':
+        return cancelTurn(ctx, request as $0.CancelTurnRequest);
       case 'AnswerPermission':
         return answerPermission(ctx, request as $0.AnswerPermissionRequest);
       case 'AnswerQuestion':

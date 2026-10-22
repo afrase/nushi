@@ -271,3 +271,24 @@ func TestDaemonRestartReopensChats(t *testing.T) {
 		t.Errorf("reply after reopening = %q", last.Text)
 	}
 }
+
+func TestStopCancelsAWaitingPrompt(t *testing.T) {
+	ctx := context.Background()
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
+	a := open(t, d)
+	chatID := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
+	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "ask permission"})))
+	a.waitFor("the chat to wait on the user", func(e *nushiv1.EventsResponse) bool { return e.GetStatus().GetWaiting() })
+	must(a.c.CancelTurn(ctx, connect.NewRequest(&nushiv1.CancelTurnRequest{ChatId: chatID})))
+	a.waitFor("the turn to end", idle)
+
+	snap := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID})))
+	var got []string
+	for _, it := range snap.Items {
+		got = append(got, it.Kind.String()+":"+it.Status)
+	}
+	want := "ITEM_KIND_USER_MESSAGE: ITEM_KIND_TOOL_CALL:pending ITEM_KIND_PERMISSION:cancelled ITEM_KIND_NOTICE:cancelled"
+	if strings.Join(got, " ") != want || snap.Status.Waiting || snap.Status.Started != 0 {
+		t.Errorf("items = %v, status = %v\nwant %s", got, snap.Status, want)
+	}
+}

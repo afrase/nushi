@@ -115,6 +115,12 @@ func (c *Client) Prompt(ctx context.Context, req PromptRequest) (*PromptResponse
 	return &resp, c.conn.call(ctx, "session/prompt", req, &resp)
 }
 
+// Cancel asks the agent to stop the session's running turn, whose prompt
+// then ends with stop reason "cancelled".
+func (c *Client) Cancel(req CancelNotification) error {
+	return c.conn.notify("session/cancel", req)
+}
+
 func (c *Client) SetConfigOption(ctx context.Context, req SetSessionConfigOptionRequest) (*SetSessionConfigOptionResponse, error) {
 	var resp SetSessionConfigOptionResponse
 	return &resp, c.conn.call(ctx, "session/set_config_option", req, &resp)

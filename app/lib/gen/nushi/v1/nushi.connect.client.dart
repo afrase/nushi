@@ -99,6 +99,25 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Stops the chat's running turn (ACP session/cancel). The turn ends with a
+  /// "cancelled" notice, and prompts it was waiting on are cancelled.
+  Future<nushiv1nushi.CancelTurnResponse> cancelTurn(
+    nushiv1nushi.CancelTurnRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.cancelTurn,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Answers a pending permission prompt with one of its options.
   Future<nushiv1nushi.AnswerPermissionResponse> answerPermission(
     nushiv1nushi.AnswerPermissionRequest input, {

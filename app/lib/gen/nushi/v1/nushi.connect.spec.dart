@@ -51,6 +51,15 @@ abstract final class NushiService {
     nushiv1nushi.SendPromptResponse.new,
   );
 
+  /// Stops the chat's running turn (ACP session/cancel). The turn ends with a
+  /// "cancelled" notice, and prompts it was waiting on are cancelled.
+  static const cancelTurn = connect.Spec(
+    '/$name/CancelTurn',
+    connect.StreamType.unary,
+    nushiv1nushi.CancelTurnRequest.new,
+    nushiv1nushi.CancelTurnResponse.new,
+  );
+
   /// Answers a pending permission prompt with one of its options.
   static const answerPermission = connect.Spec(
     '/$name/AnswerPermission',

@@ -34,7 +34,7 @@ func (s *Service) chat(id string) (*chat, error) {
 	defer c.mu.Unlock()
 	if c.agent == nil && !c.busy { // never reopened, or the last try failed
 		c.busy = true
-		c.emitLocked(model.Event{ChatID: c.id, Status: &model.Status{Busy: true}})
+		c.statusChangedLocked()
 		go s.resume(c)
 	}
 	return c, nil
@@ -45,11 +45,10 @@ func (s *Service) resume(c *chat) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.busy = false
-	c.lastError = ""
 	if err != nil {
-		c.lastError = "Couldn't reopen the chat: " + err.Error()
+		c.noticeLocked("error", "Couldn't reopen the chat: "+err.Error())
 	}
-	c.emitLocked(model.Event{ChatID: c.id, Status: &model.Status{Error: c.lastError}})
+	c.statusChangedLocked()
 }
 
 // load starts the chat's agent and has it replay the session, then puts the

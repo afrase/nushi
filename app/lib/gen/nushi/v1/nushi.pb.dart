@@ -223,6 +223,7 @@ class Chat extends $pb.GeneratedMessage {
     $core.String? title,
     $core.String? mode,
     $fixnum.Int64? createdUnixMs,
+    ChatStatus? status,
   }) {
     final result = Chat._();
     if (id != null) result.id = id;
@@ -231,6 +232,7 @@ class Chat extends $pb.GeneratedMessage {
     if (title != null) result.title = title;
     if (mode != null) result.mode = mode;
     if (createdUnixMs != null) result.createdUnixMs = createdUnixMs;
+    if (status != null) result.status = status;
     return result;
   }
 
@@ -253,6 +255,8 @@ class Chat extends $pb.GeneratedMessage {
     ..aOS(4, _omitFieldNames ? '' : 'title')
     ..aOS(5, _omitFieldNames ? '' : 'mode')
     ..aInt64(6, _omitFieldNames ? '' : 'createdUnixMs')
+    ..aOM<ChatStatus>(7, _omitFieldNames ? '' : 'status',
+        subBuilder: ChatStatus.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -330,6 +334,18 @@ class Chat extends $pb.GeneratedMessage {
   $core.bool hasCreatedUnixMs() => $_has(5);
   @$pb.TagNumber(6)
   void clearCreatedUnixMs() => $_clearField(6);
+
+  /// Whether it works or waits on the user, for a list of chats.
+  @$pb.TagNumber(7)
+  ChatStatus get status => $_getN(6);
+  @$pb.TagNumber(7)
+  set status(ChatStatus value) => $_setField(7, value);
+  @$pb.TagNumber(7)
+  $core.bool hasStatus() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearStatus() => $_clearField(7);
+  @$pb.TagNumber(7)
+  ChatStatus ensureStatus() => $_ensure(6);
 }
 
 class GetChatRequest extends $pb.GeneratedMessage {
@@ -721,6 +737,104 @@ class SendPromptResponse extends $pb.GeneratedMessage {
       $pb.GeneratedMessage.$_defaultFor<SendPromptResponse>(
           SendPromptResponse.$_createMessage);
   static SendPromptResponse? _defaultInstance;
+}
+
+class CancelTurnRequest extends $pb.GeneratedMessage {
+  factory CancelTurnRequest({
+    $core.String? chatId,
+  }) {
+    final result = CancelTurnRequest._();
+    if (chatId != null) result.chatId = chatId;
+    return result;
+  }
+
+  CancelTurnRequest._();
+
+  factory CancelTurnRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CancelTurnRequest()..mergeFromBuffer(data, registry);
+  factory CancelTurnRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CancelTurnRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CancelTurnRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: CancelTurnRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CancelTurnRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CancelTurnRequest copyWith(void Function(CancelTurnRequest) updates) =>
+      super.copyWith((message) => updates(message as CancelTurnRequest))
+          as CancelTurnRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use CancelTurnRequest() / CancelTurnRequest.new instead')
+  static CancelTurnRequest create() => CancelTurnRequest._();
+  static $pb.GeneratedMessage $_createMessage() => CancelTurnRequest._();
+  @$core.override
+  CancelTurnRequest createEmptyInstance() => CancelTurnRequest._();
+  @$core.pragma('dart2js:noInline')
+  static CancelTurnRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<CancelTurnRequest>(
+          CancelTurnRequest.$_createMessage);
+  static CancelTurnRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+}
+
+class CancelTurnResponse extends $pb.GeneratedMessage {
+  factory CancelTurnResponse() => CancelTurnResponse._();
+
+  CancelTurnResponse._();
+
+  factory CancelTurnResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CancelTurnResponse()..mergeFromBuffer(data, registry);
+  factory CancelTurnResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CancelTurnResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CancelTurnResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: CancelTurnResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CancelTurnResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CancelTurnResponse copyWith(void Function(CancelTurnResponse) updates) =>
+      super.copyWith((message) => updates(message as CancelTurnResponse))
+          as CancelTurnResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use CancelTurnResponse() / CancelTurnResponse.new instead')
+  static CancelTurnResponse create() => CancelTurnResponse._();
+  static $pb.GeneratedMessage $_createMessage() => CancelTurnResponse._();
+  @$core.override
+  CancelTurnResponse createEmptyInstance() => CancelTurnResponse._();
+  @$core.pragma('dart2js:noInline')
+  static CancelTurnResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<CancelTurnResponse>(
+          CancelTurnResponse.$_createMessage);
+  static CancelTurnResponse? _defaultInstance;
 }
 
 class AnswerPermissionRequest extends $pb.GeneratedMessage {
@@ -2388,10 +2502,14 @@ class ChatStatus extends $pb.GeneratedMessage {
   factory ChatStatus({
     $core.bool? busy,
     $core.String? error,
+    $fixnum.Int64? started,
+    $core.bool? waiting,
   }) {
     final result = ChatStatus._();
     if (busy != null) result.busy = busy;
     if (error != null) result.error = error;
+    if (started != null) result.started = started;
+    if (waiting != null) result.waiting = waiting;
     return result;
   }
 
@@ -2410,6 +2528,8 @@ class ChatStatus extends $pb.GeneratedMessage {
       createEmptyInstance: ChatStatus.$_createMessage)
     ..aOB(1, _omitFieldNames ? '' : 'busy')
     ..aOS(2, _omitFieldNames ? '' : 'error')
+    ..aInt64(3, _omitFieldNames ? '' : 'started')
+    ..aOB(4, _omitFieldNames ? '' : 'waiting')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -2441,7 +2561,7 @@ class ChatStatus extends $pb.GeneratedMessage {
   @$pb.TagNumber(1)
   void clearBusy() => $_clearField(1);
 
-  /// How the last turn failed, if it did.
+  /// Not set since API version 11: a failed turn ends with a notice item.
   @$pb.TagNumber(2)
   $core.String get error => $_getSZ(1);
   @$pb.TagNumber(2)
@@ -2450,6 +2570,26 @@ class ChatStatus extends $pb.GeneratedMessage {
   $core.bool hasError() => $_has(1);
   @$pb.TagNumber(2)
   void clearError() => $_clearField(2);
+
+  /// When the running turn started, in Unix milliseconds; 0 when idle.
+  @$pb.TagNumber(3)
+  $fixnum.Int64 get started => $_getI64(2);
+  @$pb.TagNumber(3)
+  set started($fixnum.Int64 value) => $_setInt64(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasStarted() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearStarted() => $_clearField(3);
+
+  /// The agent waits on the user: a permission prompt or a question.
+  @$pb.TagNumber(4)
+  $core.bool get waiting => $_getBF(3);
+  @$pb.TagNumber(4)
+  set waiting($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasWaiting() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearWaiting() => $_clearField(4);
 }
 
 class NushiServiceApi {
@@ -2486,6 +2626,13 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, SendPromptRequest request) =>
       _client.invoke<SendPromptResponse>(
           ctx, 'NushiService', 'SendPrompt', request, SendPromptResponse());
+
+  /// Stops the chat's running turn (ACP session/cancel). The turn ends with a
+  /// "cancelled" notice, and prompts it was waiting on are cancelled.
+  $async.Future<CancelTurnResponse> cancelTurn(
+          $pb.ClientContext? ctx, CancelTurnRequest request) =>
+      _client.invoke<CancelTurnResponse>(
+          ctx, 'NushiService', 'CancelTurn', request, CancelTurnResponse());
 
   /// Answers a pending permission prompt with one of its options.
   $async.Future<AnswerPermissionResponse> answerPermission(

@@ -43,6 +43,8 @@ const (
 	NushiServiceStartChatProcedure = "/nushi.v1.NushiService/StartChat"
 	// NushiServiceSendPromptProcedure is the fully-qualified name of the NushiService's SendPrompt RPC.
 	NushiServiceSendPromptProcedure = "/nushi.v1.NushiService/SendPrompt"
+	// NushiServiceCancelTurnProcedure is the fully-qualified name of the NushiService's CancelTurn RPC.
+	NushiServiceCancelTurnProcedure = "/nushi.v1.NushiService/CancelTurn"
 	// NushiServiceAnswerPermissionProcedure is the fully-qualified name of the NushiService's
 	// AnswerPermission RPC.
 	NushiServiceAnswerPermissionProcedure = "/nushi.v1.NushiService/AnswerPermission"
@@ -70,6 +72,9 @@ type NushiServiceClient interface {
 	StartChat(context.Context, *connect.Request[v1.StartChatRequest]) (*connect.Response[v1.StartChatResponse], error)
 	// Sends a prompt; the reply arrives as events.
 	SendPrompt(context.Context, *connect.Request[v1.SendPromptRequest]) (*connect.Response[v1.SendPromptResponse], error)
+	// Stops the chat's running turn (ACP session/cancel). The turn ends with a
+	// "cancelled" notice, and prompts it was waiting on are cancelled.
+	CancelTurn(context.Context, *connect.Request[v1.CancelTurnRequest]) (*connect.Response[v1.CancelTurnResponse], error)
 	// Answers a pending permission prompt with one of its options.
 	AnswerPermission(context.Context, *connect.Request[v1.AnswerPermissionRequest]) (*connect.Response[v1.AnswerPermissionResponse], error)
 	// Answers a pending question, or declines it.
@@ -126,6 +131,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("SendPrompt")),
 			connect.WithClientOptions(opts...),
 		),
+		cancelTurn: connect.NewClient[v1.CancelTurnRequest, v1.CancelTurnResponse](
+			httpClient,
+			baseURL+NushiServiceCancelTurnProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("CancelTurn")),
+			connect.WithClientOptions(opts...),
+		),
 		answerPermission: connect.NewClient[v1.AnswerPermissionRequest, v1.AnswerPermissionResponse](
 			httpClient,
 			baseURL+NushiServiceAnswerPermissionProcedure,
@@ -166,6 +177,7 @@ type nushiServiceClient struct {
 	getChat          *connect.Client[v1.GetChatRequest, v1.GetChatResponse]
 	startChat        *connect.Client[v1.StartChatRequest, v1.StartChatResponse]
 	sendPrompt       *connect.Client[v1.SendPromptRequest, v1.SendPromptResponse]
+	cancelTurn       *connect.Client[v1.CancelTurnRequest, v1.CancelTurnResponse]
 	answerPermission *connect.Client[v1.AnswerPermissionRequest, v1.AnswerPermissionResponse]
 	answerQuestion   *connect.Client[v1.AnswerQuestionRequest, v1.AnswerQuestionResponse]
 	setConfigOption  *connect.Client[v1.SetConfigOptionRequest, v1.SetConfigOptionResponse]
@@ -196,6 +208,11 @@ func (c *nushiServiceClient) StartChat(ctx context.Context, req *connect.Request
 // SendPrompt calls nushi.v1.NushiService.SendPrompt.
 func (c *nushiServiceClient) SendPrompt(ctx context.Context, req *connect.Request[v1.SendPromptRequest]) (*connect.Response[v1.SendPromptResponse], error) {
 	return c.sendPrompt.CallUnary(ctx, req)
+}
+
+// CancelTurn calls nushi.v1.NushiService.CancelTurn.
+func (c *nushiServiceClient) CancelTurn(ctx context.Context, req *connect.Request[v1.CancelTurnRequest]) (*connect.Response[v1.CancelTurnResponse], error) {
+	return c.cancelTurn.CallUnary(ctx, req)
 }
 
 // AnswerPermission calls nushi.v1.NushiService.AnswerPermission.
@@ -235,6 +252,9 @@ type NushiServiceHandler interface {
 	StartChat(context.Context, *connect.Request[v1.StartChatRequest]) (*connect.Response[v1.StartChatResponse], error)
 	// Sends a prompt; the reply arrives as events.
 	SendPrompt(context.Context, *connect.Request[v1.SendPromptRequest]) (*connect.Response[v1.SendPromptResponse], error)
+	// Stops the chat's running turn (ACP session/cancel). The turn ends with a
+	// "cancelled" notice, and prompts it was waiting on are cancelled.
+	CancelTurn(context.Context, *connect.Request[v1.CancelTurnRequest]) (*connect.Response[v1.CancelTurnResponse], error)
 	// Answers a pending permission prompt with one of its options.
 	AnswerPermission(context.Context, *connect.Request[v1.AnswerPermissionRequest]) (*connect.Response[v1.AnswerPermissionResponse], error)
 	// Answers a pending question, or declines it.
@@ -287,6 +307,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("SendPrompt")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceCancelTurnHandler := connect.NewUnaryHandler(
+		NushiServiceCancelTurnProcedure,
+		svc.CancelTurn,
+		connect.WithSchema(nushiServiceMethods.ByName("CancelTurn")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceAnswerPermissionHandler := connect.NewUnaryHandler(
 		NushiServiceAnswerPermissionProcedure,
 		svc.AnswerPermission,
@@ -329,6 +355,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceStartChatHandler.ServeHTTP(w, r)
 		case NushiServiceSendPromptProcedure:
 			nushiServiceSendPromptHandler.ServeHTTP(w, r)
+		case NushiServiceCancelTurnProcedure:
+			nushiServiceCancelTurnHandler.ServeHTTP(w, r)
 		case NushiServiceAnswerPermissionProcedure:
 			nushiServiceAnswerPermissionHandler.ServeHTTP(w, r)
 		case NushiServiceAnswerQuestionProcedure:
@@ -366,6 +394,10 @@ func (UnimplementedNushiServiceHandler) StartChat(context.Context, *connect.Requ
 
 func (UnimplementedNushiServiceHandler) SendPrompt(context.Context, *connect.Request[v1.SendPromptRequest]) (*connect.Response[v1.SendPromptResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.SendPrompt is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) CancelTurn(context.Context, *connect.Request[v1.CancelTurnRequest]) (*connect.Response[v1.CancelTurnResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.CancelTurn is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) AnswerPermission(context.Context, *connect.Request[v1.AnswerPermissionRequest]) (*connect.Response[v1.AnswerPermissionResponse], error) {

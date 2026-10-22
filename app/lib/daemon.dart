@@ -117,7 +117,8 @@ class Daemon extends ChangeNotifier {
 
   ChatState _chat(Chat c) => (chats[c.id] ??= ChatState(c.id, c.folder))
     ..title = c.title
-    ..created = DateTime.fromMillisecondsSinceEpoch(c.createdUnixMs.toInt());
+    ..created = DateTime.fromMillisecondsSinceEpoch(c.createdUnixMs.toInt())
+    ..status(c.status);
 
   void select(String chatId) {
     selectedId = chatId;
@@ -134,6 +135,9 @@ class Daemon extends ChangeNotifier {
 
   Future<void> sendPrompt(String chatId, String text) =>
       client.sendPrompt(SendPromptRequest(chatId: chatId, text: text));
+
+  Future<void> cancelTurn(String chatId) =>
+      client.cancelTurn(CancelTurnRequest(chatId: chatId));
 
   Future<void> answerPermission(
     String chatId,

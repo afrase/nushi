@@ -165,7 +165,7 @@ class _ChatRow extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
               child: Row(
                 children: [
-                  ChatDot(busy: chat.busy),
+                  ChatDot(chat: chat),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -175,6 +175,8 @@ class _ChatRow extends StatelessWidget {
                       style: theme.ui(t.text),
                     ),
                   ),
+                  if (chat.waiting)
+                    Text('needs you', style: theme.ui(t.needs, size: 11.5)),
                 ],
               ),
             ),

@@ -15,6 +15,9 @@ service NushiService {
   rpc StartChat(StartChatRequest) returns (StartChatResponse);
   // Sends a prompt; the reply arrives as events.
   rpc SendPrompt(SendPromptRequest) returns (SendPromptResponse);
+  // Stops the chat's running turn (ACP session/cancel). The turn ends with a
+  // "cancelled" notice, and prompts it was waiting on are cancelled.
+  rpc CancelTurn(CancelTurnRequest) returns (CancelTurnResponse);
   // Answers a pending permission prompt with one of its options.
   rpc AnswerPermission(AnswerPermissionRequest) returns (AnswerPermissionResponse);
   // Answers a pending question, or declines it.
@@ -53,6 +56,8 @@ message Chat {
   // The mode it was last in.
   string mode = 5;
   int64 created_unix_ms = 6;
+  // Whether it works or waits on the user, for a list of chats.
+  ChatStatus status = 7;
 }
 
 message GetChatRequest {
@@ -84,6 +89,12 @@ message SendPromptRequest {
 }
 
 message SendPromptResponse {}
+
+message CancelTurnRequest {
+  string chat_id = 1;
+}
+
+message CancelTurnResponse {}
 
 message AnswerPermissionRequest {
   string chat_id = 1;
@@ -198,6 +209,10 @@ enum ItemKind {
   ITEM_KIND_THOUGHT = 6;
   // The agent's plan as a checklist (plan), replaced as it changes.
   ITEM_KIND_PLAN = 7;
+  // How a turn ended when it didn't end normally, or an error: status is
+  // "cancelled", "refusal", "max_tokens", "max_turn_requests" or "error",
+  // and text says it in words.
+  ITEM_KIND_NOTICE = 8;
 }
 
 // One entry of a chat's transcript.
@@ -272,6 +287,10 @@ message ItemEvent {
 
 message ChatStatus {
   bool busy = 1;
-  // How the last turn failed, if it did.
+  // Not set since API version 11: a failed turn ends with a notice item.
   string error = 2;
+  // When the running turn started, in Unix milliseconds; 0 when idle.
+  int64 started = 3;
+  // The agent waits on the user: a permission prompt or a question.
+  bool waiting = 4;
 }
