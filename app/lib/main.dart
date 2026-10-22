@@ -7,6 +7,7 @@ import 'chat_view.dart';
 import 'daemon.dart';
 import 'sidebar.dart';
 import 'theme/theme.dart';
+import 'usage.dart';
 import 'widgets.dart';
 
 void main() => runApp(NushiApp(daemon: Daemon()));
@@ -217,6 +218,8 @@ class _HeaderState extends State<_Header> {
             const SizedBox(width: 5),
             ChatStatusWord(chat, style: meta),
           ],
+          const SizedBox(width: 10),
+          CostLabel(chat.usage, style: meta),
           const SizedBox(width: 16),
           Expanded(
             child: Text(

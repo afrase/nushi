@@ -190,6 +190,14 @@ const GetChatResponse$json = {
       '6': '.nushi.v1.Command',
       '10': 'commands'
     },
+    {
+      '1': 'usage',
+      '3': 7,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.Usage',
+      '10': 'usage'
+    },
   ],
 };
 
@@ -199,7 +207,44 @@ final $typed_data.Uint8List getChatResponseDescriptor = $convert.base64Decode(
     'oFaXRlbXMYAiADKAsyDi5udXNoaS52MS5JdGVtUgVpdGVtcxIuCgZjb25maWcYAyADKAsyFi5u'
     'dXNoaS52MS5Db25maWdPcHRpb25SBmNvbmZpZxIsCgZzdGF0dXMYBCABKAsyFC5udXNoaS52MS'
     '5DaGF0U3RhdHVzUgZzdGF0dXMSEAoDc2VxGAUgASgDUgNzZXESLQoIY29tbWFuZHMYBiADKAsy'
-    'ES5udXNoaS52MS5Db21tYW5kUghjb21tYW5kcw==');
+    'ES5udXNoaS52MS5Db21tYW5kUghjb21tYW5kcxIlCgV1c2FnZRgHIAEoCzIPLm51c2hpLnYxLl'
+    'VzYWdlUgV1c2FnZQ==');
+
+@$core.Deprecated('Use usageDescriptor instead')
+const Usage$json = {
+  '1': 'Usage',
+  '2': [
+    {'1': 'context_used', '3': 1, '4': 1, '5': 3, '10': 'contextUsed'},
+    {'1': 'context_size', '3': 2, '4': 1, '5': 3, '10': 'contextSize'},
+    {'1': 'cost', '3': 3, '4': 1, '5': 1, '10': 'cost'},
+    {'1': 'currency', '3': 4, '4': 1, '5': 9, '10': 'currency'},
+    {'1': 'input_tokens', '3': 5, '4': 1, '5': 3, '10': 'inputTokens'},
+    {'1': 'output_tokens', '3': 6, '4': 1, '5': 3, '10': 'outputTokens'},
+    {
+      '1': 'cached_read_tokens',
+      '3': 7,
+      '4': 1,
+      '5': 3,
+      '10': 'cachedReadTokens'
+    },
+    {
+      '1': 'cached_write_tokens',
+      '3': 8,
+      '4': 1,
+      '5': 3,
+      '10': 'cachedWriteTokens'
+    },
+  ],
+};
+
+/// Descriptor for `Usage`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List usageDescriptor = $convert.base64Decode(
+    'CgVVc2FnZRIhCgxjb250ZXh0X3VzZWQYASABKANSC2NvbnRleHRVc2VkEiEKDGNvbnRleHRfc2'
+    'l6ZRgCIAEoA1ILY29udGV4dFNpemUSEgoEY29zdBgDIAEoAVIEY29zdBIaCghjdXJyZW5jeRgE'
+    'IAEoCVIIY3VycmVuY3kSIQoMaW5wdXRfdG9rZW5zGAUgASgDUgtpbnB1dFRva2VucxIjCg1vdX'
+    'RwdXRfdG9rZW5zGAYgASgDUgxvdXRwdXRUb2tlbnMSLAoSY2FjaGVkX3JlYWRfdG9rZW5zGAcg'
+    'ASgDUhBjYWNoZWRSZWFkVG9rZW5zEi4KE2NhY2hlZF93cml0ZV90b2tlbnMYCCABKANSEWNhY2'
+    'hlZFdyaXRlVG9rZW5z');
 
 @$core.Deprecated('Use commandDescriptor instead')
 const Command$json = {
@@ -659,6 +704,15 @@ const EventsResponse$json = {
       '10': 'commands'
     },
     {'1': 'removed', '3': 8, '4': 1, '5': 8, '9': 0, '10': 'removed'},
+    {
+      '1': 'usage',
+      '3': 9,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.Usage',
+      '9': 0,
+      '10': 'usage'
+    },
   ],
   '8': [
     {'1': 'kind'},
@@ -672,7 +726,8 @@ final $typed_data.Uint8List eventsResponseDescriptor = $convert.base64Decode(
     'cxgDIAEoCzIULm51c2hpLnYxLkNoYXRTdGF0dXNIAFIGc3RhdHVzEi4KBmNvbmZpZxgEIAEoCz'
     'IULm51c2hpLnYxLkNoYXRDb25maWdIAFIGY29uZmlnEiQKBGNoYXQYBSABKAsyDi5udXNoaS52'
     'MS5DaGF0SABSBGNoYXQSNAoIY29tbWFuZHMYByABKAsyFi5udXNoaS52MS5DaGF0Q29tbWFuZH'
-    'NIAFIIY29tbWFuZHMSGgoHcmVtb3ZlZBgIIAEoCEgAUgdyZW1vdmVkQgYKBGtpbmQ=');
+    'NIAFIIY29tbWFuZHMSGgoHcmVtb3ZlZBgIIAEoCEgAUgdyZW1vdmVkEicKBXVzYWdlGAkgASgL'
+    'Mg8ubnVzaGkudjEuVXNhZ2VIAFIFdXNhZ2VCBgoEa2luZA==');
 
 @$core.Deprecated('Use chatConfigDescriptor instead')
 const ChatConfig$json = {
@@ -1006,6 +1061,7 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.ConfigOption': ConfigOption$json,
   '.nushi.v1.ConfigValue': ConfigValue$json,
   '.nushi.v1.Command': Command$json,
+  '.nushi.v1.Usage': Usage$json,
   '.nushi.v1.StartChatRequest': StartChatRequest$json,
   '.nushi.v1.StartChatResponse': StartChatResponse$json,
   '.nushi.v1.SendPromptRequest': SendPromptRequest$json,

@@ -18,6 +18,7 @@ type fakeAgent struct {
 	session acp.NewSessionResponse
 	set     []string // config changes asked for, as id=value
 	prompt  []acp.ContentBlock
+	usage   *acp.TurnUsage // the prompt response's
 }
 
 func (f *fakeAgent) Initialize(context.Context, acp.InitializeRequest) (*acp.InitializeResponse, error) {
@@ -34,12 +35,12 @@ func (f *fakeAgent) LoadSession(context.Context, acp.LoadSessionRequest) (*acp.L
 	return &acp.LoadSessionResponse{}, nil
 }
 
-func (f *fakeAgent) Prompt(_ context.Context, req acp.PromptRequest) (*acp.PromptResponse, error) {
+func (f *fakeAgent) Prompt(_ context.Context, req acp.PromptRequest) (*acp.PromptResult, error) {
 	f.prompt = req.Prompt
 	for _, u := range f.updates {
 		f.h.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: u})
 	}
-	return &acp.PromptResponse{StopReason: acp.StopReasonEndTurn}, nil
+	return &acp.PromptResult{PromptResponse: acp.PromptResponse{StopReason: acp.StopReasonEndTurn}, Usage: f.usage}, nil
 }
 
 func (f *fakeAgent) Close() error { return nil }
@@ -284,5 +285,36 @@ func TestPlanUpdatesInPlaceWithinATurn(t *testing.T) {
 	}
 	if c.items[0].ID == c.items[1].ID {
 		t.Errorf("the thought and the message share id %q", c.items[0].ID)
+	}
+}
+
+func TestUsageIsWhatTheAgentReported(t *testing.T) {
+	usage := func(used int64, cost *acp.Cost) acp.SessionUpdate {
+		return acp.SessionUpdate{SessionUpdate: "usage_update", UsageUpdate: &acp.UsageUpdate{Used: used, Size: 1000, Cost: cost}}
+	}
+	done := make(chan struct{})
+	publish := func(e model.Event) {
+		if e.Status != nil && !e.Status.Busy {
+			close(done)
+		}
+	}
+	agent := &fakeAgent{
+		updates: []acp.SessionUpdate{usage(100, &acp.Cost{Amount: 0.5, Currency: "USD"}), usage(120, nil)},
+		usage:   &acp.TurnUsage{InputTokens: 3, OutputTokens: 4, CachedReadTokens: 5, TotalTokens: 12},
+	}
+	svc := New("fake", func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, &memModes{}, &memSessions{}, publish)
+	id, err := svc.Start(context.Background(), t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Prompt(id, "hi", nil); err != nil {
+		t.Fatal(err)
+	}
+	<-done
+	snap, _ := svc.Get(id)
+	// An update without a cost leaves the last one reported.
+	want := model.Usage{Used: 120, Size: 1000, Cost: 0.5, Currency: "USD", Input: 3, Output: 4, CachedRead: 5}
+	if snap.Usage != want {
+		t.Errorf("usage = %+v, want %+v", snap.Usage, want)
 	}
 }

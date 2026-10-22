@@ -56,6 +56,7 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 17. Long chats | 1878 | 722 | 3235 | 650 |
 | 18. Ask about a selection | 2009 | 773 | 3559 | 650 |
 | 19. Rename, archive, remove | 2179 | 773 | 3968 | 650 |
+| 20. Usage and cost | 2219 | 793 | 4070 | 650 |
 
 Tripwires crossed:
 Lines added per step, code and tests, without generated code (the tripwire is about 500): 1: 533, 2: 1,502, 3: 239, 4: 437, 5: 739, 6: 639, 7: 464, 8: 537, 9: 265, 10: 528, 11: 1,249, 12: 625, 13: 476, 14: 343, 15: 351, 16: 492, 17: 298, 18: 666.
@@ -115,7 +116,7 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 - `session/new` requires `mcpServers`: send `[]`, never `null`.
 - claude-agent-acp 0.94.0 puts a `messageId` on every `agent_message_chunk`; chunks are grouped into messages by it (by the last message when it is missing).
 - The adapter logs progress (`[session/create] ...`) on stderr; nushid copies it into its log.
-- Between chunks Claude sends `usage_update` (context size, cost), and the `prompt` result carries a `_meta.quota` usage report. Both are ignored for now.
+- Usage (claude-agent-acp 0.94.0, step 20): each turn ends with two `usage_update`s, `{used, size}` and then the same with `cost: {amount, currency: "USD"}`, the session's cost so far. `size` was 1,000,000 for Opus 5.5 here; `used` is the context after the turn. The cost is cumulative over the whole session, across agent processes: after `session/load` the next turn's cost carries on from the earlier ones. `session/load` itself sends no `usage_update`, so a reopened chat has no usage until its next turn. One `usage_update` after a load also carried `_meta._claude/rateLimit` (five-hour and seven-day utilization); not shown. The prompt result carries ACP's unstable `usage` (`inputTokens`, `outputTokens`, `cachedReadTokens`, `cachedWriteTokens`, `totalTokens`, summed over the turn's model calls, so cache reads can exceed the context) and a `_meta.quota` with the same per model.
 - Claude names its sessions itself: soon after the first prompt it sends `session_info_update` with a short title ("Apple" for "Reply with just the word apple."). Nushi uses the first line of the first prompt until then.
 - `session/load` on Claude replays the user's messages, the agent's messages and the tool calls (with their final status and output), not permission prompts or questions. Messages carry `messageId`s in the replay too. Loading a session takes under a second once npx has the adapter.
 - Claude's tool calls arrive as a `tool_call` with a generic title ("Terminal", "Read File") and empty `rawInput`, then `tool_call_update`s that set the real title (the command, "Read notes.txt"), then content. The first content is the command's description; the final one (with `status: completed`) is the output in a fenced block. Each update's `content` replaces the previous one.
@@ -183,6 +184,8 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 - An archived chat keeps its transcript in the daemon's memory, so it reads as it was until the daemon restarts; after a restart it shows no history until unarchived, since showing it would mean starting an agent to replay it. Unarchiving drops the transcript and replays it through `session/load`.
 - Removing deletes only `sessions/<id>.json`. The confirmation names `claude --resume <id>` (in the chat's folder), which was tried after a removal.
 - The sidebar's Archived group is collapsed at each start (not remembered). A click opens a chat right away; a second click within the double-tap time renames it (Flutter's double-tap recognizer would delay every single click). Right-click, or the header's ⋯, opens the menu: Rename, Archive/Unarchive, Remove….
+
+- Usage (step 20) is only what the agent reports: the context meter (a ring and a percentage by Send, the counts and the last turn's tokens on hover) shows once a `usage_update` arrives, and the cost sits in the chat header once one carries a cost. An update without a cost keeps the last cost shown (Claude sends one without, then one with, each turn). The daemon keeps usage in memory with the chat, so it survives an app quit but not a daemon restart; it isn't stored. The ring turns amber past 70% and red past 90%. The prompt result's `usage` is read through a hand-written `acp.PromptResult` (unstable in ACP v1, not in the pinned schema).
 
 - Connect for Go is v1 (`connectrpc.com/connect` v1.21), not v2: v1 is what the Dart generator's docs and the POC used, and nothing here needs v2.
 - `http2` for Dart stays on 2.x: `connectrpc` 2.0.1 doesn't resolve with `http2` 3.x.

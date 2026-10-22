@@ -98,7 +98,7 @@ type Field struct {
 }
 
 // Event is a change to one chat. Exactly one of Item, Status, Config,
-// Session, Commands and Removed is set.
+// Session, Commands, Removed and Usage is set.
 type Event struct {
 	ChatID string
 	// Seq numbers the chat's events from 1; a Chat snapshot says which
@@ -113,7 +113,20 @@ type Event struct {
 	Config []ConfigOption
 	// Commands, when not nil, are the agent's slash commands, all of them.
 	Commands []Command
-	Removed  bool // the chat was removed
+	Removed  bool   // the chat was removed
+	Usage    *Usage // the chat's usage, all of it
+}
+
+// Usage is what the agent last reported of a chat's usage; what it hasn't
+// reported is zero. Nushi keeps it only while the agent runs.
+type Usage struct {
+	// Context tokens in use, and the context window's size.
+	Used, Size int64
+	// The session's cost so far.
+	Cost     float64
+	Currency string
+	// The last turn's tokens.
+	Input, Output, CachedRead, CachedWrite int64
 }
 
 // Command is a slash command the agent offers.
@@ -140,6 +153,7 @@ type Chat struct {
 	Items    []Item
 	Config   []ConfigOption
 	Commands []Command
+	Usage    Usage
 	Status   Status
 	Seq      int64 // the last event the snapshot includes
 }

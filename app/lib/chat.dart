@@ -15,6 +15,7 @@ class ChatState extends ChangeNotifier {
   final List<Item> items = [];
   List<ConfigOption> config = [];
   List<Command> commands = []; // the agent's slash commands
+  Usage usage = Usage(); // what the agent last reported
   bool busy = false;
   bool waiting = false; // on the user: a permission prompt or a question
   bool canFork = false; // the agent can fork it into side chats
@@ -34,6 +35,7 @@ class ChatState extends ChangeNotifier {
       ..addAll(s.items);
     config = s.config;
     commands = s.commands;
+    usage = s.usage;
     status(s.status);
     error = '';
     _seq = s.seq.toInt();
@@ -84,6 +86,8 @@ class ChatState extends ChangeNotifier {
         config = e.config.options;
       case EventsResponse_Kind.commands:
         commands = e.commands.commands;
+      case EventsResponse_Kind.usage:
+        usage = e.usage;
       case EventsResponse_Kind.status:
         status(e.status);
       case EventsResponse_Kind.chat ||

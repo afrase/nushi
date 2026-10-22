@@ -20,7 +20,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 14
+const Version = 15
 
 type server struct {
 	chats *chats.Service
@@ -67,7 +67,7 @@ func (s *server) GetChat(_ context.Context, req *connect.Request[nushiv1.GetChat
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 	resp := &nushiv1.GetChatResponse{Chat: chatProto(c.Session), Config: configProto(c.Config),
-		Status: statusProto(c.Status), Seq: c.Seq, Commands: commandsProto(c.Commands)}
+		Status: statusProto(c.Status), Seq: c.Seq, Commands: commandsProto(c.Commands), Usage: usageProto(c.Usage)}
 	for _, it := range c.Items {
 		resp.Items = append(resp.Items, itemProto(&it))
 	}
@@ -230,6 +230,8 @@ func toProto(e model.Event) *nushiv1.EventsResponse {
 		out.Kind = &nushiv1.EventsResponse_Config{Config: &nushiv1.ChatConfig{Options: configProto(e.Config)}}
 	case e.Status != nil:
 		out.Kind = &nushiv1.EventsResponse_Status{Status: statusProto(*e.Status)}
+	case e.Usage != nil:
+		out.Kind = &nushiv1.EventsResponse_Usage{Usage: usageProto(*e.Usage)}
 	case e.Removed:
 		out.Kind = &nushiv1.EventsResponse_Removed{Removed: true}
 	case e.Commands != nil:
@@ -262,6 +264,11 @@ func commandsProto(cmds []model.Command) []*nushiv1.Command {
 		out = append(out, &nushiv1.Command{Name: c.Name, Description: c.Description, Hint: c.Hint})
 	}
 	return out
+}
+
+func usageProto(u model.Usage) *nushiv1.Usage {
+	return &nushiv1.Usage{ContextUsed: u.Used, ContextSize: u.Size, Cost: u.Cost, Currency: u.Currency,
+		InputTokens: u.Input, OutputTokens: u.Output, CachedReadTokens: u.CachedRead, CachedWriteTokens: u.CachedWrite}
 }
 
 func statusProto(st model.Status) *nushiv1.ChatStatus {

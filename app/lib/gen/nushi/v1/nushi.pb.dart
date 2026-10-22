@@ -427,6 +427,7 @@ class GetChatResponse extends $pb.GeneratedMessage {
     ChatStatus? status,
     $fixnum.Int64? seq,
     $core.Iterable<Command>? commands,
+    Usage? usage,
   }) {
     final result = GetChatResponse._();
     if (chat != null) result.chat = chat;
@@ -435,6 +436,7 @@ class GetChatResponse extends $pb.GeneratedMessage {
     if (status != null) result.status = status;
     if (seq != null) result.seq = seq;
     if (commands != null) result.commands.addAll(commands);
+    if (usage != null) result.usage = usage;
     return result;
   }
 
@@ -462,6 +464,8 @@ class GetChatResponse extends $pb.GeneratedMessage {
     ..aInt64(5, _omitFieldNames ? '' : 'seq')
     ..pPM<Command>(6, _omitFieldNames ? '' : 'commands',
         subBuilder: Command.$_createMessage)
+    ..aOM<Usage>(7, _omitFieldNames ? '' : 'usage',
+        subBuilder: Usage.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -527,6 +531,162 @@ class GetChatResponse extends $pb.GeneratedMessage {
   /// The agent's slash commands.
   @$pb.TagNumber(6)
   $pb.PbList<Command> get commands => $_getList(5);
+
+  @$pb.TagNumber(7)
+  Usage get usage => $_getN(6);
+  @$pb.TagNumber(7)
+  set usage(Usage value) => $_setField(7, value);
+  @$pb.TagNumber(7)
+  $core.bool hasUsage() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearUsage() => $_clearField(7);
+  @$pb.TagNumber(7)
+  Usage ensureUsage() => $_ensure(6);
+}
+
+/// What the agent last reported of a chat's usage; what it hasn't reported
+/// is zero. It starts empty when the daemon restarts.
+class Usage extends $pb.GeneratedMessage {
+  factory Usage({
+    $fixnum.Int64? contextUsed,
+    $fixnum.Int64? contextSize,
+    $core.double? cost,
+    $core.String? currency,
+    $fixnum.Int64? inputTokens,
+    $fixnum.Int64? outputTokens,
+    $fixnum.Int64? cachedReadTokens,
+    $fixnum.Int64? cachedWriteTokens,
+  }) {
+    final result = Usage._();
+    if (contextUsed != null) result.contextUsed = contextUsed;
+    if (contextSize != null) result.contextSize = contextSize;
+    if (cost != null) result.cost = cost;
+    if (currency != null) result.currency = currency;
+    if (inputTokens != null) result.inputTokens = inputTokens;
+    if (outputTokens != null) result.outputTokens = outputTokens;
+    if (cachedReadTokens != null) result.cachedReadTokens = cachedReadTokens;
+    if (cachedWriteTokens != null) result.cachedWriteTokens = cachedWriteTokens;
+    return result;
+  }
+
+  Usage._();
+
+  factory Usage.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Usage()..mergeFromBuffer(data, registry);
+  factory Usage.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Usage()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'Usage',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: Usage.$_createMessage)
+    ..aInt64(1, _omitFieldNames ? '' : 'contextUsed')
+    ..aInt64(2, _omitFieldNames ? '' : 'contextSize')
+    ..aD(3, _omitFieldNames ? '' : 'cost')
+    ..aOS(4, _omitFieldNames ? '' : 'currency')
+    ..aInt64(5, _omitFieldNames ? '' : 'inputTokens')
+    ..aInt64(6, _omitFieldNames ? '' : 'outputTokens')
+    ..aInt64(7, _omitFieldNames ? '' : 'cachedReadTokens')
+    ..aInt64(8, _omitFieldNames ? '' : 'cachedWriteTokens')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Usage clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Usage copyWith(void Function(Usage) updates) =>
+      super.copyWith((message) => updates(message as Usage)) as Usage;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use Usage() / Usage.new instead')
+  static Usage create() => Usage._();
+  static $pb.GeneratedMessage $_createMessage() => Usage._();
+  @$core.override
+  Usage createEmptyInstance() => Usage._();
+  @$core.pragma('dart2js:noInline')
+  static Usage getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<Usage>(Usage.$_createMessage);
+  static Usage? _defaultInstance;
+
+  /// Context tokens in use, and the context window's size (ACP
+  /// usage_update).
+  @$pb.TagNumber(1)
+  $fixnum.Int64 get contextUsed => $_getI64(0);
+  @$pb.TagNumber(1)
+  set contextUsed($fixnum.Int64 value) => $_setInt64(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasContextUsed() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearContextUsed() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $fixnum.Int64 get contextSize => $_getI64(1);
+  @$pb.TagNumber(2)
+  set contextSize($fixnum.Int64 value) => $_setInt64(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasContextSize() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearContextSize() => $_clearField(2);
+
+  /// The session's cost so far, in currency (ISO 4217).
+  @$pb.TagNumber(3)
+  $core.double get cost => $_getN(2);
+  @$pb.TagNumber(3)
+  set cost($core.double value) => $_setDouble(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasCost() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearCost() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get currency => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set currency($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasCurrency() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearCurrency() => $_clearField(4);
+
+  /// The last turn's tokens (the prompt response's usage).
+  @$pb.TagNumber(5)
+  $fixnum.Int64 get inputTokens => $_getI64(4);
+  @$pb.TagNumber(5)
+  set inputTokens($fixnum.Int64 value) => $_setInt64(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasInputTokens() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearInputTokens() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $fixnum.Int64 get outputTokens => $_getI64(5);
+  @$pb.TagNumber(6)
+  set outputTokens($fixnum.Int64 value) => $_setInt64(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasOutputTokens() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearOutputTokens() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $fixnum.Int64 get cachedReadTokens => $_getI64(6);
+  @$pb.TagNumber(7)
+  set cachedReadTokens($fixnum.Int64 value) => $_setInt64(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasCachedReadTokens() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearCachedReadTokens() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $fixnum.Int64 get cachedWriteTokens => $_getI64(7);
+  @$pb.TagNumber(8)
+  set cachedWriteTokens($fixnum.Int64 value) => $_setInt64(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasCachedWriteTokens() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearCachedWriteTokens() => $_clearField(8);
 }
 
 /// A slash command the agent offers; it is sent as a prompt starting with
@@ -2364,6 +2524,7 @@ enum EventsResponse_Kind {
   chat,
   commands,
   removed,
+  usage,
   notSet
 }
 
@@ -2377,6 +2538,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     $fixnum.Int64? seq,
     ChatCommands? commands,
     $core.bool? removed,
+    Usage? usage,
   }) {
     final result = EventsResponse._();
     if (chatId != null) result.chatId = chatId;
@@ -2387,6 +2549,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     if (seq != null) result.seq = seq;
     if (commands != null) result.commands = commands;
     if (removed != null) result.removed = removed;
+    if (usage != null) result.usage = usage;
     return result;
   }
 
@@ -2407,13 +2570,14 @@ class EventsResponse extends $pb.GeneratedMessage {
     5: EventsResponse_Kind.chat,
     7: EventsResponse_Kind.commands,
     8: EventsResponse_Kind.removed,
+    9: EventsResponse_Kind.usage,
     0: EventsResponse_Kind.notSet
   };
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'EventsResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: EventsResponse.$_createMessage)
-    ..oo(0, [2, 3, 4, 5, 7, 8])
+    ..oo(0, [2, 3, 4, 5, 7, 8, 9])
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
     ..aOM<ItemEvent>(2, _omitFieldNames ? '' : 'item',
         subBuilder: ItemEvent.$_createMessage)
@@ -2427,6 +2591,8 @@ class EventsResponse extends $pb.GeneratedMessage {
     ..aOM<ChatCommands>(7, _omitFieldNames ? '' : 'commands',
         subBuilder: ChatCommands.$_createMessage)
     ..aOB(8, _omitFieldNames ? '' : 'removed')
+    ..aOM<Usage>(9, _omitFieldNames ? '' : 'usage',
+        subBuilder: Usage.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -2457,6 +2623,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(5)
   @$pb.TagNumber(7)
   @$pb.TagNumber(8)
+  @$pb.TagNumber(9)
   EventsResponse_Kind whichKind() =>
       _EventsResponse_KindByTag[$_whichOneof(0)]!;
   @$pb.TagNumber(2)
@@ -2465,6 +2632,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(5)
   @$pb.TagNumber(7)
   @$pb.TagNumber(8)
+  @$pb.TagNumber(9)
   void clearKind() => $_clearField($_whichOneof(0));
 
   @$pb.TagNumber(1)
@@ -2552,6 +2720,18 @@ class EventsResponse extends $pb.GeneratedMessage {
   $core.bool hasRemoved() => $_has(7);
   @$pb.TagNumber(8)
   void clearRemoved() => $_clearField(8);
+
+  /// The chat's usage, all of it.
+  @$pb.TagNumber(9)
+  Usage get usage => $_getN(8);
+  @$pb.TagNumber(9)
+  set usage(Usage value) => $_setField(9, value);
+  @$pb.TagNumber(9)
+  $core.bool hasUsage() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearUsage() => $_clearField(9);
+  @$pb.TagNumber(9)
+  Usage ensureUsage() => $_ensure(8);
 }
 
 /// A chat's config options, all of them.

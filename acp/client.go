@@ -133,8 +133,8 @@ func (c *Client) LoadSession(ctx context.Context, req LoadSessionRequest) (*Load
 	return &resp, c.conn.call(ctx, "session/load", req, &resp)
 }
 
-func (c *Client) Prompt(ctx context.Context, req PromptRequest) (*PromptResponse, error) {
-	var resp PromptResponse
+func (c *Client) Prompt(ctx context.Context, req PromptRequest) (*PromptResult, error) {
+	var resp PromptResult
 	return &resp, c.conn.call(ctx, "session/prompt", req, &resp)
 }
 

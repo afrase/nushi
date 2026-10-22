@@ -51,6 +51,13 @@ func (c *chat) update(n acp.SessionNotification) {
 			c.config[i].Current = string(u.CurrentModeUpdate.CurrentModeID)
 			c.configChangedLocked()
 		}
+	case "usage_update":
+		u := u.UsageUpdate
+		c.usage.Used, c.usage.Size = u.Used, u.Size
+		if u.Cost != nil { // else the cost reported last still stands
+			c.usage.Cost, c.usage.Currency = u.Cost.Amount, u.Cost.Currency
+		}
+		c.usageChangedLocked()
 	case "session_info_update":
 		if t := u.SessionInfoUpdate.Title; t != "" {
 			c.saveLocked(func(s *model.Session) { s.Title = t })

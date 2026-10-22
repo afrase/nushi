@@ -24,7 +24,7 @@ type Agent interface {
 	Initialize(context.Context, acp.InitializeRequest) (*acp.InitializeResponse, error)
 	NewSession(context.Context, acp.NewSessionRequest) (*acp.NewSessionResponse, error)
 	LoadSession(context.Context, acp.LoadSessionRequest) (*acp.LoadSessionResponse, error)
-	Prompt(context.Context, acp.PromptRequest) (*acp.PromptResponse, error)
+	Prompt(context.Context, acp.PromptRequest) (*acp.PromptResult, error)
 	SetConfigOption(context.Context, acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error)
 	SetMode(context.Context, acp.SetSessionModeRequest) error
 	Cancel(acp.CancelNotification) error
@@ -73,6 +73,7 @@ type chat struct {
 	questions map[string]chan<- []model.Field // questions by item id, for the answer (nil: declined)
 	config    []model.ConfigOption
 	commands  []model.Command
+	usage     model.Usage
 	session   model.Session
 	canFork   bool             // the agent can fork the session into side chats
 	sides     map[string]*chat // the chat's side chats, by session id
@@ -103,6 +104,7 @@ func (s *Service) Get(chatID string) (model.Chat, error) {
 		Items:    slices.Clone(c.items),
 		Config:   slices.Clone(c.config),
 		Commands: slices.Clone(c.commands),
+		Usage:    c.usage,
 		Status:   c.statusLocked(),
 		Seq:      c.seq,
 	}, nil
@@ -274,6 +276,11 @@ func (c *chat) run(prompt []acp.ContentBlock) {
 	defer c.mu.Unlock()
 	c.busy, c.started = false, time.Time{}
 	close(c.done)
+	if err == nil && resp.Usage != nil {
+		u := resp.Usage
+		c.usage.Input, c.usage.Output, c.usage.CachedRead, c.usage.CachedWrite = u.InputTokens, u.OutputTokens, u.CachedReadTokens, u.CachedWriteTokens
+		c.usageChangedLocked()
+	}
 	switch {
 	case err != nil:
 		c.noticeLocked("error", "The turn failed: "+err.Error())
@@ -287,6 +294,11 @@ func (c *chat) run(prompt []acp.ContentBlock) {
 		c.noticeLocked("max_turn_requests", "The agent stopped: it reached its limit of requests in one turn")
 	}
 	c.statusChangedLocked()
+}
+
+func (c *chat) usageChangedLocked() {
+	u := c.usage
+	c.emitLocked(model.Event{ChatID: c.id, Usage: &u})
 }
 
 func (c *chat) noticeLocked(reason, text string) {

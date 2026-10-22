@@ -94,6 +94,24 @@ message GetChatResponse {
   int64 seq = 5;
   // The agent's slash commands.
   repeated Command commands = 6;
+  Usage usage = 7;
+}
+
+// What the agent last reported of a chat's usage; what it hasn't reported
+// is zero. It starts empty when the daemon restarts.
+message Usage {
+  // Context tokens in use, and the context window's size (ACP
+  // usage_update).
+  int64 context_used = 1;
+  int64 context_size = 2;
+  // The session's cost so far, in currency (ISO 4217).
+  double cost = 3;
+  string currency = 4;
+  // The last turn's tokens (the prompt response's usage).
+  int64 input_tokens = 5;
+  int64 output_tokens = 6;
+  int64 cached_read_tokens = 7;
+  int64 cached_write_tokens = 8;
 }
 
 // A slash command the agent offers; it is sent as a prompt starting with
@@ -251,6 +269,8 @@ message EventsResponse {
     ChatCommands commands = 7;
     // The chat was removed (RemoveChat).
     bool removed = 8;
+    // The chat's usage, all of it.
+    Usage usage = 9;
   }
 }
 
