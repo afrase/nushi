@@ -16,14 +16,14 @@ Milestone D (steps 11–18) is done, one commit each on `main` (not pushed), on 
 
 **What doesn't (yet)**
 - Claude sends no thoughts: recent models stream thinking "omitted", and no setting tried changed it. The Thinking line is built and tested with the fake agent only.
-- Plans need Claude's todo tools, which nushid turns on with an environment variable (`CLAUDE_CODE_ENABLE_TODO_TOOLS=1`).
+- Plans show only when Claude's todo tools are on. Nushi leaves that to Claude's own config: `"env": {"CLAUDE_CODE_ENABLE_TODO_TOOLS": "1"}` in `~/.claude/settings.json`.
 - Copying a selection across several blocks loses the line breaks between them (Flutter's `SelectionArea`).
 - Command output shows when the command ends, not while it runs (Claude sends it at the end; the terminal capability isn't offered).
 - Each streamed chunk re-parses its whole message; fine for normal replies, worth a look for very long ones.
 - Side questions: one per chat at a time, no pickers, and they end when the chat's panel closes or you switch chats.
 - Still not done from milestone C: deleting, archiving or renaming chats; usage and cost; a packaged `.app`.
 
-**Decisions to revisit**: see [the list below](#decisions-to-revisit). Most worth a look: turning on Claude's todo tools from nushid; the markdown package being `flutter_markdown_plus` plus the healer rather than the POC's renderer; tool calls collapsed by default, edits included; keeping the native title bar; light/dark following the system rather than the POC's dark default; side chats sharing the chat's agent process.
+**Decisions to revisit**: see [the list below](#decisions-to-revisit). Most worth a look: the markdown package being `flutter_markdown_plus` plus the healer rather than the POC's renderer; tool calls collapsed by default, edits included; keeping the native title bar; light/dark following the system rather than the POC's dark default; side chats sharing the chat's agent process.
 
 **Size**: the app is 3,559 lines of Dart (limit about 7,000), plus 650 in packages (the transport 131, markdown 519); the daemon is 2,009 lines of Go (limit 5,000) and the ACP client 773 (limit 2,000). The largest hand-written files are `acp/internal/acpgen/main.go` (393) and `app/lib/composer.dart` (376). Steps 11, 12, 16 and 18 went over the ~500-lines-per-step tripwire (11 by the most, 1,249, restyling every view); what pushed each is under "Tripwires crossed".
 
@@ -157,7 +157,7 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 - The POC's fonts are bundled (`app/fonts/`, IBM Plex Sans and JetBrains Mono, variable TTFs from google/fonts, OFL licenses next to them), so the app looks the same on any Mac. About 1.3 MB.
 - Not lifted from the POC: density and zoom settings, the status bar, the folder rail, chat tabs, the inspector.
 
-- nushid starts Claude with `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` (unless the variable is already set) so plans show up; that's the one place Nushi changes how Claude runs.
+- Nushi doesn't change how Claude runs: its todo tools (and so plans) are on only if your Claude config turns them on. Step 14 set the variable from nushid; removed after, since the same chat should behave the same in the terminal.
 - A plan updates in place: the turn's plan item (since the last prompt) is replaced; a new turn starts a new one. While the agent works, the current step also shows on one line above the composer, since the plan itself may have scrolled away.
 - Thoughts show as a dim "Thinking…" line (spinner while it's the newest item and the agent works), collapsed; opening it shows the text, italic, plain (not markdown).
 - The fake agent has `think` and `plan` scripts, and `acp/acptest/fakeagent` runs it on stdio. To watch them in the app: build it, put an `npx` that execs it first on `PATH`, and start `bin/nushid` with that `PATH`.
@@ -193,7 +193,6 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 - A panic while handling something the agent sent is turned into a JSON-RPC error instead of crashing the daemon, and a malformed elicitation form is refused (automated security review, step 5).
 - `ListFiles` (step 16) lists any absolute folder the client names (with the client token), through `git ls-files` or a directory walk, 20,000 names at most; it reads names, not contents. Mentioned files go to the agent as `file://` links, which Claude reads with its own permissions.
 - `GetDiff` runs `git` in the folder the client names, as you, with `core.fsmonitor` off and `--no-ext-diff`/`--no-textconv`. Clean filters (`filter.<name>.clean`) still run when `git diff` reads the work tree, as they would for your own `git status` there: a filter needs a config entry, which a cloned repository can't carry, so it takes someone who can already write your `.git/config` or global config. The automated review in step 10 suggested going further (an empty attribute source, or diffing blobs without git's work-tree comparison); I left that for you to decide. A symlink in the work tree is shown as its target path (as git sees it), never followed.
-- nushid sets `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` in Claude's environment (step 14), unless it is already set.
 - Agent text is rendered as markdown; the app never loads images it names (an image URL in a tool's output could otherwise leak data to a server). Links open in the default browser on click, http and https only (step 12); a link's text can differ from where it goes, as on any web page. (Both from the automated security review in step 4. Since step 13 diffs are no longer put into markdown, so the fence that guarded them is gone.)
 - The client token (`token`, mode 0600) sits next to the socket in a 0700 folder; any process running as you can read it ([ADR 0005](docs/adr/0005-clients-authenticate.md)).
 
