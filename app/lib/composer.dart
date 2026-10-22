@@ -7,7 +7,8 @@ import 'gen/nushi/v1/nushi.pb.dart';
 import 'pickers.dart';
 import 'theme/theme.dart';
 import 'thinking.dart';
-import 'widgets.dart';
+import 'composer_parts.dart';
+import 'usage.dart';
 
 /// Stops the chat's running turn.
 Future<void> stopTurn(
@@ -25,10 +26,9 @@ Future<void> stopTurn(
   }
 }
 
-/// A completion offered while typing: a slash command or a file.
-typedef _Choice = ({String label, String detail, String insert});
-
-/// The prompt box, with the agent's pickers and Send under it. Enter sends,
+/// The prompt box: "+" on its left starts an @ mention, and on its right
+/// a send button once there is text, or a stop button while a turn runs.
+/// Under it, the agent's pickers and the context ring. Enter sends,
 /// Shift-Enter starts a line; `/` completes the agent's commands and `@`
 /// the folder's files (sent as links); Up in an empty box brings back the
 /// last prompt.
@@ -38,7 +38,7 @@ class Composer extends StatefulWidget {
     required this.chat,
     required this.daemon,
     required this.quote,
-    this.hint = 'Message Claude   @ file   / command   ⏎ send · ⇧⏎ newline',
+    this.hint = 'Type / for commands',
   });
 
   final ChatState chat;
@@ -59,7 +59,7 @@ class _ComposerState extends State<Composer> {
   List<String> _lastFiles = []; // the last prompt's, for Up
   List<String>? _files; // the folder's, fetched at the first @
   String _filesOf = ''; // the folder they are of
-  List<_Choice> _choices = [];
+  List<Choice> _choices = [];
   int _picked = 0;
   (int, int)? _token; // where the text being completed starts and ends
   String _dismissed = ''; // the text Escape closed the choices for
@@ -99,7 +99,7 @@ class _ComposerState extends State<Composer> {
   void _complete() {
     final caret = _text.selection.baseOffset;
     final before = caret < 0 ? '' : _text.text.substring(0, caret);
-    var choices = <_Choice>[];
+    var choices = <Choice>[];
     _token = null;
     if (RegExp(r'^/(\S*)$').firstMatch(before) case final m?) {
       final names = {for (final c in widget.chat.commands) c.name: c};
@@ -147,7 +147,24 @@ class _ComposerState extends State<Composer> {
     return hits.take(8).toList();
   }
 
-  void _accept(_Choice c) {
+  /// Starts an @ mention at the cursor, which offers the folder's files.
+  void _mention() {
+    final sel = _text.selection;
+    final at = sel.isValid ? sel.start : _text.text.length;
+    final before = _text.text.substring(0, at);
+    final insert =
+        before.isEmpty || before.endsWith(' ') || before.endsWith('\n')
+        ? '@'
+        : ' @';
+    _text.value = TextEditingValue(
+      text: _text.text.replaceRange(at, sel.isValid ? sel.end : at, insert),
+      selection: TextSelection.collapsed(offset: at + insert.length),
+    );
+    _dismissed = '';
+    _focus.requestFocus();
+  }
+
+  void _accept(Choice c) {
     final (start, end) = _token!;
     final text = _text.text.replaceRange(start, end, c.insert);
     if (c.insert.startsWith('@')) _mentions.add(c.label);
@@ -233,16 +250,8 @@ class _ComposerState extends State<Composer> {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final chat = widget.chat;
-    OutlineInputBorder border(Color c, double w) => OutlineInputBorder(
-      borderRadius: BorderRadius.circular(NushiTheme.control),
-      borderSide: BorderSide(color: c, width: w),
-    );
-    return Container(
-      decoration: BoxDecoration(
-        color: t.raised,
-        border: Border(top: BorderSide(color: t.borderSubtle)),
-      ),
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -253,125 +262,80 @@ class _ComposerState extends State<Composer> {
               child: Text(chat.error, style: theme.ui(t.crashed, size: 12)),
             ),
           if (_choices.isNotEmpty)
-            _ChoiceList(_choices, _picked, onPick: _accept),
-          Focus(
-            onKeyEvent: _onKey,
-            skipTraversal: true,
-            child: TextField(
-              controller: _text,
-              focusNode: _focus,
-              autofocus: true,
-              minLines: 2,
-              maxLines: 10,
-              style: theme.ui(t.text),
-              decoration: InputDecoration(
-                isDense: true,
-                hintText: chat.busy ? 'Claude is working…' : widget.hint,
-                hintStyle: theme.ui(t.textMuted),
-                filled: true,
-                fillColor: t.base,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 8,
+            ChoiceList(_choices, _picked, onPick: _accept),
+          AnimatedBuilder(
+            animation: _focus,
+            builder: (context, child) => Container(
+              decoration: BoxDecoration(
+                color: t.base,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _focus.hasFocus ? t.focus : t.borderStrong,
                 ),
-                enabledBorder: border(t.borderStrong, 1),
-                focusedBorder: border(t.focus, 2),
               ),
+              padding: const EdgeInsets.fromLTRB(4, 4, 6, 4),
+              child: child,
             ),
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Pickers(
-                    options: chat.config,
-                    onPick: (id, value) =>
-                        widget.daemon.setConfigOption(chat.id, id, value),
-                  ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                BoxButton(
+                  tooltip: 'Mention a file',
+                  onPressed: _mention,
+                  child: Icon(Icons.add, size: 18, color: t.textSecondary),
                 ),
-              ),
-              const SizedBox(width: 10),
-              if (chat.started != null)
-                Button(
-                  label: 'Stop',
-                  hint: 'esc',
-                  icon: Icons.stop,
-                  kind: ButtonKind.danger,
-                  height: 24,
-                  onPressed: () => stopTurn(context, chat, widget.daemon),
-                )
-              else
-                Button(
-                  label: 'Send',
-                  hint: '⏎',
-                  kind: ButtonKind.primary,
-                  height: 24,
-                  onPressed: chat.busy ? null : _send,
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// The completions over the prompt box, the picked one highlighted.
-class _ChoiceList extends StatelessWidget {
-  const _ChoiceList(this.choices, this.picked, {required this.onPick});
-
-  final List<_Choice> choices;
-  final int picked;
-  final void Function(_Choice) onPick;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: t.base,
-        border: Border.all(color: t.borderStrong),
-        borderRadius: BorderRadius.circular(NushiTheme.card),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final (i, c) in choices.indexed)
-            Material(
-              color: i == picked ? t.selected : Colors.transparent,
-              borderRadius: BorderRadius.circular(NushiTheme.control),
-              child: InkWell(
-                onTap: () => onPick(c),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  child: Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(
-                          text: c.label,
-                          style: theme.code(t.text, size: 12.5),
+                Expanded(
+                  child: Focus(
+                    onKeyEvent: _onKey,
+                    skipTraversal: true,
+                    child: TextField(
+                      controller: _text,
+                      focusNode: _focus,
+                      autofocus: true,
+                      minLines: 1,
+                      maxLines: 10,
+                      style: theme.ui(t.text),
+                      decoration: InputDecoration(
+                        isDense: true,
+                        hintText: chat.busy
+                            ? 'Claude is working…'
+                            : widget.hint,
+                        hintStyle: theme.ui(t.textMuted),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 6,
                         ),
-                        if (c.detail.isNotEmpty)
-                          TextSpan(
-                            text: '   ${c.detail}',
-                            style: theme.ui(t.textMuted, size: 12),
-                          ),
-                      ],
+                      ),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-              ),
+                if (chat.started != null)
+                  BoxButton(
+                    tooltip: 'Stop (esc)',
+                    onPressed: () => stopTurn(context, chat, widget.daemon),
+                    child: StopIcon(color: t.textSecondary),
+                  )
+                else if (_text.text.trim().isNotEmpty && !chat.busy)
+                  BoxButton(
+                    tooltip: 'Send (⏎)',
+                    onPressed: _send,
+                    child: Icon(
+                      Icons.keyboard_return,
+                      size: 16,
+                      color: t.textSecondary,
+                    ),
+                  ),
+              ],
             ),
+          ),
+          const SizedBox(height: 4),
+          Pickers(
+            options: chat.config,
+            onPick: (id, value) =>
+                widget.daemon.setConfigOption(chat.id, id, value),
+            trailing: ContextMeter(chat.usage, ring: true),
+          ),
         ],
       ),
     );
