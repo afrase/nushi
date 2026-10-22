@@ -15,11 +15,13 @@ dependencies:
     path: ../packages/uds_transport
   flutter_markdown_plus: ^1.0.12
   file_selector: ^1.1.0
+  diff_view: ^0.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  fixnum: ^1.1.1
 
 flutter:
   uses-material-design: true

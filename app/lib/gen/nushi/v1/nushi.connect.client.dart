@@ -154,6 +154,25 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Returns a folder's uncommitted changes against HEAD, untracked files
+  /// included.
+  Future<nushiv1nushi.GetDiffResponse> getDiff(
+    nushiv1nushi.GetDiffRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.getDiff,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.
   Stream<nushiv1nushi.EventsResponse> events(

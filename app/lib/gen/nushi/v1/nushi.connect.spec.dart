@@ -76,6 +76,15 @@ abstract final class NushiService {
     nushiv1nushi.SetConfigOptionResponse.new,
   );
 
+  /// Returns a folder's uncommitted changes against HEAD, untracked files
+  /// included.
+  static const getDiff = connect.Spec(
+    '/$name/GetDiff',
+    connect.StreamType.unary,
+    nushiv1nushi.GetDiffRequest.new,
+    nushiv1nushi.GetDiffResponse.new,
+  );
+
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.
   static const events = connect.Spec(

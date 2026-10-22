@@ -4,7 +4,9 @@ package api
 import (
 	"context"
 	"crypto/subtle"
+	"fmt"
 	"net/http"
+	"path/filepath"
 
 	"connectrpc.com/connect"
 
@@ -12,11 +14,12 @@ import (
 	"github.com/afrase/nushi/internal/features/chats"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
+	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 7
+const Version = 8
 
 type server struct {
 	chats *chats.Service
@@ -109,6 +112,21 @@ func (s *server) SetConfigOption(ctx context.Context, req *connect.Request[nushi
 		return nil, err
 	}
 	return connect.NewResponse(&nushiv1.SetConfigOptionResponse{}), nil
+}
+
+func (s *server) GetDiff(ctx context.Context, req *connect.Request[nushiv1.GetDiffRequest]) (*connect.Response[nushiv1.GetDiffResponse], error) {
+	if !filepath.IsAbs(req.Msg.Folder) {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%q is not an absolute path", req.Msg.Folder))
+	}
+	changes, err := git.Changes(ctx, req.Msg.Folder)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	resp := &nushiv1.GetDiffResponse{}
+	for _, c := range changes {
+		resp.Files = append(resp.Files, &nushiv1.FileChange{Path: c.Path, Status: c.Status, OldText: c.Old, NewText: c.New, Skipped: c.Skipped})
+	}
+	return connect.NewResponse(resp), nil
 }
 
 func (s *server) Events(ctx context.Context, _ *connect.Request[nushiv1.EventsRequest], stream *connect.ServerStream[nushiv1.EventsResponse]) error {

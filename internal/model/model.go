@@ -118,3 +118,10 @@ type Status struct {
 	Busy  bool
 	Error string
 }
+
+// FileChange is one file's uncommitted change: its text at HEAD and now.
+// Status is "added", "modified" or "deleted". Skipped says why the texts
+// are left out ("binary", "too large"), if they are.
+type FileChange struct {
+	Path, Status, Old, New, Skipped string
+}

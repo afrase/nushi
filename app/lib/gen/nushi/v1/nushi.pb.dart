@@ -1175,6 +1175,224 @@ class SetConfigOptionResponse extends $pb.GeneratedMessage {
   static SetConfigOptionResponse? _defaultInstance;
 }
 
+class GetDiffRequest extends $pb.GeneratedMessage {
+  factory GetDiffRequest({
+    $core.String? folder,
+  }) {
+    final result = GetDiffRequest._();
+    if (folder != null) result.folder = folder;
+    return result;
+  }
+
+  GetDiffRequest._();
+
+  factory GetDiffRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetDiffRequest()..mergeFromBuffer(data, registry);
+  factory GetDiffRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetDiffRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetDiffRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetDiffRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'folder')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetDiffRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetDiffRequest copyWith(void Function(GetDiffRequest) updates) =>
+      super.copyWith((message) => updates(message as GetDiffRequest))
+          as GetDiffRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GetDiffRequest() / GetDiffRequest.new instead')
+  static GetDiffRequest create() => GetDiffRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetDiffRequest._();
+  @$core.override
+  GetDiffRequest createEmptyInstance() => GetDiffRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetDiffRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GetDiffRequest>(
+          GetDiffRequest.$_createMessage);
+  static GetDiffRequest? _defaultInstance;
+
+  /// An absolute path; it may be anywhere inside a repository.
+  @$pb.TagNumber(1)
+  $core.String get folder => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set folder($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasFolder() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearFolder() => $_clearField(1);
+}
+
+class GetDiffResponse extends $pb.GeneratedMessage {
+  factory GetDiffResponse({
+    $core.Iterable<FileChange>? files,
+  }) {
+    final result = GetDiffResponse._();
+    if (files != null) result.files.addAll(files);
+    return result;
+  }
+
+  GetDiffResponse._();
+
+  factory GetDiffResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetDiffResponse()..mergeFromBuffer(data, registry);
+  factory GetDiffResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetDiffResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetDiffResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetDiffResponse.$_createMessage)
+    ..pPM<FileChange>(1, _omitFieldNames ? '' : 'files',
+        subBuilder: FileChange.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetDiffResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetDiffResponse copyWith(void Function(GetDiffResponse) updates) =>
+      super.copyWith((message) => updates(message as GetDiffResponse))
+          as GetDiffResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GetDiffResponse() / GetDiffResponse.new instead')
+  static GetDiffResponse create() => GetDiffResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetDiffResponse._();
+  @$core.override
+  GetDiffResponse createEmptyInstance() => GetDiffResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetDiffResponse getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GetDiffResponse>(
+          GetDiffResponse.$_createMessage);
+  static GetDiffResponse? _defaultInstance;
+
+  /// Sorted by path.
+  @$pb.TagNumber(1)
+  $pb.PbList<FileChange> get files => $_getList(0);
+}
+
+/// One file's change: its text at HEAD and now.
+class FileChange extends $pb.GeneratedMessage {
+  factory FileChange({
+    $core.String? path,
+    $core.String? status,
+    $core.String? oldText,
+    $core.String? newText,
+    $core.String? skipped,
+  }) {
+    final result = FileChange._();
+    if (path != null) result.path = path;
+    if (status != null) result.status = status;
+    if (oldText != null) result.oldText = oldText;
+    if (newText != null) result.newText = newText;
+    if (skipped != null) result.skipped = skipped;
+    return result;
+  }
+
+  FileChange._();
+
+  factory FileChange.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FileChange()..mergeFromBuffer(data, registry);
+  factory FileChange.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FileChange()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'FileChange',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: FileChange.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'path')
+    ..aOS(2, _omitFieldNames ? '' : 'status')
+    ..aOS(3, _omitFieldNames ? '' : 'oldText')
+    ..aOS(4, _omitFieldNames ? '' : 'newText')
+    ..aOS(5, _omitFieldNames ? '' : 'skipped')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FileChange clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FileChange copyWith(void Function(FileChange) updates) =>
+      super.copyWith((message) => updates(message as FileChange)) as FileChange;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use FileChange() / FileChange.new instead')
+  static FileChange create() => FileChange._();
+  static $pb.GeneratedMessage $_createMessage() => FileChange._();
+  @$core.override
+  FileChange createEmptyInstance() => FileChange._();
+  @$core.pragma('dart2js:noInline')
+  static FileChange getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<FileChange>(FileChange.$_createMessage);
+  static FileChange? _defaultInstance;
+
+  /// Relative to the folder.
+  @$pb.TagNumber(1)
+  $core.String get path => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set path($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPath() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPath() => $_clearField(1);
+
+  /// "added", "modified" or "deleted".
+  @$pb.TagNumber(2)
+  $core.String get status => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set status($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasStatus() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearStatus() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get oldText => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set oldText($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasOldText() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearOldText() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get newText => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set newText($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasNewText() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearNewText() => $_clearField(4);
+
+  /// Why the texts are left out ("binary", "too large"), if they are.
+  @$pb.TagNumber(5)
+  $core.String get skipped => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set skipped($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasSkipped() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearSkipped() => $_clearField(5);
+}
+
 class EventsRequest extends $pb.GeneratedMessage {
   factory EventsRequest() => EventsRequest._();
 
@@ -2196,6 +2414,13 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, SetConfigOptionRequest request) =>
       _client.invoke<SetConfigOptionResponse>(ctx, 'NushiService',
           'SetConfigOption', request, SetConfigOptionResponse());
+
+  /// Returns a folder's uncommitted changes against HEAD, untracked files
+  /// included.
+  $async.Future<GetDiffResponse> getDiff(
+          $pb.ClientContext? ctx, GetDiffRequest request) =>
+      _client.invoke<GetDiffResponse>(
+          ctx, 'NushiService', 'GetDiff', request, GetDiffResponse());
 
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.

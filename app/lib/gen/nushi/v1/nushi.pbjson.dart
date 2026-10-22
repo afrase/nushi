@@ -330,6 +330,56 @@ const SetConfigOptionResponse$json = {
 final $typed_data.Uint8List setConfigOptionResponseDescriptor =
     $convert.base64Decode('ChdTZXRDb25maWdPcHRpb25SZXNwb25zZQ==');
 
+@$core.Deprecated('Use getDiffRequestDescriptor instead')
+const GetDiffRequest$json = {
+  '1': 'GetDiffRequest',
+  '2': [
+    {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
+  ],
+};
+
+/// Descriptor for `GetDiffRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getDiffRequestDescriptor = $convert
+    .base64Decode('Cg5HZXREaWZmUmVxdWVzdBIWCgZmb2xkZXIYASABKAlSBmZvbGRlcg==');
+
+@$core.Deprecated('Use getDiffResponseDescriptor instead')
+const GetDiffResponse$json = {
+  '1': 'GetDiffResponse',
+  '2': [
+    {
+      '1': 'files',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.FileChange',
+      '10': 'files'
+    },
+  ],
+};
+
+/// Descriptor for `GetDiffResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getDiffResponseDescriptor = $convert.base64Decode(
+    'Cg9HZXREaWZmUmVzcG9uc2USKgoFZmlsZXMYASADKAsyFC5udXNoaS52MS5GaWxlQ2hhbmdlUg'
+    'VmaWxlcw==');
+
+@$core.Deprecated('Use fileChangeDescriptor instead')
+const FileChange$json = {
+  '1': 'FileChange',
+  '2': [
+    {'1': 'path', '3': 1, '4': 1, '5': 9, '10': 'path'},
+    {'1': 'status', '3': 2, '4': 1, '5': 9, '10': 'status'},
+    {'1': 'old_text', '3': 3, '4': 1, '5': 9, '10': 'oldText'},
+    {'1': 'new_text', '3': 4, '4': 1, '5': 9, '10': 'newText'},
+    {'1': 'skipped', '3': 5, '4': 1, '5': 9, '10': 'skipped'},
+  ],
+};
+
+/// Descriptor for `FileChange`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List fileChangeDescriptor = $convert.base64Decode(
+    'CgpGaWxlQ2hhbmdlEhIKBHBhdGgYASABKAlSBHBhdGgSFgoGc3RhdHVzGAIgASgJUgZzdGF0dX'
+    'MSGQoIb2xkX3RleHQYAyABKAlSB29sZFRleHQSGQoIbmV3X3RleHQYBCABKAlSB25ld1RleHQS'
+    'GAoHc2tpcHBlZBgFIAEoCVIHc2tpcHBlZA==');
+
 @$core.Deprecated('Use eventsRequestDescriptor instead')
 const EventsRequest$json = {
   '1': 'EventsRequest',
@@ -622,6 +672,11 @@ const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
       '3': '.nushi.v1.SetConfigOptionResponse'
     },
     {
+      '1': 'GetDiff',
+      '2': '.nushi.v1.GetDiffRequest',
+      '3': '.nushi.v1.GetDiffResponse'
+    },
+    {
       '1': 'Events',
       '2': '.nushi.v1.EventsRequest',
       '3': '.nushi.v1.EventsResponse',
@@ -657,6 +712,9 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.AnswerQuestionResponse': AnswerQuestionResponse$json,
   '.nushi.v1.SetConfigOptionRequest': SetConfigOptionRequest$json,
   '.nushi.v1.SetConfigOptionResponse': SetConfigOptionResponse$json,
+  '.nushi.v1.GetDiffRequest': GetDiffRequest$json,
+  '.nushi.v1.GetDiffResponse': GetDiffResponse$json,
+  '.nushi.v1.FileChange': FileChange$json,
   '.nushi.v1.EventsRequest': EventsRequest$json,
   '.nushi.v1.EventsResponse': EventsResponse$json,
   '.nushi.v1.ItemEvent': ItemEvent$json,
@@ -676,5 +734,6 @@ final $typed_data.Uint8List nushiServiceDescriptor = $convert.base64Decode(
     'd2VyUXVlc3Rpb24SHy5udXNoaS52MS5BbnN3ZXJRdWVzdGlvblJlcXVlc3QaIC5udXNoaS52MS'
     '5BbnN3ZXJRdWVzdGlvblJlc3BvbnNlElYKD1NldENvbmZpZ09wdGlvbhIgLm51c2hpLnYxLlNl'
     'dENvbmZpZ09wdGlvblJlcXVlc3QaIS5udXNoaS52MS5TZXRDb25maWdPcHRpb25SZXNwb25zZR'
-    'I9CgZFdmVudHMSFy5udXNoaS52MS5FdmVudHNSZXF1ZXN0GhgubnVzaGkudjEuRXZlbnRzUmVz'
-    'cG9uc2UwAQ==');
+    'I+CgdHZXREaWZmEhgubnVzaGkudjEuR2V0RGlmZlJlcXVlc3QaGS5udXNoaS52MS5HZXREaWZm'
+    'UmVzcG9uc2USPQoGRXZlbnRzEhcubnVzaGkudjEuRXZlbnRzUmVxdWVzdBoYLm51c2hpLnYxLk'
+    'V2ZW50c1Jlc3BvbnNlMAE=');

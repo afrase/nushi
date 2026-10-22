@@ -26,10 +26,11 @@ gen:
 test:
 	go test ./...
 	cd packages/uds_transport && dart test
+	cd app && flutter test
 
 # Hand-written lines, without tests or generated code (the size limits).
 lines:
 	@echo "go daemon: $$(find cmd internal -name '*.go' ! -name '*_test.go' ! -path 'internal/gen/*' | xargs cat | wc -l)"
-	@echo "go acp: $$(find acp -name '*.go' ! -name '*_test.go' ! -name '*_gen.go' | xargs cat | wc -l)"
+	@echo "go acp: $$(find acp -name '*.go' ! -name '*_test.go' ! -name '*_gen.go' ! -path 'acp/acptest/*' | xargs cat | wc -l)"
 	@echo "dart app: $$(find app/lib -name '*.dart' ! -path 'app/lib/gen/*' | xargs cat | wc -l)"
 	@echo "dart packages: $$(find packages -path '*/lib/*.dart' | xargs cat | wc -l)"

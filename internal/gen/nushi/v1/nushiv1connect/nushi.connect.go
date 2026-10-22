@@ -52,6 +52,8 @@ const (
 	// NushiServiceSetConfigOptionProcedure is the fully-qualified name of the NushiService's
 	// SetConfigOption RPC.
 	NushiServiceSetConfigOptionProcedure = "/nushi.v1.NushiService/SetConfigOption"
+	// NushiServiceGetDiffProcedure is the fully-qualified name of the NushiService's GetDiff RPC.
+	NushiServiceGetDiffProcedure = "/nushi.v1.NushiService/GetDiff"
 	// NushiServiceEventsProcedure is the fully-qualified name of the NushiService's Events RPC.
 	NushiServiceEventsProcedure = "/nushi.v1.NushiService/Events"
 )
@@ -75,6 +77,9 @@ type NushiServiceClient interface {
 	// Sets one of a chat's config options (mode, model, ...). Picking a mode
 	// makes new chats with the same agent start in it.
 	SetConfigOption(context.Context, *connect.Request[v1.SetConfigOptionRequest]) (*connect.Response[v1.SetConfigOptionResponse], error)
+	// Returns a folder's uncommitted changes against HEAD, untracked files
+	// included.
+	GetDiff(context.Context, *connect.Request[v1.GetDiffRequest]) (*connect.Response[v1.GetDiffResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
 	Events(context.Context, *connect.Request[v1.EventsRequest]) (*connect.ServerStreamForClient[v1.EventsResponse], error)
@@ -139,6 +144,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("SetConfigOption")),
 			connect.WithClientOptions(opts...),
 		),
+		getDiff: connect.NewClient[v1.GetDiffRequest, v1.GetDiffResponse](
+			httpClient,
+			baseURL+NushiServiceGetDiffProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("GetDiff")),
+			connect.WithClientOptions(opts...),
+		),
 		events: connect.NewClient[v1.EventsRequest, v1.EventsResponse](
 			httpClient,
 			baseURL+NushiServiceEventsProcedure,
@@ -158,6 +169,7 @@ type nushiServiceClient struct {
 	answerPermission *connect.Client[v1.AnswerPermissionRequest, v1.AnswerPermissionResponse]
 	answerQuestion   *connect.Client[v1.AnswerQuestionRequest, v1.AnswerQuestionResponse]
 	setConfigOption  *connect.Client[v1.SetConfigOptionRequest, v1.SetConfigOptionResponse]
+	getDiff          *connect.Client[v1.GetDiffRequest, v1.GetDiffResponse]
 	events           *connect.Client[v1.EventsRequest, v1.EventsResponse]
 }
 
@@ -201,6 +213,11 @@ func (c *nushiServiceClient) SetConfigOption(ctx context.Context, req *connect.R
 	return c.setConfigOption.CallUnary(ctx, req)
 }
 
+// GetDiff calls nushi.v1.NushiService.GetDiff.
+func (c *nushiServiceClient) GetDiff(ctx context.Context, req *connect.Request[v1.GetDiffRequest]) (*connect.Response[v1.GetDiffResponse], error) {
+	return c.getDiff.CallUnary(ctx, req)
+}
+
 // Events calls nushi.v1.NushiService.Events.
 func (c *nushiServiceClient) Events(ctx context.Context, req *connect.Request[v1.EventsRequest]) (*connect.ServerStreamForClient[v1.EventsResponse], error) {
 	return c.events.CallServerStream(ctx, req)
@@ -225,6 +242,9 @@ type NushiServiceHandler interface {
 	// Sets one of a chat's config options (mode, model, ...). Picking a mode
 	// makes new chats with the same agent start in it.
 	SetConfigOption(context.Context, *connect.Request[v1.SetConfigOptionRequest]) (*connect.Response[v1.SetConfigOptionResponse], error)
+	// Returns a folder's uncommitted changes against HEAD, untracked files
+	// included.
+	GetDiff(context.Context, *connect.Request[v1.GetDiffRequest]) (*connect.Response[v1.GetDiffResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
 	Events(context.Context, *connect.Request[v1.EventsRequest], *connect.ServerStream[v1.EventsResponse]) error
@@ -285,6 +305,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("SetConfigOption")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceGetDiffHandler := connect.NewUnaryHandler(
+		NushiServiceGetDiffProcedure,
+		svc.GetDiff,
+		connect.WithSchema(nushiServiceMethods.ByName("GetDiff")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceEventsHandler := connect.NewServerStreamHandler(
 		NushiServiceEventsProcedure,
 		svc.Events,
@@ -309,6 +335,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceAnswerQuestionHandler.ServeHTTP(w, r)
 		case NushiServiceSetConfigOptionProcedure:
 			nushiServiceSetConfigOptionHandler.ServeHTTP(w, r)
+		case NushiServiceGetDiffProcedure:
+			nushiServiceGetDiffHandler.ServeHTTP(w, r)
 		case NushiServiceEventsProcedure:
 			nushiServiceEventsHandler.ServeHTTP(w, r)
 		default:
@@ -350,6 +378,10 @@ func (UnimplementedNushiServiceHandler) AnswerQuestion(context.Context, *connect
 
 func (UnimplementedNushiServiceHandler) SetConfigOption(context.Context, *connect.Request[v1.SetConfigOptionRequest]) (*connect.Response[v1.SetConfigOptionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.SetConfigOption is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) GetDiff(context.Context, *connect.Request[v1.GetDiffRequest]) (*connect.Response[v1.GetDiffResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetDiff is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) Events(context.Context, *connect.Request[v1.EventsRequest], *connect.ServerStream[v1.EventsResponse]) error {

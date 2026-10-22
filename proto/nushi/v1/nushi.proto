@@ -22,6 +22,9 @@ service NushiService {
   // Sets one of a chat's config options (mode, model, ...). Picking a mode
   // makes new chats with the same agent start in it.
   rpc SetConfigOption(SetConfigOptionRequest) returns (SetConfigOptionResponse);
+  // Returns a folder's uncommitted changes against HEAD, untracked files
+  // included.
+  rpc GetDiff(GetDiffRequest) returns (GetDiffResponse);
   // Streams every change to every chat from now on. The first message is
   // empty: it says the subscription is live.
   rpc Events(EventsRequest) returns (stream EventsResponse);
@@ -114,6 +117,28 @@ message SetConfigOptionRequest {
 }
 
 message SetConfigOptionResponse {}
+
+message GetDiffRequest {
+  // An absolute path; it may be anywhere inside a repository.
+  string folder = 1;
+}
+
+message GetDiffResponse {
+  // Sorted by path.
+  repeated FileChange files = 1;
+}
+
+// One file's change: its text at HEAD and now.
+message FileChange {
+  // Relative to the folder.
+  string path = 1;
+  // "added", "modified" or "deleted".
+  string status = 2;
+  string old_text = 3;
+  string new_text = 4;
+  // Why the texts are left out ("binary", "too large"), if they are.
+  string skipped = 5;
+}
 
 message EventsRequest {}
 
