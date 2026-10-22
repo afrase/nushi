@@ -26,6 +26,7 @@ gen:
 test:
 	go test ./...
 	cd packages/uds_transport && dart test
+	cd packages/markdown && flutter test
 	cd app && flutter test
 
 # Hand-written lines, without tests or generated code (the size limits).

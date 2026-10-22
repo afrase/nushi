@@ -27,6 +27,9 @@ class Tokens {
     required this.crashedSoft,
     required this.claude,
     required this.monogramText,
+    required this.keyword,
+    required this.function,
+    required this.string,
   });
 
   final Brightness brightness;
@@ -62,6 +65,11 @@ class Tokens {
   final Color claude;
   final Color monogramText;
 
+  // Syntax colors in code blocks.
+  final Color keyword;
+  final Color function;
+  final Color string;
+
   static const light = Tokens(
     brightness: Brightness.light,
     base: Color(0xFFFFFFFF),
@@ -86,6 +94,9 @@ class Tokens {
     crashedSoft: Color(0xFFFCE8EA),
     claude: Color(0xFFB0582B),
     monogramText: Color(0xFFFFFFFF),
+    keyword: Color(0xFF0033B3),
+    function: Color(0xFF00627A),
+    string: Color(0xFF067D17),
   );
 
   static const dark = Tokens(
@@ -112,5 +123,8 @@ class Tokens {
     crashedSoft: Color(0xFF3F2427),
     claude: Color(0xFFD98A5F),
     monogramText: Color(0xFF1E1F22),
+    keyword: Color(0xFFCF8E6D),
+    function: Color(0xFF56A8F5),
+    string: Color(0xFF6AAB73),
   );
 }

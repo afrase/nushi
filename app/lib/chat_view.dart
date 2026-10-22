@@ -25,17 +25,25 @@ class ChatView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
-          child: ListView.builder(
-            reverse: true, // keeps the newest item in view while it streams
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
-            itemCount: chat.items.length,
-            itemBuilder: (context, i) {
-              final item = chat.items[chat.items.length - 1 - i];
-              return Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: _ItemView(item, chat.id, daemon, key: ValueKey(item.id)),
-              );
-            },
+          // One selection across the transcript, messages included whole.
+          child: SelectionArea(
+            child: ListView.builder(
+              reverse: true, // keeps the newest item in view while it streams
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
+              itemCount: chat.items.length,
+              itemBuilder: (context, i) {
+                final item = chat.items[chat.items.length - 1 - i];
+                return Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: _ItemView(
+                    item,
+                    chat.id,
+                    daemon,
+                    key: ValueKey(item.id),
+                  ),
+                );
+              },
+            ),
           ),
         ),
         if (chat.busy) const LinearProgressIndicator(minHeight: 2),
@@ -70,7 +78,7 @@ class _ItemView extends StatelessWidget {
                 border: Border.all(color: t.borderSubtle),
                 borderRadius: BorderRadius.circular(NushiTheme.card),
               ),
-              child: SelectableText(item.text, style: theme.ui(t.text)),
+              child: Text(item.text, style: theme.ui(t.text)),
             ),
           ],
         );
