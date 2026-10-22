@@ -17,6 +17,10 @@ func (c *chat) SessionUpdate(n acp.SessionNotification) {
 		c.chunkLocked(model.UserMessage, u.UserMessageChunk)
 	case "agent_message_chunk":
 		c.chunkLocked(model.AgentMessage, u.AgentMessageChunk)
+	case "agent_thought_chunk":
+		c.chunkLocked(model.Thought, u.AgentThoughtChunk)
+	case "plan":
+		c.planLocked(u.Plan.Entries)
 	case "tool_call":
 		t := u.ToolCall
 		item := model.Item{ID: string(t.ToolCallID), Kind: model.ToolCall, Title: t.Title,
@@ -72,7 +76,11 @@ func (c *chat) chunkLocked(kind model.ItemKind, m *acp.ContentChunk) {
 		return
 	}
 	text := m.Content.Text.Text
-	it := c.itemLocked(string(m.MessageID))
+	id := string(m.MessageID)
+	if kind == model.Thought && id != "" {
+		id = "thought-" + id // a thought may share its message's id
+	}
+	it := c.itemLocked(id)
 	if m.MessageID == "" && len(c.items) > 0 {
 		it = &c.items[len(c.items)-1]
 	}
@@ -81,7 +89,24 @@ func (c *chat) chunkLocked(kind model.ItemKind, m *acp.ContentChunk) {
 		c.emitLocked(model.Event{ChatID: c.id, Item: &model.Item{ID: it.ID, Kind: kind, Text: text}, Append: true})
 		return
 	}
-	c.addLocked(model.Item{ID: string(m.MessageID), Kind: kind, Text: text})
+	c.addLocked(model.Item{ID: id, Kind: kind, Text: text})
+}
+
+// planLocked shows the agent's plan: it replaces the plan of the current
+// turn (since the last user message), or starts one.
+func (c *chat) planLocked(entries []acp.PlanEntry) {
+	plan := make([]model.PlanEntry, 0, len(entries))
+	for _, e := range entries {
+		plan = append(plan, model.PlanEntry{Content: e.Content, Status: string(e.Status)})
+	}
+	for i := len(c.items) - 1; i >= 0 && c.items[i].Kind != model.UserMessage; i-- {
+		if c.items[i].Kind == model.Plan {
+			c.items[i].Plan = plan
+			c.publishLocked(c.items[i])
+			return
+		}
+	}
+	c.addLocked(model.Item{Kind: model.Plan, Plan: plan})
 }
 
 func (c *chat) publishLocked(it model.Item) {

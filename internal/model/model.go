@@ -27,7 +27,17 @@ const (
 	// AskUserQuestion). Text is its message. Status is "pending" until it is
 	// "answered", "declined" or "cancelled".
 	Question
+	// Thought is the agent's thinking, streamed like a message.
+	Thought
+	// Plan is the agent's plan as a checklist (Plan), updated in place.
+	Plan
 )
+
+// PlanEntry is a step of the agent's plan; Status is ACP's ("pending",
+// "in_progress", "completed").
+type PlanEntry struct {
+	Content, Status string
+}
 
 // Item is one entry of a chat's transcript.
 type Item struct {
@@ -44,6 +54,8 @@ type Item struct {
 	// folder when inside it, and Diffs the edits it makes (Path, Old, New).
 	Paths []string
 	Diffs []FileChange
+	// Plan holds a plan's entries.
+	Plan []PlanEntry
 	// Options are a permission prompt's choices, and Answer the ID of the one picked.
 	Options []Option
 	Answer  string

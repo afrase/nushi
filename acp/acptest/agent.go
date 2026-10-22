@@ -5,7 +5,11 @@
 //     "allow" and "reject"), then a message naming the option picked;
 //   - containing "question": an elicitation form with one choice field
 //     ("color": red, green or blue), then a message with the answer;
+//   - containing "think": its thoughts in a few chunks, then a message;
+//   - containing "plan": a three-step plan, each step ticked off in turn;
 //   - anything else: "You said: <text>", streamed in two chunks.
+//
+// Pause slows the "think" and "plan" scripts down, to watch them stream.
 //
 // Sessions are kept in a History, which session/load replays; agents that
 // share a History see each other's sessions, as a restarted agent would.
@@ -19,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 // History holds every session's updates, for session/load.
@@ -47,6 +52,7 @@ func (h *History) get(session string) ([]json.RawMessage, bool) {
 // Agent is one fake agent process.
 type Agent struct {
 	History *History
+	Pause   time.Duration
 
 	w       io.Writer
 	writeMu sync.Mutex
@@ -194,6 +200,27 @@ func (a *Agent) prompt(session, text string) {
 			}},
 		})
 		a.say(session, "Answer: "+string(res))
+	case strings.Contains(text, "think"):
+		for _, t := range []string{"The user wants me to think. ", "Let me look at the files first, ", "then decide what to change."} {
+			time.Sleep(a.Pause)
+			a.update(session, map[string]any{"sessionUpdate": "agent_thought_chunk", "content": map[string]any{"type": "text", "text": t}})
+		}
+		a.say(session, "Done thinking.")
+	case strings.Contains(text, "plan"):
+		steps := []string{"Read the code", "Make the change", "Run the tests"}
+		for done := 0; done <= len(steps); done++ {
+			var entries []map[string]any
+			for i, s := range steps {
+				status := map[bool]string{true: "completed", false: "pending"}[i < done]
+				if i == done {
+					status = "in_progress"
+				}
+				entries = append(entries, map[string]any{"content": s, "priority": "medium", "status": status})
+			}
+			a.update(session, map[string]any{"sessionUpdate": "plan", "entries": entries})
+			time.Sleep(a.Pause)
+		}
+		a.say(session, "All done.")
 	default:
 		a.say(session, "You said: ")
 		a.say(session, text)

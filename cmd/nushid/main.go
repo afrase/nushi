@@ -107,10 +107,15 @@ func listen(path string) (net.Listener, error) {
 // launchClaude starts Claude Code's ACP adapter. It runs in the daemon's own
 // folder, so npx never resolves the adapter or npm settings from a project;
 // the chat's folder reaches the agent only as the session's cwd. Its stderr
-// goes to the daemon log.
+// goes to the daemon log. Claude keeps a todo list (ACP plan updates) only
+// with its todo tools on, as its own terminal UI has them; a value already
+// in the environment wins.
 func launchClaude(dir string, h acp.Handler) (chats.Agent, error) {
 	cmd := exec.Command("npx", "--yes", claudeACP)
 	cmd.Dir = dir
+	if _, ok := os.LookupEnv("CLAUDE_CODE_ENABLE_TODO_TOOLS"); !ok {
+		cmd.Env = append(os.Environ(), "CLAUDE_CODE_ENABLE_TODO_TOOLS=1")
+	}
 	cmd.Stderr = log.Writer()
 	return acp.Start(cmd, h)
 }

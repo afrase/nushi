@@ -19,7 +19,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 9
+const Version = 10
 
 type server struct {
 	chats *chats.Service
@@ -148,6 +148,8 @@ var itemKinds = map[model.ItemKind]nushiv1.ItemKind{
 	model.ToolCall:     nushiv1.ItemKind_ITEM_KIND_TOOL_CALL,
 	model.Permission:   nushiv1.ItemKind_ITEM_KIND_PERMISSION,
 	model.Question:     nushiv1.ItemKind_ITEM_KIND_QUESTION,
+	model.Thought:      nushiv1.ItemKind_ITEM_KIND_THOUGHT,
+	model.Plan:         nushiv1.ItemKind_ITEM_KIND_PLAN,
 }
 
 var fieldTypes = map[model.FieldType]nushiv1.FieldType{
@@ -179,6 +181,9 @@ func itemProto(it *model.Item) *nushiv1.Item {
 		Title: it.Title, ToolKind: it.ToolKind, Status: it.Status, Answer: it.Answer}
 	out.Options = optionsProto(it.Options)
 	out.Paths = it.Paths
+	for _, e := range it.Plan {
+		out.Plan = append(out.Plan, &nushiv1.PlanEntry{Content: e.Content, Status: e.Status})
+	}
 	for _, d := range it.Diffs {
 		out.Diffs = append(out.Diffs, &nushiv1.FileChange{Path: d.Path, Status: d.Status, OldText: d.Old, NewText: d.New})
 	}

@@ -194,6 +194,10 @@ enum ItemKind {
   // text is its message. Status is "pending" until it is "answered",
   // "declined" or "cancelled".
   ITEM_KIND_QUESTION = 5;
+  // The agent's thinking, streamed like a message.
+  ITEM_KIND_THOUGHT = 6;
+  // The agent's plan as a checklist (plan), replaced as it changes.
+  ITEM_KIND_PLAN = 7;
 }
 
 // One entry of a chat's transcript.
@@ -216,6 +220,14 @@ message Item {
   // inside it, and the edits it makes (path, old_text, new_text).
   repeated string paths = 10;
   repeated FileChange diffs = 11;
+  repeated PlanEntry plan = 12;
+}
+
+// A step of the agent's plan; status is "pending", "in_progress" or
+// "completed".
+message PlanEntry {
+  string content = 1;
+  string status = 2;
 }
 
 // A choice the agent offers.

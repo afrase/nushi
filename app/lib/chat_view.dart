@@ -9,6 +9,7 @@ import 'markdown.dart';
 import 'pickers.dart';
 import 'question_card.dart';
 import 'theme/theme.dart';
+import 'thinking.dart';
 import 'tool_calls.dart';
 import 'widgets.dart';
 
@@ -64,7 +65,12 @@ class ChatView extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 12),
                     child: e is List<Item>
                         ? ToolGroupView(e)
-                        : _ItemView(e as Item, chat.id, daemon),
+                        : _ItemView(
+                            e as Item,
+                            chat.id,
+                            daemon,
+                            live: chat.busy && i == 0,
+                          ),
                   );
                 },
               ),
@@ -79,11 +85,14 @@ class ChatView extends StatelessWidget {
 }
 
 class _ItemView extends StatelessWidget {
-  const _ItemView(this.item, this.chatId, this.daemon);
+  const _ItemView(this.item, this.chatId, this.daemon, {required this.live});
 
   final Item item;
   final String chatId;
   final Daemon daemon;
+
+  /// The newest item while the agent works.
+  final bool live;
 
   @override
   Widget build(BuildContext context) {
@@ -114,6 +123,10 @@ class _ItemView extends StatelessWidget {
           item,
           onAnswer: (answer) => daemon.answerQuestion(chatId, item.id, answer),
         );
+      case ItemKind.ITEM_KIND_THOUGHT:
+        return ThoughtView(item, live: live);
+      case ItemKind.ITEM_KIND_PLAN:
+        return PlanView(item);
       case ItemKind.ITEM_KIND_PERMISSION:
         return PermissionCard(
           item,
@@ -186,6 +199,15 @@ class _ComposerState extends State<_Composer> {
     }
   }
 
+  /// The plan of the current turn (since the last prompt), if any.
+  Item? get _plan {
+    for (final it in widget.chat.items.reversed) {
+      if (it.kind == ItemKind.ITEM_KIND_USER_MESSAGE) return null;
+      if (it.kind == ItemKind.ITEM_KIND_PLAN) return it;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
@@ -204,6 +226,7 @@ class _ComposerState extends State<_Composer> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (_plan case final plan? when chat.busy) PlanStatus(plan),
           if (chat.error.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 6),

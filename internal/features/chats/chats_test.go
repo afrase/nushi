@@ -230,3 +230,38 @@ func TestPermissionWaitsForTheUsersPick(t *testing.T) {
 		t.Errorf("item status = %q, want cancelled", final.Status)
 	}
 }
+
+func TestPlanUpdatesInPlaceWithinATurn(t *testing.T) {
+	c := &chat{id: "s1", publish: func(model.Event) {}}
+	plan := func(statuses ...string) acp.SessionUpdate {
+		var entries []acp.PlanEntry
+		for _, s := range statuses {
+			entries = append(entries, acp.PlanEntry{Content: "step", Status: acp.PlanEntryStatus(s)})
+		}
+		return acp.SessionUpdate{SessionUpdate: "plan", Plan: &acp.Plan{Entries: entries}}
+	}
+	thought := acp.SessionUpdate{SessionUpdate: "agent_thought_chunk", AgentThoughtChunk: &acp.ContentChunk{
+		MessageID: "m1", Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: "hmm"}}}}
+	message := acp.SessionUpdate{SessionUpdate: "agent_message_chunk", AgentMessageChunk: &acp.ContentChunk{
+		MessageID: "m1", Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: "hi"}}}}
+	for _, u := range []acp.SessionUpdate{thought, message, plan("pending", "pending"), plan("completed", "in_progress")} {
+		c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: u})
+	}
+	c.addLocked(model.Item{Kind: model.UserMessage, Text: "again"})
+	c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: plan("pending")})
+
+	var kinds []model.ItemKind
+	for _, it := range c.items {
+		kinds = append(kinds, it.Kind)
+	}
+	want := []model.ItemKind{model.Thought, model.AgentMessage, model.Plan, model.UserMessage, model.Plan}
+	if !reflect.DeepEqual(kinds, want) {
+		t.Fatalf("kinds = %v, want %v", kinds, want)
+	}
+	if got := c.items[2].Plan; len(got) != 2 || got[0].Status != "completed" || got[1].Status != "in_progress" {
+		t.Errorf("first plan = %+v", got)
+	}
+	if c.items[0].ID == c.items[1].ID {
+		t.Errorf("the thought and the message share id %q", c.items[0].ID)
+	}
+}

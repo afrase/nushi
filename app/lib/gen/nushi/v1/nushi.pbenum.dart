@@ -35,6 +35,14 @@ class ItemKind extends $pb.ProtobufEnum {
   static const ItemKind ITEM_KIND_QUESTION =
       ItemKind._(5, _omitEnumNames ? '' : 'ITEM_KIND_QUESTION');
 
+  /// The agent's thinking, streamed like a message.
+  static const ItemKind ITEM_KIND_THOUGHT =
+      ItemKind._(6, _omitEnumNames ? '' : 'ITEM_KIND_THOUGHT');
+
+  /// The agent's plan as a checklist (plan), replaced as it changes.
+  static const ItemKind ITEM_KIND_PLAN =
+      ItemKind._(7, _omitEnumNames ? '' : 'ITEM_KIND_PLAN');
+
   static const $core.List<ItemKind> values = <ItemKind>[
     ITEM_KIND_UNSPECIFIED,
     ITEM_KIND_USER_MESSAGE,
@@ -42,10 +50,12 @@ class ItemKind extends $pb.ProtobufEnum {
     ITEM_KIND_TOOL_CALL,
     ITEM_KIND_PERMISSION,
     ITEM_KIND_QUESTION,
+    ITEM_KIND_THOUGHT,
+    ITEM_KIND_PLAN,
   ];
 
   static final $core.List<ItemKind?> _byValue =
-      $pb.ProtobufEnum.$_initByValueList(values, 5);
+      $pb.ProtobufEnum.$_initByValueList(values, 7);
   static ItemKind? valueOf($core.int value) =>
       value < 0 || value >= _byValue.length ? null : _byValue[value];
 

@@ -25,6 +25,8 @@ const ItemKind$json = {
     {'1': 'ITEM_KIND_TOOL_CALL', '2': 3},
     {'1': 'ITEM_KIND_PERMISSION', '2': 4},
     {'1': 'ITEM_KIND_QUESTION', '2': 5},
+    {'1': 'ITEM_KIND_THOUGHT', '2': 6},
+    {'1': 'ITEM_KIND_PLAN', '2': 7},
   ],
 };
 
@@ -33,7 +35,7 @@ final $typed_data.Uint8List itemKindDescriptor = $convert.base64Decode(
     'CghJdGVtS2luZBIZChVJVEVNX0tJTkRfVU5TUEVDSUZJRUQQABIaChZJVEVNX0tJTkRfVVNFUl'
     '9NRVNTQUdFEAESGwoXSVRFTV9LSU5EX0FHRU5UX01FU1NBR0UQAhIXChNJVEVNX0tJTkRfVE9P'
     'TF9DQUxMEAMSGAoUSVRFTV9LSU5EX1BFUk1JU1NJT04QBBIWChJJVEVNX0tJTkRfUVVFU1RJT0'
-    '4QBQ==');
+    '4QBRIVChFJVEVNX0tJTkRfVEhPVUdIVBAGEhIKDklURU1fS0lORF9QTEFOEAc=');
 
 @$core.Deprecated('Use fieldTypeDescriptor instead')
 const FieldType$json = {
@@ -552,6 +554,14 @@ const Item$json = {
       '6': '.nushi.v1.FileChange',
       '10': 'diffs'
     },
+    {
+      '1': 'plan',
+      '3': 12,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.PlanEntry',
+      '10': 'plan'
+    },
   ],
 };
 
@@ -562,7 +572,22 @@ final $typed_data.Uint8List itemDescriptor = $convert.base64Decode(
     'bF9raW5kGAUgASgJUgh0b29sS2luZBIWCgZzdGF0dXMYBiABKAlSBnN0YXR1cxIqCgdvcHRpb2'
     '5zGAcgAygLMhAubnVzaGkudjEuT3B0aW9uUgdvcHRpb25zEhYKBmFuc3dlchgIIAEoCVIGYW5z'
     'd2VyEicKBmZpZWxkcxgJIAMoCzIPLm51c2hpLnYxLkZpZWxkUgZmaWVsZHMSFAoFcGF0aHMYCi'
-    'ADKAlSBXBhdGhzEioKBWRpZmZzGAsgAygLMhQubnVzaGkudjEuRmlsZUNoYW5nZVIFZGlmZnM=');
+    'ADKAlSBXBhdGhzEioKBWRpZmZzGAsgAygLMhQubnVzaGkudjEuRmlsZUNoYW5nZVIFZGlmZnMS'
+    'JwoEcGxhbhgMIAMoCzITLm51c2hpLnYxLlBsYW5FbnRyeVIEcGxhbg==');
+
+@$core.Deprecated('Use planEntryDescriptor instead')
+const PlanEntry$json = {
+  '1': 'PlanEntry',
+  '2': [
+    {'1': 'content', '3': 1, '4': 1, '5': 9, '10': 'content'},
+    {'1': 'status', '3': 2, '4': 1, '5': 9, '10': 'status'},
+  ],
+};
+
+/// Descriptor for `PlanEntry`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List planEntryDescriptor = $convert.base64Decode(
+    'CglQbGFuRW50cnkSGAoHY29udGVudBgBIAEoCVIHY29udGVudBIWCgZzdGF0dXMYAiABKAlSBn'
+    'N0YXR1cw==');
 
 @$core.Deprecated('Use optionDescriptor instead')
 const Option$json = {
@@ -709,6 +734,7 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.Option': Option$json,
   '.nushi.v1.Field': Field$json,
   '.nushi.v1.FileChange': FileChange$json,
+  '.nushi.v1.PlanEntry': PlanEntry$json,
   '.nushi.v1.ConfigOption': ConfigOption$json,
   '.nushi.v1.ConfigValue': ConfigValue$json,
   '.nushi.v1.ChatStatus': ChatStatus$json,

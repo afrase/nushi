@@ -1875,6 +1875,7 @@ class Item extends $pb.GeneratedMessage {
     $core.Iterable<Field>? fields,
     $core.Iterable<$core.String>? paths,
     $core.Iterable<FileChange>? diffs,
+    $core.Iterable<PlanEntry>? plan,
   }) {
     final result = Item._();
     if (id != null) result.id = id;
@@ -1888,6 +1889,7 @@ class Item extends $pb.GeneratedMessage {
     if (fields != null) result.fields.addAll(fields);
     if (paths != null) result.paths.addAll(paths);
     if (diffs != null) result.diffs.addAll(diffs);
+    if (plan != null) result.plan.addAll(plan);
     return result;
   }
 
@@ -1919,6 +1921,8 @@ class Item extends $pb.GeneratedMessage {
     ..pPS(10, _omitFieldNames ? '' : 'paths')
     ..pPM<FileChange>(11, _omitFieldNames ? '' : 'diffs',
         subBuilder: FileChange.$_createMessage)
+    ..pPM<PlanEntry>(12, _omitFieldNames ? '' : 'plan',
+        subBuilder: PlanEntry.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -2022,6 +2026,78 @@ class Item extends $pb.GeneratedMessage {
 
   @$pb.TagNumber(11)
   $pb.PbList<FileChange> get diffs => $_getList(10);
+
+  @$pb.TagNumber(12)
+  $pb.PbList<PlanEntry> get plan => $_getList(11);
+}
+
+/// A step of the agent's plan; status is "pending", "in_progress" or
+/// "completed".
+class PlanEntry extends $pb.GeneratedMessage {
+  factory PlanEntry({
+    $core.String? content,
+    $core.String? status,
+  }) {
+    final result = PlanEntry._();
+    if (content != null) result.content = content;
+    if (status != null) result.status = status;
+    return result;
+  }
+
+  PlanEntry._();
+
+  factory PlanEntry.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      PlanEntry()..mergeFromBuffer(data, registry);
+  factory PlanEntry.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      PlanEntry()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'PlanEntry',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: PlanEntry.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'content')
+    ..aOS(2, _omitFieldNames ? '' : 'status')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PlanEntry clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PlanEntry copyWith(void Function(PlanEntry) updates) =>
+      super.copyWith((message) => updates(message as PlanEntry)) as PlanEntry;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use PlanEntry() / PlanEntry.new instead')
+  static PlanEntry create() => PlanEntry._();
+  static $pb.GeneratedMessage $_createMessage() => PlanEntry._();
+  @$core.override
+  PlanEntry createEmptyInstance() => PlanEntry._();
+  @$core.pragma('dart2js:noInline')
+  static PlanEntry getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<PlanEntry>(PlanEntry.$_createMessage);
+  static PlanEntry? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get content => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set content($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasContent() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearContent() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get status => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set status($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasStatus() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearStatus() => $_clearField(2);
 }
 
 /// A choice the agent offers.

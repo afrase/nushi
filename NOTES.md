@@ -49,9 +49,10 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 11. The POC's look | 1665 | 716 | 2252 | 131 |
 | 12. Markdown | 1665 | 716 | 2294 | 650 |
 | 13. Tool calls | 1677 | 716 | 2579 | 650 |
+| 14. Thinking and plans | 1724 | 716 | 2780 | 650 |
 
 Tripwires crossed:
-Lines added per step, code and tests, without generated code (the tripwire is about 500): 1: 533, 2: 1,502, 3: 239, 4: 437, 5: 739, 6: 639, 7: 464, 8: 537, 9: 265, 10: 528, 11: 1,249, 12: 625, 13: 476.
+Lines added per step, code and tests, without generated code (the tripwire is about 500): 1: 533, 2: 1,502, 3: 239, 4: 437, 5: 739, 6: 639, 7: 464, 8: 537, 9: 265, 10: 528, 11: 1,249, 12: 625, 13: 476, 14: 343.
 - Step 1 (533): the Unix-socket transport package and its tests came with the skeleton.
 - Step 2 (1,502): the whole ACP client landed in this step (JSON-RPC framing, client and the schema-to-Go type generator, about 660 lines), plus the first real chat screen and the daemon's chat feature. None of it is for later steps.
 - Step 5 (739): the question card is the app's biggest widget (267 lines: options, multi-select, Other boxes, digit keys); reading the form in order, and two fixes to the type generator.
@@ -99,6 +100,8 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 - `session/load` on Claude replays the user's messages, the agent's messages and the tool calls (with their final status and output), not permission prompts or questions. Messages carry `messageId`s in the replay too. Loading a session takes under a second once npx has the adapter.
 - Claude's tool calls arrive as a `tool_call` with a generic title ("Terminal", "Read File") and empty `rawInput`, then `tool_call_update`s that set the real title (the command, "Read notes.txt"), then content. The first content is the command's description; the final one (with `status: completed`) is the output in a fenced block. Each update's `content` replaces the previous one.
 - Claude 2.1.308 searches and lists with `Bash` (`grep -rn`, `ls *.md`), not its Grep and Glob tools, so searches show as commands. A failed command's output starts with `Exit code N`; there's no exit code field. An `Edit`'s ACP `diff` holds the edited snippet (`old_string`/`new_string`), not the whole file. Tool calls carry `locations` (absolute paths) once the real title arrives.
+- Claude sends no `agent_thought_chunk`s here: the adapter says recent models stream thinking "omitted" (signature only), and neither `showThinkingSummaries` in the project's settings nor `MAX_THINKING_TOKENS` (Opus, Sonnet, Haiku) changed that. Thoughts are built to ACP and were tried with the fake agent only.
+- Claude keeps a todo list (ACP `plan` updates, full list each time) only when its todo tools are on: `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` in its environment. Without it, `TodoWrite` and `TaskCreate` aren't there and Claude says so. With it, Claude uses `TodoWrite` or `TaskCreate`/`TaskUpdate` (the adapter hides the task tool calls and sends the plan). In Plan mode Claude writes the plan before asking to leave Plan mode, so the checklist sits above the approval card.
 - Claude also sends a `tool_call_update` carrying only `_meta.claudeCode.toolResponse` (the raw tool result) before the final one; it changes nothing we show.
 - In `auto` mode Claude asked nothing for `curl -X POST` or `touch`; in Manual (`default`) mode it asks before `touch`, with two options, "Yes" (`allow_once`) and "No" (`reject_once`). A permission request names the tool call it is about (`toolCall.toolCallId`), which was sent just before as a `tool_call`.
 - To test prompts without a mode picker, a folder with `.claude/settings.json` = `{"permissions":{"defaultMode":"default"}}` starts Claude in Manual mode.
@@ -132,6 +135,11 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 - Light or dark follows the system; View ▸ Light/Dark/System Appearance overrides it until the app quits (not stored). The POC was dark by default.
 - The POC's fonts are bundled (`app/fonts/`, IBM Plex Sans and JetBrains Mono, variable TTFs from google/fonts, OFL licenses next to them), so the app looks the same on any Mac. About 1.3 MB.
 - Not lifted from the POC: density and zoom settings, the status bar, the folder rail, chat tabs, the inspector.
+
+- nushid starts Claude with `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` (unless the variable is already set) so plans show up; that's the one place Nushi changes how Claude runs.
+- A plan updates in place: the turn's plan item (since the last prompt) is replaced; a new turn starts a new one. While the agent works, the current step also shows on one line above the composer, since the plan itself may have scrolled away.
+- Thoughts show as a dim "Thinking…" line (spinner while it's the newest item and the agent works), collapsed; opening it shows the text, italic, plain (not markdown).
+- The fake agent has `think` and `plan` scripts, and `acp/acptest/fakeagent` runs it on stdio. To watch them in the app: build it, put an `npx` that execs it first on `PATH`, and start `bin/nushid` with that `PATH`.
 
 - Connect for Go is v1 (`connectrpc.com/connect` v1.21), not v2: v1 is what the Dart generator's docs and the POC used, and nothing here needs v2.
 - `http2` for Dart stays on 2.x: `connectrpc` 2.0.1 doesn't resolve with `http2` 3.x.
