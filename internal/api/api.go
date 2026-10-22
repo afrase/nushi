@@ -5,6 +5,7 @@ import (
 	"cmp"
 	"context"
 	"crypto/subtle"
+	"errors"
 	"fmt"
 	"net/http"
 	"path/filepath"
@@ -20,7 +21,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 16
+const Version = 17
 
 type server struct {
 	chats *chats.Service
@@ -191,6 +192,21 @@ func (s *server) GetDiff(ctx context.Context, req *connect.Request[nushiv1.GetDi
 		resp.Files = append(resp.Files, &nushiv1.FileChange{Path: c.Path, Status: c.Status, OldText: c.Old, NewText: c.New, Skipped: c.Skipped})
 	}
 	return connect.NewResponse(resp), nil
+}
+
+func (s *server) GetFolderStatus(ctx context.Context, req *connect.Request[nushiv1.GetFolderStatusRequest]) (*connect.Response[nushiv1.GetFolderStatusResponse], error) {
+	if !filepath.IsAbs(req.Msg.Folder) {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%q is not an absolute path", req.Msg.Folder))
+	}
+	st, err := git.Status(ctx, req.Msg.Folder)
+	if errors.Is(err, git.ErrNotRepository) {
+		return connect.NewResponse(&nushiv1.GetFolderStatusResponse{}), nil
+	}
+	if err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	return connect.NewResponse(&nushiv1.GetFolderStatusResponse{Git: true, Branch: st.Branch,
+		Files: int32(st.Files), Added: int32(st.Added), Removed: int32(st.Removed)}), nil
 }
 
 func (s *server) Events(ctx context.Context, _ *connect.Request[nushiv1.EventsRequest], stream *connect.ServerStream[nushiv1.EventsResponse]) error {

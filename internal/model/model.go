@@ -175,3 +175,10 @@ type Status struct {
 type FileChange struct {
 	Path, Status, Old, New, Skipped string
 }
+
+// FolderStatus sums up a git folder's uncommitted changes. Branch is the
+// branch checked out, or the commit when none is.
+type FolderStatus struct {
+	Branch                string
+	Files, Added, Removed int
+}

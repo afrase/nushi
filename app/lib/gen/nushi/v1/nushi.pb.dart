@@ -2383,6 +2383,175 @@ class SetConfigOptionResponse extends $pb.GeneratedMessage {
   static SetConfigOptionResponse? _defaultInstance;
 }
 
+class GetFolderStatusRequest extends $pb.GeneratedMessage {
+  factory GetFolderStatusRequest({
+    $core.String? folder,
+  }) {
+    final result = GetFolderStatusRequest._();
+    if (folder != null) result.folder = folder;
+    return result;
+  }
+
+  GetFolderStatusRequest._();
+
+  factory GetFolderStatusRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetFolderStatusRequest()..mergeFromBuffer(data, registry);
+  factory GetFolderStatusRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetFolderStatusRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetFolderStatusRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetFolderStatusRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'folder')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetFolderStatusRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetFolderStatusRequest copyWith(
+          void Function(GetFolderStatusRequest) updates) =>
+      super.copyWith((message) => updates(message as GetFolderStatusRequest))
+          as GetFolderStatusRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetFolderStatusRequest() / GetFolderStatusRequest.new instead')
+  static GetFolderStatusRequest create() => GetFolderStatusRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetFolderStatusRequest._();
+  @$core.override
+  GetFolderStatusRequest createEmptyInstance() => GetFolderStatusRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetFolderStatusRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetFolderStatusRequest>(
+          GetFolderStatusRequest.$_createMessage);
+  static GetFolderStatusRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get folder => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set folder($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasFolder() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearFolder() => $_clearField(1);
+}
+
+class GetFolderStatusResponse extends $pb.GeneratedMessage {
+  factory GetFolderStatusResponse({
+    $core.bool? git,
+    $core.String? branch,
+    $core.int? files,
+    $core.int? added,
+    $core.int? removed,
+  }) {
+    final result = GetFolderStatusResponse._();
+    if (git != null) result.git = git;
+    if (branch != null) result.branch = branch;
+    if (files != null) result.files = files;
+    if (added != null) result.added = added;
+    if (removed != null) result.removed = removed;
+    return result;
+  }
+
+  GetFolderStatusResponse._();
+
+  factory GetFolderStatusResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetFolderStatusResponse()..mergeFromBuffer(data, registry);
+  factory GetFolderStatusResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetFolderStatusResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetFolderStatusResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetFolderStatusResponse.$_createMessage)
+    ..aOB(1, _omitFieldNames ? '' : 'git')
+    ..aOS(2, _omitFieldNames ? '' : 'branch')
+    ..aI(3, _omitFieldNames ? '' : 'files')
+    ..aI(4, _omitFieldNames ? '' : 'added')
+    ..aI(5, _omitFieldNames ? '' : 'removed')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetFolderStatusResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetFolderStatusResponse copyWith(
+          void Function(GetFolderStatusResponse) updates) =>
+      super.copyWith((message) => updates(message as GetFolderStatusResponse))
+          as GetFolderStatusResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetFolderStatusResponse() / GetFolderStatusResponse.new instead')
+  static GetFolderStatusResponse create() => GetFolderStatusResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetFolderStatusResponse._();
+  @$core.override
+  GetFolderStatusResponse createEmptyInstance() => GetFolderStatusResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetFolderStatusResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetFolderStatusResponse>(
+          GetFolderStatusResponse.$_createMessage);
+  static GetFolderStatusResponse? _defaultInstance;
+
+  /// Whether the folder is in a git repository; nothing else is set if not.
+  @$pb.TagNumber(1)
+  $core.bool get git => $_getBF(0);
+  @$pb.TagNumber(1)
+  set git($core.bool value) => $_setBool(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasGit() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearGit() => $_clearField(1);
+
+  /// The branch checked out, or the commit when none is.
+  @$pb.TagNumber(2)
+  $core.String get branch => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set branch($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasBranch() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearBranch() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.int get files => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set files($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasFiles() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearFiles() => $_clearField(3);
+
+  /// Lines added and removed; binary files count none.
+  @$pb.TagNumber(4)
+  $core.int get added => $_getIZ(3);
+  @$pb.TagNumber(4)
+  set added($core.int value) => $_setSignedInt32(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasAdded() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearAdded() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.int get removed => $_getIZ(4);
+  @$pb.TagNumber(5)
+  set removed($core.int value) => $_setSignedInt32(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasRemoved() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearRemoved() => $_clearField(5);
+}
+
 class GetDiffRequest extends $pb.GeneratedMessage {
   factory GetDiffRequest({
     $core.String? folder,
@@ -3872,6 +4041,13 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, GetDiffRequest request) =>
       _client.invoke<GetDiffResponse>(
           ctx, 'NushiService', 'GetDiff', request, GetDiffResponse());
+
+  /// Sums up a folder's uncommitted changes (as GetDiff lists them) and names
+  /// its branch.
+  $async.Future<GetFolderStatusResponse> getFolderStatus(
+          $pb.ClientContext? ctx, GetFolderStatusRequest request) =>
+      _client.invoke<GetFolderStatusResponse>(ctx, 'NushiService',
+          'GetFolderStatus', request, GetFolderStatusResponse());
 
   /// Lists a folder's files (up to 20,000) for @-mentions: in a git
   /// repository the ones git doesn't ignore.

@@ -16,7 +16,7 @@ final dataDir =
     '${Platform.environment['HOME']}/Library/Application Support/Nushi Next';
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 16;
+const apiVersion = 17;
 
 /// Whether [folder] is a chat's scratch folder: the chat has no folder yet.
 bool isScratch(String folder) => folder.startsWith('$dataDir/scratch/');
@@ -74,6 +74,9 @@ class Daemon extends ChangeNotifier {
 
   /// Whether the daemon starts chats without a folder and moves them (API 16).
   bool get canMove => daemonApi >= 16;
+
+  /// Whether the daemon sums up a folder's changes (API 17).
+  bool get canFolderStatus => daemonApi >= 17;
 
   Future<void> _ping() async {
     var api = 0;

@@ -53,6 +53,7 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 20. Usage and cost | 2219 | 793 | 4070 | 650 |
 | 21. A packaged app | 2219 | 793 | 4191 | 650 |
 | 22. Chats without a folder, moving a chat | 2489 | 795 | 4383 | 650 |
+| 23. The details panel | 2576 | 795 | 4760 | 650 |
 
 Tripwires crossed:
 Lines added per step, code and tests, without generated code (the tripwire is about 500): 1: 533, 2: 1,502, 3: 239, 4: 437, 5: 739, 6: 639, 7: 464, 8: 537, 9: 265, 10: 528, 11: 1,249, 12: 625, 13: 476, 14: 343, 15: 351, 16: 492, 17: 298, 18: 666, 19: 755, 20: 223, 21: 146.
@@ -69,6 +70,7 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 - Milestone E (steps 19–21) grew the app from 3,559 to 4,191 lines of Dart and the daemon from 2,009 to 2,219 lines of Go; the ACP client from 773 to 793 (the prompt result's unstable `usage`).
 - Step 19 (755 added, 72 removed): both sides again. The daemon's rename/archive/remove (`manage.go`, 114) and their RPCs; an end-to-end test (75); in the app the chat menu, the remove confirmation and the inline rename field (`chat_menu.dart`, 181), the sidebar's archived group and double-click, the header's title and menu, and the archived bar.
 - Step 22 (814 added, 133 removed; 200 of the added are tests): Nushi's chat id split from the agent's session id (every place that spoke ACP for a chat), scratch folders, the move itself (`move.go`, 87), the Claude-specific history copy (`internal/claudehistory`, 93, and its test, 57), the end-to-end move test (134) and the fake agent's fork and `pwd`; in the app the folder control (`folder_button.dart`, 134) and the "No folder" group. `chats.go` passed 400 lines and was split (`agent.go`: launching an agent with a session).
+- Step 23 (592 added, 124 removed): the panel and its cards (`details_panel.dart`, 295), the folder control's two-line form, the header's panel button, and in the daemon the folder's summary (`git.Status`, its test and `GetFolderStatus`).
 - `acp/internal/acpgen/main.go` reached 407 lines in step 10's trim pass; it was trimmed to 393.
 
 ## Milestone A demo (steps 1–5): one working chat
@@ -211,6 +213,10 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 - Moving a chat (step 22) is the folder in the chat header: recent folders (the chats' folders, newest first, eight at most) or "Choose folder…". A chat without messages (no title yet) gets a new session in the new folder. One with messages gets a fork of its session there, through a copy of Claude's transcript ([ADR 0014](docs/adr/0014-moving-a-chat-forks-it.md)): a new session id, the same conversation; `claude --resume <new id>` works in the new folder, the old id in the old one. This depends on Claude's private file layout (`internal/claudehistory`); drop it when claude-agent-acp's `session/fork` works across folders. The chat keeps its mode; its model and other options are what the fork starts with (Claude's recorded ones). A side question open at the time ends.
 - Moving is refused while a turn runs, a prompt waits or the chat reopens; the control is disabled then. The old agent runs until the new one is ready; a failed move leaves the chat where it was and adds a notice with the error (and the app shows it in a snack bar too).
 - Claude titles a forked session "<title> (fork)"; Nushi ignores that one title change, so a moved chat keeps its title (a Claude-specific rule in the chats feature).
+
+- The details panel (step 23) sits right of the chat, 264 wide: Environment (the folder, changed from there, and the git branch, or the commit when detached), Context (the ring and percentage, tokens used of the window, the last turn's tokens with the cache on hover, the cost) and Changes (`+added −removed` and the number of files, as the Changes view lists them; untracked files count all their lines, binary ones none; a click opens Changes). The changes reload when a turn ends and when the chat moves. Context and cost show only there now.
+- The panel shows beside the chat only, not beside Changes, and steps aside while a side question is open. It hides when the chat pane is narrower than 820 (a 1024-wide window); the header's panel button is then disabled. While the panel is hidden the folder control is back in the header (when there's room), so a chat can always move. The button's state is remembered in `app.json` in the data folder (the app's only settings file).
+- The panel is "details" in code (`details_panel.dart`), since "side panel" already meant the side question's.
 
 ## Dependencies added
 
