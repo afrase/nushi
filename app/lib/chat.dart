@@ -20,6 +20,7 @@ class ChatState extends ChangeNotifier {
   bool busy = false;
   bool waiting = false; // on the user: a permission prompt or a question
   bool canFork = false; // the agent can fork it into side chats
+  bool canImages = false; // the agent takes images in prompts
   DateTime? started; // when the running turn started
   String error = ''; // why the snapshot didn't load
 
@@ -78,6 +79,7 @@ class ChatState extends ChangeNotifier {
     busy = s.busy;
     waiting = s.waiting;
     canFork = s.canFork;
+    canImages = s.images;
     started = s.started == 0
         ? null
         : DateTime.fromMillisecondsSinceEpoch(s.started.toInt());

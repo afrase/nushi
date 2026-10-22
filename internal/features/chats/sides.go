@@ -68,7 +68,7 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 	}
 	side := s.newChat()
 	side.id, side.agent, side.parent = string(resp.SessionID), agent, p
-	side.sid = side.id
+	side.sid, side.canImage = side.id, p.canImage
 	side.session = model.Session{ID: side.id, SessionID: side.sid, Agent: s.agent, Folder: folder, Title: "Side question", Created: time.Now()}
 	p.mu.Lock()
 	p.sides[side.id] = side

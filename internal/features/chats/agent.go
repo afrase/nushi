@@ -15,6 +15,7 @@ type opened struct {
 	agent  Agent
 	sid    string
 	config []model.ConfigOption
+	images bool // the agent takes images in prompts
 }
 
 // openSession launches an agent and opens a session in folder: a new one,
@@ -32,6 +33,9 @@ func (c *chat) openSession(ctx context.Context, launch Launch, sid, folder strin
 		ClientCapabilities: &acp.ClientCapabilities{Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}}},
 		ClientInfo:         &acp.Implementation{Name: "nushi", Title: "Nushi"},
 	})
+	if err == nil && init.AgentCapabilities != nil && init.AgentCapabilities.PromptCapabilities != nil {
+		o.images = init.AgentCapabilities.PromptCapabilities.Image
+	}
 	switch {
 	case err != nil:
 	case sid == "":
@@ -63,7 +67,7 @@ func (c *chat) openSession(ctx context.Context, launch Launch, sid, folder strin
 
 // useLocked makes an opened session the chat's.
 func (c *chat) useLocked(o opened) {
-	c.agent, c.canFork, c.sid, c.config = o.agent, o.agent.CanFork(), o.sid, o.config
+	c.agent, c.canFork, c.canImage, c.sid, c.config = o.agent, o.agent.CanFork(), o.images, o.sid, o.config
 	c.emitLocked(model.Event{ChatID: c.id, Config: slices.Clone(c.config)})
 }
 

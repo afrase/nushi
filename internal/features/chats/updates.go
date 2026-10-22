@@ -1,6 +1,7 @@
 package chats
 
 import (
+	"encoding/base64"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -26,7 +27,7 @@ func (c *chat) update(n acp.SessionNotification) {
 		t := u.ToolCall
 		item := model.Item{ID: string(t.ToolCallID), Kind: model.ToolCall, Title: t.Title,
 			ToolKind: string(t.Kind), Status: string(t.Status), Paths: c.paths(t.Locations)}
-		item.Text, item.Diffs = c.output(t.Content)
+		c.setOutput(&item, t.Content)
 		if it := c.itemLocked(item.ID); it != nil { // a repeated tool_call replaces the call
 			*it = item
 			c.publishLocked(item)
@@ -82,19 +83,30 @@ func (c *chat) update(n acp.SessionNotification) {
 			it.Paths = c.paths(t.Locations)
 		}
 		if t.Content != nil {
-			it.Text, it.Diffs = c.output(t.Content)
+			c.setOutput(it, t.Content)
 		}
 		c.publishLocked(*it)
 	}
 }
 
-// chunkLocked adds a chunk of a message: to the message with its id, or,
-// when it has none, to the last item if that is a message of the same kind.
+// chunkLocked adds a chunk of a message (text or an image): to the message
+// with its id, or, when it has none, to the last item if that is a message
+// of the same kind.
 func (c *chat) chunkLocked(kind model.ItemKind, m *acp.ContentChunk) {
-	if m.Content.Text == nil {
+	var text string
+	var images []model.Image
+	switch {
+	case m.Content.Text != nil:
+		text = m.Content.Text.Text
+	case m.Content.Image != nil:
+		img, ok := image(m.Content.Image)
+		if !ok {
+			return
+		}
+		images = []model.Image{img}
+	default:
 		return
 	}
-	text := m.Content.Text.Text
 	id := string(m.MessageID)
 	if kind == model.Thought && id != "" {
 		id = "thought-" + id // a thought may share its message's id
@@ -103,12 +115,17 @@ func (c *chat) chunkLocked(kind model.ItemKind, m *acp.ContentChunk) {
 	if m.MessageID == "" && len(c.items) > 0 {
 		it = &c.items[len(c.items)-1]
 	}
+	if it != nil && it.Kind == kind && images != nil {
+		it.Images = append(it.Images, images...)
+		c.publishLocked(*it)
+		return
+	}
 	if it != nil && it.Kind == kind {
 		it.Text += text
 		c.emitLocked(model.Event{ChatID: c.id, Item: &model.Item{ID: it.ID, Kind: kind, Text: text}, Append: true})
 		return
 	}
-	c.addLocked(model.Item{ID: id, Kind: kind, Text: text})
+	c.addLocked(model.Item{ID: id, Kind: kind, Text: text, Images: images})
 }
 
 // planLocked shows the agent's plan: it replaces the plan of the current
@@ -132,14 +149,20 @@ func (c *chat) publishLocked(it model.Item) {
 	c.emitLocked(model.Event{ChatID: c.id, Item: &it})
 }
 
-// output renders a tool call's content as markdown, its diffs apart.
-func (c *chat) output(content []acp.ToolCallContent) (string, []model.FileChange) {
+// setOutput sets a tool call's output from its content: the text as
+// markdown, its diffs and images apart.
+func (c *chat) setOutput(it *model.Item, content []acp.ToolCallContent) {
 	var parts []string
 	var diffs []model.FileChange
+	var images []model.Image
 	for _, tc := range content {
 		switch {
 		case tc.Content != nil && tc.Content.Content.Text != nil:
 			parts = append(parts, tc.Content.Content.Text.Text)
+		case tc.Content != nil && tc.Content.Content.Image != nil:
+			if img, ok := image(tc.Content.Content.Image); ok {
+				images = append(images, img)
+			}
 		case tc.Diff != nil:
 			d := tc.Diff
 			status := "modified"
@@ -151,7 +174,13 @@ func (c *chat) output(content []acp.ToolCallContent) (string, []model.FileChange
 			parts = append(parts, "(terminal "+string(tc.Terminal.TerminalID)+")")
 		}
 	}
-	return strings.Join(parts, "\n\n"), diffs
+	it.Text, it.Diffs, it.Images = strings.Join(parts, "\n\n"), diffs, images
+}
+
+// image decodes an image the agent sent; one given only by URI is left out.
+func image(i *acp.ImageContent) (model.Image, bool) {
+	data, err := base64.StdEncoding.DecodeString(i.Data)
+	return model.Image{MimeType: i.MimeType, Data: data}, err == nil && len(data) > 0
 }
 
 func (c *chat) paths(locs []acp.ToolCallLocation) []string {

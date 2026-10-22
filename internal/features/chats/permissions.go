@@ -13,7 +13,7 @@ import (
 // user's answer. Nushi never answers one itself.
 func (c *chat) requestPermission(ctx context.Context, req acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
 	item := model.Item{Kind: model.Permission, Status: "pending", Title: req.ToolCall.Title}
-	item.Text, item.Diffs = c.output(req.ToolCall.Content)
+	c.setOutput(&item, req.ToolCall.Content)
 	for _, o := range req.Options {
 		item.Options = append(item.Options, model.Option{ID: string(o.OptionID), Name: o.Name, Kind: string(o.Kind)})
 	}

@@ -1,3 +1,4 @@
+import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -5,6 +6,7 @@ import 'chat.dart';
 import 'chat_menu.dart';
 import 'composer.dart';
 import 'daemon.dart';
+import 'images.dart';
 import 'side_panel.dart';
 import 'theme/theme.dart';
 import 'transcript.dart';
@@ -32,6 +34,8 @@ class ChatView extends StatefulWidget {
 class _ChatViewState extends State<ChatView> {
   final _quote = ValueNotifier<String?>(null);
   final _sideQuote = ValueNotifier<String?>(null);
+  final _images = Attachments();
+  bool _dragging = false; // files are dragged over the chat
   ChatState? _side;
   bool _forking = false;
   late String _folder = widget.chat.folder;
@@ -54,6 +58,7 @@ class _ChatViewState extends State<ChatView> {
     widget.chat.removeListener(_moved);
     _closeSide();
     _quote.dispose();
+    _images.dispose();
     _sideQuote.dispose();
     super.dispose();
   }
@@ -76,6 +81,22 @@ class _ChatViewState extends State<ChatView> {
     _sideQuote.value = selection;
   }
 
+  /// Attaches the images dropped on the chat.
+  Future<void> _drop(DropDoneDetails d) async {
+    setState(() => _dragging = false);
+    final paths = d.files.map((f) => f.path).where(isImageFile).toList();
+    if (paths.isEmpty || widget.chat.archived) return;
+    if (!widget.chat.canImages) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Claude doesn’t take images in this chat'),
+        ),
+      );
+      return;
+    }
+    await tryOrShow(context, () => _images.addFiles(paths));
+  }
+
   void _closeSide() {
     final side = _side;
     if (side == null) return;
@@ -91,31 +112,53 @@ class _ChatViewState extends State<ChatView> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
-          child: CallbackShortcuts(
-            bindings: {
-              const SingleActivator(LogicalKeyboardKey.escape): () =>
-                  stopTurn(context, chat, widget.daemon),
-            },
-            child: ListenableBuilder(
-              listenable: chat,
-              builder: (context, _) => Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: Transcript(
-                      chat: chat,
-                      daemon: widget.daemon,
-                      onReply: chat.archived ? null : (s) => _quote.value = s,
-                      onSide: chat.archived ? null : _ask,
-                    ),
+          child: DropTarget(
+            onDragEntered: (_) => setState(() => _dragging = true),
+            onDragExited: (_) => setState(() => _dragging = false),
+            onDragDone: _drop,
+            child: Container(
+              foregroundDecoration: _dragging
+                  ? BoxDecoration(
+                      border: Border.all(
+                        color: NushiTheme.of(context).t.focus,
+                        width: 2,
+                      ),
+                    )
+                  : null,
+              child: CallbackShortcuts(
+                bindings: {
+                  const SingleActivator(LogicalKeyboardKey.escape): () =>
+                      stopTurn(context, chat, widget.daemon),
+                },
+                child: ListenableBuilder(
+                  listenable: chat,
+                  builder: (context, _) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: Transcript(
+                          chat: chat,
+                          daemon: widget.daemon,
+                          onReply: chat.archived
+                              ? null
+                              : (s) => _quote.value = s,
+                          onSide: chat.archived ? null : _ask,
+                        ),
+                      ),
+                      if (chat.busy || _forking)
+                        const LinearProgressIndicator(minHeight: 2),
+                      if (chat.archived)
+                        _Archived(chat, widget.daemon)
+                      else
+                        Composer(
+                          chat: chat,
+                          daemon: widget.daemon,
+                          quote: _quote,
+                          attachments: _images,
+                        ),
+                    ],
                   ),
-                  if (chat.busy || _forking)
-                    const LinearProgressIndicator(minHeight: 2),
-                  if (chat.archived)
-                    _Archived(chat, widget.daemon)
-                  else
-                    Composer(chat: chat, daemon: widget.daemon, quote: _quote),
-                ],
+                ),
               ),
             ),
           ),

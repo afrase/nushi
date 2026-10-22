@@ -113,3 +113,32 @@ class ChoiceList extends StatelessWidget {
     );
   }
 }
+
+/// The prompt box's "+" menu, above [button]: "file" to mention a file, or
+/// "image" to attach images (unavailable unless the agent takes [images]).
+Future<String?> plusMenu(BuildContext button, {required bool images}) {
+  final theme = NushiTheme.of(button);
+  final t = theme.t;
+  final box = button.findRenderObject()! as RenderBox;
+  final at = box.localToGlobal(Offset.zero);
+  return showMenu<String>(
+    context: button,
+    position: RelativeRect.fromLTRB(at.dx, at.dy - 76, at.dx, at.dy),
+    items: [
+      PopupMenuItem(
+        value: 'file',
+        height: 30,
+        child: Text('Mention a file', style: theme.ui(t.text)),
+      ),
+      PopupMenuItem(
+        value: 'image',
+        height: 30,
+        enabled: images,
+        child: Tooltip(
+          message: images ? '' : 'Claude doesn’t take images in this chat',
+          child: Text('Image…', style: theme.ui(images ? t.text : t.textMuted)),
+        ),
+      ),
+    ],
+  );
+}

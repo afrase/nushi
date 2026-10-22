@@ -1075,11 +1075,13 @@ class SendPromptRequest extends $pb.GeneratedMessage {
     $core.String? chatId,
     $core.String? text,
     $core.Iterable<$core.String>? files,
+    $core.Iterable<ImageData>? images,
   }) {
     final result = SendPromptRequest._();
     if (chatId != null) result.chatId = chatId;
     if (text != null) result.text = text;
     if (files != null) result.files.addAll(files);
+    if (images != null) result.images.addAll(images);
     return result;
   }
 
@@ -1099,6 +1101,8 @@ class SendPromptRequest extends $pb.GeneratedMessage {
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
     ..aOS(2, _omitFieldNames ? '' : 'text')
     ..pPS(3, _omitFieldNames ? '' : 'files')
+    ..pPM<ImageData>(4, _omitFieldNames ? '' : 'images',
+        subBuilder: ImageData.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1145,6 +1149,79 @@ class SendPromptRequest extends $pb.GeneratedMessage {
   /// the agent as resource links after the text.
   @$pb.TagNumber(3)
   $pb.PbList<$core.String> get files => $_getList(2);
+
+  /// Images, after the files; refused unless status.images.
+  @$pb.TagNumber(4)
+  $pb.PbList<ImageData> get images => $_getList(3);
+}
+
+/// An image in a prompt, a message or a tool call's output.
+class ImageData extends $pb.GeneratedMessage {
+  factory ImageData({
+    $core.String? mimeType,
+    $core.List<$core.int>? data,
+  }) {
+    final result = ImageData._();
+    if (mimeType != null) result.mimeType = mimeType;
+    if (data != null) result.data = data;
+    return result;
+  }
+
+  ImageData._();
+
+  factory ImageData.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ImageData()..mergeFromBuffer(data, registry);
+  factory ImageData.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ImageData()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ImageData',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ImageData.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'mimeType')
+    ..a<$core.List<$core.int>>(
+        2, _omitFieldNames ? '' : 'data', $pb.PbFieldType.OY)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ImageData clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ImageData copyWith(void Function(ImageData) updates) =>
+      super.copyWith((message) => updates(message as ImageData)) as ImageData;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ImageData() / ImageData.new instead')
+  static ImageData create() => ImageData._();
+  static $pb.GeneratedMessage $_createMessage() => ImageData._();
+  @$core.override
+  ImageData createEmptyInstance() => ImageData._();
+  @$core.pragma('dart2js:noInline')
+  static ImageData getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ImageData>(ImageData.$_createMessage);
+  static ImageData? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get mimeType => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set mimeType($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasMimeType() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearMimeType() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.List<$core.int> get data => $_getN(1);
+  @$pb.TagNumber(2)
+  set data($core.List<$core.int> value) => $_setBytes(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasData() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearData() => $_clearField(2);
 }
 
 class ListFilesRequest extends $pb.GeneratedMessage {
@@ -3316,6 +3393,7 @@ class Item extends $pb.GeneratedMessage {
     $core.Iterable<$core.String>? paths,
     $core.Iterable<FileChange>? diffs,
     $core.Iterable<PlanEntry>? plan,
+    $core.Iterable<ImageData>? images,
   }) {
     final result = Item._();
     if (id != null) result.id = id;
@@ -3330,6 +3408,7 @@ class Item extends $pb.GeneratedMessage {
     if (paths != null) result.paths.addAll(paths);
     if (diffs != null) result.diffs.addAll(diffs);
     if (plan != null) result.plan.addAll(plan);
+    if (images != null) result.images.addAll(images);
     return result;
   }
 
@@ -3363,6 +3442,8 @@ class Item extends $pb.GeneratedMessage {
         subBuilder: FileChange.$_createMessage)
     ..pPM<PlanEntry>(12, _omitFieldNames ? '' : 'plan',
         subBuilder: PlanEntry.$_createMessage)
+    ..pPM<ImageData>(13, _omitFieldNames ? '' : 'images',
+        subBuilder: ImageData.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -3469,6 +3550,10 @@ class Item extends $pb.GeneratedMessage {
 
   @$pb.TagNumber(12)
   $pb.PbList<PlanEntry> get plan => $_getList(11);
+
+  /// A message's or a tool call's images.
+  @$pb.TagNumber(13)
+  $pb.PbList<ImageData> get images => $_getList(12);
 }
 
 /// A step of the agent's plan; status is "pending", "in_progress" or
@@ -3831,6 +3916,7 @@ class ChatStatus extends $pb.GeneratedMessage {
     $fixnum.Int64? started,
     $core.bool? waiting,
     $core.bool? canFork,
+    $core.bool? images,
   }) {
     final result = ChatStatus._();
     if (busy != null) result.busy = busy;
@@ -3838,6 +3924,7 @@ class ChatStatus extends $pb.GeneratedMessage {
     if (started != null) result.started = started;
     if (waiting != null) result.waiting = waiting;
     if (canFork != null) result.canFork = canFork;
+    if (images != null) result.images = images;
     return result;
   }
 
@@ -3859,6 +3946,7 @@ class ChatStatus extends $pb.GeneratedMessage {
     ..aInt64(3, _omitFieldNames ? '' : 'started')
     ..aOB(4, _omitFieldNames ? '' : 'waiting')
     ..aOB(5, _omitFieldNames ? '' : 'canFork')
+    ..aOB(6, _omitFieldNames ? '' : 'images')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -3929,6 +4017,16 @@ class ChatStatus extends $pb.GeneratedMessage {
   $core.bool hasCanFork() => $_has(4);
   @$pb.TagNumber(5)
   void clearCanFork() => $_clearField(5);
+
+  /// The agent takes images in prompts.
+  @$pb.TagNumber(6)
+  $core.bool get images => $_getBF(5);
+  @$pb.TagNumber(6)
+  set images($core.bool value) => $_setBool(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasImages() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearImages() => $_clearField(6);
 }
 
 class NushiServiceApi {

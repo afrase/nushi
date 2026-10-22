@@ -38,14 +38,15 @@ class MarkdownStyle {
 
 /// Markdown that may still be streaming in: healed before it is parsed (see
 /// [heal]), with highlighted code blocks that scroll sideways. Images are
-/// never fetched; their alt text shows instead. Put it in a [SelectionArea]
-/// to select text.
+/// what [imageBuilder] makes of them, or else their alt text: nothing is
+/// fetched on its own. Put it in a [SelectionArea] to select text.
 class StreamingMarkdown extends StatelessWidget {
   const StreamingMarkdown(
     this.text, {
     super.key,
     required this.style,
     this.onTapLink,
+    this.imageBuilder,
   });
 
   final String text;
@@ -53,6 +54,9 @@ class StreamingMarkdown extends StatelessWidget {
 
   /// Runs when a link is clicked, with its destination.
   final void Function(String href)? onTapLink;
+
+  /// Builds an image from its URL and alt text.
+  final Widget Function(Uri uri, String? alt)? imageBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -67,6 +71,7 @@ class StreamingMarkdown extends StatelessWidget {
         if (href != null) onTapLink?.call(href);
       },
       imageBuilder: (uri, title, alt) =>
+          imageBuilder?.call(uri, alt) ??
           Text('[image: ${alt ?? uri}]', style: body.copyWith(color: s.muted)),
       styleSheet: MarkdownStyleSheet(
         p: body,
