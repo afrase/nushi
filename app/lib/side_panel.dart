@@ -95,7 +95,7 @@ class SidePanel extends StatelessWidget {
                 chat: side,
                 daemon: daemon,
                 quote: quote,
-                hint: 'Ask on the side   ⏎ send',
+                hint: 'Ask on the side',
               ),
             ],
           ),

@@ -54,6 +54,7 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 21. A packaged app | 2219 | 793 | 4191 | 650 |
 | 22. Chats without a folder, moving a chat | 2489 | 795 | 4383 | 650 |
 | 23. The details panel | 2576 | 795 | 4760 | 650 |
+| 24. A minimal composer | 2576 | 795 | 4945 | 650 |
 
 Tripwires crossed:
 Lines added per step, code and tests, without generated code (the tripwire is about 500): 1: 533, 2: 1,502, 3: 239, 4: 437, 5: 739, 6: 639, 7: 464, 8: 537, 9: 265, 10: 528, 11: 1,249, 12: 625, 13: 476, 14: 343, 15: 351, 16: 492, 17: 298, 18: 666, 19: 755, 20: 223, 21: 146.
@@ -217,6 +218,9 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 - The details panel (step 23) sits right of the chat, 264 wide: Environment (the folder, changed from there, and the git branch, or the commit when detached), Context (the ring and percentage, tokens used of the window, the last turn's tokens with the cache on hover, the cost) and Changes (`+added −removed` and the number of files, as the Changes view lists them; untracked files count all their lines, binary ones none; a click opens Changes). The changes reload when a turn ends and when the chat moves. Context and cost show only there now.
 - The panel shows beside the chat only, not beside Changes, and steps aside while a side question is open. It hides when the chat pane is narrower than 820 (a 1024-wide window); the header's panel button is then disabled. While the panel is hidden the folder control is back in the header (when there's room), so a chat can always move. The button's state is remembered in `app.json` in the data folder (the app's only settings file).
 - The panel is "details" in code (`details_panel.dart`), since "side panel" already meant the side question's.
+
+- The composer (step 24) follows Claude Code's desktop app: a rounded box with "Type / for commands", "+" on its left (starts an @ mention at the cursor, which lists the folder's files), and on its right ↵ (only once there's text) or, while a turn runs, stop (a square in a circle). Under it, without labels: the mode's value on the left; on the right one menu for model and effort ("Opus 5.5  High", effort dimmed), with every other option (Fast mode, Agent) below them as submenus; and the context ring (counts on hover). The ring is the one place context shows outside the details panel. Enter sends, Shift-Enter adds a line, Escape stops, as before.
+- The model menu lists Claude's 15 models with their descriptions, compact; it is tall but fits a 800-high window.
 
 ## Dependencies added
 
