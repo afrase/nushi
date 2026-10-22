@@ -34,10 +34,13 @@ type handleFunc func(ctx context.Context, method string, params json.RawMessage)
 // no size limit, and nothing is queued or dropped: notifications are handled
 // in order on the reading goroutine, so a slow handler slows the reader.
 // Requests from the other side are handled on their own goroutines, after
-// every notification that arrived before them.
+// every notification that arrived before them; their context ends with the
+// connection.
 type conn struct {
 	w      io.Writer
 	handle handleFunc
+	ctx    context.Context
+	cancel context.CancelFunc
 
 	writeMu sync.Mutex
 	mu      sync.Mutex
@@ -49,6 +52,7 @@ type conn struct {
 
 func newConn(r io.Reader, w io.Writer, handle handleFunc) *conn {
 	c := &conn{w: w, handle: handle, pending: map[string]chan frame{}, done: make(chan struct{})}
+	c.ctx, c.cancel = context.WithCancel(context.Background())
 	go c.read(r)
 	return c
 }
@@ -76,6 +80,7 @@ func (c *conn) read(r io.Reader) {
 		delete(c.pending, id)
 	}
 	c.mu.Unlock()
+	c.cancel()
 	close(c.done)
 }
 
@@ -94,10 +99,10 @@ func (c *conn) dispatch(line []byte) {
 			ch <- f
 		}
 	case f.ID == nil: // a notification
-		_, _ = c.handle(context.Background(), f.Method, f.Params)
+		_, _ = c.handle(c.ctx, f.Method, f.Params)
 	default: // a request
 		go func() {
-			result, err := c.handle(context.Background(), f.Method, f.Params)
+			result, err := c.handle(c.ctx, f.Method, f.Params)
 			reply := frame{JSONRPC: "2.0", ID: f.ID}
 			if err != nil {
 				var rpcErr *Error

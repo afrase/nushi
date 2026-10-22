@@ -24,15 +24,21 @@ class ItemKind extends $pb.ProtobufEnum {
   static const ItemKind ITEM_KIND_TOOL_CALL =
       ItemKind._(3, _omitEnumNames ? '' : 'ITEM_KIND_TOOL_CALL');
 
+  /// The agent asks to run a tool call. Status is "pending" until it is
+  /// answered ("answered") or the agent stops waiting ("cancelled").
+  static const ItemKind ITEM_KIND_PERMISSION =
+      ItemKind._(4, _omitEnumNames ? '' : 'ITEM_KIND_PERMISSION');
+
   static const $core.List<ItemKind> values = <ItemKind>[
     ITEM_KIND_UNSPECIFIED,
     ITEM_KIND_USER_MESSAGE,
     ITEM_KIND_AGENT_MESSAGE,
     ITEM_KIND_TOOL_CALL,
+    ITEM_KIND_PERMISSION,
   ];
 
   static final $core.List<ItemKind?> _byValue =
-      $pb.ProtobufEnum.$_initByValueList(values, 3);
+      $pb.ProtobufEnum.$_initByValueList(values, 4);
   static ItemKind? valueOf($core.int value) =>
       value < 0 || value >= _byValue.length ? null : _byValue[value];
 

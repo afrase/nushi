@@ -62,6 +62,24 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Answers a pending permission prompt with one of its options.
+  Future<nushiv1nushi.AnswerPermissionResponse> answerPermission(
+    nushiv1nushi.AnswerPermissionRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.answerPermission,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.
   Stream<nushiv1nushi.EventsResponse> events(

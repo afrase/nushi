@@ -43,10 +43,11 @@ type chat struct {
 	agent   Agent
 	publish func(model.Event)
 
-	mu     sync.Mutex
-	items  []model.Item
-	busy   bool
-	lastID string // the agent message that chunks without an id continue
+	mu      sync.Mutex
+	items   []model.Item
+	busy    bool
+	lastID  string                   // the agent message that chunks without an id continue
+	waiting map[string]chan<- string // permission prompts by item id, for the picked option
 }
 
 // Start launches an agent in folder and opens a session there.
@@ -54,7 +55,7 @@ func (s *Service) Start(ctx context.Context, folder string) (string, error) {
 	if fi, err := os.Stat(folder); err != nil || !fi.IsDir() || !filepath.IsAbs(folder) {
 		return "", fmt.Errorf("%q is not an absolute path to a folder", folder)
 	}
-	c := &chat{publish: s.publish}
+	c := &chat{publish: s.publish, waiting: map[string]chan<- string{}}
 	agent, err := s.launch(c)
 	if err != nil {
 		return "", fmt.Errorf("start agent: %w", err)
@@ -83,11 +84,9 @@ func (s *Service) Start(ctx context.Context, folder string) (string, error) {
 // Prompt sends text to the chat's agent. The turn runs in the background;
 // its progress arrives as events.
 func (s *Service) Prompt(chatID, text string) error {
-	s.mu.Lock()
-	c := s.chats[chatID]
-	s.mu.Unlock()
-	if c == nil {
-		return fmt.Errorf("no chat %q", chatID)
+	c, err := s.chat(chatID)
+	if err != nil {
+		return err
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -99,6 +98,15 @@ func (s *Service) Prompt(chatID, text string) error {
 	c.publish(model.Event{ChatID: c.id, Status: &model.Status{Busy: true}})
 	go c.run(text)
 	return nil
+}
+
+func (s *Service) chat(id string) (*chat, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if c := s.chats[id]; c != nil {
+		return c, nil
+	}
+	return nil, fmt.Errorf("no chat %q", id)
 }
 
 func (c *chat) run(text string) {

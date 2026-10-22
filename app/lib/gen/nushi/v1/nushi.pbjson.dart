@@ -23,6 +23,7 @@ const ItemKind$json = {
     {'1': 'ITEM_KIND_USER_MESSAGE', '2': 1},
     {'1': 'ITEM_KIND_AGENT_MESSAGE', '2': 2},
     {'1': 'ITEM_KIND_TOOL_CALL', '2': 3},
+    {'1': 'ITEM_KIND_PERMISSION', '2': 4},
   ],
 };
 
@@ -30,7 +31,7 @@ const ItemKind$json = {
 final $typed_data.Uint8List itemKindDescriptor = $convert.base64Decode(
     'CghJdGVtS2luZBIZChVJVEVNX0tJTkRfVU5TUEVDSUZJRUQQABIaChZJVEVNX0tJTkRfVVNFUl'
     '9NRVNTQUdFEAESGwoXSVRFTV9LSU5EX0FHRU5UX01FU1NBR0UQAhIXChNJVEVNX0tJTkRfVE9P'
-    'TF9DQUxMEAM=');
+    'TF9DQUxMEAMSGAoUSVRFTV9LSU5EX1BFUk1JU1NJT04QBA==');
 
 @$core.Deprecated('Use pingRequestDescriptor instead')
 const PingRequest$json = {
@@ -100,6 +101,31 @@ const SendPromptResponse$json = {
 final $typed_data.Uint8List sendPromptResponseDescriptor =
     $convert.base64Decode('ChJTZW5kUHJvbXB0UmVzcG9uc2U=');
 
+@$core.Deprecated('Use answerPermissionRequestDescriptor instead')
+const AnswerPermissionRequest$json = {
+  '1': 'AnswerPermissionRequest',
+  '2': [
+    {'1': 'chat_id', '3': 1, '4': 1, '5': 9, '10': 'chatId'},
+    {'1': 'item_id', '3': 2, '4': 1, '5': 9, '10': 'itemId'},
+    {'1': 'option_id', '3': 3, '4': 1, '5': 9, '10': 'optionId'},
+  ],
+};
+
+/// Descriptor for `AnswerPermissionRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List answerPermissionRequestDescriptor =
+    $convert.base64Decode(
+        'ChdBbnN3ZXJQZXJtaXNzaW9uUmVxdWVzdBIXCgdjaGF0X2lkGAEgASgJUgZjaGF0SWQSFwoHaX'
+        'RlbV9pZBgCIAEoCVIGaXRlbUlkEhsKCW9wdGlvbl9pZBgDIAEoCVIIb3B0aW9uSWQ=');
+
+@$core.Deprecated('Use answerPermissionResponseDescriptor instead')
+const AnswerPermissionResponse$json = {
+  '1': 'AnswerPermissionResponse',
+};
+
+/// Descriptor for `AnswerPermissionResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List answerPermissionResponseDescriptor =
+    $convert.base64Decode('ChhBbnN3ZXJQZXJtaXNzaW9uUmVzcG9uc2U=');
+
 @$core.Deprecated('Use eventsRequestDescriptor instead')
 const EventsRequest$json = {
   '1': 'EventsRequest',
@@ -161,6 +187,15 @@ const Item$json = {
     {'1': 'title', '3': 4, '4': 1, '5': 9, '10': 'title'},
     {'1': 'tool_kind', '3': 5, '4': 1, '5': 9, '10': 'toolKind'},
     {'1': 'status', '3': 6, '4': 1, '5': 9, '10': 'status'},
+    {
+      '1': 'options',
+      '3': 7,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.PermissionOption',
+      '10': 'options'
+    },
+    {'1': 'answer', '3': 8, '4': 1, '5': 9, '10': 'answer'},
   ],
 };
 
@@ -168,7 +203,24 @@ const Item$json = {
 final $typed_data.Uint8List itemDescriptor = $convert.base64Decode(
     'CgRJdGVtEg4KAmlkGAEgASgJUgJpZBImCgRraW5kGAIgASgOMhIubnVzaGkudjEuSXRlbUtpbm'
     'RSBGtpbmQSEgoEdGV4dBgDIAEoCVIEdGV4dBIUCgV0aXRsZRgEIAEoCVIFdGl0bGUSGwoJdG9v'
-    'bF9raW5kGAUgASgJUgh0b29sS2luZBIWCgZzdGF0dXMYBiABKAlSBnN0YXR1cw==');
+    'bF9raW5kGAUgASgJUgh0b29sS2luZBIWCgZzdGF0dXMYBiABKAlSBnN0YXR1cxI0CgdvcHRpb2'
+    '5zGAcgAygLMhoubnVzaGkudjEuUGVybWlzc2lvbk9wdGlvblIHb3B0aW9ucxIWCgZhbnN3ZXIY'
+    'CCABKAlSBmFuc3dlcg==');
+
+@$core.Deprecated('Use permissionOptionDescriptor instead')
+const PermissionOption$json = {
+  '1': 'PermissionOption',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'name', '3': 2, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'kind', '3': 3, '4': 1, '5': 9, '10': 'kind'},
+  ],
+};
+
+/// Descriptor for `PermissionOption`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List permissionOptionDescriptor = $convert.base64Decode(
+    'ChBQZXJtaXNzaW9uT3B0aW9uEg4KAmlkGAEgASgJUgJpZBISCgRuYW1lGAIgASgJUgRuYW1lEh'
+    'IKBGtpbmQYAyABKAlSBGtpbmQ=');
 
 @$core.Deprecated('Use itemEventDescriptor instead')
 const ItemEvent$json = {
@@ -212,6 +264,11 @@ const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
       '3': '.nushi.v1.SendPromptResponse'
     },
     {
+      '1': 'AnswerPermission',
+      '2': '.nushi.v1.AnswerPermissionRequest',
+      '3': '.nushi.v1.AnswerPermissionResponse'
+    },
+    {
       '1': 'Events',
       '2': '.nushi.v1.EventsRequest',
       '3': '.nushi.v1.EventsResponse',
@@ -229,10 +286,13 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.StartChatResponse': StartChatResponse$json,
   '.nushi.v1.SendPromptRequest': SendPromptRequest$json,
   '.nushi.v1.SendPromptResponse': SendPromptResponse$json,
+  '.nushi.v1.AnswerPermissionRequest': AnswerPermissionRequest$json,
+  '.nushi.v1.AnswerPermissionResponse': AnswerPermissionResponse$json,
   '.nushi.v1.EventsRequest': EventsRequest$json,
   '.nushi.v1.EventsResponse': EventsResponse$json,
   '.nushi.v1.ItemEvent': ItemEvent$json,
   '.nushi.v1.Item': Item$json,
+  '.nushi.v1.PermissionOption': PermissionOption$json,
   '.nushi.v1.ChatStatus': ChatStatus$json,
 };
 
@@ -241,5 +301,7 @@ final $typed_data.Uint8List nushiServiceDescriptor = $convert.base64Decode(
     'CgxOdXNoaVNlcnZpY2USNQoEUGluZxIVLm51c2hpLnYxLlBpbmdSZXF1ZXN0GhYubnVzaGkudj'
     'EuUGluZ1Jlc3BvbnNlEkQKCVN0YXJ0Q2hhdBIaLm51c2hpLnYxLlN0YXJ0Q2hhdFJlcXVlc3Qa'
     'Gy5udXNoaS52MS5TdGFydENoYXRSZXNwb25zZRJHCgpTZW5kUHJvbXB0EhsubnVzaGkudjEuU2'
-    'VuZFByb21wdFJlcXVlc3QaHC5udXNoaS52MS5TZW5kUHJvbXB0UmVzcG9uc2USPQoGRXZlbnRz'
-    'EhcubnVzaGkudjEuRXZlbnRzUmVxdWVzdBoYLm51c2hpLnYxLkV2ZW50c1Jlc3BvbnNlMAE=');
+    'VuZFByb21wdFJlcXVlc3QaHC5udXNoaS52MS5TZW5kUHJvbXB0UmVzcG9uc2USWQoQQW5zd2Vy'
+    'UGVybWlzc2lvbhIhLm51c2hpLnYxLkFuc3dlclBlcm1pc3Npb25SZXF1ZXN0GiIubnVzaGkudj'
+    'EuQW5zd2VyUGVybWlzc2lvblJlc3BvbnNlEj0KBkV2ZW50cxIXLm51c2hpLnYxLkV2ZW50c1Jl'
+    'cXVlc3QaGC5udXNoaS52MS5FdmVudHNSZXNwb25zZTAB');

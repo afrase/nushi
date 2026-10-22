@@ -16,7 +16,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 2
+const Version = 3
 
 type server struct {
 	chats *chats.Service
@@ -58,6 +58,13 @@ func (s *server) SendPrompt(_ context.Context, req *connect.Request[nushiv1.Send
 	return connect.NewResponse(&nushiv1.SendPromptResponse{}), nil
 }
 
+func (s *server) AnswerPermission(_ context.Context, req *connect.Request[nushiv1.AnswerPermissionRequest]) (*connect.Response[nushiv1.AnswerPermissionResponse], error) {
+	if err := s.chats.AnswerPermission(req.Msg.ChatId, req.Msg.ItemId, req.Msg.OptionId); err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	return connect.NewResponse(&nushiv1.AnswerPermissionResponse{}), nil
+}
+
 func (s *server) Events(ctx context.Context, _ *connect.Request[nushiv1.EventsRequest], stream *connect.ServerStream[nushiv1.EventsResponse]) error {
 	// An empty first message tells the client the subscription is live.
 	if err := stream.Send(&nushiv1.EventsResponse{}); err != nil {
@@ -75,19 +82,25 @@ var itemKinds = map[model.ItemKind]nushiv1.ItemKind{
 	model.UserMessage:  nushiv1.ItemKind_ITEM_KIND_USER_MESSAGE,
 	model.AgentMessage: nushiv1.ItemKind_ITEM_KIND_AGENT_MESSAGE,
 	model.ToolCall:     nushiv1.ItemKind_ITEM_KIND_TOOL_CALL,
+	model.Permission:   nushiv1.ItemKind_ITEM_KIND_PERMISSION,
 }
 
 func toProto(e model.Event) *nushiv1.EventsResponse {
 	out := &nushiv1.EventsResponse{ChatId: e.ChatID}
 	switch {
 	case e.Item != nil:
-		out.Kind = &nushiv1.EventsResponse_Item{Item: &nushiv1.ItemEvent{
-			Item: &nushiv1.Item{Id: e.Item.ID, Kind: itemKinds[e.Item.Kind], Text: e.Item.Text,
-				Title: e.Item.Title, ToolKind: e.Item.ToolKind, Status: e.Item.Status},
-			Append: e.Append,
-		}}
+		out.Kind = &nushiv1.EventsResponse_Item{Item: &nushiv1.ItemEvent{Item: itemProto(e.Item), Append: e.Append}}
 	case e.Status != nil:
 		out.Kind = &nushiv1.EventsResponse_Status{Status: &nushiv1.ChatStatus{Busy: e.Status.Busy, Error: e.Status.Error}}
+	}
+	return out
+}
+
+func itemProto(it *model.Item) *nushiv1.Item {
+	out := &nushiv1.Item{Id: it.ID, Kind: itemKinds[it.Kind], Text: it.Text,
+		Title: it.Title, ToolKind: it.ToolKind, Status: it.Status, Answer: it.Answer}
+	for _, o := range it.Options {
+		out.Options = append(out.Options, &nushiv1.PermissionOption{Id: o.ID, Name: o.Name, Kind: o.Kind})
 	}
 	return out
 }

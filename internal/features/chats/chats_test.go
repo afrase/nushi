@@ -2,7 +2,7 @@ package chats
 
 import (
 	"context"
-	"slices"
+	"reflect"
 	"sync"
 	"testing"
 
@@ -70,7 +70,7 @@ func TestPromptStreamsTheReply(t *testing.T) {
 		{ID: "m1", Kind: model.AgentMessage, Text: "Hello!"},
 		{ID: "m2", Kind: model.AgentMessage, Text: "Bye"},
 	}
-	if !slices.Equal(c.items, want) {
+	if !reflect.DeepEqual(c.items, want) {
 		t.Errorf("items = %+v\nwant %+v", c.items, want)
 	}
 	var appends int
@@ -101,9 +101,81 @@ func TestToolCallUpdatesMergeIntoOneItem(t *testing.T) {
 	}
 	want := []model.Item{
 		{ID: "t1", Kind: model.ToolCall, Title: "ls -la", ToolKind: "execute", Status: "completed", Text: "a.txt"},
-		{ID: "t2", Kind: model.ToolCall, Title: "Edit", ToolKind: "edit", Text: "`a.txt`\n\n```diff\n-one\n-two\n+three\n```"},
+		{ID: "t2", Kind: model.ToolCall, Title: "Edit", ToolKind: "edit", Text: "```diff\n--- a.txt\n+++ a.txt\n-one\n-two\n+three\n```"},
 	}
-	if !slices.Equal(c.items, want) {
+	if !reflect.DeepEqual(c.items, want) {
 		t.Errorf("items = %+v\nwant %+v", c.items, want)
+	}
+}
+
+func TestPermissionWaitsForTheUsersPick(t *testing.T) {
+	events := make(chan model.Event, 100)
+	c := &chat{id: "s1", publish: func(e model.Event) { events <- e }, waiting: map[string]chan<- string{}}
+	svc := &Service{chats: map[string]*chat{"s1": c}}
+	c.addLocked(model.Item{ID: "t1", Kind: model.ToolCall, Title: "rm -rf build"})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	type result struct {
+		resp *acp.RequestPermissionResponse
+		err  error
+	}
+	ask := func(ctx context.Context) chan result {
+		got := make(chan result, 1)
+		go func() {
+			resp, err := c.RequestPermission(ctx, acp.RequestPermissionRequest{SessionID: "s1",
+				ToolCall: acp.ToolCallUpdate{ToolCallID: "t1"},
+				Options: []acp.PermissionOption{
+					{OptionID: "allow", Name: "Allow", Kind: "allow_once"},
+					{OptionID: "reject", Name: "Reject", Kind: "reject_once"},
+				}})
+			got <- result{resp, err}
+		}()
+		return got
+	}
+	pending := func() model.Item {
+		for e := range events {
+			if e.Item != nil && e.Item.Kind == model.Permission && e.Item.Status == "pending" {
+				return *e.Item
+			}
+		}
+		panic("unreachable")
+	}
+
+	got := ask(ctx)
+	it := pending()
+	if it.Title != "rm -rf build" || it.Status != "pending" || len(it.Options) != 2 {
+		t.Fatalf("prompt item = %+v", it)
+	}
+	if err := svc.AnswerPermission("s1", it.ID, "maybe"); err == nil {
+		t.Error("an option the agent didn't offer was accepted")
+	}
+	if err := svc.AnswerPermission("s1", it.ID, "reject"); err != nil {
+		t.Fatal(err)
+	}
+	r := <-got
+	if r.err != nil || r.resp.Outcome.Selected == nil || r.resp.Outcome.Selected.OptionID != "reject" {
+		t.Errorf("agent got %+v, %v; want reject", r.resp, r.err)
+	}
+	if err := svc.AnswerPermission("s1", it.ID, "allow"); err == nil {
+		t.Error("a prompt was answered twice")
+	}
+
+	// The agent going away cancels a prompt still waiting.
+	ctx2, cancel2 := context.WithCancel(context.Background())
+	got = ask(ctx2)
+	it = pending()
+	cancel2()
+	if r := <-got; r.resp.Outcome.Outcome != "cancelled" {
+		t.Errorf("agent got %+v; want cancelled", r.resp)
+	}
+	if final := c.itemLocked(it.ID); final.Status != "cancelled" {
+		t.Errorf("item status = %q, want cancelled", final.Status)
+	}
+}
+
+func TestFenceOutlastsBackticksInside(t *testing.T) {
+	if got := fence("diff", "a ``` b ```` c"); got != "`````diff\na ``` b ```` c\n`````" {
+		t.Errorf("fence = %q", got)
 	}
 }

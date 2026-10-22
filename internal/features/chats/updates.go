@@ -75,7 +75,8 @@ func output(content []acp.ToolCallContent) string {
 		case tc.Content != nil && tc.Content.Content.Text != nil:
 			parts = append(parts, tc.Content.Content.Text.Text)
 		case tc.Diff != nil:
-			parts = append(parts, "`"+tc.Diff.Path+"`\n\n```diff\n"+diffLines("-", tc.Diff.OldText)+diffLines("+", tc.Diff.NewText)+"```")
+			d := tc.Diff
+			parts = append(parts, fence("diff", "--- "+d.Path+"\n+++ "+d.Path+"\n"+diffLines("-", d.OldText)+diffLines("+", d.NewText)))
 		case tc.Terminal != nil:
 			parts = append(parts, "(terminal "+string(tc.Terminal.TerminalID)+")")
 		}
@@ -88,4 +89,20 @@ func diffLines(prefix, text string) string {
 		return ""
 	}
 	return prefix + strings.ReplaceAll(strings.TrimSuffix(text, "\n"), "\n", "\n"+prefix) + "\n"
+}
+
+// fence puts text in a fenced code block whose fence is longer than any run
+// of backticks inside it, so the text can't end the block early.
+func fence(lang, text string) string {
+	longest, run := 0, 0
+	for _, r := range text {
+		if r == '`' {
+			run++
+			longest = max(longest, run)
+		} else {
+			run = 0
+		}
+	}
+	f := strings.Repeat("`", max(3, longest+1))
+	return f + lang + "\n" + strings.TrimSuffix(text, "\n") + "\n" + f
 }

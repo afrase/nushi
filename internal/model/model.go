@@ -7,11 +7,14 @@ const (
 	UserMessage ItemKind = iota + 1
 	AgentMessage
 	ToolCall
+	// Permission is the agent asking to run a tool call. Status is "pending"
+	// until it is answered ("answered") or the agent stops waiting ("cancelled").
+	Permission
 )
 
 // Item is one entry of a chat's transcript.
 type Item struct {
-	ID   string
+	ID   string // unique in its chat
 	Kind ItemKind
 	// Text is the message, or a tool call's output as markdown.
 	Text string
@@ -20,6 +23,15 @@ type Item struct {
 	Title    string
 	ToolKind string
 	Status   string
+	// Options are a permission prompt's choices, and Answer the ID of the one picked.
+	Options []Option
+	Answer  string
+}
+
+// Option is one of the agent's answers to a permission prompt. Kind is ACP's
+// hint, such as "allow_once" or "reject_always".
+type Option struct {
+	ID, Name, Kind string
 }
 
 // Event is a change to one chat. Exactly one of Item and Status is set.

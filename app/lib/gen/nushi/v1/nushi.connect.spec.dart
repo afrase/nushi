@@ -34,6 +34,14 @@ abstract final class NushiService {
     nushiv1nushi.SendPromptResponse.new,
   );
 
+  /// Answers a pending permission prompt with one of its options.
+  static const answerPermission = connect.Spec(
+    '/$name/AnswerPermission',
+    connect.StreamType.unary,
+    nushiv1nushi.AnswerPermissionRequest.new,
+    nushiv1nushi.AnswerPermissionResponse.new,
+  );
+
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.
   static const events = connect.Spec(

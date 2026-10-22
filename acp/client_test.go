@@ -13,6 +13,12 @@ type recorder struct{ updates []SessionNotification }
 
 func (r *recorder) SessionUpdate(n SessionNotification) { r.updates = append(r.updates, n) }
 
+// RequestPermission picks the last option.
+func (r *recorder) RequestPermission(_ context.Context, req RequestPermissionRequest) (*RequestPermissionResponse, error) {
+	opt := req.Options[len(req.Options)-1].OptionID
+	return &RequestPermissionResponse{Outcome: RequestPermissionOutcome{Outcome: "selected", Selected: &SelectedPermissionOutcome{OptionID: opt}}}, nil
+}
+
 // fakeAgent answers each request with reply(method, params), after sending
 // the notifications it returns.
 func fakeAgent(t *testing.T, reply func(method string, params json.RawMessage) (notes []string, result string)) (*Client, *recorder, func()) {
@@ -98,5 +104,31 @@ func TestTaggedUnionRoundTrip(t *testing.T) {
 	var unknown ContentBlock
 	if err := json.Unmarshal([]byte(`{"type":"hologram"}`), &unknown); err != nil || unknown.Type != "hologram" {
 		t.Errorf("unknown variant = %+v, %v", unknown, err)
+	}
+}
+
+func TestAgentRequestIsAnswered(t *testing.T) {
+	toAgentR, toAgentW := io.Pipe()
+	fromAgentR, fromAgentW := io.Pipe()
+	defer fromAgentW.Close()
+	Connect(fromAgentR, toAgentW, &recorder{})
+
+	io.WriteString(fromAgentW, `{"jsonrpc":"2.0","id":"p1","method":"session/request_permission","params":{"sessionId":"s1","toolCall":{"toolCallId":"t1"},"options":[{"optionId":"allow","name":"Allow","kind":"allow_once"},{"optionId":"deny","name":"Deny","kind":"reject_once"}]}}`+"\n")
+	io.WriteString(fromAgentW, `{"jsonrpc":"2.0","id":7,"method":"fs/read_text_file","params":{}}`+"\n")
+	sc := bufio.NewScanner(toAgentR)
+	got := map[string]string{}
+	for range 2 {
+		if !sc.Scan() {
+			t.Fatal("no reply")
+		}
+		var f frame
+		json.Unmarshal(sc.Bytes(), &f)
+		got[string(f.ID)] = sc.Text()
+	}
+	if want := `{"jsonrpc":"2.0","id":"p1","result":{"outcome":{"outcome":"selected","optionId":"deny"}}}`; got[`"p1"`] != want {
+		t.Errorf("permission reply = %s, want %s", got[`"p1"`], want)
+	}
+	if !strings.Contains(got["7"], `"code":-32601`) {
+		t.Errorf("unknown method reply = %s", got["7"])
 	}
 }

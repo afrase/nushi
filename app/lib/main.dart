@@ -28,7 +28,7 @@ class NushiApp extends StatelessWidget {
             return const Center(child: Text('Daemon not running'));
           }
           if (chat == null) return _StartChat(daemon: daemon);
-          return ChatView(chat: chat, onSend: daemon.sendPrompt);
+          return ChatView(chat: chat, daemon: daemon);
         },
       ),
     ),

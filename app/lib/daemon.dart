@@ -82,6 +82,15 @@ class Daemon extends ChangeNotifier {
   Future<void> sendPrompt(String text) =>
       client.sendPrompt(SendPromptRequest(chatId: chat!.id, text: text));
 
+  Future<void> answerPermission(String itemId, String optionId) =>
+      client.answerPermission(
+        AnswerPermissionRequest(
+          chatId: chat!.id,
+          itemId: itemId,
+          optionId: optionId,
+        ),
+      );
+
   @override
   void dispose() {
     _timer.cancel();

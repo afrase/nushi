@@ -344,6 +344,133 @@ class SendPromptResponse extends $pb.GeneratedMessage {
   static SendPromptResponse? _defaultInstance;
 }
 
+class AnswerPermissionRequest extends $pb.GeneratedMessage {
+  factory AnswerPermissionRequest({
+    $core.String? chatId,
+    $core.String? itemId,
+    $core.String? optionId,
+  }) {
+    final result = AnswerPermissionRequest._();
+    if (chatId != null) result.chatId = chatId;
+    if (itemId != null) result.itemId = itemId;
+    if (optionId != null) result.optionId = optionId;
+    return result;
+  }
+
+  AnswerPermissionRequest._();
+
+  factory AnswerPermissionRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AnswerPermissionRequest()..mergeFromBuffer(data, registry);
+  factory AnswerPermissionRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AnswerPermissionRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'AnswerPermissionRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: AnswerPermissionRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOS(2, _omitFieldNames ? '' : 'itemId')
+    ..aOS(3, _omitFieldNames ? '' : 'optionId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AnswerPermissionRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AnswerPermissionRequest copyWith(
+          void Function(AnswerPermissionRequest) updates) =>
+      super.copyWith((message) => updates(message as AnswerPermissionRequest))
+          as AnswerPermissionRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use AnswerPermissionRequest() / AnswerPermissionRequest.new instead')
+  static AnswerPermissionRequest create() => AnswerPermissionRequest._();
+  static $pb.GeneratedMessage $_createMessage() => AnswerPermissionRequest._();
+  @$core.override
+  AnswerPermissionRequest createEmptyInstance() => AnswerPermissionRequest._();
+  @$core.pragma('dart2js:noInline')
+  static AnswerPermissionRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<AnswerPermissionRequest>(
+          AnswerPermissionRequest.$_createMessage);
+  static AnswerPermissionRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get itemId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set itemId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasItemId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearItemId() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get optionId => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set optionId($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasOptionId() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearOptionId() => $_clearField(3);
+}
+
+class AnswerPermissionResponse extends $pb.GeneratedMessage {
+  factory AnswerPermissionResponse() => AnswerPermissionResponse._();
+
+  AnswerPermissionResponse._();
+
+  factory AnswerPermissionResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AnswerPermissionResponse()..mergeFromBuffer(data, registry);
+  factory AnswerPermissionResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AnswerPermissionResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'AnswerPermissionResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: AnswerPermissionResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AnswerPermissionResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AnswerPermissionResponse copyWith(
+          void Function(AnswerPermissionResponse) updates) =>
+      super.copyWith((message) => updates(message as AnswerPermissionResponse))
+          as AnswerPermissionResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use AnswerPermissionResponse() / AnswerPermissionResponse.new instead')
+  static AnswerPermissionResponse create() => AnswerPermissionResponse._();
+  static $pb.GeneratedMessage $_createMessage() => AnswerPermissionResponse._();
+  @$core.override
+  AnswerPermissionResponse createEmptyInstance() =>
+      AnswerPermissionResponse._();
+  @$core.pragma('dart2js:noInline')
+  static AnswerPermissionResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<AnswerPermissionResponse>(
+          AnswerPermissionResponse.$_createMessage);
+  static AnswerPermissionResponse? _defaultInstance;
+}
+
 class EventsRequest extends $pb.GeneratedMessage {
   factory EventsRequest() => EventsRequest._();
 
@@ -498,6 +625,8 @@ class Item extends $pb.GeneratedMessage {
     $core.String? title,
     $core.String? toolKind,
     $core.String? status,
+    $core.Iterable<PermissionOption>? options,
+    $core.String? answer,
   }) {
     final result = Item._();
     if (id != null) result.id = id;
@@ -506,6 +635,8 @@ class Item extends $pb.GeneratedMessage {
     if (title != null) result.title = title;
     if (toolKind != null) result.toolKind = toolKind;
     if (status != null) result.status = status;
+    if (options != null) result.options.addAll(options);
+    if (answer != null) result.answer = answer;
     return result;
   }
 
@@ -529,6 +660,9 @@ class Item extends $pb.GeneratedMessage {
     ..aOS(4, _omitFieldNames ? '' : 'title')
     ..aOS(5, _omitFieldNames ? '' : 'toolKind')
     ..aOS(6, _omitFieldNames ? '' : 'status')
+    ..pPM<PermissionOption>(7, _omitFieldNames ? '' : 'options',
+        subBuilder: PermissionOption.$_createMessage)
+    ..aOS(8, _omitFieldNames ? '' : 'answer')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -607,6 +741,101 @@ class Item extends $pb.GeneratedMessage {
   $core.bool hasStatus() => $_has(5);
   @$pb.TagNumber(6)
   void clearStatus() => $_clearField(6);
+
+  /// A permission prompt's choices, and the id of the one picked.
+  @$pb.TagNumber(7)
+  $pb.PbList<PermissionOption> get options => $_getList(6);
+
+  @$pb.TagNumber(8)
+  $core.String get answer => $_getSZ(7);
+  @$pb.TagNumber(8)
+  set answer($core.String value) => $_setString(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasAnswer() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearAnswer() => $_clearField(8);
+}
+
+class PermissionOption extends $pb.GeneratedMessage {
+  factory PermissionOption({
+    $core.String? id,
+    $core.String? name,
+    $core.String? kind,
+  }) {
+    final result = PermissionOption._();
+    if (id != null) result.id = id;
+    if (name != null) result.name = name;
+    if (kind != null) result.kind = kind;
+    return result;
+  }
+
+  PermissionOption._();
+
+  factory PermissionOption.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      PermissionOption()..mergeFromBuffer(data, registry);
+  factory PermissionOption.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      PermissionOption()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'PermissionOption',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: PermissionOption.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'name')
+    ..aOS(3, _omitFieldNames ? '' : 'kind')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PermissionOption clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PermissionOption copyWith(void Function(PermissionOption) updates) =>
+      super.copyWith((message) => updates(message as PermissionOption))
+          as PermissionOption;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use PermissionOption() / PermissionOption.new instead')
+  static PermissionOption create() => PermissionOption._();
+  static $pb.GeneratedMessage $_createMessage() => PermissionOption._();
+  @$core.override
+  PermissionOption createEmptyInstance() => PermissionOption._();
+  @$core.pragma('dart2js:noInline')
+  static PermissionOption getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<PermissionOption>(
+          PermissionOption.$_createMessage);
+  static PermissionOption? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get name => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set name($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasName() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearName() => $_clearField(2);
+
+  /// ACP's hint: allow_once, allow_always, reject_once or reject_always.
+  @$pb.TagNumber(3)
+  $core.String get kind => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set kind($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasKind() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearKind() => $_clearField(3);
 }
 
 class ItemEvent extends $pb.GeneratedMessage {
@@ -769,6 +998,12 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, SendPromptRequest request) =>
       _client.invoke<SendPromptResponse>(
           ctx, 'NushiService', 'SendPrompt', request, SendPromptResponse());
+
+  /// Answers a pending permission prompt with one of its options.
+  $async.Future<AnswerPermissionResponse> answerPermission(
+          $pb.ClientContext? ctx, AnswerPermissionRequest request) =>
+      _client.invoke<AnswerPermissionResponse>(ctx, 'NushiService',
+          'AnswerPermission', request, AnswerPermissionResponse());
 
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.

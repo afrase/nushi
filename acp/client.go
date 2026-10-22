@@ -15,6 +15,9 @@ const Version ProtocolVersion = 1
 type Handler interface {
 	// SessionUpdate is called for each session/update, in order.
 	SessionUpdate(SessionNotification)
+	// RequestPermission answers session/request_permission. It may block
+	// until the user decides; ctx ends if the agent goes away.
+	RequestPermission(context.Context, RequestPermissionRequest) (*RequestPermissionResponse, error)
 }
 
 // Client is a connection to one agent.
@@ -49,7 +52,7 @@ func Start(cmd *exec.Cmd, h Handler) (*Client, error) {
 
 // Connect speaks ACP over r and w.
 func Connect(r io.Reader, w io.Writer, h Handler) *Client {
-	return &Client{conn: newConn(r, w, func(_ context.Context, method string, params json.RawMessage) (any, error) {
+	return &Client{conn: newConn(r, w, func(ctx context.Context, method string, params json.RawMessage) (any, error) {
 		switch method {
 		case "session/update":
 			var n SessionNotification
@@ -58,6 +61,12 @@ func Connect(r io.Reader, w io.Writer, h Handler) *Client {
 			}
 			h.SessionUpdate(n)
 			return nil, nil
+		case "session/request_permission":
+			var req RequestPermissionRequest
+			if err := json.Unmarshal(params, &req); err != nil {
+				return nil, err
+			}
+			return h.RequestPermission(ctx, req)
 		}
 		return nil, ErrMethodNotFound
 	})}

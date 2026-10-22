@@ -10,6 +10,8 @@ service NushiService {
   rpc StartChat(StartChatRequest) returns (StartChatResponse);
   // Sends a prompt; the reply arrives as events.
   rpc SendPrompt(SendPromptRequest) returns (SendPromptResponse);
+  // Answers a pending permission prompt with one of its options.
+  rpc AnswerPermission(AnswerPermissionRequest) returns (AnswerPermissionResponse);
   // Streams every change to every chat from now on. The first message is
   // empty: it says the subscription is live.
   rpc Events(EventsRequest) returns (stream EventsResponse);
@@ -37,6 +39,14 @@ message SendPromptRequest {
 
 message SendPromptResponse {}
 
+message AnswerPermissionRequest {
+  string chat_id = 1;
+  string item_id = 2;
+  string option_id = 3;
+}
+
+message AnswerPermissionResponse {}
+
 message EventsRequest {}
 
 message EventsResponse {
@@ -52,6 +62,9 @@ enum ItemKind {
   ITEM_KIND_USER_MESSAGE = 1;
   ITEM_KIND_AGENT_MESSAGE = 2;
   ITEM_KIND_TOOL_CALL = 3;
+  // The agent asks to run a tool call. Status is "pending" until it is
+  // answered ("answered") or the agent stops waiting ("cancelled").
+  ITEM_KIND_PERMISSION = 4;
 }
 
 // One entry of a chat's transcript.
@@ -65,6 +78,16 @@ message Item {
   string title = 4;
   string tool_kind = 5;
   string status = 6;
+  // A permission prompt's choices, and the id of the one picked.
+  repeated PermissionOption options = 7;
+  string answer = 8;
+}
+
+message PermissionOption {
+  string id = 1;
+  string name = 2;
+  // ACP's hint: allow_once, allow_always, reject_once or reject_always.
+  string kind = 3;
 }
 
 message ItemEvent {

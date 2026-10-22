@@ -39,6 +39,9 @@ const (
 	NushiServiceStartChatProcedure = "/nushi.v1.NushiService/StartChat"
 	// NushiServiceSendPromptProcedure is the fully-qualified name of the NushiService's SendPrompt RPC.
 	NushiServiceSendPromptProcedure = "/nushi.v1.NushiService/SendPrompt"
+	// NushiServiceAnswerPermissionProcedure is the fully-qualified name of the NushiService's
+	// AnswerPermission RPC.
+	NushiServiceAnswerPermissionProcedure = "/nushi.v1.NushiService/AnswerPermission"
 	// NushiServiceEventsProcedure is the fully-qualified name of the NushiService's Events RPC.
 	NushiServiceEventsProcedure = "/nushi.v1.NushiService/Events"
 )
@@ -50,6 +53,8 @@ type NushiServiceClient interface {
 	StartChat(context.Context, *connect.Request[v1.StartChatRequest]) (*connect.Response[v1.StartChatResponse], error)
 	// Sends a prompt; the reply arrives as events.
 	SendPrompt(context.Context, *connect.Request[v1.SendPromptRequest]) (*connect.Response[v1.SendPromptResponse], error)
+	// Answers a pending permission prompt with one of its options.
+	AnswerPermission(context.Context, *connect.Request[v1.AnswerPermissionRequest]) (*connect.Response[v1.AnswerPermissionResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
 	Events(context.Context, *connect.Request[v1.EventsRequest]) (*connect.ServerStreamForClient[v1.EventsResponse], error)
@@ -84,6 +89,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("SendPrompt")),
 			connect.WithClientOptions(opts...),
 		),
+		answerPermission: connect.NewClient[v1.AnswerPermissionRequest, v1.AnswerPermissionResponse](
+			httpClient,
+			baseURL+NushiServiceAnswerPermissionProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("AnswerPermission")),
+			connect.WithClientOptions(opts...),
+		),
 		events: connect.NewClient[v1.EventsRequest, v1.EventsResponse](
 			httpClient,
 			baseURL+NushiServiceEventsProcedure,
@@ -95,10 +106,11 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 
 // nushiServiceClient implements NushiServiceClient.
 type nushiServiceClient struct {
-	ping       *connect.Client[v1.PingRequest, v1.PingResponse]
-	startChat  *connect.Client[v1.StartChatRequest, v1.StartChatResponse]
-	sendPrompt *connect.Client[v1.SendPromptRequest, v1.SendPromptResponse]
-	events     *connect.Client[v1.EventsRequest, v1.EventsResponse]
+	ping             *connect.Client[v1.PingRequest, v1.PingResponse]
+	startChat        *connect.Client[v1.StartChatRequest, v1.StartChatResponse]
+	sendPrompt       *connect.Client[v1.SendPromptRequest, v1.SendPromptResponse]
+	answerPermission *connect.Client[v1.AnswerPermissionRequest, v1.AnswerPermissionResponse]
+	events           *connect.Client[v1.EventsRequest, v1.EventsResponse]
 }
 
 // Ping calls nushi.v1.NushiService.Ping.
@@ -116,6 +128,11 @@ func (c *nushiServiceClient) SendPrompt(ctx context.Context, req *connect.Reques
 	return c.sendPrompt.CallUnary(ctx, req)
 }
 
+// AnswerPermission calls nushi.v1.NushiService.AnswerPermission.
+func (c *nushiServiceClient) AnswerPermission(ctx context.Context, req *connect.Request[v1.AnswerPermissionRequest]) (*connect.Response[v1.AnswerPermissionResponse], error) {
+	return c.answerPermission.CallUnary(ctx, req)
+}
+
 // Events calls nushi.v1.NushiService.Events.
 func (c *nushiServiceClient) Events(ctx context.Context, req *connect.Request[v1.EventsRequest]) (*connect.ServerStreamForClient[v1.EventsResponse], error) {
 	return c.events.CallServerStream(ctx, req)
@@ -128,6 +145,8 @@ type NushiServiceHandler interface {
 	StartChat(context.Context, *connect.Request[v1.StartChatRequest]) (*connect.Response[v1.StartChatResponse], error)
 	// Sends a prompt; the reply arrives as events.
 	SendPrompt(context.Context, *connect.Request[v1.SendPromptRequest]) (*connect.Response[v1.SendPromptResponse], error)
+	// Answers a pending permission prompt with one of its options.
+	AnswerPermission(context.Context, *connect.Request[v1.AnswerPermissionRequest]) (*connect.Response[v1.AnswerPermissionResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
 	Events(context.Context, *connect.Request[v1.EventsRequest], *connect.ServerStream[v1.EventsResponse]) error
@@ -158,6 +177,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("SendPrompt")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceAnswerPermissionHandler := connect.NewUnaryHandler(
+		NushiServiceAnswerPermissionProcedure,
+		svc.AnswerPermission,
+		connect.WithSchema(nushiServiceMethods.ByName("AnswerPermission")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceEventsHandler := connect.NewServerStreamHandler(
 		NushiServiceEventsProcedure,
 		svc.Events,
@@ -172,6 +197,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceStartChatHandler.ServeHTTP(w, r)
 		case NushiServiceSendPromptProcedure:
 			nushiServiceSendPromptHandler.ServeHTTP(w, r)
+		case NushiServiceAnswerPermissionProcedure:
+			nushiServiceAnswerPermissionHandler.ServeHTTP(w, r)
 		case NushiServiceEventsProcedure:
 			nushiServiceEventsHandler.ServeHTTP(w, r)
 		default:
@@ -193,6 +220,10 @@ func (UnimplementedNushiServiceHandler) StartChat(context.Context, *connect.Requ
 
 func (UnimplementedNushiServiceHandler) SendPrompt(context.Context, *connect.Request[v1.SendPromptRequest]) (*connect.Response[v1.SendPromptResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.SendPrompt is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) AnswerPermission(context.Context, *connect.Request[v1.AnswerPermissionRequest]) (*connect.Response[v1.AnswerPermissionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.AnswerPermission is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) Events(context.Context, *connect.Request[v1.EventsRequest], *connect.ServerStream[v1.EventsResponse]) error {

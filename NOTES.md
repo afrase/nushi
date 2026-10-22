@@ -11,6 +11,7 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 1. Skeleton | 114 | 0 | 95 | 131 |
 | 2. One chat | 429 | 663 | 360 | 131 |
 | 3. Tool calls | 524 | 663 | 432 | 131 |
+| 4. Permission prompts | 646 | 677 | 549 | 131 |
 
 Tripwires crossed:
 - Step 2 added about 1,500 hand-written lines, tests included (the limit is about 500). What pushed it: the whole ACP client landed in this step (JSON-RPC framing, client and the schema-to-Go type generator, about 660 lines), plus the first real chat screen and the daemon's chat feature. None of it is for later steps.
@@ -23,6 +24,8 @@ Tripwires crossed:
 - Between chunks Claude sends `usage_update` (context size, cost), and the `prompt` result carries a `_meta.quota` usage report. Both are ignored for now.
 - Claude's tool calls arrive as a `tool_call` with a generic title ("Terminal", "Read File") and empty `rawInput`, then `tool_call_update`s that set the real title (the command, "Read notes.txt"), then content. The first content is the command's description; the final one (with `status: completed`) is the output in a fenced block. Each update's `content` replaces the previous one.
 - Claude also sends a `tool_call_update` carrying only `_meta.claudeCode.toolResponse` (the raw tool result) before the final one; it changes nothing we show.
+- In `auto` mode Claude asked nothing for `curl -X POST` or `touch`; in Manual (`default`) mode it asks before `touch`, with two options, "Yes" (`allow_once`) and "No" (`reject_once`). A permission request names the tool call it is about (`toolCall.toolCallId`), which was sent just before as a `tool_call`.
+- To test prompts without a mode picker, a folder with `.claude/settings.json` = `{"permissions":{"defaultMode":"default"}}` starts Claude in Manual mode.
 - Claude starts new sessions in whatever mode its settings say (`auto` on this machine), and reports modes both as legacy `modes` and as a `mode` config option, as the POC found.
 
 ## Decisions to revisit
@@ -46,6 +49,7 @@ Tripwires crossed:
 ## Security notes to look at
 
 - Agents run as you, with your environment, through `npx --yes @agentclientprotocol/claude-agent-acp@0.94.0` (downloaded from npm on first use, pinned by version, not by hash). npx runs in the daemon's data folder, never the project's, so a project's `node_modules` or `.npmrc` can't swap the adapter (flagged by the automated security review in step 3). The chat's folder must be an absolute path to an existing folder and reaches the agent only as the session's `cwd`.
+- Agent text is rendered as markdown; the app never loads images it names (an image URL in a tool's output could otherwise leak data to a server), and links are not clickable. A diff in a tool call is fenced with a fence longer than any backtick run inside it (both from the automated security review in step 4).
 - The client token (`token`, mode 0600) sits next to the socket in a 0700 folder; any process running as you can read it ([ADR 0005](docs/adr/0005-clients-authenticate.md)).
 
 ## Working notes

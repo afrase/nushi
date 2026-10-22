@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
+import 'cards.dart';
 import 'chat.dart';
+import 'daemon.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
+import 'markdown.dart';
 
 /// A chat's transcript with a prompt box under it.
 class ChatView extends StatelessWidget {
-  const ChatView({super.key, required this.chat, required this.onSend});
+  const ChatView({super.key, required this.chat, required this.daemon});
 
   final Chat chat;
-  final Future<void> Function(String text) onSend;
+  final Daemon daemon;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -24,7 +26,7 @@ class ChatView extends StatelessWidget {
             itemCount: chat.items.length,
             itemBuilder: (context, i) {
               final item = chat.items[chat.items.length - 1 - i];
-              return _ItemView(item, key: ValueKey(item.id));
+              return _ItemView(item, daemon, key: ValueKey(item.id));
             },
           ),
         ),
@@ -37,16 +39,17 @@ class ChatView extends StatelessWidget {
             ),
           ),
         if (chat.busy) const LinearProgressIndicator(minHeight: 2),
-        _Composer(onSend: onSend, enabled: !chat.busy),
+        _Composer(onSend: daemon.sendPrompt, enabled: !chat.busy),
       ],
     ),
   );
 }
 
 class _ItemView extends StatelessWidget {
-  const _ItemView(this.item, {super.key});
+  const _ItemView(this.item, this.daemon, {super.key});
 
   final Item item;
+  final Daemon daemon;
 
   @override
   Widget build(BuildContext context) {
@@ -67,31 +70,15 @@ class _ItemView extends StatelessWidget {
       );
     }
     if (item.kind == ItemKind.ITEM_KIND_TOOL_CALL) return _ToolCallView(item);
+    if (item.kind == ItemKind.ITEM_KIND_PERMISSION) {
+      return PermissionCard(
+        item,
+        onAnswer: (option) => daemon.answerPermission(item.id, option),
+      );
+    }
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      child: _Markdown(item.text),
-    );
-  }
-}
-
-class _Markdown extends StatelessWidget {
-  const _Markdown(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return MarkdownBody(
-      data: text,
-      selectable: true,
-      styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
-        code: const TextStyle(fontFamily: 'Menlo', fontSize: 13),
-        codeblockDecoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(6),
-        ),
-      ),
+      child: AgentMarkdown(item.text),
     );
   }
 }
@@ -148,7 +135,7 @@ class _ToolCallView extends StatelessWidget {
       children: [
         item.text.isEmpty
             ? Text('No output', style: TextStyle(color: scheme.outline))
-            : _Markdown(item.text),
+            : AgentMarkdown(item.text),
       ],
     );
   }
