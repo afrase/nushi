@@ -12,9 +12,19 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 2. One chat | 429 | 663 | 360 | 131 |
 | 3. Tool calls | 524 | 663 | 432 | 131 |
 | 4. Permission prompts | 646 | 677 | 549 | 131 |
+| 5. Agent questions | 900 | 703 | 839 | 131 |
 
 Tripwires crossed:
 - Step 2 added about 1,500 hand-written lines, tests included (the limit is about 500). What pushed it: the whole ACP client landed in this step (JSON-RPC framing, client and the schema-to-Go type generator, about 660 lines), plus the first real chat screen and the daemon's chat feature. None of it is for later steps.
+
+## Milestone A demo (steps 1–5): one working chat
+
+1. `make run`. The window says "Daemon not running" for a moment, then "Connected". (`make stop`, and it says "Daemon not running" again within two seconds; `make daemon` brings it back.)
+2. Click **Start a chat in a folder…** and pick a folder. Claude starts there (a few seconds the first time, while npx fetches the adapter).
+3. Ask something; the reply streams in as markdown.
+4. Ask it to run `ls -la` and read a file: each tool call shows as one collapsed line with its icon, title and status (a spinner, then a check); click it for the output.
+5. Permission prompts: Claude only asks in its Manual mode (`default`), and its mode picker comes in step 6. Until then, use a folder whose `.claude/settings.json` is `{"permissions":{"defaultMode":"default"}}` and ask for `touch x.txt`: a card shows Claude's own options ("Yes", "No"). Pick one; the card says what you answered and the agent carries on (or doesn't).
+6. Ask: "Use the AskUserQuestion tool to ask me my favourite colour (red/green/blue) and which fruits I like (multi-select). Then repeat what you received." A card shows both questions with an "Other" box each. Digits 1–9 pick in the active question, clicks pick anywhere, Enter or Submit sends, Skip declines. Claude repeats exactly what you picked.
 
 ## ACP quirks
 
@@ -26,6 +36,8 @@ Tripwires crossed:
 - Claude also sends a `tool_call_update` carrying only `_meta.claudeCode.toolResponse` (the raw tool result) before the final one; it changes nothing we show.
 - In `auto` mode Claude asked nothing for `curl -X POST` or `touch`; in Manual (`default`) mode it asks before `touch`, with two options, "Yes" (`allow_once`) and "No" (`reject_once`). A permission request names the tool call it is about (`toolCall.toolCallId`), which was sent just before as a `tool_call`.
 - To test prompts without a mode picker, a folder with `.claude/settings.json` = `{"permissions":{"defaultMode":"default"}}` starts Claude in Manual mode.
+- AskUserQuestion needs the client to advertise `elicitation.form`. Claude first sends a `tool_call` ("Asking for your input", kind `other`), then `elicitation/create` in form mode, tied to it by `toolCallId`. Each question is a property `question_N`: a `string` with `oneOf` (single choice, options with `const`, `title`, `description`) or an `array` whose `items.anyOf` lists the options (multi-select), followed by an optional free-text `question_N_custom` titled "Other". Nothing is `required`. An accept with empty content reads to Claude as "the user did not answer"; it reads each answered question back as `"question"="answer"`.
+- The form's properties must be read in wire order (they are the questions' order), so the generated types keep maps of typed values as raw JSON.
 - Claude starts new sessions in whatever mode its settings say (`auto` on this machine), and reports modes both as legacy `modes` and as a `mode` config option, as the POC found.
 
 ## Decisions to revisit

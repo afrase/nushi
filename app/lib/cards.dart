@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'markdown.dart';
 
-/// A card that holds something the agent is waiting on.
-class _Card extends StatelessWidget {
-  const _Card({required this.waiting, required this.children});
+/// A card for something the agent waits on; outlined in the accent while it waits.
+class WaitingCard extends StatelessWidget {
+  const WaitingCard({super.key, required this.waiting, required this.children});
 
   final bool waiting;
   final List<Widget> children;
@@ -54,7 +54,7 @@ class PermissionCard extends StatelessWidget {
     final theme = Theme.of(context);
     final pending = item.status == 'pending';
     final picked = item.options.where((o) => o.id == item.answer).firstOrNull;
-    return _Card(
+    return WaitingCard(
       waiting: pending,
       children: [
         Text(

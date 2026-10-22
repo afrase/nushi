@@ -10,6 +10,10 @@ const (
 	// Permission is the agent asking to run a tool call. Status is "pending"
 	// until it is answered ("answered") or the agent stops waiting ("cancelled").
 	Permission
+	// Question is a form the agent asks the user to fill in (Claude's
+	// AskUserQuestion). Text is its message. Status is "pending" until it is
+	// "answered", "declined" or "cancelled".
+	Question
 )
 
 // Item is one entry of a chat's transcript.
@@ -26,12 +30,36 @@ type Item struct {
 	// Options are a permission prompt's choices, and Answer the ID of the one picked.
 	Options []Option
 	Answer  string
+	// Fields are a question's form, in the agent's order.
+	Fields []Field
 }
 
-// Option is one of the agent's answers to a permission prompt. Kind is ACP's
-// hint, such as "allow_once" or "reject_always".
+// Option is a choice the agent offers. Kind is ACP's hint for a permission
+// option, such as "allow_once" or "reject_always".
 type Option struct {
-	ID, Name, Kind string
+	ID, Name, Kind, Description string
+}
+
+// FieldType is how a question's field is answered.
+type FieldType int
+
+const (
+	Text    FieldType = iota + 1
+	Choice            // one of Options
+	Choices           // any of Options
+	Number
+	Integer
+	Boolean
+)
+
+// Field is one entry of a question's form. Values holds the answer: one value,
+// or several for Choices.
+type Field struct {
+	ID, Title, Description string
+	Type                   FieldType
+	Options                []Option
+	Required               bool
+	Values                 []string
 }
 
 // Event is a change to one chat. Exactly one of Item and Status is set.

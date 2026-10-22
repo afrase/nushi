@@ -80,6 +80,24 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Answers a pending question, or declines it.
+  Future<nushiv1nushi.AnswerQuestionResponse> answerQuestion(
+    nushiv1nushi.AnswerQuestionRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.answerQuestion,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.
   Stream<nushiv1nushi.EventsResponse> events(

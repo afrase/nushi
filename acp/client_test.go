@@ -13,6 +13,10 @@ type recorder struct{ updates []SessionNotification }
 
 func (r *recorder) SessionUpdate(n SessionNotification) { r.updates = append(r.updates, n) }
 
+func (r *recorder) CreateElicitation(context.Context, CreateElicitationRequest) (*CreateElicitationResponse, error) {
+	return &CreateElicitationResponse{Action: "decline"}, nil
+}
+
 // RequestPermission picks the last option.
 func (r *recorder) RequestPermission(_ context.Context, req RequestPermissionRequest) (*RequestPermissionResponse, error) {
 	opt := req.Options[len(req.Options)-1].OptionID

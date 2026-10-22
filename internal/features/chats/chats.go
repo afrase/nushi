@@ -43,11 +43,12 @@ type chat struct {
 	agent   Agent
 	publish func(model.Event)
 
-	mu      sync.Mutex
-	items   []model.Item
-	busy    bool
-	lastID  string                   // the agent message that chunks without an id continue
-	waiting map[string]chan<- string // permission prompts by item id, for the picked option
+	mu        sync.Mutex
+	items     []model.Item
+	busy      bool
+	lastID    string                          // the agent message that chunks without an id continue
+	waiting   map[string]chan<- string        // permission prompts by item id, for the picked option
+	questions map[string]chan<- []model.Field // questions by item id, for the answer (nil: declined)
 }
 
 // Start launches an agent in folder and opens a session there.
@@ -55,7 +56,7 @@ func (s *Service) Start(ctx context.Context, folder string) (string, error) {
 	if fi, err := os.Stat(folder); err != nil || !fi.IsDir() || !filepath.IsAbs(folder) {
 		return "", fmt.Errorf("%q is not an absolute path to a folder", folder)
 	}
-	c := &chat{publish: s.publish, waiting: map[string]chan<- string{}}
+	c := &chat{publish: s.publish, waiting: map[string]chan<- string{}, questions: map[string]chan<- []model.Field{}}
 	agent, err := s.launch(c)
 	if err != nil {
 		return "", fmt.Errorf("start agent: %w", err)
@@ -63,7 +64,7 @@ func (s *Service) Start(ctx context.Context, folder string) (string, error) {
 	c.agent = agent
 	if _, err := agent.Initialize(ctx, acp.InitializeRequest{
 		ProtocolVersion:    acp.Version,
-		ClientCapabilities: &acp.ClientCapabilities{},
+		ClientCapabilities: &acp.ClientCapabilities{Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}}},
 		ClientInfo:         &acp.Implementation{Name: "nushi", Title: "Nushi"},
 	}); err != nil {
 		agent.Close()

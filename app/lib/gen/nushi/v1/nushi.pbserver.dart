@@ -29,6 +29,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.SendPromptRequest request);
   $async.Future<$0.AnswerPermissionResponse> answerPermission(
       $pb.ServerContext ctx, $0.AnswerPermissionRequest request);
+  $async.Future<$0.AnswerQuestionResponse> answerQuestion(
+      $pb.ServerContext ctx, $0.AnswerQuestionRequest request);
   $async.Future<$0.EventsResponse> events(
       $pb.ServerContext ctx, $0.EventsRequest request);
 
@@ -42,6 +44,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.SendPromptRequest();
       case 'AnswerPermission':
         return $0.AnswerPermissionRequest();
+      case 'AnswerQuestion':
+        return $0.AnswerQuestionRequest();
       case 'Events':
         return $0.EventsRequest();
       default:
@@ -60,6 +64,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return sendPrompt(ctx, request as $0.SendPromptRequest);
       case 'AnswerPermission':
         return answerPermission(ctx, request as $0.AnswerPermissionRequest);
+      case 'AnswerQuestion':
+        return answerQuestion(ctx, request as $0.AnswerQuestionRequest);
       case 'Events':
         return events(ctx, request as $0.EventsRequest);
       default:

@@ -12,6 +12,8 @@ service NushiService {
   rpc SendPrompt(SendPromptRequest) returns (SendPromptResponse);
   // Answers a pending permission prompt with one of its options.
   rpc AnswerPermission(AnswerPermissionRequest) returns (AnswerPermissionResponse);
+  // Answers a pending question, or declines it.
+  rpc AnswerQuestion(AnswerQuestionRequest) returns (AnswerQuestionResponse);
   // Streams every change to every chat from now on. The first message is
   // empty: it says the subscription is live.
   rpc Events(EventsRequest) returns (stream EventsResponse);
@@ -47,6 +49,22 @@ message AnswerPermissionRequest {
 
 message AnswerPermissionResponse {}
 
+message AnswerQuestionRequest {
+  string chat_id = 1;
+  string item_id = 2;
+  // The answer by field; fields left out are unanswered.
+  repeated FieldAnswer answers = 3;
+  // Decline the question instead of answering it.
+  bool decline = 4;
+}
+
+message FieldAnswer {
+  string field_id = 1;
+  repeated string values = 2;
+}
+
+message AnswerQuestionResponse {}
+
 message EventsRequest {}
 
 message EventsResponse {
@@ -65,6 +83,10 @@ enum ItemKind {
   // The agent asks to run a tool call. Status is "pending" until it is
   // answered ("answered") or the agent stops waiting ("cancelled").
   ITEM_KIND_PERMISSION = 4;
+  // A form the agent asks the user to fill in (Claude's AskUserQuestion);
+  // text is its message. Status is "pending" until it is "answered",
+  // "declined" or "cancelled".
+  ITEM_KIND_QUESTION = 5;
 }
 
 // One entry of a chat's transcript.
@@ -79,15 +101,44 @@ message Item {
   string tool_kind = 5;
   string status = 6;
   // A permission prompt's choices, and the id of the one picked.
-  repeated PermissionOption options = 7;
+  repeated Option options = 7;
   string answer = 8;
+  // A question's form, in the agent's order.
+  repeated Field fields = 9;
 }
 
-message PermissionOption {
+// A choice the agent offers.
+message Option {
   string id = 1;
   string name = 2;
-  // ACP's hint: allow_once, allow_always, reject_once or reject_always.
+  // For a permission option, ACP's hint: allow_once, allow_always,
+  // reject_once or reject_always.
   string kind = 3;
+  string description = 4;
+}
+
+enum FieldType {
+  FIELD_TYPE_UNSPECIFIED = 0;
+  FIELD_TYPE_TEXT = 1;
+  // One of the options.
+  FIELD_TYPE_CHOICE = 2;
+  // Any of the options.
+  FIELD_TYPE_CHOICES = 3;
+  FIELD_TYPE_NUMBER = 4;
+  FIELD_TYPE_INTEGER = 5;
+  FIELD_TYPE_BOOLEAN = 6;
+}
+
+// One entry of a question's form.
+message Field {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  FieldType type = 4;
+  repeated Option options = 5;
+  bool required = 6;
+  // The answer, once given: one value, or several for CHOICES.
+  repeated string values = 7;
 }
 
 message ItemEvent {

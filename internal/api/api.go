@@ -16,7 +16,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 3
+const Version = 4
 
 type server struct {
 	chats *chats.Service
@@ -65,6 +65,20 @@ func (s *server) AnswerPermission(_ context.Context, req *connect.Request[nushiv
 	return connect.NewResponse(&nushiv1.AnswerPermissionResponse{}), nil
 }
 
+func (s *server) AnswerQuestion(_ context.Context, req *connect.Request[nushiv1.AnswerQuestionRequest]) (*connect.Response[nushiv1.AnswerQuestionResponse], error) {
+	var values map[string][]string
+	if !req.Msg.Decline {
+		values = map[string][]string{}
+		for _, a := range req.Msg.Answers {
+			values[a.FieldId] = a.Values
+		}
+	}
+	if err := s.chats.AnswerQuestion(req.Msg.ChatId, req.Msg.ItemId, values); err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	return connect.NewResponse(&nushiv1.AnswerQuestionResponse{}), nil
+}
+
 func (s *server) Events(ctx context.Context, _ *connect.Request[nushiv1.EventsRequest], stream *connect.ServerStream[nushiv1.EventsResponse]) error {
 	// An empty first message tells the client the subscription is live.
 	if err := stream.Send(&nushiv1.EventsResponse{}); err != nil {
@@ -83,6 +97,16 @@ var itemKinds = map[model.ItemKind]nushiv1.ItemKind{
 	model.AgentMessage: nushiv1.ItemKind_ITEM_KIND_AGENT_MESSAGE,
 	model.ToolCall:     nushiv1.ItemKind_ITEM_KIND_TOOL_CALL,
 	model.Permission:   nushiv1.ItemKind_ITEM_KIND_PERMISSION,
+	model.Question:     nushiv1.ItemKind_ITEM_KIND_QUESTION,
+}
+
+var fieldTypes = map[model.FieldType]nushiv1.FieldType{
+	model.Text:    nushiv1.FieldType_FIELD_TYPE_TEXT,
+	model.Choice:  nushiv1.FieldType_FIELD_TYPE_CHOICE,
+	model.Choices: nushiv1.FieldType_FIELD_TYPE_CHOICES,
+	model.Number:  nushiv1.FieldType_FIELD_TYPE_NUMBER,
+	model.Integer: nushiv1.FieldType_FIELD_TYPE_INTEGER,
+	model.Boolean: nushiv1.FieldType_FIELD_TYPE_BOOLEAN,
 }
 
 func toProto(e model.Event) *nushiv1.EventsResponse {
@@ -99,8 +123,18 @@ func toProto(e model.Event) *nushiv1.EventsResponse {
 func itemProto(it *model.Item) *nushiv1.Item {
 	out := &nushiv1.Item{Id: it.ID, Kind: itemKinds[it.Kind], Text: it.Text,
 		Title: it.Title, ToolKind: it.ToolKind, Status: it.Status, Answer: it.Answer}
-	for _, o := range it.Options {
-		out.Options = append(out.Options, &nushiv1.PermissionOption{Id: o.ID, Name: o.Name, Kind: o.Kind})
+	out.Options = optionsProto(it.Options)
+	for _, f := range it.Fields {
+		out.Fields = append(out.Fields, &nushiv1.Field{Id: f.ID, Title: f.Title, Description: f.Description,
+			Type: fieldTypes[f.Type], Options: optionsProto(f.Options), Required: f.Required, Values: f.Values})
+	}
+	return out
+}
+
+func optionsProto(opts []model.Option) []*nushiv1.Option {
+	var out []*nushiv1.Option
+	for _, o := range opts {
+		out = append(out, &nushiv1.Option{Id: o.ID, Name: o.Name, Kind: o.Kind, Description: o.Description})
 	}
 	return out
 }

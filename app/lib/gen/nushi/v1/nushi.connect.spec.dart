@@ -42,6 +42,14 @@ abstract final class NushiService {
     nushiv1nushi.AnswerPermissionResponse.new,
   );
 
+  /// Answers a pending question, or declines it.
+  static const answerQuestion = connect.Spec(
+    '/$name/AnswerQuestion',
+    connect.StreamType.unary,
+    nushiv1nushi.AnswerQuestionRequest.new,
+    nushiv1nushi.AnswerQuestionResponse.new,
+  );
+
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.
   static const events = connect.Spec(

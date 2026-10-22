@@ -104,6 +104,8 @@ type AuthMethod struct {
 	// Type is the "type" tag; it picks the variant that is set.
 	Type     string
 	Terminal *AuthMethodTerminal
+	// Agent is set when the tag is missing or unknown.
+	Agent *AuthMethodAgent
 }
 
 func (u AuthMethod) MarshalJSON() ([]byte, error) {
@@ -112,6 +114,10 @@ func (u AuthMethod) MarshalJSON() ([]byte, error) {
 	case "terminal":
 		if u.Terminal != nil {
 			v = u.Terminal
+		}
+	default:
+		if u.Agent != nil {
+			return json.Marshal(u.Agent)
 		}
 	}
 	return marshalTagged("type", u.Type, v)
@@ -129,8 +135,10 @@ func (u *AuthMethod) UnmarshalJSON(b []byte) error {
 	case "terminal":
 		u.Terminal = new(AuthMethodTerminal)
 		return json.Unmarshal(b, u.Terminal)
+	default:
+		u.Agent = new(AuthMethodAgent)
+		return json.Unmarshal(b, u.Agent)
 	}
-	return nil
 }
 
 // Agent handles authentication itself through `authenticate`.
@@ -174,7 +182,7 @@ type AuthMethodTerminal struct {
 	Description string `json:"description,omitempty"`
 	// Additional environment variables to set on the configured agent invocation for terminal auth.
 	// These values override same-named variables in the base launch configuration.
-	Env map[string]any `json:"env,omitempty"`
+	Env json.RawMessage `json:"env,omitempty"`
 	// Unique identifier for this authentication method.
 	ID AuthMethodID `json:"id"`
 	// Human-readable name of the authentication method.
@@ -656,7 +664,7 @@ type CreateElicitationResponse struct {
 	Meta   map[string]any `json:"_meta,omitempty"`
 	Action string         `json:"action,omitempty"`
 	// The user-provided content, if any, as an object matching the requested schema.
-	Content map[string]any `json:"content,omitempty"`
+	Content json.RawMessage `json:"content,omitempty"`
 }
 
 // Request to create a new terminal and execute a command.
@@ -761,7 +769,7 @@ type Diff struct {
 // The user accepted the elicitation and provided content.
 type ElicitationAcceptAction struct {
 	// The user-provided content, if any, as an object matching the requested schema.
-	Content map[string]any `json:"content,omitempty"`
+	Content json.RawMessage `json:"content,omitempty"`
 }
 
 // Elicitation capabilities supported by the client.
@@ -916,7 +924,7 @@ type ElicitationSchema struct {
 	// Optional. Omitted and `null` are equivalent and mean no schema description is provided.
 	Description string `json:"description,omitempty"`
 	// Property definitions (must be primitive types).
-	Properties map[string]any `json:"properties,omitempty"`
+	Properties json.RawMessage `json:"properties,omitempty"`
 	// List of required property names.
 	//
 	// Optional. Omitted and `null` are equivalent and mean no property names are required.
@@ -1402,6 +1410,8 @@ type MCPServer struct {
 	Type string
 	HTTP *MCPServerHTTP
 	SSE  *MCPServerSSE
+	// MCPServerStdio is set when the tag is missing or unknown.
+	MCPServerStdio *MCPServerStdio
 }
 
 func (u MCPServer) MarshalJSON() ([]byte, error) {
@@ -1414,6 +1424,10 @@ func (u MCPServer) MarshalJSON() ([]byte, error) {
 	case "sse":
 		if u.SSE != nil {
 			v = u.SSE
+		}
+	default:
+		if u.MCPServerStdio != nil {
+			return json.Marshal(u.MCPServerStdio)
 		}
 	}
 	return marshalTagged("type", u.Type, v)
@@ -1434,8 +1448,10 @@ func (u *MCPServer) UnmarshalJSON(b []byte) error {
 	case "sse":
 		u.SSE = new(MCPServerSSE)
 		return json.Unmarshal(b, u.SSE)
+	default:
+		u.MCPServerStdio = new(MCPServerStdio)
+		return json.Unmarshal(b, u.MCPServerStdio)
 	}
-	return nil
 }
 
 // HTTP transport configuration for MCP.
@@ -1496,6 +1512,8 @@ type MultiSelectItems struct {
 	// Type is the "type" tag; it picks the variant that is set.
 	Type   string
 	String *StringMultiSelectItems
+	// TitledMultiSelectItems is set when the tag is missing or unknown.
+	TitledMultiSelectItems *TitledMultiSelectItems
 }
 
 func (u MultiSelectItems) MarshalJSON() ([]byte, error) {
@@ -1504,6 +1522,10 @@ func (u MultiSelectItems) MarshalJSON() ([]byte, error) {
 	case "string":
 		if u.String != nil {
 			v = u.String
+		}
+	default:
+		if u.TitledMultiSelectItems != nil {
+			return json.Marshal(u.TitledMultiSelectItems)
 		}
 	}
 	return marshalTagged("type", u.Type, v)
@@ -1521,8 +1543,10 @@ func (u *MultiSelectItems) UnmarshalJSON(b []byte) error {
 	case "string":
 		u.String = new(StringMultiSelectItems)
 		return json.Unmarshal(b, u.String)
+	default:
+		u.TitledMultiSelectItems = new(TitledMultiSelectItems)
+		return json.Unmarshal(b, u.TitledMultiSelectItems)
 	}
-	return nil
 }
 
 // Schema for multi-select (array) properties in an elicitation form.

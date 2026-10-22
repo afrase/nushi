@@ -91,6 +91,22 @@ class Daemon extends ChangeNotifier {
         ),
       );
 
+  /// Answers a question with values by field id, or declines it (null).
+  Future<void> answerQuestion(
+    String itemId,
+    Map<String, List<String>>? answer,
+  ) => client.answerQuestion(
+    AnswerQuestionRequest(
+      chatId: chat!.id,
+      itemId: itemId,
+      decline: answer == null,
+      answers: [
+        for (final MapEntry(:key, :value) in (answer ?? {}).entries)
+          FieldAnswer(fieldId: key, values: value),
+      ],
+    ),
+  );
+
   @override
   void dispose() {
     _timer.cancel();

@@ -18,6 +18,9 @@ type Handler interface {
 	// RequestPermission answers session/request_permission. It may block
 	// until the user decides; ctx ends if the agent goes away.
 	RequestPermission(context.Context, RequestPermissionRequest) (*RequestPermissionResponse, error)
+	// CreateElicitation answers elicitation/create (a form for the user, such
+	// as Claude's AskUserQuestion), blocking like RequestPermission.
+	CreateElicitation(context.Context, CreateElicitationRequest) (*CreateElicitationResponse, error)
 }
 
 // Client is a connection to one agent.
@@ -67,6 +70,12 @@ func Connect(r io.Reader, w io.Writer, h Handler) *Client {
 				return nil, err
 			}
 			return h.RequestPermission(ctx, req)
+		case "elicitation/create":
+			var req CreateElicitationRequest
+			if err := json.Unmarshal(params, &req); err != nil {
+				return nil, err
+			}
+			return h.CreateElicitation(ctx, req)
 		}
 		return nil, ErrMethodNotFound
 	})}

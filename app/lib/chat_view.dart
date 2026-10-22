@@ -6,6 +6,7 @@ import 'chat.dart';
 import 'daemon.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'markdown.dart';
+import 'question_card.dart';
 
 /// A chat's transcript with a prompt box under it.
 class ChatView extends StatelessWidget {
@@ -70,6 +71,12 @@ class _ItemView extends StatelessWidget {
       );
     }
     if (item.kind == ItemKind.ITEM_KIND_TOOL_CALL) return _ToolCallView(item);
+    if (item.kind == ItemKind.ITEM_KIND_QUESTION) {
+      return QuestionCard(
+        item,
+        onAnswer: (answer) => daemon.answerQuestion(item.id, answer),
+      );
+    }
     if (item.kind == ItemKind.ITEM_KIND_PERMISSION) {
       return PermissionCard(
         item,

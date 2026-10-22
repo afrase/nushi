@@ -21,19 +21,19 @@ import (
 )
 
 type node struct {
-	Ref           string                         `json:"$ref"`
-	Description   string                         `json:"description"`
-	Title         string                         `json:"title"`
-	Type          any                            `json:"type"`
-	Const         any                            `json:"const"`
-	Properties    map[string]*node               `json:"properties"`
-	Required      []string                       `json:"required"`
-	Items         *node                          `json:"items"`
-	AllOf         []*node                        `json:"allOf"`
-	AnyOf         []*node                        `json:"anyOf"`
-	OneOf         []*node                        `json:"oneOf"`
-	Discriminator *struct{ PropertyName string } `json:"discriminator"`
-	DocsIgnore    bool                           `json:"x-docs-ignore"`
+	Ref                  string           `json:"$ref"`
+	Description          string           `json:"description"`
+	Title                string           `json:"title"`
+	Type                 any              `json:"type"`
+	Const                any              `json:"const"`
+	Properties           map[string]*node `json:"properties"`
+	Required             []string         `json:"required"`
+	Items                *node            `json:"items"`
+	AllOf                []*node          `json:"allOf"`
+	AnyOf                []*node          `json:"anyOf"`
+	OneOf                []*node          `json:"oneOf"`
+	AdditionalProperties any              `json:"additionalProperties"`
+	DocsIgnore           bool             `json:"x-docs-ignore"`
 }
 
 var defs map[string]*node
@@ -199,6 +199,9 @@ func goType(n *node) string {
 		}
 		return "[]" + goType(n.Items)
 	case "object":
+		if _, typed := n.AdditionalProperties.(map[string]any); typed {
+			return "json.RawMessage" // a map of typed values, kept raw to keep its order
+		}
 		return "map[string]any"
 	}
 	return "json.RawMessage"
@@ -292,10 +295,14 @@ func genTagged(b *bytes.Buffer, gn string, n *node) {
 	t := tag(vs)
 	type variant struct{ value, field, typ string }
 	var vars []variant
+	var fallback *variant // decoded when the tag is missing or unknown
 	for _, v := range vs {
 		pn := v.Properties[t]
 		if pn == nil {
-			continue // a variant with no tag (AuthMethod's default)
+			if r := refName(v); r != "" {
+				fallback = &variant{field: goName(strings.TrimPrefix(r, gn)), typ: goName(r)}
+			}
+			continue
 		}
 		c, ok := pn.Const.(string)
 		if !ok {
@@ -313,17 +320,27 @@ func genTagged(b *bytes.Buffer, gn string, n *node) {
 	for _, v := range vars {
 		fmt.Fprintf(b, "\t%s *%s\n", v.field, v.typ)
 	}
+	if fallback != nil {
+		fmt.Fprintf(b, "\t// %s is set when the tag is missing or unknown.\n\t%s *%s\n", fallback.field, fallback.field, fallback.typ)
+	}
 	b.WriteString("}\n\n")
 
 	fmt.Fprintf(b, "func (u %s) MarshalJSON() ([]byte, error) {\n\tvar v any = struct{}{}\n\tswitch u.%s {\n", gn, goName(t))
 	for _, v := range vars {
 		fmt.Fprintf(b, "\tcase %q:\n\t\tif u.%s != nil {\n\t\t\tv = u.%s\n\t\t}\n", v.value, v.field, v.field)
 	}
+	if fallback != nil {
+		fmt.Fprintf(b, "\tdefault:\n\t\tif u.%s != nil {\n\t\t\treturn json.Marshal(u.%s)\n\t\t}\n", fallback.field, fallback.field)
+	}
 	fmt.Fprintf(b, "\t}\n\treturn marshalTagged(%q, u.%s, v)\n}\n\n", t, goName(t))
 
 	fmt.Fprintf(b, "func (u *%s) UnmarshalJSON(b []byte) error {\n\tvar t struct {\n\t\tT string `json:%q`\n\t}\n\tif err := json.Unmarshal(b, &t); err != nil {\n\t\treturn err\n\t}\n\t*u = %s{%s: t.T}\n\tswitch t.T {\n", gn, t, gn, goName(t))
 	for _, v := range vars {
 		fmt.Fprintf(b, "\tcase %q:\n\t\tu.%s = new(%s)\n\t\treturn json.Unmarshal(b, u.%s)\n", v.value, v.field, v.typ, v.field)
+	}
+	if fallback != nil {
+		fmt.Fprintf(b, "\tdefault:\n\t\tu.%s = new(%s)\n\t\treturn json.Unmarshal(b, u.%s)\n\t}\n}\n\n", fallback.field, fallback.typ, fallback.field)
+		return
 	}
 	b.WriteString("\t}\n\treturn nil\n}\n\n")
 }
