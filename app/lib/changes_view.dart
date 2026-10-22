@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'chat.dart';
 import 'daemon.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
+import 'theme/theme.dart';
+import 'widgets.dart';
 
 /// The chat folder's uncommitted changes: a list of files, and the picked
 /// one side by side. It reloads when the agent finishes a turn.
@@ -84,83 +86,65 @@ class _ChangesViewState extends State<ChangesView> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     if (_error != null) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           spacing: 8,
           children: [
-            Text(_error!, textAlign: TextAlign.center),
-            TextButton(onPressed: _load, child: const Text('Try again')),
+            Text(_error!, textAlign: TextAlign.center, style: theme.ui(t.text)),
+            Button(label: 'Try again', onPressed: _load),
           ],
         ),
       );
     }
     final file = _files.where((f) => f.path == _path).firstOrNull;
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(
+        Container(
           width: 240,
+          decoration: BoxDecoration(
+            color: t.raised,
+            border: Border(right: BorderSide(color: t.borderSubtle)),
+          ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              ListTile(
-                dense: true,
-                title: Text(
-                  _files.isEmpty && !_loading
-                      ? 'No changes'
-                      : '${_files.length} changed',
-                ),
-                trailing: _loading
-                    ? const SizedBox.square(
-                        dimension: 14,
-                        child: CircularProgressIndicator(strokeWidth: 1.5),
-                      )
-                    : IconButton(
-                        tooltip: 'Reload',
-                        icon: const Icon(Icons.refresh, size: 18),
-                        onPressed: _load,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _files.isEmpty && !_loading
+                            ? 'No changes'
+                            : '${_files.length} changed',
+                        style: theme.ui(t.textSecondary, size: 12),
                       ),
+                    ),
+                    IconButton(
+                      tooltip: 'Reload',
+                      iconSize: 15,
+                      color: t.textSecondary,
+                      onPressed: _loading ? null : _load,
+                      icon: const Icon(Icons.refresh),
+                    ),
+                  ],
+                ),
               ),
               Expanded(
                 child: ListView(
                   children: [
-                    for (final f in _files)
-                      ListTile(
-                        dense: true,
-                        selected: f.path == _path,
-                        leading: Text(
-                          switch (f.status) {
-                            'added' => 'A',
-                            'deleted' => 'D',
-                            _ => 'M',
-                          },
-                          style: TextStyle(
-                            fontFamily: 'Menlo',
-                            color: switch (f.status) {
-                              'added' => Colors.green,
-                              'deleted' => theme.colorScheme.error,
-                              _ => theme.colorScheme.primary,
-                            },
-                          ),
-                        ),
-                        minLeadingWidth: 12,
-                        title: Tooltip(
-                          message: f.path,
-                          child: Text(
-                            f.path.split('/').last,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        onTap: () => _show(f.path),
-                      ),
+                    for (final f in _files) _FileRow(f, f.path == _path, _show),
                   ],
                 ),
               ),
             ],
           ),
         ),
-        const VerticalDivider(width: 1),
         Expanded(
           child: _controller != null
               ? SideBySideDiff(
@@ -173,10 +157,73 @@ class _ChangesViewState extends State<ChangesView> {
                     file == null
                         ? ''
                         : 'Not shown: ${file.path} is ${file.skipped}.',
+                    style: theme.ui(t.textMuted),
                   ),
                 ),
         ),
       ],
+    );
+  }
+}
+
+class _FileRow extends StatelessWidget {
+  const _FileRow(this.file, this.selected, this.onTap);
+
+  final FileChange file;
+  final bool selected;
+  final void Function(String path) onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    final (letter, color) = switch (file.status) {
+      'added' => ('A', t.done),
+      'deleted' => ('D', t.crashed),
+      _ => ('M', t.running),
+    };
+    final slash = file.path.lastIndexOf('/');
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      child: Material(
+        color: selected ? t.selected : Colors.transparent,
+        borderRadius: BorderRadius.circular(NushiTheme.control),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(NushiTheme.control),
+          onTap: () => onTap(file.path),
+          child: Tooltip(
+            message: file.path,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Row(
+                children: [
+                  Text(letter, style: theme.code(color, size: 12)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: file.path.substring(slash + 1),
+                            style: theme.ui(t.text),
+                          ),
+                          if (slash > 0)
+                            TextSpan(
+                              text: '  ${file.path.substring(0, slash)}',
+                              style: theme.ui(t.textMuted, size: 11.5),
+                            ),
+                        ],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

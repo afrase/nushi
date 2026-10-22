@@ -1,0 +1,138 @@
+import 'package:flutter/material.dart';
+
+import 'tokens.dart';
+
+export 'tokens.dart';
+
+/// Carries the [Tokens] and the fonts to widgets: `NushiTheme.of(context)`.
+/// Material's theme is derived from the tokens, never the other way round.
+@immutable
+class NushiTheme extends ThemeExtension<NushiTheme> {
+  const NushiTheme(this.t);
+
+  final Tokens t;
+
+  static const uiFont = 'IBM Plex Sans';
+  static const codeFont = 'JetBrains Mono';
+
+  // Corner radii: controls (buttons, fields) and cards.
+  static const control = 4.0;
+  static const card = 6.0;
+
+  static NushiTheme of(BuildContext context) =>
+      Theme.of(context).extension<NushiTheme>()!;
+
+  /// UI text: 13 for body, 12 for meta, 11.5 for small print.
+  TextStyle ui(Color color, {double size = 13, FontWeight? weight}) =>
+      TextStyle(
+        fontFamily: uiFont,
+        fontSize: size,
+        fontWeight: weight,
+        height: 1.4,
+        color: color,
+      );
+
+  /// Code text, ligatures off, on a whole-pixel line height.
+  TextStyle code(Color color, {double size = 13}) => TextStyle(
+    fontFamily: codeFont,
+    fontSize: size,
+    height: (size * 1.45).roundToDouble() / size,
+    color: color,
+    fontFeatures: const [
+      FontFeature.disable('liga'),
+      FontFeature.disable('calt'),
+    ],
+  );
+
+  @override
+  NushiTheme copyWith({Tokens? t}) => NushiTheme(t ?? this.t);
+
+  // Light and dark switch at once.
+  @override
+  NushiTheme lerp(NushiTheme? other, double t) =>
+      t < 0.5 || other == null ? this : other;
+
+  ThemeData toThemeData() {
+    final scheme = ColorScheme(
+      brightness: t.brightness,
+      primary: t.accent,
+      onPrimary: t.onAccent,
+      primaryContainer: t.accentSoft,
+      onPrimaryContainer: t.text,
+      secondary: t.accent,
+      onSecondary: t.onAccent,
+      error: t.crashed,
+      onError: t.onAccent,
+      errorContainer: t.crashedSoft,
+      onErrorContainer: t.crashed,
+      surface: t.base,
+      onSurface: t.text,
+      onSurfaceVariant: t.textSecondary,
+      surfaceContainerLowest: t.base,
+      surfaceContainerLow: t.raised,
+      surfaceContainer: t.raised,
+      surfaceContainerHigh: t.raised,
+      surfaceContainerHighest: t.selected,
+      outline: t.borderStrong,
+      outlineVariant: t.borderSubtle,
+    );
+    final typography = Typography.material2021();
+    // Sizes merged with colors, scaled so body text is 13.
+    final text = Typography.englishLike2021
+        .merge(
+          t.brightness == Brightness.dark ? typography.white : typography.black,
+        )
+        .apply(
+          fontFamily: uiFont,
+          fontSizeFactor: 13 / 14,
+          bodyColor: t.text,
+          displayColor: t.text,
+        );
+    return ThemeData(
+      colorScheme: scheme,
+      brightness: t.brightness,
+      typography: typography,
+      textTheme: text,
+      visualDensity: VisualDensity.compact,
+      scaffoldBackgroundColor: t.base,
+      dividerColor: t.borderSubtle,
+      dividerTheme: DividerThemeData(color: t.borderSubtle, space: 1),
+      focusColor: t.focus.withValues(alpha: 0.24),
+      textSelectionTheme: TextSelectionThemeData(
+        selectionColor: t.accent.withValues(alpha: 0.3),
+        cursorColor: t.text,
+      ),
+      menuTheme: MenuThemeData(
+        style: MenuStyle(
+          backgroundColor: WidgetStatePropertyAll(t.raised),
+          surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+          side: WidgetStatePropertyAll(BorderSide(color: t.borderStrong)),
+          shape: const WidgetStatePropertyAll(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(card)),
+            ),
+          ),
+        ),
+      ),
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(
+          color: t.raised,
+          border: Border.all(color: t.borderStrong),
+          borderRadius: BorderRadius.circular(control),
+        ),
+        textStyle: ui(t.text, size: 12),
+        waitDuration: const Duration(milliseconds: 500),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: t.raised,
+        contentTextStyle: ui(t.text),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(card),
+          side: BorderSide(color: t.borderStrong),
+        ),
+      ),
+      extensions: [this],
+    );
+  }
+}

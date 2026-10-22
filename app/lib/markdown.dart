@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
+import 'theme/theme.dart';
+
 /// Agent markdown, selectable, with code in a monospace font.
 class AgentMarkdown extends StatelessWidget {
   const AgentMarkdown(this.text, {super.key});
@@ -16,7 +18,7 @@ class AgentMarkdown extends StatelessWidget {
       // Agent text may come from anywhere: never fetch the images it names.
       imageBuilder: (uri, title, alt) => Text('[image: ${alt ?? uri}]'),
       styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
-        code: const TextStyle(fontFamily: 'Menlo', fontSize: 13),
+        code: const TextStyle(fontFamily: NushiTheme.codeFont, fontSize: 12.5),
         codeblockDecoration: BoxDecoration(
           color: theme.colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(6),

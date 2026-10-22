@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 
 import 'cards.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
+import 'theme/theme.dart';
+import 'widgets.dart';
 
 /// The agent's question form: each field with its options (a radio for one,
 /// checkboxes for several) or a text box, under one Submit. Digits 1–9 pick
@@ -104,7 +106,7 @@ class _QuestionCardState extends State<QuestionCard> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final theme = NushiTheme.of(context);
     final item = widget.item;
     if (item.status != 'pending') return _Answered(item);
     return Focus(
@@ -113,22 +115,18 @@ class _QuestionCardState extends State<QuestionCard> {
       child: WaitingCard(
         waiting: true,
         children: [
-          Text(
-            item.text.isEmpty ? 'The agent asks' : item.text,
-            style: theme.textTheme.labelMedium,
-          ),
+          CardTitle(item.text.isEmpty ? 'The agent asks' : item.text),
           for (final (i, f) in _fields.indexed) ..._field(theme, i, f),
           Row(
-            spacing: 8,
+            spacing: 6,
             children: [
-              FilledButton(
+              Button(
+                label: 'Submit',
+                hint: '⏎',
+                kind: ButtonKind.primary,
                 onPressed: _answer.isEmpty ? null : () => _send(_answer),
-                child: const Text('Submit'),
               ),
-              TextButton(
-                onPressed: () => _send(null),
-                child: const Text('Skip'),
-              ),
+              Button(label: 'Skip', onPressed: () => _send(null)),
             ],
           ),
         ],
@@ -136,7 +134,8 @@ class _QuestionCardState extends State<QuestionCard> {
     );
   }
 
-  List<Widget> _field(ThemeData theme, int i, Field f) {
+  List<Widget> _field(NushiTheme theme, int i, Field f) {
+    final t = theme.t;
     final active = i == _active && f.options.isNotEmpty;
     if (f.options.isEmpty) {
       return [
@@ -144,10 +143,13 @@ class _QuestionCardState extends State<QuestionCard> {
           controller: _text[f.id],
           onChanged: (_) => setState(() {}),
           onSubmitted: (_) => _answer.isEmpty ? null : _send(_answer),
+          style: theme.ui(t.text),
           decoration: InputDecoration(
             isDense: true,
             labelText: f.title,
             hintText: f.description,
+            filled: true,
+            fillColor: t.base,
             border: const OutlineInputBorder(),
           ),
         ),
@@ -163,16 +165,12 @@ class _QuestionCardState extends State<QuestionCard> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              border: Border.all(
-                color: active
-                    ? theme.colorScheme.tertiary
-                    : theme.colorScheme.outlineVariant,
-              ),
-              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: active ? t.needs : t.borderStrong),
+              borderRadius: BorderRadius.circular(NushiTheme.control),
             ),
-            child: Text(f.title, style: theme.textTheme.labelSmall),
+            child: Text(f.title, style: theme.ui(t.textSecondary, size: 11.5)),
           ),
-          Expanded(child: Text(f.description)),
+          Expanded(child: Text(f.description, style: theme.ui(t.text))),
         ],
       ),
       for (final (n, o) in f.options.indexed)
@@ -184,28 +182,30 @@ class _QuestionCardState extends State<QuestionCard> {
             child: Row(
               spacing: 8,
               children: [
-                Icon(switch ((many, picked.contains(o.id))) {
-                  (false, false) => Icons.radio_button_unchecked,
-                  (false, true) => Icons.radio_button_checked,
-                  (true, false) => Icons.check_box_outline_blank,
-                  (true, true) => Icons.check_box,
-                }, size: 18),
+                Icon(
+                  switch ((many, picked.contains(o.id))) {
+                    (false, false) => Icons.radio_button_unchecked,
+                    (false, true) => Icons.radio_button_checked,
+                    (true, false) => Icons.check_box_outline_blank,
+                    (true, true) => Icons.check_box,
+                  },
+                  size: 16,
+                  color: t.textSecondary,
+                ),
                 SizedBox(
                   width: 14,
-                  child: Text(
-                    active && n < 9 ? '${n + 1}' : '',
-                    style: TextStyle(color: theme.colorScheme.outline),
-                  ),
+                  child: KeyHint(active && n < 9 ? '${n + 1}' : ''),
                 ),
                 Expanded(
                   child: Text.rich(
                     TextSpan(
                       text: o.name,
+                      style: theme.ui(t.text),
                       children: [
                         if (o.description.isNotEmpty)
                           TextSpan(
                             text: '  ${o.description}',
-                            style: TextStyle(color: theme.colorScheme.outline),
+                            style: theme.ui(t.textMuted, size: 12),
                           ),
                       ],
                     ),
@@ -227,12 +227,13 @@ class _Answered extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final muted = TextStyle(color: Theme.of(context).colorScheme.outline);
+    final theme = NushiTheme.of(context);
+    final muted = theme.ui(theme.t.textMuted, size: 12);
     final answered = item.fields.where((f) => f.values.isNotEmpty);
     return WaitingCard(
       waiting: false,
       children: [
-        Text(item.text, style: Theme.of(context).textTheme.labelMedium),
+        CardTitle(item.text, waiting: false),
         if (item.status != 'answered')
           Text(
             item.status == 'declined' ? 'Skipped' : 'Cancelled',
@@ -256,7 +257,7 @@ class _Answered extends StatelessWidget {
                               v,
                         )
                         .join(', '),
-                    style: DefaultTextStyle.of(context).style,
+                    style: theme.ui(theme.t.text, size: 12),
                   ),
                 ],
               ),
