@@ -34,9 +34,19 @@ bool _running(Item it) => it.status == 'pending' || it.status == 'in_progress';
 
 /// What a run of tool calls did: "Read 4 files, ran 2 commands".
 String groupLabel(List<Item> calls) {
+  const named = {
+    'read',
+    'edit',
+    'delete',
+    'move',
+    'execute',
+    'search',
+    'fetch',
+  };
   final counts = <String, int>{};
   for (final c in calls) {
-    counts.update(c.toolKind, (n) => n + 1, ifAbsent: () => 1);
+    final kind = named.contains(c.toolKind) ? c.toolKind : 'other';
+    counts.update(kind, (n) => n + 1, ifAbsent: () => 1);
   }
   String n(int n, String one, String many) => '$n ${n == 1 ? one : many}';
   final label = [
@@ -49,7 +59,6 @@ String groupLabel(List<Item> calls) {
         'execute' => 'ran ${n(c, 'command', 'commands')}',
         'search' => 'ran ${n(c, 'search', 'searches')}',
         'fetch' => 'fetched ${n(c, 'page', 'pages')}',
-        'think' => 'thought',
         _ => 'used ${n(c, 'tool', 'tools')}',
       },
   ].join(', ');

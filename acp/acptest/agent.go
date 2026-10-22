@@ -8,6 +8,7 @@
 //     ("color": red, green or blue), then a message with the answer;
 //   - containing "think": its thoughts in a few chunks, then a message;
 //   - containing "plan": a three-step plan, each step ticked off in turn;
+//   - containing "many": 150 messages, each after a tool call, quickly;
 //   - anything else: "You said: <text>", streamed in two chunks.
 //
 // Pause slows the "think" and "plan" scripts down, to watch them stream.
@@ -210,6 +211,14 @@ func (a *Agent) prompt(session, text string) string {
 			a.update(session, map[string]any{"sessionUpdate": "agent_thought_chunk", "content": map[string]any{"type": "text", "text": t}})
 		}
 		a.say(session, "Done thinking.")
+	case strings.Contains(text, "many"):
+		for i := range 150 {
+			id := "many-" + strconv.Itoa(i)
+			a.update(session, map[string]any{"sessionUpdate": "tool_call", "toolCallId": id, "title": "Read file" + strconv.Itoa(i) + ".go", "kind": "read", "status": "completed"})
+			a.update(session, map[string]any{"sessionUpdate": "agent_message_chunk", "messageId": "m" + id, "content": map[string]any{"type": "text",
+				"text": fmt.Sprintf("Step **%d**: read `file%d.go`.\n\n```go\nfunc f%d() int { return %d }\n```\n", i, i, i, i)}})
+			time.Sleep(a.Pause / 20)
+		}
 	case strings.Contains(text, "plan"):
 		steps := []string{"Read the code", "Make the change", "Run the tests"}
 		for done := 0; done <= len(steps); done++ {

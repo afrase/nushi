@@ -9,7 +9,7 @@ void main() {
       groupLabel([call('read'), call('execute'), call('read'), call('edit')]),
       'Read 2 files, ran 1 command, edited 1 file',
     );
-    expect(groupLabel([call('other'), call('other')]), 'Used 2 tools');
+    expect(groupLabel([call('other'), call('think')]), 'Used 2 tools');
   });
 
   test('an edit counts the lines it adds and removes', () {

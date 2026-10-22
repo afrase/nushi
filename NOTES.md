@@ -52,9 +52,10 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 14. Thinking and plans | 1724 | 716 | 2780 | 650 |
 | 15. Turn controls | 1807 | 722 | 2911 | 650 |
 | 16. The composer | 1878 | 722 | 3118 | 650 |
+| 17. Long chats | 1878 | 722 | 3235 | 650 |
 
 Tripwires crossed:
-Lines added per step, code and tests, without generated code (the tripwire is about 500): 1: 533, 2: 1,502, 3: 239, 4: 437, 5: 739, 6: 639, 7: 464, 8: 537, 9: 265, 10: 528, 11: 1,249, 12: 625, 13: 476, 14: 343, 15: 351, 16: 492.
+Lines added per step, code and tests, without generated code (the tripwire is about 500): 1: 533, 2: 1,502, 3: 239, 4: 437, 5: 739, 6: 639, 7: 464, 8: 537, 9: 265, 10: 528, 11: 1,249, 12: 625, 13: 476, 14: 343, 15: 351, 16: 492, 17: 298.
 - Step 1 (533): the Unix-socket transport package and its tests came with the skeleton.
 - Step 2 (1,502): the whole ACP client landed in this step (JSON-RPC framing, client and the schema-to-Go type generator, about 660 lines), plus the first real chat screen and the daemon's chat feature. None of it is for later steps.
 - Step 5 (739): the question card is the app's biggest widget (267 lines: options, multi-select, Other boxes, digit keys); reading the form in order, and two fixes to the type generator.
@@ -151,6 +152,9 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 
 - The composer (step 16): `/` at the start completes the agent's commands, `@` anywhere completes the chat folder's files; the names whose last part starts with what's typed come first, then the shortest, eight at most. Arrows move, Enter or Tab picks, Escape closes. A picked file stays in the text as `@path` and goes to the agent as a resource link (only if `@path` is still in the text when sent). The box grows to ten lines, then scrolls. Up in an empty box brings back the last prompt, with its file links.
 - `ListFiles` returns the folder's files once per composer (20,000 at most): in a git repository `git ls-files` (tracked and untracked, not ignored), else a walk that skips hidden folders. The app filters them as you type. Like `GetDiff`, it calls `internal/git` from the API directly.
+
+- The transcript (step 17) is a top-down lazy list: it opens at the bottom and sticks to it while the agent writes (re-checking whenever the list's height changes, since lazily built items change it); scrolled up by more than a line, it stays put and shows "Jump to latest". A short chat sits at the top of the pane, as on claude.ai, rather than against the composer.
+- The fake agent's `many` script writes 150 tool calls and messages, to try a long chat.
 
 - Connect for Go is v1 (`connectrpc.com/connect` v1.21), not v2: v1 is what the Dart generator's docs and the POC used, and nothing here needs v2.
 - `http2` for Dart stays on 2.x: `connectrpc` 2.0.1 doesn't resolve with `http2` 3.x.
