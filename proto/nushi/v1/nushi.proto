@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package nushi.v1;
+
+option go_package = "github.com/afrase/nushi/internal/gen/nushi/v1;nushiv1";
+
+service NushiService {
+  rpc Ping(PingRequest) returns (PingResponse);
+}
+
+message PingRequest {}
+
+message PingResponse {
+  // Bumped when methods are added; the API only grows (ADR 0004).
+  int32 api_version = 1;
+}

@@ -1,0 +1,23 @@
+name: nushi
+description: Nushi, a chat wrangler and diff viewer for coding agents.
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  connectrpc: ^2.0.1
+  protobuf: ^6.1.0
+  uds_transport:
+    path: ../packages/uds_transport
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
