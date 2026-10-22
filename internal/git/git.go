@@ -94,8 +94,11 @@ func worktree(path string) ([]byte, error) {
 	return os.ReadFile(path)
 }
 
-// run runs git in dir. The repository's config can't make it run other
-// programs (fsmonitor, external diff and textconv drivers are off).
+// run runs git in dir, with fsmonitor, external diff and textconv drivers
+// off. Clean filters still run when git compares the work tree (git diff
+// does): a filter only runs if git config defines it, and a repository
+// can't bring config along, so that takes someone who can already write
+// the user's config, as with any git command run there.
 func run(ctx context.Context, dir string, args ...string) ([]byte, error) {
 	cmd := exec.CommandContext(ctx, "git", append([]string{"-c", "core.fsmonitor=false", "-C", dir}, args...)...)
 	cmd.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0")
