@@ -28,6 +28,10 @@ func (f *fakeAgent) NewSession(context.Context, acp.NewSessionRequest) (*acp.New
 	return &resp, nil
 }
 
+func (f *fakeAgent) LoadSession(context.Context, acp.LoadSessionRequest) (*acp.LoadSessionResponse, error) {
+	return &acp.LoadSessionResponse{}, nil
+}
+
 func (f *fakeAgent) Prompt(context.Context, acp.PromptRequest) (*acp.PromptResponse, error) {
 	for _, u := range f.updates {
 		f.h.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: u})
@@ -162,7 +166,7 @@ func TestToolCallUpdatesMergeIntoOneItem(t *testing.T) {
 
 func TestPermissionWaitsForTheUsersPick(t *testing.T) {
 	events := make(chan model.Event, 100)
-	c := &chat{id: "s1", publish: func(e model.Event) { events <- e }, waiting: map[string]chan<- string{}}
+	c := &chat{id: "s1", agent: &fakeAgent{}, publish: func(e model.Event) { events <- e }, waiting: map[string]chan<- string{}}
 	svc := &Service{chats: map[string]*chat{"s1": c}}
 	c.addLocked(model.Item{ID: "t1", Kind: model.ToolCall, Title: "rm -rf build"})
 

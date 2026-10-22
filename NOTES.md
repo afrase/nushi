@@ -16,6 +16,7 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 6. Pickers | 1202 | 723 | 972 | 131 |
 | 7. Many chats | 1340 | 723 | 1105 | 131 |
 | 8. Survive the app quitting | 1394 | 924 | 1169 | 131 |
+| 9. Survive the daemon restarting | 1515 | 931 | 1169 | 131 |
 
 Tripwires crossed:
 - Step 2 added about 1,500 hand-written lines, tests included (the limit is about 500). What pushed it: the whole ACP client landed in this step (JSON-RPC framing, client and the schema-to-Go type generator, about 660 lines), plus the first real chat screen and the daemon's chat feature. None of it is for later steps.
@@ -29,6 +30,14 @@ Tripwires crossed:
 5. Permission prompts: Claude only asks in its Manual mode (`default`), and its mode picker comes in step 6. Until then, use a folder whose `.claude/settings.json` is `{"permissions":{"defaultMode":"default"}}` and ask for `touch x.txt`: a card shows Claude's own options ("Yes", "No"). Pick one; the card says what you answered and the agent carries on (or doesn't).
 6. Ask: "Use the AskUserQuestion tool to ask me my favourite colour (red/green/blue) and which fruits I like (multi-select). Then repeat what you received." A card shows both questions with an "Other" box each. Digits 1–9 pick in the active question, clicks pick anywhere, Enter or Submit sends, Skip declines. Claude repeats exactly what you picked.
 
+## Milestone B demo (steps 6–9): many chats that survive restarts
+
+1. `make run`. Start a chat in a folder; under the transcript are Claude's pickers: Mode, Model, Effort, Fast mode, Agent. There is one Mode picker, though Claude reports its mode twice.
+2. Pick Mode ▸ Manual. Start another chat (any folder): it starts in Manual. Ask it to `touch x.txt` and it asks permission. (The pick is remembered per agent in `agents.json`; a mode Claude changes on its own isn't.)
+3. The sidebar lists chats by folder. "New chat in a folder…" picks a folder; a folder's "+" opens another chat there. Click between chats; each keeps its transcript. Titles come from Claude after the first reply.
+4. Quit the app (⌘Q) while a chat waits on a permission prompt, then `make app` (or `make run`). Open the chat: the transcript and the waiting card are there; answer it and the agent carries on.
+5. `make stop`, then `make daemon` (the app says "Daemon not running", then reconnects). Open a chat: it shows busy for a second or two while Claude replays it (`session/load`), then the transcript is back, tool calls included, and you can keep chatting. Chats from earlier daemon runs reopen the same way.
+
 ## ACP quirks
 
 - `session/new` requires `mcpServers`: send `[]`, never `null`.
@@ -36,6 +45,7 @@ Tripwires crossed:
 - The adapter logs progress (`[session/create] ...`) on stderr; nushid copies it into its log.
 - Between chunks Claude sends `usage_update` (context size, cost), and the `prompt` result carries a `_meta.quota` usage report. Both are ignored for now.
 - Claude names its sessions itself: soon after the first prompt it sends `session_info_update` with a short title ("Apple" for "Reply with just the word apple."). Nushi uses the first line of the first prompt until then.
+- `session/load` on Claude replays the user's messages, the agent's messages and the tool calls (with their final status and output), not permission prompts or questions. Messages carry `messageId`s in the replay too. Loading a session takes under a second once npx has the adapter.
 - Claude's tool calls arrive as a `tool_call` with a generic title ("Terminal", "Read File") and empty `rawInput`, then `tool_call_update`s that set the real title (the command, "Read notes.txt"), then content. The first content is the command's description; the final one (with `status: completed`) is the output in a fenced block. Each update's `content` replaces the previous one.
 - Claude also sends a `tool_call_update` carrying only `_meta.claudeCode.toolResponse` (the raw tool result) before the final one; it changes nothing we show.
 - In `auto` mode Claude asked nothing for `curl -X POST` or `touch`; in Manual (`default`) mode it asks before `touch`, with two options, "Yes" (`allow_once`) and "No" (`reject_once`). A permission request names the tool call it is about (`toolCall.toolCallId`), which was sent just before as a `tool_call`.
@@ -53,6 +63,8 @@ Tripwires crossed:
 - The sidebar groups chats by folder, newest chat first; a folder's "+" opens a new chat there without a dialog.
 - A reconnecting app asks for a chat's snapshot (`GetChat`) when the chat is opened. Each chat numbers its events; the snapshot says which number it includes, and the app applies only later events (held while the snapshot is on its way). Chats that aren't open only track busy/idle.
 - The fake agent for end-to-end tests (`acp/acptest`) is new code, about 230 lines, scripted by prompt text, rather than a lift of the POC's 8k-line YAML-scenario agent. Its scenarios so far: echo, a permission prompt, a question, and `session/load` replay.
+- After a daemon restart a chat is reopened (`session/load`) only when it is opened in the app or prompted, not all at start: each reopened chat is a Claude process. A turn that was running when the daemon stopped is lost; a permission prompt or question that was waiting is gone (the agent that asked is gone too).
+- On SIGINT/SIGTERM the daemon kills its agents (their process groups) before exiting; a daemon killed with SIGKILL leaves them to exit when their stdin closes.
 - One agent process per chat; the chat's id is the agent's session id.
 - The daemon keeps each chat's transcript in memory (not on disk); events carry an item, and a streamed message sends only the new text (`append`).
 - The `Events` stream's first message is empty, so a client knows its subscription is live (connect-go clients otherwise wait for the first real event).

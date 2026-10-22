@@ -12,8 +12,10 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/afrase/nushi/acp"
 	"github.com/afrase/nushi/internal/api"
@@ -59,7 +61,22 @@ func run() error {
 	chatSvc := chats.New("claude", launch, st, st, hub.Publish)
 	srv := &http.Server{Handler: api.Handler(token, chatSvc, hub), Protocols: new(http.Protocols)}
 	srv.Protocols.SetUnencryptedHTTP2(true)
-	return srv.Serve(ln)
+
+	// On SIGINT or SIGTERM, stop the agents too: their sessions reopen
+	// through session/load when the daemon is back.
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-stop
+		srv.Close()
+	}()
+	err = srv.Serve(ln)
+	chatSvc.Close()
+	if errors.Is(err, http.ErrServerClosed) {
+		log.Print("nushid stopped")
+		return nil
+	}
+	return err
 }
 
 // loadToken reads the client token, creating it on first start.

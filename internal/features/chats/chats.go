@@ -22,6 +22,7 @@ import (
 type Agent interface {
 	Initialize(context.Context, acp.InitializeRequest) (*acp.InitializeResponse, error)
 	NewSession(context.Context, acp.NewSessionRequest) (*acp.NewSessionResponse, error)
+	LoadSession(context.Context, acp.LoadSessionRequest) (*acp.LoadSessionResponse, error)
 	Prompt(context.Context, acp.PromptRequest) (*acp.PromptResponse, error)
 	SetConfigOption(context.Context, acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error)
 	SetMode(context.Context, acp.SetSessionModeRequest) error
@@ -61,8 +62,7 @@ type chat struct {
 
 	mu        sync.Mutex
 	items     []model.Item
-	busy      bool
-	lastID    string                          // the agent message that chunks without an id continue
+	busy      bool                            // running a turn, or reopening the session
 	waiting   map[string]chan<- string        // permission prompts by item id, for the picked option
 	questions map[string]chan<- []model.Field // questions by item id, for the answer (nil: declined)
 	config    []model.ConfigOption
@@ -101,23 +101,13 @@ func (s *Service) Start(ctx context.Context, folder string) (string, error) {
 	if fi, err := os.Stat(folder); err != nil || !fi.IsDir() || !filepath.IsAbs(folder) {
 		return "", fmt.Errorf("%q is not an absolute path to a folder", folder)
 	}
-	c := &chat{publish: s.publish, sessions: s.sessions, waiting: map[string]chan<- string{}, questions: map[string]chan<- []model.Field{}}
-	agent, err := s.launch(c)
-	if err != nil {
-		return "", fmt.Errorf("start agent: %w", err)
-	}
-	c.agent = agent
-	if _, err := agent.Initialize(ctx, acp.InitializeRequest{
-		ProtocolVersion:    acp.Version,
-		ClientCapabilities: &acp.ClientCapabilities{Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}}},
-		ClientInfo:         &acp.Implementation{Name: "nushi", Title: "Nushi"},
-	}); err != nil {
-		agent.Close()
+	c := s.newChat()
+	if _, err := c.connect(ctx, s.launch); err != nil {
 		return "", err
 	}
-	sess, err := agent.NewSession(ctx, acp.NewSessionRequest{Cwd: folder, MCPServers: []acp.MCPServer{}})
+	sess, err := c.agent.NewSession(ctx, acp.NewSessionRequest{Cwd: folder, MCPServers: []acp.MCPServer{}})
 	if err != nil {
-		agent.Close()
+		c.disconnect()
 		return "", err
 	}
 	c.id = string(sess.SessionID)
@@ -134,6 +124,50 @@ func (s *Service) Start(ctx context.Context, folder string) (string, error) {
 	s.chats[c.id] = c
 	s.mu.Unlock()
 	return c.id, nil
+}
+
+func (s *Service) newChat() *chat {
+	return &chat{publish: s.publish, sessions: s.sessions, waiting: map[string]chan<- string{}, questions: map[string]chan<- []model.Field{}}
+}
+
+// connect launches the chat's agent and initializes it.
+func (c *chat) connect(ctx context.Context, launch Launch) (*acp.InitializeResponse, error) {
+	agent, err := launch(c)
+	if err != nil {
+		return nil, fmt.Errorf("start agent: %w", err)
+	}
+	init, err := agent.Initialize(ctx, acp.InitializeRequest{
+		ProtocolVersion:    acp.Version,
+		ClientCapabilities: &acp.ClientCapabilities{Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}}},
+		ClientInfo:         &acp.Implementation{Name: "nushi", Title: "Nushi"},
+	})
+	if err != nil {
+		agent.Close()
+		return nil, err
+	}
+	c.mu.Lock()
+	c.agent = agent
+	c.mu.Unlock()
+	return init, nil
+}
+
+// disconnect stops the chat's agent.
+func (c *chat) disconnect() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.agent != nil {
+		c.agent.Close()
+		c.agent = nil
+	}
+}
+
+// Close stops every chat's agent.
+func (s *Service) Close() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, c := range s.chats {
+		c.disconnect()
+	}
 }
 
 // List returns every stored chat.
@@ -196,15 +230,6 @@ func title(prompt string) string {
 	return line
 }
 
-func (s *Service) chat(id string) (*chat, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if c := s.chats[id]; c != nil {
-		return c, nil
-	}
-	return nil, fmt.Errorf("no chat %q", id)
-}
-
 func (c *chat) run(text string) {
 	_, err := c.agent.Prompt(context.Background(), acp.PromptRequest{
 		SessionID: acp.SessionID(c.id),
@@ -216,7 +241,6 @@ func (c *chat) run(text string) {
 	}
 	c.mu.Lock()
 	c.busy = false
-	c.lastID = ""
 	c.lastError = st.Error
 	c.emitLocked(model.Event{ChatID: c.id, Status: st})
 	c.mu.Unlock()

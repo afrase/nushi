@@ -103,6 +103,13 @@ func (c *Client) NewSession(ctx context.Context, req NewSessionRequest) (*NewSes
 	return &resp, c.conn.call(ctx, "session/new", req, &resp)
 }
 
+// LoadSession reopens a session; the agent replays its history as session
+// updates before answering.
+func (c *Client) LoadSession(ctx context.Context, req LoadSessionRequest) (*LoadSessionResponse, error) {
+	var resp LoadSessionResponse
+	return &resp, c.conn.call(ctx, "session/load", req, &resp)
+}
+
 func (c *Client) Prompt(ctx context.Context, req PromptRequest) (*PromptResponse, error) {
 	var resp PromptResponse
 	return &resp, c.conn.call(ctx, "session/prompt", req, &resp)

@@ -12,8 +12,10 @@ func (c *chat) SessionUpdate(n acp.SessionNotification) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	switch u := n.Update; u.SessionUpdate {
+	case "user_message_chunk": // replayed by session/load
+		c.chunkLocked(model.UserMessage, u.UserMessageChunk)
 	case "agent_message_chunk":
-		c.messageChunkLocked(u.AgentMessageChunk)
+		c.chunkLocked(model.AgentMessage, u.AgentMessageChunk)
 	case "tool_call":
 		t := u.ToolCall
 		item := model.Item{ID: string(t.ToolCallID), Kind: model.ToolCall, Title: t.Title,
@@ -58,21 +60,23 @@ func (c *chat) SessionUpdate(n acp.SessionNotification) {
 	}
 }
 
-func (c *chat) messageChunkLocked(m *acp.ContentChunk) {
+// chunkLocked adds a chunk of a message: to the message with its id, or,
+// when it has none, to the last item if that is a message of the same kind.
+func (c *chat) chunkLocked(kind model.ItemKind, m *acp.ContentChunk) {
 	if m.Content.Text == nil {
 		return
 	}
 	text := m.Content.Text.Text
-	id := string(m.MessageID)
-	if id == "" {
-		id = c.lastID
+	it := c.itemLocked(string(m.MessageID))
+	if m.MessageID == "" && len(c.items) > 0 {
+		it = &c.items[len(c.items)-1]
 	}
-	if it := c.itemLocked(id); it != nil && it.Kind == model.AgentMessage {
+	if it != nil && it.Kind == kind {
 		it.Text += text
-		c.emitLocked(model.Event{ChatID: c.id, Item: &model.Item{ID: id, Kind: model.AgentMessage, Text: text}, Append: true})
+		c.emitLocked(model.Event{ChatID: c.id, Item: &model.Item{ID: it.ID, Kind: kind, Text: text}, Append: true})
 		return
 	}
-	c.lastID = c.addLocked(model.Item{ID: id, Kind: model.AgentMessage, Text: text})
+	c.addLocked(model.Item{ID: string(m.MessageID), Kind: kind, Text: text})
 }
 
 func (c *chat) publishLocked(it model.Item) {

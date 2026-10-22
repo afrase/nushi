@@ -16,7 +16,7 @@ const claudeForm = `{"message":"Please answer the following questions.","mode":"
 
 func TestQuestionGetsExactlyWhatWasChosen(t *testing.T) {
 	events := make(chan model.Event, 100)
-	c := &chat{id: "s1", publish: func(e model.Event) { events <- e }, questions: map[string]chan<- []model.Field{}}
+	c := &chat{id: "s1", agent: &fakeAgent{}, publish: func(e model.Event) { events <- e }, questions: map[string]chan<- []model.Field{}}
 	svc := &Service{chats: map[string]*chat{"s1": c}}
 	var req acp.CreateElicitationRequest
 	if err := json.Unmarshal([]byte(claudeForm), &req); err != nil {

@@ -27,23 +27,40 @@ import (
 // daemon is nushid with the fake agent: its agents share one History, as
 // Claude's sessions outlive its processes.
 type daemon struct {
-	url     string
-	history *acptest.History
+	url  string
+	stop func()
 }
+
+// pipeAgent is a fake agent "process": closing it closes its pipes.
+type pipeAgent struct {
+	*acp.Client
+	toAgent io.Closer
+}
+
+func (p pipeAgent) Close() error { return p.toAgent.Close() }
 
 func startDaemon(t *testing.T, dataDir string, history *acptest.History) *daemon {
 	t.Helper()
 	launch := func(h acp.Handler) (chats.Agent, error) {
 		toAgentR, toAgentW := io.Pipe()
 		fromAgentR, fromAgentW := io.Pipe()
-		go (&acptest.Agent{History: history}).Serve(toAgentR, fromAgentW)
-		return acp.Connect(fromAgentR, toAgentW, h), nil
+		go func() {
+			(&acptest.Agent{History: history}).Serve(toAgentR, fromAgentW)
+			fromAgentW.Close()
+		}()
+		return pipeAgent{acp.Connect(fromAgentR, toAgentW, h), toAgentW}, nil
 	}
 	hub := &events.Hub{}
 	st := store.New(dataDir)
-	srv := httptest.NewServer(api.Handler("tok", chats.New("fake", launch, st, st, hub.Publish), hub))
-	t.Cleanup(srv.Close)
-	return &daemon{url: srv.URL, history: history}
+	svc := chats.New("fake", launch, st, st, hub.Publish)
+	srv := httptest.NewServer(api.Handler("tok", svc, hub))
+	stop := func() {
+		srv.CloseClientConnections()
+		srv.Close()
+		svc.Close()
+	}
+	t.Cleanup(stop)
+	return &daemon{url: srv.URL, stop: stop}
 }
 
 type bearer struct{}
@@ -180,5 +197,77 @@ func TestAppQuitsWhileAPromptWaits(t *testing.T) {
 	}
 	if last := final.Items[len(final.Items)-1]; last.Text != "Permission: selected allow" {
 		t.Errorf("the agent's reply = %q", last.Text)
+	}
+}
+
+// transcript is a chat's items as kind:text:status, one per line.
+func transcript(items []*nushiv1.Item) string {
+	var lines []string
+	for _, it := range items {
+		lines = append(lines, strings.TrimPrefix(it.Kind.String(), "ITEM_KIND_")+":"+it.Text+":"+it.Status)
+	}
+	return strings.Join(lines, "\n")
+}
+
+// follow builds a chat's transcript from a snapshot and the events after it,
+// until the chat is idle.
+func (a *app) follow(chatID string, snap *nushiv1.GetChatResponse) []*nushiv1.Item {
+	a.t.Helper()
+	items := snap.Items
+	if !snap.Status.Busy {
+		return items
+	}
+	for done := false; !done; {
+		e := a.waitFor("the chat to be idle", func(e *nushiv1.EventsResponse) bool { return e.ChatId == chatID })
+		if e.Seq > snap.Seq {
+			items = apply(items, e)
+		}
+		done = idle(e)
+	}
+	return items
+}
+
+func TestDaemonRestartReopensChats(t *testing.T) {
+	ctx := context.Background()
+	dataDir, history := t.TempDir(), &acptest.History{}
+	d := startDaemon(t, dataDir, history)
+
+	a := open(t, d)
+	chatID := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
+	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "hello"})))
+	a.waitFor("the first reply", idle)
+	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "ask permission"})))
+	perm := a.waitFor("the permission prompt", pendingPermission).GetItem().Item
+	must(a.c.AnswerPermission(ctx, connect.NewRequest(&nushiv1.AnswerPermissionRequest{ChatId: chatID, ItemId: perm.Id, OptionId: "allow"})))
+	a.waitFor("the second reply", idle)
+	before := transcript(must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID}))).Items)
+
+	d.stop() // the daemon goes, and its agents with it
+	d = startDaemon(t, dataDir, history)
+
+	a = open(t, d)
+	list := must(a.c.ListChats(ctx, connect.NewRequest(&nushiv1.ListChatsRequest{}))).Chats
+	if len(list) != 1 || list[0].Id != chatID {
+		t.Fatalf("chats = %v", list)
+	}
+	snap := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID})))
+	items := a.follow(chatID, snap)
+
+	// The agent's history has no permission prompts: those were Nushi's.
+	want := strings.ReplaceAll(before, "\nPERMISSION::answered", "")
+	if got := transcript(items); got != want {
+		t.Errorf("rebuilt transcript:\n%s\nwant:\n%s", got, want)
+	}
+	final := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID})))
+	if transcript(final.Items) != transcript(items) || final.Status.Error != "" {
+		t.Errorf("snapshot after reopening = %s (error %q)", transcript(final.Items), final.Status.Error)
+	}
+
+	// The reopened chat carries on.
+	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "again"})))
+	a.waitFor("the reply after reopening", idle)
+	final = must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID})))
+	if last := final.Items[len(final.Items)-1]; last.Text != "You said: again" {
+		t.Errorf("reply after reopening = %q", last.Text)
 	}
 }
