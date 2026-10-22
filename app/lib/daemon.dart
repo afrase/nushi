@@ -91,10 +91,28 @@ class Daemon extends ChangeNotifier {
   }
 
   Future<void> _listChats() async {
+    for (final c in chats.values) {
+      c.unload(); // events may have been missed while disconnected
+    }
     for (final c in (await client.listChats(ListChatsRequest())).chats) {
       _chat(c);
     }
+    if (selected != null) unawaited(_load(selected!));
     notifyListeners();
+  }
+
+  /// Fetches a chat's snapshot; its events have been held since [loading].
+  Future<void> _load(ChatState chat) async {
+    if (chat.loaded || chat.loading) return;
+    chat.loading = true;
+    try {
+      chat.load(await client.getChat(GetChatRequest(chatId: chat.id)));
+    } on Object catch (e) {
+      chat
+        ..unload()
+        ..error = '$e';
+      notifyListeners();
+    }
   }
 
   ChatState _chat(Chat c) => (chats[c.id] ??= ChatState(c.id, c.folder))
@@ -103,13 +121,14 @@ class Daemon extends ChangeNotifier {
 
   void select(String chatId) {
     selectedId = chatId;
+    final chat = chats[chatId];
+    if (chat != null) unawaited(_load(chat));
     notifyListeners();
   }
 
   Future<void> startChat(String folder) async {
     final resp = await client.startChat(StartChatRequest(folder: folder));
-    final chat = chats[resp.chatId] ??= ChatState(resp.chatId, folder);
-    chat.config = resp.config;
+    chats[resp.chatId] ??= ChatState(resp.chatId, folder);
     select(resp.chatId);
   }
 

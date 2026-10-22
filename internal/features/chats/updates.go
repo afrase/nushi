@@ -69,14 +69,14 @@ func (c *chat) messageChunkLocked(m *acp.ContentChunk) {
 	}
 	if it := c.itemLocked(id); it != nil && it.Kind == model.AgentMessage {
 		it.Text += text
-		c.publish(model.Event{ChatID: c.id, Item: &model.Item{ID: id, Kind: model.AgentMessage, Text: text}, Append: true})
+		c.emitLocked(model.Event{ChatID: c.id, Item: &model.Item{ID: id, Kind: model.AgentMessage, Text: text}, Append: true})
 		return
 	}
 	c.lastID = c.addLocked(model.Item{ID: id, Kind: model.AgentMessage, Text: text})
 }
 
 func (c *chat) publishLocked(it model.Item) {
-	c.publish(model.Event{ChatID: c.id, Item: &it})
+	c.emitLocked(model.Event{ChatID: c.id, Item: &it})
 }
 
 // output renders a tool call's content as markdown.

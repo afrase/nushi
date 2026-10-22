@@ -26,6 +26,15 @@ abstract final class NushiService {
     nushiv1nushi.ListChatsResponse.new,
   );
 
+  /// Returns everything a chat's events have built so far, to pick it up
+  /// after (re)connecting.
+  static const getChat = connect.Spec(
+    '/$name/GetChat',
+    connect.StreamType.unary,
+    nushiv1nushi.GetChatRequest.new,
+    nushiv1nushi.GetChatResponse.new,
+  );
+
   /// Starts an agent in a folder and opens a chat with it.
   static const startChat = connect.Spec(
     '/$name/StartChat',

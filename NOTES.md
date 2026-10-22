@@ -15,6 +15,7 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 5. Agent questions | 900 | 703 | 839 | 131 |
 | 6. Pickers | 1202 | 723 | 972 | 131 |
 | 7. Many chats | 1340 | 723 | 1105 | 131 |
+| 8. Survive the app quitting | 1394 | 924 | 1169 | 131 |
 
 Tripwires crossed:
 - Step 2 added about 1,500 hand-written lines, tests included (the limit is about 500). What pushed it: the whole ACP client landed in this step (JSON-RPC framing, client and the schema-to-Go type generator, about 660 lines), plus the first real chat screen and the daemon's chat feature. None of it is for later steps.
@@ -50,6 +51,8 @@ Tripwires crossed:
 - Modes get no warning styling: claude-agent-acp 0.94.0 doesn't tag its full-access mode (`_meta.kind`), and naming `bypassPermissions` in Nushi would be a per-agent table.
 - Each chat is a file `sessions/<id>.json` in the data folder (id, agent, folder, title, last mode, created). A chat's title is the agent's (`session_info_update`) or else its first prompt's first line.
 - The sidebar groups chats by folder, newest chat first; a folder's "+" opens a new chat there without a dialog.
+- A reconnecting app asks for a chat's snapshot (`GetChat`) when the chat is opened. Each chat numbers its events; the snapshot says which number it includes, and the app applies only later events (held while the snapshot is on its way). Chats that aren't open only track busy/idle.
+- The fake agent for end-to-end tests (`acp/acptest`) is new code, about 230 lines, scripted by prompt text, rather than a lift of the POC's 8k-line YAML-scenario agent. Its scenarios so far: echo, a permission prompt, a question, and `session/load` replay.
 - One agent process per chat; the chat's id is the agent's session id.
 - The daemon keeps each chat's transcript in memory (not on disk); events carry an item, and a streamed message sends only the new text (`append`).
 - The `Events` stream's first message is empty, so a client knows its subscription is live (connect-go clients otherwise wait for the first real event).

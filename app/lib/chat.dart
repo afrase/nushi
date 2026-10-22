@@ -2,7 +2,8 @@ import 'package:flutter/foundation.dart';
 
 import 'gen/nushi/v1/nushi.pb.dart';
 
-/// One chat's transcript and status, kept current from daemon events.
+/// One chat's transcript and status: a snapshot from the daemon, kept
+/// current by the chat's later events.
 class ChatState extends ChangeNotifier {
   ChatState(this.id, this.folder);
 
@@ -15,7 +16,52 @@ class ChatState extends ChangeNotifier {
   bool busy = false;
   String error = '';
 
+  /// Whether the snapshot is in; until then events wait in [_early].
+  bool loaded = false;
+  bool loading = false;
+  int _seq = 0; // the last event applied
+  final _early = <EventsResponse>[];
+
+  /// Takes a snapshot, then the events that arrived while it was on its way.
+  void load(GetChatResponse s) {
+    items
+      ..clear()
+      ..addAll(s.items);
+    config = s.config;
+    busy = s.status.busy;
+    error = s.status.error;
+    _seq = s.seq.toInt();
+    loaded = true;
+    loading = false;
+    for (final e in _early) {
+      _apply(e);
+    }
+    _early.clear();
+    notifyListeners();
+  }
+
+  /// Forgets the snapshot (the connection was lost): the next one replaces it.
+  void unload() {
+    loaded = false;
+    loading = false;
+    _early.clear();
+  }
+
   void apply(EventsResponse e) {
+    if (loaded) {
+      _apply(e);
+      notifyListeners();
+    } else if (loading) {
+      _early.add(e);
+    } else if (e.hasStatus()) {
+      busy = e.status.busy; // for the sidebar
+      notifyListeners();
+    }
+  }
+
+  void _apply(EventsResponse e) {
+    if (e.seq <= _seq) return; // the snapshot has it
+    _seq = e.seq.toInt();
     switch (e.whichKind()) {
       case EventsResponse_Kind.item:
         _applyItem(e.item);
@@ -27,7 +73,6 @@ class ChatState extends ChangeNotifier {
       case EventsResponse_Kind.chat || EventsResponse_Kind.notSet:
         return; // the daemon keeps a chat's title and folder
     }
-    notifyListeners();
   }
 
   void _applyItem(ItemEvent e) {

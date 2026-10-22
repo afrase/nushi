@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -66,6 +67,33 @@ type chat struct {
 	questions map[string]chan<- []model.Field // questions by item id, for the answer (nil: declined)
 	config    []model.ConfigOption
 	session   model.Session
+	lastError string // how the last turn failed
+	seq       int64  // the last event's number
+}
+
+// emitLocked numbers and publishes one of the chat's events. Holding the
+// lock keeps events in order and in step with snapshots.
+func (c *chat) emitLocked(e model.Event) {
+	c.seq++
+	e.Seq = c.seq
+	c.publish(e)
+}
+
+// Get returns a snapshot of a chat.
+func (s *Service) Get(chatID string) (model.Chat, error) {
+	c, err := s.chat(chatID)
+	if err != nil {
+		return model.Chat{}, err
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return model.Chat{
+		Session: c.session,
+		Items:   slices.Clone(c.items),
+		Config:  slices.Clone(c.config),
+		Status:  model.Status{Busy: c.busy, Error: c.lastError},
+		Seq:     c.seq,
+	}, nil
 }
 
 // Start launches an agent in folder and opens a session there.
@@ -132,7 +160,7 @@ func (c *chat) storeLocked() {
 		log.Printf("chat %s: saving: %v", c.id, err)
 	}
 	sess := c.session
-	c.publish(model.Event{ChatID: c.id, Session: &sess})
+	c.emitLocked(model.Event{ChatID: c.id, Session: &sess})
 }
 
 // Prompt sends text to the chat's agent. The turn runs in the background;
@@ -154,7 +182,7 @@ func (s *Service) Prompt(chatID, text string) error {
 			s.Title = title(text)
 		}
 	})
-	c.publish(model.Event{ChatID: c.id, Status: &model.Status{Busy: true}})
+	c.emitLocked(model.Event{ChatID: c.id, Status: &model.Status{Busy: true}})
 	go c.run(text)
 	return nil
 }
@@ -189,7 +217,8 @@ func (c *chat) run(text string) {
 	c.mu.Lock()
 	c.busy = false
 	c.lastID = ""
-	c.publish(model.Event{ChatID: c.id, Status: st})
+	c.lastError = st.Error
+	c.emitLocked(model.Event{ChatID: c.id, Status: st})
 	c.mu.Unlock()
 }
 
@@ -209,6 +238,6 @@ func (c *chat) addLocked(it model.Item) string {
 		it.ID = "item-" + strconv.Itoa(len(c.items)+1)
 	}
 	c.items = append(c.items, it)
-	c.publish(model.Event{ChatID: c.id, Item: &it})
+	c.emitLocked(model.Event{ChatID: c.id, Item: &it})
 	return it.ID
 }

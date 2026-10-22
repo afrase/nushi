@@ -151,7 +151,7 @@ func (c *chat) setConfig(ctx context.Context, id, value string) error {
 // configChangedLocked publishes the chat's options, and stores its mode once
 // the chat is stored.
 func (c *chat) configChangedLocked() {
-	c.publish(model.Event{ChatID: c.id, Config: slices.Clone(c.config)})
+	c.emitLocked(model.Event{ChatID: c.id, Config: slices.Clone(c.config)})
 	if c.session.ID != "" {
 		c.saveLocked(nil)
 	}

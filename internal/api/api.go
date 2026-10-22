@@ -16,7 +16,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 6
+const Version = 7
 
 type server struct {
 	chats *chats.Service
@@ -51,6 +51,19 @@ func (s *server) ListChats(context.Context, *connect.Request[nushiv1.ListChatsRe
 	resp := &nushiv1.ListChatsResponse{}
 	for _, sess := range sessions {
 		resp.Chats = append(resp.Chats, chatProto(sess))
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (s *server) GetChat(_ context.Context, req *connect.Request[nushiv1.GetChatRequest]) (*connect.Response[nushiv1.GetChatResponse], error) {
+	c, err := s.chats.Get(req.Msg.ChatId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, err)
+	}
+	resp := &nushiv1.GetChatResponse{Chat: chatProto(c.Session), Config: configProto(c.Config),
+		Status: &nushiv1.ChatStatus{Busy: c.Status.Busy, Error: c.Status.Error}, Seq: c.Seq}
+	for _, it := range c.Items {
+		resp.Items = append(resp.Items, itemProto(&it))
 	}
 	return connect.NewResponse(resp), nil
 }
@@ -129,7 +142,7 @@ var fieldTypes = map[model.FieldType]nushiv1.FieldType{
 }
 
 func toProto(e model.Event) *nushiv1.EventsResponse {
-	out := &nushiv1.EventsResponse{ChatId: e.ChatID}
+	out := &nushiv1.EventsResponse{ChatId: e.ChatID, Seq: e.Seq}
 	switch {
 	case e.Item != nil:
 		out.Kind = &nushiv1.EventsResponse_Item{Item: &nushiv1.ItemEvent{Item: itemProto(e.Item), Append: e.Append}}

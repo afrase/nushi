@@ -332,6 +332,165 @@ class Chat extends $pb.GeneratedMessage {
   void clearCreatedUnixMs() => $_clearField(6);
 }
 
+class GetChatRequest extends $pb.GeneratedMessage {
+  factory GetChatRequest({
+    $core.String? chatId,
+  }) {
+    final result = GetChatRequest._();
+    if (chatId != null) result.chatId = chatId;
+    return result;
+  }
+
+  GetChatRequest._();
+
+  factory GetChatRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetChatRequest()..mergeFromBuffer(data, registry);
+  factory GetChatRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetChatRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetChatRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetChatRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetChatRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetChatRequest copyWith(void Function(GetChatRequest) updates) =>
+      super.copyWith((message) => updates(message as GetChatRequest))
+          as GetChatRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GetChatRequest() / GetChatRequest.new instead')
+  static GetChatRequest create() => GetChatRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetChatRequest._();
+  @$core.override
+  GetChatRequest createEmptyInstance() => GetChatRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetChatRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GetChatRequest>(
+          GetChatRequest.$_createMessage);
+  static GetChatRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+}
+
+class GetChatResponse extends $pb.GeneratedMessage {
+  factory GetChatResponse({
+    Chat? chat,
+    $core.Iterable<Item>? items,
+    $core.Iterable<ConfigOption>? config,
+    ChatStatus? status,
+    $fixnum.Int64? seq,
+  }) {
+    final result = GetChatResponse._();
+    if (chat != null) result.chat = chat;
+    if (items != null) result.items.addAll(items);
+    if (config != null) result.config.addAll(config);
+    if (status != null) result.status = status;
+    if (seq != null) result.seq = seq;
+    return result;
+  }
+
+  GetChatResponse._();
+
+  factory GetChatResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetChatResponse()..mergeFromBuffer(data, registry);
+  factory GetChatResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetChatResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetChatResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetChatResponse.$_createMessage)
+    ..aOM<Chat>(1, _omitFieldNames ? '' : 'chat',
+        subBuilder: Chat.$_createMessage)
+    ..pPM<Item>(2, _omitFieldNames ? '' : 'items',
+        subBuilder: Item.$_createMessage)
+    ..pPM<ConfigOption>(3, _omitFieldNames ? '' : 'config',
+        subBuilder: ConfigOption.$_createMessage)
+    ..aOM<ChatStatus>(4, _omitFieldNames ? '' : 'status',
+        subBuilder: ChatStatus.$_createMessage)
+    ..aInt64(5, _omitFieldNames ? '' : 'seq')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetChatResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetChatResponse copyWith(void Function(GetChatResponse) updates) =>
+      super.copyWith((message) => updates(message as GetChatResponse))
+          as GetChatResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GetChatResponse() / GetChatResponse.new instead')
+  static GetChatResponse create() => GetChatResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetChatResponse._();
+  @$core.override
+  GetChatResponse createEmptyInstance() => GetChatResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetChatResponse getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GetChatResponse>(
+          GetChatResponse.$_createMessage);
+  static GetChatResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  Chat get chat => $_getN(0);
+  @$pb.TagNumber(1)
+  set chat(Chat value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChat() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChat() => $_clearField(1);
+  @$pb.TagNumber(1)
+  Chat ensureChat() => $_ensure(0);
+
+  @$pb.TagNumber(2)
+  $pb.PbList<Item> get items => $_getList(1);
+
+  @$pb.TagNumber(3)
+  $pb.PbList<ConfigOption> get config => $_getList(2);
+
+  @$pb.TagNumber(4)
+  ChatStatus get status => $_getN(3);
+  @$pb.TagNumber(4)
+  set status(ChatStatus value) => $_setField(4, value);
+  @$pb.TagNumber(4)
+  $core.bool hasStatus() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearStatus() => $_clearField(4);
+  @$pb.TagNumber(4)
+  ChatStatus ensureStatus() => $_ensure(3);
+
+  /// The last event this includes: apply only the chat's events after it.
+  @$pb.TagNumber(5)
+  $fixnum.Int64 get seq => $_getI64(4);
+  @$pb.TagNumber(5)
+  set seq($fixnum.Int64 value) => $_setInt64(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasSeq() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearSeq() => $_clearField(5);
+}
+
 class StartChatRequest extends $pb.GeneratedMessage {
   factory StartChatRequest({
     $core.String? folder,
@@ -1066,6 +1225,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     ChatStatus? status,
     ChatConfig? config,
     Chat? chat,
+    $fixnum.Int64? seq,
   }) {
     final result = EventsResponse._();
     if (chatId != null) result.chatId = chatId;
@@ -1073,6 +1233,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     if (status != null) result.status = status;
     if (config != null) result.config = config;
     if (chat != null) result.chat = chat;
+    if (seq != null) result.seq = seq;
     return result;
   }
 
@@ -1107,6 +1268,7 @@ class EventsResponse extends $pb.GeneratedMessage {
         subBuilder: ChatConfig.$_createMessage)
     ..aOM<Chat>(5, _omitFieldNames ? '' : 'chat',
         subBuilder: Chat.$_createMessage)
+    ..aInt64(6, _omitFieldNames ? '' : 'seq')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1196,6 +1358,16 @@ class EventsResponse extends $pb.GeneratedMessage {
   void clearChat() => $_clearField(5);
   @$pb.TagNumber(5)
   Chat ensureChat() => $_ensure(4);
+
+  /// Numbers the chat's events from 1 (see GetChatResponse.seq).
+  @$pb.TagNumber(6)
+  $fixnum.Int64 get seq => $_getI64(5);
+  @$pb.TagNumber(6)
+  set seq($fixnum.Int64 value) => $_setInt64(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasSeq() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearSeq() => $_clearField(6);
 }
 
 /// A chat's config options, all of them.
@@ -1986,6 +2158,13 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, ListChatsRequest request) =>
       _client.invoke<ListChatsResponse>(
           ctx, 'NushiService', 'ListChats', request, ListChatsResponse());
+
+  /// Returns everything a chat's events have built so far, to pick it up
+  /// after (re)connecting.
+  $async.Future<GetChatResponse> getChat(
+          $pb.ClientContext? ctx, GetChatRequest request) =>
+      _client.invoke<GetChatResponse>(
+          ctx, 'NushiService', 'GetChat', request, GetChatResponse());
 
   /// Starts an agent in a folder and opens a chat with it.
   $async.Future<StartChatResponse> startChat(

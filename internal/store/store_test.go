@@ -17,7 +17,7 @@ func TestStateSurvivesANewStore(t *testing.T) {
 	for _, sess := range []model.Session{
 		{ID: "a", Agent: "claude", Folder: "/x", Created: created},
 		{ID: "a", Agent: "claude", Folder: "/x", Title: "Fix the build", Mode: "plan", Created: created}, // replaces the first
-		{ID: "../b", Agent: "claude", Folder: "/y"}, // the id can't escape the folder
+		{ID: "../b", Agent: "claude", Folder: "/y"},                                                      // the id can't escape the folder
 	} {
 		if err := s.SaveSession(sess); err != nil {
 			t.Fatal(err)

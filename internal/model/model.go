@@ -78,9 +78,12 @@ type Field struct {
 // Event is a change to one chat. Exactly one of Item, Status, Config and
 // Session is set.
 type Event struct {
-	ChatID  string
+	ChatID string
+	// Seq numbers the chat's events from 1; a Chat snapshot says which
+	// events it already includes.
+	Seq     int64
 	Session *Session // the chat was opened, or its title or mode changed
-	Item   *Item
+	Item    *Item
 	// Append means Item.Text continues the item's text rather than replacing it.
 	Append bool
 	Status *Status
@@ -99,6 +102,15 @@ type ConfigOption struct {
 // ConfigValue is one value of a select option; Group names its group, if any.
 type ConfigValue struct {
 	Value, Name, Description, Group string
+}
+
+// Chat is a snapshot of a chat: everything its events have built so far.
+type Chat struct {
+	Session Session
+	Items   []Item
+	Config  []ConfigOption
+	Status  Status
+	Seq     int64 // the last event the snapshot includes
 }
 
 // Status is whether a chat is running a turn, and how the last one ended.

@@ -8,6 +8,9 @@ service NushiService {
   rpc Ping(PingRequest) returns (PingResponse);
   // Lists every stored chat.
   rpc ListChats(ListChatsRequest) returns (ListChatsResponse);
+  // Returns everything a chat's events have built so far, to pick it up
+  // after (re)connecting.
+  rpc GetChat(GetChatRequest) returns (GetChatResponse);
   // Starts an agent in a folder and opens a chat with it.
   rpc StartChat(StartChatRequest) returns (StartChatResponse);
   // Sends a prompt; the reply arrives as events.
@@ -47,6 +50,19 @@ message Chat {
   // The mode it was last in.
   string mode = 5;
   int64 created_unix_ms = 6;
+}
+
+message GetChatRequest {
+  string chat_id = 1;
+}
+
+message GetChatResponse {
+  Chat chat = 1;
+  repeated Item items = 2;
+  repeated ConfigOption config = 3;
+  ChatStatus status = 4;
+  // The last event this includes: apply only the chat's events after it.
+  int64 seq = 5;
 }
 
 message StartChatRequest {
@@ -103,6 +119,8 @@ message EventsRequest {}
 
 message EventsResponse {
   string chat_id = 1;
+  // Numbers the chat's events from 1 (see GetChatResponse.seq).
+  int64 seq = 6;
   oneof kind {
     ItemEvent item = 2;
     ChatStatus status = 3;
