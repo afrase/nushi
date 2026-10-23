@@ -71,6 +71,47 @@ class _TranscriptState extends State<Transcript> {
   Rect? _at; // the selection's top and bottom middle, where the toolbar shows
   String? _replyTo; // the selection a reply is being written to
 
+  // The widget built for each entry, by key, and what it was built from.
+  var _built = <String, (List<Object>, Widget)>{};
+
+  /// An entry's widget, the one built before if its items are the same.
+  Widget _entry(
+    Map<String, (List<Object>, Widget)> before,
+    Object e, {
+    required bool live,
+  }) {
+    final items = e is List<Item> ? e : [e as Item];
+    final key = e is List<Item> ? 'group ${items.first.id}' : items.first.id;
+    final from = [live, ...items];
+    final was = before[key];
+    final same =
+        was != null &&
+        was.$1.length == from.length &&
+        Iterable.generate(from.length)
+            .every((i) => identical(was.$1[i], from[i]));
+    return (_built[key] = same
+            ? was
+            : (
+                from,
+                // Keyed, the item's state follows it as items arrive.
+                Padding(
+                  key: ValueKey(key),
+                  padding: const EdgeInsets.only(top: 12),
+                  child: RepaintBoundary(
+                    child: e is List<Item>
+                        ? ToolGroupView(e)
+                        : _ItemView(
+                            e as Item,
+                            widget.chat.id,
+                            widget.daemon,
+                            live: live,
+                          ),
+                  ),
+                ),
+              ))
+        .$2;
+  }
+
   @override
   void dispose() {
     _follower.dispose();
@@ -100,6 +141,8 @@ class _TranscriptState extends State<Transcript> {
     final chat = widget.chat;
     final entries = _entries(chat.items);
     _follower.stick();
+    final before = _built;
+    _built = {};
     final onReply = widget.onReply;
     final onSide = chat.canFork ? widget.onSide : null;
     return LayoutBuilder(
@@ -125,30 +168,24 @@ class _TranscriptState extends State<Transcript> {
                   _selected = c?.plainText ?? '';
                   _offer();
                 },
-                child: ListView.builder(
+                // Every item is laid out, so the list knows its exact
+                // height: the scrollbar keeps its size and nothing shifts
+                // as items come into view. Unchanged items keep their
+                // widget, so a streamed chunk rebuilds only its message.
+                child: SingleChildScrollView(
                   controller: _follower.scroll,
                   padding: const EdgeInsets.fromLTRB(20, 2, 20, 14),
-                  itemCount: entries.length,
-                  itemBuilder: (context, i) {
-                    final e = entries[i];
-                    // Keyed here, the item's state follows it as items arrive.
-                    return Padding(
-                      key: ValueKey(
-                        e is List<Item>
-                            ? 'group ${e.first.id}'
-                            : (e as Item).id,
-                      ),
-                      padding: const EdgeInsets.only(top: 12),
-                      child: e is List<Item>
-                          ? ToolGroupView(e)
-                          : _ItemView(
-                              e as Item,
-                              chat.id,
-                              widget.daemon,
-                              live: chat.busy && i == entries.length - 1,
-                            ),
-                    );
-                  },
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final (i, e) in entries.indexed)
+                        _entry(
+                          before,
+                          e,
+                          live: chat.busy && i == entries.length - 1,
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),

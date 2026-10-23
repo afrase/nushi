@@ -60,6 +60,7 @@ class _NushiAppState extends State<NushiApp> {
       theme: const NushiTheme(Tokens.light).toThemeData(),
       darkTheme: const NushiTheme(Tokens.dark).toThemeData(),
       themeMode: _mode,
+      scrollBehavior: const NativeScroll(),
       home: Scaffold(body: _Shell(widget.daemon)),
     ),
   );

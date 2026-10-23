@@ -26,7 +26,8 @@ class BottomFollower extends ChangeNotifier {
   void stick() => WidgetsBinding.instance.addPostFrameCallback((_) {
     if (!following || !scroll.hasClients) return;
     final p = scroll.position;
-    if (p.pixels == p.maxScrollExtent) return;
+    // At the bottom, or bouncing past it.
+    if (p.pixels >= p.maxScrollExtent) return;
     _jumping = true;
     p.jumpTo(p.maxScrollExtent);
     _jumping = false;
