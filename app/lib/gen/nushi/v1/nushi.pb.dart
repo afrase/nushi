@@ -7254,6 +7254,7 @@ class Terminal extends $pb.GeneratedMessage {
     $core.String? program,
     $core.bool? exited,
     $core.int? exitCode,
+    $core.String? name,
   }) {
     final result = Terminal._();
     if (id != null) result.id = id;
@@ -7263,6 +7264,7 @@ class Terminal extends $pb.GeneratedMessage {
     if (program != null) result.program = program;
     if (exited != null) result.exited = exited;
     if (exitCode != null) result.exitCode = exitCode;
+    if (name != null) result.name = name;
     return result;
   }
 
@@ -7286,6 +7288,7 @@ class Terminal extends $pb.GeneratedMessage {
     ..aOS(6, _omitFieldNames ? '' : 'program')
     ..aOB(7, _omitFieldNames ? '' : 'exited')
     ..aI(8, _omitFieldNames ? '' : 'exitCode')
+    ..aOS(9, _omitFieldNames ? '' : 'name')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -7374,6 +7377,16 @@ class Terminal extends $pb.GeneratedMessage {
   $core.bool hasExitCode() => $_has(6);
   @$pb.TagNumber(8)
   void clearExitCode() => $_clearField(8);
+
+  /// The name the user gave it, if any (API 36).
+  @$pb.TagNumber(9)
+  $core.String get name => $_getSZ(7);
+  @$pb.TagNumber(9)
+  set name($core.String value) => $_setString(7, value);
+  @$pb.TagNumber(9)
+  $core.bool hasName() => $_has(7);
+  @$pb.TagNumber(9)
+  void clearName() => $_clearField(9);
 }
 
 class ChatTerminals extends $pb.GeneratedMessage {
@@ -8080,6 +8093,355 @@ class ResizeTerminalResponse extends $pb.GeneratedMessage {
   static ResizeTerminalResponse? _defaultInstance;
 }
 
+class RenameTerminalRequest extends $pb.GeneratedMessage {
+  factory RenameTerminalRequest({
+    $core.String? terminalId,
+    $core.String? name,
+  }) {
+    final result = RenameTerminalRequest._();
+    if (terminalId != null) result.terminalId = terminalId;
+    if (name != null) result.name = name;
+    return result;
+  }
+
+  RenameTerminalRequest._();
+
+  factory RenameTerminalRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RenameTerminalRequest()..mergeFromBuffer(data, registry);
+  factory RenameTerminalRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RenameTerminalRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RenameTerminalRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RenameTerminalRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'terminalId')
+    ..aOS(2, _omitFieldNames ? '' : 'name')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RenameTerminalRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RenameTerminalRequest copyWith(
+          void Function(RenameTerminalRequest) updates) =>
+      super.copyWith((message) => updates(message as RenameTerminalRequest))
+          as RenameTerminalRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RenameTerminalRequest() / RenameTerminalRequest.new instead')
+  static RenameTerminalRequest create() => RenameTerminalRequest._();
+  static $pb.GeneratedMessage $_createMessage() => RenameTerminalRequest._();
+  @$core.override
+  RenameTerminalRequest createEmptyInstance() => RenameTerminalRequest._();
+  @$core.pragma('dart2js:noInline')
+  static RenameTerminalRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RenameTerminalRequest>(
+          RenameTerminalRequest.$_createMessage);
+  static RenameTerminalRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get terminalId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set terminalId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasTerminalId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearTerminalId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get name => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set name($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasName() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearName() => $_clearField(2);
+}
+
+class RenameTerminalResponse extends $pb.GeneratedMessage {
+  factory RenameTerminalResponse() => RenameTerminalResponse._();
+
+  RenameTerminalResponse._();
+
+  factory RenameTerminalResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RenameTerminalResponse()..mergeFromBuffer(data, registry);
+  factory RenameTerminalResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RenameTerminalResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RenameTerminalResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RenameTerminalResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RenameTerminalResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RenameTerminalResponse copyWith(
+          void Function(RenameTerminalResponse) updates) =>
+      super.copyWith((message) => updates(message as RenameTerminalResponse))
+          as RenameTerminalResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RenameTerminalResponse() / RenameTerminalResponse.new instead')
+  static RenameTerminalResponse create() => RenameTerminalResponse._();
+  static $pb.GeneratedMessage $_createMessage() => RenameTerminalResponse._();
+  @$core.override
+  RenameTerminalResponse createEmptyInstance() => RenameTerminalResponse._();
+  @$core.pragma('dart2js:noInline')
+  static RenameTerminalResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RenameTerminalResponse>(
+          RenameTerminalResponse.$_createMessage);
+  static RenameTerminalResponse? _defaultInstance;
+}
+
+class ArrangeTerminalsRequest extends $pb.GeneratedMessage {
+  factory ArrangeTerminalsRequest({
+    $core.String? chatId,
+    $core.Iterable<$core.String>? terminalIds,
+  }) {
+    final result = ArrangeTerminalsRequest._();
+    if (chatId != null) result.chatId = chatId;
+    if (terminalIds != null) result.terminalIds.addAll(terminalIds);
+    return result;
+  }
+
+  ArrangeTerminalsRequest._();
+
+  factory ArrangeTerminalsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ArrangeTerminalsRequest()..mergeFromBuffer(data, registry);
+  factory ArrangeTerminalsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ArrangeTerminalsRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ArrangeTerminalsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ArrangeTerminalsRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..pPS(2, _omitFieldNames ? '' : 'terminalIds')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ArrangeTerminalsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ArrangeTerminalsRequest copyWith(
+          void Function(ArrangeTerminalsRequest) updates) =>
+      super.copyWith((message) => updates(message as ArrangeTerminalsRequest))
+          as ArrangeTerminalsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ArrangeTerminalsRequest() / ArrangeTerminalsRequest.new instead')
+  static ArrangeTerminalsRequest create() => ArrangeTerminalsRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ArrangeTerminalsRequest._();
+  @$core.override
+  ArrangeTerminalsRequest createEmptyInstance() => ArrangeTerminalsRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ArrangeTerminalsRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ArrangeTerminalsRequest>(
+          ArrangeTerminalsRequest.$_createMessage);
+  static ArrangeTerminalsRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $pb.PbList<$core.String> get terminalIds => $_getList(1);
+}
+
+class ArrangeTerminalsResponse extends $pb.GeneratedMessage {
+  factory ArrangeTerminalsResponse() => ArrangeTerminalsResponse._();
+
+  ArrangeTerminalsResponse._();
+
+  factory ArrangeTerminalsResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ArrangeTerminalsResponse()..mergeFromBuffer(data, registry);
+  factory ArrangeTerminalsResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ArrangeTerminalsResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ArrangeTerminalsResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ArrangeTerminalsResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ArrangeTerminalsResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ArrangeTerminalsResponse copyWith(
+          void Function(ArrangeTerminalsResponse) updates) =>
+      super.copyWith((message) => updates(message as ArrangeTerminalsResponse))
+          as ArrangeTerminalsResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ArrangeTerminalsResponse() / ArrangeTerminalsResponse.new instead')
+  static ArrangeTerminalsResponse create() => ArrangeTerminalsResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ArrangeTerminalsResponse._();
+  @$core.override
+  ArrangeTerminalsResponse createEmptyInstance() =>
+      ArrangeTerminalsResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ArrangeTerminalsResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ArrangeTerminalsResponse>(
+          ArrangeTerminalsResponse.$_createMessage);
+  static ArrangeTerminalsResponse? _defaultInstance;
+}
+
+class RestartTerminalRequest extends $pb.GeneratedMessage {
+  factory RestartTerminalRequest({
+    $core.String? terminalId,
+    $core.int? cols,
+    $core.int? rows,
+  }) {
+    final result = RestartTerminalRequest._();
+    if (terminalId != null) result.terminalId = terminalId;
+    if (cols != null) result.cols = cols;
+    if (rows != null) result.rows = rows;
+    return result;
+  }
+
+  RestartTerminalRequest._();
+
+  factory RestartTerminalRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RestartTerminalRequest()..mergeFromBuffer(data, registry);
+  factory RestartTerminalRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RestartTerminalRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RestartTerminalRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RestartTerminalRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'terminalId')
+    ..aI(2, _omitFieldNames ? '' : 'cols')
+    ..aI(3, _omitFieldNames ? '' : 'rows')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RestartTerminalRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RestartTerminalRequest copyWith(
+          void Function(RestartTerminalRequest) updates) =>
+      super.copyWith((message) => updates(message as RestartTerminalRequest))
+          as RestartTerminalRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RestartTerminalRequest() / RestartTerminalRequest.new instead')
+  static RestartTerminalRequest create() => RestartTerminalRequest._();
+  static $pb.GeneratedMessage $_createMessage() => RestartTerminalRequest._();
+  @$core.override
+  RestartTerminalRequest createEmptyInstance() => RestartTerminalRequest._();
+  @$core.pragma('dart2js:noInline')
+  static RestartTerminalRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RestartTerminalRequest>(
+          RestartTerminalRequest.$_createMessage);
+  static RestartTerminalRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get terminalId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set terminalId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasTerminalId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearTerminalId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.int get cols => $_getIZ(1);
+  @$pb.TagNumber(2)
+  set cols($core.int value) => $_setSignedInt32(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasCols() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearCols() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.int get rows => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set rows($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasRows() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearRows() => $_clearField(3);
+}
+
+class RestartTerminalResponse extends $pb.GeneratedMessage {
+  factory RestartTerminalResponse() => RestartTerminalResponse._();
+
+  RestartTerminalResponse._();
+
+  factory RestartTerminalResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RestartTerminalResponse()..mergeFromBuffer(data, registry);
+  factory RestartTerminalResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RestartTerminalResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RestartTerminalResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RestartTerminalResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RestartTerminalResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RestartTerminalResponse copyWith(
+          void Function(RestartTerminalResponse) updates) =>
+      super.copyWith((message) => updates(message as RestartTerminalResponse))
+          as RestartTerminalResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RestartTerminalResponse() / RestartTerminalResponse.new instead')
+  static RestartTerminalResponse create() => RestartTerminalResponse._();
+  static $pb.GeneratedMessage $_createMessage() => RestartTerminalResponse._();
+  @$core.override
+  RestartTerminalResponse createEmptyInstance() => RestartTerminalResponse._();
+  @$core.pragma('dart2js:noInline')
+  static RestartTerminalResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RestartTerminalResponse>(
+          RestartTerminalResponse.$_createMessage);
+  static RestartTerminalResponse? _defaultInstance;
+}
+
 class CloseTerminalRequest extends $pb.GeneratedMessage {
   factory CloseTerminalRequest({
     $core.String? terminalId,
@@ -8441,6 +8803,26 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, ResizeTerminalRequest request) =>
       _client.invoke<ResizeTerminalResponse>(ctx, 'NushiService',
           'ResizeTerminal', request, ResizeTerminalResponse());
+
+  /// Names a terminal; an empty name goes back to the one it shows by
+  /// itself (API 36).
+  $async.Future<RenameTerminalResponse> renameTerminal(
+          $pb.ClientContext? ctx, RenameTerminalRequest request) =>
+      _client.invoke<RenameTerminalResponse>(ctx, 'NushiService',
+          'RenameTerminal', request, RenameTerminalResponse());
+
+  /// Puts a chat's terminals in an order (API 36).
+  $async.Future<ArrangeTerminalsResponse> arrangeTerminals(
+          $pb.ClientContext? ctx, ArrangeTerminalsRequest request) =>
+      _client.invoke<ArrangeTerminalsResponse>(ctx, 'NushiService',
+          'ArrangeTerminals', request, ArrangeTerminalsResponse());
+
+  /// Starts a new shell in a terminal's folder in place of its old one (a
+  /// shell that exited), keeping its place and name (API 36).
+  $async.Future<RestartTerminalResponse> restartTerminal(
+          $pb.ClientContext? ctx, RestartTerminalRequest request) =>
+      _client.invoke<RestartTerminalResponse>(ctx, 'NushiService',
+          'RestartTerminal', request, RestartTerminalResponse());
 
   /// Closes a terminal: its shell is hung up, then killed after a short
   /// grace, along with what still runs in it (API 35).

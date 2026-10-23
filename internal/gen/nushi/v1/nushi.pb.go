@@ -5759,7 +5759,9 @@ type Terminal struct {
 	Program string `protobuf:"bytes,6,opt,name=program,proto3" json:"program,omitempty"`
 	Exited  bool   `protobuf:"varint,7,opt,name=exited,proto3" json:"exited,omitempty"`
 	// -1: killed by a signal.
-	ExitCode      int32 `protobuf:"varint,8,opt,name=exit_code,json=exitCode,proto3" json:"exit_code,omitempty"`
+	ExitCode int32 `protobuf:"varint,8,opt,name=exit_code,json=exitCode,proto3" json:"exit_code,omitempty"`
+	// The name the user gave it, if any (API 36).
+	Name          string `protobuf:"bytes,9,opt,name=name,proto3" json:"name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5841,6 +5843,13 @@ func (x *Terminal) GetExitCode() int32 {
 		return x.ExitCode
 	}
 	return 0
+}
+
+func (x *Terminal) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
 }
 
 type ChatTerminals struct {
@@ -6377,6 +6386,278 @@ func (*ResizeTerminalResponse) Descriptor() ([]byte, []int) {
 	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{103}
 }
 
+type RenameTerminalRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TerminalId    string                 `protobuf:"bytes,1,opt,name=terminal_id,json=terminalId,proto3" json:"terminal_id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RenameTerminalRequest) Reset() {
+	*x = RenameTerminalRequest{}
+	mi := &file_nushi_v1_nushi_proto_msgTypes[104]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RenameTerminalRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RenameTerminalRequest) ProtoMessage() {}
+
+func (x *RenameTerminalRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_nushi_v1_nushi_proto_msgTypes[104]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RenameTerminalRequest.ProtoReflect.Descriptor instead.
+func (*RenameTerminalRequest) Descriptor() ([]byte, []int) {
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{104}
+}
+
+func (x *RenameTerminalRequest) GetTerminalId() string {
+	if x != nil {
+		return x.TerminalId
+	}
+	return ""
+}
+
+func (x *RenameTerminalRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type RenameTerminalResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RenameTerminalResponse) Reset() {
+	*x = RenameTerminalResponse{}
+	mi := &file_nushi_v1_nushi_proto_msgTypes[105]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RenameTerminalResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RenameTerminalResponse) ProtoMessage() {}
+
+func (x *RenameTerminalResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_nushi_v1_nushi_proto_msgTypes[105]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RenameTerminalResponse.ProtoReflect.Descriptor instead.
+func (*RenameTerminalResponse) Descriptor() ([]byte, []int) {
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{105}
+}
+
+type ArrangeTerminalsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ChatId        string                 `protobuf:"bytes,1,opt,name=chat_id,json=chatId,proto3" json:"chat_id,omitempty"`
+	TerminalIds   []string               `protobuf:"bytes,2,rep,name=terminal_ids,json=terminalIds,proto3" json:"terminal_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ArrangeTerminalsRequest) Reset() {
+	*x = ArrangeTerminalsRequest{}
+	mi := &file_nushi_v1_nushi_proto_msgTypes[106]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ArrangeTerminalsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ArrangeTerminalsRequest) ProtoMessage() {}
+
+func (x *ArrangeTerminalsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_nushi_v1_nushi_proto_msgTypes[106]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ArrangeTerminalsRequest.ProtoReflect.Descriptor instead.
+func (*ArrangeTerminalsRequest) Descriptor() ([]byte, []int) {
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{106}
+}
+
+func (x *ArrangeTerminalsRequest) GetChatId() string {
+	if x != nil {
+		return x.ChatId
+	}
+	return ""
+}
+
+func (x *ArrangeTerminalsRequest) GetTerminalIds() []string {
+	if x != nil {
+		return x.TerminalIds
+	}
+	return nil
+}
+
+type ArrangeTerminalsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ArrangeTerminalsResponse) Reset() {
+	*x = ArrangeTerminalsResponse{}
+	mi := &file_nushi_v1_nushi_proto_msgTypes[107]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ArrangeTerminalsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ArrangeTerminalsResponse) ProtoMessage() {}
+
+func (x *ArrangeTerminalsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_nushi_v1_nushi_proto_msgTypes[107]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ArrangeTerminalsResponse.ProtoReflect.Descriptor instead.
+func (*ArrangeTerminalsResponse) Descriptor() ([]byte, []int) {
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{107}
+}
+
+type RestartTerminalRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TerminalId    string                 `protobuf:"bytes,1,opt,name=terminal_id,json=terminalId,proto3" json:"terminal_id,omitempty"`
+	Cols          int32                  `protobuf:"varint,2,opt,name=cols,proto3" json:"cols,omitempty"`
+	Rows          int32                  `protobuf:"varint,3,opt,name=rows,proto3" json:"rows,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RestartTerminalRequest) Reset() {
+	*x = RestartTerminalRequest{}
+	mi := &file_nushi_v1_nushi_proto_msgTypes[108]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RestartTerminalRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RestartTerminalRequest) ProtoMessage() {}
+
+func (x *RestartTerminalRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_nushi_v1_nushi_proto_msgTypes[108]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RestartTerminalRequest.ProtoReflect.Descriptor instead.
+func (*RestartTerminalRequest) Descriptor() ([]byte, []int) {
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{108}
+}
+
+func (x *RestartTerminalRequest) GetTerminalId() string {
+	if x != nil {
+		return x.TerminalId
+	}
+	return ""
+}
+
+func (x *RestartTerminalRequest) GetCols() int32 {
+	if x != nil {
+		return x.Cols
+	}
+	return 0
+}
+
+func (x *RestartTerminalRequest) GetRows() int32 {
+	if x != nil {
+		return x.Rows
+	}
+	return 0
+}
+
+type RestartTerminalResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RestartTerminalResponse) Reset() {
+	*x = RestartTerminalResponse{}
+	mi := &file_nushi_v1_nushi_proto_msgTypes[109]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RestartTerminalResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RestartTerminalResponse) ProtoMessage() {}
+
+func (x *RestartTerminalResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_nushi_v1_nushi_proto_msgTypes[109]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RestartTerminalResponse.ProtoReflect.Descriptor instead.
+func (*RestartTerminalResponse) Descriptor() ([]byte, []int) {
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{109}
+}
+
 type CloseTerminalRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TerminalId    string                 `protobuf:"bytes,1,opt,name=terminal_id,json=terminalId,proto3" json:"terminal_id,omitempty"`
@@ -6386,7 +6667,7 @@ type CloseTerminalRequest struct {
 
 func (x *CloseTerminalRequest) Reset() {
 	*x = CloseTerminalRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[104]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[110]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6398,7 +6679,7 @@ func (x *CloseTerminalRequest) String() string {
 func (*CloseTerminalRequest) ProtoMessage() {}
 
 func (x *CloseTerminalRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[104]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[110]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6411,7 +6692,7 @@ func (x *CloseTerminalRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CloseTerminalRequest.ProtoReflect.Descriptor instead.
 func (*CloseTerminalRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{104}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{110}
 }
 
 func (x *CloseTerminalRequest) GetTerminalId() string {
@@ -6429,7 +6710,7 @@ type CloseTerminalResponse struct {
 
 func (x *CloseTerminalResponse) Reset() {
 	*x = CloseTerminalResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[105]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[111]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6441,7 +6722,7 @@ func (x *CloseTerminalResponse) String() string {
 func (*CloseTerminalResponse) ProtoMessage() {}
 
 func (x *CloseTerminalResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[105]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[111]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6454,7 +6735,7 @@ func (x *CloseTerminalResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CloseTerminalResponse.ProtoReflect.Descriptor instead.
 func (*CloseTerminalResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{105}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{111}
 }
 
 var File_nushi_v1_nushi_proto protoreflect.FileDescriptor
@@ -6824,7 +7105,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\n" +
 	"can_rewind\x18\a \x01(\bR\tcanRewind\x12\x1f\n" +
 	"\vmcp_changed\x18\b \x01(\bR\n" +
-	"mcpChanged\"\xb0\x01\n" +
+	"mcpChanged\"\xc4\x01\n" +
 	"\bTerminal\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\achat_id\x18\x02 \x01(\tR\x06chatId\x12\x16\n" +
@@ -6832,7 +7113,8 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x05shell\x18\x05 \x01(\tR\x05shell\x12\x18\n" +
 	"\aprogram\x18\x06 \x01(\tR\aprogram\x12\x16\n" +
 	"\x06exited\x18\a \x01(\bR\x06exited\x12\x1b\n" +
-	"\texit_code\x18\b \x01(\x05R\bexitCode\"A\n" +
+	"\texit_code\x18\b \x01(\x05R\bexitCode\x12\x12\n" +
+	"\x04name\x18\t \x01(\tR\x04name\"A\n" +
 	"\rChatTerminals\x120\n" +
 	"\tterminals\x18\x01 \x03(\v2\x12.nushi.v1.TerminalR\tterminals\"n\n" +
 	"\x13OpenTerminalRequest\x12\x17\n" +
@@ -6863,7 +7145,22 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"terminalId\x12\x12\n" +
 	"\x04cols\x18\x02 \x01(\x05R\x04cols\x12\x12\n" +
 	"\x04rows\x18\x03 \x01(\x05R\x04rows\"\x18\n" +
-	"\x16ResizeTerminalResponse\"7\n" +
+	"\x16ResizeTerminalResponse\"L\n" +
+	"\x15RenameTerminalRequest\x12\x1f\n" +
+	"\vterminal_id\x18\x01 \x01(\tR\n" +
+	"terminalId\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\"\x18\n" +
+	"\x16RenameTerminalResponse\"U\n" +
+	"\x17ArrangeTerminalsRequest\x12\x17\n" +
+	"\achat_id\x18\x01 \x01(\tR\x06chatId\x12!\n" +
+	"\fterminal_ids\x18\x02 \x03(\tR\vterminalIds\"\x1a\n" +
+	"\x18ArrangeTerminalsResponse\"a\n" +
+	"\x16RestartTerminalRequest\x12\x1f\n" +
+	"\vterminal_id\x18\x01 \x01(\tR\n" +
+	"terminalId\x12\x12\n" +
+	"\x04cols\x18\x02 \x01(\x05R\x04cols\x12\x12\n" +
+	"\x04rows\x18\x03 \x01(\x05R\x04rows\"\x19\n" +
+	"\x17RestartTerminalResponse\"7\n" +
 	"\x14CloseTerminalRequest\x12\x1f\n" +
 	"\vterminal_id\x18\x01 \x01(\tR\n" +
 	"terminalId\"\x17\n" +
@@ -6885,7 +7182,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x12FIELD_TYPE_CHOICES\x10\x03\x12\x15\n" +
 	"\x11FIELD_TYPE_NUMBER\x10\x04\x12\x16\n" +
 	"\x12FIELD_TYPE_INTEGER\x10\x05\x12\x16\n" +
-	"\x12FIELD_TYPE_BOOLEAN\x10\x062\xd3\x17\n" +
+	"\x12FIELD_TYPE_BOOLEAN\x10\x062\xdb\x19\n" +
 	"\fNushiService\x125\n" +
 	"\x04Ping\x12\x15.nushi.v1.PingRequest\x1a\x16.nushi.v1.PingResponse\x12D\n" +
 	"\tListChats\x12\x1a.nushi.v1.ListChatsRequest\x1a\x1b.nushi.v1.ListChatsResponse\x12>\n" +
@@ -6930,7 +7227,10 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\rListTerminals\x12\x1e.nushi.v1.ListTerminalsRequest\x1a\x1f.nushi.v1.ListTerminalsResponse\x12U\n" +
 	"\x0eAttachTerminal\x12\x1f.nushi.v1.AttachTerminalRequest\x1a .nushi.v1.AttachTerminalResponse0\x01\x12P\n" +
 	"\rWriteTerminal\x12\x1e.nushi.v1.WriteTerminalRequest\x1a\x1f.nushi.v1.WriteTerminalResponse\x12S\n" +
-	"\x0eResizeTerminal\x12\x1f.nushi.v1.ResizeTerminalRequest\x1a .nushi.v1.ResizeTerminalResponse\x12P\n" +
+	"\x0eResizeTerminal\x12\x1f.nushi.v1.ResizeTerminalRequest\x1a .nushi.v1.ResizeTerminalResponse\x12S\n" +
+	"\x0eRenameTerminal\x12\x1f.nushi.v1.RenameTerminalRequest\x1a .nushi.v1.RenameTerminalResponse\x12Y\n" +
+	"\x10ArrangeTerminals\x12!.nushi.v1.ArrangeTerminalsRequest\x1a\".nushi.v1.ArrangeTerminalsResponse\x12V\n" +
+	"\x0fRestartTerminal\x12 .nushi.v1.RestartTerminalRequest\x1a!.nushi.v1.RestartTerminalResponse\x12P\n" +
 	"\rCloseTerminal\x12\x1e.nushi.v1.CloseTerminalRequest\x1a\x1f.nushi.v1.CloseTerminalResponse\x12=\n" +
 	"\x06Events\x12\x17.nushi.v1.EventsRequest\x1a\x18.nushi.v1.EventsResponse0\x01B7Z5github.com/afrase/nushi/internal/gen/nushi/v1;nushiv1b\x06proto3"
 
@@ -6947,7 +7247,7 @@ func file_nushi_v1_nushi_proto_rawDescGZIP() []byte {
 }
 
 var file_nushi_v1_nushi_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_nushi_v1_nushi_proto_msgTypes = make([]protoimpl.MessageInfo, 106)
+var file_nushi_v1_nushi_proto_msgTypes = make([]protoimpl.MessageInfo, 112)
 var file_nushi_v1_nushi_proto_goTypes = []any{
 	(ItemKind)(0),                    // 0: nushi.v1.ItemKind
 	(FieldType)(0),                   // 1: nushi.v1.FieldType
@@ -7055,8 +7355,14 @@ var file_nushi_v1_nushi_proto_goTypes = []any{
 	(*WriteTerminalResponse)(nil),    // 103: nushi.v1.WriteTerminalResponse
 	(*ResizeTerminalRequest)(nil),    // 104: nushi.v1.ResizeTerminalRequest
 	(*ResizeTerminalResponse)(nil),   // 105: nushi.v1.ResizeTerminalResponse
-	(*CloseTerminalRequest)(nil),     // 106: nushi.v1.CloseTerminalRequest
-	(*CloseTerminalResponse)(nil),    // 107: nushi.v1.CloseTerminalResponse
+	(*RenameTerminalRequest)(nil),    // 106: nushi.v1.RenameTerminalRequest
+	(*RenameTerminalResponse)(nil),   // 107: nushi.v1.RenameTerminalResponse
+	(*ArrangeTerminalsRequest)(nil),  // 108: nushi.v1.ArrangeTerminalsRequest
+	(*ArrangeTerminalsResponse)(nil), // 109: nushi.v1.ArrangeTerminalsResponse
+	(*RestartTerminalRequest)(nil),   // 110: nushi.v1.RestartTerminalRequest
+	(*RestartTerminalResponse)(nil),  // 111: nushi.v1.RestartTerminalResponse
+	(*CloseTerminalRequest)(nil),     // 112: nushi.v1.CloseTerminalRequest
+	(*CloseTerminalResponse)(nil),    // 113: nushi.v1.CloseTerminalResponse
 }
 var file_nushi_v1_nushi_proto_depIdxs = []int32{
 	6,   // 0: nushi.v1.ListChatsResponse.chats:type_name -> nushi.v1.Chat
@@ -7149,49 +7455,55 @@ var file_nushi_v1_nushi_proto_depIdxs = []int32{
 	100, // 87: nushi.v1.NushiService.AttachTerminal:input_type -> nushi.v1.AttachTerminalRequest
 	102, // 88: nushi.v1.NushiService.WriteTerminal:input_type -> nushi.v1.WriteTerminalRequest
 	104, // 89: nushi.v1.NushiService.ResizeTerminal:input_type -> nushi.v1.ResizeTerminalRequest
-	106, // 90: nushi.v1.NushiService.CloseTerminal:input_type -> nushi.v1.CloseTerminalRequest
-	83,  // 91: nushi.v1.NushiService.Events:input_type -> nushi.v1.EventsRequest
-	3,   // 92: nushi.v1.NushiService.Ping:output_type -> nushi.v1.PingResponse
-	5,   // 93: nushi.v1.NushiService.ListChats:output_type -> nushi.v1.ListChatsResponse
-	9,   // 94: nushi.v1.NushiService.GetChat:output_type -> nushi.v1.GetChatResponse
-	16,  // 95: nushi.v1.NushiService.StartChat:output_type -> nushi.v1.StartChatResponse
-	15,  // 96: nushi.v1.NushiService.MoveChat:output_type -> nushi.v1.MoveChatResponse
-	27,  // 97: nushi.v1.NushiService.SendPrompt:output_type -> nushi.v1.SendPromptResponse
-	21,  // 98: nushi.v1.NushiService.RewindChat:output_type -> nushi.v1.RewindChatResponse
-	23,  // 99: nushi.v1.NushiService.Unqueue:output_type -> nushi.v1.UnqueueResponse
-	29,  // 100: nushi.v1.NushiService.CancelTurn:output_type -> nushi.v1.CancelTurnResponse
-	31,  // 101: nushi.v1.NushiService.ForkChat:output_type -> nushi.v1.ForkChatResponse
-	33,  // 102: nushi.v1.NushiService.CloseSideChat:output_type -> nushi.v1.CloseSideChatResponse
-	35,  // 103: nushi.v1.NushiService.RenameChat:output_type -> nushi.v1.RenameChatResponse
-	37,  // 104: nushi.v1.NushiService.ArchiveChat:output_type -> nushi.v1.ArchiveChatResponse
-	39,  // 105: nushi.v1.NushiService.RemoveChat:output_type -> nushi.v1.RemoveChatResponse
-	41,  // 106: nushi.v1.NushiService.PlanDeleteChat:output_type -> nushi.v1.PlanDeleteChatResponse
-	47,  // 107: nushi.v1.NushiService.DeleteChat:output_type -> nushi.v1.DeleteChatResponse
-	49,  // 108: nushi.v1.NushiService.AnswerPermission:output_type -> nushi.v1.AnswerPermissionResponse
-	52,  // 109: nushi.v1.NushiService.AnswerQuestion:output_type -> nushi.v1.AnswerQuestionResponse
-	54,  // 110: nushi.v1.NushiService.SetConfigOption:output_type -> nushi.v1.SetConfigOptionResponse
-	78,  // 111: nushi.v1.NushiService.GetDiff:output_type -> nushi.v1.GetDiffResponse
-	81,  // 112: nushi.v1.NushiService.ListCommits:output_type -> nushi.v1.ListCommitsResponse
-	76,  // 113: nushi.v1.NushiService.GetFolderStatus:output_type -> nushi.v1.GetFolderStatusResponse
-	26,  // 114: nushi.v1.NushiService.ListFiles:output_type -> nushi.v1.ListFilesResponse
-	56,  // 115: nushi.v1.NushiService.GetContextUsage:output_type -> nushi.v1.GetContextUsageResponse
-	58,  // 116: nushi.v1.NushiService.ListMcpServers:output_type -> nushi.v1.ListMcpServersResponse
-	61,  // 117: nushi.v1.NushiService.AddMcpServer:output_type -> nushi.v1.AddMcpServerResponse
-	63,  // 118: nushi.v1.NushiService.EditMcpServer:output_type -> nushi.v1.EditMcpServerResponse
-	65,  // 119: nushi.v1.NushiService.RemoveMcpServer:output_type -> nushi.v1.RemoveMcpServerResponse
-	67,  // 120: nushi.v1.NushiService.SetMcpServerOn:output_type -> nushi.v1.SetMcpServerOnResponse
-	69,  // 121: nushi.v1.NushiService.LoginMcpServer:output_type -> nushi.v1.LoginMcpServerResponse
-	71,  // 122: nushi.v1.NushiService.LogoutMcpServer:output_type -> nushi.v1.LogoutMcpServerResponse
-	73,  // 123: nushi.v1.NushiService.ReloadChat:output_type -> nushi.v1.ReloadChatResponse
-	97,  // 124: nushi.v1.NushiService.OpenTerminal:output_type -> nushi.v1.OpenTerminalResponse
-	99,  // 125: nushi.v1.NushiService.ListTerminals:output_type -> nushi.v1.ListTerminalsResponse
-	101, // 126: nushi.v1.NushiService.AttachTerminal:output_type -> nushi.v1.AttachTerminalResponse
-	103, // 127: nushi.v1.NushiService.WriteTerminal:output_type -> nushi.v1.WriteTerminalResponse
-	105, // 128: nushi.v1.NushiService.ResizeTerminal:output_type -> nushi.v1.ResizeTerminalResponse
-	107, // 129: nushi.v1.NushiService.CloseTerminal:output_type -> nushi.v1.CloseTerminalResponse
-	84,  // 130: nushi.v1.NushiService.Events:output_type -> nushi.v1.EventsResponse
-	92,  // [92:131] is the sub-list for method output_type
-	53,  // [53:92] is the sub-list for method input_type
+	106, // 90: nushi.v1.NushiService.RenameTerminal:input_type -> nushi.v1.RenameTerminalRequest
+	108, // 91: nushi.v1.NushiService.ArrangeTerminals:input_type -> nushi.v1.ArrangeTerminalsRequest
+	110, // 92: nushi.v1.NushiService.RestartTerminal:input_type -> nushi.v1.RestartTerminalRequest
+	112, // 93: nushi.v1.NushiService.CloseTerminal:input_type -> nushi.v1.CloseTerminalRequest
+	83,  // 94: nushi.v1.NushiService.Events:input_type -> nushi.v1.EventsRequest
+	3,   // 95: nushi.v1.NushiService.Ping:output_type -> nushi.v1.PingResponse
+	5,   // 96: nushi.v1.NushiService.ListChats:output_type -> nushi.v1.ListChatsResponse
+	9,   // 97: nushi.v1.NushiService.GetChat:output_type -> nushi.v1.GetChatResponse
+	16,  // 98: nushi.v1.NushiService.StartChat:output_type -> nushi.v1.StartChatResponse
+	15,  // 99: nushi.v1.NushiService.MoveChat:output_type -> nushi.v1.MoveChatResponse
+	27,  // 100: nushi.v1.NushiService.SendPrompt:output_type -> nushi.v1.SendPromptResponse
+	21,  // 101: nushi.v1.NushiService.RewindChat:output_type -> nushi.v1.RewindChatResponse
+	23,  // 102: nushi.v1.NushiService.Unqueue:output_type -> nushi.v1.UnqueueResponse
+	29,  // 103: nushi.v1.NushiService.CancelTurn:output_type -> nushi.v1.CancelTurnResponse
+	31,  // 104: nushi.v1.NushiService.ForkChat:output_type -> nushi.v1.ForkChatResponse
+	33,  // 105: nushi.v1.NushiService.CloseSideChat:output_type -> nushi.v1.CloseSideChatResponse
+	35,  // 106: nushi.v1.NushiService.RenameChat:output_type -> nushi.v1.RenameChatResponse
+	37,  // 107: nushi.v1.NushiService.ArchiveChat:output_type -> nushi.v1.ArchiveChatResponse
+	39,  // 108: nushi.v1.NushiService.RemoveChat:output_type -> nushi.v1.RemoveChatResponse
+	41,  // 109: nushi.v1.NushiService.PlanDeleteChat:output_type -> nushi.v1.PlanDeleteChatResponse
+	47,  // 110: nushi.v1.NushiService.DeleteChat:output_type -> nushi.v1.DeleteChatResponse
+	49,  // 111: nushi.v1.NushiService.AnswerPermission:output_type -> nushi.v1.AnswerPermissionResponse
+	52,  // 112: nushi.v1.NushiService.AnswerQuestion:output_type -> nushi.v1.AnswerQuestionResponse
+	54,  // 113: nushi.v1.NushiService.SetConfigOption:output_type -> nushi.v1.SetConfigOptionResponse
+	78,  // 114: nushi.v1.NushiService.GetDiff:output_type -> nushi.v1.GetDiffResponse
+	81,  // 115: nushi.v1.NushiService.ListCommits:output_type -> nushi.v1.ListCommitsResponse
+	76,  // 116: nushi.v1.NushiService.GetFolderStatus:output_type -> nushi.v1.GetFolderStatusResponse
+	26,  // 117: nushi.v1.NushiService.ListFiles:output_type -> nushi.v1.ListFilesResponse
+	56,  // 118: nushi.v1.NushiService.GetContextUsage:output_type -> nushi.v1.GetContextUsageResponse
+	58,  // 119: nushi.v1.NushiService.ListMcpServers:output_type -> nushi.v1.ListMcpServersResponse
+	61,  // 120: nushi.v1.NushiService.AddMcpServer:output_type -> nushi.v1.AddMcpServerResponse
+	63,  // 121: nushi.v1.NushiService.EditMcpServer:output_type -> nushi.v1.EditMcpServerResponse
+	65,  // 122: nushi.v1.NushiService.RemoveMcpServer:output_type -> nushi.v1.RemoveMcpServerResponse
+	67,  // 123: nushi.v1.NushiService.SetMcpServerOn:output_type -> nushi.v1.SetMcpServerOnResponse
+	69,  // 124: nushi.v1.NushiService.LoginMcpServer:output_type -> nushi.v1.LoginMcpServerResponse
+	71,  // 125: nushi.v1.NushiService.LogoutMcpServer:output_type -> nushi.v1.LogoutMcpServerResponse
+	73,  // 126: nushi.v1.NushiService.ReloadChat:output_type -> nushi.v1.ReloadChatResponse
+	97,  // 127: nushi.v1.NushiService.OpenTerminal:output_type -> nushi.v1.OpenTerminalResponse
+	99,  // 128: nushi.v1.NushiService.ListTerminals:output_type -> nushi.v1.ListTerminalsResponse
+	101, // 129: nushi.v1.NushiService.AttachTerminal:output_type -> nushi.v1.AttachTerminalResponse
+	103, // 130: nushi.v1.NushiService.WriteTerminal:output_type -> nushi.v1.WriteTerminalResponse
+	105, // 131: nushi.v1.NushiService.ResizeTerminal:output_type -> nushi.v1.ResizeTerminalResponse
+	107, // 132: nushi.v1.NushiService.RenameTerminal:output_type -> nushi.v1.RenameTerminalResponse
+	109, // 133: nushi.v1.NushiService.ArrangeTerminals:output_type -> nushi.v1.ArrangeTerminalsResponse
+	111, // 134: nushi.v1.NushiService.RestartTerminal:output_type -> nushi.v1.RestartTerminalResponse
+	113, // 135: nushi.v1.NushiService.CloseTerminal:output_type -> nushi.v1.CloseTerminalResponse
+	84,  // 136: nushi.v1.NushiService.Events:output_type -> nushi.v1.EventsResponse
+	95,  // [95:137] is the sub-list for method output_type
+	53,  // [53:95] is the sub-list for method input_type
 	53,  // [53:53] is the sub-list for extension type_name
 	53,  // [53:53] is the sub-list for extension extendee
 	0,   // [0:53] is the sub-list for field type_name
@@ -7220,7 +7532,7 @@ func file_nushi_v1_nushi_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_nushi_v1_nushi_proto_rawDesc), len(file_nushi_v1_nushi_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   106,
+			NumMessages:   112,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

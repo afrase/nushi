@@ -8,7 +8,8 @@ import 'daemon.dart';
 /// What the app remembers across launches, in `app.json` in the data folder:
 /// whether the details panel shows (its toolbar button), which of its cards
 /// are collapsed and their order, the repositories whose new chats get a
-/// worktree, what each chat's Changes view shows, the panes' widths, and whether changed files show flat.
+/// worktree, what each chat's Changes view shows, the panes' widths, whether changed files show flat, and which chats
+/// show their terminals.
 final showDetails = ValueNotifier<bool>(_saved['details'] != false)
   ..addListener(_save);
 final collapsedCards = ValueNotifier<Set<String>>(_strings('collapsed'))
@@ -31,6 +32,10 @@ final changeScopes = ValueNotifier<Map<String, String>>({
 
 /// Whether the Changes view lists its files flat rather than as a tree.
 final changesFlat = ValueNotifier<bool>(_saved['flat'] == true)
+  ..addListener(_save);
+
+/// The chats whose terminal panel is open.
+final terminalChats = ValueNotifier<Set<String>>(_strings('terminals'))
   ..addListener(_save);
 
 /// The widths panes were dragged to, by pane (see `Resizable`).
@@ -65,6 +70,7 @@ void _save() {
         'cards': cardOrder.value,
         'panes': paneWidths.value,
         'flat': changesFlat.value,
+        'terminals': terminalChats.value.toList(),
       }),
     );
   } on Object {

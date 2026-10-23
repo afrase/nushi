@@ -1782,6 +1782,7 @@ const Terminal$json = {
     {'1': 'program', '3': 6, '4': 1, '5': 9, '10': 'program'},
     {'1': 'exited', '3': 7, '4': 1, '5': 8, '10': 'exited'},
     {'1': 'exit_code', '3': 8, '4': 1, '5': 5, '10': 'exitCode'},
+    {'1': 'name', '3': 9, '4': 1, '5': 9, '10': 'name'},
   ],
 };
 
@@ -1790,7 +1791,7 @@ final $typed_data.Uint8List terminalDescriptor = $convert.base64Decode(
     'CghUZXJtaW5hbBIOCgJpZBgBIAEoCVICaWQSFwoHY2hhdF9pZBgCIAEoCVIGY2hhdElkEhYKBm'
     'ZvbGRlchgDIAEoCVIGZm9sZGVyEhQKBXNoZWxsGAUgASgJUgVzaGVsbBIYCgdwcm9ncmFtGAYg'
     'ASgJUgdwcm9ncmFtEhYKBmV4aXRlZBgHIAEoCFIGZXhpdGVkEhsKCWV4aXRfY29kZRgIIAEoBV'
-    'IIZXhpdENvZGU=');
+    'IIZXhpdENvZGUSEgoEbmFtZRgJIAEoCVIEbmFtZQ==');
 
 @$core.Deprecated('Use chatTerminalsDescriptor instead')
 const ChatTerminals$json = {
@@ -1956,6 +1957,78 @@ const ResizeTerminalResponse$json = {
 /// Descriptor for `ResizeTerminalResponse`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List resizeTerminalResponseDescriptor =
     $convert.base64Decode('ChZSZXNpemVUZXJtaW5hbFJlc3BvbnNl');
+
+@$core.Deprecated('Use renameTerminalRequestDescriptor instead')
+const RenameTerminalRequest$json = {
+  '1': 'RenameTerminalRequest',
+  '2': [
+    {'1': 'terminal_id', '3': 1, '4': 1, '5': 9, '10': 'terminalId'},
+    {'1': 'name', '3': 2, '4': 1, '5': 9, '10': 'name'},
+  ],
+};
+
+/// Descriptor for `RenameTerminalRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List renameTerminalRequestDescriptor = $convert.base64Decode(
+    'ChVSZW5hbWVUZXJtaW5hbFJlcXVlc3QSHwoLdGVybWluYWxfaWQYASABKAlSCnRlcm1pbmFsSW'
+    'QSEgoEbmFtZRgCIAEoCVIEbmFtZQ==');
+
+@$core.Deprecated('Use renameTerminalResponseDescriptor instead')
+const RenameTerminalResponse$json = {
+  '1': 'RenameTerminalResponse',
+};
+
+/// Descriptor for `RenameTerminalResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List renameTerminalResponseDescriptor =
+    $convert.base64Decode('ChZSZW5hbWVUZXJtaW5hbFJlc3BvbnNl');
+
+@$core.Deprecated('Use arrangeTerminalsRequestDescriptor instead')
+const ArrangeTerminalsRequest$json = {
+  '1': 'ArrangeTerminalsRequest',
+  '2': [
+    {'1': 'chat_id', '3': 1, '4': 1, '5': 9, '10': 'chatId'},
+    {'1': 'terminal_ids', '3': 2, '4': 3, '5': 9, '10': 'terminalIds'},
+  ],
+};
+
+/// Descriptor for `ArrangeTerminalsRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List arrangeTerminalsRequestDescriptor =
+    $convert.base64Decode(
+        'ChdBcnJhbmdlVGVybWluYWxzUmVxdWVzdBIXCgdjaGF0X2lkGAEgASgJUgZjaGF0SWQSIQoMdG'
+        'VybWluYWxfaWRzGAIgAygJUgt0ZXJtaW5hbElkcw==');
+
+@$core.Deprecated('Use arrangeTerminalsResponseDescriptor instead')
+const ArrangeTerminalsResponse$json = {
+  '1': 'ArrangeTerminalsResponse',
+};
+
+/// Descriptor for `ArrangeTerminalsResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List arrangeTerminalsResponseDescriptor =
+    $convert.base64Decode('ChhBcnJhbmdlVGVybWluYWxzUmVzcG9uc2U=');
+
+@$core.Deprecated('Use restartTerminalRequestDescriptor instead')
+const RestartTerminalRequest$json = {
+  '1': 'RestartTerminalRequest',
+  '2': [
+    {'1': 'terminal_id', '3': 1, '4': 1, '5': 9, '10': 'terminalId'},
+    {'1': 'cols', '3': 2, '4': 1, '5': 5, '10': 'cols'},
+    {'1': 'rows', '3': 3, '4': 1, '5': 5, '10': 'rows'},
+  ],
+};
+
+/// Descriptor for `RestartTerminalRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List restartTerminalRequestDescriptor =
+    $convert.base64Decode(
+        'ChZSZXN0YXJ0VGVybWluYWxSZXF1ZXN0Eh8KC3Rlcm1pbmFsX2lkGAEgASgJUgp0ZXJtaW5hbE'
+        'lkEhIKBGNvbHMYAiABKAVSBGNvbHMSEgoEcm93cxgDIAEoBVIEcm93cw==');
+
+@$core.Deprecated('Use restartTerminalResponseDescriptor instead')
+const RestartTerminalResponse$json = {
+  '1': 'RestartTerminalResponse',
+};
+
+/// Descriptor for `RestartTerminalResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List restartTerminalResponseDescriptor =
+    $convert.base64Decode('ChdSZXN0YXJ0VGVybWluYWxSZXNwb25zZQ==');
 
 @$core.Deprecated('Use closeTerminalRequestDescriptor instead')
 const CloseTerminalRequest$json = {
@@ -2165,6 +2238,21 @@ const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
       '3': '.nushi.v1.ResizeTerminalResponse'
     },
     {
+      '1': 'RenameTerminal',
+      '2': '.nushi.v1.RenameTerminalRequest',
+      '3': '.nushi.v1.RenameTerminalResponse'
+    },
+    {
+      '1': 'ArrangeTerminals',
+      '2': '.nushi.v1.ArrangeTerminalsRequest',
+      '3': '.nushi.v1.ArrangeTerminalsResponse'
+    },
+    {
+      '1': 'RestartTerminal',
+      '2': '.nushi.v1.RestartTerminalRequest',
+      '3': '.nushi.v1.RestartTerminalResponse'
+    },
+    {
       '1': 'CloseTerminal',
       '2': '.nushi.v1.CloseTerminalRequest',
       '3': '.nushi.v1.CloseTerminalResponse'
@@ -2279,6 +2367,12 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.WriteTerminalResponse': WriteTerminalResponse$json,
   '.nushi.v1.ResizeTerminalRequest': ResizeTerminalRequest$json,
   '.nushi.v1.ResizeTerminalResponse': ResizeTerminalResponse$json,
+  '.nushi.v1.RenameTerminalRequest': RenameTerminalRequest$json,
+  '.nushi.v1.RenameTerminalResponse': RenameTerminalResponse$json,
+  '.nushi.v1.ArrangeTerminalsRequest': ArrangeTerminalsRequest$json,
+  '.nushi.v1.ArrangeTerminalsResponse': ArrangeTerminalsResponse$json,
+  '.nushi.v1.RestartTerminalRequest': RestartTerminalRequest$json,
+  '.nushi.v1.RestartTerminalResponse': RestartTerminalResponse$json,
   '.nushi.v1.CloseTerminalRequest': CloseTerminalRequest$json,
   '.nushi.v1.CloseTerminalResponse': CloseTerminalResponse$json,
   '.nushi.v1.EventsRequest': EventsRequest$json,
@@ -2342,7 +2436,12 @@ final $typed_data.Uint8List nushiServiceDescriptor = $convert.base64Decode(
     'VGVybWluYWxSZXF1ZXN0GiAubnVzaGkudjEuQXR0YWNoVGVybWluYWxSZXNwb25zZTABElAKDV'
     'dyaXRlVGVybWluYWwSHi5udXNoaS52MS5Xcml0ZVRlcm1pbmFsUmVxdWVzdBofLm51c2hpLnYx'
     'LldyaXRlVGVybWluYWxSZXNwb25zZRJTCg5SZXNpemVUZXJtaW5hbBIfLm51c2hpLnYxLlJlc2'
-    'l6ZVRlcm1pbmFsUmVxdWVzdBogLm51c2hpLnYxLlJlc2l6ZVRlcm1pbmFsUmVzcG9uc2USUAoN'
-    'Q2xvc2VUZXJtaW5hbBIeLm51c2hpLnYxLkNsb3NlVGVybWluYWxSZXF1ZXN0Gh8ubnVzaGkudj'
-    'EuQ2xvc2VUZXJtaW5hbFJlc3BvbnNlEj0KBkV2ZW50cxIXLm51c2hpLnYxLkV2ZW50c1JlcXVl'
-    'c3QaGC5udXNoaS52MS5FdmVudHNSZXNwb25zZTAB');
+    'l6ZVRlcm1pbmFsUmVxdWVzdBogLm51c2hpLnYxLlJlc2l6ZVRlcm1pbmFsUmVzcG9uc2USUwoO'
+    'UmVuYW1lVGVybWluYWwSHy5udXNoaS52MS5SZW5hbWVUZXJtaW5hbFJlcXVlc3QaIC5udXNoaS'
+    '52MS5SZW5hbWVUZXJtaW5hbFJlc3BvbnNlElkKEEFycmFuZ2VUZXJtaW5hbHMSIS5udXNoaS52'
+    'MS5BcnJhbmdlVGVybWluYWxzUmVxdWVzdBoiLm51c2hpLnYxLkFycmFuZ2VUZXJtaW5hbHNSZX'
+    'Nwb25zZRJWCg9SZXN0YXJ0VGVybWluYWwSIC5udXNoaS52MS5SZXN0YXJ0VGVybWluYWxSZXF1'
+    'ZXN0GiEubnVzaGkudjEuUmVzdGFydFRlcm1pbmFsUmVzcG9uc2USUAoNQ2xvc2VUZXJtaW5hbB'
+    'IeLm51c2hpLnYxLkNsb3NlVGVybWluYWxSZXF1ZXN0Gh8ubnVzaGkudjEuQ2xvc2VUZXJtaW5h'
+    'bFJlc3BvbnNlEj0KBkV2ZW50cxIXLm51c2hpLnYxLkV2ZW50c1JlcXVlc3QaGC5udXNoaS52MS'
+    '5FdmVudHNSZXNwb25zZTAB');

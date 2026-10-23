@@ -8,7 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-		"sync"
+	"strings"
+	"sync"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -149,6 +150,63 @@ func (s *Service) Attach(id string, stop <-chan struct{}, fn func([]byte) bool) 
 	sh.Attach(stop, fn)
 	exited, code = sh.Exit()
 	return exited, code, nil
+}
+
+// Rename names a terminal; "" goes back to the name it shows by itself.
+func (s *Service) Rename(id, name string) error {
+	t, err := s.get(id)
+	if err != nil {
+		return err
+	}
+	s.mu.Lock()
+	t.Name = strings.TrimSpace(name)
+	s.mu.Unlock()
+	s.changed(t.ChatID)
+	return nil
+}
+
+// Arrange puts a chat's terminals in the order of ids; ones it leaves out
+// go after them.
+func (s *Service) Arrange(chatID string, ids []string) {
+	s.mu.Lock()
+	rank := func(t *term) int {
+		if i := slices.Index(ids, t.ID); i >= 0 {
+			return i
+		}
+		return len(ids)
+	}
+	var mine, others []*term
+	for _, t := range s.terms {
+		if t.ChatID == chatID {
+			mine = append(mine, t)
+		} else {
+			others = append(others, t)
+		}
+	}
+	slices.SortStableFunc(mine, func(a, b *term) int { return rank(a) - rank(b) })
+	s.terms = append(others, mine...)
+	s.mu.Unlock()
+	s.changed(chatID)
+}
+
+// Restart starts a new shell in a terminal's folder in place of its old
+// one, which is closed if it still runs.
+func (s *Service) Restart(id string, cols, rows int) error {
+	t, err := s.get(id)
+	if err != nil {
+		return err
+	}
+	sh, err := s.start(t.Folder, cols, rows, func() { s.changed(t.ChatID) })
+	if err != nil {
+		return err
+	}
+	s.mu.Lock()
+	old := t.shell
+	t.shell = sh
+	s.mu.Unlock()
+	old.Close()
+	s.changed(t.ChatID)
+	return nil
 }
 
 // Close ends a terminal: it is no longer listed, and its shell is hung up,

@@ -715,6 +715,62 @@ extension type NushiServiceClient (connect.Transport _transport) {
     );
   }
 
+  /// Names a terminal; an empty name goes back to the one it shows by
+  /// itself (API 36).
+  Future<nushiv1nushi.RenameTerminalResponse> renameTerminal(
+    nushiv1nushi.RenameTerminalRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.renameTerminal,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Puts a chat's terminals in an order (API 36).
+  Future<nushiv1nushi.ArrangeTerminalsResponse> arrangeTerminals(
+    nushiv1nushi.ArrangeTerminalsRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.arrangeTerminals,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Starts a new shell in a terminal's folder in place of its old one (a
+  /// shell that exited), keeping its place and name (API 36).
+  Future<nushiv1nushi.RestartTerminalResponse> restartTerminal(
+    nushiv1nushi.RestartTerminalRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.restartTerminal,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Closes a terminal: its shell is hung up, then killed after a short
   /// grace, along with what still runs in it (API 35).
   Future<nushiv1nushi.CloseTerminalResponse> closeTerminal(

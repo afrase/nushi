@@ -15,6 +15,7 @@ import 'panes.dart';
 import 'settings.dart';
 import 'sidebar.dart';
 import 'status.dart';
+import 'terminal_panel.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
 
@@ -163,19 +164,24 @@ class _ChatPaneState extends State<_ChatPane> {
               ),
             ),
             Expanded(
-              child: _changes
-                  ? ChangesView(chat: widget.chat, daemon: widget.daemon)
-                  : ChatView(
-                      chat: widget.chat,
-                      daemon: widget.daemon,
-                      details: panel
-                          ? DetailsPanel(
-                              chat: widget.chat,
-                              daemon: widget.daemon,
-                              onChanges: () => setState(() => _changes = true),
-                            )
-                          : null,
-                    ),
+              child: TerminalArea(
+                chat: widget.chat,
+                daemon: widget.daemon,
+                child: _changes
+                    ? ChangesView(chat: widget.chat, daemon: widget.daemon)
+                    : ChatView(
+                        chat: widget.chat,
+                        daemon: widget.daemon,
+                        details: panel
+                            ? DetailsPanel(
+                                chat: widget.chat,
+                                daemon: widget.daemon,
+                                onChanges: () =>
+                                    setState(() => _changes = true),
+                              )
+                            : null,
+                      ),
+              ),
             ),
           ],
         );
@@ -186,7 +192,8 @@ class _ChatPaneState extends State<_ChatPane> {
 
 /// The chat's header: its title (double-click renames it), the agent, its
 /// model and status, the folder while the details panel is hidden, the
-/// Chat | Changes switch, the panel's button and the chat's menu.
+/// Chat | Changes switch, the terminal's and the panel's buttons and the
+/// chat's menu.
 class _Header extends StatefulWidget {
   const _Header(
     this.chat,
@@ -289,6 +296,7 @@ class _HeaderState extends State<_Header> {
             onChanged: widget.onChanges,
           ),
           const SizedBox(width: 4),
+          TerminalButton(chat: chat, daemon: widget.daemon),
           IconTap(
             Icons.view_sidebar_outlined,
             tooltip: widget.onPanel == null

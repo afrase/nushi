@@ -128,6 +128,15 @@ const (
 	// NushiServiceResizeTerminalProcedure is the fully-qualified name of the NushiService's
 	// ResizeTerminal RPC.
 	NushiServiceResizeTerminalProcedure = "/nushi.v1.NushiService/ResizeTerminal"
+	// NushiServiceRenameTerminalProcedure is the fully-qualified name of the NushiService's
+	// RenameTerminal RPC.
+	NushiServiceRenameTerminalProcedure = "/nushi.v1.NushiService/RenameTerminal"
+	// NushiServiceArrangeTerminalsProcedure is the fully-qualified name of the NushiService's
+	// ArrangeTerminals RPC.
+	NushiServiceArrangeTerminalsProcedure = "/nushi.v1.NushiService/ArrangeTerminals"
+	// NushiServiceRestartTerminalProcedure is the fully-qualified name of the NushiService's
+	// RestartTerminal RPC.
+	NushiServiceRestartTerminalProcedure = "/nushi.v1.NushiService/RestartTerminal"
 	// NushiServiceCloseTerminalProcedure is the fully-qualified name of the NushiService's
 	// CloseTerminal RPC.
 	NushiServiceCloseTerminalProcedure = "/nushi.v1.NushiService/CloseTerminal"
@@ -252,6 +261,14 @@ type NushiServiceClient interface {
 	AttachTerminal(context.Context, *connect.Request[v1.AttachTerminalRequest]) (*connect.ServerStreamForClient[v1.AttachTerminalResponse], error)
 	WriteTerminal(context.Context, *connect.Request[v1.WriteTerminalRequest]) (*connect.Response[v1.WriteTerminalResponse], error)
 	ResizeTerminal(context.Context, *connect.Request[v1.ResizeTerminalRequest]) (*connect.Response[v1.ResizeTerminalResponse], error)
+	// Names a terminal; an empty name goes back to the one it shows by
+	// itself (API 36).
+	RenameTerminal(context.Context, *connect.Request[v1.RenameTerminalRequest]) (*connect.Response[v1.RenameTerminalResponse], error)
+	// Puts a chat's terminals in an order (API 36).
+	ArrangeTerminals(context.Context, *connect.Request[v1.ArrangeTerminalsRequest]) (*connect.Response[v1.ArrangeTerminalsResponse], error)
+	// Starts a new shell in a terminal's folder in place of its old one (a
+	// shell that exited), keeping its place and name (API 36).
+	RestartTerminal(context.Context, *connect.Request[v1.RestartTerminalRequest]) (*connect.Response[v1.RestartTerminalResponse], error)
 	// Closes a terminal: its shell is hung up, then killed after a short
 	// grace, along with what still runs in it (API 35).
 	CloseTerminal(context.Context, *connect.Request[v1.CloseTerminalRequest]) (*connect.Response[v1.CloseTerminalResponse], error)
@@ -493,6 +510,24 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("ResizeTerminal")),
 			connect.WithClientOptions(opts...),
 		),
+		renameTerminal: connect.NewClient[v1.RenameTerminalRequest, v1.RenameTerminalResponse](
+			httpClient,
+			baseURL+NushiServiceRenameTerminalProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("RenameTerminal")),
+			connect.WithClientOptions(opts...),
+		),
+		arrangeTerminals: connect.NewClient[v1.ArrangeTerminalsRequest, v1.ArrangeTerminalsResponse](
+			httpClient,
+			baseURL+NushiServiceArrangeTerminalsProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ArrangeTerminals")),
+			connect.WithClientOptions(opts...),
+		),
+		restartTerminal: connect.NewClient[v1.RestartTerminalRequest, v1.RestartTerminalResponse](
+			httpClient,
+			baseURL+NushiServiceRestartTerminalProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("RestartTerminal")),
+			connect.WithClientOptions(opts...),
+		),
 		closeTerminal: connect.NewClient[v1.CloseTerminalRequest, v1.CloseTerminalResponse](
 			httpClient,
 			baseURL+NushiServiceCloseTerminalProcedure,
@@ -547,6 +582,9 @@ type nushiServiceClient struct {
 	attachTerminal   *connect.Client[v1.AttachTerminalRequest, v1.AttachTerminalResponse]
 	writeTerminal    *connect.Client[v1.WriteTerminalRequest, v1.WriteTerminalResponse]
 	resizeTerminal   *connect.Client[v1.ResizeTerminalRequest, v1.ResizeTerminalResponse]
+	renameTerminal   *connect.Client[v1.RenameTerminalRequest, v1.RenameTerminalResponse]
+	arrangeTerminals *connect.Client[v1.ArrangeTerminalsRequest, v1.ArrangeTerminalsResponse]
+	restartTerminal  *connect.Client[v1.RestartTerminalRequest, v1.RestartTerminalResponse]
 	closeTerminal    *connect.Client[v1.CloseTerminalRequest, v1.CloseTerminalResponse]
 	events           *connect.Client[v1.EventsRequest, v1.EventsResponse]
 }
@@ -736,6 +774,21 @@ func (c *nushiServiceClient) ResizeTerminal(ctx context.Context, req *connect.Re
 	return c.resizeTerminal.CallUnary(ctx, req)
 }
 
+// RenameTerminal calls nushi.v1.NushiService.RenameTerminal.
+func (c *nushiServiceClient) RenameTerminal(ctx context.Context, req *connect.Request[v1.RenameTerminalRequest]) (*connect.Response[v1.RenameTerminalResponse], error) {
+	return c.renameTerminal.CallUnary(ctx, req)
+}
+
+// ArrangeTerminals calls nushi.v1.NushiService.ArrangeTerminals.
+func (c *nushiServiceClient) ArrangeTerminals(ctx context.Context, req *connect.Request[v1.ArrangeTerminalsRequest]) (*connect.Response[v1.ArrangeTerminalsResponse], error) {
+	return c.arrangeTerminals.CallUnary(ctx, req)
+}
+
+// RestartTerminal calls nushi.v1.NushiService.RestartTerminal.
+func (c *nushiServiceClient) RestartTerminal(ctx context.Context, req *connect.Request[v1.RestartTerminalRequest]) (*connect.Response[v1.RestartTerminalResponse], error) {
+	return c.restartTerminal.CallUnary(ctx, req)
+}
+
 // CloseTerminal calls nushi.v1.NushiService.CloseTerminal.
 func (c *nushiServiceClient) CloseTerminal(ctx context.Context, req *connect.Request[v1.CloseTerminalRequest]) (*connect.Response[v1.CloseTerminalResponse], error) {
 	return c.closeTerminal.CallUnary(ctx, req)
@@ -863,6 +916,14 @@ type NushiServiceHandler interface {
 	AttachTerminal(context.Context, *connect.Request[v1.AttachTerminalRequest], *connect.ServerStream[v1.AttachTerminalResponse]) error
 	WriteTerminal(context.Context, *connect.Request[v1.WriteTerminalRequest]) (*connect.Response[v1.WriteTerminalResponse], error)
 	ResizeTerminal(context.Context, *connect.Request[v1.ResizeTerminalRequest]) (*connect.Response[v1.ResizeTerminalResponse], error)
+	// Names a terminal; an empty name goes back to the one it shows by
+	// itself (API 36).
+	RenameTerminal(context.Context, *connect.Request[v1.RenameTerminalRequest]) (*connect.Response[v1.RenameTerminalResponse], error)
+	// Puts a chat's terminals in an order (API 36).
+	ArrangeTerminals(context.Context, *connect.Request[v1.ArrangeTerminalsRequest]) (*connect.Response[v1.ArrangeTerminalsResponse], error)
+	// Starts a new shell in a terminal's folder in place of its old one (a
+	// shell that exited), keeping its place and name (API 36).
+	RestartTerminal(context.Context, *connect.Request[v1.RestartTerminalRequest]) (*connect.Response[v1.RestartTerminalResponse], error)
 	// Closes a terminal: its shell is hung up, then killed after a short
 	// grace, along with what still runs in it (API 35).
 	CloseTerminal(context.Context, *connect.Request[v1.CloseTerminalRequest]) (*connect.Response[v1.CloseTerminalResponse], error)
@@ -1100,6 +1161,24 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("ResizeTerminal")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceRenameTerminalHandler := connect.NewUnaryHandler(
+		NushiServiceRenameTerminalProcedure,
+		svc.RenameTerminal,
+		connect.WithSchema(nushiServiceMethods.ByName("RenameTerminal")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceArrangeTerminalsHandler := connect.NewUnaryHandler(
+		NushiServiceArrangeTerminalsProcedure,
+		svc.ArrangeTerminals,
+		connect.WithSchema(nushiServiceMethods.ByName("ArrangeTerminals")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceRestartTerminalHandler := connect.NewUnaryHandler(
+		NushiServiceRestartTerminalProcedure,
+		svc.RestartTerminal,
+		connect.WithSchema(nushiServiceMethods.ByName("RestartTerminal")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceCloseTerminalHandler := connect.NewUnaryHandler(
 		NushiServiceCloseTerminalProcedure,
 		svc.CloseTerminal,
@@ -1188,6 +1267,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceWriteTerminalHandler.ServeHTTP(w, r)
 		case NushiServiceResizeTerminalProcedure:
 			nushiServiceResizeTerminalHandler.ServeHTTP(w, r)
+		case NushiServiceRenameTerminalProcedure:
+			nushiServiceRenameTerminalHandler.ServeHTTP(w, r)
+		case NushiServiceArrangeTerminalsProcedure:
+			nushiServiceArrangeTerminalsHandler.ServeHTTP(w, r)
+		case NushiServiceRestartTerminalProcedure:
+			nushiServiceRestartTerminalHandler.ServeHTTP(w, r)
 		case NushiServiceCloseTerminalProcedure:
 			nushiServiceCloseTerminalHandler.ServeHTTP(w, r)
 		case NushiServiceEventsProcedure:
@@ -1347,6 +1432,18 @@ func (UnimplementedNushiServiceHandler) WriteTerminal(context.Context, *connect.
 
 func (UnimplementedNushiServiceHandler) ResizeTerminal(context.Context, *connect.Request[v1.ResizeTerminalRequest]) (*connect.Response[v1.ResizeTerminalResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ResizeTerminal is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) RenameTerminal(context.Context, *connect.Request[v1.RenameTerminalRequest]) (*connect.Response[v1.RenameTerminalResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.RenameTerminal is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ArrangeTerminals(context.Context, *connect.Request[v1.ArrangeTerminalsRequest]) (*connect.Response[v1.ArrangeTerminalsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ArrangeTerminals is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) RestartTerminal(context.Context, *connect.Request[v1.RestartTerminalRequest]) (*connect.Response[v1.RestartTerminalResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.RestartTerminal is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) CloseTerminal(context.Context, *connect.Request[v1.CloseTerminalRequest]) (*connect.Response[v1.CloseTerminalResponse], error) {
