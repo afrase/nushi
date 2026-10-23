@@ -125,9 +125,10 @@ abstract final class NushiService {
     nushiv1nushi.PlanDeleteChatResponse.new,
   );
 
-  /// Deletes a chat: its turn is cancelled and its agent stops, the agent
-  /// deletes its history of each of the chat's sessions (ACP session/delete,
-  /// when it can), the chat's scratch folder goes, and Nushi's record of it.
+  /// Deletes a chat: its turn is cancelled and its agent stops, its worktree
+  /// and branch go if asked, the agent deletes its history of each of the
+  /// chat's sessions (ACP session/delete, when it can), the chat's scratch
+  /// folder goes, and Nushi's record of it.
   static const deleteChat = connect.Spec(
     '/$name/DeleteChat',
     connect.StreamType.unary,

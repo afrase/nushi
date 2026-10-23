@@ -44,18 +44,33 @@ func TestWorktrees(t *testing.T) {
 		t.Errorf("the worktrees show as changes in the repository: %+v", st)
 	}
 
-	// Remove leaves a worktree with work in it.
+	// Inspect counts what would be lost: changed files, and commits the
+	// base doesn't have.
 	write(t, filepath.Join(second.Path, "new.txt"), "work\n")
-	if err := (Worktrees{}).Remove(ctx, second); err == nil {
-		t.Error("a worktree with an untracked file was removed")
+	write(t, filepath.Join(second.Path, "sub", "a.txt"), "b\n")
+	git(t, second.Path, "commit", "-q", "-am", "one")
+	write(t, filepath.Join(second.Path, "sub", "a.txt"), "c\n")
+	if st, err := (Worktrees{}).Inspect(ctx, second); err != nil || st != (model.WorktreeState{Changed: 2, Commits: 1}) {
+		t.Errorf("Inspect = %+v, %v", st, err)
 	}
-	if err := (Worktrees{}).Remove(ctx, wt); err != nil {
+	if err := (Worktrees{}).Remove(ctx, second, false); err == nil {
+		t.Error("a worktree with changes was removed without force")
+	}
+	if err := (Worktrees{}).Remove(ctx, second, true); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(wt.Path); !errors.Is(err, fs.ErrNotExist) {
-		t.Errorf("the worktree is still there: %v", err)
+	if st, err := (Worktrees{}).Inspect(ctx, second); err != nil || st != (model.WorktreeState{Gone: true, Commits: 1}) {
+		t.Errorf("Inspect after removing = %+v, %v", st, err)
 	}
-	if _, err := run(ctx, repo, "rev-parse", "--verify", "-q", "refs/heads/"+wt.Branch); err == nil {
-		t.Error("the branch is still there")
+	if err := (Worktrees{}).DeleteBranch(ctx, second); err != nil {
+		t.Fatal(err)
+	}
+	if st, err := (Worktrees{}).Inspect(ctx, second); err != nil || st != (model.WorktreeState{Gone: true, BranchGone: true}) {
+		t.Errorf("Inspect after deleting the branch = %+v, %v", st, err)
+	}
+	// A worktree whose folder went outside git: removing clears git's record.
+	os.RemoveAll(wt.Path)
+	if err := (Worktrees{}).Remove(ctx, wt, false); err != nil {
+		t.Errorf("removing a worktree whose folder is gone: %v", err)
 	}
 }

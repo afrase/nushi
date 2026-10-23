@@ -34,6 +34,15 @@ type Worktree struct {
 	Base   string // the branch it started from (a commit, if HEAD was detached)
 }
 
+// WorktreeState is what removing a worktree and deleting its branch would
+// lose.
+type WorktreeState struct {
+	Gone       bool // its folder was removed outside Nushi
+	Changed    int  // files with uncommitted changes, untracked ones included
+	Commits    int  // commits on its branch that its base doesn't have
+	BranchGone bool // its branch was deleted outside Nushi
+}
+
 // AgentSession is one of the agent's sessions: its id and folder (cwd).
 type AgentSession struct {
 	ID, Folder string

@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
+	"os"
 	"slices"
 
 	"github.com/afrase/nushi/internal/model"
@@ -78,8 +80,11 @@ func (s *Service) resume(c *chat) {
 // session back in the mode it was last in.
 func (c *chat) load(ctx context.Context, launch Launch) error {
 	c.mu.Lock()
-	sid, folder := c.sid, c.session.Folder
+	sid, folder, gone := c.sid, c.session.Folder, folderGone(c.session)
 	c.mu.Unlock()
+	if gone != nil {
+		return gone
+	}
 	o, err := c.openSession(ctx, launch, sid, folder, false)
 	if err != nil {
 		return err
@@ -88,4 +93,16 @@ func (c *chat) load(ctx context.Context, launch Launch) error {
 	c.useLocked(o)
 	c.mu.Unlock()
 	return c.startMode(ctx, c.session.Mode)
+}
+
+// folderGone says why a chat can't run when its folder no longer exists
+// (removed outside Nushi), or returns nil.
+func folderGone(sess model.Session) error {
+	if _, err := os.Stat(sess.Folder); !errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if wt := sess.Worktree; wt != nil {
+		return fmt.Errorf("its worktree %s was removed outside Nushi; deleting the chat cleans up its branch %s", wt.Path, wt.Branch)
+	}
+	return fmt.Errorf("its folder %s is gone", sess.Folder)
 }

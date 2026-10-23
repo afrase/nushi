@@ -123,9 +123,10 @@ type NushiServiceClient interface {
 	// Says what DeleteChat removes. The first time, the daemon starts the
 	// agent to learn whether it can delete its history.
 	PlanDeleteChat(context.Context, *connect.Request[v1.PlanDeleteChatRequest]) (*connect.Response[v1.PlanDeleteChatResponse], error)
-	// Deletes a chat: its turn is cancelled and its agent stops, the agent
-	// deletes its history of each of the chat's sessions (ACP session/delete,
-	// when it can), the chat's scratch folder goes, and Nushi's record of it.
+	// Deletes a chat: its turn is cancelled and its agent stops, its worktree
+	// and branch go if asked, the agent deletes its history of each of the
+	// chat's sessions (ACP session/delete, when it can), the chat's scratch
+	// folder goes, and Nushi's record of it.
 	DeleteChat(context.Context, *connect.Request[v1.DeleteChatRequest]) (*connect.Response[v1.DeleteChatResponse], error)
 	// Answers a pending permission prompt with one of its options.
 	AnswerPermission(context.Context, *connect.Request[v1.AnswerPermissionRequest]) (*connect.Response[v1.AnswerPermissionResponse], error)
@@ -457,9 +458,10 @@ type NushiServiceHandler interface {
 	// Says what DeleteChat removes. The first time, the daemon starts the
 	// agent to learn whether it can delete its history.
 	PlanDeleteChat(context.Context, *connect.Request[v1.PlanDeleteChatRequest]) (*connect.Response[v1.PlanDeleteChatResponse], error)
-	// Deletes a chat: its turn is cancelled and its agent stops, the agent
-	// deletes its history of each of the chat's sessions (ACP session/delete,
-	// when it can), the chat's scratch folder goes, and Nushi's record of it.
+	// Deletes a chat: its turn is cancelled and its agent stops, its worktree
+	// and branch go if asked, the agent deletes its history of each of the
+	// chat's sessions (ACP session/delete, when it can), the chat's scratch
+	// folder goes, and Nushi's record of it.
 	DeleteChat(context.Context, *connect.Request[v1.DeleteChatRequest]) (*connect.Response[v1.DeleteChatResponse], error)
 	// Answers a pending permission prompt with one of its options.
 	AnswerPermission(context.Context, *connect.Request[v1.AnswerPermissionRequest]) (*connect.Response[v1.AnswerPermissionResponse], error)

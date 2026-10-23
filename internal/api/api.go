@@ -21,7 +21,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 21
+const Version = 22
 
 type server struct {
 	chats *chats.Service
@@ -150,6 +150,14 @@ func (s *server) PlanDeleteChat(ctx context.Context, req *connect.Request[nushiv
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
 	out := &nushiv1.PlanDeleteChatResponse{DeletesHistory: p.History, ScratchFolder: p.Scratch}
+	if wt := p.Worktree; wt != nil {
+		out.Worktree = &nushiv1.Worktree{Repo: wt.Repo, Path: wt.Path, Branch: wt.Branch, Base: wt.Base}
+		st := p.State
+		out.WorktreeState = &nushiv1.WorktreeState{Gone: st.Gone, Changed: int32(st.Changed), Commits: int32(st.Commits), BranchGone: st.BranchGone}
+		if p.StateErr != nil {
+			out.WorktreeState.Error = p.StateErr.Error()
+		}
+	}
 	for _, sess := range p.Sessions {
 		out.Sessions = append(out.Sessions, &nushiv1.AgentSession{SessionId: sess.ID, Folder: sess.Folder})
 	}
@@ -157,7 +165,10 @@ func (s *server) PlanDeleteChat(ctx context.Context, req *connect.Request[nushiv
 }
 
 func (s *server) DeleteChat(ctx context.Context, req *connect.Request[nushiv1.DeleteChatRequest]) (*connect.Response[nushiv1.DeleteChatResponse], error) {
-	if err := s.chats.Delete(ctx, req.Msg.ChatId); err != nil {
+	m := req.Msg
+	opts := chats.DeleteOptions{RemoveWorktree: m.RemoveWorktree, ForceWorktree: m.ForceWorktree,
+		DeleteBranch: m.DeleteBranch, ForceBranch: m.ForceBranch}
+	if err := s.chats.Delete(ctx, m.ChatId, opts); err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
 	return connect.NewResponse(&nushiv1.DeleteChatResponse{}), nil
@@ -222,8 +233,8 @@ func (s *server) GetFolderStatus(ctx context.Context, req *connect.Request[nushi
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%q is not an absolute path", req.Msg.Folder))
 	}
 	st, err := git.Status(ctx, req.Msg.Folder, req.Msg.Base)
-	if errors.Is(err, git.ErrNotRepository) {
-		return connect.NewResponse(&nushiv1.GetFolderStatusResponse{}), nil
+	if errors.Is(err, git.ErrNotRepository) || errors.Is(err, git.ErrGone) {
+		return connect.NewResponse(&nushiv1.GetFolderStatusResponse{Gone: errors.Is(err, git.ErrGone)}), nil
 	}
 	if err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)

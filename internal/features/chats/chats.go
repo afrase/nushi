@@ -253,6 +253,9 @@ func (s *Service) Prompt(chatID, text string, files []string, images []model.Ima
 	if c.busy {
 		return errors.New("the agent is still working on the last prompt")
 	}
+	if err := folderGone(c.session); err != nil {
+		return fmt.Errorf("the chat can't go on: %w", err)
+	}
 	if len(images) > 0 && !c.canImage {
 		return errors.New("the agent doesn't take images")
 	}

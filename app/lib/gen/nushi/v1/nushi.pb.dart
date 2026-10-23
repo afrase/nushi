@@ -2212,11 +2212,15 @@ class PlanDeleteChatResponse extends $pb.GeneratedMessage {
     $core.Iterable<AgentSession>? sessions,
     $core.bool? deletesHistory,
     $core.String? scratchFolder,
+    Worktree? worktree,
+    WorktreeState? worktreeState,
   }) {
     final result = PlanDeleteChatResponse._();
     if (sessions != null) result.sessions.addAll(sessions);
     if (deletesHistory != null) result.deletesHistory = deletesHistory;
     if (scratchFolder != null) result.scratchFolder = scratchFolder;
+    if (worktree != null) result.worktree = worktree;
+    if (worktreeState != null) result.worktreeState = worktreeState;
     return result;
   }
 
@@ -2237,6 +2241,10 @@ class PlanDeleteChatResponse extends $pb.GeneratedMessage {
         subBuilder: AgentSession.$_createMessage)
     ..aOB(2, _omitFieldNames ? '' : 'deletesHistory')
     ..aOS(3, _omitFieldNames ? '' : 'scratchFolder')
+    ..aOM<Worktree>(4, _omitFieldNames ? '' : 'worktree',
+        subBuilder: Worktree.$_createMessage)
+    ..aOM<WorktreeState>(5, _omitFieldNames ? '' : 'worktreeState',
+        subBuilder: WorktreeState.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -2287,6 +2295,141 @@ class PlanDeleteChatResponse extends $pb.GeneratedMessage {
   $core.bool hasScratchFolder() => $_has(2);
   @$pb.TagNumber(3)
   void clearScratchFolder() => $_clearField(3);
+
+  /// The chat's worktree, if it has one, and what removing it and deleting
+  /// its branch would lose (API 22).
+  @$pb.TagNumber(4)
+  Worktree get worktree => $_getN(3);
+  @$pb.TagNumber(4)
+  set worktree(Worktree value) => $_setField(4, value);
+  @$pb.TagNumber(4)
+  $core.bool hasWorktree() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearWorktree() => $_clearField(4);
+  @$pb.TagNumber(4)
+  Worktree ensureWorktree() => $_ensure(3);
+
+  @$pb.TagNumber(5)
+  WorktreeState get worktreeState => $_getN(4);
+  @$pb.TagNumber(5)
+  set worktreeState(WorktreeState value) => $_setField(5, value);
+  @$pb.TagNumber(5)
+  $core.bool hasWorktreeState() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearWorktreeState() => $_clearField(5);
+  @$pb.TagNumber(5)
+  WorktreeState ensureWorktreeState() => $_ensure(4);
+}
+
+/// What removing a worktree and deleting its branch would lose.
+class WorktreeState extends $pb.GeneratedMessage {
+  factory WorktreeState({
+    $core.bool? gone,
+    $core.int? changed,
+    $core.int? commits,
+    $core.bool? branchGone,
+    $core.String? error,
+  }) {
+    final result = WorktreeState._();
+    if (gone != null) result.gone = gone;
+    if (changed != null) result.changed = changed;
+    if (commits != null) result.commits = commits;
+    if (branchGone != null) result.branchGone = branchGone;
+    if (error != null) result.error = error;
+    return result;
+  }
+
+  WorktreeState._();
+
+  factory WorktreeState.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WorktreeState()..mergeFromBuffer(data, registry);
+  factory WorktreeState.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WorktreeState()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'WorktreeState',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: WorktreeState.$_createMessage)
+    ..aOB(1, _omitFieldNames ? '' : 'gone')
+    ..aI(2, _omitFieldNames ? '' : 'changed')
+    ..aI(3, _omitFieldNames ? '' : 'commits')
+    ..aOB(4, _omitFieldNames ? '' : 'branchGone')
+    ..aOS(5, _omitFieldNames ? '' : 'error')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WorktreeState clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WorktreeState copyWith(void Function(WorktreeState) updates) =>
+      super.copyWith((message) => updates(message as WorktreeState))
+          as WorktreeState;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use WorktreeState() / WorktreeState.new instead')
+  static WorktreeState create() => WorktreeState._();
+  static $pb.GeneratedMessage $_createMessage() => WorktreeState._();
+  @$core.override
+  WorktreeState createEmptyInstance() => WorktreeState._();
+  @$core.pragma('dart2js:noInline')
+  static WorktreeState getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<WorktreeState>(
+          WorktreeState.$_createMessage);
+  static WorktreeState? _defaultInstance;
+
+  /// Its folder was removed outside Nushi.
+  @$pb.TagNumber(1)
+  $core.bool get gone => $_getBF(0);
+  @$pb.TagNumber(1)
+  set gone($core.bool value) => $_setBool(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasGone() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearGone() => $_clearField(1);
+
+  /// Files with uncommitted changes, untracked ones included.
+  @$pb.TagNumber(2)
+  $core.int get changed => $_getIZ(1);
+  @$pb.TagNumber(2)
+  set changed($core.int value) => $_setSignedInt32(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasChanged() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearChanged() => $_clearField(2);
+
+  /// Commits on its branch that its base doesn't have.
+  @$pb.TagNumber(3)
+  $core.int get commits => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set commits($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasCommits() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearCommits() => $_clearField(3);
+
+  /// Its branch was deleted outside Nushi.
+  @$pb.TagNumber(4)
+  $core.bool get branchGone => $_getBF(3);
+  @$pb.TagNumber(4)
+  set branchGone($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasBranchGone() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearBranchGone() => $_clearField(4);
+
+  /// Why the rest can't be told, if it can't.
+  @$pb.TagNumber(5)
+  $core.String get error => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set error($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasError() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearError() => $_clearField(5);
 }
 
 /// One of the agent's sessions: its id and folder.
@@ -2362,9 +2505,17 @@ class AgentSession extends $pb.GeneratedMessage {
 class DeleteChatRequest extends $pb.GeneratedMessage {
   factory DeleteChatRequest({
     $core.String? chatId,
+    $core.bool? removeWorktree,
+    $core.bool? forceWorktree,
+    $core.bool? deleteBranch,
+    $core.bool? forceBranch,
   }) {
     final result = DeleteChatRequest._();
     if (chatId != null) result.chatId = chatId;
+    if (removeWorktree != null) result.removeWorktree = removeWorktree;
+    if (forceWorktree != null) result.forceWorktree = forceWorktree;
+    if (deleteBranch != null) result.deleteBranch = deleteBranch;
+    if (forceBranch != null) result.forceBranch = forceBranch;
     return result;
   }
 
@@ -2382,6 +2533,10 @@ class DeleteChatRequest extends $pb.GeneratedMessage {
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: DeleteChatRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOB(2, _omitFieldNames ? '' : 'removeWorktree')
+    ..aOB(3, _omitFieldNames ? '' : 'forceWorktree')
+    ..aOB(4, _omitFieldNames ? '' : 'deleteBranch')
+    ..aOB(5, _omitFieldNames ? '' : 'forceBranch')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -2414,6 +2569,46 @@ class DeleteChatRequest extends $pb.GeneratedMessage {
   $core.bool hasChatId() => $_has(0);
   @$pb.TagNumber(1)
   void clearChatId() => $_clearField(1);
+
+  /// Remove the chat's worktree (git worktree remove). One with changes is
+  /// removed only with force_worktree (API 22).
+  @$pb.TagNumber(2)
+  $core.bool get removeWorktree => $_getBF(1);
+  @$pb.TagNumber(2)
+  set removeWorktree($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasRemoveWorktree() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearRemoveWorktree() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.bool get forceWorktree => $_getBF(2);
+  @$pb.TagNumber(3)
+  set forceWorktree($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasForceWorktree() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearForceWorktree() => $_clearField(3);
+
+  /// Delete the worktree's branch (with the worktree). One with commits its
+  /// base doesn't have is deleted only with force_branch.
+  @$pb.TagNumber(4)
+  $core.bool get deleteBranch => $_getBF(3);
+  @$pb.TagNumber(4)
+  set deleteBranch($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasDeleteBranch() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearDeleteBranch() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.bool get forceBranch => $_getBF(4);
+  @$pb.TagNumber(5)
+  set forceBranch($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasForceBranch() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearForceBranch() => $_clearField(5);
 }
 
 class DeleteChatResponse extends $pb.GeneratedMessage {
@@ -2988,6 +3183,7 @@ class GetFolderStatusResponse extends $pb.GeneratedMessage {
     $core.int? files,
     $core.int? added,
     $core.int? removed,
+    $core.bool? gone,
   }) {
     final result = GetFolderStatusResponse._();
     if (git != null) result.git = git;
@@ -2995,6 +3191,7 @@ class GetFolderStatusResponse extends $pb.GeneratedMessage {
     if (files != null) result.files = files;
     if (added != null) result.added = added;
     if (removed != null) result.removed = removed;
+    if (gone != null) result.gone = gone;
     return result;
   }
 
@@ -3016,6 +3213,7 @@ class GetFolderStatusResponse extends $pb.GeneratedMessage {
     ..aI(3, _omitFieldNames ? '' : 'files')
     ..aI(4, _omitFieldNames ? '' : 'added')
     ..aI(5, _omitFieldNames ? '' : 'removed')
+    ..aOB(6, _omitFieldNames ? '' : 'gone')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -3089,6 +3287,16 @@ class GetFolderStatusResponse extends $pb.GeneratedMessage {
   $core.bool hasRemoved() => $_has(4);
   @$pb.TagNumber(5)
   void clearRemoved() => $_clearField(5);
+
+  /// The folder doesn't exist (any more); nothing else is set (API 22).
+  @$pb.TagNumber(6)
+  $core.bool get gone => $_getBF(5);
+  @$pb.TagNumber(6)
+  set gone($core.bool value) => $_setBool(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasGone() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearGone() => $_clearField(6);
 }
 
 class GetDiffRequest extends $pb.GeneratedMessage {
@@ -4599,9 +4807,10 @@ class NushiServiceApi {
       _client.invoke<PlanDeleteChatResponse>(ctx, 'NushiService',
           'PlanDeleteChat', request, PlanDeleteChatResponse());
 
-  /// Deletes a chat: its turn is cancelled and its agent stops, the agent
-  /// deletes its history of each of the chat's sessions (ACP session/delete,
-  /// when it can), the chat's scratch folder goes, and Nushi's record of it.
+  /// Deletes a chat: its turn is cancelled and its agent stops, its worktree
+  /// and branch go if asked, the agent deletes its history of each of the
+  /// chat's sessions (ACP session/delete, when it can), the chat's scratch
+  /// folder goes, and Nushi's record of it.
   $async.Future<DeleteChatResponse> deleteChat(
           $pb.ClientContext? ctx, DeleteChatRequest request) =>
       _client.invoke<DeleteChatResponse>(
