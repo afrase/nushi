@@ -2,6 +2,7 @@
 package main
 
 import (
+	"cmp"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
@@ -39,7 +40,8 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	dir := filepath.Join(home, "Library", "Application Support", "Nushi Next")
+	// NUSHI_DATA runs a second daemon beside the usual one, for development.
+	dir := cmp.Or(os.Getenv("NUSHI_DATA"), filepath.Join(home, "Library", "Application Support", "Nushi Next"))
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}

@@ -12,7 +12,9 @@ import 'chat.dart';
 import 'gen/nushi/v1/nushi.connect.client.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 
+/// The daemon's data folder; `NUSHI_DATA` picks another one (development).
 final dataDir =
+    Platform.environment['NUSHI_DATA'] ??
     '${Platform.environment['HOME']}/Library/Application Support/Nushi Next';
 
 /// The API version this app was built with (`internal/api.Version`).

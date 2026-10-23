@@ -1,7 +1,8 @@
 # Dart's protoc plugins: dart pub global activate protoc_plugin; dart pub global activate connectrpc
 export PATH := $(HOME)/.pub-cache/bin:$(PATH)
 BUF := go run github.com/bufbuild/buf/cmd/buf@v1.75.0
-DATA := $(HOME)/Library/Application Support/Nushi Next
+# NUSHI_DATA=<folder> runs a second daemon and app beside the usual ones.
+DATA := $(or $(NUSHI_DATA),$(HOME)/Library/Application Support/Nushi Next)
 RELEASE := app/build/macos/Build/Products/Release/Nushi Next.app
 
 .PHONY: run daemon stop app package install gen test lines
@@ -14,8 +15,9 @@ daemon:
 	mkdir -p "$(DATA)"
 	bin/nushid >>"$(DATA)/nushid.log" 2>&1 &
 
+# Stops the daemon listening in $(DATA), not any other.
 stop:
-	pkill -x nushid || true
+	lsof -a -c nushid -t "$(DATA)/nushid.sock" | xargs kill 2>/dev/null || true
 
 app:
 	cd app && flutter run -d macos

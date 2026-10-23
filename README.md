@@ -21,6 +21,6 @@ make install # package, then copy it to ~/Applications
 
 The packaged app starts its bundled `nushid` when no daemon is running, and leaves it running when it quits ([ADR 0013](docs/adr/0013-app-starts-its-daemon.md)). With `make run`, start and stop the daemon yourself.
 
-The daemon keeps its socket, token and log in `~/Library/Application Support/Nushi Next/`.
+The daemon keeps its socket, token and log in `~/Library/Application Support/Nushi Next/`. To try a build beside a Nushi Next that's in use, give both another folder: `NUSHI_DATA=~/Library/Application\ Support/Nushi\ Dev make run` (and the same for `make stop`).
 
 Decisions are in [`docs/adr/`](docs/adr/README.md).
