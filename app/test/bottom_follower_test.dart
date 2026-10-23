@@ -8,7 +8,7 @@ void main() {
     tester,
   ) async {
     final f = BottomFollower();
-    // Items of varying heights, built lazily, as in a transcript.
+    // Items of varying heights, all laid out, as in a transcript.
     var count = 80;
     late StateSetter grow;
     await tester.pumpWidget(
@@ -19,11 +19,14 @@ void main() {
             f.stick();
             return NotificationListener(
               onNotification: f.onNotification,
-              child: ListView.builder(
+              child: SingleChildScrollView(
                 controller: f.scroll,
-                itemCount: count,
-                itemBuilder: (_, i) =>
-                    SizedBox(height: 20.0 + (i % 7) * 40, child: Text('$i')),
+                child: Column(
+                  children: [
+                    for (var i = 0; i < count; i++)
+                      SizedBox(height: 20.0 + (i % 7) * 40, child: Text('$i')),
+                  ],
+                ),
               ),
             );
           },
@@ -35,7 +38,7 @@ void main() {
     expect(p.pixels, p.maxScrollExtent);
 
     // A trackpad-like scroll up in small steps, each well under a line.
-    final at = tester.getCenter(find.byType(ListView));
+    final at = tester.getCenter(find.byType(SingleChildScrollView));
     for (var i = 0; i < 4; i++) {
       await tester.sendEventToBinding(
         PointerScrollEvent(position: at, scrollDelta: const Offset(0, -3)),

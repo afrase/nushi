@@ -160,3 +160,25 @@ func decoded(s string) map[string]any {
 	m, _ := decode(s)
 	return m
 }
+
+func TestAChangeReachesTheChatsItAffects(t *testing.T) {
+	folders := []string{"/r", "/r/sub", "/other", "/rx"}
+	var reached []string
+	svc := New(&fakeConfig{}, func(affected func(string) bool) {
+		reached = nil
+		for _, f := range folders {
+			if affected(f) {
+				reached = append(reached, f)
+			}
+		}
+	})
+	ctx := context.Background()
+	for scope, want := range map[string][]string{"user": folders, "local": {"/r", "/r/sub"}, "project": {"/r", "/r/sub"}} {
+		if err := svc.Add(ctx, "/r", scope, "s", `{"command":"x"}`); err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(reached, want) {
+			t.Errorf("%s: reached %v, want %v", scope, reached, want)
+		}
+	}
+}

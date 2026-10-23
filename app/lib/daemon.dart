@@ -17,8 +17,13 @@ import 'terminals.dart';
 
 final _support = '${Platform.environment['HOME']}/Library/Application Support';
 
-/// The daemon's data folder; `NUSHI_DATA` picks another one (development).
-final dataDir = Platform.environment['NUSHI_DATA'] ?? '$_support/Nushi';
+/// The daemon's data folder; `NUSHI_DATA` picks another one (development),
+/// and tests get one in the temporary folder, never the user's.
+final dataDir =
+    Platform.environment['NUSHI_DATA'] ??
+    (Platform.environment.containsKey('FLUTTER_TEST')
+        ? '${Directory.systemTemp.path}/nushi-test'
+        : '$_support/Nushi');
 
 /// The data folder from when the app was "Nushi Next". The daemon moves it
 /// to [dataDir] when it starts, once its own daemon has stopped.
@@ -43,20 +48,23 @@ final String? bundledDaemon = () {
 /// answers, the bundled one is started; a running daemon is only ever
 /// stopped by [restartDaemon].
 class Daemon extends ChangeNotifier {
-  Daemon() {
+  /// A test passes a [transport] of its own.
+  Daemon({connect.Transport? transport}) {
+    client = NushiServiceClient(
+      transport ??
+          protocol.Transport(
+            baseUrl: 'http://nushid',
+            codec: const ProtoCodec(),
+            httpClient: createHttpClient(transport: _transport),
+            interceptors: [_auth],
+          ),
+    );
     _timer = Timer.periodic(const Duration(seconds: 2), (_) => _ping());
     _ping();
   }
 
   final _transport = UdsTransport('$dataDir/nushid.sock');
-  late final NushiServiceClient client = NushiServiceClient(
-    protocol.Transport(
-      baseUrl: 'http://nushid',
-      codec: const ProtoCodec(),
-      httpClient: createHttpClient(transport: _transport),
-      interceptors: [_auth],
-    ),
-  );
+  late final NushiServiceClient client;
   late final Timer _timer;
   bool connected = false;
   int daemonApi = 0; // the daemon's API version

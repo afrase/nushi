@@ -43,7 +43,11 @@ void main() {
       MaterialApp(
         theme: const NushiTheme(Tokens.dark).toThemeData(),
         home: Scaffold(
-          body: QuestionCard(item, agent: 'Claude', onAnswer: (a) async => sent = a),
+          body: QuestionCard(
+            item,
+            agent: 'Claude',
+            onAnswer: (a) async => sent = a,
+          ),
         ),
       ),
     );
@@ -110,7 +114,11 @@ void main() {
       MaterialApp(
         theme: const NushiTheme(Tokens.dark).toThemeData(),
         home: Scaffold(
-          body: QuestionCard(item, agent: 'Claude', onAnswer: (a) async => sent = a),
+          body: QuestionCard(
+            item,
+            agent: 'Claude',
+            onAnswer: (a) async => sent = a,
+          ),
         ),
       ),
     );
@@ -147,7 +155,12 @@ void main() {
         home: Scaffold(
           body: Column(
             children: [
-              if (card) QuestionCard(item, agent: 'Claude', onAnswer: (a) async => sent = a),
+              if (card)
+                QuestionCard(
+                  item,
+                  agent: 'Claude',
+                  onAnswer: (a) async => sent = a,
+                ),
               TextField(controller: draft, focusNode: draftFocus),
             ],
           ),
