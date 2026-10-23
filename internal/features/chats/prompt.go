@@ -90,6 +90,7 @@ func (c *chat) closedLocked() error {
 func (c *chat) sendLocked(m model.Message) {
 	c.addLocked(model.Item{Kind: model.UserMessage, Text: m.Text, Images: m.Images})
 	c.saveLocked(func(s *model.Session) {
+		s.HasMessages = true
 		if s.Title == "" {
 			s.Title = title(m.Text)
 		}

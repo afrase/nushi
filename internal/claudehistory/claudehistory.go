@@ -62,6 +62,13 @@ func Copy(projects, id, from, to string) (remove func() error, err error) {
 	return func() error { return os.Remove(dst) }, nil
 }
 
+// Has reports whether Claude keeps session id's transcript in folder's
+// history (it writes one once the session has a message).
+func Has(projects, id, folder string) bool {
+	fi, err := os.Stat(filepath.Join(projects, dirName(folder), id+".jsonl"))
+	return err == nil && fi.Size() > 0
+}
+
 // dirName is the name Claude gives a folder's history: the folder's real
 // path with each UTF-16 unit that isn't an ASCII letter or digit replaced by
 // "-", and past 200 characters cut short and followed by a hash of the path.

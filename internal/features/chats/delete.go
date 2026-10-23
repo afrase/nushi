@@ -119,7 +119,11 @@ func (s *Service) Delete(ctx context.Context, chatID string, opts DeleteOptions)
 		}
 	}
 	if err == nil && p.History {
-		err = s.deleteHistory(ctx, c, p.Sessions)
+		var ids []string
+		for _, sess := range p.Sessions {
+			ids = append(ids, sess.ID)
+		}
+		err = s.deleteHistory(ctx, c, ids)
 	}
 	if err == nil && p.Scratch != "" {
 		err = os.RemoveAll(p.Scratch)
@@ -136,7 +140,7 @@ func (s *Service) Delete(ctx context.Context, chatID string, opts DeleteOptions)
 }
 
 // deleteHistory has a new agent delete its history of sessions.
-func (s *Service) deleteHistory(ctx context.Context, c *chat, sessions []model.AgentSession) error {
+func (s *Service) deleteHistory(ctx context.Context, c *chat, sessions []string) error {
 	agent, deletes, err := s.startDeleter(ctx, c)
 	if err != nil {
 		return err
@@ -146,7 +150,7 @@ func (s *Service) deleteHistory(ctx context.Context, c *chat, sessions []model.A
 		return errors.New("the agent can't delete its history")
 	}
 	for _, sess := range sessions {
-		if err := agent.DeleteSession(ctx, acp.DeleteSessionRequest{SessionID: acp.SessionID(sess.ID)}); err != nil {
+		if err := agent.DeleteSession(ctx, acp.DeleteSessionRequest{SessionID: acp.SessionID(sess)}); err != nil {
 			return err
 		}
 	}

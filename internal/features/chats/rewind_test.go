@@ -11,7 +11,9 @@ import (
 func TestRewindForksBeforeTheMessage(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	turn := func(text, reply string) {
-		agent.updates = []acp.SessionUpdate{chunk(reply, "ok")}
+		// A tool call after the agent's text: the fork at the text drops it.
+		agent.updates = []acp.SessionUpdate{chunk(reply, "ok"), {SessionUpdate: "tool_call",
+			ToolCall: &acp.ToolCall{ToolCallID: acp.ToolCallID("t-" + reply), Title: "ls", Status: "completed"}}}
 		if err := svc.Prompt(c.id, model.Message{Text: text}, SendIdle); err != nil {
 			t.Fatal(err)
 		}
@@ -20,10 +22,10 @@ func TestRewindForksBeforeTheMessage(t *testing.T) {
 	turn("one", "m1")
 	turn("two", "m2")
 	turn("three", "m3")
-	if c.items[2].ForkAt != "m1" || c.items[0].ForkAt != "" {
+	if c.items[3].ForkAt != "m1" || c.items[0].ForkAt != "" {
 		t.Fatalf("fork points: %+v", c.items)
 	}
-	m, err := svc.Rewind(context.Background(), c.id, c.items[2].ID)
+	m, err := svc.Rewind(context.Background(), c.id, c.items[3].ID)
 	if err != nil || m.Text != "two" {
 		t.Fatalf("Rewind = %+v, %v", m, err)
 	}
@@ -37,7 +39,7 @@ func TestRewindForksBeforeTheMessage(t *testing.T) {
 	if _, err := svc.Rewind(context.Background(), c.id, c.items[0].ID); err != nil {
 		t.Fatal(err)
 	}
-	if len(c.items) != 0 || c.sid != "s1" || c.session.Title != "" || len(c.session.Earlier) != 2 {
+	if len(c.items) != 0 || c.sid != "s1" || c.session.Title != "" || c.session.HasMessages || len(c.session.Earlier) != 2 {
 		t.Errorf("items %+v, session %+v", c.items, c.session)
 	}
 }

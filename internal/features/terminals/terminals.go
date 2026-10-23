@@ -201,9 +201,16 @@ func (s *Service) Restart(id string, cols, rows int) error {
 		return err
 	}
 	s.mu.Lock()
+	listed := slices.Contains(s.terms, t)
 	old := t.shell
-	t.shell = sh
+	if listed {
+		t.shell = sh
+	}
 	s.mu.Unlock()
+	if !listed { // closed meanwhile
+		sh.Close()
+		return fmt.Errorf("no terminal %q", id)
+	}
 	old.Close()
 	s.changed(t.ChatID)
 	return nil

@@ -102,15 +102,20 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 			return "", err
 		}
 		first := !slices.ContainsFunc(c.items[:i], func(it model.Item) bool { return it.Kind == model.UserMessage })
+		// The fork ends with the agent's message at: what came after it
+		// (tool calls the agent made after its last text) goes too.
+		if j := c.indexLocked(at); at != "" && j >= 0 && j < i {
+			i = j + 1
+		}
 		c.sid, c.config = next, config
+		c.emitLocked(model.Event{ChatID: c.id, Cut: c.items[i].ID})
 		c.items = c.items[:i]
-		c.emitLocked(model.Event{ChatID: c.id, Cut: itemID})
 		c.emitLocked(model.Event{ChatID: c.id, Config: slices.Clone(config)})
 		c.saveLocked(func(s *model.Session) {
 			s.Earlier = append(slices.Clip(s.Earlier), model.AgentSession{ID: s.SessionID, Folder: s.Folder})
 			s.SessionID = next
-			if first {
-				s.Title = "" // a chat without messages again
+			if first { // a chat without messages again
+				s.Title, s.HasMessages = "", false
 			}
 		})
 		return c.session.Mode, nil

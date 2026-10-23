@@ -60,3 +60,28 @@ func TestArrangeRenameAndCloseChat(t *testing.T) {
 		t.Fatalf("other chat's terminals %v", got)
 	}
 }
+
+func TestRestartRacingCloseLeaksNoShell(t *testing.T) {
+	var s *Service
+	var shells []*fakeShell
+	var closing string
+	s = New(func(string, int, int, func()) (Shell, error) {
+		if closing != "" {
+			s.Close(closing) // Close runs while the new shell starts
+		}
+		sh := &fakeShell{}
+		shells = append(shells, sh)
+		return sh, nil
+	}, "zsh", folders{}, func(model.Event) {})
+	m, err := s.Open("c1", "", 80, 24)
+	if err != nil {
+		t.Fatal(err)
+	}
+	closing = m.ID
+	if s.Restart(m.ID, 80, 24) == nil {
+		t.Error("restarted a closed terminal")
+	}
+	if len(shells) != 2 || !shells[0].closed || !shells[1].closed {
+		t.Errorf("shells left running: %+v", shells)
+	}
+}

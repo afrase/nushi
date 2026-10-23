@@ -34,9 +34,9 @@ func (h *Hub) Publish(e model.Event) {
 	}
 }
 
-// Subscribe calls fn with each event published from now on, until fn returns
-// false or done is closed.
-func (h *Hub) Subscribe(done <-chan struct{}, fn func(model.Event) bool) {
+// Subscribe calls live once it is subscribed, then fn with each event
+// published from then on, until either returns false or done is closed.
+func (h *Hub) Subscribe(done <-chan struct{}, live func() bool, fn func(model.Event) bool) {
 	s := &sub{wake: make(chan struct{}, 1)}
 	h.mu.Lock()
 	if h.subs == nil {
@@ -49,6 +49,9 @@ func (h *Hub) Subscribe(done <-chan struct{}, fn func(model.Event) bool) {
 		delete(h.subs, s)
 		h.mu.Unlock()
 	}()
+	if !live() {
+		return
+	}
 	for {
 		select {
 		case <-done:

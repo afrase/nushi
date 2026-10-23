@@ -112,7 +112,7 @@ func (s *Service) watch(c *chat, agent Agent) {
 	c.noticeLocked("error", "The agent quit unexpectedly. Your next message reopens the chat.")
 	c.statusChangedLocked()
 	c.mu.Unlock()
-	s.dropSides(c)
+	s.discard(c, s.dropSides(c))
 }
 
 // disconnect stops the chat's agent.

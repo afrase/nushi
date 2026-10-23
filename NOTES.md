@@ -102,6 +102,7 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 56. The terminal panel, with tabs | 5965 | 836 | 11676 | 666 |
 | 57. Terminal touches | 5965 | 836 | 12026 | 666 |
 | 58. Agents that die, and turns that race | 6071 | 867 | 12026 | 666 |
+| 59. What the daemon keeps | 6145 | 867 | 12026 | 666 |
 
 Tripwires crossed:
 - Milestone M (steps 55–57) took the daemon from 5,157 to 5,965 lines of Go and the app from 10,793 to 12,020 lines of Dart. Step 57 stayed under the per-step tripwire (about 340 lines of Dart and 50 of tests: links and find, 160; Open in terminal in the sidebar and the Environment card; the tab's dot; showing a file in Changes). `terminal_panel.dart` passed 400 and gave the screen to `terminal_screen.dart`; `sidebar.dart` is 405.
@@ -328,6 +329,9 @@ Beside an installed Nushi that's in use: `export NUSHI_DATA=~/Library/Applicatio
 - A chat (claude-agent-acp, the Agent SDK) loads the MCP servers when its session starts or loads, and keeps them: a server added or removed later isn't seen until the session is reopened. It loads a `.mcp.json` server that `claude mcp list` calls "Pending approval" without asking (as the docs say for SDK sessions), and Claude says which servers failed or need auth. MCP tools are deferred (loaded through ToolSearch).
 
 ## Decisions to revisit
+
+- Step 59 (G8): side chats that end other than by closing them (Move, Reload, Archive, Delete, the agent quitting, the daemon stopping) are deleted from Claude's history by a fresh agent once the one they ran on has stopped (a running one would write a stub back). On SIGTERM the daemon waits for that (up to 30 s, about the time `npx` takes to start the adapter) when there were side chats open.
+- Step 59 (G3): session files carry `HasMessages`. Files from before it count a chat with a title, or whose session Claude keeps a transcript of (`<projects>/<folder>/<id>.jsonl`, not empty), as having messages; that is worked out each time they're read until the chat is saved again.
 
 - Step 58 (review G1): when a chat's agent process ends on its own, the chat lets go of it, marks its unfinished tool calls failed, ends its side chats and says "The agent quit unexpectedly. Your next message reopens the chat." Nothing reopens until the next message or opening the chat (a `GetChat`). A message sent while a chat reopens (after a quit, a daemon restart, a reload) or while it rewinds or moves waits in the queue and goes once it's ready, instead of being refused. A reopen after a quit keeps the transcript the chat has (with its notices, permission cards and questions) and ignores the agent's replay; a reopen after a daemon restart, an unarchive or a Reload still rebuilds it from the replay.
 - Step 58 (G7): a queued message the agent didn't take because the turn was stopped meanwhile goes back to the front of the queue, and comes out of the transcript when nothing came after it (else it stays there too, as before).

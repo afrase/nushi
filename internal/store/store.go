@@ -4,8 +4,8 @@ package store
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/fs"
+	"log"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -18,6 +18,9 @@ import (
 type Store struct {
 	dir string
 	mu  sync.Mutex
+	// HadMessages says whether the agent's history of a session stored
+	// before sessions said so has messages.
+	HadMessages func(model.Session) bool
 }
 
 func New(dir string) *Store { return &Store{dir: dir} }
@@ -93,16 +96,24 @@ func (s *Store) Sessions() ([]model.Session, error) {
 	}
 	var out []model.Session
 	for _, f := range files {
-		b, err := os.ReadFile(f)
-		if err != nil {
-			return nil, err
-		}
 		var sess model.Session
-		if err := json.Unmarshal(b, &sess); err != nil {
-			return nil, fmt.Errorf("%s: %w", f, err)
+		var flags struct{ HasMessages *bool }
+		b, err := os.ReadFile(f)
+		if err == nil {
+			err = json.Unmarshal(b, &sess)
+		}
+		if err == nil {
+			err = json.Unmarshal(b, &flags)
+		}
+		if err != nil { // one bad file doesn't hide the other chats
+			log.Printf("skipping session file %s: %v", f, err)
+			continue
 		}
 		if sess.SessionID == "" { // stored before step 22, when the ids were one
 			sess.SessionID = sess.ID
+		}
+		if flags.HasMessages == nil { // stored before step 59
+			sess.HasMessages = sess.Title != "" || s.HadMessages != nil && s.HadMessages(sess)
 		}
 		out = append(out, sess)
 	}

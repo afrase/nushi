@@ -89,7 +89,7 @@ func (s *Service) resume(c *chat) {
 // it gets a new session instead.
 func (s *Service) load(ctx context.Context, c *chat) error {
 	c.mu.Lock()
-	sid, folder, fresh, gone := c.sid, c.session.Folder, c.session.Title == "", folderGone(c.session)
+	sid, folder, fresh, gone := c.sid, c.session.Folder, !c.session.HasMessages, folderGone(c.session)
 	c.mu.Unlock()
 	if gone != nil {
 		return gone
