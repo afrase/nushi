@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import 'changes_span.dart';
@@ -9,7 +7,6 @@ import 'folder_button.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'panel_cards.dart';
 import 'markdown.dart';
-import 'settings.dart';
 import 'subagents.dart';
 import 'theme/theme.dart';
 import 'usage.dart';
@@ -48,53 +45,33 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
   List<Commit> _commits = []; // in Commits
   String? _error;
   GetContextUsageResponse? _context; // what fills the context, last asked
-  Timer? _askSoon;
 
-  @override
-  void initState() {
-    super.initState();
-    collapsedCards.addListener(_cardsChanged);
-  }
+  /// Whether the agent can be asked what fills its context: it has a
+  /// /context command, the chat is idle and has messages (Claude would
+  /// name a new chat after /context).
+  bool get _canAsk =>
+      daemon.daemonApi >= 25 &&
+      !chat.busy &&
+      !chat.fresh &&
+      !chat.archived &&
+      chat.commands.any((c) => c.name == 'context');
 
-  @override
-  void dispose() {
-    collapsedCards.removeListener(_cardsChanged);
-    _askSoon?.cancel();
-    super.dispose();
-  }
-
-  void _cardsChanged() => _askContext(Duration.zero);
-
-  /// Asks the agent, unseen, what fills its context ([after] a turn ends,
-  /// say): only while the Context card is open and the chat idle, and when
-  /// the agent has a /context command. Not before the first message: Claude
-  /// would name the chat after /context. The last answer stays meanwhile.
-  void _askContext([Duration after = const Duration(milliseconds: 800)]) {
-    _askSoon?.cancel();
-    _askSoon = Timer(after, () async {
-      if (!mounted ||
-          daemon.daemonApi < 25 ||
-          chat.busy ||
-          chat.fresh ||
-          chat.archived ||
-          collapsedCards.value.contains('Context') ||
-          !chat.commands.any((c) => c.name == 'context')) {
-        return;
-      }
-      try {
-        final r = await daemon.client.getContextUsage(
-          GetContextUsageRequest(chatId: chat.id),
-        );
-        if (mounted) setState(() => _context = r);
-      } on Object {
-        // Busy after all, or gone: the last answer stands.
-      }
-    });
+  /// Asks the agent, unseen, what fills its context. Only when the user
+  /// asks: Claude keeps /context's answer in the conversation, so each ask
+  /// adds a few thousand tokens to the context.
+  Future<void> _askContext() async {
+    try {
+      final r = await daemon.client.getContextUsage(
+        GetContextUsageRequest(chatId: chat.id),
+      );
+      if (mounted) setState(() => _context = r);
+    } on Object catch (e) {
+      if (mounted) showError(context, e);
+    }
   }
 
   @override
   Future<void> reload() async {
-    _askContext();
     if (!daemon.canFolderStatus) return;
     try {
       final span = await ChangeSpan.of(daemon, chat);
@@ -211,23 +188,25 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
                 child: Text(cost(u), style: theme.ui(t.text, size: 12)),
               ),
             ),
-          if (_context case final c?) ...[
+          if (_context != null || _canAsk)
             (
               'By category',
               IconTap(
                 Icons.refresh,
-                tooltip: 'Ask Claude again',
+                tooltip:
+                    'Ask Claude (/context). Its answer stays in the '
+                    'conversation: a few thousand tokens each time.',
                 size: 13,
-                onTap: chat.busy ? null : () => _askContext(Duration.zero),
+                onTap: _canAsk ? _askContext : null,
               ),
             ),
+          if (_context case final c?)
             (
               null,
               c.categories.isEmpty
                   ? AgentMarkdown(c.markdown)
                   : ContextBreakdown(c.categories),
             ),
-          ],
         ],
       ),
       PanelCard(
