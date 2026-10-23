@@ -1,9 +1,42 @@
 import 'package:flutter/material.dart';
 
+import 'chat.dart';
+import 'daemon.dart';
 import 'theme/theme.dart';
+
+/// Stops the chat's running turn.
+Future<void> stopTurn(
+  BuildContext context,
+  ChatState chat,
+  Daemon daemon,
+) async {
+  if (chat.started == null) return;
+  try {
+    await daemon.cancelTurn(chat.id);
+  } on Object catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+}
 
 /// A completion offered while typing: a slash command or a file.
 typedef Choice = ({String label, String detail, String insert});
+
+/// The names holding [q], those whose last part starts with it first,
+/// then the shortest.
+List<String> rankChoices(Iterable<String> names, String q) {
+  q = q.toLowerCase();
+  final hits = [
+    for (final n in names)
+      if (n.toLowerCase().contains(q)) n,
+  ];
+  int score(String n) =>
+      (n.split(RegExp('[/:]')).last.toLowerCase().startsWith(q) ? 0 : 1000) +
+      n.length;
+  hits.sort((a, b) => score(a) - score(b));
+  return hits.take(8).toList();
+}
 
 /// A small round icon button inside the prompt box.
 class BoxButton extends StatelessWidget {

@@ -153,26 +153,38 @@ class Thumbnails extends StatelessWidget {
                 size: size,
                 border: t.borderSubtle,
               ),
-              if (onRemove != null)
-                Positioned(
-                  top: -6,
-                  right: -6,
-                  child: Tooltip(
-                    message: 'Remove',
-                    child: InkWell(
-                      customBorder: const CircleBorder(),
-                      onTap: () => onRemove!(i),
-                      child: CircleAvatar(
-                        radius: 9,
-                        backgroundColor: t.borderStrong,
-                        child: Icon(Icons.close, size: 12, color: t.text),
-                      ),
-                    ),
-                  ),
-                ),
+              if (onRemove != null) RemoveBadge(() => onRemove!(i)),
             ],
           ),
       ],
+    );
+  }
+}
+
+/// The small round × on an attachment's top right corner, in a [Stack].
+class RemoveBadge extends StatelessWidget {
+  const RemoveBadge(this.onTap, {super.key});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = NushiTheme.of(context).t;
+    return Positioned(
+      top: -6,
+      right: -6,
+      child: Tooltip(
+        message: 'Remove',
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: CircleAvatar(
+            radius: 9,
+            backgroundColor: t.borderStrong,
+            child: Icon(Icons.close, size: 12, color: t.text),
+          ),
+        ),
+      ),
     );
   }
 }

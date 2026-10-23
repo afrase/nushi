@@ -5,8 +5,10 @@ import 'package:flutter/services.dart';
 import 'chat.dart';
 import 'chat_menu.dart';
 import 'composer.dart';
+import 'composer_parts.dart';
 import 'daemon.dart';
 import 'images.dart';
+import 'replies.dart';
 import 'side_panel.dart';
 import 'theme/theme.dart';
 import 'transcript.dart';
@@ -32,7 +34,8 @@ class ChatView extends StatefulWidget {
 }
 
 class _ChatViewState extends State<ChatView> {
-  final _quote = ValueNotifier<String?>(null);
+  final Replies _replies = ValueNotifier(const []);
+  final Replies _sideReplies = ValueNotifier(const []);
   final _sideQuote = ValueNotifier<String?>(null);
   final _images = Attachments();
   bool _dragging = false; // files are dragged over the chat
@@ -57,7 +60,8 @@ class _ChatViewState extends State<ChatView> {
   void dispose() {
     widget.chat.removeListener(_moved);
     _closeSide();
-    _quote.dispose();
+    _replies.dispose();
+    _sideReplies.dispose();
     _images.dispose();
     _sideQuote.dispose();
     super.dispose();
@@ -141,7 +145,7 @@ class _ChatViewState extends State<ChatView> {
                           daemon: widget.daemon,
                           onReply: chat.archived
                               ? null
-                              : (s) => _quote.value = s,
+                              : (r) => _replies.value = [..._replies.value, r],
                           onSide: chat.archived ? null : _ask,
                         ),
                       ),
@@ -153,7 +157,7 @@ class _ChatViewState extends State<ChatView> {
                         Composer(
                           chat: chat,
                           daemon: widget.daemon,
-                          quote: _quote,
+                          replies: _replies,
                           attachments: _images,
                         ),
                     ],
@@ -168,6 +172,7 @@ class _ChatViewState extends State<ChatView> {
             side: side,
             daemon: widget.daemon,
             quote: _sideQuote,
+            replies: _sideReplies,
             onClose: () => setState(_closeSide),
           )
         else if (widget.details != null)
