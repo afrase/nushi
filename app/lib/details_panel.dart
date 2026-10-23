@@ -65,13 +65,15 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
 
   /// Asks the agent, unseen, what fills its context ([after] a turn ends,
   /// say): only while the Context card is open and the chat idle, and when
-  /// the agent has a /context command. The last answer stays meanwhile.
+  /// the agent has a /context command. Not before the first message: Claude
+  /// would name the chat after /context. The last answer stays meanwhile.
   void _askContext([Duration after = const Duration(milliseconds: 800)]) {
     _askSoon?.cancel();
     _askSoon = Timer(after, () async {
       if (!mounted ||
           daemon.daemonApi < 25 ||
           chat.busy ||
+          chat.fresh ||
           chat.archived ||
           collapsedCards.value.contains('Context') ||
           !chat.commands.any((c) => c.name == 'context')) {
