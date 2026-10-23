@@ -9,6 +9,7 @@ import 'folder_button.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'panel_cards.dart';
 import 'settings.dart';
+import 'terminal_panel.dart';
 import 'markdown.dart';
 import 'mcp_card.dart';
 import 'agents_card.dart';
@@ -191,7 +192,28 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
         rows: [
           (
             chat.worktree == null ? 'Folder' : 'Repository',
-            FolderButton(chat: chat, daemon: daemon, stacked: true),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: FolderButton(
+                    chat: chat,
+                    daemon: daemon,
+                    stacked: true,
+                  ),
+                ),
+                if (daemon.canTerminals && !chat.archived)
+                  IconTap(
+                    Icons.terminal,
+                    size: 14,
+                    tooltip: 'Open in terminal',
+                    onTap: () => tryOrShow(
+                      context,
+                      () => openTerminalIn(daemon, chat, chat.folder),
+                    ),
+                  ),
+              ],
+            ),
           ),
           if (status != null && status.git)
             ...worktreeRows(context, chat, daemon, status.branch),

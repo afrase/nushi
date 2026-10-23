@@ -177,6 +177,21 @@ class _TabState extends State<_Tab> {
           padding: const EdgeInsets.only(left: 9, right: 2),
           child: Row(
             children: [
+              if (info.program.isNotEmpty && !info.exited) ...[
+                // A command runs: not the agent, so only here.
+                Tooltip(
+                  message: 'A command is running',
+                  child: Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: t.running,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+              ],
               label,
               if (info.exited) ...[
                 const SizedBox(width: 6),

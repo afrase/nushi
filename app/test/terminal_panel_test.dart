@@ -74,6 +74,7 @@ void main() {
             chatId: 'chat',
             terms: terms,
             onHide: () => hidden = true,
+            showChange: (_) async => false,
           ),
         ),
       ),
@@ -88,6 +89,15 @@ void main() {
     await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
     await tester.pumpAndSettle();
     expect(daemon.written.join(), 'l\x1bb');
+
+    await _meta(tester, LogicalKeyboardKey.keyF); // find in the scrollback
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), r'$');
+    await tester.pump();
+    expect(find.text('1/1'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    expect(find.byType(TextField), findsNothing);
 
     await _meta(tester, LogicalKeyboardKey.digit1);
     expect(terms.active['chat'], 'a');

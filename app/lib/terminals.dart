@@ -21,6 +21,9 @@ class Terminals extends ChangeNotifier {
   /// The tab shown in each chat's panel, by chat.
   final active = <String, String>{};
 
+  /// A terminal just opened or picked, which takes the keyboard focus.
+  String? focusNext;
+
   /// A chat's terminals in order, or null until they are listed.
   List<pb.Terminal>? of(String chatId) => _lists[chatId];
 
@@ -73,12 +76,12 @@ class Terminals extends ChangeNotifier {
     if (!list.any((t) => t.id == resp.terminal.id)) {
       _lists[chatId] = [...list, resp.terminal];
     }
-    active[chatId] = resp.terminal.id;
+    active[chatId] = focusNext = resp.terminal.id;
     notifyListeners();
   }
 
   void show(String chatId, String id) {
-    active[chatId] = id;
+    active[chatId] = focusNext = id;
     notifyListeners();
   }
 
@@ -135,6 +138,12 @@ class TermSession extends ChangeNotifier {
   final String id, chatId;
   final controller = TerminalController();
   final focus = FocusNode();
+  final scroll = ScrollController();
+
+  /// Whether its find bar shows (⌘F).
+  final finding = ValueNotifier(false);
+
+  static const fontSize = 12.5, lineHeight = 1.25;
   late Terminal terminal;
   StreamSubscription<String>? _sub;
   bool _replaying = false; // answers to queries in the replay aren't sent
@@ -240,6 +249,8 @@ class TermSession extends ChangeNotifier {
     unawaited(_sub?.cancel());
     controller.dispose();
     focus.dispose();
+    scroll.dispose();
+    finding.dispose();
     super.dispose();
   }
 }

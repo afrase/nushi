@@ -20,6 +20,14 @@ class ChatState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// A file its Changes view is to show next (a terminal link to it).
+  String? openPath;
+
+  void showFile(String path) {
+    openPath = path;
+    notifyListeners();
+  }
+
   String sessionId = ''; // the agent's
   String title = '';
   bool archived = false; // no agent runs; read-only until unarchived
