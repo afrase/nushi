@@ -21,3 +21,4 @@
 - [0019](0019-changes-read-only-toward-git.md) The Changes view is read-only toward git
 - [0020](0020-rewind-through-a-vendor-fork.md) Rewinding forks the session at a message through a vendor extension
 - [0021](0021-claude-config-is-the-mcp-source.md) Claude's own config is the source of truth for MCP servers; Nushi changes it only through the `claude mcp` CLI
+- [0022](0022-the-daemon-owns-terminals.md) The daemon owns terminals; they are local-only until remote access decides otherwise

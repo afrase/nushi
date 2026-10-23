@@ -4,11 +4,10 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
-
 import "nushi.pb.dart" as nushiv1nushi;
 import "nushi.connect.spec.dart" as specs;
 
-extension type NushiServiceClient(connect.Transport _transport) {
+extension type NushiServiceClient (connect.Transport _transport) {
   Future<nushiv1nushi.PingResponse> ping(
     nushiv1nushi.PingRequest input, {
     connect.Headers? headers,
@@ -616,6 +615,117 @@ extension type NushiServiceClient(connect.Transport _transport) {
   }) {
     return connect.Client(_transport).unary(
       specs.NushiService.reloadChat,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Opens a terminal for a chat: the user's login shell, in the chat's
+  /// folder (its worktree, for a worktree chat) or in a given one. The
+  /// daemon owns it, so it outlives the app, but not the daemon. Changes to
+  /// a chat's terminals come as events (API 35).
+  Future<nushiv1nushi.OpenTerminalResponse> openTerminal(
+    nushiv1nushi.OpenTerminalRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.openTerminal,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  Future<nushiv1nushi.ListTerminalsResponse> listTerminals(
+    nushiv1nushi.ListTerminalsRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.listTerminals,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Streams a terminal's output: first what it kept (the last 1 MB, maybe
+  /// empty), then new output, and a last message once its shell has exited.
+  /// A client that falls far behind is cut off and attaches again (API 35).
+  Stream<nushiv1nushi.AttachTerminalResponse> attachTerminal(
+    nushiv1nushi.AttachTerminalRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).server(
+      specs.NushiService.attachTerminal,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  Future<nushiv1nushi.WriteTerminalResponse> writeTerminal(
+    nushiv1nushi.WriteTerminalRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.writeTerminal,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  Future<nushiv1nushi.ResizeTerminalResponse> resizeTerminal(
+    nushiv1nushi.ResizeTerminalRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.resizeTerminal,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Closes a terminal: its shell is hung up, then killed after a short
+  /// grace, along with what still runs in it (API 35).
+  Future<nushiv1nushi.CloseTerminalResponse> closeTerminal(
+    nushiv1nushi.CloseTerminalRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.closeTerminal,
       input,
       signal: signal,
       headers: headers,

@@ -20,6 +20,7 @@ import (
 	"github.com/afrase/nushi/internal/api"
 	"github.com/afrase/nushi/internal/events"
 	"github.com/afrase/nushi/internal/features/chats"
+	"github.com/afrase/nushi/internal/features/terminals"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
 	"github.com/afrase/nushi/internal/git"
@@ -55,7 +56,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	hub := &events.Hub{}
 	st := store.New(dataDir)
 	svc := chats.New("fake", launch, st, st, copyHistory, git.Worktrees{}, filepath.Join(dataDir, "scratch"), hub.Publish)
-	srv := httptest.NewServer(api.Handler("tok", svc, nil, hub))
+	srv := httptest.NewServer(api.Handler("tok", svc, nil, terminals.New(startSh, "sh", svc, hub.Publish), hub))
 	stop := func() {
 		srv.CloseClientConnections()
 		srv.Close()

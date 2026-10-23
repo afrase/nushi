@@ -159,7 +159,7 @@ type Message struct {
 }
 
 // Event is a change to one chat. Exactly one of Item, Status, Config,
-// Session, Commands, Removed, Usage, Queue and Cut is set.
+// Session, Commands, Removed, Usage, Queue, Cut and Terminals is set.
 type Event struct {
 	ChatID string
 	// Seq numbers the chat's events from 1; a Chat snapshot says which
@@ -181,6 +181,21 @@ type Event struct {
 	// Cut is the item the transcript was cut back before: it and every
 	// item after it are gone.
 	Cut string
+	// Terminals, when not nil, are the chat's terminals, all of them. These
+	// events aren't numbered (Seq is 0).
+	Terminals *[]Terminal
+}
+
+// Terminal is a shell the user runs beside a chat, in the daemon.
+type Terminal struct {
+	ID, ChatID string
+	Folder     string // where it started
+	Shell      string // the shell's name, such as "zsh"
+	// Program is the foreground program's command line while it isn't the
+	// shell.
+	Program  string
+	Exited   bool
+	ExitCode int // -1: killed by a signal
 }
 
 // Usage is what the agent last reported of a chat's usage; what it hasn't

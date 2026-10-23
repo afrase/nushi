@@ -137,3 +137,18 @@ func (s *Service) dropSides(c *chat) {
 	}
 	s.mu.Unlock()
 }
+
+// Folder returns the folder a chat runs in (in its worktree, for a worktree
+// chat). An archived chat has none to work in.
+func (s *Service) Folder(chatID string) (string, error) {
+	c, err := s.stored(chatID)
+	if err != nil {
+		return "", err
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.session.Archived {
+		return "", errors.New("the chat is archived")
+	}
+	return c.session.Folder, nil
+}
