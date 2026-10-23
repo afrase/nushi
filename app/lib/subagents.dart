@@ -35,7 +35,7 @@ Item? _handback(Subagent s) =>
 /// hasn't handed back yet, while the turn runs or it has made steps. (A
 /// chat reopened with session/load gets no steps of a background subagent:
 /// it reads as done.)
-bool _running(Subagent s) =>
+bool subagentRunning(Subagent s) =>
     s.call.status == 'pending' ||
     s.call.status == 'in_progress' ||
     s.call.status == 'completed' &&
@@ -56,22 +56,36 @@ List<Item> _steps(Subagent s) => [
     if (it.tool != 'SubagentHandback') it,
 ];
 
-/// When each running subagent was first seen, by its call's id: the app
-/// gets no start times, so the time counts from then.
-final _seen = <String, DateTime>{};
+/// When each subagent was first seen running, and when it was first seen
+/// done, by its call's id: the app gets no times, so durations count from
+/// then, and only for a subagent seen running.
+final _seen = <String, DateTime>{}, _ended = <String, DateTime>{};
 
 /// A subagent's state in a few words: "Reading notes.md · 6 tool calls ·
-/// 40s" while it works, "6 tool calls" once done, "failed".
+/// 40s" while it works, "done · 6 tool calls · 1m 02s" once done, "failed".
+/// The count shows only when its steps are known (a background subagent's
+/// aren't after the chat reopened), the time only when it was seen.
 String subagentState(Subagent s) {
   final calls = _steps(s)
       .where((it) => it.kind == ItemKind.ITEM_KIND_TOOL_CALL)
       .length;
-  final count = '$calls tool call${calls == 1 ? '' : 's'}';
-  if (s.call.status == 'failed') return 'failed · $count';
-  if (!_running(s)) return count;
-  final since = _seen.putIfAbsent(s.call.id, DateTime.now);
-  return '${doing(s.items)} · $count · '
-      '${elapsed(DateTime.now().difference(since))}';
+  final running = subagentRunning(s);
+  final since = running
+      ? _seen.putIfAbsent(s.call.id, DateTime.now)
+      : _seen[s.call.id];
+  final end = running
+      ? DateTime.now()
+      : since == null
+      ? null
+      : _ended.putIfAbsent(s.call.id, DateTime.now);
+  return [
+    if (running)
+      doing(s.items)
+    else
+      s.call.status == 'failed' ? 'failed' : 'done',
+    if (calls > 0) '$calls tool call${calls == 1 ? '' : 's'}',
+    if (since != null && end != null) elapsed(end.difference(since)),
+  ].join(' · ');
 }
 
 /// A subagent as one card: its type and task ("Explore: find the scroll
@@ -101,7 +115,7 @@ class _SubagentCardState extends State<SubagentCard> {
   void initState() {
     super.initState();
     _tick = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (_running(widget.subagent)) setState(() {});
+      if (subagentRunning(widget.subagent)) setState(() {});
     });
   }
 
@@ -116,7 +130,7 @@ class _SubagentCardState extends State<SubagentCard> {
     final theme = NushiTheme.of(context), t = theme.t;
     final s = widget.subagent;
     final call = s.call;
-    final running = _running(s);
+    final running = subagentRunning(s);
     final failed = call.status == 'failed';
     return Container(
       clipBehavior: Clip.antiAlias,
