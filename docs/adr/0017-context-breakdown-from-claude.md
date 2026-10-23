@@ -25,3 +25,7 @@ the raw markdown. A prompt the user sends during the silent run waits for it
 (a moment). Text the agent writes on its own during that moment (a background
 subagent finishing) would be taken as the answer and lost from the
 transcript; it hasn't been seen.
+
+Claude keeps `/context`'s answer in the conversation (5–7k tokens each
+time), so the app asks only when the user presses the card's refresh
+button, never on its own.
