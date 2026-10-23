@@ -115,6 +115,7 @@ String secrets(Map<String, dynamic> c) => [
   'connected' => ('Connected', t.done),
   'failed' => ('Failed to connect', t.crashed),
   'needs_auth' => ('Needs login', t.needs),
+  'pending' when s.approved => ('Approved · folder not trusted', t.needs),
   'pending' => ('Waiting for approval', t.needs),
   'disabled' => ('Off', t.idle),
   '' => ('Checking…', t.textMuted),

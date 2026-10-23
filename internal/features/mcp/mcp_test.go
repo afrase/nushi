@@ -29,7 +29,10 @@ func (f *fakeConfig) Remove(_ context.Context, _, _, name string) error {
 	f.calls = append(f.calls, "remove "+name)
 	return nil
 }
-func (f *fakeConfig) Project(folder string) string { return folder }
+func (f *fakeConfig) Project(folder string) string                      { return folder }
+func (f *fakeConfig) SetOn(context.Context, string, string, bool) error { return nil }
+func (f *fakeConfig) Login(context.Context, string, string) error       { return nil }
+func (f *fakeConfig) Logout(context.Context, string, string) error      { return nil }
 
 func TestListMergesTheCheck(t *testing.T) {
 	svc := New(&fakeConfig{
@@ -84,5 +87,25 @@ func TestEditKeepsMaskedValuesAndPutsTheOldOneBack(t *testing.T) {
 	}
 	if strings.Join(notified, " ") != "/repo /repo/sub" {
 		t.Errorf("notified %v, want the repo's chats once", notified)
+	}
+}
+
+func TestRemoveRefusesWhatIsntAServer(t *testing.T) {
+	cfg := &fakeConfig{}
+	svc := New(cfg, nil)
+	for _, c := range []struct{ folder, scope, name string }{
+		{"/repo", "user", "-s user"},
+		{"/repo", "user", "-x"},
+		{"/repo", "local", "../x"},
+		{"repo", "local", "s"},
+		{"/repo/../etc", "local", "s"},
+		{"/repo", "plugin", "s"},
+	} {
+		if err := svc.Remove(context.Background(), c.folder, c.scope, c.name); err == nil {
+			t.Errorf("Remove(%q, %q, %q) was let through", c.folder, c.scope, c.name)
+		}
+	}
+	if len(cfg.calls) > 0 {
+		t.Errorf("the agent was asked: %v", cfg.calls)
 	}
 }

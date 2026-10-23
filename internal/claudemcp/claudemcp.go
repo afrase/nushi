@@ -60,7 +60,8 @@ func (Claude) Servers(folder string) ([]model.MCPServer, error) {
 	var cfg struct {
 		MCPServers servers `json:"mcpServers"`
 		Projects   map[string]struct {
-			MCPServers servers `json:"mcpServers"`
+			MCPServers servers  `json:"mcpServers"`
+			Disabled   []string `json:"disabledMcpjsonServers"`
 		} `json:"projects"`
 	}
 	file := configFile()
@@ -70,6 +71,7 @@ func (Claude) Servers(folder string) ([]model.MCPServer, error) {
 	out := add(nil, cfg.MCPServers, "user", file)
 	key := project(folder)
 	out = add(out, cfg.Projects[key].MCPServers, "local", key)
+	off, approved := rejected(folder, cfg.Projects[key].Disabled)
 	seen := map[string]bool{}
 	for dir := folder; ; dir = filepath.Dir(dir) {
 		path := filepath.Join(dir, ".mcp.json")
@@ -85,7 +87,12 @@ func (Claude) Servers(folder string) ([]model.MCPServer, error) {
 			}
 			seen[name] = true
 		}
+		start := len(out)
 		out = add(out, mcp.MCPServers, "project", path)
+		for i := start; i < len(out); i++ {
+			out[i].Off, out[i].OffBy = offBy(off[out[i].Name], localSettings(folder))
+			out[i].Approved = slices.Contains(approved, out[i].Name)
+		}
 		if dir == filepath.Dir(dir) {
 			return out, nil
 		}
@@ -130,4 +137,15 @@ func (Claude) Check(ctx context.Context, folder string) ([]model.MCPServer, erro
 		return nil, fmt.Errorf("claude mcp list: %w", err)
 	}
 	return parseList(string(out)), nil
+}
+
+// offBy says whether files reject a server, and names one of them that
+// isn't local (the settings file Nushi changes), if any.
+func offBy(files []string, local string) (off bool, by string) {
+	for _, f := range files {
+		if f != local {
+			return true, f
+		}
+	}
+	return len(files) > 0, ""
 }

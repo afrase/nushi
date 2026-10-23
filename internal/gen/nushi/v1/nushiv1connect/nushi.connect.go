@@ -102,6 +102,15 @@ const (
 	// NushiServiceRemoveMcpServerProcedure is the fully-qualified name of the NushiService's
 	// RemoveMcpServer RPC.
 	NushiServiceRemoveMcpServerProcedure = "/nushi.v1.NushiService/RemoveMcpServer"
+	// NushiServiceSetMcpServerOnProcedure is the fully-qualified name of the NushiService's
+	// SetMcpServerOn RPC.
+	NushiServiceSetMcpServerOnProcedure = "/nushi.v1.NushiService/SetMcpServerOn"
+	// NushiServiceLoginMcpServerProcedure is the fully-qualified name of the NushiService's
+	// LoginMcpServer RPC.
+	NushiServiceLoginMcpServerProcedure = "/nushi.v1.NushiService/LoginMcpServer"
+	// NushiServiceLogoutMcpServerProcedure is the fully-qualified name of the NushiService's
+	// LogoutMcpServer RPC.
+	NushiServiceLogoutMcpServerProcedure = "/nushi.v1.NushiService/LogoutMcpServer"
 	// NushiServiceReloadChatProcedure is the fully-qualified name of the NushiService's ReloadChat RPC.
 	NushiServiceReloadChatProcedure = "/nushi.v1.NushiService/ReloadChat"
 	// NushiServiceEventsProcedure is the fully-qualified name of the NushiService's Events RPC.
@@ -199,6 +208,16 @@ type NushiServiceClient interface {
 	AddMcpServer(context.Context, *connect.Request[v1.AddMcpServerRequest]) (*connect.Response[v1.AddMcpServerResponse], error)
 	EditMcpServer(context.Context, *connect.Request[v1.EditMcpServerRequest]) (*connect.Response[v1.EditMcpServerResponse], error)
 	RemoveMcpServer(context.Context, *connect.Request[v1.RemoveMcpServerRequest]) (*connect.Response[v1.RemoveMcpServerResponse], error)
+	// Turns a project's .mcp.json server on for the folder's project, which
+	// approves it, or off, which rejects it (Claude's
+	// enabledMcpjsonServers and disabledMcpjsonServers in the project's
+	// .claude/settings.local.json) (API 34).
+	SetMcpServerOn(context.Context, *connect.Request[v1.SetMcpServerOnRequest]) (*connect.Response[v1.SetMcpServerOnResponse], error)
+	// Signs in to a server that needs OAuth: the agent opens the browser and
+	// the call returns once the sign-in is done there, or failed (a few
+	// minutes at most). Logout forgets the sign-in (API 34).
+	LoginMcpServer(context.Context, *connect.Request[v1.LoginMcpServerRequest]) (*connect.Response[v1.LoginMcpServerResponse], error)
+	LogoutMcpServer(context.Context, *connect.Request[v1.LogoutMcpServerRequest]) (*connect.Response[v1.LogoutMcpServerResponse], error)
 	// Reopens a chat's session on a new agent (ACP session/load), which
 	// replays its transcript, so it uses the MCP servers as they are now.
 	// Refused while it is busy (API 33).
@@ -387,6 +406,24 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("RemoveMcpServer")),
 			connect.WithClientOptions(opts...),
 		),
+		setMcpServerOn: connect.NewClient[v1.SetMcpServerOnRequest, v1.SetMcpServerOnResponse](
+			httpClient,
+			baseURL+NushiServiceSetMcpServerOnProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("SetMcpServerOn")),
+			connect.WithClientOptions(opts...),
+		),
+		loginMcpServer: connect.NewClient[v1.LoginMcpServerRequest, v1.LoginMcpServerResponse](
+			httpClient,
+			baseURL+NushiServiceLoginMcpServerProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("LoginMcpServer")),
+			connect.WithClientOptions(opts...),
+		),
+		logoutMcpServer: connect.NewClient[v1.LogoutMcpServerRequest, v1.LogoutMcpServerResponse](
+			httpClient,
+			baseURL+NushiServiceLogoutMcpServerProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("LogoutMcpServer")),
+			connect.WithClientOptions(opts...),
+		),
 		reloadChat: connect.NewClient[v1.ReloadChatRequest, v1.ReloadChatResponse](
 			httpClient,
 			baseURL+NushiServiceReloadChatProcedure,
@@ -432,6 +469,9 @@ type nushiServiceClient struct {
 	addMcpServer     *connect.Client[v1.AddMcpServerRequest, v1.AddMcpServerResponse]
 	editMcpServer    *connect.Client[v1.EditMcpServerRequest, v1.EditMcpServerResponse]
 	removeMcpServer  *connect.Client[v1.RemoveMcpServerRequest, v1.RemoveMcpServerResponse]
+	setMcpServerOn   *connect.Client[v1.SetMcpServerOnRequest, v1.SetMcpServerOnResponse]
+	loginMcpServer   *connect.Client[v1.LoginMcpServerRequest, v1.LoginMcpServerResponse]
+	logoutMcpServer  *connect.Client[v1.LogoutMcpServerRequest, v1.LogoutMcpServerResponse]
 	reloadChat       *connect.Client[v1.ReloadChatRequest, v1.ReloadChatResponse]
 	events           *connect.Client[v1.EventsRequest, v1.EventsResponse]
 }
@@ -576,6 +616,21 @@ func (c *nushiServiceClient) RemoveMcpServer(ctx context.Context, req *connect.R
 	return c.removeMcpServer.CallUnary(ctx, req)
 }
 
+// SetMcpServerOn calls nushi.v1.NushiService.SetMcpServerOn.
+func (c *nushiServiceClient) SetMcpServerOn(ctx context.Context, req *connect.Request[v1.SetMcpServerOnRequest]) (*connect.Response[v1.SetMcpServerOnResponse], error) {
+	return c.setMcpServerOn.CallUnary(ctx, req)
+}
+
+// LoginMcpServer calls nushi.v1.NushiService.LoginMcpServer.
+func (c *nushiServiceClient) LoginMcpServer(ctx context.Context, req *connect.Request[v1.LoginMcpServerRequest]) (*connect.Response[v1.LoginMcpServerResponse], error) {
+	return c.loginMcpServer.CallUnary(ctx, req)
+}
+
+// LogoutMcpServer calls nushi.v1.NushiService.LogoutMcpServer.
+func (c *nushiServiceClient) LogoutMcpServer(ctx context.Context, req *connect.Request[v1.LogoutMcpServerRequest]) (*connect.Response[v1.LogoutMcpServerResponse], error) {
+	return c.logoutMcpServer.CallUnary(ctx, req)
+}
+
 // ReloadChat calls nushi.v1.NushiService.ReloadChat.
 func (c *nushiServiceClient) ReloadChat(ctx context.Context, req *connect.Request[v1.ReloadChatRequest]) (*connect.Response[v1.ReloadChatResponse], error) {
 	return c.reloadChat.CallUnary(ctx, req)
@@ -677,6 +732,16 @@ type NushiServiceHandler interface {
 	AddMcpServer(context.Context, *connect.Request[v1.AddMcpServerRequest]) (*connect.Response[v1.AddMcpServerResponse], error)
 	EditMcpServer(context.Context, *connect.Request[v1.EditMcpServerRequest]) (*connect.Response[v1.EditMcpServerResponse], error)
 	RemoveMcpServer(context.Context, *connect.Request[v1.RemoveMcpServerRequest]) (*connect.Response[v1.RemoveMcpServerResponse], error)
+	// Turns a project's .mcp.json server on for the folder's project, which
+	// approves it, or off, which rejects it (Claude's
+	// enabledMcpjsonServers and disabledMcpjsonServers in the project's
+	// .claude/settings.local.json) (API 34).
+	SetMcpServerOn(context.Context, *connect.Request[v1.SetMcpServerOnRequest]) (*connect.Response[v1.SetMcpServerOnResponse], error)
+	// Signs in to a server that needs OAuth: the agent opens the browser and
+	// the call returns once the sign-in is done there, or failed (a few
+	// minutes at most). Logout forgets the sign-in (API 34).
+	LoginMcpServer(context.Context, *connect.Request[v1.LoginMcpServerRequest]) (*connect.Response[v1.LoginMcpServerResponse], error)
+	LogoutMcpServer(context.Context, *connect.Request[v1.LogoutMcpServerRequest]) (*connect.Response[v1.LogoutMcpServerResponse], error)
 	// Reopens a chat's session on a new agent (ACP session/load), which
 	// replays its transcript, so it uses the MCP servers as they are now.
 	// Refused while it is busy (API 33).
@@ -861,6 +926,24 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("RemoveMcpServer")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceSetMcpServerOnHandler := connect.NewUnaryHandler(
+		NushiServiceSetMcpServerOnProcedure,
+		svc.SetMcpServerOn,
+		connect.WithSchema(nushiServiceMethods.ByName("SetMcpServerOn")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceLoginMcpServerHandler := connect.NewUnaryHandler(
+		NushiServiceLoginMcpServerProcedure,
+		svc.LoginMcpServer,
+		connect.WithSchema(nushiServiceMethods.ByName("LoginMcpServer")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceLogoutMcpServerHandler := connect.NewUnaryHandler(
+		NushiServiceLogoutMcpServerProcedure,
+		svc.LogoutMcpServer,
+		connect.WithSchema(nushiServiceMethods.ByName("LogoutMcpServer")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceReloadChatHandler := connect.NewUnaryHandler(
 		NushiServiceReloadChatProcedure,
 		svc.ReloadChat,
@@ -931,6 +1014,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceEditMcpServerHandler.ServeHTTP(w, r)
 		case NushiServiceRemoveMcpServerProcedure:
 			nushiServiceRemoveMcpServerHandler.ServeHTTP(w, r)
+		case NushiServiceSetMcpServerOnProcedure:
+			nushiServiceSetMcpServerOnHandler.ServeHTTP(w, r)
+		case NushiServiceLoginMcpServerProcedure:
+			nushiServiceLoginMcpServerHandler.ServeHTTP(w, r)
+		case NushiServiceLogoutMcpServerProcedure:
+			nushiServiceLogoutMcpServerHandler.ServeHTTP(w, r)
 		case NushiServiceReloadChatProcedure:
 			nushiServiceReloadChatHandler.ServeHTTP(w, r)
 		case NushiServiceEventsProcedure:
@@ -1054,6 +1143,18 @@ func (UnimplementedNushiServiceHandler) EditMcpServer(context.Context, *connect.
 
 func (UnimplementedNushiServiceHandler) RemoveMcpServer(context.Context, *connect.Request[v1.RemoveMcpServerRequest]) (*connect.Response[v1.RemoveMcpServerResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.RemoveMcpServer is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) SetMcpServerOn(context.Context, *connect.Request[v1.SetMcpServerOnRequest]) (*connect.Response[v1.SetMcpServerOnResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.SetMcpServerOn is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) LoginMcpServer(context.Context, *connect.Request[v1.LoginMcpServerRequest]) (*connect.Response[v1.LoginMcpServerResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.LoginMcpServer is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) LogoutMcpServer(context.Context, *connect.Request[v1.LogoutMcpServerRequest]) (*connect.Response[v1.LogoutMcpServerResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.LogoutMcpServer is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) ReloadChat(context.Context, *connect.Request[v1.ReloadChatRequest]) (*connect.Response[v1.ReloadChatResponse], error) {

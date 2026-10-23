@@ -330,3 +330,10 @@ func split(out []byte) []string {
 	}
 	return strings.Split(s, "\x00")
 }
+
+// Ignored says whether git ignores path (relative to folder); false
+// outside git.
+func Ignored(ctx context.Context, folder, path string) bool {
+	_, err := run(ctx, folder, "check-ignore", "-q", "--", path)
+	return err == nil
+}
