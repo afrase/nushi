@@ -22,7 +22,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 25
+const Version = 26
 
 type server struct {
 	chats *chats.Service
@@ -250,7 +250,8 @@ func (s *server) GetDiff(ctx context.Context, req *connect.Request[nushiv1.GetDi
 	}
 	resp := &nushiv1.GetDiffResponse{}
 	for _, c := range changes {
-		resp.Files = append(resp.Files, &nushiv1.FileChange{Path: c.Path, Status: c.Status, OldText: c.Old, NewText: c.New, Skipped: c.Skipped})
+		resp.Files = append(resp.Files, &nushiv1.FileChange{Path: c.Path, Status: c.Status, OldText: c.Old, NewText: c.New, Skipped: c.Skipped,
+			OldPath: c.OldPath, Added: int32(c.Added), Removed: int32(c.Removed)})
 	}
 	return connect.NewResponse(resp), nil
 }

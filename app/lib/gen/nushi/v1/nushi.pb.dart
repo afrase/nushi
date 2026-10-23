@@ -3843,6 +3843,9 @@ class FileChange extends $pb.GeneratedMessage {
     $core.String? oldText,
     $core.String? newText,
     $core.String? skipped,
+    $core.String? oldPath,
+    $core.int? added,
+    $core.int? removed,
   }) {
     final result = FileChange._();
     if (path != null) result.path = path;
@@ -3850,6 +3853,9 @@ class FileChange extends $pb.GeneratedMessage {
     if (oldText != null) result.oldText = oldText;
     if (newText != null) result.newText = newText;
     if (skipped != null) result.skipped = skipped;
+    if (oldPath != null) result.oldPath = oldPath;
+    if (added != null) result.added = added;
+    if (removed != null) result.removed = removed;
     return result;
   }
 
@@ -3871,6 +3877,9 @@ class FileChange extends $pb.GeneratedMessage {
     ..aOS(3, _omitFieldNames ? '' : 'oldText')
     ..aOS(4, _omitFieldNames ? '' : 'newText')
     ..aOS(5, _omitFieldNames ? '' : 'skipped')
+    ..aOS(6, _omitFieldNames ? '' : 'oldPath')
+    ..aI(7, _omitFieldNames ? '' : 'added')
+    ..aI(8, _omitFieldNames ? '' : 'removed')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -3903,7 +3912,8 @@ class FileChange extends $pb.GeneratedMessage {
   @$pb.TagNumber(1)
   void clearPath() => $_clearField(1);
 
-  /// "added", "modified" or "deleted".
+  /// "added", "modified", "deleted", "renamed" (API 26: from old_path) or
+  /// "untracked" (API 26).
   @$pb.TagNumber(2)
   $core.String get status => $_getSZ(1);
   @$pb.TagNumber(2)
@@ -3940,6 +3950,35 @@ class FileChange extends $pb.GeneratedMessage {
   $core.bool hasSkipped() => $_has(4);
   @$pb.TagNumber(5)
   void clearSkipped() => $_clearField(5);
+
+  /// A renamed file's earlier path (API 26).
+  @$pb.TagNumber(6)
+  $core.String get oldPath => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set oldPath($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasOldPath() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearOldPath() => $_clearField(6);
+
+  /// Lines added and removed; a binary file counts none (API 26).
+  @$pb.TagNumber(7)
+  $core.int get added => $_getIZ(6);
+  @$pb.TagNumber(7)
+  set added($core.int value) => $_setSignedInt32(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasAdded() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearAdded() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.int get removed => $_getIZ(7);
+  @$pb.TagNumber(8)
+  set removed($core.int value) => $_setSignedInt32(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasRemoved() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearRemoved() => $_clearField(8);
 }
 
 class EventsRequest extends $pb.GeneratedMessage {

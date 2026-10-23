@@ -419,12 +419,18 @@ message GetDiffResponse {
 message FileChange {
   // Relative to the folder.
   string path = 1;
-  // "added", "modified" or "deleted".
+  // "added", "modified", "deleted", "renamed" (API 26: from old_path) or
+  // "untracked" (API 26).
   string status = 2;
   string old_text = 3;
   string new_text = 4;
   // Why the texts are left out ("binary", "too large"), if they are.
   string skipped = 5;
+  // A renamed file's earlier path (API 26).
+  string old_path = 6;
+  // Lines added and removed; a binary file counts none (API 26).
+  int32 added = 7;
+  int32 removed = 8;
 }
 
 message EventsRequest {}

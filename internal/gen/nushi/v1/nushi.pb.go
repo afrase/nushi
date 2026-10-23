@@ -3117,12 +3117,18 @@ type FileChange struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Relative to the folder.
 	Path string `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
-	// "added", "modified" or "deleted".
+	// "added", "modified", "deleted", "renamed" (API 26: from old_path) or
+	// "untracked" (API 26).
 	Status  string `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
 	OldText string `protobuf:"bytes,3,opt,name=old_text,json=oldText,proto3" json:"old_text,omitempty"`
 	NewText string `protobuf:"bytes,4,opt,name=new_text,json=newText,proto3" json:"new_text,omitempty"`
 	// Why the texts are left out ("binary", "too large"), if they are.
-	Skipped       string `protobuf:"bytes,5,opt,name=skipped,proto3" json:"skipped,omitempty"`
+	Skipped string `protobuf:"bytes,5,opt,name=skipped,proto3" json:"skipped,omitempty"`
+	// A renamed file's earlier path (API 26).
+	OldPath string `protobuf:"bytes,6,opt,name=old_path,json=oldPath,proto3" json:"old_path,omitempty"`
+	// Lines added and removed; a binary file counts none (API 26).
+	Added         int32 `protobuf:"varint,7,opt,name=added,proto3" json:"added,omitempty"`
+	Removed       int32 `protobuf:"varint,8,opt,name=removed,proto3" json:"removed,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3190,6 +3196,27 @@ func (x *FileChange) GetSkipped() string {
 		return x.Skipped
 	}
 	return ""
+}
+
+func (x *FileChange) GetOldPath() string {
+	if x != nil {
+		return x.OldPath
+	}
+	return ""
+}
+
+func (x *FileChange) GetAdded() int32 {
+	if x != nil {
+		return x.Added
+	}
+	return 0
+}
+
+func (x *FileChange) GetRemoved() int32 {
+	if x != nil {
+		return x.Removed
+	}
+	return 0
 }
 
 type EventsRequest struct {
@@ -4340,14 +4367,17 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x06folder\x18\x01 \x01(\tR\x06folder\x12\x12\n" +
 	"\x04base\x18\x02 \x01(\tR\x04base\"=\n" +
 	"\x0fGetDiffResponse\x12*\n" +
-	"\x05files\x18\x01 \x03(\v2\x14.nushi.v1.FileChangeR\x05files\"\x88\x01\n" +
+	"\x05files\x18\x01 \x03(\v2\x14.nushi.v1.FileChangeR\x05files\"\xd3\x01\n" +
 	"\n" +
 	"FileChange\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12\x19\n" +
 	"\bold_text\x18\x03 \x01(\tR\aoldText\x12\x19\n" +
 	"\bnew_text\x18\x04 \x01(\tR\anewText\x12\x18\n" +
-	"\askipped\x18\x05 \x01(\tR\askipped\"\x0f\n" +
+	"\askipped\x18\x05 \x01(\tR\askipped\x12\x19\n" +
+	"\bold_path\x18\x06 \x01(\tR\aoldPath\x12\x14\n" +
+	"\x05added\x18\a \x01(\x05R\x05added\x12\x18\n" +
+	"\aremoved\x18\b \x01(\x05R\aremoved\"\x0f\n" +
 	"\rEventsRequest\"\xef\x02\n" +
 	"\x0eEventsResponse\x12\x17\n" +
 	"\achat_id\x18\x01 \x01(\tR\x06chatId\x12\x10\n" +

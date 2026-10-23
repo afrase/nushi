@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 
 import 'chat.dart';
 import 'daemon.dart';
+import 'file_tree.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'panes.dart';
+import 'settings.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
 
@@ -80,7 +82,10 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
       _files = resp.files;
       _error = null;
       if (!_files.any((f) => f.path == _path)) {
-        _path = _files.firstOrNull?.path;
+        _path = changeRows(
+          _files,
+          flat: changesFlat.value,
+        ).where((r) => r.file != null).firstOrNull?.path;
       }
     } on Object catch (e) {
       if (mounted) setState(() => _error = '$e');
@@ -135,12 +140,25 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
                     padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
                     child: Row(
                       children: [
+                        Text(
+                          _files.isEmpty && !_loading
+                              ? 'No changes'
+                              : '${_files.length} file${_files.length == 1 ? '' : 's'}',
+                          style: theme.ui(t.textSecondary, size: 12),
+                        ),
                         Expanded(
-                          child: Text(
-                            _files.isEmpty && !_loading
-                                ? 'No changes'
-                                : '${_files.length} changed',
-                            style: theme.ui(t.textSecondary, size: 12),
+                          child: LineCounts(
+                            _files.fold(0, (n, f) => n + f.added),
+                            _files.fold(0, (n, f) => n + f.removed),
+                          ),
+                        ),
+                        ValueListenableBuilder(
+                          valueListenable: changesFlat,
+                          builder: (context, flat, _) => IconTap(
+                            flat ? Icons.account_tree_outlined : Icons.list,
+                            tooltip: flat ? 'Show as a tree' : 'Show as a list',
+                            size: 15,
+                            onTap: () => changesFlat.value = !flat,
                           ),
                         ),
                         IconTap(
@@ -153,15 +171,10 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
                     ),
                   ),
                   Expanded(
-                    child: ListView(
-                      children: [
-                        for (final f in _files)
-                          _FileRow(
-                            f,
-                            f.path == _path,
-                            (p) => setState(() => _path = p),
-                          ),
-                      ],
+                    child: FileList(
+                      files: _files,
+                      selected: _path,
+                      onSelect: (p) => setState(() => _path = p),
                     ),
                   ),
                 ],
@@ -181,59 +194,6 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
                   ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _FileRow extends StatelessWidget {
-  const _FileRow(this.file, this.selected, this.onTap);
-
-  final FileChange file;
-  final bool selected;
-  final void Function(String path) onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
-    final (letter, color) = switch (file.status) {
-      'added' => ('A', t.done),
-      'deleted' => ('D', t.crashed),
-      _ => ('M', t.running),
-    };
-    final slash = file.path.lastIndexOf('/');
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-      child: Tap(
-        onTap: () => onTap(file.path),
-        selected: selected,
-        tooltip: file.path,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: Row(
-          children: [
-            Text(letter, style: theme.code(color, size: 12)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: file.path.substring(slash + 1),
-                      style: theme.ui(t.text),
-                    ),
-                    if (slash > 0)
-                      TextSpan(
-                        text: '  ${file.path.substring(0, slash)}',
-                        style: theme.ui(t.textMuted, size: 11.5),
-                      ),
-                  ],
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

@@ -217,10 +217,12 @@ type Status struct {
 }
 
 // FileChange is one file's uncommitted change: its text at HEAD and now.
-// Status is "added", "modified" or "deleted". Skipped says why the texts
-// are left out ("binary", "too large"), if they are.
+// Status is "added", "modified", "deleted", "renamed" (from OldPath) or
+// "untracked". Skipped says why the texts are left out ("binary", "too
+// large"), if they are. Added and Removed count its lines.
 type FileChange struct {
-	Path, Status, Old, New, Skipped string
+	Path, OldPath, Status, Old, New, Skipped string
+	Added, Removed                           int
 }
 
 // FolderStatus sums up a git folder's uncommitted changes. Branch is the

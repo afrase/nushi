@@ -58,10 +58,10 @@ func TestChanges(t *testing.T) {
 	}
 	want := []model.FileChange{
 		{Path: "bin", Status: "modified", Skipped: "binary"},
-		{Path: "gone.txt", Status: "deleted", Old: "bye\n"},
-		{Path: "kept.txt", Status: "modified", Old: "one\n", New: "one\ntwo\n"},
-		{Path: "link", Status: "added", New: "/etc/hosts"},
-		{Path: "new.txt", Status: "added", New: "new\n"},
+		{Path: "gone.txt", Status: "deleted", Old: "bye\n", Removed: 1},
+		{Path: "kept.txt", Status: "modified", Old: "one\n", New: "one\ntwo\n", Added: 1},
+		{Path: "link", Status: "untracked", New: "/etc/hosts", Added: 1},
+		{Path: "new.txt", Status: "untracked", New: "new\n", Added: 1},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("changes =\n%+v\nwant\n%+v", got, want)
@@ -69,6 +69,17 @@ func TestChanges(t *testing.T) {
 	st, err := Status(ctx, filepath.Join(repo, "sub"), "")
 	if want := (model.FolderStatus{Branch: "main", Files: 5, Added: 3, Removed: 1}); err != nil || st != want {
 		t.Errorf("status = %+v, %v; want %+v", st, err, want)
+	}
+
+	// A rename, counted under its new path.
+	git(t, repo, "add", ".")
+	git(t, repo, "commit", "-q", "-m", "more")
+	git(t, repo, "mv", "sub/kept.txt", "sub/moved.txt")
+	write(t, filepath.Join(repo, "sub", "moved.txt"), "one\ntwo\nthree\n")
+	got, err = Changes(ctx, filepath.Join(repo, "sub"), "")
+	want = []model.FileChange{{Path: "moved.txt", OldPath: "kept.txt", Status: "renamed", Old: "one\ntwo\n", New: "one\ntwo\nthree\n", Added: 1}}
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Errorf("renamed: %+v, %v", got, err)
 	}
 }
 
