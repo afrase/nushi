@@ -94,6 +94,7 @@ class _Shell extends StatelessWidget {
           ),
         );
       }
+      if (daemon.outdated) return _Outdated(daemon);
       final chat = daemon.selected;
       final app = LayoutBuilder(
         builder: (context, box) => Row(
@@ -270,9 +271,7 @@ class _HeaderState extends State<_Header> {
                     onDone: () => setState(() => _renaming = false),
                   )
                 : GestureDetector(
-                    onDoubleTap: widget.daemon.canManageChats
-                        ? () => setState(() => _renaming = true)
-                        : null,
+                    onDoubleTap: () => setState(() => _renaming = true),
                     child: Text(
                       chat.title.isEmpty ? 'New chat' : chat.title,
                       maxLines: 1,
@@ -371,6 +370,58 @@ class _Monogram extends StatelessWidget {
           height: 1,
           fontWeight: FontWeight.w600,
           color: t.monogramText,
+        ),
+      ),
+    );
+  }
+}
+
+/// Says the daemon is older than the app, with a way to restart it: the app
+/// shows nothing else until it has.
+class _Outdated extends StatefulWidget {
+  const _Outdated(this.daemon);
+
+  final Daemon daemon;
+
+  @override
+  State<_Outdated> createState() => _OutdatedState();
+}
+
+class _OutdatedState extends State<_Outdated> {
+  bool _restarting = false;
+
+  Future<void> _restart() async {
+    setState(() => _restarting = true);
+    await tryOrShow(context, widget.daemon.restartDaemon);
+    if (mounted) setState(() => _restarting = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context), t = theme.t;
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'The daemon is older than this app. Restarting it stops '
+              'running turns and closes terminals; chats reopen as you open '
+              'them.',
+              textAlign: TextAlign.center,
+              style: theme.ui(t.textSecondary),
+            ),
+            const SizedBox(height: 14),
+            if (bundledDaemon != null)
+              Button(
+                label: _restarting ? 'Restarting…' : 'Restart daemon',
+                kind: ButtonKind.primary,
+                onPressed: _restarting ? null : _restart,
+              )
+            else
+              Text('make stop daemon', style: theme.code(t.textMuted)),
+          ],
         ),
       ),
     );

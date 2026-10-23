@@ -16,7 +16,7 @@ Future<void> stopTurn(
   chat.stopping = true;
   await tryOrShow(context, () async {
     final r = await daemon.client.cancelTurn(
-      CancelTurnRequest(chatId: chat.id, takeBack: daemon.canTakeBack),
+      CancelTurnRequest(chatId: chat.id, takeBack: true),
     );
     if (r.hasMessage()) chat.takeBack.value = r.message;
   });

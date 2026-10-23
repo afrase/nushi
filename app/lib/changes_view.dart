@@ -286,7 +286,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   Widget _toolbar() {
     final theme = NushiTheme.of(context), t = theme.t;
     final span = _span;
-    final scopes = span?.scopes(daemon) ?? const [];
+    final scopes = span?.scopes ?? const [];
     final n = _files.length;
     return Container(
       height: 36,
@@ -318,16 +318,12 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
             listenable: Listenable.merge([reviews, chat]),
             builder: (context, _) {
               final n = commentsOf(chat.id).where((c) => !c.sent).length;
-              // A newer daemon queues it while the agent works.
-              final busy = (chat.busy || chat.waiting) && !daemon.canQueue;
               if (n == 0) return const SizedBox.shrink();
               return Button(
-                label: busy
-                    ? 'Send review ($n) when Claude is done'
-                    : 'Send review ($n)',
+                label: 'Send review ($n)',
                 icon: Icons.rate_review_outlined,
                 kind: ButtonKind.primary,
-                onPressed: busy || chat.archived
+                onPressed: chat.archived
                     ? null
                     : () => sendReview(context, daemon, chat.id),
               );

@@ -67,11 +67,10 @@ class _McpActionsState extends State<McpActions> {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context), t = theme.t;
     final daemon = list.daemon;
-    final project = server.scope == 'project' && daemon.canMcpOn;
-    final remote = config(server)['url'] != null && daemon.canMcpOn;
+    final project = server.scope == 'project';
+    final remote = config(server)['url'] != null;
     final menu = [
-      if ({'user', 'project', 'local'}.contains(server.scope) &&
-          daemon.canMcpChange) ...[
+      if ({'user', 'project', 'local'}.contains(server.scope)) ...[
         MenuEntry(
           'Edit…',
           onPick: () => mcpForm(context, list, server: server),
@@ -104,7 +103,7 @@ class _McpActionsState extends State<McpActions> {
       children: [
         if (_working && server.state == 'needs_auth')
           Text('Finish in the browser…', style: theme.ui(t.textMuted, size: 12))
-        else if (server.state == 'needs_auth' && daemon.canMcpOn)
+        else if (server.state == 'needs_auth')
           button(
             'Log in',
             () => _do(

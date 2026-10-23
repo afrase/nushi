@@ -9,8 +9,7 @@ import 'widgets.dart';
 
 /// Whether the chat can be rewound to just before [item], a user message:
 /// the agent forks at the message before it, or it is the first.
-bool canRewindTo(Daemon daemon, ChatState chat, Item item) =>
-    daemon.canRewind &&
+bool canRewindTo(ChatState chat, Item item) =>
     chat.canRewind &&
     !chat.busy &&
     !chat.archived &&

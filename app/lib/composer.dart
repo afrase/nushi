@@ -174,10 +174,7 @@ class _ComposerState extends State<Composer> {
     final replies = _draft.replies.value;
     final mentions = {..._mentions};
     final busy = widget.chat.busy;
-    if (text.isEmpty && images.isEmpty && replies.isEmpty ||
-        busy && !widget.daemon.canQueue) {
-      return;
-    }
+    if (text.isEmpty && images.isEmpty && replies.isEmpty) return;
     final files = [
       for (final f in _mentions)
         if (text.contains('@$f')) f,
@@ -306,11 +303,7 @@ class _ComposerState extends State<Composer> {
                           style: theme.ui(t.text),
                           textAlignVertical: TextAlignVertical.center,
                           decoration: InputDecoration(
-                            hintText: !chat.busy
-                                ? widget.hint
-                                : widget.daemon.canQueue
-                                ? 'Claude is working: ⏎ queues, ⌘⏎ stops it and sends'
-                                : 'Claude is working…',
+                            hintText: !chat.busy ? widget.hint : 'Claude is working: ⏎ queues, ⌘⏎ stops it and sends',
                             border: InputBorder.none,
                             // One line (18.2) is as tall as the buttons.
                             contentPadding: const EdgeInsets.symmetric(

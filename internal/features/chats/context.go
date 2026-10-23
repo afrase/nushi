@@ -9,23 +9,19 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-// silentRun is the agent's reply to a prompt Nushi sends on its own, kept
-// out of the transcript: its messages' text, by message id, in order.
+// silentRun is the agent's reply to a prompt Nushi sends on its own in a
+// throwaway fork, kept out of the transcript: its messages' text, by
+// message id, in order.
 type silentRun struct {
 	ids  []string
 	text map[string]string
-	done chan struct{}
 }
 
 // ContextUsage runs the agent's /context command without a trace and
-// returns what it answers: the prompt and the reply never join the
-// transcript, and the chat doesn't turn busy. It runs only while the chat is
-// idle. When the agent can fork, it runs in a throwaway fork of the session
-// (same history, so the same numbers), which is closed and deleted after:
-// Claude keeps /context's answer in a conversation. Otherwise it runs in
-// the chat's own session, and a prompt sent meanwhile waits for it to end
-// (claude-agent-acp answers /context itself, without the model, in a
-// moment).
+// returns what it answers. It runs while the chat is idle, in a throwaway
+// fork of the session (same history, so the same numbers), which is closed
+// and deleted after: Claude keeps /context's answer in a conversation. An
+// agent that can't fork isn't asked.
 func (s *Service) ContextUsage(ctx context.Context, chatID string) (string, error) {
 	c, err := s.chat(chatID)
 	if err != nil {
@@ -35,31 +31,17 @@ func (s *Service) ContextUsage(ctx context.Context, chatID string) (string, erro
 	switch {
 	case !slices.ContainsFunc(c.commands, func(cmd model.Command) bool { return cmd.Name == "context" }):
 		err = errors.New("the agent has no /context command")
-	case c.busy || c.agent == nil || c.silent != nil:
+	case !c.canFork || c.parent != nil:
+		err = errors.New("the agent can't fork this chat to ask")
+	case c.busy || c.agent == nil:
 		err = errors.New("the chat is busy")
 	}
-	if err != nil {
-		c.mu.Unlock()
-		return "", err
-	}
 	agent, sid, folder := c.agent, c.sid, c.session.Folder
-	if c.canFork && c.parent == nil {
-		c.mu.Unlock()
-		return c.contextInFork(ctx, agent, sid, folder)
-	}
-	run := &silentRun{text: map[string]string{}, done: make(chan struct{})}
-	c.silent = run
 	c.mu.Unlock()
-
-	err = prompt(ctx, agent, acp.SessionID(sid), "/context")
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.silent = nil
-	close(run.done)
 	if err != nil {
 		return "", err
 	}
-	return run.answer()
+	return c.contextInFork(ctx, agent, sid, folder)
 }
 
 // answer is the run's last message: claude-agent-acp 0.94.0 sends
@@ -97,34 +79,12 @@ func (c *chat) contextInFork(ctx context.Context, agent Agent, sid, folder strin
 	return run.answer()
 }
 
-// silentLocked takes a chunk of the agent's message while a silent run
-// goes on; false when there is none.
-func (c *chat) silentLocked(m *acp.ContentChunk) bool {
-	run := c.silent
-	if run == nil || m.Content.Text == nil {
-		return false
-	}
-	run.add(m)
-	return true
-}
-
 func (run *silentRun) add(m *acp.ContentChunk) {
 	id := string(m.MessageID)
 	if _, ok := run.text[id]; !ok {
 		run.ids = append(run.ids, id)
 	}
 	run.text[id] += m.Content.Text.Text
-}
-
-// waitSilentLocked waits, with the lock let go meanwhile, until no silent
-// run goes on.
-func (c *chat) waitSilentLocked() {
-	for c.silent != nil {
-		done := c.silent.done
-		c.mu.Unlock()
-		<-done
-		c.mu.Lock()
-	}
 }
 
 // prompt sends text to session sid and waits for the turn to end.

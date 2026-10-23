@@ -110,7 +110,7 @@ class PingResponse extends $pb.GeneratedMessage {
           PingResponse.$_createMessage);
   static PingResponse? _defaultInstance;
 
-  /// Bumped when methods are added; the API only grows (ADR 0004).
+  /// Bumped when the API grows; it only grows (ADR 0004).
   @$pb.TagNumber(1)
   $core.int get apiVersion => $_getIZ(0);
   @$pb.TagNumber(1)
@@ -368,8 +368,7 @@ class Chat extends $pb.GeneratedMessage {
   @$pb.TagNumber(8)
   void clearArchived() => $_clearField(8);
 
-  /// The agent's session id (claude --resume <id>). It differs from id for
-  /// chats started since API 16.
+  /// The agent's session id (claude --resume <id>).
   @$pb.TagNumber(9)
   $core.String get sessionId => $_getSZ(8);
   @$pb.TagNumber(9)
@@ -379,7 +378,7 @@ class Chat extends $pb.GeneratedMessage {
   @$pb.TagNumber(9)
   void clearSessionId() => $_clearField(9);
 
-  /// The git worktree Nushi made for the chat, if it runs in one (API 20).
+  /// The git worktree Nushi made for the chat, if it runs in one.
   @$pb.TagNumber(10)
   Worktree get worktree => $_getN(9);
   @$pb.TagNumber(10)
@@ -673,7 +672,7 @@ class GetChatResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(7)
   Usage ensureUsage() => $_ensure(6);
 
-  /// Messages waiting for the agent (API 28).
+  /// Messages waiting for the agent.
   @$pb.TagNumber(8)
   ChatQueue get queue => $_getN(7);
   @$pb.TagNumber(8)
@@ -1027,7 +1026,7 @@ class StartChatRequest extends $pb.GeneratedMessage {
 
   /// Run the chat in a new worktree of folder's repository, at
   /// <repo>/.worktrees/<name> on a new branch nushi/<name> from folder's
-  /// HEAD (API 20).
+  /// HEAD.
   @$pb.TagNumber(2)
   $core.bool get worktree => $_getBF(1);
   @$pb.TagNumber(2)
@@ -1316,9 +1315,9 @@ class SendPromptRequest extends $pb.GeneratedMessage {
   @$pb.TagNumber(4)
   $pb.PbList<ImageData> get images => $_getList(3);
 
-  /// While the chat is busy: wait in its queue for the agent's next chance
-  /// (API 28): into the running turn when the agent can be steered, else as
-  /// the next prompt. Without it a busy chat refuses the prompt.
+  /// While the chat is busy: wait in its queue for the agent's next chance:
+  /// into the running turn when the agent can be steered, else as the next
+  /// prompt. Without it a busy chat refuses the prompt.
   @$pb.TagNumber(5)
   $core.bool get queue => $_getBF(4);
   @$pb.TagNumber(5)
@@ -1328,7 +1327,7 @@ class SendPromptRequest extends $pb.GeneratedMessage {
   @$pb.TagNumber(5)
   void clearQueue() => $_clearField(5);
 
-  /// While a turn runs: stop it and send at once (API 28).
+  /// While a turn runs: stop it and send at once.
   @$pb.TagNumber(6)
   $core.bool get now => $_getBF(5);
   @$pb.TagNumber(6)
@@ -2013,7 +2012,7 @@ class CancelTurnRequest extends $pb.GeneratedMessage {
 
   /// Take the last user message back too, if the agent hasn't answered it
   /// with any text or tool call yet: the chat is rewound to just before it
-  /// when it can be, else it stays, with a notice (API 30). The call then
+  /// when it can be, else it stays, with a notice. The call then
   /// returns once the turn has ended.
   @$pb.TagNumber(2)
   $core.bool get takeBack => $_getBF(1);
@@ -2524,104 +2523,6 @@ class ArchiveChatResponse extends $pb.GeneratedMessage {
   static ArchiveChatResponse? _defaultInstance;
 }
 
-class RemoveChatRequest extends $pb.GeneratedMessage {
-  factory RemoveChatRequest({
-    $core.String? chatId,
-  }) {
-    final result = RemoveChatRequest._();
-    if (chatId != null) result.chatId = chatId;
-    return result;
-  }
-
-  RemoveChatRequest._();
-
-  factory RemoveChatRequest.fromBuffer($core.List<$core.int> data,
-          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      RemoveChatRequest()..mergeFromBuffer(data, registry);
-  factory RemoveChatRequest.fromJson($core.String json,
-          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      RemoveChatRequest()..mergeFromJson(json, registry);
-
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
-      _omitMessageNames ? '' : 'RemoveChatRequest',
-      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
-      createEmptyInstance: RemoveChatRequest.$_createMessage)
-    ..aOS(1, _omitFieldNames ? '' : 'chatId')
-    ..hasRequiredFields = false;
-
-  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  RemoveChatRequest clone() => deepCopy();
-  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  RemoveChatRequest copyWith(void Function(RemoveChatRequest) updates) =>
-      super.copyWith((message) => updates(message as RemoveChatRequest))
-          as RemoveChatRequest;
-
-  @$core.override
-  $pb.BuilderInfo get info_ => _i;
-
-  @$core.pragma('dart2js:noInline')
-  @$core.Deprecated('Use RemoveChatRequest() / RemoveChatRequest.new instead')
-  static RemoveChatRequest create() => RemoveChatRequest._();
-  static $pb.GeneratedMessage $_createMessage() => RemoveChatRequest._();
-  @$core.override
-  RemoveChatRequest createEmptyInstance() => RemoveChatRequest._();
-  @$core.pragma('dart2js:noInline')
-  static RemoveChatRequest getDefault() =>
-      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<RemoveChatRequest>(
-          RemoveChatRequest.$_createMessage);
-  static RemoveChatRequest? _defaultInstance;
-
-  @$pb.TagNumber(1)
-  $core.String get chatId => $_getSZ(0);
-  @$pb.TagNumber(1)
-  set chatId($core.String value) => $_setString(0, value);
-  @$pb.TagNumber(1)
-  $core.bool hasChatId() => $_has(0);
-  @$pb.TagNumber(1)
-  void clearChatId() => $_clearField(1);
-}
-
-class RemoveChatResponse extends $pb.GeneratedMessage {
-  factory RemoveChatResponse() => RemoveChatResponse._();
-
-  RemoveChatResponse._();
-
-  factory RemoveChatResponse.fromBuffer($core.List<$core.int> data,
-          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      RemoveChatResponse()..mergeFromBuffer(data, registry);
-  factory RemoveChatResponse.fromJson($core.String json,
-          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      RemoveChatResponse()..mergeFromJson(json, registry);
-
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
-      _omitMessageNames ? '' : 'RemoveChatResponse',
-      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
-      createEmptyInstance: RemoveChatResponse.$_createMessage)
-    ..hasRequiredFields = false;
-
-  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  RemoveChatResponse clone() => deepCopy();
-  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  RemoveChatResponse copyWith(void Function(RemoveChatResponse) updates) =>
-      super.copyWith((message) => updates(message as RemoveChatResponse))
-          as RemoveChatResponse;
-
-  @$core.override
-  $pb.BuilderInfo get info_ => _i;
-
-  @$core.pragma('dart2js:noInline')
-  @$core.Deprecated('Use RemoveChatResponse() / RemoveChatResponse.new instead')
-  static RemoveChatResponse create() => RemoveChatResponse._();
-  static $pb.GeneratedMessage $_createMessage() => RemoveChatResponse._();
-  @$core.override
-  RemoveChatResponse createEmptyInstance() => RemoveChatResponse._();
-  @$core.pragma('dart2js:noInline')
-  static RemoveChatResponse getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<RemoveChatResponse>(
-          RemoveChatResponse.$_createMessage);
-  static RemoveChatResponse? _defaultInstance;
-}
-
 class PlanDeleteChatRequest extends $pb.GeneratedMessage {
   factory PlanDeleteChatRequest({
     $core.String? chatId,
@@ -2686,8 +2587,6 @@ class PlanDeleteChatResponse extends $pb.GeneratedMessage {
     $core.Iterable<AgentSession>? sessions,
     $core.bool? deletesHistory,
     $core.String? scratchFolder,
-    Worktree? worktree,
-    WorktreeState? worktreeState,
     $core.Iterable<WorktreePlan>? worktrees,
     $core.Iterable<Terminal>? terminals,
   }) {
@@ -2695,8 +2594,6 @@ class PlanDeleteChatResponse extends $pb.GeneratedMessage {
     if (sessions != null) result.sessions.addAll(sessions);
     if (deletesHistory != null) result.deletesHistory = deletesHistory;
     if (scratchFolder != null) result.scratchFolder = scratchFolder;
-    if (worktree != null) result.worktree = worktree;
-    if (worktreeState != null) result.worktreeState = worktreeState;
     if (worktrees != null) result.worktrees.addAll(worktrees);
     if (terminals != null) result.terminals.addAll(terminals);
     return result;
@@ -2719,10 +2616,6 @@ class PlanDeleteChatResponse extends $pb.GeneratedMessage {
         subBuilder: AgentSession.$_createMessage)
     ..aOB(2, _omitFieldNames ? '' : 'deletesHistory')
     ..aOS(3, _omitFieldNames ? '' : 'scratchFolder')
-    ..aOM<Worktree>(4, _omitFieldNames ? '' : 'worktree',
-        subBuilder: Worktree.$_createMessage)
-    ..aOM<WorktreeState>(5, _omitFieldNames ? '' : 'worktreeState',
-        subBuilder: WorktreeState.$_createMessage)
     ..pPM<WorktreePlan>(6, _omitFieldNames ? '' : 'worktrees',
         subBuilder: WorktreePlan.$_createMessage)
     ..pPM<Terminal>(7, _omitFieldNames ? '' : 'terminals',
@@ -2778,40 +2671,16 @@ class PlanDeleteChatResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(3)
   void clearScratchFolder() => $_clearField(3);
 
-  /// The chat's worktree, if it has one, and what removing it and deleting
-  /// its branch would lose (API 22).
-  @$pb.TagNumber(4)
-  Worktree get worktree => $_getN(3);
-  @$pb.TagNumber(4)
-  set worktree(Worktree value) => $_setField(4, value);
-  @$pb.TagNumber(4)
-  $core.bool hasWorktree() => $_has(3);
-  @$pb.TagNumber(4)
-  void clearWorktree() => $_clearField(4);
-  @$pb.TagNumber(4)
-  Worktree ensureWorktree() => $_ensure(3);
-
-  @$pb.TagNumber(5)
-  WorktreeState get worktreeState => $_getN(4);
-  @$pb.TagNumber(5)
-  set worktreeState(WorktreeState value) => $_setField(5, value);
-  @$pb.TagNumber(5)
-  $core.bool hasWorktreeState() => $_has(4);
-  @$pb.TagNumber(5)
-  void clearWorktreeState() => $_clearField(5);
-  @$pb.TagNumber(5)
-  WorktreeState ensureWorktreeState() => $_ensure(4);
-
   /// All of the chat's worktrees, each with what removing it and deleting
   /// its branch would lose: its own, then those it moved out of, which stay
-  /// on disk until it is deleted (API 23).
+  /// on disk until it is deleted.
   @$pb.TagNumber(6)
-  $pb.PbList<WorktreePlan> get worktrees => $_getList(5);
+  $pb.PbList<WorktreePlan> get worktrees => $_getList(3);
 
-  /// The chat's terminals whose shell still runs; deleting closes them
-  /// (API 35).
+  ///  The chat's terminals whose shell still runs; deleting closes them
+  /// .
   @$pb.TagNumber(7)
-  $pb.PbList<Terminal> get terminals => $_getList(6);
+  $pb.PbList<Terminal> get terminals => $_getList(4);
 }
 
 class WorktreePlan extends $pb.GeneratedMessage {
@@ -3073,18 +2942,10 @@ class AgentSession extends $pb.GeneratedMessage {
 class DeleteChatRequest extends $pb.GeneratedMessage {
   factory DeleteChatRequest({
     $core.String? chatId,
-    $core.bool? removeWorktree,
-    $core.bool? forceWorktree,
-    $core.bool? deleteBranch,
-    $core.bool? forceBranch,
     $core.Iterable<WorktreeChoice>? worktrees,
   }) {
     final result = DeleteChatRequest._();
     if (chatId != null) result.chatId = chatId;
-    if (removeWorktree != null) result.removeWorktree = removeWorktree;
-    if (forceWorktree != null) result.forceWorktree = forceWorktree;
-    if (deleteBranch != null) result.deleteBranch = deleteBranch;
-    if (forceBranch != null) result.forceBranch = forceBranch;
     if (worktrees != null) result.worktrees.addAll(worktrees);
     return result;
   }
@@ -3103,10 +2964,6 @@ class DeleteChatRequest extends $pb.GeneratedMessage {
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: DeleteChatRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
-    ..aOB(2, _omitFieldNames ? '' : 'removeWorktree')
-    ..aOB(3, _omitFieldNames ? '' : 'forceWorktree')
-    ..aOB(4, _omitFieldNames ? '' : 'deleteBranch')
-    ..aOB(5, _omitFieldNames ? '' : 'forceBranch')
     ..pPM<WorktreeChoice>(6, _omitFieldNames ? '' : 'worktrees',
         subBuilder: WorktreeChoice.$_createMessage)
     ..hasRequiredFields = false;
@@ -3142,54 +2999,16 @@ class DeleteChatRequest extends $pb.GeneratedMessage {
   @$pb.TagNumber(1)
   void clearChatId() => $_clearField(1);
 
-  /// Remove the chat's worktree (git worktree remove). One with changes is
-  /// removed only with force_worktree (API 22).
-  @$pb.TagNumber(2)
-  $core.bool get removeWorktree => $_getBF(1);
-  @$pb.TagNumber(2)
-  set removeWorktree($core.bool value) => $_setBool(1, value);
-  @$pb.TagNumber(2)
-  $core.bool hasRemoveWorktree() => $_has(1);
-  @$pb.TagNumber(2)
-  void clearRemoveWorktree() => $_clearField(2);
-
-  @$pb.TagNumber(3)
-  $core.bool get forceWorktree => $_getBF(2);
-  @$pb.TagNumber(3)
-  set forceWorktree($core.bool value) => $_setBool(2, value);
-  @$pb.TagNumber(3)
-  $core.bool hasForceWorktree() => $_has(2);
-  @$pb.TagNumber(3)
-  void clearForceWorktree() => $_clearField(3);
-
-  /// Delete the worktree's branch (with the worktree). One with commits its
-  /// base doesn't have is deleted only with force_branch.
-  @$pb.TagNumber(4)
-  $core.bool get deleteBranch => $_getBF(3);
-  @$pb.TagNumber(4)
-  set deleteBranch($core.bool value) => $_setBool(3, value);
-  @$pb.TagNumber(4)
-  $core.bool hasDeleteBranch() => $_has(3);
-  @$pb.TagNumber(4)
-  void clearDeleteBranch() => $_clearField(4);
-
-  @$pb.TagNumber(5)
-  $core.bool get forceBranch => $_getBF(4);
-  @$pb.TagNumber(5)
-  set forceBranch($core.bool value) => $_setBool(4, value);
-  @$pb.TagNumber(5)
-  $core.bool hasForceBranch() => $_has(4);
-  @$pb.TagNumber(5)
-  void clearForceBranch() => $_clearField(5);
-
-  /// What to do with each of the chat's worktrees, by path; when set, the
-  /// fields above don't apply (API 23).
+  /// What to do with each of the chat's worktrees, by path; the ones left
+  /// out stay.
   @$pb.TagNumber(6)
-  $pb.PbList<WorktreeChoice> get worktrees => $_getList(5);
+  $pb.PbList<WorktreeChoice> get worktrees => $_getList(1);
 }
 
-/// What to do with a worktree and its branch, as for DeleteChatRequest's own
-/// fields.
+/// What to do with a worktree and its branch: remove the worktree (git
+/// worktree remove; one with changes only with force_worktree), and delete
+/// its branch (one with commits its base doesn't have only with
+/// force_branch).
 class WorktreeChoice extends $pb.GeneratedMessage {
   factory WorktreeChoice({
     $core.String? path,
@@ -5221,7 +5040,7 @@ class GetFolderStatusRequest extends $pb.GeneratedMessage {
   @$pb.TagNumber(1)
   void clearFolder() => $_clearField(1);
 
-  /// As GetDiffRequest.base (API 21).
+  /// As GetDiffRequest.base.
   @$pb.TagNumber(2)
   $core.String get base => $_getSZ(1);
   @$pb.TagNumber(2)
@@ -5350,7 +5169,7 @@ class GetFolderStatusResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(5)
   void clearRemoved() => $_clearField(5);
 
-  /// The folder doesn't exist (any more); nothing else is set (API 22).
+  /// The folder doesn't exist (any more); nothing else is set.
   @$pb.TagNumber(6)
   $core.bool get gone => $_getBF(5);
   @$pb.TagNumber(6)
@@ -5361,7 +5180,7 @@ class GetFolderStatusResponse extends $pb.GeneratedMessage {
   void clearGone() => $_clearField(6);
 
   /// The branch a branch is counted from when the chat has no base of its
-  /// own: origin/HEAD's branch, else main or master; "" if none (API 27).
+  /// own: origin/HEAD's branch, else main or master; "" if none.
   @$pb.TagNumber(7)
   $core.String get defaultBase => $_getSZ(6);
   @$pb.TagNumber(7)
@@ -5371,8 +5190,8 @@ class GetFolderStatusResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(7)
   void clearDefaultBase() => $_clearField(7);
 
-  /// The commits HEAD has that the base (or else default_base) lacks
-  /// (API 27).
+  ///  The commits HEAD has that the base (or else default_base) lacks
+  /// .
   @$pb.TagNumber(8)
   $core.int get ahead => $_getIZ(7);
   @$pb.TagNumber(8)
@@ -5451,7 +5270,7 @@ class GetDiffRequest extends $pb.GeneratedMessage {
 
   /// A branch: count the changes from where HEAD's branch left it (git
   /// merge-base HEAD base), the branch's commits and uncommitted changes
-  /// together, instead of from HEAD (API 21).
+  /// together, instead of from HEAD.
   @$pb.TagNumber(2)
   $core.String get base => $_getSZ(1);
   @$pb.TagNumber(2)
@@ -5461,7 +5280,7 @@ class GetDiffRequest extends $pb.GeneratedMessage {
   @$pb.TagNumber(2)
   void clearBase() => $_clearField(2);
 
-  /// A commit: what it changed, from its first parent, instead (API 27).
+  /// A commit: what it changed, from its first parent, instead.
   @$pb.TagNumber(3)
   $core.String get commit => $_getSZ(2);
   @$pb.TagNumber(3)
@@ -5472,7 +5291,7 @@ class GetDiffRequest extends $pb.GeneratedMessage {
   void clearCommit() => $_clearField(3);
 
   /// With commit, an older commit: what the commits from it to commit
-  /// changed, it included (API 27).
+  /// changed, it included.
   @$pb.TagNumber(4)
   $core.String get since => $_getSZ(3);
   @$pb.TagNumber(4)
@@ -5613,8 +5432,8 @@ class FileChange extends $pb.GeneratedMessage {
   @$pb.TagNumber(1)
   void clearPath() => $_clearField(1);
 
-  /// "added", "modified", "deleted", "renamed" (API 26: from old_path) or
-  /// "untracked" (API 26).
+  /// "added", "modified", "deleted", "renamed" (from old_path) or
+  /// "untracked".
   @$pb.TagNumber(2)
   $core.String get status => $_getSZ(1);
   @$pb.TagNumber(2)
@@ -5652,7 +5471,7 @@ class FileChange extends $pb.GeneratedMessage {
   @$pb.TagNumber(5)
   void clearSkipped() => $_clearField(5);
 
-  /// A renamed file's earlier path (API 26).
+  /// A renamed file's earlier path.
   @$pb.TagNumber(6)
   $core.String get oldPath => $_getSZ(5);
   @$pb.TagNumber(6)
@@ -5662,7 +5481,7 @@ class FileChange extends $pb.GeneratedMessage {
   @$pb.TagNumber(6)
   void clearOldPath() => $_clearField(6);
 
-  /// Lines added and removed; a binary file counts none (API 26).
+  /// Lines added and removed; a binary file counts none.
   @$pb.TagNumber(7)
   $core.int get added => $_getIZ(6);
   @$pb.TagNumber(7)
@@ -6180,7 +5999,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(7)
   ChatCommands ensureCommands() => $_ensure(6);
 
-  /// The chat was removed (RemoveChat).
+  /// The chat was deleted (DeleteChat).
   @$pb.TagNumber(8)
   $core.bool get removed => $_getBF(7);
   @$pb.TagNumber(8)
@@ -6202,7 +6021,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(9)
   Usage ensureUsage() => $_ensure(8);
 
-  /// The messages waiting for the agent, all of them (API 28).
+  /// The messages waiting for the agent, all of them.
   @$pb.TagNumber(10)
   ChatQueue get queue => $_getN(9);
   @$pb.TagNumber(10)
@@ -6215,7 +6034,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   ChatQueue ensureQueue() => $_ensure(9);
 
   /// The transcript was cut back: this item and every one after it are
-  /// gone (API 29).
+  /// gone.
   @$pb.TagNumber(11)
   $core.String get cut => $_getSZ(10);
   @$pb.TagNumber(11)
@@ -6226,7 +6045,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   void clearCut() => $_clearField(11);
 
   /// The chat's terminals, all of them, in order; these events have no
-  /// seq (API 35).
+  /// seq.
   @$pb.TagNumber(12)
   ChatTerminals get terminals => $_getN(11);
   @$pb.TagNumber(12)
@@ -6701,7 +6520,7 @@ class Item extends $pb.GeneratedMessage {
   @$pb.TagNumber(13)
   $pb.PbList<ImageData> get images => $_getList(12);
 
-  /// The tool call whose subagent made this item, if one did (API 24).
+  /// The tool call whose subagent made this item, if one did.
   @$pb.TagNumber(14)
   $core.String get parent => $_getSZ(13);
   @$pb.TagNumber(14)
@@ -6733,7 +6552,7 @@ class Item extends $pb.GeneratedMessage {
   void clearTool() => $_clearField(16);
 
   /// For a user message: the agent's message the conversation before it
-  /// ends with, where a rewind to it forks the session (API 29).
+  /// ends with, where a rewind to it forks the session.
   @$pb.TagNumber(17)
   $core.String get forkAt => $_getSZ(16);
   @$pb.TagNumber(17)
@@ -7100,7 +6919,6 @@ class ItemEvent extends $pb.GeneratedMessage {
 class ChatStatus extends $pb.GeneratedMessage {
   factory ChatStatus({
     $core.bool? busy,
-    $core.String? error,
     $fixnum.Int64? started,
     $core.bool? waiting,
     $core.bool? canFork,
@@ -7110,7 +6928,6 @@ class ChatStatus extends $pb.GeneratedMessage {
   }) {
     final result = ChatStatus._();
     if (busy != null) result.busy = busy;
-    if (error != null) result.error = error;
     if (started != null) result.started = started;
     if (waiting != null) result.waiting = waiting;
     if (canFork != null) result.canFork = canFork;
@@ -7134,7 +6951,6 @@ class ChatStatus extends $pb.GeneratedMessage {
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: ChatStatus.$_createMessage)
     ..aOB(1, _omitFieldNames ? '' : 'busy')
-    ..aOS(2, _omitFieldNames ? '' : 'error')
     ..aInt64(3, _omitFieldNames ? '' : 'started')
     ..aOB(4, _omitFieldNames ? '' : 'waiting')
     ..aOB(5, _omitFieldNames ? '' : 'canFork')
@@ -7172,74 +6988,64 @@ class ChatStatus extends $pb.GeneratedMessage {
   @$pb.TagNumber(1)
   void clearBusy() => $_clearField(1);
 
-  /// Not set since API version 11: a failed turn ends with a notice item.
-  @$pb.TagNumber(2)
-  $core.String get error => $_getSZ(1);
-  @$pb.TagNumber(2)
-  set error($core.String value) => $_setString(1, value);
-  @$pb.TagNumber(2)
-  $core.bool hasError() => $_has(1);
-  @$pb.TagNumber(2)
-  void clearError() => $_clearField(2);
-
   /// When the running turn started, in Unix milliseconds; 0 when idle.
   @$pb.TagNumber(3)
-  $fixnum.Int64 get started => $_getI64(2);
+  $fixnum.Int64 get started => $_getI64(1);
   @$pb.TagNumber(3)
-  set started($fixnum.Int64 value) => $_setInt64(2, value);
+  set started($fixnum.Int64 value) => $_setInt64(1, value);
   @$pb.TagNumber(3)
-  $core.bool hasStarted() => $_has(2);
+  $core.bool hasStarted() => $_has(1);
   @$pb.TagNumber(3)
   void clearStarted() => $_clearField(3);
 
   /// The agent waits on the user: a permission prompt or a question.
   @$pb.TagNumber(4)
-  $core.bool get waiting => $_getBF(3);
+  $core.bool get waiting => $_getBF(2);
   @$pb.TagNumber(4)
-  set waiting($core.bool value) => $_setBool(3, value);
+  set waiting($core.bool value) => $_setBool(2, value);
   @$pb.TagNumber(4)
-  $core.bool hasWaiting() => $_has(3);
+  $core.bool hasWaiting() => $_has(2);
   @$pb.TagNumber(4)
   void clearWaiting() => $_clearField(4);
 
   /// The agent can fork the chat (ForkChat).
   @$pb.TagNumber(5)
-  $core.bool get canFork => $_getBF(4);
+  $core.bool get canFork => $_getBF(3);
   @$pb.TagNumber(5)
-  set canFork($core.bool value) => $_setBool(4, value);
+  set canFork($core.bool value) => $_setBool(3, value);
   @$pb.TagNumber(5)
-  $core.bool hasCanFork() => $_has(4);
+  $core.bool hasCanFork() => $_has(3);
   @$pb.TagNumber(5)
   void clearCanFork() => $_clearField(5);
 
   /// The agent takes images in prompts.
   @$pb.TagNumber(6)
-  $core.bool get images => $_getBF(5);
+  $core.bool get images => $_getBF(4);
   @$pb.TagNumber(6)
-  set images($core.bool value) => $_setBool(5, value);
+  set images($core.bool value) => $_setBool(4, value);
   @$pb.TagNumber(6)
-  $core.bool hasImages() => $_has(5);
+  $core.bool hasImages() => $_has(4);
   @$pb.TagNumber(6)
   void clearImages() => $_clearField(6);
 
-  /// The agent can rewind the chat to a user message (RewindChat, API 29).
+  /// The agent can rewind the chat to a user message (RewindChat).
   @$pb.TagNumber(7)
-  $core.bool get canRewind => $_getBF(6);
+  $core.bool get canRewind => $_getBF(5);
   @$pb.TagNumber(7)
-  set canRewind($core.bool value) => $_setBool(6, value);
+  set canRewind($core.bool value) => $_setBool(5, value);
   @$pb.TagNumber(7)
-  $core.bool hasCanRewind() => $_has(6);
+  $core.bool hasCanRewind() => $_has(5);
   @$pb.TagNumber(7)
   void clearCanRewind() => $_clearField(7);
 
-  /// MCP servers changed since the agent started; ReloadChat picks them up
-  /// (API 33).
+  ///  MCP servers changed since the agent started; ReloadChat picks them up
+  /// .
   @$pb.TagNumber(8)
-  $core.bool get mcpChanged => $_getBF(7);
+  $core.bool get mcpChanged => $_getBF(6);
   @$pb.TagNumber(8)
-  set mcpChanged($core.bool value) => $_setBool(7, value);
+  set mcpChanged($core.bool value) => $_setBool(6, value);
   @$pb.TagNumber(8)
-  $core.bool hasMcpChanged() => $_has(7);
+  $core.bool hasMcpChanged() => $_has(6);
   @$pb.TagNumber(8)
   void clearMcpChanged() => $_clearField(8);
 }
@@ -7378,7 +7184,7 @@ class Terminal extends $pb.GeneratedMessage {
   @$pb.TagNumber(8)
   void clearExitCode() => $_clearField(8);
 
-  /// The name the user gave it, if any (API 36).
+  /// The name the user gave it, if any.
   @$pb.TagNumber(9)
   $core.String get name => $_getSZ(7);
   @$pb.TagNumber(9)
@@ -8884,14 +8690,14 @@ class NushiServiceApi {
   /// status.can_rewind and the message's fork_at is set, or it is the first)
   /// and returns that message. The agent's session is forked there: a new
   /// session id, the same chat. Files aren't rewound. Refused while the chat
-  /// is busy (API 29).
+  /// is busy.
   $async.Future<RewindChatResponse> rewindChat(
           $pb.ClientContext? ctx, RewindChatRequest request) =>
       _client.invoke<RewindChatResponse>(
           ctx, 'NushiService', 'RewindChat', request, RewindChatResponse());
 
   /// Takes a message out of the chat's queue before the agent gets it, and
-  /// returns it (API 28). Refused once the agent has it.
+  /// returns it. Refused once the agent has it.
   $async.Future<UnqueueResponse> unqueue(
           $pb.ClientContext? ctx, UnqueueRequest request) =>
       _client.invoke<UnqueueResponse>(
@@ -8931,13 +8737,6 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, ArchiveChatRequest request) =>
       _client.invoke<ArchiveChatResponse>(
           ctx, 'NushiService', 'ArchiveChat', request, ArchiveChatResponse());
-
-  /// Forgets a chat: its turn is cancelled, its agent stops, and Nushi's
-  /// record of it goes. The agent's own history of the session stays.
-  $async.Future<RemoveChatResponse> removeChat(
-          $pb.ClientContext? ctx, RemoveChatRequest request) =>
-      _client.invoke<RemoveChatResponse>(
-          ctx, 'NushiService', 'RemoveChat', request, RemoveChatResponse());
 
   /// Says what DeleteChat removes. The first time, the daemon starts the
   /// agent to learn whether it can delete its history.
@@ -8982,7 +8781,7 @@ class NushiServiceApi {
       _client.invoke<GetDiffResponse>(
           ctx, 'NushiService', 'GetDiff', request, GetDiffResponse());
 
-  /// Lists a branch's commits since a base, or the last ones (API 27).
+  /// Lists a branch's commits since a base, or the last ones.
   $async.Future<ListCommitsResponse> listCommits(
           $pb.ClientContext? ctx, ListCommitsRequest request) =>
       _client.invoke<ListCommitsResponse>(
@@ -9003,7 +8802,8 @@ class NushiServiceApi {
           ctx, 'NushiService', 'ListFiles', request, ListFilesResponse());
 
   /// Asks the chat's agent, unseen, what fills its context (Claude's
-  /// /context), while the chat is idle (API 25).
+  /// /context), in a throwaway fork of its session, while the chat is idle.
+  /// Refused when the agent can't fork.
   $async.Future<GetContextUsageResponse> getContextUsage(
           $pb.ClientContext? ctx, GetContextUsageRequest request) =>
       _client.invoke<GetContextUsageResponse>(ctx, 'NushiService',
@@ -9013,7 +8813,7 @@ class NushiServiceApi {
   /// agent's own files, env and header values masked. With check_health, the
   /// agent connects to each and says how that went (Claude's `claude mcp list`,
   /// seconds), and servers only it knows (plugins', claude.ai connectors)
-  /// are added (API 32).
+  /// are added.
   $async.Future<ListMcpServersResponse> listMcpServers(
           $pb.ClientContext? ctx, ListMcpServersRequest request) =>
       _client.invoke<ListMcpServersResponse>(ctx, 'NushiService',
@@ -9024,7 +8824,7 @@ class NushiServiceApi {
   /// Editing keeps the name and scope, and env and header values sent as
   /// "••••" keep the values they had; if the new config is refused, the old
   /// one is put back. Running chats the change reaches get
-  /// status.mcp_changed (API 33).
+  /// status.mcp_changed.
   $async.Future<AddMcpServerResponse> addMcpServer(
           $pb.ClientContext? ctx, AddMcpServerRequest request) =>
       _client.invoke<AddMcpServerResponse>(
@@ -9041,7 +8841,7 @@ class NushiServiceApi {
   /// Turns a project's .mcp.json server on for the folder's project, which
   /// approves it, or off, which rejects it (Claude's
   /// enabledMcpjsonServers and disabledMcpjsonServers in the project's
-  /// .claude/settings.local.json) (API 34).
+  /// .claude/settings.local.json).
   $async.Future<SetMcpServerOnResponse> setMcpServerOn(
           $pb.ClientContext? ctx, SetMcpServerOnRequest request) =>
       _client.invoke<SetMcpServerOnResponse>(ctx, 'NushiService',
@@ -9049,7 +8849,7 @@ class NushiServiceApi {
 
   /// Signs in to a server that needs OAuth: the agent opens the browser and
   /// the call returns once the sign-in is done there, or failed (a few
-  /// minutes at most). Logout forgets the sign-in (API 34).
+  /// minutes at most). Logout forgets the sign-in.
   $async.Future<LoginMcpServerResponse> loginMcpServer(
           $pb.ClientContext? ctx, LoginMcpServerRequest request) =>
       _client.invoke<LoginMcpServerResponse>(ctx, 'NushiService',
@@ -9061,7 +8861,7 @@ class NushiServiceApi {
 
   /// Reopens a chat's session on a new agent (ACP session/load), which
   /// replays its transcript, so it uses the MCP servers as they are now.
-  /// Refused while it is busy (API 33).
+  /// Refused while it is busy.
   $async.Future<ReloadChatResponse> reloadChat(
           $pb.ClientContext? ctx, ReloadChatRequest request) =>
       _client.invoke<ReloadChatResponse>(
@@ -9070,7 +8870,7 @@ class NushiServiceApi {
   /// Opens a terminal for a chat: the user's login shell, in the chat's
   /// folder (its worktree, for a worktree chat) or in a given one. The
   /// daemon owns it, so it outlives the app, but not the daemon. Changes to
-  /// a chat's terminals come as events (API 35).
+  /// a chat's terminals come as events.
   $async.Future<OpenTerminalResponse> openTerminal(
           $pb.ClientContext? ctx, OpenTerminalRequest request) =>
       _client.invoke<OpenTerminalResponse>(
@@ -9082,7 +8882,7 @@ class NushiServiceApi {
 
   /// Streams a terminal's output: first what it kept (the last 1 MB, maybe
   /// empty), then new output, and a last message once its shell has exited.
-  /// A client that falls far behind is cut off and attaches again (API 35).
+  /// A client that falls far behind is cut off and attaches again.
   $async.Future<AttachTerminalResponse> attachTerminal(
           $pb.ClientContext? ctx, AttachTerminalRequest request) =>
       _client.invoke<AttachTerminalResponse>(ctx, 'NushiService',
@@ -9097,27 +8897,27 @@ class NushiServiceApi {
           'ResizeTerminal', request, ResizeTerminalResponse());
 
   /// Names a terminal; an empty name goes back to the one it shows by
-  /// itself (API 36).
+  /// itself.
   $async.Future<RenameTerminalResponse> renameTerminal(
           $pb.ClientContext? ctx, RenameTerminalRequest request) =>
       _client.invoke<RenameTerminalResponse>(ctx, 'NushiService',
           'RenameTerminal', request, RenameTerminalResponse());
 
-  /// Puts a chat's terminals in an order (API 36).
+  /// Puts a chat's terminals in an order.
   $async.Future<ArrangeTerminalsResponse> arrangeTerminals(
           $pb.ClientContext? ctx, ArrangeTerminalsRequest request) =>
       _client.invoke<ArrangeTerminalsResponse>(ctx, 'NushiService',
           'ArrangeTerminals', request, ArrangeTerminalsResponse());
 
   /// Starts a new shell in a terminal's folder in place of its old one (a
-  /// shell that exited), keeping its place and name (API 36).
+  /// shell that exited), keeping its place and name.
   $async.Future<RestartTerminalResponse> restartTerminal(
           $pb.ClientContext? ctx, RestartTerminalRequest request) =>
       _client.invoke<RestartTerminalResponse>(ctx, 'NushiService',
           'RestartTerminal', request, RestartTerminalResponse());
 
   /// Closes a terminal: its shell is hung up, then killed after a short
-  /// grace, along with what still runs in it (API 35).
+  /// grace, along with what still runs in it.
   $async.Future<CloseTerminalResponse> closeTerminal(
           $pb.ClientContext? ctx, CloseTerminalRequest request) =>
       _client.invoke<CloseTerminalResponse>(ctx, 'NushiService',
@@ -9126,14 +8926,14 @@ class NushiServiceApi {
   /// Says what a folder brings for the agent to run on its own (MCP
   /// servers, hooks, helper commands) when neither the agent nor Nushi was
   /// told to trust it; nothing when it is trusted or brings nothing. Ask
-  /// before starting or moving a chat there (API 37).
+  /// before starting or moving a chat there.
   $async.Future<CheckFolderResponse> checkFolder(
           $pb.ClientContext? ctx, CheckFolderRequest request) =>
       _client.invoke<CheckFolderResponse>(
           ctx, 'NushiService', 'CheckFolder', request, CheckFolderResponse());
 
   /// Remembers that the user starts chats in a folder anyway (its
-  /// repository, outside git the folders under it too) (API 37).
+  /// repository, outside git the folders under it too).
   $async.Future<TrustFolderResponse> trustFolder(
           $pb.ClientContext? ctx, TrustFolderRequest request) =>
       _client.invoke<TrustFolderResponse>(

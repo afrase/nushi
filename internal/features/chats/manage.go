@@ -60,16 +60,6 @@ func (s *Service) Archive(chatID string, archived bool) error {
 	return err
 }
 
-// Remove forgets a chat: its agent stops and its session file goes. The
-// agent's own history of the session stays.
-func (s *Service) Remove(chatID string) error {
-	c, err := s.halt(chatID)
-	if err != nil {
-		return err
-	}
-	return s.forget(c)
-}
-
 // halt stops a chat's agent for good, before the chat goes. The chat
 // doesn't reopen until it is forgotten, or unhalted if it stays.
 func (s *Service) halt(chatID string) (*chat, error) {

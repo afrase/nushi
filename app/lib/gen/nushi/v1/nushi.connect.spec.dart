@@ -4,6 +4,7 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
+
 import "nushi.pb.dart" as nushiv1nushi;
 
 abstract final class NushiService {
@@ -66,7 +67,7 @@ abstract final class NushiService {
   /// status.can_rewind and the message's fork_at is set, or it is the first)
   /// and returns that message. The agent's session is forked there: a new
   /// session id, the same chat. Files aren't rewound. Refused while the chat
-  /// is busy (API 29).
+  /// is busy.
   static const rewindChat = connect.Spec(
     '/$name/RewindChat',
     connect.StreamType.unary,
@@ -75,7 +76,7 @@ abstract final class NushiService {
   );
 
   /// Takes a message out of the chat's queue before the agent gets it, and
-  /// returns it (API 28). Refused once the agent has it.
+  /// returns it. Refused once the agent has it.
   static const unqueue = connect.Spec(
     '/$name/Unqueue',
     connect.StreamType.unary,
@@ -127,15 +128,6 @@ abstract final class NushiService {
     connect.StreamType.unary,
     nushiv1nushi.ArchiveChatRequest.new,
     nushiv1nushi.ArchiveChatResponse.new,
-  );
-
-  /// Forgets a chat: its turn is cancelled, its agent stops, and Nushi's
-  /// record of it goes. The agent's own history of the session stays.
-  static const removeChat = connect.Spec(
-    '/$name/RemoveChat',
-    connect.StreamType.unary,
-    nushiv1nushi.RemoveChatRequest.new,
-    nushiv1nushi.RemoveChatResponse.new,
   );
 
   /// Says what DeleteChat removes. The first time, the daemon starts the
@@ -193,7 +185,7 @@ abstract final class NushiService {
     nushiv1nushi.GetDiffResponse.new,
   );
 
-  /// Lists a branch's commits since a base, or the last ones (API 27).
+  /// Lists a branch's commits since a base, or the last ones.
   static const listCommits = connect.Spec(
     '/$name/ListCommits',
     connect.StreamType.unary,
@@ -220,7 +212,8 @@ abstract final class NushiService {
   );
 
   /// Asks the chat's agent, unseen, what fills its context (Claude's
-  /// /context), while the chat is idle (API 25).
+  /// /context), in a throwaway fork of its session, while the chat is idle.
+  /// Refused when the agent can't fork.
   static const getContextUsage = connect.Spec(
     '/$name/GetContextUsage',
     connect.StreamType.unary,
@@ -232,7 +225,7 @@ abstract final class NushiService {
   /// agent's own files, env and header values masked. With check_health, the
   /// agent connects to each and says how that went (Claude's `claude mcp list`,
   /// seconds), and servers only it knows (plugins', claude.ai connectors)
-  /// are added (API 32).
+  /// are added.
   static const listMcpServers = connect.Spec(
     '/$name/ListMcpServers',
     connect.StreamType.unary,
@@ -245,7 +238,7 @@ abstract final class NushiService {
   /// Editing keeps the name and scope, and env and header values sent as
   /// "••••" keep the values they had; if the new config is refused, the old
   /// one is put back. Running chats the change reaches get
-  /// status.mcp_changed (API 33).
+  /// status.mcp_changed.
   static const addMcpServer = connect.Spec(
     '/$name/AddMcpServer',
     connect.StreamType.unary,
@@ -270,7 +263,7 @@ abstract final class NushiService {
   /// Turns a project's .mcp.json server on for the folder's project, which
   /// approves it, or off, which rejects it (Claude's
   /// enabledMcpjsonServers and disabledMcpjsonServers in the project's
-  /// .claude/settings.local.json) (API 34).
+  /// .claude/settings.local.json).
   static const setMcpServerOn = connect.Spec(
     '/$name/SetMcpServerOn',
     connect.StreamType.unary,
@@ -280,7 +273,7 @@ abstract final class NushiService {
 
   /// Signs in to a server that needs OAuth: the agent opens the browser and
   /// the call returns once the sign-in is done there, or failed (a few
-  /// minutes at most). Logout forgets the sign-in (API 34).
+  /// minutes at most). Logout forgets the sign-in.
   static const loginMcpServer = connect.Spec(
     '/$name/LoginMcpServer',
     connect.StreamType.unary,
@@ -297,7 +290,7 @@ abstract final class NushiService {
 
   /// Reopens a chat's session on a new agent (ACP session/load), which
   /// replays its transcript, so it uses the MCP servers as they are now.
-  /// Refused while it is busy (API 33).
+  /// Refused while it is busy.
   static const reloadChat = connect.Spec(
     '/$name/ReloadChat',
     connect.StreamType.unary,
@@ -308,7 +301,7 @@ abstract final class NushiService {
   /// Opens a terminal for a chat: the user's login shell, in the chat's
   /// folder (its worktree, for a worktree chat) or in a given one. The
   /// daemon owns it, so it outlives the app, but not the daemon. Changes to
-  /// a chat's terminals come as events (API 35).
+  /// a chat's terminals come as events.
   static const openTerminal = connect.Spec(
     '/$name/OpenTerminal',
     connect.StreamType.unary,
@@ -325,7 +318,7 @@ abstract final class NushiService {
 
   /// Streams a terminal's output: first what it kept (the last 1 MB, maybe
   /// empty), then new output, and a last message once its shell has exited.
-  /// A client that falls far behind is cut off and attaches again (API 35).
+  /// A client that falls far behind is cut off and attaches again.
   static const attachTerminal = connect.Spec(
     '/$name/AttachTerminal',
     connect.StreamType.server,
@@ -348,7 +341,7 @@ abstract final class NushiService {
   );
 
   /// Names a terminal; an empty name goes back to the one it shows by
-  /// itself (API 36).
+  /// itself.
   static const renameTerminal = connect.Spec(
     '/$name/RenameTerminal',
     connect.StreamType.unary,
@@ -356,7 +349,7 @@ abstract final class NushiService {
     nushiv1nushi.RenameTerminalResponse.new,
   );
 
-  /// Puts a chat's terminals in an order (API 36).
+  /// Puts a chat's terminals in an order.
   static const arrangeTerminals = connect.Spec(
     '/$name/ArrangeTerminals',
     connect.StreamType.unary,
@@ -365,7 +358,7 @@ abstract final class NushiService {
   );
 
   /// Starts a new shell in a terminal's folder in place of its old one (a
-  /// shell that exited), keeping its place and name (API 36).
+  /// shell that exited), keeping its place and name.
   static const restartTerminal = connect.Spec(
     '/$name/RestartTerminal',
     connect.StreamType.unary,
@@ -374,7 +367,7 @@ abstract final class NushiService {
   );
 
   /// Closes a terminal: its shell is hung up, then killed after a short
-  /// grace, along with what still runs in it (API 35).
+  /// grace, along with what still runs in it.
   static const closeTerminal = connect.Spec(
     '/$name/CloseTerminal',
     connect.StreamType.unary,
@@ -385,7 +378,7 @@ abstract final class NushiService {
   /// Says what a folder brings for the agent to run on its own (MCP
   /// servers, hooks, helper commands) when neither the agent nor Nushi was
   /// told to trust it; nothing when it is trusted or brings nothing. Ask
-  /// before starting or moving a chat there (API 37).
+  /// before starting or moving a chat there.
   static const checkFolder = connect.Spec(
     '/$name/CheckFolder',
     connect.StreamType.unary,
@@ -394,7 +387,7 @@ abstract final class NushiService {
   );
 
   /// Remembers that the user starts chats in a folder anyway (its
-  /// repository, outside git the folders under it too) (API 37).
+  /// repository, outside git the folders under it too).
   static const trustFolder = connect.Spec(
     '/$name/TrustFolder',
     connect.StreamType.unary,

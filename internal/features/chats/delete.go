@@ -25,14 +25,12 @@ type DeletePlan struct {
 // and its branch would lose, unless StateErr says why that can't be told.
 type WorktreePlan struct {
 	Worktree model.Worktree
-	Current  bool // the chat runs in it
 	State    model.WorktreeState
 	StateErr error
 }
 
 // DeleteOptions say what to do with a deleted chat's worktrees and their
-// branches, by the worktree's path ("" for the one the chat runs in, unless
-// its path is given); the rest stay.
+// branches, by the worktree's path; the rest stay.
 type DeleteOptions map[string]WorktreeOptions
 
 // WorktreeOptions say what to do with a worktree and its branch. Removing a
@@ -62,9 +60,9 @@ func (s *Service) PlanDelete(ctx context.Context, chatID string) (DeletePlan, er
 	if sess.Worktree != nil {
 		wts = append([]model.Worktree{*sess.Worktree}, wts...)
 	}
-	for i, wt := range wts {
+	for _, wt := range wts {
 		st, err := s.worktrees.Inspect(ctx, wt)
-		p.Worktrees = append(p.Worktrees, WorktreePlan{wt, i == 0 && sess.Worktree != nil, st, err})
+		p.Worktrees = append(p.Worktrees, WorktreePlan{wt, st, err})
 	}
 	s.mu.Lock()
 	known := s.deletes
@@ -111,11 +109,7 @@ func (s *Service) Delete(ctx context.Context, chatID string, opts DeleteOptions)
 	}
 	for _, wt := range p.Worktrees {
 		if err == nil {
-			o, ok := opts[wt.Worktree.Path]
-			if !ok && wt.Current {
-				o = opts[""]
-			}
-			err = s.deleteWorktree(ctx, &wt.Worktree, o)
+			err = s.deleteWorktree(ctx, &wt.Worktree, opts[wt.Worktree.Path])
 		}
 	}
 	if err == nil && p.History {

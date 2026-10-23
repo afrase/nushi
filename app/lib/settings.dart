@@ -22,9 +22,8 @@ final cardOrder = ValueNotifier<List<String>>([..._strings('cards')])
   ..addListener(_save);
 
 /// What each chat's Changes view shows (a `Scope`'s name), by chat, once
-/// picked. Chats from before step 43 that showed what's uncommitted keep it.
+/// picked.
 final changeScopes = ValueNotifier<Map<String, String>>({
-  for (final id in _strings('uncommitted')) id: 'uncommitted',
   for (final MapEntry(:key, :value)
       in ((_saved['scopes'] as Map?) ?? {}).entries)
     if (key is String && value is String) key: value,

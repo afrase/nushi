@@ -172,14 +172,6 @@ func (s *server) ArchiveChat(_ context.Context, req *connect.Request[nushiv1.Arc
 	return connect.NewResponse(&nushiv1.ArchiveChatResponse{}), nil
 }
 
-func (s *server) RemoveChat(_ context.Context, req *connect.Request[nushiv1.RemoveChatRequest]) (*connect.Response[nushiv1.RemoveChatResponse], error) {
-	if err := s.chats.Remove(req.Msg.ChatId); err != nil {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
-	}
-	s.terms.CloseChat(req.Msg.ChatId)
-	return connect.NewResponse(&nushiv1.RemoveChatResponse{}), nil
-}
-
 func (s *server) PlanDeleteChat(ctx context.Context, req *connect.Request[nushiv1.PlanDeleteChatRequest]) (*connect.Response[nushiv1.PlanDeleteChatResponse], error) {
 	p, err := s.chats.PlanDelete(ctx, req.Msg.ChatId)
 	if err != nil {
@@ -196,9 +188,6 @@ func (s *server) PlanDeleteChat(ctx context.Context, req *connect.Request[nushiv
 			plan.State.Error = w.StateErr.Error()
 		}
 		out.Worktrees = append(out.Worktrees, plan)
-	}
-	if len(p.Worktrees) > 0 && p.Worktrees[0].Current {
-		out.Worktree, out.WorktreeState = out.Worktrees[0].Worktree, out.Worktrees[0].State // for apps before API 23
 	}
 	for _, sess := range p.Sessions {
 		out.Sessions = append(out.Sessions, &nushiv1.AgentSession{SessionId: sess.ID, Folder: sess.Folder})
@@ -217,10 +206,6 @@ func (s *server) DeleteChat(ctx context.Context, req *connect.Request[nushiv1.De
 	for _, c := range m.Worktrees {
 		opts[c.Path] = chats.WorktreeOptions{RemoveWorktree: c.RemoveWorktree, ForceWorktree: c.ForceWorktree,
 			DeleteBranch: c.DeleteBranch, ForceBranch: c.ForceBranch}
-	}
-	if len(m.Worktrees) == 0 { // an app before API 23: the chat's own worktree only
-		opts[""] = chats.WorktreeOptions{RemoveWorktree: m.RemoveWorktree, ForceWorktree: m.ForceWorktree,
-			DeleteBranch: m.DeleteBranch, ForceBranch: m.ForceBranch}
 	}
 	if err := s.chats.Delete(ctx, m.ChatId, opts); err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)

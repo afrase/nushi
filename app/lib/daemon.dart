@@ -63,6 +63,9 @@ class Daemon extends ChangeNotifier {
   late final Timer _timer;
   bool connected = false;
   int daemonApi = 0; // the daemon's API version
+
+  /// Whether the daemon is older than the app: it needs a restart.
+  bool get outdated => daemonApi < apiVersion;
   DateTime _launched = DateTime(0); // when the bundled daemon was last started
   StreamSubscription<EventsResponse>? _events;
 
@@ -83,34 +86,6 @@ class Daemon extends ChangeNotifier {
     return next(req);
   };
 
-  /// Whether the daemon has rename, archive and remove (API 14).
-  bool get canManageChats => daemonApi >= 14;
-  bool get canDeleteChats => daemonApi >= 19;
-
-  /// Whether the daemon starts chats without a folder and moves them (API 16).
-  bool get canMove => daemonApi >= 16;
-
-  /// Whether the daemon runs chats in worktrees (API 20).
-  bool get canWorktrees => daemonApi >= 20;
-
-  /// Whether the daemon lists commits and finds the default branch, for
-  /// the Changes view's Branch and Commits (API 27).
-  bool get canCommits => daemonApi >= 27;
-
-  /// Whether the daemon queues messages sent while the agent works (API 28).
-  bool get canQueue => daemonApi >= 28;
-
-  /// Whether the daemon rewinds chats (API 29), and takes back a stopped
-  /// message (API 30).
-  bool get canRewind => daemonApi >= 29;
-  bool get canTakeBack => daemonApi >= 30;
-
-  /// Whether the daemon lists MCP servers (API 32), changes them (33), and
-  /// turns them on and off and signs in to them (34).
-  bool get canMcp => daemonApi >= 32;
-  bool get canMcpChange => daemonApi >= 33;
-  bool get canMcpOn => daemonApi >= 34;
-
   /// The folder whose MCP servers show in place of the chat, if they do.
   String? mcpFolder;
 
@@ -120,15 +95,8 @@ class Daemon extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Whether the daemon runs terminals (API 36).
-  bool get canTerminals => daemonApi >= 36;
-
   /// The chats' terminals.
   late final terminals = Terminals(client);
-
-  /// Whether the daemon says what a folder brings for the agent to run
-  /// (API 37).
-  bool get canTrust => daemonApi >= 37;
 
   /// A folder's code waiting for the user's word before a chat starts or
   /// moves there (see TrustCard).
@@ -139,7 +107,7 @@ class Daemon extends ChangeNotifier {
   /// [trustAsk] shows it and this waits for "Start anyway", which the
   /// daemon remembers, or Cancel.
   Future<bool> _mayRun(String folder, String action) async {
-    if (folder.isEmpty || !canTrust) return true;
+    if (folder.isEmpty) return true;
     final check = await client.checkFolder(CheckFolderRequest(folder: folder));
     if (check.runs.isEmpty) return true;
     trustAsk?.decide(false);
@@ -153,9 +121,6 @@ class Daemon extends ChangeNotifier {
     if (start) await client.trustFolder(TrustFolderRequest(folder: folder));
     return start;
   }
-
-  /// Whether the daemon sums up a folder's changes (API 17).
-  bool get canFolderStatus => daemonApi >= 17;
 
   Future<void> _ping() async {
     var api = 0;
@@ -325,7 +290,6 @@ class Daemon extends ChangeNotifier {
     }
     return chat
       ..worktree = c.hasWorktree() ? c.worktree : null
-      ..sessionId = c.sessionId.isEmpty ? c.id : c.sessionId
       ..title = c.title
       ..archived = c.archived
       ..created = DateTime.fromMillisecondsSinceEpoch(c.createdUnixMs.toInt())
@@ -353,8 +317,7 @@ class Daemon extends ChangeNotifier {
     select(resp.chatId);
   }
 
-  bool _worktree(String folder) =>
-      canWorktrees && worktreeRepos.value.contains(folder);
+  bool _worktree(String folder) => worktreeRepos.value.contains(folder);
 
   /// Moves a chat to [folder], or to a new worktree of its repository. A
   /// chat without messages follows the choice remembered for [folder].

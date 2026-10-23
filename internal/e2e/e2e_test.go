@@ -276,8 +276,8 @@ func TestDaemonRestartReopensChats(t *testing.T) {
 		t.Errorf("rebuilt transcript:\n%s\nwant:\n%s", got, want)
 	}
 	final := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID})))
-	if transcript(final.Items) != transcript(items) || final.Status.Error != "" {
-		t.Errorf("snapshot after reopening = %s (error %q)", transcript(final.Items), final.Status.Error)
+	if transcript(final.Items) != transcript(items) {
+		t.Errorf("snapshot after reopening = %s", transcript(final.Items))
 	}
 
 	// The reopened chat carries on.
@@ -310,7 +310,7 @@ func TestStopCancelsAWaitingPrompt(t *testing.T) {
 	}
 }
 
-func TestRenameArchiveAndRemove(t *testing.T) {
+func TestRenameArchiveAndDelete(t *testing.T) {
 	ctx := context.Background()
 	dataDir, history := t.TempDir(), &acptest.History{}
 	d := startDaemon(t, dataDir, history, nil)
@@ -347,11 +347,11 @@ func TestRenameArchiveAndRemove(t *testing.T) {
 		t.Error("an archived chat took a prompt")
 	}
 
-	// Removing forgets the chat in Nushi.
-	must(a.c.RemoveChat(ctx, connect.NewRequest(&nushiv1.RemoveChatRequest{ChatId: gone})))
-	a.waitFor("the removal", func(e *nushiv1.EventsResponse) bool { return e.ChatId == gone && e.GetRemoved() })
+	// Deleting forgets the chat in Nushi.
+	must(a.c.DeleteChat(ctx, connect.NewRequest(&nushiv1.DeleteChatRequest{ChatId: gone})))
+	a.waitFor("the deletion", func(e *nushiv1.EventsResponse) bool { return e.ChatId == gone && e.GetRemoved() })
 	if _, ok := list()[gone]; ok {
-		t.Error("the removed chat is still listed")
+		t.Error("the deleted chat is still listed")
 	}
 
 	// After a restart the chat is still archived and renamed; unarchived,

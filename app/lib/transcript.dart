@@ -87,7 +87,7 @@ class _TranscriptState extends State<Transcript> {
       final Subagent s => ('agent ${s.call.id}', [s.call, s.busy, ...s.items]),
       _ => ((e as Item).id, [e]),
     };
-    final rewindable = e is Item && canRewindTo(widget.daemon, widget.chat, e);
+    final rewindable = e is Item && canRewindTo(widget.chat, e);
     final from = [live, still, rewindable, ...items];
     final was = before[key];
     final same =

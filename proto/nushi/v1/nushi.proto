@@ -25,10 +25,10 @@ service NushiService {
   // status.can_rewind and the message's fork_at is set, or it is the first)
   // and returns that message. The agent's session is forked there: a new
   // session id, the same chat. Files aren't rewound. Refused while the chat
-  // is busy (API 29).
+  // is busy.
   rpc RewindChat(RewindChatRequest) returns (RewindChatResponse);
   // Takes a message out of the chat's queue before the agent gets it, and
-  // returns it (API 28). Refused once the agent has it.
+  // returns it. Refused once the agent has it.
   rpc Unqueue(UnqueueRequest) returns (UnqueueResponse);
   // Stops the chat's running turn (ACP session/cancel). The turn ends with a
   // "cancelled" notice, and prompts it was waiting on are cancelled. It can
@@ -46,9 +46,6 @@ service NushiService {
   // Archives a chat: its turn is cancelled and its agent stops; it stays
   // listed, read-only. Unarchiving reopens it (ACP session/load).
   rpc ArchiveChat(ArchiveChatRequest) returns (ArchiveChatResponse);
-  // Forgets a chat: its turn is cancelled, its agent stops, and Nushi's
-  // record of it goes. The agent's own history of the session stays.
-  rpc RemoveChat(RemoveChatRequest) returns (RemoveChatResponse);
   // Says what DeleteChat removes. The first time, the daemon starts the
   // agent to learn whether it can delete its history.
   rpc PlanDeleteChat(PlanDeleteChatRequest) returns (PlanDeleteChatResponse);
@@ -68,7 +65,7 @@ service NushiService {
   // included, or everything since its branch left a base, or what commits
   // changed.
   rpc GetDiff(GetDiffRequest) returns (GetDiffResponse);
-  // Lists a branch's commits since a base, or the last ones (API 27).
+  // Lists a branch's commits since a base, or the last ones.
   rpc ListCommits(ListCommitsRequest) returns (ListCommitsResponse);
   // Sums up a folder's changes (as GetDiff lists them) and names its
   // branch.
@@ -77,67 +74,68 @@ service NushiService {
   // repository the ones git doesn't ignore.
   rpc ListFiles(ListFilesRequest) returns (ListFilesResponse);
   // Asks the chat's agent, unseen, what fills its context (Claude's
-  // /context), while the chat is idle (API 25).
+  // /context), in a throwaway fork of its session, while the chat is idle.
+  // Refused when the agent can't fork.
   rpc GetContextUsage(GetContextUsageRequest) returns (GetContextUsageResponse);
   // Lists the MCP servers the agent's config gives a folder, read from the
   // agent's own files, env and header values masked. With check_health, the
   // agent connects to each and says how that went (Claude's `claude mcp list`,
   // seconds), and servers only it knows (plugins', claude.ai connectors)
-  // are added (API 32).
+  // are added.
   rpc ListMcpServers(ListMcpServersRequest) returns (ListMcpServersResponse);
   // Add, edit and remove an MCP server in a scope ("user", "project",
   // "local"), through the agent's own CLI; the folder names the project.
   // Editing keeps the name and scope, and env and header values sent as
   // "••••" keep the values they had; if the new config is refused, the old
   // one is put back. Running chats the change reaches get
-  // status.mcp_changed (API 33).
+  // status.mcp_changed.
   rpc AddMcpServer(AddMcpServerRequest) returns (AddMcpServerResponse);
   rpc EditMcpServer(EditMcpServerRequest) returns (EditMcpServerResponse);
   rpc RemoveMcpServer(RemoveMcpServerRequest) returns (RemoveMcpServerResponse);
   // Turns a project's .mcp.json server on for the folder's project, which
   // approves it, or off, which rejects it (Claude's
   // enabledMcpjsonServers and disabledMcpjsonServers in the project's
-  // .claude/settings.local.json) (API 34).
+  // .claude/settings.local.json).
   rpc SetMcpServerOn(SetMcpServerOnRequest) returns (SetMcpServerOnResponse);
   // Signs in to a server that needs OAuth: the agent opens the browser and
   // the call returns once the sign-in is done there, or failed (a few
-  // minutes at most). Logout forgets the sign-in (API 34).
+  // minutes at most). Logout forgets the sign-in.
   rpc LoginMcpServer(LoginMcpServerRequest) returns (LoginMcpServerResponse);
   rpc LogoutMcpServer(LogoutMcpServerRequest) returns (LogoutMcpServerResponse);
   // Reopens a chat's session on a new agent (ACP session/load), which
   // replays its transcript, so it uses the MCP servers as they are now.
-  // Refused while it is busy (API 33).
+  // Refused while it is busy.
   rpc ReloadChat(ReloadChatRequest) returns (ReloadChatResponse);
   // Opens a terminal for a chat: the user's login shell, in the chat's
   // folder (its worktree, for a worktree chat) or in a given one. The
   // daemon owns it, so it outlives the app, but not the daemon. Changes to
-  // a chat's terminals come as events (API 35).
+  // a chat's terminals come as events.
   rpc OpenTerminal(OpenTerminalRequest) returns (OpenTerminalResponse);
   rpc ListTerminals(ListTerminalsRequest) returns (ListTerminalsResponse);
   // Streams a terminal's output: first what it kept (the last 1 MB, maybe
   // empty), then new output, and a last message once its shell has exited.
-  // A client that falls far behind is cut off and attaches again (API 35).
+  // A client that falls far behind is cut off and attaches again.
   rpc AttachTerminal(AttachTerminalRequest) returns (stream AttachTerminalResponse);
   rpc WriteTerminal(WriteTerminalRequest) returns (WriteTerminalResponse);
   rpc ResizeTerminal(ResizeTerminalRequest) returns (ResizeTerminalResponse);
   // Names a terminal; an empty name goes back to the one it shows by
-  // itself (API 36).
+  // itself.
   rpc RenameTerminal(RenameTerminalRequest) returns (RenameTerminalResponse);
-  // Puts a chat's terminals in an order (API 36).
+  // Puts a chat's terminals in an order.
   rpc ArrangeTerminals(ArrangeTerminalsRequest) returns (ArrangeTerminalsResponse);
   // Starts a new shell in a terminal's folder in place of its old one (a
-  // shell that exited), keeping its place and name (API 36).
+  // shell that exited), keeping its place and name.
   rpc RestartTerminal(RestartTerminalRequest) returns (RestartTerminalResponse);
   // Closes a terminal: its shell is hung up, then killed after a short
-  // grace, along with what still runs in it (API 35).
+  // grace, along with what still runs in it.
   rpc CloseTerminal(CloseTerminalRequest) returns (CloseTerminalResponse);
   // Says what a folder brings for the agent to run on its own (MCP
   // servers, hooks, helper commands) when neither the agent nor Nushi was
   // told to trust it; nothing when it is trusted or brings nothing. Ask
-  // before starting or moving a chat there (API 37).
+  // before starting or moving a chat there.
   rpc CheckFolder(CheckFolderRequest) returns (CheckFolderResponse);
   // Remembers that the user starts chats in a folder anyway (its
-  // repository, outside git the folders under it too) (API 37).
+  // repository, outside git the folders under it too).
   rpc TrustFolder(TrustFolderRequest) returns (TrustFolderResponse);
   // Streams every change to every chat from now on. The first message is
   // empty: it says the subscription is live.
@@ -147,7 +145,7 @@ service NushiService {
 message PingRequest {}
 
 message PingResponse {
-  // Bumped when methods are added; the API only grows (ADR 0004).
+  // Bumped when the API grows; it only grows (ADR 0004).
   int32 api_version = 1;
 }
 
@@ -172,10 +170,9 @@ message Chat {
   ChatStatus status = 7;
   // Archived chats have no agent running and take no prompts.
   bool archived = 8;
-  // The agent's session id (claude --resume <id>). It differs from id for
-  // chats started since API 16.
+  // The agent's session id (claude --resume <id>).
   string session_id = 9;
-  // The git worktree Nushi made for the chat, if it runs in one (API 20).
+  // The git worktree Nushi made for the chat, if it runs in one.
   Worktree worktree = 10;
 }
 
@@ -205,7 +202,7 @@ message GetChatResponse {
   // The agent's slash commands.
   repeated Command commands = 6;
   Usage usage = 7;
-  // Messages waiting for the agent (API 28).
+  // Messages waiting for the agent.
   ChatQueue queue = 8;
 }
 
@@ -244,7 +241,7 @@ message StartChatRequest {
   string folder = 1;
   // Run the chat in a new worktree of folder's repository, at
   // <repo>/.worktrees/<name> on a new branch nushi/<name> from folder's
-  // HEAD (API 20).
+  // HEAD.
   bool worktree = 2;
 }
 
@@ -271,11 +268,11 @@ message SendPromptRequest {
   repeated string files = 3;
   // Images, after the files; refused unless status.images.
   repeated ImageData images = 4;
-  // While the chat is busy: wait in its queue for the agent's next chance
-  // (API 28): into the running turn when the agent can be steered, else as
-  // the next prompt. Without it a busy chat refuses the prompt.
+  // While the chat is busy: wait in its queue for the agent's next chance:
+  // into the running turn when the agent can be steered, else as the next
+  // prompt. Without it a busy chat refuses the prompt.
   bool queue = 5;
-  // While a turn runs: stop it and send at once (API 28).
+  // While a turn runs: stop it and send at once.
   bool now = 6;
 }
 
@@ -333,7 +330,7 @@ message CancelTurnRequest {
   string chat_id = 1;
   // Take the last user message back too, if the agent hasn't answered it
   // with any text or tool call yet: the chat is rewound to just before it
-  // when it can be, else it stays, with a notice (API 30). The call then
+  // when it can be, else it stays, with a notice. The call then
   // returns once the turn has ended.
   bool take_back = 2;
 }
@@ -373,12 +370,6 @@ message ArchiveChatRequest {
 
 message ArchiveChatResponse {}
 
-message RemoveChatRequest {
-  string chat_id = 1;
-}
-
-message RemoveChatResponse {}
-
 message PlanDeleteChatRequest {
   string chat_id = 1;
 }
@@ -391,16 +382,14 @@ message PlanDeleteChatResponse {
   bool deletes_history = 2;
   // The chat's scratch folder, if it still has one.
   string scratch_folder = 3;
-  // The chat's worktree, if it has one, and what removing it and deleting
-  // its branch would lose (API 22).
-  Worktree worktree = 4;
-  WorktreeState worktree_state = 5;
+  reserved 4, 5;
+  reserved "worktree", "worktree_state";
   // All of the chat's worktrees, each with what removing it and deleting
   // its branch would lose: its own, then those it moved out of, which stay
-  // on disk until it is deleted (API 23).
+  // on disk until it is deleted.
   repeated WorktreePlan worktrees = 6;
   // The chat's terminals whose shell still runs; deleting closes them
-  // (API 35).
+  //.
   repeated Terminal terminals = 7;
 }
 
@@ -431,21 +420,17 @@ message AgentSession {
 
 message DeleteChatRequest {
   string chat_id = 1;
-  // Remove the chat's worktree (git worktree remove). One with changes is
-  // removed only with force_worktree (API 22).
-  bool remove_worktree = 2;
-  bool force_worktree = 3;
-  // Delete the worktree's branch (with the worktree). One with commits its
-  // base doesn't have is deleted only with force_branch.
-  bool delete_branch = 4;
-  bool force_branch = 5;
-  // What to do with each of the chat's worktrees, by path; when set, the
-  // fields above don't apply (API 23).
+  reserved 2 to 5;
+  reserved "remove_worktree", "force_worktree", "delete_branch", "force_branch";
+  // What to do with each of the chat's worktrees, by path; the ones left
+  // out stay.
   repeated WorktreeChoice worktrees = 6;
 }
 
-// What to do with a worktree and its branch, as for DeleteChatRequest's own
-// fields.
+// What to do with a worktree and its branch: remove the worktree (git
+// worktree remove; one with changes only with force_worktree), and delete
+// its branch (one with commits its base doesn't have only with
+// force_branch).
 message WorktreeChoice {
   string path = 1;
   bool remove_worktree = 2;
@@ -598,7 +583,7 @@ message ContextCategory {
 
 message GetFolderStatusRequest {
   string folder = 1;
-  // As GetDiffRequest.base (API 21).
+  // As GetDiffRequest.base.
   string base = 2;
 }
 
@@ -611,13 +596,13 @@ message GetFolderStatusResponse {
   // Lines added and removed; binary files count none.
   int32 added = 4;
   int32 removed = 5;
-  // The folder doesn't exist (any more); nothing else is set (API 22).
+  // The folder doesn't exist (any more); nothing else is set.
   bool gone = 6;
   // The branch a branch is counted from when the chat has no base of its
-  // own: origin/HEAD's branch, else main or master; "" if none (API 27).
+  // own: origin/HEAD's branch, else main or master; "" if none.
   string default_base = 7;
   // The commits HEAD has that the base (or else default_base) lacks
-  // (API 27).
+  //.
   int32 ahead = 8;
 }
 
@@ -626,12 +611,12 @@ message GetDiffRequest {
   string folder = 1;
   // A branch: count the changes from where HEAD's branch left it (git
   // merge-base HEAD base), the branch's commits and uncommitted changes
-  // together, instead of from HEAD (API 21).
+  // together, instead of from HEAD.
   string base = 2;
-  // A commit: what it changed, from its first parent, instead (API 27).
+  // A commit: what it changed, from its first parent, instead.
   string commit = 3;
   // With commit, an older commit: what the commits from it to commit
-  // changed, it included (API 27).
+  // changed, it included.
   string since = 4;
 }
 
@@ -644,16 +629,16 @@ message GetDiffResponse {
 message FileChange {
   // Relative to the folder.
   string path = 1;
-  // "added", "modified", "deleted", "renamed" (API 26: from old_path) or
-  // "untracked" (API 26).
+  // "added", "modified", "deleted", "renamed" (from old_path) or
+  // "untracked".
   string status = 2;
   string old_text = 3;
   string new_text = 4;
   // Why the texts are left out ("binary", "too large"), if they are.
   string skipped = 5;
-  // A renamed file's earlier path (API 26).
+  // A renamed file's earlier path.
   string old_path = 6;
-  // Lines added and removed; a binary file counts none (API 26).
+  // Lines added and removed; a binary file counts none.
   int32 added = 7;
   int32 removed = 8;
 }
@@ -693,17 +678,17 @@ message EventsResponse {
     Chat chat = 5;
     // The agent's slash commands, all of them.
     ChatCommands commands = 7;
-    // The chat was removed (RemoveChat).
+    // The chat was deleted (DeleteChat).
     bool removed = 8;
     // The chat's usage, all of it.
     Usage usage = 9;
-    // The messages waiting for the agent, all of them (API 28).
+    // The messages waiting for the agent, all of them.
     ChatQueue queue = 10;
     // The transcript was cut back: this item and every one after it are
-    // gone (API 29).
+    // gone.
     string cut = 11;
     // The chat's terminals, all of them, in order; these events have no
-    // seq (API 35).
+    // seq.
     ChatTerminals terminals = 12;
   }
 }
@@ -780,7 +765,7 @@ message Item {
   repeated PlanEntry plan = 12;
   // A message's or a tool call's images.
   repeated ImageData images = 13;
-  // The tool call whose subagent made this item, if one did (API 24).
+  // The tool call whose subagent made this item, if one did.
   string parent = 14;
   // For a tool call that starts a subagent, the subagent's type ("Explore").
   string agent = 15;
@@ -788,7 +773,7 @@ message Item {
   // "SubagentHandback", ...).
   string tool = 16;
   // For a user message: the agent's message the conversation before it
-  // ends with, where a rewind to it forks the session (API 29).
+  // ends with, where a rewind to it forks the session.
   string fork_at = 17;
 }
 
@@ -841,8 +826,8 @@ message ItemEvent {
 
 message ChatStatus {
   bool busy = 1;
-  // Not set since API version 11: a failed turn ends with a notice item.
-  string error = 2;
+  reserved 2;
+  reserved "error";
   // When the running turn started, in Unix milliseconds; 0 when idle.
   int64 started = 3;
   // The agent waits on the user: a permission prompt or a question.
@@ -851,10 +836,10 @@ message ChatStatus {
   bool can_fork = 5;
   // The agent takes images in prompts.
   bool images = 6;
-  // The agent can rewind the chat to a user message (RewindChat, API 29).
+  // The agent can rewind the chat to a user message (RewindChat).
   bool can_rewind = 7;
   // MCP servers changed since the agent started; ReloadChat picks them up
-  // (API 33).
+  //.
   bool mcp_changed = 8;
 }
 
@@ -871,7 +856,7 @@ message Terminal {
   bool exited = 7;
   // -1: killed by a signal.
   int32 exit_code = 8;
-  // The name the user gave it, if any (API 36).
+  // The name the user gave it, if any.
   string name = 9;
 }
 

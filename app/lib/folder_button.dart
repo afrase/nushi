@@ -69,8 +69,7 @@ class FolderButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context), t = theme.t;
-    final enabled =
-        daemon.canMove && !chat.archived && !chat.busy && !chat.waiting;
+    final enabled = !chat.archived && !chat.busy && !chat.waiting;
     final recent = daemon.recentFolders.where((f) => f != chat.home).take(8);
     final (name, parent) = folderParts(chat.home);
     final nameStyle = theme.ui(t.text, size: 12, weight: FontWeight.w500);
@@ -88,7 +87,7 @@ class FolderButton extends StatelessWidget {
         MenuEntry('Choose folder…', onPick: () => _move(context, null)),
       ],
       builder: (context, open) => Tap(
-        tooltip: !daemon.canMove || chat.archived
+        tooltip: chat.archived
             ? chat.home
             : enabled
             ? 'Change the folder'

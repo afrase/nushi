@@ -54,17 +54,13 @@ class TerminalButton extends StatelessWidget {
       final on = open.contains(chat.id);
       return IconTap(
         Icons.terminal,
-        tooltip: !daemon.canTerminals
-            ? 'Terminals need a newer daemon'
-            : chat.archived
+        tooltip: chat.archived
             ? 'An archived chat has no terminals'
             : on
             ? 'Hide terminal  ⌃`'
             : 'Show terminal  ⌃`',
         color: on ? t.text : t.textSecondary,
-        onTap: daemon.canTerminals && !chat.archived
-            ? () => toggleTerminal(chat.id)
-            : null,
+        onTap: !chat.archived ? () => toggleTerminal(chat.id) : null,
       );
     },
   );
@@ -94,7 +90,7 @@ class _TerminalAreaState extends State<TerminalArea> {
   final _focus = FocusNode(skipTraversal: true);
 
   void _toggle() {
-    if (!widget.daemon.canTerminals || widget.chat.archived) return;
+    if (widget.chat.archived) return;
     // Hiding takes the focus out of the panel; keep it here for ⌃`.
     if (terminalChats.value.contains(widget.chat.id)) _focus.requestFocus();
     toggleTerminal(widget.chat.id);
@@ -136,9 +132,7 @@ class _TerminalAreaState extends State<TerminalArea> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(child: widget.child),
-              if (open.contains(widget.chat.id) &&
-                  widget.daemon.canTerminals &&
-                  !widget.chat.archived)
+              if (open.contains(widget.chat.id) && !widget.chat.archived)
                 Resizable(
                   name: 'terminal',
                   initial: 260,

@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
@@ -31,12 +30,10 @@ class _SidebarState extends State<Sidebar> {
   String? _starting; // the folder a chat is starting in ('' for none)
   bool _showArchived = false;
 
-  /// Starts a chat in [folder] ('' for a scratch folder, null to pick one).
-  Future<void> _start(String? folder) async {
-    folder ??= await getDirectoryPath(confirmButtonText: 'Start chat');
-    if (folder == null || !mounted) return;
+  /// Starts a chat in [folder] ('' for a scratch folder).
+  Future<void> _start(String folder) async {
     setState(() => _starting = folder);
-    await tryOrShow(context, () => widget.daemon.startChat(folder!));
+    await tryOrShow(context, () => widget.daemon.startChat(folder));
     if (mounted) setState(() => _starting = null);
   }
 
@@ -73,15 +70,11 @@ class _SidebarState extends State<Sidebar> {
           Padding(
             padding: const EdgeInsets.all(10),
             child: Button(
-              label: widget.daemon.canMove
-                  ? 'New chat'
-                  : 'New chat in a folder…',
+              label: 'New chat',
               icon: Icons.add,
               kind: ButtonKind.primary,
               height: 28,
-              onPressed: _starting == null
-                  ? () => _start(widget.daemon.canMove ? '' : null)
-                  : null,
+              onPressed: _starting == null ? () => _start('') : null,
             ),
           ),
           Expanded(
@@ -93,10 +86,7 @@ class _SidebarState extends State<Sidebar> {
                   _FolderHeader(
                     folder,
                     onNew: _starting == null ? () => _start(folder) : null,
-                    onTerminal:
-                        folder.isEmpty ||
-                            chats.isEmpty ||
-                            !widget.daemon.canTerminals
+                    onTerminal: folder.isEmpty || chats.isEmpty
                         ? null
                         : () => _terminal(folder, chats),
                   ),
@@ -146,8 +136,7 @@ class _SidebarState extends State<Sidebar> {
               ],
             ),
           ),
-          if (widget.daemon.canMcp) _McpButton(widget.daemon),
-          if (widget.daemon.daemonApi < apiVersion) _Outdated(widget.daemon),
+          _McpButton(widget.daemon),
         ],
       ),
     );
@@ -185,59 +174,6 @@ class _McpButton extends StatelessWidget {
             Text('MCP servers', style: theme.ui(t.textSecondary, size: 12)),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// Says the daemon is older than the app, with a way to restart it.
-class _Outdated extends StatefulWidget {
-  const _Outdated(this.daemon);
-
-  final Daemon daemon;
-
-  @override
-  State<_Outdated> createState() => _OutdatedState();
-}
-
-class _OutdatedState extends State<_Outdated> {
-  bool _restarting = false;
-
-  Future<void> _restart() async {
-    setState(() => _restarting = true);
-    await tryOrShow(context, widget.daemon.restartDaemon);
-    if (mounted) setState(() => _restarting = false);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: t.borderSubtle)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'The daemon is older than this app, so some features are '
-            'unavailable. Restarting it stops running turns and closes '
-            'terminals; chats reopen as you open them.',
-            style: theme.ui(t.textSecondary, size: 12),
-          ),
-          const SizedBox(height: 8),
-          if (bundledDaemon != null)
-            Button(
-              label: _restarting ? 'Restarting…' : 'Restart daemon',
-              onPressed: _restarting ? null : _restart,
-            )
-          else
-            Text(
-              'make stop daemon',
-              style: theme.code(t.textMuted, size: 11.5),
-            ),
-        ],
       ),
     );
   }
@@ -325,8 +261,7 @@ class _ChatRowState extends State<_ChatRow> {
 
   void _tap() {
     final now = DateTime.now();
-    if (now.difference(_lastTap) < kDoubleTapTimeout &&
-        widget.daemon.canManageChats) {
+    if (now.difference(_lastTap) < kDoubleTapTimeout) {
       setState(() => _renaming = true);
     }
     _lastTap = now;

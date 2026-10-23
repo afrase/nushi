@@ -37,9 +37,9 @@ func TestContextUsageLeavesNoTrace(t *testing.T) {
 		t.Errorf("prompt = %q, deleted %v", got, deleted)
 	}
 
-	// An agent that can't fork answers in the chat's own session, unseen.
+	// An agent that can't fork isn't asked.
 	c.canFork = false
-	if md, err := svc.ContextUsage(context.Background(), id); err != nil || md != "## Context Usage" || len(c.items) != 0 || events != before {
-		t.Errorf("ContextUsage = %q, %v; %d items, %d events", md, err, len(c.items), events-before)
+	if _, err := svc.ContextUsage(context.Background(), id); err == nil {
+		t.Error("ran /context without a fork")
 	}
 }
