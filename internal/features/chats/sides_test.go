@@ -39,7 +39,7 @@ func TestSideChatKeepsToItself(t *testing.T) {
 			t.Errorf("the side chat was stored")
 		}
 	}
-	if err := svc.CloseSide(ctx, side); err != nil {
+	if err := svc.CloseSide(side); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := svc.Get(side); err == nil {

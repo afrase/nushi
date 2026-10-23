@@ -88,17 +88,18 @@ type chat struct {
 	commands  []model.Command
 	usage     model.Usage
 	session   model.Session
-	canFork   bool             // the agent can fork the session into side chats
-	canImage  bool             // the agent takes images in prompts
-	sides     map[string]*chat // the chat's side chats, by session id
-	parent    *chat            // a side chat's chat
-	started   time.Time        // when the running turn started
-	done      chan struct{}    // closed when the running turn ends
-	seq       int64            // the last event's number
-	silent    *silentRun       // a prompt Nushi sent on its own, running
-	queue     []model.Message  // waiting for the agent's next chance
-	steer     bool             // the agent takes messages into a running turn
-	canRewind bool             // the agent forks a session at a message
+	canFork   bool                  // the agent can fork the session into side chats
+	canImage  bool                  // the agent takes images in prompts
+	sides     map[string]*chat      // the chat's side chats, by session id
+	parent    *chat                 // a side chat's chat
+	started   time.Time             // when the running turn started
+	done      chan struct{}         // closed when the running turn ends
+	seq       int64                 // the last event's number
+	silent    *silentRun            // a prompt Nushi sent on its own, running
+	probes    map[string]*silentRun // throwaway forks' runs, by session id
+	queue     []model.Message       // waiting for the agent's next chance
+	steer     bool                  // the agent takes messages into a running turn
+	canRewind bool                  // the agent forks a session at a message
 }
 
 // emitLocked numbers and publishes one of the chat's events. Holding the
@@ -186,7 +187,7 @@ func checkFolder(folder string) error {
 
 func (s *Service) newChat() *chat {
 	return &chat{publish: s.publish, sessions: s.sessions, waiting: map[string]chan<- string{},
-		questions: map[string]chan<- []model.Field{}, sides: map[string]*chat{}}
+		questions: map[string]chan<- []model.Field{}, sides: map[string]*chat{}, probes: map[string]*silentRun{}}
 }
 
 // Close stops every chat's agent.

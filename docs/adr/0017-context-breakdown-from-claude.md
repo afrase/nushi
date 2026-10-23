@@ -29,3 +29,9 @@ transcript; it hasn't been seen.
 Claude keeps `/context`'s answer in the conversation (5–7k tokens each
 time), so the app asks only when the user presses the card's refresh
 button, never on its own.
+
+Since step 50, when the agent can fork, `/context` runs in a throwaway fork
+of the session instead (deleted right after), which leaves the chat's
+conversation alone, so the card asks on its own again: after a turn, at
+most once a minute, while it is open. Agents that can't fork keep the
+refresh button only.
