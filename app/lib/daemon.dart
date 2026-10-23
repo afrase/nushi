@@ -30,10 +30,7 @@ final String? _oldDataDir =
     : null;
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 37;
-
-/// Whether [folder] is a chat's scratch folder: the chat has no folder yet.
-bool isScratch(String folder) => folder.startsWith('$dataDir/scratch/');
+const apiVersion = 38;
 
 /// The daemon in the app's bundle (`make package`), if the app runs from one.
 final String? bundledDaemon = () {
@@ -290,6 +287,8 @@ class Daemon extends ChangeNotifier {
     }
     return chat
       ..worktree = c.hasWorktree() ? c.worktree : null
+      ..agent = c.agent
+      ..scratch = c.scratch
       ..title = c.title
       ..archived = c.archived
       ..created = DateTime.fromMillisecondsSinceEpoch(c.createdUnixMs.toInt())
@@ -339,14 +338,15 @@ class Daemon extends ChangeNotifier {
       ..sort((a, b) => b.created.compareTo(a.created));
     return {
       for (final c in byNewest)
-        if (!isScratch(c.folder)) c.home,
+        if (!c.scratch) c.home,
     }.toList();
   }
 
   /// Opens a side chat of [chat] (see ForkChat).
   Future<ChatState> forkChat(ChatState chat) async {
     final resp = await client.forkChat(ForkChatRequest(chatId: chat.id));
-    final side = sides[resp.chatId] = ChatState(resp.chatId, chat.folder);
+    final side = sides[resp.chatId] = ChatState(resp.chatId, chat.folder)
+      ..agent = chat.agent;
     unawaited(_load(side));
     return side;
   }

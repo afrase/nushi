@@ -30,6 +30,9 @@ type Session struct {
 	// EarlierWorktrees are the worktrees Nushi made for the chat before it
 	// moved out of them, oldest first. They stay until the chat is deleted.
 	EarlierWorktrees []Worktree `json:",omitempty"`
+	// Scratch says Folder is a scratch folder of the chat's own (the chat
+	// has no folder yet); worked out from the folder, not stored.
+	Scratch bool `json:"-"`
 }
 
 // Worktree is a git worktree of a repository, on a branch of its own.
@@ -115,7 +118,23 @@ type Item struct {
 	Tool string
 	// ForkAt is, for a user message, the agent's message the conversation
 	// before it ends with: where a rewind to it forks the session.
-	ForkAt string
+	// Rewindable says a rewind to it can fork there (or it is the first).
+	ForkAt     string
+	Rewindable bool
+	// Subagent is how the subagent a tool call starts goes.
+	Subagent *Subagent
+	// Report says the tool call is a subagent's report to its chat: the
+	// subagent's result, not one of its steps.
+	Report bool
+}
+
+// Subagent is how a subagent goes: State is "running", "done" or "failed";
+// Started and Ended are when the daemon saw that (zero when it didn't: a
+// replayed chat); Result is what it found, once it ended.
+type Subagent struct {
+	State          string
+	Started, Ended time.Time
+	Result         string
 }
 
 // Image is an image in a message or a tool call's output.
@@ -150,6 +169,7 @@ type Field struct {
 	Options                []Option
 	Required               bool
 	Values                 []string
+	OtherFor               string // the field this free-text one is the "Other" answer of
 }
 
 // Message is what the user sends: text, the files it mentions (relative
@@ -227,6 +247,7 @@ type ContextCategory struct {
 	Name    string
 	Tokens  int64
 	Percent float64
+	Kind    string // "free" for free space, "deferred" for what loads on demand, else ""
 }
 
 // Command is a slash command the agent offers.
@@ -245,6 +266,7 @@ type ConfigOption struct {
 // ConfigValue is one value of a select option; Group names its group, if any.
 type ConfigValue struct {
 	Value, Name, Description, Group string
+	Default                         bool // the agent's "use the default" choice
 }
 
 // Chat is a snapshot of a chat: everything its events have built so far.
@@ -271,6 +293,9 @@ type Status struct {
 	// MCPChanged says MCP servers changed since the agent started; a reload
 	// picks them up.
 	MCPChanged bool
+	// CanAskContext says ContextUsage can ask the agent what fills its
+	// context, once the chat is idle.
+	CanAskContext bool
 }
 
 // FileChange is one file's uncommitted change: its text at HEAD and now.

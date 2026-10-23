@@ -59,7 +59,7 @@ class _SidebarState extends State<Sidebar> {
         if (c.archived) c,
     ];
     for (final c in byNewest.where((c) => !c.archived)) {
-      (groups[isScratch(c.folder) ? '' : c.home] ??= []).add(c);
+      (groups[c.scratch ? '' : c.home] ??= []).add(c);
     }
     if (_starting != null) groups.putIfAbsent(_starting!, () => []);
     return DecoratedBox(
@@ -326,7 +326,7 @@ class _ChatRowState extends State<_ChatRow> {
                       ),
                     ),
                   ),
-                if (chat.archived && !isScratch(chat.folder))
+                if (chat.archived && !chat.scratch)
                   Text(
                     folderParts(chat.home).$1,
                     style: theme.ui(t.textMuted, size: 11.5),

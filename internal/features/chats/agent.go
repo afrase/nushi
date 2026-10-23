@@ -37,17 +37,17 @@ func (c *chat) openSession(ctx context.Context, launch Launch, sid, folder strin
 	}
 	switch {
 	case sid == "":
-		o.sid, o.config, err = newSession(ctx, agent, folder)
+		o.sid, o.config, err = c.newSession(ctx, agent, folder)
 	case fork && !agent.CanFork():
 		err = errors.New("the agent can't fork sessions")
 	case fork:
-		o.sid, o.config, err = forkSession(ctx, agent, sid, folder, nil)
+		o.sid, o.config, err = c.forkSession(ctx, agent, sid, folder, nil)
 	case init.AgentCapabilities == nil || !init.AgentCapabilities.LoadSession:
 		err = errors.New("the agent can't reopen sessions")
 	default:
 		var resp *acp.LoadSessionResponse
 		if resp, err = agent.LoadSession(ctx, acp.LoadSessionRequest{SessionID: acp.SessionID(sid), Cwd: folder, MCPServers: []acp.MCPServer{}}); err == nil {
-			o.config = configFrom(resp.ConfigOptions, resp.Modes)
+			o.config = c.configFrom(resp.ConfigOptions, resp.Modes)
 		}
 	}
 	if err != nil {
@@ -58,22 +58,22 @@ func (c *chat) openSession(ctx context.Context, launch Launch, sid, folder strin
 }
 
 // newSession has agent start a session in folder.
-func newSession(ctx context.Context, agent Agent, folder string) (string, []model.ConfigOption, error) {
+func (c *chat) newSession(ctx context.Context, agent Agent, folder string) (string, []model.ConfigOption, error) {
 	resp, err := agent.NewSession(ctx, acp.NewSessionRequest{Cwd: folder, MCPServers: []acp.MCPServer{}})
 	if err != nil {
 		return "", nil, err
 	}
-	return string(resp.SessionID), configFrom(resp.ConfigOptions, resp.Modes), nil
+	return string(resp.SessionID), c.configFrom(resp.ConfigOptions, resp.Modes), nil
 }
 
 // forkSession has agent fork session sid with folder as the fork's cwd:
 // a copy of the whole conversation, or as meta asks (see Dialect.ForkAt).
-func forkSession(ctx context.Context, agent Agent, sid, folder string, meta map[string]any) (string, []model.ConfigOption, error) {
+func (c *chat) forkSession(ctx context.Context, agent Agent, sid, folder string, meta map[string]any) (string, []model.ConfigOption, error) {
 	resp, err := agent.ForkSession(ctx, acp.ForkSessionRequest{SessionID: acp.SessionID(sid), Cwd: folder, MCPServers: []acp.MCPServer{}, Meta: meta})
 	if err != nil {
 		return "", nil, err
 	}
-	return string(resp.SessionID), configFrom(resp.ConfigOptions, resp.Modes), nil
+	return string(resp.SessionID), c.configFrom(resp.ConfigOptions, resp.Modes), nil
 }
 
 // initialize launches an agent and initializes the connection, with meta
@@ -121,6 +121,7 @@ func (s *Service) watch(c *chat, agent Agent) {
 	for i, it := range c.items { // they won't finish now
 		if it.Kind == model.ToolCall && (it.Status == "pending" || it.Status == "in_progress") {
 			c.items[i].Status = "failed"
+			c.subagentLocked(&c.items[i])
 			c.publishLocked(c.items[i])
 		}
 	}

@@ -17,7 +17,7 @@ Future<void> mcpForm(
   McpServer? server,
 }) => showDialog<void>(context: context, builder: (_) => _Form(list, server));
 
-final _name = RegExp(r'^[A-Za-z0-9_-]+$');
+final _name = RegExp(r'^[A-Za-z0-9_][A-Za-z0-9_-]*$'); // as the daemon checks
 
 /// The keys the form shows; others are kept as they are.
 const _known = {'type', 'command', 'args', 'env', 'url', 'headers'};
@@ -127,7 +127,8 @@ class _FormState extends State<_Form> {
   /// What's wrong with the form, or ''.
   String _check(Map<String, dynamic> c) {
     if (!_name.hasMatch(_nameCtl.text)) {
-      return 'A name can only have letters, digits, - and _.';
+      return 'A name can only have letters, digits, - and _, and can’t '
+          'start with -.';
     }
     final url = '${c['url'] ?? ''}';
     if (c['url'] == null && '${c['command'] ?? ''}'.trim().isEmpty) {

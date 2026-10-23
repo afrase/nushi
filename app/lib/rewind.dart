@@ -7,18 +7,10 @@ import 'menu.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
 
-/// Whether the chat can be rewound to just before [item], a user message:
-/// the agent forks at the message before it, or it is the first.
+/// Whether the chat can be rewound to just before [item], a user message,
+/// as the daemon says.
 bool canRewindTo(ChatState chat, Item item) =>
-    chat.canRewind &&
-    !chat.busy &&
-    !chat.archived &&
-    item.kind == ItemKind.ITEM_KIND_USER_MESSAGE &&
-    (item.forkAt.isNotEmpty ||
-        chat.items
-                .firstWhere((it) => it.kind == ItemKind.ITEM_KIND_USER_MESSAGE)
-                .id ==
-            item.id);
+    chat.canRewind && !chat.busy && !chat.archived && item.rewindable;
 
 /// Asks, then cuts the chat back to just before [item] and puts the message
 /// in the composer to edit.
@@ -31,10 +23,10 @@ Future<void> rewind(
   if (!await confirm(
         context,
         'Rewind to here?',
-        'The conversation goes back to just before this message, and Claude '
-            'forgets everything from it on. The message goes back in the box '
-            'to edit.\n\nFiles aren’t rewound: changes Claude made since then '
-            'stay.',
+        'The conversation goes back to just before this message, and '
+            '${chat.agentName} forgets everything from it on. The message goes '
+            'back in the box to edit.\n\nFiles aren’t rewound: changes '
+            '${chat.agentName} made since then stay.',
         'Rewind',
       ) ||
       !context.mounted) {

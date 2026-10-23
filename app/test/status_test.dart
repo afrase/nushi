@@ -52,12 +52,13 @@ void main() {
         kind: ItemKind.ITEM_KIND_TOOL_CALL,
         agent: 'Explore',
         status: 'completed',
+        subagent: Subagent(state: 'done'),
       ),
       Item(id: 'm', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE),
       Item(id: 'r', kind: ItemKind.ITEM_KIND_TOOL_CALL, parent: 'a'),
       Item(id: 's', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE, parent: 'a'),
     ];
-    final subs = subagentsOf(items, busy: false);
+    final subs = subagentsOf(items);
     expect([for (final s in subs) s.call.id], ['a']);
     expect([for (final it in subs.single.items) it.id], ['r', 's']);
     expect(subagentState(subs.single), 'done · 1 tool call');

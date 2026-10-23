@@ -23,10 +23,14 @@ type Modes interface {
 // configFrom turns the agent's config options and legacy modes into options.
 // An agent that publishes its mode both ways (claude-agent-acp does) gets one
 // mode option: the config option.
-func configFrom(opts []acp.SessionConfigOption, modes *acp.SessionModeState) []model.ConfigOption {
+func (c *chat) configFrom(opts []acp.SessionConfigOption, modes *acp.SessionModeState) []model.ConfigOption {
 	out := []model.ConfigOption{}
 	for _, o := range opts {
-		out = append(out, configOption(o))
+		co := configOption(o)
+		for i, v := range co.Values {
+			co.Values[i].Default = c.dialect.Default != nil && c.dialect.Default(co, v)
+		}
+		out = append(out, co)
 	}
 	if modes != nil && modeIndex(out) < 0 {
 		m := model.ConfigOption{ID: legacyMode, Name: "Mode", Category: "mode", Type: "select", Current: string(modes.CurrentModeID)}
@@ -174,7 +178,7 @@ func (c *chat) configChangedLocked() {
 // replaceConfigLocked takes a new set of config options from the agent,
 // keeping the legacy mode unless a mode option came with them.
 func (c *chat) replaceConfigLocked(opts []acp.SessionConfigOption) {
-	out := configFrom(opts, nil)
+	out := c.configFrom(opts, nil)
 	if i := modeIndex(c.config); i >= 0 && c.config[i].ID == legacyMode && modeIndex(out) < 0 {
 		out = append(out, c.config[i])
 	}

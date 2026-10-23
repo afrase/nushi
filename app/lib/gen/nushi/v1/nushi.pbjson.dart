@@ -138,6 +138,7 @@ const Chat$json = {
       '6': '.nushi.v1.Worktree',
       '10': 'worktree'
     },
+    {'1': 'scratch', '3': 11, '4': 1, '5': 8, '10': 'scratch'},
   ],
 };
 
@@ -148,7 +149,7 @@ final $typed_data.Uint8List chatDescriptor = $convert.base64Decode(
     'JgoPY3JlYXRlZF91bml4X21zGAYgASgDUg1jcmVhdGVkVW5peE1zEiwKBnN0YXR1cxgHIAEoCz'
     'IULm51c2hpLnYxLkNoYXRTdGF0dXNSBnN0YXR1cxIaCghhcmNoaXZlZBgIIAEoCFIIYXJjaGl2'
     'ZWQSHQoKc2Vzc2lvbl9pZBgJIAEoCVIJc2Vzc2lvbklkEi4KCHdvcmt0cmVlGAogASgLMhIubn'
-    'VzaGkudjEuV29ya3RyZWVSCHdvcmt0cmVl');
+    'VzaGkudjEuV29ya3RyZWVSCHdvcmt0cmVlEhgKB3NjcmF0Y2gYCyABKAhSB3NjcmF0Y2g=');
 
 @$core.Deprecated('Use worktreeDescriptor instead')
 const Worktree$json = {
@@ -1230,13 +1231,14 @@ const ContextCategory$json = {
     {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
     {'1': 'tokens', '3': 2, '4': 1, '5': 3, '10': 'tokens'},
     {'1': 'percent', '3': 3, '4': 1, '5': 1, '10': 'percent'},
+    {'1': 'kind', '3': 4, '4': 1, '5': 9, '10': 'kind'},
   ],
 };
 
 /// Descriptor for `ContextCategory`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List contextCategoryDescriptor = $convert.base64Decode(
     'Cg9Db250ZXh0Q2F0ZWdvcnkSEgoEbmFtZRgBIAEoCVIEbmFtZRIWCgZ0b2tlbnMYAiABKANSBn'
-    'Rva2VucxIYCgdwZXJjZW50GAMgASgBUgdwZXJjZW50');
+    'Rva2VucxIYCgdwZXJjZW50GAMgASgBUgdwZXJjZW50EhIKBGtpbmQYBCABKAlSBGtpbmQ=');
 
 @$core.Deprecated('Use getFolderStatusRequestDescriptor instead')
 const GetFolderStatusRequest$json = {
@@ -1549,13 +1551,15 @@ const ConfigValue$json = {
     {'1': 'name', '3': 2, '4': 1, '5': 9, '10': 'name'},
     {'1': 'description', '3': 3, '4': 1, '5': 9, '10': 'description'},
     {'1': 'group', '3': 4, '4': 1, '5': 9, '10': 'group'},
+    {'1': 'is_default', '3': 5, '4': 1, '5': 8, '10': 'isDefault'},
   ],
 };
 
 /// Descriptor for `ConfigValue`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List configValueDescriptor = $convert.base64Decode(
     'CgtDb25maWdWYWx1ZRIUCgV2YWx1ZRgBIAEoCVIFdmFsdWUSEgoEbmFtZRgCIAEoCVIEbmFtZR'
-    'IgCgtkZXNjcmlwdGlvbhgDIAEoCVILZGVzY3JpcHRpb24SFAoFZ3JvdXAYBCABKAlSBWdyb3Vw');
+    'IgCgtkZXNjcmlwdGlvbhgDIAEoCVILZGVzY3JpcHRpb24SFAoFZ3JvdXAYBCABKAlSBWdyb3Vw'
+    'Eh0KCmlzX2RlZmF1bHQYBSABKAhSCWlzRGVmYXVsdA==');
 
 @$core.Deprecated('Use itemDescriptor instead')
 const Item$json = {
@@ -1620,6 +1624,16 @@ const Item$json = {
     {'1': 'agent', '3': 15, '4': 1, '5': 9, '10': 'agent'},
     {'1': 'tool', '3': 16, '4': 1, '5': 9, '10': 'tool'},
     {'1': 'fork_at', '3': 17, '4': 1, '5': 9, '10': 'forkAt'},
+    {'1': 'rewindable', '3': 18, '4': 1, '5': 8, '10': 'rewindable'},
+    {
+      '1': 'subagent',
+      '3': 19,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.Subagent',
+      '10': 'subagent'
+    },
+    {'1': 'report', '3': 20, '4': 1, '5': 8, '10': 'report'},
   ],
 };
 
@@ -1634,7 +1648,25 @@ final $typed_data.Uint8List itemDescriptor = $convert.base64Decode(
     'JwoEcGxhbhgMIAMoCzITLm51c2hpLnYxLlBsYW5FbnRyeVIEcGxhbhIrCgZpbWFnZXMYDSADKA'
     'syEy5udXNoaS52MS5JbWFnZURhdGFSBmltYWdlcxIWCgZwYXJlbnQYDiABKAlSBnBhcmVudBIU'
     'CgVhZ2VudBgPIAEoCVIFYWdlbnQSEgoEdG9vbBgQIAEoCVIEdG9vbBIXCgdmb3JrX2F0GBEgAS'
-    'gJUgZmb3JrQXQ=');
+    'gJUgZmb3JrQXQSHgoKcmV3aW5kYWJsZRgSIAEoCFIKcmV3aW5kYWJsZRIuCghzdWJhZ2VudBgT'
+    'IAEoCzISLm51c2hpLnYxLlN1YmFnZW50UghzdWJhZ2VudBIWCgZyZXBvcnQYFCABKAhSBnJlcG'
+    '9ydA==');
+
+@$core.Deprecated('Use subagentDescriptor instead')
+const Subagent$json = {
+  '1': 'Subagent',
+  '2': [
+    {'1': 'state', '3': 1, '4': 1, '5': 9, '10': 'state'},
+    {'1': 'started', '3': 2, '4': 1, '5': 3, '10': 'started'},
+    {'1': 'ended', '3': 3, '4': 1, '5': 3, '10': 'ended'},
+    {'1': 'result', '3': 4, '4': 1, '5': 9, '10': 'result'},
+  ],
+};
+
+/// Descriptor for `Subagent`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List subagentDescriptor = $convert.base64Decode(
+    'CghTdWJhZ2VudBIUCgVzdGF0ZRgBIAEoCVIFc3RhdGUSGAoHc3RhcnRlZBgCIAEoA1IHc3Rhcn'
+    'RlZBIUCgVlbmRlZBgDIAEoA1IFZW5kZWQSFgoGcmVzdWx0GAQgASgJUgZyZXN1bHQ=');
 
 @$core.Deprecated('Use planEntryDescriptor instead')
 const PlanEntry$json = {
@@ -1691,6 +1723,7 @@ const Field$json = {
     },
     {'1': 'required', '3': 6, '4': 1, '5': 8, '10': 'required'},
     {'1': 'values', '3': 7, '4': 3, '5': 9, '10': 'values'},
+    {'1': 'other_for', '3': 8, '4': 1, '5': 9, '10': 'otherFor'},
   ],
 };
 
@@ -1699,7 +1732,8 @@ final $typed_data.Uint8List fieldDescriptor = $convert.base64Decode(
     'CgVGaWVsZBIOCgJpZBgBIAEoCVICaWQSFAoFdGl0bGUYAiABKAlSBXRpdGxlEiAKC2Rlc2NyaX'
     'B0aW9uGAMgASgJUgtkZXNjcmlwdGlvbhInCgR0eXBlGAQgASgOMhMubnVzaGkudjEuRmllbGRU'
     'eXBlUgR0eXBlEioKB29wdGlvbnMYBSADKAsyEC5udXNoaS52MS5PcHRpb25SB29wdGlvbnMSGg'
-    'oIcmVxdWlyZWQYBiABKAhSCHJlcXVpcmVkEhYKBnZhbHVlcxgHIAMoCVIGdmFsdWVz');
+    'oIcmVxdWlyZWQYBiABKAhSCHJlcXVpcmVkEhYKBnZhbHVlcxgHIAMoCVIGdmFsdWVzEhsKCW90'
+    'aGVyX2ZvchgIIAEoCVIIb3RoZXJGb3I=');
 
 @$core.Deprecated('Use itemEventDescriptor instead')
 const ItemEvent$json = {
@@ -1726,6 +1760,7 @@ const ChatStatus$json = {
     {'1': 'images', '3': 6, '4': 1, '5': 8, '10': 'images'},
     {'1': 'can_rewind', '3': 7, '4': 1, '5': 8, '10': 'canRewind'},
     {'1': 'mcp_changed', '3': 8, '4': 1, '5': 8, '10': 'mcpChanged'},
+    {'1': 'can_ask_context', '3': 9, '4': 1, '5': 8, '10': 'canAskContext'},
   ],
   '9': [
     {'1': 2, '2': 3},
@@ -1738,7 +1773,8 @@ final $typed_data.Uint8List chatStatusDescriptor = $convert.base64Decode(
     'CgpDaGF0U3RhdHVzEhIKBGJ1c3kYASABKAhSBGJ1c3kSGAoHc3RhcnRlZBgDIAEoA1IHc3Rhcn'
     'RlZBIYCgd3YWl0aW5nGAQgASgIUgd3YWl0aW5nEhkKCGNhbl9mb3JrGAUgASgIUgdjYW5Gb3Jr'
     'EhYKBmltYWdlcxgGIAEoCFIGaW1hZ2VzEh0KCmNhbl9yZXdpbmQYByABKAhSCWNhblJld2luZB'
-    'IfCgttY3BfY2hhbmdlZBgIIAEoCFIKbWNwQ2hhbmdlZEoECAIQA1IFZXJyb3I=');
+    'IfCgttY3BfY2hhbmdlZBgIIAEoCFIKbWNwQ2hhbmdlZBImCg9jYW5fYXNrX2NvbnRleHQYCSAB'
+    'KAhSDWNhbkFza0NvbnRleHRKBAgCEANSBWVycm9y');
 
 @$core.Deprecated('Use terminalDescriptor instead')
 const Terminal$json = {
@@ -2328,6 +2364,7 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.FileChange': FileChange$json,
   '.nushi.v1.PlanEntry': PlanEntry$json,
   '.nushi.v1.ImageData': ImageData$json,
+  '.nushi.v1.Subagent': Subagent$json,
   '.nushi.v1.ConfigOption': ConfigOption$json,
   '.nushi.v1.ConfigValue': ConfigValue$json,
   '.nushi.v1.Command': Command$json,

@@ -81,7 +81,7 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 	if agent == nil || !can {
 		return "", errors.New("the agent can't fork this chat")
 	}
-	id, _, err := forkSession(ctx, agent, sid, folder, nil)
+	id, _, err := p.forkSession(ctx, agent, sid, folder, nil)
 	if err != nil {
 		return "", err
 	}

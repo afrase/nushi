@@ -30,7 +30,10 @@ class McpView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context), t = theme.t;
     final list = McpServers.of(daemon, folder);
-    final (name, dir) = folderParts(folder);
+    final (name, dir) = folderParts(
+      folder,
+      scratch: daemon.chats.values.any((c) => c.scratch && c.folder == folder),
+    );
     return ListenableBuilder(
       listenable: list,
       builder: (context, _) => Column(

@@ -147,7 +147,7 @@ class _ReplyDialogState extends State<_ReplyDialog> {
             autofocus: true,
             style: theme.ui(theme.t.text),
             onSubmitted: (_) => save(),
-            decoration: const InputDecoration(hintText: 'Reply to Claude'),
+            decoration: const InputDecoration(hintText: 'Your reply'),
           ),
         ],
       ),

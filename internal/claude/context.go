@@ -33,7 +33,14 @@ func Parse(markdown string) ([]model.ContextCategory, error) {
 		if err1 != nil || err2 != nil {
 			continue // the header and the line under it
 		}
-		out = append(out, model.ContextCategory{Name: name, Tokens: tokens, Percent: pct})
+		c := model.ContextCategory{Name: name, Tokens: tokens, Percent: pct}
+		switch {
+		case name == "Free space":
+			c.Kind = "free"
+		case strings.HasSuffix(name, " (deferred)"): // listed, loaded on demand
+			c.Name, c.Kind = strings.TrimSuffix(name, " (deferred)"), "deferred"
+		}
+		out = append(out, c)
 	}
 	if len(out) == 0 {
 		return nil, errors.New("no categories in the output")

@@ -18,9 +18,9 @@ String tildePath(String path) {
 }
 
 /// A folder's name and its parent's path ("~" for the home folder), or "No
-/// folder" and '' for a scratch folder.
-(String, String) folderParts(String folder) {
-  if (isScratch(folder)) return ('No folder', '');
+/// folder" and '' for a [scratch] folder.
+(String, String) folderParts(String folder, {bool scratch = false}) {
+  if (scratch) return ('No folder', '');
   final slash = folder.lastIndexOf('/');
   return (folder.substring(slash + 1), tildePath(folder.substring(0, slash)));
 }
@@ -71,7 +71,7 @@ class FolderButton extends StatelessWidget {
     final theme = NushiTheme.of(context), t = theme.t;
     final enabled = !chat.archived && !chat.busy && !chat.waiting;
     final recent = daemon.recentFolders.where((f) => f != chat.home).take(8);
-    final (name, parent) = folderParts(chat.home);
+    final (name, parent) = folderParts(chat.home, scratch: chat.scratch);
     final nameStyle = theme.ui(t.text, size: 12, weight: FontWeight.w500);
     final parentStyle = theme.ui(t.textMuted, size: 11.5);
     final chevron = Icon(Icons.expand_more, size: 14, color: t.textMuted);

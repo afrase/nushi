@@ -2,6 +2,7 @@ package api
 
 import (
 	"cmp"
+	"time"
 
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/model"
@@ -74,7 +75,11 @@ func toProto(e model.Event) *nushiv1.EventsResponse {
 
 func itemProto(it *model.Item) *nushiv1.Item {
 	out := &nushiv1.Item{Id: it.ID, Kind: itemKinds[it.Kind], Text: it.Text,
-		Title: it.Title, ToolKind: it.ToolKind, Status: it.Status, Answer: it.Answer, Parent: it.Parent, Agent: it.Agent, Tool: it.Tool, ForkAt: it.ForkAt}
+		Title: it.Title, ToolKind: it.ToolKind, Status: it.Status, Answer: it.Answer, Parent: it.Parent, Agent: it.Agent, Tool: it.Tool, ForkAt: it.ForkAt,
+		Rewindable: it.Rewindable, Report: it.Report}
+	if sa := it.Subagent; sa != nil {
+		out.Subagent = &nushiv1.Subagent{State: sa.State, Started: unixMs(sa.Started), Ended: unixMs(sa.Ended), Result: sa.Result}
+	}
 	out.Options = optionsProto(it.Options)
 	out.Paths = it.Paths
 	for _, img := range it.Images {
@@ -88,7 +93,7 @@ func itemProto(it *model.Item) *nushiv1.Item {
 	}
 	for _, f := range it.Fields {
 		out.Fields = append(out.Fields, &nushiv1.Field{Id: f.ID, Title: f.Title, Description: f.Description,
-			Type: fieldTypes[f.Type], Options: optionsProto(f.Options), Required: f.Required, Values: f.Values})
+			Type: fieldTypes[f.Type], Options: optionsProto(f.Options), Required: f.Required, Values: f.Values, OtherFor: f.OtherFor})
 	}
 	return out
 }
@@ -107,12 +112,16 @@ func usageProto(u model.Usage) *nushiv1.Usage {
 }
 
 func statusProto(st model.Status) *nushiv1.ChatStatus {
-	out := &nushiv1.ChatStatus{Busy: st.Busy, Waiting: st.Waiting, CanFork: st.CanFork, Images: st.Images, CanRewind: st.CanRewind,
-		McpChanged: st.MCPChanged}
-	if !st.Started.IsZero() {
-		out.Started = st.Started.UnixMilli()
+	return &nushiv1.ChatStatus{Busy: st.Busy, Waiting: st.Waiting, CanFork: st.CanFork, Images: st.Images, CanRewind: st.CanRewind,
+		McpChanged: st.MCPChanged, Started: unixMs(st.Started), CanAskContext: st.CanAskContext}
+}
+
+// unixMs is t in Unix milliseconds, 0 for the zero time.
+func unixMs(t time.Time) int64 {
+	if t.IsZero() {
+		return 0
 	}
-	return out
+	return t.UnixMilli()
 }
 
 func optionsProto(opts []model.Option) []*nushiv1.Option {
@@ -129,7 +138,7 @@ func configProto(opts []model.ConfigOption) []*nushiv1.ConfigOption {
 		co := &nushiv1.ConfigOption{Id: o.ID, Name: o.Name, Description: o.Description,
 			Category: o.Category, Type: o.Type, Current: o.Current}
 		for _, v := range o.Values {
-			co.Values = append(co.Values, &nushiv1.ConfigValue{Value: v.Value, Name: v.Name, Description: v.Description, Group: v.Group})
+			co.Values = append(co.Values, &nushiv1.ConfigValue{Value: v.Value, Name: v.Name, Description: v.Description, Group: v.Group, IsDefault: v.Default})
 		}
 		out = append(out, co)
 	}
@@ -138,7 +147,7 @@ func configProto(opts []model.ConfigOption) []*nushiv1.ConfigOption {
 
 func chatProto(s model.Session) *nushiv1.Chat {
 	out := &nushiv1.Chat{Id: s.ID, Agent: s.Agent, Folder: s.Folder, Title: cmp.Or(s.Name, s.Title), Mode: s.Mode,
-		CreatedUnixMs: s.Created.UnixMilli(), Archived: s.Archived, SessionId: s.SessionID}
+		CreatedUnixMs: s.Created.UnixMilli(), Archived: s.Archived, SessionId: s.SessionID, Scratch: s.Scratch}
 	if wt := s.Worktree; wt != nil {
 		out.Worktree = &nushiv1.Worktree{Repo: wt.Repo, Path: wt.Path, Branch: wt.Branch, Base: wt.Base}
 	}

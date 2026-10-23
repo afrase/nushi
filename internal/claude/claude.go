@@ -84,6 +84,23 @@ func ToolCall(it *model.Item, meta map[string]any, input json.RawMessage) (ownTe
 	return false
 }
 
+// Background says an Agent call's output tells that Claude started the
+// subagent in the background: it then completes the call at once, and the
+// subagent runs until its SubagentHandback.
+func Background(output string) bool { return strings.HasPrefix(output, "Async agent launched") }
+
+// Other says field is the free-text "Other" answer that Claude's
+// AskUserQuestion form puts after a question: `<id>_custom`.
+func Other(field, before model.Field) bool {
+	return len(field.Options) == 0 && field.ID == before.ID+"_custom"
+}
+
+// Default says v is the model list's "Default (recommended)": Claude
+// picks the model then.
+func Default(o model.ConfigOption, v model.ConfigValue) bool {
+	return o.Category == "model" && strings.HasPrefix(strings.ToLower(v.Name), "default")
+}
+
 // ForkTitle says whether title is Claude's for a fork of a session titled
 // of: "<title> (fork)", for a fork of a fork "<title> (fork) (fork)".
 func ForkTitle(title, of string) bool {

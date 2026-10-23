@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'cards.dart';
+import 'chat.dart';
 import 'daemon.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'images.dart';
@@ -16,7 +17,7 @@ import 'tool_calls.dart';
 class ItemView extends StatelessWidget {
   const ItemView(
     this.item,
-    this.chatId,
+    this.chat,
     this.daemon, {
     super.key,
     required this.live,
@@ -25,7 +26,7 @@ class ItemView extends StatelessWidget {
   });
 
   final Item item;
-  final String chatId;
+  final ChatState chat;
   final Daemon daemon;
 
   /// The newest item while the agent works.
@@ -72,9 +73,10 @@ class ItemView extends StatelessWidget {
       case ItemKind.ITEM_KIND_QUESTION:
         return QuestionCard(
           item,
+          agent: chat.agentName,
           onAnswer: (answer) => daemon.client.answerQuestion(
             AnswerQuestionRequest(
-              chatId: chatId,
+              chatId: chat.id,
               itemId: item.id,
               decline: answer == null,
               answers: answer,
@@ -106,7 +108,7 @@ class ItemView extends StatelessWidget {
           item,
           onAnswer: (option) => daemon.client.answerPermission(
             AnswerPermissionRequest(
-              chatId: chatId,
+              chatId: chat.id,
               itemId: item.id,
               optionId: option,
             ),
@@ -117,7 +119,7 @@ class ItemView extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           spacing: 4,
           children: [
-            _who(theme, 'Claude'),
+            _who(theme, chat.agentName),
             AgentMarkdown(item.text, live: live),
             if (item.images.isNotEmpty) Thumbnails(item.images, size: 240),
           ],

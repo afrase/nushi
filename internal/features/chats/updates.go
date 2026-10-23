@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/afrase/nushi/acp"
 	"github.com/afrase/nushi/internal/model"
@@ -32,13 +33,17 @@ func (c *chat) update(n acp.SessionNotification) {
 		item := model.Item{ID: string(t.ToolCallID), Kind: model.ToolCall, Title: t.Title,
 			ToolKind: string(t.Kind), Status: string(t.Status), Paths: c.paths(t.Locations)}
 		c.setOutput(&item, t.Content)
-		c.toolCallLocked(&item, t.Meta, t.RawInput)
+		item.Report = c.toolCallLocked(&item, t.Meta, t.RawInput)
 		if it := c.itemLocked(item.ID); it != nil { // a repeated tool_call replaces the call
+			item.Subagent = it.Subagent
 			*it = item
-			c.publishLocked(item)
-			return
+			c.subagentLocked(it)
+			c.publishLocked(*it)
+		} else {
+			c.subagentLocked(&item)
+			c.addLocked(item)
 		}
-		c.addLocked(item)
+		c.reportedLocked(item)
 	case "available_commands_update":
 		c.commands = []model.Command{}
 		for _, a := range u.AvailableCommandsUpdate.AvailableCommands {
@@ -49,6 +54,7 @@ func (c *chat) update(n acp.SessionNotification) {
 			c.commands = append(c.commands, cmd)
 		}
 		c.emitLocked(model.Event{ChatID: c.id, Commands: slices.Clone(c.commands)})
+		c.statusChangedLocked() // CanAskContext
 	case "config_option_update":
 		c.replaceConfigLocked(u.ConfigOptionUpdate.ConfigOptions)
 		c.configChangedLocked()
@@ -87,10 +93,14 @@ func (c *chat) update(n acp.SessionNotification) {
 		if t.Locations != nil {
 			it.Paths = c.paths(t.Locations)
 		}
-		if own := c.toolCallLocked(it, t.Meta, t.RawInput); t.Content != nil && !own {
+		if report := c.toolCallLocked(it, t.Meta, t.RawInput); report {
+			it.Report = true
+		} else if t.Content != nil {
 			c.setOutput(it, t.Content)
 		}
+		c.subagentLocked(it)
 		c.publishLocked(*it)
+		c.reportedLocked(*it)
 		if (t.Status == "completed" || t.Status == "failed") && it.Parent == "" && !c.started.IsZero() {
 			c.deliverLocked() // between tool calls: the agent's chance to take queued messages
 		}
@@ -145,8 +155,59 @@ func (c *chat) chunkLocked(kind model.ItemKind, m *acp.ContentChunk) {
 
 // toolCallLocked adds what the agent tells of a tool call beyond ACP (see
 // Dialect.ToolCall).
-func (c *chat) toolCallLocked(it *model.Item, meta map[string]any, input json.RawMessage) (ownText bool) {
+func (c *chat) toolCallLocked(it *model.Item, meta map[string]any, input json.RawMessage) (report bool) {
 	return c.dialect.ToolCall != nil && c.dialect.ToolCall(it, meta, input)
+}
+
+// subagentLocked brings the subagent that tool call call starts, if it
+// starts one, up to date (see model.Subagent), and says whether it
+// changed. A subagent in the background runs on past its call until its
+// report, if the daemon saw it start: a replayed one without a report has
+// ended.
+func (c *chat) subagentLocked(call *model.Item) bool {
+	if call.Agent == "" {
+		return false
+	}
+	var sa model.Subagent
+	if call.Subagent != nil {
+		sa = *call.Subagent
+	}
+	old := sa
+	r := slices.IndexFunc(c.items, func(it model.Item) bool { return it.Report && it.Parent == call.ID })
+	background := c.dialect.Background != nil && c.dialect.Background(call.Text)
+	switch {
+	case call.Status == "pending" || call.Status == "in_progress":
+		sa.State = "running"
+	case call.Status == "failed":
+		sa.State = "failed"
+	case background && r < 0 && !sa.Started.IsZero():
+		sa.State = "running"
+	default:
+		sa.State = "done"
+	}
+	switch {
+	case sa.State == "running" && sa.Started.IsZero() && !c.reopeningLocked():
+		sa.Started = time.Now()
+	case sa.State != "running" && !sa.Started.IsZero() && sa.Ended.IsZero():
+		sa.Ended = time.Now()
+	}
+	switch {
+	case sa.State == "running":
+		sa.Result = ""
+	case r >= 0:
+		sa.Result = c.items[r].Text
+	case !background:
+		sa.Result = call.Text
+	}
+	call.Subagent = &sa
+	return sa != old
+}
+
+// reportedLocked updates the subagent whose report it is, if it is one.
+func (c *chat) reportedLocked(it model.Item) {
+	if call := c.itemLocked(it.Parent); it.Report && call != nil && c.subagentLocked(call) {
+		c.publishLocked(*call)
+	}
 }
 
 // planLocked shows the agent's plan: it replaces the plan of the current

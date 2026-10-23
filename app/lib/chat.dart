@@ -29,6 +29,8 @@ class ChatState extends ChangeNotifier {
     notifyListeners();
   }
 
+  String agent = ''; // the agent it runs, such as "claude"
+  bool scratch = false; // its folder is a scratch folder: it has none yet
   String title = '';
   bool archived = false; // no agent runs; read-only until unarchived
   DateTime created = DateTime.now();
@@ -43,6 +45,7 @@ class ChatState extends ChangeNotifier {
   bool canImages = false; // the agent takes images in prompts
   bool canRewind = false; // the agent rewinds to a user message
   bool mcpChanged = false; // MCP servers changed since the agent started
+  bool canAskContext = false; // the agent can say what fills its context
   DateTime? started; // when the running turn started
   bool stopping = false; // the app asked the turn to stop
   String error = ''; // why the snapshot didn't load
@@ -59,6 +62,13 @@ class ChatState extends ChangeNotifier {
 
   /// A subagent's call id, set to bring its card into view.
   final reveal = ValueNotifier<String?>(null);
+
+  /// The agent's name to show: "Claude".
+  String get agentName => switch (agent) {
+    'claude' => 'Claude',
+    '' => 'The agent',
+    _ => agent[0].toUpperCase() + agent.substring(1),
+  };
 
   /// The folder the chat stands for: in a worktree, the same folder in its
   /// repository; the sidebar groups chats by it.
@@ -132,6 +142,7 @@ class ChatState extends ChangeNotifier {
     canImages = s.images;
     canRewind = s.canRewind;
     mcpChanged = s.mcpChanged;
+    canAskContext = s.canAskContext;
     started = s.started == 0
         ? null
         : DateTime.fromMillisecondsSinceEpoch(s.started.toInt());

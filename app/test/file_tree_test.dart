@@ -14,9 +14,8 @@ void main() {
       FileChange(path: p, added: 2, removed: 1),
   ];
 
-  String show(List<ChangeRow> rows) => rows
-      .map((r) => '${'  ' * r.depth}${r.name} +${r.added}')
-      .join('\n');
+  String show(List<ChangeRow> rows) =>
+      rows.map((r) => '${'  ' * r.depth}${r.name} +${r.added}').join('\n');
 
   test('a tree with single-folder chains joined, folders first', () {
     expect(show(changeRows(files, flat: false)), '''

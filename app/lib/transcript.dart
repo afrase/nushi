@@ -15,9 +15,9 @@ import 'tool_calls.dart';
 import 'widgets.dart';
 
 /// The items, with each run of tool calls as one list, and each subagent
-/// as one [Subagent] with what it did.
-List<Object> _entries(List<Item> items, {required bool busy}) {
-  final subs = {for (final s in subagentsOf(items, busy: busy)) s.call.id: s};
+/// as one [SubagentRun] with what it did.
+List<Object> _entries(List<Item> items) {
+  final subs = {for (final s in subagentsOf(items)) s.call.id: s};
   final out = <Object>[];
   for (final it in items) {
     final last = out.lastOrNull;
@@ -84,7 +84,7 @@ class _TranscriptState extends State<Transcript> {
   }) {
     final (key, items) = switch (e) {
       final List<Item> run => ('group ${run.first.id}', run),
-      final Subagent s => ('agent ${s.call.id}', [s.call, s.busy, ...s.items]),
+      final SubagentRun s => ('agent ${s.call.id}', [s.call, ...s.items]),
       _ => ((e as Item).id, [e]),
     };
     final rewindable = e is Item && canRewindTo(widget.chat, e);
@@ -104,7 +104,7 @@ class _TranscriptState extends State<Transcript> {
                   key: ValueKey(key),
                   padding: const EdgeInsets.only(top: 12),
                   child: RepaintBoundary(
-                    child: e is Subagent
+                    child: e is SubagentRun
                         ? KeyedSubtree(
                             key: _subagents.putIfAbsent(
                               e.call.id,
@@ -132,13 +132,13 @@ class _TranscriptState extends State<Transcript> {
     bool rewindable = false,
   }) => switch (e) {
     final List<Item> run => ToolGroupView(run, still: still),
-    final Subagent s => SubagentCard(
+    final SubagentRun s => SubagentCard(
       s,
       still: still,
       nested: (items) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (final e in _entries(items, busy: widget.chat.busy))
+          for (final e in _entries(items))
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: _view(e, live: false, still: still),
@@ -148,7 +148,7 @@ class _TranscriptState extends State<Transcript> {
     ),
     _ => ItemView(
       e as Item,
-      widget.chat.id,
+      widget.chat,
       widget.daemon,
       live: live,
       still: still,
@@ -208,7 +208,7 @@ class _TranscriptState extends State<Transcript> {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context), t = theme.t;
     final chat = widget.chat;
-    final entries = _entries(chat.items, busy: chat.busy);
+    final entries = _entries(chat.items);
     _follower.stick();
     final before = _built;
     _built = {};

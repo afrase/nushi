@@ -66,7 +66,10 @@ class _ChatViewState extends State<ChatView> {
     final paths = d.files.map((f) => f.path).where(isImageFile).toList();
     if (paths.isEmpty || widget.chat.archived) return;
     if (!widget.chat.canImages) {
-      showError(context, 'Claude doesn’t take images in this chat');
+      showError(
+        context,
+        '${widget.chat.agentName} doesn’t take images in this chat',
+      );
       return;
     }
     await tryOrShow(context, () => widget.chat.draft.images.addFiles(paths));
@@ -233,7 +236,7 @@ class _McpChanged extends StatelessWidget {
           const SizedBox(width: 6),
           Tooltip(
             message: chat.busy
-                ? 'Once Claude is done'
+                ? 'Once ${chat.agentName} is done'
                 : 'Reopens the chat with the servers as they are now',
             child: Button(
               label: 'Reload',

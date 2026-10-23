@@ -56,16 +56,9 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
   static final _asked = <String, (DateTime, GetContextUsageResponse)>{};
   Timer? _timer;
 
-  /// Whether the agent can be asked what fills its context, in a throwaway
-  /// fork of the session: it forks and has a /context command, and the chat
-  /// is idle and has messages (Claude would name a new chat after
-  /// /context).
-  bool get _canAsk =>
-      chat.canFork &&
-      !chat.busy &&
-      !chat.fresh &&
-      !chat.archived &&
-      chat.commands.any((c) => c.name == 'context');
+  /// Whether the agent can be asked what fills its context: the daemon
+  /// says so, and the chat is idle.
+  bool get _canAsk => chat.canAskContext && !chat.busy && !chat.archived;
 
   /// Asks the agent, unseen, what fills its context.
   Future<void> _askContext() async {
@@ -176,7 +169,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
       PanelCard(
         title: 'Environment',
         summary: Text(
-          folderParts(chat.home).$1,
+          folderParts(chat.home, scratch: chat.scratch).$1,
           style: muted,
           overflow: TextOverflow.ellipsis,
         ),
@@ -227,7 +220,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
         summary: ContextMeter(u),
         rows: [
           if (u.contextSize == 0 && cost(u).isEmpty && _context == null)
-            (null, 'Claude reports it after a turn.'),
+            (null, '${chat.agentName} reports it after a turn.'),
           if (u.contextSize > 0) ...[
             ('Used', ContextMeter(u)),
             (
@@ -248,7 +241,8 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
             (
               'Cost',
               Tooltip(
-                message: 'The session’s cost so far, as Claude reports it',
+                message:
+                    'The session’s cost so far, as ${chat.agentName} reports it',
                 child: Text(cost(u), style: theme.ui(t.text, size: 12)),
               ),
             ),
@@ -257,7 +251,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
               'By category',
               IconTap(
                 Icons.refresh,
-                tooltip: 'Ask Claude again (/context, in a copy of the chat)',
+                tooltip: 'Ask ${chat.agentName} again, in a copy of the chat',
                 size: 13,
                 onTap: _canAsk ? _askContext : null,
               ),

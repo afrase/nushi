@@ -177,7 +177,7 @@ func (s *Service) Start(ctx context.Context, folder string, worktree bool) (stri
 	}
 	c.mu.Lock()
 	s.useLocked(c, o)
-	c.session = model.Session{ID: c.id, SessionID: o.sid, Agent: s.agent, Folder: folder, Created: time.Now(), Worktree: wt}
+	c.session = model.Session{ID: c.id, SessionID: o.sid, Agent: s.agent, Folder: folder, Created: time.Now(), Worktree: wt, Scratch: scratch}
 	c.mu.Unlock()
 	if err := c.startMode(ctx, o.agent, o.sid, s.modes.Mode(s.agent)); err != nil {
 		log.Printf("chat %s: starting mode: %v", c.id, err) // the chat keeps the agent's default
@@ -227,7 +227,16 @@ func (s *Service) Close() {
 }
 
 // List returns every stored chat.
-func (s *Service) List() ([]model.Session, error) { return s.sessions.Sessions() }
+func (s *Service) List() ([]model.Session, error) {
+	list, err := s.sessions.Sessions()
+	for i := range list {
+		list[i].Scratch = s.isScratch(list[i].Folder)
+	}
+	return list, err
+}
+
+// isScratch says whether folder is a chat's scratch folder.
+func (s *Service) isScratch(folder string) bool { return filepath.Dir(folder) == s.scratch }
 
 // Status returns whether a chat works or waits on the user, without
 // reopening it.
@@ -280,7 +289,7 @@ func (c *chat) noticeLocked(reason, text string) {
 
 func (c *chat) statusLocked() model.Status {
 	return model.Status{Busy: c.busy, Started: c.started, Waiting: len(c.waiting)+len(c.questions) > 0, CanFork: c.canFork, Images: c.canImage,
-		CanRewind: c.forkAt != nil, MCPChanged: c.mcpChanged}
+		CanRewind: c.forkAt != nil, MCPChanged: c.mcpChanged, CanAskContext: c.canAskContextLocked() == nil}
 }
 
 func (c *chat) statusChangedLocked() {
@@ -335,6 +344,7 @@ func (c *chat) addLocked(it model.Item) string {
 	}
 	if it.Kind == model.UserMessage {
 		it.ForkAt = c.forkPointLocked()
+		it.Rewindable = it.ForkAt != "" || !slices.ContainsFunc(c.items, func(it model.Item) bool { return it.Kind == model.UserMessage })
 	}
 	c.items = append(c.items, it)
 	c.emitLocked(model.Event{ChatID: c.id, Item: &it})
