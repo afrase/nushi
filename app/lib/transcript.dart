@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import 'bottom_follower.dart';
 import 'cards.dart';
 import 'chat.dart';
 import 'daemon.dart';
@@ -62,9 +63,7 @@ class Transcript extends StatefulWidget {
 }
 
 class _TranscriptState extends State<Transcript> {
-  final _scroll = ScrollController();
-  bool _follow = true; // keep the bottom in view
-  bool _jumping = false; // the scroll moves because of us
+  final _follower = BottomFollower();
   final _area = GlobalKey<SelectionAreaState>();
   String _selected = '';
   bool _down = false; // a pointer is down on the transcript
@@ -72,33 +71,10 @@ class _TranscriptState extends State<Transcript> {
   String? _replyTo; // the selection a reply is being written to
 
   @override
-  void initState() {
-    super.initState();
-    _scroll.addListener(() {
-      if (_jumping) return;
-      final p = _scroll.position;
-      final atBottom = p.pixels >= p.maxScrollExtent - 24;
-      if (atBottom != _follow) setState(() => _follow = atBottom);
-    });
-  }
-
-  @override
   void dispose() {
-    _scroll.dispose();
+    _follower.dispose();
     super.dispose();
   }
-
-  /// Scrolls to the bottom after this frame's layout. Lazily built items
-  /// change the list's height as they come into view, so it checks again
-  /// whenever the height changes ([ScrollMetricsNotification]).
-  void _stick() => WidgetsBinding.instance.addPostFrameCallback((_) {
-    if (!_follow || !_scroll.hasClients) return;
-    final p = _scroll.position;
-    if (p.pixels == p.maxScrollExtent) return;
-    _jumping = true;
-    p.jumpTo(p.maxScrollExtent);
-    _jumping = false;
-  });
 
   // The selection is reported a frame after the pointer goes up: offer the
   // toolbar once both have happened.
@@ -117,26 +93,18 @@ class _TranscriptState extends State<Transcript> {
 
   void _closeToolbar() => setState(() => _at = _replyTo = null);
 
-  void _latest() {
-    setState(() => _follow = true);
-    _stick();
-  }
-
   @override
   Widget build(BuildContext context) {
     final chat = widget.chat;
     final entries = _entries(chat.items);
-    _stick();
+    _follower.stick();
     final onReply = widget.onReply;
     final onSide = chat.canFork ? widget.onSide : null;
     return LayoutBuilder(
       builder: (context, box) => Stack(
         children: [
-          NotificationListener<ScrollMetricsNotification>(
-            onNotification: (_) {
-              _stick();
-              return false;
-            },
+          NotificationListener(
+            onNotification: _follower.onNotification,
             // One selection across the transcript, messages included whole;
             // when a drag or double-click leaves text selected, the popover
             // shows where the pointer went up.
@@ -156,7 +124,7 @@ class _TranscriptState extends State<Transcript> {
                   _offer();
                 },
                 child: ListView.builder(
-                  controller: _scroll,
+                  controller: _follower.scroll,
                   padding: const EdgeInsets.fromLTRB(20, 2, 20, 14),
                   itemCount: entries.length,
                   itemBuilder: (context, i) {
@@ -208,12 +176,16 @@ class _TranscriptState extends State<Transcript> {
                 },
               ),
             ),
-          if (!_follow)
-            Positioned(
-              right: 20,
-              bottom: 12,
-              child: _LatestButton(onPressed: _latest),
-            ),
+          ListenableBuilder(
+            listenable: _follower,
+            builder: (context, _) => _follower.following
+                ? const SizedBox.shrink()
+                : Positioned(
+                    right: 20,
+                    bottom: 12,
+                    child: _LatestButton(onPressed: _follower.follow),
+                  ),
+          ),
         ],
       ),
     );
