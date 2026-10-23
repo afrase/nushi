@@ -13,7 +13,8 @@ import (
 
 // A side chat is a session the agent forks from a chat's: it knows the
 // conversation so far but doesn't add to it. It shares the chat's agent,
-// isn't stored, and ends with CloseSide (or the daemon).
+// isn't stored, and ends with CloseSide (or the daemon), which also has
+// the agent delete its history of it: it is never shown again.
 
 // SessionUpdate, RequestPermission and CreateElicitation take what the
 // agent sends to the chat or to one of its side chats. A side chat's
@@ -79,8 +80,8 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 	return side.id, nil
 }
 
-// CloseSide ends a side chat: its running turn stops and the agent closes
-// its session.
+// CloseSide ends a side chat: its running turn stops, and the agent closes
+// its session and deletes its history of it.
 func (s *Service) CloseSide(ctx context.Context, id string) error {
 	s.mu.Lock()
 	c := s.chats[id]
@@ -96,6 +97,9 @@ func (s *Service) CloseSide(ctx context.Context, id string) error {
 	c.cancel()
 	if err := c.agent.CloseSession(ctx, acp.CloseSessionRequest{SessionID: acp.SessionID(id)}); err != nil {
 		log.Printf("side chat %s: closing: %v", id, err)
+	}
+	if err := c.agent.DeleteSession(ctx, acp.DeleteSessionRequest{SessionID: acp.SessionID(id)}); err != nil {
+		log.Printf("side chat %s: deleting: %v", id, err)
 	}
 	return nil
 }

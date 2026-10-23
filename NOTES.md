@@ -11,12 +11,11 @@ Milestone G (steps 26–29, a polish round) is done, one commit each on `main`, 
 - Selecting text shows "Start a side chat | Reply" above it. Reply opens a small box; Enter adds a reply card to the composer; several cards, editable, removable; the message shows each quote with its reply, and Claude answers about the quoted parts.
 
 **What doesn't (yet)**
-- Side chats (step 18) are Claude forks and stay in Claude's history after they close; Delete doesn't know them (see below). A chat moved before step 26 only knows its current session, so Delete leaves its earlier ones.
+- A chat moved before step 26 only knows its current session, so Delete leaves its earlier ones.
 - Claude leaves an empty history folder behind for each folder whose sessions were deleted.
 - Carried over: dropping files untried by hand; cost restarts near zero after a move or reload; no thoughts from Claude; plans only with Claude's todo tools on; copy across blocks loses line breaks; archived chats show no history after a daemon restart until unarchived; nothing runs after a reboot until the app opens.
 
 **Needs your decision**
-- **Side chats' sessions.** Each side question leaves a Claude session (a fork, the whole conversation) in the chat folder's history, and nothing deletes it. I'd delete a side chat's session when it closes (it is never shown again, by design), through the same `session/delete`. Not done: it changes step 18's behavior.
 - The development data folder (`NUSHI_DATA`, the first commit of this round) exists so a dev build can run beside your installed Nushi Next. `make stop` now stops only the daemon of its folder; it used to kill every `nushid`, yours included.
 - The installed app's daemon (API 18) still runs your chats; the new app (API 19) shows "Restart daemon" until it is restarted. Delete is greyed out until then.
 
@@ -177,6 +176,8 @@ To try it beside an installed Nushi Next that's in use: `export NUSHI_DATA=~/Lib
 - Claude 0.94.0's config options: `mode` (Manual, Accept edits, Plan, Auto, Bypass permissions), `model`, `effort` (category `thought_level`), `fast` (category `model_config`, a select of on/off rather than a boolean) and `agent` (no category: the subagent to run as). `set_config_option` answers with the full new set of options.
 
 ## Decisions to revisit
+
+- A side chat's session is deleted from the agent's history (`session/delete`) when the side chat closes: it is never shown again. A side chat still open when the daemon stops stays in the history.
 
 - The remembered mode lives in `agents.json` in the data folder (`{"claude":{"mode":"default"}}`); the agent is named "claude" in code until there's a second one.
 - Modes get no warning styling: claude-agent-acp 0.94.0 doesn't tag its full-access mode (`_meta.kind`), and naming `bypassPermissions` in Nushi would be a per-agent table.
