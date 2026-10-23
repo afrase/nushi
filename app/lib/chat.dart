@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'gen/nushi/v1/nushi.pb.dart';
+import 'settings.dart';
 
 /// One chat's transcript and status: a snapshot from the daemon, kept
 /// current by the chat's later events.
@@ -12,14 +13,15 @@ class ChatState extends ChangeNotifier {
   Worktree? worktree; // the git worktree it runs in, if Nushi made one
 
   /// For a worktree chat, whether its changes show the whole branch (since
-  /// it left its base) rather than what's uncommitted.
-  bool get branchDiff => _branchDiff;
+  /// it left its base) rather than what's uncommitted; remembered.
+  bool get branchDiff => !uncommittedChats.value.contains(id);
   set branchDiff(bool v) {
-    _branchDiff = v;
+    final ids = {...uncommittedChats.value};
+    v ? ids.remove(id) : ids.add(id);
+    uncommittedChats.value = ids;
     notifyListeners();
   }
 
-  bool _branchDiff = true;
   String sessionId = ''; // the agent's
   String title = '';
   bool archived = false; // no agent runs; read-only until unarchived

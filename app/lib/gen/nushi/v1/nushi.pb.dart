@@ -2214,6 +2214,7 @@ class PlanDeleteChatResponse extends $pb.GeneratedMessage {
     $core.String? scratchFolder,
     Worktree? worktree,
     WorktreeState? worktreeState,
+    $core.Iterable<WorktreePlan>? worktrees,
   }) {
     final result = PlanDeleteChatResponse._();
     if (sessions != null) result.sessions.addAll(sessions);
@@ -2221,6 +2222,7 @@ class PlanDeleteChatResponse extends $pb.GeneratedMessage {
     if (scratchFolder != null) result.scratchFolder = scratchFolder;
     if (worktree != null) result.worktree = worktree;
     if (worktreeState != null) result.worktreeState = worktreeState;
+    if (worktrees != null) result.worktrees.addAll(worktrees);
     return result;
   }
 
@@ -2245,6 +2247,8 @@ class PlanDeleteChatResponse extends $pb.GeneratedMessage {
         subBuilder: Worktree.$_createMessage)
     ..aOM<WorktreeState>(5, _omitFieldNames ? '' : 'worktreeState',
         subBuilder: WorktreeState.$_createMessage)
+    ..pPM<WorktreePlan>(6, _omitFieldNames ? '' : 'worktrees',
+        subBuilder: WorktreePlan.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -2319,6 +2323,87 @@ class PlanDeleteChatResponse extends $pb.GeneratedMessage {
   void clearWorktreeState() => $_clearField(5);
   @$pb.TagNumber(5)
   WorktreeState ensureWorktreeState() => $_ensure(4);
+
+  /// All of the chat's worktrees, each with what removing it and deleting
+  /// its branch would lose: its own, then those it moved out of, which stay
+  /// on disk until it is deleted (API 23).
+  @$pb.TagNumber(6)
+  $pb.PbList<WorktreePlan> get worktrees => $_getList(5);
+}
+
+class WorktreePlan extends $pb.GeneratedMessage {
+  factory WorktreePlan({
+    Worktree? worktree,
+    WorktreeState? state,
+  }) {
+    final result = WorktreePlan._();
+    if (worktree != null) result.worktree = worktree;
+    if (state != null) result.state = state;
+    return result;
+  }
+
+  WorktreePlan._();
+
+  factory WorktreePlan.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WorktreePlan()..mergeFromBuffer(data, registry);
+  factory WorktreePlan.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WorktreePlan()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'WorktreePlan',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: WorktreePlan.$_createMessage)
+    ..aOM<Worktree>(1, _omitFieldNames ? '' : 'worktree',
+        subBuilder: Worktree.$_createMessage)
+    ..aOM<WorktreeState>(2, _omitFieldNames ? '' : 'state',
+        subBuilder: WorktreeState.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WorktreePlan clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WorktreePlan copyWith(void Function(WorktreePlan) updates) =>
+      super.copyWith((message) => updates(message as WorktreePlan))
+          as WorktreePlan;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use WorktreePlan() / WorktreePlan.new instead')
+  static WorktreePlan create() => WorktreePlan._();
+  static $pb.GeneratedMessage $_createMessage() => WorktreePlan._();
+  @$core.override
+  WorktreePlan createEmptyInstance() => WorktreePlan._();
+  @$core.pragma('dart2js:noInline')
+  static WorktreePlan getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<WorktreePlan>(
+          WorktreePlan.$_createMessage);
+  static WorktreePlan? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  Worktree get worktree => $_getN(0);
+  @$pb.TagNumber(1)
+  set worktree(Worktree value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasWorktree() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearWorktree() => $_clearField(1);
+  @$pb.TagNumber(1)
+  Worktree ensureWorktree() => $_ensure(0);
+
+  @$pb.TagNumber(2)
+  WorktreeState get state => $_getN(1);
+  @$pb.TagNumber(2)
+  set state(WorktreeState value) => $_setField(2, value);
+  @$pb.TagNumber(2)
+  $core.bool hasState() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearState() => $_clearField(2);
+  @$pb.TagNumber(2)
+  WorktreeState ensureState() => $_ensure(1);
 }
 
 /// What removing a worktree and deleting its branch would lose.
@@ -2509,6 +2594,7 @@ class DeleteChatRequest extends $pb.GeneratedMessage {
     $core.bool? forceWorktree,
     $core.bool? deleteBranch,
     $core.bool? forceBranch,
+    $core.Iterable<WorktreeChoice>? worktrees,
   }) {
     final result = DeleteChatRequest._();
     if (chatId != null) result.chatId = chatId;
@@ -2516,6 +2602,7 @@ class DeleteChatRequest extends $pb.GeneratedMessage {
     if (forceWorktree != null) result.forceWorktree = forceWorktree;
     if (deleteBranch != null) result.deleteBranch = deleteBranch;
     if (forceBranch != null) result.forceBranch = forceBranch;
+    if (worktrees != null) result.worktrees.addAll(worktrees);
     return result;
   }
 
@@ -2537,6 +2624,8 @@ class DeleteChatRequest extends $pb.GeneratedMessage {
     ..aOB(3, _omitFieldNames ? '' : 'forceWorktree')
     ..aOB(4, _omitFieldNames ? '' : 'deleteBranch')
     ..aOB(5, _omitFieldNames ? '' : 'forceBranch')
+    ..pPM<WorktreeChoice>(6, _omitFieldNames ? '' : 'worktrees',
+        subBuilder: WorktreeChoice.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -2592,6 +2681,118 @@ class DeleteChatRequest extends $pb.GeneratedMessage {
 
   /// Delete the worktree's branch (with the worktree). One with commits its
   /// base doesn't have is deleted only with force_branch.
+  @$pb.TagNumber(4)
+  $core.bool get deleteBranch => $_getBF(3);
+  @$pb.TagNumber(4)
+  set deleteBranch($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasDeleteBranch() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearDeleteBranch() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.bool get forceBranch => $_getBF(4);
+  @$pb.TagNumber(5)
+  set forceBranch($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasForceBranch() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearForceBranch() => $_clearField(5);
+
+  /// What to do with each of the chat's worktrees, by path; when set, the
+  /// fields above don't apply (API 23).
+  @$pb.TagNumber(6)
+  $pb.PbList<WorktreeChoice> get worktrees => $_getList(5);
+}
+
+/// What to do with a worktree and its branch, as for DeleteChatRequest's own
+/// fields.
+class WorktreeChoice extends $pb.GeneratedMessage {
+  factory WorktreeChoice({
+    $core.String? path,
+    $core.bool? removeWorktree,
+    $core.bool? forceWorktree,
+    $core.bool? deleteBranch,
+    $core.bool? forceBranch,
+  }) {
+    final result = WorktreeChoice._();
+    if (path != null) result.path = path;
+    if (removeWorktree != null) result.removeWorktree = removeWorktree;
+    if (forceWorktree != null) result.forceWorktree = forceWorktree;
+    if (deleteBranch != null) result.deleteBranch = deleteBranch;
+    if (forceBranch != null) result.forceBranch = forceBranch;
+    return result;
+  }
+
+  WorktreeChoice._();
+
+  factory WorktreeChoice.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WorktreeChoice()..mergeFromBuffer(data, registry);
+  factory WorktreeChoice.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WorktreeChoice()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'WorktreeChoice',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: WorktreeChoice.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'path')
+    ..aOB(2, _omitFieldNames ? '' : 'removeWorktree')
+    ..aOB(3, _omitFieldNames ? '' : 'forceWorktree')
+    ..aOB(4, _omitFieldNames ? '' : 'deleteBranch')
+    ..aOB(5, _omitFieldNames ? '' : 'forceBranch')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WorktreeChoice clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WorktreeChoice copyWith(void Function(WorktreeChoice) updates) =>
+      super.copyWith((message) => updates(message as WorktreeChoice))
+          as WorktreeChoice;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use WorktreeChoice() / WorktreeChoice.new instead')
+  static WorktreeChoice create() => WorktreeChoice._();
+  static $pb.GeneratedMessage $_createMessage() => WorktreeChoice._();
+  @$core.override
+  WorktreeChoice createEmptyInstance() => WorktreeChoice._();
+  @$core.pragma('dart2js:noInline')
+  static WorktreeChoice getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<WorktreeChoice>(
+          WorktreeChoice.$_createMessage);
+  static WorktreeChoice? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get path => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set path($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPath() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPath() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.bool get removeWorktree => $_getBF(1);
+  @$pb.TagNumber(2)
+  set removeWorktree($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasRemoveWorktree() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearRemoveWorktree() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.bool get forceWorktree => $_getBF(2);
+  @$pb.TagNumber(3)
+  set forceWorktree($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasForceWorktree() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearForceWorktree() => $_clearField(3);
+
   @$pb.TagNumber(4)
   $core.bool get deleteBranch => $_getBF(3);
   @$pb.TagNumber(4)

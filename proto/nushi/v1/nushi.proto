@@ -270,6 +270,15 @@ message PlanDeleteChatResponse {
   // its branch would lose (API 22).
   Worktree worktree = 4;
   WorktreeState worktree_state = 5;
+  // All of the chat's worktrees, each with what removing it and deleting
+  // its branch would lose: its own, then those it moved out of, which stay
+  // on disk until it is deleted (API 23).
+  repeated WorktreePlan worktrees = 6;
+}
+
+message WorktreePlan {
+  Worktree worktree = 1;
+  WorktreeState state = 2;
 }
 
 // What removing a worktree and deleting its branch would lose.
@@ -300,6 +309,19 @@ message DeleteChatRequest {
   bool force_worktree = 3;
   // Delete the worktree's branch (with the worktree). One with commits its
   // base doesn't have is deleted only with force_branch.
+  bool delete_branch = 4;
+  bool force_branch = 5;
+  // What to do with each of the chat's worktrees, by path; when set, the
+  // fields above don't apply (API 23).
+  repeated WorktreeChoice worktrees = 6;
+}
+
+// What to do with a worktree and its branch, as for DeleteChatRequest's own
+// fields.
+message WorktreeChoice {
+  string path = 1;
+  bool remove_worktree = 2;
+  bool force_worktree = 3;
   bool delete_branch = 4;
   bool force_branch = 5;
 }

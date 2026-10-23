@@ -199,37 +199,35 @@ class WorktreeChoices extends StatelessWidget {
     required this.onChanged,
   });
 
-  final PlanDeleteChatResponse plan;
+  final WorktreePlan plan;
   final bool remove, branch;
   final void Function(bool remove, bool branch) onChanged;
 
   /// The choices that start on for [plan]: (remove, branch).
-  static (bool, bool) defaults(PlanDeleteChatResponse plan) {
-    final st = plan.worktreeState;
+  static (bool, bool) defaults(WorktreePlan plan) {
+    final st = plan.state;
     final remove = st.error.isEmpty && st.changed == 0;
     return (remove, remove && st.commits == 0 && !st.branchGone);
   }
 
-  /// [req] with these choices.
-  static DeleteChatRequest request(
-    DeleteChatRequest req,
-    PlanDeleteChatResponse plan, {
+  /// These choices for the request.
+  static WorktreeChoice choice(
+    WorktreePlan plan, {
     required bool remove,
     required bool branch,
-  }) {
-    final st = plan.worktreeState;
-    return req
-      ..removeWorktree = remove
-      ..forceWorktree = remove && st.changed > 0
-      ..deleteBranch = remove && branch
-      ..forceBranch = remove && branch && st.commits > 0;
-  }
+  }) => WorktreeChoice(
+    path: plan.worktree.path,
+    removeWorktree: remove,
+    forceWorktree: remove && plan.state.changed > 0,
+    deleteBranch: remove && branch,
+    forceBranch: remove && branch && plan.state.commits > 0,
+  );
 
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context), t = theme.t;
     final wt = plan.worktree;
-    final st = plan.worktreeState;
+    final st = plan.state;
     final base = wt.base;
     Widget note(String text, {bool warn = false}) => Padding(
       padding: const EdgeInsets.only(left: 32, bottom: 2),

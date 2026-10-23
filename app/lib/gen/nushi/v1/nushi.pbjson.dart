@@ -614,6 +614,14 @@ const PlanDeleteChatResponse$json = {
       '6': '.nushi.v1.WorktreeState',
       '10': 'worktreeState'
     },
+    {
+      '1': 'worktrees',
+      '3': 6,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.WorktreePlan',
+      '10': 'worktrees'
+    },
   ],
 };
 
@@ -623,7 +631,36 @@ final $typed_data.Uint8List planDeleteChatResponseDescriptor = $convert.base64De
     'dlbnRTZXNzaW9uUghzZXNzaW9ucxInCg9kZWxldGVzX2hpc3RvcnkYAiABKAhSDmRlbGV0ZXNI'
     'aXN0b3J5EiUKDnNjcmF0Y2hfZm9sZGVyGAMgASgJUg1zY3JhdGNoRm9sZGVyEi4KCHdvcmt0cm'
     'VlGAQgASgLMhIubnVzaGkudjEuV29ya3RyZWVSCHdvcmt0cmVlEj4KDndvcmt0cmVlX3N0YXRl'
-    'GAUgASgLMhcubnVzaGkudjEuV29ya3RyZWVTdGF0ZVINd29ya3RyZWVTdGF0ZQ==');
+    'GAUgASgLMhcubnVzaGkudjEuV29ya3RyZWVTdGF0ZVINd29ya3RyZWVTdGF0ZRI0Cgl3b3JrdH'
+    'JlZXMYBiADKAsyFi5udXNoaS52MS5Xb3JrdHJlZVBsYW5SCXdvcmt0cmVlcw==');
+
+@$core.Deprecated('Use worktreePlanDescriptor instead')
+const WorktreePlan$json = {
+  '1': 'WorktreePlan',
+  '2': [
+    {
+      '1': 'worktree',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.Worktree',
+      '10': 'worktree'
+    },
+    {
+      '1': 'state',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.WorktreeState',
+      '10': 'state'
+    },
+  ],
+};
+
+/// Descriptor for `WorktreePlan`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List worktreePlanDescriptor = $convert.base64Decode(
+    'CgxXb3JrdHJlZVBsYW4SLgoId29ya3RyZWUYASABKAsyEi5udXNoaS52MS5Xb3JrdHJlZVIId2'
+    '9ya3RyZWUSLQoFc3RhdGUYAiABKAsyFy5udXNoaS52MS5Xb3JrdHJlZVN0YXRlUgVzdGF0ZQ==');
 
 @$core.Deprecated('Use worktreeStateDescriptor instead')
 const WorktreeState$json = {
@@ -666,6 +703,14 @@ const DeleteChatRequest$json = {
     {'1': 'force_worktree', '3': 3, '4': 1, '5': 8, '10': 'forceWorktree'},
     {'1': 'delete_branch', '3': 4, '4': 1, '5': 8, '10': 'deleteBranch'},
     {'1': 'force_branch', '3': 5, '4': 1, '5': 8, '10': 'forceBranch'},
+    {
+      '1': 'worktrees',
+      '3': 6,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.WorktreeChoice',
+      '10': 'worktrees'
+    },
   ],
 };
 
@@ -674,7 +719,27 @@ final $typed_data.Uint8List deleteChatRequestDescriptor = $convert.base64Decode(
     'ChFEZWxldGVDaGF0UmVxdWVzdBIXCgdjaGF0X2lkGAEgASgJUgZjaGF0SWQSJwoPcmVtb3ZlX3'
     'dvcmt0cmVlGAIgASgIUg5yZW1vdmVXb3JrdHJlZRIlCg5mb3JjZV93b3JrdHJlZRgDIAEoCFIN'
     'Zm9yY2VXb3JrdHJlZRIjCg1kZWxldGVfYnJhbmNoGAQgASgIUgxkZWxldGVCcmFuY2gSIQoMZm'
-    '9yY2VfYnJhbmNoGAUgASgIUgtmb3JjZUJyYW5jaA==');
+    '9yY2VfYnJhbmNoGAUgASgIUgtmb3JjZUJyYW5jaBI2Cgl3b3JrdHJlZXMYBiADKAsyGC5udXNo'
+    'aS52MS5Xb3JrdHJlZUNob2ljZVIJd29ya3RyZWVz');
+
+@$core.Deprecated('Use worktreeChoiceDescriptor instead')
+const WorktreeChoice$json = {
+  '1': 'WorktreeChoice',
+  '2': [
+    {'1': 'path', '3': 1, '4': 1, '5': 9, '10': 'path'},
+    {'1': 'remove_worktree', '3': 2, '4': 1, '5': 8, '10': 'removeWorktree'},
+    {'1': 'force_worktree', '3': 3, '4': 1, '5': 8, '10': 'forceWorktree'},
+    {'1': 'delete_branch', '3': 4, '4': 1, '5': 8, '10': 'deleteBranch'},
+    {'1': 'force_branch', '3': 5, '4': 1, '5': 8, '10': 'forceBranch'},
+  ],
+};
+
+/// Descriptor for `WorktreeChoice`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List worktreeChoiceDescriptor = $convert.base64Decode(
+    'Cg5Xb3JrdHJlZUNob2ljZRISCgRwYXRoGAEgASgJUgRwYXRoEicKD3JlbW92ZV93b3JrdHJlZR'
+    'gCIAEoCFIOcmVtb3ZlV29ya3RyZWUSJQoOZm9yY2Vfd29ya3RyZWUYAyABKAhSDWZvcmNlV29y'
+    'a3RyZWUSIwoNZGVsZXRlX2JyYW5jaBgEIAEoCFIMZGVsZXRlQnJhbmNoEiEKDGZvcmNlX2JyYW'
+    '5jaBgFIAEoCFILZm9yY2VCcmFuY2g=');
 
 @$core.Deprecated('Use deleteChatResponseDescriptor instead')
 const DeleteChatResponse$json = {
@@ -1341,7 +1406,9 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.PlanDeleteChatResponse': PlanDeleteChatResponse$json,
   '.nushi.v1.AgentSession': AgentSession$json,
   '.nushi.v1.WorktreeState': WorktreeState$json,
+  '.nushi.v1.WorktreePlan': WorktreePlan$json,
   '.nushi.v1.DeleteChatRequest': DeleteChatRequest$json,
+  '.nushi.v1.WorktreeChoice': WorktreeChoice$json,
   '.nushi.v1.DeleteChatResponse': DeleteChatResponse$json,
   '.nushi.v1.AnswerPermissionRequest': AnswerPermissionRequest$json,
   '.nushi.v1.AnswerPermissionResponse': AnswerPermissionResponse$json,

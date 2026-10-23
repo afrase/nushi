@@ -36,7 +36,8 @@ func gitIn(t *testing.T, dir string, args ...string) {
 func TestChatsInWorktrees(t *testing.T) {
 	ctx := context.Background()
 	repo := gitRepo(t)
-	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
+	noCopy := func(string, string, string) (func() error, error) { return func() error { return nil }, nil }
+	d := startDaemon(t, t.TempDir(), &acptest.History{}, noCopy)
 	a := open(t, d)
 	chat := func(id string) *nushiv1.Chat {
 		return must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))).Chat
@@ -83,10 +84,34 @@ func TestChatsInWorktrees(t *testing.T) {
 		t.Error("a chat started in a worktree outside git")
 	}
 
+	// A chat with messages moved out of its worktree keeps it, and Delete
+	// offers it with what removing it would lose.
+	id = must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: repo, Worktree: true}))).ChatId
+	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "pwd"})))
+	a.waitFor("the reply", idle)
+	wt = chat(id).Worktree
+	gitIn(t, wt.Path, "commit", "-q", "--allow-empty", "-m", "work")
+	must(a.c.MoveChat(ctx, connect.NewRequest(&nushiv1.MoveChatRequest{ChatId: id, Folder: repo})))
+	if c := chat(id); c.Worktree != nil || c.Folder != repo {
+		t.Fatalf("after moving out: %v", c)
+	}
+	if _, err := os.Stat(wt.Path); err != nil {
+		t.Fatalf("the worktree went with the move: %v", err)
+	}
+	plan := must(a.c.PlanDeleteChat(ctx, connect.NewRequest(&nushiv1.PlanDeleteChatRequest{ChatId: id})))
+	if len(plan.Worktrees) != 1 || plan.Worktrees[0].Worktree.Path != wt.Path || plan.Worktrees[0].State.Commits != 1 || plan.Worktree != nil {
+		t.Fatalf("plan after moving out = %v", plan)
+	}
+	must(a.c.DeleteChat(ctx, connect.NewRequest(&nushiv1.DeleteChatRequest{ChatId: id, Worktrees: []*nushiv1.WorktreeChoice{
+		{Path: wt.Path, RemoveWorktree: true, DeleteBranch: true, ForceBranch: true}}})))
+	if _, err := os.Stat(wt.Path); !errors.Is(err, fs.ErrNotExist) || branchExists(repo, wt.Branch) {
+		t.Errorf("after deleting the moved chat: the worktree %v, the branch %v", err, branchExists(repo, wt.Branch))
+	}
+
 	// Deleting: merged work loses nothing, so the worktree and branch go.
 	gitIn(t, wts[0].Path, "commit", "-q", "--allow-empty", "-m", "merged")
 	gitIn(t, repo, "merge", "-q", wts[0].Branch)
-	plan := must(a.c.PlanDeleteChat(ctx, connect.NewRequest(&nushiv1.PlanDeleteChatRequest{ChatId: ids[0]})))
+	plan = must(a.c.PlanDeleteChat(ctx, connect.NewRequest(&nushiv1.PlanDeleteChatRequest{ChatId: ids[0]})))
 	if st := plan.WorktreeState; plan.Worktree.GetPath() != wts[0].Path || st.Changed != 0 || st.Commits != 0 || st.Gone {
 		t.Fatalf("plan = %v", plan)
 	}

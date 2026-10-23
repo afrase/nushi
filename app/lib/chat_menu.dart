@@ -56,26 +56,43 @@ class _DeleteDialogState extends State<_DeleteDialog> {
   late final _plan = widget.daemon.client
       .planDeleteChat(PlanDeleteChatRequest(chatId: widget.chat.id))
       .then((p) {
-        if (p.hasWorktree()) {
-          final (remove, branch) = WorktreeChoices.defaults(p);
-          _remove = remove;
-          _branch = branch;
+        // From a daemon before API 23, only the chat's own worktree.
+        _worktrees = p.worktrees.isNotEmpty || !p.hasWorktree()
+            ? p.worktrees
+            : [WorktreePlan(worktree: p.worktree, state: p.worktreeState)];
+        for (final w in _worktrees) {
+          _choices[w.worktree.path] = WorktreeChoices.defaults(w);
         }
         return p;
       });
-  bool _remove = false, _branch = false; // the worktree, its branch
+  var _worktrees = <WorktreePlan>[];
+  final _choices = <String, (bool, bool)>{}; // by path: remove, delete branch
   bool _deleting = false;
   String _error = '';
 
   Future<void> _delete() async {
     setState(() => _deleting = true);
     try {
-      final req = DeleteChatRequest(chatId: widget.chat.id);
-      final p = await _plan;
+      await _plan;
+      final choices = [
+        for (final w in _worktrees)
+          WorktreeChoices.choice(
+            w,
+            remove: _choices[w.worktree.path]!.$1,
+            branch: _choices[w.worktree.path]!.$2,
+          ),
+      ];
+      final old = choices.firstOrNull;
       await widget.daemon.client.deleteChat(
-        p.hasWorktree()
-            ? WorktreeChoices.request(req, p, remove: _remove, branch: _branch)
-            : req,
+        widget.daemon.daemonApi >= 23 || old == null
+            ? DeleteChatRequest(chatId: widget.chat.id, worktrees: choices)
+            : DeleteChatRequest(
+                chatId: widget.chat.id,
+                removeWorktree: old.removeWorktree,
+                forceWorktree: old.forceWorktree,
+                deleteBranch: old.deleteBranch,
+                forceBranch: old.forceBranch,
+              ),
       );
       if (mounted) Navigator.pop(context);
     } on Object catch (e) {
@@ -146,16 +163,18 @@ class _DeleteDialogState extends State<_DeleteDialog> {
                 line(tildePath(p.scratchFolder), mono: true),
               ],
               line('• Nushi’s record of the chat.'),
-              if (p.hasWorktree()) ...[
-                const SizedBox(height: 12),
+              for (final (i, w) in _worktrees.indexed) ...[
+                if (i > 0 || !p.hasWorktree())
+                  line('A worktree it ran in before it moved:')
+                else
+                  const SizedBox(height: 12),
                 WorktreeChoices(
-                  plan: p,
-                  remove: _remove,
-                  branch: _branch,
-                  onChanged: (remove, branch) => setState(() {
-                    _remove = remove;
-                    _branch = branch;
-                  }),
+                  plan: w,
+                  remove: _choices[w.worktree.path]!.$1,
+                  branch: _choices[w.worktree.path]!.$2,
+                  onChanged: (remove, branch) => setState(
+                    () => _choices[w.worktree.path] = (remove, branch),
+                  ),
                 ),
               ],
               if (!p.deletesHistory) ...[

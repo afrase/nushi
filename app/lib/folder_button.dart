@@ -50,6 +50,19 @@ class FolderButton extends StatelessWidget {
       confirmButtonText: chat.fresh ? 'Open' : 'Move chat here',
     );
     if (folder == null || !context.mounted) return;
+    final wt = chat.worktree;
+    if (wt != null && !chat.fresh) {
+      final move = await confirm(
+        context,
+        'Move to ${folderParts(folder).$1}?',
+        'The chat goes on in ${tildePath(folder)}, knowing the conversation '
+            'so far.\n\nIts worktree ${tildePath(wt.path)} and its branch '
+            '${wt.branch} stay, with their work. Delete… on the chat offers '
+            'to remove them.',
+        'Move',
+      );
+      if (!move || !context.mounted) return;
+    }
     await tryOrShow(context, () => daemon.moveChat(chat, folder!));
   }
 

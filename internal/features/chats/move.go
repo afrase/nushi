@@ -19,7 +19,8 @@ import (
 // chat's agent keeps running until the new one is ready, so a move that fails
 // leaves the chat where it was, with a notice saying why. A chat without
 // messages that leaves the worktree it had removes it, if it holds no work;
-// its empty session is deleted, so the chat never had it.
+// its empty session is deleted, so the chat never had it. One with
+// messages keeps the worktree it leaves on disk, and Delete offers it.
 func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool) error {
 	if err := checkFolder(folder); err != nil {
 		return err
@@ -63,6 +64,9 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 		c.saveLocked(func(s *model.Session) {
 			if !fresh { // an empty session is just dropped, not something the chat had
 				s.Earlier = append(slices.Clip(s.Earlier), model.AgentSession{ID: s.SessionID, Folder: s.Folder})
+				if oldWT != nil { // it stays, with the work done in it
+					s.EarlierWorktrees = append(slices.Clip(s.EarlierWorktrees), *oldWT)
+				}
 			}
 			s.Folder, s.SessionID, s.Worktree = folder, o.sid, wt
 		})

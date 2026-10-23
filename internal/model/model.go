@@ -24,6 +24,9 @@ type Session struct {
 	// Worktree is the git worktree Nushi made for the chat, if it runs in
 	// one; Folder is in it.
 	Worktree *Worktree `json:",omitempty"`
+	// EarlierWorktrees are the worktrees Nushi made for the chat before it
+	// moved out of them, oldest first. They stay until the chat is deleted.
+	EarlierWorktrees []Worktree `json:",omitempty"`
 }
 
 // Worktree is a git worktree of a repository, on a branch of its own.
