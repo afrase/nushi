@@ -152,6 +152,7 @@ class _ChatViewState extends State<ChatView> {
                           daemon: widget.daemon,
                           replies: _replies,
                           attachments: _images,
+                          folder: true,
                         ),
                     ],
                   ),

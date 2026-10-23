@@ -35,11 +35,15 @@ class FolderButton extends StatelessWidget {
     required this.chat,
     required this.daemon,
     this.stacked = false,
+    this.path = true,
   });
 
   final ChatState chat;
   final Daemon daemon;
   final bool stacked;
+
+  /// Whether the one-line form shows the parent path after the name.
+  final bool path;
 
   Future<void> _move(BuildContext context, String? folder) async {
     folder ??= await getDirectoryPath(
@@ -117,7 +121,8 @@ class FolderButton extends StatelessWidget {
                       TextSpan(
                         children: [
                           TextSpan(text: name, style: nameStyle),
-                          TextSpan(text: '  $parent', style: parentStyle),
+                          if (path)
+                            TextSpan(text: '  $parent', style: parentStyle),
                         ],
                       ),
                       maxLines: 1,

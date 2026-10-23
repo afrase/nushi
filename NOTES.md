@@ -67,6 +67,7 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 31. The branch's diff | 3044 | 800 | 6449 | 655 |
 | 32. Worktrees when a chat ends | 3188 | 800 | 6621 | 655 |
 | 33. A trim pass | 3197 | 800 | 6364 | 655 |
+| 34. Long lists and the worktree switch | 3197 | 800 | 6600 | 655 |
 
 Tripwires crossed:
 Lines added per step, code and tests, without generated code (the tripwire is about 500): 1: 533, 2: 1,502, 3: 239, 4: 437, 5: 739, 6: 639, 7: 464, 8: 537, 9: 265, 10: 528, 11: 1,249, 12: 625, 13: 476, 14: 343, 15: 351, 16: 492, 17: 298, 18: 666, 19: 755, 20: 223, 21: 146; 26: 438, 27: 238, 28: 140, 29: 683, 30: 677, 31: 145, 32: 470.
@@ -205,6 +206,8 @@ To try it beside an installed Nushi Next that's in use: `export NUSHI_DATA=~/Lib
 - Claude 0.94.0's config options: `mode` (Manual, Accept edits, Plan, Auto, Bypass permissions), `model`, `effort` (category `thought_level`), `fast` (category `model_config`, a select of on/off rather than a boolean) and `agent` (no category: the subagent to run as). `set_config_option` answers with the full new set of options.
 
 ## Decisions to revisit
+
+- Step 34: a menu list with more than 10 rows (Agent, a long model list) opens with a Filter field that has the focus; typing narrows by name, description and tooltip; ↑/↓ move a highlight that starts on the current value, Enter picks, Escape clears, then closes. Group headings don't show in a filtered list. A chat without messages shows its folder (name only) and, in a git repository, a "New worktree" chip under the composer, after the mode, like Claude Code; it is the Environment card's switch (same remembered choice per repository), so with the panel open both show.
 
 - Step 33: Delete in the Delete dialog is an outlined red button (it was red text); Cancel and the other dialog buttons are the app's own. The sidebar's folder path shows `~` for the home folder, like the rest of the app. The model menu's hover and focus look are Flutter's `MenuItemButton` ones, restyled (rounded rows, no ripple).
 
