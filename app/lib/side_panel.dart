@@ -32,78 +32,64 @@ class SidePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context), t = theme.t;
-    return Container(
-      width: 380,
-      decoration: BoxDecoration(
-        border: Border(left: BorderSide(color: t.borderSubtle)),
-      ),
-      child: CallbackShortcuts(
-        bindings: {
-          const SingleActivator(LogicalKeyboardKey.escape): () =>
-              stopTurn(context, side, daemon),
-        },
-        child: ListenableBuilder(
-          listenable: side,
-          builder: (context, _) => Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Container(
-                height: 34,
-                padding: const EdgeInsets.only(left: 14, right: 4),
-                decoration: BoxDecoration(
-                  color: t.raised,
-                  border: Border(bottom: BorderSide(color: t.borderSubtle)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.forum_outlined,
-                      size: 14,
-                      color: t.textSecondary,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Side question',
-                      style: theme.ui(
-                        t.text,
-                        size: 12,
-                        weight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'not added to the chat',
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.ui(t.textMuted, size: 12),
-                      ),
-                    ),
-                    IconTap(
-                      Icons.close,
-                      tooltip: 'Close and end the side question',
-                      size: 15,
-                      onTap: onClose,
-                    ),
-                  ],
-                ),
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.escape): () =>
+            stopTurn(context, side, daemon),
+      },
+      child: ListenableBuilder(
+        listenable: side,
+        builder: (context, _) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              height: 34,
+              padding: const EdgeInsets.only(left: 14, right: 4),
+              decoration: BoxDecoration(
+                color: t.raised,
+                border: Border(bottom: BorderSide(color: t.borderSubtle)),
               ),
-              Expanded(
-                child: Transcript(
-                  chat: side,
-                  daemon: daemon,
-                  onReply: (r) => replies.value = [...replies.value, r],
-                ),
+              child: Row(
+                children: [
+                  Icon(Icons.forum_outlined, size: 14, color: t.textSecondary),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Side question',
+                    style: theme.ui(t.text, size: 12, weight: FontWeight.w600),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'not added to the chat',
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.ui(t.textMuted, size: 12),
+                    ),
+                  ),
+                  IconTap(
+                    Icons.close,
+                    tooltip: 'Close and end the side question',
+                    size: 15,
+                    onTap: onClose,
+                  ),
+                ],
               ),
-              if (side.busy) TurnStatus(side),
-              Composer(
+            ),
+            Expanded(
+              child: Transcript(
                 chat: side,
                 daemon: daemon,
-                quote: quote,
-                replies: replies,
-                hint: 'Ask on the side',
+                onReply: (r) => replies.value = [...replies.value, r],
               ),
-            ],
-          ),
+            ),
+            if (side.busy) TurnStatus(side),
+            Composer(
+              chat: side,
+              daemon: daemon,
+              quote: quote,
+              replies: replies,
+              hint: 'Ask on the side',
+            ),
+          ],
         ),
       ),
     );

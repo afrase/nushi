@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,8 +8,10 @@ import 'chat.dart';
 import 'composer.dart';
 import 'composer_parts.dart';
 import 'daemon.dart';
+import 'details_panel.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'images.dart';
+import 'panes.dart';
 import 'replies.dart';
 import 'side_panel.dart';
 import 'status.dart';
@@ -29,6 +33,9 @@ class ChatView extends StatefulWidget {
   final ChatState chat;
   final Daemon daemon;
   final Widget? details;
+
+  /// The narrowest the transcript gets beside a panel.
+  static const minWidth = 556.0;
 
   @override
   State<ChatView> createState() => _ChatViewState();
@@ -106,76 +113,93 @@ class _ChatViewState extends State<ChatView> {
   Widget build(BuildContext context) {
     final chat = widget.chat;
     final side = _side;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(
-          child: DropTarget(
-            onDragEntered: (_) => setState(() => _dragging = true),
-            onDragExited: (_) => setState(() => _dragging = false),
-            onDragDone: _drop,
-            child: Container(
-              foregroundDecoration: _dragging
-                  ? BoxDecoration(
-                      border: Border.all(
-                        color: NushiTheme.of(context).t.focus,
-                        width: 2,
-                      ),
-                    )
-                  : null,
-              child: CallbackShortcuts(
-                bindings: {
-                  const SingleActivator(LogicalKeyboardKey.escape): () =>
-                      stopTurn(context, chat, widget.daemon),
-                },
-                child: ListenableBuilder(
-                  listenable: chat,
-                  builder: (context, _) => Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(
-                        child: Transcript(
-                          chat: chat,
-                          daemon: widget.daemon,
-                          onReply: chat.archived
-                              ? null
-                              : (r) => _replies.value = [..._replies.value, r],
-                          onSide: chat.archived ? null : _ask,
+    return LayoutBuilder(
+      builder: (context, box) => Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: DropTarget(
+              onDragEntered: (_) => setState(() => _dragging = true),
+              onDragExited: (_) => setState(() => _dragging = false),
+              onDragDone: _drop,
+              child: Container(
+                foregroundDecoration: _dragging
+                    ? BoxDecoration(
+                        border: Border.all(
+                          color: NushiTheme.of(context).t.focus,
+                          width: 2,
                         ),
-                      ),
-                      if (chat.busy || _forking)
-                        TurnStatus(
-                          chat,
-                          what: _forking ? 'Starting a side chat' : null,
+                      )
+                    : null,
+                child: CallbackShortcuts(
+                  bindings: {
+                    const SingleActivator(LogicalKeyboardKey.escape): () =>
+                        stopTurn(context, chat, widget.daemon),
+                  },
+                  child: ListenableBuilder(
+                    listenable: chat,
+                    builder: (context, _) => Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: Transcript(
+                            chat: chat,
+                            daemon: widget.daemon,
+                            onReply: chat.archived
+                                ? null
+                                : (r) =>
+                                      _replies.value = [..._replies.value, r],
+                            onSide: chat.archived ? null : _ask,
+                          ),
                         ),
-                      if (chat.archived)
-                        _Archived(chat, widget.daemon)
-                      else
-                        Composer(
-                          chat: chat,
-                          daemon: widget.daemon,
-                          replies: _replies,
-                          attachments: _images,
-                          folder: true,
-                        ),
-                    ],
+                        if (chat.busy || _forking)
+                          TurnStatus(
+                            chat,
+                            what: _forking ? 'Starting a side chat' : null,
+                          ),
+                        if (chat.archived)
+                          _Archived(chat, widget.daemon)
+                        else
+                          Composer(
+                            chat: chat,
+                            daemon: widget.daemon,
+                            replies: _replies,
+                            attachments: _images,
+                            folder: true,
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-        if (side != null && !chat.archived)
-          SidePanel(
-            side: side,
-            daemon: widget.daemon,
-            quote: _sideQuote,
-            replies: _sideReplies,
-            onClose: () => setState(_closeSide),
-          )
-        else if (widget.details != null)
-          widget.details!,
-      ],
+          if (side != null && !chat.archived)
+            Resizable(
+              name: 'side',
+              initial: 380,
+              min: 300,
+              max: min(640, box.maxWidth - ChatView.minWidth),
+              left: true,
+              child: SidePanel(
+                side: side,
+                daemon: widget.daemon,
+                quote: _sideQuote,
+                replies: _sideReplies,
+                onClose: () => setState(_closeSide),
+              ),
+            )
+          else if (widget.details != null)
+            Resizable(
+              name: 'details',
+              initial: DetailsPanel.width,
+              min: 220,
+              max: min(480, box.maxWidth - ChatView.minWidth),
+              left: true,
+              child: widget.details!,
+            ),
+        ],
+      ),
     );
   }
 }

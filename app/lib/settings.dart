@@ -7,8 +7,9 @@ import 'daemon.dart';
 
 /// What the app remembers across launches, in `app.json` in the data folder:
 /// whether the details panel shows (its toolbar button), which of its cards
-/// are collapsed and their order, the repositories whose new chats get a worktree, and the
-/// worktree chats whose changes show what's uncommitted, not the branch.
+/// are collapsed and their order, the repositories whose new chats get a
+/// worktree, the worktree chats whose changes show what's uncommitted, not
+/// the branch, and the panes' widths.
 final showDetails = ValueNotifier<bool>(_saved['details'] != false)
   ..addListener(_save);
 final collapsedCards = ValueNotifier<Set<String>>(_strings('collapsed'))
@@ -21,6 +22,13 @@ final cardOrder = ValueNotifier<List<String>>([..._strings('cards')])
   ..addListener(_save);
 final uncommittedChats = ValueNotifier<Set<String>>(_strings('uncommitted'))
   ..addListener(_save);
+
+/// The widths panes were dragged to, by pane (see `Resizable`).
+final paneWidths = ValueNotifier<Map<String, double>>({
+  for (final MapEntry(:key, :value)
+      in ((_saved['panes'] as Map?) ?? {}).entries)
+    if (key is String && value is num) key: value.toDouble(),
+})..addListener(_save);
 
 File get _settings => File('$dataDir/app.json');
 
@@ -45,6 +53,7 @@ void _save() {
         'worktrees': worktreeRepos.value.toList(),
         'uncommitted': uncommittedChats.value.toList(),
         'cards': cardOrder.value,
+        'panes': paneWidths.value,
       }),
     );
   } on Object {
