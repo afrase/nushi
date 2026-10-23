@@ -98,6 +98,7 @@ type chat struct {
 	silent    *silentRun       // a prompt Nushi sent on its own, running
 	queue     []model.Message  // waiting for the agent's next chance
 	steer     bool             // the agent takes messages into a running turn
+	canRewind bool             // the agent forks a session at a message
 }
 
 // emitLocked numbers and publishes one of the chat's events. Holding the
@@ -252,7 +253,8 @@ func (c *chat) noticeLocked(reason, text string) {
 }
 
 func (c *chat) statusLocked() model.Status {
-	return model.Status{Busy: c.busy, Started: c.started, Waiting: len(c.waiting)+len(c.questions) > 0, CanFork: c.canFork, Images: c.canImage}
+	return model.Status{Busy: c.busy, Started: c.started, Waiting: len(c.waiting)+len(c.questions) > 0, CanFork: c.canFork, Images: c.canImage,
+		CanRewind: c.canRewind}
 }
 
 func (c *chat) statusChangedLocked() {
@@ -305,6 +307,9 @@ func (c *chat) itemLocked(id string) *model.Item {
 func (c *chat) addLocked(it model.Item) string {
 	if it.ID == "" {
 		it.ID = "item-" + strconv.Itoa(len(c.items)+1)
+	}
+	if it.Kind == model.UserMessage {
+		it.ForkAt = c.forkPointLocked()
 	}
 	c.items = append(c.items, it)
 	c.emitLocked(model.Event{ChatID: c.id, Item: &it})

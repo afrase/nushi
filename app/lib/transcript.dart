@@ -8,6 +8,7 @@ import 'daemon.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'items.dart';
 import 'replies.dart';
+import 'rewind.dart';
 import 'subagents.dart';
 import 'theme/theme.dart';
 import 'tool_calls.dart';
@@ -86,7 +87,8 @@ class _TranscriptState extends State<Transcript> {
       final Subagent s => ('agent ${s.call.id}', [s.call, s.busy, ...s.items]),
       _ => ((e as Item).id, [e]),
     };
-    final from = [live, still, ...items];
+    final rewindable = e is Item && canRewindTo(widget.daemon, widget.chat, e);
+    final from = [live, still, rewindable, ...items];
     final was = before[key];
     final same =
         was != null &&
@@ -110,7 +112,12 @@ class _TranscriptState extends State<Transcript> {
                             ),
                             child: _view(e, live: live, still: still),
                           )
-                        : _view(e, live: live, still: still),
+                        : _view(
+                            e,
+                            live: live,
+                            still: still,
+                            rewindable: rewindable,
+                          ),
                   ),
                 ),
               ))
@@ -118,31 +125,38 @@ class _TranscriptState extends State<Transcript> {
   }
 
   /// An entry's view: an item, a run of tool calls or a subagent.
-  Widget _view(Object e, {required bool live, required bool still}) =>
-      switch (e) {
-        final List<Item> run => ToolGroupView(run, still: still),
-        final Subagent s => SubagentCard(
-          s,
-          still: still,
-          nested: (items) => Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (final e in _entries(items, busy: widget.chat.busy))
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: _view(e, live: false, still: still),
-                ),
-            ],
-          ),
-        ),
-        _ => ItemView(
-          e as Item,
-          widget.chat.id,
-          widget.daemon,
-          live: live,
-          still: still,
-        ),
-      };
+  Widget _view(
+    Object e, {
+    required bool live,
+    required bool still,
+    bool rewindable = false,
+  }) => switch (e) {
+    final List<Item> run => ToolGroupView(run, still: still),
+    final Subagent s => SubagentCard(
+      s,
+      still: still,
+      nested: (items) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final e in _entries(items, busy: widget.chat.busy))
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: _view(e, live: false, still: still),
+            ),
+        ],
+      ),
+    ),
+    _ => ItemView(
+      e as Item,
+      widget.chat.id,
+      widget.daemon,
+      live: live,
+      still: still,
+      onRewind: rewindable
+          ? () => rewind(context, widget.daemon, widget.chat, e)
+          : null,
+    ),
+  };
 
   /// The subagent cards, by their call's id, to scroll to (ChatState.reveal).
   final _subagents = <String, GlobalKey>{};

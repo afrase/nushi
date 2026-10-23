@@ -16,6 +16,7 @@ type opened struct {
 	sid    string
 	config []model.ConfigOption
 	images bool // the agent takes images in prompts
+	rewind bool // and forks sessions at a message
 }
 
 // openSession launches an agent and opens a session in folder: a new one,
@@ -27,7 +28,7 @@ func (c *chat) openSession(ctx context.Context, launch Launch, sid, folder strin
 	if err != nil {
 		return opened{}, err
 	}
-	o := opened{agent: agent, sid: sid}
+	o := opened{agent: agent, sid: sid, rewind: agent.CanFork() && forksAtMessage(init)}
 	if init.AgentCapabilities != nil && init.AgentCapabilities.PromptCapabilities != nil {
 		o.images = init.AgentCapabilities.PromptCapabilities.Image
 	}
@@ -85,6 +86,7 @@ func initialize(ctx context.Context, launch Launch, h acp.Handler) (Agent, *acp.
 // useLocked makes an opened session the chat's.
 func (c *chat) useLocked(o opened) {
 	c.agent, c.canFork, c.steer, c.canImage, c.sid, c.config = o.agent, o.agent.CanFork(), o.agent.CanSteer(), o.images, o.sid, o.config
+	c.canRewind = o.rewind
 	c.emitLocked(model.Event{ChatID: c.id, Config: slices.Clone(c.config)})
 }
 

@@ -4,10 +4,11 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
+
 import "nushi.pb.dart" as nushiv1nushi;
 import "nushi.connect.spec.dart" as specs;
 
-extension type NushiServiceClient (connect.Transport _transport) {
+extension type NushiServiceClient(connect.Transport _transport) {
   Future<nushiv1nushi.PingResponse> ping(
     nushiv1nushi.PingRequest input, {
     connect.Headers? headers,
@@ -112,6 +113,28 @@ extension type NushiServiceClient (connect.Transport _transport) {
   }) {
     return connect.Client(_transport).unary(
       specs.NushiService.sendPrompt,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Cuts a chat back to just before one of its user messages (when
+  /// status.can_rewind and the message's fork_at is set, or it is the first)
+  /// and returns that message. The agent's session is forked there: a new
+  /// session id, the same chat. Files aren't rewound. Refused while the chat
+  /// is busy (API 29).
+  Future<nushiv1nushi.RewindChatResponse> rewindChat(
+    nushiv1nushi.RewindChatRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.rewindChat,
       input,
       signal: signal,
       headers: headers,

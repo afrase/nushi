@@ -110,6 +110,9 @@ type Item struct {
 	Agent string
 	// Tool is a tool call's tool, when the agent names it ("Read").
 	Tool string
+	// ForkAt is, for a user message, the agent's message the conversation
+	// before it ends with: where a rewind to it forks the session.
+	ForkAt string
 }
 
 // Image is an image in a message or a tool call's output.
@@ -156,7 +159,7 @@ type Message struct {
 }
 
 // Event is a change to one chat. Exactly one of Item, Status, Config,
-// Session, Commands, Removed, Usage and Queue is set.
+// Session, Commands, Removed, Usage, Queue and Cut is set.
 type Event struct {
 	ChatID string
 	// Seq numbers the chat's events from 1; a Chat snapshot says which
@@ -175,6 +178,9 @@ type Event struct {
 	Usage    *Usage // the chat's usage, all of it
 	// Queue, when not nil, is every message waiting for the agent.
 	Queue *[]Message
+	// Cut is the item the transcript was cut back before: it and every
+	// item after it are gone.
+	Cut string
 }
 
 // Usage is what the agent last reported of a chat's usage; what it hasn't
@@ -226,6 +232,8 @@ type Status struct {
 	Waiting bool      // a permission prompt or question waits on the user
 	CanFork bool      // the agent can fork the chat into side chats
 	Images  bool      // the agent takes images in prompts
+	// CanRewind says the agent can rewind the chat to a user message.
+	CanRewind bool
 }
 
 // FileChange is one file's uncommitted change: its text at HEAD and now.

@@ -7,6 +7,7 @@ import 'images.dart';
 import 'markdown.dart';
 import 'question_card.dart';
 import 'replies.dart';
+import 'rewind.dart';
 import 'theme/theme.dart';
 import 'thinking.dart';
 import 'tool_calls.dart';
@@ -20,6 +21,7 @@ class ItemView extends StatelessWidget {
     super.key,
     required this.live,
     required this.still,
+    this.onRewind,
   });
 
   final Item item;
@@ -32,29 +34,38 @@ class ItemView extends StatelessWidget {
   /// The agent waits on the user (a tool call isn't running then).
   final bool still;
 
+  /// Rewinds the chat to just before this user message, if it can be.
+  final VoidCallback? onRewind;
+
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context), t = theme.t;
     switch (item.kind) {
       case ItemKind.ITEM_KIND_USER_MESSAGE:
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: 4,
-          children: [
-            _who(theme, 'You'),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              decoration: box(t.borderSubtle, fill: t.raised),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: 6,
-                children: [
-                  if (item.images.isNotEmpty) Thumbnails(item.images),
-                  if (item.text.isNotEmpty) UserMessageText(item.text),
-                ],
+        return RewindTarget(
+          onRewind: onRewind,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 4,
+            children: [
+              _who(theme, 'You'),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
+                decoration: box(t.borderSubtle, fill: t.raised),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: 6,
+                  children: [
+                    if (item.images.isNotEmpty) Thumbnails(item.images),
+                    if (item.text.isNotEmpty) UserMessageText(item.text),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       case ItemKind.ITEM_KIND_TOOL_CALL:
         return ToolCallView(item, still: still);

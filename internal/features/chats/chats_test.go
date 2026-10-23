@@ -27,10 +27,11 @@ type fakeAgent struct {
 	steerable bool
 	prompts   []string // every prompt's text, and every message steered in
 	steered   []string
+	forkMeta  map[string]any
 }
 
 func (f *fakeAgent) Initialize(context.Context, acp.InitializeRequest) (*acp.InitializeResponse, error) {
-	return &acp.InitializeResponse{ProtocolVersion: acp.Version,
+	return &acp.InitializeResponse{ProtocolVersion: acp.Version, AgentInfo: &acp.Implementation{Name: "@agentclientprotocol/claude-agent-acp"},
 		AgentCapabilities: &acp.AgentCapabilities{PromptCapabilities: &acp.PromptCapabilities{Image: true}}}, nil
 }
 
@@ -96,7 +97,8 @@ func (f *fakeAgent) Steer(_ context.Context, _ acp.SessionID, prompt []acp.Conte
 
 func (f *fakeAgent) CanFork() bool { return true }
 
-func (f *fakeAgent) ForkSession(context.Context, acp.ForkSessionRequest) (*acp.ForkSessionResponse, error) {
+func (f *fakeAgent) ForkSession(_ context.Context, req acp.ForkSessionRequest) (*acp.ForkSessionResponse, error) {
+	f.forkMeta = req.Meta
 	return &acp.ForkSessionResponse{SessionID: "fork1"}, nil
 }
 

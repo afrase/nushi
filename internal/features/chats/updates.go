@@ -65,8 +65,9 @@ func (c *chat) update(n acp.SessionNotification) {
 		}
 		c.usageChangedLocked()
 	case "session_info_update":
-		// Claude titles a fork "<title> (fork)"; a moved chat keeps its title.
-		if t := u.SessionInfoUpdate.Title; t != "" && t != c.session.Title+" (fork)" {
+		// Claude titles a fork "<title> (fork)", a fork of a fork "<title>
+		// (fork) (fork)": a moved or rewound chat keeps its title.
+		if t := u.SessionInfoUpdate.Title; t != "" && !isFork(t, c.session.Title) {
 			c.saveLocked(func(s *model.Session) { s.Title = t })
 		}
 	case "tool_call_update":
@@ -241,4 +242,11 @@ func (c *chat) rel(path string) string {
 		return r
 	}
 	return path
+}
+
+// isFork says whether title is Claude's for a fork of a session titled of
+// (one " (fork)" or more after it).
+func isFork(title, of string) bool {
+	rest, ok := strings.CutPrefix(title, of)
+	return ok && rest != "" && strings.Trim(strings.ReplaceAll(rest, " (fork)", ""), " ") == ""
 }

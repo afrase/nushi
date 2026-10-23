@@ -21,6 +21,12 @@ service NushiService {
   rpc MoveChat(MoveChatRequest) returns (MoveChatResponse);
   // Sends a prompt; the reply arrives as events.
   rpc SendPrompt(SendPromptRequest) returns (SendPromptResponse);
+  // Cuts a chat back to just before one of its user messages (when
+  // status.can_rewind and the message's fork_at is set, or it is the first)
+  // and returns that message. The agent's session is forked there: a new
+  // session id, the same chat. Files aren't rewound. Refused while the chat
+  // is busy (API 29).
+  rpc RewindChat(RewindChatRequest) returns (RewindChatResponse);
   // Takes a message out of the chat's queue before the agent gets it, and
   // returns it (API 28). Refused once the agent has it.
   rpc Unqueue(UnqueueRequest) returns (UnqueueResponse);
@@ -223,6 +229,17 @@ message QueuedMessage {
 // Every message waiting in a chat's queue, in order.
 message ChatQueue {
   repeated QueuedMessage messages = 1;
+}
+
+message RewindChatRequest {
+  string chat_id = 1;
+  // The user message to rewind to.
+  string item_id = 2;
+}
+
+message RewindChatResponse {
+  // The message, to edit and send again (its files aren't kept).
+  QueuedMessage message = 1;
 }
 
 message UnqueueRequest {
@@ -521,6 +538,9 @@ message EventsResponse {
     Usage usage = 9;
     // The messages waiting for the agent, all of them (API 28).
     ChatQueue queue = 10;
+    // The transcript was cut back: this item and every one after it are
+    // gone (API 29).
+    string cut = 11;
   }
 }
 
@@ -603,6 +623,9 @@ message Item {
   // A tool call's tool, when the agent names it (Claude's "Read",
   // "SubagentHandback", ...).
   string tool = 16;
+  // For a user message: the agent's message the conversation before it
+  // ends with, where a rewind to it forks the session (API 29).
+  string fork_at = 17;
 }
 
 // A step of the agent's plan; status is "pending", "in_progress" or
@@ -664,4 +687,6 @@ message ChatStatus {
   bool can_fork = 5;
   // The agent takes images in prompts.
   bool images = 6;
+  // The agent can rewind the chat to a user message (RewindChat, API 29).
+  bool can_rewind = 7;
 }

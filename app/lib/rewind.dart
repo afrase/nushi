@@ -1,0 +1,98 @@
+import 'package:flutter/material.dart';
+
+import 'chat.dart';
+import 'daemon.dart';
+import 'gen/nushi/v1/nushi.pb.dart';
+import 'menu.dart';
+import 'theme/theme.dart';
+import 'widgets.dart';
+
+/// Whether the chat can be rewound to just before [item], a user message:
+/// the agent forks at the message before it, or it is the first.
+bool canRewindTo(Daemon daemon, ChatState chat, Item item) =>
+    daemon.canRewind &&
+    chat.canRewind &&
+    !chat.busy &&
+    !chat.archived &&
+    item.kind == ItemKind.ITEM_KIND_USER_MESSAGE &&
+    (item.forkAt.isNotEmpty ||
+        chat.items
+            .takeWhile((it) => it.id != item.id)
+            .every((it) => it.kind != ItemKind.ITEM_KIND_USER_MESSAGE));
+
+/// Asks, then cuts the chat back to just before [item] and puts the message
+/// in the composer to edit.
+Future<void> rewind(
+  BuildContext context,
+  Daemon daemon,
+  ChatState chat,
+  Item item,
+) async {
+  if (!await confirm(
+        context,
+        'Rewind to here?',
+        'The conversation goes back to just before this message, and Claude '
+            'forgets everything from it on. The message goes back in the box '
+            'to edit.\n\nFiles aren’t rewound: changes Claude made since then '
+            'stay.',
+        'Rewind',
+      ) ||
+      !context.mounted) {
+    return;
+  }
+  await tryOrShow(context, () async {
+    final r = await daemon.client.rewindChat(
+      RewindChatRequest(chatId: chat.id, itemId: item.id),
+    );
+    chat.takeBack.value = r.message;
+  });
+}
+
+/// A user message with "Rewind to here" on hover (top right) and in its
+/// context menu, when [onRewind] is set.
+class RewindTarget extends StatefulWidget {
+  const RewindTarget({super.key, required this.child, this.onRewind});
+
+  final Widget child;
+  final VoidCallback? onRewind;
+
+  @override
+  State<RewindTarget> createState() => _RewindTargetState();
+}
+
+class _RewindTargetState extends State<RewindTarget> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final run = widget.onRewind;
+    if (run == null) return widget.child;
+    return Menu(
+      entries: [MenuEntry('Rewind to here', onPick: run)],
+      builder: (context, open) => MouseRegion(
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        child: GestureDetector(
+          onSecondaryTapUp: (d) => open(d.localPosition),
+          child: Stack(
+            children: [
+              widget.child,
+              if (_hover)
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: IconTap(
+                    Icons.history,
+                    size: 15,
+                    color: NushiTheme.of(context).t.textMuted,
+                    tooltip: 'Rewind to here',
+                    onTap: run,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
