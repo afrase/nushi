@@ -1,35 +1,39 @@
 # Notes
 
-## Summary (2026-10-23, after step 54)
+## Summary (2026-10-23, after step 57)
 
-Milestone L (steps 52–54, an MCP manager) is done, one commit each on `main`, pushed. `make test` passes: Go unit tests (new: reading Claude's three scopes, parsing `claude mcp list`, masking, merging the check, editing with masked values and putting the old config back, Remove refusing bad names, scopes and folders, the approval lists in `settings.local.json`), the end-to-end tests (new: Reload replays a chat), and the app's tests. Every add, edit, remove, on/off and login was tried against a throwaway Claude config (`CLAUDE_CONFIG_DIR` in a temporary folder, the daemon and its `claude` and adapter on it, signed in through `CLAUDE_CODE_OAUTH_TOKEN` read from the keychain at start, never written anywhere), with small MCP test servers (stdio, HTTP, and one with a fake OAuth sign-in), in throwaway repositories, with the dev daemon and app on `NUSHI_DATA`, at 1280×800, dark. The installed Nushi and its daemon were left alone; the remembered start mode wasn't touched; Bypass was never picked; no prompt asked Claude to use a connector. Your Claude config is unchanged: the MCP parts of `~/.claude.json` (user servers, every project's servers and approval lists), `~/.claude/settings.json`, `~/.claude/.claude.json` and the MCP sign-ins in the keychain hash the same as before (the rest of `~/.claude.json` changes all the time from your own Claude sessions), and no `.mcp.json` of yours was touched. `make install` put the build in `~/Applications/Nushi.app` (and the iCloud copy).
+Milestone M (steps 55–57, terminals) is done, one commit each on `main` plus one fix (Delete lists running terminals), pushed. `make test` passes: Go unit tests (new: the PTY package against a real `/bin/sh`: output, input, `stty size` after a resize, the exit code, replay on reattach, the foreground program, and close killing a child that ignores the hangup; the terminals feature's order, rename and closing a chat's terminals), the end-to-end tests (new: a terminal through the API outlives the app, replays, reports its exit, shows in Delete's plan, and goes with Archive), and the app's tests (new: the panel's keys against a fake daemon, links and words under a click). Everything was tried by hand with the dev daemon and app on `NUSHI_DATA`, the fake agent in place of Claude (no Claude process ran, so no credentials were involved), a throwaway repository with a worktree chat in the scratchpad, at 1280×800, dark and light; test shells ran only `pwd`, `ls`-like echoes, `stty size`, `printf` colors, `sleep`, `top` and `exit`. The installed Nushi and its daemon were left alone. `make install` put the build in `~/Applications/Nushi.app` (and the iCloud copy).
 
 **What works**
-- 52: "MCP servers" (sidebar footer, a chat's menu, the panel's MCP card): the servers by scope (User, Project, Local for the folder picked on top, Plugins, claude.ai), each with a status dot and word, transport, command or URL, and env vars and headers as `KEY=••••`; a failure's reason in red; a server hidden by one of the same name dimmed. They show at once from Claude's files; `claude mcp list` fills in the states (and the plugins' servers and connectors) a second or so later. The MCP card lists the chat's servers with dots.
-- 53: Add server (a form, or Edit as JSON both ways), Edit… (name and scope fixed, masked values kept unless typed over; a refused config puts the old one back, tried), Remove… (names the scope). Running chats the change reaches show "MCP servers changed. Reload to use them."; Reload reopens the session and the transcript replays. Tried: Claude listed its MCP tools before and after; a removed server was gone after Reload.
-- 54: a project server's switch turns it off (or on) for the project; one waiting for approval has Approve and Reject. "Log in" on a server that needs a sign-in opens the browser (Claude's own flow) and the row turns Connected when it's done; Log out in the row's menu. Demo done in the throwaway config: a stdio server at user scope and an HTTP one at project scope (with a header) added through the form, both with their status; one edited; the project one turned off; the chat reloaded and Claude listed only the user one ("webveg is gone"); a sign-in through the fake OAuth server; both removed.
+- 55: the daemon runs `$SHELL -l` per terminal in a pseudo-terminal (`internal/terminal`, `creack/pty`), in the chat's folder (its worktree) or a given one, keeps its last 1 MB and replays it to whoever attaches, reports the program in front and the exit code, and closes a chat's terminals on Archive, Delete and Remove (Delete's dialog lists the running ones). Close hangs up, waits 2 s, then kills what's left on the terminal.
+- 56: the panel under the chat (and Changes): ⌃` or the header's terminal button, a draggable, remembered height, tabs named `zsh — brave-lynx` / `top` / your name, +, ×, drag to reorder, double-click to rename, `exit 3` dimmed with Restart. `xterm2` renders it in the app's colors, 256 and true color, JetBrains Mono, a blinking bar. Demo done: two tabs in a worktree chat, `pwd` in both (the worktree), `top` in one, the panel dragged taller (top reflowed), the app quit and reopened: both tabs back with their output.
+- 57: ⌘-click on a path opens it in Changes when the view lists it (tried: `veg.txt:2` and a branch-committed `notes.md`), else reveals it in Finder; URLs open in the browser. "Open in terminal" on a sidebar folder (right-click) and the Environment card's terminal icon (both tried). A tab running a command has a blue dot (tried with `sleep 20`); terminals never touch the chat's status. ⌘F finds in the scrollback (tried: 16 matches highlighted, stepping).
 
-**What doesn't (yet)**
-- No on/off for user, local, plugin or claude.ai servers: Claude records that per project only in `~/.claude.json` (`disabledMcpServers`, from `/mcp`), which Nushi doesn't write (ADR 0021). Only project (`.mcp.json`) servers get the switch.
-- Approve writes `enabledMcpjsonServers` to the project's `.claude/settings.local.json`, which Claude in the terminal honors only once you've trusted the folder there (the row says "Approved · folder not trusted"). Chats in Nushi load `.mcp.json` servers without approval anyway (Agent SDK sessions don't ask), so approval matters only for the terminal.
-- Plugins' servers and connectors appear only after the check (they come from `claude mcp list`), and their target is what the list prints. In the throwaway config there were none (no claude.ai sign-in, no plugins); the parsing was checked against your real `claude mcp list` output (names and states only).
-- A sign-in that's abandoned in the browser keeps the row at "Finish in the browser…" until Claude gives up (5 minutes at most).
-- Found, not fixed (from before L): a chat that never had a message can't be reopened after a daemon restart ("session/load: Resource not found": Claude never wrote the session). It shows the error in the transcript.
-- Carried over: a background subagent's steps after a daemon restart, and background tasks (step 51); a rewind keeps `@` file links only as text; a message queued while steering fails also stays in the transcript; Python `def` names uncolored; plain `mv` shows as delete plus untracked; Reduce motion untried with the setting on; Delete leaves earlier sessions of chats moved before step 26; dropping files untried; cost restarts near zero after a move, a reload or a rewind; no thoughts from Claude; copy across blocks loses line breaks; nothing runs after a reboot until the app opens.
+**What doesn't (yet), or wasn't tried by hand**
+- ⌘ shortcuts (⌘C/V/K/T/W/1–9/F) and ⌘-click were checked only in widget tests and with a temporary build that took a plain click as ⌘-click: the synthetic keyboard events I can send here never carry ⌘ (or ⌃ as a modifier) into Flutter. ⌘V/⌘C with your clipboard weren't tried at all. Please try those first.
+- The Finder branch of ⌘-click and URLs in the browser weren't clicked by hand (only parsed in tests), to avoid opening windows on your screen.
+- No underline or pointer while ⌘ is held over a link; `:line` isn't scrolled to in Changes; relative paths resolve from the terminal's starting folder, not the shell's current one.
+- Once, the first key typed right after the panel auto-opened a new shell was lost (the next ones arrived); not reproduced since a new or picked tab now takes the focus.
+- ⌘K clears the screen only; reopening the app replays the cleared output from the daemon.
+- Terminals don't survive a daemon restart (the banner says so); a turn of the agent and a shell are equally lost then.
+- After Archive, the panel's open state is kept: unarchiving shows the panel again and opens a fresh shell.
+- Carried over from L: no on/off for non-project MCP servers; Approve counts for Claude in the terminal only in a trusted folder; plugins' servers and connectors show only after the check; an abandoned MCP sign-in waits up to 5 minutes. From before: a background subagent's steps after a daemon restart, and background tasks (step 51); a rewind keeps `@` file links only as text; a message queued while steering fails also stays in the transcript; Python `def` names uncolored; plain `mv` shows as delete plus untracked; Reduce motion untried with the setting on; Delete leaves earlier sessions of chats moved before step 26; dropping files untried; cost restarts near zero after a move, a reload or a rewind; no thoughts from Claude; copy across blocks loses line breaks; nothing runs after a reboot until the app opens.
 
 **Changes to earlier behavior**
-- The chat menu has "MCP servers…"; the sidebar has a footer row "MCP servers"; the panel has an MCP card (last, movable and collapsible like the others).
-- `git.Exclude` (the worktrees' `/.worktrees/` line) now matches its line exactly, so an old `.worktrees/` line without the leading slash gets the slashed one added beside it.
+- The chat header has a terminal button (left of the details button); the Environment card's folder row has a terminal icon; the sidebar's folder headers have a right-click menu (New chat here, Open in terminal).
+- `Resizable` (step 41) can sit on a pane's top edge. The Changes view can be told to show a file (a terminal link).
+- The "daemon is older" banner says a restart also closes terminals.
 
 **Needs your decision**
-- The daemon's API went from 31 to 34 (32 the list, 33 add, edit, remove and Reload, 34 on/off and sign-in). Press "Restart daemon" in the installed app; until then the MCP view is off.
-- Decisions to revisit, new in L (details in the list below): the view in place of the chat; Approve/Reject writing `.claude/settings.local.json` (and adding it to `.git/info/exclude` when Nushi creates it); no on/off for non-project servers; sign-in through `script(1)` for a terminal; which chats get the Reload notice; health checked once per folder per app run.
+- The daemon's API went from 34 to 36 (35 terminals, 36 rename, arrange and restart). Press "Restart daemon" in the installed app; it closes nothing yet since there were no terminals before.
+- Decisions to revisit, new in M (details in the list below): `xterm2` over the unmaintained `xterm` and the AGPL `xterm3`; the panel spans the details panel too; open/closed per chat and remembered, auto-opening a shell; Option is always Meta; `COLORTERM=truecolor` added to the shell's environment; VS Code's ANSI palettes; "Open in terminal" on a folder picks the chat; deleting closes terminals after the worktree goes; Restart wipes the old output; terminal list events have no `seq`.
+- Security (in "Security notes"): any token holder can open a shell; terminals must stay off remote access until it decides otherwise (ADR 0022).
 
-**Size**: the app is 10,793 lines of Dart (9,616 before L), plus 666 in packages; the daemon 5,157 lines of Go (4,235); the ACP client 836. Each step crossed the ~500-line tripwire (about 950, 930 and 600 lines with tests; see "Tripwires crossed"). `mcp_form.dart` is 399 lines; `mcp.dart` was split once.
+**Size**: the app is 12,026 lines of Dart (10,793 before M), plus 666 in packages; the daemon 5,965 lines of Go (5,157); the ACP client 836. Steps 55 and 56 crossed the ~500-line tripwire (about 880 and 1,100 lines with tests); 57 didn't. `sidebar.dart` is 405 lines.
 
-**Dependencies**: none added. Sign-in uses macOS's `script` to give `claude mcp login` a terminal.
+**Dependencies**: Go `github.com/creack/pty` and `golang.org/x/sys` (step 55); Dart `xterm2` (MIT), which brings `xterm2_core`, `zmodem`, `quiver`, `equatable`, `convert` (step 56).
 
-**Left behind by the testing**: nothing (the dev data folder, the throwaway Claude config and its keychain item, the throwaway repositories, test servers and helper scripts removed).
+**Left behind by the testing**: nothing (the dev data folder, the throwaway repository and its worktree, the fake-agent shim, the helper tools and screenshots removed).
 
 ## Line counts
 
@@ -96,7 +100,7 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 54. MCP on/off, approvals, sign-in | 5157 | 836 | 10793 | 666 |
 | 55. Shells in the daemon | 5835 | 836 | 10794 | 666 |
 | 56. The terminal panel, with tabs | 5965 | 836 | 11676 | 666 |
-| 57. Terminal touches | 5965 | 836 | 12020 | 666 |
+| 57. Terminal touches | 5965 | 836 | 12026 | 666 |
 
 Tripwires crossed:
 - Milestone M (steps 55–57) took the daemon from 5,157 to 5,965 lines of Go and the app from 10,793 to 12,020 lines of Dart. Step 57 stayed under the per-step tripwire (about 340 lines of Dart and 50 of tests: links and find, 160; Open in terminal in the sidebar and the Environment card; the tab's dot; showing a file in Changes). `terminal_panel.dart` passed 400 and gave the screen to `terminal_screen.dart`; `sidebar.dart` is 405.
@@ -265,6 +269,19 @@ Try it against a throwaway Claude config first, so your own stays as it is: `exp
 5. On `docs` press Reject (or Approve, then the switch off): "Off". `cat /tmp/veg/.claude/settings.local.json`, and `/.claude/settings.local.json` is in `.git/info/exclude`. Reload the chat and ask again: only `everything`'s tools.
 6. A server that needs a sign-in (a remote one with OAuth, e.g. `https://mcp.linear.app/mcp`): "Needs login" ▸ Log in: the browser opens; finish there and the row turns Connected. ⋯ ▸ Log out: "Needs login" again.
 7. ⋯ ▸ Remove… on each (the dialog names the scope): gone, `.mcp.json` back to `{"mcpServers": {}}`.
+
+## Milestone M demo (steps 55–57): terminals
+
+Beside an installed Nushi that's in use: `export NUSHI_DATA=~/Library/Application\ Support/Nushi\ Dev`, then `make run` (and `make stop` after). Otherwise `make install`, quit Nushi, and press "Restart daemon".
+
+1. A throwaway repository: `mkdir -p /tmp/veg && cd /tmp/veg && git init -b main && echo carrot > veg.txt && git add . && git commit -m init`. New chat there with "New worktree" on.
+2. ⌃` (or the terminal button in the header): a tab `zsh — <worktree>`; `pwd` shows the worktree. ⌘T (or +): a second tab; `pwd` again. Run `top` in one: the tab is named `top` with a blue dot; drag the panel's top edge up and down: `top` reflows.
+3. Quit Nushi (⌘Q) and open it again, open the chat: both tabs are back with their output; `top` still runs.
+4. × on the `top` tab: it asks first. Double-click the other tab, name it, Enter. Drag a tab to reorder. `exit 3`: "exit 3" on the tab and a Restart bar.
+5. `echo potato >> veg.txt; echo veg.txt:1 https://example.com`, then ⌘-click `veg.txt:1`: Changes opens on it; ⌘-click the URL: the browser. ⌘-click a file that isn't changed: Finder.
+6. ⌘F, type `veg`: matches highlighted; Enter steps up. ⌘K clears. Option-B / Option-F move by word in zsh.
+7. Right-click the folder in the sidebar ▸ Open in terminal: a tab in the repository folder. The Environment card's terminal icon: a tab in the worktree.
+8. Chat menu ▸ Delete…: lists the running terminals (Cancel). Archive the chat: its terminals close (`ps` no longer shows `top`).
 
 ## ACP quirks
 
