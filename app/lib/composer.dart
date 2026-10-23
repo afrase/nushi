@@ -2,16 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'chat.dart';
-import 'chat_menu.dart';
+import 'composer_parts.dart';
 import 'daemon.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'images.dart';
+import 'menu.dart';
 import 'pickers.dart';
 import 'replies.dart';
 import 'reply_cards.dart';
 import 'theme/theme.dart';
 import 'thinking.dart';
-import 'composer_parts.dart';
+import 'widgets.dart';
 
 /// The prompt box: "+" on its left mentions a file or attaches images
 /// (⌘V and dropping work too), and on its right a send button once there
@@ -81,18 +82,6 @@ class _ComposerState extends State<Composer> {
     setState(() => _replyCount = widget.replies.value.length);
   }
 
-  /// The "+" menu: mention a file, or attach images.
-  Future<void> _plus(BuildContext button) async {
-    final picked = await plusMenu(button, images: widget.chat.canImages);
-    if (!mounted) return;
-    switch (picked) {
-      case 'file':
-        _mention();
-      case 'image':
-        await tryOrShow(context, _images.pick);
-    }
-  }
-
   @override
   void dispose() {
     _images.removeListener(_imagesChanged);
@@ -138,8 +127,10 @@ class _ComposerState extends State<Composer> {
       if (files == null) {
         _files = const [];
         _filesOf = folder;
-        widget.daemon.listFiles(folder).then((f) {
-          _files = f;
+        widget.daemon.client.listFiles(ListFilesRequest(folder: folder)).then((
+          r,
+        ) {
+          _files = r.paths;
           if (mounted) _complete();
         }, onError: (_) => _files = null);
       }
@@ -248,20 +239,19 @@ class _ComposerState extends State<Composer> {
     _mentions.clear();
     _lastFiles = files;
     try {
-      await widget.daemon.sendPrompt(
-        widget.chat.id,
-        withReplies(replies, text),
-        files,
-        images,
+      await widget.daemon.client.sendPrompt(
+        SendPromptRequest(
+          chatId: widget.chat.id,
+          text: withReplies(replies, text),
+          files: files,
+          images: images,
+        ),
       );
     } on Object catch (e) {
       _text.text = text;
       _images.value = images;
       widget.replies.value = replies;
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('$e')));
-      }
+      if (mounted) showError(context, e);
     }
   }
 
@@ -276,8 +266,7 @@ class _ComposerState extends State<Composer> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
+    final theme = NushiTheme.of(context), t = theme.t;
     final chat = widget.chat;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
@@ -323,15 +312,23 @@ class _ComposerState extends State<Composer> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Builder(
-                      builder: (button) => BoxButton(
-                        tooltip: 'Mention a file or attach an image',
-                        onPressed: () => _plus(button),
-                        child: Icon(
-                          Icons.add,
-                          size: 18,
-                          color: t.textSecondary,
+                    Menu(
+                      entries: [
+                        MenuEntry('Mention a file', onPick: _mention),
+                        MenuEntry(
+                          'Image…',
+                          onPick: chat.canImages
+                              ? () => tryOrShow(context, _images.pick)
+                              : null,
+                          tooltip: chat.canImages
+                              ? ''
+                              : 'Claude doesn’t take images in this chat',
                         ),
+                      ],
+                      builder: (context, open) => boxButton(
+                        'Mention a file or attach an image',
+                        open,
+                        Icon(Icons.add, size: 18, color: t.textSecondary),
                       ),
                     ),
                     Expanded(
@@ -347,11 +344,9 @@ class _ComposerState extends State<Composer> {
                           style: theme.ui(t.text),
                           textAlignVertical: TextAlignVertical.center,
                           decoration: InputDecoration(
-                            isDense: true,
                             hintText: chat.busy
                                 ? 'Claude is working…'
                                 : widget.hint,
-                            hintStyle: theme.ui(t.textMuted),
                             border: InputBorder.none,
                             // One line (18.2) is as tall as the buttons.
                             contentPadding: const EdgeInsets.symmetric(
@@ -363,19 +358,19 @@ class _ComposerState extends State<Composer> {
                       ),
                     ),
                     if (chat.started != null)
-                      BoxButton(
-                        tooltip: 'Stop (esc)',
-                        onPressed: () => stopTurn(context, chat, widget.daemon),
-                        child: StopIcon(color: t.textSecondary),
+                      boxButton(
+                        'Stop (esc)',
+                        () => stopTurn(context, chat, widget.daemon),
+                        stopIcon(t.textSecondary),
                       )
                     else if ((_text.text.trim().isNotEmpty ||
                             _images.value.isNotEmpty ||
                             widget.replies.value.isNotEmpty) &&
                         !chat.busy)
-                      BoxButton(
-                        tooltip: 'Send (⏎)',
-                        onPressed: _send,
-                        child: Icon(
+                      boxButton(
+                        'Send (⏎)',
+                        _send,
+                        Icon(
                           Icons.keyboard_return,
                           size: 16,
                           color: t.textSecondary,
@@ -389,8 +384,13 @@ class _ComposerState extends State<Composer> {
           const SizedBox(height: 4),
           Pickers(
             options: chat.config,
-            onPick: (id, value) =>
-                widget.daemon.setConfigOption(chat.id, id, value),
+            onPick: (id, value) => widget.daemon.client.setConfigOption(
+              SetConfigOptionRequest(
+                chatId: chat.id,
+                configId: id,
+                value: value,
+              ),
+            ),
             onClose: _focus.requestFocus,
           ),
         ],

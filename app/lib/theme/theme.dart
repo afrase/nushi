@@ -4,6 +4,17 @@ import 'tokens.dart';
 
 export 'tokens.dart';
 
+/// A box outlined in [border], filled with [fill], its corners rounded.
+BoxDecoration box(
+  Color border, {
+  Color? fill,
+  double radius = NushiTheme.card,
+}) => BoxDecoration(
+  color: fill,
+  border: Border.all(color: border),
+  borderRadius: BorderRadius.circular(radius),
+);
+
 /// Carries the [Tokens] and the fonts to widgets: `NushiTheme.of(context)`.
 /// Material's theme is derived from the tokens, never the other way round.
 @immutable
@@ -102,10 +113,17 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
         selectionColor: t.accent.withValues(alpha: 0.3),
         cursorColor: t.text,
       ),
+      // Quiet: no ripples, menus and dialogs with only a faint shadow.
+      splashFactory: NoSplash.splashFactory,
+      highlightColor: Colors.transparent,
+      hoverColor: t.hover,
       menuTheme: MenuThemeData(
         style: MenuStyle(
           backgroundColor: WidgetStatePropertyAll(t.raised),
           surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+          elevation: const WidgetStatePropertyAll(3),
+          shadowColor: const WidgetStatePropertyAll(Color(0x33000000)),
+          padding: const WidgetStatePropertyAll(EdgeInsets.all(4)),
           side: WidgetStatePropertyAll(BorderSide(color: t.borderStrong)),
           shape: const WidgetStatePropertyAll(
             RoundedRectangleBorder(
@@ -113,6 +131,34 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
             ),
           ),
         ),
+      ),
+      menuButtonTheme: MenuButtonThemeData(
+        style: MenuItemButton.styleFrom(
+          minimumSize: const Size(0, 28),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          visualDensity: VisualDensity.compact,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(control)),
+          ),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: t.raised,
+        surfaceTintColor: Colors.transparent,
+        elevation: 3,
+        shadowColor: const Color(0x33000000),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(color: t.borderStrong),
+        ),
+        titleTextStyle: ui(t.text, size: 15, weight: FontWeight.w600),
+        contentTextStyle: ui(t.textSecondary),
+      ),
+      inputDecorationTheme: InputDecorationThemeData(
+        isDense: true,
+        contentPadding: const EdgeInsets.all(8),
+        hintStyle: ui(t.textMuted),
+        border: const OutlineInputBorder(),
       ),
       tooltipTheme: TooltipThemeData(
         decoration: BoxDecoration(

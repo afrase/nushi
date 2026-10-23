@@ -1,10 +1,12 @@
 import 'package:diff_view/diff_view.dart';
 import 'package:flutter/material.dart';
 
+import 'changes_view.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'images.dart';
 import 'markdown.dart';
 import 'theme/theme.dart';
+import 'widgets.dart';
 
 const _icons = {
   'read': Icons.description_outlined,
@@ -33,35 +35,33 @@ bool _running(Item it) => it.status == 'pending' || it.status == 'in_progress';
   );
 }
 
+/// What each kind of tool call did, and to what.
+const _did = {
+  'read': ('read', 'file'),
+  'edit': ('edited', 'file'),
+  'delete': ('deleted', 'file'),
+  'move': ('moved', 'file'),
+  'execute': ('ran', 'command'),
+  'search': ('ran', 'search'),
+  'fetch': ('fetched', 'page'),
+  'other': ('used', 'tool'),
+};
+
 /// What a run of tool calls did: "Read 4 files, ran 2 commands".
 String groupLabel(List<Item> calls) {
-  const named = {
-    'read',
-    'edit',
-    'delete',
-    'move',
-    'execute',
-    'search',
-    'fetch',
-  };
   final counts = <String, int>{};
   for (final c in calls) {
-    final kind = named.contains(c.toolKind) ? c.toolKind : 'other';
+    final kind = _did.containsKey(c.toolKind) ? c.toolKind : 'other';
     counts.update(kind, (n) => n + 1, ifAbsent: () => 1);
   }
-  String n(int n, String one, String many) => '$n ${n == 1 ? one : many}';
   final label = [
-    for (final MapEntry(key: kind, value: c) in counts.entries)
-      switch (kind) {
-        'read' => 'read ${n(c, 'file', 'files')}',
-        'edit' => 'edited ${n(c, 'file', 'files')}',
-        'delete' => 'deleted ${n(c, 'file', 'files')}',
-        'move' => 'moved ${n(c, 'file', 'files')}',
-        'execute' => 'ran ${n(c, 'command', 'commands')}',
-        'search' => 'ran ${n(c, 'search', 'searches')}',
-        'fetch' => 'fetched ${n(c, 'page', 'pages')}',
-        _ => 'used ${n(c, 'tool', 'tools')}',
-      },
+    for (final MapEntry(key: kind, value: n) in counts.entries)
+      if (_did[kind] case (final verb, final what))
+        '$verb $n $what${n == 1
+            ? ''
+            : what.endsWith('h')
+            ? 'es'
+            : 's'}',
   ].join(', ');
   return label[0].toUpperCase() + label.substring(1);
 }
@@ -92,33 +92,33 @@ class _CollapsibleState extends State<_Collapsible> {
     final body = widget.body;
     return Container(
       clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        border: Border.all(color: widget.failed ? t.crashed : t.borderSubtle),
-        borderRadius: BorderRadius.circular(NushiTheme.card),
-      ),
+      decoration: box(widget.failed ? t.crashed : t.borderSubtle),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          InkWell(
-            onTap: body == null ? null : () => setState(() => _open = !_open),
-            child: Container(
-              height: 28,
-              color: widget.failed ? t.crashedSoft : t.raised,
+          ColoredBox(
+            color: widget.failed ? t.crashedSoft : t.raised,
+            child: Tap(
+              onTap: body == null ? null : () => setState(() => _open = !_open),
+              radius: 0,
               padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 18,
-                    child: body == null
-                        ? null
-                        : Icon(
-                            _open ? Icons.expand_more : Icons.chevron_right,
-                            size: 14,
-                            color: t.textSecondary,
-                          ),
-                  ),
-                  Expanded(child: widget.header),
-                ],
+              child: SizedBox(
+                height: 28,
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 18,
+                      child: body == null
+                          ? null
+                          : Icon(
+                              _open ? Icons.expand_more : Icons.chevron_right,
+                              size: 14,
+                              color: t.textSecondary,
+                            ),
+                    ),
+                    Expanded(child: widget.header),
+                  ],
+                ),
               ),
             ),
           ),
@@ -129,18 +129,10 @@ class _CollapsibleState extends State<_Collapsible> {
   }
 }
 
-/// The end of a tool call's header: a spinner while it runs, "failed" in
-/// red when it failed.
-class _Status extends StatelessWidget {
-  const _Status({required this.running, required this.failed});
-
-  final bool running;
-  final String failed;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    return Row(
+/// The end of a tool call's header: [failed] in red, and a spinner while
+/// it runs.
+Widget _status(NushiTheme theme, {required bool running, String failed = ''}) =>
+    Row(
       mainAxisSize: MainAxisSize.min,
       spacing: 6,
       children: [
@@ -152,8 +144,6 @@ class _Status extends StatelessWidget {
           ),
       ],
     );
-  }
-}
 
 /// One tool call: a one-line summary by kind (the file read or edited, the
 /// command run, `+n −m` for an edit) that opens to its output and diffs.
@@ -167,8 +157,7 @@ class ToolCallView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
+    final theme = NushiTheme.of(context), t = theme.t;
     final it = item;
     final code = theme.code(t.text, size: 12).copyWith(height: 1.2);
     final path = it.paths.firstOrNull ?? it.diffs.firstOrNull?.path;
@@ -197,7 +186,7 @@ class ToolCallView extends StatelessWidget {
     }
     final failed = it.status == 'failed';
     final hasBody = it.text.isNotEmpty || it.diffs.isNotEmpty;
-    return _WithImages(
+    return _withImages(
       [if (images) ...it.images],
       _Collapsible(
         failed: failed,
@@ -228,7 +217,11 @@ class ToolCallView extends StatelessWidget {
               ),
             ],
             const SizedBox(width: 8),
-            _Status(running: _running(it), failed: failed ? 'failed' : ''),
+            _status(
+              theme,
+              running: _running(it),
+              failed: failed ? 'failed' : '',
+            ),
           ],
         ),
         body: !hasBody
@@ -239,7 +232,7 @@ class ToolCallView extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   spacing: 8,
                   children: [
-                    for (final d in it.diffs) EditDiff(d),
+                    for (final d in it.diffs) DiffBox(d),
                     if (it.text.isNotEmpty) AgentMarkdown(it.text),
                   ],
                 ),
@@ -250,27 +243,19 @@ class ToolCallView extends StatelessWidget {
 }
 
 /// A tool call, or a run of them, with the images they returned under it.
-class _WithImages extends StatelessWidget {
-  const _WithImages(this.images, this.child);
-
-  final List<ImageData> images;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => images.isEmpty
-      ? child
-      : Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: 6,
-          children: [
-            child,
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Thumbnails(images, size: 240),
-            ),
-          ],
-        );
-}
+Widget _withImages(List<ImageData> images, Widget child) => images.isEmpty
+    ? child
+    : Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 6,
+        children: [
+          child,
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Thumbnails(images, size: 240),
+          ),
+        ],
+      );
 
 /// A run of tool calls as one line ("Read 4 files, ran 2 commands") that
 /// opens to each call.
@@ -281,10 +266,9 @@ class ToolGroupView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
+    final theme = NushiTheme.of(context), t = theme.t;
     final failed = calls.where((c) => c.status == 'failed').length;
-    return _WithImages(
+    return _withImages(
       [for (final c in calls) ...c.images],
       _Collapsible(
         failed: false, // its failed calls stand out inside, and in the count
@@ -301,7 +285,8 @@ class ToolGroupView extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            _Status(
+            _status(
+              theme,
               running: calls.any(_running),
               failed: failed == 0 ? '' : '$failed failed',
             ),
@@ -318,79 +303,6 @@ class ToolGroupView extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// An edit's diff, side by side and only as tall as the edit (up to about
-/// fifteen lines, then it scrolls).
-class EditDiff extends StatefulWidget {
-  const EditDiff(this.change, {super.key});
-
-  final FileChange change;
-
-  @override
-  State<EditDiff> createState() => _EditDiffState();
-}
-
-class _EditDiffState extends State<EditDiff> {
-  DiffViewController? _controller;
-  late DiffThemeData _theme;
-  double _height = 0;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _build();
-  }
-
-  @override
-  void didUpdateWidget(EditDiff old) {
-    super.didUpdateWidget(old);
-    if (old.change != widget.change) _build();
-  }
-
-  void _build() {
-    final d = widget.change;
-    final dpr = MediaQuery.devicePixelRatioOf(context);
-    _theme = Theme.of(context).brightness == Brightness.dark
-        ? DiffThemeData.dark()
-        : DiffThemeData.light();
-    final diff = TextDiff.compute(d.oldText, d.newText, path: d.path);
-    _controller?.dispose();
-    _controller = DiffViewController(
-      document: diff.document,
-      lines: diff.lines,
-      theme: _theme,
-      devicePixelRatio: dpr,
-    );
-    final rows = diff.document.oldLineCount > diff.document.newLineCount
-        ? diff.document.oldLineCount
-        : diff.document.newLineCount;
-    _height = _theme.lineHeightFor(dpr) * rows.clamp(1, 15) + 6;
-  }
-
-  @override
-  void dispose() {
-    _controller?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final t = NushiTheme.of(context).t;
-    return Container(
-      height: _height,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        border: Border.all(color: t.borderSubtle),
-        borderRadius: BorderRadius.circular(NushiTheme.control),
-      ),
-      child: SideBySideDiff(
-        controller: _controller!,
-        theme: _theme,
-        inlayBuilder: (context, spec) => const SizedBox.shrink(),
       ),
     );
   }

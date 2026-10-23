@@ -66,6 +66,7 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 30. Chats in their own worktree | 3025 | 800 | 6407 | 655 |
 | 31. The branch's diff | 3044 | 800 | 6449 | 655 |
 | 32. Worktrees when a chat ends | 3188 | 800 | 6621 | 655 |
+| 33. A trim pass | 3197 | 800 | 6364 | 655 |
 
 Tripwires crossed:
 Lines added per step, code and tests, without generated code (the tripwire is about 500): 1: 533, 2: 1,502, 3: 239, 4: 437, 5: 739, 6: 639, 7: 464, 8: 537, 9: 265, 10: 528, 11: 1,249, 12: 625, 13: 476, 14: 343, 15: 351, 16: 492, 17: 298, 18: 666, 19: 755, 20: 223, 21: 146; 26: 438, 27: 238, 28: 140, 29: 683, 30: 677, 31: 145, 32: 470.
@@ -87,6 +88,16 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 - Step 25 (718 added, 174 removed): images on both sides. The daemon carries them in prompts, messages and tool calls (and the agent's image capability) with a test; the app attaches them (paste, drop, the "+" menu), shrinks them, shows them as thumbnails with a preview, and renders markdown images by the rules below (`images.dart`, 280). `composer.dart` passed 400 lines twice in steps 24–25 and gave its small widgets and the "+" menu to `composer_parts.dart`.
 - Step 30 (677 added, 110 removed; 140 of the added are tests): worktrees on both sides. The git side (`internal/git/worktree.go`, 115: making one, the exclude line, removing an unused one) and its test (61); the chats feature's names and the worktree option in Start and Move (`worktree.go`, 56); an end-to-end test (79); the proto; in the app the Environment card's rows, the switch and the move confirmation (`worktree.dart`, 138), grouping by repository, and `app.json` moved out of `details_panel.dart` into `settings.dart` (44 lines, mostly moved).
 - `acp/internal/acpgen/main.go` reached 407 lines in step 10's trim pass; it was trimmed to 393.
+
+## Step 33: what the trim pass took out
+
+The app went from 6,623 lines of Dart (after the scroll fix, 6,634) to 6,364: about 270 lines, short of the goal of 6,000. What went, roughly:
+- **One menu** (`menu.dart`, 200 lines, new): `Menu` and `MenuEntry` on Flutter's `MenuAnchor` (opens at once, no grow animation), used by the mode, model and "⋯" menus, the "+" menu, the chat menu (header and right-click in the sidebar) and the folder menu. It replaced `showMenu`/`PopupMenuItem` in three places and the composer's own menu button: `pickers.dart` −216, `composer_parts.dart` −66 (the "+" menu, `BoxButton`, `StopIcon` as functions), `folder_button.dart` −53, `chat_menu.dart` −43. Net about −180.
+- **No Material ink or elevation**: the theme turns splashes off and gives menus and dialogs one faint shadow and a border; a small `Tap` (hover tint, no ripple) and `IconTap` replace `InkWell`/`Material` pairs and `IconButton`s in the sidebar, Changes list, cards, tool calls, thinking, question options, reply cards, images and the selection toolbar. Dialogs use one `nushiDialog` and a `confirm()` with the app's buttons; text fields take their look from the theme. Mostly line-neutral (theme +46), but it removed most per-site styling.
+- **Merged duplicates**: the Changes view and the edit diffs share one `DiffBox` (tool calls −88 with the shorter group label); the Changes view and the details panel share the reload-when-the-turn-ends logic (`FollowsChanges` mixin; details panel −40); one `tryOrShow`/`showError` instead of seven snack-bar blocks; the folder name and path come from one `folderParts`; the daemon's ten one-line wrappers around RPCs went (callers use `daemon.client` directly, −60); the panel's card rows take plain strings.
+- `status.dart` (92) is not new code: the status dot and word moved out of `widgets.dart`.
+- The daemon: nothing cheap to take out (`deadcode` finds nothing); unchanged.
+- What's left is mostly behavior. Getting under 6,000 would mean dropping features (the compatibility gating for older daemons, the reply-card editing, the side chat's own composer) or reformatting to a wider line; neither seemed right for a trim.
 
 ## Milestone A demo (steps 1–5): one working chat
 
@@ -194,6 +205,8 @@ To try it beside an installed Nushi Next that's in use: `export NUSHI_DATA=~/Lib
 - Claude 0.94.0's config options: `mode` (Manual, Accept edits, Plan, Auto, Bypass permissions), `model`, `effort` (category `thought_level`), `fast` (category `model_config`, a select of on/off rather than a boolean) and `agent` (no category: the subagent to run as). `set_config_option` answers with the full new set of options.
 
 ## Decisions to revisit
+
+- Step 33: Delete in the Delete dialog is an outlined red button (it was red text); Cancel and the other dialog buttons are the app's own. The sidebar's folder path shows `~` for the home folder, like the rest of the app. The model menu's hover and focus look are Flutter's `MenuItemButton` ones, restyled (rounded rows, no ripple).
 
 - A side chat's session is deleted from the agent's history (`session/delete`) when the side chat closes: it is never shown again. A side chat still open when the daemon stops stays in the history.
 

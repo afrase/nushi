@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import 'chat.dart';
 import 'chat_menu.dart';
 import 'daemon.dart';
+import 'folder_button.dart';
+import 'menu.dart';
+import 'status.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
 
@@ -28,24 +31,15 @@ class _SidebarState extends State<Sidebar> {
   /// Starts a chat in [folder] ('' for a scratch folder, null to pick one).
   Future<void> _start(String? folder) async {
     folder ??= await getDirectoryPath(confirmButtonText: 'Start chat');
-    if (folder == null) return;
+    if (folder == null || !mounted) return;
     setState(() => _starting = folder);
-    try {
-      await widget.daemon.startChat(folder);
-    } on Object catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('$e')));
-      }
-    } finally {
-      if (mounted) setState(() => _starting = null);
-    }
+    await tryOrShow(context, () => widget.daemon.startChat(folder!));
+    if (mounted) setState(() => _starting = null);
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
+    final theme = NushiTheme.of(context), t = theme.t;
     final groups = <String, List<ChatState>>{};
     final byNewest = widget.daemon.chats.values.toList()
       ..sort((a, b) => b.created.compareTo(a.created));
@@ -102,31 +96,28 @@ class _SidebarState extends State<Sidebar> {
                 if (archived.isNotEmpty) ...[
                   Padding(
                     padding: const EdgeInsets.fromLTRB(6, 12, 6, 2),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(NushiTheme.control),
+                    child: Tap(
                       onTap: () =>
                           setState(() => _showArchived = !_showArchived),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 4,
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              _showArchived
-                                  ? Icons.expand_more
-                                  : Icons.chevron_right,
-                              size: 16,
-                              color: t.textMuted,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Archived  ${archived.length}',
-                              style: theme.ui(t.textSecondary, size: 12),
-                            ),
-                          ],
-                        ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 4,
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _showArchived
+                                ? Icons.expand_more
+                                : Icons.chevron_right,
+                            size: 16,
+                            color: t.textMuted,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Archived  ${archived.length}',
+                            style: theme.ui(t.textSecondary, size: 12),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -165,8 +156,7 @@ class _OutdatedState extends State<_Outdated> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
+    final theme = NushiTheme.of(context), t = theme.t;
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -208,8 +198,10 @@ class _FolderHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
+    final theme = NushiTheme.of(context), t = theme.t;
+    final (name, parent) = folder.isEmpty
+        ? ('No folder', '')
+        : folderParts(folder);
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 6, 4),
       child: Row(
@@ -219,14 +211,14 @@ class _FolderHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  folder.isEmpty ? 'No folder' : folder.split('/').last,
+                  name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.ui(t.text, weight: FontWeight.w600),
                 ),
-                if (folder.isNotEmpty)
+                if (parent.isNotEmpty)
                   Text(
-                    folder,
+                    parent,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.code(t.textMuted, size: 11),
@@ -234,14 +226,7 @@ class _FolderHeader extends StatelessWidget {
               ],
             ),
           ),
-          IconButton(
-            tooltip: 'New chat here',
-            iconSize: 16,
-            color: t.textSecondary,
-            visualDensity: VisualDensity.compact,
-            onPressed: onNew,
-            icon: const Icon(Icons.add),
-          ),
+          IconTap(Icons.add, tooltip: 'New chat here', onTap: onNew),
         ],
       ),
     );
@@ -276,73 +261,68 @@ class _ChatRowState extends State<_ChatRow> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
+    final theme = NushiTheme.of(context), t = theme.t;
     final chat = widget.chat;
     final daemon = widget.daemon;
     return ListenableBuilder(
       listenable: chat,
       builder: (context, _) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-        child: Material(
-          color: daemon.selectedId == chat.id ? t.selected : Colors.transparent,
-          borderRadius: BorderRadius.circular(NushiTheme.control),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(NushiTheme.control),
+        child: Menu(
+          entries: chatMenu(
+            context,
+            chat,
+            daemon,
+            onRename: () => setState(() => _renaming = true),
+          ),
+          builder: (context, open) => Tap(
             onTap: _tap,
-            onSecondaryTapUp: (d) => showChatMenu(
-              context,
-              d.globalPosition,
-              chat,
-              daemon,
-              onRename: () => setState(() => _renaming = true),
+            onSecondaryTapUp: (d) => open(d.localPosition),
+            selected: daemon.selectedId == chat.id,
+            padding: EdgeInsets.symmetric(
+              horizontal: 8,
+              vertical: _renaming ? 1 : 5,
             ),
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: _renaming ? 1 : 5,
-              ),
-              child: Row(
-                children: [
-                  ChatDot(chat: chat),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _renaming
-                        ? RenameField(
-                            chat: chat,
-                            daemon: daemon,
-                            onDone: () => setState(() => _renaming = false),
-                          )
-                        : Text(
-                            chat.title.isEmpty ? 'New chat' : chat.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.ui(
-                              chat.archived ? t.textSecondary : t.text,
-                            ),
-                          ),
-                  ),
-                  if (chat.waiting)
-                    Text('needs you', style: theme.ui(t.needs, size: 11.5))
-                  else if (chat.worktree case final wt?)
-                    Flexible(
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 6),
-                        child: Text(
-                          wt.branch.replaceFirst('nushi/', ''),
+            child: Row(
+              children: [
+                ChatDot(chat: chat),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _renaming
+                      ? RenameField(
+                          chat: chat,
+                          daemon: daemon,
+                          onDone: () => setState(() => _renaming = false),
+                        )
+                      : Text(
+                          chat.title.isEmpty ? 'New chat' : chat.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: theme.code(t.textMuted, size: 10.5),
+                          style: theme.ui(
+                            chat.archived ? t.textSecondary : t.text,
+                          ),
                         ),
+                ),
+                if (chat.waiting)
+                  Text('needs you', style: theme.ui(t.needs, size: 11.5))
+                else if (chat.worktree case final wt?)
+                  Flexible(
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: Text(
+                        wt.branch.replaceFirst('nushi/', ''),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.code(t.textMuted, size: 10.5),
                       ),
                     ),
-                  if (chat.archived && !isScratch(chat.folder))
-                    Text(
-                      chat.home.split('/').last,
-                      style: theme.ui(t.textMuted, size: 11.5),
-                    ),
-                ],
-              ),
+                  ),
+                if (chat.archived && !isScratch(chat.folder))
+                  Text(
+                    folderParts(chat.home).$1,
+                    style: theme.ui(t.textMuted, size: 11.5),
+                  ),
+              ],
             ),
           ),
         ),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import 'chat.dart';
-import 'chat_menu.dart';
 import 'daemon.dart';
 import 'folder_button.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
@@ -23,8 +22,7 @@ List<(String?, Widget)> worktreeRows(
   Daemon daemon,
   String branch,
 ) {
-  final theme = NushiTheme.of(context);
-  final t = theme.t;
+  final theme = NushiTheme.of(context), t = theme.t;
   final wt = chat.worktree;
   final code = theme.code(t.text, size: 12);
   final offer = daemon.canWorktrees && !chat.archived;
@@ -96,41 +94,17 @@ Future<void> _confirmMove(
   ChatState chat,
   Daemon daemon,
 ) async {
-  final theme = NushiTheme.of(context);
-  final t = theme.t;
   final name = chat.home.split('/').last;
-  final move = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      backgroundColor: t.raised,
-      title: Text(
-        'Move to a new worktree?',
-        style: theme.ui(t.text, size: 15, weight: FontWeight.w600),
-      ),
-      content: SizedBox(
-        width: 440,
-        child: Text(
-          'The chat goes on in a new worktree of $name, in its .worktrees '
-          'folder, on a new branch nushi/… that starts from the last commit.'
-          '\n\nUncommitted changes stay where they are: they stay in $name, '
-          'and the worktree starts without them.',
-          style: theme.ui(t.textSecondary),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: Text('Cancel', style: theme.ui(t.text)),
-        ),
-        TextButton(
-          autofocus: true,
-          onPressed: () => Navigator.pop(context, true),
-          child: Text('Move', style: theme.ui(t.accent)),
-        ),
-      ],
-    ),
+  final move = await confirm(
+    context,
+    'Move to a new worktree?',
+    'The chat goes on in a new worktree of $name, in its .worktrees folder, '
+        'on a new branch nushi/… that starts from the last commit.\n\n'
+        'Uncommitted changes stay where they are: they stay in $name, and the '
+        'worktree starts without them.',
+    'Move',
   );
-  if (move == true && context.mounted) {
+  if (move && context.mounted) {
     await tryOrShow(
       context,
       () => daemon.moveChat(chat, chat.home, worktree: true),
@@ -179,8 +153,7 @@ class WorktreeChoices extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
+    final theme = NushiTheme.of(context), t = theme.t;
     final wt = plan.worktree;
     final st = plan.worktreeState;
     final base = wt.base;

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'images.dart';
 import 'replies.dart';
 import 'theme/theme.dart';
+import 'widgets.dart';
 
 /// The replies waiting in the composer, as small cards: a click opens one
 /// to edit its text, and hovering one shows a button that removes it.
@@ -55,8 +56,7 @@ class _ReplyCardState extends State<_ReplyCard> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
+    final theme = NushiTheme.of(context), t = theme.t;
     final r = widget.reply;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
@@ -64,42 +64,39 @@ class _ReplyCardState extends State<_ReplyCard> {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Material(
-            color: t.raised,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(NushiTheme.control),
-              side: BorderSide(color: t.borderSubtle),
+          Container(
+            width: 168,
+            height: 64,
+            decoration: box(
+              t.borderSubtle,
+              fill: t.raised,
+              radius: NushiTheme.control,
             ),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
+            child: Tap(
               onTap: widget.onTap,
-              child: Container(
-                width: 168,
-                height: 64,
-                padding: const EdgeInsets.fromLTRB(8, 6, 8, 5),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (r.quote.isNotEmpty)
-                      QuoteBlock(
-                        r.quote,
-                        maxLines: r.text.isEmpty ? 2 : 1,
-                        size: 11.5,
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 5),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (r.quote.isNotEmpty)
+                    QuoteBlock(
+                      r.quote,
+                      maxLines: r.text.isEmpty ? 2 : 1,
+                      size: 11.5,
+                    ),
+                  if (r.text.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        r.text,
+                        maxLines: r.quote.isEmpty ? 2 : 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.ui(t.text, size: 11.5),
                       ),
-                    if (r.text.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text(
-                          r.text,
-                          maxLines: r.quote.isEmpty ? 2 : 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.ui(t.text, size: 11.5),
-                        ),
-                      ),
-                    const Spacer(),
-                    Text('Reply', style: theme.ui(t.textMuted, size: 10.5)),
-                  ],
-                ),
+                    ),
+                  const Spacer(),
+                  Text('Reply', style: theme.ui(t.textMuted, size: 10.5)),
+                ],
               ),
             ),
           ),
@@ -133,60 +130,34 @@ class _ReplyDialogState extends State<_ReplyDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
-    final t = theme.t;
     void save() => Navigator.pop(context, _text.text);
-    return AlertDialog(
-      backgroundColor: t.raised,
-      title: Text(
-        'Reply',
-        style: theme.ui(t.text, size: 15, weight: FontWeight.w600),
+    return nushiDialog(
+      'Reply',
+      Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 12,
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 240),
+            child: SingleChildScrollView(child: QuoteBlock(widget.reply.quote)),
+          ),
+          TextField(
+            controller: _text,
+            autofocus: true,
+            style: theme.ui(theme.t.text),
+            onSubmitted: (_) => save(),
+            decoration: const InputDecoration(hintText: 'Reply to Claude'),
+          ),
+        ],
       ),
-      content: SizedBox(
-        width: 460,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: 12,
-          children: [
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 240),
-              child: SingleChildScrollView(
-                child: QuoteBlock(widget.reply.quote),
-              ),
-            ),
-            TextField(
-              controller: _text,
-              autofocus: true,
-              style: theme.ui(t.text),
-              onSubmitted: (_) => save(),
-              decoration: InputDecoration(
-                isDense: true,
-                hintText: 'Reply to Claude',
-                hintStyle: theme.ui(t.textMuted),
-                contentPadding: const EdgeInsets.all(8),
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(color: t.borderStrong),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: t.borderStrong),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: t.textMuted),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
+      [
+        Button(
+          label: 'Cancel',
+          kind: ButtonKind.ghost,
           onPressed: () => Navigator.pop(context),
-          child: Text('Cancel', style: theme.ui(t.text)),
         ),
-        TextButton(
-          onPressed: save,
-          child: Text('Save', style: theme.ui(t.link)),
-        ),
+        Button(label: 'Save', kind: ButtonKind.primary, onPressed: save),
       ],
     );
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'theme/theme.dart';
+import 'widgets.dart';
 
 /// The agent's thinking: a dim "Thinking" line that opens to the thoughts,
 /// with a spinner while they stream ([live]).
@@ -27,28 +28,25 @@ class _ThoughtViewState extends State<ThoughtView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        InkWell(
+        Tap(
           onTap: () => setState(() => _open = !_open),
-          borderRadius: BorderRadius.circular(NushiTheme.control),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 2),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 6,
-              children: [
-                Icon(
-                  _open ? Icons.expand_more : Icons.chevron_right,
-                  size: 14,
-                  color: theme.t.textMuted,
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 6,
+            children: [
+              Icon(
+                _open ? Icons.expand_more : Icons.chevron_right,
+                size: 14,
+                color: theme.t.textMuted,
+              ),
+              Text(widget.live ? 'Thinking…' : 'Thought', style: style),
+              if (widget.live)
+                const SizedBox.square(
+                  dimension: 10,
+                  child: CircularProgressIndicator(strokeWidth: 1.5),
                 ),
-                Text(widget.live ? 'Thinking…' : 'Thought', style: style),
-                if (widget.live)
-                  const SizedBox.square(
-                    dimension: 10,
-                    child: CircularProgressIndicator(strokeWidth: 1.5),
-                  ),
-              ],
-            ),
+            ],
           ),
         ),
         if (_open)
@@ -75,15 +73,11 @@ class PlanView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
+    final theme = NushiTheme.of(context), t = theme.t;
     final done = item.plan.where((e) => e.status == 'completed').length;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        border: Border.all(color: t.borderSubtle),
-        borderRadius: BorderRadius.circular(NushiTheme.card),
-      ),
+      decoration: box(t.borderSubtle),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 4,
@@ -147,8 +141,7 @@ class PlanStatus extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
+    final theme = NushiTheme.of(context), t = theme.t;
     final entries = plan.plan;
     final done = entries.where((e) => e.status == 'completed').length;
     final now = entries.where((e) => e.status == 'in_progress').firstOrNull;

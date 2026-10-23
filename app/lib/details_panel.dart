@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'changes_view.dart';
 import 'chat.dart';
 import 'daemon.dart';
 import 'folder_button.dart';
@@ -7,6 +8,7 @@ import 'gen/nushi/v1/nushi.pb.dart';
 import 'settings.dart';
 import 'theme/theme.dart';
 import 'usage.dart';
+import 'widgets.dart';
 import 'worktree.dart';
 
 /// The panel beside a chat: cards for its environment (folder or
@@ -31,43 +33,20 @@ class DetailsPanel extends StatefulWidget {
   State<DetailsPanel> createState() => _DetailsPanelState();
 }
 
-class _DetailsPanelState extends State<DetailsPanel> {
+class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
+  @override
+  ChatState get chat => widget.chat;
+  @override
+  Daemon get daemon => widget.daemon;
   GetFolderStatusResponse? _status;
   String? _error;
-  bool _wasBusy = false;
-  late String _folder = widget.chat.folder;
-  late String _base = widget.daemon.diffBase(widget.chat);
 
   @override
-  void initState() {
-    super.initState();
-    widget.chat.addListener(_chatChanged);
-    _load();
-  }
-
-  @override
-  void dispose() {
-    widget.chat.removeListener(_chatChanged);
-    super.dispose();
-  }
-
-  void _chatChanged() {
-    final base = widget.daemon.diffBase(widget.chat);
-    if (_wasBusy && !widget.chat.busy ||
-        _folder != widget.chat.folder ||
-        _base != base) {
-      _folder = widget.chat.folder;
-      _base = base;
-      _load();
-    }
-    _wasBusy = widget.chat.busy;
-  }
-
-  Future<void> _load() async {
-    if (!widget.daemon.canFolderStatus) return;
+  Future<void> reload() async {
+    if (!daemon.canFolderStatus) return;
     try {
-      final status = await widget.daemon.client.getFolderStatus(
-        GetFolderStatusRequest(folder: widget.chat.folder, base: _base),
+      final status = await daemon.client.getFolderStatus(
+        GetFolderStatusRequest(folder: chat.folder, base: base),
       );
       if (mounted) {
         setState(() {
@@ -82,9 +61,7 @@ class _DetailsPanelState extends State<DetailsPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final chat = widget.chat;
+    final theme = NushiTheme.of(context), t = theme.t;
     final u = chat.usage;
     final status = _status;
     final muted = theme.ui(t.textMuted, size: 12);
@@ -104,7 +81,6 @@ class _DetailsPanelState extends State<DetailsPanel> {
               ],
             ),
           );
-    final value = theme.ui(t.text, size: 12);
     return Container(
       width: DetailsPanel.width,
       decoration: BoxDecoration(
@@ -116,17 +92,17 @@ class _DetailsPanelState extends State<DetailsPanel> {
           _Card(
             title: 'Environment',
             summary: Text(
-              isScratch(chat.folder) ? 'No folder' : _name(chat.home),
+              folderParts(chat.home).$1,
               style: muted,
               overflow: TextOverflow.ellipsis,
             ),
             rows: [
               (
                 chat.worktree == null ? 'Folder' : 'Repository',
-                FolderButton(chat: chat, daemon: widget.daemon, stacked: true),
+                FolderButton(chat: chat, daemon: daemon, stacked: true),
               ),
               if (status != null && status.git)
-                ...worktreeRows(context, chat, widget.daemon, status.branch),
+                ...worktreeRows(context, chat, daemon, status.branch),
               if (status != null && status.gone)
                 (
                   null,
@@ -145,21 +121,14 @@ class _DetailsPanelState extends State<DetailsPanel> {
             title: 'Context',
             summary: ContextMeter(u),
             rows: u.contextSize == 0 && cost(u).isEmpty
-                ? [
-                    (
-                      null,
-                      Text('Claude reports it after a turn.', style: muted),
-                    ),
-                  ]
+                ? [(null, 'Claude reports it after a turn.')]
                 : [
                     if (u.contextSize > 0) ...[
                       ('Used', ContextMeter(u)),
                       (
                         'Tokens',
-                        Text(
-                          '${tokens(u.contextUsed.toInt())} of ${tokens(u.contextSize.toInt())}',
-                          style: value,
-                        ),
+                        '${tokens(u.contextUsed.toInt())} of '
+                            '${tokens(u.contextSize.toInt())}',
                       ),
                     ],
                     if (lastTurn(u).isNotEmpty)
@@ -169,7 +138,10 @@ class _DetailsPanelState extends State<DetailsPanel> {
                           message: cacheUse(u).isEmpty
                               ? ''
                               : 'Cache: ${cacheUse(u)}',
-                          child: Text(lastTurn(u), style: value),
+                          child: Text(
+                            lastTurn(u),
+                            style: theme.ui(t.text, size: 12),
+                          ),
                         ),
                       ),
                     if (cost(u).isNotEmpty)
@@ -178,7 +150,10 @@ class _DetailsPanelState extends State<DetailsPanel> {
                         Tooltip(
                           message:
                               'The session’s cost so far, as Claude reports it',
-                          child: Text(cost(u), style: value),
+                          child: Text(
+                            cost(u),
+                            style: theme.ui(t.text, size: 12),
+                          ),
                         ),
                       ),
                   ],
@@ -189,30 +164,19 @@ class _DetailsPanelState extends State<DetailsPanel> {
             onTap: status != null && status.git ? widget.onChanges : null,
             rows: [
               if (_error != null)
-                (null, Text(_error!, style: muted))
-              else if (!widget.daemon.canFolderStatus)
-                (null, Text('Needs a newer daemon.', style: muted))
+                (null, _error!)
+              else if (!daemon.canFolderStatus)
+                (null, 'Needs a newer daemon.')
               else if (status == null)
-                (null, Text('…', style: muted))
+                (null, '…')
               else if (!status.git)
                 (
                   null,
-                  Text(
-                    status.gone
-                        ? 'The folder is gone.'
-                        : 'Not a git repository.',
-                    style: muted,
-                  ),
+                  status.gone ? 'The folder is gone.' : 'Not a git repository.',
                 )
               else ...[
-                (_base.isEmpty ? 'Uncommitted' : 'Branch', lines!),
-                (
-                  'Files',
-                  Text(
-                    status.files == 0 ? 'None' : '${status.files}',
-                    style: value,
-                  ),
-                ),
+                (base.isEmpty ? 'Uncommitted' : 'Branch', lines!),
+                ('Files', status.files == 0 ? 'None' : '${status.files}'),
               ],
             ],
           ),
@@ -221,10 +185,6 @@ class _DetailsPanelState extends State<DetailsPanel> {
     );
   }
 }
-
-String _name(String folder) => folder
-    .split('/')
-    .lastWhere((part) => part.isNotEmpty, orElse: () => folder);
 
 /// A rounded card: a title that collapses it (remembered in
 /// [collapsedCards]), with [summary] on its right while collapsed; then rows
@@ -239,103 +199,103 @@ class _Card extends StatelessWidget {
   });
 
   final String title;
-  final List<(String?, Widget)> rows;
+  final List<(String?, Object)> rows;
   final Widget? summary;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
+    final theme = NushiTheme.of(context), t = theme.t;
+    final muted = theme.ui(t.textMuted, size: 12);
     return ValueListenableBuilder(
       valueListenable: collapsedCards,
       builder: (context, collapsed, _) {
         final open = !collapsed.contains(title);
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Material(
-            color: t.raised,
-            shape: RoundedRectangleBorder(
-              side: BorderSide(color: t.borderSubtle),
-              borderRadius: BorderRadius.circular(NushiTheme.card * 1.5),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                InkWell(
-                  onTap: () => collapsedCards.value = open
-                      ? {...collapsed, title}
-                      : ({...collapsed}..remove(title)),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 9, 10, 9),
-                    child: Row(
-                      children: [
-                        Text(
-                          title,
-                          style: theme.ui(
-                            t.textSecondary,
-                            size: 12,
-                            weight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(width: 2),
-                        Icon(
-                          open ? Icons.expand_more : Icons.chevron_right,
-                          size: 15,
-                          color: t.textMuted,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: open ? null : summary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                if (open)
-                  InkWell(
-                    onTap: onTap,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 0, 10, 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          for (final (label, value) in rows)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 3),
-                              child: label == null
-                                  ? value
-                                  : Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          label,
-                                          style: theme.ui(
-                                            t.textMuted,
-                                            size: 12,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Align(
-                                            alignment: Alignment.centerRight,
-                                            child: value,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                            ),
-                        ],
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          decoration: box(
+            t.borderSubtle,
+            fill: t.raised,
+            radius: NushiTheme.card * 1.5,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Tap(
+                onTap: () => collapsedCards.value = open
+                    ? {...collapsed, title}
+                    : ({...collapsed}..remove(title)),
+                radius: NushiTheme.card * 1.5,
+                padding: const EdgeInsets.fromLTRB(12, 9, 10, 9),
+                child: Row(
+                  children: [
+                    Text(
+                      title,
+                      style: theme.ui(
+                        t.textSecondary,
+                        size: 12,
+                        weight: FontWeight.w600,
                       ),
                     ),
+                    const SizedBox(width: 2),
+                    Icon(
+                      open ? Icons.expand_more : Icons.chevron_right,
+                      size: 15,
+                      color: t.textMuted,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: open ? null : summary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (open)
+                Tap(
+                  onTap: onTap,
+                  padding: const EdgeInsets.fromLTRB(12, 0, 10, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final (label, v) in rows)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 3),
+                          child: label == null
+                              ? (v is String
+                                    ? Text(v, style: muted)
+                                    : v as Widget)
+                              : Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      label,
+                                      style: theme.ui(t.textMuted, size: 12),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Align(
+                                        alignment: Alignment.centerRight,
+                                        child: v is String
+                                            ? Text(
+                                                v,
+                                                style: theme.ui(
+                                                  t.text,
+                                                  size: 12,
+                                                ),
+                                              )
+                                            : v as Widget,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                    ],
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
         );
       },

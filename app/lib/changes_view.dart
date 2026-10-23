@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:diff_view/diff_view.dart';
 import 'package:flutter/material.dart';
 
@@ -21,54 +23,64 @@ class ChangesView extends StatefulWidget {
   State<ChangesView> createState() => _ChangesViewState();
 }
 
-class _ChangesViewState extends State<ChangesView> {
-  List<FileChange> _files = [];
-  String? _error;
-  bool _loading = false;
-  String? _path; // the file shown
-  DiffViewController? _controller;
-  DiffThemeData? _theme;
+/// Reloads (`reload`) a chat's changes when its turn ends, it moves, or
+/// the base they are counted from changes.
+mixin FollowsChanges<T extends StatefulWidget> on State<T> {
+  ChatState get chat;
+  Daemon get daemon;
+  late String base = daemon.diffBase(chat);
+  late String _folder = chat.folder;
   bool _wasBusy = false;
-  late String _folder = widget.chat.folder;
-  late String _base = widget.daemon.diffBase(widget.chat);
+
+  Future<void> reload();
 
   @override
   void initState() {
     super.initState();
-    widget.chat.addListener(_chatChanged);
-    _load();
+    chat.addListener(_changed);
+    reload();
   }
 
   @override
   void dispose() {
-    widget.chat.removeListener(_chatChanged);
-    _controller?.dispose();
+    chat.removeListener(_changed);
     super.dispose();
   }
 
-  void _chatChanged() {
-    final base = widget.daemon.diffBase(widget.chat);
-    if (_wasBusy && !widget.chat.busy ||
-        _folder != widget.chat.folder ||
-        _base != base) {
-      _folder = widget.chat.folder;
-      _base = base;
-      _load();
+  void _changed() {
+    final b = daemon.diffBase(chat);
+    if (_wasBusy && !chat.busy || _folder != chat.folder || base != b) {
+      _folder = chat.folder;
+      base = b;
+      reload();
     }
-    _wasBusy = widget.chat.busy;
+    _wasBusy = chat.busy;
   }
+}
 
-  Future<void> _load() async {
+class _ChangesViewState extends State<ChangesView> with FollowsChanges {
+  @override
+  ChatState get chat => widget.chat;
+  @override
+  Daemon get daemon => widget.daemon;
+  List<FileChange> _files = [];
+  String? _error;
+  bool _loading = false;
+  String? _path; // the file shown
+
+  @override
+  Future<void> reload() async {
     setState(() => _loading = true);
     try {
-      final resp = await widget.daemon.client.getDiff(
-        GetDiffRequest(folder: widget.chat.folder, base: _base),
+      final resp = await daemon.client.getDiff(
+        GetDiffRequest(folder: chat.folder, base: base),
       );
       if (!mounted) return;
       _files = resp.files;
       _error = null;
-      final keep = _files.any((f) => f.path == _path);
-      _show(keep ? _path : _files.firstOrNull?.path);
+      if (!_files.any((f) => f.path == _path)) {
+        _path = _files.firstOrNull?.path;
+      }
     } on Object catch (e) {
       if (mounted) setState(() => _error = '$e');
     } finally {
@@ -76,29 +88,9 @@ class _ChangesViewState extends State<ChangesView> {
     }
   }
 
-  void _show(String? path) {
-    _controller?.dispose();
-    _controller = null;
-    _path = path;
-    final file = _files.where((f) => f.path == path).firstOrNull;
-    if (file != null && file.skipped.isEmpty) {
-      final diff = TextDiff.compute(file.oldText, file.newText, path: path!);
-      final dark = Theme.of(context).brightness == Brightness.dark;
-      _theme = dark ? DiffThemeData.dark() : DiffThemeData.light();
-      _controller = DiffViewController(
-        document: diff.document,
-        lines: diff.lines,
-        theme: _theme!,
-        devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
-      );
-    }
-    setState(() {});
-  }
-
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
+    final theme = NushiTheme.of(context), t = theme.t;
     if (_error != null) {
       return Center(
         child: Column(
@@ -106,13 +98,12 @@ class _ChangesViewState extends State<ChangesView> {
           spacing: 8,
           children: [
             Text(_error!, textAlign: TextAlign.center, style: theme.ui(t.text)),
-            Button(label: 'Try again', onPressed: _load),
+            Button(label: 'Try again', onPressed: reload),
           ],
         ),
       );
     }
     final file = _files.where((f) => f.path == _path).firstOrNull;
-    final chat = widget.chat;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -125,7 +116,7 @@ class _ChangesViewState extends State<ChangesView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (chat.worktree != null && widget.daemon.canBranchDiff)
+              if (chat.worktree != null && daemon.canBranchDiff)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
                   child: Segmented(
@@ -146,12 +137,11 @@ class _ChangesViewState extends State<ChangesView> {
                         style: theme.ui(t.textSecondary, size: 12),
                       ),
                     ),
-                    IconButton(
+                    IconTap(
+                      Icons.refresh,
                       tooltip: 'Reload',
-                      iconSize: 15,
-                      color: t.textSecondary,
-                      onPressed: _loading ? null : _load,
-                      icon: const Icon(Icons.refresh),
+                      size: 15,
+                      onTap: _loading ? null : reload,
                     ),
                   ],
                 ),
@@ -159,7 +149,12 @@ class _ChangesViewState extends State<ChangesView> {
               Expanded(
                 child: ListView(
                   children: [
-                    for (final f in _files) _FileRow(f, f.path == _path, _show),
+                    for (final f in _files)
+                      _FileRow(
+                        f,
+                        f.path == _path,
+                        (p) => setState(() => _path = p),
+                      ),
                   ],
                 ),
               ),
@@ -167,12 +162,8 @@ class _ChangesViewState extends State<ChangesView> {
           ),
         ),
         Expanded(
-          child: _controller != null
-              ? SideBySideDiff(
-                  controller: _controller!,
-                  theme: _theme!,
-                  inlayBuilder: (context, spec) => const SizedBox.shrink(),
-                )
+          child: file != null && file.skipped.isEmpty
+              ? DiffBox(file, key: ValueKey(file.path), fit: false)
               : Center(
                   child: Text(
                     file == null
@@ -196,8 +187,7 @@ class _FileRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
+    final theme = NushiTheme.of(context), t = theme.t;
     final (letter, color) = switch (file.status) {
       'added' => ('A', t.done),
       'deleted' => ('D', t.crashed),
@@ -206,45 +196,112 @@ class _FileRow extends StatelessWidget {
     final slash = file.path.lastIndexOf('/');
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-      child: Material(
-        color: selected ? t.selected : Colors.transparent,
-        borderRadius: BorderRadius.circular(NushiTheme.control),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(NushiTheme.control),
-          onTap: () => onTap(file.path),
-          child: Tooltip(
-            message: file.path,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: Row(
-                children: [
-                  Text(letter, style: theme.code(color, size: 12)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(
-                            text: file.path.substring(slash + 1),
-                            style: theme.ui(t.text),
-                          ),
-                          if (slash > 0)
-                            TextSpan(
-                              text: '  ${file.path.substring(0, slash)}',
-                              style: theme.ui(t.textMuted, size: 11.5),
-                            ),
-                        ],
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+      child: Tap(
+        onTap: () => onTap(file.path),
+        selected: selected,
+        tooltip: file.path,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Row(
+          children: [
+            Text(letter, style: theme.code(color, size: 12)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: file.path.substring(slash + 1),
+                      style: theme.ui(t.text),
                     ),
-                  ),
-                ],
+                    if (slash > 0)
+                      TextSpan(
+                        text: '  ${file.path.substring(0, slash)}',
+                        style: theme.ui(t.textMuted, size: 11.5),
+                      ),
+                  ],
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-          ),
+          ],
         ),
       ),
+    );
+  }
+}
+
+/// A file's change side by side. With [fit] it is only as tall as the
+/// change (up to fifteen lines, then it scrolls), in a thin frame; else as
+/// tall as its box.
+class DiffBox extends StatefulWidget {
+  const DiffBox(this.change, {super.key, this.fit = true});
+
+  final FileChange change;
+  final bool fit;
+
+  @override
+  State<DiffBox> createState() => _DiffBoxState();
+}
+
+class _DiffBoxState extends State<DiffBox> {
+  DiffViewController? _controller;
+  late DiffThemeData _theme;
+  double _height = 0;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _build();
+  }
+
+  @override
+  void didUpdateWidget(DiffBox old) {
+    super.didUpdateWidget(old);
+    if (old.change != widget.change) _build();
+  }
+
+  void _build() {
+    final d = widget.change;
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    _theme = Theme.of(context).brightness == Brightness.dark
+        ? DiffThemeData.dark()
+        : DiffThemeData.light();
+    final diff = TextDiff.compute(d.oldText, d.newText, path: d.path);
+    _controller?.dispose();
+    _controller = DiffViewController(
+      document: diff.document,
+      lines: diff.lines,
+      theme: _theme,
+      devicePixelRatio: dpr,
+    );
+    final doc = diff.document;
+    final rows = max(doc.oldLineCount, doc.newLineCount).clamp(1, 15);
+    _height = _theme.lineHeightFor(dpr) * rows + 6;
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final diff = SideBySideDiff(
+      controller: _controller!,
+      theme: _theme,
+      inlayBuilder: (context, spec) => const SizedBox.shrink(),
+    );
+    if (!widget.fit) return diff;
+    return Container(
+      height: _height,
+      clipBehavior: Clip.antiAlias,
+      decoration: box(
+        NushiTheme.of(context).t.borderSubtle,
+        radius: NushiTheme.control,
+      ),
+      child: diff,
     );
   }
 }

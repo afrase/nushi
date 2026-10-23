@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'theme/theme.dart';
+import 'widgets.dart';
 
 /// A reply to a part of the transcript: the quoted text, and what the user
 /// says about it (either may be empty, not both).
@@ -124,18 +125,18 @@ class SelectionToolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     const fg = Color(0xFFE8E9EC);
-    Widget action(String label, VoidCallback run) => InkWell(
+    Widget action(String label, VoidCallback run) => Tap(
       onTap: run,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        child: Text(label, style: theme.ui(fg, size: 12.5)),
-      ),
+      radius: 14,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: Text(label, style: theme.ui(fg, size: 12.5)),
     );
-    return Material(
-      color: const Color(0xFF26272B),
-      elevation: 4,
-      shape: const StadiumBorder(side: BorderSide(color: Color(0x22FFFFFF))),
-      clipBehavior: Clip.antiAlias,
+    return Container(
+      decoration: const ShapeDecoration(
+        color: Color(0xFF26272B),
+        shape: StadiumBorder(side: BorderSide(color: Color(0x22FFFFFF))),
+        shadows: [BoxShadow(color: Color(0x33000000), blurRadius: 6)],
+      ),
       child: IntrinsicHeight(
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -200,58 +201,52 @@ class _ReplyBoxState extends State<ReplyBox> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
+    final theme = NushiTheme.of(context), t = theme.t;
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.escape): widget.onClose,
       },
-      child: Material(
-        color: t.raised,
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-          side: BorderSide(color: t.borderStrong),
+      child: Container(
+        width: 340,
+        padding: const EdgeInsets.fromLTRB(12, 10, 6, 4),
+        decoration: ShapeDecoration(
+          color: t.raised,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+            side: BorderSide(color: t.borderStrong),
+          ),
+          shadows: const [BoxShadow(color: Color(0x33000000), blurRadius: 6)],
         ),
-        child: SizedBox(
-          width: 340,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 6, 4),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                QuoteBlock(widget.quote.trim(), maxLines: 2, size: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _text,
-                        focusNode: _focus,
-                        style: theme.ui(t.text),
-                        onSubmitted: (_) => _send(),
-                        decoration: InputDecoration(
-                          isDense: true,
-                          hintText: 'Reply to Claude',
-                          hintStyle: theme.ui(t.textMuted),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 8,
-                          ),
-                        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              QuoteBlock(widget.quote.trim(), maxLines: 2, size: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _text,
+                      focusNode: _focus,
+                      style: theme.ui(t.text),
+                      onSubmitted: (_) => _send(),
+                      decoration: const InputDecoration(
+                        hintText: 'Reply to Claude',
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(vertical: 8),
                       ),
                     ),
-                    IconButton(
-                      tooltip: 'Add to the message (⏎)',
-                      iconSize: 16,
-                      color: t.textSecondary,
-                      onPressed: _send,
-                      icon: const Icon(Icons.arrow_upward),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+                  ),
+                  IconTap(
+                    Icons.arrow_upward,
+                    tooltip: 'Add to the message (⏎)',
+                    onTap: _send,
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),

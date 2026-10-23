@@ -1,9 +1,117 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
-import 'chat.dart';
 import 'theme/theme.dart';
+
+/// Shows [message] in a snack bar.
+void showError(BuildContext context, Object message) =>
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('$message')));
+
+/// Runs a call, showing its error, if any, in a snack bar.
+Future<void> tryOrShow(
+  BuildContext context,
+  Future<void> Function() call,
+) async {
+  try {
+    await call();
+  } on Object catch (e) {
+    if (context.mounted) showError(context, e);
+  }
+}
+
+/// A quiet pressable area: a light tint under the pointer or when
+/// [selected], no ripple.
+class Tap extends StatefulWidget {
+  const Tap({
+    super.key,
+    required this.onTap,
+    required this.child,
+    this.onSecondaryTapUp,
+    this.selected = false,
+    this.padding = EdgeInsets.zero,
+    this.radius = NushiTheme.control,
+    this.tooltip = '',
+  });
+
+  final VoidCallback? onTap;
+  final GestureTapUpCallback? onSecondaryTapUp;
+  final Widget child;
+  final bool selected;
+  final EdgeInsetsGeometry padding;
+  final double radius;
+  final String tooltip;
+
+  @override
+  State<Tap> createState() => _TapState();
+}
+
+class _TapState extends State<Tap> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = NushiTheme.of(context).t;
+    final on = widget.onTap != null;
+    final tap = MouseRegion(
+      cursor: on ? SystemMouseCursors.click : MouseCursor.defer,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        onSecondaryTapUp: widget.onSecondaryTapUp,
+        child: Container(
+          padding: widget.padding,
+          decoration: BoxDecoration(
+            color: widget.selected
+                ? t.selected
+                : _hover && on
+                ? t.hover
+                : null,
+            borderRadius: BorderRadius.circular(widget.radius),
+          ),
+          child: widget.child,
+        ),
+      ),
+    );
+    return widget.tooltip.isEmpty
+        ? tap
+        : Tooltip(message: widget.tooltip, child: tap);
+  }
+}
+
+/// A small icon button.
+class IconTap extends StatelessWidget {
+  const IconTap(
+    this.icon, {
+    super.key,
+    required this.tooltip,
+    required this.onTap,
+    this.size = 16,
+    this.color,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onTap;
+  final double size;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = NushiTheme.of(context).t;
+    return Tap(
+      tooltip: tooltip,
+      onTap: onTap,
+      padding: const EdgeInsets.all(5),
+      child: Icon(
+        icon,
+        size: size,
+        color: onTap == null ? t.textMuted : color ?? t.textSecondary,
+      ),
+    );
+  }
+}
 
 enum ButtonKind {
   /// The one main action: accent fill.
@@ -15,7 +123,7 @@ enum ButtonKind {
   /// A quiet toolbar action: no chrome.
   ghost,
 
-  /// Stop: outlined in red.
+  /// Stop or delete: in red.
   danger,
 }
 
@@ -30,6 +138,7 @@ class Button extends StatelessWidget {
     this.icon,
     this.hint,
     this.height = 26,
+    this.autofocus = false,
   });
 
   final String label;
@@ -38,11 +147,11 @@ class Button extends StatelessWidget {
   final IconData? icon;
   final String? hint;
   final double height;
+  final bool autofocus;
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
+    final theme = NushiTheme.of(context), t = theme.t;
     final enabled = onPressed != null;
     final (Color? bg, Color fg, Color? border) = switch (kind) {
       ButtonKind.primary => (t.accent, t.onAccent, null),
@@ -57,30 +166,28 @@ class Button extends StatelessWidget {
     );
     return TextButton(
       onPressed: onPressed,
-      style: ButtonStyle(
-        minimumSize: WidgetStatePropertyAll(Size(0, height)),
-        fixedSize: WidgetStatePropertyAll(Size.fromHeight(height)),
-        padding: const WidgetStatePropertyAll(
-          EdgeInsets.symmetric(horizontal: 10),
-        ),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        backgroundColor: WidgetStatePropertyAll(
-          enabled ? bg : (bg == null ? null : t.selected),
-        ),
-        foregroundColor: WidgetStatePropertyAll(color),
-        overlayColor: WidgetStatePropertyAll(t.text.withValues(alpha: 0.06)),
-        shape: WidgetStateProperty.resolveWith(
-          (states) => RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(NushiTheme.control),
-            side: states.contains(WidgetState.focused)
-                ? BorderSide(color: t.focus, width: 2)
-                : border == null
-                ? BorderSide.none
-                : BorderSide(color: enabled ? border : t.borderSubtle),
+      autofocus: autofocus,
+      style:
+          TextButton.styleFrom(
+            minimumSize: Size(0, height),
+            fixedSize: Size.fromHeight(height),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            backgroundColor: enabled ? bg : (bg == null ? null : t.selected),
+            foregroundColor: color,
+            textStyle: style,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(NushiTheme.control),
+            ),
+          ).copyWith(
+            side: WidgetStateProperty.resolveWith(
+              (states) => states.contains(WidgetState.focused)
+                  ? BorderSide(color: t.focus, width: 2)
+                  : border == null
+                  ? null
+                  : BorderSide(color: enabled ? border : t.borderSubtle),
+            ),
           ),
-        ),
-        textStyle: WidgetStatePropertyAll(style),
-      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -98,7 +205,8 @@ class Button extends StatelessWidget {
           ),
           if (hint != null) ...[
             const SizedBox(width: 6),
-            KeyHint(
+            keyHint(
+              context,
               hint!,
               color: enabled && kind == ButtonKind.primary
                   ? t.onAccent
@@ -111,136 +219,43 @@ class Button extends StatelessWidget {
   }
 }
 
-/// A shortcut in small monospace (`⏎`).
-class KeyHint extends StatelessWidget {
-  const KeyHint(this.keys, {super.key, this.color});
-
-  final String keys;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    return Text(keys, style: theme.code(color ?? theme.t.textMuted, size: 11));
-  }
-}
-
-/// A chat's status dot: amber with a soft ring while it waits on the user,
-/// filled while the agent works, a ring when idle.
-class ChatDot extends StatelessWidget {
-  const ChatDot({super.key, required this.chat, this.size = 7});
-
-  final ChatState chat;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = NushiTheme.of(context).t;
-    return DecoratedBox(
-      decoration: chat.waiting
-          ? BoxDecoration(
-              color: t.needs,
-              shape: BoxShape.circle,
-              boxShadow: [BoxShadow(color: t.needsSoft, spreadRadius: 2)],
-            )
-          : chat.busy
-          ? BoxDecoration(color: t.running, shape: BoxShape.circle)
-          : BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: t.idle, width: 1.5),
-            ),
-      child: SizedBox.square(dimension: size),
+/// A dialog: [title], [content] 460 wide, and its [actions].
+Widget nushiDialog(String title, Widget content, List<Widget> actions) =>
+    AlertDialog(
+      title: Text(title),
+      content: SizedBox(width: 460, child: content),
+      actions: actions,
     );
-  }
-}
 
-/// What a chat is doing, in a word: "needs you", "working · 12s" (ticking)
-/// or "idle".
-class ChatStatusWord extends StatefulWidget {
-  const ChatStatusWord(this.chat, {super.key, this.style});
-
-  final ChatState chat;
-  final TextStyle? style;
-
-  @override
-  State<ChatStatusWord> createState() => _ChatStatusWordState();
-}
-
-class _ChatStatusWordState extends State<ChatStatusWord> {
-  Timer? _tick;
-
-  @override
-  void initState() {
-    super.initState();
-    _tick = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (widget.chat.started != null) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _tick?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final chat = widget.chat;
-    final started = chat.started;
-    final (word, color) = chat.waiting
-        ? ('needs you', t.needs)
-        : started != null
-        ? (
-            'working · ${_elapsed(DateTime.now().difference(started))}',
-            t.running,
-          )
-        : chat.busy
-        ? ('working', t.running)
-        : ('idle', t.idle);
-    return Text(
-      word,
-      style: (widget.style ?? theme.ui(t.text, size: 12)).copyWith(
-        color: color,
-      ),
-    );
-  }
-
-  static String _elapsed(Duration d) => d.inMinutes == 0
-      ? '${d.inSeconds}s'
-      : '${d.inMinutes}m ${(d.inSeconds % 60).toString().padLeft(2, '0')}s';
-}
-
-/// The agent's monogram: its letter on its color.
-class AgentMonogram extends StatelessWidget {
-  const AgentMonogram({super.key, this.size = 16});
-
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = NushiTheme.of(context).t;
-    return Container(
-      width: size,
-      height: size,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: t.claude,
-        borderRadius: BorderRadius.circular(size / 5),
-      ),
-      child: Text(
-        'C',
-        style: TextStyle(
-          fontFamily: NushiTheme.uiFont,
-          fontSize: size * 0.64,
-          height: 1,
-          fontWeight: FontWeight.w600,
-          color: t.monogramText,
+/// Asks [title] with [text] in a dialog; true once [action] is pressed.
+Future<bool> confirm(
+  BuildContext context,
+  String title,
+  String text,
+  String action,
+) async =>
+    await showDialog<bool>(
+      context: context,
+      builder: (context) => nushiDialog(title, Text(text), [
+        Button(
+          label: 'Cancel',
+          kind: ButtonKind.ghost,
+          onPressed: () => Navigator.pop(context, false),
         ),
-      ),
-    );
-  }
+        Button(
+          label: action,
+          kind: ButtonKind.primary,
+          autofocus: true,
+          onPressed: () => Navigator.pop(context, true),
+        ),
+      ]),
+    ) ??
+    false;
+
+/// A shortcut in small monospace (`⏎`).
+Widget keyHint(BuildContext context, String keys, {Color? color}) {
+  final theme = NushiTheme.of(context);
+  return Text(keys, style: theme.code(color ?? theme.t.textMuted, size: 11));
 }
 
 /// One choice of a few (`Chat | Changes`).
@@ -258,39 +273,18 @@ class Segmented<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
+    final theme = NushiTheme.of(context), t = theme.t;
     return Container(
       padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: t.base,
-        border: Border.all(color: t.borderSubtle),
-        borderRadius: BorderRadius.circular(NushiTheme.control),
-      ),
+      decoration: box(t.borderSubtle, fill: t.base, radius: NushiTheme.control),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           for (final (v, text) in segments)
-            TextButton(
-              onPressed: () => onChanged(v),
-              style: ButtonStyle(
-                minimumSize: const WidgetStatePropertyAll(Size(0, 20)),
-                fixedSize: const WidgetStatePropertyAll(Size.fromHeight(20)),
-                padding: const WidgetStatePropertyAll(
-                  EdgeInsets.symmetric(horizontal: 10),
-                ),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                backgroundColor: WidgetStatePropertyAll(
-                  v == value ? t.selected : null,
-                ),
-                shape: const WidgetStatePropertyAll(
-                  RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(
-                      Radius.circular(NushiTheme.control),
-                    ),
-                  ),
-                ),
-              ),
+            Tap(
+              onTap: () => onChanged(v),
+              selected: v == value,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
               child: Text(
                 text,
                 style: theme.ui(
