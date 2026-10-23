@@ -28,7 +28,7 @@ func ids(ts []model.Terminal) []string {
 	return out
 }
 
-func TestArrangeRenameAndCloseChat(t *testing.T) {
+func TestArrangeRenameAndDeleteChat(t *testing.T) {
 	var shells []*fakeShell
 	start := func(string, int, int, func()) (Shell, error) {
 		sh := &fakeShell{}
@@ -52,9 +52,9 @@ func TestArrangeRenameAndCloseChat(t *testing.T) {
 	if err := s.Rename(b, "  dev server "); err != nil || s.List("one")[2].Name != "dev server" {
 		t.Fatalf("rename: %v, %+v", err, s.List("one")[2])
 	}
-	s.CloseChat("one")
+	s.Follow(model.Event{ChatID: "one", Removed: true})
 	if len(s.List("one")) != 0 || !shells[0].closed || shells[2].closed {
-		t.Fatal("CloseChat closed the wrong shells")
+		t.Fatal("deleting a chat closed the wrong shells")
 	}
 	if got := ids(s.List("two")); !slices.Equal(got, []string{other}) {
 		t.Fatalf("other chat's terminals %v", got)

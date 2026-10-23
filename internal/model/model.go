@@ -214,6 +214,21 @@ type Usage struct {
 	Input, Output, CachedRead, CachedWrite int64
 }
 
+// ContextUsage is what the agent says fills its context: its answer as
+// markdown, and the categories read from it (none when they couldn't be).
+type ContextUsage struct {
+	Markdown   string
+	Categories []ContextCategory
+}
+
+// ContextCategory is one kind of thing in the context: "Messages", 15,900
+// tokens, 1.6%.
+type ContextCategory struct {
+	Name    string
+	Tokens  int64
+	Percent float64
+}
+
 // Command is a slash command the agent offers.
 type Command struct {
 	Name, Description, Hint string

@@ -1,7 +1,6 @@
 package chats
 
 import (
-	"cmp"
 	"encoding/base64"
 	"encoding/json"
 	"path/filepath"
@@ -33,7 +32,7 @@ func (c *chat) update(n acp.SessionNotification) {
 		item := model.Item{ID: string(t.ToolCallID), Kind: model.ToolCall, Title: t.Title,
 			ToolKind: string(t.Kind), Status: string(t.Status), Paths: c.paths(t.Locations)}
 		c.setOutput(&item, t.Content)
-		fromClaude(&item, t.Meta, t.RawInput)
+		c.toolCallLocked(&item, t.Meta, t.RawInput)
 		if it := c.itemLocked(item.ID); it != nil { // a repeated tool_call replaces the call
 			*it = item
 			c.publishLocked(item)
@@ -66,9 +65,8 @@ func (c *chat) update(n acp.SessionNotification) {
 		}
 		c.usageChangedLocked()
 	case "session_info_update":
-		// Claude titles a fork "<title> (fork)", a fork of a fork "<title>
-		// (fork) (fork)": a moved or rewound chat keeps its title.
-		if t := u.SessionInfoUpdate.Title; t != "" && !isFork(t, c.session.Title) {
+		forkTitle := c.dialect.ForkTitle != nil && c.dialect.ForkTitle(u.SessionInfoUpdate.Title, c.session.Title)
+		if t := u.SessionInfoUpdate.Title; t != "" && !forkTitle {
 			c.saveLocked(func(s *model.Session) { s.Title = t })
 		}
 	case "tool_call_update":
@@ -89,10 +87,9 @@ func (c *chat) update(n acp.SessionNotification) {
 		if t.Locations != nil {
 			it.Paths = c.paths(t.Locations)
 		}
-		if t.Content != nil && it.Tool != "SubagentHandback" { // its output is only an acknowledgement
+		if own := c.toolCallLocked(it, t.Meta, t.RawInput); t.Content != nil && !own {
 			c.setOutput(it, t.Content)
 		}
-		fromClaude(it, t.Meta, t.RawInput)
 		c.publishLocked(*it)
 		if (t.Status == "completed" || t.Status == "failed") && it.Parent == "" && !c.started.IsZero() {
 			c.deliverLocked() // between tool calls: the agent's chance to take queued messages
@@ -122,7 +119,10 @@ func (c *chat) chunkLocked(kind model.ItemKind, m *acp.ContentChunk) {
 	if kind == model.Thought && id != "" {
 		id = "thought-" + id // a thought may share its message's id
 	}
-	parent, _ := claudeMeta(m.Meta)
+	var parent string
+	if c.dialect.Parent != nil {
+		parent = c.dialect.Parent(m.Meta)
+	}
 	it := c.itemLocked(id)
 	if m.MessageID == "" && len(c.items) > 0 {
 		it = &c.items[len(c.items)-1]
@@ -143,35 +143,10 @@ func (c *chat) chunkLocked(kind model.ItemKind, m *acp.ContentChunk) {
 	c.addLocked(model.Item{ID: id, Kind: kind, Text: text, Images: images, Parent: parent})
 }
 
-// claudeMeta reads what Claude adds under _meta.claudeCode: the subagent
-// tool call an update comes from (the subagent's own tool calls, text and
-// thinking), and a tool call's tool name.
-func claudeMeta(meta map[string]any) (parent, tool string) {
-	cc, _ := meta["claudeCode"].(map[string]any)
-	parent, _ = cc["parentToolUseId"].(string)
-	tool, _ = cc["toolName"].(string)
-	return parent, tool
-}
-
-// fromClaude adds what Claude tells about a tool call: the subagent it
-// comes from, its tool's name, for one that starts a subagent (Agent, Task)
-// the subagent's type, and for a subagent's SubagentHandback, which ends
-// it, the report it hands back as its output. Claude may send the input
-// in a later update than the name.
-func fromClaude(it *model.Item, meta map[string]any, input json.RawMessage) {
-	parent, tool := claudeMeta(meta)
-	it.Parent, it.Tool = cmp.Or(it.Parent, parent), cmp.Or(tool, it.Tool)
-	var in struct {
-		Type    string `json:"subagent_type"`
-		Message string `json:"message"`
-	}
-	json.Unmarshal(input, &in)
-	switch it.Tool {
-	case "Agent", "Task":
-		it.Agent = cmp.Or(in.Type, it.Agent, "Agent")
-	case "SubagentHandback":
-		it.Text = cmp.Or(in.Message, it.Text)
-	}
+// toolCallLocked adds what the agent tells of a tool call beyond ACP (see
+// Dialect.ToolCall).
+func (c *chat) toolCallLocked(it *model.Item, meta map[string]any, input json.RawMessage) (ownText bool) {
+	return c.dialect.ToolCall != nil && c.dialect.ToolCall(it, meta, input)
 }
 
 // planLocked shows the agent's plan: it replaces the plan of the current
@@ -243,11 +218,4 @@ func (c *chat) rel(path string) string {
 		return r
 	}
 	return path
-}
-
-// isFork says whether title is Claude's for a fork of a session titled of
-// (one " (fork)" or more after it).
-func isFork(title, of string) bool {
-	rest, ok := strings.CutPrefix(title, of)
-	return ok && rest != "" && strings.Trim(strings.ReplaceAll(rest, " (fork)", ""), " ") == ""
 }

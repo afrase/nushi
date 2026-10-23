@@ -1,8 +1,10 @@
-package claudecontext
+package claude
 
 import (
 	"reflect"
 	"testing"
+
+	"github.com/afrase/nushi/internal/model"
 )
 
 func TestParse(t *testing.T) {
@@ -26,7 +28,8 @@ func TestParse(t *testing.T) {
 | mcp__x__y | x | 153 |
 `
 	got, err := Parse(out)
-	want := []Category{{"System prompt", 2500, 0.3}, {"MCP tools", 622, 0.1}, {"Free space", 934600, 93.5}}
+	want := []model.ContextCategory{{Name: "System prompt", Tokens: 2500, Percent: 0.3}, {Name: "MCP tools", Tokens: 622, Percent: 0.1},
+		{Name: "Free space", Tokens: 934600, Percent: 93.5}}
 	if err != nil || !reflect.DeepEqual(got, want) {
 		t.Errorf("Parse = %v, %v; want %v", got, err, want)
 	}

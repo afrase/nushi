@@ -25,6 +25,7 @@ import (
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
 	"github.com/afrase/nushi/internal/git"
+	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/store"
 )
 
@@ -62,9 +63,13 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	}
 	hub := &events.Hub{}
 	st := store.New(dataDir)
-	svc := chats.New("fake", launch, st, st, copyHistory, git.Worktrees{}, filepath.Join(dataDir, "scratch"), hub.Publish)
-	srv := httptest.NewServer(api.Handler("tok", svc, nil, terminals.New(startSh, "sh", svc, hub.Publish), nil, hub))
+	svc := chats.New("fake", launch, chats.Dialect{}, st, st, copyHistory, git.Worktrees{}, filepath.Join(dataDir, "scratch"), hub.Publish)
+	terms := terminals.New(startSh, "sh", svc, hub.Publish)
+	follow, unfollow := context.WithCancel(context.Background())
+	go hub.Subscribe(follow.Done(), func() bool { return true }, func(e model.Event) bool { terms.Follow(e); return true })
+	srv := httptest.NewServer(api.Handler("tok", svc, nil, terms, nil, hub))
 	stop := func() {
+		unfollow()
 		srv.CloseClientConnections()
 		srv.Close()
 		svc.Close()

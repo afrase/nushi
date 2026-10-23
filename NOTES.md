@@ -119,6 +119,7 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 62. The app keeps what you type | 6725 | 867 | 12293 | 666 |
 | 63. The app stays fast and in sync | 6725 | 867 | 12506 | 682 |
 | 64. Delete (T1, T2, T4, T5) | 6650 | 867 | 12394 | 682 |
+| 65. One home for Claude's rules (T6, T9, T10, T13) | 6753 | 867 | 12394 | 682 |
 
 Tripwires crossed:
 - Step 60 (about 720 lines with tests, without generated code): reading Claude's trust record and what a folder runs (`internal/claudetrust`, 190: `.mcp.json` servers through `claudemcp`, hooks, env, helpers, skills' hooks), the `trust` feature and its store (90), the API (30), git without hooks and the repository's filters (35), the app's check before a start or move and the card (160), tests (190).

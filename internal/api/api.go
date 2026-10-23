@@ -8,7 +8,6 @@ import (
 
 	"connectrpc.com/connect"
 
-	"github.com/afrase/nushi/internal/claudecontext"
 	"github.com/afrase/nushi/internal/events"
 	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/features/mcp"
@@ -166,9 +165,6 @@ func (s *server) ArchiveChat(_ context.Context, req *connect.Request[nushiv1.Arc
 	if err := s.chats.Archive(req.Msg.ChatId, req.Msg.Archived); err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
-	if req.Msg.Archived {
-		s.terms.CloseChat(req.Msg.ChatId)
-	}
 	return connect.NewResponse(&nushiv1.ArchiveChatResponse{}), nil
 }
 
@@ -210,7 +206,6 @@ func (s *server) DeleteChat(ctx context.Context, req *connect.Request[nushiv1.De
 	if err := s.chats.Delete(ctx, m.ChatId, opts); err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
-	s.terms.CloseChat(m.ChatId)
 	return connect.NewResponse(&nushiv1.DeleteChatResponse{}), nil
 }
 
@@ -243,13 +238,12 @@ func (s *server) SetConfigOption(ctx context.Context, req *connect.Request[nushi
 }
 
 func (s *server) GetContextUsage(ctx context.Context, req *connect.Request[nushiv1.GetContextUsageRequest]) (*connect.Response[nushiv1.GetContextUsageResponse], error) {
-	md, err := s.chats.ContextUsage(ctx, req.Msg.ChatId)
+	u, err := s.chats.ContextUsage(ctx, req.Msg.ChatId)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
-	out := &nushiv1.GetContextUsageResponse{Markdown: md}
-	cats, _ := claudecontext.Parse(md) // the app shows the markdown when there are none
-	for _, c := range cats {
+	out := &nushiv1.GetContextUsageResponse{Markdown: u.Markdown}
+	for _, c := range u.Categories {
 		out.Categories = append(out.Categories, &nushiv1.ContextCategory{Name: c.Name, Tokens: c.Tokens, Percent: c.Percent})
 	}
 	return connect.NewResponse(out), nil

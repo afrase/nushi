@@ -138,7 +138,7 @@ func (s *Service) dropSides(c *chat) []string {
 
 // discard has a new agent delete side chats' sessions from its history,
 // once the agent they ran on has stopped: one that still runs would write a
-// little of a session back as it ends it (see throwAway).
+// little of a session back as it ends it (see Dialect.Redelete).
 func (s *Service) discard(c *chat, sides []string) {
 	if len(sides) == 0 {
 		return

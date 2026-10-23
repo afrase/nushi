@@ -81,12 +81,12 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 	if agent == nil || !can {
 		return "", errors.New("the agent can't fork this chat")
 	}
-	resp, err := agent.ForkSession(ctx, acp.ForkSessionRequest{SessionID: acp.SessionID(sid), Cwd: folder, MCPServers: []acp.MCPServer{}})
+	id, _, err := forkSession(ctx, agent, sid, folder, nil)
 	if err != nil {
 		return "", err
 	}
 	side := s.newChat()
-	side.id, side.agent, side.parent = string(resp.SessionID), agent, p
+	side.id, side.agent, side.parent = id, agent, p
 	side.sid, side.canImage = side.id, p.canImage
 	side.session = model.Session{ID: side.id, SessionID: side.sid, Agent: s.agent, Folder: folder, Title: "Side question", Created: time.Now()}
 	p.mu.Lock()
@@ -116,20 +116,21 @@ func (s *Service) CloseSide(id string) error {
 	c.cancelLocked()
 	agent := c.agent
 	c.mu.Unlock()
-	throwAway(agent, acp.SessionID(id))
+	c.throwAway(agent, id)
 	return nil
 }
 
 // throwAway has the agent delete a session nobody will see again (a side
-// chat, a /context fork). Deleting closes it first, but Claude writes a
-// little of the session back as it ends (claude-agent-acp 0.94.0): a second
-// delete, a moment later, takes that too.
-func throwAway(agent Agent, sid acp.SessionID) {
+// chat, a /context fork), and again a moment later for an agent that
+// writes a little of it back as it ends (Dialect.Redelete).
+func (c *chat) throwAway(agent Agent, sid string) {
 	del := func() {
-		if err := agent.DeleteSession(context.Background(), acp.DeleteSessionRequest{SessionID: sid}); err != nil {
+		if err := agent.DeleteSession(context.Background(), acp.DeleteSessionRequest{SessionID: acp.SessionID(sid)}); err != nil {
 			log.Printf("deleting session %s: %v", sid, err)
 		}
 	}
 	del()
-	time.AfterFunc(3*time.Second, del)
+	if c.dialect.Redelete > 0 {
+		time.AfterFunc(c.dialect.Redelete, del)
+	}
 }

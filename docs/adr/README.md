@@ -24,3 +24,4 @@
 - [0022](0022-the-daemon-owns-terminals.md) The daemon owns terminals; they are local-only until remote access decides otherwise
 - [0023](0023-warn-before-a-folder-runs-code.md) Warn before a folder's own code runs (hooks, helpers, `.mcp.json` servers) unless Claude or Nushi trusts it; never refuse
 - [0024](0024-the-agent-can-read-the-token.md) The agent can read Nushi's token file; no same-user protection is worth its cost (amends 0005)
+- [0025](0025-claude-rules-in-one-place.md) Claude's rules live in `internal/claude*`; the chats feature takes a `Dialect` that `main` fills

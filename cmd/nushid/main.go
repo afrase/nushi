@@ -12,7 +12,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strings"
@@ -20,6 +19,7 @@ import (
 
 	"github.com/afrase/nushi/acp"
 	"github.com/afrase/nushi/internal/api"
+	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/claudehistory"
 	"github.com/afrase/nushi/internal/claudemcp"
 	"github.com/afrase/nushi/internal/claudetrust"
@@ -33,9 +33,6 @@ import (
 	"github.com/afrase/nushi/internal/store"
 	"github.com/afrase/nushi/internal/terminal"
 )
-
-// claudeACP is the pinned Claude Code ACP adapter.
-const claudeACP = "@agentclientprotocol/claude-agent-acp@0.94.0"
 
 func main() {
 	if err := run(); err != nil {
@@ -78,12 +75,16 @@ func run() error {
 	log.Printf("nushid listening on %s", ln.Addr())
 
 	hub := &events.Hub{}
-	launch := func(h acp.Handler) (chats.Agent, error) { return launchClaude(dir, h) }
+	// Every chat runs Claude: what it does beyond ACP is in internal/claude*.
+	launch := func(h acp.Handler) (chats.Agent, error) { return claude.Start(dir, h) }
+	dialect := chats.Dialect{InitMeta: claude.InitMeta, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall,
+		ForkTitle: claude.ForkTitle, ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete}
 	st := store.New(dir)
 	st.HadMessages = func(s model.Session) bool { return claudehistory.Has(projects, s.SessionID, s.Folder) }
 	copyHistory := func(id, from, to string) (func() error, error) { return claudehistory.Copy(projects, id, from, to) }
-	chatSvc := chats.New("claude", launch, st, st, copyHistory, git.Worktrees{}, filepath.Join(dir, "scratch"), hub.Publish)
+	chatSvc := chats.New("claude", launch, dialect, st, st, copyHistory, git.Worktrees{}, filepath.Join(dir, "scratch"), hub.Publish)
 	termSvc := terminals.New(startShell, filepath.Base(loginShell), chatSvc, hub.Publish)
+	go hub.Subscribe(nil, func() bool { return true }, func(e model.Event) bool { termSvc.Follow(e); return true })
 	srv := &http.Server{Handler: api.Handler(token, chatSvc, mcp.New(claudemcp.Claude{}, chatSvc.MCPChanged), termSvc, trust.New(claudetrust.Trust{}, st), hub),
 		Protocols: new(http.Protocols)}
 	srv.Protocols.SetUnencryptedHTTP2(true)
@@ -132,17 +133,6 @@ func listen(path string) (net.Listener, error) {
 	}
 	_ = os.Remove(path)
 	return net.Listen("unix", path)
-}
-
-// launchClaude starts Claude Code's ACP adapter. It runs in the daemon's own
-// folder, so npx never resolves the adapter or npm settings from a project;
-// the chat's folder reaches the agent only as the session's cwd. Its stderr
-// goes to the daemon log.
-func launchClaude(dir string, h acp.Handler) (chats.Agent, error) {
-	cmd := exec.Command("npx", "--yes", claudeACP)
-	cmd.Dir = dir
-	cmd.Stderr = log.Writer()
-	return acp.Start(cmd, h)
 }
 
 var loginShell = cmp.Or(os.Getenv("SHELL"), "/bin/zsh")

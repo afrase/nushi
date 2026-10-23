@@ -22,7 +22,7 @@ import (
 // its empty session is deleted, so the chat never had it. One with
 // messages keeps the worktree it leaves on disk, and Delete offers it.
 func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool) error {
-	if err := checkFolder(folder); err != nil {
+	if err := CheckFolder(folder); err != nil {
 		return err
 	}
 	c, err := s.stored(chatID)

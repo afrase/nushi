@@ -44,14 +44,6 @@ func TestRewindForksBeforeTheMessage(t *testing.T) {
 	}
 }
 
-func TestForkTitlesAreIgnored(t *testing.T) {
-	for title, want := range map[string]bool{"A (fork)": true, "A (fork) (fork)": true, "A": false, "A b": false, "B (fork)": false} {
-		if isFork(title, "A") != want {
-			t.Errorf("isFork(%q) != %v", title, want)
-		}
-	}
-}
-
 func TestStopTakesBackAnUnansweredMessage(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	ctx := context.Background()
@@ -76,7 +68,7 @@ func TestStopTakesBackAnUnansweredMessage(t *testing.T) {
 	eventually(t, c, func() bool { return !c.busy })
 
 	// Without rewinding, it stays, with a notice.
-	agent.updates, c.canRewind = nil, false
+	agent.updates, c.forkAt = nil, nil
 	svc.Prompt(c.id, model.Message{Text: "four"}, SendIdle)
 	if m, err := svc.Stop(ctx, c.id, true); m == nil || m.Text != "four" || err != nil {
 		t.Errorf("Stop = %+v, %v", m, err)
