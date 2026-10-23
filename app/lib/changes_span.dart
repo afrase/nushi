@@ -18,15 +18,16 @@ enum Scope {
 
 /// A chat's changes as its folder stands: the [scope] shown, the [base]
 /// branch they are counted from (a worktree's own base, else the
-/// repository's default branch; '' if there's none), and the folder's
-/// [status] (its branch, and how far it is [GetFolderStatusResponse.ahead]
-/// of the base).
+/// repository's default branch; '' if there's none), the folder's [status]
+/// (its branch, and its changes counted as the scope shows them), and in
+/// Commits the branch's [commits].
 class ChangeSpan {
-  ChangeSpan(this.scope, this.base, this.status);
+  ChangeSpan(this.scope, this.base, this.status, [this.commits = const []]);
 
   final Scope scope;
   final String base;
   final GetFolderStatusResponse status;
+  final List<Commit> commits;
 
   /// Whether HEAD is on the base branch itself: its commits are then the
   /// last ones, not the branch's own.
@@ -44,27 +45,45 @@ class ChangeSpan {
   /// Reads [chat]'s folder. The scope is the one picked for the chat, else
   /// Branch when the branch has commits of its own, else Uncommitted.
   static Future<ChangeSpan> of(Daemon daemon, ChatState chat) async {
-    final status = await daemon.client.getFolderStatus(
-      GetFolderStatusRequest(folder: chat.folder, base: chat.worktree?.base),
+    final client = daemon.client, folder = chat.folder;
+    final wtBase = chat.worktree?.base ?? '';
+    var status = await client.getFolderStatus(
+      GetFolderStatusRequest(folder: folder, base: wtBase),
     );
-    final base = chat.worktree?.base ?? status.defaultBase;
-    final span = ChangeSpan(Scope.uncommitted, base, status);
-    final scopes = span.scopes;
+    final base = wtBase.isNotEmpty ? wtBase : status.defaultBase;
+    final scopes = ChangeSpan(Scope.uncommitted, base, status).scopes;
     final picked = Scope.values.where((s) => s.name == chat.scope).firstOrNull;
-    return ChangeSpan(
-      scopes.contains(picked)
-          ? picked!
-          : status.ahead > 0 && scopes.contains(Scope.branch)
-          ? Scope.branch
-          : Scope.uncommitted,
-      base,
-      status,
+    final scope = scopes.contains(picked)
+        ? picked!
+        : status.ahead > 0 && scopes.contains(Scope.branch)
+        ? Scope.branch
+        : Scope.uncommitted;
+    final countFrom = scope == Scope.branch ? base : '';
+    if (status.git && countFrom != wtBase) {
+      status = await client.getFolderStatus(
+        GetFolderStatusRequest(folder: folder, base: countFrom),
+      );
+    }
+    final span = ChangeSpan(scope, base, status);
+    if (scope != Scope.commits || !status.git) return span;
+    final commits = await client.listCommits(
+      ListCommitsRequest(folder: folder, base: span.onBase ? '' : base),
     );
+    return ChangeSpan(scope, base, status, commits.commits);
   }
 
-  /// The base the branch's commits are listed from: none on the base
-  /// branch itself (its last commits).
-  String get commitsBase => onBase ? '' : base;
+  /// What GetDiff lists for the scope; in Commits, what the commits from
+  /// [since] to [commit] changed.
+  GetDiffRequest diff(String folder, {String? commit, String? since}) =>
+      switch (scope) {
+        Scope.uncommitted => GetDiffRequest(folder: folder),
+        Scope.branch => GetDiffRequest(folder: folder, base: base),
+        Scope.commits => GetDiffRequest(
+          folder: folder,
+          commit: commit,
+          since: since,
+        ),
+      };
 }
 
 /// Reloads (`reload`) a chat's changes when its turn ends, it moves, or its

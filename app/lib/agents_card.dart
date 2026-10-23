@@ -103,11 +103,7 @@ class _FinishedState extends State<_Finished> {
                 '${widget.done.length} finished',
                 style: theme.ui(t.textMuted, size: 12),
               ),
-              Icon(
-                _open ? Icons.expand_more : Icons.chevron_right,
-                size: 14,
-                color: t.textMuted,
-              ),
+              Chevron(_open),
             ],
           ),
         ),

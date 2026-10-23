@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import 'chat.dart';
@@ -12,6 +11,7 @@ import 'status.dart';
 import 'terminal_panel.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
+import 'inline_edit.dart';
 
 /// The chats, grouped by folder (a chat in a worktree under its
 /// repository): the folder with the newest chat first, and in each folder
@@ -113,13 +113,7 @@ class _SidebarState extends State<Sidebar> {
                       ),
                       child: Row(
                         children: [
-                          Icon(
-                            _showArchived
-                                ? Icons.expand_more
-                                : Icons.chevron_right,
-                            size: 16,
-                            color: t.textMuted,
-                          ),
+                          Chevron(_showArchived, size: 16),
                           const SizedBox(width: 4),
                           Text(
                             'Archived  ${archived.length}',
@@ -257,14 +251,10 @@ class _ChatRow extends StatefulWidget {
 
 class _ChatRowState extends State<_ChatRow> {
   bool _renaming = false;
-  DateTime _lastTap = DateTime(0);
+  final _double = DoubleClick();
 
   void _tap() {
-    final now = DateTime.now();
-    if (now.difference(_lastTap) < kDoubleTapTimeout) {
-      setState(() => _renaming = true);
-    }
-    _lastTap = now;
+    if (_double()) setState(() => _renaming = true);
     widget.daemon.select(widget.chat.id);
   }
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'cards.dart';
+import 'question_parts.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
@@ -187,7 +187,7 @@ class _QuestionCardState extends State<QuestionCard> {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context), t = theme.t;
     final item = widget.item;
-    if (item.status != 'pending') return _Answered(item);
+    if (item.status != 'pending') return AnsweredQuestion(item);
     return Focus(
       focusNode: _focus,
       onKeyEvent: _onKey,
@@ -288,47 +288,16 @@ class _QuestionCardState extends State<QuestionCard> {
         style: theme.ui(t.text),
       ),
       for (final (n, o) in f.options.indexed)
-        Tap(
+        QuestionOption(
+          o,
+          digit: n < 9 ? '${n + 1}' : null,
+          many: many,
+          picked: picked.contains(o.id),
+          at: n == _at,
           onTap: () {
             _pick(n);
             _focus.requestFocus();
           },
-          selected: n == _at,
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-          child: Row(
-            spacing: 8,
-            children: [
-              SizedBox(
-                width: 12,
-                child: n < 9 ? keyHint(context, '${n + 1}') : null,
-              ),
-              Icon(
-                switch ((many, picked.contains(o.id))) {
-                  (false, false) => Icons.radio_button_unchecked,
-                  (false, true) => Icons.radio_button_checked,
-                  (true, false) => Icons.check_box_outline_blank,
-                  (true, true) => Icons.check_box,
-                },
-                size: 16,
-                color: picked.contains(o.id) ? t.accent : t.textSecondary,
-              ),
-              Expanded(
-                child: Text.rich(
-                  TextSpan(
-                    text: o.name,
-                    style: theme.ui(t.text),
-                    children: [
-                      if (o.description.isNotEmpty)
-                        TextSpan(
-                          text: '  ${o.description}',
-                          style: theme.ui(t.textMuted, size: 12),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
         ),
       if (f.options.isEmpty) field(f, f.title),
       if (q.other case final other?) field(other, '${other.title}…'),
@@ -368,53 +337,5 @@ class _QuestionCardState extends State<QuestionCard> {
         onPressed: _answer.isEmpty ? null : () => _send(_answer),
       ),
     ];
-  }
-}
-
-/// A question that is no longer waiting: what was answered.
-class _Answered extends StatelessWidget {
-  const _Answered(this.item);
-
-  final Item item;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final muted = theme.ui(theme.t.textMuted, size: 12);
-    final answered = item.fields.where((f) => f.values.isNotEmpty);
-    return WaitingCard(
-      waiting: false,
-      children: [
-        CardTitle(item.text, waiting: false),
-        if (item.status != 'answered')
-          Text(
-            item.status == 'declined' ? 'Skipped' : 'Cancelled',
-            style: muted,
-          )
-        else
-          for (final f in answered)
-            Text.rich(
-              TextSpan(
-                text: '${f.options.isEmpty ? f.title : f.description}  ',
-                style: muted,
-                children: [
-                  TextSpan(
-                    text: f.values
-                        .map(
-                          (v) =>
-                              f.options
-                                  .where((o) => o.id == v)
-                                  .firstOrNull
-                                  ?.name ??
-                              v,
-                        )
-                        .join(', '),
-                    style: theme.ui(theme.t.text, size: 12),
-                  ),
-                ],
-              ),
-            ),
-      ],
-    );
   }
 }

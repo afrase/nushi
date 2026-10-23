@@ -7,6 +7,7 @@ import 'package:flutter/scheduler.dart';
 import 'chat.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'theme/theme.dart';
+import 'tool_calls.dart';
 
 /// One clock for every moving mark: a phase from 0 to 1 and back, every
 /// 1.6 seconds. It ticks only while a mark listens, and the marks paint
@@ -217,15 +218,7 @@ String doing(List<Item> items) {
       .firstOrNull;
   if (running != null) {
     final path = running.paths.firstOrNull ?? running.diffs.firstOrNull?.path;
-    final verb = switch (running.toolKind) {
-      'read' => 'Reading',
-      'edit' => 'Editing',
-      'delete' => 'Deleting',
-      'move' => 'Moving',
-      'search' => 'Searching',
-      'fetch' => 'Fetching',
-      _ => null,
-    };
+    final verb = kindOf(running).doing;
     return switch ((verb, path)) {
       _ when running.toolKind == 'execute' => 'Running ${running.title}',
       (final v?, final p?) => '$v $p',

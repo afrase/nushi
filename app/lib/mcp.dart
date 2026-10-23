@@ -54,17 +54,11 @@ class McpView extends StatelessWidget {
                 const SizedBox(width: 12),
                 Menu(
                   tooltip: 'The folder whose servers show',
-                  entries: [
-                    for (final f in daemon.recentFolders.take(8))
-                      MenuEntry(
-                        folderParts(f).$1,
-                        detail: folderParts(f).$2,
-                        checked: f == folder,
-                        onPick: () => daemon.showMcp(f),
-                      ),
-                    MenuEntry.divider,
-                    MenuEntry('Choose folder…', onPick: _pick),
-                  ],
+                  entries: folderEntries(
+                    daemon,
+                    checked: folder,
+                    onPick: (f) => f == null ? _pick() : daemon.showMcp(f),
+                  ),
                   child: Text.rich(
                     TextSpan(
                       children: [

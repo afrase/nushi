@@ -1,11 +1,10 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'gen/nushi/v1/nushi.pb.dart' as pb;
 import 'terminals.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
+import 'inline_edit.dart';
 
 /// Closes a terminal, asking first when a program other than the shell
 /// runs in it.
@@ -101,39 +100,20 @@ class _Tab extends StatefulWidget {
 
 class _TabState extends State<_Tab> {
   bool _hover = false;
-  TextEditingController? _rename; // while renaming
-  DateTime _lastTap = DateTime(0);
+  bool _renaming = false;
+  final _double = DoubleClick();
 
-  @override
-  void dispose() {
-    _rename?.dispose();
-    super.dispose();
-  }
-
-  // A second click soon after the first renames; the first shows the tab
-  // at once (a double-tap recognizer would hold every click back).
+  // The first click shows the tab at once; a second renames (without
+  // showing it again, which would hand the keyboard to the shell).
   void _tap() {
-    final now = DateTime.now();
-    if (now.difference(_lastTap) < kDoubleTapTimeout) {
-      setState(
-        () => _rename = TextEditingController(text: terminalName(widget.info))
-          ..selection = TextSelection(
-            baseOffset: 0,
-            extentOffset: terminalName(widget.info).length,
-          ),
-      );
-    }
-    _lastTap = now;
+    if (_double()) return setState(() => _renaming = true);
     widget.terms.show(widget.info.chatId, widget.info.id);
   }
 
-  void _done(bool save) {
-    final rename = _rename!, name = rename.text.trim();
-    setState(() => _rename = null);
-    // Its field goes with this frame.
-    WidgetsBinding.instance.addPostFrameCallback((_) => rename.dispose());
+  void _done(String? name) {
+    setState(() => _renaming = false);
     widget.terms.session(widget.info).focus.requestFocus();
-    if (save && name != terminalName(widget.info)) {
+    if (name != null && name != terminalName(widget.info)) {
       tryOrShow(context, () => widget.terms.rename(widget.info.id, name));
     }
   }
@@ -147,22 +127,14 @@ class _TabState extends State<_Tab> {
         : widget.active
         ? t.text
         : t.textSecondary;
-    final label = _rename != null
+    final label = _renaming
         ? SizedBox(
             width: 160,
-            child: CallbackShortcuts(
-              bindings: {
-                const SingleActivator(LogicalKeyboardKey.escape): () =>
-                    _done(false),
-              },
-              child: TextField(
-                controller: _rename,
-                autofocus: true,
-                style: theme.ui(t.text, size: 12),
-                decoration: const InputDecoration.collapsed(hintText: 'Name'),
-                onSubmitted: (_) => _done(true),
-                onTapOutside: (_) => _done(true),
-              ),
+            child: InlineEdit(
+              text: terminalName(info),
+              style: theme.ui(t.text, size: 12),
+              decoration: const InputDecoration.collapsed(hintText: 'Name'),
+              onDone: _done,
             ),
           )
         : ConstrainedBox(

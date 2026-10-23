@@ -89,16 +89,10 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
         throw status.gone ? 'The folder is gone.' : 'Not a git repository.';
       }
       _span = span;
-      _commits = [];
-      if (span.scope == Scope.commits) {
-        _commits = (await daemon.client.listCommits(
-          ListCommitsRequest(folder: chat.folder, base: span.commitsBase),
-        )).commits;
-        if (asked != _asked) return;
-        if (_picked == null) {
-          _first = _commits.firstOrNull?.hash;
-          _last = null;
-        }
+      _commits = span.commits;
+      if (_picked == null) {
+        _first = _commits.firstOrNull?.hash;
+        _last = null;
       }
       await _diff(asked);
       _error = null;
@@ -132,17 +126,13 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
     asked ??= ++_asked;
     final span = _span!;
     final picked = _picked;
-    final GetDiffRequest req = switch (span.scope) {
-      Scope.uncommitted => GetDiffRequest(folder: chat.folder),
-      Scope.branch => GetDiffRequest(folder: chat.folder, base: span.base),
-      Scope.commits => GetDiffRequest(
-        folder: chat.folder,
-        commit: picked == null ? null : _commits[picked.$1].hash,
-        since: picked == null || picked.$1 == picked.$2
-            ? null
-            : _commits[picked.$2].hash,
-      ),
-    };
+    final req = span.diff(
+      chat.folder,
+      commit: picked == null ? null : _commits[picked.$1].hash,
+      since: picked == null || picked.$1 == picked.$2
+          ? null
+          : _commits[picked.$2].hash,
+    );
     final files = span.scope == Scope.commits && picked == null
         ? <FileChange>[]
         : (await daemon.client.getDiff(req)).files;
