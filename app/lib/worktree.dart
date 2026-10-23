@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'changes_view.dart';
 import 'chat.dart';
 import 'daemon.dart';
 import 'folder_button.dart';
@@ -57,15 +58,7 @@ List<(String?, Widget)> worktreeRows(
             child: Switch(
               value: wt != null,
               onChanged: can
-                  ? (on) {
-                      final repos = {...worktreeRepos.value};
-                      on ? repos.add(chat.home) : repos.remove(chat.home);
-                      worktreeRepos.value = repos;
-                      tryOrShow(
-                        context,
-                        () => daemon.moveChat(chat, chat.home, worktree: on),
-                      );
-                    }
+                  ? (on) => _switch(context, chat, daemon, on)
                   : null,
             ),
           ),
@@ -86,6 +79,87 @@ List<(String?, Widget)> worktreeRows(
         ),
       ),
   ];
+}
+
+/// Moves a chat without messages into a new worktree ([on]) or back to its
+/// repository, and remembers the choice for the repository.
+void _switch(BuildContext context, ChatState chat, Daemon daemon, bool on) {
+  final repos = {...worktreeRepos.value};
+  on ? repos.add(chat.home) : repos.remove(chat.home);
+  worktreeRepos.value = repos;
+  tryOrShow(context, () => daemon.moveChat(chat, chat.home, worktree: on));
+}
+
+/// Under the composer of a chat without messages, as in Claude Code: its
+/// folder and, in a git repository, the "New worktree" switch as a chip.
+class NewChatBar extends StatefulWidget {
+  const NewChatBar({super.key, required this.chat, required this.daemon});
+
+  final ChatState chat;
+  final Daemon daemon;
+
+  @override
+  State<NewChatBar> createState() => _NewChatBarState();
+}
+
+class _NewChatBarState extends State<NewChatBar> with FollowsChanges {
+  @override
+  ChatState get chat => widget.chat;
+  @override
+  Daemon get daemon => widget.daemon;
+  bool _git = false;
+
+  @override
+  Future<void> reload() async {
+    if (!daemon.canFolderStatus) return;
+    try {
+      final s = await daemon.client.getFolderStatus(
+        GetFolderStatusRequest(folder: chat.folder),
+      );
+      if (mounted) setState(() => _git = s.git);
+    } on Object {
+      // No chip, as outside git.
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context), t = theme.t;
+    final on = chat.worktree != null;
+    final color = on ? t.accent : t.textSecondary;
+    return Row(
+      children: [
+        Flexible(
+          child: FolderButton(chat: chat, daemon: daemon, path: false),
+        ),
+        if (_git && daemon.canWorktrees)
+          DecoratedBox(
+            decoration: box(
+              on ? t.accent : t.borderStrong,
+              fill: on ? t.accentSoft : null,
+              radius: 10,
+            ),
+            child: Tap(
+              tooltip: on
+                  ? 'The chat runs in a new worktree; click to go back'
+                  : 'Run the chat in a new worktree of the repository',
+              onTap: chat.busy || chat.waiting
+                  ? null
+                  : () => _switch(context, chat, daemon, !on),
+              radius: 10,
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              child: Row(
+                spacing: 4,
+                children: [
+                  Icon(worktreeIcon, size: 12, color: color),
+                  Text('New worktree', style: theme.ui(color, size: 12)),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
 }
 
 /// Asks before moving a chat with messages to a new worktree, then moves it.

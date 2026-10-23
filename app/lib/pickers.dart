@@ -18,11 +18,15 @@ class Pickers extends StatelessWidget {
     required this.options,
     required this.onPick,
     this.onClose,
+    this.leading,
   });
 
   final List<ConfigOption> options;
   final Future<void> Function(String configId, String value) onPick;
   final VoidCallback? onClose;
+
+  /// After the mode, on the left.
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -88,7 +92,8 @@ class Pickers extends StatelessWidget {
             entries: rows(mode),
             child: Text(_current(mode), style: value),
           ),
-        const Spacer(),
+        if (leading != null) Flexible(child: leading!) else const Spacer(),
+        if (leading != null) const SizedBox(width: 12),
         if (rest.isNotEmpty)
           Menu(
             tooltip: [for (final o in rest) o.name].join(', '),

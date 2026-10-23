@@ -13,6 +13,7 @@ import 'reply_cards.dart';
 import 'theme/theme.dart';
 import 'thinking.dart';
 import 'widgets.dart';
+import 'worktree.dart';
 
 /// The prompt box: "+" on its left mentions a file or attaches images
 /// (⌘V and dropping work too), and on its right a send button once there
@@ -31,6 +32,7 @@ class Composer extends StatefulWidget {
     this.quote,
     this.attachments,
     this.hint = 'Type / for commands',
+    this.folder = false,
   });
 
   final ChatState chat;
@@ -46,6 +48,9 @@ class Composer extends StatefulWidget {
   /// The images to send with the prompt; the box keeps its own if null.
   final Attachments? attachments;
   final String hint;
+
+  /// Whether a chat without messages shows its folder under the box.
+  final bool folder;
 
   @override
   State<Composer> createState() => _ComposerState();
@@ -383,6 +388,9 @@ class _ComposerState extends State<Composer> {
           ),
           const SizedBox(height: 4),
           Pickers(
+            leading: widget.folder && chat.fresh && !chat.archived
+                ? NewChatBar(chat: chat, daemon: widget.daemon)
+                : null,
             options: chat.config,
             onPick: (id, value) => widget.daemon.client.setConfigOption(
               SetConfigOptionRequest(

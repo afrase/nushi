@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -100,7 +102,12 @@ class _MenuState extends State<Menu> {
     onKeyEvent: _onKey,
     child: MenuAnchor(
       controller: _menu,
-      menuChildren: _rows(context, widget.entries, digits: widget.digits),
+      menuChildren: _rows(
+        context,
+        widget.entries,
+        _menu.close,
+        digits: widget.digits,
+      ),
       onOpen: () {
         if (widget.digits) _focus.requestFocus();
       },
@@ -120,71 +127,20 @@ class _MenuState extends State<Menu> {
   );
 }
 
+/// Lists longer than this get a filter field.
+const _filterPast = 10;
+
 List<Widget> _rows(
   BuildContext context,
-  List<MenuEntry> entries, {
+  List<MenuEntry> entries,
+  VoidCallback close, {
   bool digits = false,
 }) {
+  if (entries.where((e) => e._pickable).length > _filterPast) {
+    return [_Filtered(entries, close)];
+  }
   final theme = NushiTheme.of(context), t = theme.t;
   var n = 0;
-  Widget row(MenuEntry e) {
-    final on = e.onPick != null || e.submenu != null;
-    Widget label = ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 380),
-      child: Text.rich(
-        TextSpan(
-          children: [
-            TextSpan(
-              text: e.label,
-              style: theme.ui(
-                on ? t.text : t.textMuted,
-                weight: FontWeight.w400,
-              ),
-            ),
-            if (e.detail.isNotEmpty)
-              TextSpan(
-                text: '   ${e.detail}',
-                style: theme.ui(t.textMuted, size: 12),
-              ),
-          ],
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-    if (e.tooltip.isNotEmpty) {
-      label = Tooltip(message: e.tooltip, child: label);
-    }
-    if (e.submenu case final sub?) {
-      return SubmenuButton(menuChildren: _rows(context, sub), child: label);
-    }
-    final digit = digits && e._pickable && n < 9 ? '${++n}' : '';
-    return MenuItemButton(
-      onPressed: e.onPick,
-      trailingIcon: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: 14,
-            child: e.checked
-                ? Icon(Icons.check, size: 14, color: t.text)
-                : null,
-          ),
-          if (digits)
-            SizedBox(
-              width: 22,
-              child: Text(
-                digit,
-                textAlign: TextAlign.right,
-                style: theme.ui(t.textMuted, size: 12),
-              ),
-            ),
-        ],
-      ),
-      child: Padding(padding: const EdgeInsets.only(right: 12), child: label),
-    );
-  }
-
   return [
     for (final e in entries)
       if (identical(e, MenuEntry.divider))
@@ -195,6 +151,193 @@ List<Widget> _rows(
           child: Text(e.label, style: theme.ui(t.textMuted, size: 11.5)),
         )
       else
-        row(e),
+        _row(
+          context,
+          e,
+          close,
+          digit: !digits
+              ? null
+              : e._pickable && n < 9
+              ? '${++n}'
+              : '',
+        ),
   ];
+}
+
+/// A row: [digit] shows its key on the right; [lit] marks it as the one
+/// Enter picks.
+Widget _row(
+  BuildContext context,
+  MenuEntry e,
+  VoidCallback close, {
+  String? digit,
+  bool lit = false,
+  Key? key,
+}) {
+  final theme = NushiTheme.of(context), t = theme.t;
+  final on = e.onPick != null || e.submenu != null;
+  Widget label = ConstrainedBox(
+    constraints: const BoxConstraints(maxWidth: 380),
+    child: Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: e.label,
+            style: theme.ui(on ? t.text : t.textMuted, weight: FontWeight.w400),
+          ),
+          if (e.detail.isNotEmpty)
+            TextSpan(
+              text: '   ${e.detail}',
+              style: theme.ui(t.textMuted, size: 12),
+            ),
+        ],
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    ),
+  );
+  if (e.tooltip.isNotEmpty) label = Tooltip(message: e.tooltip, child: label);
+  if (e.submenu case final sub?) {
+    return SubmenuButton(
+      key: key,
+      menuChildren: _rows(context, sub, close),
+      child: label,
+    );
+  }
+  return MenuItemButton(
+    key: key,
+    onPressed: e.onPick,
+    style: lit ? MenuItemButton.styleFrom(backgroundColor: t.hover) : null,
+    trailingIcon: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 14,
+          child: e.checked ? Icon(Icons.check, size: 14, color: t.text) : null,
+        ),
+        if (digit != null)
+          SizedBox(
+            width: 22,
+            child: Text(
+              digit,
+              textAlign: TextAlign.right,
+              style: theme.ui(t.textMuted, size: 12),
+            ),
+          ),
+      ],
+    ),
+    child: Padding(padding: const EdgeInsets.only(right: 12), child: label),
+  );
+}
+
+/// A long list under a field that takes the focus and narrows it by name
+/// and description as you type. ↑ and ↓ move, Enter picks, Escape clears
+/// the field, then closes the menu.
+class _Filtered extends StatefulWidget {
+  const _Filtered(this.entries, this.close);
+
+  final List<MenuEntry> entries;
+  final VoidCallback close;
+
+  @override
+  State<_Filtered> createState() => _FilteredState();
+}
+
+class _FilteredState extends State<_Filtered> {
+  final _text = TextEditingController();
+  final _lit = GlobalKey();
+  // The row Enter picks, of those shown: the current one at first.
+  late int _at = max(0, _shown.indexWhere((e) => e.checked));
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  List<MenuEntry> get _shown {
+    final q = _text.text.trim().toLowerCase();
+    return [
+      for (final e in widget.entries)
+        if (e._pickable &&
+            '${e.label} ${e.detail} ${e.tooltip}'.toLowerCase().contains(q))
+          e,
+    ];
+  }
+
+  KeyEventResult _onKey(FocusNode _, KeyEvent e) {
+    if (e is KeyUpEvent) return KeyEventResult.ignored;
+    final shown = _shown;
+    switch (e.logicalKey) {
+      case LogicalKeyboardKey.arrowDown || LogicalKeyboardKey.arrowUp
+          when shown.isNotEmpty:
+        final step = e.logicalKey == LogicalKeyboardKey.arrowDown ? 1 : -1;
+        setState(() => _at = (_at + step) % shown.length);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_lit.currentContext case final c?) Scrollable.ensureVisible(c);
+        });
+      case LogicalKeyboardKey.enter when _at < shown.length:
+        widget.close();
+        shown[_at].onPick!();
+      case LogicalKeyboardKey.escape when _text.text.isNotEmpty:
+        _text.clear();
+        setState(() => _at = 0);
+      default:
+        return KeyEventResult.ignored;
+    }
+    return KeyEventResult.handled;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context), t = theme.t;
+    final shown = _shown;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Focus(
+          onKeyEvent: _onKey,
+          skipTraversal: true,
+          child: TextField(
+            controller: _text,
+            autofocus: true,
+            style: theme.ui(t.text),
+            onChanged: (_) => setState(() => _at = 0),
+            decoration: const InputDecoration(
+              hintText: 'Filter',
+              border: InputBorder.none,
+              prefixIcon: Icon(Icons.search, size: 15),
+              prefixIconConstraints: BoxConstraints(minWidth: 28),
+            ),
+          ),
+        ),
+        const Divider(height: 1),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 360),
+          child: SingleChildScrollView(
+            primary: false,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final (i, e) in shown.indexed)
+                  _row(
+                    context,
+                    e,
+                    widget.close,
+                    lit: i == _at,
+                    key: i == _at ? _lit : null,
+                  ),
+                if (shown.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text('No match', style: theme.ui(t.textMuted)),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
