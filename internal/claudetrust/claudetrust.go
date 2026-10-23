@@ -31,9 +31,43 @@ import (
 // Trust reads Claude Code's trust and settings files.
 type Trust struct{}
 
-// Key is the folder Claude keys a folder's trust on: its repository's main
-// checkout, or the folder itself outside git (real paths).
-func (Trust) Key(folder string) string { return claudemcp.Claude{}.Project(folder) }
+// Key is the folder Claude keys a folder's trust on (real paths): its
+// repository's main checkout, or the folder itself outside git. A folder's
+// .git can name any repository's git dir, so a worktree counts as its
+// repository's only when the repository lists it as one of its worktrees;
+// otherwise its key is its own work tree's root.
+func (Trust) Key(folder string) string {
+	if real, err := filepath.EvalSymlinks(folder); err == nil {
+		folder = real
+	}
+	out, err := gitIn(folder, "rev-parse", "--path-format=absolute", "--show-toplevel", "--git-common-dir")
+	top, common, _ := strings.Cut(strings.TrimSpace(out), "\n")
+	if err != nil || top == "" {
+		return folder
+	}
+	if filepath.Base(common) != ".git" {
+		return top
+	}
+	main := filepath.Dir(common)
+	if main == top {
+		return top
+	}
+	listed, _ := filepath.Glob(filepath.Join(common, "worktrees", "*", "gitdir"))
+	for _, gitdir := range listed {
+		b, _ := os.ReadFile(gitdir)
+		path := filepath.Dir(strings.TrimSpace(string(b)))
+		if real, err := filepath.EvalSymlinks(path); err == nil && real == top {
+			return main
+		}
+	}
+	return top
+}
+
+// gitIn runs git in dir with hooks and fsmonitor off.
+func gitIn(dir string, args ...string) (string, error) {
+	out, err := exec.Command("git", append([]string{"-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null", "-C", dir}, args...)...).Output()
+	return string(out), err
+}
 
 // Trusted says whether folder is trusted: by Claude (its trust dialog was
 // accepted there), or by one of also, keys Nushi was told to trust.
@@ -72,11 +106,11 @@ func (t Trust) Trusted(folder string, also []string) (bool, error) {
 
 // toplevel is the root of folder's work tree, or "" outside git.
 func toplevel(folder string) string {
-	out, err := exec.Command("git", "-C", folder, "rev-parse", "--show-toplevel").Output()
+	out, err := gitIn(folder, "rev-parse", "--show-toplevel")
 	if err != nil {
 		return ""
 	}
-	return strings.TrimSpace(string(out))
+	return strings.TrimSpace(out)
 }
 
 // Runs lists what folder brings for Claude to run: its .mcp.json servers
