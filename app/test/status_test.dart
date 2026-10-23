@@ -60,6 +60,6 @@ void main() {
     final subs = subagentsOf(items, busy: false);
     expect([for (final s in subs) s.call.id], ['a']);
     expect([for (final it in subs.single.items) it.id], ['r', 's']);
-    expect(subagentState(subs.single), '1 tool call');
+    expect(subagentState(subs.single), 'done · 1 tool call');
   });
 }
