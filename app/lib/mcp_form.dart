@@ -298,8 +298,8 @@ class _FormState extends State<_Form> {
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
                     child: Text(
-                      'A value left as •••• keeps the one it has, while '
-                      'the rest of the server stays as it was.',
+                      'Values shown as •••• are kept only if nothing else '
+                      'changes; after any change, type them again.',
                       style: muted,
                     ),
                   ),
