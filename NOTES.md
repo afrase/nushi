@@ -1,34 +1,34 @@
 # Notes
 
-## Summary (2026-10-23, after step 40)
+## Summary (2026-10-23, after step 45)
 
-Milestone I (steps 33–40, with steps 37–40 added during the run) is done, one commit each on `main`, pushed, plus two transcript-scrolling fixes the user reported (their own commits) and a split of two files that passed 400 lines. `make test` passes: Go unit tests (new: subagent routing, the silent `/context` run, the `/context` parser), the end-to-end tests (the worktree test now moves a worktree chat out and deletes it), and the app's tests (new: following the bottom with small scroll steps, the menu filter, one-at-a-time questions, the turn status helpers). Each step was looked at in a development build against live Claude (claude-agent-acp 0.94.0) at 1280×800, dark, on throwaway repositories, with the dev daemon and app on `NUSHI_DATA`; the installed Nushi and its daemon were left alone. `make install` put the build in `~/Applications/Nushi.app` (and the iCloud copy).
+Milestone J (steps 41–45) is done, one commit each on `main`, pushed, plus two fixes to step 40's Context card (their own commits). `make test` passes: Go unit tests (new: renames, per-file counts, commit spans, the default base, `ahead`, the commit list), the end-to-end tests, and the app's tests (new: the file tree, highlighting whole sides, the review message). Each step was looked at in a development build against live Claude (claude-agent-acp 0.94.0) at 1280×800, dark (and light for step 44), on a throwaway repository, with the dev daemon and app on `NUSHI_DATA`; the installed Nushi and its daemon were left alone. `make install` put the build in `~/Applications/Nushi.app` (and the iCloud copy).
 
 **What works**
-- 33, trim: one `Menu` for every menu (opens at once, no grow animation, digits, submenus), no ripples or Material elevation, shared dialog, diff view, reload logic and folder formatting. The app went from 6,623 to 6,364 lines of Dart; the goal of 6,000 wasn't reached (see "Step 33" below).
-- Scrolling fixes: a slow scroll up no longer snaps back (following stops at the first scroll up), the transcript lays out every item so the scrollbar thumb keeps its size, and scrolling is macOS-like everywhere (rubber-band ends, a thin overlay scrollbar that fades).
-- 34: menus over 10 rows get a focused Filter field (arrows, Enter, Escape clears then closes; the current value marked and first). A chat without messages shows its folder and a "New worktree" chip under the composer.
-- 35: Branch | Uncommitted is remembered per chat. A worktree chat with messages moved elsewhere (after a confirmation that says the worktree stays) keeps its worktree and branch, and Delete… offers them with the usual safe choices. Tried live end to end, including the forced removal.
-- 36: the panel's cards move by dragging their title row; the order is remembered; a click still collapses.
-- 37: a status row under the transcript while a turn runs: a breathing mark, what Claude is doing ("Running sleep 6; ls -la", "Reading x"), the time; "Waiting for you" in amber. The sidebar dot breathes while a chat works.
-- 38: agent questions one at a time with tabs and a Submit review; Claude got all three answers of a three-question form after going back and changing them.
-- 39: subagents show as live cards ("Explore: Explore alpha folder · Thinking · 3 tool calls · 9s") that open to their steps and report; the panel's Agents card lists them and scrolls to them. Tried with two parallel Explore subagents.
-- 40: the Context card's "By category" breakdown from a silent `/context`, refreshed after each turn; nothing shows in the transcript.
+- 41: the sidebar, the details panel, the side chat and the Changes file list have one draggable edge each (thin line, highlights on hover, resize cursor, limits); widths are remembered; a double-click resets.
+- 42: Changes lists files as a tree (folder chains joined, collapsible, totals) with status letters (A, U, D, R, M) and `+n −m`; a flat list (folder part dimmed) is a remembered switch; ↑/↓ move and keep the file in view. The daemon reports renames, untracked files and per-file counts.
+- 43: every repo chat gets Uncommitted | Branch | Commits. Tried as the demo asks: Claude committed twice on `feature/beds` and left one change; Branch showed all three files, Commits listed the two and showed each, a shift-click showed both as one range, Uncommitted showed one. The default (Branch when the branch has commits of its own) and the per-chat pick work; the Changes card counts what the view shows.
+- 44: diffs are highlighted per whole side off the UI thread, in the transcript's colors, light and dark; a multi-line Go comment and raw string and a Python docstring come out right.
+- 45: comments on one line and on a dragged range in two files, edited, then sent with a note: Claude got one message quoting both, fixed both, the diff updated and the comments showed dimmed as sent; changing the file afterwards dropped its sent comment. While Claude works the button reads "Send review (1) when Claude is done", disabled.
+- Fixes to step 40: the Context card asks `/context` only on its refresh button. Each ask stays in Claude's conversation (5–7k tokens; "Messages" went from 10 to 5.4k with no turn), so the automatic asks after every turn were filling every chat's context. And no ask before a chat's first message, which had Claude title a new chat "Skill listing token budget table".
 
 **What doesn't (yet)**
-- The app is 7,540 lines of Dart, over the old ~7,000 tripwire (see "Tripwires crossed"); `composer.dart` (408) and `question_card.dart` (402) are just over 400.
-- After a daemon restart a background subagent's steps and report aren't replayed (Claude keeps them in separate files), so its card shows "0 tool calls"; a foreground subagent wasn't seen (Claude chose the background each time). Background tasks (`async_task_*`) are sent only to AIR clients, so the Agents card lists subagents only.
-- Reduce motion wasn't tried with the setting on; only the dark theme was looked at.
-- Carried over: Delete leaves earlier sessions of chats moved before step 26; Claude leaves an empty history folder per deleted folder; dropping files untried; cost restarts near zero after a move or reload; no thoughts from Claude; copy across blocks loses line breaks; nothing runs after a reboot until the app opens.
+- Comments stay at the line numbers they were made on; if the file changes before they're sent, they can sit on the wrong lines (the message still quotes the right text).
+- A rename shows as one only when git sees both sides (staged or committed); a plain `mv` the agent doesn't stage shows as deleted plus untracked.
+- The side chat's resizable edge wasn't tried live (same widget as the others); the Changes view with a daemon older than API 27 wasn't tried (it shows Uncommitted only, no switch).
+- Python `def` and `class` names aren't colored, in diffs as in the transcript (highlight.js names their scope `title.function`).
+- Carried over: after a daemon restart a background subagent's steps and report aren't replayed; Reduce motion untried with the setting on; Delete leaves earlier sessions of chats moved before step 26; Claude leaves an empty history folder per deleted folder; dropping files untried; cost restarts near zero after a move or reload; no thoughts from Claude; copy across blocks loses line breaks; nothing runs after a reboot until the app opens.
 
 **Needs your decision**
-- The daemon's API went from 22 to 25 (23 several worktrees per chat, 24 subagents, 25 `/context`). The installed app shows "Restart daemon" until the running daemon is restarted; until then those features are off.
-- The trim fell short of 6,000; getting there would mean dropping behavior (older-daemon gating, reply-card editing, the side chat's own composer) or reformatting to a wider line.
-- Decisions to revisit, new in I (details in the list below): the Delete button's look; menus' filter and its threshold; the folder and worktree chip under a new chat's composer (both there and in the panel); the header no longer counts seconds (the status row does); questions' calmer look and single-question send-on-pick; the subagent heuristics (background agents, the handback's report, Claude-specific `_meta`); the silent `/context` and the wait it can put on a prompt ([ADR 0017](docs/adr/0017-context-breakdown-from-claude.md)).
+- The daemon's API went from 25 to 27 (26 per-file counts and renames, 27 commits and the default branch). The installed app shows "Restart daemon" until the running daemon is restarted; until then the Changes view shows Uncommitted only, without counts per file.
+- The Context card no longer refreshes its breakdown on its own (see above): it changed step 40's behavior because of the context cost. If you'd rather keep it automatic, it'd need a way to ask Claude for the breakdown that doesn't stay in the conversation.
+- Decisions to revisit, new in J (details in the list below): pane limits and the 5 px grab strip inside each pane; folders first in the tree, collapse not remembered, flat switch app-wide; the Changes toolbar; Branch on the default branch showing unpushed commits; a commit's diff from its first parent; the default scope rule; 200,000 characters as the highlighting limit; comments tied to the view they were made in, not moved when the file changes, kept by the app in `reviews.json`; when a sent comment goes away.
 
-**Size**: the app is 7,540 lines of Dart, plus 655 in packages; the daemon 3,456 lines of Go and the ACP client 800.
+**Size**: the app is 8,990 lines of Dart (7,561 before J), plus 655 in packages; the daemon 3,756 lines of Go (3,528) and the ACP client 800. Step 45 added about 580 lines, past the ~500 tripwire (see "Tripwires crossed"). `composer.dart` (408) and `question_card.dart` (402) are still just over 400; no new file is.
 
-**Left behind by the testing**: nothing (see the cleanup at the end of the run: the dev chats deleted with Delete, the dev data folder and throwaway repositories removed, Claude's empty history folders for them removed).
+**Dependencies**: `re_highlight` is now a direct dependency of the app (it was already in through `packages/markdown`).
+
+**Left behind by the testing**: nothing (the dev chat deleted with Delete, the dev data folder and the throwaway repository removed, Claude's empty history folder for it removed).
 
 ## Line counts
 
@@ -209,6 +209,17 @@ To try it beside an installed Nushi that's in use: `export NUSHI_DATA=~/Library/
 8. Ask: "Use two Explore subagents in parallel, one on folder a, one on folder b." Two live cards, the Agents card lists them; click one there to scroll to it; open a card for its steps and report.
 9. Open the Context card after a turn: "By category" with a bar and rows; send another prompt: it refreshes; the transcript has no `/context`.
 
+## Milestone J demo (steps 41–45): reviewing changes
+
+To try it beside an installed Nushi that's in use: `export NUSHI_DATA=~/Library/Application\ Support/Nushi\ Dev`, then `make run` (and `make stop` after). Otherwise `make install`, quit Nushi, and press "Restart daemon".
+
+1. Panes: drag the line right of the sidebar, left of the details panel, and (in Changes) right of the file list; each highlights under the pointer. Quit and reopen: the widths stay. Double-click one: back to its default.
+2. A throwaway repository: `mkdir -p /tmp/fruit && cd /tmp/fruit && git init -b main && printf 'package main\n\nimport "fmt"\n\nfunc main() {\n\tfmt.Println("hello")\n}\n' > main.go && mkdir -p app/lib && printf 'const fruit = ["apple"];\n' > app/lib/fruit.js && git add . && git commit -m init && git switch -c feature/kiwi`.
+3. New chat in `/tmp/fruit`. Ask: "Change hello to hi in main.go and commit it as 'Say hi'. Then add kiwi to fruit in app/lib/fruit.js and commit it as 'Add kiwi'. Then add a line '// TODO: more fruit' to main.go and leave it uncommitted."
+4. Changes: the toolbar says Branch (the branch has commits of its own): both files, `app/lib` as one folder, `+n −m` per file and folder, colors in the code. The list icon switches to a flat list; ↑/↓ move.
+5. Commits: "Add kiwi" and "Say hi"; click one, then shift-click the other: both files as one range. Uncommitted: only the TODO line. The panel's Changes card follows the scope.
+6. Review: in Uncommitted, click a line number on the right side of main.go, write "Use a constant for the greeting.", Enter. Drag over two line numbers of a file in Branch, comment, Enter (it shows only on Branch). The tree marks both files. "Send review (2)" ▸ add a note ▸ Send: the chat gets one message quoting both; when Claude is done the diff updates and the comments show dimmed, "· sent". While Claude works, the button reads "… when Claude is done".
+
 ## ACP quirks
 
 - `session/new` requires `mcpServers`: send `[]`, never `null`.
@@ -379,6 +390,7 @@ To try it beside an installed Nushi that's in use: `export NUSHI_DATA=~/Library/
 - Dart: `connectrpc`, `protobuf`, `http2` (API), `flutter_markdown_plus` (rendering replies), `file_selector` (the native folder picker).
 - Fonts (step 11): IBM Plex Sans and JetBrains Mono, bundled as assets (OFL).
 - Dart (step 12): `re_highlight` (syntax highlighting), `markdown` (already there through `flutter_markdown_plus`, now named), `url_launcher` (opening links).
+- Dart (step 44): `re_highlight` as a direct dependency of the app (it was in through `packages/markdown`), for highlighting diffs.
 - Dart (step 25): `pasteboard` (reading an image or files from the clipboard; Flutter's clipboard is text only) and `desktop_drop` (files dropped on the window). Both are small native plugins; each replaces writing a macOS method channel.
 
 ## Security notes to look at
@@ -390,6 +402,8 @@ To try it beside an installed Nushi that's in use: `export NUSHI_DATA=~/Library/
 - Agent text is rendered as markdown. Since step 25 its images show when they are local files (an absolute path or a `file:` URL, read as you; nothing leaves the machine) or `data:` URLs; a remote (http/https) image only loads after a click on its "Load image", one image at a time (an image URL in a tool's output could otherwise leak data to a server, or tell it when the reply was read). Links open in the default browser on click, http and https only (step 12); a link's text can differ from where it goes, as on any web page. (Both from the automated security review in step 4. Since step 13 diffs are no longer put into markdown, so the fence that guarded them is gone.)
 - Moving a chat (step 22) writes in Claude's own data: a copy of the session's transcript goes into `~/.claude/projects/<new folder>/` (mode 0600) for the length of the fork, then is removed; Claude writes the fork there. Nushi refuses session ids with path separators and never replaces a transcript already there; the original is only read.
 - Worktrees (steps 30–32) run `git worktree add/remove/prune`, `git branch -D` and `git status`/`rev-list` in the chat's repository, as you. `git worktree remove --force` and `git branch -D` past unmerged commits run only when the Delete request says to force, which the app sends only after showing what would be lost; the daemon checks again before acting. The base branch a client sends to `GetDiff`/`GetFolderStatus` is refused if it starts with `-`, so it can't become a git option.
+- Commits (step 43): `GetDiff` with `commit`/`since` and `ListCommits` run `git diff`, `git show`, `git log` and `git rev-parse` on the names the client sends; a name starting with `-` is refused so it can't become an option, as for the base. They read; nothing in the Changes view writes to git ([ADR 0019](docs/adr/0019-changes-read-only-toward-git.md)).
+- Review comments (step 45) go to the agent as an ordinary prompt the user sends; they quote the file's lines as the diff showed them.
 - The client token (`token`, mode 0600) sits next to the socket in a 0700 folder; any process running as you can read it ([ADR 0005](docs/adr/0005-clients-authenticate.md)).
 
 ## Working notes
