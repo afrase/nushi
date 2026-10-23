@@ -55,7 +55,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	hub := &events.Hub{}
 	st := store.New(dataDir)
 	svc := chats.New("fake", launch, st, st, copyHistory, git.Worktrees{}, filepath.Join(dataDir, "scratch"), hub.Publish)
-	srv := httptest.NewServer(api.Handler("tok", svc, hub))
+	srv := httptest.NewServer(api.Handler("tok", svc, nil, hub))
 	stop := func() {
 		srv.CloseClientConnections()
 		srv.Close()

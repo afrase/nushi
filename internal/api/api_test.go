@@ -13,7 +13,7 @@ import (
 )
 
 func TestPingNeedsToken(t *testing.T) {
-	srv := httptest.NewServer(Handler("secret", nil, nil))
+	srv := httptest.NewServer(Handler("secret", nil, nil, nil))
 	defer srv.Close()
 
 	ping := func(token string) error {

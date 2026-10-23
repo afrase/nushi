@@ -90,6 +90,9 @@ const (
 	// NushiServiceGetContextUsageProcedure is the fully-qualified name of the NushiService's
 	// GetContextUsage RPC.
 	NushiServiceGetContextUsageProcedure = "/nushi.v1.NushiService/GetContextUsage"
+	// NushiServiceListMcpServersProcedure is the fully-qualified name of the NushiService's
+	// ListMcpServers RPC.
+	NushiServiceListMcpServersProcedure = "/nushi.v1.NushiService/ListMcpServers"
 	// NushiServiceEventsProcedure is the fully-qualified name of the NushiService's Events RPC.
 	NushiServiceEventsProcedure = "/nushi.v1.NushiService/Events"
 )
@@ -170,6 +173,12 @@ type NushiServiceClient interface {
 	// Asks the chat's agent, unseen, what fills its context (Claude's
 	// /context), while the chat is idle (API 25).
 	GetContextUsage(context.Context, *connect.Request[v1.GetContextUsageRequest]) (*connect.Response[v1.GetContextUsageResponse], error)
+	// Lists the MCP servers the agent's config gives a folder, read from the
+	// agent's own files, env and header values masked. With check_health, the
+	// agent connects to each and says how that went (Claude's `claude mcp list`,
+	// seconds), and servers only it knows (plugins', claude.ai connectors)
+	// are added (API 32).
+	ListMcpServers(context.Context, *connect.Request[v1.ListMcpServersRequest]) (*connect.Response[v1.ListMcpServersResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
 	Events(context.Context, *connect.Request[v1.EventsRequest]) (*connect.ServerStreamForClient[v1.EventsResponse], error)
@@ -330,6 +339,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("GetContextUsage")),
 			connect.WithClientOptions(opts...),
 		),
+		listMcpServers: connect.NewClient[v1.ListMcpServersRequest, v1.ListMcpServersResponse](
+			httpClient,
+			baseURL+NushiServiceListMcpServersProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ListMcpServers")),
+			connect.WithClientOptions(opts...),
+		),
 		events: connect.NewClient[v1.EventsRequest, v1.EventsResponse](
 			httpClient,
 			baseURL+NushiServiceEventsProcedure,
@@ -365,6 +380,7 @@ type nushiServiceClient struct {
 	getFolderStatus  *connect.Client[v1.GetFolderStatusRequest, v1.GetFolderStatusResponse]
 	listFiles        *connect.Client[v1.ListFilesRequest, v1.ListFilesResponse]
 	getContextUsage  *connect.Client[v1.GetContextUsageRequest, v1.GetContextUsageResponse]
+	listMcpServers   *connect.Client[v1.ListMcpServersRequest, v1.ListMcpServersResponse]
 	events           *connect.Client[v1.EventsRequest, v1.EventsResponse]
 }
 
@@ -488,6 +504,11 @@ func (c *nushiServiceClient) GetContextUsage(ctx context.Context, req *connect.R
 	return c.getContextUsage.CallUnary(ctx, req)
 }
 
+// ListMcpServers calls nushi.v1.NushiService.ListMcpServers.
+func (c *nushiServiceClient) ListMcpServers(ctx context.Context, req *connect.Request[v1.ListMcpServersRequest]) (*connect.Response[v1.ListMcpServersResponse], error) {
+	return c.listMcpServers.CallUnary(ctx, req)
+}
+
 // Events calls nushi.v1.NushiService.Events.
 func (c *nushiServiceClient) Events(ctx context.Context, req *connect.Request[v1.EventsRequest]) (*connect.ServerStreamForClient[v1.EventsResponse], error) {
 	return c.events.CallServerStream(ctx, req)
@@ -569,6 +590,12 @@ type NushiServiceHandler interface {
 	// Asks the chat's agent, unseen, what fills its context (Claude's
 	// /context), while the chat is idle (API 25).
 	GetContextUsage(context.Context, *connect.Request[v1.GetContextUsageRequest]) (*connect.Response[v1.GetContextUsageResponse], error)
+	// Lists the MCP servers the agent's config gives a folder, read from the
+	// agent's own files, env and header values masked. With check_health, the
+	// agent connects to each and says how that went (Claude's `claude mcp list`,
+	// seconds), and servers only it knows (plugins', claude.ai connectors)
+	// are added (API 32).
+	ListMcpServers(context.Context, *connect.Request[v1.ListMcpServersRequest]) (*connect.Response[v1.ListMcpServersResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
 	Events(context.Context, *connect.Request[v1.EventsRequest], *connect.ServerStream[v1.EventsResponse]) error
@@ -725,6 +752,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("GetContextUsage")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceListMcpServersHandler := connect.NewUnaryHandler(
+		NushiServiceListMcpServersProcedure,
+		svc.ListMcpServers,
+		connect.WithSchema(nushiServiceMethods.ByName("ListMcpServers")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceEventsHandler := connect.NewServerStreamHandler(
 		NushiServiceEventsProcedure,
 		svc.Events,
@@ -781,6 +814,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceListFilesHandler.ServeHTTP(w, r)
 		case NushiServiceGetContextUsageProcedure:
 			nushiServiceGetContextUsageHandler.ServeHTTP(w, r)
+		case NushiServiceListMcpServersProcedure:
+			nushiServiceListMcpServersHandler.ServeHTTP(w, r)
 		case NushiServiceEventsProcedure:
 			nushiServiceEventsHandler.ServeHTTP(w, r)
 		default:
@@ -886,6 +921,10 @@ func (UnimplementedNushiServiceHandler) ListFiles(context.Context, *connect.Requ
 
 func (UnimplementedNushiServiceHandler) GetContextUsage(context.Context, *connect.Request[v1.GetContextUsageRequest]) (*connect.Response[v1.GetContextUsageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetContextUsage is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ListMcpServers(context.Context, *connect.Request[v1.ListMcpServersRequest]) (*connect.Response[v1.ListMcpServersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ListMcpServers is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) Events(context.Context, *connect.Request[v1.EventsRequest], *connect.ServerStream[v1.EventsResponse]) error {

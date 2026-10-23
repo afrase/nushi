@@ -9,6 +9,7 @@ import 'chat_view.dart';
 import 'daemon.dart';
 import 'details_panel.dart';
 import 'folder_button.dart';
+import 'mcp.dart';
 import 'menu.dart';
 import 'panes.dart';
 import 'settings.dart';
@@ -102,7 +103,9 @@ class _Shell extends StatelessWidget {
               child: Sidebar(daemon: daemon),
             ),
             Expanded(
-              child: chat == null
+              child: daemon.mcpFolder != null
+                  ? McpView(daemon: daemon, folder: daemon.mcpFolder!)
+                  : chat == null
                   ? Center(
                       child: Text(
                         'Start a chat',

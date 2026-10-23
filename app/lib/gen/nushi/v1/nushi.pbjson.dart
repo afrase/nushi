@@ -1018,6 +1018,63 @@ final $typed_data.Uint8List getContextUsageResponseDescriptor = $convert.base64D
     'EuQ29udGV4dENhdGVnb3J5UgpjYXRlZ29yaWVzEhoKCG1hcmtkb3duGAIgASgJUghtYXJrZG93'
     'bg==');
 
+@$core.Deprecated('Use listMcpServersRequestDescriptor instead')
+const ListMcpServersRequest$json = {
+  '1': 'ListMcpServersRequest',
+  '2': [
+    {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
+    {'1': 'check_health', '3': 2, '4': 1, '5': 8, '10': 'checkHealth'},
+  ],
+};
+
+/// Descriptor for `ListMcpServersRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listMcpServersRequestDescriptor = $convert.base64Decode(
+    'ChVMaXN0TWNwU2VydmVyc1JlcXVlc3QSFgoGZm9sZGVyGAEgASgJUgZmb2xkZXISIQoMY2hlY2'
+    'tfaGVhbHRoGAIgASgIUgtjaGVja0hlYWx0aA==');
+
+@$core.Deprecated('Use listMcpServersResponseDescriptor instead')
+const ListMcpServersResponse$json = {
+  '1': 'ListMcpServersResponse',
+  '2': [
+    {
+      '1': 'servers',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.McpServer',
+      '10': 'servers'
+    },
+    {'1': 'check_error', '3': 2, '4': 1, '5': 9, '10': 'checkError'},
+  ],
+};
+
+/// Descriptor for `ListMcpServersResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listMcpServersResponseDescriptor =
+    $convert.base64Decode(
+        'ChZMaXN0TWNwU2VydmVyc1Jlc3BvbnNlEi0KB3NlcnZlcnMYASADKAsyEy5udXNoaS52MS5NY3'
+        'BTZXJ2ZXJSB3NlcnZlcnMSHwoLY2hlY2tfZXJyb3IYAiABKAlSCmNoZWNrRXJyb3I=');
+
+@$core.Deprecated('Use mcpServerDescriptor instead')
+const McpServer$json = {
+  '1': 'McpServer',
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'scope', '3': 2, '4': 1, '5': 9, '10': 'scope'},
+    {'1': 'source', '3': 3, '4': 1, '5': 9, '10': 'source'},
+    {'1': 'config_json', '3': 4, '4': 1, '5': 9, '10': 'configJson'},
+    {'1': 'state', '3': 5, '4': 1, '5': 9, '10': 'state'},
+    {'1': 'detail', '3': 6, '4': 1, '5': 9, '10': 'detail'},
+    {'1': 'shadowed', '3': 7, '4': 1, '5': 8, '10': 'shadowed'},
+  ],
+};
+
+/// Descriptor for `McpServer`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List mcpServerDescriptor = $convert.base64Decode(
+    'CglNY3BTZXJ2ZXISEgoEbmFtZRgBIAEoCVIEbmFtZRIUCgVzY29wZRgCIAEoCVIFc2NvcGUSFg'
+    'oGc291cmNlGAMgASgJUgZzb3VyY2USHwoLY29uZmlnX2pzb24YBCABKAlSCmNvbmZpZ0pzb24S'
+    'FAoFc3RhdGUYBSABKAlSBXN0YXRlEhYKBmRldGFpbBgGIAEoCVIGZGV0YWlsEhoKCHNoYWRvd2'
+    'VkGAcgASgIUghzaGFkb3dlZA==');
+
 @$core.Deprecated('Use contextCategoryDescriptor instead')
 const ContextCategory$json = {
   '1': 'ContextCategory',
@@ -1641,6 +1698,11 @@ const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
       '3': '.nushi.v1.GetContextUsageResponse'
     },
     {
+      '1': 'ListMcpServers',
+      '2': '.nushi.v1.ListMcpServersRequest',
+      '3': '.nushi.v1.ListMcpServersResponse'
+    },
+    {
       '1': 'Events',
       '2': '.nushi.v1.EventsRequest',
       '3': '.nushi.v1.EventsResponse',
@@ -1722,6 +1784,9 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.GetContextUsageRequest': GetContextUsageRequest$json,
   '.nushi.v1.GetContextUsageResponse': GetContextUsageResponse$json,
   '.nushi.v1.ContextCategory': ContextCategory$json,
+  '.nushi.v1.ListMcpServersRequest': ListMcpServersRequest$json,
+  '.nushi.v1.ListMcpServersResponse': ListMcpServersResponse$json,
+  '.nushi.v1.McpServer': McpServer$json,
   '.nushi.v1.EventsRequest': EventsRequest$json,
   '.nushi.v1.EventsResponse': EventsResponse$json,
   '.nushi.v1.ItemEvent': ItemEvent$json,
@@ -1763,5 +1828,7 @@ final $typed_data.Uint8List nushiServiceDescriptor = $convert.base64Decode(
     'ohLm51c2hpLnYxLkdldEZvbGRlclN0YXR1c1Jlc3BvbnNlEkQKCUxpc3RGaWxlcxIaLm51c2hp'
     'LnYxLkxpc3RGaWxlc1JlcXVlc3QaGy5udXNoaS52MS5MaXN0RmlsZXNSZXNwb25zZRJWCg9HZX'
     'RDb250ZXh0VXNhZ2USIC5udXNoaS52MS5HZXRDb250ZXh0VXNhZ2VSZXF1ZXN0GiEubnVzaGku'
-    'djEuR2V0Q29udGV4dFVzYWdlUmVzcG9uc2USPQoGRXZlbnRzEhcubnVzaGkudjEuRXZlbnRzUm'
-    'VxdWVzdBoYLm51c2hpLnYxLkV2ZW50c1Jlc3BvbnNlMAE=');
+    'djEuR2V0Q29udGV4dFVzYWdlUmVzcG9uc2USUwoOTGlzdE1jcFNlcnZlcnMSHy5udXNoaS52MS'
+    '5MaXN0TWNwU2VydmVyc1JlcXVlc3QaIC5udXNoaS52MS5MaXN0TWNwU2VydmVyc1Jlc3BvbnNl'
+    'Ej0KBkV2ZW50cxIXLm51c2hpLnYxLkV2ZW50c1JlcXVlc3QaGC5udXNoaS52MS5FdmVudHNSZX'
+    'Nwb25zZTAB');

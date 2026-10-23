@@ -251,3 +251,22 @@ type FolderStatus struct {
 	Branch                string
 	Files, Added, Removed int
 }
+
+// MCPServer is an MCP server the agent's config gives a folder.
+type MCPServer struct {
+	Name string
+	// Scope is where it is configured: "user", "project", "local",
+	// "plugin", "claudeai" (a claude.ai connector), or "other".
+	Scope string
+	// Source is the file (or, for local scope, the project folder) that
+	// has it.
+	Source string
+	// Config is its config as JSON, with env and header values masked.
+	Config string
+	// State is how connecting to it went, once checked: "connected",
+	// "failed", "needs_auth", "pending" (approval), "disabled" or
+	// "unknown". Detail is the agent's words on it.
+	State, Detail string
+	// Shadowed says a server of the same name in a scope that wins hides it.
+	Shadowed bool
+}
