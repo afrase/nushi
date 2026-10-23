@@ -51,8 +51,7 @@ func (s *Service) ContextUsage(ctx context.Context, chatID string) (string, erro
 	c.silent = run
 	c.mu.Unlock()
 
-	_, err = agent.Prompt(ctx, acp.PromptRequest{SessionID: acp.SessionID(sid),
-		Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "/context"}}}})
+	err = prompt(ctx, agent, acp.SessionID(sid), "/context")
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.silent = nil
@@ -90,8 +89,7 @@ func (c *chat) contextInFork(ctx context.Context, agent Agent, sid, folder strin
 		delete(c.probes, string(fork))
 		c.mu.Unlock()
 	}()
-	if _, err := agent.Prompt(ctx, acp.PromptRequest{SessionID: fork,
-		Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "/context"}}}}); err != nil {
+	if err := prompt(ctx, agent, fork, "/context"); err != nil {
 		return "", err
 	}
 	c.mu.Lock()
@@ -127,4 +125,13 @@ func (c *chat) waitSilentLocked() {
 		<-done
 		c.mu.Lock()
 	}
+}
+
+// prompt sends text to session sid and waits for the turn to end.
+func prompt(ctx context.Context, agent Agent, sid acp.SessionID, text string) error {
+	wait, err := agent.StartPrompt(acp.PromptRequest{SessionID: sid, Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: text}}}})
+	if err == nil {
+		_, err = wait(ctx)
+	}
+	return err
 }

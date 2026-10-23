@@ -83,11 +83,36 @@ func initialize(ctx context.Context, launch Launch, h acp.Handler) (Agent, *acp.
 	return agent, init, nil
 }
 
-// useLocked makes an opened session the chat's.
-func (c *chat) useLocked(o opened) {
+// useLocked makes an opened session the chat's, on a new agent.
+func (s *Service) useLocked(c *chat, o opened) {
 	c.agent, c.canFork, c.steer, c.canImage, c.sid, c.config = o.agent, o.agent.CanFork(), o.agent.CanSteer(), o.images, o.sid, o.config
-	c.canRewind = o.rewind
+	c.canRewind, c.held = o.rewind, false
 	c.emitLocked(model.Event{ChatID: c.id, Config: slices.Clone(c.config)})
+	go s.watch(c, o.agent)
+}
+
+// watch notices the agent's process ending on its own: the chat lets go of
+// it and says so, its side chats end, and the next message (or opening the
+// chat) reopens the session through session/load. An agent Nushi stopped or
+// replaced is no longer the chat's by then.
+func (s *Service) watch(c *chat, agent Agent) {
+	<-agent.Done()
+	c.mu.Lock()
+	if c.agent != agent {
+		c.mu.Unlock()
+		return
+	}
+	c.agent, c.kept = nil, true
+	for i, it := range c.items { // they won't finish now
+		if it.Kind == model.ToolCall && (it.Status == "pending" || it.Status == "in_progress") {
+			c.items[i].Status = "failed"
+			c.publishLocked(c.items[i])
+		}
+	}
+	c.noticeLocked("error", "The agent quit unexpectedly. Your next message reopens the chat.")
+	c.statusChangedLocked()
+	c.mu.Unlock()
+	s.dropSides(c)
 }
 
 // disconnect stops the chat's agent.

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -32,6 +33,7 @@ import (
 type daemon struct {
 	url  string
 	stop func()
+	kill func() // ends the last agent started, as if its process died
 }
 
 // pipeAgent is a fake agent "process": closing it closes its pipes.
@@ -44,9 +46,14 @@ func (p pipeAgent) Close() error { return p.toAgent.Close() }
 
 func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHistory chats.CopyHistory) *daemon {
 	t.Helper()
+	var mu sync.Mutex
+	var kill func()
 	launch := func(h acp.Handler) (chats.Agent, error) {
 		toAgentR, toAgentW := io.Pipe()
 		fromAgentR, fromAgentW := io.Pipe()
+		mu.Lock()
+		kill = func() { toAgentR.Close(); fromAgentW.Close() }
+		mu.Unlock()
 		go func() {
 			(&acptest.Agent{History: history}).Serve(toAgentR, fromAgentW)
 			fromAgentW.Close()
@@ -63,7 +70,11 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 		svc.Close()
 	}
 	t.Cleanup(stop)
-	return &daemon{url: srv.URL, stop: stop}
+	return &daemon{url: srv.URL, stop: stop, kill: func() {
+		mu.Lock()
+		defer mu.Unlock()
+		kill()
+	}}
 }
 
 type bearer struct{}

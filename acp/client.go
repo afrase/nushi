@@ -146,8 +146,25 @@ func (c *Client) LoadSession(ctx context.Context, req LoadSessionRequest) (*Load
 }
 
 func (c *Client) Prompt(ctx context.Context, req PromptRequest) (*PromptResult, error) {
-	var resp PromptResult
-	return &resp, c.conn.call(ctx, "session/prompt", req, &resp)
+	wait, err := c.StartPrompt(req)
+	if err != nil {
+		return nil, err
+	}
+	return wait(ctx)
+}
+
+// StartPrompt sends a prompt and returns once it is written to the agent,
+// so a session/cancel sent after it can't reach the agent first; wait
+// returns the turn's result when it ends.
+func (c *Client) StartPrompt(req PromptRequest) (wait func(context.Context) (*PromptResult, error), err error) {
+	w, err := c.conn.send("session/prompt", req)
+	if err != nil {
+		return nil, err
+	}
+	return func(ctx context.Context) (*PromptResult, error) {
+		var resp PromptResult
+		return &resp, w(ctx, &resp)
+	}, nil
 }
 
 // Cancel asks the agent to stop the session's running turn, whose prompt

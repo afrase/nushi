@@ -74,14 +74,14 @@ func (c *conn) read(r io.Reader) {
 		err = io.ErrUnexpectedEOF
 	}
 	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.err = fmt.Errorf("agent connection closed: %w", err)
+	c.cancel()
+	close(c.done) // before the calls fail, so a failed call can tell why
 	for id, ch := range c.pending {
 		close(ch)
 		delete(c.pending, id)
 	}
-	c.mu.Unlock()
-	c.cancel()
-	close(c.done)
 }
 
 func (c *conn) dispatch(line []byte) {
@@ -142,15 +142,25 @@ func (c *conn) write(f frame) error {
 
 // call sends a request and decodes its result into result (unless nil).
 func (c *conn) call(ctx context.Context, method string, params, result any) error {
-	p, err := json.Marshal(params)
+	wait, err := c.send(method, params)
 	if err != nil {
 		return err
+	}
+	return wait(ctx, result)
+}
+
+// send writes a request and returns once it is written; wait then waits
+// for its result and decodes it into result (unless nil).
+func (c *conn) send(method string, params any) (wait func(ctx context.Context, result any) error, err error) {
+	p, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
 	}
 	ch := make(chan frame, 1)
 	c.mu.Lock()
 	if c.err != nil {
 		c.mu.Unlock()
-		return c.err
+		return nil, c.err
 	}
 	c.nextID++
 	id := json.RawMessage(strconv.FormatInt(c.nextID, 10))
@@ -159,8 +169,12 @@ func (c *conn) call(ctx context.Context, method string, params, result any) erro
 
 	if err := c.write(frame{JSONRPC: "2.0", ID: id, Method: method, Params: p}); err != nil {
 		c.forget(id)
-		return fmt.Errorf("%s: %w", method, err)
+		return nil, fmt.Errorf("%s: %w", method, err)
 	}
+	return func(ctx context.Context, result any) error { return c.await(ctx, method, id, ch, result) }, nil
+}
+
+func (c *conn) await(ctx context.Context, method string, id json.RawMessage, ch chan frame, result any) error {
 	select {
 	case f, ok := <-ch:
 		if !ok {

@@ -23,7 +23,8 @@ type Agent interface {
 	Initialize(context.Context, acp.InitializeRequest) (*acp.InitializeResponse, error)
 	NewSession(context.Context, acp.NewSessionRequest) (*acp.NewSessionResponse, error)
 	LoadSession(context.Context, acp.LoadSessionRequest) (*acp.LoadSessionResponse, error)
-	Prompt(context.Context, acp.PromptRequest) (*acp.PromptResult, error)
+	// StartPrompt returns once the prompt is written; wait returns its result.
+	StartPrompt(acp.PromptRequest) (wait func(context.Context) (*acp.PromptResult, error), err error)
 	SetConfigOption(context.Context, acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error)
 	SetMode(context.Context, acp.SetSessionModeRequest) error
 	Cancel(acp.CancelNotification) error
@@ -34,6 +35,7 @@ type Agent interface {
 	CloseSession(context.Context, acp.CloseSessionRequest) error
 	DeleteSession(context.Context, acp.DeleteSessionRequest) error
 	Close() error
+	Done() <-chan struct{} // closed when the agent's process ends
 }
 
 // Launch starts an agent; its session updates go to h.
@@ -82,6 +84,11 @@ type chat struct {
 	mu        sync.Mutex
 	items     []model.Item
 	busy      bool                            // running a turn, or reopening or moving the session
+	halting   bool                            // being deleted: never reopens
+	stopping  bool                            // its agent is being stopped: nothing more goes to it
+	held      bool                            // the last turn was stopped or failed: the queue waits for the next
+	steering  bool                            // a steering worker hands the queue to the running turn
+	kept      bool                            // the transcript outlived its agent: reopening doesn't replay into it
 	waiting   map[string]chan<- string        // permission prompts by item id, for the picked option
 	questions map[string]chan<- []model.Field // questions by item id, for the answer (nil: declined)
 	config    []model.ConfigOption
@@ -94,6 +101,7 @@ type chat struct {
 	parent    *chat                 // a side chat's chat
 	started   time.Time             // when the running turn started
 	done      chan struct{}         // closed when the running turn ends
+	sent      chan struct{}         // closed once the running turn's prompt is written
 	seq       int64                 // the last event's number
 	silent    *silentRun            // a prompt Nushi sent on its own, running
 	probes    map[string]*silentRun // throwaway forks' runs, by session id
@@ -164,10 +172,10 @@ func (s *Service) Start(ctx context.Context, folder string, worktree bool) (stri
 		return "", err
 	}
 	c.mu.Lock()
-	c.useLocked(o)
+	s.useLocked(c, o)
 	c.session = model.Session{ID: c.id, SessionID: o.sid, Agent: s.agent, Folder: folder, Created: time.Now(), Worktree: wt}
 	c.mu.Unlock()
-	if err := c.startMode(ctx, s.modes.Mode(s.agent)); err != nil {
+	if err := c.startMode(ctx, o.agent, o.sid, s.modes.Mode(s.agent)); err != nil {
 		log.Printf("chat %s: starting mode: %v", c.id, err) // the chat keeps the agent's default
 	}
 	c.mu.Lock()
@@ -265,14 +273,8 @@ func (c *chat) statusChangedLocked() {
 	c.emitLocked(model.Event{ChatID: c.id, Status: &st})
 }
 
-// cancel stops the chat's running turn: the agent is told to stop, and the
-// prompts it waits on are cancelled, as ACP asks of a client.
-func (c *chat) cancel() error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return c.cancelLocked()
-}
-
+// cancelLocked stops the chat's running turn: the agent is told to stop,
+// and the prompts it waits on are cancelled, as ACP asks of a client.
 func (c *chat) cancelLocked() error {
 	if c.started.IsZero() || c.agent == nil {
 		return nil // no turn runs
@@ -285,7 +287,20 @@ func (c *chat) cancelLocked() error {
 	}
 	clear(c.waiting)
 	clear(c.questions)
-	return c.agent.Cancel(acp.CancelNotification{SessionID: acp.SessionID(c.sid)})
+	agent, cancel := c.agent, acp.CancelNotification{SessionID: acp.SessionID(c.sid)}
+	select {
+	case <-c.sent:
+		return agent.Cancel(cancel)
+	default: // the cancel must not reach the agent before the prompt
+		sent := c.sent
+		go func() {
+			<-sent
+			if err := agent.Cancel(cancel); err != nil {
+				log.Printf("chat %s: cancelling: %v", c.id, err)
+			}
+		}()
+		return nil
+	}
 }
 
 // itemLocked returns the item with id, or nil.

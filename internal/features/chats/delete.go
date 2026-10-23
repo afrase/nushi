@@ -105,7 +105,7 @@ func (s *Service) Delete(ctx context.Context, chatID string, opts DeleteOptions)
 	if err != nil {
 		return err
 	}
-	c, archived, err := s.halt(chatID)
+	c, err := s.halt(chatID)
 	if err != nil {
 		return err
 	}
@@ -121,18 +121,18 @@ func (s *Service) Delete(ctx context.Context, chatID string, opts DeleteOptions)
 	if err == nil && p.History {
 		err = s.deleteHistory(ctx, c, p.Sessions)
 	}
+	if err == nil && p.Scratch != "" {
+		err = os.RemoveAll(p.Scratch)
+	}
+	if err == nil {
+		err = s.forget(c)
+	}
 	if err != nil {
 		c.mu.Lock()
-		c.session.Archived = archived // it may reopen
+		c.halting = false // it may reopen
 		c.mu.Unlock()
-		return err
 	}
-	if p.Scratch != "" {
-		if err := os.RemoveAll(p.Scratch); err != nil {
-			return err
-		}
-	}
-	return s.forget(c)
+	return err
 }
 
 // deleteHistory has a new agent delete its history of sessions.

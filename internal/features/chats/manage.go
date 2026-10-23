@@ -47,7 +47,7 @@ func (s *Service) Archive(chatID string, archived bool) error {
 		return errReopening
 	}
 	if !archived && c.session.Archived {
-		c.items = nil
+		c.items, c.kept = nil, false
 	}
 	c.saveLocked(func(s *model.Session) { s.Archived = archived })
 	c.mu.Unlock()
@@ -61,30 +61,29 @@ func (s *Service) Archive(chatID string, archived bool) error {
 // Remove forgets a chat: its agent stops and its session file goes. The
 // agent's own history of the session stays.
 func (s *Service) Remove(chatID string) error {
-	c, _, err := s.halt(chatID)
+	c, err := s.halt(chatID)
 	if err != nil {
 		return err
 	}
 	return s.forget(c)
 }
 
-// halt stops a chat's agent for good, before the chat goes, and says
-// whether the chat was archived.
-func (s *Service) halt(chatID string) (*chat, bool, error) {
+// halt stops a chat's agent for good, before the chat goes. The chat
+// doesn't reopen until it is forgotten, or unhalted if it stays.
+func (s *Service) halt(chatID string) (*chat, error) {
 	c, err := s.stored(chatID)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 	c.mu.Lock()
 	if c.reopeningLocked() {
 		c.mu.Unlock()
-		return nil, false, errReopening
+		return nil, errReopening
 	}
-	archived := c.session.Archived
-	c.session.Archived = true // keeps it from reopening while it stops
+	c.halting = true
 	c.mu.Unlock()
 	s.stop(c)
-	return c, archived, nil
+	return c, nil
 }
 
 // forget removes a halted chat's session file and tells the app it's gone.
@@ -106,12 +105,15 @@ var errReopening = errors.New("the chat is still reopening; try again in a momen
 func (c *chat) reopeningLocked() bool { return c.busy && c.started.IsZero() }
 
 // stop ends a chat's agent and its side chats. A running turn is cancelled
-// first, and the agent gets a few seconds to end it.
+// first, and the agent gets a few seconds to end it; nothing from the queue
+// goes to the agent meanwhile, and the queue is emptied.
 func (s *Service) stop(c *chat) {
 	c.mu.Lock()
-	done := c.done
+	c.stopping = true
+	done, running := c.done, !c.started.IsZero()
+	err := c.cancelLocked()
 	c.mu.Unlock()
-	if err := c.cancel(); err == nil && done != nil {
+	if err == nil && running {
 		select {
 		case <-done:
 		case <-time.After(5 * time.Second):
@@ -120,9 +122,10 @@ func (s *Service) stop(c *chat) {
 	s.dropSides(c)
 	c.disconnect()
 	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.stopping = false
 	c.queue = nil
 	c.queueChangedLocked()
-	c.mu.Unlock()
 }
 
 // dropSides forgets a chat's side chats, whose agent is about to stop.
