@@ -6,6 +6,7 @@ import 'daemon.dart';
 import 'folder_button.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'menu.dart';
+import 'terminals.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
 import 'worktree.dart';
@@ -167,6 +168,11 @@ class _DeleteDialogState extends State<_DeleteDialog> {
                 line(tildePath(p.scratchFolder), mono: true),
               ],
               line('• Nushi’s record of the chat.'),
+              if (p.terminals.isNotEmpty) ...[
+                line('• Its terminals, and what still runs in them:'),
+                for (final term in p.terminals)
+                  line(terminalName(term), mono: true),
+              ],
               for (final (i, w) in _worktrees.indexed) ...[
                 if (i > 0 || !p.hasWorktree())
                   line('A worktree it ran in before it moved:')
