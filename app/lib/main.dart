@@ -167,6 +167,7 @@ class _ChatPaneState extends State<_ChatPane> {
               child: TerminalArea(
                 chat: widget.chat,
                 daemon: widget.daemon,
+                onChanges: () => setState(() => _changes = true),
                 child: _changes
                     ? ChangesView(chat: widget.chat, daemon: widget.daemon)
                     : ChatView(

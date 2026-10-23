@@ -118,6 +118,8 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
     if (!chat.busy) forgetChanged(chat.id, _where, files);
     setState(() {
       _files = files;
+      if (_files.any((f) => f.path == chat.openPath)) _path = chat.openPath;
+      chat.openPath = null;
       if (!_files.any((f) => f.path == _path)) {
         _path = changeRows(
           _files,

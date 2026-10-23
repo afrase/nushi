@@ -2,19 +2,24 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:xterm2/xterm.dart';
 
+import 'changes_span.dart';
 import 'chat.dart';
 import 'daemon.dart';
-import 'gen/nushi/v1/nushi.pb.dart' as pb;
+import 'gen/nushi/v1/nushi.pb.dart' show GetDiffRequest;
 import 'panes.dart';
 import 'settings.dart';
+import 'terminal_screen.dart';
 import 'terminal_tabs.dart';
 import 'terminals.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
 
-const _toggleKey = SingleActivator(LogicalKeyboardKey.backquote, control: true);
+/// ⌃`: shows or hides the terminal panel.
+const toggleTerminalKey = SingleActivator(
+  LogicalKeyboardKey.backquote,
+  control: true,
+);
 
 /// Shows or hides a chat's terminal panel.
 void toggleTerminal(String chatId) {
@@ -22,6 +27,16 @@ void toggleTerminal(String chatId) {
   terminalChats.value = open.contains(chatId)
       ? ({...open}..remove(chatId))
       : {...open, chatId};
+}
+
+/// Opens a terminal for [chat] in [folder] and shows its panel.
+Future<void> openTerminalIn(
+  Daemon daemon,
+  ChatState chat,
+  String folder,
+) async {
+  await daemon.terminals.open(chat.id, folder: folder);
+  if (!terminalChats.value.contains(chat.id)) toggleTerminal(chat.id);
 }
 
 /// The header's button for the terminal panel.
@@ -62,11 +77,13 @@ class TerminalArea extends StatefulWidget {
     super.key,
     required this.chat,
     required this.daemon,
+    required this.onChanges,
     required this.child,
   });
 
   final ChatState chat;
   final Daemon daemon;
+  final VoidCallback onChanges; // shows the Changes view
   final Widget child;
 
   @override
@@ -83,6 +100,24 @@ class _TerminalAreaState extends State<TerminalArea> {
     toggleTerminal(widget.chat.id);
   }
 
+  // A file the Changes view lists (in Commits: what's uncommitted) shows
+  // there.
+  Future<bool> _showChange(String path) async {
+    final chat = widget.chat;
+    if (!path.startsWith('${chat.folder}/')) return false;
+    final rel = path.substring(chat.folder.length + 1);
+    final span = await ChangeSpan.of(widget.daemon, chat);
+    final branch = span.scope == Scope.branch;
+    final diff = await widget.daemon.client.getDiff(
+      GetDiffRequest(folder: chat.folder, base: branch ? span.base : null),
+    );
+    if (!diff.files.any((f) => f.path == rel)) return false;
+    if (span.scope == Scope.commits) chat.scope = Scope.uncommitted.name;
+    chat.showFile(rel);
+    widget.onChanges();
+    return true;
+  }
+
   @override
   void dispose() {
     _focus.dispose();
@@ -91,7 +126,7 @@ class _TerminalAreaState extends State<TerminalArea> {
 
   @override
   Widget build(BuildContext context) => CallbackShortcuts(
-    bindings: {_toggleKey: _toggle},
+    bindings: {toggleTerminalKey: _toggle},
     child: Focus(
       focusNode: _focus,
       child: ValueListenableBuilder(
@@ -114,6 +149,7 @@ class _TerminalAreaState extends State<TerminalArea> {
                     chatId: widget.chat.id,
                     terms: widget.daemon.terminals,
                     onHide: _toggle,
+                    showChange: _showChange,
                   ),
                 ),
             ],
@@ -131,9 +167,14 @@ class TerminalPanel extends StatefulWidget {
     required this.chatId,
     required this.terms,
     required this.onHide,
+    required this.showChange,
   });
 
   final String chatId;
+
+  /// Shows a file (an absolute path) in the Changes view if it's changed,
+  /// and says whether it did.
+  final Future<bool> Function(String path) showChange;
   final Terminals terms;
   final VoidCallback onHide;
 
@@ -209,12 +250,13 @@ class _PanelState extends State<TerminalPanel> {
               Expanded(
                 child: shown == null
                     ? const SizedBox.shrink()
-                    : _Screen(
+                    : TerminalScreen(
                         key: ValueKey(shown.id),
                         info: shown,
                         list: list,
                         terms: widget.terms,
                         onHide: widget.onHide,
+                        showChange: widget.showChange,
                       ),
               ),
             ],
@@ -223,134 +265,4 @@ class _PanelState extends State<TerminalPanel> {
       },
     );
   }
-}
-
-/// One terminal's screen, and its exit with Restart once its shell ended.
-class _Screen extends StatelessWidget {
-  const _Screen({
-    super.key,
-    required this.info,
-    required this.list,
-    required this.terms,
-    required this.onHide,
-  });
-
-  final pb.Terminal info;
-  final List<pb.Terminal> list;
-  final Terminals terms;
-  final VoidCallback onHide;
-
-  /// The keys the panel keeps for itself; the rest go to the shell.
-  Map<ShortcutActivator, Intent> _keys(BuildContext context, TermSession s) {
-    SingleActivator cmd(LogicalKeyboardKey key) =>
-        SingleActivator(key, meta: true);
-    return {
-      cmd(LogicalKeyboardKey.keyC): CopySelectionTextIntent.copy,
-      cmd(LogicalKeyboardKey.keyV): const PasteTextIntent(
-        SelectionChangedCause.keyboard,
-      ),
-      cmd(LogicalKeyboardKey.keyK): VoidCallbackIntent(s.terminal.clear),
-      cmd(LogicalKeyboardKey.keyT): VoidCallbackIntent(
-        () => tryOrShow(context, () => terms.open(info.chatId)),
-      ),
-      cmd(LogicalKeyboardKey.keyW): VoidCallbackIntent(
-        () => closeTerminal(context, terms, info),
-      ),
-      _toggleKey: VoidCallbackIntent(onHide),
-      for (var i = 0; i < 9 && i < list.length; i++)
-        cmd(LogicalKeyboardKey(0x31 + i)): VoidCallbackIntent(
-          () => terms.show(info.chatId, list[i].id),
-        ),
-    };
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
-    final s = terms.session(info);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(
-          child: ListenableBuilder(
-            listenable: s,
-            builder: (context, _) => TerminalView(
-              s.terminal,
-              key: ObjectKey(s.terminal),
-              controller: s.controller,
-              focusNode: s.focus,
-              autofocus: true,
-              theme: terminalTheme(t),
-              textStyle: const TerminalStyle(
-                fontFamily: NushiTheme.codeFont,
-                fontSize: 12.5,
-                height: 1.25,
-              ),
-              padding: const EdgeInsets.fromLTRB(10, 6, 6, 4),
-              cursorType: TerminalCursorType.verticalBar,
-              cursorBlink: true,
-              keyboardAppearance: t.brightness,
-              shortcuts: _keys(context, s),
-              readOnly: info.exited,
-            ),
-          ),
-        ),
-        if (info.exited)
-          Container(
-            padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
-            decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: t.borderSubtle)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    info.exitCode < 0
-                        ? 'The shell was killed.'
-                        : 'The shell exited with code ${info.exitCode}.',
-                    style: theme.ui(t.textSecondary, size: 12),
-                  ),
-                ),
-                Button(
-                  label: 'Restart',
-                  onPressed: () =>
-                      tryOrShow(context, () => terms.restart(info.id)),
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-/// The app's colors with VS Code's ANSI palettes, for one brightness.
-TerminalTheme terminalTheme(Tokens t) {
-  final dark = t.brightness == Brightness.dark;
-  Color c(int light, int darkColor) => Color(dark ? darkColor : light);
-  return TerminalTheme(
-    cursor: t.text,
-    selection: t.accent.withValues(alpha: 0.3),
-    foreground: t.text,
-    background: t.base,
-    black: c(0xFF000000, 0xFF000000),
-    red: c(0xFFCD3131, 0xFFCD3131),
-    green: c(0xFF00BC00, 0xFF0DBC79),
-    yellow: c(0xFF949800, 0xFFE5E510),
-    blue: c(0xFF0451A5, 0xFF2472C8),
-    magenta: c(0xFFBC05BC, 0xFFBC3FBC),
-    cyan: c(0xFF0598BC, 0xFF11A8CD),
-    white: c(0xFF555555, 0xFFE5E5E5),
-    brightBlack: c(0xFF666666, 0xFF666666),
-    brightRed: c(0xFFCD3131, 0xFFF14C4C),
-    brightGreen: c(0xFF14CE14, 0xFF23D18B),
-    brightYellow: c(0xFFB5BA00, 0xFFF5F543),
-    brightBlue: c(0xFF0451A5, 0xFF3B8EEA),
-    brightMagenta: c(0xFFBC05BC, 0xFFD670D6),
-    brightCyan: c(0xFF0598BC, 0xFF29B8DB),
-    brightWhite: c(0xFFA5A5A5, 0xFFE5E5E5),
-    searchHitBackground: t.needsSoft,
-    searchHitBackgroundCurrent: t.needs,
-    searchHitForeground: t.text,
-  );
 }

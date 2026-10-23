@@ -10,6 +10,7 @@ import 'daemon.dart';
 import 'folder_button.dart';
 import 'menu.dart';
 import 'status.dart';
+import 'terminal_panel.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
 
@@ -37,6 +38,17 @@ class _SidebarState extends State<Sidebar> {
     setState(() => _starting = folder);
     await tryOrShow(context, () => widget.daemon.startChat(folder!));
     if (mounted) setState(() => _starting = null);
+  }
+
+  /// Opens a terminal in [folder] for the chat shown, if it's one of
+  /// [chats], else for the newest of them, which it shows.
+  Future<void> _terminal(String folder, List<ChatState> chats) async {
+    final daemon = widget.daemon;
+    final chat = chats.contains(daemon.selected)
+        ? daemon.selected!
+        : chats.first;
+    daemon.select(chat.id);
+    await tryOrShow(context, () => openTerminalIn(daemon, chat, folder));
   }
 
   @override
@@ -81,6 +93,12 @@ class _SidebarState extends State<Sidebar> {
                   _FolderHeader(
                     folder,
                     onNew: _starting == null ? () => _start(folder) : null,
+                    onTerminal:
+                        folder.isEmpty ||
+                            chats.isEmpty ||
+                            !widget.daemon.canTerminals
+                        ? null
+                        : () => _terminal(folder, chats),
                   ),
                   if (_starting == folder)
                     Padding(
@@ -227,10 +245,15 @@ class _OutdatedState extends State<_Outdated> {
 /// A group's header: the folder's name and path, or "No folder" ('') for
 /// chats in scratch folders.
 class _FolderHeader extends StatelessWidget {
-  const _FolderHeader(this.folder, {required this.onNew});
+  const _FolderHeader(
+    this.folder, {
+    required this.onNew,
+    required this.onTerminal,
+  });
 
   final String folder;
   final VoidCallback? onNew;
+  final VoidCallback? onTerminal; // a terminal there, in one of its chats
 
   @override
   Widget build(BuildContext context) {
@@ -238,6 +261,20 @@ class _FolderHeader extends StatelessWidget {
     final (name, parent) = folder.isEmpty
         ? ('No folder', '')
         : folderParts(folder);
+    return Menu(
+      entries: [
+        MenuEntry('New chat here', onPick: onNew),
+        MenuEntry('Open in terminal', onPick: onTerminal),
+      ],
+      builder: (context, open) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onSecondaryTapUp: (d) => open(d.localPosition),
+        child: _header(theme, t, name, parent),
+      ),
+    );
+  }
+
+  Widget _header(NushiTheme theme, Tokens t, String name, String parent) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 6, 4),
       child: Row(
