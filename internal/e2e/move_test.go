@@ -3,6 +3,8 @@ package e2e
 import (
 	"context"
 	"errors"
+	"io/fs"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -130,5 +132,29 @@ func TestMoveAChat(t *testing.T) {
 	got := transcript(items)
 	if !strings.HasPrefix(got, "USER_MESSAGE:pwd:\nAGENT_MESSAGE:cwd: "+repo) || !strings.HasSuffix(got, "cwd: "+other+":") {
 		t.Errorf("after a restart:\n%s", got)
+	}
+
+	// Deleting it deletes the agent's history of all three of its
+	// sessions, its scratch folder and Nushi's record of it.
+	plan := must(a.c.PlanDeleteChat(ctx, connect.NewRequest(&nushiv1.PlanDeleteChatRequest{ChatId: id})))
+	var sessions []string
+	for _, sess := range plan.Sessions {
+		sessions = append(sessions, sess.SessionId+" "+sess.Folder)
+	}
+	want := []string{scratch.SessionId + " " + scratch.Folder, moved.SessionId + " " + repo, chat(id).SessionId + " " + other}
+	if !slices.Equal(sessions, want) || !plan.DeletesHistory || plan.ScratchFolder != scratch.Folder {
+		t.Fatalf("plan: %v, want sessions %v", plan, want)
+	}
+	must(a.c.DeleteChat(ctx, connect.NewRequest(&nushiv1.DeleteChatRequest{ChatId: id})))
+	for _, sess := range plan.Sessions {
+		if history.Has(sess.SessionId) {
+			t.Errorf("session %s is still in the agent's history", sess.SessionId)
+		}
+	}
+	if _, err := os.Stat(scratch.Folder); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("the scratch folder is still there: %v", err)
+	}
+	if chats := must(a.c.ListChats(ctx, connect.NewRequest(&nushiv1.ListChatsRequest{}))).Chats; len(chats) != 0 {
+		t.Errorf("chats left: %v", chats)
 	}
 }

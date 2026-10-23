@@ -543,6 +543,77 @@ const RemoveChatResponse$json = {
 final $typed_data.Uint8List removeChatResponseDescriptor =
     $convert.base64Decode('ChJSZW1vdmVDaGF0UmVzcG9uc2U=');
 
+@$core.Deprecated('Use planDeleteChatRequestDescriptor instead')
+const PlanDeleteChatRequest$json = {
+  '1': 'PlanDeleteChatRequest',
+  '2': [
+    {'1': 'chat_id', '3': 1, '4': 1, '5': 9, '10': 'chatId'},
+  ],
+};
+
+/// Descriptor for `PlanDeleteChatRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List planDeleteChatRequestDescriptor =
+    $convert.base64Decode(
+        'ChVQbGFuRGVsZXRlQ2hhdFJlcXVlc3QSFwoHY2hhdF9pZBgBIAEoCVIGY2hhdElk');
+
+@$core.Deprecated('Use planDeleteChatResponseDescriptor instead')
+const PlanDeleteChatResponse$json = {
+  '1': 'PlanDeleteChatResponse',
+  '2': [
+    {
+      '1': 'sessions',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.AgentSession',
+      '10': 'sessions'
+    },
+    {'1': 'deletes_history', '3': 2, '4': 1, '5': 8, '10': 'deletesHistory'},
+    {'1': 'scratch_folder', '3': 3, '4': 1, '5': 9, '10': 'scratchFolder'},
+  ],
+};
+
+/// Descriptor for `PlanDeleteChatResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List planDeleteChatResponseDescriptor = $convert.base64Decode(
+    'ChZQbGFuRGVsZXRlQ2hhdFJlc3BvbnNlEjIKCHNlc3Npb25zGAEgAygLMhYubnVzaGkudjEuQW'
+    'dlbnRTZXNzaW9uUghzZXNzaW9ucxInCg9kZWxldGVzX2hpc3RvcnkYAiABKAhSDmRlbGV0ZXNI'
+    'aXN0b3J5EiUKDnNjcmF0Y2hfZm9sZGVyGAMgASgJUg1zY3JhdGNoRm9sZGVy');
+
+@$core.Deprecated('Use agentSessionDescriptor instead')
+const AgentSession$json = {
+  '1': 'AgentSession',
+  '2': [
+    {'1': 'session_id', '3': 1, '4': 1, '5': 9, '10': 'sessionId'},
+    {'1': 'folder', '3': 2, '4': 1, '5': 9, '10': 'folder'},
+  ],
+};
+
+/// Descriptor for `AgentSession`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List agentSessionDescriptor = $convert.base64Decode(
+    'CgxBZ2VudFNlc3Npb24SHQoKc2Vzc2lvbl9pZBgBIAEoCVIJc2Vzc2lvbklkEhYKBmZvbGRlch'
+    'gCIAEoCVIGZm9sZGVy');
+
+@$core.Deprecated('Use deleteChatRequestDescriptor instead')
+const DeleteChatRequest$json = {
+  '1': 'DeleteChatRequest',
+  '2': [
+    {'1': 'chat_id', '3': 1, '4': 1, '5': 9, '10': 'chatId'},
+  ],
+};
+
+/// Descriptor for `DeleteChatRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List deleteChatRequestDescriptor = $convert.base64Decode(
+    'ChFEZWxldGVDaGF0UmVxdWVzdBIXCgdjaGF0X2lkGAEgASgJUgZjaGF0SWQ=');
+
+@$core.Deprecated('Use deleteChatResponseDescriptor instead')
+const DeleteChatResponse$json = {
+  '1': 'DeleteChatResponse',
+};
+
+/// Descriptor for `DeleteChatResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List deleteChatResponseDescriptor =
+    $convert.base64Decode('ChJEZWxldGVDaGF0UmVzcG9uc2U=');
+
 @$core.Deprecated('Use answerPermissionRequestDescriptor instead')
 const AnswerPermissionRequest$json = {
   '1': 'AnswerPermissionRequest',
@@ -1102,6 +1173,16 @@ const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
       '3': '.nushi.v1.RemoveChatResponse'
     },
     {
+      '1': 'PlanDeleteChat',
+      '2': '.nushi.v1.PlanDeleteChatRequest',
+      '3': '.nushi.v1.PlanDeleteChatResponse'
+    },
+    {
+      '1': 'DeleteChat',
+      '2': '.nushi.v1.DeleteChatRequest',
+      '3': '.nushi.v1.DeleteChatResponse'
+    },
+    {
       '1': 'AnswerPermission',
       '2': '.nushi.v1.AnswerPermissionRequest',
       '3': '.nushi.v1.AnswerPermissionResponse'
@@ -1179,6 +1260,11 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.ArchiveChatResponse': ArchiveChatResponse$json,
   '.nushi.v1.RemoveChatRequest': RemoveChatRequest$json,
   '.nushi.v1.RemoveChatResponse': RemoveChatResponse$json,
+  '.nushi.v1.PlanDeleteChatRequest': PlanDeleteChatRequest$json,
+  '.nushi.v1.PlanDeleteChatResponse': PlanDeleteChatResponse$json,
+  '.nushi.v1.AgentSession': AgentSession$json,
+  '.nushi.v1.DeleteChatRequest': DeleteChatRequest$json,
+  '.nushi.v1.DeleteChatResponse': DeleteChatResponse$json,
   '.nushi.v1.AnswerPermissionRequest': AnswerPermissionRequest$json,
   '.nushi.v1.AnswerPermissionResponse': AnswerPermissionResponse$json,
   '.nushi.v1.AnswerQuestionRequest': AnswerQuestionRequest$json,
@@ -1216,14 +1302,17 @@ final $typed_data.Uint8List nushiServiceDescriptor = $convert.base64Decode(
     'ZUNoYXRSZXF1ZXN0GhwubnVzaGkudjEuUmVuYW1lQ2hhdFJlc3BvbnNlEkoKC0FyY2hpdmVDaG'
     'F0EhwubnVzaGkudjEuQXJjaGl2ZUNoYXRSZXF1ZXN0Gh0ubnVzaGkudjEuQXJjaGl2ZUNoYXRS'
     'ZXNwb25zZRJHCgpSZW1vdmVDaGF0EhsubnVzaGkudjEuUmVtb3ZlQ2hhdFJlcXVlc3QaHC5udX'
-    'NoaS52MS5SZW1vdmVDaGF0UmVzcG9uc2USWQoQQW5zd2VyUGVybWlzc2lvbhIhLm51c2hpLnYx'
-    'LkFuc3dlclBlcm1pc3Npb25SZXF1ZXN0GiIubnVzaGkudjEuQW5zd2VyUGVybWlzc2lvblJlc3'
-    'BvbnNlElMKDkFuc3dlclF1ZXN0aW9uEh8ubnVzaGkudjEuQW5zd2VyUXVlc3Rpb25SZXF1ZXN0'
-    'GiAubnVzaGkudjEuQW5zd2VyUXVlc3Rpb25SZXNwb25zZRJWCg9TZXRDb25maWdPcHRpb24SIC'
-    '5udXNoaS52MS5TZXRDb25maWdPcHRpb25SZXF1ZXN0GiEubnVzaGkudjEuU2V0Q29uZmlnT3B0'
-    'aW9uUmVzcG9uc2USPgoHR2V0RGlmZhIYLm51c2hpLnYxLkdldERpZmZSZXF1ZXN0GhkubnVzaG'
-    'kudjEuR2V0RGlmZlJlc3BvbnNlElYKD0dldEZvbGRlclN0YXR1cxIgLm51c2hpLnYxLkdldEZv'
-    'bGRlclN0YXR1c1JlcXVlc3QaIS5udXNoaS52MS5HZXRGb2xkZXJTdGF0dXNSZXNwb25zZRJECg'
-    'lMaXN0RmlsZXMSGi5udXNoaS52MS5MaXN0RmlsZXNSZXF1ZXN0GhsubnVzaGkudjEuTGlzdEZp'
-    'bGVzUmVzcG9uc2USPQoGRXZlbnRzEhcubnVzaGkudjEuRXZlbnRzUmVxdWVzdBoYLm51c2hpLn'
-    'YxLkV2ZW50c1Jlc3BvbnNlMAE=');
+    'NoaS52MS5SZW1vdmVDaGF0UmVzcG9uc2USUwoOUGxhbkRlbGV0ZUNoYXQSHy5udXNoaS52MS5Q'
+    'bGFuRGVsZXRlQ2hhdFJlcXVlc3QaIC5udXNoaS52MS5QbGFuRGVsZXRlQ2hhdFJlc3BvbnNlEk'
+    'cKCkRlbGV0ZUNoYXQSGy5udXNoaS52MS5EZWxldGVDaGF0UmVxdWVzdBocLm51c2hpLnYxLkRl'
+    'bGV0ZUNoYXRSZXNwb25zZRJZChBBbnN3ZXJQZXJtaXNzaW9uEiEubnVzaGkudjEuQW5zd2VyUG'
+    'VybWlzc2lvblJlcXVlc3QaIi5udXNoaS52MS5BbnN3ZXJQZXJtaXNzaW9uUmVzcG9uc2USUwoO'
+    'QW5zd2VyUXVlc3Rpb24SHy5udXNoaS52MS5BbnN3ZXJRdWVzdGlvblJlcXVlc3QaIC5udXNoaS'
+    '52MS5BbnN3ZXJRdWVzdGlvblJlc3BvbnNlElYKD1NldENvbmZpZ09wdGlvbhIgLm51c2hpLnYx'
+    'LlNldENvbmZpZ09wdGlvblJlcXVlc3QaIS5udXNoaS52MS5TZXRDb25maWdPcHRpb25SZXNwb2'
+    '5zZRI+CgdHZXREaWZmEhgubnVzaGkudjEuR2V0RGlmZlJlcXVlc3QaGS5udXNoaS52MS5HZXRE'
+    'aWZmUmVzcG9uc2USVgoPR2V0Rm9sZGVyU3RhdHVzEiAubnVzaGkudjEuR2V0Rm9sZGVyU3RhdH'
+    'VzUmVxdWVzdBohLm51c2hpLnYxLkdldEZvbGRlclN0YXR1c1Jlc3BvbnNlEkQKCUxpc3RGaWxl'
+    'cxIaLm51c2hpLnYxLkxpc3RGaWxlc1JlcXVlc3QaGy5udXNoaS52MS5MaXN0RmlsZXNSZXNwb2'
+    '5zZRI9CgZFdmVudHMSFy5udXNoaS52MS5FdmVudHNSZXF1ZXN0GhgubnVzaGkudjEuRXZlbnRz'
+    'UmVzcG9uc2UwAQ==');

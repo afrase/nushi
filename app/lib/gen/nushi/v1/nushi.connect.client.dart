@@ -4,11 +4,10 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
-
 import "nushi.pb.dart" as nushiv1nushi;
 import "nushi.connect.spec.dart" as specs;
 
-extension type NushiServiceClient(connect.Transport _transport) {
+extension type NushiServiceClient (connect.Transport _transport) {
   Future<nushiv1nushi.PingResponse> ping(
     nushiv1nushi.PingRequest input, {
     connect.Headers? headers,
@@ -226,6 +225,45 @@ extension type NushiServiceClient(connect.Transport _transport) {
   }) {
     return connect.Client(_transport).unary(
       specs.NushiService.removeChat,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Says what DeleteChat removes. The first time, the daemon starts the
+  /// agent to learn whether it can delete its history.
+  Future<nushiv1nushi.PlanDeleteChatResponse> planDeleteChat(
+    nushiv1nushi.PlanDeleteChatRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.planDeleteChat,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Deletes a chat: its turn is cancelled and its agent stops, the agent
+  /// deletes its history of each of the chat's sessions (ACP session/delete,
+  /// when it can), the chat's scratch folder goes, and Nushi's record of it.
+  Future<nushiv1nushi.DeleteChatResponse> deleteChat(
+    nushiv1nushi.DeleteChatRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.deleteChat,
       input,
       signal: signal,
       headers: headers,

@@ -121,6 +121,11 @@ func (c *Client) CloseSession(ctx context.Context, req CloseSessionRequest) erro
 	return c.conn.call(ctx, "session/close", req, nil)
 }
 
+// DeleteSession deletes the agent's history of a session (session/delete).
+func (c *Client) DeleteSession(ctx context.Context, req DeleteSessionRequest) error {
+	return c.conn.call(ctx, "session/delete", req, nil)
+}
+
 func (c *Client) NewSession(ctx context.Context, req NewSessionRequest) (*NewSessionResponse, error) {
 	var resp NewSessionResponse
 	return &resp, c.conn.call(ctx, "session/new", req, &resp)

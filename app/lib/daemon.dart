@@ -18,7 +18,7 @@ final dataDir =
     '${Platform.environment['HOME']}/Library/Application Support/Nushi Next';
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 18;
+const apiVersion = 19;
 
 /// Whether [folder] is a chat's scratch folder: the chat has no folder yet.
 bool isScratch(String folder) => folder.startsWith('$dataDir/scratch/');
@@ -73,6 +73,7 @@ class Daemon extends ChangeNotifier {
 
   /// Whether the daemon has rename, archive and remove (API 14).
   bool get canManageChats => daemonApi >= 14;
+  bool get canDeleteChats => daemonApi >= 19;
 
   /// Whether the daemon starts chats without a folder and moves them (API 16).
   bool get canMove => daemonApi >= 16;
@@ -243,8 +244,11 @@ class Daemon extends ChangeNotifier {
   Future<void> archiveChat(String chatId, {required bool archived}) => client
       .archiveChat(ArchiveChatRequest(chatId: chatId, archived: archived));
 
-  Future<void> removeChat(String chatId) =>
-      client.removeChat(RemoveChatRequest(chatId: chatId));
+  Future<PlanDeleteChatResponse> planDeleteChat(String chatId) =>
+      client.planDeleteChat(PlanDeleteChatRequest(chatId: chatId));
+
+  Future<void> deleteChat(String chatId) =>
+      client.deleteChat(DeleteChatRequest(chatId: chatId));
 
   Future<void> sendPrompt(
     String chatId,

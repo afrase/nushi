@@ -4,7 +4,6 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
-
 import "nushi.pb.dart" as nushiv1nushi;
 
 abstract final class NushiService {
@@ -114,6 +113,25 @@ abstract final class NushiService {
     connect.StreamType.unary,
     nushiv1nushi.RemoveChatRequest.new,
     nushiv1nushi.RemoveChatResponse.new,
+  );
+
+  /// Says what DeleteChat removes. The first time, the daemon starts the
+  /// agent to learn whether it can delete its history.
+  static const planDeleteChat = connect.Spec(
+    '/$name/PlanDeleteChat',
+    connect.StreamType.unary,
+    nushiv1nushi.PlanDeleteChatRequest.new,
+    nushiv1nushi.PlanDeleteChatResponse.new,
+  );
+
+  /// Deletes a chat: its turn is cancelled and its agent stops, the agent
+  /// deletes its history of each of the chat's sessions (ACP session/delete,
+  /// when it can), the chat's scratch folder goes, and Nushi's record of it.
+  static const deleteChat = connect.Spec(
+    '/$name/DeleteChat',
+    connect.StreamType.unary,
+    nushiv1nushi.DeleteChatRequest.new,
+    nushiv1nushi.DeleteChatResponse.new,
   );
 
   /// Answers a pending permission prompt with one of its options.
