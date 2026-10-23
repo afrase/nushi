@@ -8,10 +8,11 @@ import 'chat_menu.dart';
 import 'daemon.dart';
 import 'theme/theme.dart';
 
-/// The chat's folder: its name, then its parent path, dimmed ("No folder"
-/// for a scratch folder), on one line or, [stacked], on two. A click offers
-/// the recent folders and "Choose folder…", and moves the chat to the one
-/// picked. Not while the agent works or waits on the user.
+/// The chat's folder (in a worktree, its repository's): its name, then its
+/// parent path, dimmed ("No folder" for a scratch folder), on one line or,
+/// [stacked], on two. A click offers the recent folders and "Choose
+/// folder…", and moves the chat to the one picked. Not while the agent
+/// works or waits on the user.
 class FolderButton extends StatelessWidget {
   const FolderButton({
     super.key,
@@ -29,7 +30,7 @@ class FolderButton extends StatelessWidget {
     final t = theme.t;
     final box = context.findRenderObject()! as RenderBox;
     final at = box.localToGlobal(box.size.bottomLeft(Offset.zero));
-    final recent = daemon.recentFolders.where((f) => f != chat.folder).take(8);
+    final recent = daemon.recentFolders.where((f) => f != chat.home).take(8);
     final picked = await showMenu<String>(
       context: context,
       position: RelativeRect.fromLTRB(at.dx, at.dy, at.dx, at.dy),
@@ -53,13 +54,13 @@ class FolderButton extends StatelessWidget {
         ? picked
         : await getDirectoryPath(confirmButtonText: 'Move chat here');
     if (folder == null || !context.mounted) return;
-    await tryOrShow(context, () => daemon.moveChat(chat.id, folder));
+    await tryOrShow(context, () => daemon.moveChat(chat, folder));
   }
 
   /// The name, and the parent path under it, to the right.
   Widget _stacked(NushiTheme theme, bool enabled) {
     final t = theme.t;
-    final folder = chat.folder;
+    final folder = chat.home;
     final slash = folder.lastIndexOf('/');
     final scratch = isScratch(folder);
     return Column(
@@ -99,7 +100,7 @@ class FolderButton extends StatelessWidget {
         daemon.canMove && !chat.archived && !chat.busy && !chat.waiting;
     return Tooltip(
       message: !daemon.canMove || chat.archived
-          ? chat.folder
+          ? chat.home
           : enabled
           ? 'Change the folder'
           : 'The folder can change once the agent is done',
@@ -122,7 +123,7 @@ class FolderButton extends StatelessWidget {
                       color: t.textSecondary,
                     ),
                     const SizedBox(width: 6),
-                    Flexible(child: _FolderName(chat.folder, theme: theme)),
+                    Flexible(child: _FolderName(chat.home, theme: theme)),
                     if (enabled) ...[
                       const SizedBox(width: 2),
                       Icon(Icons.expand_more, size: 14, color: t.textMuted),

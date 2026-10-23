@@ -130,6 +130,14 @@ const Chat$json = {
     },
     {'1': 'archived', '3': 8, '4': 1, '5': 8, '10': 'archived'},
     {'1': 'session_id', '3': 9, '4': 1, '5': 9, '10': 'sessionId'},
+    {
+      '1': 'worktree',
+      '3': 10,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.Worktree',
+      '10': 'worktree'
+    },
   ],
 };
 
@@ -139,7 +147,24 @@ final $typed_data.Uint8List chatDescriptor = $convert.base64Decode(
     'MgASgJUgZmb2xkZXISFAoFdGl0bGUYBCABKAlSBXRpdGxlEhIKBG1vZGUYBSABKAlSBG1vZGUS'
     'JgoPY3JlYXRlZF91bml4X21zGAYgASgDUg1jcmVhdGVkVW5peE1zEiwKBnN0YXR1cxgHIAEoCz'
     'IULm51c2hpLnYxLkNoYXRTdGF0dXNSBnN0YXR1cxIaCghhcmNoaXZlZBgIIAEoCFIIYXJjaGl2'
-    'ZWQSHQoKc2Vzc2lvbl9pZBgJIAEoCVIJc2Vzc2lvbklk');
+    'ZWQSHQoKc2Vzc2lvbl9pZBgJIAEoCVIJc2Vzc2lvbklkEi4KCHdvcmt0cmVlGAogASgLMhIubn'
+    'VzaGkudjEuV29ya3RyZWVSCHdvcmt0cmVl');
+
+@$core.Deprecated('Use worktreeDescriptor instead')
+const Worktree$json = {
+  '1': 'Worktree',
+  '2': [
+    {'1': 'repo', '3': 1, '4': 1, '5': 9, '10': 'repo'},
+    {'1': 'path', '3': 2, '4': 1, '5': 9, '10': 'path'},
+    {'1': 'branch', '3': 3, '4': 1, '5': 9, '10': 'branch'},
+    {'1': 'base', '3': 4, '4': 1, '5': 9, '10': 'base'},
+  ],
+};
+
+/// Descriptor for `Worktree`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List worktreeDescriptor = $convert.base64Decode(
+    'CghXb3JrdHJlZRISCgRyZXBvGAEgASgJUgRyZXBvEhIKBHBhdGgYAiABKAlSBHBhdGgSFgoGYn'
+    'JhbmNoGAMgASgJUgZicmFuY2gSEgoEYmFzZRgEIAEoCVIEYmFzZQ==');
 
 @$core.Deprecated('Use getChatRequestDescriptor instead')
 const GetChatRequest$json = {
@@ -287,12 +312,14 @@ const StartChatRequest$json = {
   '1': 'StartChatRequest',
   '2': [
     {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
+    {'1': 'worktree', '3': 2, '4': 1, '5': 8, '10': 'worktree'},
   ],
 };
 
 /// Descriptor for `StartChatRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List startChatRequestDescriptor = $convert
-    .base64Decode('ChBTdGFydENoYXRSZXF1ZXN0EhYKBmZvbGRlchgBIAEoCVIGZm9sZGVy');
+final $typed_data.Uint8List startChatRequestDescriptor = $convert.base64Decode(
+    'ChBTdGFydENoYXRSZXF1ZXN0EhYKBmZvbGRlchgBIAEoCVIGZm9sZGVyEhoKCHdvcmt0cmVlGA'
+    'IgASgIUgh3b3JrdHJlZQ==');
 
 @$core.Deprecated('Use moveChatRequestDescriptor instead')
 const MoveChatRequest$json = {
@@ -300,13 +327,14 @@ const MoveChatRequest$json = {
   '2': [
     {'1': 'chat_id', '3': 1, '4': 1, '5': 9, '10': 'chatId'},
     {'1': 'folder', '3': 2, '4': 1, '5': 9, '10': 'folder'},
+    {'1': 'worktree', '3': 3, '4': 1, '5': 8, '10': 'worktree'},
   ],
 };
 
 /// Descriptor for `MoveChatRequest`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List moveChatRequestDescriptor = $convert.base64Decode(
     'Cg9Nb3ZlQ2hhdFJlcXVlc3QSFwoHY2hhdF9pZBgBIAEoCVIGY2hhdElkEhYKBmZvbGRlchgCIA'
-    'EoCVIGZm9sZGVy');
+    'EoCVIGZm9sZGVyEhoKCHdvcmt0cmVlGAMgASgIUgh3b3JrdHJlZQ==');
 
 @$core.Deprecated('Use moveChatResponseDescriptor instead')
 const MoveChatResponse$json = {
@@ -1230,6 +1258,7 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.ListChatsResponse': ListChatsResponse$json,
   '.nushi.v1.Chat': Chat$json,
   '.nushi.v1.ChatStatus': ChatStatus$json,
+  '.nushi.v1.Worktree': Worktree$json,
   '.nushi.v1.GetChatRequest': GetChatRequest$json,
   '.nushi.v1.GetChatResponse': GetChatResponse$json,
   '.nushi.v1.Item': Item$json,

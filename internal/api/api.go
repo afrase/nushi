@@ -21,7 +21,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 19
+const Version = 20
 
 type server struct {
 	chats *chats.Service
@@ -76,7 +76,7 @@ func (s *server) GetChat(_ context.Context, req *connect.Request[nushiv1.GetChat
 }
 
 func (s *server) StartChat(ctx context.Context, req *connect.Request[nushiv1.StartChatRequest]) (*connect.Response[nushiv1.StartChatResponse], error) {
-	id, err := s.chats.Start(ctx, req.Msg.Folder)
+	id, err := s.chats.Start(ctx, req.Msg.Folder, req.Msg.Worktree)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func (s *server) StartChat(ctx context.Context, req *connect.Request[nushiv1.Sta
 }
 
 func (s *server) MoveChat(ctx context.Context, req *connect.Request[nushiv1.MoveChatRequest]) (*connect.Response[nushiv1.MoveChatResponse], error) {
-	if err := s.chats.Move(ctx, req.Msg.ChatId, req.Msg.Folder); err != nil {
+	if err := s.chats.Move(ctx, req.Msg.ChatId, req.Msg.Folder, req.Msg.Worktree); err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
 	return connect.NewResponse(&nushiv1.MoveChatResponse{}), nil
@@ -350,6 +350,10 @@ func configProto(opts []model.ConfigOption) []*nushiv1.ConfigOption {
 }
 
 func chatProto(s model.Session) *nushiv1.Chat {
-	return &nushiv1.Chat{Id: s.ID, Agent: s.Agent, Folder: s.Folder, Title: cmp.Or(s.Name, s.Title), Mode: s.Mode,
+	out := &nushiv1.Chat{Id: s.ID, Agent: s.Agent, Folder: s.Folder, Title: cmp.Or(s.Name, s.Title), Mode: s.Mode,
 		CreatedUnixMs: s.Created.UnixMilli(), Archived: s.Archived, SessionId: s.SessionID}
+	if wt := s.Worktree; wt != nil {
+		out.Worktree = &nushiv1.Worktree{Repo: wt.Repo, Path: wt.Path, Branch: wt.Branch, Base: wt.Base}
+	}
+	return out
 }

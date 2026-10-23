@@ -226,6 +226,7 @@ class Chat extends $pb.GeneratedMessage {
     ChatStatus? status,
     $core.bool? archived,
     $core.String? sessionId,
+    Worktree? worktree,
   }) {
     final result = Chat._();
     if (id != null) result.id = id;
@@ -237,6 +238,7 @@ class Chat extends $pb.GeneratedMessage {
     if (status != null) result.status = status;
     if (archived != null) result.archived = archived;
     if (sessionId != null) result.sessionId = sessionId;
+    if (worktree != null) result.worktree = worktree;
     return result;
   }
 
@@ -263,6 +265,8 @@ class Chat extends $pb.GeneratedMessage {
         subBuilder: ChatStatus.$_createMessage)
     ..aOB(8, _omitFieldNames ? '' : 'archived')
     ..aOS(9, _omitFieldNames ? '' : 'sessionId')
+    ..aOM<Worktree>(10, _omitFieldNames ? '' : 'worktree',
+        subBuilder: Worktree.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -374,6 +378,114 @@ class Chat extends $pb.GeneratedMessage {
   $core.bool hasSessionId() => $_has(8);
   @$pb.TagNumber(9)
   void clearSessionId() => $_clearField(9);
+
+  /// The git worktree Nushi made for the chat, if it runs in one (API 20).
+  @$pb.TagNumber(10)
+  Worktree get worktree => $_getN(9);
+  @$pb.TagNumber(10)
+  set worktree(Worktree value) => $_setField(10, value);
+  @$pb.TagNumber(10)
+  $core.bool hasWorktree() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearWorktree() => $_clearField(10);
+  @$pb.TagNumber(10)
+  Worktree ensureWorktree() => $_ensure(9);
+}
+
+/// A git worktree of a repository, on a branch of its own.
+class Worktree extends $pb.GeneratedMessage {
+  factory Worktree({
+    $core.String? repo,
+    $core.String? path,
+    $core.String? branch,
+    $core.String? base,
+  }) {
+    final result = Worktree._();
+    if (repo != null) result.repo = repo;
+    if (path != null) result.path = path;
+    if (branch != null) result.branch = branch;
+    if (base != null) result.base = base;
+    return result;
+  }
+
+  Worktree._();
+
+  factory Worktree.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Worktree()..mergeFromBuffer(data, registry);
+  factory Worktree.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Worktree()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'Worktree',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: Worktree.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'repo')
+    ..aOS(2, _omitFieldNames ? '' : 'path')
+    ..aOS(3, _omitFieldNames ? '' : 'branch')
+    ..aOS(4, _omitFieldNames ? '' : 'base')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Worktree clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Worktree copyWith(void Function(Worktree) updates) =>
+      super.copyWith((message) => updates(message as Worktree)) as Worktree;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use Worktree() / Worktree.new instead')
+  static Worktree create() => Worktree._();
+  static $pb.GeneratedMessage $_createMessage() => Worktree._();
+  @$core.override
+  Worktree createEmptyInstance() => Worktree._();
+  @$core.pragma('dart2js:noInline')
+  static Worktree getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<Worktree>(Worktree.$_createMessage);
+  static Worktree? _defaultInstance;
+
+  /// The repository's folder (its main worktree).
+  @$pb.TagNumber(1)
+  $core.String get repo => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set repo($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasRepo() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRepo() => $_clearField(1);
+
+  /// The worktree's folder; the chat's folder is in it.
+  @$pb.TagNumber(2)
+  $core.String get path => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set path($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasPath() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPath() => $_clearField(2);
+
+  /// Its branch, nushi/<name>.
+  @$pb.TagNumber(3)
+  $core.String get branch => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set branch($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasBranch() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearBranch() => $_clearField(3);
+
+  /// The branch it started from (a commit, if HEAD was detached).
+  @$pb.TagNumber(4)
+  $core.String get base => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set base($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasBase() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearBase() => $_clearField(4);
 }
 
 class GetChatRequest extends $pb.GeneratedMessage {
@@ -840,9 +952,11 @@ class ChatCommands extends $pb.GeneratedMessage {
 class StartChatRequest extends $pb.GeneratedMessage {
   factory StartChatRequest({
     $core.String? folder,
+    $core.bool? worktree,
   }) {
     final result = StartChatRequest._();
     if (folder != null) result.folder = folder;
+    if (worktree != null) result.worktree = worktree;
     return result;
   }
 
@@ -860,6 +974,7 @@ class StartChatRequest extends $pb.GeneratedMessage {
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: StartChatRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'folder')
+    ..aOB(2, _omitFieldNames ? '' : 'worktree')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -893,16 +1008,30 @@ class StartChatRequest extends $pb.GeneratedMessage {
   $core.bool hasFolder() => $_has(0);
   @$pb.TagNumber(1)
   void clearFolder() => $_clearField(1);
+
+  /// Run the chat in a new worktree of folder's repository, at
+  /// <repo>/.worktrees/<name> on a new branch nushi/<name> from folder's
+  /// HEAD (API 20).
+  @$pb.TagNumber(2)
+  $core.bool get worktree => $_getBF(1);
+  @$pb.TagNumber(2)
+  set worktree($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasWorktree() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearWorktree() => $_clearField(2);
 }
 
 class MoveChatRequest extends $pb.GeneratedMessage {
   factory MoveChatRequest({
     $core.String? chatId,
     $core.String? folder,
+    $core.bool? worktree,
   }) {
     final result = MoveChatRequest._();
     if (chatId != null) result.chatId = chatId;
     if (folder != null) result.folder = folder;
+    if (worktree != null) result.worktree = worktree;
     return result;
   }
 
@@ -921,6 +1050,7 @@ class MoveChatRequest extends $pb.GeneratedMessage {
       createEmptyInstance: MoveChatRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
     ..aOS(2, _omitFieldNames ? '' : 'folder')
+    ..aOB(3, _omitFieldNames ? '' : 'worktree')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -962,6 +1092,16 @@ class MoveChatRequest extends $pb.GeneratedMessage {
   $core.bool hasFolder() => $_has(1);
   @$pb.TagNumber(2)
   void clearFolder() => $_clearField(2);
+
+  /// Move to a new worktree of folder's repository, as StartChat makes one.
+  @$pb.TagNumber(3)
+  $core.bool get worktree => $_getBF(2);
+  @$pb.TagNumber(3)
+  set worktree($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasWorktree() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearWorktree() => $_clearField(3);
 }
 
 class MoveChatResponse extends $pb.GeneratedMessage {
@@ -4367,10 +4507,11 @@ class NushiServiceApi {
       _client.invoke<StartChatResponse>(
           ctx, 'NushiService', 'StartChat', request, StartChatResponse());
 
-  /// Moves a chat to another folder. A chat without messages starts a new
-  /// session there; one with messages keeps its session and history, reopened
-  /// in the new folder. Refused while the chat is busy. If the move fails the
-  /// chat stays where it was, with a notice saying why.
+  /// Moves a chat to another folder, or to a new worktree. A chat without
+  /// messages starts a new session there (and a worktree it leaves is
+  /// removed if it holds no work); one with messages keeps its history, in a
+  /// fork of its session there. Refused while the chat is busy. If the move
+  /// fails the chat stays where it was, with a notice saying why.
   $async.Future<MoveChatResponse> moveChat(
           $pb.ClientContext? ctx, MoveChatRequest request) =>
       _client.invoke<MoveChatResponse>(

@@ -7,6 +7,7 @@ import 'chat_view.dart';
 import 'daemon.dart';
 import 'details_panel.dart';
 import 'folder_button.dart';
+import 'settings.dart';
 import 'sidebar.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';

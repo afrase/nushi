@@ -50,13 +50,14 @@ type Sessions interface {
 
 // Service holds the open chats, all with one agent.
 type Service struct {
-	agent    string // the agent's name, such as "claude"
-	launch   Launch
-	modes    Modes
-	sessions Sessions
-	history  CopyHistory
-	scratch  string // the folder that holds chats' scratch folders
-	publish  func(model.Event)
+	agent     string // the agent's name, such as "claude"
+	launch    Launch
+	modes     Modes
+	sessions  Sessions
+	history   CopyHistory
+	worktrees Worktrees
+	scratch   string // the folder that holds chats' scratch folders
+	publish   func(model.Event)
 
 	mu      sync.Mutex
 	chats   map[string]*chat
@@ -68,9 +69,9 @@ type Service struct {
 // as its cwd, and returns a function that removes the copy again.
 type CopyHistory func(sessionID, from, to string) (remove func() error, err error)
 
-func New(agent string, launch Launch, modes Modes, sessions Sessions, history CopyHistory, scratch string, publish func(model.Event)) *Service {
-	return &Service{agent: agent, launch: launch, modes: modes, sessions: sessions, history: history, scratch: scratch,
-		publish: publish, chats: map[string]*chat{}}
+func New(agent string, launch Launch, modes Modes, sessions Sessions, history CopyHistory, worktrees Worktrees, scratch string, publish func(model.Event)) *Service {
+	return &Service{agent: agent, launch: launch, modes: modes, sessions: sessions, history: history, worktrees: worktrees,
+		scratch: scratch, publish: publish, chats: map[string]*chat{}}
 }
 
 type chat struct {
@@ -126,17 +127,26 @@ func (s *Service) Get(chatID string) (model.Chat, error) {
 }
 
 // Start opens a chat in folder, or in a new scratch folder of its own when
-// folder is "".
-func (s *Service) Start(ctx context.Context, folder string) (string, error) {
+// folder is "". With worktree, the chat gets a new git worktree of folder's
+// repository and runs there.
+func (s *Service) Start(ctx context.Context, folder string, worktree bool) (string, error) {
 	c := s.newChat()
 	c.id = rand.Text()
 	scratch := folder == ""
-	if scratch {
+	var wt *model.Worktree
+	var err error
+	switch {
+	case scratch:
 		folder = filepath.Join(s.scratch, c.id)
-		if err := os.MkdirAll(folder, 0o700); err != nil {
-			return "", err
+		err = os.MkdirAll(folder, 0o700)
+	case worktree:
+		if err = checkFolder(folder); err == nil {
+			wt, folder, err = s.addWorktree(ctx, folder)
 		}
-	} else if err := checkFolder(folder); err != nil {
+	default:
+		err = checkFolder(folder)
+	}
+	if err != nil {
 		return "", err
 	}
 	o, err := c.openSession(ctx, s.launch, "", folder, false)
@@ -144,11 +154,12 @@ func (s *Service) Start(ctx context.Context, folder string) (string, error) {
 		if scratch {
 			os.Remove(folder)
 		}
+		s.dropWorktree(wt)
 		return "", err
 	}
 	c.mu.Lock()
 	c.useLocked(o)
-	c.session = model.Session{ID: c.id, SessionID: o.sid, Agent: s.agent, Folder: folder, Created: time.Now()}
+	c.session = model.Session{ID: c.id, SessionID: o.sid, Agent: s.agent, Folder: folder, Created: time.Now(), Worktree: wt}
 	c.mu.Unlock()
 	if err := c.startMode(ctx, s.modes.Mode(s.agent)); err != nil {
 		log.Printf("chat %s: starting mode: %v", c.id, err) // the chat keeps the agent's default

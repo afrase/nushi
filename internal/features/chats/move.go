@@ -9,14 +9,16 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-// Move moves a chat to another folder. A chat without messages gets a new
+// Move moves a chat to another folder, or with worktree to a new git
+// worktree of folder's repository. A chat without messages gets a new
 // session there. A chat with messages gets a fork of its session there: the
 // agent's record of the session is copied into the folder's history, forked
 // with the folder as its cwd (a new session id, with the whole conversation),
 // and the copy removed; the original stays in the old folder's history. The
 // chat's agent keeps running until the new one is ready, so a move that fails
-// leaves the chat where it was, with a notice saying why.
-func (s *Service) Move(ctx context.Context, chatID, folder string) error {
+// leaves the chat where it was, with a notice saying why. A chat without
+// messages that leaves the worktree it had removes it, if it holds no work.
+func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool) error {
 	if err := checkFolder(folder); err != nil {
 		return err
 	}
@@ -25,14 +27,14 @@ func (s *Service) Move(ctx context.Context, chatID, folder string) error {
 		return err
 	}
 	c.mu.Lock()
-	from, sid, fresh := c.session.Folder, c.sid, c.session.Title == ""
+	from, sid, fresh, oldWT := c.session.Folder, c.sid, c.session.Title == "", c.session.Worktree
 	switch {
 	case c.session.Archived:
 		err = errors.New("the chat is archived")
 	case c.busy:
 		err = errors.New("the chat is busy; move it once the turn has ended")
 	}
-	if err != nil || from == folder {
+	if err != nil || from == folder && !worktree {
 		c.mu.Unlock()
 		return err
 	}
@@ -40,10 +42,16 @@ func (s *Service) Move(ctx context.Context, chatID, folder string) error {
 	c.statusChangedLocked()
 	c.mu.Unlock()
 
+	var wt *model.Worktree
+	if worktree {
+		wt, folder, err = s.addWorktree(ctx, folder)
+	}
 	var o opened
-	if fresh {
+	switch {
+	case err != nil:
+	case fresh:
 		o, err = c.openSession(ctx, s.launch, "", folder, false)
-	} else {
+	default:
 		o, err = s.fork(ctx, c, sid, from, folder)
 	}
 	if err == nil {
@@ -52,16 +60,21 @@ func (s *Service) Move(ctx context.Context, chatID, folder string) error {
 		c.useLocked(o)
 		c.saveLocked(func(s *model.Session) {
 			s.Earlier = append(slices.Clip(s.Earlier), model.AgentSession{ID: s.SessionID, Folder: s.Folder})
-			s.Folder, s.SessionID = folder, o.sid
+			s.Folder, s.SessionID, s.Worktree = folder, o.sid, wt
 		})
 		c.mu.Unlock()
 		s.dropSides(c) // they ran on the old agent
 		if old != nil {
 			old.Close()
 		}
+		if fresh {
+			s.dropWorktree(oldWT)
+		}
 		if err := c.startMode(ctx, c.session.Mode); err != nil {
 			log.Printf("chat %s: mode after moving: %v", c.id, err)
 		}
+	} else {
+		s.dropWorktree(wt)
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()

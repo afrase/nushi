@@ -62,9 +62,10 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 27. Composer menus | 2810 | 800 | 5635 | 655 |
 | 28. Collapsible panel cards | 2810 | 800 | 5694 | 655 |
 | 29. Reply and side chat | 2810 | 800 | 6213 | 655 |
+| 30. Chats in their own worktree | 3025 | 800 | 6407 | 655 |
 
 Tripwires crossed:
-Lines added per step, code and tests, without generated code (the tripwire is about 500): 1: 533, 2: 1,502, 3: 239, 4: 437, 5: 739, 6: 639, 7: 464, 8: 537, 9: 265, 10: 528, 11: 1,249, 12: 625, 13: 476, 14: 343, 15: 351, 16: 492, 17: 298, 18: 666, 19: 755, 20: 223, 21: 146; 26: 438, 27: 238, 28: 140, 29: 683.
+Lines added per step, code and tests, without generated code (the tripwire is about 500): 1: 533, 2: 1,502, 3: 239, 4: 437, 5: 739, 6: 639, 7: 464, 8: 537, 9: 265, 10: 528, 11: 1,249, 12: 625, 13: 476, 14: 343, 15: 351, 16: 492, 17: 298, 18: 666, 19: 755, 20: 223, 21: 146; 26: 438, 27: 238, 28: 140, 29: 683, 30: 677.
 - Step 1 (533): the Unix-socket transport package and its tests came with the skeleton.
 - Step 2 (1,502): the whole ACP client landed in this step (JSON-RPC framing, client and the schema-to-Go type generator, about 660 lines), plus the first real chat screen and the daemon's chat feature. None of it is for later steps.
 - Step 5 (739): the question card is the app's biggest widget (267 lines: options, multi-select, Other boxes, digit keys); reading the form in order, and two fixes to the type generator.
@@ -81,6 +82,7 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 - Step 23 (592 added, 124 removed): the panel and its cards (`details_panel.dart`, 295), the folder control's two-line form, the header's panel button, and in the daemon the folder's summary (`git.Status`, its test and `GetFolderStatus`).
 - Step 29 (683 added, 136 removed; 30 of them a test): the reply's whole flow is app-side and new: the selection toolbar placed by the selection's own bounds, the reply box, the message format and its parser (`replies.dart`, 251), the reply cards with their edit dialog (`reply_cards.dart`, 202), the composer sending them, and the transcript showing them. `composer.dart` sits at 400 after giving `stopTurn` and the completion ranking to `composer_parts.dart`.
 - Step 25 (718 added, 174 removed): images on both sides. The daemon carries them in prompts, messages and tool calls (and the agent's image capability) with a test; the app attaches them (paste, drop, the "+" menu), shrinks them, shows them as thumbnails with a preview, and renders markdown images by the rules below (`images.dart`, 280). `composer.dart` passed 400 lines twice in steps 24–25 and gave its small widgets and the "+" menu to `composer_parts.dart`.
+- Step 30 (677 added, 110 removed; 150 of the added are tests): worktrees on both sides. The git side (`internal/git/worktree.go`, 108: making one, the exclude line, removing an unused one) and its test (66); the chats feature's names and the worktree option in Start and Move (`worktree.go`, 55); an end-to-end test (85); the proto; in the app the Environment card's rows, the switch and the move confirmation (`worktree.dart`, 145), grouping by repository, and `app.json` moved out of `details_panel.dart` into `settings.dart` (45 lines moved, not new).
 - `acp/internal/acpgen/main.go` reached 407 lines in step 10's trim pass; it was trimmed to 393.
 
 ## Milestone A demo (steps 1–5): one working chat
@@ -266,6 +268,10 @@ To try it beside an installed Nushi Next that's in use: `export NUSHI_DATA=~/Lib
 - A moved chat remembers its earlier sessions (`Earlier` in the session file, oldest first) since step 26. Chats moved before step 26 know only their current session, so Delete leaves their earlier sessions in Claude's history.
 - A session that never had a message (a chat moved before its first message) is in the list too: Claude never wrote it, and deleting it succeeds.
 - `NUSHI_DATA` (since step 26) picks the data folder for the daemon, the app and `make run`/`make stop`, so a development build runs beside an installed Nushi Next. `make stop` stops only the daemon on that folder's socket (it used to `pkill` every nushid).
+
+- Worktrees (step 30, [ADR 0016](docs/adr/0016-a-worktree-per-chat.md)): "New worktree" is a switch in the Environment card, shown while the chat has no messages and its folder is in git. Flipping it moves the chat (a new session, as for any chat without messages) into a new worktree, or back to the repository, which removes the unused worktree and its branch (plain `git worktree remove` and `git branch -d`, so git keeps them if anything is in them). The choice is remembered per repository (`worktrees` in `app.json`) and applies to the folder's "+" in the sidebar and to a chat without messages moved by the folder control. The switch isn't in the header's folder control (when the panel is hidden): the header doesn't know whether the folder is in git.
+- A chat with messages moves with "Move to new worktree" in the Environment card (after a confirmation saying uncommitted changes stay behind), through step 22's fork. A worktree chat moved elsewhere with the folder control leaves its worktree and branch where they are, and Nushi forgets them (`git worktree list` still shows them).
+- A chat started in a subfolder of a repository runs in the same subfolder of its worktree and is listed under that subfolder. The base is the folder's branch, or the commit when `HEAD` is detached; a repository without commits can't have worktrees (git says so). The worktree's name is two words from two lists of 30 (`brave-otter`); the sidebar shows it beside the title (the branch without `nushi/`), the Environment card the whole branch with a worktree icon, and the base.
 
 ## Later ideas
 

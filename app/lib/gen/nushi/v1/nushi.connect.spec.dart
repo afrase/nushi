@@ -42,10 +42,11 @@ abstract final class NushiService {
     nushiv1nushi.StartChatResponse.new,
   );
 
-  /// Moves a chat to another folder. A chat without messages starts a new
-  /// session there; one with messages keeps its session and history, reopened
-  /// in the new folder. Refused while the chat is busy. If the move fails the
-  /// chat stays where it was, with a notice saying why.
+  /// Moves a chat to another folder, or to a new worktree. A chat without
+  /// messages starts a new session there (and a worktree it leaves is
+  /// removed if it holds no work); one with messages keeps its history, in a
+  /// fork of its session there. Refused while the chat is busy. If the move
+  /// fails the chat stays where it was, with a notice saying why.
   static const moveChat = connect.Spec(
     '/$name/MoveChat',
     connect.StreamType.unary,
