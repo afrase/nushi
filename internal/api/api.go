@@ -12,6 +12,7 @@ import (
 
 	"connectrpc.com/connect"
 
+	"github.com/afrase/nushi/internal/claudecontext"
 	"github.com/afrase/nushi/internal/events"
 	"github.com/afrase/nushi/internal/features/chats"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
@@ -21,7 +22,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 24
+const Version = 25
 
 type server struct {
 	chats *chats.Service
@@ -224,6 +225,19 @@ func (s *server) ListFiles(ctx context.Context, req *connect.Request[nushiv1.Lis
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
 	return connect.NewResponse(&nushiv1.ListFilesResponse{Paths: paths}), nil
+}
+
+func (s *server) GetContextUsage(ctx context.Context, req *connect.Request[nushiv1.GetContextUsageRequest]) (*connect.Response[nushiv1.GetContextUsageResponse], error) {
+	md, err := s.chats.ContextUsage(ctx, req.Msg.ChatId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	out := &nushiv1.GetContextUsageResponse{Markdown: md}
+	cats, _ := claudecontext.Parse(md) // the app shows the markdown when there are none
+	for _, c := range cats {
+		out.Categories = append(out.Categories, &nushiv1.ContextCategory{Name: c.Name, Tokens: c.Tokens, Percent: c.Percent})
+	}
+	return connect.NewResponse(out), nil
 }
 
 func (s *server) GetDiff(ctx context.Context, req *connect.Request[nushiv1.GetDiffRequest]) (*connect.Response[nushiv1.GetDiffResponse], error) {

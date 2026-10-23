@@ -80,6 +80,9 @@ const (
 	NushiServiceGetFolderStatusProcedure = "/nushi.v1.NushiService/GetFolderStatus"
 	// NushiServiceListFilesProcedure is the fully-qualified name of the NushiService's ListFiles RPC.
 	NushiServiceListFilesProcedure = "/nushi.v1.NushiService/ListFiles"
+	// NushiServiceGetContextUsageProcedure is the fully-qualified name of the NushiService's
+	// GetContextUsage RPC.
+	NushiServiceGetContextUsageProcedure = "/nushi.v1.NushiService/GetContextUsage"
 	// NushiServiceEventsProcedure is the fully-qualified name of the NushiService's Events RPC.
 	NushiServiceEventsProcedure = "/nushi.v1.NushiService/Events"
 )
@@ -144,6 +147,9 @@ type NushiServiceClient interface {
 	// Lists a folder's files (up to 20,000) for @-mentions: in a git
 	// repository the ones git doesn't ignore.
 	ListFiles(context.Context, *connect.Request[v1.ListFilesRequest]) (*connect.Response[v1.ListFilesResponse], error)
+	// Asks the chat's agent, unseen, what fills its context (Claude's
+	// /context), while the chat is idle (API 25).
+	GetContextUsage(context.Context, *connect.Request[v1.GetContextUsageRequest]) (*connect.Response[v1.GetContextUsageResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
 	Events(context.Context, *connect.Request[v1.EventsRequest]) (*connect.ServerStreamForClient[v1.EventsResponse], error)
@@ -280,6 +286,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("ListFiles")),
 			connect.WithClientOptions(opts...),
 		),
+		getContextUsage: connect.NewClient[v1.GetContextUsageRequest, v1.GetContextUsageResponse](
+			httpClient,
+			baseURL+NushiServiceGetContextUsageProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("GetContextUsage")),
+			connect.WithClientOptions(opts...),
+		),
 		events: connect.NewClient[v1.EventsRequest, v1.EventsResponse](
 			httpClient,
 			baseURL+NushiServiceEventsProcedure,
@@ -311,6 +323,7 @@ type nushiServiceClient struct {
 	getDiff          *connect.Client[v1.GetDiffRequest, v1.GetDiffResponse]
 	getFolderStatus  *connect.Client[v1.GetFolderStatusRequest, v1.GetFolderStatusResponse]
 	listFiles        *connect.Client[v1.ListFilesRequest, v1.ListFilesResponse]
+	getContextUsage  *connect.Client[v1.GetContextUsageRequest, v1.GetContextUsageResponse]
 	events           *connect.Client[v1.EventsRequest, v1.EventsResponse]
 }
 
@@ -414,6 +427,11 @@ func (c *nushiServiceClient) ListFiles(ctx context.Context, req *connect.Request
 	return c.listFiles.CallUnary(ctx, req)
 }
 
+// GetContextUsage calls nushi.v1.NushiService.GetContextUsage.
+func (c *nushiServiceClient) GetContextUsage(ctx context.Context, req *connect.Request[v1.GetContextUsageRequest]) (*connect.Response[v1.GetContextUsageResponse], error) {
+	return c.getContextUsage.CallUnary(ctx, req)
+}
+
 // Events calls nushi.v1.NushiService.Events.
 func (c *nushiServiceClient) Events(ctx context.Context, req *connect.Request[v1.EventsRequest]) (*connect.ServerStreamForClient[v1.EventsResponse], error) {
 	return c.events.CallServerStream(ctx, req)
@@ -479,6 +497,9 @@ type NushiServiceHandler interface {
 	// Lists a folder's files (up to 20,000) for @-mentions: in a git
 	// repository the ones git doesn't ignore.
 	ListFiles(context.Context, *connect.Request[v1.ListFilesRequest]) (*connect.Response[v1.ListFilesResponse], error)
+	// Asks the chat's agent, unseen, what fills its context (Claude's
+	// /context), while the chat is idle (API 25).
+	GetContextUsage(context.Context, *connect.Request[v1.GetContextUsageRequest]) (*connect.Response[v1.GetContextUsageResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
 	Events(context.Context, *connect.Request[v1.EventsRequest], *connect.ServerStream[v1.EventsResponse]) error
@@ -611,6 +632,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("ListFiles")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceGetContextUsageHandler := connect.NewUnaryHandler(
+		NushiServiceGetContextUsageProcedure,
+		svc.GetContextUsage,
+		connect.WithSchema(nushiServiceMethods.ByName("GetContextUsage")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceEventsHandler := connect.NewServerStreamHandler(
 		NushiServiceEventsProcedure,
 		svc.Events,
@@ -659,6 +686,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceGetFolderStatusHandler.ServeHTTP(w, r)
 		case NushiServiceListFilesProcedure:
 			nushiServiceListFilesHandler.ServeHTTP(w, r)
+		case NushiServiceGetContextUsageProcedure:
+			nushiServiceGetContextUsageHandler.ServeHTTP(w, r)
 		case NushiServiceEventsProcedure:
 			nushiServiceEventsHandler.ServeHTTP(w, r)
 		default:
@@ -748,6 +777,10 @@ func (UnimplementedNushiServiceHandler) GetFolderStatus(context.Context, *connec
 
 func (UnimplementedNushiServiceHandler) ListFiles(context.Context, *connect.Request[v1.ListFilesRequest]) (*connect.Response[v1.ListFilesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ListFiles is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) GetContextUsage(context.Context, *connect.Request[v1.GetContextUsageRequest]) (*connect.Response[v1.GetContextUsageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetContextUsage is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) Events(context.Context, *connect.Request[v1.EventsRequest], *connect.ServerStream[v1.EventsResponse]) error {

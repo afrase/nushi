@@ -847,6 +847,56 @@ const SetConfigOptionResponse$json = {
 final $typed_data.Uint8List setConfigOptionResponseDescriptor =
     $convert.base64Decode('ChdTZXRDb25maWdPcHRpb25SZXNwb25zZQ==');
 
+@$core.Deprecated('Use getContextUsageRequestDescriptor instead')
+const GetContextUsageRequest$json = {
+  '1': 'GetContextUsageRequest',
+  '2': [
+    {'1': 'chat_id', '3': 1, '4': 1, '5': 9, '10': 'chatId'},
+  ],
+};
+
+/// Descriptor for `GetContextUsageRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getContextUsageRequestDescriptor =
+    $convert.base64Decode(
+        'ChZHZXRDb250ZXh0VXNhZ2VSZXF1ZXN0EhcKB2NoYXRfaWQYASABKAlSBmNoYXRJZA==');
+
+@$core.Deprecated('Use getContextUsageResponseDescriptor instead')
+const GetContextUsageResponse$json = {
+  '1': 'GetContextUsageResponse',
+  '2': [
+    {
+      '1': 'categories',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.ContextCategory',
+      '10': 'categories'
+    },
+    {'1': 'markdown', '3': 2, '4': 1, '5': 9, '10': 'markdown'},
+  ],
+};
+
+/// Descriptor for `GetContextUsageResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getContextUsageResponseDescriptor = $convert.base64Decode(
+    'ChdHZXRDb250ZXh0VXNhZ2VSZXNwb25zZRI5CgpjYXRlZ29yaWVzGAEgAygLMhkubnVzaGkudj'
+    'EuQ29udGV4dENhdGVnb3J5UgpjYXRlZ29yaWVzEhoKCG1hcmtkb3duGAIgASgJUghtYXJrZG93'
+    'bg==');
+
+@$core.Deprecated('Use contextCategoryDescriptor instead')
+const ContextCategory$json = {
+  '1': 'ContextCategory',
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'tokens', '3': 2, '4': 1, '5': 3, '10': 'tokens'},
+    {'1': 'percent', '3': 3, '4': 1, '5': 1, '10': 'percent'},
+  ],
+};
+
+/// Descriptor for `ContextCategory`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List contextCategoryDescriptor = $convert.base64Decode(
+    'Cg9Db250ZXh0Q2F0ZWdvcnkSEgoEbmFtZRgBIAEoCVIEbmFtZRIWCgZ0b2tlbnMYAiABKANSBn'
+    'Rva2VucxIYCgdwZXJjZW50GAMgASgBUgdwZXJjZW50');
+
 @$core.Deprecated('Use getFolderStatusRequestDescriptor instead')
 const GetFolderStatusRequest$json = {
   '1': 'GetFolderStatusRequest',
@@ -1358,6 +1408,11 @@ const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
       '3': '.nushi.v1.ListFilesResponse'
     },
     {
+      '1': 'GetContextUsage',
+      '2': '.nushi.v1.GetContextUsageRequest',
+      '3': '.nushi.v1.GetContextUsageResponse'
+    },
+    {
       '1': 'Events',
       '2': '.nushi.v1.EventsRequest',
       '3': '.nushi.v1.EventsResponse',
@@ -1427,6 +1482,9 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.GetFolderStatusResponse': GetFolderStatusResponse$json,
   '.nushi.v1.ListFilesRequest': ListFilesRequest$json,
   '.nushi.v1.ListFilesResponse': ListFilesResponse$json,
+  '.nushi.v1.GetContextUsageRequest': GetContextUsageRequest$json,
+  '.nushi.v1.GetContextUsageResponse': GetContextUsageResponse$json,
+  '.nushi.v1.ContextCategory': ContextCategory$json,
   '.nushi.v1.EventsRequest': EventsRequest$json,
   '.nushi.v1.EventsResponse': EventsResponse$json,
   '.nushi.v1.ItemEvent': ItemEvent$json,
@@ -1463,5 +1521,6 @@ final $typed_data.Uint8List nushiServiceDescriptor = $convert.base64Decode(
     'aWZmUmVzcG9uc2USVgoPR2V0Rm9sZGVyU3RhdHVzEiAubnVzaGkudjEuR2V0Rm9sZGVyU3RhdH'
     'VzUmVxdWVzdBohLm51c2hpLnYxLkdldEZvbGRlclN0YXR1c1Jlc3BvbnNlEkQKCUxpc3RGaWxl'
     'cxIaLm51c2hpLnYxLkxpc3RGaWxlc1JlcXVlc3QaGy5udXNoaS52MS5MaXN0RmlsZXNSZXNwb2'
-    '5zZRI9CgZFdmVudHMSFy5udXNoaS52MS5FdmVudHNSZXF1ZXN0GhgubnVzaGkudjEuRXZlbnRz'
-    'UmVzcG9uc2UwAQ==');
+    '5zZRJWCg9HZXRDb250ZXh0VXNhZ2USIC5udXNoaS52MS5HZXRDb250ZXh0VXNhZ2VSZXF1ZXN0'
+    'GiEubnVzaGkudjEuR2V0Q29udGV4dFVzYWdlUmVzcG9uc2USPQoGRXZlbnRzEhcubnVzaGkudj'
+    'EuRXZlbnRzUmVxdWVzdBoYLm51c2hpLnYxLkV2ZW50c1Jlc3BvbnNlMAE=');

@@ -97,6 +97,7 @@ type chat struct {
 	started   time.Time        // when the running turn started
 	done      chan struct{}    // closed when the running turn ends
 	seq       int64            // the last event's number
+	silent    *silentRun       // a prompt Nushi sent on its own, running
 }
 
 // emitLocked numbers and publishes one of the chat's events. Holding the
@@ -250,6 +251,7 @@ func (s *Service) Prompt(chatID, text string, files []string, images []model.Ima
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	c.waitSilentLocked()
 	if c.busy {
 		return errors.New("the agent is still working on the last prompt")
 	}

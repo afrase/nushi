@@ -386,6 +386,25 @@ extension type NushiServiceClient (connect.Transport _transport) {
     );
   }
 
+  /// Asks the chat's agent, unseen, what fills its context (Claude's
+  /// /context), while the chat is idle (API 25).
+  Future<nushiv1nushi.GetContextUsageResponse> getContextUsage(
+    nushiv1nushi.GetContextUsageRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.getContextUsage,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.
   Stream<nushiv1nushi.EventsResponse> events(
