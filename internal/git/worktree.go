@@ -52,7 +52,7 @@ func (Worktrees) Add(ctx context.Context, folder, name string) (model.Worktree, 
 	} else {
 		return wt, "", errors.New("the repository has no commits yet")
 	}
-	if err := exclude(ctx, folder); err != nil {
+	if err := Exclude(ctx, folder, "/.worktrees/"); err != nil {
 		return wt, "", err
 	}
 	if _, err := run(ctx, folder, "worktree", "add", "-q", "-b", wt.Branch, wt.Path, "HEAD"); err != nil {
@@ -124,8 +124,8 @@ func mainWorktree(ctx context.Context, folder string) (string, error) {
 	return repo, nil
 }
 
-// exclude adds .worktrees/ to the repository's info/exclude, once.
-func exclude(ctx context.Context, folder string) error {
+// Exclude adds a line (a pattern) to the repository's info/exclude, once.
+func Exclude(ctx context.Context, folder, line string) error {
 	out, err := run(ctx, folder, "rev-parse", "--path-format=absolute", "--git-path", "info/exclude")
 	if err != nil {
 		return err
@@ -135,8 +135,8 @@ func exclude(ctx context.Context, folder string) error {
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
-	for line := range strings.Lines(string(b)) {
-		if l := strings.TrimSpace(line); l == ".worktrees/" || l == "/.worktrees/" {
+	for l := range strings.Lines(string(b)) {
+		if strings.TrimSpace(l) == line {
 			return nil
 		}
 	}
@@ -146,5 +146,5 @@ func exclude(ctx context.Context, folder string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(path, append(b, "/.worktrees/\n"...), 0o644)
+	return os.WriteFile(path, append(b, line+"\n"...), 0o644)
 }

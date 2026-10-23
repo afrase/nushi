@@ -1,8 +1,12 @@
 package claudemcp
 
 import (
+	"context"
+	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -72,5 +76,42 @@ func write(t *testing.T, path, text string) {
 	}
 	if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestSetOnKeepsOtherSettings(t *testing.T) {
+	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
+	repo, _ := filepath.EvalSymlinks(t.TempDir())
+	if out, err := exec.Command("git", "-C", repo, "init", "-q").CombinedOutput(); err != nil {
+		t.Fatal(string(out))
+	}
+	write(t, filepath.Join(repo, ".mcp.json"), `{"mcpServers":{"web":{"type":"http","url":"http://x"}}}`)
+	ctx := context.Background()
+	if err := (Claude{}).SetOn(ctx, repo, "web", false); err != nil {
+		t.Fatal(err)
+	}
+	servers, _ := Claude{}.Servers(repo)
+	if len(servers) != 1 || !servers[0].Off || servers[0].OffBy != "" {
+		t.Fatalf("after turning it off: %+v", servers)
+	}
+	exclude, _ := os.ReadFile(filepath.Join(repo, ".git", "info", "exclude"))
+	if !strings.Contains(string(exclude), "/.claude/settings.local.json\n") {
+		t.Errorf("info/exclude:\n%s", exclude)
+	}
+	path := filepath.Join(repo, ".claude", "settings.local.json")
+	write(t, path, `{"permissions":{"allow":["Bash(ls)"]},"disabledMcpjsonServers":["web","other"]}`)
+	if err := (Claude{}).SetOn(ctx, repo, "web", true); err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]any
+	b, _ := os.ReadFile(path)
+	_ = json.Unmarshal(b, &got)
+	want := `{"disabledMcpjsonServers":["other"],"enabledMcpjsonServers":["web"],"permissions":{"allow":["Bash(ls)"]}}`
+	if g, _ := json.Marshal(got); string(g) != want {
+		t.Errorf("settings = %s, want %s", g, want)
+	}
+	write(t, filepath.Join(repo, ".claude", "settings.json"), `{"disabledMcpjsonServers":["web"]}`)
+	if servers, _ := (Claude{}).Servers(repo); !servers[0].Off || servers[0].OffBy != filepath.Join(repo, ".claude", "settings.json") {
+		t.Errorf("turned off by the shared settings: %+v", servers[0])
 	}
 }

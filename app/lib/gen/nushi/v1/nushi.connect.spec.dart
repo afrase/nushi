@@ -268,6 +268,34 @@ abstract final class NushiService {
     nushiv1nushi.RemoveMcpServerResponse.new,
   );
 
+  /// Turns a project's .mcp.json server on for the folder's project, which
+  /// approves it, or off, which rejects it (Claude's
+  /// enabledMcpjsonServers and disabledMcpjsonServers in the project's
+  /// .claude/settings.local.json) (API 34).
+  static const setMcpServerOn = connect.Spec(
+    '/$name/SetMcpServerOn',
+    connect.StreamType.unary,
+    nushiv1nushi.SetMcpServerOnRequest.new,
+    nushiv1nushi.SetMcpServerOnResponse.new,
+  );
+
+  /// Signs in to a server that needs OAuth: the agent opens the browser and
+  /// the call returns once the sign-in is done there, or failed (a few
+  /// minutes at most). Logout forgets the sign-in (API 34).
+  static const loginMcpServer = connect.Spec(
+    '/$name/LoginMcpServer',
+    connect.StreamType.unary,
+    nushiv1nushi.LoginMcpServerRequest.new,
+    nushiv1nushi.LoginMcpServerResponse.new,
+  );
+
+  static const logoutMcpServer = connect.Spec(
+    '/$name/LogoutMcpServer',
+    connect.StreamType.unary,
+    nushiv1nushi.LogoutMcpServerRequest.new,
+    nushiv1nushi.LogoutMcpServerResponse.new,
+  );
+
   /// Reopens a chat's session on a new agent (ACP session/load), which
   /// replays its transcript, so it uses the MCP servers as they are now.
   /// Refused while it is busy (API 33).

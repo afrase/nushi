@@ -29,7 +29,7 @@ final String? _oldDataDir =
     : null;
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 32;
+const apiVersion = 34;
 
 /// Whether [folder] is a chat's scratch folder: the chat has no folder yet.
 bool isScratch(String folder) => folder.startsWith('$dataDir/scratch/');
@@ -104,8 +104,11 @@ class Daemon extends ChangeNotifier {
   bool get canRewind => daemonApi >= 29;
   bool get canTakeBack => daemonApi >= 30;
 
-  /// Whether the daemon lists MCP servers (API 32).
+  /// Whether the daemon lists MCP servers (API 32), changes them (33), and
+  /// turns them on and off and signs in to them (34).
   bool get canMcp => daemonApi >= 32;
+  bool get canMcpChange => daemonApi >= 33;
+  bool get canMcpOn => daemonApi >= 34;
 
   /// The folder whose MCP servers show in place of the chat, if they do.
   String? mcpFolder;

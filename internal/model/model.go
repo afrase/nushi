@@ -272,4 +272,10 @@ type MCPServer struct {
 	State, Detail string
 	// Shadowed says a server of the same name in a scope that wins hides it.
 	Shadowed bool
+	// Off says a project server is turned off (rejected) for the folder;
+	// OffBy names a file that does it other than the one Nushi changes.
+	Off   bool
+	OffBy string
+	// Approved says the project's local settings approve a project server.
+	Approved bool
 }

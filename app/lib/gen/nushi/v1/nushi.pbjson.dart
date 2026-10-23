@@ -1065,6 +1065,9 @@ const McpServer$json = {
     {'1': 'state', '3': 5, '4': 1, '5': 9, '10': 'state'},
     {'1': 'detail', '3': 6, '4': 1, '5': 9, '10': 'detail'},
     {'1': 'shadowed', '3': 7, '4': 1, '5': 8, '10': 'shadowed'},
+    {'1': 'off', '3': 8, '4': 1, '5': 8, '10': 'off'},
+    {'1': 'off_by', '3': 9, '4': 1, '5': 9, '10': 'offBy'},
+    {'1': 'approved', '3': 10, '4': 1, '5': 8, '10': 'approved'},
   ],
 };
 
@@ -1073,7 +1076,8 @@ final $typed_data.Uint8List mcpServerDescriptor = $convert.base64Decode(
     'CglNY3BTZXJ2ZXISEgoEbmFtZRgBIAEoCVIEbmFtZRIUCgVzY29wZRgCIAEoCVIFc2NvcGUSFg'
     'oGc291cmNlGAMgASgJUgZzb3VyY2USHwoLY29uZmlnX2pzb24YBCABKAlSCmNvbmZpZ0pzb24S'
     'FAoFc3RhdGUYBSABKAlSBXN0YXRlEhYKBmRldGFpbBgGIAEoCVIGZGV0YWlsEhoKCHNoYWRvd2'
-    'VkGAcgASgIUghzaGFkb3dlZA==');
+    'VkGAcgASgIUghzaGFkb3dlZBIQCgNvZmYYCCABKAhSA29mZhIVCgZvZmZfYnkYCSABKAlSBW9m'
+    'ZkJ5EhoKCGFwcHJvdmVkGAogASgIUghhcHByb3ZlZA==');
 
 @$core.Deprecated('Use addMcpServerRequestDescriptor instead')
 const AddMcpServerRequest$json = {
@@ -1151,6 +1155,77 @@ const RemoveMcpServerResponse$json = {
 /// Descriptor for `RemoveMcpServerResponse`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List removeMcpServerResponseDescriptor =
     $convert.base64Decode('ChdSZW1vdmVNY3BTZXJ2ZXJSZXNwb25zZQ==');
+
+@$core.Deprecated('Use setMcpServerOnRequestDescriptor instead')
+const SetMcpServerOnRequest$json = {
+  '1': 'SetMcpServerOnRequest',
+  '2': [
+    {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
+    {'1': 'name', '3': 2, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'on', '3': 3, '4': 1, '5': 8, '10': 'on'},
+  ],
+};
+
+/// Descriptor for `SetMcpServerOnRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List setMcpServerOnRequestDescriptor = $convert.base64Decode(
+    'ChVTZXRNY3BTZXJ2ZXJPblJlcXVlc3QSFgoGZm9sZGVyGAEgASgJUgZmb2xkZXISEgoEbmFtZR'
+    'gCIAEoCVIEbmFtZRIOCgJvbhgDIAEoCFICb24=');
+
+@$core.Deprecated('Use setMcpServerOnResponseDescriptor instead')
+const SetMcpServerOnResponse$json = {
+  '1': 'SetMcpServerOnResponse',
+};
+
+/// Descriptor for `SetMcpServerOnResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List setMcpServerOnResponseDescriptor =
+    $convert.base64Decode('ChZTZXRNY3BTZXJ2ZXJPblJlc3BvbnNl');
+
+@$core.Deprecated('Use loginMcpServerRequestDescriptor instead')
+const LoginMcpServerRequest$json = {
+  '1': 'LoginMcpServerRequest',
+  '2': [
+    {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
+    {'1': 'name', '3': 2, '4': 1, '5': 9, '10': 'name'},
+  ],
+};
+
+/// Descriptor for `LoginMcpServerRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List loginMcpServerRequestDescriptor = $convert.base64Decode(
+    'ChVMb2dpbk1jcFNlcnZlclJlcXVlc3QSFgoGZm9sZGVyGAEgASgJUgZmb2xkZXISEgoEbmFtZR'
+    'gCIAEoCVIEbmFtZQ==');
+
+@$core.Deprecated('Use loginMcpServerResponseDescriptor instead')
+const LoginMcpServerResponse$json = {
+  '1': 'LoginMcpServerResponse',
+};
+
+/// Descriptor for `LoginMcpServerResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List loginMcpServerResponseDescriptor =
+    $convert.base64Decode('ChZMb2dpbk1jcFNlcnZlclJlc3BvbnNl');
+
+@$core.Deprecated('Use logoutMcpServerRequestDescriptor instead')
+const LogoutMcpServerRequest$json = {
+  '1': 'LogoutMcpServerRequest',
+  '2': [
+    {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
+    {'1': 'name', '3': 2, '4': 1, '5': 9, '10': 'name'},
+  ],
+};
+
+/// Descriptor for `LogoutMcpServerRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List logoutMcpServerRequestDescriptor =
+    $convert.base64Decode(
+        'ChZMb2dvdXRNY3BTZXJ2ZXJSZXF1ZXN0EhYKBmZvbGRlchgBIAEoCVIGZm9sZGVyEhIKBG5hbW'
+        'UYAiABKAlSBG5hbWU=');
+
+@$core.Deprecated('Use logoutMcpServerResponseDescriptor instead')
+const LogoutMcpServerResponse$json = {
+  '1': 'LogoutMcpServerResponse',
+};
+
+/// Descriptor for `LogoutMcpServerResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List logoutMcpServerResponseDescriptor =
+    $convert.base64Decode('ChdMb2dvdXRNY3BTZXJ2ZXJSZXNwb25zZQ==');
 
 @$core.Deprecated('Use reloadChatRequestDescriptor instead')
 const ReloadChatRequest$json = {
@@ -1817,6 +1892,21 @@ const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
       '3': '.nushi.v1.RemoveMcpServerResponse'
     },
     {
+      '1': 'SetMcpServerOn',
+      '2': '.nushi.v1.SetMcpServerOnRequest',
+      '3': '.nushi.v1.SetMcpServerOnResponse'
+    },
+    {
+      '1': 'LoginMcpServer',
+      '2': '.nushi.v1.LoginMcpServerRequest',
+      '3': '.nushi.v1.LoginMcpServerResponse'
+    },
+    {
+      '1': 'LogoutMcpServer',
+      '2': '.nushi.v1.LogoutMcpServerRequest',
+      '3': '.nushi.v1.LogoutMcpServerResponse'
+    },
+    {
       '1': 'ReloadChat',
       '2': '.nushi.v1.ReloadChatRequest',
       '3': '.nushi.v1.ReloadChatResponse'
@@ -1912,6 +2002,12 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.EditMcpServerResponse': EditMcpServerResponse$json,
   '.nushi.v1.RemoveMcpServerRequest': RemoveMcpServerRequest$json,
   '.nushi.v1.RemoveMcpServerResponse': RemoveMcpServerResponse$json,
+  '.nushi.v1.SetMcpServerOnRequest': SetMcpServerOnRequest$json,
+  '.nushi.v1.SetMcpServerOnResponse': SetMcpServerOnResponse$json,
+  '.nushi.v1.LoginMcpServerRequest': LoginMcpServerRequest$json,
+  '.nushi.v1.LoginMcpServerResponse': LoginMcpServerResponse$json,
+  '.nushi.v1.LogoutMcpServerRequest': LogoutMcpServerRequest$json,
+  '.nushi.v1.LogoutMcpServerResponse': LogoutMcpServerResponse$json,
   '.nushi.v1.ReloadChatRequest': ReloadChatRequest$json,
   '.nushi.v1.ReloadChatResponse': ReloadChatResponse$json,
   '.nushi.v1.EventsRequest': EventsRequest$json,
@@ -1961,6 +2057,11 @@ final $typed_data.Uint8List nushiServiceDescriptor = $convert.base64Decode(
     '52MS5BZGRNY3BTZXJ2ZXJSZXNwb25zZRJQCg1FZGl0TWNwU2VydmVyEh4ubnVzaGkudjEuRWRp'
     'dE1jcFNlcnZlclJlcXVlc3QaHy5udXNoaS52MS5FZGl0TWNwU2VydmVyUmVzcG9uc2USVgoPUm'
     'Vtb3ZlTWNwU2VydmVyEiAubnVzaGkudjEuUmVtb3ZlTWNwU2VydmVyUmVxdWVzdBohLm51c2hp'
-    'LnYxLlJlbW92ZU1jcFNlcnZlclJlc3BvbnNlEkcKClJlbG9hZENoYXQSGy5udXNoaS52MS5SZW'
-    'xvYWRDaGF0UmVxdWVzdBocLm51c2hpLnYxLlJlbG9hZENoYXRSZXNwb25zZRI9CgZFdmVudHMS'
-    'Fy5udXNoaS52MS5FdmVudHNSZXF1ZXN0GhgubnVzaGkudjEuRXZlbnRzUmVzcG9uc2UwAQ==');
+    'LnYxLlJlbW92ZU1jcFNlcnZlclJlc3BvbnNlElMKDlNldE1jcFNlcnZlck9uEh8ubnVzaGkudj'
+    'EuU2V0TWNwU2VydmVyT25SZXF1ZXN0GiAubnVzaGkudjEuU2V0TWNwU2VydmVyT25SZXNwb25z'
+    'ZRJTCg5Mb2dpbk1jcFNlcnZlchIfLm51c2hpLnYxLkxvZ2luTWNwU2VydmVyUmVxdWVzdBogLm'
+    '51c2hpLnYxLkxvZ2luTWNwU2VydmVyUmVzcG9uc2USVgoPTG9nb3V0TWNwU2VydmVyEiAubnVz'
+    'aGkudjEuTG9nb3V0TWNwU2VydmVyUmVxdWVzdBohLm51c2hpLnYxLkxvZ291dE1jcFNlcnZlcl'
+    'Jlc3BvbnNlEkcKClJlbG9hZENoYXQSGy5udXNoaS52MS5SZWxvYWRDaGF0UmVxdWVzdBocLm51'
+    'c2hpLnYxLlJlbG9hZENoYXRSZXNwb25zZRI9CgZFdmVudHMSFy5udXNoaS52MS5FdmVudHNSZX'
+    'F1ZXN0GhgubnVzaGkudjEuRXZlbnRzUmVzcG9uc2UwAQ==');

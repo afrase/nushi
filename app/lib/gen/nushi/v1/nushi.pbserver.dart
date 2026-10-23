@@ -77,6 +77,12 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.EditMcpServerRequest request);
   $async.Future<$0.RemoveMcpServerResponse> removeMcpServer(
       $pb.ServerContext ctx, $0.RemoveMcpServerRequest request);
+  $async.Future<$0.SetMcpServerOnResponse> setMcpServerOn(
+      $pb.ServerContext ctx, $0.SetMcpServerOnRequest request);
+  $async.Future<$0.LoginMcpServerResponse> loginMcpServer(
+      $pb.ServerContext ctx, $0.LoginMcpServerRequest request);
+  $async.Future<$0.LogoutMcpServerResponse> logoutMcpServer(
+      $pb.ServerContext ctx, $0.LogoutMcpServerRequest request);
   $async.Future<$0.ReloadChatResponse> reloadChat(
       $pb.ServerContext ctx, $0.ReloadChatRequest request);
   $async.Future<$0.EventsResponse> events(
@@ -140,6 +146,12 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.EditMcpServerRequest();
       case 'RemoveMcpServer':
         return $0.RemoveMcpServerRequest();
+      case 'SetMcpServerOn':
+        return $0.SetMcpServerOnRequest();
+      case 'LoginMcpServer':
+        return $0.LoginMcpServerRequest();
+      case 'LogoutMcpServer':
+        return $0.LogoutMcpServerRequest();
       case 'ReloadChat':
         return $0.ReloadChatRequest();
       case 'Events':
@@ -208,6 +220,12 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return editMcpServer(ctx, request as $0.EditMcpServerRequest);
       case 'RemoveMcpServer':
         return removeMcpServer(ctx, request as $0.RemoveMcpServerRequest);
+      case 'SetMcpServerOn':
+        return setMcpServerOn(ctx, request as $0.SetMcpServerOnRequest);
+      case 'LoginMcpServer':
+        return loginMcpServer(ctx, request as $0.LoginMcpServerRequest);
+      case 'LogoutMcpServer':
+        return logoutMcpServer(ctx, request as $0.LogoutMcpServerRequest);
       case 'ReloadChat':
         return reloadChat(ctx, request as $0.ReloadChatRequest);
       case 'Events':

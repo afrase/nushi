@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'daemon.dart';
 import 'folder_button.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
+import 'mcp_actions.dart';
 import 'mcp_form.dart';
 import 'mcp_servers.dart';
 import 'menu.dart';
@@ -80,7 +81,9 @@ class McpView extends StatelessWidget {
                   icon: Icons.add,
                   kind: ButtonKind.ghost,
                   height: 24,
-                  onPressed: () => mcpForm(context, list),
+                  onPressed: daemon.canMcpChange
+                      ? () => mcpForm(context, list)
+                      : null,
                 ),
                 const SizedBox(width: 8),
                 if (list.checking)
@@ -193,30 +196,6 @@ class _Row extends StatelessWidget {
   final bool first;
   final String? shadowedBy;
 
-  static const _changeable = {'user', 'project', 'local'};
-
-  Future<void> _remove(BuildContext context) async {
-    final (scope, about) = scopes[server.scope]!;
-    final ok = await confirm(
-      context,
-      'Remove ${server.name}?',
-      'It goes from the $scope scope: ${about[0].toLowerCase()}'
-          '${about.substring(1)}',
-      'Remove',
-    );
-    if (!ok || !context.mounted) return;
-    await tryOrShow(context, () async {
-      await list.daemon.client.removeMcpServer(
-        RemoveMcpServerRequest(
-          folder: list.folder,
-          scope: server.scope,
-          name: server.name,
-        ),
-      );
-      list.changed();
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context), t = theme.t;
@@ -261,22 +240,8 @@ class _Row extends StatelessWidget {
                   const SizedBox(width: 12),
                   Text(word, style: theme.ui(color, size: 12)),
                 ],
-                if (_changeable.contains(server.scope))
-                  Menu(
-                    tooltip: 'Edit or remove',
-                    entries: [
-                      MenuEntry(
-                        'Edit…',
-                        onPick: () => mcpForm(context, list, server: server),
-                      ),
-                      MenuEntry('Remove…', onPick: () => _remove(context)),
-                    ],
-                    child: Icon(
-                      Icons.more_horiz,
-                      size: 15,
-                      color: t.textSecondary,
-                    ),
-                  ),
+                const SizedBox(width: 6),
+                McpActions(list, server),
               ],
             ),
             if (hidden.isNotEmpty || dim || failed)

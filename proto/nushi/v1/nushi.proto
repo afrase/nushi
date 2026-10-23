@@ -94,6 +94,16 @@ service NushiService {
   rpc AddMcpServer(AddMcpServerRequest) returns (AddMcpServerResponse);
   rpc EditMcpServer(EditMcpServerRequest) returns (EditMcpServerResponse);
   rpc RemoveMcpServer(RemoveMcpServerRequest) returns (RemoveMcpServerResponse);
+  // Turns a project's .mcp.json server on for the folder's project, which
+  // approves it, or off, which rejects it (Claude's
+  // enabledMcpjsonServers and disabledMcpjsonServers in the project's
+  // .claude/settings.local.json) (API 34).
+  rpc SetMcpServerOn(SetMcpServerOnRequest) returns (SetMcpServerOnResponse);
+  // Signs in to a server that needs OAuth: the agent opens the browser and
+  // the call returns once the sign-in is done there, or failed (a few
+  // minutes at most). Logout forgets the sign-in (API 34).
+  rpc LoginMcpServer(LoginMcpServerRequest) returns (LoginMcpServerResponse);
+  rpc LogoutMcpServer(LogoutMcpServerRequest) returns (LogoutMcpServerResponse);
   // Reopens a chat's session on a new agent (ACP session/load), which
   // replays its transcript, so it uses the MCP servers as they are now.
   // Refused while it is busy (API 33).
@@ -483,6 +493,13 @@ message McpServer {
   string detail = 6;
   // A server of the same name in a scope that wins hides it.
   bool shadowed = 7;
+  // A project server turned off (rejected) for the folder; off_by names a
+  // file that does it other than the one SetMcpServerOn changes.
+  bool off = 8;
+  string off_by = 9;
+  // The project's local settings approve this project server (Claude in
+  // the terminal takes that once the folder is trusted there).
+  bool approved = 10;
 }
 
 message AddMcpServerRequest {
@@ -510,6 +527,28 @@ message RemoveMcpServerRequest {
 }
 
 message RemoveMcpServerResponse {}
+
+message SetMcpServerOnRequest {
+  string folder = 1;
+  string name = 2;
+  bool on = 3;
+}
+
+message SetMcpServerOnResponse {}
+
+message LoginMcpServerRequest {
+  string folder = 1;
+  string name = 2;
+}
+
+message LoginMcpServerResponse {}
+
+message LogoutMcpServerRequest {
+  string folder = 1;
+  string name = 2;
+}
+
+message LogoutMcpServerResponse {}
 
 message ReloadChatRequest {
   string chat_id = 1;
