@@ -95,6 +95,12 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.WriteTerminalRequest request);
   $async.Future<$0.ResizeTerminalResponse> resizeTerminal(
       $pb.ServerContext ctx, $0.ResizeTerminalRequest request);
+  $async.Future<$0.RenameTerminalResponse> renameTerminal(
+      $pb.ServerContext ctx, $0.RenameTerminalRequest request);
+  $async.Future<$0.ArrangeTerminalsResponse> arrangeTerminals(
+      $pb.ServerContext ctx, $0.ArrangeTerminalsRequest request);
+  $async.Future<$0.RestartTerminalResponse> restartTerminal(
+      $pb.ServerContext ctx, $0.RestartTerminalRequest request);
   $async.Future<$0.CloseTerminalResponse> closeTerminal(
       $pb.ServerContext ctx, $0.CloseTerminalRequest request);
   $async.Future<$0.EventsResponse> events(
@@ -176,6 +182,12 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.WriteTerminalRequest();
       case 'ResizeTerminal':
         return $0.ResizeTerminalRequest();
+      case 'RenameTerminal':
+        return $0.RenameTerminalRequest();
+      case 'ArrangeTerminals':
+        return $0.ArrangeTerminalsRequest();
+      case 'RestartTerminal':
+        return $0.RestartTerminalRequest();
       case 'CloseTerminal':
         return $0.CloseTerminalRequest();
       case 'Events':
@@ -262,6 +274,12 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return writeTerminal(ctx, request as $0.WriteTerminalRequest);
       case 'ResizeTerminal':
         return resizeTerminal(ctx, request as $0.ResizeTerminalRequest);
+      case 'RenameTerminal':
+        return renameTerminal(ctx, request as $0.RenameTerminalRequest);
+      case 'ArrangeTerminals':
+        return arrangeTerminals(ctx, request as $0.ArrangeTerminalsRequest);
+      case 'RestartTerminal':
+        return restartTerminal(ctx, request as $0.RestartTerminalRequest);
       case 'CloseTerminal':
         return closeTerminal(ctx, request as $0.CloseTerminalRequest);
       case 'Events':

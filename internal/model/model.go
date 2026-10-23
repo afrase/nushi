@@ -190,6 +190,7 @@ type Event struct {
 type Terminal struct {
 	ID, ChatID string
 	Folder     string // where it started
+	Name       string // the name the user gave it, if any
 	Shell      string // the shell's name, such as "zsh"
 	// Program is the foreground program's command line while it isn't the
 	// shell.

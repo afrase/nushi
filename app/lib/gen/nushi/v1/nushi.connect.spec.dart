@@ -347,6 +347,32 @@ abstract final class NushiService {
     nushiv1nushi.ResizeTerminalResponse.new,
   );
 
+  /// Names a terminal; an empty name goes back to the one it shows by
+  /// itself (API 36).
+  static const renameTerminal = connect.Spec(
+    '/$name/RenameTerminal',
+    connect.StreamType.unary,
+    nushiv1nushi.RenameTerminalRequest.new,
+    nushiv1nushi.RenameTerminalResponse.new,
+  );
+
+  /// Puts a chat's terminals in an order (API 36).
+  static const arrangeTerminals = connect.Spec(
+    '/$name/ArrangeTerminals',
+    connect.StreamType.unary,
+    nushiv1nushi.ArrangeTerminalsRequest.new,
+    nushiv1nushi.ArrangeTerminalsResponse.new,
+  );
+
+  /// Starts a new shell in a terminal's folder in place of its old one (a
+  /// shell that exited), keeping its place and name (API 36).
+  static const restartTerminal = connect.Spec(
+    '/$name/RestartTerminal',
+    connect.StreamType.unary,
+    nushiv1nushi.RestartTerminalRequest.new,
+    nushiv1nushi.RestartTerminalResponse.new,
+  );
+
   /// Closes a terminal: its shell is hung up, then killed after a short
   /// grace, along with what still runs in it (API 35).
   static const closeTerminal = connect.Spec(

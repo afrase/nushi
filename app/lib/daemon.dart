@@ -13,6 +13,7 @@ import 'gen/nushi/v1/nushi.connect.client.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'review.dart';
 import 'settings.dart';
+import 'terminals.dart';
 
 final _support = '${Platform.environment['HOME']}/Library/Application Support';
 
@@ -29,7 +30,7 @@ final String? _oldDataDir =
     : null;
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 35;
+const apiVersion = 36;
 
 /// Whether [folder] is a chat's scratch folder: the chat has no folder yet.
 bool isScratch(String folder) => folder.startsWith('$dataDir/scratch/');
@@ -118,6 +119,12 @@ class Daemon extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Whether the daemon runs terminals (API 36).
+  bool get canTerminals => daemonApi >= 36;
+
+  /// The chats' terminals.
+  late final terminals = Terminals(client);
+
   /// Whether the daemon sums up a folder's changes (API 17).
   bool get canFolderStatus => daemonApi >= 17;
 
@@ -203,7 +210,9 @@ class Daemon extends ChangeNotifier {
               unawaited(_listChats());
               return;
             }
-            if (sides[e.chatId] case final side?) {
+            if (e.hasTerminals()) {
+              terminals.apply(e.chatId, e.terminals.terminals);
+            } else if (sides[e.chatId] case final side?) {
               side.apply(e);
             } else if (e.hasChat()) {
               _chat(e.chat);
@@ -214,6 +223,10 @@ class Daemon extends ChangeNotifier {
                 changeScopes.value = {...changeScopes.value}..remove(e.chatId);
               }
               if (commentsOf(e.chatId).isNotEmpty) setComments(e.chatId, []);
+              if (terminalChats.value.contains(e.chatId)) {
+                terminalChats.value = {...terminalChats.value}
+                  ..remove(e.chatId);
+              }
               if (selectedId == e.chatId) selectedId = null;
               notifyListeners();
             } else {
@@ -229,6 +242,7 @@ class Daemon extends ChangeNotifier {
     for (final c in chats.values) {
       c.unload(); // events may have been missed while disconnected
     }
+    terminals.stale();
     for (final c in (await client.listChats(ListChatsRequest())).chats) {
       _chat(c);
     }

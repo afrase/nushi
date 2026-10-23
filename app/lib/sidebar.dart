@@ -203,8 +203,8 @@ class _OutdatedState extends State<_Outdated> {
         children: [
           Text(
             'The daemon is older than this app, so some features are '
-            'unavailable. Restarting it stops running turns; chats reopen '
-            'as you open them.',
+            'unavailable. Restarting it stops running turns and closes '
+            'terminals; chats reopen as you open them.',
             style: theme.ui(t.textSecondary, size: 12),
           ),
           const SizedBox(height: 8),

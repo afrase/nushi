@@ -46,12 +46,26 @@ func (s *server) ResizeTerminal(_ context.Context, req *connect.Request[nushiv1.
 	return changed(s.terms.Resize(m.TerminalId, int(m.Cols), int(m.Rows)), &nushiv1.ResizeTerminalResponse{})
 }
 
+func (s *server) RenameTerminal(_ context.Context, req *connect.Request[nushiv1.RenameTerminalRequest]) (*connect.Response[nushiv1.RenameTerminalResponse], error) {
+	return changed(s.terms.Rename(req.Msg.TerminalId, req.Msg.Name), &nushiv1.RenameTerminalResponse{})
+}
+
+func (s *server) ArrangeTerminals(_ context.Context, req *connect.Request[nushiv1.ArrangeTerminalsRequest]) (*connect.Response[nushiv1.ArrangeTerminalsResponse], error) {
+	s.terms.Arrange(req.Msg.ChatId, req.Msg.TerminalIds)
+	return connect.NewResponse(&nushiv1.ArrangeTerminalsResponse{}), nil
+}
+
+func (s *server) RestartTerminal(_ context.Context, req *connect.Request[nushiv1.RestartTerminalRequest]) (*connect.Response[nushiv1.RestartTerminalResponse], error) {
+	m := req.Msg
+	return changed(s.terms.Restart(m.TerminalId, int(m.Cols), int(m.Rows)), &nushiv1.RestartTerminalResponse{})
+}
+
 func (s *server) CloseTerminal(_ context.Context, req *connect.Request[nushiv1.CloseTerminalRequest]) (*connect.Response[nushiv1.CloseTerminalResponse], error) {
 	return changed(s.terms.Close(req.Msg.TerminalId), &nushiv1.CloseTerminalResponse{})
 }
 
 func terminalProto(t model.Terminal) *nushiv1.Terminal {
-	return &nushiv1.Terminal{Id: t.ID, ChatId: t.ChatID, Folder: t.Folder, Shell: t.Shell,
+	return &nushiv1.Terminal{Id: t.ID, ChatId: t.ChatID, Folder: t.Folder, Name: t.Name, Shell: t.Shell,
 		Program: t.Program, Exited: t.Exited, ExitCode: int32(t.ExitCode)}
 }
 
