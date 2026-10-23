@@ -1142,6 +1142,9 @@ const Item$json = {
       '6': '.nushi.v1.ImageData',
       '10': 'images'
     },
+    {'1': 'parent', '3': 14, '4': 1, '5': 9, '10': 'parent'},
+    {'1': 'agent', '3': 15, '4': 1, '5': 9, '10': 'agent'},
+    {'1': 'tool', '3': 16, '4': 1, '5': 9, '10': 'tool'},
   ],
 };
 
@@ -1154,7 +1157,8 @@ final $typed_data.Uint8List itemDescriptor = $convert.base64Decode(
     'd2VyEicKBmZpZWxkcxgJIAMoCzIPLm51c2hpLnYxLkZpZWxkUgZmaWVsZHMSFAoFcGF0aHMYCi'
     'ADKAlSBXBhdGhzEioKBWRpZmZzGAsgAygLMhQubnVzaGkudjEuRmlsZUNoYW5nZVIFZGlmZnMS'
     'JwoEcGxhbhgMIAMoCzITLm51c2hpLnYxLlBsYW5FbnRyeVIEcGxhbhIrCgZpbWFnZXMYDSADKA'
-    'syEy5udXNoaS52MS5JbWFnZURhdGFSBmltYWdlcw==');
+    'syEy5udXNoaS52MS5JbWFnZURhdGFSBmltYWdlcxIWCgZwYXJlbnQYDiABKAlSBnBhcmVudBIU'
+    'CgVhZ2VudBgPIAEoCVIFYWdlbnQSEgoEdG9vbBgQIAEoCVIEdG9vbA==');
 
 @$core.Deprecated('Use planEntryDescriptor instead')
 const PlanEntry$json = {

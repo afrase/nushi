@@ -3485,7 +3485,14 @@ type Item struct {
 	Diffs []*FileChange `protobuf:"bytes,11,rep,name=diffs,proto3" json:"diffs,omitempty"`
 	Plan  []*PlanEntry  `protobuf:"bytes,12,rep,name=plan,proto3" json:"plan,omitempty"`
 	// A message's or a tool call's images.
-	Images        []*ImageData `protobuf:"bytes,13,rep,name=images,proto3" json:"images,omitempty"`
+	Images []*ImageData `protobuf:"bytes,13,rep,name=images,proto3" json:"images,omitempty"`
+	// The tool call whose subagent made this item, if one did (API 24).
+	Parent string `protobuf:"bytes,14,opt,name=parent,proto3" json:"parent,omitempty"`
+	// For a tool call that starts a subagent, the subagent's type ("Explore").
+	Agent string `protobuf:"bytes,15,opt,name=agent,proto3" json:"agent,omitempty"`
+	// A tool call's tool, when the agent names it (Claude's "Read",
+	// "SubagentHandback", ...).
+	Tool          string `protobuf:"bytes,16,opt,name=tool,proto3" json:"tool,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3609,6 +3616,27 @@ func (x *Item) GetImages() []*ImageData {
 		return x.Images
 	}
 	return nil
+}
+
+func (x *Item) GetParent() string {
+	if x != nil {
+		return x.Parent
+	}
+	return ""
+}
+
+func (x *Item) GetAgent() string {
+	if x != nil {
+		return x.Agent
+	}
+	return ""
+}
+
+func (x *Item) GetTool() string {
+	if x != nil {
+		return x.Tool
+	}
+	return ""
 }
 
 // A step of the agent's plan; status is "pending", "in_progress" or
@@ -4177,7 +4205,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x05value\x18\x01 \x01(\tR\x05value\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x14\n" +
-	"\x05group\x18\x04 \x01(\tR\x05group\"\xa2\x03\n" +
+	"\x05group\x18\x04 \x01(\tR\x05group\"\xe4\x03\n" +
 	"\x04Item\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12&\n" +
 	"\x04kind\x18\x02 \x01(\x0e2\x12.nushi.v1.ItemKindR\x04kind\x12\x12\n" +
@@ -4192,7 +4220,10 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	" \x03(\tR\x05paths\x12*\n" +
 	"\x05diffs\x18\v \x03(\v2\x14.nushi.v1.FileChangeR\x05diffs\x12'\n" +
 	"\x04plan\x18\f \x03(\v2\x13.nushi.v1.PlanEntryR\x04plan\x12+\n" +
-	"\x06images\x18\r \x03(\v2\x13.nushi.v1.ImageDataR\x06images\"=\n" +
+	"\x06images\x18\r \x03(\v2\x13.nushi.v1.ImageDataR\x06images\x12\x16\n" +
+	"\x06parent\x18\x0e \x01(\tR\x06parent\x12\x14\n" +
+	"\x05agent\x18\x0f \x01(\tR\x05agent\x12\x12\n" +
+	"\x04tool\x18\x10 \x01(\tR\x04tool\"=\n" +
 	"\tPlanEntry\x12\x18\n" +
 	"\acontent\x18\x01 \x01(\tR\acontent\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\"b\n" +

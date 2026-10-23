@@ -67,9 +67,13 @@ func initialize(ctx context.Context, launch Launch, h acp.Handler) (Agent, *acp.
 		return nil, nil, fmt.Errorf("start agent: %w", err)
 	}
 	init, err := agent.Initialize(ctx, acp.InitializeRequest{
-		ProtocolVersion:    acp.Version,
-		ClientCapabilities: &acp.ClientCapabilities{Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}}},
-		ClientInfo:         &acp.Implementation{Name: "nushi", Title: "Nushi"},
+		ProtocolVersion: acp.Version,
+		ClientCapabilities: &acp.ClientCapabilities{
+			Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}},
+			// claude-agent-acp then sends a subagent's text and thinking too.
+			Meta: map[string]any{"subagent-transcript": true},
+		},
+		ClientInfo: &acp.Implementation{Name: "nushi", Title: "Nushi"},
 	})
 	if err != nil {
 		agent.Close()

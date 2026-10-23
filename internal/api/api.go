@@ -21,7 +21,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 23
+const Version = 24
 
 type server struct {
 	chats *chats.Service
@@ -312,7 +312,7 @@ func toProto(e model.Event) *nushiv1.EventsResponse {
 
 func itemProto(it *model.Item) *nushiv1.Item {
 	out := &nushiv1.Item{Id: it.ID, Kind: itemKinds[it.Kind], Text: it.Text,
-		Title: it.Title, ToolKind: it.ToolKind, Status: it.Status, Answer: it.Answer}
+		Title: it.Title, ToolKind: it.ToolKind, Status: it.Status, Answer: it.Answer, Parent: it.Parent, Agent: it.Agent, Tool: it.Tool}
 	out.Options = optionsProto(it.Options)
 	out.Paths = it.Paths
 	for _, img := range it.Images {

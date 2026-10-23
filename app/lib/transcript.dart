@@ -11,27 +11,31 @@ import 'images.dart';
 import 'markdown.dart';
 import 'question_card.dart';
 import 'replies.dart';
+import 'subagents.dart';
 import 'theme/theme.dart';
 import 'thinking.dart';
 import 'tool_calls.dart';
 import 'widgets.dart';
 
-/// The items, with each run of tool calls as one list.
-List<Object> _entries(List<Item> items) {
+/// The items, with each run of tool calls as one list, and each subagent
+/// as one [Subagent] with what it did.
+List<Object> _entries(List<Item> items, {required bool busy}) {
+  final subs = {for (final s in subagentsOf(items, busy: busy)) s.call.id: s};
   final out = <Object>[];
   for (final it in items) {
     final last = out.lastOrNull;
-    if (it.kind == ItemKind.ITEM_KIND_TOOL_CALL) {
-      if (last is List<Item>) {
-        last.add(it);
-        continue;
-      }
-      if (last is Item && last.kind == ItemKind.ITEM_KIND_TOOL_CALL) {
-        out.last = [last, it];
-        continue;
-      }
+    if (subs.containsKey(it.parent)) continue;
+    if (subs[it.id] case final sub?) {
+      out.add(sub);
+    } else if (it.kind == ItemKind.ITEM_KIND_TOOL_CALL && last is List<Item>) {
+      last.add(it);
+    } else if (it.kind == ItemKind.ITEM_KIND_TOOL_CALL &&
+        last is Item &&
+        last.kind == ItemKind.ITEM_KIND_TOOL_CALL) {
+      out.last = [last, it];
+    } else {
+      out.add(it);
     }
-    out.add(it);
   }
   return out;
 }
@@ -81,8 +85,11 @@ class _TranscriptState extends State<Transcript> {
     required bool live,
     required bool still,
   }) {
-    final items = e is List<Item> ? e : [e as Item];
-    final key = e is List<Item> ? 'group ${items.first.id}' : items.first.id;
+    final (key, items) = switch (e) {
+      final List<Item> run => ('group ${run.first.id}', run),
+      final Subagent s => ('agent ${s.call.id}', [s.call, s.busy, ...s.items]),
+      _ => ((e as Item).id, [e]),
+    };
     final from = [live, still, ...items];
     final was = before[key];
     final same =
@@ -99,23 +106,73 @@ class _TranscriptState extends State<Transcript> {
                   key: ValueKey(key),
                   padding: const EdgeInsets.only(top: 12),
                   child: RepaintBoundary(
-                    child: e is List<Item>
-                        ? ToolGroupView(e, still: still)
-                        : _ItemView(
-                            e as Item,
-                            widget.chat.id,
-                            widget.daemon,
-                            live: live,
-                            still: still,
-                          ),
+                    child: e is Subagent
+                        ? KeyedSubtree(
+                            key: _subagents.putIfAbsent(
+                              e.call.id,
+                              GlobalKey.new,
+                            ),
+                            child: _view(e, live: live, still: still),
+                          )
+                        : _view(e, live: live, still: still),
                   ),
                 ),
               ))
         .$2;
   }
 
+  /// An entry's view: an item, a run of tool calls or a subagent.
+  Widget _view(Object e, {required bool live, required bool still}) =>
+      switch (e) {
+        final List<Item> run => ToolGroupView(run, still: still),
+        final Subagent s => SubagentCard(
+          s,
+          still: still,
+          nested: (items) => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final e in _entries(items, busy: widget.chat.busy))
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: _view(e, live: false, still: still),
+                ),
+            ],
+          ),
+        ),
+        _ => _ItemView(
+          e as Item,
+          widget.chat.id,
+          widget.daemon,
+          live: live,
+          still: still,
+        ),
+      };
+
+  /// The subagent cards, by their call's id, to scroll to (ChatState.reveal).
+  final _subagents = <String, GlobalKey>{};
+
+  @override
+  void initState() {
+    super.initState();
+    widget.chat.reveal.addListener(_reveal);
+  }
+
+  void _reveal() {
+    final id = widget.chat.reveal.value;
+    if (id == null) return;
+    widget.chat.reveal.value = null;
+    if (_subagents[id]?.currentContext case final c?) {
+      Scrollable.ensureVisible(
+        c,
+        alignment: 0.1,
+        duration: const Duration(milliseconds: 250),
+      );
+    }
+  }
+
   @override
   void dispose() {
+    widget.chat.reveal.removeListener(_reveal);
     _follower.dispose();
     super.dispose();
   }
@@ -141,7 +198,7 @@ class _TranscriptState extends State<Transcript> {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context), t = theme.t;
     final chat = widget.chat;
-    final entries = _entries(chat.items);
+    final entries = _entries(chat.items, busy: chat.busy);
     _follower.stick();
     final before = _built;
     _built = {};

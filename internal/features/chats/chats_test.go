@@ -344,3 +344,42 @@ func TestImagesJoinTheirMessageOrToolCall(t *testing.T) {
 		t.Errorf("items = %+v", c.items)
 	}
 }
+
+func TestSubagentUpdatesGoUnderTheirToolCall(t *testing.T) {
+	c := &chat{id: "s1", sid: "s1", publish: func(model.Event) {}, session: model.Session{Folder: "/w"}}
+	under := func(parent string) map[string]any {
+		return map[string]any{"claudeCode": map[string]any{"parentToolUseId": parent}}
+	}
+	chunk := func(text, parent string) *acp.ContentChunk {
+		ch := &acp.ContentChunk{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: text}}}
+		if parent != "" {
+			ch.Meta = under(parent)
+		}
+		return ch
+	}
+	for _, u := range []acp.SessionUpdate{
+		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "a1", Title: "Find it", Kind: "think", Status: "pending",
+			Meta: map[string]any{"claudeCode": map[string]any{"toolName": "Agent"}}, RawInput: []byte(`{"subagent_type":"Explore"}`)}},
+		{SessionUpdate: "agent_message_chunk", AgentMessageChunk: chunk("Main text", "")},
+		{SessionUpdate: "agent_message_chunk", AgentMessageChunk: chunk("Looking", "a1")},
+		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "r1", Title: "Read a.go", Kind: "read", Meta: under("a1")}},
+		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "h1", Title: "SubagentHandback", Meta: map[string]any{
+			"claudeCode": map[string]any{"parentToolUseId": "a1", "toolName": "SubagentHandback"}}}},
+		{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "h1", RawInput: []byte(`{"message":"The report"}`)}},
+		{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "h1", Status: "completed", Content: []acp.ToolCallContent{
+			{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: "ok"}}}}}}},
+	} {
+		c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: u})
+	}
+	got := map[string][2]string{} // by text or title: parent, agent
+	for _, it := range c.items {
+		got[it.Text+it.Title] = [2]string{it.Parent, it.Agent}
+	}
+	want := map[string][2]string{
+		"Find it": {"", "Explore"}, "Main text": {"", ""}, "Looking": {"a1", ""}, "Read a.go": {"a1", ""},
+		"The reportSubagentHandback": {"a1", ""},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("items = %v\nwant %v", got, want)
+	}
+}
