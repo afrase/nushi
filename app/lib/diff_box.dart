@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:diff_view/diff_view.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'gen/nushi/v1/nushi.pb.dart';
@@ -8,6 +9,24 @@ import 'review.dart';
 import 'review_cards.dart';
 import 'syntax.dart';
 import 'theme/theme.dart';
+
+/// Above this many lines on a side a diff isn't computed: Myers' diff
+/// keeps memory for every step, lines times edits, and a regenerated
+/// lockfile would take seconds and hundreds of MB. The box says so.
+const maxDiffLines = 10000;
+
+/// Diffs at least this long (both sides, in characters) are computed off
+/// the UI thread; smaller ones at once, so a short edit doesn't flicker.
+const _offThread = 20000;
+
+int _lines(String s) => s.isEmpty ? 0 : '\n'.allMatches(s).length + 1;
+
+/// Whether [d] is too long a change to diff (see [maxDiffLines]).
+bool tooLongToDiff(FileChange d) =>
+    _lines(d.oldText) > maxDiffLines || _lines(d.newText) > maxDiffLines;
+
+TextDiff _diff((String, String, String) d) =>
+    TextDiff.compute(d.$1, d.$2, path: d.$3);
 
 /// A file's change side by side. With [fit] it is only as tall as the
 /// change (up to fifteen lines, then it scrolls), in a thin frame; else as
@@ -26,7 +45,9 @@ class DiffBox extends StatefulWidget {
 }
 
 class _DiffBoxState extends State<DiffBox> {
-  DiffViewController? _controller;
+  DiffViewController? _controller; // once the diff is in
+  TextDiff? _diffed;
+  FileChange? _of; // the change _diffed is of, or is being computed for
   late DiffThemeData _theme;
   double _height = 0;
   bool _selecting = false; // the line selection changed during this click
@@ -43,6 +64,7 @@ class _DiffBoxState extends State<DiffBox> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _theme = diffTheme(NushiTheme.of(context).t);
     _build();
   }
 
@@ -52,11 +74,36 @@ class _DiffBoxState extends State<DiffBox> {
     if (old.change != widget.change) _build();
   }
 
+  /// Diffs the change (once per change), then makes the view.
   void _build() {
     final d = widget.change;
+    final rows = max(_lines(d.oldText), _lines(d.newText)).clamp(1, 15);
+    _height =
+        _theme.lineHeightFor(MediaQuery.devicePixelRatioOf(context)) * rows + 6;
+    if (_of == d) {
+      if (_diffed case final diff?) _view(diff);
+      return;
+    }
+    _of = d;
+    if (tooLongToDiff(d)) {
+      _controller?.dispose();
+      _controller = null;
+      return;
+    }
+    final args = (d.oldText, d.newText, d.path);
+    if (d.oldText.length + d.newText.length < _offThread) {
+      _view(_diffed = _diff(args));
+      return;
+    }
+    compute(_diff, args).then((diff) {
+      if (!mounted || _of != d) return;
+      setState(() => _view(_diffed = diff));
+    }).ignore();
+  }
+
+  void _view(TextDiff diff) {
+    final d = widget.change;
     final dpr = MediaQuery.devicePixelRatioOf(context);
-    _theme = diffTheme(NushiTheme.of(context).t);
-    final diff = TextDiff.compute(d.oldText, d.newText, path: d.path);
     final doc = diff.document;
     final lines = SyntaxLines(diff.lines, doc.oldLineCount, doc.newLineCount);
     _controller?.dispose();
@@ -90,8 +137,6 @@ class _DiffBoxState extends State<DiffBox> {
         if (mounted && _controller == controller) lines.highlight(spans);
       }).ignore();
     }
-    final rows = max(doc.oldLineCount, doc.newLineCount).clamp(1, 15);
-    _height = _theme.lineHeightFor(dpr) * rows + 6;
   }
 
   @override
@@ -113,7 +158,9 @@ class _DiffBoxState extends State<DiffBox> {
   /// Puts the comments, and the box being written in, under their lines:
   /// where those lines are now, or above the file when they're gone.
   void _showComments() {
-    final c = _controller!, doc = c.document, change = widget.change;
+    final c = _controller;
+    if (c == null) return;
+    final doc = c.document, change = widget.change;
     var moved = false;
     for (final m in _comments) {
       if (m.anchor(m.old ? change.oldText : change.newText)) moved = true;
@@ -142,7 +189,7 @@ class _DiffBoxState extends State<DiffBox> {
 
   /// A click or drag on line numbers ended: a comment on those lines.
   void _pointerUp(PointerUpEvent _) {
-    final sel = _controller!.selection.value;
+    final sel = _controller?.selection.value;
     if (!_selecting || sel == null || widget.review == null) return;
     _selecting = false;
     _draft = sel;
@@ -231,6 +278,22 @@ class _DiffBoxState extends State<DiffBox> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final d = widget.change;
+    if (_controller == null) {
+      final long = tooLongToDiff(d);
+      final placeholder = Center(
+        child: Text(
+          long
+              ? 'Too long to diff here: ${_lines(d.oldText)} → ${_lines(d.newText)} lines'
+              : '',
+          style: theme.ui(theme.t.textMuted, size: 12),
+        ),
+      );
+      return widget.fit
+          ? SizedBox(height: long ? 40 : _height, child: placeholder)
+          : placeholder;
+    }
     final diff = Listener(
       onPointerUp: _pointerUp,
       child: SideBySideDiff(

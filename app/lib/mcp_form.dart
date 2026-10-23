@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'folder_button.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
+import 'mcp_pairs.dart';
 import 'mcp_servers.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
@@ -20,28 +21,6 @@ final _name = RegExp(r'^[A-Za-z0-9_-]+$');
 
 /// The keys the form shows; others are kept as they are.
 const _known = {'type', 'command', 'args', 'env', 'url', 'headers'};
-
-/// Key/value rows: env vars or headers.
-class _Pairs {
-  final rows = <(TextEditingController, TextEditingController)>[];
-
-  void load(Object? m) {
-    rows.clear();
-    for (final MapEntry(:key, :value) in (m as Map? ?? {}).entries) {
-      add('$key', '$value');
-    }
-  }
-
-  void add([String k = '', String v = '']) => rows.add((
-    TextEditingController(text: k),
-    TextEditingController(text: v),
-  ));
-
-  Map<String, String> get map => {
-    for (final (k, v) in rows)
-      if (k.text.trim().isNotEmpty) k.text.trim(): v.text,
-  };
-}
 
 class _Form extends StatefulWidget {
   const _Form(this.list, this.server);
@@ -60,7 +39,7 @@ class _FormState extends State<_Form> {
   final _command = TextEditingController();
   final _args = TextEditingController(); // one per line
   final _url = TextEditingController();
-  final _env = _Pairs(), _headers = _Pairs();
+  final _env = Pairs(), _headers = Pairs();
   Map<String, dynamic> _extra = {}; // what the form doesn't show
   bool _asJson = false;
   final _json = TextEditingController();
@@ -73,6 +52,16 @@ class _FormState extends State<_Form> {
   void initState() {
     super.initState();
     if (widget.server case final s?) _load(config(s));
+  }
+
+  @override
+  void dispose() {
+    for (final c in [_nameCtl, _command, _args, _url, _json]) {
+      c.dispose();
+    }
+    _env.dispose();
+    _headers.dispose();
+    super.dispose();
   }
 
   /// Fills the form from a config; false when the form can't show it.
@@ -281,7 +270,7 @@ class _FormState extends State<_Form> {
                     style: mono,
                   ),
                   label('Environment variables'),
-                  _PairRows(_env, 'NAME', () => setState(() {})),
+                  PairRows(_env, 'NAME', () => setState(() {})),
                 ] else ...[
                   label('URL'),
                   TextField(
@@ -292,7 +281,7 @@ class _FormState extends State<_Form> {
                     ),
                   ),
                   label('Headers'),
-                  _PairRows(_headers, 'Header', () => setState(() {})),
+                  PairRows(_headers, 'Header', () => setState(() {})),
                 ],
                 if (_editing)
                   Padding(
@@ -329,70 +318,6 @@ class _FormState extends State<_Form> {
           label: _saving ? 'Saving…' : (_editing ? 'Save' : 'Add'),
           kind: ButtonKind.primary,
           onPressed: _saving ? null : _save,
-        ),
-      ],
-    );
-  }
-}
-
-/// Key/value rows, each removable, and a row to add one.
-class _PairRows extends StatelessWidget {
-  const _PairRows(this.pairs, this.hint, this.changed);
-
-  final _Pairs pairs;
-  final String hint;
-  final VoidCallback changed;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
-    final mono = theme.code(t.text, size: 12);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (final (i, (k, v)) in pairs.rows.indexed)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: TextField(
-                    controller: k,
-                    style: mono,
-                    decoration: InputDecoration(hintText: hint),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  flex: 3,
-                  child: TextField(
-                    controller: v,
-                    style: mono,
-                    decoration: const InputDecoration(hintText: 'value'),
-                  ),
-                ),
-                IconTap(
-                  Icons.close,
-                  tooltip: 'Remove',
-                  size: 14,
-                  onTap: () {
-                    pairs.rows.removeAt(i);
-                    changed();
-                  },
-                ),
-              ],
-            ),
-          ),
-        Button(
-          label: 'Add',
-          icon: Icons.add,
-          kind: ButtonKind.ghost,
-          height: 22,
-          onPressed: () {
-            pairs.add();
-            changed();
-          },
         ),
       ],
     );

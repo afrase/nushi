@@ -209,11 +209,51 @@ Future<void> sendReview(
   String chat,
 ) async {
   final unsent = commentsOf(chat).where((c) => !c.sent).toList();
-  final note = TextEditingController();
   final files = unsent.map((c) => c.path).toSet().length;
-  final send = await showDialog<bool>(
+  final note = await showDialog<String>(
     context: context,
-    builder: (context) => nushiDialog(
+    builder: (context) => _SendDialog(comments: unsent.length, files: files),
+  );
+  if (note == null || !context.mounted) return;
+  await tryOrShow(context, () async {
+    await daemon.client.sendPrompt(
+      SendPromptRequest(
+        chatId: chat,
+        text: reviewMessage(unsent, note),
+        queue: daemon.canQueue,
+      ),
+    );
+    for (final c in unsent) {
+      c.sent = true;
+    }
+    setComments(chat, [...commentsOf(chat)]);
+  });
+}
+
+/// "Send review": what goes, and a box for an overall note; pops the note
+/// ('' for none) or null when cancelled.
+class _SendDialog extends StatefulWidget {
+  const _SendDialog({required this.comments, required this.files});
+
+  final int comments, files;
+
+  @override
+  State<_SendDialog> createState() => _SendDialogState();
+}
+
+class _SendDialogState extends State<_SendDialog> {
+  final _note = TextEditingController();
+
+  @override
+  void dispose() {
+    _note.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final (n, files) = (widget.comments, widget.files);
+    return nushiDialog(
       'Send review',
       Column(
         mainAxisSize: MainAxisSize.min,
@@ -221,12 +261,12 @@ Future<void> sendReview(
         spacing: 10,
         children: [
           Text(
-            '${unsent.length} comment${unsent.length == 1 ? '' : 's'} on '
+            '$n comment${n == 1 ? '' : 's'} on '
             '$files file${files == 1 ? '' : 's'}, with the lines they are '
             'on, go to Claude as one message.',
           ),
           TextField(
-            controller: note,
+            controller: _note,
             autofocus: true,
             minLines: 2,
             maxLines: 6,
@@ -240,28 +280,14 @@ Future<void> sendReview(
         Button(
           label: 'Cancel',
           kind: ButtonKind.ghost,
-          onPressed: () => Navigator.pop(context, false),
+          onPressed: () => Navigator.pop(context),
         ),
         Button(
           label: 'Send',
           kind: ButtonKind.primary,
-          onPressed: () => Navigator.pop(context, true),
+          onPressed: () => Navigator.pop(context, _note.text),
         ),
       ],
-    ),
-  );
-  if (send != true || !context.mounted) return;
-  await tryOrShow(context, () async {
-    await daemon.client.sendPrompt(
-      SendPromptRequest(
-        chatId: chat,
-        text: reviewMessage(unsent, note.text),
-        queue: daemon.canQueue,
-      ),
     );
-    for (final c in unsent) {
-      c.sent = true;
-    }
-    setComments(chat, [...commentsOf(chat)]);
-  });
+  }
 }

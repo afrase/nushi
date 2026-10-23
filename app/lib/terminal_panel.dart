@@ -111,7 +111,7 @@ class _TerminalAreaState extends State<TerminalArea> {
     final diff = await widget.daemon.client.getDiff(
       GetDiffRequest(folder: chat.folder, base: branch ? span.base : null),
     );
-    if (!diff.files.any((f) => f.path == rel)) return false;
+    if (!mounted || !diff.files.any((f) => f.path == rel)) return false;
     if (span.scope == Scope.commits) chat.scope = Scope.uncommitted.name;
     chat.showFile(rel);
     widget.onChanges();
@@ -194,11 +194,16 @@ class _PanelState extends State<TerminalPanel> {
     unawaited(_start());
   }
 
-  // Opening the panel on a chat without terminals opens one.
-  Future<void> _start() async {
+  Future<void>? _starting; // one at a time: two would open two shells
+
+  // Opening the panel on a chat without terminals opens one ([open]).
+  Future<void> _start({bool open = true}) =>
+      _starting ??= _run(open).whenComplete(() => _starting = null);
+
+  Future<void> _run(bool open) async {
     try {
       if (widget.terms.of(_chat) == null) await widget.terms.load(_chat);
-      if (mounted && widget.terms.of(_chat)!.isEmpty) {
+      if (open && mounted && widget.terms.of(_chat)!.isEmpty) {
         await widget.terms.open(_chat);
       }
     } on Object catch (e) {
@@ -209,7 +214,9 @@ class _PanelState extends State<TerminalPanel> {
   void _changed() {
     final list = widget.terms.of(_chat);
     if (list == null) {
-      unawaited(_start()); // reconnected: list them again
+      // Reconnected: list them again, opening none (a restarted daemon
+      // has none; the panel then hides, as when the last one closes).
+      unawaited(_start(open: false));
       return;
     }
     if (list.isNotEmpty) {

@@ -17,8 +17,9 @@ bool canRewindTo(Daemon daemon, ChatState chat, Item item) =>
     item.kind == ItemKind.ITEM_KIND_USER_MESSAGE &&
     (item.forkAt.isNotEmpty ||
         chat.items
-            .takeWhile((it) => it.id != item.id)
-            .every((it) => it.kind != ItemKind.ITEM_KIND_USER_MESSAGE));
+                .firstWhere((it) => it.kind == ItemKind.ITEM_KIND_USER_MESSAGE)
+                .id ==
+            item.id);
 
 /// Asks, then cuts the chat back to just before [item] and puts the message
 /// in the composer to edit.

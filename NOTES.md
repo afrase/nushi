@@ -1,39 +1,48 @@
 # Notes
 
-## Summary (2026-10-23, after step 57)
+## Summary (2026-10-24, after step 63)
 
-Milestone M (steps 55–57, terminals) is done, one commit each on `main` plus one fix (Delete lists running terminals), pushed. `make test` passes: Go unit tests (new: the PTY package against a real `/bin/sh`: output, input, `stty size` after a resize, the exit code, replay on reattach, the foreground program, and close killing a child that ignores the hangup; the terminals feature's order, rename and closing a chat's terminals), the end-to-end tests (new: a terminal through the API outlives the app, replays, reports its exit, shows in Delete's plan, and goes with Archive), and the app's tests (new: the panel's keys against a fake daemon, links and words under a click). Everything was tried by hand with the dev daemon and app on `NUSHI_DATA`, the fake agent in place of Claude (no Claude process ran, so no credentials were involved), a throwaway repository with a worktree chat in the scratchpad, at 1280×800, dark and light; test shells ran only `pwd`, `ls`-like echoes, `stty size`, `printf` colors, `sleep`, `top` and `exit`. The installed Nushi and its daemon were left alone. `make install` put the build in `~/Applications/Nushi.app` (and the iCloud copy).
+Milestone N (steps 58–63, the review's fixes) is done: one commit per step on `main`, plus four follow-up commits for issues the security review found in my own step 60 and 61 changes, all pushed. `make test` passes (Go with `-race` too). Tried by hand with the dev daemon and app on `NUSHI_DATA` (a symlink in `/tmp` to the scratchpad, since the socket path must be short), the fake agent in place of Claude (no Claude process ran, so no credentials were involved), `CLAUDE_CONFIG_DIR` in the scratchpad, throwaway folders and a throwaway repository whose `.mcp.json` server and hook were `echo`; dark theme, 1280×800; the test shell ran only `printf` and `exit`. The installed Nushi and its daemon were left alone. `make install` put the build in `~/Applications/Nushi.app` (and the iCloud copy).
+
+**Every finding**
+- Fixed: S1, S2, S3, S4, S6, S7; G1–G14; A1–A12, A14, A15.
+- S5 (the agent can read the token): left as it is, by [ADR 0024](docs/adr/0024-the-agent-can-read-the-token.md) (amends 0005): no simple way holds against a process running as you (ad hoc signing breaks Keychain access lists at every build; the daemon outlives the app, so no handoff; the agent can rewrite `~/Applications/Nushi.app`). The token file is now never empty or short, and kept at 0600.
+- A13: in part. Each code block is highlighted once (a streamed chunk re-highlights only the open block), and the rewind check looks only at the first message (it was already skipped while the agent works). Opening a long chat still lays out every item: that's what fixed milestone I's scroll bugs (the thumb resizing, the scroll locking up), and doing it lazily would bring them back.
+- Not done as asked: G12 and G9 have no regression test (the interleaving can't be forced from a test); A4, A5, A8, A9, A11 have none either (they were tried by hand where noted below, or not).
 
 **What works**
-- 55: the daemon runs `$SHELL -l` per terminal in a pseudo-terminal (`internal/terminal`, `creack/pty`), in the chat's folder (its worktree) or a given one, keeps its last 1 MB and replays it to whoever attaches, reports the program in front and the exit code, and closes a chat's terminals on Archive, Delete and Remove (Delete's dialog lists the running ones). Close hangs up, waits 2 s, then kills what's left on the terminal.
-- 56: the panel under the chat (and Changes): ⌃` or the header's terminal button, a draggable, remembered height, tabs named `zsh — brave-lynx` / `top` / your name, +, ×, drag to reorder, double-click to rename, `exit 3` dimmed with Restart. `xterm2` renders it in the app's colors, 256 and true color, JetBrains Mono, a blinking bar. Demo done: two tabs in a worktree chat, `pwd` in both (the worktree), `top` in one, the panel dragged taller (top reflowed), the app quit and reopened: both tabs back with their output.
-- 57: ⌘-click on a path opens it in Changes when the view lists it (tried: `veg.txt:2` and a branch-committed `notes.md`), else reveals it in Finder; URLs open in the browser. "Open in terminal" on a sidebar folder (right-click) and the Environment card's terminal icon (both tried). A tab running a command has a blue dot (tried with `sleep 20`); terminals never touch the chat's status. ⌘F finds in the scrollback (tried: 16 matches highlighted, stepping).
+- 58: a chat notices its agent's process ending, says "The agent quit unexpectedly. Your next message reopens the chat.", marks its unfinished tool calls failed, and reopens through `session/load` with the next message (queued meanwhile; the transcript it has is kept). Tried by hand: killing the fake agent mid-turn showed the notice. The prompt is written before a cancel can be; SendNow, Stop and Rewind check the chat again after every wait; one steering worker per chat; halting and stopping flags.
+- 59: `HasMessages` on the session file (old files migrated); rewind cuts the transcript where the fork cut Claude's history; side chats are deleted from Claude's history however they end; Events subscribes before it says "live"; a bad session file is skipped; Restart racing Close leaks no shell.
+- 60: the trust card (tried: "+" on a folder group with a `.mcp.json` and a hook showed both, exactly; Start anyway started the chat and was remembered). Git never runs hooks; the panel's status never runs the repository's own filters. [ADR 0023](docs/adr/0023-warn-before-a-folder-runs-code.md).
+- 61: wider MCP masking (a display heuristic, not a guarantee), hidden values kept only when nothing else about the server changed; local markdown images only from regular files ≤ 20 MB; a terminal link's real target shows on hover (tried) and ⌘-click opens only it.
+- 62: drafts and the side question live on the chat (tried: text kept across Changes, another chat, and a lost connection, which now shows a banner and keeps the app as it was); the question card never answers from its Other box nor takes the keyboard from a box with text (tried with the fake agent's question while typing `1 2`); review comments survive a reload; finished messages aren't healed.
+- 63: diffs over 20,000 characters are computed off the UI thread, and a side over 10,000 lines isn't diffed (tried: a 3,000-line change); line counts once per change; Changes drops stale answers and takes a terminal's file request before awaiting; images decoded once at the size shown; reconnecting drops chats that are gone and checks side chats; one terminal start at a time, none after a reconnect; the ping times out after 3 s; controllers disposed.
 
-**What doesn't (yet), or wasn't tried by hand**
-- ⌘ shortcuts (⌘C/V/K/T/W/1–9/F) and ⌘-click were checked only in widget tests and with a temporary build that took a plain click as ⌘-click: the synthetic keyboard events I can send here never carry ⌘ (or ⌃ as a modifier) into Flutter. ⌘V/⌘C with your clipboard weren't tried at all. Please try those first.
-- The Finder branch of ⌘-click and URLs in the browser weren't clicked by hand (only parsed in tests), to avoid opening windows on your screen.
-- No underline or pointer while ⌘ is held over a link; `:line` isn't scrolled to in Changes; relative paths resolve from the terminal's starting folder, not the shell's current one.
-- Once, the first key typed right after the panel auto-opened a new shell was lost (the next ones arrived); not reproduced since a new or picked tab now takes the focus.
-- ⌘K clears the screen only; reopening the app replays the cleared output from the daemon.
-- Terminals don't survive a daemon restart (the banner says so); a turn of the agent and a shell are equally lost then.
-- After Archive, the panel's open state is kept: unarchiving shows the panel again and opens a fresh shell.
-- Carried over from L: no on/off for non-project MCP servers; Approve counts for Claude in the terminal only in a trusted folder; plugins' servers and connectors show only after the check; an abandoned MCP sign-in waits up to 5 minutes. From before: a background subagent's steps after a daemon restart, and background tasks (step 51); a rewind keeps `@` file links only as text; a message queued while steering fails also stays in the transcript; Python `def` names uncolored; plain `mv` shows as delete plus untracked; Reduce motion untried with the setting on; Delete leaves earlier sessions of chats moved before step 26; dropping files untried; cost restarts near zero after a move, a reload or a rewind; no thoughts from Claude; copy across blocks loses line breaks; nothing runs after a reboot until the app opens.
+**Security review of my own changes (four follow-up commits)**
+- Filter overrides: a driver named `a.b` was cleared as `a`, and a name with `=` broke `-c`; now cleared by exact name through `GIT_CONFIG_KEY_<n>`, and status fails closed if git can't list them.
+- Trust keys: a folder's `.git` file, or `core.worktree`/`GIT_WORK_TREE`, could make it borrow a trusted repository's trust; the key is now read from the files, and a worktree counts only when its repository names it back.
+- MCP edits: kept secrets could follow an edit of the arguments, type or headers; hidden values now go back only into a config that is then exactly the old one. Masking also covers `-H` values, Authorization/Bearer values, words inside `sh -c` strings, and bare query tokens.
+
+**Not tried by hand**
+- Anything with real Claude: the death of a real adapter, side-chat deletion by a fresh adapter after the old one stopped (and the daemon waiting for it on SIGTERM), the trust card against real `~/.claude.json` entries (only read, with `jq`, to confirm the key's shape).
+- ⌘-click on a terminal link (no ⌘ reaches Flutter from here), the trust card on a Move, MCP masking and the edit refusal in the form, a review comment surviving a reload (A4), the Changes races (A5), reconnect dropping chats (A8), the terminal panel after a daemon restart (A9), Shift-arrows in a comment box (A11), the light theme.
 
 **Changes to earlier behavior**
-- The chat header has a terminal button (left of the details button); the Environment card's folder row has a terminal icon; the sidebar's folder headers have a right-click menu (New chat here, Open in terminal).
-- `Resizable` (step 41) can sit on a pane's top edge. The Changes view can be told to show a file (a terminal link).
-- The "daemon is older" banner says a restart also closes terminals.
+- A message sent while a chat reopens, rewinds or moves waits in the queue instead of being refused.
+- Editing an MCP server: any change (another env var too) means typing every hidden value again.
+- A side question stays open when you switch chats.
+- Opening a comment box in a diff clears the line highlight.
 
 **Needs your decision**
-- The daemon's API went from 34 to 36 (35 terminals, 36 rename, arrange and restart). Press "Restart daemon" in the installed app; it closes nothing yet since there were no terminals before.
-- Decisions to revisit, new in M (details in the list below): `xterm2` over the unmaintained `xterm` and the AGPL `xterm3`; the panel spans the details panel too; open/closed per chat and remembered, auto-opening a shell; Option is always Meta; `COLORTERM=truecolor` added to the shell's environment; VS Code's ANSI palettes; "Open in terminal" on a folder picks the chat; deleting closes terminals after the worktree goes; Restart wipes the old output; terminal list events have no `seq`.
-- Security (in "Security notes"): any token holder can open a shell; terminals must stay off remote access until it decides otherwise (ADR 0022).
+- The API went from 36 to 37 (CheckFolder, TrustFolder). Press "Restart daemon" in the installed app.
+- Decisions to revisit, new in N, are at the top of the list below.
+- Security (in "Security notes"): trust is a warning the daemon doesn't enforce; the token stays readable by the agent (ADR 0024). If you want that closed, deny `~/Library/Application Support/Nushi/**` to Claude in your own settings.
 
-**Size**: the app is 12,026 lines of Dart (10,793 before M), plus 666 in packages; the daemon 5,965 lines of Go (5,157); the ACP client 836. Steps 55 and 56 crossed the ~500-line tripwire (about 880 and 1,100 lines with tests); 57 didn't. `sidebar.dart` is 405 lines.
+**Size**: the daemon is 6,725 lines of Go (5,965 before N), the ACP client 867 (836), the app 12,506 lines of Dart (12,026), packages 682. Step 60 crossed the ~500-line tripwire (about 720 with tests). `sidebar.dart` is 406 lines; `mcp_form.dart` gave its key/value rows to `mcp_pairs.dart`.
 
-**Dependencies**: Go `github.com/creack/pty` and `golang.org/x/sys` (step 55); Dart `xterm2` (MIT), which brings `xterm2_core`, `zmodem`, `quiver`, `equatable`, `convert` (step 56).
+**Dependencies**: none added.
 
-**Left behind by the testing**: nothing (the dev data folder, the throwaway repository and its worktree, the fake-agent shim, the helper tools and screenshots removed).
+**Left behind by the testing**: nothing (the dev data folder and its `/tmp` link, the throwaway repository, the fake-agent shim and helper tools removed).
 
 ## Line counts
 
@@ -108,6 +117,7 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 61. Secrets and untrusted output | 6699 | 867 | 12246 | 666 |
 | (61's security fixes) | 6725 | 867 | 12246 | 666 |
 | 62. The app keeps what you type | 6725 | 867 | 12293 | 666 |
+| 63. The app stays fast and in sync | 6725 | 867 | 12506 | 682 |
 
 Tripwires crossed:
 - Step 60 (about 720 lines with tests, without generated code): reading Claude's trust record and what a folder runs (`internal/claudetrust`, 190: `.mcp.json` servers through `claudemcp`, hooks, env, helpers, skills' hooks), the `trust` feature and its store (90), the API (30), git without hooks and the repository's filters (35), the app's check before a start or move and the card (160), tests (190).
@@ -291,6 +301,18 @@ Beside an installed Nushi that's in use: `export NUSHI_DATA=~/Library/Applicatio
 7. Right-click the folder in the sidebar ▸ Open in terminal: a tab in the repository folder. The Environment card's terminal icon: a tab in the worktree.
 8. Chat menu ▸ Delete…: lists the running terminals (Cancel). Archive the chat: its terminals close (`ps` no longer shows `top`).
 
+## Milestone N demo (steps 58–63): the review's fixes
+
+Beside an installed Nushi that's in use: `export NUSHI_DATA=/tmp/nushi-dev` (the socket's path must stay short), then `make run` (and `make stop` after). Otherwise `make install`, quit Nushi, and press "Restart daemon".
+
+1. A throwaway repository with code of its own: `mkdir -p /tmp/trusty/.claude && cd /tmp/trusty && git init -b main && echo '{"mcpServers":{"hi":{"command":"echo","args":["hi"]}}}' > .mcp.json && echo '{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"echo started"}]}]}}' > .claude/settings.json`. New chat there: the card lists the server and the hook; Cancel, then again and Start anyway. A second chat there doesn't ask.
+2. Type a message without sending it. Peek at Changes, switch to another chat, open MCP servers, come back: the text is there. Reply to a selection and attach an image: they stay too.
+3. Ask Claude something with choices ("ask me which color with AskUserQuestion"). While the card is up, type in the box: it keeps the keyboard. Click the card's "Other" box and type `1 2`: nothing is answered.
+4. In a terminal tab: `printf '\e]8;;https://example.org/real\e\\https://github.com/shown\e]8;;\e\\\n'`, hover the link: the real target shows at the bottom left.
+5. Find the adapter's process (`pgrep -f claude-agent-acp`) and kill it while Claude works: the chat says the agent quit; send a message: it reopens and answers.
+6. `make stop` while a chat is open: a banner says the connection is lost and the chat stays as it was; `make daemon`: it's back.
+7. A big change: regenerate a lockfile (or `seq 1 30000 > big.txt` committed, then `seq 2 30001 > big.txt`): Changes stays responsive and says it's too long to diff.
+
 ## ACP quirks
 
 - `session/new` requires `mcpServers`: send `[]`, never `null`.
@@ -335,6 +357,10 @@ Beside an installed Nushi that's in use: `export NUSHI_DATA=~/Library/Applicatio
 - A chat (claude-agent-acp, the Agent SDK) loads the MCP servers when its session starts or loads, and keeps them: a server added or removed later isn't seen until the session is reopened. It loads a `.mcp.json` server that `claude mcp list` calls "Pending approval" without asking (as the docs say for SDK sessions), and Claude says which servers failed or need auth. MCP tools are deferred (loaded through ToolSearch).
 
 ## Decisions to revisit
+
+- Step 63 (A3): a change over 10,000 lines on a side isn't diffed ("Too long to diff here: n → m lines"), and its line counts are each side's whole length; diffs over 20,000 characters are computed in an isolate, smaller ones at once (no flicker for a short edit). The daemon already skips files over 1 MB a side.
+- Step 63 (A9): after a reconnect the terminal panel lists the chat's terminals again and opens none; when a restarted daemon has none, the panel hides, as when the last tab closes.
+- Step 63 (A14): a ping that takes over 3 s counts as a lost daemon.
 
 - Step 62 (A2): what's written in a chat's box (text, @ mentions, reply cards, images) is the chat's draft, kept on the chat in the app's memory: peeking at Changes, switching chats, the MCP view, a lost connection and a daemon restart keep it; quitting the app doesn't. The side question is the chat's too: it stays open across a peek at Changes and a switch to another chat, and ends when closed or when the chat moves. A lost connection (after the first) is a banner over the app ("Lost the connection to the daemon; reconnecting…"); the app stays as it was meanwhile, its calls failing with the daemon's error.
 - Step 62 (A1): a question card takes the keyboard when it appears only if the box with the keyboard is empty; keys typed into its "Other" box are never answers.

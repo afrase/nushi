@@ -150,7 +150,9 @@ class Thumbnails extends StatelessWidget {
             clipBehavior: Clip.none,
             children: [
               _Clickable(
-                image: MemoryImage(Uint8List.fromList(img.data)),
+                image: _provider[img] ??= MemoryImage(
+                  Uint8List.fromList(img.data),
+                ),
                 size: size,
                 border: t.borderSubtle,
               ),
@@ -161,6 +163,9 @@ class Thumbnails extends StatelessWidget {
     );
   }
 }
+
+/// Each attachment's image, decoded once (the box rebuilds as replies stream).
+final _provider = Expando<ImageProvider>();
 
 /// The small round × on an attachment's top right corner, in a [Stack].
 class RemoveBadge extends StatelessWidget {
@@ -209,7 +214,13 @@ class _Clickable extends StatelessWidget {
         ),
         clipBehavior: Clip.antiAlias,
         child: Image(
-          image: image,
+          // Decoded at the size shown; the preview has it whole.
+          image: ResizeImage(
+            image,
+            height: (size * MediaQuery.devicePixelRatioOf(context)).round(),
+            policy: ResizeImagePolicy.fit,
+          ),
+          gaplessPlayback: true,
           fit: BoxFit.contain,
           errorBuilder: (context, _, _) => const Icon(Icons.broken_image),
         ),

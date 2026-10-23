@@ -21,8 +21,17 @@ const _icons = {
 
 bool _running(Item it) => it.status == 'pending' || it.status == 'in_progress';
 
-/// Lines added and removed by [d].
-(int, int) lineCounts(FileChange d) {
+final _counted = Expando<(int, int)>();
+
+/// Lines added and removed by [d], counted once per change. One too long
+/// to diff counts every line of each side.
+(int, int) lineCounts(FileChange d) => _counted[d] ??= _count(d);
+
+(int, int) _count(FileChange d) {
+  if (tooLongToDiff(d)) {
+    int n(String s) => s.isEmpty ? 0 : '\n'.allMatches(s).length + 1;
+    return (n(d.newText), n(d.oldText));
+  }
   final ids = <String, int>{};
   List<int> lines(String s) => [
     if (s.isNotEmpty)
