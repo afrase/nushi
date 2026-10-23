@@ -1,12 +1,14 @@
 import 'package:flutter/widgets.dart';
 
 /// Keeps a list scrolled to its bottom ([following]) until the user
-/// scrolls up, however little, and again once they scroll back down to it.
-/// The list's notifications go to [onNotification]; [stick] after a build.
+/// scrolls up, however little, and again once it is back at the bottom (by
+/// a drag, a fling or a bounce). The list's notifications go to
+/// [onNotification]; [stick] after a build.
 class BottomFollower extends ChangeNotifier {
   final scroll = ScrollController();
   bool following = true;
   bool _jumping = false; // the scroll moves because of us
+  bool _dragged = false; // the scroll going on began with a drag
 
   /// Follows the bottom again, from wherever the list is.
   void follow() {
@@ -34,17 +36,24 @@ class BottomFollower extends ChangeNotifier {
   });
 
   /// Takes the list's notifications. Only the user's scrolls of the list
-  /// itself count, not those of what's in it (a wide code block).
+  /// itself count, not those of what's in it (a wide code block). A drag's
+  /// fling and the spring back from past the bottom move the list too, but
+  /// aren't the user scrolling up.
   bool onNotification(Notification n) {
     if (n is ScrollMetricsNotification && n.depth == 0) {
       stick();
+    } else if (n is ScrollStartNotification && n.depth == 0) {
+      _dragged = n.dragDetails != null;
     } else if (n is ScrollUpdateNotification && n.depth == 0 && !_jumping) {
-      final delta = n.scrollDelta ?? 0;
       final m = n.metrics;
-      if (delta < 0) {
-        _set(false);
-      } else if (delta > 0 && m.pixels >= m.maxScrollExtent - 2) {
+      // A wheel's scroll (no drag), or a drag itself, not its fling.
+      final user = n.dragDetails != null || !_dragged;
+      if (m.pixels > m.maxScrollExtent) {
+        // Past the bottom, bouncing: nothing to decide yet.
+      } else if (m.pixels >= m.maxScrollExtent - 1) {
         _set(true);
+      } else if ((n.scrollDelta ?? 0) < 0 && user) {
+        _set(false);
       }
     }
     return false;
