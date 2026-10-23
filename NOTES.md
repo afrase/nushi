@@ -94,8 +94,10 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 52. See the MCP servers | 4607 | 836 | 10135 | 666 |
 | 53. Add, edit, remove MCP servers | 4896 | 836 | 10655 | 666 |
 | 54. MCP on/off, approvals, sign-in | 5157 | 836 | 10793 | 666 |
+| 55. Shells in the daemon | 5835 | 836 | 10794 | 666 |
 
 Tripwires crossed:
+- Step 55 (about 880 lines with tests, without generated code): the PTY package (`internal/terminal`, 316: starting the shell on a terminal of its own, the 1 MB scrollback and attached clients, the foreground program from the terminal's process group and `kern.procargs2`, hanging up and killing what runs on the terminal), the `terminals` feature (200), the API (65), tests (205: a real `/bin/sh` for output, input, `stty size`, the exit code, replay, the program and close; an end-to-end test through the API).
 - Milestone L (steps 52–54) took the app from 9,616 to 10,793 lines of Dart and the daemon from 4,235 to 5,157 lines of Go.
 - Step 54 (about 600 lines with tests): the approval lists in `settings.local.json` (`settings.go`, 120), sign-in and sign-out through the CLI (45), the feature's on/off and account calls with their checks (60), the API (40), tests (90); in the app the row's actions (`mcp_actions.dart`, 160: switch, Approve and Reject, Log in, the menu moved out of `mcp.dart`).
 - Step 53 (about 930 lines with tests, without generated code): the Claude package's CLI calls (40), the feature's add, edit (with masked values kept and the old config put back) and remove, and which chats a change reaches (170), the chats' MCP-changed flag and Reload (60), the API (50), tests (130: editing and rollback, and an end-to-end reload); in the app the form (`mcp_form.dart`, 400: name, scope, transport, command, arguments, env and header rows, Edit as JSON both ways, checks), the view's Add, Edit and Remove, and the chat's notice with Reload. `mcp.dart` passed 400 and gave the list and its helpers to `mcp_servers.dart`.
@@ -452,13 +454,15 @@ Try it against a throwaway Claude config first, so your own stays as it is: `exp
 - A chat without messages that leaves its worktree (step 30's switch) now uses the same inspection: the worktree and branch go only if nothing would be lost.
 - A chat started in a subfolder of a repository runs in the same subfolder of its worktree and is listed under that subfolder. The base is the folder's branch, or the commit when `HEAD` is detached; a repository without commits can't have worktrees (git says so). The worktree's name is two words from two lists of 30 (`brave-otter`); the sidebar shows it beside the title (the branch without `nushi/`), the Environment card the whole branch with a worktree icon, and the base.
 
+- Terminals (step 55, [ADR 0022](docs/adr/0022-the-daemon-owns-terminals.md)): the daemon runs `$SHELL -l` in a pseudo-terminal with its own environment plus `TERM=xterm-256color` and `COLORTERM=truecolor` (the second is mine, so programs use true color). The terminal's foreground program is checked twice a second (its process group, then its arguments through `kern.procargs2`) and reported as the terminal's `program` when it isn't the shell. Closing sends SIGHUP to everything whose controlling terminal it is, waits up to 2 s, then SIGKILLs what's left; a process that left the terminal (`setsid`) outlives it, while `nohup … &` doesn't (it is still on the terminal). A client that falls 4 MB behind is cut off and attaches again; the replay starts at a line once the scrollback is cut.
+- Terminal events (the chat's whole list) come on the Events stream with no `seq`, outside the chat's numbered events: the list isn't part of a chat's snapshot (`ListTerminals` is).
+- Deleting a chat closes its terminals after its worktree is removed, so a failed delete leaves them running.
+
 ## Later ideas
 
 - Show the plan's usage limits (session and weekly) for subscription users, if the agent exposes them. ACP doesn't today; claude-agent-acp 0.94.0 did put a `_meta._claude/rateLimit` (five-hour and seven-day utilization) on one `usage_update` (see ACP quirks), which isn't a stable interface.
 - Plain model chat with no agent (no tools, no folder) straight to an API or gateway with a key. Nushi would then own the history and model settings. For agent chats a gateway or key already works through Claude's own settings (`ANTHROPIC_BASE_URL`, `ANTHROPIC_API_KEY` or `apiKeyHelper` in `~/.claude/settings.json`).
 - Open a session started outside Nushi (e.g. `claude` in a terminal) as a chat: list the agent's sessions per folder through ACP `session/list` (claude-agent-acp 0.94.0 has it, under `sessionCapabilities`), pick one, and `session/load` it. No copy: the agent's history stays the source. Mind a session that's still open in a terminal (two writers to one transcript).
-
-- A terminal panel per chat, like Claude Code desktop and VS Code: a shell in the chat's folder (or worktree) to run commands yourself. The daemon owns the PTY (Go: creack/pty), so shells survive app restarts like agents do and could later go over the relay. The app renders it with xterm.dart, streaming over Connect.
 
 - Git actions from the Changes view: stage and unstage files or hunks, commit with a message, maybe push. It's read-only toward git for now ([ADR 0019](docs/adr/0019-changes-read-only-toward-git.md)); doing it would mean revisiting that ADR (git writes next to an agent that may be writing too).
 - Subagents as ACP child sessions (the RFD form claude-agent-acp offers a client that advertises `subagents`): a background subagent's steps after a daemon restart, and a stop button per subagent. See step 51.
@@ -470,6 +474,7 @@ Try it against a throwaway Claude config first, so your own stays as it is: `exp
 - Fonts (step 11): IBM Plex Sans and JetBrains Mono, bundled as assets (OFL).
 - Dart (step 12): `re_highlight` (syntax highlighting), `markdown` (already there through `flutter_markdown_plus`, now named), `url_launcher` (opening links).
 - Dart (step 44): `re_highlight` as a direct dependency of the app (it was in through `packages/markdown`), for highlighting diffs.
+- Go (step 55): `github.com/creack/pty` (opening a pseudo-terminal) and `golang.org/x/sys/unix` (the terminal's foreground process group, its processes and their arguments through `sysctl`, window size).
 - Dart (step 25): `pasteboard` (reading an image or files from the clipboard; Flutter's clipboard is text only) and `desktop_drop` (files dropped on the window). Both are small native plugins; each replaces writing a macOS method channel.
 
 ## Security notes to look at
@@ -484,6 +489,7 @@ Try it against a throwaway Claude config first, so your own stays as it is: `exp
 - Commits (step 43): `GetDiff` with `commit`/`since` and `ListCommits` run `git diff`, `git show`, `git log` and `git rev-parse` on the names the client sends; a name starting with `-` is refused so it can't become an option, as for the base. They read; nothing in the Changes view writes to git ([ADR 0019](docs/adr/0019-changes-read-only-toward-git.md)).
 - Review comments (step 45) go to the agent as an ordinary prompt the user sends; they quote the file's lines as the diff showed them.
 - MCP servers (milestone L): the daemon reads Claude's config, which holds env and header values in clear text, and sends them to the app masked (`••••`); an edit that sends `••••` back keeps the stored value. It runs `claude mcp add-json/remove/login/logout` in the folder the client names (absolute and clean; names checked, `--` before them; scopes only user, project, local), so a client can add a server, which Claude then runs as you: the same trust as sending Claude a prompt. Sign-in runs `script -q /dev/null claude mcp login -- <name>` to give the CLI a terminal. The on/off switch writes the project's `.claude/settings.local.json` (only its two MCP lists) and may add a line to `.git/info/exclude`.
+- Terminals (milestone M, [ADR 0022](docs/adr/0022-the-daemon-owns-terminals.md)): any client with the token can open a shell as you, in any absolute folder, and type into it. That is fine locally (the token is readable only by you) and is why terminals must stay off any future remote access until it decides otherwise. Closing a terminal kills the processes whose controlling terminal it is, by pid, listed just before the hang-up.
 - The client token (`token`, mode 0600) sits next to the socket in a 0700 folder; any process running as you can read it ([ADR 0005](docs/adr/0005-clients-authenticate.md)).
 
 ## Working notes

@@ -85,6 +85,18 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.LogoutMcpServerRequest request);
   $async.Future<$0.ReloadChatResponse> reloadChat(
       $pb.ServerContext ctx, $0.ReloadChatRequest request);
+  $async.Future<$0.OpenTerminalResponse> openTerminal(
+      $pb.ServerContext ctx, $0.OpenTerminalRequest request);
+  $async.Future<$0.ListTerminalsResponse> listTerminals(
+      $pb.ServerContext ctx, $0.ListTerminalsRequest request);
+  $async.Future<$0.AttachTerminalResponse> attachTerminal(
+      $pb.ServerContext ctx, $0.AttachTerminalRequest request);
+  $async.Future<$0.WriteTerminalResponse> writeTerminal(
+      $pb.ServerContext ctx, $0.WriteTerminalRequest request);
+  $async.Future<$0.ResizeTerminalResponse> resizeTerminal(
+      $pb.ServerContext ctx, $0.ResizeTerminalRequest request);
+  $async.Future<$0.CloseTerminalResponse> closeTerminal(
+      $pb.ServerContext ctx, $0.CloseTerminalRequest request);
   $async.Future<$0.EventsResponse> events(
       $pb.ServerContext ctx, $0.EventsRequest request);
 
@@ -154,6 +166,18 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.LogoutMcpServerRequest();
       case 'ReloadChat':
         return $0.ReloadChatRequest();
+      case 'OpenTerminal':
+        return $0.OpenTerminalRequest();
+      case 'ListTerminals':
+        return $0.ListTerminalsRequest();
+      case 'AttachTerminal':
+        return $0.AttachTerminalRequest();
+      case 'WriteTerminal':
+        return $0.WriteTerminalRequest();
+      case 'ResizeTerminal':
+        return $0.ResizeTerminalRequest();
+      case 'CloseTerminal':
+        return $0.CloseTerminalRequest();
       case 'Events':
         return $0.EventsRequest();
       default:
@@ -228,6 +252,18 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return logoutMcpServer(ctx, request as $0.LogoutMcpServerRequest);
       case 'ReloadChat':
         return reloadChat(ctx, request as $0.ReloadChatRequest);
+      case 'OpenTerminal':
+        return openTerminal(ctx, request as $0.OpenTerminalRequest);
+      case 'ListTerminals':
+        return listTerminals(ctx, request as $0.ListTerminalsRequest);
+      case 'AttachTerminal':
+        return attachTerminal(ctx, request as $0.AttachTerminalRequest);
+      case 'WriteTerminal':
+        return writeTerminal(ctx, request as $0.WriteTerminalRequest);
+      case 'ResizeTerminal':
+        return resizeTerminal(ctx, request as $0.ResizeTerminalRequest);
+      case 'CloseTerminal':
+        return closeTerminal(ctx, request as $0.CloseTerminalRequest);
       case 'Events':
         return events(ctx, request as $0.EventsRequest);
       default:

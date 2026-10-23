@@ -12,24 +12,26 @@ import (
 	"github.com/afrase/nushi/internal/events"
 	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/features/mcp"
+	"github.com/afrase/nushi/internal/features/terminals"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
 	"github.com/afrase/nushi/internal/model"
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 34
+const Version = 35
 
 type server struct {
 	chats *chats.Service
 	mcp   *mcp.Service
+	terms *terminals.Service
 	hub   *events.Hub
 }
 
 // Handler returns the API, refusing requests that don't carry token.
-func Handler(token string, chats *chats.Service, mcp *mcp.Service, hub *events.Hub) http.Handler {
+func Handler(token string, chats *chats.Service, mcp *mcp.Service, terms *terminals.Service, hub *events.Hub) http.Handler {
 	mux := http.NewServeMux()
-	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{chats: chats, mcp: mcp, hub: hub}))
+	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{chats: chats, mcp: mcp, terms: terms, hub: hub}))
 	want := []byte("Bearer " + token)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if subtle.ConstantTimeCompare([]byte(r.Header.Get("Authorization")), want) != 1 {
@@ -162,6 +164,9 @@ func (s *server) ArchiveChat(_ context.Context, req *connect.Request[nushiv1.Arc
 	if err := s.chats.Archive(req.Msg.ChatId, req.Msg.Archived); err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
+	if req.Msg.Archived {
+		s.terms.CloseChat(req.Msg.ChatId)
+	}
 	return connect.NewResponse(&nushiv1.ArchiveChatResponse{}), nil
 }
 
@@ -169,6 +174,7 @@ func (s *server) RemoveChat(_ context.Context, req *connect.Request[nushiv1.Remo
 	if err := s.chats.Remove(req.Msg.ChatId); err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
+	s.terms.CloseChat(req.Msg.ChatId)
 	return connect.NewResponse(&nushiv1.RemoveChatResponse{}), nil
 }
 
@@ -195,6 +201,11 @@ func (s *server) PlanDeleteChat(ctx context.Context, req *connect.Request[nushiv
 	for _, sess := range p.Sessions {
 		out.Sessions = append(out.Sessions, &nushiv1.AgentSession{SessionId: sess.ID, Folder: sess.Folder})
 	}
+	for _, t := range s.terms.List(req.Msg.ChatId) {
+		if !t.Exited {
+			out.Terminals = append(out.Terminals, terminalProto(t))
+		}
+	}
 	return connect.NewResponse(out), nil
 }
 
@@ -212,6 +223,7 @@ func (s *server) DeleteChat(ctx context.Context, req *connect.Request[nushiv1.De
 	if err := s.chats.Delete(ctx, m.ChatId, opts); err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
+	s.terms.CloseChat(m.ChatId)
 	return connect.NewResponse(&nushiv1.DeleteChatResponse{}), nil
 }
 

@@ -66,6 +66,8 @@ func toProto(e model.Event) *nushiv1.EventsResponse {
 		out.Kind = &nushiv1.EventsResponse_Queue{Queue: queueProto(*e.Queue)}
 	case e.Commands != nil:
 		out.Kind = &nushiv1.EventsResponse_Commands{Commands: &nushiv1.ChatCommands{Commands: commandsProto(e.Commands)}}
+	case e.Terminals != nil:
+		out.Kind = &nushiv1.EventsResponse_Terminals{Terminals: &nushiv1.ChatTerminals{Terminals: terminalsProto(*e.Terminals)}}
 	}
 	return out
 }

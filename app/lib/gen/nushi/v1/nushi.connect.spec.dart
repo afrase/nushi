@@ -4,7 +4,6 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
-
 import "nushi.pb.dart" as nushiv1nushi;
 
 abstract final class NushiService {
@@ -304,6 +303,57 @@ abstract final class NushiService {
     connect.StreamType.unary,
     nushiv1nushi.ReloadChatRequest.new,
     nushiv1nushi.ReloadChatResponse.new,
+  );
+
+  /// Opens a terminal for a chat: the user's login shell, in the chat's
+  /// folder (its worktree, for a worktree chat) or in a given one. The
+  /// daemon owns it, so it outlives the app, but not the daemon. Changes to
+  /// a chat's terminals come as events (API 35).
+  static const openTerminal = connect.Spec(
+    '/$name/OpenTerminal',
+    connect.StreamType.unary,
+    nushiv1nushi.OpenTerminalRequest.new,
+    nushiv1nushi.OpenTerminalResponse.new,
+  );
+
+  static const listTerminals = connect.Spec(
+    '/$name/ListTerminals',
+    connect.StreamType.unary,
+    nushiv1nushi.ListTerminalsRequest.new,
+    nushiv1nushi.ListTerminalsResponse.new,
+  );
+
+  /// Streams a terminal's output: first what it kept (the last 1 MB, maybe
+  /// empty), then new output, and a last message once its shell has exited.
+  /// A client that falls far behind is cut off and attaches again (API 35).
+  static const attachTerminal = connect.Spec(
+    '/$name/AttachTerminal',
+    connect.StreamType.server,
+    nushiv1nushi.AttachTerminalRequest.new,
+    nushiv1nushi.AttachTerminalResponse.new,
+  );
+
+  static const writeTerminal = connect.Spec(
+    '/$name/WriteTerminal',
+    connect.StreamType.unary,
+    nushiv1nushi.WriteTerminalRequest.new,
+    nushiv1nushi.WriteTerminalResponse.new,
+  );
+
+  static const resizeTerminal = connect.Spec(
+    '/$name/ResizeTerminal',
+    connect.StreamType.unary,
+    nushiv1nushi.ResizeTerminalRequest.new,
+    nushiv1nushi.ResizeTerminalResponse.new,
+  );
+
+  /// Closes a terminal: its shell is hung up, then killed after a short
+  /// grace, along with what still runs in it (API 35).
+  static const closeTerminal = connect.Spec(
+    '/$name/CloseTerminal',
+    connect.StreamType.unary,
+    nushiv1nushi.CloseTerminalRequest.new,
+    nushiv1nushi.CloseTerminalResponse.new,
   );
 
   /// Streams every change to every chat from now on. The first message is

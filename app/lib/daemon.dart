@@ -29,7 +29,7 @@ final String? _oldDataDir =
     : null;
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 34;
+const apiVersion = 35;
 
 /// Whether [folder] is a chat's scratch folder: the chat has no folder yet.
 bool isScratch(String folder) => folder.startsWith('$dataDir/scratch/');

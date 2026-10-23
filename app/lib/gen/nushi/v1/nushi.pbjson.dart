@@ -758,6 +758,14 @@ const PlanDeleteChatResponse$json = {
       '6': '.nushi.v1.WorktreePlan',
       '10': 'worktrees'
     },
+    {
+      '1': 'terminals',
+      '3': 7,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.Terminal',
+      '10': 'terminals'
+    },
   ],
 };
 
@@ -768,7 +776,8 @@ final $typed_data.Uint8List planDeleteChatResponseDescriptor = $convert.base64De
     'aXN0b3J5EiUKDnNjcmF0Y2hfZm9sZGVyGAMgASgJUg1zY3JhdGNoRm9sZGVyEi4KCHdvcmt0cm'
     'VlGAQgASgLMhIubnVzaGkudjEuV29ya3RyZWVSCHdvcmt0cmVlEj4KDndvcmt0cmVlX3N0YXRl'
     'GAUgASgLMhcubnVzaGkudjEuV29ya3RyZWVTdGF0ZVINd29ya3RyZWVTdGF0ZRI0Cgl3b3JrdH'
-    'JlZXMYBiADKAsyFi5udXNoaS52MS5Xb3JrdHJlZVBsYW5SCXdvcmt0cmVlcw==');
+    'JlZXMYBiADKAsyFi5udXNoaS52MS5Xb3JrdHJlZVBsYW5SCXdvcmt0cmVlcxIwCgl0ZXJtaW5h'
+    'bHMYByADKAsyEi5udXNoaS52MS5UZXJtaW5hbFIJdGVybWluYWxz');
 
 @$core.Deprecated('Use worktreePlanDescriptor instead')
 const WorktreePlan$json = {
@@ -1491,6 +1500,15 @@ const EventsResponse$json = {
       '10': 'queue'
     },
     {'1': 'cut', '3': 11, '4': 1, '5': 9, '9': 0, '10': 'cut'},
+    {
+      '1': 'terminals',
+      '3': 12,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.ChatTerminals',
+      '9': 0,
+      '10': 'terminals'
+    },
   ],
   '8': [
     {'1': 'kind'},
@@ -1506,7 +1524,8 @@ final $typed_data.Uint8List eventsResponseDescriptor = $convert.base64Decode(
     'MS5DaGF0SABSBGNoYXQSNAoIY29tbWFuZHMYByABKAsyFi5udXNoaS52MS5DaGF0Q29tbWFuZH'
     'NIAFIIY29tbWFuZHMSGgoHcmVtb3ZlZBgIIAEoCEgAUgdyZW1vdmVkEicKBXVzYWdlGAkgASgL'
     'Mg8ubnVzaGkudjEuVXNhZ2VIAFIFdXNhZ2USKwoFcXVldWUYCiABKAsyEy5udXNoaS52MS5DaG'
-    'F0UXVldWVIAFIFcXVldWUSEgoDY3V0GAsgASgJSABSA2N1dEIGCgRraW5k');
+    'F0UXVldWVIAFIFcXVldWUSEgoDY3V0GAsgASgJSABSA2N1dBI3Cgl0ZXJtaW5hbHMYDCABKAsy'
+    'Fy5udXNoaS52MS5DaGF0VGVybWluYWxzSABSCXRlcm1pbmFsc0IGCgRraW5k');
 
 @$core.Deprecated('Use chatConfigDescriptor instead')
 const ChatConfig$json = {
@@ -1752,6 +1771,214 @@ final $typed_data.Uint8List chatStatusDescriptor = $convert.base64Decode(
     'YW5fZm9yaxgFIAEoCFIHY2FuRm9yaxIWCgZpbWFnZXMYBiABKAhSBmltYWdlcxIdCgpjYW5fcm'
     'V3aW5kGAcgASgIUgljYW5SZXdpbmQSHwoLbWNwX2NoYW5nZWQYCCABKAhSCm1jcENoYW5nZWQ=');
 
+@$core.Deprecated('Use terminalDescriptor instead')
+const Terminal$json = {
+  '1': 'Terminal',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'chat_id', '3': 2, '4': 1, '5': 9, '10': 'chatId'},
+    {'1': 'folder', '3': 3, '4': 1, '5': 9, '10': 'folder'},
+    {'1': 'shell', '3': 5, '4': 1, '5': 9, '10': 'shell'},
+    {'1': 'program', '3': 6, '4': 1, '5': 9, '10': 'program'},
+    {'1': 'exited', '3': 7, '4': 1, '5': 8, '10': 'exited'},
+    {'1': 'exit_code', '3': 8, '4': 1, '5': 5, '10': 'exitCode'},
+  ],
+};
+
+/// Descriptor for `Terminal`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List terminalDescriptor = $convert.base64Decode(
+    'CghUZXJtaW5hbBIOCgJpZBgBIAEoCVICaWQSFwoHY2hhdF9pZBgCIAEoCVIGY2hhdElkEhYKBm'
+    'ZvbGRlchgDIAEoCVIGZm9sZGVyEhQKBXNoZWxsGAUgASgJUgVzaGVsbBIYCgdwcm9ncmFtGAYg'
+    'ASgJUgdwcm9ncmFtEhYKBmV4aXRlZBgHIAEoCFIGZXhpdGVkEhsKCWV4aXRfY29kZRgIIAEoBV'
+    'IIZXhpdENvZGU=');
+
+@$core.Deprecated('Use chatTerminalsDescriptor instead')
+const ChatTerminals$json = {
+  '1': 'ChatTerminals',
+  '2': [
+    {
+      '1': 'terminals',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.Terminal',
+      '10': 'terminals'
+    },
+  ],
+};
+
+/// Descriptor for `ChatTerminals`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List chatTerminalsDescriptor = $convert.base64Decode(
+    'Cg1DaGF0VGVybWluYWxzEjAKCXRlcm1pbmFscxgBIAMoCzISLm51c2hpLnYxLlRlcm1pbmFsUg'
+    'l0ZXJtaW5hbHM=');
+
+@$core.Deprecated('Use openTerminalRequestDescriptor instead')
+const OpenTerminalRequest$json = {
+  '1': 'OpenTerminalRequest',
+  '2': [
+    {'1': 'chat_id', '3': 1, '4': 1, '5': 9, '10': 'chatId'},
+    {'1': 'folder', '3': 2, '4': 1, '5': 9, '10': 'folder'},
+    {'1': 'cols', '3': 3, '4': 1, '5': 5, '10': 'cols'},
+    {'1': 'rows', '3': 4, '4': 1, '5': 5, '10': 'rows'},
+  ],
+};
+
+/// Descriptor for `OpenTerminalRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List openTerminalRequestDescriptor = $convert.base64Decode(
+    'ChNPcGVuVGVybWluYWxSZXF1ZXN0EhcKB2NoYXRfaWQYASABKAlSBmNoYXRJZBIWCgZmb2xkZX'
+    'IYAiABKAlSBmZvbGRlchISCgRjb2xzGAMgASgFUgRjb2xzEhIKBHJvd3MYBCABKAVSBHJvd3M=');
+
+@$core.Deprecated('Use openTerminalResponseDescriptor instead')
+const OpenTerminalResponse$json = {
+  '1': 'OpenTerminalResponse',
+  '2': [
+    {
+      '1': 'terminal',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.Terminal',
+      '10': 'terminal'
+    },
+  ],
+};
+
+/// Descriptor for `OpenTerminalResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List openTerminalResponseDescriptor = $convert.base64Decode(
+    'ChRPcGVuVGVybWluYWxSZXNwb25zZRIuCgh0ZXJtaW5hbBgBIAEoCzISLm51c2hpLnYxLlRlcm'
+    '1pbmFsUgh0ZXJtaW5hbA==');
+
+@$core.Deprecated('Use listTerminalsRequestDescriptor instead')
+const ListTerminalsRequest$json = {
+  '1': 'ListTerminalsRequest',
+  '2': [
+    {'1': 'chat_id', '3': 1, '4': 1, '5': 9, '10': 'chatId'},
+  ],
+};
+
+/// Descriptor for `ListTerminalsRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listTerminalsRequestDescriptor =
+    $convert.base64Decode(
+        'ChRMaXN0VGVybWluYWxzUmVxdWVzdBIXCgdjaGF0X2lkGAEgASgJUgZjaGF0SWQ=');
+
+@$core.Deprecated('Use listTerminalsResponseDescriptor instead')
+const ListTerminalsResponse$json = {
+  '1': 'ListTerminalsResponse',
+  '2': [
+    {
+      '1': 'terminals',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.Terminal',
+      '10': 'terminals'
+    },
+  ],
+};
+
+/// Descriptor for `ListTerminalsResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listTerminalsResponseDescriptor = $convert.base64Decode(
+    'ChVMaXN0VGVybWluYWxzUmVzcG9uc2USMAoJdGVybWluYWxzGAEgAygLMhIubnVzaGkudjEuVG'
+    'VybWluYWxSCXRlcm1pbmFscw==');
+
+@$core.Deprecated('Use attachTerminalRequestDescriptor instead')
+const AttachTerminalRequest$json = {
+  '1': 'AttachTerminalRequest',
+  '2': [
+    {'1': 'terminal_id', '3': 1, '4': 1, '5': 9, '10': 'terminalId'},
+  ],
+};
+
+/// Descriptor for `AttachTerminalRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List attachTerminalRequestDescriptor = $convert.base64Decode(
+    'ChVBdHRhY2hUZXJtaW5hbFJlcXVlc3QSHwoLdGVybWluYWxfaWQYASABKAlSCnRlcm1pbmFsSW'
+    'Q=');
+
+@$core.Deprecated('Use attachTerminalResponseDescriptor instead')
+const AttachTerminalResponse$json = {
+  '1': 'AttachTerminalResponse',
+  '2': [
+    {'1': 'data', '3': 1, '4': 1, '5': 12, '10': 'data'},
+    {'1': 'exited', '3': 2, '4': 1, '5': 8, '10': 'exited'},
+    {'1': 'exit_code', '3': 3, '4': 1, '5': 5, '10': 'exitCode'},
+  ],
+};
+
+/// Descriptor for `AttachTerminalResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List attachTerminalResponseDescriptor =
+    $convert.base64Decode(
+        'ChZBdHRhY2hUZXJtaW5hbFJlc3BvbnNlEhIKBGRhdGEYASABKAxSBGRhdGESFgoGZXhpdGVkGA'
+        'IgASgIUgZleGl0ZWQSGwoJZXhpdF9jb2RlGAMgASgFUghleGl0Q29kZQ==');
+
+@$core.Deprecated('Use writeTerminalRequestDescriptor instead')
+const WriteTerminalRequest$json = {
+  '1': 'WriteTerminalRequest',
+  '2': [
+    {'1': 'terminal_id', '3': 1, '4': 1, '5': 9, '10': 'terminalId'},
+    {'1': 'data', '3': 2, '4': 1, '5': 12, '10': 'data'},
+  ],
+};
+
+/// Descriptor for `WriteTerminalRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List writeTerminalRequestDescriptor = $convert.base64Decode(
+    'ChRXcml0ZVRlcm1pbmFsUmVxdWVzdBIfCgt0ZXJtaW5hbF9pZBgBIAEoCVIKdGVybWluYWxJZB'
+    'ISCgRkYXRhGAIgASgMUgRkYXRh');
+
+@$core.Deprecated('Use writeTerminalResponseDescriptor instead')
+const WriteTerminalResponse$json = {
+  '1': 'WriteTerminalResponse',
+};
+
+/// Descriptor for `WriteTerminalResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List writeTerminalResponseDescriptor =
+    $convert.base64Decode('ChVXcml0ZVRlcm1pbmFsUmVzcG9uc2U=');
+
+@$core.Deprecated('Use resizeTerminalRequestDescriptor instead')
+const ResizeTerminalRequest$json = {
+  '1': 'ResizeTerminalRequest',
+  '2': [
+    {'1': 'terminal_id', '3': 1, '4': 1, '5': 9, '10': 'terminalId'},
+    {'1': 'cols', '3': 2, '4': 1, '5': 5, '10': 'cols'},
+    {'1': 'rows', '3': 3, '4': 1, '5': 5, '10': 'rows'},
+  ],
+};
+
+/// Descriptor for `ResizeTerminalRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List resizeTerminalRequestDescriptor = $convert.base64Decode(
+    'ChVSZXNpemVUZXJtaW5hbFJlcXVlc3QSHwoLdGVybWluYWxfaWQYASABKAlSCnRlcm1pbmFsSW'
+    'QSEgoEY29scxgCIAEoBVIEY29scxISCgRyb3dzGAMgASgFUgRyb3dz');
+
+@$core.Deprecated('Use resizeTerminalResponseDescriptor instead')
+const ResizeTerminalResponse$json = {
+  '1': 'ResizeTerminalResponse',
+};
+
+/// Descriptor for `ResizeTerminalResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List resizeTerminalResponseDescriptor =
+    $convert.base64Decode('ChZSZXNpemVUZXJtaW5hbFJlc3BvbnNl');
+
+@$core.Deprecated('Use closeTerminalRequestDescriptor instead')
+const CloseTerminalRequest$json = {
+  '1': 'CloseTerminalRequest',
+  '2': [
+    {'1': 'terminal_id', '3': 1, '4': 1, '5': 9, '10': 'terminalId'},
+  ],
+};
+
+/// Descriptor for `CloseTerminalRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List closeTerminalRequestDescriptor = $convert.base64Decode(
+    'ChRDbG9zZVRlcm1pbmFsUmVxdWVzdBIfCgt0ZXJtaW5hbF9pZBgBIAEoCVIKdGVybWluYWxJZA'
+    '==');
+
+@$core.Deprecated('Use closeTerminalResponseDescriptor instead')
+const CloseTerminalResponse$json = {
+  '1': 'CloseTerminalResponse',
+};
+
+/// Descriptor for `CloseTerminalResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List closeTerminalResponseDescriptor =
+    $convert.base64Decode('ChVDbG9zZVRlcm1pbmFsUmVzcG9uc2U=');
+
 const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
   '1': 'NushiService',
   '2': [
@@ -1912,6 +2139,37 @@ const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
       '3': '.nushi.v1.ReloadChatResponse'
     },
     {
+      '1': 'OpenTerminal',
+      '2': '.nushi.v1.OpenTerminalRequest',
+      '3': '.nushi.v1.OpenTerminalResponse'
+    },
+    {
+      '1': 'ListTerminals',
+      '2': '.nushi.v1.ListTerminalsRequest',
+      '3': '.nushi.v1.ListTerminalsResponse'
+    },
+    {
+      '1': 'AttachTerminal',
+      '2': '.nushi.v1.AttachTerminalRequest',
+      '3': '.nushi.v1.AttachTerminalResponse',
+      '6': true
+    },
+    {
+      '1': 'WriteTerminal',
+      '2': '.nushi.v1.WriteTerminalRequest',
+      '3': '.nushi.v1.WriteTerminalResponse'
+    },
+    {
+      '1': 'ResizeTerminal',
+      '2': '.nushi.v1.ResizeTerminalRequest',
+      '3': '.nushi.v1.ResizeTerminalResponse'
+    },
+    {
+      '1': 'CloseTerminal',
+      '2': '.nushi.v1.CloseTerminalRequest',
+      '3': '.nushi.v1.CloseTerminalResponse'
+    },
+    {
       '1': 'Events',
       '2': '.nushi.v1.EventsRequest',
       '3': '.nushi.v1.EventsResponse',
@@ -1971,6 +2229,7 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.AgentSession': AgentSession$json,
   '.nushi.v1.WorktreeState': WorktreeState$json,
   '.nushi.v1.WorktreePlan': WorktreePlan$json,
+  '.nushi.v1.Terminal': Terminal$json,
   '.nushi.v1.DeleteChatRequest': DeleteChatRequest$json,
   '.nushi.v1.WorktreeChoice': WorktreeChoice$json,
   '.nushi.v1.DeleteChatResponse': DeleteChatResponse$json,
@@ -2010,11 +2269,24 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.LogoutMcpServerResponse': LogoutMcpServerResponse$json,
   '.nushi.v1.ReloadChatRequest': ReloadChatRequest$json,
   '.nushi.v1.ReloadChatResponse': ReloadChatResponse$json,
+  '.nushi.v1.OpenTerminalRequest': OpenTerminalRequest$json,
+  '.nushi.v1.OpenTerminalResponse': OpenTerminalResponse$json,
+  '.nushi.v1.ListTerminalsRequest': ListTerminalsRequest$json,
+  '.nushi.v1.ListTerminalsResponse': ListTerminalsResponse$json,
+  '.nushi.v1.AttachTerminalRequest': AttachTerminalRequest$json,
+  '.nushi.v1.AttachTerminalResponse': AttachTerminalResponse$json,
+  '.nushi.v1.WriteTerminalRequest': WriteTerminalRequest$json,
+  '.nushi.v1.WriteTerminalResponse': WriteTerminalResponse$json,
+  '.nushi.v1.ResizeTerminalRequest': ResizeTerminalRequest$json,
+  '.nushi.v1.ResizeTerminalResponse': ResizeTerminalResponse$json,
+  '.nushi.v1.CloseTerminalRequest': CloseTerminalRequest$json,
+  '.nushi.v1.CloseTerminalResponse': CloseTerminalResponse$json,
   '.nushi.v1.EventsRequest': EventsRequest$json,
   '.nushi.v1.EventsResponse': EventsResponse$json,
   '.nushi.v1.ItemEvent': ItemEvent$json,
   '.nushi.v1.ChatConfig': ChatConfig$json,
   '.nushi.v1.ChatCommands': ChatCommands$json,
+  '.nushi.v1.ChatTerminals': ChatTerminals$json,
 };
 
 /// Descriptor for `NushiService`. Decode as a `google.protobuf.ServiceDescriptorProto`.
@@ -2063,5 +2335,14 @@ final $typed_data.Uint8List nushiServiceDescriptor = $convert.base64Decode(
     '51c2hpLnYxLkxvZ2luTWNwU2VydmVyUmVzcG9uc2USVgoPTG9nb3V0TWNwU2VydmVyEiAubnVz'
     'aGkudjEuTG9nb3V0TWNwU2VydmVyUmVxdWVzdBohLm51c2hpLnYxLkxvZ291dE1jcFNlcnZlcl'
     'Jlc3BvbnNlEkcKClJlbG9hZENoYXQSGy5udXNoaS52MS5SZWxvYWRDaGF0UmVxdWVzdBocLm51'
-    'c2hpLnYxLlJlbG9hZENoYXRSZXNwb25zZRI9CgZFdmVudHMSFy5udXNoaS52MS5FdmVudHNSZX'
-    'F1ZXN0GhgubnVzaGkudjEuRXZlbnRzUmVzcG9uc2UwAQ==');
+    'c2hpLnYxLlJlbG9hZENoYXRSZXNwb25zZRJNCgxPcGVuVGVybWluYWwSHS5udXNoaS52MS5PcG'
+    'VuVGVybWluYWxSZXF1ZXN0Gh4ubnVzaGkudjEuT3BlblRlcm1pbmFsUmVzcG9uc2USUAoNTGlz'
+    'dFRlcm1pbmFscxIeLm51c2hpLnYxLkxpc3RUZXJtaW5hbHNSZXF1ZXN0Gh8ubnVzaGkudjEuTG'
+    'lzdFRlcm1pbmFsc1Jlc3BvbnNlElUKDkF0dGFjaFRlcm1pbmFsEh8ubnVzaGkudjEuQXR0YWNo'
+    'VGVybWluYWxSZXF1ZXN0GiAubnVzaGkudjEuQXR0YWNoVGVybWluYWxSZXNwb25zZTABElAKDV'
+    'dyaXRlVGVybWluYWwSHi5udXNoaS52MS5Xcml0ZVRlcm1pbmFsUmVxdWVzdBofLm51c2hpLnYx'
+    'LldyaXRlVGVybWluYWxSZXNwb25zZRJTCg5SZXNpemVUZXJtaW5hbBIfLm51c2hpLnYxLlJlc2'
+    'l6ZVRlcm1pbmFsUmVxdWVzdBogLm51c2hpLnYxLlJlc2l6ZVRlcm1pbmFsUmVzcG9uc2USUAoN'
+    'Q2xvc2VUZXJtaW5hbBIeLm51c2hpLnYxLkNsb3NlVGVybWluYWxSZXF1ZXN0Gh8ubnVzaGkudj'
+    'EuQ2xvc2VUZXJtaW5hbFJlc3BvbnNlEj0KBkV2ZW50cxIXLm51c2hpLnYxLkV2ZW50c1JlcXVl'
+    'c3QaGC5udXNoaS52MS5FdmVudHNSZXNwb25zZTAB');

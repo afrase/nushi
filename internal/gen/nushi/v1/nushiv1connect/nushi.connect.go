@@ -113,6 +113,24 @@ const (
 	NushiServiceLogoutMcpServerProcedure = "/nushi.v1.NushiService/LogoutMcpServer"
 	// NushiServiceReloadChatProcedure is the fully-qualified name of the NushiService's ReloadChat RPC.
 	NushiServiceReloadChatProcedure = "/nushi.v1.NushiService/ReloadChat"
+	// NushiServiceOpenTerminalProcedure is the fully-qualified name of the NushiService's OpenTerminal
+	// RPC.
+	NushiServiceOpenTerminalProcedure = "/nushi.v1.NushiService/OpenTerminal"
+	// NushiServiceListTerminalsProcedure is the fully-qualified name of the NushiService's
+	// ListTerminals RPC.
+	NushiServiceListTerminalsProcedure = "/nushi.v1.NushiService/ListTerminals"
+	// NushiServiceAttachTerminalProcedure is the fully-qualified name of the NushiService's
+	// AttachTerminal RPC.
+	NushiServiceAttachTerminalProcedure = "/nushi.v1.NushiService/AttachTerminal"
+	// NushiServiceWriteTerminalProcedure is the fully-qualified name of the NushiService's
+	// WriteTerminal RPC.
+	NushiServiceWriteTerminalProcedure = "/nushi.v1.NushiService/WriteTerminal"
+	// NushiServiceResizeTerminalProcedure is the fully-qualified name of the NushiService's
+	// ResizeTerminal RPC.
+	NushiServiceResizeTerminalProcedure = "/nushi.v1.NushiService/ResizeTerminal"
+	// NushiServiceCloseTerminalProcedure is the fully-qualified name of the NushiService's
+	// CloseTerminal RPC.
+	NushiServiceCloseTerminalProcedure = "/nushi.v1.NushiService/CloseTerminal"
 	// NushiServiceEventsProcedure is the fully-qualified name of the NushiService's Events RPC.
 	NushiServiceEventsProcedure = "/nushi.v1.NushiService/Events"
 )
@@ -222,6 +240,21 @@ type NushiServiceClient interface {
 	// replays its transcript, so it uses the MCP servers as they are now.
 	// Refused while it is busy (API 33).
 	ReloadChat(context.Context, *connect.Request[v1.ReloadChatRequest]) (*connect.Response[v1.ReloadChatResponse], error)
+	// Opens a terminal for a chat: the user's login shell, in the chat's
+	// folder (its worktree, for a worktree chat) or in a given one. The
+	// daemon owns it, so it outlives the app, but not the daemon. Changes to
+	// a chat's terminals come as events (API 35).
+	OpenTerminal(context.Context, *connect.Request[v1.OpenTerminalRequest]) (*connect.Response[v1.OpenTerminalResponse], error)
+	ListTerminals(context.Context, *connect.Request[v1.ListTerminalsRequest]) (*connect.Response[v1.ListTerminalsResponse], error)
+	// Streams a terminal's output: first what it kept (the last 1 MB, maybe
+	// empty), then new output, and a last message once its shell has exited.
+	// A client that falls far behind is cut off and attaches again (API 35).
+	AttachTerminal(context.Context, *connect.Request[v1.AttachTerminalRequest]) (*connect.ServerStreamForClient[v1.AttachTerminalResponse], error)
+	WriteTerminal(context.Context, *connect.Request[v1.WriteTerminalRequest]) (*connect.Response[v1.WriteTerminalResponse], error)
+	ResizeTerminal(context.Context, *connect.Request[v1.ResizeTerminalRequest]) (*connect.Response[v1.ResizeTerminalResponse], error)
+	// Closes a terminal: its shell is hung up, then killed after a short
+	// grace, along with what still runs in it (API 35).
+	CloseTerminal(context.Context, *connect.Request[v1.CloseTerminalRequest]) (*connect.Response[v1.CloseTerminalResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
 	Events(context.Context, *connect.Request[v1.EventsRequest]) (*connect.ServerStreamForClient[v1.EventsResponse], error)
@@ -430,6 +463,42 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("ReloadChat")),
 			connect.WithClientOptions(opts...),
 		),
+		openTerminal: connect.NewClient[v1.OpenTerminalRequest, v1.OpenTerminalResponse](
+			httpClient,
+			baseURL+NushiServiceOpenTerminalProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("OpenTerminal")),
+			connect.WithClientOptions(opts...),
+		),
+		listTerminals: connect.NewClient[v1.ListTerminalsRequest, v1.ListTerminalsResponse](
+			httpClient,
+			baseURL+NushiServiceListTerminalsProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ListTerminals")),
+			connect.WithClientOptions(opts...),
+		),
+		attachTerminal: connect.NewClient[v1.AttachTerminalRequest, v1.AttachTerminalResponse](
+			httpClient,
+			baseURL+NushiServiceAttachTerminalProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("AttachTerminal")),
+			connect.WithClientOptions(opts...),
+		),
+		writeTerminal: connect.NewClient[v1.WriteTerminalRequest, v1.WriteTerminalResponse](
+			httpClient,
+			baseURL+NushiServiceWriteTerminalProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("WriteTerminal")),
+			connect.WithClientOptions(opts...),
+		),
+		resizeTerminal: connect.NewClient[v1.ResizeTerminalRequest, v1.ResizeTerminalResponse](
+			httpClient,
+			baseURL+NushiServiceResizeTerminalProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ResizeTerminal")),
+			connect.WithClientOptions(opts...),
+		),
+		closeTerminal: connect.NewClient[v1.CloseTerminalRequest, v1.CloseTerminalResponse](
+			httpClient,
+			baseURL+NushiServiceCloseTerminalProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("CloseTerminal")),
+			connect.WithClientOptions(opts...),
+		),
 		events: connect.NewClient[v1.EventsRequest, v1.EventsResponse](
 			httpClient,
 			baseURL+NushiServiceEventsProcedure,
@@ -473,6 +542,12 @@ type nushiServiceClient struct {
 	loginMcpServer   *connect.Client[v1.LoginMcpServerRequest, v1.LoginMcpServerResponse]
 	logoutMcpServer  *connect.Client[v1.LogoutMcpServerRequest, v1.LogoutMcpServerResponse]
 	reloadChat       *connect.Client[v1.ReloadChatRequest, v1.ReloadChatResponse]
+	openTerminal     *connect.Client[v1.OpenTerminalRequest, v1.OpenTerminalResponse]
+	listTerminals    *connect.Client[v1.ListTerminalsRequest, v1.ListTerminalsResponse]
+	attachTerminal   *connect.Client[v1.AttachTerminalRequest, v1.AttachTerminalResponse]
+	writeTerminal    *connect.Client[v1.WriteTerminalRequest, v1.WriteTerminalResponse]
+	resizeTerminal   *connect.Client[v1.ResizeTerminalRequest, v1.ResizeTerminalResponse]
+	closeTerminal    *connect.Client[v1.CloseTerminalRequest, v1.CloseTerminalResponse]
 	events           *connect.Client[v1.EventsRequest, v1.EventsResponse]
 }
 
@@ -636,6 +711,36 @@ func (c *nushiServiceClient) ReloadChat(ctx context.Context, req *connect.Reques
 	return c.reloadChat.CallUnary(ctx, req)
 }
 
+// OpenTerminal calls nushi.v1.NushiService.OpenTerminal.
+func (c *nushiServiceClient) OpenTerminal(ctx context.Context, req *connect.Request[v1.OpenTerminalRequest]) (*connect.Response[v1.OpenTerminalResponse], error) {
+	return c.openTerminal.CallUnary(ctx, req)
+}
+
+// ListTerminals calls nushi.v1.NushiService.ListTerminals.
+func (c *nushiServiceClient) ListTerminals(ctx context.Context, req *connect.Request[v1.ListTerminalsRequest]) (*connect.Response[v1.ListTerminalsResponse], error) {
+	return c.listTerminals.CallUnary(ctx, req)
+}
+
+// AttachTerminal calls nushi.v1.NushiService.AttachTerminal.
+func (c *nushiServiceClient) AttachTerminal(ctx context.Context, req *connect.Request[v1.AttachTerminalRequest]) (*connect.ServerStreamForClient[v1.AttachTerminalResponse], error) {
+	return c.attachTerminal.CallServerStream(ctx, req)
+}
+
+// WriteTerminal calls nushi.v1.NushiService.WriteTerminal.
+func (c *nushiServiceClient) WriteTerminal(ctx context.Context, req *connect.Request[v1.WriteTerminalRequest]) (*connect.Response[v1.WriteTerminalResponse], error) {
+	return c.writeTerminal.CallUnary(ctx, req)
+}
+
+// ResizeTerminal calls nushi.v1.NushiService.ResizeTerminal.
+func (c *nushiServiceClient) ResizeTerminal(ctx context.Context, req *connect.Request[v1.ResizeTerminalRequest]) (*connect.Response[v1.ResizeTerminalResponse], error) {
+	return c.resizeTerminal.CallUnary(ctx, req)
+}
+
+// CloseTerminal calls nushi.v1.NushiService.CloseTerminal.
+func (c *nushiServiceClient) CloseTerminal(ctx context.Context, req *connect.Request[v1.CloseTerminalRequest]) (*connect.Response[v1.CloseTerminalResponse], error) {
+	return c.closeTerminal.CallUnary(ctx, req)
+}
+
 // Events calls nushi.v1.NushiService.Events.
 func (c *nushiServiceClient) Events(ctx context.Context, req *connect.Request[v1.EventsRequest]) (*connect.ServerStreamForClient[v1.EventsResponse], error) {
 	return c.events.CallServerStream(ctx, req)
@@ -746,6 +851,21 @@ type NushiServiceHandler interface {
 	// replays its transcript, so it uses the MCP servers as they are now.
 	// Refused while it is busy (API 33).
 	ReloadChat(context.Context, *connect.Request[v1.ReloadChatRequest]) (*connect.Response[v1.ReloadChatResponse], error)
+	// Opens a terminal for a chat: the user's login shell, in the chat's
+	// folder (its worktree, for a worktree chat) or in a given one. The
+	// daemon owns it, so it outlives the app, but not the daemon. Changes to
+	// a chat's terminals come as events (API 35).
+	OpenTerminal(context.Context, *connect.Request[v1.OpenTerminalRequest]) (*connect.Response[v1.OpenTerminalResponse], error)
+	ListTerminals(context.Context, *connect.Request[v1.ListTerminalsRequest]) (*connect.Response[v1.ListTerminalsResponse], error)
+	// Streams a terminal's output: first what it kept (the last 1 MB, maybe
+	// empty), then new output, and a last message once its shell has exited.
+	// A client that falls far behind is cut off and attaches again (API 35).
+	AttachTerminal(context.Context, *connect.Request[v1.AttachTerminalRequest], *connect.ServerStream[v1.AttachTerminalResponse]) error
+	WriteTerminal(context.Context, *connect.Request[v1.WriteTerminalRequest]) (*connect.Response[v1.WriteTerminalResponse], error)
+	ResizeTerminal(context.Context, *connect.Request[v1.ResizeTerminalRequest]) (*connect.Response[v1.ResizeTerminalResponse], error)
+	// Closes a terminal: its shell is hung up, then killed after a short
+	// grace, along with what still runs in it (API 35).
+	CloseTerminal(context.Context, *connect.Request[v1.CloseTerminalRequest]) (*connect.Response[v1.CloseTerminalResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
 	Events(context.Context, *connect.Request[v1.EventsRequest], *connect.ServerStream[v1.EventsResponse]) error
@@ -950,6 +1070,42 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("ReloadChat")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceOpenTerminalHandler := connect.NewUnaryHandler(
+		NushiServiceOpenTerminalProcedure,
+		svc.OpenTerminal,
+		connect.WithSchema(nushiServiceMethods.ByName("OpenTerminal")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceListTerminalsHandler := connect.NewUnaryHandler(
+		NushiServiceListTerminalsProcedure,
+		svc.ListTerminals,
+		connect.WithSchema(nushiServiceMethods.ByName("ListTerminals")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceAttachTerminalHandler := connect.NewServerStreamHandler(
+		NushiServiceAttachTerminalProcedure,
+		svc.AttachTerminal,
+		connect.WithSchema(nushiServiceMethods.ByName("AttachTerminal")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceWriteTerminalHandler := connect.NewUnaryHandler(
+		NushiServiceWriteTerminalProcedure,
+		svc.WriteTerminal,
+		connect.WithSchema(nushiServiceMethods.ByName("WriteTerminal")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceResizeTerminalHandler := connect.NewUnaryHandler(
+		NushiServiceResizeTerminalProcedure,
+		svc.ResizeTerminal,
+		connect.WithSchema(nushiServiceMethods.ByName("ResizeTerminal")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceCloseTerminalHandler := connect.NewUnaryHandler(
+		NushiServiceCloseTerminalProcedure,
+		svc.CloseTerminal,
+		connect.WithSchema(nushiServiceMethods.ByName("CloseTerminal")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceEventsHandler := connect.NewServerStreamHandler(
 		NushiServiceEventsProcedure,
 		svc.Events,
@@ -1022,6 +1178,18 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceLogoutMcpServerHandler.ServeHTTP(w, r)
 		case NushiServiceReloadChatProcedure:
 			nushiServiceReloadChatHandler.ServeHTTP(w, r)
+		case NushiServiceOpenTerminalProcedure:
+			nushiServiceOpenTerminalHandler.ServeHTTP(w, r)
+		case NushiServiceListTerminalsProcedure:
+			nushiServiceListTerminalsHandler.ServeHTTP(w, r)
+		case NushiServiceAttachTerminalProcedure:
+			nushiServiceAttachTerminalHandler.ServeHTTP(w, r)
+		case NushiServiceWriteTerminalProcedure:
+			nushiServiceWriteTerminalHandler.ServeHTTP(w, r)
+		case NushiServiceResizeTerminalProcedure:
+			nushiServiceResizeTerminalHandler.ServeHTTP(w, r)
+		case NushiServiceCloseTerminalProcedure:
+			nushiServiceCloseTerminalHandler.ServeHTTP(w, r)
 		case NushiServiceEventsProcedure:
 			nushiServiceEventsHandler.ServeHTTP(w, r)
 		default:
@@ -1159,6 +1327,30 @@ func (UnimplementedNushiServiceHandler) LogoutMcpServer(context.Context, *connec
 
 func (UnimplementedNushiServiceHandler) ReloadChat(context.Context, *connect.Request[v1.ReloadChatRequest]) (*connect.Response[v1.ReloadChatResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ReloadChat is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) OpenTerminal(context.Context, *connect.Request[v1.OpenTerminalRequest]) (*connect.Response[v1.OpenTerminalResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.OpenTerminal is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ListTerminals(context.Context, *connect.Request[v1.ListTerminalsRequest]) (*connect.Response[v1.ListTerminalsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ListTerminals is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) AttachTerminal(context.Context, *connect.Request[v1.AttachTerminalRequest], *connect.ServerStream[v1.AttachTerminalResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.AttachTerminal is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) WriteTerminal(context.Context, *connect.Request[v1.WriteTerminalRequest]) (*connect.Response[v1.WriteTerminalResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.WriteTerminal is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ResizeTerminal(context.Context, *connect.Request[v1.ResizeTerminalRequest]) (*connect.Response[v1.ResizeTerminalResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ResizeTerminal is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) CloseTerminal(context.Context, *connect.Request[v1.CloseTerminalRequest]) (*connect.Response[v1.CloseTerminalResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.CloseTerminal is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) Events(context.Context, *connect.Request[v1.EventsRequest], *connect.ServerStream[v1.EventsResponse]) error {

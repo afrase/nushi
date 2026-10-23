@@ -2,6 +2,7 @@
 package main
 
 import (
+	"cmp"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
@@ -24,8 +25,10 @@ import (
 	"github.com/afrase/nushi/internal/events"
 	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/features/mcp"
+	"github.com/afrase/nushi/internal/features/terminals"
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/store"
+	"github.com/afrase/nushi/internal/terminal"
 )
 
 // claudeACP is the pinned Claude Code ACP adapter.
@@ -76,7 +79,9 @@ func run() error {
 	st := store.New(dir)
 	copyHistory := func(id, from, to string) (func() error, error) { return claudehistory.Copy(projects, id, from, to) }
 	chatSvc := chats.New("claude", launch, st, st, copyHistory, git.Worktrees{}, filepath.Join(dir, "scratch"), hub.Publish)
-	srv := &http.Server{Handler: api.Handler(token, chatSvc, mcp.New(claudemcp.Claude{}, chatSvc.MCPChanged), hub), Protocols: new(http.Protocols)}
+	termSvc := terminals.New(startShell, filepath.Base(loginShell), chatSvc, hub.Publish)
+	srv := &http.Server{Handler: api.Handler(token, chatSvc, mcp.New(claudemcp.Claude{}, chatSvc.MCPChanged), termSvc, hub),
+		Protocols: new(http.Protocols)}
 	srv.Protocols.SetUnencryptedHTTP2(true)
 
 	// On SIGINT or SIGTERM, stop the agents too: their sessions reopen
@@ -89,6 +94,7 @@ func run() error {
 	}()
 	err = srv.Serve(ln)
 	chatSvc.Close()
+	termSvc.CloseAll()
 	if errors.Is(err, http.ErrServerClosed) {
 		log.Print("nushid stopped")
 		return nil
@@ -130,4 +136,13 @@ func launchClaude(dir string, h acp.Handler) (chats.Agent, error) {
 	cmd.Dir = dir
 	cmd.Stderr = log.Writer()
 	return acp.Start(cmd, h)
+}
+
+var loginShell = cmp.Or(os.Getenv("SHELL"), "/bin/zsh")
+
+// startShell starts the user's login shell in a terminal, with the daemon's
+// environment.
+func startShell(folder string, cols, rows int, changed func()) (terminals.Shell, error) {
+	env := append(os.Environ(), "TERM=xterm-256color", "COLORTERM=truecolor")
+	return terminal.Start([]string{loginShell, "-l"}, folder, env, cols, rows, changed)
 }

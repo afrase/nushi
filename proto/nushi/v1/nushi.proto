@@ -108,6 +108,21 @@ service NushiService {
   // replays its transcript, so it uses the MCP servers as they are now.
   // Refused while it is busy (API 33).
   rpc ReloadChat(ReloadChatRequest) returns (ReloadChatResponse);
+  // Opens a terminal for a chat: the user's login shell, in the chat's
+  // folder (its worktree, for a worktree chat) or in a given one. The
+  // daemon owns it, so it outlives the app, but not the daemon. Changes to
+  // a chat's terminals come as events (API 35).
+  rpc OpenTerminal(OpenTerminalRequest) returns (OpenTerminalResponse);
+  rpc ListTerminals(ListTerminalsRequest) returns (ListTerminalsResponse);
+  // Streams a terminal's output: first what it kept (the last 1 MB, maybe
+  // empty), then new output, and a last message once its shell has exited.
+  // A client that falls far behind is cut off and attaches again (API 35).
+  rpc AttachTerminal(AttachTerminalRequest) returns (stream AttachTerminalResponse);
+  rpc WriteTerminal(WriteTerminalRequest) returns (WriteTerminalResponse);
+  rpc ResizeTerminal(ResizeTerminalRequest) returns (ResizeTerminalResponse);
+  // Closes a terminal: its shell is hung up, then killed after a short
+  // grace, along with what still runs in it (API 35).
+  rpc CloseTerminal(CloseTerminalRequest) returns (CloseTerminalResponse);
   // Streams every change to every chat from now on. The first message is
   // empty: it says the subscription is live.
   rpc Events(EventsRequest) returns (stream EventsResponse);
@@ -368,6 +383,9 @@ message PlanDeleteChatResponse {
   // its branch would lose: its own, then those it moved out of, which stay
   // on disk until it is deleted (API 23).
   repeated WorktreePlan worktrees = 6;
+  // The chat's terminals whose shell still runs; deleting closes them
+  // (API 35).
+  repeated Terminal terminals = 7;
 }
 
 message WorktreePlan {
@@ -668,6 +686,9 @@ message EventsResponse {
     // The transcript was cut back: this item and every one after it are
     // gone (API 29).
     string cut = 11;
+    // The chat's terminals, all of them, in order; these events have no
+    // seq (API 35).
+    ChatTerminals terminals = 12;
   }
 }
 
@@ -820,3 +841,74 @@ message ChatStatus {
   // (API 33).
   bool mcp_changed = 8;
 }
+
+// A shell the user runs beside a chat, in the daemon.
+message Terminal {
+  string id = 1;
+  string chat_id = 2;
+  // Where it started.
+  string folder = 3;
+  // The shell's name, such as "zsh".
+  string shell = 5;
+  // The foreground program's command line while it isn't the shell.
+  string program = 6;
+  bool exited = 7;
+  // -1: killed by a signal.
+  int32 exit_code = 8;
+}
+
+message ChatTerminals {
+  repeated Terminal terminals = 1;
+}
+
+message OpenTerminalRequest {
+  string chat_id = 1;
+  // Empty: the chat's folder.
+  string folder = 2;
+  int32 cols = 3;
+  int32 rows = 4;
+}
+
+message OpenTerminalResponse {
+  Terminal terminal = 1;
+}
+
+message ListTerminalsRequest {
+  string chat_id = 1;
+}
+
+message ListTerminalsResponse {
+  repeated Terminal terminals = 1;
+}
+
+message AttachTerminalRequest {
+  string terminal_id = 1;
+}
+
+message AttachTerminalResponse {
+  bytes data = 1;
+  // The shell has exited; this is the last message.
+  bool exited = 2;
+  int32 exit_code = 3;
+}
+
+message WriteTerminalRequest {
+  string terminal_id = 1;
+  bytes data = 2;
+}
+
+message WriteTerminalResponse {}
+
+message ResizeTerminalRequest {
+  string terminal_id = 1;
+  int32 cols = 2;
+  int32 rows = 3;
+}
+
+message ResizeTerminalResponse {}
+
+message CloseTerminalRequest {
+  string terminal_id = 1;
+}
+
+message CloseTerminalResponse {}
