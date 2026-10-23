@@ -7,13 +7,17 @@ import 'daemon.dart';
 
 /// What the app remembers across launches, in `app.json` in the data folder:
 /// whether the details panel shows (its toolbar button), which of its cards
-/// are collapsed, the repositories whose new chats get a worktree, and the
+/// are collapsed and their order, the repositories whose new chats get a worktree, and the
 /// worktree chats whose changes show what's uncommitted, not the branch.
 final showDetails = ValueNotifier<bool>(_saved['details'] != false)
   ..addListener(_save);
 final collapsedCards = ValueNotifier<Set<String>>(_strings('collapsed'))
   ..addListener(_save);
 final worktreeRepos = ValueNotifier<Set<String>>(_strings('worktrees'))
+  ..addListener(_save);
+
+/// The details panel's cards by title, in the order they were dragged into.
+final cardOrder = ValueNotifier<List<String>>([..._strings('cards')])
   ..addListener(_save);
 final uncommittedChats = ValueNotifier<Set<String>>(_strings('uncommitted'))
   ..addListener(_save);
@@ -40,6 +44,7 @@ void _save() {
         'collapsed': collapsedCards.value.toList(),
         'worktrees': worktreeRepos.value.toList(),
         'uncommitted': uncommittedChats.value.toList(),
+        'cards': cardOrder.value,
       }),
     );
   } on Object {
