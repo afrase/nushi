@@ -74,6 +74,7 @@ func (s *Service) resume(c *chat) {
 		c.noticeLocked("error", "Couldn't reopen the chat: "+err.Error())
 	}
 	c.statusChangedLocked()
+	c.deliverLocked()
 }
 
 // load starts the chat's agent and has it replay the session, then puts the

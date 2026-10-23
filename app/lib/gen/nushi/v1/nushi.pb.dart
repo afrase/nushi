@@ -554,6 +554,7 @@ class GetChatResponse extends $pb.GeneratedMessage {
     $fixnum.Int64? seq,
     $core.Iterable<Command>? commands,
     Usage? usage,
+    ChatQueue? queue,
   }) {
     final result = GetChatResponse._();
     if (chat != null) result.chat = chat;
@@ -563,6 +564,7 @@ class GetChatResponse extends $pb.GeneratedMessage {
     if (seq != null) result.seq = seq;
     if (commands != null) result.commands.addAll(commands);
     if (usage != null) result.usage = usage;
+    if (queue != null) result.queue = queue;
     return result;
   }
 
@@ -592,6 +594,8 @@ class GetChatResponse extends $pb.GeneratedMessage {
         subBuilder: Command.$_createMessage)
     ..aOM<Usage>(7, _omitFieldNames ? '' : 'usage',
         subBuilder: Usage.$_createMessage)
+    ..aOM<ChatQueue>(8, _omitFieldNames ? '' : 'queue',
+        subBuilder: ChatQueue.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -668,6 +672,18 @@ class GetChatResponse extends $pb.GeneratedMessage {
   void clearUsage() => $_clearField(7);
   @$pb.TagNumber(7)
   Usage ensureUsage() => $_ensure(6);
+
+  /// Messages waiting for the agent (API 28).
+  @$pb.TagNumber(8)
+  ChatQueue get queue => $_getN(7);
+  @$pb.TagNumber(8)
+  set queue(ChatQueue value) => $_setField(8, value);
+  @$pb.TagNumber(8)
+  $core.bool hasQueue() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearQueue() => $_clearField(8);
+  @$pb.TagNumber(8)
+  ChatQueue ensureQueue() => $_ensure(7);
 }
 
 /// What the agent last reported of a chat's usage; what it hasn't reported
@@ -1216,12 +1232,16 @@ class SendPromptRequest extends $pb.GeneratedMessage {
     $core.String? text,
     $core.Iterable<$core.String>? files,
     $core.Iterable<ImageData>? images,
+    $core.bool? queue,
+    $core.bool? now,
   }) {
     final result = SendPromptRequest._();
     if (chatId != null) result.chatId = chatId;
     if (text != null) result.text = text;
     if (files != null) result.files.addAll(files);
     if (images != null) result.images.addAll(images);
+    if (queue != null) result.queue = queue;
+    if (now != null) result.now = now;
     return result;
   }
 
@@ -1243,6 +1263,8 @@ class SendPromptRequest extends $pb.GeneratedMessage {
     ..pPS(3, _omitFieldNames ? '' : 'files')
     ..pPM<ImageData>(4, _omitFieldNames ? '' : 'images',
         subBuilder: ImageData.$_createMessage)
+    ..aOB(5, _omitFieldNames ? '' : 'queue')
+    ..aOB(6, _omitFieldNames ? '' : 'now')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1293,6 +1315,291 @@ class SendPromptRequest extends $pb.GeneratedMessage {
   /// Images, after the files; refused unless status.images.
   @$pb.TagNumber(4)
   $pb.PbList<ImageData> get images => $_getList(3);
+
+  /// While the chat is busy: wait in its queue for the agent's next chance
+  /// (API 28): into the running turn when the agent can be steered, else as
+  /// the next prompt. Without it a busy chat refuses the prompt.
+  @$pb.TagNumber(5)
+  $core.bool get queue => $_getBF(4);
+  @$pb.TagNumber(5)
+  set queue($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasQueue() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearQueue() => $_clearField(5);
+
+  /// While a turn runs: stop it and send at once (API 28).
+  @$pb.TagNumber(6)
+  $core.bool get now => $_getBF(5);
+  @$pb.TagNumber(6)
+  set now($core.bool value) => $_setBool(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasNow() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearNow() => $_clearField(6);
+}
+
+/// A message the user sent, waiting in a chat's queue.
+class QueuedMessage extends $pb.GeneratedMessage {
+  factory QueuedMessage({
+    $core.String? id,
+    $core.String? text,
+    $core.Iterable<$core.String>? files,
+    $core.Iterable<ImageData>? images,
+  }) {
+    final result = QueuedMessage._();
+    if (id != null) result.id = id;
+    if (text != null) result.text = text;
+    if (files != null) result.files.addAll(files);
+    if (images != null) result.images.addAll(images);
+    return result;
+  }
+
+  QueuedMessage._();
+
+  factory QueuedMessage.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      QueuedMessage()..mergeFromBuffer(data, registry);
+  factory QueuedMessage.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      QueuedMessage()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'QueuedMessage',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: QueuedMessage.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'text')
+    ..pPS(3, _omitFieldNames ? '' : 'files')
+    ..pPM<ImageData>(4, _omitFieldNames ? '' : 'images',
+        subBuilder: ImageData.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  QueuedMessage clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  QueuedMessage copyWith(void Function(QueuedMessage) updates) =>
+      super.copyWith((message) => updates(message as QueuedMessage))
+          as QueuedMessage;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use QueuedMessage() / QueuedMessage.new instead')
+  static QueuedMessage create() => QueuedMessage._();
+  static $pb.GeneratedMessage $_createMessage() => QueuedMessage._();
+  @$core.override
+  QueuedMessage createEmptyInstance() => QueuedMessage._();
+  @$core.pragma('dart2js:noInline')
+  static QueuedMessage getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<QueuedMessage>(
+          QueuedMessage.$_createMessage);
+  static QueuedMessage? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get text => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set text($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasText() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearText() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $pb.PbList<$core.String> get files => $_getList(2);
+
+  @$pb.TagNumber(4)
+  $pb.PbList<ImageData> get images => $_getList(3);
+}
+
+/// Every message waiting in a chat's queue, in order.
+class ChatQueue extends $pb.GeneratedMessage {
+  factory ChatQueue({
+    $core.Iterable<QueuedMessage>? messages,
+  }) {
+    final result = ChatQueue._();
+    if (messages != null) result.messages.addAll(messages);
+    return result;
+  }
+
+  ChatQueue._();
+
+  factory ChatQueue.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ChatQueue()..mergeFromBuffer(data, registry);
+  factory ChatQueue.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ChatQueue()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ChatQueue',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ChatQueue.$_createMessage)
+    ..pPM<QueuedMessage>(1, _omitFieldNames ? '' : 'messages',
+        subBuilder: QueuedMessage.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ChatQueue clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ChatQueue copyWith(void Function(ChatQueue) updates) =>
+      super.copyWith((message) => updates(message as ChatQueue)) as ChatQueue;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ChatQueue() / ChatQueue.new instead')
+  static ChatQueue create() => ChatQueue._();
+  static $pb.GeneratedMessage $_createMessage() => ChatQueue._();
+  @$core.override
+  ChatQueue createEmptyInstance() => ChatQueue._();
+  @$core.pragma('dart2js:noInline')
+  static ChatQueue getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ChatQueue>(ChatQueue.$_createMessage);
+  static ChatQueue? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<QueuedMessage> get messages => $_getList(0);
+}
+
+class UnqueueRequest extends $pb.GeneratedMessage {
+  factory UnqueueRequest({
+    $core.String? chatId,
+    $core.String? id,
+  }) {
+    final result = UnqueueRequest._();
+    if (chatId != null) result.chatId = chatId;
+    if (id != null) result.id = id;
+    return result;
+  }
+
+  UnqueueRequest._();
+
+  factory UnqueueRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UnqueueRequest()..mergeFromBuffer(data, registry);
+  factory UnqueueRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UnqueueRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'UnqueueRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: UnqueueRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOS(2, _omitFieldNames ? '' : 'id')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UnqueueRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UnqueueRequest copyWith(void Function(UnqueueRequest) updates) =>
+      super.copyWith((message) => updates(message as UnqueueRequest))
+          as UnqueueRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use UnqueueRequest() / UnqueueRequest.new instead')
+  static UnqueueRequest create() => UnqueueRequest._();
+  static $pb.GeneratedMessage $_createMessage() => UnqueueRequest._();
+  @$core.override
+  UnqueueRequest createEmptyInstance() => UnqueueRequest._();
+  @$core.pragma('dart2js:noInline')
+  static UnqueueRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<UnqueueRequest>(
+          UnqueueRequest.$_createMessage);
+  static UnqueueRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get id => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set id($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearId() => $_clearField(2);
+}
+
+class UnqueueResponse extends $pb.GeneratedMessage {
+  factory UnqueueResponse({
+    QueuedMessage? message,
+  }) {
+    final result = UnqueueResponse._();
+    if (message != null) result.message = message;
+    return result;
+  }
+
+  UnqueueResponse._();
+
+  factory UnqueueResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UnqueueResponse()..mergeFromBuffer(data, registry);
+  factory UnqueueResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UnqueueResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'UnqueueResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: UnqueueResponse.$_createMessage)
+    ..aOM<QueuedMessage>(1, _omitFieldNames ? '' : 'message',
+        subBuilder: QueuedMessage.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UnqueueResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UnqueueResponse copyWith(void Function(UnqueueResponse) updates) =>
+      super.copyWith((message) => updates(message as UnqueueResponse))
+          as UnqueueResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use UnqueueResponse() / UnqueueResponse.new instead')
+  static UnqueueResponse create() => UnqueueResponse._();
+  static $pb.GeneratedMessage $_createMessage() => UnqueueResponse._();
+  @$core.override
+  UnqueueResponse createEmptyInstance() => UnqueueResponse._();
+  @$core.pragma('dart2js:noInline')
+  static UnqueueResponse getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<UnqueueResponse>(
+          UnqueueResponse.$_createMessage);
+  static UnqueueResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  QueuedMessage get message => $_getN(0);
+  @$pb.TagNumber(1)
+  set message(QueuedMessage value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasMessage() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearMessage() => $_clearField(1);
+  @$pb.TagNumber(1)
+  QueuedMessage ensureMessage() => $_ensure(0);
 }
 
 /// An image in a prompt, a message or a tool call's output.
@@ -4325,6 +4632,7 @@ enum EventsResponse_Kind {
   commands,
   removed,
   usage,
+  queue,
   notSet
 }
 
@@ -4339,6 +4647,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     ChatCommands? commands,
     $core.bool? removed,
     Usage? usage,
+    ChatQueue? queue,
   }) {
     final result = EventsResponse._();
     if (chatId != null) result.chatId = chatId;
@@ -4350,6 +4659,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     if (commands != null) result.commands = commands;
     if (removed != null) result.removed = removed;
     if (usage != null) result.usage = usage;
+    if (queue != null) result.queue = queue;
     return result;
   }
 
@@ -4371,13 +4681,14 @@ class EventsResponse extends $pb.GeneratedMessage {
     7: EventsResponse_Kind.commands,
     8: EventsResponse_Kind.removed,
     9: EventsResponse_Kind.usage,
+    10: EventsResponse_Kind.queue,
     0: EventsResponse_Kind.notSet
   };
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'EventsResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: EventsResponse.$_createMessage)
-    ..oo(0, [2, 3, 4, 5, 7, 8, 9])
+    ..oo(0, [2, 3, 4, 5, 7, 8, 9, 10])
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
     ..aOM<ItemEvent>(2, _omitFieldNames ? '' : 'item',
         subBuilder: ItemEvent.$_createMessage)
@@ -4393,6 +4704,8 @@ class EventsResponse extends $pb.GeneratedMessage {
     ..aOB(8, _omitFieldNames ? '' : 'removed')
     ..aOM<Usage>(9, _omitFieldNames ? '' : 'usage',
         subBuilder: Usage.$_createMessage)
+    ..aOM<ChatQueue>(10, _omitFieldNames ? '' : 'queue',
+        subBuilder: ChatQueue.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -4424,6 +4737,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(7)
   @$pb.TagNumber(8)
   @$pb.TagNumber(9)
+  @$pb.TagNumber(10)
   EventsResponse_Kind whichKind() =>
       _EventsResponse_KindByTag[$_whichOneof(0)]!;
   @$pb.TagNumber(2)
@@ -4433,6 +4747,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(7)
   @$pb.TagNumber(8)
   @$pb.TagNumber(9)
+  @$pb.TagNumber(10)
   void clearKind() => $_clearField($_whichOneof(0));
 
   @$pb.TagNumber(1)
@@ -4532,6 +4847,18 @@ class EventsResponse extends $pb.GeneratedMessage {
   void clearUsage() => $_clearField(9);
   @$pb.TagNumber(9)
   Usage ensureUsage() => $_ensure(8);
+
+  /// The messages waiting for the agent, all of them (API 28).
+  @$pb.TagNumber(10)
+  ChatQueue get queue => $_getN(9);
+  @$pb.TagNumber(10)
+  set queue(ChatQueue value) => $_setField(10, value);
+  @$pb.TagNumber(10)
+  $core.bool hasQueue() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearQueue() => $_clearField(10);
+  @$pb.TagNumber(10)
+  ChatQueue ensureQueue() => $_ensure(9);
 }
 
 /// A chat's config options, all of them.
@@ -5542,6 +5869,13 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, SendPromptRequest request) =>
       _client.invoke<SendPromptResponse>(
           ctx, 'NushiService', 'SendPrompt', request, SendPromptResponse());
+
+  /// Takes a message out of the chat's queue before the agent gets it, and
+  /// returns it (API 28). Refused once the agent has it.
+  $async.Future<UnqueueResponse> unqueue(
+          $pb.ClientContext? ctx, UnqueueRequest request) =>
+      _client.invoke<UnqueueResponse>(
+          ctx, 'NushiService', 'Unqueue', request, UnqueueResponse());
 
   /// Stops the chat's running turn (ACP session/cancel). The turn ends with a
   /// "cancelled" notice, and prompts it was waiting on are cancelled.

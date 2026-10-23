@@ -20,6 +20,13 @@ type fakeAgent struct {
 	prompt  []acp.ContentBlock
 	usage   *acp.TurnUsage // the prompt response's
 	deleted []acp.SessionID
+
+	mu        sync.Mutex
+	gate      chan struct{} // when set, a prompt's turn runs until it is closed
+	cancelled bool
+	steerable bool
+	prompts   []string // every prompt's text, and every message steered in
+	steered   []string
 }
 
 func (f *fakeAgent) Initialize(context.Context, acp.InitializeRequest) (*acp.InitializeResponse, error) {
@@ -38,16 +45,54 @@ func (f *fakeAgent) LoadSession(context.Context, acp.LoadSessionRequest) (*acp.L
 }
 
 func (f *fakeAgent) Prompt(_ context.Context, req acp.PromptRequest) (*acp.PromptResult, error) {
+	f.mu.Lock()
 	f.prompt = req.Prompt
+	f.prompts = append(f.prompts, req.Prompt[0].Text.Text)
+	gate := f.gate
+	f.mu.Unlock()
 	for _, u := range f.updates {
 		f.h.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: u})
 	}
-	return &acp.PromptResult{PromptResponse: acp.PromptResponse{StopReason: acp.StopReasonEndTurn}, Usage: f.usage}, nil
+	stop := acp.StopReasonEndTurn
+	if gate != nil {
+		<-gate
+		f.mu.Lock()
+		f.gate = make(chan struct{}) // the next turn runs until closed too
+		if f.cancelled {
+			stop, f.cancelled = acp.StopReasonCancelled, false
+		}
+		f.mu.Unlock()
+	}
+	return &acp.PromptResult{PromptResponse: acp.PromptResponse{StopReason: stop}, Usage: f.usage}, nil
 }
 
 func (f *fakeAgent) Close() error { return nil }
 
-func (f *fakeAgent) Cancel(acp.CancelNotification) error { return nil }
+func (f *fakeAgent) Cancel(acp.CancelNotification) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.gate != nil {
+		f.cancelled = true
+		close(f.gate)
+	}
+	return nil
+}
+
+// release ends the running turn.
+func (f *fakeAgent) release() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	close(f.gate)
+}
+
+func (f *fakeAgent) CanSteer() bool { return f.steerable }
+
+func (f *fakeAgent) Steer(_ context.Context, _ acp.SessionID, prompt []acp.ContentBlock) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.steered = append(f.steered, prompt[0].Text.Text)
+	return true, nil
+}
 
 func (f *fakeAgent) CanFork() bool { return true }
 
@@ -128,7 +173,7 @@ func TestPromptStreamsTheReply(t *testing.T) {
 		t.Fatalf("Start = %q, %v", id, err)
 	}
 	png := model.Image{MimeType: "image/png", Data: []byte("\x89PNG")}
-	if err := svc.Prompt(id, "hi", []string{"a b.go"}, []model.Image{png}); err != nil {
+	if err := svc.Prompt(id, model.Message{Text: "hi", Files: []string{"a b.go"}, Images: []model.Image{png}}, SendIdle); err != nil {
 		t.Fatal(err)
 	}
 	<-done
@@ -316,7 +361,7 @@ func TestUsageIsWhatTheAgentReported(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := svc.Prompt(id, "hi", nil, nil); err != nil {
+	if err := svc.Prompt(id, model.Message{Text: "hi"}, SendIdle); err != nil {
 		t.Fatal(err)
 	}
 	<-done

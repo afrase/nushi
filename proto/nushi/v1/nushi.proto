@@ -21,6 +21,9 @@ service NushiService {
   rpc MoveChat(MoveChatRequest) returns (MoveChatResponse);
   // Sends a prompt; the reply arrives as events.
   rpc SendPrompt(SendPromptRequest) returns (SendPromptResponse);
+  // Takes a message out of the chat's queue before the agent gets it, and
+  // returns it (API 28). Refused once the agent has it.
+  rpc Unqueue(UnqueueRequest) returns (UnqueueResponse);
   // Stops the chat's running turn (ACP session/cancel). The turn ends with a
   // "cancelled" notice, and prompts it was waiting on are cancelled.
   rpc CancelTurn(CancelTurnRequest) returns (CancelTurnResponse);
@@ -135,6 +138,8 @@ message GetChatResponse {
   // The agent's slash commands.
   repeated Command commands = 6;
   Usage usage = 7;
+  // Messages waiting for the agent (API 28).
+  ChatQueue queue = 8;
 }
 
 // What the agent last reported of a chat's usage; what it hasn't reported
@@ -199,6 +204,34 @@ message SendPromptRequest {
   repeated string files = 3;
   // Images, after the files; refused unless status.images.
   repeated ImageData images = 4;
+  // While the chat is busy: wait in its queue for the agent's next chance
+  // (API 28): into the running turn when the agent can be steered, else as
+  // the next prompt. Without it a busy chat refuses the prompt.
+  bool queue = 5;
+  // While a turn runs: stop it and send at once (API 28).
+  bool now = 6;
+}
+
+// A message the user sent, waiting in a chat's queue.
+message QueuedMessage {
+  string id = 1;
+  string text = 2;
+  repeated string files = 3;
+  repeated ImageData images = 4;
+}
+
+// Every message waiting in a chat's queue, in order.
+message ChatQueue {
+  repeated QueuedMessage messages = 1;
+}
+
+message UnqueueRequest {
+  string chat_id = 1;
+  string id = 2;
+}
+
+message UnqueueResponse {
+  QueuedMessage message = 1;
 }
 
 // An image in a prompt, a message or a tool call's output.
@@ -486,6 +519,8 @@ message EventsResponse {
     bool removed = 8;
     // The chat's usage, all of it.
     Usage usage = 9;
+    // The messages waiting for the agent, all of them (API 28).
+    ChatQueue queue = 10;
   }
 }
 

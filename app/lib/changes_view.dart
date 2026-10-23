@@ -284,7 +284,8 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
             listenable: Listenable.merge([reviews, chat]),
             builder: (context, _) {
               final n = commentsOf(chat.id).where((c) => !c.sent).length;
-              final busy = chat.busy || chat.waiting;
+              // A newer daemon queues it while the agent works.
+              final busy = (chat.busy || chat.waiting) && !daemon.canQueue;
               if (n == 0) return const SizedBox.shrink();
               return Button(
                 label: busy

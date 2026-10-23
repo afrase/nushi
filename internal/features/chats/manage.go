@@ -119,6 +119,10 @@ func (s *Service) stop(c *chat) {
 	}
 	s.dropSides(c)
 	c.disconnect()
+	c.mu.Lock()
+	c.queue = nil
+	c.queueChangedLocked()
+	c.mu.Unlock()
 }
 
 // dropSides forgets a chat's side chats, whose agent is about to stop.

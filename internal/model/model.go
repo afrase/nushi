@@ -146,8 +146,17 @@ type Field struct {
 	Values                 []string
 }
 
+// Message is what the user sends: text, the files it mentions (relative
+// to the chat's folder) and images. ID names one waiting in a chat's queue.
+type Message struct {
+	ID     string
+	Text   string
+	Files  []string
+	Images []Image
+}
+
 // Event is a change to one chat. Exactly one of Item, Status, Config,
-// Session, Commands, Removed and Usage is set.
+// Session, Commands, Removed, Usage and Queue is set.
 type Event struct {
 	ChatID string
 	// Seq numbers the chat's events from 1; a Chat snapshot says which
@@ -164,6 +173,8 @@ type Event struct {
 	Commands []Command
 	Removed  bool   // the chat was removed
 	Usage    *Usage // the chat's usage, all of it
+	// Queue, when not nil, is every message waiting for the agent.
+	Queue *[]Message
 }
 
 // Usage is what the agent last reported of a chat's usage; what it hasn't
@@ -204,7 +215,8 @@ type Chat struct {
 	Commands []Command
 	Usage    Usage
 	Status   Status
-	Seq      int64 // the last event the snapshot includes
+	Queue    []Message // waiting for the agent, in order
+	Seq      int64     // the last event the snapshot includes
 }
 
 // Status is whether a chat is running a turn, and how the last one ended.

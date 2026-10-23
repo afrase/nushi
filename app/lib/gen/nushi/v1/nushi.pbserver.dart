@@ -33,6 +33,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.MoveChatRequest request);
   $async.Future<$0.SendPromptResponse> sendPrompt(
       $pb.ServerContext ctx, $0.SendPromptRequest request);
+  $async.Future<$0.UnqueueResponse> unqueue(
+      $pb.ServerContext ctx, $0.UnqueueRequest request);
   $async.Future<$0.CancelTurnResponse> cancelTurn(
       $pb.ServerContext ctx, $0.CancelTurnRequest request);
   $async.Future<$0.ForkChatResponse> forkChat(
@@ -82,6 +84,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.MoveChatRequest();
       case 'SendPrompt':
         return $0.SendPromptRequest();
+      case 'Unqueue':
+        return $0.UnqueueRequest();
       case 'CancelTurn':
         return $0.CancelTurnRequest();
       case 'ForkChat':
@@ -136,6 +140,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return moveChat(ctx, request as $0.MoveChatRequest);
       case 'SendPrompt':
         return sendPrompt(ctx, request as $0.SendPromptRequest);
+      case 'Unqueue':
+        return unqueue(ctx, request as $0.UnqueueRequest);
       case 'CancelTurn':
         return cancelTurn(ctx, request as $0.CancelTurnRequest);
       case 'ForkChat':
