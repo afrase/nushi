@@ -11,6 +11,7 @@ import 'package:uds_transport/uds_transport.dart';
 import 'chat.dart';
 import 'gen/nushi/v1/nushi.connect.client.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
+import 'review.dart';
 import 'settings.dart';
 
 final _support = '${Platform.environment['HOME']}/Library/Application Support';
@@ -190,6 +191,7 @@ class Daemon extends ChangeNotifier {
               if (changeScopes.value.containsKey(e.chatId)) {
                 changeScopes.value = {...changeScopes.value}..remove(e.chatId);
               }
+              if (commentsOf(e.chatId).isNotEmpty) setComments(e.chatId, []);
               if (selectedId == e.chatId) selectedId = null;
               notifyListeners();
             } else {

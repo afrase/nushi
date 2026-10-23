@@ -4,17 +4,21 @@ import 'package:diff_view/diff_view.dart';
 import 'package:flutter/material.dart';
 
 import 'gen/nushi/v1/nushi.pb.dart';
+import 'review.dart';
 import 'syntax.dart';
 import 'theme/theme.dart';
 
 /// A file's change side by side. With [fit] it is only as tall as the
 /// change (up to fifteen lines, then it scrolls), in a thin frame; else as
-/// tall as its box.
+/// tall as its box. With [review], a click or a drag on line numbers opens
+/// a box for a comment on those lines, and the chat's comments made in
+/// that view show under their lines.
 class DiffBox extends StatefulWidget {
-  const DiffBox(this.change, {super.key, this.fit = true});
+  const DiffBox(this.change, {super.key, this.fit = true, this.review});
 
   final FileChange change;
   final bool fit;
+  final ({String chat, String where})? review;
 
   @override
   State<DiffBox> createState() => _DiffBoxState();
@@ -24,6 +28,15 @@ class _DiffBoxState extends State<DiffBox> {
   DiffViewController? _controller;
   late DiffThemeData _theme;
   double _height = 0;
+  bool _selecting = false; // the line selection changed during this click
+  LineSelection? _draft; // the lines a comment is being written for
+  ReviewComment? _editing; // the comment being changed, if one is
+
+  @override
+  void initState() {
+    super.initState();
+    reviews.addListener(_showComments);
+  }
 
   @override
   void didChangeDependencies() {
@@ -51,7 +64,9 @@ class _DiffBoxState extends State<DiffBox> {
       theme: _theme,
       captureNames: syntaxCaptures,
       devicePixelRatio: dpr,
-    );
+    )..selectionChanges.addListener(() => _selecting = true);
+    _draft = _editing = null;
+    _showComments();
     // Plain until the colors are in (a moment, off the UI thread).
     final controller = _controller;
     if (languageOf(d.path) case final language?) {
@@ -65,16 +80,128 @@ class _DiffBoxState extends State<DiffBox> {
 
   @override
   void dispose() {
+    reviews.removeListener(_showComments);
     _controller?.dispose();
     super.dispose();
   }
 
+  List<ReviewComment> get _comments => switch (widget.review) {
+    final r? => [
+      for (final c in commentsOf(r.chat))
+        if (c.where == r.where && c.path == widget.change.path) c,
+    ],
+    null => const [],
+  };
+
+  /// Puts the comments, and the box being written in, under their lines.
+  void _showComments() {
+    final c = _controller!, doc = c.document;
+    int below(bool old, int line) =>
+        min(line, (old ? doc.oldLineCount : doc.newLineCount)) - 1;
+    final d = _draft;
+    c.inlays = [
+      for (final m in _comments)
+        if (m != _editing)
+          InlaySpec(
+            id: m.id,
+            side: m.old ? PaneSide.old : PaneSide.neu,
+            afterLine: below(m.old, m.end),
+          ),
+      if (d != null) InlaySpec(id: '', side: d.side, afterLine: d.span.end - 1),
+    ];
+  }
+
+  /// A click or drag on line numbers ended: a comment on those lines.
+  void _pointerUp(PointerUpEvent _) {
+    final sel = _controller!.selection.value;
+    if (!_selecting || sel == null || widget.review == null) return;
+    _selecting = false;
+    _draft = sel;
+    _editing = null;
+    _showComments();
+  }
+
+  void _closeDraft() {
+    _draft = _editing = null;
+    _controller!.selection.clear();
+    _selecting = false;
+    _showComments();
+  }
+
+  void _save(String text) {
+    final r = widget.review!, d = _draft!;
+    final edited = _editing;
+    final span = d.span, side = d.side;
+    final lines = [
+      for (var i = span.start; i < span.end; i++)
+        _controller!.lines.lineAt(side, i)?.text ?? '',
+    ];
+    final comment =
+        edited ??
+        ReviewComment(
+          id: '${DateTime.now().microsecondsSinceEpoch}',
+          where: r.where,
+          path: widget.change.path,
+          old: side == PaneSide.old,
+          start: span.start + 1,
+          end: span.end,
+          quote: lines.join('\n'),
+          text: text,
+        );
+    comment.text = text;
+    _closeDraft();
+    setComments(r.chat, [
+      for (final c in commentsOf(r.chat))
+        if (c != edited) c,
+      comment,
+    ]);
+  }
+
+  Widget _inlay(BuildContext context, InlaySpec spec) {
+    final r = widget.review!;
+    if (spec.id.isEmpty) {
+      final d = _draft!, s = d.span;
+      return CommentBox(
+        key: ValueKey(_editing?.id ?? 'new'),
+        lines: s.length == 1
+            ? 'Line ${s.start + 1}'
+            : 'Lines ${s.start + 1}–${s.end}',
+        text: _editing?.text ?? '',
+        onSave: _save,
+        onCancel: _closeDraft,
+      );
+    }
+    final c = _comments.firstWhere((c) => c.id == spec.id);
+    return CommentCard(
+      c,
+      onEdit: () {
+        final side = c.old ? PaneSide.old : PaneSide.neu;
+        _draft = LineSelection(
+          side: side,
+          anchor: c.start - 1,
+          focus: c.end - 1,
+        );
+        _editing = c;
+        _showComments();
+      },
+      onRemove: () => setComments(r.chat, [
+        for (final m in commentsOf(r.chat))
+          if (m != c) m,
+      ]),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final diff = SideBySideDiff(
-      controller: _controller!,
-      theme: _theme,
-      inlayBuilder: (context, spec) => const SizedBox.shrink(),
+    final diff = Listener(
+      onPointerUp: _pointerUp,
+      child: SideBySideDiff(
+        controller: _controller!,
+        theme: _theme,
+        inlayBuilder: widget.review == null
+            ? (context, spec) => const SizedBox.shrink()
+            : _inlay,
+      ),
     );
     if (!widget.fit) return diff;
     return Container(
