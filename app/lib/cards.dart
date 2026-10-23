@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'changes_view.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'markdown.dart';
 import 'theme/theme.dart';
-import 'tool_calls.dart';
 import 'widgets.dart';
 
 /// A card for something the agent waits on: amber while it waits.
@@ -18,10 +18,9 @@ class WaitingCard extends StatelessWidget {
     final t = NushiTheme.of(context).t;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: waiting ? t.needsSoft : null,
-        border: Border.all(color: waiting ? t.needs : t.borderSubtle),
-        borderRadius: BorderRadius.circular(NushiTheme.card),
+      decoration: box(
+        waiting ? t.needs : t.borderSubtle,
+        fill: waiting ? t.needsSoft : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -47,8 +46,7 @@ class CardTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
+    final theme = NushiTheme.of(context), t = theme.t;
     return Row(
       children: [
         Icon(
@@ -78,17 +76,6 @@ class PermissionCard extends StatelessWidget {
   final Item item;
   final Future<void> Function(String optionId) onAnswer;
 
-  Future<void> _answer(BuildContext context, String optionId) async {
-    try {
-      await onAnswer(optionId);
-    } on Object catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('$e')));
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
@@ -98,7 +85,7 @@ class PermissionCard extends StatelessWidget {
       waiting: pending,
       children: [
         CardTitle('Permission', detail: item.title, waiting: pending),
-        for (final d in item.diffs) EditDiff(d),
+        for (final d in item.diffs) DiffBox(d),
         if (item.text.isNotEmpty) AgentMarkdown(item.text),
         if (pending)
           Wrap(
@@ -109,7 +96,7 @@ class PermissionCard extends StatelessWidget {
                 Button(
                   label: o.name,
                   kind: i == 0 ? ButtonKind.primary : ButtonKind.secondary,
-                  onPressed: () => _answer(context, o.id),
+                  onPressed: () => tryOrShow(context, () => onAnswer(o.id)),
                 ),
             ],
           )

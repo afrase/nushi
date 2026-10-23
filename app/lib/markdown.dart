@@ -21,8 +21,7 @@ class AgentMarkdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
+    final theme = NushiTheme.of(context), t = theme.t;
     TextStyle c(Color color, {FontStyle? style}) =>
         TextStyle(color: color, fontStyle: style);
     return StreamingMarkdown(

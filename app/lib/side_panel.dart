@@ -8,6 +8,7 @@ import 'daemon.dart';
 import 'replies.dart';
 import 'theme/theme.dart';
 import 'transcript.dart';
+import 'widgets.dart';
 
 /// A side question: a forked session beside the chat, which knows the
 /// conversation so far but doesn't add to it. Closing it ends it.
@@ -29,8 +30,7 @@ class SidePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
+    final theme = NushiTheme.of(context), t = theme.t;
     return Container(
       width: 380,
       decoration: BoxDecoration(
@@ -77,12 +77,11 @@ class SidePanel extends StatelessWidget {
                         style: theme.ui(t.textMuted, size: 12),
                       ),
                     ),
-                    IconButton(
+                    IconTap(
+                      Icons.close,
                       tooltip: 'Close and end the side question',
-                      iconSize: 15,
-                      color: t.textSecondary,
-                      onPressed: onClose,
-                      icon: const Icon(Icons.close),
+                      size: 15,
+                      onTap: onClose,
                     ),
                   ],
                 ),

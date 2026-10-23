@@ -7,8 +7,10 @@ import 'chat_view.dart';
 import 'daemon.dart';
 import 'details_panel.dart';
 import 'folder_button.dart';
+import 'menu.dart';
 import 'settings.dart';
 import 'sidebar.dart';
+import 'status.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
 
@@ -194,8 +196,7 @@ class _HeaderState extends State<_Header> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
+    final theme = NushiTheme.of(context), t = theme.t;
     final chat = widget.chat;
     final meta = theme.ui(t.textSecondary, size: 12);
     final model = chat.config.where((o) => o.category == 'model').firstOrNull;
@@ -234,7 +235,7 @@ class _HeaderState extends State<_Header> {
                   ),
           ),
           const SizedBox(width: 14),
-          const AgentMonogram(),
+          const _Monogram(),
           const SizedBox(width: 8),
           Text(
             'Claude',
@@ -271,38 +272,58 @@ class _HeaderState extends State<_Header> {
             onChanged: widget.onChanges,
           ),
           const SizedBox(width: 4),
-          IconButton(
+          IconTap(
+            Icons.view_sidebar_outlined,
             tooltip: widget.onPanel == null
                 ? 'The window is too narrow for the details panel'
                 : widget.panel
                 ? 'Hide details'
                 : 'Show details',
-            iconSize: 16,
             color: widget.panel ? t.text : t.textSecondary,
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.view_sidebar_outlined),
-            onPressed: widget.onPanel,
+            onTap: widget.onPanel,
           ),
-          Builder(
-            builder: (context) => IconButton(
-              tooltip: 'Chat menu',
-              iconSize: 16,
-              color: t.textSecondary,
-              visualDensity: VisualDensity.compact,
-              icon: const Icon(Icons.more_horiz),
-              onPressed: () {
-                final box = context.findRenderObject()! as RenderBox;
-                showChatMenu(
-                  context,
-                  box.localToGlobal(box.size.bottomLeft(Offset.zero)),
-                  chat,
-                  widget.daemon,
-                  onRename: () => setState(() => _renaming = true),
-                );
-              },
+          Menu(
+            tooltip: 'Chat menu',
+            entries: chatMenu(
+              context,
+              chat,
+              widget.daemon,
+              onRename: () => setState(() => _renaming = true),
             ),
+            child: Icon(Icons.more_horiz, size: 16, color: t.textSecondary),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The agent's monogram: its letter on its color.
+class _Monogram extends StatelessWidget {
+  const _Monogram();
+
+  static const size = 16.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = NushiTheme.of(context).t;
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: t.claude,
+        borderRadius: BorderRadius.circular(size / 5),
+      ),
+      child: Text(
+        'C',
+        style: TextStyle(
+          fontFamily: NushiTheme.uiFont,
+          fontSize: size * 0.64,
+          height: 1,
+          fontWeight: FontWeight.w600,
+          color: t.monogramText,
+        ),
       ),
     );
   }

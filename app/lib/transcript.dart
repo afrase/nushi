@@ -14,6 +14,7 @@ import 'replies.dart';
 import 'theme/theme.dart';
 import 'thinking.dart';
 import 'tool_calls.dart';
+import 'widgets.dart';
 
 /// The items, with each run of tool calls as one list.
 List<Object> _entries(List<Item> items) {
@@ -95,6 +96,7 @@ class _TranscriptState extends State<Transcript> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context), t = theme.t;
     final chat = widget.chat;
     final entries = _entries(chat.items);
     _follower.stick();
@@ -183,7 +185,33 @@ class _TranscriptState extends State<Transcript> {
                 : Positioned(
                     right: 20,
                     bottom: 12,
-                    child: _LatestButton(onPressed: _follower.follow),
+                    child: DecoratedBox(
+                      decoration: ShapeDecoration(
+                        color: t.raised,
+                        shape: StadiumBorder(
+                          side: BorderSide(color: t.borderStrong),
+                        ),
+                      ),
+                      child: Tap(
+                        onTap: _follower.follow,
+                        radius: 14,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          spacing: 6,
+                          children: [
+                            Icon(Icons.arrow_downward, size: 14, color: t.text),
+                            Text(
+                              'Jump to latest',
+                              style: theme.ui(t.text, size: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
           ),
         ],
@@ -219,38 +247,6 @@ class _Above extends SingleChildLayoutDelegate {
   bool shouldRelayout(_Above old) => old.at != at;
 }
 
-class _LatestButton extends StatelessWidget {
-  const _LatestButton({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    return Material(
-      color: t.raised,
-      elevation: 2,
-      shape: StadiumBorder(side: BorderSide(color: t.borderStrong)),
-      child: InkWell(
-        customBorder: const StadiumBorder(),
-        onTap: onPressed,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 6,
-            children: [
-              Icon(Icons.arrow_downward, size: 14, color: t.text),
-              Text('Jump to latest', style: theme.ui(t.text, size: 12)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _ItemView extends StatelessWidget {
   const _ItemView(this.item, this.chatId, this.daemon, {required this.live});
 
@@ -263,22 +259,17 @@ class _ItemView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
+    final theme = NushiTheme.of(context), t = theme.t;
     switch (item.kind) {
       case ItemKind.ITEM_KIND_USER_MESSAGE:
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 4,
           children: [
-            const _Who('You'),
-            const SizedBox(height: 4),
+            _who(theme, 'You'),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              decoration: BoxDecoration(
-                color: t.raised,
-                border: Border.all(color: t.borderSubtle),
-                borderRadius: BorderRadius.circular(NushiTheme.card),
-              ),
+              decoration: box(t.borderSubtle, fill: t.raised),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 spacing: 6,
@@ -295,7 +286,14 @@ class _ItemView extends StatelessWidget {
       case ItemKind.ITEM_KIND_QUESTION:
         return QuestionCard(
           item,
-          onAnswer: (answer) => daemon.answerQuestion(chatId, item.id, answer),
+          onAnswer: (answer) => daemon.client.answerQuestion(
+            AnswerQuestionRequest(
+              chatId: chatId,
+              itemId: item.id,
+              decline: answer == null,
+              answers: answer,
+            ),
+          ),
         );
       case ItemKind.ITEM_KIND_THOUGHT:
         return ThoughtView(item, live: live);
@@ -319,15 +317,20 @@ class _ItemView extends StatelessWidget {
       case ItemKind.ITEM_KIND_PERMISSION:
         return PermissionCard(
           item,
-          onAnswer: (option) =>
-              daemon.answerPermission(chatId, item.id, option),
+          onAnswer: (option) => daemon.client.answerPermission(
+            AnswerPermissionRequest(
+              chatId: chatId,
+              itemId: item.id,
+              optionId: option,
+            ),
+          ),
         );
       default:
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 4,
           children: [
-            const _Who('Claude'),
-            const SizedBox(height: 4),
+            _who(theme, 'Claude'),
             AgentMarkdown(item.text),
             if (item.images.isNotEmpty) Thumbnails(item.images, size: 240),
           ],
@@ -337,17 +340,7 @@ class _ItemView extends StatelessWidget {
 }
 
 /// The small header above a message: who wrote it.
-class _Who extends StatelessWidget {
-  const _Who(this.name);
-
-  final String name;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    return Text(
-      name,
-      style: theme.ui(theme.t.textSecondary, size: 12, weight: FontWeight.w600),
-    );
-  }
-}
+Widget _who(NushiTheme theme, String name) => Text(
+  name,
+  style: theme.ui(theme.t.textSecondary, size: 12, weight: FontWeight.w600),
+);

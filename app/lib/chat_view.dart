@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'chat.dart';
-import 'chat_menu.dart';
 import 'composer.dart';
 import 'composer_parts.dart';
 import 'daemon.dart';
+import 'gen/nushi/v1/nushi.pb.dart';
 import 'images.dart';
 import 'replies.dart';
 import 'side_panel.dart';
@@ -74,10 +74,7 @@ class _ChatViewState extends State<ChatView> {
         final side = await widget.daemon.forkChat(widget.chat);
         if (mounted) setState(() => _side = side);
       } on Object catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text('$e')));
-        }
+        if (mounted) showError(context, e);
       } finally {
         if (mounted) setState(() => _forking = false);
       }
@@ -91,11 +88,7 @@ class _ChatViewState extends State<ChatView> {
     final paths = d.files.map((f) => f.path).where(isImageFile).toList();
     if (paths.isEmpty || widget.chat.archived) return;
     if (!widget.chat.canImages) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Claude doesn’t take images in this chat'),
-        ),
-      );
+      showError(context, 'Claude doesn’t take images in this chat');
       return;
     }
     await tryOrShow(context, () => _images.addFiles(paths));
@@ -192,8 +185,7 @@ class _Archived extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
+    final theme = NushiTheme.of(context), t = theme.t;
     return Container(
       decoration: BoxDecoration(
         color: t.raised,
@@ -215,7 +207,9 @@ class _Archived extends StatelessWidget {
             kind: ButtonKind.primary,
             onPressed: () => tryOrShow(
               context,
-              () => daemon.archiveChat(chat.id, archived: false),
+              () => daemon.client.archiveChat(
+                ArchiveChatRequest(chatId: chat.id),
+              ),
             ),
           ),
         ],

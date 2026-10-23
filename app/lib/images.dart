@@ -8,6 +8,7 @@ import 'package:pasteboard/pasteboard.dart';
 
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'theme/theme.dart';
+import 'widgets.dart';
 
 /// The longest side an attached image keeps; larger ones are scaled down
 /// (Claude scales images past about 1,568 pixels down anyway).
@@ -173,16 +174,14 @@ class RemoveBadge extends StatelessWidget {
     return Positioned(
       top: -6,
       right: -6,
-      child: Tooltip(
-        message: 'Remove',
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: onTap,
-          child: CircleAvatar(
-            radius: 9,
-            backgroundColor: t.borderStrong,
-            child: Icon(Icons.close, size: 12, color: t.text),
-          ),
+      child: Tap(
+        tooltip: 'Remove',
+        onTap: onTap,
+        radius: 9,
+        child: CircleAvatar(
+          radius: 9,
+          backgroundColor: t.borderStrong,
+          child: Icon(Icons.close, size: 12, color: t.text),
         ),
       ),
     );
@@ -255,17 +254,13 @@ class _RemoteImageState extends State<_RemoteImage> {
     if (_load) {
       return _Clickable(image: NetworkImage(widget.uri.toString()), size: 320);
     }
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
+    final theme = NushiTheme.of(context), t = theme.t;
     final alt = widget.alt;
     return Tooltip(
       message: widget.uri.toString(),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          border: Border.all(color: t.borderSubtle),
-          borderRadius: BorderRadius.circular(NushiTheme.control),
-        ),
+        decoration: box(t.borderSubtle, radius: NushiTheme.control),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -280,7 +275,7 @@ class _RemoteImageState extends State<_RemoteImage> {
               ),
             ),
             const SizedBox(width: 8),
-            InkWell(
+            Tap(
               onTap: () => setState(() => _load = true),
               child: Text('Load image', style: theme.ui(t.link, size: 12)),
             ),

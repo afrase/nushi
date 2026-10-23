@@ -42,8 +42,7 @@ class ContextMeter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (usage.contextSize == 0) return const SizedBox.shrink();
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
+    final theme = NushiTheme.of(context), t = theme.t;
     final fill = (usage.contextUsed.toInt() / usage.contextSize.toInt()).clamp(
       0.0,
       1.0,

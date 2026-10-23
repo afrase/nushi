@@ -16,7 +16,7 @@ class QuestionCard extends StatefulWidget {
   final Item item;
 
   /// Sends the answer by field id, or null to decline.
-  final Future<void> Function(Map<String, List<String>>? answer) onAnswer;
+  final Future<void> Function(List<FieldAnswer>? answer) onAnswer;
 
   @override
   State<QuestionCard> createState() => _QuestionCardState();
@@ -52,13 +52,13 @@ class _QuestionCardState extends State<QuestionCard> {
     super.dispose();
   }
 
-  Map<String, List<String>> get _answer => {
+  List<FieldAnswer> get _answer => [
     for (final f in _fields)
       if (_picked[f.id]?.isNotEmpty ?? false)
-        f.id: _picked[f.id]!
+        FieldAnswer(fieldId: f.id, values: _picked[f.id])
       else if (_text[f.id]?.text.trim().isNotEmpty ?? false)
-        f.id: [_text[f.id]!.text.trim()],
-  };
+        FieldAnswer(fieldId: f.id, values: [_text[f.id]!.text.trim()]),
+  ];
 
   void _pick(int field, String option) {
     final f = _fields[field];
@@ -78,16 +78,8 @@ class _QuestionCardState extends State<QuestionCard> {
     });
   }
 
-  Future<void> _send(Map<String, List<String>>? answer) async {
-    try {
-      await widget.onAnswer(answer);
-    } on Object catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('$e')));
-      }
-    }
-  }
+  Future<void> _send(List<FieldAnswer>? answer) =>
+      tryOrShow(context, () => widget.onAnswer(answer));
 
   KeyEventResult _onKey(FocusNode _, KeyEvent e) {
     if (e is! KeyDownEvent) return KeyEventResult.ignored;
@@ -145,12 +137,10 @@ class _QuestionCardState extends State<QuestionCard> {
           onSubmitted: (_) => _answer.isEmpty ? null : _send(_answer),
           style: theme.ui(t.text),
           decoration: InputDecoration(
-            isDense: true,
             labelText: f.title,
             hintText: f.description,
             filled: true,
             fillColor: t.base,
-            border: const OutlineInputBorder(),
           ),
         ),
       ];
@@ -164,9 +154,9 @@ class _QuestionCardState extends State<QuestionCard> {
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              border: Border.all(color: active ? t.needs : t.borderStrong),
-              borderRadius: BorderRadius.circular(NushiTheme.control),
+            decoration: box(
+              active ? t.needs : t.borderStrong,
+              radius: NushiTheme.control,
             ),
             child: Text(f.title, style: theme.ui(t.textSecondary, size: 11.5)),
           ),
@@ -174,45 +164,42 @@ class _QuestionCardState extends State<QuestionCard> {
         ],
       ),
       for (final (n, o) in f.options.indexed)
-        InkWell(
+        Tap(
           onTap: () => _pick(i, o.id),
-          borderRadius: BorderRadius.circular(6),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(
-              spacing: 8,
-              children: [
-                Icon(
-                  switch ((many, picked.contains(o.id))) {
-                    (false, false) => Icons.radio_button_unchecked,
-                    (false, true) => Icons.radio_button_checked,
-                    (true, false) => Icons.check_box_outline_blank,
-                    (true, true) => Icons.check_box,
-                  },
-                  size: 16,
-                  color: t.textSecondary,
-                ),
-                SizedBox(
-                  width: 14,
-                  child: KeyHint(active && n < 9 ? '${n + 1}' : ''),
-                ),
-                Expanded(
-                  child: Text.rich(
-                    TextSpan(
-                      text: o.name,
-                      style: theme.ui(t.text),
-                      children: [
-                        if (o.description.isNotEmpty)
-                          TextSpan(
-                            text: '  ${o.description}',
-                            style: theme.ui(t.textMuted, size: 12),
-                          ),
-                      ],
-                    ),
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            spacing: 8,
+            children: [
+              Icon(
+                switch ((many, picked.contains(o.id))) {
+                  (false, false) => Icons.radio_button_unchecked,
+                  (false, true) => Icons.radio_button_checked,
+                  (true, false) => Icons.check_box_outline_blank,
+                  (true, true) => Icons.check_box,
+                },
+                size: 16,
+                color: t.textSecondary,
+              ),
+              SizedBox(
+                width: 14,
+                child: keyHint(context, active && n < 9 ? '${n + 1}' : ''),
+              ),
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    text: o.name,
+                    style: theme.ui(t.text),
+                    children: [
+                      if (o.description.isNotEmpty)
+                        TextSpan(
+                          text: '  ${o.description}',
+                          style: theme.ui(t.textMuted, size: 12),
+                        ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
     ];

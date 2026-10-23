@@ -70,6 +70,9 @@ class Tokens {
   final Color function;
   final Color string;
 
+  /// The tint of a row or button under the pointer.
+  Color get hover => text.withValues(alpha: 0.06);
+
   static const light = Tokens(
     brightness: Brightness.light,
     base: Color(0xFFFFFFFF),

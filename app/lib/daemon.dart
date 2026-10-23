@@ -267,29 +267,6 @@ class Daemon extends ChangeNotifier {
     }.toList();
   }
 
-  Future<void> renameChat(String chatId, String title) =>
-      client.renameChat(RenameChatRequest(chatId: chatId, title: title));
-
-  Future<void> archiveChat(String chatId, {required bool archived}) => client
-      .archiveChat(ArchiveChatRequest(chatId: chatId, archived: archived));
-
-  Future<PlanDeleteChatResponse> planDeleteChat(String chatId) =>
-      client.planDeleteChat(PlanDeleteChatRequest(chatId: chatId));
-
-  Future<void> deleteChat(DeleteChatRequest req) => client.deleteChat(req);
-
-  Future<void> sendPrompt(
-    String chatId,
-    String text,
-    List<String> files,
-    List<ImageData> images,
-  ) => client.sendPrompt(
-    SendPromptRequest(chatId: chatId, text: text, files: files, images: images),
-  );
-
-  Future<List<String>> listFiles(String folder) async =>
-      (await client.listFiles(ListFilesRequest(folder: folder))).paths;
-
   /// Opens a side chat of [chat] (see ForkChat).
   Future<ChatState> forkChat(ChatState chat) async {
     final resp = await client.forkChat(ForkChatRequest(chatId: chat.id));
@@ -302,43 +279,6 @@ class Daemon extends ChangeNotifier {
     sides.remove(side.id);
     await client.closeSideChat(CloseSideChatRequest(chatId: side.id));
   }
-
-  Future<void> cancelTurn(String chatId) =>
-      client.cancelTurn(CancelTurnRequest(chatId: chatId));
-
-  Future<void> answerPermission(
-    String chatId,
-    String itemId,
-    String optionId,
-  ) => client.answerPermission(
-    AnswerPermissionRequest(chatId: chatId, itemId: itemId, optionId: optionId),
-  );
-
-  Future<void> setConfigOption(String chatId, String configId, String value) =>
-      client.setConfigOption(
-        SetConfigOptionRequest(
-          chatId: chatId,
-          configId: configId,
-          value: value,
-        ),
-      );
-
-  /// Answers a question with values by field id, or declines it (null).
-  Future<void> answerQuestion(
-    String chatId,
-    String itemId,
-    Map<String, List<String>>? answer,
-  ) => client.answerQuestion(
-    AnswerQuestionRequest(
-      chatId: chatId,
-      itemId: itemId,
-      decline: answer == null,
-      answers: [
-        for (final MapEntry(:key, :value) in (answer ?? {}).entries)
-          FieldAnswer(fieldId: key, values: value),
-      ],
-    ),
-  );
 
   @override
   void dispose() {
