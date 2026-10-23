@@ -4,6 +4,7 @@ import 'package:diff_view/diff_view.dart';
 import 'package:flutter/material.dart';
 
 import 'gen/nushi/v1/nushi.pb.dart';
+import 'syntax.dart';
 import 'theme/theme.dart';
 
 /// A file's change side by side. With [fit] it is only as tall as the
@@ -39,18 +40,25 @@ class _DiffBoxState extends State<DiffBox> {
   void _build() {
     final d = widget.change;
     final dpr = MediaQuery.devicePixelRatioOf(context);
-    _theme = Theme.of(context).brightness == Brightness.dark
-        ? DiffThemeData.dark()
-        : DiffThemeData.light();
+    _theme = diffTheme(NushiTheme.of(context).t);
     final diff = TextDiff.compute(d.oldText, d.newText, path: d.path);
+    final doc = diff.document;
+    final lines = SyntaxLines(diff.lines, doc.oldLineCount, doc.newLineCount);
     _controller?.dispose();
     _controller = DiffViewController(
-      document: diff.document,
-      lines: diff.lines,
+      document: doc,
+      lines: lines,
       theme: _theme,
+      captureNames: syntaxCaptures,
       devicePixelRatio: dpr,
     );
-    final doc = diff.document;
+    // Plain until the colors are in (a moment, off the UI thread).
+    final controller = _controller;
+    if (languageOf(d.path) case final language?) {
+      highlightSides(language, d.oldText, d.newText).then((spans) {
+        if (mounted && _controller == controller) lines.highlight(spans);
+      }).ignore();
+    }
     final rows = max(doc.oldLineCount, doc.newLineCount).clamp(1, 15);
     _height = _theme.lineHeightFor(dpr) * rows + 6;
   }

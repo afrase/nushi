@@ -18,6 +18,7 @@ dependencies:
   url_launcher: ^6.3.3
   file_selector: ^1.1.0
   diff_view: ^0.1.0
+  re_highlight: ^0.0.3
   pasteboard: ^0.5.0
   desktop_drop: ^0.8.4
 
