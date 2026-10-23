@@ -43,12 +43,18 @@ func (s *Service) open(id string) (*chat, error) {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.agent == nil && !c.busy && !c.session.Archived { // never reopened, or the last try failed
+	s.reopenLocked(c)
+	return c, nil
+}
+
+// reopenLocked reopens a chat whose agent isn't running (never reopened,
+// the last try failed, or the agent quit), unless it is archived or going.
+func (s *Service) reopenLocked(c *chat) {
+	if c.agent == nil && !c.busy && !c.session.Archived && !c.halting && c.parent == nil {
 		c.busy = true
 		c.statusChangedLocked()
 		go s.resume(c)
 	}
-	return c, nil
 }
 
 // chat returns an open chat to work with: not an archived one.
@@ -59,14 +65,14 @@ func (s *Service) chat(id string) (*chat, error) {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.session.Archived {
-		return nil, errors.New("the chat is archived")
+	if c.session.Archived || c.halting {
+		return nil, c.closedLocked()
 	}
 	return c, nil
 }
 
 func (s *Service) resume(c *chat) {
-	err := c.load(context.Background(), s.launch)
+	err := s.load(context.Background(), c)
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.busy = false
@@ -81,27 +87,29 @@ func (s *Service) resume(c *chat) {
 // session back in the mode it was last in. A chat that never had a message
 // may have nothing to replay (Claude keeps a session only once it has one):
 // it gets a new session instead.
-func (c *chat) load(ctx context.Context, launch Launch) error {
+func (s *Service) load(ctx context.Context, c *chat) error {
 	c.mu.Lock()
 	sid, folder, fresh, gone := c.sid, c.session.Folder, c.session.Title == "", folderGone(c.session)
 	c.mu.Unlock()
 	if gone != nil {
 		return gone
 	}
-	o, err := c.openSession(ctx, launch, sid, folder, false)
+	o, err := c.openSession(ctx, s.launch, sid, folder, false)
 	if err != nil && fresh {
-		o, err = c.openSession(ctx, launch, "", folder, false)
+		o, err = c.openSession(ctx, s.launch, "", folder, false)
 	}
 	if err != nil {
 		return err
 	}
 	c.mu.Lock()
-	c.useLocked(o)
+	s.useLocked(c, o)
+	c.kept = false
 	if o.sid != sid {
 		c.saveLocked(func(s *model.Session) { s.SessionID = o.sid })
 	}
+	mode := c.session.Mode
 	c.mu.Unlock()
-	return c.startMode(ctx, c.session.Mode)
+	return c.startMode(ctx, o.agent, o.sid, mode)
 }
 
 // folderGone says why a chat can't run when its folder no longer exists

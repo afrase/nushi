@@ -16,6 +16,9 @@ import (
 func (c *chat) update(n acp.SessionNotification) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if c.kept && slices.Contains([]string{"user_message_chunk", "agent_message_chunk", "agent_thought_chunk", "plan", "tool_call", "tool_call_update"}, n.Update.SessionUpdate) {
+		return // session/load's replay of a transcript the chat still has
+	}
 	switch u := n.Update; u.SessionUpdate {
 	case "user_message_chunk": // replayed by session/load
 		c.chunkLocked(model.UserMessage, u.UserMessageChunk)

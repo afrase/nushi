@@ -44,26 +44,30 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 	if err != nil {
 		return model.Message{}, err
 	}
-	c.mu.Lock()
-	i := slices.IndexFunc(c.items, func(it model.Item) bool { return it.ID == itemID })
-	first := i >= 0 && !slices.ContainsFunc(c.items[:i], func(it model.Item) bool { return it.Kind == model.UserMessage })
-	switch {
-	case c.busy:
-		err = errors.New("the chat is busy; rewind once the turn has ended")
-	case i < 0 || c.items[i].Kind != model.UserMessage:
-		err = errors.New("no such message")
-	case !c.rewindableLocked(i):
-		err = errors.New("the agent can't rewind to this message")
-	}
+	var msg model.Message
+	var agent Agent
+	var sid, folder, at string
+	err = func() error {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		i := c.indexLocked(itemID)
+		switch {
+		case c.busy:
+			return errors.New("the chat is busy; rewind once the turn has ended")
+		case i < 0 || c.items[i].Kind != model.UserMessage:
+			return errors.New("no such message")
+		case !c.rewindableLocked(i):
+			return errors.New("the agent can't rewind to this message")
+		}
+		msg = model.Message{Text: c.items[i].Text, Images: c.items[i].Images}
+		agent, sid, folder, at = c.agent, c.sid, c.session.Folder, c.items[i].ForkAt
+		c.busy = true
+		c.statusChangedLocked()
+		return nil
+	}()
 	if err != nil {
-		c.mu.Unlock()
 		return model.Message{}, err
 	}
-	msg := model.Message{Text: c.items[i].Text, Images: c.items[i].Images}
-	agent, sid, folder, at := c.agent, c.sid, c.session.Folder, c.items[i].ForkAt
-	c.busy = true
-	c.statusChangedLocked()
-	c.mu.Unlock()
 
 	var next string
 	var config []model.ConfigOption
@@ -79,34 +83,53 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 			next, config = string(resp.SessionID), configFrom(resp.ConfigOptions, resp.Modes)
 		}
 	}
-	c.mu.Lock()
-	c.busy = false
+	mode, err := func() (string, error) {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		c.busy = false
+		defer c.statusChangedLocked()
+		defer c.deliverLocked()
+		i := c.indexLocked(itemID) // looked up again: the lock was let go
+		switch {
+		case err != nil:
+		case c.agent != agent:
+			err = errors.New("the agent quit")
+		case i < 0:
+			err = errors.New("the message is gone")
+		}
+		if err != nil {
+			c.noticeLocked("error", "Couldn't rewind the chat: "+err.Error())
+			return "", err
+		}
+		first := !slices.ContainsFunc(c.items[:i], func(it model.Item) bool { return it.Kind == model.UserMessage })
+		c.sid, c.config = next, config
+		c.items = c.items[:i]
+		c.emitLocked(model.Event{ChatID: c.id, Cut: itemID})
+		c.emitLocked(model.Event{ChatID: c.id, Config: slices.Clone(config)})
+		c.saveLocked(func(s *model.Session) {
+			s.Earlier = append(slices.Clip(s.Earlier), model.AgentSession{ID: s.SessionID, Folder: s.Folder})
+			s.SessionID = next
+			if first {
+				s.Title = "" // a chat without messages again
+			}
+		})
+		return c.session.Mode, nil
+	}()
 	if err != nil {
-		c.noticeLocked("error", "Couldn't rewind the chat: "+err.Error())
-		c.statusChangedLocked()
-		c.mu.Unlock()
 		return model.Message{}, err
 	}
-	c.sid, c.config = next, config
-	c.items = c.items[:i]
-	c.emitLocked(model.Event{ChatID: c.id, Cut: itemID})
-	c.emitLocked(model.Event{ChatID: c.id, Config: slices.Clone(config)})
-	c.saveLocked(func(s *model.Session) {
-		s.Earlier = append(slices.Clip(s.Earlier), model.AgentSession{ID: s.SessionID, Folder: s.Folder})
-		s.SessionID = next
-		if first {
-			s.Title = "" // a chat without messages again
-		}
-	})
-	c.statusChangedLocked()
-	c.mu.Unlock()
 	if err := agent.CloseSession(ctx, acp.CloseSessionRequest{SessionID: acp.SessionID(sid)}); err != nil {
 		log.Printf("chat %s: closing %s after rewinding: %v", c.id, sid, err)
 	}
-	if err := c.startMode(ctx, c.session.Mode); err != nil {
+	if err := c.startMode(ctx, agent, next, mode); err != nil {
 		log.Printf("chat %s: mode after rewinding: %v", c.id, err)
 	}
 	return msg, nil
+}
+
+// indexLocked returns the index of the item with id, or -1.
+func (c *chat) indexLocked(id string) int {
+	return slices.IndexFunc(c.items, func(it model.Item) bool { return it.ID == id })
 }
 
 // Stop stops the chat's running turn. With takeBack, if the agent hasn't
@@ -119,31 +142,49 @@ func (s *Service) Stop(ctx context.Context, chatID string, takeBack bool) (*mode
 	if err != nil {
 		return nil, err
 	}
-	c.mu.Lock()
-	i := len(c.items) - 1
-	for i >= 0 && c.items[i].Kind != model.UserMessage {
-		i--
-	}
-	answered := i < 0 || slices.ContainsFunc(c.items[i+1:], func(it model.Item) bool {
-		return it.Kind == model.AgentMessage || it.Kind == model.ToolCall
-	})
-	done := c.done
-	if err := c.cancelLocked(); err != nil || !takeBack || answered || c.started.IsZero() {
-		c.mu.Unlock()
+	var id string
+	var msg model.Message
+	var done chan struct{}
+	err = func() error {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		i := len(c.items) - 1
+		for i >= 0 && c.items[i].Kind != model.UserMessage {
+			i--
+		}
+		answered := i < 0 || slices.ContainsFunc(c.items[i+1:], func(it model.Item) bool {
+			return it.Kind == model.AgentMessage || it.Kind == model.ToolCall
+		})
+		running := !c.started.IsZero()
+		done = c.done
+		if err := c.cancelLocked(); err != nil || !takeBack || answered || !running {
+			return err
+		}
+		id, msg = c.items[i].ID, model.Message{Text: c.items[i].Text, Images: c.items[i].Images}
+		return nil
+	}()
+	if err != nil || id == "" {
 		return nil, err
 	}
-	it := c.items[i]
-	c.mu.Unlock()
 	<-done
-	msg := model.Message{Text: it.Text, Images: it.Images}
-	c.mu.Lock()
-	can := c.rewindableLocked(i)
-	if !can {
-		c.noticeLocked("taken_back", "Your message is back in the box to edit; the agent still has it in its history.")
+	can, gone := func() (bool, bool) {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		i := c.indexLocked(id) // looked up again: the lock was let go
+		if i < 0 {
+			return false, true // rewound or reloaded meanwhile
+		}
+		can := c.rewindableLocked(i)
+		if !can {
+			c.noticeLocked("taken_back", "Your message is back in the box to edit; the agent still has it in its history.")
+		}
+		return can, false
+	}()
+	if gone {
+		return nil, nil
 	}
-	c.mu.Unlock()
 	if can {
-		if _, err := s.Rewind(ctx, chatID, it.ID); err != nil {
+		if _, err := s.Rewind(ctx, chatID, id); err != nil {
 			return nil, err
 		}
 	}

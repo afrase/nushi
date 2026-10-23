@@ -54,7 +54,11 @@ func TestMoveAChat(t *testing.T) {
 	ask := func(id, text string) string {
 		t.Helper()
 		must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: text})))
-		a.waitFor("the reply to "+text, idle)
+		// The reply, then the end of its turn: a failed move's idle may be waiting before them.
+		a.waitFor("the reply to "+text, func(e *nushiv1.EventsResponse) bool {
+			return e.GetItem().GetItem().GetKind() == nushiv1.ItemKind_ITEM_KIND_AGENT_MESSAGE
+		})
+		a.waitFor("the end of the turn", idle)
 		items := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))).Items
 		return items[len(items)-1].Text
 	}

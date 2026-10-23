@@ -3,6 +3,7 @@ package chats
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 
@@ -88,7 +89,16 @@ func (s *Service) SetConfig(ctx context.Context, chatID, id, value string) error
 	if err != nil {
 		return err
 	}
-	if err := c.setConfig(ctx, id, value); err != nil {
+	c.mu.Lock()
+	agent, sid, reopening := c.agent, c.sid, c.reopeningLocked()
+	c.mu.Unlock()
+	switch {
+	case reopening:
+		return errors.New("the chat is reopening or moving; try again in a moment")
+	case agent == nil:
+		return errors.New("the agent isn't running")
+	}
+	if err := c.setConfig(ctx, agent, sid, id, value); err != nil {
 		return err
 	}
 	c.mu.Lock()
@@ -100,9 +110,10 @@ func (s *Service) SetConfig(ctx context.Context, chatID, id, value string) error
 	return nil
 }
 
-// setConfig asks the agent to change an option. The lock isn't held while
-// the agent answers, since its updates need it.
-func (c *chat) setConfig(ctx context.Context, id, value string) error {
+// setConfig asks agent to change an option of session sid. The lock isn't
+// held while the agent answers, since its updates need it; an answer for a
+// session the chat no longer has is dropped.
+func (c *chat) setConfig(ctx context.Context, agent Agent, sid, id, value string) error {
 	c.mu.Lock()
 	i := slices.IndexFunc(c.config, func(o model.ConfigOption) bool { return o.ID == id })
 	var opt model.ConfigOption
@@ -117,11 +128,11 @@ func (c *chat) setConfig(ctx context.Context, id, value string) error {
 	var updated []acp.SessionConfigOption
 	switch {
 	case id == legacyMode:
-		if err := c.agent.SetMode(ctx, acp.SetSessionModeRequest{SessionID: acp.SessionID(c.sid), ModeID: acp.SessionModeID(value)}); err != nil {
+		if err := agent.SetMode(ctx, acp.SetSessionModeRequest{SessionID: acp.SessionID(sid), ModeID: acp.SessionModeID(value)}); err != nil {
 			return err
 		}
 	case opt.Type == "boolean":
-		resp, err := c.agent.SetConfigOption(ctx, acp.SetSessionConfigOptionRequest{SessionID: acp.SessionID(c.sid),
+		resp, err := agent.SetConfigOption(ctx, acp.SetSessionConfigOptionRequest{SessionID: acp.SessionID(sid),
 			ConfigID: acp.SessionConfigID(id), Type: "boolean", Value: json.RawMessage(fmt.Sprint(value == "true"))})
 		if err != nil {
 			return err
@@ -129,7 +140,7 @@ func (c *chat) setConfig(ctx context.Context, id, value string) error {
 		updated = resp.ConfigOptions
 	default:
 		v, _ := json.Marshal(value)
-		resp, err := c.agent.SetConfigOption(ctx, acp.SetSessionConfigOptionRequest{SessionID: acp.SessionID(c.sid),
+		resp, err := agent.SetConfigOption(ctx, acp.SetSessionConfigOptionRequest{SessionID: acp.SessionID(sid),
 			ConfigID: acp.SessionConfigID(id), Value: v})
 		if err != nil {
 			return err
@@ -139,6 +150,9 @@ func (c *chat) setConfig(ctx context.Context, id, value string) error {
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if c.agent != agent || c.sid != sid {
+		return nil
+	}
 	if updated != nil {
 		c.replaceConfigLocked(updated)
 	} else if i := slices.IndexFunc(c.config, func(o model.ConfigOption) bool { return o.ID == id }); i >= 0 {
@@ -167,9 +181,9 @@ func (c *chat) replaceConfigLocked(opts []acp.SessionConfigOption) {
 	c.config = out
 }
 
-// startMode switches a new session to the mode last picked for its agent,
-// if the agent offers it.
-func (c *chat) startMode(ctx context.Context, mode string) error {
+// startMode switches session sid, just opened on agent, to mode (the one
+// last picked for its agent, or the chat's), if the agent offers it.
+func (c *chat) startMode(ctx context.Context, agent Agent, sid, mode string) error {
 	c.mu.Lock()
 	i := modeIndex(c.config)
 	ok := i >= 0 && c.config[i].Current != mode &&
@@ -182,5 +196,5 @@ func (c *chat) startMode(ctx context.Context, mode string) error {
 	if !ok {
 		return nil
 	}
-	return c.setConfig(ctx, id, mode)
+	return c.setConfig(ctx, agent, sid, id, mode)
 }

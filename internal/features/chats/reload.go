@@ -41,7 +41,7 @@ func (s *Service) Reload(chatID string) error {
 		c.mu.Unlock()
 		return errors.New("the chat is busy; reload it once the agent is done")
 	}
-	c.busy, c.mcpChanged = true, false
+	c.busy, c.mcpChanged, c.kept = true, false, false
 	if len(c.items) > 0 {
 		c.emitLocked(model.Event{ChatID: c.id, Cut: c.items[0].ID})
 		c.items = nil

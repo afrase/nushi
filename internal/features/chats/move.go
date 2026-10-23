@@ -60,7 +60,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 	if err == nil {
 		c.mu.Lock()
 		old := c.agent
-		c.useLocked(o)
+		s.useLocked(c, o)
 		c.saveLocked(func(s *model.Session) {
 			if !fresh { // an empty session is just dropped, not something the chat had
 				s.Earlier = append(slices.Clip(s.Earlier), model.AgentSession{ID: s.SessionID, Folder: s.Folder})
@@ -70,6 +70,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 			}
 			s.Folder, s.SessionID, s.Worktree = folder, o.sid, wt
 		})
+		mode := c.session.Mode
 		c.mu.Unlock()
 		s.dropSides(c) // they ran on the old agent
 		if old != nil {
@@ -83,7 +84,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 		if fresh {
 			s.dropWorktree(oldWT)
 		}
-		if err := c.startMode(ctx, c.session.Mode); err != nil {
+		if err := c.startMode(ctx, o.agent, o.sid, mode); err != nil {
 			log.Printf("chat %s: mode after moving: %v", c.id, err)
 		}
 	} else {

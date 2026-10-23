@@ -112,8 +112,11 @@ func (s *Service) CloseSide(id string) error {
 	c.parent.mu.Lock()
 	delete(c.parent.sides, id)
 	c.parent.mu.Unlock()
-	c.cancel()
-	throwAway(c.agent, acp.SessionID(id))
+	c.mu.Lock()
+	c.cancelLocked()
+	agent := c.agent
+	c.mu.Unlock()
+	throwAway(agent, acp.SessionID(id))
 	return nil
 }
 
