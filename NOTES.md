@@ -1,30 +1,34 @@
 # Notes
 
-## Summary (2026-10-23, after step 32)
+## Summary (2026-10-23, after step 40)
 
-Milestone H (steps 30–32, a worktree per chat) is done, one commit each on `main`, pushed to origin. `make test` passes: Go unit tests (a new git test for worktrees and one for a branch's diff), the end-to-end tests against the fake agent (a new one: chats in worktrees, moving a chat without messages in and out, deleting with merged work, with unmerged commits and changes, and after the folder was removed outside Nushi), the package tests and the app's tests. Each step was looked at in a development build against live Claude (claude-agent-acp 0.94.0) at 1280×800, dark, on a throwaway repository, beside the installed Nushi Next, which was left running and untouched (the dev daemon and app ran on `NUSHI_DATA`). `make install` put the current build in `~/Applications/Nushi Next.app`.
+Milestone I (steps 33–40, with steps 37–40 added during the run) is done, one commit each on `main`, pushed, plus two transcript-scrolling fixes the user reported (their own commits) and a split of two files that passed 400 lines. `make test` passes: Go unit tests (new: subagent routing, the silent `/context` run, the `/context` parser), the end-to-end tests (the worktree test now moves a worktree chat out and deletes it), and the app's tests (new: following the bottom with small scroll steps, the menu filter, one-at-a-time questions, the turn status helpers). Each step was looked at in a development build against live Claude (claude-agent-acp 0.94.0) at 1280×800, dark, on throwaway repositories, with the dev daemon and app on `NUSHI_DATA`; the installed Nushi Next and its daemon were left alone. `make install` put the build in `~/Applications/Nushi Next.app` (and the iCloud copy).
 
-**What works** (on top of milestones A–G)
-- New worktree: the Environment card of a chat without messages in a git repository has a "New worktree" switch. On, the chat moves into `<repo>/.worktrees/<two-words>` on `nushi/<two-words>` from the folder's branch, `.worktrees/` lands in `.git/info/exclude`, and the choice is remembered for the repository (the folder's "+" then starts chats straight in a worktree); off, it goes back and the unused worktree and branch are removed. Tried live: two chats edited `fruit.md` differently in their worktrees, the main checkout kept the original, both sat under the repository in the sidebar with their names.
-- The Environment card shows Repository, Branch (with a worktree icon) and Base; a chat with messages gets "Move to new worktree" with a confirmation saying uncommitted changes stay behind. Tried live: the uncommitted change stayed in the main checkout, and the moved chat knew the conversation and its new folder.
-- The Changes view of a worktree chat has Branch | Uncommitted (Branch first); the Changes card counts the same. Tried live: a commit plus an uncommitted line showed as both under Branch and one under Uncommitted.
-- Delete… on a worktree chat: "Remove the worktree" and "Delete the branch", each on only when nothing would be lost, otherwise off with what would be lost in red. Tried live: merged work (both went), unmerged commit plus a changed file (worktree went, branch stayed), and a worktree removed by hand (the chat said so on opening, the card said so, Delete pruned it and deleted the branch).
+**What works**
+- 33, trim: one `Menu` for every menu (opens at once, no grow animation, digits, submenus), no ripples or Material elevation, shared dialog, diff view, reload logic and folder formatting. The app went from 6,623 to 6,364 lines of Dart; the goal of 6,000 wasn't reached (see "Step 33" below).
+- Scrolling fixes: a slow scroll up no longer snaps back (following stops at the first scroll up), the transcript lays out every item so the scrollbar thumb keeps its size, and scrolling is macOS-like everywhere (rubber-band ends, a thin overlay scrollbar that fades).
+- 34: menus over 10 rows get a focused Filter field (arrows, Enter, Escape clears then closes; the current value marked and first). A chat without messages shows its folder and a "New worktree" chip under the composer.
+- 35: Branch | Uncommitted is remembered per chat. A worktree chat with messages moved elsewhere (after a confirmation that says the worktree stays) keeps its worktree and branch, and Delete… offers them with the usual safe choices. Tried live end to end, including the forced removal.
+- 36: the panel's cards move by dragging their title row; the order is remembered; a click still collapses.
+- 37: a status row under the transcript while a turn runs: a breathing mark, what Claude is doing ("Running sleep 6; ls -la", "Reading x"), the time; "Waiting for you" in amber. The sidebar dot breathes while a chat works.
+- 38: agent questions one at a time with tabs and a Submit review; Claude got all three answers of a three-question form after going back and changing them.
+- 39: subagents show as live cards ("Explore: Explore alpha folder · Thinking · 3 tool calls · 9s") that open to their steps and report; the panel's Agents card lists them and scrolls to them. Tried with two parallel Explore subagents.
+- 40: the Context card's "By category" breakdown from a silent `/context`, refreshed after each turn; nothing shows in the transcript.
 
 **What doesn't (yet)**
-- The "New worktree" switch is only in the details panel, not in the header's folder control (the panel hidden or the window narrow).
-- A worktree chat with messages moved elsewhere with the folder control forgets its worktree; it stays on disk and in git.
-- Branch | Uncommitted isn't remembered across launches. Only the dark theme was looked at this round.
-- Carried over: a chat moved before step 26 only knows its current session, so Delete leaves its earlier ones; Claude leaves an empty history folder behind for each folder whose sessions were deleted (now one per deleted worktree too); dropping files untried by hand; cost restarts near zero after a move or reload; no thoughts from Claude; plans only with Claude's todo tools on; copy across blocks loses line breaks; archived chats show no history after a daemon restart until unarchived; nothing runs after a reboot until the app opens.
+- The app is 7,540 lines of Dart, over the old ~7,000 tripwire (see "Tripwires crossed"); `composer.dart` (408) and `question_card.dart` (402) are just over 400.
+- After a daemon restart a background subagent's steps and report aren't replayed (Claude keeps them in separate files), so its card shows "0 tool calls"; a foreground subagent wasn't seen (Claude chose the background each time). Background tasks (`async_task_*`) are sent only to AIR clients, so the Agents card lists subagents only.
+- Reduce motion wasn't tried with the setting on; only the dark theme was looked at.
+- Carried over: Delete leaves earlier sessions of chats moved before step 26; Claude leaves an empty history folder per deleted folder; dropping files untried; cost restarts near zero after a move or reload; no thoughts from Claude; copy across blocks loses line breaks; nothing runs after a reboot until the app opens.
 
 **Needs your decision**
-- The "New worktree" switch moves a chat that has no messages yet (a new session, about a second) rather than asking before the chat starts: chats start at once here, so this kept one flow for New chat, the folder's "+" and the folder control. See "Decisions to revisit".
-- The installed app's daemon still runs API 19; the new app (API 22) shows "Restart daemon" until it is restarted, and worktrees, the branch diff and the new Delete choices are off until then.
+- The daemon's API went from 22 to 25 (23 several worktrees per chat, 24 subagents, 25 `/context`). The installed app shows "Restart daemon" until the running daemon is restarted; until then those features are off.
+- The trim fell short of 6,000; getting there would mean dropping behavior (older-daemon gating, reply-card editing, the side chat's own composer) or reformatting to a wider line.
+- Decisions to revisit, new in I (details in the list below): the Delete button's look; menus' filter and its threshold; the folder and worktree chip under a new chat's composer (both there and in the panel); the header no longer counts seconds (the status row does); questions' calmer look and single-question send-on-pick; the subagent heuristics (background agents, the handback's report, Claude-specific `_meta`); the silent `/context` and the wait it can put on a prompt ([ADR 0017](docs/adr/0017-context-breakdown-from-claude.md)).
 
-**Decisions to revisit**: see [the list below](#decisions-to-revisit). New in H: the switch that moves a chat without messages; the sidebar showing the worktree's name, not the whole branch; moving a worktree chat elsewhere forgets the worktree; the branch can only be deleted with its worktree; a gone worktree is pruned with `git worktree prune`. [ADR 0016](docs/adr/0016-a-worktree-per-chat.md) records the worktree rules.
+**Size**: the app is 7,540 lines of Dart, plus 655 in packages; the daemon 3,456 lines of Go and the ACP client 800.
 
-**Size**: the app is 6,621 lines of Dart (limit about 7,000), plus 655 in packages; the daemon is 3,188 lines of Go (limit 5,000) and the ACP client 800. No hand-written file is over 400 lines (largest: `composer.dart` 400, `tool_calls.dart` 397, `acpgen/main.go` 393). Step 30 (677 added, 140 of them tests) went over the ~500-lines-per-step tripwire; see "Tripwires crossed".
-
-**Left behind by the testing**: nothing. The test chats were deleted with Delete (their worktrees and branches with them), the throwaway repository and the dev data folder were removed, and the empty history folders Claude left in `~/.claude/projects/` for the throwaway paths were removed by hand.
+**Left behind by the testing**: nothing (see the cleanup at the end of the run: the dev chats deleted with Delete, the dev data folder and throwaway repositories removed, Claude's empty history folders for them removed).
 
 ## Line counts
 
@@ -76,6 +80,7 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 40. A detailed context card | 3456 | 800 | 7524 | 655 |
 
 Tripwires crossed:
+- Milestone I (steps 33–40) took the app from 6,623 to 7,540 lines of Dart, past the ~7,000 tripwire: the trim saved about 270 (short of its 6,000 goal), and steps 34–40 added about 1,180, most of it for the four steps added mid-run (status row 37, questions 38, subagents 39, context breakdown 40, about 900 together). Step 33's own diff (1,634 added, 1,909 removed) is a rewrite of call sites, not growth. `composer.dart` (408) and `question_card.dart` (402) are just over 400 lines; `transcript.dart` and `details_panel.dart` were split after passing it.
 Lines added per step, code and tests, without generated code (the tripwire is about 500): 1: 533, 2: 1,502, 3: 239, 4: 437, 5: 739, 6: 639, 7: 464, 8: 537, 9: 265, 10: 528, 11: 1,249, 12: 625, 13: 476, 14: 343, 15: 351, 16: 492, 17: 298, 18: 666, 19: 755, 20: 223, 21: 146; 26: 438, 27: 238, 28: 140, 29: 683, 30: 677, 31: 145, 32: 470.
 - Step 1 (533): the Unix-socket transport package and its tests came with the skeleton.
 - Step 2 (1,502): the whole ACP client landed in this step (JSON-RPC framing, client and the schema-to-Go type generator, about 660 lines), plus the first real chat screen and the daemon's chat feature. None of it is for later steps.
@@ -182,6 +187,20 @@ To try it beside an installed Nushi Next that's in use: `export NUSHI_DATA=~/Lib
 6. A chat with messages outside a worktree: Environment ▸ "Move to new worktree" ▸ Move. The dialog says uncommitted changes stay; they do (`git status` in `/tmp/fruit`), and the chat carries on in the worktree.
 7. Delete: commit in the mango chat's worktree and `git merge nushi/<its name>` in `/tmp/fruit`; right-click it ▸ Delete…: both boxes on ("main has all of its commits"); Delete, and the worktree and branch are gone. Right-click the blueberry chat ▸ Delete…: "Remove the worktree" off, "1 file with uncommitted or untracked changes would be lost" in red; tick it, and "Delete the branch" says "1 commit that main doesn't have would be lost", off. Delete: the worktree goes, `git branch` still has the branch.
 8. `rm -rf` another worktree chat's folder and open the chat: it says the worktree was removed outside Nushi; Delete… still works and cleans up the branch.
+
+## Milestone I demo (steps 33–40): trim and loose ends
+
+To try it beside an installed Nushi Next that's in use: `export NUSHI_DATA=~/Library/Application\ Support/Nushi\ Dev`, then `make run` (and `make stop` after). Otherwise `make install`, quit Nushi Next, and press "Restart daemon".
+
+1. Menus: click the mode, the model ("Opus 5.5  High"; press 2, then reopen and press 1), "⋯" ▸ Agent, the "+" in the box, the chat's "⋯" and a right-click on a chat: all open at once, quiet rows, a faint shadow. A list over 10 rows (Agent with many agents) has a Filter field: type, ↑/↓, Enter; Escape clears, then closes.
+2. Scrolling: in a long chat scroll up slowly on the trackpad: it stays where you put it, "Jump to latest" shows; the thin scrollbar keeps its size and fades; the ends rubber-band.
+3. New chat in a git repository: under the box, the folder and a "New worktree" chip; click it: the chat moves into a worktree (the panel's switch follows).
+4. In a worktree chat with a commit and an uncommitted change: Changes ▸ Uncommitted, quit, reopen: still Uncommitted. Move it with the folder control to another folder: the dialog says the worktree stays; then ⋯ ▸ Delete…: "A worktree it ran in before it moved" with both choices.
+5. Drag the panel's Changes title above Environment; quit and reopen: still on top; a click still collapses it.
+6. Ask Claude to read two files and run `sleep 6; ls`: the row under the transcript says "Reading …", then "Running sleep 6; ls", and counts. In Manual mode ask for `touch x.txt`: "Waiting for you" in amber, the sidebar dot amber.
+7. Ask: "Use the AskUserQuestion tool to ask me three questions in one call: favourite color (red/green/blue), fruits (multi-select: apple, kiwi, fig), size (S/M/L). Then repeat exactly what you received." Pick on the second tab, go back with ←, change the third, review on Submit, Enter.
+8. Ask: "Use two Explore subagents in parallel, one on folder a, one on folder b." Two live cards, the Agents card lists them; click one there to scroll to it; open a card for its steps and report.
+9. Open the Context card after a turn: "By category" with a bar and rows; send another prompt: it refreshes; the transcript has no `/context`.
 
 ## ACP quirks
 
