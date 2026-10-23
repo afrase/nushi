@@ -7,30 +7,17 @@ import 'daemon.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'images.dart';
 import 'pickers.dart';
+import 'replies.dart';
+import 'reply_cards.dart';
 import 'theme/theme.dart';
 import 'thinking.dart';
 import 'composer_parts.dart';
 
-/// Stops the chat's running turn.
-Future<void> stopTurn(
-  BuildContext context,
-  ChatState chat,
-  Daemon daemon,
-) async {
-  if (chat.started == null) return;
-  try {
-    await daemon.cancelTurn(chat.id);
-  } on Object catch (e) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
-    }
-  }
-}
-
 /// The prompt box: "+" on its left mentions a file or attaches images
 /// (⌘V and dropping work too), and on its right a send button once there
-/// is something to send, or a stop button while a turn runs. Attached
-/// images show above the text. Under it, the agent's pickers. Enter sends,
+/// is something to send, or a stop button while a turn runs. Reply cards
+/// and attached images show above the text; the replies go first in the
+/// message. Under it, the agent's pickers. Enter sends,
 /// Shift-Enter starts a line; `/` completes the agent's commands and `@`
 /// the folder's files (sent as links); Up in an empty box brings back the
 /// last prompt.
@@ -39,7 +26,8 @@ class Composer extends StatefulWidget {
     super.key,
     required this.chat,
     required this.daemon,
-    required this.quote,
+    required this.replies,
+    this.quote,
     this.attachments,
     this.hint = 'Type / for commands',
   });
@@ -47,8 +35,12 @@ class Composer extends StatefulWidget {
   final ChatState chat;
   final Daemon daemon;
 
-  /// Text to quote in the box (Reply), cursor after it; taken and cleared.
-  final ValueNotifier<String?> quote;
+  /// Text to quote in the box (a side chat's start), cursor after it;
+  /// taken and cleared.
+  final ValueNotifier<String?>? quote;
+
+  /// The replies to send with the next message.
+  final Replies replies;
 
   /// The images to send with the prompt; the box keeps its own if null.
   final Attachments? attachments;
@@ -75,12 +67,19 @@ class _ComposerState extends State<Composer> {
   void initState() {
     super.initState();
     _images.addListener(_imagesChanged);
+    widget.replies.addListener(_repliesChanged);
     _text.addListener(_complete);
-    widget.quote.addListener(_quote);
+    widget.quote?.addListener(_quote);
     _quote(); // one given before the box was built
   }
 
   void _imagesChanged() => setState(() {});
+
+  int _replyCount = 0;
+  void _repliesChanged() {
+    if (widget.replies.value.length > _replyCount) _focus.requestFocus();
+    setState(() => _replyCount = widget.replies.value.length);
+  }
 
   /// The "+" menu: mention a file, or attach images.
   Future<void> _plus(BuildContext button) async {
@@ -97,17 +96,18 @@ class _ComposerState extends State<Composer> {
   @override
   void dispose() {
     _images.removeListener(_imagesChanged);
+    widget.replies.removeListener(_repliesChanged);
     if (widget.attachments == null) _images.dispose();
-    widget.quote.removeListener(_quote);
+    widget.quote?.removeListener(_quote);
     _text.dispose();
     _focus.dispose();
     super.dispose();
   }
 
   void _quote() {
-    final q = widget.quote.value;
+    final q = widget.quote?.value;
     if (q == null) return;
-    widget.quote.value = null;
+    widget.quote!.value = null;
     final quoted = q.trim().split('\n').map((l) => '> $l').join('\n');
     final before = _text.text.trim().isEmpty
         ? ''
@@ -128,7 +128,7 @@ class _ComposerState extends State<Composer> {
     if (RegExp(r'^/(\S*)$').firstMatch(before) case final m?) {
       final names = {for (final c in widget.chat.commands) c.name: c};
       choices = [
-        for (final n in _rank(names.keys, m[1]!))
+        for (final n in rankChoices(names.keys, m[1]!))
           (label: '/$n', detail: names[n]!.description, insert: '/$n '),
       ];
       _token = (0, caret);
@@ -144,7 +144,7 @@ class _ComposerState extends State<Composer> {
         }, onError: (_) => _files = null);
       }
       choices = [
-        for (final f in _rank(files ?? const [], m[2]!))
+        for (final f in rankChoices(files ?? const [], m[2]!))
           (label: f, detail: '', insert: '@$f '),
       ];
       _token = (caret - m[2]!.length - 1, caret);
@@ -154,21 +154,6 @@ class _ComposerState extends State<Composer> {
       _choices = choices.take(8).toList();
       _picked = 0;
     });
-  }
-
-  /// The names holding [q], those whose last part starts with it first,
-  /// then the shortest.
-  static List<String> _rank(Iterable<String> names, String q) {
-    q = q.toLowerCase();
-    final hits = [
-      for (final n in names)
-        if (n.toLowerCase().contains(q)) n,
-    ];
-    int score(String n) =>
-        (n.split(RegExp('[/:]')).last.toLowerCase().startsWith(q) ? 0 : 1000) +
-        n.length;
-    hits.sort((a, b) => score(a) - score(b));
-    return hits.take(8).toList();
   }
 
   /// Starts an @ mention at the cursor, which offers the folder's files.
@@ -235,9 +220,11 @@ class _ComposerState extends State<Composer> {
         orElse: Item.new,
       );
       _mentions.addAll(_lastFiles);
+      final (replies, text) = splitReplies(last.text);
+      widget.replies.value = replies;
       _text.value = TextEditingValue(
-        text: last.text,
-        selection: TextSelection.collapsed(offset: last.text.length),
+        text: text,
+        selection: TextSelection.collapsed(offset: text.length),
       );
       return KeyEventResult.handled;
     }
@@ -247,20 +234,30 @@ class _ComposerState extends State<Composer> {
   Future<void> _send() async {
     final text = _text.text.trim();
     final images = _images.value;
-    if (text.isEmpty && images.isEmpty || widget.chat.busy) return;
+    final replies = widget.replies.value;
+    if (text.isEmpty && images.isEmpty && replies.isEmpty || widget.chat.busy) {
+      return;
+    }
     final files = [
       for (final f in _mentions)
         if (text.contains('@$f')) f,
     ];
     _text.clear();
     _images.clear();
+    widget.replies.value = const [];
     _mentions.clear();
     _lastFiles = files;
     try {
-      await widget.daemon.sendPrompt(widget.chat.id, text, files, images);
+      await widget.daemon.sendPrompt(
+        widget.chat.id,
+        withReplies(replies, text),
+        files,
+        images,
+      );
     } on Object catch (e) {
       _text.text = text;
       _images.value = images;
+      widget.replies.value = replies;
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('$e')));
@@ -311,12 +308,16 @@ class _ComposerState extends State<Composer> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (_images.value.isNotEmpty)
+                if (_images.value.isNotEmpty || widget.replies.value.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(6, 8, 6, 4),
-                    child: Thumbnails(
-                      _images.value,
-                      onRemove: _images.removeAt,
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        ReplyCards(widget.replies, onDone: _focus.requestFocus),
+                        Thumbnails(_images.value, onRemove: _images.removeAt),
+                      ],
                     ),
                   ),
                 Row(
@@ -368,7 +369,8 @@ class _ComposerState extends State<Composer> {
                         child: StopIcon(color: t.textSecondary),
                       )
                     else if ((_text.text.trim().isNotEmpty ||
-                            _images.value.isNotEmpty) &&
+                            _images.value.isNotEmpty ||
+                            widget.replies.value.isNotEmpty) &&
                         !chat.busy)
                       BoxButton(
                         tooltip: 'Send (⏎)',

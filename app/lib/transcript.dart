@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import 'cards.dart';
@@ -7,10 +9,10 @@ import 'gen/nushi/v1/nushi.pb.dart';
 import 'images.dart';
 import 'markdown.dart';
 import 'question_card.dart';
+import 'replies.dart';
 import 'theme/theme.dart';
 import 'thinking.dart';
 import 'tool_calls.dart';
-import 'widgets.dart';
 
 /// The items, with each run of tool calls as one list.
 List<Object> _entries(List<Item> items) {
@@ -34,8 +36,8 @@ List<Object> _entries(List<Item> items) {
 
 /// A chat's items, built as they scroll into view. It opens at the bottom
 /// and follows it while the agent writes; scrolled up, it stays put and
-/// offers a way back to the latest. Selected text gets a popover to reply
-/// with it, or to ask about it on the side.
+/// offers a way back to the latest. Selected text gets a toolbar above it
+/// to start a side chat about it, or to reply to it.
 class Transcript extends StatefulWidget {
   const Transcript({
     super.key,
@@ -48,8 +50,9 @@ class Transcript extends StatefulWidget {
   final ChatState chat;
   final Daemon daemon;
 
-  /// Quotes the selection in the composer; null hides the action.
-  final void Function(String selection)? onReply;
+  /// Takes a reply to the selection (for the composer); null hides the
+  /// action.
+  final void Function(Reply reply)? onReply;
 
   /// Opens a side question about the selection; null hides the action.
   final void Function(String selection)? onSide;
@@ -62,10 +65,11 @@ class _TranscriptState extends State<Transcript> {
   final _scroll = ScrollController();
   bool _follow = true; // keep the bottom in view
   bool _jumping = false; // the scroll moves because of us
+  final _area = GlobalKey<SelectionAreaState>();
   String _selected = '';
   bool _down = false; // a pointer is down on the transcript
-  Offset _up = Offset.zero; // where it last went up
-  Offset? _popover; // where the selection popover shows
+  Rect? _at; // the selection's top and bottom middle, where the toolbar shows
+  String? _replyTo; // the selection a reply is being written to
 
   @override
   void initState() {
@@ -97,12 +101,21 @@ class _TranscriptState extends State<Transcript> {
   });
 
   // The selection is reported a frame after the pointer goes up: offer the
-  // popover once both have happened.
+  // toolbar once both have happened.
   void _offer() {
-    if (!_down && _popover == null && _selected.trim().isNotEmpty) {
-      setState(() => _popover = _up);
-    }
+    if (_down || _at != null || _selected.trim().isEmpty) return;
+    final a = _area.currentState?.selectableRegion.contextMenuAnchors;
+    final box = context.findRenderObject() as RenderBox?;
+    if (a == null || box == null) return;
+    setState(
+      () => _at = Rect.fromPoints(
+        box.globalToLocal(a.primaryAnchor),
+        box.globalToLocal(a.secondaryAnchor ?? a.primaryAnchor),
+      ),
+    );
   }
+
+  void _closeToolbar() => setState(() => _at = _replyTo = null);
 
   void _latest() {
     setState(() => _follow = true);
@@ -114,12 +127,8 @@ class _TranscriptState extends State<Transcript> {
     final chat = widget.chat;
     final entries = _entries(chat.items);
     _stick();
-    final onReply = widget.onReply, onSide = widget.onSide;
-    final actions = {
-      if (onReply != null) 'Reply': () => onReply(_selected),
-      if (onSide != null && chat.canFork)
-        'Side question': () => onSide(_selected),
-    };
+    final onReply = widget.onReply;
+    final onSide = chat.canFork ? widget.onSide : null;
     return LayoutBuilder(
       builder: (context, box) => Stack(
         children: [
@@ -134,14 +143,14 @@ class _TranscriptState extends State<Transcript> {
             child: Listener(
               onPointerDown: (_) => setState(() {
                 _down = true;
-                _popover = null;
+                _at = _replyTo = null;
               }),
-              onPointerUp: (e) {
+              onPointerUp: (_) {
                 _down = false;
-                _up = e.localPosition;
                 _offer();
               },
               child: SelectionArea(
+                key: _area,
                 onSelectionChanged: (c) {
                   _selected = c?.plainText ?? '';
                   _offer();
@@ -174,13 +183,29 @@ class _TranscriptState extends State<Transcript> {
               ),
             ),
           ),
-          if (_popover case final at? when actions.isNotEmpty)
-            Positioned(
-              left: at.dx.clamp(8, box.maxWidth - 240),
-              top: at.dy + 10,
-              child: _Popover(
-                actions: actions,
-                onDone: () => setState(() => _popover = null),
+          if (_at case final at? when onReply != null || onSide != null)
+            Positioned.fill(
+              child: CustomSingleChildLayout(
+                delegate: _Above(at),
+                child: switch (_replyTo) {
+                  final quote? => ReplyBox(
+                    quote: quote,
+                    onReply: onReply!,
+                    onClose: _closeToolbar,
+                  ),
+                  null => SelectionToolbar(
+                    onSide: onSide == null
+                        ? null
+                        : () {
+                            final selected = _selected;
+                            _closeToolbar();
+                            onSide(selected);
+                          },
+                    onReply: onReply == null
+                        ? null
+                        : () => setState(() => _replyTo = _selected),
+                  ),
+                },
               ),
             ),
           if (!_follow)
@@ -195,46 +220,31 @@ class _TranscriptState extends State<Transcript> {
   }
 }
 
-/// A small row of actions on the selection.
-class _Popover extends StatelessWidget {
-  const _Popover({required this.actions, required this.onDone});
+/// Places its child centered just above [at] (a selection's top and bottom
+/// middle), or below it when there is no room above, inside the box.
+class _Above extends SingleChildLayoutDelegate {
+  _Above(this.at);
 
-  final Map<String, VoidCallback> actions;
-  final VoidCallback onDone;
+  final Rect at;
 
   @override
-  Widget build(BuildContext context) {
-    final t = NushiTheme.of(context).t;
-    return Material(
-      color: t.raised,
-      elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(NushiTheme.card),
-        side: BorderSide(color: t.borderStrong),
+  BoxConstraints getConstraintsForChild(BoxConstraints c) => c.loosen();
+
+  @override
+  Offset getPositionForChild(Size size, Size child) {
+    var y = at.top - child.height - 6;
+    if (y < 4) y = at.bottom + 6;
+    return Offset(
+      (at.center.dx - child.width / 2).clamp(
+        8,
+        max(8, size.width - child.width - 8),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(3),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final MapEntry(key: label, value: run) in actions.entries)
-              Button(
-                label: label,
-                kind: ButtonKind.ghost,
-                height: 24,
-                icon: label == 'Reply'
-                    ? Icons.format_quote
-                    : Icons.forum_outlined,
-                onPressed: () {
-                  onDone();
-                  run();
-                },
-              ),
-          ],
-        ),
-      ),
+      y.clamp(4, max(4, size.height - child.height - 4)),
     );
   }
+
+  @override
+  bool shouldRelayout(_Above old) => old.at != at;
 }
 
 class _LatestButton extends StatelessWidget {
@@ -302,8 +312,7 @@ class _ItemView extends StatelessWidget {
                 spacing: 6,
                 children: [
                   if (item.images.isNotEmpty) Thumbnails(item.images),
-                  if (item.text.isNotEmpty)
-                    Text(item.text, style: theme.ui(t.text)),
+                  if (item.text.isNotEmpty) UserMessageText(item.text),
                 ],
               ),
             ),

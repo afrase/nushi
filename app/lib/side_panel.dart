@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 
 import 'chat.dart';
 import 'composer.dart';
+import 'composer_parts.dart';
 import 'daemon.dart';
+import 'replies.dart';
 import 'theme/theme.dart';
 import 'transcript.dart';
 
@@ -15,12 +17,14 @@ class SidePanel extends StatelessWidget {
     required this.side,
     required this.daemon,
     required this.quote,
+    required this.replies,
     required this.onClose,
   });
 
   final ChatState side;
   final Daemon daemon;
   final ValueNotifier<String?> quote;
+  final Replies replies;
   final VoidCallback onClose;
 
   @override
@@ -87,7 +91,7 @@ class SidePanel extends StatelessWidget {
                 child: Transcript(
                   chat: side,
                   daemon: daemon,
-                  onReply: (s) => quote.value = s,
+                  onReply: (r) => replies.value = [...replies.value, r],
                 ),
               ),
               if (side.busy) const LinearProgressIndicator(minHeight: 2),
@@ -95,6 +99,7 @@ class SidePanel extends StatelessWidget {
                 chat: side,
                 daemon: daemon,
                 quote: quote,
+                replies: replies,
                 hint: 'Ask on the side',
               ),
             ],
