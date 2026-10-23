@@ -790,6 +790,46 @@ extension type NushiServiceClient (connect.Transport _transport) {
     );
   }
 
+  /// Says what a folder brings for the agent to run on its own (MCP
+  /// servers, hooks, helper commands) when neither the agent nor Nushi was
+  /// told to trust it; nothing when it is trusted or brings nothing. Ask
+  /// before starting or moving a chat there (API 37).
+  Future<nushiv1nushi.CheckFolderResponse> checkFolder(
+    nushiv1nushi.CheckFolderRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.checkFolder,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Remembers that the user starts chats in a folder anyway (its
+  /// repository, outside git the folders under it too) (API 37).
+  Future<nushiv1nushi.TrustFolderResponse> trustFolder(
+    nushiv1nushi.TrustFolderRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.trustFolder,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.
   Stream<nushiv1nushi.EventsResponse> events(

@@ -140,6 +140,12 @@ const (
 	// NushiServiceCloseTerminalProcedure is the fully-qualified name of the NushiService's
 	// CloseTerminal RPC.
 	NushiServiceCloseTerminalProcedure = "/nushi.v1.NushiService/CloseTerminal"
+	// NushiServiceCheckFolderProcedure is the fully-qualified name of the NushiService's CheckFolder
+	// RPC.
+	NushiServiceCheckFolderProcedure = "/nushi.v1.NushiService/CheckFolder"
+	// NushiServiceTrustFolderProcedure is the fully-qualified name of the NushiService's TrustFolder
+	// RPC.
+	NushiServiceTrustFolderProcedure = "/nushi.v1.NushiService/TrustFolder"
 	// NushiServiceEventsProcedure is the fully-qualified name of the NushiService's Events RPC.
 	NushiServiceEventsProcedure = "/nushi.v1.NushiService/Events"
 )
@@ -272,6 +278,14 @@ type NushiServiceClient interface {
 	// Closes a terminal: its shell is hung up, then killed after a short
 	// grace, along with what still runs in it (API 35).
 	CloseTerminal(context.Context, *connect.Request[v1.CloseTerminalRequest]) (*connect.Response[v1.CloseTerminalResponse], error)
+	// Says what a folder brings for the agent to run on its own (MCP
+	// servers, hooks, helper commands) when neither the agent nor Nushi was
+	// told to trust it; nothing when it is trusted or brings nothing. Ask
+	// before starting or moving a chat there (API 37).
+	CheckFolder(context.Context, *connect.Request[v1.CheckFolderRequest]) (*connect.Response[v1.CheckFolderResponse], error)
+	// Remembers that the user starts chats in a folder anyway (its
+	// repository, outside git the folders under it too) (API 37).
+	TrustFolder(context.Context, *connect.Request[v1.TrustFolderRequest]) (*connect.Response[v1.TrustFolderResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
 	Events(context.Context, *connect.Request[v1.EventsRequest]) (*connect.ServerStreamForClient[v1.EventsResponse], error)
@@ -534,6 +548,18 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("CloseTerminal")),
 			connect.WithClientOptions(opts...),
 		),
+		checkFolder: connect.NewClient[v1.CheckFolderRequest, v1.CheckFolderResponse](
+			httpClient,
+			baseURL+NushiServiceCheckFolderProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("CheckFolder")),
+			connect.WithClientOptions(opts...),
+		),
+		trustFolder: connect.NewClient[v1.TrustFolderRequest, v1.TrustFolderResponse](
+			httpClient,
+			baseURL+NushiServiceTrustFolderProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("TrustFolder")),
+			connect.WithClientOptions(opts...),
+		),
 		events: connect.NewClient[v1.EventsRequest, v1.EventsResponse](
 			httpClient,
 			baseURL+NushiServiceEventsProcedure,
@@ -586,6 +612,8 @@ type nushiServiceClient struct {
 	arrangeTerminals *connect.Client[v1.ArrangeTerminalsRequest, v1.ArrangeTerminalsResponse]
 	restartTerminal  *connect.Client[v1.RestartTerminalRequest, v1.RestartTerminalResponse]
 	closeTerminal    *connect.Client[v1.CloseTerminalRequest, v1.CloseTerminalResponse]
+	checkFolder      *connect.Client[v1.CheckFolderRequest, v1.CheckFolderResponse]
+	trustFolder      *connect.Client[v1.TrustFolderRequest, v1.TrustFolderResponse]
 	events           *connect.Client[v1.EventsRequest, v1.EventsResponse]
 }
 
@@ -794,6 +822,16 @@ func (c *nushiServiceClient) CloseTerminal(ctx context.Context, req *connect.Req
 	return c.closeTerminal.CallUnary(ctx, req)
 }
 
+// CheckFolder calls nushi.v1.NushiService.CheckFolder.
+func (c *nushiServiceClient) CheckFolder(ctx context.Context, req *connect.Request[v1.CheckFolderRequest]) (*connect.Response[v1.CheckFolderResponse], error) {
+	return c.checkFolder.CallUnary(ctx, req)
+}
+
+// TrustFolder calls nushi.v1.NushiService.TrustFolder.
+func (c *nushiServiceClient) TrustFolder(ctx context.Context, req *connect.Request[v1.TrustFolderRequest]) (*connect.Response[v1.TrustFolderResponse], error) {
+	return c.trustFolder.CallUnary(ctx, req)
+}
+
 // Events calls nushi.v1.NushiService.Events.
 func (c *nushiServiceClient) Events(ctx context.Context, req *connect.Request[v1.EventsRequest]) (*connect.ServerStreamForClient[v1.EventsResponse], error) {
 	return c.events.CallServerStream(ctx, req)
@@ -927,6 +965,14 @@ type NushiServiceHandler interface {
 	// Closes a terminal: its shell is hung up, then killed after a short
 	// grace, along with what still runs in it (API 35).
 	CloseTerminal(context.Context, *connect.Request[v1.CloseTerminalRequest]) (*connect.Response[v1.CloseTerminalResponse], error)
+	// Says what a folder brings for the agent to run on its own (MCP
+	// servers, hooks, helper commands) when neither the agent nor Nushi was
+	// told to trust it; nothing when it is trusted or brings nothing. Ask
+	// before starting or moving a chat there (API 37).
+	CheckFolder(context.Context, *connect.Request[v1.CheckFolderRequest]) (*connect.Response[v1.CheckFolderResponse], error)
+	// Remembers that the user starts chats in a folder anyway (its
+	// repository, outside git the folders under it too) (API 37).
+	TrustFolder(context.Context, *connect.Request[v1.TrustFolderRequest]) (*connect.Response[v1.TrustFolderResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
 	Events(context.Context, *connect.Request[v1.EventsRequest], *connect.ServerStream[v1.EventsResponse]) error
@@ -1185,6 +1231,18 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("CloseTerminal")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceCheckFolderHandler := connect.NewUnaryHandler(
+		NushiServiceCheckFolderProcedure,
+		svc.CheckFolder,
+		connect.WithSchema(nushiServiceMethods.ByName("CheckFolder")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceTrustFolderHandler := connect.NewUnaryHandler(
+		NushiServiceTrustFolderProcedure,
+		svc.TrustFolder,
+		connect.WithSchema(nushiServiceMethods.ByName("TrustFolder")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceEventsHandler := connect.NewServerStreamHandler(
 		NushiServiceEventsProcedure,
 		svc.Events,
@@ -1275,6 +1333,10 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceRestartTerminalHandler.ServeHTTP(w, r)
 		case NushiServiceCloseTerminalProcedure:
 			nushiServiceCloseTerminalHandler.ServeHTTP(w, r)
+		case NushiServiceCheckFolderProcedure:
+			nushiServiceCheckFolderHandler.ServeHTTP(w, r)
+		case NushiServiceTrustFolderProcedure:
+			nushiServiceTrustFolderHandler.ServeHTTP(w, r)
 		case NushiServiceEventsProcedure:
 			nushiServiceEventsHandler.ServeHTTP(w, r)
 		default:
@@ -1448,6 +1510,14 @@ func (UnimplementedNushiServiceHandler) RestartTerminal(context.Context, *connec
 
 func (UnimplementedNushiServiceHandler) CloseTerminal(context.Context, *connect.Request[v1.CloseTerminalRequest]) (*connect.Response[v1.CloseTerminalResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.CloseTerminal is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) CheckFolder(context.Context, *connect.Request[v1.CheckFolderRequest]) (*connect.Response[v1.CheckFolderResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.CheckFolder is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) TrustFolder(context.Context, *connect.Request[v1.TrustFolderRequest]) (*connect.Response[v1.TrustFolderResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.TrustFolder is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) Events(context.Context, *connect.Request[v1.EventsRequest], *connect.ServerStream[v1.EventsResponse]) error {

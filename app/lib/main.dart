@@ -17,6 +17,7 @@ import 'sidebar.dart';
 import 'status.dart';
 import 'terminal_panel.dart';
 import 'theme/theme.dart';
+import 'trust_card.dart';
 import 'widgets.dart';
 
 void main() => runApp(NushiApp(daemon: Daemon()));
@@ -104,7 +105,9 @@ class _Shell extends StatelessWidget {
               child: Sidebar(daemon: daemon),
             ),
             Expanded(
-              child: daemon.mcpFolder != null
+              child: daemon.trustAsk != null
+                  ? TrustCard(daemon.trustAsk!)
+                  : daemon.mcpFolder != null
                   ? McpView(daemon: daemon, folder: daemon.mcpFolder!)
                   : chat == null
                   ? Center(

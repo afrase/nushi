@@ -30,7 +30,7 @@ final String? _oldDataDir =
     : null;
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 36;
+const apiVersion = 37;
 
 /// Whether [folder] is a chat's scratch folder: the chat has no folder yet.
 bool isScratch(String folder) => folder.startsWith('$dataDir/scratch/');
@@ -115,6 +115,7 @@ class Daemon extends ChangeNotifier {
   String? mcpFolder;
 
   void showMcp(String? folder) {
+    trustAsk?.decide(false);
     mcpFolder = folder;
     notifyListeners();
   }
@@ -124,6 +125,34 @@ class Daemon extends ChangeNotifier {
 
   /// The chats' terminals.
   late final terminals = Terminals(client);
+
+  /// Whether the daemon says what a folder brings for the agent to run
+  /// (API 37).
+  bool get canTrust => daemonApi >= 37;
+
+  /// A folder's code waiting for the user's word before a chat starts or
+  /// moves there (see TrustCard).
+  TrustAsk? trustAsk;
+
+  /// Whether a chat may start or move into [folder] (doing [action]): when
+  /// the folder brings code for the agent to run that nobody trusted,
+  /// [trustAsk] shows it and this waits for "Start anyway", which the
+  /// daemon remembers, or Cancel.
+  Future<bool> _mayRun(String folder, String action) async {
+    if (folder.isEmpty || !canTrust) return true;
+    final check = await client.checkFolder(CheckFolderRequest(folder: folder));
+    if (check.runs.isEmpty) return true;
+    trustAsk?.decide(false);
+    final ask = trustAsk = TrustAsk(folder, action, check.runs);
+    notifyListeners();
+    final start = await ask.answer.future;
+    if (trustAsk == ask) {
+      trustAsk = null;
+      notifyListeners();
+    }
+    if (start) await client.trustFolder(TrustFolderRequest(folder: folder));
+    return start;
+  }
 
   /// Whether the daemon sums up a folder's changes (API 17).
   bool get canFolderStatus => daemonApi >= 17;
@@ -283,6 +312,7 @@ class Daemon extends ChangeNotifier {
   }
 
   void select(String chatId) {
+    trustAsk?.decide(false);
     selectedId = chatId;
     mcpFolder = null;
     final chat = chats[chatId];
@@ -293,6 +323,7 @@ class Daemon extends ChangeNotifier {
   /// Starts a chat in [folder], or in a scratch folder of its own (''); in a
   /// new worktree of its repository if that's the choice remembered for it.
   Future<void> startChat(String folder) async {
+    if (!await _mayRun(folder, 'Start a chat')) return;
     final resp = await client.startChat(
       StartChatRequest(folder: folder, worktree: _worktree(folder)),
     );
@@ -305,14 +336,16 @@ class Daemon extends ChangeNotifier {
 
   /// Moves a chat to [folder], or to a new worktree of its repository. A
   /// chat without messages follows the choice remembered for [folder].
-  Future<void> moveChat(ChatState chat, String folder, {bool? worktree}) =>
-      client.moveChat(
-        MoveChatRequest(
-          chatId: chat.id,
-          folder: folder,
-          worktree: worktree ?? (chat.fresh && _worktree(folder)),
-        ),
-      );
+  Future<void> moveChat(ChatState chat, String folder, {bool? worktree}) async {
+    if (!await _mayRun(folder, 'Move the chat')) return;
+    await client.moveChat(
+      MoveChatRequest(
+        chatId: chat.id,
+        folder: folder,
+        worktree: worktree ?? (chat.fresh && _worktree(folder)),
+      ),
+    );
+  }
 
   /// The chats' folders (in a worktree, its repository's), the newest
   /// chat's first, scratch folders left out.
@@ -344,5 +377,20 @@ class Daemon extends ChangeNotifier {
     unawaited(_events?.cancel());
     unawaited(_transport.close());
     super.dispose();
+  }
+}
+
+/// What [folder] would have the agent run, shown before a chat starts or
+/// moves there; [answer] is true for "Start anyway".
+class TrustAsk {
+  TrustAsk(this.folder, this.action, this.runs);
+
+  final String folder;
+  final String action;
+  final List<FolderRun> runs;
+  final answer = Completer<bool>();
+
+  void decide(bool start) {
+    if (!answer.isCompleted) answer.complete(start);
   }
 }

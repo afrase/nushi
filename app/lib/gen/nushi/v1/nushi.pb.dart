@@ -8543,6 +8543,298 @@ class CloseTerminalResponse extends $pb.GeneratedMessage {
   static CloseTerminalResponse? _defaultInstance;
 }
 
+class CheckFolderRequest extends $pb.GeneratedMessage {
+  factory CheckFolderRequest({
+    $core.String? folder,
+  }) {
+    final result = CheckFolderRequest._();
+    if (folder != null) result.folder = folder;
+    return result;
+  }
+
+  CheckFolderRequest._();
+
+  factory CheckFolderRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CheckFolderRequest()..mergeFromBuffer(data, registry);
+  factory CheckFolderRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CheckFolderRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CheckFolderRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: CheckFolderRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'folder')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CheckFolderRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CheckFolderRequest copyWith(void Function(CheckFolderRequest) updates) =>
+      super.copyWith((message) => updates(message as CheckFolderRequest))
+          as CheckFolderRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use CheckFolderRequest() / CheckFolderRequest.new instead')
+  static CheckFolderRequest create() => CheckFolderRequest._();
+  static $pb.GeneratedMessage $_createMessage() => CheckFolderRequest._();
+  @$core.override
+  CheckFolderRequest createEmptyInstance() => CheckFolderRequest._();
+  @$core.pragma('dart2js:noInline')
+  static CheckFolderRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<CheckFolderRequest>(
+          CheckFolderRequest.$_createMessage);
+  static CheckFolderRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get folder => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set folder($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasFolder() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearFolder() => $_clearField(1);
+}
+
+class CheckFolderResponse extends $pb.GeneratedMessage {
+  factory CheckFolderResponse({
+    $core.Iterable<FolderRun>? runs,
+  }) {
+    final result = CheckFolderResponse._();
+    if (runs != null) result.runs.addAll(runs);
+    return result;
+  }
+
+  CheckFolderResponse._();
+
+  factory CheckFolderResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CheckFolderResponse()..mergeFromBuffer(data, registry);
+  factory CheckFolderResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CheckFolderResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CheckFolderResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: CheckFolderResponse.$_createMessage)
+    ..pPM<FolderRun>(1, _omitFieldNames ? '' : 'runs',
+        subBuilder: FolderRun.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CheckFolderResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CheckFolderResponse copyWith(void Function(CheckFolderResponse) updates) =>
+      super.copyWith((message) => updates(message as CheckFolderResponse))
+          as CheckFolderResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use CheckFolderResponse() / CheckFolderResponse.new instead')
+  static CheckFolderResponse create() => CheckFolderResponse._();
+  static $pb.GeneratedMessage $_createMessage() => CheckFolderResponse._();
+  @$core.override
+  CheckFolderResponse createEmptyInstance() => CheckFolderResponse._();
+  @$core.pragma('dart2js:noInline')
+  static CheckFolderResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<CheckFolderResponse>(
+          CheckFolderResponse.$_createMessage);
+  static CheckFolderResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<FolderRun> get runs => $_getList(0);
+}
+
+/// Something a folder has the agent run on its own.
+class FolderRun extends $pb.GeneratedMessage {
+  factory FolderRun({
+    $core.String? file,
+    $core.String? what,
+    $core.String? command,
+  }) {
+    final result = FolderRun._();
+    if (file != null) result.file = file;
+    if (what != null) result.what = what;
+    if (command != null) result.command = command;
+    return result;
+  }
+
+  FolderRun._();
+
+  factory FolderRun.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FolderRun()..mergeFromBuffer(data, registry);
+  factory FolderRun.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FolderRun()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'FolderRun',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: FolderRun.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'file')
+    ..aOS(2, _omitFieldNames ? '' : 'what')
+    ..aOS(3, _omitFieldNames ? '' : 'command')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FolderRun clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FolderRun copyWith(void Function(FolderRun) updates) =>
+      super.copyWith((message) => updates(message as FolderRun)) as FolderRun;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use FolderRun() / FolderRun.new instead')
+  static FolderRun create() => FolderRun._();
+  static $pb.GeneratedMessage $_createMessage() => FolderRun._();
+  @$core.override
+  FolderRun createEmptyInstance() => FolderRun._();
+  @$core.pragma('dart2js:noInline')
+  static FolderRun getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<FolderRun>(FolderRun.$_createMessage);
+  static FolderRun? _defaultInstance;
+
+  /// The file that says so.
+  @$pb.TagNumber(1)
+  $core.String get file => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set file($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasFile() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearFile() => $_clearField(1);
+
+  /// What it is: "MCP server github", "Hook on SessionStart".
+  @$pb.TagNumber(2)
+  $core.String get what => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set what($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasWhat() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearWhat() => $_clearField(2);
+
+  /// Its command line, or URL; for an env block the names it sets.
+  @$pb.TagNumber(3)
+  $core.String get command => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set command($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasCommand() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearCommand() => $_clearField(3);
+}
+
+class TrustFolderRequest extends $pb.GeneratedMessage {
+  factory TrustFolderRequest({
+    $core.String? folder,
+  }) {
+    final result = TrustFolderRequest._();
+    if (folder != null) result.folder = folder;
+    return result;
+  }
+
+  TrustFolderRequest._();
+
+  factory TrustFolderRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      TrustFolderRequest()..mergeFromBuffer(data, registry);
+  factory TrustFolderRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      TrustFolderRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'TrustFolderRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: TrustFolderRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'folder')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  TrustFolderRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  TrustFolderRequest copyWith(void Function(TrustFolderRequest) updates) =>
+      super.copyWith((message) => updates(message as TrustFolderRequest))
+          as TrustFolderRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use TrustFolderRequest() / TrustFolderRequest.new instead')
+  static TrustFolderRequest create() => TrustFolderRequest._();
+  static $pb.GeneratedMessage $_createMessage() => TrustFolderRequest._();
+  @$core.override
+  TrustFolderRequest createEmptyInstance() => TrustFolderRequest._();
+  @$core.pragma('dart2js:noInline')
+  static TrustFolderRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<TrustFolderRequest>(
+          TrustFolderRequest.$_createMessage);
+  static TrustFolderRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get folder => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set folder($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasFolder() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearFolder() => $_clearField(1);
+}
+
+class TrustFolderResponse extends $pb.GeneratedMessage {
+  factory TrustFolderResponse() => TrustFolderResponse._();
+
+  TrustFolderResponse._();
+
+  factory TrustFolderResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      TrustFolderResponse()..mergeFromBuffer(data, registry);
+  factory TrustFolderResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      TrustFolderResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'TrustFolderResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: TrustFolderResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  TrustFolderResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  TrustFolderResponse copyWith(void Function(TrustFolderResponse) updates) =>
+      super.copyWith((message) => updates(message as TrustFolderResponse))
+          as TrustFolderResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use TrustFolderResponse() / TrustFolderResponse.new instead')
+  static TrustFolderResponse create() => TrustFolderResponse._();
+  static $pb.GeneratedMessage $_createMessage() => TrustFolderResponse._();
+  @$core.override
+  TrustFolderResponse createEmptyInstance() => TrustFolderResponse._();
+  @$core.pragma('dart2js:noInline')
+  static TrustFolderResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<TrustFolderResponse>(
+          TrustFolderResponse.$_createMessage);
+  static TrustFolderResponse? _defaultInstance;
+}
+
 class NushiServiceApi {
   final $pb.RpcClient _client;
 
@@ -8830,6 +9122,22 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, CloseTerminalRequest request) =>
       _client.invoke<CloseTerminalResponse>(ctx, 'NushiService',
           'CloseTerminal', request, CloseTerminalResponse());
+
+  /// Says what a folder brings for the agent to run on its own (MCP
+  /// servers, hooks, helper commands) when neither the agent nor Nushi was
+  /// told to trust it; nothing when it is trusted or brings nothing. Ask
+  /// before starting or moving a chat there (API 37).
+  $async.Future<CheckFolderResponse> checkFolder(
+          $pb.ClientContext? ctx, CheckFolderRequest request) =>
+      _client.invoke<CheckFolderResponse>(
+          ctx, 'NushiService', 'CheckFolder', request, CheckFolderResponse());
+
+  /// Remembers that the user starts chats in a folder anyway (its
+  /// repository, outside git the folders under it too) (API 37).
+  $async.Future<TrustFolderResponse> trustFolder(
+          $pb.ClientContext? ctx, TrustFolderRequest request) =>
+      _client.invoke<TrustFolderResponse>(
+          ctx, 'NushiService', 'TrustFolder', request, TrustFolderResponse());
 
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.

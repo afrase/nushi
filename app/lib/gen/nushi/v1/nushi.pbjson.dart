@@ -2052,6 +2052,76 @@ const CloseTerminalResponse$json = {
 final $typed_data.Uint8List closeTerminalResponseDescriptor =
     $convert.base64Decode('ChVDbG9zZVRlcm1pbmFsUmVzcG9uc2U=');
 
+@$core.Deprecated('Use checkFolderRequestDescriptor instead')
+const CheckFolderRequest$json = {
+  '1': 'CheckFolderRequest',
+  '2': [
+    {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
+  ],
+};
+
+/// Descriptor for `CheckFolderRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List checkFolderRequestDescriptor =
+    $convert.base64Decode(
+        'ChJDaGVja0ZvbGRlclJlcXVlc3QSFgoGZm9sZGVyGAEgASgJUgZmb2xkZXI=');
+
+@$core.Deprecated('Use checkFolderResponseDescriptor instead')
+const CheckFolderResponse$json = {
+  '1': 'CheckFolderResponse',
+  '2': [
+    {
+      '1': 'runs',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.FolderRun',
+      '10': 'runs'
+    },
+  ],
+};
+
+/// Descriptor for `CheckFolderResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List checkFolderResponseDescriptor = $convert.base64Decode(
+    'ChNDaGVja0ZvbGRlclJlc3BvbnNlEicKBHJ1bnMYASADKAsyEy5udXNoaS52MS5Gb2xkZXJSdW'
+    '5SBHJ1bnM=');
+
+@$core.Deprecated('Use folderRunDescriptor instead')
+const FolderRun$json = {
+  '1': 'FolderRun',
+  '2': [
+    {'1': 'file', '3': 1, '4': 1, '5': 9, '10': 'file'},
+    {'1': 'what', '3': 2, '4': 1, '5': 9, '10': 'what'},
+    {'1': 'command', '3': 3, '4': 1, '5': 9, '10': 'command'},
+  ],
+};
+
+/// Descriptor for `FolderRun`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List folderRunDescriptor = $convert.base64Decode(
+    'CglGb2xkZXJSdW4SEgoEZmlsZRgBIAEoCVIEZmlsZRISCgR3aGF0GAIgASgJUgR3aGF0EhgKB2'
+    'NvbW1hbmQYAyABKAlSB2NvbW1hbmQ=');
+
+@$core.Deprecated('Use trustFolderRequestDescriptor instead')
+const TrustFolderRequest$json = {
+  '1': 'TrustFolderRequest',
+  '2': [
+    {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
+  ],
+};
+
+/// Descriptor for `TrustFolderRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List trustFolderRequestDescriptor =
+    $convert.base64Decode(
+        'ChJUcnVzdEZvbGRlclJlcXVlc3QSFgoGZm9sZGVyGAEgASgJUgZmb2xkZXI=');
+
+@$core.Deprecated('Use trustFolderResponseDescriptor instead')
+const TrustFolderResponse$json = {
+  '1': 'TrustFolderResponse',
+};
+
+/// Descriptor for `TrustFolderResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List trustFolderResponseDescriptor =
+    $convert.base64Decode('ChNUcnVzdEZvbGRlclJlc3BvbnNl');
+
 const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
   '1': 'NushiService',
   '2': [
@@ -2258,6 +2328,16 @@ const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
       '3': '.nushi.v1.CloseTerminalResponse'
     },
     {
+      '1': 'CheckFolder',
+      '2': '.nushi.v1.CheckFolderRequest',
+      '3': '.nushi.v1.CheckFolderResponse'
+    },
+    {
+      '1': 'TrustFolder',
+      '2': '.nushi.v1.TrustFolderRequest',
+      '3': '.nushi.v1.TrustFolderResponse'
+    },
+    {
       '1': 'Events',
       '2': '.nushi.v1.EventsRequest',
       '3': '.nushi.v1.EventsResponse',
@@ -2375,6 +2455,11 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.RestartTerminalResponse': RestartTerminalResponse$json,
   '.nushi.v1.CloseTerminalRequest': CloseTerminalRequest$json,
   '.nushi.v1.CloseTerminalResponse': CloseTerminalResponse$json,
+  '.nushi.v1.CheckFolderRequest': CheckFolderRequest$json,
+  '.nushi.v1.CheckFolderResponse': CheckFolderResponse$json,
+  '.nushi.v1.FolderRun': FolderRun$json,
+  '.nushi.v1.TrustFolderRequest': TrustFolderRequest$json,
+  '.nushi.v1.TrustFolderResponse': TrustFolderResponse$json,
   '.nushi.v1.EventsRequest': EventsRequest$json,
   '.nushi.v1.EventsResponse': EventsResponse$json,
   '.nushi.v1.ItemEvent': ItemEvent$json,
@@ -2443,5 +2528,8 @@ final $typed_data.Uint8List nushiServiceDescriptor = $convert.base64Decode(
     'Nwb25zZRJWCg9SZXN0YXJ0VGVybWluYWwSIC5udXNoaS52MS5SZXN0YXJ0VGVybWluYWxSZXF1'
     'ZXN0GiEubnVzaGkudjEuUmVzdGFydFRlcm1pbmFsUmVzcG9uc2USUAoNQ2xvc2VUZXJtaW5hbB'
     'IeLm51c2hpLnYxLkNsb3NlVGVybWluYWxSZXF1ZXN0Gh8ubnVzaGkudjEuQ2xvc2VUZXJtaW5h'
-    'bFJlc3BvbnNlEj0KBkV2ZW50cxIXLm51c2hpLnYxLkV2ZW50c1JlcXVlc3QaGC5udXNoaS52MS'
-    '5FdmVudHNSZXNwb25zZTAB');
+    'bFJlc3BvbnNlEkoKC0NoZWNrRm9sZGVyEhwubnVzaGkudjEuQ2hlY2tGb2xkZXJSZXF1ZXN0Gh'
+    '0ubnVzaGkudjEuQ2hlY2tGb2xkZXJSZXNwb25zZRJKCgtUcnVzdEZvbGRlchIcLm51c2hpLnYx'
+    'LlRydXN0Rm9sZGVyUmVxdWVzdBodLm51c2hpLnYxLlRydXN0Rm9sZGVyUmVzcG9uc2USPQoGRX'
+    'ZlbnRzEhcubnVzaGkudjEuRXZlbnRzUmVxdWVzdBoYLm51c2hpLnYxLkV2ZW50c1Jlc3BvbnNl'
+    'MAE=');
