@@ -45,4 +45,7 @@ func TestSideChatKeepsToItself(t *testing.T) {
 	if _, err := svc.Get(side); err == nil {
 		t.Errorf("the side chat is still there after CloseSide")
 	}
+	if len(agent.deleted) != 1 || agent.deleted[0] != "fork1" {
+		t.Errorf("deleted = %v, want the side chat's session", agent.deleted)
+	}
 }

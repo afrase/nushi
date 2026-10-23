@@ -19,6 +19,7 @@ type fakeAgent struct {
 	set     []string // config changes asked for, as id=value
 	prompt  []acp.ContentBlock
 	usage   *acp.TurnUsage // the prompt response's
+	deleted []acp.SessionID
 }
 
 func (f *fakeAgent) Initialize(context.Context, acp.InitializeRequest) (*acp.InitializeResponse, error) {
@@ -56,7 +57,10 @@ func (f *fakeAgent) ForkSession(context.Context, acp.ForkSessionRequest) (*acp.F
 
 func (f *fakeAgent) CloseSession(context.Context, acp.CloseSessionRequest) error { return nil }
 
-func (f *fakeAgent) DeleteSession(context.Context, acp.DeleteSessionRequest) error { return nil }
+func (f *fakeAgent) DeleteSession(_ context.Context, req acp.DeleteSessionRequest) error {
+	f.deleted = append(f.deleted, req.SessionID)
+	return nil
+}
 
 func (f *fakeAgent) SetConfigOption(_ context.Context, req acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error) {
 	f.set = append(f.set, string(req.ConfigID)+"="+string(req.Value))
