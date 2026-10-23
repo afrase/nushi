@@ -78,20 +78,28 @@ func (s *Service) resume(c *chat) {
 }
 
 // load starts the chat's agent and has it replay the session, then puts the
-// session back in the mode it was last in.
+// session back in the mode it was last in. A chat that never had a message
+// may have nothing to replay (Claude keeps a session only once it has one):
+// it gets a new session instead.
 func (c *chat) load(ctx context.Context, launch Launch) error {
 	c.mu.Lock()
-	sid, folder, gone := c.sid, c.session.Folder, folderGone(c.session)
+	sid, folder, fresh, gone := c.sid, c.session.Folder, c.session.Title == "", folderGone(c.session)
 	c.mu.Unlock()
 	if gone != nil {
 		return gone
 	}
 	o, err := c.openSession(ctx, launch, sid, folder, false)
+	if err != nil && fresh {
+		o, err = c.openSession(ctx, launch, "", folder, false)
+	}
 	if err != nil {
 		return err
 	}
 	c.mu.Lock()
 	c.useLocked(o)
+	if o.sid != sid {
+		c.saveLocked(func(s *model.Session) { s.SessionID = o.sid })
+	}
 	c.mu.Unlock()
 	return c.startMode(ctx, c.session.Mode)
 }
