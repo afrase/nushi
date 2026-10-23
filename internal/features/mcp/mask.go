@@ -2,8 +2,8 @@ package mcp
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	"maps"
 	"reflect"
 	"regexp"
 	"strings"
@@ -160,11 +160,11 @@ func tokenLike(s string) bool {
 }
 
 // unmasked is config with what is still masked as it was shown (Mask
-// values, or a URL, command or arguments sent back exactly as masked)
-// taken from old. A kept env or header value goes only to a server that is
-// otherwise the same (URL, command, arguments, everything but env and
-// headers): after any other change a hidden value must be typed again, so
-// an edit can't hand a stored secret to something else.
+// values, or a URL, command, arguments or helper sent back exactly as
+// masked) taken from old. Hidden values go back only into a config that is
+// then old exactly: after any other change (another URL, type, argument,
+// header, env var…) they must be typed again, so an edit can't hand a
+// stored secret to something else.
 func unmasked(config, old string) (string, error) {
 	cfg, err := decode(config)
 	if err != nil {
@@ -172,17 +172,15 @@ func unmasked(config, old string) (string, error) {
 	}
 	was, _ := decode(old)
 	shown, _ := decode(masked(old))
+	kept := false
 	for _, key := range []string{"url", "command", "args", "headersHelper"} {
-		if cfg[key] != nil && reflect.DeepEqual(cfg[key], shown[key]) {
-			cfg[key] = was[key]
+		if cfg[key] != nil && reflect.DeepEqual(cfg[key], shown[key]) && !reflect.DeepEqual(shown[key], was[key]) {
+			cfg[key], kept = was[key], true
 		}
-	}
-	for _, key := range []string{"url", "command", "args", "headersHelper"} {
 		if b, _ := json.Marshal(cfg[key]); strings.Contains(string(b), Mask) {
-			return "", fmt.Errorf("type the hidden parts of %s again: it changed", key)
+			return "", fmt.Errorf("type the hidden parts of %s again", key)
 		}
 	}
-	same := reflect.DeepEqual(without(cfg, "env", "headers"), without(was, "env", "headers"))
 	for _, key := range []string{"env", "headers"} {
 		m, _ := cfg[key].(map[string]any)
 		prev, _ := was[key].(map[string]any)
@@ -191,24 +189,15 @@ func unmasked(config, old string) (string, error) {
 				continue
 			}
 			p, ok := prev[k]
-			switch {
-			case !ok:
+			if !ok {
 				return "", fmt.Errorf("%s %s has no value", strings.TrimSuffix(key, "s"), k)
-			case !same:
-				return "", fmt.Errorf("type %s %s again: the server changed", strings.TrimSuffix(key, "s"), k)
 			}
-			m[k] = p
+			m[k], kept = p, true
 		}
+	}
+	if kept && !reflect.DeepEqual(cfg, was) {
+		return "", errors.New("the server changed: type its hidden values (shown as ••••) again")
 	}
 	b, _ := json.Marshal(cfg)
 	return string(b), nil
-}
-
-// without is cfg without keys.
-func without(cfg map[string]any, keys ...string) map[string]any {
-	out := maps.Clone(cfg)
-	for _, k := range keys {
-		delete(out, k)
-	}
-	return out
 }
