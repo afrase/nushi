@@ -84,6 +84,16 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 		t.Errorf("a folder pretending to be a worktree is trusted (key %s)", (Trust{}).Key(fake))
 	}
 
+	// Nor one whose own config points its work tree at the trusted repository.
+	steer, _ := filepath.EvalSymlinks(t.TempDir())
+	git(t, steer, "init", "-q")
+	git(t, steer, "config", "core.worktree", repo)
+	t.Setenv("GIT_WORK_TREE", repo) // nor the environment
+	if trusted(steer) || (Trust{}).Key(steer) != steer {
+		t.Errorf("a folder steering git's work tree is trusted (key %s)", (Trust{}).Key(steer))
+	}
+	os.Unsetenv("GIT_WORK_TREE")
+
 	// Outside git a folder above counts, Claude's or Nushi's.
 	plain, _ := filepath.EvalSymlinks(t.TempDir())
 	sub := filepath.Join(plain, "a", "b")
