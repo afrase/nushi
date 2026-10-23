@@ -103,6 +103,13 @@ type Item struct {
 	Fields []Field
 	// Images are a message's or a tool call's images.
 	Images []Image
+	// Parent is the subagent tool call whose subagent made it, if one did.
+	Parent string
+	// Agent is the subagent's type ("Explore") when the item is a tool call
+	// that starts a subagent.
+	Agent string
+	// Tool is a tool call's tool, when the agent names it ("Read").
+	Tool string
 }
 
 // Image is an image in a message or a tool call's output.

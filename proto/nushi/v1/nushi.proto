@@ -499,6 +499,13 @@ message Item {
   repeated PlanEntry plan = 12;
   // A message's or a tool call's images.
   repeated ImageData images = 13;
+  // The tool call whose subagent made this item, if one did (API 24).
+  string parent = 14;
+  // For a tool call that starts a subagent, the subagent's type ("Explore").
+  string agent = 15;
+  // A tool call's tool, when the agent names it (Claude's "Read",
+  // "SubagentHandback", ...).
+  string tool = 16;
 }
 
 // A step of the agent's plan; status is "pending", "in_progress" or

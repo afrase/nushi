@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/status.dart';
+import 'package:nushi/subagents.dart';
 
 void main() {
   test('what the agent is doing, from the turn so far', () {
@@ -42,5 +43,23 @@ void main() {
   test('elapsed time', () {
     expect(elapsed(const Duration(seconds: 12)), '12s');
     expect(elapsed(const Duration(seconds: 64)), '1m 04s');
+  });
+
+  test('a subagent gathers the items it made', () {
+    final items = [
+      Item(
+        id: 'a',
+        kind: ItemKind.ITEM_KIND_TOOL_CALL,
+        agent: 'Explore',
+        status: 'completed',
+      ),
+      Item(id: 'm', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE),
+      Item(id: 'r', kind: ItemKind.ITEM_KIND_TOOL_CALL, parent: 'a'),
+      Item(id: 's', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE, parent: 'a'),
+    ];
+    final subs = subagentsOf(items, busy: false);
+    expect([for (final s in subs) s.call.id], ['a']);
+    expect([for (final it in subs.single.items) it.id], ['r', 's']);
+    expect(subagentState(subs.single), '1 tool call');
   });
 }

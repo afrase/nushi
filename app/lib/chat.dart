@@ -37,6 +37,9 @@ class ChatState extends ChangeNotifier {
   DateTime? started; // when the running turn started
   String error = ''; // why the snapshot didn't load
 
+  /// A subagent's call id, set to bring its card into view.
+  final reveal = ValueNotifier<String?>(null);
+
   /// The folder the chat stands for: in a worktree, the same folder in its
   /// repository; the sidebar groups chats by it.
   String get home => switch (worktree) {

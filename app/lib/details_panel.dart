@@ -6,6 +6,7 @@ import 'daemon.dart';
 import 'folder_button.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'settings.dart';
+import 'subagents.dart';
 import 'theme/theme.dart';
 import 'usage.dart';
 import 'widgets.dart';
@@ -59,8 +60,12 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
     }
   }
 
+  // Live with the chat (usage, subagents), not only when a turn ends.
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      ListenableBuilder(listenable: chat, builder: (context, _) => _panel());
+
+  Widget _panel() {
     final theme = NushiTheme.of(context), t = theme.t;
     final u = chat.usage;
     final status = _status;
@@ -175,6 +180,46 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
             ],
           ],
         ),
+        if (subagentsOf(chat.items, busy: chat.busy) case final subs
+            when subs.isNotEmpty)
+          _Card(
+            title: 'Agents',
+            summary: Text(
+              '${subs.length} subagent${subs.length == 1 ? '' : 's'}',
+              style: muted,
+            ),
+            rows: [
+              for (final s in subs)
+                (
+                  null,
+                  Tap(
+                    onTap: () => chat.reveal.value = s.call.id,
+                    tooltip: 'Show it in the chat',
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${s.call.agent}: ${s.call.title}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.ui(t.text, size: 12),
+                        ),
+                        Text(
+                          subagentState(s),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.ui(
+                            s.call.status == 'failed' ? t.crashed : t.textMuted,
+                            size: 11.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
       ]),
     );
   }

@@ -4280,6 +4280,9 @@ class Item extends $pb.GeneratedMessage {
     $core.Iterable<FileChange>? diffs,
     $core.Iterable<PlanEntry>? plan,
     $core.Iterable<ImageData>? images,
+    $core.String? parent,
+    $core.String? agent,
+    $core.String? tool,
   }) {
     final result = Item._();
     if (id != null) result.id = id;
@@ -4295,6 +4298,9 @@ class Item extends $pb.GeneratedMessage {
     if (diffs != null) result.diffs.addAll(diffs);
     if (plan != null) result.plan.addAll(plan);
     if (images != null) result.images.addAll(images);
+    if (parent != null) result.parent = parent;
+    if (agent != null) result.agent = agent;
+    if (tool != null) result.tool = tool;
     return result;
   }
 
@@ -4330,6 +4336,9 @@ class Item extends $pb.GeneratedMessage {
         subBuilder: PlanEntry.$_createMessage)
     ..pPM<ImageData>(13, _omitFieldNames ? '' : 'images',
         subBuilder: ImageData.$_createMessage)
+    ..aOS(14, _omitFieldNames ? '' : 'parent')
+    ..aOS(15, _omitFieldNames ? '' : 'agent')
+    ..aOS(16, _omitFieldNames ? '' : 'tool')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -4440,6 +4449,37 @@ class Item extends $pb.GeneratedMessage {
   /// A message's or a tool call's images.
   @$pb.TagNumber(13)
   $pb.PbList<ImageData> get images => $_getList(12);
+
+  /// The tool call whose subagent made this item, if one did (API 24).
+  @$pb.TagNumber(14)
+  $core.String get parent => $_getSZ(13);
+  @$pb.TagNumber(14)
+  set parent($core.String value) => $_setString(13, value);
+  @$pb.TagNumber(14)
+  $core.bool hasParent() => $_has(13);
+  @$pb.TagNumber(14)
+  void clearParent() => $_clearField(14);
+
+  /// For a tool call that starts a subagent, the subagent's type ("Explore").
+  @$pb.TagNumber(15)
+  $core.String get agent => $_getSZ(14);
+  @$pb.TagNumber(15)
+  set agent($core.String value) => $_setString(14, value);
+  @$pb.TagNumber(15)
+  $core.bool hasAgent() => $_has(14);
+  @$pb.TagNumber(15)
+  void clearAgent() => $_clearField(15);
+
+  /// A tool call's tool, when the agent names it (Claude's "Read",
+  /// "SubagentHandback", ...).
+  @$pb.TagNumber(16)
+  $core.String get tool => $_getSZ(15);
+  @$pb.TagNumber(16)
+  set tool($core.String value) => $_setString(15, value);
+  @$pb.TagNumber(16)
+  $core.bool hasTool() => $_has(15);
+  @$pb.TagNumber(16)
+  void clearTool() => $_clearField(16);
 }
 
 /// A step of the agent's plan; status is "pending", "in_progress" or
