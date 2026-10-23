@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'changes_span.dart';
@@ -6,6 +8,7 @@ import 'daemon.dart';
 import 'folder_button.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'panel_cards.dart';
+import 'settings.dart';
 import 'markdown.dart';
 import 'subagents.dart';
 import 'theme/theme.dart';
@@ -44,7 +47,12 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
   Scope _scope = Scope.uncommitted;
   List<Commit> _commits = []; // in Commits
   String? _error;
-  GetContextUsageResponse? _context; // what fills the context, last asked
+  late GetContextUsageResponse? _context = _asked[chat.id]?.$2;
+
+  /// What fills each chat's context, and when it was asked: kept across
+  /// panels, so switching chats doesn't ask again.
+  static final _asked = <String, (DateTime, GetContextUsageResponse)>{};
+  Timer? _timer;
 
   /// Whether the agent can be asked what fills its context: it has a
   /// /context command, the chat is idle and has messages (Claude would
@@ -56,22 +64,64 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
       !chat.archived &&
       chat.commands.any((c) => c.name == 'context');
 
-  /// Asks the agent, unseen, what fills its context. Only when the user
-  /// asks: Claude keeps /context's answer in the conversation, so each ask
-  /// adds a few thousand tokens to the context.
+  /// Whether the daemon asks in a throwaway fork of the session (API 31),
+  /// so the card can ask on its own: in the chat's own session Claude keeps
+  /// /context's answer, a few thousand tokens each time, so it then asks
+  /// only on its refresh button.
+  bool get _auto => daemon.daemonApi >= 31 && chat.canFork;
+
+  /// Asks the agent, unseen, what fills its context.
   Future<void> _askContext() async {
     try {
       final r = await daemon.client.getContextUsage(
         GetContextUsageRequest(chatId: chat.id),
       );
+      _asked[chat.id] = (DateTime.now(), r);
       if (mounted) setState(() => _context = r);
     } on Object catch (e) {
-      if (mounted) showError(context, e);
+      if (mounted && !_auto) showError(context, e);
     }
+  }
+
+  /// Asks on its own while the Context card is open and the chat idle: a
+  /// moment after a turn ends or the card opens, at most once a minute.
+  void _schedule() {
+    _timer?.cancel();
+    bool ready() =>
+        mounted &&
+        _auto &&
+        _canAsk &&
+        !collapsedCards.value.contains('Context');
+    if (!ready()) return;
+    final last = _asked[chat.id]?.$1;
+    var wait = const Duration(seconds: 1);
+    if (last != null) {
+      final next = last
+          .add(const Duration(minutes: 1))
+          .difference(DateTime.now());
+      if (next > wait) wait = next;
+    }
+    _timer = Timer(wait, () {
+      if (ready()) _askContext();
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    collapsedCards.addListener(_schedule);
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    collapsedCards.removeListener(_schedule);
+    super.dispose();
   }
 
   @override
   Future<void> reload() async {
+    _schedule();
     if (!daemon.canFolderStatus) return;
     try {
       final span = await ChangeSpan.of(daemon, chat);
@@ -193,9 +243,10 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
               'By category',
               IconTap(
                 Icons.refresh,
-                tooltip:
-                    'Ask Claude (/context). Its answer stays in the '
-                    'conversation: a few thousand tokens each time.',
+                tooltip: _auto
+                    ? 'Ask Claude again (/context, in a copy of the chat)'
+                    : 'Ask Claude (/context). Its answer stays in the '
+                          'conversation: a few thousand tokens each time.',
                 size: 13,
                 onTap: _canAsk ? _askContext : null,
               ),

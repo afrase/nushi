@@ -20,9 +20,27 @@ import (
 // agent sends to the chat or to one of its side chats. A side chat's
 // updates that arrive before it is set up are dropped.
 func (c *chat) SessionUpdate(n acp.SessionNotification) {
+	if c.probe(n) {
+		return
+	}
 	if to := c.route(n.SessionID); to != nil {
 		to.update(n)
 	}
+}
+
+// probe takes an update of a throwaway fork (see contextInFork): its
+// message text goes to its silent run, and nothing else of it is kept.
+func (c *chat) probe(n acp.SessionNotification) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	run := c.probes[string(n.SessionID)]
+	if run == nil {
+		return false
+	}
+	if m := n.Update.AgentMessageChunk; m != nil && m.Content.Text != nil {
+		run.add(m)
+	}
+	return true
 }
 
 func (c *chat) RequestPermission(ctx context.Context, req acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
@@ -80,9 +98,9 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 	return side.id, nil
 }
 
-// CloseSide ends a side chat: its running turn stops, and the agent closes
-// its session and deletes its history of it.
-func (s *Service) CloseSide(ctx context.Context, id string) error {
+// CloseSide ends a side chat: its running turn stops, and the agent deletes
+// its session, history and all.
+func (s *Service) CloseSide(id string) error {
 	s.mu.Lock()
 	c := s.chats[id]
 	if c == nil || c.parent == nil {
@@ -95,11 +113,20 @@ func (s *Service) CloseSide(ctx context.Context, id string) error {
 	delete(c.parent.sides, id)
 	c.parent.mu.Unlock()
 	c.cancel()
-	if err := c.agent.CloseSession(ctx, acp.CloseSessionRequest{SessionID: acp.SessionID(id)}); err != nil {
-		log.Printf("side chat %s: closing: %v", id, err)
-	}
-	if err := c.agent.DeleteSession(ctx, acp.DeleteSessionRequest{SessionID: acp.SessionID(id)}); err != nil {
-		log.Printf("side chat %s: deleting: %v", id, err)
-	}
+	throwAway(c.agent, acp.SessionID(id))
 	return nil
+}
+
+// throwAway has the agent delete a session nobody will see again (a side
+// chat, a /context fork). Deleting closes it first, but Claude writes a
+// little of the session back as it ends (claude-agent-acp 0.94.0): a second
+// delete, a moment later, takes that too.
+func throwAway(agent Agent, sid acp.SessionID) {
+	del := func() {
+		if err := agent.DeleteSession(context.Background(), acp.DeleteSessionRequest{SessionID: sid}); err != nil {
+			log.Printf("deleting session %s: %v", sid, err)
+		}
+	}
+	del()
+	time.AfterFunc(3*time.Second, del)
 }

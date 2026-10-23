@@ -109,7 +109,8 @@ class ChatState extends ChangeNotifier {
     }
   }
 
-  void status(ChatStatus s) {
+  void status(ChatStatus? s) {
+    if (s == null) return;
     busy = s.busy;
     waiting = s.waiting;
     canFork = s.canFork;

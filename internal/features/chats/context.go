@@ -20,8 +20,12 @@ type silentRun struct {
 // ContextUsage runs the agent's /context command without a trace and
 // returns what it answers: the prompt and the reply never join the
 // transcript, and the chat doesn't turn busy. It runs only while the chat is
-// idle, and a prompt sent meanwhile waits for it to end (claude-agent-acp
-// answers /context itself, without the model, in a moment).
+// idle. When the agent can fork, it runs in a throwaway fork of the session
+// (same history, so the same numbers), which is closed and deleted after:
+// Claude keeps /context's answer in a conversation. Otherwise it runs in
+// the chat's own session, and a prompt sent meanwhile waits for it to end
+// (claude-agent-acp answers /context itself, without the model, in a
+// moment).
 func (s *Service) ContextUsage(ctx context.Context, chatID string) (string, error) {
 	c, err := s.chat(chatID)
 	if err != nil {
@@ -38,9 +42,13 @@ func (s *Service) ContextUsage(ctx context.Context, chatID string) (string, erro
 		c.mu.Unlock()
 		return "", err
 	}
+	agent, sid, folder := c.agent, c.sid, c.session.Folder
+	if c.canFork && c.parent == nil {
+		c.mu.Unlock()
+		return c.contextInFork(ctx, agent, sid, folder)
+	}
 	run := &silentRun{text: map[string]string{}, done: make(chan struct{})}
 	c.silent = run
-	agent, sid := c.agent, c.sid
 	c.mu.Unlock()
 
 	_, err = agent.Prompt(ctx, acp.PromptRequest{SessionID: acp.SessionID(sid),
@@ -52,11 +60,43 @@ func (s *Service) ContextUsage(ctx context.Context, chatID string) (string, erro
 	if err != nil {
 		return "", err
 	}
+	return run.answer()
+}
+
+// answer is the run's last message: claude-agent-acp 0.94.0 sends
+// /context's output twice, as two messages.
+func (run *silentRun) answer() (string, error) {
 	if len(run.ids) == 0 {
 		return "", errors.New("the agent answered nothing")
 	}
-	// claude-agent-acp 0.94.0 sends the output twice, as two messages.
 	return run.text[run.ids[len(run.ids)-1]], nil
+}
+
+// contextInFork runs /context in a fork of session sid, whose updates go
+// to a silent run (see probe), then closes and deletes the fork.
+func (c *chat) contextInFork(ctx context.Context, agent Agent, sid, folder string) (string, error) {
+	resp, err := agent.ForkSession(ctx, acp.ForkSessionRequest{SessionID: acp.SessionID(sid), Cwd: folder, MCPServers: []acp.MCPServer{}})
+	if err != nil {
+		return "", err
+	}
+	fork := resp.SessionID
+	run := &silentRun{text: map[string]string{}}
+	c.mu.Lock()
+	c.probes[string(fork)] = run
+	c.mu.Unlock()
+	defer func() {
+		throwAway(agent, fork)
+		c.mu.Lock()
+		delete(c.probes, string(fork))
+		c.mu.Unlock()
+	}()
+	if _, err := agent.Prompt(ctx, acp.PromptRequest{SessionID: fork,
+		Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "/context"}}}}); err != nil {
+		return "", err
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return run.answer()
 }
 
 // silentLocked takes a chunk of the agent's message while a silent run
@@ -66,12 +106,16 @@ func (c *chat) silentLocked(m *acp.ContentChunk) bool {
 	if run == nil || m.Content.Text == nil {
 		return false
 	}
+	run.add(m)
+	return true
+}
+
+func (run *silentRun) add(m *acp.ContentChunk) {
 	id := string(m.MessageID)
 	if _, ok := run.text[id]; !ok {
 		run.ids = append(run.ids, id)
 	}
 	run.text[id] += m.Content.Text.Text
-	return true
 }
 
 // waitSilentLocked waits, with the lock let go meanwhile, until no silent

@@ -18,7 +18,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 30
+const Version = 31
 
 type server struct {
 	chats *chats.Service
@@ -159,8 +159,8 @@ func (s *server) ForkChat(ctx context.Context, req *connect.Request[nushiv1.Fork
 	return connect.NewResponse(&nushiv1.ForkChatResponse{ChatId: id}), nil
 }
 
-func (s *server) CloseSideChat(ctx context.Context, req *connect.Request[nushiv1.CloseSideChatRequest]) (*connect.Response[nushiv1.CloseSideChatResponse], error) {
-	if err := s.chats.CloseSide(ctx, req.Msg.ChatId); err != nil {
+func (s *server) CloseSideChat(_ context.Context, req *connect.Request[nushiv1.CloseSideChatRequest]) (*connect.Response[nushiv1.CloseSideChatResponse], error) {
+	if err := s.chats.CloseSide(req.Msg.ChatId); err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 	return connect.NewResponse(&nushiv1.CloseSideChatResponse{}), nil

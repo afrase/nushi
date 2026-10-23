@@ -105,6 +105,8 @@ func (f *fakeAgent) ForkSession(_ context.Context, req acp.ForkSessionRequest) (
 func (f *fakeAgent) CloseSession(context.Context, acp.CloseSessionRequest) error { return nil }
 
 func (f *fakeAgent) DeleteSession(_ context.Context, req acp.DeleteSessionRequest) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.deleted = append(f.deleted, req.SessionID)
 	return nil
 }

@@ -30,7 +30,16 @@ func TestContextUsageLeavesNoTrace(t *testing.T) {
 	if len(c.items) != 0 || events != before || c.busy {
 		t.Errorf("a trace: %d items, %d events, busy %v", len(c.items), events-before, c.busy)
 	}
-	if got := agent.prompt[0].Text.Text; got != "/context" {
-		t.Errorf("prompt = %q", got)
+	agent.mu.Lock()
+	deleted := append([]acp.SessionID(nil), agent.deleted...)
+	agent.mu.Unlock()
+	if got := agent.prompt[0].Text.Text; got != "/context" || len(deleted) != 1 || deleted[0] != "fork1" || len(c.probes) != 0 {
+		t.Errorf("prompt = %q, deleted %v", got, deleted)
+	}
+
+	// An agent that can't fork answers in the chat's own session, unseen.
+	c.canFork = false
+	if md, err := svc.ContextUsage(context.Background(), id); err != nil || md != "## Context Usage" || len(c.items) != 0 || events != before {
+		t.Errorf("ContextUsage = %q, %v; %d items, %d events", md, err, len(c.items), events-before)
 	}
 }
