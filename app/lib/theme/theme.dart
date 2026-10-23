@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import 'tokens.dart';
@@ -181,4 +182,21 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
       extensions: [this],
     );
   }
+}
+
+/// Scrolling as in a native macOS view: rubber-banding at the ends, and a
+/// thin overlay scrollbar that shows while scrolling, then fades.
+class NativeScroll extends MaterialScrollBehavior {
+  const NativeScroll();
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) =>
+      const BouncingScrollPhysics(parent: RangeMaintainingScrollPhysics());
+
+  @override
+  Widget buildScrollbar(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) => CupertinoScrollbar(controller: details.controller, child: child);
 }
