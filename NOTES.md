@@ -1,29 +1,30 @@
 # Notes
 
-## Summary (2026-10-23, after step 29)
+## Summary (2026-10-23, after step 32)
 
-Milestone G (steps 26–29, a polish round) is done, one commit each on `main`, pushed to origin (plus a first commit adding `NUSHI_DATA`). `make test` passes: Go unit tests, the end-to-end tests against the fake agent (the move test now ends by deleting the moved chat), the package tests and the app's tests (a new one for the reply format). Each step was looked at in a development build against live Claude (claude-agent-acp 0.94.0) at 1280×800, beside the installed Nushi Next, which was left running and untouched: the dev daemon and app ran on their own data folder (`NUSHI_DATA`). `make install` put the current build in `~/Applications/Nushi Next.app`.
+Milestone H (steps 30–32, a worktree per chat) is done, one commit each on `main`, pushed to origin. `make test` passes: Go unit tests (a new git test for worktrees and one for a branch's diff), the end-to-end tests against the fake agent (a new one: chats in worktrees, moving a chat without messages in and out, deleting with merged work, with unmerged commits and changes, and after the folder was removed outside Nushi), the package tests and the app's tests. Each step was looked at in a development build against live Claude (claude-agent-acp 0.94.0) at 1280×800, dark, on a throwaway repository, beside the installed Nushi Next, which was left running and untouched (the dev daemon and app ran on `NUSHI_DATA`). `make install` put the current build in `~/Applications/Nushi Next.app`.
 
-**What works** (on top of milestones A–F)
-- Delete…: the chat menu is Rename, Archive, Delete…. The confirmation lists what goes (Claude's history of each session the chat had, with id and folder; the scratch folder; Nushi's record) and deleting removes all three: Claude's through ACP `session/delete`. Tried live on a scratch chat moved once: both `.jsonl` transcripts, the scratch folder and the session file were gone.
-- Composer menus like Claude Code's: the model menu shows the first four models (1–4 pick them), Effort ▸ and More models ▸; Fast mode and Agent moved to a "⋯" menu; the "+" and the text are centered, and there is no blue focus ring.
-- The details panel's cards collapse to their title (`Context › 3%`, `Changes › +1 −0`) and stay collapsed across launches.
-- Selecting text shows "Start a side chat | Reply" above it. Reply opens a small box; Enter adds a reply card to the composer; several cards, editable, removable; the message shows each quote with its reply, and Claude answers about the quoted parts.
+**What works** (on top of milestones A–G)
+- New worktree: the Environment card of a chat without messages in a git repository has a "New worktree" switch. On, the chat moves into `<repo>/.worktrees/<two-words>` on `nushi/<two-words>` from the folder's branch, `.worktrees/` lands in `.git/info/exclude`, and the choice is remembered for the repository (the folder's "+" then starts chats straight in a worktree); off, it goes back and the unused worktree and branch are removed. Tried live: two chats edited `fruit.md` differently in their worktrees, the main checkout kept the original, both sat under the repository in the sidebar with their names.
+- The Environment card shows Repository, Branch (with a worktree icon) and Base; a chat with messages gets "Move to new worktree" with a confirmation saying uncommitted changes stay behind. Tried live: the uncommitted change stayed in the main checkout, and the moved chat knew the conversation and its new folder.
+- The Changes view of a worktree chat has Branch | Uncommitted (Branch first); the Changes card counts the same. Tried live: a commit plus an uncommitted line showed as both under Branch and one under Uncommitted.
+- Delete… on a worktree chat: "Remove the worktree" and "Delete the branch", each on only when nothing would be lost, otherwise off with what would be lost in red. Tried live: merged work (both went), unmerged commit plus a changed file (worktree went, branch stayed), and a worktree removed by hand (the chat said so on opening, the card said so, Delete pruned it and deleted the branch).
 
 **What doesn't (yet)**
-- A chat moved before step 26 only knows its current session, so Delete leaves its earlier ones.
-- Claude leaves an empty history folder behind for each folder whose sessions were deleted.
-- Carried over: dropping files untried by hand; cost restarts near zero after a move or reload; no thoughts from Claude; plans only with Claude's todo tools on; copy across blocks loses line breaks; archived chats show no history after a daemon restart until unarchived; nothing runs after a reboot until the app opens.
+- The "New worktree" switch is only in the details panel, not in the header's folder control (the panel hidden or the window narrow).
+- A worktree chat with messages moved elsewhere with the folder control forgets its worktree; it stays on disk and in git.
+- Branch | Uncommitted isn't remembered across launches. Only the dark theme was looked at this round.
+- Carried over: a chat moved before step 26 only knows its current session, so Delete leaves its earlier ones; Claude leaves an empty history folder behind for each folder whose sessions were deleted (now one per deleted worktree too); dropping files untried by hand; cost restarts near zero after a move or reload; no thoughts from Claude; plans only with Claude's todo tools on; copy across blocks loses line breaks; archived chats show no history after a daemon restart until unarchived; nothing runs after a reboot until the app opens.
 
 **Needs your decision**
-- The development data folder (`NUSHI_DATA`, the first commit of this round) exists so a dev build can run beside your installed Nushi Next. `make stop` now stops only the daemon of its folder; it used to kill every `nushid`, yours included.
-- The installed app's daemon (API 18) still runs your chats; the new app (API 19) shows "Restart daemon" until it is restarted. Delete is greyed out until then.
+- The "New worktree" switch moves a chat that has no messages yet (a new session, about a second) rather than asking before the chat starts: chats start at once here, so this kept one flow for New chat, the folder's "+" and the folder control. See "Decisions to revisit".
+- The installed app's daemon still runs API 19; the new app (API 22) shows "Restart daemon" until it is restarted, and worktrees, the branch diff and the new Delete choices are off until then.
 
-**Decisions to revisit**: see [the list below](#decisions-to-revisit). New in G: Delete instead of Remove ([ADR 0015](docs/adr/0015-delete-takes-the-agents-history.md)), learning the delete capability by starting the agent once; "first four models, skipping Default" as the rule; checks on the right; menus giving focus back to the composer; which cards are collapsed is global, not per chat; the reply format's one-line replies.
+**Decisions to revisit**: see [the list below](#decisions-to-revisit). New in H: the switch that moves a chat without messages; the sidebar showing the worktree's name, not the whole branch; moving a worktree chat elsewhere forgets the worktree; the branch can only be deleted with its worktree; a gone worktree is pruned with `git worktree prune`. [ADR 0016](docs/adr/0016-a-worktree-per-chat.md) records the worktree rules.
 
-**Size**: the app is 6,213 lines of Dart (limit about 7,000), plus 655 in packages; the daemon is 2,810 lines of Go (limit 5,000) and the ACP client 800. No hand-written file is over 400 lines (largest: `composer.dart` 400, `tool_calls.dart` 397, `acpgen/main.go` 393). Step 29 (683 added) went over the ~500-lines-per-step tripwire; see "Tripwires crossed".
+**Size**: the app is 6,621 lines of Dart (limit about 7,000), plus 655 in packages; the daemon is 3,188 lines of Go (limit 5,000) and the ACP client 800. No hand-written file is over 400 lines (largest: `composer.dart` 400, `tool_calls.dart` 397, `acpgen/main.go` 393). Step 30 (677 added, 140 of them tests) went over the ~500-lines-per-step tripwire; see "Tripwires crossed".
 
-**Left behind by the testing**: nothing of the dev data folder; the test chats were deleted with Delete, and this round's empty test folders in `~/.claude/projects/` and one side-chat transcript were removed by hand.
+**Left behind by the testing**: nothing. The test chats were deleted with Delete (their worktrees and branches with them), the throwaway repository and the dev data folder were removed, and the empty history folders Claude left in `~/.claude/projects/` for the throwaway paths were removed by hand.
 
 ## Line counts
 
@@ -150,6 +151,19 @@ To try it beside an installed Nushi Next that's in use: `export NUSHI_DATA=~/Lib
 2. Start a chat. Click the model ("Opus 5.5  High") under the box: four models by name, the current one checked, 1–4 on the right; press 2, then open it again and press 1. Hover Effort ▸ and More models ▸: they open beside their rows. Click "⋯": Fast mode and Agent, each with its value; Agent's list has one line per agent. The "+" and the text sit on one line; the box gets no blue ring.
 3. Click the Context and Changes titles: they collapse to `Context › 3%` and `Changes › +n −m`. Quit the app and reopen it: they stay collapsed.
 4. Ask for three sentences about otters. Select one: "Start a side chat | Reply" shows above it. Reply, type a question, Enter: a card sits in the composer. Select another sentence, Reply, Enter. Click the first card, change its text, Save. Type a line and send: the message shows each quote with its reply, then the line, and Claude answers about the quoted parts. Select text again ▸ Start a side chat: the side panel opens with the quote, as before.
+
+## Milestone H demo (steps 30–32): a worktree per chat
+
+To try it beside an installed Nushi Next that's in use: `export NUSHI_DATA=~/Library/Application\ Support/Nushi\ Dev`, then `make run` (and `make stop` after). Otherwise `make install`, quit Nushi Next, and press "Restart daemon" if the sidebar offers it.
+
+1. Make a throwaway repository: `mkdir -p /tmp/fruit && cd /tmp/fruit && git init -b main && printf -- '- apple\n- banana\n' > fruit.md && git add . && git commit -m init`.
+2. New chat ▸ in the details panel, Folder ▸ Choose folder… ▸ `/tmp/fruit`. Environment shows Folder, Branch `main` and a "New worktree" switch; turn it on. The chat now shows Repository `fruit`, Branch `nushi/<two-words>` with a worktree icon, Base `main`; in the sidebar the chat sits under `fruit` with `<two-words>` beside its title. Ask "replace banana with blueberry in fruit.md".
+3. Click the `fruit` group's "+": the new chat starts straight in another worktree (the choice was remembered). Ask "replace banana with mango in fruit.md". `cat /tmp/fruit/fruit.md /tmp/fruit/.worktrees/*/fruit.md`: banana, blueberry, mango. `cat .git/info/exclude` ends with `/.worktrees/`.
+4. Turn the switch off on a third chat that has no messages: it goes back to `fruit`, and `git worktree list` no longer lists its worktree.
+5. In the blueberry chat ask "commit that, then add a line '- kiwi' and leave it uncommitted". Changes ▸ Branch shows banana→blueberry and kiwi; Uncommitted shows only kiwi. The Changes card says "Branch +2 −1", then "Uncommitted +1 −0".
+6. A chat with messages outside a worktree: Environment ▸ "Move to new worktree" ▸ Move. The dialog says uncommitted changes stay; they do (`git status` in `/tmp/fruit`), and the chat carries on in the worktree.
+7. Delete: commit in the mango chat's worktree and `git merge nushi/<its name>` in `/tmp/fruit`; right-click it ▸ Delete…: both boxes on ("main has all of its commits"); Delete, and the worktree and branch are gone. Right-click the blueberry chat ▸ Delete…: "Remove the worktree" off, "1 file with uncommitted or untracked changes would be lost" in red; tick it, and "Delete the branch" says "1 commit that main doesn't have would be lost", off. Delete: the worktree goes, `git branch` still has the branch.
+8. `rm -rf` another worktree chat's folder and open the chat: it says the worktree was removed outside Nushi; Delete… still works and cleans up the branch.
 
 ## ACP quirks
 
@@ -300,6 +314,7 @@ To try it beside an installed Nushi Next that's in use: `export NUSHI_DATA=~/Lib
 - `GetDiff` runs `git` in the folder the client names, as you, with `core.fsmonitor` off and `--no-ext-diff`/`--no-textconv`. Clean filters (`filter.<name>.clean`) still run when `git diff` reads the work tree, as they would for your own `git status` there: a filter needs a config entry, which a cloned repository can't carry, so it takes someone who can already write your `.git/config` or global config. The automated review in step 10 suggested going further (an empty attribute source, or diffing blobs without git's work-tree comparison); I left that for you to decide. A symlink in the work tree is shown as its target path (as git sees it), never followed.
 - Agent text is rendered as markdown. Since step 25 its images show when they are local files (an absolute path or a `file:` URL, read as you; nothing leaves the machine) or `data:` URLs; a remote (http/https) image only loads after a click on its "Load image", one image at a time (an image URL in a tool's output could otherwise leak data to a server, or tell it when the reply was read). Links open in the default browser on click, http and https only (step 12); a link's text can differ from where it goes, as on any web page. (Both from the automated security review in step 4. Since step 13 diffs are no longer put into markdown, so the fence that guarded them is gone.)
 - Moving a chat (step 22) writes in Claude's own data: a copy of the session's transcript goes into `~/.claude/projects/<new folder>/` (mode 0600) for the length of the fork, then is removed; Claude writes the fork there. Nushi refuses session ids with path separators and never replaces a transcript already there; the original is only read.
+- Worktrees (steps 30–32) run `git worktree add/remove/prune`, `git branch -D` and `git status`/`rev-list` in the chat's repository, as you. `git worktree remove --force` and `git branch -D` past unmerged commits run only when the Delete request says to force, which the app sends only after showing what would be lost; the daemon checks again before acting. The base branch a client sends to `GetDiff`/`GetFolderStatus` is refused if it starts with `-`, so it can't become a git option.
 - The client token (`token`, mode 0600) sits next to the socket in a 0700 folder; any process running as you can read it ([ADR 0005](docs/adr/0005-clients-authenticate.md)).
 
 ## Working notes
