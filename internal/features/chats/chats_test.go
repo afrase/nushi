@@ -14,7 +14,8 @@ import (
 
 // claudeDialect is Claude's, as main fills it.
 var claudeDialect = Dialect{InitMeta: claude.InitMeta, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall,
-	ForkTitle: claude.ForkTitle, ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete}
+	Background: claude.Background, Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle,
+	ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete}
 
 // fakeAgent replies to each prompt with the given updates.
 type fakeAgent struct {
@@ -221,7 +222,7 @@ func TestPromptStreamsTheReply(t *testing.T) {
 		t.Errorf("title = %q, want the first prompt (has messages: %v)", c.session.Title, c.session.HasMessages)
 	}
 	want := []model.Item{
-		{ID: "item-1", Kind: model.UserMessage, Text: "hi", Images: []model.Image{png}},
+		{ID: "item-1", Kind: model.UserMessage, Text: "hi", Images: []model.Image{png}, Rewindable: true},
 		{ID: "m1", Kind: model.AgentMessage, Text: "Hello!"},
 		{ID: "m2", Kind: model.AgentMessage, Text: "Bye"},
 	}
@@ -448,12 +449,23 @@ func TestSubagentUpdatesGoUnderTheirToolCall(t *testing.T) {
 	} {
 		c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: u})
 	}
+	if sa := c.items[0].Subagent; sa == nil || sa.State != "running" || sa.Started.IsZero() || !c.items[len(c.items)-1].Report {
+		t.Fatalf("while its call runs: %+v", c.items)
+	}
+	// Started in the background: the call completes at once; its report
+	// (already in) ends it.
+	c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call_update",
+		ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "a1", Status: "completed", Content: []acp.ToolCallContent{
+			{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: "Async agent launched"}}}}}}}})
+	if sa := c.items[0].Subagent; sa.State != "done" || sa.Result != "The report" || sa.Ended.IsZero() {
+		t.Errorf("subagent = %+v", sa)
+	}
 	got := map[string][2]string{} // by text or title: parent, agent
 	for _, it := range c.items {
 		got[it.Text+it.Title] = [2]string{it.Parent, it.Agent}
 	}
 	want := map[string][2]string{
-		"Find it": {"", "Explore"}, "Main text": {"", ""}, "Looking": {"a1", ""}, "Read a.go": {"a1", ""},
+		"Async agent launchedFind it": {"", "Explore"}, "Main text": {"", ""}, "Looking": {"a1", ""}, "Read a.go": {"a1", ""},
 		"The reportSubagentHandback": {"a1", ""},
 	}
 	if !reflect.DeepEqual(got, want) {

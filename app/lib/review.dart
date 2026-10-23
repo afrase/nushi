@@ -212,7 +212,11 @@ Future<void> sendReview(
   final files = unsent.map((c) => c.path).toSet().length;
   final note = await showDialog<String>(
     context: context,
-    builder: (context) => _SendDialog(comments: unsent.length, files: files),
+    builder: (context) => _SendDialog(
+      comments: unsent.length,
+      files: files,
+      agent: daemon.chats[chat]?.agentName ?? 'the agent',
+    ),
   );
   if (note == null || !context.mounted) return;
   await tryOrShow(context, () async {
@@ -233,7 +237,13 @@ Future<void> sendReview(
 /// "Send review": what goes, and a box for an overall note; pops the note
 /// ('' for none) or null when cancelled.
 class _SendDialog extends StatefulWidget {
-  const _SendDialog({required this.comments, required this.files});
+  const _SendDialog({
+    required this.comments,
+    required this.files,
+    required this.agent,
+  });
+
+  final String agent;
 
   final int comments, files;
 
@@ -263,7 +273,7 @@ class _SendDialogState extends State<_SendDialog> {
           Text(
             '$n comment${n == 1 ? '' : 's'} on '
             '$files file${files == 1 ? '' : 's'}, with the lines they are '
-            'on, go to Claude as one message.',
+            'on, go to ${widget.agent} as one message.',
           ),
           TextField(
             controller: _note,

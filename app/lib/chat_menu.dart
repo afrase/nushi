@@ -93,6 +93,7 @@ class _DeleteDialogState extends State<_DeleteDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context), t = theme.t;
+    final name = widget.chat.agentName;
     final title = widget.chat.title.isEmpty
         ? 'this chat'
         : '“${widget.chat.title}”';
@@ -132,12 +133,13 @@ class _DeleteDialogState extends State<_DeleteDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               line('This deletes, for good:'),
+              // claude --resume: Claude's CLI, the only agent so far.
               if (p.deletesHistory) ...[
                 line(
                   p.sessions.length == 1
-                      ? '• Claude’s history of the chat, so claude --resume '
+                      ? '• $name’s history of the chat, so claude --resume '
                             'no longer finds it:'
-                      : '• Claude’s history of its ${p.sessions.length} '
+                      : '• $name’s history of its ${p.sessions.length} '
                             'sessions (it moved), so claude --resume no '
                             'longer finds them:',
                 ),
@@ -169,7 +171,7 @@ class _DeleteDialogState extends State<_DeleteDialog> {
               ],
               if (!p.deletesHistory) ...[
                 line(
-                  'Claude can’t delete its history from here, so it '
+                  '$name can’t delete its history from here, so it '
                   'stays: claude --resume still opens',
                 ),
                 ...sessions(p),

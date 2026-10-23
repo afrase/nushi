@@ -78,7 +78,8 @@ func run() error {
 	// Every chat runs Claude: what it does beyond ACP is in internal/claude*.
 	launch := func(h acp.Handler) (chats.Agent, error) { return claude.Start(dir, h) }
 	dialect := chats.Dialect{InitMeta: claude.InitMeta, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall,
-		ForkTitle: claude.ForkTitle, ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete}
+		Background: claude.Background, Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle,
+		ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete}
 	st := store.New(dir)
 	st.HadMessages = func(s model.Session) bool { return claudehistory.Has(projects, s.SessionID, s.Folder) }
 	copyHistory := func(id, from, to string) (func() error, error) { return claudehistory.Copy(projects, id, from, to) }

@@ -71,13 +71,10 @@ class Pickers extends StatelessWidget {
           submenu: rows(o, vs, o == model),
         );
 
-    // The first four models by name, skipping a "Default" entry; the rest
-    // (that one included) under More models.
+    // The first four models, skipping the agent's "use the default"; the
+    // rest (that one included) under More models.
     final models = model == null ? <ConfigValue>[] : _values(model);
-    final top = models
-        .where((v) => !v.name.toLowerCase().startsWith('default'))
-        .take(4)
-        .toList();
+    final top = models.where((v) => !v.isDefault).take(4).toList();
     final more = [
       for (final v in models)
         if (!top.contains(v)) v,

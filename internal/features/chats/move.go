@@ -68,7 +68,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 					s.EarlierWorktrees = append(slices.Clip(s.EarlierWorktrees), *oldWT)
 				}
 			}
-			s.Folder, s.SessionID, s.Worktree = folder, o.sid, wt
+			s.Folder, s.SessionID, s.Worktree, s.Scratch = folder, o.sid, wt, false
 		})
 		mode := c.session.Mode
 		c.mu.Unlock()

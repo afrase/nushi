@@ -9,80 +9,47 @@ import 'theme/theme.dart';
 import 'widgets.dart';
 
 /// A tool call that started a subagent, and what the subagent did.
-/// [busy]: the chat's turn runs.
-typedef Subagent = ({Item call, List<Item> items, bool busy});
+typedef SubagentRun = ({Item call, List<Item> items});
 
 /// The subagents in [items], each with the items it made, in order.
-List<Subagent> subagentsOf(List<Item> items, {required bool busy}) {
+List<SubagentRun> subagentsOf(List<Item> items) {
   final under = <String, List<Item>>{};
   for (final it in items) {
     if (it.parent.isNotEmpty) (under[it.parent] ??= []).add(it);
   }
   return [
     for (final it in items)
-      if (it.agent.isNotEmpty)
-        (call: it, items: under[it.id] ?? const [], busy: busy),
+      if (it.agent.isNotEmpty) (call: it, items: under[it.id] ?? const []),
   ];
 }
 
-/// The tool call that ends a subagent and carries its report (Claude's
-/// SubagentHandback), if it has come.
-Item? _handback(Subagent s) =>
-    s.items.where((it) => it.tool == 'SubagentHandback').lastOrNull;
+/// Whether the subagent works, as the daemon says.
+bool subagentRunning(SubagentRun s) => s.call.subagent.state == 'running';
 
-/// Whether the subagent works: its call runs, or it was started in the
-/// background (Claude then completes the call at once, saying so) and
-/// hasn't handed back yet, while the turn runs or it has made steps. (A
-/// chat reopened with session/load gets no steps of a background subagent:
-/// it reads as done.)
-bool subagentRunning(Subagent s) =>
-    s.call.status == 'pending' ||
-    s.call.status == 'in_progress' ||
-    s.call.status == 'completed' &&
-        s.call.text.startsWith('Async agent launched') &&
-        _handback(s) == null &&
-        (s.busy || s.items.isNotEmpty);
-
-/// What the subagent found: its handback's report, else (a subagent in the
-/// foreground) its call's output, once it has ended.
-String _result(Subagent s) =>
-    _handback(s)?.text ??
-    (s.call.text.startsWith('Async agent launched') ? '' : s.call.text);
-
-/// The subagent's own steps, without the handback (its report shows as the
-/// result).
-List<Item> _steps(Subagent s) => [
+/// The subagent's own steps, without its report (that shows as its result).
+List<Item> _steps(SubagentRun s) => [
   for (final it in s.items)
-    if (it.tool != 'SubagentHandback') it,
+    if (!it.report) it,
 ];
 
-/// When each subagent was first seen running, and when it was first seen
-/// done, by its call's id: the app gets no times, so durations count from
-/// then, and only for a subagent seen running.
-final _seen = <String, DateTime>{}, _ended = <String, DateTime>{};
+DateTime? _time(int ms) =>
+    ms == 0 ? null : DateTime.fromMillisecondsSinceEpoch(ms);
 
 /// A subagent's state in a few words: "Reading notes.md · 6 tool calls ·
 /// 40s" while it works, "done · 6 tool calls · 1m 02s" once done, "failed".
 /// The count shows only when its steps are known (a background subagent's
-/// aren't after the chat reopened), the time only when it was seen.
-String subagentState(Subagent s) {
+/// aren't after the chat reopened), the time only when the daemon saw it
+/// start.
+String subagentState(SubagentRun s) {
+  final sa = s.call.subagent;
   final calls = _steps(s)
       .where((it) => it.kind == ItemKind.ITEM_KIND_TOOL_CALL)
       .length;
   final running = subagentRunning(s);
-  final since = running
-      ? _seen.putIfAbsent(s.call.id, DateTime.now)
-      : _seen[s.call.id];
-  final end = running
-      ? DateTime.now()
-      : since == null
-      ? null
-      : _ended.putIfAbsent(s.call.id, DateTime.now);
+  final since = _time(sa.started.toInt());
+  final end = running ? DateTime.now() : _time(sa.ended.toInt());
   return [
-    if (running)
-      doing(s.items)
-    else
-      s.call.status == 'failed' ? 'failed' : 'done',
+    if (running) doing(s.items) else sa.state,
     if (calls > 0) '$calls tool call${calls == 1 ? '' : 's'}',
     if (since != null && end != null) elapsed(end.difference(since)),
   ].join(' · ');
@@ -99,7 +66,7 @@ class SubagentCard extends StatefulWidget {
     this.still = false,
   });
 
-  final Subagent subagent;
+  final SubagentRun subagent;
   final Widget Function(List<Item> items) nested;
   final bool still;
 
@@ -131,7 +98,7 @@ class _SubagentCardState extends State<SubagentCard> {
     final s = widget.subagent;
     final call = s.call;
     final running = subagentRunning(s);
-    final failed = call.status == 'failed';
+    final failed = call.subagent.state == 'failed';
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: box(failed ? t.crashed : t.borderSubtle),
@@ -201,7 +168,7 @@ class _SubagentCardState extends State<SubagentCard> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   widget.nested(_steps(s)),
-                  if (_result(s) case final result
+                  if (call.subagent.result case final result
                       when !running && result.isNotEmpty) ...[
                     const SizedBox(height: 10),
                     Text(

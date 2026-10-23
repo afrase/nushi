@@ -227,6 +227,7 @@ class Chat extends $pb.GeneratedMessage {
     $core.bool? archived,
     $core.String? sessionId,
     Worktree? worktree,
+    $core.bool? scratch,
   }) {
     final result = Chat._();
     if (id != null) result.id = id;
@@ -239,6 +240,7 @@ class Chat extends $pb.GeneratedMessage {
     if (archived != null) result.archived = archived;
     if (sessionId != null) result.sessionId = sessionId;
     if (worktree != null) result.worktree = worktree;
+    if (scratch != null) result.scratch = scratch;
     return result;
   }
 
@@ -267,6 +269,7 @@ class Chat extends $pb.GeneratedMessage {
     ..aOS(9, _omitFieldNames ? '' : 'sessionId')
     ..aOM<Worktree>(10, _omitFieldNames ? '' : 'worktree',
         subBuilder: Worktree.$_createMessage)
+    ..aOB(11, _omitFieldNames ? '' : 'scratch')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -389,6 +392,16 @@ class Chat extends $pb.GeneratedMessage {
   void clearWorktree() => $_clearField(10);
   @$pb.TagNumber(10)
   Worktree ensureWorktree() => $_ensure(9);
+
+  /// Its folder is a scratch folder of its own: it has no folder yet.
+  @$pb.TagNumber(11)
+  $core.bool get scratch => $_getBF(10);
+  @$pb.TagNumber(11)
+  set scratch($core.bool value) => $_setBool(10, value);
+  @$pb.TagNumber(11)
+  $core.bool hasScratch() => $_has(10);
+  @$pb.TagNumber(11)
+  void clearScratch() => $_clearField(11);
 }
 
 /// A git worktree of a repository, on a branch of its own.
@@ -4903,11 +4916,13 @@ class ContextCategory extends $pb.GeneratedMessage {
     $core.String? name,
     $fixnum.Int64? tokens,
     $core.double? percent,
+    $core.String? kind,
   }) {
     final result = ContextCategory._();
     if (name != null) result.name = name;
     if (tokens != null) result.tokens = tokens;
     if (percent != null) result.percent = percent;
+    if (kind != null) result.kind = kind;
     return result;
   }
 
@@ -4927,6 +4942,7 @@ class ContextCategory extends $pb.GeneratedMessage {
     ..aOS(1, _omitFieldNames ? '' : 'name')
     ..aInt64(2, _omitFieldNames ? '' : 'tokens')
     ..aD(3, _omitFieldNames ? '' : 'percent')
+    ..aOS(4, _omitFieldNames ? '' : 'kind')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -4977,6 +4993,17 @@ class ContextCategory extends $pb.GeneratedMessage {
   $core.bool hasPercent() => $_has(2);
   @$pb.TagNumber(3)
   void clearPercent() => $_clearField(3);
+
+  /// "free" for the free space, "deferred" for what is listed but loaded
+  /// only on demand (outside the context), else "".
+  @$pb.TagNumber(4)
+  $core.String get kind => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set kind($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasKind() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearKind() => $_clearField(4);
 }
 
 class GetFolderStatusRequest extends $pb.GeneratedMessage {
@@ -6243,12 +6270,14 @@ class ConfigValue extends $pb.GeneratedMessage {
     $core.String? name,
     $core.String? description,
     $core.String? group,
+    $core.bool? isDefault,
   }) {
     final result = ConfigValue._();
     if (value != null) result.value = value;
     if (name != null) result.name = name;
     if (description != null) result.description = description;
     if (group != null) result.group = group;
+    if (isDefault != null) result.isDefault = isDefault;
     return result;
   }
 
@@ -6269,6 +6298,7 @@ class ConfigValue extends $pb.GeneratedMessage {
     ..aOS(2, _omitFieldNames ? '' : 'name')
     ..aOS(3, _omitFieldNames ? '' : 'description')
     ..aOS(4, _omitFieldNames ? '' : 'group')
+    ..aOB(5, _omitFieldNames ? '' : 'isDefault')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -6329,6 +6359,17 @@ class ConfigValue extends $pb.GeneratedMessage {
   $core.bool hasGroup() => $_has(3);
   @$pb.TagNumber(4)
   void clearGroup() => $_clearField(4);
+
+  /// The agent's "use the default" choice (Claude's "Default (recommended)"
+  /// model), rather than one value of its own.
+  @$pb.TagNumber(5)
+  $core.bool get isDefault => $_getBF(4);
+  @$pb.TagNumber(5)
+  set isDefault($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasIsDefault() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearIsDefault() => $_clearField(5);
 }
 
 /// One entry of a chat's transcript.
@@ -6351,6 +6392,9 @@ class Item extends $pb.GeneratedMessage {
     $core.String? agent,
     $core.String? tool,
     $core.String? forkAt,
+    $core.bool? rewindable,
+    Subagent? subagent,
+    $core.bool? report,
   }) {
     final result = Item._();
     if (id != null) result.id = id;
@@ -6370,6 +6414,9 @@ class Item extends $pb.GeneratedMessage {
     if (agent != null) result.agent = agent;
     if (tool != null) result.tool = tool;
     if (forkAt != null) result.forkAt = forkAt;
+    if (rewindable != null) result.rewindable = rewindable;
+    if (subagent != null) result.subagent = subagent;
+    if (report != null) result.report = report;
     return result;
   }
 
@@ -6409,6 +6456,10 @@ class Item extends $pb.GeneratedMessage {
     ..aOS(15, _omitFieldNames ? '' : 'agent')
     ..aOS(16, _omitFieldNames ? '' : 'tool')
     ..aOS(17, _omitFieldNames ? '' : 'forkAt')
+    ..aOB(18, _omitFieldNames ? '' : 'rewindable')
+    ..aOM<Subagent>(19, _omitFieldNames ? '' : 'subagent',
+        subBuilder: Subagent.$_createMessage)
+    ..aOB(20, _omitFieldNames ? '' : 'report')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -6561,6 +6612,136 @@ class Item extends $pb.GeneratedMessage {
   $core.bool hasForkAt() => $_has(16);
   @$pb.TagNumber(17)
   void clearForkAt() => $_clearField(17);
+
+  /// For a user message: the chat can be rewound to just before it while
+  /// status.can_rewind and the chat is idle.
+  @$pb.TagNumber(18)
+  $core.bool get rewindable => $_getBF(17);
+  @$pb.TagNumber(18)
+  set rewindable($core.bool value) => $_setBool(17, value);
+  @$pb.TagNumber(18)
+  $core.bool hasRewindable() => $_has(17);
+  @$pb.TagNumber(18)
+  void clearRewindable() => $_clearField(18);
+
+  /// For a tool call that starts a subagent: how the subagent goes.
+  @$pb.TagNumber(19)
+  Subagent get subagent => $_getN(18);
+  @$pb.TagNumber(19)
+  set subagent(Subagent value) => $_setField(19, value);
+  @$pb.TagNumber(19)
+  $core.bool hasSubagent() => $_has(18);
+  @$pb.TagNumber(19)
+  void clearSubagent() => $_clearField(19);
+  @$pb.TagNumber(19)
+  Subagent ensureSubagent() => $_ensure(18);
+
+  /// The tool call is a subagent's report to the chat (Claude's
+  /// SubagentHandback): its subagent's result, not one of its steps.
+  @$pb.TagNumber(20)
+  $core.bool get report => $_getBF(19);
+  @$pb.TagNumber(20)
+  set report($core.bool value) => $_setBool(19, value);
+  @$pb.TagNumber(20)
+  $core.bool hasReport() => $_has(19);
+  @$pb.TagNumber(20)
+  void clearReport() => $_clearField(20);
+}
+
+/// How a subagent goes.
+class Subagent extends $pb.GeneratedMessage {
+  factory Subagent({
+    $core.String? state,
+    $fixnum.Int64? started,
+    $fixnum.Int64? ended,
+    $core.String? result,
+  }) {
+    final result$ = Subagent._();
+    if (state != null) result$.state = state;
+    if (started != null) result$.started = started;
+    if (ended != null) result$.ended = ended;
+    if (result != null) result$.result = result;
+    return result$;
+  }
+
+  Subagent._();
+
+  factory Subagent.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Subagent()..mergeFromBuffer(data, registry);
+  factory Subagent.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Subagent()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'Subagent',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: Subagent.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'state')
+    ..aInt64(2, _omitFieldNames ? '' : 'started')
+    ..aInt64(3, _omitFieldNames ? '' : 'ended')
+    ..aOS(4, _omitFieldNames ? '' : 'result')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Subagent clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Subagent copyWith(void Function(Subagent) updates) =>
+      super.copyWith((message) => updates(message as Subagent)) as Subagent;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use Subagent() / Subagent.new instead')
+  static Subagent create() => Subagent._();
+  static $pb.GeneratedMessage $_createMessage() => Subagent._();
+  @$core.override
+  Subagent createEmptyInstance() => Subagent._();
+  @$core.pragma('dart2js:noInline')
+  static Subagent getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<Subagent>(Subagent.$_createMessage);
+  static Subagent? _defaultInstance;
+
+  /// "running", "done" or "failed".
+  @$pb.TagNumber(1)
+  $core.String get state => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set state($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasState() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearState() => $_clearField(1);
+
+  /// When the daemon saw it start, and end, in Unix milliseconds; 0 when it
+  /// didn't (a replayed chat).
+  @$pb.TagNumber(2)
+  $fixnum.Int64 get started => $_getI64(1);
+  @$pb.TagNumber(2)
+  set started($fixnum.Int64 value) => $_setInt64(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasStarted() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearStarted() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $fixnum.Int64 get ended => $_getI64(2);
+  @$pb.TagNumber(3)
+  set ended($fixnum.Int64 value) => $_setInt64(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasEnded() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearEnded() => $_clearField(3);
+
+  /// What it found, once it has ended: its report, or its call's output.
+  @$pb.TagNumber(4)
+  $core.String get result => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set result($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasResult() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearResult() => $_clearField(4);
 }
 
 /// A step of the agent's plan; status is "pending", "in_progress" or
@@ -6736,6 +6917,7 @@ class Field extends $pb.GeneratedMessage {
     $core.Iterable<Option>? options,
     $core.bool? required,
     $core.Iterable<$core.String>? values,
+    $core.String? otherFor,
   }) {
     final result = Field._();
     if (id != null) result.id = id;
@@ -6745,6 +6927,7 @@ class Field extends $pb.GeneratedMessage {
     if (options != null) result.options.addAll(options);
     if (required != null) result.required = required;
     if (values != null) result.values.addAll(values);
+    if (otherFor != null) result.otherFor = otherFor;
     return result;
   }
 
@@ -6770,6 +6953,7 @@ class Field extends $pb.GeneratedMessage {
         subBuilder: Option.$_createMessage)
     ..aOB(6, _omitFieldNames ? '' : 'required')
     ..pPS(7, _omitFieldNames ? '' : 'values')
+    ..aOS(8, _omitFieldNames ? '' : 'otherFor')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -6843,6 +7027,17 @@ class Field extends $pb.GeneratedMessage {
   /// The answer, once given: one value, or several for CHOICES.
   @$pb.TagNumber(7)
   $pb.PbList<$core.String> get values => $_getList(6);
+
+  /// For a free-text field that is another field's "Other" answer: that
+  /// field's id.
+  @$pb.TagNumber(8)
+  $core.String get otherFor => $_getSZ(7);
+  @$pb.TagNumber(8)
+  set otherFor($core.String value) => $_setString(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasOtherFor() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearOtherFor() => $_clearField(8);
 }
 
 class ItemEvent extends $pb.GeneratedMessage {
@@ -6925,6 +7120,7 @@ class ChatStatus extends $pb.GeneratedMessage {
     $core.bool? images,
     $core.bool? canRewind,
     $core.bool? mcpChanged,
+    $core.bool? canAskContext,
   }) {
     final result = ChatStatus._();
     if (busy != null) result.busy = busy;
@@ -6934,6 +7130,7 @@ class ChatStatus extends $pb.GeneratedMessage {
     if (images != null) result.images = images;
     if (canRewind != null) result.canRewind = canRewind;
     if (mcpChanged != null) result.mcpChanged = mcpChanged;
+    if (canAskContext != null) result.canAskContext = canAskContext;
     return result;
   }
 
@@ -6957,6 +7154,7 @@ class ChatStatus extends $pb.GeneratedMessage {
     ..aOB(6, _omitFieldNames ? '' : 'images')
     ..aOB(7, _omitFieldNames ? '' : 'canRewind')
     ..aOB(8, _omitFieldNames ? '' : 'mcpChanged')
+    ..aOB(9, _omitFieldNames ? '' : 'canAskContext')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -7048,6 +7246,17 @@ class ChatStatus extends $pb.GeneratedMessage {
   $core.bool hasMcpChanged() => $_has(6);
   @$pb.TagNumber(8)
   void clearMcpChanged() => $_clearField(8);
+
+  /// GetContextUsage can ask the agent what fills its context, once the
+  /// chat is idle.
+  @$pb.TagNumber(9)
+  $core.bool get canAskContext => $_getBF(7);
+  @$pb.TagNumber(9)
+  set canAskContext($core.bool value) => $_setBool(7, value);
+  @$pb.TagNumber(9)
+  $core.bool hasCanAskContext() => $_has(7);
+  @$pb.TagNumber(9)
+  void clearCanAskContext() => $_clearField(9);
 }
 
 /// A shell the user runs beside a chat, in the daemon.

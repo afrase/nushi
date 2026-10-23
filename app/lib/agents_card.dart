@@ -10,7 +10,7 @@ import 'widgets.dart';
 /// state and current step, then a quiet "n finished" line that opens the
 /// finished ones. Null (no card) when the chat never had one.
 PanelCard? agentsCard(ChatState chat) {
-  final subs = subagentsOf(chat.items, busy: chat.busy);
+  final subs = subagentsOf(chat.items);
   if (subs.isEmpty) return null;
   final running = subs.where(subagentRunning).toList();
   final done = subs.where((s) => !subagentRunning(s)).toList();
@@ -40,7 +40,7 @@ class _AgentRow extends StatelessWidget {
   const _AgentRow(this.chat, this.s);
 
   final ChatState chat;
-  final Subagent s;
+  final SubagentRun s;
 
   @override
   Widget build(BuildContext context) {
@@ -78,7 +78,7 @@ class _Finished extends StatefulWidget {
   const _Finished(this.chat, this.done);
 
   final ChatState chat;
-  final List<Subagent> done;
+  final List<SubagentRun> done;
 
   @override
   State<_Finished> createState() => _FinishedState();

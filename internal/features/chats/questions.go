@@ -22,6 +22,11 @@ func (c *chat) createElicitation(ctx context.Context, req acp.CreateElicitationR
 	if err != nil {
 		return nil, err
 	}
+	for i := 1; i < len(fields) && c.dialect.Other != nil; i++ {
+		if c.dialect.Other(fields[i], fields[i-1]) {
+			fields[i].OtherFor = fields[i-1].ID
+		}
+	}
 	answer := make(chan []model.Field, 1)
 	c.mu.Lock()
 	id := c.addLocked(model.Item{Kind: model.Question, Status: "pending", Text: req.Message, Fields: fields})

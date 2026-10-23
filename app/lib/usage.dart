@@ -71,9 +71,9 @@ class ContextMeter extends StatelessWidget {
   }
 }
 
-/// Whether Claude lists [c] without it being in the context: its
-/// deferred tools, loaded on demand.
-bool onDemand(ContextCategory c) => c.name.endsWith('(deferred)');
+/// Whether the agent lists [c] without it being in the context: loaded on
+/// demand.
+bool onDemand(ContextCategory c) => c.kind == 'deferred';
 
 /// The bar's parts: each category in the context (not those [onDemand]),
 /// in order, with its share of their total; the shares add up to 1.
@@ -107,7 +107,7 @@ class ContextBreakdown extends StatelessWidget {
       t.crashed,
       t.textSecondary,
     ];
-    bool free(ContextCategory c) => c.name == 'Free space';
+    bool free(ContextCategory c) => c.kind == 'free';
     final inContext = categories.where((c) => !onDemand(c)).toList();
     final colors = {
       for (final (i, c) in inContext.where((c) => !free(c)).indexed)
@@ -121,14 +121,14 @@ class ContextBreakdown extends StatelessWidget {
           width: 8,
           height: 8,
           decoration: box(
-            colors[c.name] ?? t.borderStrong,
-            fill: colors[c.name],
+            (dim ? null : colors[c.name]) ?? t.borderStrong,
+            fill: dim ? null : colors[c.name],
             radius: 2,
           ),
         ),
         Expanded(
           child: Text(
-            dim ? c.name.replaceFirst(' (deferred)', '') : c.name,
+            c.name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.ui(dim ? t.textMuted : t.textSecondary, size: 12),

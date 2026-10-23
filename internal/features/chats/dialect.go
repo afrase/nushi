@@ -22,9 +22,19 @@ type Dialect struct {
 	// _meta.
 	Parent func(meta map[string]any) string
 	// ToolCall adds what a tool call's _meta and raw input tell of it (its
-	// subagent, tool, and the subagent it starts); ownText says it set the
-	// call's text itself, so the call's content isn't its output.
-	ToolCall func(it *model.Item, meta map[string]any, input json.RawMessage) (ownText bool)
+	// subagent, tool, and the subagent it starts); report says the call is
+	// its subagent's report, whose text it set, so the call's content isn't
+	// its output.
+	ToolCall func(it *model.Item, meta map[string]any, input json.RawMessage) (report bool)
+	// Background says a subagent call's output tells it started the
+	// subagent in the background: it runs on past the call, until its
+	// report.
+	Background func(output string) bool
+	// Other says a form field is the free-text "Other" answer of the field
+	// before it.
+	Other func(field, before model.Field) bool
+	// Default says a config value is the agent's "use the default" choice.
+	Default func(model.ConfigOption, model.ConfigValue) bool
 	// ForkTitle says whether title is the agent's own for a fork of a
 	// session titled of: a moved or rewound chat keeps its title.
 	ForkTitle func(title, of string) bool

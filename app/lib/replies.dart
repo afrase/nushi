@@ -232,7 +232,7 @@ class _ReplyBoxState extends State<ReplyBox> {
                       style: theme.ui(t.text),
                       onSubmitted: (_) => _send(),
                       decoration: const InputDecoration(
-                        hintText: 'Reply to Claude',
+                        hintText: 'Your reply',
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.symmetric(vertical: 8),
                       ),

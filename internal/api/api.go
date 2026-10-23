@@ -19,7 +19,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 37
+const Version = 38
 
 type server struct {
 	chats *chats.Service
@@ -244,7 +244,7 @@ func (s *server) GetContextUsage(ctx context.Context, req *connect.Request[nushi
 	}
 	out := &nushiv1.GetContextUsageResponse{Markdown: u.Markdown}
 	for _, c := range u.Categories {
-		out.Categories = append(out.Categories, &nushiv1.ContextCategory{Name: c.Name, Tokens: c.Tokens, Percent: c.Percent})
+		out.Categories = append(out.Categories, &nushiv1.ContextCategory{Name: c.Name, Tokens: c.Tokens, Percent: c.Percent, Kind: c.Kind})
 	}
 	return connect.NewResponse(out), nil
 }

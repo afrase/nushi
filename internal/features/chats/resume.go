@@ -28,6 +28,7 @@ func (s *Service) lookup(id string) (*chat, error) {
 	}
 	c := s.newChat()
 	c.id, c.sid, c.session = id, stored[i].SessionID, stored[i]
+	c.session.Scratch = s.isScratch(c.session.Folder)
 	s.chats[id] = c
 	return c, nil
 }

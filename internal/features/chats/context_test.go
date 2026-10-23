@@ -22,6 +22,10 @@ func TestContextUsageLeavesNoTrace(t *testing.T) {
 		t.Error("ran /context for an agent without the command")
 	}
 	c.commands = []model.Command{{Name: "context"}}
+	if _, err := svc.ContextUsage(context.Background(), id); err == nil {
+		t.Error("ran /context in a chat without messages")
+	}
+	c.session.HasMessages = true
 	before := events
 	md, err := svc.ContextUsage(context.Background(), id)
 	if err != nil || md.Markdown != "## Context Usage" {

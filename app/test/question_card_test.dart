@@ -31,6 +31,7 @@ void main() {
         choice('question_0', 'Color', ['red', 'green']),
         Field(
           id: 'question_0_custom',
+          otherFor: 'question_0',
           title: 'Other',
           type: FieldType.FIELD_TYPE_TEXT,
         ),
@@ -42,7 +43,7 @@ void main() {
       MaterialApp(
         theme: const NushiTheme(Tokens.dark).toThemeData(),
         home: Scaffold(
-          body: QuestionCard(item, onAnswer: (a) async => sent = a),
+          body: QuestionCard(item, agent: 'Claude', onAnswer: (a) async => sent = a),
         ),
       ),
     );
@@ -109,7 +110,7 @@ void main() {
       MaterialApp(
         theme: const NushiTheme(Tokens.dark).toThemeData(),
         home: Scaffold(
-          body: QuestionCard(item, onAnswer: (a) async => sent = a),
+          body: QuestionCard(item, agent: 'Claude', onAnswer: (a) async => sent = a),
         ),
       ),
     );
@@ -134,6 +135,7 @@ void main() {
         choice('question_0', 'Color', ['red', 'green']),
         Field(
           id: 'question_0_custom',
+          otherFor: 'question_0',
           title: 'Other',
           type: FieldType.FIELD_TYPE_TEXT,
         ),
@@ -145,7 +147,7 @@ void main() {
         home: Scaffold(
           body: Column(
             children: [
-              if (card) QuestionCard(item, onAnswer: (a) async => sent = a),
+              if (card) QuestionCard(item, agent: 'Claude', onAnswer: (a) async => sent = a),
               TextField(controller: draft, focusNode: draftFocus),
             ],
           ),

@@ -281,10 +281,10 @@ class _HeaderState extends State<_Header> {
                   ),
           ),
           const SizedBox(width: 14),
-          const _Monogram(),
+          _Monogram(chat),
           const SizedBox(width: 8),
           Text(
-            'Claude',
+            chat.agentName,
             style: theme.ui(t.text, size: 12, weight: FontWeight.w500),
           ),
           if (modelName != null) ...[
@@ -345,9 +345,11 @@ class _HeaderState extends State<_Header> {
   }
 }
 
-/// The agent's monogram: its letter on its color.
+/// The agent's monogram: its letter on its color (Claude's, or the accent).
 class _Monogram extends StatelessWidget {
-  const _Monogram();
+  const _Monogram(this.chat);
+
+  final ChatState chat;
 
   static const size = 16.0;
 
@@ -359,11 +361,11 @@ class _Monogram extends StatelessWidget {
       height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: t.claude,
+        color: chat.agent == 'claude' ? t.claude : t.accent,
         borderRadius: BorderRadius.circular(size / 5),
       ),
       child: Text(
-        'C',
+        chat.agentName[0],
         style: TextStyle(
           fontFamily: NushiTheme.uiFont,
           fontSize: size * 0.64,

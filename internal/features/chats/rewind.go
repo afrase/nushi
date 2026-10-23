@@ -27,11 +27,9 @@ func (c *chat) forkPointLocked() string {
 }
 
 // rewindableLocked says whether the chat can be rewound to just before its
-// item i, a user message: the agent forks at the message before it, or it
-// is the first.
+// item i, a user message (see model.Item.Rewindable).
 func (c *chat) rewindableLocked(i int) bool {
-	first := !slices.ContainsFunc(c.items[:i], func(it model.Item) bool { return it.Kind == model.UserMessage })
-	return c.forkAt != nil && c.agent != nil && c.parent == nil && (c.items[i].ForkAt != "" || first)
+	return c.forkAt != nil && c.agent != nil && c.parent == nil && c.items[i].Rewindable
 }
 
 // Rewind cuts a chat back to just before one of its user messages and
@@ -73,9 +71,9 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 	var next string
 	var config []model.ConfigOption
 	if at == "" {
-		next, config, err = newSession(ctx, agent, folder)
+		next, config, err = c.newSession(ctx, agent, folder)
 	} else {
-		next, config, err = forkSession(ctx, agent, sid, folder, forkAt(at))
+		next, config, err = c.forkSession(ctx, agent, sid, folder, forkAt(at))
 	}
 	mode, err := func() (string, error) {
 		c.mu.Lock()

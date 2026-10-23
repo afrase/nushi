@@ -66,10 +66,7 @@ Thanks.
     expect(c.anchor('// one\n// two\n$file'), isTrue);
     expect((c.start, c.end, c.outdated), (6, 7, false));
     // The same lines in another function too: the one with its context.
-    expect(
-      c.anchor('func b() {\nx := 1\ny := 2\n}\n$file'),
-      isTrue,
-    );
+    expect(c.anchor('func b() {\nx := 1\ny := 2\n}\n$file'), isTrue);
     expect((c.start, c.end), (8, 9));
     // Gone: outdated, until they come back.
     expect(c.anchor('package a\nfunc a() {\n}\n'), isTrue);

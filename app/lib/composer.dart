@@ -281,7 +281,7 @@ class _ComposerState extends State<Composer> {
                               : null,
                           tooltip: chat.canImages
                               ? ''
-                              : 'Claude doesn’t take images in this chat',
+                              : '${chat.agentName} doesn’t take images in this chat',
                         ),
                       ],
                       builder: (context, open) => boxButton(
@@ -303,7 +303,9 @@ class _ComposerState extends State<Composer> {
                           style: theme.ui(t.text),
                           textAlignVertical: TextAlignVertical.center,
                           decoration: InputDecoration(
-                            hintText: !chat.busy ? widget.hint : 'Claude is working: ⏎ queues, ⌘⏎ stops it and sends',
+                            hintText: !chat.busy
+                                ? widget.hint
+                                : '${chat.agentName} is working: ⏎ queues, ⌘⏎ stops it and sends',
                             border: InputBorder.none,
                             // One line (18.2) is as tall as the buttons.
                             contentPadding: const EdgeInsets.symmetric(

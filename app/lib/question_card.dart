@@ -7,7 +7,7 @@ import 'theme/theme.dart';
 import 'widgets.dart';
 
 /// One question of a form: a field with options, or a text field, and the
-/// free-text "Other" field that may follow it (Claude names it `<id>_custom`).
+/// free-text "Other" field the daemon pairs with it, if any.
 typedef _Question = ({Field field, Field? other});
 
 /// The agent's question form, one question at a time as in Claude Code.
@@ -18,9 +18,15 @@ typedef _Question = ({Field field, Field? other});
 /// and Enter moves on. ↑/↓ move through the options. A single question has
 /// no tabs, and picking an option sends it at once.
 class QuestionCard extends StatefulWidget {
-  const QuestionCard(this.item, {super.key, required this.onAnswer});
+  const QuestionCard(
+    this.item, {
+    super.key,
+    required this.agent,
+    required this.onAnswer,
+  });
 
   final Item item;
+  final String agent; // its name
 
   /// Sends the answers, or null to decline.
   final Future<void> Function(List<FieldAnswer>? answer) onAnswer;
@@ -40,11 +46,8 @@ class _QuestionCardState extends State<QuestionCard> {
   static List<_Question> _questions(List<Field> fields) {
     final out = <_Question>[];
     for (final f in fields) {
-      final last = out.lastOrNull;
-      if (f.options.isEmpty &&
-          last != null &&
-          f.id == '${last.field.id}_custom') {
-        out.last = (field: last.field, other: f);
+      if (f.otherFor.isNotEmpty && out.lastOrNull?.field.id == f.otherFor) {
+        out.last = (field: out.last.field, other: f);
       } else {
         out.add((field: f, other: null));
       }
@@ -201,7 +204,7 @@ class _QuestionCardState extends State<QuestionCard> {
                 Icon(Icons.help_outline, size: 15, color: t.accent),
                 Expanded(
                   child: Text(
-                    item.text.isEmpty ? 'Claude asks' : item.text,
+                    item.text.isEmpty ? '${widget.agent} asks' : item.text,
                     style: theme.ui(t.text, weight: FontWeight.w600),
                   ),
                 ),

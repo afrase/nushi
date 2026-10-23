@@ -152,7 +152,7 @@ class _CommentBoxState extends State<CommentBox> {
               maxLines: 8,
               style: theme.ui(t.text),
               decoration: const InputDecoration(
-                hintText: 'Comment for Claude',
+                hintText: 'Your comment',
                 isDense: true,
               ),
             ),
