@@ -212,8 +212,8 @@ func TestPromptStreamsTheReply(t *testing.T) {
 	}
 
 	c := svc.chats[id]
-	if c.session.Title != "hi" {
-		t.Errorf("title = %q, want the first prompt", c.session.Title)
+	if c.session.Title != "hi" || !c.session.HasMessages {
+		t.Errorf("title = %q, want the first prompt (has messages: %v)", c.session.Title, c.session.HasMessages)
 	}
 	want := []model.Item{
 		{ID: "item-1", Kind: model.UserMessage, Text: "hi", Images: []model.Image{png}},

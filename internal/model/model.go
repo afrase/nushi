@@ -18,6 +18,9 @@ type Session struct {
 	Created   time.Time
 	// Archived chats have no agent running; they reopen when unarchived.
 	Archived bool
+	// HasMessages says the chat's session has had a message: it is in the
+	// agent's history and can be reopened, forked and moved with it.
+	HasMessages bool
 	// Earlier are the agent's sessions the chat had before it moved, oldest
 	// first.
 	Earlier []AgentSession `json:",omitempty"`

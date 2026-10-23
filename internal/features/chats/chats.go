@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"log"
+	"maps"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -200,14 +201,23 @@ func (s *Service) newChat() *chat {
 		questions: map[string]chan<- []model.Field{}, sides: map[string]*chat{}, probes: map[string]*silentRun{}}
 }
 
-// Close stops every chat's agent.
+// Close stops every chat's agent, then has the agent's history forget the
+// side chats.
 func (s *Service) Close() {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	for _, c := range s.chats {
+	open := slices.Collect(maps.Values(s.chats))
+	s.mu.Unlock()
+	var sides []string
+	var with *chat
+	for _, c := range open {
 		if c.parent == nil { // a side chat shares its chat's agent
+			sides = append(sides, s.dropSides(c)...)
 			c.disconnect()
+			with = c
 		}
+	}
+	if with != nil {
+		s.discard(with, sides)
 	}
 }
 

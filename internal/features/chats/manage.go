@@ -1,7 +1,9 @@
 package chats
 
 import (
+	"context"
 	"errors"
+	"log"
 	"fmt"
 	"maps"
 	"slices"
@@ -119,8 +121,9 @@ func (s *Service) stop(c *chat) {
 		case <-time.After(5 * time.Second):
 		}
 	}
-	s.dropSides(c)
+	sides := s.dropSides(c)
 	c.disconnect()
+	go s.discard(c, sides)
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.stopping = false
@@ -128,8 +131,9 @@ func (s *Service) stop(c *chat) {
 	c.queueChangedLocked()
 }
 
-// dropSides forgets a chat's side chats, whose agent is about to stop.
-func (s *Service) dropSides(c *chat) {
+// dropSides forgets a chat's side chats, whose agent is about to stop, and
+// returns their session ids, for discard once it has.
+func (s *Service) dropSides(c *chat) []string {
 	c.mu.Lock()
 	sides := slices.Collect(maps.Keys(c.sides))
 	clear(c.sides)
@@ -139,6 +143,21 @@ func (s *Service) dropSides(c *chat) {
 		delete(s.chats, id)
 	}
 	s.mu.Unlock()
+	return sides
+}
+
+// discard has a new agent delete side chats' sessions from its history,
+// once the agent they ran on has stopped: one that still runs would write a
+// little of a session back as it ends it (see throwAway).
+func (s *Service) discard(c *chat, sides []string) {
+	if len(sides) == 0 {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := s.deleteHistory(ctx, c, sides); err != nil {
+		log.Printf("chat %s: deleting its side chats %v: %v", c.id, sides, err)
+	}
 }
 
 // Folder returns the folder a chat runs in (in its worktree, for a worktree

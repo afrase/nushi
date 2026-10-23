@@ -1,6 +1,9 @@
 package store
 
 import (
+	"os"
+	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
@@ -35,5 +38,38 @@ func TestStateSurvivesANewStore(t *testing.T) {
 	if len(got) != 2 || got[1].ID != "a" || got[1].Title != "Fix the build" || !got[1].Created.Equal(created) || got[0].ID != "../b" ||
 		got[1].SessionID != "a" || got[0].SessionID != "s2" { // a chat from before step 22 has one id for both
 		t.Errorf("sessions = %+v", got)
+	}
+}
+
+func TestOldAndBrokenSessionFiles(t *testing.T) {
+	dir := t.TempDir()
+	s := New(dir)
+	s.HadMessages = func(sess model.Session) bool { return sess.SessionID == "in-history" }
+	if err := s.SaveSession(model.Session{ID: "new", SessionID: "x"}); err != nil {
+		t.Fatal(err)
+	}
+	files := map[string]string{
+		"titled.json":     `{"ID":"titled","SessionID":"t","Title":"Fix it"}`, // before the flag
+		"image.json":      `{"ID":"image","SessionID":"in-history"}`,          // an image-only first message
+		"empty.json":      `{"ID":"empty","SessionID":"e"}`,
+		"broken.json":     `{"ID":`,
+		"unreadable.json": ``,
+	}
+	for name, body := range files {
+		if err := os.WriteFile(filepath.Join(dir, "sessions", name), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	os.Chmod(filepath.Join(dir, "sessions", "unreadable.json"), 0)
+	got, err := s.Sessions()
+	if err != nil {
+		t.Fatal(err)
+	}
+	has := map[string]bool{}
+	for _, sess := range got {
+		has[sess.ID] = sess.HasMessages
+	}
+	if want := map[string]bool{"new": false, "titled": true, "image": true, "empty": false}; !reflect.DeepEqual(has, want) {
+		t.Errorf("has messages = %v, want %v", has, want)
 	}
 }

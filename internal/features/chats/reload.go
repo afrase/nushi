@@ -48,8 +48,9 @@ func (s *Service) Reload(chatID string) error {
 	}
 	c.statusChangedLocked()
 	c.mu.Unlock()
-	s.dropSides(c)
+	sides := s.dropSides(c)
 	c.disconnect()
+	go s.discard(c, sides)
 	go s.resume(c)
 	return nil
 }

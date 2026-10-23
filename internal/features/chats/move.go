@@ -30,7 +30,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 		return err
 	}
 	c.mu.Lock()
-	from, sid, fresh, oldWT := c.session.Folder, c.sid, c.session.Title == "", c.session.Worktree
+	from, sid, fresh, oldWT := c.session.Folder, c.sid, !c.session.HasMessages, c.session.Worktree
 	switch {
 	case c.session.Archived:
 		err = errors.New("the chat is archived")
@@ -72,7 +72,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 		})
 		mode := c.session.Mode
 		c.mu.Unlock()
-		s.dropSides(c) // they ran on the old agent
+		sides := s.dropSides(c) // they ran on the old agent
 		if old != nil {
 			if fresh {
 				if err := old.DeleteSession(ctx, acp.DeleteSessionRequest{SessionID: acp.SessionID(sid)}); err != nil {
@@ -81,6 +81,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 			}
 			old.Close()
 		}
+		go s.discard(c, sides)
 		if fresh {
 			s.dropWorktree(oldWT)
 		}

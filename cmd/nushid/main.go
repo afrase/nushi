@@ -27,6 +27,7 @@ import (
 	"github.com/afrase/nushi/internal/features/mcp"
 	"github.com/afrase/nushi/internal/features/terminals"
 	"github.com/afrase/nushi/internal/git"
+	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/store"
 	"github.com/afrase/nushi/internal/terminal"
 )
@@ -77,6 +78,7 @@ func run() error {
 	hub := &events.Hub{}
 	launch := func(h acp.Handler) (chats.Agent, error) { return launchClaude(dir, h) }
 	st := store.New(dir)
+	st.HadMessages = func(s model.Session) bool { return claudehistory.Has(projects, s.SessionID, s.Folder) }
 	copyHistory := func(id, from, to string) (func() error, error) { return claudehistory.Copy(projects, id, from, to) }
 	chatSvc := chats.New("claude", launch, st, st, copyHistory, git.Worktrees{}, filepath.Join(dir, "scratch"), hub.Publish)
 	termSvc := terminals.New(startShell, filepath.Base(loginShell), chatSvc, hub.Publish)

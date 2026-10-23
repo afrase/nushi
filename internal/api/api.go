@@ -269,12 +269,12 @@ func (s *server) GetContextUsage(ctx context.Context, req *connect.Request[nushi
 }
 
 func (s *server) Events(ctx context.Context, _ *connect.Request[nushiv1.EventsRequest], stream *connect.ServerStream[nushiv1.EventsResponse]) error {
-	// An empty first message tells the client the subscription is live.
-	if err := stream.Send(&nushiv1.EventsResponse{}); err != nil {
-		return err
-	}
 	var err error
-	s.hub.Subscribe(ctx.Done(), func(e model.Event) bool {
+	// An empty first message tells the client the subscription is live.
+	s.hub.Subscribe(ctx.Done(), func() bool {
+		err = stream.Send(&nushiv1.EventsResponse{})
+		return err == nil
+	}, func(e model.Event) bool {
 		err = stream.Send(toProto(e))
 		return err == nil
 	})
