@@ -13,10 +13,19 @@ import 'gen/nushi/v1/nushi.connect.client.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'settings.dart';
 
+final _support = '${Platform.environment['HOME']}/Library/Application Support';
+
 /// The daemon's data folder; `NUSHI_DATA` picks another one (development).
-final dataDir =
-    Platform.environment['NUSHI_DATA'] ??
-    '${Platform.environment['HOME']}/Library/Application Support/Nushi Next';
+final dataDir = Platform.environment['NUSHI_DATA'] ?? '$_support/Nushi';
+
+/// The data folder from when the app was "Nushi Next". The daemon moves it
+/// to [dataDir] when it starts, once its own daemon has stopped.
+final String? _oldDataDir =
+    Platform.environment['NUSHI_DATA'] == null &&
+        !Directory(dataDir).existsSync() &&
+        Directory('$_support/Nushi Next').existsSync()
+    ? '$_support/Nushi Next'
+    : null;
 
 /// The API version this app was built with (`internal/api.Version`).
 const apiVersion = 25;
@@ -122,11 +131,18 @@ class Daemon extends ChangeNotifier {
       return;
     }
     _launched = DateTime.now();
-    Directory(dataDir).createSync(recursive: true);
+    // Moving from Nushi Next: its daemon stops, and the new one starts in
+    // the old folder, which it then moves (its log and folder move along).
+    var dir = dataDir;
+    if (_oldDataDir case final old? when !Directory(dataDir).existsSync()) {
+      _stopDaemon(old);
+      dir = old;
+    }
+    Directory(dir).createSync(recursive: true);
     Process.start(
       Platform.environment['SHELL'] ?? '/bin/zsh',
-      ['-l', '-c', "exec '$bin' >>'$dataDir/nushid.log' 2>&1"],
-      workingDirectory: dataDir,
+      ['-l', '-c', "exec '$bin' >>'$dir/nushid.log' 2>&1"],
+      workingDirectory: dir,
       mode: ProcessStartMode.detached,
     ).ignore();
   }
@@ -134,21 +150,26 @@ class Daemon extends ChangeNotifier {
   /// Stops the running daemon (it stops its agents) and starts the bundled
   /// one; chats reopen through session/load as they are opened.
   Future<void> restartDaemon() async {
-    final lsof = await Process.run('lsof', [
-      '-a',
-      '-c',
-      'nushid',
-      '-t',
-      '$dataDir/nushid.sock',
-    ]);
-    for (final pid in '${lsof.stdout}'.split('\n')) {
-      if (int.tryParse(pid) case final pid?) Process.killPid(pid);
-    }
+    _stopDaemon(dataDir);
     // The first ping that fails starts the bundled daemon.
     _launched = DateTime(0);
     for (var i = 0; i < 50 && connected; i++) {
       await Future<void>.delayed(const Duration(milliseconds: 200));
       await _ping();
+    }
+  }
+
+  /// Stops the daemon listening in [dir], if one is.
+  void _stopDaemon(String dir) {
+    final lsof = Process.runSync('lsof', [
+      '-a',
+      '-c',
+      'nushid',
+      '-t',
+      '$dir/nushid.sock',
+    ]);
+    for (final pid in '${lsof.stdout}'.split('\n')) {
+      if (int.tryParse(pid) case final pid?) Process.killPid(pid);
     }
   }
 
