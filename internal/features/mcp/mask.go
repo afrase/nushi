@@ -3,6 +3,7 @@ package mcp
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"reflect"
 	"regexp"
 	"strings"
@@ -46,29 +47,53 @@ func masked(config string) string {
 	return string(b)
 }
 
+// maskHeader masks a header's value ("Authorization: Bearer x" keeps its
+// name), or the whole of what isn't one.
+func maskHeader(h string) string {
+	if name, _, ok := strings.Cut(h, ":"); ok && !strings.Contains(name, " ") {
+		return name + ": " + Mask
+	}
+	return Mask
+}
+
 var (
+	authValue  = regexp.MustCompile(`(?i)^['"]?(authorization:|bearer )`)
 	secretWord = regexp.MustCompile(`(?i)key|token|secret|pass|pwd|auth|cred|bearer|session|cookie|private`)
 	envName    = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 	tokenChars = regexp.MustCompile(`^[A-Za-z0-9_-]{16,}$`)
 )
 
 // maskArgs masks the arguments that look secret: the value of a flag
-// named like a secret (--api-key x, --token=x), VAR=x when VAR is named
-// like one or follows -e/--env (docker run -e VAR=x), and URLs' secrets.
+// named like a secret (--api-key x, --token=x) or of a header (-H x,
+// --header x), an Authorization or Bearer value anywhere, VAR=x when VAR
+// is named like a secret or follows -e/--env (docker run -e VAR=x), URLs'
+// secrets, and the same inside an argument of several words (sh -c '…').
+// It's a display heuristic: what it doesn't recognize shows.
 func maskArgs(args []string) []string {
 	out := append([]string(nil), args...)
 	for i, a := range out {
 		name, _, eq := strings.Cut(a, "=")
 		flag := strings.HasPrefix(a, "-")
 		switch {
+		case a == Mask:
+		case (a == "-H" || a == "--header") && i+1 < len(out):
+			out[i+1] = maskHeader(out[i+1])
+		case authValue.MatchString(a):
+			out[i] = maskHeader(a)
+		case strings.EqualFold(strings.Trim(a, `'"`), "bearer") && i+1 < len(out):
+			out[i+1] = Mask
+		case strings.ContainsAny(a, " \t\n"):
+			out[i] = strings.Join(maskArgs(strings.Fields(a)), " ")
 		case flag && eq && secretWord.MatchString(name):
 			out[i] = name + "=" + Mask
 		case flag && !eq && secretWord.MatchString(a) && i+1 < len(out) && !strings.HasPrefix(out[i+1], "-"):
 			out[i+1] = Mask
 		case !flag && eq && envName.MatchString(name) && (secretWord.MatchString(name) || i > 0 && (args[i-1] == "-e" || args[i-1] == "--env")):
 			out[i] = name + "=" + Mask
-		case strings.Contains(a, "://"):
-			out[i] = maskURL(a)
+		case strings.Contains(a, "://"): // quotes around it stay
+			core := strings.Trim(a, `'"`)
+			at := strings.Index(a, core)
+			out[i] = a[:at] + maskURL(core) + a[at+len(core):]
 		}
 	}
 	return out
@@ -105,6 +130,8 @@ func maskURL(u string) string {
 		for i, p := range pairs {
 			if k, _, ok := strings.Cut(p, "="); ok {
 				pairs[i] = k + "=" + Mask
+			} else if tokenLike(p) {
+				pairs[i] = Mask
 			}
 		}
 		out += "?" + strings.Join(pairs, "&")
@@ -134,9 +161,10 @@ func tokenLike(s string) bool {
 
 // unmasked is config with what is still masked as it was shown (Mask
 // values, or a URL, command or arguments sent back exactly as masked)
-// taken from old. A kept env or header value goes only to the same URL
-// and command: when they change, a hidden value must be typed again, so
-// an edit can't send a stored secret somewhere else.
+// taken from old. A kept env or header value goes only to a server that is
+// otherwise the same (URL, command, arguments, everything but env and
+// headers): after any other change a hidden value must be typed again, so
+// an edit can't hand a stored secret to something else.
 func unmasked(config, old string) (string, error) {
 	cfg, err := decode(config)
 	if err != nil {
@@ -154,7 +182,7 @@ func unmasked(config, old string) (string, error) {
 			return "", fmt.Errorf("type the hidden parts of %s again: it changed", key)
 		}
 	}
-	same := reflect.DeepEqual(cfg["url"], was["url"]) && reflect.DeepEqual(cfg["command"], was["command"])
+	same := reflect.DeepEqual(without(cfg, "env", "headers"), without(was, "env", "headers"))
 	for _, key := range []string{"env", "headers"} {
 		m, _ := cfg[key].(map[string]any)
 		prev, _ := was[key].(map[string]any)
@@ -167,11 +195,20 @@ func unmasked(config, old string) (string, error) {
 			case !ok:
 				return "", fmt.Errorf("%s %s has no value", strings.TrimSuffix(key, "s"), k)
 			case !same:
-				return "", fmt.Errorf("type %s %s again: the server's URL or command changed", strings.TrimSuffix(key, "s"), k)
+				return "", fmt.Errorf("type %s %s again: the server changed", strings.TrimSuffix(key, "s"), k)
 			}
 			m[k] = p
 		}
 	}
 	b, _ := json.Marshal(cfg)
 	return string(b), nil
+}
+
+// without is cfg without keys.
+func without(cfg map[string]any, keys ...string) map[string]any {
+	out := maps.Clone(cfg)
+	for _, k := range keys {
+		delete(out, k)
+	}
+	return out
 }
