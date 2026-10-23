@@ -2425,8 +2425,10 @@ func (*SetConfigOptionResponse) Descriptor() ([]byte, []int) {
 }
 
 type GetFolderStatusRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Folder        string                 `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Folder string                 `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
+	// As GetDiffRequest.base (API 21).
+	Base          string `protobuf:"bytes,2,opt,name=base,proto3" json:"base,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2464,6 +2466,13 @@ func (*GetFolderStatusRequest) Descriptor() ([]byte, []int) {
 func (x *GetFolderStatusRequest) GetFolder() string {
 	if x != nil {
 		return x.Folder
+	}
+	return ""
+}
+
+func (x *GetFolderStatusRequest) GetBase() string {
+	if x != nil {
+		return x.Base
 	}
 	return ""
 }
@@ -2550,7 +2559,11 @@ func (x *GetFolderStatusResponse) GetRemoved() int32 {
 type GetDiffRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// An absolute path; it may be anywhere inside a repository.
-	Folder        string `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
+	Folder string `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
+	// A branch: count the changes from where HEAD's branch left it (git
+	// merge-base HEAD base), the branch's commits and uncommitted changes
+	// together, instead of from HEAD (API 21).
+	Base          string `protobuf:"bytes,2,opt,name=base,proto3" json:"base,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2588,6 +2601,13 @@ func (*GetDiffRequest) Descriptor() ([]byte, []int) {
 func (x *GetDiffRequest) GetFolder() string {
 	if x != nil {
 		return x.Folder
+	}
+	return ""
+}
+
+func (x *GetDiffRequest) GetBase() string {
+	if x != nil {
+		return x.Base
 	}
 	return ""
 }
@@ -3787,17 +3807,19 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\achat_id\x18\x01 \x01(\tR\x06chatId\x12\x1b\n" +
 	"\tconfig_id\x18\x02 \x01(\tR\bconfigId\x12\x14\n" +
 	"\x05value\x18\x03 \x01(\tR\x05value\"\x19\n" +
-	"\x17SetConfigOptionResponse\"0\n" +
+	"\x17SetConfigOptionResponse\"D\n" +
 	"\x16GetFolderStatusRequest\x12\x16\n" +
-	"\x06folder\x18\x01 \x01(\tR\x06folder\"\x89\x01\n" +
+	"\x06folder\x18\x01 \x01(\tR\x06folder\x12\x12\n" +
+	"\x04base\x18\x02 \x01(\tR\x04base\"\x89\x01\n" +
 	"\x17GetFolderStatusResponse\x12\x10\n" +
 	"\x03git\x18\x01 \x01(\bR\x03git\x12\x16\n" +
 	"\x06branch\x18\x02 \x01(\tR\x06branch\x12\x14\n" +
 	"\x05files\x18\x03 \x01(\x05R\x05files\x12\x14\n" +
 	"\x05added\x18\x04 \x01(\x05R\x05added\x12\x18\n" +
-	"\aremoved\x18\x05 \x01(\x05R\aremoved\"(\n" +
+	"\aremoved\x18\x05 \x01(\x05R\aremoved\"<\n" +
 	"\x0eGetDiffRequest\x12\x16\n" +
-	"\x06folder\x18\x01 \x01(\tR\x06folder\"=\n" +
+	"\x06folder\x18\x01 \x01(\tR\x06folder\x12\x12\n" +
+	"\x04base\x18\x02 \x01(\tR\x04base\"=\n" +
 	"\x0fGetDiffResponse\x12*\n" +
 	"\x05files\x18\x01 \x03(\v2\x14.nushi.v1.FileChangeR\x05files\"\x88\x01\n" +
 	"\n" +

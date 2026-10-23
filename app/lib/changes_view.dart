@@ -7,8 +7,10 @@ import 'gen/nushi/v1/nushi.pb.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
 
-/// The chat folder's uncommitted changes: a list of files, and the picked
-/// one side by side. It reloads when the agent finishes a turn.
+/// The chat folder's uncommitted changes, or for a worktree chat a choice
+/// of those and the branch's (everything since it left its base): a list of
+/// files, and the picked one side by side. It reloads when the agent
+/// finishes a turn.
 class ChangesView extends StatefulWidget {
   const ChangesView({super.key, required this.chat, required this.daemon});
 
@@ -28,6 +30,7 @@ class _ChangesViewState extends State<ChangesView> {
   DiffThemeData? _theme;
   bool _wasBusy = false;
   late String _folder = widget.chat.folder;
+  late String _base = widget.daemon.diffBase(widget.chat);
 
   @override
   void initState() {
@@ -44,8 +47,12 @@ class _ChangesViewState extends State<ChangesView> {
   }
 
   void _chatChanged() {
-    if (_wasBusy && !widget.chat.busy || _folder != widget.chat.folder) {
+    final base = widget.daemon.diffBase(widget.chat);
+    if (_wasBusy && !widget.chat.busy ||
+        _folder != widget.chat.folder ||
+        _base != base) {
       _folder = widget.chat.folder;
+      _base = base;
       _load();
     }
     _wasBusy = widget.chat.busy;
@@ -55,7 +62,7 @@ class _ChangesViewState extends State<ChangesView> {
     setState(() => _loading = true);
     try {
       final resp = await widget.daemon.client.getDiff(
-        GetDiffRequest(folder: widget.chat.folder),
+        GetDiffRequest(folder: widget.chat.folder, base: _base),
       );
       if (!mounted) return;
       _files = resp.files;
@@ -105,6 +112,7 @@ class _ChangesViewState extends State<ChangesView> {
       );
     }
     final file = _files.where((f) => f.path == _path).firstOrNull;
+    final chat = widget.chat;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -117,6 +125,15 @@ class _ChangesViewState extends State<ChangesView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (chat.worktree != null && widget.daemon.canBranchDiff)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                  child: Segmented(
+                    value: chat.branchDiff,
+                    segments: const [(true, 'Branch'), (false, 'Uncommitted')],
+                    onChanged: (v) => chat.branchDiff = v,
+                  ),
+                ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
                 child: Row(

@@ -135,10 +135,10 @@ type NushiServiceClient interface {
 	// makes new chats with the same agent start in it.
 	SetConfigOption(context.Context, *connect.Request[v1.SetConfigOptionRequest]) (*connect.Response[v1.SetConfigOptionResponse], error)
 	// Returns a folder's uncommitted changes against HEAD, untracked files
-	// included.
+	// included, or everything since its branch left a base.
 	GetDiff(context.Context, *connect.Request[v1.GetDiffRequest]) (*connect.Response[v1.GetDiffResponse], error)
-	// Sums up a folder's uncommitted changes (as GetDiff lists them) and names
-	// its branch.
+	// Sums up a folder's changes (as GetDiff lists them) and names its
+	// branch.
 	GetFolderStatus(context.Context, *connect.Request[v1.GetFolderStatusRequest]) (*connect.Response[v1.GetFolderStatusResponse], error)
 	// Lists a folder's files (up to 20,000) for @-mentions: in a git
 	// repository the ones git doesn't ignore.
@@ -469,10 +469,10 @@ type NushiServiceHandler interface {
 	// makes new chats with the same agent start in it.
 	SetConfigOption(context.Context, *connect.Request[v1.SetConfigOptionRequest]) (*connect.Response[v1.SetConfigOptionResponse], error)
 	// Returns a folder's uncommitted changes against HEAD, untracked files
-	// included.
+	// included, or everything since its branch left a base.
 	GetDiff(context.Context, *connect.Request[v1.GetDiffRequest]) (*connect.Response[v1.GetDiffResponse], error)
-	// Sums up a folder's uncommitted changes (as GetDiff lists them) and names
-	// its branch.
+	// Sums up a folder's changes (as GetDiff lists them) and names its
+	// branch.
 	GetFolderStatus(context.Context, *connect.Request[v1.GetFolderStatusRequest]) (*connect.Response[v1.GetFolderStatusResponse], error)
 	// Lists a folder's files (up to 20,000) for @-mentions: in a git
 	// repository the ones git doesn't ignore.

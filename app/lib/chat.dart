@@ -10,6 +10,16 @@ class ChatState extends ChangeNotifier {
   final String id;
   String folder; // it can move (MoveChat)
   Worktree? worktree; // the git worktree it runs in, if Nushi made one
+
+  /// For a worktree chat, whether its changes show the whole branch (since
+  /// it left its base) rather than what's uncommitted.
+  bool get branchDiff => _branchDiff;
+  set branchDiff(bool v) {
+    _branchDiff = v;
+    notifyListeners();
+  }
+
+  bool _branchDiff = true;
   String sessionId = ''; // the agent's
   String title = '';
   bool archived = false; // no agent runs; read-only until unarchived

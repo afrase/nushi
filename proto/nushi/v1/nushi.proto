@@ -54,10 +54,10 @@ service NushiService {
   // makes new chats with the same agent start in it.
   rpc SetConfigOption(SetConfigOptionRequest) returns (SetConfigOptionResponse);
   // Returns a folder's uncommitted changes against HEAD, untracked files
-  // included.
+  // included, or everything since its branch left a base.
   rpc GetDiff(GetDiffRequest) returns (GetDiffResponse);
-  // Sums up a folder's uncommitted changes (as GetDiff lists them) and names
-  // its branch.
+  // Sums up a folder's changes (as GetDiff lists them) and names its
+  // branch.
   rpc GetFolderStatus(GetFolderStatusRequest) returns (GetFolderStatusResponse);
   // Lists a folder's files (up to 20,000) for @-mentions: in a git
   // repository the ones git doesn't ignore.
@@ -314,6 +314,8 @@ message SetConfigOptionResponse {}
 
 message GetFolderStatusRequest {
   string folder = 1;
+  // As GetDiffRequest.base (API 21).
+  string base = 2;
 }
 
 message GetFolderStatusResponse {
@@ -330,6 +332,10 @@ message GetFolderStatusResponse {
 message GetDiffRequest {
   // An absolute path; it may be anywhere inside a repository.
   string folder = 1;
+  // A branch: count the changes from where HEAD's branch left it (git
+  // merge-base HEAD base), the branch's commits and uncommitted changes
+  // together, instead of from HEAD (API 21).
+  string base = 2;
 }
 
 message GetDiffResponse {

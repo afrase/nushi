@@ -40,7 +40,7 @@ func TestWorktrees(t *testing.T) {
 	if b, _ := os.ReadFile(filepath.Join(repo, ".git", "info", "exclude")); strings.Count(string(b), "/.worktrees/") != 1 {
 		t.Errorf("info/exclude:\n%s", b)
 	}
-	if st, _ := Status(ctx, repo); st.Files != 0 {
+	if st, _ := Status(ctx, repo, ""); st.Files != 0 {
 		t.Errorf("the worktrees show as changes in the repository: %+v", st)
 	}
 

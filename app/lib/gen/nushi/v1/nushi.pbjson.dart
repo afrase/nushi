@@ -744,13 +744,15 @@ const GetFolderStatusRequest$json = {
   '1': 'GetFolderStatusRequest',
   '2': [
     {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
+    {'1': 'base', '3': 2, '4': 1, '5': 9, '10': 'base'},
   ],
 };
 
 /// Descriptor for `GetFolderStatusRequest`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List getFolderStatusRequestDescriptor =
     $convert.base64Decode(
-        'ChZHZXRGb2xkZXJTdGF0dXNSZXF1ZXN0EhYKBmZvbGRlchgBIAEoCVIGZm9sZGVy');
+        'ChZHZXRGb2xkZXJTdGF0dXNSZXF1ZXN0EhYKBmZvbGRlchgBIAEoCVIGZm9sZGVyEhIKBGJhc2'
+        'UYAiABKAlSBGJhc2U=');
 
 @$core.Deprecated('Use getFolderStatusResponseDescriptor instead')
 const GetFolderStatusResponse$json = {
@@ -775,12 +777,14 @@ const GetDiffRequest$json = {
   '1': 'GetDiffRequest',
   '2': [
     {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
+    {'1': 'base', '3': 2, '4': 1, '5': 9, '10': 'base'},
   ],
 };
 
 /// Descriptor for `GetDiffRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List getDiffRequestDescriptor = $convert
-    .base64Decode('Cg5HZXREaWZmUmVxdWVzdBIWCgZmb2xkZXIYASABKAlSBmZvbGRlcg==');
+final $typed_data.Uint8List getDiffRequestDescriptor = $convert.base64Decode(
+    'Cg5HZXREaWZmUmVxdWVzdBIWCgZmb2xkZXIYASABKAlSBmZvbGRlchISCgRiYXNlGAIgASgJUg'
+    'RiYXNl');
 
 @$core.Deprecated('Use getDiffResponseDescriptor instead')
 const GetDiffResponse$json = {

@@ -11,8 +11,8 @@ import 'worktree.dart';
 
 /// The panel beside a chat: cards for its environment (folder or
 /// repository, branch, worktree), its context and cost, and its folder's
-/// uncommitted changes. The changes reload when a turn ends or the chat
-/// moves.
+/// changes (uncommitted, or the branch's for a worktree chat), as the
+/// Changes view shows them. They reload when a turn ends or the chat moves.
 class DetailsPanel extends StatefulWidget {
   const DetailsPanel({
     super.key,
@@ -36,6 +36,7 @@ class _DetailsPanelState extends State<DetailsPanel> {
   String? _error;
   bool _wasBusy = false;
   late String _folder = widget.chat.folder;
+  late String _base = widget.daemon.diffBase(widget.chat);
 
   @override
   void initState() {
@@ -51,8 +52,12 @@ class _DetailsPanelState extends State<DetailsPanel> {
   }
 
   void _chatChanged() {
-    if (_wasBusy && !widget.chat.busy || _folder != widget.chat.folder) {
+    final base = widget.daemon.diffBase(widget.chat);
+    if (_wasBusy && !widget.chat.busy ||
+        _folder != widget.chat.folder ||
+        _base != base) {
       _folder = widget.chat.folder;
+      _base = base;
       _load();
     }
     _wasBusy = widget.chat.busy;
@@ -62,7 +67,7 @@ class _DetailsPanelState extends State<DetailsPanel> {
     if (!widget.daemon.canFolderStatus) return;
     try {
       final status = await widget.daemon.client.getFolderStatus(
-        GetFolderStatusRequest(folder: widget.chat.folder),
+        GetFolderStatusRequest(folder: widget.chat.folder, base: _base),
       );
       if (mounted) {
         setState(() {
@@ -180,7 +185,7 @@ class _DetailsPanelState extends State<DetailsPanel> {
               else if (!status.git)
                 (null, Text('Not a git repository.', style: muted))
               else ...[
-                ('Uncommitted', lines!),
+                (_base.isEmpty ? 'Uncommitted' : 'Branch', lines!),
                 (
                   'Files',
                   Text(
