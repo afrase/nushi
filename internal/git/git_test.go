@@ -31,12 +31,12 @@ func write(t *testing.T, path, text string) {
 func TestChanges(t *testing.T) {
 	ctx := context.Background()
 	repo := t.TempDir()
-	if _, err := Changes(ctx, repo, ""); err == nil {
+	if _, err := Changes(ctx, repo, Span{}); err == nil {
 		t.Error("a folder outside git had changes")
 	}
 	git(t, repo, "init", "-q", "-b", "main")
 	write(t, filepath.Join(repo, "sub", "kept.txt"), "one\n")
-	if got, err := Changes(ctx, repo, ""); err != nil || len(got) != 1 || got[0].Status != "added" {
+	if got, err := Changes(ctx, repo, Span{}); err != nil || len(got) != 1 || got[0].Status != "added" {
 		t.Errorf("before the first commit: %+v, %v", got, err) // no HEAD yet
 	}
 	write(t, filepath.Join(repo, "sub", "gone.txt"), "bye\n")
@@ -52,7 +52,7 @@ func TestChanges(t *testing.T) {
 	os.Symlink("/etc/hosts", filepath.Join(repo, "sub", "link"))
 	write(t, filepath.Join(repo, "top.txt"), "changed\n") // outside the folder asked for
 
-	got, err := Changes(ctx, filepath.Join(repo, "sub"), "")
+	got, err := Changes(ctx, filepath.Join(repo, "sub"), Span{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +76,7 @@ func TestChanges(t *testing.T) {
 	git(t, repo, "commit", "-q", "-m", "more")
 	git(t, repo, "mv", "sub/kept.txt", "sub/moved.txt")
 	write(t, filepath.Join(repo, "sub", "moved.txt"), "one\ntwo\nthree\n")
-	got, err = Changes(ctx, filepath.Join(repo, "sub"), "")
+	got, err = Changes(ctx, filepath.Join(repo, "sub"), Span{})
 	want = []model.FileChange{{Path: "moved.txt", OldPath: "kept.txt", Status: "renamed", Old: "one\ntwo\n", New: "one\ntwo\nthree\n", Added: 1}}
 	if err != nil || !reflect.DeepEqual(got, want) {
 		t.Errorf("renamed: %+v, %v", got, err)
@@ -102,8 +102,8 @@ func TestBranchChanges(t *testing.T) {
 	git(t, repo, "switch", "-q", "feature")
 	write(t, filepath.Join(repo, "b.txt"), "b2\n")
 
-	paths := func(base string) string {
-		changes, err := Changes(ctx, repo, base)
+	paths := func(span Span) string {
+		changes, err := Changes(ctx, repo, span)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -113,16 +113,42 @@ func TestBranchChanges(t *testing.T) {
 		}
 		return strings.Join(out, " ")
 	}
-	if got, want := paths("main"), "a.txt:a\n>a\nmore\n b.txt:b\n>b2\n"; got != want {
+	if got, want := paths(Span{Base: "main"}), "a.txt:a\n>a\nmore\n b.txt:b\n>b2\n"; got != want {
 		t.Errorf("branch changes = %q, want %q", got, want)
 	}
-	if got, want := paths(""), "b.txt:b\n>b2\n"; got != want {
+	if got, want := paths(Span{}), "b.txt:b\n>b2\n"; got != want {
 		t.Errorf("uncommitted changes = %q, want %q", got, want)
 	}
 	if st, err := Status(ctx, repo, "main"); err != nil || st.Files != 2 || st.Added != 2 || st.Removed != 1 {
 		t.Errorf("branch status = %+v, %v", st, err)
 	}
-	if _, err := Changes(ctx, repo, "--output=x"); err == nil {
+	if _, err := Changes(ctx, repo, Span{Base: "--output=x"}); err == nil {
 		t.Error("an option as the base")
+	}
+
+	// The branch's commits, and what each made.
+	if b := DefaultBase(ctx, repo); b != "main" {
+		t.Errorf("default base = %q", b)
+	}
+	git(t, repo, "commit", "-q", "-am", "second")
+	if n, err := Ahead(ctx, repo, "main"); n != 2 || err != nil {
+		t.Errorf("ahead = %d, %v", n, err)
+	}
+	commits, err := Commits(ctx, repo, "main", 50)
+	if err != nil || len(commits) != 2 || commits[0].Subject != "second" || commits[1].Added != 1 {
+		t.Fatalf("commits = %+v, %v", commits, err)
+	}
+	if got, want := paths(Span{Commit: commits[0].Hash}), "b.txt:b\n>b2\n"; got != want {
+		t.Errorf("a commit's changes = %q, want %q", got, want)
+	}
+	if got, want := paths(Span{Commit: commits[0].Hash, Since: commits[1].Hash}), "a.txt:a\n>a\nmore\n b.txt:b\n>b2\n"; got != want {
+		t.Errorf("two commits' changes = %q, want %q", got, want)
+	}
+	if all, err := Commits(ctx, repo, "", 50); err != nil || len(all) != 3 {
+		t.Errorf("the last commits = %+v, %v", all, err)
+	}
+	first, _ := Commits(ctx, repo, "", 50)
+	if got, want := paths(Span{Commit: first[2].Hash}), "a.txt:>a\n b.txt:>b\n"; got != want {
+		t.Errorf("the first commit's changes = %q, want %q", got, want)
 	}
 }

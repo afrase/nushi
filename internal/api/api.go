@@ -5,10 +5,7 @@ import (
 	"cmp"
 	"context"
 	"crypto/subtle"
-	"errors"
-	"fmt"
 	"net/http"
-	"path/filepath"
 
 	"connectrpc.com/connect"
 
@@ -17,12 +14,11 @@ import (
 	"github.com/afrase/nushi/internal/features/chats"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
-	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 26
+const Version = 27
 
 type server struct {
 	chats *chats.Service
@@ -216,17 +212,6 @@ func (s *server) SetConfigOption(ctx context.Context, req *connect.Request[nushi
 	return connect.NewResponse(&nushiv1.SetConfigOptionResponse{}), nil
 }
 
-func (s *server) ListFiles(ctx context.Context, req *connect.Request[nushiv1.ListFilesRequest]) (*connect.Response[nushiv1.ListFilesResponse], error) {
-	if !filepath.IsAbs(req.Msg.Folder) {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%q is not an absolute path", req.Msg.Folder))
-	}
-	paths, err := git.Files(ctx, req.Msg.Folder, 20000)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
-	}
-	return connect.NewResponse(&nushiv1.ListFilesResponse{Paths: paths}), nil
-}
-
 func (s *server) GetContextUsage(ctx context.Context, req *connect.Request[nushiv1.GetContextUsageRequest]) (*connect.Response[nushiv1.GetContextUsageResponse], error) {
 	md, err := s.chats.ContextUsage(ctx, req.Msg.ChatId)
 	if err != nil {
@@ -238,37 +223,6 @@ func (s *server) GetContextUsage(ctx context.Context, req *connect.Request[nushi
 		out.Categories = append(out.Categories, &nushiv1.ContextCategory{Name: c.Name, Tokens: c.Tokens, Percent: c.Percent})
 	}
 	return connect.NewResponse(out), nil
-}
-
-func (s *server) GetDiff(ctx context.Context, req *connect.Request[nushiv1.GetDiffRequest]) (*connect.Response[nushiv1.GetDiffResponse], error) {
-	if !filepath.IsAbs(req.Msg.Folder) {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%q is not an absolute path", req.Msg.Folder))
-	}
-	changes, err := git.Changes(ctx, req.Msg.Folder, req.Msg.Base)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
-	}
-	resp := &nushiv1.GetDiffResponse{}
-	for _, c := range changes {
-		resp.Files = append(resp.Files, &nushiv1.FileChange{Path: c.Path, Status: c.Status, OldText: c.Old, NewText: c.New, Skipped: c.Skipped,
-			OldPath: c.OldPath, Added: int32(c.Added), Removed: int32(c.Removed)})
-	}
-	return connect.NewResponse(resp), nil
-}
-
-func (s *server) GetFolderStatus(ctx context.Context, req *connect.Request[nushiv1.GetFolderStatusRequest]) (*connect.Response[nushiv1.GetFolderStatusResponse], error) {
-	if !filepath.IsAbs(req.Msg.Folder) {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%q is not an absolute path", req.Msg.Folder))
-	}
-	st, err := git.Status(ctx, req.Msg.Folder, req.Msg.Base)
-	if errors.Is(err, git.ErrNotRepository) || errors.Is(err, git.ErrGone) {
-		return connect.NewResponse(&nushiv1.GetFolderStatusResponse{Gone: errors.Is(err, git.ErrGone)}), nil
-	}
-	if err != nil {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
-	}
-	return connect.NewResponse(&nushiv1.GetFolderStatusResponse{Git: true, Branch: st.Branch,
-		Files: int32(st.Files), Added: int32(st.Added), Removed: int32(st.Removed)}), nil
 }
 
 func (s *server) Events(ctx context.Context, _ *connect.Request[nushiv1.EventsRequest], stream *connect.ServerStream[nushiv1.EventsResponse]) error {

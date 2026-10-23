@@ -55,8 +55,11 @@ service NushiService {
   // makes new chats with the same agent start in it.
   rpc SetConfigOption(SetConfigOptionRequest) returns (SetConfigOptionResponse);
   // Returns a folder's uncommitted changes against HEAD, untracked files
-  // included, or everything since its branch left a base.
+  // included, or everything since its branch left a base, or what commits
+  // changed.
   rpc GetDiff(GetDiffRequest) returns (GetDiffResponse);
+  // Lists a branch's commits since a base, or the last ones (API 27).
+  rpc ListCommits(ListCommitsRequest) returns (ListCommitsResponse);
   // Sums up a folder's changes (as GetDiff lists them) and names its
   // branch.
   rpc GetFolderStatus(GetFolderStatusRequest) returns (GetFolderStatusResponse);
@@ -399,6 +402,12 @@ message GetFolderStatusResponse {
   int32 removed = 5;
   // The folder doesn't exist (any more); nothing else is set (API 22).
   bool gone = 6;
+  // The branch a branch is counted from when the chat has no base of its
+  // own: origin/HEAD's branch, else main or master; "" if none (API 27).
+  string default_base = 7;
+  // The commits HEAD has that the base (or else default_base) lacks
+  // (API 27).
+  int32 ahead = 8;
 }
 
 message GetDiffRequest {
@@ -408,6 +417,11 @@ message GetDiffRequest {
   // merge-base HEAD base), the branch's commits and uncommitted changes
   // together, instead of from HEAD (API 21).
   string base = 2;
+  // A commit: what it changed, from its first parent, instead (API 27).
+  string commit = 3;
+  // With commit, an older commit: what the commits from it to commit
+  // changed, it included (API 27).
+  string since = 4;
 }
 
 message GetDiffResponse {
@@ -431,6 +445,27 @@ message FileChange {
   // Lines added and removed; a binary file counts none (API 26).
   int32 added = 7;
   int32 removed = 8;
+}
+
+message ListCommitsRequest {
+  string folder = 1;
+  // HEAD's commits that base lacks (up to 500); without one the last 50.
+  string base = 2;
+}
+
+message ListCommitsResponse {
+  // Newest first.
+  repeated Commit commits = 1;
+}
+
+message Commit {
+  string hash = 1;
+  string short = 2;
+  string subject = 3;
+  int64 unix_seconds = 4;
+  // Lines added and removed in the folder.
+  int32 added = 5;
+  int32 removed = 6;
 }
 
 message EventsRequest {}

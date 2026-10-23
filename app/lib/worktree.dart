@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'changes_view.dart';
+import 'changes_span.dart';
 import 'chat.dart';
 import 'daemon.dart';
 import 'folder_button.dart';

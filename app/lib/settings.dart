@@ -8,8 +8,7 @@ import 'daemon.dart';
 /// What the app remembers across launches, in `app.json` in the data folder:
 /// whether the details panel shows (its toolbar button), which of its cards
 /// are collapsed and their order, the repositories whose new chats get a
-/// worktree, the worktree chats whose changes show what's uncommitted, not
-/// the branch, the panes' widths, and whether changed files show flat.
+/// worktree, what each chat's Changes view shows, the panes' widths, and whether changed files show flat.
 final showDetails = ValueNotifier<bool>(_saved['details'] != false)
   ..addListener(_save);
 final collapsedCards = ValueNotifier<Set<String>>(_strings('collapsed'))
@@ -20,8 +19,15 @@ final worktreeRepos = ValueNotifier<Set<String>>(_strings('worktrees'))
 /// The details panel's cards by title, in the order they were dragged into.
 final cardOrder = ValueNotifier<List<String>>([..._strings('cards')])
   ..addListener(_save);
-final uncommittedChats = ValueNotifier<Set<String>>(_strings('uncommitted'))
-  ..addListener(_save);
+
+/// What each chat's Changes view shows (a `Scope`'s name), by chat, once
+/// picked. Chats from before step 43 that showed what's uncommitted keep it.
+final changeScopes = ValueNotifier<Map<String, String>>({
+  for (final id in _strings('uncommitted')) id: 'uncommitted',
+  for (final MapEntry(:key, :value)
+      in ((_saved['scopes'] as Map?) ?? {}).entries)
+    if (key is String && value is String) key: value,
+})..addListener(_save);
 
 /// Whether the Changes view lists its files flat rather than as a tree.
 final changesFlat = ValueNotifier<bool>(_saved['flat'] == true)
@@ -55,7 +61,7 @@ void _save() {
         'details': showDetails.value,
         'collapsed': collapsedCards.value.toList(),
         'worktrees': worktreeRepos.value.toList(),
-        'uncommitted': uncommittedChats.value.toList(),
+        'scopes': changeScopes.value,
         'cards': cardOrder.value,
         'panes': paneWidths.value,
         'flat': changesFlat.value,

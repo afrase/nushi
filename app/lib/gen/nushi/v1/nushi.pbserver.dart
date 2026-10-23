@@ -57,6 +57,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.SetConfigOptionRequest request);
   $async.Future<$0.GetDiffResponse> getDiff(
       $pb.ServerContext ctx, $0.GetDiffRequest request);
+  $async.Future<$0.ListCommitsResponse> listCommits(
+      $pb.ServerContext ctx, $0.ListCommitsRequest request);
   $async.Future<$0.GetFolderStatusResponse> getFolderStatus(
       $pb.ServerContext ctx, $0.GetFolderStatusRequest request);
   $async.Future<$0.ListFilesResponse> listFiles(
@@ -104,6 +106,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.SetConfigOptionRequest();
       case 'GetDiff':
         return $0.GetDiffRequest();
+      case 'ListCommits':
+        return $0.ListCommitsRequest();
       case 'GetFolderStatus':
         return $0.GetFolderStatusRequest();
       case 'ListFiles':
@@ -156,6 +160,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return setConfigOption(ctx, request as $0.SetConfigOptionRequest);
       case 'GetDiff':
         return getDiff(ctx, request as $0.GetDiffRequest);
+      case 'ListCommits':
+        return listCommits(ctx, request as $0.ListCommitsRequest);
       case 'GetFolderStatus':
         return getFolderStatus(ctx, request as $0.GetFolderStatusRequest);
       case 'ListFiles':

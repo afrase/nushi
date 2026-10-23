@@ -18,3 +18,4 @@
 - [0016](0016-a-worktree-per-chat.md) A chat can have a git worktree of its own
 - [0017](0017-context-breakdown-from-claude.md) The context card reads Claude's /context output
 - [0018](0018-the-app-is-nushi.md) The app is Nushi
+- [0019](0019-changes-read-only-toward-git.md) The Changes view is read-only toward git

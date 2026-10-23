@@ -330,7 +330,8 @@ extension type NushiServiceClient (connect.Transport _transport) {
   }
 
   /// Returns a folder's uncommitted changes against HEAD, untracked files
-  /// included, or everything since its branch left a base.
+  /// included, or everything since its branch left a base, or what commits
+  /// changed.
   Future<nushiv1nushi.GetDiffResponse> getDiff(
     nushiv1nushi.GetDiffRequest input, {
     connect.Headers? headers,
@@ -340,6 +341,24 @@ extension type NushiServiceClient (connect.Transport _transport) {
   }) {
     return connect.Client(_transport).unary(
       specs.NushiService.getDiff,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Lists a branch's commits since a base, or the last ones (API 27).
+  Future<nushiv1nushi.ListCommitsResponse> listCommits(
+    nushiv1nushi.ListCommitsRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.listCommits,
       input,
       signal: signal,
       headers: headers,

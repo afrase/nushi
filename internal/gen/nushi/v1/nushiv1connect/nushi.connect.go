@@ -75,6 +75,9 @@ const (
 	NushiServiceSetConfigOptionProcedure = "/nushi.v1.NushiService/SetConfigOption"
 	// NushiServiceGetDiffProcedure is the fully-qualified name of the NushiService's GetDiff RPC.
 	NushiServiceGetDiffProcedure = "/nushi.v1.NushiService/GetDiff"
+	// NushiServiceListCommitsProcedure is the fully-qualified name of the NushiService's ListCommits
+	// RPC.
+	NushiServiceListCommitsProcedure = "/nushi.v1.NushiService/ListCommits"
 	// NushiServiceGetFolderStatusProcedure is the fully-qualified name of the NushiService's
 	// GetFolderStatus RPC.
 	NushiServiceGetFolderStatusProcedure = "/nushi.v1.NushiService/GetFolderStatus"
@@ -139,8 +142,11 @@ type NushiServiceClient interface {
 	// makes new chats with the same agent start in it.
 	SetConfigOption(context.Context, *connect.Request[v1.SetConfigOptionRequest]) (*connect.Response[v1.SetConfigOptionResponse], error)
 	// Returns a folder's uncommitted changes against HEAD, untracked files
-	// included, or everything since its branch left a base.
+	// included, or everything since its branch left a base, or what commits
+	// changed.
 	GetDiff(context.Context, *connect.Request[v1.GetDiffRequest]) (*connect.Response[v1.GetDiffResponse], error)
+	// Lists a branch's commits since a base, or the last ones (API 27).
+	ListCommits(context.Context, *connect.Request[v1.ListCommitsRequest]) (*connect.Response[v1.ListCommitsResponse], error)
 	// Sums up a folder's changes (as GetDiff lists them) and names its
 	// branch.
 	GetFolderStatus(context.Context, *connect.Request[v1.GetFolderStatusRequest]) (*connect.Response[v1.GetFolderStatusResponse], error)
@@ -274,6 +280,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("GetDiff")),
 			connect.WithClientOptions(opts...),
 		),
+		listCommits: connect.NewClient[v1.ListCommitsRequest, v1.ListCommitsResponse](
+			httpClient,
+			baseURL+NushiServiceListCommitsProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ListCommits")),
+			connect.WithClientOptions(opts...),
+		),
 		getFolderStatus: connect.NewClient[v1.GetFolderStatusRequest, v1.GetFolderStatusResponse](
 			httpClient,
 			baseURL+NushiServiceGetFolderStatusProcedure,
@@ -321,6 +333,7 @@ type nushiServiceClient struct {
 	answerQuestion   *connect.Client[v1.AnswerQuestionRequest, v1.AnswerQuestionResponse]
 	setConfigOption  *connect.Client[v1.SetConfigOptionRequest, v1.SetConfigOptionResponse]
 	getDiff          *connect.Client[v1.GetDiffRequest, v1.GetDiffResponse]
+	listCommits      *connect.Client[v1.ListCommitsRequest, v1.ListCommitsResponse]
 	getFolderStatus  *connect.Client[v1.GetFolderStatusRequest, v1.GetFolderStatusResponse]
 	listFiles        *connect.Client[v1.ListFilesRequest, v1.ListFilesResponse]
 	getContextUsage  *connect.Client[v1.GetContextUsageRequest, v1.GetContextUsageResponse]
@@ -417,6 +430,11 @@ func (c *nushiServiceClient) GetDiff(ctx context.Context, req *connect.Request[v
 	return c.getDiff.CallUnary(ctx, req)
 }
 
+// ListCommits calls nushi.v1.NushiService.ListCommits.
+func (c *nushiServiceClient) ListCommits(ctx context.Context, req *connect.Request[v1.ListCommitsRequest]) (*connect.Response[v1.ListCommitsResponse], error) {
+	return c.listCommits.CallUnary(ctx, req)
+}
+
 // GetFolderStatus calls nushi.v1.NushiService.GetFolderStatus.
 func (c *nushiServiceClient) GetFolderStatus(ctx context.Context, req *connect.Request[v1.GetFolderStatusRequest]) (*connect.Response[v1.GetFolderStatusResponse], error) {
 	return c.getFolderStatus.CallUnary(ctx, req)
@@ -489,8 +507,11 @@ type NushiServiceHandler interface {
 	// makes new chats with the same agent start in it.
 	SetConfigOption(context.Context, *connect.Request[v1.SetConfigOptionRequest]) (*connect.Response[v1.SetConfigOptionResponse], error)
 	// Returns a folder's uncommitted changes against HEAD, untracked files
-	// included, or everything since its branch left a base.
+	// included, or everything since its branch left a base, or what commits
+	// changed.
 	GetDiff(context.Context, *connect.Request[v1.GetDiffRequest]) (*connect.Response[v1.GetDiffResponse], error)
+	// Lists a branch's commits since a base, or the last ones (API 27).
+	ListCommits(context.Context, *connect.Request[v1.ListCommitsRequest]) (*connect.Response[v1.ListCommitsResponse], error)
 	// Sums up a folder's changes (as GetDiff lists them) and names its
 	// branch.
 	GetFolderStatus(context.Context, *connect.Request[v1.GetFolderStatusRequest]) (*connect.Response[v1.GetFolderStatusResponse], error)
@@ -620,6 +641,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("GetDiff")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceListCommitsHandler := connect.NewUnaryHandler(
+		NushiServiceListCommitsProcedure,
+		svc.ListCommits,
+		connect.WithSchema(nushiServiceMethods.ByName("ListCommits")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceGetFolderStatusHandler := connect.NewUnaryHandler(
 		NushiServiceGetFolderStatusProcedure,
 		svc.GetFolderStatus,
@@ -682,6 +709,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceSetConfigOptionHandler.ServeHTTP(w, r)
 		case NushiServiceGetDiffProcedure:
 			nushiServiceGetDiffHandler.ServeHTTP(w, r)
+		case NushiServiceListCommitsProcedure:
+			nushiServiceListCommitsHandler.ServeHTTP(w, r)
 		case NushiServiceGetFolderStatusProcedure:
 			nushiServiceGetFolderStatusHandler.ServeHTTP(w, r)
 		case NushiServiceListFilesProcedure:
@@ -769,6 +798,10 @@ func (UnimplementedNushiServiceHandler) SetConfigOption(context.Context, *connec
 
 func (UnimplementedNushiServiceHandler) GetDiff(context.Context, *connect.Request[v1.GetDiffRequest]) (*connect.Response[v1.GetDiffResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetDiff is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ListCommits(context.Context, *connect.Request[v1.ListCommitsRequest]) (*connect.Response[v1.ListCommitsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ListCommits is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) GetFolderStatus(context.Context, *connect.Request[v1.GetFolderStatusRequest]) (*connect.Response[v1.GetFolderStatusResponse], error) {
