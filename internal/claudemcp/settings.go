@@ -68,6 +68,13 @@ func rejected(folder string, terminal []string) (out map[string][]string, approv
 // Claude keeps it out through your global excludes.
 func (Claude) SetOn(ctx context.Context, folder, name string, on bool) error {
 	path := localSettings(folder)
+	// The repository decides what's in .claude/: refuse symlinks there, so
+	// a cloned repo can't point the write at a file elsewhere.
+	for _, p := range []string{filepath.Dir(path), path} {
+		if fi, err := os.Lstat(p); err == nil && fi.Mode()&os.ModeSymlink != 0 {
+			return fmt.Errorf("%s is a symlink; not changing it", p)
+		}
+	}
 	settings := map[string]json.RawMessage{}
 	b, err := os.ReadFile(path)
 	created := os.IsNotExist(err)
@@ -100,14 +107,10 @@ func (Claude) SetOn(ctx context.Context, folder, name string, on bool) error {
 		return err
 	}
 	mode := os.FileMode(0o644)
-	if fi, err := os.Stat(path); err == nil {
+	if fi, err := os.Lstat(path); err == nil {
 		mode = fi.Mode().Perm()
 	}
-	tmp := path + ".nushi-tmp"
-	if err := os.WriteFile(tmp, append(out, '\n'), mode); err != nil {
-		return err
-	}
-	if err := os.Rename(tmp, path); err != nil {
+	if err := replaceFile(path, append(out, '\n'), mode); err != nil {
 		return err
 	}
 	root := project(folder)
@@ -115,4 +118,28 @@ func (Claude) SetOn(ctx context.Context, folder, name string, on bool) error {
 		_ = git.Exclude(ctx, root, "/.claude/settings.local.json") // outside git there is nothing to keep it out of
 	}
 	return nil
+}
+
+// replaceFile writes data to path through a new temporary file beside it
+// (a fresh name, never an existing file or symlink), then renames it over
+// path.
+func replaceFile(path string, data []byte, mode os.FileMode) error {
+	f, err := os.CreateTemp(filepath.Dir(path), ".nushi-*")
+	if err != nil {
+		return err
+	}
+	_, err = f.Write(data)
+	if err == nil {
+		err = f.Chmod(mode)
+	}
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	if err == nil {
+		err = os.Rename(f.Name(), path)
+	}
+	if err != nil {
+		os.Remove(f.Name())
+	}
+	return err
 }
