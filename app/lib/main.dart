@@ -82,7 +82,9 @@ class _Shell extends StatelessWidget {
     listenable: daemon,
     builder: (context, _) {
       final theme = NushiTheme.of(context);
-      if (!daemon.connected) {
+      // Never connected yet: nothing to show. Once it was, a lost
+      // connection is a banner over the app, which keeps what's open.
+      if (!daemon.connected && daemon.daemonApi == 0) {
         return Center(
           child: Text(
             bundledDaemon == null
@@ -93,7 +95,7 @@ class _Shell extends StatelessWidget {
         );
       }
       final chat = daemon.selected;
-      return LayoutBuilder(
+      final app = LayoutBuilder(
         builder: (context, box) => Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -120,6 +122,23 @@ class _Shell extends StatelessWidget {
             ),
           ],
         ),
+      );
+      // Always a column, the app its last child: the banner coming and
+      // going keeps the app's state.
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (!daemon.connected)
+            Container(
+              color: theme.t.needsSoft,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              child: Text(
+                'Lost the connection to the daemon; reconnecting…',
+                style: theme.ui(theme.t.needs, size: 12),
+              ),
+            ),
+          Expanded(child: app),
+        ],
       );
     },
   );

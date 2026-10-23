@@ -108,7 +108,8 @@ class _SidebarState extends State<Sidebar> {
                         style: theme.ui(t.textMuted, size: 12),
                       ),
                     ),
-                  for (final c in chats) _ChatRow(c, daemon: widget.daemon),
+                  for (final c in chats)
+                    _ChatRow(c, key: ValueKey(c.id), daemon: widget.daemon),
                 ],
                 if (archived.isNotEmpty) ...[
                   Padding(
@@ -140,7 +141,7 @@ class _SidebarState extends State<Sidebar> {
                   ),
                   if (_showArchived)
                     for (final c in archived)
-                      _ChatRow(c, daemon: widget.daemon),
+                      _ChatRow(c, key: ValueKey(c.id), daemon: widget.daemon),
                 ],
               ],
             ),
@@ -309,7 +310,7 @@ class _FolderHeader extends StatelessWidget {
 /// A chat in the list: click opens it, double-click renames it, and a
 /// right-click opens its menu.
 class _ChatRow extends StatefulWidget {
-  const _ChatRow(this.chat, {required this.daemon});
+  const _ChatRow(this.chat, {super.key, required this.daemon});
 
   final ChatState chat;
   final Daemon daemon;

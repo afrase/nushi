@@ -30,25 +30,13 @@ class Composer extends StatefulWidget {
     super.key,
     required this.chat,
     required this.daemon,
-    required this.replies,
-    this.quote,
-    this.attachments,
     this.hint = 'Type / for commands',
     this.folder = false,
   });
 
+  /// The chat; what's written is its draft, which outlives the box.
   final ChatState chat;
   final Daemon daemon;
-
-  /// Text to quote in the box (a side chat's start), cursor after it;
-  /// taken and cleared.
-  final ValueNotifier<String?>? quote;
-
-  /// The replies to send with the next message.
-  final Replies replies;
-
-  /// The images to send with the prompt; the box keeps its own if null.
-  final Attachments? attachments;
   final String hint;
 
   /// Whether a chat without messages shows its folder under the box.
@@ -59,53 +47,55 @@ class Composer extends StatefulWidget {
 }
 
 class _ComposerState extends State<Composer> {
-  final _text = TextEditingController();
   final _focus = FocusNode();
+  late final _draft = widget.chat.draft;
+  late final _text = _draft.text;
   late final _completions = Completions(
     _text,
+    _draft.mentions,
     () => widget.chat,
     widget.daemon,
   );
-  Set<String> get _mentions => _completions.mentions; // files picked with @
+  Set<String> get _mentions => _draft.mentions; // files picked with @
   List<String> _lastFiles = []; // the last prompt's, for Up
-  late final _images = widget.attachments ?? Attachments();
+  late final _images = _draft.images;
 
   @override
   void initState() {
     super.initState();
     _images.addListener(_imagesChanged);
-    widget.replies.addListener(_repliesChanged);
+    _draft.replies.addListener(_repliesChanged);
+    _replyCount = _draft.replies.value.length;
     _completions.addListener(_imagesChanged);
-    widget.quote?.addListener(_quote);
+    _draft.quote.addListener(_quote);
     _quote(); // one given before the box was built
     widget.chat.takeBack.addListener(_takeBack);
+    _takeBack(); // one taken back while the box wasn't there
   }
 
   void _imagesChanged() => setState(() {}); // and completions
 
   int _replyCount = 0;
   void _repliesChanged() {
-    if (widget.replies.value.length > _replyCount) _focus.requestFocus();
-    setState(() => _replyCount = widget.replies.value.length);
+    if (_draft.replies.value.length > _replyCount) _focus.requestFocus();
+    setState(() => _replyCount = _draft.replies.value.length);
   }
 
   @override
   void dispose() {
     _images.removeListener(_imagesChanged);
-    widget.replies.removeListener(_repliesChanged);
-    if (widget.attachments == null) _images.dispose();
-    widget.quote?.removeListener(_quote);
+    _draft.replies.removeListener(_repliesChanged);
+    _draft.quote.removeListener(_quote);
     widget.chat.takeBack.removeListener(_takeBack);
     _completions.dispose();
-    _text.dispose();
     _focus.dispose();
     super.dispose();
   }
 
   void _quote() {
-    final q = widget.quote?.value;
+    final q = _draft.quote.value;
     if (q == null) return;
-    widget.quote!.value = null;
+    _draft.quote.value = null;
     final quoted = q.trim().split('\n').map((l) => '> $l').join('\n');
     final before = _text.text.trim().isEmpty
         ? ''
@@ -147,7 +137,7 @@ class _ComposerState extends State<Composer> {
   /// cards, its text, its file mentions and images.
   void _restore(String message, List<String> files, List<ImageData> images) {
     final (replies, text) = splitReplies(message);
-    widget.replies.value = [...widget.replies.value, ...replies];
+    _draft.replies.value = [..._draft.replies.value, ...replies];
     _mentions.addAll(files);
     _images.value = [..._images.value, ...images];
     final before = _text.text.trim();
@@ -157,7 +147,7 @@ class _ComposerState extends State<Composer> {
       text: joined,
       selection: TextSelection.collapsed(offset: joined.length),
     );
-    _focus.requestFocus();
+    if (mounted) _focus.requestFocus();
   }
 
   void _takeBack() {
@@ -181,7 +171,8 @@ class _ComposerState extends State<Composer> {
   Future<void> _send({bool now = false}) async {
     final text = _text.text.trim();
     final images = _images.value;
-    final replies = widget.replies.value;
+    final replies = _draft.replies.value;
+    final mentions = {..._mentions};
     final busy = widget.chat.busy;
     if (text.isEmpty && images.isEmpty && replies.isEmpty ||
         busy && !widget.daemon.canQueue) {
@@ -193,7 +184,7 @@ class _ComposerState extends State<Composer> {
     ];
     _text.clear();
     _images.clear();
-    widget.replies.value = const [];
+    _draft.replies.value = const [];
     _mentions.clear();
     _lastFiles = files;
     try {
@@ -208,9 +199,12 @@ class _ComposerState extends State<Composer> {
         ),
       );
     } on Object catch (e) {
-      _text.text = text;
-      _images.value = images;
-      widget.replies.value = replies;
+      // Back in the draft (it outlives the box), before what was typed since.
+      final since = _text.text.trim();
+      _text.text = [text, if (since.isNotEmpty) since].join('\n\n');
+      _images.value = [...images, ..._images.value];
+      _draft.replies.value = [...replies, ..._draft.replies.value];
+      _mentions.addAll(mentions);
       if (mounted) showError(context, e);
     }
   }
@@ -259,14 +253,14 @@ class _ComposerState extends State<Composer> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (_images.value.isNotEmpty || widget.replies.value.isNotEmpty)
+                if (_images.value.isNotEmpty || _draft.replies.value.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(6, 8, 6, 4),
                     child: Wrap(
                       spacing: 6,
                       runSpacing: 6,
                       children: [
-                        ReplyCards(widget.replies, onDone: _focus.requestFocus),
+                        ReplyCards(_draft.replies, onDone: _focus.requestFocus),
                         Thumbnails(_images.value, onRemove: _images.removeAt),
                       ],
                     ),
@@ -335,7 +329,7 @@ class _ComposerState extends State<Composer> {
                       )
                     else if ((_text.text.trim().isNotEmpty ||
                             _images.value.isNotEmpty ||
-                            widget.replies.value.isNotEmpty) &&
+                            _draft.replies.value.isNotEmpty) &&
                         !chat.busy)
                       boxButton(
                         'Send (⏎)',

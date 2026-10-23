@@ -11,14 +11,14 @@ import 'widgets.dart';
 /// `/` the agent's commands, anywhere after `@` the chat folder's files.
 /// The files picked go in [mentions].
 class Completions extends ChangeNotifier {
-  Completions(this.text, this.chat, this.daemon) {
+  Completions(this.text, this.mentions, this.chat, this.daemon) {
     text.addListener(_update);
   }
 
   final TextEditingController text;
   final ChatState Function() chat;
   final Daemon daemon;
-  final mentions = <String>{};
+  final Set<String> mentions;
   List<Choice> choices = [];
   int picked = 0;
   List<String>? _files; // the folder's, fetched at the first @

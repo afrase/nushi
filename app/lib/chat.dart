@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import 'draft.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'settings.dart';
 
@@ -46,6 +47,12 @@ class ChatState extends ChangeNotifier {
   DateTime? started; // when the running turn started
   bool stopping = false; // the app asked the turn to stop
   String error = ''; // why the snapshot didn't load
+
+  /// What the user is writing to it.
+  final draft = Draft();
+
+  /// Its open side question, if any (see SidePanel).
+  ChatState? side;
 
   /// A message taken back from the transcript, set for the composer to
   /// put back in the box.

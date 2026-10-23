@@ -118,7 +118,7 @@ class ItemView extends StatelessWidget {
           spacing: 4,
           children: [
             _who(theme, 'Claude'),
-            AgentMarkdown(item.text),
+            AgentMarkdown(item.text, live: live),
             if (item.images.isNotEmpty) Thumbnails(item.images, size: 240),
           ],
         );

@@ -5,7 +5,6 @@ import 'chat.dart';
 import 'composer.dart';
 import 'composer_parts.dart';
 import 'daemon.dart';
-import 'replies.dart';
 import 'status.dart';
 import 'theme/theme.dart';
 import 'transcript.dart';
@@ -18,15 +17,11 @@ class SidePanel extends StatelessWidget {
     super.key,
     required this.side,
     required this.daemon,
-    required this.quote,
-    required this.replies,
     required this.onClose,
   });
 
   final ChatState side;
   final Daemon daemon;
-  final ValueNotifier<String?> quote;
-  final Replies replies;
   final VoidCallback onClose;
 
   @override
@@ -78,17 +73,12 @@ class SidePanel extends StatelessWidget {
               child: Transcript(
                 chat: side,
                 daemon: daemon,
-                onReply: (r) => replies.value = [...replies.value, r],
+                onReply: (r) =>
+                    side.draft.replies.value = [...side.draft.replies.value, r],
               ),
             ),
             if (side.busy) TurnStatus(side),
-            Composer(
-              chat: side,
-              daemon: daemon,
-              quote: quote,
-              replies: replies,
-              hint: 'Ask on the side',
-            ),
+            Composer(chat: side, daemon: daemon, hint: 'Ask on the side'),
           ],
         ),
       ),

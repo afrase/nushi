@@ -106,6 +106,8 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 60. Trusting a folder | 6498 | 867 | 12188 | 666 |
 | (60's security fixes) | 6550 | 867 | 12188 | 666 |
 | 61. Secrets and untrusted output | 6699 | 867 | 12246 | 666 |
+| (61's security fixes) | 6725 | 867 | 12246 | 666 |
+| 62. The app keeps what you type | 6725 | 867 | 12293 | 666 |
 
 Tripwires crossed:
 - Step 60 (about 720 lines with tests, without generated code): reading Claude's trust record and what a folder runs (`internal/claudetrust`, 190: `.mcp.json` servers through `claudemcp`, hooks, env, helpers, skills' hooks), the `trust` feature and its store (90), the API (30), git without hooks and the repository's filters (35), the app's check before a start or move and the card (160), tests (190).
@@ -333,6 +335,11 @@ Beside an installed Nushi that's in use: `export NUSHI_DATA=~/Library/Applicatio
 - A chat (claude-agent-acp, the Agent SDK) loads the MCP servers when its session starts or loads, and keeps them: a server added or removed later isn't seen until the session is reopened. It loads a `.mcp.json` server that `claude mcp list` calls "Pending approval" without asking (as the docs say for SDK sessions), and Claude says which servers failed or need auth. MCP tools are deferred (loaded through ToolSearch).
 
 ## Decisions to revisit
+
+- Step 62 (A2): what's written in a chat's box (text, @ mentions, reply cards, images) is the chat's draft, kept on the chat in the app's memory: peeking at Changes, switching chats, the MCP view, a lost connection and a daemon restart keep it; quitting the app doesn't. The side question is the chat's too: it stays open across a peek at Changes and a switch to another chat, and ends when closed or when the chat moves. A lost connection (after the first) is a banner over the app ("Lost the connection to the daemon; reconnecting…"); the app stays as it was meanwhile, its calls failing with the daemon's error.
+- Step 62 (A1): a question card takes the keyboard when it appears only if the box with the keyboard is empty; keys typed into its "Other" box are never answers.
+- Step 62 (A4, A11): a comment being written in a diff keeps its text when the file reloads, on the same line numbers (cut to the file's length). Opening the box clears the diff's line selection, so Shift-arrows and ⌘C work in the box (the commented lines no longer show highlighted while it's open).
+- Step 62 (A6): agent markdown is healed only while it streams; a finished message shows exactly as written.
 
 - Step 61 (S2): MCP configs leave the daemon with these masked as `••••`: env and header values, `headersHelper`, a URL's user and password, every query value, its fragment, and path segments that look like tokens (16+ letters, digits, `-`, `_`, at least three digits, few separators; `my-server-2024-edition` stays); in arguments, the value after a flag named like a secret (`--api-key x`, `--token=x`; key, token, secret, pass, auth, cred, bearer, session, cookie, private), `VAR=x` when VAR is named so or follows `-e`/`--env` (so `-e LOG=1` is masked too), and URLs. Also the value after `-H`/`--header` (its name stays: `Authorization: ••••`), any value starting `Authorization:` or `Bearer `, the word after `Bearer`, the same rules inside an argument of several words (`sh -c '…'`), and query parts without `=` that look like tokens. The health check's rows (plugins, connectors) are masked the same way. Masking is a display heuristic, not a guarantee: a secret in a shape it doesn't recognize shows. Edit: a URL, command, arguments or helper sent back exactly as shown keeps the stored one; hidden values (env and header values, the masked parts of a URL, command, arguments or helper) are put back only when the config is then exactly the old one; after any other change (another URL, type, argument, header or env var) the edit is refused until they are typed again ("the server changed: type its hidden values again"), and the form says so.
 - Step 61 (S3): a local markdown image shows only from a regular file of 20 MB at most; otherwise "[image: … (not an image file Nushi reads)]".

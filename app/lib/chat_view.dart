@@ -12,7 +12,6 @@ import 'details_panel.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'images.dart';
 import 'panes.dart';
-import 'replies.dart';
 import 'side_panel.dart';
 import 'status.dart';
 import 'theme/theme.dart';
@@ -21,7 +20,8 @@ import 'widgets.dart';
 
 /// A chat's transcript with the composer under it, and beside them a side
 /// question when one is open, or else [details]. Escape stops a running
-/// turn.
+/// turn. What's being written, and the side question, belong to the chat
+/// (its draft and side), so they outlive the view.
 class ChatView extends StatefulWidget {
   const ChatView({
     super.key,
@@ -42,52 +42,22 @@ class ChatView extends StatefulWidget {
 }
 
 class _ChatViewState extends State<ChatView> {
-  final Replies _replies = ValueNotifier(const []);
-  final Replies _sideReplies = ValueNotifier(const []);
-  final _sideQuote = ValueNotifier<String?>(null);
-  final _images = Attachments();
   bool _dragging = false; // files are dragged over the chat
-  ChatState? _side;
   bool _forking = false;
-  late String _folder = widget.chat.folder;
-
-  @override
-  void initState() {
-    super.initState();
-    widget.chat.addListener(_moved);
-  }
-
-  /// A side question ends when the chat moves: it ran on the old agent.
-  void _moved() {
-    if (_folder == widget.chat.folder) return;
-    _folder = widget.chat.folder;
-    setState(_closeSide);
-  }
-
-  @override
-  void dispose() {
-    widget.chat.removeListener(_moved);
-    _closeSide();
-    _replies.dispose();
-    _sideReplies.dispose();
-    _images.dispose();
-    _sideQuote.dispose();
-    super.dispose();
-  }
 
   Future<void> _ask(String selection) async {
-    if (_side == null && !_forking) {
+    final chat = widget.chat;
+    if (chat.side == null && !_forking) {
       setState(() => _forking = true);
       try {
-        final side = await widget.daemon.forkChat(widget.chat);
-        if (mounted) setState(() => _side = side);
+        chat.side = await widget.daemon.forkChat(chat);
       } on Object catch (e) {
         if (mounted) showError(context, e);
       } finally {
         if (mounted) setState(() => _forking = false);
       }
     }
-    _sideQuote.value = selection;
+    chat.side?.draft.quote.value = selection;
   }
 
   /// Attaches the images dropped on the chat.
@@ -99,20 +69,14 @@ class _ChatViewState extends State<ChatView> {
       showError(context, 'Claude doesn’t take images in this chat');
       return;
     }
-    await tryOrShow(context, () => _images.addFiles(paths));
-  }
-
-  void _closeSide() {
-    final side = _side;
-    if (side == null) return;
-    _side = null;
-    widget.daemon.closeSide(side).ignore();
+    await tryOrShow(context, () => widget.chat.draft.images.addFiles(paths));
   }
 
   @override
   Widget build(BuildContext context) {
     final chat = widget.chat;
-    final side = _side;
+    final side = chat.side;
+    final replies = chat.draft.replies;
     return LayoutBuilder(
       builder: (context, box) => Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -147,8 +111,7 @@ class _ChatViewState extends State<ChatView> {
                             daemon: widget.daemon,
                             onReply: chat.archived
                                 ? null
-                                : (r) =>
-                                      _replies.value = [..._replies.value, r],
+                                : (r) => replies.value = [...replies.value, r],
                             onSide: chat.archived ? null : _ask,
                           ),
                         ),
@@ -165,8 +128,6 @@ class _ChatViewState extends State<ChatView> {
                           Composer(
                             chat: chat,
                             daemon: widget.daemon,
-                            replies: _replies,
-                            attachments: _images,
                             folder: true,
                           ),
                       ],
@@ -184,11 +145,10 @@ class _ChatViewState extends State<ChatView> {
               max: min(640, box.maxWidth - ChatView.minWidth),
               left: true,
               child: SidePanel(
+                key: ValueKey(side.id),
                 side: side,
                 daemon: widget.daemon,
-                quote: _sideQuote,
-                replies: _sideReplies,
-                onClose: () => setState(_closeSide),
+                onClose: () => setState(() => widget.daemon.closeSide(chat)),
               ),
             )
           else if (widget.details != null)
