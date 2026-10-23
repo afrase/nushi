@@ -152,3 +152,29 @@ func TestBranchChanges(t *testing.T) {
 		t.Errorf("the first commit's changes = %q, want %q", got, want)
 	}
 }
+
+// A downloaded folder's .git/config can name hooks and filters: Nushi's own
+// status runs neither, and its worktrees run no hooks.
+func TestARepositorysOwnConfigRunsNothing(t *testing.T) {
+	ctx := context.Background()
+	repo, marks := t.TempDir(), t.TempDir()
+	git(t, repo, "init", "-q", "-b", "main")
+	write(t, filepath.Join(repo, "a.txt"), "one\n")
+	git(t, repo, "add", ".")
+	git(t, repo, "commit", "-q", "-m", "first")
+	write(t, filepath.Join(repo, ".git", "info", "attributes"), "*.txt filter=evil\n")
+	git(t, repo, "config", "filter.evil.clean", "touch "+filepath.Join(marks, "filter")+"; cat")
+	write(t, filepath.Join(repo, ".git", "hooks", "post-checkout"), "#!/bin/sh\ntouch "+filepath.Join(marks, "hook")+"\n")
+	os.Chmod(filepath.Join(repo, ".git", "hooks", "post-checkout"), 0o755)
+	write(t, filepath.Join(repo, "a.txt"), "one\ntwo\n")
+
+	if st, err := Status(ctx, repo, ""); err != nil || st.Added != 1 {
+		t.Errorf("status = %+v, %v", st, err)
+	}
+	if _, _, err := (Worktrees{}).Add(ctx, repo, "wt"); err != nil {
+		t.Fatal(err)
+	}
+	if ran, _ := filepath.Glob(filepath.Join(marks, "*")); len(ran) > 0 {
+		t.Errorf("ran %v", ran)
+	}
+}

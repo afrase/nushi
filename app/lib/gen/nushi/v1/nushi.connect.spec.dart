@@ -382,6 +382,26 @@ abstract final class NushiService {
     nushiv1nushi.CloseTerminalResponse.new,
   );
 
+  /// Says what a folder brings for the agent to run on its own (MCP
+  /// servers, hooks, helper commands) when neither the agent nor Nushi was
+  /// told to trust it; nothing when it is trusted or brings nothing. Ask
+  /// before starting or moving a chat there (API 37).
+  static const checkFolder = connect.Spec(
+    '/$name/CheckFolder',
+    connect.StreamType.unary,
+    nushiv1nushi.CheckFolderRequest.new,
+    nushiv1nushi.CheckFolderResponse.new,
+  );
+
+  /// Remembers that the user starts chats in a folder anyway (its
+  /// repository, outside git the folders under it too) (API 37).
+  static const trustFolder = connect.Spec(
+    '/$name/TrustFolder',
+    connect.StreamType.unary,
+    nushiv1nushi.TrustFolderRequest.new,
+    nushiv1nushi.TrustFolderResponse.new,
+  );
+
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.
   static const events = connect.Spec(

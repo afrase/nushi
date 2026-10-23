@@ -29,9 +29,9 @@ import (
 // Claude reads Claude Code's MCP config.
 type Claude struct{}
 
-// configFile is Claude's own config file, which holds user and local
+// ConfigFile is Claude's own config file, which holds user and local
 // servers.
-func configFile() string {
+func ConfigFile() string {
 	if dir := os.Getenv("CLAUDE_CONFIG_DIR"); dir != "" {
 		return filepath.Join(dir, ".claude.json")
 	}
@@ -64,7 +64,7 @@ func (Claude) Servers(folder string) ([]model.MCPServer, error) {
 			Disabled   []string `json:"disabledMcpjsonServers"`
 		} `json:"projects"`
 	}
-	file := configFile()
+	file := ConfigFile()
 	if err := readJSON(file, &cfg); err != nil {
 		return nil, err
 	}

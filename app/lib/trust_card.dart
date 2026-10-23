@@ -1,0 +1,111 @@
+import 'package:flutter/material.dart';
+
+import 'daemon.dart';
+import 'folder_button.dart';
+import 'gen/nushi/v1/nushi.pb.dart';
+import 'theme/theme.dart';
+import 'widgets.dart';
+
+/// What a folder would have the agent run on its own, before a chat starts
+/// or moves there: each file and what it runs, exactly, with "Start
+/// anyway" and Cancel. A warning, not a rule (ADR 0023).
+class TrustCard extends StatelessWidget {
+  const TrustCard(this.ask, {super.key});
+
+  final TrustAsk ask;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context), t = theme.t;
+    final byFile = <String, List<FolderRun>>{};
+    for (final r in ask.runs) {
+      (byFile[r.file] ??= []).add(r);
+    }
+    String shown(String file) => file.startsWith('${ask.folder}/')
+        ? file.substring(ask.folder.length + 1)
+        : tildePath(file);
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 680),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: box(t.needs, fill: t.needsSoft),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 10,
+              children: [
+                Row(
+                  spacing: 8,
+                  children: [
+                    Icon(Icons.warning_amber_rounded, size: 16, color: t.needs),
+                    Flexible(
+                      child: Text(
+                        '${folderParts(ask.folder).$1} brings its own code to run',
+                        style: theme.ui(t.text, weight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  '${tildePath(ask.folder)} has Claude run these on its own, '
+                  'without asking, as soon as a chat starts there. Claude '
+                  "hasn't been told to trust this folder (claude in a "
+                  'terminal shows its trust dialog), so look before you '
+                  'start.',
+                  style: theme.ui(t.textSecondary, size: 12),
+                ),
+                for (final MapEntry(key: file, value: runs) in byFile.entries)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: 4,
+                    children: [
+                      Text(
+                        shown(file),
+                        style: theme.code(t.textMuted, size: 11.5),
+                      ),
+                      for (final r in runs)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 12),
+                          child: SelectableText.rich(
+                            TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: '${r.what}  ',
+                                  style: theme.ui(t.text, size: 12.5),
+                                ),
+                                TextSpan(
+                                  text: r.command,
+                                  style: theme.code(t.text, size: 12),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  spacing: 8,
+                  children: [
+                    Button(
+                      label: 'Cancel',
+                      kind: ButtonKind.ghost,
+                      onPressed: () => ask.decide(false),
+                    ),
+                    Button(
+                      label: 'Start anyway',
+                      kind: ButtonKind.primary,
+                      onPressed: () => ask.decide(true),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

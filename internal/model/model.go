@@ -274,6 +274,15 @@ type FolderStatus struct {
 	Files, Added, Removed int
 }
 
+// FolderRun is something a folder has the agent run on its own: an MCP
+// server, a hook, an env block or a helper command, and the file that says
+// so.
+type FolderRun struct {
+	File    string
+	What    string // "MCP server github", "Hook on SessionStart"
+	Command string // the command line (an env block: the names it sets)
+}
+
 // MCPServer is an MCP server the agent's config gives a folder.
 type MCPServer struct {
 	Name string

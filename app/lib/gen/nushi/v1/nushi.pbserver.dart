@@ -103,6 +103,10 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.RestartTerminalRequest request);
   $async.Future<$0.CloseTerminalResponse> closeTerminal(
       $pb.ServerContext ctx, $0.CloseTerminalRequest request);
+  $async.Future<$0.CheckFolderResponse> checkFolder(
+      $pb.ServerContext ctx, $0.CheckFolderRequest request);
+  $async.Future<$0.TrustFolderResponse> trustFolder(
+      $pb.ServerContext ctx, $0.TrustFolderRequest request);
   $async.Future<$0.EventsResponse> events(
       $pb.ServerContext ctx, $0.EventsRequest request);
 
@@ -190,6 +194,10 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.RestartTerminalRequest();
       case 'CloseTerminal':
         return $0.CloseTerminalRequest();
+      case 'CheckFolder':
+        return $0.CheckFolderRequest();
+      case 'TrustFolder':
+        return $0.TrustFolderRequest();
       case 'Events':
         return $0.EventsRequest();
       default:
@@ -282,6 +290,10 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return restartTerminal(ctx, request as $0.RestartTerminalRequest);
       case 'CloseTerminal':
         return closeTerminal(ctx, request as $0.CloseTerminalRequest);
+      case 'CheckFolder':
+        return checkFolder(ctx, request as $0.CheckFolderRequest);
+      case 'TrustFolder':
+        return trustFolder(ctx, request as $0.TrustFolderRequest);
       case 'Events':
         return events(ctx, request as $0.EventsRequest);
       default:

@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 
 	"github.com/afrase/nushi/internal/model"
@@ -59,6 +60,36 @@ func (s *Store) agents() (map[string]agentPrefs, error) {
 		return prefs, err
 	}
 	return prefs, json.Unmarshal(b, &prefs)
+}
+
+// TrustedFolders returns the folders the user started chats in anyway.
+func (s *Store) TrustedFolders() ([]string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.trusted()
+}
+
+// TrustFolder remembers a folder the user started chats in anyway.
+func (s *Store) TrustFolder(folder string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	folders, err := s.trusted()
+	if err != nil || slices.Contains(folders, folder) {
+		return err
+	}
+	return writeJSON(filepath.Join(s.dir, "trusted.json"), append(folders, folder))
+}
+
+func (s *Store) trusted() ([]string, error) {
+	var folders []string
+	b, err := os.ReadFile(filepath.Join(s.dir, "trusted.json"))
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	if err == nil {
+		err = json.Unmarshal(b, &folders)
+	}
+	return folders, err
 }
 
 // writeJSON replaces path with v, atomically.

@@ -131,6 +131,14 @@ service NushiService {
   // Closes a terminal: its shell is hung up, then killed after a short
   // grace, along with what still runs in it (API 35).
   rpc CloseTerminal(CloseTerminalRequest) returns (CloseTerminalResponse);
+  // Says what a folder brings for the agent to run on its own (MCP
+  // servers, hooks, helper commands) when neither the agent nor Nushi was
+  // told to trust it; nothing when it is trusted or brings nothing. Ask
+  // before starting or moving a chat there (API 37).
+  rpc CheckFolder(CheckFolderRequest) returns (CheckFolderResponse);
+  // Remembers that the user starts chats in a folder anyway (its
+  // repository, outside git the folders under it too) (API 37).
+  rpc TrustFolder(TrustFolderRequest) returns (TrustFolderResponse);
   // Streams every change to every chat from now on. The first message is
   // empty: it says the subscription is live.
   rpc Events(EventsRequest) returns (stream EventsResponse);
@@ -944,3 +952,27 @@ message CloseTerminalRequest {
 }
 
 message CloseTerminalResponse {}
+
+message CheckFolderRequest {
+  string folder = 1;
+}
+
+message CheckFolderResponse {
+  repeated FolderRun runs = 1;
+}
+
+// Something a folder has the agent run on its own.
+message FolderRun {
+  // The file that says so.
+  string file = 1;
+  // What it is: "MCP server github", "Hook on SessionStart".
+  string what = 2;
+  // Its command line, or URL; for an env block the names it sets.
+  string command = 3;
+}
+
+message TrustFolderRequest {
+  string folder = 1;
+}
+
+message TrustFolderResponse {}

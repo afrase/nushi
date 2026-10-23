@@ -64,7 +64,7 @@ func Changes(ctx context.Context, folder string, span Span) ([]model.FileChange,
 			}
 			changes = append(changes, c)
 		}
-		counts, err := numstat(ctx, folder, revs...)
+		counts, err := numstat(ctx, folder, nil, revs...)
 		if err != nil {
 			return nil, err
 		}
@@ -124,8 +124,8 @@ func Changes(ctx context.Context, folder string, span Span) ([]model.FileChange,
 // numstat returns the lines added and removed per file (by its new path)
 // between revs (a commit and the work tree, or two commits), as git diff
 // counts them; a binary file counts none.
-func numstat(ctx context.Context, folder string, revs ...string) (map[string][2]int, error) {
-	out, err := run(ctx, folder, append(append([]string{"diff"}, revs...), "--numstat", "-z", "-M", "--relative", "--no-ext-diff", "--no-textconv")...)
+func numstat(ctx context.Context, folder string, config []string, revs ...string) (map[string][2]int, error) {
+	out, err := runWith(ctx, folder, config, append(append([]string{"diff"}, revs...), "--numstat", "-z", "-M", "--relative", "--no-ext-diff", "--no-textconv")...)
 	if err != nil {
 		return nil, err
 	}
@@ -230,6 +230,8 @@ func untracked(ctx context.Context, folder string, hasHead bool) ([]string, erro
 // Status sums up the folder's changes as Changes lists them (the files,
 // and the lines added and removed; binary and over-large files count no
 // lines), and names the branch checked out, or the commit when none is.
+// It runs on its own (the panel's card), so without the repository's own
+// filters.
 func Status(ctx context.Context, folder, base string) (model.FolderStatus, error) {
 	var st model.FolderStatus
 	from, err := start(ctx, folder, base)
@@ -243,7 +245,7 @@ func Status(ctx context.Context, folder, base string) (model.FolderStatus, error
 		st.Branch = strings.TrimSpace(string(out))
 	}
 	if hasHead {
-		counts, err := numstat(ctx, folder, from)
+		counts, err := numstat(ctx, folder, noFilters(ctx, folder), from)
 		if err != nil {
 			return st, err
 		}
@@ -301,13 +303,20 @@ func Files(ctx context.Context, folder string, limit int) ([]string, error) {
 	return files, err
 }
 
-// run runs git in dir, with fsmonitor, external diff and textconv drivers
-// off. Clean filters still run when git compares the work tree (git diff
-// does): a filter only runs if git config defines it, and a repository
-// can't bring config along, so that takes someone who can already write
-// the user's config, as with any git command run there.
+// run runs git in dir, with hooks, fsmonitor, signature checks, external
+// diff and textconv drivers off. A folder that was downloaded rather than
+// cloned brings its own .git/config, which could set any of them. Clean
+// filters still run when git compares the work tree (git diff does), unless
+// noFilters turns them off: Changes shows what git shows, as the user's
+// own git diff would.
 func run(ctx context.Context, dir string, args ...string) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, "git", append([]string{"-c", "core.fsmonitor=false", "-C", dir}, args...)...)
+	return runWith(ctx, dir, nil, args...)
+}
+
+// runWith is run with config options of its own (-c name=value pairs).
+func runWith(ctx context.Context, dir string, config []string, args ...string) ([]byte, error) {
+	global := []string{"-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null", "-c", "log.showSignature=false"}
+	cmd := exec.CommandContext(ctx, "git", slices.Concat(global, config, []string{"-C", dir}, args)...)
 	cmd.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0")
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
@@ -320,6 +329,25 @@ func run(ctx context.Context, dir string, args ...string) ([]byte, error) {
 		return nil, err
 	}
 	return out, nil
+}
+
+// noFilters returns the config options that turn off the filter drivers a
+// repository's own config defines (filter.<name>.clean, .smudge and
+// .process), for the git runs Nushi starts on its own. The user's
+// (git-lfs, in the global config) stay.
+func noFilters(ctx context.Context, dir string) []string {
+	out, _ := run(ctx, dir, "config", "--show-scope", "--name-only", "--get-regexp", `^filter\.`)
+	var config []string
+	for line := range strings.Lines(string(out)) {
+		scope, name, _ := strings.Cut(strings.TrimSpace(line), "\t")
+		driver, _, ok := strings.Cut(strings.TrimPrefix(name, "filter."), ".")
+		if ok && scope != "global" && scope != "system" {
+			for _, key := range []string{"clean", "smudge", "process"} {
+				config = append(config, "-c", "filter."+driver+"."+key+"=")
+			}
+		}
+	}
+	return config
 }
 
 // split splits git's NUL-separated output.

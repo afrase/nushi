@@ -13,25 +13,27 @@ import (
 	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/features/mcp"
 	"github.com/afrase/nushi/internal/features/terminals"
+	"github.com/afrase/nushi/internal/features/trust"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
 	"github.com/afrase/nushi/internal/model"
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 36
+const Version = 37
 
 type server struct {
 	chats *chats.Service
 	mcp   *mcp.Service
 	terms *terminals.Service
+	trust *trust.Service
 	hub   *events.Hub
 }
 
 // Handler returns the API, refusing requests that don't carry token.
-func Handler(token string, chats *chats.Service, mcp *mcp.Service, terms *terminals.Service, hub *events.Hub) http.Handler {
+func Handler(token string, chats *chats.Service, mcp *mcp.Service, terms *terminals.Service, trust *trust.Service, hub *events.Hub) http.Handler {
 	mux := http.NewServeMux()
-	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{chats: chats, mcp: mcp, terms: terms, hub: hub}))
+	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{chats: chats, mcp: mcp, terms: terms, trust: trust, hub: hub}))
 	want := []byte("Bearer " + token)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if subtle.ConstantTimeCompare([]byte(r.Header.Get("Authorization")), want) != 1 {
@@ -266,6 +268,25 @@ func (s *server) GetContextUsage(ctx context.Context, req *connect.Request[nushi
 		out.Categories = append(out.Categories, &nushiv1.ContextCategory{Name: c.Name, Tokens: c.Tokens, Percent: c.Percent})
 	}
 	return connect.NewResponse(out), nil
+}
+
+func (s *server) CheckFolder(_ context.Context, req *connect.Request[nushiv1.CheckFolderRequest]) (*connect.Response[nushiv1.CheckFolderResponse], error) {
+	runs, err := s.trust.Check(req.Msg.Folder)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	out := &nushiv1.CheckFolderResponse{}
+	for _, r := range runs {
+		out.Runs = append(out.Runs, &nushiv1.FolderRun{File: r.File, What: r.What, Command: r.Command})
+	}
+	return connect.NewResponse(out), nil
+}
+
+func (s *server) TrustFolder(_ context.Context, req *connect.Request[nushiv1.TrustFolderRequest]) (*connect.Response[nushiv1.TrustFolderResponse], error) {
+	if err := s.trust.Trust(req.Msg.Folder); err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	return connect.NewResponse(&nushiv1.TrustFolderResponse{}), nil
 }
 
 func (s *server) Events(ctx context.Context, _ *connect.Request[nushiv1.EventsRequest], stream *connect.ServerStream[nushiv1.EventsResponse]) error {

@@ -57,7 +57,7 @@ func rejected(folder string, terminal []string) (out map[string][]string, approv
 		}
 	}
 	for _, name := range terminal {
-		out[name] = append(out[name], configFile())
+		out[name] = append(out[name], ConfigFile())
 	}
 	return out, approved
 }
