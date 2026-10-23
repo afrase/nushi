@@ -32,46 +32,71 @@ import (
 type Trust struct{}
 
 // Key is the folder Claude keys a folder's trust on (real paths): its
-// repository's main checkout, or the folder itself outside git. A folder's
-// .git can name any repository's git dir, so a worktree counts as its
-// repository's only when the repository lists it as one of its worktrees;
-// otherwise its key is its own work tree's root.
+// repository's main checkout, or the folder itself outside git. It is read
+// from the files rather than asked of git, which a repository's own config
+// (core.worktree) can steer: the nearest folder up with a .git folder is a
+// main checkout; one with a .git file is a worktree of the repository it
+// names only when that repository names it back. Anything else, or a
+// repository that sets core.worktree, keys on the folder itself.
 func (Trust) Key(folder string) string {
-	if real, err := filepath.EvalSymlinks(folder); err == nil {
-		folder = real
-	}
-	out, err := gitIn(folder, "rev-parse", "--path-format=absolute", "--show-toplevel", "--git-common-dir")
-	top, common, _ := strings.Cut(strings.TrimSpace(out), "\n")
-	if err != nil || top == "" {
-		return folder
-	}
-	if filepath.Base(common) != ".git" {
-		return top
-	}
-	main := filepath.Dir(common)
-	if main == top {
-		return top
-	}
-	listed, _ := filepath.Glob(filepath.Join(common, "worktrees", "*", "gitdir"))
-	for _, gitdir := range listed {
-		b, _ := os.ReadFile(gitdir)
-		path := filepath.Dir(strings.TrimSpace(string(b)))
-		if real, err := filepath.EvalSymlinks(path); err == nil && real == top {
-			return main
-		}
-	}
-	return top
+	_, key := repoOf(real(folder))
+	return key
 }
 
-// gitIn runs git in dir with hooks and fsmonitor off.
-func gitIn(dir string, args ...string) (string, error) {
-	out, err := exec.Command("git", append([]string{"-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null", "-C", dir}, args...)...).Output()
-	return string(out), err
+func real(path string) string {
+	if r, err := filepath.EvalSymlinks(path); err == nil {
+		return r
+	}
+	return path
+}
+
+// repoOf returns the root of folder's work tree ("" outside git) and the
+// folder its trust is keyed on (see Key).
+func repoOf(folder string) (top, key string) {
+	for top = folder; ; top = filepath.Dir(top) {
+		if _, err := os.Lstat(filepath.Join(top, ".git")); err == nil {
+			break
+		}
+		if top == filepath.Dir(top) {
+			return "", folder
+		}
+	}
+	dotgit := filepath.Join(top, ".git")
+	if fi, err := os.Lstat(dotgit); err == nil && fi.IsDir() {
+		if worktreeSet(filepath.Join(dotgit, "config")) {
+			return top, folder
+		}
+		return top, top
+	}
+	b, _ := os.ReadFile(dotgit)
+	gitdir, ok := strings.CutPrefix(strings.TrimSpace(string(b)), "gitdir: ")
+	if !ok {
+		return top, folder
+	}
+	if !filepath.IsAbs(gitdir) {
+		gitdir = filepath.Join(top, gitdir)
+	}
+	gitdir = real(gitdir)
+	back, _ := os.ReadFile(filepath.Join(gitdir, "gitdir"))
+	common := filepath.Dir(filepath.Dir(gitdir)) // <common>/worktrees/<name>
+	if real(strings.TrimSpace(string(back))) != real(dotgit) || filepath.Base(filepath.Dir(gitdir)) != "worktrees" ||
+		filepath.Base(common) != ".git" || worktreeSet(filepath.Join(common, "config")) {
+		return top, folder
+	}
+	return top, filepath.Dir(common)
+}
+
+// worktreeSet says whether a repository's config file sets core.worktree
+// (includes followed); git's own environment is left out.
+func worktreeSet(config string) bool {
+	cmd := exec.Command("git", "config", "--file", config, "--includes", "--get", "core.worktree")
+	cmd.Env = slices.DeleteFunc(os.Environ(), func(e string) bool { return strings.HasPrefix(e, "GIT_") })
+	return cmd.Run() == nil
 }
 
 // Trusted says whether folder is trusted: by Claude (its trust dialog was
 // accepted there), or by one of also, keys Nushi was told to trust.
-func (t Trust) Trusted(folder string, also []string) (bool, error) {
+func (Trust) Trusted(folder string, also []string) (bool, error) {
 	var cfg struct {
 		Projects map[string]struct {
 			Accepted bool `json:"hasTrustDialogAccepted"`
@@ -85,13 +110,12 @@ func (t Trust) Trusted(folder string, also []string) (bool, error) {
 		return false, fmt.Errorf("reading Claude's config: %w", err)
 	}
 	ok := func(dir string) bool { return cfg.Projects[dir].Accepted || slices.Contains(also, dir) }
-	if real, err := filepath.EvalSymlinks(folder); err == nil {
-		folder = real
-	}
-	if ok(t.Key(folder)) {
+	folder = real(folder)
+	top, key := repoOf(folder)
+	if ok(key) {
 		return true, nil
 	}
-	if toplevel(folder) != "" { // in a repository only its key counts
+	if top != "" { // in a repository only its key counts
 		return false, nil
 	}
 	for dir := folder; ; dir = filepath.Dir(dir) { // outside git, a folder above counts too
@@ -102,15 +126,6 @@ func (t Trust) Trusted(folder string, also []string) (bool, error) {
 			return false, nil
 		}
 	}
-}
-
-// toplevel is the root of folder's work tree, or "" outside git.
-func toplevel(folder string) string {
-	out, err := gitIn(folder, "rev-parse", "--show-toplevel")
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(out)
 }
 
 // Runs lists what folder brings for Claude to run: its .mcp.json servers
@@ -129,7 +144,7 @@ func (Trust) Runs(folder string) ([]model.FolderRun, error) {
 		}
 	}
 	dirs := []string{folder}
-	if top := toplevel(folder); top != "" && top != folder {
+	if top, _ := repoOf(real(folder)); top != "" && top != real(folder) {
 		dirs = append(dirs, top)
 	}
 	for _, dir := range dirs {

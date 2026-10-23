@@ -124,8 +124,8 @@ func Changes(ctx context.Context, folder string, span Span) ([]model.FileChange,
 // numstat returns the lines added and removed per file (by its new path)
 // between revs (a commit and the work tree, or two commits), as git diff
 // counts them; a binary file counts none.
-func numstat(ctx context.Context, folder string, config []string, revs ...string) (map[string][2]int, error) {
-	out, err := runWith(ctx, folder, config, append(append([]string{"diff"}, revs...), "--numstat", "-z", "-M", "--relative", "--no-ext-diff", "--no-textconv")...)
+func numstat(ctx context.Context, folder string, blank []string, revs ...string) (map[string][2]int, error) {
+	out, err := runWith(ctx, folder, blank, append(append([]string{"diff"}, revs...), "--numstat", "-z", "-M", "--relative", "--no-ext-diff", "--no-textconv")...)
 	if err != nil {
 		return nil, err
 	}
@@ -317,11 +317,16 @@ func run(ctx context.Context, dir string, args ...string) ([]byte, error) {
 	return runWith(ctx, dir, nil, args...)
 }
 
-// runWith is run with config options of its own (-c name=value pairs).
-func runWith(ctx context.Context, dir string, config []string, args ...string) ([]byte, error) {
-	global := []string{"-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null", "-c", "log.showSignature=false"}
-	cmd := exec.CommandContext(ctx, "git", slices.Concat(global, config, []string{"-C", dir}, args)...)
-	cmd.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0")
+// runWith is run with the config settings named in blank set empty. They
+// go through GIT_CONFIG_KEY_<n>, which keeps a name apart from its value
+// whatever it holds ("=" too, which -c would split at).
+func runWith(ctx context.Context, dir string, blank []string, args ...string) ([]byte, error) {
+	global := []string{"-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null", "-c", "log.showSignature=false", "-C", dir}
+	cmd := exec.CommandContext(ctx, "git", append(global, args...)...)
+	cmd.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0", "GIT_CONFIG_COUNT="+strconv.Itoa(len(blank)))
+	for i, name := range blank {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("GIT_CONFIG_KEY_%d=%s", i, name), fmt.Sprintf("GIT_CONFIG_VALUE_%d=", i))
+	}
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	out, err := cmd.Output()
@@ -335,10 +340,10 @@ func runWith(ctx context.Context, dir string, config []string, args ...string) (
 	return out, nil
 }
 
-// noFilters returns the config options that turn off the filter drivers a
-// repository's own config defines (filter.<name>.clean, .smudge and
-// .process, by the exact names git lists), for the git runs Nushi starts
-// on its own. The user's (git-lfs, in the global config) stay. When git
+// noFilters returns the config settings to blank that turn off the filter
+// drivers a repository's own config defines (filter.<name>.clean, .smudge
+// and .process, by the exact names git lists), for the git runs Nushi
+// starts on its own. The user's (git-lfs, in the global config) stay. When git
 // can't list them, it fails: nothing runs with them on.
 func noFilters(ctx context.Context, dir string) ([]string, error) {
 	cmd := exec.CommandContext(ctx, "git", "-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null", "-C", dir,
@@ -356,7 +361,7 @@ func noFilters(ctx context.Context, dir string) ([]string, error) {
 		scope, name, _ := strings.Cut(strings.TrimSpace(line), "\t")
 		key := name[strings.LastIndex(name, ".")+1:]
 		if scope != "global" && scope != "system" && (key == "clean" || key == "smudge" || key == "process") {
-			config = append(config, "-c", name+"=")
+			config = append(config, name)
 		}
 	}
 	return config, nil
