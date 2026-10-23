@@ -31,5 +31,6 @@ void main() {
     expect(find.text('half a thought\n\ntaken back'), findsOneWidget);
     await show(false);
     daemon.dispose(); // its ping timer
+    await tester.pump(const Duration(seconds: 4)); // and the ping's timeout
   });
 }

@@ -68,8 +68,8 @@ class ChangeSpan {
   String get commitsBase => onBase ? '' : base;
 }
 
-/// Reloads (`reload`) a chat's changes when its turn ends, it moves, its
-/// scope is changed, or a file is to be shown.
+/// Reloads (`reload`) a chat's changes when its turn ends, it moves, or its
+/// scope is changed.
 mixin FollowsChanges<T extends StatefulWidget> on State<T> {
   ChatState get chat;
   Daemon get daemon;
@@ -96,7 +96,6 @@ mixin FollowsChanges<T extends StatefulWidget> on State<T> {
 
   void _changed() {
     if (_wasBusy && !chat.busy ||
-        chat.openPath != null ||
         _folder != chat.folder ||
         _scope != chat.scope) {
       _folder = chat.folder;

@@ -104,6 +104,12 @@ class _TabState extends State<_Tab> {
   TextEditingController? _rename; // while renaming
   DateTime _lastTap = DateTime(0);
 
+  @override
+  void dispose() {
+    _rename?.dispose();
+    super.dispose();
+  }
+
   // A second click soon after the first renames; the first shows the tab
   // at once (a double-tap recognizer would hold every click back).
   void _tap() {
@@ -122,8 +128,10 @@ class _TabState extends State<_Tab> {
   }
 
   void _done(bool save) {
-    final name = _rename!.text.trim();
+    final rename = _rename!, name = rename.text.trim();
     setState(() => _rename = null);
+    // Its field goes with this frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) => rename.dispose());
     widget.terms.session(widget.info).focus.requestFocus();
     if (save && name != terminalName(widget.info)) {
       tryOrShow(context, () => widget.terms.rename(widget.info.id, name));

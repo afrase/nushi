@@ -160,7 +160,10 @@ class Daemon extends ChangeNotifier {
   Future<void> _ping() async {
     var api = 0;
     try {
-      api = (await client.ping(PingRequest())).apiVersion;
+      // A daemon that hangs counts as gone, rather than stalling the pings.
+      api =
+          (await client.ping(PingRequest()).timeout(const Duration(seconds: 3)))
+              .apiVersion;
     } on Object {
       _launch();
     }
@@ -268,12 +271,28 @@ class Daemon extends ChangeNotifier {
   }
 
   Future<void> _listChats() async {
-    for (final c in chats.values) {
+    for (final c in [...chats.values, ...sides.values]) {
       c.unload(); // events may have been missed while disconnected
     }
     terminals.stale();
-    for (final c in (await client.listChats(ListChatsRequest())).chats) {
+    final listed = (await client.listChats(ListChatsRequest())).chats;
+    for (final c in listed) {
       _chat(c);
+    }
+    // Chats deleted meanwhile go; side chats the daemon lost (it restarted)
+    // end, the others catch up.
+    final ids = {for (final c in listed) c.id};
+    chats.removeWhere((id, _) => !ids.contains(id));
+    if (!chats.containsKey(selectedId)) selectedId = null;
+    for (final chat in chats.values) {
+      if (chat.side case final side?) {
+        try {
+          side.load(await client.getChat(GetChatRequest(chatId: side.id)));
+        } on Object {
+          chat.side = null;
+          sides.remove(side.id);
+        }
+      }
     }
     if (selected != null) unawaited(_load(selected!));
     notifyListeners();

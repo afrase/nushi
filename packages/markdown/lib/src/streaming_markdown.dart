@@ -134,6 +134,11 @@ class StreamingMarkdown extends StatelessWidget {
 
 final _highlighter = Highlight()..registerLanguages(builtinAllLanguages);
 
+/// Highlighted code blocks, by language, code and colors: a message is
+/// built again for every chunk that streams in, and only its open block
+/// changes.
+final _spans = <(String, String, TextStyle, TextStyle?), TextSpan>{};
+
 /// A fenced code block: its language and a copy button over the code,
 /// highlighted when the language is known.
 class _CodeBlockBuilder extends MarkdownElementBuilder {
@@ -144,6 +149,19 @@ class _CodeBlockBuilder extends MarkdownElementBuilder {
   @override
   bool isBlockElement() => true;
 
+  TextSpan _highlighted(String language, String code, TextStyle codeStyle) {
+    final key = (language, code, codeStyle, style.highlight['keyword']);
+    if (_spans[key] case final span?) return span;
+    var span = TextSpan(text: code, style: codeStyle);
+    if (_highlighter.getLanguage(language) != null) {
+      final renderer = TextSpanRenderer(codeStyle, style.highlight);
+      _highlighter.highlight(code: code, language: language).render(renderer);
+      span = renderer.span ?? span;
+    }
+    if (_spans.length >= 200) _spans.remove(_spans.keys.first);
+    return _spans[key] = span;
+  }
+
   @override
   Widget visitElementAfterWithContext(
     BuildContext context,
@@ -152,7 +170,9 @@ class _CodeBlockBuilder extends MarkdownElementBuilder {
     TextStyle? parentStyle,
   ) {
     final codeElement = element.children?.firstOrNull;
-    final cls = codeElement is md.Element ? codeElement.attributes['class'] : null;
+    final cls = codeElement is md.Element
+        ? codeElement.attributes['class']
+        : null;
     final language = cls?.startsWith('language-') ?? false
         ? cls!.substring('language-'.length)
         : '';
@@ -161,12 +181,7 @@ class _CodeBlockBuilder extends MarkdownElementBuilder {
     final codeStyle = style.code.copyWith(color: style.body.color);
     // Text draws a tab as one space.
     final shown = code.replaceAll('\t', '    ');
-    TextSpan span = TextSpan(text: shown, style: codeStyle);
-    if (_highlighter.getLanguage(language) != null) {
-      final renderer = TextSpanRenderer(codeStyle, style.highlight);
-      _highlighter.highlight(code: shown, language: language).render(renderer);
-      span = renderer.span ?? span;
-    }
+    final span = _highlighted(language, shown, codeStyle);
     final label = style.code.copyWith(fontSize: 11, color: style.muted);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -211,6 +226,7 @@ class _CopyButtonState extends State<_CopyButton> {
 
   Future<void> _copy() async {
     await Clipboard.setData(ClipboardData(text: widget.text));
+    if (!mounted) return;
     setState(() => _copied = true);
     await Future<void>.delayed(const Duration(seconds: 2));
     if (mounted) setState(() => _copied = false);

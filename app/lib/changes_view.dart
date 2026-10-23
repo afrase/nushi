@@ -41,6 +41,34 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   String? _error;
   bool _loading = false;
   String? _path; // the file shown
+  String? _opening; // a file to show once the list is in (a terminal link)
+  int _asked = 0; // the last request's number: older answers are dropped
+
+  @override
+  void initState() {
+    _take();
+    super.initState();
+    chat.addListener(_open);
+  }
+
+  @override
+  void dispose() {
+    chat.removeListener(_open);
+    super.dispose();
+  }
+
+  /// Takes the file the chat asks to show (see ChatState.showFile).
+  bool _take() {
+    final path = chat.openPath;
+    if (path == null) return false;
+    chat.openPath = null;
+    _opening = path;
+    return true;
+  }
+
+  void _open() {
+    if (_take()) reload();
+  }
 
   /// The commits picked, as indices: newest, oldest.
   (int, int)? get _picked {
@@ -51,9 +79,11 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
 
   @override
   Future<void> reload() async {
+    final asked = ++_asked;
     setState(() => _loading = true);
     try {
       final span = await ChangeSpan.of(daemon, chat);
+      if (asked != _asked) return; // another reload took over
       final status = span.status;
       if (!status.git) {
         throw status.gone ? 'The folder is gone.' : 'Not a git repository.';
@@ -64,17 +94,18 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
         _commits = (await daemon.client.listCommits(
           ListCommitsRequest(folder: chat.folder, base: span.commitsBase),
         )).commits;
+        if (asked != _asked) return;
         if (_picked == null) {
           _first = _commits.firstOrNull?.hash;
           _last = null;
         }
       }
-      await _diff();
+      await _diff(asked);
       _error = null;
     } on Object catch (e) {
       if (mounted) setState(() => _error = '$e');
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && asked == _asked) setState(() => _loading = false);
     }
   }
 
@@ -97,7 +128,8 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   }
 
   /// Reads the files of the scope (in Commits, of the commits picked).
-  Future<void> _diff() async {
+  Future<void> _diff([int? asked]) async {
+    asked ??= ++_asked;
     final span = _span!;
     final picked = _picked;
     final GetDiffRequest req = switch (span.scope) {
@@ -114,12 +146,12 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
     final files = span.scope == Scope.commits && picked == null
         ? <FileChange>[]
         : (await daemon.client.getDiff(req)).files;
-    if (!mounted) return;
+    if (!mounted || asked != _asked) return; // a newer one is coming
     if (!chat.busy) forgetChanged(chat.id, _where, files);
     setState(() {
       _files = files;
-      if (_files.any((f) => f.path == chat.openPath)) _path = chat.openPath;
-      chat.openPath = null;
+      if (_files.any((f) => f.path == _opening)) _path = _opening;
+      _opening = null;
       if (!_files.any((f) => f.path == _path)) {
         _path = changeRows(
           _files,
