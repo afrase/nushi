@@ -79,10 +79,11 @@ class _TranscriptState extends State<Transcript> {
     Map<String, (List<Object>, Widget)> before,
     Object e, {
     required bool live,
+    required bool still,
   }) {
     final items = e is List<Item> ? e : [e as Item];
     final key = e is List<Item> ? 'group ${items.first.id}' : items.first.id;
-    final from = [live, ...items];
+    final from = [live, still, ...items];
     final was = before[key];
     final same =
         was != null &&
@@ -99,12 +100,13 @@ class _TranscriptState extends State<Transcript> {
                   padding: const EdgeInsets.only(top: 12),
                   child: RepaintBoundary(
                     child: e is List<Item>
-                        ? ToolGroupView(e)
+                        ? ToolGroupView(e, still: still)
                         : _ItemView(
                             e as Item,
                             widget.chat.id,
                             widget.daemon,
                             live: live,
+                            still: still,
                           ),
                   ),
                 ),
@@ -183,6 +185,7 @@ class _TranscriptState extends State<Transcript> {
                           before,
                           e,
                           live: chat.busy && i == entries.length - 1,
+                          still: chat.waiting,
                         ),
                     ],
                   ),
@@ -285,7 +288,13 @@ class _Above extends SingleChildLayoutDelegate {
 }
 
 class _ItemView extends StatelessWidget {
-  const _ItemView(this.item, this.chatId, this.daemon, {required this.live});
+  const _ItemView(
+    this.item,
+    this.chatId,
+    this.daemon, {
+    required this.live,
+    required this.still,
+  });
 
   final Item item;
   final String chatId;
@@ -293,6 +302,9 @@ class _ItemView extends StatelessWidget {
 
   /// The newest item while the agent works.
   final bool live;
+
+  /// The agent waits on the user (a tool call isn't running then).
+  final bool still;
 
   @override
   Widget build(BuildContext context) {
@@ -319,7 +331,7 @@ class _ItemView extends StatelessWidget {
           ],
         );
       case ItemKind.ITEM_KIND_TOOL_CALL:
-        return ToolCallView(item);
+        return ToolCallView(item, still: still);
       case ItemKind.ITEM_KIND_QUESTION:
         return QuestionCard(
           item,

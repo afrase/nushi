@@ -148,9 +148,17 @@ Widget _status(NushiTheme theme, {required bool running, String failed = ''}) =>
 /// One tool call: a one-line summary by kind (the file read or edited, the
 /// command run, `+n −m` for an edit) that opens to its output and diffs.
 class ToolCallView extends StatelessWidget {
-  const ToolCallView(this.item, {super.key, this.images = true});
+  const ToolCallView(
+    this.item, {
+    super.key,
+    this.images = true,
+    this.still = false,
+  });
 
   final Item item;
+
+  /// Whether the agent waits on the user: nothing spins.
+  final bool still;
 
   /// Whether its images show under it (a run of calls shows them itself).
   final bool images;
@@ -219,7 +227,7 @@ class ToolCallView extends StatelessWidget {
             const SizedBox(width: 8),
             _status(
               theme,
-              running: _running(it),
+              running: _running(it) && !still,
               failed: failed ? 'failed' : '',
             ),
           ],
@@ -260,9 +268,10 @@ Widget _withImages(List<ImageData> images, Widget child) => images.isEmpty
 /// A run of tool calls as one line ("Read 4 files, ran 2 commands") that
 /// opens to each call.
 class ToolGroupView extends StatelessWidget {
-  const ToolGroupView(this.calls, {super.key});
+  const ToolGroupView(this.calls, {super.key, this.still = false});
 
   final List<Item> calls;
+  final bool still; // as ToolCallView's
 
   @override
   Widget build(BuildContext context) {
@@ -287,7 +296,7 @@ class ToolGroupView extends StatelessWidget {
             const SizedBox(width: 8),
             _status(
               theme,
-              running: calls.any(_running),
+              running: calls.any(_running) && !still,
               failed: failed == 0 ? '' : '$failed failed',
             ),
           ],
@@ -299,7 +308,12 @@ class ToolGroupView extends StatelessWidget {
             spacing: 4,
             children: [
               for (final c in calls)
-                ToolCallView(c, key: ValueKey(c.id), images: false),
+                ToolCallView(
+                  c,
+                  key: ValueKey(c.id),
+                  images: false,
+                  still: still,
+                ),
             ],
           ),
         ),
