@@ -8,8 +8,13 @@ import (
 	"testing"
 
 	"github.com/afrase/nushi/acp"
+	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/model"
 )
+
+// claudeDialect is Claude's, as main fills it.
+var claudeDialect = Dialect{InitMeta: claude.InitMeta, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall,
+	ForkTitle: claude.ForkTitle, ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete}
 
 // fakeAgent replies to each prompt with the given updates.
 type fakeAgent struct {
@@ -192,7 +197,7 @@ func TestPromptStreamsTheReply(t *testing.T) {
 		}
 	}
 	agent := &fakeAgent{updates: []acp.SessionUpdate{chunk("m1", "Hel"), chunk("m1", "lo"), chunk("", "!"), chunk("m2", "Bye")}}
-	svc := New("fake", func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, &memModes{}, &memSessions{}, nil, nil, "", publish)
+	svc := New("fake", func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, claudeDialect, &memModes{}, &memSessions{}, nil, nil, "", publish)
 
 	folder := t.TempDir()
 	id, err := svc.Start(context.Background(), folder, false)
@@ -383,7 +388,7 @@ func TestUsageIsWhatTheAgentReported(t *testing.T) {
 		updates: []acp.SessionUpdate{usage(100, &acp.Cost{Amount: 0.5, Currency: "USD"}), usage(120, nil)},
 		usage:   &acp.TurnUsage{InputTokens: 3, OutputTokens: 4, CachedReadTokens: 5, TotalTokens: 12},
 	}
-	svc := New("fake", func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, &memModes{}, &memSessions{}, nil, nil, "", publish)
+	svc := New("fake", func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, claudeDialect, &memModes{}, &memSessions{}, nil, nil, "", publish)
 	id, err := svc.Start(context.Background(), t.TempDir(), false)
 	if err != nil {
 		t.Fatal(err)
@@ -418,7 +423,7 @@ func TestImagesJoinTheirMessageOrToolCall(t *testing.T) {
 }
 
 func TestSubagentUpdatesGoUnderTheirToolCall(t *testing.T) {
-	c := &chat{id: "s1", sid: "s1", publish: func(model.Event) {}, session: model.Session{Folder: "/w"}}
+	c := &chat{id: "s1", sid: "s1", dialect: claudeDialect, publish: func(model.Event) {}, session: model.Session{Folder: "/w"}}
 	under := func(parent string) map[string]any {
 		return map[string]any{"claudeCode": map[string]any{"parentToolUseId": parent}}
 	}

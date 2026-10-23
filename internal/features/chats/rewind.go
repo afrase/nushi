@@ -31,7 +31,7 @@ func (c *chat) forkPointLocked() string {
 // is the first.
 func (c *chat) rewindableLocked(i int) bool {
 	first := !slices.ContainsFunc(c.items[:i], func(it model.Item) bool { return it.Kind == model.UserMessage })
-	return c.canRewind && c.agent != nil && c.parent == nil && (c.items[i].ForkAt != "" || first)
+	return c.forkAt != nil && c.agent != nil && c.parent == nil && (c.items[i].ForkAt != "" || first)
 }
 
 // Rewind cuts a chat back to just before one of its user messages and
@@ -47,6 +47,7 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 	var msg model.Message
 	var agent Agent
 	var sid, folder, at string
+	var forkAt func(string) map[string]any
 	err = func() error {
 		c.mu.Lock()
 		defer c.mu.Unlock()
@@ -60,7 +61,7 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 			return errors.New("the agent can't rewind to this message")
 		}
 		msg = model.Message{Text: c.items[i].Text, Images: c.items[i].Images}
-		agent, sid, folder, at = c.agent, c.sid, c.session.Folder, c.items[i].ForkAt
+		agent, sid, folder, at, forkAt = c.agent, c.sid, c.session.Folder, c.items[i].ForkAt, c.forkAt
 		c.busy = true
 		c.statusChangedLocked()
 		return nil
@@ -72,16 +73,9 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 	var next string
 	var config []model.ConfigOption
 	if at == "" {
-		var resp *acp.NewSessionResponse
-		if resp, err = agent.NewSession(ctx, acp.NewSessionRequest{Cwd: folder, MCPServers: []acp.MCPServer{}}); err == nil {
-			next, config = string(resp.SessionID), configFrom(resp.ConfigOptions, resp.Modes)
-		}
+		next, config, err = newSession(ctx, agent, folder)
 	} else {
-		var resp *acp.ForkSessionResponse
-		if resp, err = agent.ForkSession(ctx, acp.ForkSessionRequest{SessionID: acp.SessionID(sid), Cwd: folder,
-			MCPServers: []acp.MCPServer{}, Meta: airFork(at)}); err == nil {
-			next, config = string(resp.SessionID), configFrom(resp.ConfigOptions, resp.Modes)
-		}
+		next, config, err = forkSession(ctx, agent, sid, folder, forkAt(at))
 	}
 	mode, err := func() (string, error) {
 		c.mu.Lock()

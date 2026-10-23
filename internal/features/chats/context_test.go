@@ -11,7 +11,7 @@ import (
 func TestContextUsageLeavesNoTrace(t *testing.T) {
 	agent := &fakeAgent{updates: []acp.SessionUpdate{chunk("m1", "## Context"), chunk("m2", "## Context Usage")}}
 	var events int
-	svc := New("fake", func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, &memModes{}, &memSessions{}, nil, nil, "",
+	svc := New("fake", func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, claudeDialect, &memModes{}, &memSessions{}, nil, nil, "",
 		func(model.Event) { events++ })
 	id, err := svc.Start(context.Background(), t.TempDir(), false)
 	if err != nil {
@@ -24,8 +24,8 @@ func TestContextUsageLeavesNoTrace(t *testing.T) {
 	c.commands = []model.Command{{Name: "context"}}
 	before := events
 	md, err := svc.ContextUsage(context.Background(), id)
-	if err != nil || md != "## Context Usage" {
-		t.Errorf("ContextUsage = %q, %v", md, err)
+	if err != nil || md.Markdown != "## Context Usage" {
+		t.Errorf("ContextUsage = %+v, %v", md, err)
 	}
 	if len(c.items) != 0 || events != before || c.busy {
 		t.Errorf("a trace: %d items, %d events, busy %v", len(c.items), events-before, c.busy)

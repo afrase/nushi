@@ -80,7 +80,7 @@ func TestTerminalOutlivesTheApp(t *testing.T) {
 		t.Fatalf("delete plan's terminals = %v, want the running one", plan.Terminals)
 	}
 	must(second.c.ArchiveChat(ctx, connect.NewRequest(&nushiv1.ArchiveChatRequest{ChatId: chatID, Archived: true})))
-	if list := must(second.c.ListTerminals(ctx, connect.NewRequest(&nushiv1.ListTerminalsRequest{ChatId: chatID}))).Terminals; len(list) != 0 {
-		t.Fatalf("terminals after archiving = %v", list)
-	}
+	second.waitFor("the terminals to close", func(e *nushiv1.EventsResponse) bool {
+		return e.GetTerminals() != nil && len(e.GetTerminals().GetTerminals()) == 0
+	})
 }

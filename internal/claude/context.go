@@ -1,29 +1,23 @@
-// Package claudecontext reads what fills Claude's context from the output
-// of its /context command: the "Estimated usage by category" table of the
-// markdown claude-agent-acp returns. This is Claude's private format (Claude
-// Code 2.1.308, claude-agent-acp 0.94.0): see ADR 0017.
-package claudecontext
+package claude
 
 import (
 	"errors"
 	"strconv"
 	"strings"
+
+	"github.com/afrase/nushi/internal/model"
 )
 
-// Category is one row of the table: "Messages", 15,900 tokens, 1.6%.
-type Category struct {
-	Name    string
-	Tokens  int64
-	Percent float64
-}
-
-// Parse reads the categories from /context's output, in its order.
-func Parse(markdown string) ([]Category, error) {
+// Parse reads what fills Claude's context from the output of its /context
+// command, in its order: the "Estimated usage by category" table of the
+// markdown the adapter returns. This is Claude's private format (Claude
+// Code 2.1.308, claude-agent-acp 0.94.0): see ADR 0017.
+func Parse(markdown string) ([]model.ContextCategory, error) {
 	_, table, ok := strings.Cut(markdown, "### Estimated usage by category")
 	if !ok {
 		return nil, errors.New("no usage by category in the output")
 	}
-	var out []Category
+	var out []model.ContextCategory
 	for _, line := range strings.Split(table, "\n")[1:] {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "###") {
@@ -39,7 +33,7 @@ func Parse(markdown string) ([]Category, error) {
 		if err1 != nil || err2 != nil {
 			continue // the header and the line under it
 		}
-		out = append(out, Category{name, tokens, pct})
+		out = append(out, model.ContextCategory{Name: name, Tokens: tokens, Percent: pct})
 	}
 	if len(out) == 0 {
 		return nil, errors.New("no categories in the output")

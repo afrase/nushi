@@ -82,7 +82,7 @@ func (s *Service) PlanDelete(ctx context.Context, chatID string) (DeletePlan, er
 // startDeleter starts an agent with no session, to delete sessions with, and
 // remembers whether it can.
 func (s *Service) startDeleter(ctx context.Context, h acp.Handler) (Agent, bool, error) {
-	agent, init, err := initialize(ctx, s.launch, h)
+	agent, init, err := initialize(ctx, s.launch, h, s.dialect.InitMeta)
 	if err != nil {
 		return nil, false, err
 	}

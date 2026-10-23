@@ -53,6 +53,7 @@ type Sessions interface {
 type Service struct {
 	agent     string // the agent's name, such as "claude"
 	launch    Launch
+	dialect   Dialect
 	modes     Modes
 	sessions  Sessions
 	history   CopyHistory
@@ -70,8 +71,8 @@ type Service struct {
 // as its cwd, and returns a function that removes the copy again.
 type CopyHistory func(sessionID, from, to string) (remove func() error, err error)
 
-func New(agent string, launch Launch, modes Modes, sessions Sessions, history CopyHistory, worktrees Worktrees, scratch string, publish func(model.Event)) *Service {
-	return &Service{agent: agent, launch: launch, modes: modes, sessions: sessions, history: history, worktrees: worktrees,
+func New(agent string, launch Launch, dialect Dialect, modes Modes, sessions Sessions, history CopyHistory, worktrees Worktrees, scratch string, publish func(model.Event)) *Service {
+	return &Service{agent: agent, launch: launch, dialect: dialect, modes: modes, sessions: sessions, history: history, worktrees: worktrees,
 		scratch: scratch, publish: publish, chats: map[string]*chat{}}
 }
 
@@ -79,6 +80,7 @@ type chat struct {
 	id       string // Nushi's id for the chat
 	sid      string // the agent's session id
 	agent    Agent
+	dialect  Dialect
 	publish  func(model.Event)
 	sessions Sessions
 
@@ -107,7 +109,9 @@ type chat struct {
 	probes    map[string]*silentRun // throwaway forks' runs, by session id
 	queue     []model.Message       // waiting for the agent's next chance
 	steer     bool                  // the agent takes messages into a running turn
-	canRewind bool                  // the agent forks a session at a message
+	// forkAt is session/fork's meta to fork at a message, when the agent
+	// can (see Dialect).
+	forkAt func(messageID string) map[string]any
 	// mcpChanged says the MCP servers changed since the agent started.
 	mcpChanged bool
 }
@@ -154,11 +158,11 @@ func (s *Service) Start(ctx context.Context, folder string, worktree bool) (stri
 		folder = filepath.Join(s.scratch, c.id)
 		err = os.MkdirAll(folder, 0o700)
 	case worktree:
-		if err = checkFolder(folder); err == nil {
+		if err = CheckFolder(folder); err == nil {
 			wt, folder, err = s.addWorktree(ctx, folder)
 		}
 	default:
-		err = checkFolder(folder)
+		err = CheckFolder(folder)
 	}
 	if err != nil {
 		return "", err
@@ -188,7 +192,9 @@ func (s *Service) Start(ctx context.Context, folder string, worktree bool) (stri
 	return c.id, nil
 }
 
-func checkFolder(folder string) error {
+// CheckFolder refuses a folder that isn't an absolute path to an existing
+// folder.
+func CheckFolder(folder string) error {
 	if fi, err := os.Stat(folder); err != nil || !fi.IsDir() || !filepath.IsAbs(folder) {
 		return fmt.Errorf("%q is not an absolute path to a folder", folder)
 	}
@@ -196,7 +202,7 @@ func checkFolder(folder string) error {
 }
 
 func (s *Service) newChat() *chat {
-	return &chat{publish: s.publish, sessions: s.sessions, waiting: map[string]chan<- string{},
+	return &chat{dialect: s.dialect, publish: s.publish, sessions: s.sessions, waiting: map[string]chan<- string{},
 		questions: map[string]chan<- []model.Field{}, sides: map[string]*chat{}, probes: map[string]*silentRun{}}
 }
 
@@ -274,7 +280,7 @@ func (c *chat) noticeLocked(reason, text string) {
 
 func (c *chat) statusLocked() model.Status {
 	return model.Status{Busy: c.busy, Started: c.started, Waiting: len(c.waiting)+len(c.questions) > 0, CanFork: c.canFork, Images: c.canImage,
-		CanRewind: c.canRewind, MCPChanged: c.mcpChanged}
+		CanRewind: c.forkAt != nil, MCPChanged: c.mcpChanged}
 }
 
 func (c *chat) statusChangedLocked() {

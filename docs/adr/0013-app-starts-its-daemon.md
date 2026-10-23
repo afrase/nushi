@@ -5,7 +5,7 @@ The packaged app (`make package`) carries `nushid` inside its bundle. Agents mus
 
 ## Decision
 - When no daemon answers, the app starts its bundled `nushid`, detached, through the user's login shell (`$SHELL -l -c 'exec …'`), so the daemon and its agents get the same environment as a terminal. Its log goes to `nushid.log` in the data folder.
-- The app never stops or restarts a running daemon by itself. When the daemon's API version is lower than the app's, features it lacks show as unavailable and the app offers "Restart daemon"; only that button stops it (SIGTERM, which stops its agents) and starts the bundled one. Chats reopen through `session/load`.
+- The app never stops or restarts a running daemon by itself. When the daemon's API version is lower than the app's, the app shows only a "Restart daemon" screen (ADR 0004); only that button stops it (SIGTERM, which stops its agents) and starts the bundled one. Chats reopen through `session/load`.
 - No launchd agent: the daemon runs from the moment the app first needs it until it is stopped or the Mac restarts.
 
 ## Consequences

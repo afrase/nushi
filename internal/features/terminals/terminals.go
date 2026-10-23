@@ -5,12 +5,11 @@ package terminals
 import (
 	"crypto/rand"
 	"fmt"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
 
+	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -62,8 +61,8 @@ func (s *Service) Open(chatID, folder string, cols, rows int) (model.Terminal, e
 	if folder == "" {
 		folder = chatFolder
 	}
-	if fi, err := os.Stat(folder); err != nil || !fi.IsDir() || !filepath.IsAbs(folder) {
-		return model.Terminal{}, fmt.Errorf("%q is not an absolute path to a folder", folder)
+	if err := chats.CheckFolder(folder); err != nil {
+		return model.Terminal{}, err
 	}
 	t := &term{Terminal: model.Terminal{ID: rand.Text(), ChatID: chatID, Folder: folder, Shell: s.shell}}
 	if t.shell, err = s.start(folder, cols, rows, func() { s.changed(chatID) }); err != nil {
@@ -229,8 +228,14 @@ func (s *Service) Close(id string) error {
 	return nil
 }
 
-// CloseChat ends a chat's terminals (the chat was archived or deleted).
-func (s *Service) CloseChat(chatID string) {
+// Follow takes every event: a chat archived or deleted ends its terminals.
+func (s *Service) Follow(e model.Event) {
+	if e.Removed || e.Session != nil && e.Session.Archived {
+		s.closeChat(e.ChatID)
+	}
+}
+
+func (s *Service) closeChat(chatID string) {
 	gone := s.unlist(func(t *term) bool { return t.ChatID == chatID })
 	if len(gone) > 0 {
 		s.changed(chatID)

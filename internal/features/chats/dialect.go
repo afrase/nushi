@@ -1,0 +1,40 @@
+package chats
+
+import (
+	"encoding/json"
+	"time"
+
+	"github.com/afrase/nushi/acp"
+	"github.com/afrase/nushi/internal/model"
+)
+
+// Dialect is what the agent does beyond ACP, and how Nushi reads it: `main`
+// fills it for Claude (internal/claude). A nil field means the agent has
+// none of it, as a plain ACP agent.
+type Dialect struct {
+	// InitMeta goes in initialize's client capabilities, as _meta.
+	InitMeta map[string]any
+	// ForkAt, given the agent's initialize answer, returns session/fork's
+	// _meta to fork a session at one of the agent's messages (its ACP
+	// messageId), the message included; nil when the agent can't.
+	ForkAt func(*acp.InitializeResponse) func(messageID string) map[string]any
+	// Parent reads the subagent tool call an update comes from, from its
+	// _meta.
+	Parent func(meta map[string]any) string
+	// ToolCall adds what a tool call's _meta and raw input tell of it (its
+	// subagent, tool, and the subagent it starts); ownText says it set the
+	// call's text itself, so the call's content isn't its output.
+	ToolCall func(it *model.Item, meta map[string]any, input json.RawMessage) (ownText bool)
+	// ForkTitle says whether title is the agent's own for a fork of a
+	// session titled of: a moved or rewound chat keeps its title.
+	ForkTitle func(title, of string) bool
+	// ContextCommand is the slash command that says what fills the
+	// context, run unseen in a throwaway fork; ReadContext reads its reply
+	// (the reply's messages, in order, at least one).
+	ContextCommand string
+	ReadContext    func(messages []string) model.ContextUsage
+	// Redelete is how long after deleting a session nobody will see again
+	// to delete it once more, for an agent that writes a little of it back
+	// as it ends; 0 for once.
+	Redelete time.Duration
+}

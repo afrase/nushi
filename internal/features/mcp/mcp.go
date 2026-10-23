@@ -1,6 +1,8 @@
-// Package mcp shows the MCP servers the agent uses in a folder. The
-// agent's own config is the source of truth: Nushi keeps no copy of it
-// (ADR 0021).
+// Package mcp shows and changes the MCP servers the agent uses in a
+// folder. The agent's own config is the source of truth: Nushi keeps no
+// copy of it (ADR 0021). The feature is Claude-only: its scopes (user,
+// project, local, plugin, claudeai), which one wins, and project approvals
+// are Claude Code's model; another agent's MCP config needs its own.
 package mcp
 
 import (

@@ -12,7 +12,7 @@ call, no cost, left out of `session/load` replay) with markdown that has an
 ## Decision
 
 The daemon sends `/context` on its own while the chat is idle and keeps its
-answer out of the transcript; `internal/claudecontext` reads the table, and
+answer out of the transcript; `internal/claude` reads the table, and
 the API returns both the categories and the markdown. The app shows the
 markdown as it is when no categories could be read, rather than guessing.
 An agent without a `context` command gets the card as before.
