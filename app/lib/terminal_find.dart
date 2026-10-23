@@ -13,7 +13,12 @@ import 'widgets.dart';
 /// Characters that end a path or URL in a terminal's text.
 final _stop = RegExp(r'''[\s"'`()<>\[\]{}|]''');
 
-/// The word under [at] on its line: what a ⌘-click opens.
+/// What a ⌘-click at [at] opens: an OSC 8 link's real target (never the
+/// text it shows), else the word under it.
+String clickTarget(Terminal terminal, CellOffset at) =>
+    terminal.hyperlinkAt(at) ?? wordAt(terminal, at);
+
+/// The word under [at] on its line.
 String wordAt(Terminal terminal, CellOffset at) {
   if (at.y < 0 || at.y >= terminal.buffer.lines.length) return '';
   final line = terminal.buffer.lines[at.y];

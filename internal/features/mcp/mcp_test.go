@@ -72,14 +72,17 @@ func TestEditKeepsMaskedValuesAndPutsTheOldOneBack(t *testing.T) {
 		}
 	})
 	ctx := context.Background()
-	if err := svc.Edit(ctx, "/repo", "local", "s", `{"command":"y","env":{"K":"••••","N":"new"}}`); err != nil {
+	if err := svc.Edit(ctx, "/repo", "local", "s", `{"command":"x","env":{"K":"••••","N":"new"}}`); err != nil {
 		t.Fatal(err)
+	}
+	if err := svc.Edit(ctx, "/repo", "local", "s", `{"command":"y","env":{"K":"••••"}}`); err == nil {
+		t.Fatal("a kept secret went to another command")
 	}
 	if err := svc.Edit(ctx, "/repo", "local", "s", `{"command":"bad"}`); err == nil {
 		t.Fatal("a refused config should fail the edit")
 	}
 	want := []string{
-		`remove s`, `add s {"command":"y","env":{"K":"secret","N":"new"}}`,
+		`remove s`, `add s {"command":"x","env":{"K":"secret","N":"new"}}`,
 		`remove s`, `add s {"command":"bad"}`, `add s {"command":"x","env":{"K":"secret"}}`,
 	}
 	if strings.Join(cfg.calls, "\n") != strings.Join(want, "\n") {
@@ -107,5 +110,38 @@ func TestRemoveRefusesWhatIsntAServer(t *testing.T) {
 	}
 	if len(cfg.calls) > 0 {
 		t.Errorf("the agent was asked: %v", cfg.calls)
+	}
+}
+
+func TestSecretsAreMaskedWhereverTheyAre(t *testing.T) {
+	for in, want := range map[string]string{
+		`{"url":"https://u:p@h.io/s/aB3dE5fG7hJ9kL1mN3/x?apiKey=k1&v=2#t","headers":{"A":"b"},"headersHelper":"get-token"}`:    `{"headers":{"A":"••••"},"headersHelper":"••••","url":"https://••••@h.io/s/••••/x?apiKey=••••\u0026v=••••#••••"}`,
+		`{"url":"https://h.io/my-server-2024-edition/v1"}`:                                                                     `{"url":"https://h.io/my-server-2024-edition/v1"}`,
+		`{"command":"docker","args":["run","-e","LOG=1","--api-key","sk-1","--token=t","GH_TOKEN=g","--port","80","plain=1"]}`: `{"args":["run","-e","LOG=••••","--api-key","••••","--token=••••","GH_TOKEN=••••","--port","80","plain=1"],"command":"docker"}`,
+		`{"command":"npx srv --password pw https://h.io/?k=v"}`:                                                                `{"command":"npx srv --password •••• https://h.io/?k=••••"}`,
+	} {
+		if got := masked(in); got != want {
+			t.Errorf("masked(%s)\n= %s\nwant %s", in, got, want)
+		}
+	}
+}
+
+func TestEditKeepsWhatWasShownMasked(t *testing.T) {
+	old := `{"url":"https://h.io/mcp?key=s1","headers":{"Authorization":"Bearer s2"}}`
+	shown := masked(old)
+	if got, err := unmasked(shown, old); err != nil || got != `{"headers":{"Authorization":"Bearer s2"},"url":"https://h.io/mcp?key=s1"}` {
+		t.Errorf("sent back as shown: %s, %v", got, err)
+	}
+	for _, edit := range []string{
+		`{"url":"https://evil.io/mcp?key=••••","headers":{"Authorization":"••••"}}`, // the URL's hidden part elsewhere
+		`{"url":"https://evil.io/mcp","headers":{"Authorization":"••••"}}`,          // the header elsewhere
+	} {
+		if got, err := unmasked(edit, old); err == nil {
+			t.Errorf("unmasked(%s) = %s: a kept secret went to a new URL", edit, got)
+		}
+	}
+	if got, err := unmasked(`{"url":"https://h.io/mcp?key=s1","headers":{"Authorization":"••••","X":"y"}}`, old); err != nil ||
+		!strings.Contains(got, "Bearer s2") {
+		t.Errorf("same URL, header kept: %s, %v", got, err)
 	}
 }

@@ -26,4 +26,17 @@ void main() {
     final gone = linkOf(wordAt(terminal, const CellOffset(55, 0)), folder);
     expect((gone.url, gone.path), (null, null));
   });
+
+  test('a link opens its real target, not the text it shows', () {
+    final terminal = Terminal()
+      ..resize(80, 2)
+      ..write(
+        '\x1b]8;;https://evil.example/x\x07https://github.com/a\x1b]8;;\x07 plain',
+      );
+    expect(
+      clickTarget(terminal, const CellOffset(3, 0)),
+      'https://evil.example/x',
+    );
+    expect(clickTarget(terminal, const CellOffset(23, 0)), 'plain');
+  });
 }

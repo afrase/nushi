@@ -106,18 +106,21 @@ func run() error {
 	return err
 }
 
-// loadToken reads the client token, creating it on first start.
+// loadToken reads the client token, making a new one on first start or
+// when the file holds too little to be one (an empty token would let
+// "Bearer " in). The file is kept at mode 0600.
 func loadToken(path string) (string, error) {
 	b, err := os.ReadFile(path)
-	if err == nil {
-		return strings.TrimSpace(string(b)), nil
+	if token := strings.TrimSpace(string(b)); err == nil && len(token) >= 32 {
+		return token, os.Chmod(path, 0o600)
 	}
-	if !errors.Is(err, fs.ErrNotExist) {
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return "", err
 	}
 	raw := make([]byte, 32)
 	_, _ = rand.Read(raw)
 	token := hex.EncodeToString(raw)
+	os.Remove(path) // WriteFile keeps an old file's mode
 	return token, os.WriteFile(path, []byte(token), 0o600)
 }
 

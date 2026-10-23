@@ -218,7 +218,11 @@ class _Clickable extends StatelessWidget {
   );
 }
 
-/// A markdown image: a local file (an absolute path or a file: URL) or a
+/// The largest local file a markdown image reads.
+const maxImageFile = 20 << 20;
+
+/// A markdown image: a local file (an absolute path or a file: URL; a
+/// regular file of [maxImageFile] at most, never a device or a pipe) or a
 /// data: URL shows at once; a remote one only after "Load image", since
 /// loading it tells its server that, and when, the reply was read.
 Widget markdownImage(Uri uri, String? alt) {
@@ -228,7 +232,12 @@ Widget markdownImage(Uri uri, String? alt) {
   }
   if (uri.scheme == 'file' ||
       (uri.scheme.isEmpty && uri.path.startsWith('/'))) {
-    return _Clickable(image: FileImage(File(uri.toFilePath())), size: 320);
+    final file = File(uri.toFilePath());
+    final stat = file.statSync();
+    if (stat.type != FileSystemEntityType.file || stat.size > maxImageFile) {
+      return Text('[image: ${alt ?? uri} (not an image file Nushi reads)]');
+    }
+    return _Clickable(image: FileImage(file), size: 320);
   }
   if (uri.scheme == 'http' || uri.scheme == 'https') {
     return _RemoteImage(uri, alt);

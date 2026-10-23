@@ -9,3 +9,4 @@ Every request carries a bearer token that the daemon checks. The daemon creates 
 ## Consequences
 - Remote access needs only a way to hand a client a token (see [0006](0006-remote-through-relay.md)), not a new auth model.
 - Same-user processes can read the token; they are outside the threat model.
+- Amended by [0024](0024-the-agent-can-read-the-token.md): the agent is a same-user process too, and can read the token.
