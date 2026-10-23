@@ -188,6 +188,15 @@ abstract final class NushiService {
     nushiv1nushi.ListFilesResponse.new,
   );
 
+  /// Asks the chat's agent, unseen, what fills its context (Claude's
+  /// /context), while the chat is idle (API 25).
+  static const getContextUsage = connect.Spec(
+    '/$name/GetContextUsage',
+    connect.StreamType.unary,
+    nushiv1nushi.GetContextUsageRequest.new,
+    nushiv1nushi.GetContextUsageResponse.new,
+  );
+
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.
   static const events = connect.Spec(

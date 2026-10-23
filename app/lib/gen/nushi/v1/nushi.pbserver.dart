@@ -61,6 +61,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.GetFolderStatusRequest request);
   $async.Future<$0.ListFilesResponse> listFiles(
       $pb.ServerContext ctx, $0.ListFilesRequest request);
+  $async.Future<$0.GetContextUsageResponse> getContextUsage(
+      $pb.ServerContext ctx, $0.GetContextUsageRequest request);
   $async.Future<$0.EventsResponse> events(
       $pb.ServerContext ctx, $0.EventsRequest request);
 
@@ -106,6 +108,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.GetFolderStatusRequest();
       case 'ListFiles':
         return $0.ListFilesRequest();
+      case 'GetContextUsage':
+        return $0.GetContextUsageRequest();
       case 'Events':
         return $0.EventsRequest();
       default:
@@ -156,6 +160,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return getFolderStatus(ctx, request as $0.GetFolderStatusRequest);
       case 'ListFiles':
         return listFiles(ctx, request as $0.ListFilesRequest);
+      case 'GetContextUsage':
+        return getContextUsage(ctx, request as $0.GetContextUsageRequest);
       case 'Events':
         return events(ctx, request as $0.EventsRequest);
       default:

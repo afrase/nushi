@@ -70,3 +70,86 @@ class ContextMeter extends StatelessWidget {
     );
   }
 }
+
+/// What fills the agent's context, as /context tells (ADR 0017): a bar of
+/// the categories in quiet colors, free space left empty, then a row per
+/// category with its tokens and share.
+class ContextBreakdown extends StatelessWidget {
+  const ContextBreakdown(this.categories, {super.key});
+
+  final List<ContextCategory> categories;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context), t = theme.t;
+    final palette = [
+      t.accent,
+      t.function,
+      t.string,
+      t.keyword,
+      t.claude,
+      t.needs,
+      t.done,
+      t.link,
+      t.crashed,
+      t.textSecondary,
+    ];
+    bool free(ContextCategory c) => c.name == 'Free space';
+    final colors = {
+      for (final (i, c) in categories.where((c) => !free(c)).indexed)
+        c.name: palette[i % palette.length].withValues(alpha: 0.75),
+    };
+    final total = categories.fold(0, (n, c) => n + c.tokens.toInt());
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 3,
+      children: [
+        Container(
+          height: 8,
+          margin: const EdgeInsets.only(bottom: 4),
+          clipBehavior: Clip.antiAlias,
+          decoration: box(t.borderSubtle, radius: 3),
+          child: Row(
+            children: [
+              for (final c in categories)
+                if (c.tokens > 0 && total > 0)
+                  Expanded(
+                    flex: (c.tokens.toInt() * 1000 ~/ total).clamp(1, 1000),
+                    child: ColoredBox(
+                      color: colors[c.name] ?? const Color(0x00000000),
+                    ),
+                  ),
+            ],
+          ),
+        ),
+        for (final c in categories)
+          Row(
+            spacing: 6,
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: box(
+                  colors[c.name] ?? t.borderStrong,
+                  fill: colors[c.name],
+                  radius: 2,
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  c.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.ui(t.textSecondary, size: 12),
+                ),
+              ),
+              Text(
+                '${tokens(c.tokens.toInt())}  ${c.percent.toStringAsFixed(1)}%',
+                style: theme.ui(t.text, size: 12),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+}

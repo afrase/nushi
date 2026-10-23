@@ -20,7 +20,9 @@ func (c *chat) update(n acp.SessionNotification) {
 	case "user_message_chunk": // replayed by session/load
 		c.chunkLocked(model.UserMessage, u.UserMessageChunk)
 	case "agent_message_chunk":
-		c.chunkLocked(model.AgentMessage, u.AgentMessageChunk)
+		if !c.silentLocked(u.AgentMessageChunk) {
+			c.chunkLocked(model.AgentMessage, u.AgentMessageChunk)
+		}
 	case "agent_thought_chunk":
 		c.chunkLocked(model.Thought, u.AgentThoughtChunk)
 	case "plan":

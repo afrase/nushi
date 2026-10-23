@@ -19,7 +19,7 @@ final dataDir =
     '${Platform.environment['HOME']}/Library/Application Support/Nushi Next';
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 24;
+const apiVersion = 25;
 
 /// Whether [folder] is a chat's scratch folder: the chat has no folder yet.
 bool isScratch(String folder) => folder.startsWith('$dataDir/scratch/');

@@ -3305,6 +3305,215 @@ class SetConfigOptionResponse extends $pb.GeneratedMessage {
   static SetConfigOptionResponse? _defaultInstance;
 }
 
+class GetContextUsageRequest extends $pb.GeneratedMessage {
+  factory GetContextUsageRequest({
+    $core.String? chatId,
+  }) {
+    final result = GetContextUsageRequest._();
+    if (chatId != null) result.chatId = chatId;
+    return result;
+  }
+
+  GetContextUsageRequest._();
+
+  factory GetContextUsageRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetContextUsageRequest()..mergeFromBuffer(data, registry);
+  factory GetContextUsageRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetContextUsageRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetContextUsageRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetContextUsageRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetContextUsageRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetContextUsageRequest copyWith(
+          void Function(GetContextUsageRequest) updates) =>
+      super.copyWith((message) => updates(message as GetContextUsageRequest))
+          as GetContextUsageRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetContextUsageRequest() / GetContextUsageRequest.new instead')
+  static GetContextUsageRequest create() => GetContextUsageRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetContextUsageRequest._();
+  @$core.override
+  GetContextUsageRequest createEmptyInstance() => GetContextUsageRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetContextUsageRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetContextUsageRequest>(
+          GetContextUsageRequest.$_createMessage);
+  static GetContextUsageRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+}
+
+class GetContextUsageResponse extends $pb.GeneratedMessage {
+  factory GetContextUsageResponse({
+    $core.Iterable<ContextCategory>? categories,
+    $core.String? markdown,
+  }) {
+    final result = GetContextUsageResponse._();
+    if (categories != null) result.categories.addAll(categories);
+    if (markdown != null) result.markdown = markdown;
+    return result;
+  }
+
+  GetContextUsageResponse._();
+
+  factory GetContextUsageResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetContextUsageResponse()..mergeFromBuffer(data, registry);
+  factory GetContextUsageResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetContextUsageResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetContextUsageResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetContextUsageResponse.$_createMessage)
+    ..pPM<ContextCategory>(1, _omitFieldNames ? '' : 'categories',
+        subBuilder: ContextCategory.$_createMessage)
+    ..aOS(2, _omitFieldNames ? '' : 'markdown')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetContextUsageResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetContextUsageResponse copyWith(
+          void Function(GetContextUsageResponse) updates) =>
+      super.copyWith((message) => updates(message as GetContextUsageResponse))
+          as GetContextUsageResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetContextUsageResponse() / GetContextUsageResponse.new instead')
+  static GetContextUsageResponse create() => GetContextUsageResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetContextUsageResponse._();
+  @$core.override
+  GetContextUsageResponse createEmptyInstance() => GetContextUsageResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetContextUsageResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetContextUsageResponse>(
+          GetContextUsageResponse.$_createMessage);
+  static GetContextUsageResponse? _defaultInstance;
+
+  /// What fills the context, in the agent's order ("Free space" among them);
+  /// empty when its answer couldn't be read.
+  @$pb.TagNumber(1)
+  $pb.PbList<ContextCategory> get categories => $_getList(0);
+
+  /// The agent's answer as it gave it, markdown.
+  @$pb.TagNumber(2)
+  $core.String get markdown => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set markdown($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasMarkdown() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearMarkdown() => $_clearField(2);
+}
+
+class ContextCategory extends $pb.GeneratedMessage {
+  factory ContextCategory({
+    $core.String? name,
+    $fixnum.Int64? tokens,
+    $core.double? percent,
+  }) {
+    final result = ContextCategory._();
+    if (name != null) result.name = name;
+    if (tokens != null) result.tokens = tokens;
+    if (percent != null) result.percent = percent;
+    return result;
+  }
+
+  ContextCategory._();
+
+  factory ContextCategory.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ContextCategory()..mergeFromBuffer(data, registry);
+  factory ContextCategory.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ContextCategory()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ContextCategory',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ContextCategory.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'name')
+    ..aInt64(2, _omitFieldNames ? '' : 'tokens')
+    ..aD(3, _omitFieldNames ? '' : 'percent')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ContextCategory clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ContextCategory copyWith(void Function(ContextCategory) updates) =>
+      super.copyWith((message) => updates(message as ContextCategory))
+          as ContextCategory;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ContextCategory() / ContextCategory.new instead')
+  static ContextCategory create() => ContextCategory._();
+  static $pb.GeneratedMessage $_createMessage() => ContextCategory._();
+  @$core.override
+  ContextCategory createEmptyInstance() => ContextCategory._();
+  @$core.pragma('dart2js:noInline')
+  static ContextCategory getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ContextCategory>(
+          ContextCategory.$_createMessage);
+  static ContextCategory? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get name => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set name($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearName() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $fixnum.Int64 get tokens => $_getI64(1);
+  @$pb.TagNumber(2)
+  set tokens($fixnum.Int64 value) => $_setInt64(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasTokens() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearTokens() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.double get percent => $_getN(2);
+  @$pb.TagNumber(3)
+  set percent($core.double value) => $_setDouble(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasPercent() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearPercent() => $_clearField(3);
+}
+
 class GetFolderStatusRequest extends $pb.GeneratedMessage {
   factory GetFolderStatusRequest({
     $core.String? folder,
@@ -5096,6 +5305,13 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, ListFilesRequest request) =>
       _client.invoke<ListFilesResponse>(
           ctx, 'NushiService', 'ListFiles', request, ListFilesResponse());
+
+  /// Asks the chat's agent, unseen, what fills its context (Claude's
+  /// /context), while the chat is idle (API 25).
+  $async.Future<GetContextUsageResponse> getContextUsage(
+          $pb.ClientContext? ctx, GetContextUsageRequest request) =>
+      _client.invoke<GetContextUsageResponse>(ctx, 'NushiService',
+          'GetContextUsage', request, GetContextUsageResponse());
 
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.
