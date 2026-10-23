@@ -3,6 +3,7 @@ package git
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -21,10 +22,10 @@ import (
 const maxText = 1 << 20
 
 // Changes returns the folder's uncommitted changes against HEAD, untracked
-// files included, with paths relative to the folder. The folder may be
-// anywhere inside a repository. With base, the changes are counted from
-// where HEAD's branch left base (their merge base): the branch's commits
-// and the uncommitted changes.
+// files included, with paths relative to the folder and each file's lines
+// added and removed. The folder may be anywhere inside a repository. With
+// base, the changes are counted from where HEAD's branch left base (their
+// merge base): the branch's commits and the uncommitted changes.
 func Changes(ctx context.Context, folder, base string) ([]model.FileChange, error) {
 	from, err := start(ctx, folder, base)
 	if err != nil {
@@ -33,33 +34,53 @@ func Changes(ctx context.Context, folder, base string) ([]model.FileChange, erro
 	hasHead := from != ""
 	var changes []model.FileChange
 	if hasHead {
-		out, err := run(ctx, folder, "diff", from, "--name-status", "-z", "--no-renames", "--relative", "--no-ext-diff", "--no-textconv")
+		out, err := run(ctx, folder, "diff", from, "--name-status", "-z", "-M", "--relative", "--no-ext-diff", "--no-textconv")
 		if err != nil {
 			return nil, err
 		}
 		fields := split(out)
 		for i := 0; i+1 < len(fields); i += 2 {
-			status := map[string]string{"A": "added", "D": "deleted"}[fields[i][:1]]
-			if status == "" {
-				status = "modified"
+			c := model.FileChange{Path: fields[i+1], Status: "modified"}
+			switch fields[i][0] {
+			case 'A':
+				c.Status = "added"
+			case 'D':
+				c.Status = "deleted"
+			case 'R': // R<score>, the old path, the new one
+				if i+2 < len(fields) {
+					c.Status, c.OldPath, c.Path = "renamed", fields[i+1], fields[i+2]
+					i++
+				}
 			}
-			changes = append(changes, model.FileChange{Path: fields[i+1], Status: status})
+			changes = append(changes, c)
+		}
+		counts, err := numstat(ctx, folder, from)
+		if err != nil {
+			return nil, err
+		}
+		for i := range changes {
+			n := counts[changes[i].Path]
+			changes[i].Added, changes[i].Removed = n[0], n[1]
 		}
 	}
 	added, err := untracked(ctx, folder, hasHead)
 	if err != nil {
 		return nil, err
 	}
+	status := "untracked"
+	if !hasHead {
+		status = "added" // before the first commit, every file is new
+	}
 	for _, p := range added {
-		changes = append(changes, model.FileChange{Path: p, Status: "added"})
+		changes = append(changes, model.FileChange{Path: p, Status: status})
 	}
 
 	slices.SortFunc(changes, func(a, b model.FileChange) int { return strings.Compare(a.Path, b.Path) })
 	for i := range changes {
 		c := &changes[i]
 		var old, cur []byte
-		if c.Status != "added" {
-			if old, err = run(ctx, folder, "show", "--no-textconv", from+":./"+c.Path); err != nil {
+		if c.Status != "added" && c.Status != "untracked" {
+			if old, err = run(ctx, folder, "show", "--no-textconv", from+":./"+cmp.Or(c.OldPath, c.Path)); err != nil {
 				return nil, err
 			}
 		}
@@ -75,9 +96,44 @@ func Changes(ctx context.Context, folder, base string) ([]model.FileChange, erro
 			c.Skipped = "too large"
 		default:
 			c.Old, c.New = string(old), string(cur)
+			if c.Status == "added" || c.Status == "untracked" {
+				c.Added = lines(cur)
+			}
 		}
 	}
 	return changes, nil
+}
+
+// numstat returns the lines added and removed per file (by its new path)
+// since from, as git diff counts them; a binary file counts none.
+func numstat(ctx context.Context, folder, from string) (map[string][2]int, error) {
+	out, err := run(ctx, folder, "diff", from, "--numstat", "-z", "-M", "--relative", "--no-ext-diff", "--no-textconv")
+	if err != nil {
+		return nil, err
+	}
+	counts := map[string][2]int{}
+	fields := split(out)
+	for i := 0; i < len(fields); i++ { // added, removed ("-" if binary), path
+		added, rest, _ := strings.Cut(fields[i], "\t")
+		removed, path, _ := strings.Cut(rest, "\t")
+		if path == "" && i+2 < len(fields) { // renamed: the old path, the new one
+			path = fields[i+2]
+			i += 2
+		}
+		a, _ := strconv.Atoi(added)
+		r, _ := strconv.Atoi(removed)
+		counts[path] = [2]int{a, r}
+	}
+	return counts, nil
+}
+
+// lines counts a text's lines, a last one without a newline included.
+func lines(b []byte) int {
+	n := bytes.Count(b, []byte("\n"))
+	if len(b) > 0 && b[len(b)-1] != '\n' {
+		n++
+	}
+	return n
 }
 
 var (
@@ -143,16 +199,12 @@ func Status(ctx context.Context, folder, base string) (model.FolderStatus, error
 		st.Branch = strings.TrimSpace(string(out))
 	}
 	if hasHead {
-		out, err := run(ctx, folder, "diff", from, "--numstat", "-z", "--no-renames", "--relative", "--no-ext-diff", "--no-textconv")
+		counts, err := numstat(ctx, folder, from)
 		if err != nil {
 			return st, err
 		}
-		for _, f := range split(out) { // added, removed ("-" if binary), path
-			added, rest, _ := strings.Cut(f, "\t")
-			removed, _, _ := strings.Cut(rest, "\t")
-			a, _ := strconv.Atoi(added)
-			r, _ := strconv.Atoi(removed)
-			st.Files, st.Added, st.Removed = st.Files+1, st.Added+a, st.Removed+r
+		for _, n := range counts {
+			st.Files, st.Added, st.Removed = st.Files+1, st.Added+n[0], st.Removed+n[1]
 		}
 	}
 	added, err := untracked(ctx, folder, hasHead)
@@ -161,12 +213,8 @@ func Status(ctx context.Context, folder, base string) (model.FolderStatus, error
 	}
 	for _, p := range added {
 		st.Files++
-		b, err := worktree(filepath.Join(folder, p))
-		if err == nil && len(b) <= maxText && bytes.IndexByte(b, 0) < 0 && len(b) > 0 {
-			st.Added += bytes.Count(b, []byte("\n"))
-			if b[len(b)-1] != '\n' {
-				st.Added++
-			}
+		if b, err := worktree(filepath.Join(folder, p)); err == nil && len(b) <= maxText && bytes.IndexByte(b, 0) < 0 {
+			st.Added += lines(b)
 		}
 	}
 	return st, nil

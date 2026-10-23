@@ -974,6 +974,9 @@ const FileChange$json = {
     {'1': 'old_text', '3': 3, '4': 1, '5': 9, '10': 'oldText'},
     {'1': 'new_text', '3': 4, '4': 1, '5': 9, '10': 'newText'},
     {'1': 'skipped', '3': 5, '4': 1, '5': 9, '10': 'skipped'},
+    {'1': 'old_path', '3': 6, '4': 1, '5': 9, '10': 'oldPath'},
+    {'1': 'added', '3': 7, '4': 1, '5': 5, '10': 'added'},
+    {'1': 'removed', '3': 8, '4': 1, '5': 5, '10': 'removed'},
   ],
 };
 
@@ -981,7 +984,8 @@ const FileChange$json = {
 final $typed_data.Uint8List fileChangeDescriptor = $convert.base64Decode(
     'CgpGaWxlQ2hhbmdlEhIKBHBhdGgYASABKAlSBHBhdGgSFgoGc3RhdHVzGAIgASgJUgZzdGF0dX'
     'MSGQoIb2xkX3RleHQYAyABKAlSB29sZFRleHQSGQoIbmV3X3RleHQYBCABKAlSB25ld1RleHQS'
-    'GAoHc2tpcHBlZBgFIAEoCVIHc2tpcHBlZA==');
+    'GAoHc2tpcHBlZBgFIAEoCVIHc2tpcHBlZBIZCghvbGRfcGF0aBgGIAEoCVIHb2xkUGF0aBIUCg'
+    'VhZGRlZBgHIAEoBVIFYWRkZWQSGAoHcmVtb3ZlZBgIIAEoBVIHcmVtb3ZlZA==');
 
 @$core.Deprecated('Use eventsRequestDescriptor instead')
 const EventsRequest$json = {

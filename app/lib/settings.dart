@@ -9,7 +9,7 @@ import 'daemon.dart';
 /// whether the details panel shows (its toolbar button), which of its cards
 /// are collapsed and their order, the repositories whose new chats get a
 /// worktree, the worktree chats whose changes show what's uncommitted, not
-/// the branch, and the panes' widths.
+/// the branch, the panes' widths, and whether changed files show flat.
 final showDetails = ValueNotifier<bool>(_saved['details'] != false)
   ..addListener(_save);
 final collapsedCards = ValueNotifier<Set<String>>(_strings('collapsed'))
@@ -21,6 +21,10 @@ final worktreeRepos = ValueNotifier<Set<String>>(_strings('worktrees'))
 final cardOrder = ValueNotifier<List<String>>([..._strings('cards')])
   ..addListener(_save);
 final uncommittedChats = ValueNotifier<Set<String>>(_strings('uncommitted'))
+  ..addListener(_save);
+
+/// Whether the Changes view lists its files flat rather than as a tree.
+final changesFlat = ValueNotifier<bool>(_saved['flat'] == true)
   ..addListener(_save);
 
 /// The widths panes were dragged to, by pane (see `Resizable`).
@@ -54,6 +58,7 @@ void _save() {
         'uncommitted': uncommittedChats.value.toList(),
         'cards': cardOrder.value,
         'panes': paneWidths.value,
+        'flat': changesFlat.value,
       }),
     );
   } on Object {
