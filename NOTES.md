@@ -1,29 +1,30 @@
 # Notes
 
-## Summary (2026-10-23, after step 25)
+## Summary (2026-10-23, after step 29)
 
-Milestone F (steps 22–25) is done, one commit each on `main` (plus a follow-up that dropped step 24's context ring), not pushed. `make test` passes: Go unit tests, five end-to-end tests against the fake agent (now with moving a chat), the package tests and the app's tests. Each step was looked at in the running app against live Claude (claude-agent-acp 0.94.0) at 1280×800 and 1024×700. `make install` put the current build in `~/Applications/Nushi Next.app`.
+Milestone G (steps 26–29, a polish round) is done, one commit each on `main`, pushed to origin (plus a first commit adding `NUSHI_DATA`). `make test` passes: Go unit tests, the end-to-end tests against the fake agent (the move test now ends by deleting the moved chat), the package tests and the app's tests (a new one for the reply format). Each step was looked at in a development build against live Claude (claude-agent-acp 0.94.0) at 1280×800, beside the installed Nushi Next, which was left running and untouched: the dev daemon and app ran on their own data folder (`NUSHI_DATA`). `make install` put the current build in `~/Applications/Nushi Next.app`.
 
-**What works** (on top of milestones A–E)
-- New chat starts at once, in a scratch folder of its own, under "No folder" in the sidebar. The chat's folder (in the details panel, or in the header while the panel is hidden) moves it to a recent folder or one you pick. Before the first message that's a new session there; after, Claude's session is forked into the new folder with the whole conversation (Claude remembers, runs in the new folder, and `claude --resume <new id>` works there; the old id still resumes in the old folder). A failed move leaves the chat where it was, with a notice. Tried live: scratch → repo, repo → repo, daemon restart after a move.
-- A details panel right of the chat: Environment (folder, branch), Context (meter, tokens, last turn, cost) and Changes (`+n −m` and files, refreshed when a turn ends; a click opens Changes). A header button shows or hides it (remembered); it hides itself below a chat pane of 820 (so at 1024 wide).
-- A minimal composer like Claude Code's: "Type / for commands", "+" (mention a file, attach an image), ↵ once there's something to send, a stop button while a turn runs; under it the mode alone, and one menu for model and effort with the other options below.
-- Images: paste, drop, or "+" ▸ Image…; thumbnails in the box and in the transcript; images from tools (Claude reading a PNG) inline; markdown images from local files and data: URLs; remote ones behind "Load image"; a click shows one large. Images survive an app quit and come back after a daemon restart.
+**What works** (on top of milestones A–F)
+- Delete…: the chat menu is Rename, Archive, Delete…. The confirmation lists what goes (Claude's history of each session the chat had, with id and folder; the scratch folder; Nushi's record) and deleting removes all three: Claude's through ACP `session/delete`. Tried live on a scratch chat moved once: both `.jsonl` transcripts, the scratch folder and the session file were gone.
+- Composer menus like Claude Code's: the model menu shows the first four models (1–4 pick them), Effort ▸ and More models ▸; Fast mode and Agent moved to a "⋯" menu; the "+" and the text are centered, and there is no blue focus ring.
+- The details panel's cards collapse to their title (`Context › 3%`, `Changes › +1 −0`) and stay collapsed across launches.
+- Selecting text shows "Start a side chat | Reply" above it. Reply opens a small box; Enter adds a reply card to the composer; several cards, editable, removable; the message shows each quote with its reply, and Claude answers about the quoted parts.
 
 **What doesn't (yet)**
-- Dropping files was built but not tried by hand (no Automation access to Finder here to drive a drag). After a move or `session/load` Claude's reported cost starts near zero again. Scratch folders are never cleaned up. A folder path with decomposed Unicode accents won't move (Nushi names Claude's history folder without NFC).
-- Carried over: no thoughts from Claude; plans only with Claude's todo tools on; copy across blocks loses line breaks; one side question per chat; archived chats show no history after a daemon restart until unarchived; nothing runs after a reboot until the app opens.
+- Side chats (step 18) are Claude forks and stay in Claude's history after they close; Delete doesn't know them (see below). A chat moved before step 26 only knows its current session, so Delete leaves its earlier ones.
+- Claude leaves an empty history folder behind for each folder whose sessions were deleted.
+- Carried over: dropping files untried by hand; cost restarts near zero after a move or reload; no thoughts from Claude; plans only with Claude's todo tools on; copy across blocks loses line breaks; archived chats show no history after a daemon restart until unarchived; nothing runs after a reboot until the app opens.
 
 **Needs your decision**
-- Moving a chat with messages gives it a **new Claude session id** (a fork), not the same id as the prompt asked ([ADR 0014](docs/adr/0014-moving-a-chat-forks-it.md)). A same-id copy plus `session/load` does resume, but claude-agent-acp replays a loaded session from whichever copy of the id it finds first across all folders, so after a daemon restart a moved chat could show its old, shorter transcript. Nushi's chat id now stays put on its own (it was the session id until step 22). The cost: `claude --resume` needs the new id (the Remove dialog shows it).
-- The move depends on Claude's private file layout (`internal/claudehistory`): it copies the transcript into `~/.claude/projects/<new folder>/` for the length of the fork, then removes its copy. Worth a look as it writes in Claude's data.
-- Nushi ignores the one title change Claude makes on a fork ("<title> (fork)"), so a moved chat keeps its title: a Claude-specific rule in the chats feature.
+- **Side chats' sessions.** Each side question leaves a Claude session (a fork, the whole conversation) in the chat folder's history, and nothing deletes it. I'd delete a side chat's session when it closes (it is never shown again, by design), through the same `session/delete`. Not done: it changes step 18's behavior.
+- The development data folder (`NUSHI_DATA`, the first commit of this round) exists so a dev build can run beside your installed Nushi Next. `make stop` now stops only the daemon of its folder; it used to kill every `nushid`, yours included.
+- The installed app's daemon (API 18) still runs your chats; the new app (API 19) shows "Restart daemon" until it is restarted. Delete is greyed out until then.
 
-**Decisions to revisit**: see [the list below](#decisions-to-revisit). New in F: scratch folders kept forever; the panel's 820 breakpoint and that it steps aside for Changes and side questions; the folder control coming back to the header when the panel is hidden; `app.json` in the data folder for the panel's state; the image limits (1,568 px, 3.75 MB, PNG when re-encoded); remote markdown images behind a click; two new plugins (`pasteboard`, `desktop_drop`).
+**Decisions to revisit**: see [the list below](#decisions-to-revisit). New in G: Delete instead of Remove ([ADR 0015](docs/adr/0015-delete-takes-the-agents-history.md)), learning the delete capability by starting the agent once; "first four models, skipping Default" as the rule; checks on the right; menus giving focus back to the composer; which cards are collapsed is global, not per chat; the reply format's one-line replies.
 
-**Size**: the app is 5,388 lines of Dart (limit about 7,000), plus 655 in packages; the daemon is 2,634 lines of Go (limit 5,000) and the ACP client 795. No hand-written file is over 400 lines (largest: `tool_calls.dart` 397, `composer.dart` 395, `acpgen/main.go` 393). Steps 22 (814 added), 23 (592) and 25 (718) went over the ~500-lines-per-step tripwire; see "Tripwires crossed".
+**Size**: the app is 6,213 lines of Dart (limit about 7,000), plus 655 in packages; the daemon is 2,810 lines of Go (limit 5,000) and the ACP client 800. No hand-written file is over 400 lines (largest: `composer.dart` 400, `tool_calls.dart` 397, `acpgen/main.go` 393). Step 29 (683 added) went over the ~500-lines-per-step tripwire; see "Tripwires crossed".
 
-**Left behind by the testing**: test chats are removed from the data folder and the daemon is stopped. Claude keeps its history of the test sessions under `~/.claude/projects/` (folders named after this session's scratch directory), including one same-id copy from the first version of step 22's move. During step 24's testing the mode menu once got set to Bypass permissions by a stray click; it was set back, and `agents.json` is removed.
+**Left behind by the testing**: nothing of the dev data folder; the test chats were deleted with Delete, and this round's empty test folders in `~/.claude/projects/` and one side-chat transcript were removed by hand.
 
 ## Line counts
 
@@ -137,6 +138,15 @@ Lines added per step, code and tests, without generated code (the tripwire is ab
 3. Ask Claude to change a file and add one: the Context card fills in (tokens, last turn, cost) and Changes shows `+n −m` when the turn ends; click it for the Changes view. The header button hides the panel (the folder comes back to the header); narrow the window to 1024 and it hides by itself.
 4. The composer: type `/`, `@`, or press "+"; ↵ appears once there's text; while Claude works the ↵ spot is a stop button (Escape works too). Under the box: the mode, and model plus effort in one menu with Fast mode and Agent below.
 5. Copy a screenshot (⌘⌃⇧4) and paste it in the box: a thumbnail with ×. Ask what's in it. Put a PNG in the repo and ask Claude to read it: the image shows under the Read call. Ask for a reply that is `![x](/absolute/path.png)` and `![y](https://example.com/y.png)`: the first shows, the second waits behind "Load image". Click an image for a large view; Escape closes it.
+
+## Milestone G demo (steps 26–29): polish
+
+To try it beside an installed Nushi Next that's in use: `export NUSHI_DATA=~/Library/Application\ Support/Nushi\ Dev`, then `make run` (and `make stop` after). Otherwise `make install`, quit Nushi Next, and press "Restart daemon" if the sidebar offers it.
+
+1. New chat; ask "Remember the word narwhal." Move it to a git repository (the folder in the details panel). Right-click it ▸ Delete…: the dialog lists two Claude sessions (the scratch one and the repository's), the scratch folder and Nushi's record. Delete: the chat is gone, `ls ~/.claude/projects/*/<id>.jsonl` finds neither session, and the scratch folder is gone.
+2. Start a chat. Click the model ("Opus 5.5  High") under the box: four models by name, the current one checked, 1–4 on the right; press 2, then open it again and press 1. Hover Effort ▸ and More models ▸: they open beside their rows. Click "⋯": Fast mode and Agent, each with its value; Agent's list has one line per agent. The "+" and the text sit on one line; the box gets no blue ring.
+3. Click the Context and Changes titles: they collapse to `Context › 3%` and `Changes › +n −m`. Quit the app and reopen it: they stay collapsed.
+4. Ask for three sentences about otters. Select one: "Start a side chat | Reply" shows above it. Reply, type a question, Enter: a card sits in the composer. Select another sentence, Reply, Enter. Click the first card, change its text, Save. Type a line and send: the message shows each quote with its reply, then the line, and Claude answers about the quoted parts. Select text again ▸ Start a side chat: the side panel opens with the quote, as before.
 
 ## ACP quirks
 
