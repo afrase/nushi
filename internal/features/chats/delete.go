@@ -16,18 +16,29 @@ type DeletePlan struct {
 	Sessions []model.AgentSession // the agent's sessions the chat had, oldest first
 	History  bool                 // the agent deletes its history of them (ACP session/delete)
 	Scratch  string               // the chat's scratch folder, if it still has one
-	// Worktree is the chat's worktree, if it has one; State says what
-	// removing it and its branch would lose, unless StateErr says why
-	// that can't be told.
-	Worktree *model.Worktree
+	// Worktrees are the chat's worktree, if it has one, then those it moved
+	// out of.
+	Worktrees []WorktreePlan
+}
+
+// WorktreePlan is one of a chat's worktrees: State says what removing it
+// and its branch would lose, unless StateErr says why that can't be told.
+type WorktreePlan struct {
+	Worktree model.Worktree
+	Current  bool // the chat runs in it
 	State    model.WorktreeState
 	StateErr error
 }
 
-// DeleteOptions say what to do with a deleted chat's worktree and branch.
-// Removing a worktree with changes, or deleting a branch with commits its
-// base doesn't have, needs the matching Force.
-type DeleteOptions struct {
+// DeleteOptions say what to do with a deleted chat's worktrees and their
+// branches, by the worktree's path ("" for the one the chat runs in, unless
+// its path is given); the rest stay.
+type DeleteOptions map[string]WorktreeOptions
+
+// WorktreeOptions say what to do with a worktree and its branch. Removing a
+// worktree with changes, or deleting a branch with commits its base doesn't
+// have, needs the matching Force.
+type WorktreeOptions struct {
 	RemoveWorktree, ForceWorktree bool
 	DeleteBranch, ForceBranch     bool
 }
@@ -47,8 +58,13 @@ func (s *Service) PlanDelete(ctx context.Context, chatID string) (DeletePlan, er
 	if fi, err := os.Lstat(filepath.Join(s.scratch, c.id)); err == nil && fi.IsDir() {
 		p.Scratch = filepath.Join(s.scratch, c.id)
 	}
-	if p.Worktree = sess.Worktree; p.Worktree != nil {
-		p.State, p.StateErr = s.worktrees.Inspect(ctx, *p.Worktree)
+	wts := sess.EarlierWorktrees
+	if sess.Worktree != nil {
+		wts = append([]model.Worktree{*sess.Worktree}, wts...)
+	}
+	for i, wt := range wts {
+		st, err := s.worktrees.Inspect(ctx, wt)
+		p.Worktrees = append(p.Worktrees, WorktreePlan{wt, i == 0 && sess.Worktree != nil, st, err})
 	}
 	s.mu.Lock()
 	known := s.deletes
@@ -80,8 +96,8 @@ func (s *Service) startDeleter(ctx context.Context, h acp.Handler) (Agent, bool,
 	return agent, deletes, nil
 }
 
-// Delete deletes a chat: its agent stops, its worktree and branch go as
-// opts say, the agent deletes its history of each of the chat's sessions
+// Delete deletes a chat: its agent stops, its worktrees and branches go
+// as opts say, the agent deletes its history of each of the chat's sessions
 // (when it can), the chat's scratch folder goes, and then Nushi's record
 // of it. If the worktree or the agent's history can't go, the chat stays.
 func (s *Service) Delete(ctx context.Context, chatID string, opts DeleteOptions) error {
@@ -93,7 +109,15 @@ func (s *Service) Delete(ctx context.Context, chatID string, opts DeleteOptions)
 	if err != nil {
 		return err
 	}
-	err = s.deleteWorktree(ctx, p.Worktree, opts)
+	for _, wt := range p.Worktrees {
+		if err == nil {
+			o, ok := opts[wt.Worktree.Path]
+			if !ok && wt.Current {
+				o = opts[""]
+			}
+			err = s.deleteWorktree(ctx, &wt.Worktree, o)
+		}
+	}
 	if err == nil && p.History {
 		err = s.deleteHistory(ctx, c, p.Sessions)
 	}

@@ -71,7 +71,7 @@ func (s *Service) dropWorktree(wt *model.Worktree) {
 
 // deleteWorktree removes a deleted chat's worktree and deletes its branch,
 // as the user chose. Forcing is needed to lose changes or commits.
-func (s *Service) deleteWorktree(ctx context.Context, wt *model.Worktree, opts DeleteOptions) error {
+func (s *Service) deleteWorktree(ctx context.Context, wt *model.Worktree, opts WorktreeOptions) error {
 	if wt == nil || !opts.RemoveWorktree && !opts.DeleteBranch {
 		return nil
 	}

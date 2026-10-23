@@ -7,12 +7,15 @@ import 'daemon.dart';
 
 /// What the app remembers across launches, in `app.json` in the data folder:
 /// whether the details panel shows (its toolbar button), which of its cards
-/// are collapsed, and the repositories whose new chats get a worktree.
+/// are collapsed, the repositories whose new chats get a worktree, and the
+/// worktree chats whose changes show what's uncommitted, not the branch.
 final showDetails = ValueNotifier<bool>(_saved['details'] != false)
   ..addListener(_save);
 final collapsedCards = ValueNotifier<Set<String>>(_strings('collapsed'))
   ..addListener(_save);
 final worktreeRepos = ValueNotifier<Set<String>>(_strings('worktrees'))
+  ..addListener(_save);
+final uncommittedChats = ValueNotifier<Set<String>>(_strings('uncommitted'))
   ..addListener(_save);
 
 File get _settings => File('$dataDir/app.json');
@@ -36,6 +39,7 @@ void _save() {
         'details': showDetails.value,
         'collapsed': collapsedCards.value.toList(),
         'worktrees': worktreeRepos.value.toList(),
+        'uncommitted': uncommittedChats.value.toList(),
       }),
     );
   } on Object {

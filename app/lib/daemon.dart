@@ -19,7 +19,7 @@ final dataDir =
     '${Platform.environment['HOME']}/Library/Application Support/Nushi Next';
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 22;
+const apiVersion = 23;
 
 /// Whether [folder] is a chat's scratch folder: the chat has no folder yet.
 bool isScratch(String folder) => folder.startsWith('$dataDir/scratch/');
@@ -172,6 +172,10 @@ class Daemon extends ChangeNotifier {
               notifyListeners();
             } else if (e.removed) {
               chats.remove(e.chatId);
+              if (uncommittedChats.value.contains(e.chatId)) {
+                uncommittedChats.value = {...uncommittedChats.value}
+                  ..remove(e.chatId);
+              }
               if (selectedId == e.chatId) selectedId = null;
               notifyListeners();
             } else {
