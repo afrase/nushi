@@ -105,7 +105,8 @@ func usageProto(u model.Usage) *nushiv1.Usage {
 }
 
 func statusProto(st model.Status) *nushiv1.ChatStatus {
-	out := &nushiv1.ChatStatus{Busy: st.Busy, Waiting: st.Waiting, CanFork: st.CanFork, Images: st.Images, CanRewind: st.CanRewind}
+	out := &nushiv1.ChatStatus{Busy: st.Busy, Waiting: st.Waiting, CanFork: st.CanFork, Images: st.Images, CanRewind: st.CanRewind,
+		McpChanged: st.MCPChanged}
 	if !st.Started.IsZero() {
 		out.Started = st.Started.UnixMilli()
 	}

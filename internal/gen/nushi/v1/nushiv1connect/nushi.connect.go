@@ -93,6 +93,17 @@ const (
 	// NushiServiceListMcpServersProcedure is the fully-qualified name of the NushiService's
 	// ListMcpServers RPC.
 	NushiServiceListMcpServersProcedure = "/nushi.v1.NushiService/ListMcpServers"
+	// NushiServiceAddMcpServerProcedure is the fully-qualified name of the NushiService's AddMcpServer
+	// RPC.
+	NushiServiceAddMcpServerProcedure = "/nushi.v1.NushiService/AddMcpServer"
+	// NushiServiceEditMcpServerProcedure is the fully-qualified name of the NushiService's
+	// EditMcpServer RPC.
+	NushiServiceEditMcpServerProcedure = "/nushi.v1.NushiService/EditMcpServer"
+	// NushiServiceRemoveMcpServerProcedure is the fully-qualified name of the NushiService's
+	// RemoveMcpServer RPC.
+	NushiServiceRemoveMcpServerProcedure = "/nushi.v1.NushiService/RemoveMcpServer"
+	// NushiServiceReloadChatProcedure is the fully-qualified name of the NushiService's ReloadChat RPC.
+	NushiServiceReloadChatProcedure = "/nushi.v1.NushiService/ReloadChat"
 	// NushiServiceEventsProcedure is the fully-qualified name of the NushiService's Events RPC.
 	NushiServiceEventsProcedure = "/nushi.v1.NushiService/Events"
 )
@@ -179,6 +190,19 @@ type NushiServiceClient interface {
 	// seconds), and servers only it knows (plugins', claude.ai connectors)
 	// are added (API 32).
 	ListMcpServers(context.Context, *connect.Request[v1.ListMcpServersRequest]) (*connect.Response[v1.ListMcpServersResponse], error)
+	// Add, edit and remove an MCP server in a scope ("user", "project",
+	// "local"), through the agent's own CLI; the folder names the project.
+	// Editing keeps the name and scope, and env and header values sent as
+	// "••••" keep the values they had; if the new config is refused, the old
+	// one is put back. Running chats the change reaches get
+	// status.mcp_changed (API 33).
+	AddMcpServer(context.Context, *connect.Request[v1.AddMcpServerRequest]) (*connect.Response[v1.AddMcpServerResponse], error)
+	EditMcpServer(context.Context, *connect.Request[v1.EditMcpServerRequest]) (*connect.Response[v1.EditMcpServerResponse], error)
+	RemoveMcpServer(context.Context, *connect.Request[v1.RemoveMcpServerRequest]) (*connect.Response[v1.RemoveMcpServerResponse], error)
+	// Reopens a chat's session on a new agent (ACP session/load), which
+	// replays its transcript, so it uses the MCP servers as they are now.
+	// Refused while it is busy (API 33).
+	ReloadChat(context.Context, *connect.Request[v1.ReloadChatRequest]) (*connect.Response[v1.ReloadChatResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
 	Events(context.Context, *connect.Request[v1.EventsRequest]) (*connect.ServerStreamForClient[v1.EventsResponse], error)
@@ -345,6 +369,30 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("ListMcpServers")),
 			connect.WithClientOptions(opts...),
 		),
+		addMcpServer: connect.NewClient[v1.AddMcpServerRequest, v1.AddMcpServerResponse](
+			httpClient,
+			baseURL+NushiServiceAddMcpServerProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("AddMcpServer")),
+			connect.WithClientOptions(opts...),
+		),
+		editMcpServer: connect.NewClient[v1.EditMcpServerRequest, v1.EditMcpServerResponse](
+			httpClient,
+			baseURL+NushiServiceEditMcpServerProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("EditMcpServer")),
+			connect.WithClientOptions(opts...),
+		),
+		removeMcpServer: connect.NewClient[v1.RemoveMcpServerRequest, v1.RemoveMcpServerResponse](
+			httpClient,
+			baseURL+NushiServiceRemoveMcpServerProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("RemoveMcpServer")),
+			connect.WithClientOptions(opts...),
+		),
+		reloadChat: connect.NewClient[v1.ReloadChatRequest, v1.ReloadChatResponse](
+			httpClient,
+			baseURL+NushiServiceReloadChatProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ReloadChat")),
+			connect.WithClientOptions(opts...),
+		),
 		events: connect.NewClient[v1.EventsRequest, v1.EventsResponse](
 			httpClient,
 			baseURL+NushiServiceEventsProcedure,
@@ -381,6 +429,10 @@ type nushiServiceClient struct {
 	listFiles        *connect.Client[v1.ListFilesRequest, v1.ListFilesResponse]
 	getContextUsage  *connect.Client[v1.GetContextUsageRequest, v1.GetContextUsageResponse]
 	listMcpServers   *connect.Client[v1.ListMcpServersRequest, v1.ListMcpServersResponse]
+	addMcpServer     *connect.Client[v1.AddMcpServerRequest, v1.AddMcpServerResponse]
+	editMcpServer    *connect.Client[v1.EditMcpServerRequest, v1.EditMcpServerResponse]
+	removeMcpServer  *connect.Client[v1.RemoveMcpServerRequest, v1.RemoveMcpServerResponse]
+	reloadChat       *connect.Client[v1.ReloadChatRequest, v1.ReloadChatResponse]
 	events           *connect.Client[v1.EventsRequest, v1.EventsResponse]
 }
 
@@ -509,6 +561,26 @@ func (c *nushiServiceClient) ListMcpServers(ctx context.Context, req *connect.Re
 	return c.listMcpServers.CallUnary(ctx, req)
 }
 
+// AddMcpServer calls nushi.v1.NushiService.AddMcpServer.
+func (c *nushiServiceClient) AddMcpServer(ctx context.Context, req *connect.Request[v1.AddMcpServerRequest]) (*connect.Response[v1.AddMcpServerResponse], error) {
+	return c.addMcpServer.CallUnary(ctx, req)
+}
+
+// EditMcpServer calls nushi.v1.NushiService.EditMcpServer.
+func (c *nushiServiceClient) EditMcpServer(ctx context.Context, req *connect.Request[v1.EditMcpServerRequest]) (*connect.Response[v1.EditMcpServerResponse], error) {
+	return c.editMcpServer.CallUnary(ctx, req)
+}
+
+// RemoveMcpServer calls nushi.v1.NushiService.RemoveMcpServer.
+func (c *nushiServiceClient) RemoveMcpServer(ctx context.Context, req *connect.Request[v1.RemoveMcpServerRequest]) (*connect.Response[v1.RemoveMcpServerResponse], error) {
+	return c.removeMcpServer.CallUnary(ctx, req)
+}
+
+// ReloadChat calls nushi.v1.NushiService.ReloadChat.
+func (c *nushiServiceClient) ReloadChat(ctx context.Context, req *connect.Request[v1.ReloadChatRequest]) (*connect.Response[v1.ReloadChatResponse], error) {
+	return c.reloadChat.CallUnary(ctx, req)
+}
+
 // Events calls nushi.v1.NushiService.Events.
 func (c *nushiServiceClient) Events(ctx context.Context, req *connect.Request[v1.EventsRequest]) (*connect.ServerStreamForClient[v1.EventsResponse], error) {
 	return c.events.CallServerStream(ctx, req)
@@ -596,6 +668,19 @@ type NushiServiceHandler interface {
 	// seconds), and servers only it knows (plugins', claude.ai connectors)
 	// are added (API 32).
 	ListMcpServers(context.Context, *connect.Request[v1.ListMcpServersRequest]) (*connect.Response[v1.ListMcpServersResponse], error)
+	// Add, edit and remove an MCP server in a scope ("user", "project",
+	// "local"), through the agent's own CLI; the folder names the project.
+	// Editing keeps the name and scope, and env and header values sent as
+	// "••••" keep the values they had; if the new config is refused, the old
+	// one is put back. Running chats the change reaches get
+	// status.mcp_changed (API 33).
+	AddMcpServer(context.Context, *connect.Request[v1.AddMcpServerRequest]) (*connect.Response[v1.AddMcpServerResponse], error)
+	EditMcpServer(context.Context, *connect.Request[v1.EditMcpServerRequest]) (*connect.Response[v1.EditMcpServerResponse], error)
+	RemoveMcpServer(context.Context, *connect.Request[v1.RemoveMcpServerRequest]) (*connect.Response[v1.RemoveMcpServerResponse], error)
+	// Reopens a chat's session on a new agent (ACP session/load), which
+	// replays its transcript, so it uses the MCP servers as they are now.
+	// Refused while it is busy (API 33).
+	ReloadChat(context.Context, *connect.Request[v1.ReloadChatRequest]) (*connect.Response[v1.ReloadChatResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
 	Events(context.Context, *connect.Request[v1.EventsRequest], *connect.ServerStream[v1.EventsResponse]) error
@@ -758,6 +843,30 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("ListMcpServers")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceAddMcpServerHandler := connect.NewUnaryHandler(
+		NushiServiceAddMcpServerProcedure,
+		svc.AddMcpServer,
+		connect.WithSchema(nushiServiceMethods.ByName("AddMcpServer")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceEditMcpServerHandler := connect.NewUnaryHandler(
+		NushiServiceEditMcpServerProcedure,
+		svc.EditMcpServer,
+		connect.WithSchema(nushiServiceMethods.ByName("EditMcpServer")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceRemoveMcpServerHandler := connect.NewUnaryHandler(
+		NushiServiceRemoveMcpServerProcedure,
+		svc.RemoveMcpServer,
+		connect.WithSchema(nushiServiceMethods.ByName("RemoveMcpServer")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceReloadChatHandler := connect.NewUnaryHandler(
+		NushiServiceReloadChatProcedure,
+		svc.ReloadChat,
+		connect.WithSchema(nushiServiceMethods.ByName("ReloadChat")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceEventsHandler := connect.NewServerStreamHandler(
 		NushiServiceEventsProcedure,
 		svc.Events,
@@ -816,6 +925,14 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceGetContextUsageHandler.ServeHTTP(w, r)
 		case NushiServiceListMcpServersProcedure:
 			nushiServiceListMcpServersHandler.ServeHTTP(w, r)
+		case NushiServiceAddMcpServerProcedure:
+			nushiServiceAddMcpServerHandler.ServeHTTP(w, r)
+		case NushiServiceEditMcpServerProcedure:
+			nushiServiceEditMcpServerHandler.ServeHTTP(w, r)
+		case NushiServiceRemoveMcpServerProcedure:
+			nushiServiceRemoveMcpServerHandler.ServeHTTP(w, r)
+		case NushiServiceReloadChatProcedure:
+			nushiServiceReloadChatHandler.ServeHTTP(w, r)
 		case NushiServiceEventsProcedure:
 			nushiServiceEventsHandler.ServeHTTP(w, r)
 		default:
@@ -925,6 +1042,22 @@ func (UnimplementedNushiServiceHandler) GetContextUsage(context.Context, *connec
 
 func (UnimplementedNushiServiceHandler) ListMcpServers(context.Context, *connect.Request[v1.ListMcpServersRequest]) (*connect.Response[v1.ListMcpServersResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ListMcpServers is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) AddMcpServer(context.Context, *connect.Request[v1.AddMcpServerRequest]) (*connect.Response[v1.AddMcpServerResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.AddMcpServer is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) EditMcpServer(context.Context, *connect.Request[v1.EditMcpServerRequest]) (*connect.Response[v1.EditMcpServerResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.EditMcpServer is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) RemoveMcpServer(context.Context, *connect.Request[v1.RemoveMcpServerRequest]) (*connect.Response[v1.RemoveMcpServerResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.RemoveMcpServer is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ReloadChat(context.Context, *connect.Request[v1.ReloadChatRequest]) (*connect.Response[v1.ReloadChatResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ReloadChat is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) Events(context.Context, *connect.Request[v1.EventsRequest], *connect.ServerStream[v1.EventsResponse]) error {

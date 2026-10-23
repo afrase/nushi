@@ -50,8 +50,8 @@ func TestServersReadsEachScope(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []string{
-		`user u {"command":"x","env":{"TOKEN":"••••"}}`,
-		`local l {"headers":{"Authorization":"••••"},"type":"http","url":"http://l"}`,
+		`user u {"command":"x","env":{"TOKEN":"secret"}}`,
+		`local l {"type":"http","url":"http://l","headers":{"Authorization":"Bearer secret"}}`,
 		`project p {"command":"near"}`,
 		`project q {"command":"q"}`,
 	}

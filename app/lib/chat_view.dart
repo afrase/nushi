@@ -157,6 +157,8 @@ class _ChatViewState extends State<ChatView> {
                             chat,
                             what: _forking ? 'Starting a side chat' : null,
                           ),
+                        if (chat.mcpChanged && !chat.archived)
+                          _McpChanged(chat, widget.daemon),
                         if (chat.archived)
                           _Archived(chat, widget.daemon)
                         else
@@ -239,6 +241,52 @@ class _Archived extends StatelessWidget {
               () => daemon.client.archiveChat(
                 ArchiveChatRequest(chatId: chat.id),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Over the composer once MCP servers changed for the chat's folder: the
+/// agent keeps the ones it started with until the chat reloads.
+class _McpChanged extends StatelessWidget {
+  const _McpChanged(this.chat, this.daemon);
+
+  final ChatState chat;
+  final Daemon daemon;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context), t = theme.t;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+      child: Row(
+        children: [
+          Icon(Icons.hub_outlined, size: 13, color: t.textMuted),
+          const SizedBox(width: 6),
+          Text(
+            'MCP servers changed. Reload to use them.',
+            style: theme.ui(t.textSecondary, size: 12),
+          ),
+          const SizedBox(width: 6),
+          Tooltip(
+            message: chat.busy
+                ? 'Once Claude is done'
+                : 'Reopens the chat with the servers as they are now',
+            child: Button(
+              label: 'Reload',
+              kind: ButtonKind.ghost,
+              height: 22,
+              onPressed: chat.busy
+                  ? null
+                  : () => tryOrShow(
+                      context,
+                      () => daemon.client.reloadChat(
+                        ReloadChatRequest(chatId: chat.id),
+                      ),
+                    ),
             ),
           ),
         ],

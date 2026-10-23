@@ -4,6 +4,7 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
+
 import "nushi.pb.dart" as nushiv1nushi;
 
 abstract final class NushiService {
@@ -238,6 +239,43 @@ abstract final class NushiService {
     connect.StreamType.unary,
     nushiv1nushi.ListMcpServersRequest.new,
     nushiv1nushi.ListMcpServersResponse.new,
+  );
+
+  /// Add, edit and remove an MCP server in a scope ("user", "project",
+  /// "local"), through the agent's own CLI; the folder names the project.
+  /// Editing keeps the name and scope, and env and header values sent as
+  /// "••••" keep the values they had; if the new config is refused, the old
+  /// one is put back. Running chats the change reaches get
+  /// status.mcp_changed (API 33).
+  static const addMcpServer = connect.Spec(
+    '/$name/AddMcpServer',
+    connect.StreamType.unary,
+    nushiv1nushi.AddMcpServerRequest.new,
+    nushiv1nushi.AddMcpServerResponse.new,
+  );
+
+  static const editMcpServer = connect.Spec(
+    '/$name/EditMcpServer',
+    connect.StreamType.unary,
+    nushiv1nushi.EditMcpServerRequest.new,
+    nushiv1nushi.EditMcpServerResponse.new,
+  );
+
+  static const removeMcpServer = connect.Spec(
+    '/$name/RemoveMcpServer',
+    connect.StreamType.unary,
+    nushiv1nushi.RemoveMcpServerRequest.new,
+    nushiv1nushi.RemoveMcpServerResponse.new,
+  );
+
+  /// Reopens a chat's session on a new agent (ACP session/load), which
+  /// replays its transcript, so it uses the MCP servers as they are now.
+  /// Refused while it is busy (API 33).
+  static const reloadChat = connect.Spec(
+    '/$name/ReloadChat',
+    connect.StreamType.unary,
+    nushiv1nushi.ReloadChatRequest.new,
+    nushiv1nushi.ReloadChatResponse.new,
   );
 
   /// Streams every change to every chat from now on. The first message is

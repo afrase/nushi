@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'chat.dart';
 import 'daemon.dart';
-import 'mcp.dart';
+import 'mcp_servers.dart';
 import 'panel_cards.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';

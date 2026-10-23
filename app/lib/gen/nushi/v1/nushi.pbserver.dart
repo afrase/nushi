@@ -71,6 +71,14 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.GetContextUsageRequest request);
   $async.Future<$0.ListMcpServersResponse> listMcpServers(
       $pb.ServerContext ctx, $0.ListMcpServersRequest request);
+  $async.Future<$0.AddMcpServerResponse> addMcpServer(
+      $pb.ServerContext ctx, $0.AddMcpServerRequest request);
+  $async.Future<$0.EditMcpServerResponse> editMcpServer(
+      $pb.ServerContext ctx, $0.EditMcpServerRequest request);
+  $async.Future<$0.RemoveMcpServerResponse> removeMcpServer(
+      $pb.ServerContext ctx, $0.RemoveMcpServerRequest request);
+  $async.Future<$0.ReloadChatResponse> reloadChat(
+      $pb.ServerContext ctx, $0.ReloadChatRequest request);
   $async.Future<$0.EventsResponse> events(
       $pb.ServerContext ctx, $0.EventsRequest request);
 
@@ -126,6 +134,14 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.GetContextUsageRequest();
       case 'ListMcpServers':
         return $0.ListMcpServersRequest();
+      case 'AddMcpServer':
+        return $0.AddMcpServerRequest();
+      case 'EditMcpServer':
+        return $0.EditMcpServerRequest();
+      case 'RemoveMcpServer':
+        return $0.RemoveMcpServerRequest();
+      case 'ReloadChat':
+        return $0.ReloadChatRequest();
       case 'Events':
         return $0.EventsRequest();
       default:
@@ -186,6 +202,14 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return getContextUsage(ctx, request as $0.GetContextUsageRequest);
       case 'ListMcpServers':
         return listMcpServers(ctx, request as $0.ListMcpServersRequest);
+      case 'AddMcpServer':
+        return addMcpServer(ctx, request as $0.AddMcpServerRequest);
+      case 'EditMcpServer':
+        return editMcpServer(ctx, request as $0.EditMcpServerRequest);
+      case 'RemoveMcpServer':
+        return removeMcpServer(ctx, request as $0.RemoveMcpServerRequest);
+      case 'ReloadChat':
+        return reloadChat(ctx, request as $0.ReloadChatRequest);
       case 'Events':
         return events(ctx, request as $0.EventsRequest);
       default:

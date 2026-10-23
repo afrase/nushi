@@ -85,6 +85,19 @@ service NushiService {
   // seconds), and servers only it knows (plugins', claude.ai connectors)
   // are added (API 32).
   rpc ListMcpServers(ListMcpServersRequest) returns (ListMcpServersResponse);
+  // Add, edit and remove an MCP server in a scope ("user", "project",
+  // "local"), through the agent's own CLI; the folder names the project.
+  // Editing keeps the name and scope, and env and header values sent as
+  // "••••" keep the values they had; if the new config is refused, the old
+  // one is put back. Running chats the change reaches get
+  // status.mcp_changed (API 33).
+  rpc AddMcpServer(AddMcpServerRequest) returns (AddMcpServerResponse);
+  rpc EditMcpServer(EditMcpServerRequest) returns (EditMcpServerResponse);
+  rpc RemoveMcpServer(RemoveMcpServerRequest) returns (RemoveMcpServerResponse);
+  // Reopens a chat's session on a new agent (ACP session/load), which
+  // replays its transcript, so it uses the MCP servers as they are now.
+  // Refused while it is busy (API 33).
+  rpc ReloadChat(ReloadChatRequest) returns (ReloadChatResponse);
   // Streams every change to every chat from now on. The first message is
   // empty: it says the subscription is live.
   rpc Events(EventsRequest) returns (stream EventsResponse);
@@ -472,6 +485,38 @@ message McpServer {
   bool shadowed = 7;
 }
 
+message AddMcpServerRequest {
+  string folder = 1;
+  string scope = 2;
+  string name = 3;
+  string config_json = 4;
+}
+
+message AddMcpServerResponse {}
+
+message EditMcpServerRequest {
+  string folder = 1;
+  string scope = 2;
+  string name = 3;
+  string config_json = 4;
+}
+
+message EditMcpServerResponse {}
+
+message RemoveMcpServerRequest {
+  string folder = 1;
+  string scope = 2;
+  string name = 3;
+}
+
+message RemoveMcpServerResponse {}
+
+message ReloadChatRequest {
+  string chat_id = 1;
+}
+
+message ReloadChatResponse {}
+
 message ContextCategory {
   string name = 1;
   int64 tokens = 2;
@@ -732,4 +777,7 @@ message ChatStatus {
   bool images = 6;
   // The agent can rewind the chat to a user message (RewindChat, API 29).
   bool can_rewind = 7;
+  // MCP servers changed since the agent started; ReloadChat picks them up
+  // (API 33).
+  bool mcp_changed = 8;
 }

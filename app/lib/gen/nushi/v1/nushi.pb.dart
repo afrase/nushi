@@ -4179,6 +4179,503 @@ class McpServer extends $pb.GeneratedMessage {
   void clearShadowed() => $_clearField(7);
 }
 
+class AddMcpServerRequest extends $pb.GeneratedMessage {
+  factory AddMcpServerRequest({
+    $core.String? folder,
+    $core.String? scope,
+    $core.String? name,
+    $core.String? configJson,
+  }) {
+    final result = AddMcpServerRequest._();
+    if (folder != null) result.folder = folder;
+    if (scope != null) result.scope = scope;
+    if (name != null) result.name = name;
+    if (configJson != null) result.configJson = configJson;
+    return result;
+  }
+
+  AddMcpServerRequest._();
+
+  factory AddMcpServerRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddMcpServerRequest()..mergeFromBuffer(data, registry);
+  factory AddMcpServerRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddMcpServerRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'AddMcpServerRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: AddMcpServerRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'folder')
+    ..aOS(2, _omitFieldNames ? '' : 'scope')
+    ..aOS(3, _omitFieldNames ? '' : 'name')
+    ..aOS(4, _omitFieldNames ? '' : 'configJson')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddMcpServerRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddMcpServerRequest copyWith(void Function(AddMcpServerRequest) updates) =>
+      super.copyWith((message) => updates(message as AddMcpServerRequest))
+          as AddMcpServerRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use AddMcpServerRequest() / AddMcpServerRequest.new instead')
+  static AddMcpServerRequest create() => AddMcpServerRequest._();
+  static $pb.GeneratedMessage $_createMessage() => AddMcpServerRequest._();
+  @$core.override
+  AddMcpServerRequest createEmptyInstance() => AddMcpServerRequest._();
+  @$core.pragma('dart2js:noInline')
+  static AddMcpServerRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<AddMcpServerRequest>(
+          AddMcpServerRequest.$_createMessage);
+  static AddMcpServerRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get folder => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set folder($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasFolder() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearFolder() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get scope => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set scope($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasScope() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearScope() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get name => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set name($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasName() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearName() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get configJson => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set configJson($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasConfigJson() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearConfigJson() => $_clearField(4);
+}
+
+class AddMcpServerResponse extends $pb.GeneratedMessage {
+  factory AddMcpServerResponse() => AddMcpServerResponse._();
+
+  AddMcpServerResponse._();
+
+  factory AddMcpServerResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddMcpServerResponse()..mergeFromBuffer(data, registry);
+  factory AddMcpServerResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddMcpServerResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'AddMcpServerResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: AddMcpServerResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddMcpServerResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddMcpServerResponse copyWith(void Function(AddMcpServerResponse) updates) =>
+      super.copyWith((message) => updates(message as AddMcpServerResponse))
+          as AddMcpServerResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use AddMcpServerResponse() / AddMcpServerResponse.new instead')
+  static AddMcpServerResponse create() => AddMcpServerResponse._();
+  static $pb.GeneratedMessage $_createMessage() => AddMcpServerResponse._();
+  @$core.override
+  AddMcpServerResponse createEmptyInstance() => AddMcpServerResponse._();
+  @$core.pragma('dart2js:noInline')
+  static AddMcpServerResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<AddMcpServerResponse>(
+          AddMcpServerResponse.$_createMessage);
+  static AddMcpServerResponse? _defaultInstance;
+}
+
+class EditMcpServerRequest extends $pb.GeneratedMessage {
+  factory EditMcpServerRequest({
+    $core.String? folder,
+    $core.String? scope,
+    $core.String? name,
+    $core.String? configJson,
+  }) {
+    final result = EditMcpServerRequest._();
+    if (folder != null) result.folder = folder;
+    if (scope != null) result.scope = scope;
+    if (name != null) result.name = name;
+    if (configJson != null) result.configJson = configJson;
+    return result;
+  }
+
+  EditMcpServerRequest._();
+
+  factory EditMcpServerRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      EditMcpServerRequest()..mergeFromBuffer(data, registry);
+  factory EditMcpServerRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      EditMcpServerRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'EditMcpServerRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: EditMcpServerRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'folder')
+    ..aOS(2, _omitFieldNames ? '' : 'scope')
+    ..aOS(3, _omitFieldNames ? '' : 'name')
+    ..aOS(4, _omitFieldNames ? '' : 'configJson')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  EditMcpServerRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  EditMcpServerRequest copyWith(void Function(EditMcpServerRequest) updates) =>
+      super.copyWith((message) => updates(message as EditMcpServerRequest))
+          as EditMcpServerRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use EditMcpServerRequest() / EditMcpServerRequest.new instead')
+  static EditMcpServerRequest create() => EditMcpServerRequest._();
+  static $pb.GeneratedMessage $_createMessage() => EditMcpServerRequest._();
+  @$core.override
+  EditMcpServerRequest createEmptyInstance() => EditMcpServerRequest._();
+  @$core.pragma('dart2js:noInline')
+  static EditMcpServerRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<EditMcpServerRequest>(
+          EditMcpServerRequest.$_createMessage);
+  static EditMcpServerRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get folder => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set folder($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasFolder() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearFolder() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get scope => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set scope($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasScope() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearScope() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get name => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set name($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasName() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearName() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get configJson => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set configJson($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasConfigJson() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearConfigJson() => $_clearField(4);
+}
+
+class EditMcpServerResponse extends $pb.GeneratedMessage {
+  factory EditMcpServerResponse() => EditMcpServerResponse._();
+
+  EditMcpServerResponse._();
+
+  factory EditMcpServerResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      EditMcpServerResponse()..mergeFromBuffer(data, registry);
+  factory EditMcpServerResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      EditMcpServerResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'EditMcpServerResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: EditMcpServerResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  EditMcpServerResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  EditMcpServerResponse copyWith(
+          void Function(EditMcpServerResponse) updates) =>
+      super.copyWith((message) => updates(message as EditMcpServerResponse))
+          as EditMcpServerResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use EditMcpServerResponse() / EditMcpServerResponse.new instead')
+  static EditMcpServerResponse create() => EditMcpServerResponse._();
+  static $pb.GeneratedMessage $_createMessage() => EditMcpServerResponse._();
+  @$core.override
+  EditMcpServerResponse createEmptyInstance() => EditMcpServerResponse._();
+  @$core.pragma('dart2js:noInline')
+  static EditMcpServerResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<EditMcpServerResponse>(
+          EditMcpServerResponse.$_createMessage);
+  static EditMcpServerResponse? _defaultInstance;
+}
+
+class RemoveMcpServerRequest extends $pb.GeneratedMessage {
+  factory RemoveMcpServerRequest({
+    $core.String? folder,
+    $core.String? scope,
+    $core.String? name,
+  }) {
+    final result = RemoveMcpServerRequest._();
+    if (folder != null) result.folder = folder;
+    if (scope != null) result.scope = scope;
+    if (name != null) result.name = name;
+    return result;
+  }
+
+  RemoveMcpServerRequest._();
+
+  factory RemoveMcpServerRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemoveMcpServerRequest()..mergeFromBuffer(data, registry);
+  factory RemoveMcpServerRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemoveMcpServerRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RemoveMcpServerRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RemoveMcpServerRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'folder')
+    ..aOS(2, _omitFieldNames ? '' : 'scope')
+    ..aOS(3, _omitFieldNames ? '' : 'name')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemoveMcpServerRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemoveMcpServerRequest copyWith(
+          void Function(RemoveMcpServerRequest) updates) =>
+      super.copyWith((message) => updates(message as RemoveMcpServerRequest))
+          as RemoveMcpServerRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RemoveMcpServerRequest() / RemoveMcpServerRequest.new instead')
+  static RemoveMcpServerRequest create() => RemoveMcpServerRequest._();
+  static $pb.GeneratedMessage $_createMessage() => RemoveMcpServerRequest._();
+  @$core.override
+  RemoveMcpServerRequest createEmptyInstance() => RemoveMcpServerRequest._();
+  @$core.pragma('dart2js:noInline')
+  static RemoveMcpServerRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RemoveMcpServerRequest>(
+          RemoveMcpServerRequest.$_createMessage);
+  static RemoveMcpServerRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get folder => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set folder($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasFolder() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearFolder() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get scope => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set scope($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasScope() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearScope() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get name => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set name($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasName() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearName() => $_clearField(3);
+}
+
+class RemoveMcpServerResponse extends $pb.GeneratedMessage {
+  factory RemoveMcpServerResponse() => RemoveMcpServerResponse._();
+
+  RemoveMcpServerResponse._();
+
+  factory RemoveMcpServerResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemoveMcpServerResponse()..mergeFromBuffer(data, registry);
+  factory RemoveMcpServerResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemoveMcpServerResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RemoveMcpServerResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RemoveMcpServerResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemoveMcpServerResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemoveMcpServerResponse copyWith(
+          void Function(RemoveMcpServerResponse) updates) =>
+      super.copyWith((message) => updates(message as RemoveMcpServerResponse))
+          as RemoveMcpServerResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RemoveMcpServerResponse() / RemoveMcpServerResponse.new instead')
+  static RemoveMcpServerResponse create() => RemoveMcpServerResponse._();
+  static $pb.GeneratedMessage $_createMessage() => RemoveMcpServerResponse._();
+  @$core.override
+  RemoveMcpServerResponse createEmptyInstance() => RemoveMcpServerResponse._();
+  @$core.pragma('dart2js:noInline')
+  static RemoveMcpServerResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RemoveMcpServerResponse>(
+          RemoveMcpServerResponse.$_createMessage);
+  static RemoveMcpServerResponse? _defaultInstance;
+}
+
+class ReloadChatRequest extends $pb.GeneratedMessage {
+  factory ReloadChatRequest({
+    $core.String? chatId,
+  }) {
+    final result = ReloadChatRequest._();
+    if (chatId != null) result.chatId = chatId;
+    return result;
+  }
+
+  ReloadChatRequest._();
+
+  factory ReloadChatRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ReloadChatRequest()..mergeFromBuffer(data, registry);
+  factory ReloadChatRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ReloadChatRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ReloadChatRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ReloadChatRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReloadChatRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReloadChatRequest copyWith(void Function(ReloadChatRequest) updates) =>
+      super.copyWith((message) => updates(message as ReloadChatRequest))
+          as ReloadChatRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ReloadChatRequest() / ReloadChatRequest.new instead')
+  static ReloadChatRequest create() => ReloadChatRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ReloadChatRequest._();
+  @$core.override
+  ReloadChatRequest createEmptyInstance() => ReloadChatRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ReloadChatRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ReloadChatRequest>(
+          ReloadChatRequest.$_createMessage);
+  static ReloadChatRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+}
+
+class ReloadChatResponse extends $pb.GeneratedMessage {
+  factory ReloadChatResponse() => ReloadChatResponse._();
+
+  ReloadChatResponse._();
+
+  factory ReloadChatResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ReloadChatResponse()..mergeFromBuffer(data, registry);
+  factory ReloadChatResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ReloadChatResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ReloadChatResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ReloadChatResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReloadChatResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReloadChatResponse copyWith(void Function(ReloadChatResponse) updates) =>
+      super.copyWith((message) => updates(message as ReloadChatResponse))
+          as ReloadChatResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ReloadChatResponse() / ReloadChatResponse.new instead')
+  static ReloadChatResponse create() => ReloadChatResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ReloadChatResponse._();
+  @$core.override
+  ReloadChatResponse createEmptyInstance() => ReloadChatResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ReloadChatResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ReloadChatResponse>(
+          ReloadChatResponse.$_createMessage);
+  static ReloadChatResponse? _defaultInstance;
+}
+
 class ContextCategory extends $pb.GeneratedMessage {
   factory ContextCategory({
     $core.String? name,
@@ -6185,6 +6682,7 @@ class ChatStatus extends $pb.GeneratedMessage {
     $core.bool? canFork,
     $core.bool? images,
     $core.bool? canRewind,
+    $core.bool? mcpChanged,
   }) {
     final result = ChatStatus._();
     if (busy != null) result.busy = busy;
@@ -6194,6 +6692,7 @@ class ChatStatus extends $pb.GeneratedMessage {
     if (canFork != null) result.canFork = canFork;
     if (images != null) result.images = images;
     if (canRewind != null) result.canRewind = canRewind;
+    if (mcpChanged != null) result.mcpChanged = mcpChanged;
     return result;
   }
 
@@ -6217,6 +6716,7 @@ class ChatStatus extends $pb.GeneratedMessage {
     ..aOB(5, _omitFieldNames ? '' : 'canFork')
     ..aOB(6, _omitFieldNames ? '' : 'images')
     ..aOB(7, _omitFieldNames ? '' : 'canRewind')
+    ..aOB(8, _omitFieldNames ? '' : 'mcpChanged')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -6307,6 +6807,17 @@ class ChatStatus extends $pb.GeneratedMessage {
   $core.bool hasCanRewind() => $_has(6);
   @$pb.TagNumber(7)
   void clearCanRewind() => $_clearField(7);
+
+  /// MCP servers changed since the agent started; ReloadChat picks them up
+  /// (API 33).
+  @$pb.TagNumber(8)
+  $core.bool get mcpChanged => $_getBF(7);
+  @$pb.TagNumber(8)
+  set mcpChanged($core.bool value) => $_setBool(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasMcpChanged() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearMcpChanged() => $_clearField(8);
 }
 
 class NushiServiceApi {
@@ -6492,6 +7003,33 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, ListMcpServersRequest request) =>
       _client.invoke<ListMcpServersResponse>(ctx, 'NushiService',
           'ListMcpServers', request, ListMcpServersResponse());
+
+  /// Add, edit and remove an MCP server in a scope ("user", "project",
+  /// "local"), through the agent's own CLI; the folder names the project.
+  /// Editing keeps the name and scope, and env and header values sent as
+  /// "••••" keep the values they had; if the new config is refused, the old
+  /// one is put back. Running chats the change reaches get
+  /// status.mcp_changed (API 33).
+  $async.Future<AddMcpServerResponse> addMcpServer(
+          $pb.ClientContext? ctx, AddMcpServerRequest request) =>
+      _client.invoke<AddMcpServerResponse>(
+          ctx, 'NushiService', 'AddMcpServer', request, AddMcpServerResponse());
+  $async.Future<EditMcpServerResponse> editMcpServer(
+          $pb.ClientContext? ctx, EditMcpServerRequest request) =>
+      _client.invoke<EditMcpServerResponse>(ctx, 'NushiService',
+          'EditMcpServer', request, EditMcpServerResponse());
+  $async.Future<RemoveMcpServerResponse> removeMcpServer(
+          $pb.ClientContext? ctx, RemoveMcpServerRequest request) =>
+      _client.invoke<RemoveMcpServerResponse>(ctx, 'NushiService',
+          'RemoveMcpServer', request, RemoveMcpServerResponse());
+
+  /// Reopens a chat's session on a new agent (ACP session/load), which
+  /// replays its transcript, so it uses the MCP servers as they are now.
+  /// Refused while it is busy (API 33).
+  $async.Future<ReloadChatResponse> reloadChat(
+          $pb.ClientContext? ctx, ReloadChatRequest request) =>
+      _client.invoke<ReloadChatResponse>(
+          ctx, 'NushiService', 'ReloadChat', request, ReloadChatResponse());
 
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.

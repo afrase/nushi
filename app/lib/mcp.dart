@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'dart:convert';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
@@ -7,138 +6,11 @@ import 'package:flutter/material.dart';
 import 'daemon.dart';
 import 'folder_button.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
+import 'mcp_form.dart';
+import 'mcp_servers.dart';
 import 'menu.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
-
-/// The MCP servers the agent's config gives a folder, from the daemon (API
-/// 32): read from the config at once, then checked (the agent connects to
-/// each, a few seconds), which fills in their states. One per folder,
-/// shared by the view and the panel card while the app runs.
-class McpServers extends ChangeNotifier {
-  McpServers._(this.daemon, this.folder) {
-    refresh();
-  }
-
-  static final _byFolder = <String, McpServers>{};
-
-  factory McpServers.of(Daemon daemon, String folder) =>
-      _byFolder[folder] ??= McpServers._(daemon, folder);
-
-  final Daemon daemon;
-  final String folder;
-  List<McpServer> servers = [];
-  bool loaded = false;
-  bool checking = false;
-  String error = ''; // why the list or the check failed
-
-  Future<void> refresh() async {
-    if (checking) return;
-    checking = true;
-    notifyListeners();
-    try {
-      _take(await _list(false));
-      _take(await _list(true));
-    } on Object catch (e) {
-      error = '$e';
-    }
-    checking = false;
-    notifyListeners();
-  }
-
-  Future<ListMcpServersResponse> _list(bool check) =>
-      daemon.client.listMcpServers(
-        ListMcpServersRequest(folder: folder, checkHealth: check),
-      );
-
-  void _take(ListMcpServersResponse r) {
-    servers = r.servers;
-    error = r.checkError;
-    loaded = true;
-    notifyListeners();
-  }
-
-  /// The servers the agent uses: none hidden by one of the same name.
-  Iterable<McpServer> get used => servers.where((s) => !s.shadowed);
-}
-
-/// The scopes in the order the view shows them: its heading and what it
-/// means.
-const scopes = {
-  'user': ('User', 'Yours, in every folder.'),
-  'project': (
-    'Project',
-    'The repository’s .mcp.json, shared with everyone on the repo.',
-  ),
-  'local': ('Local', 'Yours, in this project only.'),
-  'plugin': (
-    'Plugins',
-    'From installed plugins: add or remove them with /plugin in Claude Code.',
-  ),
-  'claudeai': (
-    'claude.ai',
-    'Connectors from your claude.ai account: change them at '
-        'claude.ai/customize/connectors.',
-  ),
-  'other': ('Other', 'From settings Nushi doesn’t read, such as managed ones.'),
-};
-
-/// A server's config, decoded.
-Map<String, dynamic> config(McpServer s) =>
-    (jsonDecode(s.configJson) as Map).cast<String, dynamic>();
-
-/// "stdio", "http", "sse", ...
-String transport(Map<String, dynamic> c) =>
-    c['type'] as String? ?? (c['url'] == null ? 'stdio' : 'http');
-
-/// Its command line, or its URL.
-String target(Map<String, dynamic> c) =>
-    c['url'] as String? ?? [c['command'], ...?(c['args'] as List?)].join(' ');
-
-/// Its env vars and headers, values masked as the daemon sends them.
-String secrets(Map<String, dynamic> c) => [
-  for (final k in (c['env'] as Map? ?? {}).keys) '$k=••••',
-  for (final k in (c['headers'] as Map? ?? {}).keys) '$k: ••••',
-].join('  ');
-
-/// A server's state in words, and its color.
-(String, Color) stateOf(McpServer s, Tokens t) => switch (s.state) {
-  'connected' => ('Connected', t.done),
-  'failed' => ('Failed to connect', t.crashed),
-  'needs_auth' => ('Needs login', t.needs),
-  'pending' => ('Waiting for approval', t.needs),
-  'disabled' => ('Off', t.idle),
-  '' => ('Checking…', t.textMuted),
-  _ => (s.detail, t.textMuted),
-};
-
-/// A server's state as a dot: filled once known, a ring until then or
-/// while it is off.
-class McpDot extends StatelessWidget {
-  const McpDot(this.server, {super.key});
-
-  final McpServer server;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = NushiTheme.of(context).t;
-    final (word, color) = stateOf(server, t);
-    final ring = server.state == '' || server.state == 'disabled';
-    return Tooltip(
-      message: server.detail.isEmpty ? word : '$word: ${server.detail}',
-      child: Container(
-        width: 7,
-        height: 7,
-        margin: const EdgeInsets.all(2),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: ring ? null : color,
-          border: ring ? Border.all(color: color, width: 1.5) : null,
-        ),
-      ),
-    );
-  }
-}
 
 /// The MCP servers view: a folder picker, then the servers by scope, each
 /// with its state, transport and command or URL (secrets masked).
@@ -203,6 +75,14 @@ class McpView extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
+                Button(
+                  label: 'Add server',
+                  icon: Icons.add,
+                  kind: ButtonKind.ghost,
+                  height: 24,
+                  onPressed: () => mcpForm(context, list),
+                ),
+                const SizedBox(width: 8),
                 if (list.checking)
                   Text('Checking…', style: theme.ui(t.textMuted, size: 12)),
                 IconTap(
@@ -285,7 +165,7 @@ class _Group extends StatelessWidget {
                     ),
                   ),
                 for (final (i, s) in servers.indexed)
-                  _Row(s, first: i == 0, shadowedBy: _winner(s)),
+                  _Row(list, s, first: i == 0, shadowedBy: _winner(s)),
               ],
             ),
           ),
@@ -306,11 +186,36 @@ class _Group extends StatelessWidget {
 /// A server: its state, name, transport and command or URL, its masked
 /// env vars and headers, and why it failed.
 class _Row extends StatelessWidget {
-  const _Row(this.server, {required this.first, this.shadowedBy});
+  const _Row(this.list, this.server, {required this.first, this.shadowedBy});
 
+  final McpServers list;
   final McpServer server;
   final bool first;
   final String? shadowedBy;
+
+  static const _changeable = {'user', 'project', 'local'};
+
+  Future<void> _remove(BuildContext context) async {
+    final (scope, about) = scopes[server.scope]!;
+    final ok = await confirm(
+      context,
+      'Remove ${server.name}?',
+      'It goes from the $scope scope: ${about[0].toLowerCase()}'
+          '${about.substring(1)}',
+      'Remove',
+    );
+    if (!ok || !context.mounted) return;
+    await tryOrShow(context, () async {
+      await list.daemon.client.removeMcpServer(
+        RemoveMcpServerRequest(
+          folder: list.folder,
+          scope: server.scope,
+          name: server.name,
+        ),
+      );
+      list.changed();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -356,6 +261,22 @@ class _Row extends StatelessWidget {
                   const SizedBox(width: 12),
                   Text(word, style: theme.ui(color, size: 12)),
                 ],
+                if (_changeable.contains(server.scope))
+                  Menu(
+                    tooltip: 'Edit or remove',
+                    entries: [
+                      MenuEntry(
+                        'Edit…',
+                        onPick: () => mcpForm(context, list, server: server),
+                      ),
+                      MenuEntry('Remove…', onPick: () => _remove(context)),
+                    ],
+                    child: Icon(
+                      Icons.more_horiz,
+                      size: 15,
+                      color: t.textSecondary,
+                    ),
+                  ),
               ],
             ),
             if (hidden.isNotEmpty || dim || failed)
