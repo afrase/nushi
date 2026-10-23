@@ -1,0 +1,201 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import 'review.dart';
+import 'theme/theme.dart';
+import 'widgets.dart';
+
+/// A comment under its lines in the diff: its lines and text, Edit and
+/// Remove on hover; dimmed once sent. An outdated one (its lines are gone)
+/// shows above the file with the lines it was on.
+class CommentCard extends StatefulWidget {
+  const CommentCard(
+    this.comment, {
+    super.key,
+    required this.onEdit,
+    required this.onRemove,
+  });
+
+  final ReviewComment comment;
+  final VoidCallback onEdit, onRemove;
+
+  @override
+  State<CommentCard> createState() => _CommentCardState();
+}
+
+class _CommentCardState extends State<CommentCard> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context), t = theme.t;
+    final c = widget.comment;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: Opacity(
+        opacity: c.sent ? 0.55 : 1,
+        child: _Inlay(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      [
+                        if (c.outdated) 'Outdated',
+                        c.lines,
+                        if (c.sent) 'sent',
+                      ].join(' · '),
+                      style: theme.ui(t.textMuted, size: 11.5),
+                    ),
+                  ),
+                  if (_hover && !c.sent && !c.outdated)
+                    IconTap(
+                      Icons.edit_outlined,
+                      tooltip: 'Edit',
+                      size: 13,
+                      onTap: widget.onEdit,
+                    ),
+                  if (_hover)
+                    IconTap(
+                      Icons.close,
+                      tooltip: 'Remove',
+                      size: 13,
+                      onTap: widget.onRemove,
+                    ),
+                ],
+              ),
+              if (c.outdated)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Text(
+                    c.quote,
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.code(t.textMuted, size: 11.5),
+                  ),
+                ),
+              SelectableText(c.text, style: theme.ui(t.text)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The box to write a comment in, under the lines it's on: Enter saves it,
+/// Shift-Enter adds a line, Escape drops it.
+class CommentBox extends StatefulWidget {
+  const CommentBox({
+    super.key,
+    required this.lines,
+    required this.text,
+    required this.onSave,
+    required this.onCancel,
+  });
+
+  final String lines, text;
+  final ValueChanged<String> onSave;
+  final VoidCallback onCancel;
+
+  @override
+  State<CommentBox> createState() => _CommentBoxState();
+}
+
+class _CommentBoxState extends State<CommentBox> {
+  late final _text = TextEditingController(text: widget.text);
+  final _focus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    // The diff pane took the focus with the click; autofocus would yield.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _focus.requestFocus());
+  }
+
+  @override
+  void dispose() {
+    _text.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    if (_text.text.trim().isNotEmpty) widget.onSave(_text.text.trim());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context), t = theme.t;
+    return _Inlay(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 6,
+        children: [
+          Text(widget.lines, style: theme.ui(t.textMuted, size: 11.5)),
+          CallbackShortcuts(
+            bindings: {
+              const SingleActivator(LogicalKeyboardKey.enter): _save,
+              const SingleActivator(LogicalKeyboardKey.escape): widget.onCancel,
+            },
+            child: TextField(
+              controller: _text,
+              focusNode: _focus,
+              minLines: 1,
+              maxLines: 8,
+              style: theme.ui(t.text),
+              decoration: const InputDecoration(
+                hintText: 'Comment for Claude',
+                isDense: true,
+              ),
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            spacing: 6,
+            children: [
+              Button(
+                label: 'Cancel',
+                kind: ButtonKind.ghost,
+                onPressed: widget.onCancel,
+              ),
+              Button(
+                label: widget.text.isEmpty ? 'Comment' : 'Save',
+                kind: ButtonKind.primary,
+                onPressed: _save,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// An inline box between a diff's lines, with an accent bar on its left.
+class _Inlay extends StatelessWidget {
+  const _Inlay({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = NushiTheme.of(context).t;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 4, 8, 6),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(10, 6, 6, 8),
+        decoration: BoxDecoration(
+          color: t.raised,
+          border: Border(left: BorderSide(color: t.accent, width: 2)),
+          borderRadius: BorderRadius.circular(NushiTheme.control),
+        ),
+        child: child,
+      ),
+    );
+  }
+}

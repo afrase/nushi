@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'review.dart';
+import 'review_cards.dart';
 import 'syntax.dart';
 import 'theme/theme.dart';
 
@@ -93,9 +94,21 @@ class _DiffBoxState extends State<DiffBox> {
     null => const [],
   };
 
-  /// Puts the comments, and the box being written in, under their lines.
+  /// Puts the comments, and the box being written in, under their lines:
+  /// where those lines are now, or above the file when they're gone.
   void _showComments() {
-    final c = _controller!, doc = c.document;
+    final c = _controller!, doc = c.document, change = widget.change;
+    var moved = false;
+    for (final m in _comments) {
+      if (m.anchor(m.old ? change.oldText : change.newText)) moved = true;
+    }
+    if (moved) {
+      // After this build: saving tells every view, this one included.
+      final chat = widget.review!.chat;
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => setComments(chat, [...commentsOf(chat)]),
+      );
+    }
     int below(bool old, int line) =>
         min(line, (old ? doc.oldLineCount : doc.newLineCount)) - 1;
     final d = _draft;
@@ -105,7 +118,7 @@ class _DiffBoxState extends State<DiffBox> {
           InlaySpec(
             id: m.id,
             side: m.old ? PaneSide.old : PaneSide.neu,
-            afterLine: below(m.old, m.end),
+            afterLine: m.outdated ? -1 : below(m.old, m.end),
           ),
       if (d != null) InlaySpec(id: '', side: d.side, afterLine: d.span.end - 1),
     ];
@@ -128,15 +141,15 @@ class _DiffBoxState extends State<DiffBox> {
     _showComments();
   }
 
-  void _save(String text) {
+  void _save(String comment) {
     final r = widget.review!, d = _draft!;
     final edited = _editing;
     final span = d.span, side = d.side;
-    final lines = [
-      for (var i = span.start; i < span.end; i++)
-        _controller!.lines.lineAt(side, i)?.text ?? '',
-    ];
-    final comment =
+    String text(int from, int to) => [
+      for (var i = max(from, 0); i < to; i++)
+        if (_controller!.lines.lineAt(side, i) case final line?) line.text,
+    ].join('\n');
+    final made =
         edited ??
         ReviewComment(
           id: '${DateTime.now().microsecondsSinceEpoch}',
@@ -145,15 +158,17 @@ class _DiffBoxState extends State<DiffBox> {
           old: side == PaneSide.old,
           start: span.start + 1,
           end: span.end,
-          quote: lines.join('\n'),
-          text: text,
+          quote: text(span.start, span.end),
+          before: text(span.start - 2, span.start),
+          after: text(span.end, span.end + 2),
+          text: comment,
         );
-    comment.text = text;
+    made.text = comment;
     _closeDraft();
     setComments(r.chat, [
       for (final c in commentsOf(r.chat))
         if (c != edited) c,
-      comment,
+      made,
     ]);
   }
 
