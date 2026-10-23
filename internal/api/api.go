@@ -18,7 +18,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 29
+const Version = 30
 
 type server struct {
 	chats *chats.Service
@@ -139,11 +139,16 @@ func messageProto(m model.Message) *nushiv1.QueuedMessage {
 	return out
 }
 
-func (s *server) CancelTurn(_ context.Context, req *connect.Request[nushiv1.CancelTurnRequest]) (*connect.Response[nushiv1.CancelTurnResponse], error) {
-	if err := s.chats.Cancel(req.Msg.ChatId); err != nil {
+func (s *server) CancelTurn(ctx context.Context, req *connect.Request[nushiv1.CancelTurnRequest]) (*connect.Response[nushiv1.CancelTurnResponse], error) {
+	m, err := s.chats.Stop(ctx, req.Msg.ChatId, req.Msg.TakeBack)
+	if err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
-	return connect.NewResponse(&nushiv1.CancelTurnResponse{}), nil
+	out := &nushiv1.CancelTurnResponse{}
+	if m != nil {
+		out.Message = messageProto(*m)
+	}
+	return connect.NewResponse(out), nil
 }
 
 func (s *server) ForkChat(ctx context.Context, req *connect.Request[nushiv1.ForkChatRequest]) (*connect.Response[nushiv1.ForkChatResponse], error) {

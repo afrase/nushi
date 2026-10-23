@@ -4,11 +4,10 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
-
 import "nushi.pb.dart" as nushiv1nushi;
 import "nushi.connect.spec.dart" as specs;
 
-extension type NushiServiceClient(connect.Transport _transport) {
+extension type NushiServiceClient (connect.Transport _transport) {
   Future<nushiv1nushi.PingResponse> ping(
     nushiv1nushi.PingRequest input, {
     connect.Headers? headers,
@@ -163,7 +162,8 @@ extension type NushiServiceClient(connect.Transport _transport) {
   }
 
   /// Stops the chat's running turn (ACP session/cancel). The turn ends with a
-  /// "cancelled" notice, and prompts it was waiting on are cancelled.
+  /// "cancelled" notice, and prompts it was waiting on are cancelled. It can
+  /// take the last message back too (take_back).
   Future<nushiv1nushi.CancelTurnResponse> cancelTurn(
     nushiv1nushi.CancelTurnRequest input, {
     connect.Headers? headers,

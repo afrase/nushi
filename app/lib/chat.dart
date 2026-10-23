@@ -35,6 +35,7 @@ class ChatState extends ChangeNotifier {
   bool canImages = false; // the agent takes images in prompts
   bool canRewind = false; // the agent rewinds to a user message
   DateTime? started; // when the running turn started
+  bool stopping = false; // the app asked the turn to stop
   String error = ''; // why the snapshot didn't load
 
   /// A message taken back from the transcript, set for the composer to

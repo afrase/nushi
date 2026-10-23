@@ -1955,9 +1955,11 @@ class SendPromptResponse extends $pb.GeneratedMessage {
 class CancelTurnRequest extends $pb.GeneratedMessage {
   factory CancelTurnRequest({
     $core.String? chatId,
+    $core.bool? takeBack,
   }) {
     final result = CancelTurnRequest._();
     if (chatId != null) result.chatId = chatId;
+    if (takeBack != null) result.takeBack = takeBack;
     return result;
   }
 
@@ -1975,6 +1977,7 @@ class CancelTurnRequest extends $pb.GeneratedMessage {
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: CancelTurnRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOB(2, _omitFieldNames ? '' : 'takeBack')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -2007,10 +2010,29 @@ class CancelTurnRequest extends $pb.GeneratedMessage {
   $core.bool hasChatId() => $_has(0);
   @$pb.TagNumber(1)
   void clearChatId() => $_clearField(1);
+
+  /// Take the last user message back too, if the agent hasn't answered it
+  /// with any text or tool call yet: the chat is rewound to just before it
+  /// when it can be, else it stays, with a notice (API 30). The call then
+  /// returns once the turn has ended.
+  @$pb.TagNumber(2)
+  $core.bool get takeBack => $_getBF(1);
+  @$pb.TagNumber(2)
+  set takeBack($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasTakeBack() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearTakeBack() => $_clearField(2);
 }
 
 class CancelTurnResponse extends $pb.GeneratedMessage {
-  factory CancelTurnResponse() => CancelTurnResponse._();
+  factory CancelTurnResponse({
+    QueuedMessage? message,
+  }) {
+    final result = CancelTurnResponse._();
+    if (message != null) result.message = message;
+    return result;
+  }
 
   CancelTurnResponse._();
 
@@ -2025,6 +2047,8 @@ class CancelTurnResponse extends $pb.GeneratedMessage {
       _omitMessageNames ? '' : 'CancelTurnResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: CancelTurnResponse.$_createMessage)
+    ..aOM<QueuedMessage>(1, _omitFieldNames ? '' : 'message',
+        subBuilder: QueuedMessage.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -2048,6 +2072,18 @@ class CancelTurnResponse extends $pb.GeneratedMessage {
       $pb.GeneratedMessage.$_defaultFor<CancelTurnResponse>(
           CancelTurnResponse.$_createMessage);
   static CancelTurnResponse? _defaultInstance;
+
+  /// The message taken back, to edit, if it was.
+  @$pb.TagNumber(1)
+  QueuedMessage get message => $_getN(0);
+  @$pb.TagNumber(1)
+  set message(QueuedMessage value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasMessage() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearMessage() => $_clearField(1);
+  @$pb.TagNumber(1)
+  QueuedMessage ensureMessage() => $_ensure(0);
 }
 
 class ForkChatRequest extends $pb.GeneratedMessage {
@@ -6064,7 +6100,8 @@ class NushiServiceApi {
           ctx, 'NushiService', 'Unqueue', request, UnqueueResponse());
 
   /// Stops the chat's running turn (ACP session/cancel). The turn ends with a
-  /// "cancelled" notice, and prompts it was waiting on are cancelled.
+  /// "cancelled" notice, and prompts it was waiting on are cancelled. It can
+  /// take the last message back too (take_back).
   $async.Future<CancelTurnResponse> cancelTurn(
           $pb.ClientContext? ctx, CancelTurnRequest request) =>
       _client.invoke<CancelTurnResponse>(

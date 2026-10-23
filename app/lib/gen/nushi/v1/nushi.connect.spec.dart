@@ -4,7 +4,6 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
-
 import "nushi.pb.dart" as nushiv1nushi;
 
 abstract final class NushiService {
@@ -85,7 +84,8 @@ abstract final class NushiService {
   );
 
   /// Stops the chat's running turn (ACP session/cancel). The turn ends with a
-  /// "cancelled" notice, and prompts it was waiting on are cancelled.
+  /// "cancelled" notice, and prompts it was waiting on are cancelled. It can
+  /// take the last message back too (take_back).
   static const cancelTurn = connect.Spec(
     '/$name/CancelTurn',
     connect.StreamType.unary,

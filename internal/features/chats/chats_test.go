@@ -52,7 +52,7 @@ func (f *fakeAgent) Prompt(_ context.Context, req acp.PromptRequest) (*acp.Promp
 	gate := f.gate
 	f.mu.Unlock()
 	for _, u := range f.updates {
-		f.h.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: u})
+		f.h.SessionUpdate(acp.SessionNotification{SessionID: req.SessionID, Update: u})
 	}
 	stop := acp.StopReasonEndTurn
 	if gate != nil {

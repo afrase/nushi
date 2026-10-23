@@ -122,7 +122,8 @@ type NushiServiceClient interface {
 	// returns it (API 28). Refused once the agent has it.
 	Unqueue(context.Context, *connect.Request[v1.UnqueueRequest]) (*connect.Response[v1.UnqueueResponse], error)
 	// Stops the chat's running turn (ACP session/cancel). The turn ends with a
-	// "cancelled" notice, and prompts it was waiting on are cancelled.
+	// "cancelled" notice, and prompts it was waiting on are cancelled. It can
+	// take the last message back too (take_back).
 	CancelTurn(context.Context, *connect.Request[v1.CancelTurnRequest]) (*connect.Response[v1.CancelTurnResponse], error)
 	// Opens a side chat: a session the agent forks from the chat's (ACP
 	// session/fork, when status.can_fork). It knows the conversation so far
@@ -520,7 +521,8 @@ type NushiServiceHandler interface {
 	// returns it (API 28). Refused once the agent has it.
 	Unqueue(context.Context, *connect.Request[v1.UnqueueRequest]) (*connect.Response[v1.UnqueueResponse], error)
 	// Stops the chat's running turn (ACP session/cancel). The turn ends with a
-	// "cancelled" notice, and prompts it was waiting on are cancelled.
+	// "cancelled" notice, and prompts it was waiting on are cancelled. It can
+	// take the last message back too (take_back).
 	CancelTurn(context.Context, *connect.Request[v1.CancelTurnRequest]) (*connect.Response[v1.CancelTurnResponse], error)
 	// Opens a side chat: a session the agent forks from the chat's (ACP
 	// session/fork, when status.can_fork). It knows the conversation so far

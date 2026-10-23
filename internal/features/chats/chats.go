@@ -262,16 +262,8 @@ func (c *chat) statusChangedLocked() {
 	c.emitLocked(model.Event{ChatID: c.id, Status: &st})
 }
 
-// Cancel stops the chat's running turn: the agent is told to stop, and the
+// cancel stops the chat's running turn: the agent is told to stop, and the
 // prompts it waits on are cancelled, as ACP asks of a client.
-func (s *Service) Cancel(chatID string) error {
-	c, err := s.chat(chatID)
-	if err != nil {
-		return err
-	}
-	return c.cancel()
-}
-
 func (c *chat) cancel() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()

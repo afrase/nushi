@@ -31,7 +31,8 @@ service NushiService {
   // returns it (API 28). Refused once the agent has it.
   rpc Unqueue(UnqueueRequest) returns (UnqueueResponse);
   // Stops the chat's running turn (ACP session/cancel). The turn ends with a
-  // "cancelled" notice, and prompts it was waiting on are cancelled.
+  // "cancelled" notice, and prompts it was waiting on are cancelled. It can
+  // take the last message back too (take_back).
   rpc CancelTurn(CancelTurnRequest) returns (CancelTurnResponse);
   // Opens a side chat: a session the agent forks from the chat's (ACP
   // session/fork, when status.can_fork). It knows the conversation so far
@@ -270,9 +271,17 @@ message SendPromptResponse {}
 
 message CancelTurnRequest {
   string chat_id = 1;
+  // Take the last user message back too, if the agent hasn't answered it
+  // with any text or tool call yet: the chat is rewound to just before it
+  // when it can be, else it stays, with a notice (API 30). The call then
+  // returns once the turn has ended.
+  bool take_back = 2;
 }
 
-message CancelTurnResponse {}
+message CancelTurnResponse {
+  // The message taken back, to edit, if it was.
+  QueuedMessage message = 1;
+}
 
 message ForkChatRequest {
   string chat_id = 1;
