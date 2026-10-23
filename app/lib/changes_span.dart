@@ -35,11 +35,10 @@ class ChangeSpan {
       base == status.branch ||
       base.endsWith('/${status.branch}');
 
-  /// The scopes there are: Branch needs a base; all need API 27.
-  List<Scope> scopes(Daemon daemon) => [
-    if (daemon.canCommits)
-      for (final s in Scope.values)
-        if (s != Scope.branch || base.isNotEmpty) s,
+  /// The scopes there are: Branch needs a base.
+  List<Scope> get scopes => [
+    for (final s in Scope.values)
+      if (s != Scope.branch || base.isNotEmpty) s,
   ];
 
   /// Reads [chat]'s folder. The scope is the one picked for the chat, else
@@ -50,7 +49,7 @@ class ChangeSpan {
     );
     final base = chat.worktree?.base ?? status.defaultBase;
     final span = ChangeSpan(Scope.uncommitted, base, status);
-    final scopes = span.scopes(daemon);
+    final scopes = span.scopes;
     final picked = Scope.values.where((s) => s.name == chat.scope).firstOrNull;
     return ChangeSpan(
       scopes.contains(picked)

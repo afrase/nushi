@@ -61,8 +61,6 @@ const (
 	// NushiServiceArchiveChatProcedure is the fully-qualified name of the NushiService's ArchiveChat
 	// RPC.
 	NushiServiceArchiveChatProcedure = "/nushi.v1.NushiService/ArchiveChat"
-	// NushiServiceRemoveChatProcedure is the fully-qualified name of the NushiService's RemoveChat RPC.
-	NushiServiceRemoveChatProcedure = "/nushi.v1.NushiService/RemoveChat"
 	// NushiServicePlanDeleteChatProcedure is the fully-qualified name of the NushiService's
 	// PlanDeleteChat RPC.
 	NushiServicePlanDeleteChatProcedure = "/nushi.v1.NushiService/PlanDeleteChat"
@@ -172,10 +170,10 @@ type NushiServiceClient interface {
 	// status.can_rewind and the message's fork_at is set, or it is the first)
 	// and returns that message. The agent's session is forked there: a new
 	// session id, the same chat. Files aren't rewound. Refused while the chat
-	// is busy (API 29).
+	// is busy.
 	RewindChat(context.Context, *connect.Request[v1.RewindChatRequest]) (*connect.Response[v1.RewindChatResponse], error)
 	// Takes a message out of the chat's queue before the agent gets it, and
-	// returns it (API 28). Refused once the agent has it.
+	// returns it. Refused once the agent has it.
 	Unqueue(context.Context, *connect.Request[v1.UnqueueRequest]) (*connect.Response[v1.UnqueueResponse], error)
 	// Stops the chat's running turn (ACP session/cancel). The turn ends with a
 	// "cancelled" notice, and prompts it was waiting on are cancelled. It can
@@ -193,9 +191,6 @@ type NushiServiceClient interface {
 	// Archives a chat: its turn is cancelled and its agent stops; it stays
 	// listed, read-only. Unarchiving reopens it (ACP session/load).
 	ArchiveChat(context.Context, *connect.Request[v1.ArchiveChatRequest]) (*connect.Response[v1.ArchiveChatResponse], error)
-	// Forgets a chat: its turn is cancelled, its agent stops, and Nushi's
-	// record of it goes. The agent's own history of the session stays.
-	RemoveChat(context.Context, *connect.Request[v1.RemoveChatRequest]) (*connect.Response[v1.RemoveChatResponse], error)
 	// Says what DeleteChat removes. The first time, the daemon starts the
 	// agent to learn whether it can delete its history.
 	PlanDeleteChat(context.Context, *connect.Request[v1.PlanDeleteChatRequest]) (*connect.Response[v1.PlanDeleteChatResponse], error)
@@ -215,7 +210,7 @@ type NushiServiceClient interface {
 	// included, or everything since its branch left a base, or what commits
 	// changed.
 	GetDiff(context.Context, *connect.Request[v1.GetDiffRequest]) (*connect.Response[v1.GetDiffResponse], error)
-	// Lists a branch's commits since a base, or the last ones (API 27).
+	// Lists a branch's commits since a base, or the last ones.
 	ListCommits(context.Context, *connect.Request[v1.ListCommitsRequest]) (*connect.Response[v1.ListCommitsResponse], error)
 	// Sums up a folder's changes (as GetDiff lists them) and names its
 	// branch.
@@ -224,67 +219,68 @@ type NushiServiceClient interface {
 	// repository the ones git doesn't ignore.
 	ListFiles(context.Context, *connect.Request[v1.ListFilesRequest]) (*connect.Response[v1.ListFilesResponse], error)
 	// Asks the chat's agent, unseen, what fills its context (Claude's
-	// /context), while the chat is idle (API 25).
+	// /context), in a throwaway fork of its session, while the chat is idle.
+	// Refused when the agent can't fork.
 	GetContextUsage(context.Context, *connect.Request[v1.GetContextUsageRequest]) (*connect.Response[v1.GetContextUsageResponse], error)
 	// Lists the MCP servers the agent's config gives a folder, read from the
 	// agent's own files, env and header values masked. With check_health, the
 	// agent connects to each and says how that went (Claude's `claude mcp list`,
 	// seconds), and servers only it knows (plugins', claude.ai connectors)
-	// are added (API 32).
+	// are added.
 	ListMcpServers(context.Context, *connect.Request[v1.ListMcpServersRequest]) (*connect.Response[v1.ListMcpServersResponse], error)
 	// Add, edit and remove an MCP server in a scope ("user", "project",
 	// "local"), through the agent's own CLI; the folder names the project.
 	// Editing keeps the name and scope, and env and header values sent as
 	// "••••" keep the values they had; if the new config is refused, the old
 	// one is put back. Running chats the change reaches get
-	// status.mcp_changed (API 33).
+	// status.mcp_changed.
 	AddMcpServer(context.Context, *connect.Request[v1.AddMcpServerRequest]) (*connect.Response[v1.AddMcpServerResponse], error)
 	EditMcpServer(context.Context, *connect.Request[v1.EditMcpServerRequest]) (*connect.Response[v1.EditMcpServerResponse], error)
 	RemoveMcpServer(context.Context, *connect.Request[v1.RemoveMcpServerRequest]) (*connect.Response[v1.RemoveMcpServerResponse], error)
 	// Turns a project's .mcp.json server on for the folder's project, which
 	// approves it, or off, which rejects it (Claude's
 	// enabledMcpjsonServers and disabledMcpjsonServers in the project's
-	// .claude/settings.local.json) (API 34).
+	// .claude/settings.local.json).
 	SetMcpServerOn(context.Context, *connect.Request[v1.SetMcpServerOnRequest]) (*connect.Response[v1.SetMcpServerOnResponse], error)
 	// Signs in to a server that needs OAuth: the agent opens the browser and
 	// the call returns once the sign-in is done there, or failed (a few
-	// minutes at most). Logout forgets the sign-in (API 34).
+	// minutes at most). Logout forgets the sign-in.
 	LoginMcpServer(context.Context, *connect.Request[v1.LoginMcpServerRequest]) (*connect.Response[v1.LoginMcpServerResponse], error)
 	LogoutMcpServer(context.Context, *connect.Request[v1.LogoutMcpServerRequest]) (*connect.Response[v1.LogoutMcpServerResponse], error)
 	// Reopens a chat's session on a new agent (ACP session/load), which
 	// replays its transcript, so it uses the MCP servers as they are now.
-	// Refused while it is busy (API 33).
+	// Refused while it is busy.
 	ReloadChat(context.Context, *connect.Request[v1.ReloadChatRequest]) (*connect.Response[v1.ReloadChatResponse], error)
 	// Opens a terminal for a chat: the user's login shell, in the chat's
 	// folder (its worktree, for a worktree chat) or in a given one. The
 	// daemon owns it, so it outlives the app, but not the daemon. Changes to
-	// a chat's terminals come as events (API 35).
+	// a chat's terminals come as events.
 	OpenTerminal(context.Context, *connect.Request[v1.OpenTerminalRequest]) (*connect.Response[v1.OpenTerminalResponse], error)
 	ListTerminals(context.Context, *connect.Request[v1.ListTerminalsRequest]) (*connect.Response[v1.ListTerminalsResponse], error)
 	// Streams a terminal's output: first what it kept (the last 1 MB, maybe
 	// empty), then new output, and a last message once its shell has exited.
-	// A client that falls far behind is cut off and attaches again (API 35).
+	// A client that falls far behind is cut off and attaches again.
 	AttachTerminal(context.Context, *connect.Request[v1.AttachTerminalRequest]) (*connect.ServerStreamForClient[v1.AttachTerminalResponse], error)
 	WriteTerminal(context.Context, *connect.Request[v1.WriteTerminalRequest]) (*connect.Response[v1.WriteTerminalResponse], error)
 	ResizeTerminal(context.Context, *connect.Request[v1.ResizeTerminalRequest]) (*connect.Response[v1.ResizeTerminalResponse], error)
 	// Names a terminal; an empty name goes back to the one it shows by
-	// itself (API 36).
+	// itself.
 	RenameTerminal(context.Context, *connect.Request[v1.RenameTerminalRequest]) (*connect.Response[v1.RenameTerminalResponse], error)
-	// Puts a chat's terminals in an order (API 36).
+	// Puts a chat's terminals in an order.
 	ArrangeTerminals(context.Context, *connect.Request[v1.ArrangeTerminalsRequest]) (*connect.Response[v1.ArrangeTerminalsResponse], error)
 	// Starts a new shell in a terminal's folder in place of its old one (a
-	// shell that exited), keeping its place and name (API 36).
+	// shell that exited), keeping its place and name.
 	RestartTerminal(context.Context, *connect.Request[v1.RestartTerminalRequest]) (*connect.Response[v1.RestartTerminalResponse], error)
 	// Closes a terminal: its shell is hung up, then killed after a short
-	// grace, along with what still runs in it (API 35).
+	// grace, along with what still runs in it.
 	CloseTerminal(context.Context, *connect.Request[v1.CloseTerminalRequest]) (*connect.Response[v1.CloseTerminalResponse], error)
 	// Says what a folder brings for the agent to run on its own (MCP
 	// servers, hooks, helper commands) when neither the agent nor Nushi was
 	// told to trust it; nothing when it is trusted or brings nothing. Ask
-	// before starting or moving a chat there (API 37).
+	// before starting or moving a chat there.
 	CheckFolder(context.Context, *connect.Request[v1.CheckFolderRequest]) (*connect.Response[v1.CheckFolderResponse], error)
 	// Remembers that the user starts chats in a folder anyway (its
-	// repository, outside git the folders under it too) (API 37).
+	// repository, outside git the folders under it too).
 	TrustFolder(context.Context, *connect.Request[v1.TrustFolderRequest]) (*connect.Response[v1.TrustFolderResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
@@ -378,12 +374,6 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceArchiveChatProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("ArchiveChat")),
-			connect.WithClientOptions(opts...),
-		),
-		removeChat: connect.NewClient[v1.RemoveChatRequest, v1.RemoveChatResponse](
-			httpClient,
-			baseURL+NushiServiceRemoveChatProcedure,
-			connect.WithSchema(nushiServiceMethods.ByName("RemoveChat")),
 			connect.WithClientOptions(opts...),
 		),
 		planDeleteChat: connect.NewClient[v1.PlanDeleteChatRequest, v1.PlanDeleteChatResponse](
@@ -584,7 +574,6 @@ type nushiServiceClient struct {
 	closeSideChat    *connect.Client[v1.CloseSideChatRequest, v1.CloseSideChatResponse]
 	renameChat       *connect.Client[v1.RenameChatRequest, v1.RenameChatResponse]
 	archiveChat      *connect.Client[v1.ArchiveChatRequest, v1.ArchiveChatResponse]
-	removeChat       *connect.Client[v1.RemoveChatRequest, v1.RemoveChatResponse]
 	planDeleteChat   *connect.Client[v1.PlanDeleteChatRequest, v1.PlanDeleteChatResponse]
 	deleteChat       *connect.Client[v1.DeleteChatRequest, v1.DeleteChatResponse]
 	answerPermission *connect.Client[v1.AnswerPermissionRequest, v1.AnswerPermissionResponse]
@@ -680,11 +669,6 @@ func (c *nushiServiceClient) RenameChat(ctx context.Context, req *connect.Reques
 // ArchiveChat calls nushi.v1.NushiService.ArchiveChat.
 func (c *nushiServiceClient) ArchiveChat(ctx context.Context, req *connect.Request[v1.ArchiveChatRequest]) (*connect.Response[v1.ArchiveChatResponse], error) {
 	return c.archiveChat.CallUnary(ctx, req)
-}
-
-// RemoveChat calls nushi.v1.NushiService.RemoveChat.
-func (c *nushiServiceClient) RemoveChat(ctx context.Context, req *connect.Request[v1.RemoveChatRequest]) (*connect.Response[v1.RemoveChatResponse], error) {
-	return c.removeChat.CallUnary(ctx, req)
 }
 
 // PlanDeleteChat calls nushi.v1.NushiService.PlanDeleteChat.
@@ -859,10 +843,10 @@ type NushiServiceHandler interface {
 	// status.can_rewind and the message's fork_at is set, or it is the first)
 	// and returns that message. The agent's session is forked there: a new
 	// session id, the same chat. Files aren't rewound. Refused while the chat
-	// is busy (API 29).
+	// is busy.
 	RewindChat(context.Context, *connect.Request[v1.RewindChatRequest]) (*connect.Response[v1.RewindChatResponse], error)
 	// Takes a message out of the chat's queue before the agent gets it, and
-	// returns it (API 28). Refused once the agent has it.
+	// returns it. Refused once the agent has it.
 	Unqueue(context.Context, *connect.Request[v1.UnqueueRequest]) (*connect.Response[v1.UnqueueResponse], error)
 	// Stops the chat's running turn (ACP session/cancel). The turn ends with a
 	// "cancelled" notice, and prompts it was waiting on are cancelled. It can
@@ -880,9 +864,6 @@ type NushiServiceHandler interface {
 	// Archives a chat: its turn is cancelled and its agent stops; it stays
 	// listed, read-only. Unarchiving reopens it (ACP session/load).
 	ArchiveChat(context.Context, *connect.Request[v1.ArchiveChatRequest]) (*connect.Response[v1.ArchiveChatResponse], error)
-	// Forgets a chat: its turn is cancelled, its agent stops, and Nushi's
-	// record of it goes. The agent's own history of the session stays.
-	RemoveChat(context.Context, *connect.Request[v1.RemoveChatRequest]) (*connect.Response[v1.RemoveChatResponse], error)
 	// Says what DeleteChat removes. The first time, the daemon starts the
 	// agent to learn whether it can delete its history.
 	PlanDeleteChat(context.Context, *connect.Request[v1.PlanDeleteChatRequest]) (*connect.Response[v1.PlanDeleteChatResponse], error)
@@ -902,7 +883,7 @@ type NushiServiceHandler interface {
 	// included, or everything since its branch left a base, or what commits
 	// changed.
 	GetDiff(context.Context, *connect.Request[v1.GetDiffRequest]) (*connect.Response[v1.GetDiffResponse], error)
-	// Lists a branch's commits since a base, or the last ones (API 27).
+	// Lists a branch's commits since a base, or the last ones.
 	ListCommits(context.Context, *connect.Request[v1.ListCommitsRequest]) (*connect.Response[v1.ListCommitsResponse], error)
 	// Sums up a folder's changes (as GetDiff lists them) and names its
 	// branch.
@@ -911,67 +892,68 @@ type NushiServiceHandler interface {
 	// repository the ones git doesn't ignore.
 	ListFiles(context.Context, *connect.Request[v1.ListFilesRequest]) (*connect.Response[v1.ListFilesResponse], error)
 	// Asks the chat's agent, unseen, what fills its context (Claude's
-	// /context), while the chat is idle (API 25).
+	// /context), in a throwaway fork of its session, while the chat is idle.
+	// Refused when the agent can't fork.
 	GetContextUsage(context.Context, *connect.Request[v1.GetContextUsageRequest]) (*connect.Response[v1.GetContextUsageResponse], error)
 	// Lists the MCP servers the agent's config gives a folder, read from the
 	// agent's own files, env and header values masked. With check_health, the
 	// agent connects to each and says how that went (Claude's `claude mcp list`,
 	// seconds), and servers only it knows (plugins', claude.ai connectors)
-	// are added (API 32).
+	// are added.
 	ListMcpServers(context.Context, *connect.Request[v1.ListMcpServersRequest]) (*connect.Response[v1.ListMcpServersResponse], error)
 	// Add, edit and remove an MCP server in a scope ("user", "project",
 	// "local"), through the agent's own CLI; the folder names the project.
 	// Editing keeps the name and scope, and env and header values sent as
 	// "••••" keep the values they had; if the new config is refused, the old
 	// one is put back. Running chats the change reaches get
-	// status.mcp_changed (API 33).
+	// status.mcp_changed.
 	AddMcpServer(context.Context, *connect.Request[v1.AddMcpServerRequest]) (*connect.Response[v1.AddMcpServerResponse], error)
 	EditMcpServer(context.Context, *connect.Request[v1.EditMcpServerRequest]) (*connect.Response[v1.EditMcpServerResponse], error)
 	RemoveMcpServer(context.Context, *connect.Request[v1.RemoveMcpServerRequest]) (*connect.Response[v1.RemoveMcpServerResponse], error)
 	// Turns a project's .mcp.json server on for the folder's project, which
 	// approves it, or off, which rejects it (Claude's
 	// enabledMcpjsonServers and disabledMcpjsonServers in the project's
-	// .claude/settings.local.json) (API 34).
+	// .claude/settings.local.json).
 	SetMcpServerOn(context.Context, *connect.Request[v1.SetMcpServerOnRequest]) (*connect.Response[v1.SetMcpServerOnResponse], error)
 	// Signs in to a server that needs OAuth: the agent opens the browser and
 	// the call returns once the sign-in is done there, or failed (a few
-	// minutes at most). Logout forgets the sign-in (API 34).
+	// minutes at most). Logout forgets the sign-in.
 	LoginMcpServer(context.Context, *connect.Request[v1.LoginMcpServerRequest]) (*connect.Response[v1.LoginMcpServerResponse], error)
 	LogoutMcpServer(context.Context, *connect.Request[v1.LogoutMcpServerRequest]) (*connect.Response[v1.LogoutMcpServerResponse], error)
 	// Reopens a chat's session on a new agent (ACP session/load), which
 	// replays its transcript, so it uses the MCP servers as they are now.
-	// Refused while it is busy (API 33).
+	// Refused while it is busy.
 	ReloadChat(context.Context, *connect.Request[v1.ReloadChatRequest]) (*connect.Response[v1.ReloadChatResponse], error)
 	// Opens a terminal for a chat: the user's login shell, in the chat's
 	// folder (its worktree, for a worktree chat) or in a given one. The
 	// daemon owns it, so it outlives the app, but not the daemon. Changes to
-	// a chat's terminals come as events (API 35).
+	// a chat's terminals come as events.
 	OpenTerminal(context.Context, *connect.Request[v1.OpenTerminalRequest]) (*connect.Response[v1.OpenTerminalResponse], error)
 	ListTerminals(context.Context, *connect.Request[v1.ListTerminalsRequest]) (*connect.Response[v1.ListTerminalsResponse], error)
 	// Streams a terminal's output: first what it kept (the last 1 MB, maybe
 	// empty), then new output, and a last message once its shell has exited.
-	// A client that falls far behind is cut off and attaches again (API 35).
+	// A client that falls far behind is cut off and attaches again.
 	AttachTerminal(context.Context, *connect.Request[v1.AttachTerminalRequest], *connect.ServerStream[v1.AttachTerminalResponse]) error
 	WriteTerminal(context.Context, *connect.Request[v1.WriteTerminalRequest]) (*connect.Response[v1.WriteTerminalResponse], error)
 	ResizeTerminal(context.Context, *connect.Request[v1.ResizeTerminalRequest]) (*connect.Response[v1.ResizeTerminalResponse], error)
 	// Names a terminal; an empty name goes back to the one it shows by
-	// itself (API 36).
+	// itself.
 	RenameTerminal(context.Context, *connect.Request[v1.RenameTerminalRequest]) (*connect.Response[v1.RenameTerminalResponse], error)
-	// Puts a chat's terminals in an order (API 36).
+	// Puts a chat's terminals in an order.
 	ArrangeTerminals(context.Context, *connect.Request[v1.ArrangeTerminalsRequest]) (*connect.Response[v1.ArrangeTerminalsResponse], error)
 	// Starts a new shell in a terminal's folder in place of its old one (a
-	// shell that exited), keeping its place and name (API 36).
+	// shell that exited), keeping its place and name.
 	RestartTerminal(context.Context, *connect.Request[v1.RestartTerminalRequest]) (*connect.Response[v1.RestartTerminalResponse], error)
 	// Closes a terminal: its shell is hung up, then killed after a short
-	// grace, along with what still runs in it (API 35).
+	// grace, along with what still runs in it.
 	CloseTerminal(context.Context, *connect.Request[v1.CloseTerminalRequest]) (*connect.Response[v1.CloseTerminalResponse], error)
 	// Says what a folder brings for the agent to run on its own (MCP
 	// servers, hooks, helper commands) when neither the agent nor Nushi was
 	// told to trust it; nothing when it is trusted or brings nothing. Ask
-	// before starting or moving a chat there (API 37).
+	// before starting or moving a chat there.
 	CheckFolder(context.Context, *connect.Request[v1.CheckFolderRequest]) (*connect.Response[v1.CheckFolderResponse], error)
 	// Remembers that the user starts chats in a folder anyway (its
-	// repository, outside git the folders under it too) (API 37).
+	// repository, outside git the folders under it too).
 	TrustFolder(context.Context, *connect.Request[v1.TrustFolderRequest]) (*connect.Response[v1.TrustFolderResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
@@ -1061,12 +1043,6 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceArchiveChatProcedure,
 		svc.ArchiveChat,
 		connect.WithSchema(nushiServiceMethods.ByName("ArchiveChat")),
-		connect.WithHandlerOptions(opts...),
-	)
-	nushiServiceRemoveChatHandler := connect.NewUnaryHandler(
-		NushiServiceRemoveChatProcedure,
-		svc.RemoveChat,
-		connect.WithSchema(nushiServiceMethods.ByName("RemoveChat")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServicePlanDeleteChatHandler := connect.NewUnaryHandler(
@@ -1277,8 +1253,6 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceRenameChatHandler.ServeHTTP(w, r)
 		case NushiServiceArchiveChatProcedure:
 			nushiServiceArchiveChatHandler.ServeHTTP(w, r)
-		case NushiServiceRemoveChatProcedure:
-			nushiServiceRemoveChatHandler.ServeHTTP(w, r)
 		case NushiServicePlanDeleteChatProcedure:
 			nushiServicePlanDeleteChatHandler.ServeHTTP(w, r)
 		case NushiServiceDeleteChatProcedure:
@@ -1398,10 +1372,6 @@ func (UnimplementedNushiServiceHandler) RenameChat(context.Context, *connect.Req
 
 func (UnimplementedNushiServiceHandler) ArchiveChat(context.Context, *connect.Request[v1.ArchiveChatRequest]) (*connect.Response[v1.ArchiveChatResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ArchiveChat is not implemented"))
-}
-
-func (UnimplementedNushiServiceHandler) RemoveChat(context.Context, *connect.Request[v1.RemoveChatRequest]) (*connect.Response[v1.RemoveChatResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.RemoveChat is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) PlanDeleteChat(context.Context, *connect.Request[v1.PlanDeleteChatRequest]) (*connect.Response[v1.PlanDeleteChatResponse], error) {

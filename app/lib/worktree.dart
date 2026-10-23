@@ -26,7 +26,7 @@ List<(String?, Widget)> worktreeRows(
   final theme = NushiTheme.of(context), t = theme.t;
   final wt = chat.worktree;
   final code = theme.code(t.text, size: 12);
-  final offer = daemon.canWorktrees && !chat.archived;
+  final offer = !chat.archived;
   final can = offer && !chat.busy && !chat.waiting;
   return [
     (
@@ -111,7 +111,6 @@ class _NewChatBarState extends State<NewChatBar> with FollowsChanges {
 
   @override
   Future<void> reload() async {
-    if (!daemon.canFolderStatus) return;
     try {
       final s = await daemon.client.getFolderStatus(
         GetFolderStatusRequest(folder: chat.folder),
@@ -132,7 +131,7 @@ class _NewChatBarState extends State<NewChatBar> with FollowsChanges {
         Flexible(
           child: FolderButton(chat: chat, daemon: daemon, path: false),
         ),
-        if (_git && daemon.canWorktrees)
+        if (_git)
           DecoratedBox(
             decoration: box(
               on ? t.accent : t.borderStrong,

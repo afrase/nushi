@@ -3,7 +3,7 @@
 - [0001](0001-chat-wrangler-and-diff-viewer.md) Nushi is a chat wrangler and a very good diff viewer
 - [0002](0002-separate-daemon.md) A separate Go daemon runs the agents; Flutter is the window
 - [0003](0003-acp-v1-own-client.md) Agents speak ACP v1 through our own small client
-- [0004](0004-connect-over-unix-socket.md) Connect RPC over a Unix socket, additive changes only
+- [0004](0004-connect-over-unix-socket.md) Connect RPC over a Unix socket, additive changes only; a newer app asks for a daemon restart
 - [0005](0005-clients-authenticate.md) Clients authenticate with a token from the start
 - [0006](0006-remote-through-relay.md) Remote access later, through an end-to-end encrypted relay (proposed)
 - [0007](0007-harness-owns-permissions.md) The harness owns permissions; its mode is the only control

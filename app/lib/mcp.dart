@@ -30,8 +30,7 @@ class McpView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context), t = theme.t;
     final list = McpServers.of(daemon, folder);
-    final (name, parent) = folderParts(folder);
-    final dir = tildePath(parent);
+    final (name, dir) = folderParts(folder);
     return ListenableBuilder(
       listenable: list,
       builder: (context, _) => Column(
@@ -81,9 +80,7 @@ class McpView extends StatelessWidget {
                   icon: Icons.add,
                   kind: ButtonKind.ghost,
                   height: 24,
-                  onPressed: daemon.canMcpChange
-                      ? () => mcpForm(context, list)
-                      : null,
+                  onPressed: () => mcpForm(context, list),
                 ),
                 const SizedBox(width: 8),
                 if (list.checking)

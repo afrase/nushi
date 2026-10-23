@@ -9,8 +9,7 @@ import 'widgets.dart';
 
 /// The details panel's MCP card: the servers the agent uses in the chat's
 /// folder, each with its state; "Manage…" opens the MCP servers view.
-PanelCard? mcpCard(ChatState chat, Daemon daemon) {
-  if (!daemon.canMcp) return null;
+PanelCard mcpCard(ChatState chat, Daemon daemon) {
   final list = McpServers.of(daemon, chat.folder);
   return PanelCard(
     title: 'MCP',

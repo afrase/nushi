@@ -104,7 +104,6 @@ type chat struct {
 	done      chan struct{}         // closed when the running turn ends
 	sent      chan struct{}         // closed once the running turn's prompt is written
 	seq       int64                 // the last event's number
-	silent    *silentRun            // a prompt Nushi sent on its own, running
 	probes    map[string]*silentRun // throwaway forks' runs, by session id
 	queue     []model.Message       // waiting for the agent's next chance
 	steer     bool                  // the agent takes messages into a running turn

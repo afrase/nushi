@@ -29,7 +29,6 @@ class ChatState extends ChangeNotifier {
     notifyListeners();
   }
 
-  String sessionId = ''; // the agent's
   String title = '';
   bool archived = false; // no agent runs; read-only until unarchived
   DateTime created = DateTime.now();

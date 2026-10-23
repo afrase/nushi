@@ -47,8 +47,6 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.RenameChatRequest request);
   $async.Future<$0.ArchiveChatResponse> archiveChat(
       $pb.ServerContext ctx, $0.ArchiveChatRequest request);
-  $async.Future<$0.RemoveChatResponse> removeChat(
-      $pb.ServerContext ctx, $0.RemoveChatRequest request);
   $async.Future<$0.PlanDeleteChatResponse> planDeleteChat(
       $pb.ServerContext ctx, $0.PlanDeleteChatRequest request);
   $async.Future<$0.DeleteChatResponse> deleteChat(
@@ -138,8 +136,6 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.RenameChatRequest();
       case 'ArchiveChat':
         return $0.ArchiveChatRequest();
-      case 'RemoveChat':
-        return $0.RemoveChatRequest();
       case 'PlanDeleteChat':
         return $0.PlanDeleteChatRequest();
       case 'DeleteChat':
@@ -234,8 +230,6 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return renameChat(ctx, request as $0.RenameChatRequest);
       case 'ArchiveChat':
         return archiveChat(ctx, request as $0.ArchiveChatRequest);
-      case 'RemoveChat':
-        return removeChat(ctx, request as $0.RemoveChatRequest);
       case 'PlanDeleteChat':
         return planDeleteChat(ctx, request as $0.PlanDeleteChatRequest);
       case 'DeleteChat':

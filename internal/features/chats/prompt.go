@@ -38,7 +38,6 @@ func (s *Service) Prompt(chatID string, m model.Message, how Send) error {
 	defer c.mu.Unlock()
 	// Each wait lets go of the lock, so everything is checked again after it.
 	for {
-		c.waitSilentLocked()
 		if err := c.closedLocked(); err != nil {
 			return err
 		}

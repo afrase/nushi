@@ -56,21 +56,16 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
   static final _asked = <String, (DateTime, GetContextUsageResponse)>{};
   Timer? _timer;
 
-  /// Whether the agent can be asked what fills its context: it has a
-  /// /context command, the chat is idle and has messages (Claude would
-  /// name a new chat after /context).
+  /// Whether the agent can be asked what fills its context, in a throwaway
+  /// fork of the session: it forks and has a /context command, and the chat
+  /// is idle and has messages (Claude would name a new chat after
+  /// /context).
   bool get _canAsk =>
-      daemon.daemonApi >= 25 &&
+      chat.canFork &&
       !chat.busy &&
       !chat.fresh &&
       !chat.archived &&
       chat.commands.any((c) => c.name == 'context');
-
-  /// Whether the daemon asks in a throwaway fork of the session (API 31),
-  /// so the card can ask on its own: in the chat's own session Claude keeps
-  /// /context's answer, a few thousand tokens each time, so it then asks
-  /// only on its refresh button.
-  bool get _auto => daemon.daemonApi >= 31 && chat.canFork;
 
   /// Asks the agent, unseen, what fills its context.
   Future<void> _askContext() async {
@@ -80,8 +75,8 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
       );
       _asked[chat.id] = (DateTime.now(), r);
       if (mounted) setState(() => _context = r);
-    } on Object catch (e) {
-      if (mounted && !_auto) showError(context, e);
+    } on Object {
+      // The card keeps what it had; it asks again after the next turn.
     }
   }
 
@@ -90,10 +85,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
   void _schedule() {
     _timer?.cancel();
     bool ready() =>
-        mounted &&
-        _auto &&
-        _canAsk &&
-        !collapsedCards.value.contains('Context');
+        mounted && _canAsk && !collapsedCards.value.contains('Context');
     if (!ready()) return;
     final last = _asked[chat.id]?.$1;
     var wait = const Duration(seconds: 1);
@@ -124,7 +116,6 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
   @override
   Future<void> reload() async {
     _schedule();
-    if (!daemon.canFolderStatus) return;
     try {
       final span = await ChangeSpan.of(daemon, chat);
       final branch = span.scope == Scope.branch;
@@ -202,7 +193,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
                     stacked: true,
                   ),
                 ),
-                if (daemon.canTerminals && !chat.archived)
+                if (!chat.archived)
                   IconTap(
                     Icons.terminal,
                     size: 14,
@@ -266,10 +257,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
               'By category',
               IconTap(
                 Icons.refresh,
-                tooltip: _auto
-                    ? 'Ask Claude again (/context, in a copy of the chat)'
-                    : 'Ask Claude (/context). Its answer stays in the '
-                          'conversation: a few thousand tokens each time.',
+                tooltip: 'Ask Claude again (/context, in a copy of the chat)',
                 size: 13,
                 onTap: _canAsk ? _askContext : null,
               ),
@@ -290,8 +278,6 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
         rows: [
           if (_error != null)
             (null, _error!)
-          else if (!daemon.canFolderStatus)
-            (null, 'Needs a newer daemon.')
           else if (status == null)
             (null, '…')
           else if (!status.git)
@@ -309,7 +295,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
         ],
       ),
       ?agentsCard(chat),
-      ?mcpCard(chat, daemon),
+      mcpCard(chat, daemon),
     ]);
   }
 }

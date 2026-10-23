@@ -76,10 +76,11 @@ class _Mark extends CustomPainter {
 /// A chat's status dot: amber with a soft ring while it waits on the user,
 /// breathing while the agent works, a ring when idle.
 class ChatDot extends StatelessWidget {
-  const ChatDot({super.key, required this.chat, this.size = 7});
+  const ChatDot({super.key, required this.chat});
+
+  static const size = 7.0;
 
   final ChatState chat;
-  final double size;
 
   @override
   Widget build(BuildContext context) {

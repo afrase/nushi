@@ -11,38 +11,30 @@ import 'theme/theme.dart';
 import 'widgets.dart';
 import 'worktree.dart';
 
-/// The chat's menu: Rename, Archive or Unarchive, Delete…. An older
-/// daemon lacks these: they show, unavailable.
+/// The chat's menu: Rename, Archive or Unarchive, MCP servers…, Delete….
 List<MenuEntry> chatMenu(
   BuildContext context,
   ChatState chat,
   Daemon daemon, {
   required VoidCallback onRename,
 }) => [
-  MenuEntry('Rename', onPick: daemon.canManageChats ? onRename : null),
+  MenuEntry('Rename', onPick: onRename),
   MenuEntry(
     chat.archived ? 'Unarchive' : 'Archive',
-    onPick: daemon.canManageChats
-        ? () => tryOrShow(
-            context,
-            () => daemon.client.archiveChat(
-              ArchiveChatRequest(chatId: chat.id, archived: !chat.archived),
-            ),
-          )
-        : null,
+    onPick: () => tryOrShow(
+      context,
+      () => daemon.client.archiveChat(
+        ArchiveChatRequest(chatId: chat.id, archived: !chat.archived),
+      ),
+    ),
   ),
-  MenuEntry(
-    'MCP servers…',
-    onPick: daemon.canMcp ? () => daemon.showMcp(chat.folder) : null,
-  ),
+  MenuEntry('MCP servers…', onPick: () => daemon.showMcp(chat.folder)),
   MenuEntry(
     'Delete…',
-    onPick: daemon.canDeleteChats
-        ? () => showDialog<void>(
-            context: context,
-            builder: (_) => _DeleteDialog(chat, daemon),
-          )
-        : null,
+    onPick: () => showDialog<void>(
+      context: context,
+      builder: (_) => _DeleteDialog(chat, daemon),
+    ),
   ),
 ];
 
@@ -61,10 +53,7 @@ class _DeleteDialogState extends State<_DeleteDialog> {
   late final _plan = widget.daemon.client
       .planDeleteChat(PlanDeleteChatRequest(chatId: widget.chat.id))
       .then((p) {
-        // From a daemon before API 23, only the chat's own worktree.
-        _worktrees = p.worktrees.isNotEmpty || !p.hasWorktree()
-            ? p.worktrees
-            : [WorktreePlan(worktree: p.worktree, state: p.worktreeState)];
+        _worktrees = p.worktrees;
         for (final w in _worktrees) {
           _choices[w.worktree.path] = WorktreeChoices.defaults(w);
         }
@@ -87,17 +76,8 @@ class _DeleteDialogState extends State<_DeleteDialog> {
             branch: _choices[w.worktree.path]!.$2,
           ),
       ];
-      final old = choices.firstOrNull;
       await widget.daemon.client.deleteChat(
-        widget.daemon.daemonApi >= 23 || old == null
-            ? DeleteChatRequest(chatId: widget.chat.id, worktrees: choices)
-            : DeleteChatRequest(
-                chatId: widget.chat.id,
-                removeWorktree: old.removeWorktree,
-                forceWorktree: old.forceWorktree,
-                deleteBranch: old.deleteBranch,
-                forceBranch: old.forceBranch,
-              ),
+        DeleteChatRequest(chatId: widget.chat.id, worktrees: choices),
       );
       if (mounted) Navigator.pop(context);
     } on Object catch (e) {
@@ -174,7 +154,7 @@ class _DeleteDialogState extends State<_DeleteDialog> {
                   line(terminalName(term), mono: true),
               ],
               for (final (i, w) in _worktrees.indexed) ...[
-                if (i > 0 || !p.hasWorktree())
+                if (i > 0 || widget.chat.worktree == null)
                   line('A worktree it ran in before it moved:')
                 else
                   const SizedBox(height: 12),

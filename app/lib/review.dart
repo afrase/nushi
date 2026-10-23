@@ -220,7 +220,7 @@ Future<void> sendReview(
       SendPromptRequest(
         chatId: chat,
         text: reviewMessage(unsent, note),
-        queue: daemon.canQueue,
+        queue: true,
       ),
     );
     for (final c in unsent) {

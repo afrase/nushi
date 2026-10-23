@@ -99,7 +99,7 @@ func TestChatsInWorktrees(t *testing.T) {
 		t.Fatalf("the worktree went with the move: %v", err)
 	}
 	plan := must(a.c.PlanDeleteChat(ctx, connect.NewRequest(&nushiv1.PlanDeleteChatRequest{ChatId: id})))
-	if len(plan.Worktrees) != 1 || plan.Worktrees[0].Worktree.Path != wt.Path || plan.Worktrees[0].State.Commits != 1 || plan.Worktree != nil {
+	if len(plan.Worktrees) != 1 || plan.Worktrees[0].Worktree.Path != wt.Path || plan.Worktrees[0].State.Commits != 1 {
 		t.Fatalf("plan after moving out = %v", plan)
 	}
 	must(a.c.DeleteChat(ctx, connect.NewRequest(&nushiv1.DeleteChatRequest{ChatId: id, Worktrees: []*nushiv1.WorktreeChoice{
@@ -112,10 +112,11 @@ func TestChatsInWorktrees(t *testing.T) {
 	gitIn(t, wts[0].Path, "commit", "-q", "--allow-empty", "-m", "merged")
 	gitIn(t, repo, "merge", "-q", wts[0].Branch)
 	plan = must(a.c.PlanDeleteChat(ctx, connect.NewRequest(&nushiv1.PlanDeleteChatRequest{ChatId: ids[0]})))
-	if st := plan.WorktreeState; plan.Worktree.GetPath() != wts[0].Path || st.Changed != 0 || st.Commits != 0 || st.Gone {
+	if st := plan.Worktrees[0].State; plan.Worktrees[0].Worktree.Path != wts[0].Path || st.Changed != 0 || st.Commits != 0 || st.Gone {
 		t.Fatalf("plan = %v", plan)
 	}
-	must(a.c.DeleteChat(ctx, connect.NewRequest(&nushiv1.DeleteChatRequest{ChatId: ids[0], RemoveWorktree: true, DeleteBranch: true})))
+	must(a.c.DeleteChat(ctx, connect.NewRequest(&nushiv1.DeleteChatRequest{ChatId: ids[0], Worktrees: []*nushiv1.WorktreeChoice{
+		{Path: wts[0].Path, RemoveWorktree: true, DeleteBranch: true}}})))
 	if _, err := os.Stat(wts[0].Path); !errors.Is(err, fs.ErrNotExist) || branchExists(repo, wts[0].Branch) {
 		t.Errorf("after deleting a chat with merged work: the worktree %v, the branch %v", err, branchExists(repo, wts[0].Branch))
 	}
@@ -124,16 +125,18 @@ func TestChatsInWorktrees(t *testing.T) {
 	gitIn(t, wts[1].Path, "commit", "-q", "--allow-empty", "-m", "unmerged")
 	os.WriteFile(filepath.Join(wts[1].Path, "new.txt"), []byte("x"), 0o644)
 	plan = must(a.c.PlanDeleteChat(ctx, connect.NewRequest(&nushiv1.PlanDeleteChatRequest{ChatId: ids[1]})))
-	if st := plan.WorktreeState; st.Changed != 1 || st.Commits != 1 {
+	if st := plan.Worktrees[0].State; st.Changed != 1 || st.Commits != 1 {
 		t.Fatalf("plan = %v", plan)
 	}
-	for _, req := range []*nushiv1.DeleteChatRequest{{RemoveWorktree: true}, {RemoveWorktree: true, ForceWorktree: true, DeleteBranch: true}} {
-		req.ChatId = ids[1]
+	for _, c := range []*nushiv1.WorktreeChoice{{RemoveWorktree: true}, {RemoveWorktree: true, ForceWorktree: true, DeleteBranch: true}} {
+		c.Path = wts[1].Path
+		req := &nushiv1.DeleteChatRequest{ChatId: ids[1], Worktrees: []*nushiv1.WorktreeChoice{c}}
 		if _, err := a.c.DeleteChat(ctx, connect.NewRequest(req)); err == nil {
-			t.Errorf("deleted without forcing: %v", req)
+			t.Errorf("deleted without forcing: %v", c)
 		}
 	}
-	must(a.c.DeleteChat(ctx, connect.NewRequest(&nushiv1.DeleteChatRequest{ChatId: ids[1], RemoveWorktree: true, ForceWorktree: true})))
+	must(a.c.DeleteChat(ctx, connect.NewRequest(&nushiv1.DeleteChatRequest{ChatId: ids[1], Worktrees: []*nushiv1.WorktreeChoice{
+		{Path: wts[1].Path, RemoveWorktree: true, ForceWorktree: true}}})))
 	if _, err := os.Stat(wts[1].Path); !errors.Is(err, fs.ErrNotExist) || !branchExists(repo, wts[1].Branch) {
 		t.Errorf("the worktree should be gone (%v) and the branch kept", err)
 	}
@@ -145,10 +148,11 @@ func TestChatsInWorktrees(t *testing.T) {
 		t.Errorf("prompting a chat whose worktree is gone: %v", err)
 	}
 	plan = must(a.c.PlanDeleteChat(ctx, connect.NewRequest(&nushiv1.PlanDeleteChatRequest{ChatId: ids[2]})))
-	if !plan.WorktreeState.Gone {
+	if !plan.Worktrees[0].State.Gone {
 		t.Errorf("plan = %v", plan)
 	}
-	must(a.c.DeleteChat(ctx, connect.NewRequest(&nushiv1.DeleteChatRequest{ChatId: ids[2], RemoveWorktree: true, DeleteBranch: true})))
+	must(a.c.DeleteChat(ctx, connect.NewRequest(&nushiv1.DeleteChatRequest{ChatId: ids[2], Worktrees: []*nushiv1.WorktreeChoice{
+		{Path: wts[2].Path, RemoveWorktree: true, DeleteBranch: true}}})))
 	if branchExists(repo, wts[2].Branch) {
 		t.Error("the branch of the removed worktree is still there")
 	}

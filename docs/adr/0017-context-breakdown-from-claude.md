@@ -21,17 +21,11 @@ An agent without a `context` command gets the card as before.
 
 This depends on Claude's private output format and on the adapter treating
 `/context` as local; either can change without notice, which then shows as
-the raw markdown. A prompt the user sends during the silent run waits for it
-(a moment). Text the agent writes on its own during that moment (a background
-subagent finishing) would be taken as the answer and lost from the
-transcript; it hasn't been seen.
+the raw markdown.
 
-Claude keeps `/context`'s answer in the conversation (5–7k tokens each
-time), so the app asks only when the user presses the card's refresh
-button, never on its own.
-
-Since step 50, when the agent can fork, `/context` runs in a throwaway fork
-of the session instead (deleted right after), which leaves the chat's
-conversation alone, so the card asks on its own again: after a turn, at
-most once a minute, while it is open. Agents that can't fork keep the
-refresh button only.
+Claude keeps `/context`'s answer in a conversation (5–7k tokens each time),
+so it runs in a throwaway fork of the session (deleted right after), which
+leaves the chat's conversation alone; the card asks on its own after a
+turn, at most once a minute, while it is open. Agents that can't fork
+aren't asked (step 64 dropped the run in the chat's own session that
+step 50 kept for them).
