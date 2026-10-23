@@ -25,3 +25,5 @@
 - [0023](0023-warn-before-a-folder-runs-code.md) Warn before a folder's own code runs (hooks, helpers, `.mcp.json` servers) unless Claude or Nushi trusts it; never refuse
 - [0024](0024-the-agent-can-read-the-token.md) The agent can read Nushi's token file; no same-user protection is worth its cost (amends 0005)
 - [0025](0025-claude-rules-in-one-place.md) Claude's rules live in `internal/claude*`; the chats feature takes a `Dialect` that `main` fills
+- [0026](0026-the-transcript-lays-out-every-item.md) The transcript lays out every item, not a lazy list
+- [0027](0027-what-lives-only-in-memory.md) What lives only in memory, in the daemon and the app
