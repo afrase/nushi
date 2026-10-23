@@ -38,7 +38,7 @@ class _NushiAppState extends State<NushiApp> {
   Widget build(BuildContext context) => PlatformMenuBar(
     menus: [
       const PlatformMenu(
-        label: 'Nushi Next',
+        label: 'Nushi',
         menus: [
           PlatformProvidedMenuItem(type: PlatformProvidedMenuItemType.about),
           PlatformProvidedMenuItem(type: PlatformProvidedMenuItemType.hide),
@@ -55,7 +55,7 @@ class _NushiAppState extends State<NushiApp> {
       ),
     ],
     child: MaterialApp(
-      title: 'Nushi Next',
+      title: 'Nushi',
       debugShowCheckedModeBanner: false,
       theme: const NushiTheme(Tokens.light).toThemeData(),
       darkTheme: const NushiTheme(Tokens.dark).toThemeData(),

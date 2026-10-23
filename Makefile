@@ -2,8 +2,8 @@
 export PATH := $(HOME)/.pub-cache/bin:$(PATH)
 BUF := go run github.com/bufbuild/buf/cmd/buf@v1.75.0
 # NUSHI_DATA=<folder> runs a second daemon and app beside the usual ones.
-DATA := $(or $(NUSHI_DATA),$(HOME)/Library/Application Support/Nushi Next)
-RELEASE := app/build/macos/Build/Products/Release/Nushi Next.app
+DATA := $(or $(NUSHI_DATA),$(HOME)/Library/Application Support/Nushi)
+RELEASE := app/build/macos/Build/Products/Release/Nushi.app
 # local.mk (not committed) can set COPY_TO=<folder>: make install also copies the app there.
 -include local.mk
 
@@ -33,9 +33,9 @@ package:
 
 install: package
 	mkdir -p "$(HOME)/Applications"
-	rm -rf "$(HOME)/Applications/Nushi Next.app"
-	ditto "$(RELEASE)" "$(HOME)/Applications/Nushi Next.app"
-	if [ -n "$(COPY_TO)" ]; then rm -rf "$(COPY_TO)/Nushi Next.app" && ditto "$(RELEASE)" "$(COPY_TO)/Nushi Next.app"; fi
+	rm -rf "$(HOME)/Applications/Nushi.app" "$(HOME)/Applications/Nushi Next.app"
+	ditto "$(RELEASE)" "$(HOME)/Applications/Nushi.app"
+	if [ -n "$(COPY_TO)" ]; then rm -rf "$(COPY_TO)/Nushi.app" "$(COPY_TO)/Nushi Next.app" && ditto "$(RELEASE)" "$(COPY_TO)/Nushi.app"; fi
 
 gen:
 	$(BUF) lint

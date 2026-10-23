@@ -2,7 +2,7 @@
 
 ## Summary (2026-10-23, after step 40)
 
-Milestone I (steps 33–40, with steps 37–40 added during the run) is done, one commit each on `main`, pushed, plus two transcript-scrolling fixes the user reported (their own commits) and a split of two files that passed 400 lines. `make test` passes: Go unit tests (new: subagent routing, the silent `/context` run, the `/context` parser), the end-to-end tests (the worktree test now moves a worktree chat out and deletes it), and the app's tests (new: following the bottom with small scroll steps, the menu filter, one-at-a-time questions, the turn status helpers). Each step was looked at in a development build against live Claude (claude-agent-acp 0.94.0) at 1280×800, dark, on throwaway repositories, with the dev daemon and app on `NUSHI_DATA`; the installed Nushi Next and its daemon were left alone. `make install` put the build in `~/Applications/Nushi Next.app` (and the iCloud copy).
+Milestone I (steps 33–40, with steps 37–40 added during the run) is done, one commit each on `main`, pushed, plus two transcript-scrolling fixes the user reported (their own commits) and a split of two files that passed 400 lines. `make test` passes: Go unit tests (new: subagent routing, the silent `/context` run, the `/context` parser), the end-to-end tests (the worktree test now moves a worktree chat out and deletes it), and the app's tests (new: following the bottom with small scroll steps, the menu filter, one-at-a-time questions, the turn status helpers). Each step was looked at in a development build against live Claude (claude-agent-acp 0.94.0) at 1280×800, dark, on throwaway repositories, with the dev daemon and app on `NUSHI_DATA`; the installed Nushi and its daemon were left alone. `make install` put the build in `~/Applications/Nushi.app` (and the iCloud copy).
 
 **What works**
 - 33, trim: one `Menu` for every menu (opens at once, no grow animation, digits, submenus), no ripples or Material elevation, shared dialog, diff view, reload logic and folder formatting. The app went from 6,623 to 6,364 lines of Dart; the goal of 6,000 wasn't reached (see "Step 33" below).
@@ -151,7 +151,7 @@ The app went from 6,623 lines of Dart (after the scroll fix, 6,634) to 6,364: ab
 
 ## Milestone E demo (steps 19–21): loose ends
 
-1. `make stop`, then `make install`. Open `~/Applications/Nushi Next.app` from Finder. It says "Starting the daemon…" for a moment, then the sidebar shows (`pgrep -lf nushid` shows the bundled one, its parent launchd).
+1. `make stop`, then `make install`. Open `~/Applications/Nushi.app` from Finder. It says "Starting the daemon…" for a moment, then the sidebar shows (`pgrep -lf nushid` shows the bundled one, its parent launchd).
 2. Start a chat, ask for something that runs a command (`go version`): the agent has your PATH. Chat a few turns: the ring by Send fills (hover for the counts and the last turn's tokens) and the cost in the header goes up.
 3. Ask for a 400-word story and quit the app (⌘Q) while it streams. Wait, reopen: the story is complete, the cost and ring are there.
 4. Double-click the chat's title (sidebar or header), type a name, Enter. Start a long reply and pick ⋯ ▸ Archive: the reply stops, the chat moves under Archived. Open it: read-only, with Unarchive; press it, the transcript replays, and you can keep chatting.
@@ -160,7 +160,7 @@ The app went from 6,623 lines of Dart (after the scroll fix, 6,634) to 6,364: ab
 
 ## Milestone F demo (steps 22–25): folders, the panel, the composer, images
 
-1. `make install`, open `~/Applications/Nushi Next.app`. Click **New chat**: it opens at once under "No folder". Ask "what is your pwd? Remember the word narwhal." (a `scratch/<id>` folder in the data folder).
+1. `make install`, open `~/Applications/Nushi.app`. Click **New chat**: it opens at once under "No folder". Ask "what is your pwd? Remember the word narwhal." (a `scratch/<id>` folder in the data folder).
 2. In the details panel, click the folder ▸ Choose folder… and pick a git repository. The chat moves under that folder in the sidebar; ask "what is your pwd now, and which word did I ask you to remember?": the repo, and narwhal. In a terminal in the repo, `claude --resume <id>` (the id the chat's ⋯ ▸ Remove… dialog names; cancel it) resumes the same conversation.
 3. Ask Claude to change a file and add one: the Context card fills in (tokens, last turn, cost) and Changes shows `+n −m` when the turn ends; click it for the Changes view. The header button hides the panel (the folder comes back to the header); narrow the window to 1024 and it hides by itself.
 4. The composer: type `/`, `@`, or press "+"; ↵ appears once there's text; while Claude works the ↵ spot is a stop button (Escape works too). Under the box: the mode, and model plus effort in one menu with Fast mode and Agent below.
@@ -168,7 +168,7 @@ The app went from 6,623 lines of Dart (after the scroll fix, 6,634) to 6,364: ab
 
 ## Milestone G demo (steps 26–29): polish
 
-To try it beside an installed Nushi Next that's in use: `export NUSHI_DATA=~/Library/Application\ Support/Nushi\ Dev`, then `make run` (and `make stop` after). Otherwise `make install`, quit Nushi Next, and press "Restart daemon" if the sidebar offers it.
+To try it beside an installed Nushi that's in use: `export NUSHI_DATA=~/Library/Application\ Support/Nushi\ Dev`, then `make run` (and `make stop` after). Otherwise `make install`, quit Nushi, and press "Restart daemon" if the sidebar offers it.
 
 1. New chat; ask "Remember the word narwhal." Move it to a git repository (the folder in the details panel). Right-click it ▸ Delete…: the dialog lists two Claude sessions (the scratch one and the repository's), the scratch folder and Nushi's record. Delete: the chat is gone, `ls ~/.claude/projects/*/<id>.jsonl` finds neither session, and the scratch folder is gone.
 2. Start a chat. Click the model ("Opus 5.5  High") under the box: four models by name, the current one checked, 1–4 on the right; press 2, then open it again and press 1. Hover Effort ▸ and More models ▸: they open beside their rows. Click "⋯": Fast mode and Agent, each with its value; Agent's list has one line per agent. The "+" and the text sit on one line; the box gets no blue ring.
@@ -177,7 +177,7 @@ To try it beside an installed Nushi Next that's in use: `export NUSHI_DATA=~/Lib
 
 ## Milestone H demo (steps 30–32): a worktree per chat
 
-To try it beside an installed Nushi Next that's in use: `export NUSHI_DATA=~/Library/Application\ Support/Nushi\ Dev`, then `make run` (and `make stop` after). Otherwise `make install`, quit Nushi Next, and press "Restart daemon" if the sidebar offers it.
+To try it beside an installed Nushi that's in use: `export NUSHI_DATA=~/Library/Application\ Support/Nushi\ Dev`, then `make run` (and `make stop` after). Otherwise `make install`, quit Nushi, and press "Restart daemon" if the sidebar offers it.
 
 1. Make a throwaway repository: `mkdir -p /tmp/fruit && cd /tmp/fruit && git init -b main && printf -- '- apple\n- banana\n' > fruit.md && git add . && git commit -m init`.
 2. New chat ▸ in the details panel, Folder ▸ Choose folder… ▸ `/tmp/fruit`. Environment shows Folder, Branch `main` and a "New worktree" switch; turn it on. The chat now shows Repository `fruit`, Branch `nushi/<two-words>` with a worktree icon, Base `main`; in the sidebar the chat sits under `fruit` with `<two-words>` beside its title. Ask "replace banana with blueberry in fruit.md".
@@ -190,7 +190,7 @@ To try it beside an installed Nushi Next that's in use: `export NUSHI_DATA=~/Lib
 
 ## Milestone I demo (steps 33–40): trim and loose ends
 
-To try it beside an installed Nushi Next that's in use: `export NUSHI_DATA=~/Library/Application\ Support/Nushi\ Dev`, then `make run` (and `make stop` after). Otherwise `make install`, quit Nushi Next, and press "Restart daemon".
+To try it beside an installed Nushi that's in use: `export NUSHI_DATA=~/Library/Application\ Support/Nushi\ Dev`, then `make run` (and `make stop` after). Otherwise `make install`, quit Nushi, and press "Restart daemon".
 
 1. Menus: click the mode, the model ("Opus 5.5  High"; press 2, then reopen and press 1), "⋯" ▸ Agent, the "+" in the box, the chat's "⋯" and a right-click on a chat: all open at once, quiet rows, a faint shadow. A list over 10 rows (Agent with many agents) has a Filter field: type, ↑/↓, Enter; Escape clears, then closes.
 2. Scrolling: in a long chat scroll up slowly on the trackpad: it stays where you put it, "Jump to latest" shows; the thin scrollbar keeps its size and fades; the ends rubber-band.
@@ -305,7 +305,7 @@ To try it beside an installed Nushi Next that's in use: `export NUSHI_DATA=~/Lib
 - The packaged app (step 21) finds `nushid` next to its own executable (`Contents/MacOS/nushid`) and starts it when a ping fails, at most every ten seconds, as `$SHELL -l -c "exec '<nushid>' >>'<data>/nushid.log' 2>&1"`, detached ([ADR 0013](docs/adr/0013-app-starts-its-daemon.md)). A debug build (`make run`) has no bundled daemon, so it never starts one. A path with a `'` in it isn't started (quoting differs between shells).
 - "Older" means the daemon's `Ping` API version is below the app's (`apiVersion` in `daemon.dart`, kept equal to `internal/api.Version`). Rename, archive and remove need 14: with an older daemon their menu items show greyed out and double-click doesn't rename. Usage (15) simply doesn't show. The banner sits at the bottom of the sidebar.
 - "Restart daemon" finds the daemon with `lsof -a -c nushid -t <socket>`, sends it SIGTERM (it stops its agents), waits for pings to fail, then starts the bundled one. A turn running at that moment is lost, as with any daemon restart; the banner says so.
-- `make package` is `flutter build macos --release`, `go build` into the bundle, then `codesign --force --deep --sign -` (ad-hoc). `make install` replaces `~/Applications/Nushi Next.app` with `ditto`.
+- `make package` is `flutter build macos --release`, `go build` into the bundle, then `codesign --force --deep --sign -` (ad-hoc). `make install` replaces `~/Applications/Nushi.app` with `ditto`.
 
 - Connect for Go is v1 (`connectrpc.com/connect` v1.21), not v2: v1 is what the Dart generator's docs and the POC used, and nothing here needs v2.
 - `http2` for Dart stays on 2.x: `connectrpc` 2.0.1 doesn't resolve with `http2` 3.x.
@@ -336,7 +336,7 @@ To try it beside an installed Nushi Next that's in use: `export NUSHI_DATA=~/Lib
 - Whether the agent can delete is learned by starting it once per daemon run, the first time a Delete dialog opens (under a second once npx has the adapter); a daemon that never started an agent pays that when the dialog opens.
 - A moved chat remembers its earlier sessions (`Earlier` in the session file, oldest first) since step 26. Chats moved before step 26 know only their current session, so Delete leaves their earlier sessions in Claude's history.
 - A session that never had a message (a chat moved before its first message) is in the list too: Claude never wrote it, and deleting it succeeds.
-- `NUSHI_DATA` (since step 26) picks the data folder for the daemon, the app and `make run`/`make stop`, so a development build runs beside an installed Nushi Next. `make stop` stops only the daemon on that folder's socket (it used to `pkill` every nushid).
+- `NUSHI_DATA` (since step 26) picks the data folder for the daemon, the app and `make run`/`make stop`, so a development build runs beside an installed Nushi. `make stop` stops only the daemon on that folder's socket (it used to `pkill` every nushid).
 
 - Worktrees (step 30, [ADR 0016](docs/adr/0016-a-worktree-per-chat.md)): "New worktree" is a switch in the Environment card, shown while the chat has no messages and its folder is in git. Flipping it moves the chat (a new session, as for any chat without messages) into a new worktree, or back to the repository, which removes the unused worktree and its branch (plain `git worktree remove` and `git branch -d`, so git keeps them if anything is in them). The choice is remembered per repository (`worktrees` in `app.json`) and applies to the folder's "+" in the sidebar and to a chat without messages moved by the folder control. The switch isn't in the header's folder control (when the panel is hidden): the header doesn't know whether the folder is in git.
 - A chat with messages moves with "Move to new worktree" in the Environment card (after a confirmation saying uncommitted changes stay behind), through step 22's fork. A worktree chat with messages moved elsewhere with the folder control (after a confirmation saying the worktree and branch stay) leaves them on disk, and since step 35 the chat keeps them (`EarlierWorktrees` in the session file, beside `Earlier`); Delete… lists each with the same two safe choices as its own worktree, under "A worktree it ran in before it moved" (API 23: `PlanDeleteChatResponse.worktrees`, `DeleteChatRequest.worktrees` by path; the single fields stay for older apps).

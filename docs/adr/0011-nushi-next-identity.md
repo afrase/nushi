@@ -1,5 +1,7 @@
 # 0011. The rebuild runs as "Nushi Next" beside the first build
 
+Superseded by [0018](0018-the-app-is-nushi.md).
+
 ## Context
 The POC may still be installed and running on the same Mac.
 

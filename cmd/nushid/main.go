@@ -2,7 +2,6 @@
 package main
 
 import (
-	"cmp"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
@@ -41,8 +40,19 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	projects, err := claudehistory.Projects()
+	if err != nil {
+		return err
+	}
 	// NUSHI_DATA runs a second daemon beside the usual one, for development.
-	dir := cmp.Or(os.Getenv("NUSHI_DATA"), filepath.Join(home, "Library", "Application Support", "Nushi Next"))
+	dir := os.Getenv("NUSHI_DATA")
+	if dir == "" {
+		support := filepath.Join(home, "Library", "Application Support")
+		dir = filepath.Join(support, "Nushi")
+		if err := moveData(filepath.Join(support, "Nushi Next"), dir, projects); err != nil {
+			return fmt.Errorf("moving Nushi Next's data: %w", err)
+		}
+	}
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
@@ -62,10 +72,6 @@ func run() error {
 	hub := &events.Hub{}
 	launch := func(h acp.Handler) (chats.Agent, error) { return launchClaude(dir, h) }
 	st := store.New(dir)
-	projects, err := claudehistory.Projects()
-	if err != nil {
-		return err
-	}
 	copyHistory := func(id, from, to string) (func() error, error) { return claudehistory.Copy(projects, id, from, to) }
 	chatSvc := chats.New("claude", launch, st, st, copyHistory, git.Worktrees{}, filepath.Join(dir, "scratch"), hub.Publish)
 	srv := &http.Server{Handler: api.Handler(token, chatSvc, hub), Protocols: new(http.Protocols)}
