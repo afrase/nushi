@@ -61,9 +61,12 @@ class _QuestionCardState extends State<QuestionCard> {
           ..addListener(() => setState(() {}));
       }
     }
-    // The agent is waiting on this: take the keyboard from the composer.
+    // The agent is waiting on this: take the keyboard, unless the user is
+    // writing something (the composer, a comment) that has text in it.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && widget.item.status == 'pending') _focus.requestFocus();
+      if (mounted && widget.item.status == 'pending' && !_writing()) {
+        _focus.requestFocus();
+      }
     });
   }
 
@@ -75,6 +78,15 @@ class _QuestionCardState extends State<QuestionCard> {
     _focus.dispose();
     super.dispose();
   }
+
+  /// Whether the keyboard is in a text field with text in it.
+  static bool _writing() =>
+      FocusManager.instance.primaryFocus?.context
+          ?.findAncestorWidgetOfExactType<EditableText>()
+          ?.controller
+          .text
+          .isNotEmpty ??
+      false;
 
   bool get _many => _qs.length > 1;
 
@@ -122,7 +134,10 @@ class _QuestionCardState extends State<QuestionCard> {
       tryOrShow(context, () => widget.onAnswer(answer));
 
   KeyEventResult _onKey(FocusNode _, KeyEvent e) {
-    if (e is KeyUpEvent) return KeyEventResult.ignored;
+    // Keys typed into a box on the card (an "Other" answer) are its own.
+    if (e is KeyUpEvent || !_focus.hasPrimaryFocus) {
+      return KeyEventResult.ignored;
+    }
     final k = e.logicalKey;
     final onQuestion = _tab < _qs.length;
     final options = onQuestion ? _qs[_tab].field.options : <Option>[];

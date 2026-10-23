@@ -166,9 +166,9 @@ class Daemon extends ChangeNotifier {
     }
     final ok = api > 0;
     if (ok && _events == null) _subscribe();
-    if (ok != connected || api != daemonApi) {
+    if (ok != connected || ok && api != daemonApi) {
       connected = ok;
-      daemonApi = api;
+      if (ok) daemonApi = api; // kept while away: the app stays as it was
       notifyListeners();
     }
   }
@@ -300,7 +300,10 @@ class Daemon extends ChangeNotifier {
       chat.unload();
       if (chat.id == selectedId) unawaited(_load(chat));
     }
-    if (chat.folder != c.folder) chat.moved(c.folder);
+    if (chat.folder != c.folder) {
+      chat.moved(c.folder);
+      closeSide(chat); // it ran on the old agent
+    }
     return chat
       ..worktree = c.hasWorktree() ? c.worktree : null
       ..sessionId = c.sessionId.isEmpty ? c.id : c.sessionId
@@ -366,9 +369,13 @@ class Daemon extends ChangeNotifier {
     return side;
   }
 
-  Future<void> closeSide(ChatState side) async {
+  /// Ends [chat]'s side question, if it has one.
+  void closeSide(ChatState chat) {
+    final side = chat.side;
+    if (side == null) return;
+    chat.side = null;
     sides.remove(side.id);
-    await client.closeSideChat(CloseSideChatRequest(chatId: side.id));
+    client.closeSideChat(CloseSideChatRequest(chatId: side.id)).ignore();
   }
 
   @override

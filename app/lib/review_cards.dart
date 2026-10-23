@@ -92,12 +92,17 @@ class CommentBox extends StatefulWidget {
   const CommentBox({
     super.key,
     required this.lines,
-    required this.text,
+    required this.controller,
+    this.editing = false,
     required this.onSave,
     required this.onCancel,
   });
 
-  final String lines, text;
+  final String lines;
+
+  /// Its text, kept by the diff so it outlives the box.
+  final TextEditingController controller;
+  final bool editing; // a comment made before, being changed
   final ValueChanged<String> onSave;
   final VoidCallback onCancel;
 
@@ -106,7 +111,7 @@ class CommentBox extends StatefulWidget {
 }
 
 class _CommentBoxState extends State<CommentBox> {
-  late final _text = TextEditingController(text: widget.text);
+  TextEditingController get _text => widget.controller;
   final _focus = FocusNode();
 
   @override
@@ -118,7 +123,6 @@ class _CommentBoxState extends State<CommentBox> {
 
   @override
   void dispose() {
-    _text.dispose();
     _focus.dispose();
     super.dispose();
   }
@@ -163,7 +167,7 @@ class _CommentBoxState extends State<CommentBox> {
                 onPressed: widget.onCancel,
               ),
               Button(
-                label: widget.text.isEmpty ? 'Comment' : 'Save',
+                label: widget.editing ? 'Save' : 'Comment',
                 kind: ButtonKind.primary,
                 onPressed: _save,
               ),

@@ -8,12 +8,21 @@ import 'theme/theme.dart';
 /// Agent markdown in the theme's fonts and colors. Links open in the
 /// browser, http and https only; images as [markdownImage] shows them.
 class AgentMarkdown extends StatelessWidget {
-  const AgentMarkdown(this.text, {super.key, this.typed = false});
+  const AgentMarkdown(
+    this.text, {
+    super.key,
+    this.typed = false,
+    this.live = false,
+  });
 
   final String text;
 
-  /// The user typed it: it is complete, and its line breaks stay as typed.
+  /// The user typed it: its line breaks stay as typed.
   final bool typed;
+
+  /// It is still streaming in: half-written syntax is healed until it ends.
+  /// A finished message shows as written ("[1, 2, 3]", "a*b").
+  final bool live;
 
   static void _open(String href) {
     final uri = Uri.tryParse(href);
@@ -29,7 +38,7 @@ class AgentMarkdown extends StatelessWidget {
         TextStyle(color: color, fontStyle: style);
     return StreamingMarkdown(
       text,
-      streaming: !typed,
+      streaming: live,
       lineBreaks: typed,
       onTapLink: _open,
       imageBuilder: markdownImage,

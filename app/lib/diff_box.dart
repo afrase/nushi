@@ -32,6 +32,7 @@ class _DiffBoxState extends State<DiffBox> {
   bool _selecting = false; // the line selection changed during this click
   LineSelection? _draft; // the lines a comment is being written for
   ReviewComment? _editing; // the comment being changed, if one is
+  final _comment = TextEditingController(); // its text; outlives a reload
 
   @override
   void initState() {
@@ -66,7 +67,21 @@ class _DiffBoxState extends State<DiffBox> {
       captureNames: syntaxCaptures,
       devicePixelRatio: dpr,
     )..selectionChanges.addListener(() => _selecting = true);
-    _draft = _editing = null;
+    // A comment being written stays, on the same lines while there are
+    // that many.
+    if (_draft case final d?) {
+      final count = d.side == PaneSide.old
+          ? doc.oldLineCount
+          : doc.newLineCount;
+      _draft = count == 0
+          ? null
+          : LineSelection(
+              side: d.side,
+              anchor: min(d.anchor, count - 1),
+              focus: min(d.focus, count - 1),
+            );
+      if (_draft == null) _editing = null;
+    }
     _showComments();
     // Plain until the colors are in (a moment, off the UI thread).
     final controller = _controller;
@@ -83,6 +98,7 @@ class _DiffBoxState extends State<DiffBox> {
   void dispose() {
     reviews.removeListener(_showComments);
     _controller?.dispose();
+    _comment.dispose();
     super.dispose();
   }
 
@@ -131,11 +147,16 @@ class _DiffBoxState extends State<DiffBox> {
     _selecting = false;
     _draft = sel;
     _editing = null;
+    _comment.clear();
+    // The box takes the keys (Shift-arrows, ⌘C), not the diff's selection.
+    _controller!.selection.clear();
+    _selecting = false;
     _showComments();
   }
 
   void _closeDraft() {
     _draft = _editing = null;
+    _comment.clear();
     _controller!.selection.clear();
     _selecting = false;
     _showComments();
@@ -181,7 +202,8 @@ class _DiffBoxState extends State<DiffBox> {
         lines: s.length == 1
             ? 'Line ${s.start + 1}'
             : 'Lines ${s.start + 1}–${s.end}',
-        text: _editing?.text ?? '',
+        controller: _comment,
+        editing: _editing != null,
         onSave: _save,
         onCancel: _closeDraft,
       );
@@ -197,6 +219,7 @@ class _DiffBoxState extends State<DiffBox> {
           focus: c.end - 1,
         );
         _editing = c;
+        _comment.text = c.text;
         _showComments();
       },
       onRemove: () => setComments(r.chat, [
