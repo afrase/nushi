@@ -1,34 +1,38 @@
 # Notes
 
-## Summary (2026-10-23, after step 45)
+## Summary (2026-10-23, after step 51)
 
-Milestone J (steps 41–45) is done, one commit each on `main`, pushed, plus two fixes to step 40's Context card (their own commits). `make test` passes: Go unit tests (new: renames, per-file counts, commit spans, the default base, `ahead`, the commit list), the end-to-end tests, and the app's tests (new: the file tree, highlighting whole sides, the review message). Each step was looked at in a development build against live Claude (claude-agent-acp 0.94.0) at 1280×800, dark (and light for step 44), on a throwaway repository, with the dev daemon and app on `NUSHI_DATA`; the installed Nushi and its daemon were left alone. `make install` put the build in `~/Applications/Nushi.app` (and the iCloud copy).
+Milestone K (steps 46–51) is done, one commit each on `main`, pushed, plus fixes asked for during the run, each its own commit: following the bottom after a bounce, the Context card's bar, the Agents card, and `api.go` split. `make test` passes: Go unit tests (new: the queue, steering, send-now, rewinding, taking back, `/context` in a fork, fork titles), the end-to-end tests, and the app's and markdown package's tests (new: typed markdown, the fling into the bottom, comments following their lines, the context bar with your numbers). Each step was tried in a development build against live Claude (claude-agent-acp 0.94.0) at 1280×800, dark, with the dev daemon and app on `NUSHI_DATA`, in scratch chats and a throwaway repository; the installed Nushi and its daemon were left alone, and the remembered start mode wasn't touched. `make install` put the build in `~/Applications/Nushi.app` (and the iCloud copy).
 
 **What works**
-- 41: the sidebar, the details panel, the side chat and the Changes file list have one draggable edge each (thin line, highlights on hover, resize cursor, limits); widths are remembered; a double-click resets.
-- 42: Changes lists files as a tree (folder chains joined, collapsible, totals) with status letters (A, U, D, R, M) and `+n −m`; a flat list (folder part dimmed) is a remembered switch; ↑/↓ move and keep the file in view. The daemon reports renames, untracked files and per-file counts.
-- 43: every repo chat gets Uncommitted | Branch | Commits. Tried as the demo asks: Claude committed twice on `feature/beds` and left one change; Branch showed all three files, Commits listed the two and showed each, a shift-click showed both as one range, Uncommitted showed one. The default (Branch when the branch has commits of its own) and the per-chat pick work; the Changes card counts what the view shows.
-- 44: diffs are highlighted per whole side off the UI thread, in the transcript's colors, light and dark; a multi-line Go comment and raw string and a Python docstring come out right.
-- 45: comments on one line and on a dragged range in two files, edited, then sent with a note: Claude got one message quoting both, fixed both, the diff updated and the comments showed dimmed as sent; changing the file afterwards dropped its sent comment. While Claude works the button reads "Send review (1) when Claude is done", disabled.
-- Fixes to step 40: the Context card asks `/context` only on its refresh button. Each ask stays in Claude's conversation (5–7k tokens; "Messages" went from 10 to 5.4k with no turn), so the automatic asks after every turn were filling every chat's context. And no ask before a chat's first message, which had Claude title a new chat "Skill listing token budget table".
+- 46: your messages render as markdown (inline code, fences with colors, bold, italics, links, lists), each newline a line break, raw HTML as text; reply cards still split out.
+- 47: while Claude works, Enter queues (pills over the box: click to edit back, × to drop), ⌘Enter stops the turn and sends. Tried as the demo asks: two messages queued during `sleep 10` calls went into the running turn when a call ended (claude-agent-acp's steering) and Claude answered them mid-turn; during a long text reply three queued, the twin removed, one edited back and requeued, then delivered one per turn; ⌘Enter stopped a story and sent the next message. "Send review" queues too.
+- 48: "Rewind to here" (hover, right-click): three exchanges, rewound to the second, edited, sent: Claude listed narwhal and kiwi and said cactus and teapot never came up. Rewound again after a daemon restart: works (the fork resolves the message from the transcript).
+- 49: Escape right after sending put the message back in the box and Claude never saw it ("Did I mention owls?" "No."); once Claude had written, Escape only stopped. Taking back a chat's first message makes it a new chat again.
+- 50: the Context card fills in on its own a second after a turn, from `/context` in a throwaway fork (same numbers within 0.2k; nothing in the transcript or title; the fork's transcript is deleted). Refresh stays.
+- 51: review comments follow their lines when the file changes, and show above the file as outdated when the lines are gone.
 
 **What doesn't (yet)**
-- Comments stay at the line numbers they were made on; if the file changes before they're sent, they can sit on the wrong lines (the message still quotes the right text).
-- A rename shows as one only when git sees both sides (staged or committed); a plain `mv` the agent doesn't stage shows as deleted plus untracked.
-- The side chat's resizable edge wasn't tried live (same widget as the others); the Changes view with a daemon older than API 27 wasn't tried (it shows Uncommitted only, no switch).
-- Python `def` and `class` names aren't colored, in diffs as in the transcript (highlight.js names their scope `title.function`).
-- Carried over: after a daemon restart a background subagent's steps and report aren't replayed; Reduce motion untried with the setting on; Delete leaves earlier sessions of chats moved before step 26; Claude leaves an empty history folder per deleted folder; dropping files untried; cost restarts near zero after a move or reload; no thoughts from Claude; copy across blocks loses line breaks; nothing runs after a reboot until the app opens.
+- 51's subagent part: a background subagent's steps after a daemon restart, and background tasks, need claude-agent-acp's AIR or "subagent sessions" forms (see the step 51 entry in Decisions); not done. The Agents card no longer shows a count it doesn't know.
+- A rewind brings back the message's text, reply cards and images, not its `@` file links (kept as text only).
+- A message queued while steering fails is put back in the queue but also stays in the transcript (not seen; it needs an adapter error).
+- Carried over: Python `def` names uncolored; plain `mv` shows as delete plus untracked; Reduce motion untried with the setting on; Delete leaves earlier sessions of chats moved before step 26; dropping files untried; cost restarts near zero after a move, a reload or a rewind; no thoughts from Claude; copy across blocks loses line breaks; nothing runs after a reboot until the app opens.
+
+**Changes to earlier steps' behavior**
+- Step 40 (ADR 0017): the Context card asks on its own again, in a fork (as step 50 asks); the chat's own session is used only for an agent that can't fork, on the button.
+- Step 45: "Send review" is no longer disabled while Claude works; it queues.
+- Step 18/29: side chats are deleted with a second `session/delete` a moment later, since Claude wrote a ~700-byte stub of each back after the first (a leak since step 18).
+- Bugs fixed: a bounce at the bottom of the transcript turned following off; any chat event (a title arriving, a rename, a mode change) cleared the chat's status flags in the app, so "Start a side chat" disappeared once Claude titled a chat; the Context card's bar never drew; Claude's "(fork) (fork)" title after a second fork replaced the chat's title.
 
 **Needs your decision**
-- The daemon's API went from 25 to 27 (26 per-file counts and renames, 27 commits and the default branch). The installed app shows "Restart daemon" until the running daemon is restarted; until then the Changes view shows Uncommitted only, without counts per file.
-- The Context card no longer refreshes its breakdown on its own (see above): it changed step 40's behavior because of the context cost. If you'd rather keep it automatic, it'd need a way to ask Claude for the breakdown that doesn't stay in the conversation.
-- Decisions to revisit, new in J (details in the list below): pane limits and the 5 px grab strip inside each pane; folders first in the tree, collapse not remembered, flat switch app-wide; the Changes toolbar; Branch on the default branch showing unpushed commits; a commit's diff from its first parent; the default scope rule; 200,000 characters as the highlighting limit; comments tied to the view they were made in, not moved when the file changes, kept by the app in `reviews.json`; when a sent comment goes away.
+- The daemon's API went from 27 to 31 (28 the queue, 29 rewind, 30 taking back, 31 `/context` in a fork). The installed app shows "Restart daemon" until the running daemon is restarted; until then those features are off.
+- Decisions to revisit, new in K (details in the list below): when queued messages are delivered (after each of Claude's own tool calls, by steering; one per turn otherwise) and that a stopped turn holds the queue; rewinding through a JetBrains AIR vendor meta (ADR 0020), offered for claude-agent-acp only; rewinding to the first message making the chat new again; thinking not counting as an answer for taking back; `/context` in a fork starting a Claude process each time (about 1.3 s, at most once a minute while the card is open); outdated review comments still being sent; subagents as ACP child sessions as a future step.
 
-**Size**: the app is 8,990 lines of Dart (7,561 before J), plus 655 in packages; the daemon 3,756 lines of Go (3,528) and the ACP client 800. Step 45 added about 580 lines, past the ~500 tripwire (see "Tripwires crossed"). `composer.dart` (408) and `question_card.dart` (402) are still just over 400; no new file is.
+**Size**: the app is 9,616 lines of Dart (8,990 before K), plus 666 in packages; the daemon 4,235 lines of Go (3,756) and the ACP client 836 (800). Step 47 added about 560 lines with tests, past the ~500 tripwire (see "Tripwires crossed"). `composer.dart` was split (373 now) since it was touched; `question_card.dart` (402) wasn't touched. `api.go` passed 400 and was split.
 
-**Dependencies**: `re_highlight` is now a direct dependency of the app (it was already in through `packages/markdown`).
+**Dependencies**: none added.
 
-**Left behind by the testing**: nothing (the dev chat deleted with Delete, the dev data folder and the throwaway repository removed, Claude's empty history folder for it removed).
+**Left behind by the testing**: nothing (the dev chats deleted with Delete, which deletes Claude's history of them; the dev data folder, the throwaway repository and Claude's empty history folders for them removed).
 
 ## Line counts
 
@@ -93,6 +97,7 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 
 Tripwires crossed:
 - Milestone I (steps 33–40) took the app from 6,623 to 7,540 lines of Dart, past the ~7,000 tripwire: the trim saved about 270 (short of its 6,000 goal), and steps 34–40 added about 1,180, most of it for the four steps added mid-run (status row 37, questions 38, subagents 39, context breakdown 40, about 900 together). Step 33's own diff (1,634 added, 1,909 removed) is a rewrite of call sites, not growth. `composer.dart` (408) and `question_card.dart` (402) are just over 400 lines; `transcript.dart` and `details_panel.dart` were split after passing it.
+- Milestone K (steps 46–51) took the app from 8,990 to 9,616 lines of Dart and the daemon from 3,756 to 4,235 lines of Go (the ACP client 800 to 836).
 - Step 47 (about 560 lines with tests, without the generated API code): the daemon's queue, send-now and delivery (`prompt.go`, 230, mostly the prompt code moved out of `chats.go`), steering in the ACP client (35), three tests (110), and in the app the pills (`queue.dart`, 92) and the composer's queue, send-now and edit-back. `composer.dart` would have passed 400, so its completions moved to `completions.dart` (it is 364 now).
 - Step 45 (about 580 lines of Dart, plus a 30-line test): the comment model and its file, the inline box and card, the send dialog and message (`review.dart`, 389), drafting and placing comments in `DiffBox`, and the toolbar button and tree marks. Milestone J took the app from 7,561 to 8,990 lines of Dart and the daemon from 3,528 to 3,756 lines of Go.
 Lines added per step, code and tests, without generated code (the tripwire is about 500): 1: 533, 2: 1,502, 3: 239, 4: 437, 5: 739, 6: 639, 7: 464, 8: 537, 9: 265, 10: 528, 11: 1,249, 12: 625, 13: 476, 14: 343, 15: 351, 16: 492, 17: 298, 18: 666, 19: 755, 20: 223, 21: 146; 26: 438, 27: 238, 28: 140, 29: 683, 30: 677, 31: 145, 32: 470.
@@ -226,6 +231,18 @@ To try it beside an installed Nushi that's in use: `export NUSHI_DATA=~/Library/
 4. Changes: the toolbar says Branch (the branch has commits of its own): both files, `app/lib` as one folder, `+n −m` per file and folder, colors in the code. The list icon switches to a flat list; ↑/↓ move.
 5. Commits: "Add kiwi" and "Say hi"; click one, then shift-click the other: both files as one range. Uncommitted: only the TODO line. The panel's Changes card follows the scope.
 6. Review: in Uncommitted, click a line number on the right side of main.go, write "Use a constant for the greeting.", Enter. Drag over two line numbers of a file in Branch, comment, Enter (it shows only on Branch). The tree marks both files. "Send review (2)" ▸ add a note ▸ Send: the chat gets one message quoting both; when Claude is done the diff updates and the comments show dimmed, "· sent". While Claude works, the button reads "… when Claude is done".
+
+## Milestone K demo (steps 46–51): the conversation
+
+To try it beside an installed Nushi that's in use: `export NUSHI_DATA=~/Library/Application\ Support/Nushi\ Dev`, then `make run` (and `make stop` after). Otherwise `make install`, quit Nushi, and press "Restart daemon".
+
+1. New chat. Send a message with `**bold**`, `` `code` ``, a list, a fenced block and two lines one under the other: it shows rendered, line breaks as typed.
+2. Ask "Run sleep 10 three times as separate Bash calls, saying the number after each; answer anything I send meanwhile briefly." While it runs, type two questions and press Enter after each: pills over the box. Type the second one again, then × its twin; click the first pill: it comes back into the box; change it, Enter. When a `sleep` ends, the pills go into the turn and show as your messages there; Claude answers them and carries on.
+3. Ask for a 600-word story; while it streams, type "Stop, just say banana" and press ⌘Enter: "Stopped", then your message and "banana".
+4. Three exchanges ("remember narwhal", "remember cactus", "remember teapot"). Hover the second message: the clock icon (or right-click ▸ Rewind to here) ▸ Rewind: the transcript ends after the first answer and "remember cactus" is in the box. Change it to "remember kiwi, then list the words", send: narwhal and kiwi.
+5. Send "Write a poem about toads." and press Escape at once: the message is back in the box, the transcript as before. Send it again, wait for some lines, Escape: it just stops.
+6. Open the details panel: after each turn the Context card's "By category" fills in by itself (a bar, the categories, the deferred tools dimmed under them); the transcript has no `/context`.
+7. In a repository chat, comment on two changed lines in Changes; add lines above them in the file and press ↻: the comment moves with its lines. Delete the lines: it shows above the file, "Outdated", with the lines it was on.
 
 ## ACP quirks
 
