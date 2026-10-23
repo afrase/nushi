@@ -3,6 +3,7 @@ import 'package:markdown_view/markdown_view.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'images.dart';
+import 'syntax.dart';
 import 'theme/theme.dart';
 
 /// Agent markdown in the theme's fonts and colors. Links open in the
@@ -34,8 +35,6 @@ class AgentMarkdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context), t = theme.t;
-    TextStyle c(Color color, {FontStyle? style}) =>
-        TextStyle(color: color, fontStyle: style);
     return StreamingMarkdown(
       text,
       streaming: live,
@@ -49,15 +48,7 @@ class AgentMarkdown extends StatelessWidget {
         border: t.borderSubtle,
         muted: t.textMuted,
         link: t.link,
-        highlight: {
-          for (final k in ['keyword', 'built_in', 'type', 'literal', 'number'])
-            k: c(t.keyword),
-          for (final k in ['title', 'title.function_', 'title.class_'])
-            k: c(t.function),
-          for (final k in ['string', 'regexp', 'meta-string']) k: c(t.string),
-          for (final k in ['comment', 'quote'])
-            k: c(t.textMuted, style: FontStyle.italic),
-        },
+        highlight: highlightStyles(t),
       ),
     );
   }

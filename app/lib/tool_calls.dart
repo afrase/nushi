@@ -8,16 +8,49 @@ import 'markdown.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
 
-const _icons = {
-  'read': Icons.description_outlined,
-  'edit': Icons.edit_outlined,
-  'delete': Icons.delete_outline,
-  'move': Icons.drive_file_move_outline,
-  'search': Icons.search,
-  'execute': Icons.terminal,
-  'think': Icons.psychology_outlined,
-  'fetch': Icons.public,
+/// What a kind of tool call does: its icon, what it did ("read") to what
+/// ("file"), its verb on a path ("Read") and what it is doing ("Reading").
+class ToolKind {
+  const ToolKind(this.icon, this.did, this.what, [this.verb, this.doing]);
+
+  final IconData icon;
+  final String did, what;
+  final String? verb, doing;
+}
+
+/// The ACP kinds of tool calls.
+const _kinds = {
+  'read': ToolKind(
+    Icons.description_outlined,
+    'read',
+    'file',
+    'Read',
+    'Reading',
+  ),
+  'edit': ToolKind(Icons.edit_outlined, 'edited', 'file', 'Edit', 'Editing'),
+  'delete': ToolKind(
+    Icons.delete_outline,
+    'deleted',
+    'file',
+    'Delete',
+    'Deleting',
+  ),
+  'move': ToolKind(
+    Icons.drive_file_move_outline,
+    'moved',
+    'file',
+    'Move',
+    'Moving',
+  ),
+  'search': ToolKind(Icons.search, 'ran', 'search', null, 'Searching'),
+  'execute': ToolKind(Icons.terminal, 'ran', 'command'),
+  'think': ToolKind(Icons.psychology_outlined, 'used', 'tool'),
+  'fetch': ToolKind(Icons.public, 'fetched', 'page', null, 'Fetching'),
 };
+
+/// The kind of tool call [it] is.
+ToolKind kindOf(Item it) =>
+    _kinds[it.toolKind] ?? const ToolKind(Icons.build_outlined, 'used', 'tool');
 
 bool _running(Item it) => it.status == 'pending' || it.status == 'in_progress';
 
@@ -44,41 +77,29 @@ final _counted = Expando<(int, int)>();
   );
 }
 
-/// What each kind of tool call did, and to what.
-const _did = {
-  'read': ('read', 'file'),
-  'edit': ('edited', 'file'),
-  'delete': ('deleted', 'file'),
-  'move': ('moved', 'file'),
-  'execute': ('ran', 'command'),
-  'search': ('ran', 'search'),
-  'fetch': ('fetched', 'page'),
-  'other': ('used', 'tool'),
-};
-
 /// What a run of tool calls did: "Read 4 files, ran 2 commands".
 String groupLabel(List<Item> calls) {
-  final counts = <String, int>{};
+  final counts = <(String, String), int>{};
   for (final c in calls) {
-    final kind = _did.containsKey(c.toolKind) ? c.toolKind : 'other';
-    counts.update(kind, (n) => n + 1, ifAbsent: () => 1);
+    final k = kindOf(c);
+    counts.update((k.did, k.what), (n) => n + 1, ifAbsent: () => 1);
   }
   final label = [
-    for (final MapEntry(key: kind, value: n) in counts.entries)
-      if (_did[kind] case (final verb, final what))
-        '$verb $n $what${n == 1
-            ? ''
-            : what.endsWith('h')
-            ? 'es'
-            : 's'}',
+    for (final MapEntry(key: (verb, what), value: n) in counts.entries)
+      '$verb $n $what${n == 1
+          ? ''
+          : what.endsWith('h')
+          ? 'es'
+          : 's'}',
   ].join(', ');
   return label[0].toUpperCase() + label.substring(1);
 }
 
 /// A card with a one-line header that opens to show [body]; outlined in
 /// red when [failed].
-class _Collapsible extends StatefulWidget {
-  const _Collapsible({
+class Collapsible extends StatefulWidget {
+  const Collapsible({
+    super.key,
     required this.header,
     required this.body,
     required this.failed,
@@ -89,10 +110,10 @@ class _Collapsible extends StatefulWidget {
   final bool failed;
 
   @override
-  State<_Collapsible> createState() => _CollapsibleState();
+  State<Collapsible> createState() => _CollapsibleState();
 }
 
-class _CollapsibleState extends State<_Collapsible> {
+class _CollapsibleState extends State<Collapsible> {
   bool _open = false;
 
   @override
@@ -119,11 +140,7 @@ class _CollapsibleState extends State<_Collapsible> {
                       width: 18,
                       child: body == null
                           ? null
-                          : Icon(
-                              _open ? Icons.expand_more : Icons.chevron_right,
-                              size: 14,
-                              color: t.textSecondary,
-                            ),
+                          : Chevron(_open, color: t.textSecondary),
                     ),
                     Expanded(child: widget.header),
                   ],
@@ -178,13 +195,7 @@ class ToolCallView extends StatelessWidget {
     final it = item;
     final code = theme.code(t.text, size: 12).copyWith(height: 1.2);
     final path = it.paths.firstOrNull ?? it.diffs.firstOrNull?.path;
-    final verb = switch (it.toolKind) {
-      'read' => 'Read',
-      'edit' => 'Edit',
-      'delete' => 'Delete',
-      'move' => 'Move',
-      _ => null,
-    };
+    final verb = kindOf(it).verb;
     final InlineSpan title = it.toolKind == 'execute'
         ? TextSpan(text: '\$ ${it.title}', style: code)
         : verb != null && path != null
@@ -205,12 +216,12 @@ class ToolCallView extends StatelessWidget {
     final hasBody = it.text.isNotEmpty || it.diffs.isNotEmpty;
     return _withImages(
       [if (images) ...it.images],
-      _Collapsible(
+      Collapsible(
         failed: failed,
         header: Row(
           children: [
             Icon(
-              _icons[it.toolKind] ?? Icons.build_outlined,
+              kindOf(it).icon,
               size: 13,
               color: failed ? t.crashed : t.textSecondary,
             ),
@@ -288,7 +299,7 @@ class ToolGroupView extends StatelessWidget {
     final failed = calls.where((c) => c.status == 'failed').length;
     return _withImages(
       [for (final c in calls) ...c.images],
-      _Collapsible(
+      Collapsible(
         failed: false, // its failed calls stand out inside, and in the count
         header: Row(
           children: [

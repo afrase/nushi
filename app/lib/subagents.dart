@@ -6,7 +6,7 @@ import 'gen/nushi/v1/nushi.pb.dart';
 import 'markdown.dart';
 import 'status.dart';
 import 'theme/theme.dart';
-import 'widgets.dart';
+import 'tool_calls.dart';
 
 /// A tool call that started a subagent, and what the subagent did.
 typedef SubagentRun = ({Item call, List<Item> items});
@@ -75,7 +75,6 @@ class SubagentCard extends StatefulWidget {
 }
 
 class _SubagentCardState extends State<SubagentCard> {
-  bool _open = false;
   late final Timer _tick;
 
   @override
@@ -99,92 +98,65 @@ class _SubagentCardState extends State<SubagentCard> {
     final call = s.call;
     final running = subagentRunning(s);
     final failed = call.subagent.state == 'failed';
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: box(failed ? t.crashed : t.borderSubtle),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Collapsible(
+      failed: failed,
+      header: Row(
+        spacing: 6,
         children: [
-          ColoredBox(
-            color: failed ? t.crashedSoft : t.raised,
-            child: Tap(
-              onTap: () => setState(() => _open = !_open),
-              radius: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              child: Row(
-                spacing: 6,
+          Icon(Icons.smart_toy_outlined, size: 14, color: t.textSecondary),
+          Expanded(
+            child: Text.rich(
+              TextSpan(
                 children: [
-                  Icon(
-                    _open ? Icons.expand_more : Icons.chevron_right,
-                    size: 14,
-                    color: t.textSecondary,
+                  TextSpan(
+                    text: '${call.agent}: ',
+                    style: theme.ui(t.text, weight: FontWeight.w600),
                   ),
-                  Icon(
-                    Icons.smart_toy_outlined,
-                    size: 14,
-                    color: t.textSecondary,
-                  ),
-                  Expanded(
-                    child: Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(
-                            text: '${call.agent}: ',
-                            style: theme.ui(t.text, weight: FontWeight.w600),
-                          ),
-                          TextSpan(text: call.title, style: theme.ui(t.text)),
-                        ],
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Flexible(
-                    child: Text(
-                      subagentState(s),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.ui(
-                        failed ? t.crashed : t.textMuted,
-                        size: 12,
-                      ),
-                    ),
-                  ),
-                  if (running && !widget.still)
-                    const SizedBox.square(
-                      dimension: 10,
-                      child: CircularProgressIndicator(strokeWidth: 1.5),
-                    )
-                  else if (!running && !failed)
-                    Icon(Icons.check, size: 13, color: t.done),
+                  TextSpan(text: call.title, style: theme.ui(t.text)),
                 ],
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          if (_open)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  widget.nested(_steps(s)),
-                  if (call.subagent.result case final result
-                      when !running && result.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Text(
-                      'Result',
-                      style: theme.ui(
-                        t.textSecondary,
-                        size: 12,
-                        weight: FontWeight.w600,
-                      ),
-                    ),
-                    AgentMarkdown(result),
-                  ],
-                ],
-              ),
+          Flexible(
+            child: Text(
+              subagentState(s),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.ui(failed ? t.crashed : t.textMuted, size: 12),
             ),
+          ),
+          if (running && !widget.still)
+            const SizedBox.square(
+              dimension: 10,
+              child: CircularProgressIndicator(strokeWidth: 1.5),
+            )
+          else if (!running && !failed)
+            Icon(Icons.check, size: 13, color: t.done),
         ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            widget.nested(_steps(s)),
+            if (call.subagent.result case final result
+                when !running && result.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text(
+                'Result',
+                style: theme.ui(
+                  t.textSecondary,
+                  size: 12,
+                  weight: FontWeight.w600,
+                ),
+              ),
+              AgentMarkdown(result),
+            ],
+          ],
+        ),
       ),
     );
   }

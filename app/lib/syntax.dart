@@ -9,16 +9,36 @@ import 'package:re_highlight/re_highlight.dart';
 
 import 'theme/theme.dart';
 
-/// Syntax colors for diffs: the transcript's code block colors (see
-/// `AgentMarkdown`), by capture id.
+/// The syntax colors of code, in diffs and the transcript's code blocks,
+/// by capture id: the highlight.js scopes each colors, its color, and
+/// whether it is italic.
 const syntaxCaptures = ['keyword', 'function', 'string', 'comment'];
+const _scopesOf = [
+  ['keyword', 'built_in', 'type', 'literal', 'number'],
+  ['title', 'title.function_', 'title.class_'],
+  ['string', 'regexp', 'meta-string'],
+  ['comment', 'quote'],
+];
+List<(Color, bool)> _colors(Tokens t) => [
+  (t.keyword, false),
+  (t.function, false),
+  (t.string, false),
+  (t.textMuted, true),
+];
 
-/// highlight.js scopes to capture ids, as the transcript colors them.
+/// highlight.js scopes to capture ids.
 final _captures = {
-  for (final k in ['keyword', 'built_in', 'type', 'literal', 'number']) k: 0,
-  for (final k in ['title', 'title.function_', 'title.class_']) k: 1,
-  for (final k in ['string', 'regexp', 'meta-string']) k: 2,
-  for (final k in ['comment', 'quote']) k: 3,
+  for (final (i, scopes) in _scopesOf.indexed)
+    for (final k in scopes) k: i,
+};
+
+/// highlight.js scopes to their styles, for code blocks.
+Map<String, TextStyle> highlightStyles(Tokens t) => {
+  for (final MapEntry(key: k, value: i) in _captures.entries)
+    k: TextStyle(
+      color: _colors(t)[i].$1,
+      fontStyle: _colors(t)[i].$2 ? FontStyle.italic : null,
+    ),
 };
 
 /// Past this many characters a side isn't highlighted.
@@ -182,10 +202,8 @@ DiffThemeData diffTheme(Tokens t) {
     loadingBar: d.loadingBar,
     hoverAffordance: d.hoverAffordance,
     syntax: {
-      'keyword': SyntaxStyle(t.keyword),
-      'function': SyntaxStyle(t.function),
-      'string': SyntaxStyle(t.string),
-      'comment': SyntaxStyle(t.textMuted, italic: true),
+      for (final (i, (color, italic)) in _colors(t).indexed)
+        syntaxCaptures[i]: SyntaxStyle(color, italic: italic),
     },
   );
 }

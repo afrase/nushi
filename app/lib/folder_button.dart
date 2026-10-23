@@ -25,6 +25,28 @@ String tildePath(String path) {
   return (folder.substring(slash + 1), tildePath(folder.substring(0, slash)));
 }
 
+/// The recent folders as menu entries ([skip] left out, [checked] ticked),
+/// then "Choose folder…", which picks null.
+List<MenuEntry> folderEntries(
+  Daemon daemon, {
+  required void Function(String? folder) onPick,
+  String? skip,
+  String? checked,
+}) {
+  final recent = daemon.recentFolders.where((f) => f != skip).take(8);
+  return [
+    for (final f in recent)
+      MenuEntry(
+        folderParts(f).$1,
+        detail: folderParts(f).$2,
+        checked: f == checked,
+        onPick: () => onPick(f),
+      ),
+    if (recent.isNotEmpty) MenuEntry.divider,
+    MenuEntry('Choose folder…', onPick: () => onPick(null)),
+  ];
+}
+
 /// The chat's folder (in a worktree, its repository's): its name, then its
 /// parent path, dimmed, on one line or, [stacked], on two. A click offers
 /// the recent folders and "Choose folder…", and moves the chat to the one
@@ -70,22 +92,16 @@ class FolderButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context), t = theme.t;
     final enabled = !chat.archived && !chat.busy && !chat.waiting;
-    final recent = daemon.recentFolders.where((f) => f != chat.home).take(8);
     final (name, parent) = folderParts(chat.home, scratch: chat.scratch);
     final nameStyle = theme.ui(t.text, size: 12, weight: FontWeight.w500);
     final parentStyle = theme.ui(t.textMuted, size: 11.5);
     final chevron = Icon(Icons.expand_more, size: 14, color: t.textMuted);
     return Menu(
-      entries: [
-        for (final f in recent)
-          MenuEntry(
-            folderParts(f).$1,
-            detail: folderParts(f).$2,
-            onPick: () => _move(context, f),
-          ),
-        if (recent.isNotEmpty) MenuEntry.divider,
-        MenuEntry('Choose folder…', onPick: () => _move(context, null)),
-      ],
+      entries: folderEntries(
+        daemon,
+        skip: chat.home,
+        onPick: (f) => _move(context, f),
+      ),
       builder: (context, open) => Tap(
         tooltip: chat.archived
             ? chat.home

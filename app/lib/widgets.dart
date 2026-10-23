@@ -298,3 +298,19 @@ class Segmented<T> extends StatelessWidget {
     );
   }
 }
+
+/// The chevron of something that opens: down while [open].
+class Chevron extends StatelessWidget {
+  const Chevron(this.open, {super.key, this.size = 14, this.color});
+
+  final bool open;
+  final double size;
+  final Color? color; // the muted text color if not given
+
+  @override
+  Widget build(BuildContext context) => Icon(
+    open ? Icons.expand_more : Icons.chevron_right,
+    size: size,
+    color: color ?? NushiTheme.of(context).t.textMuted,
+  );
+}

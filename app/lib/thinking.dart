@@ -35,11 +35,7 @@ class _ThoughtViewState extends State<ThoughtView> {
             mainAxisSize: MainAxisSize.min,
             spacing: 6,
             children: [
-              Icon(
-                _open ? Icons.expand_more : Icons.chevron_right,
-                size: 14,
-                color: theme.t.textMuted,
-              ),
+              Chevron(_open),
               Text(widget.live ? 'Thinking…' : 'Thought', style: style),
               if (widget.live)
                 const SizedBox.square(

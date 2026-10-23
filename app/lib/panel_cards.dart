@@ -104,11 +104,7 @@ class PanelCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 2),
-                      Icon(
-                        open ? Icons.expand_more : Icons.chevron_right,
-                        size: 15,
-                        color: t.textMuted,
-                      ),
+                      Chevron(open, size: 15),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Align(

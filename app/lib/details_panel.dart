@@ -111,25 +111,11 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
     _schedule();
     try {
       final span = await ChangeSpan.of(daemon, chat);
-      final branch = span.scope == Scope.branch;
-      final status = !span.status.git
-          ? span.status
-          : await daemon.client.getFolderStatus(
-              GetFolderStatusRequest(
-                folder: chat.folder,
-                base: branch ? span.base : null,
-              ),
-            );
-      final commits = span.scope == Scope.commits && status.git
-          ? (await daemon.client.listCommits(
-              ListCommitsRequest(folder: chat.folder, base: span.commitsBase),
-            )).commits
-          : <Commit>[];
       if (mounted) {
         setState(() {
-          _status = status;
+          _status = span.status;
           _scope = span.scope;
-          _commits = commits;
+          _commits = span.commits;
           _error = null;
         });
       }

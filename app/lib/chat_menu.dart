@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'chat.dart';
 import 'daemon.dart';
@@ -10,6 +9,7 @@ import 'terminals.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
 import 'worktree.dart';
+import 'inline_edit.dart';
 
 /// The chat's menu: Rename, Archive or Unarchive, MCP servers…, Delete….
 List<MenuEntry> chatMenu(
@@ -205,8 +205,8 @@ class _DeleteDialogState extends State<_DeleteDialog> {
   }
 }
 
-/// Renames a chat in place: Enter or leaving the box saves, Escape cancels.
-class RenameField extends StatefulWidget {
+/// Renames a chat in place (see InlineEdit); [onDone] when it's over.
+class RenameField extends StatelessWidget {
   const RenameField({
     super.key,
     required this.chat,
@@ -221,69 +221,19 @@ class RenameField extends StatefulWidget {
   final TextStyle? style;
 
   @override
-  State<RenameField> createState() => _RenameFieldState();
-}
-
-class _RenameFieldState extends State<RenameField> {
-  late final _text = TextEditingController(text: widget.chat.title);
-  final _focus = FocusNode();
-  bool _done = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _focus.addListener(() {
-      if (!_focus.hasFocus) _finish(save: true);
-    });
-    // Focusing the box puts the cursor at the end; select all after it.
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _text.selection = TextSelection(
-        baseOffset: 0,
-        extentOffset: _text.text.length,
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _text.dispose();
-    _focus.dispose();
-    super.dispose();
-  }
-
-  void _finish({required bool save}) {
-    if (_done) return;
-    _done = true;
-    final title = _text.text.trim();
-    if (save && title != widget.chat.title) {
-      tryOrShow(
-        context,
-        () => widget.daemon.client.renameChat(
-          RenameChatRequest(chatId: widget.chat.id, title: title),
-        ),
-      );
-    }
-    widget.onDone();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    return CallbackShortcuts(
-      bindings: {
-        const SingleActivator(LogicalKeyboardKey.escape): () =>
-            _finish(save: false),
-      },
-      child: TextField(
-        controller: _text,
-        focusNode: _focus,
-        autofocus: true,
-        style: widget.style ?? theme.ui(theme.t.text),
-        onSubmitted: (_) => _finish(save: true),
-        decoration: const InputDecoration(
-          contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => InlineEdit(
+    text: chat.title,
+    style: style,
+    onDone: (title) {
+      if (title != null && title != chat.title) {
+        tryOrShow(
+          context,
+          () => daemon.client.renameChat(
+            RenameChatRequest(chatId: chat.id, title: title),
+          ),
+        );
+      }
+      onDone();
+    },
+  );
 }

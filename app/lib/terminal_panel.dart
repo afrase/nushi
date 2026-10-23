@@ -103,9 +103,10 @@ class _TerminalAreaState extends State<TerminalArea> {
     if (!path.startsWith('${chat.folder}/')) return false;
     final rel = path.substring(chat.folder.length + 1);
     final span = await ChangeSpan.of(widget.daemon, chat);
-    final branch = span.scope == Scope.branch;
     final diff = await widget.daemon.client.getDiff(
-      GetDiffRequest(folder: chat.folder, base: branch ? span.base : null),
+      span.scope == Scope.commits
+          ? GetDiffRequest(folder: chat.folder)
+          : span.diff(chat.folder),
     );
     if (!mounted || !diff.files.any((f) => f.path == rel)) return false;
     if (span.scope == Scope.commits) chat.scope = Scope.uncommitted.name;
