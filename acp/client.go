@@ -25,9 +25,10 @@ type Handler interface {
 
 // Client is a connection to one agent.
 type Client struct {
-	conn    *conn
-	cmd     *exec.Cmd
-	canFork bool // initialize advertised session/fork
+	conn     *conn
+	cmd      *exec.Cmd
+	canFork  bool // initialize advertised session/fork
+	canSteer bool // and steering (see Steer)
 }
 
 // Start runs the agent command, in its own process group, and speaks ACP over
@@ -104,6 +105,11 @@ func (c *Client) Initialize(ctx context.Context, req InitializeRequest) (*Initia
 		return nil, err
 	}
 	var caps struct {
+		Meta struct {
+			Steering struct {
+				Supported bool `json:"supported"`
+			} `json:"steering"`
+		} `json:"_meta"`
 		AgentCapabilities struct {
 			SessionCapabilities struct {
 				Fork json.RawMessage `json:"fork"`
@@ -113,6 +119,7 @@ func (c *Client) Initialize(ctx context.Context, req InitializeRequest) (*Initia
 	json.Unmarshal(raw, &caps)
 	fork := caps.AgentCapabilities.SessionCapabilities.Fork
 	c.canFork = len(fork) > 0 && string(fork) != "null"
+	c.canSteer = caps.Meta.Steering.Supported
 	return &resp, nil
 }
 

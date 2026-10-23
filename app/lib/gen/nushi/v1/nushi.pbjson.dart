@@ -224,6 +224,14 @@ const GetChatResponse$json = {
       '6': '.nushi.v1.Usage',
       '10': 'usage'
     },
+    {
+      '1': 'queue',
+      '3': 8,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.ChatQueue',
+      '10': 'queue'
+    },
   ],
 };
 
@@ -234,7 +242,7 @@ final $typed_data.Uint8List getChatResponseDescriptor = $convert.base64Decode(
     'dXNoaS52MS5Db25maWdPcHRpb25SBmNvbmZpZxIsCgZzdGF0dXMYBCABKAsyFC5udXNoaS52MS'
     '5DaGF0U3RhdHVzUgZzdGF0dXMSEAoDc2VxGAUgASgDUgNzZXESLQoIY29tbWFuZHMYBiADKAsy'
     'ES5udXNoaS52MS5Db21tYW5kUghjb21tYW5kcxIlCgV1c2FnZRgHIAEoCzIPLm51c2hpLnYxLl'
-    'VzYWdlUgV1c2FnZQ==');
+    'VzYWdlUgV1c2FnZRIpCgVxdWV1ZRgIIAEoCzITLm51c2hpLnYxLkNoYXRRdWV1ZVIFcXVldWU=');
 
 @$core.Deprecated('Use usageDescriptor instead')
 const Usage$json = {
@@ -381,6 +389,8 @@ const SendPromptRequest$json = {
       '6': '.nushi.v1.ImageData',
       '10': 'images'
     },
+    {'1': 'queue', '3': 5, '4': 1, '5': 8, '10': 'queue'},
+    {'1': 'now', '3': 6, '4': 1, '5': 8, '10': 'now'},
   ],
 };
 
@@ -388,7 +398,86 @@ const SendPromptRequest$json = {
 final $typed_data.Uint8List sendPromptRequestDescriptor = $convert.base64Decode(
     'ChFTZW5kUHJvbXB0UmVxdWVzdBIXCgdjaGF0X2lkGAEgASgJUgZjaGF0SWQSEgoEdGV4dBgCIA'
     'EoCVIEdGV4dBIUCgVmaWxlcxgDIAMoCVIFZmlsZXMSKwoGaW1hZ2VzGAQgAygLMhMubnVzaGku'
-    'djEuSW1hZ2VEYXRhUgZpbWFnZXM=');
+    'djEuSW1hZ2VEYXRhUgZpbWFnZXMSFAoFcXVldWUYBSABKAhSBXF1ZXVlEhAKA25vdxgGIAEoCF'
+    'IDbm93');
+
+@$core.Deprecated('Use queuedMessageDescriptor instead')
+const QueuedMessage$json = {
+  '1': 'QueuedMessage',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'text', '3': 2, '4': 1, '5': 9, '10': 'text'},
+    {'1': 'files', '3': 3, '4': 3, '5': 9, '10': 'files'},
+    {
+      '1': 'images',
+      '3': 4,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.ImageData',
+      '10': 'images'
+    },
+  ],
+};
+
+/// Descriptor for `QueuedMessage`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List queuedMessageDescriptor = $convert.base64Decode(
+    'Cg1RdWV1ZWRNZXNzYWdlEg4KAmlkGAEgASgJUgJpZBISCgR0ZXh0GAIgASgJUgR0ZXh0EhQKBW'
+    'ZpbGVzGAMgAygJUgVmaWxlcxIrCgZpbWFnZXMYBCADKAsyEy5udXNoaS52MS5JbWFnZURhdGFS'
+    'BmltYWdlcw==');
+
+@$core.Deprecated('Use chatQueueDescriptor instead')
+const ChatQueue$json = {
+  '1': 'ChatQueue',
+  '2': [
+    {
+      '1': 'messages',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.QueuedMessage',
+      '10': 'messages'
+    },
+  ],
+};
+
+/// Descriptor for `ChatQueue`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List chatQueueDescriptor = $convert.base64Decode(
+    'CglDaGF0UXVldWUSMwoIbWVzc2FnZXMYASADKAsyFy5udXNoaS52MS5RdWV1ZWRNZXNzYWdlUg'
+    'htZXNzYWdlcw==');
+
+@$core.Deprecated('Use unqueueRequestDescriptor instead')
+const UnqueueRequest$json = {
+  '1': 'UnqueueRequest',
+  '2': [
+    {'1': 'chat_id', '3': 1, '4': 1, '5': 9, '10': 'chatId'},
+    {'1': 'id', '3': 2, '4': 1, '5': 9, '10': 'id'},
+  ],
+};
+
+/// Descriptor for `UnqueueRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List unqueueRequestDescriptor = $convert.base64Decode(
+    'Cg5VbnF1ZXVlUmVxdWVzdBIXCgdjaGF0X2lkGAEgASgJUgZjaGF0SWQSDgoCaWQYAiABKAlSAm'
+    'lk');
+
+@$core.Deprecated('Use unqueueResponseDescriptor instead')
+const UnqueueResponse$json = {
+  '1': 'UnqueueResponse',
+  '2': [
+    {
+      '1': 'message',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.QueuedMessage',
+      '10': 'message'
+    },
+  ],
+};
+
+/// Descriptor for `UnqueueResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List unqueueResponseDescriptor = $convert.base64Decode(
+    'Cg9VbnF1ZXVlUmVzcG9uc2USMQoHbWVzc2FnZRgBIAEoCzIXLm51c2hpLnYxLlF1ZXVlZE1lc3'
+    'NhZ2VSB21lc3NhZ2U=');
 
 @$core.Deprecated('Use imageDataDescriptor instead')
 const ImageData$json = {
@@ -1115,6 +1204,15 @@ const EventsResponse$json = {
       '9': 0,
       '10': 'usage'
     },
+    {
+      '1': 'queue',
+      '3': 10,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.ChatQueue',
+      '9': 0,
+      '10': 'queue'
+    },
   ],
   '8': [
     {'1': 'kind'},
@@ -1129,7 +1227,8 @@ final $typed_data.Uint8List eventsResponseDescriptor = $convert.base64Decode(
     'IULm51c2hpLnYxLkNoYXRDb25maWdIAFIGY29uZmlnEiQKBGNoYXQYBSABKAsyDi5udXNoaS52'
     'MS5DaGF0SABSBGNoYXQSNAoIY29tbWFuZHMYByABKAsyFi5udXNoaS52MS5DaGF0Q29tbWFuZH'
     'NIAFIIY29tbWFuZHMSGgoHcmVtb3ZlZBgIIAEoCEgAUgdyZW1vdmVkEicKBXVzYWdlGAkgASgL'
-    'Mg8ubnVzaGkudjEuVXNhZ2VIAFIFdXNhZ2VCBgoEa2luZA==');
+    'Mg8ubnVzaGkudjEuVXNhZ2VIAFIFdXNhZ2USKwoFcXVldWUYCiABKAsyEy5udXNoaS52MS5DaG'
+    'F0UXVldWVIAFIFcXVldWVCBgoEa2luZA==');
 
 @$core.Deprecated('Use chatConfigDescriptor instead')
 const ChatConfig$json = {
@@ -1400,6 +1499,11 @@ const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
       '3': '.nushi.v1.SendPromptResponse'
     },
     {
+      '1': 'Unqueue',
+      '2': '.nushi.v1.UnqueueRequest',
+      '3': '.nushi.v1.UnqueueResponse'
+    },
+    {
       '1': 'CancelTurn',
       '2': '.nushi.v1.CancelTurnRequest',
       '3': '.nushi.v1.CancelTurnResponse'
@@ -1510,12 +1614,16 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.ConfigValue': ConfigValue$json,
   '.nushi.v1.Command': Command$json,
   '.nushi.v1.Usage': Usage$json,
+  '.nushi.v1.ChatQueue': ChatQueue$json,
+  '.nushi.v1.QueuedMessage': QueuedMessage$json,
   '.nushi.v1.StartChatRequest': StartChatRequest$json,
   '.nushi.v1.StartChatResponse': StartChatResponse$json,
   '.nushi.v1.MoveChatRequest': MoveChatRequest$json,
   '.nushi.v1.MoveChatResponse': MoveChatResponse$json,
   '.nushi.v1.SendPromptRequest': SendPromptRequest$json,
   '.nushi.v1.SendPromptResponse': SendPromptResponse$json,
+  '.nushi.v1.UnqueueRequest': UnqueueRequest$json,
+  '.nushi.v1.UnqueueResponse': UnqueueResponse$json,
   '.nushi.v1.CancelTurnRequest': CancelTurnRequest$json,
   '.nushi.v1.CancelTurnResponse': CancelTurnResponse$json,
   '.nushi.v1.ForkChatRequest': ForkChatRequest$json,
@@ -1571,28 +1679,29 @@ final $typed_data.Uint8List nushiServiceDescriptor = $convert.base64Decode(
     'aGkudjEuU3RhcnRDaGF0UmVxdWVzdBobLm51c2hpLnYxLlN0YXJ0Q2hhdFJlc3BvbnNlEkEKCE'
     '1vdmVDaGF0EhkubnVzaGkudjEuTW92ZUNoYXRSZXF1ZXN0GhoubnVzaGkudjEuTW92ZUNoYXRS'
     'ZXNwb25zZRJHCgpTZW5kUHJvbXB0EhsubnVzaGkudjEuU2VuZFByb21wdFJlcXVlc3QaHC5udX'
-    'NoaS52MS5TZW5kUHJvbXB0UmVzcG9uc2USRwoKQ2FuY2VsVHVybhIbLm51c2hpLnYxLkNhbmNl'
-    'bFR1cm5SZXF1ZXN0GhwubnVzaGkudjEuQ2FuY2VsVHVyblJlc3BvbnNlEkEKCEZvcmtDaGF0Eh'
-    'kubnVzaGkudjEuRm9ya0NoYXRSZXF1ZXN0GhoubnVzaGkudjEuRm9ya0NoYXRSZXNwb25zZRJQ'
-    'Cg1DbG9zZVNpZGVDaGF0Eh4ubnVzaGkudjEuQ2xvc2VTaWRlQ2hhdFJlcXVlc3QaHy5udXNoaS'
-    '52MS5DbG9zZVNpZGVDaGF0UmVzcG9uc2USRwoKUmVuYW1lQ2hhdBIbLm51c2hpLnYxLlJlbmFt'
-    'ZUNoYXRSZXF1ZXN0GhwubnVzaGkudjEuUmVuYW1lQ2hhdFJlc3BvbnNlEkoKC0FyY2hpdmVDaG'
-    'F0EhwubnVzaGkudjEuQXJjaGl2ZUNoYXRSZXF1ZXN0Gh0ubnVzaGkudjEuQXJjaGl2ZUNoYXRS'
-    'ZXNwb25zZRJHCgpSZW1vdmVDaGF0EhsubnVzaGkudjEuUmVtb3ZlQ2hhdFJlcXVlc3QaHC5udX'
-    'NoaS52MS5SZW1vdmVDaGF0UmVzcG9uc2USUwoOUGxhbkRlbGV0ZUNoYXQSHy5udXNoaS52MS5Q'
-    'bGFuRGVsZXRlQ2hhdFJlcXVlc3QaIC5udXNoaS52MS5QbGFuRGVsZXRlQ2hhdFJlc3BvbnNlEk'
-    'cKCkRlbGV0ZUNoYXQSGy5udXNoaS52MS5EZWxldGVDaGF0UmVxdWVzdBocLm51c2hpLnYxLkRl'
-    'bGV0ZUNoYXRSZXNwb25zZRJZChBBbnN3ZXJQZXJtaXNzaW9uEiEubnVzaGkudjEuQW5zd2VyUG'
-    'VybWlzc2lvblJlcXVlc3QaIi5udXNoaS52MS5BbnN3ZXJQZXJtaXNzaW9uUmVzcG9uc2USUwoO'
-    'QW5zd2VyUXVlc3Rpb24SHy5udXNoaS52MS5BbnN3ZXJRdWVzdGlvblJlcXVlc3QaIC5udXNoaS'
-    '52MS5BbnN3ZXJRdWVzdGlvblJlc3BvbnNlElYKD1NldENvbmZpZ09wdGlvbhIgLm51c2hpLnYx'
-    'LlNldENvbmZpZ09wdGlvblJlcXVlc3QaIS5udXNoaS52MS5TZXRDb25maWdPcHRpb25SZXNwb2'
-    '5zZRI+CgdHZXREaWZmEhgubnVzaGkudjEuR2V0RGlmZlJlcXVlc3QaGS5udXNoaS52MS5HZXRE'
-    'aWZmUmVzcG9uc2USSgoLTGlzdENvbW1pdHMSHC5udXNoaS52MS5MaXN0Q29tbWl0c1JlcXVlc3'
-    'QaHS5udXNoaS52MS5MaXN0Q29tbWl0c1Jlc3BvbnNlElYKD0dldEZvbGRlclN0YXR1cxIgLm51'
-    'c2hpLnYxLkdldEZvbGRlclN0YXR1c1JlcXVlc3QaIS5udXNoaS52MS5HZXRGb2xkZXJTdGF0dX'
-    'NSZXNwb25zZRJECglMaXN0RmlsZXMSGi5udXNoaS52MS5MaXN0RmlsZXNSZXF1ZXN0GhsubnVz'
-    'aGkudjEuTGlzdEZpbGVzUmVzcG9uc2USVgoPR2V0Q29udGV4dFVzYWdlEiAubnVzaGkudjEuR2'
-    'V0Q29udGV4dFVzYWdlUmVxdWVzdBohLm51c2hpLnYxLkdldENvbnRleHRVc2FnZVJlc3BvbnNl'
-    'Ej0KBkV2ZW50cxIXLm51c2hpLnYxLkV2ZW50c1JlcXVlc3QaGC5udXNoaS52MS5FdmVudHNSZX'
-    'Nwb25zZTAB');
+    'NoaS52MS5TZW5kUHJvbXB0UmVzcG9uc2USPgoHVW5xdWV1ZRIYLm51c2hpLnYxLlVucXVldWVS'
+    'ZXF1ZXN0GhkubnVzaGkudjEuVW5xdWV1ZVJlc3BvbnNlEkcKCkNhbmNlbFR1cm4SGy5udXNoaS'
+    '52MS5DYW5jZWxUdXJuUmVxdWVzdBocLm51c2hpLnYxLkNhbmNlbFR1cm5SZXNwb25zZRJBCghG'
+    'b3JrQ2hhdBIZLm51c2hpLnYxLkZvcmtDaGF0UmVxdWVzdBoaLm51c2hpLnYxLkZvcmtDaGF0Um'
+    'VzcG9uc2USUAoNQ2xvc2VTaWRlQ2hhdBIeLm51c2hpLnYxLkNsb3NlU2lkZUNoYXRSZXF1ZXN0'
+    'Gh8ubnVzaGkudjEuQ2xvc2VTaWRlQ2hhdFJlc3BvbnNlEkcKClJlbmFtZUNoYXQSGy5udXNoaS'
+    '52MS5SZW5hbWVDaGF0UmVxdWVzdBocLm51c2hpLnYxLlJlbmFtZUNoYXRSZXNwb25zZRJKCgtB'
+    'cmNoaXZlQ2hhdBIcLm51c2hpLnYxLkFyY2hpdmVDaGF0UmVxdWVzdBodLm51c2hpLnYxLkFyY2'
+    'hpdmVDaGF0UmVzcG9uc2USRwoKUmVtb3ZlQ2hhdBIbLm51c2hpLnYxLlJlbW92ZUNoYXRSZXF1'
+    'ZXN0GhwubnVzaGkudjEuUmVtb3ZlQ2hhdFJlc3BvbnNlElMKDlBsYW5EZWxldGVDaGF0Eh8ubn'
+    'VzaGkudjEuUGxhbkRlbGV0ZUNoYXRSZXF1ZXN0GiAubnVzaGkudjEuUGxhbkRlbGV0ZUNoYXRS'
+    'ZXNwb25zZRJHCgpEZWxldGVDaGF0EhsubnVzaGkudjEuRGVsZXRlQ2hhdFJlcXVlc3QaHC5udX'
+    'NoaS52MS5EZWxldGVDaGF0UmVzcG9uc2USWQoQQW5zd2VyUGVybWlzc2lvbhIhLm51c2hpLnYx'
+    'LkFuc3dlclBlcm1pc3Npb25SZXF1ZXN0GiIubnVzaGkudjEuQW5zd2VyUGVybWlzc2lvblJlc3'
+    'BvbnNlElMKDkFuc3dlclF1ZXN0aW9uEh8ubnVzaGkudjEuQW5zd2VyUXVlc3Rpb25SZXF1ZXN0'
+    'GiAubnVzaGkudjEuQW5zd2VyUXVlc3Rpb25SZXNwb25zZRJWCg9TZXRDb25maWdPcHRpb24SIC'
+    '5udXNoaS52MS5TZXRDb25maWdPcHRpb25SZXF1ZXN0GiEubnVzaGkudjEuU2V0Q29uZmlnT3B0'
+    'aW9uUmVzcG9uc2USPgoHR2V0RGlmZhIYLm51c2hpLnYxLkdldERpZmZSZXF1ZXN0GhkubnVzaG'
+    'kudjEuR2V0RGlmZlJlc3BvbnNlEkoKC0xpc3RDb21taXRzEhwubnVzaGkudjEuTGlzdENvbW1p'
+    'dHNSZXF1ZXN0Gh0ubnVzaGkudjEuTGlzdENvbW1pdHNSZXNwb25zZRJWCg9HZXRGb2xkZXJTdG'
+    'F0dXMSIC5udXNoaS52MS5HZXRGb2xkZXJTdGF0dXNSZXF1ZXN0GiEubnVzaGkudjEuR2V0Rm9s'
+    'ZGVyU3RhdHVzUmVzcG9uc2USRAoJTGlzdEZpbGVzEhoubnVzaGkudjEuTGlzdEZpbGVzUmVxdW'
+    'VzdBobLm51c2hpLnYxLkxpc3RGaWxlc1Jlc3BvbnNlElYKD0dldENvbnRleHRVc2FnZRIgLm51'
+    'c2hpLnYxLkdldENvbnRleHRVc2FnZVJlcXVlc3QaIS5udXNoaS52MS5HZXRDb250ZXh0VXNhZ2'
+    'VSZXNwb25zZRI9CgZFdmVudHMSFy5udXNoaS52MS5FdmVudHNSZXF1ZXN0GhgubnVzaGkudjEu'
+    'RXZlbnRzUmVzcG9uc2UwAQ==');

@@ -18,7 +18,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 27
+const Version = 28
 
 type server struct {
 	chats *chats.Service
@@ -65,7 +65,8 @@ func (s *server) GetChat(_ context.Context, req *connect.Request[nushiv1.GetChat
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 	resp := &nushiv1.GetChatResponse{Chat: chatProto(c.Session), Config: configProto(c.Config),
-		Status: statusProto(c.Status), Seq: c.Seq, Commands: commandsProto(c.Commands), Usage: usageProto(c.Usage)}
+		Status: statusProto(c.Status), Seq: c.Seq, Commands: commandsProto(c.Commands), Usage: usageProto(c.Usage),
+		Queue: queueProto(c.Queue)}
 	for _, it := range c.Items {
 		resp.Items = append(resp.Items, itemProto(&it))
 	}
@@ -88,14 +89,46 @@ func (s *server) MoveChat(ctx context.Context, req *connect.Request[nushiv1.Move
 }
 
 func (s *server) SendPrompt(_ context.Context, req *connect.Request[nushiv1.SendPromptRequest]) (*connect.Response[nushiv1.SendPromptResponse], error) {
-	var images []model.Image
-	for _, img := range req.Msg.Images {
-		images = append(images, model.Image{MimeType: img.MimeType, Data: img.Data})
+	m := req.Msg
+	msg := model.Message{Text: m.Text, Files: m.Files}
+	for _, img := range m.Images {
+		msg.Images = append(msg.Images, model.Image{MimeType: img.MimeType, Data: img.Data})
 	}
-	if err := s.chats.Prompt(req.Msg.ChatId, req.Msg.Text, req.Msg.Files, images); err != nil {
+	how := chats.SendIdle
+	switch {
+	case m.Now:
+		how = chats.SendNow
+	case m.Queue:
+		how = chats.SendQueue
+	}
+	if err := s.chats.Prompt(m.ChatId, msg, how); err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
 	return connect.NewResponse(&nushiv1.SendPromptResponse{}), nil
+}
+
+func (s *server) Unqueue(_ context.Context, req *connect.Request[nushiv1.UnqueueRequest]) (*connect.Response[nushiv1.UnqueueResponse], error) {
+	m, err := s.chats.Unqueue(req.Msg.ChatId, req.Msg.Id)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, err)
+	}
+	return connect.NewResponse(&nushiv1.UnqueueResponse{Message: messageProto(m)}), nil
+}
+
+func queueProto(q []model.Message) *nushiv1.ChatQueue {
+	out := &nushiv1.ChatQueue{}
+	for _, m := range q {
+		out.Messages = append(out.Messages, messageProto(m))
+	}
+	return out
+}
+
+func messageProto(m model.Message) *nushiv1.QueuedMessage {
+	out := &nushiv1.QueuedMessage{Id: m.ID, Text: m.Text, Files: m.Files}
+	for _, img := range m.Images {
+		out.Images = append(out.Images, &nushiv1.ImageData{MimeType: img.MimeType, Data: img.Data})
+	}
+	return out
 }
 
 func (s *server) CancelTurn(_ context.Context, req *connect.Request[nushiv1.CancelTurnRequest]) (*connect.Response[nushiv1.CancelTurnResponse], error) {
@@ -273,6 +306,8 @@ func toProto(e model.Event) *nushiv1.EventsResponse {
 		out.Kind = &nushiv1.EventsResponse_Usage{Usage: usageProto(*e.Usage)}
 	case e.Removed:
 		out.Kind = &nushiv1.EventsResponse_Removed{Removed: true}
+	case e.Queue != nil:
+		out.Kind = &nushiv1.EventsResponse_Queue{Queue: queueProto(*e.Queue)}
 	case e.Commands != nil:
 		out.Kind = &nushiv1.EventsResponse_Commands{Commands: &nushiv1.ChatCommands{Commands: commandsProto(e.Commands)}}
 	}

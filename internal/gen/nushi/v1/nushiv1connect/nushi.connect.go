@@ -45,6 +45,8 @@ const (
 	NushiServiceMoveChatProcedure = "/nushi.v1.NushiService/MoveChat"
 	// NushiServiceSendPromptProcedure is the fully-qualified name of the NushiService's SendPrompt RPC.
 	NushiServiceSendPromptProcedure = "/nushi.v1.NushiService/SendPrompt"
+	// NushiServiceUnqueueProcedure is the fully-qualified name of the NushiService's Unqueue RPC.
+	NushiServiceUnqueueProcedure = "/nushi.v1.NushiService/Unqueue"
 	// NushiServiceCancelTurnProcedure is the fully-qualified name of the NushiService's CancelTurn RPC.
 	NushiServiceCancelTurnProcedure = "/nushi.v1.NushiService/CancelTurn"
 	// NushiServiceForkChatProcedure is the fully-qualified name of the NushiService's ForkChat RPC.
@@ -108,6 +110,9 @@ type NushiServiceClient interface {
 	MoveChat(context.Context, *connect.Request[v1.MoveChatRequest]) (*connect.Response[v1.MoveChatResponse], error)
 	// Sends a prompt; the reply arrives as events.
 	SendPrompt(context.Context, *connect.Request[v1.SendPromptRequest]) (*connect.Response[v1.SendPromptResponse], error)
+	// Takes a message out of the chat's queue before the agent gets it, and
+	// returns it (API 28). Refused once the agent has it.
+	Unqueue(context.Context, *connect.Request[v1.UnqueueRequest]) (*connect.Response[v1.UnqueueResponse], error)
 	// Stops the chat's running turn (ACP session/cancel). The turn ends with a
 	// "cancelled" notice, and prompts it was waiting on are cancelled.
 	CancelTurn(context.Context, *connect.Request[v1.CancelTurnRequest]) (*connect.Response[v1.CancelTurnResponse], error)
@@ -206,6 +211,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceSendPromptProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("SendPrompt")),
+			connect.WithClientOptions(opts...),
+		),
+		unqueue: connect.NewClient[v1.UnqueueRequest, v1.UnqueueResponse](
+			httpClient,
+			baseURL+NushiServiceUnqueueProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("Unqueue")),
 			connect.WithClientOptions(opts...),
 		),
 		cancelTurn: connect.NewClient[v1.CancelTurnRequest, v1.CancelTurnResponse](
@@ -321,6 +332,7 @@ type nushiServiceClient struct {
 	startChat        *connect.Client[v1.StartChatRequest, v1.StartChatResponse]
 	moveChat         *connect.Client[v1.MoveChatRequest, v1.MoveChatResponse]
 	sendPrompt       *connect.Client[v1.SendPromptRequest, v1.SendPromptResponse]
+	unqueue          *connect.Client[v1.UnqueueRequest, v1.UnqueueResponse]
 	cancelTurn       *connect.Client[v1.CancelTurnRequest, v1.CancelTurnResponse]
 	forkChat         *connect.Client[v1.ForkChatRequest, v1.ForkChatResponse]
 	closeSideChat    *connect.Client[v1.CloseSideChatRequest, v1.CloseSideChatResponse]
@@ -368,6 +380,11 @@ func (c *nushiServiceClient) MoveChat(ctx context.Context, req *connect.Request[
 // SendPrompt calls nushi.v1.NushiService.SendPrompt.
 func (c *nushiServiceClient) SendPrompt(ctx context.Context, req *connect.Request[v1.SendPromptRequest]) (*connect.Response[v1.SendPromptResponse], error) {
 	return c.sendPrompt.CallUnary(ctx, req)
+}
+
+// Unqueue calls nushi.v1.NushiService.Unqueue.
+func (c *nushiServiceClient) Unqueue(ctx context.Context, req *connect.Request[v1.UnqueueRequest]) (*connect.Response[v1.UnqueueResponse], error) {
+	return c.unqueue.CallUnary(ctx, req)
 }
 
 // CancelTurn calls nushi.v1.NushiService.CancelTurn.
@@ -473,6 +490,9 @@ type NushiServiceHandler interface {
 	MoveChat(context.Context, *connect.Request[v1.MoveChatRequest]) (*connect.Response[v1.MoveChatResponse], error)
 	// Sends a prompt; the reply arrives as events.
 	SendPrompt(context.Context, *connect.Request[v1.SendPromptRequest]) (*connect.Response[v1.SendPromptResponse], error)
+	// Takes a message out of the chat's queue before the agent gets it, and
+	// returns it (API 28). Refused once the agent has it.
+	Unqueue(context.Context, *connect.Request[v1.UnqueueRequest]) (*connect.Response[v1.UnqueueResponse], error)
 	// Stops the chat's running turn (ACP session/cancel). The turn ends with a
 	// "cancelled" notice, and prompts it was waiting on are cancelled.
 	CancelTurn(context.Context, *connect.Request[v1.CancelTurnRequest]) (*connect.Response[v1.CancelTurnResponse], error)
@@ -567,6 +587,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceSendPromptProcedure,
 		svc.SendPrompt,
 		connect.WithSchema(nushiServiceMethods.ByName("SendPrompt")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceUnqueueHandler := connect.NewUnaryHandler(
+		NushiServiceUnqueueProcedure,
+		svc.Unqueue,
+		connect.WithSchema(nushiServiceMethods.ByName("Unqueue")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceCancelTurnHandler := connect.NewUnaryHandler(
@@ -685,6 +711,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceMoveChatHandler.ServeHTTP(w, r)
 		case NushiServiceSendPromptProcedure:
 			nushiServiceSendPromptHandler.ServeHTTP(w, r)
+		case NushiServiceUnqueueProcedure:
+			nushiServiceUnqueueHandler.ServeHTTP(w, r)
 		case NushiServiceCancelTurnProcedure:
 			nushiServiceCancelTurnHandler.ServeHTTP(w, r)
 		case NushiServiceForkChatProcedure:
@@ -750,6 +778,10 @@ func (UnimplementedNushiServiceHandler) MoveChat(context.Context, *connect.Reque
 
 func (UnimplementedNushiServiceHandler) SendPrompt(context.Context, *connect.Request[v1.SendPromptRequest]) (*connect.Response[v1.SendPromptResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.SendPrompt is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) Unqueue(context.Context, *connect.Request[v1.UnqueueRequest]) (*connect.Response[v1.UnqueueResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.Unqueue is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) CancelTurn(context.Context, *connect.Request[v1.CancelTurnRequest]) (*connect.Response[v1.CancelTurnResponse], error) {

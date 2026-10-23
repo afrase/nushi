@@ -120,6 +120,25 @@ extension type NushiServiceClient (connect.Transport _transport) {
     );
   }
 
+  /// Takes a message out of the chat's queue before the agent gets it, and
+  /// returns it (API 28). Refused once the agent has it.
+  Future<nushiv1nushi.UnqueueResponse> unqueue(
+    nushiv1nushi.UnqueueRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.unqueue,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Stops the chat's running turn (ACP session/cancel). The turn ends with a
   /// "cancelled" notice, and prompts it was waiting on are cancelled.
   Future<nushiv1nushi.CancelTurnResponse> cancelTurn(

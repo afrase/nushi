@@ -84,7 +84,7 @@ func initialize(ctx context.Context, launch Launch, h acp.Handler) (Agent, *acp.
 
 // useLocked makes an opened session the chat's.
 func (c *chat) useLocked(o opened) {
-	c.agent, c.canFork, c.canImage, c.sid, c.config = o.agent, o.agent.CanFork(), o.images, o.sid, o.config
+	c.agent, c.canFork, c.steer, c.canImage, c.sid, c.config = o.agent, o.agent.CanFork(), o.agent.CanSteer(), o.images, o.sid, o.config
 	c.emitLocked(model.Event{ChatID: c.id, Config: slices.Clone(c.config)})
 }
 

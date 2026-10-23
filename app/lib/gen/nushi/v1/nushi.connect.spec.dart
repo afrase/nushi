@@ -62,6 +62,15 @@ abstract final class NushiService {
     nushiv1nushi.SendPromptResponse.new,
   );
 
+  /// Takes a message out of the chat's queue before the agent gets it, and
+  /// returns it (API 28). Refused once the agent has it.
+  static const unqueue = connect.Spec(
+    '/$name/Unqueue',
+    connect.StreamType.unary,
+    nushiv1nushi.UnqueueRequest.new,
+    nushiv1nushi.UnqueueResponse.new,
+  );
+
   /// Stops the chat's running turn (ACP session/cancel). The turn ends with a
   /// "cancelled" notice, and prompts it was waiting on are cancelled.
   static const cancelTurn = connect.Spec(

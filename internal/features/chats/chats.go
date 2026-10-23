@@ -4,17 +4,13 @@ package chats
 import (
 	"context"
 	"crypto/rand"
-	"encoding/base64"
-	"errors"
 	"fmt"
 	"log"
-	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
 	"slices"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -31,6 +27,8 @@ type Agent interface {
 	SetConfigOption(context.Context, acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error)
 	SetMode(context.Context, acp.SetSessionModeRequest) error
 	Cancel(acp.CancelNotification) error
+	CanSteer() bool
+	Steer(context.Context, acp.SessionID, []acp.ContentBlock) (bool, error)
 	CanFork() bool
 	ForkSession(context.Context, acp.ForkSessionRequest) (*acp.ForkSessionResponse, error)
 	CloseSession(context.Context, acp.CloseSessionRequest) error
@@ -98,6 +96,8 @@ type chat struct {
 	done      chan struct{}    // closed when the running turn ends
 	seq       int64            // the last event's number
 	silent    *silentRun       // a prompt Nushi sent on its own, running
+	queue     []model.Message  // waiting for the agent's next chance
+	steer     bool             // the agent takes messages into a running turn
 }
 
 // emitLocked numbers and publishes one of the chat's events. Holding the
@@ -123,6 +123,7 @@ func (s *Service) Get(chatID string) (model.Chat, error) {
 		Commands: slices.Clone(c.commands),
 		Usage:    c.usage,
 		Status:   c.statusLocked(),
+		Queue:    slices.Clone(c.queue),
 		Seq:      c.seq,
 	}, nil
 }
@@ -241,83 +242,6 @@ func (c *chat) storeLocked() {
 	c.emitLocked(model.Event{ChatID: c.id, Session: &sess})
 }
 
-// Prompt sends text to the chat's agent, with links to the files it
-// mentions (relative to the chat's folder) and images. The turn runs in the
-// background; its progress arrives as events.
-func (s *Service) Prompt(chatID, text string, files []string, images []model.Image) error {
-	c, err := s.chat(chatID)
-	if err != nil {
-		return err
-	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.waitSilentLocked()
-	if c.busy {
-		return errors.New("the agent is still working on the last prompt")
-	}
-	if err := folderGone(c.session); err != nil {
-		return fmt.Errorf("the chat can't go on: %w", err)
-	}
-	if len(images) > 0 && !c.canImage {
-		return errors.New("the agent doesn't take images")
-	}
-	c.busy, c.started, c.done = true, time.Now(), make(chan struct{})
-	c.addLocked(model.Item{Kind: model.UserMessage, Text: text, Images: images})
-	c.saveLocked(func(s *model.Session) {
-		if s.Title == "" {
-			s.Title = title(text)
-		}
-	})
-	c.statusChangedLocked()
-	prompt := []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: text}}}
-	for _, f := range files {
-		path := filepath.Join(c.session.Folder, f)
-		prompt = append(prompt, acp.ContentBlock{Type: "resource_link", ResourceLink: &acp.ResourceLink{
-			Name: f, URI: (&url.URL{Scheme: "file", Path: path}).String()}})
-	}
-	for _, img := range images {
-		prompt = append(prompt, acp.ContentBlock{Type: "image", Image: &acp.ImageContent{
-			MimeType: img.MimeType, Data: base64.StdEncoding.EncodeToString(img.Data)}})
-	}
-	go c.run(c.agent, acp.PromptRequest{SessionID: acp.SessionID(c.sid), Prompt: prompt})
-	return nil
-}
-
-// title makes a chat's title from its first prompt: the first line, cut short.
-func title(prompt string) string {
-	line, _, _ := strings.Cut(strings.TrimSpace(prompt), "\n")
-	if r := []rune(line); len(r) > 80 {
-		return string(r[:79]) + "…"
-	}
-	return line
-}
-
-func (c *chat) run(agent Agent, req acp.PromptRequest) {
-	resp, err := agent.Prompt(context.Background(), req)
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.busy, c.started = false, time.Time{}
-	close(c.done)
-	if err == nil && resp.Usage != nil {
-		u := resp.Usage
-		c.usage.Input, c.usage.Output, c.usage.CachedRead, c.usage.CachedWrite = u.InputTokens, u.OutputTokens, u.CachedReadTokens, u.CachedWriteTokens
-		c.usageChangedLocked()
-	}
-	switch {
-	case err != nil:
-		c.noticeLocked("error", "The turn failed: "+err.Error())
-	case resp.StopReason == "cancelled":
-		c.noticeLocked("cancelled", "Stopped")
-	case resp.StopReason == "refusal":
-		c.noticeLocked("refusal", "The agent refused to go on")
-	case resp.StopReason == "max_tokens":
-		c.noticeLocked("max_tokens", "The agent stopped: it reached its token limit")
-	case resp.StopReason == "max_turn_requests":
-		c.noticeLocked("max_turn_requests", "The agent stopped: it reached its limit of requests in one turn")
-	}
-	c.statusChangedLocked()
-}
-
 func (c *chat) usageChangedLocked() {
 	u := c.usage
 	c.emitLocked(model.Event{ChatID: c.id, Usage: &u})
@@ -349,6 +273,10 @@ func (s *Service) Cancel(chatID string) error {
 func (c *chat) cancel() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	return c.cancelLocked()
+}
+
+func (c *chat) cancelLocked() error {
 	if c.started.IsZero() || c.agent == nil {
 		return nil // no turn runs
 	}

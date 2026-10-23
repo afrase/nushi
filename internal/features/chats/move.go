@@ -96,6 +96,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 		c.noticeLocked("error", "Couldn't move the chat to "+folder+": "+err.Error())
 	}
 	c.statusChangedLocked()
+	c.deliverLocked()
 	return err
 }
 

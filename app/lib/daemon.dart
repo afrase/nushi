@@ -29,7 +29,7 @@ final String? _oldDataDir =
     : null;
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 27;
+const apiVersion = 28;
 
 /// Whether [folder] is a chat's scratch folder: the chat has no folder yet.
 bool isScratch(String folder) => folder.startsWith('$dataDir/scratch/');
@@ -95,6 +95,9 @@ class Daemon extends ChangeNotifier {
   /// Whether the daemon lists commits and finds the default branch, for
   /// the Changes view's Branch and Commits (API 27).
   bool get canCommits => daemonApi >= 27;
+
+  /// Whether the daemon queues messages sent while the agent works (API 28).
+  bool get canQueue => daemonApi >= 28;
 
   /// Whether the daemon sums up a folder's changes (API 17).
   bool get canFolderStatus => daemonApi >= 17;

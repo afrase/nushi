@@ -169,3 +169,12 @@ class PlanStatus extends StatelessWidget {
     );
   }
 }
+
+/// The plan of the current turn (since the last prompt), if any.
+Item? turnPlan(List<Item> items) {
+  for (final it in items.reversed) {
+    if (it.kind == ItemKind.ITEM_KIND_USER_MESSAGE) return null;
+    if (it.kind == ItemKind.ITEM_KIND_PLAN) return it;
+  }
+  return null;
+}

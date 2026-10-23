@@ -1,0 +1,97 @@
+package chats
+
+import (
+	"reflect"
+	"testing"
+	"time"
+
+	"github.com/afrase/nushi/acp"
+	"github.com/afrase/nushi/internal/model"
+)
+
+// eventually waits for cond, checked under the chat's lock.
+func eventually(t *testing.T, c *chat, cond func() bool) {
+	t.Helper()
+	for range 200 {
+		c.mu.Lock()
+		ok := cond()
+		c.mu.Unlock()
+		if ok {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatal("timed out")
+}
+
+func (f *fakeAgent) texts() ([]string, []string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]string(nil), f.prompts...), append([]string(nil), f.steered...)
+}
+
+func TestQueueGoesAfterTheTurnInOrder(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.gate = make(chan struct{})
+	send := func(text string, how Send) error { return svc.Prompt(c.id, model.Message{Text: text}, how) }
+	if err := send("one", SendIdle); err != nil {
+		t.Fatal(err)
+	}
+	if send("two", SendIdle) == nil {
+		t.Error("a busy chat took a prompt without queueing it")
+	}
+	for _, text := range []string{"two", "three", "four"} {
+		if err := send(text, SendQueue); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if m, err := svc.Unqueue(c.id, c.queue[1].ID); err != nil || m.Text != "three" {
+		t.Errorf("Unqueue = %+v, %v", m, err)
+	}
+	agent.release()
+	eventually(t, c, func() bool { return len(c.queue) == 1 && c.busy })
+	agent.release()
+	eventually(t, c, func() bool { return len(c.queue) == 0 && c.busy })
+	agent.release()
+	eventually(t, c, func() bool { return !c.busy })
+	if got, _ := agent.texts(); !reflect.DeepEqual(got, []string{"one", "two", "four"}) {
+		t.Errorf("prompts = %q", got)
+	}
+}
+
+func TestQueueSteersBetweenToolCalls(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.steerable, c.steer = true, true
+	agent.gate = make(chan struct{})
+	svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle)
+	svc.Prompt(c.id, model.Message{Text: "two"}, SendQueue)
+	if _, steered := agent.texts(); len(steered) != 0 {
+		t.Fatalf("steered %q before the agent's chance", steered)
+	}
+	c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call",
+		ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "ls", Status: "in_progress"}}})
+	c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call_update",
+		ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed"}}})
+	eventually(t, c, func() bool { return len(c.items) == 3 && c.items[2].Text == "two" })
+	eventually(t, c, func() bool { _, steered := agent.texts(); return reflect.DeepEqual(steered, []string{"two"}) })
+	agent.release()
+	eventually(t, c, func() bool { return !c.busy })
+}
+
+func TestSendNowStopsTheTurn(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.gate = make(chan struct{})
+	svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle)
+	svc.Prompt(c.id, model.Message{Text: "held"}, SendQueue)
+	if err := svc.Prompt(c.id, model.Message{Text: "now"}, SendNow); err != nil {
+		t.Fatal(err)
+	}
+	eventually(t, c, func() bool { return c.busy && c.items[len(c.items)-1].Text == "now" })
+	if c.items[1].Kind != model.Notice || len(c.queue) != 1 {
+		t.Errorf("items = %+v, queue = %+v", c.items, c.queue)
+	}
+	agent.release()
+	eventually(t, c, func() bool { return len(c.queue) == 0 })
+	eventually(t, c, func() bool { got, _ := agent.texts(); return reflect.DeepEqual(got, []string{"one", "now", "held"}) })
+	agent.release()
+}

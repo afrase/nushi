@@ -92,6 +92,9 @@ func (c *chat) update(n acp.SessionNotification) {
 		}
 		fromClaude(it, t.Meta, t.RawInput)
 		c.publishLocked(*it)
+		if (t.Status == "completed" || t.Status == "failed") && it.Parent == "" && !c.started.IsZero() {
+			c.deliverLocked() // between tool calls: the agent's chance to take queued messages
+		}
 	}
 }
 

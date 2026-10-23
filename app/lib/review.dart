@@ -199,7 +199,11 @@ Future<void> sendReview(
   if (send != true || !context.mounted) return;
   await tryOrShow(context, () async {
     await daemon.client.sendPrompt(
-      SendPromptRequest(chatId: chat, text: reviewMessage(unsent, note.text)),
+      SendPromptRequest(
+        chatId: chat,
+        text: reviewMessage(unsent, note.text),
+        queue: daemon.canQueue,
+      ),
     );
     for (final c in unsent) {
       c.sent = true;
