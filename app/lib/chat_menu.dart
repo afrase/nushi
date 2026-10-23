@@ -31,6 +31,10 @@ List<MenuEntry> chatMenu(
         : null,
   ),
   MenuEntry(
+    'MCP servers…',
+    onPick: daemon.canMcp ? () => daemon.showMcp(chat.folder) : null,
+  ),
+  MenuEntry(
     'Delete…',
     onPick: daemon.canDeleteChats
         ? () => showDialog<void>(

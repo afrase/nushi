@@ -69,6 +69,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.ListFilesRequest request);
   $async.Future<$0.GetContextUsageResponse> getContextUsage(
       $pb.ServerContext ctx, $0.GetContextUsageRequest request);
+  $async.Future<$0.ListMcpServersResponse> listMcpServers(
+      $pb.ServerContext ctx, $0.ListMcpServersRequest request);
   $async.Future<$0.EventsResponse> events(
       $pb.ServerContext ctx, $0.EventsRequest request);
 
@@ -122,6 +124,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.ListFilesRequest();
       case 'GetContextUsage':
         return $0.GetContextUsageRequest();
+      case 'ListMcpServers':
+        return $0.ListMcpServersRequest();
       case 'Events':
         return $0.EventsRequest();
       default:
@@ -180,6 +184,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return listFiles(ctx, request as $0.ListFilesRequest);
       case 'GetContextUsage':
         return getContextUsage(ctx, request as $0.GetContextUsageRequest);
+      case 'ListMcpServers':
+        return listMcpServers(ctx, request as $0.ListMcpServersRequest);
       case 'Events':
         return events(ctx, request as $0.EventsRequest);
       default:

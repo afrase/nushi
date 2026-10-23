@@ -79,6 +79,12 @@ service NushiService {
   // Asks the chat's agent, unseen, what fills its context (Claude's
   // /context), while the chat is idle (API 25).
   rpc GetContextUsage(GetContextUsageRequest) returns (GetContextUsageResponse);
+  // Lists the MCP servers the agent's config gives a folder, read from the
+  // agent's own files, env and header values masked. With check_health, the
+  // agent connects to each and says how that went (Claude's `claude mcp list`,
+  // seconds), and servers only it knows (plugins', claude.ai connectors)
+  // are added (API 32).
+  rpc ListMcpServers(ListMcpServersRequest) returns (ListMcpServersResponse);
   // Streams every change to every chat from now on. The first message is
   // empty: it says the subscription is live.
   rpc Events(EventsRequest) returns (stream EventsResponse);
@@ -436,6 +442,34 @@ message GetContextUsageResponse {
   repeated ContextCategory categories = 1;
   // The agent's answer as it gave it, markdown.
   string markdown = 2;
+}
+
+message ListMcpServersRequest {
+  string folder = 1;
+  bool check_health = 2;
+}
+
+message ListMcpServersResponse {
+  repeated McpServer servers = 1;
+  // Why checking failed; the servers then come unchecked.
+  string check_error = 2;
+}
+
+message McpServer {
+  string name = 1;
+  // "user", "project", "local", "plugin", "claudeai" or "other".
+  string scope = 2;
+  // The file that has it (for local scope, the project folder).
+  string source = 3;
+  // Its config as JSON ("command", "args", "env", "type", "url",
+  // "headers", ...), env and header values as "••••".
+  string config_json = 4;
+  // Once checked: "connected", "failed", "needs_auth", "pending"
+  // (approval), "disabled" or "unknown"; detail is the agent's words.
+  string state = 5;
+  string detail = 6;
+  // A server of the same name in a scope that wins hides it.
+  bool shadowed = 7;
 }
 
 message ContextCategory {

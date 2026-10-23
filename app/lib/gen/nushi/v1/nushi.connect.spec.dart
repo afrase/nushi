@@ -4,7 +4,6 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
-
 import "nushi.pb.dart" as nushiv1nushi;
 
 abstract final class NushiService {
@@ -227,6 +226,18 @@ abstract final class NushiService {
     connect.StreamType.unary,
     nushiv1nushi.GetContextUsageRequest.new,
     nushiv1nushi.GetContextUsageResponse.new,
+  );
+
+  /// Lists the MCP servers the agent's config gives a folder, read from the
+  /// agent's own files, env and header values masked. With check_health, the
+  /// agent connects to each and says how that went (Claude's `claude mcp list`,
+  /// seconds), and servers only it knows (plugins', claude.ai connectors)
+  /// are added (API 32).
+  static const listMcpServers = connect.Spec(
+    '/$name/ListMcpServers',
+    connect.StreamType.unary,
+    nushiv1nushi.ListMcpServersRequest.new,
+    nushiv1nushi.ListMcpServersResponse.new,
   );
 
   /// Streams every change to every chat from now on. The first message is

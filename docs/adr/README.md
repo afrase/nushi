@@ -20,3 +20,4 @@
 - [0018](0018-the-app-is-nushi.md) The app is Nushi
 - [0019](0019-changes-read-only-toward-git.md) The Changes view is read-only toward git
 - [0020](0020-rewind-through-a-vendor-fork.md) Rewinding forks the session at a message through a vendor extension
+- [0021](0021-claude-config-is-the-mcp-source.md) Claude's own config is the source of truth for MCP servers; Nushi changes it only through the `claude mcp` CLI

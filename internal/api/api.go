@@ -11,23 +11,25 @@ import (
 	"github.com/afrase/nushi/internal/claudecontext"
 	"github.com/afrase/nushi/internal/events"
 	"github.com/afrase/nushi/internal/features/chats"
+	"github.com/afrase/nushi/internal/features/mcp"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
 	"github.com/afrase/nushi/internal/model"
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 31
+const Version = 32
 
 type server struct {
 	chats *chats.Service
+	mcp   *mcp.Service
 	hub   *events.Hub
 }
 
 // Handler returns the API, refusing requests that don't carry token.
-func Handler(token string, chats *chats.Service, hub *events.Hub) http.Handler {
+func Handler(token string, chats *chats.Service, mcp *mcp.Service, hub *events.Hub) http.Handler {
 	mux := http.NewServeMux()
-	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{chats: chats, hub: hub}))
+	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{chats: chats, mcp: mcp, hub: hub}))
 	want := []byte("Bearer " + token)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if subtle.ConstantTimeCompare([]byte(r.Header.Get("Authorization")), want) != 1 {

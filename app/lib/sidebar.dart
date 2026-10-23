@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -125,8 +127,45 @@ class _SidebarState extends State<Sidebar> {
               ],
             ),
           ),
+          if (widget.daemon.canMcp) _McpButton(widget.daemon),
           if (widget.daemon.daemonApi < apiVersion) _Outdated(widget.daemon),
         ],
+      ),
+    );
+  }
+}
+
+/// The footer's way into the MCP servers view, for the open chat's folder
+/// (else the home folder).
+class _McpButton extends StatelessWidget {
+  const _McpButton(this.daemon);
+
+  final Daemon daemon;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context), t = theme.t;
+    final open = daemon.mcpFolder != null;
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: t.borderSubtle)),
+      ),
+      child: Tap(
+        selected: open,
+        onTap: () => daemon.showMcp(
+          open
+              ? null
+              : daemon.selected?.folder ?? Platform.environment['HOME']!,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        child: Row(
+          children: [
+            Icon(Icons.hub_outlined, size: 14, color: t.textSecondary),
+            const SizedBox(width: 8),
+            Text('MCP servers', style: theme.ui(t.textSecondary, size: 12)),
+          ],
+        ),
       ),
     );
   }

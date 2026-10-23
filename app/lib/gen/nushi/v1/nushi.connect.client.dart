@@ -4,11 +4,10 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
-
 import "nushi.pb.dart" as nushiv1nushi;
 import "nushi.connect.spec.dart" as specs;
 
-extension type NushiServiceClient(connect.Transport _transport) {
+extension type NushiServiceClient (connect.Transport _transport) {
   Future<nushiv1nushi.PingResponse> ping(
     nushiv1nushi.PingRequest input, {
     connect.Headers? headers,
@@ -459,6 +458,28 @@ extension type NushiServiceClient(connect.Transport _transport) {
   }) {
     return connect.Client(_transport).unary(
       specs.NushiService.getContextUsage,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Lists the MCP servers the agent's config gives a folder, read from the
+  /// agent's own files, env and header values masked. With check_health, the
+  /// agent connects to each and says how that went (Claude's `claude mcp list`,
+  /// seconds), and servers only it knows (plugins', claude.ai connectors)
+  /// are added (API 32).
+  Future<nushiv1nushi.ListMcpServersResponse> listMcpServers(
+    nushiv1nushi.ListMcpServersRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.listMcpServers,
       input,
       signal: signal,
       headers: headers,

@@ -10,6 +10,7 @@ import 'gen/nushi/v1/nushi.pb.dart';
 import 'panel_cards.dart';
 import 'settings.dart';
 import 'markdown.dart';
+import 'mcp_card.dart';
 import 'agents_card.dart';
 import 'theme/theme.dart';
 import 'usage.dart';
@@ -286,6 +287,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
         ],
       ),
       ?agentsCard(chat),
+      ?mcpCard(chat, daemon),
     ]);
   }
 }
