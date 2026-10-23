@@ -3594,6 +3594,8 @@ class GetFolderStatusResponse extends $pb.GeneratedMessage {
     $core.int? added,
     $core.int? removed,
     $core.bool? gone,
+    $core.String? defaultBase,
+    $core.int? ahead,
   }) {
     final result = GetFolderStatusResponse._();
     if (git != null) result.git = git;
@@ -3602,6 +3604,8 @@ class GetFolderStatusResponse extends $pb.GeneratedMessage {
     if (added != null) result.added = added;
     if (removed != null) result.removed = removed;
     if (gone != null) result.gone = gone;
+    if (defaultBase != null) result.defaultBase = defaultBase;
+    if (ahead != null) result.ahead = ahead;
     return result;
   }
 
@@ -3624,6 +3628,8 @@ class GetFolderStatusResponse extends $pb.GeneratedMessage {
     ..aI(4, _omitFieldNames ? '' : 'added')
     ..aI(5, _omitFieldNames ? '' : 'removed')
     ..aOB(6, _omitFieldNames ? '' : 'gone')
+    ..aOS(7, _omitFieldNames ? '' : 'defaultBase')
+    ..aI(8, _omitFieldNames ? '' : 'ahead')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -3707,16 +3713,42 @@ class GetFolderStatusResponse extends $pb.GeneratedMessage {
   $core.bool hasGone() => $_has(5);
   @$pb.TagNumber(6)
   void clearGone() => $_clearField(6);
+
+  /// The branch a branch is counted from when the chat has no base of its
+  /// own: origin/HEAD's branch, else main or master; "" if none (API 27).
+  @$pb.TagNumber(7)
+  $core.String get defaultBase => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set defaultBase($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasDefaultBase() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearDefaultBase() => $_clearField(7);
+
+  /// The commits HEAD has that the base (or else default_base) lacks
+  /// (API 27).
+  @$pb.TagNumber(8)
+  $core.int get ahead => $_getIZ(7);
+  @$pb.TagNumber(8)
+  set ahead($core.int value) => $_setSignedInt32(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasAhead() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearAhead() => $_clearField(8);
 }
 
 class GetDiffRequest extends $pb.GeneratedMessage {
   factory GetDiffRequest({
     $core.String? folder,
     $core.String? base,
+    $core.String? commit,
+    $core.String? since,
   }) {
     final result = GetDiffRequest._();
     if (folder != null) result.folder = folder;
     if (base != null) result.base = base;
+    if (commit != null) result.commit = commit;
+    if (since != null) result.since = since;
     return result;
   }
 
@@ -3735,6 +3767,8 @@ class GetDiffRequest extends $pb.GeneratedMessage {
       createEmptyInstance: GetDiffRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'folder')
     ..aOS(2, _omitFieldNames ? '' : 'base')
+    ..aOS(3, _omitFieldNames ? '' : 'commit')
+    ..aOS(4, _omitFieldNames ? '' : 'since')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -3780,6 +3814,27 @@ class GetDiffRequest extends $pb.GeneratedMessage {
   $core.bool hasBase() => $_has(1);
   @$pb.TagNumber(2)
   void clearBase() => $_clearField(2);
+
+  /// A commit: what it changed, from its first parent, instead (API 27).
+  @$pb.TagNumber(3)
+  $core.String get commit => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set commit($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasCommit() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearCommit() => $_clearField(3);
+
+  /// With commit, an older commit: what the commits from it to commit
+  /// changed, it included (API 27).
+  @$pb.TagNumber(4)
+  $core.String get since => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set since($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasSince() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearSince() => $_clearField(4);
 }
 
 class GetDiffResponse extends $pb.GeneratedMessage {
@@ -3979,6 +4034,246 @@ class FileChange extends $pb.GeneratedMessage {
   $core.bool hasRemoved() => $_has(7);
   @$pb.TagNumber(8)
   void clearRemoved() => $_clearField(8);
+}
+
+class ListCommitsRequest extends $pb.GeneratedMessage {
+  factory ListCommitsRequest({
+    $core.String? folder,
+    $core.String? base,
+  }) {
+    final result = ListCommitsRequest._();
+    if (folder != null) result.folder = folder;
+    if (base != null) result.base = base;
+    return result;
+  }
+
+  ListCommitsRequest._();
+
+  factory ListCommitsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListCommitsRequest()..mergeFromBuffer(data, registry);
+  factory ListCommitsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListCommitsRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListCommitsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListCommitsRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'folder')
+    ..aOS(2, _omitFieldNames ? '' : 'base')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListCommitsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListCommitsRequest copyWith(void Function(ListCommitsRequest) updates) =>
+      super.copyWith((message) => updates(message as ListCommitsRequest))
+          as ListCommitsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ListCommitsRequest() / ListCommitsRequest.new instead')
+  static ListCommitsRequest create() => ListCommitsRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ListCommitsRequest._();
+  @$core.override
+  ListCommitsRequest createEmptyInstance() => ListCommitsRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ListCommitsRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListCommitsRequest>(
+          ListCommitsRequest.$_createMessage);
+  static ListCommitsRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get folder => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set folder($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasFolder() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearFolder() => $_clearField(1);
+
+  /// HEAD's commits that base lacks (up to 500); without one the last 50.
+  @$pb.TagNumber(2)
+  $core.String get base => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set base($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasBase() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearBase() => $_clearField(2);
+}
+
+class ListCommitsResponse extends $pb.GeneratedMessage {
+  factory ListCommitsResponse({
+    $core.Iterable<Commit>? commits,
+  }) {
+    final result = ListCommitsResponse._();
+    if (commits != null) result.commits.addAll(commits);
+    return result;
+  }
+
+  ListCommitsResponse._();
+
+  factory ListCommitsResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListCommitsResponse()..mergeFromBuffer(data, registry);
+  factory ListCommitsResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListCommitsResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListCommitsResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListCommitsResponse.$_createMessage)
+    ..pPM<Commit>(1, _omitFieldNames ? '' : 'commits',
+        subBuilder: Commit.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListCommitsResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListCommitsResponse copyWith(void Function(ListCommitsResponse) updates) =>
+      super.copyWith((message) => updates(message as ListCommitsResponse))
+          as ListCommitsResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use ListCommitsResponse() / ListCommitsResponse.new instead')
+  static ListCommitsResponse create() => ListCommitsResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ListCommitsResponse._();
+  @$core.override
+  ListCommitsResponse createEmptyInstance() => ListCommitsResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ListCommitsResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListCommitsResponse>(
+          ListCommitsResponse.$_createMessage);
+  static ListCommitsResponse? _defaultInstance;
+
+  /// Newest first.
+  @$pb.TagNumber(1)
+  $pb.PbList<Commit> get commits => $_getList(0);
+}
+
+class Commit extends $pb.GeneratedMessage {
+  factory Commit({
+    $core.String? hash,
+    $core.String? short,
+    $core.String? subject,
+    $fixnum.Int64? unixSeconds,
+    $core.int? added,
+    $core.int? removed,
+  }) {
+    final result = Commit._();
+    if (hash != null) result.hash = hash;
+    if (short != null) result.short = short;
+    if (subject != null) result.subject = subject;
+    if (unixSeconds != null) result.unixSeconds = unixSeconds;
+    if (added != null) result.added = added;
+    if (removed != null) result.removed = removed;
+    return result;
+  }
+
+  Commit._();
+
+  factory Commit.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Commit()..mergeFromBuffer(data, registry);
+  factory Commit.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Commit()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'Commit',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: Commit.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'hash')
+    ..aOS(2, _omitFieldNames ? '' : 'short')
+    ..aOS(3, _omitFieldNames ? '' : 'subject')
+    ..aInt64(4, _omitFieldNames ? '' : 'unixSeconds')
+    ..aI(5, _omitFieldNames ? '' : 'added')
+    ..aI(6, _omitFieldNames ? '' : 'removed')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Commit clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Commit copyWith(void Function(Commit) updates) =>
+      super.copyWith((message) => updates(message as Commit)) as Commit;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use Commit() / Commit.new instead')
+  static Commit create() => Commit._();
+  static $pb.GeneratedMessage $_createMessage() => Commit._();
+  @$core.override
+  Commit createEmptyInstance() => Commit._();
+  @$core.pragma('dart2js:noInline')
+  static Commit getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<Commit>(Commit.$_createMessage);
+  static Commit? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get hash => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set hash($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasHash() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearHash() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get short => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set short($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasShort() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearShort() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get subject => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set subject($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasSubject() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearSubject() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $fixnum.Int64 get unixSeconds => $_getI64(3);
+  @$pb.TagNumber(4)
+  set unixSeconds($fixnum.Int64 value) => $_setInt64(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasUnixSeconds() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearUnixSeconds() => $_clearField(4);
+
+  /// Lines added and removed in the folder.
+  @$pb.TagNumber(5)
+  $core.int get added => $_getIZ(4);
+  @$pb.TagNumber(5)
+  set added($core.int value) => $_setSignedInt32(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasAdded() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearAdded() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.int get removed => $_getIZ(5);
+  @$pb.TagNumber(6)
+  set removed($core.int value) => $_setSignedInt32(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasRemoved() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearRemoved() => $_clearField(6);
 }
 
 class EventsRequest extends $pb.GeneratedMessage {
@@ -5325,11 +5620,18 @@ class NushiServiceApi {
           'SetConfigOption', request, SetConfigOptionResponse());
 
   /// Returns a folder's uncommitted changes against HEAD, untracked files
-  /// included, or everything since its branch left a base.
+  /// included, or everything since its branch left a base, or what commits
+  /// changed.
   $async.Future<GetDiffResponse> getDiff(
           $pb.ClientContext? ctx, GetDiffRequest request) =>
       _client.invoke<GetDiffResponse>(
           ctx, 'NushiService', 'GetDiff', request, GetDiffResponse());
+
+  /// Lists a branch's commits since a base, or the last ones (API 27).
+  $async.Future<ListCommitsResponse> listCommits(
+          $pb.ClientContext? ctx, ListCommitsRequest request) =>
+      _client.invoke<ListCommitsResponse>(
+          ctx, 'NushiService', 'ListCommits', request, ListCommitsResponse());
 
   /// Sums up a folder's changes (as GetDiff lists them) and names its
   /// branch.

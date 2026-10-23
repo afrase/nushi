@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'changes_view.dart';
+import 'diff_box.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'markdown.dart';
 import 'theme/theme.dart';

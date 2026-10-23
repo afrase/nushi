@@ -162,12 +162,21 @@ abstract final class NushiService {
   );
 
   /// Returns a folder's uncommitted changes against HEAD, untracked files
-  /// included, or everything since its branch left a base.
+  /// included, or everything since its branch left a base, or what commits
+  /// changed.
   static const getDiff = connect.Spec(
     '/$name/GetDiff',
     connect.StreamType.unary,
     nushiv1nushi.GetDiffRequest.new,
     nushiv1nushi.GetDiffResponse.new,
+  );
+
+  /// Lists a branch's commits since a base, or the last ones (API 27).
+  static const listCommits = connect.Spec(
+    '/$name/ListCommits',
+    connect.StreamType.unary,
+    nushiv1nushi.ListCommitsRequest.new,
+    nushiv1nushi.ListCommitsResponse.new,
   );
 
   /// Sums up a folder's changes (as GetDiff lists them) and names its

@@ -922,6 +922,8 @@ const GetFolderStatusResponse$json = {
     {'1': 'added', '3': 4, '4': 1, '5': 5, '10': 'added'},
     {'1': 'removed', '3': 5, '4': 1, '5': 5, '10': 'removed'},
     {'1': 'gone', '3': 6, '4': 1, '5': 8, '10': 'gone'},
+    {'1': 'default_base', '3': 7, '4': 1, '5': 9, '10': 'defaultBase'},
+    {'1': 'ahead', '3': 8, '4': 1, '5': 5, '10': 'ahead'},
   ],
 };
 
@@ -929,7 +931,8 @@ const GetFolderStatusResponse$json = {
 final $typed_data.Uint8List getFolderStatusResponseDescriptor = $convert.base64Decode(
     'ChdHZXRGb2xkZXJTdGF0dXNSZXNwb25zZRIQCgNnaXQYASABKAhSA2dpdBIWCgZicmFuY2gYAi'
     'ABKAlSBmJyYW5jaBIUCgVmaWxlcxgDIAEoBVIFZmlsZXMSFAoFYWRkZWQYBCABKAVSBWFkZGVk'
-    'EhgKB3JlbW92ZWQYBSABKAVSB3JlbW92ZWQSEgoEZ29uZRgGIAEoCFIEZ29uZQ==');
+    'EhgKB3JlbW92ZWQYBSABKAVSB3JlbW92ZWQSEgoEZ29uZRgGIAEoCFIEZ29uZRIhCgxkZWZhdW'
+    'x0X2Jhc2UYByABKAlSC2RlZmF1bHRCYXNlEhQKBWFoZWFkGAggASgFUgVhaGVhZA==');
 
 @$core.Deprecated('Use getDiffRequestDescriptor instead')
 const GetDiffRequest$json = {
@@ -937,13 +940,15 @@ const GetDiffRequest$json = {
   '2': [
     {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
     {'1': 'base', '3': 2, '4': 1, '5': 9, '10': 'base'},
+    {'1': 'commit', '3': 3, '4': 1, '5': 9, '10': 'commit'},
+    {'1': 'since', '3': 4, '4': 1, '5': 9, '10': 'since'},
   ],
 };
 
 /// Descriptor for `GetDiffRequest`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List getDiffRequestDescriptor = $convert.base64Decode(
     'Cg5HZXREaWZmUmVxdWVzdBIWCgZmb2xkZXIYASABKAlSBmZvbGRlchISCgRiYXNlGAIgASgJUg'
-    'RiYXNl');
+    'RiYXNlEhYKBmNvbW1pdBgDIAEoCVIGY29tbWl0EhQKBXNpbmNlGAQgASgJUgVzaW5jZQ==');
 
 @$core.Deprecated('Use getDiffResponseDescriptor instead')
 const GetDiffResponse$json = {
@@ -986,6 +991,59 @@ final $typed_data.Uint8List fileChangeDescriptor = $convert.base64Decode(
     'MSGQoIb2xkX3RleHQYAyABKAlSB29sZFRleHQSGQoIbmV3X3RleHQYBCABKAlSB25ld1RleHQS'
     'GAoHc2tpcHBlZBgFIAEoCVIHc2tpcHBlZBIZCghvbGRfcGF0aBgGIAEoCVIHb2xkUGF0aBIUCg'
     'VhZGRlZBgHIAEoBVIFYWRkZWQSGAoHcmVtb3ZlZBgIIAEoBVIHcmVtb3ZlZA==');
+
+@$core.Deprecated('Use listCommitsRequestDescriptor instead')
+const ListCommitsRequest$json = {
+  '1': 'ListCommitsRequest',
+  '2': [
+    {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
+    {'1': 'base', '3': 2, '4': 1, '5': 9, '10': 'base'},
+  ],
+};
+
+/// Descriptor for `ListCommitsRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listCommitsRequestDescriptor = $convert.base64Decode(
+    'ChJMaXN0Q29tbWl0c1JlcXVlc3QSFgoGZm9sZGVyGAEgASgJUgZmb2xkZXISEgoEYmFzZRgCIA'
+    'EoCVIEYmFzZQ==');
+
+@$core.Deprecated('Use listCommitsResponseDescriptor instead')
+const ListCommitsResponse$json = {
+  '1': 'ListCommitsResponse',
+  '2': [
+    {
+      '1': 'commits',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.Commit',
+      '10': 'commits'
+    },
+  ],
+};
+
+/// Descriptor for `ListCommitsResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listCommitsResponseDescriptor = $convert.base64Decode(
+    'ChNMaXN0Q29tbWl0c1Jlc3BvbnNlEioKB2NvbW1pdHMYASADKAsyEC5udXNoaS52MS5Db21taX'
+    'RSB2NvbW1pdHM=');
+
+@$core.Deprecated('Use commitDescriptor instead')
+const Commit$json = {
+  '1': 'Commit',
+  '2': [
+    {'1': 'hash', '3': 1, '4': 1, '5': 9, '10': 'hash'},
+    {'1': 'short', '3': 2, '4': 1, '5': 9, '10': 'short'},
+    {'1': 'subject', '3': 3, '4': 1, '5': 9, '10': 'subject'},
+    {'1': 'unix_seconds', '3': 4, '4': 1, '5': 3, '10': 'unixSeconds'},
+    {'1': 'added', '3': 5, '4': 1, '5': 5, '10': 'added'},
+    {'1': 'removed', '3': 6, '4': 1, '5': 5, '10': 'removed'},
+  ],
+};
+
+/// Descriptor for `Commit`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List commitDescriptor = $convert.base64Decode(
+    'CgZDb21taXQSEgoEaGFzaBgBIAEoCVIEaGFzaBIUCgVzaG9ydBgCIAEoCVIFc2hvcnQSGAoHc3'
+    'ViamVjdBgDIAEoCVIHc3ViamVjdBIhCgx1bml4X3NlY29uZHMYBCABKANSC3VuaXhTZWNvbmRz'
+    'EhQKBWFkZGVkGAUgASgFUgVhZGRlZBIYCgdyZW1vdmVkGAYgASgFUgdyZW1vdmVk');
 
 @$core.Deprecated('Use eventsRequestDescriptor instead')
 const EventsRequest$json = {
@@ -1402,6 +1460,11 @@ const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
       '3': '.nushi.v1.GetDiffResponse'
     },
     {
+      '1': 'ListCommits',
+      '2': '.nushi.v1.ListCommitsRequest',
+      '3': '.nushi.v1.ListCommitsResponse'
+    },
+    {
       '1': 'GetFolderStatus',
       '2': '.nushi.v1.GetFolderStatusRequest',
       '3': '.nushi.v1.GetFolderStatusResponse'
@@ -1482,6 +1545,9 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.SetConfigOptionResponse': SetConfigOptionResponse$json,
   '.nushi.v1.GetDiffRequest': GetDiffRequest$json,
   '.nushi.v1.GetDiffResponse': GetDiffResponse$json,
+  '.nushi.v1.ListCommitsRequest': ListCommitsRequest$json,
+  '.nushi.v1.ListCommitsResponse': ListCommitsResponse$json,
+  '.nushi.v1.Commit': Commit$json,
   '.nushi.v1.GetFolderStatusRequest': GetFolderStatusRequest$json,
   '.nushi.v1.GetFolderStatusResponse': GetFolderStatusResponse$json,
   '.nushi.v1.ListFilesRequest': ListFilesRequest$json,
@@ -1522,9 +1588,11 @@ final $typed_data.Uint8List nushiServiceDescriptor = $convert.base64Decode(
     '52MS5BbnN3ZXJRdWVzdGlvblJlc3BvbnNlElYKD1NldENvbmZpZ09wdGlvbhIgLm51c2hpLnYx'
     'LlNldENvbmZpZ09wdGlvblJlcXVlc3QaIS5udXNoaS52MS5TZXRDb25maWdPcHRpb25SZXNwb2'
     '5zZRI+CgdHZXREaWZmEhgubnVzaGkudjEuR2V0RGlmZlJlcXVlc3QaGS5udXNoaS52MS5HZXRE'
-    'aWZmUmVzcG9uc2USVgoPR2V0Rm9sZGVyU3RhdHVzEiAubnVzaGkudjEuR2V0Rm9sZGVyU3RhdH'
-    'VzUmVxdWVzdBohLm51c2hpLnYxLkdldEZvbGRlclN0YXR1c1Jlc3BvbnNlEkQKCUxpc3RGaWxl'
-    'cxIaLm51c2hpLnYxLkxpc3RGaWxlc1JlcXVlc3QaGy5udXNoaS52MS5MaXN0RmlsZXNSZXNwb2'
-    '5zZRJWCg9HZXRDb250ZXh0VXNhZ2USIC5udXNoaS52MS5HZXRDb250ZXh0VXNhZ2VSZXF1ZXN0'
-    'GiEubnVzaGkudjEuR2V0Q29udGV4dFVzYWdlUmVzcG9uc2USPQoGRXZlbnRzEhcubnVzaGkudj'
-    'EuRXZlbnRzUmVxdWVzdBoYLm51c2hpLnYxLkV2ZW50c1Jlc3BvbnNlMAE=');
+    'aWZmUmVzcG9uc2USSgoLTGlzdENvbW1pdHMSHC5udXNoaS52MS5MaXN0Q29tbWl0c1JlcXVlc3'
+    'QaHS5udXNoaS52MS5MaXN0Q29tbWl0c1Jlc3BvbnNlElYKD0dldEZvbGRlclN0YXR1cxIgLm51'
+    'c2hpLnYxLkdldEZvbGRlclN0YXR1c1JlcXVlc3QaIS5udXNoaS52MS5HZXRGb2xkZXJTdGF0dX'
+    'NSZXNwb25zZRJECglMaXN0RmlsZXMSGi5udXNoaS52MS5MaXN0RmlsZXNSZXF1ZXN0GhsubnVz'
+    'aGkudjEuTGlzdEZpbGVzUmVzcG9uc2USVgoPR2V0Q29udGV4dFVzYWdlEiAubnVzaGkudjEuR2'
+    'V0Q29udGV4dFVzYWdlUmVxdWVzdBohLm51c2hpLnYxLkdldENvbnRleHRVc2FnZVJlc3BvbnNl'
+    'Ej0KBkV2ZW50cxIXLm51c2hpLnYxLkV2ZW50c1JlcXVlc3QaGC5udXNoaS52MS5FdmVudHNSZX'
+    'Nwb25zZTAB');

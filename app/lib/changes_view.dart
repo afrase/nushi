@@ -1,10 +1,12 @@
 import 'dart:math';
 
-import 'package:diff_view/diff_view.dart';
 import 'package:flutter/material.dart';
 
+import 'changes_span.dart';
 import 'chat.dart';
+import 'commits.dart';
 import 'daemon.dart';
+import 'diff_box.dart';
 import 'file_tree.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'panes.dart';
@@ -12,10 +14,9 @@ import 'settings.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
 
-/// The chat folder's uncommitted changes, or for a worktree chat a choice
-/// of those and the branch's (everything since it left its base): a list of
-/// files, and the picked one side by side. It reloads when the agent
-/// finishes a turn.
+/// The chat folder's changes in a [Scope]: a toolbar, the changed files
+/// (under the branch's commits in Commits) and the picked one side by
+/// side. It reloads when the agent finishes a turn.
 class ChangesView extends StatefulWidget {
   const ChangesView({super.key, required this.chat, required this.daemon});
 
@@ -26,72 +27,96 @@ class ChangesView extends StatefulWidget {
   State<ChangesView> createState() => _ChangesViewState();
 }
 
-/// Reloads (`reload`) a chat's changes when its turn ends, it moves, or
-/// the base they are counted from changes.
-mixin FollowsChanges<T extends StatefulWidget> on State<T> {
-  ChatState get chat;
-  Daemon get daemon;
-  late String base = daemon.diffBase(chat);
-  late String _folder = chat.folder;
-  bool _wasBusy = false;
-
-  Future<void> reload();
-
-  @override
-  void initState() {
-    super.initState();
-    chat.addListener(_changed);
-    reload();
-  }
-
-  @override
-  void dispose() {
-    chat.removeListener(_changed);
-    super.dispose();
-  }
-
-  void _changed() {
-    final b = daemon.diffBase(chat);
-    if (_wasBusy && !chat.busy || _folder != chat.folder || base != b) {
-      _folder = chat.folder;
-      base = b;
-      reload();
-    }
-    _wasBusy = chat.busy;
-  }
-}
-
 class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   @override
   ChatState get chat => widget.chat;
   @override
   Daemon get daemon => widget.daemon;
+  ChangeSpan? _span;
   List<FileChange> _files = [];
+  List<Commit> _commits = [];
+  String? _first,
+      _last; // the commits picked (hashes), a click and a shift-click
   String? _error;
   bool _loading = false;
   String? _path; // the file shown
+
+  /// The commits picked, as indices: newest, oldest.
+  (int, int)? get _picked {
+    final i = _commits.indexWhere((c) => c.hash == _first);
+    final j = _commits.indexWhere((c) => c.hash == (_last ?? _first));
+    return i < 0 || j < 0 ? null : (min(i, j), max(i, j));
+  }
 
   @override
   Future<void> reload() async {
     setState(() => _loading = true);
     try {
-      final resp = await daemon.client.getDiff(
-        GetDiffRequest(folder: chat.folder, base: base),
-      );
-      if (!mounted) return;
-      _files = resp.files;
+      final span = await ChangeSpan.of(daemon, chat);
+      final status = span.status;
+      if (!status.git) {
+        throw status.gone ? 'The folder is gone.' : 'Not a git repository.';
+      }
+      _span = span;
+      _commits = [];
+      if (span.scope == Scope.commits) {
+        _commits = (await daemon.client.listCommits(
+          ListCommitsRequest(folder: chat.folder, base: span.commitsBase),
+        )).commits;
+        if (_picked == null) {
+          _first = _commits.firstOrNull?.hash;
+          _last = null;
+        }
+      }
+      await _diff();
       _error = null;
+    } on Object catch (e) {
+      if (mounted) setState(() => _error = '$e');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// Reads the files of the scope (in Commits, of the commits picked).
+  Future<void> _diff() async {
+    final span = _span!;
+    final picked = _picked;
+    final GetDiffRequest req = switch (span.scope) {
+      Scope.uncommitted => GetDiffRequest(folder: chat.folder),
+      Scope.branch => GetDiffRequest(folder: chat.folder, base: span.base),
+      Scope.commits => GetDiffRequest(
+        folder: chat.folder,
+        commit: picked == null ? null : _commits[picked.$1].hash,
+        since: picked == null || picked.$1 == picked.$2
+            ? null
+            : _commits[picked.$2].hash,
+      ),
+    };
+    final files = span.scope == Scope.commits && picked == null
+        ? <FileChange>[]
+        : (await daemon.client.getDiff(req)).files;
+    if (!mounted) return;
+    setState(() {
+      _files = files;
       if (!_files.any((f) => f.path == _path)) {
         _path = changeRows(
           _files,
           flat: changesFlat.value,
         ).where((r) => r.file != null).firstOrNull?.path;
       }
-    } on Object catch (e) {
-      if (mounted) setState(() => _error = '$e');
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
+    });
+  }
+
+  void _pick(int i, {required bool extend}) {
+    setState(() {
+      if (extend && _first != null) {
+        _last = _commits[i].hash;
+      } else {
+        _first = _commits[i].hash;
+        _last = null;
+      }
+    });
+    tryOrShow(context, _diff);
   }
 
   @override
@@ -110,166 +135,139 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
       );
     }
     final file = _files.where((f) => f.path == _path).firstOrNull;
-    return LayoutBuilder(
-      builder: (context, box) => Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Resizable(
-            name: 'files',
-            initial: 240,
-            min: 180,
-            max: min(560, box.maxWidth - 360),
-            child: ColoredBox(
-              color: t.raised,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (chat.worktree != null && daemon.canBranchDiff)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-                      child: Segmented(
-                        value: chat.branchDiff,
-                        segments: const [
-                          (true, 'Branch'),
-                          (false, 'Uncommitted'),
-                        ],
-                        onChanged: (v) => chat.branchDiff = v,
-                      ),
-                    ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
-                    child: Row(
+    final commits = _span?.scope == Scope.commits;
+    final empty = _loading
+        ? ''
+        : commits && _commits.isEmpty
+        ? 'No commits of its own yet'
+        : _files.isEmpty
+        ? 'No changes'
+        : '';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _toolbar(),
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, box) => Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Resizable(
+                  name: 'files',
+                  initial: 240,
+                  min: 180,
+                  max: min(560, box.maxWidth - 360),
+                  child: ColoredBox(
+                    color: t.raised,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          _files.isEmpty && !_loading
-                              ? 'No changes'
-                              : '${_files.length} file${_files.length == 1 ? '' : 's'}',
-                          style: theme.ui(t.textSecondary, size: 12),
-                        ),
+                        if (commits && _commits.isNotEmpty)
+                          Container(
+                            height: min(
+                              _commits.length * CommitList.rowHeight + 8,
+                              box.maxHeight * 0.45,
+                            ),
+                            padding: const EdgeInsets.only(top: 4),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(color: t.borderSubtle),
+                              ),
+                            ),
+                            child: CommitList(
+                              commits: _commits,
+                              picked: _picked,
+                              onPick: _pick,
+                            ),
+                          ),
+                        if (empty.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Text(empty, style: theme.ui(t.textMuted)),
+                          ),
                         Expanded(
-                          child: LineCounts(
-                            _files.fold(0, (n, f) => n + f.added),
-                            _files.fold(0, (n, f) => n + f.removed),
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: FileList(
+                              files: _files,
+                              selected: _path,
+                              onSelect: (p) => setState(() => _path = p),
+                            ),
                           ),
-                        ),
-                        ValueListenableBuilder(
-                          valueListenable: changesFlat,
-                          builder: (context, flat, _) => IconTap(
-                            flat ? Icons.account_tree_outlined : Icons.list,
-                            tooltip: flat ? 'Show as a tree' : 'Show as a list',
-                            size: 15,
-                            onTap: () => changesFlat.value = !flat,
-                          ),
-                        ),
-                        IconTap(
-                          Icons.refresh,
-                          tooltip: 'Reload',
-                          size: 15,
-                          onTap: _loading ? null : reload,
                         ),
                       ],
                     ),
                   ),
-                  Expanded(
-                    child: FileList(
-                      files: _files,
-                      selected: _path,
-                      onSelect: (p) => setState(() => _path = p),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                Expanded(
+                  child: file != null && file.skipped.isEmpty
+                      ? DiffBox(file, key: ValueKey(file.path), fit: false)
+                      : Center(
+                          child: Text(
+                            file == null
+                                ? ''
+                                : 'Not shown: ${file.path} is ${file.skipped}.',
+                            style: theme.ui(t.textMuted),
+                          ),
+                        ),
+                ),
+              ],
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  /// The scope, what the files add up to, and the list's controls.
+  Widget _toolbar() {
+    final theme = NushiTheme.of(context), t = theme.t;
+    final span = _span;
+    final scopes = span?.scopes(daemon) ?? const [];
+    final n = _files.length;
+    return Container(
+      height: 36,
+      padding: const EdgeInsets.only(left: 8, right: 6),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: t.borderSubtle)),
+      ),
+      child: Row(
+        spacing: 10,
+        children: [
+          if (span != null && scopes.length > 1)
+            Segmented(
+              value: span.scope,
+              segments: [for (final s in scopes) (s, s.label)],
+              onChanged: (s) => chat.scope = s.name,
+            ),
+          if (n > 0)
+            Text(
+              '$n file${n == 1 ? '' : 's'}',
+              style: theme.ui(t.textSecondary, size: 12),
+            ),
           Expanded(
-            child: file != null && file.skipped.isEmpty
-                ? DiffBox(file, key: ValueKey(file.path), fit: false)
-                : Center(
-                    child: Text(
-                      file == null
-                          ? ''
-                          : 'Not shown: ${file.path} is ${file.skipped}.',
-                      style: theme.ui(t.textMuted),
-                    ),
-                  ),
+            child: LineCounts(
+              _files.fold(0, (n, f) => n + f.added),
+              _files.fold(0, (n, f) => n + f.removed),
+            ),
+          ),
+          ValueListenableBuilder(
+            valueListenable: changesFlat,
+            builder: (context, flat, _) => IconTap(
+              flat ? Icons.account_tree_outlined : Icons.list,
+              tooltip: flat ? 'Show as a tree' : 'Show as a list',
+              size: 15,
+              onTap: () => changesFlat.value = !flat,
+            ),
+          ),
+          IconTap(
+            Icons.refresh,
+            tooltip: 'Reload',
+            size: 15,
+            onTap: _loading ? null : reload,
           ),
         ],
       ),
-    );
-  }
-}
-
-/// A file's change side by side. With [fit] it is only as tall as the
-/// change (up to fifteen lines, then it scrolls), in a thin frame; else as
-/// tall as its box.
-class DiffBox extends StatefulWidget {
-  const DiffBox(this.change, {super.key, this.fit = true});
-
-  final FileChange change;
-  final bool fit;
-
-  @override
-  State<DiffBox> createState() => _DiffBoxState();
-}
-
-class _DiffBoxState extends State<DiffBox> {
-  DiffViewController? _controller;
-  late DiffThemeData _theme;
-  double _height = 0;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _build();
-  }
-
-  @override
-  void didUpdateWidget(DiffBox old) {
-    super.didUpdateWidget(old);
-    if (old.change != widget.change) _build();
-  }
-
-  void _build() {
-    final d = widget.change;
-    final dpr = MediaQuery.devicePixelRatioOf(context);
-    _theme = Theme.of(context).brightness == Brightness.dark
-        ? DiffThemeData.dark()
-        : DiffThemeData.light();
-    final diff = TextDiff.compute(d.oldText, d.newText, path: d.path);
-    _controller?.dispose();
-    _controller = DiffViewController(
-      document: diff.document,
-      lines: diff.lines,
-      theme: _theme,
-      devicePixelRatio: dpr,
-    );
-    final doc = diff.document;
-    final rows = max(doc.oldLineCount, doc.newLineCount).clamp(1, 15);
-    _height = _theme.lineHeightFor(dpr) * rows + 6;
-  }
-
-  @override
-  void dispose() {
-    _controller?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final diff = SideBySideDiff(
-      controller: _controller!,
-      theme: _theme,
-      inlayBuilder: (context, spec) => const SizedBox.shrink(),
-    );
-    if (!widget.fit) return diff;
-    return Container(
-      height: _height,
-      clipBehavior: Clip.antiAlias,
-      decoration: box(
-        NushiTheme.of(context).t.borderSubtle,
-        radius: NushiTheme.control,
-      ),
-      child: diff,
     );
   }
 }

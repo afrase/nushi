@@ -28,7 +28,7 @@ final String? _oldDataDir =
     : null;
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 26;
+const apiVersion = 27;
 
 /// Whether [folder] is a chat's scratch folder: the chat has no folder yet.
 bool isScratch(String folder) => folder.startsWith('$dataDir/scratch/');
@@ -91,15 +91,9 @@ class Daemon extends ChangeNotifier {
   /// Whether the daemon runs chats in worktrees (API 20).
   bool get canWorktrees => daemonApi >= 20;
 
-  /// Whether the daemon counts a branch's changes since its base (API 21).
-  bool get canBranchDiff => daemonApi >= 21;
-
-  /// The branch [chat]'s changes are counted from, or '' for uncommitted
-  /// changes (see GetDiffRequest.base).
-  String diffBase(ChatState chat) => switch (chat.worktree) {
-    final wt? when canBranchDiff && chat.branchDiff => wt.base,
-    _ => '',
-  };
+  /// Whether the daemon lists commits and finds the default branch, for
+  /// the Changes view's Branch and Commits (API 27).
+  bool get canCommits => daemonApi >= 27;
 
   /// Whether the daemon sums up a folder's changes (API 17).
   bool get canFolderStatus => daemonApi >= 17;
@@ -193,9 +187,8 @@ class Daemon extends ChangeNotifier {
               notifyListeners();
             } else if (e.removed) {
               chats.remove(e.chatId);
-              if (uncommittedChats.value.contains(e.chatId)) {
-                uncommittedChats.value = {...uncommittedChats.value}
-                  ..remove(e.chatId);
+              if (changeScopes.value.containsKey(e.chatId)) {
+                changeScopes.value = {...changeScopes.value}..remove(e.chatId);
               }
               if (selectedId == e.chatId) selectedId = null;
               notifyListeners();

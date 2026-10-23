@@ -12,13 +12,11 @@ class ChatState extends ChangeNotifier {
   String folder; // it can move (MoveChat)
   Worktree? worktree; // the git worktree it runs in, if Nushi made one
 
-  /// For a worktree chat, whether its changes show the whole branch (since
-  /// it left its base) rather than what's uncommitted; remembered.
-  bool get branchDiff => !uncommittedChats.value.contains(id);
-  set branchDiff(bool v) {
-    final ids = {...uncommittedChats.value};
-    v ? ids.remove(id) : ids.add(id);
-    uncommittedChats.value = ids;
+  /// What its Changes view shows (a `Scope`'s name), once picked;
+  /// remembered.
+  String? get scope => changeScopes.value[id];
+  set scope(String? v) {
+    changeScopes.value = {...changeScopes.value, id: ?v};
     notifyListeners();
   }
 

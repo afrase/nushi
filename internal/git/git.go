@@ -21,20 +21,30 @@ import (
 // maxText is the largest text shown in a diff, per side.
 const maxText = 1 << 20
 
-// Changes returns the folder's uncommitted changes against HEAD, untracked
-// files included, with paths relative to the folder and each file's lines
-// added and removed. The folder may be anywhere inside a repository. With
-// base, the changes are counted from where HEAD's branch left base (their
-// merge base): the branch's commits and the uncommitted changes.
-func Changes(ctx context.Context, folder, base string) ([]model.FileChange, error) {
-	from, err := start(ctx, folder, base)
+// Span says which changes Changes reads: the uncommitted ones, counted
+// from HEAD or, with Base, from where HEAD's branch left Base (their merge
+// base), so the branch's commits too; or with Commit what that commit
+// changed, and with Since as well what the commits from Since to Commit
+// changed.
+type Span struct{ Base, Commit, Since string }
+
+// Changes returns the folder's changes in span, untracked files included
+// when they are uncommitted ones, with paths relative to the folder and
+// each file's lines added and removed. The folder may be anywhere inside a
+// repository.
+func Changes(ctx context.Context, folder string, span Span) ([]model.FileChange, error) {
+	from, to, err := ends(ctx, folder, span)
 	if err != nil {
 		return nil, err
 	}
 	hasHead := from != ""
+	revs := []string{from}
+	if to != "" {
+		revs = append(revs, to)
+	}
 	var changes []model.FileChange
 	if hasHead {
-		out, err := run(ctx, folder, "diff", from, "--name-status", "-z", "-M", "--relative", "--no-ext-diff", "--no-textconv")
+		out, err := run(ctx, folder, append(append([]string{"diff"}, revs...), "--name-status", "-z", "-M", "--relative", "--no-ext-diff", "--no-textconv")...)
 		if err != nil {
 			return nil, err
 		}
@@ -54,7 +64,7 @@ func Changes(ctx context.Context, folder, base string) ([]model.FileChange, erro
 			}
 			changes = append(changes, c)
 		}
-		counts, err := numstat(ctx, folder, from)
+		counts, err := numstat(ctx, folder, revs...)
 		if err != nil {
 			return nil, err
 		}
@@ -63,9 +73,11 @@ func Changes(ctx context.Context, folder, base string) ([]model.FileChange, erro
 			changes[i].Added, changes[i].Removed = n[0], n[1]
 		}
 	}
-	added, err := untracked(ctx, folder, hasHead)
-	if err != nil {
-		return nil, err
+	var added []string
+	if to == "" {
+		if added, err = untracked(ctx, folder, hasHead); err != nil {
+			return nil, err
+		}
 	}
 	status := "untracked"
 	if !hasHead {
@@ -84,10 +96,15 @@ func Changes(ctx context.Context, folder, base string) ([]model.FileChange, erro
 				return nil, err
 			}
 		}
-		if c.Status != "deleted" {
-			if cur, err = worktree(filepath.Join(folder, c.Path)); err != nil {
-				return nil, err
-			}
+		switch {
+		case c.Status == "deleted":
+		case to != "":
+			cur, err = run(ctx, folder, "show", "--no-textconv", to+":./"+c.Path)
+		default:
+			cur, err = worktree(filepath.Join(folder, c.Path))
+		}
+		if err != nil {
+			return nil, err
 		}
 		switch {
 		case bytes.IndexByte(old, 0) >= 0 || bytes.IndexByte(cur, 0) >= 0:
@@ -105,9 +122,10 @@ func Changes(ctx context.Context, folder, base string) ([]model.FileChange, erro
 }
 
 // numstat returns the lines added and removed per file (by its new path)
-// since from, as git diff counts them; a binary file counts none.
-func numstat(ctx context.Context, folder, from string) (map[string][2]int, error) {
-	out, err := run(ctx, folder, "diff", from, "--numstat", "-z", "-M", "--relative", "--no-ext-diff", "--no-textconv")
+// between revs (a commit and the work tree, or two commits), as git diff
+// counts them; a binary file counts none.
+func numstat(ctx context.Context, folder string, revs ...string) (map[string][2]int, error) {
+	out, err := run(ctx, folder, append(append([]string{"diff"}, revs...), "--numstat", "-z", "-M", "--relative", "--no-ext-diff", "--no-textconv")...)
 	if err != nil {
 		return nil, err
 	}
@@ -170,6 +188,32 @@ func start(ctx context.Context, folder, base string) (string, error) {
 	}
 	out, err := run(ctx, folder, "merge-base", "HEAD", base)
 	return strings.TrimSpace(string(out)), err
+}
+
+// ends returns the commits span's changes go from and to; to is "" for the
+// work tree, and from is "" before the first commit.
+func ends(ctx context.Context, folder string, span Span) (from, to string, err error) {
+	if span.Commit == "" {
+		from, err = start(ctx, folder, span.Base)
+		return from, "", err
+	}
+	if _, err := repo(ctx, folder); err != nil {
+		return "", "", err
+	}
+	since := cmp.Or(span.Since, span.Commit)
+	if strings.HasPrefix(since, "-") || strings.HasPrefix(span.Commit, "-") {
+		return "", "", fmt.Errorf("%q is not a commit", since)
+	}
+	from = since + "^"
+	if _, err := run(ctx, folder, "rev-parse", "--verify", "-q", from); err != nil {
+		// The first commit: from nothing.
+		out, err := run(ctx, folder, "hash-object", "-t", "tree", "/dev/null")
+		if err != nil {
+			return "", "", err
+		}
+		from = strings.TrimSpace(string(out))
+	}
+	return from, span.Commit, nil
 }
 
 // untracked lists the files that are new to git: untracked ones, and before

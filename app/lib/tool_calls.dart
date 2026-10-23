@@ -1,7 +1,7 @@
 import 'package:diff_view/diff_view.dart';
 import 'package:flutter/material.dart';
 
-import 'changes_view.dart';
+import 'diff_box.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'images.dart';
 import 'markdown.dart';

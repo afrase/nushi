@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import 'changes_view.dart';
+import 'changes_span.dart';
 import 'chat.dart';
 import 'daemon.dart';
 import 'folder_button.dart';
@@ -43,7 +43,9 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
   ChatState get chat => widget.chat;
   @override
   Daemon get daemon => widget.daemon;
-  GetFolderStatusResponse? _status;
+  GetFolderStatusResponse? _status; // counted as the Changes view shows
+  Scope _scope = Scope.uncommitted;
+  List<Commit> _commits = []; // in Commits
   String? _error;
   GetContextUsageResponse? _context; // what fills the context, last asked
   Timer? _askSoon;
@@ -95,12 +97,26 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
     _askContext();
     if (!daemon.canFolderStatus) return;
     try {
-      final status = await daemon.client.getFolderStatus(
-        GetFolderStatusRequest(folder: chat.folder, base: base),
-      );
+      final span = await ChangeSpan.of(daemon, chat);
+      final branch = span.scope == Scope.branch;
+      final status = !span.status.git
+          ? span.status
+          : await daemon.client.getFolderStatus(
+              GetFolderStatusRequest(
+                folder: chat.folder,
+                base: branch ? span.base : null,
+              ),
+            );
+      final commits = span.scope == Scope.commits && status.git
+          ? (await daemon.client.listCommits(
+              ListCommitsRequest(folder: chat.folder, base: span.commitsBase),
+            )).commits
+          : <Commit>[];
       if (mounted) {
         setState(() {
           _status = status;
+          _scope = span.scope;
+          _commits = commits;
           _error = null;
         });
       }
@@ -119,17 +135,18 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
     final u = chat.usage;
     final status = _status;
     final muted = theme.ui(t.textMuted, size: 12);
+    final commits = _scope == Scope.commits;
+    final (added, removed) = commits
+        ? _commits.fold((0, 0), (n, c) => (n.$1 + c.added, n.$2 + c.removed))
+        : (status?.added ?? 0, status?.removed ?? 0);
     final lines = status == null || !status.git
         ? null
         : Text.rich(
             TextSpan(
               children: [
+                TextSpan(text: '+$added', style: theme.code(t.done, size: 12)),
                 TextSpan(
-                  text: '+${status.added}',
-                  style: theme.code(t.done, size: 12),
-                ),
-                TextSpan(
-                  text: '  −${status.removed}',
+                  text: '  −$removed',
                   style: theme.code(t.crashed, size: 12),
                 ),
               ],
@@ -230,8 +247,11 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
               status.gone ? 'The folder is gone.' : 'Not a git repository.',
             )
           else ...[
-            (base.isEmpty ? 'Uncommitted' : 'Branch', lines!),
-            ('Files', status.files == 0 ? 'None' : '${status.files}'),
+            (_scope.label, lines!),
+            if (commits)
+              ('Number', _commits.isEmpty ? 'None' : '${_commits.length}')
+            else
+              ('Files', status.files == 0 ? 'None' : '${status.files}'),
           ],
         ],
       ),
