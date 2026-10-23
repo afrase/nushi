@@ -2,19 +2,20 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'daemon.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'syntax.dart';
-import 'theme/theme.dart';
 import 'widgets.dart';
 
 /// A review comment on lines [start]–[end] (from 1) of a file's [old] or
 /// new side, in the Changes view it was made in ([where]: the scope, and
-/// the commits in Commits). [quote] is those lines as they were. Once
-/// [sent], it stays (dimmed) until the file changes after the agent's
-/// reply: [seen] is the file's text as the first look after it found it.
+/// the commits in Commits). [quote] is those lines as they were, and
+/// [before] and [after] the lines around them: when the file changes, the
+/// comment moves to where they are now ([anchor]), or is [outdated] when
+/// they're gone. Once [sent], it stays (dimmed) until the file changes
+/// after the agent's reply: [seen] is the file's text as the first look
+/// after it found it.
 class ReviewComment {
   ReviewComment({
     required this.id,
@@ -25,7 +26,10 @@ class ReviewComment {
     required this.end,
     required this.quote,
     required this.text,
+    this.before = '',
+    this.after = '',
     this.sent = false,
+    this.outdated = false,
     this.seen,
   });
 
@@ -39,15 +43,18 @@ class ReviewComment {
         end: j['end'],
         quote: j['quote'],
         text: j['text'],
+        before: j['before'] ?? '',
+        after: j['after'] ?? '',
         sent: j['sent'] ?? false,
+        outdated: j['outdated'] ?? false,
         seen: j['seen'],
       );
 
-  final String id, where, path, quote;
+  final String id, where, path, quote, before, after;
   final bool old;
-  final int start, end;
+  int start, end;
   String text;
-  bool sent;
+  bool sent, outdated;
   int? seen; // a hash of the side's text
 
   Map<String, Object?> toJson() => {
@@ -59,9 +66,53 @@ class ReviewComment {
     'end': end,
     'quote': quote,
     'text': text,
+    'before': before,
+    'after': after,
     'sent': sent,
+    'outdated': outdated,
     'seen': seen,
   };
+
+  /// Follows the commented lines into [text], the side as it is now: true
+  /// if the comment moved or became (or stopped being) [outdated].
+  bool anchor(String text) {
+    final lines = text.split('\n'), quoted = quote.split('\n');
+    bool at(int i) =>
+        i >= 0 &&
+        i + quoted.length <= lines.length &&
+        Iterable<int>.generate(quoted.length)
+            .every((k) => lines[i + k] == quoted[k]);
+    var found = at(start - 1) ? start - 1 : -1;
+    if (found < 0) {
+      // Where the lines are now; with several, where the lines around
+      // them match best, then the nearest.
+      final b = before.isEmpty ? <String>[] : before.split('\n');
+      final a = after.isEmpty ? <String>[] : after.split('\n');
+      int score(int i) {
+        var n = 0;
+        for (var k = 0; k < b.length; k++) {
+          final j = i - b.length + k;
+          if (j >= 0 && lines[j] == b[k]) n += 1000;
+        }
+        for (var k = 0; k < a.length; k++) {
+          final j = i + quoted.length + k;
+          if (j < lines.length && lines[j] == a[k]) n += 1000;
+        }
+        return n - (i - (start - 1)).abs();
+      }
+
+      for (var i = 0; i + quoted.length <= lines.length; i++) {
+        if (at(i) && (found < 0 || score(i) > score(found))) found = i;
+      }
+    }
+    final was = (start, end, outdated);
+    if (found >= 0) {
+      start = found + 1;
+      end = found + quoted.length;
+    }
+    outdated = found < 0;
+    return was != (start, end, outdated);
+  }
 
   String get lines => start == end ? 'Line $start' : 'Lines $start–$end';
 }
@@ -133,7 +184,10 @@ int _hash(String s) {
 String reviewMessage(List<ReviewComment> comments, String note) {
   final out = StringBuffer('Review comments:\n');
   for (final (i, c) in comments.indexed) {
-    final side = c.old ? ' (the old version, before the change)' : '';
+    final side = [
+      if (c.old) ' (the old version, before the change)',
+      if (c.outdated) ' (they have changed since; they were)',
+    ].join();
     var fence = '```';
     while (c.quote.contains(fence)) {
       fence += '`';
@@ -210,184 +264,4 @@ Future<void> sendReview(
     }
     setComments(chat, [...commentsOf(chat)]);
   });
-}
-
-/// A comment under its lines in the diff: its lines and text, Edit and
-/// Remove on hover; dimmed once sent.
-class CommentCard extends StatefulWidget {
-  const CommentCard(
-    this.comment, {
-    super.key,
-    required this.onEdit,
-    required this.onRemove,
-  });
-
-  final ReviewComment comment;
-  final VoidCallback onEdit, onRemove;
-
-  @override
-  State<CommentCard> createState() => _CommentCardState();
-}
-
-class _CommentCardState extends State<CommentCard> {
-  bool _hover = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
-    final c = widget.comment;
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: Opacity(
-        opacity: c.sent ? 0.55 : 1,
-        child: _Inlay(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      c.sent ? '${c.lines} · sent' : c.lines,
-                      style: theme.ui(t.textMuted, size: 11.5),
-                    ),
-                  ),
-                  if (_hover && !c.sent)
-                    IconTap(
-                      Icons.edit_outlined,
-                      tooltip: 'Edit',
-                      size: 13,
-                      onTap: widget.onEdit,
-                    ),
-                  if (_hover)
-                    IconTap(
-                      Icons.close,
-                      tooltip: 'Remove',
-                      size: 13,
-                      onTap: widget.onRemove,
-                    ),
-                ],
-              ),
-              SelectableText(c.text, style: theme.ui(t.text)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The box to write a comment in, under the lines it's on: Enter saves it,
-/// Shift-Enter adds a line, Escape drops it.
-class CommentBox extends StatefulWidget {
-  const CommentBox({
-    super.key,
-    required this.lines,
-    required this.text,
-    required this.onSave,
-    required this.onCancel,
-  });
-
-  final String lines, text;
-  final ValueChanged<String> onSave;
-  final VoidCallback onCancel;
-
-  @override
-  State<CommentBox> createState() => _CommentBoxState();
-}
-
-class _CommentBoxState extends State<CommentBox> {
-  late final _text = TextEditingController(text: widget.text);
-  final _focus = FocusNode();
-
-  @override
-  void initState() {
-    super.initState();
-    // The diff pane took the focus with the click; autofocus would yield.
-    WidgetsBinding.instance.addPostFrameCallback((_) => _focus.requestFocus());
-  }
-
-  @override
-  void dispose() {
-    _text.dispose();
-    _focus.dispose();
-    super.dispose();
-  }
-
-  void _save() {
-    if (_text.text.trim().isNotEmpty) widget.onSave(_text.text.trim());
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
-    return _Inlay(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        spacing: 6,
-        children: [
-          Text(widget.lines, style: theme.ui(t.textMuted, size: 11.5)),
-          CallbackShortcuts(
-            bindings: {
-              const SingleActivator(LogicalKeyboardKey.enter): _save,
-              const SingleActivator(LogicalKeyboardKey.escape): widget.onCancel,
-            },
-            child: TextField(
-              controller: _text,
-              focusNode: _focus,
-              minLines: 1,
-              maxLines: 8,
-              style: theme.ui(t.text),
-              decoration: const InputDecoration(
-                hintText: 'Comment for Claude',
-                isDense: true,
-              ),
-            ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            spacing: 6,
-            children: [
-              Button(
-                label: 'Cancel',
-                kind: ButtonKind.ghost,
-                onPressed: widget.onCancel,
-              ),
-              Button(
-                label: widget.text.isEmpty ? 'Comment' : 'Save',
-                kind: ButtonKind.primary,
-                onPressed: _save,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// An inline box between a diff's lines, with an accent bar on its left.
-class _Inlay extends StatelessWidget {
-  const _Inlay({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = NushiTheme.of(context).t;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 4, 8, 6),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(10, 6, 6, 8),
-        decoration: BoxDecoration(
-          color: t.raised,
-          border: Border(left: BorderSide(color: t.accent, width: 2)),
-          borderRadius: BorderRadius.circular(NushiTheme.control),
-        ),
-        child: child,
-      ),
-    );
-  }
 }
