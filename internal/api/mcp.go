@@ -26,3 +26,33 @@ func (s *server) ListMcpServers(ctx context.Context, req *connect.Request[nushiv
 	}
 	return connect.NewResponse(resp), nil
 }
+
+func (s *server) AddMcpServer(ctx context.Context, req *connect.Request[nushiv1.AddMcpServerRequest]) (*connect.Response[nushiv1.AddMcpServerResponse], error) {
+	m := req.Msg
+	return changed(s.mcp.Add(ctx, m.Folder, m.Scope, m.Name, m.ConfigJson), &nushiv1.AddMcpServerResponse{})
+}
+
+func (s *server) EditMcpServer(ctx context.Context, req *connect.Request[nushiv1.EditMcpServerRequest]) (*connect.Response[nushiv1.EditMcpServerResponse], error) {
+	m := req.Msg
+	return changed(s.mcp.Edit(ctx, m.Folder, m.Scope, m.Name, m.ConfigJson), &nushiv1.EditMcpServerResponse{})
+}
+
+func (s *server) RemoveMcpServer(ctx context.Context, req *connect.Request[nushiv1.RemoveMcpServerRequest]) (*connect.Response[nushiv1.RemoveMcpServerResponse], error) {
+	m := req.Msg
+	return changed(s.mcp.Remove(ctx, m.Folder, m.Scope, m.Name), &nushiv1.RemoveMcpServerResponse{})
+}
+
+// changed answers a change: resp, or err as refused.
+func changed[T any](err error, resp *T) (*connect.Response[T], error) {
+	if err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (s *server) ReloadChat(_ context.Context, req *connect.Request[nushiv1.ReloadChatRequest]) (*connect.Response[nushiv1.ReloadChatResponse], error) {
+	if err := s.chats.Reload(req.Msg.ChatId); err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	return connect.NewResponse(&nushiv1.ReloadChatResponse{}), nil
+}

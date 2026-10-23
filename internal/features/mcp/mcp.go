@@ -11,17 +11,30 @@ import (
 
 // Config is the agent's MCP config (Claude's: internal/claudemcp).
 type Config interface {
-	// Servers returns the servers the agent's config files give folder.
+	// Servers returns the servers the agent's config files give folder,
+	// with their config as stored (secrets in clear).
 	Servers(folder string) ([]model.MCPServer, error)
 	// Check has the agent connect to every server it would use in folder
 	// and returns how each went, by name; one only the agent knows comes
 	// with its scope and config.
 	Check(ctx context.Context, folder string) ([]model.MCPServer, error)
+	// Add and Remove change a scope's servers, run in folder.
+	Add(ctx context.Context, folder, scope, name, config string) error
+	Remove(ctx context.Context, folder, scope, name string) error
+	// Project is the folder the agent files folder's local servers under.
+	Project(folder string) string
 }
 
-type Service struct{ config Config }
+// Changed tells the chats that the servers changed for chats in the
+// folders affected says yes to.
+type Changed func(affected func(folder string) bool)
 
-func New(config Config) *Service { return &Service{config: config} }
+type Service struct {
+	config  Config
+	changed Changed
+}
+
+func New(config Config, changed Changed) *Service { return &Service{config: config, changed: changed} }
 
 // rank orders scopes as the agent picks between servers of the same name:
 // local wins, then project, user, plugins and claude.ai.
@@ -34,6 +47,9 @@ func (s *Service) List(ctx context.Context, folder string, check bool) (servers 
 	servers, err = s.config.Servers(folder)
 	if err != nil {
 		return nil, nil, err
+	}
+	for i := range servers {
+		servers[i].Config = masked(servers[i].Config)
 	}
 	used := map[string]int{} // the server the agent uses, by name
 	for i, sv := range servers {

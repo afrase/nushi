@@ -100,6 +100,8 @@ type chat struct {
 	queue     []model.Message       // waiting for the agent's next chance
 	steer     bool                  // the agent takes messages into a running turn
 	canRewind bool                  // the agent forks a session at a message
+	// mcpChanged says the MCP servers changed since the agent started.
+	mcpChanged bool
 }
 
 // emitLocked numbers and publishes one of the chat's events. Holding the
@@ -255,7 +257,7 @@ func (c *chat) noticeLocked(reason, text string) {
 
 func (c *chat) statusLocked() model.Status {
 	return model.Status{Busy: c.busy, Started: c.started, Waiting: len(c.waiting)+len(c.questions) > 0, CanFork: c.canFork, Images: c.canImage,
-		CanRewind: c.canRewind}
+		CanRewind: c.canRewind, MCPChanged: c.mcpChanged}
 }
 
 func (c *chat) statusChangedLocked() {

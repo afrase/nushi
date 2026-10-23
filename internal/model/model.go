@@ -234,6 +234,9 @@ type Status struct {
 	Images  bool      // the agent takes images in prompts
 	// CanRewind says the agent can rewind the chat to a user message.
 	CanRewind bool
+	// MCPChanged says MCP servers changed since the agent started; a reload
+	// picks them up.
+	MCPChanged bool
 }
 
 // FileChange is one file's uncommitted change: its text at HEAD and now.

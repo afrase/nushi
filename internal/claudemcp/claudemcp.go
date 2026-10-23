@@ -26,9 +26,6 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-// Mask stands in for env and header values, which never leave the daemon.
-const Mask = "••••"
-
 // Claude reads Claude Code's MCP config.
 type Claude struct{}
 
@@ -58,7 +55,7 @@ func project(folder string) string {
 type servers map[string]json.RawMessage
 
 // Servers returns the servers Claude's files give folder: user, local and
-// project scope, each sorted by name.
+// project scope, each sorted by name, with their config as Claude has it.
 func (Claude) Servers(folder string) ([]model.MCPServer, error) {
 	var cfg struct {
 		MCPServers servers `json:"mcpServers"`
@@ -113,28 +110,10 @@ func readJSON(path string, v any) error {
 func add(out []model.MCPServer, s servers, scope, source string) []model.MCPServer {
 	start := len(out)
 	for name, raw := range s {
-		out = append(out, model.MCPServer{Name: name, Scope: scope, Source: source, Config: masked(raw)})
+		out = append(out, model.MCPServer{Name: name, Scope: scope, Source: source, Config: string(raw)})
 	}
 	slices.SortFunc(out[start:], func(a, b model.MCPServer) int { return cmp.Compare(a.Name, b.Name) })
 	return out
-}
-
-// masked is a server's config with its env and header values replaced by
-// Mask.
-func masked(raw json.RawMessage) string {
-	var cfg map[string]any
-	if json.Unmarshal(raw, &cfg) != nil {
-		return "{}"
-	}
-	for _, key := range []string{"env", "headers"} {
-		if m, ok := cfg[key].(map[string]any); ok {
-			for k := range m {
-				m[k] = Mask
-			}
-		}
-	}
-	b, _ := json.Marshal(cfg)
-	return string(b)
 }
 
 // Check runs `claude mcp list` in folder, which connects to every server

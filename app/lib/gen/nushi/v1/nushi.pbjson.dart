@@ -1075,6 +1075,104 @@ final $typed_data.Uint8List mcpServerDescriptor = $convert.base64Decode(
     'FAoFc3RhdGUYBSABKAlSBXN0YXRlEhYKBmRldGFpbBgGIAEoCVIGZGV0YWlsEhoKCHNoYWRvd2'
     'VkGAcgASgIUghzaGFkb3dlZA==');
 
+@$core.Deprecated('Use addMcpServerRequestDescriptor instead')
+const AddMcpServerRequest$json = {
+  '1': 'AddMcpServerRequest',
+  '2': [
+    {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
+    {'1': 'scope', '3': 2, '4': 1, '5': 9, '10': 'scope'},
+    {'1': 'name', '3': 3, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'config_json', '3': 4, '4': 1, '5': 9, '10': 'configJson'},
+  ],
+};
+
+/// Descriptor for `AddMcpServerRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List addMcpServerRequestDescriptor = $convert.base64Decode(
+    'ChNBZGRNY3BTZXJ2ZXJSZXF1ZXN0EhYKBmZvbGRlchgBIAEoCVIGZm9sZGVyEhQKBXNjb3BlGA'
+    'IgASgJUgVzY29wZRISCgRuYW1lGAMgASgJUgRuYW1lEh8KC2NvbmZpZ19qc29uGAQgASgJUgpj'
+    'b25maWdKc29u');
+
+@$core.Deprecated('Use addMcpServerResponseDescriptor instead')
+const AddMcpServerResponse$json = {
+  '1': 'AddMcpServerResponse',
+};
+
+/// Descriptor for `AddMcpServerResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List addMcpServerResponseDescriptor =
+    $convert.base64Decode('ChRBZGRNY3BTZXJ2ZXJSZXNwb25zZQ==');
+
+@$core.Deprecated('Use editMcpServerRequestDescriptor instead')
+const EditMcpServerRequest$json = {
+  '1': 'EditMcpServerRequest',
+  '2': [
+    {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
+    {'1': 'scope', '3': 2, '4': 1, '5': 9, '10': 'scope'},
+    {'1': 'name', '3': 3, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'config_json', '3': 4, '4': 1, '5': 9, '10': 'configJson'},
+  ],
+};
+
+/// Descriptor for `EditMcpServerRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List editMcpServerRequestDescriptor = $convert.base64Decode(
+    'ChRFZGl0TWNwU2VydmVyUmVxdWVzdBIWCgZmb2xkZXIYASABKAlSBmZvbGRlchIUCgVzY29wZR'
+    'gCIAEoCVIFc2NvcGUSEgoEbmFtZRgDIAEoCVIEbmFtZRIfCgtjb25maWdfanNvbhgEIAEoCVIK'
+    'Y29uZmlnSnNvbg==');
+
+@$core.Deprecated('Use editMcpServerResponseDescriptor instead')
+const EditMcpServerResponse$json = {
+  '1': 'EditMcpServerResponse',
+};
+
+/// Descriptor for `EditMcpServerResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List editMcpServerResponseDescriptor =
+    $convert.base64Decode('ChVFZGl0TWNwU2VydmVyUmVzcG9uc2U=');
+
+@$core.Deprecated('Use removeMcpServerRequestDescriptor instead')
+const RemoveMcpServerRequest$json = {
+  '1': 'RemoveMcpServerRequest',
+  '2': [
+    {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
+    {'1': 'scope', '3': 2, '4': 1, '5': 9, '10': 'scope'},
+    {'1': 'name', '3': 3, '4': 1, '5': 9, '10': 'name'},
+  ],
+};
+
+/// Descriptor for `RemoveMcpServerRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List removeMcpServerRequestDescriptor =
+    $convert.base64Decode(
+        'ChZSZW1vdmVNY3BTZXJ2ZXJSZXF1ZXN0EhYKBmZvbGRlchgBIAEoCVIGZm9sZGVyEhQKBXNjb3'
+        'BlGAIgASgJUgVzY29wZRISCgRuYW1lGAMgASgJUgRuYW1l');
+
+@$core.Deprecated('Use removeMcpServerResponseDescriptor instead')
+const RemoveMcpServerResponse$json = {
+  '1': 'RemoveMcpServerResponse',
+};
+
+/// Descriptor for `RemoveMcpServerResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List removeMcpServerResponseDescriptor =
+    $convert.base64Decode('ChdSZW1vdmVNY3BTZXJ2ZXJSZXNwb25zZQ==');
+
+@$core.Deprecated('Use reloadChatRequestDescriptor instead')
+const ReloadChatRequest$json = {
+  '1': 'ReloadChatRequest',
+  '2': [
+    {'1': 'chat_id', '3': 1, '4': 1, '5': 9, '10': 'chatId'},
+  ],
+};
+
+/// Descriptor for `ReloadChatRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List reloadChatRequestDescriptor = $convert.base64Decode(
+    'ChFSZWxvYWRDaGF0UmVxdWVzdBIXCgdjaGF0X2lkGAEgASgJUgZjaGF0SWQ=');
+
+@$core.Deprecated('Use reloadChatResponseDescriptor instead')
+const ReloadChatResponse$json = {
+  '1': 'ReloadChatResponse',
+};
+
+/// Descriptor for `ReloadChatResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List reloadChatResponseDescriptor =
+    $convert.base64Decode('ChJSZWxvYWRDaGF0UmVzcG9uc2U=');
+
 @$core.Deprecated('Use contextCategoryDescriptor instead')
 const ContextCategory$json = {
   '1': 'ContextCategory',
@@ -1568,6 +1666,7 @@ const ChatStatus$json = {
     {'1': 'can_fork', '3': 5, '4': 1, '5': 8, '10': 'canFork'},
     {'1': 'images', '3': 6, '4': 1, '5': 8, '10': 'images'},
     {'1': 'can_rewind', '3': 7, '4': 1, '5': 8, '10': 'canRewind'},
+    {'1': 'mcp_changed', '3': 8, '4': 1, '5': 8, '10': 'mcpChanged'},
   ],
 };
 
@@ -1576,7 +1675,7 @@ final $typed_data.Uint8List chatStatusDescriptor = $convert.base64Decode(
     'CgpDaGF0U3RhdHVzEhIKBGJ1c3kYASABKAhSBGJ1c3kSFAoFZXJyb3IYAiABKAlSBWVycm9yEh'
     'gKB3N0YXJ0ZWQYAyABKANSB3N0YXJ0ZWQSGAoHd2FpdGluZxgEIAEoCFIHd2FpdGluZxIZCghj'
     'YW5fZm9yaxgFIAEoCFIHY2FuRm9yaxIWCgZpbWFnZXMYBiABKAhSBmltYWdlcxIdCgpjYW5fcm'
-    'V3aW5kGAcgASgIUgljYW5SZXdpbmQ=');
+    'V3aW5kGAcgASgIUgljYW5SZXdpbmQSHwoLbWNwX2NoYW5nZWQYCCABKAhSCm1jcENoYW5nZWQ=');
 
 const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
   '1': 'NushiService',
@@ -1703,6 +1802,26 @@ const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
       '3': '.nushi.v1.ListMcpServersResponse'
     },
     {
+      '1': 'AddMcpServer',
+      '2': '.nushi.v1.AddMcpServerRequest',
+      '3': '.nushi.v1.AddMcpServerResponse'
+    },
+    {
+      '1': 'EditMcpServer',
+      '2': '.nushi.v1.EditMcpServerRequest',
+      '3': '.nushi.v1.EditMcpServerResponse'
+    },
+    {
+      '1': 'RemoveMcpServer',
+      '2': '.nushi.v1.RemoveMcpServerRequest',
+      '3': '.nushi.v1.RemoveMcpServerResponse'
+    },
+    {
+      '1': 'ReloadChat',
+      '2': '.nushi.v1.ReloadChatRequest',
+      '3': '.nushi.v1.ReloadChatResponse'
+    },
+    {
       '1': 'Events',
       '2': '.nushi.v1.EventsRequest',
       '3': '.nushi.v1.EventsResponse',
@@ -1787,6 +1906,14 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.ListMcpServersRequest': ListMcpServersRequest$json,
   '.nushi.v1.ListMcpServersResponse': ListMcpServersResponse$json,
   '.nushi.v1.McpServer': McpServer$json,
+  '.nushi.v1.AddMcpServerRequest': AddMcpServerRequest$json,
+  '.nushi.v1.AddMcpServerResponse': AddMcpServerResponse$json,
+  '.nushi.v1.EditMcpServerRequest': EditMcpServerRequest$json,
+  '.nushi.v1.EditMcpServerResponse': EditMcpServerResponse$json,
+  '.nushi.v1.RemoveMcpServerRequest': RemoveMcpServerRequest$json,
+  '.nushi.v1.RemoveMcpServerResponse': RemoveMcpServerResponse$json,
+  '.nushi.v1.ReloadChatRequest': ReloadChatRequest$json,
+  '.nushi.v1.ReloadChatResponse': ReloadChatResponse$json,
   '.nushi.v1.EventsRequest': EventsRequest$json,
   '.nushi.v1.EventsResponse': EventsResponse$json,
   '.nushi.v1.ItemEvent': ItemEvent$json,
@@ -1830,5 +1957,10 @@ final $typed_data.Uint8List nushiServiceDescriptor = $convert.base64Decode(
     'RDb250ZXh0VXNhZ2USIC5udXNoaS52MS5HZXRDb250ZXh0VXNhZ2VSZXF1ZXN0GiEubnVzaGku'
     'djEuR2V0Q29udGV4dFVzYWdlUmVzcG9uc2USUwoOTGlzdE1jcFNlcnZlcnMSHy5udXNoaS52MS'
     '5MaXN0TWNwU2VydmVyc1JlcXVlc3QaIC5udXNoaS52MS5MaXN0TWNwU2VydmVyc1Jlc3BvbnNl'
-    'Ej0KBkV2ZW50cxIXLm51c2hpLnYxLkV2ZW50c1JlcXVlc3QaGC5udXNoaS52MS5FdmVudHNSZX'
-    'Nwb25zZTAB');
+    'Ek0KDEFkZE1jcFNlcnZlchIdLm51c2hpLnYxLkFkZE1jcFNlcnZlclJlcXVlc3QaHi5udXNoaS'
+    '52MS5BZGRNY3BTZXJ2ZXJSZXNwb25zZRJQCg1FZGl0TWNwU2VydmVyEh4ubnVzaGkudjEuRWRp'
+    'dE1jcFNlcnZlclJlcXVlc3QaHy5udXNoaS52MS5FZGl0TWNwU2VydmVyUmVzcG9uc2USVgoPUm'
+    'Vtb3ZlTWNwU2VydmVyEiAubnVzaGkudjEuUmVtb3ZlTWNwU2VydmVyUmVxdWVzdBohLm51c2hp'
+    'LnYxLlJlbW92ZU1jcFNlcnZlclJlc3BvbnNlEkcKClJlbG9hZENoYXQSGy5udXNoaS52MS5SZW'
+    'xvYWRDaGF0UmVxdWVzdBocLm51c2hpLnYxLlJlbG9hZENoYXRSZXNwb25zZRI9CgZFdmVudHMS'
+    'Fy5udXNoaS52MS5FdmVudHNSZXF1ZXN0GhgubnVzaGkudjEuRXZlbnRzUmVzcG9uc2UwAQ==');

@@ -135,6 +135,9 @@ func idle(e *nushiv1.EventsResponse) bool { return e.GetStatus() != nil && !e.Ge
 // apply builds a transcript as the app does: a snapshot, then the chat's
 // later events.
 func apply(items []*nushiv1.Item, e *nushiv1.EventsResponse) []*nushiv1.Item {
+	if cut := e.GetCut(); cut != "" {
+		return items[:slices.IndexFunc(items, func(it *nushiv1.Item) bool { return it.Id == cut })]
+	}
 	ie := e.GetItem()
 	if ie == nil {
 		return items

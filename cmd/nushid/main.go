@@ -76,7 +76,7 @@ func run() error {
 	st := store.New(dir)
 	copyHistory := func(id, from, to string) (func() error, error) { return claudehistory.Copy(projects, id, from, to) }
 	chatSvc := chats.New("claude", launch, st, st, copyHistory, git.Worktrees{}, filepath.Join(dir, "scratch"), hub.Publish)
-	srv := &http.Server{Handler: api.Handler(token, chatSvc, mcp.New(claudemcp.Claude{}), hub), Protocols: new(http.Protocols)}
+	srv := &http.Server{Handler: api.Handler(token, chatSvc, mcp.New(claudemcp.Claude{}, chatSvc.MCPChanged), hub), Protocols: new(http.Protocols)}
 	srv.Protocols.SetUnencryptedHTTP2(true)
 
 	// On SIGINT or SIGTERM, stop the agents too: their sessions reopen

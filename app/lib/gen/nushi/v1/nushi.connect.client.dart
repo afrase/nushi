@@ -4,10 +4,11 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
+
 import "nushi.pb.dart" as nushiv1nushi;
 import "nushi.connect.spec.dart" as specs;
 
-extension type NushiServiceClient (connect.Transport _transport) {
+extension type NushiServiceClient(connect.Transport _transport) {
   Future<nushiv1nushi.PingResponse> ping(
     nushiv1nushi.PingRequest input, {
     connect.Headers? headers,
@@ -480,6 +481,83 @@ extension type NushiServiceClient (connect.Transport _transport) {
   }) {
     return connect.Client(_transport).unary(
       specs.NushiService.listMcpServers,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Add, edit and remove an MCP server in a scope ("user", "project",
+  /// "local"), through the agent's own CLI; the folder names the project.
+  /// Editing keeps the name and scope, and env and header values sent as
+  /// "••••" keep the values they had; if the new config is refused, the old
+  /// one is put back. Running chats the change reaches get
+  /// status.mcp_changed (API 33).
+  Future<nushiv1nushi.AddMcpServerResponse> addMcpServer(
+    nushiv1nushi.AddMcpServerRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.addMcpServer,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  Future<nushiv1nushi.EditMcpServerResponse> editMcpServer(
+    nushiv1nushi.EditMcpServerRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.editMcpServer,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  Future<nushiv1nushi.RemoveMcpServerResponse> removeMcpServer(
+    nushiv1nushi.RemoveMcpServerRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.removeMcpServer,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Reopens a chat's session on a new agent (ACP session/load), which
+  /// replays its transcript, so it uses the MCP servers as they are now.
+  /// Refused while it is busy (API 33).
+  Future<nushiv1nushi.ReloadChatResponse> reloadChat(
+    nushiv1nushi.ReloadChatRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.reloadChat,
       input,
       signal: signal,
       headers: headers,

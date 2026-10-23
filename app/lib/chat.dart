@@ -34,6 +34,7 @@ class ChatState extends ChangeNotifier {
   bool canFork = false; // the agent can fork it into side chats
   bool canImages = false; // the agent takes images in prompts
   bool canRewind = false; // the agent rewinds to a user message
+  bool mcpChanged = false; // MCP servers changed since the agent started
   DateTime? started; // when the running turn started
   bool stopping = false; // the app asked the turn to stop
   String error = ''; // why the snapshot didn't load
@@ -116,6 +117,7 @@ class ChatState extends ChangeNotifier {
     canFork = s.canFork;
     canImages = s.images;
     canRewind = s.canRewind;
+    mcpChanged = s.mcpChanged;
     started = s.started == 0
         ? null
         : DateTime.fromMillisecondsSinceEpoch(s.started.toInt());
