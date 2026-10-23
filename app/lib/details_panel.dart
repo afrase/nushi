@@ -133,152 +133,146 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
               ],
             ),
           );
-    return Container(
-      width: DetailsPanel.width,
-      decoration: BoxDecoration(
-        border: Border(left: BorderSide(color: t.borderSubtle)),
+    return PanelCards([
+      PanelCard(
+        title: 'Environment',
+        summary: Text(
+          folderParts(chat.home).$1,
+          style: muted,
+          overflow: TextOverflow.ellipsis,
+        ),
+        rows: [
+          (
+            chat.worktree == null ? 'Folder' : 'Repository',
+            FolderButton(chat: chat, daemon: daemon, stacked: true),
+          ),
+          if (status != null && status.git)
+            ...worktreeRows(context, chat, daemon, status.branch),
+          if (status != null && status.gone)
+            (
+              null,
+              Text(
+                chat.worktree == null
+                    ? 'The folder is gone.'
+                    : 'Its worktree was removed outside Nushi. Delete '
+                          'the chat to clean up its branch '
+                          '${chat.worktree!.branch}.',
+                style: theme.ui(t.crashed, size: 12),
+              ),
+            ),
+        ],
       ),
-      child: PanelCards([
+      PanelCard(
+        title: 'Context',
+        summary: ContextMeter(u),
+        rows: [
+          if (u.contextSize == 0 && cost(u).isEmpty && _context == null)
+            (null, 'Claude reports it after a turn.'),
+          if (u.contextSize > 0) ...[
+            ('Used', ContextMeter(u)),
+            (
+              'Tokens',
+              '${tokens(u.contextUsed.toInt())} of '
+                  '${tokens(u.contextSize.toInt())}',
+            ),
+          ],
+          if (lastTurn(u).isNotEmpty)
+            (
+              'Last turn',
+              Tooltip(
+                message: cacheUse(u).isEmpty ? '' : 'Cache: ${cacheUse(u)}',
+                child: Text(lastTurn(u), style: theme.ui(t.text, size: 12)),
+              ),
+            ),
+          if (cost(u).isNotEmpty)
+            (
+              'Cost',
+              Tooltip(
+                message: 'The session’s cost so far, as Claude reports it',
+                child: Text(cost(u), style: theme.ui(t.text, size: 12)),
+              ),
+            ),
+          if (_context case final c?) ...[
+            (
+              'By category',
+              IconTap(
+                Icons.refresh,
+                tooltip: 'Ask Claude again',
+                size: 13,
+                onTap: chat.busy ? null : () => _askContext(Duration.zero),
+              ),
+            ),
+            (
+              null,
+              c.categories.isEmpty
+                  ? AgentMarkdown(c.markdown)
+                  : ContextBreakdown(c.categories),
+            ),
+          ],
+        ],
+      ),
+      PanelCard(
+        title: 'Changes',
+        summary: lines,
+        onTap: status != null && status.git ? widget.onChanges : null,
+        rows: [
+          if (_error != null)
+            (null, _error!)
+          else if (!daemon.canFolderStatus)
+            (null, 'Needs a newer daemon.')
+          else if (status == null)
+            (null, '…')
+          else if (!status.git)
+            (
+              null,
+              status.gone ? 'The folder is gone.' : 'Not a git repository.',
+            )
+          else ...[
+            (base.isEmpty ? 'Uncommitted' : 'Branch', lines!),
+            ('Files', status.files == 0 ? 'None' : '${status.files}'),
+          ],
+        ],
+      ),
+      if (subagentsOf(chat.items, busy: chat.busy) case final subs
+          when subs.isNotEmpty)
         PanelCard(
-          title: 'Environment',
+          title: 'Agents',
           summary: Text(
-            folderParts(chat.home).$1,
+            '${subs.length} subagent${subs.length == 1 ? '' : 's'}',
             style: muted,
-            overflow: TextOverflow.ellipsis,
           ),
           rows: [
-            (
-              chat.worktree == null ? 'Folder' : 'Repository',
-              FolderButton(chat: chat, daemon: daemon, stacked: true),
-            ),
-            if (status != null && status.git)
-              ...worktreeRows(context, chat, daemon, status.branch),
-            if (status != null && status.gone)
+            for (final s in subs)
               (
                 null,
-                Text(
-                  chat.worktree == null
-                      ? 'The folder is gone.'
-                      : 'Its worktree was removed outside Nushi. Delete '
-                            'the chat to clean up its branch '
-                            '${chat.worktree!.branch}.',
-                  style: theme.ui(t.crashed, size: 12),
-                ),
-              ),
-          ],
-        ),
-        PanelCard(
-          title: 'Context',
-          summary: ContextMeter(u),
-          rows: [
-            if (u.contextSize == 0 && cost(u).isEmpty && _context == null)
-              (null, 'Claude reports it after a turn.'),
-            if (u.contextSize > 0) ...[
-              ('Used', ContextMeter(u)),
-              (
-                'Tokens',
-                '${tokens(u.contextUsed.toInt())} of '
-                    '${tokens(u.contextSize.toInt())}',
-              ),
-            ],
-            if (lastTurn(u).isNotEmpty)
-              (
-                'Last turn',
-                Tooltip(
-                  message: cacheUse(u).isEmpty ? '' : 'Cache: ${cacheUse(u)}',
-                  child: Text(lastTurn(u), style: theme.ui(t.text, size: 12)),
-                ),
-              ),
-            if (cost(u).isNotEmpty)
-              (
-                'Cost',
-                Tooltip(
-                  message: 'The session’s cost so far, as Claude reports it',
-                  child: Text(cost(u), style: theme.ui(t.text, size: 12)),
-                ),
-              ),
-            if (_context case final c?) ...[
-              (
-                'By category',
-                IconTap(
-                  Icons.refresh,
-                  tooltip: 'Ask Claude again',
-                  size: 13,
-                  onTap: chat.busy ? null : () => _askContext(Duration.zero),
-                ),
-              ),
-              (
-                null,
-                c.categories.isEmpty
-                    ? AgentMarkdown(c.markdown)
-                    : ContextBreakdown(c.categories),
-              ),
-            ],
-          ],
-        ),
-        PanelCard(
-          title: 'Changes',
-          summary: lines,
-          onTap: status != null && status.git ? widget.onChanges : null,
-          rows: [
-            if (_error != null)
-              (null, _error!)
-            else if (!daemon.canFolderStatus)
-              (null, 'Needs a newer daemon.')
-            else if (status == null)
-              (null, '…')
-            else if (!status.git)
-              (
-                null,
-                status.gone ? 'The folder is gone.' : 'Not a git repository.',
-              )
-            else ...[
-              (base.isEmpty ? 'Uncommitted' : 'Branch', lines!),
-              ('Files', status.files == 0 ? 'None' : '${status.files}'),
-            ],
-          ],
-        ),
-        if (subagentsOf(chat.items, busy: chat.busy) case final subs
-            when subs.isNotEmpty)
-          PanelCard(
-            title: 'Agents',
-            summary: Text(
-              '${subs.length} subagent${subs.length == 1 ? '' : 's'}',
-              style: muted,
-            ),
-            rows: [
-              for (final s in subs)
-                (
-                  null,
-                  Tap(
-                    onTap: () => chat.reveal.value = s.call.id,
-                    tooltip: 'Show it in the chat',
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${s.call.agent}: ${s.call.title}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.ui(t.text, size: 12),
+                Tap(
+                  onTap: () => chat.reveal.value = s.call.id,
+                  tooltip: 'Show it in the chat',
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${s.call.agent}: ${s.call.title}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.ui(t.text, size: 12),
+                      ),
+                      Text(
+                        subagentState(s),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.ui(
+                          s.call.status == 'failed' ? t.crashed : t.textMuted,
+                          size: 11.5,
                         ),
-                        Text(
-                          subagentState(s),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.ui(
-                            s.call.status == 'failed' ? t.crashed : t.textMuted,
-                            size: 11.5,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-            ],
-          ),
-      ]),
-    );
+              ),
+          ],
+        ),
+    ]);
   }
 }

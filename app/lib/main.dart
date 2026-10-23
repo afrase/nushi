@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import 'changes_view.dart';
@@ -8,6 +10,7 @@ import 'daemon.dart';
 import 'details_panel.dart';
 import 'folder_button.dart';
 import 'menu.dart';
+import 'panes.dart';
 import 'settings.dart';
 import 'sidebar.dart';
 import 'status.dart';
@@ -87,21 +90,29 @@ class _Shell extends StatelessWidget {
         );
       }
       final chat = daemon.selected;
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(width: 260, child: Sidebar(daemon: daemon)),
-          Expanded(
-            child: chat == null
-                ? Center(
-                    child: Text(
-                      'Start a chat',
-                      style: theme.ui(theme.t.textMuted),
-                    ),
-                  )
-                : _ChatPane(key: ValueKey(chat.id), chat, daemon),
-          ),
-        ],
+      return LayoutBuilder(
+        builder: (context, box) => Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Resizable(
+              name: 'sidebar',
+              initial: 260,
+              min: 200,
+              max: min(480, box.maxWidth - 560),
+              child: Sidebar(daemon: daemon),
+            ),
+            Expanded(
+              child: chat == null
+                  ? Center(
+                      child: Text(
+                        'Start a chat',
+                        style: theme.ui(theme.t.textMuted),
+                      ),
+                    )
+                  : _ChatPane(key: ValueKey(chat.id), chat, daemon),
+            ),
+          ],
+        ),
       );
     },
   );
@@ -128,7 +139,9 @@ class _ChatPaneState extends State<_ChatPane> {
       valueListenable: showDetails,
       builder: (context, show, _) {
         // The panel goes when the chat would get too narrow.
-        final fits = box.maxWidth >= 820;
+        final fits =
+            box.maxWidth >=
+            paneWidth('details', DetailsPanel.width) + ChatView.minWidth;
         final panel = show && fits && !_changes;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

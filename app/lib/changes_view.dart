@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'chat.dart';
 import 'daemon.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
+import 'panes.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
 
@@ -104,76 +105,83 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
       );
     }
     final file = _files.where((f) => f.path == _path).firstOrNull;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Container(
-          width: 240,
-          decoration: BoxDecoration(
-            color: t.raised,
-            border: Border(right: BorderSide(color: t.borderSubtle)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (chat.worktree != null && daemon.canBranchDiff)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-                  child: Segmented(
-                    value: chat.branchDiff,
-                    segments: const [(true, 'Branch'), (false, 'Uncommitted')],
-                    onChanged: (v) => chat.branchDiff = v,
-                  ),
-                ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        _files.isEmpty && !_loading
-                            ? 'No changes'
-                            : '${_files.length} changed',
-                        style: theme.ui(t.textSecondary, size: 12),
+    return LayoutBuilder(
+      builder: (context, box) => Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Resizable(
+            name: 'files',
+            initial: 240,
+            min: 180,
+            max: min(560, box.maxWidth - 360),
+            child: ColoredBox(
+              color: t.raised,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (chat.worktree != null && daemon.canBranchDiff)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                      child: Segmented(
+                        value: chat.branchDiff,
+                        segments: const [
+                          (true, 'Branch'),
+                          (false, 'Uncommitted'),
+                        ],
+                        onChanged: (v) => chat.branchDiff = v,
                       ),
                     ),
-                    IconTap(
-                      Icons.refresh,
-                      tooltip: 'Reload',
-                      size: 15,
-                      onTap: _loading ? null : reload,
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _files.isEmpty && !_loading
+                                ? 'No changes'
+                                : '${_files.length} changed',
+                            style: theme.ui(t.textSecondary, size: 12),
+                          ),
+                        ),
+                        IconTap(
+                          Icons.refresh,
+                          tooltip: 'Reload',
+                          size: 15,
+                          onTap: _loading ? null : reload,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: ListView(
-                  children: [
-                    for (final f in _files)
-                      _FileRow(
-                        f,
-                        f.path == _path,
-                        (p) => setState(() => _path = p),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: file != null && file.skipped.isEmpty
-              ? DiffBox(file, key: ValueKey(file.path), fit: false)
-              : Center(
-                  child: Text(
-                    file == null
-                        ? ''
-                        : 'Not shown: ${file.path} is ${file.skipped}.',
-                    style: theme.ui(t.textMuted),
                   ),
-                ),
-        ),
-      ],
+                  Expanded(
+                    child: ListView(
+                      children: [
+                        for (final f in _files)
+                          _FileRow(
+                            f,
+                            f.path == _path,
+                            (p) => setState(() => _path = p),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            child: file != null && file.skipped.isEmpty
+                ? DiffBox(file, key: ValueKey(file.path), fit: false)
+                : Center(
+                    child: Text(
+                      file == null
+                          ? ''
+                          : 'Not shown: ${file.path} is ${file.skipped}.',
+                      style: theme.ui(t.textMuted),
+                    ),
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }

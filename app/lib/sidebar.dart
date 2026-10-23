@@ -52,10 +52,7 @@ class _SidebarState extends State<Sidebar> {
     }
     if (_starting != null) groups.putIfAbsent(_starting!, () => []);
     return DecoratedBox(
-      decoration: BoxDecoration(
-        color: t.raised,
-        border: Border(right: BorderSide(color: t.borderSubtle)),
-      ),
+      decoration: BoxDecoration(color: t.raised),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

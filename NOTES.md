@@ -78,6 +78,8 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 38. Questions one at a time | 3241 | 800 | 7069 | 655 |
 | 39. Subagents you can see | 3291 | 800 | 7384 | 655 |
 | 40. A detailed context card | 3456 | 800 | 7524 | 655 |
+| (rename to Nushi, ADR 0018) | 3528 | 800 | 7561 | 655 |
+| 41. Resizable panes | 3528 | 800 | 7695 | 655 |
 
 Tripwires crossed:
 - Milestone I (steps 33–40) took the app from 6,623 to 7,540 lines of Dart, past the ~7,000 tripwire: the trim saved about 270 (short of its 6,000 goal), and steps 34–40 added about 1,180, most of it for the four steps added mid-run (status row 37, questions 38, subagents 39, context breakdown 40, about 900 together). Step 33's own diff (1,634 added, 1,909 removed) is a rewrite of call sites, not growth. `composer.dart` (408) and `question_card.dart` (402) are just over 400 lines; `transcript.dart` and `details_panel.dart` were split after passing it.
@@ -233,6 +235,8 @@ To try it beside an installed Nushi that's in use: `export NUSHI_DATA=~/Library/
 - `/context` (claude-agent-acp 0.94.0, step 40) is answered by the adapter itself (no model call, no cost, no usage update) as agent text: a markdown "Context Usage" with the model, the tokens used of the window, an "Estimated usage by category" table (System prompt, System tools, MCP tools, MCP server instructions, MCP tools (deferred), System tools (deferred), Custom agents, Memory files, Skills, Messages, Free space, Autocompact buffer; counts like `2.5k`, `622`, `934.6k`), then tables of MCP tools, custom agents, memory files and skills. It came twice, as two messages with different ids and the same text. It isn't replayed by `session/load`.
 
 ## Decisions to revisit
+
+- Step 41: the sidebar, the details panel, the side chat and the Changes file list have a draggable edge (`Resizable` in `panes.dart`): a 1 px line, 2 px in the focus blue under the pointer or while dragging, with a resize cursor over a 5 px strip inside the pane (Flutter can't hit-test outside a widget's box, so the strip sits on the pane's side of the line). Limits: sidebar 200–480 (default 260), details 220–480 (264), side chat 300–640 (380), file list 180–560 (240); the transcript keeps 556 beside a panel (the panel hides below that, as before at 820) and the main area 560 beside the sidebar. A double-click resets the default. Widths are app-wide (not per chat), in `app.json` (`panes`), written when a drag ends.
 
 - Step 40 ([ADR 0017](docs/adr/0017-context-breakdown-from-claude.md)): the Context card adds "By category": a thin bar of the categories (free space left empty) and a row per category with tokens and percent, from `/context`, which the daemon sends on its own (`GetContextUsage`, API 25) and keeps out of the transcript: the reply's chunks go to the request, the chat doesn't turn busy, and a prompt sent meanwhile waits for it. The app asks while the card is open and the chat idle: when the panel opens, the card opens, 0.8 s after each turn ends, and on the card's refresh button; never during a turn. The last answer stays until the next. If the table can't be read, the card shows the reply's markdown as it is. An agent without a `context` command gets the card as before. The colors are the theme's, in order; Free space has none.
 
