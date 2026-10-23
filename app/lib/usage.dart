@@ -71,9 +71,22 @@ class ContextMeter extends StatelessWidget {
   }
 }
 
+/// Whether Claude lists [c] without it being in the context: its
+/// deferred tools, loaded on demand.
+bool onDemand(ContextCategory c) => c.name.endsWith('(deferred)');
+
+/// The bar's parts: each category in the context (not those [onDemand]),
+/// in order, with its share of their total; the shares add up to 1.
+List<(ContextCategory, double)> contextShares(List<ContextCategory> all) {
+  final parts = all.where((c) => !onDemand(c) && c.tokens > 0).toList();
+  final total = parts.fold(0, (n, c) => n + c.tokens.toInt());
+  return [for (final c in parts) (c, c.tokens.toInt() / total)];
+}
+
 /// What fills the agent's context, as /context tells (ADR 0017): a bar of
 /// the categories in quiet colors, free space left empty, then a row per
-/// category with its tokens and share.
+/// category with its tokens and share; the deferred ones, outside the
+/// context, dimmed under them.
 class ContextBreakdown extends StatelessWidget {
   const ContextBreakdown(this.categories, {super.key});
 
@@ -95,11 +108,41 @@ class ContextBreakdown extends StatelessWidget {
       t.textSecondary,
     ];
     bool free(ContextCategory c) => c.name == 'Free space';
+    final inContext = categories.where((c) => !onDemand(c)).toList();
     final colors = {
-      for (final (i, c) in categories.where((c) => !free(c)).indexed)
+      for (final (i, c) in inContext.where((c) => !free(c)).indexed)
         c.name: palette[i % palette.length].withValues(alpha: 0.75),
     };
-    final total = categories.fold(0, (n, c) => n + c.tokens.toInt());
+    final shares = contextShares(categories);
+    Widget row(ContextCategory c, {bool dim = false}) => Row(
+      spacing: 6,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: box(
+            colors[c.name] ?? t.borderStrong,
+            fill: colors[c.name],
+            radius: 2,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            dim ? c.name.replaceFirst(' (deferred)', '') : c.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.ui(dim ? t.textMuted : t.textSecondary, size: 12),
+          ),
+        ),
+        Text(
+          dim
+              ? tokens(c.tokens.toInt())
+              : '${tokens(c.tokens.toInt())}  ${c.percent.toStringAsFixed(1)}%',
+          style: theme.ui(dim ? t.textMuted : t.text, size: 12),
+        ),
+      ],
+    );
+    final later = categories.where(onDemand).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 3,
@@ -109,46 +152,40 @@ class ContextBreakdown extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 4),
           clipBehavior: Clip.antiAlias,
           decoration: box(t.borderSubtle, radius: 3),
-          child: Row(
-            children: [
-              for (final c in categories)
-                if (c.tokens > 0 && total > 0)
-                  Expanded(
-                    flex: (c.tokens.toInt() * 1000 ~/ total).clamp(1, 1000),
-                    child: ColoredBox(
-                      color: colors[c.name] ?? const Color(0x00000000),
+          child: LayoutBuilder(
+            builder: (context, box) {
+              // A used part gets a sliver at least; free space what's left.
+              final used = [
+                for (final (c, share) in shares)
+                  if (!free(c))
+                    (c, (share * box.maxWidth).clamp(1.5, box.maxWidth)),
+              ];
+              final width = used.fold(0.0, (w, p) => w + p.$2);
+              final scale = width > box.maxWidth ? box.maxWidth / width : 1.0;
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final (c, w) in used)
+                    SizedBox(
+                      width: w * scale,
+                      child: ColoredBox(color: colors[c.name]!),
                     ),
-                  ),
-            ],
+                ],
+              );
+            },
           ),
         ),
-        for (final c in categories)
-          Row(
-            spacing: 6,
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: box(
-                  colors[c.name] ?? t.borderStrong,
-                  fill: colors[c.name],
-                  radius: 2,
-                ),
-              ),
-              Expanded(
-                child: Text(
-                  c.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.ui(t.textSecondary, size: 12),
-                ),
-              ),
-              Text(
-                '${tokens(c.tokens.toInt())}  ${c.percent.toStringAsFixed(1)}%',
-                style: theme.ui(t.text, size: 12),
-              ),
-            ],
+        for (final c in inContext) row(c),
+        if (later.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              'Loaded on demand, not in the context',
+              style: theme.ui(t.textMuted, size: 11.5),
+            ),
           ),
+          for (final c in later) row(c, dim: true),
+        ],
       ],
     );
   }
