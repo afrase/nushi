@@ -161,7 +161,7 @@ abstract final class NushiService {
   );
 
   /// Returns a folder's uncommitted changes against HEAD, untracked files
-  /// included.
+  /// included, or everything since its branch left a base.
   static const getDiff = connect.Spec(
     '/$name/GetDiff',
     connect.StreamType.unary,
@@ -169,8 +169,8 @@ abstract final class NushiService {
     nushiv1nushi.GetDiffResponse.new,
   );
 
-  /// Sums up a folder's uncommitted changes (as GetDiff lists them) and names
-  /// its branch.
+  /// Sums up a folder's changes (as GetDiff lists them) and names its
+  /// branch.
   static const getFolderStatus = connect.Spec(
     '/$name/GetFolderStatus',
     connect.StreamType.unary,

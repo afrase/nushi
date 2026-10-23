@@ -21,15 +21,18 @@ const maxText = 1 << 20
 
 // Changes returns the folder's uncommitted changes against HEAD, untracked
 // files included, with paths relative to the folder. The folder may be
-// anywhere inside a repository.
-func Changes(ctx context.Context, folder string) ([]model.FileChange, error) {
-	hasHead, err := repo(ctx, folder)
+// anywhere inside a repository. With base, the changes are counted from
+// where HEAD's branch left base (their merge base): the branch's commits
+// and the uncommitted changes.
+func Changes(ctx context.Context, folder, base string) ([]model.FileChange, error) {
+	from, err := start(ctx, folder, base)
 	if err != nil {
 		return nil, err
 	}
+	hasHead := from != ""
 	var changes []model.FileChange
 	if hasHead {
-		out, err := run(ctx, folder, "diff", "HEAD", "--name-status", "-z", "--no-renames", "--relative", "--no-ext-diff", "--no-textconv")
+		out, err := run(ctx, folder, "diff", from, "--name-status", "-z", "--no-renames", "--relative", "--no-ext-diff", "--no-textconv")
 		if err != nil {
 			return nil, err
 		}
@@ -55,7 +58,7 @@ func Changes(ctx context.Context, folder string) ([]model.FileChange, error) {
 		c := &changes[i]
 		var old, cur []byte
 		if c.Status != "added" {
-			if old, err = run(ctx, folder, "show", "--no-textconv", "HEAD:./"+c.Path); err != nil {
+			if old, err = run(ctx, folder, "show", "--no-textconv", from+":./"+c.Path); err != nil {
 				return nil, err
 			}
 		}
@@ -89,6 +92,22 @@ func repo(ctx context.Context, folder string) (hasHead bool, err error) {
 	return err == nil, nil
 }
 
+// start returns the commit changes are counted from: HEAD, or with base
+// the merge base of HEAD and base; "" before the first commit.
+func start(ctx context.Context, folder, base string) (string, error) {
+	hasHead, err := repo(ctx, folder)
+	switch {
+	case err != nil || !hasHead:
+		return "", err
+	case base == "":
+		return "HEAD", nil
+	case strings.HasPrefix(base, "-"):
+		return "", fmt.Errorf("%q is not a branch", base)
+	}
+	out, err := run(ctx, folder, "merge-base", "HEAD", base)
+	return strings.TrimSpace(string(out)), err
+}
+
 // untracked lists the files that are new to git: untracked ones, and before
 // the first commit every file.
 func untracked(ctx context.Context, folder string, hasHead bool) ([]string, error) {
@@ -100,23 +119,23 @@ func untracked(ctx context.Context, folder string, hasHead bool) ([]string, erro
 	return split(out), err
 }
 
-// Status sums up the folder's uncommitted changes as Changes lists them
-// (the files, and the lines added and removed; binary and over-large files
-// count no lines), and names the branch checked out, or the commit when
-// none is.
-func Status(ctx context.Context, folder string) (model.FolderStatus, error) {
+// Status sums up the folder's changes as Changes lists them (the files,
+// and the lines added and removed; binary and over-large files count no
+// lines), and names the branch checked out, or the commit when none is.
+func Status(ctx context.Context, folder, base string) (model.FolderStatus, error) {
 	var st model.FolderStatus
-	hasHead, err := repo(ctx, folder)
+	from, err := start(ctx, folder, base)
 	if err != nil {
 		return st, err
 	}
+	hasHead := from != ""
 	if out, err := run(ctx, folder, "symbolic-ref", "--short", "-q", "HEAD"); err == nil {
 		st.Branch = strings.TrimSpace(string(out))
 	} else if out, err := run(ctx, folder, "rev-parse", "--short", "HEAD"); err == nil {
 		st.Branch = strings.TrimSpace(string(out))
 	}
 	if hasHead {
-		out, err := run(ctx, folder, "diff", "HEAD", "--numstat", "-z", "--no-renames", "--relative", "--no-ext-diff", "--no-textconv")
+		out, err := run(ctx, folder, "diff", from, "--numstat", "-z", "--no-renames", "--relative", "--no-ext-diff", "--no-textconv")
 		if err != nil {
 			return st, err
 		}

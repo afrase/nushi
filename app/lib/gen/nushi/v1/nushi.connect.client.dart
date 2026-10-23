@@ -329,7 +329,7 @@ extension type NushiServiceClient (connect.Transport _transport) {
   }
 
   /// Returns a folder's uncommitted changes against HEAD, untracked files
-  /// included.
+  /// included, or everything since its branch left a base.
   Future<nushiv1nushi.GetDiffResponse> getDiff(
     nushiv1nushi.GetDiffRequest input, {
     connect.Headers? headers,
@@ -347,8 +347,8 @@ extension type NushiServiceClient (connect.Transport _transport) {
     );
   }
 
-  /// Sums up a folder's uncommitted changes (as GetDiff lists them) and names
-  /// its branch.
+  /// Sums up a folder's changes (as GetDiff lists them) and names its
+  /// branch.
   Future<nushiv1nushi.GetFolderStatusResponse> getFolderStatus(
     nushiv1nushi.GetFolderStatusRequest input, {
     connect.Headers? headers,

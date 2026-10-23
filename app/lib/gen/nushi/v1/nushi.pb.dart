@@ -2912,9 +2912,11 @@ class SetConfigOptionResponse extends $pb.GeneratedMessage {
 class GetFolderStatusRequest extends $pb.GeneratedMessage {
   factory GetFolderStatusRequest({
     $core.String? folder,
+    $core.String? base,
   }) {
     final result = GetFolderStatusRequest._();
     if (folder != null) result.folder = folder;
+    if (base != null) result.base = base;
     return result;
   }
 
@@ -2932,6 +2934,7 @@ class GetFolderStatusRequest extends $pb.GeneratedMessage {
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: GetFolderStatusRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'folder')
+    ..aOS(2, _omitFieldNames ? '' : 'base')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -2966,6 +2969,16 @@ class GetFolderStatusRequest extends $pb.GeneratedMessage {
   $core.bool hasFolder() => $_has(0);
   @$pb.TagNumber(1)
   void clearFolder() => $_clearField(1);
+
+  /// As GetDiffRequest.base (API 21).
+  @$pb.TagNumber(2)
+  $core.String get base => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set base($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasBase() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearBase() => $_clearField(2);
 }
 
 class GetFolderStatusResponse extends $pb.GeneratedMessage {
@@ -3081,9 +3094,11 @@ class GetFolderStatusResponse extends $pb.GeneratedMessage {
 class GetDiffRequest extends $pb.GeneratedMessage {
   factory GetDiffRequest({
     $core.String? folder,
+    $core.String? base,
   }) {
     final result = GetDiffRequest._();
     if (folder != null) result.folder = folder;
+    if (base != null) result.base = base;
     return result;
   }
 
@@ -3101,6 +3116,7 @@ class GetDiffRequest extends $pb.GeneratedMessage {
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: GetDiffRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'folder')
+    ..aOS(2, _omitFieldNames ? '' : 'base')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -3134,6 +3150,18 @@ class GetDiffRequest extends $pb.GeneratedMessage {
   $core.bool hasFolder() => $_has(0);
   @$pb.TagNumber(1)
   void clearFolder() => $_clearField(1);
+
+  /// A branch: count the changes from where HEAD's branch left it (git
+  /// merge-base HEAD base), the branch's commits and uncommitted changes
+  /// together, instead of from HEAD (API 21).
+  @$pb.TagNumber(2)
+  $core.String get base => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set base($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasBase() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearBase() => $_clearField(2);
 }
 
 class GetDiffResponse extends $pb.GeneratedMessage {
@@ -4599,14 +4627,14 @@ class NushiServiceApi {
           'SetConfigOption', request, SetConfigOptionResponse());
 
   /// Returns a folder's uncommitted changes against HEAD, untracked files
-  /// included.
+  /// included, or everything since its branch left a base.
   $async.Future<GetDiffResponse> getDiff(
           $pb.ClientContext? ctx, GetDiffRequest request) =>
       _client.invoke<GetDiffResponse>(
           ctx, 'NushiService', 'GetDiff', request, GetDiffResponse());
 
-  /// Sums up a folder's uncommitted changes (as GetDiff lists them) and names
-  /// its branch.
+  /// Sums up a folder's changes (as GetDiff lists them) and names its
+  /// branch.
   $async.Future<GetFolderStatusResponse> getFolderStatus(
           $pb.ClientContext? ctx, GetFolderStatusRequest request) =>
       _client.invoke<GetFolderStatusResponse>(ctx, 'NushiService',

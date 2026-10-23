@@ -21,7 +21,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 20
+const Version = 21
 
 type server struct {
 	chats *chats.Service
@@ -206,7 +206,7 @@ func (s *server) GetDiff(ctx context.Context, req *connect.Request[nushiv1.GetDi
 	if !filepath.IsAbs(req.Msg.Folder) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%q is not an absolute path", req.Msg.Folder))
 	}
-	changes, err := git.Changes(ctx, req.Msg.Folder)
+	changes, err := git.Changes(ctx, req.Msg.Folder, req.Msg.Base)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
@@ -221,7 +221,7 @@ func (s *server) GetFolderStatus(ctx context.Context, req *connect.Request[nushi
 	if !filepath.IsAbs(req.Msg.Folder) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%q is not an absolute path", req.Msg.Folder))
 	}
-	st, err := git.Status(ctx, req.Msg.Folder)
+	st, err := git.Status(ctx, req.Msg.Folder, req.Msg.Base)
 	if errors.Is(err, git.ErrNotRepository) {
 		return connect.NewResponse(&nushiv1.GetFolderStatusResponse{}), nil
 	}
