@@ -298,7 +298,8 @@ class _FormState extends State<_Form> {
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
                     child: Text(
-                      'A value left as •••• keeps the one it has.',
+                      'A value left as •••• keeps the one it has, while '
+                      'the command and URL stay as they were.',
                       style: muted,
                     ),
                   ),

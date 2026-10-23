@@ -143,6 +143,9 @@ class TermSession extends ChangeNotifier {
   /// Whether its find bar shows (⌘F).
   final finding = ValueNotifier(false);
 
+  /// The real target of the OSC 8 link under the pointer, if any.
+  final hoveredLink = ValueNotifier<String?>(null);
+
   static const fontSize = 12.5, lineHeight = 1.25;
   late Terminal terminal;
   StreamSubscription<String>? _sub;
@@ -251,6 +254,7 @@ class TermSession extends ChangeNotifier {
     focus.dispose();
     scroll.dispose();
     finding.dispose();
+    hoveredLink.dispose();
     super.dispose();
   }
 }

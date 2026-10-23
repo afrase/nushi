@@ -12,27 +12,6 @@ import (
 	"unicode"
 )
 
-// Mask stands in for env and header values, which never leave the daemon.
-const Mask = "••••"
-
-// masked is a server's config with its env and header values replaced by
-// Mask.
-func masked(config string) string {
-	cfg, err := decode(config)
-	if err != nil {
-		return "{}"
-	}
-	for _, key := range []string{"env", "headers"} {
-		if m, ok := cfg[key].(map[string]any); ok {
-			for k := range m {
-				m[k] = Mask
-			}
-		}
-	}
-	b, _ := json.Marshal(cfg)
-	return string(b)
-}
-
 func decode(config string) (map[string]any, error) {
 	var cfg map[string]any
 	if err := json.Unmarshal([]byte(config), &cfg); err != nil || cfg == nil {
@@ -132,31 +111,6 @@ func (s *Service) stored(folder, scope, name string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("no %s server %q", scope, name)
-}
-
-// unmasked is config with each env or header value that is Mask taken from
-// old.
-func unmasked(config, old string) (string, error) {
-	cfg, err := decode(config)
-	if err != nil {
-		return "", err
-	}
-	was, _ := decode(old)
-	for _, key := range []string{"env", "headers"} {
-		m, _ := cfg[key].(map[string]any)
-		prev, _ := was[key].(map[string]any)
-		for k, v := range m {
-			if v == Mask {
-				if p, ok := prev[k]; ok {
-					m[k] = p
-				} else {
-					return "", fmt.Errorf("%s %s has no value", strings.TrimSuffix(key, "s"), k)
-				}
-			}
-		}
-	}
-	b, _ := json.Marshal(cfg)
-	return string(b), nil
 }
 
 // notify tells the chats the change reaches: every chat for user scope;

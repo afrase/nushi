@@ -87,6 +87,7 @@ func (s *Service) List(ctx context.Context, folder string, check bool) (servers 
 		if c.Scope == "" {
 			c.Scope = "other"
 		}
+		c.Config = masked(c.Config)
 		servers = append(servers, c)
 	}
 	return servers, nil, nil

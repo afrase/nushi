@@ -3,8 +3,8 @@ package chats
 import (
 	"context"
 	"errors"
-	"log"
 	"fmt"
+	"log"
 	"maps"
 	"slices"
 	"strings"

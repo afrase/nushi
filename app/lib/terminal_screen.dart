@@ -91,14 +91,53 @@ class TerminalScreen extends StatelessWidget {
                   keyboardAppearance: t.brightness,
                   shortcuts: _keys(context, s),
                   readOnly: info.exited,
-                  // ⌘-click opens a URL or a file in the output.
+                  // ⌘-click opens one thing: an OSC 8 link's real
+                  // target, else the URL or file under the pointer.
                   onTapUp: (_, at) {
                     if (HardwareKeyboard.instance.isMetaPressed) {
-                      openLink(wordAt(s.terminal, at), info.folder, showChange);
+                      openLink(
+                        clickTarget(s.terminal, at),
+                        info.folder,
+                        showChange,
+                      );
                     }
                   },
-                  onHyperlinkTap: (uri) =>
-                      openLink(uri, info.folder, showChange),
+                  onHover: (_, at) =>
+                      s.hoveredLink.value = s.terminal.hyperlinkAt(at),
+                  onExit: (_) => s.hoveredLink.value = null,
+                ),
+                // A link's text can say anything: its target shows here.
+                ValueListenableBuilder(
+                  valueListenable: s.hoveredLink,
+                  builder: (context, link, _) => link == null
+                      ? const SizedBox.shrink()
+                      : Positioned(
+                          left: 6,
+                          bottom: 4,
+                          right: 40,
+                          child: IgnorePointer(
+                            child: Align(
+                              alignment: Alignment.bottomLeft,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: box(
+                                  t.borderStrong,
+                                  fill: t.raised,
+                                  radius: NushiTheme.control,
+                                ),
+                                child: Text(
+                                  link,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.code(t.textSecondary, size: 11),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                 ),
                 ValueListenableBuilder(
                   valueListenable: s.finding,
