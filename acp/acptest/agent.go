@@ -14,9 +14,10 @@
 //
 // Pause slows the "think" and "plan" scripts down, to watch them stream.
 //
-// Sessions are kept in a History, which session/load replays and
-// session/fork copies; agents that share a History see each other's
-// sessions, as a restarted agent would. A session takes any cwd.
+// Sessions are kept in a History, which session/load replays,
+// session/fork copies and session/delete deletes; agents that share a
+// History see each other's sessions, as a restarted agent would. A
+// session takes any cwd.
 package acptest
 
 import (
@@ -51,6 +52,12 @@ func (h *History) fork(from, to string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.sessions[to] = append(h.sessions[to], h.sessions[from]...)
+}
+
+// Has reports whether session is in the history.
+func (h *History) Has(session string) bool {
+	_, ok := h.get(session)
+	return ok
 }
 
 func (h *History) get(session string) ([]json.RawMessage, bool) {
@@ -152,7 +159,7 @@ func (a *Agent) answer(f frame) {
 	switch f.Method {
 	case "initialize":
 		result = map[string]any{"protocolVersion": 1, "agentCapabilities": map[string]any{"loadSession": true,
-			"sessionCapabilities": map[string]any{"fork": map[string]any{}}}}
+			"sessionCapabilities": map[string]any{"fork": map[string]any{}, "delete": map[string]any{}}}}
 	case "session/new", "session/fork":
 		a.mu.Lock()
 		a.nextID++
@@ -180,6 +187,11 @@ func (a *Agent) answer(f frame) {
 				a.send(frame{Method: "session/update", Params: json.RawMessage(`{"sessionId":"` + p.SessionID + `","update":` + string(u) + `}`)})
 			}
 		}
+		result = map[string]any{}
+	case "session/delete":
+		a.History.mu.Lock()
+		delete(a.History.sessions, p.SessionID)
+		a.History.mu.Unlock()
 		result = map[string]any{}
 	case "session/prompt":
 		var text string

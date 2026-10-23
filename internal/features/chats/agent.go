@@ -23,21 +23,15 @@ type opened struct {
 // fork a new one that starts with a copy of it (session/fork). The agent
 // stops if that fails.
 func (c *chat) openSession(ctx context.Context, launch Launch, sid, folder string, fork bool) (opened, error) {
-	agent, err := launch(c)
+	agent, init, err := initialize(ctx, launch, c)
 	if err != nil {
-		return opened{}, fmt.Errorf("start agent: %w", err)
+		return opened{}, err
 	}
 	o := opened{agent: agent, sid: sid}
-	init, err := agent.Initialize(ctx, acp.InitializeRequest{
-		ProtocolVersion:    acp.Version,
-		ClientCapabilities: &acp.ClientCapabilities{Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}}},
-		ClientInfo:         &acp.Implementation{Name: "nushi", Title: "Nushi"},
-	})
-	if err == nil && init.AgentCapabilities != nil && init.AgentCapabilities.PromptCapabilities != nil {
+	if init.AgentCapabilities != nil && init.AgentCapabilities.PromptCapabilities != nil {
 		o.images = init.AgentCapabilities.PromptCapabilities.Image
 	}
 	switch {
-	case err != nil:
 	case sid == "":
 		var resp *acp.NewSessionResponse
 		if resp, err = agent.NewSession(ctx, acp.NewSessionRequest{Cwd: folder, MCPServers: []acp.MCPServer{}}); err == nil {
@@ -63,6 +57,25 @@ func (c *chat) openSession(ctx context.Context, launch Launch, sid, folder strin
 		return opened{}, err
 	}
 	return o, nil
+}
+
+// initialize launches an agent and initializes the connection; the agent
+// stops if that fails.
+func initialize(ctx context.Context, launch Launch, h acp.Handler) (Agent, *acp.InitializeResponse, error) {
+	agent, err := launch(h)
+	if err != nil {
+		return nil, nil, fmt.Errorf("start agent: %w", err)
+	}
+	init, err := agent.Initialize(ctx, acp.InitializeRequest{
+		ProtocolVersion:    acp.Version,
+		ClientCapabilities: &acp.ClientCapabilities{Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}}},
+		ClientInfo:         &acp.Implementation{Name: "nushi", Title: "Nushi"},
+	})
+	if err != nil {
+		agent.Close()
+		return nil, nil, err
+	}
+	return agent, init, nil
 }
 
 // useLocked makes an opened session the chat's.

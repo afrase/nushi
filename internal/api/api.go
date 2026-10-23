@@ -21,7 +21,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 18
+const Version = 19
 
 type server struct {
 	chats *chats.Service
@@ -142,6 +142,25 @@ func (s *server) RemoveChat(_ context.Context, req *connect.Request[nushiv1.Remo
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
 	return connect.NewResponse(&nushiv1.RemoveChatResponse{}), nil
+}
+
+func (s *server) PlanDeleteChat(ctx context.Context, req *connect.Request[nushiv1.PlanDeleteChatRequest]) (*connect.Response[nushiv1.PlanDeleteChatResponse], error) {
+	p, err := s.chats.PlanDelete(ctx, req.Msg.ChatId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	out := &nushiv1.PlanDeleteChatResponse{DeletesHistory: p.History, ScratchFolder: p.Scratch}
+	for _, sess := range p.Sessions {
+		out.Sessions = append(out.Sessions, &nushiv1.AgentSession{SessionId: sess.ID, Folder: sess.Folder})
+	}
+	return connect.NewResponse(out), nil
+}
+
+func (s *server) DeleteChat(ctx context.Context, req *connect.Request[nushiv1.DeleteChatRequest]) (*connect.Response[nushiv1.DeleteChatResponse], error) {
+	if err := s.chats.Delete(ctx, req.Msg.ChatId); err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	return connect.NewResponse(&nushiv1.DeleteChatResponse{}), nil
 }
 
 func (s *server) AnswerPermission(_ context.Context, req *connect.Request[nushiv1.AnswerPermissionRequest]) (*connect.Response[nushiv1.AnswerPermissionResponse], error) {

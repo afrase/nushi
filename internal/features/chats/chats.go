@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -33,6 +34,7 @@ type Agent interface {
 	CanFork() bool
 	ForkSession(context.Context, acp.ForkSessionRequest) (*acp.ForkSessionResponse, error)
 	CloseSession(context.Context, acp.CloseSessionRequest) error
+	DeleteSession(context.Context, acp.DeleteSessionRequest) error
 	Close() error
 }
 
@@ -56,8 +58,9 @@ type Service struct {
 	scratch  string // the folder that holds chats' scratch folders
 	publish  func(model.Event)
 
-	mu    sync.Mutex
-	chats map[string]*chat
+	mu      sync.Mutex
+	chats   map[string]*chat
+	deletes *bool // whether the agent deletes sessions, once known
 }
 
 // CopyHistory copies the agent's own record of a session from one folder's
@@ -210,7 +213,7 @@ func (c *chat) saveLocked(change func(*model.Session)) {
 	if i := modeIndex(c.config); i >= 0 {
 		next.Mode = c.config[i].Current
 	}
-	if next != c.session {
+	if !reflect.DeepEqual(next, c.session) {
 		c.session = next
 		c.storeLocked()
 	}

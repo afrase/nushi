@@ -18,6 +18,14 @@ type Session struct {
 	Created   time.Time
 	// Archived chats have no agent running; they reopen when unarchived.
 	Archived bool
+	// Earlier are the agent's sessions the chat had before it moved, oldest
+	// first.
+	Earlier []AgentSession `json:",omitempty"`
+}
+
+// AgentSession is one of the agent's sessions: its id and folder (cwd).
+type AgentSession struct {
+	ID, Folder string
 }
 
 type ItemKind int

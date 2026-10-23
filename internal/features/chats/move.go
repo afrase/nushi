@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"slices"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -49,7 +50,10 @@ func (s *Service) Move(ctx context.Context, chatID, folder string) error {
 		c.mu.Lock()
 		old := c.agent
 		c.useLocked(o)
-		c.saveLocked(func(s *model.Session) { s.Folder, s.SessionID = folder, o.sid })
+		c.saveLocked(func(s *model.Session) {
+			s.Earlier = append(slices.Clip(s.Earlier), model.AgentSession{ID: s.SessionID, Folder: s.Folder})
+			s.Folder, s.SessionID = folder, o.sid
+		})
 		c.mu.Unlock()
 		s.dropSides(c) // they ran on the old agent
 		if old != nil {

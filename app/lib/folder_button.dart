@@ -82,7 +82,7 @@ class FolderButton extends StatelessWidget {
         ),
         if (!scratch)
           Text(
-            _home(folder.substring(0, slash)),
+            tildePath(folder.substring(0, slash)),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.ui(t.textMuted, size: 11.5),
@@ -157,7 +157,7 @@ class _FolderName extends StatelessWidget {
                   style: theme.ui(t.text, size: 12, weight: FontWeight.w500),
                 ),
                 TextSpan(
-                  text: '  ${_home(folder.substring(0, slash))}',
+                  text: '  ${tildePath(folder.substring(0, slash))}',
                   style: theme.ui(t.textMuted, size: 11.5),
                 ),
               ],
@@ -175,7 +175,7 @@ class _FolderName extends StatelessWidget {
 }
 
 /// [path] with the home folder as "~".
-String _home(String path) {
+String tildePath(String path) {
   final home = Platform.environment['HOME'] ?? '';
   return home.isNotEmpty && (path == home || path.startsWith('$home/'))
       ? '~${path.substring(home.length)}'

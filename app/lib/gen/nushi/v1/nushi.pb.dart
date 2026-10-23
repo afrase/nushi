@@ -2008,6 +2008,315 @@ class RemoveChatResponse extends $pb.GeneratedMessage {
   static RemoveChatResponse? _defaultInstance;
 }
 
+class PlanDeleteChatRequest extends $pb.GeneratedMessage {
+  factory PlanDeleteChatRequest({
+    $core.String? chatId,
+  }) {
+    final result = PlanDeleteChatRequest._();
+    if (chatId != null) result.chatId = chatId;
+    return result;
+  }
+
+  PlanDeleteChatRequest._();
+
+  factory PlanDeleteChatRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      PlanDeleteChatRequest()..mergeFromBuffer(data, registry);
+  factory PlanDeleteChatRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      PlanDeleteChatRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'PlanDeleteChatRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: PlanDeleteChatRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PlanDeleteChatRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PlanDeleteChatRequest copyWith(
+          void Function(PlanDeleteChatRequest) updates) =>
+      super.copyWith((message) => updates(message as PlanDeleteChatRequest))
+          as PlanDeleteChatRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use PlanDeleteChatRequest() / PlanDeleteChatRequest.new instead')
+  static PlanDeleteChatRequest create() => PlanDeleteChatRequest._();
+  static $pb.GeneratedMessage $_createMessage() => PlanDeleteChatRequest._();
+  @$core.override
+  PlanDeleteChatRequest createEmptyInstance() => PlanDeleteChatRequest._();
+  @$core.pragma('dart2js:noInline')
+  static PlanDeleteChatRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<PlanDeleteChatRequest>(
+          PlanDeleteChatRequest.$_createMessage);
+  static PlanDeleteChatRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+}
+
+class PlanDeleteChatResponse extends $pb.GeneratedMessage {
+  factory PlanDeleteChatResponse({
+    $core.Iterable<AgentSession>? sessions,
+    $core.bool? deletesHistory,
+    $core.String? scratchFolder,
+  }) {
+    final result = PlanDeleteChatResponse._();
+    if (sessions != null) result.sessions.addAll(sessions);
+    if (deletesHistory != null) result.deletesHistory = deletesHistory;
+    if (scratchFolder != null) result.scratchFolder = scratchFolder;
+    return result;
+  }
+
+  PlanDeleteChatResponse._();
+
+  factory PlanDeleteChatResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      PlanDeleteChatResponse()..mergeFromBuffer(data, registry);
+  factory PlanDeleteChatResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      PlanDeleteChatResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'PlanDeleteChatResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: PlanDeleteChatResponse.$_createMessage)
+    ..pPM<AgentSession>(1, _omitFieldNames ? '' : 'sessions',
+        subBuilder: AgentSession.$_createMessage)
+    ..aOB(2, _omitFieldNames ? '' : 'deletesHistory')
+    ..aOS(3, _omitFieldNames ? '' : 'scratchFolder')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PlanDeleteChatResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PlanDeleteChatResponse copyWith(
+          void Function(PlanDeleteChatResponse) updates) =>
+      super.copyWith((message) => updates(message as PlanDeleteChatResponse))
+          as PlanDeleteChatResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use PlanDeleteChatResponse() / PlanDeleteChatResponse.new instead')
+  static PlanDeleteChatResponse create() => PlanDeleteChatResponse._();
+  static $pb.GeneratedMessage $_createMessage() => PlanDeleteChatResponse._();
+  @$core.override
+  PlanDeleteChatResponse createEmptyInstance() => PlanDeleteChatResponse._();
+  @$core.pragma('dart2js:noInline')
+  static PlanDeleteChatResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<PlanDeleteChatResponse>(
+          PlanDeleteChatResponse.$_createMessage);
+  static PlanDeleteChatResponse? _defaultInstance;
+
+  /// The agent's sessions the chat had, oldest first (more than one once it
+  /// has moved).
+  @$pb.TagNumber(1)
+  $pb.PbList<AgentSession> get sessions => $_getList(0);
+
+  /// Whether the agent deletes its history of them; if not, it stays.
+  @$pb.TagNumber(2)
+  $core.bool get deletesHistory => $_getBF(1);
+  @$pb.TagNumber(2)
+  set deletesHistory($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasDeletesHistory() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearDeletesHistory() => $_clearField(2);
+
+  /// The chat's scratch folder, if it still has one.
+  @$pb.TagNumber(3)
+  $core.String get scratchFolder => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set scratchFolder($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasScratchFolder() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearScratchFolder() => $_clearField(3);
+}
+
+/// One of the agent's sessions: its id and folder.
+class AgentSession extends $pb.GeneratedMessage {
+  factory AgentSession({
+    $core.String? sessionId,
+    $core.String? folder,
+  }) {
+    final result = AgentSession._();
+    if (sessionId != null) result.sessionId = sessionId;
+    if (folder != null) result.folder = folder;
+    return result;
+  }
+
+  AgentSession._();
+
+  factory AgentSession.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AgentSession()..mergeFromBuffer(data, registry);
+  factory AgentSession.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AgentSession()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'AgentSession',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: AgentSession.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'sessionId')
+    ..aOS(2, _omitFieldNames ? '' : 'folder')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AgentSession clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AgentSession copyWith(void Function(AgentSession) updates) =>
+      super.copyWith((message) => updates(message as AgentSession))
+          as AgentSession;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use AgentSession() / AgentSession.new instead')
+  static AgentSession create() => AgentSession._();
+  static $pb.GeneratedMessage $_createMessage() => AgentSession._();
+  @$core.override
+  AgentSession createEmptyInstance() => AgentSession._();
+  @$core.pragma('dart2js:noInline')
+  static AgentSession getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<AgentSession>(
+          AgentSession.$_createMessage);
+  static AgentSession? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get sessionId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set sessionId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSessionId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSessionId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get folder => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set folder($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasFolder() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearFolder() => $_clearField(2);
+}
+
+class DeleteChatRequest extends $pb.GeneratedMessage {
+  factory DeleteChatRequest({
+    $core.String? chatId,
+  }) {
+    final result = DeleteChatRequest._();
+    if (chatId != null) result.chatId = chatId;
+    return result;
+  }
+
+  DeleteChatRequest._();
+
+  factory DeleteChatRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DeleteChatRequest()..mergeFromBuffer(data, registry);
+  factory DeleteChatRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DeleteChatRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'DeleteChatRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: DeleteChatRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DeleteChatRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DeleteChatRequest copyWith(void Function(DeleteChatRequest) updates) =>
+      super.copyWith((message) => updates(message as DeleteChatRequest))
+          as DeleteChatRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use DeleteChatRequest() / DeleteChatRequest.new instead')
+  static DeleteChatRequest create() => DeleteChatRequest._();
+  static $pb.GeneratedMessage $_createMessage() => DeleteChatRequest._();
+  @$core.override
+  DeleteChatRequest createEmptyInstance() => DeleteChatRequest._();
+  @$core.pragma('dart2js:noInline')
+  static DeleteChatRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<DeleteChatRequest>(
+          DeleteChatRequest.$_createMessage);
+  static DeleteChatRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+}
+
+class DeleteChatResponse extends $pb.GeneratedMessage {
+  factory DeleteChatResponse() => DeleteChatResponse._();
+
+  DeleteChatResponse._();
+
+  factory DeleteChatResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DeleteChatResponse()..mergeFromBuffer(data, registry);
+  factory DeleteChatResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DeleteChatResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'DeleteChatResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: DeleteChatResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DeleteChatResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DeleteChatResponse copyWith(void Function(DeleteChatResponse) updates) =>
+      super.copyWith((message) => updates(message as DeleteChatResponse))
+          as DeleteChatResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use DeleteChatResponse() / DeleteChatResponse.new instead')
+  static DeleteChatResponse create() => DeleteChatResponse._();
+  static $pb.GeneratedMessage $_createMessage() => DeleteChatResponse._();
+  @$core.override
+  DeleteChatResponse createEmptyInstance() => DeleteChatResponse._();
+  @$core.pragma('dart2js:noInline')
+  static DeleteChatResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<DeleteChatResponse>(
+          DeleteChatResponse.$_createMessage);
+  static DeleteChatResponse? _defaultInstance;
+}
+
 class AnswerPermissionRequest extends $pb.GeneratedMessage {
   factory AnswerPermissionRequest({
     $core.String? chatId,
@@ -4113,6 +4422,21 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, RemoveChatRequest request) =>
       _client.invoke<RemoveChatResponse>(
           ctx, 'NushiService', 'RemoveChat', request, RemoveChatResponse());
+
+  /// Says what DeleteChat removes. The first time, the daemon starts the
+  /// agent to learn whether it can delete its history.
+  $async.Future<PlanDeleteChatResponse> planDeleteChat(
+          $pb.ClientContext? ctx, PlanDeleteChatRequest request) =>
+      _client.invoke<PlanDeleteChatResponse>(ctx, 'NushiService',
+          'PlanDeleteChat', request, PlanDeleteChatResponse());
+
+  /// Deletes a chat: its turn is cancelled and its agent stops, the agent
+  /// deletes its history of each of the chat's sessions (ACP session/delete,
+  /// when it can), the chat's scratch folder goes, and Nushi's record of it.
+  $async.Future<DeleteChatResponse> deleteChat(
+          $pb.ClientContext? ctx, DeleteChatRequest request) =>
+      _client.invoke<DeleteChatResponse>(
+          ctx, 'NushiService', 'DeleteChat', request, DeleteChatResponse());
 
   /// Answers a pending permission prompt with one of its options.
   $async.Future<AnswerPermissionResponse> answerPermission(

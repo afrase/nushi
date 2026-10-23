@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 
 import 'chat.dart';
 import 'daemon.dart';
+import 'folder_button.dart';
+import 'gen/nushi/v1/nushi.pb.dart';
 import 'theme/theme.dart';
 
 /// Runs a call, showing its error, if any, in a snack bar.
@@ -19,7 +21,7 @@ Future<void> tryOrShow(
   }
 }
 
-/// The chat's menu at [at] (global): Rename, Archive or Unarchive, Remove.
+/// The chat's menu at [at] (global): Rename, Archive or Unarchive, Delete.
 Future<void> showChatMenu(
   BuildContext context,
   Offset at,
@@ -29,20 +31,27 @@ Future<void> showChatMenu(
 }) async {
   final theme = NushiTheme.of(context);
   // An older daemon lacks these: they show, unavailable.
-  final can = daemon.canManageChats;
-  PopupMenuItem<String> item(String value, String label) => PopupMenuItem(
-    value: value,
-    height: 30,
-    enabled: can,
-    child: Text(label, style: theme.ui(can ? theme.t.text : theme.t.textMuted)),
-  );
+  PopupMenuItem<String> item(String value, String label, bool can) =>
+      PopupMenuItem(
+        value: value,
+        height: 30,
+        enabled: can,
+        child: Text(
+          label,
+          style: theme.ui(can ? theme.t.text : theme.t.textMuted),
+        ),
+      );
   final picked = await showMenu<String>(
     context: context,
     position: RelativeRect.fromLTRB(at.dx, at.dy, at.dx, at.dy),
     items: [
-      item('rename', 'Rename'),
-      item('archive', chat.archived ? 'Unarchive' : 'Archive'),
-      item('remove', 'Remove…'),
+      item('rename', 'Rename', daemon.canManageChats),
+      item(
+        'archive',
+        chat.archived ? 'Unarchive' : 'Archive',
+        daemon.canManageChats,
+      ),
+      item('delete', 'Delete…', daemon.canDeleteChats),
     ],
   );
   if (!context.mounted) return;
@@ -54,48 +63,146 @@ Future<void> showChatMenu(
         context,
         () => daemon.archiveChat(chat.id, archived: !chat.archived),
       );
-    case 'remove':
-      if (await _confirmRemove(context, chat) && context.mounted) {
-        await tryOrShow(context, () => daemon.removeChat(chat.id));
-      }
+    case 'delete':
+      await showDialog<void>(
+        context: context,
+        builder: (_) => _DeleteDialog(chat, daemon),
+      );
   }
 }
 
-Future<bool> _confirmRemove(BuildContext context, ChatState chat) async {
-  final theme = NushiTheme.of(context);
-  final t = theme.t;
-  final title = chat.title.isEmpty ? 'this chat' : '“${chat.title}”';
-  return await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          backgroundColor: t.raised,
-          title: Text(
-            'Remove $title?',
-            style: theme.ui(t.text, size: 15, weight: FontWeight.w600),
-          ),
-          content: SizedBox(
-            width: 420,
-            child: Text(
-              'Nushi forgets the chat and stops its agent. Claude keeps its '
-              'own history of the session, so you can still resume it in a '
-              'terminal in its folder: claude --resume ${chat.sessionId}',
-              style: theme.ui(t.textSecondary),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text('Cancel', style: theme.ui(t.text)),
-            ),
-            TextButton(
-              autofocus: true,
-              onPressed: () => Navigator.pop(context, true),
-              child: Text('Remove', style: theme.ui(t.crashed)),
-            ),
-          ],
+/// Asks before deleting a chat, listing what goes, then deletes it.
+class _DeleteDialog extends StatefulWidget {
+  const _DeleteDialog(this.chat, this.daemon);
+
+  final ChatState chat;
+  final Daemon daemon;
+
+  @override
+  State<_DeleteDialog> createState() => _DeleteDialogState();
+}
+
+class _DeleteDialogState extends State<_DeleteDialog> {
+  late final _plan = widget.daemon.planDeleteChat(widget.chat.id);
+  bool _deleting = false;
+  String _error = '';
+
+  Future<void> _delete() async {
+    setState(() => _deleting = true);
+    try {
+      await widget.daemon.deleteChat(widget.chat.id);
+      if (mounted) Navigator.pop(context);
+    } on Object catch (e) {
+      if (mounted) {
+        setState(() {
+          _deleting = false;
+          _error = '$e';
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    final title = widget.chat.title.isEmpty
+        ? 'this chat'
+        : '“${widget.chat.title}”';
+    Widget line(String text, {bool mono = false}) => Padding(
+      padding: EdgeInsets.only(top: mono ? 2 : 8, left: mono ? 10 : 0),
+      child: Text(
+        text,
+        style: mono
+            ? theme.code(t.textMuted, size: 11.5)
+            : theme.ui(t.textSecondary),
+      ),
+    );
+    Iterable<Widget> sessions(PlanDeleteChatResponse p) => [
+      for (final s in p.sessions) ...[
+        line(s.sessionId, mono: true),
+        line(
+          s.folder == p.scratchFolder
+              ? '  in its scratch folder'
+              : '  in ${tildePath(s.folder)}',
+          mono: true,
         ),
-      ) ??
-      false;
+      ],
+    ];
+    return AlertDialog(
+      backgroundColor: t.raised,
+      title: Text(
+        'Delete $title?',
+        style: theme.ui(t.text, size: 15, weight: FontWeight.w600),
+      ),
+      content: SizedBox(
+        width: 460,
+        child: FutureBuilder(
+          future: _plan,
+          builder: (context, snap) {
+            final p = snap.data;
+            if (p == null) {
+              return line(
+                snap.hasError ? '${snap.error}' : 'Checking what goes…',
+              );
+            }
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                line('This deletes, for good:'),
+                if (p.deletesHistory) ...[
+                  line(
+                    p.sessions.length == 1
+                        ? '• Claude’s history of the chat, so claude --resume '
+                              'no longer finds it:'
+                        : '• Claude’s history of its ${p.sessions.length} '
+                              'sessions (it moved), so claude --resume no '
+                              'longer finds them:',
+                  ),
+                  ...sessions(p),
+                ],
+                if (p.scratchFolder.isNotEmpty) ...[
+                  line('• Its scratch folder, with any files made there:'),
+                  line(tildePath(p.scratchFolder), mono: true),
+                ],
+                line('• Nushi’s record of the chat.'),
+                if (!p.deletesHistory) ...[
+                  line(
+                    'Claude can’t delete its history from here, so it '
+                    'stays: claude --resume still opens',
+                  ),
+                  ...sessions(p),
+                ],
+                if (_error.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Text(_error, style: theme.ui(t.crashed)),
+                  ),
+              ],
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Cancel', style: theme.ui(t.text)),
+        ),
+        FutureBuilder(
+          future: _plan,
+          builder: (context, snap) => TextButton(
+            autofocus: true,
+            onPressed: snap.hasData && !_deleting ? _delete : null,
+            child: Text(
+              _deleting ? 'Deleting…' : 'Delete',
+              style: theme.ui(snap.hasData ? t.crashed : t.textMuted),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 /// Renames a chat in place: Enter or leaving the box saves, Escape cancels.

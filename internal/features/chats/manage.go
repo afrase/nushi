@@ -61,27 +61,43 @@ func (s *Service) Archive(chatID string, archived bool) error {
 // Remove forgets a chat: its agent stops and its session file goes. The
 // agent's own history of the session stays.
 func (s *Service) Remove(chatID string) error {
-	c, err := s.stored(chatID)
+	c, _, err := s.halt(chatID)
 	if err != nil {
 		return err
+	}
+	return s.forget(c)
+}
+
+// halt stops a chat's agent for good, before the chat goes, and says
+// whether the chat was archived.
+func (s *Service) halt(chatID string) (*chat, bool, error) {
+	c, err := s.stored(chatID)
+	if err != nil {
+		return nil, false, err
 	}
 	c.mu.Lock()
 	if c.reopeningLocked() {
 		c.mu.Unlock()
-		return errReopening
+		return nil, false, errReopening
 	}
+	archived := c.session.Archived
 	c.session.Archived = true // keeps it from reopening while it stops
 	c.mu.Unlock()
 	s.stop(c)
-	if err := s.sessions.DeleteSession(chatID); err != nil {
+	return c, archived, nil
+}
+
+// forget removes a halted chat's session file and tells the app it's gone.
+func (s *Service) forget(c *chat) error {
+	if err := s.sessions.DeleteSession(c.id); err != nil {
 		return err
 	}
 	s.mu.Lock()
-	delete(s.chats, chatID)
+	delete(s.chats, c.id)
 	s.mu.Unlock()
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.emitLocked(model.Event{ChatID: chatID, Removed: true})
+	c.emitLocked(model.Event{ChatID: c.id, Removed: true})
 	return nil
 }
 

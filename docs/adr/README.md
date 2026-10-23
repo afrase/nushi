@@ -14,3 +14,4 @@
 - [0012](0012-diff-view-package.md) The diff viewer uses the published diff_view package
 - [0013](0013-app-starts-its-daemon.md) The packaged app starts its own daemon, never stops one on its own
 - [0014](0014-moving-a-chat-forks-it.md) Moving a chat forks its Claude session through a copy of Claude's history
+- [0015](0015-delete-takes-the-agents-history.md) Deleting a chat deletes the agent's history of it, through ACP

@@ -56,6 +56,8 @@ func (f *fakeAgent) ForkSession(context.Context, acp.ForkSessionRequest) (*acp.F
 
 func (f *fakeAgent) CloseSession(context.Context, acp.CloseSessionRequest) error { return nil }
 
+func (f *fakeAgent) DeleteSession(context.Context, acp.DeleteSessionRequest) error { return nil }
+
 func (f *fakeAgent) SetConfigOption(_ context.Context, req acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error) {
 	f.set = append(f.set, string(req.ConfigID)+"="+string(req.Value))
 	return &acp.SetSessionConfigOptionResponse{}, nil
