@@ -302,10 +302,10 @@ class _ComposerState extends State<Composer> {
                 color: t.base,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: _focus.hasFocus ? t.focus : t.borderStrong,
+                  color: _focus.hasFocus ? t.textMuted : t.borderStrong,
                 ),
               ),
-              padding: const EdgeInsets.fromLTRB(4, 4, 6, 4),
+              padding: const EdgeInsets.all(6),
               child: child,
             ),
             child: Column(
@@ -320,7 +320,7 @@ class _ComposerState extends State<Composer> {
                     ),
                   ),
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Builder(
                       builder: (button) => BoxButton(
@@ -344,6 +344,7 @@ class _ComposerState extends State<Composer> {
                           minLines: 1,
                           maxLines: 10,
                           style: theme.ui(t.text),
+                          textAlignVertical: TextAlignVertical.center,
                           decoration: InputDecoration(
                             isDense: true,
                             hintText: chat.busy
@@ -351,9 +352,10 @@ class _ComposerState extends State<Composer> {
                                 : widget.hint,
                             hintStyle: theme.ui(t.textMuted),
                             border: InputBorder.none,
+                            // One line (18.2) is as tall as the buttons.
                             contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 4,
-                              vertical: 6,
+                              horizontal: 6,
+                              vertical: 5,
                             ),
                           ),
                         ),
@@ -387,6 +389,7 @@ class _ComposerState extends State<Composer> {
             options: chat.config,
             onPick: (id, value) =>
                 widget.daemon.setConfigOption(chat.id, id, value),
+            onClose: _focus.requestFocus,
           ),
         ],
       ),
