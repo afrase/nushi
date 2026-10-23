@@ -51,6 +51,9 @@ func (h *History) add(session string, update any) {
 func (h *History) fork(from, to string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	if h.sessions == nil {
+		h.sessions = map[string][]json.RawMessage{}
+	}
 	h.sessions[to] = append(h.sessions[to], h.sessions[from]...)
 }
 
@@ -166,7 +169,7 @@ func (a *Agent) answer(f frame) {
 		id := fmt.Sprintf("fake-%d-%p", a.nextID, a)
 		a.cwds[id] = p.Cwd
 		a.mu.Unlock()
-		a.History.add(id, nil)
+		// Like Claude, a new session is only kept once it has a message.
 		if f.Method == "session/fork" {
 			a.History.fork(p.SessionID, id)
 		}
