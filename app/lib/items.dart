@@ -88,6 +88,7 @@ class ItemView extends StatelessWidget {
       case ItemKind.ITEM_KIND_NOTICE:
         final (icon, color) = switch (item.status) {
           'cancelled' => (Icons.stop_circle_outlined, t.textMuted),
+          'taken_back' => (Icons.undo, t.textMuted),
           'error' => (Icons.error_outline, t.crashed),
           _ => (Icons.info_outline, t.needs),
         };

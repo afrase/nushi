@@ -565,21 +565,34 @@ const CancelTurnRequest$json = {
   '1': 'CancelTurnRequest',
   '2': [
     {'1': 'chat_id', '3': 1, '4': 1, '5': 9, '10': 'chatId'},
+    {'1': 'take_back', '3': 2, '4': 1, '5': 8, '10': 'takeBack'},
   ],
 };
 
 /// Descriptor for `CancelTurnRequest`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List cancelTurnRequestDescriptor = $convert.base64Decode(
-    'ChFDYW5jZWxUdXJuUmVxdWVzdBIXCgdjaGF0X2lkGAEgASgJUgZjaGF0SWQ=');
+    'ChFDYW5jZWxUdXJuUmVxdWVzdBIXCgdjaGF0X2lkGAEgASgJUgZjaGF0SWQSGwoJdGFrZV9iYW'
+    'NrGAIgASgIUgh0YWtlQmFjaw==');
 
 @$core.Deprecated('Use cancelTurnResponseDescriptor instead')
 const CancelTurnResponse$json = {
   '1': 'CancelTurnResponse',
+  '2': [
+    {
+      '1': 'message',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.QueuedMessage',
+      '10': 'message'
+    },
+  ],
 };
 
 /// Descriptor for `CancelTurnResponse`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List cancelTurnResponseDescriptor =
-    $convert.base64Decode('ChJDYW5jZWxUdXJuUmVzcG9uc2U=');
+final $typed_data.Uint8List cancelTurnResponseDescriptor = $convert.base64Decode(
+    'ChJDYW5jZWxUdXJuUmVzcG9uc2USMQoHbWVzc2FnZRgBIAEoCzIXLm51c2hpLnYxLlF1ZXVlZE'
+    '1lc3NhZ2VSB21lc3NhZ2U=');
 
 @$core.Deprecated('Use forkChatRequestDescriptor instead')
 const ForkChatRequest$json = {

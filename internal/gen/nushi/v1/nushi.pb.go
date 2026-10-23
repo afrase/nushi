@@ -1664,8 +1664,13 @@ func (*SendPromptResponse) Descriptor() ([]byte, []int) {
 }
 
 type CancelTurnRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ChatId        string                 `protobuf:"bytes,1,opt,name=chat_id,json=chatId,proto3" json:"chat_id,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	ChatId string                 `protobuf:"bytes,1,opt,name=chat_id,json=chatId,proto3" json:"chat_id,omitempty"`
+	// Take the last user message back too, if the agent hasn't answered it
+	// with any text or tool call yet: the chat is rewound to just before it
+	// when it can be, else it stays, with a notice (API 30). The call then
+	// returns once the turn has ended.
+	TakeBack      bool `protobuf:"varint,2,opt,name=take_back,json=takeBack,proto3" json:"take_back,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1707,8 +1712,17 @@ func (x *CancelTurnRequest) GetChatId() string {
 	return ""
 }
 
+func (x *CancelTurnRequest) GetTakeBack() bool {
+	if x != nil {
+		return x.TakeBack
+	}
+	return false
+}
+
 type CancelTurnResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The message taken back, to edit, if it was.
+	Message       *QueuedMessage `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1741,6 +1755,13 @@ func (x *CancelTurnResponse) ProtoReflect() protoreflect.Message {
 // Deprecated: Use CancelTurnResponse.ProtoReflect.Descriptor instead.
 func (*CancelTurnResponse) Descriptor() ([]byte, []int) {
 	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *CancelTurnResponse) GetMessage() *QueuedMessage {
+	if x != nil {
+		return x.Message
+	}
+	return nil
 }
 
 type ForkChatRequest struct {
@@ -4897,10 +4918,12 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x06folder\x18\x01 \x01(\tR\x06folder\")\n" +
 	"\x11ListFilesResponse\x12\x14\n" +
 	"\x05paths\x18\x01 \x03(\tR\x05paths\"\x14\n" +
-	"\x12SendPromptResponse\",\n" +
+	"\x12SendPromptResponse\"I\n" +
 	"\x11CancelTurnRequest\x12\x17\n" +
-	"\achat_id\x18\x01 \x01(\tR\x06chatId\"\x14\n" +
-	"\x12CancelTurnResponse\"*\n" +
+	"\achat_id\x18\x01 \x01(\tR\x06chatId\x12\x1b\n" +
+	"\ttake_back\x18\x02 \x01(\bR\btakeBack\"G\n" +
+	"\x12CancelTurnResponse\x121\n" +
+	"\amessage\x18\x01 \x01(\v2\x17.nushi.v1.QueuedMessageR\amessage\"*\n" +
 	"\x0fForkChatRequest\x12\x17\n" +
 	"\achat_id\x18\x01 \x01(\tR\x06chatId\"+\n" +
 	"\x10ForkChatResponse\x12\x17\n" +
@@ -5268,90 +5291,91 @@ var file_nushi_v1_nushi_proto_depIdxs = []int32{
 	18, // 14: nushi.v1.ChatQueue.messages:type_name -> nushi.v1.QueuedMessage
 	18, // 15: nushi.v1.RewindChatResponse.message:type_name -> nushi.v1.QueuedMessage
 	18, // 16: nushi.v1.UnqueueResponse.message:type_name -> nushi.v1.QueuedMessage
-	44, // 17: nushi.v1.PlanDeleteChatResponse.sessions:type_name -> nushi.v1.AgentSession
-	7,  // 18: nushi.v1.PlanDeleteChatResponse.worktree:type_name -> nushi.v1.Worktree
-	43, // 19: nushi.v1.PlanDeleteChatResponse.worktree_state:type_name -> nushi.v1.WorktreeState
-	42, // 20: nushi.v1.PlanDeleteChatResponse.worktrees:type_name -> nushi.v1.WorktreePlan
-	7,  // 21: nushi.v1.WorktreePlan.worktree:type_name -> nushi.v1.Worktree
-	43, // 22: nushi.v1.WorktreePlan.state:type_name -> nushi.v1.WorktreeState
-	46, // 23: nushi.v1.DeleteChatRequest.worktrees:type_name -> nushi.v1.WorktreeChoice
-	51, // 24: nushi.v1.AnswerQuestionRequest.answers:type_name -> nushi.v1.FieldAnswer
-	57, // 25: nushi.v1.GetContextUsageResponse.categories:type_name -> nushi.v1.ContextCategory
-	62, // 26: nushi.v1.GetDiffResponse.files:type_name -> nushi.v1.FileChange
-	65, // 27: nushi.v1.ListCommitsResponse.commits:type_name -> nushi.v1.Commit
-	75, // 28: nushi.v1.EventsResponse.item:type_name -> nushi.v1.ItemEvent
-	76, // 29: nushi.v1.EventsResponse.status:type_name -> nushi.v1.ChatStatus
-	68, // 30: nushi.v1.EventsResponse.config:type_name -> nushi.v1.ChatConfig
-	6,  // 31: nushi.v1.EventsResponse.chat:type_name -> nushi.v1.Chat
-	12, // 32: nushi.v1.EventsResponse.commands:type_name -> nushi.v1.ChatCommands
-	10, // 33: nushi.v1.EventsResponse.usage:type_name -> nushi.v1.Usage
-	19, // 34: nushi.v1.EventsResponse.queue:type_name -> nushi.v1.ChatQueue
-	69, // 35: nushi.v1.ChatConfig.options:type_name -> nushi.v1.ConfigOption
-	70, // 36: nushi.v1.ConfigOption.values:type_name -> nushi.v1.ConfigValue
-	0,  // 37: nushi.v1.Item.kind:type_name -> nushi.v1.ItemKind
-	73, // 38: nushi.v1.Item.options:type_name -> nushi.v1.Option
-	74, // 39: nushi.v1.Item.fields:type_name -> nushi.v1.Field
-	62, // 40: nushi.v1.Item.diffs:type_name -> nushi.v1.FileChange
-	72, // 41: nushi.v1.Item.plan:type_name -> nushi.v1.PlanEntry
-	24, // 42: nushi.v1.Item.images:type_name -> nushi.v1.ImageData
-	1,  // 43: nushi.v1.Field.type:type_name -> nushi.v1.FieldType
-	73, // 44: nushi.v1.Field.options:type_name -> nushi.v1.Option
-	71, // 45: nushi.v1.ItemEvent.item:type_name -> nushi.v1.Item
-	2,  // 46: nushi.v1.NushiService.Ping:input_type -> nushi.v1.PingRequest
-	4,  // 47: nushi.v1.NushiService.ListChats:input_type -> nushi.v1.ListChatsRequest
-	8,  // 48: nushi.v1.NushiService.GetChat:input_type -> nushi.v1.GetChatRequest
-	13, // 49: nushi.v1.NushiService.StartChat:input_type -> nushi.v1.StartChatRequest
-	14, // 50: nushi.v1.NushiService.MoveChat:input_type -> nushi.v1.MoveChatRequest
-	17, // 51: nushi.v1.NushiService.SendPrompt:input_type -> nushi.v1.SendPromptRequest
-	20, // 52: nushi.v1.NushiService.RewindChat:input_type -> nushi.v1.RewindChatRequest
-	22, // 53: nushi.v1.NushiService.Unqueue:input_type -> nushi.v1.UnqueueRequest
-	28, // 54: nushi.v1.NushiService.CancelTurn:input_type -> nushi.v1.CancelTurnRequest
-	30, // 55: nushi.v1.NushiService.ForkChat:input_type -> nushi.v1.ForkChatRequest
-	32, // 56: nushi.v1.NushiService.CloseSideChat:input_type -> nushi.v1.CloseSideChatRequest
-	34, // 57: nushi.v1.NushiService.RenameChat:input_type -> nushi.v1.RenameChatRequest
-	36, // 58: nushi.v1.NushiService.ArchiveChat:input_type -> nushi.v1.ArchiveChatRequest
-	38, // 59: nushi.v1.NushiService.RemoveChat:input_type -> nushi.v1.RemoveChatRequest
-	40, // 60: nushi.v1.NushiService.PlanDeleteChat:input_type -> nushi.v1.PlanDeleteChatRequest
-	45, // 61: nushi.v1.NushiService.DeleteChat:input_type -> nushi.v1.DeleteChatRequest
-	48, // 62: nushi.v1.NushiService.AnswerPermission:input_type -> nushi.v1.AnswerPermissionRequest
-	50, // 63: nushi.v1.NushiService.AnswerQuestion:input_type -> nushi.v1.AnswerQuestionRequest
-	53, // 64: nushi.v1.NushiService.SetConfigOption:input_type -> nushi.v1.SetConfigOptionRequest
-	60, // 65: nushi.v1.NushiService.GetDiff:input_type -> nushi.v1.GetDiffRequest
-	63, // 66: nushi.v1.NushiService.ListCommits:input_type -> nushi.v1.ListCommitsRequest
-	58, // 67: nushi.v1.NushiService.GetFolderStatus:input_type -> nushi.v1.GetFolderStatusRequest
-	25, // 68: nushi.v1.NushiService.ListFiles:input_type -> nushi.v1.ListFilesRequest
-	55, // 69: nushi.v1.NushiService.GetContextUsage:input_type -> nushi.v1.GetContextUsageRequest
-	66, // 70: nushi.v1.NushiService.Events:input_type -> nushi.v1.EventsRequest
-	3,  // 71: nushi.v1.NushiService.Ping:output_type -> nushi.v1.PingResponse
-	5,  // 72: nushi.v1.NushiService.ListChats:output_type -> nushi.v1.ListChatsResponse
-	9,  // 73: nushi.v1.NushiService.GetChat:output_type -> nushi.v1.GetChatResponse
-	16, // 74: nushi.v1.NushiService.StartChat:output_type -> nushi.v1.StartChatResponse
-	15, // 75: nushi.v1.NushiService.MoveChat:output_type -> nushi.v1.MoveChatResponse
-	27, // 76: nushi.v1.NushiService.SendPrompt:output_type -> nushi.v1.SendPromptResponse
-	21, // 77: nushi.v1.NushiService.RewindChat:output_type -> nushi.v1.RewindChatResponse
-	23, // 78: nushi.v1.NushiService.Unqueue:output_type -> nushi.v1.UnqueueResponse
-	29, // 79: nushi.v1.NushiService.CancelTurn:output_type -> nushi.v1.CancelTurnResponse
-	31, // 80: nushi.v1.NushiService.ForkChat:output_type -> nushi.v1.ForkChatResponse
-	33, // 81: nushi.v1.NushiService.CloseSideChat:output_type -> nushi.v1.CloseSideChatResponse
-	35, // 82: nushi.v1.NushiService.RenameChat:output_type -> nushi.v1.RenameChatResponse
-	37, // 83: nushi.v1.NushiService.ArchiveChat:output_type -> nushi.v1.ArchiveChatResponse
-	39, // 84: nushi.v1.NushiService.RemoveChat:output_type -> nushi.v1.RemoveChatResponse
-	41, // 85: nushi.v1.NushiService.PlanDeleteChat:output_type -> nushi.v1.PlanDeleteChatResponse
-	47, // 86: nushi.v1.NushiService.DeleteChat:output_type -> nushi.v1.DeleteChatResponse
-	49, // 87: nushi.v1.NushiService.AnswerPermission:output_type -> nushi.v1.AnswerPermissionResponse
-	52, // 88: nushi.v1.NushiService.AnswerQuestion:output_type -> nushi.v1.AnswerQuestionResponse
-	54, // 89: nushi.v1.NushiService.SetConfigOption:output_type -> nushi.v1.SetConfigOptionResponse
-	61, // 90: nushi.v1.NushiService.GetDiff:output_type -> nushi.v1.GetDiffResponse
-	64, // 91: nushi.v1.NushiService.ListCommits:output_type -> nushi.v1.ListCommitsResponse
-	59, // 92: nushi.v1.NushiService.GetFolderStatus:output_type -> nushi.v1.GetFolderStatusResponse
-	26, // 93: nushi.v1.NushiService.ListFiles:output_type -> nushi.v1.ListFilesResponse
-	56, // 94: nushi.v1.NushiService.GetContextUsage:output_type -> nushi.v1.GetContextUsageResponse
-	67, // 95: nushi.v1.NushiService.Events:output_type -> nushi.v1.EventsResponse
-	71, // [71:96] is the sub-list for method output_type
-	46, // [46:71] is the sub-list for method input_type
-	46, // [46:46] is the sub-list for extension type_name
-	46, // [46:46] is the sub-list for extension extendee
-	0,  // [0:46] is the sub-list for field type_name
+	18, // 17: nushi.v1.CancelTurnResponse.message:type_name -> nushi.v1.QueuedMessage
+	44, // 18: nushi.v1.PlanDeleteChatResponse.sessions:type_name -> nushi.v1.AgentSession
+	7,  // 19: nushi.v1.PlanDeleteChatResponse.worktree:type_name -> nushi.v1.Worktree
+	43, // 20: nushi.v1.PlanDeleteChatResponse.worktree_state:type_name -> nushi.v1.WorktreeState
+	42, // 21: nushi.v1.PlanDeleteChatResponse.worktrees:type_name -> nushi.v1.WorktreePlan
+	7,  // 22: nushi.v1.WorktreePlan.worktree:type_name -> nushi.v1.Worktree
+	43, // 23: nushi.v1.WorktreePlan.state:type_name -> nushi.v1.WorktreeState
+	46, // 24: nushi.v1.DeleteChatRequest.worktrees:type_name -> nushi.v1.WorktreeChoice
+	51, // 25: nushi.v1.AnswerQuestionRequest.answers:type_name -> nushi.v1.FieldAnswer
+	57, // 26: nushi.v1.GetContextUsageResponse.categories:type_name -> nushi.v1.ContextCategory
+	62, // 27: nushi.v1.GetDiffResponse.files:type_name -> nushi.v1.FileChange
+	65, // 28: nushi.v1.ListCommitsResponse.commits:type_name -> nushi.v1.Commit
+	75, // 29: nushi.v1.EventsResponse.item:type_name -> nushi.v1.ItemEvent
+	76, // 30: nushi.v1.EventsResponse.status:type_name -> nushi.v1.ChatStatus
+	68, // 31: nushi.v1.EventsResponse.config:type_name -> nushi.v1.ChatConfig
+	6,  // 32: nushi.v1.EventsResponse.chat:type_name -> nushi.v1.Chat
+	12, // 33: nushi.v1.EventsResponse.commands:type_name -> nushi.v1.ChatCommands
+	10, // 34: nushi.v1.EventsResponse.usage:type_name -> nushi.v1.Usage
+	19, // 35: nushi.v1.EventsResponse.queue:type_name -> nushi.v1.ChatQueue
+	69, // 36: nushi.v1.ChatConfig.options:type_name -> nushi.v1.ConfigOption
+	70, // 37: nushi.v1.ConfigOption.values:type_name -> nushi.v1.ConfigValue
+	0,  // 38: nushi.v1.Item.kind:type_name -> nushi.v1.ItemKind
+	73, // 39: nushi.v1.Item.options:type_name -> nushi.v1.Option
+	74, // 40: nushi.v1.Item.fields:type_name -> nushi.v1.Field
+	62, // 41: nushi.v1.Item.diffs:type_name -> nushi.v1.FileChange
+	72, // 42: nushi.v1.Item.plan:type_name -> nushi.v1.PlanEntry
+	24, // 43: nushi.v1.Item.images:type_name -> nushi.v1.ImageData
+	1,  // 44: nushi.v1.Field.type:type_name -> nushi.v1.FieldType
+	73, // 45: nushi.v1.Field.options:type_name -> nushi.v1.Option
+	71, // 46: nushi.v1.ItemEvent.item:type_name -> nushi.v1.Item
+	2,  // 47: nushi.v1.NushiService.Ping:input_type -> nushi.v1.PingRequest
+	4,  // 48: nushi.v1.NushiService.ListChats:input_type -> nushi.v1.ListChatsRequest
+	8,  // 49: nushi.v1.NushiService.GetChat:input_type -> nushi.v1.GetChatRequest
+	13, // 50: nushi.v1.NushiService.StartChat:input_type -> nushi.v1.StartChatRequest
+	14, // 51: nushi.v1.NushiService.MoveChat:input_type -> nushi.v1.MoveChatRequest
+	17, // 52: nushi.v1.NushiService.SendPrompt:input_type -> nushi.v1.SendPromptRequest
+	20, // 53: nushi.v1.NushiService.RewindChat:input_type -> nushi.v1.RewindChatRequest
+	22, // 54: nushi.v1.NushiService.Unqueue:input_type -> nushi.v1.UnqueueRequest
+	28, // 55: nushi.v1.NushiService.CancelTurn:input_type -> nushi.v1.CancelTurnRequest
+	30, // 56: nushi.v1.NushiService.ForkChat:input_type -> nushi.v1.ForkChatRequest
+	32, // 57: nushi.v1.NushiService.CloseSideChat:input_type -> nushi.v1.CloseSideChatRequest
+	34, // 58: nushi.v1.NushiService.RenameChat:input_type -> nushi.v1.RenameChatRequest
+	36, // 59: nushi.v1.NushiService.ArchiveChat:input_type -> nushi.v1.ArchiveChatRequest
+	38, // 60: nushi.v1.NushiService.RemoveChat:input_type -> nushi.v1.RemoveChatRequest
+	40, // 61: nushi.v1.NushiService.PlanDeleteChat:input_type -> nushi.v1.PlanDeleteChatRequest
+	45, // 62: nushi.v1.NushiService.DeleteChat:input_type -> nushi.v1.DeleteChatRequest
+	48, // 63: nushi.v1.NushiService.AnswerPermission:input_type -> nushi.v1.AnswerPermissionRequest
+	50, // 64: nushi.v1.NushiService.AnswerQuestion:input_type -> nushi.v1.AnswerQuestionRequest
+	53, // 65: nushi.v1.NushiService.SetConfigOption:input_type -> nushi.v1.SetConfigOptionRequest
+	60, // 66: nushi.v1.NushiService.GetDiff:input_type -> nushi.v1.GetDiffRequest
+	63, // 67: nushi.v1.NushiService.ListCommits:input_type -> nushi.v1.ListCommitsRequest
+	58, // 68: nushi.v1.NushiService.GetFolderStatus:input_type -> nushi.v1.GetFolderStatusRequest
+	25, // 69: nushi.v1.NushiService.ListFiles:input_type -> nushi.v1.ListFilesRequest
+	55, // 70: nushi.v1.NushiService.GetContextUsage:input_type -> nushi.v1.GetContextUsageRequest
+	66, // 71: nushi.v1.NushiService.Events:input_type -> nushi.v1.EventsRequest
+	3,  // 72: nushi.v1.NushiService.Ping:output_type -> nushi.v1.PingResponse
+	5,  // 73: nushi.v1.NushiService.ListChats:output_type -> nushi.v1.ListChatsResponse
+	9,  // 74: nushi.v1.NushiService.GetChat:output_type -> nushi.v1.GetChatResponse
+	16, // 75: nushi.v1.NushiService.StartChat:output_type -> nushi.v1.StartChatResponse
+	15, // 76: nushi.v1.NushiService.MoveChat:output_type -> nushi.v1.MoveChatResponse
+	27, // 77: nushi.v1.NushiService.SendPrompt:output_type -> nushi.v1.SendPromptResponse
+	21, // 78: nushi.v1.NushiService.RewindChat:output_type -> nushi.v1.RewindChatResponse
+	23, // 79: nushi.v1.NushiService.Unqueue:output_type -> nushi.v1.UnqueueResponse
+	29, // 80: nushi.v1.NushiService.CancelTurn:output_type -> nushi.v1.CancelTurnResponse
+	31, // 81: nushi.v1.NushiService.ForkChat:output_type -> nushi.v1.ForkChatResponse
+	33, // 82: nushi.v1.NushiService.CloseSideChat:output_type -> nushi.v1.CloseSideChatResponse
+	35, // 83: nushi.v1.NushiService.RenameChat:output_type -> nushi.v1.RenameChatResponse
+	37, // 84: nushi.v1.NushiService.ArchiveChat:output_type -> nushi.v1.ArchiveChatResponse
+	39, // 85: nushi.v1.NushiService.RemoveChat:output_type -> nushi.v1.RemoveChatResponse
+	41, // 86: nushi.v1.NushiService.PlanDeleteChat:output_type -> nushi.v1.PlanDeleteChatResponse
+	47, // 87: nushi.v1.NushiService.DeleteChat:output_type -> nushi.v1.DeleteChatResponse
+	49, // 88: nushi.v1.NushiService.AnswerPermission:output_type -> nushi.v1.AnswerPermissionResponse
+	52, // 89: nushi.v1.NushiService.AnswerQuestion:output_type -> nushi.v1.AnswerQuestionResponse
+	54, // 90: nushi.v1.NushiService.SetConfigOption:output_type -> nushi.v1.SetConfigOptionResponse
+	61, // 91: nushi.v1.NushiService.GetDiff:output_type -> nushi.v1.GetDiffResponse
+	64, // 92: nushi.v1.NushiService.ListCommits:output_type -> nushi.v1.ListCommitsResponse
+	59, // 93: nushi.v1.NushiService.GetFolderStatus:output_type -> nushi.v1.GetFolderStatusResponse
+	26, // 94: nushi.v1.NushiService.ListFiles:output_type -> nushi.v1.ListFilesResponse
+	56, // 95: nushi.v1.NushiService.GetContextUsage:output_type -> nushi.v1.GetContextUsageResponse
+	67, // 96: nushi.v1.NushiService.Events:output_type -> nushi.v1.EventsResponse
+	72, // [72:97] is the sub-list for method output_type
+	47, // [47:72] is the sub-list for method input_type
+	47, // [47:47] is the sub-list for extension type_name
+	47, // [47:47] is the sub-list for extension extendee
+	0,  // [0:47] is the sub-list for field type_name
 }
 
 func init() { file_nushi_v1_nushi_proto_init() }

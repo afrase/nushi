@@ -49,3 +49,37 @@ func TestForkTitlesAreIgnored(t *testing.T) {
 		}
 	}
 }
+
+func TestStopTakesBackAnUnansweredMessage(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	ctx := context.Background()
+	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
+	svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle)
+	eventually(t, c, func() bool { return !c.busy })
+
+	agent.updates, agent.gate = nil, make(chan struct{})
+	svc.Prompt(c.id, model.Message{Text: "two"}, SendIdle)
+	m, err := svc.Stop(ctx, c.id, true)
+	if err != nil || m == nil || m.Text != "two" || len(c.items) != 2 || c.sid != "fork1" {
+		t.Fatalf("Stop = %+v, %v; items %+v", m, err, c.items)
+	}
+
+	// Answered already: it only stops.
+	agent.updates = []acp.SessionUpdate{chunk("m3", "ok")}
+	svc.Prompt(c.id, model.Message{Text: "three"}, SendIdle)
+	eventually(t, c, func() bool { return len(c.items) == 4 })
+	if m, err := svc.Stop(ctx, c.id, true); m != nil || err != nil {
+		t.Errorf("Stop after an answer = %+v, %v", m, err)
+	}
+	eventually(t, c, func() bool { return !c.busy })
+
+	// Without rewinding, it stays, with a notice.
+	agent.updates, c.canRewind = nil, false
+	svc.Prompt(c.id, model.Message{Text: "four"}, SendIdle)
+	if m, err := svc.Stop(ctx, c.id, true); m == nil || m.Text != "four" || err != nil {
+		t.Errorf("Stop = %+v, %v", m, err)
+	}
+	if last := c.items[len(c.items)-1]; last.Status != "taken_back" || c.items[len(c.items)-3].Text != "four" {
+		t.Errorf("items = %+v", c.items)
+	}
+}

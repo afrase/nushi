@@ -5,18 +5,22 @@ import 'daemon.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'widgets.dart';
 
-/// Stops the chat's running turn.
+/// Stops the chat's running turn. If the agent hasn't answered the last
+/// message yet, the daemon takes it back too, for the composer.
 Future<void> stopTurn(
   BuildContext context,
   ChatState chat,
   Daemon daemon,
 ) async {
-  if (chat.started != null) {
-    await tryOrShow(
-      context,
-      () => daemon.client.cancelTurn(CancelTurnRequest(chatId: chat.id)),
+  if (chat.started == null || chat.stopping) return;
+  chat.stopping = true;
+  await tryOrShow(context, () async {
+    final r = await daemon.client.cancelTurn(
+      CancelTurnRequest(chatId: chat.id, takeBack: daemon.canTakeBack),
     );
-  }
+    if (r.hasMessage()) chat.takeBack.value = r.message;
+  });
+  chat.stopping = false;
 }
 
 /// A small round icon button inside the prompt box.
