@@ -77,6 +77,13 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 		t.Error("a trusted repository, its subfolder or its worktree isn't trusted")
 	}
 
+	// A folder whose .git names the trusted repository's worktree isn't one.
+	fake, _ := filepath.EvalSymlinks(t.TempDir())
+	write(t, filepath.Join(fake, ".git"), "gitdir: "+filepath.Join(repo, ".git", "worktrees", filepath.Base(wt))+"\n")
+	if trusted(fake) || (Trust{}).Key(fake) != fake {
+		t.Errorf("a folder pretending to be a worktree is trusted (key %s)", (Trust{}).Key(fake))
+	}
+
 	// Outside git a folder above counts, Claude's or Nushi's.
 	plain, _ := filepath.EvalSymlinks(t.TempDir())
 	sub := filepath.Join(plain, "a", "b")

@@ -245,7 +245,11 @@ func Status(ctx context.Context, folder, base string) (model.FolderStatus, error
 		st.Branch = strings.TrimSpace(string(out))
 	}
 	if hasHead {
-		counts, err := numstat(ctx, folder, noFilters(ctx, folder), from)
+		off, err := noFilters(ctx, folder)
+		if err != nil {
+			return st, err
+		}
+		counts, err := numstat(ctx, folder, off, from)
 		if err != nil {
 			return st, err
 		}
@@ -333,21 +337,29 @@ func runWith(ctx context.Context, dir string, config []string, args ...string) (
 
 // noFilters returns the config options that turn off the filter drivers a
 // repository's own config defines (filter.<name>.clean, .smudge and
-// .process), for the git runs Nushi starts on its own. The user's
-// (git-lfs, in the global config) stay.
-func noFilters(ctx context.Context, dir string) []string {
-	out, _ := run(ctx, dir, "config", "--show-scope", "--name-only", "--get-regexp", `^filter\.`)
+// .process, by the exact names git lists), for the git runs Nushi starts
+// on its own. The user's (git-lfs, in the global config) stay. When git
+// can't list them, it fails: nothing runs with them on.
+func noFilters(ctx context.Context, dir string) ([]string, error) {
+	cmd := exec.CommandContext(ctx, "git", "-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null", "-C", dir,
+		"config", "--show-scope", "--name-only", "--get-regexp", `^filter\.`)
+	out, err := cmd.Output()
+	var exit *exec.ExitError
+	if errors.As(err, &exit) && exit.ExitCode() == 1 && len(exit.Stderr) == 0 {
+		return nil, nil // none
+	}
+	if err != nil {
+		return nil, fmt.Errorf("listing the repository's filters: %w", err)
+	}
 	var config []string
 	for line := range strings.Lines(string(out)) {
 		scope, name, _ := strings.Cut(strings.TrimSpace(line), "\t")
-		driver, _, ok := strings.Cut(strings.TrimPrefix(name, "filter."), ".")
-		if ok && scope != "global" && scope != "system" {
-			for _, key := range []string{"clean", "smudge", "process"} {
-				config = append(config, "-c", "filter."+driver+"."+key+"=")
-			}
+		key := name[strings.LastIndex(name, ".")+1:]
+		if scope != "global" && scope != "system" && (key == "clean" || key == "smudge" || key == "process") {
+			config = append(config, "-c", name+"=")
 		}
 	}
-	return config
+	return config, nil
 }
 
 // split splits git's NUL-separated output.

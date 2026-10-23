@@ -160,15 +160,19 @@ func TestARepositorysOwnConfigRunsNothing(t *testing.T) {
 	repo, marks := t.TempDir(), t.TempDir()
 	git(t, repo, "init", "-q", "-b", "main")
 	write(t, filepath.Join(repo, "a.txt"), "one\n")
+	write(t, filepath.Join(repo, "b.md"), "one\n")
 	git(t, repo, "add", ".")
 	git(t, repo, "commit", "-q", "-m", "first")
-	write(t, filepath.Join(repo, ".git", "info", "attributes"), "*.txt filter=evil\n")
 	git(t, repo, "config", "filter.evil.clean", "touch "+filepath.Join(marks, "filter")+"; cat")
+	// A driver whose name has a dot in it.
+	write(t, filepath.Join(repo, ".git", "info", "attributes"), "*.txt filter=evil\n*.md filter=a.b\n")
+	git(t, repo, "config", "filter.a.b.clean", "touch "+filepath.Join(marks, "dotted")+"; cat")
+	write(t, filepath.Join(repo, "b.md"), "one\ntwo\n")
 	write(t, filepath.Join(repo, ".git", "hooks", "post-checkout"), "#!/bin/sh\ntouch "+filepath.Join(marks, "hook")+"\n")
 	os.Chmod(filepath.Join(repo, ".git", "hooks", "post-checkout"), 0o755)
 	write(t, filepath.Join(repo, "a.txt"), "one\ntwo\n")
 
-	if st, err := Status(ctx, repo, ""); err != nil || st.Added != 1 {
+	if st, err := Status(ctx, repo, ""); err != nil || st.Added != 2 {
 		t.Errorf("status = %+v, %v", st, err)
 	}
 	if _, _, err := (Worktrees{}).Add(ctx, repo, "wt"); err != nil {
