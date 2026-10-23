@@ -70,6 +70,7 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 34. Long lists and the worktree switch | 3197 | 800 | 6600 | 655 |
 | 35. Worktree gaps | 3241 | 800 | 6697 | 655 |
 | 36. Reorder the panel's cards | 3241 | 800 | 6745 | 655 |
+| 37. A working indicator | 3241 | 800 | 6896 | 655 |
 
 Tripwires crossed:
 Lines added per step, code and tests, without generated code (the tripwire is about 500): 1: 533, 2: 1,502, 3: 239, 4: 437, 5: 739, 6: 639, 7: 464, 8: 537, 9: 265, 10: 528, 11: 1,249, 12: 625, 13: 476, 14: 343, 15: 351, 16: 492, 17: 298, 18: 666, 19: 755, 20: 223, 21: 146; 26: 438, 27: 238, 28: 140, 29: 683, 30: 677, 31: 145, 32: 470.
@@ -208,6 +209,8 @@ To try it beside an installed Nushi Next that's in use: `export NUSHI_DATA=~/Lib
 - Claude 0.94.0's config options: `mode` (Manual, Accept edits, Plan, Auto, Bypass permissions), `model`, `effort` (category `thought_level`), `fast` (category `model_config`, a select of on/off rather than a boolean) and `agent` (no category: the subagent to run as). `set_config_option` answers with the full new set of options.
 
 ## Decisions to revisit
+
+- Step 37: while a turn runs, a row under the transcript (above the composer, in the side chat too) shows a breathing accent dot (a `CustomPainter` on one shared clock that ticks only while a mark is on screen; it repaints, nothing rebuilds), what the agent is doing and the time. "Doing" is the turn's running tool call by kind and path ("Reading notes.md", "Running make test", "Editing x.go"; the bare verb before Claude names the file; other kinds show the agent's title), else "Writing" when its message is the last thing, else "Thinking"; "Waiting for you" in amber, still, while a prompt or question waits; "Starting a side chat" while one forks. The header's status word no longer counts the seconds (the row does), so it reads "working". In the sidebar a working chat's dot breathes; one waiting on you is steady amber with its soft ring and "needs you". With Reduce motion (MediaQuery's `disableAnimations` or the platform's `reduceMotion`) the marks hold still; not tried with the setting on.
 
 - Step 34: a menu list with more than 10 rows (Agent, a long model list) opens with a Filter field that has the focus; typing narrows by name, description and tooltip; ↑/↓ move a highlight that starts on the current value, Enter picks, Escape clears, then closes. Group headings don't show in a filtered list. A chat without messages shows its folder (name only) and, in a git repository, a "New worktree" chip under the composer, after the mode, like Claude Code; it is the Environment card's switch (same remembered choice per repository), so with the panel open both show.
 

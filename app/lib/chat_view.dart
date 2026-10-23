@@ -10,6 +10,7 @@ import 'gen/nushi/v1/nushi.pb.dart';
 import 'images.dart';
 import 'replies.dart';
 import 'side_panel.dart';
+import 'status.dart';
 import 'theme/theme.dart';
 import 'transcript.dart';
 import 'widgets.dart';
@@ -143,7 +144,10 @@ class _ChatViewState extends State<ChatView> {
                         ),
                       ),
                       if (chat.busy || _forking)
-                        const LinearProgressIndicator(minHeight: 2),
+                        TurnStatus(
+                          chat,
+                          what: _forking ? 'Starting a side chat' : null,
+                        ),
                       if (chat.archived)
                         _Archived(chat, widget.daemon)
                       else

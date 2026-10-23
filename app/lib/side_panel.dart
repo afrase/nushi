@@ -6,6 +6,7 @@ import 'composer.dart';
 import 'composer_parts.dart';
 import 'daemon.dart';
 import 'replies.dart';
+import 'status.dart';
 import 'theme/theme.dart';
 import 'transcript.dart';
 import 'widgets.dart';
@@ -93,7 +94,7 @@ class SidePanel extends StatelessWidget {
                   onReply: (r) => replies.value = [...replies.value, r],
                 ),
               ),
-              if (side.busy) const LinearProgressIndicator(minHeight: 2),
+              if (side.busy) TurnStatus(side),
               Composer(
                 chat: side,
                 daemon: daemon,
