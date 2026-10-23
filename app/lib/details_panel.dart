@@ -10,24 +10,33 @@ import 'gen/nushi/v1/nushi.pb.dart';
 import 'theme/theme.dart';
 import 'usage.dart';
 
-/// Whether the details panel shows (its toolbar button), remembered across
-/// launches in `app.json` in the data folder.
-final showDetails = ValueNotifier<bool>(_readShowDetails())
-  ..addListener(_writeShowDetails);
+/// What the app remembers across launches, in `app.json` in the data folder:
+/// whether the details panel shows (its toolbar button) and which of its
+/// cards are collapsed.
+final showDetails = ValueNotifier<bool>(_saved['details'] != false)
+  ..addListener(_save);
+final collapsedCards = ValueNotifier<Set<String>>({
+  ...?(_saved['collapsed'] as List?)?.whereType<String>(),
+})..addListener(_save);
 
 File get _settings => File('$dataDir/app.json');
 
-bool _readShowDetails() {
+final Map<String, Object?> _saved = () {
   try {
-    return jsonDecode(_settings.readAsStringSync())['details'] != false;
+    return jsonDecode(_settings.readAsStringSync()) as Map<String, Object?>;
   } on Object {
-    return true;
+    return <String, Object?>{};
   }
-}
+}();
 
-void _writeShowDetails() {
+void _save() {
   try {
-    _settings.writeAsStringSync(jsonEncode({'details': showDetails.value}));
+    _settings.writeAsStringSync(
+      jsonEncode({
+        'details': showDetails.value,
+        'collapsed': collapsedCards.value.toList(),
+      }),
+    );
   } on Object {
     // Not remembered; it still applies until the app quits.
   }
@@ -106,6 +115,22 @@ class _DetailsPanelState extends State<DetailsPanel> {
     final u = chat.usage;
     final status = _status;
     final muted = theme.ui(t.textMuted, size: 12);
+    final lines = status == null || !status.git
+        ? null
+        : Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: '+${status.added}',
+                  style: theme.code(t.done, size: 12),
+                ),
+                TextSpan(
+                  text: '  −${status.removed}',
+                  style: theme.code(t.crashed, size: 12),
+                ),
+              ],
+            ),
+          );
     final value = theme.ui(t.text, size: 12);
     return Container(
       width: DetailsPanel.width,
@@ -117,6 +142,11 @@ class _DetailsPanelState extends State<DetailsPanel> {
         children: [
           _Card(
             title: 'Environment',
+            summary: Text(
+              isScratch(chat.folder) ? 'No folder' : _name(chat.folder),
+              style: muted,
+              overflow: TextOverflow.ellipsis,
+            ),
             rows: [
               (
                 'Folder',
@@ -131,6 +161,7 @@ class _DetailsPanelState extends State<DetailsPanel> {
           ),
           _Card(
             title: 'Context',
+            summary: ContextMeter(u),
             rows: u.contextSize == 0 && cost(u).isEmpty
                 ? [
                     (
@@ -172,6 +203,7 @@ class _DetailsPanelState extends State<DetailsPanel> {
           ),
           _Card(
             title: 'Changes',
+            summary: lines,
             onTap: status != null && status.git ? widget.onChanges : null,
             rows: [
               if (_error != null)
@@ -183,23 +215,7 @@ class _DetailsPanelState extends State<DetailsPanel> {
               else if (!status.git)
                 (null, Text('Not a git repository.', style: muted))
               else ...[
-                (
-                  'Uncommitted',
-                  Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(
-                          text: '+${status.added}',
-                          style: theme.code(t.done, size: 12),
-                        ),
-                        TextSpan(
-                          text: '  −${status.removed}',
-                          style: theme.code(t.crashed, size: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                ('Uncommitted', lines!),
                 (
                   'Files',
                   Text(
@@ -216,80 +232,123 @@ class _DetailsPanelState extends State<DetailsPanel> {
   }
 }
 
-/// A rounded card: a title, then rows of a quiet label on the left and a
-/// value on the right (a row without a label is a line of its own). With
-/// [onTap] the whole card is a button, marked with a chevron.
+String _name(String folder) => folder
+    .split('/')
+    .lastWhere((part) => part.isNotEmpty, orElse: () => folder);
+
+/// A rounded card: a title that collapses it (remembered in
+/// [collapsedCards]), with [summary] on its right while collapsed; then rows
+/// of a quiet label on the left and a value on the right (a row without a
+/// label is a line of its own). With [onTap] the rows are a button.
 class _Card extends StatelessWidget {
-  const _Card({required this.title, required this.rows, this.onTap});
+  const _Card({
+    required this.title,
+    required this.rows,
+    this.summary,
+    this.onTap,
+  });
 
   final String title;
   final List<(String?, Widget)> rows;
+  final Widget? summary;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: t.raised,
-        shape: RoundedRectangleBorder(
-          side: BorderSide(color: t.borderSubtle),
-          borderRadius: BorderRadius.circular(NushiTheme.card * 1.5),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 10, 8),
+    return ValueListenableBuilder(
+      valueListenable: collapsedCards,
+      builder: (context, collapsed, _) {
+        final open = !collapsed.contains(title);
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Material(
+            color: t.raised,
+            shape: RoundedRectangleBorder(
+              side: BorderSide(color: t.borderSubtle),
+              borderRadius: BorderRadius.circular(NushiTheme.card * 1.5),
+            ),
+            clipBehavior: Clip.antiAlias,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: theme.ui(
-                          t.textSecondary,
-                          size: 12,
-                          weight: FontWeight.w600,
+                InkWell(
+                  onTap: () => collapsedCards.value = open
+                      ? {...collapsed, title}
+                      : ({...collapsed}..remove(title)),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 9, 10, 9),
+                    child: Row(
+                      children: [
+                        Text(
+                          title,
+                          style: theme.ui(
+                            t.textSecondary,
+                            size: 12,
+                            weight: FontWeight.w600,
+                          ),
                         ),
+                        const SizedBox(width: 2),
+                        Icon(
+                          open ? Icons.expand_more : Icons.chevron_right,
+                          size: 15,
+                          color: t.textMuted,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: open ? null : summary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (open)
+                  InkWell(
+                    onTap: onTap,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 10, 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          for (final (label, value) in rows)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 3),
+                              child: label == null
+                                  ? value
+                                  : Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          label,
+                                          style: theme.ui(
+                                            t.textMuted,
+                                            size: 12,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Align(
+                                            alignment: Alignment.centerRight,
+                                            child: value,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                        ],
                       ),
                     ),
-                    if (onTap != null)
-                      Icon(Icons.chevron_right, size: 16, color: t.textMuted),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                for (final (label, value) in rows)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 3),
-                    child: label == null
-                        ? value
-                        : Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                label,
-                                style: theme.ui(t.textMuted, size: 12),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Align(
-                                  alignment: Alignment.centerRight,
-                                  child: value,
-                                ),
-                              ),
-                            ],
-                          ),
                   ),
               ],
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
