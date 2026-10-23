@@ -18,7 +18,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 28
+const Version = 29
 
 type server struct {
 	chats *chats.Service
@@ -105,6 +105,14 @@ func (s *server) SendPrompt(_ context.Context, req *connect.Request[nushiv1.Send
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
 	return connect.NewResponse(&nushiv1.SendPromptResponse{}), nil
+}
+
+func (s *server) RewindChat(ctx context.Context, req *connect.Request[nushiv1.RewindChatRequest]) (*connect.Response[nushiv1.RewindChatResponse], error) {
+	m, err := s.chats.Rewind(ctx, req.Msg.ChatId, req.Msg.ItemId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	return connect.NewResponse(&nushiv1.RewindChatResponse{Message: messageProto(m)}), nil
 }
 
 func (s *server) Unqueue(_ context.Context, req *connect.Request[nushiv1.UnqueueRequest]) (*connect.Response[nushiv1.UnqueueResponse], error) {
@@ -306,6 +314,8 @@ func toProto(e model.Event) *nushiv1.EventsResponse {
 		out.Kind = &nushiv1.EventsResponse_Usage{Usage: usageProto(*e.Usage)}
 	case e.Removed:
 		out.Kind = &nushiv1.EventsResponse_Removed{Removed: true}
+	case e.Cut != "":
+		out.Kind = &nushiv1.EventsResponse_Cut{Cut: e.Cut}
 	case e.Queue != nil:
 		out.Kind = &nushiv1.EventsResponse_Queue{Queue: queueProto(*e.Queue)}
 	case e.Commands != nil:
@@ -316,7 +326,7 @@ func toProto(e model.Event) *nushiv1.EventsResponse {
 
 func itemProto(it *model.Item) *nushiv1.Item {
 	out := &nushiv1.Item{Id: it.ID, Kind: itemKinds[it.Kind], Text: it.Text,
-		Title: it.Title, ToolKind: it.ToolKind, Status: it.Status, Answer: it.Answer, Parent: it.Parent, Agent: it.Agent, Tool: it.Tool}
+		Title: it.Title, ToolKind: it.ToolKind, Status: it.Status, Answer: it.Answer, Parent: it.Parent, Agent: it.Agent, Tool: it.Tool, ForkAt: it.ForkAt}
 	out.Options = optionsProto(it.Options)
 	out.Paths = it.Paths
 	for _, img := range it.Images {
@@ -349,7 +359,7 @@ func usageProto(u model.Usage) *nushiv1.Usage {
 }
 
 func statusProto(st model.Status) *nushiv1.ChatStatus {
-	out := &nushiv1.ChatStatus{Busy: st.Busy, Waiting: st.Waiting, CanFork: st.CanFork, Images: st.Images}
+	out := &nushiv1.ChatStatus{Busy: st.Busy, Waiting: st.Waiting, CanFork: st.CanFork, Images: st.Images, CanRewind: st.CanRewind}
 	if !st.Started.IsZero() {
 		out.Started = st.Started.UnixMilli()
 	}

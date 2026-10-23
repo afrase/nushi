@@ -8,9 +8,10 @@ import "context"
 // ForkSessionRequest asks the agent for a new session that starts with a
 // copy of another one's conversation.
 type ForkSessionRequest struct {
-	SessionID  SessionID   `json:"sessionId"`
-	Cwd        string      `json:"cwd"`
-	MCPServers []MCPServer `json:"mcpServers"`
+	SessionID  SessionID      `json:"sessionId"`
+	Cwd        string         `json:"cwd"`
+	MCPServers []MCPServer    `json:"mcpServers"`
+	Meta       map[string]any `json:"_meta,omitempty"`
 }
 
 type ForkSessionResponse struct {

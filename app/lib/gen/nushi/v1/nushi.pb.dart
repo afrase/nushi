@@ -1473,6 +1473,137 @@ class ChatQueue extends $pb.GeneratedMessage {
   $pb.PbList<QueuedMessage> get messages => $_getList(0);
 }
 
+class RewindChatRequest extends $pb.GeneratedMessage {
+  factory RewindChatRequest({
+    $core.String? chatId,
+    $core.String? itemId,
+  }) {
+    final result = RewindChatRequest._();
+    if (chatId != null) result.chatId = chatId;
+    if (itemId != null) result.itemId = itemId;
+    return result;
+  }
+
+  RewindChatRequest._();
+
+  factory RewindChatRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RewindChatRequest()..mergeFromBuffer(data, registry);
+  factory RewindChatRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RewindChatRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RewindChatRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RewindChatRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOS(2, _omitFieldNames ? '' : 'itemId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RewindChatRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RewindChatRequest copyWith(void Function(RewindChatRequest) updates) =>
+      super.copyWith((message) => updates(message as RewindChatRequest))
+          as RewindChatRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use RewindChatRequest() / RewindChatRequest.new instead')
+  static RewindChatRequest create() => RewindChatRequest._();
+  static $pb.GeneratedMessage $_createMessage() => RewindChatRequest._();
+  @$core.override
+  RewindChatRequest createEmptyInstance() => RewindChatRequest._();
+  @$core.pragma('dart2js:noInline')
+  static RewindChatRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<RewindChatRequest>(
+          RewindChatRequest.$_createMessage);
+  static RewindChatRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  /// The user message to rewind to.
+  @$pb.TagNumber(2)
+  $core.String get itemId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set itemId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasItemId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearItemId() => $_clearField(2);
+}
+
+class RewindChatResponse extends $pb.GeneratedMessage {
+  factory RewindChatResponse({
+    QueuedMessage? message,
+  }) {
+    final result = RewindChatResponse._();
+    if (message != null) result.message = message;
+    return result;
+  }
+
+  RewindChatResponse._();
+
+  factory RewindChatResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RewindChatResponse()..mergeFromBuffer(data, registry);
+  factory RewindChatResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RewindChatResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RewindChatResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RewindChatResponse.$_createMessage)
+    ..aOM<QueuedMessage>(1, _omitFieldNames ? '' : 'message',
+        subBuilder: QueuedMessage.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RewindChatResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RewindChatResponse copyWith(void Function(RewindChatResponse) updates) =>
+      super.copyWith((message) => updates(message as RewindChatResponse))
+          as RewindChatResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use RewindChatResponse() / RewindChatResponse.new instead')
+  static RewindChatResponse create() => RewindChatResponse._();
+  static $pb.GeneratedMessage $_createMessage() => RewindChatResponse._();
+  @$core.override
+  RewindChatResponse createEmptyInstance() => RewindChatResponse._();
+  @$core.pragma('dart2js:noInline')
+  static RewindChatResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RewindChatResponse>(
+          RewindChatResponse.$_createMessage);
+  static RewindChatResponse? _defaultInstance;
+
+  /// The message, to edit and send again (its files aren't kept).
+  @$pb.TagNumber(1)
+  QueuedMessage get message => $_getN(0);
+  @$pb.TagNumber(1)
+  set message(QueuedMessage value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasMessage() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearMessage() => $_clearField(1);
+  @$pb.TagNumber(1)
+  QueuedMessage ensureMessage() => $_ensure(0);
+}
+
 class UnqueueRequest extends $pb.GeneratedMessage {
   factory UnqueueRequest({
     $core.String? chatId,
@@ -4633,6 +4764,7 @@ enum EventsResponse_Kind {
   removed,
   usage,
   queue,
+  cut,
   notSet
 }
 
@@ -4648,6 +4780,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     $core.bool? removed,
     Usage? usage,
     ChatQueue? queue,
+    $core.String? cut,
   }) {
     final result = EventsResponse._();
     if (chatId != null) result.chatId = chatId;
@@ -4660,6 +4793,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     if (removed != null) result.removed = removed;
     if (usage != null) result.usage = usage;
     if (queue != null) result.queue = queue;
+    if (cut != null) result.cut = cut;
     return result;
   }
 
@@ -4682,13 +4816,14 @@ class EventsResponse extends $pb.GeneratedMessage {
     8: EventsResponse_Kind.removed,
     9: EventsResponse_Kind.usage,
     10: EventsResponse_Kind.queue,
+    11: EventsResponse_Kind.cut,
     0: EventsResponse_Kind.notSet
   };
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'EventsResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: EventsResponse.$_createMessage)
-    ..oo(0, [2, 3, 4, 5, 7, 8, 9, 10])
+    ..oo(0, [2, 3, 4, 5, 7, 8, 9, 10, 11])
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
     ..aOM<ItemEvent>(2, _omitFieldNames ? '' : 'item',
         subBuilder: ItemEvent.$_createMessage)
@@ -4706,6 +4841,7 @@ class EventsResponse extends $pb.GeneratedMessage {
         subBuilder: Usage.$_createMessage)
     ..aOM<ChatQueue>(10, _omitFieldNames ? '' : 'queue',
         subBuilder: ChatQueue.$_createMessage)
+    ..aOS(11, _omitFieldNames ? '' : 'cut')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -4738,6 +4874,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(8)
   @$pb.TagNumber(9)
   @$pb.TagNumber(10)
+  @$pb.TagNumber(11)
   EventsResponse_Kind whichKind() =>
       _EventsResponse_KindByTag[$_whichOneof(0)]!;
   @$pb.TagNumber(2)
@@ -4748,6 +4885,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(8)
   @$pb.TagNumber(9)
   @$pb.TagNumber(10)
+  @$pb.TagNumber(11)
   void clearKind() => $_clearField($_whichOneof(0));
 
   @$pb.TagNumber(1)
@@ -4859,6 +4997,17 @@ class EventsResponse extends $pb.GeneratedMessage {
   void clearQueue() => $_clearField(10);
   @$pb.TagNumber(10)
   ChatQueue ensureQueue() => $_ensure(9);
+
+  /// The transcript was cut back: this item and every one after it are
+  /// gone (API 29).
+  @$pb.TagNumber(11)
+  $core.String get cut => $_getSZ(10);
+  @$pb.TagNumber(11)
+  set cut($core.String value) => $_setString(10, value);
+  @$pb.TagNumber(11)
+  $core.bool hasCut() => $_has(10);
+  @$pb.TagNumber(11)
+  void clearCut() => $_clearField(11);
 }
 
 /// A chat's config options, all of them.
@@ -5153,6 +5302,7 @@ class Item extends $pb.GeneratedMessage {
     $core.String? parent,
     $core.String? agent,
     $core.String? tool,
+    $core.String? forkAt,
   }) {
     final result = Item._();
     if (id != null) result.id = id;
@@ -5171,6 +5321,7 @@ class Item extends $pb.GeneratedMessage {
     if (parent != null) result.parent = parent;
     if (agent != null) result.agent = agent;
     if (tool != null) result.tool = tool;
+    if (forkAt != null) result.forkAt = forkAt;
     return result;
   }
 
@@ -5209,6 +5360,7 @@ class Item extends $pb.GeneratedMessage {
     ..aOS(14, _omitFieldNames ? '' : 'parent')
     ..aOS(15, _omitFieldNames ? '' : 'agent')
     ..aOS(16, _omitFieldNames ? '' : 'tool')
+    ..aOS(17, _omitFieldNames ? '' : 'forkAt')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -5350,6 +5502,17 @@ class Item extends $pb.GeneratedMessage {
   $core.bool hasTool() => $_has(15);
   @$pb.TagNumber(16)
   void clearTool() => $_clearField(16);
+
+  /// For a user message: the agent's message the conversation before it
+  /// ends with, where a rewind to it forks the session (API 29).
+  @$pb.TagNumber(17)
+  $core.String get forkAt => $_getSZ(16);
+  @$pb.TagNumber(17)
+  set forkAt($core.String value) => $_setString(16, value);
+  @$pb.TagNumber(17)
+  $core.bool hasForkAt() => $_has(16);
+  @$pb.TagNumber(17)
+  void clearForkAt() => $_clearField(17);
 }
 
 /// A step of the agent's plan; status is "pending", "in_progress" or
@@ -5713,6 +5876,7 @@ class ChatStatus extends $pb.GeneratedMessage {
     $core.bool? waiting,
     $core.bool? canFork,
     $core.bool? images,
+    $core.bool? canRewind,
   }) {
     final result = ChatStatus._();
     if (busy != null) result.busy = busy;
@@ -5721,6 +5885,7 @@ class ChatStatus extends $pb.GeneratedMessage {
     if (waiting != null) result.waiting = waiting;
     if (canFork != null) result.canFork = canFork;
     if (images != null) result.images = images;
+    if (canRewind != null) result.canRewind = canRewind;
     return result;
   }
 
@@ -5743,6 +5908,7 @@ class ChatStatus extends $pb.GeneratedMessage {
     ..aOB(4, _omitFieldNames ? '' : 'waiting')
     ..aOB(5, _omitFieldNames ? '' : 'canFork')
     ..aOB(6, _omitFieldNames ? '' : 'images')
+    ..aOB(7, _omitFieldNames ? '' : 'canRewind')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -5823,6 +5989,16 @@ class ChatStatus extends $pb.GeneratedMessage {
   $core.bool hasImages() => $_has(5);
   @$pb.TagNumber(6)
   void clearImages() => $_clearField(6);
+
+  /// The agent can rewind the chat to a user message (RewindChat, API 29).
+  @$pb.TagNumber(7)
+  $core.bool get canRewind => $_getBF(6);
+  @$pb.TagNumber(7)
+  set canRewind($core.bool value) => $_setBool(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasCanRewind() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearCanRewind() => $_clearField(7);
 }
 
 class NushiServiceApi {
@@ -5869,6 +6045,16 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, SendPromptRequest request) =>
       _client.invoke<SendPromptResponse>(
           ctx, 'NushiService', 'SendPrompt', request, SendPromptResponse());
+
+  /// Cuts a chat back to just before one of its user messages (when
+  /// status.can_rewind and the message's fork_at is set, or it is the first)
+  /// and returns that message. The agent's session is forked there: a new
+  /// session id, the same chat. Files aren't rewound. Refused while the chat
+  /// is busy (API 29).
+  $async.Future<RewindChatResponse> rewindChat(
+          $pb.ClientContext? ctx, RewindChatRequest request) =>
+      _client.invoke<RewindChatResponse>(
+          ctx, 'NushiService', 'RewindChat', request, RewindChatResponse());
 
   /// Takes a message out of the chat's queue before the agent gets it, and
   /// returns it (API 28). Refused once the agent has it.

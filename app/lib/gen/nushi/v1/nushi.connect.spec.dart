@@ -4,6 +4,7 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
+
 import "nushi.pb.dart" as nushiv1nushi;
 
 abstract final class NushiService {
@@ -60,6 +61,18 @@ abstract final class NushiService {
     connect.StreamType.unary,
     nushiv1nushi.SendPromptRequest.new,
     nushiv1nushi.SendPromptResponse.new,
+  );
+
+  /// Cuts a chat back to just before one of its user messages (when
+  /// status.can_rewind and the message's fork_at is set, or it is the first)
+  /// and returns that message. The agent's session is forked there: a new
+  /// session id, the same chat. Files aren't rewound. Refused while the chat
+  /// is busy (API 29).
+  static const rewindChat = connect.Spec(
+    '/$name/RewindChat',
+    connect.StreamType.unary,
+    nushiv1nushi.RewindChatRequest.new,
+    nushiv1nushi.RewindChatResponse.new,
   );
 
   /// Takes a message out of the chat's queue before the agent gets it, and

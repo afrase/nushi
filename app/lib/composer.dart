@@ -78,6 +78,7 @@ class _ComposerState extends State<Composer> {
     _completions.addListener(_imagesChanged);
     widget.quote?.addListener(_quote);
     _quote(); // one given before the box was built
+    widget.chat.takeBack.addListener(_takeBack);
   }
 
   void _imagesChanged() => setState(() {}); // and completions
@@ -94,6 +95,7 @@ class _ComposerState extends State<Composer> {
     widget.replies.removeListener(_repliesChanged);
     if (widget.attachments == null) _images.dispose();
     widget.quote?.removeListener(_quote);
+    widget.chat.takeBack.removeListener(_takeBack);
     _completions.dispose();
     _text.dispose();
     _focus.dispose();
@@ -156,6 +158,13 @@ class _ComposerState extends State<Composer> {
       selection: TextSelection.collapsed(offset: joined.length),
     );
     _focus.requestFocus();
+  }
+
+  void _takeBack() {
+    final m = widget.chat.takeBack.value;
+    if (m == null) return;
+    widget.chat.takeBack.value = null;
+    _restore(m.text, m.files, m.images);
   }
 
   /// Takes a queued message back from the daemon, to edit unless [drop].

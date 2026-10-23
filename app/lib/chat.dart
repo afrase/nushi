@@ -33,8 +33,13 @@ class ChatState extends ChangeNotifier {
   bool waiting = false; // on the user: a permission prompt or a question
   bool canFork = false; // the agent can fork it into side chats
   bool canImages = false; // the agent takes images in prompts
+  bool canRewind = false; // the agent rewinds to a user message
   DateTime? started; // when the running turn started
   String error = ''; // why the snapshot didn't load
+
+  /// A message taken back from the transcript, set for the composer to
+  /// put back in the box.
+  final takeBack = ValueNotifier<QueuedMessage?>(null);
 
   /// A subagent's call id, set to bring its card into view.
   final reveal = ValueNotifier<String?>(null);
@@ -108,6 +113,7 @@ class ChatState extends ChangeNotifier {
     waiting = s.waiting;
     canFork = s.canFork;
     canImages = s.images;
+    canRewind = s.canRewind;
     started = s.started == 0
         ? null
         : DateTime.fromMillisecondsSinceEpoch(s.started.toInt());
@@ -127,6 +133,9 @@ class ChatState extends ChangeNotifier {
         usage = e.usage;
       case EventsResponse_Kind.queue:
         queue = e.queue.messages;
+      case EventsResponse_Kind.cut:
+        final i = items.indexWhere((it) => it.id == e.cut);
+        if (i >= 0) items.removeRange(i, items.length);
       case EventsResponse_Kind.status:
         status(e.status);
       case EventsResponse_Kind.chat ||
