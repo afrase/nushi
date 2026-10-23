@@ -10,6 +10,7 @@ import 'diff_box.dart';
 import 'file_tree.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'panes.dart';
+import 'review.dart';
 import 'settings.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
@@ -77,6 +78,24 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
     }
   }
 
+  /// Which view the review comments are made in: the scope, and in
+  /// Commits the commits picked.
+  String get _where {
+    final p = _picked;
+    return _span?.scope != Scope.commits || p == null
+        ? '${_span?.scope.name}'
+        : 'commits:${_commits[p.$1].hash}:${_commits[p.$2].hash}';
+  }
+
+  /// How many review comments each file has in this view.
+  Map<String, int> _marks() {
+    final marks = <String, int>{};
+    for (final c in commentsOf(chat.id).where((c) => c.where == _where)) {
+      marks.update(c.path, (n) => n + 1, ifAbsent: () => 1);
+    }
+    return marks;
+  }
+
   /// Reads the files of the scope (in Commits, of the commits picked).
   Future<void> _diff() async {
     final span = _span!;
@@ -96,6 +115,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
         ? <FileChange>[]
         : (await daemon.client.getDiff(req)).files;
     if (!mounted) return;
+    if (!chat.busy) forgetChanged(chat.id, _where, files);
     setState(() {
       _files = files;
       if (!_files.any((f) => f.path == _path)) {
@@ -188,10 +208,14 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
                         Expanded(
                           child: Padding(
                             padding: const EdgeInsets.only(top: 4),
-                            child: FileList(
-                              files: _files,
-                              selected: _path,
-                              onSelect: (p) => setState(() => _path = p),
+                            child: ValueListenableBuilder(
+                              valueListenable: reviews,
+                              builder: (context, _, _) => FileList(
+                                files: _files,
+                                selected: _path,
+                                onSelect: (p) => setState(() => _path = p),
+                                marks: _marks(),
+                              ),
                             ),
                           ),
                         ),
@@ -201,7 +225,12 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
                 ),
                 Expanded(
                   child: file != null && file.skipped.isEmpty
-                      ? DiffBox(file, key: ValueKey(file.path), fit: false)
+                      ? DiffBox(
+                          file,
+                          key: ValueKey(file.path),
+                          fit: false,
+                          review: (chat: chat.id, where: _where),
+                        )
                       : Center(
                           child: Text(
                             file == null
@@ -250,6 +279,24 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
               _files.fold(0, (n, f) => n + f.added),
               _files.fold(0, (n, f) => n + f.removed),
             ),
+          ),
+          ListenableBuilder(
+            listenable: Listenable.merge([reviews, chat]),
+            builder: (context, _) {
+              final n = commentsOf(chat.id).where((c) => !c.sent).length;
+              final busy = chat.busy || chat.waiting;
+              if (n == 0) return const SizedBox.shrink();
+              return Button(
+                label: busy
+                    ? 'Send review ($n) when Claude is done'
+                    : 'Send review ($n)',
+                icon: Icons.rate_review_outlined,
+                kind: ButtonKind.primary,
+                onPressed: busy || chat.archived
+                    ? null
+                    : () => sendReview(context, daemon, chat.id),
+              );
+            },
           ),
           ValueListenableBuilder(
             valueListenable: changesFlat,

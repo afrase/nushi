@@ -87,11 +87,13 @@ class FileList extends StatefulWidget {
     required this.files,
     required this.selected,
     required this.onSelect,
+    this.marks = const {},
   });
 
   final List<FileChange> files;
   final String? selected;
   final ValueChanged<String> onSelect;
+  final Map<String, int> marks; // review comments, by file
 
   @override
   State<FileList> createState() => _FileListState();
@@ -163,6 +165,7 @@ class _FileListState extends State<FileList> {
               flat: flat,
               selected: row.file != null && row.path == widget.selected,
               open: !_collapsed.contains(row.path),
+              comments: widget.marks[row.file?.path] ?? 0,
               onTap: () {
                 _focus.requestFocus();
                 if (row.file == null) {
@@ -187,11 +190,13 @@ class _Row extends StatelessWidget {
     required this.flat,
     required this.selected,
     required this.open,
+    required this.comments,
     required this.onTap,
   });
 
   final ChangeRow row;
   final bool flat, selected, open;
+  final int comments;
   final VoidCallback onTap;
 
   @override
@@ -248,6 +253,16 @@ class _Row extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
+          if (comments > 0)
+            Tooltip(
+              message: '$comments review comment${comments == 1 ? '' : 's'}',
+              child: Row(
+                children: [
+                  Icon(Icons.mode_comment_outlined, size: 12, color: t.accent),
+                  Text(' $comments ', style: theme.ui(t.accent, size: 11)),
+                ],
+              ),
+            ),
           LineCounts(row.added, row.removed),
         ],
       ),
