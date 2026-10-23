@@ -115,3 +115,31 @@ func TestSetOnKeepsOtherSettings(t *testing.T) {
 		t.Errorf("turned off by the shared settings: %+v", servers[0])
 	}
 }
+
+func TestSetOnRefusesSymlinks(t *testing.T) {
+	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
+	ctx := context.Background()
+	for _, link := range []string{".claude", ".claude/settings.local.json"} {
+		repo, outside := t.TempDir(), t.TempDir()
+		target := filepath.Join(outside, "victim")
+		write(t, filepath.Join(target, "settings.local.json"), "keep")
+		if link == ".claude" {
+			if err := os.Symlink(target, filepath.Join(repo, ".claude")); err != nil {
+				t.Fatal(err)
+			}
+		} else {
+			if err := os.MkdirAll(filepath.Join(repo, ".claude"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Symlink(filepath.Join(target, "settings.local.json"), filepath.Join(repo, link)); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := (Claude{}).SetOn(ctx, repo, "web", true); err == nil {
+			t.Errorf("%s as a symlink: changed", link)
+		}
+		if b, _ := os.ReadFile(filepath.Join(target, "settings.local.json")); string(b) != "keep" {
+			t.Errorf("%s as a symlink: the target became %q", link, b)
+		}
+	}
+}
