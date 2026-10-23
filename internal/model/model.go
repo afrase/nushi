@@ -21,6 +21,17 @@ type Session struct {
 	// Earlier are the agent's sessions the chat had before it moved, oldest
 	// first.
 	Earlier []AgentSession `json:",omitempty"`
+	// Worktree is the git worktree Nushi made for the chat, if it runs in
+	// one; Folder is in it.
+	Worktree *Worktree `json:",omitempty"`
+}
+
+// Worktree is a git worktree of a repository, on a branch of its own.
+type Worktree struct {
+	Repo   string // the repository's folder (its main worktree)
+	Path   string // the worktree's folder
+	Branch string // its branch, made for it
+	Base   string // the branch it started from (a commit, if HEAD was detached)
 }
 
 // AgentSession is one of the agent's sessions: its id and folder (cwd).

@@ -1,50 +1,18 @@
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 
 import 'chat.dart';
 import 'daemon.dart';
 import 'folder_button.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
+import 'settings.dart';
 import 'theme/theme.dart';
 import 'usage.dart';
+import 'worktree.dart';
 
-/// What the app remembers across launches, in `app.json` in the data folder:
-/// whether the details panel shows (its toolbar button) and which of its
-/// cards are collapsed.
-final showDetails = ValueNotifier<bool>(_saved['details'] != false)
-  ..addListener(_save);
-final collapsedCards = ValueNotifier<Set<String>>({
-  ...?(_saved['collapsed'] as List?)?.whereType<String>(),
-})..addListener(_save);
-
-File get _settings => File('$dataDir/app.json');
-
-final Map<String, Object?> _saved = () {
-  try {
-    return jsonDecode(_settings.readAsStringSync()) as Map<String, Object?>;
-  } on Object {
-    return <String, Object?>{};
-  }
-}();
-
-void _save() {
-  try {
-    _settings.writeAsStringSync(
-      jsonEncode({
-        'details': showDetails.value,
-        'collapsed': collapsedCards.value.toList(),
-      }),
-    );
-  } on Object {
-    // Not remembered; it still applies until the app quits.
-  }
-}
-
-/// The panel beside a chat: cards for its environment (folder and branch),
-/// its context and cost, and its folder's uncommitted changes. The changes
-/// reload when a turn ends or the chat moves.
+/// The panel beside a chat: cards for its environment (folder or
+/// repository, branch, worktree), its context and cost, and its folder's
+/// uncommitted changes. The changes reload when a turn ends or the chat
+/// moves.
 class DetailsPanel extends StatefulWidget {
   const DetailsPanel({
     super.key,
@@ -143,20 +111,17 @@ class _DetailsPanelState extends State<DetailsPanel> {
           _Card(
             title: 'Environment',
             summary: Text(
-              isScratch(chat.folder) ? 'No folder' : _name(chat.folder),
+              isScratch(chat.folder) ? 'No folder' : _name(chat.home),
               style: muted,
               overflow: TextOverflow.ellipsis,
             ),
             rows: [
               (
-                'Folder',
+                chat.worktree == null ? 'Folder' : 'Repository',
                 FolderButton(chat: chat, daemon: widget.daemon, stacked: true),
               ),
               if (status != null && status.git)
-                (
-                  'Branch',
-                  Text(status.branch, style: theme.code(t.text, size: 12)),
-                ),
+                ...worktreeRows(context, chat, widget.daemon, status.branch),
             ],
           ),
           _Card(

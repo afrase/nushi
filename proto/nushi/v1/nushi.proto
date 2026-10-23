@@ -13,10 +13,11 @@ service NushiService {
   rpc GetChat(GetChatRequest) returns (GetChatResponse);
   // Starts an agent in a folder and opens a chat with it.
   rpc StartChat(StartChatRequest) returns (StartChatResponse);
-  // Moves a chat to another folder. A chat without messages starts a new
-  // session there; one with messages keeps its session and history, reopened
-  // in the new folder. Refused while the chat is busy. If the move fails the
-  // chat stays where it was, with a notice saying why.
+  // Moves a chat to another folder, or to a new worktree. A chat without
+  // messages starts a new session there (and a worktree it leaves is
+  // removed if it holds no work); one with messages keeps its history, in a
+  // fork of its session there. Refused while the chat is busy. If the move
+  // fails the chat stays where it was, with a notice saying why.
   rpc MoveChat(MoveChatRequest) returns (MoveChatResponse);
   // Sends a prompt; the reply arrives as events.
   rpc SendPrompt(SendPromptRequest) returns (SendPromptResponse);
@@ -97,6 +98,20 @@ message Chat {
   // The agent's session id (claude --resume <id>). It differs from id for
   // chats started since API 16.
   string session_id = 9;
+  // The git worktree Nushi made for the chat, if it runs in one (API 20).
+  Worktree worktree = 10;
+}
+
+// A git worktree of a repository, on a branch of its own.
+message Worktree {
+  // The repository's folder (its main worktree).
+  string repo = 1;
+  // The worktree's folder; the chat's folder is in it.
+  string path = 2;
+  // Its branch, nushi/<name>.
+  string branch = 3;
+  // The branch it started from (a commit, if HEAD was detached).
+  string base = 4;
 }
 
 message GetChatRequest {
@@ -148,11 +163,17 @@ message ChatCommands {
 message StartChatRequest {
   // Empty: a scratch folder of the chat's own, in the daemon's data folder.
   string folder = 1;
+  // Run the chat in a new worktree of folder's repository, at
+  // <repo>/.worktrees/<name> on a new branch nushi/<name> from folder's
+  // HEAD (API 20).
+  bool worktree = 2;
 }
 
 message MoveChatRequest {
   string chat_id = 1;
   string folder = 2;
+  // Move to a new worktree of folder's repository, as StartChat makes one.
+  bool worktree = 3;
 }
 
 message MoveChatResponse {}

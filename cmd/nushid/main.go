@@ -23,6 +23,7 @@ import (
 	"github.com/afrase/nushi/internal/claudehistory"
 	"github.com/afrase/nushi/internal/events"
 	"github.com/afrase/nushi/internal/features/chats"
+	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/store"
 )
 
@@ -66,7 +67,7 @@ func run() error {
 		return err
 	}
 	copyHistory := func(id, from, to string) (func() error, error) { return claudehistory.Copy(projects, id, from, to) }
-	chatSvc := chats.New("claude", launch, st, st, copyHistory, filepath.Join(dir, "scratch"), hub.Publish)
+	chatSvc := chats.New("claude", launch, st, st, copyHistory, git.Worktrees{}, filepath.Join(dir, "scratch"), hub.Publish)
 	srv := &http.Server{Handler: api.Handler(token, chatSvc, hub), Protocols: new(http.Protocols)}
 	srv.Protocols.SetUnencryptedHTTP2(true)
 

@@ -94,10 +94,11 @@ type NushiServiceClient interface {
 	GetChat(context.Context, *connect.Request[v1.GetChatRequest]) (*connect.Response[v1.GetChatResponse], error)
 	// Starts an agent in a folder and opens a chat with it.
 	StartChat(context.Context, *connect.Request[v1.StartChatRequest]) (*connect.Response[v1.StartChatResponse], error)
-	// Moves a chat to another folder. A chat without messages starts a new
-	// session there; one with messages keeps its session and history, reopened
-	// in the new folder. Refused while the chat is busy. If the move fails the
-	// chat stays where it was, with a notice saying why.
+	// Moves a chat to another folder, or to a new worktree. A chat without
+	// messages starts a new session there (and a worktree it leaves is
+	// removed if it holds no work); one with messages keeps its history, in a
+	// fork of its session there. Refused while the chat is busy. If the move
+	// fails the chat stays where it was, with a notice saying why.
 	MoveChat(context.Context, *connect.Request[v1.MoveChatRequest]) (*connect.Response[v1.MoveChatResponse], error)
 	// Sends a prompt; the reply arrives as events.
 	SendPrompt(context.Context, *connect.Request[v1.SendPromptRequest]) (*connect.Response[v1.SendPromptResponse], error)
@@ -427,10 +428,11 @@ type NushiServiceHandler interface {
 	GetChat(context.Context, *connect.Request[v1.GetChatRequest]) (*connect.Response[v1.GetChatResponse], error)
 	// Starts an agent in a folder and opens a chat with it.
 	StartChat(context.Context, *connect.Request[v1.StartChatRequest]) (*connect.Response[v1.StartChatResponse], error)
-	// Moves a chat to another folder. A chat without messages starts a new
-	// session there; one with messages keeps its session and history, reopened
-	// in the new folder. Refused while the chat is busy. If the move fails the
-	// chat stays where it was, with a notice saying why.
+	// Moves a chat to another folder, or to a new worktree. A chat without
+	// messages starts a new session there (and a worktree it leaves is
+	// removed if it holds no work); one with messages keeps its history, in a
+	// fork of its session there. Refused while the chat is busy. If the move
+	// fails the chat stays where it was, with a notice saying why.
 	MoveChat(context.Context, *connect.Request[v1.MoveChatRequest]) (*connect.Response[v1.MoveChatResponse], error)
 	// Sends a prompt; the reply arrives as events.
 	SendPrompt(context.Context, *connect.Request[v1.SendPromptRequest]) (*connect.Response[v1.SendPromptResponse], error)

@@ -9,6 +9,7 @@ class ChatState extends ChangeNotifier {
 
   final String id;
   String folder; // it can move (MoveChat)
+  Worktree? worktree; // the git worktree it runs in, if Nushi made one
   String sessionId = ''; // the agent's
   String title = '';
   bool archived = false; // no agent runs; read-only until unarchived
@@ -23,6 +24,18 @@ class ChatState extends ChangeNotifier {
   bool canImages = false; // the agent takes images in prompts
   DateTime? started; // when the running turn started
   String error = ''; // why the snapshot didn't load
+
+  /// The folder the chat stands for: in a worktree, the same folder in its
+  /// repository; the sidebar groups chats by it.
+  String get home => switch (worktree) {
+    final wt? when folder.startsWith(wt.path) =>
+      wt.repo + folder.substring(wt.path.length),
+    _ => folder,
+  };
+
+  /// Whether the chat has no messages yet (its snapshot is in).
+  bool get fresh =>
+      loaded && !items.any((i) => i.kind == ItemKind.ITEM_KIND_USER_MESSAGE);
 
   /// Whether the snapshot is in; until then events wait in [_early].
   bool loaded = false;

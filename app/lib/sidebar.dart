@@ -8,9 +8,10 @@ import 'daemon.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
 
-/// The chats, grouped by folder: the folder with the newest chat first, and
-/// in each folder the newest chat first. Archived chats are in a collapsed
-/// group at the bottom.
+/// The chats, grouped by folder (a chat in a worktree under its
+/// repository): the folder with the newest chat first, and in each folder
+/// the newest chat first. Archived chats are in a collapsed group at the
+/// bottom.
 class Sidebar extends StatefulWidget {
   const Sidebar({super.key, required this.daemon});
 
@@ -53,7 +54,7 @@ class _SidebarState extends State<Sidebar> {
         if (c.archived) c,
     ];
     for (final c in byNewest.where((c) => !c.archived)) {
-      (groups[isScratch(c.folder) ? '' : c.folder] ??= []).add(c);
+      (groups[isScratch(c.folder) ? '' : c.home] ??= []).add(c);
     }
     if (_starting != null) groups.putIfAbsent(_starting!, () => []);
     return DecoratedBox(
@@ -322,10 +323,22 @@ class _ChatRowState extends State<_ChatRow> {
                           ),
                   ),
                   if (chat.waiting)
-                    Text('needs you', style: theme.ui(t.needs, size: 11.5)),
+                    Text('needs you', style: theme.ui(t.needs, size: 11.5))
+                  else if (chat.worktree case final wt?)
+                    Flexible(
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: Text(
+                          wt.branch.replaceFirst('nushi/', ''),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.code(t.textMuted, size: 10.5),
+                        ),
+                      ),
+                    ),
                   if (chat.archived && !isScratch(chat.folder))
                     Text(
-                      chat.folder.split('/').last,
+                      chat.home.split('/').last,
                       style: theme.ui(t.textMuted, size: 11.5),
                     ),
                 ],

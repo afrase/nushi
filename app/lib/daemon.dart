@@ -11,6 +11,7 @@ import 'package:uds_transport/uds_transport.dart';
 import 'chat.dart';
 import 'gen/nushi/v1/nushi.connect.client.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
+import 'settings.dart';
 
 /// The daemon's data folder; `NUSHI_DATA` picks another one (development).
 final dataDir =
@@ -18,7 +19,7 @@ final dataDir =
     '${Platform.environment['HOME']}/Library/Application Support/Nushi Next';
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 19;
+const apiVersion = 20;
 
 /// Whether [folder] is a chat's scratch folder: the chat has no folder yet.
 bool isScratch(String folder) => folder.startsWith('$dataDir/scratch/');
@@ -77,6 +78,9 @@ class Daemon extends ChangeNotifier {
 
   /// Whether the daemon starts chats without a folder and moves them (API 16).
   bool get canMove => daemonApi >= 16;
+
+  /// Whether the daemon runs chats in worktrees (API 20).
+  bool get canWorktrees => daemonApi >= 20;
 
   /// Whether the daemon sums up a folder's changes (API 17).
   bool get canFolderStatus => daemonApi >= 17;
@@ -203,6 +207,7 @@ class Daemon extends ChangeNotifier {
     }
     if (chat.folder != c.folder) chat.moved(c.folder);
     return chat
+      ..worktree = c.hasWorktree() ? c.worktree : null
       ..sessionId = c.sessionId.isEmpty ? c.id : c.sessionId
       ..title = c.title
       ..archived = c.archived
@@ -217,24 +222,38 @@ class Daemon extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Starts a chat in [folder], or in a scratch folder of its own ('').
+  /// Starts a chat in [folder], or in a scratch folder of its own (''); in a
+  /// new worktree of its repository if that's the choice remembered for it.
   Future<void> startChat(String folder) async {
-    final resp = await client.startChat(StartChatRequest(folder: folder));
+    final resp = await client.startChat(
+      StartChatRequest(folder: folder, worktree: _worktree(folder)),
+    );
     chats[resp.chatId] ??= ChatState(resp.chatId, folder);
     select(resp.chatId);
   }
 
-  Future<void> moveChat(String chatId, String folder) =>
-      client.moveChat(MoveChatRequest(chatId: chatId, folder: folder));
+  bool _worktree(String folder) =>
+      canWorktrees && worktreeRepos.value.contains(folder);
 
-  /// The folders of the chats, the newest chat's first, scratch folders left
-  /// out.
+  /// Moves a chat to [folder], or to a new worktree of its repository. A
+  /// chat without messages follows the choice remembered for [folder].
+  Future<void> moveChat(ChatState chat, String folder, {bool? worktree}) =>
+      client.moveChat(
+        MoveChatRequest(
+          chatId: chat.id,
+          folder: folder,
+          worktree: worktree ?? (chat.fresh && _worktree(folder)),
+        ),
+      );
+
+  /// The chats' folders (in a worktree, its repository's), the newest
+  /// chat's first, scratch folders left out.
   List<String> get recentFolders {
     final byNewest = chats.values.toList()
       ..sort((a, b) => b.created.compareTo(a.created));
     return {
       for (final c in byNewest)
-        if (!isScratch(c.folder)) c.folder,
+        if (!isScratch(c.folder)) c.home,
     }.toList();
   }
 
