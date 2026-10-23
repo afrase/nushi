@@ -10,7 +10,7 @@ import 'gen/nushi/v1/nushi.pb.dart';
 import 'panel_cards.dart';
 import 'settings.dart';
 import 'markdown.dart';
-import 'subagents.dart';
+import 'agents_card.dart';
 import 'theme/theme.dart';
 import 'usage.dart';
 import 'widgets.dart';
@@ -285,46 +285,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
           ],
         ],
       ),
-      if (subagentsOf(chat.items, busy: chat.busy) case final subs
-          when subs.isNotEmpty)
-        PanelCard(
-          title: 'Agents',
-          summary: Text(
-            '${subs.length} subagent${subs.length == 1 ? '' : 's'}',
-            style: muted,
-          ),
-          rows: [
-            for (final s in subs)
-              (
-                null,
-                Tap(
-                  onTap: () => chat.reveal.value = s.call.id,
-                  tooltip: 'Show it in the chat',
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${s.call.agent}: ${s.call.title}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.ui(t.text, size: 12),
-                      ),
-                      Text(
-                        subagentState(s),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.ui(
-                          s.call.status == 'failed' ? t.crashed : t.textMuted,
-                          size: 11.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
-        ),
+      ?agentsCard(chat),
     ]);
   }
 }
