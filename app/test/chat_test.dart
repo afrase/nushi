@@ -41,4 +41,21 @@ void main() {
     expect(chat.busy, isTrue);
     expect(chat.items, isEmpty);
   });
+
+  test('a cut drops the item and what follows; a whole item replaces', () {
+    final chat = ChatState('c', '/x')..loading = true;
+    Item msg(String id, String text) =>
+        Item(id: id, kind: ItemKind.ITEM_KIND_AGENT_MESSAGE, text: text);
+    chat.load(
+      GetChatResponse(
+        items: [msg('a', 'one'), msg('b', 'two'), msg('c', 'three')],
+        seq: Int64(1),
+      ),
+    );
+    chat.apply(chunk(2, 'a', 'One', append: false));
+    chat.apply(EventsResponse(seq: Int64(3), cut: 'b'));
+    expect([for (final it in chat.items) it.text], ['One']);
+    chat.apply(EventsResponse(seq: Int64(4), cut: 'gone')); // nothing to cut
+    expect(chat.items, hasLength(1));
+  });
 }

@@ -23,6 +23,9 @@ type fakeAgent struct {
 	prompt  []acp.ContentBlock
 	usage   *acp.TurnUsage // the prompt response's
 	deleted []acp.SessionID
+	// deletes makes it able to delete sessions, failing with deleteErr.
+	deletes   bool
+	deleteErr error
 
 	mu           sync.Mutex
 	gate         chan struct{} // when set, a prompt's turn runs until it is closed
@@ -39,8 +42,12 @@ type fakeAgent struct {
 }
 
 func (f *fakeAgent) Initialize(context.Context, acp.InitializeRequest) (*acp.InitializeResponse, error) {
+	caps := &acp.AgentCapabilities{PromptCapabilities: &acp.PromptCapabilities{Image: true}}
+	if f.deletes {
+		caps.SessionCapabilities = &acp.SessionCapabilities{Delete: &acp.SessionDeleteCapabilities{}}
+	}
 	return &acp.InitializeResponse{ProtocolVersion: acp.Version, AgentInfo: &acp.Implementation{Name: "@agentclientprotocol/claude-agent-acp"},
-		AgentCapabilities: &acp.AgentCapabilities{PromptCapabilities: &acp.PromptCapabilities{Image: true}}}, nil
+		AgentCapabilities: caps}, nil
 }
 
 func (f *fakeAgent) NewSession(context.Context, acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
@@ -133,7 +140,7 @@ func (f *fakeAgent) DeleteSession(_ context.Context, req acp.DeleteSessionReques
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.deleted = append(f.deleted, req.SessionID)
-	return nil
+	return f.deleteErr
 }
 
 func (f *fakeAgent) SetConfigOption(_ context.Context, req acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error) {
