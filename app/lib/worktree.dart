@@ -4,6 +4,7 @@ import 'chat.dart';
 import 'chat_menu.dart';
 import 'daemon.dart';
 import 'folder_button.dart';
+import 'gen/nushi/v1/nushi.pb.dart';
 import 'settings.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
@@ -133,6 +134,131 @@ Future<void> _confirmMove(
     await tryOrShow(
       context,
       () => daemon.moveChat(chat, chat.home, worktree: true),
+    );
+  }
+}
+
+/// The Delete dialog's choices for a chat's worktree and branch, each on by
+/// default only when nothing would be lost; forcing follows from the
+/// warning shown. The branch goes only with the worktree (git keeps a
+/// branch a worktree has checked out).
+class WorktreeChoices extends StatelessWidget {
+  const WorktreeChoices({
+    super.key,
+    required this.plan,
+    required this.remove,
+    required this.branch,
+    required this.onChanged,
+  });
+
+  final PlanDeleteChatResponse plan;
+  final bool remove, branch;
+  final void Function(bool remove, bool branch) onChanged;
+
+  /// The choices that start on for [plan]: (remove, branch).
+  static (bool, bool) defaults(PlanDeleteChatResponse plan) {
+    final st = plan.worktreeState;
+    final remove = st.error.isEmpty && st.changed == 0;
+    return (remove, remove && st.commits == 0 && !st.branchGone);
+  }
+
+  /// [req] with these choices.
+  static DeleteChatRequest request(
+    DeleteChatRequest req,
+    PlanDeleteChatResponse plan, {
+    required bool remove,
+    required bool branch,
+  }) {
+    final st = plan.worktreeState;
+    return req
+      ..removeWorktree = remove
+      ..forceWorktree = remove && st.changed > 0
+      ..deleteBranch = remove && branch
+      ..forceBranch = remove && branch && st.commits > 0;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    final wt = plan.worktree;
+    final st = plan.worktreeState;
+    final base = wt.base;
+    Widget note(String text, {bool warn = false}) => Padding(
+      padding: const EdgeInsets.only(left: 32, bottom: 2),
+      child: Text(
+        text,
+        style: theme.ui(warn ? t.crashed : t.textMuted, size: 12),
+      ),
+    );
+    Widget choice(
+      String label,
+      String what,
+      bool value,
+      ValueChanged<bool>? onChanged,
+    ) => Row(
+      children: [
+        Checkbox(
+          value: value,
+          visualDensity: VisualDensity.compact,
+          onChanged: onChanged == null ? null : (v) => onChanged(v!),
+        ),
+        Text(label, style: theme.ui(onChanged == null ? t.textMuted : t.text)),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            what,
+            overflow: TextOverflow.ellipsis,
+            style: theme.code(t.textMuted, size: 11.5),
+          ),
+        ),
+      ],
+    );
+    if (st.error.isNotEmpty) {
+      return Text(
+        'Its worktree ${tildePath(wt.path)} and branch ${wt.branch} stay: '
+        'Nushi can’t tell what’s in them (${st.error}).',
+        style: theme.ui(t.textSecondary),
+      );
+    }
+    final changes = st.changed == 1 ? '1 file' : '${st.changed} files';
+    final commits = st.commits == 1 ? '1 commit' : '${st.commits} commits';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        choice(
+          'Remove the worktree',
+          '.worktrees/${wt.path.split('/').last}',
+          remove,
+          (v) => onChanged(v, branch),
+        ),
+        if (st.gone)
+          note('Its folder was already removed outside Nushi.')
+        else if (st.changed > 0)
+          note(
+            '$changes with uncommitted or untracked changes would be lost.',
+            warn: true,
+          ),
+        if (st.branchGone)
+          note('Its branch ${wt.branch} was already deleted.')
+        else ...[
+          choice(
+            'Delete the branch',
+            wt.branch,
+            remove && branch,
+            remove ? (v) => onChanged(remove, v) : null,
+          ),
+          if (!remove)
+            note(
+              'Only with the worktree: git won’t delete a branch a worktree '
+              'has checked out.',
+            )
+          else if (st.commits > 0)
+            note('$commits that $base doesn’t have would be lost.', warn: true)
+          else
+            note('$base has all of its commits.'),
+        ],
+      ],
     );
   }
 }

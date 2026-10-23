@@ -127,6 +127,18 @@ class _DetailsPanelState extends State<DetailsPanel> {
               ),
               if (status != null && status.git)
                 ...worktreeRows(context, chat, widget.daemon, status.branch),
+              if (status != null && status.gone)
+                (
+                  null,
+                  Text(
+                    chat.worktree == null
+                        ? 'The folder is gone.'
+                        : 'Its worktree was removed outside Nushi. Delete '
+                              'the chat to clean up its branch '
+                              '${chat.worktree!.branch}.',
+                    style: theme.ui(t.crashed, size: 12),
+                  ),
+                ),
             ],
           ),
           _Card(
@@ -183,7 +195,15 @@ class _DetailsPanelState extends State<DetailsPanel> {
               else if (status == null)
                 (null, Text('…', style: muted))
               else if (!status.git)
-                (null, Text('Not a git repository.', style: muted))
+                (
+                  null,
+                  Text(
+                    status.gone
+                        ? 'The folder is gone.'
+                        : 'Not a git repository.',
+                    style: muted,
+                  ),
+                )
               else ...[
                 (_base.isEmpty ? 'Uncommitted' : 'Branch', lines!),
                 (

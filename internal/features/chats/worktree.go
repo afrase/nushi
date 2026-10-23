@@ -3,6 +3,7 @@ package chats
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/fs"
 	"log"
 	"math/rand/v2"
@@ -17,9 +18,11 @@ type Worktrees interface {
 	// it and the folder in it that matches folder. A name already taken
 	// fails with fs.ErrExist.
 	Add(ctx context.Context, folder, name string) (model.Worktree, string, error)
-	// Remove removes a worktree and its branch, but only if they hold no
-	// work.
-	Remove(ctx context.Context, wt model.Worktree) error
+	// Inspect says what removing a worktree and its branch would lose.
+	Inspect(ctx context.Context, wt model.Worktree) (model.WorktreeState, error)
+	// Remove removes a worktree; without force, only a clean one.
+	Remove(ctx context.Context, wt model.Worktree, force bool) error
+	DeleteBranch(ctx context.Context, wt model.Worktree) error
 }
 
 var (
@@ -44,13 +47,52 @@ func (s *Service) addWorktree(ctx context.Context, folder string) (*model.Worktr
 	return nil, "", errors.New("couldn't find a free name for the worktree")
 }
 
-// dropWorktree removes a worktree no chat uses any more, if it holds no
-// work; otherwise it stays, as git keeps it.
+// dropWorktree removes a worktree no chat uses any more, and its branch,
+// if they hold no work; otherwise they stay.
 func (s *Service) dropWorktree(wt *model.Worktree) {
 	if wt == nil {
 		return
 	}
-	if err := s.worktrees.Remove(context.Background(), *wt); err != nil {
+	ctx := context.Background()
+	st, err := s.worktrees.Inspect(ctx, *wt)
+	switch {
+	case err != nil:
+	case st.Changed > 0 || st.Commits > 0:
+		err = errors.New("it has work in it")
+	default:
+		if err = s.worktrees.Remove(ctx, *wt, false); err == nil {
+			err = s.worktrees.DeleteBranch(ctx, *wt)
+		}
+	}
+	if err != nil {
 		log.Printf("leaving the worktree %s: %v", wt.Path, err)
 	}
+}
+
+// deleteWorktree removes a deleted chat's worktree and deletes its branch,
+// as the user chose. Forcing is needed to lose changes or commits.
+func (s *Service) deleteWorktree(ctx context.Context, wt *model.Worktree, opts DeleteOptions) error {
+	if wt == nil || !opts.RemoveWorktree && !opts.DeleteBranch {
+		return nil
+	}
+	st, err := s.worktrees.Inspect(ctx, *wt)
+	if err != nil {
+		return err
+	}
+	branch := opts.DeleteBranch && !st.BranchGone
+	switch {
+	case opts.RemoveWorktree && st.Changed > 0 && !opts.ForceWorktree:
+		return fmt.Errorf("the worktree has %d changed files", st.Changed)
+	case branch && st.Commits > 0 && !opts.ForceBranch:
+		return fmt.Errorf("the branch has %d commits that %s doesn't have", st.Commits, wt.Base)
+	}
+	if opts.RemoveWorktree {
+		if err := s.worktrees.Remove(ctx, *wt, st.Changed > 0); err != nil {
+			return err
+		}
+	}
+	if branch {
+		return s.worktrees.DeleteBranch(ctx, *wt)
+	}
+	return nil
 }

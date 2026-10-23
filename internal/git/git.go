@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -79,12 +80,19 @@ func Changes(ctx context.Context, folder, base string) ([]model.FileChange, erro
 	return changes, nil
 }
 
-// ErrNotRepository says a folder isn't in a git repository.
-var ErrNotRepository = errors.New("not in a git repository")
+var (
+	// ErrNotRepository says a folder isn't in a git repository.
+	ErrNotRepository = errors.New("not in a git repository")
+	// ErrGone says a folder doesn't exist (any more).
+	ErrGone = errors.New("gone")
+)
 
 // repo checks that folder is in a git repository, and says whether it has
 // a commit checked out.
 func repo(ctx context.Context, folder string) (hasHead bool, err error) {
+	if _, err := os.Stat(folder); errors.Is(err, fs.ErrNotExist) {
+		return false, fmt.Errorf("%s is %w", folder, ErrGone)
+	}
 	if _, err := run(ctx, folder, "rev-parse", "--show-toplevel"); err != nil {
 		return false, fmt.Errorf("%s is %w", folder, ErrNotRepository)
 	}

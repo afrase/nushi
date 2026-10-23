@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -19,13 +20,17 @@ import (
 func gitRepo(t *testing.T) string {
 	t.Helper()
 	repo, _ := filepath.EvalSymlinks(t.TempDir())
-	for _, args := range [][]string{{"init", "-q", "-b", "main"}, {"commit", "-q", "--allow-empty", "-m", "init"}} {
-		cmd := exec.Command("git", append([]string{"-C", repo, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false"}, args...)...)
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("git %v: %v\n%s", args, err, out)
-		}
-	}
+	gitIn(t, repo, "init", "-q", "-b", "main")
+	gitIn(t, repo, "commit", "-q", "--allow-empty", "-m", "init")
 	return repo
+}
+
+func gitIn(t *testing.T, dir string, args ...string) {
+	t.Helper()
+	cmd := exec.Command("git", append([]string{"-C", dir, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false"}, args...)...)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git %v: %v\n%s", args, err, out)
+	}
 }
 
 func TestChatsInWorktrees(t *testing.T) {
@@ -39,8 +44,9 @@ func TestChatsInWorktrees(t *testing.T) {
 
 	// Two chats in new worktrees of one repository: each has its own folder
 	// and branch, from main.
+	var ids []string
 	var wts []*nushiv1.Worktree
-	for range 2 {
+	for range 3 {
 		id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: repo, Worktree: true}))).ChatId
 		c := chat(id)
 		wt := c.Worktree
@@ -50,7 +56,7 @@ func TestChatsInWorktrees(t *testing.T) {
 		}
 		must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "pwd"})))
 		a.waitFor("the reply", idle)
-		wts = append(wts, wt)
+		ids, wts = append(ids, id), append(wts, wt)
 	}
 	if wts[0].Path == wts[1].Path {
 		t.Fatal("both chats got one worktree")
@@ -76,4 +82,53 @@ func TestChatsInWorktrees(t *testing.T) {
 	if _, err := a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir(), Worktree: true})); err == nil {
 		t.Error("a chat started in a worktree outside git")
 	}
+
+	// Deleting: merged work loses nothing, so the worktree and branch go.
+	gitIn(t, wts[0].Path, "commit", "-q", "--allow-empty", "-m", "merged")
+	gitIn(t, repo, "merge", "-q", wts[0].Branch)
+	plan := must(a.c.PlanDeleteChat(ctx, connect.NewRequest(&nushiv1.PlanDeleteChatRequest{ChatId: ids[0]})))
+	if st := plan.WorktreeState; plan.Worktree.GetPath() != wts[0].Path || st.Changed != 0 || st.Commits != 0 || st.Gone {
+		t.Fatalf("plan = %v", plan)
+	}
+	must(a.c.DeleteChat(ctx, connect.NewRequest(&nushiv1.DeleteChatRequest{ChatId: ids[0], RemoveWorktree: true, DeleteBranch: true})))
+	if _, err := os.Stat(wts[0].Path); !errors.Is(err, fs.ErrNotExist) || branchExists(repo, wts[0].Branch) {
+		t.Errorf("after deleting a chat with merged work: the worktree %v, the branch %v", err, branchExists(repo, wts[0].Branch))
+	}
+
+	// Unmerged commits and changes need forcing.
+	gitIn(t, wts[1].Path, "commit", "-q", "--allow-empty", "-m", "unmerged")
+	os.WriteFile(filepath.Join(wts[1].Path, "new.txt"), []byte("x"), 0o644)
+	plan = must(a.c.PlanDeleteChat(ctx, connect.NewRequest(&nushiv1.PlanDeleteChatRequest{ChatId: ids[1]})))
+	if st := plan.WorktreeState; st.Changed != 1 || st.Commits != 1 {
+		t.Fatalf("plan = %v", plan)
+	}
+	for _, req := range []*nushiv1.DeleteChatRequest{{RemoveWorktree: true}, {RemoveWorktree: true, ForceWorktree: true, DeleteBranch: true}} {
+		req.ChatId = ids[1]
+		if _, err := a.c.DeleteChat(ctx, connect.NewRequest(req)); err == nil {
+			t.Errorf("deleted without forcing: %v", req)
+		}
+	}
+	must(a.c.DeleteChat(ctx, connect.NewRequest(&nushiv1.DeleteChatRequest{ChatId: ids[1], RemoveWorktree: true, ForceWorktree: true})))
+	if _, err := os.Stat(wts[1].Path); !errors.Is(err, fs.ErrNotExist) || !branchExists(repo, wts[1].Branch) {
+		t.Errorf("the worktree should be gone (%v) and the branch kept", err)
+	}
+
+	// A worktree removed outside Nushi: the chat says so, and Delete works.
+	os.RemoveAll(wts[2].Path)
+	if _, err := a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: ids[2], Text: "hi"})); err == nil ||
+		!strings.Contains(err.Error(), "removed outside Nushi") {
+		t.Errorf("prompting a chat whose worktree is gone: %v", err)
+	}
+	plan = must(a.c.PlanDeleteChat(ctx, connect.NewRequest(&nushiv1.PlanDeleteChatRequest{ChatId: ids[2]})))
+	if !plan.WorktreeState.Gone {
+		t.Errorf("plan = %v", plan)
+	}
+	must(a.c.DeleteChat(ctx, connect.NewRequest(&nushiv1.DeleteChatRequest{ChatId: ids[2], RemoveWorktree: true, DeleteBranch: true})))
+	if branchExists(repo, wts[2].Branch) {
+		t.Error("the branch of the removed worktree is still there")
+	}
+}
+
+func branchExists(repo, branch string) bool {
+	return exec.Command("git", "-C", repo, "rev-parse", "--verify", "-q", "refs/heads/"+branch).Run() == nil
 }

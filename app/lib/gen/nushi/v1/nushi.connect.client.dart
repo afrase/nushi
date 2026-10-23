@@ -253,9 +253,10 @@ extension type NushiServiceClient (connect.Transport _transport) {
     );
   }
 
-  /// Deletes a chat: its turn is cancelled and its agent stops, the agent
-  /// deletes its history of each of the chat's sessions (ACP session/delete,
-  /// when it can), the chat's scratch folder goes, and Nushi's record of it.
+  /// Deletes a chat: its turn is cancelled and its agent stops, its worktree
+  /// and branch go if asked, the agent deletes its history of each of the
+  /// chat's sessions (ACP session/delete, when it can), the chat's scratch
+  /// folder goes, and Nushi's record of it.
   Future<nushiv1nushi.DeleteChatResponse> deleteChat(
     nushiv1nushi.DeleteChatRequest input, {
     connect.Headers? headers,

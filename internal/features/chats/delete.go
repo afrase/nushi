@@ -16,6 +16,20 @@ type DeletePlan struct {
 	Sessions []model.AgentSession // the agent's sessions the chat had, oldest first
 	History  bool                 // the agent deletes its history of them (ACP session/delete)
 	Scratch  string               // the chat's scratch folder, if it still has one
+	// Worktree is the chat's worktree, if it has one; State says what
+	// removing it and its branch would lose, unless StateErr says why
+	// that can't be told.
+	Worktree *model.Worktree
+	State    model.WorktreeState
+	StateErr error
+}
+
+// DeleteOptions say what to do with a deleted chat's worktree and branch.
+// Removing a worktree with changes, or deleting a branch with commits its
+// base doesn't have, needs the matching Force.
+type DeleteOptions struct {
+	RemoveWorktree, ForceWorktree bool
+	DeleteBranch, ForceBranch     bool
 }
 
 // PlanDelete says what Delete would remove. The first time, it starts the
@@ -32,6 +46,9 @@ func (s *Service) PlanDelete(ctx context.Context, chatID string) (DeletePlan, er
 	// Only the folder Nushi made for the chat, never one the user picked.
 	if fi, err := os.Lstat(filepath.Join(s.scratch, c.id)); err == nil && fi.IsDir() {
 		p.Scratch = filepath.Join(s.scratch, c.id)
+	}
+	if p.Worktree = sess.Worktree; p.Worktree != nil {
+		p.State, p.StateErr = s.worktrees.Inspect(ctx, *p.Worktree)
 	}
 	s.mu.Lock()
 	known := s.deletes
@@ -63,11 +80,11 @@ func (s *Service) startDeleter(ctx context.Context, h acp.Handler) (Agent, bool,
 	return agent, deletes, nil
 }
 
-// Delete deletes a chat: its agent stops, the agent deletes its history of
-// each of the chat's sessions (when it can), the chat's scratch folder goes,
-// and then Nushi's record of it. If the agent fails to delete its history,
-// the chat stays.
-func (s *Service) Delete(ctx context.Context, chatID string) error {
+// Delete deletes a chat: its agent stops, its worktree and branch go as
+// opts say, the agent deletes its history of each of the chat's sessions
+// (when it can), the chat's scratch folder goes, and then Nushi's record
+// of it. If the worktree or the agent's history can't go, the chat stays.
+func (s *Service) Delete(ctx context.Context, chatID string, opts DeleteOptions) error {
 	p, err := s.PlanDelete(ctx, chatID)
 	if err != nil {
 		return err
@@ -76,13 +93,15 @@ func (s *Service) Delete(ctx context.Context, chatID string) error {
 	if err != nil {
 		return err
 	}
-	if p.History {
-		if err := s.deleteHistory(ctx, c, p.Sessions); err != nil {
-			c.mu.Lock()
-			c.session.Archived = archived // it may reopen
-			c.mu.Unlock()
-			return err
-		}
+	err = s.deleteWorktree(ctx, p.Worktree, opts)
+	if err == nil && p.History {
+		err = s.deleteHistory(ctx, c, p.Sessions)
+	}
+	if err != nil {
+		c.mu.Lock()
+		c.session.Archived = archived // it may reopen
+		c.mu.Unlock()
+		return err
 	}
 	if p.Scratch != "" {
 		if err := os.RemoveAll(p.Scratch); err != nil {

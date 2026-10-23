@@ -598,6 +598,22 @@ const PlanDeleteChatResponse$json = {
     },
     {'1': 'deletes_history', '3': 2, '4': 1, '5': 8, '10': 'deletesHistory'},
     {'1': 'scratch_folder', '3': 3, '4': 1, '5': 9, '10': 'scratchFolder'},
+    {
+      '1': 'worktree',
+      '3': 4,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.Worktree',
+      '10': 'worktree'
+    },
+    {
+      '1': 'worktree_state',
+      '3': 5,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.WorktreeState',
+      '10': 'worktreeState'
+    },
   ],
 };
 
@@ -605,7 +621,27 @@ const PlanDeleteChatResponse$json = {
 final $typed_data.Uint8List planDeleteChatResponseDescriptor = $convert.base64Decode(
     'ChZQbGFuRGVsZXRlQ2hhdFJlc3BvbnNlEjIKCHNlc3Npb25zGAEgAygLMhYubnVzaGkudjEuQW'
     'dlbnRTZXNzaW9uUghzZXNzaW9ucxInCg9kZWxldGVzX2hpc3RvcnkYAiABKAhSDmRlbGV0ZXNI'
-    'aXN0b3J5EiUKDnNjcmF0Y2hfZm9sZGVyGAMgASgJUg1zY3JhdGNoRm9sZGVy');
+    'aXN0b3J5EiUKDnNjcmF0Y2hfZm9sZGVyGAMgASgJUg1zY3JhdGNoRm9sZGVyEi4KCHdvcmt0cm'
+    'VlGAQgASgLMhIubnVzaGkudjEuV29ya3RyZWVSCHdvcmt0cmVlEj4KDndvcmt0cmVlX3N0YXRl'
+    'GAUgASgLMhcubnVzaGkudjEuV29ya3RyZWVTdGF0ZVINd29ya3RyZWVTdGF0ZQ==');
+
+@$core.Deprecated('Use worktreeStateDescriptor instead')
+const WorktreeState$json = {
+  '1': 'WorktreeState',
+  '2': [
+    {'1': 'gone', '3': 1, '4': 1, '5': 8, '10': 'gone'},
+    {'1': 'changed', '3': 2, '4': 1, '5': 5, '10': 'changed'},
+    {'1': 'commits', '3': 3, '4': 1, '5': 5, '10': 'commits'},
+    {'1': 'branch_gone', '3': 4, '4': 1, '5': 8, '10': 'branchGone'},
+    {'1': 'error', '3': 5, '4': 1, '5': 9, '10': 'error'},
+  ],
+};
+
+/// Descriptor for `WorktreeState`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List worktreeStateDescriptor = $convert.base64Decode(
+    'Cg1Xb3JrdHJlZVN0YXRlEhIKBGdvbmUYASABKAhSBGdvbmUSGAoHY2hhbmdlZBgCIAEoBVIHY2'
+    'hhbmdlZBIYCgdjb21taXRzGAMgASgFUgdjb21taXRzEh8KC2JyYW5jaF9nb25lGAQgASgIUgpi'
+    'cmFuY2hHb25lEhQKBWVycm9yGAUgASgJUgVlcnJvcg==');
 
 @$core.Deprecated('Use agentSessionDescriptor instead')
 const AgentSession$json = {
@@ -626,12 +662,19 @@ const DeleteChatRequest$json = {
   '1': 'DeleteChatRequest',
   '2': [
     {'1': 'chat_id', '3': 1, '4': 1, '5': 9, '10': 'chatId'},
+    {'1': 'remove_worktree', '3': 2, '4': 1, '5': 8, '10': 'removeWorktree'},
+    {'1': 'force_worktree', '3': 3, '4': 1, '5': 8, '10': 'forceWorktree'},
+    {'1': 'delete_branch', '3': 4, '4': 1, '5': 8, '10': 'deleteBranch'},
+    {'1': 'force_branch', '3': 5, '4': 1, '5': 8, '10': 'forceBranch'},
   ],
 };
 
 /// Descriptor for `DeleteChatRequest`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List deleteChatRequestDescriptor = $convert.base64Decode(
-    'ChFEZWxldGVDaGF0UmVxdWVzdBIXCgdjaGF0X2lkGAEgASgJUgZjaGF0SWQ=');
+    'ChFEZWxldGVDaGF0UmVxdWVzdBIXCgdjaGF0X2lkGAEgASgJUgZjaGF0SWQSJwoPcmVtb3ZlX3'
+    'dvcmt0cmVlGAIgASgIUg5yZW1vdmVXb3JrdHJlZRIlCg5mb3JjZV93b3JrdHJlZRgDIAEoCFIN'
+    'Zm9yY2VXb3JrdHJlZRIjCg1kZWxldGVfYnJhbmNoGAQgASgIUgxkZWxldGVCcmFuY2gSIQoMZm'
+    '9yY2VfYnJhbmNoGAUgASgIUgtmb3JjZUJyYW5jaA==');
 
 @$core.Deprecated('Use deleteChatResponseDescriptor instead')
 const DeleteChatResponse$json = {
@@ -763,6 +806,7 @@ const GetFolderStatusResponse$json = {
     {'1': 'files', '3': 3, '4': 1, '5': 5, '10': 'files'},
     {'1': 'added', '3': 4, '4': 1, '5': 5, '10': 'added'},
     {'1': 'removed', '3': 5, '4': 1, '5': 5, '10': 'removed'},
+    {'1': 'gone', '3': 6, '4': 1, '5': 8, '10': 'gone'},
   ],
 };
 
@@ -770,7 +814,7 @@ const GetFolderStatusResponse$json = {
 final $typed_data.Uint8List getFolderStatusResponseDescriptor = $convert.base64Decode(
     'ChdHZXRGb2xkZXJTdGF0dXNSZXNwb25zZRIQCgNnaXQYASABKAhSA2dpdBIWCgZicmFuY2gYAi'
     'ABKAlSBmJyYW5jaBIUCgVmaWxlcxgDIAEoBVIFZmlsZXMSFAoFYWRkZWQYBCABKAVSBWFkZGVk'
-    'EhgKB3JlbW92ZWQYBSABKAVSB3JlbW92ZWQ=');
+    'EhgKB3JlbW92ZWQYBSABKAVSB3JlbW92ZWQSEgoEZ29uZRgGIAEoCFIEZ29uZQ==');
 
 @$core.Deprecated('Use getDiffRequestDescriptor instead')
 const GetDiffRequest$json = {
@@ -1296,6 +1340,7 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.PlanDeleteChatRequest': PlanDeleteChatRequest$json,
   '.nushi.v1.PlanDeleteChatResponse': PlanDeleteChatResponse$json,
   '.nushi.v1.AgentSession': AgentSession$json,
+  '.nushi.v1.WorktreeState': WorktreeState$json,
   '.nushi.v1.DeleteChatRequest': DeleteChatRequest$json,
   '.nushi.v1.DeleteChatResponse': DeleteChatResponse$json,
   '.nushi.v1.AnswerPermissionRequest': AnswerPermissionRequest$json,

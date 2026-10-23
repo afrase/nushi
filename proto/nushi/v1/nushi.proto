@@ -42,9 +42,10 @@ service NushiService {
   // Says what DeleteChat removes. The first time, the daemon starts the
   // agent to learn whether it can delete its history.
   rpc PlanDeleteChat(PlanDeleteChatRequest) returns (PlanDeleteChatResponse);
-  // Deletes a chat: its turn is cancelled and its agent stops, the agent
-  // deletes its history of each of the chat's sessions (ACP session/delete,
-  // when it can), the chat's scratch folder goes, and Nushi's record of it.
+  // Deletes a chat: its turn is cancelled and its agent stops, its worktree
+  // and branch go if asked, the agent deletes its history of each of the
+  // chat's sessions (ACP session/delete, when it can), the chat's scratch
+  // folder goes, and Nushi's record of it.
   rpc DeleteChat(DeleteChatRequest) returns (DeleteChatResponse);
   // Answers a pending permission prompt with one of its options.
   rpc AnswerPermission(AnswerPermissionRequest) returns (AnswerPermissionResponse);
@@ -265,6 +266,24 @@ message PlanDeleteChatResponse {
   bool deletes_history = 2;
   // The chat's scratch folder, if it still has one.
   string scratch_folder = 3;
+  // The chat's worktree, if it has one, and what removing it and deleting
+  // its branch would lose (API 22).
+  Worktree worktree = 4;
+  WorktreeState worktree_state = 5;
+}
+
+// What removing a worktree and deleting its branch would lose.
+message WorktreeState {
+  // Its folder was removed outside Nushi.
+  bool gone = 1;
+  // Files with uncommitted changes, untracked ones included.
+  int32 changed = 2;
+  // Commits on its branch that its base doesn't have.
+  int32 commits = 3;
+  // Its branch was deleted outside Nushi.
+  bool branch_gone = 4;
+  // Why the rest can't be told, if it can't.
+  string error = 5;
 }
 
 // One of the agent's sessions: its id and folder.
@@ -275,6 +294,14 @@ message AgentSession {
 
 message DeleteChatRequest {
   string chat_id = 1;
+  // Remove the chat's worktree (git worktree remove). One with changes is
+  // removed only with force_worktree (API 22).
+  bool remove_worktree = 2;
+  bool force_worktree = 3;
+  // Delete the worktree's branch (with the worktree). One with commits its
+  // base doesn't have is deleted only with force_branch.
+  bool delete_branch = 4;
+  bool force_branch = 5;
 }
 
 message DeleteChatResponse {}
@@ -327,6 +354,8 @@ message GetFolderStatusResponse {
   // Lines added and removed; binary files count none.
   int32 added = 4;
   int32 removed = 5;
+  // The folder doesn't exist (any more); nothing else is set (API 22).
+  bool gone = 6;
 }
 
 message GetDiffRequest {

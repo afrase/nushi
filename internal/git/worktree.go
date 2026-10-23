@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/afrase/nushi/internal/model"
@@ -60,13 +61,47 @@ func (Worktrees) Add(ctx context.Context, folder, name string) (model.Worktree, 
 	return wt, filepath.Join(wt.Path, sub), nil
 }
 
-// Remove removes a worktree that holds no work: git refuses one with
-// changes, and the branch goes only if it is merged.
-func (Worktrees) Remove(ctx context.Context, wt model.Worktree) error {
-	if _, err := run(ctx, wt.Repo, "worktree", "remove", wt.Path); err != nil {
+// Inspect says what removing a worktree and deleting its branch would lose.
+func (Worktrees) Inspect(ctx context.Context, wt model.Worktree) (model.WorktreeState, error) {
+	var st model.WorktreeState
+	if _, err := os.Stat(wt.Path); errors.Is(err, fs.ErrNotExist) {
+		st.Gone = true
+	} else if out, err := run(ctx, wt.Path, "status", "--porcelain", "-z", "--untracked-files=all"); err != nil {
+		return st, err
+	} else {
+		st.Changed = len(split(out))
+	}
+	if _, err := run(ctx, wt.Repo, "rev-parse", "--verify", "-q", "refs/heads/"+wt.Branch); err != nil {
+		st.BranchGone = true
+		return st, nil
+	}
+	out, err := run(ctx, wt.Repo, "rev-list", "--count", "refs/heads/"+wt.Branch, "--not", wt.Base)
+	if err != nil {
+		return st, err
+	}
+	st.Commits, err = strconv.Atoi(strings.TrimSpace(string(out)))
+	return st, err
+}
+
+// Remove removes a worktree (git worktree remove), with force even if it
+// has changes. Of a worktree whose folder is gone, git's record goes (git
+// worktree prune, which only drops such records).
+func (Worktrees) Remove(ctx context.Context, wt model.Worktree, force bool) error {
+	if _, err := os.Stat(wt.Path); errors.Is(err, fs.ErrNotExist) {
+		_, err := run(ctx, wt.Repo, "worktree", "prune")
 		return err
 	}
-	_, err := run(ctx, wt.Repo, "branch", "-d", wt.Branch)
+	args := []string{"worktree", "remove", wt.Path}
+	if force {
+		args = append(args, "--force")
+	}
+	_, err := run(ctx, wt.Repo, args...)
+	return err
+}
+
+// DeleteBranch deletes a worktree's branch, merged or not.
+func (Worktrees) DeleteBranch(ctx context.Context, wt model.Worktree) error {
+	_, err := run(ctx, wt.Repo, "branch", "-D", wt.Branch)
 	return err
 }
 

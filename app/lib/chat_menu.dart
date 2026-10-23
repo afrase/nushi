@@ -6,6 +6,7 @@ import 'daemon.dart';
 import 'folder_button.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'theme/theme.dart';
+import 'worktree.dart';
 
 /// Runs a call, showing its error, if any, in a snack bar.
 Future<void> tryOrShow(
@@ -83,14 +84,28 @@ class _DeleteDialog extends StatefulWidget {
 }
 
 class _DeleteDialogState extends State<_DeleteDialog> {
-  late final _plan = widget.daemon.planDeleteChat(widget.chat.id);
+  late final _plan = widget.daemon.planDeleteChat(widget.chat.id).then((p) {
+    if (p.hasWorktree()) {
+      final (remove, branch) = WorktreeChoices.defaults(p);
+      _remove = remove;
+      _branch = branch;
+    }
+    return p;
+  });
+  bool _remove = false, _branch = false; // the worktree, its branch
   bool _deleting = false;
   String _error = '';
 
   Future<void> _delete() async {
     setState(() => _deleting = true);
     try {
-      await widget.daemon.deleteChat(widget.chat.id);
+      final req = DeleteChatRequest(chatId: widget.chat.id);
+      final p = await _plan;
+      await widget.daemon.deleteChat(
+        p.hasWorktree()
+            ? WorktreeChoices.request(req, p, remove: _remove, branch: _branch)
+            : req,
+      );
       if (mounted) Navigator.pop(context);
     } on Object catch (e) {
       if (mounted) {
@@ -167,6 +182,18 @@ class _DeleteDialogState extends State<_DeleteDialog> {
                   line(tildePath(p.scratchFolder), mono: true),
                 ],
                 line('• Nushi’s record of the chat.'),
+                if (p.hasWorktree()) ...[
+                  const SizedBox(height: 12),
+                  WorktreeChoices(
+                    plan: p,
+                    remove: _remove,
+                    branch: _branch,
+                    onChanged: (remove, branch) => setState(() {
+                      _remove = remove;
+                      _branch = branch;
+                    }),
+                  ),
+                ],
                 if (!p.deletesHistory) ...[
                   line(
                     'Claude can’t delete its history from here, so it '
