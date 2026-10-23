@@ -71,6 +71,7 @@ Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp
 | 35. Worktree gaps | 3241 | 800 | 6697 | 655 |
 | 36. Reorder the panel's cards | 3241 | 800 | 6745 | 655 |
 | 37. A working indicator | 3241 | 800 | 6896 | 655 |
+| 38. Questions one at a time | 3241 | 800 | 7069 | 655 |
 
 Tripwires crossed:
 Lines added per step, code and tests, without generated code (the tripwire is about 500): 1: 533, 2: 1,502, 3: 239, 4: 437, 5: 739, 6: 639, 7: 464, 8: 537, 9: 265, 10: 528, 11: 1,249, 12: 625, 13: 476, 14: 343, 15: 351, 16: 492, 17: 298, 18: 666, 19: 755, 20: 223, 21: 146; 26: 438, 27: 238, 28: 140, 29: 683, 30: 677, 31: 145, 32: 470.
@@ -209,6 +210,8 @@ To try it beside an installed Nushi Next that's in use: `export NUSHI_DATA=~/Lib
 - Claude 0.94.0's config options: `mode` (Manual, Accept edits, Plan, Auto, Bypass permissions), `model`, `effort` (category `thought_level`), `fast` (category `model_config`, a select of on/off rather than a boolean) and `agent` (no category: the subagent to run as). `set_config_option` answers with the full new set of options.
 
 ## Decisions to revisit
+
+- Step 38: an agent question shows one question at a time, as in Claude Code. A question is a field with options plus the free-text field Claude sends after it (`<id>_custom`, titled "Other"), shown as an "Other…" box under the options. Several questions get tabs named by their header (a check once answered) and a Submit tab that lists every answer ("Not answered" in amber) with Submit; ←/→ and Tab/Shift-Tab move, ↑/↓ move through the options, a digit or a click picks (a one-choice question then moves on; a many-choice one toggles, as Space does, and Enter moves on), Enter on Submit sends. A single question has no tabs and is sent as soon as an option is picked (a many-choice or text one has a Submit button). Skip sits in the card's title row. The pending card has a quiet accent border instead of the amber fill (permission prompts keep amber). While the agent waits on the user, tool calls show no spinner (the "Asking for your input" row, and a command waiting for permission).
 
 - Step 37: while a turn runs, a row under the transcript (above the composer, in the side chat too) shows a breathing accent dot (a `CustomPainter` on one shared clock that ticks only while a mark is on screen; it repaints, nothing rebuilds), what the agent is doing and the time. "Doing" is the turn's running tool call by kind and path ("Reading notes.md", "Running make test", "Editing x.go"; the bare verb before Claude names the file; other kinds show the agent's title), else "Writing" when its message is the last thing, else "Thinking"; "Waiting for you" in amber, still, while a prompt or question waits; "Starting a side chat" while one forks. The header's status word no longer counts the seconds (the row does), so it reads "working". In the sidebar a working chat's dot breathes; one waiting on you is steady amber with its soft ring and "needs you". With Reduce motion (MediaQuery's `disableAnimations` or the platform's `reduceMotion`) the marks hold still; not tried with the setting on.
 

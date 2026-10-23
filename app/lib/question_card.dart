@@ -6,16 +6,23 @@ import 'gen/nushi/v1/nushi.pb.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
 
-/// The agent's question form: each field with its options (a radio for one,
-/// checkboxes for several) or a text box, under one Submit. Digits 1–9 pick
-/// an option of the active question, Enter submits once something is
-/// answered, and Skip declines.
+/// One question of a form: a field with options, or a text field, and the
+/// free-text "Other" field that may follow it (Claude names it `<id>_custom`).
+typedef _Question = ({Field field, Field? other});
+
+/// The agent's question form, one question at a time as in Claude Code.
+/// Several questions get a tab each (a check once answered) and a last
+/// Submit tab that reviews the answers; ←/→ or Tab move between them.
+/// Picking an option (a click or its digit) answers a one-choice question
+/// and moves on; a many-choice one toggles with a click, its digit or Space,
+/// and Enter moves on. ↑/↓ move through the options. A single question has
+/// no tabs, and picking an option sends it at once.
 class QuestionCard extends StatefulWidget {
   const QuestionCard(this.item, {super.key, required this.onAnswer});
 
   final Item item;
 
-  /// Sends the answer by field id, or null to decline.
+  /// Sends the answers, or null to decline.
   final Future<void> Function(List<FieldAnswer>? answer) onAnswer;
 
   @override
@@ -23,20 +30,37 @@ class QuestionCard extends StatefulWidget {
 }
 
 class _QuestionCardState extends State<QuestionCard> {
-  final _picked = <String, List<String>>{};
-  final _text = <String, TextEditingController>{};
+  final _picked = <String, List<String>>{}; // option ids by field id
+  final _text = <String, TextEditingController>{}; // by field id
   final _focus = FocusNode();
-  int _active = 0; // the field the digit keys pick in
+  late final List<_Question> _qs = _questions(widget.item.fields);
+  int _tab = 0; // the question shown; _qs.length is Submit
+  int _at = 0; // the option ↑/↓ are on
 
-  List<Field> get _fields => widget.item.fields;
+  static List<_Question> _questions(List<Field> fields) {
+    final out = <_Question>[];
+    for (final f in fields) {
+      final last = out.lastOrNull;
+      if (f.options.isEmpty &&
+          last != null &&
+          f.id == '${last.field.id}_custom') {
+        out.last = (field: last.field, other: f);
+      } else {
+        out.add((field: f, other: null));
+      }
+    }
+    return out;
+  }
 
   @override
   void initState() {
     super.initState();
-    for (final f in _fields) {
-      if (f.options.isEmpty) _text[f.id] = TextEditingController();
+    for (final f in widget.item.fields) {
+      if (f.options.isEmpty) {
+        _text[f.id] = TextEditingController()
+          ..addListener(() => setState(() {}));
+      }
     }
-    _active = _fields.indexWhere((f) => f.options.isNotEmpty).clamp(0, 99);
     // The agent is waiting on this: take the keyboard from the composer.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && widget.item.status == 'pending') _focus.requestFocus();
@@ -52,124 +76,214 @@ class _QuestionCardState extends State<QuestionCard> {
     super.dispose();
   }
 
+  bool get _many => _qs.length > 1;
+
   List<FieldAnswer> get _answer => [
-    for (final f in _fields)
+    for (final f in widget.item.fields)
       if (_picked[f.id]?.isNotEmpty ?? false)
         FieldAnswer(fieldId: f.id, values: _picked[f.id])
       else if (_text[f.id]?.text.trim().isNotEmpty ?? false)
         FieldAnswer(fieldId: f.id, values: [_text[f.id]!.text.trim()]),
   ];
 
-  void _pick(int field, String option) {
-    final f = _fields[field];
+  /// The answer to [q] in words, or ''.
+  String _said(_Question q) => [
+    for (final id in _picked[q.field.id] ?? const <String>[])
+      q.field.options.firstWhere((o) => o.id == id).name,
+    for (final f in [q.field, ?q.other])
+      if (_text[f.id]?.text.trim() case final s? when s.isNotEmpty) s,
+  ].join(', ');
+
+  void _go(int tab) => setState(() {
+    _tab = tab.clamp(0, _many ? _qs.length : 0);
+    _at = 0;
+  });
+
+  void _pick(int option) {
+    final f = _qs[_tab].field;
+    final id = f.options[option].id;
+    final many = f.type == FieldType.FIELD_TYPE_CHOICES;
     setState(() {
-      _active = field;
-      final values = _picked[f.id] ?? [];
-      if (values.contains(option)) {
-        values.remove(option);
-      } else if (f.type == FieldType.FIELD_TYPE_CHOICES) {
-        values.add(option);
+      _at = option;
+      final values = _picked[f.id] ??= [];
+      if (many) {
+        values.contains(id) ? values.remove(id) : values.add(id);
       } else {
         values
           ..clear()
-          ..add(option);
+          ..add(id);
       }
-      _picked[f.id] = values;
     });
+    if (many) return;
+    _many ? _go(_tab + 1) : _send(_answer);
   }
 
   Future<void> _send(List<FieldAnswer>? answer) =>
       tryOrShow(context, () => widget.onAnswer(answer));
 
   KeyEventResult _onKey(FocusNode _, KeyEvent e) {
-    if (e is! KeyDownEvent) return KeyEventResult.ignored;
-    final digit = int.tryParse(e.character ?? '');
-    final options = _fields.isEmpty ? <Option>[] : _fields[_active].options;
-    if (digit != null && digit >= 1 && digit <= options.length) {
-      _pick(_active, options[digit - 1].id);
-      return KeyEventResult.handled;
+    if (e is KeyUpEvent) return KeyEventResult.ignored;
+    final k = e.logicalKey;
+    final onQuestion = _tab < _qs.length;
+    final options = onQuestion ? _qs[_tab].field.options : <Option>[];
+    final digit = int.tryParse(e.character ?? '') ?? 0;
+    final shift = HardwareKeyboard.instance.isShiftPressed;
+    if (digit >= 1 && digit <= options.length && digit <= 9) {
+      _pick(digit - 1);
+    } else if (_many &&
+        (k == LogicalKeyboardKey.arrowRight ||
+            k == LogicalKeyboardKey.tab && !shift)) {
+      _go(_tab + 1);
+    } else if (_many &&
+        (k == LogicalKeyboardKey.arrowLeft || k == LogicalKeyboardKey.tab)) {
+      _go(_tab - 1);
+    } else if (options.isNotEmpty &&
+        (k == LogicalKeyboardKey.arrowDown ||
+            k == LogicalKeyboardKey.arrowUp)) {
+      setState(
+        () => _at =
+            (_at + (k == LogicalKeyboardKey.arrowDown ? 1 : -1)) %
+            options.length,
+      );
+    } else if (options.isNotEmpty && k == LogicalKeyboardKey.space) {
+      _pick(_at);
+    } else if (k == LogicalKeyboardKey.enter) {
+      final f = onQuestion ? _qs[_tab].field : null;
+      if (f != null &&
+          f.type != FieldType.FIELD_TYPE_CHOICES &&
+          options.isNotEmpty &&
+          _said(_qs[_tab]).isEmpty) {
+        _pick(_at);
+      } else if (_many && onQuestion) {
+        _go(_tab + 1);
+      } else if (_answer.isNotEmpty) {
+        _send(_answer);
+      }
+    } else {
+      return KeyEventResult.ignored;
     }
-    if (e.logicalKey == LogicalKeyboardKey.enter && _answer.isNotEmpty) {
-      _send(_answer);
-      return KeyEventResult.handled;
-    }
-    return KeyEventResult.ignored;
+    return KeyEventResult.handled;
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
+    final theme = NushiTheme.of(context), t = theme.t;
     final item = widget.item;
     if (item.status != 'pending') return _Answered(item);
     return Focus(
       focusNode: _focus,
       onKeyEvent: _onKey,
-      child: WaitingCard(
-        waiting: true,
-        children: [
-          CardTitle(item.text.isEmpty ? 'The agent asks' : item.text),
-          for (final (i, f) in _fields.indexed) ..._field(theme, i, f),
-          Row(
-            spacing: 6,
-            children: [
-              Button(
-                label: 'Submit',
-                hint: '⏎',
-                kind: ButtonKind.primary,
-                onPressed: _answer.isEmpty ? null : () => _send(_answer),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: box(t.accent.withValues(alpha: 0.6)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 8,
+          children: [
+            Row(
+              spacing: 8,
+              children: [
+                Icon(Icons.help_outline, size: 15, color: t.accent),
+                Expanded(
+                  child: Text(
+                    item.text.isEmpty ? 'Claude asks' : item.text,
+                    style: theme.ui(t.text, weight: FontWeight.w600),
+                  ),
+                ),
+                Button(
+                  label: 'Skip',
+                  kind: ButtonKind.ghost,
+                  height: 22,
+                  onPressed: () => _send(null),
+                ),
+              ],
+            ),
+            if (_many)
+              Wrap(
+                spacing: 4,
+                runSpacing: 4,
+                children: [
+                  for (final (i, q) in [..._qs, null].indexed)
+                    Tap(
+                      onTap: () {
+                        _go(i);
+                        _focus.requestFocus();
+                      },
+                      selected: i == _tab,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        spacing: 4,
+                        children: [
+                          if (q != null && _said(q).isNotEmpty)
+                            Icon(Icons.check, size: 13, color: t.done),
+                          Text(
+                            q == null ? 'Submit' : q.field.title,
+                            style: theme.ui(
+                              i == _tab ? t.text : t.textSecondary,
+                              size: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
               ),
-              Button(label: 'Skip', onPressed: () => _send(null)),
-            ],
-          ),
-        ],
+            if (_tab < _qs.length)
+              ..._question(theme, _qs[_tab])
+            else
+              ..._review(theme),
+          ],
+        ),
       ),
     );
   }
 
-  List<Widget> _field(NushiTheme theme, int i, Field f) {
+  List<Widget> _question(NushiTheme theme, _Question q) {
     final t = theme.t;
-    final active = i == _active && f.options.isNotEmpty;
-    if (f.options.isEmpty) {
-      return [
-        TextField(
-          controller: _text[f.id],
-          onChanged: (_) => setState(() {}),
-          onSubmitted: (_) => _answer.isEmpty ? null : _send(_answer),
-          style: theme.ui(t.text),
-          decoration: InputDecoration(
-            labelText: f.title,
-            hintText: f.description,
-            filled: true,
-            fillColor: t.base,
-          ),
-        ),
-      ];
-    }
+    final f = q.field;
     final picked = _picked[f.id] ?? const [];
     final many = f.type == FieldType.FIELD_TYPE_CHOICES;
+    Widget field(Field f, String hint) => TextField(
+      controller: _text[f.id],
+      style: theme.ui(t.text),
+      onSubmitted: (_) {
+        _many
+            ? _go(_tab + 1)
+            : _answer.isNotEmpty
+            ? _send(_answer)
+            : null;
+        _focus.requestFocus();
+      },
+      decoration: InputDecoration(
+        hintText: hint,
+        filled: true,
+        fillColor: t.base,
+      ),
+    );
     return [
-      const SizedBox(height: 4),
-      Row(
-        spacing: 8,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: box(
-              active ? t.needs : t.borderStrong,
-              radius: NushiTheme.control,
-            ),
-            child: Text(f.title, style: theme.ui(t.textSecondary, size: 11.5)),
-          ),
-          Expanded(child: Text(f.description, style: theme.ui(t.text))),
-        ],
+      Text(
+        f.description.isEmpty ? f.title : f.description,
+        style: theme.ui(t.text),
       ),
       for (final (n, o) in f.options.indexed)
         Tap(
-          onTap: () => _pick(i, o.id),
-          padding: const EdgeInsets.symmetric(vertical: 4),
+          onTap: () {
+            _pick(n);
+            _focus.requestFocus();
+          },
+          selected: n == _at,
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
           child: Row(
             spacing: 8,
             children: [
+              SizedBox(
+                width: 12,
+                child: n < 9 ? keyHint(context, '${n + 1}') : null,
+              ),
               Icon(
                 switch ((many, picked.contains(o.id))) {
                   (false, false) => Icons.radio_button_unchecked,
@@ -178,11 +292,7 @@ class _QuestionCardState extends State<QuestionCard> {
                   (true, true) => Icons.check_box,
                 },
                 size: 16,
-                color: t.textSecondary,
-              ),
-              SizedBox(
-                width: 14,
-                child: keyHint(context, active && n < 9 ? '${n + 1}' : ''),
+                color: picked.contains(o.id) ? t.accent : t.textSecondary,
               ),
               Expanded(
                 child: Text.rich(
@@ -202,6 +312,43 @@ class _QuestionCardState extends State<QuestionCard> {
             ],
           ),
         ),
+      if (f.options.isEmpty) field(f, f.title),
+      if (q.other case final other?) field(other, '${other.title}…'),
+      if (!_many && (many || f.options.isEmpty))
+        Button(
+          label: 'Submit',
+          hint: '⏎',
+          kind: ButtonKind.primary,
+          onPressed: _answer.isEmpty ? null : () => _send(_answer),
+        ),
+    ];
+  }
+
+  List<Widget> _review(NushiTheme theme) {
+    final t = theme.t;
+    return [
+      for (final q in _qs)
+        Text.rich(
+          TextSpan(
+            text: '${q.field.title}   ',
+            style: theme.ui(t.textMuted, size: 12.5),
+            children: [
+              if (_said(q) case final s when s.isNotEmpty)
+                TextSpan(text: s, style: theme.ui(t.text, size: 12.5))
+              else
+                TextSpan(
+                  text: 'Not answered',
+                  style: theme.ui(t.needs, size: 12.5),
+                ),
+            ],
+          ),
+        ),
+      Button(
+        label: 'Submit',
+        hint: '⏎',
+        kind: ButtonKind.primary,
+        onPressed: _answer.isEmpty ? null : () => _send(_answer),
+      ),
     ];
   }
 }
