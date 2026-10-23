@@ -6,6 +6,7 @@ import (
 	"log"
 	"slices"
 
+	"github.com/afrase/nushi/acp"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -17,7 +18,8 @@ import (
 // and the copy removed; the original stays in the old folder's history. The
 // chat's agent keeps running until the new one is ready, so a move that fails
 // leaves the chat where it was, with a notice saying why. A chat without
-// messages that leaves the worktree it had removes it, if it holds no work.
+// messages that leaves the worktree it had removes it, if it holds no work;
+// its empty session is deleted, so the chat never had it.
 func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool) error {
 	if err := checkFolder(folder); err != nil {
 		return err
@@ -59,12 +61,19 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 		old := c.agent
 		c.useLocked(o)
 		c.saveLocked(func(s *model.Session) {
-			s.Earlier = append(slices.Clip(s.Earlier), model.AgentSession{ID: s.SessionID, Folder: s.Folder})
+			if !fresh { // an empty session is just dropped, not something the chat had
+				s.Earlier = append(slices.Clip(s.Earlier), model.AgentSession{ID: s.SessionID, Folder: s.Folder})
+			}
 			s.Folder, s.SessionID, s.Worktree = folder, o.sid, wt
 		})
 		c.mu.Unlock()
 		s.dropSides(c) // they ran on the old agent
 		if old != nil {
+			if fresh {
+				if err := old.DeleteSession(ctx, acp.DeleteSessionRequest{SessionID: acp.SessionID(sid)}); err != nil {
+					log.Printf("chat %s: deleting the empty session %s: %v", c.id, sid, err)
+				}
+			}
 			old.Close()
 		}
 		if fresh {

@@ -52,7 +52,9 @@ class FolderButton extends StatelessWidget {
     if (picked == null || !context.mounted) return;
     final folder = picked.isNotEmpty
         ? picked
-        : await getDirectoryPath(confirmButtonText: 'Move chat here');
+        : await getDirectoryPath(
+            confirmButtonText: chat.fresh ? 'Open' : 'Move chat here',
+          );
     if (folder == null || !context.mounted) return;
     await tryOrShow(context, () => daemon.moveChat(chat, folder));
   }

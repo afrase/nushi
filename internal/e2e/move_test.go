@@ -70,13 +70,17 @@ func TestMoveAChat(t *testing.T) {
 		t.Fatalf("folder = %q, want a scratch folder", scratch.Folder)
 	}
 
-	// Before the first message, a move starts a new session there.
+	// Before the first message, a move starts a new session there and
+	// deletes the empty one: the chat never had it.
 	if err := move(id, repo); err != nil {
 		t.Fatal(err)
 	}
 	moved := chat(id)
 	if moved.Folder != repo || moved.SessionId == scratch.SessionId || len(copies) != 0 {
 		t.Fatalf("after the first move: %v (was %v), copies %v", moved, scratch, copies)
+	}
+	if history.Has(scratch.SessionId) {
+		t.Error("the empty session is still in the agent's history")
 	}
 	if got := ask(id, "pwd"); got != "cwd: "+repo {
 		t.Fatalf("reply = %q", got)
@@ -134,14 +138,14 @@ func TestMoveAChat(t *testing.T) {
 		t.Errorf("after a restart:\n%s", got)
 	}
 
-	// Deleting it deletes the agent's history of all three of its
-	// sessions, its scratch folder and Nushi's record of it.
+	// Deleting it deletes the agent's history of both of its sessions, its
+	// scratch folder and Nushi's record of it.
 	plan := must(a.c.PlanDeleteChat(ctx, connect.NewRequest(&nushiv1.PlanDeleteChatRequest{ChatId: id})))
 	var sessions []string
 	for _, sess := range plan.Sessions {
 		sessions = append(sessions, sess.SessionId+" "+sess.Folder)
 	}
-	want := []string{scratch.SessionId + " " + scratch.Folder, moved.SessionId + " " + repo, chat(id).SessionId + " " + other}
+	want := []string{moved.SessionId + " " + repo, chat(id).SessionId + " " + other}
 	if !slices.Equal(sessions, want) || !plan.DeletesHistory || plan.ScratchFolder != scratch.Folder {
 		t.Fatalf("plan: %v, want sessions %v", plan, want)
 	}
