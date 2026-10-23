@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'markdown.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
 
@@ -92,7 +93,6 @@ class UserMessageText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
     final (replies, rest) = splitReplies(message);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -104,11 +104,10 @@ class UserMessageText extends StatelessWidget {
             spacing: 3,
             children: [
               if (r.quote.isNotEmpty) QuoteBlock(r.quote),
-              if (r.text.isNotEmpty)
-                Text(r.text, style: theme.ui(theme.t.text)),
+              if (r.text.isNotEmpty) AgentMarkdown(r.text, typed: true),
             ],
           ),
-        if (rest.isNotEmpty) Text(rest, style: theme.ui(theme.t.text)),
+        if (rest.isNotEmpty) AgentMarkdown(rest, typed: true),
       ],
     );
   }

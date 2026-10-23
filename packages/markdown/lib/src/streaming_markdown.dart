@@ -39,7 +39,8 @@ class MarkdownStyle {
 /// Markdown that may still be streaming in: healed before it is parsed (see
 /// [heal]), with highlighted code blocks that scroll sideways. Images are
 /// what [imageBuilder] makes of them, or else their alt text: nothing is
-/// fetched on its own. Put it in a [SelectionArea] to select text.
+/// fetched on its own. Raw HTML shows as the text it is. Put it in a
+/// [SelectionArea] to select text.
 class StreamingMarkdown extends StatelessWidget {
   const StreamingMarkdown(
     this.text, {
@@ -47,10 +48,19 @@ class StreamingMarkdown extends StatelessWidget {
     required this.style,
     this.onTapLink,
     this.imageBuilder,
+    this.streaming = true,
+    this.lineBreaks = false,
   });
 
   final String text;
   final MarkdownStyle style;
+
+  /// Whether [text] may still be incomplete, so it is healed first.
+  final bool streaming;
+
+  /// Whether a single newline breaks the line, as typed, rather than
+  /// joining the lines into one paragraph.
+  final bool lineBreaks;
 
   /// Runs when a link is clicked, with its destination.
   final void Function(String href)? onTapLink;
@@ -65,7 +75,8 @@ class StreamingMarkdown extends StatelessWidget {
     final heading = body.copyWith(fontWeight: FontWeight.w600);
     final size = body.fontSize ?? 14;
     return MarkdownBody(
-      data: heal(text),
+      data: streaming ? heal(text) : text,
+      softLineBreak: lineBreaks,
       builders: {'pre': _CodeBlockBuilder(s)},
       onTapLink: (_, href, _) {
         if (href != null) onTapLink?.call(href);
