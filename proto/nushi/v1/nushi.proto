@@ -150,6 +150,18 @@ service NushiService {
   // Remembers that the user starts chats in a folder anyway (its
   // repository, outside git the folders under it too).
   rpc TrustFolder(TrustFolderRequest) returns (TrustFolderResponse);
+  // Remote access (ADRs 0033, 0034): how it stands, and switching it on
+  // or off through a relay.
+  rpc GetRemote(GetRemoteRequest) returns (GetRemoteResponse);
+  rpc SetRemote(SetRemoteRequest) returns (SetRemoteResponse);
+  // Starts pairing a phone (remote access must be on): the text for the QR
+  // code, good until it expires. Once a phone holding it connects,
+  // Remote.pairing has its name and the code both screens show.
+  rpc StartPairing(StartPairingRequest) returns (StartPairingResponse);
+  // Allows or denies the phone that connected, named by its code.
+  rpc ConfirmPairing(ConfirmPairingRequest) returns (ConfirmPairingResponse);
+  // Unpairs a phone and drops its connections.
+  rpc RevokeDevice(RevokeDeviceRequest) returns (RevokeDeviceResponse);
   // Streams every change to every chat from now on. The first message is
   // empty: it says the subscription is live.
   rpc Events(EventsRequest) returns (stream EventsResponse);
@@ -792,6 +804,8 @@ message EventsResponse {
     ChatTerminals terminals = 12;
     // This item is gone (a message the agent never got); the rest stay.
     string dropped = 13;
+    // Remote access changed (chat_id is empty).
+    Remote remote = 14;
   }
 }
 
@@ -1141,3 +1155,67 @@ message TrustFolderRequest {
 }
 
 message TrustFolderResponse {}
+
+message Remote {
+  bool on = 1;
+  // The relay's ws:// or wss:// URL.
+  string relay = 2;
+  // "off", "connecting", "connected" (waiting at the relay for phones) or
+  // "error" (error says what; it tries again).
+  string state = 3;
+  string error = 4;
+  repeated Device devices = 5;
+  // A phone being paired; unset when none.
+  Pairing pairing = 6;
+}
+
+message Device {
+  string id = 1;
+  string name = 2;
+  // Unix milliseconds; last_seen 0 when never.
+  int64 paired = 3;
+  int64 last_seen = 4;
+  bool connected = 5;
+}
+
+message Pairing {
+  // Unix milliseconds: the QR code is good until then.
+  int64 expires = 1;
+  // Once a phone has connected: its name, and the code both screens show.
+  string name = 2;
+  string code = 3;
+}
+
+message GetRemoteRequest {}
+
+message GetRemoteResponse {
+  Remote remote = 1;
+}
+
+message SetRemoteRequest {
+  bool on = 1;
+  string relay = 2;
+}
+
+message SetRemoteResponse {}
+
+message StartPairingRequest {}
+
+message StartPairingResponse {
+  // nushi://pair?r=<relay>&i=<one-time id>&k=<daemon's key>&s=<secret>
+  string qr = 1;
+  int64 expires = 2;
+}
+
+message ConfirmPairingRequest {
+  string code = 1;
+  bool allow = 2;
+}
+
+message ConfirmPairingResponse {}
+
+message RevokeDeviceRequest {
+  string id = 1;
+}
+
+message RevokeDeviceResponse {}

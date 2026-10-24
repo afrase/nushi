@@ -437,6 +437,48 @@ abstract final class NushiService {
     nushiv1nushi.TrustFolderResponse.new,
   );
 
+  /// Remote access (ADRs 0033, 0034): how it stands, and switching it on
+  /// or off through a relay.
+  static const getRemote = connect.Spec(
+    '/$name/GetRemote',
+    connect.StreamType.unary,
+    nushiv1nushi.GetRemoteRequest.new,
+    nushiv1nushi.GetRemoteResponse.new,
+  );
+
+  static const setRemote = connect.Spec(
+    '/$name/SetRemote',
+    connect.StreamType.unary,
+    nushiv1nushi.SetRemoteRequest.new,
+    nushiv1nushi.SetRemoteResponse.new,
+  );
+
+  /// Starts pairing a phone (remote access must be on): the text for the QR
+  /// code, good until it expires. Once a phone holding it connects,
+  /// Remote.pairing has its name and the code both screens show.
+  static const startPairing = connect.Spec(
+    '/$name/StartPairing',
+    connect.StreamType.unary,
+    nushiv1nushi.StartPairingRequest.new,
+    nushiv1nushi.StartPairingResponse.new,
+  );
+
+  /// Allows or denies the phone that connected, named by its code.
+  static const confirmPairing = connect.Spec(
+    '/$name/ConfirmPairing',
+    connect.StreamType.unary,
+    nushiv1nushi.ConfirmPairingRequest.new,
+    nushiv1nushi.ConfirmPairingResponse.new,
+  );
+
+  /// Unpairs a phone and drops its connections.
+  static const revokeDevice = connect.Spec(
+    '/$name/RevokeDevice',
+    connect.StreamType.unary,
+    nushiv1nushi.RevokeDeviceRequest.new,
+    nushiv1nushi.RevokeDeviceResponse.new,
+  );
+
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.
   static const events = connect.Spec(

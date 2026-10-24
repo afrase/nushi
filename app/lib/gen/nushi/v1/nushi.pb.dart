@@ -6634,6 +6634,7 @@ enum EventsResponse_Kind {
   cut,
   terminals,
   dropped,
+  remote,
   notSet
 }
 
@@ -6652,6 +6653,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     $core.String? cut,
     ChatTerminals? terminals,
     $core.String? dropped,
+    Remote? remote,
   }) {
     final result = EventsResponse._();
     if (chatId != null) result.chatId = chatId;
@@ -6667,6 +6669,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     if (cut != null) result.cut = cut;
     if (terminals != null) result.terminals = terminals;
     if (dropped != null) result.dropped = dropped;
+    if (remote != null) result.remote = remote;
     return result;
   }
 
@@ -6692,13 +6695,14 @@ class EventsResponse extends $pb.GeneratedMessage {
     11: EventsResponse_Kind.cut,
     12: EventsResponse_Kind.terminals,
     13: EventsResponse_Kind.dropped,
+    14: EventsResponse_Kind.remote,
     0: EventsResponse_Kind.notSet
   };
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'EventsResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: EventsResponse.$_createMessage)
-    ..oo(0, [2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13])
+    ..oo(0, [2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14])
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
     ..aOM<ItemEvent>(2, _omitFieldNames ? '' : 'item',
         subBuilder: ItemEvent.$_createMessage)
@@ -6720,6 +6724,8 @@ class EventsResponse extends $pb.GeneratedMessage {
     ..aOM<ChatTerminals>(12, _omitFieldNames ? '' : 'terminals',
         subBuilder: ChatTerminals.$_createMessage)
     ..aOS(13, _omitFieldNames ? '' : 'dropped')
+    ..aOM<Remote>(14, _omitFieldNames ? '' : 'remote',
+        subBuilder: Remote.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -6755,6 +6761,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(11)
   @$pb.TagNumber(12)
   @$pb.TagNumber(13)
+  @$pb.TagNumber(14)
   EventsResponse_Kind whichKind() =>
       _EventsResponse_KindByTag[$_whichOneof(0)]!;
   @$pb.TagNumber(2)
@@ -6768,6 +6775,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(11)
   @$pb.TagNumber(12)
   @$pb.TagNumber(13)
+  @$pb.TagNumber(14)
   void clearKind() => $_clearField($_whichOneof(0));
 
   @$pb.TagNumber(1)
@@ -6913,6 +6921,18 @@ class EventsResponse extends $pb.GeneratedMessage {
   $core.bool hasDropped() => $_has(12);
   @$pb.TagNumber(13)
   void clearDropped() => $_clearField(13);
+
+  /// Remote access changed (chat_id is empty).
+  @$pb.TagNumber(14)
+  Remote get remote => $_getN(13);
+  @$pb.TagNumber(14)
+  set remote(Remote value) => $_setField(14, value);
+  @$pb.TagNumber(14)
+  $core.bool hasRemote() => $_has(13);
+  @$pb.TagNumber(14)
+  void clearRemote() => $_clearField(14);
+  @$pb.TagNumber(14)
+  Remote ensureRemote() => $_ensure(13);
 }
 
 /// A chat's config options, all of them.
@@ -9981,6 +10001,846 @@ class TrustFolderResponse extends $pb.GeneratedMessage {
   static TrustFolderResponse? _defaultInstance;
 }
 
+class Remote extends $pb.GeneratedMessage {
+  factory Remote({
+    $core.bool? on,
+    $core.String? relay,
+    $core.String? state,
+    $core.String? error,
+    $core.Iterable<Device>? devices,
+    Pairing? pairing,
+  }) {
+    final result = Remote._();
+    if (on != null) result.on = on;
+    if (relay != null) result.relay = relay;
+    if (state != null) result.state = state;
+    if (error != null) result.error = error;
+    if (devices != null) result.devices.addAll(devices);
+    if (pairing != null) result.pairing = pairing;
+    return result;
+  }
+
+  Remote._();
+
+  factory Remote.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Remote()..mergeFromBuffer(data, registry);
+  factory Remote.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Remote()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'Remote',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: Remote.$_createMessage)
+    ..aOB(1, _omitFieldNames ? '' : 'on')
+    ..aOS(2, _omitFieldNames ? '' : 'relay')
+    ..aOS(3, _omitFieldNames ? '' : 'state')
+    ..aOS(4, _omitFieldNames ? '' : 'error')
+    ..pPM<Device>(5, _omitFieldNames ? '' : 'devices',
+        subBuilder: Device.$_createMessage)
+    ..aOM<Pairing>(6, _omitFieldNames ? '' : 'pairing',
+        subBuilder: Pairing.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Remote clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Remote copyWith(void Function(Remote) updates) =>
+      super.copyWith((message) => updates(message as Remote)) as Remote;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use Remote() / Remote.new instead')
+  static Remote create() => Remote._();
+  static $pb.GeneratedMessage $_createMessage() => Remote._();
+  @$core.override
+  Remote createEmptyInstance() => Remote._();
+  @$core.pragma('dart2js:noInline')
+  static Remote getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<Remote>(Remote.$_createMessage);
+  static Remote? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.bool get on => $_getBF(0);
+  @$pb.TagNumber(1)
+  set on($core.bool value) => $_setBool(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasOn() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearOn() => $_clearField(1);
+
+  /// The relay's ws:// or wss:// URL.
+  @$pb.TagNumber(2)
+  $core.String get relay => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set relay($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasRelay() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearRelay() => $_clearField(2);
+
+  /// "off", "connecting", "connected" (waiting at the relay for phones) or
+  /// "error" (error says what; it tries again).
+  @$pb.TagNumber(3)
+  $core.String get state => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set state($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasState() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearState() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get error => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set error($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasError() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearError() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $pb.PbList<Device> get devices => $_getList(4);
+
+  /// A phone being paired; unset when none.
+  @$pb.TagNumber(6)
+  Pairing get pairing => $_getN(5);
+  @$pb.TagNumber(6)
+  set pairing(Pairing value) => $_setField(6, value);
+  @$pb.TagNumber(6)
+  $core.bool hasPairing() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearPairing() => $_clearField(6);
+  @$pb.TagNumber(6)
+  Pairing ensurePairing() => $_ensure(5);
+}
+
+class Device extends $pb.GeneratedMessage {
+  factory Device({
+    $core.String? id,
+    $core.String? name,
+    $fixnum.Int64? paired,
+    $fixnum.Int64? lastSeen,
+    $core.bool? connected,
+  }) {
+    final result = Device._();
+    if (id != null) result.id = id;
+    if (name != null) result.name = name;
+    if (paired != null) result.paired = paired;
+    if (lastSeen != null) result.lastSeen = lastSeen;
+    if (connected != null) result.connected = connected;
+    return result;
+  }
+
+  Device._();
+
+  factory Device.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Device()..mergeFromBuffer(data, registry);
+  factory Device.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Device()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'Device',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: Device.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'name')
+    ..aInt64(3, _omitFieldNames ? '' : 'paired')
+    ..aInt64(4, _omitFieldNames ? '' : 'lastSeen')
+    ..aOB(5, _omitFieldNames ? '' : 'connected')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Device clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Device copyWith(void Function(Device) updates) =>
+      super.copyWith((message) => updates(message as Device)) as Device;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use Device() / Device.new instead')
+  static Device create() => Device._();
+  static $pb.GeneratedMessage $_createMessage() => Device._();
+  @$core.override
+  Device createEmptyInstance() => Device._();
+  @$core.pragma('dart2js:noInline')
+  static Device getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<Device>(Device.$_createMessage);
+  static Device? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get name => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set name($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasName() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearName() => $_clearField(2);
+
+  /// Unix milliseconds; last_seen 0 when never.
+  @$pb.TagNumber(3)
+  $fixnum.Int64 get paired => $_getI64(2);
+  @$pb.TagNumber(3)
+  set paired($fixnum.Int64 value) => $_setInt64(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasPaired() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearPaired() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $fixnum.Int64 get lastSeen => $_getI64(3);
+  @$pb.TagNumber(4)
+  set lastSeen($fixnum.Int64 value) => $_setInt64(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasLastSeen() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearLastSeen() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.bool get connected => $_getBF(4);
+  @$pb.TagNumber(5)
+  set connected($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasConnected() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearConnected() => $_clearField(5);
+}
+
+class Pairing extends $pb.GeneratedMessage {
+  factory Pairing({
+    $fixnum.Int64? expires,
+    $core.String? name,
+    $core.String? code,
+  }) {
+    final result = Pairing._();
+    if (expires != null) result.expires = expires;
+    if (name != null) result.name = name;
+    if (code != null) result.code = code;
+    return result;
+  }
+
+  Pairing._();
+
+  factory Pairing.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Pairing()..mergeFromBuffer(data, registry);
+  factory Pairing.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Pairing()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'Pairing',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: Pairing.$_createMessage)
+    ..aInt64(1, _omitFieldNames ? '' : 'expires')
+    ..aOS(2, _omitFieldNames ? '' : 'name')
+    ..aOS(3, _omitFieldNames ? '' : 'code')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Pairing clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Pairing copyWith(void Function(Pairing) updates) =>
+      super.copyWith((message) => updates(message as Pairing)) as Pairing;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use Pairing() / Pairing.new instead')
+  static Pairing create() => Pairing._();
+  static $pb.GeneratedMessage $_createMessage() => Pairing._();
+  @$core.override
+  Pairing createEmptyInstance() => Pairing._();
+  @$core.pragma('dart2js:noInline')
+  static Pairing getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<Pairing>(Pairing.$_createMessage);
+  static Pairing? _defaultInstance;
+
+  /// Unix milliseconds: the QR code is good until then.
+  @$pb.TagNumber(1)
+  $fixnum.Int64 get expires => $_getI64(0);
+  @$pb.TagNumber(1)
+  set expires($fixnum.Int64 value) => $_setInt64(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasExpires() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearExpires() => $_clearField(1);
+
+  /// Once a phone has connected: its name, and the code both screens show.
+  @$pb.TagNumber(2)
+  $core.String get name => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set name($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasName() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearName() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get code => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set code($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasCode() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearCode() => $_clearField(3);
+}
+
+class GetRemoteRequest extends $pb.GeneratedMessage {
+  factory GetRemoteRequest() => GetRemoteRequest._();
+
+  GetRemoteRequest._();
+
+  factory GetRemoteRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetRemoteRequest()..mergeFromBuffer(data, registry);
+  factory GetRemoteRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetRemoteRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetRemoteRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetRemoteRequest.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetRemoteRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetRemoteRequest copyWith(void Function(GetRemoteRequest) updates) =>
+      super.copyWith((message) => updates(message as GetRemoteRequest))
+          as GetRemoteRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GetRemoteRequest() / GetRemoteRequest.new instead')
+  static GetRemoteRequest create() => GetRemoteRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetRemoteRequest._();
+  @$core.override
+  GetRemoteRequest createEmptyInstance() => GetRemoteRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetRemoteRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GetRemoteRequest>(
+          GetRemoteRequest.$_createMessage);
+  static GetRemoteRequest? _defaultInstance;
+}
+
+class GetRemoteResponse extends $pb.GeneratedMessage {
+  factory GetRemoteResponse({
+    Remote? remote,
+  }) {
+    final result = GetRemoteResponse._();
+    if (remote != null) result.remote = remote;
+    return result;
+  }
+
+  GetRemoteResponse._();
+
+  factory GetRemoteResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetRemoteResponse()..mergeFromBuffer(data, registry);
+  factory GetRemoteResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetRemoteResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetRemoteResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetRemoteResponse.$_createMessage)
+    ..aOM<Remote>(1, _omitFieldNames ? '' : 'remote',
+        subBuilder: Remote.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetRemoteResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetRemoteResponse copyWith(void Function(GetRemoteResponse) updates) =>
+      super.copyWith((message) => updates(message as GetRemoteResponse))
+          as GetRemoteResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GetRemoteResponse() / GetRemoteResponse.new instead')
+  static GetRemoteResponse create() => GetRemoteResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetRemoteResponse._();
+  @$core.override
+  GetRemoteResponse createEmptyInstance() => GetRemoteResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetRemoteResponse getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GetRemoteResponse>(
+          GetRemoteResponse.$_createMessage);
+  static GetRemoteResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  Remote get remote => $_getN(0);
+  @$pb.TagNumber(1)
+  set remote(Remote value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasRemote() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRemote() => $_clearField(1);
+  @$pb.TagNumber(1)
+  Remote ensureRemote() => $_ensure(0);
+}
+
+class SetRemoteRequest extends $pb.GeneratedMessage {
+  factory SetRemoteRequest({
+    $core.bool? on,
+    $core.String? relay,
+  }) {
+    final result = SetRemoteRequest._();
+    if (on != null) result.on = on;
+    if (relay != null) result.relay = relay;
+    return result;
+  }
+
+  SetRemoteRequest._();
+
+  factory SetRemoteRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetRemoteRequest()..mergeFromBuffer(data, registry);
+  factory SetRemoteRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetRemoteRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SetRemoteRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SetRemoteRequest.$_createMessage)
+    ..aOB(1, _omitFieldNames ? '' : 'on')
+    ..aOS(2, _omitFieldNames ? '' : 'relay')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetRemoteRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetRemoteRequest copyWith(void Function(SetRemoteRequest) updates) =>
+      super.copyWith((message) => updates(message as SetRemoteRequest))
+          as SetRemoteRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use SetRemoteRequest() / SetRemoteRequest.new instead')
+  static SetRemoteRequest create() => SetRemoteRequest._();
+  static $pb.GeneratedMessage $_createMessage() => SetRemoteRequest._();
+  @$core.override
+  SetRemoteRequest createEmptyInstance() => SetRemoteRequest._();
+  @$core.pragma('dart2js:noInline')
+  static SetRemoteRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<SetRemoteRequest>(
+          SetRemoteRequest.$_createMessage);
+  static SetRemoteRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.bool get on => $_getBF(0);
+  @$pb.TagNumber(1)
+  set on($core.bool value) => $_setBool(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasOn() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearOn() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get relay => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set relay($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasRelay() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearRelay() => $_clearField(2);
+}
+
+class SetRemoteResponse extends $pb.GeneratedMessage {
+  factory SetRemoteResponse() => SetRemoteResponse._();
+
+  SetRemoteResponse._();
+
+  factory SetRemoteResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetRemoteResponse()..mergeFromBuffer(data, registry);
+  factory SetRemoteResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetRemoteResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SetRemoteResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SetRemoteResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetRemoteResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetRemoteResponse copyWith(void Function(SetRemoteResponse) updates) =>
+      super.copyWith((message) => updates(message as SetRemoteResponse))
+          as SetRemoteResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use SetRemoteResponse() / SetRemoteResponse.new instead')
+  static SetRemoteResponse create() => SetRemoteResponse._();
+  static $pb.GeneratedMessage $_createMessage() => SetRemoteResponse._();
+  @$core.override
+  SetRemoteResponse createEmptyInstance() => SetRemoteResponse._();
+  @$core.pragma('dart2js:noInline')
+  static SetRemoteResponse getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<SetRemoteResponse>(
+          SetRemoteResponse.$_createMessage);
+  static SetRemoteResponse? _defaultInstance;
+}
+
+class StartPairingRequest extends $pb.GeneratedMessage {
+  factory StartPairingRequest() => StartPairingRequest._();
+
+  StartPairingRequest._();
+
+  factory StartPairingRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StartPairingRequest()..mergeFromBuffer(data, registry);
+  factory StartPairingRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StartPairingRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'StartPairingRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: StartPairingRequest.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StartPairingRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StartPairingRequest copyWith(void Function(StartPairingRequest) updates) =>
+      super.copyWith((message) => updates(message as StartPairingRequest))
+          as StartPairingRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use StartPairingRequest() / StartPairingRequest.new instead')
+  static StartPairingRequest create() => StartPairingRequest._();
+  static $pb.GeneratedMessage $_createMessage() => StartPairingRequest._();
+  @$core.override
+  StartPairingRequest createEmptyInstance() => StartPairingRequest._();
+  @$core.pragma('dart2js:noInline')
+  static StartPairingRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<StartPairingRequest>(
+          StartPairingRequest.$_createMessage);
+  static StartPairingRequest? _defaultInstance;
+}
+
+class StartPairingResponse extends $pb.GeneratedMessage {
+  factory StartPairingResponse({
+    $core.String? qr,
+    $fixnum.Int64? expires,
+  }) {
+    final result = StartPairingResponse._();
+    if (qr != null) result.qr = qr;
+    if (expires != null) result.expires = expires;
+    return result;
+  }
+
+  StartPairingResponse._();
+
+  factory StartPairingResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StartPairingResponse()..mergeFromBuffer(data, registry);
+  factory StartPairingResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StartPairingResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'StartPairingResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: StartPairingResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'qr')
+    ..aInt64(2, _omitFieldNames ? '' : 'expires')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StartPairingResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StartPairingResponse copyWith(void Function(StartPairingResponse) updates) =>
+      super.copyWith((message) => updates(message as StartPairingResponse))
+          as StartPairingResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use StartPairingResponse() / StartPairingResponse.new instead')
+  static StartPairingResponse create() => StartPairingResponse._();
+  static $pb.GeneratedMessage $_createMessage() => StartPairingResponse._();
+  @$core.override
+  StartPairingResponse createEmptyInstance() => StartPairingResponse._();
+  @$core.pragma('dart2js:noInline')
+  static StartPairingResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<StartPairingResponse>(
+          StartPairingResponse.$_createMessage);
+  static StartPairingResponse? _defaultInstance;
+
+  /// nushi://pair?r=<relay>&i=<one-time id>&k=<daemon's key>&s=<secret>
+  @$pb.TagNumber(1)
+  $core.String get qr => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set qr($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasQr() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearQr() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $fixnum.Int64 get expires => $_getI64(1);
+  @$pb.TagNumber(2)
+  set expires($fixnum.Int64 value) => $_setInt64(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasExpires() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearExpires() => $_clearField(2);
+}
+
+class ConfirmPairingRequest extends $pb.GeneratedMessage {
+  factory ConfirmPairingRequest({
+    $core.String? code,
+    $core.bool? allow,
+  }) {
+    final result = ConfirmPairingRequest._();
+    if (code != null) result.code = code;
+    if (allow != null) result.allow = allow;
+    return result;
+  }
+
+  ConfirmPairingRequest._();
+
+  factory ConfirmPairingRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ConfirmPairingRequest()..mergeFromBuffer(data, registry);
+  factory ConfirmPairingRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ConfirmPairingRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ConfirmPairingRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ConfirmPairingRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'code')
+    ..aOB(2, _omitFieldNames ? '' : 'allow')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ConfirmPairingRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ConfirmPairingRequest copyWith(
+          void Function(ConfirmPairingRequest) updates) =>
+      super.copyWith((message) => updates(message as ConfirmPairingRequest))
+          as ConfirmPairingRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ConfirmPairingRequest() / ConfirmPairingRequest.new instead')
+  static ConfirmPairingRequest create() => ConfirmPairingRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ConfirmPairingRequest._();
+  @$core.override
+  ConfirmPairingRequest createEmptyInstance() => ConfirmPairingRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ConfirmPairingRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ConfirmPairingRequest>(
+          ConfirmPairingRequest.$_createMessage);
+  static ConfirmPairingRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get code => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set code($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasCode() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearCode() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.bool get allow => $_getBF(1);
+  @$pb.TagNumber(2)
+  set allow($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasAllow() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearAllow() => $_clearField(2);
+}
+
+class ConfirmPairingResponse extends $pb.GeneratedMessage {
+  factory ConfirmPairingResponse() => ConfirmPairingResponse._();
+
+  ConfirmPairingResponse._();
+
+  factory ConfirmPairingResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ConfirmPairingResponse()..mergeFromBuffer(data, registry);
+  factory ConfirmPairingResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ConfirmPairingResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ConfirmPairingResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ConfirmPairingResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ConfirmPairingResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ConfirmPairingResponse copyWith(
+          void Function(ConfirmPairingResponse) updates) =>
+      super.copyWith((message) => updates(message as ConfirmPairingResponse))
+          as ConfirmPairingResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ConfirmPairingResponse() / ConfirmPairingResponse.new instead')
+  static ConfirmPairingResponse create() => ConfirmPairingResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ConfirmPairingResponse._();
+  @$core.override
+  ConfirmPairingResponse createEmptyInstance() => ConfirmPairingResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ConfirmPairingResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ConfirmPairingResponse>(
+          ConfirmPairingResponse.$_createMessage);
+  static ConfirmPairingResponse? _defaultInstance;
+}
+
+class RevokeDeviceRequest extends $pb.GeneratedMessage {
+  factory RevokeDeviceRequest({
+    $core.String? id,
+  }) {
+    final result = RevokeDeviceRequest._();
+    if (id != null) result.id = id;
+    return result;
+  }
+
+  RevokeDeviceRequest._();
+
+  factory RevokeDeviceRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RevokeDeviceRequest()..mergeFromBuffer(data, registry);
+  factory RevokeDeviceRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RevokeDeviceRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RevokeDeviceRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RevokeDeviceRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RevokeDeviceRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RevokeDeviceRequest copyWith(void Function(RevokeDeviceRequest) updates) =>
+      super.copyWith((message) => updates(message as RevokeDeviceRequest))
+          as RevokeDeviceRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use RevokeDeviceRequest() / RevokeDeviceRequest.new instead')
+  static RevokeDeviceRequest create() => RevokeDeviceRequest._();
+  static $pb.GeneratedMessage $_createMessage() => RevokeDeviceRequest._();
+  @$core.override
+  RevokeDeviceRequest createEmptyInstance() => RevokeDeviceRequest._();
+  @$core.pragma('dart2js:noInline')
+  static RevokeDeviceRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RevokeDeviceRequest>(
+          RevokeDeviceRequest.$_createMessage);
+  static RevokeDeviceRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+}
+
+class RevokeDeviceResponse extends $pb.GeneratedMessage {
+  factory RevokeDeviceResponse() => RevokeDeviceResponse._();
+
+  RevokeDeviceResponse._();
+
+  factory RevokeDeviceResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RevokeDeviceResponse()..mergeFromBuffer(data, registry);
+  factory RevokeDeviceResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RevokeDeviceResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RevokeDeviceResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RevokeDeviceResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RevokeDeviceResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RevokeDeviceResponse copyWith(void Function(RevokeDeviceResponse) updates) =>
+      super.copyWith((message) => updates(message as RevokeDeviceResponse))
+          as RevokeDeviceResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RevokeDeviceResponse() / RevokeDeviceResponse.new instead')
+  static RevokeDeviceResponse create() => RevokeDeviceResponse._();
+  static $pb.GeneratedMessage $_createMessage() => RevokeDeviceResponse._();
+  @$core.override
+  RevokeDeviceResponse createEmptyInstance() => RevokeDeviceResponse._();
+  @$core.pragma('dart2js:noInline')
+  static RevokeDeviceResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RevokeDeviceResponse>(
+          RevokeDeviceResponse.$_createMessage);
+  static RevokeDeviceResponse? _defaultInstance;
+}
+
 class NushiServiceApi {
   final $pb.RpcClient _client;
 
@@ -10309,6 +11169,37 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, TrustFolderRequest request) =>
       _client.invoke<TrustFolderResponse>(
           ctx, 'NushiService', 'TrustFolder', request, TrustFolderResponse());
+
+  /// Remote access (ADRs 0033, 0034): how it stands, and switching it on
+  /// or off through a relay.
+  $async.Future<GetRemoteResponse> getRemote(
+          $pb.ClientContext? ctx, GetRemoteRequest request) =>
+      _client.invoke<GetRemoteResponse>(
+          ctx, 'NushiService', 'GetRemote', request, GetRemoteResponse());
+  $async.Future<SetRemoteResponse> setRemote(
+          $pb.ClientContext? ctx, SetRemoteRequest request) =>
+      _client.invoke<SetRemoteResponse>(
+          ctx, 'NushiService', 'SetRemote', request, SetRemoteResponse());
+
+  /// Starts pairing a phone (remote access must be on): the text for the QR
+  /// code, good until it expires. Once a phone holding it connects,
+  /// Remote.pairing has its name and the code both screens show.
+  $async.Future<StartPairingResponse> startPairing(
+          $pb.ClientContext? ctx, StartPairingRequest request) =>
+      _client.invoke<StartPairingResponse>(
+          ctx, 'NushiService', 'StartPairing', request, StartPairingResponse());
+
+  /// Allows or denies the phone that connected, named by its code.
+  $async.Future<ConfirmPairingResponse> confirmPairing(
+          $pb.ClientContext? ctx, ConfirmPairingRequest request) =>
+      _client.invoke<ConfirmPairingResponse>(ctx, 'NushiService',
+          'ConfirmPairing', request, ConfirmPairingResponse());
+
+  /// Unpairs a phone and drops its connections.
+  $async.Future<RevokeDeviceResponse> revokeDevice(
+          $pb.ClientContext? ctx, RevokeDeviceRequest request) =>
+      _client.invoke<RevokeDeviceResponse>(
+          ctx, 'NushiService', 'RevokeDevice', request, RevokeDeviceResponse());
 
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.

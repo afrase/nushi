@@ -1,0 +1,130 @@
+package remote
+
+import (
+	"bytes"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"net"
+	"slices"
+	"time"
+
+	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/noiseconn"
+	"github.com/afrase/nushi/relay"
+)
+
+var errUnknown = errors.New("not a paired device")
+
+// accept runs IK with a phone that came to the daemon's id: only a paired
+// device's key gets an answer, and it counts as connected once its first
+// transport message decrypts.
+func (s *Service) accept(ctx context.Context, c *relay.Conn) {
+	timer := time.AfterFunc(HandshakeWait, func() { c.Close() })
+	defer timer.Stop()
+	stop := context.AfterFunc(ctx, func() { c.Close() })
+	defer stop()
+	conn, err := noiseconn.Respond(c, noiseconn.Config{Static: s.key, Prologue: prologue(s.id)}, func(peer []byte) error {
+		if s.device(peer) == "" {
+			return errUnknown
+		}
+		return nil
+	})
+	if err != nil || conn.Peek() != nil || !timer.Stop() || !stop() {
+		c.Close()
+		return
+	}
+	s.run(conn, s.device(conn.Peer()))
+}
+
+// device names the paired device with key, or "".
+func (s *Service) device(key []byte) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, d := range s.devices {
+		if bytes.Equal(d.Key, key) {
+			return d.ID
+		}
+	}
+	return ""
+}
+
+// run serves the API to device on conn until it closes, if the device is
+// still paired and the cap allows.
+func (s *Service) run(conn *noiseconn.Conn, device string) {
+	s.mu.Lock()
+	i := slices.IndexFunc(s.devices, func(d model.Device) bool { return d.ID == device })
+	if i < 0 || !s.settings.On || len(s.conns) >= MaxConns {
+		s.mu.Unlock()
+		conn.Close()
+		return
+	}
+	s.conns[conn] = device
+	s.seen(i)
+	s.mu.Unlock()
+	s.serve(&served{Conn: conn, s: s})
+}
+
+// seen moves device i's last-seen time and tells the clients. Called with
+// s.mu.
+func (s *Service) seen(i int) {
+	s.devices[i].LastSeen = time.Now()
+	_ = s.st.SaveDevices(s.devices) // the time is a convenience
+	s.changed()
+}
+
+// served is a device's channel given to the API; closing it forgets it.
+type served struct {
+	*noiseconn.Conn
+	s *Service
+}
+
+func (c *served) Close() error {
+	s := c.s
+	s.mu.Lock()
+	if device, ok := s.conns[c.Conn]; ok {
+		delete(s.conns, c.Conn)
+		if i := slices.IndexFunc(s.devices, func(d model.Device) bool { return d.ID == device }); i >= 0 {
+			s.seen(i)
+		}
+	}
+	s.mu.Unlock()
+	return c.Conn.Close()
+}
+
+var _ net.Conn = (*served)(nil)
+
+// add pairs a device with key. Called with s.mu.
+func (s *Service) add(name string, key []byte) (string, error) {
+	sum := sha256.Sum256(key)
+	d := model.Device{ID: hex.EncodeToString(sum[:8]), Name: name, Key: key, Paired: time.Now()}
+	devices := append(slices.DeleteFunc(slices.Clone(s.devices), func(o model.Device) bool { return o.ID == d.ID }), d)
+	if err := s.st.SaveDevices(devices); err != nil {
+		return "", err
+	}
+	s.devices = devices
+	return d.ID, nil
+}
+
+// Revoke unpairs a device and drops its connections at once.
+func (s *Service) Revoke(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	devices := slices.DeleteFunc(slices.Clone(s.devices), func(d model.Device) bool { return d.ID == id })
+	if len(devices) == len(s.devices) {
+		return errors.New("no such device")
+	}
+	if err := s.st.SaveDevices(devices); err != nil {
+		return err
+	}
+	s.devices = devices
+	for c, d := range s.conns {
+		if d == id {
+			delete(s.conns, c)
+			c.Close()
+		}
+	}
+	s.changed()
+	return nil
+}

@@ -233,7 +233,8 @@ type Relay struct {
 }
 
 // Event is a change to one chat. Exactly one of Item, Status, Config,
-// Session, Commands, Removed, Usage, Queue, Cut and Terminals is set.
+// Session, Commands, Removed, Usage, Queue, Cut, Terminals and Remote is
+// set.
 type Event struct {
 	ChatID string
 	// Seq numbers the chat's events from 1; a Chat snapshot says which
@@ -261,6 +262,8 @@ type Event struct {
 	// Terminals, when not nil, are the chat's terminals, all of them. These
 	// events aren't numbered (Seq is 0).
 	Terminals *[]Terminal
+	// Remote, when not nil, is remote access as it stands; ChatID is "".
+	Remote *Remote
 }
 
 // Terminal is a shell the user runs beside a chat, in the daemon.
