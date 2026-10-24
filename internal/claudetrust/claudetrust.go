@@ -92,7 +92,12 @@ func homeDir() string {
 // (in it or a folder above, and not turned off), and the hooks, env block
 // and helper commands in its .claude/settings.json and settings.local.json
 // and its skills' hooks, in the folder and at its repository's root.
-func (Trust) Runs(folder string) ([]model.FolderRun, error) {
+func (t Trust) Runs(folder string) ([]model.FolderRun, string, error) {
+	out, err := runs(folder)
+	return out, t.Key(folder), err
+}
+
+func runs(folder string) ([]model.FolderRun, error) {
 	servers, unread, err := claudemcp.Claude{}.Read(folder)
 	if err != nil {
 		return nil, err

@@ -9153,9 +9153,11 @@ class CheckFolderRequest extends $pb.GeneratedMessage {
 class CheckFolderResponse extends $pb.GeneratedMessage {
   factory CheckFolderResponse({
     $core.Iterable<FolderRun>? runs,
+    $core.String? key,
   }) {
     final result = CheckFolderResponse._();
     if (runs != null) result.runs.addAll(runs);
+    if (key != null) result.key = key;
     return result;
   }
 
@@ -9174,6 +9176,7 @@ class CheckFolderResponse extends $pb.GeneratedMessage {
       createEmptyInstance: CheckFolderResponse.$_createMessage)
     ..pPM<FolderRun>(1, _omitFieldNames ? '' : 'runs',
         subBuilder: FolderRun.$_createMessage)
+    ..aOS(2, _omitFieldNames ? '' : 'key')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -9201,6 +9204,17 @@ class CheckFolderResponse extends $pb.GeneratedMessage {
 
   @$pb.TagNumber(1)
   $pb.PbList<FolderRun> get runs => $_getList(0);
+
+  /// What TrustFolder remembers for exactly what runs shows; empty when the
+  /// folder can't be remembered (Start anyway is then for this start only).
+  @$pb.TagNumber(2)
+  $core.String get key => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set key($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasKey() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearKey() => $_clearField(2);
 }
 
 /// Something a folder has the agent run on its own.
@@ -9290,10 +9304,12 @@ class TrustFolderRequest extends $pb.GeneratedMessage {
   factory TrustFolderRequest({
     $core.String? folder,
     $core.String? agent,
+    $core.String? key,
   }) {
     final result = TrustFolderRequest._();
     if (folder != null) result.folder = folder;
     if (agent != null) result.agent = agent;
+    if (key != null) result.key = key;
     return result;
   }
 
@@ -9312,6 +9328,7 @@ class TrustFolderRequest extends $pb.GeneratedMessage {
       createEmptyInstance: TrustFolderRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'folder')
     ..aOS(2, _omitFieldNames ? '' : 'agent')
+    ..aOS(3, _omitFieldNames ? '' : 'key')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -9354,6 +9371,17 @@ class TrustFolderRequest extends $pb.GeneratedMessage {
   $core.bool hasAgent() => $_has(1);
   @$pb.TagNumber(2)
   void clearAgent() => $_clearField(2);
+
+  /// CheckFolderResponse.key. Refused (aborted) when the folder no longer
+  /// matches it: check again.
+  @$pb.TagNumber(3)
+  $core.String get key => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set key($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasKey() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearKey() => $_clearField(3);
 }
 
 class TrustFolderResponse extends $pb.GeneratedMessage {

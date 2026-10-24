@@ -5,6 +5,7 @@ import 'chat.dart';
 import 'composer.dart';
 import 'composer_parts.dart';
 import 'daemon.dart';
+import 'gen/nushi/v1/nushi.pb.dart';
 import 'status.dart';
 import 'theme/theme.dart';
 import 'transcript.dart';
@@ -83,5 +84,17 @@ class SidePanel extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Side questions' end.
+extension SideChats on Daemon {
+  /// Ends [chat]'s side question, if it has one.
+  void closeSide(ChatState chat) {
+    final side = chat.side;
+    if (side == null) return;
+    chat.side = null;
+    sides.remove(side.id);
+    client.closeSideChat(CloseSideChatRequest(chatId: side.id)).ignore();
   }
 }

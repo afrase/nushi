@@ -2177,13 +2177,14 @@ const CheckFolderResponse$json = {
       '6': '.nushi.v1.FolderRun',
       '10': 'runs'
     },
+    {'1': 'key', '3': 2, '4': 1, '5': 9, '10': 'key'},
   ],
 };
 
 /// Descriptor for `CheckFolderResponse`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List checkFolderResponseDescriptor = $convert.base64Decode(
     'ChNDaGVja0ZvbGRlclJlc3BvbnNlEicKBHJ1bnMYASADKAsyEy5udXNoaS52MS5Gb2xkZXJSdW'
-    '5SBHJ1bnM=');
+    '5SBHJ1bnMSEAoDa2V5GAIgASgJUgNrZXk=');
 
 @$core.Deprecated('Use folderRunDescriptor instead')
 const FolderRun$json = {
@@ -2206,13 +2207,14 @@ const TrustFolderRequest$json = {
   '2': [
     {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
     {'1': 'agent', '3': 2, '4': 1, '5': 9, '10': 'agent'},
+    {'1': 'key', '3': 3, '4': 1, '5': 9, '10': 'key'},
   ],
 };
 
 /// Descriptor for `TrustFolderRequest`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List trustFolderRequestDescriptor = $convert.base64Decode(
     'ChJUcnVzdEZvbGRlclJlcXVlc3QSFgoGZm9sZGVyGAEgASgJUgZmb2xkZXISFAoFYWdlbnQYAi'
-    'ABKAlSBWFnZW50');
+    'ABKAlSBWFnZW50EhAKA2tleRgDIAEoCVIDa2V5');
 
 @$core.Deprecated('Use trustFolderResponseDescriptor instead')
 const TrustFolderResponse$json = {

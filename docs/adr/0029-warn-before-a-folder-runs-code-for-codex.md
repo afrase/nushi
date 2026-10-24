@@ -5,7 +5,8 @@
 
 ## Decision
 - For a Codex chat, the card shows every file that isn't empty in each `.codex` Codex reads for that folder (the project's root down to it, and a worktree's main checkout's), whole (past 256 KB, where it is), as milestone R settled for Claude's skill hooks: Nushi doesn't pick which keys matter. A `config.toml`'s MCP servers and environment show above it, as a summary.
-- Codex's record of trust counts as Claude's does. "Start anyway" is kept per agent and per what was shown (`codex:<folder>#<hash of the files>` in `trusted.json`): a folder below, or a file added or changed since, asks again, and a folder trusted for Claude still warns for Codex.
+- Codex's record of trust counts as Claude's does. "Start anyway" is kept per agent and per what was shown (`codex:<folder>#<hash of every file, whole>` in `trusted.json`): a folder below, or a file added or changed since, asks again, and a folder trusted for Claude still warns for Codex. The key comes with the card (CheckFolder) and TrustFolder keeps it only while the folder still hashes to it, else the card shows again; Claude's key (the repository's folder) goes the same way.
+- Links aren't followed. A `.codex` that holds a link, a file Nushi can't read or anything but a regular file has no key: the card says so, and "Start anyway" is for that start only.
 - As in 0023, it warns and never refuses; Nushi never writes Codex's config.
 
 ## Consequences

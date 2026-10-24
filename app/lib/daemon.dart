@@ -15,6 +15,7 @@ import 'gen/nushi/v1/nushi.connect.client.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'review.dart';
 import 'settings.dart';
+import 'side_panel.dart';
 import 'terminals.dart';
 import 'trust_card.dart';
 
@@ -110,24 +111,30 @@ class Daemon extends ChangeNotifier {
   /// daemon remembers, or Cancel.
   Future<bool> _mayRun(String folder, String action, String agent) async {
     if (folder.isEmpty) return true;
-    final check = await client.checkFolder(
-      CheckFolderRequest(folder: folder, agent: agent),
-    );
-    if (check.runs.isEmpty) return true;
-    trustAsk?.decide(false);
-    final ask = trustAsk = TrustAsk(folder, action, check.runs, agent);
-    notifyListeners();
-    final start = await ask.answer.future;
-    if (trustAsk == ask) {
-      trustAsk = null;
-      notifyListeners();
-    }
-    if (start) {
-      await client.trustFolder(
-        TrustFolderRequest(folder: folder, agent: agent),
+    while (true) {
+      final check = await client.checkFolder(
+        CheckFolderRequest(folder: folder, agent: agent),
       );
+      if (check.runs.isEmpty) return true;
+      trustAsk?.decide(false);
+      final ask = trustAsk = TrustAsk(folder, action, check.runs, agent);
+      notifyListeners();
+      final start = await ask.answer.future;
+      if (trustAsk == ask) {
+        trustAsk = null;
+        notifyListeners();
+      }
+      // A folder without a key is for this start only.
+      if (!start || check.key.isEmpty) return start;
+      try {
+        await client.trustFolder(
+          TrustFolderRequest(folder: folder, agent: agent, key: check.key),
+        );
+        return true;
+      } on connect.ConnectException catch (e) {
+        if (e.code != connect.Code.aborted) rethrow; // changed: look again
+      }
     }
-    return start;
   }
 
   Future<void> _ping() async {
@@ -378,15 +385,6 @@ class Daemon extends ChangeNotifier {
       if (chat.side == side) chat.side = null;
     }
     notifyListeners();
-  }
-
-  /// Ends [chat]'s side question, if it has one.
-  void closeSide(ChatState chat) {
-    final side = chat.side;
-    if (side == null) return;
-    chat.side = null;
-    sides.remove(side.id);
-    client.closeSideChat(CloseSideChatRequest(chatId: side.id)).ignore();
   }
 
   @override
