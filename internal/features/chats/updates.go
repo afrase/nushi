@@ -19,6 +19,9 @@ func (c *chat) update(n acp.SessionNotification) {
 	if c.kept && slices.Contains([]string{"user_message_chunk", "agent_message_chunk", "agent_thought_chunk", "plan", "tool_call", "tool_call_update"}, n.Update.SessionUpdate) {
 		return // session/load's replay of a transcript the chat still has
 	}
+	if !c.busy && c.started.IsZero() && slices.Contains([]string{"agent_message_chunk", "agent_thought_chunk", "tool_call", "tool_call_update"}, n.Update.SessionUpdate) {
+		c.ownTurn = true // until its usage_update, which ends a turn
+	}
 	switch u := n.Update; u.SessionUpdate {
 	case "user_message_chunk": // replayed by session/load
 		c.chunkLocked(model.UserMessage, u.UserMessageChunk)
@@ -66,6 +69,7 @@ func (c *chat) update(n acp.SessionNotification) {
 			c.configChangedLocked()
 		}
 	case "usage_update":
+		c.ownTurn = false
 		u := u.UsageUpdate
 		c.usage.Used, c.usage.Size = u.Used, u.Size
 		if u.Cost != nil { // else the cost reported last still stands

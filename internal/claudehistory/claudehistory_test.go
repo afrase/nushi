@@ -39,8 +39,12 @@ func TestCopyKeepsTheOriginal(t *testing.T) {
 			t.Errorf("%s = %q, %v", path, b, err)
 		}
 	}
+	if _, err := Copy(projects, "s1", from, to); err != nil {
+		t.Errorf("a copy a move left (the start of this one) wasn't replaced: %v", err)
+	}
+	os.WriteFile(filepath.Join(dst, "s1.jsonl"), []byte("another"), 0o600)
 	if _, err := Copy(projects, "s1", from, to); err == nil {
-		t.Error("a copy already there was replaced")
+		t.Error("another transcript already there was replaced")
 	}
 	if err := remove(); err != nil {
 		t.Fatal(err)

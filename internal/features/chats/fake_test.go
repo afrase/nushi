@@ -2,6 +2,8 @@ package chats
 
 import (
 	"context"
+	"fmt"
+	"slices"
 	"sync"
 	"time"
 
@@ -17,7 +19,9 @@ var claudeDialect = Dialect{InitMeta: claude.InitMeta, ForkAt: claude.ForkAt, Pa
 	SubagentID: claude.SubagentID, Relay: claude.Relay, Relayed: claude.Relayed, Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle,
 	ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete}
 
-// fakeAgent replies to each prompt with the given updates.
+// fakeAgent replies to each prompt with the given updates. Like Claude, it
+// keeps each prompt and what it answered, which session/load replays, and
+// its process can end (quit).
 type fakeAgent struct {
 	h       acp.Handler
 	updates []acp.SessionUpdate
@@ -42,10 +46,35 @@ type fakeAgent struct {
 	steered      []string
 	wire         []string // prompts and cancels, in the order they reach the agent
 	forkMeta     map[string]any
+	history      []acp.SessionUpdate // what session/load replays
+	done         chan struct{}       // closed by quit
+}
+
+// launch is a Launch for f: it starts again once it has quit.
+func (f *fakeAgent) launch(h acp.Handler) (Agent, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.h = h
+	select {
+	case <-f.done:
+		f.done = nil
+	default:
+	}
+	if f.done == nil {
+		f.done = make(chan struct{})
+	}
+	return f, nil
+}
+
+// quit ends the agent's process.
+func (f *fakeAgent) quit() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	close(f.done)
 }
 
 func (f *fakeAgent) Initialize(context.Context, acp.InitializeRequest) (*acp.InitializeResponse, error) {
-	caps := &acp.AgentCapabilities{PromptCapabilities: &acp.PromptCapabilities{Image: true}}
+	caps := &acp.AgentCapabilities{LoadSession: true, PromptCapabilities: &acp.PromptCapabilities{Image: true}}
 	if f.deletes {
 		caps.SessionCapabilities = &acp.SessionCapabilities{Delete: &acp.SessionDeleteCapabilities{}}
 	}
@@ -59,8 +88,14 @@ func (f *fakeAgent) NewSession(context.Context, acp.NewSessionRequest) (*acp.New
 	return &resp, nil
 }
 
-func (f *fakeAgent) LoadSession(context.Context, acp.LoadSessionRequest) (*acp.LoadSessionResponse, error) {
-	return &acp.LoadSessionResponse{}, nil
+func (f *fakeAgent) LoadSession(_ context.Context, req acp.LoadSessionRequest) (*acp.LoadSessionResponse, error) {
+	f.mu.Lock()
+	history := slices.Clone(f.history)
+	f.mu.Unlock()
+	for _, u := range history {
+		f.h.SessionUpdate(acp.SessionNotification{SessionID: req.SessionID, Update: u})
+	}
+	return &acp.LoadSessionResponse{ConfigOptions: f.session.ConfigOptions, Modes: f.session.Modes}, nil
 }
 
 func (f *fakeAgent) StartPrompt(req acp.PromptRequest) (func(context.Context) (*acp.PromptResult, error), error) {
@@ -71,6 +106,8 @@ func (f *fakeAgent) StartPrompt(req acp.PromptRequest) (func(context.Context) (*
 	f.wire = append(f.wire, "prompt "+req.Prompt[0].Text.Text)
 	f.prompt = req.Prompt
 	f.prompts = append(f.prompts, req.Prompt[0].Text.Text)
+	f.history = append(f.history, acp.SessionUpdate{SessionUpdate: "user_message_chunk", UserMessageChunk: &acp.ContentChunk{
+		MessageID: acp.MessageID(fmt.Sprintf("u%d", len(f.prompts))), Content: req.Prompt[0]}})
 	gate := f.gate
 	f.mu.Unlock()
 	return func(context.Context) (*acp.PromptResult, error) { return f.turn(req, gate) }, nil
@@ -79,6 +116,9 @@ func (f *fakeAgent) StartPrompt(req acp.PromptRequest) (func(context.Context) (*
 func (f *fakeAgent) turn(req acp.PromptRequest, gate chan struct{}) (*acp.PromptResult, error) {
 	for _, u := range f.updates {
 		f.h.SessionUpdate(acp.SessionNotification{SessionID: req.SessionID, Update: u})
+		f.mu.Lock()
+		f.history = append(f.history, u)
+		f.mu.Unlock()
 	}
 	stop := acp.StopReasonEndTurn
 	if gate != nil {
@@ -102,7 +142,11 @@ func (f *fakeAgent) Stop(time.Duration) error {
 	return f.Close()
 }
 
-func (f *fakeAgent) Done() <-chan struct{} { return nil }
+func (f *fakeAgent) Done() <-chan struct{} {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.done
+}
 
 func (f *fakeAgent) Cancel(acp.CancelNotification) error {
 	f.mu.Lock()
@@ -141,7 +185,7 @@ func (f *fakeAgent) CanFork() bool { return true }
 
 func (f *fakeAgent) ForkSession(_ context.Context, req acp.ForkSessionRequest) (*acp.ForkSessionResponse, error) {
 	f.forkMeta = req.Meta
-	return &acp.ForkSessionResponse{SessionID: "fork1"}, nil
+	return &acp.ForkSessionResponse{SessionID: "fork1", ConfigOptions: f.session.ConfigOptions, Modes: f.session.Modes}, nil
 }
 
 func (f *fakeAgent) CloseSession(context.Context, acp.CloseSessionRequest) error { return nil }

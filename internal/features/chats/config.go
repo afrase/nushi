@@ -167,11 +167,19 @@ func (c *chat) setConfig(ctx context.Context, agent Agent, sid, id, value string
 }
 
 // configChangedLocked publishes the chat's options, and stores its mode once
-// the chat is stored.
+// the chat is stored. Only a change the agent reports or the user makes is
+// the chat's mode: a new session's default isn't.
 func (c *chat) configChangedLocked() {
 	c.emitLocked(model.Event{ChatID: c.id, Config: slices.Clone(c.config)})
 	if c.session.ID != "" {
-		c.saveLocked(nil)
+		c.saveLocked(c.modeLocked)
+	}
+}
+
+// modeLocked sets a session's mode to the chat's mode option's.
+func (c *chat) modeLocked(s *model.Session) {
+	if i := modeIndex(c.config); i >= 0 {
+		s.Mode = c.config[i].Current
 	}
 }
 

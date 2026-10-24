@@ -6,6 +6,7 @@
 package claudehistory
 
 import (
+	"bytes"
 	"cmp"
 	"errors"
 	"fmt"
@@ -31,22 +32,19 @@ func Projects() (string, error) {
 // history into folder to's, and returns a function that removes the copy
 // again. The original stays. When both folders have the same history
 // folder there is nothing to copy (or remove); a transcript already in to's
-// history is never replaced.
+// history is never replaced, unless it is the start of this one: a copy a
+// move left when the daemon died before removing it.
 func Copy(projects, id, from, to string) (remove func() error, err error) {
 	none := func() error { return nil }
-	if id == "" || strings.ContainsAny(id, `/\`) || strings.HasPrefix(id, ".") {
-		return nil, fmt.Errorf("%q is not a session id", id)
-	}
-	src := filepath.Join(projects, dirName(from), id+".jsonl")
-	dst := filepath.Join(projects, dirName(to), id+".jsonl")
-	if src == dst {
-		return none, nil
+	src, dst, err := paths(projects, id, from, to)
+	if err != nil || src == dst {
+		return none, err
 	}
 	b, err := os.ReadFile(src)
 	if err != nil {
 		return nil, fmt.Errorf("Claude's history of the session isn't where Nushi looks for it: %w", err)
 	}
-	if _, err := os.Stat(dst); !errors.Is(err, fs.ErrNotExist) {
+	if there, err := os.ReadFile(dst); !errors.Is(err, fs.ErrNotExist) && (err != nil || !bytes.HasPrefix(b, there)) {
 		return nil, fmt.Errorf("Claude's history of %s already has session %s", to, id)
 	}
 	if err := os.MkdirAll(filepath.Dir(dst), 0o700); err != nil {
@@ -60,6 +58,45 @@ func Copy(projects, id, from, to string) (remove func() error, err error) {
 		return nil, err
 	}
 	return func() error { return os.Remove(dst) }, nil
+}
+
+// Move moves session id's transcript (and its folder, <id>/) from folder
+// from's history into folder to's. One already in to's history that holds
+// all of it stays, and the old one goes; nothing to move is no error.
+func Move(projects, id, from, to string) error {
+	src, dst, err := paths(projects, id, from, to)
+	if err != nil || src == dst {
+		return err
+	}
+	old, err := os.ReadFile(src)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if there, err := os.ReadFile(dst); err == nil && !bytes.HasPrefix(there, old) {
+		return fmt.Errorf("Claude's history of %s has another session %s", to, id)
+	} else if err == nil {
+		return os.Remove(src) // a copy made before, which went on since
+	}
+	if err := os.MkdirAll(filepath.Dir(dst), 0o700); err != nil {
+		return err
+	}
+	dir := strings.TrimSuffix(src, ".jsonl")
+	if _, err := os.Stat(strings.TrimSuffix(dst, ".jsonl")); errors.Is(err, fs.ErrNotExist) {
+		os.Rename(dir, strings.TrimSuffix(dst, ".jsonl")) // when it has one
+	}
+	return os.Rename(src, dst)
+}
+
+// paths returns where session id's transcript is in folder from's history
+// and in folder to's.
+func paths(projects, id, from, to string) (src, dst string, err error) {
+	if id == "" || strings.ContainsAny(id, `/\`) || strings.HasPrefix(id, ".") {
+		return "", "", fmt.Errorf("%q is not a session id", id)
+	}
+	return filepath.Join(projects, dirName(from), id+".jsonl"), filepath.Join(projects, dirName(to), id+".jsonl"), nil
 }
 
 // Has reports whether Claude keeps session id's transcript in folder's

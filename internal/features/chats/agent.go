@@ -107,7 +107,7 @@ func initialize(ctx context.Context, launch Launch, h acp.Handler, meta map[stri
 // What the agent sends from then on is live, not a replay (kept).
 func (s *Service) useLocked(c *chat, o opened) {
 	c.agent, c.canFork, c.steer, c.canImage, c.sid, c.config = o.agent, o.agent.CanFork(), o.agent.CanSteer(), o.images, o.sid, o.config
-	c.forkAt, c.held, c.kept = o.forkAt, false, false
+	c.forkAt, c.held, c.kept, c.ownTurn = o.forkAt, false, false, false
 	c.emitLocked(model.Event{ChatID: c.id, Config: slices.Clone(c.config)})
 	go s.watch(c, o.agent)
 }
@@ -124,17 +124,27 @@ func (s *Service) watch(c *chat, agent Agent) {
 		return
 	}
 	c.agent, c.kept = nil, true
-	for i, it := range c.items { // they won't finish now
-		if it.Kind == model.ToolCall && (it.Status == "pending" || it.Status == "in_progress") {
+	c.orphanLocked()
+	c.noticeLocked("error", "The agent quit unexpectedly. Your next message reopens the chat.")
+	c.statusChangedLocked()
+	c.mu.Unlock()
+	s.discard(c, s.dropSides(c))
+}
+
+// orphanLocked fails what can't finish once the agent that ran it is gone:
+// tool calls still pending or running (also as a replay brings them back,
+// when the agent died before their results), and subagents running in the
+// background.
+func (c *chat) orphanLocked() {
+	c.ownTurn = false
+	for i, it := range c.items {
+		running := it.Status == "pending" || it.Status == "in_progress" || it.Subagent != nil && it.Subagent.State == "running"
+		if it.Kind == model.ToolCall && running {
 			c.items[i].Status = "failed"
 			c.subagentLocked(&c.items[i])
 			c.publishLocked(c.items[i])
 		}
 	}
-	c.noticeLocked("error", "The agent quit unexpectedly. Your next message reopens the chat.")
-	c.statusChangedLocked()
-	c.mu.Unlock()
-	s.discard(c, s.dropSides(c))
 }
 
 // disconnect stops the chat's agent, gently (Agent.Stop), and not under
@@ -144,6 +154,7 @@ func (c *chat) disconnect() {
 	c.mu.Lock()
 	agent := c.agent
 	c.agent, c.kept = nil, len(c.items) > 0
+	c.orphanLocked()
 	c.mu.Unlock()
 	if agent != nil {
 		agent.Stop(stopGrace)

@@ -83,8 +83,8 @@ func TestMoveAChat(t *testing.T) {
 	if moved.Folder != repo || moved.SessionId == scratch.SessionId || len(copies) != 0 {
 		t.Fatalf("after the first move: %v (was %v), copies %v", moved, scratch, copies)
 	}
-	if history.Has(scratch.SessionId) {
-		t.Error("the empty session is still in the agent's history")
+	if !history.Deleted(scratch.SessionId) {
+		t.Error("the empty session wasn't deleted from the agent's history")
 	}
 	if got := ask(id, "pwd"); got != "cwd: "+repo {
 		t.Fatalf("reply = %q", got)

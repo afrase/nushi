@@ -98,6 +98,7 @@ type chat struct {
 	stopping  bool                            // its agent is being stopped: nothing more goes to it
 	held      bool                            // the last turn was stopped or failed: the queue waits for the next
 	steering  bool                            // a steering worker hands the queue to the running turn
+	ownTurn   bool                            // the agent works on its own, outside a turn of Nushi's
 	kept      bool                            // the transcript outlived its agent: reopening doesn't replay into it
 	waiting   map[string]chan<- string        // permission prompts by item id, for the picked option
 	questions map[string]chan<- []model.Field // questions by item id, for the answer (nil: declined)
@@ -190,7 +191,7 @@ func (s *Service) Start(ctx context.Context, folder string, worktree bool) (stri
 		log.Printf("chat %s: starting mode: %v", c.id, err) // the chat keeps the agent's default
 	}
 	c.mu.Lock()
-	c.saveLocked(nil)
+	c.saveLocked(c.modeLocked)
 	c.storeLocked()
 	c.mu.Unlock()
 	s.mu.Lock()
@@ -256,15 +257,12 @@ func (s *Service) Status(chatID string) model.Status {
 	return c.statusLocked()
 }
 
-// saveLocked applies change (if any) to the chat's session, keeps its mode
-// in step with the chat's mode option, and stores it if anything changed.
+// saveLocked applies change (if any) to the chat's session, and stores it
+// if anything changed.
 func (c *chat) saveLocked(change func(*model.Session)) {
 	next := c.session
 	if change != nil {
 		change(&next)
-	}
-	if i := modeIndex(c.config); i >= 0 {
-		next.Mode = c.config[i].Current
 	}
 	if !reflect.DeepEqual(next, c.session) {
 		c.session = next

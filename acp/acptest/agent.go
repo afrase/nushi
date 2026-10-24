@@ -31,10 +31,20 @@ import (
 	"time"
 )
 
-// History holds every session's updates, for session/load.
+// History holds every session's updates, for session/load, and the
+// sessions deleted.
 type History struct {
 	mu       sync.Mutex
 	sessions map[string][]json.RawMessage
+	deleted  map[string]bool
+}
+
+// Deleted reports whether session/delete was asked for session (one never
+// kept, without a message, included).
+func (h *History) Deleted(session string) bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.deleted[session]
 }
 
 func (h *History) add(session string, update any) {
@@ -194,6 +204,10 @@ func (a *Agent) answer(f frame) {
 	case "session/delete":
 		a.History.mu.Lock()
 		delete(a.History.sessions, p.SessionID)
+		if a.History.deleted == nil {
+			a.History.deleted = map[string]bool{}
+		}
+		a.History.deleted[p.SessionID] = true
 		a.History.mu.Unlock()
 		result = map[string]any{}
 	case "session/prompt":
