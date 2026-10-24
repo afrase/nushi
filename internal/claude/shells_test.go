@@ -27,9 +27,9 @@ func TestBackgroundShells(t *testing.T) {
 		t.Error("a command moved to the background")
 	}
 	for _, it := range []model.Item{
-		{Tool: "Read", TaskID: "b1", Text: started},           // a README that says it
-		{Tool: "Bash", Text: started},                         // a foreground command that prints it
-		{Tool: "Bash", TaskID: "b9", Text: started},           // another task's file
+		{Tool: "Read", TaskID: "b1", Text: started}, // a README that says it
+		{Tool: "Bash", Text: started},               // a foreground command that prints it
+		{Tool: "Bash", TaskID: "b9", Text: started}, // another task's file
 		{Tool: "Bash", TaskID: "b1", Text: "Command running in background with ID: b1. Output is being written to: /etc/b1.output."},
 	} {
 		if _, _, ok := Shell(it); ok {

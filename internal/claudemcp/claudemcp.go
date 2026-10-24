@@ -59,7 +59,23 @@ type servers map[string]json.RawMessage
 
 // Servers returns the servers Claude's files give folder: user, local and
 // project scope, each sorted by name, with their config as Claude has it.
-func (Claude) Servers(folder string) ([]model.MCPServer, error) {
+// A .mcp.json that can't be read is left out (see Read).
+func (c Claude) Servers(folder string) ([]model.MCPServer, error) {
+	servers, unread, err := c.Read(folder)
+	for _, u := range unread {
+		log.Printf("leaving out %v", u.Err) // as Claude does: the other files' servers still count
+	}
+	return servers, err
+}
+
+// Unread is a .mcp.json that is there but couldn't be read or parsed.
+type Unread struct {
+	Path string
+	Err  error
+}
+
+// Read is Servers, with the .mcp.json files it left out.
+func (Claude) Read(folder string) (out []model.MCPServer, unread []Unread, err error) {
 	var cfg struct {
 		MCPServers servers `json:"mcpServers"`
 		Projects   map[string]struct {
@@ -69,9 +85,9 @@ func (Claude) Servers(folder string) ([]model.MCPServer, error) {
 	}
 	file := ConfigFile()
 	if err := readJSON(file, &cfg); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	out := add(nil, cfg.MCPServers, "user", file)
+	out = add(nil, cfg.MCPServers, "user", file)
 	key := project(folder)
 	out = add(out, cfg.Projects[key].MCPServers, "local", key)
 	off, approved := rejected(folder, cfg.Projects[key].Disabled)
@@ -82,7 +98,7 @@ func (Claude) Servers(folder string) ([]model.MCPServer, error) {
 			MCPServers servers `json:"mcpServers"`
 		}
 		if err := readJSON(path, &mcp); err != nil {
-			log.Printf("leaving out %v", err) // as Claude does: the other files' servers still count
+			unread = append(unread, Unread{path, err})
 		}
 		for name := range mcp.MCPServers {
 			if seen[name] {
@@ -97,7 +113,7 @@ func (Claude) Servers(folder string) ([]model.MCPServer, error) {
 			out[i].Approved = slices.Contains(approved, out[i].Name)
 		}
 		if dir == filepath.Dir(dir) {
-			return out, nil
+			return out, unread, nil
 		}
 	}
 }
