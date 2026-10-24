@@ -114,6 +114,30 @@ func TestOneSteeringWorkerThatRespectsAStop(t *testing.T) {
 	}
 }
 
+// The daemon stopping cancels a running turn, so the agent ends it (and the
+// command it runs) and records it, before the agent is stopped.
+func TestCloseEndsTheTurnFirst(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.gate = make(chan struct{})
+	svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle)
+	eventually(t, c, func() bool { return len(agent.onWire()) == 1 })
+	svc.Close()
+	if got := agent.onWire(); !reflect.DeepEqual(got, []string{"prompt one", "cancel", "stop"}) {
+		t.Errorf("the agent got %q", got)
+	}
+}
+
+func TestAMessageTooLargeIsRefused(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	big := model.Image{MimeType: "image/png", Data: make([]byte, acp.MaxFrame*3/4)}
+	if err := svc.Prompt(c.id, model.Message{Text: "look", Images: []model.Image{big}}, SendIdle); err == nil {
+		t.Error("a message past what the agent takes was sent")
+	}
+	if got, _ := agent.texts(); len(got) > 0 || len(c.items) > 0 {
+		t.Errorf("prompts %q, items %v", got, c.items)
+	}
+}
+
 func TestAFailedDeleteLeavesTheChatAsItWas(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	sessions := svc.sessions.(*memSessions)

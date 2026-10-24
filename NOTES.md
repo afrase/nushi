@@ -126,6 +126,7 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 73. Message a subagent from its pane | 7281 | 867 | 13322 | 682 |
 | (Context card: one line over the bar) | 7281 | 867 | 13372 | 682 |
 | 74. Hostile repositories and git (D2–D4, D9, D20–D25, D41, D57) | 7458 | 867 | 13411 | 682 |
+| 75. Processes and throwaway sessions (D1, D10, D12, D13, D27, D29, D45, D54, D60, D61) | 7604 | 929 | 13411 | 682 |
 
 Steps over the ~500-line tripwire (code and tests, without generated code): 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 and this milestone removed more than they added.
 
@@ -170,6 +171,7 @@ What the code depends on, and how the adapter behaves. Everything Nushi does abo
 
 Open questions; what's settled is in `docs/adr/` or in the code.
 
+- New in Q: stopping the daemon cancels running turns and gives each agent up to 5 s to end it, then closes its input (claude-agent-acp then ends its sessions) and kills it after 5 s more; Archive, Delete, Reload and Move stop agents the same way. Archiving keeps the queued messages, held: they wait after Unarchive until you send something or the next turn ends. Side chats end when no app has followed the daemon for 2 minutes. A message over about 30 MB (images in base64) is refused before it joins the transcript.
 - New in Q: a worktree's ignored files (`.env`, `node_modules`, build output) count as work that removing it loses: a fresh chat that leaves it keeps it, and Delete asks to force, naming how many. Changes stops reading file contents after 32 MB of text in one view (the rest say so); a nested repository and a submodule show as not shown, not as an error. A worktree whose base branch is gone counts from the commit it started from (worktrees made before Q: from the default branch).
 
 - New in P: a message for a subagent goes to the main session as a prompt (steered or queued like any) asking Claude to pass it on unchanged with SendMessage ([`claude.Relay`](internal/claude/relay.go)); the transcript shows only the message, as "You → Explore, through Claude", also after a reload (the prompt is read back). Claude's history holds the whole wrapped prompt, so `claude --resume` in a terminal shows it. A subagent with steps after its last report runs again ("running").

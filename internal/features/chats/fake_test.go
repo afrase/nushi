@@ -3,6 +3,7 @@ package chats
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/afrase/nushi/acp"
 	"github.com/afrase/nushi/internal/claude"
@@ -93,6 +94,13 @@ func (f *fakeAgent) turn(req acp.PromptRequest, gate chan struct{}) (*acp.Prompt
 }
 
 func (f *fakeAgent) Close() error { return nil }
+
+func (f *fakeAgent) Stop(time.Duration) error {
+	f.mu.Lock()
+	f.wire = append(f.wire, "stop")
+	f.mu.Unlock()
+	return f.Close()
+}
 
 func (f *fakeAgent) Done() <-chan struct{} { return nil }
 

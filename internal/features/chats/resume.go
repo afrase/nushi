@@ -103,13 +103,15 @@ func (s *Service) load(ctx context.Context, c *chat) error {
 		return err
 	}
 	c.mu.Lock()
+	held := c.held // a queue held before (an archived chat's) stays held
 	s.useLocked(c, o)
-	c.kept = false
+	c.held = held
 	if o.sid != sid {
 		c.saveLocked(func(s *model.Session) { s.SessionID = o.sid })
 	}
-	mode := c.session.Mode
+	mode, throwaway := c.session.Mode, slices.Clone(c.session.Throwaway)
 	c.mu.Unlock()
+	go s.discard(c, throwaway) // left by an agent that stopped before it could
 	return c.startMode(ctx, o.agent, o.sid, mode)
 }
 

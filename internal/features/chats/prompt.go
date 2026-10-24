@@ -30,6 +30,9 @@ const (
 // arrives as events. A chat whose agent isn't running is reopened, and the
 // message waits in the queue until it is.
 func (s *Service) Prompt(chatID string, m model.Message, how Send) error {
+	if n := size(m); n > acp.MaxFrame-64<<10 {
+		return fmt.Errorf("the message is too large to send: %d MB with its images, and the agent takes about %d MB", n>>20, acp.MaxFrame>>20)
+	}
 	c, err := s.chat(chatID)
 	if err != nil {
 		return err
@@ -68,6 +71,9 @@ func (s *Service) Prompt(chatID string, m model.Message, how Send) error {
 		m.ID = rand.Text()
 		c.queue = append(c.queue, m)
 		c.queueChangedLocked()
+		if c.reopeningLocked() {
+			c.held = false // a new message is the held queue's chance
+		}
 	case c.busy:
 		return errors.New("the agent is still working on the last prompt")
 	case len(m.Images) > 0 && !c.canImage:
@@ -135,6 +141,16 @@ func (c *chat) blocks(m model.Message) []acp.ContentBlock {
 			MimeType: img.MimeType, Data: base64.StdEncoding.EncodeToString(img.Data)}})
 	}
 	return prompt
+}
+
+// size is about how much of a prompt's frame a message takes: its text, and
+// its images in base64.
+func size(m model.Message) int {
+	n := len(m.Text)
+	for _, img := range m.Images {
+		n += base64.StdEncoding.EncodedLen(len(img.Data))
+	}
+	return n
 }
 
 // title makes a chat's title from its first prompt: the first line, cut short.

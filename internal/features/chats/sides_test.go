@@ -2,6 +2,7 @@ package chats
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/afrase/nushi/acp"
@@ -39,8 +40,15 @@ func TestSideChatKeepsToItself(t *testing.T) {
 			t.Errorf("the side chat was stored")
 		}
 	}
+	if p := svc.chats[id]; !reflect.DeepEqual(p.session.Throwaway, []string{"fork1"}) {
+		t.Errorf("the chat doesn't keep its side chat's session until it's deleted: %v", p.session.Throwaway)
+	}
+	sideChat := svc.chats[side]
 	if err := svc.CloseSide(side); err != nil {
 		t.Fatal(err)
+	}
+	if sideChat.agent != nil {
+		t.Error("a closed side chat keeps the agent: what follows it (a background command) goes on")
 	}
 	if _, err := svc.Get(side); err == nil {
 		t.Errorf("the side chat is still there after CloseSide")
