@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/diff_box.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/review.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
 
@@ -37,5 +38,46 @@ void main() {
     await tester.pumpWidget(box(change));
     expect(find.textContaining('Too long to diff'), findsOneWidget);
     expect(lineCounts(change), (1, 0));
+  });
+
+  testWidgets('the same file in another view shows that view\'s comments', (
+    tester,
+  ) async {
+    final change = FileChange(
+      path: 'f.txt',
+      oldText: 'a\nb\n',
+      newText: 'a\nB\n',
+    );
+    setComments('c', [
+      ReviewComment(
+        id: '1',
+        where: 'uncommitted',
+        path: 'f.txt',
+        old: false,
+        start: 2,
+        end: 2,
+        quote: 'B',
+        text: 'why?',
+      ),
+    ]);
+    addTearDown(() => setComments('c', []));
+    Widget view(String where) => MaterialApp(
+      theme: const NushiTheme(Tokens.dark).toThemeData(),
+      home: Scaffold(
+        body: DiffBox(
+          change,
+          key: const ValueKey('f.txt'),
+          fit: false,
+          review: (chat: 'c', where: where),
+        ),
+      ),
+    );
+    await tester.pumpWidget(view('uncommitted'));
+    await tester.pump();
+    expect(find.text('why?'), findsOneWidget);
+    await tester.pumpWidget(view('branch'));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(find.text('why?'), findsNothing);
   });
 }

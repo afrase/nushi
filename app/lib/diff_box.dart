@@ -71,7 +71,15 @@ class _DiffBoxState extends State<DiffBox> {
   @override
   void didUpdateWidget(DiffBox old) {
     super.didUpdateWidget(old);
-    if (old.change != widget.change) _build();
+    if (old.change != widget.change) {
+      _build();
+    } else if (old.review != widget.review) {
+      // Another view of the same file (another commit picked): its own
+      // comments, and no box half written for the last one.
+      _draft = _editing = null;
+      _comment.clear();
+      _showComments();
+    }
   }
 
   /// Diffs the change (once per change), then makes the view.
@@ -255,7 +263,8 @@ class _DiffBoxState extends State<DiffBox> {
         onCancel: _closeDraft,
       );
     }
-    final c = _comments.firstWhere((c) => c.id == spec.id);
+    final c = _comments.where((c) => c.id == spec.id).firstOrNull;
+    if (c == null) return const SizedBox.shrink(); // gone meanwhile
     return CommentCard(
       c,
       onEdit: () {
