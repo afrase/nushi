@@ -7,11 +7,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os/exec"
 	"strings"
 
 	"github.com/afrase/nushi/acp"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/npx"
 )
 
 // adapter is the pinned Codex ACP adapter; it brings its own Codex.
@@ -21,8 +21,10 @@ const adapter = "@agentclientprotocol/codex-acp@2.2.2"
 // daemon's own folder), its stderr to the daemon log. Codex reads its own
 // config and login ($CODEX_HOME, else ~/.codex); Nushi never does.
 func Start(dir string, h acp.Handler) (*acp.Client, error) {
-	cmd := exec.Command("npx", "--yes", adapter)
-	cmd.Dir = dir
+	cmd, err := npx.Command(dir, []string{adapter}, "codex-acp")
+	if err != nil {
+		return nil, err
+	}
 	cmd.Stderr = log.Writer()
 	return acp.Start(cmd, h)
 }

@@ -9,13 +9,13 @@ import (
 	"cmp"
 	"encoding/json"
 	"log"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/afrase/nushi/acp"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/npx"
 )
 
 // adapter is the pinned Claude Code ACP adapter.
@@ -26,8 +26,10 @@ const adapter = "@agentclientprotocol/claude-agent-acp@0.94.0"
 // folder reaches the agent only as the session's cwd. Its stderr goes to
 // the daemon log.
 func Start(dir string, h acp.Handler) (*acp.Client, error) {
-	cmd := exec.Command("npx", "--yes", adapter)
-	cmd.Dir = dir
+	cmd, err := npx.Command(dir, []string{adapter}, "claude-agent-acp")
+	if err != nil {
+		return nil, err
+	}
 	cmd.Stderr = log.Writer()
 	return acp.Start(cmd, h)
 }
