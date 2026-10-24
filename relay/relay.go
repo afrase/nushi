@@ -35,6 +35,7 @@ type Limits struct {
 	NewBurst   float64
 	Total      int           // connections in all
 	IPHeader   string        // behind a reverse proxy, the header with the client's address (such as Fly-Client-IP)
+	IPHops     int           // the proxies that append to IPHeader: the address is this many from its right (at least 1)
 	HTTPIdle   time.Duration // an HTTP connection that isn't a WebSocket waits this long for its next request
 }
 

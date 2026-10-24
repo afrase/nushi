@@ -93,6 +93,6 @@ app = "my-nushi-relay"
     handlers = ["tls", "http"]
 ```
 
-`-ip-header` makes the per-address caps count Fly's client address rather than its proxy's. Fly's edge then sees what the relay sees (ids, timing, sizes, addresses), and may log requests. For TLS of the relay's own, give the port no handlers, run `-host` with `-cert-cache` on a volume, and copy `/etc/ssl/certs/ca-certificates.crt` into the image (autocert talks to Let's Encrypt over HTTPS).
+`-ip-header` makes the per-address caps count Fly's client address rather than its proxy's. Behind a proxy of your own, name a header it sets (nginx's `X-Real-IP $remote_addr`) or one it appends to (`X-Forwarded-For` with `$proxy_add_x_forwarded_for`, HAProxy's `option forwardfor`): the relay takes the last entry, the one the proxy added, since the client writes what comes before; with several proxies in a row, `-ip-hops` says how many append. Never a header the proxy passes on as the client sent it. Fly's edge then sees what the relay sees (ids, timing, sizes, addresses), and may log requests. For TLS of the relay's own, give the port no handlers, run `-host` with `-cert-cache` on a volume, and copy `/etc/ssl/certs/ca-certificates.crt` into the image (autocert talks to Let's Encrypt over HTTPS).
 
 Decisions are in [`docs/adr/`](docs/adr/README.md).

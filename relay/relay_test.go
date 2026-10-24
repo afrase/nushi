@@ -7,6 +7,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -615,5 +616,37 @@ func TestIdleHTTPConnections(t *testing.T) {
 		t.Fatal("refused once the idle ones went")
 	} else {
 		c.Close()
+	}
+}
+
+// Behind a proxy that appends to X-Forwarded-For, what the client wrote
+// there doesn't count: the address is the one the proxies added.
+func TestForwardedForFromTheRight(t *testing.T) {
+	for _, hops := range []int{1, 2} {
+		lim := Defaults
+		lim.IPHeader = "X-Forwarded-For"
+		lim.IPHops = hops
+		lim.PerIP = 2
+		url := start(t, lim)
+		var open []*websocket.Conn
+		for i := range 3 {
+			h := fmt.Sprintf("198.51.100.%d, 203.0.113.7", i) // a new made-up address each time, then the proxy's entry
+			if hops == 2 {
+				h += ", 192.0.2.99" // and the next proxy's
+			}
+			ws, resp, err := websocket.DefaultDialer.Dial(url+"/v1/dial/"+newID(), http.Header{"X-Forwarded-For": {h}})
+			if i < 2 && err != nil {
+				t.Fatalf("hops %d: refused under the cap: %v", hops, err)
+			}
+			if i == 2 && (err == nil || resp.StatusCode != http.StatusServiceUnavailable) {
+				t.Fatalf("hops %d: made-up addresses got past the cap", hops)
+			}
+			if ws != nil {
+				open = append(open, ws)
+			}
+		}
+		for _, ws := range open {
+			ws.Close()
+		}
 	}
 }
