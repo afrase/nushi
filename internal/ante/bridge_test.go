@@ -2,10 +2,15 @@ package ante
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"io"
+	"maps"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -222,7 +227,7 @@ func TestASessionThroughTheBridge(t *testing.T) {
 func TestFlatten(t *testing.T) {
 	got, err := flatten([]acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "look at"}},
 		{Type: "resource_link", ResourceLink: &acp.ResourceLink{URI: "file:///a%20b/c.go", Name: "c.go"}},
-		{Type: "text", Text: &acp.TextContent{Text: "please"}}})
+		{Type: "text", Text: &acp.TextContent{Text: "please"}}}, nil)
 	if err != nil || got != `look at @/a\ b/c.go please` {
 		t.Errorf("flatten = %q, %v", got, err)
 	}
@@ -245,5 +250,76 @@ func TestIDs(t *testing.T) {
 	id := "ses_" + ulid()
 	if !isSessionID(id) || isSessionID("ses_../../etc") || isSessionID("ses_"+strings.Repeat("U", 26)) {
 		t.Errorf("isSessionID(%s)", id)
+	}
+}
+
+// A Write's old text is read only from a regular file, at most 1 MB, so a
+// path the model names can't block the bridge or fill its memory.
+func TestWritesOldText(t *testing.T) {
+	dir := t.TempDir()
+	small, big, fifo := dir+"/small", dir+"/big", dir+"/fifo"
+	os.WriteFile(small, []byte("before"), 0o600)
+	os.WriteFile(big, make([]byte, maxOld+1), 0o600)
+	if err := syscall.Mkfifo(fifo, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	os.Symlink(small, dir+"/link")
+	s := &session{cwd: dir}
+	done := make(chan map[string]oldText)
+	go func() {
+		olds := map[string]oldText{}
+		for _, p := range []string{"small", "big", "fifo", "/dev/zero", "link", "new"} {
+			ev := event{Name: "ToolStart", Payload: json.RawMessage(`{"id":"` + p + `","name":"Write","args":{"file_path":"` + p + `","content":"x"}}`)}
+			maps.Copy(olds, s.readOlds(ev))
+		}
+		done <- olds
+	}()
+	select {
+	case olds := <-done:
+		if olds["small"].text != "before" || olds["new"] != (oldText{}) {
+			t.Errorf("olds: %+v", olds)
+		}
+		for _, p := range []string{"big", "fifo", "/dev/zero", "link"} {
+			if olds[p].text != "" || olds[p].note == "" {
+				t.Errorf("%s: %+v, want no text and a note", p, olds[p])
+			}
+		}
+		call := s.toolCall(toolUse{ID: "big", Name: "Write", Args: json.RawMessage(`{"file_path":"big","content":"x"}`)}, "pending", olds)
+		if len(call.Content) != 2 || !strings.Contains(call.Content[1].Content.Content.Text.Text, "over 1 MB") {
+			t.Errorf("the diff doesn't say why its old text is missing: %+v", call.Content)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("reading the old texts blocked")
+	}
+}
+
+// Only Ante's shell's command is a call's whole title: any other tool's
+// title starts with its name, a "command" argument or not.
+func TestToolTitles(t *testing.T) {
+	s := &session{cwd: "/work"}
+	for name, want := range map[string]string{"Bash": "ls", "mcp__x__run": "mcp__x__run ls"} {
+		call := s.toolCall(toolUse{ID: "c", Name: name, Args: json.RawMessage(`{"command":"ls"}`)}, "pending", nil)
+		if call.Title != want {
+			t.Errorf("%s's title = %q, want %q", name, call.Title, want)
+		}
+	}
+}
+
+// A prompt's image goes to a new file in the bridge's own folder.
+func TestImagesInAFolderOfTheBridges(t *testing.T) {
+	b := &bridge{}
+	png := base64.StdEncoding.EncodeToString([]byte("png"))
+	text, err := flatten([]acp.ContentBlock{{Type: "image", Image: &acp.ImageContent{Data: png, MimeType: "image/png"}}}, b.images)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(b.imgDir)
+	path := strings.TrimPrefix(text, "@")
+	fi, err := os.Lstat(filepath.Dir(path))
+	if err != nil || filepath.Dir(path) != b.imgDir || fi.Mode().Perm() != 0o700 || strings.Contains(path, "ante-paste-cache") {
+		t.Errorf("image at %s (%v, %v)", path, fi, err)
+	}
+	if got, _ := os.ReadFile(path); string(got) != "png" {
+		t.Errorf("image holds %q", got)
 	}
 }

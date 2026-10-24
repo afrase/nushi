@@ -130,7 +130,7 @@ func (s *session) replayLocked(ev event) []acp.SessionUpdate {
 	case "AgentMessage", "Thinking":
 		return s.textLocked(ev)
 	case "ToolStart", "ToolEnd":
-		return s.toolLocked(ev, false)
+		return s.toolLocked(ev, nil)
 	}
 	return nil
 }

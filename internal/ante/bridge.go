@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -28,6 +29,10 @@ type bridge struct {
 
 	catOnce sync.Once
 	cat     []provider
+
+	imgOnce sync.Once
+	imgDir  string // the prompts' images, made when the first comes
+	imgErr  error
 
 	mu       sync.Mutex
 	sessions map[string]*session
@@ -56,6 +61,11 @@ func Serve(r io.Reader, w io.Writer, cfg Config) {
 	b.peer.Serve(r)
 	<-b.peer.Done()
 	cancel()
+	defer func() {
+		if b.imgDir != "" {
+			os.RemoveAll(b.imgDir)
+		}
+	}()
 	b.mu.Lock()
 	open := make([]*session, 0, len(b.sessions))
 	for _, s := range b.sessions {
@@ -77,6 +87,12 @@ func (b *bridge) catalog() []provider {
 		}
 	})
 	return b.cat
+}
+
+// images is the bridge's folder for the prompts' images.
+func (b *bridge) images() (string, error) {
+	b.imgOnce.Do(func() { b.imgDir, b.imgErr = os.MkdirTemp("", "nushi-ante-images-") })
+	return b.imgDir, b.imgErr
 }
 
 // update sends the client one of a session's updates.
@@ -157,7 +173,7 @@ func (b *bridge) handle(ctx context.Context, method string, params json.RawMessa
 		if err != nil {
 			return nil, err
 		}
-		text, err := flatten(p.Prompt)
+		text, err := flatten(p.Prompt, b.images)
 		if err != nil {
 			return nil, err
 		}
@@ -185,7 +201,7 @@ func (b *bridge) handle(ctx context.Context, method string, params json.RawMessa
 		if err != nil {
 			return nil, err
 		}
-		text, err := flatten(p.Prompt)
+		text, err := flatten(p.Prompt, b.images)
 		if err != nil {
 			return nil, err
 		}
