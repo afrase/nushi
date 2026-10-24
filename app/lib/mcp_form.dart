@@ -198,11 +198,9 @@ class _FormState extends State<_Form> {
     final mono = theme.code(t.text, size: 12);
     final stdio = _transport == 'stdio';
     final where = switch (_scope) {
-      'user' => 'For you, in every folder (Claude’s own config).',
-      'project' =>
-        'Adds to the repository’s .mcp.json, which is shared with everyone '
-            'on the repo.',
-      _ => 'For you, in ${folderParts(widget.list.folder).$1} only.',
+      'user' => 'Yours, in every folder.',
+      'project' => 'In the repository’s .mcp.json, shared with everyone on it.',
+      _ => 'Yours, in ${folderParts(widget.list.folder).$1} only.',
     };
     Widget label(String text) => Padding(
       padding: const EdgeInsets.only(top: 12, bottom: 4),
@@ -298,8 +296,8 @@ class _FormState extends State<_Form> {
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
                     child: Text(
-                      'Values shown as •••• are kept only if nothing else '
-                      'changes; after any change, type them again.',
+                      'Values shown as •••• stay only if nothing else '
+                      'changes; else type them again.',
                       style: muted,
                     ),
                   ),

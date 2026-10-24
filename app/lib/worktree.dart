@@ -141,9 +141,6 @@ class _NewChatBarState extends State<NewChatBar> with FollowsChanges {
               radius: 10,
             ),
             child: Tap(
-              tooltip: on
-                  ? 'The chat runs in a new worktree; click to go back'
-                  : 'Run the chat in a new worktree of the repository',
               onTap: chat.busy || chat.waiting
                   ? null
                   : () => _switch(context, chat, daemon, !on),
@@ -173,10 +170,9 @@ Future<void> _confirmMove(
   final move = await confirm(
     context,
     'Move to a new worktree?',
-    'The chat goes on in a new worktree of $name, in its .worktrees folder, '
-        'on a new branch nushi/… that starts from the last commit.\n\n'
-        'Uncommitted changes stay where they are: they stay in $name, and the '
-        'worktree starts without them.',
+    'It goes on in a new worktree of $name, on a new branch from the last '
+        'commit. Uncommitted changes stay in $name: the worktree starts '
+        'without them.',
     'Move',
   );
   if (move && context.mounted) {
@@ -219,8 +215,7 @@ class WorktreeChoices extends StatelessWidget {
   }) => WorktreeChoice(
     path: plan.worktree.path,
     removeWorktree: remove,
-    forceWorktree:
-        remove && (plan.state.changed > 0 || plan.state.ignored > 0),
+    forceWorktree: remove && (plan.state.changed > 0 || plan.state.ignored > 0),
     deleteBranch: remove && branch,
     forceBranch: remove && branch && plan.state.commits > 0,
   );
@@ -304,8 +299,7 @@ class WorktreeChoices extends StatelessWidget {
           ),
           if (!remove)
             note(
-              'Only with the worktree: git won’t delete a branch a worktree '
-              'has checked out.',
+              'Only with the worktree: git won’t delete a checked-out branch.',
             )
           else if (st.commits > 0)
             note('$commits that $base doesn’t have would be lost.', warn: true)

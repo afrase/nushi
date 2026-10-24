@@ -256,8 +256,8 @@ class _Archived extends StatelessWidget {
           Expanded(
             child: Text(
               chat.items.isEmpty
-                  ? 'Archived. Unarchive it to bring back its history and keep chatting.'
-                  : 'Archived: read-only. Unarchive it to keep chatting.',
+                  ? 'Archived. Unarchive it to see its history and go on.'
+                  : 'Archived. Unarchive it to go on.',
               style: theme.ui(t.textSecondary),
             ),
           ),
@@ -300,9 +300,7 @@ class _McpChanged extends StatelessWidget {
           ),
           const SizedBox(width: 6),
           Tooltip(
-            message: chat.busy
-                ? 'Once ${chat.agentName} is done'
-                : 'Reopens the chat with the servers as they are now',
+            message: chat.busy ? 'Once ${chat.agentName} is done' : '',
             child: Button(
               label: 'Reload',
               kind: ButtonKind.ghost,

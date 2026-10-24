@@ -168,8 +168,7 @@ class _ComposerState extends State<Composer> {
     } else if (m.relayTo.isNotEmpty && mounted) {
       showError(
         context,
-        'This message was for ${m.relayTo}: send it from its pane for '
-        '${m.relayTo} to get it.',
+        'This message was for ${m.relayTo}: send it from its pane.',
       );
     }
   }
@@ -315,7 +314,7 @@ class _ComposerState extends State<Composer> {
                         ),
                       ],
                       builder: (context, open) => boxButton(
-                        'Mention a file or attach an image',
+                        'Add a file or image',
                         open,
                         Icon(Icons.add, size: 18, color: t.textSecondary),
                       ),
@@ -335,7 +334,7 @@ class _ComposerState extends State<Composer> {
                           decoration: InputDecoration(
                             hintText: !chat.busy
                                 ? widget.hint
-                                : '${chat.agentName} is working: ⏎ queues, ⌘⏎ stops it and sends',
+                                : '⏎ queues it, ⌘⏎ stops ${chat.agentName} and sends',
                             border: InputBorder.none,
                             // One line (18.2) is as tall as the buttons.
                             contentPadding: const EdgeInsets.symmetric(

@@ -96,7 +96,7 @@ const scopes = {
   'user': ('User', 'Yours, in every folder.'),
   'project': (
     'Project',
-    'The repository’s .mcp.json, shared with everyone on the repo.',
+    'The repository’s .mcp.json, shared with everyone on it.',
   ),
   'local': ('Local', 'Yours, in this project only.'),
   'plugin': (

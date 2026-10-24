@@ -77,10 +77,8 @@ class FolderButton extends StatelessWidget {
       final move = await confirm(
         context,
         'Move to ${folderParts(folder).$1}?',
-        'The chat goes on in ${tildePath(folder)}, knowing the conversation '
-            'so far.\n\nIts worktree ${tildePath(wt.path)} and its branch '
-            '${wt.branch} stay, with their work. Delete… on the chat offers '
-            'to remove them.',
+        'Its worktree ${tildePath(wt.path)} and branch ${wt.branch} stay, '
+            'with their work; Delete offers to remove them.',
         'Move',
       );
       if (!move || !context.mounted) return;
@@ -106,8 +104,8 @@ class FolderButton extends StatelessWidget {
         tooltip: chat.archived
             ? chat.home
             : enabled
-            ? 'Change the folder'
-            : 'The folder can change once the agent is done',
+            ? ''
+            : 'Once the agent is done',
         onTap: enabled ? open : null,
         padding: stacked
             ? const EdgeInsets.only(left: 6)

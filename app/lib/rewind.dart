@@ -23,10 +23,9 @@ Future<void> rewind(
   if (!await confirm(
         context,
         'Rewind to here?',
-        'The conversation goes back to just before this message, and '
-            '${chat.agentName} forgets everything from it on. The message goes '
-            'back in the box to edit.\n\nFiles aren’t rewound: changes '
-            '${chat.agentName} made since then stay.',
+        '${chat.agentName} forgets everything from this message on; the '
+            'message goes back in the box.\n\nFiles aren’t rewound: '
+            '${chat.agentName}’s changes since then stay.',
         'Rewind',
       ) ||
       !context.mounted) {

@@ -49,11 +49,9 @@ class TrustCard extends StatelessWidget {
                   ],
                 ),
                 Text(
-                  '${tildePath(ask.folder)} has Claude run these on its own, '
-                  'without asking, as soon as a chat starts there. Claude '
-                  "hasn't been told to trust this folder (claude in a "
-                  'terminal shows its trust dialog), so look before you '
-                  'start.',
+                  'Claude runs these without asking as soon as a chat starts '
+                  'in ${tildePath(ask.folder)}, and it hasn’t been told to '
+                  'trust the folder. Look before you start.',
                   style: theme.ui(t.textSecondary, size: 12),
                 ),
                 for (final MapEntry(key: file, value: runs) in byFile.entries)

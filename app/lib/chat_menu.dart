@@ -165,16 +165,15 @@ class _DeleteDialogState extends State<_DeleteDialog> {
               if (p.deletesHistory) ...[
                 line(
                   p.sessions.length == 1
-                      ? '• $name’s history of the chat, so claude --resume '
-                            'no longer finds it:'
+                      ? '• $name’s history of the chat (claude --resume '
+                            'won’t find it):'
                       : '• $name’s history of its ${p.sessions.length} '
-                            'sessions (it moved), so claude --resume no '
-                            'longer finds them:',
+                            'sessions (claude --resume won’t find them):',
                 ),
                 ...sessions(p),
               ],
               if (p.scratchFolder.isNotEmpty) ...[
-                line('• Its scratch folder, with any files made there:'),
+                line('• Its scratch folder and its files:'),
                 line(tildePath(p.scratchFolder), mono: true),
               ],
               line('• Nushi’s record of the chat.'),

@@ -42,7 +42,7 @@ class QueuePills extends StatelessWidget {
                   Flexible(
                     child: Tap(
                       onTap: () => onEdit(m),
-                      tooltip: 'Edit (it goes back in the box)',
+                      tooltip: 'Edit',
                       radius: 14,
                       padding: const EdgeInsets.fromLTRB(10, 4, 4, 4),
                       child: Row(

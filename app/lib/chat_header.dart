@@ -119,7 +119,7 @@ class _ChatHeaderState extends State<ChatHeader> {
           IconTap(
             Icons.view_sidebar_outlined,
             tooltip: widget.onPanel == null
-                ? 'The window is too narrow for the details panel'
+                ? 'The window is too narrow'
                 : widget.panel
                 ? 'Hide details'
                 : 'Show details',
