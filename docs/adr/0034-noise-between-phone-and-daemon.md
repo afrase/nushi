@@ -41,6 +41,7 @@ What a paired device gets is code execution as the user on the Mac. Everything b
 | A revoked device | dial the old id while another device hasn't moved from it yet: a handshake's work each time, and while it holds the id's dialer slots, that device is kept out (availability) | learn the new id; listen in the daemon's place (no listen key), so get a phone's dial; get an answer, or keep a connection |
 | Another relay user | share the relay's caps | reach this daemon's ids without knowing them (hashes of random keys); listen at them even knowing them |
 | A stolen phone, unlocked | everything a paired device can, until revoked on the Mac; leave something behind through a terminal or an agent (code execution as you), which revoking doesn't undo | pair another device, revoke the owner's, or move remote access to another relay (the Mac's calls) |
+| Someone who gets the phone to scan a QR code of their own (forged) | have the phone pair with their daemon, and read what the user then types into it | reach the user's Mac: the real daemon answers only its own keys (the phone app is to show which Mac it is paired with) |
 | Same-user processes on the Mac, the agent included | read the daemon's key and devices file, as they can read the token ([0024](0024-the-agent-can-read-the-token.md)); pair a device through the token (the Mac app still shows Allow and Deny) | (out of scope, as for the local token) |
 
 Also outside what this protects:
