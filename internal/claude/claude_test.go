@@ -55,7 +55,7 @@ func TestRelay(t *testing.T) {
 		t.Error("read a prompt Relay didn't make")
 	}
 	for out, want := range map[string]string{
-		"Async agent launched successfully. (internal)\nagentId: ab59154609c2876d6 (more)": "ab59154609c2876d6",
+		"Async agent launched successfully. (internal)\nagentId: ab59154609c2876d6 (more)":                   "ab59154609c2876d6",
 		`This agent's report was delivered to you as a message from "a62bea8e" (its SubagentHandback call).`: "a62bea8e",
 		"Found 2 files": "",
 	} {

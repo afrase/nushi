@@ -124,6 +124,7 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 80. Review comments and the Changes view (D36–D38, D40) | 7813 | 929 | 13624 | 682 |
 | 81. Fakes and tests that couldn't fail (D62, D63, D112–D119) | 7813 | 929 | 13624 | 682 |
 | 82. Hostile repositories, git and Claude's files (D72–D74, D76, D82, D83, D89, D92, D104) | 7888 | 929 | 13624 | 682 |
+| 83. The trust card fails closed (security review S1, S2) | 7953 | 929 | 13624 | 682 |
 
 Steps over the ~500-line tripwire (code and tests, without generated code): 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 and this milestone removed more than they added.
 
@@ -168,7 +169,7 @@ What the code depends on, and how the adapter behaves. Everything Nushi does abo
 
 Open questions; what's settled is in `docs/adr/` or in the code.
 
-- New in R: a `.mcp.json` that can't be read (malformed, not a regular file) is left out of the MCP list, as Claude leaves it out; only the daemon's log says so. A skill whose front matter has hooks in a form the line reader doesn't follow (flow style) shows its whole front matter on the trust card. A background command's end line counts once the output file stops growing after it.
+- New in R: a `.mcp.json` that can't be read (malformed, not a regular file) is left out of the MCP list, as Claude leaves it out; only the daemon's log says so. The trust card still lists it ("MCP servers Nushi couldn't read", with its text) and asks. A skill whose hooks block has anything the line reader doesn't follow (flow style, block scalars, anchors, quoted or unknown keys, hooks elsewhere in the front matter) shows its whole front matter on the trust card. A background command's end line counts once the output file stops growing after it.
 
 - New in Q: a question card takes the keyboard only from nothing, an empty box on the same screen, or another card: never from a terminal, a dialog or text being written. A pending permission shows its whole command, wrapped; an opened command's card shows it whole too. Archive asks first when a program runs in one of the chat's terminals. A message taken back from a subagent's queue (or by Stop or Rewind) keeps its subagent, as a chip; a replayed one can't, and says so. The "New worktree" choice is remembered only once the move worked.
 - New in Q: MCP changes run to the end once begun, even when the app goes. A project server that's off or not approved gives way to a user or local one of its name, as in Claude. The MCP card says "Not checked" and why after a failed check, with Try again, and a list older than 5 minutes is asked for again when the card or view shows it.
@@ -221,7 +222,7 @@ Open questions; what's settled is in `docs/adr/` or in the code.
 - MCP: Claude's config holds secrets in clear; the daemon masks them before they leave it. It runs `claude mcp add-json/remove/login/logout` (names checked, `--`), so a client can add a server Claude runs as you, as a prompt could. The on/off switch writes the project's `.claude/settings.local.json` (its two MCP lists only, atomically, keeping its mode) and may add it to `.git/info/exclude`.
 - Terminals: any client with the token can open a shell as you anywhere; they must stay off remote access ([ADR 0022](docs/adr/0022-the-daemon-owns-terminals.md)). Closing kills what has the terminal as its controlling terminal.
 - Background shells: the daemon reads the output file a Bash call's output names (only a regular file, no link, named `<task id>.output` in a `tasks` folder; its last 64 KB), once a second while the command runs, and shows it in the app.
-- Trust lists any string setting named like Claude's credential helpers (`…Helper`, `…AuthRefresh`, `…CredentialExport`), and a skill's whole front matter when it has hooks the line reader can't follow.
+- Trust lists any string setting named like Claude's credential helpers (`…Helper`, `…AuthRefresh`, `…CredentialExport`), a skill's whole front matter when its hooks block holds anything the line reader can't follow, and a `.mcp.json` it can't read or parse (with its first 4 KB): it fails closed. The MCP list leaves such a file out, as Claude does.
 - Trust reads `~/.claude.json`, never writes it; "Start anyway" goes to Nushi's `trusted.json`. Trust of the home folder (or `/`) covers that folder only, never the folders under it, and `~/.claude` is never listed as the home folder's own.
 - The token (0600, made again if empty or short) sits beside the socket in a 0700 folder; anything running as you, the agent included, can read it.
 

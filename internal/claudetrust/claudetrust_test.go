@@ -160,30 +160,57 @@ func TestTheHomeFolder(t *testing.T) {
 // Claude leaves it out).
 func TestASettingsFileThatNeverEnds(t *testing.T) {
 	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
-	for name, fails := range map[string]bool{".mcp.json": false, ".claude/settings.json": true} {
+	for _, name := range []string{".mcp.json", ".claude/settings.json"} {
 		repo := t.TempDir()
 		os.MkdirAll(filepath.Join(repo, ".claude"), 0o700)
 		os.Symlink("/dev/zero", filepath.Join(repo, name))
-		if runs, err := (Trust{}).Runs(repo); (err != nil) != fails || len(runs) > 0 {
-			t.Errorf("%s linked to /dev/zero: %v, %v", name, runs, err)
+		if runs, err := (Trust{}).Runs(repo); err == nil && len(runs) == 0 {
+			t.Errorf("%s linked to /dev/zero: nothing to say", name)
 		}
 	}
 }
 
+// A .mcp.json Nushi can't parse still shows on the trust card, as it is:
+// Claude might read it.
+func TestAnMCPFileNushiCantRead(t *testing.T) {
+	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
+	repo := t.TempDir()
+	body := `{"mcpServers":{"echo":{"command":"echo","args":["hi"]},}}`
+	write(t, filepath.Join(repo, ".mcp.json"), body)
+	runs, err := Trust{}.Runs(repo)
+	if err != nil || len(runs) != 1 || runs[0].Command != body || runs[0].File != filepath.Join(repo, ".mcp.json") {
+		t.Errorf("runs = %+v, %v", runs, err)
+	}
+}
+
 // A skill's hooks written in YAML the line reader doesn't follow are shown
-// whole, not missed.
+// whole, not missed, even when it follows some of them.
 func TestSkillHooksInAnyForm(t *testing.T) {
 	dir := t.TempDir()
-	for front, want := range map[string][]string{
-		"hooks:\n  Stop:\n    - hooks:\n        - \"command\": evil":                    {"evil"},
-		"\"hooks\":\n  Stop:\n    - hooks:\n        - command: evil":                    {"evil"},
-		"name: x\nhooks: {PreToolUse: [{hooks: [{type: command, command: \"evil\"}]}]}": {"name: x\nhooks: {PreToolUse: [{hooks: [{type: command, command: \"evil\"}]}]}"},
-		"name: x\ndescription: no hooks here":                                           nil,
+	plain := "hooks:\n  Stop:\n    - matcher: Edit\n      hooks:\n        - type: command\n          command: \"echo one\"\n        - type: command\n          command: echo two"
+	for _, c := range []struct {
+		front string
+		whole bool
+		want  []string
+	}{
+		{front: plain, want: []string{"echo one", "echo two"}},
+		{front: "name: x\ndescription: no hooks here"},
+		{front: "name: x\nhooks: {PreToolUse: [{hooks: [{type: command, command: \"echo flow\"}]}]}", whole: true},
+		{front: "\"hooks\":\n  Stop:\n    - hooks:\n        - command: echo quoted", whole: true},
+		{front: plain + "\n        - type: command\n          command: |\n            echo block", whole: true},
+		{front: plain + "\n        - {type: command, command: echo inline}", whole: true},
+		{front: plain + "\n        - type: command\n          \"command\": echo key", whole: true},
+		{front: plain + "\n          command: &a echo anchor", whole: true},
+		{front: "name: x\nmeta:\n  hooks:\n    Stop: []", whole: true},
 	} {
 		path := filepath.Join(dir, "SKILL.md")
-		write(t, path, "---\n"+front+"\n---\nbody\n")
+		write(t, path, "---\n"+c.front+"\n---\nbody\n")
+		want := c.want
+		if c.whole {
+			want = []string{c.front}
+		}
 		if got := skillHooks(path); !reflect.DeepEqual(got, want) {
-			t.Errorf("%q: %q, want %q", front, got, want)
+			t.Errorf("%q:\n%q\nwant %q", c.front, got, want)
 		}
 	}
 }

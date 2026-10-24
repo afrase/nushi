@@ -42,8 +42,8 @@ type fakeAgent struct {
 	steerGate    chan struct{} // when set, steering waits until it is closed
 	deleteGate   chan struct{} // when set, deleting a session waits until it is closed
 	launches     int
-	refuseSteer  bool          // steering answers "no turn runs"
-	steerErr     error         // steering fails
+	refuseSteer  bool  // steering answers "no turn runs"
+	steerErr     error // steering fails
 	steerable    bool
 	prompts      []string // every prompt's text, and every message steered in
 	steered      []string

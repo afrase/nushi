@@ -145,7 +145,7 @@ func (s *Service) dropSides(c *chat) []string {
 	s.mu.Unlock()
 	for _, side := range sides {
 		side.mu.Lock()
-		side.agent = nil // what still follows it (a background command) stops
+		side.agent = nil                                             // what still follows it (a background command) stops
 		side.emitLocked(model.Event{ChatID: side.id, Removed: true}) // for the app showing it
 		side.mu.Unlock()
 	}

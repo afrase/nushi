@@ -224,7 +224,7 @@ func TestARepositorysOwnConfigRunsNothing(t *testing.T) {
 	}
 	write(t, filepath.Join(repo, "lazy.txt"), "lazy\ntwo\n")
 
-	Status(ctx, repo, "") // it may fail on the missing blob; it runs nothing
+	Status(ctx, repo, "")                                                 // it may fail on the missing blob; it runs nothing
 	if ran, _ := filepath.Glob(filepath.Join(marks, "*")); len(ran) > 1 { // gpg.sh
 		t.Errorf("ran %v", ran)
 	}

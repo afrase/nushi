@@ -141,11 +141,20 @@ func homeDir() string {
 // and helper commands in its .claude/settings.json and settings.local.json
 // and its skills' hooks, in the folder and at its repository's root.
 func (Trust) Runs(folder string) ([]model.FolderRun, error) {
-	servers, err := claudemcp.Claude{}.Servers(folder)
+	servers, unread, err := claudemcp.Claude{}.Read(folder)
 	if err != nil {
 		return nil, err
 	}
 	var out []model.FolderRun
+	// Nushi can't tell what one it can't read runs, but Claude might read
+	// it (or read it later): it shows, and the card still asks.
+	for _, u := range unread {
+		what := u.Err.Error()
+		if b, err := claudemcp.ReadFile(u.Path); err == nil {
+			what = string(b[:min(len(b), 4<<10)])
+		}
+		out = append(out, model.FolderRun{File: u.Path, What: "MCP servers Nushi couldn't read", Command: what})
+	}
 	for _, s := range servers {
 		if s.Scope == "project" && !s.Off {
 			out = append(out, model.FolderRun{File: s.Source, What: "MCP server " + s.Name, Command: serverCommand(s.Config)})
@@ -240,15 +249,17 @@ func settingsRuns(path string) ([]model.FolderRun, error) {
 }
 
 // skillHooks returns the commands of the hooks in a skill's front matter,
-// read line by line rather than as YAML: each `command:` value under its
-// `hooks:` key. Front matter that has a hooks key in a form this doesn't
-// read (flow style, say) comes back whole, as one "command".
+// read line by line rather than as YAML: each `command:` value of a plain
+// `hooks:` block. A block with anything else in it (flow style, block
+// scalars, anchors, keys it doesn't know), or hooks anywhere else, comes
+// back whole, as one "command": what the reader can't follow, the user
+// reads.
 func skillHooks(path string) []string {
 	b, err := claudemcp.ReadFile(path)
 	if err != nil || !bytes.HasPrefix(b, []byte("---")) {
 		return nil
 	}
-	var cmds, front []string
+	var front, block, rest []string
 	sc := bufio.NewScanner(bytes.NewReader(b[3:]))
 	inHooks := false
 	for sc.Scan() {
@@ -257,15 +268,31 @@ func skillHooks(path string) []string {
 			break
 		}
 		front = append(front, line)
-		if line != "" && line[0] != ' ' && line[0] != '\t' && line[0] != '-' {
-			_, inHooks = key(line, "hooks")
+		if line != "" && line[0] != ' ' && line[0] != '\t' && line[0] != '-' && line[0] != '#' {
+			inHooks = strings.TrimRight(line, " ") == "hooks:"
+			if inHooks {
+				continue
+			}
 		}
-		if v, ok := key(strings.TrimLeft(strings.TrimSpace(line), "- "), "command"); ok && inHooks {
-			cmds = append(cmds, strings.Trim(strings.TrimSpace(v), `"'`))
+		if inHooks {
+			block = append(block, line)
+		} else {
+			rest = append(rest, line)
 		}
 	}
-	if len(cmds) == 0 && anyHooks.MatchString(strings.Join(front, "\n")) {
-		return []string{strings.TrimSpace(strings.Join(front, "\n"))}
+	whole := []string{strings.TrimSpace(strings.Join(front, "\n"))}
+	if anyHooks.MatchString(strings.Join(rest, "\n")) {
+		return whole
+	}
+	var cmds []string
+	for _, line := range block {
+		k, v, ok := plainPair(strings.TrimPrefix(strings.TrimSpace(line), "- "))
+		switch {
+		case !ok:
+			return whole
+		case k == "command":
+			cmds = append(cmds, v)
+		}
 	}
 	return cmds
 }
@@ -273,12 +300,34 @@ func skillHooks(path string) []string {
 // anyHooks finds a hooks key anywhere in YAML, quoted or not.
 var anyHooks = regexp.MustCompile(`(?m)(^|[\s{,\[])["']?hooks["']?\s*:`)
 
-// key returns the value of line's YAML key name (written plain or quoted).
-func key(line, name string) (string, bool) {
-	for _, q := range []string{"", `"`, "'"} {
-		if v, ok := strings.CutPrefix(line, q+name+q+":"); ok {
-			return v, true
-		}
+// plainKey is a key the hooks block has: an event's name, or a hook's
+// fields as Claude documents them.
+var plainKey = regexp.MustCompile(`^(?:[A-Z][A-Za-z]*|hooks|matcher|type|command|prompt|timeout|async|statusMessage|once)$`)
+
+// plainPair reads a line of a hooks block the reader follows: empty, a
+// comment, or `key:` with a value on the line that YAML takes as it reads
+// (plain, or quoted and closed); ok is false for anything else.
+func plainPair(line string) (k, v string, ok bool) {
+	if line == "" || strings.HasPrefix(line, "#") {
+		return "", "", true
 	}
-	return "", false
+	k, v, found := strings.Cut(line, ":")
+	v = strings.TrimSpace(v)
+	if !found || !plainKey.MatchString(k) || strings.Contains(v, " #") {
+		return "", "", false
+	}
+	switch {
+	case v == "":
+		return k, v, true
+	case strings.ContainsAny(v[:1], "|>[{&*!%@`"):
+		return "", "", false
+	case v[0] == '"' || v[0] == '\'':
+		q := v[:1]
+		inner, closed := strings.CutSuffix(v[1:], q)
+		if !closed || strings.Contains(inner, q) || strings.Contains(inner, "\\") {
+			return "", "", false
+		}
+		return k, inner, true
+	}
+	return k, v, !strings.Contains(v, ": ")
 }

@@ -115,7 +115,9 @@ func TestStopCancelsAPendingQuestion(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("the question still waits")
 	}
-	eventually(t, c, func() bool { return slices.ContainsFunc(c.items, func(it model.Item) bool { return it.Kind == model.Question && it.Status == "cancelled" }) })
+	eventually(t, c, func() bool {
+		return slices.ContainsFunc(c.items, func(it model.Item) bool { return it.Kind == model.Question && it.Status == "cancelled" })
+	})
 }
 
 // A second answer before the agent has the first fails, and doesn't block
