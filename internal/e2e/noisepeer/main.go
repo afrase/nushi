@@ -11,6 +11,8 @@ package main
 
 import (
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"flag"
@@ -56,13 +58,14 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	id, psk := "noisepeerAAAAAAAAAAAAA", []byte(strings.Repeat("s", 32))
+	_, listen, _ := ed25519.GenerateKey(rand.Reader)
+	id, psk := relay.ListenID(listen.Public().(ed25519.PublicKey)), []byte(strings.Repeat("s", 32))
 	b64 := base64.RawURLEncoding.EncodeToString
 	line, _ := json.Marshal(map[string]string{"relay": "ws" + strings.TrimPrefix(srv.URL, "http"), "id": id, "key": b64(key.Public), "psk": b64(psk)})
 	fmt.Println(string(line))
 
 	var dl relay.Dialer
-	c, err := dl.Listen(context.Background(), "ws"+strings.TrimPrefix(srv.URL, "http"), id)
+	c, err := dl.Listen(context.Background(), "ws"+strings.TrimPrefix(srv.URL, "http"), listen)
 	if err != nil {
 		log.Fatal(err)
 	}

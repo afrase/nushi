@@ -1,10 +1,16 @@
 // Package relay is a dumb pipe between two WebSocket peers that meet on a
-// random rendezvous id. A listener waits at /v1/listen/{id}, a dialer comes
-// to /v1/dial/{id}, and the relay copies binary messages between them. It
-// keeps everything in memory, has no accounts, and logs nothing.
+// rendezvous id. A listener waits at /v1/listen/{id}, a dialer comes to
+// /v1/dial/{id}, and the relay copies binary messages between them. An id
+// is the hash of a listen key (ListenID): only the key's holder can listen
+// there, anyone told the id can dial. It keeps everything in memory, has no
+// accounts, and logs nothing.
 package relay
 
 import (
+	"crypto/ed25519"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
 	"net/http"
 	"regexp"
 	"sync"
@@ -20,9 +26,9 @@ type Limits struct {
 	Rate       int           // bytes a second a connection may send once its burst is spent
 	Burst      int           // bytes a connection may send at once
 	Idle       time.Duration // a connection that sends nothing, not even a ping, for this long is closed
-	DialWait   time.Duration // how long a dialer waits for a listener
+	DialWait   time.Duration // how long a dialer waits for a listener, and a listener has to prove its key
 	MaxWait    time.Duration // how long a listener may wait for a dialer; it then connects again
-	PerID      int           // connections on one id, both sides
+	PerID      int           // dialers on one id
 	PerIP      int           // connections from one address (an IPv6 /64); at most half of Total
 	NewRate    float64       // new connections a second from one address, once NewBurst is spent
 	NewBurst   float64
@@ -41,6 +47,22 @@ const minCost = 512
 
 var validID = regexp.MustCompile(`^[A-Za-z0-9_-]{16,128}$`)
 
+// ListenID is the rendezvous id of a listen key.
+func ListenID(pub ed25519.PublicKey) string {
+	h := sha256.Sum256(append([]byte("nushi-relay/1 id\x00"), pub...))
+	return base64.RawURLEncoding.EncodeToString(h[:])
+}
+
+// A listener proves it holds the id's key: the relay sends challengeTag and
+// 32 random bytes, the listener answers its public key and its signature of
+// proven(id, challenge), and the relay answers an empty message once it
+// listens.
+const challengeTag = "nushi-relay/1 challenge\x00"
+
+func proven(id string, challenge []byte) []byte {
+	return append([]byte("nushi-relay/1 listen\x00"+id+"\x00"), challenge...)
+}
+
 type server struct {
 	http.Handler
 	lim Limits
@@ -53,11 +75,12 @@ type server struct {
 	swept   time.Time
 }
 
-// room is one rendezvous id: its connections, and its listeners still
+// room is one rendezvous id: its connections, and its listener still
 // waiting for a dialer.
 type room struct {
-	conns   int
-	waiting []*peer
+	conns   int // both sides
+	dialers int
+	waiting *peer
 	arrived chan struct{} // closed (and replaced) when a listener starts waiting
 }
 
@@ -81,14 +104,18 @@ func New(lim Limits) http.Handler {
 }
 
 func (s *server) listen(w http.ResponseWriter, r *http.Request) {
-	id, src, ws := s.join(w, r)
+	id, src, ws := s.join(w, r, false)
 	if ws == nil {
 		return
 	}
-	defer s.leave(id, src)
+	defer s.leave(src)
 	p := &peer{ws: ws}
 	defer s.closeBoth(p)
 	b := s.prepare(p)
+	if !s.prove(p, b, id) {
+		_ = ws.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(4403, "not this id's key"), time.Now().Add(time.Second))
+		return
+	}
 	// Pings keep a waiting listener open only so long.
 	waited := time.AfterFunc(s.lim.MaxWait, func() {
 		if p.other.Load() == nil {
@@ -96,9 +123,14 @@ func (s *server) listen(w http.ResponseWriter, r *http.Request) {
 		}
 	})
 	defer waited.Stop()
+	// A second listener is the key's holder again (a daemon that came
+	// back): it replaces the one waiting.
 	s.mu.Lock()
-	rm := s.rooms[id]
-	rm.waiting = append(rm.waiting, p)
+	rm := s.enter(id, false)
+	if rm.waiting != nil {
+		rm.waiting.ws.Close()
+	}
+	rm.waiting = p
 	close(rm.arrived)
 	rm.arrived = make(chan struct{})
 	s.mu.Unlock()
@@ -106,12 +138,33 @@ func (s *server) listen(w http.ResponseWriter, r *http.Request) {
 	s.pump(p, b)
 }
 
+// prove asks p for the signature of id's key on a fresh challenge.
+func (s *server) prove(p *peer, b *bucket, id string) bool {
+	challenge := make([]byte, 32)
+	rand.Read(challenge)
+	late := time.AfterFunc(s.lim.DialWait, func() { p.ws.Close() })
+	_ = p.ws.SetWriteDeadline(time.Now().Add(s.lim.Idle))
+	if p.ws.WriteMessage(websocket.BinaryMessage, append([]byte(challengeTag), challenge...)) != nil {
+		return false
+	}
+	m, ok := s.read(p, b)
+	if !ok || len(m) != ed25519.PublicKeySize+ed25519.SignatureSize {
+		return false
+	}
+	pub := ed25519.PublicKey(m[:ed25519.PublicKeySize])
+	if ListenID(pub) != id || !ed25519.Verify(pub, proven(id, challenge), m[ed25519.PublicKeySize:]) || !late.Stop() {
+		return false
+	}
+	return p.ws.WriteMessage(websocket.BinaryMessage, nil) == nil
+}
+
 func (s *server) dial(w http.ResponseWriter, r *http.Request) {
-	id, src, ws := s.join(w, r)
+	id, src, ws := s.join(w, r, true)
 	if ws == nil {
 		return
 	}
-	defer s.leave(id, src)
+	defer s.leave(src)
+	defer s.exit(id, true)
 	p := &peer{ws: ws}
 	defer s.closeBoth(p)
 	// A dialer meets a listener only once it has spoken (it always speaks
@@ -138,8 +191,10 @@ func (s *server) dial(w http.ResponseWriter, r *http.Request) {
 	s.pump(p, b)
 }
 
-// join admits a connection to id within the caps and upgrades it.
-func (s *server) join(w http.ResponseWriter, r *http.Request) (string, string, *websocket.Conn) {
+// join admits a connection within the caps and upgrades it: a dialer
+// joins id's room at once, within PerID; a listener only once it has
+// proven its key.
+func (s *server) join(w http.ResponseWriter, r *http.Request, dialer bool) (string, string, *websocket.Conn) {
 	id := r.PathValue("id")
 	if !validID.MatchString(id) {
 		http.NotFound(w, r)
@@ -147,11 +202,7 @@ func (s *server) join(w http.ResponseWriter, r *http.Request) (string, string, *
 	}
 	src := s.sourceKey(r)
 	s.mu.Lock()
-	rm := s.rooms[id]
-	if rm == nil {
-		rm = &room{arrived: make(chan struct{})}
-	}
-	if s.total >= s.lim.Total || rm.conns >= s.lim.PerID {
+	if s.total >= s.lim.Total || dialer && s.rooms[id] != nil && s.rooms[id].dialers >= s.lim.PerID {
 		s.mu.Unlock()
 		http.Error(w, "busy", http.StatusServiceUnavailable)
 		return "", "", nil
@@ -161,52 +212,74 @@ func (s *server) join(w http.ResponseWriter, r *http.Request) (string, string, *
 		http.Error(w, "busy", code)
 		return "", "", nil
 	}
-	s.rooms[id] = rm
-	rm.conns++
 	s.total++
+	if dialer {
+		s.enter(id, true)
+	}
 	s.mu.Unlock()
 	ws, err := s.up.Upgrade(w, r, nil)
 	if err != nil {
-		s.leave(id, src)
+		if dialer {
+			s.exit(id, true)
+		}
+		s.leave(src)
 		return "", "", nil
 	}
 	return id, src, ws
 }
 
-func (s *server) leave(id, src string) {
+func (s *server) leave(src string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.total--
 	s.leaveSource(src)
+}
+
+// enter counts a connection in id's room. Called with s.mu.
+func (s *server) enter(id string, dialer bool) *room {
+	rm := s.rooms[id]
+	if rm == nil {
+		rm = &room{arrived: make(chan struct{})}
+		s.rooms[id] = rm
+	}
+	rm.conns++
+	if dialer {
+		rm.dialers++
+	}
+	return rm
+}
+
+func (s *server) exit(id string, dialer bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if rm := s.rooms[id]; rm != nil {
+		if dialer {
+			rm.dialers--
+		}
 		if rm.conns--; rm.conns == 0 {
 			delete(s.rooms, id)
 		}
 	}
 }
 
+// unwait takes p out of id's room.
 func (s *server) unwait(id string, p *peer) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	if rm := s.rooms[id]; rm != nil {
-		for i, w := range rm.waiting {
-			if w == p {
-				rm.waiting = append(rm.waiting[:i], rm.waiting[i+1:]...)
-				break
-			}
-		}
+	if rm := s.rooms[id]; rm != nil && rm.waiting == p {
+		rm.waiting = nil
 	}
+	s.mu.Unlock()
+	s.exit(id, false)
 }
 
-// match takes a waiting listener on id, waiting up to DialWait for one.
+// match takes the listener waiting on id, waiting up to DialWait for one.
 func (s *server) match(id string) *peer {
 	timeout := time.After(s.lim.DialWait)
 	for {
 		s.mu.Lock()
 		rm := s.rooms[id]
-		if len(rm.waiting) > 0 {
-			l := rm.waiting[0]
-			rm.waiting = rm.waiting[1:]
+		if l := rm.waiting; l != nil {
+			rm.waiting = nil
 			s.mu.Unlock()
 			return l
 		}

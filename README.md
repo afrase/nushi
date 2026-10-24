@@ -43,7 +43,7 @@ Settings → Remote access connects the daemon to a relay you name (`wss://…`)
 
 ## The relay
 
-A phone reaches the daemon through a relay: `nushi-relay`, one static binary that pairs two WebSocket connections on a random id and copies their messages, which are end-to-end encrypted between the phone and the daemon. It keeps nothing: no accounts, no disk, no logs beyond starting ([ADR 0033](docs/adr/0033-the-relay-is-a-dumb-pipe.md) says what it can still see). Anyone can run one; Nushi doesn't run one for you.
+A phone reaches the daemon through a relay: `nushi-relay`, one static binary that pairs two WebSocket connections on an id (only the daemon, holding its key, can listen there) and copies their messages, which are end-to-end encrypted between the phone and the daemon. It keeps nothing: no accounts, no disk, no logs beyond starting ([ADR 0033](docs/adr/0033-the-relay-is-a-dumb-pipe.md) says what it can still see). Anyone can run one; Nushi doesn't run one for you.
 
 ```sh
 make relay                                   # bin/nushi-relay, no cgo
