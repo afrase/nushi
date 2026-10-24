@@ -1,39 +1,46 @@
 # Notes
 
-## Summary (2026-10-24, after step 69)
+## Summary (2026-10-24, after step 73)
 
-Milestone O (steps 64–69, the review's trim findings T1–T16) is done: one commit per step on `main`, all pushed. `make test` passes (Go with `-race` too). The app was tried by hand after steps 64, 66 and 67 with the dev daemon and app on `NUSHI_DATA` (a `/tmp` link to the scratchpad), the fake agent in place of Claude (no Claude process ran), `CLAUDE_CONFIG_DIR` in the scratchpad, a throwaway repository; dark theme, 1280×800; the test shell ran only `printf`. The installed Nushi and its daemon were left alone. `make install` put the build in `~/Applications/Nushi.app` (and the iCloud copy).
+Milestone P (steps 70–73, plus a Context card change asked for during the run) is done: one commit each on `main`, all pushed. `make test` passes (the chats feature with `-race` too). Every step was tried by hand in a development build against live Claude (claude-agent-acp 0.94.0, Claude Code 2.1.309) at 1280×800, dark, with the dev daemon and app on `NUSHI_DATA` (a `/tmp` link to the scratchpad) and a throwaway repository; prompts only listed and read its files, ran `sleep`/`echo`/`wc`, and started Explore and general-purpose agents. Before any new test ran I checked that tests can't reach the real data folder (Go tests use `t.TempDir()`, app tests `FLUTTER_TEST`'s temporary folder) and kept a copy of `app.json`: it was unchanged at the end. The installed Nushi and its daemon were left alone. `make install` put the build in `~/Applications/Nushi.app` (and the iCloud copy).
 
-**Size**: the daemon went from 6,725 to 6,913 lines of Go (the `Dialect` and the facts the daemon now decides for the app: rewindable, scratch, subagent state, Other fields, category kinds, the default model), the ACP client stays 867, the app went from 12,506 to 12,431 lines of Dart, packages 682. No file is over 400 lines.
+**What works**
+- 70: terminals start the login shell from the user database (`id -P`: fish here), with `-l` and `$SHELL` set to it; `status is-login` holds and the prompt works. Settings… (⌘,, also from a focused terminal) picks the terminal's font among the installed monospaced families (33 here, Nerd Fonts included) and its size; JetBrains Mono stays the default. Symbols Nerd Font Mono 3.5.1 is bundled as the fallback: lsd's icons, folder, git and Apple glyphs render in JetBrains Mono and in FiraCode Nerd Font Mono; xterm paints each cell on its own, so wide glyphs, CJK and emoji keep the grid. Also fixed: a new terminal answers fish's startup query at once (fish waited 10 seconds for it).
+- 71: a click on a subagent (its one-line card in the transcript, or its row in the card) opens its pane in place of the details panel: back, its name, wider (remembered), ×; its prompt folded to five lines with Show more; "Model Sonnet 5.5 · Effort Low", or the chat's "(inherited)"; state and time; its steps live; its result. Back finds the panel as it was (scroll kept). The card rows show model and effort as a tag. A replayed subagent says its steps (and report) weren't kept.
+- 72: see "Background shells" below. The card is now "Background tasks": running subagents and commands, then "n finished" (or "n earlier" when it holds a command whose end isn't known). A command's row shows it, its state and time, and its last line; its pane shows the command and the output so far, live.
+- 73: the subagent pane has a box, "Message Explore through Claude". The message goes to the main session (steered or queued like any) asking Claude to pass it on verbatim with SendMessage; the transcript shows "You → Explore, through Claude" and only the message. Tried four times on finished subagents (one after a daemon restart) and once on a running one: the text arrived verbatim every time, the subagent acted on it, and its pane showed it running again, then its new result.
+- Context card: expanded, one line over the bar ("5% used", "51.3k / 1M", refresh), then the bar and categories, Last turn and Cost; collapsed, the ring.
 
-**Every finding**
-- T1 done (64): no per-feature gating; an app newer than its daemon shows only a "Restart daemon" screen; the daemon's code for apps before API 23 and the `(API n)` tags are gone; dropped fields `reserved`; [ADR 0004](docs/adr/0004-connect-over-unix-socket.md) amended. T2 done: `RemoveChat` is gone (the e2e test deletes instead). T3 kept, as asked. T4 done: `/context` runs only in a throwaway fork. T5 done.
-- T6 done (65): Claude's rules are in `internal/claude` (with `claudehistory`, `claudemcp`, `claudetrust`); `features/chats` takes a `Dialect` that `main` fills; the API calls no Claude package ([ADR 0025](docs/adr/0025-claude-rules-in-one-place.md)). T9 done: terminals follow the hub's chat events (archived or deleted closes them); `PlanDeleteChat` still lists the running terminals from the API, as composition. T10: the cheaper way, the `mcp` package says it's Claude-only. T13 done: one helper each for `session/new` and `session/fork`, one folder check (`chats.CheckFolder`).
-- T7 done (66): the daemon sends whether a user message is rewindable, whether a chat's folder is a scratch folder, a subagent's state, times and result (and which call is its report), which form field is another's "Other", a context category's kind, which model is the default, and whether the context can be asked; the MCP form refuses a leading `-`. API 38. T8 done: the app names the agent from `Chat.agent` (`ChatState.agentName`).
-- T11, T12, T14 done (67): one loader for a chat's changes, one tool-kind table, one collapsible card, chevron, inline edit, recent-folders menu and syntax color table; `chat_header.dart`, `question_parts.dart`, `inline_edit.dart`, `fake_test.go` split out.
-- T15 done (68): the missing tests, the stale follower test fixed; the usage test was redone in step 66 (Claude's format is tested in `internal/claude`).
-- T16 done (69): these notes, from 22,900 words to about a quarter; settled decisions went into [ADR 0026](docs/adr/0026-the-transcript-lays-out-every-item.md) and [ADR 0027](docs/adr/0027-what-lives-only-in-memory.md), or went.
-
-**"Claude" left in the app**, where it is Claude-only: the MCP views (Claude's config, Claude's scopes), the trust card (Claude's trust record), and `claude --resume` in the Delete dialog (Claude's CLI).
+**Background shells (what a client that isn't AIR sees)**: the Bash call's input (`run_in_background: true`), and an output naming the task id and the file Claude writes the command's output to, which ends with "[exited with code N]" or "[killed]" when the command does. Claude 2.1.309 has no BashOutput: it reads that file with Read; it stops one with the deferred `TaskStop` (`{task_id}`). When a command ends, Claude gets a notification Nushi never sees and runs a turn of its own; the only trace is `_claude/origin: {kind: "task-notification"}` on that turn's last `usage_update`, naming no task. So the daemon follows the file: "running" only while it has no end line and the Claude that started it still runs; with the end line, done/failed/stopped and the exit; otherwise "started" (Claude's commands outlive it: a `sleep 300` kept running after the daemon stopped). Details in "Agent facts".
 
 **Changes to earlier behavior**
-- An agent that can't fork gets no context breakdown (it had a refresh button in its own session).
-- A background subagent counts as running only if the daemon saw it start (not, as before, while the turn runs or once it has steps): a replayed one reads as done, as before.
-- A second click on a terminal tab renames it without showing the tab again (that handed the keyboard back to the shell). A rename saves on a click outside the box, for chats too.
-- Hints: "Your reply", "Your comment" (were "… Claude").
-- A deleted or archived chat's terminals close just after the call returns, not before.
+- The transcript's subagent card no longer unfolds inline: it is one line that opens the pane.
+- The card "Agents" is "Background tasks": a collapse or position it had is forgotten.
+- A foreground subagent's result was Claude's pointer to its report ("This agent's report was delivered…") after a reload; now it is empty, and the pane says the report wasn't kept.
+- A finished subagent with new steps (run again by SendMessage) counts as running again.
 
 **Not tried by hand**
-- Anything with real Claude: subagent state and times, the Other pairing, the default model, context kinds and `/context` (the fake agent has none of these; they're covered by tests).
-- A terminal tab rename with a real double-click (synthetic clicks don't reach the tab in either the old or the new build), the light theme, MCP add and edit.
+- The light theme; a terminal font size other than 14 and 12.5; a login shell other than fish (zsh, bash fall back the same way).
+- A background command started by a subagent, and a command whose output passes 64 KB (only its end is read; covered by reasoning, not a test).
+- `make install`'s app with the new font list (the Swift side was only run in debug builds).
 
 **Needs your attention**
-- My new app test (step 68) wrote the app's settings into your real data folder before I made tests use a temporary one: `~/Library/Application Support/Nushi/app.json` now holds the defaults, so the installed app forgets its collapsed cards, card order, pane widths, worktree choices, Changes scopes and open terminal panels. There was no backup to restore. Tests can't do that any more (`FLUTTER_TEST` picks a temporary data folder).
-- The API went from 37 to 38: press "Restart daemon" in the installed app (it now shows only that until you do).
+- The API went from 38 to 41: press "Restart daemon" in the installed app. Restarting stops running turns and closes terminals.
+- Security: the daemon now reads Claude's background output files (see "Security notes"), and step 73's prompt asks Claude to pass text on; Claude's history keeps that wrapped prompt (`claude --resume` shows it).
 
-**Dependencies**: none added.
+**Size**: the daemon went from 6,913 to 7,281 lines of Go, the app from 12,431 to 13,372 lines of Dart. No file is over 400 lines (`subagent_pane.dart` is 321). Two steps crossed the ~500-line tripwire, tests included: 71 (616 added, 183 removed: the pane, its prompt and model/effort header, and the inline card it replaced) and 72 (652 added: following Claude's output files in the daemon, the shell pane and rows, and their tests).
 
-**Left behind by the testing**: nothing (the dev data folder and its `/tmp` link, the throwaway repository, the fake-agent shim, the dev client and UI helper removed).
+**Dependencies**: none added; one font bundled (Symbols Nerd Font Mono, MIT, 2.5 MB).
+
+**Left behind by the testing**: nothing (the dev chats deleted with Delete, Claude's history folder for the throwaway repository and its task outputs removed, the dev data folder, its `/tmp` link, the throwaway repository and the helper scripts removed).
+
+## Demo (milestone P)
+
+1. Open a terminal (⌃\`): it is your login shell (fish), `status is-login` is true. ⌘, picks a font (try FiraCode Nerd Font Mono) and a size; `lsd --icon always` shows icons in any font.
+2. Ask: "Use an Explore agent with the haiku model and low effort to list the files in this folder." Click its line in the transcript: the pane shows the prompt, "Model Haiku 5.5 · Effort Low", the steps as they come, the result. Back returns to the panel where it was; the expand button widens the pane.
+3. In the pane, type "Also print the first line of README.md" and press Enter: the transcript shows "You → Explore, through Claude", Claude forwards it, the pane shows the subagent running again, then its answer.
+4. Ask: "Run `for i in 1 2 3 4 5 6; do echo tick $i; sleep 3; done` in the background and end your turn." Background tasks lists it with its last line; click it: the output grows, then "done · exited with code 0".
+5. Expand Context: one line "n% used … used / size" with refresh, then the bar.
 
 ## Line counts
 
@@ -119,7 +126,7 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 73. Message a subagent from its pane | 7281 | 867 | 13322 | 682 |
 | (Context card: one line over the bar) | 7281 | 867 | 13372 | 682 |
 
-Steps over the ~500-line tripwire (code and tests, without generated code): 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 and this milestone removed more than they added.
+Steps over the ~500-line tripwire (code and tests, without generated code): 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 and this milestone removed more than they added.
 
 ## Agent facts (claude-agent-acp 0.94.0, Claude Code 2.1.308–309)
 
