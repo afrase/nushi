@@ -45,6 +45,7 @@ type fakeAgent struct {
 	loadGate     chan struct{} // when set, session/load waits until it is closed
 	forkGate     chan struct{} // when set, session/fork waits until it is closed
 	loadErr      error
+	lastWords    *acp.SessionUpdate // sent as it stops
 	launches     int
 	closed       int
 	refuseSteer  bool  // steering answers "no turn runs"
@@ -55,31 +56,69 @@ type fakeAgent struct {
 	wire         []string // prompts and cancels, in the order they reach the agent
 	forkMeta     map[string]any
 	history      []acp.SessionUpdate // what session/load replays
-	done         chan struct{}       // closed by quit
+	cur          *proc               // the last process launched
 }
 
-// launch is a Launch for f: it starts again once it has quit.
+// proc is one of the fake agent's processes: each launch starts one, and
+// Stop (or quit) ends it.
+type proc struct {
+	*fakeAgent
+	done chan struct{}
+}
+
+// launch is a Launch for f: each call starts a new process.
 func (f *fakeAgent) launch(h acp.Handler) (Agent, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.h = h
 	f.launches++
-	select {
-	case <-f.done:
-		f.done = nil
-	default:
-	}
-	if f.done == nil {
-		f.done = make(chan struct{})
-	}
-	return f, nil
+	f.cur = &proc{f, make(chan struct{})}
+	return f.cur, nil
 }
 
-// quit ends the agent's process.
+// quit ends the agent's last process.
 func (f *fakeAgent) quit() {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	close(f.done)
+	f.cur.end()
+}
+
+func (p *proc) end() {
+	select {
+	case <-p.done:
+	default:
+		close(p.done)
+	}
+}
+
+func (p *proc) Done() <-chan struct{} { return p.done }
+
+// Stop ends the process; its last words, if any, still come after, as
+// from a pipe read to its end.
+func (p *proc) Stop(grace time.Duration) error {
+	p.fakeAgent.Stop(grace)
+	p.mu.Lock()
+	last, h := p.lastWords, p.h
+	p.mu.Unlock()
+	go func() {
+		if last != nil {
+			time.Sleep(5 * time.Millisecond)
+			h.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: *last})
+		}
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		p.end()
+	}()
+	return nil
+}
+
+func (p *proc) DeleteSession(ctx context.Context, req acp.DeleteSessionRequest) error {
+	select {
+	case <-p.done:
+		return errors.New("agent connection closed")
+	default:
+	}
+	return p.fakeAgent.DeleteSession(ctx, req)
 }
 
 func (f *fakeAgent) Initialize(context.Context, acp.InitializeRequest) (*acp.InitializeResponse, error) {
@@ -160,16 +199,12 @@ func (f *fakeAgent) Close() error {
 
 func (f *fakeAgent) Stop(time.Duration) error {
 	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.wire = append(f.wire, "stop")
-	f.mu.Unlock()
 	return nil
 }
 
-func (f *fakeAgent) Done() <-chan struct{} {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	return f.done
-}
+func (f *fakeAgent) Done() <-chan struct{} { return nil } // used without launch: it never ends
 
 func (f *fakeAgent) Cancel(acp.CancelNotification) error {
 	f.mu.Lock()
@@ -225,11 +260,6 @@ func (f *fakeAgent) DeleteSession(_ context.Context, req acp.DeleteSessionReques
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	select {
-	case <-f.done:
-		return errors.New("agent connection closed")
-	default:
-	}
 	f.deleted = append(f.deleted, req.SessionID)
 	return f.deleteErr
 }

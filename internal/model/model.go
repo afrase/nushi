@@ -132,6 +132,7 @@ type Item struct {
 	// was asked to pass it to, and RelayCall that subagent's tool call
 	// (Message.To; not known after a replay).
 	RelayTo, RelayCall string
+	Files              []string // a user message's mentioned files (Message.Files)
 	// Tool is a tool call's tool, when the agent names it ("Read").
 	Tool string
 	// TaskID is the agent's id for the command a tool call left running in

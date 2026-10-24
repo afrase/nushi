@@ -24,7 +24,7 @@ func (c *chat) relayLocked(callID string) (*model.Relay, error) {
 // userItem is a message as the transcript shows it: one for a subagent
 // says which.
 func userItem(m model.Message) model.Item {
-	it := model.Item{Kind: model.UserMessage, Text: m.Text, Images: m.Images}
+	it := model.Item{Kind: model.UserMessage, Text: m.Text, Images: m.Images, Files: m.Files}
 	if m.Relay != nil {
 		it.RelayTo, it.RelayCall = m.Relay.Agent, m.To
 	}
@@ -34,7 +34,7 @@ func userItem(m model.Message) model.Item {
 // messageOf is a user message back as a message to send again: for a
 // subagent still (Message.To), when the transcript knows which.
 func messageOf(it model.Item) model.Message {
-	m := model.Message{Text: it.Text, Images: it.Images, To: it.RelayCall}
+	m := model.Message{Text: it.Text, Files: it.Files, Images: it.Images, To: it.RelayCall}
 	if it.RelayTo != "" {
 		m.Relay = &model.Relay{Agent: it.RelayTo}
 	}

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"maps"
 	"slices"
+	"time"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -41,15 +42,26 @@ func (s *Service) Reload(chatID string) error {
 		c.mu.Unlock()
 		return errors.New("the chat is busy; reload it once the agent is done")
 	}
-	c.busy, c.mcpChanged, c.kept, c.reopenFailed = true, false, false, false
-	if len(c.items) > 0 {
-		c.emitLocked(model.Event{ChatID: c.id, Cut: c.items[0].ID})
-		c.items = nil
-	}
+	c.busy, c.mcpChanged, c.reopenFailed = true, false, false
+	c.cancelLocked() // a prompt or question of the agent's own turn: it won't be answered
+	agent := c.agent
 	c.statusChangedLocked()
 	c.mu.Unlock()
 	sides := s.dropSides(c)
 	c.disconnect()
+	if agent != nil { // its last updates, still on their way, before the cut
+		select {
+		case <-agent.Done():
+		case <-time.After(stopGrace):
+		}
+	}
+	c.mu.Lock()
+	c.kept = false
+	if len(c.items) > 0 {
+		c.emitLocked(model.Event{ChatID: c.id, Cut: c.items[0].ID})
+		c.items = nil
+	}
+	c.mu.Unlock()
 	go s.discard(c, sides)
 	go s.resume(c)
 	return nil

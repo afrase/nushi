@@ -112,7 +112,8 @@ func check(f model.Field) error {
 			return fmt.Errorf("%q has no option %q", f.Title, v)
 		}
 	}
-	return nil
+	_, err := formContent([]model.Field{f}) // a number, integer or yes/no that reads as one
+	return err
 }
 
 // formFields reads the form's properties, in their order.

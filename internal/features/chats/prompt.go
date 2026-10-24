@@ -39,7 +39,18 @@ func (s *Service) Prompt(chatID string, m model.Message, how Send) error {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	// Each wait lets go of the lock, so everything is checked again after it.
+	// Each wait lets go of the lock, so everything is checked again after
+	// it. Only the turn running when SendNow came is stopped: the queue
+	// starts none meanwhile, and the message goes once it has ended.
+	waited, sent := false, false
+	defer func() {
+		if waited {
+			c.sendingNow--
+			if !sent {
+				c.deliverLocked()
+			}
+		}
+	}()
 	for {
 		if err := c.closedLocked(); err != nil {
 			return err
@@ -49,13 +60,15 @@ func (s *Service) Prompt(chatID string, m model.Message, how Send) error {
 		}
 		c.reopenFailed = false // a message tries again
 		s.reopenLocked(c)
-		if how != SendNow || c.started.IsZero() {
+		if how != SendNow || c.started.IsZero() || waited {
 			break
 		}
 		done := c.done
 		if err := c.cancelLocked(); err != nil {
 			return err
 		}
+		waited = true
+		c.sendingNow++
 		c.mu.Unlock()
 		<-done
 		c.mu.Lock()
@@ -81,6 +94,7 @@ func (s *Service) Prompt(chatID string, m model.Message, how Send) error {
 		return errors.New("the agent doesn't take images")
 	default:
 		c.sendLocked(m)
+		sent = true
 	}
 	return nil
 }
@@ -209,7 +223,7 @@ func (c *chat) run(agent Agent, req acp.PromptRequest, sent chan struct{}) {
 // idle, the first message as the next prompt.
 func (c *chat) deliverLocked() {
 	switch {
-	case len(c.queue) == 0 || c.agent == nil || c.stopping || c.halting || c.held || c.steering:
+	case len(c.queue) == 0 || c.agent == nil || c.stopping || c.halting || c.held || c.steering || c.sendingNow > 0:
 	case !c.busy:
 		m := c.queue[0]
 		c.queue = c.queue[1:]
@@ -244,7 +258,7 @@ func (c *chat) steerQueue(agent Agent, sid acp.SessionID) {
 			continue
 		case c.indexLocked(id) < 0:
 			return // taken back (Stop) meanwhile: it is in the box
-		case err == nil && !c.busy && c.agent == agent && !c.held && !c.stopping && !c.halting:
+		case err == nil && !c.busy && c.agent == agent && !c.held && !c.stopping && !c.halting && c.sendingNow == 0:
 			c.startLocked(blocks) // the turn ended meanwhile: this starts the next
 			return
 		}
@@ -270,7 +284,7 @@ func (c *chat) unsendLocked(id string) {
 // Unqueue takes a message out of the chat's queue and returns it, before
 // the agent gets it.
 func (s *Service) Unqueue(chatID, id string) (model.Message, error) {
-	c, err := s.stored(chatID)
+	c, err := s.lookup(chatID) // a side chat's too
 	if err != nil {
 		return model.Message{}, err
 	}
