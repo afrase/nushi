@@ -128,6 +128,20 @@ type Item struct {
 	// Report says the tool call is a subagent's report to its chat: the
 	// subagent's result, not one of its steps.
 	Report bool
+	// Shell is the command a tool call left running in the background.
+	Shell *Shell
+}
+
+// Shell is a command the agent runs in the background. State is "running"
+// while the daemon sees it run, then "done", "failed" or "stopped";
+// "started" when its end can't be known (its agent is gone, or it started
+// before the chat reopened, and it hasn't said it ended). Started and Ended
+// are when the daemon saw that; Output is what it wrote (the end of it),
+// End how it ended, in the agent's words ("exited with code 0").
+type Shell struct {
+	ID, State      string
+	Started, Ended time.Time
+	Output, End    string
 }
 
 // Subagent is how a subagent goes: State is "running", "done" or "failed";

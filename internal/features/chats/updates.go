@@ -35,12 +35,14 @@ func (c *chat) update(n acp.SessionNotification) {
 		c.setOutput(&item, t.Content)
 		item.Report = c.toolCallLocked(&item, t.Meta, t.RawInput)
 		if it := c.itemLocked(item.ID); it != nil { // a repeated tool_call replaces the call
-			item.Subagent = it.Subagent
+			item.Subagent, item.Shell = it.Subagent, it.Shell
 			*it = item
 			c.subagentLocked(it)
+			c.shellLocked(it)
 			c.publishLocked(*it)
 		} else {
 			c.subagentLocked(&item)
+			c.shellLocked(&item)
 			c.addLocked(item)
 		}
 		c.reportedLocked(item)
@@ -99,6 +101,7 @@ func (c *chat) update(n acp.SessionNotification) {
 			c.setOutput(it, t.Content)
 		}
 		c.subagentLocked(it)
+		c.shellLocked(it)
 		c.publishLocked(*it)
 		c.reportedLocked(*it)
 		if (t.Status == "completed" || t.Status == "failed") && it.Parent == "" && !c.started.IsZero() {

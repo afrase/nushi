@@ -1638,6 +1638,14 @@ const Item$json = {
     {'1': 'model', '3': 22, '4': 1, '5': 9, '10': 'model'},
     {'1': 'effort', '3': 23, '4': 1, '5': 9, '10': 'effort'},
     {'1': 'ran_model', '3': 24, '4': 1, '5': 9, '10': 'ranModel'},
+    {
+      '1': 'shell',
+      '3': 25,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.Shell',
+      '10': 'shell'
+    },
   ],
 };
 
@@ -1655,7 +1663,27 @@ final $typed_data.Uint8List itemDescriptor = $convert.base64Decode(
     'gJUgZmb3JrQXQSHgoKcmV3aW5kYWJsZRgSIAEoCFIKcmV3aW5kYWJsZRIuCghzdWJhZ2VudBgT'
     'IAEoCzISLm51c2hpLnYxLlN1YmFnZW50UghzdWJhZ2VudBIWCgZyZXBvcnQYFCABKAhSBnJlcG'
     '9ydBIWCgZwcm9tcHQYFSABKAlSBnByb21wdBIUCgVtb2RlbBgWIAEoCVIFbW9kZWwSFgoGZWZm'
-    'b3J0GBcgASgJUgZlZmZvcnQSGwoJcmFuX21vZGVsGBggASgJUghyYW5Nb2RlbA==');
+    'b3J0GBcgASgJUgZlZmZvcnQSGwoJcmFuX21vZGVsGBggASgJUghyYW5Nb2RlbBIlCgVzaGVsbB'
+    'gZIAEoCzIPLm51c2hpLnYxLlNoZWxsUgVzaGVsbA==');
+
+@$core.Deprecated('Use shellDescriptor instead')
+const Shell$json = {
+  '1': 'Shell',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'state', '3': 2, '4': 1, '5': 9, '10': 'state'},
+    {'1': 'started', '3': 3, '4': 1, '5': 3, '10': 'started'},
+    {'1': 'ended', '3': 4, '4': 1, '5': 3, '10': 'ended'},
+    {'1': 'output', '3': 5, '4': 1, '5': 9, '10': 'output'},
+    {'1': 'end', '3': 6, '4': 1, '5': 9, '10': 'end'},
+  ],
+};
+
+/// Descriptor for `Shell`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List shellDescriptor = $convert.base64Decode(
+    'CgVTaGVsbBIOCgJpZBgBIAEoCVICaWQSFAoFc3RhdGUYAiABKAlSBXN0YXRlEhgKB3N0YXJ0ZW'
+    'QYAyABKANSB3N0YXJ0ZWQSFAoFZW5kZWQYBCABKANSBWVuZGVkEhYKBm91dHB1dBgFIAEoCVIG'
+    'b3V0cHV0EhAKA2VuZBgGIAEoCVIDZW5k');
 
 @$core.Deprecated('Use subagentDescriptor instead')
 const Subagent$json = {
@@ -2370,6 +2398,7 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.PlanEntry': PlanEntry$json,
   '.nushi.v1.ImageData': ImageData$json,
   '.nushi.v1.Subagent': Subagent$json,
+  '.nushi.v1.Shell': Shell$json,
   '.nushi.v1.ConfigOption': ConfigOption$json,
   '.nushi.v1.ConfigValue': ConfigValue$json,
   '.nushi.v1.Command': Command$json,

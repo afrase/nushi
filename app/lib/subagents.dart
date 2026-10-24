@@ -86,25 +86,49 @@ String settingText(Setting s) => s.name.isEmpty
     ? '${s.name} (inherited)'
     : s.name;
 
-/// [subagentState] in [style], its time ticking while the subagent works.
-class SubagentState extends StatefulWidget {
+/// [subagentState] in [style] (red once it failed), its time ticking while
+/// the subagent works.
+class SubagentState extends StatelessWidget {
   const SubagentState(this.s, {super.key, required this.style});
 
   final SubagentRun s;
   final TextStyle style;
 
   @override
-  State<SubagentState> createState() => _SubagentStateState();
+  Widget build(BuildContext context) => LiveText(
+    () => subagentState(s),
+    live: subagentRunning(s),
+    style: s.call.subagent.state == 'failed'
+        ? style.copyWith(color: NushiTheme.of(context).t.crashed)
+        : style,
+  );
 }
 
-class _SubagentStateState extends State<SubagentState> {
+/// [text] on one line in [style], again every second while [live].
+class LiveText extends StatefulWidget {
+  const LiveText(
+    this.text, {
+    super.key,
+    required this.live,
+    required this.style,
+  });
+
+  final String Function() text;
+  final bool live;
+  final TextStyle style;
+
+  @override
+  State<LiveText> createState() => _LiveTextState();
+}
+
+class _LiveTextState extends State<LiveText> {
   late final Timer _tick;
 
   @override
   void initState() {
     super.initState();
     _tick = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (subagentRunning(widget.s)) setState(() {});
+      if (widget.live) setState(() {});
     });
   }
 
@@ -116,14 +140,10 @@ class _SubagentStateState extends State<SubagentState> {
 
   @override
   Widget build(BuildContext context) => Text(
-    subagentState(widget.s),
+    widget.text(),
     maxLines: 1,
     overflow: TextOverflow.ellipsis,
-    style: widget.style.copyWith(
-      color: widget.s.call.subagent.state == 'failed'
-          ? NushiTheme.of(context).t.crashed
-          : null,
-    ),
+    style: widget.style,
   );
 }
 
@@ -155,7 +175,7 @@ class SubagentLine extends StatelessWidget {
     final theme = NushiTheme.of(context), t = theme.t;
     final failed = s.call.subagent.state == 'failed';
     return ValueListenableBuilder(
-      valueListenable: chat.subagent,
+      valueListenable: chat.pane,
       builder: (context, open, _) => Container(
         clipBehavior: Clip.antiAlias,
         decoration: box(
@@ -167,7 +187,7 @@ class SubagentLine extends StatelessWidget {
           fill: failed ? t.crashedSoft : t.raised,
         ),
         child: Tap(
-          onTap: () => chat.subagent.value = s.call.id,
+          onTap: () => chat.pane.value = s.call.id,
           tooltip: 'Open its steps beside the chat',
           radius: 0,
           padding: const EdgeInsets.symmetric(horizontal: 10),

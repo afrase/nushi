@@ -2,10 +2,13 @@ package chats
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/afrase/nushi/acp"
 	"github.com/afrase/nushi/internal/model"
@@ -297,4 +300,61 @@ func TestSubagentUpdatesGoUnderTheirToolCall(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("items = %v\nwant %v", got, want)
 	}
+}
+
+func TestBackgroundShellsAreFollowed(t *testing.T) {
+	shellPoll = 10 * time.Millisecond
+	dir := filepath.Join(t.TempDir(), "tasks")
+	os.Mkdir(dir, 0o700)
+	file := filepath.Join(dir, "b1.output")
+	os.WriteFile(file, []byte("half"), 0o600)
+	events := make(chan model.Event, 100)
+	c := &chat{id: "s1", sid: "s1", dialect: claudeDialect, publish: func(e model.Event) { events <- e }, agent: &acp.Client{},
+		session: model.Session{Folder: "/w"}}
+	text := func(s string) []acp.ToolCallContent {
+		return []acp.ToolCallContent{{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: s}}}}}
+	}
+	for _, u := range []acp.SessionUpdate{
+		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "sleep 9", Kind: "execute", Status: "pending"}},
+		{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed",
+			Content: text("Command running in background with ID: b1. Output is being written to: " + file + ". You will be notified.")}},
+	} {
+		c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: u})
+	}
+	shell := func(want string) model.Shell {
+		t.Helper()
+		for deadline := time.After(2 * time.Second); ; {
+			c.mu.Lock()
+			sh := *c.items[0].Shell
+			c.mu.Unlock()
+			if sh.State == want && sh.Output != "" {
+				return sh
+			}
+			select {
+			case <-deadline:
+				t.Fatalf("shell = %+v, want %s", sh, want)
+			case <-events:
+			}
+		}
+	}
+	if sh := shell("running"); sh.Output != "half" || sh.Started.IsZero() {
+		t.Errorf("running: %+v", sh)
+	}
+	os.WriteFile(file, []byte("all\n\n[exited with code 0]\n"), 0o600)
+	if sh := shell("done"); sh.Output != "all" || sh.End != "exited with code 0" || sh.Ended.IsZero() {
+		t.Errorf("done: %+v", sh)
+	}
+
+	// Its agent gone without a word of its end: only that it started.
+	os.WriteFile(file, []byte("again"), 0o600)
+	c.mu.Lock()
+	c.items[0].Shell = nil
+	c.mu.Unlock()
+	c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call_update",
+		ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed"}}})
+	shell("running")
+	c.mu.Lock()
+	c.agent = nil
+	c.mu.Unlock()
+	shell("started")
 }

@@ -13,6 +13,7 @@ import 'gen/nushi/v1/nushi.pb.dart';
 import 'images.dart';
 import 'panes.dart';
 import 'settings.dart';
+import 'shells.dart';
 import 'side_panel.dart';
 import 'subagent_pane.dart';
 import 'status.dart';
@@ -168,9 +169,9 @@ class _ChatViewState extends State<ChatView> {
     }
     final details = widget.details;
     return ListenableBuilder(
-      listenable: Listenable.merge([chat.subagent, subagentWide]),
+      listenable: Listenable.merge([chat.pane, subagentWide]),
       builder: (context, _) {
-        final id = chat.subagent.value, wide = subagentWide.value;
+        final id = chat.pane.value, wide = subagentWide.value;
         return Row(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -195,10 +196,16 @@ class _ChatViewState extends State<ChatView> {
     );
   }
 
-  /// A subagent's pane; wide, it may squeeze the transcript below its
-  /// usual minimum.
+  /// A subagent's or background command's pane; wide, it may squeeze the
+  /// transcript below its usual minimum.
   Widget _pane(BoxConstraints box, String id, bool wide, bool back) {
     final chat = widget.chat;
+    final onBack = back ? () => chat.pane.value = null : null;
+    void onClose() {
+      chat.pane.value = null;
+      showDetails.value = false;
+    }
+
     return Resizable(
       key: ValueKey(wide),
       name: wide ? 'subagent' : 'details',
@@ -206,16 +213,15 @@ class _ChatViewState extends State<ChatView> {
       min: 220,
       max: box.maxWidth - (wide ? 360 : ChatView.minWidth),
       left: true,
-      child: SubagentPane(
-        chat: chat,
-        daemon: widget.daemon,
-        id: id,
-        onBack: back ? () => chat.subagent.value = null : null,
-        onClose: () {
-          chat.subagent.value = null;
-          showDetails.value = false;
-        },
-      ),
+      child: chat.items.any((it) => it.id == id && it.hasShell())
+          ? ShellPane(chat: chat, id: id, onBack: onBack, onClose: onClose)
+          : SubagentPane(
+              chat: chat,
+              daemon: widget.daemon,
+              id: id,
+              onBack: onBack,
+              onClose: onClose,
+            ),
     );
   }
 }

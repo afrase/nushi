@@ -35,7 +35,7 @@ final String? _oldDataDir =
     : null;
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 39;
+const apiVersion = 40;
 
 /// The daemon in the app's bundle (`make package`), if the app runs from one.
 final String? bundledDaemon = () {

@@ -799,6 +799,25 @@ message Item {
   string model = 22;
   string effort = 23;
   string ran_model = 24;
+  // For a tool call that left its command running in the background.
+  Shell shell = 25;
+}
+
+// A command the agent runs in the background.
+message Shell {
+  // The agent's id for it.
+  string id = 1;
+  // "running" while the daemon sees it run, then "done", "failed" or
+  // "stopped"; "started" when its end can't be known.
+  string state = 2;
+  // When the daemon saw it start, and end, in Unix milliseconds; 0 when it
+  // didn't.
+  int64 started = 3;
+  int64 ended = 4;
+  // What it wrote so far (the end of it), and how it ended, in the agent's
+  // words ("exited with code 0").
+  string output = 5;
+  string end = 6;
 }
 
 // How a subagent goes.
