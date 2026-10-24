@@ -23,7 +23,7 @@ Milestone S added Codex, through codex-acp 2.2.2 (Codex 0.160.1), as a second ag
 
 **Dependencies**: `github.com/BurntSushi/toml` (Go, step 96: Codex's config is TOML).
 
-**Left behind by the testing**: see the end of the milestone report; the dev data folder, temp Codex homes, throwaway repositories and Claude's empty history folders were removed.
+**Left behind by the testing**: nothing. The dev chats were deleted with Delete; the dev data folder (`/tmp/nds`), the temp Codex homes, the throwaway repositories, the downloaded adapter and Codex source, Claude's empty history folder for the dev chat, and a Codex app-server that `codex resume` left running were removed. The Fireworks key is in no file under the dev data folder, the scratchpad or the repository (checked with grep, the key on stdin).
 
 ## Demo (milestone S)
 
@@ -207,7 +207,7 @@ What the code depends on, and how the adapter behaves. Everything Nushi does abo
 - codex-acp starts and forks every session with `projects.<cwd>.trust_level = "trusted"` as a config override (ADR 0029).
 - `session/load` replays user messages (with `messageId`), agent messages (same `msg_…` ids as live), tool calls with their output, thoughts and the title; not the model-metadata warning, permission cards or questions. `session/list` works for a `/private/…` cwd.
 - `session/fork` takes another `cwd` (so a move needs no history copy) and `_meta.jetbrains.air.fork = {version: 1, messageId}` for any client: the fork keeps the turns up to the one that has the message. It replays nothing. After a fork Codex titles the session after its next prompt.
-- `session/delete` is `thread/archive`: the rollout moves to `$CODEX_HOME/archived_sessions/`; `codex resume <id>` then asks "Unarchive and resume". `codex delete <id>` would delete for good. History is `$CODEX_HOME/sessions/YYYY/MM/DD/rollout-…-<id>.jsonl`; `codex resume` in a terminal first asks to trust the folder, and says when another app has the session open.
+- `session/delete` is `thread/archive`: the rollout moves to `$CODEX_HOME/archived_sessions/`; `codex resume <id>` then asks "Unarchive and resume". `codex delete <id>` would delete for good. History is `$CODEX_HOME/sessions/YYYY/MM/DD/rollout-…-<id>.jsonl`; `codex resume` in a terminal first asks to trust the folder, says when another app has the session open, and leaves a Codex app-server running in the background (`$CODEX_HOME/packages/app-server-daemon`).
 
 **Updates**
 - Commands are `exec_command` tool calls: `kind` execute (content a `terminal` reference even without the client's `terminal` capability) or read/search for listing commands (no content). A client that isn't AIR gets the output in `_meta.terminal_output_delta {data}` on `tool_call_update`s and the end in `_meta.terminal_exit {exit_code, signal}`; read commands send `rawOutput.exit_code`. After Stop a running command finishes on its own and its call completes then.
