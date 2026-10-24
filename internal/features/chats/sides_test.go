@@ -13,9 +13,9 @@ import (
 func TestSideChatKeepsToItself(t *testing.T) {
 	agent := &fakeAgent{}
 	sessions := &memSessions{}
-	svc := New("fake", func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, claudeDialect, &memModes{}, sessions, nil, nil, "", func(model.Event) {})
+	svc := New([]Kind{{Name: "fake", Launch: func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, Dialect: claudeDialect}}, &memModes{}, sessions, nil, "", func(model.Event) {})
 	ctx := context.Background()
-	id, err := svc.Start(ctx, t.TempDir(), false)
+	id, err := svc.Start(ctx, "", t.TempDir(), false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,13 +76,13 @@ func TestSideChatKeepsToItself(t *testing.T) {
 func TestASideChatThatEndsSaysSo(t *testing.T) {
 	agent := &fakeAgent{}
 	removed := make(chan string, 10)
-	svc := New("fake", agent.launch, claudeDialect, &memModes{}, &memSessions{}, nil, nil, "", func(e model.Event) {
+	svc := New([]Kind{{Name: "fake", Launch: agent.launch, Dialect: claudeDialect}}, &memModes{}, &memSessions{}, nil, "", func(e model.Event) {
 		if e.Removed {
 			removed <- e.ChatID
 		}
 	})
 	ctx := context.Background()
-	id, _ := svc.Start(ctx, t.TempDir(), false)
+	id, _ := svc.Start(ctx, "", t.TempDir(), false)
 	side, err := svc.Fork(ctx, id)
 	if err != nil {
 		t.Fatal(err)

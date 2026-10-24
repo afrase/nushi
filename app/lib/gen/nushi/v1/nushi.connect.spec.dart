@@ -42,6 +42,14 @@ abstract final class NushiService {
     nushiv1nushi.StartChatResponse.new,
   );
 
+  /// Lists the agents chats can run, the default first.
+  static const listAgents = connect.Spec(
+    '/$name/ListAgents',
+    connect.StreamType.unary,
+    nushiv1nushi.ListAgentsRequest.new,
+    nushiv1nushi.ListAgentsResponse.new,
+  );
+
   /// Moves a chat to another folder, or to a new worktree. A chat without
   /// messages starts a new session there (and a worktree it leaves is
   /// removed if it holds no work); one with messages keeps its history, in a

@@ -109,7 +109,7 @@ func (s *Service) SetConfig(ctx context.Context, chatID, id, value string) error
 	isMode := modeIndex(c.config) >= 0 && c.config[modeIndex(c.config)].ID == id
 	c.mu.Unlock()
 	if isMode {
-		return s.modes.SetMode(s.agent, value)
+		return s.modes.SetMode(c.kind.Name, value)
 	}
 	return nil
 }

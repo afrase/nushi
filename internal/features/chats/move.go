@@ -63,7 +63,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 	switch {
 	case err != nil:
 	case fresh:
-		o, err = c.openSession(ctx, s.launch, "", folder, false)
+		o, err = c.openSession(ctx, "", folder, false)
 	default:
 		o, err = s.fork(ctx, c, sid, from, folder)
 	}
@@ -129,10 +129,10 @@ func within(folder, dir string) bool {
 
 // fork starts an agent with a fork of session sid in folder to.
 func (s *Service) fork(ctx context.Context, c *chat, sid, from, to string) (opened, error) {
-	if s.history == nil {
+	if c.kind.History == nil {
 		return opened{}, errors.New("moving this agent's sessions isn't supported")
 	}
-	remove, err := s.history(sid, from, to)
+	remove, err := c.kind.History(sid, from, to)
 	if err != nil {
 		return opened{}, err
 	}
@@ -141,7 +141,7 @@ func (s *Service) fork(ctx context.Context, c *chat, sid, from, to string) (open
 			log.Printf("chat %s: removing the copy of %s in %s: %v", c.id, sid, to, err)
 		}
 	}()
-	return c.openSession(ctx, s.launch, sid, to, true)
+	return c.openSession(ctx, sid, to, true)
 }
 
 // inUse says whether something but chat c runs in dir: another chat, or a

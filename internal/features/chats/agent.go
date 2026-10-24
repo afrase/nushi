@@ -24,8 +24,8 @@ type opened struct {
 // or, given its id, an existing one, replayed through session/load, or with
 // fork a new one that starts with a copy of it (session/fork). The agent
 // stops if that fails.
-func (c *chat) openSession(ctx context.Context, launch Launch, sid, folder string, fork bool) (opened, error) {
-	agent, init, err := initialize(ctx, launch, c, c.dialect.InitMeta)
+func (c *chat) openSession(ctx context.Context, sid, folder string, fork bool) (opened, error) {
+	agent, init, err := initialize(ctx, c.kind.launch, c, c.dialect.InitMeta)
 	if err != nil {
 		return opened{}, err
 	}

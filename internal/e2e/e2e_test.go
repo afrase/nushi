@@ -69,7 +69,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	}
 	hub := &events.Hub{}
 	st := store.New(dataDir)
-	svc := chats.New("fake", launch, chats.Dialect{}, st, st, copyHistory, git.Worktrees{}, filepath.Join(dataDir, "scratch"), hub.Publish)
+	svc := chats.New([]chats.Kind{{Name: "fake", Launch: launch, Dialect: chats.Dialect{}, History: copyHistory}}, st, st, git.Worktrees{}, filepath.Join(dataDir, "scratch"), hub.Publish)
 	terms := terminals.New(startSh, "sh", svc, hub.Publish)
 	svc.UseTerminals(terms)
 	follow, unfollow := context.WithCancel(context.Background())

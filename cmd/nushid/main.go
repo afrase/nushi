@@ -26,6 +26,7 @@ import (
 	"github.com/afrase/nushi/internal/claudehistory"
 	"github.com/afrase/nushi/internal/claudemcp"
 	"github.com/afrase/nushi/internal/claudetrust"
+	"github.com/afrase/nushi/internal/codex"
 	"github.com/afrase/nushi/internal/events"
 	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/features/mcp"
@@ -78,17 +79,21 @@ func run() error {
 	log.Printf("nushid listening on %s", ln.Addr())
 
 	hub := &events.Hub{}
-	// Every chat runs Claude: what it does beyond ACP is in internal/claude*.
-	launch := func(h acp.Handler) (chats.Agent, error) { return claude.Start(dir, h) }
-	dialect := chats.Dialect{InitMeta: claude.InitMeta, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall,
-		Background: claude.Background, ReportElsewhere: claude.ReportElsewhere,
-		Shell: claude.Shell, ReadShell: claude.ReadShell,
-		SubagentID: claude.SubagentID, Relay: claude.Relay, Relayed: claude.Relayed, Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle,
-		ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete}
+	// What each agent does beyond ACP is in its own packages: internal/claude*
+	// and internal/codex*.
+	claudeKind := chats.Kind{Name: "claude", Title: "Claude", Resume: "claude --resume", MCP: true,
+		Launch: func(h acp.Handler) (chats.Agent, error) { return claude.Start(dir, h) },
+		Dialect: chats.Dialect{InitMeta: claude.InitMeta, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall,
+			Background: claude.Background, ReportElsewhere: claude.ReportElsewhere,
+			Shell: claude.Shell, ReadShell: claude.ReadShell,
+			SubagentID: claude.SubagentID, Relay: claude.Relay, Relayed: claude.Relayed, Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle,
+			ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete},
+		History: func(id, from, to string) (func() error, error) { return claudehistory.Copy(projects, id, from, to) }}
+	codexKind := chats.Kind{Name: "codex", Title: "Codex", Resume: codex.Resume, History: codex.History,
+		Launch: func(h acp.Handler) (chats.Agent, error) { return codex.Start(dir, h) }}
 	st := store.New(dir)
 	st.HadMessages = func(s model.Session) bool { return claudehistory.Has(projects, s.SessionID, s.Folder) }
-	copyHistory := func(id, from, to string) (func() error, error) { return claudehistory.Copy(projects, id, from, to) }
-	chatSvc := chats.New("claude", launch, dialect, st, st, copyHistory, git.Worktrees{}, filepath.Join(dir, "scratch"), hub.Publish)
+	chatSvc := chats.New([]chats.Kind{claudeKind, codexKind}, st, st, git.Worktrees{}, filepath.Join(dir, "scratch"), hub.Publish)
 	termSvc := terminals.New(startShell, filepath.Base(loginShell), chatSvc, hub.Publish)
 	chatSvc.UseTerminals(termSvc)
 	go hub.Subscribe(nil, func() bool { return true }, func(e model.Event) bool { termSvc.Follow(e); return true })

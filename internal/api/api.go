@@ -23,7 +23,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 43
+const Version = 44
 
 // build is the daemon's executable as it started (PingResponse.build).
 var build = func() string {
@@ -118,11 +118,19 @@ func (s *server) GetChat(_ context.Context, req *connect.Request[nushiv1.GetChat
 }
 
 func (s *server) StartChat(ctx context.Context, req *connect.Request[nushiv1.StartChatRequest]) (*connect.Response[nushiv1.StartChatResponse], error) {
-	id, err := s.chats.Start(ctx, req.Msg.Folder, req.Msg.Worktree)
+	id, err := s.chats.Start(ctx, req.Msg.Agent, req.Msg.Folder, req.Msg.Worktree)
 	if err != nil {
 		return nil, err
 	}
 	return connect.NewResponse(&nushiv1.StartChatResponse{ChatId: id, Config: configProto(s.chats.Config(id))}), nil
+}
+
+func (s *server) ListAgents(context.Context, *connect.Request[nushiv1.ListAgentsRequest]) (*connect.Response[nushiv1.ListAgentsResponse], error) {
+	resp := &nushiv1.ListAgentsResponse{}
+	for _, k := range s.chats.Agents() {
+		resp.Agents = append(resp.Agents, &nushiv1.Agent{Name: k.Name, Title: k.Title, Resume: k.Resume, Mcp: k.MCP})
+	}
+	return connect.NewResponse(resp), nil
 }
 
 func (s *server) MoveChat(ctx context.Context, req *connect.Request[nushiv1.MoveChatRequest]) (*connect.Response[nushiv1.MoveChatResponse], error) {

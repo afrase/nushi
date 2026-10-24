@@ -55,14 +55,11 @@ type Sessions interface {
 	DeleteSession(id string) error
 }
 
-// Service holds the open chats, all with one agent.
+// Service holds the open chats, each with one of the agents.
 type Service struct {
-	agent     string // the agent's name, such as "claude"
-	launch    Launch
-	dialect   Dialect
+	kinds     []*kind // the first is the default
 	modes     Modes
 	sessions  Sessions
-	history   CopyHistory
 	worktrees Worktrees
 	scratch   string // the folder that holds chats' scratch folders
 	publish   func(model.Event)
@@ -71,8 +68,7 @@ type Service struct {
 
 	mu      sync.Mutex
 	chats   map[string]*chat
-	deletes *bool // whether the agent deletes sessions, once known
-	closing bool  // Close began: no agent starts any more
+	closing bool // Close began: no agent starts any more
 	live    map[Agent]bool
 }
 
@@ -93,18 +89,12 @@ func (s *Service) UseTerminals(t Terminals) { s.terminals = t }
 // as its cwd, and returns a function that removes the copy again.
 type CopyHistory func(sessionID, from, to string) (remove func() error, err error)
 
-func New(agent string, launch Launch, dialect Dialect, modes Modes, sessions Sessions, history CopyHistory, worktrees Worktrees, scratch string, publish func(model.Event)) *Service {
-	s := &Service{agent: agent, dialect: dialect, modes: modes, sessions: sessions, history: history, worktrees: worktrees,
-		scratch: scratch, publish: publish, chats: map[string]*chat{}, live: map[Agent]bool{}}
-	s.launch = s.started(launch)
-	return s
-}
-
 type chat struct {
 	id       string // Nushi's id for the chat
 	sid      string // the agent's session id
+	kind     *kind  // the agent it runs, for good
 	agent    Agent
-	dialect  Dialect
+	dialect  Dialect // kind's
 	publish  func(model.Event)
 	sessions Sessions
 
@@ -172,15 +162,18 @@ func (s *Service) Get(chatID string) (model.Chat, error) {
 	}, nil
 }
 
-// Start opens a chat in folder, or in a new scratch folder of its own when
-// folder is "". With worktree, the chat gets a new git worktree of folder's
-// repository and runs there.
-func (s *Service) Start(ctx context.Context, folder string, worktree bool) (string, error) {
-	c := s.newChat()
+// Start opens a chat with agent ("" for the default) in folder, or in a new
+// scratch folder of its own when folder is "". With worktree, the chat gets
+// a new git worktree of folder's repository and runs there.
+func (s *Service) Start(ctx context.Context, agent, folder string, worktree bool) (string, error) {
+	k, err := s.kindOf(agent)
+	if err != nil {
+		return "", err
+	}
+	c := s.newChat(k)
 	c.id = rand.Text()
 	scratch := folder == ""
 	var wt *model.Worktree
-	var err error
 	switch {
 	case scratch:
 		folder = filepath.Join(s.scratch, c.id)
@@ -195,8 +188,9 @@ func (s *Service) Start(ctx context.Context, folder string, worktree bool) (stri
 	if err != nil {
 		return "", err
 	}
-	o, err := c.openSession(ctx, s.launch, "", folder, false)
+	o, err := c.openSession(ctx, "", folder, false)
 	if err != nil {
+		err = fmt.Errorf("couldn't start %s: %w", k.Title, err)
 		if scratch {
 			os.Remove(folder)
 		}
@@ -205,9 +199,9 @@ func (s *Service) Start(ctx context.Context, folder string, worktree bool) (stri
 	}
 	c.mu.Lock()
 	s.useLocked(c, o)
-	c.session = model.Session{ID: c.id, SessionID: o.sid, Agent: s.agent, Folder: folder, Created: time.Now(), Worktree: wt, Scratch: scratch}
+	c.session = model.Session{ID: c.id, SessionID: o.sid, Agent: k.Name, Folder: folder, Created: time.Now(), Worktree: wt, Scratch: scratch}
 	c.mu.Unlock()
-	if err := c.startMode(ctx, o.agent, o.sid, s.modes.Mode(s.agent)); err != nil {
+	if err := c.startMode(ctx, o.agent, o.sid, s.modes.Mode(k.Name)); err != nil {
 		log.Printf("chat %s: starting mode: %v", c.id, err) // the chat keeps the agent's default
 	}
 	c.mu.Lock()
@@ -229,8 +223,8 @@ func CheckFolder(folder string) error {
 	return nil
 }
 
-func (s *Service) newChat() *chat {
-	return &chat{dialect: s.dialect, publish: s.publish, sessions: s.sessions, waiting: map[string]chan<- string{},
+func (s *Service) newChat(k *kind) *chat {
+	return &chat{kind: k, dialect: k.Dialect, publish: s.publish, sessions: s.sessions, waiting: map[string]chan<- string{},
 		questions: map[string]chan<- []model.Field{}, sides: map[string]*chat{}, probes: map[string]*silentRun{}}
 }
 

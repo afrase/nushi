@@ -80,6 +80,24 @@ extension type NushiServiceClient (connect.Transport _transport) {
     );
   }
 
+  /// Lists the agents chats can run, the default first.
+  Future<nushiv1nushi.ListAgentsResponse> listAgents(
+    nushiv1nushi.ListAgentsRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.listAgents,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Moves a chat to another folder, or to a new worktree. A chat without
   /// messages starts a new session there (and a worktree it leaves is
   /// removed if it holds no work); one with messages keeps its history, in a

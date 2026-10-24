@@ -65,7 +65,7 @@ func (s *Service) PlanDelete(ctx context.Context, chatID string) (DeletePlan, er
 		p.Worktrees = append(p.Worktrees, WorktreePlan{wt, st, err})
 	}
 	s.mu.Lock()
-	known := s.deletes
+	known := c.kind.deletes
 	s.mu.Unlock()
 	if known == nil {
 		agent, deletes, err := s.startDeleter(ctx, c)
@@ -79,17 +79,17 @@ func (s *Service) PlanDelete(ctx context.Context, chatID string) (DeletePlan, er
 	return p, nil
 }
 
-// startDeleter starts an agent with no session, to delete sessions with, and
-// remembers whether it can.
-func (s *Service) startDeleter(ctx context.Context, h acp.Handler) (Agent, bool, error) {
-	agent, init, err := initialize(ctx, s.launch, h, s.dialect.InitMeta)
+// startDeleter starts the chat's agent with no session, to delete sessions
+// with, and remembers whether it can.
+func (s *Service) startDeleter(ctx context.Context, c *chat) (Agent, bool, error) {
+	agent, init, err := initialize(ctx, c.kind.launch, c, c.dialect.InitMeta)
 	if err != nil {
 		return nil, false, err
 	}
 	deletes := init.AgentCapabilities != nil && init.AgentCapabilities.SessionCapabilities != nil &&
 		init.AgentCapabilities.SessionCapabilities.Delete != nil
 	s.mu.Lock()
-	s.deletes = &deletes
+	c.kind.deletes = &deletes
 	s.mu.Unlock()
 	return agent, deletes, nil
 }
