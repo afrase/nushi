@@ -11,6 +11,7 @@ import 'details_panel.dart';
 import 'mcp.dart';
 import 'panes.dart';
 import 'settings.dart';
+import 'settings_dialog.dart';
 import 'sidebar.dart';
 import 'terminal_panel.dart';
 import 'theme/theme.dart';
@@ -30,6 +31,7 @@ class NushiApp extends StatefulWidget {
 
 class _NushiAppState extends State<NushiApp> {
   var _mode = ThemeMode.system;
+  final _navigator = GlobalKey<NavigatorState>();
 
   PlatformMenuItem _appearance(String label, ThemeMode mode) =>
       PlatformMenuItem(
@@ -40,10 +42,15 @@ class _NushiAppState extends State<NushiApp> {
   @override
   Widget build(BuildContext context) => PlatformMenuBar(
     menus: [
-      const PlatformMenu(
+      PlatformMenu(
         label: 'Nushi',
         menus: [
           PlatformProvidedMenuItem(type: PlatformProvidedMenuItemType.about),
+          PlatformMenuItem(
+            label: 'Settings…',
+            shortcut: settingsKey,
+            onSelected: () => showSettings(_navigator.currentContext!),
+          ),
           PlatformProvidedMenuItem(type: PlatformProvidedMenuItemType.hide),
           PlatformProvidedMenuItem(type: PlatformProvidedMenuItemType.quit),
         ],
@@ -58,13 +65,20 @@ class _NushiAppState extends State<NushiApp> {
       ),
     ],
     child: MaterialApp(
+      navigatorKey: _navigator,
       title: 'Nushi',
       debugShowCheckedModeBanner: false,
       theme: const NushiTheme(Tokens.light).toThemeData(),
       darkTheme: const NushiTheme(Tokens.dark).toThemeData(),
       themeMode: _mode,
       scrollBehavior: const NativeScroll(),
-      home: Scaffold(body: _Shell(widget.daemon)),
+      // The menu's ⌘, doesn't reach the menu while Flutter has the keys.
+      home: Builder(
+        builder: (context) => CallbackShortcuts(
+          bindings: {settingsKey: () => showSettings(context)},
+          child: Scaffold(body: _Shell(widget.daemon)),
+        ),
+      ),
     ),
   );
 }

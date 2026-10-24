@@ -8,8 +8,9 @@ import 'daemon.dart';
 /// What the app remembers across launches, in `app.json` in the data folder:
 /// whether the details panel shows (its toolbar button), which of its cards
 /// are collapsed and their order, the repositories whose new chats get a
-/// worktree, what each chat's Changes view shows, the panes' widths, whether changed files show flat, and which chats
-/// show their terminals.
+/// worktree, what each chat's Changes view shows, the panes' widths, whether
+/// changed files show flat, which chats show their terminals, and the
+/// terminal's font.
 final showDetails = ValueNotifier<bool>(_saved['details'] != false)
   ..addListener(_save);
 final collapsedCards = ValueNotifier<Set<String>>(_strings('collapsed'))
@@ -44,6 +45,15 @@ final paneWidths = ValueNotifier<Map<String, double>>({
     if (key is String && value is num) key: value.toDouble(),
 })..addListener(_save);
 
+/// The terminal's font family (null: the bundled JetBrains Mono) and size.
+final terminalFont = ValueNotifier<String?>(switch (_saved['termFont']) {
+  final String f => f,
+  _ => null,
+})..addListener(_save);
+final terminalFontSize = ValueNotifier<double>(
+  (_saved['termSize'] as num?)?.toDouble() ?? 12.5,
+)..addListener(_save);
+
 File get _settings => File('$dataDir/app.json');
 
 final Map<String, Object?> _saved = () {
@@ -70,6 +80,8 @@ void _save() {
         'panes': paneWidths.value,
         'flat': changesFlat.value,
         'terminals': terminalChats.value.toList(),
+        'termFont': terminalFont.value,
+        'termSize': terminalFontSize.value,
       }),
     );
   } on Object {

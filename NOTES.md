@@ -111,7 +111,9 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 65. One home for Claude's rules (T6, T9, T10, T13) | 6753 | 867 | 12394 | 682 |
 | 66. The app renders what the daemon decides (T7, T8) | 6913 | 867 | 12383 | 682 |
 | 67. Duplicates and splits (T11, T12, T14) | 6913 | 867 | 12423 | 682 |
-| 68. Tests (T15) | 6913 | 867 | 12431 | 682 || 69. Notes (T16) | 6913 | 867 | 12431 | 682 |
+| 68. Tests (T15) | 6913 | 867 | 12431 | 682 |
+| 69. Notes (T16) | 6913 | 867 | 12431 | 682 |
+| 70. Terminal shell and fonts | 6927 | 867 | 12603 | 682 |
 
 Steps over the ~500-line tripwire (code and tests, without generated code): 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 and this milestone removed more than they added.
 
@@ -179,7 +181,7 @@ Open questions; what's settled is in `docs/adr/` or in the code.
 ## Dependencies
 
 - Go: `connectrpc.com/connect` v1, `google.golang.org/protobuf`, buf through `go run` (codegen), `github.com/creack/pty`, `golang.org/x/sys/unix`.
-- Dart: `connectrpc` (with `http2` 2.x: 2.0.1 doesn't resolve with 3.x), `protobuf`, `flutter_markdown_plus`, `markdown`, `re_highlight`, `url_launcher`, `file_selector`, `pasteboard`, `desktop_drop`, `xterm2` (MIT; brings `xterm2_core`, `zmodem`, `quiver`, `equatable`, `convert`); fonts IBM Plex Sans and JetBrains Mono (OFL), bundled.
+- Dart: `connectrpc` (with `http2` 2.x: 2.0.1 doesn't resolve with 3.x), `protobuf`, `flutter_markdown_plus`, `markdown`, `re_highlight`, `url_launcher`, `file_selector`, `pasteboard`, `desktop_drop`, `xterm2` (MIT; brings `xterm2_core`, `zmodem`, `quiver`, `equatable`, `convert`); fonts IBM Plex Sans and JetBrains Mono (OFL), and Symbols Nerd Font Mono from Nerd Fonts 3.5.1 (MIT; its icons come from projects under their own licenses, listed in the Nerd Fonts repository), bundled.
 
 ## Security notes to look at
 
@@ -198,4 +200,5 @@ Open questions; what's settled is in `docs/adr/` or in the code.
 
 - Screenshots of the app window are current only while it's in front: macOS stops Flutter drawing an occluded window.
 - To watch the fake agent in the app: build `acp/acptest/fakeagent`, put an `npx` that execs it first on `PATH`, and start a daemon with that `PATH` and `NUSHI_DATA` (a short path: the socket path has a length limit). Its scripts answer prompt words: `permission`, `question`, `think`, `pwd`, `many`, `plan`.
+- Terminals: the shell is the user's login shell from `id -P` (the user database), never the daemon's `$SHELL`. fish 4 asks the terminal's Primary Device Attributes as it starts and waits 10 seconds for the answer; the app answers queries in a replay only for a terminal it opened itself (anyone attaching later would answer twice).
 - App tests get a data folder in the temporary folder (`FLUTTER_TEST`); never point them at the real one.
