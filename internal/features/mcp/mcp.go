@@ -49,6 +49,16 @@ func New(config Config, changed Changed) *Service { return &Service{config: conf
 // local wins, then project, user, plugins and claude.ai.
 var rank = map[string]int{"local": 0, "project": 1, "user": 2, "plugin": 3, "claudeai": 4, "other": 5}
 
+// order is a server's place among those of its name: as its scope ranks,
+// except that a project server that is off or not approved gives way to a
+// local or user one (Claude Code 2.1.309 skips it then).
+func order(sv model.MCPServer) int {
+	if sv.Scope == "project" && (sv.Off || !sv.Approved) {
+		return 2*rank["user"] + 1
+	}
+	return 2 * rank[sv.Scope]
+}
+
 // List returns folder's servers. With check, each gets its state, and a
 // server only the agent knows is added; when checking fails, the servers
 // come back unchecked with checkErr saying why.
@@ -62,7 +72,7 @@ func (s *Service) List(ctx context.Context, folder string, check bool) (servers 
 	}
 	used := map[string]int{} // the server the agent uses, by name
 	for i, sv := range servers {
-		if j, ok := used[sv.Name]; !ok || rank[sv.Scope] < rank[servers[j].Scope] {
+		if j, ok := used[sv.Name]; !ok || order(sv) < order(servers[j]) {
 			used[sv.Name] = i
 		}
 	}

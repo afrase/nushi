@@ -39,10 +39,28 @@ class _Servers extends StatelessWidget {
       builder: (context, _) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (!list.loaded)
+          if (!list.loaded && list.checking)
             Text('…', style: muted)
-          else if (list.used.isEmpty)
+          else if (list.loaded && list.used.isEmpty)
             Text('No MCP servers.', style: muted),
+          if (list.error.isNotEmpty && !list.checking)
+            Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(text: '${list.error} '),
+                  WidgetSpan(
+                    child: Tap(
+                      onTap: list.refresh,
+                      child: Text(
+                        'Try again',
+                        style: theme.ui(t.link, size: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              style: theme.ui(t.crashed, size: 12),
+            ),
           for (final s in list.used)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 2),

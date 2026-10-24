@@ -47,9 +47,15 @@ func check(folder, scope, name, config string) error {
 	return err
 }
 
+// The changes below run to the end once begun, even if the app goes: a
+// CLI killed while it writes Claude's config could leave it half written,
+// and an edit stopped between its remove and its add would lose the server
+// (its secrets the app never had).
+
 // Add adds a server to a scope; folder names the project for project and
 // local scope.
 func (s *Service) Add(ctx context.Context, folder, scope, name, config string) error {
+	ctx = context.WithoutCancel(ctx)
 	if err := check(folder, scope, name, config); err != nil {
 		return err
 	}
@@ -64,6 +70,7 @@ func (s *Service) Add(ctx context.Context, folder, scope, name, config string) e
 // header value left as Mask keeps the value it had. It is a remove and an
 // add; when the add fails, the old config is put back.
 func (s *Service) Edit(ctx context.Context, folder, scope, name, config string) error {
+	ctx = context.WithoutCancel(ctx)
 	if err := check(folder, scope, name, config); err != nil {
 		return err
 	}
@@ -89,6 +96,7 @@ func (s *Service) Edit(ctx context.Context, folder, scope, name, config string) 
 
 // Remove removes a server from a scope.
 func (s *Service) Remove(ctx context.Context, folder, scope, name string) error {
+	ctx = context.WithoutCancel(ctx)
 	if err := target(folder, scope, name); err != nil {
 		return err
 	}
@@ -133,6 +141,7 @@ func (s *Service) notify(folder, scope string) {
 // SetOn turns a project's server (its .mcp.json) on, which approves it,
 // or off for the project.
 func (s *Service) SetOn(ctx context.Context, folder, name string, on bool) error {
+	ctx = context.WithoutCancel(ctx)
 	if err := target(folder, "project", name); err != nil {
 		return err
 	}
