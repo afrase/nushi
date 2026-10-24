@@ -1,46 +1,36 @@
 # Notes
 
-## Summary (2026-10-24, after step 73)
+## Summary (2026-10-24, after step 80: milestone Q)
 
-Milestone P (steps 70–73, plus a Context card change asked for during the run) is done: one commit each on `main`, all pushed. `make test` passes (the chats feature with `-race` too). Every step was tried by hand in a development build against live Claude (claude-agent-acp 0.94.0, Claude Code 2.1.309) at 1280×800, dark, with the dev daemon and app on `NUSHI_DATA` (a `/tmp` link to the scratchpad) and a throwaway repository; prompts only listed and read its files, ran `sleep`/`echo`/`wc`, and started Explore and general-purpose agents. Before any new test ran I checked that tests can't reach the real data folder (Go tests use `t.TempDir()`, app tests `FLUTTER_TEST`'s temporary folder) and kept a copy of `app.json`: it was unchanged at the end. The installed Nushi and its daemon were left alone. `make install` put the build in `~/Applications/Nushi.app` (and the iCloud copy).
+Milestone Q fixed D1–D61 of the deep review (`~/Developer/nushi-deep-review-findings.md`) in steps 74–80, one commit each on `main`, all pushed. `make test` passes (Go with `-race` for the chats, e2e and acp packages too). Most fixes have a regression test that fails without them (checked by undoing the fix for the git guards, the kept/replay fixes, the mode, the steer duplicate, the rewind fork point, the own-turn cancel and DiffBox's view change). The fakes were fixed so they can catch these bugs: the chats fake agent now replays its history on `session/load`, can quit, advertises `loadSession`, returns config on fork and load; acptest records `session/delete`.
 
-**What works**
-- 70: terminals start the login shell from the user database (`id -P`: fish here), with `-l` and `$SHELL` set to it; `status is-login` holds and the prompt works. Settings… (⌘,, also from a focused terminal) picks the terminal's font among the installed monospaced families (33 here, Nerd Fonts included) and its size; JetBrains Mono stays the default. Symbols Nerd Font Mono 3.5.1 is bundled as the fallback: lsd's icons, folder, git and Apple glyphs render in JetBrains Mono and in FiraCode Nerd Font Mono; xterm paints each cell on its own, so wide glyphs, CJK and emoji keep the grid. Also fixed: a new terminal answers fish's startup query at once (fish waited 10 seconds for it).
-- 71: a click on a subagent (its one-line card in the transcript, or its row in the card) opens its pane in place of the details panel: back, its name, wider (remembered), ×; its prompt folded to five lines with Show more; "Model Sonnet 5.5 · Effort Low", or the chat's "(inherited)"; state and time; its steps live; its result. Back finds the panel as it was (scroll kept). The card rows show model and effort as a tag. A replayed subagent says its steps (and report) weren't kept.
-- 72: see "Background shells" below. The card is now "Background tasks": running subagents and commands, then "n finished" (or "n earlier" when it holds a command whose end isn't known). A command's row shows it, its state and time, and its last line; its pane shows the command and the output so far, live.
-- 73: the subagent pane has a box, "Message Explore through Claude". The message goes to the main session (steered or queued like any) asking Claude to pass it on verbatim with SendMessage; the transcript shows "You → Explore, through Claude" and only the message. Tried four times on finished subagents (one after a daemon restart) and once on a running one: the text arrived verbatim every time, the subagent acted on it, and its pane showed it running again, then its new result.
-- Context card: expanded, one line over the bar ("5% used", "51.3k / 1M", refresh), then the bar and categories, Last turn and Cost; collapsed, the ring.
+**By id**
+- Fixed: D1–D6, D8–D61. D7 is the same bug as D5 (fixed once, in `useLocked`); D27 was fixed by step 75's `disconnect` and tested in 76; D59 is the plain-Stop path of D15 (fixed once); D41 came with D22.
+- Nothing deferred, nothing found wrong. Partly done: D44 refreshes a list once it is 5 minutes old (not on `mcpChanged`); D32 keeps a taken-back message's subagent only when the transcript knows its call (not for a message replayed after a restart: the app then says so).
 
-**Background shells (what a client that isn't AIR sees)**: the Bash call's input (`run_in_background: true`), and an output naming the task id and the file Claude writes the command's output to, which ends with "[exited with code N]" or "[killed]" when the command does. Claude 2.1.309 has no BashOutput: it reads that file with Read; it stops one with the deferred `TaskStop` (`{task_id}`). When a command ends, Claude gets a notification Nushi never sees and runs a turn of its own; the only trace is `_claude/origin: {kind: "task-notification"}` on that turn's last `usage_update`, naming no task. So the daemon follows the file: "running" only while it has no end line and the Claude that started it still runs; with the end line, done/failed/stopped and the exit; otherwise "started" (Claude's commands outlive it: a `sleep 300` kept running after the daemon stopped). Details in "Agent facts".
+**Tried by hand** (dev daemon and app on `NUSHI_DATA`, a `/tmp` link to the scratchpad, live Claude, a throwaway repository, 1280×800 dark): the whole command in a pending permission card and in an opened command; a background command followed from Claude's task id (and a `Read` of its output file not taken for one); Archive asking about `sleep 300` in the chat's terminal; Enter and a digit typed in the terminal while an AskUserQuestion card appeared went to the terminal, the card stayed pending; stopping the daemon mid-command (a 25 s `python3 … sleep`) ended the command at once, and after the restart Claude's history showed the interruption and the call as failed; Changes with a nested repository and a link to `/dev/zero` ("Not shown: nested is a repository of its own"); the Delete dialog naming an ignored `.env` in a worktree, and removing it.
 
-**Changes to earlier behavior**
-- The transcript's subagent card no longer unfolds inline: it is one line that opens the pane.
-- The card "Agents" is "Background tasks": a collapse or position it had is forgotten.
-- A foreground subagent's result was Claude's pointer to its report ("This agent's report was delivered…") after a reload; now it is empty, and the pane says the report wasn't kept.
-- A finished subagent with new steps (run again by SendMessage) counts as running again.
-
-**Not tried by hand**
-- The light theme; a terminal font size other than 14 and 12.5; a login shell other than fish (zsh, bash fall back the same way).
-- A background command started by a subagent, and a command whose output passes 64 KB (only its end is read; covered by reasoning, not a test).
-- `make install`'s app with the new font list (the Swift side was only run in debug builds).
+**Not tried by hand**: the subagent chip in the composer (D32), side chats ending in the app (D19, covered by a daemon test), the Changes toolbar in its error state (D41) and a commit picked during a reload (D38, no test either: the fix is two counters), the trust card followed by a failing move (D53), a worktree whose base branch was deleted, the "moved to the background" phrasings with live Claude (from Claude's binary), `$/cancel_request` from live Claude, a 30 MB image message, the 2-minute side-chat sweep in the app, and the light theme.
 
 **Needs your attention**
-- The API went from 38 to 41: press "Restart daemon" in the installed app. Restarting stops running turns and closes terminals.
-- Security: the daemon now reads Claude's background output files (see "Security notes"), and step 73's prompt asks Claude to pass text on; Claude's history keeps that wrapped prompt (`claude --resume` shows it).
+- The API went from 41 to 42 (new fields: a worktree's base commit, a worktree's ignored files, the Dropped event, a queued message's subagent call): press "Restart daemon" in the installed app. Restarting now cancels running turns and gives Claude a few seconds to end them; terminals still close.
+- Product calls made, in "Decisions to revisit" under "New in Q": Archive keeps the queue held; ignored files count as work a worktree removal loses; Move and Rewind wait for Claude's own turn; side chats end 2 minutes after the last app goes; the "New worktree" choice is saved only after the move worked.
+- Security: see "Security notes" (git now refuses lazy fetches and submodule status runs; nothing is written through repository links; Claude's settings are read only when regular and at most 64 MiB; home-folder trust no longer covers its subfolders). ADR 0023 and 0027 were amended.
+- At startup the daemon now moves the old Nushi Next scratch chats' history copies: a copy under the old folder name goes when the new one holds all of it (D46). That touches `~/.claude/projects` once.
 
-**Size**: the daemon went from 6,913 to 7,281 lines of Go, the app from 12,431 to 13,372 lines of Dart. No file is over 400 lines (`subagent_pane.dart` is 321). Two steps crossed the ~500-line tripwire, tests included: 71 (616 added, 183 removed: the pane, its prompt and model/effort header, and the inline card it replaced) and 72 (652 added: following Claude's output files in the daemon, the shell pane and rows, and their tests).
+**Size**: the daemon went from 7,281 to 7,813 lines of Go, the ACP client from 867 to 929, the app from 13,372 to 13,624 lines of Dart. Every step stayed under the ~500-line tripwire (the largest, 76, added 491). Two files sit at the ~400-line tripwire: `app/lib/daemon.dart` (405, the side-chat ending) and `internal/git/git.go` (400).
 
-**Dependencies**: none added; one font bundled (Symbols Nerd Font Mono, MIT, 2.5 MB).
+**Dependencies**: none added.
 
-**Left behind by the testing**: nothing (the dev chats deleted with Delete, Claude's history folder for the throwaway repository and its task outputs removed, the dev data folder, its `/tmp` link, the throwaway repository and the helper scripts removed).
+**Left behind by the testing**: nothing (the dev chats deleted with Delete, which took Claude's history; the empty history folders, task outputs, dev data folder, its `/tmp` link, the throwaway repository and the helper tools removed).
 
-## Demo (milestone P)
+## Demo (milestone Q)
 
-1. Open a terminal (⌃\`): it is your login shell (fish), `status is-login` is true. ⌘, picks a font (try FiraCode Nerd Font Mono) and a size; `lsd --icon always` shows icons in any font.
-2. Ask: "Use an Explore agent with the haiku model and low effort to list the files in this folder." Click its line in the transcript: the pane shows the prompt, "Model Haiku 5.5 · Effort Low", the steps as they come, the result. Back returns to the panel where it was; the expand button widens the pane.
-3. In the pane, type "Also print the first line of README.md" and press Enter: the transcript shows "You → Explore, through Claude", Claude forwards it, the pane shows the subagent running again, then its answer.
-4. Ask: "Run `for i in 1 2 3 4 5 6; do echo tick $i; sleep 3; done` in the background and end your turn." Background tasks lists it with its last line; click it: the output grows, then "done · exited with code 0".
-5. Expand Context: one line "n% used … used / size" with refresh, then the bar.
+1. In a repository, ask Claude in Manual mode to run a long command that writes a file: the permission card shows the whole command, wrapped.
+2. Open a terminal in the chat, run `sleep 300`, then pick Archive: it asks first, naming `sleep 300`.
+3. With the terminal focused, ask Claude to use AskUserQuestion: Enter and digits stay in the terminal.
+4. Ask Claude to run a 30-second foreground command, then stop the daemon: the command ends at once; after a restart the chat shows it interrupted.
+5. In Changes, an untracked repository inside the folder reads "Not shown: … is a repository of its own" instead of failing the view.
 
 ## Line counts
 
@@ -235,4 +225,5 @@ Open questions; what's settled is in `docs/adr/` or in the code.
 - Screenshots of the app window are current only while it's in front: macOS stops Flutter drawing an occluded window.
 - To watch the fake agent in the app: build `acp/acptest/fakeagent`, put an `npx` that execs it first on `PATH`, and start a daemon with that `PATH` and `NUSHI_DATA` (a short path: the socket path has a length limit). Its scripts answer prompt words: `permission`, `question`, `think`, `pwd`, `many`, `plan`.
 - Terminals: the shell is the user's login shell from `id -P` (the user database), never the daemon's `$SHELL`. fish 4 asks the terminal's Primary Device Attributes as it starts and waits 10 seconds for the answer; the app answers queries in a replay only for a terminal it opened itself (anyone attaching later would answer twice).
+- Driving the app by hand: System Events' `click at` doesn't reach a Flutter window; a few lines of Swift posting `CGEvent` mouse and key events do. Screenshots are 2× the window's points.
 - App tests get a data folder in the temporary folder (`FLUTTER_TEST`); never point them at the real one.
