@@ -48,6 +48,7 @@ gen:
 test:
 	go test ./...
 	cd packages/uds_transport && dart test
+	cd packages/noise && dart test
 	cd packages/markdown && flutter test
 	cd app && flutter test
 
