@@ -1,0 +1,15 @@
+name: svg_path
+description: SVG path data (a path's `d` attribute) as a Flutter Path.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter

@@ -15,6 +15,8 @@ dependencies:
     path: ../packages/uds_transport
   markdown_view:
     path: ../packages/markdown
+  svg_path:
+    path: ../packages/svg_path
   url_launcher: ^6.3.3
   file_selector: ^1.1.0
   diff_view: ^0.1.0

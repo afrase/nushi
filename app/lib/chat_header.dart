@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'agent_mark.dart';
 import 'chat.dart';
 import 'chat_menu.dart';
 import 'daemon.dart';
@@ -78,7 +79,7 @@ class _ChatHeaderState extends State<ChatHeader> {
                   ),
           ),
           const SizedBox(width: 14),
-          _Monogram(chat),
+          AgentMark(chat.agent, size: 16, color: t.text),
           const SizedBox(width: 8),
           Text(
             chat.agentName,
@@ -137,39 +138,6 @@ class _ChatHeaderState extends State<ChatHeader> {
             child: Icon(Icons.more_horiz, size: 16, color: t.textSecondary),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// The agent's monogram: its letter on its color (Claude's, or the accent).
-class _Monogram extends StatelessWidget {
-  const _Monogram(this.chat);
-
-  final ChatState chat;
-
-  static const size = 16.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = NushiTheme.of(context).t;
-    return Container(
-      width: size,
-      height: size,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: chat.agent == 'claude' ? t.claude : t.accent,
-        borderRadius: BorderRadius.circular(size / 5),
-      ),
-      child: Text(
-        chat.agentName[0],
-        style: TextStyle(
-          fontFamily: NushiTheme.uiFont,
-          fontSize: size * 0.64,
-          height: 1,
-          fontWeight: FontWeight.w600,
-          color: t.monogramText,
-        ),
       ),
     );
   }
