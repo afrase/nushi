@@ -21,6 +21,7 @@ import (
 	"syscall"
 
 	"github.com/afrase/nushi/acp"
+	"github.com/afrase/nushi/internal/ante"
 	"github.com/afrase/nushi/internal/api"
 	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/claudehistory"
@@ -40,6 +41,10 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == ante.Command { // the bridge Nushi runs Ante through
+		ante.Main()
+		return
+	}
 	if err := run(); err != nil {
 		log.Fatal(err)
 	}
