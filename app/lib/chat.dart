@@ -69,11 +69,7 @@ class ChatState extends ChangeNotifier {
   final pane = ValueNotifier<String?>(null);
 
   /// The agent's name to show: "Claude".
-  String get agentName => switch (agent) {
-    _ when knownAgents[agent] != null => knownAgents[agent]!.title,
-    '' => 'The agent',
-    _ => agent[0].toUpperCase() + agent.substring(1),
-  };
+  String get agentName => agentTitle(agent);
 
   /// The terminal command that opens one of its agent's sessions, before
   /// the session id ('' when not known).

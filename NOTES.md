@@ -260,6 +260,8 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 120. Plain connections can't crowd out WebSockets | 12698 | 984 | 14777 | 1759 | 1130 |
 | 121. The docs: a forged QR code in the threat model | 12698 | 984 | 14777 | 1759 | 1130 |
 | 122. New connections without a request have a budget of their own | 12698 | 984 | 14777 | 1759 | 1170 |
+| 123. The icon, the still lake | 12698 | 984 | 14857 | 1759 | 1170 |
+| 124. Agent marks: one per agent, in the sidebar, the header and the status bar (`packages/svg_path`) | 12698 | 984 | 15027 | 1864 | 1170 |
 
 Steps over the ~500-line tripwire (code and tests, without generated code): 98 (2,384 with its tests: Ante's whole bridge and its fake), 99 (901: two agents, two trust packages, the shared trust files), 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 removed more than it added.
 
@@ -344,6 +346,19 @@ What the code depends on (`internal/omp*`), from driving `omp --mode acp` and it
 - `session/load` replays user messages, tool calls and agent messages (fresh message ids each time); `session/fork` copies the whole session.
 - Sessions are `~/.omp/agent/sessions/<folder name>/<time>_<id>.jsonl`; all of omp's state is under `~/.omp` (`PI_CODING_AGENT_DIR` moves only `agent/`), so a test points `HOME` at a temp folder.
 - It runs only under Bun (≥ 1.3.14); npx installs Bun's npm package beside it.
+
+## Agent marks (step 124)
+
+One mark per agent wherever a chat's agent shows (`app/lib/agent_mark.dart`), drawn in one color from paths bundled in the source; nothing is fetched. An agent without one gets its initial on a rounded square.
+
+| Agent | Source | Terms |
+|---|---|---|
+| Claude | the ACP registry's `claude-acp.svg` (`cdn.agentclientprotocol.com/registry/v1/latest/`; the registry repository is Apache-2.0, its Claude entry says "proprietary"), numbers rounded to 0.1 of its 1200 box | The Claude mark is Anthropic's trademark. Anthropic's trademark guidelines (anthropic.com/legal/trademark-guidelines) allow use only as Anthropic permits, with no change of color, font or proportion, and nothing that implies endorsement. The registry itself serves it in one color (`currentColor`) for ACP clients to show. |
+| Codex | the registry's `codex-acp.svg` (codex-acp is Apache-2.0) | The OpenAI Blossom, OpenAI's trademark, under OpenAI's brand guidelines (openai.com/brand; the page answered 403, so not read). |
+| Ante | `docs-site/static/assets/ante.png` in AntigmaLabs/ante (its docs' logo), redrawn as its rows of pixels | The repository is Apache-2.0, which grants no trademark rights (§6). |
+| oh-my-pi | `assets/icon.svg` in can1357/oh-my-pi (MIT): the π with a plug, its two decorative dots left out (they'd vanish in one color) | MIT for the file; the mark is the project's. |
+
+Each mark only names the agent beside a chat (nominative use); none stands for Nushi. That's fine for a personal app; before Nushi is published, ask Anthropic and OpenAI, or drop their entries from `_marks` (each then shows its monogram).
 
 ## Memory and speed (step 101)
 

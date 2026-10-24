@@ -61,7 +61,7 @@ class Tokens {
   final Color crashed;
   final Color crashedSoft;
 
-  // The agent's monogram.
+  // Claude's color, and the letter on an agent's monogram.
   final Color claude;
   final Color monogramText;
 

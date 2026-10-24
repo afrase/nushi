@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import 'agent_mark.dart';
 import 'agents.dart';
 import 'chat.dart';
 import 'chat_menu.dart';
@@ -328,7 +329,15 @@ class _ChatRowState extends State<_ChatRow> {
             child: Row(
               children: [
                 ChatDot(chat: chat),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
+                Tooltip(
+                  message: chat.agentName,
+                  child: AgentMark(
+                    chat.agent,
+                    color: chat.archived ? t.textMuted : t.textSecondary,
+                  ),
+                ),
+                const SizedBox(width: 7),
                 Expanded(
                   child: _renaming
                       ? RenameField(

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import 'agent_mark.dart';
 import 'chat.dart';
 import 'chat_menu.dart';
 import 'daemon.dart';
@@ -163,6 +164,10 @@ class _MemoryButton extends StatelessWidget {
         width: 340,
         child: Row(
           children: [
+            if (chat != null) ...[
+              AgentMark(chat.agent, size: 12),
+              const SizedBox(width: 6),
+            ],
             Expanded(child: name),
             Text(bytes(n), style: theme.ui(t.textSecondary, size: 12)),
             SizedBox(
@@ -202,11 +207,7 @@ class _MemoryButton extends StatelessWidget {
       alignmentOffset: const Offset(0, 4),
       menuChildren: [
         for (final (c, n) in chats)
-          row(
-            label(c.title.isEmpty ? 'New chat' : c.title, c.agentName),
-            n,
-            chat: c,
-          ),
+          row(label(c.title.isEmpty ? 'New chat' : c.title), n, chat: c),
         if (chats.isNotEmpty) const Divider(height: 9),
         row(label('Nushi', 'daemon and app'), nushi),
         if (m.other > 0) row(label('Terminals and other'), m.other.toInt()),

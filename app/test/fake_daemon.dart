@@ -1,0 +1,98 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:connectrpc/connect.dart';
+import 'package:fixnum/fixnum.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/daemon.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+
+/// The four agents, as the daemon lists them.
+final agents = [
+  Agent(name: 'claude', title: 'Claude'),
+  Agent(name: 'codex', title: 'Codex'),
+  Agent(name: 'ante', title: 'Ante'),
+  Agent(name: 'omp', title: 'oh-my-pi'),
+];
+
+/// A daemon with [chats] and [agents] for widget tests; it records the
+/// chats asked for in [started], and fails them with [startError] if set.
+class FakeDaemon implements Transport {
+  FakeDaemon(this.chats);
+
+  final List<Chat> chats;
+  final started = <StartChatRequest>[];
+  String? startError;
+  final _events = StreamController<EventsResponse>()..add(EventsResponse());
+
+  /// A [Daemon] on this fake, its chats and agents listed.
+  Future<Daemon> connect(WidgetTester tester) async {
+    final d = Daemon(transport: this);
+    for (var i = 0; i < 5; i++) {
+      await tester.pump();
+    }
+    return d;
+  }
+
+  @override
+  Future<UnaryResponse<I, O>> unary<I extends Object, O extends Object>(
+    Spec<I, O> spec,
+    I input, [
+    CallOptions? options,
+  ]) async {
+    if (input is StartChatRequest) {
+      started.add(input);
+      if (startError case final e?) throw ConnectException(Code.unknown, e);
+    }
+    final Object out = switch (input) {
+      PingRequest() => PingResponse(apiVersion: apiVersion),
+      ListChatsRequest() => ListChatsResponse(chats: chats),
+      ListAgentsRequest() => ListAgentsResponse(agents: agents),
+      StartChatRequest() => StartChatResponse(chatId: 'new'),
+      _ => spec.outputFactory(),
+    };
+    return UnaryResponse(spec, Headers(), out as O, Headers());
+  }
+
+  @override
+  Future<StreamResponse<I, O>> stream<I extends Object, O extends Object>(
+    Spec<I, O> spec,
+    Stream<I> input, [
+    CallOptions? options,
+  ]) async =>
+      StreamResponse(spec, Headers(), _events.stream as Stream<O>, Headers());
+}
+
+/// A chat for [FakeDaemon], [age] minutes old.
+Chat chat(
+  String id,
+  String agent,
+  String title, {
+  String folder = '/Users/me/nushi',
+  int age = 0,
+  ChatStatus? status,
+}) => Chat(
+  id: id,
+  agent: agent,
+  title: title,
+  folder: folder,
+  createdUnixMs: Int64(
+    DateTime(2026, 10, 25, 12).millisecondsSinceEpoch - age * 60000,
+  ),
+  status: status ?? ChatStatus(),
+);
+
+/// Loads the app's fonts (the bundled ones and Material's icons), so
+/// goldens show text rather than boxes.
+Future<void> loadFonts() async {
+  final manifest =
+      json.decode(await rootBundle.loadString('FontManifest.json')) as List;
+  for (final family in manifest.cast<Map<String, dynamic>>()) {
+    final loader = FontLoader(family['family'] as String);
+    for (final font in (family['fonts'] as List).cast<Map>()) {
+      loader.addFont(rootBundle.load(font['asset'] as String));
+    }
+    await loader.load();
+  }
+}
