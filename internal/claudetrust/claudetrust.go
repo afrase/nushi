@@ -21,9 +21,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/afrase/nushi/internal/claudemcp"
 	"github.com/afrase/nushi/internal/model"
@@ -149,11 +150,14 @@ func (Trust) Runs(folder string) ([]model.FolderRun, error) {
 	// Nushi can't tell what one it can't read runs, but Claude might read
 	// it (or read it later): it shows, and the card still asks.
 	for _, u := range unread {
-		what := u.Err.Error()
+		what, text := "MCP servers Nushi couldn't read", u.Err.Error()
 		if b, err := claudemcp.ReadFile(u.Path); err == nil {
-			what = string(b[:min(len(b), 4<<10)])
+			text = string(b[:min(len(b), shown)])
+			if len(b) > shown {
+				what += fmt.Sprintf(" (the first %d KB of %d KB shown)", shown>>10, (len(b)+1023)>>10)
+			}
 		}
-		out = append(out, model.FolderRun{File: u.Path, What: "MCP servers Nushi couldn't read", Command: what})
+		out = append(out, model.FolderRun{File: u.Path, What: what, Command: text})
 	}
 	for _, s := range servers {
 		if s.Scope == "project" && !s.Off {
@@ -185,6 +189,9 @@ func (Trust) Runs(folder string) ([]model.FolderRun, error) {
 	}
 	return out, nil
 }
+
+// shown is how much of a file Nushi can't read the trust card shows.
+const shown = 4 << 10
 
 // serverCommand is the command line a server runs, or the URL it connects to.
 func serverCommand(config string) string {
@@ -248,86 +255,143 @@ func settingsRuns(path string) ([]model.FolderRun, error) {
 	return out, nil
 }
 
-// skillHooks returns the commands of the hooks in a skill's front matter,
-// read line by line rather than as YAML: each `command:` value of a plain
-// `hooks:` block. A block with anything else in it (flow style, block
-// scalars, anchors, keys it doesn't know), or hooks anywhere else, comes
-// back whole, as one "command": what the reader can't follow, the user
-// reads.
+// skillHooks returns the commands of the hooks in a skill's front matter
+// (YAML), as Claude's settings write them: hooks: {<event>: [{matcher,
+// hooks: [{type, command or prompt}]}]}. Front matter that doesn't parse,
+// or whose hooks take any other shape (an alias, a duplicate key, hooks
+// anywhere else), comes back whole, as one "command": what Nushi can't
+// follow, the user reads.
 func skillHooks(path string) []string {
 	b, err := claudemcp.ReadFile(path)
 	if err != nil || !bytes.HasPrefix(b, []byte("---")) {
 		return nil
 	}
-	var front, block, rest []string
+	var front []string
 	sc := bufio.NewScanner(bytes.NewReader(b[3:]))
-	inHooks := false
-	for sc.Scan() {
-		line := sc.Text()
-		if strings.TrimSpace(line) == "---" {
-			break
-		}
-		front = append(front, line)
-		if line != "" && line[0] != ' ' && line[0] != '\t' && line[0] != '-' && line[0] != '#' {
-			inHooks = strings.TrimRight(line, " ") == "hooks:"
-			if inHooks {
-				continue
-			}
-		}
-		if inHooks {
-			block = append(block, line)
-		} else {
-			rest = append(rest, line)
-		}
+	for sc.Scan() && strings.TrimSpace(sc.Text()) != "---" {
+		front = append(front, sc.Text())
 	}
-	whole := []string{strings.TrimSpace(strings.Join(front, "\n"))}
-	if anyHooks.MatchString(strings.Join(rest, "\n")) {
+	text := strings.Join(front, "\n")
+	whole := []string{strings.TrimSpace(text)}
+	var doc yaml.Node
+	if err := yaml.Unmarshal([]byte(text), &doc); err != nil {
+		return whole
+	}
+	if len(doc.Content) == 0 {
+		return nil
+	}
+	top := doc.Content[0]
+	if top.Kind != yaml.MappingNode || !plainYAML(top) {
 		return whole
 	}
 	var cmds []string
-	for _, line := range block {
-		k, v, ok := plainPair(strings.TrimPrefix(strings.TrimSpace(line), "- "))
-		switch {
-		case !ok:
-			return whole
-		case k == "command":
-			cmds = append(cmds, v)
+	for i := 0; i < len(top.Content); i += 2 {
+		k, v := top.Content[i], top.Content[i+1]
+		if k.Value != "hooks" {
+			if hasHooks(v) {
+				return whole
+			}
+			continue
 		}
+		c, ok := hookCommands(v)
+		if !ok {
+			return whole
+		}
+		cmds = append(cmds, c...)
 	}
 	return cmds
 }
 
-// anyHooks finds a hooks key anywhere in YAML, quoted or not.
-var anyHooks = regexp.MustCompile(`(?m)(^|[\s{,\[])["']?hooks["']?\s*:`)
-
-// plainKey is a key the hooks block has: an event's name, or a hook's
-// fields as Claude documents them.
-var plainKey = regexp.MustCompile(`^(?:[A-Z][A-Za-z]*|hooks|matcher|type|command|prompt|timeout|async|statusMessage|once)$`)
-
-// plainPair reads a line of a hooks block the reader follows: empty, a
-// comment, or `key:` with a value on the line that YAML takes as it reads
-// (plain, or quoted and closed); ok is false for anything else.
-func plainPair(line string) (k, v string, ok bool) {
-	if line == "" || strings.HasPrefix(line, "#") {
-		return "", "", true
+// hookCommands reads a hooks value of the shape Claude's settings have.
+func hookCommands(hooks *yaml.Node) ([]string, bool) {
+	var cmds []string
+	if hooks.Kind != yaml.MappingNode {
+		return nil, false
 	}
-	k, v, found := strings.Cut(line, ":")
-	v = strings.TrimSpace(v)
-	if !found || !plainKey.MatchString(k) || strings.Contains(v, " #") {
-		return "", "", false
-	}
-	switch {
-	case v == "":
-		return k, v, true
-	case strings.ContainsAny(v[:1], "|>[{&*!%@`"):
-		return "", "", false
-	case v[0] == '"' || v[0] == '\'':
-		q := v[:1]
-		inner, closed := strings.CutSuffix(v[1:], q)
-		if !closed || strings.Contains(inner, q) || strings.Contains(inner, "\\") {
-			return "", "", false
+	for i := 1; i < len(hooks.Content); i += 2 {
+		matchers := hooks.Content[i]
+		if matchers.Kind != yaml.SequenceNode {
+			return nil, false
 		}
-		return k, inner, true
+		for _, m := range matchers.Content {
+			if m.Kind != yaml.MappingNode {
+				return nil, false
+			}
+			for j := 0; j < len(m.Content); j += 2 {
+				k, v := m.Content[j], m.Content[j+1]
+				switch {
+				case k.Value == "hooks" && v.Kind == yaml.SequenceNode:
+					for _, h := range v.Content {
+						cmd, ok := hookCommand(h)
+						if !ok {
+							return nil, false
+						}
+						cmds = append(cmds, cmd)
+					}
+				case k.Value == "matcher" && isString(v):
+				default:
+					return nil, false
+				}
+			}
+		}
 	}
-	return k, v, !strings.Contains(v, ": ")
+	return cmds, true
+}
+
+// hookCommand reads one hook: a mapping of plain values, with a command
+// or a prompt and no hooks in it.
+func hookCommand(h *yaml.Node) (string, bool) {
+	if h.Kind != yaml.MappingNode {
+		return "", false
+	}
+	var cmd string
+	for j := 0; j < len(h.Content); j += 2 {
+		k, v := h.Content[j], h.Content[j+1]
+		if v.Kind != yaml.ScalarNode || k.Value == "hooks" {
+			return "", false
+		}
+		if k.Value == "command" || k.Value == "prompt" {
+			if !isString(v) || cmd != "" {
+				return "", false
+			}
+			cmd = v.Value
+		}
+	}
+	return cmd, cmd != ""
+}
+
+func isString(n *yaml.Node) bool { return n.Kind == yaml.ScalarNode && n.Tag == "!!str" }
+
+// plainYAML says n has no aliases, merge keys or duplicate keys, at any
+// depth: what they'd hide, a walk of the tree would miss.
+func plainYAML(n *yaml.Node) bool {
+	if n.Kind == yaml.AliasNode {
+		return false
+	}
+	if n.Kind == yaml.MappingNode {
+		seen := map[string]bool{}
+		for i := 0; i < len(n.Content); i += 2 {
+			k := n.Content[i]
+			if k.Kind != yaml.ScalarNode || k.Tag == "!!merge" || seen[k.Value] {
+				return false
+			}
+			seen[k.Value] = true
+		}
+	}
+	for _, c := range n.Content {
+		if !plainYAML(c) {
+			return false
+		}
+	}
+	return true
+}
+
+// hasHooks says a hooks key is anywhere in n.
+func hasHooks(n *yaml.Node) bool {
+	for i, c := range n.Content {
+		if n.Kind == yaml.MappingNode && i%2 == 0 && c.Value == "hooks" || hasHooks(c) {
+			return true
+		}
+	}
+	return false
 }
