@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"slices"
+	"time"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -51,7 +52,7 @@ func (s *Service) open(id string) (*chat, error) {
 // reopenLocked reopens a chat whose agent isn't running (never reopened,
 // the last try failed, or the agent quit), unless it is archived or going.
 func (s *Service) reopenLocked(c *chat) {
-	if c.agent == nil && !c.busy && !c.session.Archived && !c.halting && c.parent == nil {
+	if c.agent == nil && !c.busy && !c.session.Archived && !c.halting && c.parent == nil && !c.reopenFailed {
 		c.busy = true
 		c.statusChangedLocked()
 		go s.resume(c)
@@ -72,12 +73,19 @@ func (s *Service) chat(id string) (*chat, error) {
 	return c, nil
 }
 
+// reopenTimeout bounds a reopen: an agent that never answers (a stalled
+// npx, an MCP server that hangs) mustn't leave the chat reopening for good.
+var reopenTimeout = 2 * time.Minute
+
 func (s *Service) resume(c *chat) {
-	err := s.load(context.Background(), c)
+	ctx, cancel := context.WithTimeout(context.Background(), reopenTimeout)
+	defer cancel()
+	err := s.load(ctx, c)
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.busy = false
 	if err != nil {
+		c.reopenFailed = true // not again until a message, a reload or a move
 		c.noticeLocked("error", "Couldn't reopen the chat: "+err.Error())
 	}
 	c.statusChangedLocked()

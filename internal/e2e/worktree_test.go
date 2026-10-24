@@ -202,4 +202,23 @@ func TestWorktreeMovesKeepTheWork(t *testing.T) {
 	if len(plan.Worktrees) != 1 || plan.Worktrees[0].Worktree.Path != wt.Path || plan.Worktrees[0].State.Commits != 1 {
 		t.Errorf("the worktree it left, with a commit, isn't offered: %v", plan.Worktrees)
 	}
+
+	// Nor one a terminal runs in; Delete ends the terminal, then removes it.
+	id = must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: repo, Worktree: true}))).ChatId
+	wt = chat(id).Worktree
+	must(a.c.OpenTerminal(ctx, connect.NewRequest(&nushiv1.OpenTerminalRequest{ChatId: id, Cols: 80, Rows: 24})))
+	move(id, repo)
+	if _, err := os.Stat(wt.Path); err != nil {
+		t.Fatalf("a worktree with a terminal in it went: %v", err)
+	}
+	plan = must(a.c.PlanDeleteChat(ctx, connect.NewRequest(&nushiv1.PlanDeleteChatRequest{ChatId: id})))
+	if len(plan.Worktrees) != 1 || len(plan.Terminals) != 1 {
+		t.Fatalf("plan = %v", plan)
+	}
+	must(a.c.DeleteChat(ctx, connect.NewRequest(&nushiv1.DeleteChatRequest{ChatId: id, Worktrees: []*nushiv1.WorktreeChoice{
+		{Path: wt.Path, RemoveWorktree: true, DeleteBranch: true}}})))
+	left := must(a.c.ListTerminals(ctx, connect.NewRequest(&nushiv1.ListTerminalsRequest{ChatId: id}))).Terminals
+	if _, err := os.Stat(wt.Path); !errors.Is(err, fs.ErrNotExist) || len(left) > 0 {
+		t.Errorf("after Delete: the worktree %v, terminals %v", err, left)
+	}
 }

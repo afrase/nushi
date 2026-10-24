@@ -2,6 +2,7 @@ package chats
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"sync"
@@ -41,7 +42,11 @@ type fakeAgent struct {
 	sendGate     chan struct{} // when set, writing a prompt waits until it is closed
 	steerGate    chan struct{} // when set, steering waits until it is closed
 	deleteGate   chan struct{} // when set, deleting a session waits until it is closed
+	loadGate     chan struct{} // when set, session/load waits until it is closed
+	forkGate     chan struct{} // when set, session/fork waits until it is closed
+	loadErr      error
 	launches     int
+	closed       int
 	refuseSteer  bool  // steering answers "no turn runs"
 	steerErr     error // steering fails
 	steerable    bool
@@ -86,13 +91,22 @@ func (f *fakeAgent) Initialize(context.Context, acp.InitializeRequest) (*acp.Ini
 		AgentCapabilities: caps}, nil
 }
 
-func (f *fakeAgent) NewSession(context.Context, acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
+func (f *fakeAgent) NewSession(ctx context.Context, _ acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 	resp := f.session
 	resp.SessionID = "s1"
 	return &resp, nil
 }
 
 func (f *fakeAgent) LoadSession(_ context.Context, req acp.LoadSessionRequest) (*acp.LoadSessionResponse, error) {
+	if f.loadGate != nil {
+		<-f.loadGate
+	}
+	if f.loadErr != nil {
+		return nil, f.loadErr
+	}
 	f.mu.Lock()
 	history := slices.Clone(f.history)
 	f.mu.Unlock()
@@ -137,13 +151,18 @@ func (f *fakeAgent) turn(req acp.PromptRequest, gate chan struct{}) (*acp.Prompt
 	return &acp.PromptResult{PromptResponse: acp.PromptResponse{StopReason: stop}, Usage: f.usage}, nil
 }
 
-func (f *fakeAgent) Close() error { return nil }
+func (f *fakeAgent) Close() error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.closed++
+	return nil
+}
 
 func (f *fakeAgent) Stop(time.Duration) error {
 	f.mu.Lock()
 	f.wire = append(f.wire, "stop")
 	f.mu.Unlock()
-	return f.Close()
+	return nil
 }
 
 func (f *fakeAgent) Done() <-chan struct{} {
@@ -187,7 +206,13 @@ func (f *fakeAgent) Steer(_ context.Context, _ acp.SessionID, prompt []acp.Conte
 
 func (f *fakeAgent) CanFork() bool { return true }
 
-func (f *fakeAgent) ForkSession(_ context.Context, req acp.ForkSessionRequest) (*acp.ForkSessionResponse, error) {
+func (f *fakeAgent) ForkSession(ctx context.Context, req acp.ForkSessionRequest) (*acp.ForkSessionResponse, error) {
+	if f.forkGate != nil {
+		<-f.forkGate
+	}
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 	f.forkMeta = req.Meta
 	return &acp.ForkSessionResponse{SessionID: "fork1", ConfigOptions: f.session.ConfigOptions, Modes: f.session.Modes}, nil
 }
@@ -200,6 +225,11 @@ func (f *fakeAgent) DeleteSession(_ context.Context, req acp.DeleteSessionReques
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	select {
+	case <-f.done:
+		return errors.New("agent connection closed")
+	default:
+	}
 	f.deleted = append(f.deleted, req.SessionID)
 	return f.deleteErr
 }

@@ -71,6 +71,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	st := store.New(dataDir)
 	svc := chats.New("fake", launch, chats.Dialect{}, st, st, copyHistory, git.Worktrees{}, filepath.Join(dataDir, "scratch"), hub.Publish)
 	terms := terminals.New(startSh, "sh", svc, hub.Publish)
+	svc.UseTerminals(terms)
 	follow, unfollow := context.WithCancel(context.Background())
 	go hub.Subscribe(follow.Done(), func() bool { return true }, func(e model.Event) bool { terms.Follow(e); return true })
 	srv := httptest.NewServer(api.Handler("tok", svc, nil, terms, nil, hub))
