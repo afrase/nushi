@@ -97,7 +97,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
         _last = null;
       }
       await _diff();
-      _error = null;
+      if (asked == _reloads) _error = null;
     } on Object catch (e) {
       if (mounted && asked == _reloads) setState(() => _error = '$e');
     } finally {

@@ -1,12 +1,15 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import 'chat.dart';
 import 'daemon.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'settings.dart';
 import 'syntax.dart';
+import 'theme/theme.dart';
 import 'widgets.dart';
 
 /// A review comment on lines [start]–[end] (from 1) of a file's [old] or
@@ -203,6 +206,9 @@ String reviewMessage(List<ReviewComment> comments, String note) {
   return out.toString();
 }
 
+List<ReviewComment> _unsent(String chat) =>
+    commentsOf(chat).where((c) => !c.sent).toList();
+
 /// Asks for an overall note, then sends [chat]'s unsent comments to its
 /// agent as one message and marks them sent.
 Future<void> sendReview(
@@ -210,44 +216,66 @@ Future<void> sendReview(
   Daemon daemon,
   String chat,
 ) async {
-  final unsent = commentsOf(chat).where((c) => !c.sent).toList();
-  final files = unsent.map((c) => c.path).toSet().length;
   final note = await showDialog<String>(
     context: context,
     builder: (context) => _SendDialog(
-      comments: unsent.length,
-      files: files,
+      chat: chat,
       agent: daemon.chats[chat]?.agentName ?? 'the agent',
     ),
   );
-  if (note == null || !context.mounted) return;
+  final unsent = _unsent(chat);
+  if (note == null || unsent.isEmpty || !context.mounted) return;
   await tryOrShow(context, () async {
+    final text = reviewMessage(unsent, note);
     await daemon.client.sendPrompt(
-      SendPromptRequest(
-        chatId: chat,
-        text: reviewMessage(unsent, note),
-        queue: true,
-      ),
+      SendPromptRequest(chatId: chat, text: text, queue: true),
     );
     for (final c in unsent) {
       c.sent = true;
     }
     setComments(chat, [...commentsOf(chat)]);
+    if (daemon.chats[chat] case final state?) _untilSent(state, text, unsent);
   });
+}
+
+/// Marks [comments] unsent again when the review they went in leaves the
+/// chat's queue without reaching its transcript (Stop, Archive, or taken
+/// out of the queue): the agent never got them.
+void _untilSent(ChatState chat, String text, List<ReviewComment> comments) {
+  var queued = false;
+  bool sent() => chat.items.any(
+    (i) => i.kind == ItemKind.ITEM_KIND_USER_MESSAGE && i.text == text,
+  );
+  void check() {
+    if (!chat.loaded || sent()) {
+      if (sent()) chat.removeListener(check);
+      return;
+    }
+    if (chat.queue.any((m) => m.text == text)) {
+      queued = true;
+    } else if (queued) {
+      // Out of the queue: into the transcript, a moment later, or gone.
+      Timer(const Duration(seconds: 2), () {
+        if (sent() || chat.queue.any((m) => m.text == text)) return;
+        chat.removeListener(check);
+        for (final c in comments) {
+          c.sent = false;
+        }
+        setComments(chat.id, [...commentsOf(chat.id)]);
+      });
+    }
+  }
+
+  chat.addListener(check);
+  check();
 }
 
 /// "Send review": what goes, and a box for an overall note; pops the note
 /// ('' for none) or null when cancelled.
 class _SendDialog extends StatefulWidget {
-  const _SendDialog({
-    required this.comments,
-    required this.files,
-    required this.agent,
-  });
+  const _SendDialog({required this.chat, required this.agent});
 
-  final String agent;
-
-  final int comments, files;
+  final String chat, agent;
 
   @override
   State<_SendDialog> createState() => _SendDialogState();
@@ -263,8 +291,14 @@ class _SendDialogState extends State<_SendDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final (n, files) = (widget.comments, widget.files);
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: reviews,
+    builder: (context, _, _) => _build(context, _unsent(widget.chat)),
+  );
+
+  Widget _build(BuildContext context, List<ReviewComment> unsent) {
+    final theme = NushiTheme.of(context), t = theme.t;
+    final n = unsent.length;
     return nushiDialog(
       'Send review',
       Column(
@@ -273,9 +307,43 @@ class _SendDialogState extends State<_SendDialog> {
         spacing: 10,
         children: [
           Text(
-            '$n comment${n == 1 ? '' : 's'} on '
-            '$files file${files == 1 ? '' : 's'}, with the lines they are '
-            'on, go to ${widget.agent} as one message.',
+            '$n comment${n == 1 ? '' : 's'} go to ${widget.agent} as one '
+            'message:',
+          ),
+          // Every one, those on files the view no longer shows too.
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 200),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final c in unsent)
+                    Row(
+                      spacing: 6,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${c.path}, ${c.lines.toLowerCase()}: '
+                            '${c.text.split('\n').first}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.ui(t.textSecondary, size: 12),
+                          ),
+                        ),
+                        IconTap(
+                          Icons.close,
+                          tooltip: 'Remove',
+                          size: 13,
+                          onTap: () => setComments(widget.chat, [
+                            for (final m in commentsOf(widget.chat))
+                              if (m != c) m,
+                          ]),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
           ),
           TextField(
             controller: _note,
@@ -297,7 +365,7 @@ class _SendDialogState extends State<_SendDialog> {
         Button(
           label: 'Send',
           kind: ButtonKind.primary,
-          onPressed: () => Navigator.pop(context, _note.text),
+          onPressed: n == 0 ? null : () => Navigator.pop(context, _note.text),
         ),
       ],
     );

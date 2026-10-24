@@ -17,6 +17,7 @@ class _Daemon implements Transport {
   final written = <String>[];
   var opened = 0;
   var replay = '\$ ';
+  String? live; // what the shell writes after the replay
 
   @override
   Future<UnaryResponse<I, O>> unary<I extends Object, O extends Object>(
@@ -46,6 +47,9 @@ class _Daemon implements Transport {
   ]) async {
     final out = StreamController<O>()
       ..add(AttachTerminalResponse(data: utf8.encode(replay)) as O);
+    if (live case final live?) {
+      out.add(AttachTerminalResponse(data: utf8.encode(live)) as O);
+    }
     return StreamResponse(spec, Headers(), out.stream, Headers());
   }
 
@@ -135,5 +139,23 @@ void main() {
     await _meta(tester, LogicalKeyboardKey.keyT);
     await tester.pumpAndSettle();
     expect(daemon.written.join(), startsWith('\x1b[?'));
+  });
+
+  testWidgets('a query after an empty replay is live, and answered', (
+    tester,
+  ) async {
+    final daemon = _Daemon()
+      ..replay = ''
+      ..live = '\x1b[c';
+    await _panel(tester, Terminals(NushiServiceClient(daemon)));
+    expect(daemon.written.join(), startsWith('\x1b[?'));
+  });
+
+  testWidgets('output can\'t have its title typed at the prompt', (
+    tester,
+  ) async {
+    final daemon = _Daemon()..live = '\x1b]2;s; echo hi #\x07\x1b[21t\x1b[20t';
+    await _panel(tester, Terminals(NushiServiceClient(daemon)));
+    expect(daemon.written.join(), isNot(contains('echo hi')));
   });
 }

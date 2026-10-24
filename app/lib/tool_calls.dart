@@ -107,25 +107,39 @@ String groupLabel(List<Item> calls) {
 }
 
 /// A card with a one-line header that opens to show [body]; outlined in
-/// red when [failed].
+/// red when [failed]. Given [ids] (its call's, or its group's and its
+/// first call's), it opens as it was left, rebuilt or not.
 class Collapsible extends StatefulWidget {
   const Collapsible({
     super.key,
     required this.header,
     required this.body,
     required this.failed,
+    this.ids = const [],
   });
 
   final Widget header;
   final Widget? body;
   final bool failed;
+  final List<String> ids;
+
+  /// The ids of what the user opened.
+  static final opened = <String>{};
 
   @override
   State<Collapsible> createState() => _CollapsibleState();
 }
 
 class _CollapsibleState extends State<Collapsible> {
-  bool _open = false;
+  late bool _open = widget.ids.any(Collapsible.opened.contains);
+
+  void _toggle() => setState(() {
+    _open = !_open;
+    if (widget.ids.isEmpty) return;
+    _open
+        ? Collapsible.opened.add(widget.ids.first)
+        : Collapsible.opened.removeAll(widget.ids);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -140,7 +154,7 @@ class _CollapsibleState extends State<Collapsible> {
           ColoredBox(
             color: widget.failed ? t.crashedSoft : t.raised,
             child: Tap(
-              onTap: body == null ? null : () => setState(() => _open = !_open),
+              onTap: body == null ? null : _toggle,
               radius: 0,
               padding: const EdgeInsets.symmetric(horizontal: 10),
               child: SizedBox(
@@ -229,6 +243,7 @@ class ToolCallView extends StatelessWidget {
     return _withImages(
       [if (images) ...it.images],
       Collapsible(
+        ids: [it.id],
         failed: failed,
         header: Row(
           children: [
@@ -322,6 +337,8 @@ class ToolGroupView extends StatelessWidget {
     return _withImages(
       [for (final c in calls) ...c.images],
       Collapsible(
+        // Open when its first call was, before the next made it a group.
+        ids: ['group ${calls.first.id}', calls.first.id],
         failed: false, // its failed calls stand out inside, and in the count
         header: Row(
           children: [

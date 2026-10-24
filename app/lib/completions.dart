@@ -23,6 +23,7 @@ class Completions extends ChangeNotifier {
   int picked = 0;
   List<String>? _files; // the folder's, fetched at the first @
   String _filesOf = ''; // the folder they are of
+  DateTime _filesAt = DateTime(0); // when they were asked for
   (int, int)? _token; // where the text being completed starts and ends
   String _dismissed = ''; // the text Escape closed the choices for
   bool _disposed = false;
@@ -42,10 +43,15 @@ class Completions extends ChangeNotifier {
     } else if (RegExp(r'(^|\s)@(\S*)$').firstMatch(before) case final m?) {
       final folder = chat().folder;
       final files = _filesOf == folder ? _files : null;
-      if (files == null) {
-        _files = const [];
+      // Asked again for each mention, after a few seconds: the agent adds
+      // files. The list it had shows meanwhile.
+      final stale = DateTime.now().difference(_filesAt).inSeconds > 5;
+      if (files == null || stale && m[2]!.isEmpty) {
+        _files = files ?? const [];
         _filesOf = folder;
+        _filesAt = DateTime.now();
         daemon.client.listFiles(ListFilesRequest(folder: folder)).then((r) {
+          if (_filesOf != folder) return; // another folder's, asked since
           _files = r.paths;
           if (!_disposed) _update();
         }, onError: (_) => _files = null);

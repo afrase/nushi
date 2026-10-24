@@ -79,6 +79,8 @@ class Terminals extends ChangeNotifier {
       _lists[chatId] = [...list, resp.terminal];
     }
     _opened.add(resp.terminal.id);
+    // Its session may be made already, from the list's event.
+    _sessions[resp.terminal.id]?.fresh = true;
     active[chatId] = focusNext = resp.terminal.id;
     notifyListeners();
   }
@@ -152,7 +154,7 @@ class TermSession extends ChangeNotifier {
   final hoveredLink = ValueNotifier<String?>(null);
 
   late Terminal terminal;
-  StreamSubscription<String>? _sub;
+  StreamSubscription<pb.AttachTerminalResponse>? _sub;
   bool _replaying = false; // answers to queries in the replay aren't sent
 
   /// Whether no one has attached to the shell yet: then its queries in the
@@ -182,7 +184,12 @@ class TermSession extends ChangeNotifier {
         _OptionAsMeta(),
         defaultInputHandler,
       ]),
-      onOutput: (s) => _replaying ? null : send(s),
+      // Not a title report (CSI 20/21 t): output could set the title and
+      // have it typed at the prompt.
+      onOutput: (s) =>
+          _replaying || s.startsWith('\x1b]l') || s.startsWith('\x1b]L')
+          ? null
+          : send(s),
     );
     // Never the view's size, so its first layout resizes it and attaches.
     terminal
@@ -204,19 +211,23 @@ class TermSession extends ChangeNotifier {
   }
 
   void _attach() {
+    // The first message is the replay (maybe empty): what it decodes to,
+    // not the first text decoded.
     var first = true;
+    final text = StringBuffer();
+    final utf8 = const Utf8Decoder(allowMalformed: true)
+        .startChunkedConversion(StringConversionSink.fromStringSink(text));
     _sub = client
         .attachTerminal(pb.AttachTerminalRequest(terminalId: id))
-        .map((m) {
-          _exited = m.exited;
-          return m.data;
-        })
-        .transform(const Utf8Decoder(allowMalformed: true))
         .listen(
-          (s) {
+          (m) {
+            _exited = m.exited;
+            utf8.add(m.data);
+            final s = text.toString();
+            text.clear();
             _replaying = first && !fresh;
             first = fresh = false;
-            terminal.write(s);
+            if (s.isNotEmpty) terminal.write(s);
             _replaying = false;
           },
           onError: (_) => _retry(),

@@ -214,8 +214,16 @@ class _ChatViewState extends State<ChatView> {
       max: box.maxWidth - (wide ? 360 : ChatView.minWidth),
       left: true,
       child: chat.items.any((it) => it.id == id && it.hasShell())
-          ? ShellPane(chat: chat, id: id, onBack: onBack, onClose: onClose)
+          // Keyed: another subagent's pane is its own, its unsent text too.
+          ? ShellPane(
+              key: ValueKey(id),
+              chat: chat,
+              id: id,
+              onBack: onBack,
+              onClose: onClose,
+            )
           : SubagentPane(
+              key: ValueKey(id),
               chat: chat,
               daemon: widget.daemon,
               id: id,
