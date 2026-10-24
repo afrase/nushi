@@ -5116,7 +5116,15 @@ type Item struct {
 	Subagent *Subagent `protobuf:"bytes,19,opt,name=subagent,proto3" json:"subagent,omitempty"`
 	// The tool call is a subagent's report to the chat (Claude's
 	// SubagentHandback): its subagent's result, not one of its steps.
-	Report        bool `protobuf:"varint,20,opt,name=report,proto3" json:"report,omitempty"`
+	Report bool `protobuf:"varint,20,opt,name=report,proto3" json:"report,omitempty"`
+	// For a tool call that starts a subagent: the task it was given, the
+	// model and effort it was asked to use (the config option values, "" when
+	// it uses the chat's), and the model it ran on (a name to show), once the
+	// agent says.
+	Prompt        string `protobuf:"bytes,21,opt,name=prompt,proto3" json:"prompt,omitempty"`
+	Model         string `protobuf:"bytes,22,opt,name=model,proto3" json:"model,omitempty"`
+	Effort        string `protobuf:"bytes,23,opt,name=effort,proto3" json:"effort,omitempty"`
+	RanModel      string `protobuf:"bytes,24,opt,name=ran_model,json=ranModel,proto3" json:"ran_model,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5289,6 +5297,34 @@ func (x *Item) GetReport() bool {
 		return x.Report
 	}
 	return false
+}
+
+func (x *Item) GetPrompt() string {
+	if x != nil {
+		return x.Prompt
+	}
+	return ""
+}
+
+func (x *Item) GetModel() string {
+	if x != nil {
+		return x.Model
+	}
+	return ""
+}
+
+func (x *Item) GetEffort() string {
+	if x != nil {
+		return x.Effort
+	}
+	return ""
+}
+
+func (x *Item) GetRanModel() string {
+	if x != nil {
+		return x.RanModel
+	}
+	return ""
 }
 
 // How a subagent goes.
@@ -7291,7 +7327,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x14\n" +
 	"\x05group\x18\x04 \x01(\tR\x05group\x12\x1d\n" +
 	"\n" +
-	"is_default\x18\x05 \x01(\bR\tisDefault\"\xe5\x04\n" +
+	"is_default\x18\x05 \x01(\bR\tisDefault\"\xc8\x05\n" +
 	"\x04Item\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12&\n" +
 	"\x04kind\x18\x02 \x01(\x0e2\x12.nushi.v1.ItemKindR\x04kind\x12\x12\n" +
@@ -7315,7 +7351,11 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"rewindable\x18\x12 \x01(\bR\n" +
 	"rewindable\x12.\n" +
 	"\bsubagent\x18\x13 \x01(\v2\x12.nushi.v1.SubagentR\bsubagent\x12\x16\n" +
-	"\x06report\x18\x14 \x01(\bR\x06report\"h\n" +
+	"\x06report\x18\x14 \x01(\bR\x06report\x12\x16\n" +
+	"\x06prompt\x18\x15 \x01(\tR\x06prompt\x12\x14\n" +
+	"\x05model\x18\x16 \x01(\tR\x05model\x12\x16\n" +
+	"\x06effort\x18\x17 \x01(\tR\x06effort\x12\x1b\n" +
+	"\tran_model\x18\x18 \x01(\tR\branModel\"h\n" +
 	"\bSubagent\x12\x14\n" +
 	"\x05state\x18\x01 \x01(\tR\x05state\x12\x18\n" +
 	"\astarted\x18\x02 \x01(\x03R\astarted\x12\x14\n" +

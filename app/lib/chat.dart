@@ -60,8 +60,9 @@ class ChatState extends ChangeNotifier {
   /// put back in the box.
   final takeBack = ValueNotifier<QueuedMessage?>(null);
 
-  /// A subagent's call id, set to bring its card into view.
-  final reveal = ValueNotifier<String?>(null);
+  /// The subagent (its call's id) whose pane shows beside the chat, in
+  /// place of the details panel (see SubagentPane).
+  final subagent = ValueNotifier<String?>(null);
 
   /// The agent's name to show: "Claude".
   String get agentName => switch (agent) {

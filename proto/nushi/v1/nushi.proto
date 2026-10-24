@@ -791,6 +791,14 @@ message Item {
   // The tool call is a subagent's report to the chat (Claude's
   // SubagentHandback): its subagent's result, not one of its steps.
   bool report = 20;
+  // For a tool call that starts a subagent: the task it was given, the
+  // model and effort it was asked to use (the config option values, "" when
+  // it uses the chat's), and the model it ran on (a name to show), once the
+  // agent says.
+  string prompt = 21;
+  string model = 22;
+  string effort = 23;
+  string ran_model = 24;
 }
 
 // How a subagent goes.

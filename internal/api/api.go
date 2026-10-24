@@ -19,7 +19,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 38
+const Version = 39
 
 type server struct {
 	chats *chats.Service

@@ -196,7 +196,7 @@ func (c *chat) subagentLocked(call *model.Item) bool {
 		sa.Result = ""
 	case r >= 0:
 		sa.Result = c.items[r].Text
-	case !background:
+	case !background && (c.dialect.ReportElsewhere == nil || !c.dialect.ReportElsewhere(call.Text)):
 		sa.Result = call.Text
 	}
 	call.Subagent = &sa

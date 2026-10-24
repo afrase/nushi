@@ -12,7 +12,9 @@ import 'details_panel.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'images.dart';
 import 'panes.dart';
+import 'settings.dart';
 import 'side_panel.dart';
+import 'subagent_pane.dart';
 import 'status.dart';
 import 'theme/theme.dart';
 import 'transcript.dart';
@@ -78,7 +80,6 @@ class _ChatViewState extends State<ChatView> {
   @override
   Widget build(BuildContext context) {
     final chat = widget.chat;
-    final side = chat.side;
     final replies = chat.draft.replies;
     return LayoutBuilder(
       builder: (context, box) => Row(
@@ -140,30 +141,80 @@ class _ChatViewState extends State<ChatView> {
               ),
             ),
           ),
-          if (side != null && !chat.archived)
-            Resizable(
-              name: 'side',
-              initial: 380,
-              min: 300,
-              max: min(640, box.maxWidth - ChatView.minWidth),
-              left: true,
-              child: SidePanel(
-                key: ValueKey(side.id),
-                side: side,
-                daemon: widget.daemon,
-                onClose: () => setState(() => widget.daemon.closeSide(chat)),
-              ),
-            )
-          else if (widget.details != null)
-            Resizable(
-              name: 'details',
-              initial: DetailsPanel.width,
-              min: 220,
-              max: min(480, box.maxWidth - ChatView.minWidth),
-              left: true,
-              child: widget.details!,
-            ),
+          ?_beside(box),
         ],
+      ),
+    );
+  }
+
+  /// Beside the transcript: the side question when one is open, else a
+  /// subagent's pane when one is open, else [ChatView.details].
+  Widget? _beside(BoxConstraints box) {
+    final chat = widget.chat, side = chat.side;
+    if (side != null && !chat.archived) {
+      return Resizable(
+        name: 'side',
+        initial: 380,
+        min: 300,
+        max: min(640, box.maxWidth - ChatView.minWidth),
+        left: true,
+        child: SidePanel(
+          key: ValueKey(side.id),
+          side: side,
+          daemon: widget.daemon,
+          onClose: () => setState(() => widget.daemon.closeSide(chat)),
+        ),
+      );
+    }
+    final details = widget.details;
+    return ListenableBuilder(
+      listenable: Listenable.merge([chat.subagent, subagentWide]),
+      builder: (context, _) {
+        final id = chat.subagent.value, wide = subagentWide.value;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Kept behind the pane, so Back finds it as it was.
+            if (details != null)
+              Offstage(
+                offstage: id != null,
+                child: Resizable(
+                  name: 'details',
+                  initial: DetailsPanel.width,
+                  min: 220,
+                  max: min(480, box.maxWidth - ChatView.minWidth),
+                  left: true,
+                  child: details,
+                ),
+              ),
+            if (id != null) _pane(box, id, wide, details != null),
+          ],
+        );
+      },
+    );
+  }
+
+  /// A subagent's pane; wide, it may squeeze the transcript below its
+  /// usual minimum.
+  Widget _pane(BoxConstraints box, String id, bool wide, bool back) {
+    final chat = widget.chat;
+    return Resizable(
+      key: ValueKey(wide),
+      name: wide ? 'subagent' : 'details',
+      initial: wide ? 640 : DetailsPanel.width,
+      min: 220,
+      max: box.maxWidth - (wide ? 360 : ChatView.minWidth),
+      left: true,
+      child: SubagentPane(
+        chat: chat,
+        daemon: widget.daemon,
+        id: id,
+        onBack: back ? () => chat.subagent.value = null : null,
+        onClose: () {
+          chat.subagent.value = null;
+          showDetails.value = false;
+        },
       ),
     );
   }

@@ -30,6 +30,9 @@ type Dialect struct {
 	// subagent in the background: it runs on past the call, until its
 	// report.
 	Background func(output string) bool
+	// ReportElsewhere says a subagent call's output only points at its
+	// report, which then isn't its result.
+	ReportElsewhere func(output string) bool
 	// Other says a form field is the free-text "Other" answer of the field
 	// before it.
 	Other func(field, before model.Field) bool

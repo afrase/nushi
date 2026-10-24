@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"log"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -63,7 +64,8 @@ func claudeCode(meta map[string]any, key string) string {
 
 // ToolCall adds what Claude tells about a tool call: the subagent it comes
 // from, its tool's name, for one that starts a subagent (Agent, Task) the
-// subagent's type, and for a subagent's SubagentHandback, which ends it,
+// subagent's type, prompt, model and effort (its input comes in pieces),
+// the model it ran on once it has ended, and for a subagent's SubagentHandback, which ends it,
 // the report it hands back as its text: true then, since the call's own
 // output is only an acknowledgement. Claude may send the input in a later
 // update than the name.
@@ -71,12 +73,21 @@ func ToolCall(it *model.Item, meta map[string]any, input json.RawMessage) (ownTe
 	it.Parent, it.Tool = cmp.Or(it.Parent, Parent(meta)), cmp.Or(claudeCode(meta, "toolName"), it.Tool)
 	var in struct {
 		Type    string `json:"subagent_type"`
+		Prompt  string `json:"prompt"`
+		Model   string `json:"model"`
+		Effort  string `json:"effort"`
 		Message string `json:"message"`
 	}
 	json.Unmarshal(input, &in)
 	switch it.Tool {
 	case "Agent", "Task":
 		it.Agent = cmp.Or(in.Type, it.Agent, "Agent")
+		it.Prompt, it.Model, it.Effort = cmp.Or(in.Prompt, it.Prompt), cmp.Or(in.Model, it.Model), cmp.Or(in.Effort, it.Effort)
+		cc, _ := meta["claudeCode"].(map[string]any)
+		resp, _ := cc["toolResponse"].(map[string]any)
+		if m, _ := resp["resolvedModel"].(string); m != "" {
+			it.RanModel = modelName(m)
+		}
 	case "SubagentHandback":
 		it.Text = cmp.Or(in.Message, it.Text)
 		return true
@@ -84,10 +95,34 @@ func ToolCall(it *model.Item, meta map[string]any, input json.RawMessage) (ownTe
 	return false
 }
 
+// modelName names a model id as Claude's model picker does:
+// "claude-sonnet-5-5" is "Sonnet 5.5"; a date suffix and a context tag
+// ("[1m]") go.
+func modelName(id string) string {
+	id, _, _ = strings.Cut(strings.TrimPrefix(id, "claude-"), "[")
+	var words, version []string
+	for _, p := range strings.Split(id, "-") {
+		switch _, err := strconv.Atoi(p); {
+		case err != nil && p != "":
+			words = append(words, strings.ToUpper(p[:1])+p[1:])
+		case len(p) <= 2:
+			version = append(version, p)
+		}
+	}
+	return strings.TrimSpace(strings.Join(words, " ") + " " + strings.Join(version, "."))
+}
+
 // Background says an Agent call's output tells that Claude started the
 // subagent in the background: it then completes the call at once, and the
 // subagent runs until its SubagentHandback.
 func Background(output string) bool { return strings.HasPrefix(output, "Async agent launched") }
+
+// ReportElsewhere says a subagent call's output only points at the
+// subagent's report, its SubagentHandback call, which session/load doesn't
+// replay.
+func ReportElsewhere(output string) bool {
+	return strings.HasPrefix(strings.TrimSpace(output), "This agent's report was delivered to you")
+}
 
 // Other says field is the free-text "Other" answer that Claude's
 // AskUserQuestion form puts after a question: `<id>_custom`.

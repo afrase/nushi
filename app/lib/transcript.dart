@@ -40,7 +40,9 @@ List<Object> _entries(List<Item> items) {
 /// A chat's items, built as they scroll into view. It opens at the bottom
 /// and follows it while the agent writes; scrolled up, it stays put and
 /// offers a way back to the latest. Selected text gets a toolbar above it
-/// to start a side chat about it, or to reply to it.
+/// to start a side chat about it, or to reply to it. Given [items] (a
+/// subagent's steps) it shows those instead, between [header] and
+/// [footer], [live] while more come.
 class Transcript extends StatefulWidget {
   const Transcript({
     super.key,
@@ -48,6 +50,10 @@ class Transcript extends StatefulWidget {
     required this.daemon,
     required this.onReply,
     this.onSide,
+    this.items,
+    this.live = false,
+    this.header,
+    this.footer,
   });
 
   final ChatState chat;
@@ -59,6 +65,10 @@ class Transcript extends StatefulWidget {
 
   /// Opens a side question about the selection; null hides the action.
   final void Function(String selection)? onSide;
+
+  final List<Item>? items;
+  final bool live;
+  final Widget? header, footer;
 
   @override
   State<Transcript> createState() => _TranscriptState();
@@ -104,20 +114,12 @@ class _TranscriptState extends State<Transcript> {
                   key: ValueKey(key),
                   padding: const EdgeInsets.only(top: 12),
                   child: RepaintBoundary(
-                    child: e is SubagentRun
-                        ? KeyedSubtree(
-                            key: _subagents.putIfAbsent(
-                              e.call.id,
-                              GlobalKey.new,
-                            ),
-                            child: _view(e, live: live, still: still),
-                          )
-                        : _view(
-                            e,
-                            live: live,
-                            still: still,
-                            rewindable: rewindable,
-                          ),
+                    child: _view(
+                      e,
+                      live: live,
+                      still: still,
+                      rewindable: rewindable,
+                    ),
                   ),
                 ),
               ))
@@ -132,20 +134,7 @@ class _TranscriptState extends State<Transcript> {
     bool rewindable = false,
   }) => switch (e) {
     final List<Item> run => ToolGroupView(run, still: still),
-    final SubagentRun s => SubagentCard(
-      s,
-      still: still,
-      nested: (items) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final e in _entries(items))
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: _view(e, live: false, still: still),
-            ),
-        ],
-      ),
-    ),
+    final SubagentRun s => SubagentLine(s, widget.chat, still: still),
     _ => ItemView(
       e as Item,
       widget.chat,
@@ -158,31 +147,15 @@ class _TranscriptState extends State<Transcript> {
     ),
   };
 
-  /// The subagent cards, by their call's id, to scroll to (ChatState.reveal).
-  final _subagents = <String, GlobalKey>{};
-
   @override
   void initState() {
     super.initState();
-    widget.chat.reveal.addListener(_reveal);
-  }
-
-  void _reveal() {
-    final id = widget.chat.reveal.value;
-    if (id == null) return;
-    widget.chat.reveal.value = null;
-    if (_subagents[id]?.currentContext case final c?) {
-      Scrollable.ensureVisible(
-        c,
-        alignment: 0.1,
-        duration: const Duration(milliseconds: 250),
-      );
-    }
+    // A finished subagent's steps open at the top, at its prompt.
+    if (widget.items != null && !widget.live) _follower.following = false;
   }
 
   @override
   void dispose() {
-    widget.chat.reveal.removeListener(_reveal);
     _follower.dispose();
     super.dispose();
   }
@@ -208,7 +181,8 @@ class _TranscriptState extends State<Transcript> {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context), t = theme.t;
     final chat = widget.chat;
-    final entries = _entries(chat.items);
+    final entries = _entries(widget.items ?? chat.items);
+    final live = widget.items == null ? chat.busy : widget.live;
     _follower.stick();
     final before = _built;
     _built = {};
@@ -247,13 +221,15 @@ class _TranscriptState extends State<Transcript> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      ?widget.header,
                       for (final (i, e) in entries.indexed)
                         _entry(
                           before,
                           e,
-                          live: chat.busy && i == entries.length - 1,
+                          live: live && i == entries.length - 1,
                           still: chat.waiting,
                         ),
+                      ?widget.footer,
                     ],
                   ),
                 ),
