@@ -102,3 +102,38 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 		t.Error("trust outside git doesn't follow the folders above")
 	}
 }
+
+// The home folder brings the user's own ~/.claude, not the folder's, and
+// trusting it trusts nothing under it.
+func TestTheHomeFolder(t *testing.T) {
+	home, _ := filepath.EvalSymlinks(t.TempDir())
+	t.Setenv("HOME", home)
+	t.Setenv("CLAUDE_CONFIG_DIR", filepath.Join(home, ".claude"))
+	write(t, filepath.Join(home, ".claude", "settings.json"), `{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"say done"}]}]}}`)
+	if runs, err := (Trust{}).Runs(home); err != nil || len(runs) > 0 {
+		t.Errorf("the home folder runs %v, %v", runs, err)
+	}
+	download := filepath.Join(home, "Downloads", "evil")
+	os.MkdirAll(download, 0o700)
+	write(t, filepath.Join(home, ".claude.json"), `{"projects":{"`+home+`":{"hasTrustDialogAccepted":true}}}`)
+	if ok, _ := (Trust{}).Trusted(home, []string{home}); !ok {
+		t.Error("the home folder itself isn't trusted")
+	}
+	if ok, _ := (Trust{}).Trusted(download, []string{home, "/"}); ok {
+		t.Error("trusting the home folder trusts what's under it")
+	}
+}
+
+// A repository can bring a link to a device where a settings file goes:
+// it is refused at once, not read forever.
+func TestASettingsFileThatNeverEnds(t *testing.T) {
+	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
+	for _, name := range []string{".mcp.json", ".claude/settings.json"} {
+		repo := t.TempDir()
+		os.MkdirAll(filepath.Join(repo, ".claude"), 0o700)
+		os.Symlink("/dev/zero", filepath.Join(repo, name))
+		if _, err := (Trust{}).Runs(repo); err == nil {
+			t.Errorf("%s linked to /dev/zero: no error", name)
+		}
+	}
+}

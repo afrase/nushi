@@ -16,10 +16,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"syscall"
 	"strings"
 	"time"
 
@@ -101,7 +103,7 @@ func (Claude) Servers(folder string) ([]model.MCPServer, error) {
 
 // readJSON reads a JSON file into v; a missing file leaves v as it is.
 func readJSON(path string, v any) error {
-	b, err := os.ReadFile(path)
+	b, err := ReadFile(path)
 	if os.IsNotExist(err) {
 		return nil
 	}
@@ -112,6 +114,28 @@ func readJSON(path string, v any) error {
 		return fmt.Errorf("reading %s: %w", path, err)
 	}
 	return nil
+}
+
+// maxFile is the largest of Claude's files Nushi reads.
+const maxFile = 64 << 20
+
+// ReadFile reads one of Claude's files as Claude would: only a regular file
+// (a link is followed), of up to 64 MiB. A repository could bring a link to
+// /dev/zero, or a fifo, in the place of one.
+func ReadFile(path string) ([]byte, error) {
+	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0) // a fifo doesn't wait
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	if fi, err := f.Stat(); err != nil || !fi.Mode().IsRegular() || fi.Size() > maxFile {
+		return nil, fmt.Errorf("%s isn't a regular file of at most 64 MiB", path)
+	}
+	b, err := io.ReadAll(io.LimitReader(f, maxFile+1))
+	if err == nil && len(b) > maxFile {
+		err = fmt.Errorf("%s grew past 64 MiB", path)
+	}
+	return b, err
 }
 
 func add(out []model.MCPServer, s servers, scope, source string) []model.MCPServer {

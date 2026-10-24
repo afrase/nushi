@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -154,36 +155,118 @@ func TestBranchChanges(t *testing.T) {
 }
 
 // A downloaded folder's .git/config can name hooks and filters: Nushi's own
-// status runs neither, and its worktrees run no hooks.
+// status runs neither, and its worktrees run no hooks. Nothing Nushi runs
+// starts the fsmonitor, a signature check, a lazy fetch, or a nested
+// repository's filters.
 func TestARepositorysOwnConfigRunsNothing(t *testing.T) {
 	ctx := context.Background()
 	repo, marks := t.TempDir(), t.TempDir()
+	mark := func(name string) string { return "touch " + filepath.Join(marks, name) }
 	git(t, repo, "init", "-q", "-b", "main")
 	write(t, filepath.Join(repo, "a.txt"), "one\n")
 	write(t, filepath.Join(repo, "b.md"), "one\n")
 	write(t, filepath.Join(repo, "c.go"), "one\n")
-	git(t, repo, "add", ".")
+	write(t, filepath.Join(repo, "lazy.txt"), "lazy\n")
+	// A repository inside it, as an unpacked download brings one: a gitlink
+	// in the index, and its own config with a filter.
+	sub := filepath.Join(repo, "sub")
+	git(t, repo, "init", "-q", "-b", "main", "sub")
+	write(t, filepath.Join(sub, "s.txt"), "one\n")
+	git(t, sub, "add", ".")
+	git(t, sub, "commit", "-q", "-m", "sub")
+	head, _ := exec.Command("git", "-C", sub, "rev-parse", "HEAD").Output()
+	git(t, repo, "add", "a.txt", "b.md", "c.go", "lazy.txt")
+	git(t, repo, "update-index", "--add", "--cacheinfo", "160000,"+strings.TrimSpace(string(head))+",sub")
 	git(t, repo, "commit", "-q", "-m", "first")
-	git(t, repo, "config", "filter.evil.clean", "touch "+filepath.Join(marks, "filter")+"; cat")
+	git(t, sub, "config", "filter.evil.clean", mark("subfilter")+"; cat")
+	write(t, filepath.Join(sub, ".git", "info", "attributes"), "*.txt filter=evil\n")
+	os.Chtimes(filepath.Join(sub, "s.txt"), time.Now(), time.Now().Add(time.Hour)) // its index is stale
+
+	git(t, repo, "config", "filter.evil.clean", mark("filter")+"; cat")
 	// A driver whose name has a dot in it.
 	write(t, filepath.Join(repo, ".git", "info", "attributes"), "*.txt filter=evil\n*.md filter=a.b\n")
-	git(t, repo, "config", "filter.a.b.clean", "touch "+filepath.Join(marks, "dotted")+"; cat")
+	git(t, repo, "config", "filter.a.b.clean", mark("dotted")+"; cat")
 	// And one with "=" in it, which -c would split at.
-	write(t, filepath.Join(repo, ".git", "info", "attributes"), "*.txt filter=evil\n*.md filter=a.b\n*.go filter=x=y\n")
-	git(t, repo, "config", "filter.x=y.clean", "touch "+filepath.Join(marks, "equals")+"; cat")
+	write(t, filepath.Join(repo, ".git", "info", "attributes"), "a.txt filter=evil\n*.md filter=a.b\n*.go filter=x=y\n")
+	git(t, repo, "config", "filter.x=y.clean", mark("equals")+"; cat")
 	write(t, filepath.Join(repo, "c.go"), "one\ntwo\n")
 	write(t, filepath.Join(repo, "b.md"), "one\ntwo\n")
-	write(t, filepath.Join(repo, ".git", "hooks", "post-checkout"), "#!/bin/sh\ntouch "+filepath.Join(marks, "hook")+"\n")
+	write(t, filepath.Join(repo, ".git", "hooks", "post-checkout"), "#!/bin/sh\n"+mark("hook")+"\n")
 	os.Chmod(filepath.Join(repo, ".git", "hooks", "post-checkout"), 0o755)
 	write(t, filepath.Join(repo, "a.txt"), "one\ntwo\n")
 
-	if st, err := Status(ctx, repo, ""); err != nil || st.Added != 3 {
-		t.Errorf("status = %+v, %v", st, err)
-	}
+	// A signed commit, and a gpg that marks any check of it.
+	gpg := filepath.Join(marks, "gpg.sh")
+	write(t, gpg, "#!/bin/sh\ncase \"$*\" in *--verify*) "+mark("gpg")+"; exit 0;; esac\n"+
+		"echo '[GNUPG:] SIG_CREATED ' >&2\nprintf -- '-----BEGIN PGP SIGNATURE-----\\n\\nx\\n-----END PGP SIGNATURE-----\\n'\n")
+	os.Chmod(gpg, 0o755)
+	git(t, repo, "-c", "gpg.program="+gpg, "commit", "-q", "-S", "--allow-empty", "-m", "signed")
+	git(t, repo, "config", "gpg.program", gpg)
+	git(t, repo, "config", "log.showSignature", "true")
+	git(t, repo, "config", "core.fsmonitor", mark("fsmonitor")+"; true")
 	if _, _, err := (Worktrees{}).Add(ctx, repo, "wt"); err != nil {
 		t.Fatal(err)
 	}
-	if ran, _ := filepath.Glob(filepath.Join(marks, "*")); len(ran) > 0 {
+	// A partial clone missing a blob: fetching it would run the transport
+	// the config names.
+	blob, _ := exec.Command("git", "-C", repo, "rev-parse", "HEAD:lazy.txt").Output()
+	b := strings.TrimSpace(string(blob))
+	os.Remove(filepath.Join(repo, ".git", "objects", b[:2], b[2:]))
+	for _, kv := range [][2]string{{"core.repositoryformatversion", "1"}, {"extensions.partialClone", "origin"},
+		{"remote.origin.url", "ssh://example.invalid/x"}, {"remote.origin.promisor", "true"}, {"core.sshCommand", mark("lazy") + "; false"}} {
+		git(t, repo, "config", kv[0], kv[1])
+	}
+	write(t, filepath.Join(repo, "lazy.txt"), "lazy\ntwo\n")
+
+	Status(ctx, repo, "") // it may fail on the missing blob; it runs nothing
+	if ran, _ := filepath.Glob(filepath.Join(marks, "*")); len(ran) > 1 { // gpg.sh
 		t.Errorf("ran %v", ran)
+	}
+	// Changes runs the repository's own filters, as the user's git diff
+	// would (ADR 0023), and nothing else.
+	Changes(ctx, repo, Span{})
+	Commits(ctx, repo, "", 10)
+	for _, name := range []string{"fsmonitor", "gpg", "lazy", "subfilter", "hook"} {
+		if _, err := os.Stat(filepath.Join(marks, name)); err == nil {
+			t.Errorf("ran the repository's %s", name)
+		}
+	}
+}
+
+// What Changes can't read is left out, never the whole diff: a repository
+// inside the folder, a submodule that moved, a huge file.
+func TestChangesLeavesOutWhatItCantShow(t *testing.T) {
+	ctx := context.Background()
+	repo := t.TempDir()
+	git(t, repo, "init", "-q", "-b", "main")
+	sub := filepath.Join(repo, "sm")
+	git(t, repo, "init", "-q", "-b", "main", "sm")
+	git(t, sub, "commit", "-q", "--allow-empty", "-m", "one")
+	head, _ := exec.Command("git", "-C", sub, "rev-parse", "HEAD").Output()
+	git(t, repo, "update-index", "--add", "--cacheinfo", "160000,"+strings.TrimSpace(string(head))+",sm")
+	write(t, filepath.Join(repo, "a.txt"), "a\n")
+	git(t, repo, "add", "a.txt")
+	git(t, repo, "commit", "-q", "-m", "first")
+	git(t, sub, "commit", "-q", "--allow-empty", "-m", "two") // the pointer moves
+	clone := filepath.Join(repo, "clone")
+	git(t, repo, "init", "-q", "clone") // a repository the agent made, untracked
+	write(t, filepath.Join(clone, "x"), "x\n")
+	write(t, filepath.Join(repo, "big.txt"), strings.Repeat("x", maxText+1))
+	write(t, filepath.Join(repo, "a.txt"), "a\nb\n")
+
+	got, err := Changes(ctx, repo, Span{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	skipped := map[string]string{}
+	for _, c := range got {
+		skipped[c.Path] = c.Skipped
+	}
+	want := map[string]string{"a.txt": "", "big.txt": "too large", "clone": "a repository of its own", "sm": "a submodule"}
+	if !reflect.DeepEqual(skipped, want) {
+		t.Errorf("skipped = %v, want %v", skipped, want)
+	}
+	if st, err := Status(ctx, repo, ""); err != nil || st.Files != 4 || st.Added != 2 || st.Removed != 1 { // the submodule's pointer counts as a line
+		t.Errorf("status = %+v, %v", st, err)
 	}
 }

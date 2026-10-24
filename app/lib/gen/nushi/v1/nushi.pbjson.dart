@@ -159,13 +159,15 @@ const Worktree$json = {
     {'1': 'path', '3': 2, '4': 1, '5': 9, '10': 'path'},
     {'1': 'branch', '3': 3, '4': 1, '5': 9, '10': 'branch'},
     {'1': 'base', '3': 4, '4': 1, '5': 9, '10': 'base'},
+    {'1': 'base_commit', '3': 5, '4': 1, '5': 9, '10': 'baseCommit'},
   ],
 };
 
 /// Descriptor for `Worktree`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List worktreeDescriptor = $convert.base64Decode(
     'CghXb3JrdHJlZRISCgRyZXBvGAEgASgJUgRyZXBvEhIKBHBhdGgYAiABKAlSBHBhdGgSFgoGYn'
-    'JhbmNoGAMgASgJUgZicmFuY2gSEgoEYmFzZRgEIAEoCVIEYmFzZQ==');
+    'JhbmNoGAMgASgJUgZicmFuY2gSEgoEYmFzZRgEIAEoCVIEYmFzZRIfCgtiYXNlX2NvbW1pdBgF'
+    'IAEoCVIKYmFzZUNvbW1pdA==');
 
 @$core.Deprecated('Use getChatRequestDescriptor instead')
 const GetChatRequest$json = {
@@ -786,6 +788,7 @@ const WorktreeState$json = {
     {'1': 'commits', '3': 3, '4': 1, '5': 5, '10': 'commits'},
     {'1': 'branch_gone', '3': 4, '4': 1, '5': 8, '10': 'branchGone'},
     {'1': 'error', '3': 5, '4': 1, '5': 9, '10': 'error'},
+    {'1': 'ignored', '3': 6, '4': 1, '5': 5, '10': 'ignored'},
   ],
 };
 
@@ -793,7 +796,8 @@ const WorktreeState$json = {
 final $typed_data.Uint8List worktreeStateDescriptor = $convert.base64Decode(
     'Cg1Xb3JrdHJlZVN0YXRlEhIKBGdvbmUYASABKAhSBGdvbmUSGAoHY2hhbmdlZBgCIAEoBVIHY2'
     'hhbmdlZBIYCgdjb21taXRzGAMgASgFUgdjb21taXRzEh8KC2JyYW5jaF9nb25lGAQgASgIUgpi'
-    'cmFuY2hHb25lEhQKBWVycm9yGAUgASgJUgVlcnJvcg==');
+    'cmFuY2hHb25lEhQKBWVycm9yGAUgASgJUgVlcnJvchIYCgdpZ25vcmVkGAYgASgFUgdpZ25vcm'
+    'Vk');
 
 @$core.Deprecated('Use agentSessionDescriptor instead')
 const AgentSession$json = {

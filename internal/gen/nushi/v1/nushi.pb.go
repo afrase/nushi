@@ -465,7 +465,10 @@ type Worktree struct {
 	// Its branch, nushi/<name>.
 	Branch string `protobuf:"bytes,3,opt,name=branch,proto3" json:"branch,omitempty"`
 	// The branch it started from (a commit, if HEAD was detached).
-	Base          string `protobuf:"bytes,4,opt,name=base,proto3" json:"base,omitempty"`
+	Base string `protobuf:"bytes,4,opt,name=base,proto3" json:"base,omitempty"`
+	// The commit it started from, for when its base branch is gone; empty
+	// for worktrees made before daemon API 42.
+	BaseCommit    string `protobuf:"bytes,5,opt,name=base_commit,json=baseCommit,proto3" json:"base_commit,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -524,6 +527,13 @@ func (x *Worktree) GetBranch() string {
 func (x *Worktree) GetBase() string {
 	if x != nil {
 		return x.Base
+	}
+	return ""
+}
+
+func (x *Worktree) GetBaseCommit() string {
+	if x != nil {
+		return x.BaseCommit
 	}
 	return ""
 }
@@ -2330,7 +2340,9 @@ type WorktreeState struct {
 	// Its branch was deleted outside Nushi.
 	BranchGone bool `protobuf:"varint,4,opt,name=branch_gone,json=branchGone,proto3" json:"branch_gone,omitempty"`
 	// Why the rest can't be told, if it can't.
-	Error         string `protobuf:"bytes,5,opt,name=error,proto3" json:"error,omitempty"`
+	Error string `protobuf:"bytes,5,opt,name=error,proto3" json:"error,omitempty"`
+	// Files and folders git ignores, which removing it deletes too.
+	Ignored       int32 `protobuf:"varint,6,opt,name=ignored,proto3" json:"ignored,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2398,6 +2410,13 @@ func (x *WorktreeState) GetError() string {
 		return x.Error
 	}
 	return ""
+}
+
+func (x *WorktreeState) GetIgnored() int32 {
+	if x != nil {
+		return x.Ignored
+	}
+	return 0
 }
 
 // One of the agent's sessions: its id and folder.
@@ -7180,12 +7199,14 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"session_id\x18\t \x01(\tR\tsessionId\x12.\n" +
 	"\bworktree\x18\n" +
 	" \x01(\v2\x12.nushi.v1.WorktreeR\bworktree\x12\x18\n" +
-	"\ascratch\x18\v \x01(\bR\ascratch\"^\n" +
+	"\ascratch\x18\v \x01(\bR\ascratch\"\x7f\n" +
 	"\bWorktree\x12\x12\n" +
 	"\x04repo\x18\x01 \x01(\tR\x04repo\x12\x12\n" +
 	"\x04path\x18\x02 \x01(\tR\x04path\x12\x16\n" +
 	"\x06branch\x18\x03 \x01(\tR\x06branch\x12\x12\n" +
-	"\x04base\x18\x04 \x01(\tR\x04base\")\n" +
+	"\x04base\x18\x04 \x01(\tR\x04base\x12\x1f\n" +
+	"\vbase_commit\x18\x05 \x01(\tR\n" +
+	"baseCommit\")\n" +
 	"\x0eGetChatRequest\x12\x17\n" +
 	"\achat_id\x18\x01 \x01(\tR\x06chatId\"\xcc\x02\n" +
 	"\x0fGetChatResponse\x12\"\n" +
@@ -7288,14 +7309,15 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\tterminals\x18\a \x03(\v2\x12.nushi.v1.TerminalR\tterminalsJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06R\bworktreeR\x0eworktree_state\"m\n" +
 	"\fWorktreePlan\x12.\n" +
 	"\bworktree\x18\x01 \x01(\v2\x12.nushi.v1.WorktreeR\bworktree\x12-\n" +
-	"\x05state\x18\x02 \x01(\v2\x17.nushi.v1.WorktreeStateR\x05state\"\x8e\x01\n" +
+	"\x05state\x18\x02 \x01(\v2\x17.nushi.v1.WorktreeStateR\x05state\"\xa8\x01\n" +
 	"\rWorktreeState\x12\x12\n" +
 	"\x04gone\x18\x01 \x01(\bR\x04gone\x12\x18\n" +
 	"\achanged\x18\x02 \x01(\x05R\achanged\x12\x18\n" +
 	"\acommits\x18\x03 \x01(\x05R\acommits\x12\x1f\n" +
 	"\vbranch_gone\x18\x04 \x01(\bR\n" +
 	"branchGone\x12\x14\n" +
-	"\x05error\x18\x05 \x01(\tR\x05error\"E\n" +
+	"\x05error\x18\x05 \x01(\tR\x05error\x12\x18\n" +
+	"\aignored\x18\x06 \x01(\x05R\aignored\"E\n" +
 	"\fAgentSession\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x16\n" +

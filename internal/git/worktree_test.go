@@ -22,7 +22,8 @@ func TestWorktrees(t *testing.T) {
 
 	wt, folder, err := Worktrees{}.Add(ctx, filepath.Join(repo, "sub"), "brave-otter")
 	want := model.Worktree{Repo: repo, Path: filepath.Join(repo, ".worktrees", "brave-otter"), Branch: "nushi/brave-otter", Base: "main"}
-	if err != nil || wt != want || folder != filepath.Join(want.Path, "sub") {
+	want.BaseCommit = wt.BaseCommit
+	if err != nil || len(wt.BaseCommit) != 40 || wt != want || folder != filepath.Join(want.Path, "sub") {
 		t.Fatalf("Add = %+v, %q, %v; want %+v", wt, folder, err, want)
 	}
 	if b, err := os.ReadFile(filepath.Join(folder, "a.txt")); err != nil || string(b) != "a\n" {
@@ -34,7 +35,7 @@ func TestWorktrees(t *testing.T) {
 		t.Errorf("a taken name: %v", err)
 	}
 	second, _, err := Worktrees{}.Add(ctx, folder, "calm-heron")
-	if err != nil || second.Path != filepath.Join(repo, ".worktrees", "calm-heron") || second.Base != "nushi/brave-otter" {
+	if err != nil || second.Path != filepath.Join(repo, ".worktrees", "calm-heron") || second.Base != "nushi/brave-otter" || second.BaseCommit != wt.BaseCommit {
 		t.Fatalf("Add from the worktree = %+v, %v", second, err)
 	}
 	if b, _ := os.ReadFile(filepath.Join(repo, ".git", "info", "exclude")); strings.Count(string(b), "/.worktrees/") != 1 {
@@ -50,8 +51,17 @@ func TestWorktrees(t *testing.T) {
 	write(t, filepath.Join(second.Path, "sub", "a.txt"), "b\n")
 	git(t, second.Path, "commit", "-q", "-am", "one")
 	write(t, filepath.Join(second.Path, "sub", "a.txt"), "c\n")
-	if st, err := (Worktrees{}).Inspect(ctx, second); err != nil || st != (model.WorktreeState{Changed: 2, Commits: 1}) {
+	// Ignored files go with the worktree too.
+	write(t, filepath.Join(second.Path, ".gitignore"), ".env\nbuild/\n")
+	write(t, filepath.Join(second.Path, ".env"), "SECRET=1\n")
+	write(t, filepath.Join(second.Path, "build", "out.o"), "o")
+	if st, err := (Worktrees{}).Inspect(ctx, second); err != nil || st != (model.WorktreeState{Changed: 3, Ignored: 2, Commits: 1}) {
 		t.Errorf("Inspect = %+v, %v", st, err)
+	}
+	// Its base branch deleted (merged, say): counted from where it started.
+	git(t, repo, "update-ref", "-d", "refs/heads/nushi/brave-otter")
+	if n, err := (Worktrees{}).Inspect(ctx, second); err != nil || n.Commits != 1 {
+		t.Errorf("Inspect with its base gone = %+v, %v", n, err)
 	}
 	if err := (Worktrees{}).Remove(ctx, second, false); err == nil {
 		t.Error("a worktree with changes was removed without force")
@@ -72,5 +82,40 @@ func TestWorktrees(t *testing.T) {
 	os.RemoveAll(wt.Path)
 	if err := (Worktrees{}).Remove(ctx, wt, false); err != nil {
 		t.Errorf("removing a worktree whose folder is gone: %v", err)
+	}
+}
+
+// A repository can bring links where Nushi writes: .worktrees, and its
+// info/exclude or info folder. Nushi writes through none of them.
+func TestNoWritesThroughARepositorysLinks(t *testing.T) {
+	ctx := context.Background()
+	repo, elsewhere := t.TempDir(), t.TempDir()
+	git(t, repo, "init", "-q", "-b", "main")
+	write(t, filepath.Join(repo, "SKILL.md"), "evil\n")
+	git(t, repo, "add", ".")
+	git(t, repo, "commit", "-q", "-m", "init")
+	os.Symlink(elsewhere, filepath.Join(repo, ".worktrees"))
+	if _, _, err := (Worktrees{}).Add(ctx, repo, "brave-otter"); err == nil {
+		t.Error("made a worktree through a linked .worktrees")
+	}
+	if got, _ := os.ReadDir(elsewhere); len(got) > 0 {
+		t.Errorf("wrote %v where the link points", got)
+	}
+
+	target := filepath.Join(elsewhere, "settings.json")
+	write(t, target, "{}")
+	exclude := filepath.Join(repo, ".git", "info", "exclude")
+	os.Remove(exclude)
+	os.Symlink(target, exclude)
+	if err := Exclude(ctx, repo, "/.worktrees/"); err == nil {
+		t.Error("wrote through a linked info/exclude")
+	}
+	os.RemoveAll(filepath.Join(repo, ".git", "info"))
+	os.Symlink(elsewhere, filepath.Join(repo, ".git", "info"))
+	if err := Exclude(ctx, repo, "/.worktrees/"); err == nil {
+		t.Error("wrote through a linked info folder")
+	}
+	if b, _ := os.ReadFile(target); string(b) != "{}" {
+		t.Errorf("the link's target became %q", b)
 	}
 }

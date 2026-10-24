@@ -188,6 +188,9 @@ message Worktree {
   string branch = 3;
   // The branch it started from (a commit, if HEAD was detached).
   string base = 4;
+  // The commit it started from, for when its base branch is gone; empty
+  // for worktrees made before daemon API 42.
+  string base_commit = 5;
 }
 
 message GetChatRequest {
@@ -417,6 +420,8 @@ message WorktreeState {
   bool branch_gone = 4;
   // Why the rest can't be told, if it can't.
   string error = 5;
+  // Files and folders git ignores, which removing it deletes too.
+  int32 ignored = 6;
 }
 
 // One of the agent's sessions: its id and folder.
