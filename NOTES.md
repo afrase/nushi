@@ -85,10 +85,10 @@ Milestone U measured memory and speed, added sleeping chats and a status bar, in
 
 ## Line counts
 
-Hand-written, without tests or generated code (`make lines`). Go is split into the daemon (`cmd`, `internal`) and the generic ACP client (`acp`, its type generator included, its fake test agent not). Packages are counted apart from the app.
+Hand-written, without tests or generated code (`make lines`). Go is split into the daemon (`cmd/nushid`, `internal`), the generic ACP client (`acp`, its type generator included, its fake test agent not), and from step 106 the relay and the Noise channel (`relay`, `noiseconn`, `cmd/nushi-relay`). Packages are counted apart from the app.
 
-| Step | Go daemon | Go acp | Dart app | Dart packages |
-|---|---|---|---|---|
+| Step | Go daemon | Go acp | Dart app | Dart packages | Go relay, noise |
+|---|---|---|---|---|---|
 | 1. Skeleton | 114 | 0 | 95 | 131 |
 | 2. One chat | 429 | 663 | 360 | 131 |
 | 3. Tool calls | 524 | 663 | 432 | 131 |
@@ -201,6 +201,7 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 103. Sleep in the app: menus, the sidebar's mark, the setting | 11186 | 984 | 14138 | 682 |
 | 104. A status bar: agents and memory; API 46 | 11328 | 984 | 14373 | 682 |
 | 105. By hand, the bar following each chat, and the docs | 11328 | 984 | 14377 | 682 |
+| 106. The relay (ADR 0033) | 11328 | 984 | 14377 | 682 | 458 |
 
 Steps over the ~500-line tripwire (code and tests, without generated code): 98 (2,384 with its tests: Ante's whole bridge and its fake), 99 (901: two agents, two trust packages, the shared trust files), 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 removed more than it added.
 
