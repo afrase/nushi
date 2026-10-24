@@ -12,6 +12,7 @@ import 'details_panel.dart';
 import 'folder_button.dart';
 import 'mcp.dart';
 import 'panes.dart';
+import 'remote.dart';
 import 'settings.dart';
 import 'settings_dialog.dart';
 import 'sidebar.dart';
@@ -35,6 +36,12 @@ class NushiApp extends StatefulWidget {
 class _NushiAppState extends State<NushiApp> {
   var _mode = ThemeMode.system;
   final _navigator = GlobalKey<NavigatorState>();
+
+  @override
+  void initState() {
+    super.initState();
+    watchPairings(_navigator, widget.daemon.client);
+  }
 
   PlatformMenuItem _appearance(String label, ThemeMode mode) =>
       PlatformMenuItem(
