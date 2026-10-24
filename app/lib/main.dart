@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import 'bundled_daemon.dart';
 import 'changes_view.dart';
 import 'chat.dart';
 import 'chat_header.dart';

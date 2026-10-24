@@ -25,10 +25,8 @@ class PanelCards extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         buildDefaultDragHandles: false,
         proxyDecorator: (child, _, _) => child,
-        onReorderItem: (from, to) {
-          titles.insert(to, titles.removeAt(from));
-          cardOrder.value = titles;
-        },
+        onReorderItem: (from, to) =>
+            cardOrder.value = reordered(saved, titles, from, to),
         children: [
           for (final (i, title) in titles.indexed) byTitle[title]!.at(i),
         ],
@@ -164,4 +162,21 @@ class PanelCard extends StatelessWidget {
       },
     );
   }
+}
+
+/// The saved card order once the card [from] of those [shown] moved to
+/// [to]: cards not shown here keep their places among the rest.
+List<String> reordered(
+  List<String> saved,
+  List<String> shown,
+  int from,
+  int to,
+) {
+  final moved = [...shown];
+  moved.insert(to, moved.removeAt(from));
+  var k = 0;
+  return [
+    for (final s in saved) shown.contains(s) ? moved[k++] : s,
+    ...moved.skip(k),
+  ];
 }

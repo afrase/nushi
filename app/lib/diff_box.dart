@@ -44,6 +44,10 @@ class DiffBox extends StatefulWidget {
   State<DiffBox> createState() => _DiffBoxState();
 }
 
+/// Comments half written in a file's view that went (another file picked,
+/// the file left the list), by chat, view and file, until it shows again.
+final _drafts = <String, ({LineSelection at, String text, String? editing})>{};
+
 class _DiffBoxState extends State<DiffBox> {
   DiffViewController? _controller; // once the diff is in
   TextDiff? _diffed;
@@ -59,6 +63,27 @@ class _DiffBoxState extends State<DiffBox> {
   void initState() {
     super.initState();
     reviews.addListener(_showComments);
+    _takeDraft();
+  }
+
+  void _takeDraft() {
+    if (_drafts.remove(_draftKey(widget.review)) case final d?) {
+      _draft = d.at;
+      _comment.text = d.text;
+      _editing = _comments.where((c) => c.id == d.editing).firstOrNull;
+    }
+  }
+
+  String? _draftKey(({String chat, String where})? r) =>
+      r == null ? null : '${r.chat}\n${r.where}\n${widget.change.path}';
+
+  /// Keeps the comment being written for when the view shows again.
+  void _keepDraft(({String chat, String where})? r) {
+    if (_draft case final at? when _comment.text.trim().isNotEmpty) {
+      if (_draftKey(r) case final key?) {
+        _drafts[key] = (at: at, text: _comment.text, editing: _editing?.id);
+      }
+    }
   }
 
   @override
@@ -75,9 +100,11 @@ class _DiffBoxState extends State<DiffBox> {
       _build();
     } else if (old.review != widget.review) {
       // Another view of the same file (another commit picked): its own
-      // comments, and no box half written for the last one.
+      // comments; the box half written for the last one waits for it.
+      _keepDraft(old.review);
       _draft = _editing = null;
       _comment.clear();
+      _takeDraft();
       _showComments();
     }
   }
@@ -149,6 +176,7 @@ class _DiffBoxState extends State<DiffBox> {
 
   @override
   void dispose() {
+    _keepDraft(widget.review);
     reviews.removeListener(_showComments);
     _controller?.dispose();
     _comment.dispose();

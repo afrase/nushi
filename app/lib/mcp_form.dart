@@ -51,7 +51,10 @@ class _FormState extends State<_Form> {
   @override
   void initState() {
     super.initState();
-    if (widget.server case final s?) _load(config(s));
+    if (widget.server case final s? when !_load(config(s))) {
+      _json.text = const JsonEncoder.withIndent('  ').convert(config(s));
+      _asJson = true;
+    }
   }
 
   @override
@@ -68,7 +71,14 @@ class _FormState extends State<_Form> {
   bool _load(Map<String, dynamic> c) {
     final t = transport(c);
     final args = c['args'] ?? [];
-    if (!{'stdio', 'http', 'sse'}.contains(t) || args is! List) return false;
+    // One argument a line: one that has a line break, is empty or isn't
+    // text would come back changed, so the JSON shows instead.
+    final lines =
+        args is List &&
+        args.every(
+          (a) => a is String && a.trim().isNotEmpty && !a.contains('\n'),
+        );
+    if (!{'stdio', 'http', 'sse'}.contains(t) || !lines) return false;
     _transport = t;
     _command.text = '${c['command'] ?? ''}';
     _args.text = args.join('\n');

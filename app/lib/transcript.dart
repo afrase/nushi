@@ -93,7 +93,8 @@ class _TranscriptState extends State<Transcript> {
     required bool still,
   }) {
     final (key, items) = switch (e) {
-      final List<Item> run => ('group ${run.first.id}', run),
+      // A call and the group it becomes keep their place (and state).
+      final List<Item> run => (run.first.id, run),
       final SubagentRun s => ('agent ${s.call.id}', [s.call, ...s.items]),
       _ => ((e as Item).id, [e]),
     };
