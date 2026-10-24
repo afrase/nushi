@@ -42,6 +42,9 @@ func TestBackgroundShells(t *testing.T) {
 		"done\n\n[exited with code 0]\n": {"done", "exited with code 0"},
 		"oops\n\n[exited with code 2]\n": {"oops", "exited with code 2"},
 		"\n[killed]\n":                   {"", "killed"},
+		"[killed]\n":                     {"[killed]\n", ""},
+		"x [exited with code 0]\n":       {"x [exited with code 0]\n", ""},
+		"\n[killed]\nmore\n":             {"\n[killed]\nmore\n", ""},
 	} {
 		os.WriteFile(file, []byte(text), 0o600)
 		if out, end, err := ReadShell("b1", file); err != nil || out != want[0] || end != want[1] {

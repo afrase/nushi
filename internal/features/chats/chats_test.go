@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -375,4 +376,26 @@ func TestBackgroundShellsAreFollowed(t *testing.T) {
 	c.agent = nil
 	c.mu.Unlock()
 	shell("started")
+}
+
+// A line that reads as the end, which the command printed itself, isn't
+// its end: the file goes on growing after it.
+func TestAnEndLineTheCommandPrintedIsntItsEnd(t *testing.T) {
+	shellPoll = time.Millisecond
+	reads := [][2]string{{"[killed]", "killed"}, {"[killed] and on", ""}, {"[killed] and on", "exited with code 0"}, {"[killed] and on", "exited with code 0"}}
+	var states []string
+	dialect := claudeDialect
+	dialect.ReadShell = func(string, string) (string, string, error) {
+		r := reads[min(len(states), len(reads)-1)]
+		return r[0], r[1], nil
+	}
+	c := &chat{id: "s1", dialect: dialect, publish: func(e model.Event) {
+		if e.Item != nil && e.Item.Shell != nil {
+			states = append(states, e.Item.Shell.State)
+		}
+	}, agent: &acp.Client{}, items: []model.Item{{ID: "t1", Shell: &model.Shell{State: "running"}}}}
+	c.followShell("t1", "b1", "f", c.agent)
+	if c.items[0].Shell.State != "done" || slices.Contains(states, "stopped") {
+		t.Errorf("states %q, the end %+v", states, c.items[0].Shell)
+	}
 }

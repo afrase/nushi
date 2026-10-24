@@ -29,7 +29,11 @@ func (c *chat) shellLocked(it *model.Item) {
 // shellPoll is how often a running background command's output is read.
 var shellPoll = time.Second
 
+// A command can print a line that reads as Claude's end line, so an end is
+// taken only once the file stops growing after it (while the command's
+// agent runs: else there's nothing more to wait for).
 func (c *chat) followShell(callID, id, file string, agent Agent) {
+	var endAt *string // the output an end was first seen after
 	for {
 		out, end, err := c.dialect.ReadShell(id, file)
 		c.mu.Lock()
@@ -42,13 +46,16 @@ func (c *chat) followShell(callID, id, file string, agent Agent) {
 		if err == nil {
 			sh.Output = out
 		}
+		gone := agent == nil || c.agent != agent || err != nil
 		switch {
-		case end != "":
+		case end != "" && (gone || endAt != nil && *endAt == out):
 			sh.State, sh.End = shellState(end), end
 			if !sh.Started.IsZero() && sh.Ended.IsZero() {
 				sh.Ended = time.Now()
 			}
-		case agent == nil || c.agent != agent || err != nil:
+		case end != "":
+			endAt = &out
+		case gone:
 			sh.State = "started" // no word of its end, and nothing says it still runs
 		}
 		if sh != *it.Shell {

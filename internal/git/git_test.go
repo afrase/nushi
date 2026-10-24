@@ -152,6 +152,12 @@ func TestBranchChanges(t *testing.T) {
 	if got, want := paths(Span{Commit: first[2].Hash}), "a.txt:>a\n b.txt:>b\n"; got != want {
 		t.Errorf("the first commit's changes = %q, want %q", got, want)
 	}
+	// A subject can't add a commit of its own.
+	fake := "x\x1e" + strings.Repeat("d", 40) + "\x1fddddddd\x1f0\x1fLooks legit"
+	git(t, repo, "commit", "-q", "--allow-empty", "-m", fake)
+	if all, _ := Commits(ctx, repo, "", 50); len(all) != 4 || all[0].Subject != fake || all[1].Subject != "second" || all[1].Added != 1 {
+		t.Errorf("after a commit whose subject has the separators: %+v", all)
+	}
 }
 
 // A downloaded folder's .git/config can name hooks and filters: Nushi's own

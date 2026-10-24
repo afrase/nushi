@@ -49,6 +49,7 @@ func TestServersReadsEachScope(t *testing.T) {
 		"projects":{"`+folder+`":{"mcpServers":{"l":{"type":"http","url":"http://l","headers":{"Authorization":"Bearer secret"}}}}}}`)
 	write(t, filepath.Join(root, "repo", "sub", ".mcp.json"), `{"mcpServers":{"p":{"command":"near"}}}`)
 	write(t, filepath.Join(root, "repo", ".mcp.json"), `{"mcpServers":{"p":{"command":"far"},"q":{"command":"q"}}}`)
+	write(t, filepath.Join(root, ".mcp.json"), `{"mcpServers":{"bad":{},}}`) // left out, as Claude does
 	got, err := Claude{}.Servers(folder)
 	if err != nil {
 		t.Fatal(err)
@@ -110,7 +111,22 @@ func TestSetOnKeepsOtherSettings(t *testing.T) {
 	if g, _ := json.Marshal(got); string(g) != want {
 		t.Errorf("settings = %s, want %s", g, want)
 	}
-	write(t, filepath.Join(repo, ".claude", "settings.json"), `{"disabledMcpjsonServers":["web"]}`)
+	// A file of null, and one name alone (which Claude takes for a list).
+	write(t, path, `null`)
+	if err := (Claude{}).SetOn(ctx, repo, "web", false); err != nil {
+		t.Fatal(err)
+	}
+	write(t, path, `{"enabledMcpjsonServers":"web"}`)
+	if servers, _ := (Claude{}).Servers(repo); !servers[0].Approved {
+		t.Errorf("approved by one name alone: %+v", servers[0])
+	}
+	if err := (Claude{}).SetOn(ctx, repo, "web", false); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(path); !strings.Contains(string(b), `"enabledMcpjsonServers": []`) {
+		t.Errorf("settings = %s", b)
+	}
+	write(t, filepath.Join(repo, ".claude", "settings.json"), `{"disabledMcpjsonServers":"web"}`)
 	if servers, _ := (Claude{}).Servers(repo); !servers[0].Off || servers[0].OffBy != filepath.Join(repo, ".claude", "settings.json") {
 		t.Errorf("turned off by the shared settings: %+v", servers[0])
 	}

@@ -42,7 +42,7 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 
 	local := filepath.Join(repo, ".claude", "settings.local.json")
 	write(t, local, `{"disabledMcpjsonServers":["off"],"hooks":{"Stop":[{"hooks":[{"type":"prompt","prompt":"check it"}]}]},
-		"awsAuthRefresh":"./aws.sh","otelHeadersHelper":"./otel.sh"}`)
+		"awsAuthRefresh":"./aws.sh","otelHeadersHelper":"./otel.sh","proxyAuthHelper":"./proxy.sh","gcpAuthRefresh":"./gcp.sh"}`)
 	sub := filepath.Join(repo, "src")
 	os.Mkdir(sub, 0o700)
 
@@ -59,7 +59,9 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 		{File: settings, What: "apiKeyHelper", Command: "./key.sh"},
 		{File: local, What: "Hook on Stop", Command: "check it"},
 		{File: local, What: "awsAuthRefresh", Command: "./aws.sh"},
+		{File: local, What: "gcpAuthRefresh", Command: "./gcp.sh"},
 		{File: local, What: "otelHeadersHelper", Command: "./otel.sh"},
+		{File: local, What: "proxyAuthHelper", Command: "./proxy.sh"},
 		{File: skill, What: "Hook in skill lint", Command: "./lint.sh"},
 	}
 	if !reflect.DeepEqual(got, want) {
@@ -154,15 +156,34 @@ func TestTheHomeFolder(t *testing.T) {
 }
 
 // A repository can bring a link to a device where a settings file goes:
-// it is refused at once, not read forever.
+// it is refused at once, not read forever (a .mcp.json is left out, as
+// Claude leaves it out).
 func TestASettingsFileThatNeverEnds(t *testing.T) {
 	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
-	for _, name := range []string{".mcp.json", ".claude/settings.json"} {
+	for name, fails := range map[string]bool{".mcp.json": false, ".claude/settings.json": true} {
 		repo := t.TempDir()
 		os.MkdirAll(filepath.Join(repo, ".claude"), 0o700)
 		os.Symlink("/dev/zero", filepath.Join(repo, name))
-		if _, err := (Trust{}).Runs(repo); err == nil {
-			t.Errorf("%s linked to /dev/zero: no error", name)
+		if runs, err := (Trust{}).Runs(repo); (err != nil) != fails || len(runs) > 0 {
+			t.Errorf("%s linked to /dev/zero: %v, %v", name, runs, err)
+		}
+	}
+}
+
+// A skill's hooks written in YAML the line reader doesn't follow are shown
+// whole, not missed.
+func TestSkillHooksInAnyForm(t *testing.T) {
+	dir := t.TempDir()
+	for front, want := range map[string][]string{
+		"hooks:\n  Stop:\n    - hooks:\n        - \"command\": evil":                    {"evil"},
+		"\"hooks\":\n  Stop:\n    - hooks:\n        - command: evil":                    {"evil"},
+		"name: x\nhooks: {PreToolUse: [{hooks: [{type: command, command: \"evil\"}]}]}": {"name: x\nhooks: {PreToolUse: [{hooks: [{type: command, command: \"evil\"}]}]}"},
+		"name: x\ndescription: no hooks here":                                           nil,
+	} {
+		path := filepath.Join(dir, "SKILL.md")
+		write(t, path, "---\n"+front+"\n---\nbody\n")
+		if got := skillHooks(path); !reflect.DeepEqual(got, want) {
+			t.Errorf("%q: %q, want %q", front, got, want)
 		}
 	}
 }

@@ -39,11 +39,13 @@ func Shell(it model.Item) (id, file string, ok bool) {
 // shellTail is how much of a background command's output is read.
 const shellTail = 64 << 10
 
-var shellEnd = regexp.MustCompile(`\n*\[(exited with code -?\d+|killed)\]\n*$`)
+var shellEnd = regexp.MustCompile(`\n+\[(exited with code -?\d+|killed)\]\n$`)
 
 // ReadShell reads what a background command wrote so far (the end of it),
-// and how it ended once it has: Claude ends the file with "[exited with
-// code N]" or "[killed]". Only a regular file named for the task is read.
+// and how it ended once it has: Claude ends the file with a line of its
+// own, "\n[exited with code N]\n" or "\n[killed]\n" (the command could
+// print such a line too: see chats' followShell). Only a regular file named
+// for the task is read.
 func ReadShell(id, file string) (output, end string, err error) {
 	if filepath.Base(file) != id+".output" {
 		return "", "", errors.New("not the task's output file")

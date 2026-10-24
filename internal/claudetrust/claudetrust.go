@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -187,8 +188,13 @@ func serverCommand(config string) string {
 	return cmp.Or(strings.Join(append([]string{c.Command}, c.Args...), " "), c.URL)
 }
 
-// helpers are the settings that name a command Claude runs on its own.
-var helpers = []string{"apiKeyHelper", "awsAuthRefresh", "awsCredentialExport", "otelHeadersHelper"}
+// helper says a setting names a command Claude runs on its own (Claude Code
+// 2.1.309's credential helpers apiKeyHelper, awsAuthRefresh,
+// awsCredentialExport, gcpAuthRefresh, otelHeadersHelper and
+// proxyAuthHelper, and any it adds named the same way).
+func helper(setting string) bool {
+	return strings.HasSuffix(setting, "Helper") || strings.HasSuffix(setting, "AuthRefresh") || strings.HasSuffix(setting, "CredentialExport")
+}
 
 // settingsRuns lists what a settings file has Claude run: its hooks, its
 // env block (the names only) and its helper commands.
@@ -224,9 +230,9 @@ func settingsRuns(path string) ([]model.FolderRun, error) {
 	if json.Unmarshal(s["env"], &env) == nil && len(env) > 0 {
 		out = append(out, model.FolderRun{File: path, What: "Environment variables", Command: strings.Join(slices.Sorted(maps.Keys(env)), " ")})
 	}
-	for _, h := range helpers {
+	for _, h := range slices.Sorted(maps.Keys(s)) {
 		var cmd string
-		if json.Unmarshal(s[h], &cmd) == nil && cmd != "" {
+		if helper(h) && json.Unmarshal(s[h], &cmd) == nil && cmd != "" {
 			out = append(out, model.FolderRun{File: path, What: h, Command: cmd})
 		}
 	}
@@ -234,13 +240,15 @@ func settingsRuns(path string) ([]model.FolderRun, error) {
 }
 
 // skillHooks returns the commands of the hooks in a skill's front matter,
-// read line by line rather than as YAML: each `command:` value under it.
+// read line by line rather than as YAML: each `command:` value under its
+// `hooks:` key. Front matter that has a hooks key in a form this doesn't
+// read (flow style, say) comes back whole, as one "command".
 func skillHooks(path string) []string {
 	b, err := claudemcp.ReadFile(path)
 	if err != nil || !bytes.HasPrefix(b, []byte("---")) {
 		return nil
 	}
-	var cmds []string
+	var cmds, front []string
 	sc := bufio.NewScanner(bytes.NewReader(b[3:]))
 	inHooks := false
 	for sc.Scan() {
@@ -248,12 +256,29 @@ func skillHooks(path string) []string {
 		if strings.TrimSpace(line) == "---" {
 			break
 		}
+		front = append(front, line)
 		if line != "" && line[0] != ' ' && line[0] != '\t' && line[0] != '-' {
-			inHooks = strings.HasPrefix(line, "hooks:")
+			_, inHooks = key(line, "hooks")
 		}
-		if v, ok := strings.CutPrefix(strings.TrimLeft(strings.TrimSpace(line), "- "), "command:"); ok && inHooks {
+		if v, ok := key(strings.TrimLeft(strings.TrimSpace(line), "- "), "command"); ok && inHooks {
 			cmds = append(cmds, strings.Trim(strings.TrimSpace(v), `"'`))
 		}
 	}
+	if len(cmds) == 0 && anyHooks.MatchString(strings.Join(front, "\n")) {
+		return []string{strings.TrimSpace(strings.Join(front, "\n"))}
+	}
 	return cmds
+}
+
+// anyHooks finds a hooks key anywhere in YAML, quoted or not.
+var anyHooks = regexp.MustCompile(`(?m)(^|[\s{,\[])["']?hooks["']?\s*:`)
+
+// key returns the value of line's YAML key name (written plain or quoted).
+func key(line, name string) (string, bool) {
+	for _, q := range []string{"", `"`, "'"} {
+		if v, ok := strings.CutPrefix(line, q+name+q+":"); ok {
+			return v, true
+		}
+	}
+	return "", false
 }

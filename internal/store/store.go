@@ -92,17 +92,38 @@ func (s *Store) trusted() ([]string, error) {
 	return folders, err
 }
 
-// writeJSON replaces path with v, atomically.
+// writeJSON replaces path with v, atomically, and durably: the new file's
+// data is on disk before it takes path's place (a crash right after a
+// rename can otherwise leave an empty file), and so is the rename.
 func writeJSON(path string, v any) error {
 	b, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		return err
 	}
 	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, b, 0o600); err != nil {
+	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	if err != nil {
 		return err
 	}
-	return os.Rename(tmp, path)
+	_, err = f.Write(b)
+	if err == nil {
+		err = f.Sync() // F_FULLFSYNC on macOS
+	}
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	if err == nil {
+		err = os.Rename(tmp, path)
+	}
+	if err != nil {
+		os.Remove(tmp)
+		return err
+	}
+	if dir, err := os.Open(filepath.Dir(path)); err == nil {
+		dir.Sync()
+		dir.Close()
+	}
+	return nil
 }
 
 // SaveSession writes a session's file, replacing any earlier one.
