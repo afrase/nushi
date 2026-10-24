@@ -15,7 +15,9 @@ import (
 	"bytes"
 	"cmp"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"maps"
 	"os"
 	"os/exec"
@@ -23,6 +25,8 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/afrase/nushi/internal/claudemcp"
 	"github.com/afrase/nushi/internal/model"
@@ -150,7 +154,7 @@ func (Trust) Runs(folder string) ([]model.FolderRun, error) {
 	for _, u := range unread {
 		what, text := "MCP servers Nushi couldn't read", u.Err.Error()
 		if b, err := claudemcp.ReadFile(u.Path); err == nil {
-			what, text = what+cut(string(b)), string(b[:min(len(b), shown)])
+			text = whole(u.Path, b)
 		}
 		out = append(out, model.FolderRun{File: u.Path, What: what, Command: text})
 	}
@@ -178,22 +182,22 @@ func (Trust) Runs(folder string) ([]model.FolderRun, error) {
 		skills, _ := filepath.Glob(filepath.Join(dir, ".claude", "skills", "*", "SKILL.md"))
 		for _, path := range skills {
 			if front, ok := skillHooks(path); ok {
-				out = append(out, model.FolderRun{File: path, What: "Hooks in skill " + filepath.Base(filepath.Dir(path)) + cut(front), Command: front[:min(len(front), shown)]})
+				out = append(out, model.FolderRun{File: path, What: "Hooks in skill " + filepath.Base(filepath.Dir(path)), Command: whole(path, front)})
 			}
 		}
 	}
 	return out, nil
 }
 
-// shown is how much of a file the trust card shows.
-const shown = 4 << 10
+// shown is the most of a file the trust card shows: all of it, or nothing
+// but where it is, never a part that would look like all of it.
+const shown = 256 << 10
 
-// cut says how much of text the card shows, when it doesn't show it all.
-func cut(text string) string {
-	if len(text) <= shown {
-		return ""
+func whole(path string, b []byte) string {
+	if len(b) > shown {
+		return fmt.Sprintf("too large to show (%d KB): read %s", (len(b)+1023)>>10, path)
 	}
-	return fmt.Sprintf(" (the first %d KB of %d KB shown)", shown>>10, (len(text)+1023)>>10)
+	return string(b)
 }
 
 // serverCommand is the command line a server runs, or the URL it connects to.
@@ -258,20 +262,65 @@ func settingsRuns(path string) ([]model.FolderRun, error) {
 	return out, nil
 }
 
-// skillHooks returns a skill's front matter, raw, when it mentions hooks
-// at all: Nushi doesn't guess which commands Claude would read out of it.
-// Without a closing "---" line, the whole file counts as front matter.
-func skillHooks(path string) (string, bool) {
+// skillHooks returns a skill's front matter, raw, when it has hooks: the
+// word anywhere in it, or a key that YAML reads as hooks (any case, any
+// depth, in any of its documents, aliases and merges resolved), or YAML
+// that doesn't decode. Nushi doesn't guess which commands Claude would read
+// out of it. Without a closing "---" line, the whole file counts.
+func skillHooks(path string) ([]byte, bool) {
 	b, err := claudemcp.ReadFile(path)
 	if err != nil || !bytes.HasPrefix(b, []byte("---")) {
-		return "", false
+		return nil, false
 	}
 	front := b
 	if loc := closing.FindIndex(b[3:]); loc != nil {
 		front = bytes.TrimRight(b[:3+loc[1]], "\n")
 	}
-	return string(front), bytes.Contains(front, []byte("hooks"))
+	if bytes.Contains(bytes.ToLower(front), []byte("hooks")) {
+		return front, true
+	}
+	yamlText := bytes.TrimPrefix(front, []byte("---"))
+	if loc := closing.FindIndex(yamlText); loc != nil {
+		yamlText = yamlText[:loc[0]]
+	}
+	dec := yaml.NewDecoder(bytes.NewReader(yamlText))
+	for {
+		var doc any
+		err := dec.Decode(&doc)
+		if errors.Is(err, io.EOF) {
+			return nil, false
+		}
+		if err != nil || hasHooksKey(doc) {
+			return front, true
+		}
+	}
 }
 
 // closing is the line that ends front matter: "---" alone.
 var closing = regexp.MustCompile(`\n---[ \t\r]*(\n|\z)`)
+
+// hasHooksKey says a decoded YAML value has a key reading hooks, in any
+// case, at any depth.
+func hasHooksKey(v any) bool {
+	switch v := v.(type) {
+	case map[string]any:
+		for k, x := range v {
+			if strings.EqualFold(k, "hooks") || hasHooksKey(x) {
+				return true
+			}
+		}
+	case map[any]any:
+		for k, x := range v {
+			if strings.EqualFold(fmt.Sprint(k), "hooks") || hasHooksKey(k) || hasHooksKey(x) {
+				return true
+			}
+		}
+	case []any:
+		for _, x := range v {
+			if hasHooksKey(x) {
+				return true
+			}
+		}
+	}
+	return false
+}

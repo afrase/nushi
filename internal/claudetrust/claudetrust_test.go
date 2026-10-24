@@ -195,24 +195,36 @@ func TestSkillHooksShowWhole(t *testing.T) {
 		"---\nname: x\n...\n---\nhooks:\n  Stop: []\n---\n":                     "", // a second document is the body
 		"---\nname: x\n...\nhooks:\n  Stop: []\n---\n":                          "---\nname: x\n...\nhooks:\n  Stop: []\n---",
 		"---\nd: " + long + "\nhooks:\n  Stop: []\n---\n":                       "---\nd: " + long + "\nhooks:\n  Stop: []\n---",
+		"---\n\"\\x68ooks\": {Stop: []}\n---\n":                                 "---\n\"\\x68ooks\": {Stop: []}\n---",
+		"---\nk: &a {\"\\x48OOKS\": []}\nm:\n  <<: *a\n---\n":                   "---\nk: &a {\"\\x48OOKS\": []}\nm:\n  <<: *a\n---",
+		"---\nv: &x \"\\x68ooks\"\nm: {*x : 1}\n---\n":                          "---\nv: &x \"\\x68ooks\"\nm: {*x : 1}\n---",
+		"---\nname: x\n...\n---\nlater: {\"\\x68ooks\": 1}\n---\n":              "",
+		"---\nname: x\n...\n\"\\x68ooks\": 1\n---\n":                            "---\nname: x\n...\n\"\\x68ooks\": 1\n---",
+		"---\nname: [unclosed\n---\n":                                           "---\nname: [unclosed\n---",
 		"---\nname: x\n--- not the end\nhooks: {}\n---\n":                       "---\nname: x\n--- not the end\nhooks: {}\n---",
 		"---\nname: x\nhooks:\n  Stop: [{hooks: [{command: echo unclosed}]}]\n": "---\nname: x\nhooks:\n  Stop: [{hooks: [{command: echo unclosed}]}]\n",
 	} {
 		path := filepath.Join(dir, "SKILL.md")
 		write(t, path, body)
-		if got, ok := skillHooks(path); ok != (want != "") || ok && got != want {
+		if got, ok := skillHooks(path); ok != (want != "") || ok && string(got) != want {
 			t.Errorf("%.60q: %.60q, %v", body, got, ok)
 		}
 	}
 }
 
-// A long file Nushi can't read shows cut, and says so.
-func TestALongUnreadFileSaysItsCut(t *testing.T) {
+// A file the card shows is shown whole, or, past 256 KB, not at all but
+// where it is: never a part of it as if it were all.
+func TestAFileShownWholeOrNotAtAll(t *testing.T) {
 	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
 	repo := t.TempDir()
-	write(t, filepath.Join(repo, ".mcp.json"), "{"+strings.Repeat(" ", 10<<10))
-	runs, _ := Trust{}.Runs(repo)
-	if len(runs) != 1 || len(runs[0].Command) != 4<<10 || !strings.Contains(runs[0].What, "first 4 KB of 11 KB") {
-		t.Errorf("runs = %q", runs[0].What)
+	mcp := filepath.Join(repo, ".mcp.json")
+	body := "{" + strings.Repeat(" ", 100<<10)
+	write(t, mcp, body)
+	if runs, _ := (Trust{}).Runs(repo); len(runs) != 1 || runs[0].Command != body {
+		t.Errorf("a 100 KB file isn't shown whole")
+	}
+	write(t, mcp, "{"+strings.Repeat(" ", 300<<10))
+	if runs, _ := (Trust{}).Runs(repo); len(runs) != 1 || runs[0].Command != "too large to show (301 KB): read "+mcp {
+		t.Errorf("runs = %.80q", runs[0].Command)
 	}
 }

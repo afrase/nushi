@@ -68,20 +68,22 @@ class TrustCard extends StatelessWidget {
                       for (final r in runs)
                         Padding(
                           padding: const EdgeInsets.only(left: 12),
-                          child: SelectableText.rich(
-                            TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: '${r.what}  ',
-                                  style: theme.ui(t.text, size: 12.5),
+                          child: r.command.contains('\n')
+                              ? _Block(r)
+                              : SelectableText.rich(
+                                  TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: '${r.what}  ',
+                                        style: theme.ui(t.text, size: 12.5),
+                                      ),
+                                      TextSpan(
+                                        text: r.command,
+                                        style: theme.code(t.text, size: 12),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                                TextSpan(
-                                  text: r.command,
-                                  style: theme.code(t.text, size: 12),
-                                ),
-                              ],
-                            ),
-                          ),
                         ),
                     ],
                   ),
@@ -106,6 +108,38 @@ class TrustCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// A run whose text has many lines (a file shown whole), in a box of its
+/// own that scrolls.
+class _Block extends StatelessWidget {
+  const _Block(this.run);
+
+  final FolderRun run;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context), t = theme.t;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 4,
+      children: [
+        Text(run.what, style: theme.ui(t.text, size: 12.5)),
+        Container(
+          constraints: const BoxConstraints(maxHeight: 240),
+          width: double.infinity,
+          decoration: box(t.borderSubtle, fill: t.base),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(8),
+            child: SelectableText(
+              run.command,
+              style: theme.code(t.text, size: 12),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
