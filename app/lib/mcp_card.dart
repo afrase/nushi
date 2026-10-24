@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'agents.dart';
 import 'chat.dart';
 import 'daemon.dart';
 import 'mcp_servers.dart';
@@ -8,8 +9,17 @@ import 'theme/theme.dart';
 import 'widgets.dart';
 
 /// The details panel's MCP card: the servers the agent uses in the chat's
-/// folder, each with its state; "Manage…" opens the MCP servers view.
+/// folder, each with its state; "Manage…" opens the MCP servers view. An
+/// agent whose MCP config Nushi doesn't read gets a note.
 PanelCard mcpCard(ChatState chat, Daemon daemon) {
+  if (knownAgents[chat.agent]?.mcp == false) {
+    return PanelCard(
+      title: 'MCP',
+      rows: [
+        (null, '${chat.agentName} uses the MCP servers in its own config.'),
+      ],
+    );
+  }
   final list = McpServers.of(daemon, chat.folder);
   return PanelCard(
     title: 'MCP',

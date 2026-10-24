@@ -33,7 +33,9 @@ List<MenuEntry> folderEntries(
   String? skip,
   String? checked,
 }) {
-  final recent = daemon.recentFolders.where((f) => f != skip).take(8);
+  final recent = recentFolders(daemon.chats.values)
+      .where((f) => f != skip)
+      .take(8);
   return [
     for (final f in recent)
       MenuEntry(
@@ -161,4 +163,15 @@ class FolderButton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The chats' folders (in a worktree, its repository's), the newest chat's
+/// first, scratch folders left out.
+List<String> recentFolders(Iterable<ChatState> chats) {
+  final byNewest = chats.toList()
+    ..sort((a, b) => b.created.compareTo(a.created));
+  return {
+    for (final c in byNewest)
+      if (!c.scratch) c.home,
+  }.toList();
 }

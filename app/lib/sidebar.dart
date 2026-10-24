@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import 'agents.dart';
 import 'chat.dart';
 import 'chat_menu.dart';
 import 'daemon.dart';
@@ -30,11 +31,31 @@ class _SidebarState extends State<Sidebar> {
   String? _starting; // the folder a chat is starting in ('' for none)
   bool _showArchived = false;
 
-  /// Starts a chat in [folder] ('' for a scratch folder).
-  Future<void> _start(String folder) async {
+  /// Starts a chat in [folder] ('' for a scratch folder), with [agent]
+  /// or the last one used.
+  Future<void> _start(String folder, {String? agent}) async {
     setState(() => _starting = folder);
-    await tryOrShow(context, () => widget.daemon.startChat(folder));
+    await tryOrShow(
+      context,
+      () => widget.daemon.startChat(folder, agent: agent),
+    );
     if (mounted) setState(() => _starting = null);
+  }
+
+  /// "New chat" for each agent, the last one used checked, when there is
+  /// more than one.
+  List<MenuEntry> _agents(String folder) {
+    final last = lastAgent(widget.daemon.chats.values);
+    return [
+      for (final a in knownAgents.values)
+        MenuEntry(
+          a.title,
+          checked: a.name == last,
+          onPick: _starting == null
+              ? () => _start(folder, agent: a.name)
+              : null,
+        ),
+    ];
   }
 
   /// Opens a terminal in [folder] for the chat shown, if it's one of
@@ -69,12 +90,31 @@ class _SidebarState extends State<Sidebar> {
         children: [
           Padding(
             padding: const EdgeInsets.all(10),
-            child: Button(
-              label: 'New chat',
-              icon: Icons.add,
-              kind: ButtonKind.primary,
-              height: 28,
-              onPressed: _starting == null ? () => _start('') : null,
+            child: Row(
+              spacing: 4,
+              children: [
+                Expanded(
+                  child: Button(
+                    label: knownAgents.length > 1
+                        ? 'New ${knownAgents[lastAgent(widget.daemon.chats.values)]?.title} chat'
+                        : 'New chat',
+                    icon: Icons.add,
+                    kind: ButtonKind.primary,
+                    height: 28,
+                    onPressed: _starting == null ? () => _start('') : null,
+                  ),
+                ),
+                if (knownAgents.length > 1)
+                  Menu(
+                    tooltip: 'Pick the agent',
+                    entries: _agents(''),
+                    child: Icon(
+                      Icons.expand_more,
+                      size: 18,
+                      color: t.textSecondary,
+                    ),
+                  ),
+              ],
             ),
           ),
           Expanded(
@@ -86,6 +126,7 @@ class _SidebarState extends State<Sidebar> {
                   _FolderHeader(
                     folder,
                     onNew: _starting == null ? () => _start(folder) : null,
+                    agents: knownAgents.length > 1 ? _agents(folder) : null,
                     onTerminal: folder.isEmpty || chats.isEmpty
                         ? null
                         : () => _terminal(folder, chats),
@@ -180,10 +221,12 @@ class _FolderHeader extends StatelessWidget {
     this.folder, {
     required this.onNew,
     required this.onTerminal,
+    this.agents,
   });
 
   final String folder;
   final VoidCallback? onNew;
+  final List<MenuEntry>? agents; // "New chat here" with each agent
   final VoidCallback? onTerminal; // a terminal there, in one of its chats
 
   @override
@@ -194,7 +237,7 @@ class _FolderHeader extends StatelessWidget {
         : folderParts(folder);
     return Menu(
       entries: [
-        MenuEntry('New chat here', onPick: onNew),
+        MenuEntry('New chat here', onPick: onNew, submenu: agents),
         MenuEntry('Open in terminal', onPick: onTerminal),
       ],
       builder: (context, open) => GestureDetector(

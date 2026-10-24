@@ -8,6 +8,7 @@ import 'package:connectrpc/protocol/connect.dart' as protocol;
 import 'package:flutter/foundation.dart';
 import 'package:uds_transport/uds_transport.dart';
 
+import 'agents.dart';
 import 'bundled_daemon.dart';
 import 'chat.dart';
 import 'gen/nushi/v1/nushi.connect.client.dart';
@@ -15,6 +16,7 @@ import 'gen/nushi/v1/nushi.pb.dart';
 import 'review.dart';
 import 'settings.dart';
 import 'terminals.dart';
+import 'trust_card.dart';
 
 final support = '${Platform.environment['HOME']}/Library/Application Support';
 
@@ -27,7 +29,7 @@ final dataDir =
         : '$support/Nushi');
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 43;
+const apiVersion = 44;
 
 /// The app's link to nushid. [connected] follows a ping every few seconds;
 /// while connected, daemon events keep [chats] current. When no daemon
@@ -170,6 +172,7 @@ class Daemon extends ChangeNotifier {
               // list can't miss a chat.
               live = true;
               unawaited(_listChats());
+              unawaited(_listAgents());
               return;
             }
             if (_held case final held?) {
@@ -256,6 +259,16 @@ class Daemon extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> _listAgents() async {
+    try {
+      final list = (await client.listAgents(ListAgentsRequest())).agents;
+      knownAgents = {for (final a in list) a.name: a};
+      notifyListeners();
+    } on Object {
+      // As they were: the next subscription asks again.
+    }
+  }
+
   /// Fetches a chat's snapshot; its events have been held since [loading].
   Future<void> _load(ChatState chat) async {
     if (chat.loaded || chat.loading) return;
@@ -301,13 +314,19 @@ class Daemon extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Starts a chat in [folder], or in a scratch folder of its own (''); in a
-  /// new worktree of its repository if that's the choice remembered for it.
-  Future<void> startChat(String folder) async {
+  /// Starts a chat with [agent] (else the last one used) in [folder], or
+  /// in a scratch folder of its own (''); in a new worktree of its
+  /// repository if that's the choice remembered for it.
+  Future<void> startChat(String folder, {String? agent}) async {
+    agent ??= lastAgent(chats.values);
     if (!await _mayRun(folder, 'Start a chat')) return;
     final before = (selectedId, mcpFolder);
     final resp = await client.startChat(
-      StartChatRequest(folder: folder, worktree: _worktree(folder)),
+      StartChatRequest(
+        agent: agent,
+        folder: folder,
+        worktree: _worktree(folder),
+      ),
     );
     chats[resp.chatId] ??= ChatState(resp.chatId, folder);
     // Not if the user went elsewhere meanwhile: a trust card or another
@@ -334,17 +353,6 @@ class Daemon extends ChangeNotifier {
       ),
     );
     return true;
-  }
-
-  /// The chats' folders (in a worktree, its repository's), the newest
-  /// chat's first, scratch folders left out.
-  List<String> get recentFolders {
-    final byNewest = chats.values.toList()
-      ..sort((a, b) => b.created.compareTo(a.created));
-    return {
-      for (final c in byNewest)
-        if (!c.scratch) c.home,
-    }.toList();
   }
 
   /// Opens a side chat of [chat] (see ForkChat).
@@ -381,20 +389,5 @@ class Daemon extends ChangeNotifier {
     unawaited(_events?.cancel());
     unawaited(_transport.close());
     super.dispose();
-  }
-}
-
-/// What [folder] would have the agent run, shown before a chat starts or
-/// moves there; [answer] is true for "Start anyway".
-class TrustAsk {
-  TrustAsk(this.folder, this.action, this.runs);
-
-  final String folder;
-  final String action;
-  final List<FolderRun> runs;
-  final answer = Completer<bool>();
-
-  void decide(bool start) {
-    if (!answer.isCompleted) answer.complete(start);
   }
 }
