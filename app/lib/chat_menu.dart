@@ -28,6 +28,7 @@ List<MenuEntry> chatMenu(
     'Delete…',
     onPick: () => showDialog<void>(
       context: context,
+      barrierDismissible: false, // not while it deletes: see _DeleteDialog
       builder: (_) => _DeleteDialog(chat, daemon),
     ),
   ),
@@ -144,7 +145,7 @@ class _DeleteDialogState extends State<_DeleteDialog> {
         ),
       ],
     ];
-    return nushiDialog(
+    final dialog = nushiDialog(
       'Delete $title?',
       FutureBuilder(
         future: _plan,
@@ -216,7 +217,7 @@ class _DeleteDialogState extends State<_DeleteDialog> {
         Button(
           label: 'Cancel',
           kind: ButtonKind.ghost,
-          onPressed: () => Navigator.pop(context),
+          onPressed: _deleting ? null : () => Navigator.pop(context),
         ),
         FutureBuilder(
           future: _plan,
@@ -229,6 +230,8 @@ class _DeleteDialogState extends State<_DeleteDialog> {
         ),
       ],
     );
+    // Once it deletes, it can't be called off: it stays to say how it went.
+    return PopScope(canPop: !_deleting, child: dialog);
   }
 }
 

@@ -4,7 +4,9 @@ package api
 import (
 	"context"
 	"crypto/subtle"
+	"fmt"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -21,7 +23,20 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 42
+const Version = 43
+
+// build is the daemon's executable as it started (PingResponse.build).
+var build = func() string {
+	exe, err := os.Executable()
+	if err != nil {
+		return ""
+	}
+	fi, err := os.Stat(exe)
+	if err != nil {
+		return ""
+	}
+	return fmt.Sprintf("%d-%d", fi.Size(), fi.ModTime().UnixMilli())
+}()
 
 type server struct {
 	chats *chats.Service
@@ -71,7 +86,7 @@ func Handler(token string, chats *chats.Service, mcp *mcp.Service, terms *termin
 }
 
 func (s *server) Ping(context.Context, *connect.Request[nushiv1.PingRequest]) (*connect.Response[nushiv1.PingResponse], error) {
-	return connect.NewResponse(&nushiv1.PingResponse{ApiVersion: Version}), nil
+	return connect.NewResponse(&nushiv1.PingResponse{ApiVersion: Version, Build: build}), nil
 }
 
 func (s *server) ListChats(context.Context, *connect.Request[nushiv1.ListChatsRequest]) (*connect.Response[nushiv1.ListChatsResponse], error) {

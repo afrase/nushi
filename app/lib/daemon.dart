@@ -35,12 +35,21 @@ final String? _oldDataDir =
     : null;
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 42;
+const apiVersion = 43;
 
 /// The daemon in the app's bundle (`make package`), if the app runs from one.
 final String? bundledDaemon = () {
   final path = '${File(Platform.resolvedExecutable).parent.path}/nushid';
   return File(path).existsSync() ? path : null;
+}();
+
+/// The bundled daemon's build, as the daemon tells its own (PingResponse).
+final String? _bundledBuild = () {
+  if (bundledDaemon case final path?) {
+    final st = File(path).statSync();
+    return '${st.size}-${st.modified.millisecondsSinceEpoch}';
+  }
+  return null;
 }();
 
 /// The app's link to nushid. [connected] follows a ping every few seconds;
@@ -68,10 +77,20 @@ class Daemon extends ChangeNotifier {
   late final Timer _timer;
   bool connected = false;
   int daemonApi = 0; // the daemon's API version
+  String _build = ''; // the running daemon's build
 
   /// Whether the daemon is older than the app: it needs a restart.
   bool get outdated => daemonApi < apiVersion;
+
+  /// Whether the app bundles another build of the daemon than the one that
+  /// runs (installed since it started): a restart would bring it in.
+  bool get replaced =>
+      _bundledBuild != null && _build.isNotEmpty && _build != _bundledBuild;
   DateTime _launched = DateTime(0); // when the bundled daemon was last started
+  int _launches = 0; // starts of the bundled daemon since it last answered
+
+  /// Whether starting the bundled daemon keeps failing.
+  bool get launchFailed => _launches >= 3 && !connected;
   StreamSubscription<EventsResponse>? _events;
 
   /// Every stored chat, by id.
@@ -129,19 +148,25 @@ class Daemon extends ChangeNotifier {
 
   Future<void> _ping() async {
     var api = 0;
+    var build = '';
     try {
       // A daemon that hangs counts as gone, rather than stalling the pings.
-      api =
-          (await client.ping(PingRequest()).timeout(const Duration(seconds: 3)))
-              .apiVersion;
+      final r = await client
+          .ping(PingRequest())
+          .timeout(const Duration(seconds: 3));
+      (api, build) = (r.apiVersion, r.build);
     } on Object {
       _launch();
     }
     final ok = api > 0;
+    if (ok) _launches = 0;
     if (ok && _events == null) _subscribe();
-    if (ok != connected || ok && api != daemonApi) {
+    if (ok != connected || ok && (api != daemonApi || build != _build)) {
       connected = ok;
-      if (ok) daemonApi = api; // kept while away: the app stays as it was
+      if (ok) {
+        daemonApi = api; // kept while away: the app stays as it was
+        _build = build;
+      }
       notifyListeners();
     }
   }
@@ -151,12 +176,12 @@ class Daemon extends ChangeNotifier {
   /// detached, so it outlives the app.
   void _launch() {
     final bin = bundledDaemon;
-    if (bin == null ||
-        bin.contains("'") ||
-        DateTime.now().difference(_launched).inSeconds < 10) {
+    if (bin == null || DateTime.now().difference(_launched).inSeconds < 10) {
       return;
     }
     _launched = DateTime.now();
+    _launches++;
+    if (_launches == 3) notifyListeners(); // launchFailed
     // Moving from Nushi Next: its daemon stops, and the new one starts in
     // the old folder, which it then moves (its log and folder move along).
     var dir = dataDir;
@@ -165,10 +190,15 @@ class Daemon extends ChangeNotifier {
       dir = old;
     }
     Directory(dir).createSync(recursive: true);
+    // The paths go through the environment: no quoting, and the line reads
+    // the same in sh, zsh, bash and fish; another shell gets zsh.
+    final shell = Platform.environment['SHELL'] ?? '';
+    final known = {'sh', 'zsh', 'bash', 'fish', 'dash', 'ksh'};
     Process.start(
-      Platform.environment['SHELL'] ?? '/bin/zsh',
-      ['-l', '-c', "exec '$bin' >>'$dir/nushid.log' 2>&1"],
+      known.contains(shell.split('/').last) ? shell : '/bin/zsh',
+      ['-l', '-c', r'exec "$NUSHID_BIN" >>"$NUSHID_LOG" 2>&1'],
       workingDirectory: dir,
+      environment: {'NUSHID_BIN': bin, 'NUSHID_LOG': '$dir/nushid.log'},
       mode: ProcessStartMode.detached,
     ).ignore();
   }
@@ -212,27 +242,10 @@ class Daemon extends ChangeNotifier {
               unawaited(_listChats());
               return;
             }
-            if (e.hasTerminals()) {
-              terminals.apply(e.chatId, e.terminals.terminals);
-            } else if (sides[e.chatId] case final side?) {
-              e.removed ? _sideGone(side) : side.apply(e);
-            } else if (e.hasChat()) {
-              _chat(e.chat);
-              notifyListeners();
-            } else if (e.removed) {
-              chats.remove(e.chatId);
-              if (changeScopes.value.containsKey(e.chatId)) {
-                changeScopes.value = {...changeScopes.value}..remove(e.chatId);
-              }
-              if (commentsOf(e.chatId).isNotEmpty) setComments(e.chatId, []);
-              if (terminalChats.value.contains(e.chatId)) {
-                terminalChats.value = {...terminalChats.value}
-                  ..remove(e.chatId);
-              }
-              if (selectedId == e.chatId) selectedId = null;
-              notifyListeners();
+            if (_held case final held?) {
+              held.add(e); // applied after the list, which may be older
             } else {
-              chats[e.chatId]?.apply(e);
+              _handle(e);
             }
           },
           onError: (_) => _events = null,
@@ -240,21 +253,66 @@ class Daemon extends ChangeNotifier {
         );
   }
 
+  /// Events that came while the chat list was on its way.
+  List<EventsResponse>? _held;
+
+  void _handle(EventsResponse e) {
+    if (e.hasTerminals()) {
+      terminals.apply(e.chatId, e.terminals.terminals);
+    } else if (sides[e.chatId] case final side?) {
+      e.removed ? _sideGone(side) : side.apply(e);
+    } else if (e.hasChat()) {
+      _chat(e.chat);
+      notifyListeners();
+    } else if (e.removed) {
+      chats.remove(e.chatId);
+      if (changeScopes.value.containsKey(e.chatId)) {
+        changeScopes.value = {...changeScopes.value}..remove(e.chatId);
+      }
+      if (commentsOf(e.chatId).isNotEmpty) setComments(e.chatId, []);
+      if (terminalChats.value.contains(e.chatId)) {
+        terminalChats.value = {...terminalChats.value}..remove(e.chatId);
+      }
+      if (selectedId == e.chatId) selectedId = null;
+      notifyListeners();
+    } else {
+      chats[e.chatId]?.apply(e);
+    }
+  }
+
+  /// Lists the chats, then applies the events held meanwhile, in order: the
+  /// list was read at some point while they came, so they bring it up to
+  /// date (a chat started meanwhile included). When listing fails, the
+  /// subscription starts again, and with it the list.
   Future<void> _listChats() async {
+    _held = [];
     for (final c in [...chats.values, ...sides.values]) {
       c.unload(); // events may have been missed while disconnected
     }
     terminals.stale();
-    final listed = (await client.listChats(ListChatsRequest())).chats;
-    for (final c in listed) {
-      _chat(c);
+    try {
+      final listed = (await client.listChats(ListChatsRequest())).chats;
+      for (final c in listed) {
+        _chat(c);
+      }
+      // Chats deleted meanwhile go; side chats the daemon lost (it
+      // restarted) end, the others catch up.
+      final ids = {for (final c in listed) c.id};
+      chats.removeWhere((id, _) => !ids.contains(id));
+      for (final side in sides.values) {
+        side.loading = true; // its events wait for its snapshot
+      }
+    } on Object {
+      unawaited(_events?.cancel());
+      _events = null; // the next ping subscribes again
+      return;
+    } finally {
+      final held = _held ?? [];
+      _held = null;
+      held.forEach(_handle);
     }
-    // Chats deleted meanwhile go; side chats the daemon lost (it restarted)
-    // end, the others catch up.
-    final ids = {for (final c in listed) c.id};
-    chats.removeWhere((id, _) => !ids.contains(id));
     if (!chats.containsKey(selectedId)) selectedId = null;
-    for (final chat in chats.values) {
+    for (final chat in [...chats.values]) {
       if (chat.side case final side?) {
         try {
           side.load(await client.getChat(GetChatRequest(chatId: side.id)));
@@ -317,11 +375,18 @@ class Daemon extends ChangeNotifier {
   /// new worktree of its repository if that's the choice remembered for it.
   Future<void> startChat(String folder) async {
     if (!await _mayRun(folder, 'Start a chat')) return;
+    final before = (selectedId, mcpFolder);
     final resp = await client.startChat(
       StartChatRequest(folder: folder, worktree: _worktree(folder)),
     );
     chats[resp.chatId] ??= ChatState(resp.chatId, folder);
-    select(resp.chatId);
+    // Not if the user went elsewhere meanwhile: a trust card or another
+    // chat they're on stays.
+    if ((selectedId, mcpFolder) == before && trustAsk == null) {
+      select(resp.chatId);
+    } else {
+      notifyListeners();
+    }
   }
 
   bool _worktree(String folder) => worktreeRepos.value.contains(folder);

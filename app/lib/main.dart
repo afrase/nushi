@@ -8,6 +8,7 @@ import 'chat_header.dart';
 import 'chat_view.dart';
 import 'daemon.dart';
 import 'details_panel.dart';
+import 'folder_button.dart';
 import 'mcp.dart';
 import 'panes.dart';
 import 'settings.dart';
@@ -100,6 +101,9 @@ class _Shell extends StatelessWidget {
           child: Text(
             bundledDaemon == null
                 ? 'Daemon not running'
+                : daemon.launchFailed
+                ? "Couldn't start the daemon. Its log: "
+                      '${tildePath('$dataDir/nushid.log')}'
                 : 'Starting the daemon…',
             style: theme.ui(theme.t.textSecondary),
           ),
@@ -149,6 +153,7 @@ class _Shell extends StatelessWidget {
                 style: theme.ui(theme.t.needs, size: 12),
               ),
             ),
+          if (daemon.connected && daemon.replaced) _Replaced(daemon),
           Expanded(child: app),
         ],
       );
@@ -223,6 +228,54 @@ class _ChatPaneState extends State<_ChatPane> {
       },
     ),
   );
+}
+
+/// Says a newer daemon was installed since the running one started (same
+/// API), with a way to restart into it.
+class _Replaced extends StatefulWidget {
+  const _Replaced(this.daemon);
+
+  final Daemon daemon;
+
+  @override
+  State<_Replaced> createState() => _ReplacedState();
+}
+
+class _ReplacedState extends State<_Replaced> {
+  bool _restarting = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context), t = theme.t;
+    return Container(
+      color: t.raised,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        spacing: 12,
+        children: [
+          Expanded(
+            child: Text(
+              'A newer daemon is installed. Restarting stops running turns '
+              'and closes terminals.',
+              style: theme.ui(t.textSecondary, size: 12),
+            ),
+          ),
+          Button(
+            label: _restarting ? 'Restarting…' : 'Restart daemon',
+            kind: ButtonKind.ghost,
+            height: 24,
+            onPressed: _restarting
+                ? null
+                : () async {
+                    setState(() => _restarting = true);
+                    await tryOrShow(context, widget.daemon.restartDaemon);
+                    if (mounted) setState(() => _restarting = false);
+                  },
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Says the daemon is older than the app, with a way to restart it: the app

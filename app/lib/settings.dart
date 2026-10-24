@@ -72,9 +72,17 @@ Set<String> _strings(String key) => {
   ...?(_saved[key] as List?)?.whereType<String>(),
 };
 
+/// Writes [file] whole or not at all: to a file beside it, renamed over
+/// it, so a crash mid-write can't leave half of it.
+void writeWhole(File file, String text) {
+  final tmp = File('${file.path}.tmp')..writeAsStringSync(text, flush: true);
+  tmp.renameSync(file.path);
+}
+
 void _save() {
   try {
-    _settings.writeAsStringSync(
+    writeWhole(
+      _settings,
       jsonEncode({
         'details': showDetails.value,
         'collapsed': collapsedCards.value.toList(),

@@ -11,6 +11,10 @@ import 'package:nushi/settings.dart';
 class _Fake implements Transport {
   final events = StreamController<EventsResponse>();
 
+  /// When set, the chat list answers once it completes; StartChat too.
+  Completer<ListChatsResponse>? list;
+  Completer<StartChatResponse>? start;
+
   @override
   Future<UnaryResponse<I, O>> unary<I extends Object, O extends Object>(
     Spec<I, O> spec,
@@ -19,10 +23,14 @@ class _Fake implements Transport {
   ]) async {
     final Object out = switch (input) {
       PingRequest() => PingResponse(apiVersion: apiVersion),
-      ListChatsRequest() => ListChatsResponse(
-        chats: [Chat(id: 'a', folder: '/x', agent: 'claude')],
-      ),
+      ListChatsRequest() =>
+        await list?.future ??
+            ListChatsResponse(
+              chats: [Chat(id: 'a', folder: '/x', agent: 'claude')],
+            ),
       GetChatRequest() => GetChatResponse(seq: Int64(1)),
+      StartChatRequest() => await start!.future,
+      CheckFolderRequest() => CheckFolderResponse(),
       ForkChatRequest() => ForkChatResponse(chatId: 'side'),
       _ => spec.outputFactory(),
     };
@@ -100,5 +108,53 @@ void main() {
     expect(d.chats.keys, ['b']);
     expect(d.selectedId, isNull);
     expect(changeScopes.value, isEmpty);
+  });
+
+  test('events while the list is on its way come after it', () async {
+    final fake = _Fake()..list = Completer();
+    final d = Daemon(transport: fake);
+    addTearDown(d.dispose);
+    fake.events.add(EventsResponse()); // live: the chats are listed
+    await pumpEventQueue();
+    // The turn ends after the list was read, and before it arrives; a chat
+    // starts meanwhile too.
+    fake.events
+      ..add(
+        EventsResponse(
+          chatId: 'a',
+          seq: Int64(9),
+          status: ChatStatus(busy: false),
+        ),
+      )
+      ..add(
+        EventsResponse(
+          chatId: 'b',
+          chat: Chat(id: 'b', folder: '/y'),
+        ),
+      );
+    await pumpEventQueue();
+    fake.list!.complete(
+      ListChatsResponse(
+        chats: [Chat(id: 'a', folder: '/x', status: ChatStatus(busy: true))],
+      ),
+    );
+    await pumpEventQueue();
+    expect(d.chats.keys.toSet(), {'a', 'b'});
+    expect(d.chats['a']!.busy, isFalse);
+  });
+
+  test('a slow start leaves the chat the user went to', () async {
+    final fake = _Fake()..start = Completer();
+    final d = Daemon(transport: fake);
+    addTearDown(d.dispose);
+    fake.events.add(EventsResponse());
+    await pumpEventQueue();
+    final started = d.startChat('/z');
+    await pumpEventQueue();
+    d.select('a');
+    fake.start!.complete(StartChatResponse(chatId: 'new'));
+    await started;
+    expect(d.selectedId, 'a');
+    expect(d.chats.containsKey('new'), isTrue);
   });
 }

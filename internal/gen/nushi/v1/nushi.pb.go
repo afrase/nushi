@@ -200,7 +200,11 @@ func (*PingRequest) Descriptor() ([]byte, []int) {
 type PingResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Bumped when the API grows; it only grows (ADR 0004).
-	ApiVersion    int32 `protobuf:"varint,1,opt,name=api_version,json=apiVersion,proto3" json:"api_version,omitempty"`
+	ApiVersion int32 `protobuf:"varint,1,opt,name=api_version,json=apiVersion,proto3" json:"api_version,omitempty"`
+	// The daemon's executable as it started, "<size>-<mtime in ms>": the app
+	// compares it with the daemon it bundles, to offer a restart into a
+	// newer one.
+	Build         string `protobuf:"bytes,2,opt,name=build,proto3" json:"build,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -240,6 +244,13 @@ func (x *PingResponse) GetApiVersion() int32 {
 		return x.ApiVersion
 	}
 	return 0
+}
+
+func (x *PingResponse) GetBuild() string {
+	if x != nil {
+		return x.Build
+	}
+	return ""
 }
 
 type ListChatsRequest struct {
@@ -7206,10 +7217,11 @@ var File_nushi_v1_nushi_proto protoreflect.FileDescriptor
 const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\n" +
 	"\x14nushi/v1/nushi.proto\x12\bnushi.v1\"\r\n" +
-	"\vPingRequest\"/\n" +
+	"\vPingRequest\"E\n" +
 	"\fPingResponse\x12\x1f\n" +
 	"\vapi_version\x18\x01 \x01(\x05R\n" +
-	"apiVersion\"\x12\n" +
+	"apiVersion\x12\x14\n" +
+	"\x05build\x18\x02 \x01(\tR\x05build\"\x12\n" +
 	"\x10ListChatsRequest\"9\n" +
 	"\x11ListChatsResponse\x12$\n" +
 	"\x05chats\x18\x01 \x03(\v2\x0e.nushi.v1.ChatR\x05chats\"\xc9\x02\n" +
