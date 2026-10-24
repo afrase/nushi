@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:xterm2/xterm.dart';
 
+import 'gen/nushi/v1/nushi.connect.client.dart';
+import 'gen/nushi/v1/nushi.pb.dart';
 import 'menu.dart';
 import 'settings.dart';
 import 'theme/theme.dart';
@@ -28,12 +30,26 @@ Future<List<String>> _monospaced() async {
 
 const settingsKey = SingleActivator(LogicalKeyboardKey.comma, meta: true);
 
-/// The app's settings (⌘,): the terminal's font and size.
-Future<void> showSettings(BuildContext context) =>
-    showDialog(context: context, builder: (_) => const _Settings());
+/// The app's settings (⌘,): the terminal's font and size, and when idle
+/// chats sleep (the daemon's).
+Future<void> showSettings(BuildContext context, NushiServiceClient client) =>
+    showDialog(context: context, builder: (_) => _Settings(client));
+
+/// The choices for when idle chats sleep, in minutes; 0: never.
+const _sleepAfter = {
+  0: 'Never',
+  15: '15 minutes',
+  30: '30 minutes',
+  60: '1 hour',
+  120: '2 hours',
+};
+
+String _sleepLabel(int m) => _sleepAfter[m] ?? '$m minute${m == 1 ? '' : 's'}';
 
 class _Settings extends StatefulWidget {
-  const _Settings();
+  const _Settings(this.client);
+
+  final NushiServiceClient client;
 
   @override
   State<_Settings> createState() => _SettingsState();
@@ -41,6 +57,27 @@ class _Settings extends StatefulWidget {
 
 class _SettingsState extends State<_Settings> {
   final _families = _monospaced();
+  int? _sleep; // minutes, once the daemon said
+
+  @override
+  void initState() {
+    super.initState();
+    widget.client
+        .getSettings(GetSettingsRequest())
+        .then(
+          (r) => mounted
+              ? setState(() => _sleep = r.settings.sleepAfterMinutes)
+              : null,
+          onError: (_) {}, // the row stays out
+        );
+  }
+
+  Future<void> _setSleep(int minutes) async {
+    await widget.client.setSettings(
+      SetSettingsRequest(settings: Settings(sleepAfterMinutes: minutes)),
+    );
+    if (mounted) setState(() => _sleep = minutes);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -122,6 +159,30 @@ class _SettingsState extends State<_Settings> {
                 style: terminalStyle().toTextStyle(color: t.text),
               ),
             ),
+            if (_sleep case final sleep?) ...[
+              const SizedBox(height: 16),
+              Text('Chats', style: theme.ui(t.text, weight: FontWeight.w600)),
+              row(
+                'Sleep idle',
+                Menu(
+                  entries: [
+                    for (final MapEntry(:key, :value) in {
+                      ..._sleepAfter,
+                      sleep: _sleepLabel(sleep),
+                    }.entries)
+                      MenuEntry(
+                        value,
+                        checked: key == sleep,
+                        onPick: () => tryOrShow(context, () => _setSleep(key)),
+                      ),
+                  ],
+                  child: Text(
+                    sleep == 0 ? 'Never' : 'After ${_sleepLabel(sleep)}',
+                    style: value,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

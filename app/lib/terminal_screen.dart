@@ -46,7 +46,9 @@ class TerminalScreen extends StatelessWidget {
         () => closeTerminal(context, terms, info),
       ),
       toggleTerminalKey: VoidCallbackIntent(onHide),
-      settingsKey: VoidCallbackIntent(() => showSettings(context)),
+      settingsKey: VoidCallbackIntent(
+        () => showSettings(context, terms.client),
+      ),
       cmd(LogicalKeyboardKey.keyF): VoidCallbackIntent(
         () => s.finding.value = true,
       ),

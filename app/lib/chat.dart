@@ -47,6 +47,8 @@ class ChatState extends ChangeNotifier {
   bool canRewind = false; // the agent rewinds to a user message
   bool mcpChanged = false; // MCP servers changed since the agent started
   bool canAskContext = false; // the agent can say what fills its context
+  bool asleep = false; // no agent runs for it: a message wakes it
+  bool canSleep = false; // its agent runs and can reopen the session
   DateTime? started; // when the running turn started
   bool stopping = false; // the app asked the turn to stop
   String error = ''; // why the snapshot didn't load
@@ -150,6 +152,8 @@ class ChatState extends ChangeNotifier {
     canRewind = s.canRewind;
     mcpChanged = s.mcpChanged;
     canAskContext = s.canAskContext;
+    asleep = s.asleep;
+    canSleep = s.canSleep;
     started = s.started == 0
         ? null
         : DateTime.fromMillisecondsSinceEpoch(s.started.toInt());

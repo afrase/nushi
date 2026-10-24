@@ -86,6 +86,9 @@ class ChatDot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
+    if (chat.asleep && !chat.archived) {
+      return Icon(Icons.bedtime_outlined, size: size * 1.6, color: t.idle);
+    }
     if (chat.busy && !chat.waiting) {
       return CustomPaint(
         size: Size.square(size * 1.6),
@@ -111,7 +114,8 @@ class ChatDot extends StatelessWidget {
   }
 }
 
-/// What a chat is doing, in a word: "needs you", "working" or "idle".
+/// What a chat is doing, in a word: "needs you", "working", "asleep" or
+/// "idle".
 class ChatStatusWord extends StatelessWidget {
   const ChatStatusWord(this.chat, {super.key, required this.style});
 
@@ -125,6 +129,8 @@ class ChatStatusWord extends StatelessWidget {
         ? ('needs you', t.needs)
         : chat.busy
         ? ('working', t.running)
+        : chat.asleep
+        ? ('asleep', t.idle)
         : ('idle', t.idle);
     return Text(word, style: style.copyWith(color: color));
   }

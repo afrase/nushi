@@ -12,7 +12,8 @@ import 'widgets.dart';
 import 'worktree.dart';
 import 'inline_edit.dart';
 
-/// The chat's menu: Rename, Archive or Unarchive, MCP servers…, Delete….
+/// The chat's menu: Rename, Sleep, Archive or Unarchive, MCP servers…,
+/// Delete….
 List<MenuEntry> chatMenu(
   BuildContext context,
   ChatState chat,
@@ -20,6 +21,8 @@ List<MenuEntry> chatMenu(
   required VoidCallback onRename,
 }) => [
   MenuEntry('Rename', onPick: onRename),
+  if (chat.canSleep && !chat.archived)
+    MenuEntry('Sleep', onPick: () => sleepChat(context, chat, daemon)),
   MenuEntry(
     chat.archived ? 'Unarchive' : 'Archive',
     onPick: () => tryOrShow(context, () => _archive(context, chat, daemon)),
@@ -35,6 +38,13 @@ List<MenuEntry> chatMenu(
     ),
   ),
 ];
+
+/// Stops a chat's agent to free its memory; a message wakes it.
+void sleepChat(BuildContext context, ChatState chat, Daemon daemon) =>
+    tryOrShow(
+      context,
+      () => daemon.client.sleepChat(SleepChatRequest(chatId: chat.id)),
+    );
 
 /// Archives (or unarchives) a chat. Archiving ends its terminals: when a
 /// program runs in one, it asks first, as closing that terminal would.
