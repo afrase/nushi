@@ -228,3 +228,23 @@ func TestAFileShownWholeOrNotAtAll(t *testing.T) {
 		t.Errorf("runs = %.80q", runs[0].Command)
 	}
 }
+
+// A folder whose path holds a glob's characters still has its skills'
+// hooks found; a skills folder that can't be read fails the card closed.
+func TestSkillsUnderAPathWithPatternCharacters(t *testing.T) {
+	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
+	base, _ := filepath.EvalSymlinks(t.TempDir())
+	repo := filepath.Join(base, "x[1]*?")
+	skill := filepath.Join(repo, ".claude", "skills", "lint", "SKILL.md")
+	write(t, skill, "---\nname: lint\nhooks:\n  Stop: [{hooks: [{command: ./lint.sh}]}]\n---\n")
+	got, err := runs(repo)
+	if err != nil || len(got) != 1 || got[0].File != skill {
+		t.Fatalf("runs = %v, %v", got, err)
+	}
+	skills := filepath.Dir(filepath.Dir(skill))
+	os.Chmod(skills, 0)
+	defer os.Chmod(skills, 0o700)
+	if _, err := runs(repo); err == nil {
+		t.Error("an unreadable skills folder was passed over")
+	}
+}

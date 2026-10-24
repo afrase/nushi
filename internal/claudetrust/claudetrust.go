@@ -18,12 +18,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
+	"syscall"
 
 	"gopkg.in/yaml.v3"
 
@@ -133,11 +135,36 @@ func runs(folder string) ([]model.FolderRun, error) {
 			}
 			out = append(out, runs...)
 		}
-		skills, _ := filepath.Glob(filepath.Join(dir, ".claude", "skills", "*", "SKILL.md"))
+		skills, err := skillFiles(filepath.Join(dir, ".claude", "skills"))
+		if err != nil {
+			return nil, err // the card says so, and can't be remembered
+		}
 		for _, path := range skills {
 			if front, ok := skillHooks(path); ok {
 				out = append(out, model.FolderRun{File: path, What: "Hooks in skill " + filepath.Base(filepath.Dir(path)), Command: whole(path, front)})
 			}
+		}
+	}
+	return out, nil
+}
+
+// skillFiles lists each skill's SKILL.md in skills. It reads the folder
+// rather than globbing: the folder's own path may hold a pattern's
+// characters.
+func skillFiles(skills string) ([]string, error) {
+	entries, err := os.ReadDir(skills)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	} else if err != nil {
+		return nil, fmt.Errorf("reading %s: %w", skills, err)
+	}
+	var out []string
+	for _, e := range entries {
+		path := filepath.Join(skills, e.Name(), "SKILL.md")
+		if _, err := os.Stat(path); err == nil {
+			out = append(out, path)
+		} else if !errors.Is(err, fs.ErrNotExist) && !errors.Is(err, syscall.ENOTDIR) {
+			return nil, fmt.Errorf("reading %s: %w", path, err)
 		}
 	}
 	return out, nil

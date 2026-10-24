@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 
 	"github.com/afrase/nushi/internal/model"
@@ -142,12 +143,16 @@ func (s *Store) DeleteSession(id string) error {
 
 // Sessions reads every stored session.
 func (s *Store) Sessions() ([]model.Session, error) {
-	files, err := filepath.Glob(filepath.Join(s.dir, "sessions", "*.json"))
-	if err != nil {
+	entries, err := os.ReadDir(filepath.Join(s.dir, "sessions")) // not a glob: the folder may hold a pattern's characters
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return nil, err
 	}
 	var out []model.Session
-	for _, f := range files {
+	for _, e := range entries {
+		if !strings.HasSuffix(e.Name(), ".json") {
+			continue
+		}
+		f := filepath.Join(s.dir, "sessions", e.Name())
 		var sess model.Session
 		var flags struct{ HasMessages *bool }
 		b, err := os.ReadFile(f)
