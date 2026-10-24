@@ -128,7 +128,7 @@ func run() error {
 	if sv.Remote, err = remote.New(st, &relay.Dialer{Proxies: sysproxy.For}, channels.serve, keepAwake, hub.Publish); err != nil {
 		return err
 	}
-	remoteSrv := &http.Server{Handler: api.New(sv), Protocols: new(http.Protocols)}
+	remoteSrv := &http.Server{Handler: api.ForDevices(sv), Protocols: new(http.Protocols)}
 	remoteSrv.Protocols.SetUnencryptedHTTP2(true)
 	go remoteSrv.Serve(channels)
 	srv := &http.Server{Handler: api.WithToken(token, api.New(sv)), Protocols: new(http.Protocols)}

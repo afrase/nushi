@@ -21,14 +21,14 @@ A phone talks to the daemon through a relay anyone may run ([0033](0033-the-rela
 **Pairing.**
 1. Settings → Remote access → "Pair a phone". The daemon makes a one-time rendezvous id and a 32-byte secret, waits at the relay on that id for 5 minutes, and the Mac shows a QR code: `nushi://pair?r=<relay URL>&i=<pairing id>&k=<daemon's public key>&s=<secret>`. It goes camera to screen, never through the relay.
 2. The phone makes its key and runs `IKpsk1` on the pairing id, then sends its name in its first transport message. Only once that decrypts (the phone holds the session, so it held the secret) does the daemon stop waiting on the pairing id: the secret and the id are used up.
-3. Both screens show a six-digit code from the handshake hash. The Mac shows the device's name and the code, with Allow and Deny. The user must check the phone shows the same code: that is what stops someone who saw the QR code and connected first (the real phone then shows no code at all).
+3. Both screens show a six-digit code from the handshake hash. The Mac shows the device's name and the code, with Allow and Deny, whoever started the pairing. The user must check the phone shows the same code: that is what stops someone who saw the QR code and connected first (the real phone then shows no code at all).
 4. On Allow the daemon stores the device and sends its long-lived rendezvous id inside the channel (it is never in the QR code); the same channel then carries the API. On Deny, or no answer within 2 minutes, it sends a refusal and closes.
 
 **Later connections.** The phone dials the daemon's id and runs `IK`. The daemon answers only a static key in `devices.json`; anything else gets no answer. A device counts as connected (and its last-seen time moves) only once its first transport message decrypts.
 
 **Revoking** a device removes it from `devices.json` and closes its connections at once; its key then gets no answer. Turning remote access off closes the relay link and every remote connection.
 
-**A paired device is a full client**, like the Mac app ("Owner decisions": no device modes): chats, permission answers, and terminals too, which amends [0022](0022-the-daemon-owns-terminals.md). An agent in a permissive mode already runs anything the phone asks for, so leaving terminals out would protect nothing; the agent's own mode stays the only permission control ([0007](0007-harness-owns-permissions.md)).
+**A paired device is a full client**, like the Mac app ("Owner decisions": no device modes): chats, permission answers, and terminals too, which amends [0022](0022-the-daemon-owns-terminals.md). Except the Mac's own calls: a device's channel gets "permission denied" for SetRemote, StartPairing, ConfirmPairing and RevokeDevice, so only the Mac (the local socket and its token) pairs, revokes or moves remote access. An agent in a permissive mode already runs anything the phone asks for, so leaving terminals out would protect nothing; the agent's own mode stays the only permission control ([0007](0007-harness-owns-permissions.md)).
 
 ## Threat model
 What a paired device gets is code execution as the user on the Mac. Everything below is about who can get that, or read what flows.
@@ -40,8 +40,8 @@ What a paired device gets is code execution as the user on the Mac. Everything b
 | Someone with a used or expired QR code | nothing: the id and secret are used up | |
 | A revoked device | dial the daemon's id (it still knows it) and take its waiting connection for one failed handshake at a time | get an answer, or keep a connection |
 | Another relay user | share the relay's caps | reach this daemon's ids without knowing them (random, 128 bits) |
-| A stolen phone, unlocked | everything a paired device can, until revoked on the Mac | |
-| Same-user processes on the Mac, the agent included | read the daemon's key and devices file, as they can read the token ([0024](0024-the-agent-can-read-the-token.md)) | (out of scope, as for the local token) |
+| A stolen phone, unlocked | everything a paired device can, until revoked on the Mac; leave something behind through a terminal or an agent (code execution as you), which revoking doesn't undo | pair another device, revoke the owner's, or move remote access to another relay (the Mac's calls) |
+| Same-user processes on the Mac, the agent included | read the daemon's key and devices file, as they can read the token ([0024](0024-the-agent-can-read-the-token.md)); pair a device through the token (the Mac app still shows Allow and Deny) | (out of scope, as for the local token) |
 
 Also outside what this protects:
 - Metadata (0033's list) and availability.

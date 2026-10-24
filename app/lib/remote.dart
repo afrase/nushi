@@ -168,17 +168,50 @@ Future<void> _pair(BuildContext context, NushiServiceClient client) async {
     return;
   }
   if (!context.mounted) return;
-  await showDialog<void>(
-    context: context,
-    builder: (_) => _Pairing(client, start.qr),
-  );
+  await _show(context, client, start.qr);
+}
+
+/// Whether a pairing dialog is open.
+var _open = false;
+
+Future<void> _show(
+  BuildContext context,
+  NushiServiceClient client,
+  String qr,
+) async {
+  _open = true;
+  try {
+    await showDialog<void>(
+      context: context,
+      builder: (_) => _Pairing(client, qr),
+    );
+  } finally {
+    _open = false;
+  }
+}
+
+/// Asks Allow or Deny whenever a pairing reaches its code, whoever started
+/// it, unless a pairing dialog is open already.
+void watchPairings(
+  GlobalKey<NavigatorState> navigator,
+  NushiServiceClient client,
+) {
+  var asked = '';
+  remoteState.addListener(() {
+    final r = remoteState.value;
+    final code = r != null && r.hasPairing() ? r.pairing.code : '';
+    final context = navigator.currentContext;
+    if (code.isEmpty || code == asked || _open || context == null) return;
+    asked = code;
+    _show(context, client, '');
+  });
 }
 
 class _Pairing extends StatelessWidget {
   const _Pairing(this.client, this.qr);
 
   final NushiServiceClient client;
-  final String qr;
+  final String qr; // empty when another client started the pairing
 
   @override
   Widget build(BuildContext context) {
@@ -202,7 +235,7 @@ class _Pairing extends StatelessWidget {
           kind: ButtonKind.ghost,
           onPressed: () => Navigator.pop(context),
         );
-        if (p == null) {
+        if (p == null || p.code.isEmpty && qr.isEmpty) {
           return nushiDialog(
             'Pair a phone',
             Text('The code has expired.', style: theme.ui(t.textSecondary)),

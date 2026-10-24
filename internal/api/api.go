@@ -43,10 +43,10 @@ var build = func() string {
 }()
 
 type server struct {
-	chats *chats.Service
-	mcp   *mcp.Service
-	terms *terminals.Service
-	trust *trust.Service
+	chats  *chats.Service
+	mcp    *mcp.Service
+	terms  *terminals.Service
+	trust  *trust.Service
 	hub    *events.Hub
 	memory *memory.Service
 	remote *remote.Service
@@ -86,14 +86,35 @@ type Services struct {
 	Remote *remote.Service
 }
 
-// New returns the API, unauthenticated: a paired device's channel has
-// authenticated it already (ADR 0034); the local socket wraps it in
+// New returns the whole API, unauthenticated: the local socket wraps it in
 // WithToken.
-func New(sv Services) http.Handler {
+func New(sv Services, opts ...connect.HandlerOption) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{chats: sv.Chats, mcp: sv.MCP, terms: sv.Terms, trust: sv.Trust,
-		hub: sv.Hub, memory: sv.Memory, remote: sv.Remote}))
+		hub: sv.Hub, memory: sv.Memory, remote: sv.Remote}, opts...))
 	return mux
+}
+
+// macOnly are the calls that pair, revoke or move remote access: only the
+// Mac makes them, never a device's channel (ADR 0034).
+var macOnly = map[string]bool{
+	nushiv1connect.NushiServiceSetRemoteProcedure:      true,
+	nushiv1connect.NushiServiceStartPairingProcedure:   true,
+	nushiv1connect.NushiServiceConfirmPairingProcedure: true,
+	nushiv1connect.NushiServiceRevokeDeviceProcedure:   true,
+}
+
+// ForDevices is the API a paired device's channel gets, which the
+// handshake has authenticated: all of it but the Mac's own calls.
+func ForDevices(sv Services) http.Handler {
+	return New(sv, connect.WithInterceptors(connect.UnaryInterceptorFunc(func(next connect.UnaryFunc) connect.UnaryFunc {
+		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+			if macOnly[req.Spec().Procedure] {
+				return nil, connect.NewError(connect.CodePermissionDenied, errors.New("only the Mac can do this"))
+			}
+			return next(ctx, req)
+		}
+	})))
 }
 
 // WithToken refuses requests to h that don't carry token.
