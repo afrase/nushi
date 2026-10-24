@@ -1,7 +1,7 @@
 # 0006. Remote access later, through an end-to-end encrypted relay
 
 ## Status
-Proposed; nothing is built.
+Replaced by [0033](0033-the-relay-is-a-dumb-pipe.md) (the relay) and [0034](0034-noise-between-phone-and-daemon.md) (the channel and pairing).
 
 ## Context
 The user will want to check on agents from a phone. Opening a port on the Mac is fragile and risky.

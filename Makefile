@@ -7,7 +7,7 @@ RELEASE := app/build/macos/Build/Products/Release/Nushi.app
 # local.mk (not committed) can set COPY_TO=<folder>: make install also copies the app there.
 -include local.mk
 
-.PHONY: run daemon stop app package install gen test lines
+.PHONY: run daemon stop app package install gen test lines relay
 
 # Starts the daemon in the background (unless one is running), then the app.
 run: daemon app
@@ -37,6 +37,10 @@ install: package
 	ditto "$(RELEASE)" "$(HOME)/Applications/Nushi.app"
 	if [ -n "$(COPY_TO)" ]; then rm -rf "$(COPY_TO)/Nushi.app" "$(COPY_TO)/Nushi Next.app" && ditto "$(RELEASE)" "$(COPY_TO)/Nushi.app"; fi
 
+# The relay (ADR 0033), one static binary: bin/nushi-relay -h lists its flags.
+relay:
+	CGO_ENABLED=0 go build -o bin/nushi-relay ./cmd/nushi-relay
+
 gen:
 	$(BUF) lint
 	$(BUF) generate
@@ -49,7 +53,8 @@ test:
 
 # Hand-written lines, without tests or generated code (the size limits).
 lines:
-	@echo "go daemon: $$(find cmd internal -name '*.go' ! -name '*_test.go' ! -path 'internal/gen/*' ! -path 'internal/ante/antetest/*' | xargs cat | wc -l)"
+	@echo "go daemon: $$(find cmd/nushid internal -name '*.go' ! -name '*_test.go' ! -path 'internal/gen/*' ! -path 'internal/ante/antetest/*' | xargs cat | wc -l)"
+	@echo "go relay and noise: $$(find cmd/nushi-relay relay noiseconn -name '*.go' ! -name '*_test.go' 2>/dev/null | xargs cat | wc -l)"
 	@echo "go acp: $$(find acp -name '*.go' ! -name '*_test.go' ! -name '*_gen.go' ! -path 'acp/acptest/*' | xargs cat | wc -l)"
 	@echo "dart app: $$(find app/lib -name '*.dart' ! -path 'app/lib/gen/*' | xargs cat | wc -l)"
 	@echo "dart packages: $$(find packages -path '*/lib/*.dart' | xargs cat | wc -l)"

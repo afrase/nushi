@@ -5,7 +5,7 @@
 - [0003](0003-acp-v1-own-client.md) Agents speak ACP v1 through our own small client
 - [0004](0004-connect-over-unix-socket.md) Connect RPC over a Unix socket, additive changes only; a newer app asks for a daemon restart
 - [0005](0005-clients-authenticate.md) Clients authenticate with a token from the start
-- [0006](0006-remote-through-relay.md) Remote access later, through an end-to-end encrypted relay (proposed)
+- [0006](0006-remote-through-relay.md) Remote access later, through an end-to-end encrypted relay (replaced by 0033 and 0034)
 - [0007](0007-harness-owns-permissions.md) The harness owns permissions; its mode is the only control
 - [0008](0008-chats-belong-to-the-agent.md) Chats belong to the agent
 - [0009](0009-agent-questions-are-cards.md) Agent questions are real, answerable cards
@@ -32,3 +32,4 @@
 - [0030](0030-our-own-bridge-for-ante.md) Ante runs through an ACP bridge of Nushi's own (`nushid ante-acp`), not `ante-acp`
 - [0031](0031-warn-before-a-folder-runs-code-for-ante-and-omp.md) Warn before a folder's own code runs, for Ante and omp; the files are read by `internal/folderfiles`
 - [0032](0032-idle-chats-sleep.md) Idle chats sleep: their agent stops, a message wakes them through `session/load`
+- [0033](0033-the-relay-is-a-dumb-pipe.md) The relay is a dumb pipe that keeps nothing; what it can still see (replaces 0006)

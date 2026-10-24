@@ -37,4 +37,58 @@ Claude, Codex and oh-my-pi need `npx` (Node) on the login shell's `PATH`; npx in
 
 A chat whose agent isn't needed can sleep: its agent stops and the chat stays, and the next message wakes it (`session/load`). Chats sleep on their own after 30 idle minutes when nothing would be lost (Settings changes the time), or from a chat's menu ([ADR 0032](docs/adr/0032-idle-chats-sleep.md)). The bar along the window's bottom counts working, awake and sleeping agents, and shows the memory Nushi takes; a click lists each awake chat's.
 
+## The relay
+
+A phone reaches the daemon through a relay: `nushi-relay`, one static binary that pairs two WebSocket connections on a random id and copies their messages, which are end-to-end encrypted between the phone and the daemon. It keeps nothing: no accounts, no disk, no logs beyond starting ([ADR 0033](docs/adr/0033-the-relay-is-a-dumb-pipe.md) says what it can still see). Anyone can run one; Nushi doesn't run one for you.
+
+```sh
+make relay                                   # bin/nushi-relay, no cgo
+bin/nushi-relay -addr 127.0.0.1:8080         # plain ws://, e.g. behind a reverse proxy
+bin/nushi-relay -host relay.example.com      # wss:// on :443 with a Let's Encrypt certificate
+bin/nushi-relay -h                           # the caps: message size, rate, idle time, connections
+```
+
+Use `wss://`: company proxies tunnel 443 but often break a plain `ws://` upgrade, and iOS refuses plain connections by default.
+
+**On a VPS** (any small Linux box): build with `GOOS=linux GOARCH=amd64 make relay`, copy the binary, point a DNS name at the box, and run it as a service with port 443 open:
+
+```ini
+# /etc/systemd/system/nushi-relay.service
+[Service]
+ExecStart=/usr/local/bin/nushi-relay -host relay.example.com -cert-cache /var/lib/nushi-relay
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+DynamicUser=yes
+StateDirectory=nushi-relay
+Restart=always
+[Install]
+WantedBy=multi-user.target
+```
+
+The certificate cache is the only thing it writes; without `-cert-cache` each start asks Let's Encrypt for a new certificate, and frequent restarts run into its rate limits.
+
+**On Fly.io** (`fly launch --no-deploy`, then `fly deploy`), with Fly terminating TLS:
+
+```dockerfile
+FROM golang:1.27 AS build
+WORKDIR /src
+COPY . .
+RUN CGO_ENABLED=0 go build -o /nushi-relay ./cmd/nushi-relay
+FROM scratch
+COPY --from=build /nushi-relay /nushi-relay
+CMD ["/nushi-relay", "-addr", ":8080"]
+```
+
+```toml
+# fly.toml
+app = "my-nushi-relay"
+[[services]]
+  internal_port = 8080
+  protocol = "tcp"
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+```
+
+Fly's edge then sees what the relay sees (ids, timing, sizes, addresses), and may log requests. For TLS of the relay's own, give the port no handlers, run `-host` with `-cert-cache` on a volume, and copy `/etc/ssl/certs/ca-certificates.crt` into the image (autocert talks to Let's Encrypt over HTTPS).
+
 Decisions are in [`docs/adr/`](docs/adr/README.md).
