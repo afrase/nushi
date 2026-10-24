@@ -14,7 +14,7 @@ func (c *chat) shellLocked(it *model.Item) {
 	if it.Shell != nil || it.Status != "completed" || c.dialect.Shell == nil {
 		return
 	}
-	id, file, ok := c.dialect.Shell(it.Text)
+	id, file, ok := c.dialect.Shell(*it)
 	if !ok {
 		return
 	}

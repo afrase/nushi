@@ -112,6 +112,9 @@ func TestOneSteeringWorkerThatRespectsAStop(t *testing.T) {
 	if !reflect.DeepEqual(queue, []string{"two", "three"}) {
 		t.Errorf("queue = %q", queue)
 	}
+	if got := texts(c); slices.Contains(got, "user:two") {
+		t.Errorf("a message back in the queue is in the transcript too: %q", got)
+	}
 }
 
 // The daemon stopping cancels a running turn, so the agent ends it (and the

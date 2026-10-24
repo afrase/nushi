@@ -5874,6 +5874,7 @@ enum EventsResponse_Kind {
   queue,
   cut,
   terminals,
+  dropped,
   notSet
 }
 
@@ -5891,6 +5892,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     ChatQueue? queue,
     $core.String? cut,
     ChatTerminals? terminals,
+    $core.String? dropped,
   }) {
     final result = EventsResponse._();
     if (chatId != null) result.chatId = chatId;
@@ -5905,6 +5907,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     if (queue != null) result.queue = queue;
     if (cut != null) result.cut = cut;
     if (terminals != null) result.terminals = terminals;
+    if (dropped != null) result.dropped = dropped;
     return result;
   }
 
@@ -5929,13 +5932,14 @@ class EventsResponse extends $pb.GeneratedMessage {
     10: EventsResponse_Kind.queue,
     11: EventsResponse_Kind.cut,
     12: EventsResponse_Kind.terminals,
+    13: EventsResponse_Kind.dropped,
     0: EventsResponse_Kind.notSet
   };
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'EventsResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: EventsResponse.$_createMessage)
-    ..oo(0, [2, 3, 4, 5, 7, 8, 9, 10, 11, 12])
+    ..oo(0, [2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13])
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
     ..aOM<ItemEvent>(2, _omitFieldNames ? '' : 'item',
         subBuilder: ItemEvent.$_createMessage)
@@ -5956,6 +5960,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     ..aOS(11, _omitFieldNames ? '' : 'cut')
     ..aOM<ChatTerminals>(12, _omitFieldNames ? '' : 'terminals',
         subBuilder: ChatTerminals.$_createMessage)
+    ..aOS(13, _omitFieldNames ? '' : 'dropped')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -5990,6 +5995,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(10)
   @$pb.TagNumber(11)
   @$pb.TagNumber(12)
+  @$pb.TagNumber(13)
   EventsResponse_Kind whichKind() =>
       _EventsResponse_KindByTag[$_whichOneof(0)]!;
   @$pb.TagNumber(2)
@@ -6002,6 +6008,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(10)
   @$pb.TagNumber(11)
   @$pb.TagNumber(12)
+  @$pb.TagNumber(13)
   void clearKind() => $_clearField($_whichOneof(0));
 
   @$pb.TagNumber(1)
@@ -6137,6 +6144,16 @@ class EventsResponse extends $pb.GeneratedMessage {
   void clearTerminals() => $_clearField(12);
   @$pb.TagNumber(12)
   ChatTerminals ensureTerminals() => $_ensure(11);
+
+  /// This item is gone (a message the agent never got); the rest stay.
+  @$pb.TagNumber(13)
+  $core.String get dropped => $_getSZ(12);
+  @$pb.TagNumber(13)
+  set dropped($core.String value) => $_setString(12, value);
+  @$pb.TagNumber(13)
+  $core.bool hasDropped() => $_has(12);
+  @$pb.TagNumber(13)
+  void clearDropped() => $_clearField(13);
 }
 
 /// A chat's config options, all of them.

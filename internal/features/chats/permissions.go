@@ -41,14 +41,18 @@ func (c *chat) requestPermission(ctx context.Context, req acp.RequestPermissionR
 	defer c.mu.Unlock()
 	delete(c.waiting, id)
 	c.statusChangedLocked()
-	it := c.itemLocked(id)
+	it := c.itemLocked(id) // nil once rewound or reloaded past
 	if picked == "" {
-		it.Status = "cancelled"
-		c.publishLocked(*it)
+		if it != nil {
+			it.Status = "cancelled"
+			c.publishLocked(*it)
+		}
 		return &acp.RequestPermissionResponse{Outcome: acp.RequestPermissionOutcome{Outcome: "cancelled", Cancelled: &struct{}{}}}, nil
 	}
-	it.Status, it.Answer = "answered", picked
-	c.publishLocked(*it)
+	if it != nil {
+		it.Status, it.Answer = "answered", picked
+		c.publishLocked(*it)
+	}
 	return &acp.RequestPermissionResponse{Outcome: acp.RequestPermissionOutcome{
 		Outcome: "selected", Selected: &acp.SelectedPermissionOutcome{OptionID: acp.PermissionOptionID(picked)},
 	}}, nil
@@ -62,11 +66,11 @@ func (s *Service) AnswerPermission(chatID, itemID, optionID string) error {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	answer := c.waiting[itemID]
-	if answer == nil {
+	answer, it := c.waiting[itemID], c.itemLocked(itemID)
+	if answer == nil || it == nil {
 		return fmt.Errorf("no pending permission prompt %q", itemID)
 	}
-	if !slices.ContainsFunc(c.itemLocked(itemID).Options, func(o model.Option) bool { return o.ID == optionID }) {
+	if !slices.ContainsFunc(it.Options, func(o model.Option) bool { return o.ID == optionID }) {
 		return fmt.Errorf("the prompt has no option %q", optionID)
 	}
 	delete(c.waiting, itemID)

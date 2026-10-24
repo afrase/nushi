@@ -72,19 +72,25 @@ func claudeCode(meta map[string]any, key string) string {
 func ToolCall(it *model.Item, meta map[string]any, input json.RawMessage) (ownText bool) {
 	it.Parent, it.Tool = cmp.Or(it.Parent, Parent(meta)), cmp.Or(claudeCode(meta, "toolName"), it.Tool)
 	var in struct {
-		Type    string `json:"subagent_type"`
-		Prompt  string `json:"prompt"`
-		Model   string `json:"model"`
-		Effort  string `json:"effort"`
-		Message string `json:"message"`
+		Type       string `json:"subagent_type"`
+		Prompt     string `json:"prompt"`
+		Model      string `json:"model"`
+		Effort     string `json:"effort"`
+		Message    string `json:"message"`
+		Background bool   `json:"run_in_background"`
 	}
 	json.Unmarshal(input, &in)
+	cc, _ := meta["claudeCode"].(map[string]any)
+	resp, _ := cc["toolResponse"].(map[string]any)
 	switch it.Tool {
+	case "Bash":
+		it.InBackground = it.InBackground || in.Background
+		if id, _ := resp["backgroundTaskId"].(string); id != "" {
+			it.TaskID = id
+		}
 	case "Agent", "Task":
 		it.Agent = cmp.Or(in.Type, it.Agent, "Agent")
 		it.Prompt, it.Model, it.Effort = cmp.Or(in.Prompt, it.Prompt), cmp.Or(in.Model, it.Model), cmp.Or(in.Effort, it.Effort)
-		cc, _ := meta["claudeCode"].(map[string]any)
-		resp, _ := cc["toolResponse"].(map[string]any)
 		if m, _ := resp["resolvedModel"].(string); m != "" {
 			it.RanModel = modelName(m)
 		}

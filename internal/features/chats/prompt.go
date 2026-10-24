@@ -241,13 +241,16 @@ func (c *chat) steerQueue(agent Agent, sid acp.SessionID) {
 		switch {
 		case taken:
 			continue
+		case c.indexLocked(id) < 0:
+			return // taken back (Stop) meanwhile: it is in the box
 		case err == nil && !c.busy && c.agent == agent && !c.held && !c.stopping && !c.halting:
 			c.startLocked(blocks) // the turn ended meanwhile: this starts the next
 			return
-		case err != nil:
-			c.noticeLocked("error", "Couldn't hand your message to the agent; it's back in the queue: "+err.Error())
 		}
 		c.unsendLocked(id)
+		if err != nil {
+			c.noticeLocked("error", "Couldn't hand your message to the agent; it's back in the queue: "+err.Error())
+		}
 		c.queue = append([]model.Message{m}, c.queue...)
 		c.queueChangedLocked()
 		return
@@ -255,11 +258,11 @@ func (c *chat) steerQueue(agent Agent, sid acp.SessionID) {
 }
 
 // unsendLocked takes a message the agent never got out of the transcript,
-// when nothing came after it.
+// wherever it is: what came after it stays.
 func (c *chat) unsendLocked(id string) {
-	if n := len(c.items); n > 0 && c.items[n-1].ID == id {
-		c.items = c.items[:n-1]
-		c.emitLocked(model.Event{ChatID: c.id, Cut: id})
+	if i := c.indexLocked(id); i >= 0 {
+		c.items = slices.Delete(c.items, i, i+1)
+		c.emitLocked(model.Event{ChatID: c.id, Dropped: id})
 	}
 }
 

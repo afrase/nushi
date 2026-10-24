@@ -4674,6 +4674,7 @@ type EventsResponse struct {
 	//	*EventsResponse_Queue
 	//	*EventsResponse_Cut
 	//	*EventsResponse_Terminals
+	//	*EventsResponse_Dropped
 	Kind          isEventsResponse_Kind `protobuf_oneof:"kind"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -4820,6 +4821,15 @@ func (x *EventsResponse) GetTerminals() *ChatTerminals {
 	return nil
 }
 
+func (x *EventsResponse) GetDropped() string {
+	if x != nil {
+		if x, ok := x.Kind.(*EventsResponse_Dropped); ok {
+			return x.Dropped
+		}
+	}
+	return ""
+}
+
 type isEventsResponse_Kind interface {
 	isEventsResponse_Kind()
 }
@@ -4873,6 +4883,11 @@ type EventsResponse_Terminals struct {
 	Terminals *ChatTerminals `protobuf:"bytes,12,opt,name=terminals,proto3,oneof"`
 }
 
+type EventsResponse_Dropped struct {
+	// This item is gone (a message the agent never got); the rest stay.
+	Dropped string `protobuf:"bytes,13,opt,name=dropped,proto3,oneof"`
+}
+
 func (*EventsResponse_Item) isEventsResponse_Kind() {}
 
 func (*EventsResponse_Status) isEventsResponse_Kind() {}
@@ -4892,6 +4907,8 @@ func (*EventsResponse_Queue) isEventsResponse_Kind() {}
 func (*EventsResponse_Cut) isEventsResponse_Kind() {}
 
 func (*EventsResponse_Terminals) isEventsResponse_Kind() {}
+
+func (*EventsResponse_Dropped) isEventsResponse_Kind() {}
 
 // A chat's config options, all of them.
 type ChatConfig struct {
@@ -7459,7 +7476,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\funix_seconds\x18\x04 \x01(\x03R\vunixSeconds\x12\x14\n" +
 	"\x05added\x18\x05 \x01(\x05R\x05added\x12\x18\n" +
 	"\aremoved\x18\x06 \x01(\x05R\aremoved\"\x0f\n" +
-	"\rEventsRequest\"\xe9\x03\n" +
+	"\rEventsRequest\"\x85\x04\n" +
 	"\x0eEventsResponse\x12\x17\n" +
 	"\achat_id\x18\x01 \x01(\tR\x06chatId\x12\x10\n" +
 	"\x03seq\x18\x06 \x01(\x03R\x03seq\x12)\n" +
@@ -7473,7 +7490,8 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x05queue\x18\n" +
 	" \x01(\v2\x13.nushi.v1.ChatQueueH\x00R\x05queue\x12\x12\n" +
 	"\x03cut\x18\v \x01(\tH\x00R\x03cut\x127\n" +
-	"\tterminals\x18\f \x01(\v2\x17.nushi.v1.ChatTerminalsH\x00R\tterminalsB\x06\n" +
+	"\tterminals\x18\f \x01(\v2\x17.nushi.v1.ChatTerminalsH\x00R\tterminals\x12\x1a\n" +
+	"\adropped\x18\r \x01(\tH\x00R\adroppedB\x06\n" +
 	"\x04kind\">\n" +
 	"\n" +
 	"ChatConfig\x120\n" +
@@ -8006,6 +8024,7 @@ func file_nushi_v1_nushi_proto_init() {
 		(*EventsResponse_Queue)(nil),
 		(*EventsResponse_Cut)(nil),
 		(*EventsResponse_Terminals)(nil),
+		(*EventsResponse_Dropped)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
