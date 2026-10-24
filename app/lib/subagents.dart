@@ -188,7 +188,7 @@ class SubagentLine extends StatelessWidget {
         ),
         child: Tap(
           onTap: () => chat.pane.value = s.call.id,
-          tooltip: 'Open its steps beside the chat',
+          tooltip: 'Open its steps',
           radius: 0,
           padding: const EdgeInsets.symmetric(horizontal: 10),
           child: SizedBox(

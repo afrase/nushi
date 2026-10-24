@@ -168,9 +168,7 @@ class ShellPane extends StatelessWidget {
                             Padding(
                               padding: const EdgeInsets.only(top: 6),
                               child: Text(
-                                'Whether it still runs isn’t known: its agent '
-                                'stopped, or the chat reopened, before it '
-                                'ended.',
+                                'It may still run: its agent stopped first.',
                                 style: small,
                               ),
                             ),

@@ -193,9 +193,8 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
               Text(
                 chat.worktree == null
                     ? 'The folder is gone.'
-                    : 'Its worktree was removed outside Nushi. Delete '
-                          'the chat to clean up its branch '
-                          '${chat.worktree!.branch}.',
+                    : 'Its worktree was removed. Delete the chat to clean '
+                          'up its branch ${chat.worktree!.branch}.',
                 style: theme.ui(t.crashed, size: 12),
               ),
             ),
@@ -206,7 +205,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
         summary: ContextMeter(u),
         rows: [
           if (u.contextSize == 0 && cost(u).isEmpty && _context == null)
-            (null, '${chat.agentName} reports it after a turn.'),
+            (null, 'Not reported yet'),
           // "4% used … 37.4k / 1M", then the bar.
           if (u.contextSize > 0 || _context != null || _canAsk)
             (
@@ -223,9 +222,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
                   if (_context != null || _canAsk)
                     IconTap(
                       Icons.refresh,
-                      tooltip:
-                          'Ask ${chat.agentName} what fills it, in a copy of '
-                          'the chat',
+                      tooltip: 'Ask again',
                       size: 13,
                       onTap: _canAsk ? _askContext : null,
                     ),
@@ -250,14 +247,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
               ),
             ),
           if (cost(u).isNotEmpty)
-            (
-              'Cost',
-              Tooltip(
-                message:
-                    'The session’s cost so far, as ${chat.agentName} reports it',
-                child: Text(cost(u), style: theme.ui(t.text, size: 12)),
-              ),
-            ),
+            ('Cost', Text(cost(u), style: theme.ui(t.text, size: 12))),
         ],
       ),
       PanelCard(

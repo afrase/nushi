@@ -221,7 +221,7 @@ class ContextBreakdown extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Text(
-              'Loaded on demand, not in the context',
+              'Loaded on demand',
               style: theme.ui(t.textMuted, size: 11.5),
             ),
           ),

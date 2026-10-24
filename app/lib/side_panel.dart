@@ -62,7 +62,7 @@ class SidePanel extends StatelessWidget {
                   ),
                   IconTap(
                     Icons.close,
-                    tooltip: 'Close and end the side question',
+                    tooltip: 'End the side question',
                     size: 15,
                     onTap: onClose,
                   ),

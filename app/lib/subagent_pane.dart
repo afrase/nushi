@@ -308,9 +308,7 @@ class _RelayState extends State<_Relay> {
           ),
           IconTap(
             Icons.arrow_upward,
-            tooltip:
-                '${widget.chat.agentName} passes it on unchanged, with its '
-                'SendMessage tool',
+            tooltip: 'Send',
             size: 15,
             onTap: _sending ? null : _send,
           ),

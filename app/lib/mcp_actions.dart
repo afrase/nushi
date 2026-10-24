@@ -111,7 +111,6 @@ class _McpActionsState extends State<McpActions> {
                 LoginMcpServerRequest(folder: list.folder, name: server.name),
               ),
             ),
-            tip: 'Opens the browser to sign in',
           ),
         if (project &&
             server.state == 'pending' &&
@@ -121,29 +120,18 @@ class _McpActionsState extends State<McpActions> {
             'Approve',
             () => _setOn(true),
             tip:
-                'Adds it to enabledMcpjsonServers in the project’s '
-                '.claude/settings.local.json. Claude in the terminal takes '
-                'that once you’ve trusted the folder there; chats in Nushi '
-                'use it either way.',
+                'Chats here use it either way; Claude in a terminal, once '
+                'you trust the folder there.',
           ),
-          button(
-            'Reject',
-            () => _setOn(false),
-            tip:
-                'Adds it to disabledMcpjsonServers in the project’s '
-                '.claude/settings.local.json: off for this project.',
-          ),
+          button('Reject', () => _setOn(false)),
         ] else if (project)
           Tooltip(
             message: server.offBy.isNotEmpty
                 ? 'Turned off in ${tildePath(server.offBy)}; turn it on there.'
-                : server.off
-                ? 'Off for this project'
-                : server.state == 'pending'
-                ? 'Approved in .claude/settings.local.json. Claude in the '
-                      'terminal takes that once you’ve trusted the folder '
-                      'there; chats in Nushi use it either way.'
-                : 'On for this project',
+                : server.state == 'pending' && !server.off
+                ? 'Approved. Claude in a terminal uses it once you trust '
+                      'the folder there.'
+                : '',
             child: SizedBox(
               height: 20,
               child: FittedBox(

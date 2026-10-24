@@ -1,28 +1,39 @@
 # Notes
 
-## Summary (2026-10-24, after step 80: milestone Q)
+## Summary (2026-10-24, after step 91: milestone R)
 
-Milestone Q fixed D1–D61 of the deep review (`~/Developer/nushi-deep-review-findings.md`) in steps 74–80, one commit each on `main`, all pushed. `make test` passes (Go with `-race` for the chats, e2e and acp packages too). Most fixes have a regression test that fails without them (checked by undoing the fix for the git guards, the kept/replay fixes, the mode, the steer duplicate, the rewind fork point, the own-turn cancel and DiffBox's view change). The fakes were fixed so they can catch these bugs: the chats fake agent now replays its history on `session/load`, can quit, advertises `loadSession`, returns config on fork and load; acptest records `session/delete`.
+Milestone R fixed D62–D121 of the deep review (`~/Developer/nushi-deep-review-findings.md`) in steps 81, 82, 86 and 88–90, did the help-text pass in step 91, and fixed three rounds of security-review findings on the trust card in steps 83–85 and 87 (S1–S9: a `.mcp.json` that can't be read, and a skill's hooks, see "Security notes"). One commit each on `main`, all pushed. `make test` passes (Go with `-race` for the chats, e2e and acp packages too). Most fixes have a regression test that was checked to fail without the fix (by undoing it: the mutations named in D62, D63, D112–D119, and the new guards). The fakes now catch what they hid: acptest keeps history per folder (load and fork find a session only under the request's cwd; the e2e move copies through it), answers prompts and config only for sessions it opened, and ends its scripts on `session/cancel`; the chats fake runs a process per launch, which Stop ends, after any last words.
 
 **By id**
-- Fixed: D1–D6, D8–D61. D7 is the same bug as D5 (fixed once, in `useLocked`); D27 was fixed by step 75's `disconnect` and tested in 76; D59 is the plain-Stop path of D15 (fixed once); D41 came with D22.
-- Nothing deferred, nothing found wrong. Partly done: D44 refreshes a list once it is 5 minutes old (not on `mcpChanged`); D32 keeps a taken-back message's subagent only when the transcript knows its call (not for a message replayed after a restart: the app then says so).
+- Fixed: D62–D76, D78–D80, D82–D92, D94, D96–D102, D104–D107, D109–D119, D121.
+- Same bug as another: D77 (D75, fixed once: events held while the list is on its way), D93 (D86), D120 (D105).
+- Already fixed in Q (checked against the code): D81 (the "New worktree" choice is saved after the move), D103 (a fresh chat's move keeps on record a worktree that holds work), D108 (Archive keeps the queue, held). Partly in Q: D84 (a folder inside the worktree; R adds other chats and terminals), D85 (nil checks, ids never reused; R cancels a pending prompt on Reload), D95 (the catch's guard; R guards the clear too), D121 (the fork itself; R the rewind's new session and close).
+- Partly done: D88 doesn't replace the earlier failure notice (it no longer repeats: one per try the user starts). D90's ranking of up to 20,000 files on each keystroke stays (the stale list and the wrong folder are fixed). D114's GIT_ scrub in `worktreeSet` has no test: no way found for the environment to change what `git config --file` reads. D116: the guard in `chat()` stays untested; each method it covers refuses on its own.
+- Nothing deferred, nothing found wrong.
 
-**Tried by hand** (dev daemon and app on `NUSHI_DATA`, a `/tmp` link to the scratchpad, live Claude, a throwaway repository, 1280×800 dark): the whole command in a pending permission card and in an opened command; a background command followed from Claude's task id (and a `Read` of its output file not taken for one); Archive asking about `sleep 300` in the chat's terminal; Enter and a digit typed in the terminal while an AskUserQuestion card appeared went to the terminal, the card stayed pending; stopping the daemon mid-command (a 25 s `python3 … sleep`) ended the command at once, and after the restart Claude's history showed the interruption and the call as failed; Changes with a nested repository and a link to `/dev/zero` ("Not shown: nested is a repository of its own"); the Delete dialog naming an ignored `.env` in a worktree, and removing it.
+**Tried by hand** (dev daemon and app on `NUSHI_DATA`, a `/tmp` link, live Claude, two throwaway repositories, 1280×800 dark): the trust card for a `.mcp.json` Claude's parser would reject (its text shown) and a skill's hooks (its front matter in a box that scrolls), and its shorter text; Start anyway, then a real turn; the "A newer daemon is installed" bar after a rebuild, and Restart daemon (the chat reopened); the Delete dialog's shorter lines; the MCP view; the context card's "Not reported yet" after a reopen.
 
-**Not tried by hand**: the subagent chip in the composer (D32), side chats ending in the app (D19, covered by a daemon test), the Changes toolbar in its error state (D41) and a commit picked during a reload (D38, no test either: the fix is two counters), the trust card followed by a failing move (D53), a worktree whose base branch was deleted, the "moved to the background" phrasings with live Claude (from Claude's binary), `$/cancel_request` from live Claude, a 30 MB image message, the 2-minute side-chat sweep in the app, and the light theme.
+**Not tried by hand**: the Delete dialog during a slow delete (it finished too fast to catch; `PopScope` and a disabled Cancel), a failed daemon launch and a nushell login shell, the Send review list and a review taken out of the queue, a half-written comment kept across files (no test either: the comment box didn't open under the test's tap), @ completions refetching, a call's output staying open as the next call makes a group, the MCP form opening as JSON, title reports in a live terminal (an app test covers it), D70 in a terminal tab (a daemon test covers it), and the light theme.
 
 **Needs your attention**
-- The API went from 41 to 42 (new fields: a worktree's base commit, a worktree's ignored files, the Dropped event, a queued message's subagent call): press "Restart daemon" in the installed app. Restarting now cancels running turns and gives Claude a few seconds to end them; terminals still close.
-- Product calls made, in "Decisions to revisit" under "New in Q": Archive keeps the queue held; ignored files count as work a worktree removal loses; Move and Rewind wait for Claude's own turn; side chats end 2 minutes after the last app goes; the "New worktree" choice is saved only after the move worked.
-- Security: see "Security notes" (git now refuses lazy fetches and submodule status runs; nothing is written through repository links; Claude's settings are read only when regular and at most 64 MiB; home-folder trust no longer covers its subfolders). ADR 0023 and 0027 were amended.
-- At startup the daemon now moves the old Nushi Next scratch chats' history copies: a copy under the old folder name goes when the new one holds all of it (D46). That touches `~/.claude/projects` once.
+- The API went from 42 to 43 (Ping reports the daemon's build): press "Restart daemon" in the installed app. From now on the app also offers a restart, in a bar, when it bundles another build of the daemon than the one running.
+- Product calls, in "Decisions to revisit" under "New in R": a fresh chat's worktree stays while another chat or a terminal is in it; a failed reopen isn't retried on its own; Send now goes before the queue; "Send review" lists every unsent comment; a `.mcp.json` Claude would skip is left out of the MCP list but shown on the trust card.
+- Security: the trust card fails closed (S1–S9). A skill whose front matter has hooks (by text or YAML key) shows it raw instead of the commands Nushi guessed; a `.mcp.json` Nushi can't read shows whole. That added `gopkg.in/yaml.v3`.
+- The app's launcher passes the daemon's paths as `NUSHID_BIN`/`NUSHID_LOG`; the daemon's children (agents) inherit them. Harmless, but visible in `ps`.
 
-**Size**: the daemon went from 7,281 to 7,813 lines of Go, the ACP client from 867 to 929, the app from 13,372 to 13,624 lines of Dart. Every step stayed under the ~500-line tripwire (the largest, 76, added 491). Two files sit at the ~400-line tripwire: `app/lib/daemon.dart` (405, the side-chat ending) and `internal/git/git.go` (400).
+**Size**: the daemon went from 7,813 to 8,128 lines of Go, the app from 13,624 to 13,918 lines of Dart (the ACP client stays at 929). Every step stayed under the ~500-line tripwire (the largest, 81, added 468 lines, nearly all tests). Files at the ~400-line tripwire: `app/lib/daemon.dart` (400, after the launcher moved out), `internal/git/git.go` (400), `internal/model/model.go` (400), `internal/features/chats/chats_test.go` (401); `chats.go` went past it and was split (`close.go`).
 
-**Dependencies**: none added.
+**Dependencies**: `gopkg.in/yaml.v3` (Go, step 87: a skill's front matter for the trust card).
 
-**Left behind by the testing**: nothing (the dev chats deleted with Delete, which took Claude's history; the empty history folders, task outputs, dev data folder, its `/tmp` link, the throwaway repository and the helper tools removed).
+**Left behind by the testing**: nothing (the dev chats deleted with Delete; the empty history folders Claude left, the dev data folder, its `/tmp` links and the throwaway repositories removed; the helper tools stay in the session's scratchpad).
+
+## Demo (milestone R)
+
+1. Put a `.claude/skills/x/SKILL.md` with a `hooks:` block in a repository and start a chat there: the trust card shows the skill's front matter, raw, in a box that scrolls.
+2. Rebuild and reinstall the app while its daemon runs: a bar says a newer daemon is installed, with Restart daemon.
+3. Queue a review while Claude works, then take it out of the queue: its comments count as unsent again.
+4. In a worktree chat without messages, open a terminal, then move the chat back to the repository: the worktree stays, and Delete offers it.
+5. Open a chat whose folder is gone: one "Couldn't reopen" notice, not one per look.
 
 ## Demo (milestone Q)
 
@@ -132,6 +143,7 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 88. Turns and a chat's agent (D64–D68, D85, D86, D93, D109) | 8105 | 929 | 13658 | 682 |
 | 89. The app's link to the daemon (D75, D77–D80, D106, D110, D111) | 8128 | 929 | 13788 | 682 |
 | 90. The app's views (D90, D91, D94–D102) | 8128 | 929 | 13962 | 682 |
+| 91. Help text: less of it | 8128 | 929 | 13918 | 682 |
 
 Steps over the ~500-line tripwire (code and tests, without generated code): 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 and this milestone removed more than they added.
 
@@ -176,6 +188,7 @@ What the code depends on, and how the adapter behaves. Everything Nushi does abo
 
 Open questions; what's settled is in `docs/adr/` or in the code.
 
+- New in R: step 91 cut the app's help text to what the screen can't show: what a destructive action loses, why something is disabled, warnings and errors. Tooltips that restated a label went; empty states are a few words.
 - New in R: "Send review" lists every unsent comment, those on files the view no longer shows too, each with Remove; comments sent in a review that leaves the queue without reaching the transcript (Stop, Archive, taken out) count as unsent again. A comment half written stays when its file leaves the view, until it shows again (while the app runs). A tool call's output left open stays open as the next call makes it a group. The MCP form shows a server's JSON when an argument has a line break, is empty or isn't text. Terminals ignore title reports (`CSI 20/21 t`).
 - New in R: the app offers "Restart daemon" in a bar (not a blocking screen) when the daemon it bundles isn't the one running (same API, another build: its size and time). The bundled daemon starts through the login shell only for sh, zsh, bash, fish, dash and ksh (else zsh), with its paths in the environment; after three failed starts the app says so, with the log's path. A chat that finishes starting after you went elsewhere (another chat, a trust card, the MCP view) doesn't take the screen. The Delete dialog can't be closed while it deletes.
 - New in R: Send now stops only the turn running when it came; if that turn ends on its own meanwhile, the message still goes next, before the queue. Reload cancels a permission prompt or question Claude asked on its own. A message taken back (Stop, Rewind, the queue) keeps its file mentions, and a side chat's queue can be edited.

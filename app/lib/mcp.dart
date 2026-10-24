@@ -53,7 +53,6 @@ class McpView extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Menu(
-                  tooltip: 'The folder whose servers show',
                   entries: folderEntries(
                     daemon,
                     checked: folder,

@@ -99,7 +99,7 @@ class _AgentRow extends StatelessWidget {
     return Tap(
       onTap: () => chat.pane.value = s.call.id,
       tooltip:
-          'Open its steps. Model ${settingText(runs.model)}, effort '
+          'Model ${settingText(runs.model)}, effort '
           '${settingText(runs.effort)}',
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Column(
