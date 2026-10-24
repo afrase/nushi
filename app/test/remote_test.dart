@@ -58,5 +58,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(daemon.answers.single.allow, isFalse);
     expect(find.text('Allow'), findsNothing);
+
+    // A pairing that ends before an answer: a new code is the user's call.
+    remoteState.value = Remote(
+      on: true,
+      pairing: Pairing(name: 'Phone', code: '654 321'),
+    );
+    await tester.pumpAndSettle();
+    remoteState.value = Remote(on: true);
+    await tester.pumpAndSettle();
+    expect(find.text('This code is used up or has expired.'), findsOneWidget);
+    expect(find.text('New code'), findsOneWidget);
   });
 }

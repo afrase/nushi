@@ -75,8 +75,9 @@ func (s *Service) endPairing() {
 }
 
 // pair waits on p's id for a phone with p's secret, until p expires. The
-// first that completes IKpsk1 and sends its name uses the pairing up; the
-// user then allows or denies it.
+// first that completes IKpsk1 uses the pairing up, whatever happens next:
+// one that then sends no name ends it, so whoever holds the secret gets one
+// code, not a code per try. Otherwise the user allows or denies the phone.
 func (s *Service) pair(ctx context.Context, p *pairing, relayURL string) {
 	defer func() {
 		s.mu.Lock()
@@ -88,7 +89,10 @@ func (s *Service) pair(ctx context.Context, p *pairing, relayURL string) {
 	waiting, cancel := context.WithDeadline(ctx, p.expires)
 	defer cancel()
 	for waiting.Err() == nil {
-		conn, name := s.meet(waiting, p, relayURL)
+		conn, name, used := s.meet(waiting, p, relayURL)
+		if used && conn == nil {
+			return
+		}
 		if conn == nil {
 			continue
 		}
@@ -129,38 +133,37 @@ func (s *Service) pair(ctx context.Context, p *pairing, relayURL string) {
 	}
 }
 
-// meet waits for one phone on p's id and runs the handshake; it returns
-// nil when the phone failed (a wrong secret, junk), so the pairing waits
-// on.
-func (s *Service) meet(ctx context.Context, p *pairing, relayURL string) (*noiseconn.Conn, string) {
+// meet waits for one phone on p's id and runs the handshake. It returns
+// the channel and the phone's name, or nil; used says the handshake
+// completed (the phone held the secret) even if no name came.
+func (s *Service) meet(ctx context.Context, p *pairing, relayURL string) (conn *noiseconn.Conn, name string, used bool) {
 	c, err := s.dialer.Listen(ctx, relayURL, p.id)
 	if err != nil {
 		sleep(ctx, jitter(2*time.Second))
-		return nil, ""
+		return nil, "", false
 	}
 	stop := context.AfterFunc(ctx, func() { c.Close() })
 	defer stop()
 	if c.Wait() != nil {
 		c.Close()
-		return nil, ""
+		return nil, "", false
 	}
 	timer := time.AfterFunc(HandshakeWait, func() { c.Close() })
 	defer timer.Stop()
-	conn, err := noiseconn.Respond(c, noiseconn.Config{Static: s.key, Prologue: prologue(p.id), PSK: p.psk},
+	conn, err = noiseconn.Respond(c, noiseconn.Config{Static: s.key, Prologue: prologue(p.id), PSK: p.psk},
 		func([]byte) error { return nil })
 	if err != nil {
-		return nil, ""
+		return nil, "", false
 	}
-	// The phone's first transport message is its name: once it decrypts,
-	// the phone held the secret, and the pairing is used up.
+	// The phone's first transport message is its name.
 	buf := make([]byte, noiseconn.MaxPlaintext)
 	n, err := conn.Read(buf)
 	var hello struct{ Name string }
 	if err != nil || json.Unmarshal(buf[:n], &hello) != nil || !timer.Stop() || !stop() {
 		conn.Close()
-		return nil, ""
+		return nil, "", true
 	}
-	return conn, cleanName(hello.Name)
+	return conn, cleanName(hello.Name), true
 }
 
 // codeOf is the six digits both screens show, from the handshake hash.

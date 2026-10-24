@@ -411,3 +411,28 @@ func TestWaitsAgain(t *testing.T) {
 		t.Fatal("no connection after the relay ended waits", err)
 	}
 }
+
+// The first handshake with the secret uses the pairing up, even with no
+// name after it: someone with the QR code who sits on the path gets one
+// code, not one per try until it matches the real phone's.
+func TestOneHandshakePerPairing(t *testing.T) {
+	url := startRelay(t)
+	s := startRemote(t, t.TempDir(), url)
+	qr, _, _ := s.StartPairing()
+	o := parseQR(t, qr)
+	var dl relay.Dialer
+	c, err := dl.Dial(context.Background(), o.relay, o.id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn, err := noiseconn.Initiate(c, noiseconn.Config{Static: newKey(t), Prologue: prologue(o.id), PSK: o.psk}, o.key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn.Close() // no name
+	waitFor(t, func() bool { return s.Get().Pairing == nil })
+	if c, _, err := phonePair(t, o, newKey(t), o.psk); err == nil {
+		c.Close()
+		t.Fatal("a second handshake on one pairing")
+	}
+}

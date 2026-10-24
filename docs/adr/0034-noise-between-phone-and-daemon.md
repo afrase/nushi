@@ -20,9 +20,9 @@ A phone talks to the daemon through a relay anyone may run ([0033](0033-the-rela
 
 **Pairing.**
 1. Settings → Remote access → "Pair a phone". The daemon makes a one-time rendezvous id and a 32-byte secret, waits at the relay on that id for 5 minutes, and the Mac shows a QR code: `nushi://pair?r=<relay URL>&i=<pairing id>&k=<daemon's public key>&s=<secret>`. It goes camera to screen, never through the relay.
-2. The phone makes its key and runs `IKpsk1` on the pairing id, then sends its name in its first transport message. Only once that decrypts (the phone holds the session, so it held the secret) does the daemon stop waiting on the pairing id: the secret and the id are used up.
+2. The phone makes its key and runs `IKpsk1` on the pairing id, then sends its name in its first transport message. The first handshake that completes with the secret uses the secret and the id up, whatever follows: if no name comes, the pairing ends and the Mac offers a new code (the user's choice). A wrong secret or junk doesn't use it up.
 3. Both screens show a six-digit code from the handshake hash. The Mac shows the device's name and the code, with Allow and Deny, whoever started the pairing. The user must check the phone shows the same code: that is what stops someone who saw the QR code and connected first (the real phone then shows no code at all).
-4. On Allow the daemon stores the device and sends its long-lived rendezvous id inside the channel (it is never in the QR code); the same channel then carries the API. On Deny, or no answer within 2 minutes, it sends a refusal and closes.
+4. The phone gives up on its code after 150 s with no answer. On Allow the daemon stores the device and sends its long-lived rendezvous id inside the channel (it is never in the QR code); the same channel then carries the API. On Deny, or no answer within 2 minutes, it sends a refusal and closes.
 
 **Later connections.** The phone dials the daemon's id and runs `IK`. The daemon answers only a static key in `devices.json`; anything else gets no answer. A device counts as connected (and its last-seen time moves) only once its first transport message decrypts.
 
@@ -36,7 +36,7 @@ What a paired device gets is code execution as the user on the Mac. Everything b
 | Who | Can | Can't |
 |---|---|---|
 | The relay, its host, or the networks in between (passive or active) | see addresses, rendezvous ids, timing and sizes (0033); drop, delay or refuse traffic; make the daemon do a handshake's work per dial | read, change, replay, reorder or inject a message; pose as the daemon (its key is pinned from the QR code) or as a phone (the daemon answers only known keys); pair a phone (no secret); tell which device connects |
-| Someone who sees or photographs the QR code within its 5 minutes | connect first and get a confirm prompt on the Mac, under any name | get in without the user pressing Allow while the phone shows another code, or no code |
+| Someone who sees or photographs the QR code within its 5 minutes | connect first and get a confirm prompt on the Mac, under any name; with the path as well (the relay, or ws://), drop the real phone's name and use the pairing up | get in without the user pressing Allow while the phone shows another code, or no code; try for a code that matches the real phone's (one handshake per pairing: a one-in-a-million chance) |
 | Someone with a used or expired QR code | nothing: the id and secret are used up | |
 | A revoked device | dial the daemon's id (it still knows it) and take its waiting connection for one failed handshake at a time | get an answer, or keep a connection |
 | Another relay user | share the relay's caps | reach this daemon's ids without knowing them (random, 128 bits) |
