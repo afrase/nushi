@@ -20,14 +20,20 @@ func (f *fakeConfig) Servers(string) ([]model.MCPServer, error) { return f.files
 func (f *fakeConfig) Check(context.Context, string) ([]model.MCPServer, error) {
 	return f.checked, nil
 }
-func (f *fakeConfig) Add(_ context.Context, _, _, name, config string) error {
+func (f *fakeConfig) Add(ctx context.Context, _, _, name, config string) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
 	f.calls = append(f.calls, "add "+name+" "+config)
 	if strings.Contains(config, "bad") {
 		return errors.New("refused")
 	}
 	return nil
 }
-func (f *fakeConfig) Remove(_ context.Context, _, _, name string) error {
+func (f *fakeConfig) Remove(ctx context.Context, _, _, name string) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
 	f.calls = append(f.calls, "remove "+name)
 	return nil
 }
@@ -180,5 +186,35 @@ func TestAChangeReachesTheChatsItAffects(t *testing.T) {
 		if !reflect.DeepEqual(reached, want) {
 			t.Errorf("%s: reached %v, want %v", scope, reached, want)
 		}
+	}
+}
+
+// The app going away mid-edit doesn't stop it halfway (removed, not added).
+func TestAnEditOutlivesTheApp(t *testing.T) {
+	cfg := &fakeConfig{files: []model.MCPServer{{Name: "s", Scope: "user", Config: `{"command":"x"}`}}}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := New(cfg, nil).Edit(ctx, "/repo", "user", "s", `{"command":"y"}`); err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"remove s", `add s {"command":"y"}`}; !reflect.DeepEqual(cfg.calls, want) {
+		t.Errorf("calls = %q", cfg.calls)
+	}
+}
+
+// A repository's .mcp.json server that isn't approved, or is off, gives way
+// to the user's of the same name, which gets its state.
+func TestAnUnapprovedProjectServerGivesWay(t *testing.T) {
+	for _, project := range []model.MCPServer{{Name: "github", Scope: "project"}, {Name: "github", Scope: "project", Approved: true, Off: true}} {
+		svc := New(&fakeConfig{files: []model.MCPServer{{Name: "github", Scope: "user"}, project},
+			checked: []model.MCPServer{{Name: "github", State: "connected"}}}, nil)
+		got, _, _ := svc.List(context.Background(), "/f", true)
+		if got[0].Shadowed || got[0].State != "connected" || !got[1].Shadowed || got[1].State == "connected" {
+			t.Errorf("%+v: user %+v, project %+v", project, got[0], got[1])
+		}
+	}
+	svc := New(&fakeConfig{files: []model.MCPServer{{Name: "github", Scope: "user"}, {Name: "github", Scope: "project", Approved: true}}}, nil)
+	if got, _, _ := svc.List(context.Background(), "/f", false); !got[0].Shadowed || got[1].Shadowed {
+		t.Errorf("an approved project server: %+v", got)
 	}
 }

@@ -9,7 +9,9 @@ import 'theme/theme.dart';
 /// The MCP servers the agent's config gives a folder, from the daemon (API
 /// 32): read from the config at once, then checked (the agent connects to
 /// each, a few seconds), which fills in their states. One per folder,
-/// shared by the view and the panel card while the app runs.
+/// shared by the view and the panel card while the app runs; asked for
+/// again once it is a few minutes old, since servers connect, sign in and
+/// change outside Nushi too.
 class McpServers extends ChangeNotifier {
   McpServers._(this.daemon, this.folder) {
     refresh();
@@ -17,8 +19,17 @@ class McpServers extends ChangeNotifier {
 
   static final _byFolder = <String, McpServers>{};
 
-  factory McpServers.of(Daemon daemon, String folder) =>
-      _byFolder[folder] ??= McpServers._(daemon, folder);
+  /// How long a list is taken as current.
+  static const fresh = Duration(minutes: 5);
+
+  factory McpServers.of(Daemon daemon, String folder) {
+    final list = _byFolder[folder] ??= McpServers._(daemon, folder);
+    final at = list._at;
+    if (!list.checking && at != null && DateTime.now().difference(at) > fresh) {
+      Future.microtask(list.refresh); // not while a build asks
+    }
+    return list;
+  }
 
   final Daemon daemon;
   final String folder;
@@ -28,6 +39,7 @@ class McpServers extends ChangeNotifier {
   String error = ''; // why the list or the check failed
 
   bool _again = false; // refresh once the running one is done
+  DateTime? _at; // when the last refresh ended
 
   Future<void> refresh() async {
     if (checking) {
@@ -46,6 +58,7 @@ class McpServers extends ChangeNotifier {
       }
     } while (_again);
     checking = false;
+    _at = DateTime.now();
     notifyListeners();
   }
 
@@ -61,7 +74,13 @@ class McpServers extends ChangeNotifier {
       );
 
   void _take(ListMcpServersResponse r) {
-    servers = r.servers;
+    // A check that failed leaves the servers unchecked, not "Checking…".
+    servers = [
+      for (final s in r.servers)
+        r.checkError.isNotEmpty && s.state.isEmpty
+            ? (s.deepCopy()..state = 'unknown')
+            : s,
+    ];
     error = r.checkError;
     loaded = true;
     notifyListeners();
@@ -119,6 +138,7 @@ String secrets(Map<String, dynamic> c) => [
   'pending' => ('Waiting for approval', t.needs),
   'disabled' => ('Off', t.idle),
   '' => ('Checking…', t.textMuted),
+  'unknown' => ('Not checked', t.textMuted),
   _ => (s.detail, t.textMuted),
 };
 
@@ -133,7 +153,7 @@ class McpDot extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
     final (word, color) = stateOf(server, t);
-    final ring = server.state == '' || server.state == 'disabled';
+    final ring = ['', 'disabled', 'unknown'].contains(server.state);
     return Tooltip(
       message: server.detail.isEmpty ? word : '$word: ${server.detail}',
       child: Container(
