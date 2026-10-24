@@ -1246,6 +1246,7 @@ class SendPromptRequest extends $pb.GeneratedMessage {
     $core.Iterable<ImageData>? images,
     $core.bool? queue,
     $core.bool? now,
+    $core.String? toSubagent,
   }) {
     final result = SendPromptRequest._();
     if (chatId != null) result.chatId = chatId;
@@ -1254,6 +1255,7 @@ class SendPromptRequest extends $pb.GeneratedMessage {
     if (images != null) result.images.addAll(images);
     if (queue != null) result.queue = queue;
     if (now != null) result.now = now;
+    if (toSubagent != null) result.toSubagent = toSubagent;
     return result;
   }
 
@@ -1277,6 +1279,7 @@ class SendPromptRequest extends $pb.GeneratedMessage {
         subBuilder: ImageData.$_createMessage)
     ..aOB(5, _omitFieldNames ? '' : 'queue')
     ..aOB(6, _omitFieldNames ? '' : 'now')
+    ..aOS(7, _omitFieldNames ? '' : 'toSubagent')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1349,6 +1352,17 @@ class SendPromptRequest extends $pb.GeneratedMessage {
   $core.bool hasNow() => $_has(5);
   @$pb.TagNumber(6)
   void clearNow() => $_clearField(6);
+
+  /// The tool call of a subagent (one with agent_id) the message is for: the
+  /// agent is asked to pass it on unchanged.
+  @$pb.TagNumber(7)
+  $core.String get toSubagent => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set toSubagent($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasToSubagent() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearToSubagent() => $_clearField(7);
 }
 
 /// A message the user sent, waiting in a chat's queue.
@@ -1358,12 +1372,14 @@ class QueuedMessage extends $pb.GeneratedMessage {
     $core.String? text,
     $core.Iterable<$core.String>? files,
     $core.Iterable<ImageData>? images,
+    $core.String? relayTo,
   }) {
     final result = QueuedMessage._();
     if (id != null) result.id = id;
     if (text != null) result.text = text;
     if (files != null) result.files.addAll(files);
     if (images != null) result.images.addAll(images);
+    if (relayTo != null) result.relayTo = relayTo;
     return result;
   }
 
@@ -1385,6 +1401,7 @@ class QueuedMessage extends $pb.GeneratedMessage {
     ..pPS(3, _omitFieldNames ? '' : 'files')
     ..pPM<ImageData>(4, _omitFieldNames ? '' : 'images',
         subBuilder: ImageData.$_createMessage)
+    ..aOS(5, _omitFieldNames ? '' : 'relayTo')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1432,6 +1449,16 @@ class QueuedMessage extends $pb.GeneratedMessage {
 
   @$pb.TagNumber(4)
   $pb.PbList<ImageData> get images => $_getList(3);
+
+  /// The type of the subagent it is for (SendPromptRequest.to_subagent).
+  @$pb.TagNumber(5)
+  $core.String get relayTo => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set relayTo($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasRelayTo() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearRelayTo() => $_clearField(5);
 }
 
 /// Every message waiting in a chat's queue, in order.
@@ -6400,6 +6427,8 @@ class Item extends $pb.GeneratedMessage {
     $core.String? effort,
     $core.String? ranModel,
     Shell? shell,
+    $core.String? agentId,
+    $core.String? relayTo,
   }) {
     final result = Item._();
     if (id != null) result.id = id;
@@ -6427,6 +6456,8 @@ class Item extends $pb.GeneratedMessage {
     if (effort != null) result.effort = effort;
     if (ranModel != null) result.ranModel = ranModel;
     if (shell != null) result.shell = shell;
+    if (agentId != null) result.agentId = agentId;
+    if (relayTo != null) result.relayTo = relayTo;
     return result;
   }
 
@@ -6476,6 +6507,8 @@ class Item extends $pb.GeneratedMessage {
     ..aOS(24, _omitFieldNames ? '' : 'ranModel')
     ..aOM<Shell>(25, _omitFieldNames ? '' : 'shell',
         subBuilder: Shell.$_createMessage)
+    ..aOS(26, _omitFieldNames ? '' : 'agentId')
+    ..aOS(27, _omitFieldNames ? '' : 'relayTo')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -6714,6 +6747,28 @@ class Item extends $pb.GeneratedMessage {
   void clearShell() => $_clearField(25);
   @$pb.TagNumber(25)
   Shell ensureShell() => $_ensure(24);
+
+  /// For a tool call that starts a subagent: the agent's id for it, when the
+  /// agent can pass it messages (SendPromptRequest.to_subagent).
+  @$pb.TagNumber(26)
+  $core.String get agentId => $_getSZ(25);
+  @$pb.TagNumber(26)
+  set agentId($core.String value) => $_setString(25, value);
+  @$pb.TagNumber(26)
+  $core.bool hasAgentId() => $_has(25);
+  @$pb.TagNumber(26)
+  void clearAgentId() => $_clearField(26);
+
+  /// For a user message: the type of the subagent the agent was asked to
+  /// pass it to.
+  @$pb.TagNumber(27)
+  $core.String get relayTo => $_getSZ(26);
+  @$pb.TagNumber(27)
+  set relayTo($core.String value) => $_setString(26, value);
+  @$pb.TagNumber(27)
+  $core.bool hasRelayTo() => $_has(26);
+  @$pb.TagNumber(27)
+  void clearRelayTo() => $_clearField(27);
 }
 
 /// A command the agent runs in the background.

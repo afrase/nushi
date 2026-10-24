@@ -392,6 +392,7 @@ const SendPromptRequest$json = {
     },
     {'1': 'queue', '3': 5, '4': 1, '5': 8, '10': 'queue'},
     {'1': 'now', '3': 6, '4': 1, '5': 8, '10': 'now'},
+    {'1': 'to_subagent', '3': 7, '4': 1, '5': 9, '10': 'toSubagent'},
   ],
 };
 
@@ -400,7 +401,7 @@ final $typed_data.Uint8List sendPromptRequestDescriptor = $convert.base64Decode(
     'ChFTZW5kUHJvbXB0UmVxdWVzdBIXCgdjaGF0X2lkGAEgASgJUgZjaGF0SWQSEgoEdGV4dBgCIA'
     'EoCVIEdGV4dBIUCgVmaWxlcxgDIAMoCVIFZmlsZXMSKwoGaW1hZ2VzGAQgAygLMhMubnVzaGku'
     'djEuSW1hZ2VEYXRhUgZpbWFnZXMSFAoFcXVldWUYBSABKAhSBXF1ZXVlEhAKA25vdxgGIAEoCF'
-    'IDbm93');
+    'IDbm93Eh8KC3RvX3N1YmFnZW50GAcgASgJUgp0b1N1YmFnZW50');
 
 @$core.Deprecated('Use queuedMessageDescriptor instead')
 const QueuedMessage$json = {
@@ -417,6 +418,7 @@ const QueuedMessage$json = {
       '6': '.nushi.v1.ImageData',
       '10': 'images'
     },
+    {'1': 'relay_to', '3': 5, '4': 1, '5': 9, '10': 'relayTo'},
   ],
 };
 
@@ -424,7 +426,7 @@ const QueuedMessage$json = {
 final $typed_data.Uint8List queuedMessageDescriptor = $convert.base64Decode(
     'Cg1RdWV1ZWRNZXNzYWdlEg4KAmlkGAEgASgJUgJpZBISCgR0ZXh0GAIgASgJUgR0ZXh0EhQKBW'
     'ZpbGVzGAMgAygJUgVmaWxlcxIrCgZpbWFnZXMYBCADKAsyEy5udXNoaS52MS5JbWFnZURhdGFS'
-    'BmltYWdlcw==');
+    'BmltYWdlcxIZCghyZWxheV90bxgFIAEoCVIHcmVsYXlUbw==');
 
 @$core.Deprecated('Use chatQueueDescriptor instead')
 const ChatQueue$json = {
@@ -1646,6 +1648,8 @@ const Item$json = {
       '6': '.nushi.v1.Shell',
       '10': 'shell'
     },
+    {'1': 'agent_id', '3': 26, '4': 1, '5': 9, '10': 'agentId'},
+    {'1': 'relay_to', '3': 27, '4': 1, '5': 9, '10': 'relayTo'},
   ],
 };
 
@@ -1664,7 +1668,8 @@ final $typed_data.Uint8List itemDescriptor = $convert.base64Decode(
     'IAEoCzISLm51c2hpLnYxLlN1YmFnZW50UghzdWJhZ2VudBIWCgZyZXBvcnQYFCABKAhSBnJlcG'
     '9ydBIWCgZwcm9tcHQYFSABKAlSBnByb21wdBIUCgVtb2RlbBgWIAEoCVIFbW9kZWwSFgoGZWZm'
     'b3J0GBcgASgJUgZlZmZvcnQSGwoJcmFuX21vZGVsGBggASgJUghyYW5Nb2RlbBIlCgVzaGVsbB'
-    'gZIAEoCzIPLm51c2hpLnYxLlNoZWxsUgVzaGVsbA==');
+    'gZIAEoCzIPLm51c2hpLnYxLlNoZWxsUgVzaGVsbBIZCghhZ2VudF9pZBgaIAEoCVIHYWdlbnRJ'
+    'ZBIZCghyZWxheV90bxgbIAEoCVIHcmVsYXlUbw==');
 
 @$core.Deprecated('Use shellDescriptor instead')
 const Shell$json = {

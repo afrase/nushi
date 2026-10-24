@@ -19,7 +19,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 40
+const Version = 41
 
 type server struct {
 	chats *chats.Service
@@ -94,7 +94,7 @@ func (s *server) MoveChat(ctx context.Context, req *connect.Request[nushiv1.Move
 
 func (s *server) SendPrompt(_ context.Context, req *connect.Request[nushiv1.SendPromptRequest]) (*connect.Response[nushiv1.SendPromptResponse], error) {
 	m := req.Msg
-	msg := model.Message{Text: m.Text, Files: m.Files}
+	msg := model.Message{Text: m.Text, Files: m.Files, To: m.ToSubagent}
 	for _, img := range m.Images {
 		msg.Images = append(msg.Images, model.Image{MimeType: img.MimeType, Data: img.Data})
 	}

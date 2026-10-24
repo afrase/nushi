@@ -150,10 +150,16 @@ func (c *chat) chunkLocked(kind model.ItemKind, m *acp.ContentChunk) {
 	}
 	if it != nil && it.Kind == kind {
 		it.Text += text
+		if c.relayedLocked(it) { // whole now
+			c.publishLocked(*it)
+			return
+		}
 		c.emitLocked(model.Event{ChatID: c.id, Item: &model.Item{ID: it.ID, Kind: kind, Text: text}, Append: true})
 		return
 	}
-	c.addLocked(model.Item{ID: id, Kind: kind, Text: text, Images: images, Parent: parent})
+	item := model.Item{ID: id, Kind: kind, Text: text, Images: images, Parent: parent}
+	c.relayedLocked(&item)
+	c.addLocked(item)
 }
 
 // toolCallLocked adds what the agent tells of a tool call beyond ACP (see
@@ -176,14 +182,31 @@ func (c *chat) subagentLocked(call *model.Item) bool {
 		sa = *call.Subagent
 	}
 	old := sa
-	r := slices.IndexFunc(c.items, func(it model.Item) bool { return it.Report && it.Parent == call.ID })
+	if call.AgentID == "" && c.dialect.SubagentID != nil {
+		call.AgentID = c.dialect.SubagentID(call.Text)
+	}
+	r, last := -1, -1 // its last report, and its last item
+	for i, it := range c.items {
+		if it.Parent == call.ID {
+			last = i
+			if it.Report {
+				r = i
+			}
+		}
+	}
 	background := c.dialect.Background != nil && c.dialect.Background(call.Text)
+	elsewhere := c.dialect.ReportElsewhere != nil && c.dialect.ReportElsewhere(call.Text)
 	switch {
 	case call.Status == "pending" || call.Status == "in_progress":
 		sa.State = "running"
 	case call.Status == "failed":
 		sa.State = "failed"
 	case background && r < 0 && !sa.Started.IsZero():
+		sa.State = "running"
+	// Steps after its last report (never replayed, so seen live): a
+	// message ran it again. A call that reports apart from its output
+	// may not have its report any more (replayed).
+	case last > r && (r >= 0 || background || elsewhere):
 		sa.State = "running"
 	default:
 		sa.State = "done"
@@ -193,22 +216,25 @@ func (c *chat) subagentLocked(call *model.Item) bool {
 		sa.Started = time.Now()
 	case sa.State != "running" && !sa.Started.IsZero() && sa.Ended.IsZero():
 		sa.Ended = time.Now()
+	case sa.State == "running":
+		sa.Ended = time.Time{}
 	}
 	switch {
 	case sa.State == "running":
 		sa.Result = ""
 	case r >= 0:
 		sa.Result = c.items[r].Text
-	case !background && (c.dialect.ReportElsewhere == nil || !c.dialect.ReportElsewhere(call.Text)):
+	case !background && !elsewhere:
 		sa.Result = call.Text
 	}
 	call.Subagent = &sa
 	return sa != old
 }
 
-// reportedLocked updates the subagent whose report it is, if it is one.
+// reportedLocked updates the subagent a tool call comes from, if one does:
+// a report ends it, and a step after its report means it runs again.
 func (c *chat) reportedLocked(it model.Item) {
-	if call := c.itemLocked(it.Parent); it.Report && call != nil && c.subagentLocked(call) {
+	if call := c.itemLocked(it.Parent); call != nil && c.subagentLocked(call) {
 		c.publishLocked(*call)
 	}
 }

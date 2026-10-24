@@ -49,7 +49,13 @@ class ItemView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             spacing: 4,
             children: [
-              _who(theme, 'You'),
+              // A message the agent was asked to pass to a subagent.
+              _who(
+                theme,
+                item.relayTo.isEmpty
+                    ? 'You'
+                    : 'You → ${item.relayTo}, through ${chat.agentName}',
+              ),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,

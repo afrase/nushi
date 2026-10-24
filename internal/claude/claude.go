@@ -88,6 +88,9 @@ func ToolCall(it *model.Item, meta map[string]any, input json.RawMessage) (ownTe
 		if m, _ := resp["resolvedModel"].(string); m != "" {
 			it.RanModel = modelName(m)
 		}
+		if id, _ := resp["agentId"].(string); id != "" {
+			it.AgentID = id
+		}
 	case "SubagentHandback":
 		it.Text = cmp.Or(in.Message, it.Text)
 		return true
