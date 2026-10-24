@@ -81,6 +81,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.7"
+  cryptography:
+    dependency: transitive
+    description:
+      name: cryptography
+      sha256: "3eda3029d34ec9095a27a198ac9785630fe525c0eb6a49f3d575272f8e792ef0"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.9.0"
   dbus:
     dependency: transitive
     description:
@@ -327,6 +335,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.18.3"
+  noise:
+    dependency: transitive
+    description:
+      path: "../packages/noise"
+      relative: true
+    source: path
+    version: "0.1.0"
   pasteboard:
     dependency: "direct main"
     description:
@@ -383,6 +398,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.0.3"
+  remote_transport:
+    dependency: "direct dev"
+    description:
+      path: "../packages/remote_transport"
+      relative: true
+    source: path
+    version: "0.1.0"
   sky_engine:
     dependency: transitive
     description: flutter
