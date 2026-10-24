@@ -4,6 +4,7 @@ package chats
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"log"
 	"maps"
@@ -68,10 +69,26 @@ type Service struct {
 	scratch   string // the folder that holds chats' scratch folders
 	publish   func(model.Event)
 
+	terminals Terminals // set once at startup, if there are any
+
 	mu      sync.Mutex
 	chats   map[string]*chat
 	deletes *bool // whether the agent deletes sessions, once known
+	closing bool  // Close began: no agent starts any more
+	live    map[Agent]bool
 }
+
+// Terminals are the shells beside chats (internal/features/terminals).
+type Terminals interface {
+	// Within says whether a terminal runs in dir or a folder in it.
+	Within(dir string) bool
+	// CloseChat ends a chat's terminals.
+	CloseChat(chatID string)
+}
+
+// UseTerminals tells the chats about the terminals, which need the chats
+// to be made first.
+func (s *Service) UseTerminals(t Terminals) { s.terminals = t }
 
 // CopyHistory copies the agent's own record of a session from one folder's
 // history into another's, where the agent can fork it with the other folder
@@ -79,9 +96,45 @@ type Service struct {
 type CopyHistory func(sessionID, from, to string) (remove func() error, err error)
 
 func New(agent string, launch Launch, dialect Dialect, modes Modes, sessions Sessions, history CopyHistory, worktrees Worktrees, scratch string, publish func(model.Event)) *Service {
-	return &Service{agent: agent, launch: launch, dialect: dialect, modes: modes, sessions: sessions, history: history, worktrees: worktrees,
-		scratch: scratch, publish: publish, chats: map[string]*chat{}}
+	s := &Service{agent: agent, dialect: dialect, modes: modes, sessions: sessions, history: history, worktrees: worktrees,
+		scratch: scratch, publish: publish, chats: map[string]*chat{}, live: map[Agent]bool{}}
+	s.launch = s.started(launch)
+	return s
 }
+
+// started wraps launch: once Close has begun, no agent starts, and the
+// agents still running when it has ended the chats' (those a reopen or a
+// move was opening meanwhile) are closed too.
+func (s *Service) started(launch Launch) Launch {
+	return func(h acp.Handler) (Agent, error) {
+		s.mu.Lock()
+		closing := s.closing
+		s.mu.Unlock()
+		if closing {
+			return nil, errClosing
+		}
+		agent, err := launch(h)
+		if err != nil {
+			return nil, err
+		}
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		if s.closing {
+			agent.Close()
+			return nil, errClosing
+		}
+		s.live[agent] = true
+		go func() {
+			<-agent.Done()
+			s.mu.Lock()
+			delete(s.live, agent)
+			s.mu.Unlock()
+		}()
+		return agent, nil
+	}
+}
+
+var errClosing = errors.New("the daemon is stopping")
 
 type chat struct {
 	id       string // Nushi's id for the chat
@@ -91,33 +144,34 @@ type chat struct {
 	publish  func(model.Event)
 	sessions Sessions
 
-	mu        sync.Mutex
-	items     []model.Item
-	busy      bool                            // running a turn, or reopening or moving the session
-	halting   bool                            // being deleted: never reopens
-	stopping  bool                            // its agent is being stopped: nothing more goes to it
-	held      bool                            // the last turn was stopped or failed: the queue waits for the next
-	steering  bool                            // a steering worker hands the queue to the running turn
-	ownTurn   bool                            // the agent works on its own, outside a turn of Nushi's
-	kept      bool                            // the transcript outlived its agent: reopening doesn't replay into it
-	waiting   map[string]chan<- string        // permission prompts by item id, for the picked option
-	questions map[string]chan<- []model.Field // questions by item id, for the answer (nil: declined)
-	config    []model.ConfigOption
-	commands  []model.Command
-	usage     model.Usage
-	session   model.Session
-	canFork   bool                  // the agent can fork the session into side chats
-	canImage  bool                  // the agent takes images in prompts
-	sides     map[string]*chat      // the chat's side chats, by session id
-	parent    *chat                 // a side chat's chat
-	started   time.Time             // when the running turn started
-	done      chan struct{}         // closed when the running turn ends
-	sent      chan struct{}         // closed once the running turn's prompt is written
-	seq       int64                 // the last event's number
-	lastItem  int                   // the last item id given (item-N), never reused
-	probes    map[string]*silentRun // throwaway forks' runs, by session id
-	queue     []model.Message       // waiting for the agent's next chance
-	steer     bool                  // the agent takes messages into a running turn
+	mu           sync.Mutex
+	items        []model.Item
+	busy         bool                            // running a turn, or reopening or moving the session
+	halting      bool                            // being deleted: never reopens
+	stopping     bool                            // its agent is being stopped: nothing more goes to it
+	held         bool                            // the last turn was stopped or failed: the queue waits for the next
+	steering     bool                            // a steering worker hands the queue to the running turn
+	ownTurn      bool                            // the agent works on its own, outside a turn of Nushi's
+	kept         bool                            // the transcript outlived its agent: reopening doesn't replay into it
+	reopenFailed bool                            // the last reopen failed: only a message or a reload tries again
+	waiting      map[string]chan<- string        // permission prompts by item id, for the picked option
+	questions    map[string]chan<- []model.Field // questions by item id, for the answer (nil: declined)
+	config       []model.ConfigOption
+	commands     []model.Command
+	usage        model.Usage
+	session      model.Session
+	canFork      bool                  // the agent can fork the session into side chats
+	canImage     bool                  // the agent takes images in prompts
+	sides        map[string]*chat      // the chat's side chats, by session id
+	parent       *chat                 // a side chat's chat
+	started      time.Time             // when the running turn started
+	done         chan struct{}         // closed when the running turn ends
+	sent         chan struct{}         // closed once the running turn's prompt is written
+	seq          int64                 // the last event's number
+	lastItem     int                   // the last item id given (item-N), never reused
+	probes       map[string]*silentRun // throwaway forks' runs, by session id
+	queue        []model.Message       // waiting for the agent's next chance
+	steer        bool                  // the agent takes messages into a running turn
 	// forkAt is session/fork's meta to fork at a message, when the agent
 	// can (see Dialect).
 	forkAt func(messageID string) map[string]any
@@ -221,6 +275,7 @@ func (s *Service) newChat() *chat {
 // time each chat opens (model.Session.Throwaway).
 func (s *Service) Close() {
 	s.mu.Lock()
+	s.closing = true
 	open := slices.Collect(maps.Values(s.chats))
 	s.mu.Unlock()
 	var wg sync.WaitGroup
@@ -230,6 +285,12 @@ func (s *Service) Close() {
 		}
 	}
 	wg.Wait()
+	s.mu.Lock()
+	left := slices.Collect(maps.Keys(s.live))
+	s.mu.Unlock()
+	for _, agent := range left {
+		agent.Close() // being opened: no turn of it to end
+	}
 }
 
 // List returns every stored chat.

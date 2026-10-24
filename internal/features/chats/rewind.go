@@ -6,6 +6,7 @@ import (
 	"log"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/afrase/nushi/acp"
 	"github.com/afrase/nushi/internal/model"
@@ -74,6 +75,10 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 		return model.Message{}, err
 	}
 
+	// What changes the agent's sessions goes on when the app goes: its
+	// result is a session the chat must keep or throw away.
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Minute)
+	defer cancel()
 	var next string
 	var config []model.ConfigOption
 	if at == "" {
@@ -96,6 +101,9 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 			err = errors.New("the message is gone")
 		}
 		if err != nil {
+			if next != "" { // made, then not used: Delete deletes it, or the next reopen
+				c.throwawayLocked([]string{next}, false)
+			}
 			c.noticeLocked("error", "Couldn't rewind the chat: "+err.Error())
 			return "", err
 		}

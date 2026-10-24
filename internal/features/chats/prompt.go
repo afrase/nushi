@@ -47,6 +47,7 @@ func (s *Service) Prompt(chatID string, m model.Message, how Send) error {
 		if err := folderGone(c.session); err != nil {
 			return fmt.Errorf("the chat can't go on: %w", err)
 		}
+		c.reopenFailed = false // a message tries again
 		s.reopenLocked(c)
 		if how != SendNow || c.started.IsZero() {
 			break

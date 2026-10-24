@@ -5,6 +5,7 @@ package terminals
 import (
 	"crypto/rand"
 	"fmt"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -231,11 +232,23 @@ func (s *Service) Close(id string) error {
 // Follow takes every event: a chat archived or deleted ends its terminals.
 func (s *Service) Follow(e model.Event) {
 	if e.Removed || e.Session != nil && e.Session.Archived {
-		s.closeChat(e.ChatID)
+		s.CloseChat(e.ChatID)
 	}
 }
 
-func (s *Service) closeChat(chatID string) {
+// Within says whether a terminal (running or not: it can restart) is in
+// dir or a folder in it.
+func (s *Service) Within(dir string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return slices.ContainsFunc(s.terms, func(t *term) bool {
+		rel, err := filepath.Rel(dir, t.Folder)
+		return err == nil && filepath.IsLocal(rel)
+	})
+}
+
+// CloseChat ends a chat's terminals.
+func (s *Service) CloseChat(chatID string) {
 	gone := s.unlist(func(t *term) bool { return t.ChatID == chatID })
 	if len(gone) > 0 {
 		s.changed(chatID)

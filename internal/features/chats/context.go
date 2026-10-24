@@ -47,7 +47,7 @@ func (s *Service) ContextUsage(ctx context.Context, chatID string) (model.Contex
 	c.probes[fork] = run
 	c.mu.Unlock()
 	defer func() {
-		c.throwAway(agent, fork)
+		s.throwAway(c, agent, fork)
 		c.mu.Lock()
 		delete(c.probes, fork)
 		c.mu.Unlock()

@@ -92,7 +92,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 			old.Stop(stopGrace)
 		}
 		go s.discard(c, sides)
-		if left := oldWT != nil && wt != oldWT; left && (!fresh || !s.dropWorktree(oldWT)) {
+		if left := oldWT != nil && wt != oldWT; left && (!fresh || s.inUse(c, oldWT.Path) || !s.dropWorktree(oldWT)) {
 			c.mu.Lock()
 			c.saveLocked(func(s *model.Session) { // it stays, with the work in it, until Delete
 				s.EarlierWorktrees = append(slices.Clip(s.EarlierWorktrees), *oldWT)
@@ -142,4 +142,14 @@ func (s *Service) fork(ctx context.Context, c *chat, sid, from, to string) (open
 		}
 	}()
 	return c.openSession(ctx, s.launch, sid, to, true)
+}
+
+// inUse says whether something but chat c runs in dir: another chat, or a
+// terminal (c's too: it stays in its folder).
+func (s *Service) inUse(c *chat, dir string) bool {
+	if s.terminals != nil && s.terminals.Within(dir) {
+		return true
+	}
+	stored, _ := s.sessions.Sessions()
+	return slices.ContainsFunc(stored, func(sess model.Session) bool { return sess.ID != c.id && within(sess.Folder, dir) })
 }

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"slices"
 	"time"
 
 	"github.com/afrase/nushi/acp"
@@ -90,7 +89,7 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 	p.throwawayLocked([]string{id}, false)
 	p.mu.Unlock()
 	if ctx.Err() != nil { // the app went meanwhile: nobody will open it
-		p.throwAway(agent, id)
+		s.throwAway(p, agent, id)
 		return "", ctx.Err()
 	}
 	side := s.newChat()
@@ -98,6 +97,11 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 	side.sid, side.canImage = side.id, p.canImage
 	side.session = model.Session{ID: side.id, SessionID: side.sid, Agent: s.agent, Folder: folder, Title: "Side question", Created: time.Now()}
 	p.mu.Lock()
+	if p.agent != agent { // it ended meanwhile (reload, move, archive): the fork with it
+		p.mu.Unlock()
+		s.throwAway(p, agent, id)
+		return "", errors.New("the agent stopped")
+	}
 	p.sides[side.id] = side
 	p.mu.Unlock()
 	s.mu.Lock()
@@ -125,7 +129,7 @@ func (s *Service) CloseSide(id string) error {
 	agent := c.agent
 	c.agent = nil // what still follows it (a background command) stops
 	c.mu.Unlock()
-	c.parent.throwAway(agent, id)
+	s.throwAway(c.parent, agent, id)
 	return nil
 }
 
@@ -148,27 +152,34 @@ func (s *Service) CloseSides() {
 // throwAway has the chat's agent delete a session forked from the chat that
 // nobody will see again (a side chat, a /context fork), and again a moment
 // later for an agent that writes a little of it back as it ends
-// (Dialect.Redelete); then the chat forgets it. If that fails, the chat
-// keeps it, for a fresh agent to delete (see model.Session.Throwaway).
-func (c *chat) throwAway(agent Agent, sid string) {
-	del := func(last bool) {
+// (Dialect.Redelete); then the chat forgets it. If the agent can't (it
+// went, or is going, meanwhile), the chat keeps it, and a fresh agent
+// deletes it once that one has stopped (see discard).
+func (s *Service) throwAway(c *chat, agent Agent, sid string) {
+	del := func() error {
 		err := agent.DeleteSession(context.Background(), acp.DeleteSessionRequest{SessionID: acp.SessionID(sid)})
 		if err != nil {
 			log.Printf("deleting session %s: %v", sid, err)
 		}
-		if last {
-			c.mu.Lock()
-			defer c.mu.Unlock()
-			kept := slices.Contains(c.session.Throwaway, sid)
-			if err == nil && kept || err != nil && !kept {
-				c.throwawayLocked([]string{sid}, err == nil)
+		return err
+	}
+	last := func() {
+		err := del()
+		c.mu.Lock()
+		c.throwawayLocked([]string{sid}, err == nil)
+		c.mu.Unlock()
+		if err != nil {
+			select {
+			case <-agent.Done():
+			case <-time.After(3 * stopGrace):
 			}
+			s.discard(c, []string{sid})
 		}
 	}
 	if c.dialect.Redelete == 0 {
-		del(true)
+		last()
 		return
 	}
-	del(false)
-	time.AfterFunc(c.dialect.Redelete, func() { del(true) })
+	del()
+	time.AfterFunc(c.dialect.Redelete, last)
 }

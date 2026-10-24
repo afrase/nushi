@@ -3,8 +3,8 @@ package terminal
 import (
 	"os"
 	"os/exec"
-	"slices"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -130,5 +130,23 @@ func TestLaterProcessesDontGetTheTerminal(t *testing.T) {
 	}
 	if fd := strconv.Itoa(int(term.pty.Fd())); slices.Contains(strings.Fields(string(out)), fd) {
 		t.Errorf("a later process has the master (fd %s): %s", fd, out)
+	}
+}
+
+// An empty first argument isn't taken for padding: the arguments stay
+// where they are, and the environment out of the title.
+func TestCommandLineWithAnEmptyFirstArgument(t *testing.T) {
+	for _, args := range [][]string{{"", "30"}, {"sleep", "30"}} {
+		cmd := &exec.Cmd{Path: "/bin/sleep", Args: args, Env: []string{"SECRET_TOKEN=hunter2"}}
+		if err := cmd.Start(); err != nil {
+			t.Fatal(err)
+		}
+		time.Sleep(50 * time.Millisecond)
+		got := commandLine(cmd.Process.Pid)
+		cmd.Process.Kill()
+		cmd.Wait()
+		if want := strings.TrimSpace(args[0] + " 30"); got != want {
+			t.Errorf("commandLine of %q = %q, want %q", args, got, want)
+		}
 	}
 }

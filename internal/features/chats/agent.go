@@ -107,7 +107,7 @@ func initialize(ctx context.Context, launch Launch, h acp.Handler, meta map[stri
 // What the agent sends from then on is live, not a replay (kept).
 func (s *Service) useLocked(c *chat, o opened) {
 	c.agent, c.canFork, c.steer, c.canImage, c.sid, c.config = o.agent, o.agent.CanFork(), o.agent.CanSteer(), o.images, o.sid, o.config
-	c.forkAt, c.held, c.kept, c.ownTurn = o.forkAt, false, false, false
+	c.forkAt, c.held, c.kept, c.ownTurn, c.reopenFailed = o.forkAt, false, false, false, false
 	c.emitLocked(model.Event{ChatID: c.id, Config: slices.Clone(c.config)})
 	go s.watch(c, o.agent)
 }

@@ -127,6 +127,7 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 83. The trust card fails closed (security review S1, S2) | 7953 | 929 | 13624 | 682 |
 | 84. Skill hooks read as YAML (security review S3, S4) | 8017 | 929 | 13624 | 682 |
 | 85. A skill's front matter shown raw (security review S5–S7) | 7897 | 929 | 13624 | 682 |
+| 86. Processes and throwaway sessions (D69–D71, D84, D87, D88, D105, D107, D120, D121) | 8026 | 929 | 13624 | 682 |
 
 Steps over the ~500-line tripwire (code and tests, without generated code): 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 and this milestone removed more than they added.
 
@@ -171,6 +172,7 @@ What the code depends on, and how the adapter behaves. Everything Nushi does abo
 
 Open questions; what's settled is in `docs/adr/` or in the code.
 
+- New in R: a fresh chat moving out of its worktree keeps it (on record for Delete) while another chat or any terminal is in it, the chat's own included. Delete closes the chat's terminals before it removes a worktree. A reopen that fails isn't tried again on its own: the next message, Reload, Unarchive or a move tries again; a reopen gives up after 2 minutes. Once the daemon is stopping, no agent starts, and one still opening is closed.
 - New in R: a `.mcp.json` that can't be read (malformed, not a regular file) is left out of the MCP list, as Claude leaves it out; only the daemon's log says so. The trust card still lists it ("MCP servers Nushi couldn't read", with its text) and asks. A skill whose front matter mentions `hooks` anywhere (a plain text match) shows its front matter on the trust card, raw: Nushi no longer guesses which commands Claude reads out of it (steps 82–84 tried a line reader, then YAML; each left a gap). Front matter ends at a line of `---` alone; without one, the whole file counts. A file shown cut (past 4 KB) says how much of it is shown. A background command's end line counts once the output file stops growing after it.
 
 - New in Q: a question card takes the keyboard only from nothing, an empty box on the same screen, or another card: never from a terminal, a dialog or text being written. A pending permission shows its whole command, wrapped; an opened command's card shows it whole too. Archive asks first when a program runs in one of the chat's terminals. A message taken back from a subagent's queue (or by Stop or Rewind) keeps its subagent, as a chip; a replayed one can't, and says so. The "New worktree" choice is remembered only once the move worked.
