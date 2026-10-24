@@ -147,6 +147,10 @@ message PingRequest {}
 message PingResponse {
   // Bumped when the API grows; it only grows (ADR 0004).
   int32 api_version = 1;
+  // The daemon's executable as it started, "<size>-<mtime in ms>": the app
+  // compares it with the daemon it bundles, to offer a restart into a
+  // newer one.
+  string build = 2;
 }
 
 message ListChatsRequest {}

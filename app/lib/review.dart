@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'daemon.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
+import 'settings.dart';
 import 'syntax.dart';
 import 'widgets.dart';
 
@@ -139,7 +140,7 @@ void setComments(String chat, List<ReviewComment> comments) {
   reviews.value = {...reviews.value, chat: comments}
     ..removeWhere((_, v) => v.isEmpty);
   try {
-    _file.writeAsStringSync(jsonEncode(reviews.value));
+    writeWhole(_file, jsonEncode(reviews.value));
   } on Object {
     // Kept until the app quits.
   }

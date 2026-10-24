@@ -66,9 +66,11 @@ class PingRequest extends $pb.GeneratedMessage {
 class PingResponse extends $pb.GeneratedMessage {
   factory PingResponse({
     $core.int? apiVersion,
+    $core.String? build,
   }) {
     final result = PingResponse._();
     if (apiVersion != null) result.apiVersion = apiVersion;
+    if (build != null) result.build = build;
     return result;
   }
 
@@ -86,6 +88,7 @@ class PingResponse extends $pb.GeneratedMessage {
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: PingResponse.$_createMessage)
     ..aI(1, _omitFieldNames ? '' : 'apiVersion')
+    ..aOS(2, _omitFieldNames ? '' : 'build')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -119,6 +122,18 @@ class PingResponse extends $pb.GeneratedMessage {
   $core.bool hasApiVersion() => $_has(0);
   @$pb.TagNumber(1)
   void clearApiVersion() => $_clearField(1);
+
+  /// The daemon's executable as it started, "<size>-<mtime in ms>": the app
+  /// compares it with the daemon it bundles, to offer a restart into a
+  /// newer one.
+  @$pb.TagNumber(2)
+  $core.String get build => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set build($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasBuild() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearBuild() => $_clearField(2);
 }
 
 class ListChatsRequest extends $pb.GeneratedMessage {
