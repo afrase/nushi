@@ -1,0 +1,55 @@
+# 0034. Noise between the phone and the daemon; pairing by QR code (replaces 0006)
+
+## Context
+A phone talks to the daemon through a relay anyone may run ([0033](0033-the-relay-is-a-dumb-pipe.md)), so everything must be encrypted and authenticated end to end. The owner settled it ("Owner decisions" in `nushi-mobile-research.md`): a standard Noise pattern, unmodified, `flynn/noise` in the daemon and Dart on the phone (no Go there), checked against the standard test vectors; no paid review, an adversarial review by subagents instead. This ADR is what that review checks against.
+
+## Decision
+**Patterns.** `Noise_IKpsk1_25519_ChaChaPoly_BLAKE2s` to pair, `Noise_IK_25519_ChaChaPoly_BLAKE2s` after (`noiseconn/`, `packages/noise`). The phone is always the initiator.
+- IK because the phone knows the daemon's static key beforehand (from the QR code), so it is pinned from the first message: a relay can't swap it. The phone's static key travels encrypted in the first message, so the relay never sees which device connects. One round trip; both sides' ephemeral keys give forward secrecy.
+- `psk1` puts the QR's one-time secret into the first message: the daemon rejects a phone without it before answering, and stays waiting for the right one.
+- Not XX (it would send the daemon's key, which the phone already has, and take a third message); not KK (the daemon would have to learn which device it is before the handshake, so a device id would go in the clear); nothing home-made on top of the spec.
+- Both handshake payloads are empty, so no data goes out before the handshake ends (no 0-RTT data to replay).
+- The prologue is `nushi-remote/1`, a zero byte, and the rendezvous id, so a handshake meant for one id fails on another.
+
+**The channel.** Each WebSocket message is one Noise message (at most 65,535 bytes). Nonces are Noise's 64-bit counters, implicit and in order; a message that fails to decrypt (changed, replayed, reordered, or after one that was dropped) ends the connection. Each direction rekeys (Noise's `REKEY`) after every 4,096 messages. Inside, HTTP/2 carries the existing Connect API unchanged: the daemon serves it on the channel as a `net.Conn`; the phone's generated client runs over `ClientTransportConnection.viaStreams`.
+
+**Keys.**
+- The daemon's static key and its rendezvous id are made once and kept in `remote-key.json` (0600) in the data folder. Deleting it means pairing every phone again.
+- A device's key is made and kept on the device; the daemon keeps only its public key, in `devices.json` (0600) with its name and the times it paired and was last seen.
+- Nushi never reads the agents' or the user's credentials.
+
+**Pairing.**
+1. Settings → Remote access → "Pair a phone". The daemon makes a one-time rendezvous id and a 32-byte secret, waits at the relay on that id for 5 minutes, and the Mac shows a QR code: `nushi://pair?r=<relay URL>&i=<pairing id>&k=<daemon's public key>&s=<secret>`. It goes camera to screen, never through the relay.
+2. The phone makes its key and runs `IKpsk1` on the pairing id, then sends its name in its first transport message. Only once that decrypts (the phone holds the session, so it held the secret) does the daemon stop waiting on the pairing id: the secret and the id are used up.
+3. Both screens show a six-digit code from the handshake hash. The Mac shows the device's name and the code, with Allow and Deny. The user must check the phone shows the same code: that is what stops someone who saw the QR code and connected first (the real phone then shows no code at all).
+4. On Allow the daemon stores the device and sends its long-lived rendezvous id inside the channel (it is never in the QR code); the same channel then carries the API. On Deny, or no answer within 2 minutes, it sends a refusal and closes.
+
+**Later connections.** The phone dials the daemon's id and runs `IK`. The daemon answers only a static key in `devices.json`; anything else gets no answer. A device counts as connected (and its last-seen time moves) only once its first transport message decrypts.
+
+**Revoking** a device removes it from `devices.json` and closes its connections at once; its key then gets no answer. Turning remote access off closes the relay link and every remote connection.
+
+**A paired device is a full client**, like the Mac app ("Owner decisions": no device modes): chats, permission answers, and terminals too, which amends [0022](0022-the-daemon-owns-terminals.md). An agent in a permissive mode already runs anything the phone asks for, so leaving terminals out would protect nothing; the agent's own mode stays the only permission control ([0007](0007-harness-owns-permissions.md)).
+
+## Threat model
+What a paired device gets is code execution as the user on the Mac. Everything below is about who can get that, or read what flows.
+
+| Who | Can | Can't |
+|---|---|---|
+| The relay, its host, or the networks in between (passive or active) | see addresses, rendezvous ids, timing and sizes (0033); drop, delay or refuse traffic; make the daemon do a handshake's work per dial | read, change, replay, reorder or inject a message; pose as the daemon (its key is pinned from the QR code) or as a phone (the daemon answers only known keys); pair a phone (no secret); tell which device connects |
+| Someone who sees or photographs the QR code within its 5 minutes | connect first and get a confirm prompt on the Mac, under any name | get in without the user pressing Allow while the phone shows another code, or no code |
+| Someone with a used or expired QR code | nothing: the id and secret are used up | |
+| A revoked device | dial the daemon's id (it still knows it) and take its waiting connection for one failed handshake at a time | get an answer, or keep a connection |
+| Another relay user | share the relay's caps | reach this daemon's ids without knowing them (random, 128 bits) |
+| A stolen phone, unlocked | everything a paired device can, until revoked on the Mac | |
+| Same-user processes on the Mac, the agent included | read the daemon's key and devices file, as they can read the token ([0024](0024-the-agent-can-read-the-token.md)) | (out of scope, as for the local token) |
+
+Also outside what this protects:
+- Metadata (0033's list) and availability.
+- A leaked daemon key lets its holder pose as the daemon to phones and, through IK's key-compromise impersonation, as a paired phone to the daemon: delete `remote-key.json` and pair again.
+- No post-quantum key exchange: X25519 only, so traffic recorded now could be read by a future quantum computer.
+- Protecting the device key on the phone (Keychain, app lock) is the phone app's job, still to come.
+- The code's correctness: Noise is checked against cacophony's and snow's vectors in both implementations, and Go against Dart; the pairing and channel code around it is new.
+
+## Consequences
+- Remote access is off until turned on; while on, the daemon holds one waiting connection at the relay, and nothing listens on the Mac.
+- A phone newer than the daemon will need the usual "Update Nushi on the Mac"; the protocol carries a version in its prologue (`/1`) for a later change.

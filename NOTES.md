@@ -202,6 +202,8 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 104. A status bar: agents and memory; API 46 | 11328 | 984 | 14373 | 682 |
 | 105. By hand, the bar following each chat, and the docs | 11328 | 984 | 14377 | 682 |
 | 106. The relay (ADR 0033) | 11328 | 984 | 14377 | 682 | 458 |
+| (106's security fixes) | 11328 | 984 | 14377 | 682 | 591 |
+| 107. The Noise channel in Go (ADR 0034) | 11328 | 984 | 14377 | 682 | 829 |
 
 Steps over the ~500-line tripwire (code and tests, without generated code): 98 (2,384 with its tests: Ante's whole bridge and its fake), 99 (901: two agents, two trust packages, the shared trust files), 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 removed more than it added.
 

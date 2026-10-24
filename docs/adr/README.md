@@ -33,3 +33,4 @@
 - [0031](0031-warn-before-a-folder-runs-code-for-ante-and-omp.md) Warn before a folder's own code runs, for Ante and omp; the files are read by `internal/folderfiles`
 - [0032](0032-idle-chats-sleep.md) Idle chats sleep: their agent stops, a message wakes them through `session/load`
 - [0033](0033-the-relay-is-a-dumb-pipe.md) The relay is a dumb pipe that keeps nothing; what it can still see (replaces 0006)
+- [0034](0034-noise-between-phone-and-daemon.md) Noise (IKpsk1 to pair, IK after) between the phone and the daemon; pairing by QR code; a paired device is a full client; the threat model (replaces 0006, amends 0022)

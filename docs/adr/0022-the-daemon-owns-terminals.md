@@ -15,3 +15,6 @@ Users want a shell next to the agent, in the chat's folder or worktree, like Cla
 
 ## Alternatives considered
 - Shells in the app (a PTY plugin in Flutter): simpler to wire, but they would die with the app, and the app is the part that quits and updates.
+
+## Amended
+By [0034](0034-noise-between-phone-and-daemon.md): a paired device is a full client and gets terminals too; an agent in a permissive mode already runs what the phone asks for.
