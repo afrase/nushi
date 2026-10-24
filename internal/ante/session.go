@@ -117,6 +117,7 @@ func (s *session) await(ctx context.Context, op any, want ...string) (event, err
 }
 
 func (s *session) handle(ev event) {
+	olds := s.readOlds(ev) // before the lock: it reads files
 	s.mu.Lock()
 	if ch := s.waiters[ev.Parent]; ch != nil {
 		select {
@@ -139,9 +140,9 @@ func (s *session) handle(ev event) {
 	case "MessageDelta", "AgentMessage", "ThinkingDelta", "Thinking":
 		out = s.textLocked(ev)
 	case "ToolStart", "ToolUpdate", "ToolEnd":
-		out = s.toolLocked(ev, true)
+		out = s.toolLocked(ev, olds)
 	case "TurnPause":
-		out = s.pauseLocked(ev)
+		out = s.pauseLocked(ev, olds)
 	case "UsageUpdate":
 		out = s.usageLocked(ev)
 	case "TurnEnd":

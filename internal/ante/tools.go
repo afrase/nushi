@@ -2,10 +2,14 @@ package ante
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/afrase/nushi/acp"
 )
@@ -47,20 +51,20 @@ type toolArgs struct {
 	NewString string `json:"new_string"`
 }
 
-// toolCall describes a call as it starts: its title (the command, the
-// file…), its file, and for an edit the change. A Write's old text is read
-// from disk only live (live), before the call writes it.
-func (s *session) toolCall(t toolUse, status string, live bool) acp.ToolCall {
+// toolCall describes a call as it starts: its title (a shell command, else
+// the tool and what it works on), its file, and for an edit the change. A
+// Write's old text is what olds has for it (read before the call writes,
+// live; none in a replay).
+func (s *session) toolCall(t toolUse, status string, olds map[string]oldText) acp.ToolCall {
 	var a toolArgs
 	json.Unmarshal(t.Args, &a)
 	call := acp.ToolCall{ToolCallID: acp.ToolCallID(t.ID), Title: t.Name, Kind: kindOf(t.Name), Status: acp.ToolCallStatus(status), RawInput: t.Args}
-	path := a.FilePath
-	if path != "" && !filepath.IsAbs(path) {
-		path = filepath.Join(s.cwd, path)
-	}
+	path := s.path(a.FilePath)
 	switch {
-	case a.Command != "":
+	case t.Name == "Bash" && a.Command != "": // only Ante's shell's command stands alone
 		call.Title = a.Command
+	case a.Command != "":
+		call.Title = t.Name + " " + a.Command
 	case a.FilePath != "":
 		call.Title = t.Name + " " + a.FilePath
 	case a.Pattern != "":
@@ -77,13 +81,89 @@ func (s *session) toolCall(t toolUse, status string, live bool) acp.ToolCall {
 	case "Edit":
 		call.Content = []acp.ToolCallContent{diff(path, a.OldString, a.NewString)}
 	case "Write":
-		var old []byte
-		if live {
-			old, _ = os.ReadFile(path)
+		old := olds[t.ID]
+		call.Content = []acp.ToolCallContent{diff(path, old.text, a.Content)}
+		if old.note != "" {
+			call.Content = append(call.Content, text(old.note)...)
 		}
-		call.Content = []acp.ToolCallContent{diff(path, string(old), a.Content)}
 	}
 	return call
+}
+
+func (s *session) path(p string) string {
+	if p != "" && !filepath.IsAbs(p) {
+		return filepath.Join(s.cwd, p)
+	}
+	return p
+}
+
+// oldText is what a file held before a Write, for its diff, or why it
+// isn't shown.
+type oldText struct{ text, note string }
+
+// maxOld is the most of a file a diff shows, as the daemon's diffs.
+const maxOld = 1 << 20
+
+// readOlds reads, before the calls run, the files that the Writes an event
+// starts or asks about will replace, by call id. It reads only regular
+// files, without following a link or waiting on a fifo, and at most
+// maxOld: whatever path the model names, it can't block or fill memory.
+// It runs without the session's lock.
+func (s *session) readOlds(ev event) map[string]oldText {
+	var calls []toolUse
+	switch ev.Name {
+	case "ToolStart":
+		var t toolUse
+		json.Unmarshal(ev.Payload, &t)
+		calls = []toolUse{t}
+	case "TurnPause":
+		var p struct {
+			Reason struct {
+				Approval struct {
+					Tools []toolUse `json:"tools"`
+				}
+			} `json:"reason"`
+		}
+		json.Unmarshal(ev.Payload, &p)
+		calls = p.Reason.Approval.Tools
+	}
+	olds := map[string]oldText{}
+	for _, t := range calls {
+		if t.Name == "Write" {
+			var a toolArgs
+			json.Unmarshal(t.Args, &a)
+			olds[t.ID] = readOld(s.path(a.FilePath))
+		}
+	}
+	return olds
+}
+
+func readOld(path string) oldText {
+	fi, err := os.Lstat(path)
+	switch {
+	case path == "" || errors.Is(err, fs.ErrNotExist):
+		return oldText{} // a new file
+	case err != nil || !fi.Mode().IsRegular():
+		return oldText{note: "Not shown: what this replaces isn't a regular file."}
+	case fi.Size() > maxOld:
+		return oldText{note: "Not shown: the file this replaces is over 1 MB."}
+	}
+	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
+	if err != nil {
+		return oldText{note: "Not shown: " + err.Error()}
+	}
+	defer f.Close()
+	if fi, err := f.Stat(); err != nil || !fi.Mode().IsRegular() {
+		return oldText{note: "Not shown: what this replaces isn't a regular file."}
+	}
+	b, err := io.ReadAll(io.LimitReader(f, maxOld+1))
+	switch {
+	case err != nil:
+		return oldText{note: "Not shown: " + err.Error()}
+	case len(b) > maxOld:
+		return oldText{note: "Not shown: the file this replaces is over 1 MB."}
+	}
+	return oldText{text: string(b)}
 }
 
 func diff(path, old, new string) acp.ToolCallContent {
@@ -91,15 +171,15 @@ func diff(path, old, new string) acp.ToolCallContent {
 }
 
 // announceLocked tells the client of a call.
-func (s *session) announceLocked(t toolUse, status string, live bool) acp.SessionUpdate {
+func (s *session) announceLocked(t toolUse, status string, olds map[string]oldText) acp.SessionUpdate {
 	s.tools[t.ID] = t.Name
-	call := s.toolCall(t, status, live)
+	call := s.toolCall(t, status, olds)
 	return acp.SessionUpdate{SessionUpdate: "tool_call", ToolCall: &call}
 }
 
 // toolLocked follows a call: it starts (or, after its approval, runs),
 // reports progress, ends.
-func (s *session) toolLocked(ev event, live bool) []acp.SessionUpdate {
+func (s *session) toolLocked(ev event, olds map[string]oldText) []acp.SessionUpdate {
 	switch ev.Name {
 	case "ToolStart":
 		var t toolUse
@@ -107,7 +187,7 @@ func (s *session) toolLocked(ev event, live bool) []acp.SessionUpdate {
 		if _, ok := s.tools[t.ID]; ok { // shown with its approval
 			return []acp.SessionUpdate{update(acp.ToolCallUpdate{ToolCallID: acp.ToolCallID(t.ID), Status: "in_progress"})}
 		}
-		return []acp.SessionUpdate{s.announceLocked(t, "in_progress", live)}
+		return []acp.SessionUpdate{s.announceLocked(t, "in_progress", olds)}
 	case "ToolUpdate":
 		var p struct {
 			ID      string `json:"tool_use_id"`
@@ -135,7 +215,7 @@ func (s *session) toolLocked(ev event, live bool) []acp.SessionUpdate {
 		}
 		var out []acp.SessionUpdate
 		if _, ok := s.tools[p.ID]; !ok { // denied or refused before it started
-			out = append(out, s.announceLocked(toolUse{ID: p.ID, Name: p.Name}, string(status), live))
+			out = append(out, s.announceLocked(toolUse{ID: p.ID, Name: p.Name}, string(status), nil))
 		}
 		delete(s.tools, p.ID)
 		return append(out, update(u))

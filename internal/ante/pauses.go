@@ -13,7 +13,7 @@ import (
 // pauseLocked asks the client about a paused turn: permission for the
 // calls waiting on it (shown first, as Ante pauses before it starts them),
 // or the model's questions.
-func (s *session) pauseLocked(ev event) []acp.SessionUpdate {
+func (s *session) pauseLocked(ev event, olds map[string]oldText) []acp.SessionUpdate {
 	var p struct {
 		TurnID string          `json:"turn_id"`
 		Reason json.RawMessage `json:"reason"`
@@ -29,10 +29,10 @@ func (s *session) pauseLocked(ev event) []acp.SessionUpdate {
 		var out []acp.SessionUpdate
 		for _, t := range a.Tools {
 			if _, ok := s.tools[t.ID]; !ok {
-				out = append(out, s.announceLocked(t, "pending", true))
+				out = append(out, s.announceLocked(t, "pending", olds))
 			}
 		}
-		go s.approve(p.TurnID, a.Tools)
+		go s.approve(p.TurnID, a.Tools, olds)
 		return out
 	case "Question":
 		var q questions
@@ -44,7 +44,7 @@ func (s *session) pauseLocked(ev event) []acp.SessionUpdate {
 
 // approve asks permission for each call and answers the host for all at
 // once. A call the client cancelled (the turn was stopped) is denied.
-func (s *session) approve(turnID string, tools []toolUse) {
+func (s *session) approve(turnID string, tools []toolUse, olds map[string]oldText) {
 	type decision struct {
 		ToolUseID string `json:"tool_use_id"`
 		Decision  string `json:"decision"`
@@ -55,7 +55,7 @@ func (s *session) approve(turnID string, tools []toolUse) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			call := s.toolCall(t, "pending", true)
+			call := s.toolCall(t, "pending", olds)
 			req := acp.RequestPermissionRequest{SessionID: acp.SessionID(s.id), Options: permissionOptions,
 				ToolCall: acp.ToolCallUpdate{ToolCallID: call.ToolCallID, Title: call.Title, Kind: call.Kind, Status: call.Status,
 					Content: call.Content, Locations: call.Locations, RawInput: call.RawInput}}
