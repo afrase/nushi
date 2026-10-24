@@ -114,6 +114,7 @@ type chat struct {
 	done      chan struct{}         // closed when the running turn ends
 	sent      chan struct{}         // closed once the running turn's prompt is written
 	seq       int64                 // the last event's number
+	lastItem  int                   // the last item id given (item-N), never reused
 	probes    map[string]*silentRun // throwaway forks' runs, by session id
 	queue     []model.Message       // waiting for the agent's next chance
 	steer     bool                  // the agent takes messages into a running turn
@@ -299,10 +300,15 @@ func (c *chat) statusChangedLocked() {
 	c.emitLocked(model.Event{ChatID: c.id, Status: &st})
 }
 
-// cancelLocked stops the chat's running turn: the agent is told to stop,
-// and the prompts it waits on are cancelled, as ACP asks of a client.
+// cancelLocked stops the chat's running turn, Nushi's or the agent's own
+// (after a background task): the agent is told to stop, and the prompts it
+// waits on are cancelled, as ACP asks of a client.
 func (c *chat) cancelLocked() error {
-	if c.started.IsZero() || c.agent == nil {
+	if c.agent == nil {
+		return nil
+	}
+	own := c.started.IsZero() && (c.ownTurn || len(c.waiting)+len(c.questions) > 0)
+	if c.started.IsZero() && !own {
 		return nil // no turn runs
 	}
 	for _, answer := range c.waiting {
@@ -314,6 +320,11 @@ func (c *chat) cancelLocked() error {
 	clear(c.waiting)
 	clear(c.questions)
 	agent, cancel := c.agent, acp.CancelNotification{SessionID: acp.SessionID(c.sid)}
+	if own {
+		c.ownTurn = false
+		c.statusChangedLocked()
+		return agent.Cancel(cancel)
+	}
 	select {
 	case <-c.sent:
 		return agent.Cancel(cancel)
@@ -342,7 +353,8 @@ func (c *chat) itemLocked(id string) *model.Item {
 // addLocked appends an item, giving it an id if it has none, and publishes it.
 func (c *chat) addLocked(it model.Item) string {
 	if it.ID == "" {
-		it.ID = "item-" + strconv.Itoa(len(c.items)+1)
+		c.lastItem++
+		it.ID = "item-" + strconv.Itoa(c.lastItem)
 	}
 	if it.Kind == model.UserMessage {
 		it.ForkAt = c.forkPointLocked()

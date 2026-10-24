@@ -133,6 +133,11 @@ type Item struct {
 	RelayTo string
 	// Tool is a tool call's tool, when the agent names it ("Read").
 	Tool string
+	// TaskID is the agent's id for the command a tool call left running in
+	// the background, when its result says (structured, not its text);
+	// InBackground says its input asked for that.
+	TaskID       string
+	InBackground bool
 	// ForkAt is, for a user message, the agent's message the conversation
 	// before it ends with: where a rewind to it forks the session.
 	// Rewindable says a rewind to it can fork there (or it is the first).
@@ -245,6 +250,9 @@ type Event struct {
 	// Cut is the item the transcript was cut back before: it and every
 	// item after it are gone.
 	Cut string
+	// Dropped is an item that's gone (a message the agent never got); the
+	// rest stay.
+	Dropped string
 	// Terminals, when not nil, are the chat's terminals, all of them. These
 	// events aren't numbered (Seq is 0).
 	Terminals *[]Terminal

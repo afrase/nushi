@@ -7,18 +7,33 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/afrase/nushi/internal/model"
 )
 
-var shellStart = regexp.MustCompile(`Command running in background with ID: (\S+)\. Output is being written to: (/\S+\.output)\.`)
+// shellFile is where Claude says a background command's output goes, in
+// each of its sentences for one ("Command running in background with ID:
+// X.", "…was moved to the background (ID: X)…").
+var shellFile = regexp.MustCompile(`Output is being written to: (/\S+/tasks/[^\s/]+?\.output)(?:\.|\s|$)`)
 
-// Shell reads a Bash call's output that says Claude runs its command in
-// the background: the task's id and the file Claude writes its output to.
-func Shell(output string) (id, file string, ok bool) {
-	m := shellStart.FindStringSubmatch(output)
-	if m == nil || filepath.Base(m[2]) != m[1]+".output" || filepath.Base(filepath.Dir(m[2])) != "tasks" {
+// Shell reads a Bash call that left its command running in the background:
+// the task's id and the file Claude writes its output to. Only what is
+// structured marks such a call (the task id in its result, or its input
+// asking for the background): its text could be any command's output, a
+// README's say. The text gives only the file, of that task.
+func Shell(it model.Item) (id, file string, ok bool) {
+	if it.Tool != "Bash" || it.TaskID == "" && !it.InBackground {
 		return "", "", false
 	}
-	return m[1], m[2], true
+	m := shellFile.FindStringSubmatch(it.Text)
+	if m == nil {
+		return "", "", false
+	}
+	id = strings.TrimSuffix(filepath.Base(m[1]), ".output")
+	if it.TaskID != "" && it.TaskID != id || !strings.Contains(it.Text, "ID: "+id) {
+		return "", "", false
+	}
+	return id, m[1], true
 }
 
 // shellTail is how much of a background command's output is read.

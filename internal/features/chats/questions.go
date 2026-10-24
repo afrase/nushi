@@ -44,17 +44,21 @@ func (c *chat) createElicitation(ctx context.Context, req acp.CreateElicitationR
 	defer c.mu.Unlock()
 	delete(c.questions, id)
 	c.statusChangedLocked()
-	it := c.itemLocked(id)
+	status := "answered"
 	switch {
 	case !ok:
-		it.Status = "cancelled"
+		status = "cancelled"
 	case answered == nil:
-		it.Status = "declined"
-	default:
-		it.Status, it.Fields = "answered", answered
+		status = "declined"
 	}
-	c.publishLocked(*it)
-	switch it.Status {
+	if it := c.itemLocked(id); it != nil { // nil once rewound or reloaded past
+		it.Status = status
+		if ok && answered != nil {
+			it.Fields = answered
+		}
+		c.publishLocked(*it)
+	}
+	switch status {
 	case "cancelled":
 		return &acp.CreateElicitationResponse{Action: "cancel"}, nil
 	case "declined":
@@ -76,13 +80,13 @@ func (s *Service) AnswerQuestion(chatID, itemID string, values map[string][]stri
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	answer := c.questions[itemID]
-	if answer == nil {
+	answer, it := c.questions[itemID], c.itemLocked(itemID)
+	if answer == nil || it == nil {
 		return fmt.Errorf("no pending question %q", itemID)
 	}
 	var fields []model.Field
 	if values != nil {
-		fields = slices.Clone(c.itemLocked(itemID).Fields)
+		fields = slices.Clone(it.Fields)
 		for i := range fields {
 			fields[i].Values = values[fields[i].ID]
 			if err := check(fields[i]); err != nil {

@@ -41,6 +41,7 @@ type fakeAgent struct {
 	sendGate     chan struct{} // when set, writing a prompt waits until it is closed
 	steerGate    chan struct{} // when set, steering waits until it is closed
 	refuseSteer  bool          // steering answers "no turn runs"
+	steerErr     error         // steering fails
 	steerable    bool
 	prompts      []string // every prompt's text, and every message steered in
 	steered      []string
@@ -174,8 +175,8 @@ func (f *fakeAgent) Steer(_ context.Context, _ acp.SessionID, prompt []acp.Conte
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	if f.refuseSteer {
-		return false, nil
+	if f.refuseSteer || f.steerErr != nil {
+		return false, f.steerErr
 	}
 	f.steered = append(f.steered, prompt[0].Text.Text)
 	return true, nil

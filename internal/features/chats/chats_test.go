@@ -331,9 +331,11 @@ func TestBackgroundShellsAreFollowed(t *testing.T) {
 		return []acp.ToolCallContent{{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: s}}}}}
 	}
 	for _, u := range []acp.SessionUpdate{
-		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "sleep 9", Kind: "execute", Status: "pending"}},
+		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "sleep 9", Kind: "execute", Status: "pending",
+			Meta: map[string]any{"claudeCode": map[string]any{"toolName": "Bash"}}}},
 		{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed",
-			Content: text("Command running in background with ID: b1. Output is being written to: " + file + ". You will be notified.")}},
+			Content: text("Command running in background with ID: b1. Output is being written to: " + file + ". You will be notified."),
+			Meta:    map[string]any{"claudeCode": map[string]any{"toolName": "Bash", "toolResponse": map[string]any{"backgroundTaskId": "b1"}}}}},
 	} {
 		c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: u})
 	}

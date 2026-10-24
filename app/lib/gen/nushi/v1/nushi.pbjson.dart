@@ -1483,6 +1483,7 @@ const EventsResponse$json = {
       '9': 0,
       '10': 'terminals'
     },
+    {'1': 'dropped', '3': 13, '4': 1, '5': 9, '9': 0, '10': 'dropped'},
   ],
   '8': [
     {'1': 'kind'},
@@ -1499,7 +1500,8 @@ final $typed_data.Uint8List eventsResponseDescriptor = $convert.base64Decode(
     'NIAFIIY29tbWFuZHMSGgoHcmVtb3ZlZBgIIAEoCEgAUgdyZW1vdmVkEicKBXVzYWdlGAkgASgL'
     'Mg8ubnVzaGkudjEuVXNhZ2VIAFIFdXNhZ2USKwoFcXVldWUYCiABKAsyEy5udXNoaS52MS5DaG'
     'F0UXVldWVIAFIFcXVldWUSEgoDY3V0GAsgASgJSABSA2N1dBI3Cgl0ZXJtaW5hbHMYDCABKAsy'
-    'Fy5udXNoaS52MS5DaGF0VGVybWluYWxzSABSCXRlcm1pbmFsc0IGCgRraW5k');
+    'Fy5udXNoaS52MS5DaGF0VGVybWluYWxzSABSCXRlcm1pbmFscxIaCgdkcm9wcGVkGA0gASgJSA'
+    'BSB2Ryb3BwZWRCBgoEa2luZA==');
 
 @$core.Deprecated('Use chatConfigDescriptor instead')
 const ChatConfig$json = {

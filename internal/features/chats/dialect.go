@@ -33,11 +33,11 @@ type Dialect struct {
 	// ReportElsewhere says a subagent call's output only points at its
 	// report, which then isn't its result.
 	ReportElsewhere func(output string) bool
-	// Shell says a tool call's output tells it left its command running in
-	// the background: the task's id and the file its output goes to;
+	// Shell says a tool call left its command running in the background:
+	// the task's id and the file its output goes to;
 	// ReadShell reads that file: the output so far, and how the command
 	// ended ("" while it runs).
-	Shell     func(output string) (id, file string, ok bool)
+	Shell     func(it model.Item) (id, file string, ok bool)
 	ReadShell func(id, file string) (output, end string, err error)
 	// SubagentID reads the agent's id for a subagent from its call's output
 	// (Claude's ToolCall sets it while the call runs; a replayed call has

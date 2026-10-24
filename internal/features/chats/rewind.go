@@ -13,10 +13,14 @@ import (
 
 // forkPointLocked is where a rewind to just before a new user message forks
 // the session: the last message of the agent's own (not a subagent's),
-// if the agent named it; "" if there is none.
+// if the agent named it; "" if there is none, or if a user message comes
+// after it (one the agent answered without words: a fork there would drop
+// it).
 func (c *chat) forkPointLocked() string {
 	for i := len(c.items) - 1; i >= 0; i-- {
-		if it := c.items[i]; it.Kind == model.AgentMessage && it.Parent == "" {
+		if it := c.items[i]; it.Kind == model.UserMessage {
+			return ""
+		} else if it.Kind == model.AgentMessage && it.Parent == "" {
 			if strings.HasPrefix(it.ID, "item-") { // no messageId: can't fork there
 				return ""
 			}
@@ -53,6 +57,8 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 		switch {
 		case c.busy:
 			return errors.New("the chat is busy; rewind once the turn has ended")
+		case c.ownTurn || len(c.waiting)+len(c.questions) > 0:
+			return errors.New("the agent is working on its own (a background task ended); stop it, or rewind once it's done")
 		case i < 0 || c.items[i].Kind != model.UserMessage:
 			return errors.New("no such message")
 		case !c.rewindableLocked(i):

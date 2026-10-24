@@ -705,6 +705,8 @@ message EventsResponse {
     // The chat's terminals, all of them, in order; these events have no
     // seq.
     ChatTerminals terminals = 12;
+    // This item is gone (a message the agent never got); the rest stay.
+    string dropped = 13;
   }
 }
 

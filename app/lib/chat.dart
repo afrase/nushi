@@ -167,6 +167,8 @@ class ChatState extends ChangeNotifier {
       case EventsResponse_Kind.cut:
         final i = items.indexWhere((it) => it.id == e.cut);
         if (i >= 0) items.removeRange(i, items.length);
+      case EventsResponse_Kind.dropped:
+        items.removeWhere((it) => it.id == e.dropped);
       case EventsResponse_Kind.status:
         status(e.status);
       case EventsResponse_Kind.chat ||
