@@ -46,10 +46,21 @@ class ChangeSpan {
   /// Branch when the branch has commits of its own, else Uncommitted.
   static Future<ChangeSpan> of(Daemon daemon, ChatState chat) async {
     final client = daemon.client, folder = chat.folder;
-    final wtBase = chat.worktree?.base ?? '';
-    var status = await client.getFolderStatus(
-      GetFolderStatusRequest(folder: folder, base: wtBase),
-    );
+    var wtBase = chat.worktree?.base ?? '';
+    GetFolderStatusResponse status;
+    try {
+      status = await client.getFolderStatus(
+        GetFolderStatusRequest(folder: folder, base: wtBase),
+      );
+    } on Object {
+      if (wtBase.isEmpty) rethrow;
+      // Its base branch is gone (merged and deleted, say): from the commit
+      // it started from, else (an older worktree) the default branch.
+      wtBase = chat.worktree!.baseCommit;
+      status = await client.getFolderStatus(
+        GetFolderStatusRequest(folder: folder, base: wtBase),
+      );
+    }
     final base = wtBase.isNotEmpty ? wtBase : status.defaultBase;
     final scopes = ChangeSpan(Scope.uncommitted, base, status).scopes;
     final picked = Scope.values.where((s) => s.name == chat.scope).firstOrNull;

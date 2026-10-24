@@ -177,8 +177,8 @@ func (s *server) PlanDeleteChat(ctx context.Context, req *connect.Request[nushiv
 	for _, w := range p.Worktrees {
 		wt, st := w.Worktree, w.State
 		plan := &nushiv1.WorktreePlan{
-			Worktree: &nushiv1.Worktree{Repo: wt.Repo, Path: wt.Path, Branch: wt.Branch, Base: wt.Base},
-			State:    &nushiv1.WorktreeState{Gone: st.Gone, Changed: int32(st.Changed), Commits: int32(st.Commits), BranchGone: st.BranchGone},
+			Worktree: &nushiv1.Worktree{Repo: wt.Repo, Path: wt.Path, Branch: wt.Branch, Base: wt.Base, BaseCommit: wt.BaseCommit},
+			State:    &nushiv1.WorktreeState{Gone: st.Gone, Changed: int32(st.Changed), Ignored: int32(st.Ignored), Commits: int32(st.Commits), BranchGone: st.BranchGone},
 		}
 		if w.StateErr != nil {
 			plan.State.Error = w.StateErr.Error()

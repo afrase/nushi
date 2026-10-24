@@ -57,7 +57,7 @@ func (s *Service) dropWorktree(wt *model.Worktree) {
 	st, err := s.worktrees.Inspect(ctx, *wt)
 	switch {
 	case err != nil:
-	case st.Changed > 0 || st.Commits > 0:
+	case st.Changed > 0 || st.Ignored > 0 || st.Commits > 0:
 		err = errors.New("it has work in it")
 	default:
 		if err = s.worktrees.Remove(ctx, *wt, false); err == nil {
@@ -83,6 +83,8 @@ func (s *Service) deleteWorktree(ctx context.Context, wt *model.Worktree, opts W
 	switch {
 	case opts.RemoveWorktree && st.Changed > 0 && !opts.ForceWorktree:
 		return fmt.Errorf("the worktree has %d changed files", st.Changed)
+	case opts.RemoveWorktree && st.Ignored > 0 && !opts.ForceWorktree:
+		return fmt.Errorf("the worktree has %d ignored files or folders", st.Ignored)
 	case branch && st.Commits > 0 && !opts.ForceBranch:
 		return fmt.Errorf("the branch has %d commits that %s doesn't have", st.Commits, wt.Base)
 	}

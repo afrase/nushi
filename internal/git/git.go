@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -18,8 +19,11 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-// maxText is the largest text shown in a diff, per side.
-const maxText = 1 << 20
+const (
+	maxText  = 1 << 20  // the largest text shown in a diff, per side
+	maxTotal = 32 << 20 // the text one Changes reads, past which files are left out
+	gitlink  = "160000" // the mode git gives a submodule
+)
 
 // Span says which changes Changes reads: the uncommitted ones, counted
 // from HEAD or, with Base, from where HEAD's branch left Base (their merge
@@ -44,14 +48,18 @@ func Changes(ctx context.Context, folder string, span Span) ([]model.FileChange,
 	}
 	var changes []model.FileChange
 	if hasHead {
-		out, err := run(ctx, folder, append(append([]string{"diff"}, revs...), "--name-status", "-z", "-M", "--relative", "--no-ext-diff", "--no-textconv")...)
+		out, err := run(ctx, folder, append(append([]string{"diff"}, revs...), "--raw", "-z", "-M", "--relative", "--ignore-submodules=dirty", "--no-ext-diff", "--no-textconv")...)
 		if err != nil {
 			return nil, err
 		}
 		fields := split(out)
-		for i := 0; i+1 < len(fields); i += 2 {
+		for i := 0; i+1 < len(fields); i += 2 { // ":<mode> <mode> <sha> <sha> <status>", the path
+			head := strings.Fields(fields[i])
+			if len(head) < 5 {
+				return nil, fmt.Errorf("git diff: can't read %q", fields[i])
+			}
 			c := model.FileChange{Path: fields[i+1], Status: "modified"}
-			switch fields[i][0] {
+			switch head[4][0] {
 			case 'A':
 				c.Status = "added"
 			case 'D':
@@ -61,6 +69,9 @@ func Changes(ctx context.Context, folder string, span Span) ([]model.FileChange,
 					c.Status, c.OldPath, c.Path = "renamed", fields[i+1], fields[i+2]
 					i++
 				}
+			}
+			if head[0] == ":"+gitlink || head[1] == gitlink {
+				c.Skipped = "a submodule"
 			}
 			changes = append(changes, c)
 		}
@@ -84,35 +95,45 @@ func Changes(ctx context.Context, folder string, span Span) ([]model.FileChange,
 		status = "added" // before the first commit, every file is new
 	}
 	for _, p := range added {
-		changes = append(changes, model.FileChange{Path: p, Status: status})
+		c := model.FileChange{Path: p, Status: status}
+		if strings.HasSuffix(p, "/") { // git lists a repository inside the folder as a folder
+			c.Path, c.Skipped = strings.TrimSuffix(p, "/"), "a repository of its own"
+		}
+		changes = append(changes, c)
 	}
 
 	slices.SortFunc(changes, func(a, b model.FileChange) int { return strings.Compare(a.Path, b.Path) })
+	total := 0
 	for i := range changes {
 		c := &changes[i]
+		if c.Skipped != "" {
+			continue
+		}
+		if total > maxTotal {
+			c.Skipped = "past what one view of changes loads"
+			continue
+		}
 		var old, cur []byte
 		if c.Status != "added" && c.Status != "untracked" {
-			if old, err = run(ctx, folder, "show", "--no-textconv", from+":./"+cmp.Or(c.OldPath, c.Path)); err != nil {
-				return nil, err
-			}
+			old, err = show(ctx, folder, from, cmp.Or(c.OldPath, c.Path))
 		}
 		switch {
-		case c.Status == "deleted":
+		case err != nil || c.Status == "deleted":
 		case to != "":
-			cur, err = run(ctx, folder, "show", "--no-textconv", to+":./"+c.Path)
+			cur, err = show(ctx, folder, to, c.Path)
 		default:
 			cur, err = worktree(filepath.Join(folder, c.Path))
 		}
-		if err != nil {
-			return nil, err
-		}
 		switch {
+		case err != nil: // one file that can't be read doesn't stop the rest
+			c.Skipped, err = "unreadable", nil
 		case bytes.IndexByte(old, 0) >= 0 || bytes.IndexByte(cur, 0) >= 0:
 			c.Skipped = "binary"
 		case len(old) > maxText || len(cur) > maxText:
 			c.Skipped = "too large"
 		default:
 			c.Old, c.New = string(old), string(cur)
+			total += len(old) + len(cur)
 			if c.Status == "added" || c.Status == "untracked" {
 				c.Added = lines(cur)
 			}
@@ -125,7 +146,9 @@ func Changes(ctx context.Context, folder string, span Span) ([]model.FileChange,
 // between revs (a commit and the work tree, or two commits), as git diff
 // counts them; a binary file counts none.
 func numstat(ctx context.Context, folder string, blank []string, revs ...string) (map[string][2]int, error) {
-	out, err := runWith(ctx, folder, blank, append(append([]string{"diff"}, revs...), "--numstat", "-z", "-M", "--relative", "--no-ext-diff", "--no-textconv")...)
+	// Without --ignore-submodules=dirty, git runs a status in each
+	// submodule, which runs the submodule's own filters.
+	out, err := runWith(ctx, folder, blank, append(append([]string{"diff"}, revs...), "--numstat", "-z", "-M", "--relative", "--ignore-submodules=dirty", "--no-ext-diff", "--no-textconv")...)
 	if err != nil {
 		return nil, err
 	}
@@ -270,19 +293,6 @@ func Status(ctx context.Context, folder, base string) (model.FolderStatus, error
 	return st, nil
 }
 
-// worktree reads a file as git sees it: a symlink is its target's path.
-func worktree(path string) ([]byte, error) {
-	fi, err := os.Lstat(path)
-	if err != nil {
-		return nil, err
-	}
-	if fi.Mode()&os.ModeSymlink != 0 {
-		target, err := os.Readlink(path)
-		return []byte(target), err
-	}
-	return os.ReadFile(path)
-}
-
 // Files lists up to limit files under folder, relative to it: in a
 // repository, git's tracked and untracked files that aren't ignored;
 // elsewhere, every file outside hidden folders.
@@ -308,7 +318,8 @@ func Files(ctx context.Context, folder string, limit int) ([]string, error) {
 }
 
 // run runs git in dir, with hooks, fsmonitor, signature checks, external
-// diff and textconv drivers off. A folder that was downloaded rather than
+// diff and textconv drivers, and fetching missing objects (a partial
+// clone's promisor remote, whose transport the config picks) off. A folder that was downloaded rather than
 // cloned brings its own .git/config, which could set any of them. Clean
 // filters still run when git compares the work tree (git diff does), unless
 // noFilters turns them off: Changes shows what git shows, as the user's
@@ -321,23 +332,27 @@ func run(ctx context.Context, dir string, args ...string) ([]byte, error) {
 // go through GIT_CONFIG_KEY_<n>, which keeps a name apart from its value
 // whatever it holds ("=" too, which -c would split at).
 func runWith(ctx context.Context, dir string, blank []string, args ...string) ([]byte, error) {
+	return runTo(ctx, dir, blank, nil, args...)
+}
+
+// runTo is runWith with the output going to out, unless out is nil.
+func runTo(ctx context.Context, dir string, blank []string, out io.Writer, args ...string) ([]byte, error) {
 	global := []string{"-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null", "-c", "log.showSignature=false", "-C", dir}
 	cmd := exec.CommandContext(ctx, "git", append(global, args...)...)
-	cmd.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0", "GIT_CONFIG_COUNT="+strconv.Itoa(len(blank)))
+	cmd.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0", "GIT_NO_LAZY_FETCH=1", "GIT_CONFIG_COUNT="+strconv.Itoa(len(blank)))
 	for i, name := range blank {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("GIT_CONFIG_KEY_%d=%s", i, name), fmt.Sprintf("GIT_CONFIG_VALUE_%d=", i))
 	}
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	out, err := cmd.Output()
-	if err != nil {
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout, cmd.Stderr = cmp.Or[io.Writer](out, &stdout), &stderr
+	if err := cmd.Run(); err != nil {
 		var exit *exec.ExitError
 		if errors.As(err, &exit) {
 			return nil, fmt.Errorf("git %s: %s", args[0], strings.TrimSpace(stderr.String()))
 		}
 		return nil, err
 	}
-	return out, nil
+	return stdout.Bytes(), nil
 }
 
 // noFilters returns the config settings to blank that turn off the filter
@@ -348,6 +363,7 @@ func runWith(ctx context.Context, dir string, blank []string, args ...string) ([
 func noFilters(ctx context.Context, dir string) ([]string, error) {
 	cmd := exec.CommandContext(ctx, "git", "-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null", "-C", dir,
 		"config", "--show-scope", "--name-only", "--get-regexp", `^filter\.`)
+	cmd.Env = append(os.Environ(), "GIT_NO_LAZY_FETCH=1")
 	out, err := cmd.Output()
 	var exit *exec.ExitError
 	if errors.As(err, &exit) && exit.ExitCode() == 1 && len(exit.Stderr) == 0 {

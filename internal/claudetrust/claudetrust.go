@@ -102,7 +102,7 @@ func (Trust) Trusted(folder string, also []string) (bool, error) {
 			Accepted bool `json:"hasTrustDialogAccepted"`
 		} `json:"projects"`
 	}
-	b, err := os.ReadFile(claudemcp.ConfigFile())
+	b, err := claudemcp.ReadFile(claudemcp.ConfigFile())
 	if err == nil {
 		err = json.Unmarshal(b, &cfg)
 	}
@@ -118,14 +118,21 @@ func (Trust) Trusted(folder string, also []string) (bool, error) {
 	if top != "" { // in a repository only its key counts
 		return false, nil
 	}
-	for dir := folder; ; dir = filepath.Dir(dir) { // outside git, a folder above counts too
+	// Outside git, a folder above counts too, but never the home folder or
+	// /: trusting your home would trust every download under it (Claude
+	// keeps home trust for one session only).
+	home := real(homeDir())
+	for dir := filepath.Dir(folder); dir != home && dir != filepath.Dir(dir); dir = filepath.Dir(dir) {
 		if ok(dir) {
 			return true, nil
 		}
-		if dir == filepath.Dir(dir) {
-			return false, nil
-		}
 	}
+	return false, nil
+}
+
+func homeDir() string {
+	home, _ := os.UserHomeDir()
+	return home
 }
 
 // Runs lists what folder brings for Claude to run: its .mcp.json servers
@@ -147,7 +154,11 @@ func (Trust) Runs(folder string) ([]model.FolderRun, error) {
 	if top, _ := repoOf(real(folder)); top != "" && top != real(folder) {
 		dirs = append(dirs, top)
 	}
+	home := real(homeDir())
 	for _, dir := range dirs {
+		if real(dir) == home {
+			continue // ~/.claude is the user's own config, not the folder's
+		}
 		for _, name := range []string{"settings.json", "settings.local.json"} {
 			runs, err := settingsRuns(filepath.Join(dir, ".claude", name))
 			if err != nil {
@@ -183,7 +194,7 @@ var helpers = []string{"apiKeyHelper", "awsAuthRefresh", "awsCredentialExport", 
 // env block (the names only) and its helper commands.
 func settingsRuns(path string) ([]model.FolderRun, error) {
 	var s map[string]json.RawMessage
-	b, err := os.ReadFile(path)
+	b, err := claudemcp.ReadFile(path)
 	if os.IsNotExist(err) {
 		return nil, nil
 	}
@@ -225,7 +236,7 @@ func settingsRuns(path string) ([]model.FolderRun, error) {
 // skillHooks returns the commands of the hooks in a skill's front matter,
 // read line by line rather than as YAML: each `command:` value under it.
 func skillHooks(path string) []string {
-	b, err := os.ReadFile(path)
+	b, err := claudemcp.ReadFile(path)
 	if err != nil || !bytes.HasPrefix(b, []byte("---")) {
 		return nil
 	}

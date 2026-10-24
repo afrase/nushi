@@ -205,7 +205,7 @@ class WorktreeChoices extends StatelessWidget {
   /// The choices that start on for [plan]: (remove, branch).
   static (bool, bool) defaults(WorktreePlan plan) {
     final st = plan.state;
-    final remove = st.error.isEmpty && st.changed == 0;
+    final remove = st.error.isEmpty && st.changed == 0 && st.ignored == 0;
     return (remove, remove && st.commits == 0 && !st.branchGone);
   }
 
@@ -217,7 +217,8 @@ class WorktreeChoices extends StatelessWidget {
   }) => WorktreeChoice(
     path: plan.worktree.path,
     removeWorktree: remove,
-    forceWorktree: remove && plan.state.changed > 0,
+    forceWorktree:
+        remove && (plan.state.changed > 0 || plan.state.ignored > 0),
     deleteBranch: remove && branch,
     forceBranch: remove && branch && plan.state.commits > 0,
   );
@@ -266,6 +267,9 @@ class WorktreeChoices extends StatelessWidget {
       );
     }
     final changes = st.changed == 1 ? '1 file' : '${st.changed} files';
+    final ignored = st.ignored == 1
+        ? '1 ignored file or folder'
+        : '${st.ignored} ignored files or folders';
     final commits = st.commits == 1 ? '1 commit' : '${st.commits} commits';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -278,11 +282,15 @@ class WorktreeChoices extends StatelessWidget {
         ),
         if (st.gone)
           note('Its folder was already removed outside Nushi.')
-        else if (st.changed > 0)
-          note(
-            '$changes with uncommitted or untracked changes would be lost.',
-            warn: true,
-          ),
+        else ...[
+          if (st.changed > 0)
+            note(
+              '$changes with uncommitted or untracked changes would be lost.',
+              warn: true,
+            ),
+          if (st.ignored > 0)
+            note('$ignored (.env, build output…) would be lost.', warn: true),
+        ],
         if (st.branchGone)
           note('Its branch ${wt.branch} was already deleted.')
         else ...[

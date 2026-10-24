@@ -6,11 +6,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
+	"syscall"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -39,26 +42,53 @@ func (Worktrees) Add(ctx context.Context, folder, name string) (model.Worktree, 
 		repo = top // the folder's spelling: git resolves symlinks
 	}
 	wt = model.Worktree{Repo: repo, Path: filepath.Join(repo, ".worktrees", name), Branch: "nushi/" + name}
+	if err := worktreesFolder(repo); err != nil {
+		return wt, "", err
+	}
 	if _, err := os.Lstat(wt.Path); err == nil {
 		return wt, "", fmt.Errorf("%s: %w", wt.Path, fs.ErrExist)
 	}
 	if _, err := run(ctx, folder, "rev-parse", "--verify", "-q", "refs/heads/"+wt.Branch); err == nil {
 		return wt, "", fmt.Errorf("branch %s: %w", wt.Branch, fs.ErrExist)
 	}
+	out, err := run(ctx, folder, "rev-parse", "--verify", "-q", "HEAD")
+	if err != nil {
+		return wt, "", errors.New("the repository has no commits yet")
+	}
+	wt.BaseCommit, wt.Base = strings.TrimSpace(string(out)), strings.TrimSpace(string(out)) // detached
 	if out, err := run(ctx, folder, "symbolic-ref", "--short", "-q", "HEAD"); err == nil {
 		wt.Base = strings.TrimSpace(string(out))
-	} else if out, err := run(ctx, folder, "rev-parse", "--verify", "HEAD"); err == nil {
-		wt.Base = strings.TrimSpace(string(out)) // detached
-	} else {
-		return wt, "", errors.New("the repository has no commits yet")
 	}
 	if err := Exclude(ctx, folder, "/.worktrees/"); err != nil {
 		return wt, "", err
 	}
-	if _, err := run(ctx, folder, "worktree", "add", "-q", "-b", wt.Branch, wt.Path, "HEAD"); err != nil {
+	if _, err := run(ctx, folder, "worktree", "add", "-q", "-b", wt.Branch, wt.Path, wt.BaseCommit); err != nil {
 		return wt, "", err
 	}
 	return wt, filepath.Join(wt.Path, sub), nil
+}
+
+// worktreesFolder makes <repo>/.worktrees, or checks the one there is a
+// folder of the repository's own: a repository could bring a link there
+// that sends worktrees anywhere (into ~/.claude/skills, say).
+func worktreesFolder(repo string) error {
+	dir := filepath.Join(repo, ".worktrees")
+	fi, err := os.Lstat(dir)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		err = os.Mkdir(dir, 0o755)
+	case err == nil && !fi.IsDir(): // a link too: Lstat doesn't follow it
+		err = fmt.Errorf("%s is not a folder (a link?): Nushi won't make worktrees through it", dir)
+	}
+	if err != nil {
+		return err
+	}
+	real, err := filepath.EvalSymlinks(dir)
+	top, terr := filepath.EvalSymlinks(repo)
+	if err != nil || terr != nil || real != filepath.Join(top, ".worktrees") {
+		return fmt.Errorf("%s isn't in the repository's own folder", dir)
+	}
+	return nil
 }
 
 // Inspect says what removing a worktree and deleting its branch would lose.
@@ -68,19 +98,31 @@ func (Worktrees) Inspect(ctx context.Context, wt model.Worktree) (model.Worktree
 		st.Gone = true
 	} else if out, err := run(ctx, wt.Path, "status", "--porcelain", "-z", "--untracked-files=all"); err != nil {
 		return st, err
+	} else if ignored, err := run(ctx, wt.Path, "ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--directory"); err != nil {
+		return st, err
 	} else {
-		st.Changed = len(split(out))
+		st.Changed, st.Ignored = len(split(out)), len(split(ignored))
 	}
 	if _, err := run(ctx, wt.Repo, "rev-parse", "--verify", "-q", "refs/heads/"+wt.Branch); err != nil {
 		st.BranchGone = true
 		return st, nil
 	}
-	out, err := run(ctx, wt.Repo, "rev-list", "--count", "refs/heads/"+wt.Branch, "--not", wt.Base)
+	out, err := run(ctx, wt.Repo, "rev-list", "--count", "refs/heads/"+wt.Branch, "--not", BaseOf(ctx, wt))
 	if err != nil {
 		return st, err
 	}
 	st.Commits, err = strconv.Atoi(strings.TrimSpace(string(out)))
 	return st, err
+}
+
+// BaseOf is what a worktree's work is counted from: its base branch, or
+// the commit it started from once that branch is gone (merged and
+// deleted, say).
+func BaseOf(ctx context.Context, wt model.Worktree) string {
+	if _, err := run(ctx, wt.Repo, "rev-parse", "--verify", "-q", wt.Base+"^{commit}"); err != nil && wt.BaseCommit != "" {
+		return wt.BaseCommit
+	}
+	return wt.Base
 }
 
 // Remove removes a worktree (git worktree remove), with force even if it
@@ -124,15 +166,42 @@ func mainWorktree(ctx context.Context, folder string) (string, error) {
 	return repo, nil
 }
 
+// excludeMu keeps two Excludes from losing each other's line.
+var excludeMu sync.Mutex
+
 // Exclude adds a line (a pattern) to the repository's info/exclude, once.
+// It writes only a regular file in a real folder: a repository could bring
+// a link there to any file of the user's.
 func Exclude(ctx context.Context, folder, line string) error {
-	out, err := run(ctx, folder, "rev-parse", "--path-format=absolute", "--git-path", "info/exclude")
+	// Not --path-format=absolute: that resolves a link at the end.
+	out, err := run(ctx, folder, "rev-parse", "--git-path", "info/exclude")
 	if err != nil {
 		return err
 	}
 	path := strings.TrimSpace(string(out))
-	b, err := os.ReadFile(path)
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(folder, path)
+	}
+	excludeMu.Lock()
+	defer excludeMu.Unlock()
+	dir := filepath.Dir(path)
+	if fi, err := os.Lstat(dir); errors.Is(err, fs.ErrNotExist) {
+		if err := os.Mkdir(dir, 0o755); err != nil {
+			return err
+		}
+	} else if err != nil || !fi.IsDir() {
+		return fmt.Errorf("%s is not a folder (a link?)", dir)
+	}
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0o644)
+	if err != nil {
+		return fmt.Errorf("%s: %w (a link?)", path, err)
+	}
+	defer f.Close()
+	if fi, err := f.Stat(); err != nil || !fi.Mode().IsRegular() {
+		return fmt.Errorf("%s is not a file", path)
+	}
+	b, err := io.ReadAll(io.LimitReader(f, 1<<20))
+	if err != nil {
 		return err
 	}
 	for l := range strings.Lines(string(b)) {
@@ -141,10 +210,8 @@ func Exclude(ctx context.Context, folder, line string) error {
 		}
 	}
 	if len(b) > 0 && b[len(b)-1] != '\n' {
-		b = append(b, '\n')
+		line = "\n" + line
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-	return os.WriteFile(path, append(b, line+"\n"...), 0o644)
+	_, err = f.WriteString(line + "\n")
+	return err
 }

@@ -41,6 +41,9 @@ type Worktree struct {
 	Path   string // the worktree's folder
 	Branch string // its branch, made for it
 	Base   string // the branch it started from (a commit, if HEAD was detached)
+	// BaseCommit is the commit it started from; empty for worktrees made
+	// before Nushi kept it.
+	BaseCommit string `json:",omitempty"`
 }
 
 // WorktreeState is what removing a worktree and deleting its branch would
@@ -48,6 +51,7 @@ type Worktree struct {
 type WorktreeState struct {
 	Gone       bool // its folder was removed outside Nushi
 	Changed    int  // files with uncommitted changes, untracked ones included
+	Ignored    int  // files and folders git ignores, which removing it deletes too
 	Commits    int  // commits on its branch that its base doesn't have
 	BranchGone bool // its branch was deleted outside Nushi
 }

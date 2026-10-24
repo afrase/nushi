@@ -411,12 +411,14 @@ class Worktree extends $pb.GeneratedMessage {
     $core.String? path,
     $core.String? branch,
     $core.String? base,
+    $core.String? baseCommit,
   }) {
     final result = Worktree._();
     if (repo != null) result.repo = repo;
     if (path != null) result.path = path;
     if (branch != null) result.branch = branch;
     if (base != null) result.base = base;
+    if (baseCommit != null) result.baseCommit = baseCommit;
     return result;
   }
 
@@ -437,6 +439,7 @@ class Worktree extends $pb.GeneratedMessage {
     ..aOS(2, _omitFieldNames ? '' : 'path')
     ..aOS(3, _omitFieldNames ? '' : 'branch')
     ..aOS(4, _omitFieldNames ? '' : 'base')
+    ..aOS(5, _omitFieldNames ? '' : 'baseCommit')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -498,6 +501,17 @@ class Worktree extends $pb.GeneratedMessage {
   $core.bool hasBase() => $_has(3);
   @$pb.TagNumber(4)
   void clearBase() => $_clearField(4);
+
+  /// The commit it started from, for when its base branch is gone; empty
+  /// for worktrees made before daemon API 42.
+  @$pb.TagNumber(5)
+  $core.String get baseCommit => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set baseCommit($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasBaseCommit() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearBaseCommit() => $_clearField(5);
 }
 
 class GetChatRequest extends $pb.GeneratedMessage {
@@ -2806,6 +2820,7 @@ class WorktreeState extends $pb.GeneratedMessage {
     $core.int? commits,
     $core.bool? branchGone,
     $core.String? error,
+    $core.int? ignored,
   }) {
     final result = WorktreeState._();
     if (gone != null) result.gone = gone;
@@ -2813,6 +2828,7 @@ class WorktreeState extends $pb.GeneratedMessage {
     if (commits != null) result.commits = commits;
     if (branchGone != null) result.branchGone = branchGone;
     if (error != null) result.error = error;
+    if (ignored != null) result.ignored = ignored;
     return result;
   }
 
@@ -2834,6 +2850,7 @@ class WorktreeState extends $pb.GeneratedMessage {
     ..aI(3, _omitFieldNames ? '' : 'commits')
     ..aOB(4, _omitFieldNames ? '' : 'branchGone')
     ..aOS(5, _omitFieldNames ? '' : 'error')
+    ..aI(6, _omitFieldNames ? '' : 'ignored')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -2907,6 +2924,16 @@ class WorktreeState extends $pb.GeneratedMessage {
   $core.bool hasError() => $_has(4);
   @$pb.TagNumber(5)
   void clearError() => $_clearField(5);
+
+  /// Files and folders git ignores, which removing it deletes too.
+  @$pb.TagNumber(6)
+  $core.int get ignored => $_getIZ(5);
+  @$pb.TagNumber(6)
+  set ignored($core.int value) => $_setSignedInt32(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasIgnored() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearIgnored() => $_clearField(6);
 }
 
 /// One of the agent's sessions: its id and folder.

@@ -76,7 +76,7 @@ func (Claude) SetOn(ctx context.Context, folder, name string, on bool) error {
 		}
 	}
 	settings := map[string]json.RawMessage{}
-	b, err := os.ReadFile(path)
+	b, err := ReadFile(path)
 	created := os.IsNotExist(err)
 	if err == nil {
 		err = json.Unmarshal(b, &settings)

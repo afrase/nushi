@@ -167,15 +167,28 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context), t = theme.t;
     if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          spacing: 8,
-          children: [
-            Text(_error!, textAlign: TextAlign.center, style: theme.ui(t.text)),
-            Button(label: 'Try again', onPressed: reload),
-          ],
-        ),
+      // The toolbar stays, so a scope that fails can be left.
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _toolbar(),
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 8,
+                children: [
+                  Text(
+                    _error!,
+                    textAlign: TextAlign.center,
+                    style: theme.ui(t.text),
+                  ),
+                  Button(label: 'Try again', onPressed: reload),
+                ],
+              ),
+            ),
+          ),
+        ],
       );
     }
     final file = _files.where((f) => f.path == _path).firstOrNull;
@@ -276,8 +289,15 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   Widget _toolbar() {
     final theme = NushiTheme.of(context), t = theme.t;
     final span = _span;
-    final scopes = span?.scopes ?? const [];
-    final n = _files.length;
+    // Before anything loaded (it failed), every scope, to leave the one
+    // that fails.
+    final scopes = span?.scopes ?? Scope.values;
+    final scope =
+        span?.scope ??
+        Scope.values.where((s) => s.name == chat.scope).firstOrNull ??
+        Scope.uncommitted;
+    final files = _error == null ? _files : const <FileChange>[];
+    final n = files.length;
     return Container(
       height: 36,
       padding: const EdgeInsets.only(left: 8, right: 6),
@@ -287,9 +307,9 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
       child: Row(
         spacing: 10,
         children: [
-          if (span != null && scopes.length > 1)
+          if (scopes.length > 1)
             Segmented(
-              value: span.scope,
+              value: scope,
               segments: [for (final s in scopes) (s, s.label)],
               onChanged: (s) => chat.scope = s.name,
             ),
@@ -300,8 +320,8 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
             ),
           Expanded(
             child: LineCounts(
-              _files.fold(0, (n, f) => n + f.added),
-              _files.fold(0, (n, f) => n + f.removed),
+              files.fold(0, (n, f) => n + f.added),
+              files.fold(0, (n, f) => n + f.removed),
             ),
           ),
           ListenableBuilder(
