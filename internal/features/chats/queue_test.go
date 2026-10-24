@@ -95,3 +95,28 @@ func TestSendNowStopsTheTurn(t *testing.T) {
 	eventually(t, c, func() bool { got, _ := agent.texts(); return reflect.DeepEqual(got, []string{"one", "now", "held"}) })
 	agent.release()
 }
+
+// A subagent's own step ending isn't the agent's chance: a message steered
+// in then would send the subagent's Agent call to the background.
+func TestQueueWaitsOutASubagentsSteps(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.steerable, c.steer = true, true
+	agent.gate = make(chan struct{})
+	svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle)
+	svc.Prompt(c.id, model.Message{Text: "two"}, SendQueue)
+	call := func(id string, meta map[string]any) {
+		c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call",
+			ToolCall: &acp.ToolCall{ToolCallID: acp.ToolCallID(id), Title: "ls", Status: "in_progress", Meta: meta}}})
+		c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call_update",
+			ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: acp.ToolCallID(id), Status: "completed"}}})
+	}
+	call("sub1", map[string]any{"claudeCode": map[string]any{"parentToolUseId": "agent1"}})
+	time.Sleep(20 * time.Millisecond)
+	if _, steered := agent.texts(); len(steered) != 0 || len(c.queue) != 1 {
+		t.Fatalf("steered %q after a subagent's step", steered)
+	}
+	call("t1", nil)
+	eventually(t, c, func() bool { _, steered := agent.texts(); return reflect.DeepEqual(steered, []string{"two"}) })
+	agent.release()
+	eventually(t, c, func() bool { return !c.busy })
+}

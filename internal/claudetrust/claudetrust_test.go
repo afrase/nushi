@@ -33,14 +33,20 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 	t.Setenv("CLAUDE_CONFIG_DIR", config)
 	repo, _ := filepath.EvalSymlinks(t.TempDir())
 	git(t, repo, "init", "-q")
-	write(t, filepath.Join(repo, ".mcp.json"), `{"mcpServers":{"echo":{"command":"echo","args":["hi"]},"web":{"type":"http","url":"https://example.com/mcp"}}}`)
+	write(t, filepath.Join(repo, ".mcp.json"), `{"mcpServers":{"echo":{"command":"echo","args":["hi"]},"web":{"type":"http","url":"https://example.com/mcp"},"off":{"command":"off"}}}`)
 	settings := filepath.Join(repo, ".claude", "settings.json")
 	write(t, settings, `{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"./setup.sh"}]}]},
 		"env":{"B":"1","A":"2"},"apiKeyHelper":"./key.sh","permissions":{"allow":["Bash(ls)"]}}`)
 	skill := filepath.Join(repo, ".claude", "skills", "lint", "SKILL.md")
 	write(t, skill, "---\nname: lint\nhooks:\n  PostToolUse:\n    - matcher: Edit\n      hooks:\n        - type: command\n          command: \"./lint.sh\"\n---\nRun ./not-a-hook.sh\n")
 
-	got, err := Trust{}.Runs(repo)
+	local := filepath.Join(repo, ".claude", "settings.local.json")
+	write(t, local, `{"disabledMcpjsonServers":["off"],"hooks":{"Stop":[{"hooks":[{"type":"prompt","prompt":"check it"}]}]},
+		"awsAuthRefresh":"./aws.sh","otelHeadersHelper":"./otel.sh"}`)
+	sub := filepath.Join(repo, "src")
+	os.Mkdir(sub, 0o700)
+
+	got, err := Trust{}.Runs(sub) // a chat in a subfolder: the repository's root runs too
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,6 +57,9 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 		{File: settings, What: "Hook on SessionStart", Command: "./setup.sh"},
 		{File: settings, What: "Environment variables", Command: "A B"},
 		{File: settings, What: "apiKeyHelper", Command: "./key.sh"},
+		{File: local, What: "Hook on Stop", Command: "check it"},
+		{File: local, What: "awsAuthRefresh", Command: "./aws.sh"},
+		{File: local, What: "otelHeadersHelper", Command: "./otel.sh"},
 		{File: skill, What: "Hook in skill lint", Command: "./lint.sh"},
 	}
 	if !reflect.DeepEqual(got, want) {
@@ -84,19 +93,39 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 		t.Errorf("a folder pretending to be a worktree is trusted (key %s)", (Trust{}).Key(fake))
 	}
 
-	// Nor one whose own config points its work tree at the trusted repository.
+	// Nor one whose worktree record isn't under worktrees/.
+	other := filepath.Join(repo, ".git", "other", "x")
+	fake2, _ := filepath.EvalSymlinks(t.TempDir())
+	write(t, filepath.Join(fake2, ".git"), "gitdir: "+other+"\n")
+	write(t, filepath.Join(other, "gitdir"), filepath.Join(fake2, ".git")+"\n")
+	if trusted(fake2) {
+		t.Error("a folder named back by a record outside worktrees/ is trusted")
+	}
+
+	// Nor a folder in a repository whose own config points its work tree
+	// elsewhere, a worktree's common config included: it keys on itself.
 	steer, _ := filepath.EvalSymlinks(t.TempDir())
 	git(t, steer, "init", "-q")
 	git(t, steer, "config", "core.worktree", repo)
-	t.Setenv("GIT_WORK_TREE", repo) // nor the environment
-	if trusted(steer) || (Trust{}).Key(steer) != steer {
-		t.Errorf("a folder steering git's work tree is trusted (key %s)", (Trust{}).Key(steer))
+	in := filepath.Join(steer, "in")
+	os.Mkdir(in, 0o700)
+	if trusted(in, steer) || (Trust{}).Key(in) != in {
+		t.Errorf("a folder steering git's work tree keys on %s", (Trust{}).Key(in))
 	}
-	os.Unsetenv("GIT_WORK_TREE")
+	main, _ := filepath.EvalSymlinks(t.TempDir())
+	git(t, main, "init", "-q")
+	git(t, main, "commit", "-q", "--allow-empty", "-m", "first")
+	wt2 := main + "-wt"
+	git(t, main, "worktree", "add", "-q", wt2)
+	t.Cleanup(func() { os.RemoveAll(wt2) })
+	git(t, main, "config", "core.worktree", repo)
+	if k := (Trust{}).Key(wt2); k != wt2 {
+		t.Errorf("a worktree of a repository steering its work tree keys on %s", k)
+	}
 
 	// Outside git a folder above counts, Claude's or Nushi's.
 	plain, _ := filepath.EvalSymlinks(t.TempDir())
-	sub := filepath.Join(plain, "a", "b")
+	sub = filepath.Join(plain, "a", "b")
 	os.MkdirAll(sub, 0o700)
 	if trusted(sub) || !trusted(sub, plain) || !trusted(sub, sub) || trusted(plain, sub) {
 		t.Error("trust outside git doesn't follow the folders above")

@@ -56,8 +56,8 @@ type conn struct {
 	pending map[string]chan frame
 	// incoming cancels the other side's requests being handled, by id.
 	incoming map[string]context.CancelFunc
-	err     error         // set once the read side ends
-	done    chan struct{} // closed with err
+	err      error         // set once the read side ends
+	done     chan struct{} // closed with err
 }
 
 func newConn(r io.Reader, w io.Writer, handle handleFunc) *conn {

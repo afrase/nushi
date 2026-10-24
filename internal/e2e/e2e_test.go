@@ -30,7 +30,8 @@ import (
 )
 
 // daemon is nushid with the fake agent: its agents share one History, as
-// Claude's sessions outlive its processes.
+// Claude's sessions outlive its processes. A nil copyHistory copies through
+// the History, as Claude's projects folder would be copied.
 type daemon struct {
 	url  string
 	stop func()
@@ -62,6 +63,9 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 			fromAgentW.Close()
 		}()
 		return pipeAgent{acp.Connect(fromAgentR, toAgentW, h), toAgentW}, nil
+	}
+	if copyHistory == nil {
+		copyHistory = history.Copy
 	}
 	hub := &events.Hub{}
 	st := store.New(dataDir)

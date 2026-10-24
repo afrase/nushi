@@ -36,8 +36,7 @@ func gitIn(t *testing.T, dir string, args ...string) {
 func TestChatsInWorktrees(t *testing.T) {
 	ctx := context.Background()
 	repo := gitRepo(t)
-	noCopy := func(string, string, string) (func() error, error) { return func() error { return nil }, nil }
-	d := startDaemon(t, t.TempDir(), &acptest.History{}, noCopy)
+	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
 	a := open(t, d)
 	chat := func(id string) *nushiv1.Chat {
 		return must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))).Chat
@@ -134,6 +133,9 @@ func TestChatsInWorktrees(t *testing.T) {
 		if _, err := a.c.DeleteChat(ctx, connect.NewRequest(req)); err == nil {
 			t.Errorf("deleted without forcing: %v", c)
 		}
+		if _, err := os.Stat(filepath.Join(wts[1].Path, "new.txt")); err != nil {
+			t.Errorf("a refused delete removed the worktree: %v", err)
+		}
 	}
 	must(a.c.DeleteChat(ctx, connect.NewRequest(&nushiv1.DeleteChatRequest{ChatId: ids[1], Worktrees: []*nushiv1.WorktreeChoice{
 		{Path: wts[1].Path, RemoveWorktree: true, ForceWorktree: true}}})))
@@ -170,8 +172,7 @@ func TestWorktreeMovesKeepTheWork(t *testing.T) {
 	repo := gitRepo(t)
 	os.MkdirAll(filepath.Join(repo, "newapp"), 0o755)
 	os.WriteFile(filepath.Join(repo, "newapp", "a.txt"), []byte("new\n"), 0o644)
-	noCopy := func(string, string, string) (func() error, error) { return func() error { return nil }, nil }
-	d := startDaemon(t, t.TempDir(), &acptest.History{}, noCopy)
+	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
 	a := open(t, d)
 	if _, err := a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: filepath.Join(repo, "newapp"), Worktree: true})); err == nil {
 		t.Error("a worktree chat in a folder the worktree doesn't have started")

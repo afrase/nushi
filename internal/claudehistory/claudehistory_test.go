@@ -3,6 +3,7 @@ package claudehistory
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -20,9 +21,23 @@ func TestDirNameIsClaudes(t *testing.T) {
 	}
 }
 
+// claudeName is Claude's name for a short folder's history, worked out
+// apart from dirName: its real path (/var is /private/var on macOS), each
+// character but a letter or digit a "-".
+func claudeName(t *testing.T, folder string) string {
+	real, err := filepath.EvalSymlinks(folder)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return regexp.MustCompile(`[^A-Za-z0-9]`).ReplaceAllString(real, "-")
+}
+
 func TestCopyKeepsTheOriginal(t *testing.T) {
 	projects, from, to := t.TempDir(), t.TempDir(), t.TempDir()
-	src, dst := filepath.Join(projects, dirName(from)), filepath.Join(projects, dirName(to))
+	src, dst := filepath.Join(projects, claudeName(t, from)), filepath.Join(projects, claudeName(t, to))
+	link := filepath.Join(t.TempDir(), "link") // a chat moved to a folder reached through a link
+	os.Symlink(to, link)
+	to = link
 	if err := os.MkdirAll(src, 0o700); err != nil {
 		t.Fatal(err)
 	}
