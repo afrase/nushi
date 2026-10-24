@@ -90,7 +90,8 @@ func run() error {
 			ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete},
 		History: func(id, from, to string) (func() error, error) { return claudehistory.Copy(projects, id, from, to) }}
 	codexKind := chats.Kind{Name: "codex", Title: "Codex", Resume: codex.Resume, History: codex.History,
-		Launch: func(h acp.Handler) (chats.Agent, error) { return codex.Start(dir, h) }}
+		Launch:  func(h acp.Handler) (chats.Agent, error) { return codex.Start(dir, h) },
+		Dialect: chats.Dialect{ForkAt: codex.ForkAt, ToolCall: codex.ToolCall, Other: codex.Other}}
 	st := store.New(dir)
 	st.HadMessages = func(s model.Session) bool { return claudehistory.Has(projects, s.SessionID, s.Folder) }
 	chatSvc := chats.New([]chats.Kind{claudeKind, codexKind}, st, st, git.Worktrees{}, filepath.Join(dir, "scratch"), hub.Publish)

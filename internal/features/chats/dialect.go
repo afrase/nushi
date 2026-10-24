@@ -22,10 +22,10 @@ type Dialect struct {
 	// _meta.
 	Parent func(meta map[string]any) string
 	// ToolCall adds what a tool call's _meta and raw input tell of it (its
-	// subagent, tool, and the subagent it starts); report says the call is
-	// its subagent's report, whose text it set, so the call's content isn't
-	// its output.
-	ToolCall func(it *model.Item, meta map[string]any, input json.RawMessage) (report bool)
+	// subagent, tool, the subagent it starts, whether it is a subagent's
+	// report, its command's output); ownText says it set the call's text,
+	// so the call's content isn't its output.
+	ToolCall func(it *model.Item, meta map[string]any, input json.RawMessage) (ownText bool)
 	// Background says a subagent call's output tells it started the
 	// subagent in the background: it runs on past the call, until its
 	// report.

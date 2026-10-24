@@ -36,7 +36,7 @@ func (c *chat) update(n acp.SessionNotification) {
 		item := model.Item{ID: string(t.ToolCallID), Kind: model.ToolCall, Title: t.Title,
 			ToolKind: string(t.Kind), Status: string(t.Status), Paths: c.paths(t.Locations)}
 		c.setOutput(&item, t.Content)
-		item.Report = c.toolCallLocked(&item, t.Meta, t.RawInput)
+		c.toolCallLocked(&item, t.Meta, t.RawInput)
 		if it := c.itemLocked(item.ID); it != nil { // a repeated tool_call replaces the call
 			item.Subagent, item.Shell = it.Subagent, it.Shell
 			*it = item
@@ -99,9 +99,7 @@ func (c *chat) update(n acp.SessionNotification) {
 		if t.Locations != nil {
 			it.Paths = c.paths(t.Locations)
 		}
-		if report := c.toolCallLocked(it, t.Meta, t.RawInput); report {
-			it.Report = true
-		} else if t.Content != nil {
+		if own := c.toolCallLocked(it, t.Meta, t.RawInput); !own && t.Content != nil {
 			c.setOutput(it, t.Content)
 		}
 		c.subagentLocked(it)
@@ -168,7 +166,7 @@ func (c *chat) chunkLocked(kind model.ItemKind, m *acp.ContentChunk) {
 
 // toolCallLocked adds what the agent tells of a tool call beyond ACP (see
 // Dialect.ToolCall).
-func (c *chat) toolCallLocked(it *model.Item, meta map[string]any, input json.RawMessage) (report bool) {
+func (c *chat) toolCallLocked(it *model.Item, meta map[string]any, input json.RawMessage) (ownText bool) {
 	return c.dialect.ToolCall != nil && c.dialect.ToolCall(it, meta, input)
 }
 
@@ -265,7 +263,9 @@ func (c *chat) publishLocked(it model.Item) {
 }
 
 // setOutput sets a tool call's output from its content: the text as
-// markdown, its diffs and images apart.
+// markdown, its diffs and images apart. A terminal shows nothing: Nushi
+// offers agents none, so a command's output comes in the agent's _meta
+// (Dialect.ToolCall).
 func (c *chat) setOutput(it *model.Item, content []acp.ToolCallContent) {
 	var parts []string
 	var diffs []model.FileChange
@@ -285,8 +285,6 @@ func (c *chat) setOutput(it *model.Item, content []acp.ToolCallContent) {
 				status = "added"
 			}
 			diffs = append(diffs, model.FileChange{Path: c.rel(d.Path), Status: status, Old: d.OldText, New: d.NewText})
-		case tc.Terminal != nil:
-			parts = append(parts, "(terminal "+string(tc.Terminal.TerminalID)+")")
 		}
 	}
 	it.Text, it.Diffs, it.Images = strings.Join(parts, "\n\n"), diffs, images

@@ -152,6 +152,9 @@ type Item struct {
 	Report bool
 	// Shell is the command a tool call left running in the background.
 	Shell *Shell
+	// Output is a command's output as the agent streams it in its _meta,
+	// from which the dialect makes Text; only the daemon has it.
+	Output string `json:"-"`
 }
 
 // Shell is a command the agent runs in the background. State is "running"

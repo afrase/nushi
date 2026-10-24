@@ -19,6 +19,7 @@ import (
 	"github.com/afrase/nushi/acp"
 	"github.com/afrase/nushi/acp/acptest"
 	"github.com/afrase/nushi/internal/api"
+	"github.com/afrase/nushi/internal/codex"
 	"github.com/afrase/nushi/internal/events"
 	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/features/terminals"
@@ -29,7 +30,8 @@ import (
 	"github.com/afrase/nushi/internal/store"
 )
 
-// daemon is nushid with the fake agent: its agents share one History, as
+// daemon is nushid with the fake agent, as two agents: "fake" (the
+// default) and "codex" (Codex-shaped). Its agents share one History, as
 // Claude's sessions outlive its processes. A nil copyHistory copies through
 // the History, as Claude's projects folder would be copied.
 type daemon struct {
@@ -52,24 +54,29 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	t.Helper()
 	var mu sync.Mutex
 	var kill func()
-	launch := func(h acp.Handler) (chats.Agent, error) {
-		toAgentR, toAgentW := io.Pipe()
-		fromAgentR, fromAgentW := io.Pipe()
-		mu.Lock()
-		kill = func() { toAgentR.Close(); fromAgentW.Close() }
-		mu.Unlock()
-		go func() {
-			(&acptest.Agent{History: history}).Serve(toAgentR, fromAgentW)
-			fromAgentW.Close()
-		}()
-		return pipeAgent{acp.Connect(fromAgentR, toAgentW, h), toAgentW}, nil
+	launch := func(codex bool) chats.Launch {
+		return func(h acp.Handler) (chats.Agent, error) {
+			toAgentR, toAgentW := io.Pipe()
+			fromAgentR, fromAgentW := io.Pipe()
+			mu.Lock()
+			kill = func() { toAgentR.Close(); fromAgentW.Close() }
+			mu.Unlock()
+			go func() {
+				(&acptest.Agent{History: history, Codex: codex}).Serve(toAgentR, fromAgentW)
+				fromAgentW.Close()
+			}()
+			return pipeAgent{acp.Connect(fromAgentR, toAgentW, h), toAgentW}, nil
+		}
 	}
 	if copyHistory == nil {
 		copyHistory = history.Copy
 	}
 	hub := &events.Hub{}
 	st := store.New(dataDir)
-	svc := chats.New([]chats.Kind{{Name: "fake", Launch: launch, Dialect: chats.Dialect{}, History: copyHistory}}, st, st, git.Worktrees{}, filepath.Join(dataDir, "scratch"), hub.Publish)
+	// The second agent is shaped like Codex, with Codex's dialect.
+	codexKind := chats.Kind{Name: "codex", Title: "Codex", Resume: codex.Resume, Launch: launch(true), History: copyHistory,
+		Dialect: chats.Dialect{ForkAt: codex.ForkAt, ToolCall: codex.ToolCall, Other: codex.Other}}
+	svc := chats.New([]chats.Kind{{Name: "fake", Launch: launch(false), History: copyHistory}, codexKind}, st, st, git.Worktrees{}, filepath.Join(dataDir, "scratch"), hub.Publish)
 	terms := terminals.New(startSh, "sh", svc, hub.Publish)
 	svc.UseTerminals(terms)
 	follow, unfollow := context.WithCancel(context.Background())

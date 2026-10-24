@@ -66,8 +66,8 @@ func claudeCode(meta map[string]any, key string) string {
 // from, its tool's name, for one that starts a subagent (Agent, Task) the
 // subagent's type, prompt, model and effort (its input comes in pieces),
 // the model it ran on once it has ended, and for a subagent's SubagentHandback, which ends it,
-// the report it hands back as its text: true then, since the call's own
-// output is only an acknowledgement. Claude may send the input in a later
+// the report it hands back as its text (Report): true then, since the
+// call's own output is only an acknowledgement. Claude may send the input in a later
 // update than the name.
 func ToolCall(it *model.Item, meta map[string]any, input json.RawMessage) (ownText bool) {
 	it.Parent, it.Tool = cmp.Or(it.Parent, Parent(meta)), cmp.Or(claudeCode(meta, "toolName"), it.Tool)
@@ -98,7 +98,7 @@ func ToolCall(it *model.Item, meta map[string]any, input json.RawMessage) (ownTe
 			it.AgentID = id
 		}
 	case "SubagentHandback":
-		it.Text = cmp.Or(in.Message, it.Text)
+		it.Text, it.Report = cmp.Or(in.Message, it.Text), true
 		return true
 	}
 	return false
