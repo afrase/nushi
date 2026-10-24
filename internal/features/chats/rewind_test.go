@@ -9,7 +9,10 @@ import (
 )
 
 func TestRewindForksBeforeTheMessage(t *testing.T) {
-	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	svc, agent, c := newChat(t, claudeSession, &memModes{})
+	if err := svc.SetConfig(context.Background(), c.id, "mode", "plan"); err != nil {
+		t.Fatal(err)
+	}
 	turn := func(text, reply string) {
 		// A tool call after the agent's text: the fork at the text drops it.
 		agent.updates = []acp.SessionUpdate{chunk(reply, "ok"), {SessionUpdate: "tool_call",
@@ -41,6 +44,9 @@ func TestRewindForksBeforeTheMessage(t *testing.T) {
 	}
 	if len(c.items) != 0 || c.sid != "s1" || c.session.Title != "" || c.session.HasMessages || len(c.session.Earlier) != 2 {
 		t.Errorf("items %+v, session %+v", c.items, c.session)
+	}
+	if c.session.Mode != "plan" || current(c, "mode") != "plan" {
+		t.Errorf("after rewinding, mode %q (stored %q), want plan", current(c, "mode"), c.session.Mode)
 	}
 }
 

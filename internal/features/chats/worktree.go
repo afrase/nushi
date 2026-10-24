@@ -7,6 +7,8 @@ import (
 	"io/fs"
 	"log"
 	"math/rand/v2"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/afrase/nushi/internal/model"
@@ -38,6 +40,10 @@ func (s *Service) addWorktree(ctx context.Context, folder string) (*model.Worktr
 		name := adjectives[rand.IntN(len(adjectives))] + "-" + nouns[rand.IntN(len(nouns))]
 		wt, in, err := s.worktrees.Add(ctx, folder, name)
 		if err == nil {
+			if _, err := os.Stat(in); err != nil { // a folder git doesn't track
+				s.dropWorktree(&wt)
+				return nil, "", fmt.Errorf("a worktree has only what is committed, and %s isn't: commit it, or use the repository's own folder", filepath.Base(folder))
+			}
 			return &wt, in, nil
 		}
 		if !errors.Is(err, fs.ErrExist) {
@@ -48,10 +54,10 @@ func (s *Service) addWorktree(ctx context.Context, folder string) (*model.Worktr
 }
 
 // dropWorktree removes a worktree no chat uses any more, and its branch,
-// if they hold no work; otherwise they stay.
-func (s *Service) dropWorktree(wt *model.Worktree) {
+// if they hold no work, and says whether it did; otherwise they stay.
+func (s *Service) dropWorktree(wt *model.Worktree) bool {
 	if wt == nil {
-		return
+		return false
 	}
 	ctx := context.Background()
 	st, err := s.worktrees.Inspect(ctx, *wt)
@@ -67,6 +73,7 @@ func (s *Service) dropWorktree(wt *model.Worktree) {
 	if err != nil {
 		log.Printf("leaving the worktree %s: %v", wt.Path, err)
 	}
+	return err == nil
 }
 
 // deleteWorktree removes a deleted chat's worktree and deletes its branch,

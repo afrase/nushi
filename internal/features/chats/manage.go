@@ -86,6 +86,7 @@ func (s *Service) forget(c *chat) error {
 	s.mu.Lock()
 	delete(s.chats, c.id)
 	s.mu.Unlock()
+	c.disconnect() // an agent started since the halt, if any
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.emitLocked(model.Event{ChatID: c.id, Removed: true})

@@ -106,6 +106,7 @@ func (s *Service) load(ctx context.Context, c *chat) error {
 	held := c.held // a queue held before (an archived chat's) stays held
 	s.useLocked(c, o)
 	c.held = held
+	c.orphanLocked() // replayed calls whose agent died before their results
 	if o.sid != sid {
 		c.saveLocked(func(s *model.Session) { s.SessionID = o.sid })
 	}

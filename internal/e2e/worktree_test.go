@@ -161,3 +161,44 @@ func TestChatsInWorktrees(t *testing.T) {
 func branchExists(repo, branch string) bool {
 	return exec.Command("git", "-C", repo, "rev-parse", "--verify", "-q", "refs/heads/"+branch).Run() == nil
 }
+
+// A chat without messages that moves keeps its worktree when it moves into
+// a folder of it, and leaves it on record (for Delete) when it holds work;
+// a folder git doesn't track gets no worktree.
+func TestWorktreeMovesKeepTheWork(t *testing.T) {
+	ctx := context.Background()
+	repo := gitRepo(t)
+	os.MkdirAll(filepath.Join(repo, "newapp"), 0o755)
+	os.WriteFile(filepath.Join(repo, "newapp", "a.txt"), []byte("new\n"), 0o644)
+	noCopy := func(string, string, string) (func() error, error) { return func() error { return nil }, nil }
+	d := startDaemon(t, t.TempDir(), &acptest.History{}, noCopy)
+	a := open(t, d)
+	if _, err := a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: filepath.Join(repo, "newapp"), Worktree: true})); err == nil {
+		t.Error("a worktree chat in a folder the worktree doesn't have started")
+	}
+	chat := func(id string) *nushiv1.Chat {
+		return must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))).Chat
+	}
+	move := func(id, folder string) {
+		t.Helper()
+		must(a.c.MoveChat(ctx, connect.NewRequest(&nushiv1.MoveChatRequest{ChatId: id, Folder: folder})))
+	}
+	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: repo, Worktree: true}))).ChatId
+	wt := chat(id).Worktree
+	sub := filepath.Join(wt.Path, "sub")
+	os.Mkdir(sub, 0o755)
+	move(id, sub)
+	if c := chat(id); c.Worktree.GetPath() != wt.Path || c.Folder != sub {
+		t.Errorf("moved into its worktree: %v", c)
+	}
+	if _, err := os.Stat(sub); err != nil {
+		t.Fatalf("the folder the chat moved to went: %v", err)
+	}
+
+	gitIn(t, wt.Path, "commit", "-q", "--allow-empty", "-m", "work")
+	move(id, repo)
+	plan := must(a.c.PlanDeleteChat(ctx, connect.NewRequest(&nushiv1.PlanDeleteChatRequest{ChatId: id})))
+	if len(plan.Worktrees) != 1 || plan.Worktrees[0].Worktree.Path != wt.Path || plan.Worktrees[0].State.Commits != 1 {
+		t.Errorf("the worktree it left, with a commit, isn't offered: %v", plan.Worktrees)
+	}
+}

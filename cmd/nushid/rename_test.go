@@ -65,10 +65,23 @@ func TestMoveData(t *testing.T) {
 		}
 	}
 	if _, err := os.Stat(filepath.Join(hist(newScratch), "s1.jsonl")); err != nil {
-		t.Errorf("Claude's history wasn't copied: %v", err)
+		t.Errorf("Claude's history wasn't moved: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(hist(scratch), "s1.jsonl")); err != nil {
-		t.Errorf("the old history went: %v", err)
+	if _, err := os.Stat(filepath.Join(hist(scratch), "s1.jsonl")); err == nil {
+		t.Error("the old history stayed: the agent would find either copy")
+	}
+
+	// A copy left by an earlier move, which the chat went on from: it goes.
+	os.WriteFile(filepath.Join(hist(newScratch), "s1.jsonl"), []byte("{}\n{}\n"), 0o600)
+	os.WriteFile(filepath.Join(hist(scratch), "s1.jsonl"), []byte("{}\n"), 0o600)
+	if err := moveData(old, dir, projects); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(hist(scratch), "s1.jsonl")); err == nil {
+		t.Error("the stale copy stayed")
+	}
+	if b, _ := os.ReadFile(filepath.Join(hist(newScratch), "s1.jsonl")); string(b) != "{}\n{}\n" {
+		t.Errorf("the chat's history became %q", b)
 	}
 
 	// Once moved, it's never moved again.
