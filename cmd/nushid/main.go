@@ -107,7 +107,7 @@ func run() error {
 		Dialect: chats.Dialect{ForkAt: ante.ForkAt, Other: ante.Other, Context: ante.Context}}
 	ompKind := chats.Kind{Name: "omp", Title: "oh-my-pi", Resume: omp.Resume,
 		Launch:  func(h acp.Handler) (chats.Agent, error) { return omp.Start(dir, h) },
-		Dialect: chats.Dialect{Other: omp.Other}}
+		Dialect: chats.Dialect{Other: omp.Other, ToolCall: omp.ToolCall}}
 	st := store.New(dir)
 	st.HadMessages = func(s model.Session) bool { return claudehistory.Has(projects, s.SessionID, s.Folder) }
 	chatSvc := chats.New([]chats.Kind{claudeKind, codexKind, anteKind, ompKind}, st, st, git.Worktrees{}, filepath.Join(dir, "scratch"), hub.Publish)

@@ -97,7 +97,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 			ante.Serve(r, w, ante.Config{Spawn: anteHosts, Home: anteStore.Home, Version: "0.2.14"})
 		}),
 		Dialect: chats.Dialect{ForkAt: ante.ForkAt, Other: ante.Other, Context: ante.Context}}
-	ompKind := chats.Kind{Name: "omp", Title: "oh-my-pi", Resume: omp.Resume, Launch: fake(false, true), Dialect: chats.Dialect{Other: omp.Other}}
+	ompKind := chats.Kind{Name: "omp", Title: "oh-my-pi", Resume: omp.Resume, Launch: fake(false, true), Dialect: chats.Dialect{Other: omp.Other, ToolCall: omp.ToolCall}}
 	svc := chats.New([]chats.Kind{{Name: "fake", Launch: fake(false, false), History: copyHistory}, codexKind, anteKind, ompKind},
 		st, st, git.Worktrees{}, filepath.Join(dataDir, "scratch"), hub.Publish)
 	terms := terminals.New(startSh, "sh", svc, hub.Publish)

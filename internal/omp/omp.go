@@ -4,6 +4,7 @@
 package omp
 
 import (
+	"encoding/json"
 	"log"
 	"os/exec"
 	"strings"
@@ -36,4 +37,13 @@ const Resume = "omp --resume"
 // choices: `<id>__other`, "Other (type your own)".
 func Other(field, before model.Field) bool {
 	return len(field.Options) == 0 && strings.HasPrefix(field.ID, before.ID+"__other")
+}
+
+// ToolCall drops the "$ " omp puts before a command's title: the app marks
+// commands itself.
+func ToolCall(it *model.Item, _ map[string]any, _ json.RawMessage) (ownText bool) {
+	if it.ToolKind == "execute" {
+		it.Title = strings.TrimPrefix(it.Title, "$ ")
+	}
+	return false
 }
