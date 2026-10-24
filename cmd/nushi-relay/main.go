@@ -34,7 +34,8 @@ func main() {
 	flag.StringVar(&lim.IPHeader, "ip-header", "", "behind a reverse proxy: the header holding the client's address (e.g. Fly-Client-IP); of a list (X-Forwarded-For), the last entry")
 	flag.IntVar(&lim.IPHops, "ip-hops", 1, "with -ip-header: how many proxies append to it (the client's address is this many from the right)")
 	flag.IntVar(&lim.Total, "total", lim.Total, "connections in all")
-	flag.DurationVar(&lim.HTTPIdle, "http-idle", lim.HTTPIdle, "close an HTTP connection (not a WebSocket) idle this long")
+	flag.DurationVar(&lim.HTTPIdle, "http-idle", lim.HTTPIdle, "close a plain HTTP connection (not a WebSocket) idle this long")
+	flag.IntVar(&lim.PlainPerIP, "plain-per-ip", lim.PlainPerIP, "plain HTTP connections (not WebSockets) from one address")
 	flag.Parse()
 
 	srv := relay.NewServer(lim)

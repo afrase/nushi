@@ -36,13 +36,14 @@ type Limits struct {
 	Total      int           // connections in all
 	IPHeader   string        // behind a reverse proxy, the header with the client's address (such as Fly-Client-IP)
 	IPHops     int           // the proxies that append to IPHeader: the address is this many from its right (at least 1)
-	HTTPIdle   time.Duration // an HTTP connection that isn't a WebSocket waits this long for its next request
+	HTTPIdle   time.Duration // a plain HTTP connection (not a WebSocket) waits this long for its next request
+	PlainPerIP int           // plain connections from one address
 }
 
 // Defaults suit one person's phones and Macs.
 // Many people can share one company's address, so PerIP is generous.
 var Defaults = Limits{MaxMessage: 65535, Rate: 1 << 20, Burst: 8 << 20, Idle: 90 * time.Second,
-	DialWait: 10 * time.Second, MaxWait: time.Hour, PerID: 16, PerIP: 200, NewRate: 2, NewBurst: 60, Total: 1000, HTTPIdle: 5 * time.Second}
+	DialWait: 10 * time.Second, MaxWait: time.Hour, PerID: 16, PerIP: 200, NewRate: 2, NewBurst: 60, Total: 1000, HTTPIdle: 5 * time.Second, PlainPerIP: 8}
 
 // minCost is what a message costs against the rate at least, so tiny
 // messages can't flood.
@@ -97,7 +98,7 @@ type peer struct {
 func New(lim Limits) http.Handler {
 	lim.PerIP = min(lim.PerIP, max(1, lim.Total/2))
 	s := &server{lim: lim, rooms: map[string]*room{}, sources: map[string]*source{},
-		plain: plain{conns: map[net.Conn]string{}, by: map[string]int{}}}
+		plain: plain{conns: map[net.Conn]*plainConn{}, by: map[string]*source{}}}
 	// No browser has a reason to be here: refuse any page's script.
 	s.up.CheckOrigin = func(r *http.Request) bool { return r.Header.Get("Origin") == "" }
 	mux := http.NewServeMux()
