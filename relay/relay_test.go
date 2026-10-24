@@ -566,7 +566,7 @@ func TestSecondListenerReplacesFirst(t *testing.T) {
 // one goes: one address can't pile up keep-alive connections.
 func TestIdleHTTPConnections(t *testing.T) {
 	lim := Defaults
-	lim.PerIP = 3
+	lim.PlainPerIP = 3
 	lim.HTTPIdle = 300 * time.Millisecond
 	srv := NewServer(lim)
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
@@ -648,5 +648,74 @@ func TestForwardedForFromTheRight(t *testing.T) {
 		for _, ws := range open {
 			ws.Close()
 		}
+	}
+}
+
+// A flood of idle sockets from many addresses (behind a proxy, which only
+// the header tells apart) doesn't keep a daemon and a phone from meeting:
+// the ones idle longest make way.
+func TestIdleFloodDoesntStarve(t *testing.T) {
+	lim := Defaults
+	lim.IPHeader = "X-Test-IP"
+	lim.Total = 50
+	srv := NewServer(lim)
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	go srv.Serve(ln)
+	defer srv.Close()
+	for i := range 200 {
+		c, err := net.Dial("tcp", ln.Addr().String())
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer c.Close()
+		if i%2 == 0 { // half of them asked once, from an address each, and wait
+			fmt.Fprintf(c, "GET /healthz HTTP/1.1\r\nHost: relay\r\nX-Test-IP: 198.51.%d.%d\r\n\r\n", i/256, i%256)
+		}
+	}
+	l, d := pair(t, "ws://"+ln.Addr().String(), newKey())
+	send(t, d, "through")
+	expect(t, l, "through")
+}
+
+// Behind a proxy the per-address cap on plain connections counts the
+// header's address.
+func TestPlainCapBehindAProxy(t *testing.T) {
+	lim := Defaults
+	lim.IPHeader = "X-Test-IP"
+	lim.PlainPerIP = 2
+	srv := NewServer(lim)
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	go srv.Serve(ln)
+	defer srv.Close()
+	ask := func(addr string) int {
+		c, err := net.Dial("tcp", ln.Addr().String())
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { c.Close() })
+		fmt.Fprintf(c, "GET /healthz HTTP/1.1\r\nHost: relay\r\nX-Test-IP: %s\r\n\r\n", addr)
+		resp, err := http.ReadResponse(bufio.NewReader(c), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		return resp.StatusCode
+	}
+	for range 2 {
+		if code := ask("203.0.113.5"); code != http.StatusOK {
+			t.Fatalf("under the cap: %d", code)
+		}
+	}
+	if code := ask("203.0.113.5"); code != http.StatusServiceUnavailable {
+		t.Fatalf("a third plain connection from one address: %d", code)
+	}
+	if code := ask("203.0.113.6"); code != http.StatusOK {
+		t.Fatalf("another address: %d", code)
 	}
 }
