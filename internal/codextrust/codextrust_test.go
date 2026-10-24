@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/afrase/nushi/internal/folderfiles"
 )
 
 func write(t *testing.T, path, body string) {
@@ -102,12 +104,12 @@ func TestTheKeyCoversWhatTheCardShows(t *testing.T) {
 	t.Setenv("CODEX_HOME", t.TempDir())
 	folder, _ := filepath.EvalSymlinks(t.TempDir())
 	big := filepath.Join(folder, ".codex", "rules", "big.rules")
-	write(t, big, strings.Repeat("x", shown+10)+"a")
+	write(t, big, strings.Repeat("x", folderfiles.Shown+10)+"a")
 	runs, key, _ := tr.Runs(folder)
 	if key == "" || len(runs) != 1 || !strings.HasPrefix(runs[0].Command, "too large to show") {
 		t.Fatalf("key %q, runs %v", key, runs)
 	}
-	write(t, big, strings.Repeat("x", shown+10)+"b") // changed past what the card shows
+	write(t, big, strings.Repeat("x", folderfiles.Shown+10)+"b") // changed past what the card shows
 	if tr.Key(folder) == key {
 		t.Error("a change past the card's cap kept the key")
 	}

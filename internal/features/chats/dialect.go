@@ -1,6 +1,7 @@
 package chats
 
 import (
+	"context"
 	"encoding/json"
 	"time"
 
@@ -60,6 +61,11 @@ type Dialect struct {
 	// (the reply's messages, in order, at least one).
 	ContextCommand string
 	ReadContext    func(messages []string) model.ContextUsage
+	// Context asks the agent itself what fills a session's context, with
+	// call (an extension of the agent's: Agent.Call), leaving nothing
+	// behind: no fork, no command. An agent with it needs no
+	// ContextCommand.
+	Context func(ctx context.Context, call func(ctx context.Context, method string, params, result any) error, sessionID string) (model.ContextUsage, error)
 	// Redelete is how long after deleting a session nobody will see again
 	// to delete it once more, for an agent that writes a little of it back
 	// as it ends; 0 for once.

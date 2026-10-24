@@ -1,5 +1,6 @@
 // Package acptest is a fake ACP agent for tests, shaped like Claude's
-// adapter (or like Codex's, with Agent.Codex: codex.go). It answers prompts
+// adapter (or like Codex's, with Agent.Codex: codex.go; or like omp, with
+// Agent.Omp: omp.go). It answers prompts
 // by script, keyed on the prompt's text:
 //
 //   - containing "permission": a tool call that asks permission (options
@@ -44,6 +45,7 @@ type Agent struct {
 	History *History
 	Pause   time.Duration
 	Codex   bool // answers as codex-acp does (codex.go)
+	Omp     bool // answers as omp does (omp.go)
 
 	w       io.Writer
 	writeMu sync.Mutex
@@ -182,6 +184,9 @@ func (a *Agent) answer(f frame) {
 		if a.Codex {
 			result = codexInit()
 		}
+		if a.Omp {
+			result = ompInit()
+		}
 	case "session/new", "session/fork":
 		a.mu.Lock()
 		a.nextID++
@@ -248,6 +253,8 @@ func (a *Agent) prompt(session, text string) string {
 	switch {
 	case a.Codex && strings.Contains(text, "run"):
 		a.run(session)
+	case a.Omp && strings.Contains(text, "question"):
+		a.ompQuestion(session)
 	case strings.Contains(text, "permission"):
 		a.update(session, map[string]any{"sessionUpdate": "tool_call", "toolCallId": "t1", "title": "touch x", "kind": "execute", "status": "pending"})
 		res := a.request("session/request_permission", map[string]any{

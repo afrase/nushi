@@ -39,6 +39,8 @@ type Agent interface {
 	// is killed.
 	Stop(grace time.Duration) error
 	Done() <-chan struct{} // closed when the agent's process ends
+	// Call sends a request for one of the agent's extensions.
+	Call(ctx context.Context, method string, params, result any) error
 }
 
 // stopGrace is how long a stopping agent gets to end a turn, and then its

@@ -38,6 +38,9 @@ func (s *Service) ContextUsage(ctx context.Context, chatID string) (model.Contex
 	if err != nil {
 		return model.ContextUsage{}, err
 	}
+	if c.dialect.Context != nil {
+		return c.dialect.Context(ctx, agent.Call, sid)
+	}
 	fork, _, err := c.forkSession(ctx, agent, sid, folder, nil)
 	if err != nil {
 		return model.ContextUsage{}, err
@@ -68,11 +71,14 @@ func (s *Service) ContextUsage(ctx context.Context, chatID string) (model.Contex
 }
 
 // canAskContextLocked says why the agent can't be asked what fills the
-// chat's context, or nil: it needs the command, a fork, and a chat with
-// messages (Claude would name a new chat after /context).
+// chat's context, or nil: it needs a way to ask of its own (Dialect.Context),
+// or the command, a fork, and a chat with messages (Claude would name a new
+// chat after /context).
 func (c *chat) canAskContextLocked() error {
 	cmd := c.dialect.ContextCommand
 	switch {
+	case c.dialect.Context != nil:
+		return nil
 	case cmd == "" || !slices.ContainsFunc(c.commands, func(m model.Command) bool { return m.Name == cmd }):
 		return errors.New("the agent can't say what fills its context")
 	case !c.canFork || c.parent != nil:

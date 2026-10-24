@@ -11,7 +11,6 @@
 package codextrust
 
 import (
-	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
@@ -25,6 +24,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
+	"github.com/afrase/nushi/internal/folderfiles"
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
 )
@@ -38,18 +38,7 @@ type Trust struct{}
 // a folder for Claude doesn't trust it for Codex. It is "" when the hash
 // can't cover what Codex reads (a link, a file it can't read, anything but
 // a regular file): such a folder isn't remembered, and asks every time.
-func (Trust) Key(folder string) string { return key(folder, files(folder)) }
-
-func key(folder string, fs []file) string {
-	h := sha256.New()
-	for _, f := range fs {
-		if f.sum == nil {
-			return ""
-		}
-		fmt.Fprintf(h, "%s\x00%x\x00", f.path, f.sum)
-	}
-	return fmt.Sprintf("codex:%s#%x", git.RealPath(folder), h.Sum(nil))
-}
+func (Trust) Key(folder string) string { return folderfiles.Key("codex", folder, files(folder)) }
 
 // configFile is Codex's own config.
 func configFile() string {
@@ -98,29 +87,18 @@ func (Trust) Runs(folder string) ([]model.FolderRun, string, error) {
 	var out []model.FolderRun
 	fs := files(folder)
 	for _, f := range fs {
-		switch {
-		case f.sum == nil:
-			out = append(out, model.FolderRun{File: f.path, What: "Nushi can't vouch for this, so it asks every time", Command: string(f.text)})
-		case filepath.Base(f.path) == "config.toml":
-			out = append(out, configRuns(f.path, f.text)...)
-			fallthrough
-		default:
-			out = append(out, model.FolderRun{File: f.path, What: "Read by Codex", Command: whole(f.path, f.text)})
+		if f.Sum != nil && filepath.Base(f.Path) == "config.toml" {
+			out = append(out, configRuns(f.Path, f.Text)...)
 		}
+		out = append(out, folderfiles.Run(f, "Read by Codex"))
 	}
-	return out, key(folder, fs), nil
-}
-
-type file struct {
-	path string
-	text []byte // what the card shows: its first shown+1 bytes, or why sum is nil
-	sum  []byte // the SHA-256 of all of it; nil when it can't be hashed (not a regular file)
+	return out, folderfiles.Key("codex", folder, fs), nil
 }
 
 // files returns the files of the .codex folders Codex reads for a session
 // in folder (see Runs), empty ones left out. Links aren't followed: a link
 // is a file without a sum, as is anything but a regular file.
-func files(folder string) []file {
+func files(folder string) []folderfiles.File {
 	real := git.RealPath(folder)
 	top, main := git.TrustRoot(real)
 	dirs := []string{real}
@@ -136,67 +114,13 @@ func files(folder string) []file {
 		}
 	}
 	home := git.RealPath(filepath.Dir(configFile()))
-	var out []file
+	var roots []string
 	for _, dir := range dirs {
-		root := filepath.Join(dir, ".codex")
-		fi, err := os.Lstat(root)
-		switch {
-		case err != nil || git.RealPath(root) == home:
-			continue // none, or Codex's own config, not the folder's
-		case fi.Mode()&fs.ModeSymlink != 0:
-			target, _ := os.Readlink(root)
-			out = append(out, file{path: root, text: []byte("a link to " + target + ", which Codex follows")})
-			continue
-		case !fi.IsDir():
-			continue
+		if root := filepath.Join(dir, ".codex"); git.RealPath(root) != home { // Codex's own config isn't the folder's
+			roots = append(roots, root)
 		}
-		filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-			switch {
-			case err != nil:
-				out = append(out, file{path: path, text: []byte(err.Error())})
-			case d.Type()&fs.ModeSymlink != 0:
-				target, _ := os.Readlink(path)
-				out = append(out, file{path: path, text: []byte("a link to " + target + ", which Codex follows")})
-			case d.Type().IsRegular():
-				if f := hashFile(path); len(f.text) > 0 || f.sum == nil {
-					out = append(out, f)
-				}
-			case !d.IsDir():
-				out = append(out, file{path: path, text: []byte("not a regular file")})
-			}
-			return nil
-		})
 	}
-	return out
-}
-
-// hashFile reads a regular file, without following a link or waiting on a
-// fifo: its SHA-256, whole, and its first shown+1 bytes.
-func hashFile(path string) file {
-	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
-	if err != nil {
-		return file{path: path, text: []byte(err.Error())}
-	}
-	defer f.Close()
-	if fi, err := f.Stat(); err != nil || !fi.Mode().IsRegular() {
-		return file{path: path, text: []byte("not a regular file")}
-	}
-	h := sha256.New()
-	var head capped
-	if _, err := io.Copy(io.MultiWriter(h, &head), f); err != nil {
-		return file{path: path, text: []byte(err.Error())}
-	}
-	return file{path: path, text: head.b, sum: h.Sum(nil)}
-}
-
-// capped keeps the first shown+1 bytes written to it.
-type capped struct{ b []byte }
-
-func (c *capped) Write(p []byte) (int, error) {
-	if room := shown + 1 - len(c.b); room > 0 {
-		c.b = append(c.b, p[:min(room, len(p))]...)
-	}
-	return len(p), nil
+	return folderfiles.Walk(roots, "Codex")
 }
 
 // configRuns is a cheap summary of a config.toml (the file itself shows
@@ -230,17 +154,6 @@ func configRuns(path string, b []byte) []model.FolderRun {
 		out = append(out, model.FolderRun{File: path, What: "Environment for commands", Command: strings.Join(slices.Sorted(maps.Keys(cfg.Env.Set)), " ")})
 	}
 	return out
-}
-
-// shown is the most of a file the trust card shows: all of it, or nothing
-// but where it is, never a part that would look like all of it.
-const shown = 256 << 10
-
-func whole(path string, b []byte) string {
-	if len(b) > shown {
-		return fmt.Sprintf("too large to show: read %s", path)
-	}
-	return string(b)
 }
 
 const maxFile = 64 << 20

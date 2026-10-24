@@ -18,6 +18,8 @@ import (
 
 	"github.com/afrase/nushi/acp"
 	"github.com/afrase/nushi/acp/acptest"
+	"github.com/afrase/nushi/internal/ante"
+	"github.com/afrase/nushi/internal/ante/antetest"
 	"github.com/afrase/nushi/internal/api"
 	"github.com/afrase/nushi/internal/codex"
 	"github.com/afrase/nushi/internal/events"
@@ -27,6 +29,7 @@ import (
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/omp"
 	"github.com/afrase/nushi/internal/store"
 )
 
@@ -54,7 +57,9 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	t.Helper()
 	var mu sync.Mutex
 	var kill func()
-	launch := func(codex bool) chats.Launch {
+	// serve runs an agent over pipes: the fake ACP agent, or Ante's bridge
+	// on a fake Ante.
+	launch := func(serve func(r io.Reader, w io.Writer)) chats.Launch {
 		return func(h acp.Handler) (chats.Agent, error) {
 			toAgentR, toAgentW := io.Pipe()
 			fromAgentR, fromAgentW := io.Pipe()
@@ -62,21 +67,39 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 			kill = func() { toAgentR.Close(); fromAgentW.Close() }
 			mu.Unlock()
 			go func() {
-				(&acptest.Agent{History: history, Codex: codex}).Serve(toAgentR, fromAgentW)
+				serve(toAgentR, fromAgentW)
 				fromAgentW.Close()
 			}()
 			return pipeAgent{acp.Connect(fromAgentR, toAgentW, h), toAgentW}, nil
 		}
+	}
+	fake := func(codex, omp bool) chats.Launch {
+		return launch(func(r io.Reader, w io.Writer) { (&acptest.Agent{History: history, Codex: codex, Omp: omp}).Serve(r, w) })
+	}
+	anteStore := anteStores(dataDir)
+	anteHosts := func(cwd string) (io.WriteCloser, io.Reader, func(), error) {
+		inR, inW := io.Pipe()
+		outR, outW := io.Pipe()
+		go func() { anteStore.Serve(inR, outW); outW.Close() }()
+		return inW, outR, func() { inR.Close(); outW.Close() }, nil
 	}
 	if copyHistory == nil {
 		copyHistory = history.Copy
 	}
 	hub := &events.Hub{}
 	st := store.New(dataDir)
-	// The second agent is shaped like Codex, with Codex's dialect.
-	codexKind := chats.Kind{Name: "codex", Title: "Codex", Resume: codex.Resume, Launch: launch(true), History: copyHistory,
+	// The other agents are shaped like Codex and omp, with their dialects,
+	// and Ante is its bridge on a fake Ante.
+	codexKind := chats.Kind{Name: "codex", Title: "Codex", Resume: codex.Resume, Launch: fake(true, false), History: copyHistory,
 		Dialect: chats.Dialect{ForkAt: codex.ForkAt, ToolCall: codex.ToolCall, Other: codex.Other}}
-	svc := chats.New([]chats.Kind{{Name: "fake", Launch: launch(false), History: copyHistory}, codexKind}, st, st, git.Worktrees{}, filepath.Join(dataDir, "scratch"), hub.Publish)
+	anteKind := chats.Kind{Name: "ante", Title: "Ante", Resume: ante.Resume,
+		Launch: launch(func(r io.Reader, w io.Writer) {
+			ante.Serve(r, w, ante.Config{Spawn: anteHosts, Home: anteStore.Home, Version: "0.2.14"})
+		}),
+		Dialect: chats.Dialect{ForkAt: ante.ForkAt, Other: ante.Other, Context: ante.Context}}
+	ompKind := chats.Kind{Name: "omp", Title: "oh-my-pi", Resume: omp.Resume, Launch: fake(false, true), Dialect: chats.Dialect{Other: omp.Other}}
+	svc := chats.New([]chats.Kind{{Name: "fake", Launch: fake(false, false), History: copyHistory}, codexKind, anteKind, ompKind},
+		st, st, git.Worktrees{}, filepath.Join(dataDir, "scratch"), hub.Publish)
 	terms := terminals.New(startSh, "sh", svc, hub.Publish)
 	svc.UseTerminals(terms)
 	follow, unfollow := context.WithCancel(context.Background())
@@ -94,6 +117,22 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 		defer mu.Unlock()
 		kill()
 	}}
+}
+
+var (
+	anteMu sync.Mutex
+	antes  = map[string]*antetest.Store{}
+)
+
+// anteStores is the fake Ante's sessions for a data folder: a daemon
+// started again on it finds them.
+func anteStores(dataDir string) *antetest.Store {
+	anteMu.Lock()
+	defer anteMu.Unlock()
+	if antes[dataDir] == nil {
+		antes[dataDir] = &antetest.Store{Home: filepath.Join(dataDir, "ante")}
+	}
+	return antes[dataDir]
 }
 
 type bearer struct{}
