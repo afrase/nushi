@@ -6,6 +6,7 @@
 //	-psk          pair (IKpsk1) rather than connect (IK)
 //	-tamper N     flip a bit in its Nth answer
 //	-replay N     send its Nth answer twice
+//	-mute         answer nothing after the handshake
 package main
 
 import (
@@ -47,6 +48,7 @@ func main() {
 	pair := flag.Bool("psk", false, "pair (IKpsk1)")
 	tamper := flag.Int("tamper", -1, "flip a bit in this answer")
 	replay := flag.Int("replay", -1, "send this answer twice")
+	mute := flag.Bool("mute", false, "answer nothing after the handshake")
 	flag.Parse()
 	srv := httptest.NewServer(relay.New(relay.Defaults))
 	defer srv.Close()
@@ -78,6 +80,9 @@ func main() {
 		n, err := conn.Read(buf)
 		if err == io.EOF || err != nil {
 			return
+		}
+		if *mute {
+			continue
 		}
 		if _, err := conn.Write(buf[:n]); err != nil {
 			return

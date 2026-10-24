@@ -76,13 +76,15 @@ Uri _at(Uri relay, String side, String id) => relay.replace(
 
 /// Pairs [device] from [offer]: the handshake, then the phone's [name].
 /// [onCode] gets the code to show while the Mac's user compares it and
-/// allows the phone. Returns the daemon, and a transport already connected
-/// on the pairing's channel.
+/// allows the phone; with no answer within [wait] (the Mac gives up after
+/// 2 minutes) the code is stale and it fails. Returns the daemon, and a
+/// transport already connected on the pairing's channel.
 Future<(PairedDaemon, RelayTransport)> pair(
   PairingOffer offer, {
   required KeyPair device,
   required String name,
   required void Function(String code) onCode,
+  Duration wait = const Duration(seconds: 150),
 }) async {
   final ws = await RelaySocket.connect(_at(offer.relay, 'dial', offer.id));
   final ch = await Channel.open(
@@ -94,7 +96,7 @@ Future<(PairedDaemon, RelayTransport)> pair(
   );
   ch.outgoing.add(utf8.encode(jsonEncode({'name': name})));
   onCode(ch.code);
-  final reply = await ch.read();
+  final reply = await ch.read().timeout(wait, onTimeout: () => null);
   final daemon = reply == null
       ? null
       : (jsonDecode(utf8.decode(reply)) as Map)['daemon'];

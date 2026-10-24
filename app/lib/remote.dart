@@ -238,8 +238,22 @@ class _Pairing extends StatelessWidget {
         if (p == null || p.code.isEmpty && qr.isEmpty) {
           return nushiDialog(
             'Pair a phone',
-            Text('The code has expired.', style: theme.ui(t.textSecondary)),
-            [close],
+            Text(
+              'This code is used up or has expired.',
+              style: theme.ui(t.textSecondary),
+            ),
+            [
+              close,
+              if (r?.on == true)
+                Button(
+                  label: 'New code',
+                  kind: ButtonKind.secondary,
+                  onPressed: () {
+                    final nav = Navigator.of(context)..pop();
+                    _pair(nav.context, client);
+                  },
+                ),
+            ],
           );
         }
         if (p.code.isEmpty) {

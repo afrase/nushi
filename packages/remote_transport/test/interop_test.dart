@@ -65,6 +65,17 @@ void main() {
     await ch.close();
   });
 
+  test('pairing gives up on a Mac that doesn\'t answer', () async {
+    final peer = await _peer(['-psk', '-mute']);
+    final offer = PairingOffer(Uri.parse(peer['relay']!), peer['id']!, _b64(peer['key']!), _b64(peer['psk']!));
+    String? code;
+    await expectLater(
+      pair(offer, device: await KeyPair.make(), name: 'p', onCode: (c) => code = c, wait: const Duration(milliseconds: 300)),
+      throwsA(isA<PairingRefused>()),
+    );
+    expect(code, isNotNull);
+  });
+
   test('a wrong secret fails', () async {
     final peer = await _peer(['-psk']);
     await expectLater(_open(peer, secret: Uint8List(32)), throwsA(anything));
