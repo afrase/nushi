@@ -1,14 +1,14 @@
 # Notes
 
-## Summary (2026-10-24, after step 100: milestone T)
+## Summary (2026-10-24, after step 105: milestone U)
 
-Milestone T added Ante and oh-my-pi (omp) as agents, in steps 98–100 plus three rounds of security fixes. One commit each on `main`, all pushed. `make test` passes.
+Milestone U measured memory and speed, added sleeping chats and a status bar, in steps 101–105. One commit each on `main`, all pushed. `make test` passes. API 46.
 
-- **Ante** runs through a bridge of Nushi's own (`nushid ante-acp`, ADR 0030), not `ante-acp`: there was no newer `ante-acp` than 0.2.0 (no commits to it since 2026-09-30; Ante 0.2.15 came out 2026-10-23 with nothing for ACP), and a first cut at filling its gaps upstream was dropped for the bridge. The bridge maps Ante 0.2.14's `serve` protocol (one `ante serve --stdio` per session) to what Nushi uses; nothing outside `internal/ante` knows that protocol.
-- **oh-my-pi** speaks ACP itself (`omp --mode acp`). It needs Bun, so it starts as `npx --yes -p bun@1.4.3 -p @oh-my-pi/pi-coding-agent@18.12.6 omp --mode acp` (both pinned): npx puts the Bun omp's `#!/usr/bin/env bun` finds on the PATH.
-- **Seams fixed rather than special-cased**: `Dialect.Context` (an agent says what fills its context through an extension of its own: no throwaway fork), `Agent.Call` for extensions, the agent's side of ACP in `acp` (`Peer`), and one package for the trust card's files (`internal/folderfiles`, which `codextrust` now uses too). Each new agent is otherwise its package(s), a dialect and a launch entry.
+- **Measured** (step 101, "Memory and speed" below): a Claude chat's agent took about 300 MB, 60 of them npx's own Node process, which stayed as the agent's parent; Codex 150–160 MB (npx 59); omp 310–370 MB (npx 62); Ante 19–26 MB. Agents now start without it (`internal/npx`: npx says where the pinned program is, the daemon runs it): Claude about 245 MB, Codex 85–100, omp 245–315. The daemon is 8–50 MB, the app 150–500 MB (mostly graphics). Streaming a 3,000-word reply drops a few frames late in it (p99 18 ms); opening a long chat takes one 132 ms frame; both noted, not fixed.
+- **Sleep** (steps 102–103, ADR 0032): a chat's menu and its sidebar row's menu have Sleep, which stops its agent as Archive does; the chat stays, with its transcript, and shows a moon in place of its dot. Opening it doesn't wake it; a message (or a side chat, rewind, a picker, the context breakdown) wakes it through `session/load`, with the model and effort it had. Chats sleep on their own after 30 idle minutes (Settings: never, 15 or 30 minutes, 1 or 2 hours; the daemon keeps it) unless a turn runs or waits on you, something is queued, a background command or subagent runs, a side chat is open, or the chat moves, rewinds or reopens. Only agents that report `loadSession` sleep.
+- **Status bar** (step 104): along the window's bottom, how many agents work, are awake and sleep (dot, ring, moon and a number each), and the memory Nushi takes (agents, daemon, app). A click lists the awake chats (title, agent, memory, Sleep), then Nushi itself, then terminals when any. Memory is footprint (`phys_footprint`, Activity Monitor's Memory) read by the daemon without cgo (`proc_pid_rusage` as the `proc_info` system call, the process list from sysctl), every 5 s while the app runs (about 1 ms each). Considered and left out: the daemon's connection (the banner at the top already says when it's lost), usage and cost, CPU, terminals, the branch.
 
-**Features per agent**
+**Features per agent** (milestone T; every agent can sleep, since each reopens sessions)
 
 | | Claude | Codex | Ante | oh-my-pi |
 |---|---|---|---|---|
@@ -29,20 +29,27 @@ Milestone T added Ante and oh-my-pi (omp) as agents, in steps 98–100 plus thre
 | MCP view | yes | a note | a note | a note |
 | Subagents, background shells | yes | no | no | no |
 
-**Tried by hand** (the packaged app and a dev daemon on `/tmp/ndt`, `FIREWORKS_API_KEY` only in the dev daemon's environment, `HOME` a temp folder for omp, `ANTE_HOME` the real `~/.ante`, read-only; DeepSeek V4.1 Flash; scratch folders): an Ante chat (New Ante chat, model picked, a Write with its diff and permission, a Bash command, an AskUser question, steering into a running `sleep 8`, Stop during `sleep 30`, reopen after a daemon restart, Rewind, Delete taking both of Ante's sessions), and an omp chat (model and effort picked, a command with its permission, a question with omp's Other, steering, Stop, reopen after a restart, Delete saying omp keeps its history). The bridge and omp were also driven over ACP by script (load, list, fork, close; omp's `session/delete` answers "Unknown ACP ext method").
+**Tried by hand** (a profile build and a dev daemon on `/tmp/ndu`, `FIREWORKS_API_KEY` only in the dev daemon's environment, scratch folders; Claude on Haiku, Codex and Ante on DeepSeek V4.1 Flash): 20 Claude chats, a long Codex chat and an Ante chat; Sleep from a Claude chat's row menu (its agent ended, transcript kept, opening it didn't wake it, a message woke it on Haiku again); Sleep from the status bar's list (Codex) and through the API (Ante), and an Ante chat woken by a message, on its model; auto-sleep at one minute (idle chats slept within the minute after; a Claude chat running `sleep 150` in the background stayed awake until its command ended and Claude's own turn after it, then slept a minute later); the Settings row; the bar's counts and list following a chat that sleeps.
 
-**Not tried by hand**: `ante --resume` and `omp --resume` in a terminal; the trust cards for Ante and omp in the app (unit tests cover them); side chats and moves for Ante and omp; images for either; a multi-select AskUser; "Allow for this session" and Ante's auto mode; omp's Plan mode; a Claude or Codex chat beside them in this run (the dev daemon's `HOME` was a temp folder); a missing `ante` or Bun; Ante 0.2.15 (this Mac has 0.2.14); the light theme.
+**Not tried by hand**: oh-my-pi sleeping and waking (its reopen is the one after a restart); a sleeping chat woken by Rewind, a side chat, a picker or the context card (tests cover them); auto-sleep with a permission card or a question pending (tests); typing into the box of a sleeping chat in the app (CGEvent typing stopped reaching the window late in the run; the messages went through the API, the path the app uses); the light theme; the packaged app with the new bar.
 
 **Needs your attention**
-- No API bump (still 44), but the daemon changed: press "Restart daemon" in the installed app after `make install`.
-- Set-up: "Ante and oh-my-pi for you" below. Nothing to install for either; omp's first start downloads Bun and omp (about 10 s).
-- Product calls, in "Decisions to revisit" under "New in T". Security: "Security notes" (the bridge, omp's project code).
+- API 46: the installed app asks for "Restart daemon" after `make install`.
+- The model and effort come back after a sleep, not after a daemon restart: Claude reopens a session on its default model (NOTES, Claude's facts). As before.
+- Found while checking for the key: a Claude Code transcript from milestone S, `~/.claude/projects/-Users-aaron-Developer/94b91ba3-910c-45e1-a84a-bd138ed8a5aa/subagents/agent-ab0839e3a78603706.jsonl`, holds the whole Fireworks key twice (the grep command line that leaked; 08:04 UTC today). I left it alone; delete or redact it, and consider rotating the key. Codex writes the environment, keys included, into `$CODEX_HOME/shell_snapshots/*.sh` (mode 0644): see "Security notes".
 
-**Size**: the daemon went from 8,630 to 10,862 lines of Go (the bridge is about 1,500 of them; steps 98 and 99 were over the ~500-line tripwire), `acp` from 929 to 975. The app didn't change.
+**Size**: the daemon went from 10,862 to 11,328 lines of Go, the app from 14,052 to 14,377 lines of Dart; no step over the tripwire.
 
-**Dependencies**: none new.
+**Dependencies**: none new (`golang.org/x/sys/unix` was already in).
 
-**Left behind by the testing**: nothing. The dev chats were deleted with Delete; Ante's test sessions went with them, and the bridge runs' logs (`~/.ante/logs/2026-10-24/ante.{65796,71140,71141,71591,71592,71669,71670,71717}.log`) and `~/.ante/run/` (one finished background job) were removed; `~/.ante/settings.json`, `catalog.json`, `versions.json`, `user_input_history.jsonl` and `tip_history.json` are unchanged (checksums), and the rest of `~/.ante` is as it was. The temp Ante and omp homes, npm caches, the dev data folder, the Ante clone and the omp source were removed; no `~/.omp` was made. The Fireworks key is in no file under them, the scratchpad or the repository (checked with grep, the key on stdin).
+**Left behind by the testing**: nothing. The dev chats were deleted with Delete (Claude's and Ante's histories with them); the measuring harness's two Claude sessions and their project folders, its Ante session, eight Ante logs and `~/.ante/run/` were removed; `~/.ante` is as it was (file list and checksums). The dev data folder, the temp Codex and omp homes, the scratch folders and the harness were removed. The key is in no file under them, the scratchpad or the repository (grep, the key on stdin); the only hit elsewhere is the milestone S transcript above.
+
+## Demo (milestone U)
+
+1. Right-click a chat in the sidebar and pick Sleep: its dot becomes a moon, and the bar's moon count goes up.
+2. Open it: the transcript is there, the header says asleep. Send a message: it wakes, on the model it had, and answers.
+3. Click the memory at the bottom right: the awake chats with what each takes, each with Sleep.
+4. In Settings, "Sleep idle" picks when idle chats sleep (30 minutes by default).
 
 ## Demo (milestone T)
 
@@ -193,6 +200,7 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 102. Sleeping chats in the daemon (ADR 0032); API 45 | 11186 | 984 | 14052 | 682 |
 | 103. Sleep in the app: menus, the sidebar's mark, the setting | 11186 | 984 | 14138 | 682 |
 | 104. A status bar: agents and memory; API 46 | 11328 | 984 | 14373 | 682 |
+| 105. By hand, the bar following each chat, and the docs | 11328 | 984 | 14377 | 682 |
 
 Steps over the ~500-line tripwire (code and tests, without generated code): 98 (2,384 with its tests: Ante's whole bridge and its fake), 99 (901: two agents, two trust packages, the shared trust files), 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 removed more than it added.
 
@@ -365,6 +373,11 @@ modelRoles:
 
 Open questions; what's settled is in `docs/adr/` or in the code.
 
+- New in U: a chat not opened since the daemon started counts as asleep (it has no agent); opening one still reopens it, since its transcript comes from the agent. A sleeping chat's agent stops as for Archive: a running turn is stopped (manual Sleep only), side chats end, a held queue waits. Sleep isn't offered for a side chat.
+- New in U: auto-sleep checks once a minute, so a chat sleeps up to a minute after its idle time. Every event of the chat counts as activity (a usage report, a background command's output, Claude's own turn after a background command), opening or reading it doesn't.
+- New in U: waking restores the options the chat had (model, effort, fast) when the agent offers them; not after a daemon restart, which doesn't keep them.
+- New in U: the status bar's memory is the agents' whole process trees (a command or MCP server an agent runs counts toward its chat), the daemon, and the app; terminals and agents no chat holds are a line of their own.
+
 - New in T: Ante's permission options are Allow, "Allow for this session" and Deny; Ante's own "always" (which writes an allow rule into its settings) isn't offered. A denial sends Ante no message.
 - New in T: an Ante fork (side chat, rewind) needs Ante idle: while it works, the fork fails with Ante's error. A rewind forks after the turn holding the agent's last message, as Codex does.
 - New in T: Ante's Delete removes the session's folder in `~/.ante/sessions` (Ante has no op for it). omp's Delete leaves omp's history (omp has none), and the dialog says so.
@@ -422,7 +435,9 @@ Open questions; what's settled is in `docs/adr/` or in the code.
 - Ante: subagents (the `Agent` tool's child events carry no parent link) and background jobs (`TaskEnd`), skills as slash commands (`SlashCommand`), Ante's `Info` notices in the transcript, and its native `RewindSession` (Nushi rewinds by forking). Upstream, `ante-acp` could take the bridge's mapping; the bridge would then be one launch entry.
 - omp: its `/context` for the Context card, MCP servers sent on `session/new` (omp ignores project MCP configs in ACP mode), and deleting a session's files.
 - Codex's MCP servers (its `config.toml`'s `mcp_servers`, `/mcp` over ACP) in the MCP view; Codex's background terminals and subagent sessions (codex-acp offers them to clients that negotiate them).
-- Fewer JS runtimes (far off; the owner wants as little Node/JS as possible). Claude: a Go bridge in `nushid`, like Ante's (ADR 0030), speaking the `claude` CLI's stream-JSON control protocol (what the Agent SDK does: permission prompts, interrupts, resume and fork, subagent events, `/context`) in place of `claude-agent-acp` on Node. The cost is tracking that protocol, which isn't a stable interface and moves with Claude Code releases; measure the Node process's share per chat first. Codex: the same against its native `codex app-server --stdio` in place of `codex-acp`. omp needs Bun by nature.
+- Fewer JS runtimes (far off; the owner wants as little Node/JS as possible). Claude: a Go bridge in `nushid`, like Ante's (ADR 0030), speaking the `claude` CLI's stream-JSON control protocol (what the Agent SDK does: permission prompts, interrupts, resume and fork, subagent events, `/context`) in place of `claude-agent-acp` on Node. The cost is tracking that protocol, which isn't a stable interface and moves with Claude Code releases; the adapter is about a third of a Claude chat (67–80 MB of about 245) and Node about two thirds of a Codex one ("Memory and speed"). Codex: the same against its native `codex app-server --stdio` in place of `codex-acp`. omp needs Bun by nature.
+- Speed: heal and parse only the streaming reply's last block (a 3,000-word reply drops frames late in it), and a lazy transcript for long chats (ADR 0026 lays out every item: one 132 ms frame to open a long chat).
+- Memory: Codex runs its native `codex` through a 14 MB Node launcher (`codex.js`) that codex-acp starts; codex-acp could be pointed at the native binary. Keeping a chat's model and effort across daemon restarts (in its session file) would make a wake after a restart match one within a run.
 - Subagents as ACP child sessions (the RFD form claude-agent-acp offers a client that advertises `subagents`): a background subagent's steps after a daemon restart, and a stop button per subagent. See step 51.
 
 ## Dependencies
@@ -435,6 +450,7 @@ Open questions; what's settled is in `docs/adr/` or in the code.
 - Codex runs as you through `npx --yes @agentclientprotocol/codex-acp@2.2.2` (pinned by version, not hash; it brings `@openai/codex` 0.160.1), started like Claude's adapter. codex-acp tells Codex to trust every session's cwd, so a folder's `.codex/config.toml` (MCP servers, the environment of every command, sandbox settings, plugins) and rules load without Codex asking; Nushi's card is the only warning (ADR 0029). The card's key is a hash of every file it showed, computed with the card and checked again on "Start anyway"; links aren't followed. Codex's trust record is read, never written. Agents get the login shell's environment, secrets included (ADR 0028).
 - Ante runs as you through the bridge, `nushid ante-acp`, which starts `ante serve --stdio` (the `ante` on `PATH` or in `~/.ante/bin`, 0.2.14 or newer) in the chat's folder. The bridge never reads Ante's settings; it reads `ante catalog` (models only) and each session's `meta.json`, and removes a session's folder only for an id of Ante's form (`ses_` and a ULID). A Write's old text, for its diff, is read only from a regular file of at most 1 MB, without following a link. Prompt images go to a private temp folder the bridge removes when it ends. The trust card shows the nearest `.ante/settings.json` (ADR 0031).
 - omp runs as you through `npx --yes -p bun@1.4.3 -p @oh-my-pi/pi-coding-agent@18.12.6` (pinned by version, not hash) and loads a project's extensions, hooks, tools, command modules and LSP servers without asking; the trust card shows each such file whole (ADR 0031). Its bash asks first; its writes don't.
+- Codex snapshots the shell environment of each thread into `$CODEX_HOME/shell_snapshots/<thread>.sh`, secrets included (`FIREWORKS_API_KEY` was in the test home's), mode 0644. That's Codex's own feature (ADR 0028 gives agents the login shell's environment); your `~/.codex` would get the same.
 - Memory: `GetMemory` reads the footprint of the daemon's process trees, and of the process tree a client names (`app_pid`, any process of yours), for any client with the token: sizes only. Agents start from the path `npx -c 'command -v <bin>'` prints, in the daemon's folder, as npx itself would run them.
 - Agents run as you, through `npx --yes @agentclientprotocol/claude-agent-acp@0.94.0` (pinned by version, not hash), started in the daemon's data folder so a project's `node_modules` or `.npmrc` can't swap it. A chat's folder reaches the agent only as `cwd`.
 - A panic on something the agent sent becomes a JSON-RPC error; a malformed form is refused.

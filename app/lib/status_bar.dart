@@ -58,45 +58,49 @@ class _StatusBarState extends State<StatusBar> {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context), t = theme.t;
     final small = theme.ui(t.textSecondary, size: 11.5);
+    // The chat list is the daemon's; each chat's status is its own.
     return ListenableBuilder(
       listenable: widget.daemon,
-      builder: (context, _) {
-        final live = widget.daemon.chats.values.where((c) => !c.archived);
-        final working = live.where((c) => c.started != null).length;
-        final asleep = live.where((c) => c.asleep).length;
-        final awake = live.length - asleep;
-        return Container(
-          height: 24,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          decoration: BoxDecoration(
-            color: t.raised,
-            border: Border(top: BorderSide(color: t.borderSubtle)),
-          ),
-          child: Row(
-            children: [
-              Tooltip(
-                message: '$working working, $awake awake, $asleep asleep',
-                child: Row(
-                  spacing: 4,
-                  children: [
-                    _Dot(t.running, filled: true),
-                    Text('$working', style: small),
-                    const SizedBox(width: 6),
-                    _Dot(t.idle),
-                    Text('$awake', style: small),
-                    const SizedBox(width: 6),
-                    Icon(Icons.bedtime_outlined, size: 11, color: t.idle),
-                    Text('$asleep', style: small),
-                  ],
+      builder: (context, _) => ListenableBuilder(
+        listenable: Listenable.merge(widget.daemon.chats.values),
+        builder: (context, _) {
+          final live = widget.daemon.chats.values.where((c) => !c.archived);
+          final working = live.where((c) => c.started != null).length;
+          final asleep = live.where((c) => c.asleep).length;
+          final awake = live.length - asleep;
+          return Container(
+            height: 24,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              color: t.raised,
+              border: Border(top: BorderSide(color: t.borderSubtle)),
+            ),
+            child: Row(
+              children: [
+                Tooltip(
+                  message: '$working working, $awake awake, $asleep asleep',
+                  child: Row(
+                    spacing: 4,
+                    children: [
+                      _Dot(t.running, filled: true),
+                      Text('$working', style: small),
+                      const SizedBox(width: 6),
+                      _Dot(t.idle),
+                      Text('$awake', style: small),
+                      const SizedBox(width: 6),
+                      Icon(Icons.bedtime_outlined, size: 11, color: t.idle),
+                      Text('$asleep', style: small),
+                    ],
+                  ),
                 ),
-              ),
-              const Spacer(),
-              if (_memory case final m?)
-                _MemoryButton(m, widget.daemon, onOpen: _read, style: small),
-            ],
-          ),
-        );
-      },
+                const Spacer(),
+                if (_memory case final m?)
+                  _MemoryButton(m, widget.daemon, onOpen: _read, style: small),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }

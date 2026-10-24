@@ -33,6 +33,8 @@ The daemon keeps its socket, token and log in `~/Library/Application Support/Nus
 - **Ante**, through Nushi's own bridge (`nushid ante-acp`, [ADR 0030](docs/adr/0030-our-own-bridge-for-ante.md)), which runs an `ante serve --stdio` per session. It needs Ante 0.2.14 or newer (`ante` on `PATH`, or in `~/.ante/bin`) and uses Ante's own settings, providers and sign-in (`~/.ante`, or `$ANTE_HOME`). An Ante chat resumes in a terminal with `ante --resume <session id>`.
 - **oh-my-pi**, through `npx --yes -p bun@1.4.3 -p @oh-my-pi/pi-coding-agent@18.12.6 omp --mode acp` (omp needs Bun, which npx brings beside it). It uses omp's own config and keys (`~/.omp`, the environment: `FIREWORKS_API_KEY` for Fireworks). An omp chat resumes in a terminal with `omp --resume <session id>`; Nushi can't delete an omp session's history.
 
-Claude, Codex and oh-my-pi need `npx` (Node) on the login shell's `PATH`. What each agent can do (fork, rewind, steering, questions, the context breakdown, MCP) follows what it reports; a control it lacks isn't shown.
+Claude, Codex and oh-my-pi need `npx` (Node) on the login shell's `PATH`; npx installs the pinned package and says where its program is, and the daemon runs that program itself (npx doesn't stay running). What each agent can do (fork, rewind, steering, questions, the context breakdown, MCP) follows what it reports; a control it lacks isn't shown.
+
+A chat whose agent isn't needed can sleep: its agent stops and the chat stays, and the next message wakes it (`session/load`). Chats sleep on their own after 30 idle minutes when nothing would be lost (Settings changes the time), or from a chat's menu ([ADR 0032](docs/adr/0032-idle-chats-sleep.md)). The bar along the window's bottom counts working, awake and sleeping agents, and shows the memory Nushi takes; a click lists each awake chat's.
 
 Decisions are in [`docs/adr/`](docs/adr/README.md).
