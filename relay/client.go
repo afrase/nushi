@@ -16,6 +16,10 @@ import (
 // nothing back for three times as long drops the connection.
 var KeepAlive = 25 * time.Second
 
+// MaxMessage is the largest message a client takes from a relay: a Noise
+// message. A bigger one ends the connection.
+const MaxMessage = 65535
+
 // Dialer connects to a relay.
 type Dialer struct {
 	// Proxies names the proxies to try for a URL, in order; a nil entry is
@@ -78,6 +82,7 @@ type Conn struct {
 func newConn(ws *websocket.Conn) *Conn {
 	every := KeepAlive
 	c := &Conn{ws: ws, done: make(chan struct{}), every: every}
+	ws.SetReadLimit(MaxMessage)
 	alive := func() { _ = ws.SetReadDeadline(time.Now().Add(3 * every)) }
 	alive()
 	ws.SetPongHandler(func(string) error { alive(); return nil })

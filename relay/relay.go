@@ -21,13 +21,19 @@ type Limits struct {
 	Burst      int           // bytes a connection may send at once
 	Idle       time.Duration // a connection that sends nothing, not even a ping, for this long is closed
 	DialWait   time.Duration // how long a dialer waits for a listener
+	MaxWait    time.Duration // how long a listener may wait for a dialer; it then connects again
 	PerID      int           // connections on one id, both sides
-	Total      int           // connections in all
+	PerIP      int           // connections from one address (an IPv6 /64); at most half of Total
+	NewRate    float64       // new connections a second from one address, once NewBurst is spent
+	NewBurst   float64
+	Total      int    // connections in all
+	IPHeader   string // behind a reverse proxy, the header with the client's address (such as Fly-Client-IP)
 }
 
 // Defaults suit one person's phones and Macs.
+// Many people can share one company's address, so PerIP is generous.
 var Defaults = Limits{MaxMessage: 65535, Rate: 1 << 20, Burst: 8 << 20, Idle: 90 * time.Second,
-	DialWait: 10 * time.Second, PerID: 16, Total: 1000}
+	DialWait: 10 * time.Second, MaxWait: time.Hour, PerID: 16, PerIP: 200, NewRate: 2, NewBurst: 60, Total: 1000}
 
 // minCost is what a message costs against the rate at least, so tiny
 // messages can't flood.
@@ -36,12 +42,15 @@ const minCost = 512
 var validID = regexp.MustCompile(`^[A-Za-z0-9_-]{16,128}$`)
 
 type server struct {
+	http.Handler
 	lim Limits
 	up  websocket.Upgrader
 
-	mu    sync.Mutex
-	total int
-	rooms map[string]*room
+	mu      sync.Mutex
+	total   int
+	rooms   map[string]*room
+	sources map[string]*source
+	swept   time.Time
 }
 
 // room is one rendezvous id: its connections, and its listeners still
@@ -59,25 +68,34 @@ type peer struct {
 
 // New returns the relay's handler.
 func New(lim Limits) http.Handler {
-	s := &server{lim: lim, rooms: map[string]*room{}}
+	lim.PerIP = min(lim.PerIP, max(1, lim.Total/2))
+	s := &server{lim: lim, rooms: map[string]*room{}, sources: map[string]*source{}}
 	// No browser has a reason to be here: refuse any page's script.
 	s.up.CheckOrigin = func(r *http.Request) bool { return r.Header.Get("Origin") == "" }
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v1/listen/{id}", s.listen)
 	mux.HandleFunc("GET /v1/dial/{id}", s.dial)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("ok\n")) })
-	return mux
+	s.Handler = mux
+	return s
 }
 
 func (s *server) listen(w http.ResponseWriter, r *http.Request) {
-	id, ws := s.join(w, r)
+	id, src, ws := s.join(w, r)
 	if ws == nil {
 		return
 	}
-	defer s.leave(id)
+	defer s.leave(id, src)
 	p := &peer{ws: ws}
 	defer s.closeBoth(p)
 	b := s.prepare(p)
+	// Pings keep a waiting listener open only so long.
+	waited := time.AfterFunc(s.lim.MaxWait, func() {
+		if p.other.Load() == nil {
+			ws.Close()
+		}
+	})
+	defer waited.Stop()
 	s.mu.Lock()
 	rm := s.rooms[id]
 	rm.waiting = append(rm.waiting, p)
@@ -85,15 +103,15 @@ func (s *server) listen(w http.ResponseWriter, r *http.Request) {
 	rm.arrived = make(chan struct{})
 	s.mu.Unlock()
 	defer s.unwait(id, p)
-	s.pump(p, &b)
+	s.pump(p, b)
 }
 
 func (s *server) dial(w http.ResponseWriter, r *http.Request) {
-	id, ws := s.join(w, r)
+	id, src, ws := s.join(w, r)
 	if ws == nil {
 		return
 	}
-	defer s.leave(id)
+	defer s.leave(id, src)
 	p := &peer{ws: ws}
 	defer s.closeBoth(p)
 	// A dialer meets a listener only once it has spoken (it always speaks
@@ -101,7 +119,7 @@ func (s *server) dial(w http.ResponseWriter, r *http.Request) {
 	// know is taken.
 	b := s.prepare(p)
 	silent := time.AfterFunc(s.lim.DialWait, func() { ws.Close() }) // pings don't put it off
-	first, ok := s.read(p, &b)
+	first, ok := s.read(p, b)
 	if !silent.Stop() || !ok {
 		return
 	}
@@ -117,16 +135,17 @@ func (s *server) dial(w http.ResponseWriter, r *http.Request) {
 	if !s.forward(p, first) {
 		return
 	}
-	s.pump(p, &b)
+	s.pump(p, b)
 }
 
 // join admits a connection to id within the caps and upgrades it.
-func (s *server) join(w http.ResponseWriter, r *http.Request) (string, *websocket.Conn) {
+func (s *server) join(w http.ResponseWriter, r *http.Request) (string, string, *websocket.Conn) {
 	id := r.PathValue("id")
 	if !validID.MatchString(id) {
 		http.NotFound(w, r)
-		return "", nil
+		return "", "", nil
 	}
+	src := s.sourceKey(r)
 	s.mu.Lock()
 	rm := s.rooms[id]
 	if rm == nil {
@@ -135,7 +154,12 @@ func (s *server) join(w http.ResponseWriter, r *http.Request) (string, *websocke
 	if s.total >= s.lim.Total || rm.conns >= s.lim.PerID {
 		s.mu.Unlock()
 		http.Error(w, "busy", http.StatusServiceUnavailable)
-		return "", nil
+		return "", "", nil
+	}
+	if code := s.admitSource(src, time.Now()); code != 0 {
+		s.mu.Unlock()
+		http.Error(w, "busy", code)
+		return "", "", nil
 	}
 	s.rooms[id] = rm
 	rm.conns++
@@ -143,16 +167,17 @@ func (s *server) join(w http.ResponseWriter, r *http.Request) (string, *websocke
 	s.mu.Unlock()
 	ws, err := s.up.Upgrade(w, r, nil)
 	if err != nil {
-		s.leave(id)
-		return "", nil
+		s.leave(id, src)
+		return "", "", nil
 	}
-	return id, ws
+	return id, src, ws
 }
 
-func (s *server) leave(id string) {
+func (s *server) leave(id, src string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.total--
+	s.leaveSource(src)
 	if rm := s.rooms[id]; rm != nil {
 		if rm.conns--; rm.conns == 0 {
 			delete(s.rooms, id)
@@ -196,16 +221,18 @@ func (s *server) match(id string) *peer {
 }
 
 // prepare sets p's caps: its message size, its idle time (pings count),
-// and its rate.
-func (s *server) prepare(p *peer) bucket {
+// and its rate (pings count against it too).
+func (s *server) prepare(p *peer) *bucket {
+	b := &bucket{rate: float64(s.lim.Rate), tokens: float64(s.lim.Burst), burst: float64(s.lim.Burst), last: time.Now()}
 	p.ws.SetReadLimit(int64(s.lim.MaxMessage))
 	_ = p.ws.SetReadDeadline(time.Now().Add(s.lim.Idle))
 	p.ws.SetPingHandler(func(data string) error {
+		b.take(minCost)
 		_ = p.ws.SetReadDeadline(time.Now().Add(s.lim.Idle))
 		_ = p.ws.WriteControl(websocket.PongMessage, []byte(data), time.Now().Add(5*time.Second))
 		return nil
 	})
-	return bucket{rate: float64(s.lim.Rate), tokens: float64(s.lim.Burst), burst: float64(s.lim.Burst), last: time.Now()}
+	return b
 }
 
 // read takes p's next message, at p's rate.

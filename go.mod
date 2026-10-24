@@ -6,6 +6,7 @@ require (
 	connectrpc.com/connect v1.21.1
 	github.com/BurntSushi/toml v1.6.0
 	github.com/creack/pty v1.1.24
+	github.com/flynn/noise v1.1.0
 	github.com/gorilla/websocket v1.5.3
 	golang.org/x/crypto v0.58.0
 	golang.org/x/sys v0.49.0
@@ -16,7 +17,6 @@ require (
 require (
 	golang.org/x/net v0.60.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
-	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )
 
 tool (
