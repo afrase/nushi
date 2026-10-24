@@ -535,6 +535,7 @@ Open questions; what's settled is in `docs/adr/` or in the code.
 
 ## Working notes
 
+- The icon (step 123): "the still lake" from the naming pass. `make icons` (`tools/icongen`) writes `app/macos/Runner/AppIcon.icon` (Icon Composer: a teal fill, the rings as a glass layer, the light and its glow above; macOS 26 and later draw it in Liquid Glass with dark, clear and tinted looks), the PNG set for older macOS (one ring at 16 and 32 px, thicker lines at 64), and `docs/brand/` (the icon and the bare mark for the README). `app/lib/logo.dart` draws the mark on the "Start a chat" pane. To see what macOS makes of a compiled icon, `NSWorkspace.shared.icon(forFile:)` on the built app; actool keeps a daemon, so a deleted working folder fails it until `pkill ibtoold`.
 - A phone by hand, before the phone app: decode the app's QR code from a screenshot (a few lines of Swift with Vision's `VNDetectBarcodesRequest`) and pair from a Dart script on `packages/remote_transport`; a raw Connect call is a POST of `{}` with `content-type: application/json` on the transport's `makeRequest`.
 
 - Screenshots of the app window are current only while it's in front: macOS stops Flutter drawing an occluded window.
