@@ -117,6 +117,7 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 71. A subagent's own pane | 6968 | 867 | 12938 | 682 |
 | 72. Background shells | 7129 | 867 | 13225 | 682 |
 | 73. Message a subagent from its pane | 7281 | 867 | 13322 | 682 |
+| (Context card: one line over the bar) | 7281 | 867 | 13372 | 682 |
 
 Steps over the ~500-line tripwire (code and tests, without generated code): 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 and this milestone removed more than they added.
 

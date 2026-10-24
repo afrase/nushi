@@ -207,14 +207,40 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
         rows: [
           if (u.contextSize == 0 && cost(u).isEmpty && _context == null)
             (null, '${chat.agentName} reports it after a turn.'),
-          if (u.contextSize > 0) ...[
-            ('Used', ContextMeter(u)),
+          // "4% used … 37.4k / 1M", then the bar.
+          if (u.contextSize > 0 || _context != null || _canAsk)
             (
-              'Tokens',
-              '${tokens(u.contextUsed.toInt())} of '
-                  '${tokens(u.contextSize.toInt())}',
+              null,
+              Row(
+                children: [
+                  Expanded(child: ContextUsed(u)),
+                  if (u.contextSize > 0)
+                    Text(
+                      '${tokens(u.contextUsed.toInt())} / '
+                      '${tokens(u.contextSize.toInt())}',
+                      style: theme.ui(t.text, size: 12),
+                    ),
+                  if (_context != null || _canAsk)
+                    IconTap(
+                      Icons.refresh,
+                      tooltip:
+                          'Ask ${chat.agentName} what fills it, in a copy of '
+                          'the chat',
+                      size: 13,
+                      onTap: _canAsk ? _askContext : null,
+                    ),
+                ],
+              ),
             ),
-          ],
+          switch (_context) {
+            final c? when c.categories.isNotEmpty => (
+              null,
+              ContextBreakdown(c.categories),
+            ),
+            final c? => (null, AgentMarkdown(c.markdown)),
+            null when u.contextSize > 0 => (null, UsageBar(u)),
+            null => (null, const SizedBox.shrink()),
+          },
           if (lastTurn(u).isNotEmpty)
             (
               'Last turn',
@@ -231,23 +257,6 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
                     'The session’s cost so far, as ${chat.agentName} reports it',
                 child: Text(cost(u), style: theme.ui(t.text, size: 12)),
               ),
-            ),
-          if (_context != null || _canAsk)
-            (
-              'By category',
-              IconTap(
-                Icons.refresh,
-                tooltip: 'Ask ${chat.agentName} again, in a copy of the chat',
-                size: 13,
-                onTap: _canAsk ? _askContext : null,
-              ),
-            ),
-          if (_context case final c?)
-            (
-              null,
-              c.categories.isEmpty
-                  ? AgentMarkdown(c.markdown)
-                  : ContextBreakdown(c.categories),
             ),
         ],
       ),
