@@ -28,10 +28,10 @@ func TestPromptStreamsTheReply(t *testing.T) {
 		}
 	}
 	agent := &fakeAgent{updates: []acp.SessionUpdate{chunk("m1", "Hel"), chunk("m1", "lo"), chunk("", "!"), chunk("m2", "Bye")}}
-	svc := New("fake", func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, claudeDialect, &memModes{}, &memSessions{}, nil, nil, "", publish)
+	svc := New([]Kind{{Name: "fake", Launch: func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, Dialect: claudeDialect}}, &memModes{}, &memSessions{}, nil, "", publish)
 
 	folder := t.TempDir()
-	id, err := svc.Start(context.Background(), folder, false)
+	id, err := svc.Start(context.Background(), "", folder, false)
 	if err != nil || svc.chats[id].sid != "s1" {
 		t.Fatalf("Start = %q, %v", id, err)
 	}
@@ -219,8 +219,8 @@ func TestUsageIsWhatTheAgentReported(t *testing.T) {
 		updates: []acp.SessionUpdate{usage(100, &acp.Cost{Amount: 0.5, Currency: "USD"}), usage(120, nil)},
 		usage:   &acp.TurnUsage{InputTokens: 3, OutputTokens: 4, CachedReadTokens: 5, TotalTokens: 12},
 	}
-	svc := New("fake", func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, claudeDialect, &memModes{}, &memSessions{}, nil, nil, "", publish)
-	id, err := svc.Start(context.Background(), t.TempDir(), false)
+	svc := New([]Kind{{Name: "fake", Launch: func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, Dialect: claudeDialect}}, &memModes{}, &memSessions{}, nil, "", publish)
+	id, err := svc.Start(context.Background(), "", t.TempDir(), false)
 	if err != nil {
 		t.Fatal(err)
 	}

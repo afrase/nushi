@@ -37,7 +37,7 @@ func TestCloseStopsAnAgentStillOpening(t *testing.T) {
 	if got, _ := agent.texts(); !slices.Equal(got, []string{"one"}) || closed == 0 {
 		t.Errorf("prompts %q, closed %d times", got, closed)
 	}
-	if _, err := svc.Start(context.Background(), t.TempDir(), false); err == nil {
+	if _, err := svc.Start(context.Background(), "", t.TempDir(), false); err == nil {
 		t.Error("a chat started once the daemon was stopping")
 	}
 }
@@ -83,9 +83,9 @@ func TestARedeleteAfterTheAgentWent(t *testing.T) {
 	agent := &fakeAgent{deletes: true}
 	dialect := claudeDialect
 	dialect.Redelete = 20 * time.Millisecond
-	svc := New("fake", agent.launch, dialect, &memModes{}, &memSessions{}, nil, nil, "", func(model.Event) {})
+	svc := New([]Kind{{Name: "fake", Launch: agent.launch, Dialect: dialect}}, &memModes{}, &memSessions{}, nil, "", func(model.Event) {})
 	ctx := context.Background()
-	id, _ := svc.Start(ctx, t.TempDir(), false)
+	id, _ := svc.Start(ctx, "", t.TempDir(), false)
 	side, err := svc.Fork(ctx, id)
 	if err != nil {
 		t.Fatal(err)
@@ -103,9 +103,9 @@ func TestAForkAsTheAgentEnds(t *testing.T) {
 	agent := &fakeAgent{deletes: true}
 	dialect := claudeDialect
 	dialect.Redelete = 0
-	svc := New("fake", agent.launch, dialect, &memModes{}, &memSessions{}, nil, nil, "", func(model.Event) {})
+	svc := New([]Kind{{Name: "fake", Launch: agent.launch, Dialect: dialect}}, &memModes{}, &memSessions{}, nil, "", func(model.Event) {})
 	ctx := context.Background()
-	id, _ := svc.Start(ctx, t.TempDir(), false)
+	id, _ := svc.Start(ctx, "", t.TempDir(), false)
 	c := svc.chats[id]
 	agent.forkGate = make(chan struct{})
 	forked := make(chan error)

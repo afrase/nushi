@@ -13,6 +13,8 @@ service NushiService {
   rpc GetChat(GetChatRequest) returns (GetChatResponse);
   // Starts an agent in a folder and opens a chat with it.
   rpc StartChat(StartChatRequest) returns (StartChatResponse);
+  // Lists the agents chats can run, the default first.
+  rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse);
   // Moves a chat to another folder, or to a new worktree. A chat without
   // messages starts a new session there (and a worktree it leaves is
   // removed if it holds no work); one with messages keeps its history, in a
@@ -245,9 +247,30 @@ message ChatCommands {
   repeated Command commands = 1;
 }
 
+message ListAgentsRequest {}
+
+message ListAgentsResponse {
+  repeated Agent agents = 1;
+}
+
+// An agent chats can run.
+message Agent {
+  // As Chat.agent names it, such as "claude".
+  string name = 1;
+  // As people read it, such as "Claude".
+  string title = 2;
+  // The terminal command that opens one of its sessions, followed by the
+  // session id, such as "claude --resume".
+  string resume = 3;
+  // Nushi shows and changes its MCP servers (ListMcpServers).
+  bool mcp = 4;
+}
+
 message StartChatRequest {
   // Empty: a scratch folder of the chat's own, in the daemon's data folder.
   string folder = 1;
+  // The agent to run (Agent.name); empty for the default.
+  string agent = 3;
   // Run the chat in a new worktree of folder's repository, at
   // <repo>/.worktrees/<name> on a new branch nushi/<name> from folder's
   // HEAD.

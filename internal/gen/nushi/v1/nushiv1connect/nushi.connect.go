@@ -41,6 +41,8 @@ const (
 	NushiServiceGetChatProcedure = "/nushi.v1.NushiService/GetChat"
 	// NushiServiceStartChatProcedure is the fully-qualified name of the NushiService's StartChat RPC.
 	NushiServiceStartChatProcedure = "/nushi.v1.NushiService/StartChat"
+	// NushiServiceListAgentsProcedure is the fully-qualified name of the NushiService's ListAgents RPC.
+	NushiServiceListAgentsProcedure = "/nushi.v1.NushiService/ListAgents"
 	// NushiServiceMoveChatProcedure is the fully-qualified name of the NushiService's MoveChat RPC.
 	NushiServiceMoveChatProcedure = "/nushi.v1.NushiService/MoveChat"
 	// NushiServiceSendPromptProcedure is the fully-qualified name of the NushiService's SendPrompt RPC.
@@ -158,6 +160,8 @@ type NushiServiceClient interface {
 	GetChat(context.Context, *connect.Request[v1.GetChatRequest]) (*connect.Response[v1.GetChatResponse], error)
 	// Starts an agent in a folder and opens a chat with it.
 	StartChat(context.Context, *connect.Request[v1.StartChatRequest]) (*connect.Response[v1.StartChatResponse], error)
+	// Lists the agents chats can run, the default first.
+	ListAgents(context.Context, *connect.Request[v1.ListAgentsRequest]) (*connect.Response[v1.ListAgentsResponse], error)
 	// Moves a chat to another folder, or to a new worktree. A chat without
 	// messages starts a new session there (and a worktree it leaves is
 	// removed if it holds no work); one with messages keeps its history, in a
@@ -320,6 +324,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceStartChatProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("StartChat")),
+			connect.WithClientOptions(opts...),
+		),
+		listAgents: connect.NewClient[v1.ListAgentsRequest, v1.ListAgentsResponse](
+			httpClient,
+			baseURL+NushiServiceListAgentsProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ListAgents")),
 			connect.WithClientOptions(opts...),
 		),
 		moveChat: connect.NewClient[v1.MoveChatRequest, v1.MoveChatResponse](
@@ -565,6 +575,7 @@ type nushiServiceClient struct {
 	listChats        *connect.Client[v1.ListChatsRequest, v1.ListChatsResponse]
 	getChat          *connect.Client[v1.GetChatRequest, v1.GetChatResponse]
 	startChat        *connect.Client[v1.StartChatRequest, v1.StartChatResponse]
+	listAgents       *connect.Client[v1.ListAgentsRequest, v1.ListAgentsResponse]
 	moveChat         *connect.Client[v1.MoveChatRequest, v1.MoveChatResponse]
 	sendPrompt       *connect.Client[v1.SendPromptRequest, v1.SendPromptResponse]
 	rewindChat       *connect.Client[v1.RewindChatRequest, v1.RewindChatResponse]
@@ -624,6 +635,11 @@ func (c *nushiServiceClient) GetChat(ctx context.Context, req *connect.Request[v
 // StartChat calls nushi.v1.NushiService.StartChat.
 func (c *nushiServiceClient) StartChat(ctx context.Context, req *connect.Request[v1.StartChatRequest]) (*connect.Response[v1.StartChatResponse], error) {
 	return c.startChat.CallUnary(ctx, req)
+}
+
+// ListAgents calls nushi.v1.NushiService.ListAgents.
+func (c *nushiServiceClient) ListAgents(ctx context.Context, req *connect.Request[v1.ListAgentsRequest]) (*connect.Response[v1.ListAgentsResponse], error) {
+	return c.listAgents.CallUnary(ctx, req)
 }
 
 // MoveChat calls nushi.v1.NushiService.MoveChat.
@@ -831,6 +847,8 @@ type NushiServiceHandler interface {
 	GetChat(context.Context, *connect.Request[v1.GetChatRequest]) (*connect.Response[v1.GetChatResponse], error)
 	// Starts an agent in a folder and opens a chat with it.
 	StartChat(context.Context, *connect.Request[v1.StartChatRequest]) (*connect.Response[v1.StartChatResponse], error)
+	// Lists the agents chats can run, the default first.
+	ListAgents(context.Context, *connect.Request[v1.ListAgentsRequest]) (*connect.Response[v1.ListAgentsResponse], error)
 	// Moves a chat to another folder, or to a new worktree. A chat without
 	// messages starts a new session there (and a worktree it leaves is
 	// removed if it holds no work); one with messages keeps its history, in a
@@ -989,6 +1007,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceStartChatProcedure,
 		svc.StartChat,
 		connect.WithSchema(nushiServiceMethods.ByName("StartChat")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceListAgentsHandler := connect.NewUnaryHandler(
+		NushiServiceListAgentsProcedure,
+		svc.ListAgents,
+		connect.WithSchema(nushiServiceMethods.ByName("ListAgents")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceMoveChatHandler := connect.NewUnaryHandler(
@@ -1235,6 +1259,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceGetChatHandler.ServeHTTP(w, r)
 		case NushiServiceStartChatProcedure:
 			nushiServiceStartChatHandler.ServeHTTP(w, r)
+		case NushiServiceListAgentsProcedure:
+			nushiServiceListAgentsHandler.ServeHTTP(w, r)
 		case NushiServiceMoveChatProcedure:
 			nushiServiceMoveChatHandler.ServeHTTP(w, r)
 		case NushiServiceSendPromptProcedure:
@@ -1336,6 +1362,10 @@ func (UnimplementedNushiServiceHandler) GetChat(context.Context, *connect.Reques
 
 func (UnimplementedNushiServiceHandler) StartChat(context.Context, *connect.Request[v1.StartChatRequest]) (*connect.Response[v1.StartChatResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.StartChat is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ListAgents(context.Context, *connect.Request[v1.ListAgentsRequest]) (*connect.Response[v1.ListAgentsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ListAgents is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) MoveChat(context.Context, *connect.Request[v1.MoveChatRequest]) (*connect.Response[v1.MoveChatResponse], error) {

@@ -11,9 +11,9 @@ import (
 func TestContextUsageLeavesNoTrace(t *testing.T) {
 	agent := &fakeAgent{updates: []acp.SessionUpdate{chunk("m1", "## Context"), chunk("m2", "## Context Usage")}}
 	var events int
-	svc := New("fake", func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, claudeDialect, &memModes{}, &memSessions{}, nil, nil, "",
+	svc := New([]Kind{{Name: "fake", Launch: func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, Dialect: claudeDialect}}, &memModes{}, &memSessions{}, nil, "",
 		func(model.Event) { events++ })
-	id, err := svc.Start(context.Background(), t.TempDir(), false)
+	id, err := svc.Start(context.Background(), "", t.TempDir(), false)
 	if err != nil {
 		t.Fatal(err)
 	}

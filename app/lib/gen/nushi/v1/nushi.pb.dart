@@ -1006,14 +1006,206 @@ class ChatCommands extends $pb.GeneratedMessage {
   $pb.PbList<Command> get commands => $_getList(0);
 }
 
+class ListAgentsRequest extends $pb.GeneratedMessage {
+  factory ListAgentsRequest() => ListAgentsRequest._();
+
+  ListAgentsRequest._();
+
+  factory ListAgentsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListAgentsRequest()..mergeFromBuffer(data, registry);
+  factory ListAgentsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListAgentsRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListAgentsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListAgentsRequest.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListAgentsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListAgentsRequest copyWith(void Function(ListAgentsRequest) updates) =>
+      super.copyWith((message) => updates(message as ListAgentsRequest))
+          as ListAgentsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ListAgentsRequest() / ListAgentsRequest.new instead')
+  static ListAgentsRequest create() => ListAgentsRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ListAgentsRequest._();
+  @$core.override
+  ListAgentsRequest createEmptyInstance() => ListAgentsRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ListAgentsRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ListAgentsRequest>(
+          ListAgentsRequest.$_createMessage);
+  static ListAgentsRequest? _defaultInstance;
+}
+
+class ListAgentsResponse extends $pb.GeneratedMessage {
+  factory ListAgentsResponse({
+    $core.Iterable<Agent>? agents,
+  }) {
+    final result = ListAgentsResponse._();
+    if (agents != null) result.agents.addAll(agents);
+    return result;
+  }
+
+  ListAgentsResponse._();
+
+  factory ListAgentsResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListAgentsResponse()..mergeFromBuffer(data, registry);
+  factory ListAgentsResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListAgentsResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListAgentsResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListAgentsResponse.$_createMessage)
+    ..pPM<Agent>(1, _omitFieldNames ? '' : 'agents',
+        subBuilder: Agent.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListAgentsResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListAgentsResponse copyWith(void Function(ListAgentsResponse) updates) =>
+      super.copyWith((message) => updates(message as ListAgentsResponse))
+          as ListAgentsResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ListAgentsResponse() / ListAgentsResponse.new instead')
+  static ListAgentsResponse create() => ListAgentsResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ListAgentsResponse._();
+  @$core.override
+  ListAgentsResponse createEmptyInstance() => ListAgentsResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ListAgentsResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListAgentsResponse>(
+          ListAgentsResponse.$_createMessage);
+  static ListAgentsResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<Agent> get agents => $_getList(0);
+}
+
+/// An agent chats can run.
+class Agent extends $pb.GeneratedMessage {
+  factory Agent({
+    $core.String? name,
+    $core.String? title,
+    $core.String? resume,
+    $core.bool? mcp,
+  }) {
+    final result = Agent._();
+    if (name != null) result.name = name;
+    if (title != null) result.title = title;
+    if (resume != null) result.resume = resume;
+    if (mcp != null) result.mcp = mcp;
+    return result;
+  }
+
+  Agent._();
+
+  factory Agent.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Agent()..mergeFromBuffer(data, registry);
+  factory Agent.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Agent()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'Agent',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: Agent.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'name')
+    ..aOS(2, _omitFieldNames ? '' : 'title')
+    ..aOS(3, _omitFieldNames ? '' : 'resume')
+    ..aOB(4, _omitFieldNames ? '' : 'mcp')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Agent clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Agent copyWith(void Function(Agent) updates) =>
+      super.copyWith((message) => updates(message as Agent)) as Agent;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use Agent() / Agent.new instead')
+  static Agent create() => Agent._();
+  static $pb.GeneratedMessage $_createMessage() => Agent._();
+  @$core.override
+  Agent createEmptyInstance() => Agent._();
+  @$core.pragma('dart2js:noInline')
+  static Agent getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<Agent>(Agent.$_createMessage);
+  static Agent? _defaultInstance;
+
+  /// As Chat.agent names it, such as "claude".
+  @$pb.TagNumber(1)
+  $core.String get name => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set name($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearName() => $_clearField(1);
+
+  /// As people read it, such as "Claude".
+  @$pb.TagNumber(2)
+  $core.String get title => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set title($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasTitle() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearTitle() => $_clearField(2);
+
+  /// The terminal command that opens one of its sessions, followed by the
+  /// session id, such as "claude --resume".
+  @$pb.TagNumber(3)
+  $core.String get resume => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set resume($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasResume() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearResume() => $_clearField(3);
+
+  /// Nushi shows and changes its MCP servers (ListMcpServers).
+  @$pb.TagNumber(4)
+  $core.bool get mcp => $_getBF(3);
+  @$pb.TagNumber(4)
+  set mcp($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasMcp() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearMcp() => $_clearField(4);
+}
+
 class StartChatRequest extends $pb.GeneratedMessage {
   factory StartChatRequest({
     $core.String? folder,
     $core.bool? worktree,
+    $core.String? agent,
   }) {
     final result = StartChatRequest._();
     if (folder != null) result.folder = folder;
     if (worktree != null) result.worktree = worktree;
+    if (agent != null) result.agent = agent;
     return result;
   }
 
@@ -1032,6 +1224,7 @@ class StartChatRequest extends $pb.GeneratedMessage {
       createEmptyInstance: StartChatRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'folder')
     ..aOB(2, _omitFieldNames ? '' : 'worktree')
+    ..aOS(3, _omitFieldNames ? '' : 'agent')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1077,6 +1270,16 @@ class StartChatRequest extends $pb.GeneratedMessage {
   $core.bool hasWorktree() => $_has(1);
   @$pb.TagNumber(2)
   void clearWorktree() => $_clearField(2);
+
+  /// The agent to run (Agent.name); empty for the default.
+  @$pb.TagNumber(3)
+  $core.String get agent => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set agent($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasAgent() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearAgent() => $_clearField(3);
 }
 
 class MoveChatRequest extends $pb.GeneratedMessage {
@@ -9197,6 +9400,12 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, StartChatRequest request) =>
       _client.invoke<StartChatResponse>(
           ctx, 'NushiService', 'StartChat', request, StartChatResponse());
+
+  /// Lists the agents chats can run, the default first.
+  $async.Future<ListAgentsResponse> listAgents(
+          $pb.ClientContext? ctx, ListAgentsRequest request) =>
+      _client.invoke<ListAgentsResponse>(
+          ctx, 'NushiService', 'ListAgents', request, ListAgentsResponse());
 
   /// Moves a chat to another folder, or to a new worktree. A chat without
   /// messages starts a new session there (and a worktree it leaves is

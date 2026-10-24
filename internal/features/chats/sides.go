@@ -92,10 +92,10 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 		s.throwAway(p, agent, id)
 		return "", ctx.Err()
 	}
-	side := s.newChat()
+	side := s.newChat(p.kind)
 	side.id, side.agent, side.parent = id, agent, p
 	side.sid, side.canImage = side.id, p.canImage
-	side.session = model.Session{ID: side.id, SessionID: side.sid, Agent: s.agent, Folder: folder, Title: "Side question", Created: time.Now()}
+	side.session = model.Session{ID: side.id, SessionID: side.sid, Agent: p.kind.Name, Folder: folder, Title: "Side question", Created: time.Now()}
 	p.mu.Lock()
 	if p.agent != agent { // it ended meanwhile (reload, move, archive): the fork with it
 		p.mu.Unlock()

@@ -37,7 +37,7 @@ func turn(t *testing.T, svc *Service, c *chat, text string) {
 // replies show.
 func TestMoveAfterTheAgentQuit(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
-	svc.history = noCopy
+	c.kind.History = noCopy
 	agent.updates = []acp.SessionUpdate{chunk("m1", "first")}
 	turn(t, svc, c, "one")
 	agent.quit()
@@ -55,7 +55,7 @@ func TestMoveAfterTheAgentQuit(t *testing.T) {
 // A chat whose reopen failed has an empty transcript: moved, it is replayed.
 func TestMoveAChatThatNeverReopened(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
-	svc.history = noCopy
+	c.kind.History = noCopy
 	agent.updates = []acp.SessionUpdate{chunk("m1", "first")}
 	turn(t, svc, c, "one")
 	c.mu.Lock() // as after a daemon restart, when its folder was gone
@@ -91,7 +91,7 @@ func TestAFailedDeleteThenAReopen(t *testing.T) {
 // A chat whose first message is taken back, moved, or reopened keeps its mode.
 func TestTheModeSurvivesANewSession(t *testing.T) {
 	svc, agent, c := newChat(t, claudeSession, &memModes{})
-	svc.history = noCopy
+	c.kind.History = noCopy
 	ctx := context.Background()
 	if err := svc.SetConfig(ctx, c.id, "mode", "plan"); err != nil {
 		t.Fatal(err)
@@ -127,7 +127,7 @@ func TestTheModeSurvivesANewSession(t *testing.T) {
 
 func TestNoMoveWhileTheChatGoesOrTheAgentWorks(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
-	svc.history = noCopy
+	c.kind.History = noCopy
 	turn(t, svc, c, "one")
 	c.mu.Lock()
 	c.halting = true

@@ -27,7 +27,11 @@ func (s *Service) lookup(id string) (*chat, error) {
 	if i < 0 {
 		return nil, fmt.Errorf("no chat %q", id)
 	}
-	c := s.newChat()
+	k, err := s.kindOf(stored[i].Agent)
+	if err != nil {
+		return nil, err
+	}
+	c := s.newChat(k)
 	c.id, c.sid, c.session = id, stored[i].SessionID, stored[i]
 	c.session.Scratch = s.isScratch(c.session.Folder)
 	s.chats[id] = c
@@ -103,9 +107,9 @@ func (s *Service) load(ctx context.Context, c *chat) error {
 	if gone != nil {
 		return gone
 	}
-	o, err := c.openSession(ctx, s.launch, sid, folder, false)
+	o, err := c.openSession(ctx, sid, folder, false)
 	if err != nil && fresh {
-		o, err = c.openSession(ctx, s.launch, "", folder, false)
+		o, err = c.openSession(ctx, "", folder, false)
 	}
 	if err != nil {
 		return err

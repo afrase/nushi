@@ -25,8 +25,8 @@ func newChat(t *testing.T, session string, modes *memModes) (*Service, *fakeAgen
 	if err := json.Unmarshal([]byte(session), &agent.session); err != nil {
 		t.Fatal(err)
 	}
-	svc := New("claude", agent.launch, claudeDialect, modes, &memSessions{}, nil, nil, "", func(model.Event) {})
-	id, err := svc.Start(context.Background(), t.TempDir(), false)
+	svc := New([]Kind{{Name: "claude", Launch: agent.launch, Dialect: claudeDialect}}, modes, &memSessions{}, nil, "", func(model.Event) {})
+	id, err := svc.Start(context.Background(), "", t.TempDir(), false)
 	if err != nil {
 		t.Fatal(err)
 	}
