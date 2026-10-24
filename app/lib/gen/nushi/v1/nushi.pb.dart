@@ -2921,6 +2921,160 @@ class SleepChatResponse extends $pb.GeneratedMessage {
   static SleepChatResponse? _defaultInstance;
 }
 
+class GetMemoryRequest extends $pb.GeneratedMessage {
+  factory GetMemoryRequest({
+    $core.int? appPid,
+  }) {
+    final result = GetMemoryRequest._();
+    if (appPid != null) result.appPid = appPid;
+    return result;
+  }
+
+  GetMemoryRequest._();
+
+  factory GetMemoryRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetMemoryRequest()..mergeFromBuffer(data, registry);
+  factory GetMemoryRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetMemoryRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetMemoryRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetMemoryRequest.$_createMessage)
+    ..aI(1, _omitFieldNames ? '' : 'appPid')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetMemoryRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetMemoryRequest copyWith(void Function(GetMemoryRequest) updates) =>
+      super.copyWith((message) => updates(message as GetMemoryRequest))
+          as GetMemoryRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GetMemoryRequest() / GetMemoryRequest.new instead')
+  static GetMemoryRequest create() => GetMemoryRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetMemoryRequest._();
+  @$core.override
+  GetMemoryRequest createEmptyInstance() => GetMemoryRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetMemoryRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GetMemoryRequest>(
+          GetMemoryRequest.$_createMessage);
+  static GetMemoryRequest? _defaultInstance;
+
+  /// The asking app's process, to read along; 0 for none.
+  @$pb.TagNumber(1)
+  $core.int get appPid => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set appPid($core.int value) => $_setSignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasAppPid() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearAppPid() => $_clearField(1);
+}
+
+class GetMemoryResponse extends $pb.GeneratedMessage {
+  factory GetMemoryResponse({
+    $fixnum.Int64? daemon,
+    $fixnum.Int64? app,
+    $fixnum.Int64? other,
+    $core.Iterable<$core.MapEntry<$core.String, $fixnum.Int64>>? chats,
+  }) {
+    final result = GetMemoryResponse._();
+    if (daemon != null) result.daemon = daemon;
+    if (app != null) result.app = app;
+    if (other != null) result.other = other;
+    if (chats != null) result.chats.addEntries(chats);
+    return result;
+  }
+
+  GetMemoryResponse._();
+
+  factory GetMemoryResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetMemoryResponse()..mergeFromBuffer(data, registry);
+  factory GetMemoryResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetMemoryResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetMemoryResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetMemoryResponse.$_createMessage)
+    ..aInt64(1, _omitFieldNames ? '' : 'daemon')
+    ..aInt64(2, _omitFieldNames ? '' : 'app')
+    ..aInt64(3, _omitFieldNames ? '' : 'other')
+    ..m<$core.String, $fixnum.Int64>(4, _omitFieldNames ? '' : 'chats',
+        entryClassName: 'GetMemoryResponse.ChatsEntry',
+        keyFieldType: $pb.PbFieldType.OS,
+        valueFieldType: $pb.PbFieldType.O6,
+        packageName: const $pb.PackageName('nushi.v1'))
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetMemoryResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetMemoryResponse copyWith(void Function(GetMemoryResponse) updates) =>
+      super.copyWith((message) => updates(message as GetMemoryResponse))
+          as GetMemoryResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GetMemoryResponse() / GetMemoryResponse.new instead')
+  static GetMemoryResponse create() => GetMemoryResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetMemoryResponse._();
+  @$core.override
+  GetMemoryResponse createEmptyInstance() => GetMemoryResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetMemoryResponse getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GetMemoryResponse>(
+          GetMemoryResponse.$_createMessage);
+  static GetMemoryResponse? _defaultInstance;
+
+  /// nushid itself.
+  @$pb.TagNumber(1)
+  $fixnum.Int64 get daemon => $_getI64(0);
+  @$pb.TagNumber(1)
+  set daemon($fixnum.Int64 value) => $_setInt64(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasDaemon() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearDaemon() => $_clearField(1);
+
+  /// The app's process (app_pid), with what it started.
+  @$pb.TagNumber(2)
+  $fixnum.Int64 get app => $_getI64(1);
+  @$pb.TagNumber(2)
+  set app($fixnum.Int64 value) => $_setInt64(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasApp() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearApp() => $_clearField(2);
+
+  /// The daemon's other processes: terminals, and agents no chat holds
+  /// (one deleting a session's history, one still starting).
+  @$pb.TagNumber(3)
+  $fixnum.Int64 get other => $_getI64(2);
+  @$pb.TagNumber(3)
+  set other($fixnum.Int64 value) => $_setInt64(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasOther() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearOther() => $_clearField(3);
+
+  /// Each chat's running agent, with what it started, by chat id.
+  @$pb.TagNumber(4)
+  $pb.PbMap<$core.String, $fixnum.Int64> get chats => $_getMap(3);
+}
+
 class GetSettingsRequest extends $pb.GeneratedMessage {
   factory GetSettingsRequest() => GetSettingsRequest._();
 
@@ -9940,6 +10094,12 @@ class NushiServiceApi {
           ctx, 'NushiService', 'SleepChat', request, SleepChatResponse());
 
   /// The daemon's settings, and changing them.
+  /// Says how much memory Nushi takes, as footprint (Activity Monitor's
+  /// Memory), in bytes: a few milliseconds' work.
+  $async.Future<GetMemoryResponse> getMemory(
+          $pb.ClientContext? ctx, GetMemoryRequest request) =>
+      _client.invoke<GetMemoryResponse>(
+          ctx, 'NushiService', 'GetMemory', request, GetMemoryResponse());
   $async.Future<GetSettingsResponse> getSettings(
           $pb.ClientContext? ctx, GetSettingsRequest request) =>
       _client.invoke<GetSettingsResponse>(

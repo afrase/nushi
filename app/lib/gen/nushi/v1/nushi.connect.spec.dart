@@ -149,6 +149,15 @@ abstract final class NushiService {
   );
 
   /// The daemon's settings, and changing them.
+  /// Says how much memory Nushi takes, as footprint (Activity Monitor's
+  /// Memory), in bytes: a few milliseconds' work.
+  static const getMemory = connect.Spec(
+    '/$name/GetMemory',
+    connect.StreamType.unary,
+    nushiv1nushi.GetMemoryRequest.new,
+    nushiv1nushi.GetMemoryResponse.new,
+  );
+
   static const getSettings = connect.Spec(
     '/$name/GetSettings',
     connect.StreamType.unary,

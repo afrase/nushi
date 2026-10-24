@@ -65,6 +65,8 @@ const (
 	NushiServiceArchiveChatProcedure = "/nushi.v1.NushiService/ArchiveChat"
 	// NushiServiceSleepChatProcedure is the fully-qualified name of the NushiService's SleepChat RPC.
 	NushiServiceSleepChatProcedure = "/nushi.v1.NushiService/SleepChat"
+	// NushiServiceGetMemoryProcedure is the fully-qualified name of the NushiService's GetMemory RPC.
+	NushiServiceGetMemoryProcedure = "/nushi.v1.NushiService/GetMemory"
 	// NushiServiceGetSettingsProcedure is the fully-qualified name of the NushiService's GetSettings
 	// RPC.
 	NushiServiceGetSettingsProcedure = "/nushi.v1.NushiService/GetSettings"
@@ -209,6 +211,9 @@ type NushiServiceClient interface {
 	// agent, reopens the session (ACP session/load); opening it doesn't.
 	SleepChat(context.Context, *connect.Request[v1.SleepChatRequest]) (*connect.Response[v1.SleepChatResponse], error)
 	// The daemon's settings, and changing them.
+	// Says how much memory Nushi takes, as footprint (Activity Monitor's
+	// Memory), in bytes: a few milliseconds' work.
+	GetMemory(context.Context, *connect.Request[v1.GetMemoryRequest]) (*connect.Response[v1.GetMemoryResponse], error)
 	GetSettings(context.Context, *connect.Request[v1.GetSettingsRequest]) (*connect.Response[v1.GetSettingsResponse], error)
 	SetSettings(context.Context, *connect.Request[v1.SetSettingsRequest]) (*connect.Response[v1.SetSettingsResponse], error)
 	// Says what DeleteChat removes. The first time, the daemon starts the
@@ -406,6 +411,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceSleepChatProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("SleepChat")),
+			connect.WithClientOptions(opts...),
+		),
+		getMemory: connect.NewClient[v1.GetMemoryRequest, v1.GetMemoryResponse](
+			httpClient,
+			baseURL+NushiServiceGetMemoryProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("GetMemory")),
 			connect.WithClientOptions(opts...),
 		),
 		getSettings: connect.NewClient[v1.GetSettingsRequest, v1.GetSettingsResponse](
@@ -620,6 +631,7 @@ type nushiServiceClient struct {
 	renameChat       *connect.Client[v1.RenameChatRequest, v1.RenameChatResponse]
 	archiveChat      *connect.Client[v1.ArchiveChatRequest, v1.ArchiveChatResponse]
 	sleepChat        *connect.Client[v1.SleepChatRequest, v1.SleepChatResponse]
+	getMemory        *connect.Client[v1.GetMemoryRequest, v1.GetMemoryResponse]
 	getSettings      *connect.Client[v1.GetSettingsRequest, v1.GetSettingsResponse]
 	setSettings      *connect.Client[v1.SetSettingsRequest, v1.SetSettingsResponse]
 	planDeleteChat   *connect.Client[v1.PlanDeleteChatRequest, v1.PlanDeleteChatResponse]
@@ -727,6 +739,11 @@ func (c *nushiServiceClient) ArchiveChat(ctx context.Context, req *connect.Reque
 // SleepChat calls nushi.v1.NushiService.SleepChat.
 func (c *nushiServiceClient) SleepChat(ctx context.Context, req *connect.Request[v1.SleepChatRequest]) (*connect.Response[v1.SleepChatResponse], error) {
 	return c.sleepChat.CallUnary(ctx, req)
+}
+
+// GetMemory calls nushi.v1.NushiService.GetMemory.
+func (c *nushiServiceClient) GetMemory(ctx context.Context, req *connect.Request[v1.GetMemoryRequest]) (*connect.Response[v1.GetMemoryResponse], error) {
+	return c.getMemory.CallUnary(ctx, req)
 }
 
 // GetSettings calls nushi.v1.NushiService.GetSettings.
@@ -940,6 +957,9 @@ type NushiServiceHandler interface {
 	// agent, reopens the session (ACP session/load); opening it doesn't.
 	SleepChat(context.Context, *connect.Request[v1.SleepChatRequest]) (*connect.Response[v1.SleepChatResponse], error)
 	// The daemon's settings, and changing them.
+	// Says how much memory Nushi takes, as footprint (Activity Monitor's
+	// Memory), in bytes: a few milliseconds' work.
+	GetMemory(context.Context, *connect.Request[v1.GetMemoryRequest]) (*connect.Response[v1.GetMemoryResponse], error)
 	GetSettings(context.Context, *connect.Request[v1.GetSettingsRequest]) (*connect.Response[v1.GetSettingsResponse], error)
 	SetSettings(context.Context, *connect.Request[v1.SetSettingsRequest]) (*connect.Response[v1.SetSettingsResponse], error)
 	// Says what DeleteChat removes. The first time, the daemon starts the
@@ -1133,6 +1153,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceSleepChatProcedure,
 		svc.SleepChat,
 		connect.WithSchema(nushiServiceMethods.ByName("SleepChat")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceGetMemoryHandler := connect.NewUnaryHandler(
+		NushiServiceGetMemoryProcedure,
+		svc.GetMemory,
+		connect.WithSchema(nushiServiceMethods.ByName("GetMemory")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceGetSettingsHandler := connect.NewUnaryHandler(
@@ -1359,6 +1385,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceArchiveChatHandler.ServeHTTP(w, r)
 		case NushiServiceSleepChatProcedure:
 			nushiServiceSleepChatHandler.ServeHTTP(w, r)
+		case NushiServiceGetMemoryProcedure:
+			nushiServiceGetMemoryHandler.ServeHTTP(w, r)
 		case NushiServiceGetSettingsProcedure:
 			nushiServiceGetSettingsHandler.ServeHTTP(w, r)
 		case NushiServiceSetSettingsProcedure:
@@ -1490,6 +1518,10 @@ func (UnimplementedNushiServiceHandler) ArchiveChat(context.Context, *connect.Re
 
 func (UnimplementedNushiServiceHandler) SleepChat(context.Context, *connect.Request[v1.SleepChatRequest]) (*connect.Response[v1.SleepChatResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.SleepChat is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) GetMemory(context.Context, *connect.Request[v1.GetMemoryRequest]) (*connect.Response[v1.GetMemoryResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetMemory is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) GetSettings(context.Context, *connect.Request[v1.GetSettingsRequest]) (*connect.Response[v1.GetSettingsResponse], error) {

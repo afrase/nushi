@@ -297,6 +297,25 @@ extension type NushiServiceClient (connect.Transport _transport) {
   }
 
   /// The daemon's settings, and changing them.
+  /// Says how much memory Nushi takes, as footprint (Activity Monitor's
+  /// Memory), in bytes: a few milliseconds' work.
+  Future<nushiv1nushi.GetMemoryResponse> getMemory(
+    nushiv1nushi.GetMemoryRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.getMemory,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   Future<nushiv1nushi.GetSettingsResponse> getSettings(
     nushiv1nushi.GetSettingsRequest input, {
     connect.Headers? headers,

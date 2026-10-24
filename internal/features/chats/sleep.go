@@ -169,3 +169,20 @@ func (c *chat) restoreConfig(ctx context.Context, agent Agent, sid string, befor
 		}
 	}
 }
+
+// AgentPids returns the process of each chat's running agent, by chat id
+// (side chats share their chat's).
+func (s *Service) AgentPids() map[string]int {
+	s.mu.Lock()
+	open := slices.Collect(maps.Values(s.chats))
+	s.mu.Unlock()
+	pids := map[string]int{}
+	for _, c := range open {
+		c.mu.Lock()
+		if c.agent != nil && c.parent == nil && c.agent.Pid() > 0 {
+			pids[c.id] = c.agent.Pid()
+		}
+		c.mu.Unlock()
+	}
+	return pids
+}

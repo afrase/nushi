@@ -54,6 +54,9 @@ service NushiService {
   // agent, reopens the session (ACP session/load); opening it doesn't.
   rpc SleepChat(SleepChatRequest) returns (SleepChatResponse);
   // The daemon's settings, and changing them.
+  // Says how much memory Nushi takes, as footprint (Activity Monitor's
+  // Memory), in bytes: a few milliseconds' work.
+  rpc GetMemory(GetMemoryRequest) returns (GetMemoryResponse);
   rpc GetSettings(GetSettingsRequest) returns (GetSettingsResponse);
   rpc SetSettings(SetSettingsRequest) returns (SetSettingsResponse);
   // Says what DeleteChat removes. The first time, the daemon starts the
@@ -426,6 +429,23 @@ message SleepChatRequest {
 }
 
 message SleepChatResponse {}
+
+message GetMemoryRequest {
+  // The asking app's process, to read along; 0 for none.
+  int32 app_pid = 1;
+}
+
+message GetMemoryResponse {
+  // nushid itself.
+  int64 daemon = 1;
+  // The app's process (app_pid), with what it started.
+  int64 app = 2;
+  // The daemon's other processes: terminals, and agents no chat holds
+  // (one deleting a session's history, one still starting).
+  int64 other = 3;
+  // Each chat's running agent, with what it started, by chat id.
+  map<string, int64> chats = 4;
+}
 
 message GetSettingsRequest {}
 

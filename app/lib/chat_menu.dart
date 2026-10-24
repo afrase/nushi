@@ -40,7 +40,7 @@ List<MenuEntry> chatMenu(
 ];
 
 /// Stops a chat's agent to free its memory; a message wakes it.
-void sleepChat(BuildContext context, ChatState chat, Daemon daemon) =>
+Future<void> sleepChat(BuildContext context, ChatState chat, Daemon daemon) =>
     tryOrShow(
       context,
       () => daemon.client.sleepChat(SleepChatRequest(chatId: chat.id)),

@@ -15,6 +15,7 @@ import 'panes.dart';
 import 'settings.dart';
 import 'settings_dialog.dart';
 import 'sidebar.dart';
+import 'status_bar.dart';
 import 'terminal_panel.dart';
 import 'theme/theme.dart';
 import 'trust_card.dart';
@@ -159,6 +160,7 @@ class _Shell extends StatelessWidget {
             ),
           if (daemon.connected && daemon.replaced) _Replaced(daemon),
           Expanded(child: app),
+          StatusBar(daemon),
         ],
       );
     },
