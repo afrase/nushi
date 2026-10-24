@@ -7,11 +7,8 @@ package main
 import (
 	"cmp"
 	"flag"
-	"io"
 	"log"
 	"net"
-	"net/http"
-	"time"
 
 	"golang.org/x/crypto/acme/autocert"
 
@@ -36,10 +33,10 @@ func main() {
 	flag.Float64Var(&lim.NewBurst, "new-burst", lim.NewBurst, "new connections from one address at once")
 	flag.StringVar(&lim.IPHeader, "ip-header", "", "behind a reverse proxy: the header holding the client's address (e.g. Fly-Client-IP)")
 	flag.IntVar(&lim.Total, "total", lim.Total, "connections in all")
+	flag.DurationVar(&lim.HTTPIdle, "http-idle", lim.HTTPIdle, "close an HTTP connection (not a WebSocket) idle this long")
 	flag.Parse()
 
-	srv := &http.Server{Handler: relay.New(lim), ReadHeaderTimeout: 10 * time.Second, MaxHeaderBytes: 8 << 10,
-		ErrorLog: log.New(io.Discard, "", 0)} // its messages name clients' addresses
+	srv := relay.NewServer(lim)
 	if *host == "" {
 		ln, err := net.Listen("tcp", cmp.Or(*addr, ":8080"))
 		if err != nil {

@@ -7,6 +7,8 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/base64"
+	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -557,4 +559,61 @@ func TestSecondListenerReplacesFirst(t *testing.T) {
 	expectClosed(t, l1)
 	send(t, d, "to the newest")
 	expect(t, l2, "to the newest")
+}
+
+// Connections that aren't WebSockets count under the caps too, and an idle
+// one goes: one address can't pile up keep-alive connections.
+func TestIdleHTTPConnections(t *testing.T) {
+	lim := Defaults
+	lim.PerIP = 3
+	lim.HTTPIdle = 300 * time.Millisecond
+	srv := NewServer(lim)
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	go srv.Serve(ln)
+	defer srv.Close()
+	// healthz asks once on a new connection, keeping it open; it says
+	// whether the relay answered.
+	healthz := func() (net.Conn, bool) {
+		c, err := net.Dial("tcp", ln.Addr().String())
+		if err != nil {
+			t.Fatal(err)
+		}
+		c.SetDeadline(time.Now().Add(2 * time.Second))
+		io.WriteString(c, "GET /healthz HTTP/1.1\r\nHost: relay\r\n\r\n")
+		resp, err := http.ReadResponse(bufio.NewReader(c), nil)
+		if err == nil {
+			resp.Body.Close()
+		}
+		return c, err == nil
+	}
+	// A WebSocket counts as one only until it is one.
+	l, d := pair(t, "ws://"+ln.Addr().String(), newKey())
+	var open []net.Conn
+	for range 3 {
+		c, ok := healthz()
+		if !ok {
+			t.Fatal("refused under the cap")
+		}
+		open = append(open, c)
+	}
+	if c, ok := healthz(); ok {
+		c.Close()
+		t.Fatal("a fourth idle connection from one address")
+	}
+	send(t, d, "still")
+	expect(t, l, "still")
+	for _, c := range open {
+		c.SetDeadline(time.Now().Add(2 * time.Second))
+		if _, err := c.Read(make([]byte, 1)); err != io.EOF {
+			t.Fatalf("an idle connection stayed: %v", err)
+		}
+	}
+	if c, ok := healthz(); !ok {
+		t.Fatal("refused once the idle ones went")
+	} else {
+		c.Close()
+	}
 }

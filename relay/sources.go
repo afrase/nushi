@@ -29,12 +29,17 @@ var salt = func() []byte {
 // IPv6 address's /64 (one home or phone has a whole /64). Behind a reverse
 // proxy the address comes from the header Limits.IPHeader names.
 func (s *server) sourceKey(r *http.Request) string {
-	addr := ""
-	if s.lim.IPHeader != "" {
-		addr, _, _ = strings.Cut(r.Header.Get(s.lim.IPHeader), ",")
-		addr = strings.TrimSpace(addr)
-	} else {
-		addr, _, _ = net.SplitHostPort(r.RemoteAddr)
+	if s.lim.IPHeader == "" {
+		return keyOf(r.RemoteAddr)
+	}
+	addr, _, _ := strings.Cut(r.Header.Get(s.lim.IPHeader), ",")
+	return keyOf(strings.TrimSpace(addr))
+}
+
+// keyOf is the hash of an address (with or without a port).
+func keyOf(addr string) string {
+	if host, _, err := net.SplitHostPort(addr); err == nil {
+		addr = host
 	}
 	ip := net.ParseIP(addr)
 	if ip == nil {
