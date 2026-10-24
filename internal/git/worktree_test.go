@@ -34,6 +34,21 @@ func TestWorktrees(t *testing.T) {
 	if _, _, err := (Worktrees{}).Add(ctx, folder, "brave-otter"); !errors.Is(err, fs.ErrExist) {
 		t.Errorf("a taken name: %v", err)
 	}
+	// A name is taken by its folder alone, or by its branch alone (a
+	// deleted chat can leave its branch).
+	os.MkdirAll(filepath.Join(repo, ".worktrees", "lone-folder"), 0o755)
+	git(t, repo, "branch", "nushi/lone-branch")
+	for _, name := range []string{"lone-folder", "lone-branch"} {
+		if _, _, err := (Worktrees{}).Add(ctx, repo, name); !errors.Is(err, fs.ErrExist) {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+	// Through a link to the repository, the worktree keeps the link's spelling.
+	link := filepath.Join(t.TempDir(), "link")
+	os.Symlink(repo, link)
+	if via, in, err := (Worktrees{}).Add(ctx, filepath.Join(link, "sub"), "swift-yak"); err != nil || via.Repo != link || in != filepath.Join(link, ".worktrees", "swift-yak", "sub") {
+		t.Errorf("Add through a link = %+v, %q, %v", via, in, err)
+	}
 	second, _, err := Worktrees{}.Add(ctx, folder, "calm-heron")
 	if err != nil || second.Path != filepath.Join(repo, ".worktrees", "calm-heron") || second.Base != "nushi/brave-otter" || second.BaseCommit != wt.BaseCommit {
 		t.Fatalf("Add from the worktree = %+v, %v", second, err)

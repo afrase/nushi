@@ -22,12 +22,17 @@ func TestMoveAChat(t *testing.T) {
 	dataDir, repo, other, broken := t.TempDir(), t.TempDir(), t.TempDir(), t.TempDir()
 	var mu sync.Mutex
 	var copies []string // the copies of Claude's history there are
+	history := &acptest.History{}
 	made := 0
 	copyHistory := func(id, from, to string) (func() error, error) {
 		mu.Lock()
 		defer mu.Unlock()
 		if to == broken {
 			return nil, errors.New("no room")
+		}
+		removeCopy, err := history.Copy(id, from, to)
+		if err != nil {
+			return nil, err
 		}
 		copy := id + " " + from + " -> " + to
 		copies = append(copies, copy)
@@ -36,10 +41,9 @@ func TestMoveAChat(t *testing.T) {
 			mu.Lock()
 			defer mu.Unlock()
 			copies = slices.DeleteFunc(copies, func(c string) bool { return c == copy })
-			return nil
+			return removeCopy()
 		}, nil
 	}
-	history := &acptest.History{}
 	d := startDaemon(t, dataDir, history, copyHistory)
 	a := open(t, d)
 	chat := func(id string) *nushiv1.Chat {

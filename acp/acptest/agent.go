@@ -10,14 +10,21 @@
 //   - containing "plan": a three-step plan, each step ticked off in turn;
 //   - containing "many": 150 messages, each after a tool call, quickly;
 //   - containing "pwd": "cwd: <the session's cwd>";
+//   - containing "wait": nothing, until the turn is cancelled (10 s at most);
 //   - anything else: "You said: <text>", streamed in two chunks.
 //
 // Pause slows the "think" and "plan" scripts down, to watch them stream.
 //
-// Sessions are kept in a History, which session/load replays,
-// session/fork copies and session/delete deletes; agents that share a
-// History see each other's sessions, as a restarted agent would. A
-// session takes any cwd.
+// Cancelling a turn (session/cancel) ends "think", "plan" and "many"
+// between their steps, with stop reason "cancelled".
+//
+// Sessions are kept in a History, by folder as Claude keeps them: session/load
+// and session/fork find a session only in the history of the request's cwd
+// (Copy puts a copy of one in another folder's). Agents that share a History
+// see each other's sessions, as a restarted agent would. Like Claude's
+// adapter, an agent takes prompts and config changes only for sessions it
+// opened (session/new, load or fork), and session/delete deletes a session
+// in whichever folder has it.
 package acptest
 
 import (
@@ -31,13 +38,16 @@ import (
 	"time"
 )
 
-// History holds every session's updates, for session/load, and the
-// sessions deleted.
+// History holds every session's updates by folder, for session/load, and
+// the sessions deleted.
 type History struct {
 	mu       sync.Mutex
-	sessions map[string][]json.RawMessage
+	sessions map[key][]json.RawMessage
 	deleted  map[string]bool
 }
+
+// key is a session in one folder's history.
+type key struct{ cwd, session string }
 
 // Deleted reports whether session/delete was asked for session (one never
 // kept, without a message, included).
@@ -47,37 +57,88 @@ func (h *History) Deleted(session string) bool {
 	return h.deleted[session]
 }
 
-func (h *History) add(session string, update any) {
+func (h *History) add(cwd, session string, update any) {
 	b, _ := json.Marshal(update)
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.sessions == nil {
-		h.sessions = map[string][]json.RawMessage{}
+		h.sessions = map[key][]json.RawMessage{}
 	}
-	h.sessions[session] = append(h.sessions[session], b)
+	k := key{cwd, session}
+	h.sessions[k] = append(h.sessions[k], b)
 }
 
-// fork gives session to a copy of session from's history.
-func (h *History) fork(from, to string) {
+// fork gives session to, in folder cwd, a copy of session from's history
+// there; it fails when cwd's history has no from.
+func (h *History) fork(cwd, from, to string) bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if h.sessions == nil {
-		h.sessions = map[string][]json.RawMessage{}
+	u, ok := h.sessions[key{cwd, from}]
+	if ok {
+		h.sessions[key{cwd, to}] = append([]json.RawMessage(nil), u...)
 	}
-	h.sessions[to] = append(h.sessions[to], h.sessions[from]...)
-}
-
-// Has reports whether session is in the history.
-func (h *History) Has(session string) bool {
-	_, ok := h.get(session)
 	return ok
 }
 
-func (h *History) get(session string) ([]json.RawMessage, bool) {
+// Copy copies session's history in folder from into folder to's, as the
+// daemon does before forking a session in another folder (a
+// chats.CopyHistory), and returns a function that removes the copy.
+func (h *History) Copy(session, from, to string) (remove func() error, err error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	u, ok := h.sessions[session]
+	u, ok := h.sessions[key{from, session}]
+	if !ok {
+		return nil, fmt.Errorf("no session %s in %s", session, from)
+	}
+	if _, ok := h.sessions[key{to, session}]; ok {
+		return nil, fmt.Errorf("session %s is in %s already", session, to)
+	}
+	h.sessions[key{to, session}] = append([]json.RawMessage(nil), u...)
+	return func() error {
+		h.mu.Lock()
+		defer h.mu.Unlock()
+		delete(h.sessions, key{to, session})
+		return nil
+	}, nil
+}
+
+// Has reports whether session is in the history, in any folder.
+func (h *History) Has(session string) bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	for k := range h.sessions {
+		if k.session == session {
+			return true
+		}
+	}
+	return false
+}
+
+// In reports whether session is in folder cwd's history.
+func (h *History) In(cwd, session string) bool {
+	_, ok := h.get(cwd, session)
+	return ok
+}
+
+func (h *History) get(cwd, session string) ([]json.RawMessage, bool) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	u, ok := h.sessions[key{cwd, session}]
 	return append([]json.RawMessage(nil), u...), ok
+}
+
+func (h *History) delete(session string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	for k := range h.sessions {
+		if k.session == session {
+			delete(h.sessions, k)
+		}
+	}
+	if h.deleted == nil {
+		h.deleted = map[string]bool{}
+	}
+	h.deleted[session] = true
 }
 
 // Agent is one fake agent process.
@@ -90,8 +151,12 @@ type Agent struct {
 	mu      sync.Mutex
 	nextID  int
 	pending map[string]chan json.RawMessage
-	cwds    map[string]string // by session: what session/new or session/load said
+	cwds    map[string]string // the sessions open here, by id: their cwd
+	turns   map[string]*turn  // the running turn's, by session
 }
+
+// turn is a running prompt's: cancelled once session/cancel came for it.
+type turn struct{ cancelled bool }
 
 type frame struct {
 	JSONRPC string          `json:"jsonrpc"`
@@ -109,6 +174,7 @@ func (a *Agent) Serve(r io.Reader, w io.Writer) {
 	a.w = w
 	a.pending = map[string]chan json.RawMessage{}
 	a.cwds = map[string]string{}
+	a.turns = map[string]*turn{}
 	sc := bufio.NewScanner(r)
 	sc.Buffer(nil, 1<<30)
 	for sc.Scan() {
@@ -125,10 +191,38 @@ func (a *Agent) Serve(r io.Reader, w io.Writer) {
 			}
 			continue
 		}
+		var p struct {
+			SessionID string `json:"sessionId"`
+		}
+		json.Unmarshal(f.Params, &p)
+		a.mu.Lock()
+		switch f.Method {
+		case "session/prompt": // in the order the frames come, before any cancel for it
+			a.turns[p.SessionID] = &turn{}
+		case "session/cancel":
+			if t := a.turns[p.SessionID]; t != nil {
+				t.cancelled = true
+			}
+		}
+		a.mu.Unlock()
 		if f.ID != nil {
 			go a.answer(f)
 		}
 	}
+}
+
+// cancelled reports whether the session's running turn was cancelled.
+func (a *Agent) cancelled(session string) bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	t := a.turns[session]
+	return t != nil && t.cancelled
+}
+
+func (a *Agent) fail(f frame, msg string) {
+	a.send(frame{ID: f.ID, Error: &struct {
+		Message string `json:"message"`
+	}{msg}})
 }
 
 func (a *Agent) send(f frame) {
@@ -152,9 +246,12 @@ func (a *Agent) request(method string, params any) json.RawMessage {
 	return <-ch
 }
 
-// update sends a session/update and records it in the history.
+// update sends a session/update and records it in the session's history.
 func (a *Agent) update(session string, update map[string]any) {
-	a.History.add(session, update)
+	a.mu.Lock()
+	cwd := a.cwds[session]
+	a.mu.Unlock()
+	a.History.add(cwd, session, update)
 	p, _ := json.Marshal(map[string]any{"sessionId": session, "update": update})
 	a.send(frame{Method: "session/update", Params: p})
 }
@@ -168,28 +265,39 @@ func (a *Agent) answer(f frame) {
 		} `json:"prompt"`
 	}
 	json.Unmarshal(f.Params, &p)
+	a.mu.Lock()
+	_, open := a.cwds[p.SessionID]
+	a.mu.Unlock()
+	switch f.Method {
+	case "session/prompt", "session/set_config_option", "session/set_mode", "_session/steering":
+		if !open {
+			a.fail(f, "Session not found")
+			return
+		}
+	}
 	var result any
 	switch f.Method {
 	case "initialize":
 		result = map[string]any{"protocolVersion": 1, "agentCapabilities": map[string]any{"loadSession": true,
-			"sessionCapabilities": map[string]any{"fork": map[string]any{}, "delete": map[string]any{}}}}
+			"sessionCapabilities": map[string]any{"fork": map[string]any{}, "delete": map[string]any{}, "close": map[string]any{}}}}
 	case "session/new", "session/fork":
 		a.mu.Lock()
 		a.nextID++
 		id := fmt.Sprintf("fake-%d-%p", a.nextID, a)
-		a.cwds[id] = p.Cwd
 		a.mu.Unlock()
 		// Like Claude, a new session is only kept once it has a message.
-		if f.Method == "session/fork" {
-			a.History.fork(p.SessionID, id)
+		if f.Method == "session/fork" && !a.History.fork(p.Cwd, p.SessionID, id) {
+			a.fail(f, "Session "+p.SessionID+" not found in "+p.Cwd)
+			return
 		}
+		a.mu.Lock()
+		a.cwds[id] = p.Cwd
+		a.mu.Unlock()
 		result = map[string]any{"sessionId": id}
 	case "session/load":
-		updates, ok := a.History.get(p.SessionID)
+		updates, ok := a.History.get(p.Cwd, p.SessionID)
 		if !ok {
-			a.send(frame{ID: f.ID, Error: &struct {
-				Message string `json:"message"`
-			}{"no such session"}})
+			a.fail(f, "no such session")
 			return
 		}
 		a.mu.Lock()
@@ -201,14 +309,13 @@ func (a *Agent) answer(f frame) {
 			}
 		}
 		result = map[string]any{}
-	case "session/delete":
-		a.History.mu.Lock()
-		delete(a.History.sessions, p.SessionID)
-		if a.History.deleted == nil {
-			a.History.deleted = map[string]bool{}
+	case "session/close", "session/delete":
+		a.mu.Lock()
+		delete(a.cwds, p.SessionID)
+		a.mu.Unlock()
+		if f.Method == "session/delete" {
+			a.History.delete(p.SessionID)
 		}
-		a.History.deleted[p.SessionID] = true
-		a.History.mu.Unlock()
 		result = map[string]any{}
 	case "session/prompt":
 		var text string
@@ -229,7 +336,10 @@ func (a *Agent) say(session, text string) {
 
 // prompt runs the script for text and returns the turn's stop reason.
 func (a *Agent) prompt(session, text string) string {
-	a.History.add(session, map[string]any{"sessionUpdate": "user_message_chunk", "content": map[string]any{"type": "text", "text": text}})
+	a.mu.Lock()
+	cwd := a.cwds[session]
+	a.mu.Unlock()
+	a.History.add(cwd, session, map[string]any{"sessionUpdate": "user_message_chunk", "content": map[string]any{"type": "text", "text": text}})
 	switch {
 	case strings.Contains(text, "permission"):
 		a.update(session, map[string]any{"sessionUpdate": "tool_call", "toolCallId": "t1", "title": "touch x", "kind": "execute", "status": "pending"})
@@ -257,9 +367,19 @@ func (a *Agent) prompt(session, text string) string {
 	case strings.Contains(text, "think"):
 		for _, t := range []string{"The user wants me to think. ", "Let me look at the files first, ", "then decide what to change."} {
 			time.Sleep(a.Pause)
+			if a.cancelled(session) {
+				return "cancelled"
+			}
 			a.update(session, map[string]any{"sessionUpdate": "agent_thought_chunk", "content": map[string]any{"type": "text", "text": t}})
 		}
 		a.say(session, "Done thinking.")
+	case strings.Contains(text, "wait"):
+		for range 1000 {
+			if a.cancelled(session) {
+				return "cancelled"
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
 	case strings.Contains(text, "pwd"):
 		a.mu.Lock()
 		cwd := a.cwds[session]
@@ -267,6 +387,9 @@ func (a *Agent) prompt(session, text string) string {
 		a.say(session, "cwd: "+cwd)
 	case strings.Contains(text, "many"):
 		for i := range 150 {
+			if a.cancelled(session) {
+				return "cancelled"
+			}
 			id := "many-" + strconv.Itoa(i)
 			a.update(session, map[string]any{"sessionUpdate": "tool_call", "toolCallId": id, "title": "Read file" + strconv.Itoa(i) + ".go", "kind": "read", "status": "completed"})
 			a.update(session, map[string]any{"sessionUpdate": "agent_message_chunk", "messageId": "m" + id, "content": map[string]any{"type": "text",
@@ -286,6 +409,9 @@ func (a *Agent) prompt(session, text string) string {
 			}
 			a.update(session, map[string]any{"sessionUpdate": "plan", "entries": entries})
 			time.Sleep(a.Pause)
+			if a.cancelled(session) {
+				return "cancelled"
+			}
 		}
 		a.say(session, "All done.")
 	default:

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -49,5 +50,38 @@ func TestAChatStaysIfItsWorktreeOrHistoryCantGo(t *testing.T) {
 	stays("the history", svc.Delete(ctx, c.id, nil), c)
 	if _, err := svc.stored(c.id); err != nil {
 		t.Errorf("the chat went: %v", err)
+	}
+}
+
+// While a chat is being deleted, nothing reopens it or sends to it.
+func TestNothingReopensAChatBeingDeleted(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.deletes, agent.deleteGate = true, make(chan struct{})
+	deleted := make(chan error)
+	go func() { deleted <- svc.Delete(context.Background(), c.id, nil) }()
+	eventually(t, c, func() bool { return c.halting && c.agent == nil })
+	time.Sleep(20 * time.Millisecond) // the deleter is waiting on its delete
+	agent.mu.Lock()
+	launches := agent.launches
+	agent.mu.Unlock()
+	if _, err := svc.Get(c.id); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Prompt(c.id, model.Message{Text: "hi"}, SendQueue); err == nil {
+		t.Error("a chat being deleted took a message")
+	}
+	if _, err := svc.Fork(context.Background(), c.id); err == nil {
+		t.Error("a chat being deleted forked")
+	}
+	time.Sleep(20 * time.Millisecond)
+	agent.mu.Lock()
+	again := agent.launches
+	agent.mu.Unlock()
+	close(agent.deleteGate)
+	if err := <-deleted; err != nil {
+		t.Fatal(err)
+	}
+	if again != launches {
+		t.Errorf("%d agents started while the chat was being deleted", again-launches)
 	}
 }

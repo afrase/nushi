@@ -67,6 +67,31 @@ func TestArchiveDeliversNothingToTheAgentItStops(t *testing.T) {
 	if got, _ := agent.texts(); !reflect.DeepEqual(got, []string{"one"}) {
 		t.Errorf("prompts = %q", got)
 	}
+	c.mu.Lock()
+	queued, held := len(c.queue), c.held
+	c.mu.Unlock()
+	if queued != 1 || !held {
+		t.Errorf("the queue after Archive: %d, held %v; want two, held", queued, held)
+	}
+}
+
+// Unarchived in the same run, a chat's transcript is replayed once, not
+// added to the one it had.
+func TestUnarchiveReplaysOnce(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.updates = []acp.SessionUpdate{chunk("m1", "hi")}
+	turn(t, svc, c, "one")
+	before := texts(c)
+	if err := svc.Archive(c.id, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Archive(c.id, false); err != nil {
+		t.Fatal(err)
+	}
+	eventually(t, c, func() bool { return !c.busy && c.agent != nil })
+	if got := texts(c); !reflect.DeepEqual(got, before) {
+		t.Errorf("after unarchiving: %q, want %q", got, before)
+	}
 }
 
 func TestOneSteeringWorkerThatRespectsAStop(t *testing.T) {

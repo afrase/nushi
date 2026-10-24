@@ -40,6 +40,8 @@ type fakeAgent struct {
 	ignoreCancel bool          // a cancel doesn't end the turn
 	sendGate     chan struct{} // when set, writing a prompt waits until it is closed
 	steerGate    chan struct{} // when set, steering waits until it is closed
+	deleteGate   chan struct{} // when set, deleting a session waits until it is closed
+	launches     int
 	refuseSteer  bool          // steering answers "no turn runs"
 	steerErr     error         // steering fails
 	steerable    bool
@@ -56,6 +58,7 @@ func (f *fakeAgent) launch(h acp.Handler) (Agent, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.h = h
+	f.launches++
 	select {
 	case <-f.done:
 		f.done = nil
@@ -192,6 +195,9 @@ func (f *fakeAgent) ForkSession(_ context.Context, req acp.ForkSessionRequest) (
 func (f *fakeAgent) CloseSession(context.Context, acp.CloseSessionRequest) error { return nil }
 
 func (f *fakeAgent) DeleteSession(_ context.Context, req acp.DeleteSessionRequest) error {
+	if f.deleteGate != nil {
+		<-f.deleteGate
+	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.deleted = append(f.deleted, req.SessionID)

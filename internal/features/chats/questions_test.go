@@ -3,8 +3,10 @@ package chats
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/afrase/nushi/acp"
 	"github.com/afrase/nushi/internal/model"
@@ -83,6 +85,64 @@ func TestMalformedFormIsAnError(t *testing.T) {
 	for _, props := range []string{`[1,2]`, `"x"`, ``, `{"a":1}`} {
 		if _, err := formFields(&acp.ElicitationSchema{Properties: json.RawMessage(props)}); err == nil {
 			t.Errorf("properties %s: no error", props)
+		}
+	}
+}
+
+// Stop cancels a question the turn waits on.
+func TestStopCancelsAPendingQuestion(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.gate = make(chan struct{})
+	svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle)
+	var req acp.CreateElicitationRequest
+	if err := json.Unmarshal([]byte(claudeForm), &req); err != nil {
+		t.Fatal(err)
+	}
+	got := make(chan *acp.CreateElicitationResponse, 1)
+	go func() {
+		resp, _ := c.CreateElicitation(context.Background(), req)
+		got <- resp
+	}()
+	eventually(t, c, func() bool { return len(c.questions) == 1 })
+	if _, err := svc.Stop(context.Background(), c.id, false); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case resp := <-got:
+		if resp.Action != "cancel" {
+			t.Errorf("the agent got %q, want cancel", resp.Action)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("the question still waits")
+	}
+	eventually(t, c, func() bool { return slices.ContainsFunc(c.items, func(it model.Item) bool { return it.Kind == model.Question && it.Status == "cancelled" }) })
+}
+
+// A second answer before the agent has the first fails, and doesn't block
+// the chat (on the one-answer channel, under its lock).
+func TestAnsweringTwiceFails(t *testing.T) {
+	svc, _, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	c.mu.Lock()
+	q := c.addLocked(model.Item{Kind: model.Question, Fields: []model.Field{{ID: "f", Type: model.Text}}})
+	p := c.addLocked(model.Item{Kind: model.Permission, Options: []model.Option{{ID: "yes"}}})
+	c.questions[q] = make(chan []model.Field, 1) // nobody reads them: the agent hasn't woken yet
+	c.waiting[p] = make(chan string, 1)
+	c.mu.Unlock()
+	errs := make(chan error, 4)
+	go func() {
+		for range 2 {
+			errs <- svc.AnswerQuestion(c.id, q, map[string][]string{"f": {"x"}})
+			errs <- svc.AnswerPermission(c.id, p, "yes")
+		}
+	}()
+	for i := range 4 {
+		select {
+		case err := <-errs:
+			if (i < 2) != (err == nil) {
+				t.Errorf("answer %d: %v", i, err)
+			}
+		case <-time.After(time.Second):
+			t.Fatal("a second answer blocked")
 		}
 	}
 }

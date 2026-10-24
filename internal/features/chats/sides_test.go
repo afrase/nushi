@@ -3,6 +3,7 @@ package chats
 import (
 	"context"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/afrase/nushi/acp"
@@ -35,20 +36,33 @@ func TestSideChatKeepsToItself(t *testing.T) {
 	if len(main.Items) != 1 || main.Items[0].Text != "main" || len(aside.Items) != 1 || aside.Items[0].Text != "aside" {
 		t.Errorf("main = %+v, side = %+v", main.Items, aside.Items)
 	}
+	if p := svc.chats[id]; !reflect.DeepEqual(p.session.Throwaway, []string{"fork1"}) {
+		t.Errorf("the chat doesn't keep its side chat's session until it's deleted: %v", p.session.Throwaway)
+	}
+	// Asked something, it isn't stored either; closed mid-turn, the turn stops.
+	sideChat := svc.chats[side]
+	agent.gate = make(chan struct{})
+	if err := svc.Prompt(side, model.Message{Text: "aside?"}, SendIdle); err != nil {
+		t.Fatal(err)
+	}
+	eventually(t, sideChat, func() bool { return len(agent.onWire()) == 1 })
+	sessions.mu.Lock()
 	for _, s := range sessions.saved {
 		if s.ID == side {
 			t.Errorf("the side chat was stored")
 		}
 	}
-	if p := svc.chats[id]; !reflect.DeepEqual(p.session.Throwaway, []string{"fork1"}) {
-		t.Errorf("the chat doesn't keep its side chat's session until it's deleted: %v", p.session.Throwaway)
-	}
-	sideChat := svc.chats[side]
+	sessions.mu.Unlock()
 	if err := svc.CloseSide(side); err != nil {
 		t.Fatal(err)
 	}
+	eventually(t, sideChat, func() bool { return !sideChat.busy && slices.Contains(agent.onWire(), "cancel") })
 	if sideChat.agent != nil {
 		t.Error("a closed side chat keeps the agent: what follows it (a background command) goes on")
+	}
+	say("fork1", "late")
+	if main, _ := svc.Get(id); len(main.Items) != 1 || slices.Contains(texts(sideChat), "agent:late") {
+		t.Errorf("an update for the closed side chat went somewhere: %+v, %q", main.Items, texts(sideChat))
 	}
 	if _, err := svc.Get(side); err == nil {
 		t.Errorf("the side chat is still there after CloseSide")
