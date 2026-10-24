@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
+import 'agents.dart';
 import 'daemon.dart';
 import 'folder_button.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
@@ -47,10 +48,11 @@ class McpView extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Text(
-                  'MCP servers',
-                  style: theme.ui(t.text, weight: FontWeight.w600),
-                ),
+                Text(switch (mcpAgent) {
+                  final a? when knownAgents.length > 1 =>
+                    '${a.title}’s MCP servers',
+                  _ => 'MCP servers',
+                }, style: theme.ui(t.text, weight: FontWeight.w600)),
                 const SizedBox(width: 12),
                 Menu(
                   entries: folderEntries(

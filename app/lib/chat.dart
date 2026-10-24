@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import 'agents.dart';
 import 'draft.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'settings.dart';
@@ -67,10 +68,14 @@ class ChatState extends ChangeNotifier {
 
   /// The agent's name to show: "Claude".
   String get agentName => switch (agent) {
-    'claude' => 'Claude',
+    _ when knownAgents[agent] != null => knownAgents[agent]!.title,
     '' => 'The agent',
     _ => agent[0].toUpperCase() + agent.substring(1),
   };
+
+  /// The terminal command that opens one of its agent's sessions, before
+  /// the session id ('' when not known).
+  String get resume => knownAgents[agent]?.resume ?? '';
 
   /// The folder the chat stands for: in a worktree, the same folder in its
   /// repository; the sidebar groups chats by it.
