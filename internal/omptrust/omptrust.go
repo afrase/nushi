@@ -11,10 +11,12 @@
 package omptrust
 
 import (
+	"errors"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/afrase/nushi/internal/folderfiles"
 	"github.com/afrase/nushi/internal/git"
@@ -56,6 +58,7 @@ func files(folder string) []folderfiles.File {
 	home, _ := os.UserHomeDir()
 	home = git.RealPath(home)
 	var roots []string
+	var bad []folderfiles.File // folders that couldn't be read: nothing to vouch for
 	add := func(dir string, names ...string) {
 		for _, n := range names {
 			roots = append(roots, filepath.Join(dir, n))
@@ -77,13 +80,46 @@ func files(folder string) []folderfiles.File {
 			}
 			add(cdir, "extensions", "hooks", "tools", "plugins", "settings.json", "config.toml", "opencode.json", "opencode.jsonc")
 			add(cdir, lsp...)
-			modules, _ := filepath.Glob(filepath.Join(cdir, "commands", "*", "index.*"))
-			for _, m := range modules {
-				if ext := filepath.Ext(m); slices.Contains([]string{".ts", ".js", ".mjs", ".cjs"}, ext) {
-					roots = append(roots, m)
+			bad = append(bad, commandModules(filepath.Join(cdir, "commands"), &roots)...)
+		}
+	}
+	return append(folderfiles.Walk(roots, "omp"), bad...)
+}
+
+// commandModules adds to roots the command modules in commands
+// (<name>/index.{ts,js,mjs,cjs}); a link among them is added as it is, so
+// it shows as one. It returns what it couldn't read, to show as such.
+// (It reads folders rather than globbing: the folder's own path may hold
+// a pattern's characters.)
+func commandModules(commands string, roots *[]string) []folderfiles.File {
+	if fi, err := os.Lstat(commands); errors.Is(err, fs.ErrNotExist) {
+		return nil
+	} else if err == nil && fi.Mode()&fs.ModeSymlink != 0 {
+		*roots = append(*roots, commands)
+		return nil
+	}
+	entries, err := os.ReadDir(commands)
+	if err != nil {
+		return []folderfiles.File{{Path: commands, Text: []byte("couldn't read it: " + err.Error())}}
+	}
+	var bad []folderfiles.File
+	for _, e := range entries {
+		dir := filepath.Join(commands, e.Name())
+		switch {
+		case e.Type()&fs.ModeSymlink != 0:
+			*roots = append(*roots, dir)
+		case e.IsDir():
+			files, err := os.ReadDir(dir)
+			if err != nil {
+				bad = append(bad, folderfiles.File{Path: dir, Text: []byte("couldn't read it: " + err.Error())})
+			}
+			for _, f := range files {
+				name := f.Name()
+				if strings.HasPrefix(name, "index.") && slices.Contains([]string{".ts", ".js", ".mjs", ".cjs"}, filepath.Ext(name)) {
+					*roots = append(*roots, filepath.Join(dir, name))
 				}
 			}
 		}
 	}
-	return folderfiles.Walk(roots, "omp")
+	return bad
 }

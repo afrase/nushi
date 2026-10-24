@@ -53,3 +53,24 @@ func TestWhatOmpLoads(t *testing.T) {
 		t.Error("a linked .codex is remembered")
 	}
 }
+
+// A folder whose path holds a glob's characters still has its command
+// modules listed; a commands folder that can't be read fails closed.
+func TestCommandsUnderAPathWithPatternCharacters(t *testing.T) {
+	var tr Trust
+	base, _ := filepath.EvalSymlinks(t.TempDir())
+	dir := filepath.Join(base, "x[1]*?")
+	module := filepath.Join(dir, ".claude", "commands", "go", "index.ts")
+	write(t, module, "command")
+	runs, key, _ := tr.Runs(dir)
+	if len(runs) != 1 || runs[0].File != module || key == "" {
+		t.Fatalf("runs %v, key %q", runs, key)
+	}
+	commands := filepath.Dir(filepath.Dir(module))
+	os.Chmod(commands, 0)
+	defer os.Chmod(commands, 0o700)
+	runs, key, _ = tr.Runs(dir)
+	if len(runs) != 1 || runs[0].File != commands || !strings.Contains(runs[0].Command, "couldn't read") || key != "" {
+		t.Errorf("unreadable: runs %v, key %q", runs, key)
+	}
+}
