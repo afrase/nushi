@@ -35,7 +35,7 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 	write(t, filepath.Join(repo, ".codex", "empty.json"), "")
 
 	shown := func(folder string) string {
-		runs, err := tr.Runs(folder)
+		runs, _, err := tr.Runs(folder)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -91,5 +91,40 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 	write(t, config, "[mcp_servers.x\ncommand = 1")
 	if got := shown(repo); !strings.HasPrefix(got, "/.codex/config.toml Read by Codex: [mcp_servers.x\ncommand = 1") {
 		t.Errorf("an unreadable config.toml shows as %s", got)
+	}
+}
+
+// The key covers every file whole, and nothing it can't: a link (to a
+// folder or a file), a file it can't read or a fifo leaves the folder
+// without one, and the card says so.
+func TestTheKeyCoversWhatTheCardShows(t *testing.T) {
+	var tr Trust
+	t.Setenv("CODEX_HOME", t.TempDir())
+	folder, _ := filepath.EvalSymlinks(t.TempDir())
+	big := filepath.Join(folder, ".codex", "rules", "big.rules")
+	write(t, big, strings.Repeat("x", shown+10)+"a")
+	runs, key, _ := tr.Runs(folder)
+	if key == "" || len(runs) != 1 || !strings.HasPrefix(runs[0].Command, "too large to show") {
+		t.Fatalf("key %q, runs %v", key, runs)
+	}
+	write(t, big, strings.Repeat("x", shown+10)+"b") // changed past what the card shows
+	if tr.Key(folder) == key {
+		t.Error("a change past the card's cap kept the key")
+	}
+	for name, make := range map[string]func(path string) error{
+		"link to a folder": func(p string) error { return os.Symlink(t.TempDir(), p) },
+		"link to a file":   func(p string) error { return os.Symlink(big, p) },
+		"unreadable file":  func(p string) error { return os.WriteFile(p, []byte("x"), 0o000) },
+		"fifo":             func(p string) error { return exec.Command("mkfifo", p).Run() },
+	} {
+		odd := filepath.Join(folder, ".codex", "odd")
+		if err := make(odd); err != nil {
+			t.Fatal(err)
+		}
+		runs, key, _ := tr.Runs(folder)
+		if key != "" || tr.Key(folder) != "" || !strings.Contains(runs[0].What+runs[1].What, "asks every time") {
+			t.Errorf("%s: key %q, runs %v", name, key, runs)
+		}
+		os.Remove(odd)
 	}
 }

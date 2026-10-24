@@ -7197,8 +7197,11 @@ func (x *CheckFolderRequest) GetAgent() string {
 }
 
 type CheckFolderResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Runs          []*FolderRun           `protobuf:"bytes,1,rep,name=runs,proto3" json:"runs,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Runs  []*FolderRun           `protobuf:"bytes,1,rep,name=runs,proto3" json:"runs,omitempty"`
+	// What TrustFolder remembers for exactly what runs shows; empty when the
+	// folder can't be remembered (Start anyway is then for this start only).
+	Key           string `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -7238,6 +7241,13 @@ func (x *CheckFolderResponse) GetRuns() []*FolderRun {
 		return x.Runs
 	}
 	return nil
+}
+
+func (x *CheckFolderResponse) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
 }
 
 // Something a folder has the agent run on its own.
@@ -7308,7 +7318,10 @@ type TrustFolderRequest struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	Folder string                 `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
 	// The agent the chat runs (Agent.name); empty for the default.
-	Agent         string `protobuf:"bytes,2,opt,name=agent,proto3" json:"agent,omitempty"`
+	Agent string `protobuf:"bytes,2,opt,name=agent,proto3" json:"agent,omitempty"`
+	// CheckFolderResponse.key. Refused (aborted) when the folder no longer
+	// matches it: check again.
+	Key           string `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -7353,6 +7366,13 @@ func (x *TrustFolderRequest) GetFolder() string {
 func (x *TrustFolderRequest) GetAgent() string {
 	if x != nil {
 		return x.Agent
+	}
+	return ""
+}
+
+func (x *TrustFolderRequest) GetKey() string {
+	if x != nil {
+		return x.Key
 	}
 	return ""
 }
@@ -7861,16 +7881,18 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x15CloseTerminalResponse\"B\n" +
 	"\x12CheckFolderRequest\x12\x16\n" +
 	"\x06folder\x18\x01 \x01(\tR\x06folder\x12\x14\n" +
-	"\x05agent\x18\x02 \x01(\tR\x05agent\">\n" +
+	"\x05agent\x18\x02 \x01(\tR\x05agent\"P\n" +
 	"\x13CheckFolderResponse\x12'\n" +
-	"\x04runs\x18\x01 \x03(\v2\x13.nushi.v1.FolderRunR\x04runs\"M\n" +
+	"\x04runs\x18\x01 \x03(\v2\x13.nushi.v1.FolderRunR\x04runs\x12\x10\n" +
+	"\x03key\x18\x02 \x01(\tR\x03key\"M\n" +
 	"\tFolderRun\x12\x12\n" +
 	"\x04file\x18\x01 \x01(\tR\x04file\x12\x12\n" +
 	"\x04what\x18\x02 \x01(\tR\x04what\x12\x18\n" +
-	"\acommand\x18\x03 \x01(\tR\acommand\"B\n" +
+	"\acommand\x18\x03 \x01(\tR\acommand\"T\n" +
 	"\x12TrustFolderRequest\x12\x16\n" +
 	"\x06folder\x18\x01 \x01(\tR\x06folder\x12\x14\n" +
-	"\x05agent\x18\x02 \x01(\tR\x05agent\"\x15\n" +
+	"\x05agent\x18\x02 \x01(\tR\x05agent\x12\x10\n" +
+	"\x03key\x18\x03 \x01(\tR\x03key\"\x15\n" +
 	"\x13TrustFolderResponse*\xea\x01\n" +
 	"\bItemKind\x12\x19\n" +
 	"\x15ITEM_KIND_UNSPECIFIED\x10\x00\x12\x1a\n" +

@@ -5,6 +5,7 @@
 package trust
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -13,10 +14,17 @@ import (
 
 // Agent knows an agent's own trust record and what a folder has it run.
 type Agent interface {
-	Key(folder string) string // what trust is kept under (its repository's folder)
+	// Runs returns what folder has the agent run, and the key "Start
+	// anyway" keeps that under ("" when it can't be kept): both from one
+	// look at the folder.
+	Runs(folder string) (runs []model.FolderRun, key string, err error)
+	// Key is the key for folder as it is now.
+	Key(folder string) string
 	Trusted(folder string, also []string) (bool, error)
-	Runs(folder string) ([]model.FolderRun, error)
 }
+
+// ErrChanged says the folder isn't as its card showed it.
+var ErrChanged = errors.New("the folder changed since you looked at it; look again")
 
 // Store keeps the folders the user started chats in anyway, by key.
 type Store interface {
@@ -35,36 +43,42 @@ func New(agents map[string]Agent, store Store) *Service {
 }
 
 // Check returns what folder would have agent run when nobody trusted it,
-// or nothing.
-func (s *Service) Check(agent, folder string) ([]model.FolderRun, error) {
+// or nothing, and the key that remembers what it shows ("" when it can't
+// be remembered: Start anyway is then for one start).
+func (s *Service) Check(agent, folder string) ([]model.FolderRun, string, error) {
 	a, err := s.agent(agent, folder)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	runs, err := a.Runs(folder)
+	runs, key, err := a.Runs(folder)
 	if err != nil { // can't tell what it runs: say why, and let the user decide
-		runs = []model.FolderRun{{What: "Settings Nushi couldn't read", Command: err.Error()}}
+		runs, key = []model.FolderRun{{What: "Settings Nushi couldn't read", Command: err.Error()}}, ""
 	}
 	if len(runs) == 0 {
-		return nil, nil
+		return nil, "", nil
 	}
 	also, err := s.store.TrustedFolders()
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	if ok, err := a.Trusted(folder, also); ok || err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	return runs, nil
+	return runs, key, nil
 }
 
-// Trust remembers that the user starts chats with agent in folder anyway.
-func (s *Service) Trust(agent, folder string) error {
+// Trust remembers that the user starts chats with agent in folder anyway,
+// given the key its card came with; ErrChanged when the folder is no
+// longer what the card showed.
+func (s *Service) Trust(agent, folder, key string) error {
 	a, err := s.agent(agent, folder)
 	if err != nil {
 		return err
 	}
-	return s.store.TrustFolder(a.Key(folder))
+	if key == "" || key != a.Key(folder) {
+		return ErrChanged
+	}
+	return s.store.TrustFolder(key)
 }
 
 func (s *Service) agent(name, folder string) (Agent, error) {

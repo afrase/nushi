@@ -47,7 +47,7 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 	sub := filepath.Join(repo, "src")
 	os.Mkdir(sub, 0o700)
 
-	got, err := Trust{}.Runs(sub) // a chat in a subfolder: the repository's root runs too
+	got, err := runs(sub) // a chat in a subfolder: the repository's root runs too
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +142,7 @@ func TestTheHomeFolder(t *testing.T) {
 	t.Setenv("HOME", home)
 	t.Setenv("CLAUDE_CONFIG_DIR", filepath.Join(home, ".claude"))
 	write(t, filepath.Join(home, ".claude", "settings.json"), `{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"say done"}]}]}}`)
-	if runs, err := (Trust{}).Runs(home); err != nil || len(runs) > 0 {
+	if runs, err := runs(home); err != nil || len(runs) > 0 {
 		t.Errorf("the home folder runs %v, %v", runs, err)
 	}
 	download := filepath.Join(home, "Downloads", "evil")
@@ -165,7 +165,7 @@ func TestASettingsFileThatNeverEnds(t *testing.T) {
 		repo := t.TempDir()
 		os.MkdirAll(filepath.Join(repo, ".claude"), 0o700)
 		os.Symlink("/dev/zero", filepath.Join(repo, name))
-		if runs, err := (Trust{}).Runs(repo); err == nil && len(runs) == 0 {
+		if runs, err := runs(repo); err == nil && len(runs) == 0 {
 			t.Errorf("%s linked to /dev/zero: nothing to say", name)
 		}
 	}
@@ -178,7 +178,7 @@ func TestAnMCPFileNushiCantRead(t *testing.T) {
 	repo := t.TempDir()
 	body := `{"mcpServers":{"echo":{"command":"echo","args":["hi"]},}}`
 	write(t, filepath.Join(repo, ".mcp.json"), body)
-	runs, err := Trust{}.Runs(repo)
+	runs, err := runs(repo)
 	if err != nil || len(runs) != 1 || runs[0].Command != body || runs[0].File != filepath.Join(repo, ".mcp.json") {
 		t.Errorf("runs = %+v, %v", runs, err)
 	}
@@ -220,11 +220,11 @@ func TestAFileShownWholeOrNotAtAll(t *testing.T) {
 	mcp := filepath.Join(repo, ".mcp.json")
 	body := "{" + strings.Repeat(" ", 100<<10)
 	write(t, mcp, body)
-	if runs, _ := (Trust{}).Runs(repo); len(runs) != 1 || runs[0].Command != body {
+	if runs, _ := runs(repo); len(runs) != 1 || runs[0].Command != body {
 		t.Errorf("a 100 KB file isn't shown whole")
 	}
 	write(t, mcp, "{"+strings.Repeat(" ", 300<<10))
-	if runs, _ := (Trust{}).Runs(repo); len(runs) != 1 || runs[0].Command != "too large to show (301 KB): read "+mcp {
+	if runs, _ := runs(repo); len(runs) != 1 || runs[0].Command != "too large to show (301 KB): read "+mcp {
 		t.Errorf("runs = %.80q", runs[0].Command)
 	}
 }

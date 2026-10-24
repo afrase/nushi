@@ -5,6 +5,7 @@ import (
 	"cmp"
 	"context"
 	"crypto/subtle"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -302,11 +303,11 @@ func (s *server) GetContextUsage(ctx context.Context, req *connect.Request[nushi
 }
 
 func (s *server) CheckFolder(_ context.Context, req *connect.Request[nushiv1.CheckFolderRequest]) (*connect.Response[nushiv1.CheckFolderResponse], error) {
-	runs, err := s.trust.Check(s.agent(req.Msg.Agent), req.Msg.Folder)
+	runs, key, err := s.trust.Check(s.agent(req.Msg.Agent), req.Msg.Folder)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
-	out := &nushiv1.CheckFolderResponse{}
+	out := &nushiv1.CheckFolderResponse{Key: key}
 	for _, r := range runs {
 		out.Runs = append(out.Runs, &nushiv1.FolderRun{File: r.File, What: r.What, Command: r.Command})
 	}
@@ -314,7 +315,10 @@ func (s *server) CheckFolder(_ context.Context, req *connect.Request[nushiv1.Che
 }
 
 func (s *server) TrustFolder(_ context.Context, req *connect.Request[nushiv1.TrustFolderRequest]) (*connect.Response[nushiv1.TrustFolderResponse], error) {
-	if err := s.trust.Trust(s.agent(req.Msg.Agent), req.Msg.Folder); err != nil {
+	switch err := s.trust.Trust(s.agent(req.Msg.Agent), req.Msg.Folder, req.Msg.Key); {
+	case errors.Is(err, trust.ErrChanged):
+		return nil, connect.NewError(connect.CodeAborted, err)
+	case err != nil:
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
 	return connect.NewResponse(&nushiv1.TrustFolderResponse{}), nil

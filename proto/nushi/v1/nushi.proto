@@ -1055,6 +1055,9 @@ message CheckFolderRequest {
 
 message CheckFolderResponse {
   repeated FolderRun runs = 1;
+  // What TrustFolder remembers for exactly what runs shows; empty when the
+  // folder can't be remembered (Start anyway is then for this start only).
+  string key = 2;
 }
 
 // Something a folder has the agent run on its own.
@@ -1071,6 +1074,9 @@ message TrustFolderRequest {
   string folder = 1;
   // The agent the chat runs (Agent.name); empty for the default.
   string agent = 2;
+  // CheckFolderResponse.key. Refused (aborted) when the folder no longer
+  // matches it: check again.
+  string key = 3;
 }
 
 message TrustFolderResponse {}
