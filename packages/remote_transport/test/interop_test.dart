@@ -26,11 +26,14 @@ Future<Channel> _open(Map<String, String> peer, {List<int>? secret, List<int>? k
 }
 
 void main() {
+  late Directory dir;
   setUpAll(() async {
-    _peerBin = '${(await Directory.systemTemp.createTemp('noisepeer')).path}/noisepeer';
+    dir = await Directory.systemTemp.createTemp('noisepeer');
+    _peerBin = '${dir.path}/noisepeer';
     final r = await Process.run('go', ['build', '-o', _peerBin, './internal/e2e/noisepeer'], workingDirectory: '../..');
     if (r.exitCode != 0) throw StateError('building noisepeer: ${r.stderr}');
   });
+  tearDownAll(() => dir.delete(recursive: true));
 
   test('Dart and Go agree through enough messages to rekey twice each way', () async {
     final ch = await _open(await _peer([]));

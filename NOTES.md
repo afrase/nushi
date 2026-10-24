@@ -1,12 +1,36 @@
 # Notes
 
-## Summary (2026-10-24, after step 105: milestone U)
+## Summary (2026-10-25, after step 113: milestone V)
 
-Milestone U measured memory and speed, added sleeping chats and a status bar, in steps 101–105. One commit each on `main`, all pushed. `make test` passes. API 46.
+Milestone V is phase 1 of mobile: a relay, an end-to-end Noise channel, pairing and devices, remote access in the daemon and the app's settings, in steps 106–113 (plus two commits of security fixes from the review run during the milestone). One commit each on `main`, all pushed. `make test` passes. API 47. No phone UI yet.
 
-- **Measured** (step 101, "Memory and speed" below): a Claude chat's agent took about 300 MB, 60 of them npx's own Node process, which stayed as the agent's parent; Codex 150–160 MB (npx 59); omp 310–370 MB (npx 62); Ante 19–26 MB. Agents now start without it (`internal/npx`: npx says where the pinned program is, the daemon runs it): Claude about 245 MB, Codex 85–100, omp 245–315. The daemon is 8–50 MB, the app 150–500 MB (mostly graphics). Streaming a 3,000-word reply drops a few frames late in it (p99 18 ms); opening a long chat takes one 132 ms frame; both noted, not fixed.
-- **Sleep** (steps 102–103, ADR 0032): a chat's menu and its sidebar row's menu have Sleep, which stops its agent as Archive does; the chat stays, with its transcript, and shows a moon in place of its dot. Opening it doesn't wake it; a message (or a side chat, rewind, a picker, the context breakdown) wakes it through `session/load`, with the model and effort it had. Chats sleep on their own after 30 idle minutes (Settings: never, 15 or 30 minutes, 1 or 2 hours; the daemon keeps it) unless a turn runs or waits on you, something is queued, a background command or subagent runs, a side chat is open, or the chat moves, rewinds or reopens. Only agents that report `loadSession` sleep.
-- **Status bar** (step 104): along the window's bottom, how many agents work, are awake and sleep (dot, ring, moon and a number each), and the memory Nushi takes (agents, daemon, app). A click lists the awake chats (title, agent, memory, Sleep), then Nushi itself, then terminals when any. Memory is footprint (`phys_footprint`, Activity Monitor's Memory) read by the daemon without cgo (`proc_pid_rusage` as the `proc_info` system call, the process list from sysctl), every 5 s while the app runs (about 1 ms each). Considered and left out: the daemon's connection (the banner at the top already says when it's lost), usage and cost, CPU, terminals, the branch.
+- **The relay** (step 106, ADR 0033): `nushi-relay`, one static binary (`make relay`). A listener waits at `/v1/listen/{id}`, a dialer that has spoken meets it at `/v1/dial/{id}`, and it copies binary WebSocket messages. No accounts, disk or logs (only "listening on"); caps in memory: 64 KiB a message, 1 MiB/s a connection after an 8 MiB burst (pings cost too), 90 s idle, an hour's wait at most, 16 connections an id, 200 per client address (an IPv6 /64; counted under a keyed hash, dropped when unused; never over half the total) and 2 new a second after 60, 1,000 in all. TLS through autocert (`-host`), or plain behind a proxy (`-ip-header` for the client's address). The README says how to run it on a VPS or Fly.io; nothing was deployed.
+- **The channel** (steps 107–108, ADR 0034): `Noise_IKpsk1_25519_ChaChaPoly_BLAKE2s` to pair, `Noise_IK_…` after; Go through `flynn/noise` (`noiseconn`), Dart in `packages/noise` on `cryptography` (its HMAC-BLAKE2s is wrong, so HMAC is written out). Both pass cacophony's and snow's vectors (Dart: every fundamental pattern and psk modifier for the suite, 64 vectors; Go: IK and IKpsk1), and each other (8,202 messages each way, two rekeys). Each direction rekeys every 4,096 messages; any message that fails ends the connection.
+- **The daemon** (steps 109–110): remote access off by default; on, it waits at the relay on its id (backoff with jitter, waits again when the relay ends one), keeps the Mac awake with `caffeinate -i -w <pid>`, and honours proxies: the environment's, else `scutil --proxy` (a PAC file evaluated by macOS's CFNetwork through osascript, no cgo; else the HTTPS/HTTP/SOCKS proxy with its exceptions). Pairing: a one-time id and 32-byte secret for 5 minutes, then the phone's name, a six-digit code from the handshake hash, Allow or Deny on the Mac within 2 minutes; the daemon's long-lived id goes to the phone inside the channel. `devices.json`, `remote.json`, `remote-key.json`, all 0600. Revoke and Off drop connections at once. The API runs unchanged on each channel (a second h2c server, no token: the handshake authenticated the device). New calls: GetRemote, SetRemote, StartPairing, ConfirmPairing, RevokeDevice, and a remote event.
+- **The phone's side** (step 111): `packages/remote_transport`: its own WebSocket client (dart:io's has no message limit), the channel, pairing from the QR code's text, and an `Http2ClientTransport` over `ClientTransportConnection.viaStreams` (checked: it exists in http2 2.3.1), so the app's generated client runs unchanged.
+- **The app** (step 112): Settings → Remote access (switch, relay, state, "Keeps the Mac awake while on.", "Pair a phone" with the QR code then name and code with Allow/Deny, the devices with Revoke); a phone mark in the status bar while on.
+
+**Noise patterns, and why**: IK because the phone has the daemon's key from the QR code, so it's pinned from the first message and a relay can't swap it, the phone's own key travels encrypted (the relay can't tell devices apart), and it's one round trip with forward secrecy. `psk1` binds the QR code's one-time secret into the first message, so the daemon rejects a phone without it before answering and keeps waiting for the right one. Not XX (sends a key the phone already has, one more message) and not KK (a device id would go in the clear). ADR 0034 has the full reasoning and the threat model.
+
+**What the relay sees**: both ends' IP addresses, the rendezvous ids (the daemon's long-lived one links all its phone connections), connection and message timing and sizes, how many connections a daemon has. Not: any content, which device connects, the keys or the pairing secret (ADR 0033).
+
+**Tests**: the relay (pairing peers, no cross-talk, each dialer its own listener, message size, per-id, per-address, total and new-connection caps, rate, idle, waiting lifetime, a silent dialer, the client's own message limit, and the binary run in empty folders: nothing written, one log line); Noise (vectors both sides, Go↔Dart, changed/replayed/dropped/reordered messages, wrong secret, wrong prologue, wrong responder key, refused initiator); the daemon (pair and reconnect, a restart, a used or expired QR code, a wrong secret then the right one, Deny, an unknown and a revoked key, a relay in the middle with keys of its own, Off, waiting again); proxies (scutil settings and exceptions, a PAC file through CFNetwork that sees only scheme, host and port, a PAC server that hangs, lookups not waiting on each other, a local CONNECT proxy with a password, a 407); end to end (`app/test/remote_e2e_test.dart`: the real `nushid` and `nushi-relay` on localhost, the fake agent, a Dart phone with the app's generated client that pairs, lists chats, starts one, prompts it, answers its permission card, follows the events, reconnects with IK, is revoked).
+
+**Tried by hand** (a dev daemon on `/tmp/ndv` with the fake agent, a relay on 127.0.0.1, the dev app): the switch and relay field; the QR code, decoded from a screenshot with Vision and paired by a scratch Dart phone; both showed 069 524; Allow; a ListChats through the channel; the device "connected"; Revoke; the relay stopped ("Can't reach the relay: … connection refused" in red, the bar's phone red); Off (caffeinate gone, files 0600). No live agent ran: nothing used the Fireworks key.
+
+**Not tested**: a real phone (no phone app yet); `wss://` with autocert (needs a public host); a real company proxy, SOCKS and PAC servers in the wild (the PAC engine is macOS's, run on a local file); the Mac actually staying awake; the relay on Fly.io or a VPS; the light theme of the new screens; the packaged app's remote access (the installed one gets it after the daemon restart).
+
+**Needs your attention**
+- API 47: after `make install` the app asks for "Restart daemon".
+- A paired phone gets terminals too (ADR 0034 amends 0022): with "no device modes" it's a full client, and an agent in a permissive mode already runs what it asks. Say if you want terminals kept local.
+- The relay you'll use: run one (README), then put its `wss://` URL in Settings. Check from the work Mac that a WebSocket gets through the company proxy (the research's "Do first").
+- Still from milestone U: the milestone S transcript holding the Fireworks key (`~/.claude/projects/-Users-aaron-Developer/94b91ba3-910c-45e1-a84a-bd138ed8a5aa/subagents/agent-ab0839e3a78603706.jsonl`).
+
+**Size**: the daemon went from 11,328 to 12,520 lines of Go, the relay and `noiseconn` are 829, the app from 14,377 to 14,723, the Dart packages from 682 to 1,754. Over the ~500-line tripwire: step 109 (817 lines of Go, about 1,200 with tests: the whole remote feature, its API and store), step 111 (547 of Dart: the WebSocket client, the channel, pairing and the transport) and step 108 (525: the Noise spec in Dart).
+
+**Dependencies**: Go `github.com/flynn/noise` (Noise), `github.com/gorilla/websocket` (the relay and its client), `golang.org/x/crypto` (autocert; also under flynn/noise). Dart `cryptography` (X25519, ChaCha20-Poly1305, BLAKE2s, SHA-1 for the WebSocket handshake; platform-backed on iOS with `cryptography_flutter`, which the phone app will add) and, in the app, `qr` (BSD) for the QR code.
+
+**Left behind by the testing**: nothing: the dev data folder `/tmp/ndv`, its bin and work folders, the e2e test's `/tmp/nre…` folders and the scratch phone were removed; the installed daemon wasn't touched.
 
 **Features per agent** (milestone T; every agent can sleep, since each reopens sessions)
 
@@ -43,6 +67,13 @@ Milestone U measured memory and speed, added sleeping chats and a status bar, in
 **Dependencies**: none new (`golang.org/x/sys/unix` was already in).
 
 **Left behind by the testing**: nothing. The dev chats were deleted with Delete (Claude's and Ante's histories with them); the measuring harness's two Claude sessions and their project folders, its Ante session, eight Ante logs and `~/.ante/run/` were removed; `~/.ante` is as it was (file list and checksums). The dev data folder, the temp Codex and omp homes, the scratch folders and the harness were removed. The key is in no file under them, the scratchpad or the repository (grep, the key on stdin); the only hit elsewhere is the milestone S transcript above.
+
+## Demo (milestone V)
+
+1. Run a relay: `make relay && bin/nushi-relay -addr 127.0.0.1:8080`.
+2. Settings → Remote access: type `ws://127.0.0.1:8080`, turn it on: "Connected", and a phone appears at the bottom right of the window.
+3. "Pair a phone": a QR code. Until the phone app exists, pair from Dart with `packages/remote_transport` (`pair(PairingOffer.parse(qr), …)`): the Mac then asks "Pair <name>?" with the code the phone prints; Allow, and the device is listed, connected.
+4. Revoke it: it's gone, and its connection drops. Stop the relay: the state turns red with why.
 
 ## Demo (milestone U)
 
@@ -210,6 +241,7 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | (110's security fixes) | 12434 | 984 | 14377 | 1207 | 829 |
 | 111. The phone's side in Dart (`packages/remote_transport`), end to end through the relay | 12520 | 984 | 14378 | 1754 | 829 |
 | 112. Remote access in the app: Settings, pairing, devices, the bar's mark | 12520 | 984 | 14723 | 1754 | 829 |
+| 113. By hand, and the docs | 12520 | 984 | 14723 | 1754 | 829 |
 
 Steps over the ~500-line tripwire (code and tests, without generated code): 98 (2,384 with its tests: Ante's whole bridge and its fake), 99 (901: two agents, two trust packages, the shared trust files), 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 removed more than it added.
 
@@ -382,6 +414,11 @@ modelRoles:
 
 Open questions; what's settled is in `docs/adr/` or in the code.
 
+- New in V: one pairing at a time; a new "Pair a phone" ends the one before. Closing the QR dialog leaves the pairing open until it expires (a phone that connects then gets no answer and is refused after 2 minutes). A phone that held the secret but sent no readable name doesn't use the pairing up.
+- New in V: the daemon's rendezvous id never changes (only deleting `remote-key.json`, which unpairs every phone); a revoked phone still knows it and can take the daemon's waiting connection for one failed handshake at a time.
+- New in V: a PAC file that can't be read or run leaves the static proxy settings (else direct), as macOS does, for 30 s; the environment's proxy wins over the system's when set. A password the system settings want (in the Keychain) isn't read, so such a proxy fails with "Proxy Authentication Required".
+- New in V: last-seen moves when a device's connection opens and closes; at most 16 remote connections at once.
+
 - New in U: a chat not opened since the daemon started counts as asleep (it has no agent); opening one still reopens it, since its transcript comes from the agent. A sleeping chat's agent stops as for Archive: a running turn is stopped (manual Sleep only), side chats end, a held queue waits. Sleep isn't offered for a side chat.
 - New in U: auto-sleep checks once a minute, so a chat sleeps up to a minute after its idle time. Every event of the chat counts as activity (a usage report, a background command's output, Claude's own turn after a background command), opening or reading it doesn't.
 - New in U: waking restores the options the chat had (model, effort, fast) when the agent offers them; not after a daemon restart, which doesn't keep them.
@@ -435,6 +472,8 @@ Open questions; what's settled is in `docs/adr/` or in the code.
 
 ## Later ideas
 
+- Mobile, after milestone V (the research's plan, with the owner's decisions): the phone app (an iOS target in `app/`, a phone shell on `remote_transport` with `cryptography_flutter`, the device key in the Keychain, Face ID lock, reconnect and resync), an `Events` filter for cellular data, then pushes through a tiny gateway of the publisher's (ntfy until the $99 program).
+
 - Show the plan's usage limits (session and weekly) for subscription users, if the agent exposes them. ACP doesn't today; claude-agent-acp 0.94.0 did put a `_meta._claude/rateLimit` (five-hour and seven-day utilization) on one `usage_update` (see ACP quirks), which isn't a stable interface.
 - Plain model chat with no agent (no tools, no folder) straight to an API or gateway with a key. Nushi would then own the history and model settings. For agent chats a gateway or key already works through Claude's own settings (`ANTHROPIC_BASE_URL`, `ANTHROPIC_API_KEY` or `apiKeyHelper` in `~/.claude/settings.json`).
 - Open a session started outside Nushi (e.g. `claude` in a terminal) as a chat: list the agent's sessions per folder through ACP `session/list` (claude-agent-acp 0.94.0 has it, under `sessionCapabilities`), pick one, and `session/load` it. No copy: the agent's history stays the source. Mind a session that's still open in a terminal (two writers to one transcript).
@@ -451,10 +490,12 @@ Open questions; what's settled is in `docs/adr/` or in the code.
 
 ## Dependencies
 
-- Go: `connectrpc.com/connect` v1, `google.golang.org/protobuf`, `gopkg.in/yaml.v3` (step 87: skills' front matter, for the trust card), `github.com/BurntSushi/toml` (step 96: Codex's config), buf through `go run` (codegen), `github.com/creack/pty`, `golang.org/x/sys/unix`.
-- Dart: `connectrpc` (with `http2` 2.x: 2.0.1 doesn't resolve with 3.x), `protobuf`, `flutter_markdown_plus`, `markdown`, `re_highlight`, `url_launcher`, `file_selector`, `pasteboard`, `desktop_drop`, `xterm2` (MIT; brings `xterm2_core`, `zmodem`, `quiver`, `equatable`, `convert`); fonts IBM Plex Sans and JetBrains Mono (OFL), and Symbols Nerd Font Mono from Nerd Fonts 3.5.1 (MIT; its icons come from projects under their own licenses, listed in the Nerd Fonts repository), bundled.
+- Go: `github.com/flynn/noise`, `github.com/gorilla/websocket`, `golang.org/x/crypto` (autocert) (milestone V), `connectrpc.com/connect` v1, `google.golang.org/protobuf`, `gopkg.in/yaml.v3` (step 87: skills' front matter, for the trust card), `github.com/BurntSushi/toml` (step 96: Codex's config), buf through `go run` (codegen), `github.com/creack/pty`, `golang.org/x/sys/unix`.
+- Dart: `cryptography` (packages; milestone V), `qr` (the app's QR code), `connectrpc` (with `http2` 2.x: 2.0.1 doesn't resolve with 3.x), `protobuf`, `flutter_markdown_plus`, `markdown`, `re_highlight`, `url_launcher`, `file_selector`, `pasteboard`, `desktop_drop`, `xterm2` (MIT; brings `xterm2_core`, `zmodem`, `quiver`, `equatable`, `convert`); fonts IBM Plex Sans and JetBrains Mono (OFL), and Symbols Nerd Font Mono from Nerd Fonts 3.5.1 (MIT; its icons come from projects under their own licenses, listed in the Nerd Fonts repository), bundled.
 
 ## Security notes to look at
+
+- Remote access (ADRs 0033, 0034; the review ran on it during milestone V): the daemon's Noise private key is in `remote-key.json` (0600) beside the token, readable by any process of yours, the agent included (as ADR 0024 says of the token). A paired phone is a full client: chats, permission answers, terminals, MCP changes. The remote API server has no token check: the handshake authenticated the device. The pairing code is the only thing that stops someone who saw the QR code within its 5 minutes; the Mac's dialog says to allow only if the phone shows the same code. The PAC file is fetched directly and evaluated by CFNetwork in osascript, asked only scheme://host:port/.
 
 - Codex runs as you through `npx --yes @agentclientprotocol/codex-acp@2.2.2` (pinned by version, not hash; it brings `@openai/codex` 0.160.1), started like Claude's adapter. codex-acp tells Codex to trust every session's cwd, so a folder's `.codex/config.toml` (MCP servers, the environment of every command, sandbox settings, plugins) and rules load without Codex asking; Nushi's card is the only warning (ADR 0029). The card's key is a hash of every file it showed, computed with the card and checked again on "Start anyway"; links aren't followed. Codex's trust record is read, never written. Agents get the login shell's environment, secrets included (ADR 0028).
 - Ante runs as you through the bridge, `nushid ante-acp`, which starts `ante serve --stdio` (the `ante` on `PATH` or in `~/.ante/bin`, 0.2.14 or newer) in the chat's folder. The bridge never reads Ante's settings; it reads `ante catalog` (models only) and each session's `meta.json`, and removes a session's folder only for an id of Ante's form (`ses_` and a ULID). A Write's old text, for its diff, is read only from a regular file of at most 1 MB, without following a link. Prompt images go to a private temp folder the bridge removes when it ends. The trust card shows the nearest `.ante/settings.json` (ADR 0031).
@@ -475,6 +516,8 @@ Open questions; what's settled is in `docs/adr/` or in the code.
 - The token (0600, made again if empty or short) sits beside the socket in a 0700 folder; anything running as you, the agent included, can read it.
 
 ## Working notes
+
+- A phone by hand, before the phone app: decode the app's QR code from a screenshot (a few lines of Swift with Vision's `VNDetectBarcodesRequest`) and pair from a Dart script on `packages/remote_transport`; a raw Connect call is a POST of `{}` with `content-type: application/json` on the transport's `makeRequest`.
 
 - Screenshots of the app window are current only while it's in front: macOS stops Flutter drawing an occluded window.
 - To watch the fake agent in the app: build `acp/acptest/fakeagent`, put an `npx` that prints its path (agents start through `npx … -c 'command -v <bin>'`) first on `PATH`, and start a daemon with that `PATH` and `NUSHI_DATA` (a short path: the socket path has a length limit). Its scripts answer prompt words: `permission`, `question`, `think`, `pwd`, `many`, `plan`, `wait` (until stopped).
