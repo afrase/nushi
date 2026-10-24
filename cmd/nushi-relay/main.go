@@ -35,6 +35,7 @@ func main() {
 	flag.IntVar(&lim.IPHops, "ip-hops", 1, "with -ip-header: how many proxies append to it (the client's address is this many from the right)")
 	flag.IntVar(&lim.Total, "total", lim.Total, "connections in all")
 	flag.DurationVar(&lim.HTTPIdle, "http-idle", lim.HTTPIdle, "close a plain HTTP connection (not a WebSocket) idle this long")
+	flag.DurationVar(&lim.FirstWait, "first-wait", lim.FirstWait, "how long a new connection has for its first request's headers")
 	flag.IntVar(&lim.PlainPerIP, "plain-per-ip", lim.PlainPerIP, "plain HTTP connections (not WebSockets) from one address")
 	flag.Parse()
 

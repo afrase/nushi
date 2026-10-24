@@ -1,14 +1,14 @@
 # Notes
 
-## Summary (2026-10-25, after step 121: milestone V and its review's fixes)
+## Summary (2026-10-25, after step 122: milestone V and its review's fixes)
 
 Milestone V is phase 1 of mobile: a relay, an end-to-end Noise channel, pairing and devices, remote access in the daemon and the app's settings, in steps 106–113 (plus two commits of security fixes from the review run during the milestone). One commit each on `main`, all pushed. `make test` passes. API 48. No phone UI yet.
 
-**The review's fixes** (steps 114–121, `nushi-remote-review-findings.md`):
+**The review's fixes** (steps 114–122, `nushi-remote-review-findings.md`):
 - V1, V6 (step 114): a device's channel gets "permission denied" for SetRemote, StartPairing, ConfirmPairing and RevokeDevice; the Mac app asks Allow or Deny for any pairing that reaches its code, whoever started it.
 - V2 (step 115): the first handshake that completes with the secret uses the pairing up, name or not; the Mac's dialog then offers a new code. The phone gives up on its code after 150 s.
 - V3, V7 (steps 116–117): an id is the hash of an Ed25519 listen key the daemon holds; the relay sends a listener a fresh challenge, and only a signature lets it listen. A second listener with the key replaces the one waiting; the per-id cap counts dialers only. A revoke gives the daemon a new id: the other devices learn it through `Remote.rendezvous` and still reach the old id until each has come to the new one (30 days at most).
-- V4 (steps 118, 120): plain connections (not WebSockets, or not yet) count apart from the WebSockets: 8 per address (`-plain-per-ip`; behind a proxy the header's address once a request has come), at the WebSockets' rate, 1,000 in all with the one idle longest closed for a new one; 5 s for the headers, 5 s idle between requests (`-http-idle`). Step 120 followed an automated review of step 118, which had let idle sockets from many addresses fill a global cap.
+- V4 (steps 118, 120, 122): plain connections (not WebSockets, or not yet) count apart from the WebSockets: 8 per address (`-plain-per-ip`; behind a proxy the header's address once a request has come), at the WebSockets' rate, 1,000 in all with the one idle longest closed for a new one; 5 s for the headers, 5 s idle between requests (`-http-idle`). Step 120 followed an automated review of step 118, which had let idle sockets from many addresses fill a global cap; step 122 one of step 120: connections still sending their first headers (behind a proxy, no address yet) now have a budget of 100 and 2 s (`-first-wait`), and the oldest of them makes way for a new one.
 - V5 (step 119): `-ip-header` takes a list header's last entry, or `-ip-hops` from the right.
 - The rejected finding (a forged QR code): a row in ADR 0034's threat model, and the phone app is to show which Mac it is paired with (Later ideas).
 
@@ -259,6 +259,7 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 119. `-ip-header` from the right, `-ip-hops` | 12698 | 984 | 14777 | 1759 | 1024 |
 | 120. Plain connections can't crowd out WebSockets | 12698 | 984 | 14777 | 1759 | 1130 |
 | 121. The docs: a forged QR code in the threat model | 12698 | 984 | 14777 | 1759 | 1130 |
+| 122. New connections without a request have a budget of their own | 12698 | 984 | 14777 | 1759 | 1170 |
 
 Steps over the ~500-line tripwire (code and tests, without generated code): 98 (2,384 with its tests: Ante's whole bridge and its fake), 99 (901: two agents, two trust packages, the shared trust files), 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 removed more than it added.
 
