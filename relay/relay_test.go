@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"os/exec"
@@ -14,6 +15,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 func start(t *testing.T, lim Limits) string {
@@ -168,10 +171,10 @@ func TestCaps(t *testing.T) {
 	lim := Defaults
 	lim.MaxMessage = 1000
 	lim.PerID = 2
-	lim.Total = 3
+	lim.Total = 6
+	lim.PerIP = 3
+	lim.IPHeader = "X-Test-IP"
 	url := start(t, lim)
-	var dl Dialer
-	ctx := context.Background()
 
 	t.Run("message size", func(t *testing.T) {
 		l, d := pair(t, url, newID())
@@ -184,31 +187,28 @@ func TestCaps(t *testing.T) {
 	time.Sleep(100 * time.Millisecond) // the closed pair leaves
 
 	id := newID()
-	a, err := dl.Listen(ctx, url, id)
-	if err != nil {
-		t.Fatal(err)
+	for _, addr := range []string{"192.0.2.1", "192.0.2.2"} {
+		ws, code := from(url, "listen", id, addr)
+		if ws == nil {
+			t.Fatalf("refused (%d) under the caps", code)
+		}
+		defer ws.Close()
 	}
-	defer a.Close()
-	b, err := dl.Listen(ctx, url, id)
-	if err != nil {
-		t.Fatal(err)
+	if ws, code := from(url, "listen", id, "192.0.2.3"); ws != nil || code != http.StatusServiceUnavailable {
+		t.Fatalf("a third connection on one id: %d", code)
 	}
-	defer b.Close()
-	if c, err := dl.Listen(ctx, url, id); err == nil || !strings.Contains(err.Error(), "503") {
-		c.Close()
-		t.Fatalf("a third connection on one id: %v", err)
+	for _, addr := range []string{"192.0.2.3", "192.0.2.4", "192.0.2.5", "192.0.2.6"} {
+		ws, code := from(url, "listen", newID(), addr)
+		if ws == nil {
+			t.Fatalf("refused (%d) under the caps", code)
+		}
+		defer ws.Close()
 	}
-	c, err := dl.Listen(ctx, url, newID())
-	if err != nil {
-		t.Fatal(err)
+	if ws, code := from(url, "listen", newID(), "192.0.2.7"); ws != nil || code != http.StatusServiceUnavailable {
+		t.Fatalf("a seventh connection in all: %d", code)
 	}
-	defer c.Close()
-	if d, err := dl.Listen(ctx, url, newID()); err == nil || !strings.Contains(err.Error(), "503") {
-		d.Close()
-		t.Fatalf("a fourth connection in all: %v", err)
-	}
-	if _, err := dl.Listen(ctx, url, "short"); err == nil {
-		t.Fatal("a malformed id was taken")
+	if _, code := from(url, "listen", "short", "192.0.2.8"); code != http.StatusNotFound {
+		t.Fatalf("a malformed id: %d", code)
 	}
 }
 
@@ -311,5 +311,169 @@ func TestNoDiskNoLogs(t *testing.T) {
 		if entries, _ := os.ReadDir(dir); len(entries) > 0 {
 			t.Fatalf("the relay wrote into %s: %v", dir, entries)
 		}
+	}
+}
+
+// A hostile relay's oversized message ends the client's connection.
+func TestClientTakesNoHugeMessage(t *testing.T) {
+	var up websocket.Upgrader
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ws, err := up.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		defer ws.Close()
+		ws.WriteMessage(websocket.BinaryMessage, make([]byte, MaxMessage))
+		ws.WriteMessage(websocket.BinaryMessage, make([]byte, MaxMessage+1))
+		time.Sleep(time.Second)
+	}))
+	defer srv.Close()
+	var dl Dialer
+	c, err := dl.Dial(context.Background(), "ws"+strings.TrimPrefix(srv.URL, "http"), newID())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	if m, err := c.ReadMessage(); err != nil || len(m) != MaxMessage {
+		t.Fatalf("the largest message: %d bytes, %v", len(m), err)
+	}
+	if _, err := c.ReadMessage(); err == nil {
+		t.Fatal("took a message over the limit")
+	}
+}
+
+// from connects to the relay as if from addr (the relay reads X-Test-IP).
+func from(url, side, id, addr string) (*websocket.Conn, int) {
+	h := http.Header{"X-Test-Ip": {addr}}
+	ws, resp, err := websocket.DefaultDialer.Dial(url+"/v1/"+side+"/"+id, h)
+	if err != nil {
+		if resp != nil {
+			return nil, resp.StatusCode
+		}
+		return nil, -1
+	}
+	return ws, 0
+}
+
+func TestPerAddressCaps(t *testing.T) {
+	lim := Defaults
+	lim.IPHeader = "X-Test-IP"
+	lim.PerIP = 3
+	lim.Total = 100
+	lim.NewRate = 1e9 // the rate is back as soon as they leave
+	h := New(lim).(*server)
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+	url := "ws" + strings.TrimPrefix(srv.URL, "http")
+
+	var open []*websocket.Conn
+	for range 3 {
+		ws, code := from(url, "listen", newID(), "203.0.113.7")
+		if ws == nil {
+			t.Fatalf("refused (%d) under the cap", code)
+		}
+		open = append(open, ws)
+	}
+	if ws, code := from(url, "listen", newID(), "203.0.113.7"); ws != nil || code != http.StatusServiceUnavailable {
+		t.Fatalf("a fourth connection from one address: %d", code)
+	}
+	// One IPv6 /64 counts as one address.
+	for i, addr := range []string{"2001:db8::1", "2001:db8::2", "2001:db8::3"} {
+		ws, code := from(url, "listen", newID(), addr)
+		if i < 3 && ws == nil {
+			t.Fatalf("refused (%d) under the cap", code)
+		}
+		open = append(open, ws)
+	}
+	if ws, code := from(url, "listen", newID(), "2001:db8::ffff"); ws != nil || code != http.StatusServiceUnavailable {
+		t.Fatalf("a fourth connection from one /64: %d", code)
+	}
+	if ws, _ := from(url, "listen", newID(), "198.51.100.1"); ws == nil {
+		t.Fatal("another address was refused")
+	} else {
+		open = append(open, ws)
+	}
+	for _, ws := range open {
+		ws.Close()
+	}
+	// Once the connections are gone (and the address's rate is back), the
+	// relay holds nothing about the addresses.
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		h.mu.Lock()
+		n, total := len(h.sources), h.total
+		h.mu.Unlock()
+		if total == 0 {
+			if n != 0 {
+				t.Fatalf("%d addresses kept", n)
+			}
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("%d connections still counted", total)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	// One address never takes more than half of the total.
+	if got := New(Limits{PerIP: 100, Total: 10}).(*server).lim.PerIP; got != 5 {
+		t.Fatalf("PerIP %d of 10", got)
+	}
+}
+
+func TestNewConnectionRate(t *testing.T) {
+	lim := Defaults
+	lim.IPHeader = "X-Test-IP"
+	lim.NewBurst = 3
+	lim.NewRate = 0.001
+	srv := httptest.NewServer(New(lim))
+	defer srv.Close()
+	url := "ws" + strings.TrimPrefix(srv.URL, "http")
+	for range 3 {
+		ws, code := from(url, "listen", newID(), "203.0.113.9")
+		if ws == nil {
+			t.Fatalf("refused (%d) within the burst", code)
+		}
+		ws.Close()
+	}
+	if ws, code := from(url, "listen", newID(), "203.0.113.9"); ws != nil || code != http.StatusTooManyRequests {
+		t.Fatalf("a fourth new connection at once: %d", code)
+	}
+	if ws, _ := from(url, "listen", newID(), "203.0.113.10"); ws == nil {
+		t.Fatal("another address was refused")
+	} else {
+		ws.Close()
+	}
+}
+
+// A listener waits only so long, pings or not; one with a peer stays.
+func TestWaitingLifetime(t *testing.T) {
+	lim := Defaults
+	lim.MaxWait = 300 * time.Millisecond
+	url := start(t, lim)
+	old := KeepAlive
+	KeepAlive = 50 * time.Millisecond
+	defer func() { KeepAlive = old }()
+	var dl Dialer
+	l, err := dl.Listen(context.Background(), url, newID())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer l.Close()
+	began := time.Now()
+	expectClosed(t, l)
+	if time.Since(began) < 250*time.Millisecond {
+		t.Fatal("closed too soon")
+	}
+
+	l, d := pair(t, url, newID())
+	send(t, d, "hello")
+	expect(t, l, "hello")
+	got := make(chan string, 1)
+	go func() { m, _ := l.ReadMessage(); got <- string(m) }()
+	time.Sleep(500 * time.Millisecond)
+	send(t, d, "still here")
+	if m := <-got; m != "still here" {
+		t.Fatalf("read %q", m)
 	}
 }

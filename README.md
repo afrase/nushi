@@ -75,7 +75,7 @@ COPY . .
 RUN CGO_ENABLED=0 go build -o /nushi-relay ./cmd/nushi-relay
 FROM scratch
 COPY --from=build /nushi-relay /nushi-relay
-CMD ["/nushi-relay", "-addr", ":8080"]
+CMD ["/nushi-relay", "-addr", ":8080", "-ip-header", "Fly-Client-IP"]
 ```
 
 ```toml
@@ -89,6 +89,6 @@ app = "my-nushi-relay"
     handlers = ["tls", "http"]
 ```
 
-Fly's edge then sees what the relay sees (ids, timing, sizes, addresses), and may log requests. For TLS of the relay's own, give the port no handlers, run `-host` with `-cert-cache` on a volume, and copy `/etc/ssl/certs/ca-certificates.crt` into the image (autocert talks to Let's Encrypt over HTTPS).
+`-ip-header` makes the per-address caps count Fly's client address rather than its proxy's. Fly's edge then sees what the relay sees (ids, timing, sizes, addresses), and may log requests. For TLS of the relay's own, give the port no handlers, run `-host` with `-cert-cache` on a volume, and copy `/etc/ssl/certs/ca-certificates.crt` into the image (autocert talks to Let's Encrypt over HTTPS).
 
 Decisions are in [`docs/adr/`](docs/adr/README.md).

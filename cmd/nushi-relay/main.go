@@ -29,7 +29,12 @@ func main() {
 	flag.IntVar(&lim.Burst, "burst", lim.Burst, "bytes a connection may send at once")
 	flag.DurationVar(&lim.Idle, "idle", lim.Idle, "close a connection silent this long")
 	flag.DurationVar(&lim.DialWait, "dial-wait", lim.DialWait, "how long a dialer waits for a listener")
+	flag.DurationVar(&lim.MaxWait, "max-wait", lim.MaxWait, "how long a listener may wait for a dialer")
 	flag.IntVar(&lim.PerID, "per-id", lim.PerID, "connections on one id")
+	flag.IntVar(&lim.PerIP, "per-ip", lim.PerIP, "connections from one address (an IPv6 /64), at most half of -total")
+	flag.Float64Var(&lim.NewRate, "new-rate", lim.NewRate, "new connections a second from one address")
+	flag.Float64Var(&lim.NewBurst, "new-burst", lim.NewBurst, "new connections from one address at once")
+	flag.StringVar(&lim.IPHeader, "ip-header", "", "behind a reverse proxy: the header holding the client's address (e.g. Fly-Client-IP)")
 	flag.IntVar(&lim.Total, "total", lim.Total, "connections in all")
 	flag.Parse()
 
