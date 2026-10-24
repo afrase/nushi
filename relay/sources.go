@@ -27,13 +27,24 @@ var salt = func() []byte {
 
 // sourceKey is the hash of the client's address: an IPv4 address, or an
 // IPv6 address's /64 (one home or phone has a whole /64). Behind a reverse
-// proxy the address comes from the header Limits.IPHeader names.
+// proxy the address comes from the header Limits.IPHeader names. A proxy
+// appends to a list header such as X-Forwarded-For, after whatever the
+// client wrote there, so the address is the IPHops-th from the right.
 func (s *server) sourceKey(r *http.Request) string {
 	if s.lim.IPHeader == "" {
 		return keyOf(r.RemoteAddr)
 	}
-	addr, _, _ := strings.Cut(r.Header.Get(s.lim.IPHeader), ",")
-	return keyOf(strings.TrimSpace(addr))
+	var addrs []string
+	for _, v := range r.Header.Values(s.lim.IPHeader) {
+		for a := range strings.SplitSeq(v, ",") {
+			addrs = append(addrs, strings.TrimSpace(a))
+		}
+	}
+	hops := max(1, s.lim.IPHops)
+	if len(addrs) < hops {
+		return keyOf("") // not through the proxies said
+	}
+	return keyOf(addrs[len(addrs)-hops])
 }
 
 // keyOf is the hash of an address (with or without a port).
