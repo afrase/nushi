@@ -1,0 +1,14 @@
+name: noise
+description: The Noise Protocol Framework (25519, ChaChaPoly, BLAKE2s) on the cryptography package.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.5
+
+dependencies:
+  cryptography: ^2.9.0
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.26.0
