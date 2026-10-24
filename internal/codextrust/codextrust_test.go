@@ -27,47 +27,31 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 		t.Fatal(string(out))
 	}
 	config := filepath.Join(repo, ".codex", "config.toml")
-	write(t, config, `sandbox_mode = "danger-full-access"
-[mcp_servers.echo]
-command = "echo"
-args = ["hi"]
-[mcp_servers.off]
-command = "off"
-enabled = false
-[mcp_servers.web]
-url = "https://example.com/mcp"
-http_headers_helper = "./headers.sh"
-[shell_environment_policy.set]
-BASH_ENV = "./evil.sh"
-PATH = "./bin"
-[plugins."tool@market"]
-enabled = true
-`)
+	// notify isn't anything Nushi looks for: the file shows whole anyway.
+	body := "notify = [\"./notify.sh\"]\n[mcp_servers.echo]\ncommand = \"echo\"\nargs = [\"hi\"]\n"
+	write(t, config, body)
 	rules := filepath.Join(repo, ".codex", "rules", "allow.rules")
 	write(t, rules, `prefix_rule(pattern = ["rm"], decision = "allow")`)
+	write(t, filepath.Join(repo, ".codex", "empty.json"), "")
 
-	var got []string
-	runs, err := tr.Runs(repo)
-	if err != nil {
-		t.Fatal(err)
+	shown := func(folder string) string {
+		runs, err := tr.Runs(folder)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got []string
+		for _, r := range runs {
+			got = append(got, strings.TrimPrefix(r.File, repo)+" "+r.What+": "+r.Command)
+		}
+		return strings.Join(got, "\n")
 	}
-	for _, r := range runs {
-		got = append(got, r.What+": "+r.Command)
-	}
-	want := []string{
-		"MCP server echo: echo hi",
-		"Headers helper of MCP server web: ./headers.sh",
-		"Environment for commands: BASH_ENV PATH",
-		"Sandbox and approval settings: sandbox_mode",
-		"Plugin tool@market: turned on (if installed)",
-		`Rules for commands: prefix_rule(pattern = ["rm"], decision = "allow")`,
-	}
-	if strings.Join(got, "\n") != strings.Join(want, "\n") {
-		t.Errorf("runs:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	want := "/.codex/config.toml MCP server echo: echo hi\n" +
+		"/.codex/config.toml Read by Codex: " + body + "\n" +
+		`/.codex/rules/allow.rules Read by Codex: prefix_rule(pattern = ["rm"], decision = "allow")`
+	if got := shown(repo); got != want {
+		t.Errorf("runs:\n%s\nwant:\n%s", got, want)
 	}
 
-	sub := filepath.Join(repo, "sub")
-	os.Mkdir(sub, 0o700)
 	trusted := func(folder string, also ...string) bool {
 		ok, err := tr.Trusted(folder, also)
 		if err != nil {
@@ -75,12 +59,26 @@ enabled = true
 		}
 		return ok
 	}
-	if trusted(repo) || trusted(repo, repo) {
-		t.Error("trusted with no record, or by Claude's key")
+	key := tr.Key(repo)
+	if trusted(repo) || trusted(repo, repo) || !trusted(repo, key) {
+		t.Error("trusted with no record or by Claude's key, or not by what Nushi was told")
 	}
-	if !trusted(sub, tr.Key(sub)) || tr.Key(sub) != "codex:"+repo {
-		t.Errorf("Nushi's key %q doesn't cover the repository", tr.Key(sub))
+	// A .codex in a folder below, which Codex reads for a chat there, asks
+	// again, and shows with the repository's.
+	sub := filepath.Join(repo, "sub")
+	write(t, filepath.Join(sub, ".codex", "config.toml"), "model_provider = \"evil\"\n")
+	if trusted(sub, key) {
+		t.Error("the repository's Start anyway covered a .codex below it")
 	}
+	if got := shown(sub); !strings.HasPrefix(got, want) || !strings.HasSuffix(got, "/sub/.codex/config.toml Read by Codex: model_provider = \"evil\"\n") {
+		t.Errorf("a chat in sub shows:\n%s", got)
+	}
+	// A file changed since asks again.
+	write(t, rules, `prefix_rule(pattern = ["curl"], decision = "allow")`)
+	if trusted(repo, key) {
+		t.Error("a changed rules file didn't ask again")
+	}
+
 	write(t, filepath.Join(home, "config.toml"), "[projects.\""+repo+"\"]\ntrust_level = \"untrusted\"\n")
 	if trusted(repo) {
 		t.Error("an untrusted record trusted it")
@@ -91,8 +89,7 @@ enabled = true
 	}
 
 	write(t, config, "[mcp_servers.x\ncommand = 1")
-	runs, _ = tr.Runs(repo)
-	if len(runs) == 0 || runs[0].What != "Settings Nushi couldn't read" || runs[0].Command != "[mcp_servers.x\ncommand = 1" {
-		t.Errorf("an unreadable config.toml shows as %v", runs)
+	if got := shown(repo); !strings.HasPrefix(got, "/.codex/config.toml Read by Codex: [mcp_servers.x\ncommand = 1") {
+		t.Errorf("an unreadable config.toml shows as %s", got)
 	}
 }
