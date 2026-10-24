@@ -7,6 +7,7 @@ import 'chat.dart';
 import 'chat_menu.dart';
 import 'daemon.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
+import 'remote.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
 
@@ -94,6 +95,7 @@ class _StatusBarState extends State<StatusBar> {
                   ),
                 ),
                 const Spacer(),
+                const RemoteMark(),
                 if (_memory case final m?)
                   _MemoryButton(m, widget.daemon, onOpen: _read, style: small),
               ],
