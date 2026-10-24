@@ -21,7 +21,7 @@ func write(t *testing.T, path, body string) {
 	}
 }
 
-func git(t *testing.T, dir string, args ...string) {
+func runGit(t *testing.T, dir string, args ...string) {
 	t.Helper()
 	cmd := exec.Command("git", append([]string{"-C", dir, "-c", "user.name=t", "-c", "user.email=t@t"}, args...)...)
 	if out, err := cmd.CombinedOutput(); err != nil {
@@ -33,7 +33,7 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 	config := t.TempDir()
 	t.Setenv("CLAUDE_CONFIG_DIR", config)
 	repo, _ := filepath.EvalSymlinks(t.TempDir())
-	git(t, repo, "init", "-q")
+	runGit(t, repo, "init", "-q")
 	write(t, filepath.Join(repo, ".mcp.json"), `{"mcpServers":{"echo":{"command":"echo","args":["hi"]},"web":{"type":"http","url":"https://example.com/mcp"},"off":{"command":"off"}}}`)
 	settings := filepath.Join(repo, ".claude", "settings.json")
 	write(t, settings, `{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"./setup.sh"}]}]},
@@ -81,9 +81,9 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 		t.Error("an untrusted repository is trusted")
 	}
 	write(t, filepath.Join(config, ".claude.json"), `{"projects":{"`+repo+`":{"hasTrustDialogAccepted":true}}}`)
-	git(t, repo, "commit", "-q", "--allow-empty", "-m", "first")
+	runGit(t, repo, "commit", "-q", "--allow-empty", "-m", "first")
 	wt := filepath.Join(filepath.Dir(repo), filepath.Base(repo)+"-wt")
-	git(t, repo, "worktree", "add", "-q", wt)
+	runGit(t, repo, "worktree", "add", "-q", wt)
 	t.Cleanup(func() { os.RemoveAll(wt) })
 	if !trusted(repo) || !trusted(filepath.Join(repo, ".claude")) || !trusted(wt) {
 		t.Error("a trusted repository, its subfolder or its worktree isn't trusted")
@@ -108,20 +108,20 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 	// Nor a folder in a repository whose own config points its work tree
 	// elsewhere, a worktree's common config included: it keys on itself.
 	steer, _ := filepath.EvalSymlinks(t.TempDir())
-	git(t, steer, "init", "-q")
-	git(t, steer, "config", "core.worktree", repo)
+	runGit(t, steer, "init", "-q")
+	runGit(t, steer, "config", "core.worktree", repo)
 	in := filepath.Join(steer, "in")
 	os.Mkdir(in, 0o700)
 	if trusted(in, steer) || (Trust{}).Key(in) != in {
 		t.Errorf("a folder steering git's work tree keys on %s", (Trust{}).Key(in))
 	}
 	main, _ := filepath.EvalSymlinks(t.TempDir())
-	git(t, main, "init", "-q")
-	git(t, main, "commit", "-q", "--allow-empty", "-m", "first")
+	runGit(t, main, "init", "-q")
+	runGit(t, main, "commit", "-q", "--allow-empty", "-m", "first")
 	wt2 := main + "-wt"
-	git(t, main, "worktree", "add", "-q", wt2)
+	runGit(t, main, "worktree", "add", "-q", wt2)
 	t.Cleanup(func() { os.RemoveAll(wt2) })
-	git(t, main, "config", "core.worktree", repo)
+	runGit(t, main, "config", "core.worktree", repo)
 	if k := (Trust{}).Key(wt2); k != wt2 {
 		t.Errorf("a worktree of a repository steering its work tree keys on %s", k)
 	}

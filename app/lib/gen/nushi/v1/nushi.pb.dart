@@ -9083,9 +9083,11 @@ class CloseTerminalResponse extends $pb.GeneratedMessage {
 class CheckFolderRequest extends $pb.GeneratedMessage {
   factory CheckFolderRequest({
     $core.String? folder,
+    $core.String? agent,
   }) {
     final result = CheckFolderRequest._();
     if (folder != null) result.folder = folder;
+    if (agent != null) result.agent = agent;
     return result;
   }
 
@@ -9103,6 +9105,7 @@ class CheckFolderRequest extends $pb.GeneratedMessage {
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: CheckFolderRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'folder')
+    ..aOS(2, _omitFieldNames ? '' : 'agent')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -9135,6 +9138,16 @@ class CheckFolderRequest extends $pb.GeneratedMessage {
   $core.bool hasFolder() => $_has(0);
   @$pb.TagNumber(1)
   void clearFolder() => $_clearField(1);
+
+  /// The agent the chat runs (Agent.name); empty for the default.
+  @$pb.TagNumber(2)
+  $core.String get agent => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set agent($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasAgent() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearAgent() => $_clearField(2);
 }
 
 class CheckFolderResponse extends $pb.GeneratedMessage {
@@ -9276,9 +9289,11 @@ class FolderRun extends $pb.GeneratedMessage {
 class TrustFolderRequest extends $pb.GeneratedMessage {
   factory TrustFolderRequest({
     $core.String? folder,
+    $core.String? agent,
   }) {
     final result = TrustFolderRequest._();
     if (folder != null) result.folder = folder;
+    if (agent != null) result.agent = agent;
     return result;
   }
 
@@ -9296,6 +9311,7 @@ class TrustFolderRequest extends $pb.GeneratedMessage {
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: TrustFolderRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'folder')
+    ..aOS(2, _omitFieldNames ? '' : 'agent')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -9328,6 +9344,16 @@ class TrustFolderRequest extends $pb.GeneratedMessage {
   $core.bool hasFolder() => $_has(0);
   @$pb.TagNumber(1)
   void clearFolder() => $_clearField(1);
+
+  /// The agent the chat runs (Agent.name); empty for the default.
+  @$pb.TagNumber(2)
+  $core.String get agent => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set agent($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasAgent() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearAgent() => $_clearField(2);
 }
 
 class TrustFolderResponse extends $pb.GeneratedMessage {

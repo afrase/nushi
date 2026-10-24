@@ -20,7 +20,6 @@ import (
 	"io"
 	"maps"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -29,6 +28,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/afrase/nushi/internal/claudemcp"
+	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -43,59 +43,8 @@ type Trust struct{}
 // names only when that repository names it back. Anything else, or a
 // repository that sets core.worktree, keys on the folder itself.
 func (Trust) Key(folder string) string {
-	_, key := repoOf(real(folder))
+	_, key := git.TrustRoot(git.RealPath(folder))
 	return key
-}
-
-func real(path string) string {
-	if r, err := filepath.EvalSymlinks(path); err == nil {
-		return r
-	}
-	return path
-}
-
-// repoOf returns the root of folder's work tree ("" outside git) and the
-// folder its trust is keyed on (see Key).
-func repoOf(folder string) (top, key string) {
-	for top = folder; ; top = filepath.Dir(top) {
-		if _, err := os.Lstat(filepath.Join(top, ".git")); err == nil {
-			break
-		}
-		if top == filepath.Dir(top) {
-			return "", folder
-		}
-	}
-	dotgit := filepath.Join(top, ".git")
-	if fi, err := os.Lstat(dotgit); err == nil && fi.IsDir() {
-		if worktreeSet(filepath.Join(dotgit, "config")) {
-			return top, folder
-		}
-		return top, top
-	}
-	b, _ := os.ReadFile(dotgit)
-	gitdir, ok := strings.CutPrefix(strings.TrimSpace(string(b)), "gitdir: ")
-	if !ok {
-		return top, folder
-	}
-	if !filepath.IsAbs(gitdir) {
-		gitdir = filepath.Join(top, gitdir)
-	}
-	gitdir = real(gitdir)
-	back, _ := os.ReadFile(filepath.Join(gitdir, "gitdir"))
-	common := filepath.Dir(filepath.Dir(gitdir)) // <common>/worktrees/<name>
-	if real(strings.TrimSpace(string(back))) != real(dotgit) || filepath.Base(filepath.Dir(gitdir)) != "worktrees" ||
-		filepath.Base(common) != ".git" || worktreeSet(filepath.Join(common, "config")) {
-		return top, folder
-	}
-	return top, filepath.Dir(common)
-}
-
-// worktreeSet says whether a repository's config file sets core.worktree
-// (includes followed); git's own environment is left out.
-func worktreeSet(config string) bool {
-	cmd := exec.Command("git", "config", "--file", config, "--includes", "--get", "core.worktree")
-	cmd.Env = slices.DeleteFunc(os.Environ(), func(e string) bool { return strings.HasPrefix(e, "GIT_") })
-	return cmd.Run() == nil
 }
 
 // Trusted says whether folder is trusted: by Claude (its trust dialog was
@@ -114,8 +63,8 @@ func (Trust) Trusted(folder string, also []string) (bool, error) {
 		return false, fmt.Errorf("reading Claude's config: %w", err)
 	}
 	ok := func(dir string) bool { return cfg.Projects[dir].Accepted || slices.Contains(also, dir) }
-	folder = real(folder)
-	top, key := repoOf(folder)
+	folder = git.RealPath(folder)
+	top, key := git.TrustRoot(folder)
 	if ok(key) {
 		return true, nil
 	}
@@ -125,7 +74,7 @@ func (Trust) Trusted(folder string, also []string) (bool, error) {
 	// Outside git, a folder above counts too, but never the home folder or
 	// /: trusting your home would trust every download under it (Claude
 	// keeps home trust for one session only).
-	home := real(homeDir())
+	home := git.RealPath(homeDir())
 	for dir := filepath.Dir(folder); dir != home && dir != filepath.Dir(dir); dir = filepath.Dir(dir) {
 		if ok(dir) {
 			return true, nil
@@ -164,12 +113,12 @@ func (Trust) Runs(folder string) ([]model.FolderRun, error) {
 		}
 	}
 	dirs := []string{folder}
-	if top, _ := repoOf(real(folder)); top != "" && top != real(folder) {
+	if top, _ := git.TrustRoot(git.RealPath(folder)); top != "" && top != git.RealPath(folder) {
 		dirs = append(dirs, top)
 	}
-	home := real(homeDir())
+	home := git.RealPath(homeDir())
 	for _, dir := range dirs {
-		if real(dir) == home {
+		if git.RealPath(dir) == home {
 			continue // ~/.claude is the user's own config, not the folder's
 		}
 		for _, name := range []string{"settings.json", "settings.local.json"} {

@@ -11,9 +11,9 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-// Agent knows the agent's own trust record and what a folder has it run.
+// Agent knows an agent's own trust record and what a folder has it run.
 type Agent interface {
-	Key(folder string) string // the folder trust is kept under (its repository's)
+	Key(folder string) string // what trust is kept under (its repository's folder)
 	Trusted(folder string, also []string) (bool, error)
 	Runs(folder string) ([]model.FolderRun, error)
 }
@@ -25,19 +25,23 @@ type Store interface {
 }
 
 type Service struct {
-	agent Agent
-	store Store
+	agents map[string]Agent
+	store  Store
 }
 
-func New(agent Agent, store Store) *Service { return &Service{agent: agent, store: store} }
+// New makes the service for the agents, by name.
+func New(agents map[string]Agent, store Store) *Service {
+	return &Service{agents: agents, store: store}
+}
 
-// Check returns what folder would have the agent run when nobody trusted
-// it, or nothing.
-func (s *Service) Check(folder string) ([]model.FolderRun, error) {
-	if !filepath.IsAbs(folder) {
-		return nil, fmt.Errorf("%q is not an absolute path", folder)
+// Check returns what folder would have agent run when nobody trusted it,
+// or nothing.
+func (s *Service) Check(agent, folder string) ([]model.FolderRun, error) {
+	a, err := s.agent(agent, folder)
+	if err != nil {
+		return nil, err
 	}
-	runs, err := s.agent.Runs(folder)
+	runs, err := a.Runs(folder)
 	if err != nil { // can't tell what it runs: say why, and let the user decide
 		runs = []model.FolderRun{{What: "Settings Nushi couldn't read", Command: err.Error()}}
 	}
@@ -48,16 +52,28 @@ func (s *Service) Check(folder string) ([]model.FolderRun, error) {
 	if err != nil {
 		return nil, err
 	}
-	if ok, err := s.agent.Trusted(folder, also); ok || err != nil {
+	if ok, err := a.Trusted(folder, also); ok || err != nil {
 		return nil, err
 	}
 	return runs, nil
 }
 
-// Trust remembers that the user starts chats in folder anyway.
-func (s *Service) Trust(folder string) error {
-	if !filepath.IsAbs(folder) {
-		return fmt.Errorf("%q is not an absolute path", folder)
+// Trust remembers that the user starts chats with agent in folder anyway.
+func (s *Service) Trust(agent, folder string) error {
+	a, err := s.agent(agent, folder)
+	if err != nil {
+		return err
 	}
-	return s.store.TrustFolder(s.agent.Key(folder))
+	return s.store.TrustFolder(a.Key(folder))
+}
+
+func (s *Service) agent(name, folder string) (Agent, error) {
+	switch a := s.agents[name]; {
+	case !filepath.IsAbs(folder):
+		return nil, fmt.Errorf("%q is not an absolute path", folder)
+	case a == nil:
+		return nil, fmt.Errorf("Nushi doesn't know the agent %q", name)
+	default:
+		return a, nil
+	}
 }
