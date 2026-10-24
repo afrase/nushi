@@ -25,6 +25,9 @@ type silentRun struct {
 // fork isn't asked.
 func (s *Service) ContextUsage(ctx context.Context, chatID string) (model.ContextUsage, error) {
 	c, err := s.chat(chatID)
+	if err == nil {
+		err = s.awake(ctx, c)
+	}
 	if err != nil {
 		return model.ContextUsage{}, err
 	}

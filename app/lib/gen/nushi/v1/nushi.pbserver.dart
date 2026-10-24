@@ -49,6 +49,12 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.RenameChatRequest request);
   $async.Future<$0.ArchiveChatResponse> archiveChat(
       $pb.ServerContext ctx, $0.ArchiveChatRequest request);
+  $async.Future<$0.SleepChatResponse> sleepChat(
+      $pb.ServerContext ctx, $0.SleepChatRequest request);
+  $async.Future<$0.GetSettingsResponse> getSettings(
+      $pb.ServerContext ctx, $0.GetSettingsRequest request);
+  $async.Future<$0.SetSettingsResponse> setSettings(
+      $pb.ServerContext ctx, $0.SetSettingsRequest request);
   $async.Future<$0.PlanDeleteChatResponse> planDeleteChat(
       $pb.ServerContext ctx, $0.PlanDeleteChatRequest request);
   $async.Future<$0.DeleteChatResponse> deleteChat(
@@ -140,6 +146,12 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.RenameChatRequest();
       case 'ArchiveChat':
         return $0.ArchiveChatRequest();
+      case 'SleepChat':
+        return $0.SleepChatRequest();
+      case 'GetSettings':
+        return $0.GetSettingsRequest();
+      case 'SetSettings':
+        return $0.SetSettingsRequest();
       case 'PlanDeleteChat':
         return $0.PlanDeleteChatRequest();
       case 'DeleteChat':
@@ -236,6 +248,12 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return renameChat(ctx, request as $0.RenameChatRequest);
       case 'ArchiveChat':
         return archiveChat(ctx, request as $0.ArchiveChatRequest);
+      case 'SleepChat':
+        return sleepChat(ctx, request as $0.SleepChatRequest);
+      case 'GetSettings':
+        return getSettings(ctx, request as $0.GetSettingsRequest);
+      case 'SetSettings':
+        return setSettings(ctx, request as $0.SetSettingsRequest);
       case 'PlanDeleteChat':
         return planDeleteChat(ctx, request as $0.PlanDeleteChatRequest);
       case 'DeleteChat':

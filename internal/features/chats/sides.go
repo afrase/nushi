@@ -71,6 +71,9 @@ func (c *chat) route(session acp.SessionID) *chat {
 // Fork opens a side chat of a chat and returns its id.
 func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 	p, err := s.chat(chatID)
+	if err == nil {
+		err = s.awake(ctx, p)
+	}
 	if err != nil {
 		return "", err
 	}

@@ -16,6 +16,12 @@ func TestStateSurvivesANewStore(t *testing.T) {
 	if err := s.SetMode("claude", "plan"); err != nil {
 		t.Fatal(err)
 	}
+	if got := s.SleepAfter(); got != 30*time.Minute {
+		t.Errorf("sleep after %v by default", got)
+	}
+	if err := s.SetSleepAfter(0); err != nil {
+		t.Fatal(err)
+	}
 	created := time.Date(2026, 10, 22, 12, 0, 0, 0, time.UTC)
 	for _, sess := range []model.Session{
 		{ID: "a", Agent: "claude", Folder: "/x", Created: created},
@@ -28,8 +34,8 @@ func TestStateSurvivesANewStore(t *testing.T) {
 	}
 
 	s = New(dir)
-	if got := s.Mode("claude"); got != "plan" {
-		t.Errorf("mode = %q, want plan", got)
+	if got := s.Mode("claude"); got != "plan" || s.SleepAfter() != 0 {
+		t.Errorf("mode = %q, want plan; sleep after %v, want never", got, s.SleepAfter())
 	}
 	got, err := s.Sessions()
 	if err != nil {

@@ -39,6 +39,7 @@ type Agent interface {
 	// is killed.
 	Stop(grace time.Duration) error
 	Done() <-chan struct{} // closed when the agent's process ends
+	Pid() int              // its process, the root of the processes it runs; 0 when unknown
 	// Call sends a request for one of the agent's extensions.
 	Call(ctx context.Context, method string, params, result any) error
 }
@@ -66,7 +67,8 @@ type Service struct {
 	scratch   string // the folder that holds chats' scratch folders
 	publish   func(model.Event)
 
-	terminals Terminals // set once at startup, if there are any
+	terminals Terminals  // set once at startup, if there are any
+	prefs     SleepPrefs // set once at startup, if chats sleep
 
 	mu      sync.Mutex
 	chats   map[string]*chat
@@ -134,6 +136,12 @@ type chat struct {
 	forkAt func(messageID string) map[string]any
 	// mcpChanged says the MCP servers changed since the agent started.
 	mcpChanged bool
+	canLoad    bool                 // the agent can reopen the session, so it can sleep
+	asleep     bool                 // its agent was stopped to sleep: opening the chat doesn't reopen it
+	before     []model.ConfigOption // the options it had when it fell asleep, for its waking
+	retired    <-chan struct{}      // closed once the agent it fell asleep from has ended
+	woke       chan struct{}        // closed when the reopen under way ends
+	active     time.Time            // its last event
 }
 
 // emitLocked numbers and publishes one of the chat's events. Holding the
@@ -141,6 +149,7 @@ type chat struct {
 func (c *chat) emitLocked(e model.Event) {
 	c.seq++
 	e.Seq = c.seq
+	c.active = time.Now()
 	c.publish(e)
 }
 
@@ -243,13 +252,14 @@ func (s *Service) List() ([]model.Session, error) {
 func (s *Service) isScratch(folder string) bool { return filepath.Dir(folder) == s.scratch }
 
 // Status returns whether a chat works or waits on the user, without
-// reopening it.
-func (s *Service) Status(chatID string) model.Status {
+// reopening it. One not opened since the daemon started sleeps, unless it
+// is archived.
+func (s *Service) Status(sess model.Session) model.Status {
 	s.mu.Lock()
-	c := s.chats[chatID]
+	c := s.chats[sess.ID]
 	s.mu.Unlock()
 	if c == nil {
-		return model.Status{}
+		return model.Status{Asleep: !sess.Archived}
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -289,8 +299,10 @@ func (c *chat) noticeLocked(reason, text string) {
 }
 
 func (c *chat) statusLocked() model.Status {
+	asleep := c.agent == nil && !c.busy && c.parent == nil && !c.session.Archived
 	return model.Status{Busy: c.busy, Started: c.started, Waiting: len(c.waiting)+len(c.questions) > 0, CanFork: c.canFork, Images: c.canImage,
-		CanRewind: c.forkAt != nil, MCPChanged: c.mcpChanged, CanAskContext: c.canAskContextLocked() == nil}
+		CanRewind: c.forkAt != nil, MCPChanged: c.mcpChanged, CanAskContext: !asleep && c.canAskContextLocked() == nil,
+		Asleep: asleep, CanSleep: c.parent == nil && c.canSleepLocked() == nil}
 }
 
 func (c *chat) statusChangedLocked() {

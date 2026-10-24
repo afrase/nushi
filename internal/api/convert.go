@@ -122,7 +122,7 @@ func usageProto(u model.Usage) *nushiv1.Usage {
 
 func statusProto(st model.Status) *nushiv1.ChatStatus {
 	return &nushiv1.ChatStatus{Busy: st.Busy, Waiting: st.Waiting, CanFork: st.CanFork, Images: st.Images, CanRewind: st.CanRewind,
-		McpChanged: st.MCPChanged, Started: unixMs(st.Started), CanAskContext: st.CanAskContext}
+		McpChanged: st.MCPChanged, Started: unixMs(st.Started), CanAskContext: st.CanAskContext, Asleep: st.Asleep, CanSleep: st.CanSleep}
 }
 
 // unixMs is t in Unix milliseconds, 0 for the zero time.

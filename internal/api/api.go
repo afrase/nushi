@@ -25,7 +25,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 44
+const Version = 45
 
 // build is the daemon's executable as it started (PingResponse.build).
 var build = func() string {
@@ -99,7 +99,7 @@ func (s *server) ListChats(context.Context, *connect.Request[nushiv1.ListChatsRe
 	resp := &nushiv1.ListChatsResponse{}
 	for _, sess := range sessions {
 		c := chatProto(sess)
-		c.Status = statusProto(s.chats.Status(sess.ID))
+		c.Status = statusProto(s.chats.Status(sess))
 		resp.Chats = append(resp.Chats, c)
 	}
 	return connect.NewResponse(resp), nil
@@ -219,6 +219,28 @@ func (s *server) ArchiveChat(_ context.Context, req *connect.Request[nushiv1.Arc
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
 	return connect.NewResponse(&nushiv1.ArchiveChatResponse{}), nil
+}
+
+func (s *server) SleepChat(_ context.Context, req *connect.Request[nushiv1.SleepChatRequest]) (*connect.Response[nushiv1.SleepChatResponse], error) {
+	if err := s.chats.Sleep(req.Msg.ChatId); err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	return connect.NewResponse(&nushiv1.SleepChatResponse{}), nil
+}
+
+func (s *server) GetSettings(context.Context, *connect.Request[nushiv1.GetSettingsRequest]) (*connect.Response[nushiv1.GetSettingsResponse], error) {
+	return connect.NewResponse(&nushiv1.GetSettingsResponse{Settings: &nushiv1.Settings{SleepAfterMinutes: int32(s.chats.SleepAfter() / time.Minute)}}), nil
+}
+
+func (s *server) SetSettings(_ context.Context, req *connect.Request[nushiv1.SetSettingsRequest]) (*connect.Response[nushiv1.SetSettingsResponse], error) {
+	m := req.Msg.GetSettings().GetSleepAfterMinutes()
+	if m < 0 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("sleep_after_minutes can't be negative"))
+	}
+	if err := s.chats.SetSleepAfter(time.Duration(m) * time.Minute); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&nushiv1.SetSettingsResponse{}), nil
 }
 
 func (s *server) PlanDeleteChat(ctx context.Context, req *connect.Request[nushiv1.PlanDeleteChatRequest]) (*connect.Response[nushiv1.PlanDeleteChatResponse], error) {

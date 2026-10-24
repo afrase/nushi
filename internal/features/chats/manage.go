@@ -49,7 +49,7 @@ func (s *Service) Archive(chatID string, archived bool) error {
 		return errReopening
 	}
 	if !archived && c.session.Archived {
-		c.items, c.kept, c.reopenFailed = nil, false, false
+		c.items, c.kept, c.reopenFailed, c.asleep = nil, false, false, false
 	}
 	c.saveLocked(func(s *model.Session) { s.Archived = archived })
 	c.mu.Unlock()

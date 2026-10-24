@@ -743,6 +743,104 @@ const ArchiveChatResponse$json = {
 final $typed_data.Uint8List archiveChatResponseDescriptor =
     $convert.base64Decode('ChNBcmNoaXZlQ2hhdFJlc3BvbnNl');
 
+@$core.Deprecated('Use sleepChatRequestDescriptor instead')
+const SleepChatRequest$json = {
+  '1': 'SleepChatRequest',
+  '2': [
+    {'1': 'chat_id', '3': 1, '4': 1, '5': 9, '10': 'chatId'},
+  ],
+};
+
+/// Descriptor for `SleepChatRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List sleepChatRequestDescriptor = $convert.base64Decode(
+    'ChBTbGVlcENoYXRSZXF1ZXN0EhcKB2NoYXRfaWQYASABKAlSBmNoYXRJZA==');
+
+@$core.Deprecated('Use sleepChatResponseDescriptor instead')
+const SleepChatResponse$json = {
+  '1': 'SleepChatResponse',
+};
+
+/// Descriptor for `SleepChatResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List sleepChatResponseDescriptor =
+    $convert.base64Decode('ChFTbGVlcENoYXRSZXNwb25zZQ==');
+
+@$core.Deprecated('Use getSettingsRequestDescriptor instead')
+const GetSettingsRequest$json = {
+  '1': 'GetSettingsRequest',
+};
+
+/// Descriptor for `GetSettingsRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getSettingsRequestDescriptor =
+    $convert.base64Decode('ChJHZXRTZXR0aW5nc1JlcXVlc3Q=');
+
+@$core.Deprecated('Use settingsDescriptor instead')
+const Settings$json = {
+  '1': 'Settings',
+  '2': [
+    {
+      '1': 'sleep_after_minutes',
+      '3': 1,
+      '4': 1,
+      '5': 5,
+      '10': 'sleepAfterMinutes'
+    },
+  ],
+};
+
+/// Descriptor for `Settings`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List settingsDescriptor = $convert.base64Decode(
+    'CghTZXR0aW5ncxIuChNzbGVlcF9hZnRlcl9taW51dGVzGAEgASgFUhFzbGVlcEFmdGVyTWludX'
+    'Rlcw==');
+
+@$core.Deprecated('Use getSettingsResponseDescriptor instead')
+const GetSettingsResponse$json = {
+  '1': 'GetSettingsResponse',
+  '2': [
+    {
+      '1': 'settings',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.Settings',
+      '10': 'settings'
+    },
+  ],
+};
+
+/// Descriptor for `GetSettingsResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getSettingsResponseDescriptor = $convert.base64Decode(
+    'ChNHZXRTZXR0aW5nc1Jlc3BvbnNlEi4KCHNldHRpbmdzGAEgASgLMhIubnVzaGkudjEuU2V0dG'
+    'luZ3NSCHNldHRpbmdz');
+
+@$core.Deprecated('Use setSettingsRequestDescriptor instead')
+const SetSettingsRequest$json = {
+  '1': 'SetSettingsRequest',
+  '2': [
+    {
+      '1': 'settings',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.Settings',
+      '10': 'settings'
+    },
+  ],
+};
+
+/// Descriptor for `SetSettingsRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List setSettingsRequestDescriptor = $convert.base64Decode(
+    'ChJTZXRTZXR0aW5nc1JlcXVlc3QSLgoIc2V0dGluZ3MYASABKAsyEi5udXNoaS52MS5TZXR0aW'
+    '5nc1IIc2V0dGluZ3M=');
+
+@$core.Deprecated('Use setSettingsResponseDescriptor instead')
+const SetSettingsResponse$json = {
+  '1': 'SetSettingsResponse',
+};
+
+/// Descriptor for `SetSettingsResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List setSettingsResponseDescriptor =
+    $convert.base64Decode('ChNTZXRTZXR0aW5nc1Jlc3BvbnNl');
+
 @$core.Deprecated('Use planDeleteChatRequestDescriptor instead')
 const PlanDeleteChatRequest$json = {
   '1': 'PlanDeleteChatRequest',
@@ -1857,6 +1955,8 @@ const ChatStatus$json = {
     {'1': 'can_rewind', '3': 7, '4': 1, '5': 8, '10': 'canRewind'},
     {'1': 'mcp_changed', '3': 8, '4': 1, '5': 8, '10': 'mcpChanged'},
     {'1': 'can_ask_context', '3': 9, '4': 1, '5': 8, '10': 'canAskContext'},
+    {'1': 'asleep', '3': 10, '4': 1, '5': 8, '10': 'asleep'},
+    {'1': 'can_sleep', '3': 11, '4': 1, '5': 8, '10': 'canSleep'},
   ],
   '9': [
     {'1': 2, '2': 3},
@@ -1870,7 +1970,8 @@ final $typed_data.Uint8List chatStatusDescriptor = $convert.base64Decode(
     'RlZBIYCgd3YWl0aW5nGAQgASgIUgd3YWl0aW5nEhkKCGNhbl9mb3JrGAUgASgIUgdjYW5Gb3Jr'
     'EhYKBmltYWdlcxgGIAEoCFIGaW1hZ2VzEh0KCmNhbl9yZXdpbmQYByABKAhSCWNhblJld2luZB'
     'IfCgttY3BfY2hhbmdlZBgIIAEoCFIKbWNwQ2hhbmdlZBImCg9jYW5fYXNrX2NvbnRleHQYCSAB'
-    'KAhSDWNhbkFza0NvbnRleHRKBAgCEANSBWVycm9y');
+    'KAhSDWNhbkFza0NvbnRleHQSFgoGYXNsZWVwGAogASgIUgZhc2xlZXASGwoJY2FuX3NsZWVwGA'
+    'sgASgIUghjYW5TbGVlcEoECAIQA1IFZXJyb3I=');
 
 @$core.Deprecated('Use terminalDescriptor instead')
 const Terminal$json = {
@@ -2297,6 +2398,21 @@ const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
       '3': '.nushi.v1.ArchiveChatResponse'
     },
     {
+      '1': 'SleepChat',
+      '2': '.nushi.v1.SleepChatRequest',
+      '3': '.nushi.v1.SleepChatResponse'
+    },
+    {
+      '1': 'GetSettings',
+      '2': '.nushi.v1.GetSettingsRequest',
+      '3': '.nushi.v1.GetSettingsResponse'
+    },
+    {
+      '1': 'SetSettings',
+      '2': '.nushi.v1.SetSettingsRequest',
+      '3': '.nushi.v1.SetSettingsResponse'
+    },
+    {
       '1': 'PlanDeleteChat',
       '2': '.nushi.v1.PlanDeleteChatRequest',
       '3': '.nushi.v1.PlanDeleteChatResponse'
@@ -2500,6 +2616,13 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.RenameChatResponse': RenameChatResponse$json,
   '.nushi.v1.ArchiveChatRequest': ArchiveChatRequest$json,
   '.nushi.v1.ArchiveChatResponse': ArchiveChatResponse$json,
+  '.nushi.v1.SleepChatRequest': SleepChatRequest$json,
+  '.nushi.v1.SleepChatResponse': SleepChatResponse$json,
+  '.nushi.v1.GetSettingsRequest': GetSettingsRequest$json,
+  '.nushi.v1.GetSettingsResponse': GetSettingsResponse$json,
+  '.nushi.v1.Settings': Settings$json,
+  '.nushi.v1.SetSettingsRequest': SetSettingsRequest$json,
+  '.nushi.v1.SetSettingsResponse': SetSettingsResponse$json,
   '.nushi.v1.PlanDeleteChatRequest': PlanDeleteChatRequest$json,
   '.nushi.v1.PlanDeleteChatResponse': PlanDeleteChatResponse$json,
   '.nushi.v1.AgentSession': AgentSession$json,
@@ -2595,7 +2718,11 @@ final $typed_data.Uint8List nushiServiceDescriptor = $convert.base64Decode(
     'aGF0Eh4ubnVzaGkudjEuQ2xvc2VTaWRlQ2hhdFJlcXVlc3QaHy5udXNoaS52MS5DbG9zZVNpZG'
     'VDaGF0UmVzcG9uc2USRwoKUmVuYW1lQ2hhdBIbLm51c2hpLnYxLlJlbmFtZUNoYXRSZXF1ZXN0'
     'GhwubnVzaGkudjEuUmVuYW1lQ2hhdFJlc3BvbnNlEkoKC0FyY2hpdmVDaGF0EhwubnVzaGkudj'
-    'EuQXJjaGl2ZUNoYXRSZXF1ZXN0Gh0ubnVzaGkudjEuQXJjaGl2ZUNoYXRSZXNwb25zZRJTCg5Q'
+    'EuQXJjaGl2ZUNoYXRSZXF1ZXN0Gh0ubnVzaGkudjEuQXJjaGl2ZUNoYXRSZXNwb25zZRJECglT'
+    'bGVlcENoYXQSGi5udXNoaS52MS5TbGVlcENoYXRSZXF1ZXN0GhsubnVzaGkudjEuU2xlZXBDaG'
+    'F0UmVzcG9uc2USSgoLR2V0U2V0dGluZ3MSHC5udXNoaS52MS5HZXRTZXR0aW5nc1JlcXVlc3Qa'
+    'HS5udXNoaS52MS5HZXRTZXR0aW5nc1Jlc3BvbnNlEkoKC1NldFNldHRpbmdzEhwubnVzaGkudj'
+    'EuU2V0U2V0dGluZ3NSZXF1ZXN0Gh0ubnVzaGkudjEuU2V0U2V0dGluZ3NSZXNwb25zZRJTCg5Q'
     'bGFuRGVsZXRlQ2hhdBIfLm51c2hpLnYxLlBsYW5EZWxldGVDaGF0UmVxdWVzdBogLm51c2hpLn'
     'YxLlBsYW5EZWxldGVDaGF0UmVzcG9uc2USRwoKRGVsZXRlQ2hhdBIbLm51c2hpLnYxLkRlbGV0'
     'ZUNoYXRSZXF1ZXN0GhwubnVzaGkudjEuRGVsZXRlQ2hhdFJlc3BvbnNlElkKEEFuc3dlclBlcm'

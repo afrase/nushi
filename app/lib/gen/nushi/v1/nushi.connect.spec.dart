@@ -137,6 +137,32 @@ abstract final class NushiService {
     nushiv1nushi.ArchiveChatResponse.new,
   );
 
+  /// Puts a chat to sleep (when status.can_sleep): its agent stops as for
+  /// ArchiveChat (a running turn is stopped, side chats end), and the chat
+  /// stays, its transcript too. A message, or anything else that needs the
+  /// agent, reopens the session (ACP session/load); opening it doesn't.
+  static const sleepChat = connect.Spec(
+    '/$name/SleepChat',
+    connect.StreamType.unary,
+    nushiv1nushi.SleepChatRequest.new,
+    nushiv1nushi.SleepChatResponse.new,
+  );
+
+  /// The daemon's settings, and changing them.
+  static const getSettings = connect.Spec(
+    '/$name/GetSettings',
+    connect.StreamType.unary,
+    nushiv1nushi.GetSettingsRequest.new,
+    nushiv1nushi.GetSettingsResponse.new,
+  );
+
+  static const setSettings = connect.Spec(
+    '/$name/SetSettings',
+    connect.StreamType.unary,
+    nushiv1nushi.SetSettingsRequest.new,
+    nushiv1nushi.SetSettingsResponse.new,
+  );
+
   /// Says what DeleteChat removes. The first time, the daemon starts the
   /// agent to learn whether it can delete its history.
   static const planDeleteChat = connect.Spec(
