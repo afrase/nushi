@@ -96,10 +96,22 @@ var errReopening = errors.New("the chat is still reopening; try again in a momen
 
 func (c *chat) reopeningLocked() bool { return c.busy && c.started.IsZero() }
 
-// stop ends a chat's agent and its side chats. A running turn is cancelled
-// first, and the agent gets a few seconds to end it; nothing from the queue
-// goes to the agent meanwhile, and the queue is emptied.
+// stop ends a chat's agent and its side chats (see end), then has the
+// agent's history forget the side chats. The queue stays, held: nothing
+// from it goes to an agent until the next turn has ended.
 func (s *Service) stop(c *chat) {
+	sides := s.end(c)
+	go s.discard(c, sides)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.stopping = false
+	c.held = len(c.queue) > 0
+}
+
+// end stops a chat's agent and its side chats, and returns the side chats'
+// sessions. A running turn is cancelled first, and the agent gets a few
+// seconds to end it; nothing from the queue goes to the agent meanwhile.
+func (s *Service) end(c *chat) []string {
 	c.mu.Lock()
 	c.stopping = true
 	done, running := c.done, !c.started.IsZero()
@@ -108,46 +120,74 @@ func (s *Service) stop(c *chat) {
 	if err == nil && running {
 		select {
 		case <-done:
-		case <-time.After(5 * time.Second):
+		case <-time.After(stopGrace):
 		}
 	}
 	sides := s.dropSides(c)
 	c.disconnect()
-	go s.discard(c, sides)
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.stopping = false
-	c.queue = nil
-	c.queueChangedLocked()
+	return sides
 }
 
 // dropSides forgets a chat's side chats, whose agent is about to stop, and
 // returns their session ids, for discard once it has.
 func (s *Service) dropSides(c *chat) []string {
 	c.mu.Lock()
-	sides := slices.Collect(maps.Keys(c.sides))
+	sides := slices.Collect(maps.Values(c.sides))
 	clear(c.sides)
 	c.mu.Unlock()
+	var ids []string
 	s.mu.Lock()
-	for _, id := range sides {
-		delete(s.chats, id)
+	for _, side := range sides {
+		delete(s.chats, side.id)
+		ids = append(ids, side.id)
 	}
 	s.mu.Unlock()
-	return sides
+	for _, side := range sides {
+		side.mu.Lock()
+		side.agent = nil // what still follows it (a background command) stops
+		side.mu.Unlock()
+	}
+	return ids
 }
 
-// discard has a new agent delete side chats' sessions from its history,
-// once the agent they ran on has stopped: one that still runs would write a
-// little of a session back as it ends it (see Dialect.Redelete).
-func (s *Service) discard(c *chat, sides []string) {
-	if len(sides) == 0 {
+// discard has a new agent delete sessions nobody will see again (side
+// chats, throwaway forks) from its history, once the agent they ran on has
+// stopped: one that still runs would write a little of a session back as it
+// ends it (see Dialect.Redelete). The chat then forgets them.
+func (s *Service) discard(c *chat, ids []string) {
+	if len(ids) == 0 {
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	if err := s.deleteHistory(ctx, c, sides); err != nil {
-		log.Printf("chat %s: deleting its side chats %v: %v", c.id, sides, err)
+	if err := s.deleteHistory(ctx, c, ids); err != nil {
+		log.Printf("chat %s: deleting sessions it threw away %v: %v", c.id, ids, err)
+		return
 	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.throwawayLocked(ids, true)
+}
+
+// throwawayLocked adds sessions the agent forked from the chat that nobody
+// will see again to the chat's record of them, or with deleted takes them
+// out of it (model.Session.Throwaway).
+// Not while the chat is being deleted: its file may be gone, and Delete
+// deletes them anyway.
+func (c *chat) throwawayLocked(ids []string, deleted bool) {
+	if c.halting {
+		return
+	}
+	c.saveLocked(func(s *model.Session) {
+		if deleted {
+			s.Throwaway = slices.DeleteFunc(slices.Clone(s.Throwaway), func(id string) bool { return slices.Contains(ids, id) })
+		} else {
+			s.Throwaway = append(slices.Clip(s.Throwaway), ids...)
+		}
+		if len(s.Throwaway) == 0 {
+			s.Throwaway = nil
+		}
+	})
 }
 
 // Folder returns the folder a chat runs in (in its worktree, for a worktree

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"slices"
 	"time"
 
 	"github.com/afrase/nushi/acp"
@@ -85,6 +86,13 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	p.mu.Lock()
+	p.throwawayLocked([]string{id}, false)
+	p.mu.Unlock()
+	if ctx.Err() != nil { // the app went meanwhile: nobody will open it
+		p.throwAway(agent, id)
+		return "", ctx.Err()
+	}
 	side := s.newChat()
 	side.id, side.agent, side.parent = id, agent, p
 	side.sid, side.canImage = side.id, p.canImage
@@ -115,22 +123,52 @@ func (s *Service) CloseSide(id string) error {
 	c.mu.Lock()
 	c.cancelLocked()
 	agent := c.agent
+	c.agent = nil // what still follows it (a background command) stops
 	c.mu.Unlock()
-	c.throwAway(agent, id)
+	c.parent.throwAway(agent, id)
 	return nil
 }
 
-// throwAway has the agent delete a session nobody will see again (a side
-// chat, a /context fork), and again a moment later for an agent that
-// writes a little of it back as it ends (Dialect.Redelete).
-func (c *chat) throwAway(agent Agent, sid string) {
-	del := func() {
-		if err := agent.DeleteSession(context.Background(), acp.DeleteSessionRequest{SessionID: acp.SessionID(sid)}); err != nil {
-			log.Printf("deleting session %s: %v", sid, err)
+// CloseSides ends every side chat (see CloseSide): the app keeps them only
+// while it runs, so once no app is left, nobody will see them again.
+func (s *Service) CloseSides() {
+	s.mu.Lock()
+	var sides []string
+	for id, c := range s.chats {
+		if c.parent != nil {
+			sides = append(sides, id)
 		}
 	}
-	del()
-	if c.dialect.Redelete > 0 {
-		time.AfterFunc(c.dialect.Redelete, del)
+	s.mu.Unlock()
+	for _, id := range sides {
+		s.CloseSide(id)
 	}
+}
+
+// throwAway has the chat's agent delete a session forked from the chat that
+// nobody will see again (a side chat, a /context fork), and again a moment
+// later for an agent that writes a little of it back as it ends
+// (Dialect.Redelete); then the chat forgets it. If that fails, the chat
+// keeps it, for a fresh agent to delete (see model.Session.Throwaway).
+func (c *chat) throwAway(agent Agent, sid string) {
+	del := func(last bool) {
+		err := agent.DeleteSession(context.Background(), acp.DeleteSessionRequest{SessionID: acp.SessionID(sid)})
+		if err != nil {
+			log.Printf("deleting session %s: %v", sid, err)
+		}
+		if last {
+			c.mu.Lock()
+			defer c.mu.Unlock()
+			kept := slices.Contains(c.session.Throwaway, sid)
+			if err == nil && kept || err != nil && !kept {
+				c.throwawayLocked([]string{sid}, err == nil)
+			}
+		}
+	}
+	if c.dialect.Redelete == 0 {
+		del(true)
+		return
+	}
+	del(false)
+	time.AfterFunc(c.dialect.Redelete, func() { del(true) })
 }

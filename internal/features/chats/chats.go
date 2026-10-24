@@ -35,9 +35,16 @@ type Agent interface {
 	ForkSession(context.Context, acp.ForkSessionRequest) (*acp.ForkSessionResponse, error)
 	CloseSession(context.Context, acp.CloseSessionRequest) error
 	DeleteSession(context.Context, acp.DeleteSessionRequest) error
-	Close() error
+	Close() error // kills it
+	// Stop ends it gently: it gets up to grace to end its sessions, then
+	// is killed.
+	Stop(grace time.Duration) error
 	Done() <-chan struct{} // closed when the agent's process ends
 }
+
+// stopGrace is how long a stopping agent gets to end a turn, and then its
+// sessions.
+var stopGrace = 5 * time.Second
 
 // Launch starts an agent; its session updates go to h.
 type Launch func(h acp.Handler) (Agent, error)
@@ -206,24 +213,21 @@ func (s *Service) newChat() *chat {
 		questions: map[string]chan<- []model.Field{}, sides: map[string]*chat{}, probes: map[string]*silentRun{}}
 }
 
-// Close stops every chat's agent, then has the agent's history forget the
-// side chats.
+// Close stops every chat's agent, all at once, as stop does: a running turn
+// is cancelled and gets a few seconds to end, so the agent records how it
+// ended. Their side chats are deleted from the agent's history the next
+// time each chat opens (model.Session.Throwaway).
 func (s *Service) Close() {
 	s.mu.Lock()
 	open := slices.Collect(maps.Values(s.chats))
 	s.mu.Unlock()
-	var sides []string
-	var with *chat
+	var wg sync.WaitGroup
 	for _, c := range open {
 		if c.parent == nil { // a side chat shares its chat's agent
-			sides = append(sides, s.dropSides(c)...)
-			c.disconnect()
-			with = c
+			wg.Go(func() { s.end(c) })
 		}
 	}
-	if with != nil {
-		s.discard(with, sides)
-	}
+	wg.Wait()
 }
 
 // List returns every stored chat.

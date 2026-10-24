@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"strings"
 	"testing"
+	"time"
 )
 
 type recorder struct{ updates []SessionNotification }
@@ -134,5 +136,42 @@ func TestAgentRequestIsAnswered(t *testing.T) {
 	}
 	if !strings.Contains(got["7"], `"code":-32601`) {
 		t.Errorf("unknown method reply = %s", got["7"])
+	}
+}
+
+// blocking waits on each request until its context ends.
+type blocking struct {
+	recorder
+	ended chan struct{}
+}
+
+func (b *blocking) RequestPermission(ctx context.Context, _ RequestPermissionRequest) (*RequestPermissionResponse, error) {
+	<-ctx.Done()
+	close(b.ended)
+	return &RequestPermissionResponse{Outcome: RequestPermissionOutcome{Outcome: "cancelled", Cancelled: &struct{}{}}}, nil
+}
+
+func TestAWithdrawnRequestEnds(t *testing.T) {
+	toAgentR, toAgentW := io.Pipe()
+	fromAgentR, fromAgentW := io.Pipe()
+	defer fromAgentW.Close()
+	h := &blocking{ended: make(chan struct{})}
+	Connect(fromAgentR, toAgentW, h)
+	go io.Copy(io.Discard, toAgentR)
+	io.WriteString(fromAgentW, `{"jsonrpc":"2.0","id":5,"method":"session/request_permission","params":{"sessionId":"s1","toolCall":{"toolCallId":"t1"},"options":[]}}`+"\n")
+	io.WriteString(fromAgentW, `{"jsonrpc":"2.0","method":"$/cancel_request","params":{"requestId":5}}`+"\n")
+	select {
+	case <-h.ended:
+	case <-time.After(2 * time.Second):
+		t.Fatal("a withdrawn request still waits")
+	}
+}
+
+func TestAFrameTooLargeIsntSent(t *testing.T) {
+	c, _, stop := fakeAgent(t, func(string, json.RawMessage) ([]string, string) { return nil, `{}` })
+	defer stop()
+	big := strings.Repeat("x", MaxFrame)
+	if _, err := c.StartPrompt(PromptRequest{SessionID: "s1", Prompt: []ContentBlock{{Type: "text", Text: &TextContent{Text: big}}}}); !errors.Is(err, ErrTooLarge) {
+		t.Errorf("a %d MiB prompt: %v", MaxFrame>>20, err)
 	}
 }

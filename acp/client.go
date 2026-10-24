@@ -6,6 +6,7 @@ import (
 	"io"
 	"os/exec"
 	"syscall"
+	"time"
 )
 
 // Version is the ACP version this client speaks.
@@ -27,6 +28,7 @@ type Handler interface {
 type Client struct {
 	conn     *conn
 	cmd      *exec.Cmd
+	stdin    io.Closer
 	canFork  bool // initialize advertised session/fork
 	canSteer bool // and steering (see Steer)
 }
@@ -47,7 +49,7 @@ func Start(cmd *exec.Cmd, h Handler) (*Client, error) {
 		return nil, err
 	}
 	c := Connect(stdout, stdin, h)
-	c.cmd = cmd
+	c.cmd, c.stdin = cmd, stdin
 	go func() {
 		<-c.conn.done
 		_ = cmd.Wait()
@@ -93,6 +95,22 @@ func (c *Client) Close() error {
 		return nil
 	}
 	return syscall.Kill(-c.cmd.Process.Pid, syscall.SIGKILL)
+}
+
+// Stop ends the agent gently, then kills what is left of it: its input
+// closes, which an agent takes as the end of the connection (claude-agent-acp
+// cancels its turns and closes its sessions, so they are recorded as
+// ended), and once its process has exited, or after grace, Close.
+func (c *Client) Stop(grace time.Duration) error {
+	if c.cmd == nil {
+		return nil
+	}
+	c.stdin.Close()
+	select {
+	case <-c.conn.done:
+	case <-time.After(grace):
+	}
+	return c.Close()
 }
 
 func (c *Client) Initialize(ctx context.Context, req InitializeRequest) (*InitializeResponse, error) {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/afrase/nushi/acp"
 	"github.com/afrase/nushi/internal/model"
@@ -68,7 +69,11 @@ func (c *chat) newSession(ctx context.Context, agent Agent, folder string) (stri
 
 // forkSession has agent fork session sid with folder as the fork's cwd:
 // a copy of the whole conversation, or as meta asks (see Dialect.ForkAt).
+// It goes on when ctx ends (the app went): a fork the agent made would be
+// a copy of the conversation nobody knows of.
 func (c *chat) forkSession(ctx context.Context, agent Agent, sid, folder string, meta map[string]any) (string, []model.ConfigOption, error) {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Minute)
+	defer cancel()
 	resp, err := agent.ForkSession(ctx, acp.ForkSessionRequest{SessionID: acp.SessionID(sid), Cwd: folder, MCPServers: []acp.MCPServer{}, Meta: meta})
 	if err != nil {
 		return "", nil, err
@@ -99,9 +104,10 @@ func initialize(ctx context.Context, launch Launch, h acp.Handler, meta map[stri
 }
 
 // useLocked makes an opened session the chat's, on a new agent.
+// What the agent sends from then on is live, not a replay (kept).
 func (s *Service) useLocked(c *chat, o opened) {
 	c.agent, c.canFork, c.steer, c.canImage, c.sid, c.config = o.agent, o.agent.CanFork(), o.agent.CanSteer(), o.images, o.sid, o.config
-	c.forkAt, c.held = o.forkAt, false
+	c.forkAt, c.held, c.kept = o.forkAt, false, false
 	c.emitLocked(model.Event{ChatID: c.id, Config: slices.Clone(c.config)})
 	go s.watch(c, o.agent)
 }
@@ -131,12 +137,15 @@ func (s *Service) watch(c *chat, agent Agent) {
 	s.discard(c, s.dropSides(c))
 }
 
-// disconnect stops the chat's agent.
+// disconnect stops the chat's agent, gently (Agent.Stop), and not under
+// the lock: its last updates need it. The transcript stays as it is: a
+// reopen doesn't replay into it (kept).
 func (c *chat) disconnect() {
 	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.agent != nil {
-		c.agent.Close()
-		c.agent = nil
+	agent := c.agent
+	c.agent, c.kept = nil, len(c.items) > 0
+	c.mu.Unlock()
+	if agent != nil {
+		agent.Stop(stopGrace)
 	}
 }

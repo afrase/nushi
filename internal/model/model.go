@@ -30,6 +30,11 @@ type Session struct {
 	// EarlierWorktrees are the worktrees Nushi made for the chat before it
 	// moved out of them, oldest first. They stay until the chat is deleted.
 	EarlierWorktrees []Worktree `json:",omitempty"`
+	// Throwaway are sessions the agent forked from the chat's that nobody
+	// will see again (side chats, /context runs), until the agent has
+	// deleted them: a daemon that stops or crashes first leaves them for
+	// the next time the chat opens, or Delete.
+	Throwaway []string `json:",omitempty"`
 	// Scratch says Folder is a scratch folder of the chat's own (the chat
 	// has no folder yet); worked out from the folder, not stored.
 	Scratch bool `json:"-"`

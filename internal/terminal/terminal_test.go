@@ -2,6 +2,8 @@ package terminal
 
 import (
 	"os"
+	"os/exec"
+	"slices"
 	"regexp"
 	"strconv"
 	"strings"
@@ -116,4 +118,17 @@ func TestCloseKillsChildren(t *testing.T) {
 	p, _ := os.FindProcess(pid)
 	_ = p.Kill()
 	t.Fatalf("child %d still runs after Close", pid)
+}
+
+// No process started after a terminal holds its master: it could type
+// into the terminal.
+func TestLaterProcessesDontGetTheTerminal(t *testing.T) {
+	term, _ := shell(t)
+	out, err := exec.Command("/bin/ls", "/dev/fd").Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fd := strconv.Itoa(int(term.pty.Fd())); slices.Contains(strings.Fields(string(out)), fd) {
+		t.Errorf("a later process has the master (fd %s): %s", fd, out)
+	}
 }

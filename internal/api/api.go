@@ -5,6 +5,8 @@ import (
 	"context"
 	"crypto/subtle"
 	"net/http"
+	"sync"
+	"time"
 
 	"connectrpc.com/connect"
 
@@ -27,6 +29,29 @@ type server struct {
 	terms *terminals.Service
 	trust *trust.Service
 	hub   *events.Hub
+
+	mu      sync.Mutex
+	clients int         // apps following the events
+	idle    *time.Timer // closes the side chats once none is left
+}
+
+// SidesGrace is how long side chats outlive the last app: one that
+// reconnects within it still has them.
+var SidesGrace = 2 * time.Minute
+
+// following counts an app following the events (by +1, then -1). Side chats
+// live only in the app (ADR 0027): once no app has followed for a while, they
+// are closed.
+func (s *server) following(n int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.clients += n
+	if s.idle != nil {
+		s.idle.Stop()
+	}
+	if s.clients == 0 {
+		s.idle = time.AfterFunc(SidesGrace, s.chats.CloseSides)
+	}
 }
 
 // Handler returns the API, refusing requests that don't carry token.
@@ -270,6 +295,8 @@ func (s *server) TrustFolder(_ context.Context, req *connect.Request[nushiv1.Tru
 
 func (s *server) Events(ctx context.Context, _ *connect.Request[nushiv1.EventsRequest], stream *connect.ServerStream[nushiv1.EventsResponse]) error {
 	var err error
+	s.following(1)
+	defer s.following(-1)
 	// An empty first message tells the client the subscription is live.
 	s.hub.Subscribe(ctx.Done(), func() bool {
 		err = stream.Send(&nushiv1.EventsResponse{})

@@ -79,13 +79,16 @@ func Start(argv []string, dir string, env []string, cols, rows int, changed func
 }
 
 // open opens a pseudo-terminal. The master is made non-blocking again
-// (creack/pty leaves it blocking), so closing it ends a pending read.
+// (creack/pty leaves it blocking), so closing it ends a pending read. Its
+// copy is close-on-exec from the start (dup alone isn't), or every process
+// the daemon starts later (agents, git, other shells) could type into this
+// terminal, and would keep it open.
 func open() (master, tty *os.File, err error) {
 	p, tty, err := pty.Open()
 	if err != nil {
 		return nil, nil, err
 	}
-	fd, err := unix.Dup(int(p.Fd()))
+	fd, err := unix.FcntlInt(p.Fd(), unix.F_DUPFD_CLOEXEC, 0)
 	p.Close()
 	if err == nil {
 		err = unix.SetNonblock(fd, true)

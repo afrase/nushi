@@ -113,7 +113,9 @@ func (s *Service) Delete(ctx context.Context, chatID string, opts DeleteOptions)
 		}
 	}
 	if err == nil && p.History {
-		var ids []string
+		c.mu.Lock()
+		ids := slices.Clone(c.session.Throwaway)
+		c.mu.Unlock()
 		for _, sess := range p.Sessions {
 			ids = append(ids, sess.ID)
 		}

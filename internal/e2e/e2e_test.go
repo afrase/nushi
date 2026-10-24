@@ -45,6 +45,8 @@ type pipeAgent struct {
 
 func (p pipeAgent) Close() error { return p.toAgent.Close() }
 
+func (p pipeAgent) Stop(time.Duration) error { return p.Close() }
+
 func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHistory chats.CopyHistory) *daemon {
 	t.Helper()
 	var mu sync.Mutex
