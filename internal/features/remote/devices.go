@@ -17,16 +17,16 @@ import (
 
 var errUnknown = errors.New("not a paired device")
 
-// accept runs IK with a phone that came to the daemon's id: only a paired
-// device's key gets an answer, and it counts as connected once its first
-// transport message decrypts.
-func (s *Service) accept(ctx context.Context, c *relay.Conn) {
+// accept runs IK with a phone that came to id: only a paired device's key
+// gets an answer (on an id given up, only a device still to move), and it
+// counts as connected once its first transport message decrypts.
+func (s *Service) accept(ctx context.Context, c *relay.Conn, id string) {
 	timer := time.AfterFunc(HandshakeWait, func() { c.Close() })
 	defer timer.Stop()
 	stop := context.AfterFunc(ctx, func() { c.Close() })
 	defer stop()
-	conn, err := noiseconn.Respond(c, noiseconn.Config{Static: s.key, Prologue: prologue(s.id)}, func(peer []byte) error {
-		if s.device(peer) == "" {
+	conn, err := noiseconn.Respond(c, noiseconn.Config{Static: s.key, Prologue: prologue(id)}, func(peer []byte) error {
+		if s.device(peer, id) == "" {
 			return errUnknown
 		}
 		return nil
@@ -35,24 +35,24 @@ func (s *Service) accept(ctx context.Context, c *relay.Conn) {
 		c.Close()
 		return
 	}
-	s.run(conn, s.device(conn.Peer()))
+	s.run(conn, s.device(conn.Peer(), id), id)
 }
 
-// device names the paired device with key, or "".
-func (s *Service) device(key []byte) string {
+// device names the paired device with key that may come to id, or "".
+func (s *Service) device(key []byte, id string) string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, d := range s.devices {
-		if bytes.Equal(d.Key, key) {
+		if bytes.Equal(d.Key, key) && (id == s.id || s.mayMove(d.ID, id)) {
 			return d.ID
 		}
 	}
 	return ""
 }
 
-// run serves the API to device on conn until it closes, if the device is
-// still paired and the cap allows.
-func (s *Service) run(conn *noiseconn.Conn, device string) {
+// run serves the API to device on conn, which came to id, until it
+// closes, if the device is still paired and the cap allows.
+func (s *Service) run(conn *noiseconn.Conn, device, id string) {
 	s.mu.Lock()
 	i := slices.IndexFunc(s.devices, func(d model.Device) bool { return d.ID == device })
 	if i < 0 || !s.settings.On || len(s.conns) >= MaxConns {
@@ -61,6 +61,9 @@ func (s *Service) run(conn *noiseconn.Conn, device string) {
 		return
 	}
 	s.conns[conn] = device
+	if id == s.id {
+		s.moved(device)
+	}
 	s.seen(i)
 	s.mu.Unlock()
 	s.serve(&served{Conn: conn, s: s})
@@ -125,6 +128,7 @@ func (s *Service) Revoke(id string) error {
 			c.Close()
 		}
 	}
+	err := s.rotate(id) // the device knows the id
 	s.changed()
-	return nil
+	return err
 }

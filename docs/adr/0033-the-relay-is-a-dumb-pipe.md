@@ -14,7 +14,7 @@ A phone has to reach the daemon on a Mac that is often behind a company network,
 
 ## What the relay can still see
 - IP addresses of both ends: where the phone is when it checks, and the Mac's (company) egress.
-- Rendezvous ids, and the listen keys' public halves: the daemon's long-lived id (one per daemon, so it links every phone connection to that daemon) and each one-time pairing id. Ids are random and carry no names. The URL path holds them, so without TLS the networks in between see them too.
+- Rendezvous ids, and the listen keys' public halves: the daemon's long-lived id (one per daemon, so it links every phone connection to that daemon; it changes when a device is revoked) and each one-time pairing id. Ids are random and carry no names. The URL path holds them, so without TLS the networks in between see them too.
 - Timing and sizes: when connections open and close, when each message passes and how big it is. That shows when someone works, how long turns run, roughly how much the agent writes, and when an answer comes.
 - How many connections a daemon has, and the WebSocket framing.
 - The hosting provider (Fly.io, a VPS's host, a TLS-terminating proxy in front) sees the same.

@@ -10009,6 +10009,7 @@ class Remote extends $pb.GeneratedMessage {
     $core.String? error,
     $core.Iterable<Device>? devices,
     Pairing? pairing,
+    $core.String? rendezvous,
   }) {
     final result = Remote._();
     if (on != null) result.on = on;
@@ -10017,6 +10018,7 @@ class Remote extends $pb.GeneratedMessage {
     if (error != null) result.error = error;
     if (devices != null) result.devices.addAll(devices);
     if (pairing != null) result.pairing = pairing;
+    if (rendezvous != null) result.rendezvous = rendezvous;
     return result;
   }
 
@@ -10041,6 +10043,7 @@ class Remote extends $pb.GeneratedMessage {
         subBuilder: Device.$_createMessage)
     ..aOM<Pairing>(6, _omitFieldNames ? '' : 'pairing',
         subBuilder: Pairing.$_createMessage)
+    ..aOS(7, _omitFieldNames ? '' : 'rendezvous')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -10116,6 +10119,18 @@ class Remote extends $pb.GeneratedMessage {
   void clearPairing() => $_clearField(6);
   @$pb.TagNumber(6)
   Pairing ensurePairing() => $_ensure(5);
+
+  /// The daemon's id at the relay, where its phones dial. It changes when a
+  /// device is revoked: a phone that sees another than the one it dials
+  /// keeps this one from then on (its old one answers it for 30 days).
+  @$pb.TagNumber(7)
+  $core.String get rendezvous => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set rendezvous($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasRendezvous() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearRendezvous() => $_clearField(7);
 }
 
 class Device extends $pb.GeneratedMessage {

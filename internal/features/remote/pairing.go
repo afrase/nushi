@@ -120,6 +120,7 @@ func (s *Service) pair(ctx context.Context, p *pairing, relayURL string) {
 		if allow {
 			id, err = s.add(name, conn.Peer())
 		}
+		daemon := s.id
 		s.mu.Unlock()
 		if !allow || err != nil {
 			reply, _ := json.Marshal(map[string]string{"error": "refused"})
@@ -127,12 +128,12 @@ func (s *Service) pair(ctx context.Context, p *pairing, relayURL string) {
 			conn.Close()
 			return
 		}
-		reply, _ := json.Marshal(map[string]string{"daemon": s.id})
+		reply, _ := json.Marshal(map[string]string{"daemon": daemon})
 		if _, err := conn.Write(reply); err != nil || !stop() {
 			conn.Close()
 			return
 		}
-		go s.run(conn, id)
+		go s.run(conn, id, daemon)
 		return
 	}
 }

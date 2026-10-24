@@ -1167,6 +1167,10 @@ message Remote {
   repeated Device devices = 5;
   // A phone being paired; unset when none.
   Pairing pairing = 6;
+  // The daemon's id at the relay, where its phones dial. It changes when a
+  // device is revoked: a phone that sees another than the one it dials
+  // keeps this one from then on (its old one answers it for 30 days).
+  string rendezvous = 7;
 }
 
 message Device {

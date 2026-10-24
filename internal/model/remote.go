@@ -12,9 +12,19 @@ type RemoteSettings struct {
 // relay (an Ed25519 private key, whose hash is the daemon's rendezvous id),
 // made once.
 type RemoteKey struct {
-	Private []byte `json:"private"`
-	Public  []byte `json:"public"`
-	Listen  []byte `json:"listen"`
+	Private []byte   `json:"private"`
+	Public  []byte   `json:"public"`
+	Listen  []byte   `json:"listen"`
+	Moving  []Moving `json:"moving,omitempty"`
+}
+
+// Moving is a rendezvous id the daemon gave up when it revoked a device:
+// it still waits there for the devices still paired then, until each has
+// connected at the new id.
+type Moving struct {
+	Listen  []byte    `json:"listen"`
+	Devices []string  `json:"devices"`
+	Since   time.Time `json:"since"`
 }
 
 // Device is a paired phone.
@@ -37,6 +47,8 @@ type Remote struct {
 	Error   string
 	Devices []Device
 	Pairing *Pairing
+	// Rendezvous is the daemon's id at the relay, where its phones dial.
+	Rendezvous string
 }
 
 // Pairing is a phone being paired: waiting for it until Expires, then,
