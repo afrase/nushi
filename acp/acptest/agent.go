@@ -1,5 +1,6 @@
-// Package acptest is a fake ACP agent for tests. It answers prompts by
-// script, keyed on the prompt's text:
+// Package acptest is a fake ACP agent for tests, shaped like Claude's
+// adapter (or like Codex's, with Agent.Codex: codex.go). It answers prompts
+// by script, keyed on the prompt's text:
 //
 //   - containing "permission": a tool call that asks permission (options
 //     "allow" and "reject"), then a message naming the option picked, or
@@ -38,113 +39,11 @@ import (
 	"time"
 )
 
-// History holds every session's updates by folder, for session/load, and
-// the sessions deleted.
-type History struct {
-	mu       sync.Mutex
-	sessions map[key][]json.RawMessage
-	deleted  map[string]bool
-}
-
-// key is a session in one folder's history.
-type key struct{ cwd, session string }
-
-// Deleted reports whether session/delete was asked for session (one never
-// kept, without a message, included).
-func (h *History) Deleted(session string) bool {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	return h.deleted[session]
-}
-
-func (h *History) add(cwd, session string, update any) {
-	b, _ := json.Marshal(update)
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	if h.sessions == nil {
-		h.sessions = map[key][]json.RawMessage{}
-	}
-	k := key{cwd, session}
-	h.sessions[k] = append(h.sessions[k], b)
-}
-
-// fork gives session to, in folder cwd, a copy of session from's history
-// there; it fails when cwd's history has no from.
-func (h *History) fork(cwd, from, to string) bool {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	u, ok := h.sessions[key{cwd, from}]
-	if ok {
-		h.sessions[key{cwd, to}] = append([]json.RawMessage(nil), u...)
-	}
-	return ok
-}
-
-// Copy copies session's history in folder from into folder to's, as the
-// daemon does before forking a session in another folder (a
-// chats.CopyHistory), and returns a function that removes the copy.
-func (h *History) Copy(session, from, to string) (remove func() error, err error) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	u, ok := h.sessions[key{from, session}]
-	if !ok {
-		return nil, fmt.Errorf("no session %s in %s", session, from)
-	}
-	if _, ok := h.sessions[key{to, session}]; ok {
-		return nil, fmt.Errorf("session %s is in %s already", session, to)
-	}
-	h.sessions[key{to, session}] = append([]json.RawMessage(nil), u...)
-	return func() error {
-		h.mu.Lock()
-		defer h.mu.Unlock()
-		delete(h.sessions, key{to, session})
-		return nil
-	}, nil
-}
-
-// Has reports whether session is in the history, in any folder.
-func (h *History) Has(session string) bool {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	for k := range h.sessions {
-		if k.session == session {
-			return true
-		}
-	}
-	return false
-}
-
-// In reports whether session is in folder cwd's history.
-func (h *History) In(cwd, session string) bool {
-	_, ok := h.get(cwd, session)
-	return ok
-}
-
-func (h *History) get(cwd, session string) ([]json.RawMessage, bool) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	u, ok := h.sessions[key{cwd, session}]
-	return append([]json.RawMessage(nil), u...), ok
-}
-
-func (h *History) delete(session string) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	for k := range h.sessions {
-		if k.session == session {
-			delete(h.sessions, k)
-		}
-	}
-	if h.deleted == nil {
-		h.deleted = map[string]bool{}
-	}
-	h.deleted[session] = true
-}
-
 // Agent is one fake agent process.
 type Agent struct {
 	History *History
 	Pause   time.Duration
+	Codex   bool // answers as codex-acp does (codex.go)
 
 	w       io.Writer
 	writeMu sync.Mutex
@@ -280,6 +179,9 @@ func (a *Agent) answer(f frame) {
 	case "initialize":
 		result = map[string]any{"protocolVersion": 1, "agentCapabilities": map[string]any{"loadSession": true,
 			"sessionCapabilities": map[string]any{"fork": map[string]any{}, "delete": map[string]any{}, "close": map[string]any{}}}}
+		if a.Codex {
+			result = codexInit()
+		}
 	case "session/new", "session/fork":
 		a.mu.Lock()
 		a.nextID++
@@ -294,6 +196,9 @@ func (a *Agent) answer(f frame) {
 		a.cwds[id] = p.Cwd
 		a.mu.Unlock()
 		result = map[string]any{"sessionId": id}
+		if a.Codex {
+			result = codexSession(id)
+		}
 	case "session/load":
 		updates, ok := a.History.get(p.Cwd, p.SessionID)
 		if !ok {
@@ -341,6 +246,8 @@ func (a *Agent) prompt(session, text string) string {
 	a.mu.Unlock()
 	a.History.add(cwd, session, map[string]any{"sessionUpdate": "user_message_chunk", "content": map[string]any{"type": "text", "text": text}})
 	switch {
+	case a.Codex && strings.Contains(text, "run"):
+		a.run(session)
 	case strings.Contains(text, "permission"):
 		a.update(session, map[string]any{"sessionUpdate": "tool_call", "toolCallId": "t1", "title": "touch x", "kind": "execute", "status": "pending"})
 		res := a.request("session/request_permission", map[string]any{
