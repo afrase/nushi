@@ -2,6 +2,7 @@ package remote
 
 import (
 	"context"
+	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/binary"
@@ -16,9 +17,11 @@ import (
 	"github.com/afrase/nushi/noiseconn"
 )
 
-// pairing is a QR code being shown: a one-time rendezvous id and secret.
+// pairing is a QR code being shown: a one-time rendezvous id (and its
+// listen key) and secret.
 type pairing struct {
 	id      string
+	listen  ed25519.PrivateKey
 	psk     []byte
 	expires time.Time
 	cancel  context.CancelFunc
@@ -40,7 +43,8 @@ func (s *Service) StartPairing() (string, time.Time, error) {
 	psk := make([]byte, 32)
 	rand.Read(psk)
 	ctx, cancel := context.WithCancel(context.Background())
-	p := &pairing{id: randomID(), psk: psk, expires: time.Now().Add(PairingWait), cancel: cancel, answer: make(chan bool, 1)}
+	listen := newListenKey()
+	p := &pairing{id: listenID(listen), listen: listen, psk: psk, expires: time.Now().Add(PairingWait), cancel: cancel, answer: make(chan bool, 1)}
 	s.pairing = p
 	s.changed()
 	go s.pair(ctx, p, s.settings.Relay)
@@ -137,7 +141,7 @@ func (s *Service) pair(ctx context.Context, p *pairing, relayURL string) {
 // the channel and the phone's name, or nil; used says the handshake
 // completed (the phone held the secret) even if no name came.
 func (s *Service) meet(ctx context.Context, p *pairing, relayURL string) (conn *noiseconn.Conn, name string, used bool) {
-	c, err := s.dialer.Listen(ctx, relayURL, p.id)
+	c, err := s.dialer.Listen(ctx, relayURL, p.listen)
 	if err != nil {
 		sleep(ctx, jitter(2*time.Second))
 		return nil, "", false

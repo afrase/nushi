@@ -1,7 +1,9 @@
 package relay
 
 import (
+	"bytes"
 	"context"
+	"crypto/ed25519"
 	"errors"
 	"fmt"
 	"net/http"
@@ -27,10 +29,47 @@ type Dialer struct {
 	Proxies func(*url.URL) ([]*url.URL, error)
 }
 
-// Listen waits at id for a dialer; the connection's first ReadMessage
-// returns the dialer's first message.
-func (d *Dialer) Listen(ctx context.Context, relay, id string) (*Conn, error) {
-	return d.connect(ctx, relay, "listen", id)
+// Listen waits for a dialer at key's id (ListenID), proving to the relay
+// it holds key; the connection's first ReadMessage returns the dialer's
+// first message.
+func (d *Dialer) Listen(ctx context.Context, relay string, key ed25519.PrivateKey) (*Conn, error) {
+	id := ListenID(key.Public().(ed25519.PublicKey))
+	c, err := d.connect(ctx, relay, "listen", id)
+	if err != nil {
+		return nil, err
+	}
+	stop := context.AfterFunc(ctx, func() { c.Close() })
+	defer stop()
+	if err := c.prove(id, key); err != nil {
+		c.Close()
+		return nil, err
+	}
+	return c, nil
+}
+
+// prove answers the relay's challenge with key's signature.
+func (c *Conn) prove(id string, key ed25519.PrivateKey) error {
+	_ = c.ws.SetReadDeadline(time.Now().Add(20 * time.Second))
+	old := errors.New("the relay didn't ask for the listen key's proof: is it an older nushi-relay?")
+	kind, m, err := c.ws.ReadMessage()
+	if err != nil {
+		return fmt.Errorf("%w (%w)", old, err)
+	}
+	challenge, ok := bytes.CutPrefix(m, []byte(challengeTag))
+	if kind != websocket.BinaryMessage || !ok || len(challenge) != 32 {
+		return old
+	}
+	sig := ed25519.Sign(key, proven(id, challenge))
+	if err := c.WriteMessage(append(key.Public().(ed25519.PublicKey), sig...)); err != nil {
+		return err
+	}
+	if _, m, err = c.ws.ReadMessage(); err != nil {
+		return fmt.Errorf("the relay refused the listen key: %w", err)
+	} else if len(m) != 0 {
+		return errors.New("the relay sent a message before a dialer")
+	}
+	_ = c.ws.SetReadDeadline(time.Now().Add(3 * c.every))
+	return nil
 }
 
 // Dial meets the listener waiting at id.

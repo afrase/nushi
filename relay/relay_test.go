@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/base64"
 	"net/http"
@@ -32,16 +33,24 @@ func newID() string {
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 
-// pair connects a listener and a dialer on id; the dialer speaks first.
-func pair(t *testing.T, url, id string) (l, d *Conn) {
+func newKey() ed25519.PrivateKey {
+	_, k, _ := ed25519.GenerateKey(rand.Reader)
+	return k
+}
+
+func idOf(k ed25519.PrivateKey) string { return ListenID(k.Public().(ed25519.PublicKey)) }
+
+// pair connects a listener with key and a dialer on its id; the dialer
+// speaks first.
+func pair(t *testing.T, url string, key ed25519.PrivateKey) (l, d *Conn) {
 	t.Helper()
 	var dl Dialer
-	l, err := dl.Listen(context.Background(), url, id)
+	l, err := dl.Listen(context.Background(), url, key)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { l.Close() })
-	d, err = dl.Dial(context.Background(), url, id)
+	d, err = dl.Dial(context.Background(), url, idOf(key))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +94,7 @@ func expectClosed(t *testing.T, c *Conn) {
 
 func TestPeersMeetAndTalk(t *testing.T) {
 	url := start(t, Defaults)
-	l, d := pair(t, url, newID())
+	l, d := pair(t, url, newKey())
 	send(t, d, "hello")
 	if err := l.Wait(); err != nil {
 		t.Fatal(err)
@@ -99,8 +108,8 @@ func TestPeersMeetAndTalk(t *testing.T) {
 
 func TestNoCrossTalk(t *testing.T) {
 	url := start(t, Defaults)
-	l1, d1 := pair(t, url, newID())
-	l2, d2 := pair(t, url, newID())
+	l1, d1 := pair(t, url, newKey())
+	l2, d2 := pair(t, url, newKey())
 	send(t, d1, "one")
 	send(t, d2, "two")
 	expect(t, l1, "one")
@@ -114,11 +123,11 @@ func TestNoCrossTalk(t *testing.T) {
 // Two dialers on one id each get a listener of their own.
 func TestEachDialerItsOwnListener(t *testing.T) {
 	url := start(t, Defaults)
-	id := newID()
-	l1, d1 := pair(t, url, id)
-	send(t, d1, "a") // a dialer meets the first listener waiting once it speaks
+	key := newKey()
+	l1, d1 := pair(t, url, key)
+	send(t, d1, "a") // a dialer meets the listener waiting once it speaks
 	expect(t, l1, "a")
-	l2, d2 := pair(t, url, id)
+	l2, d2 := pair(t, url, key)
 	send(t, d2, "b")
 	expect(t, l2, "b")
 	send(t, l1, "to a")
@@ -146,11 +155,11 @@ func TestSilentDialerTakesNothing(t *testing.T) {
 	lim := Defaults
 	lim.DialWait = 200 * time.Millisecond
 	url := start(t, lim)
-	id := newID()
-	l, _ := pair(t, url, id)
+	key := newKey()
+	l, _ := pair(t, url, key)
 	time.Sleep(300 * time.Millisecond) // the silent dialer is gone
 	var dl Dialer
-	d, err := dl.Dial(context.Background(), url, id)
+	d, err := dl.Dial(context.Background(), url, idOf(key))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +171,7 @@ func TestSilentDialerTakesNothing(t *testing.T) {
 func TestListenerMayNotSpeakFirst(t *testing.T) {
 	url := start(t, Defaults)
 	var dl Dialer
-	l, err := dl.Listen(context.Background(), url, newID())
+	l, err := dl.Listen(context.Background(), url, newKey())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,7 +190,7 @@ func TestCaps(t *testing.T) {
 	url := start(t, lim)
 
 	t.Run("message size", func(t *testing.T) {
-		l, d := pair(t, url, newID())
+		l, d := pair(t, url, newKey())
 		send(t, d, "hello")
 		expect(t, l, "hello")
 		send(t, d, strings.Repeat("x", 1001))
@@ -190,18 +199,25 @@ func TestCaps(t *testing.T) {
 	})
 	time.Sleep(100 * time.Millisecond) // the closed pair leaves
 
-	id := newID()
+	key := newKey()
 	for _, addr := range []string{"192.0.2.1", "192.0.2.2"} {
-		ws, code := from(url, "listen", id, addr)
+		ws, code := from(url, "dial", idOf(key), addr)
 		if ws == nil {
 			t.Fatalf("refused (%d) under the caps", code)
 		}
 		defer ws.Close()
 	}
-	if ws, code := from(url, "listen", id, "192.0.2.3"); ws != nil || code != http.StatusServiceUnavailable {
-		t.Fatalf("a third connection on one id: %d", code)
+	if ws, code := from(url, "dial", idOf(key), "192.0.2.3"); ws != nil || code != http.StatusServiceUnavailable {
+		t.Fatalf("a third dialer on one id: %d", code)
 	}
-	for _, addr := range []string{"192.0.2.3", "192.0.2.4", "192.0.2.5", "192.0.2.6"} {
+	// Dialers don't keep the id's own listener out.
+	var dl Dialer
+	l, err := dl.Listen(context.Background(), url, key)
+	if err != nil {
+		t.Fatal("the key's listener was refused:", err)
+	}
+	defer l.Close()
+	for _, addr := range []string{"192.0.2.4", "192.0.2.5", "192.0.2.6"} {
 		ws, code := from(url, "listen", newID(), addr)
 		if ws == nil {
 			t.Fatalf("refused (%d) under the caps", code)
@@ -221,7 +237,7 @@ func TestRate(t *testing.T) {
 	lim.Rate = 100_000
 	lim.Burst = 10_000
 	url := start(t, lim)
-	l, d := pair(t, url, newID())
+	l, d := pair(t, url, newKey())
 	began := time.Now()
 	for range 10 {
 		send(t, d, strings.Repeat("x", 5000))
@@ -245,7 +261,7 @@ func TestIdle(t *testing.T) {
 	// Pings keep a connection open.
 	old := KeepAlive
 	KeepAlive = 50 * time.Millisecond
-	l, d := pair(t, url, newID())
+	l, d := pair(t, url, newKey())
 	KeepAlive = old
 	got := make(chan string, 1)
 	go func() { m, _ := l.ReadMessage(); got <- string(m) }() // reading takes the pongs in
@@ -256,7 +272,7 @@ func TestIdle(t *testing.T) {
 	}
 
 	// Silence doesn't.
-	l, d = pair(t, url, newID())
+	l, d = pair(t, url, newKey())
 	send(t, d, "hello")
 	expect(t, l, "hello")
 	expectClosed(t, d)
@@ -293,15 +309,17 @@ func TestNoDiskNoLogs(t *testing.T) {
 	addr := first[strings.LastIndex(first, " ")+1 : len(first)-1]
 	url := "ws://" + addr
 
-	id := newID()
-	l, d := pair(t, url, id)
+	key := newKey()
+	l, d := pair(t, url, key)
 	send(t, d, "secret")
 	expect(t, l, "secret")
 	var dl Dialer
-	if c, err := dl.Listen(context.Background(), url, id); err == nil { // over the cap
-		c.Close()
+	for range 2 { // over the cap
+		if c, err := dl.Dial(context.Background(), url, idOf(key)); err == nil {
+			defer c.Close()
+		}
 	}
-	_, _ = dl.Listen(context.Background(), url, "bad")
+	_, _ = dl.Dial(context.Background(), url, "bad")
 	l.Close()
 	d.Close()
 
@@ -459,7 +477,7 @@ func TestWaitingLifetime(t *testing.T) {
 	KeepAlive = 50 * time.Millisecond
 	defer func() { KeepAlive = old }()
 	var dl Dialer
-	l, err := dl.Listen(context.Background(), url, newID())
+	l, err := dl.Listen(context.Background(), url, newKey())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -470,7 +488,7 @@ func TestWaitingLifetime(t *testing.T) {
 		t.Fatal("closed too soon")
 	}
 
-	l, d := pair(t, url, newID())
+	l, d := pair(t, url, newKey())
 	send(t, d, "hello")
 	expect(t, l, "hello")
 	got := make(chan string, 1)
@@ -480,4 +498,63 @@ func TestWaitingLifetime(t *testing.T) {
 	if m := <-got; m != "still here" {
 		t.Fatalf("read %q", m)
 	}
+}
+
+// Only the holder of an id's key listens there: someone who knows the id
+// (a revoked phone, anyone who saw a ws:// URL) can neither answer the
+// challenge nor take the dials meant for the key's holder.
+func TestListenNeedsTheKey(t *testing.T) {
+	url := start(t, Defaults)
+	key, other := newKey(), newKey()
+	id := idOf(key)
+	raw := func() (*websocket.Conn, []byte) {
+		ws, _, err := websocket.DefaultDialer.Dial(url+"/v1/listen/"+id, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ws.SetReadDeadline(time.Now().Add(2 * time.Second))
+		_, m, err := ws.ReadMessage()
+		if err != nil || !bytes.HasPrefix(m, []byte(challengeTag)) {
+			t.Fatalf("no challenge: %q %v", m, err)
+		}
+		return ws, m[len(challengeTag):]
+	}
+	for name, answer := range map[string]func(challenge []byte) []byte{
+		"another key": func(c []byte) []byte {
+			return append(other.Public().(ed25519.PublicKey), ed25519.Sign(other, proven(id, c))...)
+		},
+		"an old signature": func([]byte) []byte {
+			return append(key.Public().(ed25519.PublicKey), ed25519.Sign(key, proven(id, make([]byte, 32)))...)
+		},
+	} {
+		ws, challenge := raw()
+		ws.WriteMessage(websocket.BinaryMessage, answer(challenge))
+		if _, _, err := ws.ReadMessage(); err == nil {
+			t.Errorf("%s listened", name)
+		}
+		ws.Close()
+	}
+
+	squat, _ := raw() // never answers
+	defer squat.Close()
+	l, d := pair(t, url, key)
+	send(t, d, "for the key's holder")
+	expect(t, l, "for the key's holder")
+}
+
+// A second listener with the key (the same daemon, back) replaces the one
+// waiting.
+func TestSecondListenerReplacesFirst(t *testing.T) {
+	url := start(t, Defaults)
+	key := newKey()
+	var dl Dialer
+	l1, err := dl.Listen(context.Background(), url, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer l1.Close()
+	l2, d := pair(t, url, key)
+	expectClosed(t, l1)
+	send(t, d, "to the newest")
+	expect(t, l2, "to the newest")
 }

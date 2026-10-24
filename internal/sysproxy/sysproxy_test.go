@@ -3,6 +3,8 @@ package sysproxy
 import (
 	"bufio"
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
 	"encoding/base64"
 	"io"
 	"net"
@@ -190,8 +192,9 @@ func TestThroughAProxy(t *testing.T) {
 	proxyURL, seen := connectProxy(t, "me:secret")
 	t.Setenv("HTTP_PROXY", strings.Replace(proxyURL, "http://", "http://me:secret@", 1))
 	dl := relay.Dialer{Proxies: For}
-	id := "AAAAAAAAAAAAAAAAAAAAAA"
-	l, err := dl.Listen(context.Background(), relayURL, id)
+	_, key, _ := ed25519.GenerateKey(rand.Reader)
+	id := relay.ListenID(key.Public().(ed25519.PublicKey))
+	l, err := dl.Listen(context.Background(), relayURL, key)
 	if err != nil {
 		t.Fatal(err)
 	}

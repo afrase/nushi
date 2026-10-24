@@ -8,12 +8,13 @@ type RemoteSettings struct {
 	Relay string `json:"relay,omitempty"`
 }
 
-// RemoteKey is the daemon's static Noise key and its rendezvous id at the
-// relay, made once.
+// RemoteKey is the daemon's static Noise key and its listen key at the
+// relay (an Ed25519 private key, whose hash is the daemon's rendezvous id),
+// made once.
 type RemoteKey struct {
 	Private []byte `json:"private"`
 	Public  []byte `json:"public"`
-	ID      string `json:"id"`
+	Listen  []byte `json:"listen"`
 }
 
 // Device is a paired phone.

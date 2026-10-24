@@ -5,8 +5,8 @@ package remote
 
 import (
 	"context"
+	"crypto/ed25519"
 	"crypto/rand"
-	"encoding/base64"
 	"errors"
 	"math/big"
 	"net"
@@ -47,6 +47,7 @@ type Service struct {
 	awake   func() (stop func())    // keeps the Mac from idle sleep
 	publish func(model.Event)
 	key     noise.DHKey
+	listen  ed25519.PrivateKey // proves to the relay the daemon may listen at id
 	id      string
 
 	mu        sync.Mutex
@@ -71,7 +72,10 @@ func New(st Store, dialer *relay.Dialer, serve func(net.Conn), awake func() func
 		if err != nil {
 			return nil, err
 		}
-		k = model.RemoteKey{Private: key.Private, Public: key.Public, ID: randomID()}
+		k = model.RemoteKey{Private: key.Private, Public: key.Public}
+	}
+	if len(k.Listen) != ed25519.PrivateKeySize { // new, or from before step 116: its phones pair again
+		k.Listen = newListenKey()
 		if err := st.SaveRemoteKey(k); err != nil {
 			return nil, err
 		}
@@ -85,7 +89,7 @@ func New(st Store, dialer *relay.Dialer, serve func(net.Conn), awake func() func
 		return nil, err
 	}
 	s := &Service{st: st, dialer: dialer, serve: serve, awake: awake, publish: publish,
-		key: noise.DHKey{Private: k.Private, Public: k.Public}, id: k.ID,
+		key: noise.DHKey{Private: k.Private, Public: k.Public}, listen: k.Listen, id: listenID(k.Listen),
 		settings: settings, state: "off", devices: devices, conns: map[*noiseconn.Conn]string{}}
 	s.mu.Lock()
 	s.apply()
@@ -93,10 +97,15 @@ func New(st Store, dialer *relay.Dialer, serve func(net.Conn), awake func() func
 	return s, nil
 }
 
-func randomID() string {
-	b := make([]byte, 16)
-	rand.Read(b)
-	return base64.RawURLEncoding.EncodeToString(b)
+func newListenKey() ed25519.PrivateKey {
+	_, k, _ := ed25519.GenerateKey(rand.Reader)
+	return k
+}
+
+// listenID is the rendezvous id at the relay that only listen's holder can
+// listen on.
+func listenID(listen ed25519.PrivateKey) string {
+	return relay.ListenID(listen.Public().(ed25519.PublicKey))
 }
 
 // prologue binds a handshake to the rendezvous id it runs on.
@@ -203,7 +212,7 @@ func (s *Service) setState(ctx context.Context, state, err string) {
 func (s *Service) link(ctx context.Context, relayURL string) {
 	backoff := time.Second
 	for ctx.Err() == nil {
-		c, err := s.dialer.Listen(ctx, relayURL, s.id)
+		c, err := s.dialer.Listen(ctx, relayURL, s.listen)
 		if err != nil {
 			s.setState(ctx, "error", err.Error())
 			sleep(ctx, jitter(backoff))
