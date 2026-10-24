@@ -51,7 +51,8 @@ class _NushiAppState extends State<NushiApp> {
           PlatformMenuItem(
             label: 'Settings…',
             shortcut: settingsKey,
-            onSelected: () => showSettings(_navigator.currentContext!),
+            onSelected: () =>
+                showSettings(_navigator.currentContext!, widget.daemon.client),
           ),
           PlatformProvidedMenuItem(type: PlatformProvidedMenuItemType.hide),
           PlatformProvidedMenuItem(type: PlatformProvidedMenuItemType.quit),
@@ -77,7 +78,9 @@ class _NushiAppState extends State<NushiApp> {
       // The menu's ⌘, doesn't reach the menu while Flutter has the keys.
       home: Builder(
         builder: (context) => CallbackShortcuts(
-          bindings: {settingsKey: () => showSettings(context)},
+          bindings: {
+            settingsKey: () => showSettings(context, widget.daemon.client),
+          },
           child: Scaffold(body: _Shell(widget.daemon)),
         ),
       ),

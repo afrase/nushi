@@ -191,6 +191,7 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 100. Ante and oh-my-pi by hand, and the docs | 10862 | 975 | 14052 | 682 |
 | 101. Memory and speed measured; agents without npx's process | 10909 | 975 | 14052 | 682 |
 | 102. Sleeping chats in the daemon (ADR 0032); API 45 | 11186 | 984 | 14052 | 682 |
+| 103. Sleep in the app: menus, the sidebar's mark, the setting | 11186 | 984 | 14138 | 682 |
 
 Steps over the ~500-line tripwire (code and tests, without generated code): 98 (2,384 with its tests: Ante's whole bridge and its fake), 99 (901: two agents, two trust packages, the shared trust files), 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 removed more than it added.
 
