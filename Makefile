@@ -7,7 +7,7 @@ RELEASE := app/build/macos/Build/Products/Release/Nushi.app
 # local.mk (not committed) can set COPY_TO=<folder>: make install also copies the app there.
 -include local.mk
 
-.PHONY: run daemon stop app package install gen test lines relay
+.PHONY: run daemon stop app package install gen test lines relay icons
 
 # Starts the daemon in the background (unless one is running), then the app.
 run: daemon app
@@ -40,6 +40,10 @@ install: package
 # The relay (ADR 0033), one static binary: bin/nushi-relay -h lists its flags.
 relay:
 	CGO_ENABLED=0 go build -o bin/nushi-relay ./cmd/nushi-relay
+
+# The app icon (Icon Composer, and PNGs for macOS before 26) and the mark.
+icons:
+	go run ./tools/icongen
 
 gen:
 	$(BUF) lint

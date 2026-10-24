@@ -1,3 +1,5 @@
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/brand/mark-dark.svg"><img src="docs/brand/mark.svg" width="88" alt=""></picture></p>
+
 # Nushi
 
 A macOS app for running coding agents as chats over the [Agent Client Protocol](https://agentclientprotocol.com), plus a diff viewer. A Go daemon (`nushid`) runs the agents; a Flutter app is the window.
@@ -17,6 +19,7 @@ make gen     # regenerate the API code after editing proto/
 make lines   # hand-written line counts
 make package # a release "Nushi.app" with nushid inside (ad-hoc signed)
 make install # package, then copy it to ~/Applications
+make icons   # redraw the app icon and the mark (tools/icongen)
 ```
 
 The packaged app starts its bundled `nushid` when no daemon is running, and leaves it running when it quits ([ADR 0013](docs/adr/0013-app-starts-its-daemon.md)). With `make run`, start and stop the daemon yourself.
