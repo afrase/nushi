@@ -67,6 +67,7 @@ class _ComposerState extends State<Composer> {
     _draft.replies.addListener(_repliesChanged);
     _replyCount = _draft.replies.value.length;
     _completions.addListener(_imagesChanged);
+    _draft.relay.addListener(_imagesChanged);
     _draft.quote.addListener(_quote);
     _quote(); // one given before the box was built
     widget.chat.takeBack.addListener(_takeBack);
@@ -84,6 +85,7 @@ class _ComposerState extends State<Composer> {
   @override
   void dispose() {
     _images.removeListener(_imagesChanged);
+    _draft.relay.removeListener(_imagesChanged);
     _draft.replies.removeListener(_repliesChanged);
     _draft.quote.removeListener(_quote);
     widget.chat.takeBack.removeListener(_takeBack);
@@ -154,7 +156,22 @@ class _ComposerState extends State<Composer> {
     final m = widget.chat.takeBack.value;
     if (m == null) return;
     widget.chat.takeBack.value = null;
+    _restoreMessage(m);
+  }
+
+  /// Puts a message taken back in the box: one for a subagent stays for it,
+  /// or, when Nushi can't tell which one (a replayed message), says so.
+  void _restoreMessage(QueuedMessage m) {
     _restore(m.text, m.files, m.images);
+    if (m.toSubagent.isNotEmpty) {
+      _draft.relay.value = (m.toSubagent, m.relayTo);
+    } else if (m.relayTo.isNotEmpty && mounted) {
+      showError(
+        context,
+        'This message was for ${m.relayTo}: send it from its pane for '
+        '${m.relayTo} to get it.',
+      );
+    }
   }
 
   /// Takes a queued message back from the daemon, to edit unless [drop].
@@ -163,16 +180,18 @@ class _ComposerState extends State<Composer> {
         final r = await widget.daemon.client.unqueue(
           UnqueueRequest(chatId: widget.chat.id, id: m.id),
         );
-        if (!drop) _restore(r.message.text, r.message.files, r.message.images);
+        if (!drop) _restoreMessage(r.message);
       });
 
   /// Sends the box's message; while the agent works it waits in the
   /// chat's queue, or with [now] stops the turn and goes at once.
   Future<void> _send({bool now = false}) async {
+    await _images.ready(); // an image pasted a moment ago goes with it
     final text = _text.text.trim();
     final images = _images.value;
     final replies = _draft.replies.value;
     final mentions = {..._mentions};
+    final relay = _draft.relay.value;
     final busy = widget.chat.busy;
     if (text.isEmpty && images.isEmpty && replies.isEmpty) return;
     final files = [
@@ -182,6 +201,7 @@ class _ComposerState extends State<Composer> {
     _text.clear();
     _images.clear();
     _draft.replies.value = const [];
+    _draft.relay.value = null;
     _mentions.clear();
     _lastFiles = files;
     try {
@@ -193,6 +213,7 @@ class _ComposerState extends State<Composer> {
           images: images,
           queue: busy,
           now: now && widget.chat.started != null,
+          toSubagent: relay?.$1,
         ),
       );
     } on Object catch (e) {
@@ -201,6 +222,7 @@ class _ComposerState extends State<Composer> {
       _text.text = [text, if (since.isNotEmpty) since].join('\n\n');
       _images.value = [...images, ..._images.value];
       _draft.replies.value = [...replies, ..._draft.replies.value];
+      _draft.relay.value ??= relay;
       _mentions.addAll(mentions);
       if (mounted) showError(context, e);
     }
@@ -250,13 +272,21 @@ class _ComposerState extends State<Composer> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (_images.value.isNotEmpty || _draft.replies.value.isNotEmpty)
+                if (_images.value.isNotEmpty ||
+                    _draft.replies.value.isNotEmpty ||
+                    _draft.relay.value != null)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(6, 8, 6, 4),
                     child: Wrap(
                       spacing: 6,
                       runSpacing: 6,
                       children: [
+                        if (_draft.relay.value case (_, final agent)?)
+                          Chip(
+                            label: Text('To $agent, through ${chat.agentName}'),
+                            onDeleted: () => _draft.relay.value = null,
+                            visualDensity: VisualDensity.compact,
+                          ),
                         ReplyCards(_draft.replies, onDone: _focus.requestFocus),
                         Thumbnails(_images.value, onRemove: _images.removeAt),
                       ],

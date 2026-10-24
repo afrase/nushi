@@ -17,7 +17,7 @@ const maxDiffLines = 10000;
 
 /// Diffs at least this long (both sides, in characters) are computed off
 /// the UI thread; smaller ones at once, so a short edit doesn't flicker.
-const _offThread = 20000;
+const offThread = 20000;
 
 int _lines(String s) => s.isEmpty ? 0 : '\n'.allMatches(s).length + 1;
 
@@ -91,7 +91,7 @@ class _DiffBoxState extends State<DiffBox> {
       return;
     }
     final args = (d.oldText, d.newText, d.path);
-    if (d.oldText.length + d.newText.length < _offThread) {
+    if (d.oldText.length + d.newText.length < offThread) {
       _view(_diffed = _diff(args));
       return;
     }

@@ -292,6 +292,9 @@ message QueuedMessage {
   repeated ImageData images = 4;
   // The type of the subagent it is for (SendPromptRequest.to_subagent).
   string relay_to = 5;
+  // That subagent's tool call (SendPromptRequest.to_subagent), to send it
+  // there again; empty when not known (a replayed message).
+  string to_subagent = 6;
 }
 
 // Every message waiting in a chat's queue, in order.

@@ -82,13 +82,15 @@ List<(String?, Widget)> worktreeRows(
 }
 
 /// Moves a chat without messages into a new worktree ([on]) or back to its
-/// repository, and remembers the choice for the repository.
-void _switch(BuildContext context, ChatState chat, Daemon daemon, bool on) {
-  final repos = {...worktreeRepos.value};
-  on ? repos.add(chat.home) : repos.remove(chat.home);
-  worktreeRepos.value = repos;
-  tryOrShow(context, () => daemon.moveChat(chat, chat.home, worktree: on));
-}
+/// repository, and once it has moved remembers the choice for the
+/// repository.
+void _switch(BuildContext context, ChatState chat, Daemon daemon, bool on) =>
+    tryOrShow(context, () async {
+      if (!await daemon.moveChat(chat, chat.home, worktree: on)) return;
+      final repos = {...worktreeRepos.value};
+      on ? repos.add(chat.home) : repos.remove(chat.home);
+      worktreeRepos.value = repos;
+    });
 
 /// Under the composer of a chat without messages, as in Claude Code: its
 /// folder and, in a git repository, the "New worktree" switch as a chip.

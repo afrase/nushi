@@ -185,4 +185,54 @@ void main() {
     await tester.pump();
     expect(sent, isNull);
   });
+
+  testWidgets('a card never takes the keyboard from a terminal', (
+    tester,
+  ) async {
+    List<FieldAnswer>? sent;
+    final keys = <LogicalKeyboardKey>[];
+    final terminal = FocusNode(); // like xterm's: a Focus that takes keys
+    final item = Item(
+      id: 'q',
+      kind: ItemKind.ITEM_KIND_QUESTION,
+      status: 'pending',
+      fields: [
+        choice('question_0', 'Color', ['red', 'green']),
+      ],
+    );
+    Future<void> show(bool card) => tester.pumpWidget(
+      MaterialApp(
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: Scaffold(
+          body: Column(
+            children: [
+              if (card)
+                QuestionCard(
+                  item,
+                  agent: 'Claude',
+                  onAnswer: (a) async => sent = a,
+                ),
+              Focus(
+                focusNode: terminal,
+                onKeyEvent: (_, e) {
+                  if (e is KeyDownEvent) keys.add(e.logicalKey);
+                  return KeyEventResult.handled;
+                },
+                child: const SizedBox(height: 40),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await show(false);
+    terminal.requestFocus();
+    await show(true);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit1);
+    await tester.pump();
+    expect(sent, isNull);
+    expect(keys, [LogicalKeyboardKey.enter, LogicalKeyboardKey.digit1]);
+  });
 }

@@ -1213,7 +1213,10 @@ type QueuedMessage struct {
 	Files  []string               `protobuf:"bytes,3,rep,name=files,proto3" json:"files,omitempty"`
 	Images []*ImageData           `protobuf:"bytes,4,rep,name=images,proto3" json:"images,omitempty"`
 	// The type of the subagent it is for (SendPromptRequest.to_subagent).
-	RelayTo       string `protobuf:"bytes,5,opt,name=relay_to,json=relayTo,proto3" json:"relay_to,omitempty"`
+	RelayTo string `protobuf:"bytes,5,opt,name=relay_to,json=relayTo,proto3" json:"relay_to,omitempty"`
+	// That subagent's tool call (SendPromptRequest.to_subagent), to send it
+	// there again; empty when not known (a replayed message).
+	ToSubagent    string `protobuf:"bytes,6,opt,name=to_subagent,json=toSubagent,proto3" json:"to_subagent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1279,6 +1282,13 @@ func (x *QueuedMessage) GetImages() []*ImageData {
 func (x *QueuedMessage) GetRelayTo() string {
 	if x != nil {
 		return x.RelayTo
+	}
+	return ""
+}
+
+func (x *QueuedMessage) GetToSubagent() string {
+	if x != nil {
+		return x.ToSubagent
 	}
 	return ""
 }
@@ -7269,13 +7279,15 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x05queue\x18\x05 \x01(\bR\x05queue\x12\x10\n" +
 	"\x03now\x18\x06 \x01(\bR\x03now\x12\x1f\n" +
 	"\vto_subagent\x18\a \x01(\tR\n" +
-	"toSubagent\"\x91\x01\n" +
+	"toSubagent\"\xb2\x01\n" +
 	"\rQueuedMessage\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04text\x18\x02 \x01(\tR\x04text\x12\x14\n" +
 	"\x05files\x18\x03 \x03(\tR\x05files\x12+\n" +
 	"\x06images\x18\x04 \x03(\v2\x13.nushi.v1.ImageDataR\x06images\x12\x19\n" +
-	"\brelay_to\x18\x05 \x01(\tR\arelayTo\"@\n" +
+	"\brelay_to\x18\x05 \x01(\tR\arelayTo\x12\x1f\n" +
+	"\vto_subagent\x18\x06 \x01(\tR\n" +
+	"toSubagent\"@\n" +
 	"\tChatQueue\x123\n" +
 	"\bmessages\x18\x01 \x03(\v2\x17.nushi.v1.QueuedMessageR\bmessages\"E\n" +
 	"\x11RewindChatRequest\x12\x17\n" +

@@ -56,21 +56,32 @@ bool _running(Item it) => it.status == 'pending' || it.status == 'in_progress';
 
 final _counted = Expando<(int, int)>();
 
-/// Lines added and removed by [d], counted once per change. One too long
-/// to diff counts every line of each side.
+/// Lines added and removed by [d], counted once per change. A change too
+/// long to diff on the UI thread (DiffBox diffs it in an isolate) counts
+/// lines by how often each occurs on either side: the same numbers but
+/// for lines that moved, in a few milliseconds, not seconds.
 (int, int) lineCounts(FileChange d) => _counted[d] ??= _count(d);
 
 (int, int) _count(FileChange d) {
-  if (tooLongToDiff(d)) {
-    int n(String s) => s.isEmpty ? 0 : '\n'.allMatches(s).length + 1;
-    return (n(d.newText), n(d.oldText));
+  List<String> lines(String s) => s.isEmpty ? [] : s.split('\n');
+  if (d.oldText.length + d.newText.length >= offThread) {
+    final n = <String, int>{};
+    for (final l in lines(d.newText)) {
+      n[l] = (n[l] ?? 0) + 1;
+    }
+    for (final l in lines(d.oldText)) {
+      n[l] = (n[l] ?? 0) - 1;
+    }
+    return (
+      n.values.where((v) => v > 0).fold(0, (a, v) => a + v),
+      n.values.where((v) => v < 0).fold(0, (a, v) => a - v),
+    );
   }
   final ids = <String, int>{};
-  List<int> lines(String s) => [
-    if (s.isNotEmpty)
-      for (final l in s.split('\n')) ids.putIfAbsent(l, () => ids.length),
+  List<int> numbered(String s) => [
+    for (final l in lines(s)) ids.putIfAbsent(l, () => ids.length),
   ];
-  final ops = myersDiff(lines(d.oldText), lines(d.newText));
+  final ops = myersDiff(numbered(d.oldText), numbered(d.newText));
   return (
     ops.where((o) => o == EditOp.insert).length,
     ops.where((o) => o == EditOp.delete).length,
@@ -213,7 +224,8 @@ class ToolCallView extends StatelessWidget {
       removed += r;
     }
     final failed = it.status == 'failed';
-    final hasBody = it.text.isNotEmpty || it.diffs.isNotEmpty;
+    final command = it.toolKind == 'execute' && it.title.isNotEmpty;
+    final hasBody = it.text.isNotEmpty || it.diffs.isNotEmpty || command;
     return _withImages(
       [if (images) ...it.images],
       Collapsible(
@@ -266,6 +278,10 @@ class ToolCallView extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   spacing: 8,
                   children: [
+                    if (command)
+                      FullTitle(
+                        '\$ ${it.title}',
+                      ), // the header cuts it to a line
                     for (final d in it.diffs) DiffBox(d),
                     if (it.text.isNotEmpty) AgentMarkdown(it.text),
                   ],

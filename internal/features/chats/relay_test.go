@@ -32,6 +32,10 @@ func TestMessagesGoToSubagentsThroughTheAgent(t *testing.T) {
 	if it.Kind != model.UserMessage || it.Text != "and README.md" || it.RelayTo != "Explore" {
 		t.Errorf("message = %+v", it)
 	}
+	// Taken back, it is still for that subagent.
+	if m := messageOf(it); m.To != "a1" || m.Relay == nil || m.Relay.Agent != "Explore" {
+		t.Errorf("taken back: %+v", m)
+	}
 
 	// Replayed, the agent's history holds the whole prompt.
 	c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "user_message_chunk",

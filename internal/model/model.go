@@ -129,8 +129,9 @@ type Item struct {
 	// messages.
 	AgentID string
 	// RelayTo is, for a user message, the type of the subagent the agent
-	// was asked to pass it to (see Message.To).
-	RelayTo string
+	// was asked to pass it to, and RelayCall that subagent's tool call
+	// (Message.To; not known after a replay).
+	RelayTo, RelayCall string
 	// Tool is a tool call's tool, when the agent names it ("Read").
 	Tool string
 	// TaskID is the agent's id for the command a tool call left running in

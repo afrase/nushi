@@ -421,6 +421,7 @@ const QueuedMessage$json = {
       '10': 'images'
     },
     {'1': 'relay_to', '3': 5, '4': 1, '5': 9, '10': 'relayTo'},
+    {'1': 'to_subagent', '3': 6, '4': 1, '5': 9, '10': 'toSubagent'},
   ],
 };
 
@@ -428,7 +429,8 @@ const QueuedMessage$json = {
 final $typed_data.Uint8List queuedMessageDescriptor = $convert.base64Decode(
     'Cg1RdWV1ZWRNZXNzYWdlEg4KAmlkGAEgASgJUgJpZBISCgR0ZXh0GAIgASgJUgR0ZXh0EhQKBW'
     'ZpbGVzGAMgAygJUgVmaWxlcxIrCgZpbWFnZXMYBCADKAsyEy5udXNoaS52MS5JbWFnZURhdGFS'
-    'BmltYWdlcxIZCghyZWxheV90bxgFIAEoCVIHcmVsYXlUbw==');
+    'BmltYWdlcxIZCghyZWxheV90bxgFIAEoCVIHcmVsYXlUbxIfCgt0b19zdWJhZ2VudBgGIAEoCV'
+    'IKdG9TdWJhZ2VudA==');
 
 @$core.Deprecated('Use chatQueueDescriptor instead')
 const ChatQueue$json = {

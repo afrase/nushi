@@ -17,4 +17,12 @@ void main() {
     expect(lineCounts(d), (2, 1));
     expect(lineCounts(FileChange(newText: 'x\ny')), (2, 0));
   });
+
+  test('a long rewrite is counted at once, not diffed on the UI thread', () {
+    final old = [for (var i = 0; i < 9000; i++) 'old $i'].join('\n');
+    final next = [for (var i = 0; i < 9000; i++) 'new $i'].join('\n');
+    final clock = Stopwatch()..start();
+    expect(lineCounts(FileChange(oldText: old, newText: next)), (9000, 9000));
+    expect(clock.elapsedMilliseconds, lessThan(300));
+  });
 }

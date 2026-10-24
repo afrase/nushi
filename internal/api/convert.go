@@ -11,7 +11,7 @@ import (
 // Conversions between the features' model types and the API's.
 
 func messageProto(m model.Message) *nushiv1.QueuedMessage {
-	out := &nushiv1.QueuedMessage{Id: m.ID, Text: m.Text, Files: m.Files}
+	out := &nushiv1.QueuedMessage{Id: m.ID, Text: m.Text, Files: m.Files, ToSubagent: m.To}
 	if m.Relay != nil {
 		out.RelayTo = m.Relay.Agent
 	}

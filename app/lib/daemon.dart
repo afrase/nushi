@@ -215,7 +215,7 @@ class Daemon extends ChangeNotifier {
             if (e.hasTerminals()) {
               terminals.apply(e.chatId, e.terminals.terminals);
             } else if (sides[e.chatId] case final side?) {
-              side.apply(e);
+              e.removed ? _sideGone(side) : side.apply(e);
             } else if (e.hasChat()) {
               _chat(e.chat);
               notifyListeners();
@@ -326,10 +326,11 @@ class Daemon extends ChangeNotifier {
 
   bool _worktree(String folder) => worktreeRepos.value.contains(folder);
 
-  /// Moves a chat to [folder], or to a new worktree of its repository. A
-  /// chat without messages follows the choice remembered for [folder].
-  Future<void> moveChat(ChatState chat, String folder, {bool? worktree}) async {
-    if (!await _mayRun(folder, 'Move the chat')) return;
+  /// Moves a chat to [folder], or to a new worktree of its repository, and
+  /// says whether it did (not when the user cancelled). A chat without
+  /// messages follows the choice remembered for [folder].
+  Future<bool> moveChat(ChatState chat, String folder, {bool? worktree}) async {
+    if (!await _mayRun(folder, 'Move the chat')) return false;
     await client.moveChat(
       MoveChatRequest(
         chatId: chat.id,
@@ -337,6 +338,7 @@ class Daemon extends ChangeNotifier {
         worktree: worktree ?? (chat.fresh && _worktree(folder)),
       ),
     );
+    return true;
   }
 
   /// The chats' folders (in a worktree, its repository's), the newest
@@ -357,6 +359,16 @@ class Daemon extends ChangeNotifier {
       ..agent = chat.agent;
     unawaited(_load(side));
     return side;
+  }
+
+  /// A side chat the daemon ended (its chat reloaded, moved or archived,
+  /// or its agent quit).
+  void _sideGone(ChatState side) {
+    sides.remove(side.id);
+    for (final chat in chats.values) {
+      if (chat.side == side) chat.side = null;
+    }
+    notifyListeners();
   }
 
   /// Ends [chat]'s side question, if it has one.

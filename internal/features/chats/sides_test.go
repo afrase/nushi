@@ -57,3 +57,26 @@ func TestSideChatKeepsToItself(t *testing.T) {
 		t.Errorf("deleted = %v, want the side chat's session", agent.deleted)
 	}
 }
+
+// A side chat the daemon ends tells the app showing it.
+func TestASideChatThatEndsSaysSo(t *testing.T) {
+	agent := &fakeAgent{}
+	removed := make(chan string, 10)
+	svc := New("fake", agent.launch, claudeDialect, &memModes{}, &memSessions{}, nil, nil, "", func(e model.Event) {
+		if e.Removed {
+			removed <- e.ChatID
+		}
+	})
+	ctx := context.Background()
+	id, _ := svc.Start(ctx, t.TempDir(), false)
+	side, err := svc.Fork(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Reload(id); err != nil {
+		t.Fatal(err)
+	}
+	if got := <-removed; got != side {
+		t.Errorf("removed %q, want the side chat %q", got, side)
+	}
+}

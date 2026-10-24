@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -70,12 +71,31 @@ bool isImageFile(String path) =>
     _imageTypes.contains(path.split('.').last.toLowerCase());
 
 /// The images attached to the prompt being written, each prepared with
-/// [prepareImage].
+/// [prepare] ([prepareImage]), which takes a moment: [ready] waits for them.
 class Attachments extends ValueNotifier<List<ImageData>> {
-  Attachments() : super(const []);
+  Attachments({this.prepare = prepareImage}) : super(const []);
 
-  Future<void> add(Uint8List bytes) async =>
-      value = [...value, await prepareImage(bytes)];
+  final Future<ImageData> Function(Uint8List) prepare;
+  int _preparing = 0;
+  Completer<void>? _idle;
+
+  /// Adds an image once it is prepared, to the images there are then.
+  Future<void> add(Uint8List bytes) async {
+    _preparing++;
+    try {
+      final image = await prepare(bytes);
+      value = [...value, image];
+    } finally {
+      if (--_preparing == 0) {
+        _idle?.complete();
+        _idle = null;
+      }
+    }
+  }
+
+  /// Done once no image is still being prepared.
+  Future<void> ready() =>
+      _preparing == 0 ? Future.value() : (_idle ??= Completer()).future;
 
   /// Attaches the image files among [paths].
   Future<void> addFiles(Iterable<String> paths) async {
@@ -243,12 +263,21 @@ Widget markdownImage(Uri uri, String? alt) {
   }
   if (uri.scheme == 'file' ||
       (uri.scheme.isEmpty && uri.path.startsWith('/'))) {
-    final file = File(uri.toFilePath());
-    final stat = file.statSync();
-    if (stat.type != FileSystemEntityType.file || stat.size > maxImageFile) {
-      return Text('[image: ${alt ?? uri} (not an image file Nushi reads)]');
+    // Only a plain path: a host or a query isn't a local file (and
+    // toFilePath throws on them, which would break the whole message).
+    final local = uri.host.isEmpty && !uri.hasQuery && !uri.hasFragment;
+    try {
+      final file = File(uri.toFilePath());
+      final stat = file.statSync();
+      if (local &&
+          stat.type == FileSystemEntityType.file &&
+          stat.size <= maxImageFile) {
+        return _Clickable(image: FileImage(file), size: 320);
+      }
+    } on Object {
+      // not a file Nushi reads
     }
-    return _Clickable(image: FileImage(file), size: 320);
+    return Text('[image: ${alt ?? uri} (not an image file Nushi reads)]');
   }
   if (uri.scheme == 'http' || uri.scheme == 'https') {
     return _RemoteImage(uri, alt);
