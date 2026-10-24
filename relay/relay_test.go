@@ -719,3 +719,38 @@ func TestPlainCapBehindAProxy(t *testing.T) {
 		t.Fatalf("another address: %d", code)
 	}
 }
+
+// Behind a proxy, a flood of connections that send their headers slowly
+// (no address known yet, never idle) doesn't keep a daemon and a phone
+// from meeting either, and each goes after FirstWait.
+func TestSlowHeadersFloodDoesntStarve(t *testing.T) {
+	lim := Defaults
+	lim.IPHeader = "X-Test-IP"
+	lim.Total = 50
+	lim.FirstWait = 500 * time.Millisecond
+	srv := NewServer(lim)
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	go srv.Serve(ln)
+	defer srv.Close()
+	var slow []net.Conn
+	for range 200 {
+		c, err := net.Dial("tcp", ln.Addr().String())
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer c.Close()
+		io.WriteString(c, "GET /healthz HTTP/1.1\r\nHost: rel") // and no more
+		slow = append(slow, c)
+	}
+	l, d := pair(t, "ws://"+ln.Addr().String(), newKey())
+	send(t, d, "through")
+	expect(t, l, "through")
+	last := slow[len(slow)-1]
+	last.SetReadDeadline(time.Now().Add(2 * time.Second))
+	if _, err := last.Read(make([]byte, 1)); err != io.EOF {
+		t.Fatalf("a connection without its headers stayed past FirstWait: %v", err)
+	}
+}
