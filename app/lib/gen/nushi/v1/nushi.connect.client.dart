@@ -275,6 +275,62 @@ extension type NushiServiceClient (connect.Transport _transport) {
     );
   }
 
+  /// Puts a chat to sleep (when status.can_sleep): its agent stops as for
+  /// ArchiveChat (a running turn is stopped, side chats end), and the chat
+  /// stays, its transcript too. A message, or anything else that needs the
+  /// agent, reopens the session (ACP session/load); opening it doesn't.
+  Future<nushiv1nushi.SleepChatResponse> sleepChat(
+    nushiv1nushi.SleepChatRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.sleepChat,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// The daemon's settings, and changing them.
+  Future<nushiv1nushi.GetSettingsResponse> getSettings(
+    nushiv1nushi.GetSettingsRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.getSettings,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  Future<nushiv1nushi.SetSettingsResponse> setSettings(
+    nushiv1nushi.SetSettingsRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.setSettings,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Says what DeleteChat removes. The first time, the daemon starts the
   /// agent to learn whether it can delete its history.
   Future<nushiv1nushi.PlanDeleteChatResponse> planDeleteChat(

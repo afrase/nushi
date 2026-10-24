@@ -48,6 +48,14 @@ service NushiService {
   // Archives a chat: its turn is cancelled and its agent stops; it stays
   // listed, read-only. Unarchiving reopens it (ACP session/load).
   rpc ArchiveChat(ArchiveChatRequest) returns (ArchiveChatResponse);
+  // Puts a chat to sleep (when status.can_sleep): its agent stops as for
+  // ArchiveChat (a running turn is stopped, side chats end), and the chat
+  // stays, its transcript too. A message, or anything else that needs the
+  // agent, reopens the session (ACP session/load); opening it doesn't.
+  rpc SleepChat(SleepChatRequest) returns (SleepChatResponse);
+  // The daemon's settings, and changing them.
+  rpc GetSettings(GetSettingsRequest) returns (GetSettingsResponse);
+  rpc SetSettings(SetSettingsRequest) returns (SetSettingsResponse);
   // Says what DeleteChat removes. The first time, the daemon starts the
   // agent to learn whether it can delete its history.
   rpc PlanDeleteChat(PlanDeleteChatRequest) returns (PlanDeleteChatResponse);
@@ -412,6 +420,30 @@ message ArchiveChatRequest {
 }
 
 message ArchiveChatResponse {}
+
+message SleepChatRequest {
+  string chat_id = 1;
+}
+
+message SleepChatResponse {}
+
+message GetSettingsRequest {}
+
+message Settings {
+  // Chats sleep once idle this long, when nothing would be lost (no turn,
+  // queue, prompt, background command, subagent or side chat); 0: never.
+  int32 sleep_after_minutes = 1;
+}
+
+message GetSettingsResponse {
+  Settings settings = 1;
+}
+
+message SetSettingsRequest {
+  Settings settings = 1;
+}
+
+message SetSettingsResponse {}
 
 message PlanDeleteChatRequest {
   string chat_id = 1;
@@ -953,6 +985,12 @@ message ChatStatus {
   // GetContextUsage can ask the agent what fills its context, once the
   // chat is idle.
   bool can_ask_context = 9;
+  // No agent runs for the chat: it sleeps (SleepChat), or wasn't opened
+  // since the daemon started. Never said of an archived chat.
+  bool asleep = 10;
+  // SleepChat can put it to sleep: its agent runs and can reopen the
+  // session.
+  bool can_sleep = 11;
 }
 
 // A shell the user runs beside a chat, in the daemon.

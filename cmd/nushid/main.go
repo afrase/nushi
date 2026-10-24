@@ -111,6 +111,7 @@ func run() error {
 	st := store.New(dir)
 	st.HadMessages = func(s model.Session) bool { return claudehistory.Has(projects, s.SessionID, s.Folder) }
 	chatSvc := chats.New([]chats.Kind{claudeKind, codexKind, anteKind, ompKind}, st, st, git.Worktrees{}, filepath.Join(dir, "scratch"), hub.Publish)
+	chatSvc.AutoSleep(st)
 	termSvc := terminals.New(startShell, filepath.Base(loginShell), chatSvc, hub.Publish)
 	chatSvc.UseTerminals(termSvc)
 	go hub.Subscribe(nil, func() bool { return true }, func(e model.Event) bool { termSvc.Follow(e); return true })

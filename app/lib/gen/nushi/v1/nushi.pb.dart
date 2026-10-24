@@ -2823,6 +2823,365 @@ class ArchiveChatResponse extends $pb.GeneratedMessage {
   static ArchiveChatResponse? _defaultInstance;
 }
 
+class SleepChatRequest extends $pb.GeneratedMessage {
+  factory SleepChatRequest({
+    $core.String? chatId,
+  }) {
+    final result = SleepChatRequest._();
+    if (chatId != null) result.chatId = chatId;
+    return result;
+  }
+
+  SleepChatRequest._();
+
+  factory SleepChatRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SleepChatRequest()..mergeFromBuffer(data, registry);
+  factory SleepChatRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SleepChatRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SleepChatRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SleepChatRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SleepChatRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SleepChatRequest copyWith(void Function(SleepChatRequest) updates) =>
+      super.copyWith((message) => updates(message as SleepChatRequest))
+          as SleepChatRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use SleepChatRequest() / SleepChatRequest.new instead')
+  static SleepChatRequest create() => SleepChatRequest._();
+  static $pb.GeneratedMessage $_createMessage() => SleepChatRequest._();
+  @$core.override
+  SleepChatRequest createEmptyInstance() => SleepChatRequest._();
+  @$core.pragma('dart2js:noInline')
+  static SleepChatRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<SleepChatRequest>(
+          SleepChatRequest.$_createMessage);
+  static SleepChatRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+}
+
+class SleepChatResponse extends $pb.GeneratedMessage {
+  factory SleepChatResponse() => SleepChatResponse._();
+
+  SleepChatResponse._();
+
+  factory SleepChatResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SleepChatResponse()..mergeFromBuffer(data, registry);
+  factory SleepChatResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SleepChatResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SleepChatResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SleepChatResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SleepChatResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SleepChatResponse copyWith(void Function(SleepChatResponse) updates) =>
+      super.copyWith((message) => updates(message as SleepChatResponse))
+          as SleepChatResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use SleepChatResponse() / SleepChatResponse.new instead')
+  static SleepChatResponse create() => SleepChatResponse._();
+  static $pb.GeneratedMessage $_createMessage() => SleepChatResponse._();
+  @$core.override
+  SleepChatResponse createEmptyInstance() => SleepChatResponse._();
+  @$core.pragma('dart2js:noInline')
+  static SleepChatResponse getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<SleepChatResponse>(
+          SleepChatResponse.$_createMessage);
+  static SleepChatResponse? _defaultInstance;
+}
+
+class GetSettingsRequest extends $pb.GeneratedMessage {
+  factory GetSettingsRequest() => GetSettingsRequest._();
+
+  GetSettingsRequest._();
+
+  factory GetSettingsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetSettingsRequest()..mergeFromBuffer(data, registry);
+  factory GetSettingsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetSettingsRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetSettingsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetSettingsRequest.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetSettingsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetSettingsRequest copyWith(void Function(GetSettingsRequest) updates) =>
+      super.copyWith((message) => updates(message as GetSettingsRequest))
+          as GetSettingsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GetSettingsRequest() / GetSettingsRequest.new instead')
+  static GetSettingsRequest create() => GetSettingsRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetSettingsRequest._();
+  @$core.override
+  GetSettingsRequest createEmptyInstance() => GetSettingsRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetSettingsRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetSettingsRequest>(
+          GetSettingsRequest.$_createMessage);
+  static GetSettingsRequest? _defaultInstance;
+}
+
+class Settings extends $pb.GeneratedMessage {
+  factory Settings({
+    $core.int? sleepAfterMinutes,
+  }) {
+    final result = Settings._();
+    if (sleepAfterMinutes != null) result.sleepAfterMinutes = sleepAfterMinutes;
+    return result;
+  }
+
+  Settings._();
+
+  factory Settings.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Settings()..mergeFromBuffer(data, registry);
+  factory Settings.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Settings()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'Settings',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: Settings.$_createMessage)
+    ..aI(1, _omitFieldNames ? '' : 'sleepAfterMinutes')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Settings clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Settings copyWith(void Function(Settings) updates) =>
+      super.copyWith((message) => updates(message as Settings)) as Settings;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use Settings() / Settings.new instead')
+  static Settings create() => Settings._();
+  static $pb.GeneratedMessage $_createMessage() => Settings._();
+  @$core.override
+  Settings createEmptyInstance() => Settings._();
+  @$core.pragma('dart2js:noInline')
+  static Settings getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<Settings>(Settings.$_createMessage);
+  static Settings? _defaultInstance;
+
+  /// Chats sleep once idle this long, when nothing would be lost (no turn,
+  /// queue, prompt, background command, subagent or side chat); 0: never.
+  @$pb.TagNumber(1)
+  $core.int get sleepAfterMinutes => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set sleepAfterMinutes($core.int value) => $_setSignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSleepAfterMinutes() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSleepAfterMinutes() => $_clearField(1);
+}
+
+class GetSettingsResponse extends $pb.GeneratedMessage {
+  factory GetSettingsResponse({
+    Settings? settings,
+  }) {
+    final result = GetSettingsResponse._();
+    if (settings != null) result.settings = settings;
+    return result;
+  }
+
+  GetSettingsResponse._();
+
+  factory GetSettingsResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetSettingsResponse()..mergeFromBuffer(data, registry);
+  factory GetSettingsResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetSettingsResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetSettingsResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetSettingsResponse.$_createMessage)
+    ..aOM<Settings>(1, _omitFieldNames ? '' : 'settings',
+        subBuilder: Settings.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetSettingsResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetSettingsResponse copyWith(void Function(GetSettingsResponse) updates) =>
+      super.copyWith((message) => updates(message as GetSettingsResponse))
+          as GetSettingsResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use GetSettingsResponse() / GetSettingsResponse.new instead')
+  static GetSettingsResponse create() => GetSettingsResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetSettingsResponse._();
+  @$core.override
+  GetSettingsResponse createEmptyInstance() => GetSettingsResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetSettingsResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetSettingsResponse>(
+          GetSettingsResponse.$_createMessage);
+  static GetSettingsResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  Settings get settings => $_getN(0);
+  @$pb.TagNumber(1)
+  set settings(Settings value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSettings() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSettings() => $_clearField(1);
+  @$pb.TagNumber(1)
+  Settings ensureSettings() => $_ensure(0);
+}
+
+class SetSettingsRequest extends $pb.GeneratedMessage {
+  factory SetSettingsRequest({
+    Settings? settings,
+  }) {
+    final result = SetSettingsRequest._();
+    if (settings != null) result.settings = settings;
+    return result;
+  }
+
+  SetSettingsRequest._();
+
+  factory SetSettingsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetSettingsRequest()..mergeFromBuffer(data, registry);
+  factory SetSettingsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetSettingsRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SetSettingsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SetSettingsRequest.$_createMessage)
+    ..aOM<Settings>(1, _omitFieldNames ? '' : 'settings',
+        subBuilder: Settings.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetSettingsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetSettingsRequest copyWith(void Function(SetSettingsRequest) updates) =>
+      super.copyWith((message) => updates(message as SetSettingsRequest))
+          as SetSettingsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use SetSettingsRequest() / SetSettingsRequest.new instead')
+  static SetSettingsRequest create() => SetSettingsRequest._();
+  static $pb.GeneratedMessage $_createMessage() => SetSettingsRequest._();
+  @$core.override
+  SetSettingsRequest createEmptyInstance() => SetSettingsRequest._();
+  @$core.pragma('dart2js:noInline')
+  static SetSettingsRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SetSettingsRequest>(
+          SetSettingsRequest.$_createMessage);
+  static SetSettingsRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  Settings get settings => $_getN(0);
+  @$pb.TagNumber(1)
+  set settings(Settings value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSettings() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSettings() => $_clearField(1);
+  @$pb.TagNumber(1)
+  Settings ensureSettings() => $_ensure(0);
+}
+
+class SetSettingsResponse extends $pb.GeneratedMessage {
+  factory SetSettingsResponse() => SetSettingsResponse._();
+
+  SetSettingsResponse._();
+
+  factory SetSettingsResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetSettingsResponse()..mergeFromBuffer(data, registry);
+  factory SetSettingsResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetSettingsResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SetSettingsResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SetSettingsResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetSettingsResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetSettingsResponse copyWith(void Function(SetSettingsResponse) updates) =>
+      super.copyWith((message) => updates(message as SetSettingsResponse))
+          as SetSettingsResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use SetSettingsResponse() / SetSettingsResponse.new instead')
+  static SetSettingsResponse create() => SetSettingsResponse._();
+  static $pb.GeneratedMessage $_createMessage() => SetSettingsResponse._();
+  @$core.override
+  SetSettingsResponse createEmptyInstance() => SetSettingsResponse._();
+  @$core.pragma('dart2js:noInline')
+  static SetSettingsResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SetSettingsResponse>(
+          SetSettingsResponse.$_createMessage);
+  static SetSettingsResponse? _defaultInstance;
+}
+
 class PlanDeleteChatRequest extends $pb.GeneratedMessage {
   factory PlanDeleteChatRequest({
     $core.String? chatId,
@@ -7657,6 +8016,8 @@ class ChatStatus extends $pb.GeneratedMessage {
     $core.bool? canRewind,
     $core.bool? mcpChanged,
     $core.bool? canAskContext,
+    $core.bool? asleep,
+    $core.bool? canSleep,
   }) {
     final result = ChatStatus._();
     if (busy != null) result.busy = busy;
@@ -7667,6 +8028,8 @@ class ChatStatus extends $pb.GeneratedMessage {
     if (canRewind != null) result.canRewind = canRewind;
     if (mcpChanged != null) result.mcpChanged = mcpChanged;
     if (canAskContext != null) result.canAskContext = canAskContext;
+    if (asleep != null) result.asleep = asleep;
+    if (canSleep != null) result.canSleep = canSleep;
     return result;
   }
 
@@ -7691,6 +8054,8 @@ class ChatStatus extends $pb.GeneratedMessage {
     ..aOB(7, _omitFieldNames ? '' : 'canRewind')
     ..aOB(8, _omitFieldNames ? '' : 'mcpChanged')
     ..aOB(9, _omitFieldNames ? '' : 'canAskContext')
+    ..aOB(10, _omitFieldNames ? '' : 'asleep')
+    ..aOB(11, _omitFieldNames ? '' : 'canSleep')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -7793,6 +8158,28 @@ class ChatStatus extends $pb.GeneratedMessage {
   $core.bool hasCanAskContext() => $_has(7);
   @$pb.TagNumber(9)
   void clearCanAskContext() => $_clearField(9);
+
+  /// No agent runs for the chat: it sleeps (SleepChat), or wasn't opened
+  /// since the daemon started. Never said of an archived chat.
+  @$pb.TagNumber(10)
+  $core.bool get asleep => $_getBF(8);
+  @$pb.TagNumber(10)
+  set asleep($core.bool value) => $_setBool(8, value);
+  @$pb.TagNumber(10)
+  $core.bool hasAsleep() => $_has(8);
+  @$pb.TagNumber(10)
+  void clearAsleep() => $_clearField(10);
+
+  /// SleepChat can put it to sleep: its agent runs and can reopen the
+  /// session.
+  @$pb.TagNumber(11)
+  $core.bool get canSleep => $_getBF(9);
+  @$pb.TagNumber(11)
+  set canSleep($core.bool value) => $_setBool(9, value);
+  @$pb.TagNumber(11)
+  $core.bool hasCanSleep() => $_has(9);
+  @$pb.TagNumber(11)
+  void clearCanSleep() => $_clearField(11);
 }
 
 /// A shell the user runs beside a chat, in the daemon.
@@ -9542,6 +9929,25 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, ArchiveChatRequest request) =>
       _client.invoke<ArchiveChatResponse>(
           ctx, 'NushiService', 'ArchiveChat', request, ArchiveChatResponse());
+
+  /// Puts a chat to sleep (when status.can_sleep): its agent stops as for
+  /// ArchiveChat (a running turn is stopped, side chats end), and the chat
+  /// stays, its transcript too. A message, or anything else that needs the
+  /// agent, reopens the session (ACP session/load); opening it doesn't.
+  $async.Future<SleepChatResponse> sleepChat(
+          $pb.ClientContext? ctx, SleepChatRequest request) =>
+      _client.invoke<SleepChatResponse>(
+          ctx, 'NushiService', 'SleepChat', request, SleepChatResponse());
+
+  /// The daemon's settings, and changing them.
+  $async.Future<GetSettingsResponse> getSettings(
+          $pb.ClientContext? ctx, GetSettingsRequest request) =>
+      _client.invoke<GetSettingsResponse>(
+          ctx, 'NushiService', 'GetSettings', request, GetSettingsResponse());
+  $async.Future<SetSettingsResponse> setSettings(
+          $pb.ClientContext? ctx, SetSettingsRequest request) =>
+      _client.invoke<SetSettingsResponse>(
+          ctx, 'NushiService', 'SetSettings', request, SetSettingsResponse());
 
   /// Says what DeleteChat removes. The first time, the daemon starts the
   /// agent to learn whether it can delete its history.

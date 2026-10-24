@@ -63,6 +63,14 @@ const (
 	// NushiServiceArchiveChatProcedure is the fully-qualified name of the NushiService's ArchiveChat
 	// RPC.
 	NushiServiceArchiveChatProcedure = "/nushi.v1.NushiService/ArchiveChat"
+	// NushiServiceSleepChatProcedure is the fully-qualified name of the NushiService's SleepChat RPC.
+	NushiServiceSleepChatProcedure = "/nushi.v1.NushiService/SleepChat"
+	// NushiServiceGetSettingsProcedure is the fully-qualified name of the NushiService's GetSettings
+	// RPC.
+	NushiServiceGetSettingsProcedure = "/nushi.v1.NushiService/GetSettings"
+	// NushiServiceSetSettingsProcedure is the fully-qualified name of the NushiService's SetSettings
+	// RPC.
+	NushiServiceSetSettingsProcedure = "/nushi.v1.NushiService/SetSettings"
 	// NushiServicePlanDeleteChatProcedure is the fully-qualified name of the NushiService's
 	// PlanDeleteChat RPC.
 	NushiServicePlanDeleteChatProcedure = "/nushi.v1.NushiService/PlanDeleteChat"
@@ -195,6 +203,14 @@ type NushiServiceClient interface {
 	// Archives a chat: its turn is cancelled and its agent stops; it stays
 	// listed, read-only. Unarchiving reopens it (ACP session/load).
 	ArchiveChat(context.Context, *connect.Request[v1.ArchiveChatRequest]) (*connect.Response[v1.ArchiveChatResponse], error)
+	// Puts a chat to sleep (when status.can_sleep): its agent stops as for
+	// ArchiveChat (a running turn is stopped, side chats end), and the chat
+	// stays, its transcript too. A message, or anything else that needs the
+	// agent, reopens the session (ACP session/load); opening it doesn't.
+	SleepChat(context.Context, *connect.Request[v1.SleepChatRequest]) (*connect.Response[v1.SleepChatResponse], error)
+	// The daemon's settings, and changing them.
+	GetSettings(context.Context, *connect.Request[v1.GetSettingsRequest]) (*connect.Response[v1.GetSettingsResponse], error)
+	SetSettings(context.Context, *connect.Request[v1.SetSettingsRequest]) (*connect.Response[v1.SetSettingsResponse], error)
 	// Says what DeleteChat removes. The first time, the daemon starts the
 	// agent to learn whether it can delete its history.
 	PlanDeleteChat(context.Context, *connect.Request[v1.PlanDeleteChatRequest]) (*connect.Response[v1.PlanDeleteChatResponse], error)
@@ -384,6 +400,24 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceArchiveChatProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("ArchiveChat")),
+			connect.WithClientOptions(opts...),
+		),
+		sleepChat: connect.NewClient[v1.SleepChatRequest, v1.SleepChatResponse](
+			httpClient,
+			baseURL+NushiServiceSleepChatProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("SleepChat")),
+			connect.WithClientOptions(opts...),
+		),
+		getSettings: connect.NewClient[v1.GetSettingsRequest, v1.GetSettingsResponse](
+			httpClient,
+			baseURL+NushiServiceGetSettingsProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("GetSettings")),
+			connect.WithClientOptions(opts...),
+		),
+		setSettings: connect.NewClient[v1.SetSettingsRequest, v1.SetSettingsResponse](
+			httpClient,
+			baseURL+NushiServiceSetSettingsProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("SetSettings")),
 			connect.WithClientOptions(opts...),
 		),
 		planDeleteChat: connect.NewClient[v1.PlanDeleteChatRequest, v1.PlanDeleteChatResponse](
@@ -585,6 +619,9 @@ type nushiServiceClient struct {
 	closeSideChat    *connect.Client[v1.CloseSideChatRequest, v1.CloseSideChatResponse]
 	renameChat       *connect.Client[v1.RenameChatRequest, v1.RenameChatResponse]
 	archiveChat      *connect.Client[v1.ArchiveChatRequest, v1.ArchiveChatResponse]
+	sleepChat        *connect.Client[v1.SleepChatRequest, v1.SleepChatResponse]
+	getSettings      *connect.Client[v1.GetSettingsRequest, v1.GetSettingsResponse]
+	setSettings      *connect.Client[v1.SetSettingsRequest, v1.SetSettingsResponse]
 	planDeleteChat   *connect.Client[v1.PlanDeleteChatRequest, v1.PlanDeleteChatResponse]
 	deleteChat       *connect.Client[v1.DeleteChatRequest, v1.DeleteChatResponse]
 	answerPermission *connect.Client[v1.AnswerPermissionRequest, v1.AnswerPermissionResponse]
@@ -685,6 +722,21 @@ func (c *nushiServiceClient) RenameChat(ctx context.Context, req *connect.Reques
 // ArchiveChat calls nushi.v1.NushiService.ArchiveChat.
 func (c *nushiServiceClient) ArchiveChat(ctx context.Context, req *connect.Request[v1.ArchiveChatRequest]) (*connect.Response[v1.ArchiveChatResponse], error) {
 	return c.archiveChat.CallUnary(ctx, req)
+}
+
+// SleepChat calls nushi.v1.NushiService.SleepChat.
+func (c *nushiServiceClient) SleepChat(ctx context.Context, req *connect.Request[v1.SleepChatRequest]) (*connect.Response[v1.SleepChatResponse], error) {
+	return c.sleepChat.CallUnary(ctx, req)
+}
+
+// GetSettings calls nushi.v1.NushiService.GetSettings.
+func (c *nushiServiceClient) GetSettings(ctx context.Context, req *connect.Request[v1.GetSettingsRequest]) (*connect.Response[v1.GetSettingsResponse], error) {
+	return c.getSettings.CallUnary(ctx, req)
+}
+
+// SetSettings calls nushi.v1.NushiService.SetSettings.
+func (c *nushiServiceClient) SetSettings(ctx context.Context, req *connect.Request[v1.SetSettingsRequest]) (*connect.Response[v1.SetSettingsResponse], error) {
+	return c.setSettings.CallUnary(ctx, req)
 }
 
 // PlanDeleteChat calls nushi.v1.NushiService.PlanDeleteChat.
@@ -882,6 +934,14 @@ type NushiServiceHandler interface {
 	// Archives a chat: its turn is cancelled and its agent stops; it stays
 	// listed, read-only. Unarchiving reopens it (ACP session/load).
 	ArchiveChat(context.Context, *connect.Request[v1.ArchiveChatRequest]) (*connect.Response[v1.ArchiveChatResponse], error)
+	// Puts a chat to sleep (when status.can_sleep): its agent stops as for
+	// ArchiveChat (a running turn is stopped, side chats end), and the chat
+	// stays, its transcript too. A message, or anything else that needs the
+	// agent, reopens the session (ACP session/load); opening it doesn't.
+	SleepChat(context.Context, *connect.Request[v1.SleepChatRequest]) (*connect.Response[v1.SleepChatResponse], error)
+	// The daemon's settings, and changing them.
+	GetSettings(context.Context, *connect.Request[v1.GetSettingsRequest]) (*connect.Response[v1.GetSettingsResponse], error)
+	SetSettings(context.Context, *connect.Request[v1.SetSettingsRequest]) (*connect.Response[v1.SetSettingsResponse], error)
 	// Says what DeleteChat removes. The first time, the daemon starts the
 	// agent to learn whether it can delete its history.
 	PlanDeleteChat(context.Context, *connect.Request[v1.PlanDeleteChatRequest]) (*connect.Response[v1.PlanDeleteChatResponse], error)
@@ -1067,6 +1127,24 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceArchiveChatProcedure,
 		svc.ArchiveChat,
 		connect.WithSchema(nushiServiceMethods.ByName("ArchiveChat")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceSleepChatHandler := connect.NewUnaryHandler(
+		NushiServiceSleepChatProcedure,
+		svc.SleepChat,
+		connect.WithSchema(nushiServiceMethods.ByName("SleepChat")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceGetSettingsHandler := connect.NewUnaryHandler(
+		NushiServiceGetSettingsProcedure,
+		svc.GetSettings,
+		connect.WithSchema(nushiServiceMethods.ByName("GetSettings")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceSetSettingsHandler := connect.NewUnaryHandler(
+		NushiServiceSetSettingsProcedure,
+		svc.SetSettings,
+		connect.WithSchema(nushiServiceMethods.ByName("SetSettings")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServicePlanDeleteChatHandler := connect.NewUnaryHandler(
@@ -1279,6 +1357,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceRenameChatHandler.ServeHTTP(w, r)
 		case NushiServiceArchiveChatProcedure:
 			nushiServiceArchiveChatHandler.ServeHTTP(w, r)
+		case NushiServiceSleepChatProcedure:
+			nushiServiceSleepChatHandler.ServeHTTP(w, r)
+		case NushiServiceGetSettingsProcedure:
+			nushiServiceGetSettingsHandler.ServeHTTP(w, r)
+		case NushiServiceSetSettingsProcedure:
+			nushiServiceSetSettingsHandler.ServeHTTP(w, r)
 		case NushiServicePlanDeleteChatProcedure:
 			nushiServicePlanDeleteChatHandler.ServeHTTP(w, r)
 		case NushiServiceDeleteChatProcedure:
@@ -1402,6 +1486,18 @@ func (UnimplementedNushiServiceHandler) RenameChat(context.Context, *connect.Req
 
 func (UnimplementedNushiServiceHandler) ArchiveChat(context.Context, *connect.Request[v1.ArchiveChatRequest]) (*connect.Response[v1.ArchiveChatResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ArchiveChat is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) SleepChat(context.Context, *connect.Request[v1.SleepChatRequest]) (*connect.Response[v1.SleepChatResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.SleepChat is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) GetSettings(context.Context, *connect.Request[v1.GetSettingsRequest]) (*connect.Response[v1.GetSettingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetSettings is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) SetSettings(context.Context, *connect.Request[v1.SetSettingsRequest]) (*connect.Response[v1.SetSettingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.SetSettings is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) PlanDeleteChat(context.Context, *connect.Request[v1.PlanDeleteChatRequest]) (*connect.Response[v1.PlanDeleteChatResponse], error) {

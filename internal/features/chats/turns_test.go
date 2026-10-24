@@ -74,8 +74,8 @@ func TestAPromptInTheAgentsOwnTurn(t *testing.T) {
 	if _, err := svc.Stop(context.Background(), c.id, false); err != nil {
 		t.Fatal(err)
 	}
-	if resp := <-answer; resp.Outcome.Outcome != "cancelled" || svc.Status(c.id).Waiting {
-		t.Errorf("after Stop: %+v, waiting %v", resp.Outcome, svc.Status(c.id).Waiting)
+	if resp := <-answer; resp.Outcome.Outcome != "cancelled" || svc.Status(model.Session{ID: c.id}).Waiting {
+		t.Errorf("after Stop: %+v, waiting %v", resp.Outcome, svc.Status(model.Session{ID: c.id}).Waiting)
 	}
 	if got := agent.onWire(); got[len(got)-1] != "cancel" {
 		t.Errorf("the agent got %q", got)
@@ -182,8 +182,8 @@ func TestReloadLeavesNothingOfTheOldAgent(t *testing.T) {
 		t.Errorf("the prompt got %+v", resp.Outcome)
 	}
 	eventually(t, c, func() bool { return !c.busy })
-	if got := texts(c); slices.Contains(got, "agent:last words") || svc.Status(c.id).Waiting || svc.Status(c.id).MCPChanged {
-		t.Errorf("after Reload: %q, %+v", got, svc.Status(c.id))
+	if got := texts(c); slices.Contains(got, "agent:last words") || svc.Status(model.Session{ID: c.id}).Waiting || svc.Status(model.Session{ID: c.id}).MCPChanged {
+		t.Errorf("after Reload: %q, %+v", got, svc.Status(model.Session{ID: c.id}))
 	}
 }
 
@@ -195,7 +195,7 @@ func TestANewAgentClearsTheMCPChange(t *testing.T) {
 	agent.quit()
 	eventually(t, c, func() bool { return c.agent == nil })
 	turn(t, svc, c, "two")
-	if svc.Status(c.id).MCPChanged {
+	if svc.Status(model.Session{ID: c.id}).MCPChanged {
 		t.Error("the banner outlived the agent it was about")
 	}
 }

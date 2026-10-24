@@ -44,6 +44,9 @@ func (c *chat) rewindableLocked(i int) bool {
 // had before (Earlier), so Delete still deletes it. Files aren't rewound.
 func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Message, error) {
 	c, err := s.chat(chatID)
+	if err == nil {
+		err = s.awake(ctx, c)
+	}
 	if err != nil {
 		return model.Message{}, err
 	}

@@ -34,6 +34,7 @@ type fakeAgent struct {
 	// deletes makes it able to delete sessions, failing with deleteErr.
 	deletes   bool
 	deleteErr error
+	noLoad    bool // it can't reopen sessions
 
 	mu           sync.Mutex
 	gate         chan struct{} // when set, a prompt's turn runs until it is closed
@@ -122,7 +123,7 @@ func (p *proc) DeleteSession(ctx context.Context, req acp.DeleteSessionRequest) 
 }
 
 func (f *fakeAgent) Initialize(context.Context, acp.InitializeRequest) (*acp.InitializeResponse, error) {
-	caps := &acp.AgentCapabilities{LoadSession: true, PromptCapabilities: &acp.PromptCapabilities{Image: true}}
+	caps := &acp.AgentCapabilities{LoadSession: !f.noLoad, PromptCapabilities: &acp.PromptCapabilities{Image: true}}
 	if f.deletes {
 		caps.SessionCapabilities = &acp.SessionCapabilities{Delete: &acp.SessionDeleteCapabilities{}}
 	}
@@ -205,6 +206,8 @@ func (f *fakeAgent) Stop(time.Duration) error {
 }
 
 func (f *fakeAgent) Done() <-chan struct{} { return nil } // used without launch: it never ends
+
+func (f *fakeAgent) Pid() int { return 0 }
 
 func (f *fakeAgent) Cancel(acp.CancelNotification) error {
 	f.mu.Lock()

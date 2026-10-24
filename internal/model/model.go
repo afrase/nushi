@@ -350,6 +350,11 @@ type Status struct {
 	// CanAskContext says ContextUsage can ask the agent what fills its
 	// context, once the chat is idle.
 	CanAskContext bool
+	// Asleep says no agent runs for the chat (it slept, or wasn't opened
+	// since the daemon started): what needs the agent reopens the session.
+	Asleep bool
+	// CanSleep says Sleep can stop its agent: the agent reopens sessions.
+	CanSleep bool
 }
 
 // FileChange is one file's uncommitted change: its text at HEAD and now.

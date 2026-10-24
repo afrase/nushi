@@ -54,10 +54,11 @@ func (s *Service) open(id string) (*chat, error) {
 }
 
 // reopenLocked reopens a chat whose agent isn't running (never reopened,
-// the last try failed, or the agent quit), unless it is archived or going.
+// the last try failed, or the agent quit), unless it is archived, going or
+// asleep.
 func (s *Service) reopenLocked(c *chat) {
-	if c.agent == nil && !c.busy && !c.session.Archived && !c.halting && c.parent == nil && !c.reopenFailed {
-		c.busy = true
+	if c.agent == nil && !c.busy && !c.session.Archived && !c.halting && c.parent == nil && !c.reopenFailed && !c.asleep {
+		c.busy, c.woke = true, make(chan struct{})
 		c.statusChangedLocked()
 		go s.resume(c)
 	}
@@ -88,6 +89,10 @@ func (s *Service) resume(c *chat) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.busy = false
+	if c.woke != nil {
+		close(c.woke)
+		c.woke = nil
+	}
 	if err != nil {
 		c.reopenFailed = true // not again until a message, a reload or a move
 		c.noticeLocked("error", "Couldn't reopen the chat: "+err.Error())
@@ -103,9 +108,17 @@ func (s *Service) resume(c *chat) {
 func (s *Service) load(ctx context.Context, c *chat) error {
 	c.mu.Lock()
 	sid, folder, fresh, gone := c.sid, c.session.Folder, !c.session.HasMessages, folderGone(c.session)
+	retired, before := c.retired, c.before
+	c.retired, c.before = nil, nil
 	c.mu.Unlock()
 	if gone != nil {
 		return gone
+	}
+	if retired != nil { // the agent it slept from may still be ending the session
+		select {
+		case <-retired:
+		case <-time.After(2 * stopGrace):
+		}
 	}
 	o, err := c.openSession(ctx, sid, folder, false)
 	if err != nil && fresh {
@@ -125,6 +138,7 @@ func (s *Service) load(ctx context.Context, c *chat) error {
 	mode, throwaway := c.session.Mode, slices.Clone(c.session.Throwaway)
 	c.mu.Unlock()
 	go s.discard(c, throwaway) // left by an agent that stopped before it could
+	c.restoreConfig(ctx, o.agent, o.sid, before)
 	return c.startMode(ctx, o.agent, o.sid, mode)
 }
 

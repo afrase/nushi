@@ -85,6 +85,15 @@ func Connect(r io.Reader, w io.Writer, h Handler) *Client {
 	})}
 }
 
+// Pid is the agent's process id (the first of its process group), or 0
+// for an agent Connect speaks to.
+func (c *Client) Pid() int {
+	if c.cmd == nil {
+		return 0
+	}
+	return c.cmd.Process.Pid
+}
+
 // Done is closed when the connection to the agent ends.
 func (c *Client) Done() <-chan struct{} { return c.conn.done }
 

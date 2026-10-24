@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -175,4 +176,40 @@ func (s *Store) Sessions() ([]model.Session, error) {
 		out = append(out, sess)
 	}
 	return out, nil
+}
+
+// settings are the daemon's own settings (settings.json).
+type settings struct {
+	SleepAfterMinutes *int `json:"sleepAfterMinutes,omitempty"`
+}
+
+// defaultSleepAfter is how long chats idle before they sleep, until the
+// user picks another time.
+const defaultSleepAfter = 30 * time.Minute
+
+// SleepAfter returns how long a chat idles before its agent sleeps; 0:
+// never.
+func (s *Store) SleepAfter() time.Duration {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var set settings
+	b, err := os.ReadFile(filepath.Join(s.dir, "settings.json"))
+	if err == nil {
+		err = json.Unmarshal(b, &set)
+	}
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		log.Printf("reading settings.json: %v", err)
+	}
+	if set.SleepAfterMinutes == nil {
+		return defaultSleepAfter
+	}
+	return time.Duration(*set.SleepAfterMinutes) * time.Minute
+}
+
+// SetSleepAfter remembers how long a chat idles before its agent sleeps.
+func (s *Store) SetSleepAfter(d time.Duration) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	m := int(d / time.Minute)
+	return writeJSON(filepath.Join(s.dir, "settings.json"), settings{SleepAfterMinutes: &m})
 }

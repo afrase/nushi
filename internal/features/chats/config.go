@@ -90,6 +90,9 @@ func (s *Service) Config(chatID string) []model.ConfigOption {
 // agent accepts, new chats with this agent start in it.
 func (s *Service) SetConfig(ctx context.Context, chatID, id, value string) error {
 	c, err := s.chat(chatID)
+	if err == nil {
+		err = s.awake(ctx, c)
+	}
 	if err != nil {
 		return err
 	}
