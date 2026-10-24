@@ -157,6 +157,7 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 96. Trusting a folder for Codex (ADR 0029) | 8532 | 929 | 14031 | 682 |
 | (96's security fixes) | 8623 | 929 | 14042 | 682 |
 | 97. A Codex chat end to end, and the docs | 8630 | 929 | 14052 | 682 |
+| 98. Ante's bridge (ADR 0030) | 10409 | 975 | 14052 | 682 |
 
 Steps over the ~500-line tripwire (code and tests, without generated code): 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 and this milestone removed more than they added.
 

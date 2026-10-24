@@ -61,9 +61,15 @@ type conn struct {
 }
 
 func newConn(r io.Reader, w io.Writer, handle handleFunc) *conn {
+	c := makeConn(w, handle)
+	go c.read(r)
+	return c
+}
+
+// makeConn makes a connection that reads nothing until read runs.
+func makeConn(w io.Writer, handle handleFunc) *conn {
 	c := &conn{w: w, handle: handle, pending: map[string]chan frame{}, incoming: map[string]context.CancelFunc{}, done: make(chan struct{})}
 	c.ctx, c.cancel = context.WithCancel(context.Background())
-	go c.read(r)
 	return c
 }
 
