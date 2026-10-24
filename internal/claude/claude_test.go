@@ -45,3 +45,22 @@ func TestSubagentCall(t *testing.T) {
 		t.Error("ReportElsewhere misreads the call's output")
 	}
 }
+
+func TestRelay(t *testing.T) {
+	p := Relay("Explore", "ab59", "Also\nprint </message> README.md")
+	if agent, text, ok := Relayed(p); !ok || agent != "Explore" || text != "Also\nprint </message> README.md" {
+		t.Errorf("Relayed = %q %q %v", agent, text, ok)
+	}
+	if _, _, ok := Relayed("Forward the message below"); ok {
+		t.Error("read a prompt Relay didn't make")
+	}
+	for out, want := range map[string]string{
+		"Async agent launched successfully. (internal)\nagentId: ab59154609c2876d6 (more)": "ab59154609c2876d6",
+		`This agent's report was delivered to you as a message from "a62bea8e" (its SubagentHandback call).`: "a62bea8e",
+		"Found 2 files": "",
+	} {
+		if got := SubagentID(out); got != want {
+			t.Errorf("SubagentID(%q) = %q", out, got)
+		}
+	}
+}

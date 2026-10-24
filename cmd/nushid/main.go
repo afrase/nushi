@@ -82,7 +82,8 @@ func run() error {
 	launch := func(h acp.Handler) (chats.Agent, error) { return claude.Start(dir, h) }
 	dialect := chats.Dialect{InitMeta: claude.InitMeta, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall,
 		Background: claude.Background, ReportElsewhere: claude.ReportElsewhere,
-		Shell: claude.Shell, ReadShell: claude.ReadShell, Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle,
+		Shell: claude.Shell, ReadShell: claude.ReadShell,
+		SubagentID: claude.SubagentID, Relay: claude.Relay, Relayed: claude.Relayed, Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle,
 		ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete}
 	st := store.New(dir)
 	st.HadMessages = func(s model.Session) bool { return claudehistory.Has(projects, s.SessionID, s.Folder) }

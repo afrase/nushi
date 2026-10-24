@@ -276,6 +276,9 @@ message SendPromptRequest {
   bool queue = 5;
   // While a turn runs: stop it and send at once.
   bool now = 6;
+  // The tool call of a subagent (one with agent_id) the message is for: the
+  // agent is asked to pass it on unchanged.
+  string to_subagent = 7;
 }
 
 // A message the user sent, waiting in a chat's queue.
@@ -284,6 +287,8 @@ message QueuedMessage {
   string text = 2;
   repeated string files = 3;
   repeated ImageData images = 4;
+  // The type of the subagent it is for (SendPromptRequest.to_subagent).
+  string relay_to = 5;
 }
 
 // Every message waiting in a chat's queue, in order.
@@ -801,6 +806,12 @@ message Item {
   string ran_model = 24;
   // For a tool call that left its command running in the background.
   Shell shell = 25;
+  // For a tool call that starts a subagent: the agent's id for it, when the
+  // agent can pass it messages (SendPromptRequest.to_subagent).
+  string agent_id = 26;
+  // For a user message: the type of the subagent the agent was asked to
+  // pass it to.
+  string relay_to = 27;
 }
 
 // A command the agent runs in the background.

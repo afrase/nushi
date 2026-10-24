@@ -1108,7 +1108,10 @@ type SendPromptRequest struct {
 	// prompt. Without it a busy chat refuses the prompt.
 	Queue bool `protobuf:"varint,5,opt,name=queue,proto3" json:"queue,omitempty"`
 	// While a turn runs: stop it and send at once.
-	Now           bool `protobuf:"varint,6,opt,name=now,proto3" json:"now,omitempty"`
+	Now bool `protobuf:"varint,6,opt,name=now,proto3" json:"now,omitempty"`
+	// The tool call of a subagent (one with agent_id) the message is for: the
+	// agent is asked to pass it on unchanged.
+	ToSubagent    string `protobuf:"bytes,7,opt,name=to_subagent,json=toSubagent,proto3" json:"to_subagent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1185,13 +1188,22 @@ func (x *SendPromptRequest) GetNow() bool {
 	return false
 }
 
+func (x *SendPromptRequest) GetToSubagent() string {
+	if x != nil {
+		return x.ToSubagent
+	}
+	return ""
+}
+
 // A message the user sent, waiting in a chat's queue.
 type QueuedMessage struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Text          string                 `protobuf:"bytes,2,opt,name=text,proto3" json:"text,omitempty"`
-	Files         []string               `protobuf:"bytes,3,rep,name=files,proto3" json:"files,omitempty"`
-	Images        []*ImageData           `protobuf:"bytes,4,rep,name=images,proto3" json:"images,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Id     string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Text   string                 `protobuf:"bytes,2,opt,name=text,proto3" json:"text,omitempty"`
+	Files  []string               `protobuf:"bytes,3,rep,name=files,proto3" json:"files,omitempty"`
+	Images []*ImageData           `protobuf:"bytes,4,rep,name=images,proto3" json:"images,omitempty"`
+	// The type of the subagent it is for (SendPromptRequest.to_subagent).
+	RelayTo       string `protobuf:"bytes,5,opt,name=relay_to,json=relayTo,proto3" json:"relay_to,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1252,6 +1264,13 @@ func (x *QueuedMessage) GetImages() []*ImageData {
 		return x.Images
 	}
 	return nil
+}
+
+func (x *QueuedMessage) GetRelayTo() string {
+	if x != nil {
+		return x.RelayTo
+	}
+	return ""
 }
 
 // Every message waiting in a chat's queue, in order.
@@ -5126,7 +5145,13 @@ type Item struct {
 	Effort   string `protobuf:"bytes,23,opt,name=effort,proto3" json:"effort,omitempty"`
 	RanModel string `protobuf:"bytes,24,opt,name=ran_model,json=ranModel,proto3" json:"ran_model,omitempty"`
 	// For a tool call that left its command running in the background.
-	Shell         *Shell `protobuf:"bytes,25,opt,name=shell,proto3" json:"shell,omitempty"`
+	Shell *Shell `protobuf:"bytes,25,opt,name=shell,proto3" json:"shell,omitempty"`
+	// For a tool call that starts a subagent: the agent's id for it, when the
+	// agent can pass it messages (SendPromptRequest.to_subagent).
+	AgentId string `protobuf:"bytes,26,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	// For a user message: the type of the subagent the agent was asked to
+	// pass it to.
+	RelayTo       string `protobuf:"bytes,27,opt,name=relay_to,json=relayTo,proto3" json:"relay_to,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5334,6 +5359,20 @@ func (x *Item) GetShell() *Shell {
 		return x.Shell
 	}
 	return nil
+}
+
+func (x *Item) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *Item) GetRelayTo() string {
+	if x != nil {
+		return x.RelayTo
+	}
+	return ""
 }
 
 // A command the agent runs in the background.
@@ -7183,19 +7222,22 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x10MoveChatResponse\"\\\n" +
 	"\x11StartChatResponse\x12\x17\n" +
 	"\achat_id\x18\x01 \x01(\tR\x06chatId\x12.\n" +
-	"\x06config\x18\x02 \x03(\v2\x16.nushi.v1.ConfigOptionR\x06config\"\xab\x01\n" +
+	"\x06config\x18\x02 \x03(\v2\x16.nushi.v1.ConfigOptionR\x06config\"\xcc\x01\n" +
 	"\x11SendPromptRequest\x12\x17\n" +
 	"\achat_id\x18\x01 \x01(\tR\x06chatId\x12\x12\n" +
 	"\x04text\x18\x02 \x01(\tR\x04text\x12\x14\n" +
 	"\x05files\x18\x03 \x03(\tR\x05files\x12+\n" +
 	"\x06images\x18\x04 \x03(\v2\x13.nushi.v1.ImageDataR\x06images\x12\x14\n" +
 	"\x05queue\x18\x05 \x01(\bR\x05queue\x12\x10\n" +
-	"\x03now\x18\x06 \x01(\bR\x03now\"v\n" +
+	"\x03now\x18\x06 \x01(\bR\x03now\x12\x1f\n" +
+	"\vto_subagent\x18\a \x01(\tR\n" +
+	"toSubagent\"\x91\x01\n" +
 	"\rQueuedMessage\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04text\x18\x02 \x01(\tR\x04text\x12\x14\n" +
 	"\x05files\x18\x03 \x03(\tR\x05files\x12+\n" +
-	"\x06images\x18\x04 \x03(\v2\x13.nushi.v1.ImageDataR\x06images\"@\n" +
+	"\x06images\x18\x04 \x03(\v2\x13.nushi.v1.ImageDataR\x06images\x12\x19\n" +
+	"\brelay_to\x18\x05 \x01(\tR\arelayTo\"@\n" +
 	"\tChatQueue\x123\n" +
 	"\bmessages\x18\x01 \x03(\v2\x17.nushi.v1.QueuedMessageR\bmessages\"E\n" +
 	"\x11RewindChatRequest\x12\x17\n" +
@@ -7428,7 +7470,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x14\n" +
 	"\x05group\x18\x04 \x01(\tR\x05group\x12\x1d\n" +
 	"\n" +
-	"is_default\x18\x05 \x01(\bR\tisDefault\"\xef\x05\n" +
+	"is_default\x18\x05 \x01(\bR\tisDefault\"\xa5\x06\n" +
 	"\x04Item\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12&\n" +
 	"\x04kind\x18\x02 \x01(\x0e2\x12.nushi.v1.ItemKindR\x04kind\x12\x12\n" +
@@ -7457,7 +7499,9 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x05model\x18\x16 \x01(\tR\x05model\x12\x16\n" +
 	"\x06effort\x18\x17 \x01(\tR\x06effort\x12\x1b\n" +
 	"\tran_model\x18\x18 \x01(\tR\branModel\x12%\n" +
-	"\x05shell\x18\x19 \x01(\v2\x0f.nushi.v1.ShellR\x05shell\"\x87\x01\n" +
+	"\x05shell\x18\x19 \x01(\v2\x0f.nushi.v1.ShellR\x05shell\x12\x19\n" +
+	"\bagent_id\x18\x1a \x01(\tR\aagentId\x12\x19\n" +
+	"\brelay_to\x18\x1b \x01(\tR\arelayTo\"\x87\x01\n" +
 	"\x05Shell\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05state\x18\x02 \x01(\tR\x05state\x12\x18\n" +

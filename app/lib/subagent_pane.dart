@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'chat.dart';
 import 'daemon.dart';
+import 'gen/nushi/v1/nushi.pb.dart';
 import 'markdown.dart';
 import 'settings.dart';
 import 'subagents.dart';
@@ -98,6 +100,8 @@ class SubagentPane extends StatelessWidget {
                       footer: _result(context, s),
                     ),
             ),
+            if (s != null && s.call.agentId.isNotEmpty && !chat.archived)
+              _Relay(chat: chat, daemon: daemon, s: s),
           ],
         );
       },
@@ -225,6 +229,91 @@ class _HeadState extends State<_Head> {
                 style: small,
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A box for a message to the subagent. The agent passes it on (Claude's
+/// SendMessage), which runs a finished subagent again: as any message,
+/// it goes into a running turn, or starts one.
+class _Relay extends StatefulWidget {
+  const _Relay({required this.chat, required this.daemon, required this.s});
+
+  final ChatState chat;
+  final Daemon daemon;
+  final SubagentRun s;
+
+  @override
+  State<_Relay> createState() => _RelayState();
+}
+
+class _RelayState extends State<_Relay> {
+  final _text = TextEditingController();
+  bool _sending = false;
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    final text = _text.text.trim();
+    if (text.isEmpty || _sending) return;
+    setState(() => _sending = true);
+    await tryOrShow(context, () async {
+      await widget.daemon.client.sendPrompt(
+        SendPromptRequest(
+          chatId: widget.chat.id,
+          text: text,
+          queue: true,
+          toSubagent: widget.s.call.id,
+        ),
+      );
+      _text.clear();
+    });
+    if (mounted) setState(() => _sending = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context), t = theme.t;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 8, 6, 8),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: t.borderSubtle)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: CallbackShortcuts(
+              bindings: {
+                const SingleActivator(LogicalKeyboardKey.enter): _send,
+              },
+              child: TextField(
+                controller: _text,
+                minLines: 1,
+                maxLines: 6,
+                style: theme.ui(t.text),
+                decoration: InputDecoration.collapsed(
+                  hintText:
+                      'Message ${widget.s.call.agent} through '
+                      '${widget.chat.agentName}',
+                  hintStyle: theme.ui(t.textMuted),
+                ),
+              ),
+            ),
+          ),
+          IconTap(
+            Icons.arrow_upward,
+            tooltip:
+                '${widget.chat.agentName} passes it on unchanged, with its '
+                'SendMessage tool',
+            size: 15,
+            onTap: _sending ? null : _send,
+          ),
         ],
       ),
     );

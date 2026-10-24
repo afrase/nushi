@@ -83,7 +83,9 @@ String _label(QueuedMessage m) {
   final line = (text.isEmpty ? replies.firstOrNull?.text ?? '' : text)
       .replaceAll(RegExp(r'\s+'), ' ')
       .trim();
-  if (line.isNotEmpty) return line;
+  if (line.isNotEmpty) {
+    return m.relayTo.isEmpty ? line : 'To ${m.relayTo}: $line';
+  }
   if (replies.isNotEmpty) return 'Reply';
   return m.images.length == 1 ? 'An image' : '${m.images.length} images';
 }

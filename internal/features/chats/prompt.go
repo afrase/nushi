@@ -56,6 +56,13 @@ func (s *Service) Prompt(chatID string, m model.Message, how Send) error {
 		<-done
 		c.mu.Lock()
 	}
+	if m.To != "" {
+		r, err := c.relayLocked(m.To)
+		if err != nil {
+			return err
+		}
+		m.Relay = r
+	}
 	switch {
 	case c.reopeningLocked() || c.busy && how == SendQueue:
 		m.ID = rand.Text()
@@ -87,7 +94,7 @@ func (c *chat) closedLocked() error {
 
 // sendLocked shows the message in the transcript and starts a turn with it.
 func (c *chat) sendLocked(m model.Message) {
-	c.addLocked(model.Item{Kind: model.UserMessage, Text: m.Text, Images: m.Images})
+	c.addLocked(userItem(m))
 	c.saveLocked(func(s *model.Session) {
 		s.HasMessages = true
 		if s.Title == "" {
@@ -113,7 +120,11 @@ func (c *chat) startLocked(prompt []acp.ContentBlock) {
 // blocks makes a message the agent's content: the text, links to the files
 // and the images.
 func (c *chat) blocks(m model.Message) []acp.ContentBlock {
-	prompt := []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: m.Text}}}
+	text := m.Text
+	if m.Relay != nil {
+		text = c.dialect.Relay(m.Relay.Agent, m.Relay.AgentID, text)
+	}
+	prompt := []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: text}}}
 	for _, f := range m.Files {
 		path := filepath.Join(c.session.Folder, f)
 		prompt = append(prompt, acp.ContentBlock{Type: "resource_link", ResourceLink: &acp.ResourceLink{
@@ -205,7 +216,7 @@ func (c *chat) steerQueue(agent Agent, sid acp.SessionID) {
 		m := c.queue[0]
 		c.queue = c.queue[1:]
 		c.queueChangedLocked()
-		id := c.addLocked(model.Item{Kind: model.UserMessage, Text: m.Text, Images: m.Images})
+		id := c.addLocked(userItem(m))
 		blocks := c.blocks(m)
 		// The agent's updates may come before its answer: not under the lock.
 		c.mu.Unlock()

@@ -116,6 +116,12 @@ type Item struct {
 	// Effort what it was asked to use ("" when it uses the chat's), and
 	// RanModel the model it ran on, once the agent says.
 	Agent, Prompt, Model, Effort, RanModel string
+	// AgentID is the agent's id for the subagent, when it can pass it
+	// messages.
+	AgentID string
+	// RelayTo is, for a user message, the type of the subagent the agent
+	// was asked to pass it to (see Message.To).
+	RelayTo string
 	// Tool is a tool call's tool, when the agent names it ("Read").
 	Tool string
 	// ForkAt is, for a user message, the agent's message the conversation
@@ -195,6 +201,16 @@ type Message struct {
 	Text   string
 	Files  []string
 	Images []Image
+	// To is the tool call of a subagent the message is for: the agent is
+	// asked to pass it on. Relay is that subagent, once the chat found it.
+	To    string
+	Relay *Relay
+}
+
+// Relay is a subagent a message goes to through the agent: its type and the
+// agent's id for it.
+type Relay struct {
+	Agent, AgentID string
 }
 
 // Event is a change to one chat. Exactly one of Item, Status, Config,

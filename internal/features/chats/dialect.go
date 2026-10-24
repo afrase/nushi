@@ -39,6 +39,14 @@ type Dialect struct {
 	// ended ("" while it runs).
 	Shell     func(output string) (id, file string, ok bool)
 	ReadShell func(id, file string) (output, end string, err error)
+	// SubagentID reads the agent's id for a subagent from its call's output
+	// (Claude's ToolCall sets it while the call runs; a replayed call has
+	// only its output). Relay wraps a message for a subagent into a prompt
+	// that asks the agent to pass it on unchanged; Relayed reads such a
+	// prompt back: the subagent's type and the message.
+	SubagentID func(output string) string
+	Relay      func(agent, agentID, text string) string
+	Relayed    func(prompt string) (agent, text string, ok bool)
 	// Other says a form field is the free-text "Other" answer of the field
 	// before it.
 	Other func(field, before model.Field) bool

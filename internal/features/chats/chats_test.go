@@ -300,6 +300,22 @@ func TestSubagentUpdatesGoUnderTheirToolCall(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("items = %v\nwant %v", got, want)
 	}
+	// A message runs it again (Claude's SendMessage): a step after its
+	// report, then a new report.
+	for _, u := range []acp.SessionUpdate{
+		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "r2", Title: "Read b.go", Kind: "read", Meta: under("a1")}},
+	} {
+		c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: u})
+	}
+	if sa := c.items[0].Subagent; sa.State != "running" || !sa.Ended.IsZero() {
+		t.Errorf("run again: %+v", sa)
+	}
+	c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{
+		ToolCallID: "h2", Title: "SubagentHandback", RawInput: []byte(`{"message":"Second report"}`), Meta: map[string]any{
+			"claudeCode": map[string]any{"parentToolUseId": "a1", "toolName": "SubagentHandback"}}}}})
+	if sa := c.items[0].Subagent; sa.State != "done" || sa.Result != "Second report" {
+		t.Errorf("after its second report: %+v", sa)
+	}
 }
 
 func TestBackgroundShellsAreFollowed(t *testing.T) {
