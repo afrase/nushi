@@ -5,6 +5,7 @@ import 'package:xterm2/xterm.dart';
 import 'gen/nushi/v1/nushi.connect.client.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'menu.dart';
+import 'remote.dart';
 import 'settings.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
@@ -30,8 +31,8 @@ Future<List<String>> _monospaced() async {
 
 const settingsKey = SingleActivator(LogicalKeyboardKey.comma, meta: true);
 
-/// The app's settings (⌘,): the terminal's font and size, and when idle
-/// chats sleep (the daemon's).
+/// The app's settings (⌘,): the terminal's font and size, when idle chats
+/// sleep, and remote access (both the daemon's).
 Future<void> showSettings(BuildContext context, NushiServiceClient client) =>
     showDialog(context: context, builder: (_) => _Settings(client));
 
@@ -183,6 +184,7 @@ class _SettingsState extends State<_Settings> {
                 ),
               ),
             ],
+            RemoteSection(widget.client),
           ],
         ),
       ),

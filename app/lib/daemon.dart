@@ -13,6 +13,7 @@ import 'bundled_daemon.dart';
 import 'chat.dart';
 import 'gen/nushi/v1/nushi.connect.client.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
+import 'remote.dart';
 import 'review.dart';
 import 'settings.dart';
 import 'side_panel.dart';
@@ -186,6 +187,11 @@ class Daemon extends ChangeNotifier {
               live = true;
               unawaited(_listChats());
               unawaited(_listAgents());
+              unawaited(
+                client
+                    .getRemote(GetRemoteRequest())
+                    .then((r) => remoteState.value = r.remote, onError: (_) {}),
+              );
               return;
             }
             if (_held case final held?) {
@@ -203,7 +209,9 @@ class Daemon extends ChangeNotifier {
   List<EventsResponse>? _held;
 
   void _handle(EventsResponse e) {
-    if (e.hasTerminals()) {
+    if (e.hasRemote()) {
+      remoteState.value = e.remote;
+    } else if (e.hasTerminals()) {
       terminals.apply(e.chatId, e.terminals.terminals);
     } else if (sides[e.chatId] case final side?) {
       e.removed ? _sideGone(side) : side.apply(e);
