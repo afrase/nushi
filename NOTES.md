@@ -1,29 +1,56 @@
 # Notes
 
-## Summary (2026-10-24, after step 97: milestone S)
+## Summary (2026-10-24, after step 100: milestone T)
 
-Milestone S added Codex, through codex-acp 2.2.2 (Codex 0.160.1), as a second agent beside Claude, in steps 92–97 plus two rounds of security fixes on Codex's trust card. One commit each on `main`, all pushed. `make test` passes.
+Milestone T added Ante and oh-my-pi (omp) as agents, in steps 98–100 plus three rounds of security fixes. One commit each on `main`, all pushed. `make test` passes.
 
-**What each feature does for Codex**
-- Works: new chat (picked from the menu beside "New chat", which then defaults to it), a chat keeps its agent, the start mode remembered per agent, reopening after a daemon restart (`session/load`, transcript rebuilt), commands with their output (from `_meta.terminal_output_delta`; a failed one starts "Exit code N"), permission cards, steering (`_session/steering`), Stop, questions (only in Plan collaboration mode; the note field is the card's "Other"), the title (`session_info_update`), usage (context used/size, last turn's tokens; no cost), model and effort as two pickers (codex-acp's `model` and `reasoning_effort` options, once the model has metadata: see the config below), Rewind (the same AIR fork meta Claude's adapter takes; Codex cuts after the turn that has the message), side questions and moves (session/fork, a move with another cwd and no history copy), Delete (codex-acp archives: `codex resume` offers to unarchive, and the dialog says so), `codex resume <id>` in a terminal (checked with the temp `CODEX_HOME`), the trust card (every `.codex` file Codex reads, whole).
-- Switched off: the context breakdown (no `/context`: the card shows used and size), the MCP view and card (a note that Codex uses its own config; "MCP servers…" leaves the chat menu), subagents and background shells (codex-acp reports a subagent as an ordinary tool call, and background terminals only to JetBrains AIR), cost.
-- Partial: plans arrive as message text (codex-acp sends `plan` updates only to clients advertising a `plan` capability ACP v1 doesn't have); after a Rewind Codex renames the chat after the next message.
+- **Ante** runs through a bridge of Nushi's own (`nushid ante-acp`, ADR 0030), not `ante-acp`: there was no newer `ante-acp` than 0.2.0 (no commits to it since 2026-09-30; Ante 0.2.15 came out 2026-10-23 with nothing for ACP), and a first cut at filling its gaps upstream was dropped for the bridge. The bridge maps Ante 0.2.14's `serve` protocol (one `ante serve --stdio` per session) to what Nushi uses; nothing outside `internal/ante` knows that protocol.
+- **oh-my-pi** speaks ACP itself (`omp --mode acp`). It needs Bun, so it starts as `npx --yes -p bun@1.4.3 -p @oh-my-pi/pi-coding-agent@18.12.6 omp --mode acp` (both pinned): npx puts the Bun omp's `#!/usr/bin/env bun` finds on the PATH.
+- **Seams fixed rather than special-cased**: `Dialect.Context` (an agent says what fills its context through an extension of its own: no throwaway fork), `Agent.Call` for extensions, the agent's side of ACP in `acp` (`Peer`), and one package for the trust card's files (`internal/folderfiles`, which `codextrust` now uses too). Each new agent is otherwise its package(s), a dialect and a launch entry.
 
-**Tried by hand** (dev daemon and app on `/tmp/nds`, a temp `CODEX_HOME` with the config below, `FIREWORKS_API_KEY` passed only through the dev daemon's environment, throwaway repositories in the session's scratchpad, 1280×800 dark): a Codex chat end to end (New Codex chat, a move into a repository, Read-only mode, `ls` and `printf hi > x.txt` with its permission card, steering a message into a running `sleep 8`, Stop during `sleep 30`, reopen after a daemon restart, Rewind, a Plan-mode question answered, Delete), the trust card for a `.codex/config.toml` (Cancel, then Start anyway remembered), and a Claude chat working beside it (reply, context breakdown, MCP card, Delete). Codex's environment from a Finder launch was checked with a probe app (ADR 0028).
+**Features per agent**
 
-**Not tried by hand**: a side question on Codex, moving a Codex chat that has messages (codex-acp forks into another cwd: checked over ACP only), a Codex image prompt, a Codex chat where `npx` or the login is missing (the start fails with "couldn't start Codex: …" in the error dialog), the trust card's "changed since you looked" retry (a unit test covers it), and the light theme.
+| | Claude | Codex | Ante | oh-my-pi |
+|---|---|---|---|---|
+| Reopen after a daemon restart | yes | yes | yes (the resume's replay) | yes |
+| Side chats (fork) | yes | yes | yes (whole, while Ante is idle) | yes (whole) |
+| Rewind | yes | yes (cuts after the turn) | yes (cuts after the turn) | no (no fork at a message) |
+| Move to another folder | yes | yes | no | no |
+| Steering | yes | yes | yes (taken at the next step) | yes |
+| Stop | yes | yes | yes | yes |
+| Permissions | modes | modes | strict/auto/yolo; Allow, Allow for this session, Deny | bash, delete and move ask; writes never do (not mode-driven) |
+| Questions | yes | Plan mode only | yes (AskUser) | yes (its ask tool) |
+| Model, effort | yes | yes | yes (the provider's catalog models; effort when the model reasons) | yes |
+| Usage | used/size, cost, last turn | used/size, last turn | used/size, last turn | used/size, cost, last turn |
+| Context breakdown | yes (`/context`) | no | yes (`ContextReport`) | no |
+| Delete takes the history | yes | archives | yes | no (omp has no delete; the dialog says so) |
+| Resume in a terminal | `claude --resume` | `codex resume` | `ante --resume` | `omp --resume` |
+| Trust card | `.claude`, `.mcp.json` | `.codex` | nearest `.ante/settings.json` | every file omp loads code or settings from |
+| MCP view | yes | a note | a note | a note |
+| Subagents, background shells | yes | no | no | no |
+
+**Tried by hand** (the packaged app and a dev daemon on `/tmp/ndt`, `FIREWORKS_API_KEY` only in the dev daemon's environment, `HOME` a temp folder for omp, `ANTE_HOME` the real `~/.ante`, read-only; DeepSeek V4.1 Flash; scratch folders): an Ante chat (New Ante chat, model picked, a Write with its diff and permission, a Bash command, an AskUser question, steering into a running `sleep 8`, Stop during `sleep 30`, reopen after a daemon restart, Rewind, Delete taking both of Ante's sessions), and an omp chat (model and effort picked, a command with its permission, a question with omp's Other, steering, Stop, reopen after a restart, Delete saying omp keeps its history). The bridge and omp were also driven over ACP by script (load, list, fork, close; omp's `session/delete` answers "Unknown ACP ext method").
+
+**Not tried by hand**: `ante --resume` and `omp --resume` in a terminal; the trust cards for Ante and omp in the app (unit tests cover them); side chats and moves for Ante and omp; images for either; a multi-select AskUser; "Allow for this session" and Ante's auto mode; omp's Plan mode; a Claude or Codex chat beside them in this run (the dev daemon's `HOME` was a temp folder); a missing `ante` or Bun; Ante 0.2.15 (this Mac has 0.2.14); the light theme.
 
 **Needs your attention**
-- The API went from 43 to 44 (ListAgents; StartChat, CheckFolder and TrustFolder take an agent; CheckFolder returns a key TrustFolder must send back): press "Restart daemon" in the installed app after `make install`.
-- Codex's config: put the `config.toml` and `models.json` under "Codex config for you" in `~/.codex` yourself. Without `models.json` every Codex reply starts with "Model metadata … not found" and the window reads 258k.
-- Product calls, in "Decisions to revisit" under "New in S".
-- Security: see "Security notes" (Codex trust, the key, codex-acp trusting every cwd).
+- No API bump (still 44), but the daemon changed: press "Restart daemon" in the installed app after `make install`.
+- Set-up: "Ante and oh-my-pi for you" below. Nothing to install for either; omp's first start downloads Bun and omp (about 10 s).
+- Product calls, in "Decisions to revisit" under "New in T". Security: "Security notes" (the bridge, omp's project code).
 
-**Size**: the daemon went from 8,128 to 8,630 lines of Go, the app from 13,918 to 14,052 lines of Dart. Every step stayed under the ~500-line tripwire. `chats.go`, `daemon.dart` and the fake agent were split to stay under ~400 lines a file.
+**Size**: the daemon went from 8,630 to 10,862 lines of Go (the bridge is about 1,500 of them; steps 98 and 99 were over the ~500-line tripwire), `acp` from 929 to 975. The app didn't change.
 
-**Dependencies**: `github.com/BurntSushi/toml` (Go, step 96: Codex's config is TOML).
+**Dependencies**: none new.
 
-**Left behind by the testing**: nothing. The dev chats were deleted with Delete; the dev data folder (`/tmp/nds`), the temp Codex homes, the throwaway repositories, the downloaded adapter and Codex source, Claude's empty history folder for the dev chat, and a Codex app-server that `codex resume` left running were removed. The Fireworks key is in no file under the dev data folder, the scratchpad or the repository (checked with grep, the key on stdin).
+**Left behind by the testing**: nothing. The dev chats were deleted with Delete; Ante's test sessions went with them, and the bridge runs' logs (`~/.ante/logs/2026-10-24/ante.{65796,71140,71141,71591,71592,71669,71670,71717}.log`) and `~/.ante/run/` (one finished background job) were removed; `~/.ante/settings.json`, `catalog.json`, `versions.json`, `user_input_history.jsonl` and `tip_history.json` are unchanged (checksums), and the rest of `~/.ante` is as it was. The temp Ante and omp homes, npm caches, the dev data folder, the Ante clone and the omp source were removed; no `~/.omp` was made. The Fireworks key is in no file under them, the scratchpad or the repository (checked with grep, the key on stdin).
+
+## Demo (milestone T)
+
+1. Open the menu beside "New chat" and pick Ante: the header says Ante with its model; the Context card shows Ante's own breakdown before any message.
+2. Pick DeepSeek V4.1 Flash, ask Ante to write a file: a permission card with the diff (Allow, Allow for this session, Deny).
+3. Ask Ante to use AskUser: a question card with an Other field.
+4. Restart the daemon and open the chat: it comes back from Ante's session; Rewind on a message forks Ante's session after the turn before it.
+5. Pick oh-my-pi: model and effort pickers from omp; a command asks first; Delete says omp keeps its history.
 
 ## Demo (milestone S)
 
@@ -160,8 +187,10 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 98. Ante's bridge (ADR 0030) | 10409 | 975 | 14052 | 682 |
 | (98's security fixes) | 10517 | 975 | 14052 | 682 |
 | 99. Ante and oh-my-pi as agents (ADR 0031) | 10784 | 975 | 14052 | 682 |
+| (99's security fix) | 10852 | 975 | 14052 | 682 |
+| 100. Ante and oh-my-pi by hand, and the docs | 10862 | 975 | 14052 | 682 |
 
-Steps over the ~500-line tripwire (code and tests, without generated code): 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 and this milestone removed more than they added.
+Steps over the ~500-line tripwire (code and tests, without generated code): 98 (2,384 with its tests: Ante's whole bridge and its fake), 99 (901: two agents, two trust packages, the shared trust files), 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 removed more than it added.
 
 ## Agent facts (claude-agent-acp 0.94.0, Claude Code 2.1.308–309)
 
@@ -220,6 +249,31 @@ What the code depends on, and how the adapter behaves. Everything Nushi does abo
 - Without model metadata each turn starts with an agent message without `messageId`: "Warning: Model metadata for `…` not found…", and the window is 258,400.
 - Plans come as agent text: codex-acp sends `plan` updates only to clients advertising a `plan` capability.
 
+## Agent facts (Ante 0.2.14, through the bridge)
+
+What the bridge (`internal/ante`) depends on, seen with `ante serve --stdio`; the protocol is Ante's open `crates/protocol-shape/src/msg.rs` at v0.2.14.
+- Ops go in as `{"op": …, "id": "op_<ULID>"}` (a bad id is an `Error`); events come out with `parent`, the op they answer. An input's op id is its turn's id. No greeting.
+- `StartSession{cwd}` answers `SessionStart` (session id, cwd, permission mode, model with `effort` and maybe `supported_efforts`, provider); unset fields come from `~/.ante/settings.json` (the user's default model, Kimi K3 here). `ResumeSession` answers `SessionEnd` (of any running one), `SessionStart`, `ExtensionRefreshed`, then the saved event log, with no end marker: the bridge sends `ContextReport` right behind it and takes its answer as the end (the host answers ops in order). Permission mode always comes from the current settings on a resume; the model is the session's.
+- Live, the host echoes every input as `UserInput` (steers too, which the docs say it doesn't); streams `MessageDelta`/`ThinkingDelta`, then repeats the whole text (dropped once deltas came; replays have only the whole texts). A turn can hold several `AgentMessage`s; the bridge names them `<turn id>.<n>`.
+- An approval (`TurnPause.Approval`) comes before the call's `ToolStart`; a denied call ends with a `ToolEnd{Denied}` and no start. `AcceptAlways` would write an allow rule into `settings.json`, so the bridge never offers it. Questions are `TurnPause.Question` (AskUser), answered with `QuestionResponse`.
+- `UpdateSession` (model, effort, permission mode) answers `SessionUpdated` and doesn't write `settings.json` (checked). `ForkSession{at: <input id>}` needs an idle session and saves the fork without starting it (`SessionForked`); the bridge resumes it on a host of its own.
+- `ToolEnd.result_json` shapes: Bash `{"Completed":{exit_code, stdout, stderr}}` (status `Failed` when the code isn't 0), Read `{file_type:{Text:{lines}}}`, Edit `{patch, summary}`, Write `{lines_written, message}`, AskUser `{message}`, a denial a string.
+- Sessions are `~/.ante/sessions/<id>/{meta.json, events.jsonl, dialog.json}` (`ANTE_HOME` moves `~/.ante`, logs included); there's no op to list or delete them, so the bridge reads `meta.json` and removes the folder. A resume rewrites `meta.json` with zero usage.
+- A project's `.ante/settings.json` can't widen what Ante may do: mode, allow rules, MCP servers, system prompt, model and provider are ignored with an `Info` notice (checked).
+- `ante catalog` prints every provider's models (no keys: a provider's key is named by `env_key`).
+
+## Agent facts (oh-my-pi 18.12.6)
+
+What the code depends on (`internal/omp*`), from driving `omp --mode acp` and its source.
+- `initialize`: `agentInfo` `omp`, `loadSession`, `sessionCapabilities` list, fork, resume, close (no delete: `session/delete` fails "Unknown ACP ext method"), `promptCapabilities.image`, `_meta.steering.supported`; extensions `_omp/usage`, `_omp/extensions` and more.
+- `session/new` returns legacy modes and config options `mode` (default, plan; not permissions), `model` (`<provider>/<id>`, the models of providers with a key: with `FIREWORKS_API_KEY`, 35 Fireworks ones; Kimi K3 by default) and `thinking` (category `thought_level`: off, auto, then the model's levels). A model picked stays with the session.
+- Permissions: only bash, delete and move ask (Allow once, Always allow, Reject, Always reject); writes and edits never do. The request comes before the call's `tool_call`. A command's title starts with `$ ` (the dialect drops it).
+- Questions: its ask tool exists only for a client with form elicitation; each question is `qN` with `oneOf`, then `qN__other`, "Other (type your own)". An empty answer ends the turn as cancelled.
+- `usage_update` carries used, size and cost; the prompt result carries usage. A prompt during a turn cancels the turn; `_session/steering` injects ("injected").
+- `session/load` replays user messages, tool calls and agent messages (fresh message ids each time); `session/fork` copies the whole session.
+- Sessions are `~/.omp/agent/sessions/<folder name>/<time>_<id>.jsonl`; all of omp's state is under `~/.omp` (`PI_CODING_AGENT_DIR` moves only `agent/`), so a test points `HOME` at a temp folder.
+- It runs only under Bun (≥ 1.3.14); npx installs Bun's npm package beside it.
+
 ## Codex config for you
 
 Put these in `~/.codex/` (I didn't write them). `config.toml`:
@@ -259,9 +313,28 @@ curl -sL https://raw.githubusercontent.com/openai/codex/rust-v0.160.1/codex-rs/m
 
 The catalog replaces Codex's own list, so the model picker shows only this model. `FIREWORKS_API_KEY` must be exported by fish's config (it is): agents get the login shell's environment.
 
+## Ante and oh-my-pi for you
+
+- **Ante**: nothing to install. The bridge is inside `nushid`; it runs the `ante` on `PATH`, else `~/.ante/bin/ante` (yours is 0.2.14, the version it follows; 0.2.15, out on 2026-10-23, changed nothing in the protocol per its notes, so `ante update` should be fine). It uses your `~/.ante` as Ante does: your default model (Kimi K3 on Fireworks) until you pick another in the chat. `FIREWORKS_API_KEY` reaches it from fish, as it reaches Codex.
+- **oh-my-pi**: nothing to install. The first chat downloads Bun 1.4.3 and omp 18.12.6 through npx (about 10 s). omp reads `FIREWORKS_API_KEY` from the environment and lists Fireworks' models; it starts on Kimi K3 at max effort. To start on DeepSeek, put this in `~/.omp/agent/config.yml` (I didn't write it):
+
+```yaml
+modelRoles:
+  default: fireworks/deepseek-v4.1-flash
+```
+
+  For `omp` in a terminal (`omp --resume <id>`), install Bun and omp yourself: `brew install oven-sh/bun/bun` (or `npm i -g bun`) and `bun add -g @oh-my-pi/pi-coding-agent@18.12.6`.
+
 ## Decisions to revisit
 
 Open questions; what's settled is in `docs/adr/` or in the code.
+
+- New in T: Ante's permission options are Allow, "Allow for this session" and Deny; Ante's own "always" (which writes an allow rule into its settings) isn't offered. A denial sends Ante no message.
+- New in T: an Ante fork (side chat, rewind) needs Ante idle: while it works, the fork fails with Ante's error. A rewind forks after the turn holding the agent's last message, as Codex does.
+- New in T: Ante's Delete removes the session's folder in `~/.ante/sessions` (Ante has no op for it). omp's Delete leaves omp's history (omp has none), and the dialog says so.
+- New in T: the bridge drops Ante's notices (`Info`, such as "Ignoring `mcp_servers` in .ante/settings.json") and its background-job ends (`TaskEnd`); the model's own text is unchanged.
+- New in T: omp starts on its default model (Kimi K3, max effort): the start mode is remembered per agent, the model isn't.
+- New in T: the omp trust card shows code and settings from `.claude`, `.codex`, `.gemini`, `.opencode` and `.cursor` too, since omp loads them: a repository with Claude hooks asks once for omp as well.
 
 - New in S: "New chat" starts the agent of the newest chat (archived ones count), else the first the daemon lists (Claude); the menu beside it, and "New chat here" on a folder, pick another. The button names the agent ("New Codex chat"). Nothing is stored for it.
 - New in S: a chat whose agent the daemon no longer knows can't be opened, renamed or deleted from Nushi ("Nushi doesn't know the agent").
@@ -310,7 +383,8 @@ Open questions; what's settled is in `docs/adr/` or in the code.
 
 - Git actions from the Changes view: stage and unstage files or hunks, commit with a message, maybe push. It's read-only toward git for now ([ADR 0019](docs/adr/0019-changes-read-only-toward-git.md)); doing it would mean revisiting that ADR (git writes next to an agent that may be writing too).
 - More agents, if wanted: opencode (`opencode acp`; Fireworks built in, no steering, delete or questions, permissions only in `opencode.json`), Gemini CLI (`gemini --acp`; Gemini API only), goose (`goose acp`). Each is a `chats.Kind` and its own `internal/<agent>*` packages. Nushi never reads the agents' keys; each agent reads its own config.
-- Ante is dropped: Codex covers Fireworks (see `~/Developer/nushi-agents-research.md` for its ACP adapter, `ante-acp`, should it come back).
+- Ante: subagents (the `Agent` tool's child events carry no parent link) and background jobs (`TaskEnd`), skills as slash commands (`SlashCommand`), Ante's `Info` notices in the transcript, and its native `RewindSession` (Nushi rewinds by forking). Upstream, `ante-acp` could take the bridge's mapping; the bridge would then be one launch entry.
+- omp: its `/context` for the Context card, MCP servers sent on `session/new` (omp ignores project MCP configs in ACP mode), and deleting a session's files.
 - Codex's MCP servers (its `config.toml`'s `mcp_servers`, `/mcp` over ACP) in the MCP view; Codex's background terminals and subagent sessions (codex-acp offers them to clients that negotiate them).
 - Subagents as ACP child sessions (the RFD form claude-agent-acp offers a client that advertises `subagents`): a background subagent's steps after a daemon restart, and a stop button per subagent. See step 51.
 
@@ -322,6 +396,8 @@ Open questions; what's settled is in `docs/adr/` or in the code.
 ## Security notes to look at
 
 - Codex runs as you through `npx --yes @agentclientprotocol/codex-acp@2.2.2` (pinned by version, not hash; it brings `@openai/codex` 0.160.1), started like Claude's adapter. codex-acp tells Codex to trust every session's cwd, so a folder's `.codex/config.toml` (MCP servers, the environment of every command, sandbox settings, plugins) and rules load without Codex asking; Nushi's card is the only warning (ADR 0029). The card's key is a hash of every file it showed, computed with the card and checked again on "Start anyway"; links aren't followed. Codex's trust record is read, never written. Agents get the login shell's environment, secrets included (ADR 0028).
+- Ante runs as you through the bridge, `nushid ante-acp`, which starts `ante serve --stdio` (the `ante` on `PATH` or in `~/.ante/bin`, 0.2.14 or newer) in the chat's folder. The bridge never reads Ante's settings; it reads `ante catalog` (models only) and each session's `meta.json`, and removes a session's folder only for an id of Ante's form (`ses_` and a ULID). A Write's old text, for its diff, is read only from a regular file of at most 1 MB, without following a link. Prompt images go to a private temp folder the bridge removes when it ends. The trust card shows the nearest `.ante/settings.json` (ADR 0031).
+- omp runs as you through `npx --yes -p bun@1.4.3 -p @oh-my-pi/pi-coding-agent@18.12.6` (pinned by version, not hash) and loads a project's extensions, hooks, tools, command modules and LSP servers without asking; the trust card shows each such file whole (ADR 0031). Its bash asks first; its writes don't.
 - Agents run as you, through `npx --yes @agentclientprotocol/claude-agent-acp@0.94.0` (pinned by version, not hash), started in the daemon's data folder so a project's `node_modules` or `.npmrc` can't swap it. A chat's folder reaches the agent only as `cwd`.
 - A panic on something the agent sent becomes a JSON-RPC error; a malformed form is refused.
 - `ListFiles` lists any absolute folder a client names (names, 20,000 at most); mentioned files go to the agent as `file://` links.
@@ -342,4 +418,5 @@ Open questions; what's settled is in `docs/adr/` or in the code.
 - Terminals: the shell is the user's login shell from `id -P` (the user database), never the daemon's `$SHELL`. fish 4 asks the terminal's Primary Device Attributes as it starts and waits 10 seconds for the answer; the app answers queries in a replay only for a terminal it opened itself (anyone attaching later would answer twice).
 - Driving the app by hand: System Events' `click at` doesn't reach a Flutter window; a few lines of Swift posting `CGEvent` mouse and key events do. Screenshots are 2× the window's points.
 - App tests get a data folder in the temporary folder (`FLUTTER_TEST`); never point them at the real one.
+- Ante and omp by hand: start the dev daemon with `ANTE_HOME` set and `HOME` at a temp folder (omp keeps everything under `~/.omp`), the key read from `fish -l -c` with the real `HOME`. Quit the dev app before stopping the dev daemon: an app that finds no daemon starts its bundled one through the login shell, with the real `HOME` and none of the dev daemon's environment.
 - Codex by hand: start the dev daemon with `CODEX_HOME` at a temp folder holding the config above, and `FIREWORKS_API_KEY` read from `fish -l -c` inside the launching script, never on a command line or in a file. `codex resume` in a pty needs answers to the terminal's colour and cursor queries.
