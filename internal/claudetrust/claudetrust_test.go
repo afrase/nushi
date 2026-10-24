@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/afrase/nushi/internal/model"
@@ -183,8 +184,8 @@ func TestAnMCPFileNushiCantRead(t *testing.T) {
 	}
 }
 
-// A skill's hooks written in YAML the line reader doesn't follow are shown
-// whole, not missed, even when it follows some of them.
+// A skill's hooks are read as YAML, in any form; front matter whose hooks
+// have a shape Nushi doesn't follow is shown whole, not missed.
 func TestSkillHooksInAnyForm(t *testing.T) {
 	dir := t.TempDir()
 	plain := "hooks:\n  Stop:\n    - matcher: Edit\n      hooks:\n        - type: command\n          command: \"echo one\"\n        - type: command\n          command: echo two"
@@ -195,13 +196,18 @@ func TestSkillHooksInAnyForm(t *testing.T) {
 	}{
 		{front: plain, want: []string{"echo one", "echo two"}},
 		{front: "name: x\ndescription: no hooks here"},
-		{front: "name: x\nhooks: {PreToolUse: [{hooks: [{type: command, command: \"echo flow\"}]}]}", whole: true},
-		{front: "\"hooks\":\n  Stop:\n    - hooks:\n        - command: echo quoted", whole: true},
-		{front: plain + "\n        - type: command\n          command: |\n            echo block", whole: true},
-		{front: plain + "\n        - {type: command, command: echo inline}", whole: true},
-		{front: plain + "\n        - type: command\n          \"command\": echo key", whole: true},
-		{front: plain + "\n          command: &a echo anchor", whole: true},
+		{front: "name: x\nhooks: {PreToolUse: [{hooks: [{type: command, command: \"echo flow\"}]}]}", want: []string{"echo flow"}},
+		{front: "\"hooks\":\n  Stop:\n    - hooks:\n        - \"command\": echo quoted", want: []string{"echo quoted"}},
+		{front: plain + "\n        - type: command\n          command: |\n            echo block\n            echo more", want: []string{"echo one", "echo two", "echo block\necho more"}},
+		{front: plain + "\n        - type: command\n          command: echo folded\n            and continued", want: []string{"echo one", "echo two", "echo folded and continued"}},
+		{front: plain + "\n        - {type: command, command: echo inline}", want: []string{"echo one", "echo two", "echo inline"}},
+		{front: plain + "\n        - type: prompt\n          prompt: check it", want: []string{"echo one", "echo two", "check it"}},
+		{front: "x: &a echo anchor\n" + plain + "\n        - command: *a", whole: true},
+		{front: plain + "\n        - type: command\n          command: [echo, list]", whole: true},
+		{front: plain + "\n          nested: {hooks: {}}", whole: true},
 		{front: "name: x\nmeta:\n  hooks:\n    Stop: []", whole: true},
+		{front: "hooks:\n  Stop: oops: x", whole: true},
+		{front: "hooks: {}\nhooks:\n  Stop: [{hooks: [{command: echo dup}]}]", whole: true},
 	} {
 		path := filepath.Join(dir, "SKILL.md")
 		write(t, path, "---\n"+c.front+"\n---\nbody\n")
@@ -212,5 +218,16 @@ func TestSkillHooksInAnyForm(t *testing.T) {
 		if got := skillHooks(path); !reflect.DeepEqual(got, want) {
 			t.Errorf("%q:\n%q\nwant %q", c.front, got, want)
 		}
+	}
+}
+
+// A long file Nushi can't read shows cut, and says so.
+func TestALongUnreadFileSaysItsCut(t *testing.T) {
+	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
+	repo := t.TempDir()
+	write(t, filepath.Join(repo, ".mcp.json"), "{"+strings.Repeat(" ", 10<<10))
+	runs, _ := Trust{}.Runs(repo)
+	if len(runs) != 1 || len(runs[0].Command) != 4<<10 || !strings.Contains(runs[0].What, "first 4 KB of 11 KB") {
+		t.Errorf("runs = %q", runs[0].What)
 	}
 }
