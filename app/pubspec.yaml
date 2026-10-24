@@ -40,3 +40,7 @@ flutter:
     - family: JetBrains Mono
       fonts:
         - asset: fonts/JetBrainsMono.ttf
+    # Nerd Fonts 3.5.1's symbols only (MIT), the terminal's fallback.
+    - family: Symbols Nerd Font Mono
+      fonts:
+        - asset: fonts/SymbolsNerdFontMono-Regular.ttf

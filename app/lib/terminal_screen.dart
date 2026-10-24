@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:xterm2/xterm.dart';
 
 import 'gen/nushi/v1/nushi.pb.dart' as pb;
+import 'settings.dart';
+import 'settings_dialog.dart';
 import 'terminal_find.dart';
 import 'terminal_panel.dart';
 import 'terminal_tabs.dart';
@@ -44,6 +46,7 @@ class TerminalScreen extends StatelessWidget {
         () => closeTerminal(context, terms, info),
       ),
       toggleTerminalKey: VoidCallbackIntent(onHide),
+      settingsKey: VoidCallbackIntent(() => showSettings(context)),
       cmd(LogicalKeyboardKey.keyF): VoidCallbackIntent(
         () => s.finding.value = true,
       ),
@@ -69,7 +72,7 @@ class TerminalScreen extends StatelessWidget {
       children: [
         Expanded(
           child: ListenableBuilder(
-            listenable: s,
+            listenable: Listenable.merge([s, terminalFont, terminalFontSize]),
             builder: (context, _) => Stack(
               children: [
                 TerminalView(
@@ -80,11 +83,7 @@ class TerminalScreen extends StatelessWidget {
                   focusNode: s.focus,
                   autofocus: true,
                   theme: terminalTheme(t),
-                  textStyle: const TerminalStyle(
-                    fontFamily: NushiTheme.codeFont,
-                    fontSize: TermSession.fontSize,
-                    height: TermSession.lineHeight,
-                  ),
+                  textStyle: terminalStyle(),
                   padding: const EdgeInsets.fromLTRB(10, 6, 6, 4),
                   cursorType: TerminalCursorType.verticalBar,
                   cursorBlink: true,

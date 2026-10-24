@@ -17,6 +17,7 @@ class Terminals extends ChangeNotifier {
   final NushiServiceClient client;
   final _lists = <String, List<pb.Terminal>>{}; // by chat, once known
   final _sessions = <String, TermSession>{}; // by terminal id
+  final _opened = <String>{}; // opened here, not attached to yet
 
   /// The tab shown in each chat's panel, by chat.
   final active = <String, String>{};
@@ -60,7 +61,8 @@ class Terminals extends ChangeNotifier {
 
   /// The emulator of a terminal, attached to it.
   TermSession session(pb.Terminal t) =>
-      _sessions[t.id] ??= TermSession(client, t.id, t.chatId);
+      _sessions[t.id] ??= TermSession(client, t.id, t.chatId)
+        ..fresh = _opened.remove(t.id);
 
   /// Opens a terminal for a chat (in [folder], or the chat's) and shows it.
   Future<void> open(String chatId, {String folder = ''}) async {
@@ -76,6 +78,7 @@ class Terminals extends ChangeNotifier {
     if (!list.any((t) => t.id == resp.terminal.id)) {
       _lists[chatId] = [...list, resp.terminal];
     }
+    _opened.add(resp.terminal.id);
     active[chatId] = focusNext = resp.terminal.id;
     notifyListeners();
   }
@@ -115,7 +118,9 @@ class Terminals extends ChangeNotifier {
         rows: s?.terminal.viewHeight ?? 24,
       ),
     );
-    s?.attach();
+    s
+      ?..fresh = true
+      ..attach();
   }
 }
 
@@ -146,10 +151,13 @@ class TermSession extends ChangeNotifier {
   /// The real target of the OSC 8 link under the pointer, if any.
   final hoveredLink = ValueNotifier<String?>(null);
 
-  static const fontSize = 12.5, lineHeight = 1.25;
   late Terminal terminal;
   StreamSubscription<String>? _sub;
   bool _replaying = false; // answers to queries in the replay aren't sent
+
+  /// Whether no one has attached to the shell yet: then its queries in the
+  /// replay still wait for answers (fish waits 10 seconds for one).
+  bool fresh = false;
   bool _disposed = false;
   bool _exited = false; // the stream said so: it has ended for good
   final _input = BytesBuilder();
@@ -206,8 +214,8 @@ class TermSession extends ChangeNotifier {
         .transform(const Utf8Decoder(allowMalformed: true))
         .listen(
           (s) {
-            _replaying = first;
-            first = false;
+            _replaying = first && !fresh;
+            first = fresh = false;
             terminal.write(s);
             _replaying = false;
           },

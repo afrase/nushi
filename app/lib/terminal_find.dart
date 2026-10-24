@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:xterm2/xterm.dart';
 
+import 'settings_dialog.dart';
 import 'terminals.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
@@ -106,7 +107,7 @@ class _FindBarState extends State<FindBar> {
     setState(() {});
     final scroll = _s.scroll;
     if (_matches.isEmpty || !scroll.hasClients) return;
-    const lineHeight = TermSession.fontSize * TermSession.lineHeight;
+    final style = terminalStyle(), lineHeight = style.fontSize * style.height;
     final y = _matches[_current].range.begin.y - _s.terminal.viewHeight / 2;
     final p = scroll.position;
     scroll.jumpTo((y * lineHeight).clamp(0, p.maxScrollExtent));

@@ -2,6 +2,7 @@
 package main
 
 import (
+	"bytes"
 	"cmp"
 	"crypto/rand"
 	"encoding/hex"
@@ -12,8 +13,10 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 
@@ -136,11 +139,22 @@ func listen(path string) (net.Listener, error) {
 	return net.Listen("unix", path)
 }
 
-var loginShell = cmp.Or(os.Getenv("SHELL"), "/bin/zsh")
+// loginShell is the user's shell from the user database, as Terminal picks
+// it, else $SHELL, else zsh. The daemon's own $SHELL is whatever started it.
+var loginShell = func() string {
+	// id -P prints the user's passwd entry; the shell is its last field.
+	out, _ := exec.Command("/usr/bin/id", "-P").Output()
+	shell := strings.TrimSpace(string(out[bytes.LastIndexByte(out, ':')+1:]))
+	if st, err := os.Stat(shell); err == nil && st.Mode().IsRegular() && st.Mode()&0o111 != 0 {
+		return shell
+	}
+	return cmp.Or(os.Getenv("SHELL"), "/bin/zsh")
+}()
 
 // startShell starts the user's login shell in a terminal, with the daemon's
-// environment.
+// environment and $SHELL naming that shell.
 func startShell(folder string, cols, rows int, changed func()) (terminals.Shell, error) {
-	env := append(os.Environ(), "TERM=xterm-256color", "COLORTERM=truecolor")
+	env := slices.DeleteFunc(os.Environ(), func(v string) bool { return strings.HasPrefix(v, "SHELL=") })
+	env = append(env, "SHELL="+loginShell, "TERM=xterm-256color", "COLORTERM=truecolor")
 	return terminal.Start([]string{loginShell, "-l"}, folder, env, cols, rows, changed)
 }

@@ -16,6 +16,7 @@ class _Daemon implements Transport {
   final calls = <String>[];
   final written = <String>[];
   var opened = 0;
+  var replay = '\$ ';
 
   @override
   Future<UnaryResponse<I, O>> unary<I extends Object, O extends Object>(
@@ -44,7 +45,7 @@ class _Daemon implements Transport {
     CallOptions? options,
   ]) async {
     final out = StreamController<O>()
-      ..add(AttachTerminalResponse(data: utf8.encode('\$ ')) as O);
+      ..add(AttachTerminalResponse(data: utf8.encode(replay)) as O);
     return StreamResponse(spec, Headers(), out.stream, Headers());
   }
 
@@ -59,6 +60,27 @@ Future<void> _meta(WidgetTester tester, LogicalKeyboardKey key) async {
   await tester.pump();
 }
 
+Future<void> _panel(
+  WidgetTester tester,
+  Terminals terms, {
+  VoidCallback? onHide,
+}) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      theme: const NushiTheme(Tokens.dark).toThemeData(),
+      home: Scaffold(
+        body: TerminalPanel(
+          chatId: 'chat',
+          terms: terms,
+          onHide: onHide ?? () {},
+          showChange: (_) async => false,
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets('tabs, and the keys the panel keeps from the shell', (
     tester,
@@ -66,20 +88,7 @@ void main() {
     final daemon = _Daemon();
     final terms = Terminals(NushiServiceClient(daemon));
     var hidden = false;
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: TerminalPanel(
-            chatId: 'chat',
-            terms: terms,
-            onHide: () => hidden = true,
-            showChange: (_) async => false,
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await _panel(tester, terms, onHide: () => hidden = true);
     expect(find.text('zsh — veg'), findsNWidgets(2));
     expect(terms.active['chat'], 'b'); // the last one shows
 
@@ -113,5 +122,18 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.backquote);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
     expect(hidden, isTrue);
+  });
+
+  // fish waits 10 seconds for an answer to the query it starts with.
+  testWidgets('only a shell opened here gets answers to its replayed queries', (
+    tester,
+  ) async {
+    final daemon = _Daemon()..replay = '\x1b[c\$ ';
+    final terms = Terminals(NushiServiceClient(daemon));
+    await _panel(tester, terms);
+    expect(daemon.written, isEmpty); // answered when it was opened
+    await _meta(tester, LogicalKeyboardKey.keyT);
+    await tester.pumpAndSettle();
+    expect(daemon.written.join(), startsWith('\x1b[?'));
   });
 }
