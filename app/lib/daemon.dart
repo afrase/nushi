@@ -104,23 +104,29 @@ class Daemon extends ChangeNotifier {
   /// moves there (see TrustCard).
   TrustAsk? trustAsk;
 
-  /// Whether a chat may start or move into [folder] (doing [action]): when
-  /// the folder brings code for the agent to run that nobody trusted,
+  /// Whether a chat with [agent] may start or move into [folder] (doing
+  /// [action]): when the folder brings code for it to run that nobody trusted,
   /// [trustAsk] shows it and this waits for "Start anyway", which the
   /// daemon remembers, or Cancel.
-  Future<bool> _mayRun(String folder, String action) async {
+  Future<bool> _mayRun(String folder, String action, String agent) async {
     if (folder.isEmpty) return true;
-    final check = await client.checkFolder(CheckFolderRequest(folder: folder));
+    final check = await client.checkFolder(
+      CheckFolderRequest(folder: folder, agent: agent),
+    );
     if (check.runs.isEmpty) return true;
     trustAsk?.decide(false);
-    final ask = trustAsk = TrustAsk(folder, action, check.runs);
+    final ask = trustAsk = TrustAsk(folder, action, check.runs, agent);
     notifyListeners();
     final start = await ask.answer.future;
     if (trustAsk == ask) {
       trustAsk = null;
       notifyListeners();
     }
-    if (start) await client.trustFolder(TrustFolderRequest(folder: folder));
+    if (start) {
+      await client.trustFolder(
+        TrustFolderRequest(folder: folder, agent: agent),
+      );
+    }
     return start;
   }
 
@@ -319,7 +325,7 @@ class Daemon extends ChangeNotifier {
   /// repository if that's the choice remembered for it.
   Future<void> startChat(String folder, {String? agent}) async {
     agent ??= lastAgent(chats.values);
-    if (!await _mayRun(folder, 'Start a chat')) return;
+    if (!await _mayRun(folder, 'Start a chat', agent)) return;
     final before = (selectedId, mcpFolder);
     final resp = await client.startChat(
       StartChatRequest(
@@ -344,7 +350,7 @@ class Daemon extends ChangeNotifier {
   /// says whether it did (not when the user cancelled). A chat without
   /// messages follows the choice remembered for [folder].
   Future<bool> moveChat(ChatState chat, String folder, {bool? worktree}) async {
-    if (!await _mayRun(folder, 'Move the chat')) return false;
+    if (!await _mayRun(folder, 'Move the chat', chat.agent)) return false;
     await client.moveChat(
       MoveChatRequest(
         chatId: chat.id,

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'agents.dart';
 import 'folder_button.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'theme/theme.dart';
@@ -50,7 +51,7 @@ class TrustCard extends StatelessWidget {
                   ],
                 ),
                 Text(
-                  'Claude runs these without asking as soon as a chat starts '
+                  '${knownAgents[ask.agent]?.title ?? 'The agent'} runs these without asking as soon as a chat starts '
                   'in ${tildePath(ask.folder)}, and it hasn’t been told to '
                   'trust the folder. Look before you start.',
                   style: theme.ui(t.textSecondary, size: 12),
@@ -146,11 +147,12 @@ class _Block extends StatelessWidget {
 /// What [folder] would have the agent run, shown before a chat starts or
 /// moves there; [answer] is true for "Start anyway".
 class TrustAsk {
-  TrustAsk(this.folder, this.action, this.runs);
+  TrustAsk(this.folder, this.action, this.runs, this.agent);
 
   final String folder;
   final String action;
   final List<FolderRun> runs;
+  final String agent; // the agent that runs them (Agent.name)
   final answer = Completer<bool>();
 
   void decide(bool start) {

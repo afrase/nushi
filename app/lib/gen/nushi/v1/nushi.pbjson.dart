@@ -2156,13 +2156,14 @@ const CheckFolderRequest$json = {
   '1': 'CheckFolderRequest',
   '2': [
     {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
+    {'1': 'agent', '3': 2, '4': 1, '5': 9, '10': 'agent'},
   ],
 };
 
 /// Descriptor for `CheckFolderRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List checkFolderRequestDescriptor =
-    $convert.base64Decode(
-        'ChJDaGVja0ZvbGRlclJlcXVlc3QSFgoGZm9sZGVyGAEgASgJUgZmb2xkZXI=');
+final $typed_data.Uint8List checkFolderRequestDescriptor = $convert.base64Decode(
+    'ChJDaGVja0ZvbGRlclJlcXVlc3QSFgoGZm9sZGVyGAEgASgJUgZmb2xkZXISFAoFYWdlbnQYAi'
+    'ABKAlSBWFnZW50');
 
 @$core.Deprecated('Use checkFolderResponseDescriptor instead')
 const CheckFolderResponse$json = {
@@ -2204,13 +2205,14 @@ const TrustFolderRequest$json = {
   '1': 'TrustFolderRequest',
   '2': [
     {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
+    {'1': 'agent', '3': 2, '4': 1, '5': 9, '10': 'agent'},
   ],
 };
 
 /// Descriptor for `TrustFolderRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List trustFolderRequestDescriptor =
-    $convert.base64Decode(
-        'ChJUcnVzdEZvbGRlclJlcXVlc3QSFgoGZm9sZGVyGAEgASgJUgZmb2xkZXI=');
+final $typed_data.Uint8List trustFolderRequestDescriptor = $convert.base64Decode(
+    'ChJUcnVzdEZvbGRlclJlcXVlc3QSFgoGZm9sZGVyGAEgASgJUgZmb2xkZXISFAoFYWdlbnQYAi'
+    'ABKAlSBWFnZW50');
 
 @$core.Deprecated('Use trustFolderResponseDescriptor instead')
 const TrustFolderResponse$json = {

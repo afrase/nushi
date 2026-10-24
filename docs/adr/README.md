@@ -28,3 +28,4 @@
 - [0026](0026-the-transcript-lays-out-every-item.md) The transcript lays out every item, not a lazy list
 - [0027](0027-what-lives-only-in-memory.md) What lives only in memory, in the daemon and the app
 - [0028](0028-agents-get-the-login-shells-environment.md) Agents get the login shell's environment, through the daemon's; Nushi doesn't read or filter it
+- [0029](0029-warn-before-a-folder-runs-code-for-codex.md) Warn before a folder's own code runs, for Codex too; "Start anyway" is kept per agent

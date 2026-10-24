@@ -7144,8 +7144,10 @@ func (*CloseTerminalResponse) Descriptor() ([]byte, []int) {
 }
 
 type CheckFolderRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Folder        string                 `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Folder string                 `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
+	// The agent the chat runs (Agent.name); empty for the default.
+	Agent         string `protobuf:"bytes,2,opt,name=agent,proto3" json:"agent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -7183,6 +7185,13 @@ func (*CheckFolderRequest) Descriptor() ([]byte, []int) {
 func (x *CheckFolderRequest) GetFolder() string {
 	if x != nil {
 		return x.Folder
+	}
+	return ""
+}
+
+func (x *CheckFolderRequest) GetAgent() string {
+	if x != nil {
+		return x.Agent
 	}
 	return ""
 }
@@ -7296,8 +7305,10 @@ func (x *FolderRun) GetCommand() string {
 }
 
 type TrustFolderRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Folder        string                 `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Folder string                 `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
+	// The agent the chat runs (Agent.name); empty for the default.
+	Agent         string `protobuf:"bytes,2,opt,name=agent,proto3" json:"agent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -7335,6 +7346,13 @@ func (*TrustFolderRequest) Descriptor() ([]byte, []int) {
 func (x *TrustFolderRequest) GetFolder() string {
 	if x != nil {
 		return x.Folder
+	}
+	return ""
+}
+
+func (x *TrustFolderRequest) GetAgent() string {
+	if x != nil {
+		return x.Agent
 	}
 	return ""
 }
@@ -7840,17 +7858,19 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x14CloseTerminalRequest\x12\x1f\n" +
 	"\vterminal_id\x18\x01 \x01(\tR\n" +
 	"terminalId\"\x17\n" +
-	"\x15CloseTerminalResponse\",\n" +
+	"\x15CloseTerminalResponse\"B\n" +
 	"\x12CheckFolderRequest\x12\x16\n" +
-	"\x06folder\x18\x01 \x01(\tR\x06folder\">\n" +
+	"\x06folder\x18\x01 \x01(\tR\x06folder\x12\x14\n" +
+	"\x05agent\x18\x02 \x01(\tR\x05agent\">\n" +
 	"\x13CheckFolderResponse\x12'\n" +
 	"\x04runs\x18\x01 \x03(\v2\x13.nushi.v1.FolderRunR\x04runs\"M\n" +
 	"\tFolderRun\x12\x12\n" +
 	"\x04file\x18\x01 \x01(\tR\x04file\x12\x12\n" +
 	"\x04what\x18\x02 \x01(\tR\x04what\x12\x18\n" +
-	"\acommand\x18\x03 \x01(\tR\acommand\",\n" +
+	"\acommand\x18\x03 \x01(\tR\acommand\"B\n" +
 	"\x12TrustFolderRequest\x12\x16\n" +
-	"\x06folder\x18\x01 \x01(\tR\x06folder\"\x15\n" +
+	"\x06folder\x18\x01 \x01(\tR\x06folder\x12\x14\n" +
+	"\x05agent\x18\x02 \x01(\tR\x05agent\"\x15\n" +
 	"\x13TrustFolderResponse*\xea\x01\n" +
 	"\bItemKind\x12\x19\n" +
 	"\x15ITEM_KIND_UNSPECIFIED\x10\x00\x12\x1a\n" +

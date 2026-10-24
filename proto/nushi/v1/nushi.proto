@@ -1049,6 +1049,8 @@ message CloseTerminalResponse {}
 
 message CheckFolderRequest {
   string folder = 1;
+  // The agent the chat runs (Agent.name); empty for the default.
+  string agent = 2;
 }
 
 message CheckFolderResponse {
@@ -1067,6 +1069,8 @@ message FolderRun {
 
 message TrustFolderRequest {
   string folder = 1;
+  // The agent the chat runs (Agent.name); empty for the default.
+  string agent = 2;
 }
 
 message TrustFolderResponse {}

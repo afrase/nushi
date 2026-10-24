@@ -24,7 +24,7 @@ void main() {
         what: 'MCP server web',
         command: 'https://e.com',
       ),
-    ]);
+    ], 'claude');
     await tester.pumpWidget(
       MaterialApp(
         theme: const NushiTheme(Tokens.dark).toThemeData(),

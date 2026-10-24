@@ -2,6 +2,7 @@
 package api
 
 import (
+	"cmp"
 	"context"
 	"crypto/subtle"
 	"fmt"
@@ -132,6 +133,9 @@ func (s *server) ListAgents(context.Context, *connect.Request[nushiv1.ListAgents
 	}
 	return connect.NewResponse(resp), nil
 }
+
+// agent names the agent a request names, or the default for "".
+func (s *server) agent(name string) string { return cmp.Or(name, s.chats.Agents()[0].Name) }
 
 func (s *server) MoveChat(ctx context.Context, req *connect.Request[nushiv1.MoveChatRequest]) (*connect.Response[nushiv1.MoveChatResponse], error) {
 	if err := s.chats.Move(ctx, req.Msg.ChatId, req.Msg.Folder, req.Msg.Worktree); err != nil {
@@ -298,7 +302,7 @@ func (s *server) GetContextUsage(ctx context.Context, req *connect.Request[nushi
 }
 
 func (s *server) CheckFolder(_ context.Context, req *connect.Request[nushiv1.CheckFolderRequest]) (*connect.Response[nushiv1.CheckFolderResponse], error) {
-	runs, err := s.trust.Check(req.Msg.Folder)
+	runs, err := s.trust.Check(s.agent(req.Msg.Agent), req.Msg.Folder)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
@@ -310,7 +314,7 @@ func (s *server) CheckFolder(_ context.Context, req *connect.Request[nushiv1.Che
 }
 
 func (s *server) TrustFolder(_ context.Context, req *connect.Request[nushiv1.TrustFolderRequest]) (*connect.Response[nushiv1.TrustFolderResponse], error) {
-	if err := s.trust.Trust(req.Msg.Folder); err != nil {
+	if err := s.trust.Trust(s.agent(req.Msg.Agent), req.Msg.Folder); err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
 	return connect.NewResponse(&nushiv1.TrustFolderResponse{}), nil
