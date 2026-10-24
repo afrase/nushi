@@ -189,6 +189,7 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 99. Ante and oh-my-pi as agents (ADR 0031) | 10784 | 975 | 14052 | 682 |
 | (99's security fix) | 10852 | 975 | 14052 | 682 |
 | 100. Ante and oh-my-pi by hand, and the docs | 10862 | 975 | 14052 | 682 |
+| 101. Memory and speed measured; agents without npx's process | 10909 | 975 | 14052 | 682 |
 
 Steps over the ~500-line tripwire (code and tests, without generated code): 98 (2,384 with its tests: Ante's whole bridge and its fake), 99 (901: two agents, two trust packages, the shared trust files), 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 removed more than it added.
 
@@ -199,7 +200,7 @@ What the code depends on, and how the adapter behaves. Everything Nushi does abo
 **Sessions**
 - `session/new` requires `mcpServers`: send `[]`, never `null`. Claude starts a session in the mode its settings say; it reports modes both as legacy `modes` and as a `mode` config option (Nushi shows only the option). Config options: `mode` (Manual, Accept edits, Plan, Auto, Bypass permissions), `model` (Default, Opus 5.5, Fable 5.1, Sonnet 5.5, Haiku 5.5), `effort` (category `thought_level`), `fast` (category `model_config`, a select), `agent` (no category). `set_config_option` answers with the full set.
 - Claude names a session itself soon after the first prompt (`session_info_update`); until then Nushi uses the prompt's first line. A fork is titled "<title> (fork)", a fork of a fork "(fork) (fork)": ignored, so a moved or rewound chat keeps its title. Asking `/context` before the first message makes Claude name the chat after it, so it isn't asked then.
-- Claude keeps a session on disk only once it has a message: `session/load` of an empty one fails, and Nushi then starts a new one. `session/load` replays the user's and agent's messages and the tool calls (final status and output, `messageId`s included), not permission prompts or questions; a cancelled turn replays as "[Request interrupted by user]". It sends no `usage_update`. Loading takes under a second once npx has the adapter.
+- Claude keeps a session on disk only once it has a message: `session/load` of an empty one fails, and Nushi then starts a new one. `session/load` replays the user's and agent's messages and the tool calls (final status and output, `messageId`s included), not permission prompts or questions; a cancelled turn replays as "[Request interrupted by user]". It sends no `usage_update`. Loading takes under a second once npx has the adapter. A loaded session is on Claude's default model and effort, not the ones picked before (Haiku came back as Opus 5.5).
 - Claude's history folder for a session is named after its cwd: the real path (symlinks resolved, `/tmp` is `/private/tmp`), NFC, every UTF-16 unit that isn't an ASCII letter or digit replaced by `-`; past 200 characters cut, with a base-36 hash of the path. `CLAUDE_CONFIG_DIR` moves the projects folder.
 - `sessionCapabilities`: `fork`, `close`, `resume`, `list`, `delete`. `session/fork` copies the transcript into a new session on the same process (updates come tagged with the fork's id); with another `cwd` it fails, since it looks for the source only in the new folder's history, so a move copies the transcript there first ([ADR 0014](docs/adr/0014-moving-a-chat-forks-it.md)). After a fork the reported cost starts again near zero.
 - Forking at a message: `_meta.jetbrains.air.fork = {version: 1, messageId}` on `session/fork` keeps the conversation up to that agent message, it included, for any client, after `session/load` too ([ADR 0020](docs/adr/0020-rewind-through-a-vendor-fork.md)). The adapter is recognized by `agentInfo.name` `@agentclientprotocol/claude-agent-acp`.
@@ -273,6 +274,38 @@ What the code depends on (`internal/omp*`), from driving `omp --mode acp` and it
 - `session/load` replays user messages, tool calls and agent messages (fresh message ids each time); `session/fork` copies the whole session.
 - Sessions are `~/.omp/agent/sessions/<folder name>/<time>_<id>.jsonl`; all of omp's state is under `~/.omp` (`PI_CODING_AGENT_DIR` moves only `agent/`), so a test points `HOME` at a temp folder.
 - It runs only under Bun (≥ 1.3.14); npx installs Bun's npm package beside it.
+
+## Memory and speed (step 101)
+
+Measured on this Mac (M-series, macOS 27) with footprint (`phys_footprint`, Activity Monitor's Memory), read through `proc_pid_rusage` for each process in an agent's tree. Agents driven over ACP by a scratch harness, then a dev daemon and a profile build of the app.
+
+**Per agent, the whole process tree** (MB; "before" is as launched through npx, "after" without npx's process, step 101):
+
+| | started | after one short turn | after 9 turns (each a shell call and a 300-word reply) | idle 60 s later |
+|---|---|---|---|---|
+| Claude, before | 296 | 305 (npx 60, adapter 80, `claude` 165) | 300 (npx 45, adapter 67, `claude` 189) | 299 |
+| Claude, after | 276 | 244 (adapter 80, `claude` 164) | | |
+| Codex, before | 150 | 161 (npx 59, adapter 46, `codex.js` 14, `codex` 26, git 16) | 153 (`codex` 37) | 134 |
+| Codex, after | 93 | 85 (adapter 46, `codex.js` 14, `codex` 25) | 100 after 16 long replies | |
+| Ante (the bridge and `ante`) | 19 (bridge 7, `ante` 12) | 19 | 26 (bridge 12, `ante` 14) | 26 |
+| omp, before | 373 (npx 62, Bun 311) | 306 (Bun 244) | 309 | |
+| omp, after | 315 | 244 | | |
+
+- Node's share (the "Fewer JS runtimes" idea): for Claude the adapter is about a third of a chat (67–80 MB of 244), the `claude` CLI the rest (and it grows with the chat: 141 → 189 MB over 9 turns). For Codex Node is about two thirds (adapter 46 MB and Codex's `codex.js` launcher 14 MB, against `codex` itself at 21–37 MB). Before step 101 npx's own Node process (45–62 MB) sat on top of every Claude, Codex and omp chat.
+- Fixed in step 101: agents start through `internal/npx`, which asks npx where the pinned program is (`npx --yes -p <pkg> -c 'command -v <bin>'`, 0.3 s when cached) and runs it directly. Saves 45–62 MB per chat and starts faster (Claude 1.2 → 0.75 s to a session, Codex 0.95 → 0.16 s).
+- Codex runs git (a `git-remote-http` too) and `ps` as it starts; Claude ran a short-lived Python (a hook of this Mac's).
+
+**Daemon and app** (20 Claude chats in the sidebar, Haiku, one short turn each; the app's window 1399×952 points):
+- 20 awake: the daemon's tree 4,618 MB (nushid 39 MB, each chat 223–247 MB).
+- After a daemon restart, none awake: nushid 8 MB; the app 156 MB.
+- 5 awake (opened in the app): nushid 12 MB, agents 1,105 MB, the app 323 MB. The app's growth is mostly graphics (`footprint -p`: 113 MB of graphics, 79 MB of IOSurface; the Dart heap and malloc about 110 MB).
+- With a long Codex chat (16 replies of 500–3,000 words) open as well: nushid 51 MB, the app 406 MB.
+
+**Frame times** (profile build, `Flutter.Frame` events over the VM service):
+- Opening 5 chats one after another: 850 frames, p99 build 3.2 ms, one frame of 18 ms.
+- A 3,000-word reply streaming (8.2k tokens in 43 s, Codex): 4,665 frames, build p50 0.5 ms, p90 9.9 ms, p99 17.8 ms, max 22 ms; 128 frames (2.7%) over 16 ms, late in the reply. The markdown is healed and parsed whole on each chunk (see Decisions to revisit): fine to a few thousand words, then frames drop now and then. Left as it is; parsing only the last block would be the fix.
+- Opening the long chat (in memory): one frame of 132 ms build, the rest under 1 ms (the transcript lays out every item, ADR 0026). Its replay after a daemon restart: one frame of 88 ms. Scrolling it: 122 frames, max 0.7 ms build, 7 ms raster.
+- Idle: 2 frames a second (the caret).
 
 ## Codex config for you
 
@@ -415,7 +448,7 @@ Open questions; what's settled is in `docs/adr/` or in the code.
 ## Working notes
 
 - Screenshots of the app window are current only while it's in front: macOS stops Flutter drawing an occluded window.
-- To watch the fake agent in the app: build `acp/acptest/fakeagent`, put an `npx` that execs it first on `PATH`, and start a daemon with that `PATH` and `NUSHI_DATA` (a short path: the socket path has a length limit). Its scripts answer prompt words: `permission`, `question`, `think`, `pwd`, `many`, `plan`, `wait` (until stopped).
+- To watch the fake agent in the app: build `acp/acptest/fakeagent`, put an `npx` that prints its path (agents start through `npx … -c 'command -v <bin>'`) first on `PATH`, and start a daemon with that `PATH` and `NUSHI_DATA` (a short path: the socket path has a length limit). Its scripts answer prompt words: `permission`, `question`, `think`, `pwd`, `many`, `plan`, `wait` (until stopped).
 - Terminals: the shell is the user's login shell from `id -P` (the user database), never the daemon's `$SHELL`. fish 4 asks the terminal's Primary Device Attributes as it starts and waits 10 seconds for the answer; the app answers queries in a replay only for a terminal it opened itself (anyone attaching later would answer twice).
 - Driving the app by hand: System Events' `click at` doesn't reach a Flutter window; a few lines of Swift posting `CGEvent` mouse and key events do. Screenshots are 2× the window's points.
 - App tests get a data folder in the temporary folder (`FLUTTER_TEST`); never point them at the real one.
