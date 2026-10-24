@@ -18,6 +18,7 @@ import (
 	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/features/mcp"
 	"github.com/afrase/nushi/internal/features/memory"
+	"github.com/afrase/nushi/internal/features/remote"
 	"github.com/afrase/nushi/internal/features/terminals"
 	"github.com/afrase/nushi/internal/features/trust"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
@@ -26,7 +27,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 46
+const Version = 47
 
 // build is the daemon's executable as it started (PingResponse.build).
 var build = func() string {
@@ -48,6 +49,7 @@ type server struct {
 	trust *trust.Service
 	hub    *events.Hub
 	memory *memory.Service
+	remote *remote.Service
 
 	mu      sync.Mutex
 	clients int         // apps following the events
@@ -73,10 +75,29 @@ func (s *server) following(n int) {
 	}
 }
 
-// Handler returns the API, refusing requests that don't carry token.
-func Handler(token string, chats *chats.Service, mcp *mcp.Service, terms *terminals.Service, trust *trust.Service, hub *events.Hub, memory *memory.Service) http.Handler {
+// Services are what the API serves.
+type Services struct {
+	Chats  *chats.Service
+	MCP    *mcp.Service
+	Terms  *terminals.Service
+	Trust  *trust.Service
+	Hub    *events.Hub
+	Memory *memory.Service
+	Remote *remote.Service
+}
+
+// New returns the API, unauthenticated: a paired device's channel has
+// authenticated it already (ADR 0034); the local socket wraps it in
+// WithToken.
+func New(sv Services) http.Handler {
 	mux := http.NewServeMux()
-	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{chats: chats, mcp: mcp, terms: terms, trust: trust, hub: hub, memory: memory}))
+	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{chats: sv.Chats, mcp: sv.MCP, terms: sv.Terms, trust: sv.Trust,
+		hub: sv.Hub, memory: sv.Memory, remote: sv.Remote}))
+	return mux
+}
+
+// WithToken refuses requests to h that don't carry token.
+func WithToken(token string, h http.Handler) http.Handler {
 	want := []byte("Bearer " + token)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if subtle.ConstantTimeCompare([]byte(r.Header.Get("Authorization")), want) != 1 {
@@ -85,7 +106,7 @@ func Handler(token string, chats *chats.Service, mcp *mcp.Service, terms *termin
 			_, _ = w.Write([]byte(`{"code":"unauthenticated","message":"missing or wrong token"}`))
 			return
 		}
-		mux.ServeHTTP(w, r)
+		h.ServeHTTP(w, r)
 	})
 }
 

@@ -115,6 +115,16 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.CheckFolderRequest request);
   $async.Future<$0.TrustFolderResponse> trustFolder(
       $pb.ServerContext ctx, $0.TrustFolderRequest request);
+  $async.Future<$0.GetRemoteResponse> getRemote(
+      $pb.ServerContext ctx, $0.GetRemoteRequest request);
+  $async.Future<$0.SetRemoteResponse> setRemote(
+      $pb.ServerContext ctx, $0.SetRemoteRequest request);
+  $async.Future<$0.StartPairingResponse> startPairing(
+      $pb.ServerContext ctx, $0.StartPairingRequest request);
+  $async.Future<$0.ConfirmPairingResponse> confirmPairing(
+      $pb.ServerContext ctx, $0.ConfirmPairingRequest request);
+  $async.Future<$0.RevokeDeviceResponse> revokeDevice(
+      $pb.ServerContext ctx, $0.RevokeDeviceRequest request);
   $async.Future<$0.EventsResponse> events(
       $pb.ServerContext ctx, $0.EventsRequest request);
 
@@ -214,6 +224,16 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.CheckFolderRequest();
       case 'TrustFolder':
         return $0.TrustFolderRequest();
+      case 'GetRemote':
+        return $0.GetRemoteRequest();
+      case 'SetRemote':
+        return $0.SetRemoteRequest();
+      case 'StartPairing':
+        return $0.StartPairingRequest();
+      case 'ConfirmPairing':
+        return $0.ConfirmPairingRequest();
+      case 'RevokeDevice':
+        return $0.RevokeDeviceRequest();
       case 'Events':
         return $0.EventsRequest();
       default:
@@ -318,6 +338,16 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return checkFolder(ctx, request as $0.CheckFolderRequest);
       case 'TrustFolder':
         return trustFolder(ctx, request as $0.TrustFolderRequest);
+      case 'GetRemote':
+        return getRemote(ctx, request as $0.GetRemoteRequest);
+      case 'SetRemote':
+        return setRemote(ctx, request as $0.SetRemoteRequest);
+      case 'StartPairing':
+        return startPairing(ctx, request as $0.StartPairingRequest);
+      case 'ConfirmPairing':
+        return confirmPairing(ctx, request as $0.ConfirmPairingRequest);
+      case 'RevokeDevice':
+        return revokeDevice(ctx, request as $0.RevokeDeviceRequest);
       case 'Events':
         return events(ctx, request as $0.EventsRequest);
       default:

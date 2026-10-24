@@ -156,6 +156,19 @@ const (
 	// NushiServiceTrustFolderProcedure is the fully-qualified name of the NushiService's TrustFolder
 	// RPC.
 	NushiServiceTrustFolderProcedure = "/nushi.v1.NushiService/TrustFolder"
+	// NushiServiceGetRemoteProcedure is the fully-qualified name of the NushiService's GetRemote RPC.
+	NushiServiceGetRemoteProcedure = "/nushi.v1.NushiService/GetRemote"
+	// NushiServiceSetRemoteProcedure is the fully-qualified name of the NushiService's SetRemote RPC.
+	NushiServiceSetRemoteProcedure = "/nushi.v1.NushiService/SetRemote"
+	// NushiServiceStartPairingProcedure is the fully-qualified name of the NushiService's StartPairing
+	// RPC.
+	NushiServiceStartPairingProcedure = "/nushi.v1.NushiService/StartPairing"
+	// NushiServiceConfirmPairingProcedure is the fully-qualified name of the NushiService's
+	// ConfirmPairing RPC.
+	NushiServiceConfirmPairingProcedure = "/nushi.v1.NushiService/ConfirmPairing"
+	// NushiServiceRevokeDeviceProcedure is the fully-qualified name of the NushiService's RevokeDevice
+	// RPC.
+	NushiServiceRevokeDeviceProcedure = "/nushi.v1.NushiService/RevokeDevice"
 	// NushiServiceEventsProcedure is the fully-qualified name of the NushiService's Events RPC.
 	NushiServiceEventsProcedure = "/nushi.v1.NushiService/Events"
 )
@@ -307,6 +320,18 @@ type NushiServiceClient interface {
 	// Remembers that the user starts chats in a folder anyway (its
 	// repository, outside git the folders under it too).
 	TrustFolder(context.Context, *connect.Request[v1.TrustFolderRequest]) (*connect.Response[v1.TrustFolderResponse], error)
+	// Remote access (ADRs 0033, 0034): how it stands, and switching it on
+	// or off through a relay.
+	GetRemote(context.Context, *connect.Request[v1.GetRemoteRequest]) (*connect.Response[v1.GetRemoteResponse], error)
+	SetRemote(context.Context, *connect.Request[v1.SetRemoteRequest]) (*connect.Response[v1.SetRemoteResponse], error)
+	// Starts pairing a phone (remote access must be on): the text for the QR
+	// code, good until it expires. Once a phone holding it connects,
+	// Remote.pairing has its name and the code both screens show.
+	StartPairing(context.Context, *connect.Request[v1.StartPairingRequest]) (*connect.Response[v1.StartPairingResponse], error)
+	// Allows or denies the phone that connected, named by its code.
+	ConfirmPairing(context.Context, *connect.Request[v1.ConfirmPairingRequest]) (*connect.Response[v1.ConfirmPairingResponse], error)
+	// Unpairs a phone and drops its connections.
+	RevokeDevice(context.Context, *connect.Request[v1.RevokeDeviceRequest]) (*connect.Response[v1.RevokeDeviceResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
 	Events(context.Context, *connect.Request[v1.EventsRequest]) (*connect.ServerStreamForClient[v1.EventsResponse], error)
@@ -605,6 +630,36 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("TrustFolder")),
 			connect.WithClientOptions(opts...),
 		),
+		getRemote: connect.NewClient[v1.GetRemoteRequest, v1.GetRemoteResponse](
+			httpClient,
+			baseURL+NushiServiceGetRemoteProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("GetRemote")),
+			connect.WithClientOptions(opts...),
+		),
+		setRemote: connect.NewClient[v1.SetRemoteRequest, v1.SetRemoteResponse](
+			httpClient,
+			baseURL+NushiServiceSetRemoteProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("SetRemote")),
+			connect.WithClientOptions(opts...),
+		),
+		startPairing: connect.NewClient[v1.StartPairingRequest, v1.StartPairingResponse](
+			httpClient,
+			baseURL+NushiServiceStartPairingProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("StartPairing")),
+			connect.WithClientOptions(opts...),
+		),
+		confirmPairing: connect.NewClient[v1.ConfirmPairingRequest, v1.ConfirmPairingResponse](
+			httpClient,
+			baseURL+NushiServiceConfirmPairingProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ConfirmPairing")),
+			connect.WithClientOptions(opts...),
+		),
+		revokeDevice: connect.NewClient[v1.RevokeDeviceRequest, v1.RevokeDeviceResponse](
+			httpClient,
+			baseURL+NushiServiceRevokeDeviceProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("RevokeDevice")),
+			connect.WithClientOptions(opts...),
+		),
 		events: connect.NewClient[v1.EventsRequest, v1.EventsResponse](
 			httpClient,
 			baseURL+NushiServiceEventsProcedure,
@@ -663,6 +718,11 @@ type nushiServiceClient struct {
 	closeTerminal    *connect.Client[v1.CloseTerminalRequest, v1.CloseTerminalResponse]
 	checkFolder      *connect.Client[v1.CheckFolderRequest, v1.CheckFolderResponse]
 	trustFolder      *connect.Client[v1.TrustFolderRequest, v1.TrustFolderResponse]
+	getRemote        *connect.Client[v1.GetRemoteRequest, v1.GetRemoteResponse]
+	setRemote        *connect.Client[v1.SetRemoteRequest, v1.SetRemoteResponse]
+	startPairing     *connect.Client[v1.StartPairingRequest, v1.StartPairingResponse]
+	confirmPairing   *connect.Client[v1.ConfirmPairingRequest, v1.ConfirmPairingResponse]
+	revokeDevice     *connect.Client[v1.RevokeDeviceRequest, v1.RevokeDeviceResponse]
 	events           *connect.Client[v1.EventsRequest, v1.EventsResponse]
 }
 
@@ -901,6 +961,31 @@ func (c *nushiServiceClient) TrustFolder(ctx context.Context, req *connect.Reque
 	return c.trustFolder.CallUnary(ctx, req)
 }
 
+// GetRemote calls nushi.v1.NushiService.GetRemote.
+func (c *nushiServiceClient) GetRemote(ctx context.Context, req *connect.Request[v1.GetRemoteRequest]) (*connect.Response[v1.GetRemoteResponse], error) {
+	return c.getRemote.CallUnary(ctx, req)
+}
+
+// SetRemote calls nushi.v1.NushiService.SetRemote.
+func (c *nushiServiceClient) SetRemote(ctx context.Context, req *connect.Request[v1.SetRemoteRequest]) (*connect.Response[v1.SetRemoteResponse], error) {
+	return c.setRemote.CallUnary(ctx, req)
+}
+
+// StartPairing calls nushi.v1.NushiService.StartPairing.
+func (c *nushiServiceClient) StartPairing(ctx context.Context, req *connect.Request[v1.StartPairingRequest]) (*connect.Response[v1.StartPairingResponse], error) {
+	return c.startPairing.CallUnary(ctx, req)
+}
+
+// ConfirmPairing calls nushi.v1.NushiService.ConfirmPairing.
+func (c *nushiServiceClient) ConfirmPairing(ctx context.Context, req *connect.Request[v1.ConfirmPairingRequest]) (*connect.Response[v1.ConfirmPairingResponse], error) {
+	return c.confirmPairing.CallUnary(ctx, req)
+}
+
+// RevokeDevice calls nushi.v1.NushiService.RevokeDevice.
+func (c *nushiServiceClient) RevokeDevice(ctx context.Context, req *connect.Request[v1.RevokeDeviceRequest]) (*connect.Response[v1.RevokeDeviceResponse], error) {
+	return c.revokeDevice.CallUnary(ctx, req)
+}
+
 // Events calls nushi.v1.NushiService.Events.
 func (c *nushiServiceClient) Events(ctx context.Context, req *connect.Request[v1.EventsRequest]) (*connect.ServerStreamForClient[v1.EventsResponse], error) {
 	return c.events.CallServerStream(ctx, req)
@@ -1053,6 +1138,18 @@ type NushiServiceHandler interface {
 	// Remembers that the user starts chats in a folder anyway (its
 	// repository, outside git the folders under it too).
 	TrustFolder(context.Context, *connect.Request[v1.TrustFolderRequest]) (*connect.Response[v1.TrustFolderResponse], error)
+	// Remote access (ADRs 0033, 0034): how it stands, and switching it on
+	// or off through a relay.
+	GetRemote(context.Context, *connect.Request[v1.GetRemoteRequest]) (*connect.Response[v1.GetRemoteResponse], error)
+	SetRemote(context.Context, *connect.Request[v1.SetRemoteRequest]) (*connect.Response[v1.SetRemoteResponse], error)
+	// Starts pairing a phone (remote access must be on): the text for the QR
+	// code, good until it expires. Once a phone holding it connects,
+	// Remote.pairing has its name and the code both screens show.
+	StartPairing(context.Context, *connect.Request[v1.StartPairingRequest]) (*connect.Response[v1.StartPairingResponse], error)
+	// Allows or denies the phone that connected, named by its code.
+	ConfirmPairing(context.Context, *connect.Request[v1.ConfirmPairingRequest]) (*connect.Response[v1.ConfirmPairingResponse], error)
+	// Unpairs a phone and drops its connections.
+	RevokeDevice(context.Context, *connect.Request[v1.RevokeDeviceRequest]) (*connect.Response[v1.RevokeDeviceResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
 	Events(context.Context, *connect.Request[v1.EventsRequest], *connect.ServerStream[v1.EventsResponse]) error
@@ -1347,6 +1444,36 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("TrustFolder")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceGetRemoteHandler := connect.NewUnaryHandler(
+		NushiServiceGetRemoteProcedure,
+		svc.GetRemote,
+		connect.WithSchema(nushiServiceMethods.ByName("GetRemote")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceSetRemoteHandler := connect.NewUnaryHandler(
+		NushiServiceSetRemoteProcedure,
+		svc.SetRemote,
+		connect.WithSchema(nushiServiceMethods.ByName("SetRemote")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceStartPairingHandler := connect.NewUnaryHandler(
+		NushiServiceStartPairingProcedure,
+		svc.StartPairing,
+		connect.WithSchema(nushiServiceMethods.ByName("StartPairing")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceConfirmPairingHandler := connect.NewUnaryHandler(
+		NushiServiceConfirmPairingProcedure,
+		svc.ConfirmPairing,
+		connect.WithSchema(nushiServiceMethods.ByName("ConfirmPairing")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceRevokeDeviceHandler := connect.NewUnaryHandler(
+		NushiServiceRevokeDeviceProcedure,
+		svc.RevokeDevice,
+		connect.WithSchema(nushiServiceMethods.ByName("RevokeDevice")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceEventsHandler := connect.NewServerStreamHandler(
 		NushiServiceEventsProcedure,
 		svc.Events,
@@ -1449,6 +1576,16 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceCheckFolderHandler.ServeHTTP(w, r)
 		case NushiServiceTrustFolderProcedure:
 			nushiServiceTrustFolderHandler.ServeHTTP(w, r)
+		case NushiServiceGetRemoteProcedure:
+			nushiServiceGetRemoteHandler.ServeHTTP(w, r)
+		case NushiServiceSetRemoteProcedure:
+			nushiServiceSetRemoteHandler.ServeHTTP(w, r)
+		case NushiServiceStartPairingProcedure:
+			nushiServiceStartPairingHandler.ServeHTTP(w, r)
+		case NushiServiceConfirmPairingProcedure:
+			nushiServiceConfirmPairingHandler.ServeHTTP(w, r)
+		case NushiServiceRevokeDeviceProcedure:
+			nushiServiceRevokeDeviceHandler.ServeHTTP(w, r)
 		case NushiServiceEventsProcedure:
 			nushiServiceEventsHandler.ServeHTTP(w, r)
 		default:
@@ -1646,6 +1783,26 @@ func (UnimplementedNushiServiceHandler) CheckFolder(context.Context, *connect.Re
 
 func (UnimplementedNushiServiceHandler) TrustFolder(context.Context, *connect.Request[v1.TrustFolderRequest]) (*connect.Response[v1.TrustFolderResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.TrustFolder is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) GetRemote(context.Context, *connect.Request[v1.GetRemoteRequest]) (*connect.Response[v1.GetRemoteResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetRemote is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) SetRemote(context.Context, *connect.Request[v1.SetRemoteRequest]) (*connect.Response[v1.SetRemoteResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.SetRemote is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) StartPairing(context.Context, *connect.Request[v1.StartPairingRequest]) (*connect.Response[v1.StartPairingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.StartPairing is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ConfirmPairing(context.Context, *connect.Request[v1.ConfirmPairingRequest]) (*connect.Response[v1.ConfirmPairingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ConfirmPairing is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) RevokeDevice(context.Context, *connect.Request[v1.RevokeDeviceRequest]) (*connect.Response[v1.RevokeDeviceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.RevokeDevice is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) Events(context.Context, *connect.Request[v1.EventsRequest], *connect.ServerStream[v1.EventsResponse]) error {

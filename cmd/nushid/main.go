@@ -34,6 +34,7 @@ import (
 	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/features/mcp"
 	"github.com/afrase/nushi/internal/features/memory"
+	"github.com/afrase/nushi/internal/features/remote"
 	"github.com/afrase/nushi/internal/features/terminals"
 	"github.com/afrase/nushi/internal/features/trust"
 	"github.com/afrase/nushi/internal/git"
@@ -42,6 +43,7 @@ import (
 	"github.com/afrase/nushi/internal/omptrust"
 	"github.com/afrase/nushi/internal/store"
 	"github.com/afrase/nushi/internal/terminal"
+	"github.com/afrase/nushi/relay"
 )
 
 func main() {
@@ -116,8 +118,19 @@ func run() error {
 	termSvc := terminals.New(startShell, filepath.Base(loginShell), chatSvc, hub.Publish)
 	chatSvc.UseTerminals(termSvc)
 	go hub.Subscribe(nil, func() bool { return true }, func(e model.Event) bool { termSvc.Follow(e); return true })
-	srv := &http.Server{Handler: api.Handler(token, chatSvc, mcp.New(claudemcp.Claude{}, chatSvc.MCPChanged), termSvc, trust.New(map[string]trust.Agent{"claude": claudetrust.Trust{}, "codex": codextrust.Trust{}, "ante": antetrust.Trust{}, "omp": omptrust.Trust{}}, st), hub, memory.New(chatSvc)),
-		Protocols: new(http.Protocols)}
+	// The API, on the socket for the app (with the token) and on each
+	// paired device's channel (ADR 0034).
+	sv := api.Services{Chats: chatSvc, MCP: mcp.New(claudemcp.Claude{}, chatSvc.MCPChanged), Terms: termSvc,
+		Trust: trust.New(map[string]trust.Agent{"claude": claudetrust.Trust{}, "codex": codextrust.Trust{}, "ante": antetrust.Trust{}, "omp": omptrust.Trust{}}, st),
+		Hub: hub, Memory: memory.New(chatSvc)}
+	channels := newChannels()
+	if sv.Remote, err = remote.New(st, &relay.Dialer{}, channels.serve, keepAwake, hub.Publish); err != nil {
+		return err
+	}
+	remoteSrv := &http.Server{Handler: api.New(sv), Protocols: new(http.Protocols)}
+	remoteSrv.Protocols.SetUnencryptedHTTP2(true)
+	go remoteSrv.Serve(channels)
+	srv := &http.Server{Handler: api.WithToken(token, api.New(sv)), Protocols: new(http.Protocols)}
 	srv.Protocols.SetUnencryptedHTTP2(true)
 
 	// On SIGINT or SIGTERM, stop the agents too: their sessions reopen
@@ -129,6 +142,8 @@ func run() error {
 		srv.Close()
 	}()
 	err = srv.Serve(ln)
+	sv.Remote.Close()
+	remoteSrv.Close()
 	chatSvc.Close()
 	termSvc.CloseAll()
 	if errors.Is(err, http.ErrServerClosed) {

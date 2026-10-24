@@ -905,6 +905,98 @@ extension type NushiServiceClient (connect.Transport _transport) {
     );
   }
 
+  /// Remote access (ADRs 0033, 0034): how it stands, and switching it on
+  /// or off through a relay.
+  Future<nushiv1nushi.GetRemoteResponse> getRemote(
+    nushiv1nushi.GetRemoteRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.getRemote,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  Future<nushiv1nushi.SetRemoteResponse> setRemote(
+    nushiv1nushi.SetRemoteRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.setRemote,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Starts pairing a phone (remote access must be on): the text for the QR
+  /// code, good until it expires. Once a phone holding it connects,
+  /// Remote.pairing has its name and the code both screens show.
+  Future<nushiv1nushi.StartPairingResponse> startPairing(
+    nushiv1nushi.StartPairingRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.startPairing,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Allows or denies the phone that connected, named by its code.
+  Future<nushiv1nushi.ConfirmPairingResponse> confirmPairing(
+    nushiv1nushi.ConfirmPairingRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.confirmPairing,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Unpairs a phone and drops its connections.
+  Future<nushiv1nushi.RevokeDeviceResponse> revokeDevice(
+    nushiv1nushi.RevokeDeviceRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.revokeDevice,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.
   Stream<nushiv1nushi.EventsResponse> events(

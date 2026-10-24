@@ -1682,6 +1682,15 @@ const EventsResponse$json = {
       '10': 'terminals'
     },
     {'1': 'dropped', '3': 13, '4': 1, '5': 9, '9': 0, '10': 'dropped'},
+    {
+      '1': 'remote',
+      '3': 14,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.Remote',
+      '9': 0,
+      '10': 'remote'
+    },
   ],
   '8': [
     {'1': 'kind'},
@@ -1699,7 +1708,8 @@ final $typed_data.Uint8List eventsResponseDescriptor = $convert.base64Decode(
     'Mg8ubnVzaGkudjEuVXNhZ2VIAFIFdXNhZ2USKwoFcXVldWUYCiABKAsyEy5udXNoaS52MS5DaG'
     'F0UXVldWVIAFIFcXVldWUSEgoDY3V0GAsgASgJSABSA2N1dBI3Cgl0ZXJtaW5hbHMYDCABKAsy'
     'Fy5udXNoaS52MS5DaGF0VGVybWluYWxzSABSCXRlcm1pbmFscxIaCgdkcm9wcGVkGA0gASgJSA'
-    'BSB2Ryb3BwZWRCBgoEa2luZA==');
+    'BSB2Ryb3BwZWQSKgoGcmVtb3RlGA4gASgLMhAubnVzaGkudjEuUmVtb3RlSABSBnJlbW90ZUIG'
+    'CgRraW5k');
 
 @$core.Deprecated('Use chatConfigDescriptor instead')
 const ChatConfig$json = {
@@ -2376,6 +2386,192 @@ const TrustFolderResponse$json = {
 final $typed_data.Uint8List trustFolderResponseDescriptor =
     $convert.base64Decode('ChNUcnVzdEZvbGRlclJlc3BvbnNl');
 
+@$core.Deprecated('Use remoteDescriptor instead')
+const Remote$json = {
+  '1': 'Remote',
+  '2': [
+    {'1': 'on', '3': 1, '4': 1, '5': 8, '10': 'on'},
+    {'1': 'relay', '3': 2, '4': 1, '5': 9, '10': 'relay'},
+    {'1': 'state', '3': 3, '4': 1, '5': 9, '10': 'state'},
+    {'1': 'error', '3': 4, '4': 1, '5': 9, '10': 'error'},
+    {
+      '1': 'devices',
+      '3': 5,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.Device',
+      '10': 'devices'
+    },
+    {
+      '1': 'pairing',
+      '3': 6,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.Pairing',
+      '10': 'pairing'
+    },
+  ],
+};
+
+/// Descriptor for `Remote`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List remoteDescriptor = $convert.base64Decode(
+    'CgZSZW1vdGUSDgoCb24YASABKAhSAm9uEhQKBXJlbGF5GAIgASgJUgVyZWxheRIUCgVzdGF0ZR'
+    'gDIAEoCVIFc3RhdGUSFAoFZXJyb3IYBCABKAlSBWVycm9yEioKB2RldmljZXMYBSADKAsyEC5u'
+    'dXNoaS52MS5EZXZpY2VSB2RldmljZXMSKwoHcGFpcmluZxgGIAEoCzIRLm51c2hpLnYxLlBhaX'
+    'JpbmdSB3BhaXJpbmc=');
+
+@$core.Deprecated('Use deviceDescriptor instead')
+const Device$json = {
+  '1': 'Device',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'name', '3': 2, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'paired', '3': 3, '4': 1, '5': 3, '10': 'paired'},
+    {'1': 'last_seen', '3': 4, '4': 1, '5': 3, '10': 'lastSeen'},
+    {'1': 'connected', '3': 5, '4': 1, '5': 8, '10': 'connected'},
+  ],
+};
+
+/// Descriptor for `Device`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List deviceDescriptor = $convert.base64Decode(
+    'CgZEZXZpY2USDgoCaWQYASABKAlSAmlkEhIKBG5hbWUYAiABKAlSBG5hbWUSFgoGcGFpcmVkGA'
+    'MgASgDUgZwYWlyZWQSGwoJbGFzdF9zZWVuGAQgASgDUghsYXN0U2VlbhIcCgljb25uZWN0ZWQY'
+    'BSABKAhSCWNvbm5lY3RlZA==');
+
+@$core.Deprecated('Use pairingDescriptor instead')
+const Pairing$json = {
+  '1': 'Pairing',
+  '2': [
+    {'1': 'expires', '3': 1, '4': 1, '5': 3, '10': 'expires'},
+    {'1': 'name', '3': 2, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'code', '3': 3, '4': 1, '5': 9, '10': 'code'},
+  ],
+};
+
+/// Descriptor for `Pairing`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List pairingDescriptor = $convert.base64Decode(
+    'CgdQYWlyaW5nEhgKB2V4cGlyZXMYASABKANSB2V4cGlyZXMSEgoEbmFtZRgCIAEoCVIEbmFtZR'
+    'ISCgRjb2RlGAMgASgJUgRjb2Rl');
+
+@$core.Deprecated('Use getRemoteRequestDescriptor instead')
+const GetRemoteRequest$json = {
+  '1': 'GetRemoteRequest',
+};
+
+/// Descriptor for `GetRemoteRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getRemoteRequestDescriptor =
+    $convert.base64Decode('ChBHZXRSZW1vdGVSZXF1ZXN0');
+
+@$core.Deprecated('Use getRemoteResponseDescriptor instead')
+const GetRemoteResponse$json = {
+  '1': 'GetRemoteResponse',
+  '2': [
+    {
+      '1': 'remote',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.Remote',
+      '10': 'remote'
+    },
+  ],
+};
+
+/// Descriptor for `GetRemoteResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getRemoteResponseDescriptor = $convert.base64Decode(
+    'ChFHZXRSZW1vdGVSZXNwb25zZRIoCgZyZW1vdGUYASABKAsyEC5udXNoaS52MS5SZW1vdGVSBn'
+    'JlbW90ZQ==');
+
+@$core.Deprecated('Use setRemoteRequestDescriptor instead')
+const SetRemoteRequest$json = {
+  '1': 'SetRemoteRequest',
+  '2': [
+    {'1': 'on', '3': 1, '4': 1, '5': 8, '10': 'on'},
+    {'1': 'relay', '3': 2, '4': 1, '5': 9, '10': 'relay'},
+  ],
+};
+
+/// Descriptor for `SetRemoteRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List setRemoteRequestDescriptor = $convert.base64Decode(
+    'ChBTZXRSZW1vdGVSZXF1ZXN0Eg4KAm9uGAEgASgIUgJvbhIUCgVyZWxheRgCIAEoCVIFcmVsYX'
+    'k=');
+
+@$core.Deprecated('Use setRemoteResponseDescriptor instead')
+const SetRemoteResponse$json = {
+  '1': 'SetRemoteResponse',
+};
+
+/// Descriptor for `SetRemoteResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List setRemoteResponseDescriptor =
+    $convert.base64Decode('ChFTZXRSZW1vdGVSZXNwb25zZQ==');
+
+@$core.Deprecated('Use startPairingRequestDescriptor instead')
+const StartPairingRequest$json = {
+  '1': 'StartPairingRequest',
+};
+
+/// Descriptor for `StartPairingRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List startPairingRequestDescriptor =
+    $convert.base64Decode('ChNTdGFydFBhaXJpbmdSZXF1ZXN0');
+
+@$core.Deprecated('Use startPairingResponseDescriptor instead')
+const StartPairingResponse$json = {
+  '1': 'StartPairingResponse',
+  '2': [
+    {'1': 'qr', '3': 1, '4': 1, '5': 9, '10': 'qr'},
+    {'1': 'expires', '3': 2, '4': 1, '5': 3, '10': 'expires'},
+  ],
+};
+
+/// Descriptor for `StartPairingResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List startPairingResponseDescriptor = $convert.base64Decode(
+    'ChRTdGFydFBhaXJpbmdSZXNwb25zZRIOCgJxchgBIAEoCVICcXISGAoHZXhwaXJlcxgCIAEoA1'
+    'IHZXhwaXJlcw==');
+
+@$core.Deprecated('Use confirmPairingRequestDescriptor instead')
+const ConfirmPairingRequest$json = {
+  '1': 'ConfirmPairingRequest',
+  '2': [
+    {'1': 'code', '3': 1, '4': 1, '5': 9, '10': 'code'},
+    {'1': 'allow', '3': 2, '4': 1, '5': 8, '10': 'allow'},
+  ],
+};
+
+/// Descriptor for `ConfirmPairingRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List confirmPairingRequestDescriptor = $convert.base64Decode(
+    'ChVDb25maXJtUGFpcmluZ1JlcXVlc3QSEgoEY29kZRgBIAEoCVIEY29kZRIUCgVhbGxvdxgCIA'
+    'EoCFIFYWxsb3c=');
+
+@$core.Deprecated('Use confirmPairingResponseDescriptor instead')
+const ConfirmPairingResponse$json = {
+  '1': 'ConfirmPairingResponse',
+};
+
+/// Descriptor for `ConfirmPairingResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List confirmPairingResponseDescriptor =
+    $convert.base64Decode('ChZDb25maXJtUGFpcmluZ1Jlc3BvbnNl');
+
+@$core.Deprecated('Use revokeDeviceRequestDescriptor instead')
+const RevokeDeviceRequest$json = {
+  '1': 'RevokeDeviceRequest',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+  ],
+};
+
+/// Descriptor for `RevokeDeviceRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List revokeDeviceRequestDescriptor = $convert
+    .base64Decode('ChNSZXZva2VEZXZpY2VSZXF1ZXN0Eg4KAmlkGAEgASgJUgJpZA==');
+
+@$core.Deprecated('Use revokeDeviceResponseDescriptor instead')
+const RevokeDeviceResponse$json = {
+  '1': 'RevokeDeviceResponse',
+};
+
+/// Descriptor for `RevokeDeviceResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List revokeDeviceResponseDescriptor =
+    $convert.base64Decode('ChRSZXZva2VEZXZpY2VSZXNwb25zZQ==');
+
 const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
   '1': 'NushiService',
   '2': [
@@ -2612,6 +2808,31 @@ const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
       '3': '.nushi.v1.TrustFolderResponse'
     },
     {
+      '1': 'GetRemote',
+      '2': '.nushi.v1.GetRemoteRequest',
+      '3': '.nushi.v1.GetRemoteResponse'
+    },
+    {
+      '1': 'SetRemote',
+      '2': '.nushi.v1.SetRemoteRequest',
+      '3': '.nushi.v1.SetRemoteResponse'
+    },
+    {
+      '1': 'StartPairing',
+      '2': '.nushi.v1.StartPairingRequest',
+      '3': '.nushi.v1.StartPairingResponse'
+    },
+    {
+      '1': 'ConfirmPairing',
+      '2': '.nushi.v1.ConfirmPairingRequest',
+      '3': '.nushi.v1.ConfirmPairingResponse'
+    },
+    {
+      '1': 'RevokeDevice',
+      '2': '.nushi.v1.RevokeDeviceRequest',
+      '3': '.nushi.v1.RevokeDeviceResponse'
+    },
+    {
       '1': 'Events',
       '2': '.nushi.v1.EventsRequest',
       '3': '.nushi.v1.EventsResponse',
@@ -2747,6 +2968,19 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.FolderRun': FolderRun$json,
   '.nushi.v1.TrustFolderRequest': TrustFolderRequest$json,
   '.nushi.v1.TrustFolderResponse': TrustFolderResponse$json,
+  '.nushi.v1.GetRemoteRequest': GetRemoteRequest$json,
+  '.nushi.v1.GetRemoteResponse': GetRemoteResponse$json,
+  '.nushi.v1.Remote': Remote$json,
+  '.nushi.v1.Device': Device$json,
+  '.nushi.v1.Pairing': Pairing$json,
+  '.nushi.v1.SetRemoteRequest': SetRemoteRequest$json,
+  '.nushi.v1.SetRemoteResponse': SetRemoteResponse$json,
+  '.nushi.v1.StartPairingRequest': StartPairingRequest$json,
+  '.nushi.v1.StartPairingResponse': StartPairingResponse$json,
+  '.nushi.v1.ConfirmPairingRequest': ConfirmPairingRequest$json,
+  '.nushi.v1.ConfirmPairingResponse': ConfirmPairingResponse$json,
+  '.nushi.v1.RevokeDeviceRequest': RevokeDeviceRequest$json,
+  '.nushi.v1.RevokeDeviceResponse': RevokeDeviceResponse$json,
   '.nushi.v1.EventsRequest': EventsRequest$json,
   '.nushi.v1.EventsResponse': EventsResponse$json,
   '.nushi.v1.ItemEvent': ItemEvent$json,
@@ -2823,5 +3057,12 @@ final $typed_data.Uint8List nushiServiceDescriptor = $convert.base64Decode(
     'YxLkNsb3NlVGVybWluYWxSZXNwb25zZRJKCgtDaGVja0ZvbGRlchIcLm51c2hpLnYxLkNoZWNr'
     'Rm9sZGVyUmVxdWVzdBodLm51c2hpLnYxLkNoZWNrRm9sZGVyUmVzcG9uc2USSgoLVHJ1c3RGb2'
     'xkZXISHC5udXNoaS52MS5UcnVzdEZvbGRlclJlcXVlc3QaHS5udXNoaS52MS5UcnVzdEZvbGRl'
-    'clJlc3BvbnNlEj0KBkV2ZW50cxIXLm51c2hpLnYxLkV2ZW50c1JlcXVlc3QaGC5udXNoaS52MS'
-    '5FdmVudHNSZXNwb25zZTAB');
+    'clJlc3BvbnNlEkQKCUdldFJlbW90ZRIaLm51c2hpLnYxLkdldFJlbW90ZVJlcXVlc3QaGy5udX'
+    'NoaS52MS5HZXRSZW1vdGVSZXNwb25zZRJECglTZXRSZW1vdGUSGi5udXNoaS52MS5TZXRSZW1v'
+    'dGVSZXF1ZXN0GhsubnVzaGkudjEuU2V0UmVtb3RlUmVzcG9uc2USTQoMU3RhcnRQYWlyaW5nEh'
+    '0ubnVzaGkudjEuU3RhcnRQYWlyaW5nUmVxdWVzdBoeLm51c2hpLnYxLlN0YXJ0UGFpcmluZ1Jl'
+    'c3BvbnNlElMKDkNvbmZpcm1QYWlyaW5nEh8ubnVzaGkudjEuQ29uZmlybVBhaXJpbmdSZXF1ZX'
+    'N0GiAubnVzaGkudjEuQ29uZmlybVBhaXJpbmdSZXNwb25zZRJNCgxSZXZva2VEZXZpY2USHS5u'
+    'dXNoaS52MS5SZXZva2VEZXZpY2VSZXF1ZXN0Gh4ubnVzaGkudjEuUmV2b2tlRGV2aWNlUmVzcG'
+    '9uc2USPQoGRXZlbnRzEhcubnVzaGkudjEuRXZlbnRzUmVxdWVzdBoYLm51c2hpLnYxLkV2ZW50'
+    'c1Jlc3BvbnNlMAE=');
