@@ -63,7 +63,7 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 		{File: local, What: "gcpAuthRefresh", Command: "./gcp.sh"},
 		{File: local, What: "otelHeadersHelper", Command: "./otel.sh"},
 		{File: local, What: "proxyAuthHelper", Command: "./proxy.sh"},
-		{File: skill, What: "Hook in skill lint", Command: "./lint.sh"},
+		{File: skill, What: "Hooks in skill lint", Command: "---\nname: lint\nhooks:\n  PostToolUse:\n    - matcher: Edit\n      hooks:\n        - type: command\n          command: \"./lint.sh\"\n---"},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("runs:\n%v\nwant\n%v", got, want)
@@ -184,39 +184,24 @@ func TestAnMCPFileNushiCantRead(t *testing.T) {
 	}
 }
 
-// A skill's hooks are read as YAML, in any form; front matter whose hooks
-// have a shape Nushi doesn't follow is shown whole, not missed.
-func TestSkillHooksInAnyForm(t *testing.T) {
+// A skill whose front matter mentions hooks shows it whole, raw: Nushi
+// doesn't guess what Claude reads out of it.
+func TestSkillHooksShowWhole(t *testing.T) {
 	dir := t.TempDir()
-	plain := "hooks:\n  Stop:\n    - matcher: Edit\n      hooks:\n        - type: command\n          command: \"echo one\"\n        - type: command\n          command: echo two"
-	for _, c := range []struct {
-		front string
-		whole bool
-		want  []string
-	}{
-		{front: plain, want: []string{"echo one", "echo two"}},
-		{front: "name: x\ndescription: no hooks here"},
-		{front: "name: x\nhooks: {PreToolUse: [{hooks: [{type: command, command: \"echo flow\"}]}]}", want: []string{"echo flow"}},
-		{front: "\"hooks\":\n  Stop:\n    - hooks:\n        - \"command\": echo quoted", want: []string{"echo quoted"}},
-		{front: plain + "\n        - type: command\n          command: |\n            echo block\n            echo more", want: []string{"echo one", "echo two", "echo block\necho more"}},
-		{front: plain + "\n        - type: command\n          command: echo folded\n            and continued", want: []string{"echo one", "echo two", "echo folded and continued"}},
-		{front: plain + "\n        - {type: command, command: echo inline}", want: []string{"echo one", "echo two", "echo inline"}},
-		{front: plain + "\n        - type: prompt\n          prompt: check it", want: []string{"echo one", "echo two", "check it"}},
-		{front: "x: &a echo anchor\n" + plain + "\n        - command: *a", whole: true},
-		{front: plain + "\n        - type: command\n          command: [echo, list]", whole: true},
-		{front: plain + "\n          nested: {hooks: {}}", whole: true},
-		{front: "name: x\nmeta:\n  hooks:\n    Stop: []", whole: true},
-		{front: "hooks:\n  Stop: oops: x", whole: true},
-		{front: "hooks: {}\nhooks:\n  Stop: [{hooks: [{command: echo dup}]}]", whole: true},
+	long := strings.Repeat("x", 70<<10) // past a line scanner's limit
+	for body, want := range map[string]string{
+		"---\nname: x\ndescription: plain\n---\nhooks in the body\n":            "",
+		"---\nhooks: {Stop: [{hooks: [{command: echo flow}]}]}\n---\nbody\n":    "---\nhooks: {Stop: [{hooks: [{command: echo flow}]}]}\n---",
+		"---\nname: x\n...\n---\nhooks:\n  Stop: []\n---\n":                     "", // a second document is the body
+		"---\nname: x\n...\nhooks:\n  Stop: []\n---\n":                          "---\nname: x\n...\nhooks:\n  Stop: []\n---",
+		"---\nd: " + long + "\nhooks:\n  Stop: []\n---\n":                       "---\nd: " + long + "\nhooks:\n  Stop: []\n---",
+		"---\nname: x\n--- not the end\nhooks: {}\n---\n":                       "---\nname: x\n--- not the end\nhooks: {}\n---",
+		"---\nname: x\nhooks:\n  Stop: [{hooks: [{command: echo unclosed}]}]\n": "---\nname: x\nhooks:\n  Stop: [{hooks: [{command: echo unclosed}]}]\n",
 	} {
 		path := filepath.Join(dir, "SKILL.md")
-		write(t, path, "---\n"+c.front+"\n---\nbody\n")
-		want := c.want
-		if c.whole {
-			want = []string{c.front}
-		}
-		if got := skillHooks(path); !reflect.DeepEqual(got, want) {
-			t.Errorf("%q:\n%q\nwant %q", c.front, got, want)
+		write(t, path, body)
+		if got, ok := skillHooks(path); ok != (want != "") || ok && got != want {
+			t.Errorf("%.60q: %.60q, %v", body, got, ok)
 		}
 	}
 }
