@@ -90,7 +90,7 @@ func run() error {
 			SubagentID: claude.SubagentID, Relay: claude.Relay, Relayed: claude.Relayed, Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle,
 			ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete},
 		History: func(id, from, to string) (func() error, error) { return claudehistory.Copy(projects, id, from, to) }}
-	codexKind := chats.Kind{Name: "codex", Title: "Codex", Resume: codex.Resume, History: codex.History,
+	codexKind := chats.Kind{Name: "codex", Title: "Codex", Resume: codex.Resume, History: codex.History, DeleteArchives: codex.DeleteArchives,
 		Launch:  func(h acp.Handler) (chats.Agent, error) { return codex.Start(dir, h) },
 		Dialect: chats.Dialect{ForkAt: codex.ForkAt, ToolCall: codex.ToolCall, Other: codex.Other}}
 	st := store.New(dir)

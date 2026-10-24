@@ -12,3 +12,4 @@ By step 57 the chats feature and the API knew Claude's quirks: the AIR fork meta
 ## Consequences
 - A second agent means a second `Dialect` and launcher in `main`, plus its own MCP and trust packages; the app names the agent from the chat (step 66).
 - The chats tests use Claude's dialect where they test what it drives (subagents, rewind).
+- Milestone S did it for Codex: `chats.Kind` names each agent with its launcher, dialect, history copy and resume command; Codex's rules are in `internal/codex` and `internal/codextrust`, and each chat keeps its agent.

@@ -30,6 +30,10 @@ func Start(dir string, h acp.Handler) (*acp.Client, error) {
 // Resume is the terminal command that opens a Codex session by its id.
 const Resume = "codex resume"
 
+// DeleteArchives: the adapter's session/delete archives the thread
+// ($CODEX_HOME/archived_sessions); codex resume offers to unarchive it.
+const DeleteArchives = true
+
 // History makes a session ready to fork into another folder: nothing to
 // do, since Codex finds a session by its id whatever the folder, and forks
 // it with another cwd.

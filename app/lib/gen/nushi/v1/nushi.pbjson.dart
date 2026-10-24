@@ -357,13 +357,15 @@ const Agent$json = {
     {'1': 'title', '3': 2, '4': 1, '5': 9, '10': 'title'},
     {'1': 'resume', '3': 3, '4': 1, '5': 9, '10': 'resume'},
     {'1': 'mcp', '3': 4, '4': 1, '5': 8, '10': 'mcp'},
+    {'1': 'delete_archives', '3': 5, '4': 1, '5': 8, '10': 'deleteArchives'},
   ],
 };
 
 /// Descriptor for `Agent`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List agentDescriptor = $convert.base64Decode(
     'CgVBZ2VudBISCgRuYW1lGAEgASgJUgRuYW1lEhQKBXRpdGxlGAIgASgJUgV0aXRsZRIWCgZyZX'
-    'N1bWUYAyABKAlSBnJlc3VtZRIQCgNtY3AYBCABKAhSA21jcA==');
+    'N1bWUYAyABKAlSBnJlc3VtZRIQCgNtY3AYBCABKAhSA21jcBInCg9kZWxldGVfYXJjaGl2ZXMY'
+    'BSABKAhSDmRlbGV0ZUFyY2hpdmVz');
 
 @$core.Deprecated('Use startChatRequestDescriptor instead')
 const StartChatRequest$json = {

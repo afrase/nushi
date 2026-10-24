@@ -1106,12 +1106,14 @@ class Agent extends $pb.GeneratedMessage {
     $core.String? title,
     $core.String? resume,
     $core.bool? mcp,
+    $core.bool? deleteArchives,
   }) {
     final result = Agent._();
     if (name != null) result.name = name;
     if (title != null) result.title = title;
     if (resume != null) result.resume = resume;
     if (mcp != null) result.mcp = mcp;
+    if (deleteArchives != null) result.deleteArchives = deleteArchives;
     return result;
   }
 
@@ -1132,6 +1134,7 @@ class Agent extends $pb.GeneratedMessage {
     ..aOS(2, _omitFieldNames ? '' : 'title')
     ..aOS(3, _omitFieldNames ? '' : 'resume')
     ..aOB(4, _omitFieldNames ? '' : 'mcp')
+    ..aOB(5, _omitFieldNames ? '' : 'deleteArchives')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1194,6 +1197,17 @@ class Agent extends $pb.GeneratedMessage {
   $core.bool hasMcp() => $_has(3);
   @$pb.TagNumber(4)
   void clearMcp() => $_clearField(4);
+
+  /// Deleting a chat archives the agent's history of it rather than
+  /// deleting it: the resume command still offers it.
+  @$pb.TagNumber(5)
+  $core.bool get deleteArchives => $_getBF(4);
+  @$pb.TagNumber(5)
+  set deleteArchives($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasDeleteArchives() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearDeleteArchives() => $_clearField(5);
 }
 
 class StartChatRequest extends $pb.GeneratedMessage {

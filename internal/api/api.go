@@ -130,7 +130,7 @@ func (s *server) StartChat(ctx context.Context, req *connect.Request[nushiv1.Sta
 func (s *server) ListAgents(context.Context, *connect.Request[nushiv1.ListAgentsRequest]) (*connect.Response[nushiv1.ListAgentsResponse], error) {
 	resp := &nushiv1.ListAgentsResponse{}
 	for _, k := range s.chats.Agents() {
-		resp.Agents = append(resp.Agents, &nushiv1.Agent{Name: k.Name, Title: k.Title, Resume: k.Resume, Mcp: k.MCP})
+		resp.Agents = append(resp.Agents, &nushiv1.Agent{Name: k.Name, Title: k.Title, Resume: k.Resume, Mcp: k.MCP, DeleteArchives: k.DeleteArchives})
 	}
 	return connect.NewResponse(resp), nil
 }
