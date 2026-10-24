@@ -43,15 +43,7 @@ class ContextMeter extends StatelessWidget {
   Widget build(BuildContext context) {
     if (usage.contextSize == 0) return const SizedBox.shrink();
     final theme = NushiTheme.of(context), t = theme.t;
-    final fill = (usage.contextUsed.toInt() / usage.contextSize.toInt()).clamp(
-      0.0,
-      1.0,
-    );
-    final color = fill > 0.9
-        ? t.crashed
-        : fill > 0.7
-        ? t.needs
-        : t.textSecondary;
+    final fill = _fill(usage), color = _color(t, fill);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -67,6 +59,55 @@ class ContextMeter extends StatelessWidget {
         const SizedBox(width: 5),
         Text('${(fill * 100).round()}%', style: theme.ui(color, size: 12)),
       ],
+    );
+  }
+}
+
+double _fill(Usage u) =>
+    (u.contextUsed.toInt() / u.contextSize.toInt()).clamp(0.0, 1.0);
+
+/// Quiet until it fills: amber past 70%, red past 90%.
+Color _color(Tokens t, double fill) => fill > 0.9
+    ? t.crashed
+    : fill > 0.7
+    ? t.needs
+    : t.textSecondary;
+
+/// "4% used", colored as [ContextMeter]; nothing until the agent says.
+class ContextUsed extends StatelessWidget {
+  const ContextUsed(this.usage, {super.key});
+
+  final Usage usage;
+
+  @override
+  Widget build(BuildContext context) {
+    if (usage.contextSize == 0) return const SizedBox.shrink();
+    final theme = NushiTheme.of(context), fill = _fill(usage);
+    return Text(
+      '${(fill * 100).round()}% used',
+      style: theme.ui(_color(theme.t, fill), size: 12),
+    );
+  }
+}
+
+/// The context's fill as a bar, when what fills it isn't known.
+class UsageBar extends StatelessWidget {
+  const UsageBar(this.usage, {super.key});
+
+  final Usage usage;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = NushiTheme.of(context).t, fill = _fill(usage);
+    return Container(
+      height: 8,
+      clipBehavior: Clip.antiAlias,
+      decoration: box(t.borderSubtle, radius: 3),
+      child: FractionallySizedBox(
+        alignment: Alignment.centerLeft,
+        widthFactor: fill,
+        child: ColoredBox(color: _color(t, fill).withValues(alpha: 0.75)),
+      ),
     );
   }
 }
