@@ -24,6 +24,7 @@ import (
 	"github.com/afrase/nushi/internal/codex"
 	"github.com/afrase/nushi/internal/events"
 	"github.com/afrase/nushi/internal/features/chats"
+	"github.com/afrase/nushi/internal/features/memory"
 	"github.com/afrase/nushi/internal/features/terminals"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
@@ -104,7 +105,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	svc.UseTerminals(terms)
 	follow, unfollow := context.WithCancel(context.Background())
 	go hub.Subscribe(follow.Done(), func() bool { return true }, func(e model.Event) bool { terms.Follow(e); return true })
-	srv := httptest.NewServer(api.Handler("tok", svc, nil, terms, nil, hub))
+	srv := httptest.NewServer(api.Handler("tok", svc, nil, terms, nil, hub, memory.New(svc)))
 	stop := func() {
 		unfollow()
 		srv.CloseClientConnections()

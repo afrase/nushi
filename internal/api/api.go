@@ -17,6 +17,7 @@ import (
 	"github.com/afrase/nushi/internal/events"
 	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/features/mcp"
+	"github.com/afrase/nushi/internal/features/memory"
 	"github.com/afrase/nushi/internal/features/terminals"
 	"github.com/afrase/nushi/internal/features/trust"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
@@ -25,7 +26,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 45
+const Version = 46
 
 // build is the daemon's executable as it started (PingResponse.build).
 var build = func() string {
@@ -45,7 +46,8 @@ type server struct {
 	mcp   *mcp.Service
 	terms *terminals.Service
 	trust *trust.Service
-	hub   *events.Hub
+	hub    *events.Hub
+	memory *memory.Service
 
 	mu      sync.Mutex
 	clients int         // apps following the events
@@ -72,9 +74,9 @@ func (s *server) following(n int) {
 }
 
 // Handler returns the API, refusing requests that don't carry token.
-func Handler(token string, chats *chats.Service, mcp *mcp.Service, terms *terminals.Service, trust *trust.Service, hub *events.Hub) http.Handler {
+func Handler(token string, chats *chats.Service, mcp *mcp.Service, terms *terminals.Service, trust *trust.Service, hub *events.Hub, memory *memory.Service) http.Handler {
 	mux := http.NewServeMux()
-	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{chats: chats, mcp: mcp, terms: terms, trust: trust, hub: hub}))
+	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{chats: chats, mcp: mcp, terms: terms, trust: trust, hub: hub, memory: memory}))
 	want := []byte("Bearer " + token)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if subtle.ConstantTimeCompare([]byte(r.Header.Get("Authorization")), want) != 1 {
@@ -226,6 +228,18 @@ func (s *server) SleepChat(_ context.Context, req *connect.Request[nushiv1.Sleep
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
 	return connect.NewResponse(&nushiv1.SleepChatResponse{}), nil
+}
+
+func (s *server) GetMemory(_ context.Context, req *connect.Request[nushiv1.GetMemoryRequest]) (*connect.Response[nushiv1.GetMemoryResponse], error) {
+	r, err := s.memory.Report(int(req.Msg.AppPid))
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	resp := &nushiv1.GetMemoryResponse{Daemon: int64(r.Daemon), App: int64(r.App), Other: int64(r.Other), Chats: map[string]int64{}}
+	for id, n := range r.Chats {
+		resp.Chats[id] = int64(n)
+	}
+	return connect.NewResponse(resp), nil
 }
 
 func (s *server) GetSettings(context.Context, *connect.Request[nushiv1.GetSettingsRequest]) (*connect.Response[nushiv1.GetSettingsResponse], error) {
