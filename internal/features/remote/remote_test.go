@@ -436,3 +436,53 @@ func TestOneHandshakePerPairing(t *testing.T) {
 		t.Fatal("a second handshake on one pairing")
 	}
 }
+
+// Revoking a device moves the daemon to a new id, which the revoked one
+// doesn't know; the others reach the old one until they've come to the new
+// one, and the daemon then stops waiting there.
+func TestRevokeMovesTheID(t *testing.T) {
+	url := startRelay(t)
+	dir := t.TempDir()
+	s := startRemote(t, dir, url)
+	a, b := newKey(t), newKey(t)
+	o, old := pairOne(t, s, a)
+	pairOne(t, s, b)
+	var aID string
+	for _, d := range s.Get().Devices {
+		if string(d.Key) == string(a.Public) {
+			aID = d.ID
+		}
+	}
+	if err := s.Revoke(aID); err != nil {
+		t.Fatal(err)
+	}
+	moved := s.Get().Rendezvous
+	if moved == old || moved == "" {
+		t.Fatalf("the id stayed %q", moved)
+	}
+
+	// After a restart too, b still reaches the old id, and learns the new.
+	s.Close()
+	s = startRemote(t, dir, url)
+	waitFor(t, func() bool { c, err := phoneConnect(url, old, o.key, b); return err == nil && talks(c) && c.Close() == nil })
+	if c, err := phoneConnect(url, old, o.key, a); err == nil {
+		c.Close()
+		t.Fatal("the revoked device got an answer")
+	}
+	if got := s.Get().Rendezvous; got != moved {
+		t.Fatalf("after a restart the id is %q", got)
+	}
+	conn, err := phoneConnect(url, moved, o.key, b)
+	if err != nil || !talks(conn) {
+		t.Fatal("no connection at the new id", err)
+	}
+	conn.Close()
+	// b has moved: nothing waits at the old id any more.
+	waitFor(t, func() bool {
+		c, err := phoneConnect(url, old, o.key, b)
+		if err == nil {
+			c.Close()
+		}
+		return err != nil
+	})
+}

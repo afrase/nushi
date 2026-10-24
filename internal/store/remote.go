@@ -11,7 +11,7 @@ import (
 )
 
 // Remote access keeps three files, each 0600: remote.json (the switch and
-// the relay), remote-key.json (the daemon's Noise key and rendezvous id)
+// the relay), remote-key.json (the daemon's Noise key and listen keys)
 // and devices.json (the paired phones).
 
 func (s *Store) Remote() (model.RemoteSettings, error) {

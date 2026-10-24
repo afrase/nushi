@@ -27,7 +27,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 47
+const Version = 48
 
 // build is the daemon's executable as it started (PingResponse.build).
 var build = func() string {

@@ -7875,7 +7875,11 @@ type Remote struct {
 	Error   string    `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
 	Devices []*Device `protobuf:"bytes,5,rep,name=devices,proto3" json:"devices,omitempty"`
 	// A phone being paired; unset when none.
-	Pairing       *Pairing `protobuf:"bytes,6,opt,name=pairing,proto3" json:"pairing,omitempty"`
+	Pairing *Pairing `protobuf:"bytes,6,opt,name=pairing,proto3" json:"pairing,omitempty"`
+	// The daemon's id at the relay, where its phones dial. It changes when a
+	// device is revoked: a phone that sees another than the one it dials
+	// keeps this one from then on (its old one answers it for 30 days).
+	Rendezvous    string `protobuf:"bytes,7,opt,name=rendezvous,proto3" json:"rendezvous,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -7950,6 +7954,13 @@ func (x *Remote) GetPairing() *Pairing {
 		return x.Pairing
 	}
 	return nil
+}
+
+func (x *Remote) GetRendezvous() string {
+	if x != nil {
+		return x.Rendezvous
+	}
+	return ""
 }
 
 type Device struct {
@@ -9023,14 +9034,17 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x06folder\x18\x01 \x01(\tR\x06folder\x12\x14\n" +
 	"\x05agent\x18\x02 \x01(\tR\x05agent\x12\x10\n" +
 	"\x03key\x18\x03 \x01(\tR\x03key\"\x15\n" +
-	"\x13TrustFolderResponse\"\xb3\x01\n" +
+	"\x13TrustFolderResponse\"\xd3\x01\n" +
 	"\x06Remote\x12\x0e\n" +
 	"\x02on\x18\x01 \x01(\bR\x02on\x12\x14\n" +
 	"\x05relay\x18\x02 \x01(\tR\x05relay\x12\x14\n" +
 	"\x05state\x18\x03 \x01(\tR\x05state\x12\x14\n" +
 	"\x05error\x18\x04 \x01(\tR\x05error\x12*\n" +
 	"\adevices\x18\x05 \x03(\v2\x10.nushi.v1.DeviceR\adevices\x12+\n" +
-	"\apairing\x18\x06 \x01(\v2\x11.nushi.v1.PairingR\apairing\"\x7f\n" +
+	"\apairing\x18\x06 \x01(\v2\x11.nushi.v1.PairingR\apairing\x12\x1e\n" +
+	"\n" +
+	"rendezvous\x18\a \x01(\tR\n" +
+	"rendezvous\"\x7f\n" +
 	"\x06Device\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +

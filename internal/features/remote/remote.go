@@ -43,18 +43,19 @@ var (
 type Service struct {
 	st      Store
 	dialer  *relay.Dialer
-	serve   func(net.Conn)          // runs the API on a device's channel
-	awake   func() (stop func())    // keeps the Mac from idle sleep
+	serve   func(net.Conn)       // runs the API on a device's channel
+	awake   func() (stop func()) // keeps the Mac from idle sleep
 	publish func(model.Event)
 	key     noise.DHKey
-	listen  ed25519.PrivateKey // proves to the relay the daemon may listen at id
-	id      string
 
 	mu        sync.Mutex
+	listen    ed25519.PrivateKey // proves to the relay the daemon may listen at id
+	id        string
+	moving    []model.Moving // ids given up, still waited on for some devices
 	settings  model.RemoteSettings
 	state     string
 	err       string
-	stopLink  context.CancelFunc
+	stopLink  context.CancelFunc // every wait at the relay
 	stopAwake func()
 	devices   []model.Device
 	conns     map[*noiseconn.Conn]string // live connections and their devices
@@ -89,7 +90,7 @@ func New(st Store, dialer *relay.Dialer, serve func(net.Conn), awake func() func
 		return nil, err
 	}
 	s := &Service{st: st, dialer: dialer, serve: serve, awake: awake, publish: publish,
-		key: noise.DHKey{Private: k.Private, Public: k.Public}, listen: k.Listen, id: listenID(k.Listen),
+		key: noise.DHKey{Private: k.Private, Public: k.Public}, listen: k.Listen, id: listenID(k.Listen), moving: k.Moving,
 		settings: settings, state: "off", devices: devices, conns: map[*noiseconn.Conn]string{}}
 	s.mu.Lock()
 	s.apply()
@@ -119,7 +120,7 @@ func (s *Service) Get() model.Remote {
 }
 
 func (s *Service) snapshot() model.Remote {
-	r := model.Remote{RemoteSettings: s.settings, State: s.state, Error: s.err}
+	r := model.Remote{RemoteSettings: s.settings, State: s.state, Error: s.err, Rendezvous: s.id}
 	for _, d := range s.devices {
 		for _, id := range s.conns {
 			d.Connected = d.Connected || id == d.ID
@@ -182,11 +183,9 @@ func (s *Service) apply() {
 	if s.stopAwake == nil {
 		s.stopAwake = s.awake()
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	s.stopLink = cancel
 	s.state, s.err = "connecting", ""
 	s.changed()
-	go s.link(ctx, s.settings.Relay)
+	s.relink()
 }
 
 // Close stops remote access for the daemon's end, leaving it on.
@@ -197,30 +196,34 @@ func (s *Service) Close() {
 	s.apply()
 }
 
-func (s *Service) setState(ctx context.Context, state, err string) {
+// setState tells how the wait on id stands, which counts only for the
+// daemon's own id.
+func (s *Service) setState(ctx context.Context, id, state, err string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if ctx.Err() != nil || s.state == state && s.err == err {
+	if ctx.Err() != nil || id != s.id || s.state == state && s.err == err {
 		return
 	}
 	s.state, s.err = state, err
 	s.changed()
 }
 
-// link waits at the relay for phones, one waiting connection at a time,
-// until ctx ends; a failed connection is tried again after a backoff.
-func (s *Service) link(ctx context.Context, relayURL string) {
+// link waits at the relay for phones on listen's id, one waiting
+// connection at a time, until ctx ends or the id is given up; a failed
+// connection is tried again after a backoff.
+func (s *Service) link(ctx context.Context, relayURL string, listen ed25519.PrivateKey) {
+	id := listenID(listen)
 	backoff := time.Second
-	for ctx.Err() == nil {
-		c, err := s.dialer.Listen(ctx, relayURL, s.listen)
+	for ctx.Err() == nil && s.waits(id) {
+		c, err := s.dialer.Listen(ctx, relayURL, listen)
 		if err != nil {
-			s.setState(ctx, "error", err.Error())
+			s.setState(ctx, id, "error", err.Error())
 			sleep(ctx, jitter(backoff))
 			backoff = min(2*backoff, time.Minute)
 			continue
 		}
 		backoff = time.Second
-		s.setState(ctx, "connected", "")
+		s.setState(ctx, id, "connected", "")
 		stop := context.AfterFunc(ctx, func() { c.Close() })
 		err = c.Wait()
 		stop()
@@ -232,7 +235,7 @@ func (s *Service) link(ctx context.Context, relayURL string) {
 			sleep(ctx, jitter(time.Second))
 			continue
 		}
-		go s.accept(ctx, c)
+		go s.accept(ctx, c, id)
 	}
 }
 

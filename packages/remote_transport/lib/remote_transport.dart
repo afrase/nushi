@@ -116,7 +116,10 @@ Future<(PairedDaemon, RelayTransport)> pair(
 final class RelayTransport implements Http2ClientTransport {
   RelayTransport(this.daemon, this.device);
 
-  final PairedDaemon daemon;
+  /// The daemon to dial. Its id changes when another device is revoked:
+  /// when `Remote.rendezvous` names another, keep that one, and set it
+  /// here for the next channel.
+  PairedDaemon daemon;
   final KeyPair device;
 
   http2.ClientTransportConnection? _live;
