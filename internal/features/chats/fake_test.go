@@ -226,6 +226,8 @@ func (f *fakeAgent) release() {
 
 func (f *fakeAgent) CanSteer() bool { return f.steerable }
 
+func (f *fakeAgent) Call(context.Context, string, any, any) error { return acp.ErrMethodNotFound }
+
 func (f *fakeAgent) Steer(_ context.Context, _ acp.SessionID, prompt []acp.ContentBlock) (bool, error) {
 	if f.steerGate != nil {
 		<-f.steerGate

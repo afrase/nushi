@@ -22,6 +22,7 @@ import (
 
 	"github.com/afrase/nushi/acp"
 	"github.com/afrase/nushi/internal/ante"
+	"github.com/afrase/nushi/internal/antetrust"
 	"github.com/afrase/nushi/internal/api"
 	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/claudehistory"
@@ -36,6 +37,8 @@ import (
 	"github.com/afrase/nushi/internal/features/trust"
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/omp"
+	"github.com/afrase/nushi/internal/omptrust"
 	"github.com/afrase/nushi/internal/store"
 	"github.com/afrase/nushi/internal/terminal"
 )
@@ -85,8 +88,9 @@ func run() error {
 	log.Printf("nushid listening on %s", ln.Addr())
 
 	hub := &events.Hub{}
-	// What each agent does beyond ACP is in its own packages: internal/claude*
-	// and internal/codex*.
+	// What each agent does beyond ACP is in its own packages: internal/claude*,
+	// internal/codex*, internal/ante* (Ante's bridge too, ADR 0030) and
+	// internal/omp*.
 	claudeKind := chats.Kind{Name: "claude", Title: "Claude", Resume: "claude --resume", MCP: true,
 		Launch: func(h acp.Handler) (chats.Agent, error) { return claude.Start(dir, h) },
 		Dialect: chats.Dialect{InitMeta: claude.InitMeta, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall,
@@ -98,13 +102,19 @@ func run() error {
 	codexKind := chats.Kind{Name: "codex", Title: "Codex", Resume: codex.Resume, History: codex.History, DeleteArchives: codex.DeleteArchives,
 		Launch:  func(h acp.Handler) (chats.Agent, error) { return codex.Start(dir, h) },
 		Dialect: chats.Dialect{ForkAt: codex.ForkAt, ToolCall: codex.ToolCall, Other: codex.Other}}
+	anteKind := chats.Kind{Name: "ante", Title: "Ante", Resume: ante.Resume,
+		Launch:  func(h acp.Handler) (chats.Agent, error) { return ante.Start(dir, h) },
+		Dialect: chats.Dialect{ForkAt: ante.ForkAt, Other: ante.Other, Context: ante.Context}}
+	ompKind := chats.Kind{Name: "omp", Title: "oh-my-pi", Resume: omp.Resume,
+		Launch:  func(h acp.Handler) (chats.Agent, error) { return omp.Start(dir, h) },
+		Dialect: chats.Dialect{Other: omp.Other}}
 	st := store.New(dir)
 	st.HadMessages = func(s model.Session) bool { return claudehistory.Has(projects, s.SessionID, s.Folder) }
-	chatSvc := chats.New([]chats.Kind{claudeKind, codexKind}, st, st, git.Worktrees{}, filepath.Join(dir, "scratch"), hub.Publish)
+	chatSvc := chats.New([]chats.Kind{claudeKind, codexKind, anteKind, ompKind}, st, st, git.Worktrees{}, filepath.Join(dir, "scratch"), hub.Publish)
 	termSvc := terminals.New(startShell, filepath.Base(loginShell), chatSvc, hub.Publish)
 	chatSvc.UseTerminals(termSvc)
 	go hub.Subscribe(nil, func() bool { return true }, func(e model.Event) bool { termSvc.Follow(e); return true })
-	srv := &http.Server{Handler: api.Handler(token, chatSvc, mcp.New(claudemcp.Claude{}, chatSvc.MCPChanged), termSvc, trust.New(map[string]trust.Agent{"claude": claudetrust.Trust{}, "codex": codextrust.Trust{}}, st), hub),
+	srv := &http.Server{Handler: api.Handler(token, chatSvc, mcp.New(claudemcp.Claude{}, chatSvc.MCPChanged), termSvc, trust.New(map[string]trust.Agent{"claude": claudetrust.Trust{}, "codex": codextrust.Trust{}, "ante": antetrust.Trust{}, "omp": omptrust.Trust{}}, st), hub),
 		Protocols: new(http.Protocols)}
 	srv.Protocols.SetUnencryptedHTTP2(true)
 
