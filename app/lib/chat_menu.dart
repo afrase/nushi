@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'agents.dart';
 import 'chat.dart';
 import 'daemon.dart';
 import 'folder_button.dart';
@@ -23,7 +24,8 @@ List<MenuEntry> chatMenu(
     chat.archived ? 'Unarchive' : 'Archive',
     onPick: () => tryOrShow(context, () => _archive(context, chat, daemon)),
   ),
-  MenuEntry('MCP servers…', onPick: () => daemon.showMcp(chat.folder)),
+  if (knownAgents[chat.agent]?.mcp != false)
+    MenuEntry('MCP servers…', onPick: () => daemon.showMcp(chat.folder)),
   MenuEntry(
     'Delete…',
     onPick: () => showDialog<void>(
@@ -164,7 +166,15 @@ class _DeleteDialogState extends State<_DeleteDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               line('This deletes, for good:'),
-              if (p.deletesHistory) ...[
+              if (p.deletesHistory &&
+                  knownAgents[widget.chat.agent]?.deleteArchives == true) ...[
+                line(
+                  '• $name archives its history of the '
+                  '${p.sessions.length == 1 ? 'chat' : '${p.sessions.length} sessions'} '
+                  '($resume offers to unarchive it):',
+                ),
+                ...sessions(p),
+              ] else if (p.deletesHistory) ...[
                 line(
                   p.sessions.length == 1
                       ? '• $name’s history of the chat ($resume '

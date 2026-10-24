@@ -264,6 +264,9 @@ message Agent {
   string resume = 3;
   // Nushi shows and changes its MCP servers (ListMcpServers).
   bool mcp = 4;
+  // Deleting a chat archives the agent's history of it rather than
+  // deleting it: the resume command still offers it.
+  bool delete_archives = 5;
 }
 
 message StartChatRequest {

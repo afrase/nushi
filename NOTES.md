@@ -1,31 +1,37 @@
 # Notes
 
-## Summary (2026-10-24, after step 91: milestone R)
+## Summary (2026-10-24, after step 97: milestone S)
 
-Milestone R fixed D62–D121 of the deep review (`~/Developer/nushi-deep-review-findings.md`) in steps 81, 82, 86 and 88–90, did the help-text pass in step 91, and fixed three rounds of security-review findings on the trust card in steps 83–85 and 87 (S1–S9: a `.mcp.json` that can't be read, and a skill's hooks, see "Security notes"). One commit each on `main`, all pushed. `make test` passes (Go with `-race` for the chats, e2e and acp packages too). Most fixes have a regression test that was checked to fail without the fix (by undoing it: the mutations named in D62, D63, D112–D119, and the new guards). The fakes now catch what they hid: acptest keeps history per folder (load and fork find a session only under the request's cwd; the e2e move copies through it), answers prompts and config only for sessions it opened, and ends its scripts on `session/cancel`; the chats fake runs a process per launch, which Stop ends, after any last words.
+Milestone S added Codex, through codex-acp 2.2.2 (Codex 0.160.1), as a second agent beside Claude, in steps 92–97 plus two rounds of security fixes on Codex's trust card. One commit each on `main`, all pushed. `make test` passes.
 
-**By id**
-- Fixed: D62–D76, D78–D80, D82–D92, D94, D96–D102, D104–D107, D109–D119, D121.
-- Same bug as another: D77 (D75, fixed once: events held while the list is on its way), D93 (D86), D120 (D105).
-- Already fixed in Q (checked against the code): D81 (the "New worktree" choice is saved after the move), D103 (a fresh chat's move keeps on record a worktree that holds work), D108 (Archive keeps the queue, held). Partly in Q: D84 (a folder inside the worktree; R adds other chats and terminals), D85 (nil checks, ids never reused; R cancels a pending prompt on Reload), D95 (the catch's guard; R guards the clear too), D121 (the fork itself; R the rewind's new session and close).
-- Partly done: D88 doesn't replace the earlier failure notice (it no longer repeats: one per try the user starts). D90's ranking of up to 20,000 files on each keystroke stays (the stale list and the wrong folder are fixed). D114's GIT_ scrub in `worktreeSet` has no test: no way found for the environment to change what `git config --file` reads. D116: the guard in `chat()` stays untested; each method it covers refuses on its own.
-- Nothing deferred, nothing found wrong.
+**What each feature does for Codex**
+- Works: new chat (picked from the menu beside "New chat", which then defaults to it), a chat keeps its agent, the start mode remembered per agent, reopening after a daemon restart (`session/load`, transcript rebuilt), commands with their output (from `_meta.terminal_output_delta`; a failed one starts "Exit code N"), permission cards, steering (`_session/steering`), Stop, questions (only in Plan collaboration mode; the note field is the card's "Other"), the title (`session_info_update`), usage (context used/size, last turn's tokens; no cost), model and effort as two pickers (codex-acp's `model` and `reasoning_effort` options, once the model has metadata: see the config below), Rewind (the same AIR fork meta Claude's adapter takes; Codex cuts after the turn that has the message), side questions and moves (session/fork, a move with another cwd and no history copy), Delete (codex-acp archives: `codex resume` offers to unarchive, and the dialog says so), `codex resume <id>` in a terminal (checked with the temp `CODEX_HOME`), the trust card (every `.codex` file Codex reads, whole).
+- Switched off: the context breakdown (no `/context`: the card shows used and size), the MCP view and card (a note that Codex uses its own config; "MCP servers…" leaves the chat menu), subagents and background shells (codex-acp reports a subagent as an ordinary tool call, and background terminals only to JetBrains AIR), cost.
+- Partial: plans arrive as message text (codex-acp sends `plan` updates only to clients advertising a `plan` capability ACP v1 doesn't have); after a Rewind Codex renames the chat after the next message.
 
-**Tried by hand** (dev daemon and app on `NUSHI_DATA`, a `/tmp` link, live Claude, two throwaway repositories, 1280×800 dark): the trust card for a `.mcp.json` Claude's parser would reject (its text shown) and a skill's hooks (its front matter in a box that scrolls), and its shorter text; Start anyway, then a real turn; the "A newer daemon is installed" bar after a rebuild, and Restart daemon (the chat reopened); the Delete dialog's shorter lines; the MCP view; the context card's "Not reported yet" after a reopen.
+**Tried by hand** (dev daemon and app on `/tmp/nds`, a temp `CODEX_HOME` with the config below, `FIREWORKS_API_KEY` passed only through the dev daemon's environment, throwaway repositories in the session's scratchpad, 1280×800 dark): a Codex chat end to end (New Codex chat, a move into a repository, Read-only mode, `ls` and `printf hi > x.txt` with its permission card, steering a message into a running `sleep 8`, Stop during `sleep 30`, reopen after a daemon restart, Rewind, a Plan-mode question answered, Delete), the trust card for a `.codex/config.toml` (Cancel, then Start anyway remembered), and a Claude chat working beside it (reply, context breakdown, MCP card, Delete). Codex's environment from a Finder launch was checked with a probe app (ADR 0028).
 
-**Not tried by hand**: the Delete dialog during a slow delete (it finished too fast to catch; `PopScope` and a disabled Cancel), a failed daemon launch and a nushell login shell, the Send review list and a review taken out of the queue, a half-written comment kept across files (no test either: the comment box didn't open under the test's tap), @ completions refetching, a call's output staying open as the next call makes a group, the MCP form opening as JSON, title reports in a live terminal (an app test covers it), D70 in a terminal tab (a daemon test covers it), and the light theme.
+**Not tried by hand**: a side question on Codex, moving a Codex chat that has messages (codex-acp forks into another cwd: checked over ACP only), a Codex image prompt, a Codex chat where `npx` or the login is missing (the start fails with "couldn't start Codex: …" in the error dialog), the trust card's "changed since you looked" retry (a unit test covers it), and the light theme.
 
 **Needs your attention**
-- The API went from 42 to 43 (Ping reports the daemon's build): press "Restart daemon" in the installed app. From now on the app also offers a restart, in a bar, when it bundles another build of the daemon than the one running.
-- Product calls, in "Decisions to revisit" under "New in R": a fresh chat's worktree stays while another chat or a terminal is in it; a failed reopen isn't retried on its own; Send now goes before the queue; "Send review" lists every unsent comment; a `.mcp.json` Claude would skip is left out of the MCP list but shown on the trust card.
-- Security: the trust card fails closed (S1–S9). A skill whose front matter has hooks (by text or YAML key) shows it raw instead of the commands Nushi guessed; a `.mcp.json` Nushi can't read shows whole. That added `gopkg.in/yaml.v3`.
-- The app's launcher passes the daemon's paths as `NUSHID_BIN`/`NUSHID_LOG`; the daemon's children (agents) inherit them. Harmless, but visible in `ps`.
+- The API went from 43 to 44 (ListAgents; StartChat, CheckFolder and TrustFolder take an agent; CheckFolder returns a key TrustFolder must send back): press "Restart daemon" in the installed app after `make install`.
+- Codex's config: put the `config.toml` and `models.json` under "Codex config for you" in `~/.codex` yourself. Without `models.json` every Codex reply starts with "Model metadata … not found" and the window reads 258k.
+- Product calls, in "Decisions to revisit" under "New in S".
+- Security: see "Security notes" (Codex trust, the key, codex-acp trusting every cwd).
 
-**Size**: the daemon went from 7,813 to 8,128 lines of Go, the app from 13,624 to 13,918 lines of Dart (the ACP client stays at 929). Every step stayed under the ~500-line tripwire (the largest, 81, added 468 lines, nearly all tests). Files at the ~400-line tripwire: `app/lib/daemon.dart` (400, after the launcher moved out), `internal/git/git.go` (400), `internal/model/model.go` (400), `internal/features/chats/chats_test.go` (401); `chats.go` went past it and was split (`close.go`).
+**Size**: the daemon went from 8,128 to 8,630 lines of Go, the app from 13,918 to 14,052 lines of Dart. Every step stayed under the ~500-line tripwire. `chats.go`, `daemon.dart` and the fake agent were split to stay under ~400 lines a file.
 
-**Dependencies**: `gopkg.in/yaml.v3` (Go, step 87: a skill's front matter for the trust card).
+**Dependencies**: `github.com/BurntSushi/toml` (Go, step 96: Codex's config is TOML).
 
-**Left behind by the testing**: nothing (the dev chats deleted with Delete; the empty history folders Claude left, the dev data folder, its `/tmp` links and the throwaway repositories removed; the helper tools stay in the session's scratchpad).
+**Left behind by the testing**: see the end of the milestone report; the dev data folder, temp Codex homes, throwaway repositories and Claude's empty history folders were removed.
+
+## Demo (milestone S)
+
+1. Open the menu beside "New chat" and pick Codex: the button now reads "New Codex chat", and the header says Codex with DeepSeek V4.1 Flash; the pickers show the mode (Read-only, Workspace access, Auto review, Full access), the model and the effort.
+2. In Read-only, ask Codex to run `printf hi > x.txt`: a permission card, then the command and its output in the transcript.
+3. While Codex runs `sleep 8`, send another message: it goes into the running turn.
+4. Restart the daemon and open the chat: it comes back from Codex's history; `codex resume <session id>` opens it in a terminal.
+5. Put a `.codex/config.toml` in a repository and start a Codex chat there: the card shows the file whole.
 
 ## Demo (milestone R)
 
@@ -150,6 +156,7 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 95. Picking an agent in the app | 8302 | 929 | 14023 | 682 |
 | 96. Trusting a folder for Codex (ADR 0029) | 8532 | 929 | 14031 | 682 |
 | (96's security fixes) | 8623 | 929 | 14042 | 682 |
+| 97. A Codex chat end to end, and the docs | 8630 | 929 | 14052 | 682 |
 
 Steps over the ~500-line tripwire (code and tests, without generated code): 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 and this milestone removed more than they added.
 
@@ -190,9 +197,75 @@ What the code depends on, and how the adapter behaves. Everything Nushi does abo
 - Approvals: `enabledMcpjsonServers` in an untracked `.claude/settings.local.json` counts only in a folder trusted in the terminal (`hasTrustDialogAccepted`); `disabledMcpjsonServers` (any settings file) rejects a server everywhere and `claude mcp list` leaves it out. `disabledMcpServers` in a settings file does nothing. The local settings file is at the repository's root.
 - A chat loads its MCP servers when its session starts or loads and keeps them; it loads a "Pending approval" `.mcp.json` server without asking. MCP tools are deferred.
 
+## Agent facts (codex-acp 2.2.2, Codex 0.160.1)
+
+What the code depends on, and how the adapter behaves. Everything Nushi does about it is in `internal/codex*`.
+
+**Sessions**
+- `initialize`: `agentInfo.name` `@agentclientprotocol/codex-acp`, `loadSession`, `sessionCapabilities` resume, list, close, delete, fork, additionalDirectories, subagents; `promptCapabilities.image`; `_meta.steering.supported`. It advertises an `api-key` auth method (ChatGPT login too, unless `NO_BROWSER`); with a provider in `config.toml` no `authenticate` is needed. Without a login or provider, `session/new` fails "Authentication required".
+- `session/new` returns legacy `modes` (read-only, workspace-write, agent "Auto review" (the default), agent-full-access "Full access"), the unstable `models` list (ids carry the effort as a suffix, `gpt-6.1-sol[medium]`; Nushi doesn't read it) and config options `mode`, `collaboration_mode` (default, plan), `model` (base ids), and, when the model has reasoning levels, `reasoning_effort` (category `thought_level`) and `fast-mode`. A custom model is listed only while it is the current one: after switching to a GPT model, switching back is "Invalid params" (with a model catalog it stays listed). Agent-full-access is a mode like Claude's Bypass permissions: shown, never picked by Nushi itself.
+- codex-acp starts and forks every session with `projects.<cwd>.trust_level = "trusted"` as a config override (ADR 0029).
+- `session/load` replays user messages (with `messageId`), agent messages (same `msg_…` ids as live), tool calls with their output, thoughts and the title; not the model-metadata warning, permission cards or questions. `session/list` works for a `/private/…` cwd.
+- `session/fork` takes another `cwd` (so a move needs no history copy) and `_meta.jetbrains.air.fork = {version: 1, messageId}` for any client: the fork keeps the turns up to the one that has the message. It replays nothing. After a fork Codex titles the session after its next prompt.
+- `session/delete` is `thread/archive`: the rollout moves to `$CODEX_HOME/archived_sessions/`; `codex resume <id>` then asks "Unarchive and resume". `codex delete <id>` would delete for good. History is `$CODEX_HOME/sessions/YYYY/MM/DD/rollout-…-<id>.jsonl`; `codex resume` in a terminal first asks to trust the folder, and says when another app has the session open.
+
+**Updates**
+- Commands are `exec_command` tool calls: `kind` execute (content a `terminal` reference even without the client's `terminal` capability) or read/search for listing commands (no content). A client that isn't AIR gets the output in `_meta.terminal_output_delta {data}` on `tool_call_update`s and the end in `_meta.terminal_exit {exit_code, signal}`; read commands send `rawOutput.exit_code`. After Stop a running command finishes on its own and its call completes then.
+- Permission requests come before the call's `tool_call`; options "Yes, proceed" (allow_once), "Yes, and don't ask again for commands that start with …" (allow_always), "No, and tell Codex what to do differently" (reject_once). In Auto review nothing harmless asks; in Read-only writing a file does.
+- Questions (`request_user_input`) only in collaboration mode Plan: an `elicitation/create` form tied to a call id it never sends as a tool call, each question a required string with `oneOf` plus "None of the above", then an optional `<id>_note` "Additional answer or note".
+- `session_info_update` carries the title (the first prompt, whole) and `_meta.codex.threadStatus`. `usage_update` gives used/size (no cost); the prompt result has `usage` and `_meta.quota`. Thoughts come as `agent_thought_chunk`s with `rs_…` ids.
+- Without model metadata each turn starts with an agent message without `messageId`: "Warning: Model metadata for `…` not found…", and the window is 258,400.
+- Plans come as agent text: codex-acp sends `plan` updates only to clients advertising a `plan` capability.
+
+## Codex config for you
+
+Put these in `~/.codex/` (I didn't write them). `config.toml`:
+
+```toml
+model = "accounts/fireworks/models/deepseek-v4p1-flash"
+model_provider = "fireworks"
+model_catalog_json = "models.json"   # next to this file
+
+[model_providers.fireworks]
+name = "Fireworks"
+base_url = "https://api.fireworks.ai/inference/v1"
+env_key = "FIREWORKS_API_KEY"
+wire_api = "responses"
+```
+
+Codex has no per-model metadata in `config.toml`: it takes a model catalog (`model_catalog_json`), and each entry needs the system prompt (`base_instructions`) too; without one the catalog fails to load and Codex says "Authentication required". This builds `~/.codex/models.json` from Codex 0.160.1's own prompt (the one its fallback metadata uses), with the model's real window (Fireworks reports 1,048,576 tokens; Codex shows 95% of it, 996k) and three efforts (each tried):
+
+```sh
+curl -sL https://raw.githubusercontent.com/openai/codex/rust-v0.160.1/codex-rs/models-manager/prompt.md | jq -Rs '{models: [{
+  slug: "accounts/fireworks/models/deepseek-v4p1-flash",
+  display_name: "DeepSeek V4.1 Flash",
+  description: "DeepSeek V4.1 Flash on Fireworks",
+  base_instructions: .,
+  default_reasoning_level: "medium",
+  supported_reasoning_levels: [
+    {effort: "low", description: "Fast responses with lighter reasoning"},
+    {effort: "medium", description: "Balances speed and reasoning depth"},
+    {effort: "high", description: "Greater reasoning depth for complex problems"}],
+  shell_type: "unified_exec", visibility: "list", supported_in_api: true, priority: 1,
+  support_verbosity: false, default_verbosity: null, apply_patch_tool_type: null,
+  availability_nux: null, upgrade: null,
+  truncation_policy: {mode: "bytes", limit: 10000},
+  context_window: 1048576, max_context_window: 1048576,
+  experimental_supported_tools: [], input_modalities: ["text", "image"]}]}' > ~/.codex/models.json
+```
+
+The catalog replaces Codex's own list, so the model picker shows only this model. `FIREWORKS_API_KEY` must be exported by fish's config (it is): agents get the login shell's environment.
+
 ## Decisions to revisit
 
 Open questions; what's settled is in `docs/adr/` or in the code.
+
+- New in S: "New chat" starts the agent of the newest chat (archived ones count), else the first the daemon lists (Claude); the menu beside it, and "New chat here" on a folder, pick another. The button names the agent ("New Codex chat"). Nothing is stored for it.
+- New in S: a chat whose agent the daemon no longer knows can't be opened, renamed or deleted from Nushi ("Nushi doesn't know the agent").
+- New in S: Codex's Delete archives (codex-acp's `session/delete`); Nushi doesn't run `codex delete` to delete for good. Side questions and throwaway forks pile up in `archived_sessions` the same way.
+- New in S: after a Rewind Codex titles the chat after the next message (its fork has no name); Claude's chats keep theirs. A Codex Rewind drops from the transcript what came after the agent's last text in that turn, which Codex's fork keeps.
+- New in S: Codex's trust card shows every file in each `.codex` Codex reads for the folder, from the repository's root down to it (more than Codex loads when it trusts only the cwd, as codex-acp makes it); "Start anyway" is kept per folder and per what was shown, so each folder of a repository with a `.codex` asks once, and again after any change. A `.codex` holding a link, an unreadable or special file can't be remembered. "Start anyway" for Claude doesn't cover Codex.
+- New in S: the start failing ("couldn't start Codex: …") shows in the error dialog, not in a chat: no chat is made.
 
 - New in R: step 91 cut the app's help text to what the screen can't show: what a destructive action loses, why something is disabled, warnings and errors. Tooltips that restated a label went; empty states are a few words.
 - New in R: "Send review" lists every unsent comment, those on files the view no longer shows too, each with Remove; comments sent in a review that leaves the queue without reaching the transcript (Stop, Archive, taken out) count as unsent again. A comment half written stays when its file leaves the view, until it shows again (while the app runs). A tool call's output left open stays open as the next call makes it a group. The MCP form shows a server's JSON when an argument has a line break, is empty or isn't text. Terminals ignore title reports (`CSI 20/21 t`).
@@ -233,16 +306,19 @@ Open questions; what's settled is in `docs/adr/` or in the code.
 - Open a session started outside Nushi (e.g. `claude` in a terminal) as a chat: list the agent's sessions per folder through ACP `session/list` (claude-agent-acp 0.94.0 has it, under `sessionCapabilities`), pick one, and `session/load` it. No copy: the agent's history stays the source. Mind a session that's still open in a terminal (two writers to one transcript).
 
 - Git actions from the Changes view: stage and unstage files or hunks, commit with a message, maybe push. It's read-only toward git for now ([ADR 0019](docs/adr/0019-changes-read-only-toward-git.md)); doing it would mean revisiting that ADR (git writes next to an agent that may be writing too).
-- More agents: first ACP-native ones (opencode `opencode acp`, Gemini CLI, Codex through its adapter, goose), several of which can use Fireworks/DeepSeek; this proves the agent picker, non-Claude model and effort controls, and features that switch off when an agent lacks fork, steering or `/context`. Then Ante (installed on the test Mac, `~/.ante/bin/ante` 0.2.14, Fireworks/DeepSeek configured): it doesn't speak ACP; `ante serve --stdio` uses its own JSONL protocol (`OpMsg` in, events out), so it needs a small bridge to ACP shipped with Nushi, best once that protocol is documented or Ante gains an ACP mode. A coworker of the owner has Ante working with something custom: ask how before researching. Nushi never reads the agents' keys; each agent reads its own config.
+- More agents, if wanted: opencode (`opencode acp`; Fireworks built in, no steering, delete or questions, permissions only in `opencode.json`), Gemini CLI (`gemini --acp`; Gemini API only), goose (`goose acp`). Each is a `chats.Kind` and its own `internal/<agent>*` packages. Nushi never reads the agents' keys; each agent reads its own config.
+- Ante is dropped: Codex covers Fireworks (see `~/Developer/nushi-agents-research.md` for its ACP adapter, `ante-acp`, should it come back).
+- Codex's MCP servers (its `config.toml`'s `mcp_servers`, `/mcp` over ACP) in the MCP view; Codex's background terminals and subagent sessions (codex-acp offers them to clients that negotiate them).
 - Subagents as ACP child sessions (the RFD form claude-agent-acp offers a client that advertises `subagents`): a background subagent's steps after a daemon restart, and a stop button per subagent. See step 51.
 
 ## Dependencies
 
-- Go: `connectrpc.com/connect` v1, `google.golang.org/protobuf`, `gopkg.in/yaml.v3` (step 87: skills' front matter, for the trust card), buf through `go run` (codegen), `github.com/creack/pty`, `golang.org/x/sys/unix`.
+- Go: `connectrpc.com/connect` v1, `google.golang.org/protobuf`, `gopkg.in/yaml.v3` (step 87: skills' front matter, for the trust card), `github.com/BurntSushi/toml` (step 96: Codex's config), buf through `go run` (codegen), `github.com/creack/pty`, `golang.org/x/sys/unix`.
 - Dart: `connectrpc` (with `http2` 2.x: 2.0.1 doesn't resolve with 3.x), `protobuf`, `flutter_markdown_plus`, `markdown`, `re_highlight`, `url_launcher`, `file_selector`, `pasteboard`, `desktop_drop`, `xterm2` (MIT; brings `xterm2_core`, `zmodem`, `quiver`, `equatable`, `convert`); fonts IBM Plex Sans and JetBrains Mono (OFL), and Symbols Nerd Font Mono from Nerd Fonts 3.5.1 (MIT; its icons come from projects under their own licenses, listed in the Nerd Fonts repository), bundled.
 
 ## Security notes to look at
 
+- Codex runs as you through `npx --yes @agentclientprotocol/codex-acp@2.2.2` (pinned by version, not hash; it brings `@openai/codex` 0.160.1), started like Claude's adapter. codex-acp tells Codex to trust every session's cwd, so a folder's `.codex/config.toml` (MCP servers, the environment of every command, sandbox settings, plugins) and rules load without Codex asking; Nushi's card is the only warning (ADR 0029). The card's key is a hash of every file it showed, computed with the card and checked again on "Start anyway"; links aren't followed. Codex's trust record is read, never written. Agents get the login shell's environment, secrets included (ADR 0028).
 - Agents run as you, through `npx --yes @agentclientprotocol/claude-agent-acp@0.94.0` (pinned by version, not hash), started in the daemon's data folder so a project's `node_modules` or `.npmrc` can't swap it. A chat's folder reaches the agent only as `cwd`.
 - A panic on something the agent sent becomes a JSON-RPC error; a malformed form is refused.
 - `ListFiles` lists any absolute folder a client names (names, 20,000 at most); mentioned files go to the agent as `file://` links.
@@ -263,3 +339,4 @@ Open questions; what's settled is in `docs/adr/` or in the code.
 - Terminals: the shell is the user's login shell from `id -P` (the user database), never the daemon's `$SHELL`. fish 4 asks the terminal's Primary Device Attributes as it starts and waits 10 seconds for the answer; the app answers queries in a replay only for a terminal it opened itself (anyone attaching later would answer twice).
 - Driving the app by hand: System Events' `click at` doesn't reach a Flutter window; a few lines of Swift posting `CGEvent` mouse and key events do. Screenshots are 2× the window's points.
 - App tests get a data folder in the temporary folder (`FLUTTER_TEST`); never point them at the real one.
+- Codex by hand: start the dev daemon with `CODEX_HOME` at a temp folder holding the config above, and `FIREWORKS_API_KEY` read from `fish -l -c` inside the launching script, never on a command line or in a file. `codex resume` in a pty needs answers to the terminal's colour and cursor queries.

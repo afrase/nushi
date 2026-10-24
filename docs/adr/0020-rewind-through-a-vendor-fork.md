@@ -5,7 +5,7 @@
 
 ## Decision
 - Nushi rewinds by forking the chat's session at the agent's last message before the chosen one (on the chat's own agent process), or, before the first message, by starting a new session. The chat keeps its id and gets the new session id; the old session stays in the chat's earlier sessions, so Delete deletes it too (as for moves, [0014](0014-moving-a-chat-forks-it.md)).
-- The vendor meta and the check for the adapter (`agentInfo.name`) live in `internal/claude` (`ForkAt`), which `main` hands to the chats feature as part of its `Dialect`. Other agents don't get the action.
+- The vendor meta and the check for the adapter (`agentInfo.name`) live in `internal/claude` (`ForkAt`), which `main` hands to the chats feature as part of its `Dialect`. codex-acp 2.2.2 honors the same meta for any client and cuts after the whole turn that has the message (`internal/codex`'s `ForkAt`). Other agents don't get the action.
 - Files aren't rewound: ACP doesn't expose Claude's file checkpoints. The confirmation says so.
 
 ## Consequences

@@ -14,3 +14,4 @@ All of this is Claude-specific code in `internal/claudemcp`, behind an interface
 - What Nushi shows is what Claude uses, and a change made in Nushi shows in the terminal at once (and the other way round).
 - Anything Claude records only in `~/.claude.json` (per-project on/off of user servers, the terminal's approvals) can be shown but not changed from Nushi.
 - Reading depends on Claude's private file layout and the list's text format; both are read tolerantly (an unknown status is "unknown", not an error).
+- Codex keeps its MCP servers in its own `config.toml`; Nushi doesn't show them, and a Codex chat's MCP card says so.

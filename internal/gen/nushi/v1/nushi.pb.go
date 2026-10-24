@@ -1000,9 +1000,12 @@ type Agent struct {
 	// session id, such as "claude --resume".
 	Resume string `protobuf:"bytes,3,opt,name=resume,proto3" json:"resume,omitempty"`
 	// Nushi shows and changes its MCP servers (ListMcpServers).
-	Mcp           bool `protobuf:"varint,4,opt,name=mcp,proto3" json:"mcp,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Mcp bool `protobuf:"varint,4,opt,name=mcp,proto3" json:"mcp,omitempty"`
+	// Deleting a chat archives the agent's history of it rather than
+	// deleting it: the resume command still offers it.
+	DeleteArchives bool `protobuf:"varint,5,opt,name=delete_archives,json=deleteArchives,proto3" json:"delete_archives,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *Agent) Reset() {
@@ -1059,6 +1062,13 @@ func (x *Agent) GetResume() string {
 func (x *Agent) GetMcp() bool {
 	if x != nil {
 		return x.Mcp
+	}
+	return false
+}
+
+func (x *Agent) GetDeleteArchives() bool {
+	if x != nil {
+		return x.DeleteArchives
 	}
 	return false
 }
@@ -7475,12 +7485,13 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\bcommands\x18\x01 \x03(\v2\x11.nushi.v1.CommandR\bcommands\"\x13\n" +
 	"\x11ListAgentsRequest\"=\n" +
 	"\x12ListAgentsResponse\x12'\n" +
-	"\x06agents\x18\x01 \x03(\v2\x0f.nushi.v1.AgentR\x06agents\"[\n" +
+	"\x06agents\x18\x01 \x03(\v2\x0f.nushi.v1.AgentR\x06agents\"\x84\x01\n" +
 	"\x05Agent\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x16\n" +
 	"\x06resume\x18\x03 \x01(\tR\x06resume\x12\x10\n" +
-	"\x03mcp\x18\x04 \x01(\bR\x03mcp\"\\\n" +
+	"\x03mcp\x18\x04 \x01(\bR\x03mcp\x12'\n" +
+	"\x0fdelete_archives\x18\x05 \x01(\bR\x0edeleteArchives\"\\\n" +
 	"\x10StartChatRequest\x12\x16\n" +
 	"\x06folder\x18\x01 \x01(\tR\x06folder\x12\x14\n" +
 	"\x05agent\x18\x03 \x01(\tR\x05agent\x12\x1a\n" +

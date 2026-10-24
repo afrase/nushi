@@ -23,4 +23,13 @@ The packaged app starts its bundled `nushid` when no daemon is running, and leav
 
 The daemon keeps its socket, token and log in `~/Library/Application Support/Nushi/`. To try a build beside a Nushi that's in use, give both another folder: `NUSHI_DATA=~/Library/Application\ Support/Nushi\ Dev make run` (and the same for `make stop`).
 
+## Agents
+
+"New chat" starts the agent used last; the menu beside it picks another. A chat keeps its agent.
+
+- **Claude**, through `npx --yes @agentclientprotocol/claude-agent-acp@0.94.0`. It uses Claude Code's own login and settings.
+- **Codex**, through `npx --yes @agentclientprotocol/codex-acp@2.2.2`, which brings Codex 0.160.1. It uses Codex's own login or config (`$CODEX_HOME`, else `~/.codex`): sign in with `codex login`, or name a provider in `config.toml` (NOTES.md has one for Fireworks). A provider's key comes from the environment, which agents get from your login shell when the app starts the daemon ([ADR 0028](docs/adr/0028-agents-get-the-login-shells-environment.md)). A Codex chat resumes in a terminal with `codex resume <session id>`.
+
+Both need `npx` (Node) on the login shell's `PATH`. What each agent can do (fork, rewind, steering, questions, the context breakdown, MCP) follows what it reports; a control it lacks isn't shown.
+
 Decisions are in [`docs/adr/`](docs/adr/README.md).

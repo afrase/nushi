@@ -22,6 +22,9 @@ type Kind struct {
 	// MCP says its MCP servers are the ones the mcp feature shows and
 	// changes.
 	MCP bool
+	// DeleteArchives says its session/delete archives a session rather
+	// than deleting it.
+	DeleteArchives bool
 }
 
 // kind is a Kind the service runs.
