@@ -52,7 +52,7 @@ func TestPromptStreamsTheReply(t *testing.T) {
 		t.Errorf("title = %q, want the first prompt (has messages: %v)", c.session.Title, c.session.HasMessages)
 	}
 	want := []model.Item{
-		{ID: "item-1", Kind: model.UserMessage, Text: "hi", Images: []model.Image{png}, Rewindable: true},
+		{ID: "item-1", Kind: model.UserMessage, Text: "hi", Images: []model.Image{png}, Files: []string{"a b.go"}, Rewindable: true},
 		{ID: "m1", Kind: model.AgentMessage, Text: "Hello!"},
 		{ID: "m2", Kind: model.AgentMessage, Text: "Bye"},
 	}

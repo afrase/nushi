@@ -13,12 +13,12 @@ import (
 // user's answer. Nushi never answers one itself.
 func (c *chat) requestPermission(ctx context.Context, req acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
 	item := model.Item{Kind: model.Permission, Status: "pending", Title: req.ToolCall.Title}
-	c.setOutput(&item, req.ToolCall.Content)
 	for _, o := range req.Options {
 		item.Options = append(item.Options, model.Option{ID: string(o.OptionID), Name: o.Name, Kind: string(o.Kind)})
 	}
 	answer := make(chan string, 1)
 	c.mu.Lock()
+	c.setOutput(&item, req.ToolCall.Content) // under the lock: it reads the chat's folder
 	if call := c.itemLocked(string(req.ToolCall.ToolCallID)); call != nil {
 		if item.Title == "" {
 			item.Title = call.Title
