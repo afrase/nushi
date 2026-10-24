@@ -42,7 +42,9 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   bool _loading = false;
   String? _path; // the file shown
   String? _opening; // a file to show once the list is in (a terminal link)
-  int _asked = 0; // the last request's number: older answers are dropped
+  // The last reload's and the last diff's numbers: older answers are
+  // dropped. Apart, so a commit picked during a reload doesn't drop it.
+  int _reloads = 0, _asked = 0;
 
   @override
   void initState() {
@@ -79,11 +81,11 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
 
   @override
   Future<void> reload() async {
-    final asked = ++_asked;
+    final asked = ++_reloads;
     setState(() => _loading = true);
     try {
       final span = await ChangeSpan.of(daemon, chat);
-      if (asked != _asked) return; // another reload took over
+      if (asked != _reloads) return; // another reload took over
       final status = span.status;
       if (!status.git) {
         throw status.gone ? 'The folder is gone.' : 'Not a git repository.';
@@ -94,12 +96,12 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
         _first = _commits.firstOrNull?.hash;
         _last = null;
       }
-      await _diff(asked);
+      await _diff();
       _error = null;
     } on Object catch (e) {
-      if (mounted) setState(() => _error = '$e');
+      if (mounted && asked == _reloads) setState(() => _error = '$e');
     } finally {
-      if (mounted && asked == _asked) setState(() => _loading = false);
+      if (mounted && asked == _reloads) setState(() => _loading = false);
     }
   }
 
@@ -122,8 +124,8 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   }
 
   /// Reads the files of the scope (in Commits, of the commits picked).
-  Future<void> _diff([int? asked]) async {
-    asked ??= ++_asked;
+  Future<void> _diff() async {
+    final asked = ++_asked;
     final span = _span!;
     final picked = _picked;
     final req = span.diff(

@@ -131,6 +131,7 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 77. Turns (D14–D16, D34, D42, D59) | 7782 | 929 | 13413 | 682 |
 | 78. MCP (D17, D18, D44) | 7801 | 929 | 13451 | 682 |
 | 79. The app: cards, composer, side chats, moves (D6, D8, D19, D30–D33, D39, D43, D53) | 7813 | 929 | 13612 | 682 |
+| 80. Review comments and the Changes view (D36–D38, D40) | 7813 | 929 | 13624 | 682 |
 
 Steps over the ~500-line tripwire (code and tests, without generated code): 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 and this milestone removed more than they added.
 

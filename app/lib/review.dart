@@ -75,35 +75,36 @@ class ReviewComment {
 
   /// Follows the commented lines into [text], the side as it is now: true
   /// if the comment moved or became (or stopped being) [outdated].
+  /// The lines are compared as the diff shows them: without a "\r" at the
+  /// end (Windows line endings).
   bool anchor(String text) {
-    final lines = text.split('\n'), quoted = quote.split('\n');
+    final lines = text.split(RegExp(r'\r?\n')), quoted = quote.split('\n');
     bool at(int i) =>
         i >= 0 &&
         i + quoted.length <= lines.length &&
         Iterable<int>.generate(quoted.length)
             .every((k) => lines[i + k] == quoted[k]);
-    var found = at(start - 1) ? start - 1 : -1;
-    if (found < 0) {
-      // Where the lines are now; with several, where the lines around
-      // them match best, then the nearest.
-      final b = before.isEmpty ? <String>[] : before.split('\n');
-      final a = after.isEmpty ? <String>[] : after.split('\n');
-      int score(int i) {
-        var n = 0;
-        for (var k = 0; k < b.length; k++) {
-          final j = i - b.length + k;
-          if (j >= 0 && lines[j] == b[k]) n += 1000;
-        }
-        for (var k = 0; k < a.length; k++) {
-          final j = i + quoted.length + k;
-          if (j < lines.length && lines[j] == a[k]) n += 1000;
-        }
-        return n - (i - (start - 1)).abs();
+    // Where the lines are now; with several (a "}" is everywhere), where
+    // the lines around them match best, then the nearest: the old place
+    // keeps them only when nothing matches better.
+    final b = before.isEmpty ? <String>[] : before.split('\n');
+    final a = after.isEmpty ? <String>[] : after.split('\n');
+    int score(int i) {
+      var n = 0;
+      for (var k = 0; k < b.length; k++) {
+        final j = i - b.length + k;
+        if (j >= 0 && lines[j] == b[k]) n += 1000;
       }
+      for (var k = 0; k < a.length; k++) {
+        final j = i + quoted.length + k;
+        if (j < lines.length && lines[j] == a[k]) n += 1000;
+      }
+      return n - (i - (start - 1)).abs();
+    }
 
-      for (var i = 0; i + quoted.length <= lines.length; i++) {
-        if (at(i) && (found < 0 || score(i) > score(found))) found = i;
-      }
+    var found = -1;
+    for (var i = 0; i + quoted.length <= lines.length; i++) {
+      if (at(i) && (found < 0 || score(i) > score(found))) found = i;
     }
     final was = (start, end, outdated);
     if (found >= 0) {
