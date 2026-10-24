@@ -116,11 +116,15 @@ func TestEachDialerItsOwnListener(t *testing.T) {
 	url := start(t, Defaults)
 	id := newID()
 	l1, d1 := pair(t, url, id)
-	l2, d2 := pair(t, url, id)
-	send(t, d1, "a")
-	send(t, d2, "b")
+	send(t, d1, "a") // a dialer meets the first listener waiting once it speaks
 	expect(t, l1, "a")
+	l2, d2 := pair(t, url, id)
+	send(t, d2, "b")
 	expect(t, l2, "b")
+	send(t, l1, "to a")
+	send(t, l2, "to b")
+	expect(t, d1, "to a")
+	expect(t, d2, "to b")
 }
 
 func TestDialerWithoutListener(t *testing.T) {

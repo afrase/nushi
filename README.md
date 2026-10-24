@@ -37,6 +37,10 @@ Claude, Codex and oh-my-pi need `npx` (Node) on the login shell's `PATH`; npx in
 
 A chat whose agent isn't needed can sleep: its agent stops and the chat stays, and the next message wakes it (`session/load`). Chats sleep on their own after 30 idle minutes when nothing would be lost (Settings changes the time), or from a chat's menu ([ADR 0032](docs/adr/0032-idle-chats-sleep.md)). The bar along the window's bottom counts working, awake and sleeping agents, and shows the memory Nushi takes; a click lists each awake chat's.
 
+## Remote access
+
+Settings → Remote access connects the daemon to a relay you name (`wss://…`), so a phone can reach it from anywhere; it's off until you turn it on, and nothing listens on the Mac: the daemon dials out, through the Mac's proxy settings (the environment's `HTTPS_PROXY`, else the system's proxy or PAC file; not WPAD, NTLM or Kerberos). While it's on, the Mac doesn't idle-sleep (`caffeinate`); a closed lid on battery still sleeps. "Pair a phone" shows a QR code; the phone then shows a six-digit code, and the Mac asks to allow it by name and code. Everything between the phone and the daemon is end-to-end encrypted with Noise, and a paired phone is a full client, like the app ([ADR 0034](docs/adr/0034-noise-between-phone-and-daemon.md), with the threat model). The phone app itself isn't built yet; `packages/remote_transport` is its side of the channel.
+
 ## The relay
 
 A phone reaches the daemon through a relay: `nushi-relay`, one static binary that pairs two WebSocket connections on a random id and copies their messages, which are end-to-end encrypted between the phone and the daemon. It keeps nothing: no accounts, no disk, no logs beyond starting ([ADR 0033](docs/adr/0033-the-relay-is-a-dumb-pipe.md) says what it can still see). Anyone can run one; Nushi doesn't run one for you.

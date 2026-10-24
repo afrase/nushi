@@ -392,3 +392,22 @@ func TestOffClosesEverything(t *testing.T) {
 		t.Fatal("connected while off")
 	}
 }
+
+// When the relay ends the daemon's wait (its limit, a restart), the
+// daemon waits again, and a phone still gets through.
+func TestWaitsAgain(t *testing.T) {
+	lim := relay.Defaults
+	lim.MaxWait = 200 * time.Millisecond
+	lim.DialWait = 3 * time.Second
+	srv := httptest.NewServer(relay.New(lim))
+	defer srv.Close()
+	url := "ws" + strings.TrimPrefix(srv.URL, "http")
+	s := startRemote(t, t.TempDir(), url)
+	phone := newKey(t)
+	o, id := pairOne(t, s, phone)
+	time.Sleep(time.Second) // several waits ended
+	conn, err := phoneConnect(url, id, o.key, phone)
+	if err != nil || !talks(conn) {
+		t.Fatal("no connection after the relay ended waits", err)
+	}
+}
