@@ -6395,6 +6395,10 @@ class Item extends $pb.GeneratedMessage {
     $core.bool? rewindable,
     Subagent? subagent,
     $core.bool? report,
+    $core.String? prompt,
+    $core.String? model,
+    $core.String? effort,
+    $core.String? ranModel,
   }) {
     final result = Item._();
     if (id != null) result.id = id;
@@ -6417,6 +6421,10 @@ class Item extends $pb.GeneratedMessage {
     if (rewindable != null) result.rewindable = rewindable;
     if (subagent != null) result.subagent = subagent;
     if (report != null) result.report = report;
+    if (prompt != null) result.prompt = prompt;
+    if (model != null) result.model = model;
+    if (effort != null) result.effort = effort;
+    if (ranModel != null) result.ranModel = ranModel;
     return result;
   }
 
@@ -6460,6 +6468,10 @@ class Item extends $pb.GeneratedMessage {
     ..aOM<Subagent>(19, _omitFieldNames ? '' : 'subagent',
         subBuilder: Subagent.$_createMessage)
     ..aOB(20, _omitFieldNames ? '' : 'report')
+    ..aOS(21, _omitFieldNames ? '' : 'prompt')
+    ..aOS(22, _omitFieldNames ? '' : 'model')
+    ..aOS(23, _omitFieldNames ? '' : 'effort')
+    ..aOS(24, _omitFieldNames ? '' : 'ranModel')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -6646,6 +6658,46 @@ class Item extends $pb.GeneratedMessage {
   $core.bool hasReport() => $_has(19);
   @$pb.TagNumber(20)
   void clearReport() => $_clearField(20);
+
+  /// For a tool call that starts a subagent: the task it was given, the
+  /// model and effort it was asked to use (the config option values, "" when
+  /// it uses the chat's), and the model it ran on (a name to show), once the
+  /// agent says.
+  @$pb.TagNumber(21)
+  $core.String get prompt => $_getSZ(20);
+  @$pb.TagNumber(21)
+  set prompt($core.String value) => $_setString(20, value);
+  @$pb.TagNumber(21)
+  $core.bool hasPrompt() => $_has(20);
+  @$pb.TagNumber(21)
+  void clearPrompt() => $_clearField(21);
+
+  @$pb.TagNumber(22)
+  $core.String get model => $_getSZ(21);
+  @$pb.TagNumber(22)
+  set model($core.String value) => $_setString(21, value);
+  @$pb.TagNumber(22)
+  $core.bool hasModel() => $_has(21);
+  @$pb.TagNumber(22)
+  void clearModel() => $_clearField(22);
+
+  @$pb.TagNumber(23)
+  $core.String get effort => $_getSZ(22);
+  @$pb.TagNumber(23)
+  set effort($core.String value) => $_setString(22, value);
+  @$pb.TagNumber(23)
+  $core.bool hasEffort() => $_has(22);
+  @$pb.TagNumber(23)
+  void clearEffort() => $_clearField(23);
+
+  @$pb.TagNumber(24)
+  $core.String get ranModel => $_getSZ(23);
+  @$pb.TagNumber(24)
+  set ranModel($core.String value) => $_setString(23, value);
+  @$pb.TagNumber(24)
+  $core.bool hasRanModel() => $_has(23);
+  @$pb.TagNumber(24)
+  void clearRanModel() => $_clearField(24);
 }
 
 /// How a subagent goes.

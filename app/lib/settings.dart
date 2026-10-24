@@ -9,8 +9,8 @@ import 'daemon.dart';
 /// whether the details panel shows (its toolbar button), which of its cards
 /// are collapsed and their order, the repositories whose new chats get a
 /// worktree, what each chat's Changes view shows, the panes' widths, whether
-/// changed files show flat, which chats show their terminals, and the
-/// terminal's font.
+/// changed files show flat, which chats show their terminals, the
+/// terminal's font, and whether a subagent's pane shows wide.
 final showDetails = ValueNotifier<bool>(_saved['details'] != false)
   ..addListener(_save);
 final collapsedCards = ValueNotifier<Set<String>>(_strings('collapsed'))
@@ -44,6 +44,10 @@ final paneWidths = ValueNotifier<Map<String, double>>({
       in ((_saved['panes'] as Map?) ?? {}).entries)
     if (key is String && value is num) key: value.toDouble(),
 })..addListener(_save);
+
+/// Whether a subagent's pane shows wide.
+final subagentWide = ValueNotifier<bool>(_saved['subagentWide'] == true)
+  ..addListener(_save);
 
 /// The terminal's font family (null: the bundled JetBrains Mono) and size.
 final terminalFont = ValueNotifier<String?>(switch (_saved['termFont']) {
@@ -82,6 +86,7 @@ void _save() {
         'terminals': terminalChats.value.toList(),
         'termFont': terminalFont.value,
         'termSize': terminalFontSize.value,
+        'subagentWide': subagentWide.value,
       }),
     );
   } on Object {

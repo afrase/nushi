@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/subagents.dart';
@@ -62,5 +63,33 @@ void main() {
     expect([for (final s in subs) s.call.id], ['a']);
     expect([for (final it in subs.single.items) it.id], ['r', 's']);
     expect(subagentState(subs.single), 'done · 1 tool call');
+  });
+
+  test('what a subagent runs on: asked for, else the chat\'s', () {
+    ConfigOption option(String category, String current, List<String> v) =>
+        ConfigOption(
+          category: category,
+          current: current,
+          values: [
+            for (final x in v) ConfigValue(value: x, name: x.toUpperCase()),
+          ],
+        );
+    final chat = ChatState('c', '/f')
+      ..config = [
+        option('model', 'opus', ['opus', 'haiku']),
+        option('thought_level', 'high', ['low', 'high']),
+      ];
+    final call = Item(id: 'a', agent: 'Explore', model: 'haiku');
+    var runs = subagentModel(chat, (call: call, items: const []));
+    expect(
+      [settingText(runs.model), settingText(runs.effort)],
+      ['HAIKU', 'HIGH (inherited)'],
+    );
+    call.ranModel = 'Haiku 5.5'; // once it ran, the model it ran on
+    runs = subagentModel(chat, (call: call, items: const []));
+    expect(settingText(runs.model), 'Haiku 5.5');
+    chat.config = [];
+    runs = subagentModel(chat, (call: Item(), items: const []));
+    expect(settingText(runs.effort), 'inherited');
   });
 }

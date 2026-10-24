@@ -112,8 +112,10 @@ type Item struct {
 	// Parent is the subagent tool call whose subagent made it, if one did.
 	Parent string
 	// Agent is the subagent's type ("Explore") when the item is a tool call
-	// that starts a subagent.
-	Agent string
+	// that starts a subagent; Prompt is the task it was given, Model and
+	// Effort what it was asked to use ("" when it uses the chat's), and
+	// RanModel the model it ran on, once the agent says.
+	Agent, Prompt, Model, Effort, RanModel string
 	// Tool is a tool call's tool, when the agent names it ("Read").
 	Tool string
 	// ForkAt is, for a user message, the agent's message the conversation

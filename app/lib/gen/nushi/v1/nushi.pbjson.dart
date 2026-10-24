@@ -1634,6 +1634,10 @@ const Item$json = {
       '10': 'subagent'
     },
     {'1': 'report', '3': 20, '4': 1, '5': 8, '10': 'report'},
+    {'1': 'prompt', '3': 21, '4': 1, '5': 9, '10': 'prompt'},
+    {'1': 'model', '3': 22, '4': 1, '5': 9, '10': 'model'},
+    {'1': 'effort', '3': 23, '4': 1, '5': 9, '10': 'effort'},
+    {'1': 'ran_model', '3': 24, '4': 1, '5': 9, '10': 'ranModel'},
   ],
 };
 
@@ -1650,7 +1654,8 @@ final $typed_data.Uint8List itemDescriptor = $convert.base64Decode(
     'CgVhZ2VudBgPIAEoCVIFYWdlbnQSEgoEdG9vbBgQIAEoCVIEdG9vbBIXCgdmb3JrX2F0GBEgAS'
     'gJUgZmb3JrQXQSHgoKcmV3aW5kYWJsZRgSIAEoCFIKcmV3aW5kYWJsZRIuCghzdWJhZ2VudBgT'
     'IAEoCzISLm51c2hpLnYxLlN1YmFnZW50UghzdWJhZ2VudBIWCgZyZXBvcnQYFCABKAhSBnJlcG'
-    '9ydA==');
+    '9ydBIWCgZwcm9tcHQYFSABKAlSBnByb21wdBIUCgVtb2RlbBgWIAEoCVIFbW9kZWwSFgoGZWZm'
+    'b3J0GBcgASgJUgZlZmZvcnQSGwoJcmFuX21vZGVsGBggASgJUghyYW5Nb2RlbA==');
 
 @$core.Deprecated('Use subagentDescriptor instead')
 const Subagent$json = {

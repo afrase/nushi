@@ -34,8 +34,8 @@ PanelCard? agentsCard(ChatState chat) {
   );
 }
 
-/// A subagent: its type and task, and its state under them; a click shows
-/// it in the chat.
+/// A subagent: its type and task, and its state under them; a click opens
+/// its pane.
 class _AgentRow extends StatelessWidget {
   const _AgentRow(this.chat, this.s);
 
@@ -45,28 +45,38 @@ class _AgentRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context), t = theme.t;
+    final runs = subagentModel(chat, s);
     return Tap(
-      onTap: () => chat.reveal.value = s.call.id,
-      tooltip: 'Show it in the chat',
+      onTap: () => chat.subagent.value = s.call.id,
+      tooltip:
+          'Open its steps. Model ${settingText(runs.model)}, effort '
+          '${settingText(runs.effort)}',
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '${s.call.agent}: ${s.call.title}',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.ui(t.text, size: 12),
+          Row(
+            spacing: 6,
+            children: [
+              Expanded(
+                child: Text(
+                  '${s.call.agent}: ${s.call.title}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.ui(t.text, size: 12),
+                ),
+              ),
+              // Its model and effort, as a tag.
+              Text(
+                [
+                  for (final v in [runs.model, runs.effort])
+                    if (v.name.isNotEmpty) v.name,
+                ].join(' · '),
+                style: theme.code(t.textMuted, size: 10.5),
+              ),
+            ],
           ),
-          Text(
-            subagentState(s),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.ui(
-              s.call.status == 'failed' ? t.crashed : t.textMuted,
-              size: 11.5,
-            ),
-          ),
+          SubagentState(s, style: theme.ui(t.textMuted, size: 11.5)),
         ],
       ),
     );

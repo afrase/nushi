@@ -41,6 +41,8 @@ class BottomFollower extends ChangeNotifier {
   /// aren't the user scrolling up.
   bool onNotification(Notification n) {
     if (n is ScrollMetricsNotification && n.depth == 0) {
+      // At the bottom (all of it fits, say): following again.
+      if (n.metrics.extentAfter == 0) _set(true);
       stick();
     } else if (n is ScrollStartNotification && n.depth == 0) {
       _dragged = n.dragDetails != null;

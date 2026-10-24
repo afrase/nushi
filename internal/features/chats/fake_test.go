@@ -11,7 +11,7 @@ import (
 
 // claudeDialect is Claude's, as main fills it.
 var claudeDialect = Dialect{InitMeta: claude.InitMeta, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall,
-	Background: claude.Background, Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle,
+	Background: claude.Background, ReportElsewhere: claude.ReportElsewhere, Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle,
 	ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete}
 
 // fakeAgent replies to each prompt with the given updates.
