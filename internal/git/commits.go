@@ -52,33 +52,35 @@ func Commits(ctx context.Context, folder, base string, limit int) ([]Commit, err
 	if base != "" {
 		rev = base + "..HEAD"
 	}
-	// A record per commit: \x1e, the fields split by \x1f, then its
-	// numstat lines (added, removed, path).
-	out, err := run(ctx, folder, "log", "-n", strconv.Itoa(limit), "--no-renames", "--numstat", "--relative", "--no-ext-diff", "--no-textconv",
+	// With -z, a NUL ends each commit's line and each of its numstat lines
+	// (added, removed, path). A commit's line is \x1e and its fields split
+	// by \x1f, the subject last: a subject can hold those, never a NUL.
+	out, err := run(ctx, folder, "log", "-z", "-n", strconv.Itoa(limit), "--no-renames", "--numstat", "--relative", "--no-ext-diff", "--no-textconv",
 		"--format=%x1e%H%x1f%h%x1f%ct%x1f%s", rev, "--")
 	if err != nil {
 		return nil, err
 	}
 	var commits []Commit
-	for _, rec := range strings.Split(string(out), "\x1e")[1:] {
-		head, stats, _ := strings.Cut(rec, "\n")
-		f := strings.SplitN(head, "\x1f", 4)
-		if len(f) < 4 {
+	for _, rec := range strings.Split(string(out), "\x00") {
+		if head, ok := strings.CutPrefix(rec, "\x1e"); ok {
+			f := strings.SplitN(head, "\x1f", 4)
+			if len(f) < 4 {
+				return nil, fmt.Errorf("git log: a commit line of %d fields", len(f))
+			}
+			c := Commit{Hash: f[0], Short: f[1], Subject: f[3]}
+			c.Time, _ = strconv.ParseInt(f[2], 10, 64)
+			commits = append(commits, c)
 			continue
 		}
-		c := Commit{Hash: f[0], Short: f[1], Subject: f[3]}
-		c.Time, _ = strconv.ParseInt(f[2], 10, 64)
-		for _, line := range strings.Split(stats, "\n") {
-			a, rest, ok := strings.Cut(line, "\t")
-			if !ok {
-				continue
-			}
-			r, _, _ := strings.Cut(rest, "\t")
-			n, _ := strconv.Atoi(a) // "-" for binary files
-			m, _ := strconv.Atoi(r)
-			c.Added, c.Removed = c.Added+n, c.Removed+m
+		a, rest, ok := strings.Cut(strings.TrimPrefix(rec, "\n"), "\t")
+		if !ok || len(commits) == 0 {
+			continue
 		}
-		commits = append(commits, c)
+		c := &commits[len(commits)-1]
+		r, _, _ := strings.Cut(rest, "\t")
+		n, _ := strconv.Atoi(a) // "-" for binary files
+		m, _ := strconv.Atoi(r)
+		c.Added, c.Removed = c.Added+n, c.Removed+m
 	}
 	return commits, nil
 }

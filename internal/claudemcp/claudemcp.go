@@ -6,7 +6,7 @@
 //     the project is the folder's repository (its main checkout, for a
 //     worktree), or the folder itself outside git;
 //   - project scope: .mcp.json in the folder or any folder above it, the
-//     nearest winning;
+//     nearest winning; one that can't be read is left out, as Claude does;
 //   - plugins' servers and claude.ai connectors: only what `claude mcp list`
 //     reports.
 package claudemcp
@@ -17,12 +17,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
-	"syscall"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/afrase/nushi/internal/model"
@@ -62,8 +63,8 @@ func (Claude) Servers(folder string) ([]model.MCPServer, error) {
 	var cfg struct {
 		MCPServers servers `json:"mcpServers"`
 		Projects   map[string]struct {
-			MCPServers servers  `json:"mcpServers"`
-			Disabled   []string `json:"disabledMcpjsonServers"`
+			MCPServers servers `json:"mcpServers"`
+			Disabled   names   `json:"disabledMcpjsonServers"`
 		} `json:"projects"`
 	}
 	file := ConfigFile()
@@ -81,7 +82,7 @@ func (Claude) Servers(folder string) ([]model.MCPServer, error) {
 			MCPServers servers `json:"mcpServers"`
 		}
 		if err := readJSON(path, &mcp); err != nil {
-			return nil, err
+			log.Printf("leaving out %v", err) // as Claude does: the other files' servers still count
 		}
 		for name := range mcp.MCPServers {
 			if seen[name] {

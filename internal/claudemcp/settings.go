@@ -37,8 +37,21 @@ func userSettings() string {
 }
 
 type lists struct {
-	Enabled  []string `json:"enabledMcpjsonServers"`
-	Disabled []string `json:"disabledMcpjsonServers"`
+	Enabled  names `json:"enabledMcpjsonServers"`
+	Disabled names `json:"disabledMcpjsonServers"`
+}
+
+// names is a list of server names, which Claude also takes as one name
+// alone, a string.
+type names []string
+
+func (n *names) UnmarshalJSON(b []byte) error {
+	var one string
+	if json.Unmarshal(b, &one) == nil {
+		*n = names{one}
+		return nil
+	}
+	return json.Unmarshal(b, (*[]string)(n))
 }
 
 // rejected returns, by name, the files that reject a .mcp.json server in
@@ -84,22 +97,25 @@ func (Claude) SetOn(ctx context.Context, folder, name string, on bool) error {
 	if err != nil && !created {
 		return fmt.Errorf("reading %s: %w", path, err)
 	}
+	if settings == nil { // the file holds null
+		settings = map[string]json.RawMessage{}
+	}
 	add, drop := "enabledMcpjsonServers", "disabledMcpjsonServers"
 	if !on {
 		add, drop = drop, add
 	}
 	for key, keep := range map[string]bool{add: true, drop: false} {
-		names := []string{}
+		list := names{}
 		raw, had := settings[key]
-		if had && json.Unmarshal(raw, &names) != nil {
+		if had && string(raw) != "null" && json.Unmarshal(raw, &list) != nil {
 			return fmt.Errorf("%s in %s isn't a list of names", key, path)
 		}
-		names = slices.DeleteFunc(names, func(n string) bool { return n == name })
+		list = slices.DeleteFunc(list, func(n string) bool { return n == name })
 		if keep {
-			names = append(names, name)
+			list = append(list, name)
 		}
-		if len(names) > 0 || had {
-			settings[key], _ = json.Marshal(names)
+		if len(list) > 0 || had {
+			settings[key], _ = json.Marshal(list)
 		}
 	}
 	out, _ := json.MarshalIndent(settings, "", "  ")

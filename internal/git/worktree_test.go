@@ -93,10 +93,19 @@ func TestWorktrees(t *testing.T) {
 	if st, err := (Worktrees{}).Inspect(ctx, second); err != nil || st != (model.WorktreeState{Gone: true, BranchGone: true}) {
 		t.Errorf("Inspect after deleting the branch = %+v, %v", st, err)
 	}
-	// A worktree whose folder went outside git: removing clears git's record.
+	// A worktree whose folder went outside git: removing clears git's record
+	// of it, not of another missing one (the user's, on a volume not mounted).
+	theirs := filepath.Join(t.TempDir(), "theirs")
+	git(t, repo, "worktree", "add", "-q", theirs)
+	os.RemoveAll(theirs)
 	os.RemoveAll(wt.Path)
-	if err := (Worktrees{}).Remove(ctx, wt, false); err != nil {
-		t.Errorf("removing a worktree whose folder is gone: %v", err)
+	for range 2 { // and again: nothing left to remove is no error
+		if err := (Worktrees{}).Remove(ctx, wt, false); err != nil {
+			t.Errorf("removing a worktree whose folder is gone: %v", err)
+		}
+	}
+	if out, _ := run(ctx, repo, "worktree", "list"); strings.Contains(string(out), "brave-otter") || !strings.Contains(string(out), "theirs") {
+		t.Errorf("worktrees left:\n%s", out)
 	}
 }
 

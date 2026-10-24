@@ -126,18 +126,19 @@ func BaseOf(ctx context.Context, wt model.Worktree) string {
 }
 
 // Remove removes a worktree (git worktree remove), with force even if it
-// has changes. Of a worktree whose folder is gone, git's record goes (git
-// worktree prune, which only drops such records).
+// has changes. Of a worktree whose folder is gone, git's record of it goes
+// (only its: not those of others whose folders are missing too, as prune
+// would), unless git has none left.
 func (Worktrees) Remove(ctx context.Context, wt model.Worktree, force bool) error {
-	if _, err := os.Stat(wt.Path); errors.Is(err, fs.ErrNotExist) {
-		_, err := run(ctx, wt.Repo, "worktree", "prune")
-		return err
-	}
+	_, gone := os.Stat(wt.Path)
 	args := []string{"worktree", "remove", wt.Path}
 	if force {
 		args = append(args, "--force")
 	}
 	_, err := run(ctx, wt.Repo, args...)
+	if errors.Is(gone, fs.ErrNotExist) && err != nil && strings.Contains(err.Error(), "is not a working tree") {
+		return nil
+	}
 	return err
 }
 
