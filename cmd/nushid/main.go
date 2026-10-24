@@ -42,6 +42,7 @@ import (
 	"github.com/afrase/nushi/internal/omp"
 	"github.com/afrase/nushi/internal/omptrust"
 	"github.com/afrase/nushi/internal/store"
+	"github.com/afrase/nushi/internal/sysproxy"
 	"github.com/afrase/nushi/internal/terminal"
 	"github.com/afrase/nushi/relay"
 )
@@ -124,7 +125,7 @@ func run() error {
 		Trust: trust.New(map[string]trust.Agent{"claude": claudetrust.Trust{}, "codex": codextrust.Trust{}, "ante": antetrust.Trust{}, "omp": omptrust.Trust{}}, st),
 		Hub: hub, Memory: memory.New(chatSvc)}
 	channels := newChannels()
-	if sv.Remote, err = remote.New(st, &relay.Dialer{}, channels.serve, keepAwake, hub.Publish); err != nil {
+	if sv.Remote, err = remote.New(st, &relay.Dialer{Proxies: sysproxy.For}, channels.serve, keepAwake, hub.Publish); err != nil {
 		return err
 	}
 	remoteSrv := &http.Server{Handler: api.New(sv), Protocols: new(http.Protocols)}
