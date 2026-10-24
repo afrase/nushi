@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/afrase/nushi/relay"
 )
@@ -48,38 +49,99 @@ func TestSettings(t *testing.T) {
 	}
 	for raw, want := range cases {
 		u, _ := url.Parse(raw)
-		got := fromSettings(s, u, u.Scheme == "wss")
+		got, _ := fromSettings(s, u, u.Scheme == "wss")
 		if len(got) != 1 || (got[0] == nil) != (want == "") || got[0] != nil && got[0].String() != want {
 			t.Errorf("%s: %v, want %q", raw, got, want)
 		}
 	}
 	socks := parse([]byte("<dictionary> {\n  SOCKSEnable : 1\n  SOCKSPort : 1080\n  SOCKSProxy : socks.corp\n}\n"))
 	u, _ := url.Parse("wss://relay.example.com/")
-	if got := fromSettings(socks, u, true); got[0] == nil || got[0].String() != "socks5://socks.corp:1080" {
+	if got, _ := fromSettings(socks, u, true); got[0] == nil || got[0].String() != "socks5://socks.corp:1080" {
 		t.Errorf("SOCKS: %v", got)
 	}
 }
 
-// A PAC file is evaluated by macOS itself.
+// A PAC file is evaluated by macOS itself, and sees only the scheme, the
+// host and the port.
 func TestPAC(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "proxy.pac")
 	os.WriteFile(file, []byte(`function FindProxyForURL(url, host) {
-  if (dnsDomainIs(host, ".example.com") && url.indexOf("https:") == 0) return "PROXY p.corp:8080; SOCKS s.corp:1080; DIRECT";
+  if (url != "https://relay.example.com:8443/" && url != "https://relay.other.org/") return "PROXY leaked.corp:1";
+  if (dnsDomainIs(host, ".example.com")) return "PROXY p.corp:8080; SOCKS s.corp:1080; DIRECT";
   return "DIRECT";
 }`), 0o600)
 	s := settings{values: map[string]string{"ProxyAutoConfigEnable": "1", "ProxyAutoConfigURLString": "file://" + file}}
-	u, _ := url.Parse("wss://relay.example.com/v1/listen/x")
-	got := fromSettings(s, u, true)
-	if len(got) != 3 || got[0].String() != "http://p.corp:8080" || got[1].String() != "socks5://s.corp:1080" || got[2] != nil {
+	u, _ := url.Parse("wss://relay.example.com:8443/v1/listen/SECRETIDSECRETID?x=1#y")
+	got, ok := fromSettings(s, &url.URL{Scheme: u.Scheme, Host: u.Host, Path: "/"}, true)
+	if !ok || len(got) != 3 || got[0].String() != "http://p.corp:8080" || got[1].String() != "socks5://s.corp:1080" || got[2] != nil {
 		t.Fatalf("PAC: %v", got)
 	}
 	u, _ = url.Parse("wss://relay.other.org/")
-	if got := fromSettings(s, u, true); len(got) != 1 || got[0] != nil {
+	if got, _ := fromSettings(s, u, true); len(got) != 1 || got[0] != nil {
 		t.Fatalf("PAC, direct: %v", got)
 	}
+	// A PAC file that can't be had leaves the static settings.
 	s.values["ProxyAutoConfigURLString"] = "file:///nowhere.pac"
-	if got := fromSettings(s, u, true); len(got) != 1 || got[0] != nil {
-		t.Fatalf("a missing PAC file: %v", got)
+	s.values["HTTPSEnable"], s.values["HTTPSProxy"], s.values["HTTPSPort"] = "1", "static.corp", "3128"
+	if got, ok := fromSettings(s, u, true); ok || len(got) != 1 || got[0].String() != "http://static.corp:3128" {
+		t.Fatalf("a missing PAC file: %v %v", got, ok)
+	}
+}
+
+// A PAC server that never answers is given up on.
+func TestPACTimeout(t *testing.T) {
+	hang := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { <-hang }))
+	defer srv.Close()
+	defer close(hang)
+	old := Timeout
+	Timeout = 200 * time.Millisecond
+	defer func() { Timeout = old }()
+	s := settings{values: map[string]string{"ProxyAutoConfigEnable": "1", "ProxyAutoConfigURLString": srv.URL + "/proxy.pac"}}
+	u, _ := url.Parse("wss://relay.example.com/")
+	began := time.Now()
+	if got, ok := fromSettings(s, u, true); ok || got[0] != nil {
+		t.Fatalf("got %v %v", got, ok)
+	}
+	if time.Since(began) > 2*time.Second {
+		t.Fatal("waited too long")
+	}
+}
+
+// A slow lookup holds up only the lookups for its own URL.
+func TestLookupsDontWaitForEachOther(t *testing.T) {
+	t.Setenv("HTTPS_PROXY", "")
+	t.Setenv("https_proxy", "")
+	t.Setenv("HTTP_PROXY", "")
+	t.Setenv("http_proxy", "")
+	release := make(chan struct{})
+	calls := 0
+	var mu sync.Mutex
+	old := lookup
+	lookup = func(u *url.URL, _ bool) ([]*url.URL, time.Duration) {
+		mu.Lock()
+		calls++
+		mu.Unlock()
+		if u.Host == "slow.example" {
+			<-release
+		}
+		return []*url.URL{nil}, time.Minute
+	}
+	defer func() { lookup = old }()
+	slow, _ := url.Parse("wss://slow.example/v1/listen/a")
+	fast, _ := url.Parse("wss://fast.example/v1/listen/b")
+	done := make(chan struct{}, 2)
+	go func() { For(slow); done <- struct{}{} }()
+	go func() { For(slow); done <- struct{}{} }()
+	time.Sleep(50 * time.Millisecond)
+	if _, err := For(fast); err != nil {
+		t.Fatal(err)
+	}
+	close(release)
+	<-done
+	<-done
+	if calls != 2 {
+		t.Fatalf("%d lookups for two URLs", calls)
 	}
 }
 
