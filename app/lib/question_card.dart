@@ -64,10 +64,10 @@ class _QuestionCardState extends State<QuestionCard> {
           ..addListener(() => setState(() {}));
       }
     }
-    // The agent is waiting on this: take the keyboard, unless the user is
-    // writing something (the composer, a comment) that has text in it.
+    // The agent is waiting on this: take the keyboard, when nothing else
+    // has a use for it (see _free).
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && widget.item.status == 'pending' && !_writing()) {
+      if (mounted && widget.item.status == 'pending' && _free()) {
         _focus.requestFocus();
       }
     });
@@ -82,14 +82,19 @@ class _QuestionCardState extends State<QuestionCard> {
     super.dispose();
   }
 
-  /// Whether the keyboard is in a text field with text in it.
-  static bool _writing() =>
-      FocusManager.instance.primaryFocus?.context
-          ?.findAncestorWidgetOfExactType<EditableText>()
-          ?.controller
-          .text
-          .isNotEmpty ??
-      false;
+  /// Whether the card may take the keyboard: nothing has it, or an empty
+  /// box on the same screen (the composer, waiting), or an earlier card.
+  /// Never from text being written, a dialog, or anything else that takes
+  /// keys (a terminal: Enter or a digit meant for it would answer).
+  bool _free() {
+    final focus = FocusManager.instance.primaryFocus;
+    final at = focus?.context;
+    if (focus == null || at == null || focus is FocusScopeNode) return true;
+    if (ModalRoute.of(at) != ModalRoute.of(context)) return false;
+    if (at.findAncestorStateOfType<_QuestionCardState>() != null) return true;
+    final box = at.findAncestorWidgetOfExactType<EditableText>();
+    return box != null && box.controller.text.isEmpty;
+  }
 
   bool get _many => _qs.length > 1;
 

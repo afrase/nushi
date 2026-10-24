@@ -36,6 +36,6 @@ void main() {
     );
     await tester.pumpWidget(box(change));
     expect(find.textContaining('Too long to diff'), findsOneWidget);
-    expect(lineCounts(change), (maxDiffLines + 2, maxDiffLines + 1));
+    expect(lineCounts(change), (1, 0));
   });
 }

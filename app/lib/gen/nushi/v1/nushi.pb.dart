@@ -1387,6 +1387,7 @@ class QueuedMessage extends $pb.GeneratedMessage {
     $core.Iterable<$core.String>? files,
     $core.Iterable<ImageData>? images,
     $core.String? relayTo,
+    $core.String? toSubagent,
   }) {
     final result = QueuedMessage._();
     if (id != null) result.id = id;
@@ -1394,6 +1395,7 @@ class QueuedMessage extends $pb.GeneratedMessage {
     if (files != null) result.files.addAll(files);
     if (images != null) result.images.addAll(images);
     if (relayTo != null) result.relayTo = relayTo;
+    if (toSubagent != null) result.toSubagent = toSubagent;
     return result;
   }
 
@@ -1416,6 +1418,7 @@ class QueuedMessage extends $pb.GeneratedMessage {
     ..pPM<ImageData>(4, _omitFieldNames ? '' : 'images',
         subBuilder: ImageData.$_createMessage)
     ..aOS(5, _omitFieldNames ? '' : 'relayTo')
+    ..aOS(6, _omitFieldNames ? '' : 'toSubagent')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1473,6 +1476,17 @@ class QueuedMessage extends $pb.GeneratedMessage {
   $core.bool hasRelayTo() => $_has(4);
   @$pb.TagNumber(5)
   void clearRelayTo() => $_clearField(5);
+
+  /// That subagent's tool call (SendPromptRequest.to_subagent), to send it
+  /// there again; empty when not known (a replayed message).
+  @$pb.TagNumber(6)
+  $core.String get toSubagent => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set toSubagent($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasToSubagent() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearToSubagent() => $_clearField(6);
 }
 
 /// Every message waiting in a chat's queue, in order.

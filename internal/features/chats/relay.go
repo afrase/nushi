@@ -26,9 +26,19 @@ func (c *chat) relayLocked(callID string) (*model.Relay, error) {
 func userItem(m model.Message) model.Item {
 	it := model.Item{Kind: model.UserMessage, Text: m.Text, Images: m.Images}
 	if m.Relay != nil {
-		it.RelayTo = m.Relay.Agent
+		it.RelayTo, it.RelayCall = m.Relay.Agent, m.To
 	}
 	return it
+}
+
+// messageOf is a user message back as a message to send again: for a
+// subagent still (Message.To), when the transcript knows which.
+func messageOf(it model.Item) model.Message {
+	m := model.Message{Text: it.Text, Images: it.Images, To: it.RelayCall}
+	if it.RelayTo != "" {
+		m.Relay = &model.Relay{Agent: it.RelayTo}
+	}
+	return m
 }
 
 // relayedLocked reads a replayed user message that asked the agent to pass

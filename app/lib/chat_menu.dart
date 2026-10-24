@@ -21,12 +21,7 @@ List<MenuEntry> chatMenu(
   MenuEntry('Rename', onPick: onRename),
   MenuEntry(
     chat.archived ? 'Unarchive' : 'Archive',
-    onPick: () => tryOrShow(
-      context,
-      () => daemon.client.archiveChat(
-        ArchiveChatRequest(chatId: chat.id, archived: !chat.archived),
-      ),
-    ),
+    onPick: () => tryOrShow(context, () => _archive(context, chat, daemon)),
   ),
   MenuEntry('MCP servers…', onPick: () => daemon.showMcp(chat.folder)),
   MenuEntry(
@@ -37,6 +32,38 @@ List<MenuEntry> chatMenu(
     ),
   ),
 ];
+
+/// Archives (or unarchives) a chat. Archiving ends its terminals: when a
+/// program runs in one, it asks first, as closing that terminal would.
+Future<void> _archive(
+  BuildContext context,
+  ChatState chat,
+  Daemon daemon,
+) async {
+  if (!chat.archived) {
+    final terms = await daemon.client.listTerminals(
+      ListTerminalsRequest(chatId: chat.id),
+    );
+    final running = [
+      for (final t in terms.terminals)
+        if (t.program.isNotEmpty && !t.exited) '“${t.program}”',
+    ];
+    if (running.isNotEmpty &&
+        (!context.mounted ||
+            !await confirm(
+              context,
+              'Archive the chat?',
+              'Archiving ends its terminals, and what still runs in them: '
+                  '${running.join(', ')}.',
+              'Archive',
+            ))) {
+      return;
+    }
+  }
+  await daemon.client.archiveChat(
+    ArchiveChatRequest(chatId: chat.id, archived: !chat.archived),
+  );
+}
 
 /// Asks before deleting a chat, listing what goes, then deletes it.
 class _DeleteDialog extends StatefulWidget {

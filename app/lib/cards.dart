@@ -84,7 +84,14 @@ class PermissionCard extends StatelessWidget {
     return WaitingCard(
       waiting: pending,
       children: [
-        CardTitle('Permission', detail: item.title, waiting: pending),
+        // Pending, what it asks for shows whole (a long command could hide
+        // its end past one line), wrapped.
+        CardTitle(
+          'Permission',
+          detail: pending ? '' : item.title,
+          waiting: pending,
+        ),
+        if (pending && item.title.isNotEmpty) FullTitle(item.title),
         for (final d in item.diffs) DiffBox(d),
         if (item.text.isNotEmpty) AgentMarkdown(item.text),
         if (pending)

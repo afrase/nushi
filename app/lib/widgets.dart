@@ -7,15 +7,21 @@ void showError(BuildContext context, Object message) =>
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text('$message')));
 
-/// Runs a call, showing its error, if any, in a snack bar.
+/// Runs a call, showing its error, if any, in a snack bar: the app's, also
+/// once the widget that asked is gone (a trust card replaced it).
 Future<void> tryOrShow(
   BuildContext context,
   Future<void> Function() call,
 ) async {
+  final messenger = ScaffoldMessenger.maybeOf(context);
   try {
     await call();
   } on Object catch (e) {
-    if (context.mounted) showError(context, e);
+    if (context.mounted) {
+      showError(context, e);
+    } else {
+      messenger?.showSnackBar(SnackBar(content: Text('$e')));
+    }
   }
 }
 
@@ -313,4 +319,27 @@ class Chevron extends StatelessWidget {
     size: size,
     color: color ?? NushiTheme.of(context).t.textMuted,
   );
+}
+
+/// A tool call's title (a command) whole, wrapped, in monospace.
+class FullTitle extends StatelessWidget {
+  const FullTitle(this.title, {super.key});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context), t = theme.t;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: t.raised,
+        borderRadius: BorderRadius.circular(NushiTheme.control),
+      ),
+      child: Text(
+        title,
+        style: theme.code(t.text, size: 12).copyWith(height: 1.35),
+      ),
+    );
+  }
 }

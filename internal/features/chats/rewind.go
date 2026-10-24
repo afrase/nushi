@@ -64,7 +64,7 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 		case !c.rewindableLocked(i):
 			return errors.New("the agent can't rewind to this message")
 		}
-		msg = model.Message{Text: c.items[i].Text, Images: c.items[i].Images}
+		msg = messageOf(c.items[i])
 		agent, sid, folder, at, forkAt = c.agent, c.sid, c.session.Folder, c.items[i].ForkAt, c.forkAt
 		c.busy = true
 		c.statusChangedLocked()
@@ -163,7 +163,7 @@ func (s *Service) Stop(ctx context.Context, chatID string, takeBack bool) (*mode
 		if err := c.cancelLocked(); err != nil || !takeBack || answered || !running {
 			return err
 		}
-		id, msg = c.items[i].ID, model.Message{Text: c.items[i].Text, Images: c.items[i].Images}
+		id, msg = c.items[i].ID, messageOf(c.items[i])
 		return nil
 	}()
 	if err != nil || id == "" {
