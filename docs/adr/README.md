@@ -27,3 +27,4 @@
 - [0025](0025-claude-rules-in-one-place.md) Claude's rules live in `internal/claude*`; the chats feature takes a `Dialect` that `main` fills
 - [0026](0026-the-transcript-lays-out-every-item.md) The transcript lays out every item, not a lazy list
 - [0027](0027-what-lives-only-in-memory.md) What lives only in memory, in the daemon and the app
+- [0028](0028-agents-get-the-login-shells-environment.md) Agents get the login shell's environment, through the daemon's; Nushi doesn't read or filter it
