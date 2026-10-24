@@ -6399,6 +6399,7 @@ class Item extends $pb.GeneratedMessage {
     $core.String? model,
     $core.String? effort,
     $core.String? ranModel,
+    Shell? shell,
   }) {
     final result = Item._();
     if (id != null) result.id = id;
@@ -6425,6 +6426,7 @@ class Item extends $pb.GeneratedMessage {
     if (model != null) result.model = model;
     if (effort != null) result.effort = effort;
     if (ranModel != null) result.ranModel = ranModel;
+    if (shell != null) result.shell = shell;
     return result;
   }
 
@@ -6472,6 +6474,8 @@ class Item extends $pb.GeneratedMessage {
     ..aOS(22, _omitFieldNames ? '' : 'model')
     ..aOS(23, _omitFieldNames ? '' : 'effort')
     ..aOS(24, _omitFieldNames ? '' : 'ranModel')
+    ..aOM<Shell>(25, _omitFieldNames ? '' : 'shell',
+        subBuilder: Shell.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -6698,6 +6702,141 @@ class Item extends $pb.GeneratedMessage {
   $core.bool hasRanModel() => $_has(23);
   @$pb.TagNumber(24)
   void clearRanModel() => $_clearField(24);
+
+  /// For a tool call that left its command running in the background.
+  @$pb.TagNumber(25)
+  Shell get shell => $_getN(24);
+  @$pb.TagNumber(25)
+  set shell(Shell value) => $_setField(25, value);
+  @$pb.TagNumber(25)
+  $core.bool hasShell() => $_has(24);
+  @$pb.TagNumber(25)
+  void clearShell() => $_clearField(25);
+  @$pb.TagNumber(25)
+  Shell ensureShell() => $_ensure(24);
+}
+
+/// A command the agent runs in the background.
+class Shell extends $pb.GeneratedMessage {
+  factory Shell({
+    $core.String? id,
+    $core.String? state,
+    $fixnum.Int64? started,
+    $fixnum.Int64? ended,
+    $core.String? output,
+    $core.String? end,
+  }) {
+    final result = Shell._();
+    if (id != null) result.id = id;
+    if (state != null) result.state = state;
+    if (started != null) result.started = started;
+    if (ended != null) result.ended = ended;
+    if (output != null) result.output = output;
+    if (end != null) result.end = end;
+    return result;
+  }
+
+  Shell._();
+
+  factory Shell.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Shell()..mergeFromBuffer(data, registry);
+  factory Shell.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Shell()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'Shell',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: Shell.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'state')
+    ..aInt64(3, _omitFieldNames ? '' : 'started')
+    ..aInt64(4, _omitFieldNames ? '' : 'ended')
+    ..aOS(5, _omitFieldNames ? '' : 'output')
+    ..aOS(6, _omitFieldNames ? '' : 'end')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Shell clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Shell copyWith(void Function(Shell) updates) =>
+      super.copyWith((message) => updates(message as Shell)) as Shell;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use Shell() / Shell.new instead')
+  static Shell create() => Shell._();
+  static $pb.GeneratedMessage $_createMessage() => Shell._();
+  @$core.override
+  Shell createEmptyInstance() => Shell._();
+  @$core.pragma('dart2js:noInline')
+  static Shell getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<Shell>(Shell.$_createMessage);
+  static Shell? _defaultInstance;
+
+  /// The agent's id for it.
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  /// "running" while the daemon sees it run, then "done", "failed" or
+  /// "stopped"; "started" when its end can't be known.
+  @$pb.TagNumber(2)
+  $core.String get state => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set state($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasState() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearState() => $_clearField(2);
+
+  /// When the daemon saw it start, and end, in Unix milliseconds; 0 when it
+  /// didn't.
+  @$pb.TagNumber(3)
+  $fixnum.Int64 get started => $_getI64(2);
+  @$pb.TagNumber(3)
+  set started($fixnum.Int64 value) => $_setInt64(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasStarted() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearStarted() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $fixnum.Int64 get ended => $_getI64(3);
+  @$pb.TagNumber(4)
+  set ended($fixnum.Int64 value) => $_setInt64(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasEnded() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearEnded() => $_clearField(4);
+
+  /// What it wrote so far (the end of it), and how it ended, in the agent's
+  /// words ("exited with code 0").
+  @$pb.TagNumber(5)
+  $core.String get output => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set output($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasOutput() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearOutput() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get end => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set end($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasEnd() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearEnd() => $_clearField(6);
 }
 
 /// How a subagent goes.

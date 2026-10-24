@@ -244,6 +244,12 @@ class ToolCallView extends StatelessWidget {
                 style: code.copyWith(fontSize: 11, color: t.crashed),
               ),
             ],
+            // The call ends at once; the command runs on (see shells.dart).
+            if (it.hasShell())
+              Text(
+                'in the background: ${it.shell.state}',
+                style: theme.ui(t.textMuted, size: 11.5),
+              ),
             const SizedBox(width: 8),
             _status(
               theme,

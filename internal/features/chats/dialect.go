@@ -33,6 +33,12 @@ type Dialect struct {
 	// ReportElsewhere says a subagent call's output only points at its
 	// report, which then isn't its result.
 	ReportElsewhere func(output string) bool
+	// Shell says a tool call's output tells it left its command running in
+	// the background: the task's id and the file its output goes to;
+	// ReadShell reads that file: the output so far, and how the command
+	// ended ("" while it runs).
+	Shell     func(output string) (id, file string, ok bool)
+	ReadShell func(id, file string) (output, end string, err error)
 	// Other says a form field is the free-text "Other" answer of the field
 	// before it.
 	Other func(field, before model.Field) bool
