@@ -43,7 +43,7 @@ func masked(config string) string {
 		}
 		cfg["args"] = maskArgs(s)
 	}
-	b, _ := json.Marshal(cfg)
+	b, _ := json.Marshal(cfg) //nolint:errchkjson // decoded from JSON, so it encodes
 	return string(b)
 }
 
@@ -177,7 +177,7 @@ func unmasked(config, old string) (string, error) {
 		if cfg[key] != nil && reflect.DeepEqual(cfg[key], shown[key]) && !reflect.DeepEqual(shown[key], was[key]) {
 			cfg[key], kept = was[key], true
 		}
-		if b, _ := json.Marshal(cfg[key]); strings.Contains(string(b), Mask) {
+		if b, _ := json.Marshal(cfg[key]); strings.Contains(string(b), Mask) { //nolint:errchkjson // decoded from JSON, so it encodes
 			return "", fmt.Errorf("type the hidden parts of %s again", key)
 		}
 	}
@@ -198,6 +198,6 @@ func unmasked(config, old string) (string, error) {
 	if kept && !reflect.DeepEqual(cfg, was) {
 		return "", errors.New("the server changed: type its hidden values (shown as ••••) again")
 	}
-	b, _ := json.Marshal(cfg)
-	return string(b), nil
+	b, err := json.Marshal(cfg)
+	return string(b), err
 }

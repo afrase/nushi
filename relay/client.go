@@ -33,7 +33,7 @@ type Dialer struct {
 // it holds key; the connection's first ReadMessage returns the dialer's
 // first message.
 func (d *Dialer) Listen(ctx context.Context, relay string, key ed25519.PrivateKey) (*Conn, error) {
-	id := ListenID(key.Public().(ed25519.PublicKey))
+	id := ListenID(key.Public().(ed25519.PublicKey)) //nolint:forcetypeassert // an ed25519 key's Public is an ed25519.PublicKey
 	c, err := d.connect(ctx, relay, "listen", id)
 	if err != nil {
 		return nil, err
@@ -60,7 +60,7 @@ func (c *Conn) prove(id string, key ed25519.PrivateKey) error {
 		return old
 	}
 	sig := ed25519.Sign(key, proven(id, challenge))
-	if err := c.WriteMessage(append(key.Public().(ed25519.PublicKey), sig...)); err != nil {
+	if err := c.WriteMessage(append(key.Public().(ed25519.PublicKey), sig...)); err != nil { //nolint:forcetypeassert // as above
 		return err
 	}
 	if _, m, err = c.ws.ReadMessage(); err != nil {

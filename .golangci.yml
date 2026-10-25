@@ -48,8 +48,6 @@ linters:
 
     # Not clean yet: each comes off this list in the step that fixes it.
     - errcheck
-    - errchkjson
-    - forcetypeassert
 
   settings:
     errcheck:
@@ -197,6 +195,10 @@ linters:
       # Tests are long scripts, one scenario each.
       - path: _test\.go$
         linters: [gocognit, gocyclo, maintidx, dupl]
+      # A test or a fake that meets the wrong type panics, which fails the
+      # test as a check would; so does a value it can't encode.
+      - path: (_test\.go$|^acp/acptest/|^internal/ante/antetest/|^internal/pig/pigtest/)
+        linters: [forcetypeassert, errchkjson]
       # Tests start short commands, and processes and listeners they end
       # themselves; a context would add nothing.
       - path: _test\.go$

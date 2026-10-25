@@ -214,7 +214,7 @@ func run() error {
 	err = srv.Serve(ln)
 	select {
 	case sig := <-signalled:
-		slog.Info("nushid stopping", "why", unix.SignalName(sig.(syscall.Signal)))
+		slog.Info("nushid stopping", "why", unix.SignalName(sig.(syscall.Signal))) //nolint:forcetypeassert // signal.Notify sends syscall.Signals
 	default:
 		slog.Error("nushid stopping", "why", err)
 	}

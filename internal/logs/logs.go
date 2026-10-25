@@ -40,7 +40,7 @@ func Handler(w io.Writer) slog.Handler {
 		var s string
 		switch v := a.Value.Any(); a.Value.Kind() {
 		case slog.KindString:
-			s = v.(string)
+			s = a.Value.String()
 		case slog.KindAny:
 			if _, ok := v.(fmt.Stringer); !ok {
 				if _, ok := v.(error); !ok {

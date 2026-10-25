@@ -88,7 +88,7 @@ func typeName(n *node) string {
 	case []any:
 		for _, x := range t {
 			if x != "null" {
-				return x.(string)
+				return x.(string) //nolint:forcetypeassert // a schema's type list holds names
 			}
 		}
 	}

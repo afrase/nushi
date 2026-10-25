@@ -21,7 +21,7 @@ import (
 // them makes way for a new one. When Total are open, the oldest of them
 // does, else the one idle longest.
 func NewServer(lim Limits) *http.Server {
-	s := New(lim).(*server)
+	s := New(lim).(*server) //nolint:forcetypeassert // New makes one
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !s.served(r) {
 			w.Header().Set("Connection", "close")

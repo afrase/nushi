@@ -107,7 +107,7 @@ func newListenKey() ed25519.PrivateKey {
 // listenID is the rendezvous id at the relay that only listen's holder can
 // listen on.
 func listenID(listen ed25519.PrivateKey) string {
-	return relay.ListenID(listen.Public().(ed25519.PublicKey))
+	return relay.ListenID(listen.Public().(ed25519.PublicKey)) //nolint:forcetypeassert // an ed25519 key's Public is an ed25519.PublicKey
 }
 
 // prologue binds a handshake to the rendezvous id it runs on.

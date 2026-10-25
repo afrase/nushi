@@ -59,7 +59,7 @@ func (s *session) ask(raw json.RawMessage) {
 			ctx, cancel = context.WithTimeout(ctx, time.Duration(r.Timeout)*time.Millisecond)
 		}
 		defer cancel()
-		schema, _ := json.Marshal(map[string]any{"answer": field})
+		schema, _ := json.Marshal(map[string]any{"answer": field}) //nolint:errchkjson // strings, maps and slices of them
 		var resp acp.CreateElicitationResponse
 		req := acp.CreateElicitationRequest{Mode: "form", Message: r.Title, SessionID: acp.SessionID(s.id),
 			RequestedSchema: &acp.ElicitationSchema{Type: "object", Properties: schema, Required: []string{"answer"}}}
