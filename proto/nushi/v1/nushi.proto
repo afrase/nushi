@@ -412,7 +412,6 @@ message StartChatRequest {
   // agent's Jira tools say which issue it is.
   string jira_site = 4;
   string jira_key = 5;
-  string jira_summary = 7;
   // The worktree's branch, if not one of Nushi's (a name git takes).
   string branch = 6;
 }

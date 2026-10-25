@@ -1436,9 +1436,8 @@ type StartChatRequest struct {
 	Worktree bool `protobuf:"varint,2,opt,name=worktree,proto3" json:"worktree,omitempty"`
 	// A chat on a Jira issue (FindJiraIssues), which it remembers; its
 	// agent's Jira tools say which issue it is.
-	JiraSite    string `protobuf:"bytes,4,opt,name=jira_site,json=jiraSite,proto3" json:"jira_site,omitempty"`
-	JiraKey     string `protobuf:"bytes,5,opt,name=jira_key,json=jiraKey,proto3" json:"jira_key,omitempty"`
-	JiraSummary string `protobuf:"bytes,7,opt,name=jira_summary,json=jiraSummary,proto3" json:"jira_summary,omitempty"`
+	JiraSite string `protobuf:"bytes,4,opt,name=jira_site,json=jiraSite,proto3" json:"jira_site,omitempty"`
+	JiraKey  string `protobuf:"bytes,5,opt,name=jira_key,json=jiraKey,proto3" json:"jira_key,omitempty"`
 	// The worktree's branch, if not one of Nushi's (a name git takes).
 	Branch        string `protobuf:"bytes,6,opt,name=branch,proto3" json:"branch,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -1506,13 +1505,6 @@ func (x *StartChatRequest) GetJiraSite() string {
 func (x *StartChatRequest) GetJiraKey() string {
 	if x != nil {
 		return x.JiraKey
-	}
-	return ""
-}
-
-func (x *StartChatRequest) GetJiraSummary() string {
-	if x != nil {
-		return x.JiraSummary
 	}
 	return ""
 }
@@ -12435,14 +12427,13 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x12SetUpAgentResponse\"*\n" +
 	"\x12RemoveAgentRequest\x12\x14\n" +
 	"\x05agent\x18\x01 \x01(\tR\x05agent\"\x15\n" +
-	"\x13RemoveAgentResponse\"\xcf\x01\n" +
+	"\x13RemoveAgentResponse\"\xac\x01\n" +
 	"\x10StartChatRequest\x12\x16\n" +
 	"\x06folder\x18\x01 \x01(\tR\x06folder\x12\x14\n" +
 	"\x05agent\x18\x03 \x01(\tR\x05agent\x12\x1a\n" +
 	"\bworktree\x18\x02 \x01(\bR\bworktree\x12\x1b\n" +
 	"\tjira_site\x18\x04 \x01(\tR\bjiraSite\x12\x19\n" +
-	"\bjira_key\x18\x05 \x01(\tR\ajiraKey\x12!\n" +
-	"\fjira_summary\x18\a \x01(\tR\vjiraSummary\x12\x16\n" +
+	"\bjira_key\x18\x05 \x01(\tR\ajiraKey\x12\x16\n" +
 	"\x06branch\x18\x06 \x01(\tR\x06branch\"`\n" +
 	"\x18ListAgentSessionsRequest\x12\x14\n" +
 	"\x05agent\x18\x01 \x01(\tR\x05agent\x12\x16\n" +

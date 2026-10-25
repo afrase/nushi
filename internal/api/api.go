@@ -183,7 +183,7 @@ func (s *server) StartChat(ctx context.Context, req *connect.Request[nushiv1.Sta
 		if err := jira.CheckKey(m.JiraKey); err != nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, err)
 		}
-		issue = &model.ChatIssue{Site: m.JiraSite, Key: m.JiraKey, Summary: m.JiraSummary}
+		issue = &model.ChatIssue{Site: m.JiraSite, Key: m.JiraKey}
 	}
 	if b := req.Msg.Branch; b != "" {
 		if err := git.CheckBranch(b); err != nil {

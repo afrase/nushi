@@ -233,7 +233,7 @@ func TestChatOnAnIssue(t *testing.T) {
 	a := open(t, d)
 	start := func(branch string) (*nushiv1.Chat, error) {
 		r, err := a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: repo, Worktree: true,
-			JiraSite: "acme.atlassian.net", JiraKey: "ACME-12", JiraSummary: "Log in with a passkey", Branch: branch}))
+			JiraSite: "acme.atlassian.net", JiraKey: "ACME-12", Branch: branch}))
 		if err != nil {
 			return nil, err
 		}

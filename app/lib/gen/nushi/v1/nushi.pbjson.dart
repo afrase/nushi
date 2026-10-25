@@ -461,7 +461,6 @@ const StartChatRequest$json = {
     {'1': 'worktree', '3': 2, '4': 1, '5': 8, '10': 'worktree'},
     {'1': 'jira_site', '3': 4, '4': 1, '5': 9, '10': 'jiraSite'},
     {'1': 'jira_key', '3': 5, '4': 1, '5': 9, '10': 'jiraKey'},
-    {'1': 'jira_summary', '3': 7, '4': 1, '5': 9, '10': 'jiraSummary'},
     {'1': 'branch', '3': 6, '4': 1, '5': 9, '10': 'branch'},
   ],
 };
@@ -470,8 +469,8 @@ const StartChatRequest$json = {
 final $typed_data.Uint8List startChatRequestDescriptor = $convert.base64Decode(
     'ChBTdGFydENoYXRSZXF1ZXN0EhYKBmZvbGRlchgBIAEoCVIGZm9sZGVyEhQKBWFnZW50GAMgAS'
     'gJUgVhZ2VudBIaCgh3b3JrdHJlZRgCIAEoCFIId29ya3RyZWUSGwoJamlyYV9zaXRlGAQgASgJ'
-    'UghqaXJhU2l0ZRIZCghqaXJhX2tleRgFIAEoCVIHamlyYUtleRIhCgxqaXJhX3N1bW1hcnkYBy'
-    'ABKAlSC2ppcmFTdW1tYXJ5EhYKBmJyYW5jaBgGIAEoCVIGYnJhbmNo');
+    'UghqaXJhU2l0ZRIZCghqaXJhX2tleRgFIAEoCVIHamlyYUtleRIWCgZicmFuY2gYBiABKAlSBm'
+    'JyYW5jaA==');
 
 @$core.Deprecated('Use listAgentSessionsRequestDescriptor instead')
 const ListAgentSessionsRequest$json = {
