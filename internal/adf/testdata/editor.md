@@ -11,7 +11,7 @@ Editor nodes:
 - [x] Write it
 - [ ] Test it
 
-- ✔ Use Go
+* ✔ Use Go
 
 **Details**
 

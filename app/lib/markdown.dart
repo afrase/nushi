@@ -7,6 +7,18 @@ import 'package:nushi/syntax.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+/// [href] as a link the app opens: http and https only. A file:, a
+/// javascript: or an app's own scheme (an issue's text, an agent's reply)
+/// could open something on the Mac.
+Uri? webLink(String href) {
+  final uri = Uri.tryParse(href.trim());
+  return uri != null &&
+          (uri.scheme == 'http' || uri.scheme == 'https') &&
+          uri.host.isNotEmpty
+      ? uri
+      : null;
+}
+
 /// Agent markdown in the theme's fonts and colors. Links open in the
 /// browser, http and https only; images as [markdownImage] shows them.
 class AgentMarkdown extends StatelessWidget {
@@ -22,10 +34,7 @@ class AgentMarkdown extends StatelessWidget {
   final bool live;
 
   static void _open(String href) {
-    final uri = Uri.tryParse(href);
-    if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
-      unawaited(launchUrl(uri));
-    }
+    if (webLink(href) case final uri?) unawaited(launchUrl(uri));
   }
 
   @override

@@ -3,10 +3,14 @@ package adf
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	gast "github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/text"
 )
 
 var update = flag.Bool("update", false, "rewrite the .md goldens")
@@ -76,14 +80,29 @@ func TestToMarkdown(t *testing.T) {
 			"\\[shot.png\\]"},
 		{"a table without a header row", `[{"type":"table","content":[{"type":"tableRow","content":[{"type":"tableCell","content":[{"type":"paragraph","content":[{"type":"text","text":"a|b"}]}]}]},{"type":"tableRow","content":[{"type":"tableCell"},{"type":"tableCell","content":[{"type":"paragraph","content":[{"type":"text","text":"c"}]}]}]}]}]`,
 			"| a\\|b |  |\n| --- | --- |\n|  | c |"},
+		// An issue's text is anyone's who can edit it.
+		{"a link of another scheme is its text", `[{"type":"paragraph","content":[{"type":"text","text":"click","marks":[{"type":"link","attrs":{"href":"javascript:alert(1)"}}]},{"type":"inlineCard","attrs":{"url":"file:///etc/passwd"}},{"type":"text","text":" "},{"type":"inlineCard","attrs":{"url":"vscode://x"}}]}]`,
+			"clickfile:///etc/passwd vscode://x"},
+		{"a link can't end early", `[{"type":"paragraph","content":[{"type":"text","text":"x","marks":[{"type":"link","attrs":{"href":"https://e.com/)\n[y](javascript:z)"}}]}]}]`,
+			"[x](https://e.com/%29%0A[y]%28javascript:z%29)"},
+		{"a language can't leave the fence", "[{\"type\":\"codeBlock\",\"attrs\":{\"language\":\"go\\n```\\n<script>\"},\"content\":[{\"type\":\"text\",\"text\":\"x\"}]}]",
+			"```\nx\n```"},
+		{"an emoji's text is an emoji", `[{"type":"paragraph","content":[{"type":"emoji","attrs":{"shortName":":x:","text":"[a](javascript:b)"}},{"type":"emoji","attrs":{"text":"👍🏽"}}]}]`,
+			`:x:👍🏽`},
+		{"a mention's and a status's text", `[{"type":"paragraph","content":[{"type":"mention","attrs":{"text":"@<img src=x>"}},{"type":"text","text":" "},{"type":"status","attrs":{"text":"a` + "`" + `[b](c)"}}]}]`,
+			"@\\<img src=x> ``a`[b](c)``"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			var blocks []Node
 			if err := json.Unmarshal([]byte(c.adf), &blocks); err != nil {
 				t.Fatal(err)
 			}
-			if got := ToMarkdown(Doc(blocks...), nil); got != c.want {
+			got := ToMarkdown(Doc(blocks...), nil)
+			if got != c.want {
 				t.Errorf("got\n%q\nwant\n%q", got, c.want)
+			}
+			if err := onlySafe(got); err != nil {
+				t.Error(err)
 			}
 		})
 	}
@@ -98,11 +117,72 @@ func FuzzToMarkdown(f *testing.F) {
 		}
 		f.Add(b)
 	}
-	f.Fuzz(func(_ *testing.T, b []byte) {
+	f.Fuzz(func(t *testing.T, b []byte) {
 		doc, err := Parse(b)
 		if err != nil {
 			return
 		}
-		_ = ToMarkdown(doc, func(string) (string, string) { return "f", "x:y" })
+		out := ToMarkdown(doc, func(id string) (string, string) { return id, AttachmentScheme + "1" })
+		if err := onlySafe(out); err != nil {
+			t.Fatalf("%v in\n%s", err, out)
+		}
+	})
+}
+
+// FuzzAttacker puts any text where an issue's author puts text: every
+// node's text and attributes, links and languages.
+func FuzzAttacker(f *testing.F) {
+	f.Add("a *b* [c](d) <e>", "javascript:x", "go")
+	f.Add("1. `x`\n# y\n<div>", "https://e.com/)\n[a](file:/x)", "a\n```")
+	f.Fuzz(func(t *testing.T, s, href, lang string) {
+		txt := func(marks ...Mark) Node { return Node{Type: "text", Text: s, Marks: marks} }
+		a := map[string]any{"text": s, "shortName": s, "url": href, "title": s, "id": s, "timestamp": s, "level": s, "order": s, "panelType": s, "extensionKey": s, "alt": s}
+		inline := []Node{txt(), txt(Mark{Type: "link", Attrs: map[string]any{"href": href}}), txt(Mark{Type: "code"}, Mark{Type: "strong"}),
+			{Type: "hardBreak"}, {Type: "mention", Attrs: a}, {Type: "emoji", Attrs: a}, {Type: "status", Attrs: a}, {Type: "date", Attrs: a},
+			{Type: "inlineCard", Attrs: a}, {Type: "mediaInline", Attrs: a}, {Type: s, Attrs: a}}
+		p := Node{Type: "paragraph", Content: inline}
+		cell := Node{Type: "tableCell", Content: []Node{p}}
+		item := Node{Type: "listItem", Content: []Node{p, {Type: "bulletList", Content: []Node{{Type: "listItem", Content: []Node{p}}}}}}
+		doc := Doc(p, Node{Type: "heading", Attrs: a, Content: inline}, Node{Type: "codeBlock", Attrs: map[string]any{"language": lang}, Content: []Node{txt()}},
+			Node{Type: "blockquote", Content: []Node{p}}, Node{Type: "panel", Attrs: a, Content: []Node{p}},
+			Node{Type: "bulletList", Content: []Node{item}}, Node{Type: "orderedList", Attrs: a, Content: []Node{item}},
+			Node{Type: "taskList", Content: []Node{{Type: "taskItem", Attrs: a, Content: inline}}},
+			Node{Type: "table", Content: []Node{{Type: "tableRow", Content: []Node{cell, cell}}, {Type: "tableRow", Content: []Node{cell}}}},
+			Node{Type: "expand", Attrs: a, Content: []Node{p}}, Node{Type: "blockCard", Attrs: a},
+			Node{Type: "mediaSingle", Content: []Node{{Type: "media", Attrs: a}}}, Node{Type: s, Attrs: a})
+		for _, media := range []Media{nil, func(id string) (string, string) { return id, href }} {
+			out := ToMarkdown(doc, media)
+			if err := onlySafe(out); err != nil {
+				t.Fatalf("%v in\n%s", err, out)
+			}
+		}
+	})
+}
+
+// onlySafe says Markdown has no HTML and no link but to http, https or
+// mailto (an image only to an attachment), as the app would read it.
+func onlySafe(out string) error {
+	src := []byte(out)
+	return gast.Walk(md.Parser().Parse(text.NewReader(src)), func(n gast.Node, entering bool) (gast.WalkStatus, error) {
+		if !entering {
+			return gast.WalkContinue, nil
+		}
+		switch n := n.(type) {
+		case *gast.HTMLBlock, *gast.RawHTML:
+			return gast.WalkStop, fmt.Errorf("HTML %q", n.Text(src)) //nolint:staticcheck // the test's message
+		case *gast.Link:
+			if !safe(string(n.Destination)) {
+				return gast.WalkStop, fmt.Errorf("a link to %q", n.Destination)
+			}
+		case *gast.Image:
+			if !strings.HasPrefix(string(n.Destination), AttachmentScheme) {
+				return gast.WalkStop, fmt.Errorf("an image of %q", n.Destination)
+			}
+		case *gast.AutoLink:
+			if u := strings.ToLower(string(n.URL(src))); n.AutoLinkType == gast.AutoLinkURL && !strings.HasPrefix(u, "http") && !strings.HasPrefix(u, "www.") {
+				return gast.WalkStop, fmt.Errorf("an autolink to %q", u)
+			}
+		}
+		return gast.WalkContinue, nil
 	})
 }
