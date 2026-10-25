@@ -42,7 +42,7 @@ Future<void> rewind(
 /// A user message with "Rewind to here" on hover (top right) and in its
 /// context menu, when [onRewind] is set.
 class RewindTarget extends StatefulWidget {
-  const new({super.key, required this.child, this.onRewind});
+  const new({required this.child, super.key, this.onRewind});
 
   final Widget child;
   final VoidCallback? onRewind;

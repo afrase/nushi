@@ -41,7 +41,7 @@ Future<void> openTerminalIn(
 
 /// The header's button for the terminal panel.
 class TerminalButton extends StatelessWidget {
-  const new({super.key, required this.chat, required this.daemon});
+  const new({required this.chat, required this.daemon, super.key});
 
   final ChatState chat;
   final Daemon daemon;
@@ -70,11 +70,11 @@ class TerminalButton extends StatelessWidget {
 /// draggable edge. ⌃` shows or hides the panel.
 class TerminalArea extends StatefulWidget {
   const new({
-    super.key,
     required this.chat,
     required this.daemon,
     required this.onChanges,
     required this.child,
+    super.key,
   });
 
   final ChatState chat;
@@ -158,11 +158,11 @@ class _TerminalAreaState extends State<TerminalArea> {
 /// The panel: a tab per terminal over the one shown.
 class TerminalPanel extends StatefulWidget {
   const new({
-    super.key,
     required this.chatId,
     required this.terms,
     required this.onHide,
     required this.showChange,
+    super.key,
   });
 
   final String chatId;

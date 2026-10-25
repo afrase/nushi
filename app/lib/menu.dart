@@ -52,8 +52,8 @@ typedef OpenMenu = void Function([Offset? at]);
 /// [onClose] runs once it has closed.
 class Menu extends StatefulWidget {
   const new({
-    super.key,
     required this.entries,
+    super.key,
     this.child,
     this.tooltip = '',
     this.builder,

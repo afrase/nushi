@@ -22,9 +22,9 @@ class DoubleClick {
 /// gives [onDone] the text, trimmed; Escape gives it null.
 class InlineEdit extends StatefulWidget {
   const new({
-    super.key,
     required this.text,
     required this.onDone,
+    super.key,
     this.style,
     this.decoration = const InputDecoration(
       contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 3),

@@ -15,10 +15,10 @@ import 'widgets.dart';
 /// conversation so far but doesn't add to it. Closing it ends it.
 class SidePanel extends StatelessWidget {
   const new({
-    super.key,
     required this.side,
     required this.daemon,
     required this.onClose,
+    super.key,
   });
 
   final ChatState side;

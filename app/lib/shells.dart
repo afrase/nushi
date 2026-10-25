@@ -70,11 +70,11 @@ Widget shellStateText(BuildContext context, Item it, TextStyle style) =>
 /// it. Back and × as in SubagentPane.
 class ShellPane extends StatelessWidget {
   const new({
-    super.key,
     required this.chat,
     required this.id,
     required this.onBack,
     required this.onClose,
+    super.key,
   });
 
   final ChatState chat;

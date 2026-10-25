@@ -153,7 +153,7 @@ List<String> rankChoices(Iterable<String> names, String q) {
 
 /// The completions over the prompt box, the picked one highlighted.
 class ChoiceList extends StatelessWidget {
-  const new(this.choices, this.picked, {super.key, required this.onPick});
+  const new(this.choices, this.picked, {required this.onPick, super.key});
 
   final List<Choice> choices;
   final int picked;

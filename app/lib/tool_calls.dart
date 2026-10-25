@@ -111,10 +111,10 @@ String groupLabel(List<Item> calls) {
 /// first call's), it opens as it was left, rebuilt or not.
 class Collapsible extends StatefulWidget {
   const new({
-    super.key,
     required this.header,
     required this.body,
     required this.failed,
+    super.key,
     this.ids = const [],
   });
 

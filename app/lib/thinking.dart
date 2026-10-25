@@ -7,7 +7,7 @@ import 'widgets.dart';
 /// The agent's thinking: a dim "Thinking" line that opens to the thoughts,
 /// with a spinner while they stream ([live]).
 class ThoughtView extends StatefulWidget {
-  const new(this.item, {super.key, required this.live});
+  const new(this.item, {required this.live, super.key});
 
   final Item item;
   final bool live;

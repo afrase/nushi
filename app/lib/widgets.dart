@@ -29,9 +29,9 @@ Future<void> tryOrShow(
 /// [selected], no ripple.
 class Tap extends StatefulWidget {
   const new({
-    super.key,
     required this.onTap,
     required this.child,
+    super.key,
     this.onSecondaryTapUp,
     this.selected = false,
     this.padding = EdgeInsets.zero,
@@ -90,9 +90,9 @@ class _TapState extends State<Tap> {
 class IconTap extends StatelessWidget {
   const new(
     this.icon, {
-    super.key,
     required this.tooltip,
     required this.onTap,
+    super.key,
     this.size = 16,
     this.color,
   });
@@ -137,9 +137,9 @@ enum ButtonKind {
 /// after the label.
 class Button extends StatelessWidget {
   const new({
-    super.key,
     required this.label,
     required this.onPressed,
+    super.key,
     this.kind = ButtonKind.secondary,
     this.icon,
     this.hint,
@@ -267,10 +267,10 @@ Widget keyHint(BuildContext context, String keys, {Color? color}) {
 /// One choice of a few (`Chat | Changes`).
 class Segmented<T> extends StatelessWidget {
   const new({
-    super.key,
     required this.value,
     required this.segments,
     required this.onChanged,
+    super.key,
   });
 
   final T value;

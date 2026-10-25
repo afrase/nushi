@@ -20,7 +20,7 @@ import 'widgets.dart';
 /// the newest chat first. Archived chats are in a collapsed group at the
 /// bottom.
 class Sidebar extends StatefulWidget {
-  const new({super.key, required this.daemon});
+  const new({required this.daemon, super.key});
 
   final Daemon daemon;
 
@@ -233,7 +233,7 @@ class _FolderHeader extends StatelessWidget {
 /// A chat in the list: click opens it, double-click renames it, and a
 /// right-click opens its menu.
 class _ChatRow extends StatefulWidget {
-  const new(this.chat, {super.key, required this.daemon});
+  const new(this.chat, {required this.daemon, super.key});
 
   final ChatState chat;
   final Daemon daemon;

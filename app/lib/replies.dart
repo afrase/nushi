@@ -161,10 +161,10 @@ class SelectionToolbar extends StatelessWidget {
 /// Enter (or the send button) hands the reply over; Escape closes.
 class ReplyBox extends StatefulWidget {
   const new({
-    super.key,
     required this.quote,
     required this.onReply,
     required this.onClose,
+    super.key,
   });
 
   final String quote;

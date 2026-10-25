@@ -17,12 +17,12 @@ import 'widgets.dart';
 /// panel's cards; × closes the side panel.
 class SubagentPane extends StatelessWidget {
   const new({
-    super.key,
     required this.chat,
     required this.daemon,
     required this.id,
     required this.onBack,
     required this.onClose,
+    super.key,
   });
 
   final ChatState chat;

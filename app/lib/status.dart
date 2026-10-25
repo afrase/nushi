@@ -77,7 +77,7 @@ class _Mark extends CustomPainter {
 /// A chat's status dot: amber with a soft ring while it waits on the user,
 /// breathing while the agent works, a ring when idle.
 class ChatDot extends StatelessWidget {
-  const new({super.key, required this.chat});
+  const new({required this.chat, super.key});
 
   static const size = 7.0;
 
@@ -117,7 +117,7 @@ class ChatDot extends StatelessWidget {
 /// What a chat is doing, in a word: "needs you", "working", "asleep" or
 /// "idle".
 class ChatStatusWord extends StatelessWidget {
-  const new(this.chat, {super.key, required this.style});
+  const new(this.chat, {required this.style, super.key});
 
   final ChatState chat;
   final TextStyle style;

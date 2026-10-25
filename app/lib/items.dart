@@ -19,9 +19,9 @@ class ItemView extends StatelessWidget {
     this.item,
     this.chat,
     this.daemon, {
-    super.key,
     required this.live,
     required this.still,
+    super.key,
     this.onRewind,
   });
 

@@ -11,10 +11,10 @@ import 'widgets.dart';
 /// first pick to it ([onPick] says which and whether to extend).
 class CommitList extends StatelessWidget {
   const new({
-    super.key,
     required this.commits,
     required this.picked,
     required this.onPick,
+    super.key,
   });
 
   static const rowHeight = 44.0;

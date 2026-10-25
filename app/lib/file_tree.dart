@@ -83,10 +83,10 @@ List<ChangeRow> changeRows(
 /// between files, and the selected one stays in view.
 class FileList extends StatefulWidget {
   const new({
-    super.key,
     required this.files,
     required this.selected,
     required this.onSelect,
+    super.key,
     this.marks = const {},
   });
 
