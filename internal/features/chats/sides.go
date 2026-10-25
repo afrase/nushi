@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -18,18 +19,19 @@ import (
 // SessionUpdate, RequestPermission and CreateElicitation take what the
 // agent sends to the chat or to one of its side chats. A side chat's
 // updates that arrive before it is set up are dropped.
-func (c *chat) SessionUpdate(n acp.SessionNotification) {
+func (c *chat) SessionUpdate(_ context.Context, n *acp.SessionNotification) error {
 	if c.probe(n) {
-		return
+		return nil
 	}
 	if to := c.route(n.SessionID); to != nil {
 		to.update(n)
 	}
+	return nil
 }
 
 // probe takes an update of a throwaway fork (see contextInFork): its
 // message text goes to its silent run, and nothing else of it is kept.
-func (c *chat) probe(n acp.SessionNotification) bool {
+func (c *chat) probe(n *acp.SessionNotification) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	run := c.probes[string(n.SessionID)]
@@ -42,7 +44,7 @@ func (c *chat) probe(n acp.SessionNotification) bool {
 	return true
 }
 
-func (c *chat) RequestPermission(ctx context.Context, req acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
+func (c *chat) RequestPermission(ctx context.Context, req *acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
 	to := c.route(req.SessionID)
 	if to == nil {
 		return nil, fmt.Errorf("no session %q", req.SessionID)
@@ -50,10 +52,17 @@ func (c *chat) RequestPermission(ctx context.Context, req acp.RequestPermissionR
 	return to.requestPermission(ctx, req)
 }
 
-func (c *chat) CreateElicitation(ctx context.Context, req acp.CreateElicitationRequest) (*acp.CreateElicitationResponse, error) {
-	to := c.route(req.SessionID)
+func (c *chat) CreateElicitation(ctx context.Context, req *acp.CreateElicitationRequest) (*acp.CreateElicitationResponse, error) {
+	var session acp.SessionID // the form's, or the URL's; none for one outside a session
+	switch {
+	case req.Form != nil:
+		session = req.Form.SessionID
+	case req.URL != nil:
+		session = req.URL.SessionID
+	}
+	to := c.route(session)
 	if to == nil {
-		return nil, fmt.Errorf("no session %q", req.SessionID)
+		return nil, fmt.Errorf("no session %q", session)
 	}
 	return to.createElicitation(ctx, req)
 }
@@ -163,7 +172,7 @@ func (s *Service) CloseSides() {
 //nolint:contextcheck // the side chat's session is deleted after the request that closed it
 func (s *Service) throwAway(c *chat, agent Agent, sid string) {
 	del := func() error {
-		err := agent.DeleteSession(context.Background(), acp.DeleteSessionRequest{SessionID: acp.SessionID(sid)})
+		_, err := agent.DeleteSession(context.Background(), &acp.DeleteSessionRequest{SessionID: acp.SessionID(sid)})
 		if err != nil {
 			c.log().Warn("deleting a forked session", "fork", sid, "err", err)
 		}

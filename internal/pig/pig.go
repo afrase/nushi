@@ -28,7 +28,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
+	"github.com/afrase/nushi/internal/agentproc"
 )
 
 // Command is the nushid subcommand that runs the bridge.
@@ -50,14 +52,14 @@ const Resume = "pig --session"
 
 // Start starts the bridge, as ante.Start does Ante's: this executable's
 // Command, in dir (the daemon's folder), its stderr to log.
-func Start(dir string, h acp.Handler, log *slog.Logger) (*acp.Client, error) {
+func Start(dir string, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
 	self, err := os.Executable()
 	if err != nil {
 		return nil, err
 	}
 	cmd := exec.Command(self, Command) //nolint:gosec,noctx // lives until Stop or Close, not a context; this nushid as the bridge
 	cmd.Dir = dir
-	return acp.Start(cmd, h, log)
+	return agentproc.Start(cmd, client, log)
 }
 
 // logTo is where the bridge's own lines go: its stderr, which the daemon
@@ -76,7 +78,7 @@ func logf(format string, args ...any) {
 func warnf(format string, args ...any) { logf("pig-acp: "+format, args...) }
 
 // debugf writes a line the daemon logs at DEBUG (acp's stderr lines).
-func debugf(format string, args ...any) { logf(acp.DebugPrefix+"pig-acp: "+format, args...) }
+func debugf(format string, args ...any) { logf(agentproc.DebugPrefix+"pig-acp: "+format, args...) }
 
 // Main runs the bridge on stdin and stdout: the Command.
 func Main() {

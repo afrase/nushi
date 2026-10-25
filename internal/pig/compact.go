@@ -9,7 +9,8 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/toolcall"
 )
 
@@ -17,8 +18,8 @@ import (
 // its own, offered as slash commands: /compact (`compact`, what follows
 // being what the summary should keep) and /name (`set_session_name`).
 var ownCommands = []acp.AvailableCommand{
-	{Name: "compact", Description: "Summarize the conversation to free context", Input: &acp.AvailableCommandInput{Hint: "what to keep"}},
-	{Name: "name", Description: "Name the session", Input: &acp.AvailableCommandInput{Hint: "name"}},
+	{Name: "compact", Description: "Summarize the conversation to free context", Input: &acp.AvailableCommandInput{Unstructured: &acp.UnstructuredCommandInput{Hint: "what to keep"}}},
+	{Name: "name", Description: "Name the session", Input: &acp.AvailableCommandInput{Unstructured: &acp.UnstructuredCommandInput{Hint: "name"}}},
 }
 
 // ownCommand reads a prompt that is one of ownCommands: its name, and what
@@ -44,7 +45,7 @@ func ownCommand(text string) (name, arg string, ok bool) {
 // runOwn runs one of ownCommands as a turn, after the running one. pig
 // starts no run for it, so Stop ends it at once (and pig's abort cancels a
 // compaction). A compaction that fails says why in its tool call.
-func (s *session) runOwn(ctx context.Context, name, arg string) (*acp.PromptResult, error) {
+func (s *session) runOwn(ctx context.Context, name, arg string) (*acp.PromptResponse, error) {
 	t, err := s.nextTurn(ctx)
 	if err != nil {
 		return nil, err
@@ -85,7 +86,7 @@ func (s *session) runOwn(ctx context.Context, name, arg string) (*acp.PromptResu
 			s.endLocked(t, nil, err)
 			return
 		}
-		s.endLocked(t, &acp.PromptResult{StopReason: "end_turn"}, nil)
+		s.endLocked(t, &acp.PromptResponse{StopReason: "end_turn"}, nil)
 	}()
 	res := <-t.result
 	return res.resp, res.err

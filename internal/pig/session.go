@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/toolcall"
 )
 
@@ -30,6 +32,10 @@ type session struct {
 	tools map[string]string
 	olds  map[string]toolcall.Old // what a write replaces, read before it runs
 	ended chan struct{}           // closed once pig is gone
+	// handled is how many of pig's events the pump has handled; caught
+	// (on mu) says when it grows.
+	handled int
+	caught  *sync.Cond
 
 	compaction string // the tool call of the compaction under way
 	estimate   int64  // the context's tokens after the last compaction, PiG's estimate
@@ -41,7 +47,7 @@ type turn struct {
 	result     chan turnResult
 	done       bool
 	ran        bool // pig started a run for it
-	usage      acp.TurnUsage
+	usage      acp.Usage
 	stop       string // the last assistant message's stop reason
 	failed     string // and its error
 	cancelled  bool
@@ -49,21 +55,29 @@ type turn struct {
 }
 
 type turnResult struct {
-	resp *acp.PromptResult
+	resp *acp.PromptResponse
 	err  error
 }
 
 func newSession(b *bridge, p *proc, id, cwd, file string) *session {
-	return &session{b: b, p: p, id: id, cwd: cwd, file: file, tools: map[string]string{}, olds: map[string]toolcall.Old{},
+	s := &session{b: b, p: p, id: id, cwd: cwd, file: file, tools: map[string]string{}, olds: map[string]toolcall.Old{},
 		ended: make(chan struct{})}
+	s.caught = sync.NewCond(&s.mu)
+	return s
 }
 
 // pump hands pig's events to the client until pig is gone.
 func (s *session) pump() {
 	for ev := range s.p.events {
 		s.handle(ev)
+		s.mu.Lock()
+		s.handled++
+		s.caught.Broadcast()
+		s.mu.Unlock()
 	}
 	s.mu.Lock()
+	s.handled = math.MaxInt // none will come
+	s.caught.Broadcast()
 	if t := s.turn; t != nil {
 		s.endLocked(t, nil, s.p.stopped())
 	}
@@ -168,15 +182,16 @@ func (s *session) handle(ev event) {
 			go s.settle(t)
 		}
 	case "session_info_changed":
-		title := ""
-		if e.Name != nil {
-			title = *e.Name
-		}
+		title := acp.Nullable[string]{Value: e.Name, Present: true} // no name: cleared
 		out = []acp.SessionUpdate{{SessionUpdate: "session_info_update", SessionInfoUpdate: &acp.SessionInfoUpdate{Title: title}}}
 	case "thinking_level_changed":
 		go s.b.optionsChanged(s)
 	case "extension_ui_request":
-		go s.ask(ev.Raw)
+		if r := uiOf(ev.Raw); r.Method == "notify" { // in order with the turn's updates
+			out = []acp.SessionUpdate{chunk(false, r.Message, "notice-"+r.ID)}
+		} else {
+			go s.ask(r)
+		}
 	case "extension_error", "error":
 		warnf("%s", ev.Raw)
 	case "compaction_start", "compaction_end":
@@ -236,11 +251,7 @@ func (s *session) messageEndLocked(m *message) []acp.SessionUpdate {
 	s.sent = nil
 	if t := s.turn; t != nil {
 		if u := m.Usage; u != nil {
-			t.usage.InputTokens += u.Input
-			t.usage.OutputTokens += u.Output
-			t.usage.CachedReadTokens += u.CacheRead
-			t.usage.CachedWriteTokens += u.CacheWrite
-			t.usage.TotalTokens += u.TotalTokens
+			toolcall.AddUsage(&t.usage, u.Input, u.Output, u.CacheRead, u.CacheWrite, u.TotalTokens)
 		}
 		t.stop, t.failed = m.StopReason, m.ErrorMessage
 	}
@@ -248,7 +259,7 @@ func (s *session) messageEndLocked(m *message) []acp.SessionUpdate {
 }
 
 func chunk(thought bool, text, id string) acp.SessionUpdate {
-	c := &acp.ContentChunk{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: text}}, MessageID: acp.MessageID(id)}
+	c := &acp.ContentChunk{Content: acp.ContentBlock{Text: &acp.TextContent{Text: text}}, MessageID: acp.MessageID(id)}
 	if thought {
 		return acp.SessionUpdate{SessionUpdate: "agent_thought_chunk", AgentThoughtChunk: c}
 	}
@@ -264,13 +275,13 @@ func (s *session) settle(t *turn) {
 	defer s.mu.Unlock()
 	switch {
 	case t.cancelled || t.stop == "aborted":
-		s.endLocked(t, &acp.PromptResult{StopReason: "cancelled", Usage: &t.usage}, nil)
+		s.endLocked(t, &acp.PromptResponse{StopReason: "cancelled", Usage: &t.usage}, nil)
 	case t.stop == "error":
 		s.endLocked(t, nil, errors.New(t.failed))
 	case t.stop == "length":
-		s.endLocked(t, &acp.PromptResult{StopReason: "max_tokens", Usage: &t.usage}, nil)
+		s.endLocked(t, &acp.PromptResponse{StopReason: "max_tokens", Usage: &t.usage}, nil)
 	default:
-		s.endLocked(t, &acp.PromptResult{StopReason: "end_turn", Usage: &t.usage}, nil)
+		s.endLocked(t, &acp.PromptResponse{StopReason: "end_turn", Usage: &t.usage}, nil)
 	}
 }
 
@@ -279,7 +290,7 @@ func (s *session) beginLocked(t *turn) {
 }
 
 // endLocked ends turn t with its result, once.
-func (s *session) endLocked(t *turn, resp *acp.PromptResult, err error) {
+func (s *session) endLocked(t *turn, resp *acp.PromptResponse, err error) {
 	if t.done {
 		return
 	}
@@ -294,7 +305,7 @@ func (s *session) endLocked(t *turn, resp *acp.PromptResult, err error) {
 // prompt runs a turn (after the running one, if any) and returns how it
 // ended. A prompt pig hands to an extension's command ("handled") ends
 // when the command does.
-func (s *session) prompt(ctx context.Context, text string, images []image) (*acp.PromptResult, error) {
+func (s *session) prompt(ctx context.Context, text string, images []image) (*acp.PromptResponse, error) {
 	if name, arg, ok := ownCommand(text); ok {
 		return s.runOwn(ctx, name, arg)
 	}
@@ -306,14 +317,17 @@ func (s *session) prompt(ctx context.Context, text string, images []image) (*acp
 		var r struct {
 			Disposition string `json:"disposition"`
 		}
-		err := s.p.call(ctx, map[string]any{"type": "prompt", "message": text, "images": images}, &r)
+		after, err := s.p.callAfter(ctx, map[string]any{"type": "prompt", "message": text, "images": images}, &r)
 		s.mu.Lock()
 		defer s.mu.Unlock()
+		for s.handled < after { // the events pig sent first, before the turn ends
+			s.caught.Wait()
+		}
 		switch {
 		case err != nil:
 			s.endLocked(t, nil, err)
 		case r.Disposition == "handled" && !t.ran:
-			s.endLocked(t, &acp.PromptResult{StopReason: "end_turn"}, nil)
+			s.endLocked(t, &acp.PromptResponse{StopReason: "end_turn"}, nil)
 		}
 	}()
 	res := <-t.result // the turn ends, or pig does
@@ -353,7 +367,7 @@ func (s *session) cancel() {
 	if t := s.turn; t != nil {
 		t.cancelled = true
 		if !t.ran {
-			s.endLocked(t, &acp.PromptResult{StopReason: "cancelled"}, nil)
+			s.endLocked(t, &acp.PromptResponse{StopReason: "cancelled"}, nil)
 		}
 	}
 	s.mu.Unlock()

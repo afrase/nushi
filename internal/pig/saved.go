@@ -16,7 +16,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/toolcall"
 )
@@ -277,7 +278,7 @@ func (s *session) replay(ctx context.Context) error { //nolint:gocognit // one c
 // fork starts pig on the session id and forks it, whole, or after the
 // turn that has the model's message after (pig forks before a message of
 // the user's: the next one); pig then holds the fork, a new session.
-func (b *bridge) fork(ctx context.Context, id acp.SessionID, cwd, after string) (any, error) {
+func (b *bridge) fork(ctx context.Context, id acp.SessionID, cwd, after string) (*acp.ForkSessionResponse, error) {
 	file := ""
 	if s, err := b.session(id); err == nil {
 		s.mu.Lock()
@@ -300,7 +301,7 @@ func (b *bridge) fork(ctx context.Context, id acp.SessionID, cwd, after string) 
 		p.stop(time.Second)
 		return nil, err
 	}
-	return acp.ForkSessionResponse{SessionID: acp.SessionID(s.id), ConfigOptions: opts}, nil
+	return &acp.ForkSessionResponse{SessionID: acp.SessionID(s.id), ConfigOptions: opts}, nil
 }
 
 func (b *bridge) forkOn(ctx context.Context, p *proc, cwd, after string) (*session, []acp.SessionConfigOption, error) {

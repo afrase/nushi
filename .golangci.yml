@@ -150,9 +150,8 @@ linters:
       # report there and would call the directive unused.
       - linters: [nolintlint]
         text: 'for linter "contextcheck"'
-      # Doc comments for the packages that could be published (acp,
-      # noiseconn, relay); internal packages and commands aren't read
-      # through godoc.
+      # Doc comments for the packages that could be published (noiseconn,
+      # relay); internal packages and commands aren't read through godoc.
       - path: ^(internal|cmd|tools)/
         linters: [revive]
         text: "^exported:"
@@ -164,7 +163,7 @@ linters:
         linters: [gosec]
         text: "^G(101|204|301|302|304|306|702|703|704):"
       # the tools run by hand write the repository's own files;
-      - path: ^(tools/|acp/internal/acpgen/)
+      - path: ^tools/
         linters: [gosec]
       # the API copies counts, sizes and exit codes into proto's int32 and
       # int64, none near the limits;

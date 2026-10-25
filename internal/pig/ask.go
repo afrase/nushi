@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
 )
 
 // uiRequest is an extension's request through pig's ctx.ui: a dialog
@@ -22,33 +22,34 @@ type uiRequest struct {
 	Timeout     int64    `json:"timeout"`
 }
 
+// uiOf reads an extension's dialog.
+func uiOf(raw json.RawMessage) uiRequest {
+	var r uiRequest
+	_ = json.Unmarshal(raw, &r)
+	return r
+}
+
 // ask puts an extension's dialog to the client as a question (a form of
-// one field) and gives pig the answer; a notification becomes a message.
+// one field) and gives pig the answer (a notification is a message: the
+// pump sends it).
 // Without a client that shows forms, or when it declines, the dialog is
 // cancelled. A dialog with a timeout is withdrawn when pig gives up on it.
 //
 //nolint:contextcheck // the question goes out on the bridge's connection, as long as pig waits
-func (s *session) ask(raw json.RawMessage) {
-	var r uiRequest
-	_ = json.Unmarshal(raw, &r)
-	field := map[string]any{"type": "string"}
+func (s *session) ask(r uiRequest) {
+	field := &acp.StringPropertySchema{}
 	switch r.Method {
-	case "notify":
-		s.b.update(s.id, chunk(false, r.Message, "notice-"+r.ID))
-		return
 	case "select":
-		var opts []acp.EnumOption
 		for _, o := range r.Options {
-			opts = append(opts, acp.EnumOption{Const: o, Title: o})
+			field.OneOf = append(field.OneOf, acp.EnumOption{Const: o, Title: o})
 		}
-		field["oneOf"] = opts
 	case "confirm":
-		field["oneOf"] = []acp.EnumOption{{Const: "Yes", Title: "Yes"}, {Const: "No", Title: "No"}}
-		field["description"] = r.Message
+		field.OneOf = []acp.EnumOption{{Const: "Yes", Title: "Yes"}, {Const: "No", Title: "No"}}
+		field.Description = r.Message
 	case "input":
-		field["description"] = r.Placeholder
+		field.Description = r.Placeholder
 	case "editor":
-		field["description"] = r.Prefill
+		field.Description = r.Prefill
 	default:
 		return // nothing to answer
 	}
@@ -59,16 +60,19 @@ func (s *session) ask(raw json.RawMessage) {
 			ctx, cancel = context.WithTimeout(ctx, time.Duration(r.Timeout)*time.Millisecond)
 		}
 		defer cancel()
-		schema, _ := json.Marshal(map[string]any{"answer": field}) //nolint:errchkjson // strings, maps and slices of them
-		var resp acp.CreateElicitationResponse
-		req := acp.CreateElicitationRequest{Mode: "form", Message: r.Title, SessionID: acp.SessionID(s.id),
-			RequestedSchema: &acp.ElicitationSchema{Type: "object", Properties: schema, Required: []string{"answer"}}}
-		if s.b.peer.Call(ctx, "elicitation/create", req, &resp) == nil && resp.Action == "accept" {
-			var got map[string]string
-			_ = json.Unmarshal(resp.Content, &got)
-			answer = map[string]any{"type": "extension_ui_response", "id": r.ID, "value": got["answer"]}
+		resp, err := s.b.client.CreateElicitation(ctx, &acp.CreateElicitationRequest{Message: r.Title, Form: &acp.ElicitationFormMode{
+			SessionID: acp.SessionID(s.id),
+			RequestedSchema: acp.ElicitationSchema{Type: acp.ElicitationSchemaTypeObject, Required: []string{"answer"},
+				Properties: acp.ElicitationProperties{{Name: "answer", Schema: acp.ElicitationPropertySchema{String: field}}}},
+		}})
+		if err == nil && resp.Accept != nil {
+			var got string
+			if v := resp.Accept.Content["answer"].String; v != nil {
+				got = *v
+			}
+			answer = map[string]any{"type": "extension_ui_response", "id": r.ID, "value": got}
 			if r.Method == "confirm" {
-				answer = map[string]any{"type": "extension_ui_response", "id": r.ID, "confirmed": got["answer"] == "Yes"}
+				answer = map[string]any{"type": "extension_ui_response", "id": r.ID, "confirmed": got == "Yes"}
 			}
 		}
 	}

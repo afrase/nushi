@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
 )
 
 func resume(id acp.SessionID) map[string]any {
@@ -24,7 +24,7 @@ var openTimeout = time.Minute
 // open starts a host in cwd and opens a session on it with op
 // (StartSession or ResumeSession); a resumed one's saved conversation goes
 // to the client first, with replay.
-func (b *bridge) open(ctx context.Context, cwd string, op any, replay bool) (any, error) {
+func (b *bridge) open(ctx context.Context, cwd string, op any, replay bool) (*acp.NewSessionResponse, error) {
 	h, err := startHost(b.spawn, cwd)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't start ante: %w", err)
@@ -36,10 +36,7 @@ func (b *bridge) open(ctx context.Context, cwd string, op any, replay bool) (any
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if replay {
-		return acp.LoadSessionResponse{Modes: modes(s.info.PermissionMode), ConfigOptions: b.options(s.info)}, nil
-	}
-	return acp.NewSessionResponse{SessionID: acp.SessionID(s.id), Modes: modes(s.info.PermissionMode), ConfigOptions: b.options(s.info)}, nil
+	return &acp.NewSessionResponse{SessionID: acp.SessionID(s.id), Modes: modes(s.info.PermissionMode), ConfigOptions: b.options(s.info)}, nil
 }
 
 // start sends op to h and waits for the session it starts, then for the
@@ -140,7 +137,7 @@ func (s *session) replayLocked(ev event) []acp.SessionUpdate {
 // fork copies a session into a new one, whole or up to the end of the
 // turn that has message after, and opens it: on a host of its own, which
 // first opens the source when this bridge doesn't have it open.
-func (b *bridge) fork(ctx context.Context, from acp.SessionID, cwd, after string) (any, error) {
+func (b *bridge) fork(ctx context.Context, from acp.SessionID, cwd, after string) (*acp.ForkSessionResponse, error) {
 	if !isSessionID(string(from)) {
 		return nil, fmt.Errorf("%q isn't one of Ante's sessions", from)
 	}
@@ -177,12 +174,11 @@ func (b *bridge) fork(ctx context.Context, from acp.SessionID, cwd, after string
 		ID string `json:"session_id"`
 	}
 	_ = json.Unmarshal(ev.Payload, &forked)
-	resp, err := b.open(ctx, cwd, resume(acp.SessionID(forked.ID)), false)
+	n, err := b.open(ctx, cwd, resume(acp.SessionID(forked.ID)), false)
 	if err != nil {
 		return nil, err
 	}
-	n := resp.(acp.NewSessionResponse) //nolint:forcetypeassert // open without replay answers one
-	return acp.ForkSessionResponse{SessionID: acp.SessionID(forked.ID), Modes: n.Modes, ConfigOptions: n.ConfigOptions}, nil
+	return &acp.ForkSessionResponse{SessionID: acp.SessionID(forked.ID), Modes: n.Modes, ConfigOptions: n.ConfigOptions}, nil
 }
 
 func slicesIndex(s []string, v string) int {

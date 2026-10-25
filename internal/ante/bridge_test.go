@@ -14,38 +14,57 @@ import (
 	"testing"
 	"time"
 
-	"github.com/afrase/nushi/acp"
+	"github.com/afrase/acp-go/steering"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/ante/antetest"
 	"github.com/afrase/nushi/internal/toolcall"
 )
 
-// client is the ACP client's side of a bridge running on a fake Ante.
+// peer is the ACP client's side of a bridge running on a fake Ante: the
+// connection, and the client that records what the bridge sends.
+type peer struct {
+	*acp.AgentConn
+	*client
+}
+
+// Steer hands prompt to the session's running turn (steering's
+// injected).
+func (p *peer) Steer(ctx context.Context, sid acp.SessionID, prompt []acp.ContentBlock) (bool, error) {
+	outcome, err := steering.Steer(ctx, p.AgentConn, string(sid), prompt)
+	return outcome == steering.Injected, err
+}
+
+// client records what the bridge sends.
 type client struct {
-	*acp.Client
+	acp.UnimplementedClient
 	mu      sync.Mutex
 	updates []acp.SessionNotification
 	asked   []acp.RequestPermissionRequest
 	forms   []acp.CreateElicitationRequest
 }
 
-func (c *client) SessionUpdate(n acp.SessionNotification) {
+func (c *client) SessionUpdate(_ context.Context, n *acp.SessionNotification) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.updates = append(c.updates, n)
+	c.updates = append(c.updates, *n)
+	return nil
 }
 
-func (c *client) RequestPermission(_ context.Context, r acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
+func (c *client) RequestPermission(_ context.Context, r *acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
 	c.mu.Lock()
-	c.asked = append(c.asked, r)
+	c.asked = append(c.asked, *r)
 	c.mu.Unlock()
-	return &acp.RequestPermissionResponse{Outcome: acp.RequestPermissionOutcome{Outcome: "selected", Selected: &acp.SelectedPermissionOutcome{OptionID: "allow_once"}}}, nil
+	return &acp.RequestPermissionResponse{Outcome: acp.RequestPermissionOutcome{Selected: &acp.SelectedPermissionOutcome{OptionID: "allow_once"}}}, nil
 }
 
-func (c *client) CreateElicitation(_ context.Context, r acp.CreateElicitationRequest) (*acp.CreateElicitationResponse, error) {
+func (c *client) CreateElicitation(_ context.Context, r *acp.CreateElicitationRequest) (*acp.CreateElicitationResponse, error) {
 	c.mu.Lock()
-	c.forms = append(c.forms, r)
+	c.forms = append(c.forms, *r)
 	c.mu.Unlock()
-	return &acp.CreateElicitationResponse{Action: "accept", Content: json.RawMessage(`{"q0":"Blue","q0_other":"and green"}`)}, nil
+	blue, green := "Blue", "and green"
+	return &acp.CreateElicitationResponse{Accept: &acp.ElicitationAcceptAction{Content: map[string]acp.ElicitationContentValue{
+		"q0": {String: &blue}, "q0_other": {String: &green}}}}, nil
 }
 
 // texts are the session's message chunks so far, joined per message id,
@@ -92,7 +111,7 @@ func (c *client) kinds(sid acp.SessionID) string {
 }
 
 // start runs a bridge on store's fake Ante and initializes it.
-func start(t *testing.T, store *antetest.Store) *client {
+func start(t *testing.T, store *antetest.Store) *peer {
 	t.Helper()
 	toBridgeR, toBridgeW := io.Pipe()
 	fromBridgeR, fromBridgeW := io.Pipe()
@@ -116,20 +135,20 @@ func start(t *testing.T, store *antetest.Store) *client {
 		_ = fromBridgeW.Close()
 		close(done)
 	}()
-	c := &client{}
-	c.Client = acp.Connect(fromBridgeR, toBridgeW, c, nil)
+	c := &peer{client: &client{}}
+	c.AgentConn = acp.NewAgentConn(fromBridgeR, toBridgeW, c.client)
 	t.Cleanup(func() { _ = toBridgeW.Close(); <-done })
-	init, err := c.Initialize(context.Background(), acp.InitializeRequest{ProtocolVersion: 1,
+	init, err := c.Initialize(context.Background(), &acp.InitializeRequest{ProtocolVersion: acp.LatestProtocolVersion,
 		ClientCapabilities: &acp.ClientCapabilities{Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}}}})
-	if err != nil || !init.AgentCapabilities.LoadSession || !c.CanFork() || !c.CanSteer() || init.AgentInfo.Name != AgentName {
+	if err != nil || !init.AgentCapabilities.LoadSession || init.AgentCapabilities.SessionCapabilities.Fork == nil || !steering.Supported(init.Meta) || init.AgentInfo.Name != AgentName {
 		t.Fatalf("initialize: %+v, %v", init, err)
 	}
 	return c
 }
 
-func prompt(t *testing.T, c *client, sid acp.SessionID, text string) *acp.PromptResult {
+func prompt(t *testing.T, c *peer, sid acp.SessionID, text string) *acp.PromptResponse {
 	t.Helper()
-	r, err := c.Prompt(context.Background(), acp.PromptRequest{SessionID: sid, Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: text}}}})
+	r, err := c.Prompt(context.Background(), &acp.PromptRequest{SessionID: sid, Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: text}}}})
 	if err != nil {
 		t.Fatalf("prompt %q: %v", text, err)
 	}
@@ -140,7 +159,7 @@ func TestASessionThroughTheBridge(t *testing.T) {
 	ctx := context.Background()
 	store := &antetest.Store{Home: t.TempDir()}
 	c := start(t, store)
-	s, err := c.NewSession(ctx, acp.NewSessionRequest{Cwd: "/work", MCPServers: []acp.MCPServer{}})
+	s, err := c.NewSession(ctx, &acp.NewSessionRequest{Cwd: "/work"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,15 +176,15 @@ func TestASessionThroughTheBridge(t *testing.T) {
 	if len(c.asked) != 1 || !strings.Contains(c.kinds(sid), "tool_call tool_call_update") {
 		t.Errorf("asked %v, updates %s", c.asked, c.kinds(sid))
 	}
-	if err := c.SetMode(ctx, acp.SetSessionModeRequest{SessionID: sid, ModeID: "auto"}); err != nil {
+	if _, err := c.SetSessionMode(ctx, &acp.SetSessionModeRequest{SessionID: sid, ModeID: "auto"}); err != nil {
 		t.Fatal(err)
 	}
 	prompt(t, c, sid, "ask me")
-	if len(c.forms) != 1 || !strings.Contains(string(c.forms[0].RequestedSchema.Properties), `"q0_other"`) {
+	if len(c.forms) != 1 || c.forms[0].Form == nil || !strings.Contains(mustJSON(t, c.forms[0].Form.RequestedSchema.Properties), `"q0_other"`) {
 		t.Errorf("forms %+v", c.forms)
 	}
 
-	wait, _ := c.StartPrompt(acp.PromptRequest{SessionID: sid, Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "wait"}}}})
+	wait, _ := c.StartPrompt(context.Background(), &acp.PromptRequest{SessionID: sid, Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "wait"}}}})
 	time.Sleep(50 * time.Millisecond)
 	if ok, err := c.Steer(ctx, sid, []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "turn left"}}}); !ok || err != nil {
 		t.Errorf("steer: %v %v", ok, err)
@@ -173,9 +192,9 @@ func TestASessionThroughTheBridge(t *testing.T) {
 	if _, err := wait(ctx); err != nil {
 		t.Errorf("steered turn: %v", err)
 	}
-	wait, _ = c.StartPrompt(acp.PromptRequest{SessionID: sid, Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "wait"}}}})
+	wait, _ = c.StartPrompt(context.Background(), &acp.PromptRequest{SessionID: sid, Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "wait"}}}})
 	time.Sleep(50 * time.Millisecond)
-	if err := c.Cancel(acp.CancelNotification{SessionID: sid}); err != nil {
+	if err := c.Cancel(context.Background(), &acp.CancelNotification{SessionID: sid}); err != nil {
 		t.Error(err)
 	}
 	if r, err := wait(ctx); err != nil || r.StopReason != "cancelled" {
@@ -198,7 +217,7 @@ func TestASessionThroughTheBridge(t *testing.T) {
 	// A bridge started again (the daemon restarted) replays the session,
 	// forks it after its first turn, and deletes the fork.
 	c2 := start(t, store)
-	if _, err := c2.LoadSession(ctx, acp.LoadSessionRequest{SessionID: sid, Cwd: "/work", MCPServers: []acp.MCPServer{}}); err != nil {
+	if _, err := c2.LoadSession(ctx, &acp.LoadSessionRequest{SessionID: sid, Cwd: "/work"}); err != nil {
 		t.Fatal(err)
 	}
 	replayed := c2.texts(sid)
@@ -209,12 +228,12 @@ func TestASessionThroughTheBridge(t *testing.T) {
 	if first != strings.SplitN(replayed[0], ":", 3)[1]+".0" {
 		t.Errorf("agent message id %s", first)
 	}
-	f, err := c2.ForkSession(ctx, acp.ForkSessionRequest{SessionID: sid, Cwd: "/work", MCPServers: []acp.MCPServer{}, Meta: ForkAt(&acp.InitializeResponse{AgentInfo: &acp.Implementation{Name: AgentName}})(first)})
+	f, err := c2.ForkSession(ctx, &acp.ForkSessionRequest{SessionID: sid, Cwd: "/work", Meta: ForkAt(&acp.InitializeResponse{AgentInfo: &acp.Implementation{Name: AgentName}})(first)})
 	if err != nil {
 		t.Fatal(err)
 	}
 	c3 := start(t, store)
-	if _, err := c3.LoadSession(ctx, acp.LoadSessionRequest{SessionID: f.SessionID, Cwd: "/work", MCPServers: []acp.MCPServer{}}); err != nil {
+	if _, err := c3.LoadSession(ctx, &acp.LoadSessionRequest{SessionID: f.SessionID, Cwd: "/work"}); err != nil {
 		t.Fatal(err)
 	}
 	if got := c3.texts(f.SessionID); len(got) != 2 {
@@ -224,7 +243,7 @@ func TestASessionThroughTheBridge(t *testing.T) {
 	if err := c3.Call(ctx, "session/list", map[string]any{"cwd": "/work"}, &list); err != nil || len(list.Sessions) != 2 {
 		t.Errorf("list: %+v %v", list, err)
 	}
-	if err := c3.DeleteSession(ctx, acp.DeleteSessionRequest{SessionID: f.SessionID}); err != nil || store.Saved(string(f.SessionID)) {
+	if _, err := c3.DeleteSession(ctx, &acp.DeleteSessionRequest{SessionID: f.SessionID}); err != nil || store.Saved(string(f.SessionID)) {
 		t.Errorf("delete: %v", err)
 	}
 }
@@ -406,4 +425,13 @@ func check(t *testing.T, err error) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func mustJSON(t *testing.T, v any) string {
+	t.Helper()
+	b, err := json.Marshal(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
 }

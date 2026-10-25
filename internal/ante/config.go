@@ -2,11 +2,10 @@ package ante
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"slices"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
 )
 
 // provider is one of Ante's catalog's providers (`ante catalog`): only its
@@ -66,10 +65,12 @@ func (b *bridge) options(in info) []acp.SessionConfigOption {
 		efforts = ladder
 	}
 	option := func(id, name, category, current string, values []value) acp.SessionConfigOption {
-		cur, _ := json.Marshal(current)
-		opts, _ := json.Marshal(values)
+		var opts []acp.SessionConfigSelectOption
+		for _, v := range values {
+			opts = append(opts, acp.SessionConfigSelectOption{Value: acp.SessionConfigValueID(v.Value), Name: v.Name})
+		}
 		return acp.SessionConfigOption{ID: acp.SessionConfigID(id), Name: name, Category: acp.SessionConfigOptionCategory(category),
-			Type: "select", CurrentValue: cur, Options: opts}
+			Select: &acp.SessionConfigSelect{CurrentValue: acp.SessionConfigValueID(current), Options: acp.SessionConfigSelectOptions{Ungrouped: opts}}}
 	}
 	out := []acp.SessionConfigOption{option("model", "Model", "model", in.Model.ID, models)}
 	if len(efforts) > 0 {

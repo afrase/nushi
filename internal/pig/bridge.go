@@ -9,13 +9,15 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/afrase/nushi/acp"
+	"github.com/afrase/acp-go/steering"
+	acp "github.com/afrase/acp-go/unstable"
 )
 
 // bridge is Nushi's ACP agent for PiG: it speaks ACP to the client and
 // runs each session on a `pig --mode rpc` of its own.
 type bridge struct {
-	peer    *acp.Peer
+	acp.UnimplementedAgent
+	client  *acp.ClientConn
 	ctx     context.Context //nolint:containedctx // ends with the client's connection
 	spawn   Spawn
 	dirs    Dirs
@@ -46,9 +48,11 @@ func Serve(r io.Reader, w io.Writer, cfg Config) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	b.ctx = ctx
-	b.peer = acp.NewPeer(w, b.handle)
-	b.peer.Serve(r)
-	<-b.peer.Done()
+	conn := acp.NewClientConn(r, w, func(c *acp.ClientConn) acp.Agent {
+		b.client = c
+		return b
+	})
+	<-conn.Done()
 	cancel()
 	b.mu.Lock()
 	open := make([]*session, 0, len(b.sessions))
@@ -65,7 +69,7 @@ func Serve(r io.Reader, w io.Writer, cfg Config) {
 
 // update sends the client one of a session's updates.
 func (b *bridge) update(sid string, u acp.SessionUpdate) {
-	_ = b.peer.Notify("session/update", acp.SessionNotification{SessionID: acp.SessionID(sid), Update: u}) // the client is gone when it fails
+	_ = b.client.SessionUpdate(b.ctx, &acp.SessionNotification{SessionID: acp.SessionID(sid), Update: u}) // the client is gone when it fails
 }
 
 func (b *bridge) session(id acp.SessionID) (*session, error) {
@@ -74,7 +78,7 @@ func (b *bridge) session(id acp.SessionID) (*session, error) {
 	if s := b.sessions[string(id)]; s != nil {
 		return s, nil
 	}
-	return nil, &acp.Error{Code: -32602, Message: fmt.Sprintf("no open session %q", id)}
+	return nil, &acp.Error{Code: acp.ErrorCodeInvalidParams, Message: fmt.Sprintf("no open session %q", id)}
 }
 
 func (b *bridge) forget(s *session) {
@@ -85,114 +89,145 @@ func (b *bridge) forget(s *session) {
 	}
 }
 
-func (b *bridge) handle(ctx context.Context, method string, params json.RawMessage) (any, error) {
-	var p struct {
-		SessionID acp.SessionID      `json:"sessionId"`
-		Cwd       string             `json:"cwd"`
-		Cursor    string             `json:"cursor"`
-		Prompt    []acp.ContentBlock `json:"prompt"`
-		ConfigID  string             `json:"configId"`
-		Value     string             `json:"value"`
-		Meta      struct {
-			Pig struct {
-				After string `json:"afterMessage"`
-			} `json:"pig"`
-		} `json:"_meta"`
-		Caps struct {
-			Elicitation struct {
-				Form json.RawMessage `json:"form"`
-			} `json:"elicitation"`
-		} `json:"clientCapabilities"`
+// AgentName is the bridge's name in its initialize answer.
+const AgentName = "nushi-pig"
+
+func (b *bridge) Initialize(_ context.Context, req *acp.InitializeRequest) (*acp.InitializeResponse, error) {
+	if c := req.ClientCapabilities; c != nil && c.Elicitation != nil && c.Elicitation.Form != nil {
+		b.elicits.Store(true)
 	}
-	if err := json.Unmarshal(params, &p); err != nil {
-		return nil, &acp.Error{Code: -32602, Message: err.Error()}
+	if b.problem != nil {
+		return nil, b.problem
 	}
+	return &acp.InitializeResponse{
+		ProtocolVersion: acp.LatestProtocolVersion,
+		AgentInfo:       &acp.Implementation{Name: AgentName, Title: "PiG", Version: b.version},
+		AgentCapabilities: &acp.AgentCapabilities{
+			LoadSession:        true,
+			PromptCapabilities: &acp.PromptCapabilities{Image: true, EmbeddedContext: true},
+			SessionCapabilities: &acp.SessionCapabilities{
+				Fork: &acp.SessionForkCapabilities{}, List: &acp.SessionListCapabilities{},
+				Close: &acp.SessionCloseCapabilities{}, Delete: &acp.SessionDeleteCapabilities{},
+			},
+		},
+		Meta: steering.Advertise(nil),
+	}, nil
+}
+
+func (b *bridge) NewSession(ctx context.Context, req *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
+	s, opts, err := b.open(ctx, req.Cwd, "", false)
+	if err != nil {
+		return nil, err
+	}
+	return &acp.NewSessionResponse{SessionID: acp.SessionID(s.id), ConfigOptions: opts}, nil
+}
+
+func (b *bridge) LoadSession(ctx context.Context, req *acp.LoadSessionRequest) (*acp.LoadSessionResponse, error) {
+	if _, err := b.session(req.SessionID); err == nil {
+		return nil, fmt.Errorf("session %s is open already", req.SessionID)
+	}
+	file, err := b.dirs.find(string(req.SessionID), req.Cwd)
+	if err != nil {
+		return nil, err
+	}
+	_, opts, err := b.open(ctx, req.Cwd, file, true)
+	if err != nil {
+		return nil, err
+	}
+	return &acp.LoadSessionResponse{ConfigOptions: opts}, nil
+}
+
+func (b *bridge) ForkSession(ctx context.Context, req *acp.ForkSessionRequest) (*acp.ForkSessionResponse, error) {
+	pig, _ := req.Meta["pig"].(map[string]any)
+	after, _ := pig["afterMessage"].(string)
+	return b.fork(ctx, req.SessionID, req.Cwd, after)
+}
+
+func (b *bridge) ListSessions(_ context.Context, req *acp.ListSessionsRequest) (*acp.ListSessionsResponse, error) {
+	resp := b.dirs.list(req.Cwd, req.Cursor)
+	return &resp, nil
+}
+
+func (b *bridge) CloseSession(_ context.Context, req *acp.CloseSessionRequest) (*acp.CloseSessionResponse, error) {
+	if s, err := b.session(req.SessionID); err == nil {
+		s.stop()
+	}
+	return &acp.CloseSessionResponse{}, nil
+}
+
+func (b *bridge) DeleteSession(ctx context.Context, req *acp.DeleteSessionRequest) (*acp.DeleteSessionResponse, error) {
+	if s, err := b.session(req.SessionID); err == nil {
+		s.stop()
+	}
+	return &acp.DeleteSessionResponse{}, b.dirs.remove(ctx, string(req.SessionID))
+}
+
+func (b *bridge) Prompt(ctx context.Context, req *acp.PromptRequest) (*acp.PromptResponse, error) {
+	s, err := b.session(req.SessionID)
+	if err != nil {
+		return nil, err
+	}
+	text, images := flatten(req.Prompt)
+	return s.prompt(ctx, text, images)
+}
+
+func (b *bridge) Cancel(_ context.Context, n *acp.CancelNotification) error {
+	if s, err := b.session(n.SessionID); err == nil {
+		s.cancel()
+	}
+	return nil
+}
+
+func (b *bridge) SetSessionConfigOption(ctx context.Context, req *acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error) {
+	s, err := b.session(req.SessionID)
+	if err != nil {
+		return nil, err
+	}
+	if req.ValueID == nil {
+		return nil, &acp.Error{Code: acp.ErrorCodeInvalidParams, Message: "PiG's options take a value"}
+	}
+	opts, err := s.setOption(ctx, string(req.ConfigID), string(req.ValueID.Value))
+	if err != nil {
+		return nil, err
+	}
+	return &acp.SetSessionConfigOptionResponse{ConfigOptions: opts}, nil
+}
+
+// ExtMethod takes the bridge's extensions: steering, and the Context
+// card's ContextMethod.
+func (b *bridge) ExtMethod(ctx context.Context, method string, params json.RawMessage) (any, error) {
 	switch method {
-	case "initialize":
-		b.elicits.Store(len(p.Caps.Elicitation.Form) > 0 && string(p.Caps.Elicitation.Form) != "null")
-		if b.problem != nil {
-			return nil, b.problem
+	case steering.Method:
+		var req steering.Request[acp.ContentBlock]
+		if err := json.Unmarshal(params, &req); err != nil {
+			return nil, &acp.Error{Code: acp.ErrorCodeInvalidParams, Message: err.Error()}
 		}
-		return b.initialize(), nil
-	case "session/new":
-		return b.open(ctx, p.Cwd, "", false)
-	case "session/load":
-		if _, err := b.session(p.SessionID); err == nil {
-			return nil, fmt.Errorf("session %s is open already", p.SessionID)
-		}
-		file, err := b.dirs.find(string(p.SessionID), p.Cwd)
+		s, err := b.session(acp.SessionID(req.SessionID))
 		if err != nil {
 			return nil, err
 		}
-		return b.open(ctx, p.Cwd, file, true)
-	case "session/fork":
-		return b.fork(ctx, p.SessionID, p.Cwd, p.Meta.Pig.After)
-	case "session/list":
-		return b.dirs.list(p.Cwd, p.Cursor), nil
-	case "session/close":
-		if s, err := b.session(p.SessionID); err == nil {
-			s.stop()
-		}
-		return struct{}{}, nil
-	case "session/delete":
-		if s, err := b.session(p.SessionID); err == nil {
-			s.stop()
-		}
-		return struct{}{}, b.dirs.remove(ctx, string(p.SessionID))
-	case "session/prompt", "_session/steering":
-		s, err := b.session(p.SessionID)
-		if err != nil {
-			return nil, err
-		}
-		text, images := flatten(p.Prompt)
-		if method == "session/prompt" {
-			return s.prompt(ctx, text, images)
-		}
-		outcome := "promptRequired"
+		text, images := flatten(req.Prompt)
+		outcome := steering.PromptRequired
 		if ok, err := s.steer(ctx, text, images); err != nil {
 			return nil, err
 		} else if ok {
-			outcome = "injected"
+			outcome = steering.Injected
 		}
-		return map[string]string{"outcome": outcome}, nil
-	case "session/cancel":
-		if s, err := b.session(p.SessionID); err == nil {
-			s.cancel()
-		}
-		return nil, nil //nolint:nilnil // a notification has no result
-	case "session/set_config_option":
-		s, err := b.session(p.SessionID)
-		if err != nil {
-			return nil, err
-		}
-		opts, err := s.setOption(ctx, p.ConfigID, p.Value)
-		return acp.SetSessionConfigOptionResponse{ConfigOptions: opts}, err
+		return steering.Response{Outcome: outcome}, nil
 	case ContextMethod:
-		s, err := b.session(p.SessionID)
+		var req struct {
+			SessionID acp.SessionID `json:"sessionId"`
+		}
+		if err := json.Unmarshal(params, &req); err != nil {
+			return nil, &acp.Error{Code: acp.ErrorCodeInvalidParams, Message: err.Error()}
+		}
+		s, err := b.session(req.SessionID)
 		if err != nil {
 			return nil, err
 		}
 		return s.stats(ctx)
 	}
-	return nil, acp.ErrMethodNotFound
-}
-
-// AgentName is the bridge's name in its initialize answer.
-const AgentName = "nushi-pig"
-
-func (b *bridge) initialize() any {
-	return map[string]any{
-		"protocolVersion": 1,
-		"agentInfo":       acp.Implementation{Name: AgentName, Title: "PiG", Version: b.version},
-		"agentCapabilities": map[string]any{
-			"loadSession":        true,
-			"promptCapabilities": acp.PromptCapabilities{Image: true, EmbeddedContext: true},
-			"sessionCapabilities": map[string]any{
-				"fork": map[string]any{}, "list": map[string]any{}, "close": map[string]any{}, "delete": map[string]any{},
-			},
-		},
-		"_meta": map[string]any{"steering": map[string]any{"supported": true}},
-	}
+	return b.UnimplementedAgent.ExtMethod(ctx, method, params)
 }
 
 // openTimeout bounds pig's start and a session's replay.
@@ -204,26 +239,23 @@ const afterAnswer = 200 * time.Millisecond
 
 // open starts pig in cwd on a new session, or on the session in file,
 // whose conversation then goes to the client first (replay).
-func (b *bridge) open(ctx context.Context, cwd, file string, replay bool) (any, error) {
+func (b *bridge) open(ctx context.Context, cwd, file string, replay bool) (*session, []acp.SessionConfigOption, error) {
 	var args []string
 	if file != "" {
 		args = []string{"--session", file}
 	}
 	p, err := startProc(b.spawn, cwd, args...)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	ctx, cancel := context.WithTimeout(ctx, openTimeout)
 	defer cancel()
 	s, opts, err := b.start(ctx, p, cwd, replay)
 	if err != nil {
 		p.stop(time.Second)
-		return nil, err
+		return nil, nil, err
 	}
-	if replay {
-		return acp.LoadSessionResponse{ConfigOptions: opts}, nil
-	}
-	return acp.NewSessionResponse{SessionID: acp.SessionID(s.id), ConfigOptions: opts}, nil
+	return s, opts, nil
 }
 
 // start makes a session of the one pig holds: its options, and when

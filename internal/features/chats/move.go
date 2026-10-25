@@ -6,7 +6,8 @@ import (
 	"path/filepath"
 	"slices"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -84,7 +85,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 		sides := s.dropSides(c) // they ran on the old agent
 		if old != nil {
 			if fresh {
-				if err := old.DeleteSession(ctx, acp.DeleteSessionRequest{SessionID: acp.SessionID(sid)}); err != nil {
+				if _, err := old.DeleteSession(ctx, &acp.DeleteSessionRequest{SessionID: acp.SessionID(sid)}); err != nil {
 					c.log().Warn("deleting the empty session left by the move", "old", sid, "err", err)
 				}
 			}

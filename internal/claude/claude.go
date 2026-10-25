@@ -17,7 +17,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
+	"github.com/afrase/nushi/internal/agentproc"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -41,11 +43,11 @@ var adapterFiles embed.FS
 // under the Node on PATH), running cli, the user's Claude Code. It runs in
 // dir (the daemon's own folder); a chat's folder reaches the agent only as
 // the session's cwd. Its stderr goes to log.
-func Start(dir, program, cli string, h acp.Handler, log *slog.Logger) (*acp.Client, error) {
+func Start(dir, program, cli string, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
 	cmd := exec.Command("node", program) //nolint:gosec,noctx // lives until Stop or Close, not a context; the adapter set up in the data folder (ADR 0037)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), "CLAUDE_CODE_EXECUTABLE="+cli)
-	return acp.Start(cmd, h, log)
+	return agentproc.Start(cmd, client, log)
 }
 
 // CLI is Claude Code's program, and Page where to get it.

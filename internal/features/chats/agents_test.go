@@ -8,7 +8,8 @@ import (
 	"log/slog"
 	"testing"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -55,7 +56,7 @@ func TestChatsKeepTheirAgent(t *testing.T) {
 
 // A start that fails says what the agent's Explain adds.
 func TestStartFailureExplained(t *testing.T) {
-	launch := func(acp.Handler, *slog.Logger) (Agent, error) { return nil, errors.New("it quit") }
+	launch := func(acp.Client, *slog.Logger) (Agent, error) { return nil, errors.New("it quit") }
 	explain := func(err error) error { return fmt.Errorf("%w (tested with 1.0)", err) }
 	svc := New([]Kind{{Name: "a", Title: "A", Launch: launch, Explain: explain}}, &memModes{}, &memSessions{}, nil, "", func(model.Event) {})
 	_, err := svc.Start(context.Background(), "", t.TempDir(), false)

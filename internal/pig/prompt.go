@@ -5,7 +5,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/toolcall"
 )
 
@@ -35,8 +36,8 @@ func flatten(blocks []acp.ContentBlock) (string, []image) {
 				b.WriteByte(' ')
 			}
 			b.WriteString(uri)
-		case block.Resource != nil && block.Resource.Resource.Text != "":
-			r := block.Resource.Resource
+		case block.Resource != nil && block.Resource.Resource.TextResourceContents != nil:
+			r := block.Resource.Resource.TextResourceContents
 			fmt.Fprintf(&b, "\n%s:\n%s\n", r.URI, toolcall.Fence(r.Text))
 		case block.Image != nil:
 			images = append(images, image{Type: "image", Data: block.Image.Data, MimeType: block.Image.MimeType})

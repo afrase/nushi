@@ -1,8 +1,9 @@
 # Dart's protoc plugins: dart pub global activate protoc_plugin; dart pub global activate connectrpc
 export PATH := $(HOME)/.pub-cache/bin:$(PATH)
 BUF := go run github.com/bufbuild/buf/cmd/buf@v1.75.0
-# golangci-lint, pinned in its own module so the daemon's go.mod doesn't take its dependencies.
-GOLANGCI := go tool -modfile=tools/lint/go.mod golangci-lint
+# golangci-lint, pinned in its own module so the daemon's go.mod doesn't take its
+# dependencies; built into bin/ (go tool -modfile can't run beside a go.work).
+GOLANGCI := bin/golangci-lint
 DART_DIRS := app packages/uds_transport packages/noise packages/remote_transport packages/markdown packages/svg_path
 # NUSHI_DATA=<folder> runs a second daemon and app beside the usual ones.
 DATA := $(or $(NUSHI_DATA),$(HOME)/Library/Application Support/Nushi)
@@ -68,8 +69,11 @@ gen:
 	$(BUF) lint
 	$(BUF) generate
 
+$(GOLANGCI): tools/lint/go.mod tools/lint/go.sum
+	GOWORK=off go build -modfile=tools/lint/go.mod -o $@ github.com/golangci/golangci-lint/v2/cmd/golangci-lint
+
 # Linters and format checks (.golangci.yml says which are on and why).
-lint:
+lint: $(GOLANGCI)
 	$(GOLANGCI) run ./...
 	$(BUF) lint
 	$(BUF) format --diff --exit-code
@@ -91,6 +95,5 @@ test:
 lines:
 	@echo "go daemon: $$(find cmd/nushid internal -name '*.go' ! -name '*_test.go' ! -path 'internal/gen/*' ! -path 'internal/ante/antetest/*' ! -path 'internal/pig/pigtest/*' ! -path 'internal/acptest/*' | xargs cat | wc -l)"
 	@echo "go relay and noise: $$(find cmd/nushi-relay relay noiseconn -name '*.go' ! -name '*_test.go' 2>/dev/null | xargs cat | wc -l)"
-	@echo "go acp: $$(find acp -name '*.go' ! -name '*_test.go' ! -name '*_gen.go' | xargs cat | wc -l)"
 	@echo "dart app: $$(find app/lib -name '*.dart' ! -path 'app/lib/gen/*' | xargs cat | wc -l)"
 	@echo "dart packages: $$(find packages -path '*/lib/*.dart' | xargs cat | wc -l)"

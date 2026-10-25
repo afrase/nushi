@@ -38,6 +38,7 @@ type proc struct {
 	mu      sync.Mutex
 	next    int
 	waiting map[string]chan response
+	sent    int // events sent so far (on read's goroutine)
 }
 
 // event is one of pig's events, as it came, with its type.
@@ -51,6 +52,7 @@ type response struct {
 	Success bool            `json:"success"`
 	Data    json.RawMessage `json:"data"`
 	Error   string          `json:"error"`
+	after   int             // how many events pig sent before it
 }
 
 func startProc(spawn Spawn, cwd string, args ...string) (*proc, error) {
@@ -80,6 +82,7 @@ func (p *proc) read(out io.Reader) {
 		case head.Type == "response" && head.ID != nil:
 			var resp response
 			_ = json.Unmarshal(line, &resp)
+			resp.after = p.sent
 			p.mu.Lock()
 			ch := p.waiting[*head.ID]
 			delete(p.waiting, *head.ID)
@@ -93,6 +96,7 @@ func (p *proc) read(out io.Reader) {
 			warnf("pig refused a command: %s", resp.Error)
 		default:
 			p.events <- event{Type: head.Type, Raw: line}
+			p.sent++
 		}
 		if err != nil {
 			p.mu.Lock()
@@ -122,6 +126,13 @@ func (p *proc) stopped() error {
 // call sends a command and waits for its response; its data goes into out
 // (unless nil).
 func (p *proc) call(ctx context.Context, cmd map[string]any, out any) error {
+	_, err := p.callAfter(ctx, cmd, out)
+	return err
+}
+
+// callAfter is call, and says how many events pig sent before its
+// response.
+func (p *proc) callAfter(ctx context.Context, cmd map[string]any, out any) (after int, err error) {
 	p.mu.Lock()
 	p.next++
 	id := "n" + strconv.Itoa(p.next)
@@ -133,7 +144,7 @@ func (p *proc) call(ctx context.Context, cmd map[string]any, out any) error {
 		p.mu.Lock()
 		delete(p.waiting, id)
 		p.mu.Unlock()
-		return err
+		return 0, err
 	}
 	start := time.Now()
 	defer func() { debugf("rpc %v took=%s", cmd["type"], time.Since(start).Round(time.Millisecond)) }()
@@ -141,18 +152,18 @@ func (p *proc) call(ctx context.Context, cmd map[string]any, out any) error {
 	case resp, ok := <-ch:
 		switch {
 		case !ok:
-			return p.stopped()
+			return 0, p.stopped()
 		case !resp.Success:
-			return errors.New(resp.Error)
+			return resp.after, errors.New(resp.Error)
 		case out != nil && len(resp.Data) > 0:
-			return json.Unmarshal(resp.Data, out)
+			return resp.after, json.Unmarshal(resp.Data, out)
 		}
-		return nil
+		return resp.after, nil
 	case <-ctx.Done():
 		p.mu.Lock()
 		delete(p.waiting, id)
 		p.mu.Unlock()
-		return ctx.Err()
+		return 0, ctx.Err()
 	}
 }
 

@@ -12,7 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
+	"github.com/afrase/nushi/internal/agentproc"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -30,8 +32,8 @@ const (
 // arrives as events. A chat whose agent isn't running is reopened, and the
 // message waits in the queue until it is.
 func (s *Service) Prompt(chatID string, m model.Message, how Send) error {
-	if n := size(m); n > acp.MaxFrame-64<<10 {
-		return fmt.Errorf("the message is too large to send: %d MB with its images, and the agent takes about %d MB", n>>20, acp.MaxFrame>>20)
+	if n := size(m); n > agentproc.MaxMessage-64<<10 {
+		return fmt.Errorf("the message is too large to send: %d MB with its images, and the agent takes about %d MB", n>>20, agentproc.MaxMessage>>20)
 	}
 	c, err := s.chat(chatID)
 	if err != nil {
@@ -139,7 +141,7 @@ func (c *chat) startLocked(prompt []acp.ContentBlock) {
 	c.busy, c.started, c.done, c.sent, c.held = true, time.Now(), make(chan struct{}), sent, false
 	c.statusChangedLocked()
 	c.logLocked().Info("turn started", "queued", len(c.queue))
-	go c.run(c.agent, acp.PromptRequest{SessionID: acp.SessionID(c.sid), Prompt: prompt}, sent)
+	go c.run(c.agent, &acp.PromptRequest{SessionID: acp.SessionID(c.sid), Prompt: prompt}, sent)
 }
 
 // blocks makes a message the agent's content: the text, links to the files
@@ -182,10 +184,10 @@ func title(prompt string) string {
 }
 
 //nolint:contextcheck // a turn outlives the request that started it
-func (c *chat) run(agent Agent, req acp.PromptRequest, sent chan struct{}) {
-	wait, err := agent.StartPrompt(req)
+func (c *chat) run(agent Agent, req *acp.PromptRequest, sent chan struct{}) {
+	wait, err := agent.StartPrompt(context.Background(), req)
 	close(sent)
-	var resp *acp.PromptResult
+	var resp *acp.PromptResponse
 	if err == nil {
 		resp, err = wait(context.Background())
 	}
@@ -200,13 +202,14 @@ func (c *chat) run(agent Agent, req acp.PromptRequest, sent chan struct{}) {
 	close(c.done)
 	if err == nil && resp.Usage != nil {
 		u := resp.Usage
-		c.usage.Input, c.usage.Output, c.usage.CachedRead, c.usage.CachedWrite = u.InputTokens, u.OutputTokens, u.CachedReadTokens, u.CachedWriteTokens
+		c.usage.Input, c.usage.Output = int64(u.InputTokens), int64(u.OutputTokens) //nolint:gosec // token counts, far below the limits
+		c.usage.CachedRead, c.usage.CachedWrite = tokens(u.CachedReadTokens), tokens(u.CachedWriteTokens)
 		c.usageChangedLocked()
 	}
-	quit := false
+	quit := errors.Is(err, acp.ErrClosed) // the agent's connection ended: watch says so
 	select {
 	case <-agent.Done():
-		quit = true // the agent's process ended: watch says so
+		quit = true
 	default:
 	}
 	switch {
@@ -315,4 +318,12 @@ func (s *Service) Unqueue(chatID, id string) (model.Message, error) {
 func (c *chat) queueChangedLocked() {
 	q := slices.Clone(c.queue)
 	c.emitLocked(model.Event{ChatID: c.id, Queue: &q})
+}
+
+// tokens is a count the agent may not report, as 0 when it doesn't.
+func tokens(n *uint64) int64 {
+	if n == nil {
+		return 0
+	}
+	return int64(*n) //nolint:gosec // token counts, far below the limits
 }

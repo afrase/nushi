@@ -1,17 +1,19 @@
 package chats
 
 import (
+	"context"
 	"strings"
 	"testing"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/model"
 )
 
 func TestMessagesGoToSubagentsThroughTheAgent(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
-	c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{
+	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{
 		ToolCallID: "a1", Title: "Find it", Status: "completed", Meta: map[string]any{"claudeCode": map[string]any{"toolName": "Agent"}},
 		RawInput: []byte(`{"subagent_type":"Explore"}`), Content: []acp.ToolCallContent{{Type: "content", Content: &acp.Content{
 			Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: "Async agent launched successfully.\nagentId: ab59"}}}}}}}})
@@ -38,7 +40,7 @@ func TestMessagesGoToSubagentsThroughTheAgent(t *testing.T) {
 	}
 
 	// Replayed, the agent's history holds the whole prompt.
-	c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "user_message_chunk",
+	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "user_message_chunk",
 		UserMessageChunk: &acp.ContentChunk{MessageID: "u9", Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: got[0]}}}}})
 	c.mu.Lock()
 	it = c.items[len(c.items)-1]
@@ -48,7 +50,7 @@ func TestMessagesGoToSubagentsThroughTheAgent(t *testing.T) {
 	}
 
 	// A replayed subagent (no steps, no report) that a message runs again.
-	c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{
+	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{
 		ToolCallID: "r1", Title: "head -1 a.go", Kind: "execute", Meta: map[string]any{"claudeCode": map[string]any{"parentToolUseId": "a1"}}}}})
 	c.mu.Lock()
 	sa := *c.items[0].Subagent

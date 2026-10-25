@@ -7,7 +7,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -38,12 +39,12 @@ func TestAFailedSteerTakesTheMessageOut(t *testing.T) {
 	agent.gate, agent.steerGate = make(chan struct{}), make(chan struct{})
 	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
 	noErr(t, svc.Prompt(c.id, model.Message{Text: "two"}, SendQueue))
-	c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call",
+	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call",
 		ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "ls", Status: "in_progress"}}})
-	c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call_update",
+	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call_update",
 		ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed"}}})
 	eventually(t, c, func() bool { return len(c.queue) == 0 })
-	c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: chunk("m1", "more")}) // after the steered item
+	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: chunk("m1", "more")}) // after the steered item
 	agent.mu.Lock()
 	agent.steerErr = errors.New("Session not found")
 	agent.mu.Unlock()
@@ -62,7 +63,7 @@ func TestAPromptInTheAgentsOwnTurn(t *testing.T) {
 	turn(t, svc, c, "one")
 	answer := make(chan *acp.RequestPermissionResponse)
 	go func() {
-		resp, _ := c.RequestPermission(context.Background(), acp.RequestPermissionRequest{SessionID: "s1",
+		resp, _ := c.RequestPermission(context.Background(), &acp.RequestPermissionRequest{SessionID: "s1",
 			ToolCall: acp.ToolCallUpdate{ToolCallID: "t9", Title: "rm -rf build"}, Options: []acp.PermissionOption{{OptionID: "yes", Name: "Yes", Kind: "allow_once"}}})
 		answer <- resp
 	}()
@@ -74,7 +75,7 @@ func TestAPromptInTheAgentsOwnTurn(t *testing.T) {
 	if _, err := svc.Stop(context.Background(), c.id, false); err != nil {
 		t.Fatal(err)
 	}
-	if resp := <-answer; resp.Outcome.Outcome != "cancelled" || svc.Status(model.Session{ID: c.id}).Waiting {
+	if resp := <-answer; !resp.Outcome.Cancelled || svc.Status(model.Session{ID: c.id}).Waiting {
 		t.Errorf("after Stop: %+v, waiting %v", resp.Outcome, svc.Status(model.Session{ID: c.id}).Waiting)
 	}
 	if got := agent.onWire(); got[len(got)-1] != "cancel" {
@@ -165,7 +166,7 @@ func TestReloadLeavesNothingOfTheOldAgent(t *testing.T) {
 	agent.updates = nil
 	answer := make(chan *acp.RequestPermissionResponse)
 	go func() {
-		resp, _ := c.RequestPermission(context.Background(), acp.RequestPermissionRequest{SessionID: "s1",
+		resp, _ := c.RequestPermission(context.Background(), &acp.RequestPermissionRequest{SessionID: "s1",
 			ToolCall: acp.ToolCallUpdate{ToolCallID: "t9", Title: "rm -rf build"}, Options: []acp.PermissionOption{{OptionID: "yes", Name: "Yes", Kind: "allow_once"}}})
 		answer <- resp
 	}()
@@ -178,7 +179,7 @@ func TestReloadLeavesNothingOfTheOldAgent(t *testing.T) {
 	if err := svc.Reload(c.id); err != nil {
 		t.Fatal(err)
 	}
-	if resp := <-answer; resp.Outcome.Outcome != "cancelled" {
+	if resp := <-answer; !resp.Outcome.Cancelled {
 		t.Errorf("the prompt got %+v", resp.Outcome)
 	}
 	eventually(t, c, func() bool { return !c.busy })
@@ -205,7 +206,7 @@ func TestAPermissionWhileTheSessionChanges(t *testing.T) {
 	svc, _, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	done := make(chan struct{})
 	go func() { // Stop cancels the request: only the race matters
-		_, _ = c.RequestPermission(context.Background(), acp.RequestPermissionRequest{SessionID: "s1", ToolCall: acp.ToolCallUpdate{ToolCallID: "t1",
+		_, _ = c.RequestPermission(context.Background(), &acp.RequestPermissionRequest{SessionID: "s1", ToolCall: acp.ToolCallUpdate{ToolCallID: "t1",
 			Content: []acp.ToolCallContent{{Type: "diff", Diff: &acp.Diff{Path: "/w/a.go", NewText: "x"}}}}})
 		close(done)
 	}()

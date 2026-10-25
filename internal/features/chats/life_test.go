@@ -7,7 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -139,11 +140,11 @@ func TestNoMoveWhileTheChatGoesOrTheAgentWorks(t *testing.T) {
 	c.halting = false
 	c.mu.Unlock()
 	// The agent's own turn (a background command ended), until its usage.
-	c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: chunk("own", "tests passed")})
+	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: chunk("own", "tests passed")})
 	if err := svc.Move(context.Background(), c.id, t.TempDir(), false); err == nil {
 		t.Error("moved a chat during the agent's own turn")
 	}
-	c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "usage_update", UsageUpdate: &acp.UsageUpdate{Used: 1, Size: 2}}})
+	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "usage_update", UsageUpdate: &acp.UsageUpdate{Used: 1, Size: 2}}})
 	if err := svc.Move(context.Background(), c.id, t.TempDir(), false); err != nil {
 		t.Error(err)
 	}
