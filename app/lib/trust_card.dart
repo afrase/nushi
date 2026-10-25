@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import 'agents.dart';
-import 'folder_button.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/agents.dart';
+import 'package:nushi/folder_button.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// What a folder would have the agent run on its own, before a chat starts
 /// or moves there: each file and what it runs, exactly, with "Start

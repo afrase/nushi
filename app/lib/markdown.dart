@@ -2,11 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:markdown_view/markdown_view.dart';
+import 'package:nushi/images.dart';
+import 'package:nushi/syntax.dart';
+import 'package:nushi/theme/theme.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-import 'images.dart';
-import 'syntax.dart';
-import 'theme/theme.dart';
 
 /// Agent markdown in the theme's fonts and colors. Links open in the
 /// browser, http and https only; images as [markdownImage] shows them.

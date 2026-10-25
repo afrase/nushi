@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// The agent's thinking: a dim "Thinking" line that opens to the thoughts,
 /// with a spinner while they stream ([live]).

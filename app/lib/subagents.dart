@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import 'chat.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'status.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/chat.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/status.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// A tool call that started a subagent, and what the subagent did.
 typedef SubagentRun = ({Item call, List<Item> items});

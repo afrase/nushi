@@ -2,21 +2,21 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import 'agents_card.dart';
-import 'changes_span.dart';
-import 'chat.dart';
-import 'daemon.dart';
-import 'folder_button.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'markdown.dart';
-import 'mcp_card.dart';
-import 'panel_cards.dart';
-import 'settings.dart';
-import 'terminal_panel.dart';
-import 'theme/theme.dart';
-import 'usage.dart';
-import 'widgets.dart';
-import 'worktree.dart';
+import 'package:nushi/agents_card.dart';
+import 'package:nushi/changes_span.dart';
+import 'package:nushi/chat.dart';
+import 'package:nushi/daemon.dart';
+import 'package:nushi/folder_button.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/markdown.dart';
+import 'package:nushi/mcp_card.dart';
+import 'package:nushi/panel_cards.dart';
+import 'package:nushi/settings.dart';
+import 'package:nushi/terminal_panel.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/usage.dart';
+import 'package:nushi/widgets.dart';
+import 'package:nushi/worktree.dart';
 
 /// The panel beside a chat: cards for its environment (folder or
 /// repository, branch, worktree), its context and cost, and its folder's

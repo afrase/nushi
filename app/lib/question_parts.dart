@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'cards.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/cards.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// One of a question's options: its [digit], a radio button or, for
 /// [many], a check box, its name and description. [at]: ↑/↓ are on it.

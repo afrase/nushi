@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-import 'folder_button.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'mcp_form.dart';
-import 'mcp_servers.dart';
-import 'menu.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/folder_button.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/mcp_form.dart';
+import 'package:nushi/mcp_servers.dart';
+import 'package:nushi/menu.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// What can be done to a server, on its row: a project server's on/off
 /// switch (Approve and Reject while it waits for approval), "Log in" when

@@ -2,17 +2,17 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-import 'bottom_follower.dart';
-import 'chat.dart';
-import 'daemon.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'items.dart';
-import 'replies.dart';
-import 'rewind.dart';
-import 'subagents.dart';
-import 'theme/theme.dart';
-import 'tool_calls.dart';
-import 'widgets.dart';
+import 'package:nushi/bottom_follower.dart';
+import 'package:nushi/chat.dart';
+import 'package:nushi/daemon.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/items.dart';
+import 'package:nushi/replies.dart';
+import 'package:nushi/rewind.dart';
+import 'package:nushi/subagents.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/tool_calls.dart';
+import 'package:nushi/widgets.dart';
 
 /// The items, with each run of tool calls as one list, and each subagent
 /// as one [SubagentRun] with what it did.

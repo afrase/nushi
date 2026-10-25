@@ -4,10 +4,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
-import 'chat.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'theme/theme.dart';
-import 'tool_calls.dart';
+import 'package:nushi/chat.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/tool_calls.dart';
 
 /// One clock for every moving mark: a phase from 0 to 1 and back, every
 /// 1.6 seconds. It ticks only while a mark listens, and the marks paint

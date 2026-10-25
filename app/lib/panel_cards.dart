@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'settings.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/settings.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// The cards in the order they were dragged into (remembered in
 /// [cardOrder]; cards it doesn't name go last), each moved by dragging its

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'review.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/review.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// A comment under its lines in the diff: its lines and text, Edit and
 /// Remove on hover; dimmed once sent. An outdated one (its lines are gone)

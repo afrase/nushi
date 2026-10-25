@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-import 'chat.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'panel_cards.dart';
-import 'shells.dart';
-import 'subagents.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/chat.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/panel_cards.dart';
+import 'package:nushi/shells.dart';
+import 'package:nushi/subagents.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// The panel's Background tasks card: the chat's running subagents, each
 /// with its state and current step, and its running background commands;

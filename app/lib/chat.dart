@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 
-import 'agents.dart';
-import 'draft.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'settings.dart';
+import 'package:nushi/agents.dart';
+import 'package:nushi/draft.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/settings.dart';
 
 /// One chat's transcript and status: a snapshot from the daemon, kept
 /// current by the chat's later events.

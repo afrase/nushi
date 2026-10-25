@@ -3,10 +3,9 @@
 // ignore_for_file: missing_whitespace_between_adjacent_strings
 
 import 'package:flutter/material.dart';
+import 'package:nushi/agents.dart';
+import 'package:nushi/theme/theme.dart';
 import 'package:svg_path/svg_path.dart';
-
-import 'agents.dart';
-import 'theme/theme.dart';
 
 /// An agent's mark, [size] square in [color] (the secondary text's if not
 /// given): the agent's own icon where Nushi bundles one, else its initial

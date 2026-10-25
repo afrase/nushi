@@ -3,9 +3,9 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
-import 'daemon.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'theme/theme.dart';
+import 'package:nushi/daemon.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/theme/theme.dart';
 
 /// The MCP servers the agent's config gives a folder, from the daemon (API
 /// 32): read from the config at once, then checked (the agent connects to

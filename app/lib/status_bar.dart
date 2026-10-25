@@ -3,14 +3,14 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
-import 'agent_mark.dart';
-import 'chat.dart';
-import 'chat_menu.dart';
-import 'daemon.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'remote.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/agent_mark.dart';
+import 'package:nushi/chat.dart';
+import 'package:nushi/chat_menu.dart';
+import 'package:nushi/daemon.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/remote.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// How often the memory is read: a few milliseconds of the daemon's time.
 const _every = Duration(seconds: 5);

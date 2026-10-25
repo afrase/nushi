@@ -4,11 +4,11 @@ import 'package:diff_view/diff_view.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'review.dart';
-import 'review_cards.dart';
-import 'syntax.dart';
-import 'theme/theme.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/review.dart';
+import 'package:nushi/review_cards.dart';
+import 'package:nushi/syntax.dart';
+import 'package:nushi/theme/theme.dart';
 
 /// Above this many lines on a side a diff isn't computed: Myers' diff
 /// keeps memory for every step, lines times edits, and a regenerated

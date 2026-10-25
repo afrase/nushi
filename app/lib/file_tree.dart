@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'settings.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/settings.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// A row of the changed files: a folder (no [file]) or a file.
 class ChangeRow {

@@ -5,11 +5,10 @@ import 'dart:ui' as ui;
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 import 'package:pasteboard/pasteboard.dart';
-
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
 
 /// The longest side an attached image keeps; larger ones are scaled down
 /// (Claude scales images past about 1,568 pixels down anyway).

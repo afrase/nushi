@@ -3,17 +3,17 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'changes_span.dart';
-import 'chat.dart';
-import 'daemon.dart';
-import 'gen/nushi/v1/nushi.pb.dart' show GetDiffRequest;
-import 'panes.dart';
-import 'settings.dart';
-import 'terminal_screen.dart';
-import 'terminal_tabs.dart';
-import 'terminals.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/changes_span.dart';
+import 'package:nushi/chat.dart';
+import 'package:nushi/daemon.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart' show GetDiffRequest;
+import 'package:nushi/panes.dart';
+import 'package:nushi/settings.dart';
+import 'package:nushi/terminal_screen.dart';
+import 'package:nushi/terminal_tabs.dart';
+import 'package:nushi/terminals.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// ⌃`: shows or hides the terminal panel.
 const toggleTerminalKey = SingleActivator(

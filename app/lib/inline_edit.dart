@@ -2,7 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'theme/theme.dart';
+import 'package:nushi/theme/theme.dart';
 
 /// Tells a second click soon after the first, without holding the first
 /// back as a double-tap recognizer would.

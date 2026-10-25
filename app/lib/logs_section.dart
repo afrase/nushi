@@ -2,9 +2,9 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
-import 'daemon.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/daemon.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// Reveals the daemon's log (nushid.log, app.log beside it) in Finder.
 Future<void> showLogs() async {

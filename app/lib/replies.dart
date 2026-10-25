@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'markdown.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/markdown.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// A reply to a part of the transcript: the quoted text, and what the user
 /// says about it (either may be empty, not both).

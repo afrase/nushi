@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-import 'tokens.dart';
+import 'package:nushi/theme/tokens.dart';
 
 export 'tokens.dart';
 

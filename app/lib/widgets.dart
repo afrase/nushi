@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'theme/theme.dart';
+import 'package:nushi/theme/theme.dart';
 
 /// Shows [message] in a snack bar.
 void showError(BuildContext context, Object message) =>

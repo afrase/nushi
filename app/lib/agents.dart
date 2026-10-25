@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 
-import 'chat.dart';
-import 'gen/nushi/v1/nushi.connect.client.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/chat.dart';
+import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
 /// The agents the daemon runs (ListAgents), by name, the default first,
 /// as last found on this Mac.

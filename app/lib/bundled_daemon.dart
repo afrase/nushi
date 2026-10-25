@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'app_log.dart';
-import 'daemon.dart';
+import 'package:nushi/app_log.dart';
+import 'package:nushi/daemon.dart';
 
 /// The daemon's helper app inside [app] (`make package`): a background-only
 /// app, so a daemon the app started isn't the app's own process once it

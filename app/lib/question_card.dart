@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'question_parts.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/question_parts.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// One question of a form: a field with options, or a text field, and the
 /// free-text "Other" field the daemon pairs with it, if any.

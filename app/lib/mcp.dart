@@ -3,16 +3,16 @@ import 'dart:math';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
-import 'agents.dart';
-import 'daemon.dart';
-import 'folder_button.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'mcp_actions.dart';
-import 'mcp_form.dart';
-import 'mcp_servers.dart';
-import 'menu.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/agents.dart';
+import 'package:nushi/daemon.dart';
+import 'package:nushi/folder_button.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/mcp_actions.dart';
+import 'package:nushi/mcp_form.dart';
+import 'package:nushi/mcp_servers.dart';
+import 'package:nushi/menu.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// The MCP servers view: a folder picker, then the servers by scope, each
 /// with its state, transport and command or URL (secrets masked).
