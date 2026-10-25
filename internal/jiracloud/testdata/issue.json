@@ -1,0 +1,908 @@
+{
+ "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations",
+ "id": "10004",
+ "self": "https://example.atlassian.net/rest/api/3/issue/10004",
+ "key": "SCRUM-5",
+ "renderedFields": {
+  "summary": null,
+  "issuetype": null,
+  "subtasks": null,
+  "created": "Today 9:04 AM",
+  "description": "<h1><a name=\"Aheading\"></a>A heading</h1>\n<h2><a name=\"Asmallerone\"></a>A smaller one</h2>\n<h3><a name=\"Andsmaller\"></a>And smaller</h3>\n\n<p>Some <b>bold</b>, <em>italic</em>, <ins>underlined</ins>, <del>struck</del>, <tt>monospace</tt>, <sup>super</sup> and <sub>sub</sub> text, a <a href=\"https://example.com\" class=\"external-link\" rel=\"nofollow noreferrer\">link</a> and <font color=\"#ff5630\">red</font>.<br/>\nA second line in the same paragraph.</p>\n\n<ul>\n\t<li>one</li>\n\t<li>two\n\t<ul>\n\t\t<li>two and a half</li>\n\t</ul>\n\t</li>\n\t<li>three</li>\n</ul>\n\n\n<ol>\n\t<li>first</li>\n\t<li>second\n\t<ol>\n\t\t<li>nested</li>\n\t</ol>\n\t</li>\n\t<li>third</li>\n</ol>\n\n\n<div class=\"code panel\" style=\"border-width: 1px;\"><div class=\"codeContent panelContent\">\n<pre class=\"code-go\"><span class=\"code-keyword\">func</span> main() {\n\tfmt.Println(<span class=\"code-quote\">\"hi\"</span>)\n}\n</pre>\n</div></div>\n\n<div class=\"preformatted panel\" style=\"border-width: 1px;\"><div class=\"preformattedContent panelContent\">\n<pre>plain block\n</pre>\n</div></div>\n\n<blockquote><p>A quote.</p></blockquote>\n\n<div class=\"panel\" style=\"border-width: 1px;\"><div class=\"panelHeader\" style=\"border-bottom-width: 1px;\"><b>A panel</b></div><div class=\"panelContent\">\n<p>Panel text.</p>\n</div></div>\n\n{info}Info panel{info}\n{note}Note panel{note}\n{warning}Warning panel{warning}\n{tip}Tip panel{tip}\n\n<div class='table-wrap'>\n<table class='confluenceTable'><tbody>\n<tr>\n<th class='confluenceTh'>Name</th>\n<th class='confluenceTh'>Value</th>\n</tr>\n<tr>\n<td class='confluenceTd'>alpha</td>\n<td class='confluenceTd'>1</td>\n</tr>\n<tr>\n<td class='confluenceTd'>beta</td>\n<td class='confluenceTd'><b>2</b></td>\n</tr>\n</tbody></table>\n</div>\n\n\n<p>Hey <a href=\"https://example.atlassian.net/secure/ViewProfile.jspa?accountId=557058%3A00000000-0000-0000-0000-000000000001\" class=\"user-hover\" rel=\"557058:00000000-0000-0000-0000-000000000001\" data-account-id=\"557058:00000000-0000-0000-0000-000000000001\" accountid=\"557058:00000000-0000-0000-0000-000000000001\" rel=\"noreferrer\">Test User</a> <img class=\"emoticon\" src=\"/images/icons/emoticons/smile.png\" height=\"16\" width=\"16\" align=\"absmiddle\" alt=\"\" border=\"0\"/> <img class=\"emoticon\" src=\"/images/icons/emoticons/check.png\" height=\"16\" width=\"16\" align=\"absmiddle\" alt=\"\" border=\"0\"/> <img class=\"emoticon\" src=\"/images/icons/emoticons/error.png\" height=\"16\" width=\"16\" align=\"absmiddle\" alt=\"\" border=\"0\"/> <img class=\"emoticon\" src=\"/images/icons/emoticons/warning.png\" height=\"16\" width=\"16\" align=\"absmiddle\" alt=\"\" border=\"0\"/> </p>\n\n<hr />\n\n<h3><a name=\"Acceptancecriteria\"></a>Acceptance criteria</h3>\n<ul>\n\t<li>It works</li>\n\t<li>It is tested</li>\n</ul>\n\n\n\n<p>An image:</p>\n\n<p><span class=\"image-wrap\" style=\"\"><a id=\"10000_thumb\" href=\"/rest/api/3/attachment/content/10000\" title=\"nushi.png\" file-preview-type=\"image\" file-preview-id=\"10000\" file-preview-title=\"nushi.png\"><jira-attachment-thumbnail url=\"https://example.atlassian.net/rest/api/3/attachment/thumbnail/10000?default=false\" jira-url=\"https://example.atlassian.net/rest/api/3/attachment/thumbnail/10000\" filename=\"nushi.png\"><img src=\"https://example.atlassian.net/rest/api/3/attachment/thumbnail/10000\" data-attachment-name=\"nushi.png\" data-attachment-type=\"thumbnail\" data-media-services-id=\"fa78893e-e7e6-4f5e-885b-d0f99f145599\" data-media-services-type=\"file\" style=\"border: 0px solid black\" /></jira-attachment-thumbnail></a></span></p>",
+  "reporter": null,
+  "priority": null,
+  "labels": null,
+  "attachment": [
+   {
+    "self": "https://example.atlassian.net/rest/api/3/attachment/10000",
+    "id": "10000",
+    "filename": "nushi.png",
+    "author": {
+     "self": "https://example.atlassian.net/rest/api/3/user?accountId=557058%3A00000000-0000-0000-0000-000000000001",
+     "accountId": "557058:00000000-0000-0000-0000-000000000001",
+     "emailAddress": "test@example.com",
+     "avatarUrls": {
+      "48x48": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png",
+      "24x24": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png",
+      "16x16": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png",
+      "32x32": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png"
+     },
+     "displayName": "Test User",
+     "active": true,
+     "timeZone": "America/New_York",
+     "accountType": "atlassian"
+    },
+    "created": "Today 9:04 AM",
+    "size": "0.1 kB",
+    "mimeType": "image/png",
+    "content": "https://example.atlassian.net/rest/api/3/attachment/content/10000",
+    "thumbnail": "https://example.atlassian.net/rest/api/3/attachment/thumbnail/10000"
+   }
+  ],
+  "issuelinks": null,
+  "assignee": null,
+  "updated": "Today 9:29 AM",
+  "status": null
+ },
+ "fields": {
+  "summary": "ADF sample: what Jira's editor makes",
+  "issuetype": {
+   "self": "https://example.atlassian.net/rest/api/3/issuetype/10003",
+   "id": "10003",
+   "description": "Tasks track small, distinct pieces of work.",
+   "iconUrl": "https://example.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10318?size=medium",
+   "name": "Task",
+   "subtask": false,
+   "avatarId": 10318,
+   "entityId": "010b5bea-bbfb-4d1d-bc08-c9c18de622e4",
+   "hierarchyLevel": 0
+  },
+  "subtasks": [
+   {
+    "id": "10005",
+    "key": "SCRUM-6",
+    "self": "https://example.atlassian.net/rest/api/3/issue/10005",
+    "fields": {
+     "summary": "A subtask of the sample",
+     "status": {
+      "self": "https://example.atlassian.net/rest/api/3/status/10000",
+      "description": "",
+      "iconUrl": "https://example.atlassian.net/images/icons/statuses/generic.png",
+      "name": "To Do",
+      "id": "10000",
+      "statusCategory": {
+       "self": "https://example.atlassian.net/rest/api/3/statuscategory/2",
+       "id": 2,
+       "key": "new",
+       "colorName": "blue-gray",
+       "name": "To Do"
+      }
+     },
+     "priority": {
+      "self": "https://example.atlassian.net/rest/api/3/priority/3",
+      "iconUrl": "https://example.atlassian.net/images/icons/priorities/medium_new.svg",
+      "name": "Medium",
+      "id": "3"
+     },
+     "issuetype": {
+      "self": "https://example.atlassian.net/rest/api/3/issuetype/10002",
+      "id": "10002",
+      "description": "Subtasks track small pieces of work that are part of a larger task.",
+      "iconUrl": "https://example.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10316?size=medium",
+      "name": "Subtask",
+      "subtask": true,
+      "avatarId": 10316,
+      "entityId": "681cb0ae-424a-4014-9976-532d5d8d427f",
+      "hierarchyLevel": -1
+     }
+    }
+   }
+  ],
+  "created": "2026-10-25T22:04:53.016+0900",
+  "description": {
+   "type": "doc",
+   "version": 1,
+   "content": [
+    {
+     "type": "heading",
+     "attrs": {
+      "level": 1
+     },
+     "content": [
+      {
+       "type": "text",
+       "text": "A heading"
+      }
+     ]
+    },
+    {
+     "type": "heading",
+     "attrs": {
+      "level": 2
+     },
+     "content": [
+      {
+       "type": "text",
+       "text": "A smaller one"
+      }
+     ]
+    },
+    {
+     "type": "heading",
+     "attrs": {
+      "level": 3
+     },
+     "content": [
+      {
+       "type": "text",
+       "text": "And smaller"
+      }
+     ]
+    },
+    {
+     "type": "paragraph",
+     "content": [
+      {
+       "type": "text",
+       "text": "Some "
+      },
+      {
+       "type": "text",
+       "text": "bold",
+       "marks": [
+        {
+         "type": "strong"
+        }
+       ]
+      },
+      {
+       "type": "text",
+       "text": ", "
+      },
+      {
+       "type": "text",
+       "text": "italic",
+       "marks": [
+        {
+         "type": "em"
+        }
+       ]
+      },
+      {
+       "type": "text",
+       "text": ", "
+      },
+      {
+       "type": "text",
+       "text": "underlined",
+       "marks": [
+        {
+         "type": "underline"
+        }
+       ]
+      },
+      {
+       "type": "text",
+       "text": ", "
+      },
+      {
+       "type": "text",
+       "text": "struck",
+       "marks": [
+        {
+         "type": "strike"
+        }
+       ]
+      },
+      {
+       "type": "text",
+       "text": ", "
+      },
+      {
+       "type": "text",
+       "text": "monospace",
+       "marks": [
+        {
+         "type": "code"
+        }
+       ]
+      },
+      {
+       "type": "text",
+       "text": ", "
+      },
+      {
+       "type": "text",
+       "text": "super",
+       "marks": [
+        {
+         "type": "subsup",
+         "attrs": {
+          "type": "sup"
+         }
+        }
+       ]
+      },
+      {
+       "type": "text",
+       "text": " and "
+      },
+      {
+       "type": "text",
+       "text": "sub",
+       "marks": [
+        {
+         "type": "subsup",
+         "attrs": {
+          "type": "sub"
+         }
+        }
+       ]
+      },
+      {
+       "type": "text",
+       "text": " text, a "
+      },
+      {
+       "type": "text",
+       "text": "link",
+       "marks": [
+        {
+         "type": "link",
+         "attrs": {
+          "href": "https://example.com"
+         }
+        }
+       ]
+      },
+      {
+       "type": "text",
+       "text": " and "
+      },
+      {
+       "type": "text",
+       "text": "red",
+       "marks": [
+        {
+         "type": "textColor",
+         "attrs": {
+          "color": "#ff5630"
+         }
+        }
+       ]
+      },
+      {
+       "type": "text",
+       "text": "."
+      },
+      {
+       "type": "hardBreak"
+      },
+      {
+       "type": "text",
+       "text": "A second line in the same paragraph."
+      }
+     ]
+    },
+    {
+     "type": "bulletList",
+     "content": [
+      {
+       "type": "listItem",
+       "content": [
+        {
+         "type": "paragraph",
+         "content": [
+          {
+           "type": "text",
+           "text": "one"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "listItem",
+       "content": [
+        {
+         "type": "paragraph",
+         "content": [
+          {
+           "type": "text",
+           "text": "two"
+          }
+         ]
+        },
+        {
+         "type": "bulletList",
+         "content": [
+          {
+           "type": "listItem",
+           "content": [
+            {
+             "type": "paragraph",
+             "content": [
+              {
+               "type": "text",
+               "text": "two and a half"
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "listItem",
+       "content": [
+        {
+         "type": "paragraph",
+         "content": [
+          {
+           "type": "text",
+           "text": "three"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "type": "orderedList",
+     "attrs": {
+      "order": 1
+     },
+     "content": [
+      {
+       "type": "listItem",
+       "content": [
+        {
+         "type": "paragraph",
+         "content": [
+          {
+           "type": "text",
+           "text": "first"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "listItem",
+       "content": [
+        {
+         "type": "paragraph",
+         "content": [
+          {
+           "type": "text",
+           "text": "second"
+          }
+         ]
+        },
+        {
+         "type": "orderedList",
+         "attrs": {
+          "order": 1
+         },
+         "content": [
+          {
+           "type": "listItem",
+           "content": [
+            {
+             "type": "paragraph",
+             "content": [
+              {
+               "type": "text",
+               "text": "nested"
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "listItem",
+       "content": [
+        {
+         "type": "paragraph",
+         "content": [
+          {
+           "type": "text",
+           "text": "third"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "type": "codeBlock",
+     "attrs": {
+      "language": "go"
+     },
+     "content": [
+      {
+       "type": "text",
+       "text": "func main() {\n\tfmt.Println(\"hi\")\n}"
+      }
+     ]
+    },
+    {
+     "type": "codeBlock",
+     "content": [
+      {
+       "type": "text",
+       "text": "plain block"
+      }
+     ]
+    },
+    {
+     "type": "blockquote",
+     "content": [
+      {
+       "type": "paragraph",
+       "content": [
+        {
+         "type": "text",
+         "text": "A quote."
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "type": "panel",
+     "content": [
+      {
+       "type": "paragraph",
+       "content": [
+        {
+         "type": "text",
+         "text": "A panel",
+         "marks": [
+          {
+           "type": "strong"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "paragraph",
+       "content": [
+        {
+         "type": "text",
+         "text": "Panel text."
+        }
+       ]
+      }
+     ],
+     "attrs": {
+      "panelType": "info"
+     }
+    },
+    {
+     "type": "paragraph",
+     "content": [
+      {
+       "type": "text",
+       "text": "{info}Info panel{info}"
+      },
+      {
+       "type": "hardBreak"
+      },
+      {
+       "type": "text",
+       "text": "{note}Note panel{note}"
+      },
+      {
+       "type": "hardBreak"
+      },
+      {
+       "type": "text",
+       "text": "{warning}Warning panel{warning}"
+      },
+      {
+       "type": "hardBreak"
+      },
+      {
+       "type": "text",
+       "text": "{tip}Tip panel{tip}"
+      }
+     ]
+    },
+    {
+     "type": "table",
+     "attrs": {
+      "isNumberColumnEnabled": false,
+      "layout": "default"
+     },
+     "content": [
+      {
+       "type": "tableRow",
+       "content": [
+        {
+         "type": "tableHeader",
+         "attrs": {},
+         "content": [
+          {
+           "type": "paragraph",
+           "content": [
+            {
+             "type": "text",
+             "text": "Name",
+             "marks": [
+              {
+               "type": "strong"
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "tableHeader",
+         "attrs": {},
+         "content": [
+          {
+           "type": "paragraph",
+           "content": [
+            {
+             "type": "text",
+             "text": "Value",
+             "marks": [
+              {
+               "type": "strong"
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "tableRow",
+       "content": [
+        {
+         "type": "tableCell",
+         "attrs": {},
+         "content": [
+          {
+           "type": "paragraph",
+           "content": [
+            {
+             "type": "text",
+             "text": "alpha"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "tableCell",
+         "attrs": {},
+         "content": [
+          {
+           "type": "paragraph",
+           "content": [
+            {
+             "type": "text",
+             "text": "1"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "tableRow",
+       "content": [
+        {
+         "type": "tableCell",
+         "attrs": {},
+         "content": [
+          {
+           "type": "paragraph",
+           "content": [
+            {
+             "type": "text",
+             "text": "beta"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "tableCell",
+         "attrs": {},
+         "content": [
+          {
+           "type": "paragraph",
+           "content": [
+            {
+             "type": "text",
+             "text": "2",
+             "marks": [
+              {
+               "type": "strong"
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "type": "paragraph",
+     "content": [
+      {
+       "type": "text",
+       "text": "Hey "
+      },
+      {
+       "type": "mention",
+       "attrs": {
+        "id": "557058:00000000-0000-0000-0000-000000000001",
+        "text": "@Test User",
+        "accessLevel": ""
+       }
+      },
+      {
+       "type": "text",
+       "text": " "
+      },
+      {
+       "type": "emoji",
+       "attrs": {
+        "shortName": ":slight_smile:",
+        "id": "1f642",
+        "text": "🙂"
+       }
+      },
+      {
+       "type": "text",
+       "text": " "
+      },
+      {
+       "type": "emoji",
+       "attrs": {
+        "shortName": ":check_mark:",
+        "id": "atlassian-check_mark",
+        "text": ":check_mark:"
+       }
+      },
+      {
+       "type": "text",
+       "text": " "
+      },
+      {
+       "type": "emoji",
+       "attrs": {
+        "shortName": ":cross_mark:",
+        "id": "atlassian-cross_mark",
+        "text": ":cross_mark:"
+       }
+      },
+      {
+       "type": "text",
+       "text": " "
+      },
+      {
+       "type": "emoji",
+       "attrs": {
+        "shortName": ":warning:",
+        "id": "atlassian-warning",
+        "text": ":warning:"
+       }
+      },
+      {
+       "type": "text",
+       "text": " "
+      }
+     ]
+    },
+    {
+     "type": "rule"
+    },
+    {
+     "type": "heading",
+     "attrs": {
+      "level": 3
+     },
+     "content": [
+      {
+       "type": "text",
+       "text": "Acceptance criteria"
+      }
+     ]
+    },
+    {
+     "type": "bulletList",
+     "content": [
+      {
+       "type": "listItem",
+       "content": [
+        {
+         "type": "paragraph",
+         "content": [
+          {
+           "type": "text",
+           "text": "It works"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "listItem",
+       "content": [
+        {
+         "type": "paragraph",
+         "content": [
+          {
+           "type": "text",
+           "text": "It is tested"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "type": "paragraph",
+     "content": [
+      {
+       "type": "text",
+       "text": "An image:"
+      }
+     ]
+    },
+    {
+     "type": "mediaSingle",
+     "attrs": {
+      "layout": "center"
+     },
+     "content": [
+      {
+       "type": "media",
+       "attrs": {
+        "type": "file",
+        "id": "fa78893e-e7e6-4f5e-885b-d0f99f145599",
+        "collection": "",
+        "height": 183,
+        "width": 200
+       }
+      }
+     ]
+    }
+   ]
+  },
+  "reporter": {
+   "self": "https://example.atlassian.net/rest/api/3/user?accountId=557058%3A00000000-0000-0000-0000-000000000001",
+   "accountId": "557058:00000000-0000-0000-0000-000000000001",
+   "emailAddress": "test@example.com",
+   "avatarUrls": {
+    "48x48": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png",
+    "24x24": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png",
+    "16x16": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png",
+    "32x32": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png"
+   },
+   "displayName": "Test User",
+   "active": true,
+   "timeZone": "America/New_York",
+   "accountType": "atlassian"
+  },
+  "priority": {
+   "self": "https://example.atlassian.net/rest/api/3/priority/3",
+   "iconUrl": "https://example.atlassian.net/images/icons/priorities/medium_new.svg",
+   "name": "Medium",
+   "id": "3"
+  },
+  "labels": [],
+  "attachment": [
+   {
+    "self": "https://example.atlassian.net/rest/api/3/attachment/10000",
+    "id": "10000",
+    "filename": "nushi.png",
+    "author": {
+     "self": "https://example.atlassian.net/rest/api/3/user?accountId=557058%3A00000000-0000-0000-0000-000000000001",
+     "accountId": "557058:00000000-0000-0000-0000-000000000001",
+     "emailAddress": "test@example.com",
+     "avatarUrls": {
+      "48x48": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png",
+      "24x24": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png",
+      "16x16": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png",
+      "32x32": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png"
+     },
+     "displayName": "Test User",
+     "active": true,
+     "timeZone": "America/New_York",
+     "accountType": "atlassian"
+    },
+    "created": "2026-10-25T22:04:54.330+0900",
+    "size": 74,
+    "mimeType": "image/png",
+    "content": "https://example.atlassian.net/rest/api/3/attachment/content/10000",
+    "thumbnail": "https://example.atlassian.net/rest/api/3/attachment/thumbnail/10000"
+   }
+  ],
+  "issuelinks": [
+   {
+    "id": "10000",
+    "self": "https://example.atlassian.net/rest/api/3/issueLink/10000",
+    "type": {
+     "id": "10000",
+     "name": "Blocks",
+     "inward": "is blocked by",
+     "outward": "blocks",
+     "self": "https://example.atlassian.net/rest/api/3/issueLinkType/10000"
+    },
+    "inwardIssue": {
+     "id": "10000",
+     "key": "SCRUM-1",
+     "self": "https://example.atlassian.net/rest/api/3/issue/10000",
+     "fields": {
+      "summary": "Task 1",
+      "status": {
+       "self": "https://example.atlassian.net/rest/api/3/status/10000",
+       "description": "",
+       "iconUrl": "https://example.atlassian.net/images/icons/statuses/generic.png",
+       "name": "To Do",
+       "id": "10000",
+       "statusCategory": {
+        "self": "https://example.atlassian.net/rest/api/3/statuscategory/2",
+        "id": 2,
+        "key": "new",
+        "colorName": "blue-gray",
+        "name": "To Do"
+       }
+      },
+      "issuetype": {
+       "self": "https://example.atlassian.net/rest/api/3/issuetype/10003",
+       "id": "10003",
+       "description": "Tasks track small, distinct pieces of work.",
+       "iconUrl": "https://example.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10318?size=medium",
+       "name": "Task",
+       "subtask": false,
+       "avatarId": 10318,
+       "entityId": "010b5bea-bbfb-4d1d-bc08-c9c18de622e4",
+       "hierarchyLevel": 0
+      }
+     }
+    }
+   }
+  ],
+  "assignee": null,
+  "updated": "2026-10-25T22:29:31.521+0900",
+  "status": {
+   "self": "https://example.atlassian.net/rest/api/3/status/10000",
+   "description": "",
+   "iconUrl": "https://example.atlassian.net/images/icons/statuses/generic.png",
+   "name": "To Do",
+   "id": "10000",
+   "statusCategory": {
+    "self": "https://example.atlassian.net/rest/api/3/statuscategory/2",
+    "id": 2,
+    "key": "new",
+    "colorName": "blue-gray",
+    "name": "To Do"
+   }
+  }
+ }
+}

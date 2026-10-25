@@ -1,0 +1,16 @@
+[
+ {
+  "id": 10000,
+  "self": "https://example.atlassian.net/rest/api/3/issue/SCRUM-5/remotelink/10000",
+  "globalId": "nushi-test-pr-1",
+  "application": {},
+  "object": {
+   "url": "https://github.com/example/repo/pull/1",
+   "title": "PR #1: the sample",
+   "icon": {},
+   "status": {
+    "icon": {}
+   }
+  }
+ }
+]
