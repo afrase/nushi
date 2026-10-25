@@ -31,7 +31,7 @@ final dataDir =
         : '$support/Nushi');
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 49;
+const apiVersion = 50;
 
 /// The app's link to nushid. [connected] follows a ping every few seconds;
 /// while connected, daemon events keep [chats] current. When no daemon
@@ -282,8 +282,7 @@ class Daemon extends ChangeNotifier {
 
   Future<void> _listAgents() async {
     try {
-      final list = (await client.listAgents(ListAgentsRequest())).agents;
-      knownAgents = {for (final a in list) a.name: a};
+      await listAgents(client);
       notifyListeners();
     } on Object {
       // As they were: the next subscription asks again.

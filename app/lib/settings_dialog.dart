@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:xterm2/xterm.dart';
 
+import 'agents_page.dart';
 import 'bundled_daemon.dart';
 import 'gen/nushi/v1/nushi.connect.client.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
@@ -35,11 +36,16 @@ Future<List<String>> _monospaced() async {
 
 const settingsKey = SingleActivator(LogicalKeyboardKey.comma, meta: true);
 
-/// The app's settings (⌘,): the terminal's font and size, when idle chats
-/// sleep, remote access (both the daemon's), and whether the daemon starts
-/// at login (the packaged app's, for the usual data folder).
-Future<void> showSettings(BuildContext context, NushiServiceClient client) =>
-    showDialog(context: context, builder: (_) => _Settings(client));
+/// The app's settings (⌘,), on two pages. General: the terminal's font and
+/// size, when idle chats sleep, remote access (both the daemon's), and
+/// whether the daemon starts at login (the packaged app's, for the usual
+/// data folder). Agents ([agents] opens on it): the agents found, and
+/// their adapters.
+Future<void> showSettings(
+  BuildContext context,
+  NushiServiceClient client, {
+  bool agents = false,
+}) => showDialog(context: context, builder: (_) => _Settings(client, agents));
 
 /// The choices for when idle chats sleep, in minutes; 0: never.
 const _sleepAfter = {
@@ -53,9 +59,10 @@ const _sleepAfter = {
 String _sleepLabel(int m) => _sleepAfter[m] ?? '$m minute${m == 1 ? '' : 's'}';
 
 class _Settings extends StatefulWidget {
-  const _Settings(this.client);
+  const _Settings(this.client, this.agents);
 
   final NushiServiceClient client;
+  final bool agents;
 
   @override
   State<_Settings> createState() => _SettingsState();
@@ -64,6 +71,7 @@ class _Settings extends StatefulWidget {
 class _SettingsState extends State<_Settings> {
   final _families = _monospaced();
   int? _sleep; // minutes, once the daemon said
+  late bool _agents = widget.agents; // the page shown
 
   @override
   void initState() {
@@ -101,101 +109,114 @@ class _SettingsState extends State<_Settings> {
       ),
     );
     final value = theme.ui(t.text);
-    return nushiDialog(
-      'Settings',
-      ListenableBuilder(
-        listenable: Listenable.merge([terminalFont, terminalFontSize]),
-        builder: (context, _) => Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Terminal', style: theme.ui(t.text, weight: FontWeight.w600)),
-            row(
-              'Font',
-              FutureBuilder(
-                future: _families,
-                builder: (context, families) => Menu(
-                  entries: [
-                    MenuEntry(
-                      NushiTheme.codeFont,
-                      detail: 'bundled',
-                      checked: terminalFont.value == null,
-                      onPick: () => terminalFont.value = null,
-                    ),
-                    MenuEntry.divider,
-                    for (final f in families.data ?? const <String>[])
-                      MenuEntry(
-                        f,
-                        checked: terminalFont.value == f,
-                        onPick: () => terminalFont.value = f,
-                      ),
-                  ],
-                  child: Text(
-                    terminalFont.value ?? NushiTheme.codeFont,
-                    style: value,
-                  ),
-                ),
-              ),
-            ),
-            row(
-              'Size',
-              Menu(
+    final general = ListenableBuilder(
+      listenable: Listenable.merge([terminalFont, terminalFontSize]),
+      builder: (context, _) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Terminal', style: theme.ui(t.text, weight: FontWeight.w600)),
+          row(
+            'Font',
+            FutureBuilder(
+              future: _families,
+              builder: (context, families) => Menu(
                 entries: [
-                  for (final s in _sizes)
+                  MenuEntry(
+                    NushiTheme.codeFont,
+                    detail: 'bundled',
+                    checked: terminalFont.value == null,
+                    onPick: () => terminalFont.value = null,
+                  ),
+                  MenuEntry.divider,
+                  for (final f in families.data ?? const <String>[])
                     MenuEntry(
-                      '$s'.replaceAll('.0', ''),
-                      checked: terminalFontSize.value == s,
-                      onPick: () => terminalFontSize.value = s,
+                      f,
+                      checked: terminalFont.value == f,
+                      onPick: () => terminalFont.value = f,
                     ),
                 ],
                 child: Text(
-                  '${terminalFontSize.value}'.replaceAll('.0', ''),
+                  terminalFont.value ?? NushiTheme.codeFont,
                   style: value,
                 ),
               ),
             ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: box(t.borderSubtle, fill: t.base),
+          ),
+          row(
+            'Size',
+            Menu(
+              entries: [
+                for (final s in _sizes)
+                  MenuEntry(
+                    '$s'.replaceAll('.0', ''),
+                    checked: terminalFontSize.value == s,
+                    onPick: () => terminalFontSize.value = s,
+                  ),
+              ],
               child: Text(
-                // Nerd Font icons: folder, Go, git branch, Apple.
-                '~/nushi \u{e0a0} main\n\u{f07b} app  \u{e627} main.go  '
-                '\u{f179} 0O1lI{}',
-                style: terminalStyle().toTextStyle(color: t.text),
+                '${terminalFontSize.value}'.replaceAll('.0', ''),
+                style: value,
               ),
             ),
-            if (_sleep case final sleep?) ...[
-              const SizedBox(height: 16),
-              Text('Chats', style: theme.ui(t.text, weight: FontWeight.w600)),
-              row(
-                'Sleep idle',
-                Menu(
-                  entries: [
-                    for (final MapEntry(:key, :value) in {
-                      ..._sleepAfter,
-                      sleep: _sleepLabel(sleep),
-                    }.entries)
-                      MenuEntry(
-                        value,
-                        checked: key == sleep,
-                        onPick: () => tryOrShow(context, () => _setSleep(key)),
-                      ),
-                  ],
-                  child: Text(
-                    sleep == 0 ? 'Never' : 'After ${_sleepLabel(sleep)}',
-                    style: value,
-                  ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: box(t.borderSubtle, fill: t.base),
+            child: Text(
+              // Nerd Font icons: folder, Go, git branch, Apple.
+              '~/nushi \u{e0a0} main\n\u{f07b} app  \u{e627} main.go  '
+              '\u{f179} 0O1lI{}',
+              style: terminalStyle().toTextStyle(color: t.text),
+            ),
+          ),
+          if (_sleep case final sleep?) ...[
+            const SizedBox(height: 16),
+            Text('Chats', style: theme.ui(t.text, weight: FontWeight.w600)),
+            row(
+              'Sleep idle',
+              Menu(
+                entries: [
+                  for (final MapEntry(:key, :value) in {
+                    ..._sleepAfter,
+                    sleep: _sleepLabel(sleep),
+                  }.entries)
+                    MenuEntry(
+                      value,
+                      checked: key == sleep,
+                      onPick: () => tryOrShow(context, () => _setSleep(key)),
+                    ),
+                ],
+                child: Text(
+                  sleep == 0 ? 'Never' : 'After ${_sleepLabel(sleep)}',
+                  style: value,
                 ),
               ),
-            ],
-            // The launch agent starts the usual data folder's daemon.
-            if (bundledDaemon != null &&
-                Platform.environment['NUSHI_DATA'] == null)
-              const StartAtLogin(),
-            RemoteSection(widget.client),
+            ),
           ],
-        ),
+          // The launch agent starts the usual data folder's daemon.
+          if (bundledDaemon != null &&
+              Platform.environment['NUSHI_DATA'] == null)
+            const StartAtLogin(),
+          RemoteSection(widget.client),
+        ],
+      ),
+    );
+    return nushiDialog(
+      'Settings',
+      Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Segmented(
+            value: _agents,
+            segments: const [(false, 'General'), (true, 'Agents')],
+            onChanged: (v) => setState(() => _agents = v),
+          ),
+          const SizedBox(height: 12),
+          _agents ? AgentsPage(widget.client) : general,
+        ],
       ),
       [
         Button(
