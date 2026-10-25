@@ -1,0 +1,80 @@
+{
+ "issues": [
+  {
+   "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations",
+   "id": "10000",
+   "self": "https://example.atlassian.net/rest/api/3/issue/10000",
+   "key": "SCRUM-1",
+   "fields": {
+    "summary": "Task 1",
+    "issuetype": {
+     "self": "https://example.atlassian.net/rest/api/3/issuetype/10003",
+     "id": "10003",
+     "description": "Tasks track small, distinct pieces of work.",
+     "iconUrl": "https://example.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10318?size=medium",
+     "name": "Task",
+     "subtask": false,
+     "avatarId": 10318,
+     "entityId": "010b5bea-bbfb-4d1d-bc08-c9c18de622e4",
+     "hierarchyLevel": 0
+    },
+    "assignee": null,
+    "priority": null,
+    "updated": "2026-10-25T21:15:39.083+0900",
+    "status": {
+     "self": "https://example.atlassian.net/rest/api/3/status/10000",
+     "description": "",
+     "iconUrl": "https://example.atlassian.net/images/icons/statuses/generic.png",
+     "name": "To Do",
+     "id": "10000",
+     "statusCategory": {
+      "self": "https://example.atlassian.net/rest/api/3/statuscategory/2",
+      "id": 2,
+      "key": "new",
+      "colorName": "blue-gray",
+      "name": "To Do"
+     }
+    }
+   }
+  },
+  {
+   "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations",
+   "id": "10001",
+   "self": "https://example.atlassian.net/rest/api/3/issue/10001",
+   "key": "SCRUM-2",
+   "fields": {
+    "summary": "Task 2",
+    "issuetype": {
+     "self": "https://example.atlassian.net/rest/api/3/issuetype/10004",
+     "id": "10004",
+     "description": "Stories track functionality or features expressed as user goals.",
+     "iconUrl": "https://example.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10315?size=medium",
+     "name": "Story",
+     "subtask": false,
+     "avatarId": 10315,
+     "entityId": "dcf28875-7165-4b4d-8c7e-2fd3909c7e80",
+     "hierarchyLevel": 0
+    },
+    "assignee": null,
+    "priority": null,
+    "updated": "2026-10-25T21:15:39.323+0900",
+    "status": {
+     "self": "https://example.atlassian.net/rest/api/3/status/3",
+     "description": "This issue is being actively worked on at the moment by the assignee.",
+     "iconUrl": "https://example.atlassian.net/images/icons/statuses/inprogress.png",
+     "name": "In Progress",
+     "id": "3",
+     "statusCategory": {
+      "self": "https://example.atlassian.net/rest/api/3/statuscategory/4",
+      "id": 4,
+      "key": "indeterminate",
+      "colorName": "yellow",
+      "name": "In Progress"
+     }
+    }
+   }
+  }
+ ],
+ "nextPageToken": "EAIYuPiQmZc0Ihxwcm9qZWN0ID0gU0NSVU0gT1JERVIgQlkga2V5KgJbXTIXVEVOQU5UX05PVF9CT09UU1RSQVBQRUQ=",
+ "isLast": false
+}

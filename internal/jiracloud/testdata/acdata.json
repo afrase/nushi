@@ -1,0 +1,384 @@
+{
+ "visibleFieldNames": [
+  {
+   "value": "assignee",
+   "displayName": "assignee",
+   "auto": "true",
+   "orderable": "true",
+   "searchable": "true",
+   "operators": [
+    "was",
+    "was not",
+    "was in",
+    "=",
+    "is not",
+    "in",
+    "!=",
+    "not in",
+    "is",
+    "was not in",
+    "changed"
+   ],
+   "types": [
+    "com.atlassian.jira.user.ApplicationUser"
+   ]
+  },
+  {
+   "value": "issuetype",
+   "displayName": "issuetype",
+   "auto": "true",
+   "orderable": "true",
+   "searchable": "true",
+   "operators": [
+    "=",
+    "!=",
+    "in",
+    "not in",
+    "is",
+    "is not"
+   ],
+   "types": [
+    "com.atlassian.jira.issue.issuetype.IssueType"
+   ]
+  },
+  {
+   "value": "labels",
+   "displayName": "labels",
+   "auto": "true",
+   "orderable": "true",
+   "searchable": "true",
+   "operators": [
+    "=",
+    "!=",
+    "in",
+    "not in",
+    "is",
+    "is not"
+   ],
+   "types": [
+    "com.atlassian.jira.issue.label.Label"
+   ]
+  },
+  {
+   "value": "priority",
+   "displayName": "priority",
+   "auto": "true",
+   "orderable": "true",
+   "searchable": "true",
+   "operators": [
+    "was",
+    "was in",
+    "is not",
+    "in",
+    "!=",
+    "not in",
+    ">=",
+    ">",
+    "changed",
+    "<",
+    "<=",
+    "was not",
+    "=",
+    "is",
+    "was not in"
+   ],
+   "types": [
+    "com.atlassian.jira.issue.priority.Priority"
+   ]
+  },
+  {
+   "value": "project",
+   "displayName": "project",
+   "auto": "true",
+   "orderable": "true",
+   "searchable": "true",
+   "operators": [
+    "=",
+    "!=",
+    "in",
+    "not in",
+    "is",
+    "is not"
+   ],
+   "types": [
+    "com.atlassian.jira.project.Project"
+   ]
+  },
+  {
+   "value": "status",
+   "displayName": "status",
+   "auto": "true",
+   "orderable": "true",
+   "searchable": "true",
+   "operators": [
+    "was",
+    "was not",
+    "was in",
+    "=",
+    "is not",
+    "in",
+    "!=",
+    "not in",
+    "is",
+    "was not in",
+    "changed"
+   ],
+   "types": [
+    "com.atlassian.jira.issue.status.Status"
+   ]
+  },
+  {
+   "value": "summary",
+   "displayName": "summary",
+   "orderable": "true",
+   "searchable": "true",
+   "operators": [
+    "~",
+    "!~",
+    "is",
+    "is not"
+   ],
+   "types": [
+    "java.lang.String"
+   ]
+  },
+  {
+   "value": "text",
+   "displayName": "text",
+   "searchable": "true",
+   "operators": [
+    "~"
+   ],
+   "types": [
+    "java.lang.String"
+   ]
+  }
+ ],
+ "visibleFunctionNames": [
+  {
+   "value": "approved()",
+   "displayName": "approved()",
+   "types": [
+    "com.atlassian.servicedesk.plugins.approvals.internal.searcher.ApprovalsDataTypes$ApprovalDataType"
+   ]
+  },
+  {
+   "value": "approver(\"\")",
+   "displayName": "approver(\"\")",
+   "types": [
+    "com.atlassian.servicedesk.plugins.approvals.internal.searcher.ApprovalsDataTypes$ApprovalDataType"
+   ]
+  },
+  {
+   "value": "aqlFunction(\"\")",
+   "displayName": "aqlFunction(\"\")",
+   "isList": "true",
+   "types": [
+    "com.atlassian.servicedesk.cmdb.model.CmdbObjectReference"
+   ]
+  },
+  {
+   "value": "breached()",
+   "displayName": "breached()",
+   "types": [
+    "com.atlassian.servicedesk.internal.sla.searcher.SlaDataTypes$SlaDataType"
+   ]
+  },
+  {
+   "value": "cascadeOption(\"\")",
+   "displayName": "cascadeOption(\"\")",
+   "isList": "true",
+   "types": [
+    "com.atlassian.jira.issue.customfields.option.CascadingOption"
+   ]
+  },
+  {
+   "value": "choiceOption(\"\")",
+   "displayName": "choiceOption(\"\")",
+   "isList": "true",
+   "types": [
+    "com.atlassian.jira.issue.customfields.option.Option"
+   ]
+  }
+ ],
+ "jqlReservedWords": [
+  "audit",
+  "default",
+  "add",
+  "modify",
+  "output",
+  "remainder",
+  "difference",
+  "defaults",
+  "rename",
+  "size",
+  "current",
+  "by",
+  "outer",
+  "checkpoint",
+  "trigger",
+  "break",
+  "where",
+  "number",
+  "last",
+  "cf",
+  "byte",
+  "revoke",
+  "not",
+  "create",
+  "character",
+  "sum",
+  "exec",
+  "inner",
+  "explain",
+  "of",
+  "equals",
+  "notin",
+  "execute",
+  "index",
+  "drop",
+  "on",
+  "or",
+  "access",
+  "was",
+  "isempty",
+  "table",
+  "do",
+  "initial",
+  "into",
+  "max",
+  "mode",
+  "then",
+  "values",
+  "inout",
+  "power",
+  "grant",
+  "with",
+  "noaudit",
+  "when",
+  "first",
+  "char",
+  "decrement",
+  "catch",
+  "view",
+  "resource",
+  "begin",
+  "continue",
+  "trans",
+  "asc",
+  "rows",
+  "while",
+  "prior",
+  "exists",
+  "before",
+  "multiply",
+  "desc",
+  "raise",
+  "immediate",
+  "decimal",
+  "long",
+  "union",
+  "more",
+  "identified",
+  "uid",
+  "divide",
+  "update",
+  "lock",
+  "go",
+  "insert",
+  "previous",
+  "returns",
+  "escape",
+  "abort",
+  "fetch",
+  "function",
+  "for",
+  "declare",
+  "exclusive",
+  "field",
+  "double",
+  "from",
+  "int",
+  "isnull",
+  "empty",
+  "right",
+  "count",
+  "goto",
+  "false",
+  "return",
+  "true",
+  "commit",
+  "delete",
+  "intersection",
+  "rownum",
+  "after",
+  "check",
+  "avg",
+  "select",
+  "to",
+  "user",
+  "nowait",
+  "session",
+  "if",
+  "join",
+  "group",
+  "transaction",
+  "in",
+  "share",
+  "alias",
+  "changed",
+  "float",
+  "is",
+  "date",
+  "boolean",
+  "alter",
+  "end",
+  "next",
+  "integer",
+  "between",
+  "raw",
+  "set",
+  "define",
+  "left",
+  "minus",
+  "greater",
+  "option",
+  "intersect",
+  "public",
+  "string",
+  "null",
+  "collation",
+  "column",
+  "unique",
+  "order",
+  "encoding",
+  "synonym",
+  "validate",
+  "whenever",
+  "limit",
+  "subtract",
+  "rowid",
+  "min",
+  "start",
+  "less",
+  "strict",
+  "and",
+  "object",
+  "having",
+  "collate",
+  "modulo",
+  "delimiter",
+  "row",
+  "distinct",
+  "input",
+  "file",
+  "connect",
+  "like",
+  "any",
+  "as",
+  "else",
+  "privileges",
+  "increment",
+  "sqrt"
+ ]
+}

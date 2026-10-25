@@ -1,0 +1,17 @@
+{
+ "maxResults": 50,
+ "startAt": 0,
+ "total": 1,
+ "isLast": true,
+ "values": [
+  {
+   "id": 2,
+   "self": "https://example.atlassian.net/rest/agile/1.0/sprint/2",
+   "state": "active",
+   "name": "SCRUM Sprint 0",
+   "startDate": "2026-10-25T12:15:38.879Z",
+   "endDate": "2026-11-08T12:15:38.879Z",
+   "originBoardId": 1
+  }
+ ]
+}
