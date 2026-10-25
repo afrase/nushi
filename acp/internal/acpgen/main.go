@@ -344,7 +344,7 @@ func comment(b *bytes.Buffer, doc string) {
 	if doc == "" {
 		return
 	}
-	for _, l := range strings.Split(strings.TrimSpace(doc), "\n") {
+	for l := range strings.SplitSeq(strings.TrimSpace(doc), "\n") {
 		b.WriteString(strings.TrimRight("// "+l, " ") + "\n")
 	}
 }

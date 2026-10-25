@@ -249,13 +249,13 @@ func (s *session) settle(t *turn) {
 	defer s.mu.Unlock()
 	switch {
 	case t.cancelled || t.stop == "aborted":
-		s.endLocked(t, &acp.PromptResult{PromptResponse: acp.PromptResponse{StopReason: "cancelled"}, Usage: &t.usage}, nil)
+		s.endLocked(t, &acp.PromptResult{StopReason: "cancelled", Usage: &t.usage}, nil)
 	case t.stop == "error":
 		s.endLocked(t, nil, errors.New(t.failed))
 	case t.stop == "length":
-		s.endLocked(t, &acp.PromptResult{PromptResponse: acp.PromptResponse{StopReason: "max_tokens"}, Usage: &t.usage}, nil)
+		s.endLocked(t, &acp.PromptResult{StopReason: "max_tokens", Usage: &t.usage}, nil)
 	default:
-		s.endLocked(t, &acp.PromptResult{PromptResponse: acp.PromptResponse{StopReason: "end_turn"}, Usage: &t.usage}, nil)
+		s.endLocked(t, &acp.PromptResult{StopReason: "end_turn", Usage: &t.usage}, nil)
 	}
 }
 
@@ -307,7 +307,7 @@ func (s *session) prompt(ctx context.Context, text string, images []image) (*acp
 		case err != nil:
 			s.endLocked(t, nil, err)
 		case r.Disposition == "handled" && !t.ran:
-			s.endLocked(t, &acp.PromptResult{PromptResponse: acp.PromptResponse{StopReason: "end_turn"}}, nil)
+			s.endLocked(t, &acp.PromptResult{StopReason: "end_turn"}, nil)
 		}
 	}()
 	res := <-t.result // the turn ends, or pig does
@@ -322,7 +322,7 @@ func (s *session) cancel() {
 	if t := s.turn; t != nil {
 		t.cancelled = true
 		if !t.ran {
-			s.endLocked(t, &acp.PromptResult{PromptResponse: acp.PromptResponse{StopReason: "cancelled"}}, nil)
+			s.endLocked(t, &acp.PromptResult{StopReason: "cancelled"}, nil)
 		}
 	}
 	s.mu.Unlock()

@@ -21,6 +21,7 @@ linters:
     - embeddedstructfieldcheck # a blank line after embedded fields: style only
     - musttag # one-off decode structs match keys by field name (encoding/json ignores case); session files' keys are the Go names
     - nonamedreturns # named results document what a function returns and serve deferred cleanup
+    - inamedparam # an interface's parameter types say what they are (context.Context, acp.PromptRequest)
     - noinlineerr # if err := f(); err != nil is idiomatic Go
     # Rules that don't fit this code.
     - exhaustruct # a struct's zero fields are meant to be zero
@@ -35,6 +36,7 @@ linters:
     - paralleltest # tests use t.Setenv and shared fakes; running them in parallel would change them
     - tparallel # the same
     - cyclop # gocyclo and gocognit cover complexity, at their defaults
+    - prealloc # make([]T, 0, n) turns a nil result into an empty one, which JSON writes as [] where it wrote null; the lists are short
     - funlen # length alone isn't a problem; gocognit counts what makes a function hard
     - nestif # gocognit counts nesting already
     # Linters that do nothing without configuration of their own.
@@ -47,16 +49,10 @@ linters:
     - errcheck
     - protogetter
     - gosec
-    - revive
     - contextcheck
     - noctx
     - errchkjson
     - forcetypeassert
-    - modernize
-    - inamedparam
-    - prealloc
-    - thelper
-    - perfsprint
 
   settings:
     errcheck:
@@ -146,6 +142,10 @@ linters:
           disabled: true
         - name: package-directory-mismatch # main packages and test peers are named for what they do
           disabled: true
+        - name: confusing-results # the doc comment says which result is which
+          disabled: true
+        - name: multiline-if-init # a long call in an if's init reads fine wrapped
+          disabled: true
         - name: struct-tag # `json:",omitempty"` and the others are checked by go vet
           disabled: true
 
@@ -170,9 +170,9 @@ linters:
       - path: _test\.go$
         linters: [gocritic]
         text: "^deferInLoop:"
-      # Preallocating in tests buys nothing.
       - path: _test\.go$
-        linters: [prealloc]
+        linters: [revive]
+        text: "^defer: prefer not to defer inside loops"
 
 formatters:
   enable:

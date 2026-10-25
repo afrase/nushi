@@ -2,10 +2,12 @@ package chats
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"testing"
 
 	"github.com/afrase/nushi/acp"
@@ -92,7 +94,7 @@ func TestFindPages(t *testing.T) {
 		if i%3 == 0 {
 			cwd = other
 		}
-		f.listed = append(f.listed, acp.SessionInfo{SessionID: acp.SessionID(fmt.Sprint(i)), Cwd: cwd})
+		f.listed = append(f.listed, acp.SessionInfo{SessionID: acp.SessionID(strconv.Itoa(i)), Cwd: cwd})
 	}
 	svc := New([]Kind{{Name: "a", Launch: f.launch}}, &memModes{}, &memSessions{}, nil, "", func(model.Event) {})
 	first, err := svc.Find(context.Background(), "a", dir, "")
@@ -116,7 +118,7 @@ func ids(found []Found) string {
 // Opening fails without leaving a chat when the agent can't load the
 // session; Nushi's own forks aren't opened as chats.
 func TestOpenRefuses(t *testing.T) {
-	f := &fakeAgent{lists: true, loadErr: fmt.Errorf("no such session")}
+	f := &fakeAgent{lists: true, loadErr: errors.New("no such session")}
 	sessions := &memSessions{stored: []model.Session{{ID: "c0", SessionID: "x", Agent: "a", Throwaway: []string{"fork"}}}}
 	svc := New([]Kind{{Name: "a", Launch: f.launch}}, &memModes{}, sessions, nil, "", func(model.Event) {})
 	ctx, dir := context.Background(), t.TempDir()

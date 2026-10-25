@@ -311,8 +311,7 @@ type gaveUpError struct {
 func (g *gaveUpError) Unwrap() error { return g.error }
 
 func withdrawable(err error) json.RawMessage {
-	var g *gaveUpError
-	if errors.As(err, &g) {
+	if g, ok := errors.AsType[*gaveUpError](err); ok {
 		return g.id
 	}
 	return nil

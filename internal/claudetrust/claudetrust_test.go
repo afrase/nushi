@@ -221,7 +221,7 @@ func TestAFileShownWholeOrNotAtAll(t *testing.T) {
 	body := "{" + strings.Repeat(" ", 100<<10)
 	write(t, mcp, body)
 	if runs, _ := runs(repo); len(runs) != 1 || runs[0].Command != body {
-		t.Errorf("a 100 KB file isn't shown whole")
+		t.Error("a 100 KB file isn't shown whole")
 	}
 	write(t, mcp, "{"+strings.Repeat(" ", 300<<10))
 	if runs, _ := runs(repo); len(runs) != 1 || runs[0].Command != "too large to show (301 KB): read "+mcp {

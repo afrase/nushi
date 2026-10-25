@@ -112,6 +112,7 @@ func TestVectors(t *testing.T) {
 }
 
 func unhex(t *testing.T, s string) []byte {
+	t.Helper()
 	b, err := hex.DecodeString(s)
 	if err != nil {
 		t.Fatal(err)
@@ -120,6 +121,7 @@ func unhex(t *testing.T, s string) []byte {
 }
 
 func key(t *testing.T, private string) noise.DHKey {
+	t.Helper()
 	k, err := noise.DH25519.GenerateKeypair(bytes.NewReader(unhex(t, private)))
 	if err != nil {
 		t.Fatal(err)
@@ -190,6 +192,7 @@ func connect(t *testing.T, a, b *pipe, initiator, responder Config, pinned []byt
 }
 
 func keys(t *testing.T) (noise.DHKey, noise.DHKey) {
+	t.Helper()
 	a, err := NewKey()
 	if err != nil {
 		t.Fatal(err)

@@ -14,7 +14,7 @@ import (
 // is "unknown", with Claude's words as its detail.
 func parseList(out string) []model.MCPServer {
 	var list []model.MCPServer
-	for _, line := range strings.Split(out, "\n") {
+	for line := range strings.SplitSeq(out, "\n") {
 		name, rest, ok := strings.Cut(strings.TrimSpace(line), ": ")
 		i := statusAt(rest)
 		if !ok || i < 0 {

@@ -129,7 +129,7 @@ const Shown = 256 << 10
 // Whole is a file's text for the card: all of it, or where it is.
 func Whole(path string, b []byte) string {
 	if len(b) > Shown {
-		return fmt.Sprintf("too large to show: read %s", path)
+		return "too large to show: read " + path
 	}
 	return string(b)
 }

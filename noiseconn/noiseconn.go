@@ -222,15 +222,24 @@ func (c *Conn) Write(p []byte) (int, error) {
 	return n, c.werr
 }
 
+// Close closes the transport under the channel.
 func (c *Conn) Close() error { return c.t.Close() }
 
 // SetDeadline does nothing: the transport keeps itself alive and times
-// out on its own, so deadlines aren't used (nor are the two below).
-func (c *Conn) SetDeadline(time.Time) error      { return nil }
-func (c *Conn) SetReadDeadline(time.Time) error  { return nil }
+// out on its own, so deadlines aren't used.
+func (c *Conn) SetDeadline(time.Time) error { return nil }
+
+// SetReadDeadline does nothing, as SetDeadline.
+func (c *Conn) SetReadDeadline(time.Time) error { return nil }
+
+// SetWriteDeadline does nothing, as SetDeadline.
 func (c *Conn) SetWriteDeadline(time.Time) error { return nil }
-func (c *Conn) LocalAddr() net.Addr              { return addr{} }
-func (c *Conn) RemoteAddr() net.Addr             { return addr{} }
+
+// LocalAddr is a placeholder: the channel has no address of its own.
+func (c *Conn) LocalAddr() net.Addr { return addr{} }
+
+// RemoteAddr is a placeholder, as LocalAddr.
+func (c *Conn) RemoteAddr() net.Addr { return addr{} }
 
 type addr struct{}
 

@@ -44,6 +44,7 @@ func tarball(t *testing.T, files map[string]string) []byte {
 // folder. Changing a's tarball after the lockfile was written breaks its
 // hash.
 func registry(t *testing.T, marker string) (url string, lock fstest.MapFS, tamper func()) {
+	t.Helper()
 	pkgs := map[string][]byte{
 		"a": tarball(t, map[string]string{"package.json": `{"name":"a","version":"1.0.0","bin":{"a":"bin/a.js"},"dependencies":{"b":"2.0.0","s":"1.0.0"},"optionalDependencies":{"c":"1.0.0"}}`, "bin/a.js": "#!/usr/bin/env node\n"}),
 		"b": tarball(t, map[string]string{"package.json": `{"name":"b","version":"2.0.0"}`}),

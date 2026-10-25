@@ -141,6 +141,7 @@ func (c *Client) Stop(grace time.Duration) error {
 	return c.Close()
 }
 
+// Initialize sends initialize: the protocol version and capabilities.
 func (c *Client) Initialize(ctx context.Context, req InitializeRequest) (*InitializeResponse, error) {
 	var raw json.RawMessage
 	start := time.Now()
@@ -187,6 +188,7 @@ func (c *Client) ListSessions(ctx context.Context, req ListSessionsRequest) (*Li
 	return &resp, c.conn.call(ctx, "session/list", req, &resp)
 }
 
+// NewSession sends session/new.
 func (c *Client) NewSession(ctx context.Context, req NewSessionRequest) (*NewSessionResponse, error) {
 	var resp NewSessionResponse
 	start := time.Now()
@@ -205,6 +207,7 @@ func (c *Client) LoadSession(ctx context.Context, req LoadSessionRequest) (*Load
 	return &resp, err
 }
 
+// Prompt sends session/prompt and waits for the turn to end.
 func (c *Client) Prompt(ctx context.Context, req PromptRequest) (*PromptResult, error) {
 	wait, err := c.StartPrompt(req)
 	if err != nil {
@@ -233,11 +236,13 @@ func (c *Client) Cancel(req CancelNotification) error {
 	return c.conn.notify("session/cancel", req)
 }
 
+// SetConfigOption sends session/set_config_option.
 func (c *Client) SetConfigOption(ctx context.Context, req SetSessionConfigOptionRequest) (*SetSessionConfigOptionResponse, error) {
 	var resp SetSessionConfigOptionResponse
 	return &resp, c.conn.call(ctx, "session/set_config_option", req, &resp)
 }
 
+// SetMode sends session/set_mode.
 func (c *Client) SetMode(ctx context.Context, req SetSessionModeRequest) error {
 	return c.conn.call(ctx, "session/set_mode", req, nil)
 }

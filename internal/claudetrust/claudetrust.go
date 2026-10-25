@@ -297,10 +297,8 @@ func hasHooksKey(v any) bool {
 			}
 		}
 	case []any:
-		for _, x := range v {
-			if hasHooksKey(x) {
-				return true
-			}
+		if slices.ContainsFunc(v, hasHooksKey) {
+			return true
 		}
 	}
 	return false

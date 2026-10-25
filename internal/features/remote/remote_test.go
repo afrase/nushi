@@ -36,6 +36,7 @@ func echo(c net.Conn) {
 }
 
 func startRelay(t *testing.T) string {
+	t.Helper()
 	lim := relay.Defaults
 	lim.DialWait = 300 * time.Millisecond // a phone with no daemon to meet gives up soon
 	srv := httptest.NewServer(relay.New(lim))
@@ -74,6 +75,7 @@ type offer struct {
 }
 
 func parseQR(t *testing.T, qr string) offer {
+	t.Helper()
 	u, err := url.Parse(qr)
 	if err != nil || u.Scheme != "nushi" || u.Host != "pair" {
 		t.Fatalf("QR %q", qr)
@@ -85,6 +87,7 @@ func parseQR(t *testing.T, qr string) offer {
 }
 
 func newKey(t *testing.T) noise.DHKey {
+	t.Helper()
 	k, err := noiseconn.NewKey()
 	if err != nil {
 		t.Fatal(err)

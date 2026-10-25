@@ -66,7 +66,7 @@ func (s *Service) Open(chatID, folder string, cols, rows int) (model.Terminal, e
 	if err := chats.CheckFolder(folder); err != nil {
 		return model.Terminal{}, err
 	}
-	t := &term{Terminal: model.Terminal{ID: rand.Text(), ChatID: chatID, Folder: folder, Shell: s.shell}}
+	t := &term{ID: rand.Text(), ChatID: chatID, Folder: folder, Shell: s.shell}
 	if t.shell, err = s.start(folder, cols, rows, func() { s.changed(chatID) }); err != nil {
 		return model.Terminal{}, err
 	}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os/exec"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 )
@@ -51,8 +52,8 @@ func (Claude) Logout(ctx context.Context, folder, name string) error {
 func lastLine(out string) string {
 	out = ansi.ReplaceAllString(out, "")
 	lines := strings.FieldsFunc(out, func(r rune) bool { return r == '\n' || r == '\r' })
-	for i := len(lines) - 1; i >= 0; i-- {
-		if l := strings.TrimSpace(lines[i]); l != "" {
+	for _, line := range slices.Backward(lines) {
+		if l := strings.TrimSpace(line); l != "" {
 			return l
 		}
 	}

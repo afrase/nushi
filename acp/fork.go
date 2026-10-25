@@ -17,6 +17,7 @@ type ForkSessionRequest struct {
 	Meta       map[string]any `json:"_meta,omitempty"`
 }
 
+// ForkSessionResponse is session/fork's answer: the new session.
 type ForkSessionResponse struct {
 	SessionID     SessionID             `json:"sessionId"`
 	ConfigOptions []SessionConfigOption `json:"configOptions,omitempty"`

@@ -96,8 +96,8 @@ func Changes(ctx context.Context, folder string, span Span) ([]model.FileChange,
 	}
 	for _, p := range added {
 		c := model.FileChange{Path: p, Status: status}
-		if strings.HasSuffix(p, "/") { // git lists a repository inside the folder as a folder
-			c.Path, c.Skipped = strings.TrimSuffix(p, "/"), "a repository of its own"
+		if before, ok := strings.CutSuffix(p, "/"); ok { // git lists a repository inside the folder as a folder
+			c.Path, c.Skipped = before, "a repository of its own"
 		}
 		changes = append(changes, c)
 	}
@@ -346,8 +346,7 @@ func runTo(ctx context.Context, dir string, blank []string, out io.Writer, args 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = cmp.Or[io.Writer](out, &stdout), &stderr
 	if err := cmd.Run(); err != nil {
-		var exit *exec.ExitError
-		if errors.As(err, &exit) {
+		if _, ok := errors.AsType[*exec.ExitError](err); ok {
 			return nil, fmt.Errorf("git %s: %s", args[0], strings.TrimSpace(stderr.String()))
 		}
 		return nil, err

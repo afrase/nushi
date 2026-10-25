@@ -50,7 +50,7 @@ func TestSideChatKeepsToItself(t *testing.T) {
 	sessions.mu.Lock()
 	for _, s := range sessions.saved {
 		if s.ID == side {
-			t.Errorf("the side chat was stored")
+			t.Error("the side chat was stored")
 		}
 	}
 	sessions.mu.Unlock()
@@ -66,7 +66,7 @@ func TestSideChatKeepsToItself(t *testing.T) {
 		t.Errorf("an update for the closed side chat went somewhere: %+v, %q", main.Items, texts(sideChat))
 	}
 	if _, err := svc.Get(side); err == nil {
-		t.Errorf("the side chat is still there after CloseSide")
+		t.Error("the side chat is still there after CloseSide")
 	}
 	if len(agent.deleted) != 1 || agent.deleted[0] != "fork1" {
 		t.Errorf("deleted = %v, want the side chat's session", agent.deleted)

@@ -93,7 +93,7 @@ func TestPAC(t *testing.T) {
 // A PAC server that never answers is given up on.
 func TestPACTimeout(t *testing.T) {
 	hang := make(chan struct{})
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { <-hang }))
+	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { <-hang }))
 	defer srv.Close()
 	defer close(hang)
 	old := Timeout
@@ -150,6 +150,7 @@ func TestLookupsDontWaitForEachOther(t *testing.T) {
 // connectProxy is an HTTP CONNECT proxy that sends every host to
 // 127.0.0.1 (the port kept), wanting user:pass when auth is set.
 func connectProxy(t *testing.T, auth string) (string, func() []string) {
+	t.Helper()
 	var mu sync.Mutex
 	var seen []string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -104,7 +104,7 @@ func (s *Service) pair(ctx context.Context, p *pairing, relayURL string) {
 			continue
 		}
 		stop := context.AfterFunc(ctx, func() { conn.Close() })
-		defer stop() //nolint:gocritic // every path from here returns: it runs once
+		defer stop() //nolint:gocritic,revive // every path from here returns: it runs once
 		code := codeOf(conn.Hash())
 		s.mu.Lock()
 		p.name, p.code = name, code

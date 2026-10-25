@@ -149,9 +149,11 @@ func summary(file string) (title string, messages int) {
 			case e.Type == "message" && e.Message != nil && (e.Message.Role == "user" || e.Message.Role == "assistant"):
 				messages++
 				if first == "" && e.Message.Role == "user" {
+					var text strings.Builder
 					for _, b := range e.Message.blocks() {
-						first += b.Text
+						text.WriteString(b.Text)
 					}
+					first = text.String()
 				}
 			}
 		}
@@ -216,11 +218,11 @@ func (s *session) replay(ctx context.Context) error { //nolint:gocognit // one c
 		var out []acp.SessionUpdate
 		switch m.Role {
 		case "user":
-			var text string
-			for _, b := range m.blocks() {
-				text += b.Text
+			var b strings.Builder
+			for _, block := range m.blocks() {
+				b.WriteString(block.Text)
 			}
-			if text != "" {
+			if text := b.String(); text != "" {
 				out = append(out, acp.SessionUpdate{SessionUpdate: "user_message_chunk", UserMessageChunk: &acp.ContentChunk{
 					Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: text}}}})
 			}
