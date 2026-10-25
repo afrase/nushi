@@ -108,6 +108,7 @@ func (c *conn) read(r io.Reader) {
 	}
 }
 
+//nolint:contextcheck // requests from the other side end with the connection
 func (c *conn) dispatch(line []byte) {
 	var f frame
 	if err := json.Unmarshal(line, &f); err != nil {

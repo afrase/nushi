@@ -317,6 +317,8 @@ func (s *session) prompt(ctx context.Context, text string, images []image) (*acp
 // cancel stops the running turn; pig answers once it settled. A turn
 // with no run (an extension's command, which may wait on itself) ends at
 // once.
+//
+//nolint:contextcheck // the abort goes out on its own; Cancel is a notification
 func (s *session) cancel() {
 	s.mu.Lock()
 	if t := s.turn; t != nil {

@@ -82,6 +82,7 @@ func (s *Service) chat(id string) (*chat, error) {
 // npx, an MCP server that hangs) mustn't leave the chat reopening for good.
 var reopenTimeout = 2 * time.Minute
 
+//nolint:contextcheck // a reopen runs on its own: every request waiting on the chat waits for it
 func (s *Service) resume(c *chat) {
 	ctx, cancel := context.WithTimeout(context.Background(), reopenTimeout)
 	defer cancel()

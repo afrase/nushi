@@ -99,6 +99,8 @@ func (s *session) setOption(ctx context.Context, id, value string) ([]acp.Sessio
 
 // optionsChanged tells the client the session's options, which pig
 // changed on its own.
+//
+//nolint:contextcheck // asked on the bridge's connection, after the change pig reported
 func (b *bridge) optionsChanged(s *session) {
 	ctx, cancel := context.WithTimeout(b.ctx, 10*time.Second)
 	defer cancel()
@@ -109,6 +111,8 @@ func (b *bridge) optionsChanged(s *session) {
 
 // usage tells the client how full the session's context is, and what it
 // cost so far (pig's session stats).
+//
+//nolint:contextcheck // asked on the bridge's connection, after the turn that ended
 func (b *bridge) usage(s *session) {
 	ctx, cancel := context.WithTimeout(b.ctx, 10*time.Second)
 	defer cancel()
@@ -129,6 +133,8 @@ func (b *bridge) usage(s *session) {
 // commands tells the client the session's slash commands: extensions',
 // prompt templates' and skills' (pig's own, the terminal's, aren't
 // commands in RPC mode).
+//
+//nolint:contextcheck // asked on the bridge's connection, after the session's answer
 func (b *bridge) commands(s *session) {
 	ctx, cancel := context.WithTimeout(b.ctx, 10*time.Second)
 	defer cancel()

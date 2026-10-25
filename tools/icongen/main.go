@@ -6,6 +6,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -93,7 +94,7 @@ func main() {
 		}
 		for _, px := range d.pngSizes {
 			out := filepath.Join(set, fmt.Sprintf("app_icon_%d.png", px))
-			cmd := exec.Command("sips", "-s", "format", "png", "-z", strconv.Itoa(px), strconv.Itoa(px), src, "--out", out)
+			cmd := exec.CommandContext(context.Background(), "sips", "-s", "format", "png", "-z", strconv.Itoa(px), strconv.Itoa(px), src, "--out", out)
 			if b, err := cmd.CombinedOutput(); err != nil {
 				log.Fatalf("sips: %v\n%s", err, b) //nolint:gocritic // a failed run may leave its temp folder
 			}

@@ -48,8 +48,6 @@ linters:
 
     # Not clean yet: each comes off this list in the step that fixes it.
     - errcheck
-    - contextcheck
-    - noctx
     - errchkjson
     - forcetypeassert
 
@@ -151,6 +149,11 @@ linters:
   exclusions:
     generated: strict
     rules:
+      # contextcheck reads a //nolint:contextcheck on a function itself, to
+      # stop the report spreading to every caller; golangci-lint sees no
+      # report there and would call the directive unused.
+      - linters: [nolintlint]
+        text: 'for linter "contextcheck"'
       # Doc comments for the packages that could be published (acp,
       # noiseconn, relay); internal packages and commands aren't read
       # through godoc.
@@ -194,6 +197,10 @@ linters:
       # Tests are long scripts, one scenario each.
       - path: _test\.go$
         linters: [gocognit, gocyclo, maintidx, dupl]
+      # Tests start short commands, and processes and listeners they end
+      # themselves; a context would add nothing.
+      - path: _test\.go$
+        linters: [noctx]
       # Tests hold what each iteration opens until the test ends.
       - path: _test\.go$
         linters: [gocritic]

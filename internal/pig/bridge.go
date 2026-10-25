@@ -138,7 +138,7 @@ func (b *bridge) handle(ctx context.Context, method string, params json.RawMessa
 		if s, err := b.session(p.SessionID); err == nil {
 			s.stop()
 		}
-		return struct{}{}, b.dirs.remove(string(p.SessionID))
+		return struct{}{}, b.dirs.remove(ctx, string(p.SessionID))
 	case "session/prompt", "_session/steering":
 		s, err := b.session(p.SessionID)
 		if err != nil {

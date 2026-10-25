@@ -55,7 +55,7 @@ func Start(dir string, h acp.Handler, log *slog.Logger) (*acp.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	cmd := exec.Command(self, Command) //nolint:gosec // this nushid as the bridge
+	cmd := exec.Command(self, Command) //nolint:gosec,noctx // lives until Stop or Close, not a context; this nushid as the bridge
 	cmd.Dir = dir
 	return acp.Start(cmd, h, log)
 }
@@ -112,7 +112,7 @@ func version(bin string) (string, error) {
 // stderr to the bridge's (its last lines kept); its start and exit go to
 // the log.
 func spawn(bin, cwd string, args []string) (Pig, error) {
-	cmd := exec.Command(bin, args...) //nolint:gosec // the user's pig (ADR 0039)
+	cmd := exec.Command(bin, args...) //nolint:gosec,noctx // lives until Stop or Close, not a context; the user's pig (ADR 0039)
 	cmd.Dir = cwd
 	said := &lastLines{}
 	cmd.Stderr = io.MultiWriter(os.Stderr, said)

@@ -44,11 +44,13 @@ func ConfigFile() string {
 
 // project is the folder Claude files a folder's local servers under: its
 // repository's main checkout, or the folder outside git (real paths).
+//
+//nolint:contextcheck // a quick git rev-parse, also for callers with no request (the MCP list's scopes)
 func project(folder string) string {
 	if resolved, err := filepath.EvalSymlinks(folder); err == nil {
 		folder = resolved
 	}
-	out, err := exec.Command("git", "-C", folder, "rev-parse", "--path-format=absolute", "--git-common-dir").Output() //nolint:gosec // git rev-parse in the folder asked about
+	out, err := exec.CommandContext(context.Background(), "git", "-C", folder, "rev-parse", "--path-format=absolute", "--git-common-dir").Output() //nolint:gosec // git rev-parse in the folder asked about
 	if common := strings.TrimSpace(string(out)); err == nil && filepath.Base(common) == ".git" {
 		return filepath.Dir(common)
 	}

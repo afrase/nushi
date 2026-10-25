@@ -18,7 +18,7 @@ import (
 // bun` finds the user's Bun on PATH. omp reads its own config and keys
 // (~/.omp, the environment); Nushi never does.
 func Start(dir, cli string, h acp.Handler, log *slog.Logger) (*acp.Client, error) {
-	cmd := exec.Command(cli, "--mode", "acp")
+	cmd := exec.Command(cli, "--mode", "acp") //nolint:noctx // lives until Stop or Close, not a context
 	cmd.Dir = dir
 	return acp.Start(cmd, h, log)
 }

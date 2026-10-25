@@ -350,7 +350,7 @@ func TestRelayInTheMiddle(t *testing.T) {
 		// Toward the daemon: dial it with the relay's key, and a guessed
 		// secret on the pairing id.
 		var dl relay.Dialer
-		c, err := dl.Dial(context.Background(), realURL, target)
+		c, err := dl.Dial(r.Context(), realURL, target)
 		if err != nil {
 			results <- err
 			return

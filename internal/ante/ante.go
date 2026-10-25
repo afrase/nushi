@@ -53,7 +53,7 @@ func Start(dir string, h acp.Handler, log *slog.Logger) (*acp.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	cmd := exec.Command(self, Command) //nolint:gosec // this nushid as the bridge
+	cmd := exec.Command(self, Command) //nolint:gosec,noctx // lives until Stop or Close, not a context; this nushid as the bridge
 	cmd.Dir = dir
 	return acp.Start(cmd, h, log)
 }
@@ -136,7 +136,7 @@ func numbers(v string) []int {
 // serve starts `ante serve --stdio` in cwd, in a process group of its
 // own, its stderr to the bridge's.
 func serve(bin, cwd string) (io.WriteCloser, io.Reader, func(), error) {
-	cmd := exec.Command(bin, "serve", "--stdio")
+	cmd := exec.Command(bin, "serve", "--stdio") //nolint:noctx // lives until the session ends, not a context
 	cmd.Dir = cwd
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	in, err := cmd.StdinPipe()

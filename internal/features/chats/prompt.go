@@ -181,6 +181,7 @@ func title(prompt string) string {
 	return line
 }
 
+//nolint:contextcheck // a turn outlives the request that started it
 func (c *chat) run(agent Agent, req acp.PromptRequest, sent chan struct{}) {
 	wait, err := agent.StartPrompt(req)
 	close(sent)
@@ -248,6 +249,8 @@ func (c *chat) deliverLocked() {
 // in order; it is the chat's only steering worker while it runs. A message
 // the agent doesn't take because the turn has just ended starts the next
 // turn, unless the turn was stopped: then it goes back to the queue.
+//
+//nolint:contextcheck // a queued message is steered in after the request that queued it
 func (c *chat) steerQueue(agent Agent, sid acp.SessionID) {
 	c.mu.Lock()
 	defer c.mu.Unlock()

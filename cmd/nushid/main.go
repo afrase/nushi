@@ -4,6 +4,7 @@ package main
 import (
 	"bytes"
 	"cmp"
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
@@ -267,12 +268,12 @@ func loadToken(path string) (string, error) {
 
 // listen takes over the socket at path unless another daemon is answering on it.
 func listen(path string) (net.Listener, error) {
-	if c, err := net.Dial("unix", path); err == nil { //nolint:gosec // the daemon's own socket
+	if c, err := new(net.Dialer).DialContext(context.Background(), "unix", path); err == nil {
 		c.Close()
 		return nil, fmt.Errorf("a daemon is already listening on %s", path)
 	}
 	_ = os.Remove(path)
-	return net.Listen("unix", path)
+	return new(net.ListenConfig).Listen(context.Background(), "unix", path)
 }
 
 // loginShell is the user's shell from the user database, as Terminal picks

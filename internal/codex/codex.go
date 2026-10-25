@@ -21,7 +21,7 @@ import (
 // the user's Codex (codex-acp's CODEX_PATH). Codex reads its own config
 // and login ($CODEX_HOME, else ~/.codex); Nushi never does.
 func Start(dir, program, cli string, h acp.Handler, log *slog.Logger) (*acp.Client, error) {
-	cmd := exec.Command("node", program) //nolint:gosec // the adapter set up in the data folder (ADR 0037)
+	cmd := exec.Command("node", program) //nolint:gosec,noctx // lives until Stop or Close, not a context; the adapter set up in the data folder (ADR 0037)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), "CODEX_PATH="+cli)
 	return acp.Start(cmd, h, log)
