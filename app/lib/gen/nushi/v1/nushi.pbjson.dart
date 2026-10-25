@@ -413,6 +413,7 @@ const ListAgentSessionsResponse$json = {
     },
     {'1': 'next_cursor', '3': 3, '4': 1, '5': 9, '10': 'nextCursor'},
     {'1': 'sees_open', '3': 4, '4': 1, '5': 8, '10': 'seesOpen'},
+    {'1': 'one_writer', '3': 5, '4': 1, '5': 8, '10': 'oneWriter'},
   ],
 };
 
@@ -421,7 +422,7 @@ final $typed_data.Uint8List listAgentSessionsResponseDescriptor = $convert.base6
     'ChlMaXN0QWdlbnRTZXNzaW9uc1Jlc3BvbnNlEhkKCGNhbl9saXN0GAEgASgIUgdjYW5MaXN0Ej'
     'IKCHNlc3Npb25zGAIgAygLMhYubnVzaGkudjEuRm91bmRTZXNzaW9uUghzZXNzaW9ucxIfCgtu'
     'ZXh0X2N1cnNvchgDIAEoCVIKbmV4dEN1cnNvchIbCglzZWVzX29wZW4YBCABKAhSCHNlZXNPcG'
-    'Vu');
+    'VuEh0KCm9uZV93cml0ZXIYBSABKAhSCW9uZVdyaXRlcg==');
 
 @$core.Deprecated('Use foundSessionDescriptor instead')
 const FoundSession$json = {

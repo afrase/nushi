@@ -1389,12 +1389,14 @@ class ListAgentSessionsResponse extends $pb.GeneratedMessage {
     $core.Iterable<FoundSession>? sessions,
     $core.String? nextCursor,
     $core.bool? seesOpen,
+    $core.bool? oneWriter,
   }) {
     final result = ListAgentSessionsResponse._();
     if (canList != null) result.canList = canList;
     if (sessions != null) result.sessions.addAll(sessions);
     if (nextCursor != null) result.nextCursor = nextCursor;
     if (seesOpen != null) result.seesOpen = seesOpen;
+    if (oneWriter != null) result.oneWriter = oneWriter;
     return result;
   }
 
@@ -1416,6 +1418,7 @@ class ListAgentSessionsResponse extends $pb.GeneratedMessage {
         subBuilder: FoundSession.$_createMessage)
     ..aOS(3, _omitFieldNames ? '' : 'nextCursor')
     ..aOB(4, _omitFieldNames ? '' : 'seesOpen')
+    ..aOB(5, _omitFieldNames ? '' : 'oneWriter')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1477,6 +1480,17 @@ class ListAgentSessionsResponse extends $pb.GeneratedMessage {
   $core.bool hasSeesOpen() => $_has(3);
   @$pb.TagNumber(4)
   void clearSeesOpen() => $_clearField(4);
+
+  /// The agent lets one app at a time write to a session: one open
+  /// elsewhere can't be opened until it's closed there (Codex).
+  @$pb.TagNumber(5)
+  $core.bool get oneWriter => $_getBF(4);
+  @$pb.TagNumber(5)
+  set oneWriter($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasOneWriter() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearOneWriter() => $_clearField(5);
 }
 
 /// One of an agent's sessions that isn't a chat.

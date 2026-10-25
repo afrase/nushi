@@ -25,8 +25,8 @@ func TestFindWithoutList(t *testing.T) {
 	}
 }
 
-// The folder's sessions, newest first, without Nushi's own: a chat's, one it
-// had before a move, a throwaway fork; a folder through a link matches its
+// The folder's sessions, newest first, without Nushi's own (a chat's, one
+// it had before a move, a throwaway fork) or forks; a folder through a link matches its
 // sessions' real cwd; with no folder every folder's are listed, a gone one
 // marked.
 func TestFindLeavesOutNushisOwn(t *testing.T) {
@@ -47,7 +47,9 @@ func TestFindLeavesOutNushisOwn(t *testing.T) {
 		{SessionID: "lost", Cwd: gone, Title: "Lost"},
 	}}
 	sessions := &memSessions{stored: []model.Session{{ID: "c0", SessionID: "x", Earlier: []model.AgentSession{{ID: "before-move"}}, Throwaway: []string{"fork"}}}}
-	k := Kind{Name: "a", Launch: f.launch, OpenElsewhere: func() map[string]string { return map[string]string{"old": "a terminal"} }}
+	f.listed = append(f.listed, acp.SessionInfo{SessionID: "a-fork", Cwd: real, UpdatedAt: "2026-10-05T10:00:00Z"})
+	k := Kind{Name: "a", Launch: f.launch, OpenElsewhere: func([]string) map[string]string { return map[string]string{"old": "a terminal"} },
+		Forked: func([]string) map[string]bool { return map[string]bool{"a-fork": true} }}
 	svc := New([]Kind{k}, &memModes{}, sessions, nil, "", func(model.Event) {})
 	ctx := context.Background()
 	if _, err := svc.Start(ctx, "a", dir, false); err != nil { // its session is s1

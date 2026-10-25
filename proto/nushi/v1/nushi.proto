@@ -329,6 +329,9 @@ message ListAgentSessionsResponse {
   // Nushi can tell when one of this agent's sessions is open elsewhere
   // (FoundSession.open_in); without, it can't know.
   bool sees_open = 4;
+  // The agent lets one app at a time write to a session: one open
+  // elsewhere can't be opened until it's closed there (Codex).
+  bool one_writer = 5;
 }
 
 // One of an agent's sessions that isn't a chat.

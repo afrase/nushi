@@ -264,7 +264,7 @@ func (a *Agent) list(cwd, cursor string) map[string]any {
 	}
 	page := []map[string]any{}
 	for _, s := range all[min(from, to):to] {
-		if cwd == "" || s["cwd"] == cwd {
+		if cwd == "" || s["cwd"] == keyOf(cwd, "").cwd {
 			page = append(page, s)
 		}
 	}

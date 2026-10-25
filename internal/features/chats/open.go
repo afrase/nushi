@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"slices"
 	"time"
 
 	"github.com/afrase/nushi/internal/model"
@@ -15,8 +16,9 @@ import (
 // agent replays it through session/load, as it reopens a chat after a
 // daemon restart; Nushi copies nothing (ADR 0008). The chat starts in the
 // mode a new chat of the agent's would. A session that is a chat already
-// returns that chat; one of Nushi's own forks is refused.
-func (s *Service) Open(ctx context.Context, agent, folder, sessionID, title string) (string, error) {
+// returns that chat; one of Nushi's own forks is refused. Its title is
+// the one listed (listed), else its first message's, until the agent names it.
+func (s *Service) Open(ctx context.Context, agent, folder, sessionID, listed string) (string, error) {
 	k, err := s.kindOf(agent)
 	if err != nil {
 		return "", err
@@ -32,6 +34,13 @@ func (s *Service) Open(ctx context.Context, agent, folder, sessionID, title stri
 		if sess.SessionID == sessionID && sess.Agent == k.Name {
 			return sess.ID, nil
 		}
+	}
+	// The folder as the chats already there spell it (/tmp, not the
+	// agent's /private/tmp), so the chat joins them.
+	if i := slices.IndexFunc(stored, func(sess model.Session) bool {
+		return sess.Folder != folder && realPath(sess.Folder) == realPath(folder)
+	}); i >= 0 {
+		folder = stored[i].Folder
 	}
 	own, err := s.ownSessions()
 	if err != nil {
@@ -61,7 +70,7 @@ func (s *Service) Open(ctx context.Context, agent, folder, sessionID, title stri
 	c.id = rand.Text()
 	c.mu.Lock()
 	c.sid, c.busy = sessionID, true // its replay is the transcript, not a turn of the agent's own
-	c.session = model.Session{ID: c.id, SessionID: sessionID, Agent: k.Name, Folder: folder, Title: title, Created: time.Now(), HasMessages: true}
+	c.session = model.Session{ID: c.id, SessionID: sessionID, Agent: k.Name, Folder: folder, Title: listed, Created: time.Now(), HasMessages: true}
 	c.mu.Unlock()
 	o, err := c.openSession(ctx, sessionID, folder, false)
 	if err != nil {
@@ -77,6 +86,9 @@ func (s *Service) Open(ctx context.Context, agent, folder, sessionID, title stri
 	s.useLocked(c, o)
 	c.orphanLocked() // calls whose agent ended before their results
 	c.busy = false
+	if i := slices.IndexFunc(c.items, func(it model.Item) bool { return it.Kind == model.UserMessage }); c.session.Title == "" && i >= 0 {
+		c.session.Title = title(c.items[i].Text) // as for a chat's first prompt
+	}
 	c.storeLocked()
 	c.mu.Unlock()
 	if err := c.startMode(ctx, o.agent, o.sid, s.modes.Mode(k.Name)); err != nil {
