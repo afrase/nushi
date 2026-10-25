@@ -1,9 +1,11 @@
 # Dart's protoc plugins: dart pub global activate protoc_plugin; dart pub global activate connectrpc
 export PATH := $(HOME)/.pub-cache/bin:$(PATH)
 BUF := go run github.com/bufbuild/buf/cmd/buf@v1.75.0
-# golangci-lint, pinned in its own module so the daemon's go.mod doesn't take its
-# dependencies; built into bin/ (go tool -modfile can't run beside a go.work).
+# golangci-lint and govulncheck, pinned in their own module so the daemon's
+# go.mod doesn't take their dependencies; built into bin/ (go tool -modfile
+# can't run beside a go.work).
 GOLANGCI := bin/golangci-lint
+GOVULNCHECK := bin/govulncheck
 DART_DIRS := app packages/uds_transport packages/noise packages/remote_transport packages/markdown packages/svg_path
 # NUSHI_DATA=<folder> runs a second daemon and app beside the usual ones.
 DATA := $(or $(NUSHI_DATA),$(HOME)/Library/Application Support/Nushi)
@@ -72,9 +74,16 @@ gen:
 $(GOLANGCI): tools/lint/go.mod tools/lint/go.sum
 	GOWORK=off go build -modfile=tools/lint/go.mod -o $@ github.com/golangci/golangci-lint/v2/cmd/golangci-lint
 
-# Linters and format checks (.golangci.yml says which are on and why).
-lint: $(GOLANGCI)
+$(GOVULNCHECK): tools/lint/go.mod tools/lint/go.sum
+	GOWORK=off go build -modfile=tools/lint/go.mod -o $@ golang.org/x/vuln/cmd/govulncheck
+
+# Linters and format checks (.golangci.yml says which are on and why), and
+# known vulnerabilities in the code the daemon, the relay and the tools call
+# (govulncheck asks vuln.go.dev, so this needs the network).
+lint: $(GOLANGCI) $(GOVULNCHECK)
 	$(GOLANGCI) run ./...
+	$(GOVULNCHECK) ./...
+	GOWORK=off $(GOVULNCHECK) -C tools/lint github.com/golangci/golangci-lint/v2/cmd/golangci-lint golang.org/x/vuln/cmd/govulncheck
 	$(BUF) lint
 	$(BUF) format --diff --exit-code
 	@for d in $(DART_DIRS); do echo "flutter analyze $$d"; (cd $$d && flutter analyze --fatal-infos) || exit 1; done
