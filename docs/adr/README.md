@@ -36,3 +36,4 @@
 - [0034](0034-noise-between-phone-and-daemon.md) Noise (IKpsk1 to pair, IK after) between the phone and the daemon; pairing by QR code; a paired device is a full client; the threat model (replaces 0006, amends 0022)
 - [0035](0035-open-sessions-started-elsewhere.md) Sessions started elsewhere (a terminal) open as chats through `session/load`, not copies; forks left out; open elsewhere: warn where both can write, not offered where the agent allows one writer
 - [0036](0036-the-daemon-is-a-background-helper-app.md) The daemon is a background-only helper app (`Contents/Helpers/Nushi Daemon.app`) the app opens through Launch Services; Start at login is a launch agent that opens it too; no KeepAlive (amends 0013)
+- [0037](0037-agents-you-set-up.md) Agents are found on PATH, read-only; an adapter is set up only when asked, from our own lockfile, into the data folder; agents run the user's own CLIs; no npx (supersedes part of 0003)
