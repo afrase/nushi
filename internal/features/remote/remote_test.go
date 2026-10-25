@@ -30,8 +30,8 @@ import (
 // echo stands in for the API: what a device sends comes back.
 func echo(c net.Conn) {
 	go func() {
-		io.Copy(c, c)
-		c.Close()
+		_, _ = io.Copy(c, c) // until the device goes
+		_ = c.Close()
 	}()
 }
 
@@ -159,7 +159,7 @@ func pairOne(t *testing.T, s *Service, key noise.DHKey) (offer, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer conn.Close()
+	t.Cleanup(func() { _ = conn.Close() })
 	waitFor(t, func() bool { p := s.Get().Pairing; return p != nil && p.Code == code })
 	if p := s.Get().Pairing; p.Name != "Test phone" {
 		t.Fatalf("the Mac shows %q", p.Name)
@@ -208,11 +208,11 @@ func TestPairThenConnect(t *testing.T) {
 		t.Fatal("a paired phone couldn't connect", err)
 	}
 	waitFor(t, func() bool { return s.Get().Devices[0].Connected })
-	conn.Close()
+	_ = conn.Close()
 
 	// The same QR code is used up.
 	if c, _, err := phonePair(t, o, newKey(t), o.psk); err == nil {
-		c.Close()
+		_ = c.Close()
 		t.Fatal("a used QR code paired again")
 	}
 
@@ -242,7 +242,7 @@ func TestWrongSecretThenRightOne(t *testing.T) {
 	}
 	o := parseQR(t, qr)
 	if c, _, err := phonePair(t, o, newKey(t), make([]byte, 32)); err == nil {
-		c.Close()
+		_ = c.Close()
 		t.Fatal("a wrong secret got through")
 	}
 	if p := s.Get().Pairing; p == nil || p.Code != "" {
@@ -253,7 +253,7 @@ func TestWrongSecretThenRightOne(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer conn.Close()
+	t.Cleanup(func() { _ = conn.Close() })
 	waitFor(t, func() bool { p := s.Get().Pairing; return p != nil && p.Code == code })
 }
 
@@ -270,7 +270,9 @@ func TestDeny(t *testing.T) {
 	if s.ConfirmPairing("000 000", true) == nil && code != "000 000" {
 		t.Fatal("confirmed another code")
 	}
-	s.ConfirmPairing(code, false)
+	if err := s.ConfirmPairing(code, false); err != nil {
+		t.Fatal(err)
+	}
 	if m := reply(t, conn); m["error"] == "" {
 		t.Fatalf("denied, answered %v", m)
 	}
@@ -289,7 +291,7 @@ func TestPairingExpires(t *testing.T) {
 	waitFor(t, func() bool { return s.Get().Pairing == nil })
 	o := parseQR(t, qr)
 	if c, _, err := phonePair(t, o, newKey(t), o.psk); err == nil {
-		c.Close()
+		_ = c.Close()
 		t.Fatal("an expired QR code paired")
 	}
 }
@@ -301,7 +303,7 @@ func TestUnknownAndRevoked(t *testing.T) {
 	o, id := pairOne(t, s, phone)
 
 	if c, err := phoneConnect(url, id, o.key, newKey(t)); err == nil {
-		c.Close()
+		_ = c.Close()
 		t.Fatal("an unpaired key got an answer")
 	}
 
@@ -318,7 +320,7 @@ func TestUnknownAndRevoked(t *testing.T) {
 	}
 	waitFor(t, func() bool { return s.Get().State == "connected" })
 	if c, err := phoneConnect(url, id, o.key, phone); err == nil {
-		c.Close()
+		_ = c.Close()
 		t.Fatal("a revoked device got an answer")
 	}
 }
@@ -366,12 +368,12 @@ func TestRelayInTheMiddle(t *testing.T) {
 	mitmURL := "ws" + strings.TrimPrefix(srv.URL, "http")
 
 	if c, err := phoneConnect(mitmURL, id, o.key, phone); err == nil {
-		c.Close()
+		_ = c.Close()
 		t.Fatal("the phone took the relay's key for the daemon's")
 	}
 	pairingOffer.relay = mitmURL
 	if c, _, err := phonePair(t, pairingOffer, newKey(t), pairingOffer.psk); err == nil {
-		c.Close()
+		_ = c.Close()
 		t.Fatal("the pairing phone took the relay's key")
 	}
 	for range 4 {
@@ -411,7 +413,7 @@ func TestOffClosesEverything(t *testing.T) {
 		t.Fatalf("state %q", r.State)
 	}
 	if c, err := phoneConnect(url, id, o.key, phone); err == nil {
-		c.Close()
+		_ = c.Close()
 		t.Fatal("connected while off")
 	}
 }
@@ -452,10 +454,12 @@ func TestOneHandshakePerPairing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	conn.Close() // no name
+	if err := conn.Close(); err != nil { // no name
+		t.Fatal(err)
+	}
 	waitFor(t, func() bool { return s.Get().Pairing == nil })
 	if c, _, err := phonePair(t, o, newKey(t), o.psk); err == nil {
-		c.Close()
+		_ = c.Close()
 		t.Fatal("a second handshake on one pairing")
 	}
 }
@@ -492,7 +496,7 @@ func TestRevokeMovesTheID(t *testing.T) {
 		return err == nil && talks(c) && c.Close() == nil
 	})
 	if c, err := phoneConnect(url, old, o.key, a); err == nil {
-		c.Close()
+		_ = c.Close()
 		t.Fatal("the revoked device got an answer")
 	}
 	if got := s.Get().Rendezvous; got != moved {
@@ -502,12 +506,12 @@ func TestRevokeMovesTheID(t *testing.T) {
 	if err != nil || !talks(conn) {
 		t.Fatal("no connection at the new id", err)
 	}
-	conn.Close()
+	_ = conn.Close()
 	// b has moved: nothing waits at the old id any more.
 	waitFor(t, func() bool {
 		c, err := phoneConnect(url, old, o.key, b)
 		if err == nil {
-			c.Close()
+			_ = c.Close()
 		}
 		return err != nil
 	})

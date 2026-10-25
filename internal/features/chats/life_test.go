@@ -110,7 +110,7 @@ func TestTheModeSurvivesANewSession(t *testing.T) {
 	}
 	plan("moved")
 	agent.gate = make(chan struct{})
-	svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle)
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
 	if _, err := svc.Stop(ctx, c.id, true); err != nil {
 		t.Fatal(err)
 	}

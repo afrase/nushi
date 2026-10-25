@@ -26,8 +26,8 @@ func inTerminal(t *testing.T, history *acptest.History, codex bool, dir string, 
 	connect := func(h acp.Handler) *acp.Client {
 		toR, toW := io.Pipe()
 		fromR, fromW := io.Pipe()
-		go func() { (&acptest.Agent{History: history, Codex: codex}).Serve(toR, fromW); fromW.Close() }()
-		t.Cleanup(func() { toW.Close() })
+		go func() { (&acptest.Agent{History: history, Codex: codex}).Serve(toR, fromW); _ = fromW.Close() }()
+		t.Cleanup(func() { _ = toW.Close() })
 		c := acp.Connect(fromR, toW, h, nil)
 		if _, err := c.Initialize(ctx, acp.InitializeRequest{ProtocolVersion: acp.Version}); err != nil {
 			t.Fatal(err)

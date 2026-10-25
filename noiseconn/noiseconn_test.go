@@ -222,7 +222,7 @@ func TestTalk(t *testing.T) {
 		// for both directions to rekey twice.
 		big := make([]byte, 3*MaxPlaintext+5)
 		rand.Read(big)
-		go ci.Write(big)
+		go func() { _, _ = ci.Write(big) }() // the read below checks what came
 		got := make([]byte, len(big))
 		if _, err := io.ReadFull(cr, got); err != nil || !bytes.Equal(got, big) {
 			t.Fatal("a big write came out wrong", err)
@@ -230,7 +230,7 @@ func TestTalk(t *testing.T) {
 		for _, pair := range [][2]*Conn{{ci, cr}, {cr, ci}} {
 			go func() {
 				for i := range 2*RekeyEvery + 10 {
-					pair[0].Write([]byte{byte(i)})
+					_, _ = pair[0].Write([]byte{byte(i)}) // the reads below check each
 				}
 			}()
 			for i := range 2*RekeyEvery + 10 {
@@ -334,7 +334,7 @@ func TestTamperedMessages(t *testing.T) {
 				t.Fatal(erri, errr)
 			}
 			for _, m := range []string{"one", "two", "three", "four"} {
-				ci.Write([]byte(m))
+				_, _ = ci.Write([]byte(m)) // the reads below say what the tampering did
 			}
 			got := ""
 			buf := make([]byte, 64)

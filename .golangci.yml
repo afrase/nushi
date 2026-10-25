@@ -46,8 +46,6 @@ linters:
     - gomodguard_v2 # the same
     - goheader # no license header in this repo
 
-    # Not clean yet: each comes off this list in the step that fixes it.
-    - errcheck
 
   settings:
     errcheck:

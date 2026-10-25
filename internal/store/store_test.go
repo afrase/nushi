@@ -66,7 +66,7 @@ func TestOldAndBrokenSessionFiles(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	os.Chmod(filepath.Join(dir, "sessions", "unreadable.json"), 0)
+	noErr(t, os.Chmod(filepath.Join(dir, "sessions", "unreadable.json"), 0))
 	got, err := s.Sessions()
 	if err != nil {
 		t.Fatal(err)

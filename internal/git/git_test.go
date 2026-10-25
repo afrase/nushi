@@ -23,7 +23,7 @@ func git(t *testing.T, dir string, args ...string) {
 
 func write(t *testing.T, path, text string) {
 	t.Helper()
-	os.MkdirAll(filepath.Dir(path), 0o755)
+	noErr(t, os.MkdirAll(filepath.Dir(path), 0o755))
 	if err := os.WriteFile(path, []byte(text), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -47,10 +47,10 @@ func TestChanges(t *testing.T) {
 	git(t, repo, "commit", "-q", "-m", "init")
 
 	write(t, filepath.Join(repo, "sub", "kept.txt"), "one\ntwo\n")
-	os.Remove(filepath.Join(repo, "sub", "gone.txt"))
+	noErr(t, os.Remove(filepath.Join(repo, "sub", "gone.txt")))
 	write(t, filepath.Join(repo, "sub", "new.txt"), "new\n")
 	write(t, filepath.Join(repo, "sub", "bin"), "c\x00d")
-	os.Symlink("/etc/hosts", filepath.Join(repo, "sub", "link"))
+	noErr(t, os.Symlink("/etc/hosts", filepath.Join(repo, "sub", "link")))
 	write(t, filepath.Join(repo, "top.txt"), "changed\n") // outside the folder asked for
 
 	got, err := Changes(ctx, filepath.Join(repo, "sub"), Span{})
@@ -186,7 +186,7 @@ func TestARepositorysOwnConfigRunsNothing(t *testing.T) {
 	git(t, repo, "commit", "-q", "-m", "first")
 	git(t, sub, "config", "filter.evil.clean", mark("subfilter")+"; cat")
 	write(t, filepath.Join(sub, ".git", "info", "attributes"), "*.txt filter=evil\n")
-	os.Chtimes(filepath.Join(sub, "s.txt"), time.Now(), time.Now().Add(time.Hour)) // its index is stale
+	noErr(t, os.Chtimes(filepath.Join(sub, "s.txt"), time.Now(), time.Now().Add(time.Hour))) // its index is stale
 
 	git(t, repo, "config", "filter.evil.clean", mark("filter")+"; cat")
 	// A driver whose name has a dot in it.
@@ -198,14 +198,14 @@ func TestARepositorysOwnConfigRunsNothing(t *testing.T) {
 	write(t, filepath.Join(repo, "c.go"), "one\ntwo\n")
 	write(t, filepath.Join(repo, "b.md"), "one\ntwo\n")
 	write(t, filepath.Join(repo, ".git", "hooks", "post-checkout"), "#!/bin/sh\n"+mark("hook")+"\n")
-	os.Chmod(filepath.Join(repo, ".git", "hooks", "post-checkout"), 0o755)
+	noErr(t, os.Chmod(filepath.Join(repo, ".git", "hooks", "post-checkout"), 0o755))
 	write(t, filepath.Join(repo, "a.txt"), "one\ntwo\n")
 
 	// A signed commit, and a gpg that marks any check of it.
 	gpg := filepath.Join(marks, "gpg.sh")
 	write(t, gpg, "#!/bin/sh\ncase \"$*\" in *--verify*) "+mark("gpg")+"; exit 0;; esac\n"+
 		"echo '[GNUPG:] SIG_CREATED ' >&2\nprintf -- '-----BEGIN PGP SIGNATURE-----\\n\\nx\\n-----END PGP SIGNATURE-----\\n'\n")
-	os.Chmod(gpg, 0o755)
+	noErr(t, os.Chmod(gpg, 0o755))
 	git(t, repo, "-c", "gpg.program="+gpg, "commit", "-q", "-S", "--allow-empty", "-m", "signed")
 	git(t, repo, "config", "gpg.program", gpg)
 	git(t, repo, "config", "log.showSignature", "true")
@@ -217,21 +217,21 @@ func TestARepositorysOwnConfigRunsNothing(t *testing.T) {
 	// the config names.
 	blob, _ := exec.Command("git", "-C", repo, "rev-parse", "HEAD:lazy.txt").Output()
 	b := strings.TrimSpace(string(blob))
-	os.Remove(filepath.Join(repo, ".git", "objects", b[:2], b[2:]))
+	noErr(t, os.Remove(filepath.Join(repo, ".git", "objects", b[:2], b[2:])))
 	for _, kv := range [][2]string{{"core.repositoryformatversion", "1"}, {"extensions.partialClone", "origin"},
 		{"remote.origin.url", "ssh://example.invalid/x"}, {"remote.origin.promisor", "true"}, {"core.sshCommand", mark("lazy") + "; false"}} {
 		git(t, repo, "config", kv[0], kv[1])
 	}
 	write(t, filepath.Join(repo, "lazy.txt"), "lazy\ntwo\n")
 
-	Status(ctx, repo, "")                                                 // it may fail on the missing blob; it runs nothing
+	_, _ = Status(ctx, repo, "")                                          // it may fail on the missing blob; it runs nothing
 	if ran, _ := filepath.Glob(filepath.Join(marks, "*")); len(ran) > 1 { // gpg.sh
 		t.Errorf("ran %v", ran)
 	}
 	// Changes runs the repository's own filters, as the user's git diff
 	// would (ADR 0023), and nothing else.
-	Changes(ctx, repo, Span{})
-	Commits(ctx, repo, "", 10)
+	_, _ = Changes(ctx, repo, Span{}) // only what they run is tested
+	_, _ = Commits(ctx, repo, "", 10)
 	for _, name := range []string{"fsmonitor", "gpg", "lazy", "subfilter", "hook"} {
 		if _, err := os.Stat(filepath.Join(marks, name)); err == nil {
 			t.Errorf("ran the repository's %s", name)

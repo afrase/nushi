@@ -111,18 +111,18 @@ func start(t *testing.T, store *pigtest.Store, log io.Writer) *client {
 	spawn := func(cwd string, args ...string) (Pig, error) { //nolint:unparam // a Spawn, which can fail
 		inR, inW := io.Pipe()
 		outR, outW := io.Pipe()
-		go func() { store.Serve(inR, outW, cwd, args); outW.Close() }()
-		return Pig{In: inW, Out: outR, Kill: func() { inR.Close(); outW.Close() }}, nil
+		go func() { store.Serve(inR, outW, cwd, args); _ = outW.Close() }()
+		return Pig{In: inW, Out: outR, Kill: func() { _, _ = inR.Close(), outW.Close() }}, nil
 	}
 	done := make(chan struct{})
 	go func() {
 		Serve(toBridgeR, fromBridgeW, Config{Spawn: spawn, Dirs: Dirs{Sessions: store.Sessions}, Version: Version})
-		fromBridgeW.Close()
+		_ = fromBridgeW.Close()
 		close(done)
 	}()
 	c := &client{}
 	c.Client = acp.Connect(fromBridgeR, toBridgeW, c, nil)
-	t.Cleanup(func() { toBridgeW.Close(); <-done })
+	t.Cleanup(func() { _ = toBridgeW.Close(); <-done })
 	if _, err := c.Initialize(context.Background(), acp.InitializeRequest{ProtocolVersion: 1,
 		ClientCapabilities: &acp.ClientCapabilities{Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}}}}); err != nil {
 		t.Fatal(err)
@@ -205,7 +205,9 @@ func TestCancelAndSteer(t *testing.T) {
 	done := make(chan *acp.PromptResult)
 	go func() { done <- prompt(t, c, s.SessionID, "wait") }()
 	time.Sleep(50 * time.Millisecond)
-	c.Cancel(acp.CancelNotification{SessionID: s.SessionID})
+	if err := c.Cancel(acp.CancelNotification{SessionID: s.SessionID}); err != nil {
+		t.Error(err)
+	}
 	if r := <-done; r.StopReason != "cancelled" {
 		t.Errorf("stop = %s", r.StopReason)
 	}
@@ -226,7 +228,9 @@ func TestCancelAndSteer(t *testing.T) {
 	// An extension's command that never ends stops at once.
 	go func() { done <- prompt(t, c, s.SessionID, "/hang") }()
 	time.Sleep(50 * time.Millisecond)
-	c.Cancel(acp.CancelNotification{SessionID: s.SessionID})
+	if err := c.Cancel(acp.CancelNotification{SessionID: s.SessionID}); err != nil {
+		t.Error(err)
+	}
 	select {
 	case r := <-done:
 		if r.StopReason != "cancelled" {

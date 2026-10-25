@@ -105,7 +105,7 @@ func (p *proc) Done() <-chan struct{} { return p.done }
 // Stop ends the process; its last words, if any, still come after, as
 // from a pipe read to its end.
 func (p *proc) Stop(grace time.Duration) error {
-	p.fakeAgent.Stop(grace)
+	_ = p.fakeAgent.Stop(grace) // the fake's Stop doesn't fail
 	p.mu.Lock()
 	last, h := p.lastWords, p.h
 	p.mu.Unlock()

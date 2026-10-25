@@ -21,7 +21,7 @@ func TestHeld(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	t.Cleanup(func() { _ = f.Close() })
 	if err := unix.Flock(int(f.Fd()), unix.LOCK_EX); err != nil { // as Codex holds it
 		t.Fatal(err)
 	}
@@ -33,7 +33,7 @@ func TestHeld(t *testing.T) {
 
 func TestForked(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "2026", "10", "25")
-	os.MkdirAll(dir, 0o700)
+	noErr(t, os.MkdirAll(dir, 0o700))
 	const fork, plain = "01a17067-b497-76b2-b3c1-aaa7817b86d7", "01a17067-b497-76b2-b3c1-aaa7817b86d8"
 	write := func(id, meta string) {
 		if err := os.WriteFile(filepath.Join(dir, "rollout-2026-10-25T09-13-27-"+id+".jsonl"), []byte(meta+"\n{}\n"), 0o600); err != nil {

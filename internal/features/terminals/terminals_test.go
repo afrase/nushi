@@ -67,7 +67,7 @@ func TestRestartRacingCloseLeaksNoShell(t *testing.T) {
 	var closing string
 	s = New(func(string, int, int, func()) (Shell, error) {
 		if closing != "" {
-			s.Close(closing) // Close runs while the new shell starts
+			_ = s.Close(closing) // Close runs while the new shell starts; what it finds is the test's point, below
 		}
 		sh := &fakeShell{}
 		shells = append(shells, sh)

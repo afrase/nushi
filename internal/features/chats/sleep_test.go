@@ -29,7 +29,7 @@ func TestSleepAndWakeOnSend(t *testing.T) {
 		t.Fatal(err)
 	}
 	launches, _, _ := agent.count()
-	svc.Get(c.id)
+	_, _ = svc.Get(c.id) // what it does to the agent is what's tested
 	time.Sleep(10 * time.Millisecond)
 	if again, _, _ := agent.count(); again != launches || c.agent != nil || !svc.Status(c.session).Asleep || len(c.items) != 2 {
 		t.Fatalf("after Sleep and Get: %d launches (was %d), status %+v, %d items", again, launches, svc.Status(c.session), len(c.items))
@@ -48,7 +48,7 @@ func TestSleepAndWakeOnSend(t *testing.T) {
 func TestForkWakes(t *testing.T) {
 	svc, _, c := newChat(t, claudeSession, &memModes{})
 	turn(t, svc, c, "one")
-	svc.Sleep(c.id)
+	noErr(t, svc.Sleep(c.id))
 	if _, err := svc.Fork(context.Background(), c.id); err != nil || c.agent == nil {
 		t.Errorf("Fork = %v, agent %v", err, c.agent)
 	}

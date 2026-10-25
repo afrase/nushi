@@ -76,7 +76,7 @@ func registry(t *testing.T, marker string) (url string, lock fstest.MapFS, tampe
 	}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if b, ok := served[r.URL.Path]; ok {
-			w.Write(b)
+			_, _ = w.Write(b) // the client sees a short body if it fails
 			return
 		}
 		http.NotFound(w, r)
@@ -104,7 +104,7 @@ func TestInstall(t *testing.T) {
 	marker := filepath.Join(tmp, "script-ran")
 	url, lock, tamper := registry(t, marker)
 	npmrc := filepath.Join(tmp, "npmrc")
-	os.WriteFile(npmrc, []byte("registry="+url+"/\nfetch-retries=0\n"), 0o600) // no retries of the changed tarball
+	noErr(t, os.WriteFile(npmrc, []byte("registry="+url+"/\nfetch-retries=0\n"), 0o600)) // no retries of the changed tarball
 	t.Setenv("HOME", filepath.Join(tmp, "home"))
 	in := Installer{Env: []string{"npm_config_userconfig=" + npmrc, "npm_config_globalconfig=" + npmrc + ".global"}}
 	folder := filepath.Join(tmp, "agents", "x")

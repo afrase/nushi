@@ -51,7 +51,7 @@ func TestAFailedReopenIsntRetriedOnEveryCall(t *testing.T) {
 	eventually(t, c, func() bool { return c.agent == nil })
 	agent.loadErr = errors.New("no such session")
 	for range 3 {
-		svc.Get(c.id)
+		_, _ = svc.Get(c.id) // the reopen it starts is what's tested
 		eventually(t, c, func() bool { return !c.busy })
 	}
 	launches, _, _ := agent.count()
@@ -70,7 +70,7 @@ func TestAFailedReopenIsntRetriedOnEveryCall(t *testing.T) {
 	if n != 1 {
 		t.Errorf("%d notices", n)
 	}
-	svc.Prompt(c.id, model.Message{Text: "again"}, SendQueue)
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "again"}, SendQueue))
 	eventually(t, c, func() bool { return !c.busy && notices() == 2 })
 	if again, _, _ := agent.count(); again != launches+1 {
 		t.Errorf("a message didn't try again: %d launches, then %d", launches, again)
@@ -90,7 +90,7 @@ func TestARedeleteAfterTheAgentWent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc.CloseSide(side)
+	noErr(t, svc.CloseSide(side))
 	agent.quit()
 	c := svc.chats[id]
 	eventually(t, c, func() bool { _, _, deleted := agent.count(); return len(deleted) == 2 })

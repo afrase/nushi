@@ -26,7 +26,9 @@ func TestHeld(t *testing.T) {
 	if !Held(path) {
 		t.Error("a flock lock wasn't seen")
 	}
-	f.Close() // lets go
+	if err := f.Close(); err != nil { // lets go
+		t.Fatal(err)
+	}
 	if Held(path) {
 		t.Error("held after it was let go")
 	}

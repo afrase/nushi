@@ -64,7 +64,7 @@ func TestNothingPrivateLogged(t *testing.T) {
 	t.Setenv("NUSHI_TEST_SECRET", "MARKER-ENV-5d1c")
 
 	data, repo := t.TempDir(), t.TempDir()
-	os.WriteFile(filepath.Join(repo, "notes.txt"), []byte("MARKER-FILE-c41a\n"), 0o600)
+	check(t, os.WriteFile(filepath.Join(repo, "notes.txt"), []byte("MARKER-FILE-c41a\n"), 0o600))
 	if out, err := exec.Command("git", "-C", repo, "init", "-q").CombinedOutput(); err != nil {
 		t.Fatalf("git init: %v %s", err, out)
 	}

@@ -37,7 +37,7 @@ func TestCopyKeepsTheOriginal(t *testing.T) {
 	projects, from, to := t.TempDir(), t.TempDir(), t.TempDir()
 	src, dst := filepath.Join(projects, claudeName(t, from)), filepath.Join(projects, claudeName(t, to))
 	link := filepath.Join(t.TempDir(), "link") // a chat moved to a folder reached through a link
-	os.Symlink(to, link)
+	noErr(t, os.Symlink(to, link))
 	to = link
 	if err := os.MkdirAll(src, 0o700); err != nil {
 		t.Fatal(err)
@@ -58,7 +58,7 @@ func TestCopyKeepsTheOriginal(t *testing.T) {
 	if _, err := Copy(projects, "s1", from, to); err != nil {
 		t.Errorf("a copy a move left (the start of this one) wasn't replaced: %v", err)
 	}
-	os.WriteFile(filepath.Join(dst, "s1.jsonl"), []byte("another"), 0o600)
+	noErr(t, os.WriteFile(filepath.Join(dst, "s1.jsonl"), []byte("another"), 0o600))
 	if _, err := Copy(projects, "s1", from, to); err == nil {
 		t.Error("another transcript already there was replaced")
 	}

@@ -63,14 +63,14 @@ func TestProcessLines(t *testing.T) {
 			t.Errorf("no %q in\n%s", want, b)
 		}
 	}
-	c.Close()
+	_ = c.Close() // it has exited already
 
 	log, b = newLog()
 	c, err = Start(exec.Command("sleep", "30"), &recorder{}, log)
 	if err != nil {
 		t.Fatal(err)
 	}
-	c.Close()
+	_ = c.Close() // the log says how it ended
 	waitLog(t, b, `msg="agent exited"`)
 	if got := b.String(); !strings.Contains(got, "signal=SIGKILL") || !strings.Contains(got, "stopped=true") {
 		t.Errorf("got\n%s", got)
@@ -80,9 +80,9 @@ func TestProcessLines(t *testing.T) {
 func TestStderrCaps(t *testing.T) {
 	log, b := newLog()
 	s := &stderrLines{log: log}
-	io.WriteString(s, strings.Repeat("y", 5000)+"\n")
+	send(t, s, strings.Repeat("y", 5000)+"\n")
 	for i := range 150 {
-		io.WriteString(s, "line\n")
+		send(t, s, "line\n")
 		if i == 0 && !strings.Contains(b.String(), "cut=true") {
 			t.Errorf("a long line isn't marked cut:\n%s", b)
 		}
@@ -110,13 +110,13 @@ func (*panicky) SessionUpdate(SessionNotification) { panic("a bad update") }
 func TestDebugLinesOfABridge(t *testing.T) {
 	var b logBuffer
 	s := &stderrLines{log: slog.New(slog.NewTextHandler(&b, nil))}
-	io.WriteString(s, DebugPrefix+"pig-acp: rpc get_state took=1ms\nplain\n")
+	send(t, s, DebugPrefix+"pig-acp: rpc get_state took=1ms\nplain\n")
 	if got := b.String(); strings.Contains(got, "rpc get_state") || !strings.Contains(got, "level=INFO msg=plain") {
 		t.Errorf("at INFO:\n%s", got)
 	}
 	log, debug := newLog()
 	s = &stderrLines{log: log}
-	io.WriteString(s, DebugPrefix+"pig-acp: rpc get_state took=1ms\n")
+	send(t, s, DebugPrefix+"pig-acp: rpc get_state took=1ms\n")
 	if got := debug.String(); !strings.Contains(got, `level=DEBUG msg="pig-acp: rpc get_state took=1ms" source=agent`) {
 		t.Errorf("at DEBUG:\n%s", got)
 	}
@@ -126,12 +126,12 @@ func TestBadMessagesLogged(t *testing.T) {
 	log, b := newLog()
 	toAgentR, toAgentW := io.Pipe()
 	fromAgentR, fromAgentW := io.Pipe()
-	defer fromAgentW.Close()
-	go io.Copy(io.Discard, toAgentR)
+	t.Cleanup(func() { _ = fromAgentW.Close() })
+	go func() { _, _ = io.Copy(io.Discard, toAgentR) }()
 	Connect(fromAgentR, toAgentW, &panicky{}, log)
-	io.WriteString(fromAgentW, "Debugger listening on ws://127.0.0.1\n")
-	io.WriteString(fromAgentW, `{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s1","update":"nonsense"}}`+"\n")
-	io.WriteString(fromAgentW, `{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s1","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"secret words"}}}}`+"\n")
+	send(t, fromAgentW, "Debugger listening on ws://127.0.0.1\n")
+	send(t, fromAgentW, `{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s1","update":"nonsense"}}`+"\n")
+	send(t, fromAgentW, `{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s1","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"secret words"}}}}`+"\n")
 	waitLog(t, b, "acp handler panicked")
 	got := b.String()
 	for _, want := range []string{`msg="a line that isn't JSON-RPC" bytes=37`, `msg="acp notification failed" rpc=session/update err="json:`,
@@ -151,19 +151,23 @@ func TestCallsLogged(t *testing.T) {
 	log, b := newLog()
 	toAgentR, toAgentW := io.Pipe()
 	fromAgentR, fromAgentW := io.Pipe()
-	defer fromAgentW.Close()
+	t.Cleanup(func() { _ = fromAgentW.Close() })
 	c := Connect(fromAgentR, toAgentW, &recorder{}, log)
-	go func() {
+	go func() { // the pipes' errors show as the calls' below
 		buf := make([]byte, 1<<16)
-		toAgentR.Read(buf) // session/load
+		_, _ = toAgentR.Read(buf) // session/load
 		time.Sleep(80 * time.Millisecond)
-		io.WriteString(fromAgentW, `{"jsonrpc":"2.0","id":1,"result":{}}`+"\n")
-		toAgentR.Read(buf) // session/new
-		io.WriteString(fromAgentW, `{"jsonrpc":"2.0","id":2,"error":{"code":-32603,"message":"Internal error: not signed in"}}`+"\n")
+		_, _ = io.WriteString(fromAgentW, `{"jsonrpc":"2.0","id":1,"result":{}}`+"\n")
+		_, _ = toAgentR.Read(buf) // session/new
+		_, _ = io.WriteString(fromAgentW, `{"jsonrpc":"2.0","id":2,"error":{"code":-32603,"message":"Internal error: not signed in"}}`+"\n")
 	}()
 	ctx := context.Background()
-	c.LoadSession(ctx, LoadSessionRequest{SessionID: "s1", Cwd: "/x", MCPServers: []MCPServer{}})
-	c.NewSession(ctx, NewSessionRequest{Cwd: "/x", MCPServers: []MCPServer{}})
+	if _, err := c.LoadSession(ctx, LoadSessionRequest{SessionID: "s1", Cwd: "/x", MCPServers: []MCPServer{}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.NewSession(ctx, NewSessionRequest{Cwd: "/x", MCPServers: []MCPServer{}}); err == nil {
+		t.Error("session/new succeeded; the agent answered an error")
+	}
 	got := b.String()
 	for _, want := range []string{`msg="acp call slow" rpc=session/load took=`, `msg=session/load session=s1`,
 		`msg="acp call failed" rpc=session/new`, `err="session/new: acp error -32603: Internal error: not signed in"`} {

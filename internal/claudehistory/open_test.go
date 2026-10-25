@@ -27,7 +27,7 @@ func TestOpen(t *testing.T) {
 	if err := sleeper.Start(); err != nil {
 		t.Fatal(err)
 	}
-	defer sleeper.Process.Kill()
+	t.Cleanup(func() { _ = sleeper.Process.Kill() })
 	stamp := func(t time.Time) string { return t.UTC().Format("Mon Jan _2 15:04:05 2006") }
 	write := func(pid int, r map[string]any) {
 		r["pid"] = pid
@@ -40,7 +40,7 @@ func TestOpen(t *testing.T) {
 	write(dead.Process.Pid, map[string]any{"sessionId": "dead", "kind": "interactive", "updatedAt": time.Now().UnixMilli()})
 	write(sleeper.Process.Pid, map[string]any{"sessionId": "reused", "kind": "interactive", "procStart": stamp(start.Add(-time.Hour))})
 	write(1, map[string]any{"sessionId": "sdk", "kind": "interactive", "entrypoint": "sdk-cli", "updatedAt": time.Now().UnixMilli()})
-	os.WriteFile(filepath.Join(dir, "1.abc.key"), []byte("{}"), 0o600)
+	noErr(t, os.WriteFile(filepath.Join(dir, "1.abc.key"), []byte("{}"), 0o600))
 	got := open(dir, started)
 	want := map[string]string{"cli": "a terminal", "sdk": "another app"}
 	if !maps.Equal(got, want) {

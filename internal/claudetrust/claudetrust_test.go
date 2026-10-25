@@ -45,7 +45,7 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 	write(t, local, `{"disabledMcpjsonServers":["off"],"hooks":{"Stop":[{"hooks":[{"type":"prompt","prompt":"check it"}]}]},
 		"awsAuthRefresh":"./aws.sh","otelHeadersHelper":"./otel.sh","proxyAuthHelper":"./proxy.sh","gcpAuthRefresh":"./gcp.sh"}`)
 	sub := filepath.Join(repo, "src")
-	os.Mkdir(sub, 0o700)
+	noErr(t, os.Mkdir(sub, 0o700))
 
 	got, err := runs(sub) // a chat in a subfolder: the repository's root runs too
 	if err != nil {
@@ -84,7 +84,7 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 	runGit(t, repo, "commit", "-q", "--allow-empty", "-m", "first")
 	wt := filepath.Join(filepath.Dir(repo), filepath.Base(repo)+"-wt")
 	runGit(t, repo, "worktree", "add", "-q", wt)
-	t.Cleanup(func() { os.RemoveAll(wt) })
+	t.Cleanup(func() { noErr(t, os.RemoveAll(wt)) })
 	if !trusted(repo) || !trusted(filepath.Join(repo, ".claude")) || !trusted(wt) {
 		t.Error("a trusted repository, its subfolder or its worktree isn't trusted")
 	}
@@ -111,7 +111,7 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 	runGit(t, steer, "init", "-q")
 	runGit(t, steer, "config", "core.worktree", repo)
 	in := filepath.Join(steer, "in")
-	os.Mkdir(in, 0o700)
+	noErr(t, os.Mkdir(in, 0o700))
 	if trusted(in, steer) || (Trust{}).Key(in) != in {
 		t.Errorf("a folder steering git's work tree keys on %s", (Trust{}).Key(in))
 	}
@@ -120,7 +120,7 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 	runGit(t, main, "commit", "-q", "--allow-empty", "-m", "first")
 	wt2 := main + "-wt"
 	runGit(t, main, "worktree", "add", "-q", wt2)
-	t.Cleanup(func() { os.RemoveAll(wt2) })
+	t.Cleanup(func() { noErr(t, os.RemoveAll(wt2)) })
 	runGit(t, main, "config", "core.worktree", repo)
 	if k := (Trust{}).Key(wt2); k != wt2 {
 		t.Errorf("a worktree of a repository steering its work tree keys on %s", k)
@@ -129,7 +129,7 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 	// Outside git a folder above counts, Claude's or Nushi's.
 	plain, _ := filepath.EvalSymlinks(t.TempDir())
 	sub = filepath.Join(plain, "a", "b")
-	os.MkdirAll(sub, 0o700)
+	noErr(t, os.MkdirAll(sub, 0o700))
 	if trusted(sub) || !trusted(sub, plain) || !trusted(sub, sub) || trusted(plain, sub) {
 		t.Error("trust outside git doesn't follow the folders above")
 	}
@@ -146,7 +146,7 @@ func TestTheHomeFolder(t *testing.T) {
 		t.Errorf("the home folder runs %v, %v", runs, err)
 	}
 	download := filepath.Join(home, "Downloads", "evil")
-	os.MkdirAll(download, 0o700)
+	noErr(t, os.MkdirAll(download, 0o700))
 	write(t, filepath.Join(home, ".claude.json"), `{"projects":{"`+home+`":{"hasTrustDialogAccepted":true}}}`)
 	if ok, _ := (Trust{}).Trusted(home, []string{home}); !ok {
 		t.Error("the home folder itself isn't trusted")
@@ -163,8 +163,8 @@ func TestASettingsFileThatNeverEnds(t *testing.T) {
 	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
 	for _, name := range []string{".mcp.json", ".claude/settings.json"} {
 		repo := t.TempDir()
-		os.MkdirAll(filepath.Join(repo, ".claude"), 0o700)
-		os.Symlink("/dev/zero", filepath.Join(repo, name))
+		noErr(t, os.MkdirAll(filepath.Join(repo, ".claude"), 0o700))
+		noErr(t, os.Symlink("/dev/zero", filepath.Join(repo, name)))
 		if runs, err := runs(repo); err == nil && len(runs) == 0 {
 			t.Errorf("%s linked to /dev/zero: nothing to say", name)
 		}
@@ -242,8 +242,8 @@ func TestSkillsUnderAPathWithPatternCharacters(t *testing.T) {
 		t.Fatalf("runs = %v, %v", got, err)
 	}
 	skills := filepath.Dir(filepath.Dir(skill))
-	os.Chmod(skills, 0)
-	defer os.Chmod(skills, 0o700)
+	noErr(t, os.Chmod(skills, 0))
+	t.Cleanup(func() { noErr(t, os.Chmod(skills, 0o700)) }) // before TempDir's cleanup removes it
 	if _, err := runs(repo); err == nil {
 		t.Error("an unreadable skills folder was passed over")
 	}

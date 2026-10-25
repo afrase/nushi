@@ -55,15 +55,19 @@ func TestRedact(t *testing.T) {
 
 func TestRotate(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "nushid.log")
-	os.WriteFile(path, []byte("from the launcher\n"), 0o600)
+	if err := os.WriteFile(path, []byte("from the launcher\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	f, err := Open(path, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	t.Cleanup(func() { _ = f.Close() })
 	f.max = 100
 	for i := range 12 {
-		fmt.Fprintf(f, "line %02d %s\n", i, strings.Repeat("x", 30)) // 40 bytes: two to a file
+		if _, err := fmt.Fprintf(f, "line %02d %s\n", i, strings.Repeat("x", 30)); err != nil { // 40 bytes: two to a file
+			t.Fatal(err)
+		}
 	}
 	read := func(p string) string { b, _ := os.ReadFile(p); return string(b) }
 	if got := read(path); !strings.HasPrefix(got, "line 10") || strings.Count(got, "\n") != 2 {
