@@ -167,6 +167,12 @@ func (b *bridge) handle(ctx context.Context, method string, params json.RawMessa
 		}
 		opts, err := s.setOption(ctx, p.ConfigID, p.Value)
 		return acp.SetSessionConfigOptionResponse{ConfigOptions: opts}, err
+	case ContextMethod:
+		s, err := b.session(p.SessionID)
+		if err != nil {
+			return nil, err
+		}
+		return s.stats(ctx)
 	}
 	return nil, acp.ErrMethodNotFound
 }

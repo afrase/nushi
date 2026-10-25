@@ -175,7 +175,7 @@ func run() error {
 		Explain: agentSvc.Explain("pig"), Launch: launch("pig", func(_ agents.Run, h acp.Handler, log *slog.Logger) (*acp.Client, error) {
 			return pig.Start(dir, h, log)
 		}),
-		Dialect: chats.Dialect{ForkAt: pig.ForkAt}}
+		Dialect: chats.Dialect{ForkAt: pig.ForkAt, Context: pig.Context}}
 	st := store.New(dir)
 	st.HadMessages = func(s model.Session) bool { return claudehistory.Has(projects, s.SessionID, s.Folder) }
 	chatSvc := chats.New([]chats.Kind{claudeKind, codexKind, anteKind, ompKind, pigKind}, st, st, git.Worktrees{}, filepath.Join(dir, "scratch"), hub.Publish)
