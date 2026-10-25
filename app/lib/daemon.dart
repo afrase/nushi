@@ -380,6 +380,37 @@ class Daemon extends ChangeNotifier {
     }
   }
 
+  /// Opens [session], one of [agent]'s sessions that isn't a chat, as a
+  /// chat in [folder] (its own folder for ''), and shows it.
+  Future<void> openSession(
+    String folder,
+    String agent,
+    FoundSession session,
+  ) async {
+    if (folder.isEmpty) folder = session.folder;
+    starting = folder;
+    notifyListeners();
+    try {
+      if (!await _mayRun(folder, 'Open the session', agent)) return;
+      final before = (selectedId, mcpFolder);
+      final resp = await client.openAgentSession(
+        OpenAgentSessionRequest(
+          agent: agent,
+          folder: folder,
+          sessionId: session.sessionId,
+          title: session.title,
+        ),
+      );
+      chats[resp.chatId] ??= ChatState(resp.chatId, folder);
+      if ((selectedId, mcpFolder) == before && trustAsk == null) {
+        select(resp.chatId);
+      }
+    } finally {
+      starting = null;
+      notifyListeners();
+    }
+  }
+
   bool _worktree(String folder) => worktreeRepos.value.contains(folder);
 
   /// Moves a chat to [folder], or to a new worktree of its repository, and
