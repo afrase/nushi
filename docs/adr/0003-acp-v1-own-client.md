@@ -8,7 +8,7 @@ The Agent Client Protocol (ACP) gives one structured protocol for Claude Code (t
 - Nushi has its own client in the top-level `acp/` package: types generated from the pinned v1 schema, hand-written JSON-RPC framing and client on `encoding/json`, no Nushi logic, under 2,000 lines.
 
 ## Consequences
-- Node is a runtime dependency (npx runs the Claude adapter).
+- Node is a runtime dependency: Claude's and Codex's adapters run on it (set up on request since [0037](0037-agents-you-set-up.md); npx ran them before).
 - Updating the schema means regenerating the types.
 
 ## Alternatives considered

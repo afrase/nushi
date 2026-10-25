@@ -10,6 +10,6 @@ Every chat that has been opened keeps its agent running until it is archived or 
 - Waking puts the options it had back (model, effort), since an agent may reopen a session on its defaults (Claude does).
 
 ## Consequences
-- The first message after a sleep waits for the agent to start and replay the session (about a second or two once npx has the adapter).
+- The first message after a sleep waits for the agent to start and replay the session (about a second or two).
 - A chat not opened since the daemon started counts as asleep.
 - Background commands Claude started outlive it, as after Archive; a chat with one still running doesn't sleep on its own.
