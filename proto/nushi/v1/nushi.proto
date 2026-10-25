@@ -211,6 +211,8 @@ service NushiService {
   rpc TransitionJiraIssue(TransitionJiraIssueRequest) returns (TransitionJiraIssueResponse);
   // Posts a comment written in Markdown.
   rpc AddJiraComment(AddJiraCommentRequest) returns (AddJiraCommentResponse);
+  // An issue for a new chat: from its link, its key, or words of it.
+  rpc FindJiraIssues(FindJiraIssuesRequest) returns (FindJiraIssuesResponse);
   // An issue as a chat's first message (Markdown, for the user to see and
   // edit before sending it), and a branch named after it.
   rpc GetJiraContext(GetJiraContextRequest) returns (GetJiraContextResponse);
@@ -406,10 +408,12 @@ message StartChatRequest {
   // <repo>/.worktrees/<name> on a new branch nushi/<name> from folder's
   // HEAD.
   bool worktree = 2;
-  // A chat on a Jira issue (GetJiraContext), which it remembers; its
-  // worktree, if it has one, is on branch.
+  // A chat on a Jira issue (FindJiraIssues), which it remembers; its
+  // agent's Jira tools say which issue it is.
   string jira_site = 4;
   string jira_key = 5;
+  string jira_summary = 7;
+  // The worktree's branch, if not one of Nushi's (a name git takes).
   string branch = 6;
 }
 
@@ -1678,6 +1682,29 @@ message GetJiraAttachmentRequest {
 message GetJiraAttachmentResponse {
   bytes data = 1;
   string mime_type = 2;
+}
+
+message FindJiraIssuesRequest {
+  // An issue's link (https://<site>/browse/KEY, a board's ?selectedIssue=),
+  // its key, or words of it; empty for the issues looked at last.
+  string text = 1;
+  // The site a key is on (the one used last); empty for the first.
+  string site = 2;
+}
+
+message FindJiraIssuesResponse {
+  // A link matching several sites has one issue from each.
+  repeated FoundJiraIssue issues = 1;
+  // A link to a site that isn't added: its address.
+  string unknown_site = 2;
+}
+
+message FoundJiraIssue {
+  string site = 1;
+  // Key, summary, type, status.
+  JiraIssue issue = 2;
+  // KEY-summary-slug, the key uppercase so Jira links it.
+  string branch = 3;
 }
 
 message GetJiraContextRequest {

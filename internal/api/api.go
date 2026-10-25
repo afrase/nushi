@@ -25,11 +25,12 @@ import (
 	"github.com/afrase/nushi/internal/features/trust"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
+	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 52
+const Version = 53
 
 // Build is the daemon's executable as it started (PingResponse.build).
 var Build = func() string {
@@ -182,10 +183,12 @@ func (s *server) StartChat(ctx context.Context, req *connect.Request[nushiv1.Sta
 		if err := jira.CheckKey(m.JiraKey); err != nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, err)
 		}
-		if m.Branch != "" && !jira.IsBranch(m.JiraKey, m.Branch) {
-			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%q isn't a branch named after %s", m.Branch, m.JiraKey))
+		issue = &model.ChatIssue{Site: m.JiraSite, Key: m.JiraKey, Summary: m.JiraSummary}
+	}
+	if b := req.Msg.Branch; b != "" {
+		if err := git.CheckBranch(b); err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
 		}
-		issue = &model.ChatIssue{Site: m.JiraSite, Key: m.JiraKey}
 	}
 	id, err := s.chats.StartOn(ctx, req.Msg.Agent, req.Msg.Folder, req.Msg.Worktree, issue, req.Msg.Branch)
 	if err != nil {

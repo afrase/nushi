@@ -35,18 +35,19 @@ var (
 )
 
 // addWorktree makes a worktree for a chat in folder's repository, with a
-// short, readable name not yet taken there (or branch's, with a number
-// after it if it's taken), and returns the chat's folder in it.
+// short, readable name not yet taken there (or on branch, with a number
+// after it if it's taken, in a folder named after it with "-" for "/"),
+// and returns the chat's folder in it.
 func (s *Service) addWorktree(ctx context.Context, folder, branch string) (*model.Worktree, string, error) {
 	for i := range 20 {
 		name := adjectives[rand.IntN(len(adjectives))] + "-" + nouns[rand.IntN(len(nouns))] //nolint:gosec // a worktree's name, not a secret
 		named := ""                                                                         // the branch: Nushi's own, after the name
 		if branch != "" {
-			name, named = branch, branch
+			named = branch
 			if i > 0 {
-				name += "-" + strconv.Itoa(i+1)
-				named = name
+				named += "-" + strconv.Itoa(i+1)
 			}
+			name = strings.ReplaceAll(named, "/", "-") // one folder, not one in another
 		}
 		wt, in, err := s.worktrees.Add(ctx, folder, name, named)
 		if err == nil {

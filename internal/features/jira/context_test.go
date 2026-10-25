@@ -20,14 +20,6 @@ func TestBranch(t *testing.T) {
 		if got != c.want {
 			t.Errorf("Branch(%q, %q) = %q, want %q", c.key, c.summary, got, c.want)
 		}
-		if !IsBranch(c.key, got) {
-			t.Errorf("%q isn't a branch for %s", got, c.key)
-		}
-	}
-	for _, bad := range []string{"A-2-x", "A-1-X", "A-1/x", "A-1--", "A-1-x y"} {
-		if IsBranch("A-1", bad) {
-			t.Errorf("%q taken as a branch for A-1", bad)
-		}
 	}
 }
 

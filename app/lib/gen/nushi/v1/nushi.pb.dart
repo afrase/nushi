@@ -1684,6 +1684,7 @@ class StartChatRequest extends $pb.GeneratedMessage {
     $core.String? jiraSite,
     $core.String? jiraKey,
     $core.String? branch,
+    $core.String? jiraSummary,
   }) {
     final result = StartChatRequest._();
     if (folder != null) result.folder = folder;
@@ -1692,6 +1693,7 @@ class StartChatRequest extends $pb.GeneratedMessage {
     if (jiraSite != null) result.jiraSite = jiraSite;
     if (jiraKey != null) result.jiraKey = jiraKey;
     if (branch != null) result.branch = branch;
+    if (jiraSummary != null) result.jiraSummary = jiraSummary;
     return result;
   }
 
@@ -1714,6 +1716,7 @@ class StartChatRequest extends $pb.GeneratedMessage {
     ..aOS(4, _omitFieldNames ? '' : 'jiraSite')
     ..aOS(5, _omitFieldNames ? '' : 'jiraKey')
     ..aOS(6, _omitFieldNames ? '' : 'branch')
+    ..aOS(7, _omitFieldNames ? '' : 'jiraSummary')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1770,8 +1773,8 @@ class StartChatRequest extends $pb.GeneratedMessage {
   @$pb.TagNumber(3)
   void clearAgent() => $_clearField(3);
 
-  /// A chat on a Jira issue (GetJiraContext), which it remembers; its
-  /// worktree, if it has one, is on branch.
+  /// A chat on a Jira issue (FindJiraIssues), which it remembers; its
+  /// agent's Jira tools say which issue it is.
   @$pb.TagNumber(4)
   $core.String get jiraSite => $_getSZ(3);
   @$pb.TagNumber(4)
@@ -1790,6 +1793,7 @@ class StartChatRequest extends $pb.GeneratedMessage {
   @$pb.TagNumber(5)
   void clearJiraKey() => $_clearField(5);
 
+  /// The worktree's branch, if not one of Nushi's (a name git takes).
   @$pb.TagNumber(6)
   $core.String get branch => $_getSZ(5);
   @$pb.TagNumber(6)
@@ -1798,6 +1802,15 @@ class StartChatRequest extends $pb.GeneratedMessage {
   $core.bool hasBranch() => $_has(5);
   @$pb.TagNumber(6)
   void clearBranch() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.String get jiraSummary => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set jiraSummary($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasJiraSummary() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearJiraSummary() => $_clearField(7);
 }
 
 class ListAgentSessionsRequest extends $pb.GeneratedMessage {
@@ -15530,6 +15543,234 @@ class GetJiraAttachmentResponse extends $pb.GeneratedMessage {
   void clearMimeType() => $_clearField(2);
 }
 
+class FindJiraIssuesRequest extends $pb.GeneratedMessage {
+  factory FindJiraIssuesRequest({
+    $core.String? text,
+    $core.String? site,
+  }) {
+    final result = FindJiraIssuesRequest._();
+    if (text != null) result.text = text;
+    if (site != null) result.site = site;
+    return result;
+  }
+
+  FindJiraIssuesRequest._();
+
+  factory FindJiraIssuesRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FindJiraIssuesRequest()..mergeFromBuffer(data, registry);
+  factory FindJiraIssuesRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FindJiraIssuesRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'FindJiraIssuesRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: FindJiraIssuesRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'text')
+    ..aOS(2, _omitFieldNames ? '' : 'site')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FindJiraIssuesRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FindJiraIssuesRequest copyWith(
+          void Function(FindJiraIssuesRequest) updates) =>
+      super.copyWith((message) => updates(message as FindJiraIssuesRequest))
+          as FindJiraIssuesRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use FindJiraIssuesRequest() / FindJiraIssuesRequest.new instead')
+  static FindJiraIssuesRequest create() => FindJiraIssuesRequest._();
+  static $pb.GeneratedMessage $_createMessage() => FindJiraIssuesRequest._();
+  @$core.override
+  FindJiraIssuesRequest createEmptyInstance() => FindJiraIssuesRequest._();
+  @$core.pragma('dart2js:noInline')
+  static FindJiraIssuesRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<FindJiraIssuesRequest>(
+          FindJiraIssuesRequest.$_createMessage);
+  static FindJiraIssuesRequest? _defaultInstance;
+
+  /// An issue's link (https://<site>/browse/KEY, a board's ?selectedIssue=),
+  /// its key, or words of it; empty for the issues looked at last.
+  @$pb.TagNumber(1)
+  $core.String get text => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set text($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasText() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearText() => $_clearField(1);
+
+  /// The site a key is on (the one used last); empty for the first.
+  @$pb.TagNumber(2)
+  $core.String get site => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set site($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasSite() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearSite() => $_clearField(2);
+}
+
+class FindJiraIssuesResponse extends $pb.GeneratedMessage {
+  factory FindJiraIssuesResponse({
+    $core.Iterable<FoundJiraIssue>? issues,
+    $core.String? unknownSite,
+  }) {
+    final result = FindJiraIssuesResponse._();
+    if (issues != null) result.issues.addAll(issues);
+    if (unknownSite != null) result.unknownSite = unknownSite;
+    return result;
+  }
+
+  FindJiraIssuesResponse._();
+
+  factory FindJiraIssuesResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FindJiraIssuesResponse()..mergeFromBuffer(data, registry);
+  factory FindJiraIssuesResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FindJiraIssuesResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'FindJiraIssuesResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: FindJiraIssuesResponse.$_createMessage)
+    ..pPM<FoundJiraIssue>(1, _omitFieldNames ? '' : 'issues',
+        subBuilder: FoundJiraIssue.$_createMessage)
+    ..aOS(2, _omitFieldNames ? '' : 'unknownSite')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FindJiraIssuesResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FindJiraIssuesResponse copyWith(
+          void Function(FindJiraIssuesResponse) updates) =>
+      super.copyWith((message) => updates(message as FindJiraIssuesResponse))
+          as FindJiraIssuesResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use FindJiraIssuesResponse() / FindJiraIssuesResponse.new instead')
+  static FindJiraIssuesResponse create() => FindJiraIssuesResponse._();
+  static $pb.GeneratedMessage $_createMessage() => FindJiraIssuesResponse._();
+  @$core.override
+  FindJiraIssuesResponse createEmptyInstance() => FindJiraIssuesResponse._();
+  @$core.pragma('dart2js:noInline')
+  static FindJiraIssuesResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<FindJiraIssuesResponse>(
+          FindJiraIssuesResponse.$_createMessage);
+  static FindJiraIssuesResponse? _defaultInstance;
+
+  /// A link matching several sites has one issue from each.
+  @$pb.TagNumber(1)
+  $pb.PbList<FoundJiraIssue> get issues => $_getList(0);
+
+  /// A link to a site that isn't added: its address.
+  @$pb.TagNumber(2)
+  $core.String get unknownSite => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set unknownSite($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasUnknownSite() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearUnknownSite() => $_clearField(2);
+}
+
+class FoundJiraIssue extends $pb.GeneratedMessage {
+  factory FoundJiraIssue({
+    $core.String? site,
+    JiraIssue? issue,
+    $core.String? branch,
+  }) {
+    final result = FoundJiraIssue._();
+    if (site != null) result.site = site;
+    if (issue != null) result.issue = issue;
+    if (branch != null) result.branch = branch;
+    return result;
+  }
+
+  FoundJiraIssue._();
+
+  factory FoundJiraIssue.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FoundJiraIssue()..mergeFromBuffer(data, registry);
+  factory FoundJiraIssue.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FoundJiraIssue()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'FoundJiraIssue',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: FoundJiraIssue.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'site')
+    ..aOM<JiraIssue>(2, _omitFieldNames ? '' : 'issue',
+        subBuilder: JiraIssue.$_createMessage)
+    ..aOS(3, _omitFieldNames ? '' : 'branch')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FoundJiraIssue clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FoundJiraIssue copyWith(void Function(FoundJiraIssue) updates) =>
+      super.copyWith((message) => updates(message as FoundJiraIssue))
+          as FoundJiraIssue;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use FoundJiraIssue() / FoundJiraIssue.new instead')
+  static FoundJiraIssue create() => FoundJiraIssue._();
+  static $pb.GeneratedMessage $_createMessage() => FoundJiraIssue._();
+  @$core.override
+  FoundJiraIssue createEmptyInstance() => FoundJiraIssue._();
+  @$core.pragma('dart2js:noInline')
+  static FoundJiraIssue getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<FoundJiraIssue>(
+          FoundJiraIssue.$_createMessage);
+  static FoundJiraIssue? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get site => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set site($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSite() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSite() => $_clearField(1);
+
+  /// Key, summary, type, status.
+  @$pb.TagNumber(2)
+  JiraIssue get issue => $_getN(1);
+  @$pb.TagNumber(2)
+  set issue(JiraIssue value) => $_setField(2, value);
+  @$pb.TagNumber(2)
+  $core.bool hasIssue() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearIssue() => $_clearField(2);
+  @$pb.TagNumber(2)
+  JiraIssue ensureIssue() => $_ensure(1);
+
+  /// KEY-summary-slug, the key uppercase so Jira links it.
+  @$pb.TagNumber(3)
+  $core.String get branch => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set branch($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasBranch() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearBranch() => $_clearField(3);
+}
+
 class GetJiraContextRequest extends $pb.GeneratedMessage {
   factory GetJiraContextRequest({
     $core.String? site,
@@ -16155,6 +16396,12 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, AddJiraCommentRequest request) =>
       _client.invoke<AddJiraCommentResponse>(ctx, 'NushiService',
           'AddJiraComment', request, AddJiraCommentResponse());
+
+  /// An issue for a new chat: from its link, its key, or words of it.
+  $async.Future<FindJiraIssuesResponse> findJiraIssues(
+          $pb.ClientContext? ctx, FindJiraIssuesRequest request) =>
+      _client.invoke<FindJiraIssuesResponse>(ctx, 'NushiService',
+          'FindJiraIssues', request, FindJiraIssuesResponse());
 
   /// An issue as a chat's first message (Markdown, for the user to see and
   /// edit before sending it), and a branch named after it.
