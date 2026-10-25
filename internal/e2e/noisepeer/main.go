@@ -17,7 +17,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"net/http/httptest"
 	"os"
@@ -56,13 +55,13 @@ func main() {
 	defer srv.Close()
 	key, err := noiseconn.NewKey()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err) //nolint:gocritic // the process ends, the server with it
 	}
 	_, listen, _ := ed25519.GenerateKey(rand.Reader)
 	id, psk := relay.ListenID(listen.Public().(ed25519.PublicKey)), []byte(strings.Repeat("s", 32))
 	b64 := base64.RawURLEncoding.EncodeToString
 	line, _ := json.Marshal(map[string]string{"relay": "ws" + strings.TrimPrefix(srv.URL, "http"), "id": id, "key": b64(key.Public), "psk": b64(psk)})
-	fmt.Println(string(line))
+	fmt.Println(string(line)) //nolint:forbidigo // the test reads this line
 
 	var dl relay.Dialer
 	c, err := dl.Listen(context.Background(), "ws"+strings.TrimPrefix(srv.URL, "http"), listen)
@@ -81,7 +80,7 @@ func main() {
 	buf := make([]byte, noiseconn.MaxPlaintext)
 	for {
 		n, err := conn.Read(buf)
-		if err == io.EOF || err != nil {
+		if err != nil {
 			return
 		}
 		if *mute {

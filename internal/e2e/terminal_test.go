@@ -21,7 +21,7 @@ func startSh(folder string, cols, rows int, changed func()) (terminals.Shell, er
 }
 
 // attach reads a terminal's output until it contains want, or its exit.
-func (a *app) attach(ctx context.Context, id, want string) (out string, exit *nushiv1.AttachTerminalResponse) {
+func (a *app) attach(ctx context.Context, id, want string) *nushiv1.AttachTerminalResponse {
 	a.t.Helper()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -29,16 +29,17 @@ func (a *app) attach(ctx context.Context, id, want string) (out string, exit *nu
 	if err != nil {
 		a.t.Fatal(err)
 	}
+	var out string
 	for stream.Receive() {
 		if stream.Msg().Exited {
-			return out, stream.Msg()
+			return stream.Msg()
 		}
 		if out += string(stream.Msg().Data); want != "" && strings.Contains(out, want) {
-			return out, nil
+			return nil
 		}
 	}
 	a.t.Fatalf("no %q in %q: %v", want, out, stream.Err())
-	return
+	return nil
 }
 
 func TestTerminalOutlivesTheApp(t *testing.T) {
@@ -65,7 +66,7 @@ func TestTerminalOutlivesTheApp(t *testing.T) {
 
 	// Its exit is reported, and it stays listed until closed.
 	must(second.c.WriteTerminal(ctx, connect.NewRequest(&nushiv1.WriteTerminalRequest{TerminalId: term.Id, Data: []byte("exit 4\n")})))
-	if _, exit := second.attach(ctx, term.Id, ""); exit == nil || exit.ExitCode != 4 {
+	if exit := second.attach(ctx, term.Id, ""); exit == nil || exit.ExitCode != 4 {
 		t.Fatalf("exit = %v, want code 4", exit)
 	}
 	second.waitFor("the exit in the list", func(e *nushiv1.EventsResponse) bool {

@@ -469,7 +469,7 @@ func TestRevokeMovesTheID(t *testing.T) {
 	pairOne(t, s, b)
 	var aID string
 	for _, d := range s.Get().Devices {
-		if string(d.Key) == string(a.Public) {
+		if bytes.Equal(d.Key, a.Public) {
 			aID = d.ID
 		}
 	}

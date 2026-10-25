@@ -7,6 +7,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -371,7 +372,7 @@ func TestClientTakesNoHugeMessage(t *testing.T) {
 // from connects to the relay as if from addr (the relay reads X-Test-IP).
 func from(url, side, id, addr string) (*websocket.Conn, int) {
 	h := http.Header{"X-Test-Ip": {addr}}
-	ws, resp, err := websocket.DefaultDialer.Dial(url+"/v1/"+side+"/"+id, h)
+	ws, resp, err := websocket.DefaultDialer.Dial(url+"/v1/"+side+"/"+id, h) //nolint:bodyclose // gorilla's Dial: the body of a failed handshake needn't be closed
 	if err != nil {
 		if resp != nil {
 			return nil, resp.StatusCode
@@ -512,7 +513,7 @@ func TestListenNeedsTheKey(t *testing.T) {
 	key, other := newKey(), newKey()
 	id := idOf(key)
 	raw := func() (*websocket.Conn, []byte) {
-		ws, _, err := websocket.DefaultDialer.Dial(url+"/v1/listen/"+id, nil)
+		ws, _, err := websocket.DefaultDialer.Dial(url+"/v1/listen/"+id, nil) //nolint:bodyclose // gorilla's Dial: the body of a failed handshake needn't be closed
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -609,7 +610,7 @@ func TestIdleHTTPConnections(t *testing.T) {
 	expect(t, l, "still")
 	for _, c := range open {
 		c.SetDeadline(time.Now().Add(2 * time.Second))
-		if _, err := c.Read(make([]byte, 1)); err != io.EOF {
+		if _, err := c.Read(make([]byte, 1)); !errors.Is(err, io.EOF) {
 			t.Fatalf("an idle connection stayed: %v", err)
 		}
 	}
@@ -635,7 +636,7 @@ func TestForwardedForFromTheRight(t *testing.T) {
 			if hops == 2 {
 				h += ", 192.0.2.99" // and the next proxy's
 			}
-			ws, resp, err := websocket.DefaultDialer.Dial(url+"/v1/dial/"+newID(), http.Header{"X-Forwarded-For": {h}})
+			ws, resp, err := websocket.DefaultDialer.Dial(url+"/v1/dial/"+newID(), http.Header{"X-Forwarded-For": {h}}) //nolint:bodyclose // gorilla's Dial: the body of a failed handshake needn't be closed
 			if i < 2 && err != nil {
 				t.Fatalf("hops %d: refused under the cap: %v", hops, err)
 			}
@@ -751,7 +752,7 @@ func TestSlowHeadersFloodDoesntStarve(t *testing.T) {
 	expect(t, l, "through")
 	last := slow[len(slow)-1]
 	last.SetReadDeadline(time.Now().Add(2 * time.Second))
-	if _, err := last.Read(make([]byte, 1)); err != io.EOF {
+	if _, err := last.Read(make([]byte, 1)); !errors.Is(err, io.EOF) {
 		t.Fatalf("a connection without its headers stayed past FirstWait: %v", err)
 	}
 }

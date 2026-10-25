@@ -86,7 +86,7 @@ func (s *Service) Edit(ctx context.Context, folder, scope, name, config string) 
 	}
 	if err := s.config.Add(ctx, folder, scope, name, config); err != nil {
 		if back := s.config.Add(ctx, folder, scope, name, old); back != nil {
-			return fmt.Errorf("%w; putting the old config back failed too: %v", err, back)
+			return fmt.Errorf("%w; putting the old config back failed too: %w", err, back)
 		}
 		return err
 	}

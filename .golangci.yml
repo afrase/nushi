@@ -19,6 +19,7 @@ linters:
     - tagliatelle # JSON tags follow the formats of the files and agents we read
     - funcorder # where a method sits in a file is the author's choice
     - embeddedstructfieldcheck # a blank line after embedded fields: style only
+    - musttag # one-off decode structs match keys by field name (encoding/json ignores case); session files' keys are the Go names
     - nonamedreturns # named results document what a function returns and serve deferred cleanup
     - noinlineerr # if err := f(); err != nil is idiomatic Go
     # Rules that don't fit this code.
@@ -48,36 +49,20 @@ linters:
     - gosec
     - revive
     - contextcheck
-    - gocritic
     - noctx
     - errchkjson
     - forcetypeassert
     - modernize
     - inamedparam
     - prealloc
-    - staticcheck
     - thelper
-    - gocognit
-    - musttag
-    - errorlint
     - perfsprint
-    - bodyclose
-    - nilnil
-    - containedctx
-    - goprintffuncname
-    - nilerr
-    - unparam
-    - dupword
-    - errname
-    - forbidigo
-    - gochecknoinits
-    - gocyclo
-    - interfacebloat
-    - predeclared
 
   settings:
     errcheck:
       check-type-assertions: false # forcetypeassert covers them
+    errchkjson:
+      check-error-free-encoding: true # a value that can't fail to encode may drop the error
     exhaustive:
       default-signifies-exhaustive: true
     gocritic:
@@ -89,6 +74,8 @@ linters:
         - unnamedResult # results are named where a name helps
         - importShadow # a local named after a package is fine where the package isn't used
         - initClause # `if n--; n == 0` keeps a counter's change beside its test
+        - typeDefFirst # a helper method may sit beside its caller, above its type
+        - sprintfQuotedString # the "%s" it finds are SVG's quotes, where %q would be wrong
     gosec:
       excludes:
         - G104 # unchecked errors: errcheck reports them
@@ -97,6 +84,10 @@ linters:
       disable:
         - fieldalignment # field order follows meaning, not padding
         - shadow # a nested `if err :=` shadowing err is idiomatic; every report was that
+    staticcheck:
+      checks:
+        - all
+        - -ST1005 # error strings are shown as they are and start with a name: "Ante isn't installed"
     nolintlint:
       require-explanation: true
       require-specific: true
@@ -175,6 +166,10 @@ linters:
       # Tests are long scripts, one scenario each.
       - path: _test\.go$
         linters: [gocognit, gocyclo, maintidx, dupl]
+      # Tests hold what each iteration opens until the test ends.
+      - path: _test\.go$
+        linters: [gocritic]
+        text: "^deferInLoop:"
       # Preallocating in tests buys nothing.
       - path: _test\.go$
         linters: [prealloc]
@@ -192,5 +187,6 @@ formatters:
   # files (about 840 lines) and adds no check that matters.
 
 issues:
+  uniq-by-line: false
   max-issues-per-linter: 0
   max-same-issues: 0

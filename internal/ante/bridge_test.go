@@ -96,7 +96,7 @@ func start(t *testing.T, store *antetest.Store) *client {
 	t.Helper()
 	toBridgeR, toBridgeW := io.Pipe()
 	fromBridgeR, fromBridgeW := io.Pipe()
-	spawn := func(cwd string) (io.WriteCloser, io.Reader, func(), error) {
+	spawn := func(string) (io.WriteCloser, io.Reader, func(), error) { //nolint:unparam // a Spawn, which can fail
 		inR, inW := io.Pipe()
 		outR, outW := io.Pipe()
 		go func() { store.Serve(inR, outW); outW.Close() }()
@@ -241,7 +241,7 @@ func TestResultText(t *testing.T) {
 		`"Tool call denied by user."`:                             "Tool call denied by user.",
 		`{"summary":"File written"}`:                              "File written",
 	} {
-		if got := result("Bash", json.RawMessage(raw)); got != want {
+		if got := result(json.RawMessage(raw)); got != want {
 			t.Errorf("result(%s) = %q, want %q", raw, got, want)
 		}
 	}
@@ -331,7 +331,7 @@ func TestImagesInAFolderOfTheBridges(t *testing.T) {
 // link matching the real one, and what isn't a session left out.
 func TestList(t *testing.T) {
 	home, work := t.TempDir(), t.TempDir()
-	real, _ := filepath.EvalSymlinks(work)
+	resolved, _ := filepath.EvalSymlinks(work)
 	link := filepath.Join(t.TempDir(), "link")
 	if err := os.Symlink(work, link); err != nil {
 		t.Fatal(err)
@@ -345,16 +345,16 @@ func TestList(t *testing.T) {
 		}
 	}
 	const older, newer, elsewhere = "ses_01M5NT3J93ZQA28RSPG7Q9S84D", "ses_01M5NT3J93ZQA28RSPG7Q9S84E", "ses_01M5NT3J93ZQA28RSPG7Q9S84F"
-	meta(older, `{"id":"`+older+`","provider":"fireworks","dir":"`+real+`","first_user_message":"hello\n\n<folder-structure>\n- `+real+`/\n</folder-structure>",
+	meta(older, `{"id":"`+older+`","provider":"fireworks","dir":"`+resolved+`","first_user_message":"hello\n\n<folder-structure>\n- `+resolved+`/\n</folder-structure>",
 		"message_count":2,"started_time":"2026-10-24T01:58:47.331430Z","last_active_time":"2026-10-24T01:59:41.407206Z"}`)
-	meta(newer, `{"id":"`+newer+`","dir":"`+real+`","title":"Fix the tests","first_user_message":"hi","last_active_time":"2026-10-25T01:00:00Z"}`)
+	meta(newer, `{"id":"`+newer+`","dir":"`+resolved+`","title":"Fix the tests","first_user_message":"hi","last_active_time":"2026-10-25T01:00:00Z"}`)
 	meta(elsewhere, `{"id":"`+elsewhere+`","dir":"/elsewhere","first_user_message":"yo","last_active_time":"2026-10-26T01:00:00Z"}`)
-	meta("ses_broken", `{"id":"ses_broken","dir":"`+real+`"}`)
+	meta("ses_broken", `{"id":"ses_broken","dir":"`+resolved+`"}`)
 	meta("ses_01M5NT3J93ZQA28RSPG7Q9S84G", `{not json`)
 	b := &bridge{home: home}
 	got := b.list(link).Sessions
 	if len(got) != 2 || got[0].SessionID != newer || got[0].Title != "Fix the tests" || got[0].Meta != nil ||
-		got[1].Title != "hello" || got[1].Meta["messageCount"] != 2 || got[1].UpdatedAt != "2026-10-24T01:59:41.407206Z" || got[1].Cwd != real {
+		got[1].Title != "hello" || got[1].Meta["messageCount"] != 2 || got[1].UpdatedAt != "2026-10-24T01:59:41.407206Z" || got[1].Cwd != resolved {
 		t.Errorf("list(%s) = %+v", link, got)
 	}
 	if all := b.list("").Sessions; len(all) != 3 || all[0].SessionID != elsewhere {

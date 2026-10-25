@@ -61,7 +61,8 @@ func (s *Store) agents() (map[string]agentPrefs, error) {
 	if err != nil {
 		return prefs, err
 	}
-	return prefs, json.Unmarshal(b, &prefs)
+	err = json.Unmarshal(b, &prefs)
+	return prefs, err
 }
 
 // TrustedFolders returns the folders the user started chats in anyway.

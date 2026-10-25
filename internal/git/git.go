@@ -36,7 +36,7 @@ type Span struct{ Base, Commit, Since string }
 // when they are uncommitted ones, with paths relative to the folder and
 // each file's lines added and removed. The folder may be anywhere inside a
 // repository.
-func Changes(ctx context.Context, folder string, span Span) ([]model.FileChange, error) {
+func Changes(ctx context.Context, folder string, span Span) ([]model.FileChange, error) { //nolint:gocognit,gocyclo // each span's git commands, then one pass over their output
 	from, to, err := ends(ctx, folder, span)
 	if err != nil {
 		return nil, err

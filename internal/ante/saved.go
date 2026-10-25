@@ -242,8 +242,8 @@ func withoutFolder(text string) string {
 
 // realPath is path with its links resolved, or as it is when it can't be.
 func realPath(path string) string {
-	if real, err := filepath.EvalSymlinks(path); err == nil && path != "" {
-		return real
+	if resolved, err := filepath.EvalSymlinks(path); err == nil && path != "" {
+		return resolved
 	}
 	return path
 }

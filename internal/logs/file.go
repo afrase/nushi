@@ -32,7 +32,8 @@ type File struct {
 // Open opens the log at path for appending, as the launcher's `>>` does.
 func Open(path string, std bool) (*File, error) {
 	l := &File{path: path, max: MaxSize, std: std}
-	return l, l.open()
+	err := l.open()
+	return l, err
 }
 
 func (l *File) open() error {

@@ -108,7 +108,7 @@ func start(t *testing.T, store *pigtest.Store, log io.Writer) *client {
 	})
 	toBridgeR, toBridgeW := io.Pipe()
 	fromBridgeR, fromBridgeW := io.Pipe()
-	spawn := func(cwd string, args ...string) (Pig, error) {
+	spawn := func(cwd string, args ...string) (Pig, error) { //nolint:unparam // a Spawn, which can fail
 		inR, inW := io.Pipe()
 		outR, outW := io.Pipe()
 		go func() { store.Serve(inR, outW, cwd, args); outW.Close() }()

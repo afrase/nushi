@@ -78,11 +78,11 @@ func (s *Service) Find(ctx context.Context, agent, folder, cursor string) (Found
 	if err != nil {
 		return FoundPage{}, err
 	}
-	real := realPath(folder)
+	resolved := realPath(folder)
 	paths := map[string]string{} // a cwd's real path, once looked up
 	page := FoundPage{CanList: true, SeesOpen: k.OpenElsewhere != nil, OneWriter: k.OneWriter}
 	for calls := 1; ; calls++ {
-		resp, err := a.ListSessions(ctx, acp.ListSessionsRequest{Cwd: real, Cursor: cursor})
+		resp, err := a.ListSessions(ctx, acp.ListSessionsRequest{Cwd: resolved, Cursor: cursor})
 		if err != nil {
 			return FoundPage{}, err
 		}
@@ -91,7 +91,7 @@ func (s *Service) Find(ctx context.Context, agent, folder, cursor string) (Found
 			if _, ok := paths[info.Cwd]; !ok {
 				paths[info.Cwd] = realPath(info.Cwd)
 			}
-			if ours[id] || id == "" || folder != "" && paths[info.Cwd] != real {
+			if ours[id] || id == "" || folder != "" && paths[info.Cwd] != resolved {
 				continue
 			}
 			page.Sessions = append(page.Sessions, found(info))
@@ -179,8 +179,8 @@ func realPath(path string) string {
 	if path == "" {
 		return ""
 	}
-	if real, err := filepath.EvalSymlinks(path); err == nil {
-		return real
+	if resolved, err := filepath.EvalSymlinks(path); err == nil {
+		return resolved
 	}
 	return filepath.Clean(path)
 }

@@ -173,11 +173,11 @@ func (s *session) handle(ev event) {
 	case "extension_ui_request":
 		go s.ask(ev.Raw)
 	case "extension_error", "error":
-		warn("%s", ev.Raw)
+		warnf("%s", ev.Raw)
 	case "agent_end", "turn_start", "turn_end", "queue_update", "compaction_start", "compaction_end",
 		"auto_retry_start", "auto_retry_end", "bash_execution_update", "entry_appended":
 	default:
-		warn("an event the bridge doesn't know: %q", ev.Type)
+		warnf("an event the bridge doesn't know: %q", ev.Type)
 	}
 	s.mu.Unlock()
 	for _, u := range out {

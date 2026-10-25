@@ -19,7 +19,7 @@ import (
 )
 
 // Agent is a connection to a running agent (an *acp.Client).
-type Agent interface {
+type Agent interface { //nolint:interfacebloat // the ACP calls a chat makes of its agent, which each Kind fills
 	Initialize(context.Context, acp.InitializeRequest) (*acp.InitializeResponse, error)
 	NewSession(context.Context, acp.NewSessionRequest) (*acp.NewSessionResponse, error)
 	LoadSession(context.Context, acp.LoadSessionRequest) (*acp.LoadSessionResponse, error)

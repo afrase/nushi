@@ -67,9 +67,9 @@ func (t Trust) Trusted(folder string, also []string) (bool, error) {
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return false, fmt.Errorf("reading Codex's config: %w", err)
 	}
-	real := git.RealPath(folder)
-	top, key := git.TrustRoot(real)
-	for _, dir := range []string{real, folder, top, key} {
+	resolved := git.RealPath(folder)
+	top, key := git.TrustRoot(resolved)
+	for _, dir := range []string{resolved, folder, top, key} {
 		if dir != "" && cfg.Projects[dir].TrustLevel == "trusted" {
 			return true, nil
 		}
@@ -99,10 +99,10 @@ func (Trust) Runs(folder string) ([]model.FolderRun, string, error) {
 // in folder (see Runs), empty ones left out. Links aren't followed: a link
 // is a file without a sum, as is anything but a regular file.
 func files(folder string) []folderfiles.File {
-	real := git.RealPath(folder)
-	top, main := git.TrustRoot(real)
-	dirs := []string{real}
-	for dir := real; top != "" && dir != top && dir != filepath.Dir(dir); {
+	resolved := git.RealPath(folder)
+	top, main := git.TrustRoot(resolved)
+	dirs := []string{resolved}
+	for dir := resolved; top != "" && dir != top && dir != filepath.Dir(dir); {
 		dir = filepath.Dir(dir)
 		dirs = append([]string{dir}, dirs...)
 	}

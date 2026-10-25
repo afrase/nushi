@@ -265,7 +265,7 @@ func fetch(ctx context.Context, raw string) ([]byte, error) {
 			return nil, err
 		}
 	} else {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, raw, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, raw, http.NoBody)
 		if err != nil {
 			return nil, err
 		}

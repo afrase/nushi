@@ -48,10 +48,10 @@ func (Trust) Runs(folder string) ([]model.FolderRun, string, error) {
 var lsp = []string{"lsp.json", "lsp.yaml", "lsp.yml", ".lsp.json", ".lsp.yaml", ".lsp.yml"}
 
 func files(folder string) []folderfiles.File {
-	real := git.RealPath(folder)
-	top, _ := git.TrustRoot(real)
-	dirs := []string{real}
-	for dir := real; top != "" && dir != top && dir != filepath.Dir(dir); {
+	resolved := git.RealPath(folder)
+	top, _ := git.TrustRoot(resolved)
+	dirs := []string{resolved}
+	for dir := resolved; top != "" && dir != top && dir != filepath.Dir(dir); {
 		dir = filepath.Dir(dir)
 		dirs = append([]string{dir}, dirs...)
 	}

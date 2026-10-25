@@ -51,11 +51,11 @@ func (in Installer) Install(ctx context.Context, lock fs.FS, folder string, read
 			return err
 		}
 	}
-	real, err := filepath.EvalSymlinks(parent) // what the sandbox sees
+	resolved, err := filepath.EvalSymlinks(parent) // what the sandbox sees
 	if err != nil {
 		return err
 	}
-	profile := `(version 1)(allow default)(deny file-write* (require-not (require-any (literal "/dev/null") (subpath ` + strconv.Quote(real) + `))))`
+	profile := `(version 1)(allow default)(deny file-write* (require-not (require-any (literal "/dev/null") (subpath ` + strconv.Quote(resolved) + `))))`
 	cache := filepath.Join(tmp, ".npm")
 	cmd := exec.CommandContext(ctx, "/usr/bin/sandbox-exec", "-p", profile, "npm", "ci", "--omit=optional", "--omit=dev", "--ignore-scripts",
 		"--no-audit", "--no-fund", "--update-notifier=false", "--logs-max=0", "--cache", cache)

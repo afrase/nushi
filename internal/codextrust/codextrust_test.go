@@ -113,14 +113,14 @@ func TestTheKeyCoversWhatTheCardShows(t *testing.T) {
 	if tr.Key(folder) == key {
 		t.Error("a change past the card's cap kept the key")
 	}
-	for name, make := range map[string]func(path string) error{
+	for name, makeOdd := range map[string]func(path string) error{
 		"link to a folder": func(p string) error { return os.Symlink(t.TempDir(), p) },
 		"link to a file":   func(p string) error { return os.Symlink(big, p) },
 		"unreadable file":  func(p string) error { return os.WriteFile(p, []byte("x"), 0o000) },
 		"fifo":             func(p string) error { return exec.Command("mkfifo", p).Run() },
 	} {
 		odd := filepath.Join(folder, ".codex", "odd")
-		if err := make(odd); err != nil {
+		if err := makeOdd(odd); err != nil {
 			t.Fatal(err)
 		}
 		runs, key, _ := tr.Runs(folder)

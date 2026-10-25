@@ -83,7 +83,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 		return launch(func(r io.Reader, w io.Writer) { (&acptest.Agent{History: history, Codex: codex, Omp: omp}).Serve(r, w) })
 	}
 	anteStore := anteStores(dataDir)
-	anteHosts := func(cwd string) (io.WriteCloser, io.Reader, func(), error) {
+	anteHosts := func(string) (io.WriteCloser, io.Reader, func(), error) { //nolint:unparam // an ante.Spawn, which can fail
 		inR, inW := io.Pipe()
 		outR, outW := io.Pipe()
 		go func() { anteStore.Serve(inR, outW); outW.Close() }()

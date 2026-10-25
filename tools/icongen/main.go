@@ -94,7 +94,7 @@ func main() {
 			out := filepath.Join(set, fmt.Sprintf("app_icon_%d.png", px))
 			cmd := exec.Command("sips", "-s", "format", "png", "-z", fmt.Sprint(px), fmt.Sprint(px), src, "--out", out)
 			if b, err := cmd.CombinedOutput(); err != nil {
-				log.Fatalf("sips: %v\n%s", err, b)
+				log.Fatalf("sips: %v\n%s", err, b) //nolint:gocritic // a failed run may leave its temp folder
 			}
 		}
 	}

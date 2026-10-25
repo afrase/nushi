@@ -45,8 +45,8 @@ func ConfigFile() string {
 // project is the folder Claude files a folder's local servers under: its
 // repository's main checkout, or the folder outside git (real paths).
 func project(folder string) string {
-	if real, err := filepath.EvalSymlinks(folder); err == nil {
-		folder = real
+	if resolved, err := filepath.EvalSymlinks(folder); err == nil {
+		folder = resolved
 	}
 	out, err := exec.Command("git", "-C", folder, "rev-parse", "--path-format=absolute", "--git-common-dir").Output()
 	if common := strings.TrimSpace(string(out)); err == nil && filepath.Base(common) == ".git" {

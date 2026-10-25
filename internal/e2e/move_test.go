@@ -34,13 +34,13 @@ func TestMoveAChat(t *testing.T) {
 		if err != nil {
 			return nil, err
 		}
-		copy := id + " " + from + " -> " + to
-		copies = append(copies, copy)
+		entry := id + " " + from + " -> " + to
+		copies = append(copies, entry)
 		made++
 		return func() error {
 			mu.Lock()
 			defer mu.Unlock()
-			copies = slices.DeleteFunc(copies, func(c string) bool { return c == copy })
+			copies = slices.DeleteFunc(copies, func(c string) bool { return c == entry })
 			return removeCopy()
 		}, nil
 	}

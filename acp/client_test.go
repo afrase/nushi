@@ -185,7 +185,7 @@ func TestAPeerWithdrawsWhatItGaveUpOn(t *testing.T) {
 	defer toAgentW.Close()
 	h := &blocking{ended: make(chan struct{})}
 	Connect(fromAgentR, toAgentW, h, nil)
-	p := NewPeer(fromAgentW, func(context.Context, string, json.RawMessage) (any, error) { return nil, nil })
+	p := NewPeer(fromAgentW, func(context.Context, string, json.RawMessage) (any, error) { return nil, nil }) //nolint:nilnil // a request with no result
 	p.Serve(toAgentR)
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()

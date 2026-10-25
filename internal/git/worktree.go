@@ -38,7 +38,7 @@ func (Worktrees) Add(ctx context.Context, folder, name string) (model.Worktree, 
 	}
 	sub := strings.TrimSuffix(strings.TrimSpace(string(prefix)), "/")
 	top := strings.TrimSuffix(filepath.Clean(folder), "/"+sub)
-	if real, err := filepath.EvalSymlinks(top); err == nil && real == repo {
+	if resolved, err := filepath.EvalSymlinks(top); err == nil && resolved == repo {
 		repo = top // the folder's spelling: git resolves symlinks
 	}
 	wt = model.Worktree{Repo: repo, Path: filepath.Join(repo, ".worktrees", name), Branch: "nushi/" + name}
@@ -83,9 +83,9 @@ func worktreesFolder(repo string) error {
 	if err != nil {
 		return err
 	}
-	real, err := filepath.EvalSymlinks(dir)
+	resolved, err := filepath.EvalSymlinks(dir)
 	top, terr := filepath.EvalSymlinks(repo)
-	if err != nil || terr != nil || real != filepath.Join(top, ".worktrees") {
+	if err != nil || terr != nil || resolved != filepath.Join(top, ".worktrees") {
 		return fmt.Errorf("%s isn't in the repository's own folder", dir)
 	}
 	return nil
@@ -105,7 +105,7 @@ func (Worktrees) Inspect(ctx context.Context, wt model.Worktree) (model.Worktree
 	}
 	if _, err := run(ctx, wt.Repo, "rev-parse", "--verify", "-q", "refs/heads/"+wt.Branch); err != nil {
 		st.BranchGone = true
-		return st, nil
+		return st, nil //nolint:nilerr // --verify failing is the answer: the branch is gone
 	}
 	out, err := run(ctx, wt.Repo, "rev-list", "--count", "refs/heads/"+wt.Branch, "--not", BaseOf(ctx, wt))
 	if err != nil {

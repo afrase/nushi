@@ -22,7 +22,7 @@ import (
 // its empty session is deleted, so the chat never had it. A worktree that
 // holds work, or one a chat with messages leaves, stays on disk, and
 // Delete offers it. A folder inside the chat's worktree keeps it.
-func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool) error {
+func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool) error { //nolint:gocognit,gocyclo // the cases in its comment, in order
 	if err := CheckFolder(folder); err != nil {
 		return err
 	}
