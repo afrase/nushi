@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"net"
 	"os"
 	"os/exec"
@@ -50,7 +50,7 @@ func (c *channels) Addr() net.Addr { return &net.UnixAddr{Name: "noise", Net: "n
 func keepAwake() (stop func()) {
 	cmd := exec.Command("/usr/bin/caffeinate", "-i", "-w", strconv.Itoa(os.Getpid()))
 	if err := cmd.Start(); err != nil {
-		log.Printf("keeping the Mac awake: %v", err)
+		slog.Warn("keeping the Mac awake", "err", err)
 		return func() {}
 	}
 	go cmd.Wait()

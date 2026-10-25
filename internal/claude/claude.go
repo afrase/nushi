@@ -10,7 +10,6 @@ import (
 	"embed"
 	"encoding/json"
 	"io/fs"
-	"log"
 	"os"
 	"os/exec"
 	"strconv"
@@ -45,7 +44,7 @@ func Start(dir, program, cli string, h acp.Handler) (*acp.Client, error) {
 	cmd := exec.Command("node", program)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), "CLAUDE_CODE_EXECUTABLE="+cli)
-	cmd.Stderr = log.Writer()
+	cmd.Stderr = os.Stderr
 	return acp.Start(cmd, h)
 }
 

@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -55,13 +54,18 @@ func Start(dir string, h acp.Handler) (*acp.Client, error) {
 	}
 	cmd := exec.Command(self, Command)
 	cmd.Dir = dir
-	cmd.Stderr = log.Writer()
+	cmd.Stderr = os.Stderr
 	return acp.Start(cmd, h)
+}
+
+// warn writes a line to the bridge's stderr, which the daemon logs with
+// the chat's attributes, as any agent's stderr.
+func warn(format string, args ...any) {
+	fmt.Fprintf(os.Stderr, "ante-acp: "+format+"\n", args...)
 }
 
 // Main runs the bridge on stdin and stdout: the Command.
 func Main() {
-	log.SetPrefix("ante-acp: ")
 	cfg := Config{Home: Home()}
 	bin, err := binary()
 	if err == nil {
@@ -111,7 +115,7 @@ func version(bin string) (string, error) {
 	case got[0] != want[0] || got[1] < want[1] || got[1] == want[1] && got[2] < want[2]:
 		return "", fmt.Errorf("Ante %s is older than the %s Nushi needs: run `ante update`", v, Min)
 	case v != Min:
-		log.Printf("ante %s is newer than %s, whose protocol the bridge follows", v, Min)
+		warn("ante %s is newer than %s, whose protocol the bridge follows", v, Min)
 	}
 	return v, nil
 }

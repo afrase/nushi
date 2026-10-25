@@ -30,8 +30,8 @@ import (
 // Version is the API version reported by Ping. Bump it when methods are added.
 const Version = 50
 
-// build is the daemon's executable as it started (PingResponse.build).
-var build = func() string {
+// Build is the daemon's executable as it started (PingResponse.build).
+var Build = func() string {
 	exe, err := os.Executable()
 	if err != nil {
 		return ""
@@ -135,7 +135,7 @@ func WithToken(token string, h http.Handler) http.Handler {
 }
 
 func (s *server) Ping(context.Context, *connect.Request[nushiv1.PingRequest]) (*connect.Response[nushiv1.PingResponse], error) {
-	return connect.NewResponse(&nushiv1.PingResponse{ApiVersion: Version, Build: build}), nil
+	return connect.NewResponse(&nushiv1.PingResponse{ApiVersion: Version, Build: Build}), nil
 }
 
 func (s *server) ListChats(context.Context, *connect.Request[nushiv1.ListChatsRequest]) (*connect.Response[nushiv1.ListChatsResponse], error) {

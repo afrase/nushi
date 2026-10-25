@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -86,7 +85,7 @@ func (b *bridge) catalog() []provider {
 		}
 		var err error
 		if b.cat, err = b.readCat(); err != nil {
-			log.Printf("ante: no catalog, so no model list: %v", err)
+			warn("no catalog, so no model list: %v", err)
 		}
 	})
 	return b.cat

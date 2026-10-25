@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io/fs"
-	"log"
+	"log/slog"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -164,7 +164,7 @@ func (s *Store) Sessions() ([]model.Session, error) {
 			err = json.Unmarshal(b, &flags)
 		}
 		if err != nil { // one bad file doesn't hide the other chats
-			log.Printf("skipping session file %s: %v", f, err)
+			slog.Warn("skipping a chat file", "file", f, "err", err)
 			continue
 		}
 		if sess.SessionID == "" { // stored before step 22, when the ids were one
@@ -198,7 +198,7 @@ func (s *Store) SleepAfter() time.Duration {
 		err = json.Unmarshal(b, &set)
 	}
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		log.Printf("reading settings.json: %v", err)
+		slog.Warn("reading settings.json", "err", err)
 	}
 	if set.SleepAfterMinutes == nil {
 		return defaultSleepAfter

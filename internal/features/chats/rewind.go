@@ -3,7 +3,6 @@ package chats
 import (
 	"context"
 	"errors"
-	"log"
 	"slices"
 	"strings"
 	"time"
@@ -133,10 +132,10 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 		return model.Message{}, err
 	}
 	if err := agent.CloseSession(ctx, acp.CloseSessionRequest{SessionID: acp.SessionID(sid)}); err != nil {
-		log.Printf("chat %s: closing %s after rewinding: %v", c.id, sid, err)
+		c.log().Warn("closing the session left by the rewind", "old", sid, "err", err)
 	}
 	if err := c.startMode(ctx, agent, next, mode); err != nil {
-		log.Printf("chat %s: mode after rewinding: %v", c.id, err)
+		c.log().Warn("mode after rewinding", "err", err)
 	}
 	return msg, nil
 }

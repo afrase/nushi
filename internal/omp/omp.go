@@ -5,7 +5,7 @@ package omp
 
 import (
 	"encoding/json"
-	"log"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -20,7 +20,7 @@ import (
 func Start(dir, cli string, h acp.Handler) (*acp.Client, error) {
 	cmd := exec.Command(cli, "--mode", "acp")
 	cmd.Dir = dir
-	cmd.Stderr = log.Writer()
+	cmd.Stderr = os.Stderr
 	return acp.Start(cmd, h)
 }
 

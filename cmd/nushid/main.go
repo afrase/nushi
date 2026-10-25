@@ -9,13 +9,14 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime/debug"
 	"slices"
 	"strings"
 	"syscall"
@@ -39,6 +40,7 @@ import (
 	"github.com/afrase/nushi/internal/features/terminals"
 	"github.com/afrase/nushi/internal/features/trust"
 	"github.com/afrase/nushi/internal/git"
+	"github.com/afrase/nushi/internal/logs"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/npm"
 	"github.com/afrase/nushi/internal/omp"
@@ -48,6 +50,7 @@ import (
 	"github.com/afrase/nushi/internal/sysproxy"
 	"github.com/afrase/nushi/internal/terminal"
 	"github.com/afrase/nushi/relay"
+	"golang.org/x/sys/unix"
 )
 
 func main() {
@@ -55,12 +58,20 @@ func main() {
 		ante.Main()
 		return
 	}
+	// Until the daemon holds its socket, its lines go to stderr, which the
+	// launcher points at nushid.log.
+	slog.SetDefault(slog.New(logs.Handler(os.Stderr)))
 	if len(os.Args) > 1 && os.Args[1] == loginFlag {
-		log.Fatal(execLogin())
+		fatal(execLogin())
 	}
 	if err := run(); err != nil {
-		log.Fatal(err)
+		fatal(err)
 	}
+}
+
+func fatal(err error) {
+	slog.Error("nushid can't run", "why", err)
+	os.Exit(1)
 }
 
 func run() error {
@@ -95,7 +106,12 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	log.Printf("nushid listening on %s", ln.Addr())
+	if _, err := logs.Setup(filepath.Join(dir, "nushid.log")); err != nil {
+		return err
+	}
+	logs.Mask(token)
+	slog.Info("nushid started", "version", version(), "build", api.Build, "api", api.Version, "data", dir, "pid", os.Getpid(),
+		"log_level", logs.Level.Level())
 
 	hub := &events.Hub{}
 	agentSvc := agents.New([]agents.Agent{
@@ -156,30 +172,58 @@ func run() error {
 	if sv.Remote, err = remote.New(st, &relay.Dialer{Proxies: sysproxy.For}, channels.serve, keepAwake, hub.Publish); err != nil {
 		return err
 	}
-	remoteSrv := &http.Server{Handler: api.ForDevices(sv), Protocols: new(http.Protocols)}
+	// A handler's panic, which net/http recovers, is logged with its stack.
+	errorLog := slog.NewLogLogger(slog.Default().Handler(), slog.LevelError)
+	remoteSrv := &http.Server{Handler: api.ForDevices(sv), Protocols: new(http.Protocols), ErrorLog: errorLog}
 	remoteSrv.Protocols.SetUnencryptedHTTP2(true)
 	go remoteSrv.Serve(channels)
-	srv := &http.Server{Handler: api.WithToken(token, api.New(sv)), Protocols: new(http.Protocols)}
+	srv := &http.Server{Handler: api.WithToken(token, api.New(sv)), Protocols: new(http.Protocols), ErrorLog: errorLog}
 	srv.Protocols.SetUnencryptedHTTP2(true)
 
 	// On SIGINT or SIGTERM, stop the agents too: their sessions reopen
 	// through session/load when the daemon is back.
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	signalled := make(chan os.Signal, 1)
 	go func() {
-		<-stop
+		signalled <- <-stop
 		srv.Close()
 	}()
 	err = srv.Serve(ln)
+	select {
+	case sig := <-signalled:
+		slog.Info("nushid stopping", "why", unix.SignalName(sig.(syscall.Signal)))
+	default:
+		slog.Error("nushid stopping", "why", err)
+	}
 	sv.Remote.Close()
 	remoteSrv.Close()
 	chatSvc.Close()
 	termSvc.CloseAll()
 	if errors.Is(err, http.ErrServerClosed) {
-		log.Print("nushid stopped")
+		slog.Info("nushid stopped")
 		return nil
 	}
 	return err
+}
+
+// version is the commit the daemon was built from, "-dirty" with changes
+// not committed, and the Go it was built with.
+func version() string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return ""
+	}
+	var rev, dirty string
+	for _, s := range info.Settings {
+		switch {
+		case s.Key == "vcs.revision" && len(s.Value) >= 12:
+			rev = s.Value[:12]
+		case s.Key == "vcs.modified" && s.Value == "true":
+			dirty = "-dirty"
+		}
+	}
+	return strings.TrimSpace(cmp.Or(rev, "unknown") + dirty + " " + info.GoVersion)
 }
 
 // loadToken reads the client token, making a new one on first start or

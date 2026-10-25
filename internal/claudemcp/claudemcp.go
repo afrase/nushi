@@ -17,7 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -63,7 +63,7 @@ type servers map[string]json.RawMessage
 func (c Claude) Servers(folder string) ([]model.MCPServer, error) {
 	servers, unread, err := c.Read(folder)
 	for _, u := range unread {
-		log.Printf("leaving out %v", u.Err) // as Claude does: the other files' servers still count
+		slog.Warn("leaving out an MCP config", "err", u.Err) // as Claude does: the other files' servers still count
 	}
 	return servers, err
 }
