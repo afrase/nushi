@@ -23,10 +23,24 @@ class AgentsPage extends StatefulWidget {
 }
 
 class _AgentsPageState extends State<AgentsPage> {
+  final _removing = <String>{};
+
   @override
   void initState() {
     super.initState();
     listAgents(widget.client).ignore(); // as they are now
+  }
+
+  /// Removes [a]'s adapter once asked; its row says so meanwhile (its
+  /// awake chats sleep first, which takes a few seconds).
+  Future<void> _remove(Agent a) async {
+    if (!await _confirmRemove(context, widget.client, a) || !mounted) return;
+    setState(() => _removing.add(a.name));
+    await tryOrShow(context, () async {
+      await widget.client.removeAgent(RemoveAgentRequest(agent: a.name));
+      await listAgents(widget.client);
+    });
+    if (mounted) setState(() => _removing.remove(a.name));
   }
 
   @override
@@ -36,7 +50,12 @@ class _AgentsPageState extends State<AgentsPage> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final a in agents.values) AgentRow(a, client: widget.client),
+        for (final a in agents.values)
+          AgentRow(
+            a,
+            client: widget.client,
+            onRemove: _removing.contains(a.name) ? null : () => _remove(a),
+          ),
       ],
     ),
   );
@@ -54,10 +73,16 @@ String _mb(int bytes) => '${(bytes / 1e6).round()} MB';
 
 /// One agent: its mark and name, what was found, and what can be done.
 class AgentRow extends StatelessWidget {
-  const AgentRow(this.agent, {super.key, required this.client});
+  const AgentRow(
+    this.agent, {
+    super.key,
+    required this.client,
+    required this.onRemove,
+  });
 
   final Agent agent;
   final NushiServiceClient client;
+  final VoidCallback? onRemove; // null while it's being removed
 
   @override
   Widget build(BuildContext context) {
@@ -141,9 +166,9 @@ class AgentRow extends StatelessWidget {
     return [
       if (!setUp)
         Button(
-          label: 'Remove',
+          label: onRemove == null ? 'Removing…' : 'Remove',
           kind: ButtonKind.ghost,
-          onPressed: () => removeAdapter(context, client, agent),
+          onPressed: onRemove,
         ),
       if (setUp || update) ...[
         const SizedBox(width: 6),
@@ -192,6 +217,14 @@ class _SetUpState extends State<_SetUp> {
   bool _working = false;
   String? _error;
 
+  @override
+  void initState() {
+    super.initState();
+    // Its awake chats as they are now.
+    listAgents(widget.client)
+        .then((_) => mounted ? setState(() {}) : null, onError: (_) {});
+  }
+
   Future<void> _run() async {
     setState(() {
       _working = true;
@@ -216,7 +249,7 @@ class _SetUpState extends State<_SetUp> {
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context), t = theme.t;
-    final a = widget.agent, ad = a.adapter;
+    final a = knownAgents[widget.agent.name] ?? widget.agent, ad = a.adapter;
     final update = ad.installed.isNotEmpty;
     return PopScope(
       canPop: !_working,
@@ -264,25 +297,21 @@ class _SetUpState extends State<_SetUp> {
   }
 }
 
-/// Removes an agent's adapter, once asked.
-Future<void> removeAdapter(
+/// Asks before removing [agent]'s adapter, with its awake chats as they
+/// are now.
+Future<bool> _confirmRemove(
   BuildContext context,
   NushiServiceClient client,
   Agent agent,
 ) async {
-  final ad = agent.adapter;
-  if (!await confirm(
+  await listAgents(client).catchError((_) {});
+  if (!context.mounted) return false;
+  final a = knownAgents[agent.name] ?? agent, ad = a.adapter;
+  return confirm(
     context,
-    'Remove ${agent.title}\'s adapter?',
-    'Removes ${tilde(ad.folder)} (${_mb(ad.diskBytes.toInt())}). ${agent.title} chats '
-        'start again once it\'s set up.${_sleeps(agent)}',
+    'Remove ${a.title}\'s adapter?',
+    'Removes ${tilde(ad.folder)} (${_mb(ad.diskBytes.toInt())}). ${a.title} '
+        'chats start again once it\'s set up.${_sleeps(a)}',
     'Remove',
-  )) {
-    return;
-  }
-  if (!context.mounted) return;
-  await tryOrShow(context, () async {
-    await client.removeAgent(RemoveAgentRequest(agent: agent.name));
-    await listAgents(client);
-  });
+  );
 }
