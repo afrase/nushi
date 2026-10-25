@@ -44,7 +44,8 @@ func TestCloseStopsAnAgentStillOpening(t *testing.T) {
 }
 
 // A chat that can't reopen says so once, and doesn't start an agent on
-// every look at it; a message tries again.
+// every look at it; a message tries again, and says it again in the same
+// notice.
 func TestAFailedReopenIsntRetriedOnEveryCall(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	turn(t, svc, c, "one")
@@ -72,9 +73,9 @@ func TestAFailedReopenIsntRetriedOnEveryCall(t *testing.T) {
 		t.Errorf("%d notices", n)
 	}
 	noErr(t, svc.Prompt(c.id, model.Message{Text: "again"}, SendQueue))
-	eventually(t, c, func() bool { return !c.busy && notices() == 2 })
-	if again, _, _ := agent.count(); again != launches+1 {
-		t.Errorf("a message didn't try again: %d launches, then %d", launches, again)
+	eventually(t, c, func() bool { again, _, _ := agent.count(); return !c.busy && again == launches+1 })
+	if n := notices(); n != 1 {
+		t.Errorf("%d notices after trying again: the new one replaces the old", n)
 	}
 }
 

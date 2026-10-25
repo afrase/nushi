@@ -377,6 +377,28 @@ extension type NushiServiceClient (connect.Transport _transport) {
     );
   }
 
+  /// Says a chat is shown (selected, the app came to the front), or Try
+  /// again: a chat whose agent should run but doesn't is reopened, as
+  /// GetChat does, and one whose last reopen failed (status.reopen_failed)
+  /// tries again, once a call, unless what stopped it still holds (its
+  /// folder is gone, its agent isn't ready). A sleeping chat stays asleep.
+  Future<nushiv1nushi.ReopenChatResponse> reopenChat(
+    nushiv1nushi.ReopenChatRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.reopenChat,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// The daemon's settings, and changing them.
   /// Says how much memory Nushi takes, as footprint (Activity Monitor's
   /// Memory), in bytes: a few milliseconds' work.

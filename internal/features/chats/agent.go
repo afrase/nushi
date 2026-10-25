@@ -135,7 +135,8 @@ func (s *Service) useLocked(c *chat, o opened) {
 	c.agent, c.canFork, c.steer, c.canImage, c.sid, c.config = o.agent, o.agent.CanFork(), o.agent.CanSteer(), o.images, o.sid, o.config
 	c.forkAt, c.held, c.kept, c.ownTurn, c.reopenFailed = o.forkAt, false, false, false, false
 	c.canLoad, c.asleep = o.load, false
-	c.mcpChanged = false // the new agent has the MCP servers as they are now
+	c.mcpChanged = false      // the new agent has the MCP servers as they are now
+	c.unsendLocked(c.failure) // it runs: why it couldn't is stale
 	c.emitLocked(model.Event{ChatID: c.id, Config: slices.Clone(c.config)})
 	go s.watch(c, o.agent)
 }

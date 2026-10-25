@@ -139,7 +139,8 @@ func run() error {
 		{Name: "pig", Title: "PiG", CLI: pig.CLI, Page: pig.Page, Tested: pig.Tested},
 	}, readonly.Output, filepath.Join(dir, "agents"), npm.Installer{})
 	// The agents found on PATH, and their adapters (ADR 0037). A chat
-	// starts its agent through Run, and says more through Explain.
+	// starts its agent through Run, says more through Explain, and asks
+	// Run whether it could start (Ready).
 	launch := func(name string, start func(agents.Run, acp.Client, *slog.Logger) (*agentproc.Agent, error)) chats.Launch {
 		return func(h acp.Client, log *slog.Logger) (chats.Agent, error) {
 			run, err := agentSvc.Run(name)
@@ -153,11 +154,14 @@ func run() error {
 			return a, nil
 		}
 	}
+	ready := func(name string) func() error {
+		return func() error { _, err := agentSvc.Run(name); return err }
+	}
 	// What each agent does beyond ACP is in its own packages: internal/claude*,
 	// internal/codex*, internal/ante* (Ante's bridge too, ADR 0030),
 	// internal/omp* and internal/pig (PiG's bridge, ADR 0039).
 	claudeKind := chats.Kind{Name: "claude", Title: "Claude", Resume: "claude --resume", MCP: true,
-		Explain: agentSvc.Explain("claude"), Launch: launch("claude", func(r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
+		Explain: agentSvc.Explain("claude"), Ready: ready("claude"), Launch: launch("claude", func(r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
 			return claude.Start(dir, r.Program, r.CLI, h, log)
 		}),
 		Dialect: chats.Dialect{InitMeta: claude.InitMeta, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall,
@@ -169,22 +173,22 @@ func run() error {
 		OpenElsewhere: claudehistory.Open, Forked: func(ids []string) map[string]bool { return claudehistory.Forked(projects, ids) }}
 	codexKind := chats.Kind{Name: "codex", Title: "Codex", Resume: codex.Resume, History: codex.History, DeleteArchives: codex.DeleteArchives,
 		OpenElsewhere: codex.OpenElsewhere, Forked: codex.Forked, OneWriter: true,
-		Explain: agentSvc.Explain("codex"), Launch: launch("codex", func(r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
+		Explain: agentSvc.Explain("codex"), Ready: ready("codex"), Launch: launch("codex", func(r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
 			return codex.Start(dir, r.Program, r.CLI, h, log)
 		}),
 		Dialect: chats.Dialect{ForkAt: codex.ForkAt, ToolCall: codex.ToolCall, Other: codex.Other}}
 	anteKind := chats.Kind{Name: "ante", Title: "Ante", Resume: ante.Resume, OpenElsewhere: ante.OpenElsewhere,
-		Explain: agentSvc.Explain("ante"), Launch: launch("ante", func(_ agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
+		Explain: agentSvc.Explain("ante"), Ready: ready("ante"), Launch: launch("ante", func(_ agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
 			return ante.Start(dir, h, log)
 		}),
 		Dialect: chats.Dialect{ForkAt: ante.ForkAt, Other: ante.Other, Context: ante.Context}}
 	ompKind := chats.Kind{Name: "omp", Title: "oh-my-pi", Resume: omp.Resume, Forked: omp.Forked, OpenElsewhere: omp.OpenElsewhere, OneWriter: true,
-		Explain: agentSvc.Explain("omp"), Launch: launch("omp", func(r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
+		Explain: agentSvc.Explain("omp"), Ready: ready("omp"), Launch: launch("omp", func(r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
 			return omp.Start(dir, r.CLI, h, log)
 		}),
 		Dialect: chats.Dialect{Other: omp.Other, ToolCall: omp.ToolCall}}
 	pigKind := chats.Kind{Name: "pig", Title: "PiG", Resume: pig.Resume,
-		Explain: agentSvc.Explain("pig"), Launch: launch("pig", func(_ agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
+		Explain: agentSvc.Explain("pig"), Ready: ready("pig"), Launch: launch("pig", func(_ agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
 			return pig.Start(dir, h, log)
 		}),
 		Dialect: chats.Dialect{ForkAt: pig.ForkAt, Context: pig.Context}}

@@ -45,7 +45,10 @@ class ItemKind extends $pb.ProtobufEnum {
 
   /// How a turn ended when it didn't end normally, or an error: status is
   /// "cancelled", "refusal", "max_tokens", "max_turn_requests" or "error",
-  /// and text says it in words.
+  /// and text says it in words. A reopen that failed has one notice, which
+  /// goes once the chat runs again: "not_ready" (its agent isn't set up or
+  /// installed: Settings › Agents), "folder_gone" (MoveChat), or
+  /// "reopen_failed" (ReopenChat tries again).
   static const ItemKind ITEM_KIND_NOTICE =
       ItemKind._(8, _omitEnumNames ? '' : 'ITEM_KIND_NOTICE');
 

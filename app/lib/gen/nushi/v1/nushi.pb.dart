@@ -3916,6 +3916,104 @@ class SleepChatResponse extends $pb.GeneratedMessage {
   static SleepChatResponse? _defaultInstance;
 }
 
+class ReopenChatRequest extends $pb.GeneratedMessage {
+  factory ReopenChatRequest({
+    $core.String? chatId,
+  }) {
+    final result = ReopenChatRequest._();
+    if (chatId != null) result.chatId = chatId;
+    return result;
+  }
+
+  ReopenChatRequest._();
+
+  factory ReopenChatRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ReopenChatRequest()..mergeFromBuffer(data, registry);
+  factory ReopenChatRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ReopenChatRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ReopenChatRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ReopenChatRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReopenChatRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReopenChatRequest copyWith(void Function(ReopenChatRequest) updates) =>
+      super.copyWith((message) => updates(message as ReopenChatRequest))
+          as ReopenChatRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ReopenChatRequest() / ReopenChatRequest.new instead')
+  static ReopenChatRequest create() => ReopenChatRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ReopenChatRequest._();
+  @$core.override
+  ReopenChatRequest createEmptyInstance() => ReopenChatRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ReopenChatRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ReopenChatRequest>(
+          ReopenChatRequest.$_createMessage);
+  static ReopenChatRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+}
+
+class ReopenChatResponse extends $pb.GeneratedMessage {
+  factory ReopenChatResponse() => ReopenChatResponse._();
+
+  ReopenChatResponse._();
+
+  factory ReopenChatResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ReopenChatResponse()..mergeFromBuffer(data, registry);
+  factory ReopenChatResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ReopenChatResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ReopenChatResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ReopenChatResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReopenChatResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReopenChatResponse copyWith(void Function(ReopenChatResponse) updates) =>
+      super.copyWith((message) => updates(message as ReopenChatResponse))
+          as ReopenChatResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ReopenChatResponse() / ReopenChatResponse.new instead')
+  static ReopenChatResponse create() => ReopenChatResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ReopenChatResponse._();
+  @$core.override
+  ReopenChatResponse createEmptyInstance() => ReopenChatResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ReopenChatResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ReopenChatResponse>(
+          ReopenChatResponse.$_createMessage);
+  static ReopenChatResponse? _defaultInstance;
+}
+
 class GetMemoryRequest extends $pb.GeneratedMessage {
   factory GetMemoryRequest({
     $core.int? appPid,
@@ -9201,6 +9299,7 @@ class ChatStatus extends $pb.GeneratedMessage {
     $core.bool? canAskContext,
     $core.bool? asleep,
     $core.bool? canSleep,
+    $core.bool? reopenFailed,
   }) {
     final result = ChatStatus._();
     if (busy != null) result.busy = busy;
@@ -9213,6 +9312,7 @@ class ChatStatus extends $pb.GeneratedMessage {
     if (canAskContext != null) result.canAskContext = canAskContext;
     if (asleep != null) result.asleep = asleep;
     if (canSleep != null) result.canSleep = canSleep;
+    if (reopenFailed != null) result.reopenFailed = reopenFailed;
     return result;
   }
 
@@ -9239,6 +9339,7 @@ class ChatStatus extends $pb.GeneratedMessage {
     ..aOB(9, _omitFieldNames ? '' : 'canAskContext')
     ..aOB(10, _omitFieldNames ? '' : 'asleep')
     ..aOB(11, _omitFieldNames ? '' : 'canSleep')
+    ..aOB(12, _omitFieldNames ? '' : 'reopenFailed')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -9363,6 +9464,18 @@ class ChatStatus extends $pb.GeneratedMessage {
   $core.bool hasCanSleep() => $_has(9);
   @$pb.TagNumber(11)
   void clearCanSleep() => $_clearField(11);
+
+  /// No agent runs for the chat because its last reopen failed (a notice
+  /// says why); it isn't asleep. ReopenChat tries again; an agent that
+  /// becomes ready clears it where it wasn't (the next ReopenChat reopens).
+  @$pb.TagNumber(12)
+  $core.bool get reopenFailed => $_getBF(10);
+  @$pb.TagNumber(12)
+  set reopenFailed($core.bool value) => $_setBool(10, value);
+  @$pb.TagNumber(12)
+  $core.bool hasReopenFailed() => $_has(10);
+  @$pb.TagNumber(12)
+  void clearReopenFailed() => $_clearField(12);
 }
 
 /// A shell the user runs beside a chat, in the daemon.
@@ -15903,6 +16016,16 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, SleepChatRequest request) =>
       _client.invoke<SleepChatResponse>(
           ctx, 'NushiService', 'SleepChat', request, SleepChatResponse());
+
+  /// Says a chat is shown (selected, the app came to the front), or Try
+  /// again: a chat whose agent should run but doesn't is reopened, as
+  /// GetChat does, and one whose last reopen failed (status.reopen_failed)
+  /// tries again, once a call, unless what stopped it still holds (its
+  /// folder is gone, its agent isn't ready). A sleeping chat stays asleep.
+  $async.Future<ReopenChatResponse> reopenChat(
+          $pb.ClientContext? ctx, ReopenChatRequest request) =>
+      _client.invoke<ReopenChatResponse>(
+          ctx, 'NushiService', 'ReopenChat', request, ReopenChatResponse());
 
   /// The daemon's settings, and changing them.
   /// Says how much memory Nushi takes, as footprint (Activity Monitor's

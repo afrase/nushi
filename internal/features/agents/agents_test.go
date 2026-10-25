@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -94,11 +95,16 @@ func newService(agents []Agent, dir string, in Installer, chats Chats) *Service 
 	return s
 }
 
-type fakeChats struct{ awake, slept int }
+type fakeChats struct {
+	awake, slept int
+	ready        []string // the agents it was told are ready, in order
+}
 
 func (f *fakeChats) Awake(string) int { return f.awake }
 
 func (f *fakeChats) SleepAgent(string) { f.slept, f.awake = f.slept+f.awake, 0 }
+
+func (f *fakeChats) AgentReady(agent string) { f.ready = append(f.ready, agent) }
 
 // fakeInstaller installs a version: "1.0.0" without fail.
 type fakeInstaller struct {
@@ -125,7 +131,9 @@ func (f *fakeInstaller) Installed(folder, _, bin string) (string, string) {
 func (f *fakeInstaller) Remove(folder string) error { delete(f.versions, folder); return nil }
 
 // An agent with an adapter: not ready until it's set up; setting it up
-// puts its awake chats to sleep; a failed install says why; Remove.
+// puts its awake chats to sleep, and tells the chats it's ready; a failed
+// install says why; Remove; found ready again (Node back), the chats are
+// told again.
 func TestSetUp(t *testing.T) {
 	bin := t.TempDir()
 	fakeCLI(t, bin, "claude", "2.1.310")
@@ -148,12 +156,12 @@ func TestSetUp(t *testing.T) {
 		t.Errorf("Run before SetUp: %v", err)
 	}
 	in.fail = true
-	if err := svc.SetUp(context.Background(), "claude"); err == nil || chats.slept != 0 {
-		t.Errorf("a failed install: %v, %d slept", err, chats.slept)
+	if err := svc.SetUp(context.Background(), "claude"); err == nil || chats.slept != 0 || chats.ready != nil {
+		t.Errorf("a failed install: %v, %d slept, ready %q", err, chats.slept, chats.ready)
 	}
 	in.fail = false
-	if err := svc.SetUp(context.Background(), "claude"); err != nil || chats.slept != 2 {
-		t.Fatalf("SetUp: %v, %d slept", err, chats.slept)
+	if err := svc.SetUp(context.Background(), "claude"); err != nil || chats.slept != 2 || !slices.Equal(chats.ready, []string{"claude"}) {
+		t.Fatalf("SetUp: %v, %d slept, ready %q", err, chats.slept, chats.ready)
 	}
 	if st := svc.List(context.Background())[0]; !st.Ready || st.Installed != "1.0.0" || st.Program != filepath.Join(dir, "claude", "adapter") {
 		t.Errorf("after: %+v", st)
@@ -177,6 +185,13 @@ func TestSetUp(t *testing.T) {
 	}
 	if _, err := svc.Run("claude"); err == nil {
 		t.Error("Run without Node")
+	}
+	chats.ready = nil
+	fakeCLI(t, bin, "node", "v26.1.0")
+	svc.List(context.Background())
+	svc.List(context.Background())
+	if !slices.Equal(chats.ready, []string{"claude"}) {
+		t.Errorf("found ready again: told %q", chats.ready)
 	}
 }
 

@@ -64,6 +64,7 @@ type Service struct {
 
 	mu    sync.Mutex
 	found map[string]string // each agent as last logged
+	ready map[string]bool   // each agent's Ready, as last found
 }
 
 func New(agents []Agent, probe Probe, dir string, installer Installer) *Service {
@@ -85,14 +86,25 @@ func (s *Service) List(ctx context.Context) []Status {
 	return out
 }
 
-// logFound logs each agent found, when it changed since the last time.
+// logFound logs each agent found, when it changed since the last time,
+// and tells the chats of each one found ready where it wasn't.
 func (s *Service) logFound(found []Status) {
+	var ready []string
+	defer func() {
+		for _, name := range ready {
+			s.chats.AgentReady(name)
+		}
+	}()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.found == nil {
-		s.found = map[string]string{}
+		s.found, s.ready = map[string]string{}, map[string]bool{}
 	}
 	for _, st := range found {
+		if st.Ready && !s.ready[st.Name] {
+			ready = append(ready, st.Name)
+		}
+		s.ready[st.Name] = st.Ready
 		args := []any{"agent", st.Name, "path", st.Path, "version", st.Version, "problem", st.Problem, "signed_in", st.SignedIn,
 			"adapter", st.Installed, "pinned", st.Pinned, "ready", st.Ready}
 		if line := fmt.Sprint(args...); s.found[st.Name] != line {

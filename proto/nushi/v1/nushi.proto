@@ -70,6 +70,12 @@ service NushiService {
   // stays, its transcript too. A message, or anything else that needs the
   // agent, reopens the session (ACP session/load); opening it doesn't.
   rpc SleepChat(SleepChatRequest) returns (SleepChatResponse);
+  // Says a chat is shown (selected, the app came to the front), or Try
+  // again: a chat whose agent should run but doesn't is reopened, as
+  // GetChat does, and one whose last reopen failed (status.reopen_failed)
+  // tries again, once a call, unless what stopped it still holds (its
+  // folder is gone, its agent isn't ready). A sleeping chat stays asleep.
+  rpc ReopenChat(ReopenChatRequest) returns (ReopenChatResponse);
   // The daemon's settings, and changing them.
   // Says how much memory Nushi takes, as footprint (Activity Monitor's
   // Memory), in bytes: a few milliseconds' work.
@@ -605,6 +611,12 @@ message SleepChatRequest {
 
 message SleepChatResponse {}
 
+message ReopenChatRequest {
+  string chat_id = 1;
+}
+
+message ReopenChatResponse {}
+
 message GetMemoryRequest {
   // The asking app's process, to read along; 0 for none.
   int32 app_pid = 1;
@@ -1023,7 +1035,10 @@ enum ItemKind {
   ITEM_KIND_PLAN = 7;
   // How a turn ended when it didn't end normally, or an error: status is
   // "cancelled", "refusal", "max_tokens", "max_turn_requests" or "error",
-  // and text says it in words.
+  // and text says it in words. A reopen that failed has one notice, which
+  // goes once the chat runs again: "not_ready" (its agent isn't set up or
+  // installed: Settings › Agents), "folder_gone" (MoveChat), or
+  // "reopen_failed" (ReopenChat tries again).
   ITEM_KIND_NOTICE = 8;
 }
 
@@ -1191,6 +1206,10 @@ message ChatStatus {
   // SleepChat can put it to sleep: its agent runs and can reopen the
   // session.
   bool can_sleep = 11;
+  // No agent runs for the chat because its last reopen failed (a notice
+  // says why); it isn't asleep. ReopenChat tries again; an agent that
+  // becomes ready clears it where it wasn't (the next ReopenChat reopens).
+  bool reopen_failed = 12;
 }
 
 // A shell the user runs beside a chat, in the daemon.

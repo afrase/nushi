@@ -30,7 +30,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 53
+const Version = 54
 
 // Build is the daemon's executable as it started (PingResponse.build).
 var Build = func() string {
@@ -347,6 +347,13 @@ func (s *server) SleepChat(_ context.Context, req *connect.Request[nushiv1.Sleep
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
 	return connect.NewResponse(&nushiv1.SleepChatResponse{}), nil
+}
+
+func (s *server) ReopenChat(_ context.Context, req *connect.Request[nushiv1.ReopenChatRequest]) (*connect.Response[nushiv1.ReopenChatResponse], error) {
+	if err := s.chats.Reopen(req.Msg.ChatId); err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, err)
+	}
+	return connect.NewResponse(&nushiv1.ReopenChatResponse{}), nil
 }
 
 func (s *server) GetMemory(_ context.Context, req *connect.Request[nushiv1.GetMemoryRequest]) (*connect.Response[nushiv1.GetMemoryResponse], error) {

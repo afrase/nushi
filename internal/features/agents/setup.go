@@ -52,10 +52,12 @@ type Installer interface {
 }
 
 // Chats are the chats feature: an agent's awake chats, which sleep before
-// its adapter changes under them.
+// its adapter changes under them, and those that couldn't start it, told
+// when it's ready.
 type Chats interface {
 	Awake(agent string) int
 	SleepAgent(agent string)
+	AgentReady(agent string)
 }
 
 // installTimeout bounds an install.
@@ -84,6 +86,9 @@ func (s *Service) SetUp(ctx context.Context, name string) error {
 		log.Error("adapter not set up", "err", err)
 	} else {
 		log.Info("adapter set up", "folder", s.folder(name))
+		if _, err := s.Run(name); err == nil {
+			s.chats.AgentReady(name)
+		}
 	}
 	return err
 }
