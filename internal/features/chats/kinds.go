@@ -25,6 +25,10 @@ type Kind struct {
 	// DeleteArchives says its session/delete archives a session rather
 	// than deleting it.
 	DeleteArchives bool
+	// OpenElsewhere returns its sessions that a process of its own holds
+	// open now, one Nushi didn't start (a terminal's): by session id, where
+	// ("a terminal"). nil when that can't be told.
+	OpenElsewhere func() map[string]string
 }
 
 // kind is a Kind the service runs.

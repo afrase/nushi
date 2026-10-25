@@ -102,7 +102,8 @@ func run() error {
 			Shell: claude.Shell, ReadShell: claude.ReadShell,
 			SubagentID: claude.SubagentID, Relay: claude.Relay, Relayed: claude.Relayed, Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle,
 			ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete},
-		History: func(id, from, to string) (func() error, error) { return claudehistory.Copy(projects, id, from, to) }}
+		History:       func(id, from, to string) (func() error, error) { return claudehistory.Copy(projects, id, from, to) },
+		OpenElsewhere: claudehistory.Open}
 	codexKind := chats.Kind{Name: "codex", Title: "Codex", Resume: codex.Resume, History: codex.History, DeleteArchives: codex.DeleteArchives,
 		Launch:  func(h acp.Handler) (chats.Agent, error) { return codex.Start(dir, h) },
 		Dialect: chats.Dialect{ForkAt: codex.ForkAt, ToolCall: codex.ToolCall, Other: codex.Other}}
@@ -123,7 +124,7 @@ func run() error {
 	// paired device's channel (ADR 0034).
 	sv := api.Services{Chats: chatSvc, MCP: mcp.New(claudemcp.Claude{}, chatSvc.MCPChanged), Terms: termSvc,
 		Trust: trust.New(map[string]trust.Agent{"claude": claudetrust.Trust{}, "codex": codextrust.Trust{}, "ante": antetrust.Trust{}, "omp": omptrust.Trust{}}, st),
-		Hub: hub, Memory: memory.New(chatSvc)}
+		Hub:   hub, Memory: memory.New(chatSvc)}
 	channels := newChannels()
 	if sv.Remote, err = remote.New(st, &relay.Dialer{Proxies: sysproxy.For}, channels.serve, keepAwake, hub.Publish); err != nil {
 		return err

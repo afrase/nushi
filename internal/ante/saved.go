@@ -193,31 +193,40 @@ func slicesIndex(s []string, v string) int {
 }
 
 // list reads Ante's saved sessions (it has no op for them): each one's
-// meta.json, newest first, only those in cwd when given.
+// meta.json, newest first, only those in cwd when given (links resolved on
+// both sides: a terminal's Ante keeps the real path), with how many
+// messages each has.
 func (b *bridge) list(cwd string) acp.ListSessionsResponse {
 	out := acp.ListSessionsResponse{Sessions: []acp.SessionInfo{}}
+	cwd = realPath(cwd)
 	dirs, _ := os.ReadDir(filepath.Join(b.home, "sessions"))
 	for _, d := range dirs {
 		raw, err := os.ReadFile(filepath.Join(b.home, "sessions", d.Name(), "meta.json"))
 		var m struct {
 			ID, Dir, Title string
+			First          string `json:"first_user_message"`
+			Messages       int    `json:"message_count"`
 			Active         string `json:"last_active_time"`
 		}
-		if err != nil || json.Unmarshal(raw, &m) != nil || !isSessionID(m.ID) || cwd != "" && m.Dir != cwd {
+		if err != nil || json.Unmarshal(raw, &m) != nil || !isSessionID(m.ID) || cwd != "" && realPath(m.Dir) != cwd {
 			continue
 		}
-		title := m.Title
-		if title == "" {
-			var f struct {
-				First string `json:"first_user_message"`
-			}
-			json.Unmarshal(raw, &f)
-			title = f.First
+		info := acp.SessionInfo{SessionID: acp.SessionID(m.ID), Cwd: m.Dir, Title: cmp(m.Title, m.First), UpdatedAt: m.Active}
+		if m.Messages > 0 {
+			info.Meta = map[string]any{"messageCount": m.Messages}
 		}
-		out.Sessions = append(out.Sessions, acp.SessionInfo{SessionID: acp.SessionID(m.ID), Cwd: m.Dir, Title: title, UpdatedAt: m.Active})
+		out.Sessions = append(out.Sessions, info)
 	}
 	sort.Slice(out.Sessions, func(i, j int) bool { return out.Sessions[i].UpdatedAt > out.Sessions[j].UpdatedAt })
 	return out
+}
+
+// realPath is path with its links resolved, or as it is when it can't be.
+func realPath(path string) string {
+	if real, err := filepath.EvalSymlinks(path); err == nil && path != "" {
+		return real
+	}
+	return path
 }
 
 // delete removes a saved session: its folder, as Ante has no op for it,
