@@ -184,14 +184,16 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
   }
 }
 
-/// Scrolling as in a native macOS view: rubber-banding at the ends, and a
-/// thin overlay scrollbar that shows while scrolling, then fades.
+/// Scrolling everywhere in the app: no rubber-banding at the ends (a list
+/// stops at its top and bottom, a chat's transcript too), and a thin
+/// overlay scrollbar that shows while scrolling, then fades, as in a native
+/// macOS view.
 class NativeScroll extends MaterialScrollBehavior {
   const new();
 
   @override
   ScrollPhysics getScrollPhysics(BuildContext context) =>
-      const BouncingScrollPhysics(parent: RangeMaintainingScrollPhysics());
+      const ClampingScrollPhysics(parent: RangeMaintainingScrollPhysics());
 
   @override
   Widget buildScrollbar(

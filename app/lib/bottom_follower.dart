@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 
 /// Keeps a list scrolled to its bottom ([following]) until the user
 /// scrolls up, however little, and again once it is back at the bottom (by
-/// a drag, a fling or a bounce). The list's notifications go to
+/// a drag or a fling). The list's notifications go to
 /// [onNotification]; [stick] after a build.
 class BottomFollower extends ChangeNotifier {
   final scroll = ScrollController();
@@ -28,7 +28,6 @@ class BottomFollower extends ChangeNotifier {
   void stick() => WidgetsBinding.instance.addPostFrameCallback((_) {
     if (!following || !scroll.hasClients) return;
     final p = scroll.position;
-    // At the bottom, or bouncing past it.
     if (p.pixels >= p.maxScrollExtent) return;
     _jumping = true;
     p.jumpTo(p.maxScrollExtent);
@@ -37,8 +36,7 @@ class BottomFollower extends ChangeNotifier {
 
   /// Takes the list's notifications. Only the user's scrolls of the list
   /// itself count, not those of what's in it (a wide code block). A drag's
-  /// fling and the spring back from past the bottom move the list too, but
-  /// aren't the user scrolling up.
+  /// fling moves the list too, but isn't the user scrolling up.
   bool onNotification(Notification n) {
     if (n is ScrollMetricsNotification && n.depth == 0) {
       // At the bottom (all of it fits, say): following again.
@@ -50,9 +48,7 @@ class BottomFollower extends ChangeNotifier {
       final m = n.metrics;
       // A wheel's scroll (no drag), or a drag itself, not its fling.
       final user = n.dragDetails != null || !_dragged;
-      if (m.pixels > m.maxScrollExtent) {
-        // Past the bottom, bouncing: nothing to decide yet.
-      } else if (m.pixels >= m.maxScrollExtent - 1) {
+      if (m.pixels >= m.maxScrollExtent - 1) {
         _set(true);
       } else if ((n.scrollDelta ?? 0) < 0 && user) {
         _set(false);
