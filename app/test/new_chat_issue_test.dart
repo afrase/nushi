@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/inline_edit.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar.dart';
 import 'package:nushi/theme/theme.dart';
@@ -204,6 +205,12 @@ void main() {
     await _key(tester, LogicalKeyboardKey.keyI);
     await _key(tester, LogicalKeyboardKey.enter); // the first looked at
     await _key(tester, LogicalKeyboardKey.keyB);
+    // The field has the keys at once (not the dialog's list).
+    expect(
+      FocusManager.instance.primaryFocus?.context
+          ?.findAncestorWidgetOfExactType<InlineEdit>(),
+      isNotNull,
+    );
     await tester.enterText(find.byType(TextField), 'me/ACME-12-passkeys');
     await _key(tester, LogicalKeyboardKey.enter); // the field's, not a start
     await tester.testTextInput.receiveAction(TextInputAction.done);
@@ -211,7 +218,11 @@ void main() {
     expect(fake.started, isEmpty);
     expect(find.text('me/ACME-12-passkeys'), findsOneWidget);
     await _key(tester, LogicalKeyboardKey.enter);
-    expect(fake.started.last.branch, 'me/ACME-12-passkeys');
+    // The worktree stays on.
+    expect(
+      (fake.started.last.branch, fake.started.last.worktree),
+      ('me/ACME-12-passkeys', true),
+    );
 
     await _open(tester);
     await _key(tester, LogicalKeyboardKey.keyI);
