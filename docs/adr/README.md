@@ -2,7 +2,7 @@
 
 - [0001](0001-chat-wrangler-and-diff-viewer.md) Nushi is a chat wrangler and a very good diff viewer
 - [0002](0002-separate-daemon.md) A separate Go daemon runs the agents; Flutter is the window
-- [0003](0003-acp-v1-own-client.md) Agents speak ACP v1 through our own small client
+- [0003](0003-acp-v1-own-client.md) Agents speak ACP v1 through our own small client (it became a library: 0041)
 - [0004](0004-connect-over-unix-socket.md) Connect RPC over a Unix socket, additive changes only; a newer app asks for a daemon restart
 - [0005](0005-clients-authenticate.md) Clients authenticate with a token from the start
 - [0006](0006-remote-through-relay.md) Remote access later, through an end-to-end encrypted relay (replaced by 0033 and 0034)
@@ -40,3 +40,4 @@
 - [0038](0038-logs-you-can-debug-from.md) Logs you can debug from: slog's text format, a line per thing that happened with the chat's attributes, rotated by the daemon, the app's errors in it; never what the user wrote
 - [0039](0039-our-own-bridge-for-pig.md) PiG runs through an ACP bridge of Nushi's own (`nushid pig-acp`) on its RPC mode, not `pig-acp`; no trust card (PiG's own trust gates what a folder loads)
 - [0040](0040-strict-linting.md) Strict linting: every golangci-lint linter on unless listed off with why, pinned in `tools/lint/go.mod`; strict Dart analysis; `make lint`, `make check` and CI
+- [0041](0041-acp-through-acp-go.md) Agents speak ACP through `github.com/afrase/acp-go`, Nushi's client grown into a library of its own; Nushi uses its unstable package at a tagged version; what is Nushi's (logging, the fake agent) stays in Nushi

@@ -30,9 +30,10 @@ The daemon keeps its socket, token and log in `~/Library/Application Support/Nus
 
 ## Development
 
-`make lint` runs golangci-lint (with gofmt and goimports), `buf lint` and `buf format`, and `flutter analyze` and `dart format` for the app and each package; `make check` runs it and then the tests, as CI does (`.github/workflows/ci.yml`: macOS for everything, Linux for `acp`, `relay` and `noiseconn`).
+`make lint` runs golangci-lint (with gofmt and goimports), `buf lint` and `buf format`, and `flutter analyze` and `dart format` for the app and each package; `make check` runs it and then the tests, as CI does (`.github/workflows/ci.yml`: macOS for everything, Linux for `relay` and `noiseconn`).
 
-- **Go:** golangci-lint is pinned in its own module, `tools/lint/go.mod`, and runs through `go tool -modfile=tools/lint/go.mod golangci-lint`: nothing to install, and the daemon's `go.mod` doesn't take its dependencies. `.golangci.yml` turns every linter on and lists each one off with the reason. To format: `go tool -modfile=tools/lint/go.mod golangci-lint fmt ./...`.
+- **Go:** golangci-lint is pinned in its own module, `tools/lint/go.mod`; `make lint` builds it into `bin/golangci-lint` and runs that: nothing to install, and the daemon's `go.mod` doesn't take its dependencies. `.golangci.yml` turns every linter on and lists each one off with the reason. To format: `bin/golangci-lint fmt ./...`.
+- **ACP:** agents are spoken to through the library `github.com/afrase/acp-go` (its `unstable` package), at the version in `go.mod` ([ADR 0041](docs/adr/0041-acp-through-acp-go.md)). To change it and Nushi at once, clone it beside Nushi and run `go work init . ../acp-go` here: the `go.work` (ignored by git) makes Nushi build with your checkout. Remove it to build with the tagged version again; then `go get github.com/afrase/acp-go@vX.Y.Z` once the library has the release you need.
 - **Dart:** `analysis_options.yaml` at the root (strict casts, inference and raw types, and lint rules on top of `flutter_lints`) is included by the app and every package. `dart fix --apply` in a package fixes much of what it reports.
 - A report that's wrong for one line takes `//nolint:<linter> // <why>` (nolintlint refuses one without both), or `// ignore: <rule>` under a comment saying why in Dart. NOTES.md says when to exclude by path instead.
 
