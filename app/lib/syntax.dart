@@ -74,8 +74,10 @@ List<Uint32List?>? _lines(Highlight h, String language, String text) {
   if (text.length > _maxText) return null;
   final spans = _Spans();
   h.highlight(code: text, language: language).render(spans);
-  final s = spans.out, out = <Uint32List?>[];
-  var start = 0, k = 0;
+  final s = spans.out;
+  final out = <Uint32List?>[];
+  var start = 0;
+  var k = 0;
   for (final line in text.split('\n')) {
     final end = start + line.length;
     while (k < s.length && s[k] + s[k + 1] <= start) {
@@ -83,7 +85,8 @@ List<Uint32List?>? _lines(Highlight h, String language, String text) {
     }
     final mine = <int>[];
     for (var j = k; j < s.length && s[j] < end; j += 3) {
-      final a = max(s[j], start), b = min(s[j] + s[j + 1], end);
+      final a = max(s[j], start);
+      final b = min(s[j] + s[j + 1], end);
       if (b > a) mine.addAll([a - start, b - a, s[j + 2]]);
     }
     out.add(mine.isEmpty ? null : Uint32List.fromList(mine));

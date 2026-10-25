@@ -47,7 +47,8 @@ class ChangeSpan {
   /// Reads [chat]'s folder. The scope is the one picked for the chat, else
   /// Branch when the branch has commits of its own, else Uncommitted.
   static Future<ChangeSpan> of(Daemon daemon, ChatState chat) async {
-    final client = daemon.client, folder = chat.folder;
+    final client = daemon.client;
+    final folder = chat.folder;
     var wtBase = chat.worktree?.base ?? '';
     GetFolderStatusResponse status;
     try {

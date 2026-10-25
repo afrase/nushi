@@ -56,7 +56,8 @@ class _ReplyCardState extends State<_ReplyCard> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final r = widget.reply;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),

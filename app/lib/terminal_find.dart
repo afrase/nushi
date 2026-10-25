@@ -22,7 +22,8 @@ String clickTarget(Terminal terminal, CellOffset at) =>
 String wordAt(Terminal terminal, CellOffset at) {
   if (at.y < 0 || at.y >= terminal.buffer.lines.length) return '';
   final line = terminal.buffer.lines[at.y];
-  final left = line.getText(0, at.x), right = line.getText(at.x);
+  final left = line.getText(0, at.x);
+  final right = line.getText(at.x);
   final start = left.lastIndexOf(_stop) + 1;
   final end = right.indexOf(_stop);
   return left.substring(start) + (end < 0 ? right : right.substring(0, end));
@@ -106,7 +107,8 @@ class _FindBarState extends State<FindBar> {
     setState(() {});
     final scroll = _s.scroll;
     if (_matches.isEmpty || !scroll.hasClients) return;
-    final style = terminalStyle(), lineHeight = style.fontSize * style.height;
+    final style = terminalStyle();
+    final lineHeight = style.fontSize * style.height;
     final y = _matches[_current].range.begin.y - _s.terminal.viewHeight / 2;
     final p = scroll.position;
     scroll.jumpTo((y * lineHeight).clamp(0, p.maxScrollExtent));
@@ -120,7 +122,8 @@ class _FindBarState extends State<FindBar> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     return Container(
       width: 280,
       padding: const EdgeInsets.fromLTRB(10, 4, 4, 4),

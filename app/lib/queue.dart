@@ -22,7 +22,8 @@ class QueuePills extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Wrap(

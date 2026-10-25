@@ -11,8 +11,8 @@ class DoubleClick {
 
   /// Notes a click; true when it is the second of two.
   bool call() {
-    final now = DateTime.now(),
-        second = now.difference(_last) < kDoubleTapTimeout;
+    final now = DateTime.now();
+    final second = now.difference(_last) < kDoubleTapTimeout;
     _last = now;
     return second;
   }

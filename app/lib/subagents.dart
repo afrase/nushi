@@ -167,7 +167,8 @@ class SubagentLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final failed = s.call.subagent.state == 'failed';
     return ValueListenableBuilder(
       valueListenable: chat.pane,
@@ -216,7 +217,8 @@ class SubagentLine extends StatelessWidget {
 
 /// "Explore: find the scroll handling", the type in bold, on one line.
 Widget subagentName(BuildContext context, SubagentRun s, {double size = 13}) {
-  final theme = NushiTheme.of(context), t = theme.t;
+  final theme = NushiTheme.of(context);
+  final t = theme.t;
   return Text.rich(
     TextSpan(
       children: [

@@ -29,7 +29,8 @@ class FakeDaemon implements Transport {
 
   /// What ListAgents answers; the agents set up and removed.
   List<Agent> agents = readyAgents();
-  final setUp = <String>[], removed = <String>[];
+  final setUp = <String>[];
+  final removed = <String>[];
   final started = <StartChatRequest>[];
 
   /// What GetSettings answers, and each SetSettings.

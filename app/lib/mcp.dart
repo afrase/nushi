@@ -29,7 +29,8 @@ class McpView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final list = McpServers.of(daemon, folder);
     final (name, dir) = folderParts(
       folder,
@@ -127,11 +128,14 @@ class _Group extends StatelessWidget {
   const new(this.list, this.scope, this.title, this.about);
 
   final McpServers list;
-  final String scope, title, about;
+  final String scope;
+  final String title;
+  final String about;
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final servers = list.servers.where((s) => s.scope == scope).toList();
     final muted = theme.ui(t.textMuted, size: 12);
     // Plugins' servers and connectors come with the check.
@@ -193,7 +197,8 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final c = config(server);
     final hidden = secrets(c);
     final dim = shadowedBy != null;

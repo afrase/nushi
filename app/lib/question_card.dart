@@ -192,7 +192,8 @@ class _QuestionCardState extends State<QuestionCard> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final item = widget.item;
     if (item.status != 'pending') return AnsweredQuestion(item);
     return Focus(

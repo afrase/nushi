@@ -134,7 +134,8 @@ class _DeleteDialogState extends State<_DeleteDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final name = widget.chat.agentName;
     final resume = widget.chat.resume.isEmpty
         ? '$name’s resume'

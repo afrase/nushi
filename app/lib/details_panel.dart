@@ -130,7 +130,8 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
       ListenableBuilder(listenable: chat, builder: (context, _) => _panel());
 
   Widget _panel() {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final u = chat.usage;
     final status = _status;
     final muted = theme.ui(t.textMuted, size: 12);

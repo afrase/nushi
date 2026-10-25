@@ -157,7 +157,8 @@ class Button extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final enabled = onPressed != null;
     final (Color? bg, Color fg, Color? border) = switch (kind) {
       ButtonKind.primary => (t.accent, t.onAccent, null),
@@ -279,7 +280,8 @@ class Segmented<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     return Container(
       padding: const EdgeInsets.all(2),
       decoration: box(t.borderSubtle, fill: t.base, radius: NushiTheme.control),
@@ -329,7 +331,8 @@ class FullTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(

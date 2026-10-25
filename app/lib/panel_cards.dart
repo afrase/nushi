@@ -67,7 +67,8 @@ class PanelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final muted = theme.ui(t.textMuted, size: 12);
     return ValueListenableBuilder(
       valueListenable: collapsedCards,

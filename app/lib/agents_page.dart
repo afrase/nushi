@@ -86,8 +86,10 @@ class AgentRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
-    final a = agent, ad = a.hasAdapter() ? a.adapter : null;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    final a = agent;
+    final ad = a.hasAdapter() ? a.adapter : null;
     final installed = a.path.isNotEmpty;
     final muted = theme.ui(t.textMuted, size: 12);
     final found = [
@@ -161,8 +163,8 @@ class AgentRow extends StatelessWidget {
           ),
       ];
     }
-    final setUp = ad.installed.isEmpty,
-        update = !setUp && ad.installed != ad.pinned;
+    final setUp = ad.installed.isEmpty;
+    final update = !setUp && ad.installed != ad.pinned;
     return [
       if (!setUp)
         Button(
@@ -250,8 +252,10 @@ class _SetUpState extends State<_SetUp> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
-    final a = knownAgents[widget.agent.name] ?? widget.agent, ad = a.adapter;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    final a = knownAgents[widget.agent.name] ?? widget.agent;
+    final ad = a.adapter;
     final update = ad.installed.isNotEmpty;
     return PopScope(
       canPop: !_working,
@@ -309,7 +313,8 @@ Future<bool> _confirmRemove(
 ) async {
   await listAgents(client).catchError((_) {});
   if (!context.mounted) return false;
-  final a = knownAgents[agent.name] ?? agent, ad = a.adapter;
+  final a = knownAgents[agent.name] ?? agent;
+  final ad = a.adapter;
   return await confirm(
     context,
     "Remove ${a.title}'s adapter?",

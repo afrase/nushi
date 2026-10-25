@@ -17,7 +17,8 @@ class CommentCard extends StatefulWidget {
   });
 
   final ReviewComment comment;
-  final VoidCallback onEdit, onRemove;
+  final VoidCallback onEdit;
+  final VoidCallback onRemove;
 
   @override
   State<CommentCard> createState() => _CommentCardState();
@@ -28,7 +29,8 @@ class _CommentCardState extends State<CommentCard> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final c = widget.comment;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
@@ -133,7 +135,8 @@ class _CommentBoxState extends State<CommentBox> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     return _Inlay(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

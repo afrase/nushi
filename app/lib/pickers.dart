@@ -30,7 +30,8 @@ class Pickers extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     ConfigOption? of(String category) =>
         options.where((o) => o.category == category).firstOrNull;
     final mode = of('mode');

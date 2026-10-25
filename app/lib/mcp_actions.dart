@@ -65,7 +65,8 @@ class _McpActionsState extends State<McpActions> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final daemon = list.daemon;
     final project = server.scope == 'project';
     final remote = config(server)['url'] != null;

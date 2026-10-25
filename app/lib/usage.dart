@@ -42,8 +42,10 @@ class ContextMeter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (usage.contextSize == 0) return const SizedBox.shrink();
-    final theme = NushiTheme.of(context), t = theme.t;
-    final fill = _fill(usage), color = _color(t, fill);
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    final fill = _fill(usage);
+    final color = _color(t, fill);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -82,7 +84,8 @@ class ContextUsed extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (usage.contextSize == 0) return const SizedBox.shrink();
-    final theme = NushiTheme.of(context), fill = _fill(usage);
+    final theme = NushiTheme.of(context);
+    final fill = _fill(usage);
     return Text(
       '${(fill * 100).round()}% used',
       style: theme.ui(_color(theme.t, fill), size: 12),
@@ -98,7 +101,8 @@ class UsageBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = NushiTheme.of(context).t, fill = _fill(usage);
+    final t = NushiTheme.of(context).t;
+    final fill = _fill(usage);
     return Container(
       height: 8,
       clipBehavior: Clip.antiAlias,
@@ -135,7 +139,8 @@ class ContextBreakdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final palette = [
       t.accent,
       t.function,

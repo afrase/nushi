@@ -100,7 +100,8 @@ class _SettingsState extends State<_Settings> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     Widget row(String label, Widget control) => Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Row(

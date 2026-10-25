@@ -92,7 +92,8 @@ class FolderButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final enabled = !chat.archived && !chat.busy && !chat.waiting;
     final (name, parent) = folderParts(chat.home, scratch: chat.scratch);
     final nameStyle = theme.ui(t.text, size: 12, weight: FontWeight.w500);

@@ -42,7 +42,8 @@ class _ChatHeaderState extends State<ChatHeader> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final chat = widget.chat;
     final meta = theme.ui(t.textSecondary, size: 12);
     final model = chat.config.where((o) => o.category == 'model').firstOrNull;
@@ -78,7 +79,8 @@ class _ChatHeaderState extends State<ChatHeader> {
     required double titleMax,
     required double modelMax,
   }) {
-    final t = NushiTheme.of(context).t, theme = NushiTheme.of(context);
+    final t = NushiTheme.of(context).t;
+    final theme = NushiTheme.of(context);
     final chat = widget.chat;
     return Container(
       height: 34,

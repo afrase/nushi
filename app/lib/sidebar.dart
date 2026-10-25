@@ -46,7 +46,8 @@ class _SidebarState extends State<Sidebar> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final groups = <String, List<ChatState>>{};
     final byNewest = widget.daemon.chats.values.toList()
       ..sort((a, b) => b.created.compareTo(a.created));
@@ -143,7 +144,8 @@ class _McpButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final open = daemon.mcpFolder != null;
     return Container(
       padding: const EdgeInsets.all(6),
@@ -181,7 +183,8 @@ class _FolderHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final (name, parent) = folder.isEmpty
         ? ('No folder', '')
         : folderParts(folder);
@@ -253,7 +256,8 @@ class _ChatRowState extends State<_ChatRow> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final chat = widget.chat;
     final daemon = widget.daemon;
     return ListenableBuilder(

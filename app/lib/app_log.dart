@@ -33,7 +33,8 @@ class AppLog {
 
   // At most _burst lines, then one every _every: an error each frame
   // can't flood the log. What's dropped is counted on the next line.
-  static const _burst = 20, _every = Duration(seconds: 3);
+  static const _burst = 20;
+  static const _every = Duration(seconds: 3);
   double _tokens = _burst.toDouble();
   DateTime _last = DateTime.now();
   int _dropped = 0;
@@ -128,7 +129,8 @@ class AppLog {
 /// [t] as Go's slog writes it: 2026-10-25T15:16:55.513+09:00.
 String timestamp(DateTime t) {
   String two(int n) => '$n'.padLeft(2, '0');
-  final o = t.timeZoneOffset, sign = o.isNegative ? '-' : '+';
+  final o = t.timeZoneOffset;
+  final sign = o.isNegative ? '-' : '+';
   final date = '${t.year}-${two(t.month)}-${two(t.day)}';
   final time = '${two(t.hour)}:${two(t.minute)}:${two(t.second)}';
   final ms = '${t.millisecond}'.padLeft(3, '0');

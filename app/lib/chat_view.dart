@@ -151,7 +151,8 @@ class _ChatViewState extends State<ChatView> {
   /// Beside the transcript: the side question when one is open, else a
   /// subagent's pane when one is open, else [ChatView.details].
   Widget? _beside(BoxConstraints box) {
-    final chat = widget.chat, side = chat.side;
+    final chat = widget.chat;
+    final side = chat.side;
     if (side != null && !chat.archived) {
       return Resizable(
         name: 'side',
@@ -171,7 +172,8 @@ class _ChatViewState extends State<ChatView> {
     return ListenableBuilder(
       listenable: Listenable.merge([chat.pane, subagentWide]),
       builder: (context, _) {
-        final id = chat.pane.value, wide = subagentWide.value;
+        final id = chat.pane.value;
+        final wide = subagentWide.value;
         return Row(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -244,7 +246,8 @@ class _Archived extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     return Container(
       decoration: BoxDecoration(
         color: t.raised,
@@ -287,7 +290,8 @@ class _McpChanged extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
       child: Row(

@@ -233,7 +233,8 @@ class _ComposerState extends State<Composer> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final chat = widget.chat;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),

@@ -39,7 +39,8 @@ class _FormState extends State<_Form> {
   final _command = TextEditingController();
   final _args = TextEditingController(); // one per line
   final _url = TextEditingController();
-  final _env = Pairs(), _headers = Pairs();
+  final _env = Pairs();
+  final _headers = Pairs();
   Map<String, dynamic> _extra = {}; // what the form doesn't show
   bool _asJson = false;
   final _json = TextEditingController();
@@ -158,7 +159,9 @@ class _FormState extends State<_Form> {
       return;
     }
     setState(() => _saving = true);
-    final l = widget.list, json = jsonEncode(c), name = _nameCtl.text;
+    final l = widget.list;
+    final json = jsonEncode(c);
+    final name = _nameCtl.text;
     try {
       if (_editing) {
         await l.daemon.client.editMcpServer(
@@ -193,7 +196,8 @@ class _FormState extends State<_Form> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final muted = theme.ui(t.textMuted, size: 12);
     final mono = theme.code(t.text, size: 12);
     final stdio = _transport == 'stdio';

@@ -23,7 +23,8 @@ List<(String?, Widget)> worktreeRows(
   Daemon daemon,
   String branch,
 ) {
-  final theme = NushiTheme.of(context), t = theme.t;
+  final theme = NushiTheme.of(context);
+  final t = theme.t;
   final wt = chat.worktree;
   final code = theme.code(t.text, size: 12);
   final offer = !chat.archived;
@@ -125,7 +126,8 @@ class _NewChatBarState extends State<NewChatBar> with FollowsChanges {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final on = chat.worktree != null;
     final color = on ? t.accent : t.textSecondary;
     return Row(
@@ -197,7 +199,8 @@ class WorktreeChoices extends StatelessWidget {
   });
 
   final WorktreePlan plan;
-  final bool remove, branch;
+  final bool remove;
+  final bool branch;
   final void Function({required bool remove, required bool branch}) onChanged;
 
   /// The choices that start on for [plan]: (remove, branch).
@@ -222,7 +225,8 @@ class WorktreeChoices extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final wt = plan.worktree;
     final st = plan.state;
     final base = wt.base;

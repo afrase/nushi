@@ -58,7 +58,8 @@ class _StatusBarState extends State<StatusBar> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final small = theme.ui(t.textSecondary, size: 11.5);
     // The chat list is the daemon's; each chat's status is its own.
     return ListenableBuilder(
@@ -142,7 +143,8 @@ class _MemoryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final agents = m.chats.values.fold(0, (a, n) => a + n.toInt());
     final nushi = (m.daemon + m.app).toInt();
     final total = agents + nushi + m.other.toInt();

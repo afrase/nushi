@@ -20,12 +20,15 @@ class QuestionOption extends StatelessWidget {
 
   final Option option;
   final String? digit;
-  final bool many, picked, at;
+  final bool many;
+  final bool picked;
+  final bool at;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     return Tap(
       onTap: onTap,
       selected: at,
