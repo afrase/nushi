@@ -10,7 +10,7 @@ import (
 func TestForked(t *testing.T) {
 	root := t.TempDir()
 	dir := filepath.Join(root, "--work--")
-	os.MkdirAll(dir, 0o700)
+	noErr(t, os.MkdirAll(dir, 0o700))
 	write := func(id, header string) {
 		body := `{"type":"title","v":1,"title":""}` + "\n" + header + "\n"
 		if err := os.WriteFile(filepath.Join(dir, "2026-10-25T00-14-05-823Z_"+id+".jsonl"), []byte(body), 0o600); err != nil {
@@ -26,10 +26,11 @@ func TestForked(t *testing.T) {
 
 func TestHeld(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "a.lock"), nil, 0o600)
-	os.WriteFile(filepath.Join(dir, "b.lock"), nil, 0o600)
-	f, _ := os.Open(filepath.Join(dir, "a.lock"))
-	defer f.Close()
+	noErr(t, os.WriteFile(filepath.Join(dir, "a.lock"), nil, 0o600))
+	noErr(t, os.WriteFile(filepath.Join(dir, "b.lock"), nil, 0o600))
+	f, err := os.Open(filepath.Join(dir, "a.lock"))
+	noErr(t, err)
+	t.Cleanup(func() { _ = f.Close() })
 	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
 		t.Fatal(err)
 	}

@@ -99,8 +99,8 @@ func start(t *testing.T, store *antetest.Store) *client {
 	spawn := func(string) (io.WriteCloser, io.Reader, func(), error) { //nolint:unparam // a Spawn, which can fail
 		inR, inW := io.Pipe()
 		outR, outW := io.Pipe()
-		go func() { store.Serve(inR, outW); outW.Close() }()
-		return inW, outR, func() { inR.Close(); outW.Close() }, nil
+		go func() { store.Serve(inR, outW); _ = outW.Close() }()
+		return inW, outR, func() { _, _ = inR.Close(), outW.Close() }, nil
 	}
 	cat := func() ([]provider, error) {
 		return []provider{{ID: "fake", Models: []struct {
@@ -113,12 +113,12 @@ func start(t *testing.T, store *antetest.Store) *client {
 	done := make(chan struct{})
 	go func() {
 		Serve(toBridgeR, fromBridgeW, Config{Spawn: spawn, Home: store.Home, Version: "0.2.14", Catalog: cat})
-		fromBridgeW.Close()
+		_ = fromBridgeW.Close()
 		close(done)
 	}()
 	c := &client{}
 	c.Client = acp.Connect(fromBridgeR, toBridgeW, c, nil)
-	t.Cleanup(func() { toBridgeW.Close(); <-done })
+	t.Cleanup(func() { _ = toBridgeW.Close(); <-done })
 	init, err := c.Initialize(context.Background(), acp.InitializeRequest{ProtocolVersion: 1,
 		ClientCapabilities: &acp.ClientCapabilities{Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}}}})
 	if err != nil || !init.AgentCapabilities.LoadSession || !c.CanFork() || !c.CanSteer() || init.AgentInfo.Name != AgentName {
@@ -170,10 +170,14 @@ func TestASessionThroughTheBridge(t *testing.T) {
 	if ok, err := c.Steer(ctx, sid, []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "turn left"}}}); !ok || err != nil {
 		t.Errorf("steer: %v %v", ok, err)
 	}
-	wait(ctx)
+	if _, err := wait(ctx); err != nil {
+		t.Errorf("steered turn: %v", err)
+	}
 	wait, _ = c.StartPrompt(acp.PromptRequest{SessionID: sid, Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "wait"}}}})
 	time.Sleep(50 * time.Millisecond)
-	c.Cancel(acp.CancelNotification{SessionID: sid})
+	if err := c.Cancel(acp.CancelNotification{SessionID: sid}); err != nil {
+		t.Error(err)
+	}
 	if r, err := wait(ctx); err != nil || r.StopReason != "cancelled" {
 		t.Errorf("cancelled turn: %+v %v", r, err)
 	}
@@ -259,12 +263,12 @@ func TestIDs(t *testing.T) {
 func TestWritesOldText(t *testing.T) {
 	dir := t.TempDir()
 	small, big, fifo := dir+"/small", dir+"/big", dir+"/fifo"
-	os.WriteFile(small, []byte("before"), 0o600)
-	os.WriteFile(big, make([]byte, toolcall.MaxOld+1), 0o600)
+	check(t, os.WriteFile(small, []byte("before"), 0o600))
+	check(t, os.WriteFile(big, make([]byte, toolcall.MaxOld+1), 0o600))
 	if err := syscall.Mkfifo(fifo, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	os.Symlink(small, dir+"/link")
+	check(t, os.Symlink(small, dir+"/link"))
 	s := &session{cwd: dir}
 	done := make(chan map[string]toolcall.Old)
 	go func() {
@@ -314,7 +318,7 @@ func TestImagesInAFolderOfTheBridges(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(b.imgDir)
+	t.Cleanup(func() { _ = os.RemoveAll(b.imgDir) })
 	path := strings.TrimPrefix(text, "@")
 	fi, err := os.Lstat(filepath.Dir(path))
 	if err != nil || filepath.Dir(path) != b.imgDir || fi.Mode().Perm() != 0o700 || strings.Contains(path, "ante-paste-cache") {
@@ -368,7 +372,7 @@ func TestOpenFiles(t *testing.T) {
 	dir := t.TempDir()
 	open, closed := filepath.Join(dir, "a", "events.jsonl"), filepath.Join(dir, "b", "events.jsonl")
 	for _, f := range []string{open, closed} {
-		os.MkdirAll(filepath.Dir(f), 0o700)
+		check(t, os.MkdirAll(filepath.Dir(f), 0o700))
 		if err := os.WriteFile(f, nil, 0o600); err != nil {
 			t.Fatal(err)
 		}
@@ -377,7 +381,7 @@ func TestOpenFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	t.Cleanup(func() { _ = f.Close() })
 	got := openFiles([]string{open, closed}, func(f string) string { return filepath.Base(filepath.Dir(f)) })
 	if len(got) != 1 || got["a"] != "another app" {
 		t.Errorf("open = %v, want a only", got)
@@ -393,5 +397,13 @@ func TestWithoutFolder(t *testing.T) {
 		if got := withoutFolder(in); got != want {
 			t.Errorf("withoutFolder(%q) = %q", in, got)
 		}
+	}
+}
+
+// check fails the test on err.
+func check(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatal(err)
 	}
 }

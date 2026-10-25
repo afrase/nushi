@@ -143,8 +143,8 @@ func TestCommandLineWithAnEmptyFirstArgument(t *testing.T) {
 		}
 		time.Sleep(50 * time.Millisecond)
 		got := commandLine(cmd.Process.Pid)
-		cmd.Process.Kill()
-		cmd.Wait()
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait() // killed: its error says only that
 		if want := strings.TrimSpace(args[0] + " 30"); got != want {
 			t.Errorf("commandLine of %q = %q, want %q", args, got, want)
 		}

@@ -70,11 +70,11 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 			toAgentR, toAgentW := io.Pipe()
 			fromAgentR, fromAgentW := io.Pipe()
 			mu.Lock()
-			kill = func() { toAgentR.Close(); fromAgentW.Close() }
+			kill = func() { _, _ = toAgentR.Close(), fromAgentW.Close() }
 			mu.Unlock()
 			go func() {
 				serve(toAgentR, fromAgentW)
-				fromAgentW.Close()
+				_ = fromAgentW.Close()
 			}()
 			return pipeAgent{acp.Connect(fromAgentR, toAgentW, h, log), toAgentW}, nil
 		}
@@ -86,8 +86,8 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	anteHosts := func(string) (io.WriteCloser, io.Reader, func(), error) { //nolint:unparam // an ante.Spawn, which can fail
 		inR, inW := io.Pipe()
 		outR, outW := io.Pipe()
-		go func() { anteStore.Serve(inR, outW); outW.Close() }()
-		return inW, outR, func() { inR.Close(); outW.Close() }, nil
+		go func() { anteStore.Serve(inR, outW); _ = outW.Close() }()
+		return inW, outR, func() { _, _ = inR.Close(), outW.Close() }, nil
 	}
 	if copyHistory == nil {
 		copyHistory = history.Copy
@@ -110,8 +110,8 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 			spawn := func(cwd string, args ...string) (pig.Pig, error) {
 				inR, inW := io.Pipe()
 				outR, outW := io.Pipe()
-				go func() { pigs.Serve(inR, outW, cwd, args); outW.Close() }()
-				return pig.Pig{In: inW, Out: outR, Kill: func() { inR.Close(); outW.Close() }}, nil
+				go func() { pigs.Serve(inR, outW, cwd, args); _ = outW.Close() }()
+				return pig.Pig{In: inW, Out: outR, Kill: func() { _, _ = inR.Close(), outW.Close() }}, nil
 			}
 			pig.Serve(r, w, pig.Config{Spawn: spawn, Dirs: pig.Dirs{Sessions: pigs.Sessions}, Version: pig.Version})
 		}),
@@ -161,7 +161,9 @@ func pigStores(dataDir string) *pigtest.Store {
 	defer anteMu.Unlock()
 	if pigs[dataDir] == nil {
 		dir := filepath.Join(dataDir, "pig")
-		os.MkdirAll(dir, 0o700)
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			panic(err) // no t here; the panic fails the test
+		}
 		pigs[dataDir] = &pigtest.Store{Sessions: dir}
 	}
 	return pigs[dataDir]
@@ -462,5 +464,13 @@ func TestRenameArchiveAndDelete(t *testing.T) {
 	must(a.c.RenameChat(ctx, connect.NewRequest(&nushiv1.RenameChatRequest{ChatId: kept})))
 	if c := list()[kept]; c.Archived || c.Title != "hello" {
 		t.Errorf("chat = %v, want the first prompt's title back", c)
+	}
+}
+
+// check fails the test on err.
+func check(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatal(err)
 	}
 }

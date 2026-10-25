@@ -54,11 +54,11 @@ func TestStopTakesBackAnUnansweredMessage(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	ctx := context.Background()
 	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
-	svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle)
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
 	eventually(t, c, func() bool { return !c.busy })
 
 	agent.updates, agent.gate = nil, make(chan struct{})
-	svc.Prompt(c.id, model.Message{Text: "two"}, SendIdle)
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "two"}, SendIdle))
 	m, err := svc.Stop(ctx, c.id, true)
 	if err != nil || m == nil || m.Text != "two" || len(c.items) != 2 || c.sid != "fork1" {
 		t.Fatalf("Stop = %+v, %v; items %+v", m, err, c.items)
@@ -66,7 +66,7 @@ func TestStopTakesBackAnUnansweredMessage(t *testing.T) {
 
 	// Answered already: it only stops.
 	agent.updates = []acp.SessionUpdate{chunk("m3", "ok")}
-	svc.Prompt(c.id, model.Message{Text: "three"}, SendIdle)
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "three"}, SendIdle))
 	eventually(t, c, func() bool { return len(c.items) == 4 })
 	if m, err := svc.Stop(ctx, c.id, true); m != nil || err != nil {
 		t.Errorf("Stop after an answer = %+v, %v", m, err)
@@ -75,7 +75,7 @@ func TestStopTakesBackAnUnansweredMessage(t *testing.T) {
 
 	// Without rewinding, it stays, with a notice.
 	agent.updates, c.forkAt = nil, nil
-	svc.Prompt(c.id, model.Message{Text: "four"}, SendIdle)
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "four"}, SendIdle))
 	if m, err := svc.Stop(ctx, c.id, true); m == nil || m.Text != "four" || err != nil {
 		t.Errorf("Stop = %+v, %v", m, err)
 	}

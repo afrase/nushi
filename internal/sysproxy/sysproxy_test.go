@@ -67,11 +67,13 @@ func TestSettings(t *testing.T) {
 // host and the port.
 func TestPAC(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "proxy.pac")
-	os.WriteFile(file, []byte(`function FindProxyForURL(url, host) {
+	if err := os.WriteFile(file, []byte(`function FindProxyForURL(url, host) {
   if (url != "https://relay.example.com:8443/" && url != "https://relay.other.org/") return "PROXY leaked.corp:1";
   if (dnsDomainIs(host, ".example.com")) return "PROXY p.corp:8080; SOCKS s.corp:1080; DIRECT";
   return "DIRECT";
-}`), 0o600)
+}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	s := settings{values: map[string]string{"ProxyAutoConfigEnable": "1", "ProxyAutoConfigURLString": "file://" + file}}
 	u, _ := url.Parse("wss://relay.example.com:8443/v1/listen/SECRETIDSECRETID?x=1#y")
 	got, ok := fromSettings(s, &url.URL{Scheme: u.Scheme, Host: u.Host, Path: "/"}, true)
@@ -133,8 +135,8 @@ func TestLookupsDontWaitForEachOther(t *testing.T) {
 	slow, _ := url.Parse("wss://slow.example/v1/listen/a")
 	fast, _ := url.Parse("wss://fast.example/v1/listen/b")
 	done := make(chan struct{}, 2)
-	go func() { For(slow); done <- struct{}{} }()
-	go func() { For(slow); done <- struct{}{} }()
+	go func() { _, _ = For(slow); done <- struct{}{} }() // what matters is that fast doesn't wait for it
+	go func() { _, _ = For(slow); done <- struct{}{} }()
 	time.Sleep(50 * time.Millisecond)
 	if _, err := For(fast); err != nil {
 		t.Fatal(err)
@@ -172,11 +174,13 @@ func connectProxy(t *testing.T, auth string) (string, func() []string) {
 			return
 		}
 		conn, buf, _ := w.(http.Hijacker).Hijack()
-		conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
-		go func() { io.Copy(target, bufio.NewReader(io.MultiReader(buf, conn))) }()
-		io.Copy(conn, target)
-		conn.Close()
-		target.Close()
+		// A tunnel: either side's end or failure ends it, which the test
+		// sees from the client.
+		_, _ = conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
+		go func() { _, _ = io.Copy(target, bufio.NewReader(io.MultiReader(buf, conn))) }()
+		_, _ = io.Copy(conn, target)
+		_ = conn.Close()
+		_ = target.Close()
 	}))
 	t.Cleanup(srv.Close)
 	return srv.URL, func() []string { mu.Lock(); defer mu.Unlock(); return append([]string(nil), seen...) }
@@ -199,13 +203,15 @@ func TestThroughAProxy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	defer func() { _ = l.Close() }()
 	d, err := dl.Dial(context.Background(), relayURL, id)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer d.Close()
-	d.WriteMessage([]byte("hello"))
+	defer func() { _ = d.Close() }()
+	if err := d.WriteMessage([]byte("hello")); err != nil {
+		t.Fatal(err)
+	}
 	if m, err := l.ReadMessage(); err != nil || string(m) != "hello" {
 		t.Fatalf("read %q, %v", m, err)
 	}

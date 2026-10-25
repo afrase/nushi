@@ -127,6 +127,6 @@ func TestTheKeyCoversWhatTheCardShows(t *testing.T) {
 		if key != "" || tr.Key(folder) != "" || !strings.Contains(runs[0].What+runs[1].What, "asks every time") {
 			t.Errorf("%s: key %q, runs %v", name, key, runs)
 		}
-		os.Remove(odd)
+		noErr(t, os.Remove(odd))
 	}
 }

@@ -10,7 +10,7 @@ import (
 
 func TestBackgroundShells(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "tasks")
-	os.Mkdir(dir, 0o700)
+	noErr(t, os.Mkdir(dir, 0o700))
 	file := filepath.Join(dir, "b1.output")
 	started := "```console\nCommand running in background with ID: b1. Output is being written to: " + file + ". You will be notified when it completes.\n```"
 	id, got, ok := Shell(model.Item{Tool: "Bash", TaskID: "b1", Text: started})
@@ -46,13 +46,13 @@ func TestBackgroundShells(t *testing.T) {
 		"x [exited with code 0]\n":       {"x [exited with code 0]\n", ""},
 		"\n[killed]\nmore\n":             {"\n[killed]\nmore\n", ""},
 	} {
-		os.WriteFile(file, []byte(text), 0o600)
+		noErr(t, os.WriteFile(file, []byte(text), 0o600))
 		if out, end, err := ReadShell("b1", file); err != nil || out != want[0] || end != want[1] {
 			t.Errorf("ReadShell(%q) = %q %q %v", text, out, end, err)
 		}
 	}
 	link := filepath.Join(dir, "b2.output")
-	os.Symlink(file, link)
+	noErr(t, os.Symlink(file, link))
 	if _, _, err := ReadShell("b2", link); err == nil {
 		t.Error("read through a link")
 	}

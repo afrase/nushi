@@ -20,7 +20,7 @@ func (f *fakeAgent) onWire() []string {
 func TestACancelNeverOvertakesItsPrompt(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.gate, agent.sendGate = make(chan struct{}), make(chan struct{})
-	svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle)
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
 	if _, err := svc.Stop(context.Background(), c.id, false); err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +34,7 @@ func TestACancelNeverOvertakesItsPrompt(t *testing.T) {
 func TestSendNowRechecksTheChatAfterWaiting(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.gate, agent.ignoreCancel = make(chan struct{}), true
-	svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle)
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
 	now := make(chan error)
 	go func() { now <- svc.Prompt(c.id, model.Message{Text: "now"}, SendNow) }()
 	archived := make(chan error)
@@ -55,8 +55,8 @@ func TestSendNowRechecksTheChatAfterWaiting(t *testing.T) {
 func TestArchiveDeliversNothingToTheAgentItStops(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.gate, agent.ignoreCancel = make(chan struct{}), true
-	svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle)
-	svc.Prompt(c.id, model.Message{Text: "two"}, SendQueue)
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "two"}, SendQueue))
 	archived := make(chan error)
 	go func() { archived <- svc.Archive(c.id, true) }()
 	eventually(t, c, func() bool { return c.stopping })
@@ -98,9 +98,9 @@ func TestOneSteeringWorkerThatRespectsAStop(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.steerable, c.steer = true, true
 	agent.gate, agent.steerGate = make(chan struct{}), make(chan struct{})
-	svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle)
-	svc.Prompt(c.id, model.Message{Text: "two"}, SendQueue)
-	svc.Prompt(c.id, model.Message{Text: "three"}, SendQueue)
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "two"}, SendQueue))
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "three"}, SendQueue))
 	toolDone := func(id string) {
 		c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call",
 			ToolCall: &acp.ToolCall{ToolCallID: acp.ToolCallID(id), Title: "ls", Status: "in_progress"}}})
@@ -147,7 +147,7 @@ func TestOneSteeringWorkerThatRespectsAStop(t *testing.T) {
 func TestCloseEndsTheTurnFirst(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.gate = make(chan struct{})
-	svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle)
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
 	eventually(t, c, func() bool { return len(agent.onWire()) == 1 })
 	svc.Close()
 	if got := agent.onWire(); !reflect.DeepEqual(got, []string{"prompt one", "cancel", "stop"}) {
@@ -171,7 +171,7 @@ func TestAFailedDeleteLeavesTheChatAsItWas(t *testing.T) {
 	sessions := svc.sessions.(*memSessions)
 	sessions.deleteErr = errors.New("disk full")
 	agent.gate, agent.ignoreCancel = make(chan struct{}), true
-	svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle)
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
 	deleted := make(chan error)
 	go func() { deleted <- svc.Delete(context.Background(), c.id, nil) }()
 	eventually(t, c, func() bool { return c.halting })

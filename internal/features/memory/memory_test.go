@@ -18,7 +18,7 @@ func TestReport(t *testing.T) {
 		if err := cmd.Start(); err != nil {
 			t.Fatal(err)
 		}
-		defer cmd.Process.Kill()
+		t.Cleanup(func() { _ = cmd.Process.Kill() })
 		pids = append(pids, cmd.Process.Pid)
 	}
 	r, err := New(chats{"c1": pids[0]}).Report(pids[1])

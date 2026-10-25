@@ -41,13 +41,17 @@ func fakeAgent(t *testing.T, reply func(method string, params json.RawMessage) (
 			}
 			notes, result := reply(f.Method, f.Params)
 			for _, n := range notes {
-				io.WriteString(fromAgentW, `{"jsonrpc":"2.0","method":"session/update","params":`+n+"}\n")
+				if _, err := io.WriteString(fromAgentW, `{"jsonrpc":"2.0","method":"session/update","params":`+n+"}\n"); err != nil {
+					t.Error(err)
+				}
 			}
-			io.WriteString(fromAgentW, `{"jsonrpc":"2.0","id":`+string(f.ID)+`,"result":`+result+"}\n")
+			if _, err := io.WriteString(fromAgentW, `{"jsonrpc":"2.0","id":`+string(f.ID)+`,"result":`+result+"}\n"); err != nil {
+				t.Error(err)
+			}
 		}
 	}()
 	rec := &recorder{}
-	return Connect(fromAgentR, toAgentW, rec, nil), rec, func() { fromAgentW.Close() }
+	return Connect(fromAgentR, toAgentW, rec, nil), rec, func() { _ = fromAgentW.Close() }
 }
 
 func TestPromptStreamsUpdatesBeforeTheResponse(t *testing.T) {
@@ -116,11 +120,11 @@ func TestTaggedUnionRoundTrip(t *testing.T) {
 func TestAgentRequestIsAnswered(t *testing.T) {
 	toAgentR, toAgentW := io.Pipe()
 	fromAgentR, fromAgentW := io.Pipe()
-	defer fromAgentW.Close()
+	t.Cleanup(func() { _ = fromAgentW.Close() })
 	Connect(fromAgentR, toAgentW, &recorder{}, nil)
 
-	io.WriteString(fromAgentW, `{"jsonrpc":"2.0","id":"p1","method":"session/request_permission","params":{"sessionId":"s1","toolCall":{"toolCallId":"t1"},"options":[{"optionId":"allow","name":"Allow","kind":"allow_once"},{"optionId":"deny","name":"Deny","kind":"reject_once"}]}}`+"\n")
-	io.WriteString(fromAgentW, `{"jsonrpc":"2.0","id":7,"method":"fs/read_text_file","params":{}}`+"\n")
+	send(t, fromAgentW, `{"jsonrpc":"2.0","id":"p1","method":"session/request_permission","params":{"sessionId":"s1","toolCall":{"toolCallId":"t1"},"options":[{"optionId":"allow","name":"Allow","kind":"allow_once"},{"optionId":"deny","name":"Deny","kind":"reject_once"}]}}`+"\n")
+	send(t, fromAgentW, `{"jsonrpc":"2.0","id":7,"method":"fs/read_text_file","params":{}}`+"\n")
 	sc := bufio.NewScanner(toAgentR)
 	got := map[string]string{}
 	for range 2 {
@@ -128,7 +132,9 @@ func TestAgentRequestIsAnswered(t *testing.T) {
 			t.Fatal("no reply")
 		}
 		var f frame
-		json.Unmarshal(sc.Bytes(), &f)
+		if err := json.Unmarshal(sc.Bytes(), &f); err != nil {
+			t.Fatal(err)
+		}
 		got[string(f.ID)] = sc.Text()
 	}
 	if want := `{"jsonrpc":"2.0","id":"p1","result":{"outcome":{"outcome":"selected","optionId":"deny"}}}`; got[`"p1"`] != want {
@@ -154,12 +160,12 @@ func (b *blocking) RequestPermission(ctx context.Context, _ RequestPermissionReq
 func TestAWithdrawnRequestEnds(t *testing.T) {
 	toAgentR, toAgentW := io.Pipe()
 	fromAgentR, fromAgentW := io.Pipe()
-	defer fromAgentW.Close()
+	t.Cleanup(func() { _ = fromAgentW.Close() })
 	h := &blocking{ended: make(chan struct{})}
 	Connect(fromAgentR, toAgentW, h, nil)
-	go io.Copy(io.Discard, toAgentR)
-	io.WriteString(fromAgentW, `{"jsonrpc":"2.0","id":5,"method":"session/request_permission","params":{"sessionId":"s1","toolCall":{"toolCallId":"t1"},"options":[]}}`+"\n")
-	io.WriteString(fromAgentW, `{"jsonrpc":"2.0","method":"$/cancel_request","params":{"requestId":5}}`+"\n")
+	go func() { _, _ = io.Copy(io.Discard, toAgentR) }()
+	send(t, fromAgentW, `{"jsonrpc":"2.0","id":5,"method":"session/request_permission","params":{"sessionId":"s1","toolCall":{"toolCallId":"t1"},"options":[]}}`+"\n")
+	send(t, fromAgentW, `{"jsonrpc":"2.0","method":"$/cancel_request","params":{"requestId":5}}`+"\n")
 	select {
 	case <-h.ended:
 	case <-time.After(2 * time.Second):
@@ -181,8 +187,8 @@ func TestAFrameTooLargeIsntSent(t *testing.T) {
 func TestAPeerWithdrawsWhatItGaveUpOn(t *testing.T) {
 	toAgentR, toAgentW := io.Pipe()
 	fromAgentR, fromAgentW := io.Pipe()
-	defer fromAgentW.Close()
-	defer toAgentW.Close()
+	t.Cleanup(func() { _ = fromAgentW.Close() })
+	t.Cleanup(func() { _ = toAgentW.Close() })
 	h := &blocking{ended: make(chan struct{})}
 	Connect(fromAgentR, toAgentW, h, nil)
 	p := NewPeer(fromAgentW, func(context.Context, string, json.RawMessage) (any, error) { return nil, nil }) //nolint:nilnil // a request with no result
@@ -196,5 +202,13 @@ func TestAPeerWithdrawsWhatItGaveUpOn(t *testing.T) {
 	case <-h.ended:
 	case <-time.After(2 * time.Second):
 		t.Fatal("the client still asks")
+	}
+}
+
+// send writes s to w, failing the test if it can't.
+func send(t *testing.T, w io.Writer, s string) {
+	t.Helper()
+	if _, err := io.WriteString(w, s); err != nil {
+		t.Fatal(err)
 	}
 }

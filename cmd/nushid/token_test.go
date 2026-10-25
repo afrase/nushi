@@ -6,16 +6,24 @@ import (
 	"testing"
 )
 
+// check fails the test on err.
+func check(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestTheTokenIsNeverShortAndStaysPrivate(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "token")
 	for _, old := range []string{"", "  \n", "short"} {
-		os.WriteFile(path, []byte(old), 0o644)
+		check(t, os.WriteFile(path, []byte(old), 0o644))
 		token, err := loadToken(path)
 		if err != nil || len(token) != 64 {
 			t.Errorf("token from %q = %q, %v", old, token, err)
 		}
 	}
-	os.Chmod(path, 0o644)
+	check(t, os.Chmod(path, 0o644))
 	first, _ := loadToken(path)
 	again, err := loadToken(path)
 	fi, _ := os.Stat(path)

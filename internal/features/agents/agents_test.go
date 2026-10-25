@@ -170,7 +170,7 @@ func TestSetUp(t *testing.T) {
 	if err := svc.Remove("claude"); err != nil || svc.List(context.Background())[0].Ready {
 		t.Errorf("Remove: %v", err)
 	}
-	os.Remove(filepath.Join(bin, "node"))
+	noErr(t, os.Remove(filepath.Join(bin, "node")))
 	in.versions = map[string]string{filepath.Join(dir, "claude"): "1.0.0"}
 	if st := svc.List(context.Background())[0]; st.Problem != "Needs Node" || st.Ready {
 		t.Errorf("without Node: %+v", st)

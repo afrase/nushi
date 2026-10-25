@@ -10,7 +10,7 @@ import (
 
 func write(t *testing.T, path, body string) {
 	t.Helper()
-	os.MkdirAll(filepath.Dir(path), 0o700)
+	noErr(t, os.MkdirAll(filepath.Dir(path), 0o700))
 	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +48,7 @@ func TestWhatOmpLoads(t *testing.T) {
 	if ok, _ := tr.Trusted(sub, []string{key}); ok {
 		t.Error("a file added since is trusted")
 	}
-	os.Symlink(repo, filepath.Join(sub, ".codex"))
+	noErr(t, os.Symlink(repo, filepath.Join(sub, ".codex")))
 	if _, key, _ := tr.Runs(sub); key != "" {
 		t.Error("a linked .codex is remembered")
 	}
@@ -67,8 +67,8 @@ func TestCommandsUnderAPathWithPatternCharacters(t *testing.T) {
 		t.Fatalf("runs %v, key %q", runs, key)
 	}
 	commands := filepath.Dir(filepath.Dir(module))
-	os.Chmod(commands, 0)
-	defer os.Chmod(commands, 0o700)
+	noErr(t, os.Chmod(commands, 0))
+	t.Cleanup(func() { noErr(t, os.Chmod(commands, 0o700)) }) // before TempDir's cleanup removes it
 	runs, key, _ = tr.Runs(dir)
 	if len(runs) != 1 || runs[0].File != commands || !strings.Contains(runs[0].Command, "couldn't read") || key != "" {
 		t.Errorf("unreadable: runs %v, key %q", runs, key)

@@ -63,8 +63,8 @@ func TestQueueSteersBetweenToolCalls(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.steerable, c.steer = true, true
 	agent.gate = make(chan struct{})
-	svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle)
-	svc.Prompt(c.id, model.Message{Text: "two"}, SendQueue)
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "two"}, SendQueue))
 	if _, steered := agent.texts(); len(steered) != 0 {
 		t.Fatalf("steered %q before the agent's chance", steered)
 	}
@@ -81,8 +81,8 @@ func TestQueueSteersBetweenToolCalls(t *testing.T) {
 func TestSendNowStopsTheTurn(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.gate = make(chan struct{})
-	svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle)
-	svc.Prompt(c.id, model.Message{Text: "held"}, SendQueue)
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "held"}, SendQueue))
 	if err := svc.Prompt(c.id, model.Message{Text: "now"}, SendNow); err != nil {
 		t.Fatal(err)
 	}
@@ -102,8 +102,8 @@ func TestQueueWaitsOutASubagentsSteps(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.steerable, c.steer = true, true
 	agent.gate = make(chan struct{})
-	svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle)
-	svc.Prompt(c.id, model.Message{Text: "two"}, SendQueue)
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "two"}, SendQueue))
 	call := func(id string, meta map[string]any) {
 		c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call",
 			ToolCall: &acp.ToolCall{ToolCallID: acp.ToolCallID(id), Title: "ls", Status: "in_progress", Meta: meta}}})

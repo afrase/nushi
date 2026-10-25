@@ -36,8 +36,8 @@ func TestAFailedSteerTakesTheMessageOut(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.steerable, c.steer = true, true
 	agent.gate, agent.steerGate = make(chan struct{}), make(chan struct{})
-	svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle)
-	svc.Prompt(c.id, model.Message{Text: "two"}, SendQueue)
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "two"}, SendQueue))
 	c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call",
 		ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "ls", Status: "in_progress"}}})
 	c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call_update",
@@ -95,8 +95,8 @@ func TestAPromptInTheAgentsOwnTurn(t *testing.T) {
 func TestSendNowStopsOnlyTheTurnItCameFor(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.gate, agent.ignoreCancel = make(chan struct{}), true
-	svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle)
-	svc.Prompt(c.id, model.Message{Text: "held"}, SendQueue)
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "held"}, SendQueue))
 	now := make(chan error)
 	go func() { now <- svc.Prompt(c.id, model.Message{Text: "now"}, SendNow) }()
 	eventually(t, c, func() bool { return slices.Contains(agent.onWire(), "cancel") })
@@ -119,8 +119,8 @@ func TestTakingBackKeepsWhatAMessageHad(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	side, _ := svc.Fork(context.Background(), c.id)
 	agent.gate = make(chan struct{})
-	svc.Prompt(side, model.Message{Text: "one"}, SendIdle)
-	svc.Prompt(side, model.Message{Text: "two"}, SendQueue)
+	noErr(t, svc.Prompt(side, model.Message{Text: "one"}, SendIdle))
+	noErr(t, svc.Prompt(side, model.Message{Text: "two"}, SendQueue))
 	q := svc.chats[side]
 	q.mu.Lock()
 	id := q.queue[0].ID
@@ -132,7 +132,7 @@ func TestTakingBackKeepsWhatAMessageHad(t *testing.T) {
 	eventually(t, q, func() bool { return !q.busy })
 
 	agent.gate = make(chan struct{})
-	svc.Prompt(c.id, model.Message{Text: "look at @a.go", Files: []string{"a.go"}}, SendIdle)
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "look at @a.go", Files: []string{"a.go"}}, SendIdle))
 	m, err := svc.Stop(context.Background(), c.id, true)
 	if err != nil || m == nil || !slices.Equal(m.Files, []string{"a.go"}) {
 		t.Errorf("taken back: %+v, %v", m, err)
@@ -204,15 +204,17 @@ func TestANewAgentClearsTheMCPChange(t *testing.T) {
 func TestAPermissionWhileTheSessionChanges(t *testing.T) {
 	svc, _, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	done := make(chan struct{})
-	go func() {
-		c.RequestPermission(context.Background(), acp.RequestPermissionRequest{SessionID: "s1", ToolCall: acp.ToolCallUpdate{ToolCallID: "t1",
+	go func() { // Stop cancels the request: only the race matters
+		_, _ = c.RequestPermission(context.Background(), acp.RequestPermissionRequest{SessionID: "s1", ToolCall: acp.ToolCallUpdate{ToolCallID: "t1",
 			Content: []acp.ToolCallContent{{Type: "diff", Diff: &acp.Diff{Path: "/w/a.go", NewText: "x"}}}}})
 		close(done)
 	}()
 	for i := range 200 {
-		svc.Rename(c.id, strconv.Itoa(i))
+		noErr(t, svc.Rename(c.id, strconv.Itoa(i)))
 	}
 	eventually(t, c, func() bool { return len(c.waiting) == 1 })
-	svc.Stop(context.Background(), c.id, false)
+	if _, err := svc.Stop(context.Background(), c.id, false); err != nil {
+		t.Fatal(err)
+	}
 	<-done
 }

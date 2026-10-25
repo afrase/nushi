@@ -322,9 +322,9 @@ func TestSubagentUpdatesGoUnderTheirToolCall(t *testing.T) {
 func TestBackgroundShellsAreFollowed(t *testing.T) {
 	shellPoll = 10 * time.Millisecond
 	dir := filepath.Join(t.TempDir(), "tasks")
-	os.Mkdir(dir, 0o700)
+	noErr(t, os.Mkdir(dir, 0o700))
 	file := filepath.Join(dir, "b1.output")
-	os.WriteFile(file, []byte("half"), 0o600)
+	noErr(t, os.WriteFile(file, []byte("half"), 0o600))
 	events := make(chan model.Event, 100)
 	c := &chat{id: "s1", sid: "s1", dialect: claudeDialect, publish: func(e model.Event) { events <- e }, agent: &acp.Client{},
 		session: model.Session{Folder: "/w"}}
@@ -359,13 +359,13 @@ func TestBackgroundShellsAreFollowed(t *testing.T) {
 	if sh := shell("running"); sh.Output != "half" || sh.Started.IsZero() {
 		t.Errorf("running: %+v", sh)
 	}
-	os.WriteFile(file, []byte("all\n\n[exited with code 0]\n"), 0o600)
+	noErr(t, os.WriteFile(file, []byte("all\n\n[exited with code 0]\n"), 0o600))
 	if sh := shell("done"); sh.Output != "all" || sh.End != "exited with code 0" || sh.Ended.IsZero() {
 		t.Errorf("done: %+v", sh)
 	}
 
 	// Its agent gone without a word of its end: only that it started.
-	os.WriteFile(file, []byte("again"), 0o600)
+	noErr(t, os.WriteFile(file, []byte("again"), 0o600))
 	c.mu.Lock()
 	c.items[0].Shell = nil
 	c.mu.Unlock()

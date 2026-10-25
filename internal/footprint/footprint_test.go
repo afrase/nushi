@@ -12,7 +12,7 @@ func TestTree(t *testing.T) {
 	if err := child.Start(); err != nil {
 		t.Fatal(err)
 	}
-	defer child.Process.Kill()
+	t.Cleanup(func() { _ = child.Process.Kill() })
 	self := Of(os.Getpid())
 	p, err := Snapshot()
 	if err != nil {

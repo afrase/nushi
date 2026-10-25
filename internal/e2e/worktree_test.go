@@ -122,7 +122,7 @@ func TestChatsInWorktrees(t *testing.T) {
 
 	// Unmerged commits and changes need forcing.
 	gitIn(t, wts[1].Path, "commit", "-q", "--allow-empty", "-m", "unmerged")
-	os.WriteFile(filepath.Join(wts[1].Path, "new.txt"), []byte("x"), 0o644)
+	check(t, os.WriteFile(filepath.Join(wts[1].Path, "new.txt"), []byte("x"), 0o644))
 	plan = must(a.c.PlanDeleteChat(ctx, connect.NewRequest(&nushiv1.PlanDeleteChatRequest{ChatId: ids[1]})))
 	if st := plan.Worktrees[0].State; st.Changed != 1 || st.Commits != 1 {
 		t.Fatalf("plan = %v", plan)
@@ -144,7 +144,7 @@ func TestChatsInWorktrees(t *testing.T) {
 	}
 
 	// A worktree removed outside Nushi: the chat says so, and Delete works.
-	os.RemoveAll(wts[2].Path)
+	check(t, os.RemoveAll(wts[2].Path))
 	if _, err := a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: ids[2], Text: "hi"})); err == nil ||
 		!strings.Contains(err.Error(), "removed outside Nushi") {
 		t.Errorf("prompting a chat whose worktree is gone: %v", err)
@@ -170,8 +170,8 @@ func branchExists(repo, branch string) bool {
 func TestWorktreeMovesKeepTheWork(t *testing.T) {
 	ctx := context.Background()
 	repo := gitRepo(t)
-	os.MkdirAll(filepath.Join(repo, "newapp"), 0o755)
-	os.WriteFile(filepath.Join(repo, "newapp", "a.txt"), []byte("new\n"), 0o644)
+	check(t, os.MkdirAll(filepath.Join(repo, "newapp"), 0o755))
+	check(t, os.WriteFile(filepath.Join(repo, "newapp", "a.txt"), []byte("new\n"), 0o644))
 	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
 	a := open(t, d)
 	if _, err := a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: filepath.Join(repo, "newapp"), Worktree: true})); err == nil {
@@ -187,7 +187,7 @@ func TestWorktreeMovesKeepTheWork(t *testing.T) {
 	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: repo, Worktree: true}))).ChatId
 	wt := chat(id).Worktree
 	sub := filepath.Join(wt.Path, "sub")
-	os.Mkdir(sub, 0o755)
+	check(t, os.Mkdir(sub, 0o755))
 	move(id, sub)
 	if c := chat(id); c.Worktree.GetPath() != wt.Path || c.Folder != sub {
 		t.Errorf("moved into its worktree: %v", c)

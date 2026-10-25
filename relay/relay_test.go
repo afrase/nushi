@@ -53,13 +53,21 @@ func pair(t *testing.T, url string, key ed25519.PrivateKey) (l, d *Conn) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { l.Close() })
+	t.Cleanup(func() { _ = l.Close() })
 	d, err = dl.Dial(context.Background(), url, idOf(key))
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { d.Close() })
+	t.Cleanup(func() { _ = d.Close() })
 	return l, d
+}
+
+// check fails the test on err.
+func check(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func send(t *testing.T, c *Conn, m string) {
@@ -80,11 +88,11 @@ func expect(t *testing.T, c *Conn, want string) {
 // expectClosed checks the relay closes c within a few seconds.
 func expectClosed(t *testing.T, c *Conn) {
 	t.Helper()
-	done := make(chan error, 1)
+	done := make(chan struct{}, 1)
 	go func() {
 		for {
 			if _, err := c.ReadMessage(); err != nil {
-				done <- err
+				done <- struct{}{}
 				return
 			}
 		}
@@ -106,7 +114,7 @@ func TestPeersMeetAndTalk(t *testing.T) {
 	expect(t, l, "hello")
 	send(t, l, "back")
 	expect(t, d, "back")
-	d.Close()
+	check(t, d.Close())
 	expectClosed(t, l)
 }
 
@@ -149,7 +157,7 @@ func TestDialerWithoutListener(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer d.Close()
+	t.Cleanup(func() { _ = d.Close() })
 	send(t, d, "anyone?")
 	expectClosed(t, d)
 }
@@ -167,7 +175,7 @@ func TestSilentDialerTakesNothing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer d.Close()
+	t.Cleanup(func() { _ = d.Close() })
 	send(t, d, "me")
 	expect(t, l, "me")
 }
@@ -179,7 +187,7 @@ func TestListenerMayNotSpeakFirst(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	t.Cleanup(func() { _ = l.Close() })
 	send(t, l, "early")
 	expectClosed(t, l)
 }
@@ -209,7 +217,7 @@ func TestCaps(t *testing.T) {
 		if ws == nil {
 			t.Fatalf("refused (%d) under the caps", code)
 		}
-		defer ws.Close()
+		t.Cleanup(func() { _ = ws.Close() })
 	}
 	if ws, code := from(url, "dial", idOf(key), "192.0.2.3"); ws != nil || code != http.StatusServiceUnavailable {
 		t.Fatalf("a third dialer on one id: %d", code)
@@ -220,13 +228,13 @@ func TestCaps(t *testing.T) {
 	if err != nil {
 		t.Fatal("the key's listener was refused:", err)
 	}
-	defer l.Close()
+	t.Cleanup(func() { _ = l.Close() })
 	for _, addr := range []string{"192.0.2.4", "192.0.2.5", "192.0.2.6"} {
 		ws, code := from(url, "listen", newID(), addr)
 		if ws == nil {
 			t.Fatalf("refused (%d) under the caps", code)
 		}
-		defer ws.Close()
+		t.Cleanup(func() { _ = ws.Close() })
 	}
 	if ws, code := from(url, "listen", newID(), "192.0.2.7"); ws != nil || code != http.StatusServiceUnavailable {
 		t.Fatalf("a seventh connection in all: %d", code)
@@ -301,8 +309,8 @@ func TestNoDiskNoLogs(t *testing.T) {
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { cmd.Process.Kill() }) // a failure below doesn't leave it running
-	pw.Close()
+	t.Cleanup(func() { _ = cmd.Process.Kill() }) // a failure below doesn't leave it running
+	check(t, pw.Close())
 	r := bufio.NewReader(pr)
 	first, err := r.ReadString('\n')
 	if err != nil {
@@ -321,15 +329,15 @@ func TestNoDiskNoLogs(t *testing.T) {
 	var dl Dialer
 	for range 2 { // over the cap
 		if c, err := dl.Dial(context.Background(), url, idOf(key)); err == nil {
-			defer c.Close()
+			t.Cleanup(func() { _ = c.Close() })
 		}
 	}
 	_, _ = dl.Dial(context.Background(), url, "bad")
-	l.Close()
-	d.Close()
+	check(t, l.Close())
+	check(t, d.Close())
 
-	cmd.Process.Signal(syscall.SIGTERM)
-	cmd.Wait()
+	check(t, cmd.Process.Signal(syscall.SIGTERM))
+	_ = cmd.Wait() // its exit after SIGTERM; what it logged is checked below
 	<-rest
 	if lines := strings.Split(strings.TrimSpace(stderr.String()), "\n"); len(lines) != 1 || !strings.Contains(lines[0], "listening on") {
 		t.Fatalf("the relay logged:\n%s", stderr.String())
@@ -349,9 +357,9 @@ func TestClientTakesNoHugeMessage(t *testing.T) {
 		if err != nil {
 			return
 		}
-		defer ws.Close()
-		ws.WriteMessage(websocket.BinaryMessage, make([]byte, MaxMessage))
-		ws.WriteMessage(websocket.BinaryMessage, make([]byte, MaxMessage+1))
+		defer func() { _ = ws.Close() }()
+		_ = ws.WriteMessage(websocket.BinaryMessage, make([]byte, MaxMessage))   // the client checks what came
+		_ = ws.WriteMessage(websocket.BinaryMessage, make([]byte, MaxMessage+1)) // as above
 		time.Sleep(time.Second)
 	}))
 	defer srv.Close()
@@ -360,7 +368,7 @@ func TestClientTakesNoHugeMessage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer c.Close()
+	defer func() { _ = c.Close() }()
 	if m, err := c.ReadMessage(); err != nil || len(m) != MaxMessage {
 		t.Fatalf("the largest message: %d bytes, %v", len(m), err)
 	}
@@ -421,7 +429,7 @@ func TestPerAddressCaps(t *testing.T) {
 		open = append(open, ws)
 	}
 	for _, ws := range open {
-		ws.Close()
+		_ = ws.Close()
 	}
 	// Once the connections are gone (and the address's rate is back), the
 	// relay holds nothing about the addresses.
@@ -461,7 +469,7 @@ func TestNewConnectionRate(t *testing.T) {
 		if ws == nil {
 			t.Fatalf("refused (%d) within the burst", code)
 		}
-		ws.Close()
+		_ = ws.Close()
 	}
 	if ws, code := from(url, "listen", newID(), "203.0.113.9"); ws != nil || code != http.StatusTooManyRequests {
 		t.Fatalf("a fourth new connection at once: %d", code)
@@ -469,7 +477,7 @@ func TestNewConnectionRate(t *testing.T) {
 	if ws, _ := from(url, "listen", newID(), "203.0.113.10"); ws == nil {
 		t.Fatal("another address was refused")
 	} else {
-		ws.Close()
+		_ = ws.Close()
 	}
 }
 
@@ -486,7 +494,7 @@ func TestWaitingLifetime(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	t.Cleanup(func() { _ = l.Close() })
 	began := time.Now()
 	expectClosed(t, l)
 	if time.Since(began) < 250*time.Millisecond {
@@ -517,7 +525,7 @@ func TestListenNeedsTheKey(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		ws.SetReadDeadline(time.Now().Add(2 * time.Second))
+		check(t, ws.SetReadDeadline(time.Now().Add(2*time.Second)))
 		_, m, err := ws.ReadMessage()
 		if err != nil || !bytes.HasPrefix(m, []byte(challengeTag)) {
 			t.Fatalf("no challenge: %q %v", m, err)
@@ -533,15 +541,15 @@ func TestListenNeedsTheKey(t *testing.T) {
 		},
 	} {
 		ws, challenge := raw()
-		ws.WriteMessage(websocket.BinaryMessage, answer(challenge))
+		check(t, ws.WriteMessage(websocket.BinaryMessage, answer(challenge)))
 		if _, _, err := ws.ReadMessage(); err == nil {
 			t.Errorf("%s listened", name)
 		}
-		ws.Close()
+		_ = ws.Close()
 	}
 
 	squat, _ := raw() // never answers
-	defer squat.Close()
+	t.Cleanup(func() { _ = squat.Close() })
 	l, d := pair(t, url, key)
 	send(t, d, "for the key's holder")
 	expect(t, l, "for the key's holder")
@@ -557,7 +565,7 @@ func TestSecondListenerReplacesFirst(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l1.Close()
+	t.Cleanup(func() { _ = l1.Close() })
 	l2, d := pair(t, url, key)
 	expectClosed(t, l1)
 	send(t, d, "to the newest")
@@ -575,8 +583,8 @@ func TestIdleHTTPConnections(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	go srv.Serve(ln)
-	defer srv.Close()
+	go func() { _ = srv.Serve(ln) }()
+	defer func() { _ = srv.Close() }()
 	// healthz asks once on a new connection, keeping it open; it says
 	// whether the relay answered.
 	healthz := func() (net.Conn, bool) {
@@ -584,11 +592,11 @@ func TestIdleHTTPConnections(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		c.SetDeadline(time.Now().Add(2 * time.Second))
-		io.WriteString(c, "GET /healthz HTTP/1.1\r\nHost: relay\r\n\r\n")
+		check(t, c.SetDeadline(time.Now().Add(2*time.Second)))
+		_, _ = io.WriteString(c, "GET /healthz HTTP/1.1\r\nHost: relay\r\n\r\n") // a refused one may be closed already: the answer says
 		resp, err := http.ReadResponse(bufio.NewReader(c), nil)
 		if err == nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}
 		return c, err == nil
 	}
@@ -603,13 +611,13 @@ func TestIdleHTTPConnections(t *testing.T) {
 		open = append(open, c)
 	}
 	if c, ok := healthz(); ok {
-		c.Close()
+		_ = c.Close()
 		t.Fatal("a fourth idle connection from one address")
 	}
 	send(t, d, "still")
 	expect(t, l, "still")
 	for _, c := range open {
-		c.SetDeadline(time.Now().Add(2 * time.Second))
+		check(t, c.SetDeadline(time.Now().Add(2*time.Second)))
 		if _, err := c.Read(make([]byte, 1)); !errors.Is(err, io.EOF) {
 			t.Fatalf("an idle connection stayed: %v", err)
 		}
@@ -617,7 +625,7 @@ func TestIdleHTTPConnections(t *testing.T) {
 	if c, ok := healthz(); !ok {
 		t.Fatal("refused once the idle ones went")
 	} else {
-		c.Close()
+		_ = c.Close()
 	}
 }
 
@@ -648,7 +656,7 @@ func TestForwardedForFromTheRight(t *testing.T) {
 			}
 		}
 		for _, ws := range open {
-			ws.Close()
+			_ = ws.Close()
 		}
 	}
 }
@@ -665,16 +673,16 @@ func TestIdleFloodDoesntStarve(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	go srv.Serve(ln)
-	defer srv.Close()
+	go func() { _ = srv.Serve(ln) }()
+	defer func() { _ = srv.Close() }()
 	for i := range 200 {
 		c, err := net.Dial("tcp", ln.Addr().String())
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer c.Close()
+		defer func() { _ = c.Close() }()
 		if i%2 == 0 { // half of them asked once, from an address each, and wait
-			fmt.Fprintf(c, "GET /healthz HTTP/1.1\r\nHost: relay\r\nX-Test-IP: 198.51.%d.%d\r\n\r\n", i/256, i%256)
+			_, _ = fmt.Fprintf(c, "GET /healthz HTTP/1.1\r\nHost: relay\r\nX-Test-IP: 198.51.%d.%d\r\n\r\n", i/256, i%256) // one the relay dropped already is part of the flood
 		}
 	}
 	l, d := pair(t, "ws://"+ln.Addr().String(), newKey())
@@ -693,20 +701,20 @@ func TestPlainCapBehindAProxy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	go srv.Serve(ln)
-	defer srv.Close()
+	go func() { _ = srv.Serve(ln) }()
+	defer func() { _ = srv.Close() }()
 	ask := func(addr string) int {
 		c, err := net.Dial("tcp", ln.Addr().String())
 		if err != nil {
 			t.Fatal(err)
 		}
-		t.Cleanup(func() { c.Close() })
-		fmt.Fprintf(c, "GET /healthz HTTP/1.1\r\nHost: relay\r\nX-Test-IP: %s\r\n\r\n", addr)
+		t.Cleanup(func() { _ = c.Close() })
+		_, _ = fmt.Fprintf(c, "GET /healthz HTTP/1.1\r\nHost: relay\r\nX-Test-IP: %s\r\n\r\n", addr) // a refusal may close it first: the status says
 		resp, err := http.ReadResponse(bufio.NewReader(c), nil)
 		if err != nil {
 			t.Fatal(err)
 		}
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		return resp.StatusCode
 	}
 	for range 2 {
@@ -735,23 +743,23 @@ func TestSlowHeadersFloodDoesntStarve(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	go srv.Serve(ln)
-	defer srv.Close()
+	go func() { _ = srv.Serve(ln) }()
+	defer func() { _ = srv.Close() }()
 	var slow []net.Conn
 	for range 200 {
 		c, err := net.Dial("tcp", ln.Addr().String())
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer c.Close()
-		io.WriteString(c, "GET /healthz HTTP/1.1\r\nHost: rel") // and no more
+		defer func() { _ = c.Close() }()
+		_, _ = io.WriteString(c, "GET /healthz HTTP/1.1\r\nHost: rel") // and no more; one the relay dropped already is part of the flood
 		slow = append(slow, c)
 	}
 	l, d := pair(t, "ws://"+ln.Addr().String(), newKey())
 	send(t, d, "through")
 	expect(t, l, "through")
 	last := slow[len(slow)-1]
-	last.SetReadDeadline(time.Now().Add(2 * time.Second))
+	check(t, last.SetReadDeadline(time.Now().Add(2*time.Second)))
 	if _, err := last.Read(make([]byte, 1)); !errors.Is(err, io.EOF) {
 		t.Fatalf("a connection without its headers stayed past FirstWait: %v", err)
 	}
