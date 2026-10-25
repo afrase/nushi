@@ -24,6 +24,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -40,6 +41,9 @@ type Client struct {
 	log     *slog.Logger
 	// wait sleeps before a retry; tests make it instant.
 	wait func(context.Context, time.Duration) error
+
+	mu         sync.Mutex
+	acceptance *string // the site's acceptance criteria field id, once looked up
 }
 
 // New makes a client of site for email's token; with cloudID, a scoped
@@ -142,7 +146,7 @@ func (c *Client) send(ctx context.Context, method, path string, args []string, q
 		}
 	}
 	for try := 0; ; try++ {
-		req, err := http.NewRequestWithContext(ctx, method, u, bytes.NewReader(payload))
+		req, err := http.NewRequestWithContext(ctx, method, u, bytes.NewReader(payload)) //nolint:gosec // the site the user added, or Atlassian's gateway
 		if err != nil {
 			return nil, err
 		}
@@ -152,7 +156,7 @@ func (c *Client) send(ctx context.Context, method, path string, args []string, q
 			req.Header.Set("Content-Type", "application/json")
 		}
 		start := time.Now()
-		resp, err := c.http.Do(req)
+		resp, err := c.http.Do(req) //nolint:gosec // as above
 		if err != nil {
 			err = cmp.Or(errors.Unwrap(err), err) // url.Error's message has the URL, a JQL query in it
 			c.log.Warn("jira request failed", "method", method, "path", path, "took", time.Since(start).Round(time.Millisecond), "err", err)

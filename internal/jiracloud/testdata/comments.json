@@ -1,0 +1,535 @@
+{
+ "startAt": 0,
+ "maxResults": 100,
+ "total": 2,
+ "comments": [
+  {
+   "self": "https://example.atlassian.net/rest/api/3/issue/10004/comment/10001",
+   "id": "10001",
+   "author": {
+    "self": "https://example.atlassian.net/rest/api/3/user?accountId=557058%3A00000000-0000-0000-0000-000000000001",
+    "accountId": "557058:00000000-0000-0000-0000-000000000001",
+    "emailAddress": "test@example.com",
+    "avatarUrls": {
+     "48x48": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png",
+     "24x24": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png",
+     "16x16": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png",
+     "32x32": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png"
+    },
+    "displayName": "Test User",
+    "active": true,
+    "timeZone": "America/New_York",
+    "accountType": "atlassian"
+   },
+   "body": {
+    "type": "doc",
+    "version": 1,
+    "content": [
+     {
+      "type": "paragraph",
+      "content": [
+       {
+        "type": "text",
+        "text": "Editor nodes:"
+       }
+      ]
+     },
+     {
+      "type": "panel",
+      "content": [
+       {
+        "type": "paragraph",
+        "content": [
+         {
+          "type": "text",
+          "text": "Careful"
+         }
+        ]
+       }
+      ],
+      "attrs": {
+       "panelType": "warning"
+      }
+     },
+     {
+      "type": "panel",
+      "content": [
+       {
+        "type": "paragraph",
+        "content": [
+         {
+          "type": "text",
+          "text": "Done"
+         }
+        ]
+       }
+      ],
+      "attrs": {
+       "panelType": "success"
+      }
+     },
+     {
+      "type": "panel",
+      "content": [
+       {
+        "type": "paragraph",
+        "content": [
+         {
+          "type": "text",
+          "text": "Broken"
+         }
+        ]
+       }
+      ],
+      "attrs": {
+       "panelType": "error"
+      }
+     },
+     {
+      "type": "panel",
+      "content": [
+       {
+        "type": "paragraph",
+        "content": [
+         {
+          "type": "text",
+          "text": "Noted"
+         }
+        ]
+       }
+      ],
+      "attrs": {
+       "panelType": "note"
+      }
+     },
+     {
+      "type": "taskList",
+      "content": [
+       {
+        "type": "taskItem",
+        "content": [
+         {
+          "type": "text",
+          "text": "Write it"
+         }
+        ],
+        "attrs": {
+         "localId": "t1",
+         "state": "DONE"
+        }
+       },
+       {
+        "type": "taskItem",
+        "content": [
+         {
+          "type": "text",
+          "text": "Test it"
+         }
+        ],
+        "attrs": {
+         "localId": "t2",
+         "state": "TODO"
+        }
+       }
+      ],
+      "attrs": {
+       "localId": "tl1"
+      }
+     },
+     {
+      "type": "decisionList",
+      "content": [
+       {
+        "type": "decisionItem",
+        "content": [
+         {
+          "type": "text",
+          "text": "Use Go"
+         }
+        ],
+        "attrs": {
+         "localId": "d1",
+         "state": "DECIDED"
+        }
+       }
+      ],
+      "attrs": {
+       "localId": "dl1"
+      }
+     },
+     {
+      "type": "expand",
+      "content": [
+       {
+        "type": "paragraph",
+        "content": [
+         {
+          "type": "text",
+          "text": "Hidden text"
+         }
+        ]
+       }
+      ],
+      "attrs": {
+       "title": "Details"
+      }
+     },
+     {
+      "type": "paragraph",
+      "content": [
+       {
+        "type": "text",
+        "text": "Status "
+       },
+       {
+        "type": "status",
+        "attrs": {
+         "text": "IN REVIEW",
+         "color": "blue",
+         "localId": "s1"
+        }
+       },
+       {
+        "type": "text",
+        "text": " due "
+       },
+       {
+        "type": "date",
+        "attrs": {
+         "timestamp": "1767225600000"
+        }
+       },
+       {
+        "type": "text",
+        "text": " see "
+       },
+       {
+        "type": "inlineCard",
+        "attrs": {
+         "url": "https://example.com/page"
+        }
+       },
+       {
+        "type": "text",
+        "text": " and "
+       },
+       {
+        "type": "text",
+        "text": "code",
+        "marks": [
+         {
+          "type": "code"
+         }
+        ]
+       },
+       {
+        "type": "text",
+        "text": " "
+       },
+       {
+        "type": "text",
+        "text": "both",
+        "marks": [
+         {
+          "type": "strong"
+         },
+         {
+          "type": "em"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "type": "blockCard",
+      "attrs": {
+       "url": "https://example.com/block"
+      }
+     },
+     {
+      "type": "codeBlock",
+      "attrs": {
+       "language": "python"
+      },
+      "content": [
+       {
+        "type": "text",
+        "text": "print('x')\n"
+       }
+      ]
+     },
+     {
+      "type": "table",
+      "attrs": {
+       "isNumberColumnEnabled": false,
+       "layout": "default"
+      },
+      "content": [
+       {
+        "type": "tableRow",
+        "content": [
+         {
+          "type": "tableHeader",
+          "attrs": {},
+          "content": [
+           {
+            "type": "paragraph",
+            "content": [
+             {
+              "type": "text",
+              "text": "A"
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "type": "tableHeader",
+          "attrs": {},
+          "content": [
+           {
+            "type": "paragraph",
+            "content": [
+             {
+              "type": "text",
+              "text": "B"
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "type": "tableRow",
+        "content": [
+         {
+          "type": "tableCell",
+          "attrs": {},
+          "content": [
+           {
+            "type": "paragraph",
+            "content": [
+             {
+              "type": "text",
+              "text": "1 | pipe"
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "type": "tableCell",
+          "attrs": {},
+          "content": [
+           {
+            "type": "bulletList",
+            "content": [
+             {
+              "type": "listItem",
+              "content": [
+               {
+                "type": "paragraph",
+                "content": [
+                 {
+                  "type": "text",
+                  "text": "in a cell"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "type": "heading",
+      "attrs": {
+       "level": 4
+      },
+      "content": [
+       {
+        "type": "text",
+        "text": "Small heading"
+       }
+      ]
+     },
+     {
+      "type": "orderedList",
+      "attrs": {
+       "order": 3
+      },
+      "content": [
+       {
+        "type": "listItem",
+        "content": [
+         {
+          "type": "paragraph",
+          "content": [
+           {
+            "type": "text",
+            "text": "starts at three"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "renderedBody": "<p>Editor nodes:</p>\n\n<div class=\"panel\" style=\"background-color: #fffae6;border-width: 1px;\"><div class=\"panelContent\" style=\"background-color: #fffae6;\">\n<p>Careful</p>\n</div></div>\n\n<div class=\"panel\" style=\"background-color: #e3fcef;border-width: 1px;\"><div class=\"panelContent\" style=\"background-color: #e3fcef;\">\n<p>Done</p>\n</div></div>\n\n<div class=\"panel\" style=\"background-color: #ffebe6;border-width: 1px;\"><div class=\"panelContent\" style=\"background-color: #ffebe6;\">\n<p>Broken</p>\n</div></div>\n\n<div class=\"panel\" style=\"background-color: #eae6ff;border-width: 1px;\"><div class=\"panelContent\" style=\"background-color: #eae6ff;\">\n<p>Noted</p>\n</div></div>\n\n<ul>\n\t<li><del>Write it</del></li>\n\t<li>Test it</li>\n</ul>\n\n\n<ul>\n\t<li>&lt;&gt; Use Go</li>\n</ul>\n\n\n<p><b>Details</b></p>\n\n<p>Hidden text</p>\n\n<p>Status <font color=\"#00B8D9\"><b>[ IN REVIEW ]</b></font> due <tt>2026-01-01</tt> see <a href=\"https://example.com/page\" title=\"smart-link\" class=\"external-link\" rel=\"nofollow noreferrer\">https://example.com/page</a> and <tt>code</tt> <b><em>both</em></b></p>\n\n<p><a href=\"https://example.com/block\" title=\"smart-card\" class=\"external-link\" rel=\"nofollow noreferrer\">https://example.com/block</a></p>\n\n<div class=\"code panel\" style=\"border-width: 1px;\"><div class=\"codeContent panelContent\">\n<pre class=\"code-python\"><span class=\"code-object\">print</span>(<span class=\"code-quote\">'x'</span>)\n</pre>\n</div></div>\n\n<div class='table-wrap'>\n<table class='confluenceTable'><tbody>\n<tr>\n<th class='confluenceTh'>A</th>\n<th class='confluenceTh'>B</th>\n</tr>\n<tr>\n<td class='confluenceTd'>1 </td>\n<td class='confluenceTd'> pipe</td>\n<td class='confluenceTd'><ul>\n\t<li>in a cell</li>\n</ul>\n</td>\n</tr>\n</tbody></table>\n</div>\n\n\n<h4><a name=\"Smallheading\"></a>Small heading</h4>\n\n<ol>\n\t<li>starts at three</li>\n</ol>\n",
+   "updateAuthor": {
+    "self": "https://example.atlassian.net/rest/api/3/user?accountId=557058%3A00000000-0000-0000-0000-000000000001",
+    "accountId": "557058:00000000-0000-0000-0000-000000000001",
+    "emailAddress": "test@example.com",
+    "avatarUrls": {
+     "48x48": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png",
+     "24x24": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png",
+     "16x16": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png",
+     "32x32": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png"
+    },
+    "displayName": "Test User",
+    "active": true,
+    "timeZone": "America/New_York",
+    "accountType": "atlassian"
+   },
+   "created": "2026-10-25T22:05:25.263+0900",
+   "updated": "2026-10-25T22:05:25.263+0900",
+   "jsdPublic": true
+  },
+  {
+   "self": "https://example.atlassian.net/rest/api/3/issue/10004/comment/10000",
+   "id": "10000",
+   "author": {
+    "self": "https://example.atlassian.net/rest/api/3/user?accountId=557058%3A00000000-0000-0000-0000-000000000001",
+    "accountId": "557058:00000000-0000-0000-0000-000000000001",
+    "emailAddress": "test@example.com",
+    "avatarUrls": {
+     "48x48": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png",
+     "24x24": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png",
+     "16x16": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png",
+     "32x32": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png"
+    },
+    "displayName": "Test User",
+    "active": true,
+    "timeZone": "America/New_York",
+    "accountType": "atlassian"
+   },
+   "body": {
+    "type": "doc",
+    "version": 1,
+    "content": [
+     {
+      "type": "paragraph",
+      "content": [
+       {
+        "type": "text",
+        "text": "A comment with "
+       },
+       {
+        "type": "text",
+        "text": "bold",
+        "marks": [
+         {
+          "type": "strong"
+         }
+        ]
+       },
+       {
+        "type": "text",
+        "text": " and a list:"
+       }
+      ]
+     },
+     {
+      "type": "bulletList",
+      "content": [
+       {
+        "type": "listItem",
+        "content": [
+         {
+          "type": "paragraph",
+          "content": [
+           {
+            "type": "text",
+            "text": "a"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "type": "listItem",
+        "content": [
+         {
+          "type": "paragraph",
+          "content": [
+           {
+            "type": "text",
+            "text": "b"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "type": "codeBlock",
+      "attrs": {
+       "language": "java"
+      },
+      "content": [
+       {
+        "type": "text",
+        "text": "plain code"
+       }
+      ]
+     },
+     {
+      "type": "paragraph",
+      "content": [
+       {
+        "type": "mention",
+        "attrs": {
+         "id": "557058:00000000-0000-0000-0000-000000000001",
+         "text": "@Test User",
+         "accessLevel": ""
+        }
+       },
+       {
+        "type": "text",
+        "text": " please look."
+       }
+      ]
+     }
+    ]
+   },
+   "renderedBody": "<p>A comment with <b>bold</b> and a list:</p>\n<ul>\n\t<li>a</li>\n\t<li>b</li>\n</ul>\n\n\n<div class=\"code panel\" style=\"border-width: 1px;\"><div class=\"codeContent panelContent\">\n<pre class=\"code-java\">plain code\n</pre>\n</div></div>\n<p><a href=\"https://example.atlassian.net/secure/ViewProfile.jspa?accountId=557058%3A00000000-0000-0000-0000-000000000001\" class=\"user-hover\" rel=\"557058:00000000-0000-0000-0000-000000000001\" data-account-id=\"557058:00000000-0000-0000-0000-000000000001\" accountid=\"557058:00000000-0000-0000-0000-000000000001\" rel=\"noreferrer\">Test User</a> please look.</p>",
+   "updateAuthor": {
+    "self": "https://example.atlassian.net/rest/api/3/user?accountId=557058%3A00000000-0000-0000-0000-000000000001",
+    "accountId": "557058:00000000-0000-0000-0000-000000000001",
+    "emailAddress": "test@example.com",
+    "avatarUrls": {
+     "48x48": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png",
+     "24x24": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png",
+     "16x16": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png",
+     "32x32": "https://secure.gravatar.com/avatar/00000000000000000000000000000000?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FTU-5.png"
+    },
+    "displayName": "Test User",
+    "active": true,
+    "timeZone": "America/New_York",
+    "accountType": "atlassian"
+   },
+   "created": "2026-10-25T22:04:56.495+0900",
+   "updated": "2026-10-25T22:04:56.495+0900",
+   "jsdPublic": true
+  }
+ ]
+}
