@@ -294,6 +294,7 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 126. By hand, and the docs | 12698 | 984 | 15182 | 1864 | 1170 |
 | 127. An agent's sessions listed: session/list, Nushi's own left out, Claude's open ones (`~/.claude/sessions`) | 12989 | 990 | 15182 | 1864 | 1170 |
 | 128. The details panel's folder: the parent lined up under the name, the chevron beside both | 12989 | 990 | 15185 | 1864 | 1170 |
+| 129. Opening one as a chat (session/load, nothing copied); ListAgentSessions, OpenAgentSession; API 49 | 13109 | 990 | 15185 | 1864 | 1170 |
 
 Steps over the ~500-line tripwire (code and tests, without generated code): 98 (2,384 with its tests: Ante's whole bridge and its fake), 99 (901: two agents, two trust packages, the shared trust files), 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 removed more than it added.
 

@@ -1296,6 +1296,482 @@ class StartChatRequest extends $pb.GeneratedMessage {
   void clearAgent() => $_clearField(3);
 }
 
+class ListAgentSessionsRequest extends $pb.GeneratedMessage {
+  factory ListAgentSessionsRequest({
+    $core.String? agent,
+    $core.String? folder,
+    $core.String? cursor,
+  }) {
+    final result = ListAgentSessionsRequest._();
+    if (agent != null) result.agent = agent;
+    if (folder != null) result.folder = folder;
+    if (cursor != null) result.cursor = cursor;
+    return result;
+  }
+
+  ListAgentSessionsRequest._();
+
+  factory ListAgentSessionsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListAgentSessionsRequest()..mergeFromBuffer(data, registry);
+  factory ListAgentSessionsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListAgentSessionsRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListAgentSessionsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListAgentSessionsRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'agent')
+    ..aOS(2, _omitFieldNames ? '' : 'folder')
+    ..aOS(3, _omitFieldNames ? '' : 'cursor')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListAgentSessionsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListAgentSessionsRequest copyWith(
+          void Function(ListAgentSessionsRequest) updates) =>
+      super.copyWith((message) => updates(message as ListAgentSessionsRequest))
+          as ListAgentSessionsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListAgentSessionsRequest() / ListAgentSessionsRequest.new instead')
+  static ListAgentSessionsRequest create() => ListAgentSessionsRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ListAgentSessionsRequest._();
+  @$core.override
+  ListAgentSessionsRequest createEmptyInstance() =>
+      ListAgentSessionsRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ListAgentSessionsRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListAgentSessionsRequest>(
+          ListAgentSessionsRequest.$_createMessage);
+  static ListAgentSessionsRequest? _defaultInstance;
+
+  /// Agent.name; empty for the default.
+  @$pb.TagNumber(1)
+  $core.String get agent => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set agent($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasAgent() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearAgent() => $_clearField(1);
+
+  /// Empty: every folder's.
+  @$pb.TagNumber(2)
+  $core.String get folder => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set folder($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasFolder() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearFolder() => $_clearField(2);
+
+  /// The last page's next_cursor, for the page after it.
+  @$pb.TagNumber(3)
+  $core.String get cursor => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set cursor($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasCursor() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearCursor() => $_clearField(3);
+}
+
+class ListAgentSessionsResponse extends $pb.GeneratedMessage {
+  factory ListAgentSessionsResponse({
+    $core.bool? canList,
+    $core.Iterable<FoundSession>? sessions,
+    $core.String? nextCursor,
+    $core.bool? seesOpen,
+  }) {
+    final result = ListAgentSessionsResponse._();
+    if (canList != null) result.canList = canList;
+    if (sessions != null) result.sessions.addAll(sessions);
+    if (nextCursor != null) result.nextCursor = nextCursor;
+    if (seesOpen != null) result.seesOpen = seesOpen;
+    return result;
+  }
+
+  ListAgentSessionsResponse._();
+
+  factory ListAgentSessionsResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListAgentSessionsResponse()..mergeFromBuffer(data, registry);
+  factory ListAgentSessionsResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListAgentSessionsResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListAgentSessionsResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListAgentSessionsResponse.$_createMessage)
+    ..aOB(1, _omitFieldNames ? '' : 'canList')
+    ..pPM<FoundSession>(2, _omitFieldNames ? '' : 'sessions',
+        subBuilder: FoundSession.$_createMessage)
+    ..aOS(3, _omitFieldNames ? '' : 'nextCursor')
+    ..aOB(4, _omitFieldNames ? '' : 'seesOpen')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListAgentSessionsResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListAgentSessionsResponse copyWith(
+          void Function(ListAgentSessionsResponse) updates) =>
+      super.copyWith((message) => updates(message as ListAgentSessionsResponse))
+          as ListAgentSessionsResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListAgentSessionsResponse() / ListAgentSessionsResponse.new instead')
+  static ListAgentSessionsResponse create() => ListAgentSessionsResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      ListAgentSessionsResponse._();
+  @$core.override
+  ListAgentSessionsResponse createEmptyInstance() =>
+      ListAgentSessionsResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ListAgentSessionsResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListAgentSessionsResponse>(
+          ListAgentSessionsResponse.$_createMessage);
+  static ListAgentSessionsResponse? _defaultInstance;
+
+  /// The agent lists its sessions (and reopens them); without, there are none.
+  @$pb.TagNumber(1)
+  $core.bool get canList => $_getBF(0);
+  @$pb.TagNumber(1)
+  set canList($core.bool value) => $_setBool(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasCanList() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearCanList() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $pb.PbList<FoundSession> get sessions => $_getList(1);
+
+  /// Empty at the end.
+  @$pb.TagNumber(3)
+  $core.String get nextCursor => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set nextCursor($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasNextCursor() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearNextCursor() => $_clearField(3);
+
+  /// Nushi can tell when one of this agent's sessions is open elsewhere
+  /// (FoundSession.open_in); without, it can't know.
+  @$pb.TagNumber(4)
+  $core.bool get seesOpen => $_getBF(3);
+  @$pb.TagNumber(4)
+  set seesOpen($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasSeesOpen() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearSeesOpen() => $_clearField(4);
+}
+
+/// One of an agent's sessions that isn't a chat.
+class FoundSession extends $pb.GeneratedMessage {
+  factory FoundSession({
+    $core.String? sessionId,
+    $core.String? title,
+    $core.String? folder,
+    $fixnum.Int64? updatedUnixMs,
+    $core.int? messages,
+    $core.String? openIn,
+    $core.bool? folderGone,
+  }) {
+    final result = FoundSession._();
+    if (sessionId != null) result.sessionId = sessionId;
+    if (title != null) result.title = title;
+    if (folder != null) result.folder = folder;
+    if (updatedUnixMs != null) result.updatedUnixMs = updatedUnixMs;
+    if (messages != null) result.messages = messages;
+    if (openIn != null) result.openIn = openIn;
+    if (folderGone != null) result.folderGone = folderGone;
+    return result;
+  }
+
+  FoundSession._();
+
+  factory FoundSession.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FoundSession()..mergeFromBuffer(data, registry);
+  factory FoundSession.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FoundSession()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'FoundSession',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: FoundSession.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'sessionId')
+    ..aOS(2, _omitFieldNames ? '' : 'title')
+    ..aOS(3, _omitFieldNames ? '' : 'folder')
+    ..aInt64(4, _omitFieldNames ? '' : 'updatedUnixMs')
+    ..aI(5, _omitFieldNames ? '' : 'messages')
+    ..aOS(6, _omitFieldNames ? '' : 'openIn')
+    ..aOB(7, _omitFieldNames ? '' : 'folderGone')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FoundSession clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FoundSession copyWith(void Function(FoundSession) updates) =>
+      super.copyWith((message) => updates(message as FoundSession))
+          as FoundSession;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use FoundSession() / FoundSession.new instead')
+  static FoundSession create() => FoundSession._();
+  static $pb.GeneratedMessage $_createMessage() => FoundSession._();
+  @$core.override
+  FoundSession createEmptyInstance() => FoundSession._();
+  @$core.pragma('dart2js:noInline')
+  static FoundSession getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<FoundSession>(
+          FoundSession.$_createMessage);
+  static FoundSession? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get sessionId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set sessionId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSessionId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSessionId() => $_clearField(1);
+
+  /// Empty when the agent has none for it.
+  @$pb.TagNumber(2)
+  $core.String get title => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set title($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasTitle() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearTitle() => $_clearField(2);
+
+  /// Its folder (cwd), as the agent keeps it.
+  @$pb.TagNumber(3)
+  $core.String get folder => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set folder($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasFolder() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearFolder() => $_clearField(3);
+
+  /// Its last activity; 0 when the agent doesn't say.
+  @$pb.TagNumber(4)
+  $fixnum.Int64 get updatedUnixMs => $_getI64(3);
+  @$pb.TagNumber(4)
+  set updatedUnixMs($fixnum.Int64 value) => $_setInt64(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasUpdatedUnixMs() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearUpdatedUnixMs() => $_clearField(4);
+
+  /// How many messages it has; 0 when the agent doesn't say.
+  @$pb.TagNumber(5)
+  $core.int get messages => $_getIZ(4);
+  @$pb.TagNumber(5)
+  set messages($core.int value) => $_setSignedInt32(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasMessages() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearMessages() => $_clearField(5);
+
+  /// Where it is open now, outside this daemon, such as "a terminal": both
+  /// would write to its history. Empty when it isn't, or can't be told.
+  @$pb.TagNumber(6)
+  $core.String get openIn => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set openIn($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasOpenIn() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearOpenIn() => $_clearField(6);
+
+  /// Its folder no longer exists: it can't be opened.
+  @$pb.TagNumber(7)
+  $core.bool get folderGone => $_getBF(6);
+  @$pb.TagNumber(7)
+  set folderGone($core.bool value) => $_setBool(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasFolderGone() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearFolderGone() => $_clearField(7);
+}
+
+class OpenAgentSessionRequest extends $pb.GeneratedMessage {
+  factory OpenAgentSessionRequest({
+    $core.String? agent,
+    $core.String? folder,
+    $core.String? sessionId,
+    $core.String? title,
+  }) {
+    final result = OpenAgentSessionRequest._();
+    if (agent != null) result.agent = agent;
+    if (folder != null) result.folder = folder;
+    if (sessionId != null) result.sessionId = sessionId;
+    if (title != null) result.title = title;
+    return result;
+  }
+
+  OpenAgentSessionRequest._();
+
+  factory OpenAgentSessionRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      OpenAgentSessionRequest()..mergeFromBuffer(data, registry);
+  factory OpenAgentSessionRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      OpenAgentSessionRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'OpenAgentSessionRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: OpenAgentSessionRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'agent')
+    ..aOS(2, _omitFieldNames ? '' : 'folder')
+    ..aOS(3, _omitFieldNames ? '' : 'sessionId')
+    ..aOS(4, _omitFieldNames ? '' : 'title')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  OpenAgentSessionRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  OpenAgentSessionRequest copyWith(
+          void Function(OpenAgentSessionRequest) updates) =>
+      super.copyWith((message) => updates(message as OpenAgentSessionRequest))
+          as OpenAgentSessionRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use OpenAgentSessionRequest() / OpenAgentSessionRequest.new instead')
+  static OpenAgentSessionRequest create() => OpenAgentSessionRequest._();
+  static $pb.GeneratedMessage $_createMessage() => OpenAgentSessionRequest._();
+  @$core.override
+  OpenAgentSessionRequest createEmptyInstance() => OpenAgentSessionRequest._();
+  @$core.pragma('dart2js:noInline')
+  static OpenAgentSessionRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<OpenAgentSessionRequest>(
+          OpenAgentSessionRequest.$_createMessage);
+  static OpenAgentSessionRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get agent => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set agent($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasAgent() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearAgent() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get folder => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set folder($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasFolder() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearFolder() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get sessionId => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set sessionId($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasSessionId() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearSessionId() => $_clearField(3);
+
+  /// The title it had in the list, until the agent names it.
+  @$pb.TagNumber(4)
+  $core.String get title => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set title($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasTitle() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearTitle() => $_clearField(4);
+}
+
+class OpenAgentSessionResponse extends $pb.GeneratedMessage {
+  factory OpenAgentSessionResponse({
+    $core.String? chatId,
+  }) {
+    final result = OpenAgentSessionResponse._();
+    if (chatId != null) result.chatId = chatId;
+    return result;
+  }
+
+  OpenAgentSessionResponse._();
+
+  factory OpenAgentSessionResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      OpenAgentSessionResponse()..mergeFromBuffer(data, registry);
+  factory OpenAgentSessionResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      OpenAgentSessionResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'OpenAgentSessionResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: OpenAgentSessionResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  OpenAgentSessionResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  OpenAgentSessionResponse copyWith(
+          void Function(OpenAgentSessionResponse) updates) =>
+      super.copyWith((message) => updates(message as OpenAgentSessionResponse))
+          as OpenAgentSessionResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use OpenAgentSessionResponse() / OpenAgentSessionResponse.new instead')
+  static OpenAgentSessionResponse create() => OpenAgentSessionResponse._();
+  static $pb.GeneratedMessage $_createMessage() => OpenAgentSessionResponse._();
+  @$core.override
+  OpenAgentSessionResponse createEmptyInstance() =>
+      OpenAgentSessionResponse._();
+  @$core.pragma('dart2js:noInline')
+  static OpenAgentSessionResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<OpenAgentSessionResponse>(
+          OpenAgentSessionResponse.$_createMessage);
+  static OpenAgentSessionResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+}
+
 class MoveChatRequest extends $pb.GeneratedMessage {
   factory MoveChatRequest({
     $core.String? chatId,
@@ -10890,6 +11366,22 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, ListAgentsRequest request) =>
       _client.invoke<ListAgentsResponse>(
           ctx, 'NushiService', 'ListAgents', request, ListAgentsResponse());
+
+  /// Lists an agent's sessions in a folder that aren't chats (started in a
+  /// terminal, say), newest first, a page at a time. It starts the agent to
+  /// ask (ACP session/list).
+  $async.Future<ListAgentSessionsResponse> listAgentSessions(
+          $pb.ClientContext? ctx, ListAgentSessionsRequest request) =>
+      _client.invoke<ListAgentSessionsResponse>(ctx, 'NushiService',
+          'ListAgentSessions', request, ListAgentSessionsResponse());
+
+  /// Opens one of them as a chat in the folder: the agent replays it
+  /// (session/load); nothing is copied. For a session that is a chat
+  /// already, that chat.
+  $async.Future<OpenAgentSessionResponse> openAgentSession(
+          $pb.ClientContext? ctx, OpenAgentSessionRequest request) =>
+      _client.invoke<OpenAgentSessionResponse>(ctx, 'NushiService',
+          'OpenAgentSession', request, OpenAgentSessionResponse());
 
   /// Moves a chat to another folder, or to a new worktree. A chat without
   /// messages starts a new session there (and a worktree it leaves is

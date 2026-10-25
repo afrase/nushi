@@ -43,6 +43,12 @@ const (
 	NushiServiceStartChatProcedure = "/nushi.v1.NushiService/StartChat"
 	// NushiServiceListAgentsProcedure is the fully-qualified name of the NushiService's ListAgents RPC.
 	NushiServiceListAgentsProcedure = "/nushi.v1.NushiService/ListAgents"
+	// NushiServiceListAgentSessionsProcedure is the fully-qualified name of the NushiService's
+	// ListAgentSessions RPC.
+	NushiServiceListAgentSessionsProcedure = "/nushi.v1.NushiService/ListAgentSessions"
+	// NushiServiceOpenAgentSessionProcedure is the fully-qualified name of the NushiService's
+	// OpenAgentSession RPC.
+	NushiServiceOpenAgentSessionProcedure = "/nushi.v1.NushiService/OpenAgentSession"
 	// NushiServiceMoveChatProcedure is the fully-qualified name of the NushiService's MoveChat RPC.
 	NushiServiceMoveChatProcedure = "/nushi.v1.NushiService/MoveChat"
 	// NushiServiceSendPromptProcedure is the fully-qualified name of the NushiService's SendPrompt RPC.
@@ -185,6 +191,14 @@ type NushiServiceClient interface {
 	StartChat(context.Context, *connect.Request[v1.StartChatRequest]) (*connect.Response[v1.StartChatResponse], error)
 	// Lists the agents chats can run, the default first.
 	ListAgents(context.Context, *connect.Request[v1.ListAgentsRequest]) (*connect.Response[v1.ListAgentsResponse], error)
+	// Lists an agent's sessions in a folder that aren't chats (started in a
+	// terminal, say), newest first, a page at a time. It starts the agent to
+	// ask (ACP session/list).
+	ListAgentSessions(context.Context, *connect.Request[v1.ListAgentSessionsRequest]) (*connect.Response[v1.ListAgentSessionsResponse], error)
+	// Opens one of them as a chat in the folder: the agent replays it
+	// (session/load); nothing is copied. For a session that is a chat
+	// already, that chat.
+	OpenAgentSession(context.Context, *connect.Request[v1.OpenAgentSessionRequest]) (*connect.Response[v1.OpenAgentSessionResponse], error)
 	// Moves a chat to another folder, or to a new worktree. A chat without
 	// messages starts a new session there (and a worktree it leaves is
 	// removed if it holds no work); one with messages keeps its history, in a
@@ -376,6 +390,18 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceListAgentsProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("ListAgents")),
+			connect.WithClientOptions(opts...),
+		),
+		listAgentSessions: connect.NewClient[v1.ListAgentSessionsRequest, v1.ListAgentSessionsResponse](
+			httpClient,
+			baseURL+NushiServiceListAgentSessionsProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ListAgentSessions")),
+			connect.WithClientOptions(opts...),
+		),
+		openAgentSession: connect.NewClient[v1.OpenAgentSessionRequest, v1.OpenAgentSessionResponse](
+			httpClient,
+			baseURL+NushiServiceOpenAgentSessionProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("OpenAgentSession")),
 			connect.WithClientOptions(opts...),
 		),
 		moveChat: connect.NewClient[v1.MoveChatRequest, v1.MoveChatResponse](
@@ -671,59 +697,61 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 
 // nushiServiceClient implements NushiServiceClient.
 type nushiServiceClient struct {
-	ping             *connect.Client[v1.PingRequest, v1.PingResponse]
-	listChats        *connect.Client[v1.ListChatsRequest, v1.ListChatsResponse]
-	getChat          *connect.Client[v1.GetChatRequest, v1.GetChatResponse]
-	startChat        *connect.Client[v1.StartChatRequest, v1.StartChatResponse]
-	listAgents       *connect.Client[v1.ListAgentsRequest, v1.ListAgentsResponse]
-	moveChat         *connect.Client[v1.MoveChatRequest, v1.MoveChatResponse]
-	sendPrompt       *connect.Client[v1.SendPromptRequest, v1.SendPromptResponse]
-	rewindChat       *connect.Client[v1.RewindChatRequest, v1.RewindChatResponse]
-	unqueue          *connect.Client[v1.UnqueueRequest, v1.UnqueueResponse]
-	cancelTurn       *connect.Client[v1.CancelTurnRequest, v1.CancelTurnResponse]
-	forkChat         *connect.Client[v1.ForkChatRequest, v1.ForkChatResponse]
-	closeSideChat    *connect.Client[v1.CloseSideChatRequest, v1.CloseSideChatResponse]
-	renameChat       *connect.Client[v1.RenameChatRequest, v1.RenameChatResponse]
-	archiveChat      *connect.Client[v1.ArchiveChatRequest, v1.ArchiveChatResponse]
-	sleepChat        *connect.Client[v1.SleepChatRequest, v1.SleepChatResponse]
-	getMemory        *connect.Client[v1.GetMemoryRequest, v1.GetMemoryResponse]
-	getSettings      *connect.Client[v1.GetSettingsRequest, v1.GetSettingsResponse]
-	setSettings      *connect.Client[v1.SetSettingsRequest, v1.SetSettingsResponse]
-	planDeleteChat   *connect.Client[v1.PlanDeleteChatRequest, v1.PlanDeleteChatResponse]
-	deleteChat       *connect.Client[v1.DeleteChatRequest, v1.DeleteChatResponse]
-	answerPermission *connect.Client[v1.AnswerPermissionRequest, v1.AnswerPermissionResponse]
-	answerQuestion   *connect.Client[v1.AnswerQuestionRequest, v1.AnswerQuestionResponse]
-	setConfigOption  *connect.Client[v1.SetConfigOptionRequest, v1.SetConfigOptionResponse]
-	getDiff          *connect.Client[v1.GetDiffRequest, v1.GetDiffResponse]
-	listCommits      *connect.Client[v1.ListCommitsRequest, v1.ListCommitsResponse]
-	getFolderStatus  *connect.Client[v1.GetFolderStatusRequest, v1.GetFolderStatusResponse]
-	listFiles        *connect.Client[v1.ListFilesRequest, v1.ListFilesResponse]
-	getContextUsage  *connect.Client[v1.GetContextUsageRequest, v1.GetContextUsageResponse]
-	listMcpServers   *connect.Client[v1.ListMcpServersRequest, v1.ListMcpServersResponse]
-	addMcpServer     *connect.Client[v1.AddMcpServerRequest, v1.AddMcpServerResponse]
-	editMcpServer    *connect.Client[v1.EditMcpServerRequest, v1.EditMcpServerResponse]
-	removeMcpServer  *connect.Client[v1.RemoveMcpServerRequest, v1.RemoveMcpServerResponse]
-	setMcpServerOn   *connect.Client[v1.SetMcpServerOnRequest, v1.SetMcpServerOnResponse]
-	loginMcpServer   *connect.Client[v1.LoginMcpServerRequest, v1.LoginMcpServerResponse]
-	logoutMcpServer  *connect.Client[v1.LogoutMcpServerRequest, v1.LogoutMcpServerResponse]
-	reloadChat       *connect.Client[v1.ReloadChatRequest, v1.ReloadChatResponse]
-	openTerminal     *connect.Client[v1.OpenTerminalRequest, v1.OpenTerminalResponse]
-	listTerminals    *connect.Client[v1.ListTerminalsRequest, v1.ListTerminalsResponse]
-	attachTerminal   *connect.Client[v1.AttachTerminalRequest, v1.AttachTerminalResponse]
-	writeTerminal    *connect.Client[v1.WriteTerminalRequest, v1.WriteTerminalResponse]
-	resizeTerminal   *connect.Client[v1.ResizeTerminalRequest, v1.ResizeTerminalResponse]
-	renameTerminal   *connect.Client[v1.RenameTerminalRequest, v1.RenameTerminalResponse]
-	arrangeTerminals *connect.Client[v1.ArrangeTerminalsRequest, v1.ArrangeTerminalsResponse]
-	restartTerminal  *connect.Client[v1.RestartTerminalRequest, v1.RestartTerminalResponse]
-	closeTerminal    *connect.Client[v1.CloseTerminalRequest, v1.CloseTerminalResponse]
-	checkFolder      *connect.Client[v1.CheckFolderRequest, v1.CheckFolderResponse]
-	trustFolder      *connect.Client[v1.TrustFolderRequest, v1.TrustFolderResponse]
-	getRemote        *connect.Client[v1.GetRemoteRequest, v1.GetRemoteResponse]
-	setRemote        *connect.Client[v1.SetRemoteRequest, v1.SetRemoteResponse]
-	startPairing     *connect.Client[v1.StartPairingRequest, v1.StartPairingResponse]
-	confirmPairing   *connect.Client[v1.ConfirmPairingRequest, v1.ConfirmPairingResponse]
-	revokeDevice     *connect.Client[v1.RevokeDeviceRequest, v1.RevokeDeviceResponse]
-	events           *connect.Client[v1.EventsRequest, v1.EventsResponse]
+	ping              *connect.Client[v1.PingRequest, v1.PingResponse]
+	listChats         *connect.Client[v1.ListChatsRequest, v1.ListChatsResponse]
+	getChat           *connect.Client[v1.GetChatRequest, v1.GetChatResponse]
+	startChat         *connect.Client[v1.StartChatRequest, v1.StartChatResponse]
+	listAgents        *connect.Client[v1.ListAgentsRequest, v1.ListAgentsResponse]
+	listAgentSessions *connect.Client[v1.ListAgentSessionsRequest, v1.ListAgentSessionsResponse]
+	openAgentSession  *connect.Client[v1.OpenAgentSessionRequest, v1.OpenAgentSessionResponse]
+	moveChat          *connect.Client[v1.MoveChatRequest, v1.MoveChatResponse]
+	sendPrompt        *connect.Client[v1.SendPromptRequest, v1.SendPromptResponse]
+	rewindChat        *connect.Client[v1.RewindChatRequest, v1.RewindChatResponse]
+	unqueue           *connect.Client[v1.UnqueueRequest, v1.UnqueueResponse]
+	cancelTurn        *connect.Client[v1.CancelTurnRequest, v1.CancelTurnResponse]
+	forkChat          *connect.Client[v1.ForkChatRequest, v1.ForkChatResponse]
+	closeSideChat     *connect.Client[v1.CloseSideChatRequest, v1.CloseSideChatResponse]
+	renameChat        *connect.Client[v1.RenameChatRequest, v1.RenameChatResponse]
+	archiveChat       *connect.Client[v1.ArchiveChatRequest, v1.ArchiveChatResponse]
+	sleepChat         *connect.Client[v1.SleepChatRequest, v1.SleepChatResponse]
+	getMemory         *connect.Client[v1.GetMemoryRequest, v1.GetMemoryResponse]
+	getSettings       *connect.Client[v1.GetSettingsRequest, v1.GetSettingsResponse]
+	setSettings       *connect.Client[v1.SetSettingsRequest, v1.SetSettingsResponse]
+	planDeleteChat    *connect.Client[v1.PlanDeleteChatRequest, v1.PlanDeleteChatResponse]
+	deleteChat        *connect.Client[v1.DeleteChatRequest, v1.DeleteChatResponse]
+	answerPermission  *connect.Client[v1.AnswerPermissionRequest, v1.AnswerPermissionResponse]
+	answerQuestion    *connect.Client[v1.AnswerQuestionRequest, v1.AnswerQuestionResponse]
+	setConfigOption   *connect.Client[v1.SetConfigOptionRequest, v1.SetConfigOptionResponse]
+	getDiff           *connect.Client[v1.GetDiffRequest, v1.GetDiffResponse]
+	listCommits       *connect.Client[v1.ListCommitsRequest, v1.ListCommitsResponse]
+	getFolderStatus   *connect.Client[v1.GetFolderStatusRequest, v1.GetFolderStatusResponse]
+	listFiles         *connect.Client[v1.ListFilesRequest, v1.ListFilesResponse]
+	getContextUsage   *connect.Client[v1.GetContextUsageRequest, v1.GetContextUsageResponse]
+	listMcpServers    *connect.Client[v1.ListMcpServersRequest, v1.ListMcpServersResponse]
+	addMcpServer      *connect.Client[v1.AddMcpServerRequest, v1.AddMcpServerResponse]
+	editMcpServer     *connect.Client[v1.EditMcpServerRequest, v1.EditMcpServerResponse]
+	removeMcpServer   *connect.Client[v1.RemoveMcpServerRequest, v1.RemoveMcpServerResponse]
+	setMcpServerOn    *connect.Client[v1.SetMcpServerOnRequest, v1.SetMcpServerOnResponse]
+	loginMcpServer    *connect.Client[v1.LoginMcpServerRequest, v1.LoginMcpServerResponse]
+	logoutMcpServer   *connect.Client[v1.LogoutMcpServerRequest, v1.LogoutMcpServerResponse]
+	reloadChat        *connect.Client[v1.ReloadChatRequest, v1.ReloadChatResponse]
+	openTerminal      *connect.Client[v1.OpenTerminalRequest, v1.OpenTerminalResponse]
+	listTerminals     *connect.Client[v1.ListTerminalsRequest, v1.ListTerminalsResponse]
+	attachTerminal    *connect.Client[v1.AttachTerminalRequest, v1.AttachTerminalResponse]
+	writeTerminal     *connect.Client[v1.WriteTerminalRequest, v1.WriteTerminalResponse]
+	resizeTerminal    *connect.Client[v1.ResizeTerminalRequest, v1.ResizeTerminalResponse]
+	renameTerminal    *connect.Client[v1.RenameTerminalRequest, v1.RenameTerminalResponse]
+	arrangeTerminals  *connect.Client[v1.ArrangeTerminalsRequest, v1.ArrangeTerminalsResponse]
+	restartTerminal   *connect.Client[v1.RestartTerminalRequest, v1.RestartTerminalResponse]
+	closeTerminal     *connect.Client[v1.CloseTerminalRequest, v1.CloseTerminalResponse]
+	checkFolder       *connect.Client[v1.CheckFolderRequest, v1.CheckFolderResponse]
+	trustFolder       *connect.Client[v1.TrustFolderRequest, v1.TrustFolderResponse]
+	getRemote         *connect.Client[v1.GetRemoteRequest, v1.GetRemoteResponse]
+	setRemote         *connect.Client[v1.SetRemoteRequest, v1.SetRemoteResponse]
+	startPairing      *connect.Client[v1.StartPairingRequest, v1.StartPairingResponse]
+	confirmPairing    *connect.Client[v1.ConfirmPairingRequest, v1.ConfirmPairingResponse]
+	revokeDevice      *connect.Client[v1.RevokeDeviceRequest, v1.RevokeDeviceResponse]
+	events            *connect.Client[v1.EventsRequest, v1.EventsResponse]
 }
 
 // Ping calls nushi.v1.NushiService.Ping.
@@ -749,6 +777,16 @@ func (c *nushiServiceClient) StartChat(ctx context.Context, req *connect.Request
 // ListAgents calls nushi.v1.NushiService.ListAgents.
 func (c *nushiServiceClient) ListAgents(ctx context.Context, req *connect.Request[v1.ListAgentsRequest]) (*connect.Response[v1.ListAgentsResponse], error) {
 	return c.listAgents.CallUnary(ctx, req)
+}
+
+// ListAgentSessions calls nushi.v1.NushiService.ListAgentSessions.
+func (c *nushiServiceClient) ListAgentSessions(ctx context.Context, req *connect.Request[v1.ListAgentSessionsRequest]) (*connect.Response[v1.ListAgentSessionsResponse], error) {
+	return c.listAgentSessions.CallUnary(ctx, req)
+}
+
+// OpenAgentSession calls nushi.v1.NushiService.OpenAgentSession.
+func (c *nushiServiceClient) OpenAgentSession(ctx context.Context, req *connect.Request[v1.OpenAgentSessionRequest]) (*connect.Response[v1.OpenAgentSessionResponse], error) {
+	return c.openAgentSession.CallUnary(ctx, req)
 }
 
 // MoveChat calls nushi.v1.NushiService.MoveChat.
@@ -1003,6 +1041,14 @@ type NushiServiceHandler interface {
 	StartChat(context.Context, *connect.Request[v1.StartChatRequest]) (*connect.Response[v1.StartChatResponse], error)
 	// Lists the agents chats can run, the default first.
 	ListAgents(context.Context, *connect.Request[v1.ListAgentsRequest]) (*connect.Response[v1.ListAgentsResponse], error)
+	// Lists an agent's sessions in a folder that aren't chats (started in a
+	// terminal, say), newest first, a page at a time. It starts the agent to
+	// ask (ACP session/list).
+	ListAgentSessions(context.Context, *connect.Request[v1.ListAgentSessionsRequest]) (*connect.Response[v1.ListAgentSessionsResponse], error)
+	// Opens one of them as a chat in the folder: the agent replays it
+	// (session/load); nothing is copied. For a session that is a chat
+	// already, that chat.
+	OpenAgentSession(context.Context, *connect.Request[v1.OpenAgentSessionRequest]) (*connect.Response[v1.OpenAgentSessionResponse], error)
 	// Moves a chat to another folder, or to a new worktree. A chat without
 	// messages starts a new session there (and a worktree it leaves is
 	// removed if it holds no work); one with messages keeps its history, in a
@@ -1190,6 +1236,18 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceListAgentsProcedure,
 		svc.ListAgents,
 		connect.WithSchema(nushiServiceMethods.ByName("ListAgents")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceListAgentSessionsHandler := connect.NewUnaryHandler(
+		NushiServiceListAgentSessionsProcedure,
+		svc.ListAgentSessions,
+		connect.WithSchema(nushiServiceMethods.ByName("ListAgentSessions")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceOpenAgentSessionHandler := connect.NewUnaryHandler(
+		NushiServiceOpenAgentSessionProcedure,
+		svc.OpenAgentSession,
+		connect.WithSchema(nushiServiceMethods.ByName("OpenAgentSession")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceMoveChatHandler := connect.NewUnaryHandler(
@@ -1492,6 +1550,10 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceStartChatHandler.ServeHTTP(w, r)
 		case NushiServiceListAgentsProcedure:
 			nushiServiceListAgentsHandler.ServeHTTP(w, r)
+		case NushiServiceListAgentSessionsProcedure:
+			nushiServiceListAgentSessionsHandler.ServeHTTP(w, r)
+		case NushiServiceOpenAgentSessionProcedure:
+			nushiServiceOpenAgentSessionHandler.ServeHTTP(w, r)
 		case NushiServiceMoveChatProcedure:
 			nushiServiceMoveChatHandler.ServeHTTP(w, r)
 		case NushiServiceSendPromptProcedure:
@@ -1615,6 +1677,14 @@ func (UnimplementedNushiServiceHandler) StartChat(context.Context, *connect.Requ
 
 func (UnimplementedNushiServiceHandler) ListAgents(context.Context, *connect.Request[v1.ListAgentsRequest]) (*connect.Response[v1.ListAgentsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ListAgents is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ListAgentSessions(context.Context, *connect.Request[v1.ListAgentSessionsRequest]) (*connect.Response[v1.ListAgentSessionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ListAgentSessions is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) OpenAgentSession(context.Context, *connect.Request[v1.OpenAgentSessionRequest]) (*connect.Response[v1.OpenAgentSessionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.OpenAgentSession is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) MoveChat(context.Context, *connect.Request[v1.MoveChatRequest]) (*connect.Response[v1.MoveChatResponse], error) {

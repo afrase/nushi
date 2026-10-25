@@ -75,6 +75,7 @@ type Service struct {
 	chats   map[string]*chat
 	closing bool // Close began: no agent starts any more
 	live    map[Agent]bool
+	opening map[string]bool // sessions Open is making chats of
 }
 
 // Terminals are the shells beside chats (internal/features/terminals).

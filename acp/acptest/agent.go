@@ -26,7 +26,8 @@
 // see each other's sessions, as a restarted agent would. Like Claude's
 // adapter, an agent takes prompts and config changes only for sessions it
 // opened (session/new, load or fork), and session/delete deletes a session
-// in whichever folder has it.
+// in whichever folder has it. session/list lists the History's sessions,
+// titled with their first prompt.
 package acptest
 
 import (
@@ -46,6 +47,7 @@ type Agent struct {
 	Pause   time.Duration
 	Codex   bool // answers as codex-acp does (codex.go)
 	Omp     bool // answers as omp does (omp.go)
+	NoList  bool // doesn't advertise session/list
 
 	w       io.Writer
 	writeMu sync.Mutex
@@ -179,14 +181,21 @@ func (a *Agent) answer(f frame) {
 	var result any
 	switch f.Method {
 	case "initialize":
-		result = map[string]any{"protocolVersion": 1, "agentCapabilities": map[string]any{"loadSession": true,
-			"sessionCapabilities": map[string]any{"fork": map[string]any{}, "delete": map[string]any{}, "close": map[string]any{}}}}
+		caps := map[string]any{"fork": map[string]any{}, "delete": map[string]any{}, "close": map[string]any{}, "list": map[string]any{}}
+		result = map[string]any{"protocolVersion": 1, "agentCapabilities": map[string]any{"loadSession": true, "sessionCapabilities": caps}}
 		if a.Codex {
 			result = codexInit()
 		}
 		if a.Omp {
 			result = ompInit()
 		}
+		if a.NoList {
+			delete(result.(map[string]any)["agentCapabilities"].(map[string]any)["sessionCapabilities"].(map[string]any), "list")
+		}
+	case "session/list":
+		var req struct{ Cwd, Cursor string }
+		json.Unmarshal(f.Params, &req)
+		result = a.list(req.Cwd, req.Cursor)
 	case "session/new", "session/fork":
 		a.mu.Lock()
 		a.nextID++
@@ -238,6 +247,32 @@ func (a *Agent) answer(f frame) {
 	}
 	r, _ := json.Marshal(result)
 	a.send(frame{ID: f.ID, Result: r})
+}
+
+// list answers session/list a page at a time (the cursor is the next
+// one's index): all at once, or, like codex-acp, two at a time from every
+// folder's sessions, the other folders' then left out.
+func (a *Agent) list(cwd, cursor string) map[string]any {
+	all, size := a.History.list(cwd), 0
+	if a.Codex {
+		all, size = a.History.list(""), 2
+	}
+	from, _ := strconv.Atoi(cursor)
+	to := len(all)
+	if size > 0 {
+		to = min(to, from+size)
+	}
+	page := []map[string]any{}
+	for _, s := range all[min(from, to):to] {
+		if cwd == "" || s["cwd"] == cwd {
+			page = append(page, s)
+		}
+	}
+	out := map[string]any{"sessions": page}
+	if to < len(all) {
+		out["nextCursor"] = strconv.Itoa(to)
+	}
+	return out
 }
 
 func (a *Agent) say(session, text string) {

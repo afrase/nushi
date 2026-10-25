@@ -27,7 +27,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 48
+const Version = 49
 
 // build is the daemon's executable as it started (PingResponse.build).
 var build = func() string {
@@ -177,6 +177,32 @@ func (s *server) ListAgents(context.Context, *connect.Request[nushiv1.ListAgents
 		resp.Agents = append(resp.Agents, &nushiv1.Agent{Name: k.Name, Title: k.Title, Resume: k.Resume, Mcp: k.MCP, DeleteArchives: k.DeleteArchives})
 	}
 	return connect.NewResponse(resp), nil
+}
+
+func (s *server) ListAgentSessions(ctx context.Context, req *connect.Request[nushiv1.ListAgentSessionsRequest]) (*connect.Response[nushiv1.ListAgentSessionsResponse], error) {
+	m := req.Msg
+	page, err := s.chats.Find(ctx, s.agent(m.Agent), m.Folder, m.Cursor)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	out := &nushiv1.ListAgentSessionsResponse{CanList: page.CanList, NextCursor: page.Next, SeesOpen: page.SeesOpen}
+	for _, f := range page.Sessions {
+		fs := &nushiv1.FoundSession{SessionId: f.SessionID, Title: f.Title, Folder: f.Folder, Messages: int32(f.Messages), OpenIn: f.OpenIn, FolderGone: f.FolderGone}
+		if !f.Updated.IsZero() {
+			fs.UpdatedUnixMs = f.Updated.UnixMilli()
+		}
+		out.Sessions = append(out.Sessions, fs)
+	}
+	return connect.NewResponse(out), nil
+}
+
+func (s *server) OpenAgentSession(ctx context.Context, req *connect.Request[nushiv1.OpenAgentSessionRequest]) (*connect.Response[nushiv1.OpenAgentSessionResponse], error) {
+	m := req.Msg
+	id, err := s.chats.Open(ctx, s.agent(m.Agent), m.Folder, m.SessionId, m.Title)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	return connect.NewResponse(&nushiv1.OpenAgentSessionResponse{ChatId: id}), nil
 }
 
 // agent names the agent a request names, or the default for "".

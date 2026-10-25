@@ -15,6 +15,14 @@ service NushiService {
   rpc StartChat(StartChatRequest) returns (StartChatResponse);
   // Lists the agents chats can run, the default first.
   rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse);
+  // Lists an agent's sessions in a folder that aren't chats (started in a
+  // terminal, say), newest first, a page at a time. It starts the agent to
+  // ask (ACP session/list).
+  rpc ListAgentSessions(ListAgentSessionsRequest) returns (ListAgentSessionsResponse);
+  // Opens one of them as a chat in the folder: the agent replays it
+  // (session/load); nothing is copied. For a session that is a chat
+  // already, that chat.
+  rpc OpenAgentSession(OpenAgentSessionRequest) returns (OpenAgentSessionResponse);
   // Moves a chat to another folder, or to a new worktree. A chat without
   // messages starts a new session there (and a worktree it leaves is
   // removed if it holds no work); one with messages keeps its history, in a
@@ -301,6 +309,56 @@ message StartChatRequest {
   // <repo>/.worktrees/<name> on a new branch nushi/<name> from folder's
   // HEAD.
   bool worktree = 2;
+}
+
+message ListAgentSessionsRequest {
+  // Agent.name; empty for the default.
+  string agent = 1;
+  // Empty: every folder's.
+  string folder = 2;
+  // The last page's next_cursor, for the page after it.
+  string cursor = 3;
+}
+
+message ListAgentSessionsResponse {
+  // The agent lists its sessions (and reopens them); without, there are none.
+  bool can_list = 1;
+  repeated FoundSession sessions = 2;
+  // Empty at the end.
+  string next_cursor = 3;
+  // Nushi can tell when one of this agent's sessions is open elsewhere
+  // (FoundSession.open_in); without, it can't know.
+  bool sees_open = 4;
+}
+
+// One of an agent's sessions that isn't a chat.
+message FoundSession {
+  string session_id = 1;
+  // Empty when the agent has none for it.
+  string title = 2;
+  // Its folder (cwd), as the agent keeps it.
+  string folder = 3;
+  // Its last activity; 0 when the agent doesn't say.
+  int64 updated_unix_ms = 4;
+  // How many messages it has; 0 when the agent doesn't say.
+  int32 messages = 5;
+  // Where it is open now, outside this daemon, such as "a terminal": both
+  // would write to its history. Empty when it isn't, or can't be told.
+  string open_in = 6;
+  // Its folder no longer exists: it can't be opened.
+  bool folder_gone = 7;
+}
+
+message OpenAgentSessionRequest {
+  string agent = 1;
+  string folder = 2;
+  string session_id = 3;
+  // The title it had in the list, until the agent names it.
+  string title = 4;
+}
+
+message OpenAgentSessionResponse {
+  string chat_id = 1;
 }
 
 message MoveChatRequest {

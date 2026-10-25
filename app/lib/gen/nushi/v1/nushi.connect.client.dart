@@ -98,6 +98,46 @@ extension type NushiServiceClient (connect.Transport _transport) {
     );
   }
 
+  /// Lists an agent's sessions in a folder that aren't chats (started in a
+  /// terminal, say), newest first, a page at a time. It starts the agent to
+  /// ask (ACP session/list).
+  Future<nushiv1nushi.ListAgentSessionsResponse> listAgentSessions(
+    nushiv1nushi.ListAgentSessionsRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.listAgentSessions,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Opens one of them as a chat in the folder: the agent replays it
+  /// (session/load); nothing is copied. For a session that is a chat
+  /// already, that chat.
+  Future<nushiv1nushi.OpenAgentSessionResponse> openAgentSession(
+    nushiv1nushi.OpenAgentSessionRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.openAgentSession,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Moves a chat to another folder, or to a new worktree. A chat without
   /// messages starts a new session there (and a worktree it leaves is
   /// removed if it holds no work); one with messages keeps its history, in a
