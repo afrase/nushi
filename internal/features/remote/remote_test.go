@@ -1,10 +1,12 @@
 package remote
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -172,11 +175,26 @@ func pairOne(t *testing.T, s *Service, key noise.DHKey) (offer, string) {
 }
 
 func TestPairThenConnect(t *testing.T) {
+	var log bytes.Buffer
+	var logMu sync.Mutex
+	defer slog.SetDefault(slog.Default())
+	slog.SetDefault(slog.New(slog.NewTextHandler(writerFunc(func(p []byte) (int, error) {
+		logMu.Lock()
+		defer logMu.Unlock()
+		return log.Write(p)
+	}), nil)))
 	url := startRelay(t)
 	dir := t.TempDir()
 	s := startRemote(t, dir, url)
 	phone := newKey(t)
 	o, id := pairOne(t, s, phone)
+	logMu.Lock()
+	logged := log.String()
+	logMu.Unlock()
+	// The pairing is in the log, its secret isn't.
+	if !strings.Contains(logged, `msg="device paired"`) || strings.Contains(logged, base64.RawURLEncoding.EncodeToString(o.psk)) {
+		t.Errorf("log:\n%s", logged)
+	}
 	r := s.Get()
 	if len(r.Devices) != 1 || r.Devices[0].Name != "Test phone" || r.Pairing != nil {
 		t.Fatalf("after pairing: %+v", r)
@@ -491,3 +509,7 @@ func TestRevokeMovesTheID(t *testing.T) {
 		return err != nil
 	})
 }
+
+type writerFunc func([]byte) (int, error)
+
+func (f writerFunc) Write(p []byte) (int, error) { return f(p) }
