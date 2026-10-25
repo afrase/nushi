@@ -76,7 +76,7 @@ test:
 
 # Hand-written lines, without tests or generated code (the size limits).
 lines:
-	@echo "go daemon: $$(find cmd/nushid internal -name '*.go' ! -name '*_test.go' ! -path 'internal/gen/*' ! -path 'internal/ante/antetest/*' | xargs cat | wc -l)"
+	@echo "go daemon: $$(find cmd/nushid internal -name '*.go' ! -name '*_test.go' ! -path 'internal/gen/*' ! -path 'internal/ante/antetest/*' ! -path 'internal/pig/pigtest/*' | xargs cat | wc -l)"
 	@echo "go relay and noise: $$(find cmd/nushi-relay relay noiseconn -name '*.go' ! -name '*_test.go' 2>/dev/null | xargs cat | wc -l)"
 	@echo "go acp: $$(find acp -name '*.go' ! -name '*_test.go' ! -name '*_gen.go' ! -path 'acp/acptest/*' | xargs cat | wc -l)"
 	@echo "dart app: $$(find app/lib -name '*.dart' ! -path 'app/lib/gen/*' | xargs cat | wc -l)"

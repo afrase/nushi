@@ -22,9 +22,19 @@ func NewPeer(w io.Writer, handle func(ctx context.Context, method string, params
 func (p *Peer) Serve(r io.Reader) { go p.conn.read(r) }
 
 // Call sends the client a request and decodes its result into result
-// (unless nil).
+// (unless nil). If ctx ends first, the request is withdrawn
+// ($/cancel_request): the client stops asking (a question the agent gave
+// up on).
 func (p *Peer) Call(ctx context.Context, method string, params, result any) error {
-	return p.conn.call(ctx, method, params, result)
+	wait, err := p.conn.send(method, params)
+	if err != nil {
+		return err
+	}
+	err = wait(ctx, result)
+	if id := withdrawable(err); id != nil {
+		p.conn.notify("$/cancel_request", map[string]any{"requestId": id})
+	}
+	return err
 }
 
 // Notify sends the client a notification.

@@ -2,6 +2,7 @@ package acp
 
 import (
 	"bytes"
+	"context"
 	"log/slog"
 	"strings"
 	"sync"
@@ -72,6 +73,10 @@ func (c *Client) opened(err error, method, session string, start time.Time, args
 	}
 }
 
+// DebugPrefix starts a line of an agent's stderr that is logged at DEBUG,
+// and only then: a bridge of Nushi's own writes its calls so.
+const DebugPrefix = "DEBUG "
+
 // Caps on the agent's stderr: a line is cut at maxLine bytes, and lines go
 // at burst, then perSecond.
 const (
@@ -118,6 +123,13 @@ func (s *stderrLines) emit() {
 	if strings.TrimSpace(line) == "" {
 		return
 	}
+	level := slog.LevelInfo
+	if rest, ok := strings.CutPrefix(line, DebugPrefix); ok { // a bridge of Nushi's own (internal/pig)
+		if !s.log.Enabled(context.Background(), slog.LevelDebug) {
+			return
+		}
+		line, level = rest, slog.LevelDebug
+	}
 	now := time.Now()
 	s.tokens = min(burst, s.tokens+now.Sub(s.last).Seconds()*perSecond)
 	s.last = now
@@ -134,7 +146,7 @@ func (s *stderrLines) emit() {
 		args = append(args, "dropped", s.dropped)
 		s.dropped = 0
 	}
-	s.log.Info(line, args...)
+	s.log.Log(context.Background(), level, line, args...)
 }
 
 // flush logs a last line without its newline, and what was dropped.

@@ -105,6 +105,23 @@ type panicky struct{ recorder }
 
 func (*panicky) SessionUpdate(SessionNotification) { panic("a bad update") }
 
+// A line marked DEBUG (a bridge of Nushi's own) is logged at DEBUG, and
+// only when that's on.
+func TestDebugLinesOfABridge(t *testing.T) {
+	var b logBuffer
+	s := &stderrLines{log: slog.New(slog.NewTextHandler(&b, nil))}
+	io.WriteString(s, DebugPrefix+"pig-acp: rpc get_state took=1ms\nplain\n")
+	if got := b.String(); strings.Contains(got, "rpc get_state") || !strings.Contains(got, "level=INFO msg=plain") {
+		t.Errorf("at INFO:\n%s", got)
+	}
+	log, debug := newLog()
+	s = &stderrLines{log: log}
+	io.WriteString(s, DebugPrefix+"pig-acp: rpc get_state took=1ms\n")
+	if got := debug.String(); !strings.Contains(got, `level=DEBUG msg="pig-acp: rpc get_state took=1ms" source=agent`) {
+		t.Errorf("at DEBUG:\n%s", got)
+	}
+}
+
 func TestBadMessagesLogged(t *testing.T) {
 	log, b := newLog()
 	toAgentR, toAgentW := io.Pipe()

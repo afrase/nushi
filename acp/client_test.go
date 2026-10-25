@@ -175,3 +175,26 @@ func TestAFrameTooLargeIsntSent(t *testing.T) {
 		t.Errorf("a %d MiB prompt: %v", MaxFrame>>20, err)
 	}
 }
+
+// A peer (an agent of Nushi's own) that stops waiting withdraws its
+// request: the client's handler ends.
+func TestAPeerWithdrawsWhatItGaveUpOn(t *testing.T) {
+	toAgentR, toAgentW := io.Pipe()
+	fromAgentR, fromAgentW := io.Pipe()
+	defer fromAgentW.Close()
+	defer toAgentW.Close()
+	h := &blocking{ended: make(chan struct{})}
+	Connect(fromAgentR, toAgentW, h, nil)
+	p := NewPeer(fromAgentW, func(context.Context, string, json.RawMessage) (any, error) { return nil, nil })
+	p.Serve(toAgentR)
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	if err := p.Call(ctx, "session/request_permission", RequestPermissionRequest{SessionID: "s1", ToolCall: ToolCallUpdate{ToolCallID: "t1"}}, nil); !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("err = %v", err)
+	}
+	select {
+	case <-h.ended:
+	case <-time.After(2 * time.Second):
+		t.Fatal("the client still asks")
+	}
+}

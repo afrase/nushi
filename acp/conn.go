@@ -297,8 +297,25 @@ func (c *conn) await(ctx context.Context, method string, id json.RawMessage, ch 
 		return json.Unmarshal(f.Result, result)
 	case <-ctx.Done():
 		c.forget(id)
-		return ctx.Err()
+		return &gaveUp{ctx.Err(), id}
 	}
+}
+
+// gaveUp is a call whose context ended before its answer came: the id it
+// went out under, which $/cancel_request names to withdraw it.
+type gaveUp struct {
+	error
+	id json.RawMessage
+}
+
+func (g *gaveUp) Unwrap() error { return g.error }
+
+func withdrawable(err error) json.RawMessage {
+	var g *gaveUp
+	if errors.As(err, &g) {
+		return g.id
+	}
+	return nil
 }
 
 func (c *conn) forget(id json.RawMessage) {

@@ -16,6 +16,7 @@ import (
 
 	"github.com/afrase/nushi/acp"
 	"github.com/afrase/nushi/internal/ante/antetest"
+	"github.com/afrase/nushi/internal/toolcall"
 )
 
 // client is the ACP client's side of a bridge running on a fake Ante.
@@ -259,15 +260,15 @@ func TestWritesOldText(t *testing.T) {
 	dir := t.TempDir()
 	small, big, fifo := dir+"/small", dir+"/big", dir+"/fifo"
 	os.WriteFile(small, []byte("before"), 0o600)
-	os.WriteFile(big, make([]byte, maxOld+1), 0o600)
+	os.WriteFile(big, make([]byte, toolcall.MaxOld+1), 0o600)
 	if err := syscall.Mkfifo(fifo, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	os.Symlink(small, dir+"/link")
 	s := &session{cwd: dir}
-	done := make(chan map[string]oldText)
+	done := make(chan map[string]toolcall.Old)
 	go func() {
-		olds := map[string]oldText{}
+		olds := map[string]toolcall.Old{}
 		for _, p := range []string{"small", "big", "fifo", "/dev/zero", "link", "new"} {
 			ev := event{Name: "ToolStart", Payload: json.RawMessage(`{"id":"` + p + `","name":"Write","args":{"file_path":"` + p + `","content":"x"}}`)}
 			maps.Copy(olds, s.readOlds(ev))
@@ -276,11 +277,11 @@ func TestWritesOldText(t *testing.T) {
 	}()
 	select {
 	case olds := <-done:
-		if olds["small"].text != "before" || olds["new"] != (oldText{}) {
+		if olds["small"].Text != "before" || olds["new"] != (toolcall.Old{}) {
 			t.Errorf("olds: %+v", olds)
 		}
 		for _, p := range []string{"big", "fifo", "/dev/zero", "link"} {
-			if olds[p].text != "" || olds[p].note == "" {
+			if olds[p].Text != "" || olds[p].Note == "" {
 				t.Errorf("%s: %+v, want no text and a note", p, olds[p])
 			}
 		}

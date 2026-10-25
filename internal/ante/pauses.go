@@ -8,12 +8,13 @@ import (
 	"sync"
 
 	"github.com/afrase/nushi/acp"
+	"github.com/afrase/nushi/internal/toolcall"
 )
 
 // pauseLocked asks the client about a paused turn: permission for the
 // calls waiting on it (shown first, as Ante pauses before it starts them),
 // or the model's questions.
-func (s *session) pauseLocked(ev event, olds map[string]oldText) []acp.SessionUpdate {
+func (s *session) pauseLocked(ev event, olds map[string]toolcall.Old) []acp.SessionUpdate {
 	var p struct {
 		TurnID string          `json:"turn_id"`
 		Reason json.RawMessage `json:"reason"`
@@ -44,7 +45,7 @@ func (s *session) pauseLocked(ev event, olds map[string]oldText) []acp.SessionUp
 
 // approve asks permission for each call and answers the host for all at
 // once. A call the client cancelled (the turn was stopped) is denied.
-func (s *session) approve(turnID string, tools []toolUse, olds map[string]oldText) {
+func (s *session) approve(turnID string, tools []toolUse, olds map[string]toolcall.Old) {
 	type decision struct {
 		ToolUseID string `json:"tool_use_id"`
 		Decision  string `json:"decision"`
