@@ -9,7 +9,7 @@ import 'package:protobuf/well_known_types/google/protobuf/empty.pb.dart';
 import 'package:test/test.dart';
 import 'package:uds_transport/uds_transport.dart';
 
-const _spec = connect.Spec(
+const _spec = connect.Spec<Empty, Empty>(
   '/test.v1.TestService/Call',
   connect.StreamType.unary,
   Empty.new,
@@ -65,18 +65,19 @@ void main() {
 }
 
 class _Server {
-  _Server(this._socket) {
+  new(this._socket) {
     _socket.listen((s) {
       connections++;
       final conn = http2.ServerTransportConnection.viaSocket(s);
       _open.add(conn);
       conn.incomingStreams.listen((stream) async {
         await stream.incomingMessages.drain<void>();
-        stream.sendHeaders([
-          http2.Header.ascii(':status', '200'),
-          http2.Header.ascii('content-type', 'application/proto'),
-        ]);
-        stream.sendData([], endStream: true);
+        stream
+          ..sendHeaders([
+            http2.Header.ascii(':status', '200'),
+            http2.Header.ascii('content-type', 'application/proto'),
+          ])
+          ..sendData([], endStream: true);
       });
     });
   }

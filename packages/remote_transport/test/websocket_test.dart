@@ -15,9 +15,7 @@ Future<Uri> _server(List<Object> script, {Duration? ping}) async {
     // ignore: close_sinks
     final ws = await WebSocketTransformer.upgrade(req);
     ws.pingInterval = ping;
-    for (final m in script) {
-      ws.add(m);
-    }
+    script.forEach(ws.add);
     ws.listen(ws.add);
   });
   return Uri.parse('ws://127.0.0.1:${srv.port}/v1/dial/x');

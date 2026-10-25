@@ -6,8 +6,11 @@ import 'dart:ui';
 Path parseSvgPath(String d) {
   final path = Path();
   final s = _Scanner(d);
-  var cmd = '', prev = '';
-  var cur = Offset.zero, start = Offset.zero, ctrl = Offset.zero;
+  var cmd = '';
+  var prev = '';
+  var cur = Offset.zero;
+  var start = Offset.zero;
+  var ctrl = Offset.zero;
   while (!s.done) {
     if (s.command() case final c?) {
       cmd = c;
@@ -47,7 +50,8 @@ Path parseSvgPath(String d) {
       case 'A':
         final radius = Radius.elliptical(s.number().abs(), s.number().abs());
         final rotation = s.number();
-        final large = s.flag(), sweep = s.flag();
+        final large = s.flag();
+        final sweep = s.flag();
         cur = pt();
         path.arcToPoint(
           cur,
@@ -68,7 +72,7 @@ Path parseSvgPath(String d) {
 }
 
 class _Scanner {
-  _Scanner(this.d);
+  new(this.d);
 
   final String d;
   int i = 0;

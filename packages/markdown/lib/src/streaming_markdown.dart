@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:markdown/markdown.dart' as md;
+import 'package:markdown_view/src/heal.dart';
 import 'package:re_highlight/languages/all.dart';
 import 'package:re_highlight/re_highlight.dart';
-
-import 'heal.dart';
 
 /// The colors and fonts of [StreamingMarkdown].
 @immutable
 class MarkdownStyle {
-  const MarkdownStyle({
+  /// The style with each of its colors and fonts.
+  const new({
     required this.body,
     required this.code,
     required this.codeBackground,
@@ -25,11 +25,17 @@ class MarkdownStyle {
 
   /// Code, inline and in blocks.
   final TextStyle code;
+
+  /// Behind code blocks and inline code.
   final Color codeBackground;
+
+  /// Around code blocks and tables, and a quote's bar.
   final Color border;
 
   /// Quotes, a code block's language label and its copy button.
   final Color muted;
+
+  /// Links.
   final Color link;
 
   /// Syntax colors by highlight.js class (`keyword`, `string`, ...).
@@ -42,17 +48,21 @@ class MarkdownStyle {
 /// fetched on its own. Raw HTML shows as the text it is. Put it in a
 /// [SelectionArea] to select text.
 class StreamingMarkdown extends StatelessWidget {
-  const StreamingMarkdown(
+  /// Markdown for [text], drawn in [style].
+  const new(
     this.text, {
-    super.key,
     required this.style,
+    super.key,
     this.onTapLink,
     this.imageBuilder,
     this.streaming = true,
     this.lineBreaks = false,
   });
 
+  /// The markdown so far.
   final String text;
+
+  /// Its colors and fonts.
   final MarkdownStyle style;
 
   /// Whether [text] may still be incomplete, so it is healed first.
@@ -142,7 +152,7 @@ final _spans = <(String, String, TextStyle, TextStyle?), TextSpan>{};
 /// A fenced code block: its language and a copy button over the code,
 /// highlighted when the language is known.
 class _CodeBlockBuilder extends MarkdownElementBuilder {
-  _CodeBlockBuilder(this.style);
+  new(this.style);
 
   final MarkdownStyle style;
 
@@ -212,7 +222,7 @@ class _CodeBlockBuilder extends MarkdownElementBuilder {
 }
 
 class _CopyButton extends StatefulWidget {
-  const _CopyButton(this.text, {required this.color});
+  const new(this.text, {required this.color});
 
   final String text;
   final Color color;

@@ -106,7 +106,7 @@ Future<void> _vector(Map<String, dynamic> v) async {
     for (final p in (v[k] as List?) ?? []) _hex(p as String),
   ];
   Future<KeyPair?> key(String k) async =>
-      v[k] == null ? null : KeyPair.make(_hex(v[k] as String));
+      v[k] == null ? null : await KeyPair.make(_hex(v[k] as String));
   final init = await HandshakeState.start(
     name,
     initiator: true,
@@ -136,7 +136,8 @@ Future<void> _vector(Map<String, dynamic> v) async {
     final want = messages[n]['ciphertext'] as String;
     final fromInit = oneWay || n.isEven;
     final (from, to) = fromInit ? (init, resp) : (resp, init);
-    Uint8List ct, pt;
+    Uint8List ct;
+    Uint8List pt;
     if (!init.finished) {
       ct = await from.writeMessage(payload);
       pt = await to.readMessage(ct);

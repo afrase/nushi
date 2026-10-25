@@ -23,16 +23,24 @@ final _blake2s = Blake2s();
 
 /// Thrown when a message doesn't decrypt or a handshake goes wrong.
 final class NoiseException implements Exception {
-  NoiseException(this.message);
+  /// An exception saying [message].
+  new(this.message);
+
+  /// What went wrong.
   final String message;
+
   @override
   String toString() => 'NoiseException: $message';
 }
 
 /// A static or ephemeral X25519 key pair.
 final class KeyPair {
-  KeyPair._(this.private, this.public);
+  new _(this.private, this.public);
+
+  /// The private key, 32 bytes.
   final Uint8List private;
+
+  /// The public key, 32 bytes.
   final Uint8List public;
 
   /// A key pair whose private key is [private] (32 bytes), or a new one.
@@ -73,7 +81,7 @@ Future<Uint8List> _hmacOf(List<int> key, List<int> data) async {
   final k = Uint8List(block)
     ..setAll(0, key.length > block ? await _hash(key) : key);
   final inner = await _hash([for (final b in k) b ^ 0x36, ...data]);
-  return _hash([for (final b in k) b ^ 0x5c, ...inner]);
+  return await _hash([for (final b in k) b ^ 0x5c, ...inner]);
 }
 
 /// Noise's HKDF: two or three outputs of HASHLEN bytes.
@@ -91,15 +99,18 @@ Future<List<Uint8List>> _hkdf(List<int> ck, List<int> ikm, int n) async {
 
 /// Encrypts or decrypts with one key and a nonce that counts up.
 final class CipherState {
-  CipherState([List<int>? k]) : _k = k == null ? null : Uint8List.fromList(k);
+  /// A cipher with the key [k] (32 bytes), or none: it then passes
+  /// messages through as they are.
+  new([List<int>? k]) : _k = k == null ? null : Uint8List.fromList(k);
 
   Uint8List? _k;
   int _n = 0;
 
   /// The largest nonce a message may use: Dart's ints stop at 2^63-1, so
   /// this is below Noise's 2^64-2. No connection gets near it.
-  static const maxNonce = 0x7fffffffffffffff - 1;
+  static const int maxNonce = 0x7fffffffffffffff - 1;
 
+  /// Whether it has a key, so it encrypts.
   bool get hasKey => _k != null;
 
   static Uint8List _nonce(int n, {bool max = false}) {
@@ -112,6 +123,7 @@ final class CipherState {
     return b;
   }
 
+  /// [plaintext] encrypted with [ad] as associated data, its tag after it.
   Future<Uint8List> encryptWithAd(List<int> ad, List<int> plaintext) async {
     final k = _k;
     if (k == null) return Uint8List.fromList(plaintext);
@@ -126,6 +138,8 @@ final class CipherState {
     return Uint8List.fromList([...box.cipherText, ...box.mac.bytes]);
   }
 
+  /// [ciphertext] (with its tag) decrypted with [ad] as associated data;
+  /// a [NoiseException] if it doesn't authenticate.
   Future<Uint8List> decryptWithAd(List<int> ad, List<int> ciphertext) async {
     final k = _k;
     if (k == null) return Uint8List.fromList(ciphertext);
@@ -163,7 +177,7 @@ final class CipherState {
 }
 
 final class _SymmetricState {
-  _SymmetricState(this.h) : ck = h;
+  new(this.h) : ck = h;
 
   Uint8List ck;
   Uint8List h;
