@@ -30,6 +30,8 @@ The daemon keeps its socket, token and log in `~/Library/Application Support/Nus
 
 "New chat" (⌘N, or a folder's +) asks which agent to run, with the one used last picked: Enter starts it. A chat keeps its agent, and shows its mark in the sidebar.
 
+The same dialog opens a session started elsewhere, such as `claude` or `codex` in a terminal: → (or "Open a … session") lists the agent's sessions in the folder (from No folder, every folder's), and Enter opens one as a chat. The agent replays it; nothing is copied, and it goes on in the same history the terminal resumes ([ADR 0035](docs/adr/0035-open-sessions-started-elsewhere.md)). A session still open elsewhere is marked: Claude and Ante let both write (Nushi asks first), Codex and oh-my-pi only one.
+
 - **Claude**, through `npx --yes @agentclientprotocol/claude-agent-acp@0.94.0`. It uses Claude Code's own login and settings.
 - **Codex**, through `npx --yes @agentclientprotocol/codex-acp@2.2.2`, which brings Codex 0.160.1. It uses Codex's own login or config (`$CODEX_HOME`, else `~/.codex`): sign in with `codex login`, or name a provider in `config.toml` (NOTES.md has one for Fireworks). A provider's key comes from the environment, which agents get from your login shell when the app starts the daemon ([ADR 0028](docs/adr/0028-agents-get-the-login-shells-environment.md)). A Codex chat resumes in a terminal with `codex resume <session id>`.
 

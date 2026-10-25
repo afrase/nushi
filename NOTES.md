@@ -1,6 +1,40 @@
 # Notes
 
-## Summary (2026-10-25, after step 126: milestone W, picking the agent)
+## Summary (2026-10-25, after step 133: milestone X, opening sessions started elsewhere)
+
+Milestone X, steps 127–133, one commit each on `main`, all pushed (128 and 130 are the two layout fixes asked for during the milestone). `make test` passes. **API 49** (ListAgentSessions, OpenAgentSession).
+
+- **Listing** (steps 127, 129, `internal/features/chats/found.go`): `ListAgentSessions` starts the agent, asks `session/list` for the folder (its real path; from No folder, every folder's) and leaves out what's Nushi's (each chat's session, those it had before a move or rewind, side chats and throwaway forks), forks of any kind and other folders' sessions; a page is gathered over the agent's pages, since Codex filters by folder after paging. Each session shows its title (else its first message's), when it was last active, its message count (Ante, omp), its folder (from No folder), and where it's open. Only agents that advertise `session/list` and `session/load` have a list. The Ante bridge lists from `~/.ante/sessions/*/meta.json` by real path.
+- **Opening** (step 129, `chats/open.go`): `OpenAgentSession` makes it a chat in the folder through `session/load` (the replay is the transcript), in the mode a new chat of the agent starts in; nothing is copied. A session that's a chat already gives that chat; a failed load leaves no chat. From No folder the chat goes to the session's folder, spelled as the chats already there spell it.
+- **In the app** (step 131, `app/lib/open_session.dart`): a second step of the New chat dialog. Under the agents a row "Open a Claude session… →" follows the selected agent; → or a click shows its sessions; ↑↓ move, Enter opens (after the trust card, as a new chat), ← or Esc goes back, "More" pages. Enter on the first step still starts a new chat at once. Why a second step: the list needs room and comes per agent, and the first step stays exactly as it was; a tab would add a choice before the agent, an "Open existing…" row per agent four more rows.
+- **Two writers** (step 132, ADR 0035): see "What each agent does with two writers" below. Warn, don't block, where the agent lets both write (Claude, Ante): the row says "open in a terminal", and opening asks "Open it here too?… Both will write to its history, and neither sees the other's turns." Codex and omp let one process write (Codex refuses the second, omp moves it to a new session), so a session open elsewhere shows dimmed and isn't offered. Where Nushi can't tell (no check for the agent), the list says once "If one is still open in a terminal, both will write to its history."
+- **Edges** (ADR 0035): a session whose folder is gone is listed (from No folder) dimmed, "folder gone", and can't be opened (its history is keyed by its folder). "No folder" lists every folder's sessions, each with its folder, and opens the chat there. A chat Nushi archived is still a chat: not listed (unarchive it); a Codex chat Nushi deleted is an archived thread, which Codex's list leaves out. Forks and subagents aren't listed. Opening goes through the trust card like a new chat ("Open the session").
+- **Also**: the details panel's folder lines up (step 128); the MCP form's Edit as JSON sits at the left (step 130); the chat header no longer overflows with a long model id (step 132).
+
+**Per agent** (by hand, sessions started in a terminal in a throwaway repository)
+
+| | Listing | Shows | Open elsewhere | Two writers |
+|---|---|---|---|---|
+| Claude | `session/list` (pages of 1,000) | title, last active | yes: `~/.claude/sessions/<pid>.json` ("a terminal" for the CLI, "another app" for an SDK client) | both write; the transcript branches; `claude --resume` shows both |
+| Codex | `session/list` (all threads, filtered after) | title (the first prompt), last active | yes: `thread-writer-locks/<id>.lock` held | one writer: a terminal goes read-only, Nushi's load fails "in use by another Codex client"; not offered |
+| Ante | the bridge, `meta.json` | title (else the first message's first line), last active, messages | yes: `events.jsonl` open (lsof) | both append to `events.jsonl`; the last to save `dialog.json` wins, so a resume can miss the other's turns |
+| oh-my-pi | `session/list` (pages of 50) | last active, messages, title when omp has one (a `-p` run has none: "Untitled", and the chat takes its first message's) | yes: `~/.omp/run/session-owners/<id>.lock` held | one writer: the second moves to a new session (a fork, not listed); not offered |
+
+**Tried by hand** (dev daemons on `/tmp/ndx/data` and, for omp with a temp `HOME`, `/tmp/ndx/datb`; Codex with a temp `CODEX_HOME`; Ante's real home; DeepSeek V4.1 Flash, Claude on Haiku in the terminal; the key only in the processes' environment): a session started in a terminal with each agent (`claude -p`, `codex exec`, `ante -p`, `omp -p`) listed, opened and given a turn; then resumed in the terminal (`claude -p --resume`, the Codex TUI, `ante -r -p`, `omp -p --resume`), each showing one history with Nushi's turn. Claude: this very session listed "open in a terminal" from its folder. Codex: a TUI holding a thread made it "open in another app", opening it failed with Codex's message; Nushi holding one made the TUI read-only. Ante: the TUI and Nushi on one session both wrote. omp: a terminal resume while Nushi held it saved to a new session. In the dev app: the dialog's second step from No folder (Claude's 718 sessions, three "open in a terminal"), Codex's dimmed held session, the trust card when opening a session in a folder with a Claude hook, a Codex session opened with Enter; a deleted (archived) Codex chat not listed; a gone folder marked; a slept opened chat woken by a message.
+
+**Not tried by hand**: an interactive Claude CLI holding a session we then opened (it stopped at its trust prompt for the throwaway folder, which would write `~/.claude.json`; the check was seen on real sessions instead); rewind, move and archive of an opened chat (the chat is an ordinary one; tests cover those paths); a user's own fork in a terminal (left out by the marker, from the agents' code); Ante forks made outside Nushi (no marker known, so they'd be listed); omp's XDG layout (its owner locks would be elsewhere: not seen); the light theme in the app (goldens cover it); the packaged app.
+
+**Needs your attention**
+- **API 49**: after `make install` the app asks for **Restart daemon**.
+- Forks aren't listed, as asked, your own included (`claude --fork-session`, `codex fork`): say if you want those back.
+- During testing the Codex TUI's update prompt took a keystroke and ran `npm install -g @openai/codex` (0.163.0 → 0.164.0). I put it back to 0.163.0 (`npm install -g @openai/codex@0.163.0`, mise reshimmed); `codex --version` says 0.163.0.
+- Still from milestone U: the milestone S transcript holding the Fireworks key (see the summary of milestone V).
+
+**Size**: the daemon went from 12,698 to 13,461 lines of Go, the acp package from 984 to 990, the app from 15,182 to 15,623 lines of Dart. Over the ~500-line tripwire with their tests: step 132 (830: four agents' checks for open sessions and forks, each with a test, and the fixes the testing found), step 131 (544: the dialog's second step and its tests) and step 127 (504: listing, Claude's records, the Ante list's test).
+
+**Left behind by the testing**: nothing of the test's. The dev data folders, the temp `HOME` and `CODEX_HOME` (with the Codex app-server they started, stopped), the throwaway repositories and the probes were removed. Claude: the three test sessions' transcripts, project folders, `security_warnings_state` and `session-env` files, and two stale `~/.claude/sessions` files of killed test processes were removed; Claude recorded nothing in `~/.claude.json`. Ante: the test session, five logs and a `projects` marker were removed, and the TUI's line in `user_input_history.jsonl` and its start in `tip_history.json` taken back (both match their checksums from before); `versions.json` (Ante's update-check cache) was rewritten by Ante and differs. The global Codex is 0.163.0 again (see above). The key is in no file under the test folders, the scratchpad, the repository or `~/.ante` (grep, the key on stdin). The installed daemon wasn't touched.
+
+## Summary of milestone W (after step 126: picking the agent)
 
 Milestone W, steps 124–126, one commit each on `main`, all pushed. `make test` passes. App only: no API change (still 48), no daemon change.
 
@@ -97,6 +131,13 @@ Milestone V is phase 1 of mobile: a relay, an end-to-end Noise channel, pairing 
 **Dependencies**: none new (`golang.org/x/sys/unix` was already in).
 
 **Left behind by the testing**: nothing. The dev chats were deleted with Delete (Claude's and Ante's histories with them); the measuring harness's two Claude sessions and their project folders, its Ante session, eight Ante logs and `~/.ante/run/` were removed; `~/.ante` is as it was (file list and checksums). The dev data folder, the temp Codex and omp homes, the scratch folders and the harness were removed. The key is in no file under them, the scratchpad or the repository (grep, the key on stdin); the only hit elsewhere is the milestone S transcript above.
+
+## Demo (milestone X)
+
+1. In a terminal, in a repository, run `claude` and say something; quit it, or leave it open.
+2. In Nushi, a folder's + (or ⌘N for every folder), then → on Claude: the session is listed with when it was last active (and "open in a terminal" if it still runs there). Enter opens it as a chat, with its transcript.
+3. Send a message, then `claude --resume <id>` in the terminal: the history has both.
+4. Do the same with `codex` left open: its session shows dimmed, "open in another app"; quit Codex (its background app-server may keep the thread a while) and it opens.
 
 ## Demo (milestone W)
 
@@ -298,8 +339,9 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 130. The MCP form's Edit as JSON at the left, Cancel and Add at the right | 13109 | 990 | 15195 | 1864 | 1170 |
 | 131. The New chat dialog's second step: an agent's sessions, opened as a chat | 13109 | 990 | 15543 | 1864 | 1170 |
 | 132. By hand: open elsewhere per agent (Claude's records, Codex's and omp's locks, Ante's open file), forks left out, one-writer agents; the header gives way | 13460 | 990 | 15623 | 1864 | 1170 |
+| 133. The docs (ADR 0035); a terminal's Claude told by its entrypoint | 13461 | 990 | 15623 | 1864 | 1170 |
 
-Steps over the ~500-line tripwire (code and tests, without generated code): 98 (2,384 with its tests: Ante's whole bridge and its fake), 99 (901: two agents, two trust packages, the shared trust files), 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 removed more than it added.
+Steps over the ~500-line tripwire (code and tests, without generated code): 132 (830, open sessions and forks for four agents), 131 (544, the sessions step), 127 (504, listing), 98 (2,384 with its tests: Ante's whole bridge and its fake), 99 (901: two agents, two trust packages, the shared trust files), 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 removed more than it added.
 
 ## Agent facts (claude-agent-acp 0.94.0, Claude Code 2.1.308–309)
 
@@ -338,6 +380,11 @@ What the code depends on, and how the adapter behaves. Everything Nushi does abo
 - Approvals: `enabledMcpjsonServers` in an untracked `.claude/settings.local.json` counts only in a folder trusted in the terminal (`hasTrustDialogAccepted`); `disabledMcpjsonServers` (any settings file) rejects a server everywhere and `claude mcp list` leaves it out. `disabledMcpServers` in a settings file does nothing. The local settings file is at the repository's root.
 - A chat loads its MCP servers when its session starts or loads and keeps them; it loads a "Pending approval" `.mcp.json` server without asking. MCP tools are deferred.
 
+**Listing and open sessions (milestone X)**
+- `session/list` answers `{sessionId, cwd, title, updatedAt}`, newest first, 1,000 a page (cursor `offset:N`); the cwd is matched by its real path (`/tmp` finds `/private/tmp`'s). Subagents' transcripts (`isSidechain` first) aren't listed; forks are, with `forkedFrom: {sessionId, messageUuid}` in their first records (Nushi's leftover throwaway forks of the installed daemon showed up as "<title> (fork)"). Every folder's list (no cwd) took 1.2 s for 720 sessions, and left out some a folder's own list has.
+- Each running CLI writes `~/.claude/sessions/<pid>.json` (`$CLAUDE_CONFIG_DIR/sessions`): `pid`, `sessionId`, `kind` (`interactive`, an ACP client's CLI too), `entrypoint` (`cli` run by hand, `sdk-cli` under claude-agent-acp), `status`, `procStart` (`ps -o lstart` in UTC), `updatedAt`. claude-agent-acp reads it for AIR clients' session state. The CLI writes it only once past its trust prompt.
+- Two writers: a `claude -p --resume` while Nushi's chat had the session open added its turn to the same transcript; a later resume saw both; the open chat didn't see the terminal's.
+
 ## Agent facts (codex-acp 2.2.2, Codex 0.160.1)
 
 What the code depends on, and how the adapter behaves. Everything Nushi does about it is in `internal/codex*`.
@@ -358,6 +405,10 @@ What the code depends on, and how the adapter behaves. Everything Nushi does abo
 - Without model metadata each turn starts with an agent message without `messageId`: "Warning: Model metadata for `…` not found…", and the window is 258,400.
 - Plans come as agent text: codex-acp sends `plan` updates only to clients advertising a `plan` capability.
 
+- Listing (milestone X): codex-acp's `session/list` pages through every thread (`thread/list`, sources cli, vscode, exec, appServer, unknown: no subagents; unarchived only) and then keeps those whose cwd equals the request's exactly (no link resolved: `/tmp` finds nothing, `/private/tmp` does); the title is the first prompt. A fork's rollout starts with `session_meta.payload.forked_from_id`.
+- One writer at a time: whoever has a thread holds a lock on `$CODEX_HOME/thread-writer-locks/<id>.lock` (flock; F_GETLK sees it). The TUI then shows "This conversation is open in another app… press R" and is read-only; codex-acp's `session/load` fails "This Codex session is in use by another Codex client (the Codex app, the CLI or an IDE extension)". The TUI runs through a background app-server (`$CODEX_HOME/packages/app-server-daemon`), which keeps the thread, and its lock, after the TUI quits. A Nushi chat that sleeps lets go (the lock file goes).
+- The TUI asks to update itself at start: Enter there runs `npm install -g @openai/codex`. `check_for_update_on_startup = false` in `config.toml` stops it.
+
 ## Agent facts (Ante 0.2.14, through the bridge)
 
 What the bridge (`internal/ante`) depends on, seen with `ante serve --stdio`; the protocol is Ante's open `crates/protocol-shape/src/msg.rs` at v0.2.14.
@@ -371,6 +422,8 @@ What the bridge (`internal/ante`) depends on, seen with `ante serve --stdio`; th
 - A project's `.ante/settings.json` can't widen what Ante may do: mode, allow rules, MCP servers, system prompt, model and provider are ignored with an `Info` notice (checked).
 - `ante catalog` prints every provider's models (no keys: a provider's key is named by `env_key`).
 
+- Listing and two writers (milestone X): a headless or TUI session's `meta.json` has `message_count`, `model`, `provider` and `first_user_message`, which Ante's front end ends with a `<folder-structure>` listing of the folder (the bridge drops it in titles and replays). Ante takes no lock: its TUI keeps `events.jsonl` open for writing while it has the session (lsof finds it in about 0.07 s). With the TUI and Nushi on one session both appended to `events.jsonl`, and a later `ante -r` knew only Nushi's turn: the resume reads `dialog.json`, which the last to save rewrites.
+
 ## Agent facts (oh-my-pi 18.12.6)
 
 What the code depends on (`internal/omp*`), from driving `omp --mode acp` and its source.
@@ -382,6 +435,8 @@ What the code depends on (`internal/omp*`), from driving `omp --mode acp` and it
 - `session/load` replays user messages, tool calls and agent messages (fresh message ids each time); `session/fork` copies the whole session.
 - Sessions are `~/.omp/agent/sessions/<folder name>/<time>_<id>.jsonl`; all of omp's state is under `~/.omp` (`PI_CODING_AGENT_DIR` moves only `agent/`), so a test points `HOME` at a temp folder.
 - It runs only under Bun (≥ 1.3.14); npx installs Bun's npm package beside it.
+
+- Listing (milestone X): `session/list` gives `{sessionId, cwd, title, updatedAt, _meta: {messageCount, size}}`, 50 a page (cursor an offset), the cwd matched either way (`/tmp` or `/private/tmp`); a `-p` run has an empty title. Session files start with a title record, then `{"type":"session", id, cwd, parentSession?}` (a fork names its parent). One process owns a session: a flock on `~/.omp/run/session-owners/<id>.lock`; another that writes to it saves to a new session instead, with `parentSession` ("Session … is open for writing in another omp process, so this session now saves to …").
 
 ## Agent marks (step 124)
 
@@ -500,6 +555,7 @@ Open questions; what's settled is in `docs/adr/` or in the code.
 - New in T: omp starts on its default model (Kimi K3, max effort): the start mode is remembered per agent, the model isn't.
 - New in T: the omp trust card shows code and settings from `.claude`, `.codex`, `.gemini`, `.opencode` and `.cursor` too, since omp loads them: a repository with Claude hooks asks once for omp as well.
 
+- New in X: forks aren't listed, the user's own included (the agents mark them alike). Opening a session applies the start mode remembered for the agent, as a new chat does. A session open elsewhere for an agent with one writer (Codex, omp) isn't offered, where the agent itself would refuse or split it; for Claude and Ante opening asks first. Where it's open is told by the agents' own files, read when listing (not watched): it can be stale by the time Enter is pressed. Codex's background app-server keeps a thread after its TUI quits, so such a thread stays "open in another app" a while. A session whose folder is gone is listed but can't be opened. From No folder the list is every folder's, and the chat joins the folder's chats.
 - New in W: every way to start a chat (the "New chat" button, ⌘N, a folder's + and "New chat here") opens one dialog that picks the agent, the one of the newest chat picked (archived ones count; else the first the daemon lists). Digits start an agent at once, as they pick in the app's menus; the arrows only move. ⌘N (also from a terminal) starts with no folder, as the button does. An agent whose start failed in this run of the app ("couldn't start …" from the daemon) shows dimmed with the first clause of why, and isn't picked; it can still be started, and once it starts it's as before. The app keeps that, not the daemon (no API change): another app or a restart of the app forgets it.
 - New in W: a sidebar row is the status (unchanged, first), the agent's mark, then the title. The marks are one color (the row's secondary text), so the status keeps the only color in the row.
 - New in S: a chat keeps its agent for good. Nothing is stored for the agent a new chat starts with.
@@ -547,7 +603,7 @@ Open questions; what's settled is in `docs/adr/` or in the code.
 
 - Show the plan's usage limits (session and weekly) for subscription users, if the agent exposes them. ACP doesn't today; claude-agent-acp 0.94.0 did put a `_meta._claude/rateLimit` (five-hour and seven-day utilization) on one `usage_update` (see ACP quirks), which isn't a stable interface.
 - Plain model chat with no agent (no tools, no folder) straight to an API or gateway with a key. Nushi would then own the history and model settings. For agent chats a gateway or key already works through Claude's own settings (`ANTHROPIC_BASE_URL`, `ANTHROPIC_API_KEY` or `apiKeyHelper` in `~/.claude/settings.json`).
-- Open a session started outside Nushi (e.g. `claude` in a terminal) as a chat: list the agent's sessions per folder through ACP `session/list` (claude-agent-acp 0.94.0 has it, under `sessionCapabilities`), pick one, and `session/load` it. No copy: the agent's history stays the source. Mind a session that's still open in a terminal (two writers to one transcript).
+- Opening sessions started elsewhere, next: Ante's forks (no marker known: a fork made in Ante's TUI would be listed), searching the list, and sessions in a repository's other worktrees under its folder.
 
 - Git actions from the Changes view: stage and unstage files or hunks, commit with a message, maybe push. It's read-only toward git for now ([ADR 0019](docs/adr/0019-changes-read-only-toward-git.md)); doing it would mean revisiting that ADR (git writes next to an agent that may be writing too).
 - More agents, if wanted: opencode (`opencode acp`; Fireworks built in, no steering, delete or questions, permissions only in `opencode.json`), Gemini CLI (`gemini --acp`; Gemini API only), goose (`goose acp`). Each is a `chats.Kind` and its own `internal/<agent>*` packages. Nushi never reads the agents' keys; each agent reads its own config.
@@ -566,6 +622,7 @@ Open questions; what's settled is in `docs/adr/` or in the code.
 
 ## Security notes to look at
 
+- Sessions started elsewhere (ADR 0035): listing starts the agent and reads, never writes: Claude's `~/.claude/sessions/*.json` and the first records of transcripts under `~/.claude/projects`, Codex rollouts' first lines and lock files, omp session headers and lock files (F_GETLK on a file opened read-only; no lock is taken), Ante's `meta.json`, and `lsof -F n -- <events.jsonl…>` for Ante. Opening runs the agent in the session's folder after the trust card, as a new chat. A paired phone can list and open too (a full client).
 - Remote access (ADRs 0033, 0034; the review ran on it during milestone V): the daemon's Noise private key is in `remote-key.json` (0600) beside the token, readable by any process of yours, the agent included (as ADR 0024 says of the token). A paired phone is a full client: chats, permission answers, terminals, MCP changes; not the Mac's calls (SetRemote, StartPairing, ConfirmPairing, RevokeDevice: "permission denied" on a channel). The remote API server has no token check: the handshake authenticated the device. The Mac app asks Allow or Deny for any pairing that reaches its code, whoever started it. The pairing code is the only thing that stops someone who saw the QR code within its 5 minutes; the Mac's dialog says to allow only if the phone shows the same code. The PAC file is fetched directly and evaluated by CFNetwork in osascript, asked only scheme://host:port/.
 
 - Codex runs as you through `npx --yes @agentclientprotocol/codex-acp@2.2.2` (pinned by version, not hash; it brings `@openai/codex` 0.160.1), started like Claude's adapter. codex-acp tells Codex to trust every session's cwd, so a folder's `.codex/config.toml` (MCP servers, the environment of every command, sandbox settings, plugins) and rules load without Codex asking; Nushi's card is the only warning (ADR 0029). The card's key is a hash of every file it showed, computed with the card and checked again on "Start anyway"; links aren't followed. Codex's trust record is read, never written. Agents get the login shell's environment, secrets included (ADR 0028).
@@ -597,4 +654,5 @@ Open questions; what's settled is in `docs/adr/` or in the code.
 - Driving the app by hand: System Events' `click at` doesn't reach a Flutter window; a few lines of Swift posting `CGEvent` mouse and key events do. Screenshots are 2× the window's points.
 - App tests get a data folder in the temporary folder (`FLUTTER_TEST`); never point them at the real one.
 - Ante and omp by hand: start the dev daemon with `ANTE_HOME` set and `HOME` at a temp folder (omp keeps everything under `~/.omp`), the key read from `fish -l -c` with the real `HOME`. Quit the dev app before stopping the dev daemon: an app that finds no daemon starts its bundled one through the login shell, with the real `HOME` and none of the dev daemon's environment.
+- Agents in a terminal by hand (milestone X): a small pty driver (Python's `pty`) that answers the terminal's queries (cursor position, device attributes, colours) and types what's written to a FIFO runs the Codex and Ante TUIs; a FIFO write blocks once the driver is gone. Turn off Codex's update check first (`check_for_update_on_startup = false`): its prompt takes Enter and updates the global Codex. Claude's TUI stops at its trust prompt in a folder it doesn't know, and answering it writes `~/.claude.json`: use `claude -p` (and `-p --resume`) instead. Headless sessions: `codex exec`, `ante -p --permission-mode strict --session-save`, `omp -p`.
 - Codex by hand: start the dev daemon with `CODEX_HOME` at a temp folder holding the config above, and `FIREWORKS_API_KEY` read from `fish -l -c` inside the launching script, never on a command line or in a file. `codex resume` in a pty needs answers to the terminal's colour and cursor queries.

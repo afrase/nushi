@@ -36,10 +36,10 @@ func TestOpen(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	write(me, map[string]any{"sessionId": "cli", "kind": "interactive", "procStart": stamp(start), "pidDomain": "darwin"})
+	write(me, map[string]any{"sessionId": "cli", "kind": "interactive", "entrypoint": "cli", "procStart": stamp(start), "pidDomain": "darwin"})
 	write(dead.Process.Pid, map[string]any{"sessionId": "dead", "kind": "interactive", "updatedAt": time.Now().UnixMilli()})
 	write(sleeper.Process.Pid, map[string]any{"sessionId": "reused", "kind": "interactive", "procStart": stamp(start.Add(-time.Hour))})
-	write(1, map[string]any{"sessionId": "sdk", "kind": "sdk", "updatedAt": time.Now().UnixMilli()})
+	write(1, map[string]any{"sessionId": "sdk", "kind": "interactive", "entrypoint": "sdk-cli", "updatedAt": time.Now().UnixMilli()})
 	os.WriteFile(filepath.Join(dir, "1.abc.key"), []byte("{}"), 0o600)
 	got := open(dir, started)
 	want := map[string]string{"cli": "a terminal", "sdk": "another app"}

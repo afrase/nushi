@@ -17,11 +17,12 @@ import (
 
 // Open returns the sessions a running Claude Code holds open (any, not
 // only ids), by session id: "a terminal" for the CLI run by hand, "another
-// app" for one a client such as another ACP client started. Each running CLI writes
-// <config>/sessions/<pid>.json (its session id, kind, the process's start
-// time); claude-agent-acp's own session list reads them too, by the same
-// rules: the process is alive, and started when the record says, so a pid
-// used again doesn't count; a record without a start time counts for a day.
+// app" for one a client such as another ACP client started. Each running
+// CLI writes <config>/sessions/<pid>.json (its session id, entrypoint, the
+// process's start time); claude-agent-acp's own session list reads them
+// too, by the same rules: the process is alive, and started when the record
+// says, so a pid used again doesn't count; a record without a start time
+// counts for a day.
 func Open(ids []string) map[string]string {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -45,7 +46,7 @@ func open(dir string, startedAt func(pid int) (time.Time, bool)) map[string]stri
 			Pid        int    `json:"pid"`
 			SessionID  string `json:"sessionId"`
 			ProcStart  string `json:"procStart"`
-			Kind       string `json:"kind"`
+			Entrypoint string `json:"entrypoint"`
 			Domain     string `json:"pidDomain"`
 			Updated    int64  `json:"updatedAt"`
 			Started    int64  `json:"startedAt"`
@@ -64,7 +65,7 @@ func open(dir string, startedAt func(pid int) (time.Time, bool)) map[string]stri
 			continue
 		}
 		out[r.SessionID] = "another app"
-		if r.Kind == "interactive" {
+		if r.Entrypoint == "cli" { // an ACP client's CLI says "sdk-cli" (its kind is "interactive" too)
 			out[r.SessionID] = "a terminal"
 		}
 	}
