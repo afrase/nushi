@@ -243,6 +243,8 @@ class Chat extends $pb.GeneratedMessage {
     $core.String? sessionId,
     Worktree? worktree,
     $core.bool? scratch,
+    $core.String? jiraSite,
+    $core.String? jiraKey,
   }) {
     final result = Chat._();
     if (id != null) result.id = id;
@@ -256,6 +258,8 @@ class Chat extends $pb.GeneratedMessage {
     if (sessionId != null) result.sessionId = sessionId;
     if (worktree != null) result.worktree = worktree;
     if (scratch != null) result.scratch = scratch;
+    if (jiraSite != null) result.jiraSite = jiraSite;
+    if (jiraKey != null) result.jiraKey = jiraKey;
     return result;
   }
 
@@ -285,6 +289,8 @@ class Chat extends $pb.GeneratedMessage {
     ..aOM<Worktree>(10, _omitFieldNames ? '' : 'worktree',
         subBuilder: Worktree.$_createMessage)
     ..aOB(11, _omitFieldNames ? '' : 'scratch')
+    ..aOS(12, _omitFieldNames ? '' : 'jiraSite')
+    ..aOS(13, _omitFieldNames ? '' : 'jiraKey')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -417,6 +423,25 @@ class Chat extends $pb.GeneratedMessage {
   $core.bool hasScratch() => $_has(10);
   @$pb.TagNumber(11)
   void clearScratch() => $_clearField(11);
+
+  /// The Jira issue it was started from, if it was.
+  @$pb.TagNumber(12)
+  $core.String get jiraSite => $_getSZ(11);
+  @$pb.TagNumber(12)
+  set jiraSite($core.String value) => $_setString(11, value);
+  @$pb.TagNumber(12)
+  $core.bool hasJiraSite() => $_has(11);
+  @$pb.TagNumber(12)
+  void clearJiraSite() => $_clearField(12);
+
+  @$pb.TagNumber(13)
+  $core.String get jiraKey => $_getSZ(12);
+  @$pb.TagNumber(13)
+  set jiraKey($core.String value) => $_setString(12, value);
+  @$pb.TagNumber(13)
+  $core.bool hasJiraKey() => $_has(12);
+  @$pb.TagNumber(13)
+  void clearJiraKey() => $_clearField(13);
 }
 
 /// A git worktree of a repository, on a branch of its own.
@@ -1656,11 +1681,17 @@ class StartChatRequest extends $pb.GeneratedMessage {
     $core.String? folder,
     $core.bool? worktree,
     $core.String? agent,
+    $core.String? jiraSite,
+    $core.String? jiraKey,
+    $core.String? branch,
   }) {
     final result = StartChatRequest._();
     if (folder != null) result.folder = folder;
     if (worktree != null) result.worktree = worktree;
     if (agent != null) result.agent = agent;
+    if (jiraSite != null) result.jiraSite = jiraSite;
+    if (jiraKey != null) result.jiraKey = jiraKey;
+    if (branch != null) result.branch = branch;
     return result;
   }
 
@@ -1680,6 +1711,9 @@ class StartChatRequest extends $pb.GeneratedMessage {
     ..aOS(1, _omitFieldNames ? '' : 'folder')
     ..aOB(2, _omitFieldNames ? '' : 'worktree')
     ..aOS(3, _omitFieldNames ? '' : 'agent')
+    ..aOS(4, _omitFieldNames ? '' : 'jiraSite')
+    ..aOS(5, _omitFieldNames ? '' : 'jiraKey')
+    ..aOS(6, _omitFieldNames ? '' : 'branch')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1735,6 +1769,35 @@ class StartChatRequest extends $pb.GeneratedMessage {
   $core.bool hasAgent() => $_has(2);
   @$pb.TagNumber(3)
   void clearAgent() => $_clearField(3);
+
+  /// A chat on a Jira issue (GetJiraContext), which it remembers; its
+  /// worktree, if it has one, is on branch.
+  @$pb.TagNumber(4)
+  $core.String get jiraSite => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set jiraSite($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasJiraSite() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearJiraSite() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get jiraKey => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set jiraKey($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasJiraKey() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearJiraKey() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get branch => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set branch($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasBranch() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearBranch() => $_clearField(6);
 }
 
 class ListAgentSessionsRequest extends $pb.GeneratedMessage {
@@ -15341,6 +15404,149 @@ class GetJiraAttachmentResponse extends $pb.GeneratedMessage {
   void clearMimeType() => $_clearField(2);
 }
 
+class GetJiraContextRequest extends $pb.GeneratedMessage {
+  factory GetJiraContextRequest({
+    $core.String? site,
+    $core.String? key,
+  }) {
+    final result = GetJiraContextRequest._();
+    if (site != null) result.site = site;
+    if (key != null) result.key = key;
+    return result;
+  }
+
+  GetJiraContextRequest._();
+
+  factory GetJiraContextRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetJiraContextRequest()..mergeFromBuffer(data, registry);
+  factory GetJiraContextRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetJiraContextRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetJiraContextRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetJiraContextRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'site')
+    ..aOS(2, _omitFieldNames ? '' : 'key')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetJiraContextRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetJiraContextRequest copyWith(
+          void Function(GetJiraContextRequest) updates) =>
+      super.copyWith((message) => updates(message as GetJiraContextRequest))
+          as GetJiraContextRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetJiraContextRequest() / GetJiraContextRequest.new instead')
+  static GetJiraContextRequest create() => GetJiraContextRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetJiraContextRequest._();
+  @$core.override
+  GetJiraContextRequest createEmptyInstance() => GetJiraContextRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetJiraContextRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetJiraContextRequest>(
+          GetJiraContextRequest.$_createMessage);
+  static GetJiraContextRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get site => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set site($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSite() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSite() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get key => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set key($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasKey() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearKey() => $_clearField(2);
+}
+
+class GetJiraContextResponse extends $pb.GeneratedMessage {
+  factory GetJiraContextResponse({
+    $core.String? markdown,
+    $core.String? branch,
+  }) {
+    final result = GetJiraContextResponse._();
+    if (markdown != null) result.markdown = markdown;
+    if (branch != null) result.branch = branch;
+    return result;
+  }
+
+  GetJiraContextResponse._();
+
+  factory GetJiraContextResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetJiraContextResponse()..mergeFromBuffer(data, registry);
+  factory GetJiraContextResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetJiraContextResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetJiraContextResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetJiraContextResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'markdown')
+    ..aOS(2, _omitFieldNames ? '' : 'branch')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetJiraContextResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetJiraContextResponse copyWith(
+          void Function(GetJiraContextResponse) updates) =>
+      super.copyWith((message) => updates(message as GetJiraContextResponse))
+          as GetJiraContextResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetJiraContextResponse() / GetJiraContextResponse.new instead')
+  static GetJiraContextResponse create() => GetJiraContextResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetJiraContextResponse._();
+  @$core.override
+  GetJiraContextResponse createEmptyInstance() => GetJiraContextResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetJiraContextResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetJiraContextResponse>(
+          GetJiraContextResponse.$_createMessage);
+  static GetJiraContextResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get markdown => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set markdown($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasMarkdown() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearMarkdown() => $_clearField(1);
+
+  /// KEY-summary-slug, the key uppercase so Jira links it.
+  @$pb.TagNumber(2)
+  $core.String get branch => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set branch($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasBranch() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearBranch() => $_clearField(2);
+}
+
 class NushiServiceApi {
   final $pb.RpcClient _client;
 
@@ -15823,6 +16029,13 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, AddJiraCommentRequest request) =>
       _client.invoke<AddJiraCommentResponse>(ctx, 'NushiService',
           'AddJiraComment', request, AddJiraCommentResponse());
+
+  /// An issue as a chat's first message (Markdown, for the user to see and
+  /// edit before sending it), and a branch named after it.
+  $async.Future<GetJiraContextResponse> getJiraContext(
+          $pb.ClientContext? ctx, GetJiraContextRequest request) =>
+      _client.invoke<GetJiraContextResponse>(ctx, 'NushiService',
+          'GetJiraContext', request, GetJiraContextResponse());
 
   /// An attachment's file or thumbnail (20 MB at most).
   $async.Future<GetJiraAttachmentResponse> getJiraAttachment(

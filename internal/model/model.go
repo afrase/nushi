@@ -35,6 +35,8 @@ type Session struct {
 	// deleted them: a daemon that stops or crashes first leaves them for
 	// the next time the chat opens, or Delete.
 	Throwaway []string `json:",omitempty"`
+	// Issue is the Jira issue the chat was started from, if it was.
+	Issue *ChatIssue `json:",omitempty"`
 	// Scratch says Folder is a scratch folder of the chat's own (the chat
 	// has no folder yet); worked out from the folder, not stored.
 	Scratch bool `json:"-"`

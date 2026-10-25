@@ -103,6 +103,12 @@ type JiraJQLField struct {
 	Operators     []string
 }
 
+// ChatIssue is the Jira issue a chat was started from: its site's id
+// (host) and its key.
+type ChatIssue struct {
+	Site, Key string
+}
+
 // JiraSite is a Jira site Nushi was given a token for: the token is in
 // the keychain, never here.
 type JiraSite struct {

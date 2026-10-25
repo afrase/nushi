@@ -20,7 +20,7 @@ func TestWorktrees(t *testing.T) {
 	git(t, repo, "add", ".")
 	git(t, repo, "commit", "-q", "-m", "init")
 
-	wt, folder, err := Worktrees{}.Add(ctx, filepath.Join(repo, "sub"), "brave-otter")
+	wt, folder, err := Worktrees{}.Add(ctx, filepath.Join(repo, "sub"), "brave-otter", "")
 	want := model.Worktree{Repo: repo, Path: filepath.Join(repo, ".worktrees", "brave-otter"), Branch: "nushi/brave-otter", Base: "main"}
 	want.BaseCommit = wt.BaseCommit
 	if err != nil || len(wt.BaseCommit) != 40 || wt != want || folder != filepath.Join(want.Path, "sub") {
@@ -31,7 +31,7 @@ func TestWorktrees(t *testing.T) {
 	}
 	// From inside the worktree, the next one still goes beside it, and
 	// .worktrees/ is excluded once.
-	if _, _, err := (Worktrees{}).Add(ctx, folder, "brave-otter"); !errors.Is(err, fs.ErrExist) {
+	if _, _, err := (Worktrees{}).Add(ctx, folder, "brave-otter", ""); !errors.Is(err, fs.ErrExist) {
 		t.Errorf("a taken name: %v", err)
 	}
 	// A name is taken by its folder alone, or by its branch alone (a
@@ -39,17 +39,17 @@ func TestWorktrees(t *testing.T) {
 	noErr(t, os.MkdirAll(filepath.Join(repo, ".worktrees", "lone-folder"), 0o755))
 	git(t, repo, "branch", "nushi/lone-branch")
 	for _, name := range []string{"lone-folder", "lone-branch"} {
-		if _, _, err := (Worktrees{}).Add(ctx, repo, name); !errors.Is(err, fs.ErrExist) {
+		if _, _, err := (Worktrees{}).Add(ctx, repo, name, ""); !errors.Is(err, fs.ErrExist) {
 			t.Errorf("%s: %v", name, err)
 		}
 	}
 	// Through a link to the repository, the worktree keeps the link's spelling.
 	link := filepath.Join(t.TempDir(), "link")
 	noErr(t, os.Symlink(repo, link))
-	if via, in, err := (Worktrees{}).Add(ctx, filepath.Join(link, "sub"), "swift-yak"); err != nil || via.Repo != link || in != filepath.Join(link, ".worktrees", "swift-yak", "sub") {
+	if via, in, err := (Worktrees{}).Add(ctx, filepath.Join(link, "sub"), "swift-yak", ""); err != nil || via.Repo != link || in != filepath.Join(link, ".worktrees", "swift-yak", "sub") {
 		t.Errorf("Add through a link = %+v, %q, %v", via, in, err)
 	}
-	second, _, err := Worktrees{}.Add(ctx, folder, "calm-heron")
+	second, _, err := Worktrees{}.Add(ctx, folder, "calm-heron", "")
 	if err != nil || second.Path != filepath.Join(repo, ".worktrees", "calm-heron") || second.Base != "nushi/brave-otter" || second.BaseCommit != wt.BaseCommit {
 		t.Fatalf("Add from the worktree = %+v, %v", second, err)
 	}
@@ -119,7 +119,7 @@ func TestNoWritesThroughARepositorysLinks(t *testing.T) {
 	git(t, repo, "add", ".")
 	git(t, repo, "commit", "-q", "-m", "init")
 	noErr(t, os.Symlink(elsewhere, filepath.Join(repo, ".worktrees")))
-	if _, _, err := (Worktrees{}).Add(ctx, repo, "brave-otter"); err == nil {
+	if _, _, err := (Worktrees{}).Add(ctx, repo, "brave-otter", ""); err == nil {
 		t.Error("made a worktree through a linked .worktrees")
 	}
 	if got, _ := os.ReadDir(elsewhere); len(got) > 0 {

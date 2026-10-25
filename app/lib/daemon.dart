@@ -354,6 +354,8 @@ class Daemon extends ChangeNotifier {
       ..worktree = c.hasWorktree() ? c.worktree : null
       ..agent = c.agent
       ..scratch = c.scratch
+      ..jiraSite = c.jiraSite
+      ..jiraKey = c.jiraKey
       ..title = c.title
       ..archived = c.archived
       ..created = DateTime.fromMillisecondsSinceEpoch(c.createdUnixMs.toInt())
@@ -381,8 +383,13 @@ class Daemon extends ChangeNotifier {
 
   /// Starts a chat with [agent] in [folder], or in a scratch folder of its
   /// own (''); in a new worktree of its repository if that's the choice
-  /// remembered for it.
-  Future<void> startChat(String folder, String agent) async {
+  /// remembered for it. A chat on a Jira [issue] remembers it, takes its
+  /// worktree choice, and gets its context in the box, to send or edit.
+  Future<void> startChat(
+    String folder,
+    String agent, {
+    IssueChat? issue,
+  }) async {
     starting = folder;
     notifyListeners();
     try {
@@ -394,7 +401,10 @@ class Daemon extends ChangeNotifier {
           StartChatRequest(
             agent: agent,
             folder: folder,
-            worktree: _worktree(folder),
+            worktree: issue?.worktree ?? wantsWorktree(folder),
+            jiraSite: issue?.site,
+            jiraKey: issue?.key,
+            branch: issue != null && issue.worktree ? issue.branch : null,
           ),
         );
       } on connect.ConnectException catch (e) {
@@ -404,7 +414,10 @@ class Daemon extends ChangeNotifier {
         rethrow;
       }
       cantStart.remove(agent);
-      chats[resp.chatId] ??= ChatState(resp.chatId, folder);
+      final chat = chats[resp.chatId] ??= ChatState(resp.chatId, folder);
+      if (issue != null && chat.draft.text.text.isEmpty) {
+        chat.draft.text.text = issue.markdown;
+      }
       // Not if the user went elsewhere meanwhile: a trust card or another
       // chat they're on stays.
       if ((selectedId, mcpFolder) == before && trustAsk == null) {
@@ -447,7 +460,8 @@ class Daemon extends ChangeNotifier {
     }
   }
 
-  bool _worktree(String folder) => worktreeRepos.value.contains(folder);
+  /// Whether new chats in [folder] get a worktree, as last chosen there.
+  bool wantsWorktree(String folder) => worktreeRepos.value.contains(folder);
 
   /// Moves a chat to [folder], or to a new worktree of its repository, and
   /// says whether it did (not when the user cancelled). A chat without
@@ -458,7 +472,7 @@ class Daemon extends ChangeNotifier {
       MoveChatRequest(
         chatId: chat.id,
         folder: folder,
-        worktree: worktree ?? (chat.fresh && _worktree(folder)),
+        worktree: worktree ?? (chat.fresh && wantsWorktree(folder)),
       ),
     );
     return true;
@@ -490,4 +504,23 @@ class Daemon extends ChangeNotifier {
     unawaited(_transport.close());
     super.dispose();
   }
+}
+
+/// A chat to start on a Jira issue: its site and key, the issue as its
+/// first message (GetJiraContext), and a worktree on [branch] if
+/// [worktree].
+class IssueChat {
+  new({
+    required this.site,
+    required this.key,
+    required this.markdown,
+    required this.branch,
+    required this.worktree,
+  });
+
+  final String site;
+  final String key;
+  final String markdown;
+  final String branch;
+  bool worktree;
 }

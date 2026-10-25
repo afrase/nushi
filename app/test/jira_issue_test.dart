@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -72,34 +72,43 @@ Future<(FakeDaemon, Daemon, List<String>)> _open(
   Tokens tokens = Tokens.dark,
 }) async {
   final opened = <String>[];
-  final fake = FakeDaemon([])
-    ..answer = (input) => switch (input) {
-      GetJiraIssueRequest() => GetJiraIssueResponse(issue: _issue()),
-      GetJiraAttachmentRequest(:final id) => GetJiraAttachmentResponse(
-        data: id == '10000' ? _png : [],
-        mimeType: 'image/png',
-      ),
-      ListJiraTransitionsRequest() => ListJiraTransitionsResponse(
-        transitions: [
-          JiraTransition(id: '21', name: 'In Progress', to: 'In Progress'),
-          JiraTransition(
-            id: '31',
-            name: 'Done',
-            to: 'Done',
-            fields: [
-              JiraField(
-                id: 'resolution',
-                name: 'Resolution',
-                type: 'resolution',
-                required: true,
-                options: [JiraOption(id: '1', name: 'Fixed')],
+  final fake =
+      FakeDaemon([
+          chat('c1', 'claude', 'Passkeys: the API')
+            ..jiraSite = 'acme.atlassian.net'
+            ..jiraKey = 'ACME-12',
+        ])
+        ..answer = (input) => switch (input) {
+          GetJiraIssueRequest() => GetJiraIssueResponse(issue: _issue()),
+          GetJiraAttachmentRequest(:final id) => GetJiraAttachmentResponse(
+            data: id == '10000' ? _png : [],
+            mimeType: 'image/png',
+          ),
+          GetJiraContextRequest() => GetJiraContextResponse(
+            markdown: '# ACME-12: Log in with a passkey\n',
+            branch: 'ACME-12-log-in-with-a-passkey',
+          ),
+          ListJiraTransitionsRequest() => ListJiraTransitionsResponse(
+            transitions: [
+              JiraTransition(id: '21', name: 'In Progress', to: 'In Progress'),
+              JiraTransition(
+                id: '31',
+                name: 'Done',
+                to: 'Done',
+                fields: [
+                  JiraField(
+                    id: 'resolution',
+                    name: 'Resolution',
+                    type: 'resolution',
+                    required: true,
+                    options: [JiraOption(id: '1', name: 'Fixed')],
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
-      _ => null,
-    };
+          _ => null,
+        };
   final d = await fake.connect(tester);
   await tester.binding.setSurfaceSize(const Size(700, 1100));
   await tester.pumpWidget(
@@ -123,7 +132,7 @@ Future<(FakeDaemon, Daemon, List<String>)> _open(
 
 /// A row of the open menu.
 Finder menuRow(String label) => find.ancestor(
-  of: find.text(label, findRichText: true),
+  of: find.textContaining(label, findRichText: true),
   matching: find.byType(MenuItemButton),
 );
 
@@ -184,6 +193,47 @@ void main() {
     await tester.pumpAndSettle();
     final c = fake.calls.whereType<AddJiraCommentRequest>().single;
     expect((c.key, c.markdown), ('ACME-12', 'Yes, **Safari** first.'));
+    await _close(tester, d);
+  });
+
+  testWidgets('a chat on the issue, its context in the box', (tester) async {
+    final (fake, d, _) = await _open(tester);
+    // The chat already on it is listed.
+    expect(find.text('Passkeys: the API'), findsOneWidget);
+    await tester.tap(find.text('Start a chat ▾'));
+    await tester.pumpAndSettle();
+    await tester.tap(menuRow('nushi'));
+    await tester.pumpAndSettle();
+    expect(find.text('Chat on ACME-12 in nushi'), findsOneWidget);
+    expect(
+      find.textContaining('ACME-12-log-in-with-a-passkey', findRichText: true),
+      findsOneWidget,
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyW); // a worktree, then
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    final start = fake.started.single;
+    expect(
+      (
+        start.folder,
+        start.jiraSite,
+        start.jiraKey,
+        start.worktree,
+        start.branch,
+      ),
+      (
+        '/Users/me/nushi',
+        'acme.atlassian.net',
+        'ACME-12',
+        true,
+        'ACME-12-log-in-with-a-passkey',
+      ),
+    );
+    expect(
+      d.chats['c1']!.draft.text.text,
+      '# ACME-12: Log in with a passkey\n',
+    );
     await _close(tester, d);
   });
 

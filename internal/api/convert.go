@@ -162,5 +162,8 @@ func chatProto(s model.Session) *nushiv1.Chat {
 	if wt := s.Worktree; wt != nil {
 		out.Worktree = &nushiv1.Worktree{Repo: wt.Repo, Path: wt.Path, Branch: wt.Branch, Base: wt.Base, BaseCommit: wt.BaseCommit}
 	}
+	if is := s.Issue; is != nil {
+		out.JiraSite, out.JiraKey = is.Site, is.Key
+	}
 	return out
 }

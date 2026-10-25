@@ -211,6 +211,9 @@ service NushiService {
   rpc TransitionJiraIssue(TransitionJiraIssueRequest) returns (TransitionJiraIssueResponse);
   // Posts a comment written in Markdown.
   rpc AddJiraComment(AddJiraCommentRequest) returns (AddJiraCommentResponse);
+  // An issue as a chat's first message (Markdown, for the user to see and
+  // edit before sending it), and a branch named after it.
+  rpc GetJiraContext(GetJiraContextRequest) returns (GetJiraContextResponse);
   // An attachment's file or thumbnail (20 MB at most).
   rpc GetJiraAttachment(GetJiraAttachmentRequest) returns (GetJiraAttachmentResponse);
   // Streams every change to every chat from now on. The first message is
@@ -256,6 +259,9 @@ message Chat {
   Worktree worktree = 10;
   // Its folder is a scratch folder of its own: it has no folder yet.
   bool scratch = 11;
+  // The Jira issue it was started from, if it was.
+  string jira_site = 12;
+  string jira_key = 13;
 }
 
 // A git worktree of a repository, on a branch of its own.
@@ -400,6 +406,11 @@ message StartChatRequest {
   // <repo>/.worktrees/<name> on a new branch nushi/<name> from folder's
   // HEAD.
   bool worktree = 2;
+  // A chat on a Jira issue (GetJiraContext), which it remembers; its
+  // worktree, if it has one, is on branch.
+  string jira_site = 4;
+  string jira_key = 5;
+  string branch = 6;
 }
 
 message ListAgentSessionsRequest {
@@ -1653,4 +1664,15 @@ message GetJiraAttachmentRequest {
 message GetJiraAttachmentResponse {
   bytes data = 1;
   string mime_type = 2;
+}
+
+message GetJiraContextRequest {
+  string site = 1;
+  string key = 2;
+}
+
+message GetJiraContextResponse {
+  string markdown = 1;
+  // KEY-summary-slug, the key uppercase so Jira links it.
+  string branch = 2;
 }

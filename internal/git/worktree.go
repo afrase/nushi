@@ -3,6 +3,7 @@ package git
 import (
 	"bufio"
 	"bytes"
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -22,11 +23,11 @@ import (
 type Worktrees struct{}
 
 // Add makes a worktree of folder's repository at <repo>/.worktrees/<name>,
-// on a new branch nushi/<name> from folder's HEAD, and keeps .worktrees/
+// on a new branch from folder's HEAD (branch, else nushi/<name>), and keeps .worktrees/
 // out of git through the repository's info/exclude. It returns the
 // worktree and the folder in it that matches folder (the same subfolder).
 // A name already taken (folder or branch) fails with fs.ErrExist.
-func (Worktrees) Add(ctx context.Context, folder, name string) (model.Worktree, string, error) {
+func (Worktrees) Add(ctx context.Context, folder, name, branch string) (model.Worktree, string, error) {
 	var wt model.Worktree
 	repo, err := mainWorktree(ctx, folder)
 	if err != nil {
@@ -41,7 +42,7 @@ func (Worktrees) Add(ctx context.Context, folder, name string) (model.Worktree, 
 	if resolved, err := filepath.EvalSymlinks(top); err == nil && resolved == repo {
 		repo = top // the folder's spelling: git resolves symlinks
 	}
-	wt = model.Worktree{Repo: repo, Path: filepath.Join(repo, ".worktrees", name), Branch: "nushi/" + name}
+	wt = model.Worktree{Repo: repo, Path: filepath.Join(repo, ".worktrees", name), Branch: cmp.Or(branch, "nushi/"+name)}
 	if err := worktreesFolder(repo); err != nil {
 		return wt, "", err
 	}
