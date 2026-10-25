@@ -5,10 +5,16 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"os"
 
+	acp "github.com/afrase/acp-go/unstable"
+
+	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/features/jira"
+	"github.com/afrase/nushi/internal/features/tools"
 	"github.com/afrase/nushi/internal/jiracloud"
 	"github.com/afrase/nushi/internal/keychain"
+	"github.com/afrase/nushi/internal/mcpserver"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/store"
 	"github.com/afrase/nushi/internal/sysproxy"
@@ -37,6 +43,24 @@ func newJira(st *store.Store, dev bool) *jira.Service {
 		},
 	}
 	return jira.New(sites, keychain.Keychain{Service: service}, st, func(err error) bool { return errors.Is(err, keychain.ErrNeedsOK) })
+}
+
+// mcpTools gives a chat's sessions the MCP server of Nushi's tools for it
+// (ADR 0043), when it has any: this nushid as `tools-mcp`, with the
+// daemon's socket and the chat's key in its environment.
+func mcpTools(t *tools.Service, socket string) chats.Tools {
+	exe, err := os.Executable()
+	if err != nil {
+		return nil
+	}
+	return func(chat, agent string, issue *model.ChatIssue) []acp.MCPServer {
+		g := tools.Grant{Chat: chat, Agent: agent, Issue: issue}
+		if !t.HasTools(g) {
+			return nil
+		}
+		return []acp.MCPServer{{Stdio: &acp.MCPServerStdio{Name: "nushi", Command: exe, Args: []string{mcpserver.Command},
+			Env: []acp.EnvVariable{{Name: mcpserver.SocketEnv, Value: socket}, {Name: mcpserver.KeyEnv, Value: t.Key(g)}}}}}
+	}
 }
 
 // proxy is the system's proxy for a request, as macOS would pick it

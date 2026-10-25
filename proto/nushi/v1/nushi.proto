@@ -1624,6 +1624,20 @@ message GetJiraIssueRequest {
 
 message GetJiraIssueResponse {
   JiraIssue issue = 1;
+  // What agents wrote to it through their tools, the latest last.
+  repeated JiraWrite agent_writes = 2;
+}
+
+// A write an agent made to an issue through its tools (ADR 0043).
+message JiraWrite {
+  // "comment" (comment: its id) or "move" (to: the status).
+  string kind = 1;
+  string comment = 2;
+  string to = 3;
+  // The chat and its agent.
+  string chat = 4;
+  string agent = 5;
+  int64 at = 6;
 }
 
 message ListJiraTransitionsRequest {

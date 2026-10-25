@@ -3484,13 +3484,41 @@ const GetJiraIssueResponse$json = {
       '6': '.nushi.v1.JiraIssue',
       '10': 'issue'
     },
+    {
+      '1': 'agent_writes',
+      '3': 2,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.JiraWrite',
+      '10': 'agentWrites'
+    },
   ],
 };
 
 /// Descriptor for `GetJiraIssueResponse`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List getJiraIssueResponseDescriptor = $convert.base64Decode(
     'ChRHZXRKaXJhSXNzdWVSZXNwb25zZRIpCgVpc3N1ZRgBIAEoCzITLm51c2hpLnYxLkppcmFJc3'
-    'N1ZVIFaXNzdWU=');
+    'N1ZVIFaXNzdWUSNgoMYWdlbnRfd3JpdGVzGAIgAygLMhMubnVzaGkudjEuSmlyYVdyaXRlUgth'
+    'Z2VudFdyaXRlcw==');
+
+@$core.Deprecated('Use jiraWriteDescriptor instead')
+const JiraWrite$json = {
+  '1': 'JiraWrite',
+  '2': [
+    {'1': 'kind', '3': 1, '4': 1, '5': 9, '10': 'kind'},
+    {'1': 'comment', '3': 2, '4': 1, '5': 9, '10': 'comment'},
+    {'1': 'to', '3': 3, '4': 1, '5': 9, '10': 'to'},
+    {'1': 'chat', '3': 4, '4': 1, '5': 9, '10': 'chat'},
+    {'1': 'agent', '3': 5, '4': 1, '5': 9, '10': 'agent'},
+    {'1': 'at', '3': 6, '4': 1, '5': 3, '10': 'at'},
+  ],
+};
+
+/// Descriptor for `JiraWrite`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List jiraWriteDescriptor = $convert.base64Decode(
+    'CglKaXJhV3JpdGUSEgoEa2luZBgBIAEoCVIEa2luZBIYCgdjb21tZW50GAIgASgJUgdjb21tZW'
+    '50Eg4KAnRvGAMgASgJUgJ0bxISCgRjaGF0GAQgASgJUgRjaGF0EhQKBWFnZW50GAUgASgJUgVh'
+    'Z2VudBIOCgJhdBgGIAEoA1ICYXQ=');
 
 @$core.Deprecated('Use listJiraTransitionsRequestDescriptor instead')
 const ListJiraTransitionsRequest$json = {
@@ -4233,6 +4261,7 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.JiraOption': JiraOption$json,
   '.nushi.v1.GetJiraIssueRequest': GetJiraIssueRequest$json,
   '.nushi.v1.GetJiraIssueResponse': GetJiraIssueResponse$json,
+  '.nushi.v1.JiraWrite': JiraWrite$json,
   '.nushi.v1.ListJiraTransitionsRequest': ListJiraTransitionsRequest$json,
   '.nushi.v1.ListJiraTransitionsResponse': ListJiraTransitionsResponse$json,
   '.nushi.v1.JiraTransition': JiraTransition$json,

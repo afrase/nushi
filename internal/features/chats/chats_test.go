@@ -400,3 +400,35 @@ func TestAnEndLineTheCommandPrintedIsntItsEnd(t *testing.T) {
 		t.Errorf("states %q, the end %+v", states, c.items[0].Shell)
 	}
 }
+
+// A chat on an issue gives its sessions Nushi's tools, for the chat and
+// its issue; a chat without one, what the tools give it.
+func TestToolsForAChatOnAnIssue(t *testing.T) {
+	agent := &fakeAgent{}
+	svc := New([]Kind{{Name: "fake", Launch: func(h acp.Client, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }, Dialect: claudeDialect}},
+		&memModes{}, &memSessions{}, nil, "", func(model.Event) {})
+	var asked []string
+	svc.UseTools(func(chat, agent string, issue *model.ChatIssue) []acp.MCPServer {
+		if issue == nil {
+			return nil
+		}
+		asked = append(asked, chat+" "+agent+" "+issue.Key)
+		return []acp.MCPServer{{Stdio: &acp.MCPServerStdio{Name: "nushi", Command: "/bin/true"}}}
+	})
+	if _, err := svc.Start(t.Context(), "", t.TempDir(), false); err != nil {
+		t.Fatal(err)
+	}
+	if len(agent.mcp) != 0 {
+		t.Errorf("a chat without an issue got %v", agent.mcp)
+	}
+	id, err := svc.StartOn(t.Context(), "", t.TempDir(), false, &model.ChatIssue{Site: "acme.atlassian.net", Key: "ACME-12"}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(agent.mcp) != 1 || agent.mcp[0].Stdio.Name != "nushi" || len(asked) != 1 || asked[0] != id+" fake ACME-12" {
+		t.Errorf("session/new got %v; asked %v", agent.mcp, asked)
+	}
+	if s := svc.chats[id].session; s.Issue == nil || s.Issue.Key != "ACME-12" {
+		t.Errorf("the chat doesn't remember its issue: %+v", s.Issue)
+	}
+}

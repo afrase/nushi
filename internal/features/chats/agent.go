@@ -52,7 +52,7 @@ func (c *chat) openSession(ctx context.Context, sid, folder string, fork bool) (
 		err = errors.New("the agent can't reopen sessions")
 	default:
 		var resp *acp.LoadSessionResponse
-		if resp, err = agent.LoadSession(ctx, &acp.LoadSessionRequest{SessionID: acp.SessionID(sid), Cwd: folder}); err == nil {
+		if resp, err = agent.LoadSession(ctx, &acp.LoadSessionRequest{SessionID: acp.SessionID(sid), Cwd: folder, MCPServers: c.mcpServers()}); err == nil {
 			o.config = c.configFrom(resp.ConfigOptions, resp.Modes)
 		}
 	}
@@ -65,7 +65,7 @@ func (c *chat) openSession(ctx context.Context, sid, folder string, fork bool) (
 
 // newSession has agent start a session in folder.
 func (c *chat) newSession(ctx context.Context, agent Agent, folder string) (string, []model.ConfigOption, error) {
-	resp, err := agent.NewSession(ctx, &acp.NewSessionRequest{Cwd: folder})
+	resp, err := agent.NewSession(ctx, &acp.NewSessionRequest{Cwd: folder, MCPServers: c.mcpServers()})
 	if err != nil {
 		return "", nil, err
 	}
@@ -79,11 +79,31 @@ func (c *chat) newSession(ctx context.Context, agent Agent, folder string) (stri
 func (c *chat) forkSession(ctx context.Context, agent Agent, sid, folder string, meta map[string]any) (string, []model.ConfigOption, error) {
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Minute)
 	defer cancel()
-	resp, err := agent.ForkSession(ctx, &acp.ForkSessionRequest{SessionID: acp.SessionID(sid), Cwd: folder, Meta: meta})
+	resp, err := agent.ForkSession(ctx, &acp.ForkSessionRequest{SessionID: acp.SessionID(sid), Cwd: folder, Meta: meta, MCPServers: c.mcpServers()})
 	if err != nil {
 		return "", nil, err
 	}
 	return string(resp.SessionID), c.configFrom(resp.ConfigOptions, resp.Modes), nil
+}
+
+// Tools are the MCP servers of Nushi's own tools a chat's sessions get
+// (internal/features/tools): its id, its agent, its issue.
+type Tools func(chat, agent string, issue *model.ChatIssue) []acp.MCPServer
+
+// UseTools gives chats' sessions Nushi's tools, set once at startup.
+func (s *Service) UseTools(t Tools) {
+	for _, k := range s.kinds {
+		k.tools = t
+	}
+}
+
+// mcpServers are the MCP servers of Nushi's own tools for the chat, if
+// any; the agent's own come from its config.
+func (c *chat) mcpServers() []acp.MCPServer {
+	if c.kind.tools == nil {
+		return nil
+	}
+	return c.kind.tools(c.id, c.kind.Name, c.issue)
 }
 
 // initialize launches an agent and initializes the connection, with meta

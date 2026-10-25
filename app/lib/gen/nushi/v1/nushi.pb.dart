@@ -14767,9 +14767,11 @@ class GetJiraIssueRequest extends $pb.GeneratedMessage {
 class GetJiraIssueResponse extends $pb.GeneratedMessage {
   factory GetJiraIssueResponse({
     JiraIssue? issue,
+    $core.Iterable<JiraWrite>? agentWrites,
   }) {
     final result = GetJiraIssueResponse._();
     if (issue != null) result.issue = issue;
+    if (agentWrites != null) result.agentWrites.addAll(agentWrites);
     return result;
   }
 
@@ -14788,6 +14790,8 @@ class GetJiraIssueResponse extends $pb.GeneratedMessage {
       createEmptyInstance: GetJiraIssueResponse.$_createMessage)
     ..aOM<JiraIssue>(1, _omitFieldNames ? '' : 'issue',
         subBuilder: JiraIssue.$_createMessage)
+    ..pPM<JiraWrite>(2, _omitFieldNames ? '' : 'agentWrites',
+        subBuilder: JiraWrite.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -14823,6 +14827,128 @@ class GetJiraIssueResponse extends $pb.GeneratedMessage {
   void clearIssue() => $_clearField(1);
   @$pb.TagNumber(1)
   JiraIssue ensureIssue() => $_ensure(0);
+
+  /// What agents wrote to it through their tools, the latest last.
+  @$pb.TagNumber(2)
+  $pb.PbList<JiraWrite> get agentWrites => $_getList(1);
+}
+
+/// A write an agent made to an issue through its tools (ADR 0043).
+class JiraWrite extends $pb.GeneratedMessage {
+  factory JiraWrite({
+    $core.String? kind,
+    $core.String? comment,
+    $core.String? to,
+    $core.String? chat,
+    $core.String? agent,
+    $fixnum.Int64? at,
+  }) {
+    final result = JiraWrite._();
+    if (kind != null) result.kind = kind;
+    if (comment != null) result.comment = comment;
+    if (to != null) result.to = to;
+    if (chat != null) result.chat = chat;
+    if (agent != null) result.agent = agent;
+    if (at != null) result.at = at;
+    return result;
+  }
+
+  JiraWrite._();
+
+  factory JiraWrite.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraWrite()..mergeFromBuffer(data, registry);
+  factory JiraWrite.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraWrite()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'JiraWrite',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: JiraWrite.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'kind')
+    ..aOS(2, _omitFieldNames ? '' : 'comment')
+    ..aOS(3, _omitFieldNames ? '' : 'to')
+    ..aOS(4, _omitFieldNames ? '' : 'chat')
+    ..aOS(5, _omitFieldNames ? '' : 'agent')
+    ..aInt64(6, _omitFieldNames ? '' : 'at')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraWrite clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraWrite copyWith(void Function(JiraWrite) updates) =>
+      super.copyWith((message) => updates(message as JiraWrite)) as JiraWrite;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use JiraWrite() / JiraWrite.new instead')
+  static JiraWrite create() => JiraWrite._();
+  static $pb.GeneratedMessage $_createMessage() => JiraWrite._();
+  @$core.override
+  JiraWrite createEmptyInstance() => JiraWrite._();
+  @$core.pragma('dart2js:noInline')
+  static JiraWrite getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<JiraWrite>(JiraWrite.$_createMessage);
+  static JiraWrite? _defaultInstance;
+
+  /// "comment" (comment: its id) or "move" (to: the status).
+  @$pb.TagNumber(1)
+  $core.String get kind => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set kind($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasKind() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearKind() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get comment => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set comment($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasComment() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearComment() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get to => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set to($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasTo() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearTo() => $_clearField(3);
+
+  /// The chat and its agent.
+  @$pb.TagNumber(4)
+  $core.String get chat => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set chat($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasChat() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearChat() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get agent => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set agent($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasAgent() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearAgent() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $fixnum.Int64 get at => $_getI64(5);
+  @$pb.TagNumber(6)
+  set at($fixnum.Int64 value) => $_setInt64(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasAt() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearAt() => $_clearField(6);
 }
 
 class ListJiraTransitionsRequest extends $pb.GeneratedMessage {
