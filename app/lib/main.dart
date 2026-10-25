@@ -10,7 +10,6 @@ import 'chat_view.dart';
 import 'daemon.dart';
 import 'details_panel.dart';
 import 'folder_button.dart';
-import 'logo.dart';
 import 'mcp.dart';
 import 'new_chat.dart';
 import 'panes.dart';
@@ -163,19 +162,7 @@ class _Shell extends StatelessWidget {
                   : daemon.mcpFolder != null
                   ? McpView(daemon: daemon, folder: daemon.mcpFolder!)
                   : chat == null
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Logo(color: theme.t.borderStrong),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Start a chat',
-                            style: theme.ui(theme.t.textMuted),
-                          ),
-                        ],
-                      ),
-                    )
+                  ? NothingOpen(daemon)
                   : _ChatPane(key: ValueKey(chat.id), chat, daemon),
             ),
           ],
