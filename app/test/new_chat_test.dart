@@ -276,8 +276,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       find.text(
-        "It's open in a terminal. Both will write to the same "
-        'history.',
+        "It's open in a terminal. Both will write to its history, and "
+        "neither sees the other's turns.",
       ),
       findsOneWidget,
     );
@@ -285,6 +285,52 @@ void main() {
     await tester.pumpAndSettle();
     expect(fake.opened.single.sessionId, 's1');
     expect(fake.opened.single.folder, '/Users/me/nushi'); // its own
+    d.dispose();
+  });
+
+  testWidgets('one open elsewhere, for an agent with one writer, can’t open', (
+    tester,
+  ) async {
+    final (fake, d) = await _sidebar(tester);
+    fake.sessions = (_) => ListAgentSessionsResponse(
+      canList: true,
+      seesOpen: true,
+      oneWriter: true,
+      sessions: [
+        FoundSession(sessionId: 'c1', title: 'Busy', openIn: 'another app'),
+        FoundSession(sessionId: 'c2', title: 'Free'),
+      ],
+    );
+    await _open(tester);
+    await _key(tester, LogicalKeyboardKey.arrowRight);
+    await tester.tap(find.text('Busy'));
+    await tester.pumpAndSettle();
+    await _key(tester, LogicalKeyboardKey.enter); // the first: still not
+    expect(fake.opened, isEmpty);
+    expect(find.text('Open it here too?'), findsNothing);
+    await tester.tap(find.text('Free'));
+    await tester.pumpAndSettle();
+    expect(fake.opened.single.sessionId, 'c2');
+    d.dispose();
+  });
+
+  testWidgets('the arrows keep the selected session in view', (tester) async {
+    final (fake, d) = await _sidebar(tester);
+    fake.sessions = (_) => ListAgentSessionsResponse(
+      canList: true,
+      sessions: [
+        for (var i = 0; i < 30; i++)
+          FoundSession(sessionId: 's$i', title: 'Session $i', folder: '/x'),
+      ],
+    );
+    await _open(tester);
+    await _key(tester, LogicalKeyboardKey.arrowRight);
+    for (var i = 0; i < 29; i++) {
+      await _key(tester, LogicalKeyboardKey.arrowDown);
+    }
+    expect(find.text('Session 29').hitTestable(), findsOneWidget);
+    await _key(tester, LogicalKeyboardKey.arrowDown); // wraps to the first
+    expect(find.text('Session 0').hitTestable(), findsOneWidget);
     d.dispose();
   });
 

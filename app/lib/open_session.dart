@@ -39,6 +39,33 @@ class _SessionListState extends State<SessionList> {
   String? _error;
   bool _loading = false;
   int _at = 0;
+  final _shown = GlobalKey(); // the selected row's, to keep it in view
+
+  final _scroll = ScrollController();
+
+  /// Moves the selection, keeping it in view: a row away from the screen
+  /// isn't built, but then the selection wrapped to the first or last.
+  void _move(int by) {
+    setState(() => _at = (_at + by + _rows) % _rows);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_shown.currentContext case final c?) {
+        Scrollable.ensureVisible(
+          c,
+          alignmentPolicy: by > 0
+              ? ScrollPositionAlignmentPolicy.keepVisibleAtEnd
+              : ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+        );
+      } else if (_scroll.hasClients) {
+        _scroll.jumpTo(_at == 0 ? 0 : _scroll.position.maxScrollExtent);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -78,7 +105,7 @@ class _SessionListState extends State<SessionList> {
   void _pick(int i) {
     if (i == _sessions.length) {
       if (!_loading) _more();
-    } else if (!_sessions[i].folderGone) {
+    } else if (_why(_sessions[i]) == null) {
       widget.onOpen(_sessions[i]);
     }
   }
@@ -91,9 +118,9 @@ class _SessionListState extends State<SessionList> {
       case LogicalKeyboardKey.arrowLeft || LogicalKeyboardKey.escape:
         widget.onBack();
       case LogicalKeyboardKey.arrowDown when _rows > 0:
-        setState(() => _at = (_at + 1) % _rows);
+        _move(1);
       case LogicalKeyboardKey.arrowUp when _rows > 0:
-        setState(() => _at = (_at - 1 + _rows) % _rows);
+        _move(-1);
       case LogicalKeyboardKey.enter || LogicalKeyboardKey.numpadEnter
           when _rows > 0:
         _pick(_at);
@@ -155,11 +182,13 @@ class _SessionListState extends State<SessionList> {
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 360),
               child: ListView(
+                controller: _scroll,
                 shrinkWrap: true,
                 children: [
                   for (final (i, s) in _sessions.indexed) _row(theme, i, s),
                   if (_hasMore)
                     Tap(
+                      key: _at == _sessions.length ? _shown : null,
                       onTap: () => _pick(_sessions.length),
                       selected: _at == _sessions.length,
                       padding: const EdgeInsets.symmetric(
@@ -188,8 +217,19 @@ class _SessionListState extends State<SessionList> {
     );
   }
 
+  /// Why [s] can't be opened, if it can't: its folder is gone, or it's
+  /// open elsewhere and the agent lets one app at a time write to it.
+  String? _why(FoundSession s) => switch (s) {
+    _ when s.folderGone => '${tildePath(s.folder)} no longer exists',
+    _ when s.openIn.isNotEmpty && (_last?.oneWriter ?? false) =>
+      '${agentTitle(widget.agent)} lets one app at a time use a session: '
+          'close it there first',
+    _ => null,
+  };
+
   Widget _row(NushiTheme theme, int i, FoundSession s) {
     final t = theme.t;
+    final why = _why(s);
     final when = DateTime.fromMillisecondsSinceEpoch(s.updatedUnixMs.toInt());
     final details = [
       if (s.updatedUnixMs != 0) ago(DateTime.now().difference(when), when),
@@ -199,9 +239,10 @@ class _SessionListState extends State<SessionList> {
       if (s.folderGone) 'folder gone',
     ].join(' · ');
     return Tap(
-      onTap: s.folderGone ? null : () => _pick(i),
+      key: i == _at ? _shown : null,
+      onTap: why != null ? null : () => _pick(i),
       selected: i == _at,
-      tooltip: s.folderGone ? '${tildePath(s.folder)} no longer exists' : '',
+      tooltip: why ?? '',
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -210,7 +251,7 @@ class _SessionListState extends State<SessionList> {
             s.title.isEmpty ? 'Untitled' : s.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: theme.ui(s.folderGone ? t.textMuted : t.text),
+            style: theme.ui(why != null ? t.textMuted : t.text),
           ),
           const SizedBox(height: 2),
           Text.rich(
@@ -235,12 +276,14 @@ class _SessionListState extends State<SessionList> {
 }
 
 /// Whether to open [s], which may be open elsewhere: both would write to
-/// its history, so that asks first (it doesn't refuse).
+/// its history, so that asks first (it doesn't refuse). An agent that
+/// allows one writer never gets here (SessionList doesn't offer it).
 Future<bool> mayOpen(BuildContext context, FoundSession s) async =>
     s.openIn.isEmpty ||
     await confirm(
       context,
       'Open it here too?',
-      "It's open in ${s.openIn}. Both will write to the same history.",
+      "It's open in ${s.openIn}. Both will write to its history, and neither "
+          "sees the other's turns.",
       'Open',
     );

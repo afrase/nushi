@@ -3,6 +3,7 @@ package acptest
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -19,8 +20,16 @@ type History struct {
 	n        int
 }
 
-// key is a session in one folder's history.
+// key is a session in one folder's history, the folder by its real path,
+// as Claude keeps it.
 type key struct{ cwd, session string }
+
+func keyOf(cwd, session string) key {
+	if real, err := filepath.EvalSymlinks(cwd); err == nil {
+		cwd = real
+	}
+	return key{cwd, session}
+}
 
 // Deleted reports whether session/delete was asked for session (one never
 // kept, without a message, included).
@@ -37,7 +46,7 @@ func (h *History) add(cwd, session string, update any) {
 	if h.sessions == nil {
 		h.sessions = map[key][]json.RawMessage{}
 	}
-	k := key{cwd, session}
+	k := keyOf(cwd, session)
 	h.sessions[k] = append(h.sessions[k], b)
 	if h.last == nil {
 		h.last = map[key]int{}
@@ -54,7 +63,7 @@ func (h *History) list(cwd string) []map[string]any {
 	defer h.mu.Unlock()
 	var keys []key
 	for k := range h.sessions {
-		if cwd == "" || k.cwd == cwd {
+		if cwd == "" || k.cwd == keyOf(cwd, "").cwd {
 			keys = append(keys, k)
 		}
 	}
@@ -81,9 +90,9 @@ func (h *History) list(cwd string) []map[string]any {
 func (h *History) fork(cwd, from, to string) bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	u, ok := h.sessions[key{cwd, from}]
+	u, ok := h.sessions[keyOf(cwd, from)]
 	if ok {
-		h.sessions[key{cwd, to}] = append([]json.RawMessage(nil), u...)
+		h.sessions[keyOf(cwd, to)] = append([]json.RawMessage(nil), u...)
 	}
 	return ok
 }
@@ -94,18 +103,18 @@ func (h *History) fork(cwd, from, to string) bool {
 func (h *History) Copy(session, from, to string) (remove func() error, err error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	u, ok := h.sessions[key{from, session}]
+	u, ok := h.sessions[keyOf(from, session)]
 	if !ok {
 		return nil, fmt.Errorf("no session %s in %s", session, from)
 	}
-	if _, ok := h.sessions[key{to, session}]; ok {
+	if _, ok := h.sessions[keyOf(to, session)]; ok {
 		return nil, fmt.Errorf("session %s is in %s already", session, to)
 	}
-	h.sessions[key{to, session}] = append([]json.RawMessage(nil), u...)
+	h.sessions[keyOf(to, session)] = append([]json.RawMessage(nil), u...)
 	return func() error {
 		h.mu.Lock()
 		defer h.mu.Unlock()
-		delete(h.sessions, key{to, session})
+		delete(h.sessions, keyOf(to, session))
 		return nil
 	}, nil
 }
@@ -131,7 +140,7 @@ func (h *History) In(cwd, session string) bool {
 func (h *History) get(cwd, session string) ([]json.RawMessage, bool) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	u, ok := h.sessions[key{cwd, session}]
+	u, ok := h.sessions[keyOf(cwd, session)]
 	return append([]json.RawMessage(nil), u...), ok
 }
 

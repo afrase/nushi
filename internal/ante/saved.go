@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/afrase/nushi/acp"
@@ -123,6 +124,7 @@ func (s *session) replayLocked(ev event) []acp.SessionUpdate {
 	case "UserInput":
 		var text string
 		json.Unmarshal(ev.Payload, &text)
+		text = withoutFolder(text)
 		if text != "" {
 			c := &acp.ContentChunk{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: text}}, MessageID: acp.MessageID(ev.Parent)}
 			return []acp.SessionUpdate{{SessionUpdate: "user_message_chunk", UserMessageChunk: c}}
@@ -211,7 +213,7 @@ func (b *bridge) list(cwd string) acp.ListSessionsResponse {
 		if err != nil || json.Unmarshal(raw, &m) != nil || !isSessionID(m.ID) || cwd != "" && realPath(m.Dir) != cwd {
 			continue
 		}
-		info := acp.SessionInfo{SessionID: acp.SessionID(m.ID), Cwd: m.Dir, Title: cmp(m.Title, m.First), UpdatedAt: m.Active}
+		info := acp.SessionInfo{SessionID: acp.SessionID(m.ID), Cwd: m.Dir, Title: cmp(m.Title, firstLine(m.First)), UpdatedAt: m.Active}
 		if m.Messages > 0 {
 			info.Meta = map[string]any{"messageCount": m.Messages}
 		}
@@ -219,6 +221,23 @@ func (b *bridge) list(cwd string) acp.ListSessionsResponse {
 	}
 	sort.Slice(out.Sessions, func(i, j int) bool { return out.Sessions[i].UpdatedAt > out.Sessions[j].UpdatedAt })
 	return out
+}
+
+// firstLine is a message's first line: Ante adds the folder's files to the
+// first one.
+func firstLine(s string) string {
+	s, _, _ = strings.Cut(strings.TrimSpace(s), "\n")
+	return s
+}
+
+// withoutFolder is a message without the list of the folder's files Ante's
+// own front end adds to a session's first message (Nushi's prompts have
+// none): what the user typed.
+func withoutFolder(text string) string {
+	if before, list, ok := strings.Cut(text, "\n\n<folder-structure>\n"); ok && strings.HasSuffix(strings.TrimSpace(list), "</folder-structure>") {
+		return before
+	}
+	return text
 }
 
 // realPath is path with its links resolved, or as it is when it can't be.

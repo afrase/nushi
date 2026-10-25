@@ -103,14 +103,15 @@ func run() error {
 			SubagentID: claude.SubagentID, Relay: claude.Relay, Relayed: claude.Relayed, Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle,
 			ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete},
 		History:       func(id, from, to string) (func() error, error) { return claudehistory.Copy(projects, id, from, to) },
-		OpenElsewhere: claudehistory.Open}
+		OpenElsewhere: claudehistory.Open, Forked: func(ids []string) map[string]bool { return claudehistory.Forked(projects, ids) }}
 	codexKind := chats.Kind{Name: "codex", Title: "Codex", Resume: codex.Resume, History: codex.History, DeleteArchives: codex.DeleteArchives,
+		OpenElsewhere: codex.OpenElsewhere, Forked: codex.Forked, OneWriter: true,
 		Launch:  func(h acp.Handler) (chats.Agent, error) { return codex.Start(dir, h) },
 		Dialect: chats.Dialect{ForkAt: codex.ForkAt, ToolCall: codex.ToolCall, Other: codex.Other}}
-	anteKind := chats.Kind{Name: "ante", Title: "Ante", Resume: ante.Resume,
+	anteKind := chats.Kind{Name: "ante", Title: "Ante", Resume: ante.Resume, OpenElsewhere: ante.OpenElsewhere,
 		Launch:  func(h acp.Handler) (chats.Agent, error) { return ante.Start(dir, h) },
 		Dialect: chats.Dialect{ForkAt: ante.ForkAt, Other: ante.Other, Context: ante.Context}}
-	ompKind := chats.Kind{Name: "omp", Title: "oh-my-pi", Resume: omp.Resume,
+	ompKind := chats.Kind{Name: "omp", Title: "oh-my-pi", Resume: omp.Resume, Forked: omp.Forked, OpenElsewhere: omp.OpenElsewhere, OneWriter: true,
 		Launch:  func(h acp.Handler) (chats.Agent, error) { return omp.Start(dir, h) },
 		Dialect: chats.Dialect{Other: omp.Other, ToolCall: omp.ToolCall}}
 	st := store.New(dir)

@@ -35,8 +35,9 @@ type FoundPage struct {
 	// CanList says the agent lists its sessions and reopens them
 	// (session/list and session/load); without, there's no list.
 	CanList bool
-	// SeesOpen says the agent's Kind can tell a session open elsewhere.
-	SeesOpen bool
+	// SeesOpen says the agent's Kind can tell a session open elsewhere;
+	// OneWriter that such a session can't be opened (Kind.OneWriter).
+	SeesOpen, OneWriter bool
 }
 
 // findPage is how many sessions a page holds at least, unless the agent's
@@ -49,7 +50,8 @@ const (
 )
 
 // Find lists the agent's sessions in folder ("" for every folder) that
-// aren't chats yet, newest first, from cursor on (the last page's Next).
+// aren't chats yet and aren't forks, newest first, from cursor on (the
+// last page's Next).
 // It starts the agent to ask, and stops it after.
 func (s *Service) Find(ctx context.Context, agent, folder, cursor string) (FoundPage, error) {
 	k, err := s.kindOf(agent)
@@ -75,13 +77,9 @@ func (s *Service) Find(ctx context.Context, agent, folder, cursor string) (Found
 	if err != nil {
 		return FoundPage{}, err
 	}
-	var open map[string]string
-	if k.OpenElsewhere != nil {
-		open = k.OpenElsewhere()
-	}
 	real := realPath(folder)
 	paths := map[string]string{} // a cwd's real path, once looked up
-	page := FoundPage{CanList: true, SeesOpen: k.OpenElsewhere != nil}
+	page := FoundPage{CanList: true, SeesOpen: k.OpenElsewhere != nil, OneWriter: k.OneWriter}
 	for calls := 1; ; calls++ {
 		resp, err := a.ListSessions(ctx, acp.ListSessionsRequest{Cwd: real, Cursor: cursor})
 		if err != nil {
@@ -95,7 +93,7 @@ func (s *Service) Find(ctx context.Context, agent, folder, cursor string) (Found
 			if ours[id] || id == "" || folder != "" && paths[info.Cwd] != real {
 				continue
 			}
-			page.Sessions = append(page.Sessions, found(info, open[id]))
+			page.Sessions = append(page.Sessions, found(info))
 		}
 		cursor = resp.NextCursor
 		if cursor == "" || len(page.Sessions) >= findPage || calls >= findCalls {
@@ -103,13 +101,27 @@ func (s *Service) Find(ctx context.Context, agent, folder, cursor string) (Found
 		}
 	}
 	page.Next = cursor
+	ids := make([]string, len(page.Sessions))
+	for i, f := range page.Sessions {
+		ids[i] = f.SessionID
+	}
+	if k.Forked != nil {
+		forks := k.Forked(ids)
+		page.Sessions = slices.DeleteFunc(page.Sessions, func(f Found) bool { return forks[f.SessionID] })
+	}
+	if k.OpenElsewhere != nil {
+		open := k.OpenElsewhere(ids)
+		for i := range page.Sessions {
+			page.Sessions[i].OpenIn = open[page.Sessions[i].SessionID]
+		}
+	}
 	slices.SortStableFunc(page.Sessions, func(a, b Found) int { return b.Updated.Compare(a.Updated) })
 	return page, nil
 }
 
 // found reads what the agent tells of a session.
-func found(info acp.SessionInfo, openIn string) Found {
-	f := Found{SessionID: string(info.SessionID), Title: info.Title, Folder: info.Cwd, OpenIn: openIn}
+func found(info acp.SessionInfo) Found {
+	f := Found{SessionID: string(info.SessionID), Title: info.Title, Folder: info.Cwd}
 	f.Updated, _ = time.Parse(time.RFC3339, info.UpdatedAt)
 	if n, ok := info.Meta["messageCount"].(float64); ok && n > 0 {
 		f.Messages = int(n)

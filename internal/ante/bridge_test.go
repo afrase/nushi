@@ -323,3 +323,74 @@ func TestImagesInAFolderOfTheBridges(t *testing.T) {
 		t.Errorf("image holds %q", got)
 	}
 }
+
+// The list reads each saved session's meta.json in a fixture ANTE_HOME:
+// newest first, the title or else the first message's first line (Ante
+// adds the folder's files to it), the message count, a folder through a
+// link matching the real one, and what isn't a session left out.
+func TestList(t *testing.T) {
+	home, work := t.TempDir(), t.TempDir()
+	real, _ := filepath.EvalSymlinks(work)
+	link := filepath.Join(t.TempDir(), "link")
+	if err := os.Symlink(work, link); err != nil {
+		t.Fatal(err)
+	}
+	meta := func(dir, body string) {
+		if err := os.MkdirAll(filepath.Join(home, "sessions", dir), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(home, "sessions", dir, "meta.json"), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	const older, newer, elsewhere = "ses_01M5NT3J93ZQA28RSPG7Q9S84D", "ses_01M5NT3J93ZQA28RSPG7Q9S84E", "ses_01M5NT3J93ZQA28RSPG7Q9S84F"
+	meta(older, `{"id":"`+older+`","provider":"fireworks","dir":"`+real+`","first_user_message":"hello\n\n<folder-structure>\n- `+real+`/\n</folder-structure>",
+		"message_count":2,"started_time":"2026-10-24T01:58:47.331430Z","last_active_time":"2026-10-24T01:59:41.407206Z"}`)
+	meta(newer, `{"id":"`+newer+`","dir":"`+real+`","title":"Fix the tests","first_user_message":"hi","last_active_time":"2026-10-25T01:00:00Z"}`)
+	meta(elsewhere, `{"id":"`+elsewhere+`","dir":"/elsewhere","first_user_message":"yo","last_active_time":"2026-10-26T01:00:00Z"}`)
+	meta("ses_broken", `{"id":"ses_broken","dir":"`+real+`"}`)
+	meta("ses_01M5NT3J93ZQA28RSPG7Q9S84G", `{not json`)
+	b := &bridge{home: home}
+	got := b.list(link).Sessions
+	if len(got) != 2 || got[0].SessionID != newer || got[0].Title != "Fix the tests" || got[0].Meta != nil ||
+		got[1].Title != "hello" || got[1].Meta["messageCount"] != 2 || got[1].UpdatedAt != "2026-10-24T01:59:41.407206Z" || got[1].Cwd != real {
+		t.Errorf("list(%s) = %+v", link, got)
+	}
+	if all := b.list("").Sessions; len(all) != 3 || all[0].SessionID != elsewhere {
+		t.Errorf("list() = %+v, want the three sessions, the newest first", all)
+	}
+}
+
+// A session's events.jsonl that a process holds open counts as open
+// elsewhere.
+func TestOpenFiles(t *testing.T) {
+	dir := t.TempDir()
+	open, closed := filepath.Join(dir, "a", "events.jsonl"), filepath.Join(dir, "b", "events.jsonl")
+	for _, f := range []string{open, closed} {
+		os.MkdirAll(filepath.Dir(f), 0o700)
+		if err := os.WriteFile(f, nil, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	f, err := os.OpenFile(open, os.O_WRONLY|os.O_APPEND, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	got := openFiles([]string{open, closed}, func(f string) string { return filepath.Base(filepath.Dir(f)) })
+	if len(got) != 1 || got["a"] != "another app" {
+		t.Errorf("open = %v, want a only", got)
+	}
+}
+
+func TestWithoutFolder(t *testing.T) {
+	for in, want := range map[string]string{
+		"hello\n\n<folder-structure>\n- /work/\n  - a.go\n\n</folder-structure>": "hello",
+		"hello":                  "hello",
+		"see <folder-structure>": "see <folder-structure>",
+	} {
+		if got := withoutFolder(in); got != want {
+			t.Errorf("withoutFolder(%q) = %q", in, got)
+		}
+	}
+}

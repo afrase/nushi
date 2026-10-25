@@ -25,10 +25,19 @@ type Kind struct {
 	// DeleteArchives says its session/delete archives a session rather
 	// than deleting it.
 	DeleteArchives bool
-	// OpenElsewhere returns its sessions that a process of its own holds
-	// open now, one Nushi didn't start (a terminal's): by session id, where
-	// ("a terminal"). nil when that can't be told.
-	OpenElsewhere func() map[string]string
+	// OpenElsewhere says which of sessions ids a process of the agent's
+	// holds open now, one this daemon didn't start (a terminal's): by
+	// session id, where ("a terminal", "another app"). nil when that can't
+	// be told.
+	OpenElsewhere func(ids []string) map[string]string
+	// Forked says which of sessions ids are forks of another session, so
+	// Find leaves them out (only top-level sessions are listed; subagents'
+	// the agents leave out themselves). nil when that can't be told.
+	Forked func(ids []string) map[string]bool
+	// OneWriter says the agent lets one process at a time write to a
+	// session, so one open elsewhere isn't offered: Codex refuses a second
+	// one, omp moves it to a new session.
+	OneWriter bool
 }
 
 // kind is a Kind the service runs.

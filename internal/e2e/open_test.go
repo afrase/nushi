@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -79,20 +80,26 @@ func TestOpenASessionStartedElsewhere(t *testing.T) {
 	d := startDaemon(t, t.TempDir(), history, nil)
 	a := open(t, d)
 	dir, _ := filepath.EvalSymlinks(t.TempDir())
-	ours := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: dir}))).ChatId
+	link := filepath.Join(t.TempDir(), "link") // Nushi's chats spell the folder so
+	if err := os.Symlink(dir, link); err != nil {
+		t.Fatal(err)
+	}
+	ours := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: link}))).ChatId
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: ours, Text: "a chat of Nushi's"})))
 	a.waitFor("its reply", func(e *nushiv1.EventsResponse) bool { return e.ChatId == ours && idle(e) })
 	sid, resume := inTerminal(t, history, false, dir, "hello from the terminal")
 	inTerminal(t, history, false, t.TempDir(), "another folder's")
 
 	list := func() *nushiv1.ListAgentSessionsResponse {
-		return must(a.c.ListAgentSessions(ctx, connect.NewRequest(&nushiv1.ListAgentSessionsRequest{Folder: dir})))
+		return must(a.c.ListAgentSessions(ctx, connect.NewRequest(&nushiv1.ListAgentSessionsRequest{Folder: link})))
 	}
 	found := list()
 	if !found.CanList || len(found.Sessions) != 1 || found.Sessions[0].SessionId != sid ||
 		found.Sessions[0].Title != "hello from the terminal" || found.Sessions[0].UpdatedUnixMs == 0 || found.Sessions[0].Folder != dir {
 		t.Fatalf("listed %v, want the terminal's session only", found)
 	}
+	// Opened from every folder's list (its cwd), it joins the chats already
+	// in the folder, as they spell it.
 	open := func() string {
 		return must(a.c.OpenAgentSession(ctx, connect.NewRequest(&nushiv1.OpenAgentSessionRequest{
 			Folder: dir, SessionId: sid, Title: found.Sessions[0].Title}))).ChatId
@@ -100,15 +107,16 @@ func TestOpenASessionStartedElsewhere(t *testing.T) {
 	chatID := open()
 	snap := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID})))
 	want := "USER_MESSAGE:hello from the terminal:\nAGENT_MESSAGE:You said: hello from the terminal:"
-	if got := transcript(snap.Items); got != want || snap.Status.Busy || snap.Chat.Folder != dir || snap.Chat.Title != "hello from the terminal" {
+	if got := transcript(snap.Items); got != want || snap.Status.Busy || snap.Chat.Folder != link || snap.Chat.Title != "hello from the terminal" {
 		t.Errorf("opened: %s (%v, %s, %q)\nwant:\n%s", got, snap.Status.Busy, snap.Chat.Folder, snap.Chat.Title, want)
 	}
 
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "and from Nushi"})))
-	items := a.follow(chatID, must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID}))))
-	if got := transcript(items); !strings.HasSuffix(got, "AGENT_MESSAGE:You said: and from Nushi:") {
-		t.Errorf("after a turn:\n%s", got)
-	}
+	a.waitFor("the reply", func(e *nushiv1.EventsResponse) bool {
+		return e.ChatId == chatID && strings.Contains(e.GetItem().GetItem().GetText(), "and from Nushi") &&
+			e.GetItem().GetItem().GetKind() == nushiv1.ItemKind_ITEM_KIND_AGENT_MESSAGE
+	})
+	a.waitFor("the turn to end", func(e *nushiv1.EventsResponse) bool { return e.ChatId == chatID && idle(e) })
 	if got := strings.Join(resume(), " | "); got != "hello from the terminal | and from Nushi" {
 		t.Errorf("the terminal resumes %q, want one history with both", got)
 	}
@@ -155,5 +163,10 @@ func TestListAcrossFoldersAndPages(t *testing.T) {
 	all := must(a.c.ListAgentSessions(ctx, connect.NewRequest(&nushiv1.ListAgentSessionsRequest{Agent: "codex"})))
 	if len(all.Sessions) != 6 || all.Sessions[0].Title != "three" {
 		t.Errorf("every folder's: %v", all.Sessions)
+	}
+	// Without a title from the list, the chat takes its first message's.
+	id := must(a.c.OpenAgentSession(ctx, connect.NewRequest(&nushiv1.OpenAgentSessionRequest{Agent: "codex", Folder: dir, SessionId: mine[0]}))).ChatId
+	if c := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))).Chat; c.Title != "three" {
+		t.Errorf("titled %q, want its first message", c.Title)
 	}
 }

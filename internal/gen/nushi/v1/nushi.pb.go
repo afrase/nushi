@@ -1210,7 +1210,10 @@ type ListAgentSessionsResponse struct {
 	NextCursor string `protobuf:"bytes,3,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
 	// Nushi can tell when one of this agent's sessions is open elsewhere
 	// (FoundSession.open_in); without, it can't know.
-	SeesOpen      bool `protobuf:"varint,4,opt,name=sees_open,json=seesOpen,proto3" json:"sees_open,omitempty"`
+	SeesOpen bool `protobuf:"varint,4,opt,name=sees_open,json=seesOpen,proto3" json:"sees_open,omitempty"`
+	// The agent lets one app at a time write to a session: one open
+	// elsewhere can't be opened until it's closed there (Codex).
+	OneWriter     bool `protobuf:"varint,5,opt,name=one_writer,json=oneWriter,proto3" json:"one_writer,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1269,6 +1272,13 @@ func (x *ListAgentSessionsResponse) GetNextCursor() string {
 func (x *ListAgentSessionsResponse) GetSeesOpen() bool {
 	if x != nil {
 		return x.SeesOpen
+	}
+	return false
+}
+
+func (x *ListAgentSessionsResponse) GetOneWriter() bool {
+	if x != nil {
+		return x.OneWriter
 	}
 	return false
 }
@@ -8951,13 +8961,15 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x18ListAgentSessionsRequest\x12\x14\n" +
 	"\x05agent\x18\x01 \x01(\tR\x05agent\x12\x16\n" +
 	"\x06folder\x18\x02 \x01(\tR\x06folder\x12\x16\n" +
-	"\x06cursor\x18\x03 \x01(\tR\x06cursor\"\xa8\x01\n" +
+	"\x06cursor\x18\x03 \x01(\tR\x06cursor\"\xc7\x01\n" +
 	"\x19ListAgentSessionsResponse\x12\x19\n" +
 	"\bcan_list\x18\x01 \x01(\bR\acanList\x122\n" +
 	"\bsessions\x18\x02 \x03(\v2\x16.nushi.v1.FoundSessionR\bsessions\x12\x1f\n" +
 	"\vnext_cursor\x18\x03 \x01(\tR\n" +
 	"nextCursor\x12\x1b\n" +
-	"\tsees_open\x18\x04 \x01(\bR\bseesOpen\"\xd9\x01\n" +
+	"\tsees_open\x18\x04 \x01(\bR\bseesOpen\x12\x1d\n" +
+	"\n" +
+	"one_writer\x18\x05 \x01(\bR\toneWriter\"\xd9\x01\n" +
 	"\fFoundSession\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12\x14\n" +

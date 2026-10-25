@@ -51,6 +51,35 @@ class _ChatHeaderState extends State<ChatHeader> {
         .firstOrNull
         ?.name;
     final titleStyle = theme.ui(t.text, size: 13, weight: FontWeight.w600);
+    // The title and the model (a Codex model id is long) share what the
+    // rest of the row leaves (it takes about 420 points), so a narrow
+    // window cuts them short rather than overflow.
+    return LayoutBuilder(
+      builder: (context, box) {
+        final room = box.maxWidth - 420;
+        final title = (room * 0.6).clamp(80.0, 320.0);
+        return _row(
+          context,
+          titleStyle,
+          meta,
+          modelName,
+          titleMax: title,
+          modelMax: (room - title).clamp(40.0, 200.0),
+        );
+      },
+    );
+  }
+
+  Widget _row(
+    BuildContext context,
+    TextStyle titleStyle,
+    TextStyle meta,
+    String? modelName, {
+    required double titleMax,
+    required double modelMax,
+  }) {
+    final t = NushiTheme.of(context).t, theme = NushiTheme.of(context);
+    final chat = widget.chat;
     return Container(
       height: 34,
       padding: const EdgeInsets.only(left: 20, right: 8),
@@ -60,7 +89,7 @@ class _ChatHeaderState extends State<ChatHeader> {
       child: Row(
         children: [
           ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 320),
+            constraints: BoxConstraints(maxWidth: titleMax),
             child: _renaming
                 ? RenameField(
                     chat: chat,
@@ -87,7 +116,15 @@ class _ChatHeaderState extends State<ChatHeader> {
           ),
           if (modelName != null) ...[
             const SizedBox(width: 10),
-            Text(modelName, style: meta),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: modelMax),
+              child: Text(
+                modelName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: meta,
+              ),
+            ),
           ],
           const SizedBox(width: 10),
           if (chat.archived)
