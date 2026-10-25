@@ -21,7 +21,7 @@ Milestone Z, steps 138–145, one commit each on `main`, all pushed. `make test`
 **Not tried by hand**: a CLI version that fails with the pinned adapter (the message is unit-tested); Update (no newer pin; the sheet is a widget test); "Needs Node", "Needs Bun" or an Ante too old (tests); oh-my-pi at all (not installed here: it isn't offered); the empty pane's "Set up an agent" (Ante is ready here; widget test); the light theme in the app (goldens); a work Mac's npm registry or proxy.
 
 **Needs your attention**
-- **API 50**: after `make install` the app asks for **Restart daemon**.
+- **API 50**: done: after `make install` I pressed Restart daemon in the installed app (the final check); its New chat dialog shows Claude and Codex with Set up, Ante ready, oh-my-pi left out. Your two Claude chats there are asleep and reopen once Claude is set up.
 - **Set up Claude and Codex again** in Settings › Agents (about 9 MB and 2 MB). Until then their chats say they aren't set up; Ante works as before. oh-my-pi needs `omp` and Bun installed by you ("Ante and oh-my-pi for you").
 - Your npx cache still holds the old copies (about 2 GB, 1.1 GB of it omp with Bun): see "What Nushi changes outside its data folder" for the folders; delete them if nothing else of yours uses them.
 - Newer adapters exist (claude-agent-acp 0.95.0, codex-acp 2.2.3 previews); Nushi stays on the tested pins.
