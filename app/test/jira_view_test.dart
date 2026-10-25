@@ -104,6 +104,11 @@ Future<(FakeDaemon, Daemon)> openView(
     ),
   );
   await tester.pumpAndSettle();
+  // The view keeps its list while the app runs: each test starts on Mine.
+  if (find.text('Mine').evaluate().isNotEmpty) {
+    await tester.tap(find.text('Mine'));
+    await tester.pumpAndSettle();
+  }
   return (fake, d);
 }
 
@@ -177,6 +182,34 @@ void main() {
           : null,
     );
     expect(find.textContaining('Jira asks to wait'), findsOneWidget);
+    await closeView(tester, d);
+  });
+
+  testWidgets('the sprint list asks for its board first', (tester) async {
+    final (fake, d) = await openView(
+      tester,
+      sites: [_site.deepCopy()..board = Int64.ZERO],
+    );
+    await tester.tap(find.text('Sprint'));
+    await tester.pumpAndSettle();
+    expect(find.text('Pick the board'), findsOneWidget);
+    expect(
+      fake.calls.whereType<ListJiraIssuesRequest>().where(
+        (r) => r.list == 'sprint',
+      ),
+      isEmpty,
+    );
+    await closeView(tester, d);
+  });
+
+  testWidgets('a token the keychain wants an OK for', (tester) async {
+    final (fake, d) = await openView(
+      tester,
+      sites: [_site.deepCopy()..needsOk = true],
+    );
+    await tester.tap(find.text('Allow…'));
+    await tester.pumpAndSettle();
+    expect(fake.calls.whereType<AllowJiraTokenRequest>().single.site, _site.id);
     await closeView(tester, d);
   });
 

@@ -217,3 +217,35 @@ class JiraBar extends StatelessWidget {
     );
   }
 }
+
+/// Says a new build of Nushi needs the user's OK to read a site's token,
+/// with the button that asks macOS for it.
+class NeedsOk extends StatelessWidget {
+  const new({required this.onAllow, super.key});
+
+  final VoidCallback onAllow;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(10, 8, 10, 0),
+      padding: const EdgeInsets.all(10),
+      decoration: box(t.needs, fill: t.needsSoft),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              'This build of Nushi needs your OK to read the token from the '
+              'keychain; macOS asks for your password.',
+              style: theme.ui(t.needs, size: 12),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Button(label: 'Allow…', onPressed: onAllow),
+        ],
+      ),
+    );
+  }
+}

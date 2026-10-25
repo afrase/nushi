@@ -228,9 +228,17 @@ class _CommentBoxState extends State<CommentBox> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        CallbackShortcuts(
-          bindings: {
-            const SingleActivator(LogicalKeyboardKey.enter, meta: true): _post,
+        Focus(
+          skipTraversal: true,
+          // ⌘⏎ before the field reads it as a line break.
+          onKeyEvent: (_, e) {
+            if (e is KeyUpEvent ||
+                e.logicalKey != LogicalKeyboardKey.enter ||
+                !HardwareKeyboard.instance.isMetaPressed) {
+              return KeyEventResult.ignored;
+            }
+            unawaited(_post());
+            return KeyEventResult.handled;
           },
           child: TextField(
             controller: _text,

@@ -116,7 +116,10 @@ class _JiraViewState extends State<JiraView> {
         when i >= (site?.searches.length ?? 0)) {
       _list = 'mine'; // a search removed, or another site's
     }
-    if (site == null || _list == 'jql' && _jql.isEmpty) {
+    // Nothing to ask yet: the line above the list says what to do.
+    if (site == null ||
+        _list == 'jql' && _jql.isEmpty ||
+        _list == 'sprint' && site.board == 0) {
       setState(() {
         _issues = const [];
         _error = null;
@@ -296,6 +299,15 @@ class _JiraViewState extends State<JiraView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (site.needsOk)
+          NeedsOk(
+            onAllow: () => tryOrShow(context, () async {
+              await widget.daemon.client.allowJiraToken(
+                AllowJiraTokenRequest(site: site.id),
+              );
+              await _loadSites();
+            }),
+          ),
         Padding(
           padding: const EdgeInsets.fromLTRB(10, 8, 10, 4),
           child: Wrap(
