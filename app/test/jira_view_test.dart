@@ -34,10 +34,12 @@ JiraIssue issue(String key, String summary, String status, String cat) =>
 Future<(FakeDaemon, Daemon)> openView(
   WidgetTester tester, {
   List<JiraSite>? sites,
+  List<Chat> chats = const [],
+  Size size = const Size(1000, 560),
   Tokens tokens = Tokens.dark,
   Object? Function(Object input)? more,
 }) async {
-  final fake = FakeDaemon([])
+  final fake = FakeDaemon(chats)
     ..answer = (input) =>
         more?.call(input) ??
         switch (input) {
@@ -95,7 +97,8 @@ Future<(FakeDaemon, Daemon)> openView(
           _ => null,
         };
   final d = await fake.connect(tester);
-  await tester.binding.setSurfaceSize(const Size(1000, 560));
+  forgetJiraView(); // it keeps what it had while the app runs
+  await tester.binding.setSurfaceSize(size);
   await tester.pumpWidget(
     MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -104,11 +107,6 @@ Future<(FakeDaemon, Daemon)> openView(
     ),
   );
   await tester.pumpAndSettle();
-  // The view keeps its list while the app runs: each test starts on Mine.
-  if (find.text('Mine').evaluate().isNotEmpty) {
-    await tester.tap(find.text('Mine'));
-    await tester.pumpAndSettle();
-  }
   return (fake, d);
 }
 
@@ -125,18 +123,116 @@ Future<void> closeView(WidgetTester tester, Daemon d) async {
 void main() {
   setUpAll(loadFonts);
 
-  testWidgets('my open issues, picked with the keys', (tester) async {
+  testWidgets('my open issues by status; the keys pick, ⏎ the details, '
+      'Esc back', (tester) async {
     final (_, d) = await openView(tester);
-    // The row, and the issue beside it.
-    expect(find.text('Log in with a passkey'), findsNWidgets(2));
+    // To Do before In Progress before Done, whatever Jira's order.
+    final rows = [
+      for (final k in ['ACME-9', 'ACME-12', 'ACME-3'])
+        tester.getTopLeft(find.text(k)).dy,
+    ];
+    expect(rows, orderedEquals([...rows]..sort()));
+    expect(find.text('To Do  1'), findsOneWidget);
+    expect(find.byType(JiraIssuePane), findsNothing); // a list, no details
     await tester.sendKeyEvent(LogicalKeyboardKey.keyJ);
-    await tester.pumpAndSettle();
-    expect(shown(tester), 'ACME-9');
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
     await tester.sendKeyEvent(LogicalKeyboardKey.keyK);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(shown(tester), 'ACME-12');
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(JiraIssuePane), findsNothing);
+    await tester.tap(find.text('Write the release notes'));
+    await tester.pumpAndSettle();
+    expect(shown(tester), 'ACME-3');
+    await tester.tap(find.byTooltip('The list (Esc)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Write the release notes'), findsOneWidget);
+    // ⌘⏎: the selected row's Start work, its folders.
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('Choose folder', findRichText: true),
+      findsOneWidget,
+    );
+    await closeView(tester, d);
+  });
+
+  testWidgets('a row: its chats, its status, Start work', (tester) async {
+    final (fake, d) = await openView(
+      tester,
+      chats: [
+        chat('c1', 'claude', 'Passkeys', age: 5)
+          ..jiraSite = _site.id
+          ..jiraKey = 'ACME-12',
+        chat('c2', 'codex', 'Passkeys again', age: 1)
+          ..jiraSite = _site.id
+          ..jiraKey = 'ACME-12',
+      ],
+      more: (input) => switch (input) {
+        ListJiraTransitionsRequest() => ListJiraTransitionsResponse(
+          transitions: [JiraTransition(id: '31', name: 'Done', to: 'Done')],
+        ),
+        FindJiraIssuesRequest(:final text) => FindJiraIssuesResponse(
+          issues: [
+            FoundJiraIssue(
+              site: _site.id,
+              issue: issue(text, 'Log in with a passkey', 'To Do', 'new'),
+              branch: '$text-log-in-with-a-passkey',
+            ),
+          ],
+        ),
+        _ => null,
+      },
+    );
+    // Its chats: a click opens the newest.
+    await tester.tap(find.byTooltip('Open its newest chat (it has 2)'));
+    await tester.pumpAndSettle();
+    expect(d.selectedId, 'c2');
+    expect(d.jiraOpen, isFalse);
+    d.showJira(open: true);
+    await tester.pumpAndSettle();
+    // Its status, from the row.
+    await tester.tap(find.text('In Progress ▾'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Done').last);
+    await tester.pumpAndSettle();
+    final moved = fake.calls.whereType<TransitionJiraIssueRequest>().single;
+    expect((moved.key, moved.transition), ('ACME-12', '31'));
+    // Start work: a folder, then the New chat dialog with the issue.
+    await tester.tap(find.text('Start work').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('nushi', findRichText: true).last);
+    await tester.pumpAndSettle();
+    expect(find.text('Chat on ACME-9 in nushi'), findsOneWidget);
+    expect(find.text('ACME-9-log-in-with-a-passkey'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    final s = fake.started.single;
+    expect(
+      (s.jiraKey, s.worktree, s.branch),
+      ('ACME-9', true, 'ACME-9-log-in-with-a-passkey'),
+    );
+    await closeView(tester, d);
+  });
+
+  testWidgets('every site’s issues, each row naming its site', (tester) async {
+    final other = JiraSite(id: 'other.atlassian.net', url: 'https://other');
+    final (fake, d) = await openView(tester, sites: [_site, other]);
+    await tester.tap(find.text('${_site.id} ▾'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('All sites'));
+    await tester.pumpAndSettle();
+    final asked = fake.calls.whereType<ListJiraIssuesRequest>().toList();
+    expect(asked.reversed.take(2).map((r) => r.site).toSet(), {
+      _site.id,
+      other.id,
+    });
+    expect(find.text('Sprint'), findsNothing); // one site's lists
+    expect(find.textContaining(other.id, findRichText: true), findsWidgets);
     await closeView(tester, d);
   });
 
@@ -226,13 +322,34 @@ void main() {
     ('dark', Tokens.dark),
     ('light', Tokens.light),
   ]) {
-    testWidgets('golden, $name', (tester) async {
-      final (_, d) = await openView(tester, tokens: tokens);
-      await expectLater(
-        find.byType(JiraView),
-        matchesGoldenFile('goldens/jira_view_$name.png'),
-      );
-      await closeView(tester, d);
-    });
+    for (final (width, size) in [
+      ('narrow', const Size(760, 560)),
+      ('wide', const Size(1300, 560)),
+    ]) {
+      testWidgets('golden, $width, $name', (tester) async {
+        final (_, d) = await openView(
+          tester,
+          tokens: tokens,
+          size: size,
+          chats: [
+            for (final (id, agent) in [('c1', 'claude'), ('c2', 'codex')])
+              chat(id, agent, 'Passkeys')
+                ..jiraSite = _site.id
+                ..jiraKey = 'ACME-12',
+          ],
+        );
+        await expectLater(
+          find.byType(JiraView),
+          matchesGoldenFile('goldens/jira_view_${width}_$name.png'),
+        );
+        await tester.tap(find.text('Log in with a passkey'));
+        await tester.pumpAndSettle();
+        await expectLater(
+          find.byType(JiraView),
+          matchesGoldenFile('goldens/jira_details_${width}_$name.png'),
+        );
+        await closeView(tester, d);
+      });
+    }
   }
 }

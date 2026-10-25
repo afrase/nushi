@@ -156,7 +156,8 @@ class NoSite extends StatelessWidget {
   }
 }
 
-/// The view's bar: the site shown (a menu of the others), Refresh, Close.
+/// The view's bar: the site shown (a menu of the others and, with several,
+/// "All sites": [site] null), Refresh, Close.
 class JiraBar extends StatelessWidget {
   const new({
     required this.sites,
@@ -171,7 +172,7 @@ class JiraBar extends StatelessWidget {
   final List<JiraSite> sites;
   final JiraSite? site;
   final bool loading;
-  final void Function(String id) onSite;
+  final void Function(String? id) onSite;
   final VoidCallback onRefresh;
   final VoidCallback onClose;
 
@@ -189,18 +190,26 @@ class JiraBar extends StatelessWidget {
         children: [
           Text('Jira', style: theme.ui(t.text, weight: FontWeight.w600)),
           const SizedBox(width: 12),
-          if (site case final site?)
+          if (sites.isNotEmpty)
             Menu(
               entries: [
                 for (final s in sites)
                   MenuEntry(
                     s.id,
-                    checked: s.id == site.id,
+                    checked: s.id == site?.id,
                     onPick: () => onSite(s.id),
                   ),
+                if (sites.length > 1) ...[
+                  MenuEntry.divider,
+                  MenuEntry(
+                    'All sites',
+                    checked: site == null,
+                    onPick: () => onSite(null),
+                  ),
+                ],
               ],
               child: Text(
-                '${site.id} ▾',
+                '${site?.id ?? 'All sites'} ▾',
                 style: theme.ui(t.textSecondary, size: 12),
               ),
             ),
