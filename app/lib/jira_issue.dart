@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:nushi/agent_mark.dart';
+import 'package:nushi/agents.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
@@ -49,6 +50,7 @@ class JiraIssuePane extends StatefulWidget {
 
 class _JiraIssuePaneState extends State<JiraIssuePane> {
   JiraIssue? _issue;
+  List<JiraWrite> _writes = const []; // what agents wrote through their tools
   String? _error;
   Timer? _poll;
 
@@ -73,6 +75,7 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
       if (mounted) {
         setState(() {
           _issue = r.issue;
+          _writes = r.agentWrites;
           _error = null;
         });
       }
@@ -140,6 +143,15 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
         ),
       );
     });
+  }
+
+  /// Whose a write was: the agent's, in which chat (if Nushi still has it).
+  String _byAgent(JiraWrite w) {
+    final chat = widget.daemon.chats[w.chat];
+    final where = chat == null || chat.title.isEmpty
+        ? ''
+        : ' in “${chat.title}”';
+    return 'by ${agentTitle(w.agent)}$where';
   }
 
   Future<void> _comment(String markdown) async {
@@ -305,6 +317,15 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
                     ]);
             },
           ),
+          if (_writes.where((w) => w.kind == 'move').toList() case final moves
+              when moves.isNotEmpty)
+            section('Moved by agents', [
+              for (final w in moves)
+                Text(
+                  'To ${w.to} · ${age(w.at.toInt())} · ${_byAgent(w)}',
+                  style: theme.ui(t.textSecondary, size: 12),
+                ),
+            ]),
           section('Comments', [
             for (final c in i.comments)
               Padding(
@@ -313,7 +334,18 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${c.author} · ${age(c.created.toInt())}',
+                      [
+                        c.author,
+                        age(c.created.toInt()),
+                        if (_writes
+                                .where(
+                                  (w) =>
+                                      w.kind == 'comment' && w.comment == c.id,
+                                )
+                                .firstOrNull
+                            case final w?)
+                          _byAgent(w),
+                      ].join(' · '),
                       style: theme.ui(t.textMuted, size: 12),
                     ),
                     AgentMarkdown(c.body, images: images),
