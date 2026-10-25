@@ -14,6 +14,8 @@
 //   - containing "garbage": a line that isn't JSON and an event nobody
 //     knows, then an answer;
 //   - containing "wait": nothing, until abort (or a steer, answered);
+//   - the command compact: a compaction entry ("Summary: <instructions>"),
+//     unless the session has nothing to compact; "slow" waits for abort;
 //   - anything else: "You said: <text>", as two deltas.
 package pigtest
 
@@ -56,6 +58,8 @@ type Pig struct {
 	aborted  chan struct{}
 	steered  chan string
 	answers  map[string]chan map[string]any
+
+	compacting chan struct{} // closed by abort
 }
 
 // Serve runs a pig with args in cwd on r and w until r ends.
@@ -153,7 +157,12 @@ func (p *Pig) command(cmd map[string]any) {
 	case "get_commands":
 		p.respond(cmd, map[string]any{"commands": []map[string]any{{"name": "ask", "description": "Ask something", "source": "extension"}}}, "")
 	case "get_session_stats":
-		p.respond(cmd, map[string]any{"cost": 0.25, "contextUsage": map[string]any{"tokens": 100 * len(p.entries), "contextWindow": 1000}}, "")
+		var tokens any = 100 * len(p.entries)
+		if n := len(p.entries); n > 0 && p.entries[n-1]["type"] == "compaction" {
+			tokens = nil // unknown until the model answers again
+		}
+		p.respond(cmd, map[string]any{"cost": 0.25, "contextUsage": map[string]any{"tokens": tokens, "contextWindow": 1000},
+			"userMessages": 2, "assistantMessages": 3, "toolCalls": 1, "tokens": map[string]any{"input": 1500, "output": 250, "cacheRead": 64, "cacheWrite": 0}}, "")
 	case "get_entries":
 		p.respond(cmd, map[string]any{"entries": p.entries, "leafId": p.leaf}, "")
 	case "prompt":
@@ -186,9 +195,22 @@ func (p *Pig) command(cmd map[string]any) {
 			close(p.aborted)
 			p.running = false
 		}
+		if p.compacting != nil {
+			close(p.compacting)
+			p.compacting = nil
+		}
 		p.respond(cmd, nil, "")
 	case "fork", "clone":
 		p.fork(cmd)
+	case "compact":
+		p.mu.Unlock()
+		p.compact(cmd)
+		p.mu.Lock()
+	case "set_session_name":
+		name := cmd["name"].(string)
+		p.add(map[string]any{"type": "session_info", "name": name})
+		p.emit(map[string]any{"type": "session_info_changed", "name": name})
+		p.respond(cmd, nil, "")
 	default:
 		p.respond(cmd, nil, fmt.Sprintf("Unknown command: %v", cmd["type"]))
 	}
@@ -215,9 +237,13 @@ func stamp() int64 {
 }
 
 // append adds a message to the session's branch, and writes the file.
-func (p *Pig) append(msg map[string]any) {
+func (p *Pig) append(msg map[string]any) { p.add(map[string]any{"type": "message", "message": msg}) }
+
+// add adds an entry to the session's branch, and writes the file.
+func (p *Pig) add(entry map[string]any) {
 	id := fmt.Sprintf("e%d", len(p.entries)+1)
-	b, _ := json.Marshal(map[string]any{"type": "message", "id": id, "parentId": p.leaf, "message": msg})
+	entry["id"], entry["parentId"] = id, p.leaf
+	b, _ := json.Marshal(entry)
 	var e map[string]any
 	_ = json.Unmarshal(b, &e) // as read from the file
 	p.entries = append(p.entries, e)
@@ -346,4 +372,33 @@ func (p *Pig) fork(cmd map[string]any) {
 		data["text"] = text
 	}
 	p.respond(cmd, data, "")
+}
+
+// compact summarizes the session: "Summary: <instructions>"; with nothing
+// to summarize it fails as PiG does, and "slow" waits for an abort.
+func (p *Pig) compact(cmd map[string]any) {
+	p.emit(map[string]any{"type": "compaction_start", "reason": "manual"})
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	instructions, _ := cmd["customInstructions"].(string)
+	if len(p.entries) < 2 {
+		p.emit(map[string]any{"type": "compaction_end", "reason": "manual", "aborted": false, "willRetry": false,
+			"errorMessage": "Compaction failed: Nothing to compact (session too small)"})
+		p.respond(cmd, nil, "Nothing to compact (session too small)")
+		return
+	}
+	if instructions == "slow" {
+		stop := make(chan struct{})
+		p.compacting = stop
+		p.mu.Unlock()
+		<-stop
+		p.mu.Lock()
+		p.emit(map[string]any{"type": "compaction_end", "reason": "manual", "aborted": true, "willRetry": false})
+		p.respond(cmd, nil, "Compaction cancelled")
+		return
+	}
+	result := map[string]any{"summary": "Summary: " + instructions, "firstKeptEntryId": p.leaf, "tokensBefore": 100 * len(p.entries), "estimatedTokensAfter": 42}
+	p.add(map[string]any{"type": "compaction", "summary": result["summary"], "firstKeptEntryId": p.leaf, "tokensBefore": result["tokensBefore"]})
+	p.emit(map[string]any{"type": "compaction_end", "reason": "manual", "result": result, "aborted": false, "willRetry": false})
+	p.respond(cmd, result, "")
 }

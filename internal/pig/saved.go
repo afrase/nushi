@@ -167,12 +167,13 @@ func summary(file string) (title string, messages int) {
 	return title, messages
 }
 
-// entry is one of a session's entries; only messages show.
+// entry is one of a session's entries; messages and compactions show.
 type entry struct {
 	Type    string   `json:"type"`
 	ID      string   `json:"id"`
 	Parent  *string  `json:"parentId"`
 	Message *message `json:"message"`
+	Summary string   `json:"summary"` // a compaction's
 }
 
 // branch reads the session p holds: the entries from its root to its
@@ -212,6 +213,9 @@ func (s *session) replay(ctx context.Context) error { //nolint:gocognit // one c
 	}
 	for _, e := range entries {
 		m := e.Message
+		if e.Type == "compaction" {
+			s.b.update(s.id, compacted(e))
+		}
 		if e.Type != "message" || m == nil {
 			continue
 		}
