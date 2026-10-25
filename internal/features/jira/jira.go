@@ -53,7 +53,7 @@ type Tokens interface {
 
 // ErrNeedsOK is a token the keychain gives only once the user allows it
 // (a new build of Nushi): AllowToken asks.
-var ErrNeedsOK = errors.New("the keychain needs your OK for this build of Nushi to read the token: Settings › Jira")
+var ErrNeedsOK = errors.New("this build of Nushi needs your OK to read the Jira token from the keychain: Settings › Jira › Allow")
 
 // Store keeps the sites.
 type Store interface {

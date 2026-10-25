@@ -38,6 +38,12 @@ class FakeDaemon implements Transport {
   final setSettings = <Settings>[];
   String? startError;
 
+  /// Answers calls the fake doesn't know (Jira's): an answer, or null for
+  /// the empty one; a thrown error fails the call. Every such call is in
+  /// [calls].
+  Object? Function(Object input)? answer;
+  final calls = <Object>[];
+
   /// What ListAgentSessions answers (nothing listed when unset), and the
   /// requests: listed and opened.
   ListAgentSessionsResponse Function(ListAgentSessionsRequest)? sessions;
@@ -71,20 +77,24 @@ class FakeDaemon implements Transport {
       started.add(input);
       if (startError case final e?) throw ConnectException(Code.unknown, e);
     }
-    final out = switch (input) {
-      PingRequest() => PingResponse(apiVersion: apiVersion),
-      ListChatsRequest() => ListChatsResponse(chats: chats),
-      ListAgentsRequest() => ListAgentsResponse(agents: agents),
-      GetSettingsRequest() => GetSettingsResponse(settings: settings),
-      // A chat it has, so the app can show it.
-      StartChatRequest() => StartChatResponse(chatId: chats.first.id),
-      ListAgentSessionsRequest() =>
-        sessions?.call(input) ?? ListAgentSessionsResponse(canList: true),
-      OpenAgentSessionRequest() => OpenAgentSessionResponse(
-        chatId: chats.first.id,
-      ),
-      _ => spec.outputFactory(),
-    };
+    final other = answer?.call(input);
+    calls.add(input);
+    final out =
+        other ??
+        switch (input) {
+          PingRequest() => PingResponse(apiVersion: apiVersion),
+          ListChatsRequest() => ListChatsResponse(chats: chats),
+          ListAgentsRequest() => ListAgentsResponse(agents: agents),
+          GetSettingsRequest() => GetSettingsResponse(settings: settings),
+          // A chat it has, so the app can show it.
+          StartChatRequest() => StartChatResponse(chatId: chats.first.id),
+          ListAgentSessionsRequest() =>
+            sessions?.call(input) ?? ListAgentSessionsResponse(canList: true),
+          OpenAgentSessionRequest() => OpenAgentSessionResponse(
+            chatId: chats.first.id,
+          ),
+          _ => spec.outputFactory(),
+        };
     return UnaryResponse(spec, Headers(), out as O, Headers());
   }
 
