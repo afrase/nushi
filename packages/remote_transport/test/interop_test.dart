@@ -32,7 +32,7 @@ Future<Channel> _open(
   final ws = await RelaySocket.connect(
     Uri.parse('${peer['relay']}/v1/dial/${peer['id']}'),
   );
-  return Channel.open(
+  return await Channel.open(
     ws,
     id: peer['id']!,
     device: await KeyPair.make(),

@@ -127,7 +127,7 @@ const _patterns = <String, (List<String>, List<String>, List<List<String>>)>{
 
 /// One side of a handshake.
 final class HandshakeState {
-  HandshakeState._(
+  new _(
     this._ss,
     this._messages,
     this._initiator,
@@ -151,7 +151,7 @@ final class HandshakeState {
   int _next = 0;
   int _pskNext = 0;
   CipherState? _send;
-  CipherState? _receive;
+  late CipherState _receive;
 
   /// Starts a handshake for [protocol], such as
   /// `Noise_IKpsk1_25519_ChaChaPoly_BLAKE2s`. [s] is this side's static
@@ -225,8 +225,12 @@ final class HandshakeState {
 
   /// Whether the handshake is done: [send] and [receive] are then set.
   bool get finished => _send != null;
+
+  /// The cipher for what this side sends, once [finished].
   CipherState get send => _send!;
-  CipherState get receive => _receive!;
+
+  /// The cipher for what this side receives, once [finished].
+  CipherState get receive => _receive;
 
   /// The handshake hash, the same on both sides once finished.
   Uint8List get hash => _ss.h;
@@ -234,8 +238,10 @@ final class HandshakeState {
   /// The other side's static key, once known.
   Uint8List? get remoteStatic => _rs;
 
-  bool get _myTurn => (_next % 2 == 0) == _initiator;
+  bool get _myTurn => _next.isEven == _initiator;
 
+  /// The handshake's next message, this side's, with [payload] (encrypted
+  /// once there's a key).
   Future<Uint8List> writeMessage([List<int> payload = const []]) async {
     if (finished || !_myTurn) throw StateError("not this side's message");
     final out = BytesBuilder(copy: false);

@@ -20,7 +20,7 @@ final _random = Random.secure();
 /// A WebSocket client (RFC 6455) for a relay: binary messages only, at
 /// most [maxMessage] bytes each.
 final class RelaySocket {
-  RelaySocket._(this._socket) {
+  new _(this._socket) {
     unawaited(_socket.done.catchError(_fail));
     _ping = Timer.periodic(keepAlive, (_) {
       if (DateTime.now().difference(_heard) > keepAlive * 3) {
@@ -55,10 +55,11 @@ final class RelaySocket {
     final port = url.hasPort ? url.port : (secure ? 443 : 80);
     // Handed to the RelaySocket, which destroys it when it fails or closes.
     // ignore: close_sinks
-    final socket = secure
-        ? await SecureSocket.connect(url.host, port, timeout: timeout)
-        : await Socket.connect(url.host, port, timeout: timeout);
-    socket.setOption(SocketOption.tcpNoDelay, true);
+    final socket =
+        await (secure
+              ? SecureSocket.connect(url.host, port, timeout: timeout)
+              : Socket.connect(url.host, port, timeout: timeout))
+          ..setOption(SocketOption.tcpNoDelay, true);
     final key = base64.encode(List.generate(16, (_) => _random.nextInt(256)));
     final want = base64.encode(
       (await Sha1().hash(
@@ -101,11 +102,8 @@ final class RelaySocket {
         };
         if (!lines.first.startsWith('HTTP/1.1 101') ||
             headers['sec-websocket-accept'] != want) {
-          upgraded.completeError(
-            SocketException(
-              'the relay answered ${lines.first.substring(min(9, lines.first.length))}',
-            ),
-          );
+          final status = lines.first.substring(min(9, lines.first.length));
+          upgraded.completeError(SocketException('the relay answered $status'));
           return;
         }
         upgraded.complete();
@@ -149,6 +147,7 @@ final class RelaySocket {
     _frame(0x2, data);
   }
 
+  /// Sends a close frame and closes the socket.
   Future<void> close() async {
     if (_closed) return;
     _frame(0x8, const [0x03, 0xe8]); // 1000, normal
@@ -189,11 +188,13 @@ final class RelaySocket {
     var at = 0;
     while (!_closed) {
       if (b.length - at < 2) break;
-      final fin = b[at] & 0x80 != 0, opcode = b[at] & 0x0f;
+      final fin = b[at] & 0x80 != 0;
+      final opcode = b[at] & 0x0f;
       if (b[at + 1] & 0x80 != 0) {
         return _fail(const SocketException('a masked frame from the relay'));
       }
-      var len = b[at + 1] & 0x7f, head = 2;
+      var len = b[at + 1] & 0x7f;
+      var head = 2;
       if (len == 126) {
         if (b.length - at < 4) break;
         len = b[at + 2] << 8 | b[at + 3];

@@ -11,9 +11,8 @@ import 'package:connectrpc/connect.dart' as connect;
 import 'package:connectrpc/http2.dart';
 import 'package:http2/transport.dart' as http2;
 import 'package:noise/noise.dart';
-
-import 'src/channel.dart';
-import 'src/websocket.dart';
+import 'package:remote_transport/src/channel.dart';
+import 'package:remote_transport/src/websocket.dart';
 
 export 'package:noise/noise.dart' show KeyPair;
 
@@ -23,15 +22,12 @@ export 'src/websocket.dart' show RelaySocket, maxMessage;
 /// What the Mac's QR code holds: the relay, a one-time rendezvous id, the
 /// daemon's public key and the one-time secret.
 final class PairingOffer {
-  PairingOffer(this.relay, this.id, this.key, this.secret);
-
-  final Uri relay;
-  final String id;
-  final Uint8List key;
-  final Uint8List secret;
+  /// An offer to pair through [relay] at [id] with the daemon whose key is
+  /// [key], proved by [secret].
+  new(this.relay, this.id, this.key, this.secret);
 
   /// Reads `nushi://pair?r=…&i=…&k=…&s=…`.
-  factory PairingOffer.parse(String qr) {
+  factory parse(String qr) {
     final u = Uri.parse(qr);
     final q = u.queryParameters;
     if (u.scheme != 'nushi' ||
@@ -39,12 +35,25 @@ final class PairingOffer {
         [q['r'], q['i'], q['k'], q['s']].contains(null)) {
       throw const FormatException('not a Nushi pairing code');
     }
-    final key = _unb64(q['k']!), secret = _unb64(q['s']!);
+    final key = _unb64(q['k']!);
+    final secret = _unb64(q['s']!);
     if (key.length != 32 || secret.length != 32) {
       throw const FormatException('not a Nushi pairing code');
     }
     return PairingOffer(Uri.parse(q['r']!), q['i']!, key, secret);
   }
+
+  /// The relay both sides meet at.
+  final Uri relay;
+
+  /// The one-time rendezvous id.
+  final String id;
+
+  /// The daemon's public key (32 bytes).
+  final Uint8List key;
+
+  /// The one-time secret (32 bytes), mixed into the handshake.
+  final Uint8List secret;
 }
 
 Uint8List _unb64(String s) =>
@@ -53,9 +62,16 @@ Uint8List _unb64(String s) =>
 /// A daemon a phone has paired with: what the phone keeps, beside its own
 /// key.
 final class PairedDaemon {
-  PairedDaemon(this.relay, this.id, this.key);
+  /// The daemon at [id] on [relay], whose public key is [key].
+  new(this.relay, this.id, this.key);
+
+  /// The relay the daemon waits at.
   final Uri relay;
+
+  /// The daemon's long-lived rendezvous id.
   final String id;
+
+  /// The daemon's public key (32 bytes).
   final Uint8List key;
 }
 
@@ -114,12 +130,15 @@ Future<(PairedDaemon, RelayTransport)> pair(
 /// dropped, and the next call dials the relay again (IK). A failed dial
 /// reaches the caller as a [connect.ConnectException] `unavailable`.
 final class RelayTransport implements Http2ClientTransport {
-  RelayTransport(this.daemon, this.device);
+  /// A transport to [daemon] as the phone whose key is [device].
+  new(this.daemon, this.device);
 
   /// The daemon to dial. Its id changes when another device is revoked:
   /// when `Remote.rendezvous` names another, keep that one, and set it
   /// here for the next channel.
   PairedDaemon daemon;
+
+  /// The phone's own key.
   final KeyPair device;
 
   http2.ClientTransportConnection? _live;

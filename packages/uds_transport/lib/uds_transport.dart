@@ -16,8 +16,10 @@ import 'package:http2/transport.dart' as http2;
 /// A failed dial or a lost connection reaches the caller as a
 /// [connect.ConnectException] with code `unavailable`.
 final class UdsTransport implements Http2ClientTransport {
-  UdsTransport(this.socketPath);
+  /// A transport to the daemon listening on [socketPath].
+  new(this.socketPath);
 
+  /// The daemon's Unix socket.
   final String socketPath;
 
   http2.ClientTransportConnection? _live;
@@ -96,7 +98,7 @@ Object _map(Object e) => switch (e) {
 
 /// A stream whose transport errors surface as `unavailable`.
 final class _MappedStream implements http2.ClientTransportStream {
-  _MappedStream(this._inner);
+  new(this._inner);
 
   final http2.ClientTransportStream _inner;
 

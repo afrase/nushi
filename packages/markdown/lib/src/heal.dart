@@ -101,15 +101,9 @@ int _cellCount(String row) {
 // ---------------------------------------------------------------- code spans
 
 class _CodeSpans {
-  _CodeSpans(this.masked, this.openRun);
+  new(this.masked, this.openRun);
 
-  /// Per code unit: true inside a code span (its backticks included).
-  final List<bool> masked;
-
-  /// The backtick run of a code span still open at the end, or 0.
-  final int openRun;
-
-  static _CodeSpans scan(String s) {
+  factory scan(String s) {
     final masked = List<bool>.filled(s.length, false);
     var i = 0;
     while (i < s.length) {
@@ -133,6 +127,12 @@ class _CodeSpans {
     }
     return _CodeSpans(masked, 0);
   }
+
+  /// Per code unit: true inside a code span (its backticks included).
+  final List<bool> masked;
+
+  /// The backtick run of a code span still open at the end, or 0.
+  final int openRun;
 
   static int _runLength(String s, int at) {
     var n = 0;
@@ -227,7 +227,7 @@ bool _isPunctuation(int c) =>
     (c >= 0x7b && c <= 0x7e);
 
 class _Opener {
-  _Opener(this.char, this.length);
+  new(this.char, this.length);
   final int char;
   int length;
 }

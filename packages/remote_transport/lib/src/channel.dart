@@ -5,10 +5,10 @@ import 'dart:typed_data';
 
 import 'package:noise/noise.dart';
 
-import 'websocket.dart' show RelaySocket;
+import 'package:remote_transport/src/websocket.dart' show RelaySocket;
 
 /// The most bytes one transport message carries.
-const maxPlaintext = maxMessage - 16;
+const int maxPlaintext = maxMessage - 16;
 
 /// Each direction rekeys after this many messages (as `noiseconn` does).
 const rekeyEvery = 4096;
@@ -24,7 +24,7 @@ List<int> prologue(String id) => [
 /// initiator, with the daemon's key pinned (IK), and the pairing secret
 /// when pairing (IKpsk1).
 final class Channel {
-  Channel._(this._ws, this._messages, this._hs) {
+  new _(this._ws, this._messages, this._hs) {
     unawaited(_pump());
   }
 
@@ -117,6 +117,7 @@ final class Channel {
     }
   }
 
+  /// Closes the channel and its socket.
   Future<void> close() async {
     await _ws.close();
     unawaited(_out.close());
