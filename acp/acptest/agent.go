@@ -13,6 +13,12 @@
 //   - containing "many": 150 messages, each after a tool call, quickly;
 //   - containing "pwd": "cwd: <the session's cwd>";
 //   - containing "wait": nothing, until the turn is cancelled (10 s at most);
+//   - containing "tool": a command run with the prompt as its input and
+//     output;
+//   - containing "garbage": a line that isn't JSON-RPC and an update that
+//     isn't one, then a message;
+//   - containing "stderr" (with any of the others): a line with a key in
+//     it on Stderr;
 //   - anything else: "You said: <text>", streamed in two chunks.
 //
 // Pause slows the "think" and "plan" scripts down, to watch them stream.
@@ -48,6 +54,12 @@ type Agent struct {
 	Codex   bool // answers as codex-acp does (codex.go)
 	Omp     bool // answers as omp does (omp.go)
 	NoList  bool // doesn't advertise session/list
+	// For the log: what it writes to its stderr, how long session/load
+	// takes, and whether it reopens a session it doesn't know (as if
+	// another process had kept it), replaying nothing.
+	Stderr    io.Writer
+	LoadDelay time.Duration
+	LoadAny   bool
 
 	w       io.Writer
 	writeMu sync.Mutex
@@ -214,8 +226,9 @@ func (a *Agent) answer(f frame) {
 			result = codexSession(id)
 		}
 	case "session/load":
+		time.Sleep(a.LoadDelay)
 		updates, ok := a.History.get(p.Cwd, p.SessionID)
-		if !ok {
+		if !ok && !a.LoadAny {
 			a.fail(f, "no such session")
 			return
 		}
@@ -285,6 +298,9 @@ func (a *Agent) prompt(session, text string) string {
 	cwd := a.cwds[session]
 	a.mu.Unlock()
 	a.History.add(cwd, session, map[string]any{"sessionUpdate": "user_message_chunk", "content": map[string]any{"type": "text", "text": text}})
+	if strings.Contains(text, "stderr") && a.Stderr != nil {
+		fmt.Fprintln(a.Stderr, "auth: using the key sk-ant-api03-Zr8fakeFAKEfake0123456789 from the environment")
+	}
 	switch {
 	case a.Codex && strings.Contains(text, "run"):
 		a.run(session)
@@ -329,6 +345,18 @@ func (a *Agent) prompt(session, text string) string {
 			}
 			time.Sleep(10 * time.Millisecond)
 		}
+	case strings.Contains(text, "tool"):
+		a.update(session, map[string]any{"sessionUpdate": "tool_call", "toolCallId": "t2", "title": "Run " + text, "kind": "execute",
+			"status": "in_progress", "rawInput": map[string]any{"command": text}})
+		a.update(session, map[string]any{"sessionUpdate": "tool_call_update", "toolCallId": "t2", "status": "completed",
+			"content": []map[string]any{{"type": "content", "content": map[string]any{"type": "text", "text": "output of " + text}}}})
+		a.say(session, "Ran it.")
+	case strings.Contains(text, "garbage"):
+		a.writeMu.Lock()
+		io.WriteString(a.w, "this line isn't JSON-RPC\n")
+		a.writeMu.Unlock()
+		a.send(frame{Method: "session/update", Params: json.RawMessage(`{"sessionId":"` + session + `","update":"nonsense"}`)})
+		a.say(session, "Sent garbage.")
 	case strings.Contains(text, "pwd"):
 		a.mu.Lock()
 		cwd := a.cwds[session]

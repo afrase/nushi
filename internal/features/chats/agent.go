@@ -27,7 +27,8 @@ type opened struct {
 // fork a new one that starts with a copy of it (session/fork). The agent
 // stops if that fails.
 func (c *chat) openSession(ctx context.Context, sid, folder string, fork bool) (opened, error) {
-	agent, init, err := initialize(ctx, c.kind.launch, c, c.dialect.InitMeta, c.logger(sid, folder))
+	// The agent's lines name the sessions it opens (see acp's log.go).
+	agent, init, err := initialize(ctx, c.kind.launch, c, c.dialect.InitMeta, c.logger("", folder))
 	if err != nil {
 		return opened{}, c.kind.explain(err)
 	}

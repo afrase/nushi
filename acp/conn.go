@@ -130,9 +130,12 @@ func (c *conn) dispatch(line []byte) {
 	case f.ID == nil && f.Method == "$/cancel_request":
 		c.withdrawn(f.Params)
 	case f.ID == nil: // a notification
-		if _, err := c.safeHandle(c.ctx, f.Method, f.Params); err != nil {
+		switch _, err := c.safeHandle(c.ctx, f.Method, f.Params); {
+		case errors.Is(err, ErrMethodNotFound): // an extension this side doesn't follow
+			c.log.Debug("acp notification ignored", "rpc", f.Method)
+		case err != nil:
 			c.log.Warn("acp notification failed", "rpc", f.Method, "err", err)
-		} else if f.Method != "session/update" { // each chunk of a reply is one
+		case f.Method != "session/update": // each chunk of a reply is one
 			c.log.Debug("acp notification", "rpc", f.Method)
 		}
 	default: // a request
