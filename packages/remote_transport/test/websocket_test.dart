@@ -35,7 +35,9 @@ void main() {
   });
 
   test('a message over the limit ends the connection', () async {
-    final ws = await RelaySocket.connect(await _server([Uint8List(maxMessage + 1)]));
+    final ws = await RelaySocket.connect(
+      await _server([Uint8List(maxMessage + 1)]),
+    );
     await expectLater(ws.messages.toList(), throwsA(isA<SocketException>()));
   });
 
@@ -45,7 +47,9 @@ void main() {
   });
 
   test('pings from the relay are answered', () async {
-    final ws = await RelaySocket.connect(await _server([], ping: const Duration(milliseconds: 50)));
+    final ws = await RelaySocket.connect(
+      await _server([], ping: const Duration(milliseconds: 50)),
+    );
     final it = StreamIterator(ws.messages);
     await Future<void>.delayed(const Duration(milliseconds: 400));
     ws.send([9]);
@@ -57,9 +61,14 @@ void main() {
   test('a plain HTTP answer is refused', () async {
     final srv = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     addTearDown(() => srv.close(force: true));
-    srv.listen((req) => req.response
-      ..statusCode = 503
-      ..close());
-    await expectLater(RelaySocket.connect(Uri.parse('ws://127.0.0.1:${srv.port}/v1/dial/x')), throwsA(isA<SocketException>()));
+    srv.listen(
+      (req) => req.response
+        ..statusCode = 503
+        ..close(),
+    );
+    await expectLater(
+      RelaySocket.connect(Uri.parse('ws://127.0.0.1:${srv.port}/v1/dial/x')),
+      throwsA(isA<SocketException>()),
+    );
   });
 }

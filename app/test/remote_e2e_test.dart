@@ -17,20 +17,22 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:remote_transport/remote_transport.dart';
 import 'package:uds_transport/uds_transport.dart';
 
-NushiServiceClient _client(Http2ClientTransport t, {String? token}) => NushiServiceClient(
-  protocol.Transport(
-    baseUrl: 'http://nushid',
-    codec: const ProtoCodec(),
-    httpClient: createHttpClient(transport: t),
-    interceptors: [
-      if (token != null)
-        <I extends Object, O extends Object>(connect.AnyFn<I, O> next) => (req) {
-          req.headers['authorization'] = 'Bearer $token';
-          return next(req);
-        },
-    ],
-  ),
-);
+NushiServiceClient _client(Http2ClientTransport t, {String? token}) =>
+    NushiServiceClient(
+      protocol.Transport(
+        baseUrl: 'http://nushid',
+        codec: const ProtoCodec(),
+        httpClient: createHttpClient(transport: t),
+        interceptors: [
+          if (token != null)
+            <I extends Object, O extends Object>(connect.AnyFn<I, O> next) =>
+                (req) {
+                  req.headers['authorization'] = 'Bearer $token';
+                  return next(req);
+                },
+        ],
+      ),
+    );
 
 Future<void> _until(Future<bool> Function() ok) async {
   for (var i = 0; i < 300; i++) {
@@ -50,21 +52,36 @@ void main() {
     for (final d in ['bin', 'data', 'home', 'work']) {
       await Directory('${tmp.path}/$d').create();
     }
-    for (final (out, pkg) in [('nushid', './cmd/nushid'), ('nushi-relay', './cmd/nushi-relay'), ('fakeagent', './acp/acptest/fakeagent')]) {
-      final r = await Process.run('go', ['build', '-o', '${tmp.path}/bin/$out', pkg], workingDirectory: '..');
+    for (final (out, pkg) in [
+      ('nushid', './cmd/nushid'),
+      ('nushi-relay', './cmd/nushi-relay'),
+      ('fakeagent', './acp/acptest/fakeagent'),
+    ]) {
+      final r = await Process.run('go', [
+        'build',
+        '-o',
+        '${tmp.path}/bin/$out',
+        pkg,
+      ], workingDirectory: '..');
       if (r.exitCode != 0) throw StateError('building $pkg: ${r.stderr}');
     }
     // Claude, set up: its CLI on PATH, its adapter in the data folder, run
     // by a "node" that runs the fake agent instead.
-    for (final (name, body) in [('node', 'exec ${tmp.path}/bin/fakeagent'), ('claude', 'echo 2.1.310')]) {
+    for (final (name, body) in [
+      ('node', 'exec ${tmp.path}/bin/fakeagent'),
+      ('claude', 'echo 2.1.310'),
+    ]) {
       final f = File('${tmp.path}/bin/$name');
       await f.writeAsString('#!/bin/sh\n$body\n');
       await Process.run('chmod', ['+x', f.path]);
     }
-    final adapter = Directory('${tmp.path}/data/agents/claude/node_modules/@agentclientprotocol/claude-agent-acp');
+    final adapter = Directory(
+      '${tmp.path}/data/agents/claude/node_modules/@agentclientprotocol/claude-agent-acp',
+    );
     await adapter.create(recursive: true);
-    await File('${adapter.path}/package.json')
-        .writeAsString('{"version": "0.94.0", "bin": {"claude-agent-acp": "dist/index.js"}}');
+    await File('${adapter.path}/package.json').writeAsString(
+      '{"version": "0.94.0", "bin": {"claude-agent-acp": "dist/index.js"}}',
+    );
   });
 
   tearDownAll(() async {
@@ -76,70 +93,148 @@ void main() {
   });
 
   test('a phone through the relay', () async {
-    final relay = await Process.start('${tmp.path}/bin/nushi-relay', ['-addr', '127.0.0.1:0']);
+    final relay = await Process.start('${tmp.path}/bin/nushi-relay', [
+      '-addr',
+      '127.0.0.1:0',
+    ]);
     procs.add(relay);
-    final started = await relay.stderr.transform(utf8.decoder).transform(const LineSplitter()).first;
+    final started = await relay.stderr
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())
+        .first;
     final relayUrl = 'ws://${started.split(' ').last}';
-    final daemon = await Process.start('${tmp.path}/bin/nushid', [], environment: {
-      'PATH': '${tmp.path}/bin:/usr/bin:/bin',
-      'HOME': '${tmp.path}/home',
-      'NUSHI_DATA': '${tmp.path}/data',
-    }, includeParentEnvironment: false);
+    final daemon = await Process.start(
+      '${tmp.path}/bin/nushid',
+      [],
+      environment: {
+        'PATH': '${tmp.path}/bin:/usr/bin:/bin',
+        'HOME': '${tmp.path}/home',
+        'NUSHI_DATA': '${tmp.path}/data',
+      },
+      includeParentEnvironment: false,
+    );
     procs.add(daemon);
     daemon.stdout.drain<void>();
     daemon.stderr.drain<void>();
     await _until(() async => File('${tmp.path}/data/nushid.sock').exists());
     final token = (await File('${tmp.path}/data/token').readAsString()).trim();
-    final mac = _client(UdsTransport('${tmp.path}/data/nushid.sock'), token: token);
+    final mac = _client(
+      UdsTransport('${tmp.path}/data/nushid.sock'),
+      token: token,
+    );
 
     await mac.setRemote(SetRemoteRequest(on: true, relay: relayUrl));
-    await _until(() async => (await mac.getRemote(GetRemoteRequest())).remote.state == 'connected');
+    await _until(
+      () async =>
+          (await mac.getRemote(GetRemoteRequest())).remote.state == 'connected',
+    );
 
     // Pairing: the QR code, the code on both screens, Allow on the Mac.
     final qr = (await mac.startPairing(StartPairingRequest())).qr;
     final shown = Completer<String>();
     final device = await KeyPair.make();
-    final pairing = pair(PairingOffer.parse(qr), device: device, name: 'Test phone', onCode: shown.complete);
+    final pairing = pair(
+      PairingOffer.parse(qr),
+      device: device,
+      name: 'Test phone',
+      onCode: shown.complete,
+    );
     final code = await shown.future;
-    await _until(() async => (await mac.getRemote(GetRemoteRequest())).remote.pairing.code == code);
-    expect((await mac.getRemote(GetRemoteRequest())).remote.pairing.name, 'Test phone');
+    await _until(
+      () async =>
+          (await mac.getRemote(GetRemoteRequest())).remote.pairing.code == code,
+    );
+    expect(
+      (await mac.getRemote(GetRemoteRequest())).remote.pairing.name,
+      'Test phone',
+    );
     await mac.confirmPairing(ConfirmPairingRequest(code: code, allow: true));
     final (paired, transport) = await pairing;
     final phone = _client(transport);
 
     // The phone is a full client, with the same generated client.
-    expect((await phone.ping(PingRequest())).apiVersion, greaterThanOrEqualTo(47));
+    expect(
+      (await phone.ping(PingRequest())).apiVersion,
+      greaterThanOrEqualTo(47),
+    );
     expect((await phone.listChats(ListChatsRequest())).chats, isEmpty);
     final events = StreamIterator(phone.events(EventsRequest()));
     expect(await events.moveNext(), isTrue); // live
-    final chat = (await phone.startChat(StartChatRequest(agent: 'claude', folder: '${tmp.path}/work'))).chatId;
-    await phone.sendPrompt(SendPromptRequest(chatId: chat, text: 'hello from the phone'));
+    final chat = (await phone.startChat(
+      StartChatRequest(agent: 'claude', folder: '${tmp.path}/work'),
+    )).chatId;
+    await phone.sendPrompt(
+      SendPromptRequest(chatId: chat, text: 'hello from the phone'),
+    );
     Future<EventsResponse> next(bool Function(EventsResponse) ok) async {
       while (await events.moveNext()) {
-        if (events.current.chatId == chat && ok(events.current)) return events.current;
+        if (events.current.chatId == chat && ok(events.current)) {
+          return events.current;
+        }
       }
       throw StateError('events ended');
     }
 
-    await next((e) => e.hasItem() && e.item.item.text.contains('hello from the phone') && e.item.item.kind == ItemKind.ITEM_KIND_AGENT_MESSAGE);
-    await phone.sendPrompt(SendPromptRequest(chatId: chat, text: 'permission please'));
-    final card = await next((e) => e.hasItem() && e.item.item.kind == ItemKind.ITEM_KIND_PERMISSION && e.item.item.status == 'pending');
-    await phone.answerPermission(AnswerPermissionRequest(chatId: chat, itemId: card.item.item.id, optionId: 'allow'));
-    await next((e) => e.hasItem() && e.item.item.text.contains('Permission: selected allow'));
-    expect((await mac.listChats(ListChatsRequest())).chats.map((c) => c.id), contains(chat));
+    await next(
+      (e) =>
+          e.hasItem() &&
+          e.item.item.text.contains('hello from the phone') &&
+          e.item.item.kind == ItemKind.ITEM_KIND_AGENT_MESSAGE,
+    );
+    await phone.sendPrompt(
+      SendPromptRequest(chatId: chat, text: 'permission please'),
+    );
+    final card = await next(
+      (e) =>
+          e.hasItem() &&
+          e.item.item.kind == ItemKind.ITEM_KIND_PERMISSION &&
+          e.item.item.status == 'pending',
+    );
+    await phone.answerPermission(
+      AnswerPermissionRequest(
+        chatId: chat,
+        itemId: card.item.item.id,
+        optionId: 'allow',
+      ),
+    );
+    await next(
+      (e) =>
+          e.hasItem() &&
+          e.item.item.text.contains('Permission: selected allow'),
+    );
+    expect(
+      (await mac.listChats(ListChatsRequest())).chats.map((c) => c.id),
+      contains(chat),
+    );
 
     // A new channel, as after the app comes back: IK on the daemon's id.
     await transport.close();
     final again = _client(RelayTransport(paired, device));
-    expect((await again.listChats(ListChatsRequest())).chats.map((c) => c.id), contains(chat));
+    expect(
+      (await again.listChats(ListChatsRequest())).chats.map((c) => c.id),
+      contains(chat),
+    );
     final devices = (await mac.getRemote(GetRemoteRequest())).remote.devices;
     expect(devices.single.name, 'Test phone');
-    await _until(() async => (await mac.getRemote(GetRemoteRequest())).remote.devices.single.connected);
+    await _until(
+      () async =>
+          (await mac.getRemote(GetRemoteRequest()))
+              .remote
+              .devices
+              .single
+              .connected,
+    );
 
     // Revoked, the phone is out at once, and stays out.
     await mac.revokeDevice(RevokeDeviceRequest(id: devices.single.id));
-    await expectLater(again.listChats(ListChatsRequest()), throwsA(isA<connect.ConnectException>()));
-    await expectLater(_client(RelayTransport(paired, device)).listChats(ListChatsRequest()), throwsA(isA<connect.ConnectException>()));
+    await expectLater(
+      again.listChats(ListChatsRequest()),
+      throwsA(isA<connect.ConnectException>()),
+    );
+    await expectLater(
+      _client(RelayTransport(paired, device)).listChats(ListChatsRequest()),
+      throwsA(isA<connect.ConnectException>()),
+    );
 
     await mac.setRemote(SetRemoteRequest(on: false, relay: relayUrl));
   }, timeout: const Timeout(Duration(minutes: 3)));

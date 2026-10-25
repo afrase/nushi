@@ -112,7 +112,9 @@ void main() {
     d.dispose();
   });
 
-  testWidgets('Set up says what it downloads, then installs it', (tester) async {
+  testWidgets('Set up says what it downloads, then installs it', (
+    tester,
+  ) async {
     final (fake, d) = await _settings(tester);
     await tester.tap(find.text('Set up'));
     await tester.pumpAndSettle();

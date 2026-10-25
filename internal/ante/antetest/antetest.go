@@ -135,7 +135,7 @@ func (h *Host) op(id string, raw json.RawMessage) (done bool) {
 		h.store.mu.Unlock()
 		if s == nil {
 			h.emit(id, map[string]any{"Error": "no session " + req.ID}, false)
-			return
+			return false
 		}
 		h.id, h.s = req.ID, s
 		h.emit(id, map[string]any{"SessionStart": h.info()}, false)
