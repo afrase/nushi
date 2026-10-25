@@ -62,11 +62,14 @@ void main() {
     expect(calls.last.method, 'openSettings');
   });
 
-  testWidgets('no row without the launch agent or the channel', (tester) async {
-    status = 'notFound';
+  testWidgets('never registered reads as off; no channel, no row', (
+    tester,
+  ) async {
+    status = 'notFound'; // what macOS says before the first register
     await show(tester);
     await tester.pump();
-    expect(find.byType(Switch), findsNothing);
+    expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
+    await tester.pumpWidget(const SizedBox());
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, null);
     await show(tester);

@@ -343,6 +343,7 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 134. The daemon in a background-only helper app (`Contents/Helpers/Nushi Daemon.app`), opened through Launch Services; `nushid -login` | 13531 | 990 | 15631 | 1864 | 1170 |
 | 135. Start at login: a launch agent (SMAppService) that runs `start-daemon`, which opens the helper; the setting in Settings | 13531 | 990 | 15719 | 1864 | 1170 |
 | 136. The docs (ADR 0036); the relay test kills its relay when it fails | 13531 | 990 | 15719 | 1864 | 1170 |
+| 137. Start at login shows before its first use (macOS says "not found" until then) | 13531 | 990 | 15721 | 1864 | 1170 |
 
 Steps over the ~500-line tripwire (code and tests, without generated code): 132 (830, open sessions and forks for four agents), 131 (544, the sessions step), 127 (504, listing), 98 (2,384 with its tests: Ante's whole bridge and its fake), 99 (901: two agents, two trust packages, the shared trust files), 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 removed more than it added.
 

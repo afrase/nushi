@@ -17,7 +17,9 @@ class StartAtLogin extends StatefulWidget {
 }
 
 class _StartAtLoginState extends State<StartAtLogin> {
-  String? _status; // enabled, requiresApproval, notRegistered, notFound
+  // enabled, requiresApproval, notRegistered, or notFound: what macOS
+  // says of a job it hasn't seen (before the first register too).
+  String? _status;
 
   @override
   void initState() {
@@ -33,7 +35,7 @@ class _StartAtLoginState extends State<StartAtLogin> {
   @override
   Widget build(BuildContext context) {
     final status = _status;
-    if (status == null || status == 'notFound') return const SizedBox.shrink();
+    if (status == null) return const SizedBox.shrink();
     final theme = NushiTheme.of(context), t = theme.t;
     final waiting = status == 'requiresApproval';
     return Column(
