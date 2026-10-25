@@ -23,6 +23,10 @@ Milestone AC, steps 158–171, one commit each on `main`, all pushed. `make chec
 - `protogetter` is off: a nested message read without its getter could still panic in a handler one day (net/http recovers and logs it).
 - CI's goldens: GitHub's macOS image draws text a few pixels differently (0.05–0.37% of a golden's pixels), so on CI (`CI=true`) a golden may differ in up to 0.5% (`app/test/flutter_test_config.dart`, step 170); here they must still match. A change smaller than that passes CI unseen.
 
+**CI**: green on step 171 (73239e5): both jobs passed.
+
+**Install check**: `make install`, then the installed daemon stopped by its PID (from its socket); your open Nushi started the new helper at once: `nushid started version="73239e53eeba go1.27.1" … api=51`, then `app connected`. Nothing to do: the app you have open is milestone AB's and the same in use (this milestone changed no UI).
+
 **Size**: the daemon went from 16,526 to 16,573 lines of Go, `acp` from 1,270 to 1,276, the relay and noise from 1,170 to 1,181, the app from 16,503 to 16,555, the packages from 1,864 to 1,867. Steps over the ~500-line tripwire: 165 (about 620 changed in 47 test files: errcheck in every package's tests, done in parallel by package).
 
 ## Summary of milestone AB (after step 157: PiG as a fifth agent)
