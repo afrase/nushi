@@ -27,6 +27,7 @@ type Agent struct {
 	Needs       string   // a program it runs under, also on PATH: omp's "bun"
 	Min         string   // the oldest version Nushi runs: Ante's bridge follows 0.2.14
 	Adapter     *Adapter // nil when it speaks ACP itself, or through Nushi's bridge
+	Tested      []string // the CLI's versions Nushi was tried with, oldest first
 	// SignedIn says whether the CLI is signed in, "yes" or "no", or ""
 	// when it can't tell cheaply; run runs the CLI with args, read-only.
 	SignedIn func(run func(args ...string) ([]byte, error)) string
@@ -55,13 +56,18 @@ type Status struct {
 type Service struct {
 	agents     []Agent
 	probe      Probe
-	setup      Setup
+	dir        string // <data>/agents: an adapter goes into dir/<agent>
+	installer  Installer
+	chats      Chats
 	installing sync.Mutex // one install or removal at a time
 }
 
-func New(agents []Agent, probe Probe, setup Setup) *Service {
-	return &Service{agents: agents, probe: probe, setup: setup}
+func New(agents []Agent, probe Probe, dir string, installer Installer) *Service {
+	return &Service{agents: agents, probe: probe, dir: dir, installer: installer}
 }
+
+// UseChats gives the service the chats feature, once there is one.
+func (s *Service) UseChats(c Chats) { s.chats = c }
 
 // List finds every agent, all at once.
 func (s *Service) List(ctx context.Context) []Status {
@@ -75,11 +81,11 @@ func (s *Service) List(ctx context.Context) []Status {
 }
 
 func (s *Service) find(ctx context.Context, a Agent) (st Status) {
-	st = Status{Agent: a, Path: lookPath(a.CLI, a.Also), Awake: s.setup.Chats.Awake(a.Name)}
+	st = Status{Agent: a, Path: lookPath(a.CLI, a.Also), Awake: s.chats.Awake(a.Name)}
 	if a.Adapter != nil {
 		st.Folder = s.folder(a.Name)
 		st.Pinned, st.Packages = a.Adapter.pinned()
-		st.Installed, st.Program = s.setup.Installer.Installed(st.Folder, a.Adapter.Package, a.Adapter.Bin)
+		st.Installed, st.Program = s.installer.Installed(st.Folder, a.Adapter.Package, a.Adapter.Bin)
 	}
 	defer func() { st.Ready = st.Problem == "" && (a.Adapter == nil || st.Installed != "") }()
 	if st.Path == "" {
@@ -165,8 +171,27 @@ func (s *Service) Run(name string) (Run, error) {
 	case lookPath("node", nil) == "":
 		return r, fmt.Errorf("%s needs Node, and there's none on PATH", a.Title)
 	}
-	if _, r.Program = s.setup.Installer.Installed(s.folder(name), a.Adapter.Package, a.Adapter.Bin); r.Program == "" {
+	if _, r.Program = s.installer.Installed(s.folder(name), a.Adapter.Package, a.Adapter.Bin); r.Program == "" {
 		return r, fmt.Errorf("%s isn't set up: Settings › Agents", a.Title)
 	}
 	return r, nil
+}
+
+// Explain adds to why the agent named name failed to start, when its CLI
+// is a version it wasn't tested with, which versions it was.
+func (s *Service) Explain(name string) func(error) error {
+	return func(err error) error {
+		i := slices.IndexFunc(s.agents, func(a Agent) bool { return a.Name == name })
+		run, rerr := s.Run(name)
+		if i < 0 || rerr != nil || len(s.agents[i].Tested) == 0 {
+			return err
+		}
+		a := s.agents[i]
+		out, _ := s.probe(context.Background(), run.CLI, "--version")
+		v := versionIn(string(out))
+		if v == "" || slices.Contains(a.Tested, v) {
+			return err
+		}
+		return fmt.Errorf("%w (Nushi was tested with %s %s; this is %s)", err, a.Title, strings.Join(a.Tested, " and "), v)
+	}
 }

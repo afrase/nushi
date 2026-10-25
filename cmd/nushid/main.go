@@ -98,7 +98,16 @@ func run() error {
 	log.Printf("nushid listening on %s", ln.Addr())
 
 	hub := &events.Hub{}
-	var agentSvc *agents.Service // made below, once the chats it sleeps are
+	agentSvc := agents.New([]agents.Agent{
+		{Name: "claude", Title: "Claude", CLI: claude.CLI, Page: claude.Page, SignedIn: claude.SignedIn, Tested: claude.Tested,
+			Adapter: &agents.Adapter{Lock: claude.Adapter, Package: claude.AdapterPackage, Bin: claude.AdapterBin, Download: claude.AdapterDownload, Disk: claude.AdapterDisk}},
+		{Name: "codex", Title: "Codex", CLI: codex.CLI, Page: codex.Page, Tested: codex.Tested,
+			Adapter: &agents.Adapter{Lock: codex.Adapter, Package: codex.AdapterPackage, Bin: codex.AdapterBin, Download: codex.AdapterDownload, Disk: codex.AdapterDisk}},
+		{Name: "ante", Title: "Ante", CLI: ante.CLI, Also: ante.Also(), Page: ante.Page, Min: ante.Min, Tested: ante.Tested},
+		{Name: "omp", Title: "oh-my-pi", CLI: omp.CLI, Page: omp.Page, Needs: omp.Needs, Tested: omp.Tested},
+	}, readonly.Output, filepath.Join(dir, "agents"), npm.Installer{})
+	// The agents found on PATH, and their adapters (ADR 0037). A chat
+	// starts its agent through Run, and says more through Explain.
 	launch := func(name string, start func(agents.Run, acp.Handler) (*acp.Client, error)) chats.Launch {
 		return func(h acp.Handler) (chats.Agent, error) {
 			run, err := agentSvc.Run(name)
@@ -112,7 +121,7 @@ func run() error {
 	// internal/codex*, internal/ante* (Ante's bridge too, ADR 0030) and
 	// internal/omp*.
 	claudeKind := chats.Kind{Name: "claude", Title: "Claude", Resume: "claude --resume", MCP: true,
-		Launch: launch("claude", func(r agents.Run, h acp.Handler) (*acp.Client, error) { return claude.Start(dir, r.Program, r.CLI, h) }),
+		Explain: agentSvc.Explain("claude"), Launch: launch("claude", func(r agents.Run, h acp.Handler) (*acp.Client, error) { return claude.Start(dir, r.Program, r.CLI, h) }),
 		Dialect: chats.Dialect{InitMeta: claude.InitMeta, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall,
 			Background: claude.Background, ReportElsewhere: claude.ReportElsewhere,
 			Shell: claude.Shell, ReadShell: claude.ReadShell,
@@ -122,13 +131,13 @@ func run() error {
 		OpenElsewhere: claudehistory.Open, Forked: func(ids []string) map[string]bool { return claudehistory.Forked(projects, ids) }}
 	codexKind := chats.Kind{Name: "codex", Title: "Codex", Resume: codex.Resume, History: codex.History, DeleteArchives: codex.DeleteArchives,
 		OpenElsewhere: codex.OpenElsewhere, Forked: codex.Forked, OneWriter: true,
-		Launch:  launch("codex", func(r agents.Run, h acp.Handler) (*acp.Client, error) { return codex.Start(dir, r.Program, r.CLI, h) }),
+		Explain: agentSvc.Explain("codex"), Launch: launch("codex", func(r agents.Run, h acp.Handler) (*acp.Client, error) { return codex.Start(dir, r.Program, r.CLI, h) }),
 		Dialect: chats.Dialect{ForkAt: codex.ForkAt, ToolCall: codex.ToolCall, Other: codex.Other}}
 	anteKind := chats.Kind{Name: "ante", Title: "Ante", Resume: ante.Resume, OpenElsewhere: ante.OpenElsewhere,
-		Launch:  launch("ante", func(_ agents.Run, h acp.Handler) (*acp.Client, error) { return ante.Start(dir, h) }),
+		Explain: agentSvc.Explain("ante"), Launch: launch("ante", func(_ agents.Run, h acp.Handler) (*acp.Client, error) { return ante.Start(dir, h) }),
 		Dialect: chats.Dialect{ForkAt: ante.ForkAt, Other: ante.Other, Context: ante.Context}}
 	ompKind := chats.Kind{Name: "omp", Title: "oh-my-pi", Resume: omp.Resume, Forked: omp.Forked, OpenElsewhere: omp.OpenElsewhere, OneWriter: true,
-		Launch:  launch("omp", func(r agents.Run, h acp.Handler) (*acp.Client, error) { return omp.Start(dir, r.CLI, h) }),
+		Explain: agentSvc.Explain("omp"), Launch: launch("omp", func(r agents.Run, h acp.Handler) (*acp.Client, error) { return omp.Start(dir, r.CLI, h) }),
 		Dialect: chats.Dialect{Other: omp.Other, ToolCall: omp.ToolCall}}
 	st := store.New(dir)
 	st.HadMessages = func(s model.Session) bool { return claudehistory.Has(projects, s.SessionID, s.Folder) }
@@ -137,16 +146,9 @@ func run() error {
 	termSvc := terminals.New(startShell, filepath.Base(loginShell), chatSvc, hub.Publish)
 	chatSvc.UseTerminals(termSvc)
 	go hub.Subscribe(nil, func() bool { return true }, func(e model.Event) bool { termSvc.Follow(e); return true })
+	agentSvc.UseChats(chatSvc)
 	// The API, on the socket for the app (with the token) and on each
 	// paired device's channel (ADR 0034).
-	agentSvc = agents.New([]agents.Agent{
-		{Name: "claude", Title: "Claude", CLI: claude.CLI, Page: claude.Page, SignedIn: claude.SignedIn,
-			Adapter: &agents.Adapter{Lock: claude.Adapter, Package: claude.AdapterPackage, Bin: claude.AdapterBin, Download: claude.AdapterDownload, Disk: claude.AdapterDisk}},
-		{Name: "codex", Title: "Codex", CLI: codex.CLI, Page: codex.Page,
-			Adapter: &agents.Adapter{Lock: codex.Adapter, Package: codex.AdapterPackage, Bin: codex.AdapterBin, Download: codex.AdapterDownload, Disk: codex.AdapterDisk}},
-		{Name: "ante", Title: "Ante", CLI: ante.CLI, Also: ante.Also(), Page: ante.Page, Min: ante.Min},
-		{Name: "omp", Title: "oh-my-pi", CLI: omp.CLI, Page: omp.Page, Needs: omp.Needs},
-	}, readonly.Output, agents.Setup{Dir: filepath.Join(dir, "agents"), Installer: npm.Installer{}, Chats: chatSvc})
 	sv := api.Services{Chats: chatSvc, Agents: agentSvc, MCP: mcp.New(claudemcp.Claude{}, chatSvc.MCPChanged), Terms: termSvc,
 		Trust: trust.New(map[string]trust.Agent{"claude": claudetrust.Trust{}, "codex": codextrust.Trust{}, "ante": antetrust.Trust{}, "omp": omptrust.Trust{}}, st),
 		Hub:   hub, Memory: memory.New(chatSvc)}

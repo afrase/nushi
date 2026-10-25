@@ -106,7 +106,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	svc.UseTerminals(terms)
 	follow, unfollow := context.WithCancel(context.Background())
 	go hub.Subscribe(follow.Done(), func() bool { return true }, func(e model.Event) bool { terms.Follow(e); return true })
-	srv := httptest.NewServer(api.WithToken("tok", api.New(api.Services{Chats: svc, Agents: agents.New(nil, nil, agents.Setup{}), Terms: terms, Hub: hub, Memory: memory.New(svc)})))
+	srv := httptest.NewServer(api.WithToken("tok", api.New(api.Services{Chats: svc, Agents: agents.New(nil, nil, "", nil), Terms: terms, Hub: hub, Memory: memory.New(svc)})))
 	stop := func() {
 		unfollow()
 		srv.CloseClientConnections()

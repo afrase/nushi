@@ -57,13 +57,6 @@ type Chats interface {
 	SleepAgent(agent string)
 }
 
-// Setup is where adapters go and how.
-type Setup struct {
-	Dir       string // <data>/agents: an adapter goes into Dir/<agent>
-	Installer Installer
-	Chats     Chats
-}
-
 // installTimeout bounds an install.
 const installTimeout = 5 * time.Minute
 
@@ -82,7 +75,7 @@ func (s *Service) SetUp(ctx context.Context, name string) error {
 	defer s.installing.Unlock()
 	ctx, cancel := context.WithTimeout(ctx, installTimeout)
 	defer cancel()
-	return s.setup.Installer.Install(ctx, a.Adapter.Lock, s.folder(name), func() { s.setup.Chats.SleepAgent(name) })
+	return s.installer.Install(ctx, a.Adapter.Lock, s.folder(name), func() { s.chats.SleepAgent(name) })
 }
 
 // Remove removes the agent's adapter; its awake chats sleep first.
@@ -92,11 +85,11 @@ func (s *Service) Remove(name string) error {
 	}
 	s.installing.Lock()
 	defer s.installing.Unlock()
-	s.setup.Chats.SleepAgent(name)
-	return s.setup.Installer.Remove(s.folder(name))
+	s.chats.SleepAgent(name)
+	return s.installer.Remove(s.folder(name))
 }
 
-func (s *Service) folder(name string) string { return filepath.Join(s.setup.Dir, name) }
+func (s *Service) folder(name string) string { return filepath.Join(s.dir, name) }
 
 func (s *Service) adapter(name string) (Agent, error) {
 	for _, a := range s.agents {

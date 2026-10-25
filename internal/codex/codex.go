@@ -50,6 +50,10 @@ const (
 	Page = "https://developers.openai.com/codex/cli"
 )
 
+// Tested are the Codex versions the adapter was run with: its own (until
+// milestone Z), then the user's.
+var Tested = []string{"0.160.1", "0.163.0"}
+
 // Resume is the terminal command that opens a Codex session by its id.
 const Resume = "codex resume"
 
