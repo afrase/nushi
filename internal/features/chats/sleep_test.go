@@ -140,3 +140,21 @@ func TestAutoSleep(t *testing.T) {
 		t.Errorf("%d launches after waking, was %d", again, launches)
 	}
 }
+
+// SleepAgent puts an agent's awake chats to sleep, before its adapter
+// changes; Awake counts them.
+func TestSleepAgent(t *testing.T) {
+	svc, _, c := newChat(t, claudeSession, &memModes{})
+	turn(t, svc, c, "one")
+	if n := svc.Awake("claude"); n != 1 || svc.Awake("codex") != 0 {
+		t.Fatalf("awake: %d", n)
+	}
+	svc.SleepAgent("codex")
+	if c.agent == nil {
+		t.Fatal("another agent's chat slept")
+	}
+	svc.SleepAgent("claude")
+	if c.agent != nil || !svc.Status(c.session).Asleep || svc.Awake("claude") != 0 {
+		t.Errorf("after SleepAgent: %+v", svc.Status(c.session))
+	}
+}

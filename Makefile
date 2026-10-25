@@ -8,7 +8,7 @@ HELPER := $(RELEASE)/Contents/Helpers/Nushi Daemon.app
 # local.mk (not committed) can set COPY_TO=<folder>: make install also copies the app there.
 -include local.mk
 
-.PHONY: run daemon stop app package install gen test lines relay icons
+.PHONY: run daemon stop app package install gen test lines relay icons adapters
 
 # Starts the daemon in the background (unless one is running), then the app.
 run: daemon app
@@ -55,6 +55,11 @@ relay:
 # The app icon (Icon Composer, and PNGs for macOS before 26) and the mark.
 icons:
 	go run ./tools/icongen
+
+# After an adapter's version changed in internal/<agent>/adapter/package.json:
+# its lockfile again, and the sizes for its AdapterDownload and AdapterDisk.
+adapters:
+	tools/adapters.sh
 
 gen:
 	$(BUF) lint

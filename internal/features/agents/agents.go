@@ -1,7 +1,9 @@
 // Package agents finds the agents chats can run on this Mac: each one's
 // CLI on the login shell's PATH, its version, and what else it needs.
 // Finding them changes nothing: a CLI is only asked what it is, with
-// writes and the network denied (Probe). ADR 0037.
+// writes and the network denied (Probe). An agent whose ACP side is an
+// npm package (an adapter) runs once that's set up, which happens only
+// when asked (SetUp). ADR 0037.
 package agents
 
 import (
@@ -24,6 +26,7 @@ type Agent struct {
 	Page        string   // where to get it
 	Needs       string   // a program it runs under, also on PATH: omp's "bun"
 	Min         string   // the oldest version Nushi runs: Ante's bridge follows 0.2.14
+	Adapter     *Adapter // nil when it speaks ACP itself, or through Nushi's bridge
 	// SignedIn says whether the CLI is signed in, "yes" or "no", or ""
 	// when it can't tell cheaply; run runs the CLI with args, read-only.
 	SignedIn func(run func(args ...string) ([]byte, error)) string
@@ -40,14 +43,25 @@ type Status struct {
 	Version  string // as the CLI says it; "" when that couldn't be read
 	Problem  string // why it can't run, in a few words; "" when it can
 	SignedIn string // "yes", "no", or "" (unknown)
+	// With an adapter: the version pinned, the one set up ("" when it
+	// isn't), its program, how many packages it installs, and where.
+	Pinned, Installed, Program string
+	Packages                   int
+	Folder                     string
+	Ready                      bool // a chat can start
+	Awake                      int  // its chats whose agent runs
 }
 
 type Service struct {
-	agents []Agent
-	probe  Probe
+	agents     []Agent
+	probe      Probe
+	setup      Setup
+	installing sync.Mutex // one install or removal at a time
 }
 
-func New(agents []Agent, probe Probe) *Service { return &Service{agents: agents, probe: probe} }
+func New(agents []Agent, probe Probe, setup Setup) *Service {
+	return &Service{agents: agents, probe: probe, setup: setup}
+}
 
 // List finds every agent, all at once.
 func (s *Service) List(ctx context.Context) []Status {
@@ -60,8 +74,14 @@ func (s *Service) List(ctx context.Context) []Status {
 	return out
 }
 
-func (s *Service) find(ctx context.Context, a Agent) Status {
-	st := Status{Agent: a, Path: lookPath(a.CLI, a.Also)}
+func (s *Service) find(ctx context.Context, a Agent) (st Status) {
+	st = Status{Agent: a, Path: lookPath(a.CLI, a.Also), Awake: s.setup.Chats.Awake(a.Name)}
+	if a.Adapter != nil {
+		st.Folder = s.folder(a.Name)
+		st.Pinned, st.Packages = a.Adapter.pinned()
+		st.Installed, st.Program = s.setup.Installer.Installed(st.Folder, a.Adapter.Package, a.Adapter.Bin)
+	}
+	defer func() { st.Ready = st.Problem == "" && (a.Adapter == nil || st.Installed != "") }()
 	if st.Path == "" {
 		st.Problem = "Not installed"
 		return st
@@ -74,6 +94,8 @@ func (s *Service) find(ctx context.Context, a Agent) Status {
 		st.Problem = fmt.Sprintf("Needs %s or newer", a.Min)
 	case a.Needs != "" && lookPath(a.Needs, nil) == "":
 		st.Problem = "Needs " + strings.ToUpper(a.Needs[:1]) + a.Needs[1:]
+	case a.Adapter != nil && lookPath("node", nil) == "":
+		st.Problem = "Needs Node"
 	}
 	if a.SignedIn != nil && st.Problem == "" {
 		st.SignedIn = a.SignedIn(func(args ...string) ([]byte, error) { return s.probe(ctx, st.Path, args...) })
@@ -118,4 +140,33 @@ func numbers(v string) [3]int {
 		out[i], _ = strconv.Atoi(p)
 	}
 	return out
+}
+
+// Run is what starting an agent takes: its CLI, and with an adapter, the
+// adapter's program (run by the Node on PATH).
+type Run struct{ CLI, Program string }
+
+// Run finds what starting the agent named name takes, or says why it
+// can't start. It asks no CLI anything, so it's quick.
+func (s *Service) Run(name string) (Run, error) {
+	i := slices.IndexFunc(s.agents, func(a Agent) bool { return a.Name == name })
+	if i < 0 {
+		return Run{}, fmt.Errorf("Nushi doesn't know the agent %q", name)
+	}
+	a := s.agents[i]
+	r := Run{CLI: lookPath(a.CLI, a.Also)}
+	switch {
+	case r.CLI == "":
+		return r, fmt.Errorf("%s isn't installed: there's no %s on PATH", a.Title, a.CLI)
+	case a.Needs != "" && lookPath(a.Needs, nil) == "":
+		return r, fmt.Errorf("%s needs %s, and there's none on PATH", a.Title, a.Needs)
+	case a.Adapter == nil:
+		return r, nil
+	case lookPath("node", nil) == "":
+		return r, fmt.Errorf("%s needs Node, and there's none on PATH", a.Title)
+	}
+	if _, r.Program = s.setup.Installer.Installed(s.folder(name), a.Adapter.Package, a.Adapter.Bin); r.Program == "" {
+		return r, fmt.Errorf("%s isn't set up: Settings › Agents", a.Title)
+	}
+	return r, nil
 }

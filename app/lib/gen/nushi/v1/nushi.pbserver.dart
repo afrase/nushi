@@ -31,6 +31,10 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.StartChatRequest request);
   $async.Future<$0.ListAgentsResponse> listAgents(
       $pb.ServerContext ctx, $0.ListAgentsRequest request);
+  $async.Future<$0.SetUpAgentResponse> setUpAgent(
+      $pb.ServerContext ctx, $0.SetUpAgentRequest request);
+  $async.Future<$0.RemoveAgentResponse> removeAgent(
+      $pb.ServerContext ctx, $0.RemoveAgentRequest request);
   $async.Future<$0.ListAgentSessionsResponse> listAgentSessions(
       $pb.ServerContext ctx, $0.ListAgentSessionsRequest request);
   $async.Future<$0.OpenAgentSessionResponse> openAgentSession(
@@ -144,6 +148,10 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.StartChatRequest();
       case 'ListAgents':
         return $0.ListAgentsRequest();
+      case 'SetUpAgent':
+        return $0.SetUpAgentRequest();
+      case 'RemoveAgent':
+        return $0.RemoveAgentRequest();
       case 'ListAgentSessions':
         return $0.ListAgentSessionsRequest();
       case 'OpenAgentSession':
@@ -262,6 +270,10 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return startChat(ctx, request as $0.StartChatRequest);
       case 'ListAgents':
         return listAgents(ctx, request as $0.ListAgentsRequest);
+      case 'SetUpAgent':
+        return setUpAgent(ctx, request as $0.SetUpAgentRequest);
+      case 'RemoveAgent':
+        return removeAgent(ctx, request as $0.RemoveAgentRequest);
       case 'ListAgentSessions':
         return listAgentSessions(ctx, request as $0.ListAgentSessionsRequest);
       case 'OpenAgentSession':

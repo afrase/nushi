@@ -1112,6 +1112,9 @@ class Agent extends $pb.GeneratedMessage {
     $core.String? page,
     $core.String? problem,
     $core.String? signedIn,
+    Adapter? adapter,
+    $core.bool? ready,
+    $core.int? awake,
   }) {
     final result = Agent._();
     if (name != null) result.name = name;
@@ -1124,6 +1127,9 @@ class Agent extends $pb.GeneratedMessage {
     if (page != null) result.page = page;
     if (problem != null) result.problem = problem;
     if (signedIn != null) result.signedIn = signedIn;
+    if (adapter != null) result.adapter = adapter;
+    if (ready != null) result.ready = ready;
+    if (awake != null) result.awake = awake;
     return result;
   }
 
@@ -1150,6 +1156,10 @@ class Agent extends $pb.GeneratedMessage {
     ..aOS(8, _omitFieldNames ? '' : 'page')
     ..aOS(9, _omitFieldNames ? '' : 'problem')
     ..aOS(10, _omitFieldNames ? '' : 'signedIn')
+    ..aOM<Adapter>(11, _omitFieldNames ? '' : 'adapter',
+        subBuilder: Adapter.$_createMessage)
+    ..aOB(12, _omitFieldNames ? '' : 'ready')
+    ..aI(13, _omitFieldNames ? '' : 'awake')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1276,6 +1286,369 @@ class Agent extends $pb.GeneratedMessage {
   $core.bool hasSignedIn() => $_has(9);
   @$pb.TagNumber(10)
   void clearSignedIn() => $_clearField(10);
+
+  /// The npm package its ACP side comes in, when it needs one.
+  @$pb.TagNumber(11)
+  Adapter get adapter => $_getN(10);
+  @$pb.TagNumber(11)
+  set adapter(Adapter value) => $_setField(11, value);
+  @$pb.TagNumber(11)
+  $core.bool hasAdapter() => $_has(10);
+  @$pb.TagNumber(11)
+  void clearAdapter() => $_clearField(11);
+  @$pb.TagNumber(11)
+  Adapter ensureAdapter() => $_ensure(10);
+
+  /// A chat can start: it's installed, has what it needs, and its adapter
+  /// (if any) is set up.
+  @$pb.TagNumber(12)
+  $core.bool get ready => $_getBF(11);
+  @$pb.TagNumber(12)
+  set ready($core.bool value) => $_setBool(11, value);
+  @$pb.TagNumber(12)
+  $core.bool hasReady() => $_has(11);
+  @$pb.TagNumber(12)
+  void clearReady() => $_clearField(12);
+
+  /// Its chats whose agent runs (they sleep when the adapter changes).
+  @$pb.TagNumber(13)
+  $core.int get awake => $_getIZ(12);
+  @$pb.TagNumber(13)
+  set awake($core.int value) => $_setSignedInt32(12, value);
+  @$pb.TagNumber(13)
+  $core.bool hasAwake() => $_has(12);
+  @$pb.TagNumber(13)
+  void clearAwake() => $_clearField(13);
+}
+
+/// An agent's adapter.
+class Adapter extends $pb.GeneratedMessage {
+  factory Adapter({
+    $core.String? package,
+    $core.String? pinned,
+    $core.String? installed,
+    $core.int? packages,
+    $fixnum.Int64? downloadBytes,
+    $fixnum.Int64? diskBytes,
+    $core.String? folder,
+  }) {
+    final result = Adapter._();
+    if (package != null) result.package = package;
+    if (pinned != null) result.pinned = pinned;
+    if (installed != null) result.installed = installed;
+    if (packages != null) result.packages = packages;
+    if (downloadBytes != null) result.downloadBytes = downloadBytes;
+    if (diskBytes != null) result.diskBytes = diskBytes;
+    if (folder != null) result.folder = folder;
+    return result;
+  }
+
+  Adapter._();
+
+  factory Adapter.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Adapter()..mergeFromBuffer(data, registry);
+  factory Adapter.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Adapter()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'Adapter',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: Adapter.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'package')
+    ..aOS(2, _omitFieldNames ? '' : 'pinned')
+    ..aOS(3, _omitFieldNames ? '' : 'installed')
+    ..aI(4, _omitFieldNames ? '' : 'packages')
+    ..aInt64(5, _omitFieldNames ? '' : 'downloadBytes')
+    ..aInt64(6, _omitFieldNames ? '' : 'diskBytes')
+    ..aOS(7, _omitFieldNames ? '' : 'folder')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Adapter clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Adapter copyWith(void Function(Adapter) updates) =>
+      super.copyWith((message) => updates(message as Adapter)) as Adapter;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use Adapter() / Adapter.new instead')
+  static Adapter create() => Adapter._();
+  static $pb.GeneratedMessage $_createMessage() => Adapter._();
+  @$core.override
+  Adapter createEmptyInstance() => Adapter._();
+  @$core.pragma('dart2js:noInline')
+  static Adapter getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<Adapter>(Adapter.$_createMessage);
+  static Adapter? _defaultInstance;
+
+  /// "@agentclientprotocol/claude-agent-acp".
+  @$pb.TagNumber(1)
+  $core.String get package => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set package($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPackage() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPackage() => $_clearField(1);
+
+  /// The version Nushi pins, and the one set up (empty when it isn't).
+  @$pb.TagNumber(2)
+  $core.String get pinned => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set pinned($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasPinned() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPinned() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get installed => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set installed($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasInstalled() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearInstalled() => $_clearField(3);
+
+  /// How many packages it installs, the adapter's included.
+  @$pb.TagNumber(4)
+  $core.int get packages => $_getIZ(3);
+  @$pb.TagNumber(4)
+  set packages($core.int value) => $_setSignedInt32(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasPackages() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearPackages() => $_clearField(4);
+
+  /// About how much it downloads, and takes on disk, in bytes.
+  @$pb.TagNumber(5)
+  $fixnum.Int64 get downloadBytes => $_getI64(4);
+  @$pb.TagNumber(5)
+  set downloadBytes($fixnum.Int64 value) => $_setInt64(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasDownloadBytes() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearDownloadBytes() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $fixnum.Int64 get diskBytes => $_getI64(5);
+  @$pb.TagNumber(6)
+  set diskBytes($fixnum.Int64 value) => $_setInt64(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasDiskBytes() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearDiskBytes() => $_clearField(6);
+
+  /// Where it goes.
+  @$pb.TagNumber(7)
+  $core.String get folder => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set folder($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasFolder() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearFolder() => $_clearField(7);
+}
+
+class SetUpAgentRequest extends $pb.GeneratedMessage {
+  factory SetUpAgentRequest({
+    $core.String? agent,
+  }) {
+    final result = SetUpAgentRequest._();
+    if (agent != null) result.agent = agent;
+    return result;
+  }
+
+  SetUpAgentRequest._();
+
+  factory SetUpAgentRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetUpAgentRequest()..mergeFromBuffer(data, registry);
+  factory SetUpAgentRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetUpAgentRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SetUpAgentRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SetUpAgentRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'agent')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetUpAgentRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetUpAgentRequest copyWith(void Function(SetUpAgentRequest) updates) =>
+      super.copyWith((message) => updates(message as SetUpAgentRequest))
+          as SetUpAgentRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use SetUpAgentRequest() / SetUpAgentRequest.new instead')
+  static SetUpAgentRequest create() => SetUpAgentRequest._();
+  static $pb.GeneratedMessage $_createMessage() => SetUpAgentRequest._();
+  @$core.override
+  SetUpAgentRequest createEmptyInstance() => SetUpAgentRequest._();
+  @$core.pragma('dart2js:noInline')
+  static SetUpAgentRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<SetUpAgentRequest>(
+          SetUpAgentRequest.$_createMessage);
+  static SetUpAgentRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get agent => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set agent($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasAgent() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearAgent() => $_clearField(1);
+}
+
+class SetUpAgentResponse extends $pb.GeneratedMessage {
+  factory SetUpAgentResponse() => SetUpAgentResponse._();
+
+  SetUpAgentResponse._();
+
+  factory SetUpAgentResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetUpAgentResponse()..mergeFromBuffer(data, registry);
+  factory SetUpAgentResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetUpAgentResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SetUpAgentResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SetUpAgentResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetUpAgentResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetUpAgentResponse copyWith(void Function(SetUpAgentResponse) updates) =>
+      super.copyWith((message) => updates(message as SetUpAgentResponse))
+          as SetUpAgentResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use SetUpAgentResponse() / SetUpAgentResponse.new instead')
+  static SetUpAgentResponse create() => SetUpAgentResponse._();
+  static $pb.GeneratedMessage $_createMessage() => SetUpAgentResponse._();
+  @$core.override
+  SetUpAgentResponse createEmptyInstance() => SetUpAgentResponse._();
+  @$core.pragma('dart2js:noInline')
+  static SetUpAgentResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SetUpAgentResponse>(
+          SetUpAgentResponse.$_createMessage);
+  static SetUpAgentResponse? _defaultInstance;
+}
+
+class RemoveAgentRequest extends $pb.GeneratedMessage {
+  factory RemoveAgentRequest({
+    $core.String? agent,
+  }) {
+    final result = RemoveAgentRequest._();
+    if (agent != null) result.agent = agent;
+    return result;
+  }
+
+  RemoveAgentRequest._();
+
+  factory RemoveAgentRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemoveAgentRequest()..mergeFromBuffer(data, registry);
+  factory RemoveAgentRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemoveAgentRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RemoveAgentRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RemoveAgentRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'agent')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemoveAgentRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemoveAgentRequest copyWith(void Function(RemoveAgentRequest) updates) =>
+      super.copyWith((message) => updates(message as RemoveAgentRequest))
+          as RemoveAgentRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use RemoveAgentRequest() / RemoveAgentRequest.new instead')
+  static RemoveAgentRequest create() => RemoveAgentRequest._();
+  static $pb.GeneratedMessage $_createMessage() => RemoveAgentRequest._();
+  @$core.override
+  RemoveAgentRequest createEmptyInstance() => RemoveAgentRequest._();
+  @$core.pragma('dart2js:noInline')
+  static RemoveAgentRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RemoveAgentRequest>(
+          RemoveAgentRequest.$_createMessage);
+  static RemoveAgentRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get agent => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set agent($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasAgent() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearAgent() => $_clearField(1);
+}
+
+class RemoveAgentResponse extends $pb.GeneratedMessage {
+  factory RemoveAgentResponse() => RemoveAgentResponse._();
+
+  RemoveAgentResponse._();
+
+  factory RemoveAgentResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemoveAgentResponse()..mergeFromBuffer(data, registry);
+  factory RemoveAgentResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemoveAgentResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RemoveAgentResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RemoveAgentResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemoveAgentResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemoveAgentResponse copyWith(void Function(RemoveAgentResponse) updates) =>
+      super.copyWith((message) => updates(message as RemoveAgentResponse))
+          as RemoveAgentResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use RemoveAgentResponse() / RemoveAgentResponse.new instead')
+  static RemoveAgentResponse create() => RemoveAgentResponse._();
+  static $pb.GeneratedMessage $_createMessage() => RemoveAgentResponse._();
+  @$core.override
+  RemoveAgentResponse createEmptyInstance() => RemoveAgentResponse._();
+  @$core.pragma('dart2js:noInline')
+  static RemoveAgentResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RemoveAgentResponse>(
+          RemoveAgentResponse.$_createMessage);
+  static RemoveAgentResponse? _defaultInstance;
 }
 
 class StartChatRequest extends $pb.GeneratedMessage {
@@ -11450,6 +11823,21 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, ListAgentsRequest request) =>
       _client.invoke<ListAgentsResponse>(
           ctx, 'NushiService', 'ListAgents', request, ListAgentsResponse());
+
+  /// Sets up an agent's adapter (Agent.adapter): installs it into Nushi's
+  /// data folder from the lockfile Nushi pins, or updates it to the pinned
+  /// version. The agent's awake chats sleep just before the new one
+  /// replaces the old. Returns once it's done (5 minutes at most).
+  $async.Future<SetUpAgentResponse> setUpAgent(
+          $pb.ClientContext? ctx, SetUpAgentRequest request) =>
+      _client.invoke<SetUpAgentResponse>(
+          ctx, 'NushiService', 'SetUpAgent', request, SetUpAgentResponse());
+
+  /// Removes an agent's adapter; its awake chats sleep first.
+  $async.Future<RemoveAgentResponse> removeAgent(
+          $pb.ClientContext? ctx, RemoveAgentRequest request) =>
+      _client.invoke<RemoveAgentResponse>(
+          ctx, 'NushiService', 'RemoveAgent', request, RemoveAgentResponse());
 
   /// Lists an agent's sessions in a folder that aren't chats (started in a
   /// terminal, say), newest first, a page at a time. It starts the agent to

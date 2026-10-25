@@ -52,6 +52,25 @@ abstract final class NushiService {
     nushiv1nushi.ListAgentsResponse.new,
   );
 
+  /// Sets up an agent's adapter (Agent.adapter): installs it into Nushi's
+  /// data folder from the lockfile Nushi pins, or updates it to the pinned
+  /// version. The agent's awake chats sleep just before the new one
+  /// replaces the old. Returns once it's done (5 minutes at most).
+  static const setUpAgent = connect.Spec(
+    '/$name/SetUpAgent',
+    connect.StreamType.unary,
+    nushiv1nushi.SetUpAgentRequest.new,
+    nushiv1nushi.SetUpAgentResponse.new,
+  );
+
+  /// Removes an agent's adapter; its awake chats sleep first.
+  static const removeAgent = connect.Spec(
+    '/$name/RemoveAgent',
+    connect.StreamType.unary,
+    nushiv1nushi.RemoveAgentRequest.new,
+    nushiv1nushi.RemoveAgentResponse.new,
+  );
+
   /// Lists an agent's sessions in a folder that aren't chats (started in a
   /// terminal, say), newest first, a page at a time. It starts the agent to
   /// ask (ACP session/list).

@@ -2,10 +2,13 @@ package agents
 
 import (
 	"context"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"testing/fstest"
 
 	"github.com/afrase/nushi/internal/readonly"
 )
@@ -48,7 +51,7 @@ func TestList(t *testing.T) {
 		{Name: "ante", CLI: "ante", Also: []string{filepath.Join(other, "nope"), off}, Min: "0.2.14"},
 		{Name: "omp", CLI: "omp", Needs: "bun"},
 		{Name: "gone", CLI: "gone"},
-	}, readonly.Output)
+	}, readonly.Output, Setup{Chats: &fakeChats{}, Installer: &fakeInstaller{}})
 	want := []Status{
 		{Path: bin + "/claude", Version: "2.1.310", SignedIn: "yes"},
 		{Path: bin + "/codex", Version: "0.163.0-alpha.2"},
@@ -78,5 +81,91 @@ func TestOlder(t *testing.T) {
 		if older(c.a, c.b) != c.want {
 			t.Errorf("older(%s, %s) isn't %v", c.a, c.b, c.want)
 		}
+	}
+}
+
+type fakeChats struct{ awake, slept int }
+
+func (f *fakeChats) Awake(string) int { return f.awake }
+
+func (f *fakeChats) SleepAgent(string) { f.slept, f.awake = f.slept+f.awake, 0 }
+
+// fakeInstaller installs a version: "1.0.0" without fail.
+type fakeInstaller struct {
+	versions map[string]string // by folder
+	fail     bool
+}
+
+func (f *fakeInstaller) Install(_ context.Context, _ fs.FS, folder string, ready func()) error {
+	if f.fail {
+		return errors.New("npm ci: no network")
+	}
+	ready()
+	f.versions = map[string]string{folder: "1.0.0"}
+	return nil
+}
+
+func (f *fakeInstaller) Installed(folder, _, bin string) (string, string) {
+	if v := f.versions[folder]; v != "" {
+		return v, filepath.Join(folder, bin)
+	}
+	return "", ""
+}
+
+func (f *fakeInstaller) Remove(folder string) error { delete(f.versions, folder); return nil }
+
+// An agent with an adapter: not ready until it's set up; setting it up
+// puts its awake chats to sleep; a failed install says why; Remove.
+func TestSetUp(t *testing.T) {
+	bin := t.TempDir()
+	fakeCLI(t, bin, "claude", "2.1.310")
+	fakeCLI(t, bin, "node", "v26.1.0")
+	fakeCLI(t, bin, "npm", "11.13.0")
+	t.Setenv("PATH", bin+":/usr/bin:/bin")
+	lock := fstest.MapFS{
+		"package.json":      {Data: []byte(`{"dependencies":{"adapter":"1.0.0"}}`)},
+		"package-lock.json": {Data: []byte(`{"packages":{"":{},"node_modules/adapter":{},"node_modules/dep":{},"node_modules/bin-darwin":{"optional":true}}}`)},
+	}
+	chats, in := &fakeChats{awake: 2}, &fakeInstaller{}
+	dir := t.TempDir()
+	svc := New([]Agent{{Name: "claude", Title: "Claude", CLI: "claude", Adapter: &Adapter{Lock: lock, Package: "adapter", Bin: "adapter"}}, {Name: "ante", Title: "Ante", CLI: "ante"}},
+		readonly.Output, Setup{Dir: dir, Installer: in, Chats: chats})
+	st := svc.List(context.Background())[0]
+	if st.Ready || st.Pinned != "1.0.0" || st.Packages != 2 || st.Installed != "" || st.Folder != filepath.Join(dir, "claude") || st.Awake != 2 {
+		t.Fatalf("before: %+v", st)
+	}
+	if _, err := svc.Run("claude"); err == nil || err.Error() != "Claude isn't set up: Settings › Agents" {
+		t.Errorf("Run before SetUp: %v", err)
+	}
+	in.fail = true
+	if err := svc.SetUp(context.Background(), "claude"); err == nil || chats.slept != 0 {
+		t.Errorf("a failed install: %v, %d slept", err, chats.slept)
+	}
+	in.fail = false
+	if err := svc.SetUp(context.Background(), "claude"); err != nil || chats.slept != 2 {
+		t.Fatalf("SetUp: %v, %d slept", err, chats.slept)
+	}
+	if st := svc.List(context.Background())[0]; !st.Ready || st.Installed != "1.0.0" || st.Program != filepath.Join(dir, "claude", "adapter") {
+		t.Errorf("after: %+v", st)
+	}
+	if r, err := svc.Run("claude"); err != nil || r.CLI != filepath.Join(bin, "claude") || r.Program != filepath.Join(dir, "claude", "adapter") {
+		t.Errorf("Run: %+v, %v", r, err)
+	}
+	if _, err := svc.Run("ante"); err == nil || err.Error() != "Ante isn't installed: there's no ante on PATH" {
+		t.Errorf("Run without its CLI: %v", err)
+	}
+	if err := svc.SetUp(context.Background(), "ante"); err == nil {
+		t.Error("set up an agent without an adapter")
+	}
+	if err := svc.Remove("claude"); err != nil || svc.List(context.Background())[0].Ready {
+		t.Errorf("Remove: %v", err)
+	}
+	os.Remove(filepath.Join(bin, "node"))
+	in.versions = map[string]string{filepath.Join(dir, "claude"): "1.0.0"}
+	if st := svc.List(context.Background())[0]; st.Problem != "Needs Node" || st.Ready {
+		t.Errorf("without Node: %+v", st)
+	}
+	if _, err := svc.Run("claude"); err == nil {
+		t.Error("Run without Node")
 	}
 }

@@ -186,3 +186,34 @@ func (s *Service) AgentPids() map[string]int {
 	}
 	return pids
 }
+
+// awakeOf returns the chats of the agent named agent whose agent runs
+// (side chats are their chat's).
+func (s *Service) awakeOf(agent string) []string {
+	s.mu.Lock()
+	open := slices.Collect(maps.Values(s.chats))
+	s.mu.Unlock()
+	var ids []string
+	for _, c := range open {
+		c.mu.Lock()
+		if c.agent != nil && c.parent == nil && c.kind.Name == agent {
+			ids = append(ids, c.id)
+		}
+		c.mu.Unlock()
+	}
+	return ids
+}
+
+// Awake counts the chats of the agent named agent whose agent runs.
+func (s *Service) Awake(agent string) int { return len(s.awakeOf(agent)) }
+
+// SleepAgent puts every awake chat of the agent named agent to sleep, as
+// Sleep does, before its program changes; one that can't sleep (it's
+// reopening) is left.
+func (s *Service) SleepAgent(agent string) {
+	for _, id := range s.awakeOf(agent) {
+		if err := s.Sleep(id); err != nil {
+			log.Printf("chat %s: not put to sleep: %v", id, err)
+		}
+	}
+}
