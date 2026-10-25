@@ -16,7 +16,7 @@ class _Daemon implements Transport {
   final calls = <String>[];
   final written = <String>[];
   int opened = 0;
-  String replay = '\$ ';
+  String replay = r'$ ';
   String? live; // what the shell writes after the replay
 
   @override

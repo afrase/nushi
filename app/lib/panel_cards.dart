@@ -102,7 +102,7 @@ class PanelCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 2),
-                      Chevron(open, size: 15),
+                      Chevron(open: open, size: 15),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Align(
@@ -176,7 +176,8 @@ List<String> reordered(
   moved.insert(to, moved.removeAt(from));
   var k = 0;
   return [
-    for (final s in saved) shown.contains(s) ? moved[k++] : s,
+    for (final s in saved)
+      if (shown.contains(s)) moved[k++] else s,
     ...moved.skip(k),
   ];
 }

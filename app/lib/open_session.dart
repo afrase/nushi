@@ -41,7 +41,8 @@ class _SessionListState extends State<SessionList> {
   String? _error;
   bool _loading = false;
   int _at = 0;
-  final _shown = GlobalKey(); // the selected row's, to keep it in view
+  // The selected row's, to keep it in view.
+  final GlobalKey<State<StatefulWidget>> _shown = GlobalKey();
 
   final _scroll = ScrollController();
 

@@ -27,7 +27,7 @@ List<(Color, bool)> _colors(Tokens t) => [
 ];
 
 /// highlight.js scopes to capture ids.
-final _captures = {
+final Map<String, int> _captures = {
   for (final (i, scopes) in _scopesOf.indexed)
     for (final k in scopes) k: i,
 };
@@ -136,17 +136,18 @@ class SyntaxLines implements DiffLineSource {
       if (s == null) continue;
       _sides[side.index] = [
         for (final l in _sides[side.index])
-          l.line < s.length && s[l.line] != null
-              ? DiffLine(
-                  line: l.line,
-                  text: l.text,
-                  kind: l.kind,
-                  block: l.block,
-                  ending: l.ending,
-                  inner: l.inner,
-                  syntax: s[l.line],
-                )
-              : l,
+          if (l.line < s.length && s[l.line] != null)
+            DiffLine(
+              line: l.line,
+              text: l.text,
+              kind: l.kind,
+              block: l.block,
+              ending: l.ending,
+              inner: l.inner,
+              syntax: s[l.line],
+            )
+          else
+            l,
       ];
     }
     for (final l in List.of(_listeners)) {

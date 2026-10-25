@@ -119,7 +119,7 @@ class _RemoteSectionState extends State<RemoteSection> {
                             text: d.connected
                                 ? '  connected'
                                 : d.lastSeen > 0
-                                ? '  ${ago(DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(d.lastSeen.toInt())), DateTime.fromMillisecondsSinceEpoch(d.lastSeen.toInt()))}'
+                                ? '  ${_seen(d.lastSeen.toInt())}'
                                 : '',
                             style: muted,
                           ),
@@ -215,7 +215,7 @@ class _Pairing extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context), t = theme.t;
-    Future<void> answer(String code, bool allow) async {
+    Future<void> answer(String code, {required bool allow}) async {
       await tryOrShow(
         context,
         () => client.confirmPairing(
@@ -300,12 +300,12 @@ class _Pairing extends StatelessWidget {
             Button(
               label: 'Deny',
               kind: ButtonKind.ghost,
-              onPressed: () => answer(p.code, false),
+              onPressed: () => answer(p.code, allow: false),
             ),
             Button(
               label: 'Allow',
               kind: ButtonKind.primary,
-              onPressed: () => answer(p.code, true),
+              onPressed: () => answer(p.code, allow: true),
             ),
           ],
         );
@@ -355,7 +355,8 @@ class RemoteMark extends StatelessWidget {
         final phones = r.devices.where((d) => d.connected).length;
         return Tooltip(
           message:
-              'Remote access: ${_states[r.state] ?? r.state}${phones > 0 ? ', $phones connected' : ''}',
+              'Remote access: ${_states[r.state] ?? r.state}'
+              '${phones > 0 ? ', $phones connected' : ''}',
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 6),
             child: Icon(
@@ -370,4 +371,10 @@ class RemoteMark extends StatelessWidget {
       },
     );
   }
+}
+
+/// When a device was last seen, [ms] after the epoch, as "5m ago".
+String _seen(int ms) {
+  final at = DateTime.fromMillisecondsSinceEpoch(ms);
+  return ago(DateTime.now().difference(at), at);
 }

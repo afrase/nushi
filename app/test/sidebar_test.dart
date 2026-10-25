@@ -7,7 +7,7 @@ import 'package:nushi/theme/theme.dart';
 import 'fake_daemon.dart';
 
 /// Chats of all five agents, in each status.
-final _chats = [
+final List<Chat> _chats = [
   chat('a', 'claude', 'Fix the login redirect', status: ChatStatus(busy: true)),
   chat(
     'b',

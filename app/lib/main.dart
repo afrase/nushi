@@ -41,7 +41,7 @@ class NushiApp extends StatefulWidget {
 }
 
 class _NushiAppState extends State<NushiApp> {
-  var _mode = ThemeMode.system;
+  ThemeMode _mode = ThemeMode.system;
   final _navigator = GlobalKey<NavigatorState>();
 
   @override

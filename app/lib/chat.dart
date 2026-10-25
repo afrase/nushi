@@ -107,10 +107,9 @@ class ChatState extends ChangeNotifier {
     _seq = s.seq.toInt();
     loaded = true;
     loading = false;
-    for (final e in _early) {
-      _apply(e);
-    }
-    _early.clear();
+    _early
+      ..forEach(_apply)
+      ..clear();
     notifyListeners();
   }
 

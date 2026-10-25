@@ -225,7 +225,7 @@ class _Row extends StatelessWidget {
           SizedBox(
             width: 18,
             child: file == null
-                ? Chevron(open)
+                ? Chevron(open: open)
                 : Text(letter, style: theme.code(color, size: 12)),
           ),
           Expanded(

@@ -64,7 +64,8 @@ void main() {
     expect(
       line,
       contains(
-        'level=ERROR msg="Bad state: broke" source=app from=flutter library="rendering library"',
+        'level=ERROR msg="Bad state: broke" source=app from=flutter '
+        'library="rendering library"',
       ),
     );
     expect(line, contains('stack="#0'));

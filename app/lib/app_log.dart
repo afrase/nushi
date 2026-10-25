@@ -72,7 +72,7 @@ class AppLog {
       return;
     }
     _tokens--;
-    attrs = {...attrs, if (_dropped > 0) 'dropped': '$_dropped'};
+    final all = {...attrs, if (_dropped > 0) 'dropped': '$_dropped'};
     _dropped = 0;
     if (client case final client? when reachable()) {
       try {
@@ -82,7 +82,7 @@ class AppLog {
                 level: level,
                 message: message,
                 stack: stack,
-                attrs: attrs.entries,
+                attrs: all.entries,
               ),
             )
             .timeout(const Duration(seconds: 2));
@@ -93,7 +93,7 @@ class AppLog {
     }
     _toFile(now, level, message, {
       'source': 'app',
-      ...attrs,
+      ...all,
       if (stack.isNotEmpty) 'stack': stack,
     });
   }
@@ -114,7 +114,8 @@ class AppLog {
         f.renameSync('$path.1');
       }
       final line = StringBuffer(
-        'time=${timestamp(t)} level=${level.toUpperCase()} msg=${quote(message)}',
+        'time=${timestamp(t)} level=${level.toUpperCase()} '
+        'msg=${quote(message)}',
       );
       attrs.forEach((k, v) => line.write(' $k=${quote(v)}'));
       f.writeAsStringSync('$line\n', mode: FileMode.append, flush: true);
@@ -128,8 +129,11 @@ class AppLog {
 String timestamp(DateTime t) {
   String two(int n) => '$n'.padLeft(2, '0');
   final o = t.timeZoneOffset, sign = o.isNegative ? '-' : '+';
-  return '${t.year}-${two(t.month)}-${two(t.day)}T${two(t.hour)}:${two(t.minute)}:${two(t.second)}.'
-      '${'${t.millisecond}'.padLeft(3, '0')}$sign${two(o.inHours.abs())}:${two(o.inMinutes.abs() % 60)}';
+  final date = '${t.year}-${two(t.month)}-${two(t.day)}';
+  final time = '${two(t.hour)}:${two(t.minute)}:${two(t.second)}';
+  final ms = '${t.millisecond}'.padLeft(3, '0');
+  final zone = '$sign${two(o.inHours.abs())}:${two(o.inMinutes.abs() % 60)}';
+  return '${date}T$time.$ms$zone';
 }
 
 /// [s] as Go's slog text format writes a value: bare when it can be, else

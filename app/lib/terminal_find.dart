@@ -29,11 +29,11 @@ String wordAt(Terminal terminal, CellOffset at) {
   return left.substring(start) + (end < 0 ? right : right.substring(0, end));
 }
 
-/// What a ⌘-click on [word] opens: an http(s) URL, or an existing file or
+/// What a ⌘-click on [clicked] opens: an http(s) URL, or an existing file or
 /// folder (absolute, `~/`, or relative to [folder]), with the line after
 /// it, if any (`main.dart:12:5`).
-({Uri? url, String? path, int? line}) linkOf(String word, String folder) {
-  word = word.replaceFirst(RegExp(r'[.,;:!?]+$'), '');
+({Uri? url, String? path, int? line}) linkOf(String clicked, String folder) {
+  final word = clicked.replaceFirst(RegExp(r'[.,;:!?]+$'), '');
   if (RegExp('^https?://').hasMatch(word)) {
     return (url: Uri.tryParse(word), path: null, line: null);
   }

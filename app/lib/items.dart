@@ -120,6 +120,9 @@ class ItemView extends StatelessWidget {
             ),
           ),
         );
+      // The agent's messages, and kinds a newer daemon sends: ItemKind is
+      // a protobuf enum, so a switch on it can't be exhaustive.
+      // ignore: no_default_cases
       default:
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

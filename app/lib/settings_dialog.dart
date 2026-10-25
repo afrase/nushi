@@ -47,7 +47,10 @@ Future<void> showSettings(
   BuildContext context,
   NushiServiceClient client, {
   bool agents = false,
-}) => showDialog(context: context, builder: (_) => _Settings(client, agents));
+}) => showDialog(
+  context: context,
+  builder: (_) => _Settings(client, agents: agents),
+);
 
 /// The choices for when idle chats sleep, in minutes; 0: never.
 const _sleepAfter = {
@@ -61,7 +64,7 @@ const _sleepAfter = {
 String _sleepLabel(int m) => _sleepAfter[m] ?? '$m minute${m == 1 ? '' : 's'}';
 
 class _Settings extends StatefulWidget {
-  const _Settings(this.client, this.agents);
+  const _Settings(this.client, {required this.agents});
 
   final NushiServiceClient client;
   final bool agents;
@@ -71,7 +74,7 @@ class _Settings extends StatefulWidget {
 }
 
 class _SettingsState extends State<_Settings> {
-  final _families = _monospaced();
+  final Future<List<String>> _families = _monospaced();
   Settings? _set; // the daemon's, once it said
   late bool _agents = widget.agents; // the page shown
 

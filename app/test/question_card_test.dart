@@ -149,7 +149,7 @@ void main() {
         ),
       ],
     );
-    Future<void> show(bool card) => tester.pumpWidget(
+    Future<void> show({required bool card}) => tester.pumpWidget(
       MaterialApp(
         theme: const NushiTheme(Tokens.dark).toThemeData(),
         home: Scaffold(
@@ -167,9 +167,9 @@ void main() {
         ),
       ),
     );
-    await show(false);
+    await show(card: false);
     draftFocus.requestFocus();
-    await show(true); // the question arrives while the user writes
+    await show(card: true); // the question arrives while the user writes
     await tester.pump();
     expect(draftFocus.hasPrimaryFocus, isTrue);
 
@@ -200,7 +200,7 @@ void main() {
         choice('question_0', 'Color', ['red', 'green']),
       ],
     );
-    Future<void> show(bool card) => tester.pumpWidget(
+    Future<void> show({required bool card}) => tester.pumpWidget(
       MaterialApp(
         theme: const NushiTheme(Tokens.dark).toThemeData(),
         home: Scaffold(
@@ -225,9 +225,9 @@ void main() {
         ),
       ),
     );
-    await show(false);
+    await show(card: false);
     terminal.requestFocus();
-    await show(true);
+    await show(card: true);
     await tester.pump();
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.sendKeyEvent(LogicalKeyboardKey.digit1);

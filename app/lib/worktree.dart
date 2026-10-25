@@ -10,7 +10,7 @@ import 'theme/theme.dart';
 import 'widgets.dart';
 
 /// The icon that marks a worktree.
-const worktreeIcon = Icons.account_tree_outlined;
+const IconData worktreeIcon = Icons.account_tree_outlined;
 
 /// The Environment card's worktree rows for a chat in a git repository:
 /// for a worktree chat its branch (with the worktree icon) and base; for a
@@ -198,7 +198,7 @@ class WorktreeChoices extends StatelessWidget {
 
   final WorktreePlan plan;
   final bool remove, branch;
-  final void Function(bool remove, bool branch) onChanged;
+  final void Function({required bool remove, required bool branch}) onChanged;
 
   /// The choices that start on for [plan]: (remove, branch).
   static (bool, bool) defaults(WorktreePlan plan) {
@@ -235,10 +235,10 @@ class WorktreeChoices extends StatelessWidget {
     );
     Widget choice(
       String label,
-      String what,
-      bool value,
-      ValueChanged<bool>? onChanged,
-    ) => Row(
+      String what, {
+      required bool value,
+      required ValueChanged<bool>? onChanged,
+    }) => Row(
       children: [
         Checkbox(
           value: value,
@@ -274,8 +274,8 @@ class WorktreeChoices extends StatelessWidget {
         choice(
           'Remove the worktree',
           '.worktrees/${wt.path.split('/').last}',
-          remove,
-          (v) => onChanged(v, branch),
+          value: remove,
+          onChanged: (v) => onChanged(remove: v, branch: branch),
         ),
         if (st.gone)
           note('Its folder was already removed outside Nushi.')
@@ -294,8 +294,10 @@ class WorktreeChoices extends StatelessWidget {
           choice(
             'Delete the branch',
             wt.branch,
-            remove && branch,
-            remove ? (v) => onChanged(remove, v) : null,
+            value: remove && branch,
+            onChanged: remove
+                ? (v) => onChanged(remove: remove, branch: v)
+                : null,
           ),
           if (!remove)
             note(

@@ -137,13 +137,15 @@ typedef Choice = ({String label, String detail, String insert});
 /// The names holding [q], those whose last part starts with it first,
 /// then the shortest.
 List<String> rankChoices(Iterable<String> names, String q) {
-  q = q.toLowerCase();
+  final lower = q.toLowerCase();
   final hits = [
     for (final n in names)
-      if (n.toLowerCase().contains(q)) n,
+      if (n.toLowerCase().contains(lower)) n,
   ];
   int score(String n) =>
-      (n.split(RegExp('[/:]')).last.toLowerCase().startsWith(q) ? 0 : 1000) +
+      (n.split(RegExp('[/:]')).last.toLowerCase().startsWith(lower)
+          ? 0
+          : 1000) +
       n.length;
   hits.sort((a, b) => score(a) - score(b));
   return hits.take(8).toList();

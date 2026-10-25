@@ -14,15 +14,6 @@ import 'theme/theme.dart';
 /// again once it is a few minutes old, since servers connect, sign in and
 /// change outside Nushi too.
 class McpServers extends ChangeNotifier {
-  McpServers._(this.daemon, this.folder) {
-    unawaited(refresh());
-  }
-
-  static final _byFolder = <String, McpServers>{};
-
-  /// How long a list is taken as current.
-  static const fresh = Duration(minutes: 5);
-
   factory McpServers.of(Daemon daemon, String folder) {
     final list = _byFolder[folder] ??= McpServers._(daemon, folder);
     final at = list._at;
@@ -31,6 +22,14 @@ class McpServers extends ChangeNotifier {
     }
     return list;
   }
+  McpServers._(this.daemon, this.folder) {
+    unawaited(refresh());
+  }
+
+  static final _byFolder = <String, McpServers>{};
+
+  /// How long a list is taken as current.
+  static const fresh = Duration(minutes: 5);
 
   final Daemon daemon;
   final String folder;
@@ -78,9 +77,10 @@ class McpServers extends ChangeNotifier {
     // A check that failed leaves the servers unchecked, not "Checking…".
     servers = [
       for (final s in r.servers)
-        r.checkError.isNotEmpty && s.state.isEmpty
-            ? (s.deepCopy()..state = 'unknown')
-            : s,
+        if (r.checkError.isNotEmpty && s.state.isEmpty)
+          s.deepCopy()..state = 'unknown'
+        else
+          s,
     ];
     error = r.checkError;
     loaded = true;

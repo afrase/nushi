@@ -1,3 +1,7 @@
+// The marks' path data runs on over adjacent strings, and SVG path
+// commands need no space between them.
+// ignore_for_file: missing_whitespace_between_adjacent_strings
+
 import 'package:flutter/material.dart';
 import 'package:svg_path/svg_path.dart';
 

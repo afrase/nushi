@@ -208,7 +208,7 @@ class _DiffBoxState extends State<DiffBox> {
         (_) => setComments(chat, [...commentsOf(chat)]),
       );
     }
-    int below(bool old, int line) =>
+    int below(int line, {required bool old}) =>
         min(line, (old ? doc.oldLineCount : doc.newLineCount)) - 1;
     final d = _draft;
     c.inlays = [
@@ -217,7 +217,7 @@ class _DiffBoxState extends State<DiffBox> {
           InlaySpec(
             id: m.id,
             side: m.old ? PaneSide.old : PaneSide.neu,
-            afterLine: m.outdated ? -1 : below(m.old, m.end),
+            afterLine: m.outdated ? -1 : below(m.end, old: m.old),
           ),
       if (d != null) InlaySpec(id: '', side: d.side, afterLine: d.span.end - 1),
     ];
@@ -253,6 +253,7 @@ class _DiffBoxState extends State<DiffBox> {
       for (var i = max(from, 0); i < to; i++)
         if (_controller!.lines.lineAt(side, i) case final line?) line.text,
     ].join('\n');
+    edited?.text = comment;
     final made =
         edited ??
         ReviewComment(
@@ -267,7 +268,6 @@ class _DiffBoxState extends State<DiffBox> {
           after: text(span.end, span.end + 2),
           text: comment,
         );
-    made.text = comment;
     _closeDraft();
     setComments(r.chat, [
       for (final c in commentsOf(r.chat))
@@ -322,7 +322,8 @@ class _DiffBoxState extends State<DiffBox> {
       final placeholder = Center(
         child: Text(
           long
-              ? 'Too long to diff here: ${_lines(d.oldText)} → ${_lines(d.newText)} lines'
+              ? 'Too long to diff here: '
+                    '${_lines(d.oldText)} → ${_lines(d.newText)} lines'
               : '',
           style: theme.ui(theme.t.textMuted, size: 12),
         ),

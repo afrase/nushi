@@ -110,7 +110,7 @@ class _SidebarState extends State<Sidebar> {
                       ),
                       child: Row(
                         children: [
-                          Chevron(_showArchived, size: 16),
+                          Chevron(open: _showArchived, size: 16),
                           const SizedBox(width: 4),
                           Text(
                             'Archived  ${archived.length}',

@@ -44,10 +44,10 @@ class Pickers extends StatelessWidget {
     /// [values] of [o] (all of them by default) under their groups' names,
     /// each description on its row, or with [tips] as its tooltip.
     List<MenuEntry> rows(
-      ConfigOption o, [
+      ConfigOption o, {
       List<ConfigValue>? values,
       bool tips = false,
-    ]) {
+    }) {
       String? group;
       return [
         for (final v in values ?? _values(o)) ...[
@@ -68,7 +68,7 @@ class Pickers extends StatelessWidget {
         MenuEntry(
           name,
           detail: vs == null ? _current(o) : '',
-          submenu: rows(o, vs, o == model),
+          submenu: rows(o, values: vs, tips: o == model),
         );
 
     // The first four models, skipping the agent's "use the default"; the
@@ -104,7 +104,7 @@ class Pickers extends StatelessWidget {
             onClose: onClose,
             digits: true,
             entries: [
-              if (model != null) ...rows(model, top, true),
+              if (model != null) ...rows(model, values: top, tips: true),
               if (model != null && effort != null) MenuEntry.divider,
               if (effort != null) submenu('Effort', effort),
               if (model != null && more.isNotEmpty)

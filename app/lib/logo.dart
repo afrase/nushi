@@ -19,7 +19,7 @@ class Logo extends StatelessWidget {
 const _light = Color(0xFFF5A524);
 
 // On a 100-unit grid: radius, stroke, segments, drawn share, rotation.
-const _rings = [
+const List<(double, double, int, double, double)> _rings = [
   (31.0, 2.8, 4, 40 / 48.7, 0.0),
   (19.0, 2.8, 4, 24 / 29.85, 30.0),
 ];
