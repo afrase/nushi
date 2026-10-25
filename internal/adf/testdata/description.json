@@ -1,0 +1,694 @@
+{
+ "type": "doc",
+ "version": 1,
+ "content": [
+  {
+   "type": "heading",
+   "attrs": {
+    "level": 1
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "A heading"
+    }
+   ]
+  },
+  {
+   "type": "heading",
+   "attrs": {
+    "level": 2
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "A smaller one"
+    }
+   ]
+  },
+  {
+   "type": "heading",
+   "attrs": {
+    "level": 3
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "And smaller"
+    }
+   ]
+  },
+  {
+   "type": "paragraph",
+   "content": [
+    {
+     "type": "text",
+     "text": "Some "
+    },
+    {
+     "type": "text",
+     "text": "bold",
+     "marks": [
+      {
+       "type": "strong"
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "text": ", "
+    },
+    {
+     "type": "text",
+     "text": "italic",
+     "marks": [
+      {
+       "type": "em"
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "text": ", "
+    },
+    {
+     "type": "text",
+     "text": "underlined",
+     "marks": [
+      {
+       "type": "underline"
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "text": ", "
+    },
+    {
+     "type": "text",
+     "text": "struck",
+     "marks": [
+      {
+       "type": "strike"
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "text": ", "
+    },
+    {
+     "type": "text",
+     "text": "monospace",
+     "marks": [
+      {
+       "type": "code"
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "text": ", "
+    },
+    {
+     "type": "text",
+     "text": "super",
+     "marks": [
+      {
+       "type": "subsup",
+       "attrs": {
+        "type": "sup"
+       }
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "text": " and "
+    },
+    {
+     "type": "text",
+     "text": "sub",
+     "marks": [
+      {
+       "type": "subsup",
+       "attrs": {
+        "type": "sub"
+       }
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "text": " text, a "
+    },
+    {
+     "type": "text",
+     "text": "link",
+     "marks": [
+      {
+       "type": "link",
+       "attrs": {
+        "href": "https://example.com"
+       }
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "text": " and "
+    },
+    {
+     "type": "text",
+     "text": "red",
+     "marks": [
+      {
+       "type": "textColor",
+       "attrs": {
+        "color": "#ff5630"
+       }
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "text": "."
+    },
+    {
+     "type": "hardBreak"
+    },
+    {
+     "type": "text",
+     "text": "A second line in the same paragraph."
+    }
+   ]
+  },
+  {
+   "type": "bulletList",
+   "content": [
+    {
+     "type": "listItem",
+     "content": [
+      {
+       "type": "paragraph",
+       "content": [
+        {
+         "type": "text",
+         "text": "one"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "type": "listItem",
+     "content": [
+      {
+       "type": "paragraph",
+       "content": [
+        {
+         "type": "text",
+         "text": "two"
+        }
+       ]
+      },
+      {
+       "type": "bulletList",
+       "content": [
+        {
+         "type": "listItem",
+         "content": [
+          {
+           "type": "paragraph",
+           "content": [
+            {
+             "type": "text",
+             "text": "two and a half"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "type": "listItem",
+     "content": [
+      {
+       "type": "paragraph",
+       "content": [
+        {
+         "type": "text",
+         "text": "three"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "orderedList",
+   "attrs": {
+    "order": 1
+   },
+   "content": [
+    {
+     "type": "listItem",
+     "content": [
+      {
+       "type": "paragraph",
+       "content": [
+        {
+         "type": "text",
+         "text": "first"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "type": "listItem",
+     "content": [
+      {
+       "type": "paragraph",
+       "content": [
+        {
+         "type": "text",
+         "text": "second"
+        }
+       ]
+      },
+      {
+       "type": "orderedList",
+       "attrs": {
+        "order": 1
+       },
+       "content": [
+        {
+         "type": "listItem",
+         "content": [
+          {
+           "type": "paragraph",
+           "content": [
+            {
+             "type": "text",
+             "text": "nested"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "type": "listItem",
+     "content": [
+      {
+       "type": "paragraph",
+       "content": [
+        {
+         "type": "text",
+         "text": "third"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "codeBlock",
+   "attrs": {
+    "language": "go"
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "func main() {\n\tfmt.Println(\"hi\")\n}"
+    }
+   ]
+  },
+  {
+   "type": "codeBlock",
+   "content": [
+    {
+     "type": "text",
+     "text": "plain block"
+    }
+   ]
+  },
+  {
+   "type": "blockquote",
+   "content": [
+    {
+     "type": "paragraph",
+     "content": [
+      {
+       "type": "text",
+       "text": "A quote."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "panel",
+   "content": [
+    {
+     "type": "paragraph",
+     "content": [
+      {
+       "type": "text",
+       "text": "A panel",
+       "marks": [
+        {
+         "type": "strong"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "type": "paragraph",
+     "content": [
+      {
+       "type": "text",
+       "text": "Panel text."
+      }
+     ]
+    }
+   ],
+   "attrs": {
+    "panelType": "info"
+   }
+  },
+  {
+   "type": "paragraph",
+   "content": [
+    {
+     "type": "text",
+     "text": "{info}Info panel{info}"
+    },
+    {
+     "type": "hardBreak"
+    },
+    {
+     "type": "text",
+     "text": "{note}Note panel{note}"
+    },
+    {
+     "type": "hardBreak"
+    },
+    {
+     "type": "text",
+     "text": "{warning}Warning panel{warning}"
+    },
+    {
+     "type": "hardBreak"
+    },
+    {
+     "type": "text",
+     "text": "{tip}Tip panel{tip}"
+    }
+   ]
+  },
+  {
+   "type": "table",
+   "attrs": {
+    "isNumberColumnEnabled": false,
+    "layout": "default"
+   },
+   "content": [
+    {
+     "type": "tableRow",
+     "content": [
+      {
+       "type": "tableHeader",
+       "attrs": {},
+       "content": [
+        {
+         "type": "paragraph",
+         "content": [
+          {
+           "type": "text",
+           "text": "Name",
+           "marks": [
+            {
+             "type": "strong"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "tableHeader",
+       "attrs": {},
+       "content": [
+        {
+         "type": "paragraph",
+         "content": [
+          {
+           "type": "text",
+           "text": "Value",
+           "marks": [
+            {
+             "type": "strong"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "type": "tableRow",
+     "content": [
+      {
+       "type": "tableCell",
+       "attrs": {},
+       "content": [
+        {
+         "type": "paragraph",
+         "content": [
+          {
+           "type": "text",
+           "text": "alpha"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "tableCell",
+       "attrs": {},
+       "content": [
+        {
+         "type": "paragraph",
+         "content": [
+          {
+           "type": "text",
+           "text": "1"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "type": "tableRow",
+     "content": [
+      {
+       "type": "tableCell",
+       "attrs": {},
+       "content": [
+        {
+         "type": "paragraph",
+         "content": [
+          {
+           "type": "text",
+           "text": "beta"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "tableCell",
+       "attrs": {},
+       "content": [
+        {
+         "type": "paragraph",
+         "content": [
+          {
+           "type": "text",
+           "text": "2",
+           "marks": [
+            {
+             "type": "strong"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "paragraph",
+   "content": [
+    {
+     "type": "text",
+     "text": "Hey "
+    },
+    {
+     "type": "mention",
+     "attrs": {
+      "id": "557058:00000000-0000-0000-0000-000000000001",
+      "text": "@Test User",
+      "accessLevel": ""
+     }
+    },
+    {
+     "type": "text",
+     "text": " "
+    },
+    {
+     "type": "emoji",
+     "attrs": {
+      "shortName": ":slight_smile:",
+      "id": "1f642",
+      "text": "🙂"
+     }
+    },
+    {
+     "type": "text",
+     "text": " "
+    },
+    {
+     "type": "emoji",
+     "attrs": {
+      "shortName": ":check_mark:",
+      "id": "atlassian-check_mark",
+      "text": ":check_mark:"
+     }
+    },
+    {
+     "type": "text",
+     "text": " "
+    },
+    {
+     "type": "emoji",
+     "attrs": {
+      "shortName": ":cross_mark:",
+      "id": "atlassian-cross_mark",
+      "text": ":cross_mark:"
+     }
+    },
+    {
+     "type": "text",
+     "text": " "
+    },
+    {
+     "type": "emoji",
+     "attrs": {
+      "shortName": ":warning:",
+      "id": "atlassian-warning",
+      "text": ":warning:"
+     }
+    },
+    {
+     "type": "text",
+     "text": " "
+    }
+   ]
+  },
+  {
+   "type": "rule"
+  },
+  {
+   "type": "heading",
+   "attrs": {
+    "level": 3
+   },
+   "content": [
+    {
+     "type": "text",
+     "text": "Acceptance criteria"
+    }
+   ]
+  },
+  {
+   "type": "bulletList",
+   "content": [
+    {
+     "type": "listItem",
+     "content": [
+      {
+       "type": "paragraph",
+       "content": [
+        {
+         "type": "text",
+         "text": "It works"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "type": "listItem",
+     "content": [
+      {
+       "type": "paragraph",
+       "content": [
+        {
+         "type": "text",
+         "text": "It is tested"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "paragraph",
+   "content": [
+    {
+     "type": "text",
+     "text": "An image:"
+    }
+   ]
+  },
+  {
+   "type": "mediaSingle",
+   "attrs": {
+    "layout": "center"
+   },
+   "content": [
+    {
+     "type": "media",
+     "attrs": {
+      "type": "file",
+      "id": "fa78893e-e7e6-4f5e-885b-d0f99f145599",
+      "collection": "",
+      "height": 183,
+      "width": 200
+     }
+    }
+   ]
+  }
+ ]
+}
