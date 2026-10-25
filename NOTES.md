@@ -1,5 +1,30 @@
 # Notes
 
+## Summary of the reopen fix (after step 215: a chat that couldn't reopen recovers on its own)
+
+Steps 211–215, one commit each on `main`, all pushed; `make check` passed before each push. **API 54** (`ReopenChat`, `ChatStatus.reopen_failed`).
+
+- **No rubber-band bounce** (step 211, added mid-milestone): `NativeScroll` clamps (`ClampingScrollPhysics` under `RangeMaintainingScrollPhysics`), the overlay scrollbar kept. Nothing else set bouncing physics (diff_view clamps its own lists, xterm2 scrolls itself). `BottomFollower` lost its branch for a bounce past the bottom; its test now runs under the app's behaviour: a fling never passes the bottom, following holds, Jump to latest follows again. No golden changed.
+- **The bug**: a failed reopen set `reopenFailed`, tried again only on a message, a reload or a move, and the status called the chat "asleep". Now (steps 212–214):
+  - **An agent becoming ready** (Set up done, or any listing of the agents finding it ready, e.g. after an update or an install in a terminal) clears the not-ready failures of its chats (`chats.AgentReady`), starting no agent. The app reopens the shown one at once (its status event flips, and it asks `ReopenChat`); the rest reopen when next shown.
+  - **Showing a chat** (picking it, or the app coming to the front, `AppLifecycleListener.onResume`) asks `ReopenChat`: a failed reopen tries again once per call, unless what stopped it still holds (its folder is gone, or `Kind.Ready`, which asks `agents.Run`, says the agent still isn't ready); then the notice is brought up to date and nothing starts. A sleeping chat stays asleep. A chat that keeps failing tries once per show: the app asks only on a show, never on a status change it caused.
+  - **The notice says what helps**, one per chat, replaced by the next failure's, gone once the chat runs (`Dropped`): reason `not_ready` (Set up…: Settings › Agents with the agent's row marked), `folder_gone` (Move…: the folder picker; a removed worktree too), else `reopen_failed` (Try again). The text stays the daemon's ("Couldn't reopen the chat: Claude isn't set up: Settings › Agents").
+  - **The header and sidebar** say "couldn't start" with an error mark (not the moon); the status bar doesn't count such a chat as awake (its tooltip says how many couldn't start).
+- **Checked**: a folder that's gone (`folder_gone`, Move…; showing it starts nothing until the folder is back), the adapter removed in Settings (its chats sleep; a message then fails `not_ready`, Set up…; the queued message goes once it reopens), the CLI uninstalled while a chat ran (its agent quit; the next reopen fails `not_ready`: "Claude isn't installed: there's no claude on PATH", Set up…, the row says Get it).
+
+**Tried by hand** (a dev daemon on a temp data folder with `HOME` in it, the fake agent as Claude, through the API with curl over the socket; no app window): two Claude chats with a message each, the daemon restarted with the adapter gone: both opened, each `reopen_failed` in the status (not asleep) and one `not_ready` notice; `ReopenChat` started nothing; the adapter put back and the agents listed: both cleared ("chat may reopen" logged), no agent started; `ReopenChat` on one reopened it and its notice went, the other stayed until its own; a folder removed and put back; RemoveAgent then a message, then set up again: the queued message went; the CLI removed with the chat running, then put back between two listings, which found the bug fixed in step 214.
+
+**Not tried by hand**: anything in the app window (the rule for this milestone: no clicks or keys while you may be at the screen, and a screenshot needs the window in front): the buttons, the header's words, the status flip reopening the shown chat, the app coming to the front; widget tests and goldens (`reopen_test.dart`, `agents_page_test.dart`, both themes) cover them, against a fake daemon. Set up through the API (`npm` isn't on the test PATH; a unit test covers `SetUp` telling the chats). Move… on a chat whose folder is gone (the fake agent keeps no Claude history to copy; the daemon's move of such a chat has its test since milestone X). A real Claude.
+
+**Needs your attention**
+- **API 54**: `make install` done and the installed daemon restarted (below); no Nushi was open. Open it as usual.
+
+**Size**: the daemon went from 21,303 to 21,403 lines of Go, the app from 19,935 to 20,017 lines of Dart. No step over the ~500-line tripwire (212 is about 330 with tests and generated code left out).
+
+**Install check**: `make install` (also copied to your iCloud Downloads), then the installed daemon (pid 46453, step 210's) stopped by its PID and the helper opened as the app does: `nushid started version="c0f340f938cf-dirty go1.27.3" … api=54` (dirty: these notes).
+
+**Left behind by the testing**: nothing: the dev daemon and the fake agents stopped by PID, the temp folder (`/tmp/nro.*`: data, `HOME`, the chats' folders, the builds) removed. No real Claude or Codex ran; nothing outside the temp folder was written.
+
 ## Summary of the Jira follow-up (after step 210: new work from a ticket)
 
 Steps 204–210, one commit each on `main`, all pushed; `make check` passed before each push. **API 53** (`FindJiraIssues`; `GetJiraContext` gone; `StartChat` takes any branch git takes).
@@ -412,6 +437,12 @@ Milestone V is phase 1 of mobile: a relay, an end-to-end Noise channel, pairing 
 
 **Left behind by the testing**: nothing. The dev chats were deleted with Delete (Claude's and Ante's histories with them); the measuring harness's two Claude sessions and their project folders, its Ante session, eight Ante logs and `~/.ante/run/` were removed; `~/.ante` is as it was (file list and checksums). The dev data folder, the temp Codex and omp homes, the scratch folders and the harness were removed. The key is in no file under them, the scratchpad or the repository (grep, the key on stdin); the only hit elsewhere is the milestone S transcript above.
 
+## Demo (the reopen fix, steps 211–215)
+
+1. Settings › Agents › Remove on Claude; in a Claude chat, send a message: "Couldn't reopen the chat: Claude isn't set up: Settings › Agents", Set up…, the header "couldn't start".
+2. Set up… opens Settings on Claude's row (marked); Set up; close Settings: the chat reopens by itself and the notice goes, the queued message is sent.
+3. Scroll a long chat to its bottom and past it: it stops, no bounce.
+
 ## Demo (the Jira follow-up, steps 204–210)
 
 1. ⌘N in a repository's folder (its +): I, paste an issue's link from the browser (or type its key, or words of it), Enter: "Chat on ABC-12", a worktree on `ABC-12-…` ticked. B to rename the branch, W to drop the worktree, ⌫ to drop the issue.
@@ -756,6 +787,7 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 212. A chat that couldn't reopen recovers (API 54): its one notice says why with a reason for what helps (`not_ready`: its agent isn't set up or installed, from `Kind.Ready`, which asks `agents.Run`; `folder_gone`; `reopen_failed`), replaced by the next failure's, gone once the chat runs; its status says `ReopenFailed`, not `Asleep`; `ReopenChat` (the app showing the chat, or Try again) tries a failed reopen again once a call, unless its folder is still gone or its agent still not ready; `AgentReady` (after Set up, or Settings › Agents' detection finding an agent ready where it wasn't) clears the not-ready failures of that agent's chats, starting none: each reopens when it's next shown | 21409 | 0 | 19933 | 1929 | 1181 |
 | 213. The app's side: a chat picked, the app coming to the front (`AppLifecycleListener`), or the shown chat's failure cleared (its agent ready) asks `ReopenChat`; a failed reopen's notice has its button (Set up… opens Settings › Agents with the agent's row marked, Move… the folder picker without the worktree question, Try again `ReopenChat`); the header and sidebar say "couldn't start" with an error mark, not "asleep"; the status bar doesn't count such a chat awake; `moveChat` out of the folder button | 21409 | 0 | 20017 | 1929 | 1181 |
 | 214. By hand (a dev daemon on a temp folder, the fake agent as Claude, through the API): an agent found ready by detection didn't clear a chat's failure when it had been ready at the last listing (the CLI removed and put back between two listings); every listing now tells the chats of each ready agent, which only clears not-ready failures (logged "chat may reopen") | 21403 | 0 | 20017 | 1929 | 1181 |
+| 215. The docs: the summary, the demo, decisions to revisit, ADR 0032 amended (a chat that couldn't reopen isn't asleep; showing it tries again), ADR 0037's note on chats reopening once their agent is set up | 21403 | 0 | 20017 | 1929 | 1181 |
 
 Steps over the ~500-line tripwire (code and tests, without generated code): 189, 190, 191, 193, 194, 195, 196, 197, 198, 199 (milestone AE: see its summary), 177 (about 960 added and 1,890 removed, without tests: `acp/` and everything that used it go together), 153 (about 2,600 with its tests and the fake pig: PiG's whole bridge), 139 (753 with NOTES: installing, running, the local-registry test), 141 (587, the Agents page), 132 (830, open sessions and forks for four agents), 131 (544, the sessions step), 127 (504, listing), 98 (2,384 with its tests: Ante's whole bridge and its fake), 99 (901: two agents, two trust packages, the shared trust files), 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 removed more than it added.
 
@@ -1055,6 +1087,7 @@ What changed in milestone Z:
 
 Open questions; what's settled is in `docs/adr/` or in the code.
 
+- New in the reopen fix: a failed reopen isn't retried in the background, only when the chat is shown (picked, or the app comes to the front) or Try again; a hidden chat whose agent became ready says "asleep" until shown. "Set up…" is the button for an agent not installed too (its row says Get it). A removed worktree gets Move… like a gone folder, not Delete. The scroll bounce is gone everywhere, the macOS look of it with it.
 - New in AE: Jira lives in a view in the chat's place (⌘J, the sidebar's foot), as the MCP view; one site shows at a time, the one last picked. Lists and the open issue are asked for again each minute while the view shows, never otherwise; a failed poll keeps what shows.
 - New in AE: the Sprint list is one board's active sprint, picked once per site; a board with two active sprints shows the first.
 - New in AE: a token's expiry is warned about (14 days before) only when you gave its date: Jira's API doesn't say it.
