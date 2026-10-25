@@ -160,6 +160,12 @@ func (c *Client) DeleteSession(ctx context.Context, req DeleteSessionRequest) er
 	return c.conn.call(ctx, "session/delete", req, nil)
 }
 
+// ListSessions lists the agent's sessions (session/list), a page at a time.
+func (c *Client) ListSessions(ctx context.Context, req ListSessionsRequest) (*ListSessionsResponse, error) {
+	var resp ListSessionsResponse
+	return &resp, c.conn.call(ctx, "session/list", req, &resp)
+}
+
 func (c *Client) NewSession(ctx context.Context, req NewSessionRequest) (*NewSessionResponse, error) {
 	var resp NewSessionResponse
 	return &resp, c.conn.call(ctx, "session/new", req, &resp)

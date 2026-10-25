@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strconv"
 	"sync"
 	"time"
 
@@ -35,6 +36,12 @@ type fakeAgent struct {
 	deletes   bool
 	deleteErr error
 	noLoad    bool // it can't reopen sessions
+	// lists makes it able to list sessions: listed, listPage at a time
+	// (all at once for 0), the cursor being the next one's index.
+	lists    bool
+	listed   []acp.SessionInfo
+	listPage int
+	listed1  []acp.ListSessionsRequest // the list requests it had
 
 	mu           sync.Mutex
 	gate         chan struct{} // when set, a prompt's turn runs until it is closed
@@ -124,8 +131,12 @@ func (p *proc) DeleteSession(ctx context.Context, req acp.DeleteSessionRequest) 
 
 func (f *fakeAgent) Initialize(context.Context, acp.InitializeRequest) (*acp.InitializeResponse, error) {
 	caps := &acp.AgentCapabilities{LoadSession: !f.noLoad, PromptCapabilities: &acp.PromptCapabilities{Image: true}}
+	caps.SessionCapabilities = &acp.SessionCapabilities{}
 	if f.deletes {
-		caps.SessionCapabilities = &acp.SessionCapabilities{Delete: &acp.SessionDeleteCapabilities{}}
+		caps.SessionCapabilities.Delete = &acp.SessionDeleteCapabilities{}
+	}
+	if f.lists {
+		caps.SessionCapabilities.List = &acp.SessionListCapabilities{}
 	}
 	return &acp.InitializeResponse{ProtocolVersion: acp.Version, AgentInfo: &acp.Implementation{Name: "@agentclientprotocol/claude-agent-acp"},
 		AgentCapabilities: caps}, nil
@@ -138,6 +149,22 @@ func (f *fakeAgent) NewSession(ctx context.Context, _ acp.NewSessionRequest) (*a
 	resp := f.session
 	resp.SessionID = "s1"
 	return &resp, nil
+}
+
+func (f *fakeAgent) ListSessions(_ context.Context, req acp.ListSessionsRequest) (*acp.ListSessionsResponse, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.listed1 = append(f.listed1, req)
+	from, _ := strconv.Atoi(req.Cursor)
+	to := len(f.listed)
+	if f.listPage > 0 {
+		to = min(to, from+f.listPage)
+	}
+	resp := &acp.ListSessionsResponse{Sessions: slices.Clone(f.listed[from:to])}
+	if to < len(f.listed) {
+		resp.NextCursor = strconv.Itoa(to)
+	}
+	return resp, nil
 }
 
 func (f *fakeAgent) LoadSession(_ context.Context, req acp.LoadSessionRequest) (*acp.LoadSessionResponse, error) {
@@ -282,6 +309,7 @@ func (f *fakeAgent) SetMode(_ context.Context, req acp.SetSessionModeRequest) er
 type memSessions struct {
 	mu        sync.Mutex
 	saved     []model.Session
+	stored    []model.Session // what Sessions returns
 	deleteErr error
 }
 
@@ -292,7 +320,7 @@ func (m *memSessions) SaveSession(s model.Session) error {
 	return nil
 }
 
-func (m *memSessions) Sessions() ([]model.Session, error) { return nil, nil }
+func (m *memSessions) Sessions() ([]model.Session, error) { return m.stored, nil }
 
 func (m *memSessions) DeleteSession(string) error { return m.deleteErr }
 

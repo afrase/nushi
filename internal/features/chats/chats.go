@@ -27,6 +27,7 @@ type Agent interface {
 	StartPrompt(acp.PromptRequest) (wait func(context.Context) (*acp.PromptResult, error), err error)
 	SetConfigOption(context.Context, acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error)
 	SetMode(context.Context, acp.SetSessionModeRequest) error
+	ListSessions(context.Context, acp.ListSessionsRequest) (*acp.ListSessionsResponse, error)
 	Cancel(acp.CancelNotification) error
 	CanSteer() bool
 	Steer(context.Context, acp.SessionID, []acp.ContentBlock) (bool, error)
