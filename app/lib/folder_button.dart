@@ -113,30 +113,33 @@ class FolderButton extends StatelessWidget {
             ? const EdgeInsets.only(left: 6)
             : const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
         child: stacked
-            ? Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+            // The chevron beside both lines, so the parent's right edge
+            // lines up with the name's.
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Flexible(
-                        child: Text(
+                  Flexible(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
                           name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: nameStyle,
                         ),
-                      ),
-                      if (enabled) chevron,
-                    ],
-                  ),
-                  if (parent.isNotEmpty)
-                    Text(
-                      parent,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: parentStyle,
+                        if (parent.isNotEmpty)
+                          Text(
+                            parent,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: parentStyle,
+                          ),
+                      ],
                     ),
+                  ),
+                  if (enabled) chevron,
                 ],
               )
             : Row(
