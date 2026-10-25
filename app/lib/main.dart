@@ -12,6 +12,7 @@ import 'details_panel.dart';
 import 'folder_button.dart';
 import 'logo.dart';
 import 'mcp.dart';
+import 'new_chat.dart';
 import 'panes.dart';
 import 'remote.dart';
 import 'settings.dart';
@@ -68,6 +69,17 @@ class _NushiAppState extends State<NushiApp> {
         ],
       ),
       PlatformMenu(
+        label: 'File',
+        menus: [
+          PlatformMenuItem(
+            label: 'New Chat…',
+            shortcut: newChatKey,
+            onSelected: () =>
+                newChat(_navigator.currentContext!, widget.daemon, ''),
+          ),
+        ],
+      ),
+      PlatformMenu(
         label: 'View',
         menus: [
           _appearance('Light Appearance', ThemeMode.light),
@@ -84,13 +96,23 @@ class _NushiAppState extends State<NushiApp> {
       darkTheme: const NushiTheme(Tokens.dark).toThemeData(),
       themeMode: _mode,
       scrollBehavior: const NativeScroll(),
-      // The menu's ⌘, doesn't reach the menu while Flutter has the keys.
+      // The menu's ⌘, and ⌘N don't reach the menu while Flutter has the
+      // keys.
       home: Builder(
         builder: (context) => CallbackShortcuts(
           bindings: {
             settingsKey: () => showSettings(context, widget.daemon.client),
+            newChatKey: () => newChat(context, widget.daemon, ''),
           },
-          child: Scaffold(body: _Shell(widget.daemon)),
+          // A terminal, which keeps ⌘ keys, sends ⌘N here.
+          child: Actions(
+            actions: {
+              NewChatIntent: CallbackAction<NewChatIntent>(
+                onInvoke: (_) => newChat(context, widget.daemon, ''),
+              ),
+            },
+            child: Scaffold(body: _Shell(widget.daemon)),
+          ),
         ),
       ),
     ),

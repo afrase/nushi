@@ -335,26 +335,47 @@ class Daemon extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Starts a chat with [agent] (else the last one used) in [folder], or
-  /// in a scratch folder of its own (''); in a new worktree of its
-  /// repository if that's the choice remembered for it.
-  Future<void> startChat(String folder, {String? agent}) async {
-    agent ??= lastAgent(chats.values);
-    if (!await _mayRun(folder, 'Start a chat', agent)) return;
-    final before = (selectedId, mcpFolder);
-    final resp = await client.startChat(
-      StartChatRequest(
-        agent: agent,
-        folder: folder,
-        worktree: _worktree(folder),
-      ),
-    );
-    chats[resp.chatId] ??= ChatState(resp.chatId, folder);
-    // Not if the user went elsewhere meanwhile: a trust card or another
-    // chat they're on stays.
-    if ((selectedId, mcpFolder) == before && trustAsk == null) {
-      select(resp.chatId);
-    } else {
+  /// The folder a chat is starting in ('' for none), while one is.
+  String? starting;
+
+  /// Why each agent whose last start failed in this run didn't start, as
+  /// the daemon said ("couldn't start Ante: …"); a start that works clears
+  /// it.
+  final cantStart = <String, String>{};
+
+  /// Starts a chat with [agent] in [folder], or in a scratch folder of its
+  /// own (''); in a new worktree of its repository if that's the choice
+  /// remembered for it.
+  Future<void> startChat(String folder, String agent) async {
+    starting = folder;
+    notifyListeners();
+    try {
+      if (!await _mayRun(folder, 'Start a chat', agent)) return;
+      final before = (selectedId, mcpFolder);
+      final StartChatResponse resp;
+      try {
+        resp = await client.startChat(
+          StartChatRequest(
+            agent: agent,
+            folder: folder,
+            worktree: _worktree(folder),
+          ),
+        );
+      } on connect.ConnectException catch (e) {
+        if (e.message.startsWith("couldn't start ")) {
+          cantStart[agent] = e.message;
+        }
+        rethrow;
+      }
+      cantStart.remove(agent);
+      chats[resp.chatId] ??= ChatState(resp.chatId, folder);
+      // Not if the user went elsewhere meanwhile: a trust card or another
+      // chat they're on stays.
+      if ((selectedId, mcpFolder) == before && trustAsk == null) {
+        select(resp.chatId);
+      }
+    } finally {
+      starting = null;
       notifyListeners();
     }
   }

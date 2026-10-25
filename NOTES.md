@@ -262,6 +262,7 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 122. New connections without a request have a budget of their own | 12698 | 984 | 14777 | 1759 | 1170 |
 | 123. The icon, the still lake | 12698 | 984 | 14857 | 1759 | 1170 |
 | 124. Agent marks: one per agent, in the sidebar, the header and the status bar (`packages/svg_path`) | 12698 | 984 | 15027 | 1864 | 1170 |
+| 125. New chat asks which agent, in a dialog; ⌘N | 12698 | 984 | 15182 | 1864 | 1170 |
 
 Steps over the ~500-line tripwire (code and tests, without generated code): 98 (2,384 with its tests: Ante's whole bridge and its fake), 99 (901: two agents, two trust packages, the shared trust files), 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 removed more than it added.
 
@@ -464,7 +465,9 @@ Open questions; what's settled is in `docs/adr/` or in the code.
 - New in T: omp starts on its default model (Kimi K3, max effort): the start mode is remembered per agent, the model isn't.
 - New in T: the omp trust card shows code and settings from `.claude`, `.codex`, `.gemini`, `.opencode` and `.cursor` too, since omp loads them: a repository with Claude hooks asks once for omp as well.
 
-- New in S: "New chat" starts the agent of the newest chat (archived ones count), else the first the daemon lists (Claude); the menu beside it, and "New chat here" on a folder, pick another. The button names the agent ("New Codex chat"). Nothing is stored for it.
+- New in W: every way to start a chat (the "New chat" button, ⌘N, a folder's + and "New chat here") opens one dialog that picks the agent, the one of the newest chat picked (archived ones count; else the first the daemon lists). Digits start an agent at once, as they pick in the app's menus; the arrows only move. ⌘N (also from a terminal) starts with no folder, as the button does. An agent whose start failed in this run of the app ("couldn't start …" from the daemon) shows dimmed with the first clause of why, and isn't picked; it can still be started, and once it starts it's as before. The app keeps that, not the daemon (no API change): another app or a restart of the app forgets it.
+- New in W: a sidebar row is the status (unchanged, first), the agent's mark, then the title. The marks are one color (the row's secondary text), so the status keeps the only color in the row.
+- New in S: a chat keeps its agent for good. Nothing is stored for the agent a new chat starts with.
 - New in S: a chat whose agent the daemon no longer knows can't be opened, renamed or deleted from Nushi ("Nushi doesn't know the agent").
 - New in S: Codex's Delete archives (codex-acp's `session/delete`); Nushi doesn't run `codex delete` to delete for good. Side questions and throwaway forks pile up in `archived_sessions` the same way.
 - New in S: after a Rewind Codex titles the chat after the next message (its fork has no name); Claude's chats keep theirs. A Codex Rewind drops from the transcript what came after the agent's last text in that turn, which Codex's fork keeps.

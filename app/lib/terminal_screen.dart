@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:xterm2/xterm.dart';
 
 import 'gen/nushi/v1/nushi.pb.dart' as pb;
+import 'new_chat.dart';
 import 'settings.dart';
 import 'settings_dialog.dart';
 import 'terminal_find.dart';
@@ -49,6 +50,7 @@ class TerminalScreen extends StatelessWidget {
       settingsKey: VoidCallbackIntent(
         () => showSettings(context, terms.client),
       ),
+      newChatKey: const NewChatIntent(),
       cmd(LogicalKeyboardKey.keyF): VoidCallbackIntent(
         () => s.finding.value = true,
       ),

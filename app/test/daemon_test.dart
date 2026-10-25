@@ -149,7 +149,7 @@ void main() {
     addTearDown(d.dispose);
     fake.events.add(EventsResponse());
     await pumpEventQueue();
-    final started = d.startChat('/z');
+    final started = d.startChat('/z', 'claude');
     await pumpEventQueue();
     d.select('a');
     fake.start!.complete(StartChatResponse(chatId: 'new'));

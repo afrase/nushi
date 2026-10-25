@@ -49,7 +49,8 @@ class FakeDaemon implements Transport {
       PingRequest() => PingResponse(apiVersion: apiVersion),
       ListChatsRequest() => ListChatsResponse(chats: chats),
       ListAgentsRequest() => ListAgentsResponse(agents: agents),
-      StartChatRequest() => StartChatResponse(chatId: 'new'),
+      // A chat it has, so the app can show it.
+      StartChatRequest() => StartChatResponse(chatId: chats.first.id),
       _ => spec.outputFactory(),
     };
     return UnaryResponse(spec, Headers(), out as O, Headers());
