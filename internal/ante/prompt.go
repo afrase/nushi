@@ -12,6 +12,7 @@ import (
 	"syscall"
 
 	"github.com/afrase/nushi/acp"
+	"github.com/afrase/nushi/internal/toolcall"
 )
 
 // flatten turns a prompt into the text Ante takes as input: files become
@@ -38,7 +39,7 @@ func flatten(blocks []acp.ContentBlock, dir func() (string, error)) (string, err
 			}
 		case block.Resource != nil && block.Resource.Resource.Text != "":
 			r := block.Resource.Resource
-			fmt.Fprintf(&b, "\n%s:\n%s\n", r.URI, fence(r.Text))
+			fmt.Fprintf(&b, "\n%s:\n%s\n", r.URI, toolcall.Fence(r.Text))
 		case block.Image != nil:
 			path, err := saveImage(dir, block.Image)
 			if err != nil {

@@ -1,0 +1,350 @@
+package pig
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/afrase/nushi/acp"
+	"github.com/afrase/nushi/internal/pig/pigtest"
+	"github.com/afrase/nushi/internal/toolcall"
+)
+
+// client is the ACP client's side of a bridge running on a fake pig.
+type client struct {
+	*acp.Client
+	mu      sync.Mutex
+	updates []acp.SessionNotification
+	forms   []acp.CreateElicitationRequest
+}
+
+func (c *client) SessionUpdate(n acp.SessionNotification) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.updates = append(c.updates, n)
+}
+
+func (c *client) RequestPermission(context.Context, acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
+	return nil, io.EOF
+}
+
+func (c *client) CreateElicitation(_ context.Context, r acp.CreateElicitationRequest) (*acp.CreateElicitationResponse, error) {
+	c.mu.Lock()
+	c.forms = append(c.forms, r)
+	c.mu.Unlock()
+	return &acp.CreateElicitationResponse{Action: "accept", Content: json.RawMessage(`{"answer":"Blue"}`)}, nil
+}
+
+// texts are the session's message chunks so far, joined per message, as
+// kind:id:text.
+func (c *client) texts(sid acp.SessionID) []string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	var out []string
+	last := ""
+	for _, n := range c.updates {
+		var ch *acp.ContentChunk
+		kind := ""
+		switch u := n.Update; {
+		case n.SessionID != sid:
+		case u.UserMessageChunk != nil:
+			ch, kind = u.UserMessageChunk, "user"
+		case u.AgentMessageChunk != nil:
+			ch, kind = u.AgentMessageChunk, "agent"
+		case u.AgentThoughtChunk != nil:
+			ch, kind = u.AgentThoughtChunk, "thought"
+		}
+		if ch == nil {
+			continue
+		}
+		key := kind + ":" + string(ch.MessageID)
+		if key == last {
+			out[len(out)-1] += ch.Content.Text.Text
+		} else {
+			out = append(out, key+":"+ch.Content.Text.Text)
+		}
+		last = key
+	}
+	return out
+}
+
+// find returns the first of the session's updates of kind that ok
+// accepts, waiting a little for it.
+func (c *client) find(t *testing.T, sid acp.SessionID, kind string, ok func(acp.SessionUpdate) bool) acp.SessionUpdate {
+	t.Helper()
+	for range 100 {
+		c.mu.Lock()
+		for _, n := range c.updates {
+			if n.SessionID == sid && n.Update.SessionUpdate == kind && (ok == nil || ok(n.Update)) {
+				c.mu.Unlock()
+				return n.Update
+			}
+		}
+		c.mu.Unlock()
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("no %s", kind)
+	return acp.SessionUpdate{}
+}
+
+// start runs a bridge on a fake pig whose sessions are in store, and
+// initializes it; the bridge's own lines go to log.
+func start(t *testing.T, store *pigtest.Store, log io.Writer) *client {
+	t.Helper()
+	stderr = log
+	t.Cleanup(func() { stderr = os.Stderr })
+	toBridgeR, toBridgeW := io.Pipe()
+	fromBridgeR, fromBridgeW := io.Pipe()
+	spawn := func(cwd string, args ...string) (io.WriteCloser, io.Reader, func(), error) {
+		inR, inW := io.Pipe()
+		outR, outW := io.Pipe()
+		go func() { store.Serve(inR, outW, cwd, args); outW.Close() }()
+		return inW, outR, func() { inR.Close(); outW.Close() }, nil
+	}
+	done := make(chan struct{})
+	go func() {
+		Serve(toBridgeR, fromBridgeW, Config{Spawn: spawn, Dirs: Dirs{Sessions: store.Sessions}, Version: Version})
+		fromBridgeW.Close()
+		close(done)
+	}()
+	c := &client{}
+	c.Client = acp.Connect(fromBridgeR, toBridgeW, c, nil)
+	t.Cleanup(func() { toBridgeW.Close(); <-done })
+	if _, err := c.Initialize(context.Background(), acp.InitializeRequest{ProtocolVersion: 1,
+		ClientCapabilities: &acp.ClientCapabilities{Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}}}}); err != nil {
+		t.Fatal(err)
+	}
+	return c
+}
+
+func prompt(t *testing.T, c *client, sid acp.SessionID, text string) *acp.PromptResult {
+	t.Helper()
+	r, err := c.Prompt(context.Background(), acp.PromptRequest{SessionID: sid, Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: text}}}})
+	if err != nil {
+		t.Fatalf("%s: %v", text, err)
+	}
+	return r
+}
+
+func openNew(t *testing.T, c *client, cwd string) *acp.NewSessionResponse {
+	t.Helper()
+	s, err := c.NewSession(context.Background(), acp.NewSessionRequest{Cwd: cwd, MCPServers: []acp.MCPServer{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s
+}
+
+func options(opts []acp.SessionConfigOption) string {
+	var out []string
+	for _, o := range opts {
+		out = append(out, string(o.ID)+"/"+string(o.Category)+"="+strings.Trim(string(o.CurrentValue), `"`))
+	}
+	return strings.Join(out, " ")
+}
+
+// A turn: the model's text streams under the message's id, its tool call
+// shows with its output, a thought that didn't stream comes with the
+// message's end, the usage follows; a failed model call fails the turn.
+func TestATurn(t *testing.T) {
+	c := start(t, &pigtest.Store{Sessions: t.TempDir()}, io.Discard)
+	s := openNew(t, c, t.TempDir())
+	if got := options(s.ConfigOptions); got != "model/model=fake/m1 thinking/thought_level=low" {
+		t.Errorf("options = %s", got)
+	}
+	r := prompt(t, c, s.SessionID, "hello")
+	if r.StopReason != "end_turn" || r.Usage == nil || r.Usage.TotalTokens != 15 {
+		t.Errorf("result = %+v", r)
+	}
+	texts := c.texts(s.SessionID)
+	if len(texts) != 1 || !strings.HasPrefix(texts[0], "agent:") || !strings.HasSuffix(texts[0], ":You said: hello") {
+		t.Errorf("texts = %q", texts)
+	}
+	u := c.find(t, s.SessionID, "usage_update", nil).UsageUpdate
+	if u.Size != 1000 || u.Cost == nil || u.Cost.Amount != 0.25 {
+		t.Errorf("usage = %+v", u)
+	}
+	prompt(t, c, s.SessionID, "use a tool")
+	call := c.find(t, s.SessionID, "tool_call", nil).ToolCall
+	if call.Title != "ls" || call.Kind != "execute" {
+		t.Errorf("call = %+v", call)
+	}
+	end := c.find(t, s.SessionID, "tool_call_update", func(u acp.SessionUpdate) bool { return u.ToolCallUpdate.Status == "completed" }).ToolCallUpdate
+	if len(end.Content) != 1 || end.Content[0].Content.Content.Text.Text != "```\na.txt\n```" {
+		t.Errorf("end = %+v", end)
+	}
+	prompt(t, c, s.SessionID, "think")
+	texts = c.texts(s.SessionID)
+	if got := strings.Join(texts[len(texts)-2:], " | "); !strings.Contains(got, ":Hmm. | agent:") || !strings.HasPrefix(got, "thought:") {
+		t.Errorf("thought = %q", got)
+	}
+	if _, err := c.Prompt(context.Background(), acp.PromptRequest{SessionID: s.SessionID,
+		Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "fail"}}}}); err == nil || !strings.Contains(err.Error(), "boom") {
+		t.Errorf("failed turn: %v", err)
+	}
+}
+
+// Stop ends a running turn as cancelled; a message sent meanwhile is
+// steered into it.
+func TestCancelAndSteer(t *testing.T) {
+	c := start(t, &pigtest.Store{Sessions: t.TempDir()}, io.Discard)
+	s := openNew(t, c, t.TempDir())
+	done := make(chan *acp.PromptResult)
+	go func() { done <- prompt(t, c, s.SessionID, "wait") }()
+	time.Sleep(50 * time.Millisecond)
+	c.Cancel(acp.CancelNotification{SessionID: s.SessionID})
+	if r := <-done; r.StopReason != "cancelled" {
+		t.Errorf("stop = %s", r.StopReason)
+	}
+	go func() { done <- prompt(t, c, s.SessionID, "wait") }()
+	time.Sleep(50 * time.Millisecond)
+	if ok, err := c.Steer(context.Background(), s.SessionID, []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "turn left"}}}); !ok || err != nil {
+		t.Fatalf("steer = %v, %v", ok, err)
+	}
+	if r := <-done; r.StopReason != "end_turn" {
+		t.Errorf("stop = %s", r.StopReason)
+	}
+	if texts := c.texts(s.SessionID); !strings.HasSuffix(texts[len(texts)-1], "Steered: turn left") {
+		t.Errorf("texts = %q", texts)
+	}
+	if ok, _ := c.Steer(context.Background(), s.SessionID, []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "idle"}}}); ok {
+		t.Error("steered with no turn running")
+	}
+}
+
+// An extension's dialog is a question; its answer goes back, and its
+// notification is a message. pig's lines that aren't JSON, and events
+// nobody knows, are logged and passed over.
+func TestQuestionAndUnknownMessages(t *testing.T) {
+	var log bytes.Buffer
+	var mu sync.Mutex
+	c := start(t, &pigtest.Store{Sessions: t.TempDir()}, writerFunc(func(p []byte) (int, error) {
+		mu.Lock()
+		defer mu.Unlock()
+		return log.Write(p)
+	}))
+	s := openNew(t, c, t.TempDir())
+	if r := prompt(t, c, s.SessionID, "/ask"); r.StopReason != "end_turn" {
+		t.Errorf("stop = %s", r.StopReason)
+	}
+	if len(c.forms) != 1 || c.forms[0].Message != "Pick a colour" || !strings.Contains(string(c.forms[0].RequestedSchema.Properties), `"const":"Blue"`) {
+		t.Fatalf("forms = %+v", c.forms)
+	}
+	c.find(t, s.SessionID, "agent_message_chunk", func(u acp.SessionUpdate) bool { return u.AgentMessageChunk.Content.Text.Text == "Chose Blue" })
+	prompt(t, c, s.SessionID, "garbage")
+	if texts := c.texts(s.SessionID); !strings.HasSuffix(texts[len(texts)-1], "Still here") {
+		t.Errorf("texts = %q", texts)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	for _, want := range []string{"pig wrote a line that isn't JSON (9 bytes)", `an event the bridge doesn't know: "mystery"`, "DEBUG pig-acp: rpc prompt took="} {
+		if !strings.Contains(log.String(), want) {
+			t.Errorf("log lacks %q:\n%s", want, log.String())
+		}
+	}
+}
+
+type writerFunc func([]byte) (int, error)
+
+func (f writerFunc) Write(p []byte) (int, error) { return f(p) }
+
+// PiG's sessions: listed (not forks), loaded with their conversation
+// (the same message ids as live), forked after a turn or whole, deleted.
+func TestSessions(t *testing.T) {
+	store := &pigtest.Store{Sessions: t.TempDir()}
+	c := start(t, store, io.Discard)
+	cwd := t.TempDir()
+	s := openNew(t, c, cwd)
+	prompt(t, c, s.SessionID, "first")
+	prompt(t, c, s.SessionID, "second")
+	live := c.texts(s.SessionID)
+	firstReply := strings.Split(live[0], ":")[1]
+	ctx := context.Background()
+
+	l, err := c.ListSessions(ctx, acp.ListSessionsRequest{Cwd: cwd})
+	if err != nil || len(l.Sessions) != 1 || l.Sessions[0].Title != "first" || l.Sessions[0].SessionID != s.SessionID {
+		t.Fatalf("list = %+v, %v", l, err)
+	}
+	if l, _ := c.ListSessions(ctx, acp.ListSessionsRequest{Cwd: t.TempDir()}); len(l.Sessions) != 0 {
+		t.Errorf("another folder's list = %+v", l.Sessions)
+	}
+
+	f, err := c.ForkSession(ctx, acp.ForkSessionRequest{SessionID: s.SessionID, Cwd: cwd, MCPServers: []acp.MCPServer{},
+		Meta: ForkAt(&acp.InitializeResponse{AgentInfo: &acp.Implementation{Name: AgentName}})(firstReply)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	whole, err := c.ForkSession(ctx, acp.ForkSessionRequest{SessionID: s.SessionID, Cwd: cwd, MCPServers: []acp.MCPServer{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if l, _ := c.ListSessions(ctx, acp.ListSessionsRequest{Cwd: cwd}); len(l.Sessions) != 1 {
+		t.Errorf("forks listed: %+v", l.Sessions)
+	}
+
+	// A second bridge (after a daemon restart) loads each.
+	c2 := start(t, store, io.Discard)
+	load := func(id acp.SessionID) []string {
+		if _, err := c2.LoadSession(ctx, acp.LoadSessionRequest{SessionID: id, Cwd: cwd, MCPServers: []acp.MCPServer{}}); err != nil {
+			t.Fatal(err)
+		}
+		return c2.texts(id)
+	}
+	if got, want := strings.Join(load(s.SessionID), " | "), "user::first | "+live[0]+" | user::second | "+live[1]; got != want {
+		t.Errorf("replay = %s, want %s", got, want)
+	}
+	if got := strings.Join(load(f.SessionID), " | "); got != "user::first | "+live[0] {
+		t.Errorf("fork after the first turn = %s", got)
+	}
+	if got := load(whole.SessionID); len(got) != 4 {
+		t.Errorf("whole fork = %q", got)
+	}
+	if _, err := c2.LoadSession(ctx, acp.LoadSessionRequest{SessionID: s.SessionID, Cwd: t.TempDir(), MCPServers: []acp.MCPServer{}}); err == nil {
+		t.Error("loaded in another folder")
+	}
+
+	if err := c.DeleteSession(ctx, acp.DeleteSessionRequest{SessionID: s.SessionID}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(store.Sessions, string(s.SessionID)+".jsonl")); !os.IsNotExist(err) {
+		t.Errorf("deleted session's file: %v", err)
+	}
+}
+
+// The model and thinking level change through config options.
+func TestOptions(t *testing.T) {
+	c := start(t, &pigtest.Store{Sessions: t.TempDir()}, io.Discard)
+	s := openNew(t, c, t.TempDir())
+	r, err := c.SetConfigOption(context.Background(), acp.SetSessionConfigOptionRequest{SessionID: s.SessionID, ConfigID: "model", Value: json.RawMessage(`"fake/m2"`)})
+	if err != nil || options(r.ConfigOptions) != "model/model=fake/m2 thinking/thought_level=low" {
+		t.Errorf("after the model = %v, %v", options(r.ConfigOptions), err)
+	}
+	r, err = c.SetConfigOption(context.Background(), acp.SetSessionConfigOptionRequest{SessionID: s.SessionID, ConfigID: "thinking", Value: json.RawMessage(`"high"`)})
+	if err != nil || options(r.ConfigOptions) != "model/model=fake/m2 thinking/thought_level=high" {
+		t.Errorf("after thinking = %v, %v", options(r.ConfigOptions), err)
+	}
+}
+
+// Calls as PiG's tools describe them: a command by itself, an edit's
+// changes as diffs, a write's from what the file held.
+func TestToolCalls(t *testing.T) {
+	s := &session{cwd: "/repo"}
+	call := s.toolCall("c1", "edit", json.RawMessage(`{"path":"a.txt","edits":[{"oldText":"two","newText":"three"},{"oldText":"x","newText":"y"}]}`), "in_progress", toolcall.Old{})
+	if call.Title != "edit a.txt" || call.Kind != "edit" || len(call.Content) != 2 || call.Content[0].Diff.OldText != "two" || call.Content[1].Diff.NewText != "y" || call.Content[0].Diff.Path != "/repo/a.txt" {
+		t.Errorf("edit = %+v", call)
+	}
+	call = s.toolCall("c2", "write", json.RawMessage(`{"path":"/abs/b.txt","content":"new"}`), "in_progress", toolcall.Old{Text: "old"})
+	if d := call.Content[0].Diff; d.OldText != "old" || d.NewText != "new" || d.Path != "/abs/b.txt" {
+		t.Errorf("write = %+v", d)
+	}
+	if call := s.toolCall("c3", "grep", json.RawMessage(`{"pattern":"TODO"}`), "", toolcall.Old{}); call.Title != "grep TODO" || call.Kind != "search" {
+		t.Errorf("grep = %+v", call)
+	}
+}

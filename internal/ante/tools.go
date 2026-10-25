@@ -2,16 +2,12 @@ package ante
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
-	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 
 	"github.com/afrase/nushi/acp"
+	"github.com/afrase/nushi/internal/toolcall"
 )
 
 // toolUse is a call of one of Ante's tools (Bash, Read, Write, Edit, Glob,
@@ -55,7 +51,7 @@ type toolArgs struct {
 // the tool and what it works on), its file, and for an edit the change. A
 // Write's old text is what olds has for it (read before the call writes,
 // live; none in a replay).
-func (s *session) toolCall(t toolUse, status string, olds map[string]oldText) acp.ToolCall {
+func (s *session) toolCall(t toolUse, status string, olds map[string]toolcall.Old) acp.ToolCall {
 	var a toolArgs
 	json.Unmarshal(t.Args, &a)
 	call := acp.ToolCall{ToolCallID: acp.ToolCallID(t.ID), Title: t.Name, Kind: kindOf(t.Name), Status: acp.ToolCallStatus(status), RawInput: t.Args}
@@ -79,13 +75,9 @@ func (s *session) toolCall(t toolUse, status string, olds map[string]oldText) ac
 	}
 	switch t.Name {
 	case "Edit":
-		call.Content = []acp.ToolCallContent{diff(path, a.OldString, a.NewString)}
+		call.Content = []acp.ToolCallContent{toolcall.Diff(path, a.OldString, a.NewString)}
 	case "Write":
-		old := olds[t.ID]
-		call.Content = []acp.ToolCallContent{diff(path, old.text, a.Content)}
-		if old.note != "" {
-			call.Content = append(call.Content, text(old.note)...)
-		}
+		call.Content = toolcall.Write(path, olds[t.ID], a.Content)
 	}
 	return call
 }
@@ -97,19 +89,10 @@ func (s *session) path(p string) string {
 	return p
 }
 
-// oldText is what a file held before a Write, for its diff, or why it
-// isn't shown.
-type oldText struct{ text, note string }
-
-// maxOld is the most of a file a diff shows, as the daemon's diffs.
-const maxOld = 1 << 20
-
 // readOlds reads, before the calls run, the files that the Writes an event
-// starts or asks about will replace, by call id. It reads only regular
-// files, without following a link or waiting on a fifo, and at most
-// maxOld: whatever path the model names, it can't block or fill memory.
-// It runs without the session's lock.
-func (s *session) readOlds(ev event) map[string]oldText {
+// starts or asks about will replace, by call id (toolcall.ReadOld). It
+// runs without the session's lock.
+func (s *session) readOlds(ev event) map[string]toolcall.Old {
 	var calls []toolUse
 	switch ev.Name {
 	case "ToolStart":
@@ -127,51 +110,19 @@ func (s *session) readOlds(ev event) map[string]oldText {
 		json.Unmarshal(ev.Payload, &p)
 		calls = p.Reason.Approval.Tools
 	}
-	olds := map[string]oldText{}
+	olds := map[string]toolcall.Old{}
 	for _, t := range calls {
 		if t.Name == "Write" {
 			var a toolArgs
 			json.Unmarshal(t.Args, &a)
-			olds[t.ID] = readOld(s.path(a.FilePath))
+			olds[t.ID] = toolcall.ReadOld(s.path(a.FilePath))
 		}
 	}
 	return olds
 }
 
-func readOld(path string) oldText {
-	fi, err := os.Lstat(path)
-	switch {
-	case path == "" || errors.Is(err, fs.ErrNotExist):
-		return oldText{} // a new file
-	case err != nil || !fi.Mode().IsRegular():
-		return oldText{note: "Not shown: what this replaces isn't a regular file."}
-	case fi.Size() > maxOld:
-		return oldText{note: "Not shown: the file this replaces is over 1 MB."}
-	}
-	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
-	if err != nil {
-		return oldText{note: "Not shown: " + err.Error()}
-	}
-	defer f.Close()
-	if fi, err := f.Stat(); err != nil || !fi.Mode().IsRegular() {
-		return oldText{note: "Not shown: what this replaces isn't a regular file."}
-	}
-	b, err := io.ReadAll(io.LimitReader(f, maxOld+1))
-	switch {
-	case err != nil:
-		return oldText{note: "Not shown: " + err.Error()}
-	case len(b) > maxOld:
-		return oldText{note: "Not shown: the file this replaces is over 1 MB."}
-	}
-	return oldText{text: string(b)}
-}
-
-func diff(path, old, new string) acp.ToolCallContent {
-	return acp.ToolCallContent{Type: "diff", Diff: &acp.Diff{Path: path, OldText: old, NewText: new}}
-}
-
 // announceLocked tells the client of a call.
-func (s *session) announceLocked(t toolUse, status string, olds map[string]oldText) acp.SessionUpdate {
+func (s *session) announceLocked(t toolUse, status string, olds map[string]toolcall.Old) acp.SessionUpdate {
 	s.tools[t.ID] = t.Name
 	call := s.toolCall(t, status, olds)
 	return acp.SessionUpdate{SessionUpdate: "tool_call", ToolCall: &call}
@@ -179,13 +130,13 @@ func (s *session) announceLocked(t toolUse, status string, olds map[string]oldTe
 
 // toolLocked follows a call: it starts (or, after its approval, runs),
 // reports progress, ends.
-func (s *session) toolLocked(ev event, olds map[string]oldText) []acp.SessionUpdate {
+func (s *session) toolLocked(ev event, olds map[string]toolcall.Old) []acp.SessionUpdate {
 	switch ev.Name {
 	case "ToolStart":
 		var t toolUse
 		json.Unmarshal(ev.Payload, &t)
 		if _, ok := s.tools[t.ID]; ok { // shown with its approval
-			return []acp.SessionUpdate{update(acp.ToolCallUpdate{ToolCallID: acp.ToolCallID(t.ID), Status: "in_progress"})}
+			return []acp.SessionUpdate{toolcall.Update(acp.ToolCallUpdate{ToolCallID: acp.ToolCallID(t.ID), Status: "in_progress"})}
 		}
 		return []acp.SessionUpdate{s.announceLocked(t, "in_progress", olds)}
 	case "ToolUpdate":
@@ -195,7 +146,7 @@ func (s *session) toolLocked(ev event, olds map[string]oldText) []acp.SessionUpd
 		}
 		json.Unmarshal(ev.Payload, &p)
 		if name, ok := s.tools[p.ID]; ok && kindOf(name) != "edit" && p.Message != "" {
-			return []acp.SessionUpdate{update(acp.ToolCallUpdate{ToolCallID: acp.ToolCallID(p.ID), Content: text(p.Message)})}
+			return []acp.SessionUpdate{toolcall.Update(acp.ToolCallUpdate{ToolCallID: acp.ToolCallID(p.ID), Content: toolcall.Text(p.Message)})}
 		}
 	case "ToolEnd":
 		var p struct {
@@ -211,27 +162,16 @@ func (s *session) toolLocked(ev event, olds map[string]oldText) []acp.SessionUpd
 		}
 		u := acp.ToolCallUpdate{ToolCallID: acp.ToolCallID(p.ID), Status: status, RawOutput: p.Result}
 		if kindOf(p.Name) != "edit" || status != "completed" { // a finished edit keeps its diff
-			u.Content = text(result(p.Name, p.Result))
+			u.Content = toolcall.Text(result(p.Name, p.Result))
 		}
 		var out []acp.SessionUpdate
 		if _, ok := s.tools[p.ID]; !ok { // denied or refused before it started
 			out = append(out, s.announceLocked(toolUse{ID: p.ID, Name: p.Name}, string(status), nil))
 		}
 		delete(s.tools, p.ID)
-		return append(out, update(u))
+		return append(out, toolcall.Update(u))
 	}
 	return nil
-}
-
-func update(u acp.ToolCallUpdate) acp.SessionUpdate {
-	return acp.SessionUpdate{SessionUpdate: "tool_call_update", ToolCallUpdate: &u}
-}
-
-func text(s string) []acp.ToolCallContent {
-	if s == "" {
-		return nil
-	}
-	return []acp.ToolCallContent{{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: s}}}}}
 }
 
 // result is what a call's result shows: a command's output in a fence
@@ -260,13 +200,13 @@ func result(tool string, raw json.RawMessage) string {
 	json.Unmarshal(raw, &r)
 	switch {
 	case r.Completed != nil:
-		out := fence(r.Completed.Stdout + r.Completed.Stderr)
+		out := toolcall.Fence(r.Completed.Stdout + r.Completed.Stderr)
 		if c := r.Completed.ExitCode; c != nil && *c != 0 {
 			out = strings.TrimSpace(fmt.Sprintf("Exit code %d\n\n%s", *c, out))
 		}
 		return out
 	case r.FileType.Text != nil:
-		return fence(strings.Join(r.FileType.Text.Lines, ""))
+		return toolcall.Fence(strings.Join(r.FileType.Text.Lines, ""))
 	}
 	for _, s := range []string{r.Text, r.Message, r.Summary, r.Content} {
 		if s != "" {
@@ -276,23 +216,5 @@ func result(tool string, raw json.RawMessage) string {
 	if len(raw) == 0 || string(raw) == "null" {
 		return ""
 	}
-	return fence(string(raw))
-}
-
-// fence puts output in a code fence longer than any run of backticks in it.
-func fence(output string) string {
-	if output == "" {
-		return ""
-	}
-	longest, run := 0, 0
-	for _, r := range output {
-		if r == '`' {
-			run++
-			longest = max(longest, run)
-		} else {
-			run = 0
-		}
-	}
-	f := strings.Repeat("`", max(3, longest+1))
-	return f + "\n" + strings.TrimSuffix(output, "\n") + "\n" + f
+	return toolcall.Fence(string(raw))
 }
