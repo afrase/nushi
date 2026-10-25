@@ -181,17 +181,16 @@ func (s *Store) Sessions() ([]model.Session, error) {
 // settings are the daemon's own settings (settings.json).
 type settings struct {
 	SleepAfterMinutes *int `json:"sleepAfterMinutes,omitempty"`
+	DebugLog          bool `json:"debugLog,omitempty"`
 }
 
 // defaultSleepAfter is how long chats idle before they sleep, until the
 // user picks another time.
 const defaultSleepAfter = 30 * time.Minute
 
-// SleepAfter returns how long a chat idles before its agent sleeps; 0:
-// never.
-func (s *Store) SleepAfter() time.Duration {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+// settingsLocked reads settings.json; one that can't be read is as if
+// empty.
+func (s *Store) settingsLocked() settings {
 	var set settings
 	b, err := os.ReadFile(filepath.Join(s.dir, "settings.json"))
 	if err == nil {
@@ -200,16 +199,43 @@ func (s *Store) SleepAfter() time.Duration {
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		slog.Warn("reading settings.json", "err", err)
 	}
-	if set.SleepAfterMinutes == nil {
-		return defaultSleepAfter
+	return set
+}
+
+// changeSettings applies change to settings.json.
+func (s *Store) changeSettings(change func(*settings)) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	set := s.settingsLocked()
+	change(&set)
+	return writeJSON(filepath.Join(s.dir, "settings.json"), set)
+}
+
+// SleepAfter returns how long a chat idles before its agent sleeps; 0:
+// never.
+func (s *Store) SleepAfter() time.Duration {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if m := s.settingsLocked().SleepAfterMinutes; m != nil {
+		return time.Duration(*m) * time.Minute
 	}
-	return time.Duration(*set.SleepAfterMinutes) * time.Minute
+	return defaultSleepAfter
 }
 
 // SetSleepAfter remembers how long a chat idles before its agent sleeps.
 func (s *Store) SetSleepAfter(d time.Duration) error {
+	m := int(d / time.Minute)
+	return s.changeSettings(func(set *settings) { set.SleepAfterMinutes = &m })
+}
+
+// DebugLog says whether the log has DEBUG lines (ADR 0038).
+func (s *Store) DebugLog() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	m := int(d / time.Minute)
-	return writeJSON(filepath.Join(s.dir, "settings.json"), settings{SleepAfterMinutes: &m})
+	return s.settingsLocked().DebugLog
+}
+
+// SetDebugLog remembers whether the log has DEBUG lines.
+func (s *Store) SetDebugLog(on bool) error {
+	return s.changeSettings(func(set *settings) { set.DebugLog = on })
 }

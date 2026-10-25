@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import 'app_log.dart';
 import 'bundled_daemon.dart';
 import 'changes_view.dart';
 import 'chat.dart';
@@ -23,7 +25,11 @@ import 'theme/theme.dart';
 import 'trust_card.dart';
 import 'widgets.dart';
 
-void main() => runApp(NushiApp(daemon: Daemon()));
+void main() => runZonedGuarded(() {
+  WidgetsFlutterBinding.ensureInitialized();
+  catchErrors();
+  runApp(NushiApp(daemon: Daemon()));
+}, (e, s) => appLog.error('uncaught error', e, s));
 
 class NushiApp extends StatefulWidget {
   const NushiApp({super.key, required this.daemon});

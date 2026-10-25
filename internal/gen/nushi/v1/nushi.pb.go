@@ -3272,8 +3272,11 @@ type Settings struct {
 	// Chats sleep once idle this long, when nothing would be lost (no turn,
 	// queue, prompt, background command, subagent or side chat); 0: never.
 	SleepAfterMinutes int32 `protobuf:"varint,1,opt,name=sleep_after_minutes,json=sleepAfterMinutes,proto3" json:"sleep_after_minutes,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// The daemon's log has DEBUG lines too: every ACP method and API call,
+	// with how long it took (ADR 0038). SetSettings sets both fields.
+	DebugLog      bool `protobuf:"varint,2,opt,name=debug_log,json=debugLog,proto3" json:"debug_log,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Settings) Reset() {
@@ -3311,6 +3314,13 @@ func (x *Settings) GetSleepAfterMinutes() int32 {
 		return x.SleepAfterMinutes
 	}
 	return 0
+}
+
+func (x *Settings) GetDebugLog() bool {
+	if x != nil {
+		return x.DebugLog
+	}
+	return false
 }
 
 type GetSettingsResponse struct {
@@ -9219,6 +9229,113 @@ func (*RevokeDeviceResponse) Descriptor() ([]byte, []int) {
 	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{151}
 }
 
+type LogRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// "debug", "info", "warn" or "error".
+	Level   string `protobuf:"bytes,1,opt,name=level,proto3" json:"level,omitempty"`
+	Message string `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	// A Dart stack trace, for an error.
+	Stack string `protobuf:"bytes,3,opt,name=stack,proto3" json:"stack,omitempty"`
+	// More of the line, as key=value.
+	Attrs         map[string]string `protobuf:"bytes,4,rep,name=attrs,proto3" json:"attrs,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LogRequest) Reset() {
+	*x = LogRequest{}
+	mi := &file_nushi_v1_nushi_proto_msgTypes[152]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LogRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LogRequest) ProtoMessage() {}
+
+func (x *LogRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_nushi_v1_nushi_proto_msgTypes[152]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LogRequest.ProtoReflect.Descriptor instead.
+func (*LogRequest) Descriptor() ([]byte, []int) {
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{152}
+}
+
+func (x *LogRequest) GetLevel() string {
+	if x != nil {
+		return x.Level
+	}
+	return ""
+}
+
+func (x *LogRequest) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *LogRequest) GetStack() string {
+	if x != nil {
+		return x.Stack
+	}
+	return ""
+}
+
+func (x *LogRequest) GetAttrs() map[string]string {
+	if x != nil {
+		return x.Attrs
+	}
+	return nil
+}
+
+type LogResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LogResponse) Reset() {
+	*x = LogResponse{}
+	mi := &file_nushi_v1_nushi_proto_msgTypes[153]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LogResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LogResponse) ProtoMessage() {}
+
+func (x *LogResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_nushi_v1_nushi_proto_msgTypes[153]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LogResponse.ProtoReflect.Descriptor instead.
+func (*LogResponse) Descriptor() ([]byte, []int) {
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{153}
+}
+
 var File_nushi_v1_nushi_proto protoreflect.FileDescriptor
 
 const file_nushi_v1_nushi_proto_rawDesc = "" +
@@ -9425,9 +9542,10 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"ChatsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01\"\x14\n" +
-	"\x12GetSettingsRequest\":\n" +
+	"\x12GetSettingsRequest\"W\n" +
 	"\bSettings\x12.\n" +
-	"\x13sleep_after_minutes\x18\x01 \x01(\x05R\x11sleepAfterMinutes\"E\n" +
+	"\x13sleep_after_minutes\x18\x01 \x01(\x05R\x11sleepAfterMinutes\x12\x1b\n" +
+	"\tdebug_log\x18\x02 \x01(\bR\bdebugLog\"E\n" +
 	"\x13GetSettingsResponse\x12.\n" +
 	"\bsettings\x18\x01 \x01(\v2\x12.nushi.v1.SettingsR\bsettings\"D\n" +
 	"\x12SetSettingsRequest\x12.\n" +
@@ -9818,7 +9936,18 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x16ConfirmPairingResponse\"%\n" +
 	"\x13RevokeDeviceRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x16\n" +
-	"\x14RevokeDeviceResponse*\xea\x01\n" +
+	"\x14RevokeDeviceResponse\"\xc3\x01\n" +
+	"\n" +
+	"LogRequest\x12\x14\n" +
+	"\x05level\x18\x01 \x01(\tR\x05level\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12\x14\n" +
+	"\x05stack\x18\x03 \x01(\tR\x05stack\x125\n" +
+	"\x05attrs\x18\x04 \x03(\v2\x1f.nushi.v1.LogRequest.AttrsEntryR\x05attrs\x1a8\n" +
+	"\n" +
+	"AttrsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\r\n" +
+	"\vLogResponse*\xea\x01\n" +
 	"\bItemKind\x12\x19\n" +
 	"\x15ITEM_KIND_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16ITEM_KIND_USER_MESSAGE\x10\x01\x12\x1b\n" +
@@ -9836,7 +9965,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x12FIELD_TYPE_CHOICES\x10\x03\x12\x15\n" +
 	"\x11FIELD_TYPE_NUMBER\x10\x04\x12\x16\n" +
 	"\x12FIELD_TYPE_INTEGER\x10\x05\x12\x16\n" +
-	"\x12FIELD_TYPE_BOOLEAN\x10\x062\xe4\"\n" +
+	"\x12FIELD_TYPE_BOOLEAN\x10\x062\x98#\n" +
 	"\fNushiService\x125\n" +
 	"\x04Ping\x12\x15.nushi.v1.PingRequest\x1a\x16.nushi.v1.PingResponse\x12D\n" +
 	"\tListChats\x12\x1a.nushi.v1.ListChatsRequest\x1a\x1b.nushi.v1.ListChatsResponse\x12>\n" +
@@ -9901,7 +10030,8 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\tSetRemote\x12\x1a.nushi.v1.SetRemoteRequest\x1a\x1b.nushi.v1.SetRemoteResponse\x12M\n" +
 	"\fStartPairing\x12\x1d.nushi.v1.StartPairingRequest\x1a\x1e.nushi.v1.StartPairingResponse\x12S\n" +
 	"\x0eConfirmPairing\x12\x1f.nushi.v1.ConfirmPairingRequest\x1a .nushi.v1.ConfirmPairingResponse\x12M\n" +
-	"\fRevokeDevice\x12\x1d.nushi.v1.RevokeDeviceRequest\x1a\x1e.nushi.v1.RevokeDeviceResponse\x12=\n" +
+	"\fRevokeDevice\x12\x1d.nushi.v1.RevokeDeviceRequest\x1a\x1e.nushi.v1.RevokeDeviceResponse\x122\n" +
+	"\x03Log\x12\x14.nushi.v1.LogRequest\x1a\x15.nushi.v1.LogResponse\x12=\n" +
 	"\x06Events\x12\x17.nushi.v1.EventsRequest\x1a\x18.nushi.v1.EventsResponse0\x01B7Z5github.com/afrase/nushi/internal/gen/nushi/v1;nushiv1b\x06proto3"
 
 var (
@@ -9917,7 +10047,7 @@ func file_nushi_v1_nushi_proto_rawDescGZIP() []byte {
 }
 
 var file_nushi_v1_nushi_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_nushi_v1_nushi_proto_msgTypes = make([]protoimpl.MessageInfo, 153)
+var file_nushi_v1_nushi_proto_msgTypes = make([]protoimpl.MessageInfo, 156)
 var file_nushi_v1_nushi_proto_goTypes = []any{
 	(ItemKind)(0),                     // 0: nushi.v1.ItemKind
 	(FieldType)(0),                    // 1: nushi.v1.FieldType
@@ -10073,7 +10203,10 @@ var file_nushi_v1_nushi_proto_goTypes = []any{
 	(*ConfirmPairingResponse)(nil),    // 151: nushi.v1.ConfirmPairingResponse
 	(*RevokeDeviceRequest)(nil),       // 152: nushi.v1.RevokeDeviceRequest
 	(*RevokeDeviceResponse)(nil),      // 153: nushi.v1.RevokeDeviceResponse
-	nil,                               // 154: nushi.v1.GetMemoryResponse.ChatsEntry
+	(*LogRequest)(nil),                // 154: nushi.v1.LogRequest
+	(*LogResponse)(nil),               // 155: nushi.v1.LogResponse
+	nil,                               // 156: nushi.v1.GetMemoryResponse.ChatsEntry
+	nil,                               // 157: nushi.v1.LogRequest.AttrsEntry
 }
 var file_nushi_v1_nushi_proto_depIdxs = []int32{
 	6,   // 0: nushi.v1.ListChatsResponse.chats:type_name -> nushi.v1.Chat
@@ -10097,7 +10230,7 @@ var file_nushi_v1_nushi_proto_depIdxs = []int32{
 	31,  // 18: nushi.v1.RewindChatResponse.message:type_name -> nushi.v1.QueuedMessage
 	31,  // 19: nushi.v1.UnqueueResponse.message:type_name -> nushi.v1.QueuedMessage
 	31,  // 20: nushi.v1.CancelTurnResponse.message:type_name -> nushi.v1.QueuedMessage
-	154, // 21: nushi.v1.GetMemoryResponse.chats:type_name -> nushi.v1.GetMemoryResponse.ChatsEntry
+	156, // 21: nushi.v1.GetMemoryResponse.chats:type_name -> nushi.v1.GetMemoryResponse.ChatsEntry
 	56,  // 22: nushi.v1.GetSettingsResponse.settings:type_name -> nushi.v1.Settings
 	56,  // 23: nushi.v1.SetSettingsRequest.settings:type_name -> nushi.v1.Settings
 	64,  // 24: nushi.v1.PlanDeleteChatResponse.sessions:type_name -> nushi.v1.AgentSession
@@ -10140,125 +10273,128 @@ var file_nushi_v1_nushi_proto_depIdxs = []int32{
 	142, // 61: nushi.v1.Remote.devices:type_name -> nushi.v1.Device
 	143, // 62: nushi.v1.Remote.pairing:type_name -> nushi.v1.Pairing
 	141, // 63: nushi.v1.GetRemoteResponse.remote:type_name -> nushi.v1.Remote
-	2,   // 64: nushi.v1.NushiService.Ping:input_type -> nushi.v1.PingRequest
-	4,   // 65: nushi.v1.NushiService.ListChats:input_type -> nushi.v1.ListChatsRequest
-	8,   // 66: nushi.v1.NushiService.GetChat:input_type -> nushi.v1.GetChatRequest
-	21,  // 67: nushi.v1.NushiService.StartChat:input_type -> nushi.v1.StartChatRequest
-	13,  // 68: nushi.v1.NushiService.ListAgents:input_type -> nushi.v1.ListAgentsRequest
-	17,  // 69: nushi.v1.NushiService.SetUpAgent:input_type -> nushi.v1.SetUpAgentRequest
-	19,  // 70: nushi.v1.NushiService.RemoveAgent:input_type -> nushi.v1.RemoveAgentRequest
-	22,  // 71: nushi.v1.NushiService.ListAgentSessions:input_type -> nushi.v1.ListAgentSessionsRequest
-	25,  // 72: nushi.v1.NushiService.OpenAgentSession:input_type -> nushi.v1.OpenAgentSessionRequest
-	27,  // 73: nushi.v1.NushiService.MoveChat:input_type -> nushi.v1.MoveChatRequest
-	30,  // 74: nushi.v1.NushiService.SendPrompt:input_type -> nushi.v1.SendPromptRequest
-	33,  // 75: nushi.v1.NushiService.RewindChat:input_type -> nushi.v1.RewindChatRequest
-	35,  // 76: nushi.v1.NushiService.Unqueue:input_type -> nushi.v1.UnqueueRequest
-	41,  // 77: nushi.v1.NushiService.CancelTurn:input_type -> nushi.v1.CancelTurnRequest
-	43,  // 78: nushi.v1.NushiService.ForkChat:input_type -> nushi.v1.ForkChatRequest
-	45,  // 79: nushi.v1.NushiService.CloseSideChat:input_type -> nushi.v1.CloseSideChatRequest
-	47,  // 80: nushi.v1.NushiService.RenameChat:input_type -> nushi.v1.RenameChatRequest
-	49,  // 81: nushi.v1.NushiService.ArchiveChat:input_type -> nushi.v1.ArchiveChatRequest
-	51,  // 82: nushi.v1.NushiService.SleepChat:input_type -> nushi.v1.SleepChatRequest
-	53,  // 83: nushi.v1.NushiService.GetMemory:input_type -> nushi.v1.GetMemoryRequest
-	55,  // 84: nushi.v1.NushiService.GetSettings:input_type -> nushi.v1.GetSettingsRequest
-	58,  // 85: nushi.v1.NushiService.SetSettings:input_type -> nushi.v1.SetSettingsRequest
-	60,  // 86: nushi.v1.NushiService.PlanDeleteChat:input_type -> nushi.v1.PlanDeleteChatRequest
-	65,  // 87: nushi.v1.NushiService.DeleteChat:input_type -> nushi.v1.DeleteChatRequest
-	68,  // 88: nushi.v1.NushiService.AnswerPermission:input_type -> nushi.v1.AnswerPermissionRequest
-	70,  // 89: nushi.v1.NushiService.AnswerQuestion:input_type -> nushi.v1.AnswerQuestionRequest
-	73,  // 90: nushi.v1.NushiService.SetConfigOption:input_type -> nushi.v1.SetConfigOptionRequest
-	97,  // 91: nushi.v1.NushiService.GetDiff:input_type -> nushi.v1.GetDiffRequest
-	100, // 92: nushi.v1.NushiService.ListCommits:input_type -> nushi.v1.ListCommitsRequest
-	95,  // 93: nushi.v1.NushiService.GetFolderStatus:input_type -> nushi.v1.GetFolderStatusRequest
-	38,  // 94: nushi.v1.NushiService.ListFiles:input_type -> nushi.v1.ListFilesRequest
-	75,  // 95: nushi.v1.NushiService.GetContextUsage:input_type -> nushi.v1.GetContextUsageRequest
-	77,  // 96: nushi.v1.NushiService.ListMcpServers:input_type -> nushi.v1.ListMcpServersRequest
-	80,  // 97: nushi.v1.NushiService.AddMcpServer:input_type -> nushi.v1.AddMcpServerRequest
-	82,  // 98: nushi.v1.NushiService.EditMcpServer:input_type -> nushi.v1.EditMcpServerRequest
-	84,  // 99: nushi.v1.NushiService.RemoveMcpServer:input_type -> nushi.v1.RemoveMcpServerRequest
-	86,  // 100: nushi.v1.NushiService.SetMcpServerOn:input_type -> nushi.v1.SetMcpServerOnRequest
-	88,  // 101: nushi.v1.NushiService.LoginMcpServer:input_type -> nushi.v1.LoginMcpServerRequest
-	90,  // 102: nushi.v1.NushiService.LogoutMcpServer:input_type -> nushi.v1.LogoutMcpServerRequest
-	92,  // 103: nushi.v1.NushiService.ReloadChat:input_type -> nushi.v1.ReloadChatRequest
-	118, // 104: nushi.v1.NushiService.OpenTerminal:input_type -> nushi.v1.OpenTerminalRequest
-	120, // 105: nushi.v1.NushiService.ListTerminals:input_type -> nushi.v1.ListTerminalsRequest
-	122, // 106: nushi.v1.NushiService.AttachTerminal:input_type -> nushi.v1.AttachTerminalRequest
-	124, // 107: nushi.v1.NushiService.WriteTerminal:input_type -> nushi.v1.WriteTerminalRequest
-	126, // 108: nushi.v1.NushiService.ResizeTerminal:input_type -> nushi.v1.ResizeTerminalRequest
-	128, // 109: nushi.v1.NushiService.RenameTerminal:input_type -> nushi.v1.RenameTerminalRequest
-	130, // 110: nushi.v1.NushiService.ArrangeTerminals:input_type -> nushi.v1.ArrangeTerminalsRequest
-	132, // 111: nushi.v1.NushiService.RestartTerminal:input_type -> nushi.v1.RestartTerminalRequest
-	134, // 112: nushi.v1.NushiService.CloseTerminal:input_type -> nushi.v1.CloseTerminalRequest
-	136, // 113: nushi.v1.NushiService.CheckFolder:input_type -> nushi.v1.CheckFolderRequest
-	139, // 114: nushi.v1.NushiService.TrustFolder:input_type -> nushi.v1.TrustFolderRequest
-	144, // 115: nushi.v1.NushiService.GetRemote:input_type -> nushi.v1.GetRemoteRequest
-	146, // 116: nushi.v1.NushiService.SetRemote:input_type -> nushi.v1.SetRemoteRequest
-	148, // 117: nushi.v1.NushiService.StartPairing:input_type -> nushi.v1.StartPairingRequest
-	150, // 118: nushi.v1.NushiService.ConfirmPairing:input_type -> nushi.v1.ConfirmPairingRequest
-	152, // 119: nushi.v1.NushiService.RevokeDevice:input_type -> nushi.v1.RevokeDeviceRequest
-	103, // 120: nushi.v1.NushiService.Events:input_type -> nushi.v1.EventsRequest
-	3,   // 121: nushi.v1.NushiService.Ping:output_type -> nushi.v1.PingResponse
-	5,   // 122: nushi.v1.NushiService.ListChats:output_type -> nushi.v1.ListChatsResponse
-	9,   // 123: nushi.v1.NushiService.GetChat:output_type -> nushi.v1.GetChatResponse
-	29,  // 124: nushi.v1.NushiService.StartChat:output_type -> nushi.v1.StartChatResponse
-	14,  // 125: nushi.v1.NushiService.ListAgents:output_type -> nushi.v1.ListAgentsResponse
-	18,  // 126: nushi.v1.NushiService.SetUpAgent:output_type -> nushi.v1.SetUpAgentResponse
-	20,  // 127: nushi.v1.NushiService.RemoveAgent:output_type -> nushi.v1.RemoveAgentResponse
-	23,  // 128: nushi.v1.NushiService.ListAgentSessions:output_type -> nushi.v1.ListAgentSessionsResponse
-	26,  // 129: nushi.v1.NushiService.OpenAgentSession:output_type -> nushi.v1.OpenAgentSessionResponse
-	28,  // 130: nushi.v1.NushiService.MoveChat:output_type -> nushi.v1.MoveChatResponse
-	40,  // 131: nushi.v1.NushiService.SendPrompt:output_type -> nushi.v1.SendPromptResponse
-	34,  // 132: nushi.v1.NushiService.RewindChat:output_type -> nushi.v1.RewindChatResponse
-	36,  // 133: nushi.v1.NushiService.Unqueue:output_type -> nushi.v1.UnqueueResponse
-	42,  // 134: nushi.v1.NushiService.CancelTurn:output_type -> nushi.v1.CancelTurnResponse
-	44,  // 135: nushi.v1.NushiService.ForkChat:output_type -> nushi.v1.ForkChatResponse
-	46,  // 136: nushi.v1.NushiService.CloseSideChat:output_type -> nushi.v1.CloseSideChatResponse
-	48,  // 137: nushi.v1.NushiService.RenameChat:output_type -> nushi.v1.RenameChatResponse
-	50,  // 138: nushi.v1.NushiService.ArchiveChat:output_type -> nushi.v1.ArchiveChatResponse
-	52,  // 139: nushi.v1.NushiService.SleepChat:output_type -> nushi.v1.SleepChatResponse
-	54,  // 140: nushi.v1.NushiService.GetMemory:output_type -> nushi.v1.GetMemoryResponse
-	57,  // 141: nushi.v1.NushiService.GetSettings:output_type -> nushi.v1.GetSettingsResponse
-	59,  // 142: nushi.v1.NushiService.SetSettings:output_type -> nushi.v1.SetSettingsResponse
-	61,  // 143: nushi.v1.NushiService.PlanDeleteChat:output_type -> nushi.v1.PlanDeleteChatResponse
-	67,  // 144: nushi.v1.NushiService.DeleteChat:output_type -> nushi.v1.DeleteChatResponse
-	69,  // 145: nushi.v1.NushiService.AnswerPermission:output_type -> nushi.v1.AnswerPermissionResponse
-	72,  // 146: nushi.v1.NushiService.AnswerQuestion:output_type -> nushi.v1.AnswerQuestionResponse
-	74,  // 147: nushi.v1.NushiService.SetConfigOption:output_type -> nushi.v1.SetConfigOptionResponse
-	98,  // 148: nushi.v1.NushiService.GetDiff:output_type -> nushi.v1.GetDiffResponse
-	101, // 149: nushi.v1.NushiService.ListCommits:output_type -> nushi.v1.ListCommitsResponse
-	96,  // 150: nushi.v1.NushiService.GetFolderStatus:output_type -> nushi.v1.GetFolderStatusResponse
-	39,  // 151: nushi.v1.NushiService.ListFiles:output_type -> nushi.v1.ListFilesResponse
-	76,  // 152: nushi.v1.NushiService.GetContextUsage:output_type -> nushi.v1.GetContextUsageResponse
-	78,  // 153: nushi.v1.NushiService.ListMcpServers:output_type -> nushi.v1.ListMcpServersResponse
-	81,  // 154: nushi.v1.NushiService.AddMcpServer:output_type -> nushi.v1.AddMcpServerResponse
-	83,  // 155: nushi.v1.NushiService.EditMcpServer:output_type -> nushi.v1.EditMcpServerResponse
-	85,  // 156: nushi.v1.NushiService.RemoveMcpServer:output_type -> nushi.v1.RemoveMcpServerResponse
-	87,  // 157: nushi.v1.NushiService.SetMcpServerOn:output_type -> nushi.v1.SetMcpServerOnResponse
-	89,  // 158: nushi.v1.NushiService.LoginMcpServer:output_type -> nushi.v1.LoginMcpServerResponse
-	91,  // 159: nushi.v1.NushiService.LogoutMcpServer:output_type -> nushi.v1.LogoutMcpServerResponse
-	93,  // 160: nushi.v1.NushiService.ReloadChat:output_type -> nushi.v1.ReloadChatResponse
-	119, // 161: nushi.v1.NushiService.OpenTerminal:output_type -> nushi.v1.OpenTerminalResponse
-	121, // 162: nushi.v1.NushiService.ListTerminals:output_type -> nushi.v1.ListTerminalsResponse
-	123, // 163: nushi.v1.NushiService.AttachTerminal:output_type -> nushi.v1.AttachTerminalResponse
-	125, // 164: nushi.v1.NushiService.WriteTerminal:output_type -> nushi.v1.WriteTerminalResponse
-	127, // 165: nushi.v1.NushiService.ResizeTerminal:output_type -> nushi.v1.ResizeTerminalResponse
-	129, // 166: nushi.v1.NushiService.RenameTerminal:output_type -> nushi.v1.RenameTerminalResponse
-	131, // 167: nushi.v1.NushiService.ArrangeTerminals:output_type -> nushi.v1.ArrangeTerminalsResponse
-	133, // 168: nushi.v1.NushiService.RestartTerminal:output_type -> nushi.v1.RestartTerminalResponse
-	135, // 169: nushi.v1.NushiService.CloseTerminal:output_type -> nushi.v1.CloseTerminalResponse
-	137, // 170: nushi.v1.NushiService.CheckFolder:output_type -> nushi.v1.CheckFolderResponse
-	140, // 171: nushi.v1.NushiService.TrustFolder:output_type -> nushi.v1.TrustFolderResponse
-	145, // 172: nushi.v1.NushiService.GetRemote:output_type -> nushi.v1.GetRemoteResponse
-	147, // 173: nushi.v1.NushiService.SetRemote:output_type -> nushi.v1.SetRemoteResponse
-	149, // 174: nushi.v1.NushiService.StartPairing:output_type -> nushi.v1.StartPairingResponse
-	151, // 175: nushi.v1.NushiService.ConfirmPairing:output_type -> nushi.v1.ConfirmPairingResponse
-	153, // 176: nushi.v1.NushiService.RevokeDevice:output_type -> nushi.v1.RevokeDeviceResponse
-	104, // 177: nushi.v1.NushiService.Events:output_type -> nushi.v1.EventsResponse
-	121, // [121:178] is the sub-list for method output_type
-	64,  // [64:121] is the sub-list for method input_type
-	64,  // [64:64] is the sub-list for extension type_name
-	64,  // [64:64] is the sub-list for extension extendee
-	0,   // [0:64] is the sub-list for field type_name
+	157, // 64: nushi.v1.LogRequest.attrs:type_name -> nushi.v1.LogRequest.AttrsEntry
+	2,   // 65: nushi.v1.NushiService.Ping:input_type -> nushi.v1.PingRequest
+	4,   // 66: nushi.v1.NushiService.ListChats:input_type -> nushi.v1.ListChatsRequest
+	8,   // 67: nushi.v1.NushiService.GetChat:input_type -> nushi.v1.GetChatRequest
+	21,  // 68: nushi.v1.NushiService.StartChat:input_type -> nushi.v1.StartChatRequest
+	13,  // 69: nushi.v1.NushiService.ListAgents:input_type -> nushi.v1.ListAgentsRequest
+	17,  // 70: nushi.v1.NushiService.SetUpAgent:input_type -> nushi.v1.SetUpAgentRequest
+	19,  // 71: nushi.v1.NushiService.RemoveAgent:input_type -> nushi.v1.RemoveAgentRequest
+	22,  // 72: nushi.v1.NushiService.ListAgentSessions:input_type -> nushi.v1.ListAgentSessionsRequest
+	25,  // 73: nushi.v1.NushiService.OpenAgentSession:input_type -> nushi.v1.OpenAgentSessionRequest
+	27,  // 74: nushi.v1.NushiService.MoveChat:input_type -> nushi.v1.MoveChatRequest
+	30,  // 75: nushi.v1.NushiService.SendPrompt:input_type -> nushi.v1.SendPromptRequest
+	33,  // 76: nushi.v1.NushiService.RewindChat:input_type -> nushi.v1.RewindChatRequest
+	35,  // 77: nushi.v1.NushiService.Unqueue:input_type -> nushi.v1.UnqueueRequest
+	41,  // 78: nushi.v1.NushiService.CancelTurn:input_type -> nushi.v1.CancelTurnRequest
+	43,  // 79: nushi.v1.NushiService.ForkChat:input_type -> nushi.v1.ForkChatRequest
+	45,  // 80: nushi.v1.NushiService.CloseSideChat:input_type -> nushi.v1.CloseSideChatRequest
+	47,  // 81: nushi.v1.NushiService.RenameChat:input_type -> nushi.v1.RenameChatRequest
+	49,  // 82: nushi.v1.NushiService.ArchiveChat:input_type -> nushi.v1.ArchiveChatRequest
+	51,  // 83: nushi.v1.NushiService.SleepChat:input_type -> nushi.v1.SleepChatRequest
+	53,  // 84: nushi.v1.NushiService.GetMemory:input_type -> nushi.v1.GetMemoryRequest
+	55,  // 85: nushi.v1.NushiService.GetSettings:input_type -> nushi.v1.GetSettingsRequest
+	58,  // 86: nushi.v1.NushiService.SetSettings:input_type -> nushi.v1.SetSettingsRequest
+	60,  // 87: nushi.v1.NushiService.PlanDeleteChat:input_type -> nushi.v1.PlanDeleteChatRequest
+	65,  // 88: nushi.v1.NushiService.DeleteChat:input_type -> nushi.v1.DeleteChatRequest
+	68,  // 89: nushi.v1.NushiService.AnswerPermission:input_type -> nushi.v1.AnswerPermissionRequest
+	70,  // 90: nushi.v1.NushiService.AnswerQuestion:input_type -> nushi.v1.AnswerQuestionRequest
+	73,  // 91: nushi.v1.NushiService.SetConfigOption:input_type -> nushi.v1.SetConfigOptionRequest
+	97,  // 92: nushi.v1.NushiService.GetDiff:input_type -> nushi.v1.GetDiffRequest
+	100, // 93: nushi.v1.NushiService.ListCommits:input_type -> nushi.v1.ListCommitsRequest
+	95,  // 94: nushi.v1.NushiService.GetFolderStatus:input_type -> nushi.v1.GetFolderStatusRequest
+	38,  // 95: nushi.v1.NushiService.ListFiles:input_type -> nushi.v1.ListFilesRequest
+	75,  // 96: nushi.v1.NushiService.GetContextUsage:input_type -> nushi.v1.GetContextUsageRequest
+	77,  // 97: nushi.v1.NushiService.ListMcpServers:input_type -> nushi.v1.ListMcpServersRequest
+	80,  // 98: nushi.v1.NushiService.AddMcpServer:input_type -> nushi.v1.AddMcpServerRequest
+	82,  // 99: nushi.v1.NushiService.EditMcpServer:input_type -> nushi.v1.EditMcpServerRequest
+	84,  // 100: nushi.v1.NushiService.RemoveMcpServer:input_type -> nushi.v1.RemoveMcpServerRequest
+	86,  // 101: nushi.v1.NushiService.SetMcpServerOn:input_type -> nushi.v1.SetMcpServerOnRequest
+	88,  // 102: nushi.v1.NushiService.LoginMcpServer:input_type -> nushi.v1.LoginMcpServerRequest
+	90,  // 103: nushi.v1.NushiService.LogoutMcpServer:input_type -> nushi.v1.LogoutMcpServerRequest
+	92,  // 104: nushi.v1.NushiService.ReloadChat:input_type -> nushi.v1.ReloadChatRequest
+	118, // 105: nushi.v1.NushiService.OpenTerminal:input_type -> nushi.v1.OpenTerminalRequest
+	120, // 106: nushi.v1.NushiService.ListTerminals:input_type -> nushi.v1.ListTerminalsRequest
+	122, // 107: nushi.v1.NushiService.AttachTerminal:input_type -> nushi.v1.AttachTerminalRequest
+	124, // 108: nushi.v1.NushiService.WriteTerminal:input_type -> nushi.v1.WriteTerminalRequest
+	126, // 109: nushi.v1.NushiService.ResizeTerminal:input_type -> nushi.v1.ResizeTerminalRequest
+	128, // 110: nushi.v1.NushiService.RenameTerminal:input_type -> nushi.v1.RenameTerminalRequest
+	130, // 111: nushi.v1.NushiService.ArrangeTerminals:input_type -> nushi.v1.ArrangeTerminalsRequest
+	132, // 112: nushi.v1.NushiService.RestartTerminal:input_type -> nushi.v1.RestartTerminalRequest
+	134, // 113: nushi.v1.NushiService.CloseTerminal:input_type -> nushi.v1.CloseTerminalRequest
+	136, // 114: nushi.v1.NushiService.CheckFolder:input_type -> nushi.v1.CheckFolderRequest
+	139, // 115: nushi.v1.NushiService.TrustFolder:input_type -> nushi.v1.TrustFolderRequest
+	144, // 116: nushi.v1.NushiService.GetRemote:input_type -> nushi.v1.GetRemoteRequest
+	146, // 117: nushi.v1.NushiService.SetRemote:input_type -> nushi.v1.SetRemoteRequest
+	148, // 118: nushi.v1.NushiService.StartPairing:input_type -> nushi.v1.StartPairingRequest
+	150, // 119: nushi.v1.NushiService.ConfirmPairing:input_type -> nushi.v1.ConfirmPairingRequest
+	152, // 120: nushi.v1.NushiService.RevokeDevice:input_type -> nushi.v1.RevokeDeviceRequest
+	154, // 121: nushi.v1.NushiService.Log:input_type -> nushi.v1.LogRequest
+	103, // 122: nushi.v1.NushiService.Events:input_type -> nushi.v1.EventsRequest
+	3,   // 123: nushi.v1.NushiService.Ping:output_type -> nushi.v1.PingResponse
+	5,   // 124: nushi.v1.NushiService.ListChats:output_type -> nushi.v1.ListChatsResponse
+	9,   // 125: nushi.v1.NushiService.GetChat:output_type -> nushi.v1.GetChatResponse
+	29,  // 126: nushi.v1.NushiService.StartChat:output_type -> nushi.v1.StartChatResponse
+	14,  // 127: nushi.v1.NushiService.ListAgents:output_type -> nushi.v1.ListAgentsResponse
+	18,  // 128: nushi.v1.NushiService.SetUpAgent:output_type -> nushi.v1.SetUpAgentResponse
+	20,  // 129: nushi.v1.NushiService.RemoveAgent:output_type -> nushi.v1.RemoveAgentResponse
+	23,  // 130: nushi.v1.NushiService.ListAgentSessions:output_type -> nushi.v1.ListAgentSessionsResponse
+	26,  // 131: nushi.v1.NushiService.OpenAgentSession:output_type -> nushi.v1.OpenAgentSessionResponse
+	28,  // 132: nushi.v1.NushiService.MoveChat:output_type -> nushi.v1.MoveChatResponse
+	40,  // 133: nushi.v1.NushiService.SendPrompt:output_type -> nushi.v1.SendPromptResponse
+	34,  // 134: nushi.v1.NushiService.RewindChat:output_type -> nushi.v1.RewindChatResponse
+	36,  // 135: nushi.v1.NushiService.Unqueue:output_type -> nushi.v1.UnqueueResponse
+	42,  // 136: nushi.v1.NushiService.CancelTurn:output_type -> nushi.v1.CancelTurnResponse
+	44,  // 137: nushi.v1.NushiService.ForkChat:output_type -> nushi.v1.ForkChatResponse
+	46,  // 138: nushi.v1.NushiService.CloseSideChat:output_type -> nushi.v1.CloseSideChatResponse
+	48,  // 139: nushi.v1.NushiService.RenameChat:output_type -> nushi.v1.RenameChatResponse
+	50,  // 140: nushi.v1.NushiService.ArchiveChat:output_type -> nushi.v1.ArchiveChatResponse
+	52,  // 141: nushi.v1.NushiService.SleepChat:output_type -> nushi.v1.SleepChatResponse
+	54,  // 142: nushi.v1.NushiService.GetMemory:output_type -> nushi.v1.GetMemoryResponse
+	57,  // 143: nushi.v1.NushiService.GetSettings:output_type -> nushi.v1.GetSettingsResponse
+	59,  // 144: nushi.v1.NushiService.SetSettings:output_type -> nushi.v1.SetSettingsResponse
+	61,  // 145: nushi.v1.NushiService.PlanDeleteChat:output_type -> nushi.v1.PlanDeleteChatResponse
+	67,  // 146: nushi.v1.NushiService.DeleteChat:output_type -> nushi.v1.DeleteChatResponse
+	69,  // 147: nushi.v1.NushiService.AnswerPermission:output_type -> nushi.v1.AnswerPermissionResponse
+	72,  // 148: nushi.v1.NushiService.AnswerQuestion:output_type -> nushi.v1.AnswerQuestionResponse
+	74,  // 149: nushi.v1.NushiService.SetConfigOption:output_type -> nushi.v1.SetConfigOptionResponse
+	98,  // 150: nushi.v1.NushiService.GetDiff:output_type -> nushi.v1.GetDiffResponse
+	101, // 151: nushi.v1.NushiService.ListCommits:output_type -> nushi.v1.ListCommitsResponse
+	96,  // 152: nushi.v1.NushiService.GetFolderStatus:output_type -> nushi.v1.GetFolderStatusResponse
+	39,  // 153: nushi.v1.NushiService.ListFiles:output_type -> nushi.v1.ListFilesResponse
+	76,  // 154: nushi.v1.NushiService.GetContextUsage:output_type -> nushi.v1.GetContextUsageResponse
+	78,  // 155: nushi.v1.NushiService.ListMcpServers:output_type -> nushi.v1.ListMcpServersResponse
+	81,  // 156: nushi.v1.NushiService.AddMcpServer:output_type -> nushi.v1.AddMcpServerResponse
+	83,  // 157: nushi.v1.NushiService.EditMcpServer:output_type -> nushi.v1.EditMcpServerResponse
+	85,  // 158: nushi.v1.NushiService.RemoveMcpServer:output_type -> nushi.v1.RemoveMcpServerResponse
+	87,  // 159: nushi.v1.NushiService.SetMcpServerOn:output_type -> nushi.v1.SetMcpServerOnResponse
+	89,  // 160: nushi.v1.NushiService.LoginMcpServer:output_type -> nushi.v1.LoginMcpServerResponse
+	91,  // 161: nushi.v1.NushiService.LogoutMcpServer:output_type -> nushi.v1.LogoutMcpServerResponse
+	93,  // 162: nushi.v1.NushiService.ReloadChat:output_type -> nushi.v1.ReloadChatResponse
+	119, // 163: nushi.v1.NushiService.OpenTerminal:output_type -> nushi.v1.OpenTerminalResponse
+	121, // 164: nushi.v1.NushiService.ListTerminals:output_type -> nushi.v1.ListTerminalsResponse
+	123, // 165: nushi.v1.NushiService.AttachTerminal:output_type -> nushi.v1.AttachTerminalResponse
+	125, // 166: nushi.v1.NushiService.WriteTerminal:output_type -> nushi.v1.WriteTerminalResponse
+	127, // 167: nushi.v1.NushiService.ResizeTerminal:output_type -> nushi.v1.ResizeTerminalResponse
+	129, // 168: nushi.v1.NushiService.RenameTerminal:output_type -> nushi.v1.RenameTerminalResponse
+	131, // 169: nushi.v1.NushiService.ArrangeTerminals:output_type -> nushi.v1.ArrangeTerminalsResponse
+	133, // 170: nushi.v1.NushiService.RestartTerminal:output_type -> nushi.v1.RestartTerminalResponse
+	135, // 171: nushi.v1.NushiService.CloseTerminal:output_type -> nushi.v1.CloseTerminalResponse
+	137, // 172: nushi.v1.NushiService.CheckFolder:output_type -> nushi.v1.CheckFolderResponse
+	140, // 173: nushi.v1.NushiService.TrustFolder:output_type -> nushi.v1.TrustFolderResponse
+	145, // 174: nushi.v1.NushiService.GetRemote:output_type -> nushi.v1.GetRemoteResponse
+	147, // 175: nushi.v1.NushiService.SetRemote:output_type -> nushi.v1.SetRemoteResponse
+	149, // 176: nushi.v1.NushiService.StartPairing:output_type -> nushi.v1.StartPairingResponse
+	151, // 177: nushi.v1.NushiService.ConfirmPairing:output_type -> nushi.v1.ConfirmPairingResponse
+	153, // 178: nushi.v1.NushiService.RevokeDevice:output_type -> nushi.v1.RevokeDeviceResponse
+	155, // 179: nushi.v1.NushiService.Log:output_type -> nushi.v1.LogResponse
+	104, // 180: nushi.v1.NushiService.Events:output_type -> nushi.v1.EventsResponse
+	123, // [123:181] is the sub-list for method output_type
+	65,  // [65:123] is the sub-list for method input_type
+	65,  // [65:65] is the sub-list for extension type_name
+	65,  // [65:65] is the sub-list for extension extendee
+	0,   // [0:65] is the sub-list for field type_name
 }
 
 func init() { file_nushi_v1_nushi_proto_init() }
@@ -10286,7 +10422,7 @@ func file_nushi_v1_nushi_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_nushi_v1_nushi_proto_rawDesc), len(file_nushi_v1_nushi_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   153,
+			NumMessages:   156,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -133,6 +133,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.ConfirmPairingRequest request);
   $async.Future<$0.RevokeDeviceResponse> revokeDevice(
       $pb.ServerContext ctx, $0.RevokeDeviceRequest request);
+  $async.Future<$0.LogResponse> log(
+      $pb.ServerContext ctx, $0.LogRequest request);
   $async.Future<$0.EventsResponse> events(
       $pb.ServerContext ctx, $0.EventsRequest request);
 
@@ -250,6 +252,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.ConfirmPairingRequest();
       case 'RevokeDevice':
         return $0.RevokeDeviceRequest();
+      case 'Log':
+        return $0.LogRequest();
       case 'Events':
         return $0.EventsRequest();
       default:
@@ -372,6 +376,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return confirmPairing(ctx, request as $0.ConfirmPairingRequest);
       case 'RevokeDevice':
         return revokeDevice(ctx, request as $0.RevokeDeviceRequest);
+      case 'Log':
+        return log(ctx, request as $0.LogRequest);
       case 'Events':
         return events(ctx, request as $0.EventsRequest);
       default:

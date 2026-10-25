@@ -28,7 +28,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 50
+const Version = 51
 
 // Build is the daemon's executable as it started (PingResponse.build).
 var Build = func() string {
@@ -44,14 +44,15 @@ var Build = func() string {
 }()
 
 type server struct {
-	chats  *chats.Service
-	agents *agents.Service
-	mcp    *mcp.Service
-	terms  *terminals.Service
-	trust  *trust.Service
-	hub    *events.Hub
-	memory *memory.Service
-	remote *remote.Service
+	chats    *chats.Service
+	agents   *agents.Service
+	mcp      *mcp.Service
+	terms    *terminals.Service
+	trust    *trust.Service
+	hub      *events.Hub
+	memory   *memory.Service
+	remote   *remote.Service
+	logPrefs LogPrefs
 
 	mu      sync.Mutex
 	clients int         // apps following the events
@@ -87,6 +88,7 @@ type Services struct {
 	Hub    *events.Hub
 	Memory *memory.Service
 	Remote *remote.Service
+	Log    LogPrefs // nil: the debug setting isn't kept
 }
 
 // New returns the whole API, unauthenticated: the local socket wraps it in
@@ -97,7 +99,7 @@ func New(sv Services) http.Handler { return serve(sv, "socket") }
 func serve(sv Services, via string, interceptors ...connect.Interceptor) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{chats: sv.Chats, agents: sv.Agents, mcp: sv.MCP, terms: sv.Terms, trust: sv.Trust,
-		hub: sv.Hub, memory: sv.Memory, remote: sv.Remote}, connect.WithInterceptors(append([]connect.Interceptor{logCalls{via}}, interceptors...)...)))
+		hub: sv.Hub, memory: sv.Memory, remote: sv.Remote, logPrefs: sv.Log}, connect.WithInterceptors(append([]connect.Interceptor{logCalls{via}}, interceptors...)...)))
 	return mux
 }
 
@@ -342,7 +344,11 @@ func (s *server) GetMemory(_ context.Context, req *connect.Request[nushiv1.GetMe
 }
 
 func (s *server) GetSettings(context.Context, *connect.Request[nushiv1.GetSettingsRequest]) (*connect.Response[nushiv1.GetSettingsResponse], error) {
-	return connect.NewResponse(&nushiv1.GetSettingsResponse{Settings: &nushiv1.Settings{SleepAfterMinutes: int32(s.chats.SleepAfter() / time.Minute)}}), nil
+	set := &nushiv1.Settings{SleepAfterMinutes: int32(s.chats.SleepAfter() / time.Minute)}
+	if s.logPrefs != nil {
+		set.DebugLog = s.logPrefs.DebugLog()
+	}
+	return connect.NewResponse(&nushiv1.GetSettingsResponse{Settings: set}), nil
 }
 
 func (s *server) SetSettings(_ context.Context, req *connect.Request[nushiv1.SetSettingsRequest]) (*connect.Response[nushiv1.SetSettingsResponse], error) {
@@ -351,6 +357,9 @@ func (s *server) SetSettings(_ context.Context, req *connect.Request[nushiv1.Set
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("sleep_after_minutes can't be negative"))
 	}
 	if err := s.chats.SetSleepAfter(time.Duration(m) * time.Minute); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	if err := s.setDebugLog(req.Msg.GetSettings().GetDebugLog()); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 	return connect.NewResponse(&nushiv1.SetSettingsResponse{}), nil

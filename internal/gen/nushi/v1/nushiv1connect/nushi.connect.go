@@ -180,6 +180,8 @@ const (
 	// NushiServiceRevokeDeviceProcedure is the fully-qualified name of the NushiService's RevokeDevice
 	// RPC.
 	NushiServiceRevokeDeviceProcedure = "/nushi.v1.NushiService/RevokeDevice"
+	// NushiServiceLogProcedure is the fully-qualified name of the NushiService's Log RPC.
+	NushiServiceLogProcedure = "/nushi.v1.NushiService/Log"
 	// NushiServiceEventsProcedure is the fully-qualified name of the NushiService's Events RPC.
 	NushiServiceEventsProcedure = "/nushi.v1.NushiService/Events"
 )
@@ -360,6 +362,9 @@ type NushiServiceClient interface {
 	ConfirmPairing(context.Context, *connect.Request[v1.ConfirmPairingRequest]) (*connect.Response[v1.ConfirmPairingResponse], error)
 	// Unpairs a phone and drops its connections.
 	RevokeDevice(context.Context, *connect.Request[v1.RevokeDeviceRequest]) (*connect.Response[v1.RevokeDeviceResponse], error)
+	// Writes a line of the app's into the daemon's log (source=app): its
+	// errors with their stacks, and what helps afterwards.
+	Log(context.Context, *connect.Request[v1.LogRequest]) (*connect.Response[v1.LogResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
 	Events(context.Context, *connect.Request[v1.EventsRequest]) (*connect.ServerStreamForClient[v1.EventsResponse], error)
@@ -712,6 +717,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("RevokeDevice")),
 			connect.WithClientOptions(opts...),
 		),
+		log: connect.NewClient[v1.LogRequest, v1.LogResponse](
+			httpClient,
+			baseURL+NushiServiceLogProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("Log")),
+			connect.WithClientOptions(opts...),
+		),
 		events: connect.NewClient[v1.EventsRequest, v1.EventsResponse](
 			httpClient,
 			baseURL+NushiServiceEventsProcedure,
@@ -779,6 +790,7 @@ type nushiServiceClient struct {
 	startPairing      *connect.Client[v1.StartPairingRequest, v1.StartPairingResponse]
 	confirmPairing    *connect.Client[v1.ConfirmPairingRequest, v1.ConfirmPairingResponse]
 	revokeDevice      *connect.Client[v1.RevokeDeviceRequest, v1.RevokeDeviceResponse]
+	log               *connect.Client[v1.LogRequest, v1.LogResponse]
 	events            *connect.Client[v1.EventsRequest, v1.EventsResponse]
 }
 
@@ -1062,6 +1074,11 @@ func (c *nushiServiceClient) RevokeDevice(ctx context.Context, req *connect.Requ
 	return c.revokeDevice.CallUnary(ctx, req)
 }
 
+// Log calls nushi.v1.NushiService.Log.
+func (c *nushiServiceClient) Log(ctx context.Context, req *connect.Request[v1.LogRequest]) (*connect.Response[v1.LogResponse], error) {
+	return c.log.CallUnary(ctx, req)
+}
+
 // Events calls nushi.v1.NushiService.Events.
 func (c *nushiServiceClient) Events(ctx context.Context, req *connect.Request[v1.EventsRequest]) (*connect.ServerStreamForClient[v1.EventsResponse], error) {
 	return c.events.CallServerStream(ctx, req)
@@ -1243,6 +1260,9 @@ type NushiServiceHandler interface {
 	ConfirmPairing(context.Context, *connect.Request[v1.ConfirmPairingRequest]) (*connect.Response[v1.ConfirmPairingResponse], error)
 	// Unpairs a phone and drops its connections.
 	RevokeDevice(context.Context, *connect.Request[v1.RevokeDeviceRequest]) (*connect.Response[v1.RevokeDeviceResponse], error)
+	// Writes a line of the app's into the daemon's log (source=app): its
+	// errors with their stacks, and what helps afterwards.
+	Log(context.Context, *connect.Request[v1.LogRequest]) (*connect.Response[v1.LogResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
 	Events(context.Context, *connect.Request[v1.EventsRequest], *connect.ServerStream[v1.EventsResponse]) error
@@ -1591,6 +1611,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("RevokeDevice")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceLogHandler := connect.NewUnaryHandler(
+		NushiServiceLogProcedure,
+		svc.Log,
+		connect.WithSchema(nushiServiceMethods.ByName("Log")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceEventsHandler := connect.NewServerStreamHandler(
 		NushiServiceEventsProcedure,
 		svc.Events,
@@ -1711,6 +1737,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceConfirmPairingHandler.ServeHTTP(w, r)
 		case NushiServiceRevokeDeviceProcedure:
 			nushiServiceRevokeDeviceHandler.ServeHTTP(w, r)
+		case NushiServiceLogProcedure:
+			nushiServiceLogHandler.ServeHTTP(w, r)
 		case NushiServiceEventsProcedure:
 			nushiServiceEventsHandler.ServeHTTP(w, r)
 		default:
@@ -1944,6 +1972,10 @@ func (UnimplementedNushiServiceHandler) ConfirmPairing(context.Context, *connect
 
 func (UnimplementedNushiServiceHandler) RevokeDevice(context.Context, *connect.Request[v1.RevokeDeviceRequest]) (*connect.Response[v1.RevokeDeviceResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.RevokeDevice is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) Log(context.Context, *connect.Request[v1.LogRequest]) (*connect.Response[v1.LogResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.Log is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) Events(context.Context, *connect.Request[v1.EventsRequest], *connect.ServerStream[v1.EventsResponse]) error {

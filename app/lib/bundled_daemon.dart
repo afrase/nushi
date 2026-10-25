@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'app_log.dart';
 import 'daemon.dart';
 
 /// The daemon's helper app inside [app] (`make package`): a background-only
@@ -59,6 +60,7 @@ class Launcher {
     }
     launched = DateTime.now();
     launches++;
+    appLog.info('starting the bundled daemon', {'try': '$launches'});
     // Moving from Nushi Next: its daemon stops, and the new one starts in
     // the old folder, which it then moves (its log and folder move along).
     if (_oldDataDir case final old? when !Directory(dataDir).existsSync()) {

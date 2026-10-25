@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:uds_transport/uds_transport.dart';
 
 import 'agents.dart';
+import 'app_log.dart';
 import 'bundled_daemon.dart';
 import 'chat.dart';
 import 'gen/nushi/v1/nushi.connect.client.dart';
@@ -31,7 +32,7 @@ final dataDir =
         : '$support/Nushi');
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 50;
+const apiVersion = 51;
 
 /// The app's link to nushid. [connected] follows a ping every few seconds;
 /// while connected, daemon events keep [chats] current. When no daemon
@@ -49,8 +50,17 @@ class Daemon extends ChangeNotifier {
             interceptors: [_auth],
           ),
     );
+    appLog.client = client;
+    appLog.reachable = () => connected && hasLog(daemonApi);
     _timer = Timer.periodic(const Duration(seconds: 2), (_) => _ping());
-    _ping();
+    _ping().then(
+      (_) => appLog.info('app started', {
+        'version': appVersion,
+        'api': '$apiVersion',
+        'pid': '$pid',
+        'daemon': connected ? 'answers' : 'not answering',
+      }),
+    );
   }
 
   final _transport = UdsTransport('$dataDir/nushid.sock');
@@ -154,18 +164,34 @@ class Daemon extends ChangeNotifier {
     if (ok) _launcher.launches = 0;
     if (ok && _events == null) _subscribe();
     if (ok != connected || ok && (api != daemonApi || build != _build)) {
+      final was = connected;
       connected = ok;
       if (ok) {
         daemonApi = api; // kept while away: the app stays as it was
         _build = build;
       }
       notifyListeners();
+      if (!ok) {
+        appLog.warn('lost the daemon');
+      } else if (outdated) {
+        appLog.warn('the daemon is older than the app', {
+          'daemon_api': '$api',
+          'app_api': '$apiVersion',
+        });
+      } else if (!was) {
+        appLog.info('connected to the daemon', {'api': '$api', 'build': build});
+      }
     }
   }
 
   /// Stops the running daemon (it stops its agents) and starts the bundled
   /// one; chats reopen through session/load as they are opened.
   Future<void> restartDaemon() async {
+    await appLog.write(
+      'info',
+      'restarting the daemon',
+      attrs: {'build': _build, 'bundled': ?bundledBuild},
+    );
     stopDaemon(dataDir);
     // The first ping that fails starts the bundled daemon.
     _launcher.launched = DateTime(0);

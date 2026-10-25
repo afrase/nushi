@@ -4050,9 +4050,11 @@ class GetSettingsRequest extends $pb.GeneratedMessage {
 class Settings extends $pb.GeneratedMessage {
   factory Settings({
     $core.int? sleepAfterMinutes,
+    $core.bool? debugLog,
   }) {
     final result = Settings._();
     if (sleepAfterMinutes != null) result.sleepAfterMinutes = sleepAfterMinutes;
+    if (debugLog != null) result.debugLog = debugLog;
     return result;
   }
 
@@ -4070,6 +4072,7 @@ class Settings extends $pb.GeneratedMessage {
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: Settings.$_createMessage)
     ..aI(1, _omitFieldNames ? '' : 'sleepAfterMinutes')
+    ..aOB(2, _omitFieldNames ? '' : 'debugLog')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -4102,6 +4105,17 @@ class Settings extends $pb.GeneratedMessage {
   $core.bool hasSleepAfterMinutes() => $_has(0);
   @$pb.TagNumber(1)
   void clearSleepAfterMinutes() => $_clearField(1);
+
+  /// The daemon's log has DEBUG lines too: every ACP method and API call,
+  /// with how long it took (ADR 0038). SetSettings sets both fields.
+  @$pb.TagNumber(2)
+  $core.bool get debugLog => $_getBF(1);
+  @$pb.TagNumber(2)
+  set debugLog($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasDebugLog() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearDebugLog() => $_clearField(2);
 }
 
 class GetSettingsResponse extends $pb.GeneratedMessage {
@@ -11787,6 +11801,139 @@ class RevokeDeviceResponse extends $pb.GeneratedMessage {
   static RevokeDeviceResponse? _defaultInstance;
 }
 
+class LogRequest extends $pb.GeneratedMessage {
+  factory LogRequest({
+    $core.String? level,
+    $core.String? message,
+    $core.String? stack,
+    $core.Iterable<$core.MapEntry<$core.String, $core.String>>? attrs,
+  }) {
+    final result = LogRequest._();
+    if (level != null) result.level = level;
+    if (message != null) result.message = message;
+    if (stack != null) result.stack = stack;
+    if (attrs != null) result.attrs.addEntries(attrs);
+    return result;
+  }
+
+  LogRequest._();
+
+  factory LogRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      LogRequest()..mergeFromBuffer(data, registry);
+  factory LogRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      LogRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'LogRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: LogRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'level')
+    ..aOS(2, _omitFieldNames ? '' : 'message')
+    ..aOS(3, _omitFieldNames ? '' : 'stack')
+    ..m<$core.String, $core.String>(4, _omitFieldNames ? '' : 'attrs',
+        entryClassName: 'LogRequest.AttrsEntry',
+        keyFieldType: $pb.PbFieldType.OS,
+        valueFieldType: $pb.PbFieldType.OS,
+        packageName: const $pb.PackageName('nushi.v1'))
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  LogRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  LogRequest copyWith(void Function(LogRequest) updates) =>
+      super.copyWith((message) => updates(message as LogRequest)) as LogRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use LogRequest() / LogRequest.new instead')
+  static LogRequest create() => LogRequest._();
+  static $pb.GeneratedMessage $_createMessage() => LogRequest._();
+  @$core.override
+  LogRequest createEmptyInstance() => LogRequest._();
+  @$core.pragma('dart2js:noInline')
+  static LogRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<LogRequest>(LogRequest.$_createMessage);
+  static LogRequest? _defaultInstance;
+
+  /// "debug", "info", "warn" or "error".
+  @$pb.TagNumber(1)
+  $core.String get level => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set level($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasLevel() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearLevel() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get message => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set message($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasMessage() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearMessage() => $_clearField(2);
+
+  /// A Dart stack trace, for an error.
+  @$pb.TagNumber(3)
+  $core.String get stack => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set stack($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasStack() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearStack() => $_clearField(3);
+
+  /// More of the line, as key=value.
+  @$pb.TagNumber(4)
+  $pb.PbMap<$core.String, $core.String> get attrs => $_getMap(3);
+}
+
+class LogResponse extends $pb.GeneratedMessage {
+  factory LogResponse() => LogResponse._();
+
+  LogResponse._();
+
+  factory LogResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      LogResponse()..mergeFromBuffer(data, registry);
+  factory LogResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      LogResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'LogResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: LogResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  LogResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  LogResponse copyWith(void Function(LogResponse) updates) =>
+      super.copyWith((message) => updates(message as LogResponse))
+          as LogResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use LogResponse() / LogResponse.new instead')
+  static LogResponse create() => LogResponse._();
+  static $pb.GeneratedMessage $_createMessage() => LogResponse._();
+  @$core.override
+  LogResponse createEmptyInstance() => LogResponse._();
+  @$core.pragma('dart2js:noInline')
+  static LogResponse getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<LogResponse>(
+          LogResponse.$_createMessage);
+  static LogResponse? _defaultInstance;
+}
+
 class NushiServiceApi {
   final $pb.RpcClient _client;
 
@@ -12179,6 +12326,12 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, RevokeDeviceRequest request) =>
       _client.invoke<RevokeDeviceResponse>(
           ctx, 'NushiService', 'RevokeDevice', request, RevokeDeviceResponse());
+
+  /// Writes a line of the app's into the daemon's log (source=app): its
+  /// errors with their stacks, and what helps afterwards.
+  $async.Future<LogResponse> log($pb.ClientContext? ctx, LogRequest request) =>
+      _client.invoke<LogResponse>(
+          ctx, 'NushiService', 'Log', request, LogResponse());
 
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.

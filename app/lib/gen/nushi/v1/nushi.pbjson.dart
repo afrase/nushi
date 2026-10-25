@@ -1007,13 +1007,14 @@ const Settings$json = {
       '5': 5,
       '10': 'sleepAfterMinutes'
     },
+    {'1': 'debug_log', '3': 2, '4': 1, '5': 8, '10': 'debugLog'},
   ],
 };
 
 /// Descriptor for `Settings`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List settingsDescriptor = $convert.base64Decode(
     'CghTZXR0aW5ncxIuChNzbGVlcF9hZnRlcl9taW51dGVzGAEgASgFUhFzbGVlcEFmdGVyTWludX'
-    'Rlcw==');
+    'RlcxIbCglkZWJ1Z19sb2cYAiABKAhSCGRlYnVnTG9n');
 
 @$core.Deprecated('Use getSettingsResponseDescriptor instead')
 const GetSettingsResponse$json = {
@@ -2748,6 +2749,51 @@ const RevokeDeviceResponse$json = {
 final $typed_data.Uint8List revokeDeviceResponseDescriptor =
     $convert.base64Decode('ChRSZXZva2VEZXZpY2VSZXNwb25zZQ==');
 
+@$core.Deprecated('Use logRequestDescriptor instead')
+const LogRequest$json = {
+  '1': 'LogRequest',
+  '2': [
+    {'1': 'level', '3': 1, '4': 1, '5': 9, '10': 'level'},
+    {'1': 'message', '3': 2, '4': 1, '5': 9, '10': 'message'},
+    {'1': 'stack', '3': 3, '4': 1, '5': 9, '10': 'stack'},
+    {
+      '1': 'attrs',
+      '3': 4,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.LogRequest.AttrsEntry',
+      '10': 'attrs'
+    },
+  ],
+  '3': [LogRequest_AttrsEntry$json],
+};
+
+@$core.Deprecated('Use logRequestDescriptor instead')
+const LogRequest_AttrsEntry$json = {
+  '1': 'AttrsEntry',
+  '2': [
+    {'1': 'key', '3': 1, '4': 1, '5': 9, '10': 'key'},
+    {'1': 'value', '3': 2, '4': 1, '5': 9, '10': 'value'},
+  ],
+  '7': {'7': true},
+};
+
+/// Descriptor for `LogRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List logRequestDescriptor = $convert.base64Decode(
+    'CgpMb2dSZXF1ZXN0EhQKBWxldmVsGAEgASgJUgVsZXZlbBIYCgdtZXNzYWdlGAIgASgJUgdtZX'
+    'NzYWdlEhQKBXN0YWNrGAMgASgJUgVzdGFjaxI1CgVhdHRycxgEIAMoCzIfLm51c2hpLnYxLkxv'
+    'Z1JlcXVlc3QuQXR0cnNFbnRyeVIFYXR0cnMaOAoKQXR0cnNFbnRyeRIQCgNrZXkYASABKAlSA2'
+    'tleRIUCgV2YWx1ZRgCIAEoCVIFdmFsdWU6AjgB');
+
+@$core.Deprecated('Use logResponseDescriptor instead')
+const LogResponse$json = {
+  '1': 'LogResponse',
+};
+
+/// Descriptor for `LogResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List logResponseDescriptor =
+    $convert.base64Decode('CgtMb2dSZXNwb25zZQ==');
+
 const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
   '1': 'NushiService',
   '2': [
@@ -3028,6 +3074,7 @@ const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
       '2': '.nushi.v1.RevokeDeviceRequest',
       '3': '.nushi.v1.RevokeDeviceResponse'
     },
+    {'1': 'Log', '2': '.nushi.v1.LogRequest', '3': '.nushi.v1.LogResponse'},
     {
       '1': 'Events',
       '2': '.nushi.v1.EventsRequest',
@@ -3187,6 +3234,9 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.ConfirmPairingResponse': ConfirmPairingResponse$json,
   '.nushi.v1.RevokeDeviceRequest': RevokeDeviceRequest$json,
   '.nushi.v1.RevokeDeviceResponse': RevokeDeviceResponse$json,
+  '.nushi.v1.LogRequest': LogRequest$json,
+  '.nushi.v1.LogRequest.AttrsEntry': LogRequest_AttrsEntry$json,
+  '.nushi.v1.LogResponse': LogResponse$json,
   '.nushi.v1.EventsRequest': EventsRequest$json,
   '.nushi.v1.EventsResponse': EventsResponse$json,
   '.nushi.v1.ItemEvent': ItemEvent$json,
@@ -3276,5 +3326,6 @@ final $typed_data.Uint8List nushiServiceDescriptor = $convert.base64Decode(
     'ZXNwb25zZRJTCg5Db25maXJtUGFpcmluZxIfLm51c2hpLnYxLkNvbmZpcm1QYWlyaW5nUmVxdW'
     'VzdBogLm51c2hpLnYxLkNvbmZpcm1QYWlyaW5nUmVzcG9uc2USTQoMUmV2b2tlRGV2aWNlEh0u'
     'bnVzaGkudjEuUmV2b2tlRGV2aWNlUmVxdWVzdBoeLm51c2hpLnYxLlJldm9rZURldmljZVJlc3'
-    'BvbnNlEj0KBkV2ZW50cxIXLm51c2hpLnYxLkV2ZW50c1JlcXVlc3QaGC5udXNoaS52MS5FdmVu'
-    'dHNSZXNwb25zZTAB');
+    'BvbnNlEjIKA0xvZxIULm51c2hpLnYxLkxvZ1JlcXVlc3QaFS5udXNoaS52MS5Mb2dSZXNwb25z'
+    'ZRI9CgZFdmVudHMSFy5udXNoaS52MS5FdmVudHNSZXF1ZXN0GhgubnVzaGkudjEuRXZlbnRzUm'
+    'VzcG9uc2UwAQ==');

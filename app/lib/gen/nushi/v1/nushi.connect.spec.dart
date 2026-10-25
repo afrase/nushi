@@ -520,6 +520,15 @@ abstract final class NushiService {
     nushiv1nushi.RevokeDeviceResponse.new,
   );
 
+  /// Writes a line of the app's into the daemon's log (source=app): its
+  /// errors with their stacks, and what helps afterwards.
+  static const log = connect.Spec(
+    '/$name/Log',
+    connect.StreamType.unary,
+    nushiv1nushi.LogRequest.new,
+    nushiv1nushi.LogResponse.new,
+  );
+
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.
   static const events = connect.Spec(
