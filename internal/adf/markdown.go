@@ -411,7 +411,8 @@ func indent(s, pad string) string {
 
 // escape keeps a text's characters from reading as Markdown: an
 // underscore only where it could start or end emphasis (snake_case
-// stays), what starts a block only at a line's start.
+// stays), what starts a block only at a line's start, a "!" only at the
+// end (where a link that follows would make it an image).
 func escape(s string) string {
 	var b strings.Builder
 	r := []rune(s)
@@ -436,6 +437,9 @@ func escape(s string) string {
 				i, lineStart = j, false
 				continue
 			}
+		}
+		if c == '!' && i == len(r)-1 { // a link written after it would be an image
+			b.WriteRune('\\')
 		}
 		b.WriteRune(c)
 		lineStart = c == '\n' || c == '\r' || lineStart && c == ' '

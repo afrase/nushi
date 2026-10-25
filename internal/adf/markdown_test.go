@@ -89,6 +89,8 @@ func TestToMarkdown(t *testing.T) {
 			"```\nx\n```"},
 		{"an emoji's text is an emoji", `[{"type":"paragraph","content":[{"type":"emoji","attrs":{"shortName":":x:","text":"[a](javascript:b)"}},{"type":"emoji","attrs":{"text":"👍🏽"}}]}]`,
 			`:x:👍🏽`},
+		{"a link after a ! is no image", `[{"type":"paragraph","content":[{"type":"text","text":"look!"},{"type":"text","text":"x","marks":[{"type":"link","attrs":{"href":"https://track.example/p.png"}}]},{"type":"mention","attrs":{"text":"@a!"}},{"type":"inlineCard","attrs":{"url":"https://track.example/q.png"}},{"type":"text","text":"wow!","marks":[{"type":"strong"}]},{"type":"inlineCard","attrs":{"url":"https://e.com/r"}}]}]`,
+			`look\![x](https://track.example/p.png)@a\![https://track.example/q.png](https://track.example/q.png)**wow\!**[https://e.com/r](https://e.com/r)`},
 		{"a mention's and a status's text", `[{"type":"paragraph","content":[{"type":"mention","attrs":{"text":"@<img src=x>"}},{"type":"text","text":" "},{"type":"status","attrs":{"text":"a` + "`" + `[b](c)"}}]}]`,
 			"@\\<img src=x> ``a`[b](c)``"},
 	} {
@@ -134,6 +136,7 @@ func FuzzToMarkdown(f *testing.F) {
 func FuzzAttacker(f *testing.F) {
 	f.Add("a *b* [c](d) <e>", "javascript:x", "go")
 	f.Add("1. `x`\n# y\n<div>", "https://e.com/)\n[a](file:/x)", "a\n```")
+	f.Add("see!", "https://track.example/p.png", "")
 	f.Fuzz(func(t *testing.T, s, href, lang string) {
 		txt := func(marks ...Mark) Node { return Node{Type: "text", Text: s, Marks: marks} }
 		a := map[string]any{"text": s, "shortName": s, "url": href, "title": s, "id": s, "timestamp": s, "level": s, "order": s, "panelType": s, "extensionKey": s, "alt": s}
@@ -150,7 +153,7 @@ func FuzzAttacker(f *testing.F) {
 			Node{Type: "table", Content: []Node{{Type: "tableRow", Content: []Node{cell, cell}}, {Type: "tableRow", Content: []Node{cell}}}},
 			Node{Type: "expand", Attrs: a, Content: []Node{p}}, Node{Type: "blockCard", Attrs: a},
 			Node{Type: "mediaSingle", Content: []Node{{Type: "media", Attrs: a}}}, Node{Type: s, Attrs: a})
-		for _, media := range []Media{nil, func(id string) (string, string) { return id, href }} {
+		for _, media := range []Media{nil, func(id string) (string, string) { return id, AttachmentScheme + "m" }} {
 			out := ToMarkdown(doc, media)
 			if err := onlySafe(out); err != nil {
 				t.Fatalf("%v in\n%s", err, out)
@@ -174,8 +177,8 @@ func onlySafe(out string) error {
 			if !safe(string(n.Destination)) {
 				return gast.WalkStop, fmt.Errorf("a link to %q", n.Destination)
 			}
-		case *gast.Image:
-			if !strings.HasPrefix(string(n.Destination), AttachmentScheme) {
+		case *gast.Image: // only a media node's, from the lookup
+			if string(n.Destination) != AttachmentScheme+"m" && string(n.Destination) != AttachmentScheme+"1" {
 				return gast.WalkStop, fmt.Errorf("an image of %q", n.Destination)
 			}
 		case *gast.AutoLink:
