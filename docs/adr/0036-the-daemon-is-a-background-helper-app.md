@@ -17,7 +17,7 @@ The app started `Contents/MacOS/nushid` itself, detached, through the login shel
 - A daemon started from the old place (`Contents/MacOS/nushid`) runs until it is restarted; "Restart daemon" brings up the helper. The data folder doesn't change.
 - Turning Start at login on also starts the script once (`RunAtLoad`): with a daemon running, the new one finds it and stops, one line in `nushid.log`. Off unregisters the job; a running daemon keeps running.
 - A daemon that crashes while the app is closed stays down until the app opens or the next login.
-- macOS shows "Nushi can run in the background" when it's turned on, and the item under Login Items › Allow in the Background, where it can be switched off; the app then shows the setting off or waiting for approval.
+- macOS says "Nushi can run in the background" the first time it's turned on, and lists Nushi under Login Items › Allow in the Background from then on, also after it's turned off (the job is gone; that list keeps apps that ever registered, until the app is deleted). Switching it off there makes the app's setting wait for approval.
 
 ## Alternatives considered
 - `KeepAlive` on a job running `nushid`: crash restarts, but broken by every rebuild under ad-hoc signing (above), and it would fight `make stop` unless the daemon told stops from crashes.
