@@ -12,7 +12,7 @@
 - [0010](0010-json-files-for-sessions.md) A JSON file per session until that stops being enough
 - [0011](0011-nushi-next-identity.md) The rebuild runs as "Nushi Next" beside the first build
 - [0012](0012-diff-view-package.md) The diff viewer uses the published diff_view package
-- [0013](0013-app-starts-its-daemon.md) The packaged app starts its own daemon, never stops one on its own
+- [0013](0013-app-starts-its-daemon.md) The packaged app starts its own daemon, never stops one on its own (how it starts it: 0036)
 - [0014](0014-moving-a-chat-forks-it.md) Moving a chat forks its Claude session through a copy of Claude's history
 - [0015](0015-delete-takes-the-agents-history.md) Deleting a chat deletes the agent's history of it, through ACP
 - [0016](0016-a-worktree-per-chat.md) A chat can have a git worktree of its own
@@ -35,3 +35,4 @@
 - [0033](0033-the-relay-is-a-dumb-pipe.md) The relay is a dumb pipe that keeps nothing; what it can still see (replaces 0006)
 - [0034](0034-noise-between-phone-and-daemon.md) Noise (IKpsk1 to pair, IK after) between the phone and the daemon; pairing by QR code; a paired device is a full client; the threat model (replaces 0006, amends 0022)
 - [0035](0035-open-sessions-started-elsewhere.md) Sessions started elsewhere (a terminal) open as chats through `session/load`, not copies; forks left out; open elsewhere: warn where both can write, not offered where the agent allows one writer
+- [0036](0036-the-daemon-is-a-background-helper-app.md) The daemon is a background-only helper app (`Contents/Helpers/Nushi Daemon.app`) the app opens through Launch Services; Start at login is a launch agent that opens it too; no KeepAlive (amends 0013)

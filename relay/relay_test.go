@@ -300,6 +300,7 @@ func TestNoDiskNoLogs(t *testing.T) {
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() { cmd.Process.Kill() }) // a failure below doesn't leave it running
 	pw.Close()
 	r := bufio.NewReader(pr)
 	first, err := r.ReadString('\n')

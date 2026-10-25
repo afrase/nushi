@@ -1,7 +1,7 @@
 # 0028. Agents get the login shell's environment, through the daemon's
 
 ## Context
-Codex reads its provider's key from the environment (`env_key = "FIREWORKS_API_KEY"` in its `config.toml`), the way a terminal has it from the shell's config. An app opened from Finder gets launchd's bare environment (checked on macOS 27: `PATH=/usr/bin:/bin:/usr/sbin:/sbin`, `SHELL` from the user database, no shell variables). The app starts the bundled daemon through `$SHELL -l -c 'exec …'` ([0013](0013-app-starts-its-daemon.md)); the daemon starts agents and terminals with its own environment.
+Codex reads its provider's key from the environment (`env_key = "FIREWORKS_API_KEY"` in its `config.toml`), the way a terminal has it from the shell's config. An app opened from Finder gets launchd's bare environment (checked on macOS 27: `PATH=/usr/bin:/bin:/usr/sbin:/sbin`, `SHELL` from the user database, no shell variables). The bundled daemon starts through the login shell, `<shell> -l -c 'exec …'` ([0013](0013-app-starts-its-daemon.md); since [0036](0036-the-daemon-is-a-background-helper-app.md) `nushid -login` runs it, whether the app or Start at login opened the helper); the daemon starts agents and terminals with its own environment.
 
 ## Decision
 - An agent gets the daemon's environment as it is: launched by the app, the login shell's (checked: a variable set in fish's config reaches a daemon started from Finder). Nushi doesn't read, filter, add to or log it.
