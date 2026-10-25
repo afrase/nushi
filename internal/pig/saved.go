@@ -167,13 +167,15 @@ func summary(file string) (title string, messages int) {
 	return title, messages
 }
 
-// entry is one of a session's entries; messages and compactions show.
+// entry is one of a session's entries; messages, compactions and
+// extensions' todo lists show.
 type entry struct {
-	Type    string   `json:"type"`
-	ID      string   `json:"id"`
-	Parent  *string  `json:"parentId"`
-	Message *message `json:"message"`
-	Summary string   `json:"summary"` // a compaction's
+	Type    string          `json:"type"`
+	ID      string          `json:"id"`
+	Parent  *string         `json:"parentId"`
+	Message *message        `json:"message"`
+	Summary string          `json:"summary"` // a compaction's
+	Data    json.RawMessage `json:"data"`    // an extension's entry's
 }
 
 // branch reads the session p holds: the entries from its root to its
@@ -213,8 +215,13 @@ func (s *session) replay(ctx context.Context) error { //nolint:gocognit // one c
 	}
 	for _, e := range entries {
 		m := e.Message
-		if e.Type == "compaction" {
+		switch e.Type {
+		case "compaction":
 			s.b.update(s.id, compacted(e))
+		case "custom":
+			if p := planOf(e.Data); p != nil {
+				s.b.update(s.id, *p)
+			}
 		}
 		if e.Type != "message" || m == nil {
 			continue
@@ -252,6 +259,9 @@ func (s *session) replay(ctx context.Context) error { //nolint:gocognit // one c
 				u.Content = toolcall.Text(output(m.ToolName, resultText(m.Content)))
 			}
 			out = append(out, toolcall.Update(u))
+			if p := planOf(m.Details); p != nil {
+				out = append(out, *p)
+			}
 		case "bashExecution": // a command the user ran (`!` in PiG's editor)
 			id := "bash-" + e.ID
 			call := acp.ToolCall{ToolCallID: acp.ToolCallID(id), Title: m.Command, Kind: "execute", Status: "completed", Content: toolcall.Text(toolcall.Fence(m.Output))}

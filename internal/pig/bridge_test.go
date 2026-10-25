@@ -472,3 +472,49 @@ func TestContext(t *testing.T) {
 		t.Errorf("short = %s", got)
 	}
 }
+
+// A todo list an extension keeps (in its tool's results, or its own
+// entries) is the agent's plan, live and after a reload.
+func TestPlans(t *testing.T) {
+	store := &pigtest.Store{Sessions: t.TempDir()}
+	c := start(t, store, io.Discard)
+	cwd := t.TempDir()
+	s := openNew(t, c, cwd)
+	prompt(t, c, s.SessionID, "update the todo list")
+	plans := func(c *client) string {
+		var out []string
+		for range 100 {
+			c.mu.Lock()
+			out = nil
+			for _, n := range c.updates {
+				if p := n.Update.Plan; p != nil && n.SessionID == s.SessionID {
+					var es []string
+					for _, e := range p.Entries {
+						es = append(es, e.Content+"="+string(e.Status))
+					}
+					out = append(out, strings.Join(es, ","))
+				}
+			}
+			c.mu.Unlock()
+			if len(out) >= 2 {
+				break
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+		return strings.Join(out, " | ")
+	}
+	want := "Write tests=completed,Ship=pending | Plan it=pending"
+	if got := plans(c); got != want {
+		t.Errorf("plans = %s", got)
+	}
+	c2 := start(t, store, io.Discard)
+	if _, err := c2.LoadSession(context.Background(), acp.LoadSessionRequest{SessionID: s.SessionID, Cwd: cwd, MCPServers: []acp.MCPServer{}}); err != nil {
+		t.Fatal(err)
+	}
+	if got := plans(c2); got != want {
+		t.Errorf("replayed plans = %s", got)
+	}
+	if planOf([]byte(`{"todos":[]}`)) != nil || planOf([]byte(`{"todos":[{"text":"no state"}]}`)) != nil {
+		t.Error("a plan of no todos, or of todos without a state")
+	}
+}

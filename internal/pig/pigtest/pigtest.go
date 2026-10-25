@@ -9,6 +9,8 @@
 //     as a notification; the prompt is "handled", no run;
 //   - "/hang": a command that never ends;
 //   - containing "tool": a bash call (`ls`) and its output, then "Done";
+//   - containing "todo": a todo tool's call with its list in its result's
+//     details, then a plan-mode entry with its own list;
 //   - containing "think": a thought, then an answer, not streamed;
 //   - containing "fail": a failed model call ("boom");
 //   - containing "garbage": a line that isn't JSON and an event nobody
@@ -316,6 +318,22 @@ func (p *Pig) run(text string) {
 		p.mu.Lock()
 		p.append(res)
 		p.mu.Unlock()
+		say(assistant(textBlock("Done")))
+	case strings.Contains(text, "todo"): // as Pi's todo and plan-mode extensions keep their lists
+		todos := []map[string]any{{"id": 1, "text": "Write tests", "done": true}, {"id": 2, "text": "Ship", "done": false}}
+		call := map[string]any{"type": "toolCall", "id": "call_2", "name": "todo", "arguments": map[string]any{"action": "toggle", "id": 1}}
+		say(assistant(call))
+		p.emit(map[string]any{"type": "tool_execution_start", "toolCallId": "call_2", "toolName": "todo", "args": call["arguments"]})
+		out := map[string]any{"content": []map[string]any{textBlock("Toggled #1")}, "details": map[string]any{"action": "toggle", "todos": todos, "nextId": 3}}
+		p.emit(map[string]any{"type": "tool_execution_end", "toolCallId": "call_2", "toolName": "todo", "result": out, "isError": false})
+		res := map[string]any{"role": "toolResult", "toolCallId": "call_2", "toolName": "todo", "content": out["content"], "details": out["details"], "isError": false, "timestamp": stamp()}
+		p.emit(map[string]any{"type": "message_end", "message": res})
+		custom := map[string]any{"type": "custom", "customType": "plan-mode", "data": map[string]any{"todos": []map[string]any{{"step": 1, "text": "Plan it", "completed": false}}}}
+		p.mu.Lock()
+		p.append(res)
+		p.add(custom)
+		p.mu.Unlock()
+		p.emit(map[string]any{"type": "entry_appended", "entry": custom})
 		say(assistant(textBlock("Done")))
 	case strings.Contains(text, "think"):
 		m := assistant(map[string]any{"type": "thinking", "thinking": "Hmm."}, textBlock("Thought about it"))
