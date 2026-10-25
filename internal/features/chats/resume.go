@@ -166,6 +166,7 @@ func (s *Service) AgentReady(agent string) {
 		if i := c.indexLocked(c.failure); c.kind.Name == agent && c.reopenFailed && i >= 0 && c.items[i].Status == "not_ready" {
 			c.reopenFailed = false
 			c.statusChangedLocked()
+			c.logLocked().Info("chat may reopen", "why", "agent ready")
 		}
 		c.mu.Unlock()
 	}
