@@ -7,7 +7,7 @@ Several agents working in one repository step on each other's files. Git worktre
 - A worktree is an option when a chat starts in (or moves into) a git repository, off by default and remembered per repository by the app; never forced.
 - Nushi makes it at `<repo>/.worktrees/<name>`, on a new branch `nushi/<name>` from the folder's current `HEAD`, and records the branch it started from (the base). `<name>` is two random words, unique in the repository. `.worktrees/` goes into the repository's `.git/info/exclude`, never into a tracked `.gitignore`.
 - The chat runs in the worktree and is listed under its repository.
-- A chat started from a Jira issue (ADR 0042) names its worktree and branch after the issue instead: `<KEY>-<summary-slug>`, the key uppercase so Jira links the branch, and a number after it when that name is taken.
+- A chat started from a Jira issue (ADR 0042) gets a worktree when the issue is picked (the user can turn it off), on a branch named after the issue: `<KEY>-<summary-slug>`, the key uppercase so Jira links the branch, which the user can change to any name git takes; the worktree's folder is the branch with `-` for `/`, and a number goes after both when the name is taken.
 - Nushi never deletes a branch or a worktree with work in it without saying so first. Archiving leaves both alone. Delete… offers removing the worktree and deleting the branch, each on by default only when nothing would be lost (no uncommitted or untracked changes; no commits the base lacks); otherwise off, saying what would be lost, and forced (`git worktree remove --force`, `git branch -D` past unmerged commits) only when the user ticks it. A worktree a chat without messages leaves is removed only when nothing would be lost.
 
 ## Consequences

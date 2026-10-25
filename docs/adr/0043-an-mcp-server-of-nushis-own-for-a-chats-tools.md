@@ -12,7 +12,7 @@ A chat started from a Jira issue should let its agent read the issue, comment on
 - The agents' writes are kept (`jira-writes.json`: which comment or move, which chat and agent, when) and the issue view says whose they were; the log says which tool ran for which chat and whether it worked, never its arguments or result.
 
 ## Consequences
-- Claude and Codex get the tools. Ante (its `serve` protocol takes no MCP servers), oh-my-pi (ignores a client's in ACP mode) and PiG (RPC mode has none) don't: their chats on an issue have the context in the first message only.
+- Claude and Codex get the tools. Ante (its `serve` protocol takes no MCP servers), oh-my-pi (ignores a client's in ACP mode) and PiG (RPC mode has none) don't: their chats on an issue know of it only what the user tells them (Nushi writes nothing about the issue into the box).
 - The key is visible to the agent and, since Claude Code passes MCP servers on its command line, to `ps`; anything running as the user can already read Nushi's token file (ADR 0024). The key reaches one issue's four tools for as long as the daemon runs, never the Jira token.
 - A second tool set (review comments) is another `tools.Set`; the server, the key and the transport stay.
 
