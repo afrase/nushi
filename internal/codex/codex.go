@@ -4,30 +4,45 @@
 package codex
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"log"
+	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/afrase/nushi/acp"
 	"github.com/afrase/nushi/internal/model"
-	"github.com/afrase/nushi/internal/npx"
 )
 
-// adapter is the pinned Codex ACP adapter; it brings its own Codex.
-const adapter = "@agentclientprotocol/codex-acp@2.2.2"
-
-// Start starts the adapter, as claude.Start does Claude's: in dir (the
-// daemon's own folder), its stderr to the daemon log. Codex reads its own
-// config and login ($CODEX_HOME, else ~/.codex); Nushi never does.
-func Start(dir string, h acp.Handler) (*acp.Client, error) {
-	cmd, err := npx.Command(dir, []string{adapter}, "codex-acp")
-	if err != nil {
-		return nil, err
-	}
+// Start starts the adapter, as claude.Start does Claude's, running cli,
+// the user's Codex (codex-acp's CODEX_PATH). Codex reads its own config
+// and login ($CODEX_HOME, else ~/.codex); Nushi never does.
+func Start(dir, program, cli string, h acp.Handler) (*acp.Client, error) {
+	cmd := exec.Command("node", program)
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "CODEX_PATH="+cli)
 	cmd.Stderr = log.Writer()
 	return acp.Start(cmd, h)
 }
+
+// Adapter is Codex's ACP adapter, as Nushi pins it (see claude.Adapter).
+// Its own Codex (the platforms' optional dependencies) is left out: it
+// runs the user's. Only a 20 KB launcher of @openai/codex, a dependency,
+// comes along, unused.
+var Adapter, _ = fs.Sub(adapterFiles, "adapter")
+
+const (
+	AdapterPackage  = "@agentclientprotocol/codex-acp"
+	AdapterBin      = "codex-acp"
+	AdapterDownload = 2_337_235
+	AdapterDisk     = 18_599_936
+)
+
+//go:embed adapter
+var adapterFiles embed.FS
 
 // CLI is Codex's program, and Page where to get it.
 const (

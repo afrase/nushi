@@ -100,6 +100,45 @@ extension type NushiServiceClient (connect.Transport _transport) {
     );
   }
 
+  /// Sets up an agent's adapter (Agent.adapter): installs it into Nushi's
+  /// data folder from the lockfile Nushi pins, or updates it to the pinned
+  /// version. The agent's awake chats sleep just before the new one
+  /// replaces the old. Returns once it's done (5 minutes at most).
+  Future<nushiv1nushi.SetUpAgentResponse> setUpAgent(
+    nushiv1nushi.SetUpAgentRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.setUpAgent,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Removes an agent's adapter; its awake chats sleep first.
+  Future<nushiv1nushi.RemoveAgentResponse> removeAgent(
+    nushiv1nushi.RemoveAgentRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.removeAgent,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Lists an agent's sessions in a folder that aren't chats (started in a
   /// terminal, say), newest first, a page at a time. It starts the agent to
   /// ask (ACP session/list).

@@ -6,29 +6,20 @@ package omp
 import (
 	"encoding/json"
 	"log"
+	"os/exec"
 	"strings"
 
 	"github.com/afrase/nushi/acp"
 	"github.com/afrase/nushi/internal/model"
-	"github.com/afrase/nushi/internal/npx"
 )
 
-// omp needs Bun (it can't run under Node): npx brings a pinned Bun beside
-// it, whose bin its `#!/usr/bin/env bun` finds on PATH (npx.Command puts
-// the packages' bin folder first).
-const (
-	pkg = "@oh-my-pi/pi-coding-agent@18.12.6"
-	bun = "bun@1.4.3"
-)
-
-// Start starts omp's ACP mode, as claude.Start does Claude's adapter: in
-// dir (the daemon's folder), its stderr to the daemon log. omp reads its
-// own config and keys (~/.omp, the environment); Nushi never does.
-func Start(dir string, h acp.Handler) (*acp.Client, error) {
-	cmd, err := npx.Command(dir, []string{bun, pkg}, "omp", "--mode", "acp")
-	if err != nil {
-		return nil, err
-	}
+// Start starts the user's omp (cli) in its ACP mode, in dir (the
+// daemon's folder), its stderr to the daemon log; its `#!/usr/bin/env
+// bun` finds the user's Bun on PATH. omp reads its own config and keys
+// (~/.omp, the environment); Nushi never does.
+func Start(dir, cli string, h acp.Handler) (*acp.Client, error) {
+	cmd := exec.Command(cli, "--mode", "acp")
+	cmd.Dir = dir
 	cmd.Stderr = log.Writer()
 	return acp.Start(cmd, h)
 }

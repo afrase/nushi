@@ -54,10 +54,17 @@ void main() {
       final r = await Process.run('go', ['build', '-o', '${tmp.path}/bin/$out', pkg], workingDirectory: '..');
       if (r.exitCode != 0) throw StateError('building $pkg: ${r.stderr}');
     }
-    // Agents start through npx, which says where the program is.
-    final npx = File('${tmp.path}/bin/npx');
-    await npx.writeAsString('#!/bin/sh\necho ${tmp.path}/bin/fakeagent\n');
-    await Process.run('chmod', ['+x', npx.path]);
+    // Claude, set up: its CLI on PATH, its adapter in the data folder, run
+    // by a "node" that runs the fake agent instead.
+    for (final (name, body) in [('node', 'exec ${tmp.path}/bin/fakeagent'), ('claude', 'echo 2.1.310')]) {
+      final f = File('${tmp.path}/bin/$name');
+      await f.writeAsString('#!/bin/sh\n$body\n');
+      await Process.run('chmod', ['+x', f.path]);
+    }
+    final adapter = Directory('${tmp.path}/data/agents/claude/node_modules/@agentclientprotocol/claude-agent-acp');
+    await adapter.create(recursive: true);
+    await File('${adapter.path}/package.json')
+        .writeAsString('{"version": "0.94.0", "bin": {"claude-agent-acp": "dist/index.js"}}');
   });
 
   tearDownAll(() async {

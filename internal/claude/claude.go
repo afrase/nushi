@@ -7,29 +7,44 @@ package claude
 
 import (
 	"cmp"
+	"embed"
 	"encoding/json"
+	"io/fs"
 	"log"
+	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/afrase/nushi/acp"
 	"github.com/afrase/nushi/internal/model"
-	"github.com/afrase/nushi/internal/npx"
 )
 
-// adapter is the pinned Claude Code ACP adapter.
-const adapter = "@agentclientprotocol/claude-agent-acp@0.94.0"
+// Adapter is Claude Code's ACP adapter, as Nushi pins it: adapter/'s
+// package.json names the version, its lockfile every package's (make
+// adapters writes it again, and says the sizes). Its own Claude Code (an
+// optional dependency) is left out: it runs the user's.
+var Adapter, _ = fs.Sub(adapterFiles, "adapter")
 
-// Start starts the adapter. It runs in dir (the daemon's own folder), so
-// npx never resolves the adapter or npm settings from a project; a chat's
-// folder reaches the agent only as the session's cwd. Its stderr goes to
-// the daemon log.
-func Start(dir string, h acp.Handler) (*acp.Client, error) {
-	cmd, err := npx.Command(dir, []string{adapter}, "claude-agent-acp")
-	if err != nil {
-		return nil, err
-	}
+const (
+	AdapterPackage  = "@agentclientprotocol/claude-agent-acp"
+	AdapterBin      = "claude-agent-acp"
+	AdapterDownload = 8_979_854
+	AdapterDisk     = 73_064_448
+)
+
+//go:embed adapter
+var adapterFiles embed.FS
+
+// Start starts the adapter set up in Nushi's data folder (its program,
+// under the Node on PATH), running cli, the user's Claude Code. It runs in
+// dir (the daemon's own folder); a chat's folder reaches the agent only as
+// the session's cwd. Its stderr goes to the daemon log.
+func Start(dir, program, cli string, h acp.Handler) (*acp.Client, error) {
+	cmd := exec.Command("node", program)
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "CLAUDE_CODE_EXECUTABLE="+cli)
 	cmd.Stderr = log.Writer()
 	return acp.Start(cmd, h)
 }

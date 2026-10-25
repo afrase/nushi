@@ -182,10 +182,29 @@ func (s *server) ListAgents(ctx context.Context, _ *connect.Request[nushiv1.List
 	resp := &nushiv1.ListAgentsResponse{}
 	for _, k := range s.chats.Agents() {
 		st := found[k.Name]
-		resp.Agents = append(resp.Agents, &nushiv1.Agent{Name: k.Name, Title: k.Title, Resume: k.Resume, Mcp: k.MCP, DeleteArchives: k.DeleteArchives,
-			Path: st.Path, Version: st.Version, Page: st.Page, Problem: st.Problem, SignedIn: st.SignedIn})
+		a := &nushiv1.Agent{Name: k.Name, Title: k.Title, Resume: k.Resume, Mcp: k.MCP, DeleteArchives: k.DeleteArchives,
+			Path: st.Path, Version: st.Version, Page: st.Page, Problem: st.Problem, SignedIn: st.SignedIn, Ready: st.Ready, Awake: int32(st.Awake)}
+		if ad := st.Adapter; ad != nil {
+			a.Adapter = &nushiv1.Adapter{Package: ad.Package, Pinned: st.Pinned, Installed: st.Installed, Packages: int32(st.Packages),
+				DownloadBytes: ad.Download, DiskBytes: ad.Disk, Folder: st.Folder}
+		}
+		resp.Agents = append(resp.Agents, a)
 	}
 	return connect.NewResponse(resp), nil
+}
+
+func (s *server) SetUpAgent(ctx context.Context, req *connect.Request[nushiv1.SetUpAgentRequest]) (*connect.Response[nushiv1.SetUpAgentResponse], error) {
+	if err := s.agents.SetUp(ctx, req.Msg.Agent); err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	return connect.NewResponse(&nushiv1.SetUpAgentResponse{}), nil
+}
+
+func (s *server) RemoveAgent(_ context.Context, req *connect.Request[nushiv1.RemoveAgentRequest]) (*connect.Response[nushiv1.RemoveAgentResponse], error) {
+	if err := s.agents.Remove(req.Msg.Agent); err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	return connect.NewResponse(&nushiv1.RemoveAgentResponse{}), nil
 }
 
 func (s *server) ListAgentSessions(ctx context.Context, req *connect.Request[nushiv1.ListAgentSessionsRequest]) (*connect.Response[nushiv1.ListAgentSessionsResponse], error) {
