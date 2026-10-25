@@ -85,9 +85,15 @@ var reopenTimeout = 2 * time.Minute
 func (s *Service) resume(c *chat) {
 	ctx, cancel := context.WithTimeout(context.Background(), reopenTimeout)
 	defer cancel()
+	start := time.Now()
 	err := s.load(ctx, c)
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if log := c.logLocked().With("took", time.Since(start).Round(time.Millisecond)); err != nil {
+		log.Warn("chat not reopened", "err", err)
+	} else {
+		log.Info("chat reopened")
+	}
 	c.busy = false
 	if c.woke != nil {
 		close(c.woke)

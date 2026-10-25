@@ -137,6 +137,7 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 	if err := c.startMode(ctx, agent, next, mode); err != nil {
 		c.log().Warn("mode after rewinding", "err", err)
 	}
+	c.log().Info("chat rewound", "old", sid, "to", itemID)
 	return msg, nil
 }
 

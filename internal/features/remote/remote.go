@@ -8,6 +8,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"errors"
+	"log/slog"
 	"math/big"
 	"net"
 	"net/url"
@@ -176,6 +177,9 @@ func (s *Service) apply() {
 			s.stopAwake()
 			s.stopAwake = nil
 		}
+		if s.state != "off" {
+			slog.Info("remote access off")
+		}
 		s.state, s.err = "off", ""
 		s.changed()
 		return
@@ -185,6 +189,7 @@ func (s *Service) apply() {
 	}
 	s.state, s.err = "connecting", ""
 	s.changed()
+	slog.Info("remote access on", "relay", s.settings.Relay)
 	s.relink()
 }
 
@@ -206,6 +211,11 @@ func (s *Service) setState(ctx context.Context, id, state, err string) {
 	}
 	s.state, s.err = state, err
 	s.changed()
+	if err != "" {
+		slog.Warn("relay "+state, "err", err)
+	} else {
+		slog.Info("relay " + state)
+	}
 }
 
 // link waits at the relay for phones on listen's id, one waiting
@@ -231,6 +241,7 @@ func (s *Service) link(ctx context.Context, relayURL string, listen ed25519.Priv
 			// The relay ended the wait (its limit, a restart) or the network
 			// went: wait again, at a random moment so many daemons don't
 			// come back at once.
+			slog.Info("relay dropped the wait", "err", err)
 			c.Close()
 			sleep(ctx, jitter(time.Second))
 			continue

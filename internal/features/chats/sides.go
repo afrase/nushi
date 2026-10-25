@@ -109,6 +109,7 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 	s.mu.Lock()
 	s.chats[side.id] = side
 	s.mu.Unlock()
+	side.log().Info("side chat opened")
 	return side.id, nil
 }
 
@@ -126,6 +127,7 @@ func (s *Service) CloseSide(id string) error {
 	c.parent.mu.Lock()
 	delete(c.parent.sides, id)
 	c.parent.mu.Unlock()
+	c.log().Info("side chat closed")
 	c.mu.Lock()
 	c.cancelLocked()
 	agent := c.agent

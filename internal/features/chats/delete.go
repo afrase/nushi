@@ -131,6 +131,9 @@ func (s *Service) Delete(ctx context.Context, chatID string, opts DeleteOptions)
 	if err == nil {
 		err = s.forget(c)
 	}
+	if err == nil {
+		c.log().Info("chat deleted", "history", p.History, "worktrees", len(p.Worktrees), "scratch", p.Scratch != "")
+	}
 	if err != nil {
 		c.mu.Lock()
 		c.halting = false // it may reopen

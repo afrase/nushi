@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"log/slog"
 	"net"
 	"slices"
 	"time"
@@ -32,6 +33,9 @@ func (s *Service) accept(ctx context.Context, c *relay.Conn, id string) {
 		return nil
 	})
 	if err != nil || conn.Peek() != nil || !timer.Stop() || !stop() {
+		if err != nil {
+			slog.Info("device rejected", "err", err)
+		}
 		c.Close()
 		return
 	}
@@ -57,9 +61,11 @@ func (s *Service) run(conn *noiseconn.Conn, device, id string) {
 	i := slices.IndexFunc(s.devices, func(d model.Device) bool { return d.ID == device })
 	if i < 0 || !s.settings.On || len(s.conns) >= MaxConns {
 		s.mu.Unlock()
+		slog.Info("device turned away", "device", device, "connections", len(s.conns))
 		conn.Close()
 		return
 	}
+	slog.Info("device connected", "device", device, "moved", id != s.id)
 	s.conns[conn] = device
 	if id == s.id {
 		s.moved(device)
@@ -88,6 +94,7 @@ func (c *served) Close() error {
 	s.mu.Lock()
 	if device, ok := s.conns[c.Conn]; ok {
 		delete(s.conns, c.Conn)
+		slog.Info("device disconnected", "device", device)
 		if i := slices.IndexFunc(s.devices, func(d model.Device) bool { return d.ID == device }); i >= 0 {
 			s.seen(i)
 		}
@@ -130,5 +137,6 @@ func (s *Service) Revoke(id string) error {
 	}
 	err := s.rotate(id) // the device knows the id
 	s.changed()
+	slog.Info("device revoked", "device", id, "err", err)
 	return err
 }

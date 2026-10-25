@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"path/filepath"
 	"time"
 )
@@ -75,7 +76,16 @@ func (s *Service) SetUp(ctx context.Context, name string) error {
 	defer s.installing.Unlock()
 	ctx, cancel := context.WithTimeout(ctx, installTimeout)
 	defer cancel()
-	return s.installer.Install(ctx, a.Adapter.Lock, s.folder(name), func() { s.chats.SleepAgent(name) })
+	start := time.Now()
+	pinned, _ := a.Adapter.pinned()
+	err = s.installer.Install(ctx, a.Adapter.Lock, s.folder(name), func() { s.chats.SleepAgent(name) })
+	log := slog.With("agent", name, "adapter", a.Adapter.Package+" "+pinned, "took", time.Since(start).Round(time.Millisecond))
+	if err != nil {
+		log.Error("adapter not set up", "err", err)
+	} else {
+		log.Info("adapter set up", "folder", s.folder(name))
+	}
+	return err
 }
 
 // Remove removes the agent's adapter; its awake chats sleep first.
@@ -86,7 +96,9 @@ func (s *Service) Remove(name string) error {
 	s.installing.Lock()
 	defer s.installing.Unlock()
 	s.chats.SleepAgent(name)
-	return s.installer.Remove(s.folder(name))
+	err := s.installer.Remove(s.folder(name))
+	slog.Info("adapter removed", "agent", name, "err", err)
+	return err
 }
 
 func (s *Service) folder(name string) string { return filepath.Join(s.dir, name) }

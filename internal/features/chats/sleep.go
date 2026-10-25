@@ -36,6 +36,7 @@ func (s *Service) Sleep(chatID string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.statusChangedLocked()
+	c.logLocked().Info("chat asleep", "why", "asked")
 	return nil
 }
 
@@ -113,6 +114,7 @@ func (s *Service) doze(c *chat, after time.Duration) {
 	c.asleep, c.before, c.retired = true, slices.Clone(c.config), agent.Done()
 	c.agent, c.kept = nil, len(c.items) > 0
 	c.statusChangedLocked()
+	c.logLocked().Info("chat asleep", "why", "idle", "after", after)
 	c.mu.Unlock()
 	if err := agent.Stop(stopGrace); err != nil {
 		c.log().Warn("stopping the agent to sleep", "err", err)
@@ -138,6 +140,7 @@ func (s *Service) awake(ctx context.Context, c *chat) error {
 	c.mu.Lock()
 	if c.asleep {
 		c.asleep, c.reopenFailed = false, false
+		c.logLocked().Info("chat waking")
 		s.reopenLocked(c)
 	}
 	woke := c.woke
