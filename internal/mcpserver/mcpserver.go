@@ -45,7 +45,9 @@ func Main() {
 
 // Tools is where the tools come from: the daemon (or a test's fake).
 type Tools interface {
-	List(ctx context.Context) (json.RawMessage, error)
+	// List is the tools, and what they're for in this chat (MCP's
+	// instructions, which agents put beside their system prompt).
+	List(ctx context.Context) (json.RawMessage, string, error)
 	Call(ctx context.Context, name string, args json.RawMessage) (text string, failed bool, err error)
 }
 
@@ -125,15 +127,20 @@ func handle(ctx context.Context, m message, tools Tools) (any, error) {
 		if slices.Contains(versions, p.ProtocolVersion) {
 			v = p.ProtocolVersion
 		}
-		return map[string]any{
+		result := map[string]any{
 			"protocolVersion": v,
 			"capabilities":    map[string]any{"tools": map[string]any{}},
 			"serverInfo":      map[string]any{"name": "nushi", "title": "Nushi", "version": "1"},
-		}, nil
+		}
+		// Without the daemon now, the tools still say it when listed.
+		if _, text, err := tools.List(ctx); err == nil && text != "" {
+			result["instructions"] = text
+		}
+		return result, nil
 	case "ping":
 		return map[string]any{}, nil
 	case "tools/list":
-		list, err := tools.List(ctx)
+		list, _, err := tools.List(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -197,13 +204,14 @@ func (d Daemon) post(ctx context.Context, path string, body, out any) error {
 	return json.NewDecoder(resp.Body).Decode(out)
 }
 
-// List asks the daemon for the chat's tools.
-func (d Daemon) List(ctx context.Context) (json.RawMessage, error) {
+// List asks the daemon for the chat's tools and their instructions.
+func (d Daemon) List(ctx context.Context) (json.RawMessage, string, error) {
 	var r struct {
-		Tools json.RawMessage `json:"tools"`
+		Tools        json.RawMessage `json:"tools"`
+		Instructions string          `json:"instructions"`
 	}
 	err := d.post(ctx, "/tools/list", struct{}{}, &r)
-	return r.Tools, err
+	return r.Tools, r.Instructions, err
 }
 
 // Call asks the daemon to run one.

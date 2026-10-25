@@ -19,6 +19,13 @@ func (echoSet) Tools(g Grant) []Tool {
 	return []Tool{{Name: "echo", InputSchema: json.RawMessage(`{"type":"object"}`)}}
 }
 
+func (echoSet) Instructions(g Grant) string {
+	if g.Issue == nil {
+		return ""
+	}
+	return "Echoes for " + g.Issue.Key + "."
+}
+
 func (echoSet) Call(_ context.Context, g Grant, _ string, args json.RawMessage) (string, error) {
 	if string(args) == `"fail"` {
 		return "", errors.New("it failed")
@@ -41,8 +48,8 @@ func TestKeys(t *testing.T) {
 	if other == key {
 		t.Error("two chats share a key")
 	}
-	if list, err := s.List(key); err != nil || len(list) != 1 || list[0].Name != "echo" {
-		t.Errorf("list %v, %v", list, err)
+	if list, text, err := s.List(key); err != nil || len(list) != 1 || list[0].Name != "echo" || text != "Echoes for ACME-12." {
+		t.Errorf("list %v, %q, %v", list, text, err)
 	}
 	if text, err := s.Call(t.Context(), key, "echo", json.RawMessage(`"hi"`)); err != nil || text != `c1 ACME-12 "hi"` {
 		t.Errorf("call %q, %v", text, err)
@@ -57,7 +64,7 @@ func TestKeys(t *testing.T) {
 		t.Error("a tool no set has")
 	}
 	for _, bad := range []string{"", "x", key + "x"} {
-		if _, err := s.List(bad); !errors.Is(err, ErrKey) {
+		if _, _, err := s.List(bad); !errors.Is(err, ErrKey) {
 			t.Errorf("key %q: %v", bad, err)
 		}
 		if _, err := s.Call(t.Context(), bad, "echo", nil); !errors.Is(err, ErrKey) {

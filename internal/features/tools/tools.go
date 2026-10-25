@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 
 	"github.com/afrase/nushi/internal/model"
@@ -37,6 +38,9 @@ type Tool struct {
 // what a grant gets of it.
 type Set interface {
 	Tools(Grant) []Tool
+	// Instructions tells the agent what the tools are for here (Jira's:
+	// which issue the chat works on), or "".
+	Instructions(Grant) string
 	// Call runs one of its tools for a grant, with the arguments the agent
 	// sent; the text is the agent's answer. An error is the tool failing,
 	// which the agent sees as such.
@@ -97,17 +101,21 @@ func (s *Service) grant(key string) (Grant, error) {
 	return Grant{}, ErrKey
 }
 
-// List is the tools a key grants.
-func (s *Service) List(key string) ([]Tool, error) {
+// List is the tools a key grants, and what their sets say they're for.
+func (s *Service) List(key string) ([]Tool, string, error) {
 	g, err := s.grant(key)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	var out []Tool
+	var said []string
 	for _, set := range s.sets {
 		out = append(out, set.Tools(g)...)
+		if text := set.Instructions(g); text != "" {
+			said = append(said, text)
+		}
 	}
-	return out, nil
+	return out, strings.Join(said, "\n\n"), nil
 }
 
 // Call runs a tool the key grants. The log says which tool, for which
