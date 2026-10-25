@@ -13,12 +13,16 @@ import (
 
 // Level is the lowest level written: INFO, or DEBUG when NUSHI_LOG=debug
 // or the setting says so (SetDebug).
-var Level = new(slog.LevelVar)
+var Level = func() *slog.LevelVar {
+	l := new(slog.LevelVar)
+	if fromEnv {
+		l.Set(slog.LevelDebug)
+	}
+	return l
+}()
 
 // fromEnv says NUSHI_LOG=debug asks for DEBUG whatever the setting says.
 var fromEnv = strings.EqualFold(os.Getenv("NUSHI_LOG"), "debug")
-
-func init() { SetDebug(false) }
 
 // SetDebug follows the debug setting.
 func SetDebug(on bool) {

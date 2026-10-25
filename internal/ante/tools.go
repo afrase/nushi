@@ -162,7 +162,7 @@ func (s *session) toolLocked(ev event, olds map[string]toolcall.Old) []acp.Sessi
 		}
 		u := acp.ToolCallUpdate{ToolCallID: acp.ToolCallID(p.ID), Status: status, RawOutput: p.Result}
 		if kindOf(p.Name) != "edit" || status != "completed" { // a finished edit keeps its diff
-			u.Content = toolcall.Text(result(p.Name, p.Result))
+			u.Content = toolcall.Text(result(p.Result))
 		}
 		var out []acp.SessionUpdate
 		if _, ok := s.tools[p.ID]; !ok { // denied or refused before it started
@@ -176,7 +176,7 @@ func (s *session) toolLocked(ev event, olds map[string]toolcall.Old) []acp.Sessi
 
 // result is what a call's result shows: a command's output in a fence
 // (after "Exit code N" when it failed), a file's lines, else its message.
-func result(tool string, raw json.RawMessage) string {
+func result(raw json.RawMessage) string {
 	var s string
 	if json.Unmarshal(raw, &s) == nil {
 		return s

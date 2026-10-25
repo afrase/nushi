@@ -58,8 +58,9 @@ func Write(path string, old Old, content string) []acp.ToolCallContent {
 	return append([]acp.ToolCallContent{Diff(path, old.Text, content)}, Text(old.Note)...)
 }
 
-func Diff(path, old, new string) acp.ToolCallContent {
-	return acp.ToolCallContent{Type: "diff", Diff: &acp.Diff{Path: path, OldText: old, NewText: new}}
+// Diff is a call's change to the file at path, from before to after.
+func Diff(path, before, after string) acp.ToolCallContent {
+	return acp.ToolCallContent{Type: "diff", Diff: &acp.Diff{Path: path, OldText: before, NewText: after}}
 }
 
 // Text is s as a call's content; none when s is empty.

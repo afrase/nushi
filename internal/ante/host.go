@@ -80,12 +80,11 @@ func variant(raw json.RawMessage) (string, json.RawMessage) {
 	return "", nil
 }
 
-// send writes an op ("Interrupt", or {"UserInput": "hi"}) and returns its
-// id, which the events it causes carry as their parent; an input's id is
-// also its turn's.
-func (h *host) send(op any) (string, error) {
-	id := opID()
-	return id, h.write(id, op)
+// send writes an op ("Interrupt", or {"UserInput": "hi"}) under a new id
+// (write takes the id when the caller needs it: the events an op causes
+// carry it as their parent, and an input's id is also its turn's).
+func (h *host) send(op any) error {
+	return h.write(opID(), op)
 }
 
 // write writes an op under the id given (from opID).

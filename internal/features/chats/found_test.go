@@ -36,18 +36,18 @@ func TestFindLeavesOutNushisOwn(t *testing.T) {
 		t.Fatal(err)
 	}
 	gone := filepath.Join(other, "gone")
-	real, _ := filepath.EvalSymlinks(dir)
+	resolved, _ := filepath.EvalSymlinks(dir)
 	f := &fakeAgent{lists: true, listed: []acp.SessionInfo{
-		{SessionID: "old", Cwd: real, Title: "Old", UpdatedAt: "2026-10-01T10:00:00Z"},
-		{SessionID: "s1", Cwd: real, Title: "A chat's"},
-		{SessionID: "before-move", Cwd: real},
-		{SessionID: "fork", Cwd: real},
-		{SessionID: "new", Cwd: real, Title: "New", UpdatedAt: "2026-10-02T10:00:00Z", Meta: map[string]any{"messageCount": 4.0}},
+		{SessionID: "old", Cwd: resolved, Title: "Old", UpdatedAt: "2026-10-01T10:00:00Z"},
+		{SessionID: "s1", Cwd: resolved, Title: "A chat's"},
+		{SessionID: "before-move", Cwd: resolved},
+		{SessionID: "fork", Cwd: resolved},
+		{SessionID: "new", Cwd: resolved, Title: "New", UpdatedAt: "2026-10-02T10:00:00Z", Meta: map[string]any{"messageCount": 4.0}},
 		{SessionID: "elsewhere", Cwd: other, Title: "Elsewhere", UpdatedAt: "2026-10-03T10:00:00Z"},
 		{SessionID: "lost", Cwd: gone, Title: "Lost"},
 	}}
 	sessions := &memSessions{stored: []model.Session{{ID: "c0", SessionID: "x", Earlier: []model.AgentSession{{ID: "before-move"}}, Throwaway: []string{"fork"}}}}
-	f.listed = append(f.listed, acp.SessionInfo{SessionID: "a-fork", Cwd: real, UpdatedAt: "2026-10-05T10:00:00Z"})
+	f.listed = append(f.listed, acp.SessionInfo{SessionID: "a-fork", Cwd: resolved, UpdatedAt: "2026-10-05T10:00:00Z"})
 	k := Kind{Name: "a", Launch: f.launch, OpenElsewhere: func([]string) map[string]string { return map[string]string{"old": "a terminal"} },
 		Forked: func([]string) map[string]bool { return map[string]bool{"a-fork": true} }}
 	svc := New([]Kind{k}, &memModes{}, sessions, nil, "", func(model.Event) {})
@@ -65,8 +65,8 @@ func TestFindLeavesOutNushisOwn(t *testing.T) {
 	if len(page.Sessions) == 2 && (page.Sessions[0].Messages != 4 || page.Sessions[1].OpenIn != "a terminal" || page.Sessions[0].Title != "New") {
 		t.Errorf("found %+v, want new's 4 messages and old open in a terminal", page.Sessions)
 	}
-	if f.listed1[0].Cwd != real {
-		t.Errorf("listed %q, want the folder's real path %q", f.listed1[0].Cwd, real)
+	if f.listed1[0].Cwd != resolved {
+		t.Errorf("listed %q, want the folder's real path %q", f.listed1[0].Cwd, resolved)
 	}
 	page, err = svc.Find(ctx, "a", "", "")
 	if got := ids(page.Sessions); err != nil || got != "elsewhere new old lost" {
@@ -85,10 +85,10 @@ func TestFindLeavesOutNushisOwn(t *testing.T) {
 // on from the agent's cursor.
 func TestFindPages(t *testing.T) {
 	dir, other := t.TempDir(), t.TempDir()
-	real, _ := filepath.EvalSymlinks(dir)
+	resolved, _ := filepath.EvalSymlinks(dir)
 	f := &fakeAgent{lists: true, listPage: 3}
 	for i := range 90 {
-		cwd := real
+		cwd := resolved
 		if i%3 == 0 {
 			cwd = other
 		}

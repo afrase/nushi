@@ -112,8 +112,8 @@ func Has(projects, id, folder string) bool {
 // Claude also puts the path in Unicode NFC first; that isn't done here, so
 // a path with decomposed accents gets another name than Claude's.
 func dirName(folder string) string {
-	if real, err := filepath.EvalSymlinks(folder); err == nil {
-		folder = real
+	if resolved, err := filepath.EvalSymlinks(folder); err == nil {
+		folder = resolved
 	}
 	var b strings.Builder
 	var hash int32 // JavaScript's usual string hash: h*31 + unit, in 32 bits

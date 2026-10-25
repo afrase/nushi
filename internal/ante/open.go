@@ -41,7 +41,7 @@ func openFiles(files []string, of func(file string) string) map[string]string {
 	for line := range strings.Lines(string(b)) {
 		if name, ok := strings.CutPrefix(strings.TrimSpace(line), "n"); ok {
 			for _, f := range files {
-				if real, _ := filepath.EvalSymlinks(f); name == f || name == real {
+				if resolved, _ := filepath.EvalSymlinks(f); name == f || name == resolved {
 					out[of(f)] = "another app"
 				}
 			}

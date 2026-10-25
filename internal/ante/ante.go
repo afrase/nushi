@@ -58,9 +58,9 @@ func Start(dir string, h acp.Handler, log *slog.Logger) (*acp.Client, error) {
 	return acp.Start(cmd, h, log)
 }
 
-// warn writes a line to the bridge's stderr, which the daemon logs with
+// warnf writes a line to the bridge's stderr, which the daemon logs with
 // the chat's attributes, as any agent's stderr.
-func warn(format string, args ...any) {
+func warnf(format string, args ...any) {
 	fmt.Fprintf(os.Stderr, "ante-acp: "+format+"\n", args...)
 }
 
@@ -115,7 +115,7 @@ func version(bin string) (string, error) {
 	case got[0] != want[0] || got[1] < want[1] || got[1] == want[1] && got[2] < want[2]:
 		return "", fmt.Errorf("Ante %s is older than the %s Nushi needs: run `ante update`", v, Min)
 	case v != Min:
-		warn("ante %s is newer than %s, whose protocol the bridge follows", v, Min)
+		warnf("ante %s is newer than %s, whose protocol the bridge follows", v, Min)
 	}
 	return v, nil
 }

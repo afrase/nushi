@@ -120,7 +120,7 @@ func check(f model.Field) error {
 func formFields(schema *acp.ElicitationSchema) ([]model.Field, error) {
 	dec := json.NewDecoder(bytes.NewReader(schema.Properties))
 	if tok, err := dec.Token(); err != nil || tok != json.Delim('{') {
-		return nil, fmt.Errorf("elicitation schema: properties is not an object (%v)", err)
+		return nil, fmt.Errorf("elicitation schema: properties is not an object (%v)", err) //nolint:errorlint // err is nil when the token is wrong
 	}
 	var fields []model.Field
 	for dec.More() {

@@ -13,7 +13,7 @@ import (
 )
 
 // update turns the agent's updates into transcript items.
-func (c *chat) update(n acp.SessionNotification) {
+func (c *chat) update(n acp.SessionNotification) { //nolint:gocognit,gocyclo // one case per ACP update kind
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.kept && slices.Contains([]string{"user_message_chunk", "agent_message_chunk", "agent_thought_chunk", "plan", "tool_call", "tool_call_update"}, n.Update.SessionUpdate) {
@@ -170,12 +170,12 @@ func (c *chat) toolCallLocked(it *model.Item, meta map[string]any, input json.Ra
 	return c.dialect.ToolCall != nil && c.dialect.ToolCall(it, meta, input)
 }
 
-// subagentLocked brings the subagent that tool call call starts, if it
-// starts one, up to date (see model.Subagent), and says whether it
+// subagentLocked brings the subagent that call (a tool call) starts, if
+// it starts one, up to date (see model.Subagent), and says whether it
 // changed. A subagent in the background runs on past its call until its
 // report, if the daemon saw it start: a replayed one without a report has
 // ended.
-func (c *chat) subagentLocked(call *model.Item) bool {
+func (c *chat) subagentLocked(call *model.Item) bool { //nolint:gocyclo // one test per field the subagent's state takes from the call
 	if call.Agent == "" {
 		return false
 	}

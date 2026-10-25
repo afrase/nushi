@@ -106,7 +106,7 @@ func (h *Host) info() map[string]any {
 		"model": map[string]any{"id": "m1", "effort": "low"}, "provider": map[string]any{"id": "fake"}}
 }
 
-func (h *Host) op(id string, raw json.RawMessage) (done bool) {
+func (h *Host) op(id string, raw json.RawMessage) (done bool) { //nolint:gocognit // one case per op the fake takes
 	name, p := variant(raw)
 	switch name {
 	case "StartSession":

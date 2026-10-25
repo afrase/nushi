@@ -25,11 +25,11 @@ func TestDirNameIsClaudes(t *testing.T) {
 // apart from dirName: its real path (/var is /private/var on macOS), each
 // character but a letter or digit a "-".
 func claudeName(t *testing.T, folder string) string {
-	real, err := filepath.EvalSymlinks(folder)
+	resolved, err := filepath.EvalSymlinks(folder)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return regexp.MustCompile(`[^A-Za-z0-9]`).ReplaceAllString(real, "-")
+	return regexp.MustCompile(`[^A-Za-z0-9]`).ReplaceAllString(resolved, "-")
 }
 
 func TestCopyKeepsTheOriginal(t *testing.T) {

@@ -19,8 +19,8 @@ const (
 // Of returns the footprint of the process pid in bytes, or 0 when it can't
 // be read (gone, or another user's).
 func Of(pid int) uint64 {
-	var info [12]uint64 // rusage_info_v0: a 16-byte uuid, then ten counters
-	_, _, errno := unix.Syscall6(unix.SYS_PROC_INFO, procInfoCallPidRusage, uintptr(pid), rusageInfoV0, 0, uintptr(unsafe.Pointer(&info)), 0)
+	var info [12]uint64                                                                                                                       // rusage_info_v0: a 16-byte uuid, then ten counters
+	_, _, errno := unix.Syscall6(unix.SYS_PROC_INFO, procInfoCallPidRusage, uintptr(pid), rusageInfoV0, 0, uintptr(unsafe.Pointer(&info)), 0) //nolint:staticcheck,gosec // proc_pid_rusage without cgo: libSystem's wrapper needs it
 	if errno != 0 {
 		return 0
 	}

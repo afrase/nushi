@@ -17,7 +17,7 @@ import (
 // runs each session on an `ante serve --stdio` of its own.
 type bridge struct {
 	peer    *acp.Peer
-	ctx     context.Context // ends with the client's connection
+	ctx     context.Context //nolint:containedctx // ends with the client's connection
 	spawn   Spawn
 	home    string // Ante's home: its sessions are in home/sessions
 	version string // `ante --version`'s
@@ -85,7 +85,7 @@ func (b *bridge) catalog() []provider {
 		}
 		var err error
 		if b.cat, err = b.readCat(); err != nil {
-			warn("no catalog, so no model list: %v", err)
+			warnf("no catalog, so no model list: %v", err)
 		}
 	})
 	return b.cat
@@ -184,7 +184,7 @@ func (b *bridge) handle(ctx context.Context, method string, params json.RawMessa
 		if s, err := b.session(p.SessionID); err == nil {
 			s.h.send("Interrupt")
 		}
-		return nil, nil
+		return nil, nil //nolint:nilnil // a notification has no result
 	case "session/set_mode":
 		s, err := b.session(p.SessionID)
 		if err != nil {

@@ -51,8 +51,11 @@ func forked(sessions string, ids []string) map[string]bool {
 	}
 	out := map[string]bool{}
 	filepath.WalkDir(sessions, func(path string, d fs.DirEntry, err error) error {
+		if err != nil { // d is nil when sessions can't be read
+			return nil //nolint:nilerr // what can't be read is skipped; the walk goes on
+		}
 		name := d.Name()
-		if err != nil || !d.Type().IsRegular() || !strings.HasPrefix(name, "rollout-") || !strings.HasSuffix(name, ".jsonl") {
+		if !d.Type().IsRegular() || !strings.HasPrefix(name, "rollout-") || !strings.HasSuffix(name, ".jsonl") {
 			return nil
 		}
 		id := strings.TrimSuffix(name, ".jsonl")

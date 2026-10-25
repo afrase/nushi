@@ -293,7 +293,7 @@ func (a *Agent) say(session, text string) {
 }
 
 // prompt runs the script for text and returns the turn's stop reason.
-func (a *Agent) prompt(session, text string) string {
+func (a *Agent) prompt(session, text string) string { //nolint:gocognit // one case per script word
 	a.mu.Lock()
 	cwd := a.cwds[session]
 	a.mu.Unlock()

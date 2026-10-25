@@ -16,7 +16,7 @@ import (
 // runs each session on a `pig --mode rpc` of its own.
 type bridge struct {
 	peer    *acp.Peer
-	ctx     context.Context // ends with the client's connection
+	ctx     context.Context //nolint:containedctx // ends with the client's connection
 	spawn   Spawn
 	dirs    Dirs
 	version string // `pig --version`'s
@@ -159,7 +159,7 @@ func (b *bridge) handle(ctx context.Context, method string, params json.RawMessa
 		if s, err := b.session(p.SessionID); err == nil {
 			s.cancel()
 		}
-		return nil, nil
+		return nil, nil //nolint:nilnil // a notification has no result
 	case "session/set_config_option":
 		s, err := b.session(p.SessionID)
 		if err != nil {

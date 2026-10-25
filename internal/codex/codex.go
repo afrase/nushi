@@ -56,7 +56,7 @@ var Tested = []string{"0.160.1", "0.163.0"}
 // Resume is the terminal command that opens a Codex session by its id.
 const Resume = "codex resume"
 
-// DeleteArchives: the adapter's session/delete archives the thread
+// DeleteArchives says the adapter's session/delete archives the thread
 // ($CODEX_HOME/archived_sessions); codex resume offers to unarchive it.
 const DeleteArchives = true
 

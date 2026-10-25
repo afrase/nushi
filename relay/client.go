@@ -92,7 +92,7 @@ func (d *Dialer) connect(ctx context.Context, relay, side, id string) (*Conn, er
 	var errs []error
 	for _, p := range proxies {
 		wd := websocket.Dialer{Proxy: func(*http.Request) (*url.URL, error) { return p, nil }, HandshakeTimeout: 20 * time.Second}
-		ws, resp, err := wd.DialContext(ctx, u.String(), nil)
+		ws, resp, err := wd.DialContext(ctx, u.String(), nil) //nolint:bodyclose // gorilla's Dial: the body of a failed handshake needn't be closed
 		if err == nil {
 			return newConn(ws), nil
 		}

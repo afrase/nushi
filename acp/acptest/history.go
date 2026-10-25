@@ -25,8 +25,8 @@ type History struct {
 type key struct{ cwd, session string }
 
 func keyOf(cwd, session string) key {
-	if real, err := filepath.EvalSymlinks(cwd); err == nil {
-		cwd = real
+	if resolved, err := filepath.EvalSymlinks(cwd); err == nil {
+		cwd = resolved
 	}
 	return key{cwd, session}
 }

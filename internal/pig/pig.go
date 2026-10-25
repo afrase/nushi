@@ -73,10 +73,10 @@ func logf(format string, args ...any) {
 	fmt.Fprintf(logTo, format+"\n", args...)
 }
 
-func warn(format string, args ...any) { logf("pig-acp: "+format, args...) }
+func warnf(format string, args ...any) { logf("pig-acp: "+format, args...) }
 
-// debug writes a line the daemon logs at DEBUG (acp's stderr lines).
-func debug(format string, args ...any) { logf(acp.DebugPrefix+"pig-acp: "+format, args...) }
+// debugf writes a line the daemon logs at DEBUG (acp's stderr lines).
+func debugf(format string, args ...any) { logf(acp.DebugPrefix+"pig-acp: "+format, args...) }
 
 // Main runs the bridge on stdin and stdout: the Command.
 func Main() {
@@ -103,7 +103,7 @@ func version(bin string) (string, error) {
 	}
 	v, _, _ := strings.Cut(strings.TrimSpace(string(out)), "+")
 	if v != Version {
-		warn("pig %s isn't %s, whose RPC mode the bridge follows", v, Version)
+		warnf("pig %s isn't %s, whose RPC mode the bridge follows", v, Version)
 	}
 	return v, nil
 }
@@ -129,14 +129,14 @@ func spawn(bin, cwd string, args []string) (Pig, error) {
 		return Pig{}, err
 	}
 	started := time.Now()
-	warn("pig started pid=%d args=%q", cmd.Process.Pid, args)
+	warnf("pig started pid=%d args=%q", cmd.Process.Pid, args)
 	exited := make(chan struct{})
 	go func() {
 		status := "exit status 0"
 		if err := cmd.Wait(); err != nil {
 			status = err.Error() // "exit status 1", "signal: killed"
 		}
-		warn("pig exited pid=%d ran=%s %s", cmd.Process.Pid, time.Since(started).Round(100*time.Millisecond), status)
+		warnf("pig exited pid=%d ran=%s %s", cmd.Process.Pid, time.Since(started).Round(100*time.Millisecond), status)
 		close(exited)
 	}()
 	kill := func() {

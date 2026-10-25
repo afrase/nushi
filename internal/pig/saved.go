@@ -85,7 +85,7 @@ func (d Dirs) find(id, cwd string) (string, error) {
 func (d Dirs) remove(id string) error {
 	file, err := d.find(id, "")
 	if err != nil {
-		return nil // gone already
+		return nil //nolint:nilerr // not found: gone already
 	}
 	if d.Trash != "" {
 		exec.Command(d.Trash, file).Run() // file is absolute
@@ -102,10 +102,10 @@ const pageSize = 50
 // list answers session/list: the sessions in folder cwd (every folder's
 // when ""), newest first, without forks; the cursor is an offset.
 func (d Dirs) list(cwd, cursor string) acp.ListSessionsResponse {
-	real := git.RealPath(cwd)
+	resolved := git.RealPath(cwd)
 	var found []saved
 	for _, s := range d.all() {
-		if s.Parent == "" && (cwd == "" || git.RealPath(s.Cwd) == real) {
+		if s.Parent == "" && (cwd == "" || git.RealPath(s.Cwd) == resolved) {
 			found = append(found, s)
 		}
 	}
@@ -203,7 +203,7 @@ func branch(ctx context.Context, p *proc) ([]entry, error) {
 // replay sends the client the conversation of the session pig opened:
 // the user's messages, the model's (its thinking, text and calls), the
 // calls' results.
-func (s *session) replay(ctx context.Context) error {
+func (s *session) replay(ctx context.Context) error { //nolint:gocognit // one case per kind of message and content block
 	entries, err := branch(ctx, s.p)
 	if err != nil {
 		return err

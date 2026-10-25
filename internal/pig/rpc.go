@@ -76,7 +76,7 @@ func (p *proc) read(out io.Reader) {
 		switch {
 		case len(line) == 0:
 		case json.Unmarshal(line, &head) != nil:
-			warn("pig wrote a line that isn't JSON (%d bytes)", len(line))
+			warnf("pig wrote a line that isn't JSON (%d bytes)", len(line))
 		case head.Type == "response" && head.ID != nil:
 			var resp response
 			json.Unmarshal(line, &resp)
@@ -90,7 +90,7 @@ func (p *proc) read(out io.Reader) {
 		case head.Type == "response":
 			var resp response
 			json.Unmarshal(line, &resp)
-			warn("pig refused a command: %s", resp.Error)
+			warnf("pig refused a command: %s", resp.Error)
 		default:
 			p.events <- event{Type: head.Type, Raw: line}
 		}
@@ -136,7 +136,7 @@ func (p *proc) call(ctx context.Context, cmd map[string]any, out any) error {
 		return err
 	}
 	start := time.Now()
-	defer func() { debug("rpc %v took=%s", cmd["type"], time.Since(start).Round(time.Millisecond)) }()
+	defer func() { debugf("rpc %v took=%s", cmd["type"], time.Since(start).Round(time.Millisecond)) }()
 	select {
 	case resp, ok := <-ch:
 		switch {

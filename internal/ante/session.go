@@ -332,6 +332,6 @@ func (s *session) steer(text string) (bool, error) {
 	if !running {
 		return false, nil
 	}
-	_, err := s.h.send(map[string]string{"Steer": text})
+	err := s.h.send(map[string]string{"Steer": text})
 	return err == nil, err
 }

@@ -47,3 +47,11 @@ func TestForked(t *testing.T) {
 		t.Errorf("forked = %v, want only %s", got, fork)
 	}
 }
+
+// A Codex home with no sessions folder yet has no forks (the walk used to
+// call a nil entry's Name there, and panic).
+func TestForkedWithoutSessions(t *testing.T) {
+	if got := forked(filepath.Join(t.TempDir(), "sessions"), []string{"01a17067-b497-76b2-b3c1-aaa7817b86d7"}); len(got) != 0 {
+		t.Errorf("forked = %v, want none", got)
+	}
+}

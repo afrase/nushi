@@ -8,6 +8,7 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -19,15 +20,21 @@ import (
 
 // tarball packs files as npm packs a package (under package/).
 func tarball(t *testing.T, files map[string]string) []byte {
+	t.Helper()
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	tw := tar.NewWriter(gz)
 	for name, body := range files {
-		tw.WriteHeader(&tar.Header{Name: "package/" + name, Mode: 0o644, Size: int64(len(body)), Typeflag: tar.TypeReg})
-		tw.Write([]byte(body))
+		if err := tw.WriteHeader(&tar.Header{Name: "package/" + name, Mode: 0o644, Size: int64(len(body)), Typeflag: tar.TypeReg}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := tw.Write([]byte(body)); err != nil {
+			t.Fatal(err)
+		}
 	}
-	tw.Close()
-	gz.Close()
+	if err := errors.Join(tw.Close(), gz.Close()); err != nil {
+		t.Fatal(err)
+	}
 	return buf.Bytes()
 }
 
@@ -107,7 +114,7 @@ func TestInstall(t *testing.T) {
 		}
 	}
 	version, program := in.Installed(folder, "a", "a")
-	if version != "1.0.0" || program != filepath.Join(folder, "node_modules/a/bin/a.js") || readied != 2 {
+	if version != "1.0.0" || program != filepath.Join(folder, "node_modules", "a", "bin", "a.js") || readied != 2 {
 		t.Errorf("%q %q, ready %d times", version, program, readied)
 	}
 	if v, _ := in.Installed(folder, "b", "b"); v != "" {

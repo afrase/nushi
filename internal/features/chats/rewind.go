@@ -195,7 +195,7 @@ func (s *Service) Stop(ctx context.Context, chatID string, takeBack bool) (*mode
 		return can, false
 	}()
 	if gone {
-		return nil, nil
+		return nil, nil //nolint:nilnil // nothing taken back, as when the turn had an answer
 	}
 	if can {
 		if _, err := s.Rewind(ctx, chatID, id); err != nil {

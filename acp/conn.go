@@ -51,8 +51,8 @@ type conn struct {
 	w      io.Writer
 	handle handleFunc
 	log    *slog.Logger
-	junk   int // lines read that weren't JSON-RPC (on the reading goroutine)
-	ctx    context.Context
+	junk   int             // lines read that weren't JSON-RPC (on the reading goroutine)
+	ctx    context.Context //nolint:containedctx // the connection's own: requests from the other side end with it
 	cancel context.CancelFunc
 
 	writeMu sync.Mutex
@@ -297,21 +297,21 @@ func (c *conn) await(ctx context.Context, method string, id json.RawMessage, ch 
 		return json.Unmarshal(f.Result, result)
 	case <-ctx.Done():
 		c.forget(id)
-		return &gaveUp{ctx.Err(), id}
+		return &gaveUpError{ctx.Err(), id}
 	}
 }
 
-// gaveUp is a call whose context ended before its answer came: the id it
+// gaveUpError is a call whose context ended before its answer came: the id it
 // went out under, which $/cancel_request names to withdraw it.
-type gaveUp struct {
+type gaveUpError struct {
 	error
 	id json.RawMessage
 }
 
-func (g *gaveUp) Unwrap() error { return g.error }
+func (g *gaveUpError) Unwrap() error { return g.error }
 
 func withdrawable(err error) json.RawMessage {
-	var g *gaveUp
+	var g *gaveUpError
 	if errors.As(err, &g) {
 		return g.id
 	}

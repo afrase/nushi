@@ -186,7 +186,7 @@ func (s *Service) Arrange(chatID string, ids []string) {
 		}
 	}
 	slices.SortStableFunc(mine, func(a, b *term) int { return rank(a) - rank(b) })
-	s.terms = append(others, mine...)
+	s.terms = append(others, mine...) //nolint:gocritic // others is this function's own
 	s.mu.Unlock()
 	s.changed(chatID)
 }
