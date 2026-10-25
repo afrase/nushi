@@ -6,7 +6,7 @@ import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 
-/// Chats of all four agents, in each status.
+/// Chats of all five agents, in each status.
 final _chats = [
   chat('a', 'claude', 'Fix the login redirect', status: ChatStatus(busy: true)),
   chat(
@@ -28,6 +28,7 @@ final _chats = [
   chat('f', 'codex', 'Release notes', folder: '/Users/me/site', age: 5),
   chat('g', 'ante', 'Logs', folder: '/Users/me/site', age: 6),
   chat('h', 'omp', 'Fonts', folder: '/Users/me/site', age: 7),
+  chat('j', 'pig', 'Port the tests', folder: '/Users/me/site', age: 7),
   chat(
     'i',
     'mystery',

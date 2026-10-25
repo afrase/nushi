@@ -20,7 +20,8 @@ Adapter _adapter(String package, String pinned, String installed) => Adapter(
 );
 
 /// Claude installed but not set up nor signed in, Codex set up with a
-/// newer adapter pinned and a chat awake, Ante ready, oh-my-pi missing.
+/// newer adapter pinned and a chat awake, Ante ready, oh-my-pi missing,
+/// PiG ready.
 final _found = [
   Agent(
     name: 'claude',
@@ -51,6 +52,13 @@ final _found = [
     title: 'oh-my-pi',
     problem: 'Not installed',
     page: 'https://github.com/can1357/oh-my-pi',
+  ),
+  Agent(
+    name: 'pig',
+    title: 'PiG',
+    path: '/Users/me/.local/bin/pig',
+    version: '0.5.3',
+    ready: true,
   ),
 ];
 
@@ -97,7 +105,8 @@ void main() {
     expect(find.text('Adapter 2.2.1'), findsOneWidget);
     expect(find.text('Update to 2.2.2'), findsOneWidget);
     expect(find.text('Remove'), findsOneWidget);
-    expect(find.text('Ready'), findsOneWidget);
+    expect(find.text('Ready'), findsNWidgets(2)); // Ante, PiG
+    expect(find.text('0.5.3 · /Users/me/.local/bin/pig'), findsOneWidget);
     expect(find.text('Not installed'), findsOneWidget);
     expect(find.text('Get it'), findsOneWidget);
     d.dispose();
