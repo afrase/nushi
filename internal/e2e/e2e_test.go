@@ -4,6 +4,7 @@ package e2e
 import (
 	"context"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -62,7 +63,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	// serve runs an agent over pipes: the fake ACP agent, or Ante's bridge
 	// on a fake Ante.
 	launch := func(serve func(r io.Reader, w io.Writer)) chats.Launch {
-		return func(h acp.Handler) (chats.Agent, error) {
+		return func(h acp.Handler, log *slog.Logger) (chats.Agent, error) {
 			toAgentR, toAgentW := io.Pipe()
 			fromAgentR, fromAgentW := io.Pipe()
 			mu.Lock()
@@ -72,7 +73,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 				serve(toAgentR, fromAgentW)
 				fromAgentW.Close()
 			}()
-			return pipeAgent{acp.Connect(fromAgentR, toAgentW, h), toAgentW}, nil
+			return pipeAgent{acp.Connect(fromAgentR, toAgentW, h, log), toAgentW}, nil
 		}
 	}
 	fake := func(codex, omp bool) chats.Launch {

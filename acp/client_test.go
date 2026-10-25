@@ -47,7 +47,7 @@ func fakeAgent(t *testing.T, reply func(method string, params json.RawMessage) (
 		}
 	}()
 	rec := &recorder{}
-	return Connect(fromAgentR, toAgentW, rec), rec, func() { fromAgentW.Close() }
+	return Connect(fromAgentR, toAgentW, rec, nil), rec, func() { fromAgentW.Close() }
 }
 
 func TestPromptStreamsUpdatesBeforeTheResponse(t *testing.T) {
@@ -117,7 +117,7 @@ func TestAgentRequestIsAnswered(t *testing.T) {
 	toAgentR, toAgentW := io.Pipe()
 	fromAgentR, fromAgentW := io.Pipe()
 	defer fromAgentW.Close()
-	Connect(fromAgentR, toAgentW, &recorder{})
+	Connect(fromAgentR, toAgentW, &recorder{}, nil)
 
 	io.WriteString(fromAgentW, `{"jsonrpc":"2.0","id":"p1","method":"session/request_permission","params":{"sessionId":"s1","toolCall":{"toolCallId":"t1"},"options":[{"optionId":"allow","name":"Allow","kind":"allow_once"},{"optionId":"deny","name":"Deny","kind":"reject_once"}]}}`+"\n")
 	io.WriteString(fromAgentW, `{"jsonrpc":"2.0","id":7,"method":"fs/read_text_file","params":{}}`+"\n")
@@ -156,7 +156,7 @@ func TestAWithdrawnRequestEnds(t *testing.T) {
 	fromAgentR, fromAgentW := io.Pipe()
 	defer fromAgentW.Close()
 	h := &blocking{ended: make(chan struct{})}
-	Connect(fromAgentR, toAgentW, h)
+	Connect(fromAgentR, toAgentW, h, nil)
 	go io.Copy(io.Discard, toAgentR)
 	io.WriteString(fromAgentW, `{"jsonrpc":"2.0","id":5,"method":"session/request_permission","params":{"sessionId":"s1","toolCall":{"toolCallId":"t1"},"options":[]}}`+"\n")
 	io.WriteString(fromAgentW, `{"jsonrpc":"2.0","method":"$/cancel_request","params":{"requestId":5}}`+"\n")

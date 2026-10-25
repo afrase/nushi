@@ -8,8 +8,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
+	"runtime/debug"
 	"strconv"
 	"sync"
+	"time"
 )
 
 func (e *Error) Error() string { return fmt.Sprintf("acp error %d: %s", e.Code, e.Message) }
@@ -47,6 +50,8 @@ var ErrTooLarge = errors.New("the message is too large to send to the agent")
 type conn struct {
 	w      io.Writer
 	handle handleFunc
+	log    *slog.Logger
+	junk   int // lines read that weren't JSON-RPC (on the reading goroutine)
 	ctx    context.Context
 	cancel context.CancelFunc
 
@@ -60,15 +65,15 @@ type conn struct {
 	done     chan struct{} // closed with err
 }
 
-func newConn(r io.Reader, w io.Writer, handle handleFunc) *conn {
-	c := makeConn(w, handle)
+func newConn(r io.Reader, w io.Writer, log *slog.Logger, handle handleFunc) *conn {
+	c := makeConn(w, log, handle)
 	go c.read(r)
 	return c
 }
 
 // makeConn makes a connection that reads nothing until read runs.
-func makeConn(w io.Writer, handle handleFunc) *conn {
-	c := &conn{w: w, handle: handle, pending: map[string]chan frame{}, incoming: map[string]context.CancelFunc{}, done: make(chan struct{})}
+func makeConn(w io.Writer, log *slog.Logger, handle handleFunc) *conn {
+	c := &conn{w: w, handle: handle, log: log, pending: map[string]chan frame{}, incoming: map[string]context.CancelFunc{}, done: make(chan struct{})}
 	c.ctx, c.cancel = context.WithCancel(context.Background())
 	return c
 }
@@ -89,6 +94,9 @@ func (c *conn) read(r io.Reader) {
 	if errors.Is(err, io.EOF) {
 		err = io.ErrUnexpectedEOF
 	}
+	if c.junk > maxJunk {
+		c.log.Warn("lines that weren't JSON-RPC", "lines", c.junk)
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.err = fmt.Errorf("agent connection closed: %w", err)
@@ -103,7 +111,12 @@ func (c *conn) read(r io.Reader) {
 func (c *conn) dispatch(line []byte) {
 	var f frame
 	if err := json.Unmarshal(line, &f); err != nil {
-		return // not JSON-RPC; agents sometimes log to stdout
+		// Not JSON-RPC: agents sometimes log to stdout. Its size only:
+		// it may be anything.
+		if c.junk++; c.junk <= maxJunk {
+			c.log.Warn("a line that isn't JSON-RPC", "bytes", len(line), "err", err)
+		}
+		return
 	}
 	switch {
 	case f.Method == "" && f.ID != nil: // a response
@@ -117,7 +130,11 @@ func (c *conn) dispatch(line []byte) {
 	case f.ID == nil && f.Method == "$/cancel_request":
 		c.withdrawn(f.Params)
 	case f.ID == nil: // a notification
-		_, _ = c.safeHandle(c.ctx, f.Method, f.Params)
+		if _, err := c.safeHandle(c.ctx, f.Method, f.Params); err != nil {
+			c.log.Warn("acp notification failed", "rpc", f.Method, "err", err)
+		} else if f.Method != "session/update" { // each chunk of a reply is one
+			c.log.Debug("acp notification", "rpc", f.Method)
+		}
 	default: // a request
 		ctx, cancel := context.WithCancel(c.ctx)
 		key := string(bytes.TrimSpace(f.ID))
@@ -131,7 +148,9 @@ func (c *conn) dispatch(line []byte) {
 				c.mu.Unlock()
 				cancel()
 			}()
+			start := time.Now()
 			result, err := c.safeHandle(ctx, f.Method, f.Params)
+			c.logged("acp request from the agent", f.Method, time.Since(start), err)
 			reply := frame{JSONRPC: "2.0", ID: f.ID}
 			if err != nil {
 				var rpcErr *Error
@@ -166,11 +185,13 @@ func (c *conn) withdrawn(params json.RawMessage) {
 }
 
 // safeHandle runs the handler, turning a panic (a handler choking on what
-// the agent sent) into an error, so one bad message can't take the process down.
+// the agent sent) into an error, so one bad message can't take the process
+// down; the panic is logged with its stack.
 func (c *conn) safeHandle(ctx context.Context, method string, params json.RawMessage) (result any, err error) {
 	defer func() {
 		if p := recover(); p != nil {
 			err = fmt.Errorf("handling %s: %v", method, p)
+			c.log.Error("acp handler panicked", "rpc", method, "panic", fmt.Sprint(p), "stack", string(debug.Stack()))
 		}
 	}()
 	return c.handle(ctx, method, params)
@@ -217,11 +238,45 @@ func (c *conn) send(method string, params any) (wait func(ctx context.Context, r
 	c.pending[string(id)] = ch
 	c.mu.Unlock()
 
+	start := time.Now()
 	if err := c.write(frame{JSONRPC: "2.0", ID: id, Method: method, Params: p}); err != nil {
 		c.forget(id)
-		return nil, fmt.Errorf("%s: %w", method, err)
+		err = fmt.Errorf("%s: %w", method, err)
+		c.logged("acp call", method, 0, err)
+		return nil, err
 	}
-	return func(ctx context.Context, result any) error { return c.await(ctx, method, id, ch, result) }, nil
+	return func(ctx context.Context, result any) error {
+		err := c.await(ctx, method, id, ch, result)
+		c.logged("acp call", method, time.Since(start), err)
+		return err
+	}, nil
+}
+
+// Slow is how long a call or a request from the agent takes before it is
+// logged as slow. A prompt (a turn) and a request for the user's answer
+// take as long as they take.
+var Slow = 5 * time.Second
+
+// mayTakeLong are those methods.
+var mayTakeLong = map[string]bool{"session/prompt": true, "session/request_permission": true, "elicitation/create": true}
+
+// maxJunk is how many lines that aren't JSON-RPC are logged one by one;
+// the rest are counted when the connection ends.
+const maxJunk = 5
+
+// logged logs a call or a request from the agent once it ended: a failure
+// with the error (the agent's own, for a call), a slow one, and at DEBUG
+// every one, with how long it took; never what it carried.
+func (c *conn) logged(what, method string, took time.Duration, err error) {
+	took = took.Round(time.Millisecond)
+	switch {
+	case err != nil && !errors.Is(err, context.Canceled):
+		c.log.Warn(what+" failed", "rpc", method, "took", took, "err", err)
+	case took >= Slow && !mayTakeLong[method]:
+		c.log.Warn(what+" slow", "rpc", method, "took", took)
+	default:
+		c.log.Debug(what, "rpc", method, "took", took)
+	}
 }
 
 func (c *conn) await(ctx context.Context, method string, id json.RawMessage, ch chan frame, result any) error {

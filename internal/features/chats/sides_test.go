@@ -2,6 +2,7 @@ package chats
 
 import (
 	"context"
+	"log/slog"
 	"reflect"
 	"slices"
 	"testing"
@@ -13,7 +14,7 @@ import (
 func TestSideChatKeepsToItself(t *testing.T) {
 	agent := &fakeAgent{}
 	sessions := &memSessions{}
-	svc := New([]Kind{{Name: "fake", Launch: func(h acp.Handler) (Agent, error) { agent.h = h; return agent, nil }, Dialect: claudeDialect}}, &memModes{}, sessions, nil, "", func(model.Event) {})
+	svc := New([]Kind{{Name: "fake", Launch: func(h acp.Handler, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }, Dialect: claudeDialect}}, &memModes{}, sessions, nil, "", func(model.Event) {})
 	ctx := context.Background()
 	id, err := svc.Start(ctx, "", t.TempDir(), false)
 	if err != nil {

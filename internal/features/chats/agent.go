@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"slices"
 	"time"
 
@@ -26,7 +27,7 @@ type opened struct {
 // fork a new one that starts with a copy of it (session/fork). The agent
 // stops if that fails.
 func (c *chat) openSession(ctx context.Context, sid, folder string, fork bool) (opened, error) {
-	agent, init, err := initialize(ctx, c.kind.launch, c, c.dialect.InitMeta)
+	agent, init, err := initialize(ctx, c.kind.launch, c, c.dialect.InitMeta, c.logger(sid, folder))
 	if err != nil {
 		return opened{}, c.kind.explain(err)
 	}
@@ -85,9 +86,10 @@ func (c *chat) forkSession(ctx context.Context, agent Agent, sid, folder string,
 
 // initialize launches an agent and initializes the connection, with meta
 // as the client's _meta; the agent stops if that fails.
-func initialize(ctx context.Context, launch Launch, h acp.Handler, meta map[string]any) (Agent, *acp.InitializeResponse, error) {
-	agent, err := launch(h)
+func initialize(ctx context.Context, launch Launch, h acp.Handler, meta map[string]any, log *slog.Logger) (Agent, *acp.InitializeResponse, error) {
+	agent, err := launch(h, log)
 	if err != nil {
+		log.Warn("agent not started", "err", err)
 		return nil, nil, fmt.Errorf("start agent: %w", err)
 	}
 	init, err := agent.Initialize(ctx, acp.InitializeRequest{

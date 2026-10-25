@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"maps"
 	"os"
 	"path/filepath"
@@ -65,7 +66,7 @@ func (s *Service) Find(ctx context.Context, agent, folder, cursor string) (Found
 	}
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
-	a, init, err := initialize(ctx, k.launch, quiet{}, k.Dialect.InitMeta)
+	a, init, err := initialize(ctx, k.launch, quiet{}, k.Dialect.InitMeta, slog.With("agent", k.Name, "for", "listing"))
 	if err != nil {
 		return FoundPage{}, fmt.Errorf("couldn't start %s: %w", k.Title, k.explain(err))
 	}

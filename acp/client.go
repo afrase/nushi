@@ -4,7 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"os/exec"
+	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 )
@@ -29,14 +32,20 @@ type Client struct {
 	conn     *conn
 	cmd      *exec.Cmd
 	stdin    io.Closer
-	canFork  bool // initialize advertised session/fork
-	canSteer bool // and steering (see Steer)
+	canFork  bool        // initialize advertised session/fork
+	canSteer bool        // and steering (see Steer)
+	stopped  atomic.Bool // Close or Stop was called: its end isn't a death
 }
 
 // Start runs the agent command, in its own process group, and speaks ACP over
-// its stdin and stdout.
-func Start(cmd *exec.Cmd, h Handler) (*Client, error) {
+// its stdin and stdout. What happens goes to log: the process starting and
+// exiting (log.go), each line of its stderr, and the calls (conn).
+func Start(cmd *exec.Cmd, h Handler, log *slog.Logger) (*Client, error) {
+	log = orDiscard(log)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	stderr := &stderrLines{log: log}
+	cmd.Stderr = stderr
+	cmd.WaitDelay = time.Second // past the agent's exit, for a process it left holding its stderr
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, err
@@ -45,21 +54,29 @@ func Start(cmd *exec.Cmd, h Handler) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	started := time.Now()
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
-	c := Connect(stdout, stdin, h)
+	log = log.With("pid", cmd.Process.Pid)
+	stderr.mu.Lock()
+	stderr.log = log
+	stderr.mu.Unlock()
+	log.Info("agent started", "cmd", strings.Join(cmd.Args, " "))
+	c := Connect(stdout, stdin, h, log)
 	c.cmd, c.stdin = cmd, stdin
 	go func() {
 		<-c.conn.done
 		_ = cmd.Wait()
+		stderr.flush()
+		c.exited(log, time.Since(started))
 	}()
 	return c, nil
 }
 
-// Connect speaks ACP over r and w.
-func Connect(r io.Reader, w io.Writer, h Handler) *Client {
-	return &Client{conn: newConn(r, w, func(ctx context.Context, method string, params json.RawMessage) (any, error) {
+// Connect speaks ACP over r and w; log gets the calls (conn).
+func Connect(r io.Reader, w io.Writer, h Handler, log *slog.Logger) *Client {
+	return &Client{conn: newConn(r, w, orDiscard(log), func(ctx context.Context, method string, params json.RawMessage) (any, error) {
 		switch method {
 		case "session/update":
 			var n SessionNotification
@@ -103,6 +120,7 @@ func (c *Client) Close() error {
 	if c.cmd == nil {
 		return nil
 	}
+	c.stopped.Store(true)
 	return syscall.Kill(-c.cmd.Process.Pid, syscall.SIGKILL)
 }
 
@@ -114,6 +132,7 @@ func (c *Client) Stop(grace time.Duration) error {
 	if c.cmd == nil {
 		return nil
 	}
+	c.stopped.Store(true)
 	c.stdin.Close()
 	select {
 	case <-c.conn.done:
@@ -124,6 +143,7 @@ func (c *Client) Stop(grace time.Duration) error {
 
 func (c *Client) Initialize(ctx context.Context, req InitializeRequest) (*InitializeResponse, error) {
 	var raw json.RawMessage
+	start := time.Now()
 	if err := c.conn.call(ctx, "initialize", req, &raw); err != nil {
 		return nil, err
 	}
@@ -147,6 +167,7 @@ func (c *Client) Initialize(ctx context.Context, req InitializeRequest) (*Initia
 	fork := caps.AgentCapabilities.SessionCapabilities.Fork
 	c.canFork = len(fork) > 0 && string(fork) != "null"
 	c.canSteer = caps.Meta.Steering.Supported
+	c.initialized(&resp, time.Since(start))
 	return &resp, nil
 }
 
@@ -168,14 +189,20 @@ func (c *Client) ListSessions(ctx context.Context, req ListSessionsRequest) (*Li
 
 func (c *Client) NewSession(ctx context.Context, req NewSessionRequest) (*NewSessionResponse, error) {
 	var resp NewSessionResponse
-	return &resp, c.conn.call(ctx, "session/new", req, &resp)
+	start := time.Now()
+	err := c.conn.call(ctx, "session/new", req, &resp)
+	c.opened(err, "session/new", string(resp.SessionID), start)
+	return &resp, err
 }
 
 // LoadSession reopens a session; the agent replays its history as session
 // updates before answering.
 func (c *Client) LoadSession(ctx context.Context, req LoadSessionRequest) (*LoadSessionResponse, error) {
 	var resp LoadSessionResponse
-	return &resp, c.conn.call(ctx, "session/load", req, &resp)
+	start := time.Now()
+	err := c.conn.call(ctx, "session/load", req, &resp)
+	c.opened(err, "session/load", string(req.SessionID), start)
+	return &resp, err
 }
 
 func (c *Client) Prompt(ctx context.Context, req PromptRequest) (*PromptResult, error) {

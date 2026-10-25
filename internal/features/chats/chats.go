@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -48,8 +49,9 @@ type Agent interface {
 // sessions.
 var stopGrace = 5 * time.Second
 
-// Launch starts an agent; its session updates go to h.
-type Launch func(h acp.Handler) (Agent, error)
+// Launch starts an agent; its session updates go to h, and what happens
+// to it to log.
+type Launch func(h acp.Handler, log *slog.Logger) (Agent, error)
 
 // Sessions stores what Nushi keeps of each chat.
 type Sessions interface {
