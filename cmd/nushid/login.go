@@ -35,7 +35,7 @@ func execLogin() error {
 		return err
 	}
 	argv, env := loginCommand(loginShell, bin, filepath.Join(dir, "nushid.log"), os.Environ())
-	return syscall.Exec(argv[0], argv, env)
+	return syscall.Exec(argv[0], argv, env) //nolint:gosec // the login shell, running this nushid
 }
 
 // loginCommand is the login shell's command line and environment. The

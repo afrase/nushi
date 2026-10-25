@@ -53,7 +53,7 @@ func Start(argv []string, dir string, env []string, cols, rows int, changed func
 		return nil, err
 	}
 	defer tty.Close()
-	cmd := exec.Command(argv[0], argv[1:]...)
+	cmd := exec.Command(argv[0], argv[1:]...) //nolint:gosec // the user's login shell
 	cmd.Dir, cmd.Env = dir, env
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = tty, tty, tty
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true, Setctty: true}
@@ -246,7 +246,7 @@ func (t *Terminal) Resize(cols, rows int) error {
 		return err
 	}
 	err2 := rc.Control(func(fd uintptr) {
-		err = unix.IoctlSetWinsize(int(fd), unix.TIOCSWINSZ, &unix.Winsize{Row: uint16(rows), Col: uint16(cols)})
+		err = unix.IoctlSetWinsize(int(fd), unix.TIOCSWINSZ, &unix.Winsize{Row: uint16(rows), Col: uint16(cols)}) //nolint:gosec // the app sends its view's size
 	})
 	return errors.Join(err, err2)
 }

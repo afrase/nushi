@@ -98,7 +98,7 @@ func (st *Store) newID() string {
 
 // load opens a session file.
 func (p *Pig) load(file string) {
-	b, err := os.ReadFile(file)
+	b, err := os.ReadFile(file) //nolint:gosec // the fake's session file in a test's folder
 	if err != nil {
 		return
 	}

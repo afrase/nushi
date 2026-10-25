@@ -143,7 +143,7 @@ func (s *Service) load(ctx context.Context, c *chat) error {
 	}
 	mode, throwaway := c.session.Mode, slices.Clone(c.session.Throwaway)
 	c.mu.Unlock()
-	go s.discard(c, throwaway) // left by an agent that stopped before it could
+	go s.discard(c, throwaway) //nolint:gosec // discarding outlives the request; left by an agent that stopped before it could
 	c.restoreConfig(ctx, o.agent, o.sid, before)
 	return c.startMode(ctx, o.agent, o.sid, mode)
 }

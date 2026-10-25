@@ -49,7 +49,7 @@ func (d Dirs) all() []saved {
 		if err != nil || !e.Type().IsRegular() || !strings.HasSuffix(path, ".jsonl") {
 			return nil
 		}
-		f, err := os.Open(path)
+		f, err := os.Open(path) //nolint:gosec // a session file in PiG's sessions folder, read only
 		if err != nil {
 			return nil
 		}
@@ -88,7 +88,7 @@ func (d Dirs) remove(id string) error {
 		return nil //nolint:nilerr // not found: gone already
 	}
 	if d.Trash != "" {
-		exec.Command(d.Trash, file).Run() // file is absolute
+		exec.Command(d.Trash, file).Run() //nolint:gosec // trash, on a session file PiG keeps; file is absolute
 		if _, err := os.Lstat(file); errors.Is(err, fs.ErrNotExist) {
 			return nil
 		}
@@ -128,7 +128,7 @@ func (d Dirs) list(cwd, cursor string) acp.ListSessionsResponse {
 // summary reads a session's title (the last name it was given, else its
 // first message's first line) and how many messages it has.
 func summary(file string) (title string, messages int) {
-	f, err := os.Open(file)
+	f, err := os.Open(file) //nolint:gosec // a session file found in PiG's sessions folder
 	if err != nil {
 		return "", 0
 	}

@@ -37,7 +37,7 @@ func openFiles(files []string, of func(file string) string) map[string]string {
 	defer cancel()
 	// -F n prints a line "n<path>" per open file; lsof exits 1 when one of
 	// the files isn't open, so the output counts, not the status.
-	b, _ := exec.CommandContext(ctx, "/usr/sbin/lsof", append([]string{"-w", "-F", "n", "--"}, files...)...).Output()
+	b, _ := exec.CommandContext(ctx, "/usr/sbin/lsof", append([]string{"-w", "-F", "n", "--"}, files...)...).Output() //nolint:gosec // lsof on Ante's own session files
 	for line := range strings.Lines(string(b)) {
 		if name, ok := strings.CutPrefix(strings.TrimSpace(line), "n"); ok {
 			for _, f := range files {

@@ -48,7 +48,7 @@ func project(folder string) string {
 	if resolved, err := filepath.EvalSymlinks(folder); err == nil {
 		folder = resolved
 	}
-	out, err := exec.Command("git", "-C", folder, "rev-parse", "--path-format=absolute", "--git-common-dir").Output()
+	out, err := exec.Command("git", "-C", folder, "rev-parse", "--path-format=absolute", "--git-common-dir").Output() //nolint:gosec // git rev-parse in the folder asked about
 	if common := strings.TrimSpace(string(out)); err == nil && filepath.Base(common) == ".git" {
 		return filepath.Dir(common)
 	}
@@ -140,7 +140,7 @@ const maxFile = 64 << 20
 // (a link is followed), of up to 64 MiB. A repository could bring a link to
 // /dev/zero, or a fifo, in the place of one.
 func ReadFile(path string) ([]byte, error) {
-	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0) // a fifo doesn't wait
+	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0) //nolint:gosec // Claude's settings and .mcp.json, which the trust card shows; a fifo doesn't wait
 	if err != nil {
 		return nil, err
 	}

@@ -76,7 +76,7 @@ func worktreesFolder(repo string) error {
 	fi, err := os.Lstat(dir)
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
-		err = os.Mkdir(dir, 0o755)
+		err = os.Mkdir(dir, 0o755) //nolint:gosec // a worktree's folder, as git makes it
 	case err == nil && !fi.IsDir(): // a link too: Lstat doesn't follow it
 		err = fmt.Errorf("%s is not a folder (a link?): Nushi won't make worktrees through it", dir)
 	}
@@ -187,13 +187,13 @@ func Exclude(ctx context.Context, folder, line string) error {
 	defer excludeMu.Unlock()
 	dir := filepath.Dir(path)
 	if fi, err := os.Lstat(dir); errors.Is(err, fs.ErrNotExist) {
-		if err := os.Mkdir(dir, 0o755); err != nil {
+		if err := os.Mkdir(dir, 0o755); err != nil { //nolint:gosec // a repository's info folder, as git makes it
 			return err
 		}
 	} else if err != nil || !fi.IsDir() {
 		return fmt.Errorf("%s is not a folder (a link?)", dir)
 	}
-	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0o644)
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0o644) //nolint:gosec // info/exclude, as git makes it
 	if err != nil {
 		return fmt.Errorf("%s: %w (a link?)", path, err)
 	}
