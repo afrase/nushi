@@ -168,7 +168,7 @@ class Thumbnails extends StatelessWidget {
           Stack(
             clipBehavior: Clip.none,
             children: [
-              _Clickable(
+              ClickableImage(
                 image: _provider[img] ??= MemoryImage(
                   Uint8List.fromList(img.data),
                 ),
@@ -213,8 +213,8 @@ class RemoveBadge extends StatelessWidget {
 }
 
 /// An image that shows large when clicked, [size] tall at most.
-class _Clickable extends StatelessWidget {
-  const new({required this.image, required this.size, this.border});
+class ClickableImage extends StatelessWidget {
+  const new({required this.image, required this.size, super.key, this.border});
 
   final ImageProvider image;
   final double size;
@@ -258,7 +258,9 @@ const int maxImageFile = 20 << 20;
 Widget markdownImage(Uri uri, String? alt) {
   if (uri.scheme == 'data') {
     final bytes = uri.data?.contentAsBytes();
-    if (bytes != null) return _Clickable(image: MemoryImage(bytes), size: 320);
+    if (bytes != null) {
+      return ClickableImage(image: MemoryImage(bytes), size: 320);
+    }
   }
   if (uri.scheme == 'file' ||
       (uri.scheme.isEmpty && uri.path.startsWith('/'))) {
@@ -271,7 +273,7 @@ Widget markdownImage(Uri uri, String? alt) {
       if (local &&
           stat.type == FileSystemEntityType.file &&
           stat.size <= maxImageFile) {
-        return _Clickable(image: FileImage(file), size: 320);
+        return ClickableImage(image: FileImage(file), size: 320);
       }
     } on Object {
       // not a file Nushi reads
@@ -300,7 +302,10 @@ class _RemoteImageState extends State<_RemoteImage> {
   @override
   Widget build(BuildContext context) {
     if (_load) {
-      return _Clickable(image: NetworkImage(widget.uri.toString()), size: 320);
+      return ClickableImage(
+        image: NetworkImage(widget.uri.toString()),
+        size: 320,
+      );
     }
     final theme = NushiTheme.of(context);
     final t = theme.t;

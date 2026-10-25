@@ -7,8 +7,8 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_issue.dart';
 import 'package:nushi/jira_jql.dart';
 import 'package:nushi/jira_settings.dart';
+import 'package:nushi/jira_view_parts.dart';
 import 'package:nushi/menu.dart';
-import 'package:nushi/settings_dialog.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -168,32 +168,7 @@ class _JiraViewState extends State<JiraView> {
       ListJiraBoardsRequest(site: site.id),
     );
     if (!mounted) return;
-    final board = await showDialog<JiraBoard>(
-      context: context,
-      builder: (context) => nushiDialog(
-        'Sprint board',
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (final b in r.boards)
-              Tap(
-                onTap: () => Navigator.pop(context, b),
-                padding: const EdgeInsets.all(6),
-                child: Text('${b.name}  ·  ${b.project}'),
-              ),
-            if (r.boards.isEmpty) const Text('No boards on this site.'),
-          ],
-        ),
-        [
-          Button(
-            label: 'Cancel',
-            kind: ButtonKind.ghost,
-            onPressed: () => Navigator.pop(context),
-          ),
-        ],
-      ),
-    );
+    final board = await pickBoard(context, r.boards);
     if (board == null) return;
     await widget.daemon.client.setJiraBoard(
       SetJiraBoardRequest(site: site.id, board: board),
@@ -202,33 +177,8 @@ class _JiraViewState extends State<JiraView> {
   }
 
   Future<void> _saveSearch(JiraSite site) async {
-    final name = TextEditingController();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => nushiDialog(
-        'Save the search',
-        TextField(
-          controller: name,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: 'Name'),
-          onSubmitted: (_) => Navigator.pop(context, true),
-        ),
-        [
-          Button(
-            label: 'Cancel',
-            kind: ButtonKind.ghost,
-            onPressed: () => Navigator.pop(context, false),
-          ),
-          Button(
-            label: 'Save',
-            kind: ButtonKind.primary,
-            onPressed: () => Navigator.pop(context, true),
-          ),
-        ],
-      ),
-    );
-    final n = name.text.trim(); // the dialog may still be closing: not disposed
-    if (ok != true || n.isEmpty) return;
+    final n = await askName(context);
+    if (n == null || n.isEmpty) return;
     await _setSearches(site, [
       ...site.searches,
       JiraSearch(name: n, jql: _jql),
@@ -288,57 +238,22 @@ class _JiraViewState extends State<JiraView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            height: 34,
-            padding: const EdgeInsets.only(left: 20, right: 8),
-            decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: t.borderSubtle)),
-            ),
-            child: Row(
-              children: [
-                Text('Jira', style: theme.ui(t.text, weight: FontWeight.w600)),
-                const SizedBox(width: 12),
-                if (site != null)
-                  Menu(
-                    entries: [
-                      for (final s in sites!)
-                        MenuEntry(
-                          s.id,
-                          checked: s.id == site.id,
-                          onPick: () {
-                            setState(() => _site = s.id);
-                            unawaited(_load());
-                          },
-                        ),
-                    ],
-                    child: Text(
-                      '${site.id} ▾',
-                      style: theme.ui(t.textSecondary, size: 12),
-                    ),
-                  ),
-                const Spacer(),
-                if (_loading)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Text(
-                      'Loading…',
-                      style: theme.ui(t.textMuted, size: 12),
-                    ),
-                  ),
-                IconTap(Icons.refresh, tooltip: 'Refresh (⌘R)', onTap: _load),
-                IconTap(
-                  Icons.close,
-                  tooltip: 'Close (⌘J)',
-                  onTap: () => widget.daemon.showJira(open: false),
-                ),
-              ],
-            ),
+          JiraBar(
+            sites: sites ?? const [],
+            site: site,
+            loading: _loading,
+            onSite: (id) {
+              setState(() => _site = id);
+              unawaited(_load());
+            },
+            onRefresh: _load,
+            onClose: () => widget.daemon.showJira(open: false),
           ),
           Expanded(
             child: sites == null
                 ? const SizedBox()
                 : site == null
-                ? _NoSite(widget.daemon)
+                ? NoSite(widget.daemon)
                 : Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -479,7 +394,7 @@ class _JiraViewState extends State<JiraView> {
             child: ListView.builder(
               controller: _scroll,
               itemCount: _issues.length,
-              itemBuilder: (context, i) => _IssueRow(
+              itemBuilder: (context, i) => IssueRow(
                 _issues[i],
                 selected: _issues[i].key == _key,
                 onTap: () {
@@ -501,91 +416,6 @@ class _JiraViewState extends State<JiraView> {
             ),
           ),
       ],
-    );
-  }
-}
-
-/// A status's color by its category: to do, in progress, done.
-Color statusColor(Tokens t, String category) => switch (category) {
-  'done' => t.done,
-  'indeterminate' => t.running,
-  _ => t.textMuted,
-};
-
-class _IssueRow extends StatelessWidget {
-  const new(this.issue, {required this.selected, required this.onTap});
-
-  final JiraIssue issue;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final i = issue;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-      child: Tap(
-        selected: selected,
-        onTap: onTap,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(i.key, style: theme.code(t.textSecondary, size: 11.5)),
-                const SizedBox(width: 8),
-                Text(i.type, style: theme.ui(t.textMuted, size: 11.5)),
-                const Spacer(),
-                Text(
-                  i.status,
-                  style: theme.ui(statusColor(t, i.statusCategory), size: 11.5),
-                ),
-              ],
-            ),
-            Text(
-              i.summary,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: theme.ui(t.text),
-            ),
-            if (i.assignee.isNotEmpty || i.priority.isNotEmpty)
-              Text(
-                [i.assignee, i.priority].where((s) => s.isNotEmpty).join(' · '),
-                style: theme.ui(t.textMuted, size: 11.5),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _NoSite extends StatelessWidget {
-  const new(this.daemon);
-
-  final Daemon daemon;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    return Center(
-      child: Tap(
-        onTap: () => showSettings(context, daemon.client, jira: true),
-        child: Text.rich(
-          TextSpan(
-            children: [
-              TextSpan(
-                text: 'Add a Jira site in ',
-                style: theme.ui(theme.t.textMuted),
-              ),
-              TextSpan(text: 'Settings › Jira', style: theme.ui(theme.t.link)),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

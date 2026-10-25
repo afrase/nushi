@@ -22,9 +22,18 @@ Uri? webLink(String href) {
 /// Agent markdown in the theme's fonts and colors. Links open in the
 /// browser, http and https only; images as [markdownImage] shows them.
 class AgentMarkdown extends StatelessWidget {
-  const new(this.text, {super.key, this.typed = false, this.live = false});
+  const new(
+    this.text, {
+    super.key,
+    this.typed = false,
+    this.live = false,
+    this.images = markdownImage,
+  });
 
   final String text;
+
+  /// What an image shows as (Jira's text: only its attachments).
+  final Widget Function(Uri uri, String? alt) images;
 
   /// The user typed it: its line breaks stay as typed.
   final bool typed;
@@ -46,7 +55,7 @@ class AgentMarkdown extends StatelessWidget {
       streaming: live,
       lineBreaks: typed,
       onTapLink: _open,
-      imageBuilder: markdownImage,
+      imageBuilder: images,
       style: MarkdownStyle(
         body: theme.ui(t.text, size: 13.5).copyWith(height: 1.5),
         code: theme.code(t.text, size: 12.5),
