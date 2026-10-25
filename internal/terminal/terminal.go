@@ -52,23 +52,23 @@ func Start(argv []string, dir string, env []string, cols, rows int, changed func
 	if err != nil {
 		return nil, err
 	}
-	defer tty.Close()
+	defer tty.Close()                         //nolint:errcheck // the child has its own copy
 	cmd := exec.Command(argv[0], argv[1:]...) //nolint:gosec,noctx // lives until Stop or Close, not a context; the user's login shell
 	cmd.Dir, cmd.Env = dir, env
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = tty, tty, tty
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true, Setctty: true}
 	var st unix.Stat_t
 	if err := unix.Fstat(int(tty.Fd()), &st); err != nil {
-		master.Close()
+		_ = master.Close()
 		return nil, err
 	}
 	t := &Terminal{pty: master, cmd: cmd, tty: st.Rdev, changed: changed, done: make(chan struct{}), subs: map[*sub]struct{}{}}
 	if err := t.Resize(cols, rows); err != nil {
-		master.Close()
+		_ = master.Close()
 		return nil, err
 	}
 	if err := cmd.Start(); err != nil {
-		master.Close()
+		_ = master.Close()
 		return nil, err
 	}
 	read := make(chan struct{})
@@ -89,12 +89,12 @@ func open() (master, tty *os.File, err error) {
 		return nil, nil, err
 	}
 	fd, err := unix.FcntlInt(p.Fd(), unix.F_DUPFD_CLOEXEC, 0)
-	p.Close()
+	_ = p.Close() // the dup holds it now
 	if err == nil {
 		err = unix.SetNonblock(fd, true)
 	}
 	if err != nil {
-		tty.Close()
+		_ = tty.Close()
 		return nil, nil, err
 	}
 	return os.NewFile(uintptr(fd), "ptmx"), tty, nil
@@ -327,5 +327,5 @@ func (t *Terminal) Close() {
 		_ = unix.Kill(pid, unix.SIGKILL)
 	}
 	<-t.done
-	t.pty.Close()
+	_ = t.pty.Close()
 }

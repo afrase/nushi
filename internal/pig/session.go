@@ -105,7 +105,7 @@ func (m *message) blocks() []block {
 		return []block{{Type: "text", Text: text}}
 	}
 	var out []block
-	json.Unmarshal(m.Content, &out)
+	_ = json.Unmarshal(m.Content, &out)
 	return out
 }
 
@@ -136,7 +136,7 @@ type pigEvent struct {
 func (s *session) handle(ev event) {
 	var e pigEvent
 	if ev.Type != "extension_ui_request" {
-		json.Unmarshal(ev.Raw, &e)
+		_ = json.Unmarshal(ev.Raw, &e)
 	}
 	s.readOld(ev.Type, &e) // before the lock: it reads a file
 	s.mu.Lock()
@@ -328,7 +328,7 @@ func (s *session) cancel() {
 		}
 	}
 	s.mu.Unlock()
-	go s.p.call(context.Background(), map[string]any{"type": "abort"}, nil)
+	go func() { _ = s.p.call(context.Background(), map[string]any{"type": "abort"}, nil) }() // a dead pig has no run to abort
 }
 
 // steer hands text to the running turn, which takes it after the tools

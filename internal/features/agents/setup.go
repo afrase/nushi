@@ -30,9 +30,9 @@ func (a *Adapter) pinned() (version string, packages int) {
 		Packages map[string]struct{ Optional, Dev bool }
 	}
 	b, _ := fs.ReadFile(a.Lock, "package.json")
-	json.Unmarshal(b, &pkg)
+	_ = json.Unmarshal(b, &pkg)
 	b, _ = fs.ReadFile(a.Lock, "package-lock.json")
-	json.Unmarshal(b, &lock)
+	_ = json.Unmarshal(b, &lock)
 	for path, p := range lock.Packages {
 		if path != "" && !p.Optional && !p.Dev {
 			packages++

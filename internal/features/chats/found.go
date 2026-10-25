@@ -70,7 +70,7 @@ func (s *Service) Find(ctx context.Context, agent, folder, cursor string) (Found
 	if err != nil {
 		return FoundPage{}, fmt.Errorf("couldn't start %s: %w", k.Title, k.explain(err))
 	}
-	defer a.Close()
+	defer a.Close() //nolint:errcheck // a lister, stopped when done
 	if !lists(init) {
 		return FoundPage{}, nil
 	}

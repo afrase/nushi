@@ -105,7 +105,7 @@ func (p *Pig) load(file string) {
 	p.file = file
 	for i, line := range strings.Split(strings.TrimSpace(string(b)), "\n") {
 		var e map[string]any
-		json.Unmarshal([]byte(line), &e)
+		_ = json.Unmarshal([]byte(line), &e)
 		if i == 0 {
 			p.id, p.cwd = e["id"].(string), e["cwd"].(string)
 			continue
@@ -119,7 +119,7 @@ func (p *Pig) emit(v any) {
 	b, _ := json.Marshal(v)
 	p.wmu.Lock()
 	defer p.wmu.Unlock()
-	p.w.Write(append(b, '\n'))
+	_, _ = p.w.Write(append(b, '\n'))
 }
 
 func (p *Pig) respond(cmd map[string]any, data any, err string) {
@@ -219,7 +219,7 @@ func (p *Pig) append(msg map[string]any) {
 	id := fmt.Sprintf("e%d", len(p.entries)+1)
 	b, _ := json.Marshal(map[string]any{"type": "message", "id": id, "parentId": p.leaf, "message": msg})
 	var e map[string]any
-	json.Unmarshal(b, &e) // as read from the file
+	_ = json.Unmarshal(b, &e) // as read from the file
 	p.entries = append(p.entries, e)
 	p.leaf = id
 	p.save()
@@ -235,7 +235,7 @@ func (p *Pig) save() {
 		line, _ := json.Marshal(v)
 		b.Write(append(line, '\n'))
 	}
-	os.WriteFile(p.file, []byte(b.String()), 0o600)
+	_ = os.WriteFile(p.file, []byte(b.String()), 0o600)
 }
 
 func assistant(blocks ...map[string]any) map[string]any {
@@ -300,7 +300,7 @@ func (p *Pig) run(text string) {
 		say(m)
 	case strings.Contains(text, "garbage"):
 		p.wmu.Lock()
-		p.w.Write([]byte("not json\n"))
+		_, _ = p.w.Write([]byte("not json\n"))
 		p.wmu.Unlock()
 		p.emit(map[string]any{"type": "mystery"})
 		say(assistant(textBlock("Still here")))

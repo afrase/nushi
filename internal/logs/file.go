@@ -43,19 +43,19 @@ func (l *File) open() error {
 	}
 	st, err := f.Stat()
 	if err != nil {
-		f.Close()
+		_ = f.Close() // the Stat's error is the one to return
 		return err
 	}
 	if l.std {
 		for _, fd := range []int{1, 2} {
 			if err := unix.Dup2(int(f.Fd()), fd); err != nil {
-				f.Close()
+				_ = f.Close() // as above
 				return fmt.Errorf("log: stderr: %w", err)
 			}
 		}
 	}
 	if l.f != nil {
-		l.f.Close()
+		_ = l.f.Close() // the old file: writes go to the new one
 	}
 	l.f, l.size = f, st.Size()
 	return nil
@@ -78,10 +78,10 @@ func (l *File) Write(p []byte) (int, error) {
 // dropped, and starts path again.
 func (l *File) rotate() {
 	for i := Keep; i > 1; i-- {
-		os.Rename(fmt.Sprintf("%s.%d", l.path, i-1), fmt.Sprintf("%s.%d", l.path, i))
+		_ = os.Rename(fmt.Sprintf("%s.%d", l.path, i-1), fmt.Sprintf("%s.%d", l.path, i)) // an older copy missing is fine
 	}
 	if os.Rename(l.path, l.path+".1") == nil {
-		l.open()
+		_ = l.open() // when it fails, lines go on to the file it had (now .1)
 	}
 }
 

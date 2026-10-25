@@ -126,7 +126,7 @@ func (s *server) listen(w http.ResponseWriter, r *http.Request) {
 	// Pings keep a waiting listener open only so long.
 	waited := time.AfterFunc(s.lim.MaxWait, func() {
 		if p.other.Load() == nil {
-			ws.Close()
+			_ = ws.Close()
 		}
 	})
 	defer waited.Stop()
@@ -135,7 +135,7 @@ func (s *server) listen(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	rm := s.enter(id, false)
 	if rm.waiting != nil {
-		rm.waiting.ws.Close()
+		_ = rm.waiting.ws.Close()
 	}
 	rm.waiting = p
 	close(rm.arrived)
@@ -149,7 +149,7 @@ func (s *server) listen(w http.ResponseWriter, r *http.Request) {
 func (s *server) prove(p *peer, b *bucket, id string) bool {
 	challenge := make([]byte, 32)
 	rand.Read(challenge)
-	late := time.AfterFunc(s.lim.DialWait, func() { p.ws.Close() })
+	late := time.AfterFunc(s.lim.DialWait, func() { _ = p.ws.Close() })
 	_ = p.ws.SetWriteDeadline(time.Now().Add(s.lim.Idle))
 	if p.ws.WriteMessage(websocket.BinaryMessage, append([]byte(challengeTag), challenge...)) != nil {
 		return false
@@ -178,7 +178,7 @@ func (s *server) dial(w http.ResponseWriter, r *http.Request) {
 	// first), so a silent dialer can't hold a listener the listener doesn't
 	// know is taken.
 	b := s.prepare(p)
-	silent := time.AfterFunc(s.lim.DialWait, func() { ws.Close() }) // pings don't put it off
+	silent := time.AfterFunc(s.lim.DialWait, func() { _ = ws.Close() }) // pings don't put it off
 	first, ok := s.read(p, b)
 	if !silent.Stop() || !ok {
 		return
@@ -347,9 +347,9 @@ func (s *server) pump(p *peer, b *bucket) {
 }
 
 func (s *server) closeBoth(p *peer) {
-	p.ws.Close()
+	_ = p.ws.Close()
 	if o := p.other.Load(); o != nil {
-		o.ws.Close()
+		_ = o.ws.Close()
 	}
 }
 

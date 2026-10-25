@@ -275,12 +275,12 @@ func fetch(ctx context.Context, raw string) ([]byte, error) {
 			return nil, err
 		}
 		if resp.StatusCode != http.StatusOK {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			return nil, fmt.Errorf("the PAC file: %s", resp.Status)
 		}
 		r = resp.Body
 	}
-	defer r.Close()
+	defer r.Close() //nolint:errcheck // read-only
 	b, err := io.ReadAll(io.LimitReader(r, 1<<20+1))
 	if err == nil && len(b) > 1<<20 {
 		err = errors.New("the PAC file is over 1 MB")

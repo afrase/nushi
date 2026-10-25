@@ -22,9 +22,9 @@ var errUnknown = errors.New("not a paired device")
 // gets an answer (on an id given up, only a device still to move), and it
 // counts as connected once its first transport message decrypts.
 func (s *Service) accept(ctx context.Context, c *relay.Conn, id string) {
-	timer := time.AfterFunc(HandshakeWait, func() { c.Close() })
+	timer := time.AfterFunc(HandshakeWait, func() { _ = c.Close() })
 	defer timer.Stop()
-	stop := context.AfterFunc(ctx, func() { c.Close() })
+	stop := context.AfterFunc(ctx, func() { _ = c.Close() })
 	defer stop()
 	conn, err := noiseconn.Respond(c, noiseconn.Config{Static: s.key, Prologue: prologue(id)}, func(peer []byte) error {
 		if s.device(peer, id) == "" {
@@ -36,7 +36,7 @@ func (s *Service) accept(ctx context.Context, c *relay.Conn, id string) {
 		if err != nil {
 			slog.Info("device rejected", "err", err)
 		}
-		c.Close()
+		_ = c.Close()
 		return
 	}
 	s.run(conn, s.device(conn.Peer(), id), id)
@@ -62,7 +62,7 @@ func (s *Service) run(conn *noiseconn.Conn, device, id string) {
 	if i < 0 || !s.settings.On || len(s.conns) >= MaxConns {
 		s.mu.Unlock()
 		slog.Info("device turned away", "device", device, "connections", len(s.conns))
-		conn.Close()
+		_ = conn.Close()
 		return
 	}
 	slog.Info("device connected", "device", device, "moved", id != s.id)
@@ -132,7 +132,7 @@ func (s *Service) Revoke(id string) error {
 	for c, d := range s.conns {
 		if d == id {
 			delete(s.conns, c)
-			c.Close()
+			_ = c.Close()
 		}
 	}
 	err := s.rotate(id) // the device knows the id

@@ -88,7 +88,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 					c.log().Warn("deleting the empty session left by the move", "old", sid, "err", err)
 				}
 			}
-			old.Stop(stopGrace)
+			_ = old.Stop(stopGrace) // its process is gone either way
 		}
 		go s.discard(c, sides) //nolint:gosec // discarding outlives the request
 		if left := oldWT != nil && wt != oldWT; left && (!fresh || s.inUse(c, oldWT.Path) || !s.dropWorktree(oldWT)) {
@@ -99,7 +99,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 			c.mu.Unlock()
 		}
 		if replay {
-			o.agent.Stop(stopGrace)
+			_ = o.agent.Stop(stopGrace) // its process is gone either way
 		} else if err := c.startMode(ctx, o.agent, o.sid, mode); err != nil {
 			c.log().Warn("mode after moving", "err", err)
 		}

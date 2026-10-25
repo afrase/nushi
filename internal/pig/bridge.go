@@ -65,7 +65,7 @@ func Serve(r io.Reader, w io.Writer, cfg Config) {
 
 // update sends the client one of a session's updates.
 func (b *bridge) update(sid string, u acp.SessionUpdate) {
-	b.peer.Notify("session/update", acp.SessionNotification{SessionID: acp.SessionID(sid), Update: u})
+	_ = b.peer.Notify("session/update", acp.SessionNotification{SessionID: acp.SessionID(sid), Update: u}) // the client is gone when it fails
 }
 
 func (b *bridge) session(id acp.SessionID) (*session, error) {

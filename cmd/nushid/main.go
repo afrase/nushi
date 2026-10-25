@@ -198,7 +198,8 @@ func run() error {
 	errorLog := slog.NewLogLogger(slog.Default().Handler(), slog.LevelError)
 	remoteSrv := &http.Server{Handler: api.ForDevices(sv), Protocols: new(http.Protocols), ErrorLog: errorLog} //nolint:gosec // served only over paired devices' Noise channels
 	remoteSrv.Protocols.SetUnencryptedHTTP2(true)
-	go remoteSrv.Serve(channels)
+	// Serve returns once remoteSrv.Close below closes channels.
+	go func() { _ = remoteSrv.Serve(channels) }()
 	srv := &http.Server{Handler: api.WithToken(token, api.New(sv)), Protocols: new(http.Protocols), ErrorLog: errorLog} //nolint:gosec // a Unix socket in a 0700 folder; clients need the token
 	srv.Protocols.SetUnencryptedHTTP2(true)
 
@@ -209,7 +210,7 @@ func run() error {
 	signalled := make(chan os.Signal, 1)
 	go func() {
 		signalled <- <-stop
-		srv.Close()
+		_ = srv.Close() // Serve returns ErrServerClosed, handled below
 	}()
 	err = srv.Serve(ln)
 	select {
@@ -219,7 +220,7 @@ func run() error {
 		slog.Error("nushid stopping", "why", err)
 	}
 	sv.Remote.Close()
-	remoteSrv.Close()
+	_ = remoteSrv.Close() // stopping: nothing is left to tell
 	chatSvc.Close()
 	termSvc.CloseAll()
 	if errors.Is(err, http.ErrServerClosed) {
@@ -262,14 +263,14 @@ func loadToken(path string) (string, error) {
 	raw := make([]byte, 32)
 	_, _ = rand.Read(raw)
 	token := hex.EncodeToString(raw)
-	os.Remove(path) // WriteFile keeps an old file's mode
+	_ = os.Remove(path) // WriteFile keeps an old file's mode
 	return token, os.WriteFile(path, []byte(token), 0o600)
 }
 
 // listen takes over the socket at path unless another daemon is answering on it.
 func listen(path string) (net.Listener, error) {
 	if c, err := new(net.Dialer).DialContext(context.Background(), "unix", path); err == nil {
-		c.Close()
+		_ = c.Close()
 		return nil, fmt.Errorf("a daemon is already listening on %s", path)
 	}
 	_ = os.Remove(path)

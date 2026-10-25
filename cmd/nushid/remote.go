@@ -21,7 +21,7 @@ func (c *channels) serve(conn net.Conn) {
 	select {
 	case c.conns <- conn:
 	case <-c.done:
-		conn.Close()
+		_ = conn.Close() // the daemon is stopping
 	}
 }
 
@@ -53,6 +53,6 @@ func keepAwake() (stop func()) {
 		slog.Warn("keeping the Mac awake", "err", err)
 		return func() {}
 	}
-	go cmd.Wait()
-	return func() { cmd.Process.Kill() }
+	go func() { _ = cmd.Wait() }() // reaps it; it ends with the daemon or stop
+	return func() { _ = cmd.Process.Kill() }
 }

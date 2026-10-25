@@ -146,7 +146,7 @@ func ReadFile(path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck // read-only
 	if fi, err := f.Stat(); err != nil || !fi.Mode().IsRegular() || fi.Size() > maxFile {
 		return nil, fmt.Errorf("%s isn't a regular file of at most 64 MiB", path)
 	}

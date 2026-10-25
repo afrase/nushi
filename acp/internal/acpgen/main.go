@@ -64,7 +64,7 @@ func main() {
 	b.WriteString(helpers)
 	src, err := format.Source(b.Bytes())
 	if err != nil {
-		os.WriteFile(os.Args[2], b.Bytes(), 0o644)
+		_ = os.WriteFile(os.Args[2], b.Bytes(), 0o644) // unformatted, to look at; the format error is the one to show
 		log.Fatal(err)
 	}
 	if err := os.WriteFile(os.Args[2], src, 0o644); err != nil {

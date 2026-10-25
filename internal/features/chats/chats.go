@@ -206,7 +206,7 @@ func (s *Service) Start(ctx context.Context, agent, folder string, worktree bool
 	if err != nil {
 		err = fmt.Errorf("couldn't start %s: %w", k.Title, err)
 		if scratch {
-			os.Remove(folder)
+			_ = os.Remove(folder) // a scratch folder: empty, or left for the user
 		}
 		s.dropWorktree(wt)
 		return "", err

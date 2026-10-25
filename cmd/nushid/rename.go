@@ -37,7 +37,7 @@ func renameData(old, dir string) error {
 		return nil
 	}
 	if c, err := new(net.Dialer).DialContext(context.Background(), "unix", filepath.Join(old, "nushid.sock")); err == nil {
-		c.Close()
+		_ = c.Close()
 		return fmt.Errorf("a daemon still runs in %s", old)
 	}
 	if err := os.Rename(old, dir); err != nil {

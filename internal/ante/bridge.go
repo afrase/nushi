@@ -62,7 +62,7 @@ func Serve(r io.Reader, w io.Writer, cfg Config) {
 	cancel()
 	defer func() {
 		if b.imgDir != "" {
-			os.RemoveAll(b.imgDir)
+			_ = os.RemoveAll(b.imgDir) // a temp folder; the OS cleans what stays
 		}
 	}()
 	b.mu.Lock()
@@ -99,7 +99,7 @@ func (b *bridge) images() (string, error) {
 
 // update sends the client one of a session's updates.
 func (b *bridge) update(sid string, u acp.SessionUpdate) {
-	b.peer.Notify("session/update", acp.SessionNotification{SessionID: acp.SessionID(sid), Update: u})
+	_ = b.peer.Notify("session/update", acp.SessionNotification{SessionID: acp.SessionID(sid), Update: u}) // the client is gone when it fails
 }
 
 func (b *bridge) session(id acp.SessionID) (*session, error) {
@@ -182,7 +182,7 @@ func (b *bridge) handle(ctx context.Context, method string, params json.RawMessa
 		return s.prompt(ctx, text)
 	case "session/cancel":
 		if s, err := b.session(p.SessionID); err == nil {
-			s.h.send("Interrupt")
+			_ = s.h.send("Interrupt") // a dead host has no turn to stop
 		}
 		return nil, nil //nolint:nilnil // a notification has no result
 	case "session/set_mode":

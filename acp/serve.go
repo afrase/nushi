@@ -32,7 +32,7 @@ func (p *Peer) Call(ctx context.Context, method string, params, result any) erro
 	}
 	err = wait(ctx, result)
 	if id := withdrawable(err); id != nil {
-		p.conn.notify("$/cancel_request", map[string]any{"requestId": id})
+		_ = p.conn.notify("$/cancel_request", map[string]any{"requestId": id}) // the connection may be gone, which withdraws it anyway
 	}
 	return err
 }

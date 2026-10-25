@@ -50,7 +50,7 @@ func forked(sessions string, ids []string) map[string]bool {
 		want[id] = true
 	}
 	out := map[string]bool{}
-	filepath.WalkDir(sessions, func(path string, d fs.DirEntry, err error) error { //nolint:gosec // Codex's own sessions folder
+	_ = filepath.WalkDir(sessions, func(path string, d fs.DirEntry, err error) error { //nolint:gosec // Codex's own sessions folder
 		if err != nil { // d is nil when sessions can't be read
 			return nil //nolint:nilerr // what can't be read is skipped; the walk goes on
 		}
@@ -82,7 +82,7 @@ func firstLine(path string) []byte {
 	if err != nil {
 		return nil
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck // read-only
 	sc := bufio.NewScanner(f)
 	sc.Buffer(nil, 4<<20)
 	sc.Scan()

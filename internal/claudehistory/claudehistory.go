@@ -85,7 +85,7 @@ func Move(projects, id, from, to string) error {
 	}
 	dir := strings.TrimSuffix(src, ".jsonl")
 	if _, err := os.Stat(strings.TrimSuffix(dst, ".jsonl")); errors.Is(err, fs.ErrNotExist) {
-		os.Rename(dir, strings.TrimSuffix(dst, ".jsonl")) // when it has one
+		_ = os.Rename(dir, strings.TrimSuffix(dst, ".jsonl")) // when it has one
 	}
 	return os.Rename(src, dst)
 }

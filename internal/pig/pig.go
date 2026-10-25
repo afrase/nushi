@@ -70,7 +70,7 @@ var (
 func logf(format string, args ...any) {
 	logMu.Lock()
 	defer logMu.Unlock()
-	fmt.Fprintf(logTo, format+"\n", args...)
+	_, _ = fmt.Fprintf(logTo, format+"\n", args...) // stderr, which the daemon reads
 }
 
 func warnf(format string, args ...any) { logf("pig-acp: "+format, args...) }
@@ -140,7 +140,7 @@ func spawn(bin, cwd string, args []string) (Pig, error) {
 		close(exited)
 	}()
 	kill := func() {
-		syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) // the group may be gone already
 		<-exited
 	}
 	return Pig{In: in, Out: out, Kill: kill, Said: said.String}, nil

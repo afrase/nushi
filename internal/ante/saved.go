@@ -70,11 +70,11 @@ func (b *bridge) start(ctx context.Context, h *host, op any, replay bool) (*sess
 			return nil, errors.New("ante stopped before the session opened")
 		case ev.Name == "Error" && (s == nil || ev.Parent == fence):
 			var msg string
-			json.Unmarshal(ev.Payload, &msg)
+			_ = json.Unmarshal(ev.Payload, &msg)
 			return nil, errors.New(msg)
 		case ev.Name == "SessionStart" && s == nil:
 			var in info
-			json.Unmarshal(ev.Payload, &in)
+			_ = json.Unmarshal(ev.Payload, &in)
 			s = newSession(b, h, in)
 		case s == nil:
 		case ev.Name == "ContextReport" && ev.Parent == fence:
@@ -82,7 +82,7 @@ func (b *bridge) start(ctx context.Context, h *host, op any, replay bool) (*sess
 				Used  int64 `json:"used_tokens"`
 				Limit int64 `json:"limit_tokens"`
 			}
-			json.Unmarshal(ev.Payload, &c)
+			_ = json.Unmarshal(ev.Payload, &c)
 			s.mu.Lock()
 			s.turn, s.tools = nil, map[string]string{} // the saved turns are over
 			s.mu.Unlock()
@@ -116,14 +116,14 @@ func (s *session) replayLocked(ev event) []acp.SessionUpdate {
 		var p struct {
 			TurnID string `json:"turn_id"`
 		}
-		json.Unmarshal(ev.Payload, &p)
+		_ = json.Unmarshal(ev.Payload, &p)
 		s.turn = &turn{id: p.TurnID, started: true, result: make(chan turnResult, 1)}
 		s.turns, s.msg = append(s.turns, p.TurnID), 0
 	case "TurnEnd":
 		s.turn = nil
 	case "UserInput":
 		var text string
-		json.Unmarshal(ev.Payload, &text)
+		_ = json.Unmarshal(ev.Payload, &text)
 		text = withoutFolder(text)
 		if text != "" {
 			c := &acp.ContentChunk{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: text}}, MessageID: acp.MessageID(ev.Parent)}
@@ -176,7 +176,7 @@ func (b *bridge) fork(ctx context.Context, from acp.SessionID, cwd, after string
 	var forked struct {
 		ID string `json:"session_id"`
 	}
-	json.Unmarshal(ev.Payload, &forked)
+	_ = json.Unmarshal(ev.Payload, &forked)
 	resp, err := b.open(ctx, cwd, resume(acp.SessionID(forked.ID)), false)
 	if err != nil {
 		return nil, err

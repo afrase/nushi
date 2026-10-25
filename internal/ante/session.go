@@ -101,7 +101,7 @@ func (s *session) await(ctx context.Context, op any, want ...string) (event, err
 		case ev := <-ch:
 			if ev.Name == "Error" {
 				var msg string
-				json.Unmarshal(ev.Payload, &msg)
+				_ = json.Unmarshal(ev.Payload, &msg)
 				return ev, errors.New(msg)
 			}
 			if slices.Contains(want, ev.Name) {
@@ -130,7 +130,7 @@ func (s *session) handle(ev event) {
 		var p struct {
 			TurnID string `json:"turn_id"`
 		}
-		json.Unmarshal(ev.Payload, &p)
+		_ = json.Unmarshal(ev.Payload, &p)
 		if s.turn == nil || s.turn.started { // a turn Ante started itself
 			s.beginLocked(&turn{id: p.TurnID, result: make(chan turnResult, 1)})
 		}
@@ -147,11 +147,11 @@ func (s *session) handle(ev event) {
 	case "TurnEnd":
 		s.turnEndLocked(ev)
 	case "SessionUpdated":
-		json.Unmarshal(ev.Payload, &s.info)
+		_ = json.Unmarshal(ev.Payload, &s.info)
 		out = s.b.configUpdates(s.info)
 	case "Error":
 		var msg string
-		json.Unmarshal(ev.Payload, &msg)
+		_ = json.Unmarshal(ev.Payload, &msg)
 		if t := s.turn; t != nil && !t.started && ev.Parent == t.id { // the input was refused
 			s.endLocked(t, nil, errors.New(msg))
 		}
@@ -199,7 +199,7 @@ func turnOf(messageID string) string {
 // whole message ends it.
 func (s *session) textLocked(ev event) []acp.SessionUpdate {
 	var text string
-	json.Unmarshal(ev.Payload, &text)
+	_ = json.Unmarshal(ev.Payload, &text)
 	id := s.messageID()
 	var send bool
 	thought := strings.HasPrefix(ev.Name, "Thinking")
@@ -243,7 +243,7 @@ func (s *session) usageLocked(ev event) []acp.SessionUpdate {
 			Limit int64 `json:"limit_tokens"`
 		} `json:"context"`
 	}
-	json.Unmarshal(ev.Payload, &p)
+	_ = json.Unmarshal(ev.Payload, &p)
 	if t := s.turn; t != nil {
 		u := &t.usage
 		u.InputTokens += p.Usage.Input
@@ -272,7 +272,7 @@ func (s *session) turnEndLocked(ev event) {
 	var p struct {
 		Status json.RawMessage `json:"status"`
 	}
-	json.Unmarshal(ev.Payload, &p)
+	_ = json.Unmarshal(ev.Payload, &p)
 	name, payload := variant(p.Status)
 	switch name {
 	case "Completed":
@@ -285,7 +285,7 @@ func (s *session) turnEndLocked(ev event) {
 			Headline string   `json:"headline"`
 			Details  []string `json:"details"`
 		}
-		json.Unmarshal(payload, &e)
+		_ = json.Unmarshal(payload, &e)
 		msg := strings.Join(append([]string{e.Headline}, e.Details...), ": ")
 		if e.Kind == "oauth" {
 			msg += " (run `ante auth login` in a terminal)"

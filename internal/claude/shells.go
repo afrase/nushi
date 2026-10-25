@@ -57,13 +57,15 @@ func ReadShell(id, file string) (output, end string, err error) {
 	if err != nil {
 		return "", "", err
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck // read-only
 	st, err := f.Stat()
 	if err != nil {
 		return "", "", err
 	}
 	if st.Size() > shellTail {
-		f.Seek(st.Size()-shellTail, io.SeekStart)
+		if _, err := f.Seek(st.Size()-shellTail, io.SeekStart); err != nil {
+			return "", "", err
+		}
 	}
 	b, err := io.ReadAll(io.LimitReader(f, shellTail))
 	if err != nil {
