@@ -9,6 +9,7 @@ import 'bundled_daemon.dart';
 import 'gen/nushi/v1/nushi.connect.client.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
 import 'login_item.dart';
+import 'logs_section.dart';
 import 'menu.dart';
 import 'remote.dart';
 import 'settings.dart';
@@ -70,7 +71,7 @@ class _Settings extends StatefulWidget {
 
 class _SettingsState extends State<_Settings> {
   final _families = _monospaced();
-  int? _sleep; // minutes, once the daemon said
+  Settings? _set; // the daemon's, once it said
   late bool _agents = widget.agents; // the page shown
 
   @override
@@ -79,18 +80,17 @@ class _SettingsState extends State<_Settings> {
     widget.client
         .getSettings(GetSettingsRequest())
         .then(
-          (r) => mounted
-              ? setState(() => _sleep = r.settings.sleepAfterMinutes)
-              : null,
+          (r) => mounted ? setState(() => _set = r.settings) : null,
           onError: (_) {}, // the row stays out
         );
   }
 
-  Future<void> _setSleep(int minutes) async {
-    await widget.client.setSettings(
-      SetSettingsRequest(settings: Settings(sleepAfterMinutes: minutes)),
-    );
-    if (mounted) setState(() => _sleep = minutes);
+  /// Sets the daemon's settings, both: [change] applied to them.
+  Future<void> _change(void Function(Settings) change) async {
+    final set = _set!.deepCopy();
+    change(set);
+    await widget.client.setSettings(SetSettingsRequest(settings: set));
+    if (mounted) setState(() => _set = set);
   }
 
   @override
@@ -171,7 +171,7 @@ class _SettingsState extends State<_Settings> {
               style: terminalStyle().toTextStyle(color: t.text),
             ),
           ),
-          if (_sleep case final sleep?) ...[
+          if (_set?.sleepAfterMinutes case final sleep?) ...[
             const SizedBox(height: 16),
             Text('Chats', style: theme.ui(t.text, weight: FontWeight.w600)),
             row(
@@ -185,7 +185,10 @@ class _SettingsState extends State<_Settings> {
                     MenuEntry(
                       value,
                       checked: key == sleep,
-                      onPick: () => tryOrShow(context, () => _setSleep(key)),
+                      onPick: () => tryOrShow(
+                        context,
+                        () => _change((s) => s.sleepAfterMinutes = key),
+                      ),
                     ),
                 ],
                 child: Text(
@@ -200,6 +203,11 @@ class _SettingsState extends State<_Settings> {
               Platform.environment['NUSHI_DATA'] == null)
             const StartAtLogin(),
           RemoteSection(widget.client),
+          LogsSection(
+            debug: _set?.debugLog,
+            onDebug: (on) =>
+                tryOrShow(context, () => _change((s) => s.debugLog = on)),
+          ),
         ],
       ),
     );
@@ -215,7 +223,12 @@ class _SettingsState extends State<_Settings> {
             onChanged: (v) => setState(() => _agents = v),
           ),
           const SizedBox(height: 12),
-          _agents ? AgentsPage(widget.client) : general,
+          // A short window scrolls the page.
+          Flexible(
+            child: _agents
+                ? AgentsPage(widget.client)
+                : SingleChildScrollView(child: general),
+          ),
         ],
       ),
       [

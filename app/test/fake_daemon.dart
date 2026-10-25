@@ -30,6 +30,10 @@ class FakeDaemon implements Transport {
   var agents = readyAgents();
   final setUp = <String>[], removed = <String>[];
   final started = <StartChatRequest>[];
+
+  /// What GetSettings answers, and each SetSettings.
+  var settings = Settings(sleepAfterMinutes: 30);
+  final setSettings = <Settings>[];
   String? startError;
 
   /// What ListAgentSessions answers (nothing listed when unset), and the
@@ -58,6 +62,7 @@ class FakeDaemon implements Transport {
     if (input is OpenAgentSessionRequest) opened.add(input);
     if (input is SetUpAgentRequest) setUp.add(input.agent);
     if (input is RemoveAgentRequest) removed.add(input.agent);
+    if (input is SetSettingsRequest) setSettings.add(settings = input.settings);
     if (input is StartChatRequest) {
       started.add(input);
       if (startError case final e?) throw ConnectException(Code.unknown, e);
@@ -66,6 +71,7 @@ class FakeDaemon implements Transport {
       PingRequest() => PingResponse(apiVersion: apiVersion),
       ListChatsRequest() => ListChatsResponse(chats: chats),
       ListAgentsRequest() => ListAgentsResponse(agents: agents),
+      GetSettingsRequest() => GetSettingsResponse(settings: settings),
       // A chat it has, so the app can show it.
       StartChatRequest() => StartChatResponse(chatId: chats.first.id),
       ListAgentSessionsRequest() =>
