@@ -8,7 +8,9 @@ import 'agents.dart';
 import 'daemon.dart';
 import 'folder_button.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
+import 'logo.dart';
 import 'open_session.dart';
+import 'settings_dialog.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
 
@@ -26,24 +28,28 @@ class NewChatIntent extends Intent {
 /// comes through here.
 Future<void> newChat(BuildContext context, Daemon daemon, String folder) async {
   if (daemon.starting != null) return;
+  listAgents(daemon.client).ignore(); // as they are now, while it shows
   final pick = await showDialog<(String, FoundSession?)>(
     context: context,
     builder: (_) => _NewChat(daemon, folder),
   );
   if (pick == null || !context.mounted) return;
   final (agent, session) = pick;
-  if (session == null) {
+  if (agent.isEmpty || knownAgents[agent]?.ready == false) {
+    await showSettings(context, daemon.client, agents: true);
+  } else if (session == null) {
     await tryOrShow(context, () => daemon.startChat(folder, agent));
   } else if (await mayOpen(context, session) && context.mounted) {
     await tryOrShow(context, () => daemon.openSession(folder, agent, session));
   }
 }
 
-/// The agents, the last one used selected (one whose last start failed
-/// shows dimmed and isn't, unless all failed): Enter starts it, a click,
-/// or a digit, starts another; the arrows move. → (or the row under them)
-/// lists the selected agent's sessions instead (SessionList), ← comes
-/// back.
+/// The agents installed, the last one used selected (one that isn't
+/// ready, or whose last start failed, shows dimmed and isn't, unless none
+/// is): Enter starts it, a click, or a digit, starts another; the arrows
+/// move. One that isn't ready goes to Settings › Agents instead. → (or the
+/// row under them) lists the selected agent's sessions instead
+/// (SessionList), ← comes back.
 class _NewChat extends StatefulWidget {
   const _NewChat(this.daemon, this.folder);
 
@@ -55,13 +61,18 @@ class _NewChat extends StatefulWidget {
 }
 
 class _NewChatState extends State<_NewChat> {
-  final _agents = knownAgents.keys.toList();
+  List<String> get _agents => [
+    for (final a in knownAgents.values)
+      if (a.path.isNotEmpty) a.name,
+  ];
   late int _at = () {
-    final failed = widget.daemon.cantStart;
-    final last = max(0, _agents.indexOf(lastAgent(widget.daemon.chats.values)));
-    if (_agents.isEmpty || !failed.containsKey(_agents[last])) return last;
-    final ok = _agents.indexWhere((a) => !failed.containsKey(a));
-    return ok >= 0 ? ok : last;
+    final agents = _agents;
+    bool ok(String a) =>
+        knownAgents[a]!.ready && !widget.daemon.cantStart.containsKey(a);
+    final last = max(0, agents.indexOf(lastAgent(widget.daemon.chats.values)));
+    if (agents.isEmpty || ok(agents[last])) return last;
+    final first = agents.indexWhere(ok);
+    return first >= 0 ? first : last;
   }();
 
   /// The agent whose sessions show, once → was pressed.
@@ -71,6 +82,7 @@ class _NewChatState extends State<_NewChat> {
   void _start(int i) => Navigator.pop(context, (_agents[i], null));
 
   void _sessions(bool show) {
+    if (show && knownAgents[_agents[_at]]?.ready == false) return _start(_at);
     setState(() => _sessionsOf = show ? _agents[_at] : null);
     if (!show) _focus.requestFocus();
   }
@@ -105,10 +117,17 @@ class _NewChatState extends State<_NewChat> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: agentList, // found again as the dialog opened
+    builder: (context, _, _) => _dialog(context),
+  );
+
+  Widget _dialog(BuildContext context) {
     final theme = NushiTheme.of(context), t = theme.t;
     final folder = widget.folder;
     final agent = _sessionsOf;
+    final agents = _agents;
+    _at = min(_at, max(0, agents.length - 1));
     return Dialog(
       child: SizedBox(
         width: agent == null ? 300 : 440,
@@ -125,7 +144,7 @@ class _NewChatState extends State<_NewChat> {
               : Focus(
                   focusNode: _focus,
                   autofocus: true,
-                  onKeyEvent: _agents.isEmpty ? null : _key,
+                  onKeyEvent: agents.isEmpty ? null : _key,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -141,9 +160,17 @@ class _NewChatState extends State<_NewChat> {
                           style: theme.ui(t.text, weight: FontWeight.w600),
                         ),
                       ),
-                      for (final (i, name) in _agents.indexed)
+                      for (final (i, name) in agents.indexed)
                         _row(theme, t, i, name),
-                      if (_agents.isNotEmpty) ...[
+                      if (agents.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+                          child: _SetUpLine(
+                            'No agents found. ',
+                            onTap: () => Navigator.pop(context, ('', null)),
+                          ),
+                        ),
+                      if (agents.isNotEmpty) ...[
                         Divider(height: 9, color: t.borderSubtle),
                         Tap(
                           onTap: () => _sessions(true),
@@ -161,7 +188,7 @@ class _NewChatState extends State<_NewChat> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
-                                  'Open ${_an(agentTitle(_agents[_at]))} session…',
+                                  'Open ${_an(agentTitle(agents[_at]))} session…',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: theme.ui(t.textSecondary, size: 12.5),
@@ -181,12 +208,19 @@ class _NewChatState extends State<_NewChat> {
   }
 
   Widget _row(NushiTheme theme, Tokens t, int i, String name) {
-    final why = widget.daemon.cantStart[name];
+    final a = knownAgents[name]!;
+    final failed = widget.daemon.cantStart[name];
+    final setUp = !a.ready && a.problem.isEmpty;
+    final why = !a.ready
+        ? a.problem
+        : failed == null
+        ? null
+        : _reason(failed, a.title);
     final color = why == null ? t.text : t.textMuted;
     return Tap(
       onTap: () => _start(i),
       selected: i == _at,
-      tooltip: why ?? '',
+      tooltip: failed ?? '',
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
       child: Row(
         children: [
@@ -196,12 +230,16 @@ class _NewChatState extends State<_NewChat> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              why == null ? '' : _reason(why, agentTitle(name)),
+              why ?? '',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: theme.ui(t.textMuted, size: 11.5),
             ),
           ),
+          if (setUp) ...[
+            Text('Set up', style: theme.ui(t.link, size: 11.5)),
+            const SizedBox(width: 10),
+          ],
           if (i < 9) keyHint(context, '${i + 1}'),
         ],
       ),
@@ -226,3 +264,62 @@ final _step = RegExp(r'^(start agent|initialize|session/\w+|acp error -?\d+)$');
 /// [word] after "a" or "an".
 String _an(String word) =>
     '${'aeiouAEIOU'.contains(word.isEmpty ? '-' : word[0]) ? 'an' : 'a'} $word';
+
+/// "[before]Settings › Agents" with the second part a link, for when no
+/// agent can start yet.
+class _SetUpLine extends StatelessWidget {
+  const _SetUpLine(this.before, {required this.onTap});
+
+  final String before;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context), t = theme.t;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(before, style: theme.ui(t.textMuted)),
+        Tap(
+          onTap: onTap,
+          child: Text('Settings › Agents', style: theme.ui(t.link)),
+        ),
+      ],
+    );
+  }
+}
+
+/// The pane with no chat open: "Start a chat", or, while no agent can
+/// start, where to set one up.
+class NothingOpen extends StatelessWidget {
+  const NothingOpen(this.daemon, {super.key});
+
+  final Daemon daemon;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: agentList,
+    builder: (context, agents, _) => _pane(context, agents),
+  );
+
+  Widget _pane(BuildContext context, Map<String, Agent> agents) {
+    final theme = NushiTheme.of(context);
+    final none = agents.isNotEmpty && !agents.values.any((a) => a.ready);
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Logo(color: theme.t.borderStrong),
+          const SizedBox(height: 16),
+          none
+              ? _SetUpLine(
+                  'Set up an agent in ',
+                  onTap: () =>
+                      showSettings(context, daemon.client, agents: true),
+                )
+              : Text('Start a chat', style: theme.ui(theme.t.textMuted)),
+        ],
+      ),
+    );
+  }
+}

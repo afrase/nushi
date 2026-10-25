@@ -94,8 +94,58 @@ ListAgentSessionsResponse _found(ListAgentSessionsRequest r) =>
       ),
     };
 
+/// Claude installed but not set up, oh-my-pi not installed.
+List<Agent> _notAllReady() => [
+  for (final a in readyAgents())
+    switch (a.name) {
+      'claude' => a.deepCopy()
+        ..ready = false
+        ..adapter = Adapter(pinned: '0.94.0'),
+      'omp' => Agent(name: 'omp', title: 'oh-my-pi', problem: 'Not installed'),
+      _ => a,
+    },
+];
+
 void main() {
   setUpAll(loadFonts);
+  setUp(
+    () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('nushi/fonts'),
+          (_) async => <String>[],
+        ),
+  );
+
+  testWidgets('an agent not set up is dimmed and goes to Settings; one '
+      'not installed isn’t offered', (tester) async {
+    final (fake, d) = await _sidebar(tester);
+    fake.agents = _notAllReady();
+    await _open(tester);
+    expect(find.text('oh-my-pi'), findsNothing);
+    expect(find.text('Set up'), findsOneWidget);
+    await _key(tester, LogicalKeyboardKey.digit1); // Claude
+    expect(fake.started, isEmpty);
+    expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('Get it'), findsOneWidget); // on the Agents page
+    d.dispose();
+  });
+
+  testWidgets('with no agent ready, the empty pane says where to set one up', (
+    tester,
+  ) async {
+    final fake = FakeDaemon([]);
+    fake.agents = [
+      for (final a in _notAllReady()) a.deepCopy()..ready = false,
+    ];
+    final d = await fake.connect(tester);
+    await tester.pumpWidget(NushiApp(daemon: d));
+    await tester.pumpAndSettle();
+    expect(find.text('Start a chat'), findsNothing);
+    await tester.tap(find.text('Settings › Agents'));
+    await tester.pumpAndSettle();
+    expect(find.text('Get it'), findsOneWidget);
+    d.dispose();
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
   testWidgets('the last agent is picked: Enter starts it at once', (
     tester,
@@ -146,15 +196,15 @@ void main() {
   ) async {
     final (fake, d) = await _sidebar(tester);
     fake.startError =
-        "couldn't start Codex: start agent: npx didn't find codex-acp: exit "
-        'status 1';
+        "couldn't start Codex: initialize: acp error -32603: the app-server "
+        "quit: exit status 1";
     await _open(tester);
     await _key(tester, LogicalKeyboardKey.enter); // codex fails
     expect(find.textContaining("couldn't start Codex"), findsOneWidget);
 
     fake.startError = null;
     await _open(tester);
-    expect(find.text("npx didn't find codex-acp"), findsOneWidget);
+    expect(find.text('the app-server quit'), findsOneWidget);
     // Not picked any more: Enter starts the first that didn't fail.
     await _key(tester, LogicalKeyboardKey.enter);
     expect(fake.started.last.agent, 'claude');
@@ -164,7 +214,7 @@ void main() {
     await _key(tester, LogicalKeyboardKey.digit2);
     expect(fake.started.last.agent, 'codex');
     await _open(tester);
-    expect(find.text("npx didn't find codex-acp"), findsNothing);
+    expect(find.text('the app-server quit'), findsNothing);
     d.dispose();
   });
 
@@ -353,6 +403,7 @@ void main() {
         ..physicalSize = const Size(700, 400);
       addTearDown(tester.view.reset);
       final (fake, d) = await _sidebar(tester, tokens: tokens);
+      fake.agents = _notAllReady();
       d.cantStart['ante'] =
           "couldn't start Ante: initialize: acp error -32603: Ante isn't "
           "installed: there's no ante on "
