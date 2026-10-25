@@ -196,7 +196,8 @@ class _DiffBoxState extends State<DiffBox> {
   void _showComments() {
     final c = _controller;
     if (c == null) return;
-    final doc = c.document, change = widget.change;
+    final doc = c.document;
+    final change = widget.change;
     var moved = false;
     for (final m in _comments) {
       if (m.anchor(m.old ? change.oldText : change.newText)) moved = true;
@@ -246,9 +247,11 @@ class _DiffBoxState extends State<DiffBox> {
   }
 
   void _save(String comment) {
-    final r = widget.review!, d = _draft!;
+    final r = widget.review!;
+    final d = _draft!;
     final edited = _editing;
-    final span = d.span, side = d.side;
+    final span = d.span;
+    final side = d.side;
     String text(int from, int to) => [
       for (var i = max(from, 0); i < to; i++)
         if (_controller!.lines.lineAt(side, i) case final line?) line.text,
@@ -279,7 +282,8 @@ class _DiffBoxState extends State<DiffBox> {
   Widget _inlay(BuildContext context, InlaySpec spec) {
     final r = widget.review!;
     if (spec.id.isEmpty) {
-      final d = _draft!, s = d.span;
+      final d = _draft!;
+      final s = d.span;
       return CommentBox(
         key: ValueKey(_editing?.id ?? 'new'),
         lines: s.length == 1

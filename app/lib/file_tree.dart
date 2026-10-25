@@ -19,7 +19,8 @@ class ChangeRow {
   final String name; // a file's name (its path when flat), or folders
   final int depth;
   final FileChange? file;
-  final int added, removed;
+  final int added;
+  final int removed;
 }
 
 class _Folder {
@@ -124,7 +125,8 @@ class _FileListState extends State<FileList> {
   void _reveal() {
     final i = _rows.indexWhere((r) => r.file?.path == widget.selected);
     if (i < 0 || !_scroll.hasClients) return;
-    final p = _scroll.position, top = i * _row;
+    final p = _scroll.position;
+    final top = i * _row;
     if (top < p.pixels) {
       p.jumpTo(top);
     } else if (top + _row > p.pixels + p.viewportDimension) {
@@ -195,13 +197,16 @@ class _Row extends StatelessWidget {
   });
 
   final ChangeRow row;
-  final bool flat, selected, open;
+  final bool flat;
+  final bool selected;
+  final bool open;
   final int comments;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final file = row.file;
     final (letter, color) = switch (file?.status) {
       'added' => ('A', t.done),
@@ -270,11 +275,13 @@ class _Row extends StatelessWidget {
 class LineCounts extends StatelessWidget {
   const new(this.added, this.removed, {super.key});
 
-  final int added, removed;
+  final int added;
+  final int removed;
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     return Text.rich(
       TextSpan(
         children: [

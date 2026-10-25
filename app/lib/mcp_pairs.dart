@@ -58,7 +58,8 @@ class PairRows extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final mono = theme.code(t.text, size: 12);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

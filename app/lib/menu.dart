@@ -139,7 +139,8 @@ List<Widget> _rows(
   if (entries.where((e) => e._pickable).length > _filterPast) {
     return [_Filtered(entries, close)];
   }
-  final theme = NushiTheme.of(context), t = theme.t;
+  final theme = NushiTheme.of(context);
+  final t = theme.t;
   var n = 0;
   return [
     for (final e in entries)
@@ -174,7 +175,8 @@ Widget _row(
   bool lit = false,
   Key? key,
 }) {
-  final theme = NushiTheme.of(context), t = theme.t;
+  final theme = NushiTheme.of(context);
+  final t = theme.t;
   final on = e.onPick != null || e.submenu != null;
   Widget label = ConstrainedBox(
     constraints: const BoxConstraints(maxWidth: 380),
@@ -290,7 +292,8 @@ class _FilteredState extends State<_Filtered> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final shown = _shown;
     return Column(
       mainAxisSize: MainAxisSize.min,

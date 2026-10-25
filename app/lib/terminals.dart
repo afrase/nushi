@@ -141,7 +141,8 @@ class TermSession extends ChangeNotifier {
   }
 
   final NushiServiceClient client;
-  final String id, chatId;
+  final String id;
+  final String chatId;
   final controller = TerminalController();
   final focus = FocusNode();
   final scroll = ScrollController();

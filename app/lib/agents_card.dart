@@ -13,7 +13,8 @@ import 'package:nushi/widgets.dart';
 /// then a quiet "n finished" line that opens the others. Null (no card)
 /// when the chat never had one.
 PanelCard? agentsCard(ChatState chat) {
-  final subs = subagentsOf(chat.items), shells = shellsOf(chat.items);
+  final subs = subagentsOf(chat.items);
+  final shells = shellsOf(chat.items);
   if (subs.isEmpty && shells.isEmpty) return null;
   final running = [
     for (final s in subs.where(subagentRunning)) _AgentRow(chat, s),
@@ -55,7 +56,8 @@ class _ShellRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final last = lastLine(it);
     return Tap(
       onTap: () => chat.pane.value = it.id,
@@ -94,7 +96,8 @@ class _AgentRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final runs = subagentModel(chat, s);
     return Tap(
       onTap: () => chat.pane.value = s.call.id,
@@ -149,7 +152,8 @@ class _FinishedState extends State<_Finished> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [

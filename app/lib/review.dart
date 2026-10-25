@@ -54,11 +54,18 @@ class ReviewComment {
         seen: j['seen'] as int?,
       );
 
-  final String id, where, path, quote, before, after;
+  final String id;
+  final String where;
+  final String path;
+  final String quote;
+  final String before;
+  final String after;
   final bool old;
-  int start, end;
+  int start;
+  int end;
   String text;
-  bool sent, outdated;
+  bool sent;
+  bool outdated;
   int? seen; // a hash of the side's text
 
   Map<String, Object?> toJson() => {
@@ -82,7 +89,8 @@ class ReviewComment {
   /// The lines are compared as the diff shows them: without a "\r" at the
   /// end (Windows line endings).
   bool anchor(String text) {
-    final lines = text.split(RegExp(r'\r?\n')), quoted = quote.split('\n');
+    final lines = text.split(RegExp(r'\r?\n'));
+    final quoted = quote.split('\n');
     bool at(int i) =>
         i >= 0 &&
         i + quoted.length <= lines.length &&
@@ -279,7 +287,8 @@ void _untilSent(ChatState chat, String text, List<ReviewComment> comments) {
 class _SendDialog extends StatefulWidget {
   const new({required this.chat, required this.agent});
 
-  final String chat, agent;
+  final String chat;
+  final String agent;
 
   @override
   State<_SendDialog> createState() => _SendDialogState();
@@ -301,7 +310,8 @@ class _SendDialogState extends State<_SendDialog> {
   );
 
   Widget _build(BuildContext context, List<ReviewComment> unsent) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final n = unsent.length;
     return nushiDialog(
       'Send review',

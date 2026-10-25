@@ -36,7 +36,8 @@ class _StartAtLoginState extends State<StartAtLogin> {
   Widget build(BuildContext context) {
     final status = _status;
     if (status == null) return const SizedBox.shrink();
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final waiting = status == 'requiresApproval';
     return Column(
       mainAxisSize: MainAxisSize.min,

@@ -13,5 +13,3 @@ linter:
     # The app isn't a library: its public names are for its own files, and
     # the widgets' names say what they are.
     public_member_api_docs: false
-    # Still to fix, one step each (until then off):
-    avoid_multiple_declarations_per_line: false

@@ -302,7 +302,8 @@ class _RemoteImageState extends State<_RemoteImage> {
     if (_load) {
       return _Clickable(image: NetworkImage(widget.uri.toString()), size: 320);
     }
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final alt = widget.alt;
     return Tooltip(
       message: widget.uri.toString(),

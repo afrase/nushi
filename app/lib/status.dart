@@ -168,7 +168,8 @@ class _TurnStatusState extends State<TurnStatus> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final chat = widget.chat;
     final waiting = chat.waiting && widget.what == null;
     final started = chat.started;

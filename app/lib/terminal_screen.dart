@@ -64,7 +64,8 @@ class TerminalScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final s = terms.session(info);
     if (terms.focusNext == info.id) {
       terms.focusNext = null;

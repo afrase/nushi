@@ -14,8 +14,10 @@ class ToolKind {
   const new(this.icon, this.did, this.what, [this.verb, this.doing]);
 
   final IconData icon;
-  final String did, what;
-  final String? verb, doing;
+  final String did;
+  final String what;
+  final String? verb;
+  final String? doing;
 }
 
 /// The ACP kinds of tool calls.
@@ -211,7 +213,8 @@ class ToolCallView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final it = item;
     final code = theme.code(t.text, size: 12).copyWith(height: 1.2);
     final path = it.paths.firstOrNull ?? it.diffs.firstOrNull?.path;
@@ -327,7 +330,8 @@ class ToolGroupView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final failed = calls.where((c) => c.status == 'failed').length;
     return _withImages(
       [for (final c in calls) ...c.images],

@@ -18,7 +18,8 @@ class TrustCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final byFile = <String, List<FolderRun>>{};
     for (final r in ask.runs) {
       (byFile[r.file] ??= []).add(r);
@@ -123,7 +124,8 @@ class _Block extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 4,

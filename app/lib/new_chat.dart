@@ -123,7 +123,8 @@ class _NewChatState extends State<_NewChat> {
   );
 
   Widget _dialog(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final folder = widget.folder;
     final agent = _sessionsOf;
     final agents = _agents;
@@ -276,7 +277,8 @@ class _SetUpLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [

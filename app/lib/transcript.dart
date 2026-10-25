@@ -68,7 +68,8 @@ class Transcript extends StatefulWidget {
 
   final List<Item>? items;
   final bool live;
-  final Widget? header, footer;
+  final Widget? header;
+  final Widget? footer;
 
   @override
   State<Transcript> createState() => _TranscriptState();
@@ -180,7 +181,8 @@ class _TranscriptState extends State<Transcript> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final chat = widget.chat;
     final entries = _entries(widget.items ?? chat.items);
     final live = widget.items == null ? chat.busy : widget.live;

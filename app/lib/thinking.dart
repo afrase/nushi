@@ -69,7 +69,8 @@ class PlanView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final done = item.plan.where((e) => e.status == 'completed').length;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -137,7 +138,8 @@ class PlanStatus extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final entries = plan.plan;
     final done = entries.where((e) => e.status == 'completed').length;
     final now = entries.where((e) => e.status == 'in_progress').firstOrNull;

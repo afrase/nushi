@@ -37,15 +37,16 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   ChangeSpan? _span;
   List<FileChange> _files = [];
   List<Commit> _commits = [];
-  String? _first,
-      _last; // the commits picked (hashes), a click and a shift-click
+  String? _first;
+  String? _last; // the commits picked (hashes), a click and a shift-click
   String? _error;
   bool _loading = false;
   String? _path; // the file shown
   String? _opening; // a file to show once the list is in (a terminal link)
   // The last reload's and the last diff's numbers: older answers are
   // dropped. Apart, so a commit picked during a reload doesn't drop it.
-  int _reloads = 0, _asked = 0;
+  int _reloads = 0;
+  int _asked = 0;
 
   @override
   void initState() {
@@ -175,7 +176,8 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     if (_error != null) {
       // The toolbar stays, so a scope that fails can be left.
       return Column(
@@ -297,7 +299,8 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
 
   /// The scope, what the files add up to, and the list's controls.
   Widget _toolbar() {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final span = _span;
     // Before anything loaded (it failed), every scope, to leave the one
     // that fails.

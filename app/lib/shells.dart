@@ -84,7 +84,8 @@ class ShellPane extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     return ListenableBuilder(
       listenable: Listenable.merge([chat, subagentWide]),
       builder: (context, _) {

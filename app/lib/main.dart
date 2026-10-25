@@ -288,7 +288,8 @@ class _ReplacedState extends State<_Replaced> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     return Container(
       color: t.raised,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -342,7 +343,8 @@ class _OutdatedState extends State<_Outdated> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 420),

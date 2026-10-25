@@ -53,7 +53,8 @@ class _RemoteSectionState extends State<RemoteSection> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     return ValueListenableBuilder(
       valueListenable: remoteState,
       builder: (context, r, _) {
@@ -213,7 +214,8 @@ class _Pairing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     Future<void> answer(String code, {required bool allow}) async {
       await tryOrShow(
         context,
@@ -321,7 +323,8 @@ class _QrPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final n = _image.moduleCount, cell = size.width / n;
+    final n = _image.moduleCount;
+    final cell = size.width / n;
     final dark = Paint()..color = Colors.black;
     for (var y = 0; y < n; y++) {
       for (var x = 0; x < n; x++) {

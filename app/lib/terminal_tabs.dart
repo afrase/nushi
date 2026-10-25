@@ -124,7 +124,8 @@ class _TabState extends State<_Tab> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final info = widget.info;
     final color = info.exited
         ? t.textMuted

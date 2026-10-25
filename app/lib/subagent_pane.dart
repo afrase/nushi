@@ -33,7 +33,8 @@ class SubagentPane extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     return ListenableBuilder(
       listenable: Listenable.merge([chat, subagentWide]),
       builder: (context, _) {
@@ -109,7 +110,8 @@ class SubagentPane extends StatelessWidget {
   }
 
   Widget? _result(BuildContext context, SubagentRun s) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final result = s.call.subagent.result;
     if (subagentRunning(s) || result.isEmpty) return null;
     return Padding(
@@ -146,8 +148,10 @@ class _HeadState extends State<_Head> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
-    final s = widget.s, call = s.call;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    final s = widget.s;
+    final call = s.call;
     final small = theme.ui(t.textMuted, size: 12);
     final runs = subagentModel(widget.chat, s);
     // A replayed subagent (the daemon didn't see it start) with no steps:
@@ -279,7 +283,8 @@ class _RelayState extends State<_Relay> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context), t = theme.t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 8, 6, 8),
       decoration: BoxDecoration(
