@@ -135,6 +135,38 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.RevokeDeviceRequest request);
   $async.Future<$0.LogResponse> log(
       $pb.ServerContext ctx, $0.LogRequest request);
+  $async.Future<$0.ListJiraSitesResponse> listJiraSites(
+      $pb.ServerContext ctx, $0.ListJiraSitesRequest request);
+  $async.Future<$0.AddJiraSiteResponse> addJiraSite(
+      $pb.ServerContext ctx, $0.AddJiraSiteRequest request);
+  $async.Future<$0.RemoveJiraSiteResponse> removeJiraSite(
+      $pb.ServerContext ctx, $0.RemoveJiraSiteRequest request);
+  $async.Future<$0.CheckJiraSiteResponse> checkJiraSite(
+      $pb.ServerContext ctx, $0.CheckJiraSiteRequest request);
+  $async.Future<$0.AllowJiraTokenResponse> allowJiraToken(
+      $pb.ServerContext ctx, $0.AllowJiraTokenRequest request);
+  $async.Future<$0.ListJiraBoardsResponse> listJiraBoards(
+      $pb.ServerContext ctx, $0.ListJiraBoardsRequest request);
+  $async.Future<$0.SetJiraBoardResponse> setJiraBoard(
+      $pb.ServerContext ctx, $0.SetJiraBoardRequest request);
+  $async.Future<$0.SetJiraSearchesResponse> setJiraSearches(
+      $pb.ServerContext ctx, $0.SetJiraSearchesRequest request);
+  $async.Future<$0.ListJiraIssuesResponse> listJiraIssues(
+      $pb.ServerContext ctx, $0.ListJiraIssuesRequest request);
+  $async.Future<$0.GetJiraJqlResponse> getJiraJql(
+      $pb.ServerContext ctx, $0.GetJiraJqlRequest request);
+  $async.Future<$0.SuggestJiraJqlResponse> suggestJiraJql(
+      $pb.ServerContext ctx, $0.SuggestJiraJqlRequest request);
+  $async.Future<$0.GetJiraIssueResponse> getJiraIssue(
+      $pb.ServerContext ctx, $0.GetJiraIssueRequest request);
+  $async.Future<$0.ListJiraTransitionsResponse> listJiraTransitions(
+      $pb.ServerContext ctx, $0.ListJiraTransitionsRequest request);
+  $async.Future<$0.TransitionJiraIssueResponse> transitionJiraIssue(
+      $pb.ServerContext ctx, $0.TransitionJiraIssueRequest request);
+  $async.Future<$0.AddJiraCommentResponse> addJiraComment(
+      $pb.ServerContext ctx, $0.AddJiraCommentRequest request);
+  $async.Future<$0.GetJiraAttachmentResponse> getJiraAttachment(
+      $pb.ServerContext ctx, $0.GetJiraAttachmentRequest request);
   $async.Future<$0.EventsResponse> events(
       $pb.ServerContext ctx, $0.EventsRequest request);
 
@@ -254,6 +286,38 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.RevokeDeviceRequest();
       case 'Log':
         return $0.LogRequest();
+      case 'ListJiraSites':
+        return $0.ListJiraSitesRequest();
+      case 'AddJiraSite':
+        return $0.AddJiraSiteRequest();
+      case 'RemoveJiraSite':
+        return $0.RemoveJiraSiteRequest();
+      case 'CheckJiraSite':
+        return $0.CheckJiraSiteRequest();
+      case 'AllowJiraToken':
+        return $0.AllowJiraTokenRequest();
+      case 'ListJiraBoards':
+        return $0.ListJiraBoardsRequest();
+      case 'SetJiraBoard':
+        return $0.SetJiraBoardRequest();
+      case 'SetJiraSearches':
+        return $0.SetJiraSearchesRequest();
+      case 'ListJiraIssues':
+        return $0.ListJiraIssuesRequest();
+      case 'GetJiraJql':
+        return $0.GetJiraJqlRequest();
+      case 'SuggestJiraJql':
+        return $0.SuggestJiraJqlRequest();
+      case 'GetJiraIssue':
+        return $0.GetJiraIssueRequest();
+      case 'ListJiraTransitions':
+        return $0.ListJiraTransitionsRequest();
+      case 'TransitionJiraIssue':
+        return $0.TransitionJiraIssueRequest();
+      case 'AddJiraComment':
+        return $0.AddJiraCommentRequest();
+      case 'GetJiraAttachment':
+        return $0.GetJiraAttachmentRequest();
       case 'Events':
         return $0.EventsRequest();
       default:
@@ -378,6 +442,40 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return revokeDevice(ctx, request as $0.RevokeDeviceRequest);
       case 'Log':
         return log(ctx, request as $0.LogRequest);
+      case 'ListJiraSites':
+        return listJiraSites(ctx, request as $0.ListJiraSitesRequest);
+      case 'AddJiraSite':
+        return addJiraSite(ctx, request as $0.AddJiraSiteRequest);
+      case 'RemoveJiraSite':
+        return removeJiraSite(ctx, request as $0.RemoveJiraSiteRequest);
+      case 'CheckJiraSite':
+        return checkJiraSite(ctx, request as $0.CheckJiraSiteRequest);
+      case 'AllowJiraToken':
+        return allowJiraToken(ctx, request as $0.AllowJiraTokenRequest);
+      case 'ListJiraBoards':
+        return listJiraBoards(ctx, request as $0.ListJiraBoardsRequest);
+      case 'SetJiraBoard':
+        return setJiraBoard(ctx, request as $0.SetJiraBoardRequest);
+      case 'SetJiraSearches':
+        return setJiraSearches(ctx, request as $0.SetJiraSearchesRequest);
+      case 'ListJiraIssues':
+        return listJiraIssues(ctx, request as $0.ListJiraIssuesRequest);
+      case 'GetJiraJql':
+        return getJiraJql(ctx, request as $0.GetJiraJqlRequest);
+      case 'SuggestJiraJql':
+        return suggestJiraJql(ctx, request as $0.SuggestJiraJqlRequest);
+      case 'GetJiraIssue':
+        return getJiraIssue(ctx, request as $0.GetJiraIssueRequest);
+      case 'ListJiraTransitions':
+        return listJiraTransitions(
+            ctx, request as $0.ListJiraTransitionsRequest);
+      case 'TransitionJiraIssue':
+        return transitionJiraIssue(
+            ctx, request as $0.TransitionJiraIssueRequest);
+      case 'AddJiraComment':
+        return addJiraComment(ctx, request as $0.AddJiraCommentRequest);
+      case 'GetJiraAttachment':
+        return getJiraAttachment(ctx, request as $0.GetJiraAttachmentRequest);
       case 'Events':
         return events(ctx, request as $0.EventsRequest);
       default:

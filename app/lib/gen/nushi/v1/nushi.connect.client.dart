@@ -1097,6 +1097,293 @@ extension type NushiServiceClient (connect.Transport _transport) {
     );
   }
 
+  /// Jira (ADR 0042): the sites added, their tokens in the keychain. Every
+  /// call that reaches Jira is one the user made; nothing polls or writes on
+  /// its own.
+  Future<nushiv1nushi.ListJiraSitesResponse> listJiraSites(
+    nushiv1nushi.ListJiraSitesRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.listJiraSites,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Checks a token on a site (classic or scoped) and keeps it: the token
+  /// in the keychain, the site in the list.
+  Future<nushiv1nushi.AddJiraSiteResponse> addJiraSite(
+    nushiv1nushi.AddJiraSiteRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.addJiraSite,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Forgets a site and deletes its token from the keychain.
+  Future<nushiv1nushi.RemoveJiraSiteResponse> removeJiraSite(
+    nushiv1nushi.RemoveJiraSiteRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.removeJiraSite,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Asks Jira who a site's token is, to see it still works.
+  Future<nushiv1nushi.CheckJiraSiteResponse> checkJiraSite(
+    nushiv1nushi.CheckJiraSiteRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.checkJiraSite,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Reads a site's token with macOS's prompt, which asks to let this
+  /// build of Nushi read it (JiraSite.needs_ok).
+  Future<nushiv1nushi.AllowJiraTokenResponse> allowJiraToken(
+    nushiv1nushi.AllowJiraTokenRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.allowJiraToken,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// The board whose active sprint is the sprint list, and saved searches.
+  Future<nushiv1nushi.ListJiraBoardsResponse> listJiraBoards(
+    nushiv1nushi.ListJiraBoardsRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.listJiraBoards,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  Future<nushiv1nushi.SetJiraBoardResponse> setJiraBoard(
+    nushiv1nushi.SetJiraBoardRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.setJiraBoard,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  Future<nushiv1nushi.SetJiraSearchesResponse> setJiraSearches(
+    nushiv1nushi.SetJiraSearchesRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.setJiraSearches,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// A list's issues: "mine", "sprint", or a JQL search.
+  Future<nushiv1nushi.ListJiraIssuesResponse> listJiraIssues(
+    nushiv1nushi.ListJiraIssuesRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.listJiraIssues,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// What the JQL field autocompletes from, and a field's values.
+  Future<nushiv1nushi.GetJiraJqlResponse> getJiraJql(
+    nushiv1nushi.GetJiraJqlRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.getJiraJql,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  Future<nushiv1nushi.SuggestJiraJqlResponse> suggestJiraJql(
+    nushiv1nushi.SuggestJiraJqlRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.suggestJiraJql,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// An issue whole, text as Markdown.
+  Future<nushiv1nushi.GetJiraIssueResponse> getJiraIssue(
+    nushiv1nushi.GetJiraIssueRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.getJiraIssue,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  Future<nushiv1nushi.ListJiraTransitionsResponse> listJiraTransitions(
+    nushiv1nushi.ListJiraTransitionsRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.listJiraTransitions,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  Future<nushiv1nushi.TransitionJiraIssueResponse> transitionJiraIssue(
+    nushiv1nushi.TransitionJiraIssueRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.transitionJiraIssue,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Posts a comment written in Markdown.
+  Future<nushiv1nushi.AddJiraCommentResponse> addJiraComment(
+    nushiv1nushi.AddJiraCommentRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.addJiraComment,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// An attachment's file or thumbnail (20 MB at most).
+  Future<nushiv1nushi.GetJiraAttachmentResponse> getJiraAttachment(
+    nushiv1nushi.GetJiraAttachmentRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.getJiraAttachment,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.
   Stream<nushiv1nushi.EventsResponse> events(

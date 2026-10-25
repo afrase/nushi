@@ -19,7 +19,7 @@ func TestLive(t *testing.T) {
 		t.Skip("NUSHI_JIRA_TEST_SITE, _EMAIL and _TOKEN name the test site")
 	}
 	ctx := t.Context()
-	c, err := Connect(ctx, site, email, token, nil)
+	c, _, err := Connect(ctx, site, email, token, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

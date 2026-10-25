@@ -102,3 +102,27 @@ type JiraJQLField struct {
 	Name, Display string
 	Operators     []string
 }
+
+// JiraSite is a Jira site Nushi was given a token for: the token is in
+// the keychain, never here.
+type JiraSite struct {
+	URL     string `json:"url"` // https://<name>.atlassian.net
+	Email   string `json:"email"`
+	CloudID string `json:"cloudId,omitempty"` // set for a scoped token, used through Atlassian's gateway
+	// Who the token is.
+	AccountID string `json:"accountId"`
+	Name      string `json:"name"`
+	// Expires is when the token expires, if the user said (Jira doesn't).
+	Expires time.Time `json:"expires,omitzero"`
+	// Board is the board whose active sprint is the sprint list (0: not
+	// picked yet).
+	Board     int64        `json:"board,omitempty"`
+	BoardName string       `json:"boardName,omitempty"`
+	Searches  []JiraSearch `json:"searches,omitempty"`
+}
+
+// JiraSearch is a saved JQL search.
+type JiraSearch struct {
+	Name string `json:"name"`
+	JQL  string `json:"jql"`
+}
