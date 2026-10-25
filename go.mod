@@ -1,6 +1,6 @@
 module github.com/afrase/nushi
 
-go 1.27.1
+go 1.27.3
 
 require (
 	connectrpc.com/connect v1.21.1
