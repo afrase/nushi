@@ -8,12 +8,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
-/// The four agents, as the daemon lists them.
-final agents = [
-  Agent(name: 'claude', title: 'Claude'),
-  Agent(name: 'codex', title: 'Codex'),
-  Agent(name: 'ante', title: 'Ante'),
-  Agent(name: 'omp', title: 'oh-my-pi'),
+/// The four agents, as the daemon lists them: installed, ready.
+List<Agent> readyAgents() => [
+  for (final (name, title) in [
+    ('claude', 'Claude'),
+    ('codex', 'Codex'),
+    ('ante', 'Ante'),
+    ('omp', 'oh-my-pi'),
+  ])
+    Agent(name: name, title: title, path: '/bin/$name', ready: true),
 ];
 
 /// A daemon with [chats] and [agents] for widget tests; it records the
@@ -22,6 +25,10 @@ class FakeDaemon implements Transport {
   FakeDaemon(this.chats);
 
   final List<Chat> chats;
+
+  /// What ListAgents answers; the agents set up and removed.
+  var agents = readyAgents();
+  final setUp = <String>[], removed = <String>[];
   final started = <StartChatRequest>[];
   String? startError;
 
@@ -49,6 +56,8 @@ class FakeDaemon implements Transport {
   ]) async {
     if (input is ListAgentSessionsRequest) listed.add(input);
     if (input is OpenAgentSessionRequest) opened.add(input);
+    if (input is SetUpAgentRequest) setUp.add(input.agent);
+    if (input is RemoveAgentRequest) removed.add(input.agent);
     if (input is StartChatRequest) {
       started.add(input);
       if (startError case final e?) throw ConnectException(Code.unknown, e);

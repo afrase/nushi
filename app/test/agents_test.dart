@@ -7,7 +7,7 @@ void main() {
   test(
     'new chats start with the newest chat’s agent, named as the daemon says',
     () {
-      knownAgents = {
+      agentList.value = {
         'claude': Agent(
           name: 'claude',
           title: 'Claude',
