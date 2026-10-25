@@ -140,7 +140,11 @@ func (s *server) GetJiraIssue(ctx context.Context, req *connect.Request[nushiv1.
 	if err != nil {
 		return nil, jiraErr(err)
 	}
-	return connect.NewResponse(&nushiv1.GetJiraIssueResponse{Issue: jiraIssueProto(is, s.jira.Browse(req.Msg.Site, is.Key))}), nil
+	resp := &nushiv1.GetJiraIssueResponse{Issue: jiraIssueProto(is, s.jira.Browse(req.Msg.Site, is.Key))}
+	for _, w := range s.jira.Writes(req.Msg.Site, is.Key) {
+		resp.AgentWrites = append(resp.AgentWrites, &nushiv1.JiraWrite{Kind: w.Kind, Comment: w.Comment, To: w.To, Chat: w.Chat, Agent: w.Agent, At: unixMs(w.At)})
+	}
+	return connect.NewResponse(resp), nil
 }
 
 func (s *server) ListJiraTransitions(ctx context.Context, req *connect.Request[nushiv1.ListJiraTransitionsRequest]) (*connect.Response[nushiv1.ListJiraTransitionsResponse], error) {

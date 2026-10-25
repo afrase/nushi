@@ -11,3 +11,13 @@ func (s *Store) JiraSites() ([]model.JiraSite, error) {
 }
 
 func (s *Store) SaveJiraSites(sites []model.JiraSite) error { return s.write("jira.json", sites) }
+
+// JiraWrites are the writes agents made to Jira through their tools, in
+// jira-writes.json, the latest last.
+func (s *Store) JiraWrites() ([]model.JiraWrite, error) {
+	var w []model.JiraWrite
+	_, err := s.read("jira-writes.json", &w)
+	return w, err
+}
+
+func (s *Store) SaveJiraWrites(w []model.JiraWrite) error { return s.write("jira-writes.json", w) }

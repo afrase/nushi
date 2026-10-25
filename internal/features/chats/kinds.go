@@ -47,6 +47,7 @@ type Kind struct {
 type kind struct {
 	Kind
 	launch  Launch // Launch, refused once the service closes
+	tools   Tools  // Nushi's own tools for its chats' sessions; nil: none
 	deletes *bool  // whether the agent deletes sessions, once known (under Service.mu)
 }
 

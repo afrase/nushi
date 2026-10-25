@@ -152,6 +152,7 @@ type chat struct {
 	forkAt func(messageID string) map[string]any
 	// mcpChanged says the MCP servers changed since the agent started.
 	mcpChanged bool
+	issue      *model.ChatIssue     // the Jira issue it was started from; its tools are for it
 	canLoad    bool                 // the agent can reopen the session, so it can sleep
 	asleep     bool                 // its agent was stopped to sleep: opening the chat doesn't reopen it
 	before     []model.ConfigOption // the options it had when it fell asleep, for its waking
@@ -204,7 +205,7 @@ func (s *Service) StartOn(ctx context.Context, agent, folder string, worktree bo
 		return "", err
 	}
 	c := s.newChat(k)
-	c.id = rand.Text()
+	c.id, c.issue = rand.Text(), issue
 	scratch := folder == ""
 	var wt *model.Worktree
 	switch {

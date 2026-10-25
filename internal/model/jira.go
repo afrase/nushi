@@ -132,3 +132,17 @@ type JiraSearch struct {
 	Name string `json:"name"`
 	JQL  string `json:"jql"`
 }
+
+// JiraWrite is a write to Jira an agent made through its tools (ADR
+// 0043): a comment (its id) or a move (the status it moved to), by which
+// chat and agent, when.
+type JiraWrite struct {
+	Site    string    `json:"site"`
+	Key     string    `json:"key"`
+	Kind    string    `json:"kind"` // "comment" or "move"
+	Comment string    `json:"comment,omitempty"`
+	To      string    `json:"to,omitempty"`
+	Chat    string    `json:"chat"`
+	Agent   string    `json:"agent"`
+	At      time.Time `json:"at"`
+}

@@ -55,10 +55,12 @@ type Tokens interface {
 // (a new build of Nushi): AllowToken asks.
 var ErrNeedsOK = errors.New("this build of Nushi needs your OK to read the Jira token from the keychain: Settings › Jira › Allow")
 
-// Store keeps the sites.
+// Store keeps the sites, and the writes agents made.
 type Store interface {
 	JiraSites() ([]model.JiraSite, error)
 	SaveJiraSites([]model.JiraSite) error
+	JiraWrites() ([]model.JiraWrite, error)
+	SaveJiraWrites([]model.JiraWrite) error
 }
 
 // Service is Jira's feature.

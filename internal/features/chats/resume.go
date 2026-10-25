@@ -32,7 +32,7 @@ func (s *Service) lookup(id string) (*chat, error) {
 		return nil, err
 	}
 	c := s.newChat(k)
-	c.id, c.sid, c.session = id, stored[i].SessionID, stored[i]
+	c.id, c.sid, c.session, c.issue = id, stored[i].SessionID, stored[i], stored[i].Issue
 	c.session.Scratch = s.isScratch(c.session.Folder)
 	s.chats[id] = c
 	return c, nil

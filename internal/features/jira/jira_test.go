@@ -48,7 +48,17 @@ func (k *fakeTokens) Delete(account string) error {
 	return nil
 }
 
-type memStore struct{ sites []model.JiraSite }
+type memStore struct {
+	sites  []model.JiraSite
+	writes []model.JiraWrite
+}
+
+func (m *memStore) JiraWrites() ([]model.JiraWrite, error) { return m.writes, nil }
+
+func (m *memStore) SaveJiraWrites(w []model.JiraWrite) error {
+	m.writes = w
+	return nil
+}
 
 func (m *memStore) JiraSites() ([]model.JiraSite, error) {
 	return append([]model.JiraSite(nil), m.sites...), nil

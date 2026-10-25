@@ -43,9 +43,11 @@ import (
 	"github.com/afrase/nushi/internal/features/memory"
 	"github.com/afrase/nushi/internal/features/remote"
 	"github.com/afrase/nushi/internal/features/terminals"
+	"github.com/afrase/nushi/internal/features/tools"
 	"github.com/afrase/nushi/internal/features/trust"
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/logs"
+	"github.com/afrase/nushi/internal/mcpserver"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/npm"
 	"github.com/afrase/nushi/internal/omp"
@@ -65,6 +67,10 @@ func main() {
 	}
 	if len(os.Args) > 1 && os.Args[1] == pig.Command { // and PiG
 		pig.Main()
+		return
+	}
+	if len(os.Args) > 1 && os.Args[1] == mcpserver.Command { // a chat's agent's MCP server of Nushi's tools
+		mcpserver.Main()
 		return
 	}
 	// Until the daemon holds its socket, its lines go to stderr, which the
@@ -197,6 +203,8 @@ func run() error {
 		Trust: trust.New(map[string]trust.Agent{"claude": claudetrust.Trust{}, "codex": codextrust.Trust{}, "ante": antetrust.Trust{}, "omp": omptrust.Trust{}, "pig": pig.Trust{}}, st),
 		Hub:   hub, Memory: memory.New(chatSvc)}
 	sv.Jira = newJira(st, os.Getenv("NUSHI_DATA") != "")
+	toolSvc := tools.New(sv.Jira.Tools())
+	chatSvc.UseTools(mcpTools(toolSvc, filepath.Join(dir, "nushid.sock")))
 	channels := newChannels()
 	if sv.Remote, err = remote.New(st, &relay.Dialer{Proxies: sysproxy.For}, channels.serve, keepAwake, hub.Publish); err != nil {
 		return err
@@ -207,7 +215,10 @@ func run() error {
 	remoteSrv.Protocols.SetUnencryptedHTTP2(true)
 	// Serve returns once remoteSrv.Close below closes channels.
 	go func() { _ = remoteSrv.Serve(channels) }()
-	srv := &http.Server{Handler: api.WithToken(token, api.New(sv)), Protocols: new(http.Protocols), ErrorLog: errorLog} //nolint:gosec // a Unix socket in a 0700 folder; clients need the token
+	mux := http.NewServeMux()
+	mux.Handle("/tools/", api.Tools(toolSvc)) // a chat's key, not the token (ADR 0043)
+	mux.Handle("/", api.WithToken(token, api.New(sv)))
+	srv := &http.Server{Handler: mux, Protocols: new(http.Protocols), ErrorLog: errorLog} //nolint:gosec // a Unix socket in a 0700 folder; clients need the token
 	srv.Protocols.SetUnencryptedHTTP2(true)
 
 	// On SIGINT or SIGTERM, stop the agents too: their sessions reopen

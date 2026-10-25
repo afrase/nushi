@@ -28,6 +28,7 @@ var claudeDialect = Dialect{InitMeta: claude.InitMeta, ForkAt: claude.ForkAt, Pa
 // its process can end (quit).
 type fakeAgent struct {
 	h       acp.Client
+	mcp     []acp.MCPServer // the last session/new's
 	updates []acp.SessionUpdate
 	session acp.NewSessionResponse
 	set     []string // config changes asked for, as id=value
@@ -144,10 +145,13 @@ func (f *fakeAgent) Initialize(context.Context, *acp.InitializeRequest) (*acp.In
 		AgentCapabilities: caps}, nil
 }
 
-func (f *fakeAgent) NewSession(ctx context.Context, _ *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
+func (f *fakeAgent) NewSession(ctx context.Context, req *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
+	f.mu.Lock()
+	f.mcp = req.MCPServers
+	f.mu.Unlock()
 	resp := f.session
 	resp.SessionID = "s1"
 	return &resp, nil
