@@ -1,12 +1,14 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_issue.dart';
-import 'package:nushi/jira_jql.dart';
 import 'package:nushi/jira_settings.dart';
+import 'package:nushi/jira_sources.dart';
+import 'package:nushi/jira_tasks.dart';
 import 'package:nushi/jira_view_parts.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/settings.dart';
@@ -20,33 +22,40 @@ const jiraKey = SingleActivator(LogicalKeyboardKey.keyJ, meta: true);
 const jiraPoll = Duration(minutes: 1);
 
 /// What the view had last: the site (the one used last, kept), and while
-/// the app runs the list, the JQL typed, and the issue picked.
+/// the app runs every site's issues instead ([_all]), the list, the JQL
+/// typed, the issue picked and whether its details show.
 String? get _site => lastJiraSite.value;
 set _site(String? site) => lastJiraSite.value = site;
+bool _all = false;
 String _list = 'mine';
 String _jql = '';
 String? _key;
+bool _details = false;
 
-/// Shows [key], an issue of [site], in the Jira view.
+/// Forgets what the view had (tests start afresh).
+@visibleForTesting
+void forgetJiraView() {
+  _all = _details = false;
+  _list = 'mine';
+  _jql = '';
+  _key = null;
+}
+
+/// Shows [key], an issue of [site], in the Jira view: its details.
 void showIssue(Daemon daemon, String site, String key) {
   _site = site;
+  _all = false;
   _key = key;
+  _details = true;
   daemon.showJira(open: true);
 }
 
-/// A list's tab: "mine", "sprint", "jql", or a saved search's index.
-String _label(String list, JiraSite site) => switch (list) {
-  'mine' => 'Mine',
-  'sprint' => 'Sprint',
-  'jql' => 'JQL',
-  _ => site.searches[int.parse(list)].name,
-};
-
-/// Jira in the app: a site's lists (my open issues, the active sprint of
-/// a board, saved searches, JQL) on the left, the issue picked on the
-/// right. It takes the chat's place, as the MCP view does; the sidebar of
-/// chats stays. Keys: ↑↓ (or j k) pick, ⌘R asks again, ⌘1–9 a list, /
-/// the JQL, Esc closes.
+/// Jira in the app, in the chat's place as the MCP view is (the sidebar of
+/// chats stays): a task list, as Orca's task drawer (TaskList), of my
+/// open issues (on a site, or every site), the active sprint of a board,
+/// a saved search or JQL; a row's details (JiraIssuePane) in the list's
+/// place. Keys: ↑↓ (or j k) pick, ⏎ the details, ⌘⏎ Start work, ⌘R asks
+/// again, ⌘1–9 a list, / the JQL, Esc back to the list, then closes.
 class JiraView extends StatefulWidget {
   const new(this.daemon, {super.key});
 
@@ -58,21 +67,28 @@ class JiraView extends StatefulWidget {
 
 class _JiraViewState extends State<JiraView> {
   List<JiraSite>? _sites;
-  List<JiraIssue> _issues = const [];
+  List<Task> _tasks = const [];
   String _sprint = '';
   String? _error;
   bool _loading = false;
   int _asked = 0;
   Timer? _poll;
   final _listFocus = FocusNode(debugLabel: 'jira list');
+  final _viewFocus = FocusNode(debugLabel: 'jira view');
   final _jqlFocus = FocusNode(debugLabel: 'jql');
   final _jqlText = TextEditingController(text: _jql);
   final _scroll = ScrollController();
+
+  /// The selected row's Start work menu, for ⌘⏎.
+  OpenMenu? _start;
 
   JiraSite? get _siteNow {
     final sites = _sites ?? const <JiraSite>[];
     return sites.where((s) => s.id == _site).firstOrNull ?? sites.firstOrNull;
   }
+
+  /// Every site's issues show: only my open ones, the one list they share.
+  bool get _every => _all && (_sites?.length ?? 0) > 1;
 
   @override
   void initState() {
@@ -85,6 +101,7 @@ class _JiraViewState extends State<JiraView> {
   void dispose() {
     _poll?.cancel();
     _listFocus.dispose();
+    _viewFocus.dispose();
     _jqlFocus.dispose();
     _jqlText.dispose();
     _scroll.dispose();
@@ -118,40 +135,54 @@ class _JiraViewState extends State<JiraView> {
         when i >= (site?.searches.length ?? 0)) {
       _list = 'mine'; // a search removed, or another site's
     }
+    if (_every) _list = 'mine';
     // Nothing to ask yet: the line above the list says what to do.
     if (site == null ||
         _list == 'jql' && _jql.isEmpty ||
         _list == 'sprint' && site.board == 0) {
       setState(() {
-        _issues = const [];
+        _tasks = const [];
         _error = null;
       });
       return;
     }
     final n = ++_asked;
     if (!quiet) setState(() => _loading = true);
-    final req = ListJiraIssuesRequest(site: site.id);
-    switch (_list) {
-      case 'mine' || 'sprint':
-        req.list = _list;
-      case 'jql':
-        req.jql = _jql;
-      default:
-        req.jql = site.searches[int.parse(_list)].jql;
+    ListJiraIssuesRequest ask(String id) {
+      final req = ListJiraIssuesRequest(site: id);
+      switch (_list) {
+        case 'mine' || 'sprint':
+          req.list = _list;
+        case 'jql':
+          req.jql = _jql;
+        default:
+          req.jql = site.searches[int.parse(_list)].jql;
+      }
+      return req;
     }
+
     try {
-      final r = await widget.daemon.client.listJiraIssues(req);
+      final on = _every ? [for (final s in _sites!) s.id] : [site.id];
+      final got = await Future.wait([
+        for (final id in on) widget.daemon.client.listJiraIssues(ask(id)),
+      ]);
       if (n != _asked || !mounted) return;
       setState(() {
-        _issues = r.issues;
-        _sprint = r.sprint;
+        _tasks = ordered([
+          for (final (i, r) in got.indexed)
+            for (final is_ in r.issues) (site: on[i], issue: is_),
+        ]);
+        _sprint = got.first.sprint;
         _error = null;
-        _key ??= _issues.firstOrNull?.key;
+        if (!_tasks.any((t) => t.issue.key == _key)) {
+          _key = _tasks.firstOrNull?.issue.key;
+          _details = false;
+        }
       });
     } on Object catch (e) {
       if (n == _asked && mounted && !quiet) {
         setState(() {
-          _issues = const [];
+          _tasks = const [];
           _error = jiraError(e);
         });
       }
@@ -160,6 +191,8 @@ class _JiraViewState extends State<JiraView> {
     }
   }
 
+  int get _at => max(0, _tasks.indexWhere((x) => x.issue.key == _key));
+
   void _pickList(String list) {
     setState(() => _list = list);
     unawaited(_load());
@@ -167,10 +200,26 @@ class _JiraViewState extends State<JiraView> {
   }
 
   void _move(int by) {
-    if (_issues.isEmpty) return;
-    final i = _issues.indexWhere((x) => x.key == _key);
-    final next = (i + by).clamp(0, _issues.length - 1);
-    setState(() => _key = _issues[next].key);
+    if (_tasks.isEmpty) return;
+    final i = _tasks.indexWhere((x) => x.issue.key == _key);
+    final next = (i + by).clamp(0, _tasks.length - 1);
+    setState(() => _key = _tasks[next].issue.key);
+  }
+
+  void _open(int i) {
+    setState(() {
+      _key = _tasks[i].issue.key;
+      _details = true;
+    });
+    _viewFocus.requestFocus(); // the list, which had it, goes
+  }
+
+  void _back() {
+    setState(() => _details = false);
+    // Once the list is back.
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _listFocus.requestFocus(),
+    );
   }
 
   Future<void> _pickBoard(JiraSite site) async {
@@ -210,7 +259,9 @@ class _JiraViewState extends State<JiraView> {
     }
     final k = e.logicalKey;
     final meta = HardwareKeyboard.instance.isMetaPressed;
-    if (k == LogicalKeyboardKey.arrowDown ||
+    if (k == LogicalKeyboardKey.enter && _tasks.isNotEmpty) {
+      meta ? _start?.call() : _open(_at);
+    } else if (k == LogicalKeyboardKey.arrowDown ||
         k == LogicalKeyboardKey.keyJ && !meta) {
       _move(1);
     } else if (k == LogicalKeyboardKey.arrowUp ||
@@ -218,8 +269,6 @@ class _JiraViewState extends State<JiraView> {
       _move(-1);
     } else if (k == LogicalKeyboardKey.slash) {
       _pickList('jql');
-    } else if (k == LogicalKeyboardKey.escape) {
-      widget.daemon.showJira(open: false);
     } else {
       return KeyEventResult.ignored;
     }
@@ -229,66 +278,85 @@ class _JiraViewState extends State<JiraView> {
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
-    final t = theme.t;
     final sites = _sites;
     final site = _siteNow;
+    // The site of the issue whose details show.
+    final shown = _tasks
+        .where((x) => x.issue.key == _key)
+        .map((x) => x.site)
+        .firstWhere((_) => true, orElse: () => site?.id ?? '');
     final lists = [
       'mine',
-      'sprint',
-      for (var i = 0; i < (site?.searches.length ?? 0); i++) '$i',
-      'jql',
+      if (!_every) 'sprint',
+      if (!_every) ...[
+        for (var i = 0; i < (site?.searches.length ?? 0); i++) '$i',
+        'jql',
+      ],
     ];
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.keyR, meta: true): _load,
+        const SingleActivator(LogicalKeyboardKey.escape): () =>
+            _details ? _back() : widget.daemon.showJira(open: false),
         for (var i = 0; i < lists.length && i < 9; i++)
           SingleActivator(LogicalKeyboardKey(0x31 + i), meta: true): () =>
               _pickList(lists[i]),
       },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          JiraBar(
-            sites: sites ?? const [],
-            site: site,
-            loading: _loading,
-            onSite: (id) {
-              setState(() => _site = id);
-              unawaited(_load());
-            },
-            onRefresh: _load,
-            onClose: () => widget.daemon.showJira(open: false),
-          ),
-          Expanded(
-            child: sites == null
-                ? const SizedBox()
-                : site == null
-                ? NoSite(widget.daemon)
-                : Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SizedBox(width: 380, child: _lists(theme, site, lists)),
-                      VerticalDivider(width: 1, color: t.borderSubtle),
-                      Expanded(
-                        child: _key == null
-                            ? Center(
-                                child: Text(
-                                  _error == null ? 'No issue picked' : '',
-                                  style: theme.ui(t.textMuted),
-                                ),
-                              )
-                            : JiraIssuePane(
-                                key: ValueKey('${site.id} $_key'),
-                                daemon: widget.daemon,
-                                site: site.id,
-                                issueKey: _key!,
-                                onOpen: (key) => setState(() => _key = key),
+      child: Focus(
+        focusNode: _viewFocus,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            JiraBar(
+              sites: sites ?? const [],
+              site: _every ? null : site,
+              loading: _loading,
+              onSite: (id) {
+                setState(() {
+                  _all = id == null;
+                  if (id != null) _site = id;
+                });
+                unawaited(_load());
+              },
+              onRefresh: _load,
+              onClose: () => widget.daemon.showJira(open: false),
+            ),
+            Expanded(
+              child: sites == null
+                  ? const SizedBox()
+                  : site == null
+                  ? NoSite(widget.daemon)
+                  : _details && _key != null
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(10, 6, 10, 0),
+                          child: Row(
+                            children: [
+                              IconTap(
+                                Icons.arrow_back,
+                                tooltip: 'The list (Esc)',
+                                onTap: _back,
                               ),
-                      ),
-                    ],
-                  ),
-          ),
-        ],
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: JiraIssuePane(
+                            key: ValueKey('$shown $_key'),
+                            daemon: widget.daemon,
+                            site: shown,
+                            issueKey: _key!,
+                            onOpen: (key) => setState(() => _key = key),
+                          ),
+                        ),
+                      ],
+                    )
+                  : _lists(theme, site, lists),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -310,96 +378,28 @@ class _JiraViewState extends State<JiraView> {
               await _loadSites();
             }),
           ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(10, 8, 10, 4),
-          child: Wrap(
-            spacing: 4,
-            runSpacing: 4,
-            children: [
-              for (final l in lists)
-                Menu(
-                  entries: [
-                    if (l == 'sprint')
-                      MenuEntry(
-                        'Pick the board…',
-                        onPick: () => _pickBoard(site),
-                      ),
-                    if (int.tryParse(l) case final i?)
-                      MenuEntry(
-                        'Remove the search',
-                        onPick: () => _setSearches(site, [
-                          ...site.searches.take(i),
-                          ...site.searches.skip(i + 1),
-                        ]),
-                      ),
-                  ],
-                  builder: (context, open) => GestureDetector(
-                    onSecondaryTapUp: (d) => open(d.localPosition),
-                    child: Tap(
-                      selected: l == _list,
-                      onTap: () => _pickList(l),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      child: Text(
-                        _label(l, site),
-                        style: theme.ui(
-                          l == _list ? t.text : t.textSecondary,
-                          size: 12,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
+        JiraSources(
+          daemon: widget.daemon,
+          site: site,
+          lists: lists,
+          list: _list,
+          sprint: _sprintLine(),
+          jql: _jql,
+          jqlText: _jqlText,
+          jqlFocus: _jqlFocus,
+          onPick: _pickList,
+          onPickBoard: () => _pickBoard(site),
+          onRemoveSearch: (i) => _setSearches(site, [
+            ...site.searches.take(i),
+            ...site.searches.skip(i + 1),
+          ]),
+          onRunJql: (jql) {
+            _jql = jql;
+            unawaited(_load());
+            _listFocus.requestFocus();
+          },
+          onSave: () => _saveSearch(site),
         ),
-        if (_list == 'sprint')
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 2, 10, 4),
-            child: site.board == 0
-                ? Tap(
-                    onTap: () => _pickBoard(site),
-                    child: Text(
-                      'Pick the board',
-                      style: theme.ui(t.link, size: 12),
-                    ),
-                  )
-                : Text(
-                    '${site.boardName} · ${_sprintLine()}',
-                    style: theme.ui(t.textMuted, size: 12),
-                  ),
-          ),
-        if (_list == 'jql')
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 2, 10, 4),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                JqlField(
-                  client: widget.daemon.client,
-                  site: site.id,
-                  controller: _jqlText,
-                  focusNode: _jqlFocus,
-                  onRun: (jql) {
-                    _jql = jql;
-                    unawaited(_load());
-                    _listFocus.requestFocus();
-                  },
-                ),
-                if (_jql.isNotEmpty)
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Button(
-                      label: 'Save…',
-                      kind: ButtonKind.ghost,
-                      onPressed: () => _saveSearch(site),
-                    ),
-                  ),
-              ],
-            ),
-          ),
         if (_error case final e?)
           Padding(
             padding: const EdgeInsets.all(14),
@@ -410,21 +410,21 @@ class _JiraViewState extends State<JiraView> {
             focusNode: _listFocus,
             autofocus: true,
             onKeyEvent: _onKey,
-            child: ListView.builder(
-              controller: _scroll,
-              itemCount: _issues.length,
-              itemBuilder: (context, i) => IssueRow(
-                _issues[i],
-                selected: _issues[i].key == _key,
-                onTap: () {
-                  _listFocus.requestFocus();
-                  setState(() => _key = _issues[i].key);
-                },
-              ),
+            child: TaskList(
+              daemon: widget.daemon,
+              tasks: _tasks,
+              selected: _tasks.indexWhere((x) => x.issue.key == _key),
+              sites: _every,
+              onOpen: (i) {
+                _listFocus.requestFocus();
+                _open(i);
+              },
+              onMoved: _load,
+              startMenu: (open) => _start = open,
             ),
           ),
         ),
-        if (_issues.isEmpty && _error == null && !_loading)
+        if (_tasks.isEmpty && _error == null && !_loading)
           Padding(
             padding: const EdgeInsets.all(14),
             child: Text(

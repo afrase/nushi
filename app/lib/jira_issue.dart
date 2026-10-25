@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:nushi/agent_mark.dart';
 import 'package:nushi/agents.dart';
@@ -10,10 +9,9 @@ import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_issue_parts.dart';
 import 'package:nushi/jira_settings.dart';
-import 'package:nushi/jira_view_parts.dart';
+import 'package:nushi/jira_work.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/menu.dart';
-import 'package:nushi/new_chat.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -82,56 +80,6 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
     } on Object catch (e) {
       if (mounted && !quiet) setState(() => _error = jiraError(e));
     }
-  }
-
-  Future<List<MenuEntry>> _moves() async {
-    final r = await widget.daemon.client.listJiraTransitions(
-      ListJiraTransitionsRequest(site: widget.site, key: widget.issueKey),
-    );
-    return [
-      for (final t in r.transitions)
-        MenuEntry(
-          t.name,
-          detail: t.to == t.name ? '' : '→ ${t.to}',
-          checked: t.to == _issue?.status,
-          onPick: () => unawaited(_move(t)),
-        ),
-    ];
-  }
-
-  Future<void> _move(JiraTransition t) async {
-    var values = <String, String>{};
-    if (t.fields.isNotEmpty) {
-      final asked = await askFields(context, t);
-      if (asked == null) return;
-      values = asked;
-    }
-    if (!mounted) return;
-    await tryOrShow(context, () async {
-      await widget.daemon.client.transitionJiraIssue(
-        TransitionJiraIssueRequest(
-          site: widget.site,
-          key: widget.issueKey,
-          transition: t.id,
-        )..values.addAll(values),
-      );
-      await _load();
-    });
-  }
-
-  /// Starts a chat on the issue in [folder] (one to choose, when null):
-  /// the New chat dialog with the issue picked (a worktree on its branch).
-  Future<void> _chat(String? folder) async {
-    final f = folder ?? await getDirectoryPath(confirmButtonText: 'Choose');
-    if (f == null || !mounted) return;
-    final daemon = widget.daemon;
-    await tryOrShow(context, () async {
-      final r = await daemon.client.findJiraIssues(
-        FindJiraIssuesRequest(text: widget.issueKey, site: widget.site),
-      );
-      if (!mounted || r.issues.isEmpty) return;
-      await newChat(context, daemon, f, issue: IssueChat.found(r.issues.first));
-    });
   }
 
   /// Whose a write was: the agent's, in which chat (if Nushi still has it).
@@ -357,7 +305,16 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
         const SizedBox(width: 10),
         Text(i.type, style: dim),
         const SizedBox(width: 10),
-        _StatusMenu(i, load: _moves),
+        StatusMenu(
+          i,
+          load: () => issueMoves(
+            context,
+            widget.daemon,
+            widget.site,
+            i,
+            onMoved: _load,
+          ),
+        ),
         if (i.priority.isNotEmpty) ...[
           const SizedBox(width: 10),
           Text(i.priority, style: dim),
@@ -366,7 +323,11 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
         Text(i.assignee.isEmpty ? 'Unassigned' : i.assignee, style: dim),
         const Spacer(),
         Menu(
-          entries: folderEntries(widget.daemon, onPick: _chat),
+          entries: folderEntries(
+            widget.daemon,
+            onPick: (f) =>
+                startWork(context, widget.daemon, widget.site, i.key, f),
+          ),
           child: Text('Start a chat ▾', style: theme.ui(t.link, size: 12)),
         ),
         const SizedBox(width: 6),
@@ -379,58 +340,6 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
               : () => unawaited(launchUrl(webLink(i.url)!)),
         ),
       ],
-    );
-  }
-}
-
-/// The status, which opens the moves the workflow allows now (asked of
-/// Jira as it opens).
-class _StatusMenu extends StatefulWidget {
-  const new(this.issue, {required this.load});
-
-  final JiraIssue issue;
-  final Future<List<MenuEntry>> Function() load;
-
-  @override
-  State<_StatusMenu> createState() => _StatusMenuState();
-}
-
-class _StatusMenuState extends State<_StatusMenu> {
-  List<MenuEntry> _entries = const [MenuEntry('Loading…')];
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final color = statusColor(t, widget.issue.statusCategory);
-    return Menu(
-      entries: _entries,
-      builder: (context, open) => Tap(
-        onTap: () async {
-          try {
-            final entries = await widget.load();
-            if (!mounted) return;
-            setState(
-              () => _entries = entries.isEmpty
-                  ? const [MenuEntry('No moves now')]
-                  : entries,
-            );
-          } on Object catch (e) {
-            if (mounted) setState(() => _entries = [MenuEntry(jiraError(e))]);
-          }
-          // Once the menu has its rows.
-          WidgetsBinding.instance.addPostFrameCallback((_) => open());
-        },
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-          decoration: box(color, radius: NushiTheme.control),
-          child: Text(
-            '${widget.issue.status} ▾',
-            style: theme.ui(color, size: 12, weight: FontWeight.w500),
-          ),
-        ),
-      ),
     );
   }
 }
