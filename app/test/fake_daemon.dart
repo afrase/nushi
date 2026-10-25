@@ -24,6 +24,12 @@ class FakeDaemon implements Transport {
   final List<Chat> chats;
   final started = <StartChatRequest>[];
   String? startError;
+
+  /// What ListAgentSessions answers (nothing listed when unset), and the
+  /// requests: listed and opened.
+  ListAgentSessionsResponse Function(ListAgentSessionsRequest)? sessions;
+  final listed = <ListAgentSessionsRequest>[];
+  final opened = <OpenAgentSessionRequest>[];
   final _events = StreamController<EventsResponse>()..add(EventsResponse());
 
   /// A [Daemon] on this fake, its chats and agents listed.
@@ -41,6 +47,8 @@ class FakeDaemon implements Transport {
     I input, [
     CallOptions? options,
   ]) async {
+    if (input is ListAgentSessionsRequest) listed.add(input);
+    if (input is OpenAgentSessionRequest) opened.add(input);
     if (input is StartChatRequest) {
       started.add(input);
       if (startError case final e?) throw ConnectException(Code.unknown, e);
@@ -51,6 +59,11 @@ class FakeDaemon implements Transport {
       ListAgentsRequest() => ListAgentsResponse(agents: agents),
       // A chat it has, so the app can show it.
       StartChatRequest() => StartChatResponse(chatId: chats.first.id),
+      ListAgentSessionsRequest() =>
+        sessions?.call(input) ?? ListAgentSessionsResponse(canList: true),
+      OpenAgentSessionRequest() => OpenAgentSessionResponse(
+        chatId: chats.first.id,
+      ),
       _ => spec.outputFactory(),
     };
     return UnaryResponse(spec, Headers(), out as O, Headers());
