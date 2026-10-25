@@ -3,12 +3,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import 'agent_mark.dart';
-import 'agents.dart';
 import 'chat.dart';
 import 'chat_menu.dart';
 import 'daemon.dart';
 import 'folder_button.dart';
 import 'menu.dart';
+import 'new_chat.dart';
 import 'status.dart';
 import 'terminal_panel.dart';
 import 'theme/theme.dart';
@@ -29,35 +29,9 @@ class Sidebar extends StatefulWidget {
 }
 
 class _SidebarState extends State<Sidebar> {
-  String? _starting; // the folder a chat is starting in ('' for none)
   bool _showArchived = false;
 
-  /// Starts a chat in [folder] ('' for a scratch folder), with [agent]
-  /// or the last one used.
-  Future<void> _start(String folder, {String? agent}) async {
-    setState(() => _starting = folder);
-    await tryOrShow(
-      context,
-      () => widget.daemon.startChat(folder, agent: agent),
-    );
-    if (mounted) setState(() => _starting = null);
-  }
-
-  /// "New chat" for each agent, the last one used checked, when there is
-  /// more than one.
-  List<MenuEntry> _agents(String folder) {
-    final last = lastAgent(widget.daemon.chats.values);
-    return [
-      for (final a in knownAgents.values)
-        MenuEntry(
-          a.title,
-          checked: a.name == last,
-          onPick: _starting == null
-              ? () => _start(folder, agent: a.name)
-              : null,
-        ),
-    ];
-  }
+  void _new(String folder) => newChat(context, widget.daemon, folder);
 
   /// Opens a terminal in [folder] for the chat shown, if it's one of
   /// [chats], else for the newest of them, which it shows.
@@ -83,7 +57,8 @@ class _SidebarState extends State<Sidebar> {
     for (final c in byNewest.where((c) => !c.archived)) {
       (groups[c.scratch ? '' : c.home] ??= []).add(c);
     }
-    if (_starting != null) groups.putIfAbsent(_starting!, () => []);
+    final starting = widget.daemon.starting;
+    if (starting != null) groups.putIfAbsent(starting, () => []);
     return DecoratedBox(
       decoration: BoxDecoration(color: t.raised),
       child: Column(
@@ -91,31 +66,12 @@ class _SidebarState extends State<Sidebar> {
         children: [
           Padding(
             padding: const EdgeInsets.all(10),
-            child: Row(
-              spacing: 4,
-              children: [
-                Expanded(
-                  child: Button(
-                    label: knownAgents.length > 1
-                        ? 'New ${knownAgents[lastAgent(widget.daemon.chats.values)]?.title} chat'
-                        : 'New chat',
-                    icon: Icons.add,
-                    kind: ButtonKind.primary,
-                    height: 28,
-                    onPressed: _starting == null ? () => _start('') : null,
-                  ),
-                ),
-                if (knownAgents.length > 1)
-                  Menu(
-                    tooltip: 'Pick the agent',
-                    entries: _agents(''),
-                    child: Icon(
-                      Icons.expand_more,
-                      size: 18,
-                      color: t.textSecondary,
-                    ),
-                  ),
-              ],
+            child: Button(
+              label: 'New chat',
+              icon: Icons.add,
+              kind: ButtonKind.primary,
+              height: 28,
+              onPressed: starting == null ? () => _new('') : null,
             ),
           ),
           Expanded(
@@ -126,13 +82,12 @@ class _SidebarState extends State<Sidebar> {
                     in groups.entries) ...[
                   _FolderHeader(
                     folder,
-                    onNew: _starting == null ? () => _start(folder) : null,
-                    agents: knownAgents.length > 1 ? _agents(folder) : null,
+                    onNew: starting == null ? () => _new(folder) : null,
                     onTerminal: folder.isEmpty || chats.isEmpty
                         ? null
                         : () => _terminal(folder, chats),
                   ),
-                  if (_starting == folder)
+                  if (starting == folder)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 4, 10, 4),
                       child: Text(
@@ -222,12 +177,10 @@ class _FolderHeader extends StatelessWidget {
     this.folder, {
     required this.onNew,
     required this.onTerminal,
-    this.agents,
   });
 
   final String folder;
   final VoidCallback? onNew;
-  final List<MenuEntry>? agents; // "New chat here" with each agent
   final VoidCallback? onTerminal; // a terminal there, in one of its chats
 
   @override
@@ -238,7 +191,7 @@ class _FolderHeader extends StatelessWidget {
         : folderParts(folder);
     return Menu(
       entries: [
-        MenuEntry('New chat here', onPick: onNew, submenu: agents),
+        MenuEntry('New chat here', onPick: onNew),
         MenuEntry('Open in terminal', onPick: onTerminal),
       ],
       builder: (context, open) => GestureDetector(
