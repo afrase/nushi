@@ -98,9 +98,10 @@ ListAgentSessionsResponse _found(ListAgentSessionsRequest r) =>
 List<Agent> _notAllReady() => [
   for (final a in readyAgents())
     switch (a.name) {
-      'claude' => a.deepCopy()
-        ..ready = false
-        ..adapter = Adapter(pinned: '0.94.0'),
+      'claude' =>
+        a.deepCopy()
+          ..ready = false
+          ..adapter = Adapter(pinned: '0.94.0'),
       'omp' => Agent(name: 'omp', title: 'oh-my-pi', problem: 'Not installed'),
       _ => a,
     },
@@ -134,9 +135,7 @@ void main() {
     tester,
   ) async {
     final fake = FakeDaemon([]);
-    fake.agents = [
-      for (final a in _notAllReady()) a.deepCopy()..ready = false,
-    ];
+    fake.agents = [for (final a in _notAllReady()) a.deepCopy()..ready = false];
     final d = await fake.connect(tester);
     await tester.pumpWidget(NushiApp(daemon: d));
     await tester.pumpAndSettle();

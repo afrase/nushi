@@ -224,8 +224,8 @@ func (c *Conn) Write(p []byte) (int, error) {
 
 func (c *Conn) Close() error { return c.t.Close() }
 
-// The transport keeps itself alive and times out on its own; deadlines
-// aren't used.
+// SetDeadline does nothing: the transport keeps itself alive and times
+// out on its own, so deadlines aren't used (nor are the two below).
 func (c *Conn) SetDeadline(time.Time) error      { return nil }
 func (c *Conn) SetReadDeadline(time.Time) error  { return nil }
 func (c *Conn) SetWriteDeadline(time.Time) error { return nil }

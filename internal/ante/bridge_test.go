@@ -153,7 +153,7 @@ func TestASessionThroughTheBridge(t *testing.T) {
 	if r.StopReason != "end_turn" || r.Usage == nil || r.Usage.TotalTokens != 12 {
 		t.Errorf("result %+v", r)
 	}
-	r = prompt(t, c, sid, "please write")
+	prompt(t, c, sid, "please write")
 	if len(c.asked) != 1 || !strings.Contains(c.kinds(sid), "tool_call tool_call_update") {
 		t.Errorf("asked %v, updates %s", c.asked, c.kinds(sid))
 	}

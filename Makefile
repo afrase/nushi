@@ -1,6 +1,9 @@
 # Dart's protoc plugins: dart pub global activate protoc_plugin; dart pub global activate connectrpc
 export PATH := $(HOME)/.pub-cache/bin:$(PATH)
 BUF := go run github.com/bufbuild/buf/cmd/buf@v1.75.0
+# golangci-lint, pinned in its own module so the daemon's go.mod doesn't take its dependencies.
+GOLANGCI := go tool -modfile=tools/lint/go.mod golangci-lint
+DART_DIRS := app packages/uds_transport packages/noise packages/remote_transport packages/markdown packages/svg_path
 # NUSHI_DATA=<folder> runs a second daemon and app beside the usual ones.
 DATA := $(or $(NUSHI_DATA),$(HOME)/Library/Application Support/Nushi)
 RELEASE := app/build/macos/Build/Products/Release/Nushi.app
@@ -8,7 +11,7 @@ HELPER := $(RELEASE)/Contents/Helpers/Nushi Daemon.app
 # local.mk (not committed) can set COPY_TO=<folder>: make install also copies the app there.
 -include local.mk
 
-.PHONY: run daemon stop app package install gen test lines relay icons adapters
+.PHONY: run daemon stop app package install gen test lint check lines relay icons adapters
 
 # Starts the daemon in the background (unless one is running), then the app.
 run: daemon app
@@ -64,6 +67,16 @@ adapters:
 gen:
 	$(BUF) lint
 	$(BUF) generate
+
+# Linters and format checks (.golangci.yml says which are on and why).
+lint:
+	$(GOLANGCI) run ./...
+	$(BUF) lint
+	$(BUF) format --diff --exit-code
+	@for d in $(DART_DIRS); do echo "flutter analyze $$d"; (cd $$d && flutter analyze --fatal-infos) || exit 1; done
+	@for d in $(DART_DIRS); do (cd $$d && find lib test bin -name '*.dart' ! -path 'lib/gen/*' 2>/dev/null | xargs dart format --output=none --set-exit-if-changed) || exit 1; done
+
+check: lint test
 
 test:
 	go test ./...

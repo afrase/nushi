@@ -1,0 +1,196 @@
+# golangci-lint v2, pinned in tools/lint/go.mod: make lint runs it.
+# Every linter is on unless it's listed under disable with the reason.
+# To silence one report, put //nolint:<linter> // <why> on its line;
+# nolintlint refuses a nolint without both.
+version: "2"
+
+run:
+  relative-path-mode: gitroot
+
+linters:
+  default: all
+  disable:
+    # Formatting and naming style that fights the code as written.
+    - lll # line length is the formatter's business; gofmt sets none
+    - nlreturn # blank lines before return: style only
+    - wsl # blank lines: style only (deprecated, replaced by wsl_v5)
+    - wsl_v5 # the same
+    - varnamelen # short names in short scopes are Go's own style
+    - tagliatelle # JSON tags follow the formats of the files and agents we read
+    - funcorder # where a method sits in a file is the author's choice
+    - embeddedstructfieldcheck # a blank line after embedded fields: style only
+    - nonamedreturns # named results document what a function returns and serve deferred cleanup
+    - noinlineerr # if err := f(); err != nil is idiomatic Go
+    # Rules that don't fit this code.
+    - exhaustruct # a struct's zero fields are meant to be zero
+    - exhaustruct_v5 # the same
+    - mnd # numbers in place (sizes, timeouts) read better than a constant per number
+    - goconst # protocol values (ACP's statuses, JSON keys) read better as the literal the spec uses
+    - err113 # plain errors.New and fmt.Errorf; no sentinel error per message (the rebuild's rule)
+    - wrapcheck # errors from os, json and exec already say what failed; wrap where it adds context
+    - gochecknoglobals # package tables, regexps and the log level are globals on purpose
+    - ireturn # features take interfaces from main; the functions that make one return it
+    - testpackage # tests are white-box, in the package they test
+    - paralleltest # tests use t.Setenv and shared fakes; running them in parallel would change them
+    - tparallel # the same
+    - cyclop # gocyclo and gocognit cover complexity, at their defaults
+    - funlen # length alone isn't a problem; gocognit counts what makes a function hard
+    - nestif # gocognit counts nesting already
+    # Linters that do nothing without configuration of their own.
+    - depguard # no import rules: dependencies are listed in NOTES.md and added on purpose
+    - gomodguard # the same (deprecated, replaced by gomodguard_v2)
+    - gomodguard_v2 # the same
+    - goheader # no license header in this repo
+
+    # Not clean yet: each comes off this list in the step that fixes it.
+    - errcheck
+    - protogetter
+    - gosec
+    - revive
+    - contextcheck
+    - gocritic
+    - noctx
+    - errchkjson
+    - forcetypeassert
+    - modernize
+    - inamedparam
+    - prealloc
+    - staticcheck
+    - thelper
+    - gocognit
+    - musttag
+    - errorlint
+    - perfsprint
+    - bodyclose
+    - nilnil
+    - containedctx
+    - goprintffuncname
+    - nilerr
+    - unparam
+    - dupword
+    - errname
+    - forbidigo
+    - gochecknoinits
+    - gocyclo
+    - interfacebloat
+    - predeclared
+
+  settings:
+    errcheck:
+      check-type-assertions: false # forcetypeassert covers them
+    exhaustive:
+      default-signifies-exhaustive: true
+    gocritic:
+      enable-all: true
+      disabled-checks:
+        - hugeParam # passing a struct by value is a choice, not a bug; a pointer would change who can change it
+        - rangeValCopy # the same for range loops
+        - whyNoLint # nolintlint checks nolint comments
+        - unnamedResult # results are named where a name helps
+        - importShadow # a local named after a package is fine where the package isn't used
+        - initClause # `if n--; n == 0` keeps a counter's change beside its test
+    gosec:
+      excludes:
+        - G104 # unchecked errors: errcheck reports them
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment # field order follows meaning, not padding
+        - shadow # a nested `if err :=` shadowing err is idiomatic; every report was that
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+    revive:
+      enable-all-rules: true
+      rules:
+        # Covered by another linter.
+        - name: line-length-limit # lll's job, off
+          disabled: true
+        - name: add-constant # mnd and goconst, off
+          disabled: true
+        - name: cyclomatic # gocyclo
+          disabled: true
+        - name: cognitive-complexity # gocognit
+          disabled: true
+        - name: function-length # funlen, off
+          disabled: true
+        - name: unhandled-error # errcheck
+          disabled: true
+        - name: unchecked-type-assertion # forcetypeassert
+          disabled: true
+        - name: max-control-nesting # gocognit
+          disabled: true
+        # Style that doesn't fit this code.
+        - name: nested-structs # anonymous structs decode one-off JSON
+          disabled: true
+        - name: unused-receiver # a method keeps its receiver's name whether it uses it or not
+          disabled: true
+        - name: flag-parameter # a bool parameter is fine for a mode switch
+          disabled: true
+        - name: import-shadowing # a local named after a package is fine where the package isn't used
+          disabled: true
+        - name: confusing-naming # methods that differ only in case (run and Run) are a wrapper and its worker
+          disabled: true
+        - name: enforce-switch-style # a switch with no default is exhaustive where exhaustive says so
+          disabled: true
+        - name: max-public-structs # a package has as many types as it needs
+          disabled: true
+        - name: argument-limit
+          disabled: true
+        - name: function-result-limit
+          disabled: true
+        - name: file-length-limit # the ~400-line tripwire is in NOTES.md, not a gate
+          disabled: true
+        - name: banned-characters
+          disabled: true
+        - name: file-header
+          disabled: true
+        - name: enforce-map-style
+          disabled: true
+        - name: enforce-slice-style
+          disabled: true
+        - name: enforce-repeated-arg-type-style
+          disabled: true
+        - name: filename-format
+          disabled: true
+        - name: package-directory-mismatch # main packages and test peers are named for what they do
+          disabled: true
+        - name: struct-tag # `json:",omitempty"` and the others are checked by go vet
+          disabled: true
+
+  exclusions:
+    generated: strict
+    rules:
+      # Doc comments for the packages that could be published (acp,
+      # noiseconn, relay); internal packages and commands aren't read
+      # through godoc.
+      - path: ^(internal|cmd|tools)/
+        linters: [revive]
+        text: "^exported:"
+      # Tests read and write files in their own t.TempDir() and run the
+      # fakes and git they set up.
+      - path: _test\.go$
+        linters: [gosec]
+        text: "^G(204|301|304|306):"
+      # Tests are long scripts, one scenario each.
+      - path: _test\.go$
+        linters: [gocognit, gocyclo, maintidx, dupl]
+      # Preallocating in tests buys nothing.
+      - path: _test\.go$
+        linters: [prealloc]
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    gofmt:
+      simplify: true
+    goimports:
+      local-prefixes: [github.com/afrase/nushi]
+  # gofumpt was tried: it rewrites the compact composite literals in 60
+  # files (about 840 lines) and adds no check that matters.
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

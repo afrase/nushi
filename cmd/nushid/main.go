@@ -21,6 +21,8 @@ import (
 	"strings"
 	"syscall"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/afrase/nushi/acp"
 	"github.com/afrase/nushi/internal/ante"
 	"github.com/afrase/nushi/internal/antetrust"
@@ -51,7 +53,6 @@ import (
 	"github.com/afrase/nushi/internal/sysproxy"
 	"github.com/afrase/nushi/internal/terminal"
 	"github.com/afrase/nushi/relay"
-	"golang.org/x/sys/unix"
 )
 
 func main() {
