@@ -1,6 +1,31 @@
 # Notes
 
-## Summary (2026-10-25, after step 145: milestone Z, agents you set up, nothing behind your back)
+## Summary (2026-10-25, after step 152: milestone AA, logs you can debug from)
+
+Milestone AA, steps 146–152, one commit each on `main`, all pushed (plus one removing a 15 MB `nushid` binary committed by mistake in step 70). `make test` passes. **API 51** (`Log`; `Settings.debug_log`).
+
+- **The daemon on `slog`** (step 146, `internal/logs`, ADR 0038): text format, `key=value`, `~` for the home folder, levels INFO/WARN/ERROR and DEBUG (Settings › Logs › Debug lines, or `NUSHI_LOG=debug`). Every `log.Printf` moved; `log` stays only in `nushi-relay`, the type generator and a test peer. Known secret shapes and the client token are masked in every value.
+- **Rotation** (step 146): `nushid.log` at 10 MB, `.1` and `.2` kept. The daemon opens the log once it holds the socket and points its stdout and stderr at it, again after each rotation, so the Go runtime's crash text lands in the current file (a test panics after a rotation and finds it there; by hand, `kill -QUIT`).
+- **Agents** (step 147, `acp/log.go`): process started (command line, no environment) and exited (code or signal, how long, stopped by Nushi or died); stderr a record a line with the chat's attributes (`source=agent`, 2 KB a line, 100 then 10 a second); `initialize` with the agent's name, version and capabilities; `session/new`, `load`, `fork`; failed calls with the agent's error, slow ones (5 s), recovered panics with their stack, lines that aren't JSON-RPC (size only); DEBUG every request.
+- **What happens** (step 148): chats created, opened, asleep, waking, reopened, archived, moved, rewound, deleted, their agent quitting; turns started and ended; side chats; API calls failed or slow, all at DEBUG; apps connecting and disconnecting; terminals; relay, devices and pairing (never a key, the QR code or the code); agents found when it changes, adapters set up and removed.
+- **The app** (steps 149–150): Flutter's, the platform's and the zone's errors with their stacks; starting (version), connecting, losing the daemon, an outdated daemon, restarts. To the daemon's log (`Log`, `source=app`) while it answers, else `app.log` in the same format and rotation. Settings › General › Logs: Show logs (Finder), Debug lines.
+- **The crash test** (step 151): a killed agent, a bad message, a slow `session/load`, a Dart exception in a release build, a daemon crash: each is in the log; one line each in "Debugging from the logs". A fake chat's turn at DEBUG with a marker in each private thing (prompt, title, tool input and output, a mentioned file, the diff, terminal input and output, an environment value, the token, a key on stderr) leaves none in the log; a pairing leaves no secret.
+
+**Still not debuggable from the logs**: what an agent does inside a turn (tool calls and text aren't logged; a turn stuck mid-tool shows only as a start without an end); the agent's own reasons for a hang (its own logs, such as Claude's `--debug`); an app that freezes without an exception; the app's native (Swift) crashes (macOS's crash reports); a daemon killed with SIGKILL or by the OOM killer (no last line: the next start follows without "stopping"); Ante's `ante serve` processes (their stderr is logged, not their exit); the phone (no app yet).
+
+**Tried by hand**: the fake agent on a dev daemon (`/tmp/ndaa`): a chat, `garbage`, `stderr`, `kill -9` of its agent, a reopen through a 7 s `session/load`, `kill -QUIT` of the daemon. Your Claude on Haiku on a dev daemon (`/tmp/ndab`): Set up, a chat that ran `ls -la`, Sleep, Debug lines on, a wake, Debug lines off, `kill -9` of the adapter, a reopen, Delete. A release build with an error thrown on purpose (not committed): its lines through the daemon, then in `app.log` with no daemon. Settings › Logs in that app (screenshot).
+
+**Not tried by hand**: clicking Show logs and the Debug switch in the app (widget tests; the switch went through `SetSettings` by hand); Codex, Ante and oh-my-pi chats' logs (the same code paths); remote access and pairing by hand (tests); rotation of a real 10 MB log (tests at 100 and 200 bytes).
+
+**Needs your attention**
+- **API 51**: done: after `make install` I restarted the installed daemon (see "Install check" below); the installed app, if it's open, says the daemon is newer until you quit and reopen it.
+- Your daemon's log until now is in the old format above the new lines; it starts rotating at 10 MB.
+
+**Size**: the daemon went from 14,117 to 14,696 lines of Go, `acp` from 990 to 1,231, the app from 16,154 to 16,469 lines of Dart; no step over the ~500-line tripwire without generated code (149 came to 440).
+
+**Left behind by the testing**: `/tmp/ndaa`, `/tmp/ndab` and the release build's copy are removed. Claude: the test chat's transcript went with Delete; its project folder (`memory/` only), `session-env` folder, `sessions/66861.json` and its key, and its shell snapshot were removed; `~/.claude.json` doesn't name the folder. Found while testing: the release build's products folder still held milestone Z's helper, so the test app started that old daemon on `/tmp/ndab`; it was stopped (the installed daemon wasn't touched).
+
+## Summary of milestone Z (after step 145: agents you set up, nothing behind your back)
 
 Milestone Z, steps 138–145, one commit each on `main`, all pushed. `make test` passes. **API 50** (SetUpAgent, RemoveAgent; ListAgents says what was found).
 
@@ -270,7 +295,7 @@ Milestone V is phase 1 of mobile: a relay, an end-to-end Noise channel, pairing 
 
 ## Debugging from the logs (milestone AA)
 
-`nushid.log` in the data folder (Settings › Logs › Show logs), `nushid.log.1` and `.2` the older ones (10 MB each); `app.log` beside them for what the app wrote while the daemon didn't answer. One chat's story: `grep 'chat=<id>' nushid.log`; a side chat's lines name its chat too. Its agent's processes: `grep 'pid=<pid>'`. A recovered panic's stack is one quoted line: `grep panicked nushid.log | sed 's/\\n/\n/g'`. ADR 0038 has what is logged and what never is.
+`nushid.log` in the data folder (Settings › Logs › Show logs), `nushid.log.1` and `.2` the older ones (10 MB each); `app.log` beside them for what the app wrote while the daemon didn't answer. One chat's story: `grep 'chat=<id>' nushid.log`; a side chat's lines name its chat too. Its agent's processes: `grep 'pid=<pid>'`. A recovered panic's stack is one quoted line: `printf '%b\n' "$(grep panicked nushid.log)"`. ADR 0038 has what is logged and what never is.
 
 The crash test (step 151; the dev daemon on `/tmp/ndaa` with the fake agent, on `/tmp/ndab` with your Claude on Haiku, a release build with a thrown error added for the run and not committed):
 
@@ -450,6 +475,7 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 149. The app's log (`app/lib/app_log.dart`): Flutter's, the platform's and the zone's errors with their stacks, the app starting, connecting, losing the daemon, an outdated daemon, restarts; to the daemon's log (`Log`, `source=app`) while it answers, else `app.log` in the daemon's format, rotated the same way; 20 lines then one every 3 s; the debug setting kept in `settings.json`; API 51 | 14696 | 1228 | 16383 | 1864 | 1170 |
 | 150. Settings › General › Logs: Show logs (Finder, the log selected) and Debug lines (the daemon's setting; SetSettings sends both settings); the page scrolls in a short window | 14696 | 1228 | 16469 | 1864 | 1170 |
 | 151. The crash test: the fake agent says `tool`, `garbage` and `stderr`, reopens any session after `FAKEAGENT_LOAD_DELAY`; nothing private reaches the log in a fake chat's turn (`e2e/logs_test.go`) or a pairing; extension notifications Nushi doesn't follow at DEBUG; the agent's lines name its sessions | 14696 | 1231 | 16469 | 1864 | 1170 |
+| 152. The docs: ADR 0038, the README's logs, the summary | 14696 | 1231 | 16469 | 1864 | 1170 |
 
 Steps over the ~500-line tripwire (code and tests, without generated code): 139 (753 with NOTES: installing, running, the local-registry test), 141 (587, the Agents page), 132 (830, open sessions and forks for four agents), 131 (544, the sessions step), 127 (504, listing), 98 (2,384 with its tests: Ante's whole bridge and its fake), 99 (901: two agents, two trust packages, the shared trust files), 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 removed more than it added.
 
@@ -676,6 +702,12 @@ What changed in milestone Z:
 
 Open questions; what's settled is in `docs/adr/` or in the code.
 
+- New in AA: an agent's stderr is logged at INFO, a record a line (Claude's adapter writes about 20 timing lines a start); a level per agent, or DEBUG for stderr, would make the log quieter and lose where a slow start went.
+- New in AA: at DEBUG, `session/update` notifications aren't logged one by one (each chunk of a reply is one); a turn shows as its start and end lines. A count per turn would tell a turn that streams from one that's stuck.
+- New in AA: the slow threshold is 5 s for ACP calls and API calls alike; `SetUpAgent`, `ListMcpServers` and a first `StartChat` can pass it in normal use and show as WARN.
+- New in AA: a paired device can write to the log through `Log` (it's a full client); the app on the Mac is the only one that does.
+- New in AA: the app logs an outdated daemon to `app.log` (the old daemon has no `Log`), not to the daemon's log.
+
 - New in Z: an agent that isn't installed isn't in the New chat dialog (its old chats stay listed, and say it isn't installed when reopened); one not set up, or that can't run (Needs Node, Needs Bun, too old), is dimmed, and picking it opens Settings › Agents. The last-used agent is picked only if it's ready. With no agent installed the dialog says "No agents found. Settings › Agents".
 - New in Z: signed in or not is shown for Claude only (`claude auth status`); Codex's `codex login status` says "Not logged in" when a provider key in `config.toml` is all it needs, Ante and omp have no such command.
 - New in Z: Update and Remove put the agent's awake chats to sleep (a running turn is stopped, as Sleep does) rather than refusing; the sheet says how many. A chat woken between the sleep and the swap runs the old adapter until it sleeps again.
@@ -770,6 +802,7 @@ Open questions; what's settled is in `docs/adr/` or in the code.
 
 ## Security notes to look at
 
+- The log (ADR 0038): what an agent writes to stderr is logged, through a redaction pass for known secret shapes; an agent that echoes a prompt or a key of another shape to stderr puts it in `nushid.log` (0600, in the 0700 data folder). The client token is masked by value. `Log` lets any client with the token, or a paired device, add lines (capped: 2 KB a message, 16 KB a stack, 16 attributes); `\n` and quotes are escaped, so a line can't pose as another.
 - The daemon's helper (ADR 0036): `start-daemon` (the launch agent's program) is a script sealed as a resource of the app's signature, not code of its own, so launchd doesn't pin it to a hash; it runs only `open` on the helper beside it. Turning Start at login on adds a background item macOS lists under Login Items.
 - Sessions started elsewhere (ADR 0035): listing starts the agent and reads, never writes: Claude's `~/.claude/sessions/*.json` and the first records of transcripts under `~/.claude/projects`, Codex rollouts' first lines and lock files, omp session headers and lock files (F_GETLK on a file opened read-only; no lock is taken), Ante's `meta.json`, and `lsof -F n -- <events.jsonl…>` for Ante. Opening runs the agent in the session's folder after the trust card, as a new chat. A paired phone can list and open too (a full client).
 - Remote access (ADRs 0033, 0034; the review ran on it during milestone V): the daemon's Noise private key is in `remote-key.json` (0600) beside the token, readable by any process of yours, the agent included (as ADR 0024 says of the token). A paired phone is a full client: chats, permission answers, terminals, MCP changes; not the Mac's calls (SetRemote, StartPairing, ConfirmPairing, RevokeDevice: "permission denied" on a channel). The remote API server has no token check: the handshake authenticated the device. The Mac app asks Allow or Deny for any pairing that reaches its code, whoever started it. The pairing code is the only thing that stops someone who saw the QR code within its 5 minutes; the Mac's dialog says to allow only if the phone shows the same code. The PAC file is fetched directly and evaluated by CFNetwork in osascript, asked only scheme://host:port/.
