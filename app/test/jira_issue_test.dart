@@ -64,6 +64,12 @@ JiraIssue _issue() => JiraIssue(
       body: 'Can we do **Safari** first?',
       created: _ago(const Duration(hours: 5)),
     ),
+    JiraComment(
+      id: 'k1',
+      author: 'Test User',
+      body: 'Safari works; Chrome next.',
+      created: _ago(const Duration(minutes: 30)),
+    ),
   ],
 );
 
@@ -79,7 +85,24 @@ Future<(FakeDaemon, Daemon, List<String>)> _open(
             ..jiraKey = 'ACME-12',
         ])
         ..answer = (input) => switch (input) {
-          GetJiraIssueRequest() => GetJiraIssueResponse(issue: _issue()),
+          GetJiraIssueRequest() => GetJiraIssueResponse(
+            issue: _issue(),
+            agentWrites: [
+              JiraWrite(
+                kind: 'move',
+                to: 'In Progress',
+                chat: 'c1',
+                agent: 'claude',
+                at: _ago(const Duration(hours: 1)),
+              ),
+              JiraWrite(
+                kind: 'comment',
+                comment: 'k1',
+                chat: 'c1',
+                agent: 'claude',
+              ),
+            ],
+          ),
           GetJiraAttachmentRequest(:final id) => GetJiraAttachmentResponse(
             data: id == '10000' ? _png : [],
             mimeType: 'image/png',
@@ -198,8 +221,17 @@ void main() {
 
   testWidgets('a chat on the issue, its context in the box', (tester) async {
     final (fake, d, _) = await _open(tester);
-    // The chat already on it is listed.
+    // The chat already on it is listed, and what its agent wrote.
     expect(find.text('Passkeys: the API'), findsOneWidget);
+    expect(
+      find.text('Test User · 30m ago · by Claude in “Passkeys: the API”'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('To In Progress · 1h ago · by Claude in “Passkeys: the API”'),
+      findsOneWidget,
+    );
+    expect(find.text('Ann Lee · 5h ago'), findsOneWidget);
     await tester.tap(find.text('Start a chat ▾'));
     await tester.pumpAndSettle();
     await tester.tap(menuRow('nushi'));
