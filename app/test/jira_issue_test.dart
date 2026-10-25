@@ -107,10 +107,20 @@ Future<(FakeDaemon, Daemon, List<String>)> _open(
             data: id == '10000' ? _png : [],
             mimeType: 'image/png',
           ),
-          GetJiraContextRequest() => GetJiraContextResponse(
-            markdown: '# ACME-12: Log in with a passkey\n',
-            branch: 'ACME-12-log-in-with-a-passkey',
-          ),
+          FindJiraIssuesRequest(:final text, :final site)
+              when text == 'ACME-12' && site == 'acme.atlassian.net' =>
+            FindJiraIssuesResponse(
+              issues: [
+                FoundJiraIssue(
+                  site: 'acme.atlassian.net',
+                  issue: JiraIssue(
+                    key: 'ACME-12',
+                    summary: 'Log in with a passkey',
+                  ),
+                  branch: 'ACME-12-log-in-with-a-passkey',
+                ),
+              ],
+            ),
           ListJiraTransitionsRequest() => ListJiraTransitionsResponse(
             transitions: [
               JiraTransition(id: '21', name: 'In Progress', to: 'In Progress'),
@@ -222,7 +232,8 @@ void main() {
     await _close(tester, d);
   });
 
-  testWidgets('a chat on the issue, its context in the box', (tester) async {
+  testWidgets('a chat on the issue: the dialog has it picked, a worktree on '
+      'its branch; the box is empty', (tester) async {
     final (fake, d, _) = await _open(tester);
     // The chat already on it is listed, and what its agent wrote.
     expect(find.text('Passkeys: the API'), findsOneWidget);
@@ -240,12 +251,8 @@ void main() {
     await tester.tap(menuRow('nushi'));
     await tester.pumpAndSettle();
     expect(find.text('Chat on ACME-12 in nushi'), findsOneWidget);
-    expect(
-      find.textContaining('ACME-12-log-in-with-a-passkey', findRichText: true),
-      findsOneWidget,
-    );
-    await tester.sendKeyEvent(LogicalKeyboardKey.keyW); // a worktree, then
-    await tester.pumpAndSettle();
+    expect(find.text('Log in with a passkey'), findsWidgets);
+    expect(find.text('ACME-12-log-in-with-a-passkey'), findsOneWidget);
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     final start = fake.started.single;
@@ -265,10 +272,7 @@ void main() {
         'ACME-12-log-in-with-a-passkey',
       ),
     );
-    expect(
-      d.chats['c1']!.draft.text.text,
-      '# ACME-12: Log in with a passkey\n',
-    );
+    expect(d.chats['c1']!.draft.text.text, isEmpty);
     await _close(tester, d);
   });
 

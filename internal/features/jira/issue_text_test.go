@@ -9,20 +9,6 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-func TestBranch(t *testing.T) {
-	for _, c := range []struct{ key, summary, want string }{
-		{"SCRUM-5", "ADF sample: what Jira's editor makes", "SCRUM-5-adf-sample-what-jira-s-editor-makes"},
-		{"A-1", "  Ünïcode — and *marks*!  ", "A-1-n-code-and-marks"},
-		{"A-1", "???", "A-1"},
-		{"A-1", strings.Repeat("long ", 30), "A-1-long-long-long-long-long-long-long-long"},
-	} {
-		got := Branch(c.key, c.summary)
-		if got != c.want {
-			t.Errorf("Branch(%q, %q) = %q, want %q", c.key, c.summary, got, c.want)
-		}
-	}
-}
-
 // issueClient answers one rich issue.
 type issueClient struct{ *fakeClient }
 
@@ -43,7 +29,7 @@ func (issueClient) Issue(context.Context, string) (model.JiraIssue, error) {
 		Comments: comments}, nil
 }
 
-func TestContext(t *testing.T) {
+func TestIssueText(t *testing.T) {
 	s, _, _ := newService(t)
 	s.sites.Connect = func(_ context.Context, site, _, _ string) (Client, model.JiraSite, error) {
 		return issueClient{&fakeClient{}}, model.JiraSite{URL: site}, nil
@@ -51,12 +37,9 @@ func TestContext(t *testing.T) {
 	if _, err := s.AddSite(t.Context(), "https://acme.atlassian.net", "me@acme.com", "good", time.Time{}); err != nil {
 		t.Fatal(err)
 	}
-	md, branch, err := s.Context(t.Context(), "acme.atlassian.net", "ACME-12")
+	md, err := s.issueText(t.Context(), "acme.atlassian.net", "ACME-12")
 	if err != nil {
 		t.Fatal(err)
-	}
-	if branch != "ACME-12-log-in-with-a-passkey" {
-		t.Errorf("branch %q", branch)
 	}
 	for _, want := range []string{
 		"# ACME-12: Log in with a passkey\n",

@@ -173,3 +173,20 @@ func MatchSites(sites []model.JiraSite, origin, path string) []model.JiraSite {
 	}
 	return out
 }
+
+// Branch is a branch's name for work on an issue: its key, uppercase so
+// Jira links it, then its summary as a slug of 40 characters at most, cut
+// between words ("SCRUM-5-fix-the-login").
+func Branch(key, summary string) string {
+	words := strings.FieldsFunc(strings.ToLower(summary), func(r rune) bool {
+		return r >= unicode.MaxASCII || !unicode.IsLetter(r) && !unicode.IsDigit(r)
+	})
+	slug := ""
+	for _, w := range words {
+		if len(slug)+1+len(w) > 41 {
+			break
+		}
+		slug += "-" + w
+	}
+	return key + slug
+}

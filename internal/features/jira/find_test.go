@@ -227,3 +227,17 @@ func TestFindNoSite(t *testing.T) {
 		t.Error("found with no site")
 	}
 }
+
+func TestBranch(t *testing.T) {
+	for _, c := range []struct{ key, summary, want string }{
+		{"SCRUM-5", "ADF sample: what Jira's editor makes", "SCRUM-5-adf-sample-what-jira-s-editor-makes"},
+		{"A-1", "  Ünïcode — and *marks*!  ", "A-1-n-code-and-marks"},
+		{"A-1", "???", "A-1"},
+		{"A-1", strings.Repeat("long ", 30), "A-1-long-long-long-long-long-long-long-long"},
+	} {
+		got := Branch(c.key, c.summary)
+		if got != c.want {
+			t.Errorf("Branch(%q, %q) = %q, want %q", c.key, c.summary, got, c.want)
+		}
+	}
+}

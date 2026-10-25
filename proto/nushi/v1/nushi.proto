@@ -213,9 +213,6 @@ service NushiService {
   rpc AddJiraComment(AddJiraCommentRequest) returns (AddJiraCommentResponse);
   // An issue for a new chat: from its link, its key, or words of it.
   rpc FindJiraIssues(FindJiraIssuesRequest) returns (FindJiraIssuesResponse);
-  // An issue as a chat's first message (Markdown, for the user to see and
-  // edit before sending it), and a branch named after it.
-  rpc GetJiraContext(GetJiraContextRequest) returns (GetJiraContextResponse);
   // An attachment's file or thumbnail (20 MB at most).
   rpc GetJiraAttachment(GetJiraAttachmentRequest) returns (GetJiraAttachmentResponse);
   // Streams every change to every chat from now on. The first message is
@@ -1704,15 +1701,4 @@ message FoundJiraIssue {
   JiraIssue issue = 2;
   // KEY-summary-slug, the key uppercase so Jira links it.
   string branch = 3;
-}
-
-message GetJiraContextRequest {
-  string site = 1;
-  string key = 2;
-}
-
-message GetJiraContextResponse {
-  string markdown = 1;
-  // KEY-summary-slug, the key uppercase so Jira links it.
-  string branch = 2;
 }

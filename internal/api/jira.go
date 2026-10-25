@@ -178,14 +178,6 @@ func (s *server) AddJiraComment(ctx context.Context, req *connect.Request[nushiv
 	return connect.NewResponse(&nushiv1.AddJiraCommentResponse{Comment: jiraCommentProto(cm)}), nil
 }
 
-func (s *server) GetJiraContext(ctx context.Context, req *connect.Request[nushiv1.GetJiraContextRequest]) (*connect.Response[nushiv1.GetJiraContextResponse], error) {
-	md, branch, err := s.jira.Context(ctx, req.Msg.Site, req.Msg.Key)
-	if err != nil {
-		return nil, jiraErr(err)
-	}
-	return connect.NewResponse(&nushiv1.GetJiraContextResponse{Markdown: md, Branch: branch}), nil
-}
-
 func (s *server) FindJiraIssues(ctx context.Context, req *connect.Request[nushiv1.FindJiraIssuesRequest]) (*connect.Response[nushiv1.FindJiraIssuesResponse], error) {
 	f, err := s.jira.Find(ctx, req.Msg.Text, req.Msg.Site)
 	if err != nil {

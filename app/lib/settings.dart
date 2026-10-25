@@ -38,6 +38,13 @@ final changesFlat = ValueNotifier<bool>(_saved['flat'] == true)
 final terminalChats = ValueNotifier<Set<String>>(_strings('terminals'))
   ..addListener(_save);
 
+/// The Jira site used last (shown in the Jira view, or an issue picked from
+/// it for a chat): a key typed alone is looked for there.
+final lastJiraSite = ValueNotifier<String?>(switch (_saved['jiraSite']) {
+  final String s => s,
+  _ => null,
+})..addListener(_save);
+
 /// The widths panes were dragged to, by pane (see `Resizable`).
 final paneWidths = ValueNotifier<Map<String, double>>({
   for (final MapEntry(:key, :value)
@@ -96,6 +103,7 @@ void _save() {
         'termFont': terminalFont.value,
         'termSize': terminalFontSize.value,
         'subagentWide': subagentWide.value,
+        'jiraSite': lastJiraSite.value,
       }),
     );
   } on Object {

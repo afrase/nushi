@@ -167,8 +167,6 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.AddJiraCommentRequest request);
   $async.Future<$0.FindJiraIssuesResponse> findJiraIssues(
       $pb.ServerContext ctx, $0.FindJiraIssuesRequest request);
-  $async.Future<$0.GetJiraContextResponse> getJiraContext(
-      $pb.ServerContext ctx, $0.GetJiraContextRequest request);
   $async.Future<$0.GetJiraAttachmentResponse> getJiraAttachment(
       $pb.ServerContext ctx, $0.GetJiraAttachmentRequest request);
   $async.Future<$0.EventsResponse> events(
@@ -322,8 +320,6 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.AddJiraCommentRequest();
       case 'FindJiraIssues':
         return $0.FindJiraIssuesRequest();
-      case 'GetJiraContext':
-        return $0.GetJiraContextRequest();
       case 'GetJiraAttachment':
         return $0.GetJiraAttachmentRequest();
       case 'Events':
@@ -484,8 +480,6 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return addJiraComment(ctx, request as $0.AddJiraCommentRequest);
       case 'FindJiraIssues':
         return findJiraIssues(ctx, request as $0.FindJiraIssuesRequest);
-      case 'GetJiraContext':
-        return getJiraContext(ctx, request as $0.GetJiraContextRequest);
       case 'GetJiraAttachment':
         return getJiraAttachment(ctx, request as $0.GetJiraAttachmentRequest);
       case 'Events':

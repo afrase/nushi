@@ -229,9 +229,6 @@ const (
 	// NushiServiceFindJiraIssuesProcedure is the fully-qualified name of the NushiService's
 	// FindJiraIssues RPC.
 	NushiServiceFindJiraIssuesProcedure = "/nushi.v1.NushiService/FindJiraIssues"
-	// NushiServiceGetJiraContextProcedure is the fully-qualified name of the NushiService's
-	// GetJiraContext RPC.
-	NushiServiceGetJiraContextProcedure = "/nushi.v1.NushiService/GetJiraContext"
 	// NushiServiceGetJiraAttachmentProcedure is the fully-qualified name of the NushiService's
 	// GetJiraAttachment RPC.
 	NushiServiceGetJiraAttachmentProcedure = "/nushi.v1.NushiService/GetJiraAttachment"
@@ -449,9 +446,6 @@ type NushiServiceClient interface {
 	AddJiraComment(context.Context, *connect.Request[v1.AddJiraCommentRequest]) (*connect.Response[v1.AddJiraCommentResponse], error)
 	// An issue for a new chat: from its link, its key, or words of it.
 	FindJiraIssues(context.Context, *connect.Request[v1.FindJiraIssuesRequest]) (*connect.Response[v1.FindJiraIssuesResponse], error)
-	// An issue as a chat's first message (Markdown, for the user to see and
-	// edit before sending it), and a branch named after it.
-	GetJiraContext(context.Context, *connect.Request[v1.GetJiraContextRequest]) (*connect.Response[v1.GetJiraContextResponse], error)
 	// An attachment's file or thumbnail (20 MB at most).
 	GetJiraAttachment(context.Context, *connect.Request[v1.GetJiraAttachmentRequest]) (*connect.Response[v1.GetJiraAttachmentResponse], error)
 	// Streams every change to every chat from now on. The first message is
@@ -908,12 +902,6 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("FindJiraIssues")),
 			connect.WithClientOptions(opts...),
 		),
-		getJiraContext: connect.NewClient[v1.GetJiraContextRequest, v1.GetJiraContextResponse](
-			httpClient,
-			baseURL+NushiServiceGetJiraContextProcedure,
-			connect.WithSchema(nushiServiceMethods.ByName("GetJiraContext")),
-			connect.WithClientOptions(opts...),
-		),
 		getJiraAttachment: connect.NewClient[v1.GetJiraAttachmentRequest, v1.GetJiraAttachmentResponse](
 			httpClient,
 			baseURL+NushiServiceGetJiraAttachmentProcedure,
@@ -1004,7 +992,6 @@ type nushiServiceClient struct {
 	transitionJiraIssue *connect.Client[v1.TransitionJiraIssueRequest, v1.TransitionJiraIssueResponse]
 	addJiraComment      *connect.Client[v1.AddJiraCommentRequest, v1.AddJiraCommentResponse]
 	findJiraIssues      *connect.Client[v1.FindJiraIssuesRequest, v1.FindJiraIssuesResponse]
-	getJiraContext      *connect.Client[v1.GetJiraContextRequest, v1.GetJiraContextResponse]
 	getJiraAttachment   *connect.Client[v1.GetJiraAttachmentRequest, v1.GetJiraAttachmentResponse]
 	events              *connect.Client[v1.EventsRequest, v1.EventsResponse]
 }
@@ -1374,11 +1361,6 @@ func (c *nushiServiceClient) FindJiraIssues(ctx context.Context, req *connect.Re
 	return c.findJiraIssues.CallUnary(ctx, req)
 }
 
-// GetJiraContext calls nushi.v1.NushiService.GetJiraContext.
-func (c *nushiServiceClient) GetJiraContext(ctx context.Context, req *connect.Request[v1.GetJiraContextRequest]) (*connect.Response[v1.GetJiraContextResponse], error) {
-	return c.getJiraContext.CallUnary(ctx, req)
-}
-
 // GetJiraAttachment calls nushi.v1.NushiService.GetJiraAttachment.
 func (c *nushiServiceClient) GetJiraAttachment(ctx context.Context, req *connect.Request[v1.GetJiraAttachmentRequest]) (*connect.Response[v1.GetJiraAttachmentResponse], error) {
 	return c.getJiraAttachment.CallUnary(ctx, req)
@@ -1599,9 +1581,6 @@ type NushiServiceHandler interface {
 	AddJiraComment(context.Context, *connect.Request[v1.AddJiraCommentRequest]) (*connect.Response[v1.AddJiraCommentResponse], error)
 	// An issue for a new chat: from its link, its key, or words of it.
 	FindJiraIssues(context.Context, *connect.Request[v1.FindJiraIssuesRequest]) (*connect.Response[v1.FindJiraIssuesResponse], error)
-	// An issue as a chat's first message (Markdown, for the user to see and
-	// edit before sending it), and a branch named after it.
-	GetJiraContext(context.Context, *connect.Request[v1.GetJiraContextRequest]) (*connect.Response[v1.GetJiraContextResponse], error)
 	// An attachment's file or thumbnail (20 MB at most).
 	GetJiraAttachment(context.Context, *connect.Request[v1.GetJiraAttachmentRequest]) (*connect.Response[v1.GetJiraAttachmentResponse], error)
 	// Streams every change to every chat from now on. The first message is
@@ -2054,12 +2033,6 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("FindJiraIssues")),
 		connect.WithHandlerOptions(opts...),
 	)
-	nushiServiceGetJiraContextHandler := connect.NewUnaryHandler(
-		NushiServiceGetJiraContextProcedure,
-		svc.GetJiraContext,
-		connect.WithSchema(nushiServiceMethods.ByName("GetJiraContext")),
-		connect.WithHandlerOptions(opts...),
-	)
 	nushiServiceGetJiraAttachmentHandler := connect.NewUnaryHandler(
 		NushiServiceGetJiraAttachmentProcedure,
 		svc.GetJiraAttachment,
@@ -2220,8 +2193,6 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceAddJiraCommentHandler.ServeHTTP(w, r)
 		case NushiServiceFindJiraIssuesProcedure:
 			nushiServiceFindJiraIssuesHandler.ServeHTTP(w, r)
-		case NushiServiceGetJiraContextProcedure:
-			nushiServiceGetJiraContextHandler.ServeHTTP(w, r)
 		case NushiServiceGetJiraAttachmentProcedure:
 			nushiServiceGetJiraAttachmentHandler.ServeHTTP(w, r)
 		case NushiServiceEventsProcedure:
@@ -2525,10 +2496,6 @@ func (UnimplementedNushiServiceHandler) AddJiraComment(context.Context, *connect
 
 func (UnimplementedNushiServiceHandler) FindJiraIssues(context.Context, *connect.Request[v1.FindJiraIssuesRequest]) (*connect.Response[v1.FindJiraIssuesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.FindJiraIssues is not implemented"))
-}
-
-func (UnimplementedNushiServiceHandler) GetJiraContext(context.Context, *connect.Request[v1.GetJiraContextRequest]) (*connect.Response[v1.GetJiraContextResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetJiraContext is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) GetJiraAttachment(context.Context, *connect.Request[v1.GetJiraAttachmentRequest]) (*connect.Response[v1.GetJiraAttachmentResponse], error) {
