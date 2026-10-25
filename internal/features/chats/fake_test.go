@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"slices"
 	"strconv"
 	"sync"
@@ -75,7 +76,7 @@ type proc struct {
 }
 
 // launch is a Launch for f: each call starts a new process.
-func (f *fakeAgent) launch(h acp.Handler) (Agent, error) {
+func (f *fakeAgent) launch(h acp.Handler, _ *slog.Logger) (Agent, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.h = h

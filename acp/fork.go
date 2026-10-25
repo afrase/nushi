@@ -1,6 +1,9 @@
 package acp
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // session/fork is unstable in ACP v1, so it isn't in the pinned schema;
 // these types are written by hand, with only the fields Nushi uses.
@@ -27,5 +30,8 @@ func (c *Client) CanFork() bool { return c.canFork }
 // ForkSession copies a session into a new one (session/fork).
 func (c *Client) ForkSession(ctx context.Context, req ForkSessionRequest) (*ForkSessionResponse, error) {
 	var resp ForkSessionResponse
-	return &resp, c.conn.call(ctx, "session/fork", req, &resp)
+	start := time.Now()
+	err := c.conn.call(ctx, "session/fork", req, &resp)
+	c.opened(err, "session/fork", string(resp.SessionID), start, "from", string(req.SessionID))
+	return &resp, err
 }

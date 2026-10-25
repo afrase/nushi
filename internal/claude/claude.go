@@ -10,6 +10,7 @@ import (
 	"embed"
 	"encoding/json"
 	"io/fs"
+	"log/slog"
 	"os"
 	"os/exec"
 	"strconv"
@@ -39,13 +40,12 @@ var adapterFiles embed.FS
 // Start starts the adapter set up in Nushi's data folder (its program,
 // under the Node on PATH), running cli, the user's Claude Code. It runs in
 // dir (the daemon's own folder); a chat's folder reaches the agent only as
-// the session's cwd. Its stderr goes to the daemon log.
-func Start(dir, program, cli string, h acp.Handler) (*acp.Client, error) {
+// the session's cwd. Its stderr goes to log.
+func Start(dir, program, cli string, h acp.Handler, log *slog.Logger) (*acp.Client, error) {
 	cmd := exec.Command("node", program)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), "CLAUDE_CODE_EXECUTABLE="+cli)
-	cmd.Stderr = os.Stderr
-	return acp.Start(cmd, h)
+	return acp.Start(cmd, h, log)
 }
 
 // CLI is Claude Code's program, and Page where to get it.

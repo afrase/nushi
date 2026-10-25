@@ -124,20 +124,22 @@ func run() error {
 	}, readonly.Output, filepath.Join(dir, "agents"), npm.Installer{})
 	// The agents found on PATH, and their adapters (ADR 0037). A chat
 	// starts its agent through Run, and says more through Explain.
-	launch := func(name string, start func(agents.Run, acp.Handler) (*acp.Client, error)) chats.Launch {
-		return func(h acp.Handler) (chats.Agent, error) {
+	launch := func(name string, start func(agents.Run, acp.Handler, *slog.Logger) (*acp.Client, error)) chats.Launch {
+		return func(h acp.Handler, log *slog.Logger) (chats.Agent, error) {
 			run, err := agentSvc.Run(name)
 			if err != nil {
 				return nil, err
 			}
-			return start(run, h)
+			return start(run, h, log)
 		}
 	}
 	// What each agent does beyond ACP is in its own packages: internal/claude*,
 	// internal/codex*, internal/ante* (Ante's bridge too, ADR 0030) and
 	// internal/omp*.
 	claudeKind := chats.Kind{Name: "claude", Title: "Claude", Resume: "claude --resume", MCP: true,
-		Explain: agentSvc.Explain("claude"), Launch: launch("claude", func(r agents.Run, h acp.Handler) (*acp.Client, error) { return claude.Start(dir, r.Program, r.CLI, h) }),
+		Explain: agentSvc.Explain("claude"), Launch: launch("claude", func(r agents.Run, h acp.Handler, log *slog.Logger) (*acp.Client, error) {
+			return claude.Start(dir, r.Program, r.CLI, h, log)
+		}),
 		Dialect: chats.Dialect{InitMeta: claude.InitMeta, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall,
 			Background: claude.Background, ReportElsewhere: claude.ReportElsewhere,
 			Shell: claude.Shell, ReadShell: claude.ReadShell,
@@ -147,13 +149,19 @@ func run() error {
 		OpenElsewhere: claudehistory.Open, Forked: func(ids []string) map[string]bool { return claudehistory.Forked(projects, ids) }}
 	codexKind := chats.Kind{Name: "codex", Title: "Codex", Resume: codex.Resume, History: codex.History, DeleteArchives: codex.DeleteArchives,
 		OpenElsewhere: codex.OpenElsewhere, Forked: codex.Forked, OneWriter: true,
-		Explain: agentSvc.Explain("codex"), Launch: launch("codex", func(r agents.Run, h acp.Handler) (*acp.Client, error) { return codex.Start(dir, r.Program, r.CLI, h) }),
+		Explain: agentSvc.Explain("codex"), Launch: launch("codex", func(r agents.Run, h acp.Handler, log *slog.Logger) (*acp.Client, error) {
+			return codex.Start(dir, r.Program, r.CLI, h, log)
+		}),
 		Dialect: chats.Dialect{ForkAt: codex.ForkAt, ToolCall: codex.ToolCall, Other: codex.Other}}
 	anteKind := chats.Kind{Name: "ante", Title: "Ante", Resume: ante.Resume, OpenElsewhere: ante.OpenElsewhere,
-		Explain: agentSvc.Explain("ante"), Launch: launch("ante", func(_ agents.Run, h acp.Handler) (*acp.Client, error) { return ante.Start(dir, h) }),
+		Explain: agentSvc.Explain("ante"), Launch: launch("ante", func(_ agents.Run, h acp.Handler, log *slog.Logger) (*acp.Client, error) {
+			return ante.Start(dir, h, log)
+		}),
 		Dialect: chats.Dialect{ForkAt: ante.ForkAt, Other: ante.Other, Context: ante.Context}}
 	ompKind := chats.Kind{Name: "omp", Title: "oh-my-pi", Resume: omp.Resume, Forked: omp.Forked, OpenElsewhere: omp.OpenElsewhere, OneWriter: true,
-		Explain: agentSvc.Explain("omp"), Launch: launch("omp", func(r agents.Run, h acp.Handler) (*acp.Client, error) { return omp.Start(dir, r.CLI, h) }),
+		Explain: agentSvc.Explain("omp"), Launch: launch("omp", func(r agents.Run, h acp.Handler, log *slog.Logger) (*acp.Client, error) {
+			return omp.Start(dir, r.CLI, h, log)
+		}),
 		Dialect: chats.Dialect{Other: omp.Other, ToolCall: omp.ToolCall}}
 	st := store.New(dir)
 	st.HadMessages = func(s model.Session) bool { return claudehistory.Has(projects, s.SessionID, s.Folder) }

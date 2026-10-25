@@ -5,7 +5,7 @@ package omp
 
 import (
 	"encoding/json"
-	"os"
+	"log/slog"
 	"os/exec"
 	"strings"
 
@@ -14,14 +14,13 @@ import (
 )
 
 // Start starts the user's omp (cli) in its ACP mode, in dir (the
-// daemon's folder), its stderr to the daemon log; its `#!/usr/bin/env
+// daemon's folder), its stderr to log; its `#!/usr/bin/env
 // bun` finds the user's Bun on PATH. omp reads its own config and keys
 // (~/.omp, the environment); Nushi never does.
-func Start(dir, cli string, h acp.Handler) (*acp.Client, error) {
+func Start(dir, cli string, h acp.Handler, log *slog.Logger) (*acp.Client, error) {
 	cmd := exec.Command(cli, "--mode", "acp")
 	cmd.Dir = dir
-	cmd.Stderr = os.Stderr
-	return acp.Start(cmd, h)
+	return acp.Start(cmd, h, log)
 }
 
 // CLI is omp's program, which runs under Bun (Needs); Page is where to

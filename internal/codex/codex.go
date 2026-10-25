@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
@@ -19,12 +20,11 @@ import (
 // Start starts the adapter, as claude.Start does Claude's, running cli,
 // the user's Codex (codex-acp's CODEX_PATH). Codex reads its own config
 // and login ($CODEX_HOME, else ~/.codex); Nushi never does.
-func Start(dir, program, cli string, h acp.Handler) (*acp.Client, error) {
+func Start(dir, program, cli string, h acp.Handler, log *slog.Logger) (*acp.Client, error) {
 	cmd := exec.Command("node", program)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), "CODEX_PATH="+cli)
-	cmd.Stderr = os.Stderr
-	return acp.Start(cmd, h)
+	return acp.Start(cmd, h, log)
 }
 
 // Adapter is Codex's ACP adapter, as Nushi pins it (see claude.Adapter).

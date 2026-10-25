@@ -116,7 +116,7 @@ func start(t *testing.T, store *antetest.Store) *client {
 		close(done)
 	}()
 	c := &client{}
-	c.Client = acp.Connect(fromBridgeR, toBridgeW, c)
+	c.Client = acp.Connect(fromBridgeR, toBridgeW, c, nil)
 	t.Cleanup(func() { toBridgeW.Close(); <-done })
 	init, err := c.Initialize(context.Background(), acp.InitializeRequest{ProtocolVersion: 1,
 		ClientCapabilities: &acp.ClientCapabilities{Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}}}})

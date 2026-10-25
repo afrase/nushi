@@ -15,7 +15,7 @@ type Peer struct{ conn *conn }
 // NewPeer makes the agent's side of a connection that writes to w; it
 // reads nothing until Serve.
 func NewPeer(w io.Writer, handle func(ctx context.Context, method string, params json.RawMessage) (any, error)) *Peer {
-	return &Peer{conn: makeConn(w, handle)}
+	return &Peer{conn: makeConn(w, orDiscard(nil), handle)}
 }
 
 // Serve reads the client's messages from r, until r ends.

@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -45,17 +46,16 @@ func Also() []string {
 }
 
 // Start starts the bridge, as claude.Start does Claude's adapter: this
-// executable's Command, in dir (the daemon's folder), its stderr to the
-// daemon log.
-func Start(dir string, h acp.Handler) (*acp.Client, error) {
+// executable's Command, in dir (the daemon's folder), its stderr to
+// log.
+func Start(dir string, h acp.Handler, log *slog.Logger) (*acp.Client, error) {
 	self, err := os.Executable()
 	if err != nil {
 		return nil, err
 	}
 	cmd := exec.Command(self, Command)
 	cmd.Dir = dir
-	cmd.Stderr = os.Stderr
-	return acp.Start(cmd, h)
+	return acp.Start(cmd, h, log)
 }
 
 // warn writes a line to the bridge's stderr, which the daemon logs with
@@ -138,7 +138,6 @@ func numbers(v string) []int {
 func serve(bin, cwd string) (io.WriteCloser, io.Reader, func(), error) {
 	cmd := exec.Command(bin, "serve", "--stdio")
 	cmd.Dir = cwd
-	cmd.Stderr = os.Stderr
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	in, err := cmd.StdinPipe()
 	if err != nil {

@@ -2,6 +2,7 @@ package chats
 
 import (
 	"errors"
+	"log/slog"
 	"maps"
 	"slices"
 	"sync"
@@ -37,14 +38,14 @@ func (s *Service) Close() {
 // agents still running when it has ended the chats' (those a reopen or a
 // move was opening meanwhile) are closed too.
 func (s *Service) started(launch Launch) Launch {
-	return func(h acp.Handler) (Agent, error) {
+	return func(h acp.Handler, log *slog.Logger) (Agent, error) {
 		s.mu.Lock()
 		closing := s.closing
 		s.mu.Unlock()
 		if closing {
 			return nil, errClosing
 		}
-		agent, err := launch(h)
+		agent, err := launch(h, log)
 		if err != nil {
 			return nil, err
 		}
