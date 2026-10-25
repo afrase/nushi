@@ -128,16 +128,16 @@ class _SidebarState extends State<Sidebar> {
               ],
             ),
           ),
-          _McpButton(widget.daemon),
+          _Footer(widget.daemon),
         ],
       ),
     );
   }
 }
 
-/// The footer's way into the MCP servers view, for the open chat's folder
-/// (else the home folder).
-class _McpButton extends StatelessWidget {
+/// The footer: the ways into the MCP servers view (for the open chat's
+/// folder, else the home folder) and Jira.
+class _Footer extends StatelessWidget {
   const new(this.daemon);
 
   final Daemon daemon;
@@ -146,27 +146,49 @@ class _McpButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final open = daemon.mcpFolder != null;
+    final mcp = daemon.mcpFolder != null;
+    Widget row(
+      String label,
+      IconData icon,
+      VoidCallback onTap, {
+      required bool open,
+    }) => Tap(
+      selected: open,
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: t.textSecondary),
+          const SizedBox(width: 8),
+          Text(label, style: theme.ui(t.textSecondary, size: 12)),
+        ],
+      ),
+    );
     return Container(
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         border: Border(top: BorderSide(color: t.borderSubtle)),
       ),
-      child: Tap(
-        selected: open,
-        onTap: () => daemon.showMcp(
-          open
-              ? null
-              : daemon.selected?.folder ?? Platform.environment['HOME']!,
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-        child: Row(
-          children: [
-            Icon(Icons.hub_outlined, size: 14, color: t.textSecondary),
-            const SizedBox(width: 8),
-            Text('MCP servers', style: theme.ui(t.textSecondary, size: 12)),
-          ],
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          row(
+            'MCP servers',
+            Icons.hub_outlined,
+            open: mcp,
+            () => daemon.showMcp(
+              mcp
+                  ? null
+                  : daemon.selected?.folder ?? Platform.environment['HOME']!,
+            ),
+          ),
+          row(
+            'Jira',
+            Icons.task_alt,
+            open: daemon.jiraOpen,
+            () => daemon.showJira(open: !daemon.jiraOpen),
+          ),
+        ],
       ),
     );
   }

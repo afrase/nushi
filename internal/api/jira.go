@@ -128,7 +128,7 @@ func (s *server) GetJiraJql(ctx context.Context, req *connect.Request[nushiv1.Ge
 }
 
 func (s *server) SuggestJiraJql(ctx context.Context, req *connect.Request[nushiv1.SuggestJiraJqlRequest]) (*connect.Response[nushiv1.SuggestJiraJqlResponse], error) {
-	values, err := s.jira.Suggestions(ctx, req.Msg.Site, req.Msg.Field, req.Msg.Prefix)
+	values, err := s.jira.Suggestions(ctx, req.Msg.Site, req.Msg.FieldName, req.Msg.Prefix)
 	if err != nil {
 		return nil, jiraErr(err)
 	}

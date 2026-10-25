@@ -3419,15 +3419,15 @@ const SuggestJiraJqlRequest$json = {
   '1': 'SuggestJiraJqlRequest',
   '2': [
     {'1': 'site', '3': 1, '4': 1, '5': 9, '10': 'site'},
-    {'1': 'field', '3': 2, '4': 1, '5': 9, '10': 'field'},
+    {'1': 'field_name', '3': 2, '4': 1, '5': 9, '10': 'fieldName'},
     {'1': 'prefix', '3': 3, '4': 1, '5': 9, '10': 'prefix'},
   ],
 };
 
 /// Descriptor for `SuggestJiraJqlRequest`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List suggestJiraJqlRequestDescriptor = $convert.base64Decode(
-    'ChVTdWdnZXN0SmlyYUpxbFJlcXVlc3QSEgoEc2l0ZRgBIAEoCVIEc2l0ZRIUCgVmaWVsZBgCIA'
-    'EoCVIFZmllbGQSFgoGcHJlZml4GAMgASgJUgZwcmVmaXg=');
+    'ChVTdWdnZXN0SmlyYUpxbFJlcXVlc3QSEgoEc2l0ZRgBIAEoCVIEc2l0ZRIdCgpmaWVsZF9uYW'
+    '1lGAIgASgJUglmaWVsZE5hbWUSFgoGcHJlZml4GAMgASgJUgZwcmVmaXg=');
 
 @$core.Deprecated('Use suggestJiraJqlResponseDescriptor instead')
 const SuggestJiraJqlResponse$json = {
