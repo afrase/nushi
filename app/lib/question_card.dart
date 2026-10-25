@@ -287,11 +287,9 @@ class _QuestionCardState extends State<QuestionCard> {
         fillColor: t.base,
       ),
     );
+    final about = f.description.isEmpty ? f.title : f.description;
     return [
-      Text(
-        f.description.isEmpty ? f.title : f.description,
-        style: theme.ui(t.text),
-      ),
+      if (about.isNotEmpty) Text(about, style: theme.ui(t.text)),
       for (final (n, o) in f.options.indexed)
         QuestionOption(
           o,

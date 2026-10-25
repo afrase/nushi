@@ -98,15 +98,21 @@ func (c *client) find(t *testing.T, sid acp.SessionID, kind string, ok func(acp.
 // initializes it; the bridge's own lines go to log.
 func start(t *testing.T, store *pigtest.Store, log io.Writer) *client {
 	t.Helper()
-	stderr = log
-	t.Cleanup(func() { stderr = os.Stderr })
+	logMu.Lock()
+	logTo = log
+	logMu.Unlock()
+	t.Cleanup(func() {
+		logMu.Lock()
+		logTo = os.Stderr
+		logMu.Unlock()
+	})
 	toBridgeR, toBridgeW := io.Pipe()
 	fromBridgeR, fromBridgeW := io.Pipe()
-	spawn := func(cwd string, args ...string) (io.WriteCloser, io.Reader, func(), error) {
+	spawn := func(cwd string, args ...string) (Pig, error) {
 		inR, inW := io.Pipe()
 		outR, outW := io.Pipe()
 		go func() { store.Serve(inR, outW, cwd, args); outW.Close() }()
-		return inW, outR, func() { inR.Close(); outW.Close() }, nil
+		return Pig{In: inW, Out: outR, Kill: func() { inR.Close(); outW.Close() }}, nil
 	}
 	done := make(chan struct{})
 	go func() {
@@ -216,6 +222,18 @@ func TestCancelAndSteer(t *testing.T) {
 	}
 	if ok, _ := c.Steer(context.Background(), s.SessionID, []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "idle"}}}); ok {
 		t.Error("steered with no turn running")
+	}
+	// An extension's command that never ends stops at once.
+	go func() { done <- prompt(t, c, s.SessionID, "/hang") }()
+	time.Sleep(50 * time.Millisecond)
+	c.Cancel(acp.CancelNotification{SessionID: s.SessionID})
+	select {
+	case r := <-done:
+		if r.StopReason != "cancelled" {
+			t.Errorf("stop = %s", r.StopReason)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("a hung command can't be stopped")
 	}
 }
 

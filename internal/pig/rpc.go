@@ -12,15 +12,25 @@ import (
 	"time"
 )
 
-// Spawn starts `pig --mode rpc` with args in cwd: its stdin, its stdout,
-// and a way to kill it.
-type Spawn func(cwd string, args ...string) (in io.WriteCloser, out io.Reader, kill func(), err error)
+// Spawn starts `pig --mode rpc` with args in cwd.
+type Spawn func(cwd string, args ...string) (Pig, error)
+
+// Pig is a pig started: its stdin and stdout, a way to kill it, and the
+// last of what it wrote to stderr (nil: nothing kept), which says why it
+// stopped when it did.
+type Pig struct {
+	In   io.WriteCloser
+	Out  io.Reader
+	Kill func()
+	Said func() string
+}
 
 // proc is one `pig --mode rpc`: commands go in as JSON lines, responses
 // (matched by id) and events (everything else) come out.
 type proc struct {
 	in     io.WriteCloser
 	kill   func()
+	said   func() string
 	events chan event    // in order; closed when pig's output ends
 	exited chan struct{} // closed after events
 
@@ -44,12 +54,12 @@ type response struct {
 }
 
 func startProc(spawn Spawn, cwd string, args ...string) (*proc, error) {
-	in, out, kill, err := spawn(cwd, append([]string{"--mode", "rpc"}, args...)...)
+	pig, err := spawn(cwd, append([]string{"--mode", "rpc"}, args...)...)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't start pig: %w", err)
 	}
-	p := &proc{in: in, kill: kill, events: make(chan event, 256), exited: make(chan struct{}), waiting: map[string]chan response{}}
-	go p.read(out)
+	p := &proc{in: pig.In, kill: pig.Kill, said: pig.Said, events: make(chan event, 256), exited: make(chan struct{}), waiting: map[string]chan response{}}
+	go p.read(pig.Out)
 	return p, nil
 }
 
@@ -99,6 +109,16 @@ func (p *proc) read(out io.Reader) {
 // errStopped says pig is gone.
 var errStopped = errors.New("pig has stopped")
 
+// stopped says pig is gone, and why if it said.
+func (p *proc) stopped() error {
+	if p.said != nil {
+		if why := p.said(); why != "" {
+			return fmt.Errorf("pig has stopped: %s", why)
+		}
+	}
+	return errStopped
+}
+
 // call sends a command and waits for its response; its data goes into out
 // (unless nil).
 func (p *proc) call(ctx context.Context, cmd map[string]any, out any) error {
@@ -121,7 +141,7 @@ func (p *proc) call(ctx context.Context, cmd map[string]any, out any) error {
 	case resp, ok := <-ch:
 		switch {
 		case !ok:
-			return errStopped
+			return p.stopped()
 		case !resp.Success:
 			return errors.New(resp.Error)
 		case out != nil && len(resp.Data) > 0:
