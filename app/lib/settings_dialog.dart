@@ -1,9 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:xterm2/xterm.dart';
 
+import 'bundled_daemon.dart';
 import 'gen/nushi/v1/nushi.connect.client.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
+import 'login_item.dart';
 import 'menu.dart';
 import 'remote.dart';
 import 'settings.dart';
@@ -32,7 +36,8 @@ Future<List<String>> _monospaced() async {
 const settingsKey = SingleActivator(LogicalKeyboardKey.comma, meta: true);
 
 /// The app's settings (⌘,): the terminal's font and size, when idle chats
-/// sleep, and remote access (both the daemon's).
+/// sleep, remote access (both the daemon's), and whether the daemon starts
+/// at login (the packaged app's, for the usual data folder).
 Future<void> showSettings(BuildContext context, NushiServiceClient client) =>
     showDialog(context: context, builder: (_) => _Settings(client));
 
@@ -184,6 +189,10 @@ class _SettingsState extends State<_Settings> {
                 ),
               ),
             ],
+            // The launch agent starts the usual data folder's daemon.
+            if (bundledDaemon != null &&
+                Platform.environment['NUSHI_DATA'] == null)
+              const StartAtLogin(),
             RemoteSection(widget.client),
           ],
         ),

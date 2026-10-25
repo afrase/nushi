@@ -1,0 +1,5 @@
+#!/bin/sh
+# Run by launchd at login when "Start at login" is on (ADR 0036): opens the
+# daemon's helper app as the app does, and ends. A daemon already running
+# keeps running; the new one finds it and stops.
+exec /usr/bin/open -n -g "${0%/Contents/Resources/start-daemon}/Contents/Helpers/Nushi Daemon.app" --args -login

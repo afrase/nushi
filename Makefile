@@ -26,7 +26,8 @@ app:
 	cd app && flutter run -d macos
 
 # A release app with nushid inside, in a background-only helper app
-# (ADR 0036), ad-hoc signed. The app starts it when no daemon is running.
+# (ADR 0036), ad-hoc signed. The app starts it when no daemon is running,
+# and launchd at login through start-daemon when Start at login is on.
 package:
 	cd app && flutter build macos --release
 	rm -rf "$(RELEASE)/Contents/MacOS/nushid" "$(RELEASE)/Contents/Helpers"
@@ -34,6 +35,9 @@ package:
 	go build -o "$(HELPER)/Contents/MacOS/nushid" ./cmd/nushid
 	cp app/macos/Daemon/Info.plist "$(HELPER)/Contents/"
 	cp "$(RELEASE)/Contents/Resources/AppIcon.icns" "$(HELPER)/Contents/Resources/"
+	mkdir -p "$(RELEASE)/Contents/Library/LaunchAgents"
+	cp app/macos/Daemon/com.nushihq.Nushi.daemon.plist "$(RELEASE)/Contents/Library/LaunchAgents/"
+	cp app/macos/Daemon/start-daemon "$(RELEASE)/Contents/Resources/"
 	codesign --force --sign - "$(HELPER)"
 	codesign --force --deep --sign - "$(RELEASE)"
 	tools/check-bundle.sh "$(RELEASE)"
