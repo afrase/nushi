@@ -13,6 +13,9 @@ key() { plutil -extract "$2" raw -o - "$1/Contents/Info.plist" 2>/dev/null || tr
 [ "$(key "$helper" CFBundleExecutable)" = nushid ] || fail "helper's executable"
 [ "$(key "$helper" LSBackgroundOnly)" = true ] || fail "helper isn't background-only"
 [ -f "$helper/Contents/Resources/AppIcon.icns" ] || fail "helper has no icon"
+agent="$app/Contents/Library/LaunchAgents/com.nushihq.Nushi.daemon.plist"
+[ "$(plutil -extract BundleProgram raw -o - "$agent" 2>/dev/null)" = Contents/Resources/start-daemon ] || fail "no launch agent"
+[ -x "$app/Contents/Resources/start-daemon" ] || fail "no start-daemon"
 for part in "$helper" "$app"; do
   codesign --verify --strict "$part" || fail "$part isn't signed"
 done
