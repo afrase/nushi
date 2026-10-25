@@ -50,6 +50,26 @@ abstract final class NushiService {
     nushiv1nushi.ListAgentsResponse.new,
   );
 
+  /// Lists an agent's sessions in a folder that aren't chats (started in a
+  /// terminal, say), newest first, a page at a time. It starts the agent to
+  /// ask (ACP session/list).
+  static const listAgentSessions = connect.Spec(
+    '/$name/ListAgentSessions',
+    connect.StreamType.unary,
+    nushiv1nushi.ListAgentSessionsRequest.new,
+    nushiv1nushi.ListAgentSessionsResponse.new,
+  );
+
+  /// Opens one of them as a chat in the folder: the agent replays it
+  /// (session/load); nothing is copied. For a session that is a chat
+  /// already, that chat.
+  static const openAgentSession = connect.Spec(
+    '/$name/OpenAgentSession',
+    connect.StreamType.unary,
+    nushiv1nushi.OpenAgentSessionRequest.new,
+    nushiv1nushi.OpenAgentSessionResponse.new,
+  );
+
   /// Moves a chat to another folder, or to a new worktree. A chat without
   /// messages starts a new session there (and a worktree it leaves is
   /// removed if it holds no work); one with messages keeps its history, in a

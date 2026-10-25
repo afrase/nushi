@@ -110,3 +110,24 @@ func ids(found []Found) string {
 	}
 	return fmt.Sprint(out)[1 : len(fmt.Sprint(out))-1]
 }
+
+// Opening fails without leaving a chat when the agent can't load the
+// session; Nushi's own forks aren't opened as chats.
+func TestOpenRefuses(t *testing.T) {
+	f := &fakeAgent{lists: true, loadErr: fmt.Errorf("no such session")}
+	sessions := &memSessions{stored: []model.Session{{ID: "c0", SessionID: "x", Agent: "a", Throwaway: []string{"fork"}}}}
+	svc := New([]Kind{{Name: "a", Launch: f.launch}}, &memModes{}, sessions, nil, "", func(model.Event) {})
+	ctx, dir := context.Background(), t.TempDir()
+	if _, err := svc.Open(ctx, "a", dir, "gone", "Gone"); err == nil || len(svc.chats) > 0 || len(sessions.saved) > 0 {
+		t.Errorf("opened %v (%d chats, %d saved); want an error and nothing kept", err, len(svc.chats), len(sessions.saved))
+	}
+	if _, err := svc.Open(ctx, "a", dir, "fork", ""); err == nil {
+		t.Error("opened one of Nushi's own forks")
+	}
+	if id, err := svc.Open(ctx, "a", dir, "x", ""); id != "c0" || err != nil {
+		t.Errorf("opened a chat's session as %q, %v; want the chat", id, err)
+	}
+	if _, err := svc.Open(ctx, "a", filepath.Join(dir, "gone"), "s", ""); err == nil {
+		t.Error("opened a session in a folder that doesn't exist")
+	}
+}

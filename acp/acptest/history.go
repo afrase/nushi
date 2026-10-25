@@ -3,7 +3,10 @@ package acptest
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
+	"strings"
 	"sync"
+	"time"
 )
 
 // History holds every session's updates by folder, for session/load, and
@@ -12,6 +15,8 @@ type History struct {
 	mu       sync.Mutex
 	sessions map[key][]json.RawMessage
 	deleted  map[string]bool
+	last     map[key]int // each session's last update, in order
+	n        int
 }
 
 // key is a session in one folder's history.
@@ -34,6 +39,41 @@ func (h *History) add(cwd, session string, update any) {
 	}
 	k := key{cwd, session}
 	h.sessions[k] = append(h.sessions[k], b)
+	if h.last == nil {
+		h.last = map[key]int{}
+	}
+	h.n++
+	h.last[k] = h.n
+}
+
+// list is session/list's answer from the history: the sessions in cwd
+// (every folder's for ""), newest first, each titled with its first
+// prompt, its last update one second after the one before it.
+func (h *History) list(cwd string) []map[string]any {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	var keys []key
+	for k := range h.sessions {
+		if cwd == "" || k.cwd == cwd {
+			keys = append(keys, k)
+		}
+	}
+	slices.SortFunc(keys, func(a, b key) int { return h.last[b] - h.last[a] })
+	var out []map[string]any
+	for _, k := range keys {
+		var first struct {
+			Content struct{ Text string } `json:"content"`
+		}
+		for _, u := range h.sessions[k] {
+			if strings.Contains(string(u), `"user_message_chunk"`) {
+				json.Unmarshal(u, &first)
+				break
+			}
+		}
+		out = append(out, map[string]any{"sessionId": k.session, "cwd": k.cwd, "title": first.Content.Text,
+			"updatedAt": time.Unix(1_800_000_000+int64(h.last[k]), 0).UTC().Format(time.RFC3339)})
+	}
+	return out
 }
 
 // fork gives session to, in folder cwd, a copy of session from's history
