@@ -1,5 +1,7 @@
 # 0003. Agents speak ACP v1 through our own small client
 
+(The client became the library `github.com/afrase/acp-go`: [0041](0041-acp-through-acp-go.md).)
+
 ## Context
 The Agent Client Protocol (ACP) gives one structured protocol for Claude Code (through `@agentclientprotocol/claude-agent-acp`), Codex and Gemini. The Go SDKs (`coder/acp-go-sdk`, `caelis-labs/acp-go-sdk`) had edge cases the POC hit: a 1,024-message queue that closes the connection when it overflows, and a 10 MiB cap per message.
 
