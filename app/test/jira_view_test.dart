@@ -75,6 +75,14 @@ Future<(FakeDaemon, Daemon)> openView(
           ListJiraIssuesRequest() => ListJiraIssuesResponse(
             issues: [issue('ACME-1', 'Found by JQL', 'To Do', 'new')],
           ),
+          GetJiraIssueRequest(:final key) => GetJiraIssueResponse(
+            issue: issue(
+              key,
+              'Log in with a passkey',
+              'In Progress',
+              'indeterminate',
+            )..description = 'Let people sign in with a **passkey**.',
+          ),
           GetJiraJqlRequest() => GetJiraJqlResponse(
             fields: [
               JiraJqlField(
@@ -114,8 +122,8 @@ void main() {
 
   testWidgets('my open issues, picked with the keys', (tester) async {
     final (_, d) = await openView(tester);
-    expect(find.text('Log in with a passkey'), findsOneWidget);
-    expect(find.text('ACME-12'), findsWidgets); // the row, and the issue
+    // The row, and the issue beside it.
+    expect(find.text('Log in with a passkey'), findsNWidgets(2));
     await tester.sendKeyEvent(LogicalKeyboardKey.keyJ);
     await tester.pumpAndSettle();
     expect(shown(tester), 'ACME-9');
@@ -140,7 +148,7 @@ void main() {
     );
     await tester.sendKeyEvent(LogicalKeyboardKey.slash);
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'project = ACME');
+    await tester.enterText(find.byType(TextField).first, 'project = ACME');
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(
