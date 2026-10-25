@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/bottom_follower.dart';
+import 'package:nushi/theme/theme.dart';
 
 void main() {
   testWidgets('a slow scroll up stops following, scrolling down resumes', (
@@ -65,17 +66,17 @@ void main() {
     expect(p.pixels, p.maxScrollExtent);
   });
 
-  testWidgets('a fling into the bottom bounces and keeps following', (
+  testWidgets("the app's scrolling stops at the ends; following holds", (
     tester,
   ) async {
     final f = BottomFollower();
     await tester.pumpWidget(
       MaterialApp(
+        scrollBehavior: const NativeScroll(),
         home: NotificationListener(
           onNotification: f.onNotification,
           child: SingleChildScrollView(
             controller: f.scroll,
-            physics: const BouncingScrollPhysics(),
             child: Column(
               children: [
                 for (var i = 0; i < 60; i++)
@@ -90,10 +91,16 @@ void main() {
     await tester.pumpAndSettle();
     final p = f.scroll.position;
     final list = find.byType(SingleChildScrollView);
+    expect(p.physics, isA<ClampingScrollPhysics>());
 
-    // At the bottom, a fling down past it springs back: still following.
+    // At the bottom, a fling down never goes past it: still following.
+    final seen = <double>[];
+    void track() => seen.add(p.pixels);
+    p.addListener(track);
     await tester.fling(list, const Offset(0, -300), 3000);
     await tester.pumpAndSettle();
+    p.removeListener(track);
+    expect(seen.every((px) => px <= p.maxScrollExtent), isTrue);
     expect(p.pixels, p.maxScrollExtent);
     expect(f.following, isTrue);
 
@@ -103,6 +110,18 @@ void main() {
     await tester.pumpAndSettle();
     expect(f.following, isFalse);
     await tester.fling(list, const Offset(0, -150), 4000);
+    await tester.pumpAndSettle();
+    expect(p.pixels, p.maxScrollExtent);
+    expect(f.following, isTrue);
+
+    // Flung to the top, it stops there; Jump to latest (follow) goes back
+    // down and follows.
+    await tester.fling(list, const Offset(0, 3000), 8000);
+    await tester.pumpAndSettle();
+    expect(p.pixels, 0);
+    expect(f.following, isFalse);
+    f.follow();
+    tester.binding.scheduleFrame(); // the button going away rebuilds
     await tester.pumpAndSettle();
     expect(p.pixels, p.maxScrollExtent);
     expect(f.following, isTrue);
