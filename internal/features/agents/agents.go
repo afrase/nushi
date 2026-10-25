@@ -64,7 +64,6 @@ type Service struct {
 
 	mu    sync.Mutex
 	found map[string]string // each agent as last logged
-	ready map[string]bool   // each agent's Ready, as last found
 }
 
 func New(agents []Agent, probe Probe, dir string, installer Installer) *Service {
@@ -74,7 +73,7 @@ func New(agents []Agent, probe Probe, dir string, installer Installer) *Service 
 // UseChats gives the service the chats feature, once there is one.
 func (s *Service) UseChats(c Chats) { s.chats = c }
 
-// List finds every agent, all at once.
+// List finds every agent, all at once, and tells the chats which are ready.
 func (s *Service) List(ctx context.Context) []Status {
 	out := make([]Status, len(s.agents))
 	var wg sync.WaitGroup
@@ -83,28 +82,22 @@ func (s *Service) List(ctx context.Context) []Status {
 	}
 	wg.Wait()
 	s.logFound(out)
+	for _, st := range out {
+		if st.Ready { // its chats that couldn't start it (it was set up or installed meanwhile) may now
+			s.chats.AgentReady(st.Name)
+		}
+	}
 	return out
 }
 
-// logFound logs each agent found, when it changed since the last time,
-// and tells the chats of each one found ready where it wasn't.
+// logFound logs each agent found, when it changed since the last time.
 func (s *Service) logFound(found []Status) {
-	var ready []string
-	defer func() {
-		for _, name := range ready {
-			s.chats.AgentReady(name)
-		}
-	}()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.found == nil {
-		s.found, s.ready = map[string]string{}, map[string]bool{}
+		s.found = map[string]string{}
 	}
 	for _, st := range found {
-		if st.Ready && !s.ready[st.Name] {
-			ready = append(ready, st.Name)
-		}
-		s.ready[st.Name] = st.Ready
 		args := []any{"agent", st.Name, "path", st.Path, "version", st.Version, "problem", st.Problem, "signed_in", st.SignedIn,
 			"adapter", st.Installed, "pinned", st.Pinned, "ready", st.Ready}
 		if line := fmt.Sprint(args...); s.found[st.Name] != line {

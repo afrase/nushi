@@ -132,8 +132,7 @@ func (f *fakeInstaller) Remove(folder string) error { delete(f.versions, folder)
 
 // An agent with an adapter: not ready until it's set up; setting it up
 // puts its awake chats to sleep, and tells the chats it's ready; a failed
-// install says why; Remove; found ready again (Node back), the chats are
-// told again.
+// install says why; Remove; found ready (Node back), the chats are told.
 func TestSetUp(t *testing.T) {
 	bin := t.TempDir()
 	fakeCLI(t, bin, "claude", "2.1.310")
@@ -188,7 +187,6 @@ func TestSetUp(t *testing.T) {
 	}
 	chats.ready = nil
 	fakeCLI(t, bin, "node", "v26.1.0")
-	svc.List(context.Background())
 	svc.List(context.Background())
 	if !slices.Equal(chats.ready, []string{"claude"}) {
 		t.Errorf("found ready again: told %q", chats.ready)
