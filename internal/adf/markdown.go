@@ -22,13 +22,30 @@ func ToMarkdown(doc Node, media Media) string {
 
 type writer struct {
 	media Media
+	// alt marks a list with "*" or "1)": it follows a list of its kind,
+	// which a list marked the same way would join.
+	alt bool
+}
+
+func listKind(n Node) string {
+	switch n.Type {
+	case "bulletList", "taskList", "decisionList":
+		return "-"
+	case "orderedList":
+		return "1."
+	}
+	return ""
 }
 
 // blocks renders a run of blocks; inline nodes among them (a taskItem's
 // content, a malformed doc) make a paragraph of their own.
 func (w writer) blocks(nodes []Node, sep string) string {
 	var out []string
+	prev, alt := "", false
 	for i := 0; i < len(nodes); i++ {
+		kind := listKind(nodes[i])
+		alt = kind != "" && kind == prev && !alt
+		prev = kind
 		if !isBlock(nodes[i]) {
 			j := i
 			for j < len(nodes) && !isBlock(nodes[j]) {
@@ -38,7 +55,9 @@ func (w writer) blocks(nodes []Node, sep string) string {
 			i = j - 1
 			continue
 		}
-		if s := w.block(nodes[i]); s != "" {
+		bw := w
+		bw.alt = alt
+		if s := bw.block(nodes[i]); s != "" {
 			out = append(out, s)
 		}
 	}
@@ -55,13 +74,20 @@ func (w writer) block(n Node) string {
 		level, _ := strconv.Atoi(n.attr("level"))
 		return strings.Repeat("#", min(max(level, 1), 6)) + " " + w.inline(n.Content)
 	case "bulletList", "taskList", "decisionList":
+		if w.alt {
+			return w.list(n, func(int) string { return "* " })
+		}
 		return w.list(n, func(int) string { return "- " })
 	case "orderedList":
 		start, err := strconv.Atoi(n.attr("order"))
 		if err != nil {
 			start = 1
 		}
-		return w.list(n, func(i int) string { return strconv.Itoa(start+i) + ". " })
+		delim := ". "
+		if w.alt {
+			delim = ") "
+		}
+		return w.list(n, func(i int) string { return strconv.Itoa(start+i) + delim })
 	case "codeBlock":
 		return fence(textOf(n), n.attr("language"))
 	case "blockquote":
@@ -109,6 +135,8 @@ func (w writer) unknown(n Node, block bool) string {
 // list renders a list's items, each after its marker, what follows the
 // first line indented under it.
 func (w writer) list(n Node, marker func(int) string) string {
+	inner := w
+	inner.alt = false // for the lists in it
 	var items []string
 	for i, it := range n.Content {
 		m := marker(i)
@@ -120,15 +148,15 @@ func (w writer) list(n Node, marker func(int) string) string {
 				box = "[x] "
 			}
 			m += box
-			body = w.blocks(it.Content, "\n")
+			body = inner.blocks(it.Content, "\n")
 		case "decisionItem":
 			m += "✔ "
-			body = w.blocks(it.Content, "\n")
+			body = inner.blocks(it.Content, "\n")
 		case "taskList", "bulletList", "orderedList", "decisionList": // nested without an item
-			items = append(items, indent(w.block(it), "  "))
+			items = append(items, indent(inner.block(it), "  "))
 			continue
 		default:
-			body = w.itemBody(it.Content)
+			body = inner.itemBody(it.Content)
 		}
 		items = append(items, m+indent(body, strings.Repeat(" ", len(m))))
 	}
@@ -202,7 +230,7 @@ func (w writer) mediaRef(m Node) string {
 		name, ref = w.media(m.attr("id"))
 	}
 	name = cmp.Or(name, m.attr("alt"), "attachment")
-	if ref == "" {
+	if !strings.HasPrefix(ref, AttachmentScheme) {
 		return "\\[" + escape(name) + "\\]"
 	}
 	return "![" + escape(name) + "](" + dest(ref) + ")"
@@ -242,7 +270,7 @@ var atlassianEmoji = map[string]string{"check_mark": "✅", "cross_mark": "❌",
 	"star_yellow": "⭐", "thumbs_up": "👍", "thumbs_down": "👎"}
 
 func emoji(n Node) string {
-	if t := n.attr("text"); t != "" && !strings.HasPrefix(t, ":") {
+	if t := n.attr("text"); isEmoji(t) {
 		return t
 	}
 	short := n.attr("shortName")
@@ -250,6 +278,27 @@ func emoji(n Node) string {
 		return e
 	}
 	return escape(short)
+}
+
+// isEmoji says text is a few emoji or symbols, nothing Markdown reads.
+func isEmoji(text string) bool {
+	r := []rune(text)
+	if len(r) == 0 || len(r) > 12 {
+		return false
+	}
+	for _, c := range r {
+		if !symbol(c) {
+			return false
+		}
+	}
+	return true
+}
+
+// symbol is a rune emoji are made of: symbols, modifiers, joiners,
+// variation selectors, skin tones, tags.
+func symbol(c rune) bool {
+	return c >= 0x80 && (unicode.Is(unicode.So, c) || unicode.Is(unicode.Sk, c) || unicode.Is(unicode.Mn, c) ||
+		c == 0x200d || c >= 0xfe00 && c <= 0xfe0f || c >= 0x1f3fb && c <= 0x1f3ff || c >= 0xe0020 && c <= 0xe007f)
 }
 
 // marked is a text with its marks: a link outside, code inside. Spaces at
@@ -285,13 +334,16 @@ func marked(n Node) string {
 			href = m.attr("href")
 		}
 	}
-	if href != "" {
+	if safe(href) {
 		s = "[" + s + "](" + dest(href) + ")"
 	}
 	return text[:lead] + s + text[len(text)-trail:]
 }
 
 func code(s string) string {
+	// A code span reads a line break as a space; one left in could let
+	// the next line start a block (a heading, HTML) and end the span.
+	s = strings.NewReplacer("\r\n", " ", "\n", " ", "\r", " ").Replace(s)
 	ticks := "`"
 	for strings.Contains(s, ticks) {
 		ticks += "`"
@@ -303,6 +355,9 @@ func code(s string) string {
 }
 
 func fence(s, lang string) string {
+	if strings.TrimLeft(lang, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_+#.-") != "" {
+		lang = "" // only a language's name may follow the fence
+	}
 	f := "```"
 	for strings.Contains(s, f) {
 		f += "`"
@@ -311,15 +366,27 @@ func fence(s, lang string) string {
 }
 
 func link(text, href string) string {
-	if href == "" {
+	if !safe(href) {
 		return escape(text)
 	}
 	return "[" + escape(text) + "](" + dest(href) + ")"
 }
 
-// dest makes a URL safe as a link's destination.
+// AttachmentScheme is the scheme of the links a Media lookup may give.
+const AttachmentScheme = "jira-attachment:"
+
+// safe says a link may go into the Markdown: http, https and mailto only
+// (an issue's text is anyone's who can edit it; a file: or an app's own
+// scheme could open something on the Mac).
+func safe(href string) bool {
+	h := strings.ToLower(strings.TrimSpace(href))
+	return strings.HasPrefix(h, "https://") || strings.HasPrefix(h, "http://") || strings.HasPrefix(h, "mailto:")
+}
+
+// dest makes a URL safe as a link's destination: nothing in it can end
+// the destination or the link.
 func dest(href string) string {
-	return strings.NewReplacer(" ", "%20", "(", "%28", ")", "%29", "<", "%3C", ">", "%3E").Replace(href)
+	return strings.NewReplacer(" ", "%20", "(", "%28", ")", "%29", "<", "%3C", ">", "%3E", "\n", "%0A", "\r", "%0D", "\\", "%5C").Replace(href)
 }
 
 func date(ms string) string {
@@ -371,7 +438,7 @@ func escape(s string) string {
 			}
 		}
 		b.WriteRune(c)
-		lineStart = c == '\n' || lineStart && c == ' '
+		lineStart = c == '\n' || c == '\r' || lineStart && c == ' '
 	}
 	return b.String()
 }
