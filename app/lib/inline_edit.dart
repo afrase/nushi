@@ -53,6 +53,9 @@ class _InlineEditState extends State<InlineEdit> {
     _focus.addListener(() {
       if (!_focus.hasFocus) _finish(save: true);
     });
+    // Not autofocus: that does nothing where something else in the scope
+    // has the focus (the New chat dialog's keys).
+    _focus.requestFocus();
   }
 
   @override
@@ -79,7 +82,6 @@ class _InlineEditState extends State<InlineEdit> {
       child: TextField(
         controller: _text,
         focusNode: _focus,
-        autofocus: true,
         style: widget.style ?? theme.ui(theme.t.text),
         onSubmitted: (_) => _finish(save: true),
         onTapOutside: (_) => _finish(save: true),

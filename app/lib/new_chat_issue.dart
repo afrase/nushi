@@ -88,45 +88,55 @@ class IssueLines extends StatelessWidget {
           ),
         ),
         if (inFolder)
-          Tap(
-            onTap: onWorktree,
-            padding: _pad,
-            child: Row(
-              children: [
-                Icon(
-                  issue.worktree
-                      ? Icons.check_box
-                      : Icons.check_box_outline_blank,
-                  size: 16,
-                  color: t.textSecondary,
+          // The branch's field isn't inside the line's Tap: Enter there
+          // would activate the Tap rather than submit the field.
+          Row(
+            children: [
+              Tap(
+                onTap: onWorktree,
+                padding: _pad,
+                child: Row(
+                  children: [
+                    Icon(
+                      issue.worktree
+                          ? Icons.check_box
+                          : Icons.check_box_outline_blank,
+                      size: 16,
+                      color: t.textSecondary,
+                    ),
+                    const SizedBox(width: 12),
+                    Text('In a new worktree on', style: small),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Text('In a new worktree on ', style: small),
-                Expanded(
-                  child: editingBranch
-                      ? SizedBox(
-                          height: 22,
-                          child: InlineEdit(
-                            text: issue.branch,
-                            onDone: onBranch,
-                            style: theme.code(t.text, size: 12),
-                          ),
-                        )
-                      : Tap(
-                          onTap: onEditBranch,
-                          tooltip: 'Change the branch (B)',
-                          child: Text(
-                            issue.branch,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.code(t.text, size: 12),
-                          ),
+              ),
+              Expanded(
+                child: editingBranch
+                    ? SizedBox(
+                        height: 22,
+                        child: InlineEdit(
+                          text: issue.branch,
+                          onDone: onBranch,
+                          style: theme.code(t.text, size: 12),
                         ),
-                ),
-                const SizedBox(width: 8),
-                keyHint(context, 'W'),
-              ],
-            ),
+                      )
+                    : Tap(
+                        onTap: onEditBranch,
+                        tooltip: 'Change the branch (B)',
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Text(
+                          issue.branch,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.code(t.text, size: 12),
+                        ),
+                      ),
+              ),
+              const SizedBox(width: 8),
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: keyHint(context, 'W'),
+              ),
+            ],
           ),
       ],
     );
