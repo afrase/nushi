@@ -52,6 +52,14 @@ func startRemote(t *testing.T, dir, relayURL string) *Service {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// A device's channel ends after the Service closes, and saves the
+	// device's last-seen time as it does: wait for that (this runs after
+	// Close, registered below) before the test's folder goes.
+	t.Cleanup(func() {
+		waitFor(t, func() bool {
+			return !slices.ContainsFunc(s.Get().Devices, func(d model.Device) bool { return d.Connected })
+		})
+	})
 	t.Cleanup(s.Close)
 	if err := s.Set(true, relayURL); err != nil {
 		t.Fatal(err)
@@ -189,18 +197,7 @@ func TestPairThenConnect(t *testing.T) {
 	}), nil)))
 	url := startRelay(t)
 	dir := t.TempDir()
-	// A device's channel ends after its Service closes, and saves the
-	// device's last-seen time as it does: wait for that before dir goes.
-	var services []*Service
-	t.Cleanup(func() {
-		for _, s := range services {
-			waitFor(t, func() bool {
-				return !slices.ContainsFunc(s.Get().Devices, func(d model.Device) bool { return d.Connected })
-			})
-		}
-	})
 	s := startRemote(t, dir, url)
-	services = append(services, s)
 	phone := newKey(t)
 	o, id := pairOne(t, s, phone)
 	logMu.Lock()
@@ -237,7 +234,6 @@ func TestPairThenConnect(t *testing.T) {
 	// After a daemon restart the device is still paired, the key the same.
 	s.Close()
 	s2 := startRemote(t, dir, url)
-	services = append(services, s2)
 	if conn, err := phoneConnect(url, id, o.key, phone); err != nil || !talks(conn) {
 		t.Fatal("no connection after a restart", err)
 	}
