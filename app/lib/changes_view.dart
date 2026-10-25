@@ -20,7 +20,7 @@ import 'widgets.dart';
 /// (under the branch's commits in Commits) and the picked one side by
 /// side. It reloads when the agent finishes a turn.
 class ChangesView extends StatefulWidget {
-  const ChangesView({super.key, required this.chat, required this.daemon});
+  const new({super.key, required this.chat, required this.daemon});
 
   final ChatState chat;
   final Daemon daemon;

@@ -8,7 +8,7 @@ import 'settings.dart';
 /// One chat's transcript and status: a snapshot from the daemon, kept
 /// current by the chat's later events.
 class ChatState extends ChangeNotifier {
-  ChatState(this.id, this.folder);
+  new(this.id, this.folder);
 
   final String id;
   String folder; // it can move (MoveChat)

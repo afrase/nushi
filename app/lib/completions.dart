@@ -13,7 +13,7 @@ import 'widgets.dart';
 /// `/` the agent's commands, anywhere after `@` the chat folder's files.
 /// The files picked go in [mentions].
 class Completions extends ChangeNotifier {
-  Completions(this.text, this.mentions, this.chat, this.daemon) {
+  new(this.text, this.mentions, this.chat, this.daemon) {
     text.addListener(_update);
   }
 
@@ -153,12 +153,7 @@ List<String> rankChoices(Iterable<String> names, String q) {
 
 /// The completions over the prompt box, the picked one highlighted.
 class ChoiceList extends StatelessWidget {
-  const ChoiceList(
-    this.choices,
-    this.picked, {
-    super.key,
-    required this.onPick,
-  });
+  const new(this.choices, this.picked, {super.key, required this.onPick});
 
   final List<Choice> choices;
   final int picked;

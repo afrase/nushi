@@ -10,7 +10,7 @@ import 'widgets.dart';
 /// `+n −m`. A click picks one; a shift-click picks the range from the
 /// first pick to it ([onPick] says which and whether to extend).
 class CommitList extends StatelessWidget {
-  const CommitList({
+  const new({
     super.key,
     required this.commits,
     required this.picked,

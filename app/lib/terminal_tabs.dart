@@ -31,7 +31,7 @@ Future<void> closeTerminal(
 /// The panel's tab bar: a tab per terminal (drag to reorder, double-click
 /// to rename), "+" for a new one, and a button that hides the panel.
 class TerminalTabs extends StatelessWidget {
-  const TerminalTabs({
+  const new({
     super.key,
     required this.chatId,
     required this.terms,
@@ -90,7 +90,7 @@ class TerminalTabs extends StatelessWidget {
 }
 
 class _Tab extends StatefulWidget {
-  const _Tab({required this.info, required this.terms, required this.active});
+  const new({required this.info, required this.terms, required this.active});
 
   final pb.Terminal info;
   final Terminals terms;

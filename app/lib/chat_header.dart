@@ -16,7 +16,7 @@ import 'widgets.dart';
 /// Chat | Changes switch, the terminal's and the panel's buttons and the
 /// chat's menu.
 class ChatHeader extends StatefulWidget {
-  const ChatHeader(
+  const new(
     this.chat,
     this.daemon, {
     super.key,

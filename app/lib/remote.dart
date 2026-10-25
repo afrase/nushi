@@ -22,7 +22,7 @@ const _states = {
 /// Settings → Remote access: the switch, the relay, the state, pairing a
 /// phone, and the paired phones.
 class RemoteSection extends StatefulWidget {
-  const RemoteSection(this.client, {super.key});
+  const new(this.client, {super.key});
 
   final NushiServiceClient client;
 
@@ -207,7 +207,7 @@ void watchPairings(
 }
 
 class _Pairing extends StatelessWidget {
-  const _Pairing(this.client, this.qr);
+  const new(this.client, this.qr);
 
   final NushiServiceClient client;
   final String qr; // empty when another client started the pairing
@@ -315,7 +315,7 @@ class _Pairing extends StatelessWidget {
 }
 
 class _QrPainter extends CustomPainter {
-  _QrPainter(String text)
+  new(String text)
     : _image = QrImage(QrCode(payload: QrPayload.fromString(text)));
 
   final QrImage _image;
@@ -343,7 +343,7 @@ class _QrPainter extends CustomPainter {
 /// The status bar's mark while remote access is on, in red when it can't
 /// reach the relay.
 class RemoteMark extends StatelessWidget {
-  const RemoteMark({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) {

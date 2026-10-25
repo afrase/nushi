@@ -28,7 +28,7 @@ Future<void> tryOrShow(
 /// A quiet pressable area: a light tint under the pointer or when
 /// [selected], no ripple.
 class Tap extends StatefulWidget {
-  const Tap({
+  const new({
     super.key,
     required this.onTap,
     required this.child,
@@ -88,7 +88,7 @@ class _TapState extends State<Tap> {
 
 /// A small icon button.
 class IconTap extends StatelessWidget {
-  const IconTap(
+  const new(
     this.icon, {
     super.key,
     required this.tooltip,
@@ -136,7 +136,7 @@ enum ButtonKind {
 /// A compact button with an optional leading [icon] and a shortcut [hint]
 /// after the label.
 class Button extends StatelessWidget {
-  const Button({
+  const new({
     super.key,
     required this.label,
     required this.onPressed,
@@ -266,7 +266,7 @@ Widget keyHint(BuildContext context, String keys, {Color? color}) {
 
 /// One choice of a few (`Chat | Changes`).
 class Segmented<T> extends StatelessWidget {
-  const Segmented({
+  const new({
     super.key,
     required this.value,
     required this.segments,
@@ -307,7 +307,7 @@ class Segmented<T> extends StatelessWidget {
 
 /// The chevron of something that opens: down while [open].
 class Chevron extends StatelessWidget {
-  const Chevron({required this.open, super.key, this.size = 14, this.color});
+  const new({required this.open, super.key, this.size = 14, this.color});
 
   final bool open;
   final double size;
@@ -323,7 +323,7 @@ class Chevron extends StatelessWidget {
 
 /// A tool call's title (a command) whole, wrapped, in monospace.
 class FullTitle extends StatelessWidget {
-  const FullTitle(this.title, {super.key});
+  const new(this.title, {super.key});
 
   final String title;
 

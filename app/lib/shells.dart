@@ -69,7 +69,7 @@ Widget shellStateText(BuildContext context, Item it, TextStyle style) =>
 /// the command, its state, and its output as far as the daemon has read
 /// it. Back and × as in SubagentPane.
 class ShellPane extends StatelessWidget {
-  const ShellPane({
+  const new({
     super.key,
     required this.chat,
     required this.id,

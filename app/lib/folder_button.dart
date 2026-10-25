@@ -54,7 +54,7 @@ List<MenuEntry> folderEntries(
 /// the recent folders and "Choose folder…", and moves the chat to the one
 /// picked. Not while the agent works or waits on the user.
 class FolderButton extends StatelessWidget {
-  const FolderButton({
+  const new({
     super.key,
     required this.chat,
     required this.daemon,

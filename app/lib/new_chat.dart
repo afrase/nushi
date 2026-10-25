@@ -19,7 +19,7 @@ const newChatKey = SingleActivator(LogicalKeyboardKey.keyN, meta: true);
 
 /// ⌘N from a widget that keeps the key for itself (a terminal).
 class NewChatIntent extends Intent {
-  const NewChatIntent();
+  const new();
 }
 
 /// Asks which agent a new chat in [folder] ('' for none) runs, then
@@ -51,7 +51,7 @@ Future<void> newChat(BuildContext context, Daemon daemon, String folder) async {
 /// row under them) lists the selected agent's sessions instead
 /// (SessionList), ← comes back.
 class _NewChat extends StatefulWidget {
-  const _NewChat(this.daemon, this.folder);
+  const new(this.daemon, this.folder);
 
   final Daemon daemon;
   final String folder;
@@ -269,7 +269,7 @@ String _an(String word) =>
 /// "[before]Settings › Agents" with the second part a link, for when no
 /// agent can start yet.
 class _SetUpLine extends StatelessWidget {
-  const _SetUpLine(this.before, {required this.onTap});
+  const new(this.before, {required this.onTap});
 
   final String before;
   final VoidCallback onTap;
@@ -293,7 +293,7 @@ class _SetUpLine extends StatelessWidget {
 /// The pane with no chat open: "Start a chat", or, while no agent can
 /// start, where to set one up.
 class NothingOpen extends StatelessWidget {
-  const NothingOpen(this.daemon, {super.key});
+  const new(this.daemon, {super.key});
 
   final Daemon daemon;
 

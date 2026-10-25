@@ -7,7 +7,7 @@ import 'widgets.dart';
 /// The agent's thinking: a dim "Thinking" line that opens to the thoughts,
 /// with a spinner while they stream ([live]).
 class ThoughtView extends StatefulWidget {
-  const ThoughtView(this.item, {super.key, required this.live});
+  const new(this.item, {super.key, required this.live});
 
   final Item item;
   final bool live;
@@ -63,7 +63,7 @@ class _ThoughtViewState extends State<ThoughtView> {
 
 /// The agent's plan as a checklist, ticked off as the agent works.
 class PlanView extends StatelessWidget {
-  const PlanView(this.item, {super.key});
+  const new(this.item, {super.key});
 
   final Item item;
 
@@ -131,7 +131,7 @@ class PlanView extends StatelessWidget {
 /// The current step of the turn's plan, one line above the composer while
 /// the agent works, as the plan itself may have scrolled away.
 class PlanStatus extends StatelessWidget {
-  const PlanStatus(this.plan, {super.key});
+  const new(this.plan, {super.key});
 
   final Item plan;
 

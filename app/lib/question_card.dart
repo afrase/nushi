@@ -20,7 +20,7 @@ typedef _Question = ({Field field, Field? other});
 /// and Enter moves on. ↑/↓ move through the options. A single question has
 /// no tabs, and picking an option sends it at once.
 class QuestionCard extends StatefulWidget {
-  const QuestionCard(
+  const new(
     this.item, {
     super.key,
     required this.agent,

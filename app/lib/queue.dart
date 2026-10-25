@@ -9,7 +9,7 @@ import 'widgets.dart';
 /// The messages waiting for the agent, as pills over the composer: a click
 /// takes one back to edit ([onEdit]), × drops it ([onRemove]).
 class QueuePills extends StatelessWidget {
-  const QueuePills(
+  const new(
     this.chat, {
     super.key,
     required this.onEdit,

@@ -3,7 +3,7 @@ import 'package:flutter/widgets.dart';
 /// The POC's Workbench colors for one brightness.
 @immutable
 class Tokens {
-  const Tokens({
+  const new({
     required this.brightness,
     required this.base,
     required this.raised,

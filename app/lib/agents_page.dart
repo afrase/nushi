@@ -15,7 +15,7 @@ import 'widgets.dart';
 /// path, or "Not installed" with where to get it), and for one that runs
 /// through an adapter, Set up, Update and Remove (ADR 0037).
 class AgentsPage extends StatefulWidget {
-  const AgentsPage(this.client, {super.key});
+  const new(this.client, {super.key});
 
   final NushiServiceClient client;
 
@@ -74,7 +74,7 @@ String _mb(int bytes) => '${(bytes / 1e6).round()} MB';
 
 /// One agent: its mark and name, what was found, and what can be done.
 class AgentRow extends StatelessWidget {
-  const AgentRow(
+  const new(
     this.agent, {
     super.key,
     required this.client,
@@ -205,7 +205,7 @@ Future<void> setUpAdapter(
 );
 
 class _SetUp extends StatefulWidget {
-  const _SetUp(this.client, this.agent);
+  const new(this.client, this.agent);
 
   final NushiServiceClient client;
   final Agent agent;

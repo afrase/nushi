@@ -11,7 +11,7 @@ import 'widgets.dart';
 /// What a kind of tool call does: its icon, what it did ("read") to what
 /// ("file"), its verb on a path ("Read") and what it is doing ("Reading").
 class ToolKind {
-  const ToolKind(this.icon, this.did, this.what, [this.verb, this.doing]);
+  const new(this.icon, this.did, this.what, [this.verb, this.doing]);
 
   final IconData icon;
   final String did, what;
@@ -110,7 +110,7 @@ String groupLabel(List<Item> calls) {
 /// red when [failed]. Given [ids] (its call's, or its group's and its
 /// first call's), it opens as it was left, rebuilt or not.
 class Collapsible extends StatefulWidget {
-  const Collapsible({
+  const new({
     super.key,
     required this.header,
     required this.body,
@@ -199,12 +199,7 @@ Widget _status(NushiTheme theme, {required bool running, String failed = ''}) =>
 /// One tool call: a one-line summary by kind (the file read or edited, the
 /// command run, `+n −m` for an edit) that opens to its output and diffs.
 class ToolCallView extends StatelessWidget {
-  const ToolCallView(
-    this.item, {
-    super.key,
-    this.images = true,
-    this.still = false,
-  });
+  const new(this.item, {super.key, this.images = true, this.still = false});
 
   final Item item;
 
@@ -325,7 +320,7 @@ Widget _withImages(List<ImageData> images, Widget child) => images.isEmpty
 /// A run of tool calls as one line ("Read 4 files, ran 2 commands") that
 /// opens to each call.
 class ToolGroupView extends StatelessWidget {
-  const ToolGroupView(this.calls, {super.key, this.still = false});
+  const new(this.calls, {super.key, this.still = false});
 
   final List<Item> calls;
   final bool still; // as ToolCallView's

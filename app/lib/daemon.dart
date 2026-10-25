@@ -40,7 +40,7 @@ const apiVersion = 51;
 /// stopped by [restartDaemon].
 class Daemon extends ChangeNotifier {
   /// A test passes a [transport] of its own.
-  Daemon({connect.Transport? transport}) {
+  new({connect.Transport? transport}) {
     client = NushiServiceClient(
       transport ??
           protocol.Transport(

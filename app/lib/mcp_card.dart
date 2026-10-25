@@ -35,7 +35,7 @@ PanelCard mcpCard(ChatState chat, Daemon daemon) {
 }
 
 class _Servers extends StatelessWidget {
-  const _Servers(this.list, this.daemon);
+  const new(this.list, this.daemon);
 
   final McpServers list;
   final Daemon daemon;

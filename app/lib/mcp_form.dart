@@ -23,7 +23,7 @@ final _name = RegExp(r'^[A-Za-z0-9_][A-Za-z0-9_-]*$'); // as the daemon checks
 const _known = {'type', 'command', 'args', 'env', 'url', 'headers'};
 
 class _Form extends StatefulWidget {
-  const _Form(this.list, this.server);
+  const new(this.list, this.server);
 
   final McpServers list;
   final McpServer? server;

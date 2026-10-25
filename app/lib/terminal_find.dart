@@ -72,7 +72,7 @@ Future<void> openLink(
 /// and scrolls to the current one, starting from the latest. Enter goes to
 /// the one before (up), Shift-Enter back down, Escape closes it.
 class FindBar extends StatefulWidget {
-  const FindBar({super.key, required this.session});
+  const new({super.key, required this.session});
 
   final TermSession session;
 

@@ -14,7 +14,7 @@ import 'widgets.dart';
 /// A side question: a forked session beside the chat, which knows the
 /// conversation so far but doesn't add to it. Closing it ends it.
 class SidePanel extends StatelessWidget {
-  const SidePanel({
+  const new({
     super.key,
     required this.side,
     required this.daemon,

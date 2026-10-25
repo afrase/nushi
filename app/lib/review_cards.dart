@@ -9,7 +9,7 @@ import 'widgets.dart';
 /// Remove on hover; dimmed once sent. An outdated one (its lines are gone)
 /// shows above the file with the lines it was on.
 class CommentCard extends StatefulWidget {
-  const CommentCard(
+  const new(
     this.comment, {
     super.key,
     required this.onEdit,
@@ -89,7 +89,7 @@ class _CommentCardState extends State<CommentCard> {
 /// The box to write a comment in, under the lines it's on: Enter saves it,
 /// Shift-Enter adds a line, Escape drops it.
 class CommentBox extends StatefulWidget {
-  const CommentBox({
+  const new({
     super.key,
     required this.lines,
     required this.controller,
@@ -181,7 +181,7 @@ class _CommentBoxState extends State<CommentBox> {
 
 /// An inline box between a diff's lines, with an accent bar on its left.
 class _Inlay extends StatelessWidget {
-  const _Inlay({required this.child});
+  const new({required this.child});
 
   final Widget child;
 

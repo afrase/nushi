@@ -34,7 +34,7 @@ TextDiff _diff((String, String, String) d) =>
 /// a box for a comment on those lines, and the chat's comments made in
 /// that view show under their lines.
 class DiffBox extends StatefulWidget {
-  const DiffBox(this.change, {super.key, this.fit = true, this.review});
+  const new(this.change, {super.key, this.fit = true, this.review});
 
   final FileChange change;
   final bool fit;

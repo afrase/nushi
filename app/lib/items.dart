@@ -15,7 +15,7 @@ import 'tool_calls.dart';
 
 /// One item of a transcript, by its kind.
 class ItemView extends StatelessWidget {
-  const ItemView(
+  const new(
     this.item,
     this.chat,
     this.daemon, {

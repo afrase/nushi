@@ -19,7 +19,7 @@ const _every = Duration(seconds: 5);
 /// sleep, and the memory Nushi takes (agents, daemon, app), which opens a
 /// list of the awake chats, each with Sleep.
 class StatusBar extends StatefulWidget {
-  const StatusBar(this.daemon, {super.key});
+  const new(this.daemon, {super.key});
 
   final Daemon daemon;
 
@@ -109,7 +109,7 @@ class _StatusBarState extends State<StatusBar> {
 }
 
 class _Dot extends StatelessWidget {
-  const _Dot(this.color, {this.filled = false});
+  const new(this.color, {this.filled = false});
 
   final Color color;
   final bool filled;
@@ -133,12 +133,7 @@ String bytes(int n) => n >= 1000 << 20
 
 /// The total, and on a click what makes it up; [onOpen] reads it again.
 class _MemoryButton extends StatelessWidget {
-  const _MemoryButton(
-    this.m,
-    this.daemon, {
-    required this.onOpen,
-    required this.style,
-  });
+  const new(this.m, this.daemon, {required this.onOpen, required this.style});
 
   final GetMemoryResponse m;
   final Daemon daemon;

@@ -29,7 +29,7 @@ import 'worktree.dart';
 /// the folder's files (sent as links); Up in an empty box brings back the
 /// last prompt.
 class Composer extends StatefulWidget {
-  const Composer({
+  const new({
     super.key,
     required this.chat,
     required this.daemon,

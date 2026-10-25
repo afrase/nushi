@@ -9,7 +9,7 @@ import 'widgets.dart';
 /// to edit its text, and hovering one shows a button that removes it.
 /// [onDone] runs when the editing ends (the composer takes the focus back).
 class ReplyCards extends StatelessWidget {
-  const ReplyCards(this.replies, {super.key, required this.onDone});
+  const new(this.replies, {super.key, required this.onDone});
 
   final Replies replies;
   final VoidCallback onDone;
@@ -41,7 +41,7 @@ class ReplyCards extends StatelessWidget {
 }
 
 class _ReplyCard extends StatefulWidget {
-  const _ReplyCard(this.reply, {required this.onTap, required this.onRemove});
+  const new(this.reply, {required this.onTap, required this.onRemove});
 
   final Reply reply;
   final VoidCallback onTap;
@@ -110,7 +110,7 @@ class _ReplyCardState extends State<_ReplyCard> {
 /// A reply opened from its card: the quote, and its text to edit. Save (or
 /// Enter) returns the text; Escape keeps it as it was.
 class _ReplyDialog extends StatefulWidget {
-  const _ReplyDialog(this.reply);
+  const new(this.reply);
 
   final Reply reply;
 

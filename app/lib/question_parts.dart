@@ -8,7 +8,7 @@ import 'widgets.dart';
 /// One of a question's options: its [digit], a radio button or, for
 /// [many], a check box, its name and description. [at]: ↑/↓ are on it.
 class QuestionOption extends StatelessWidget {
-  const QuestionOption(
+  const new(
     this.option, {
     super.key,
     required this.digit,
@@ -70,7 +70,7 @@ class QuestionOption extends StatelessWidget {
 
 /// A question that is no longer waiting: what was answered.
 class AnsweredQuestion extends StatelessWidget {
-  const AnsweredQuestion(this.item, {super.key});
+  const new(this.item, {super.key});
 
   final Item item;
 

@@ -11,12 +11,7 @@ import 'theme/theme.dart';
 /// Agent markdown in the theme's fonts and colors. Links open in the
 /// browser, http and https only; images as [markdownImage] shows them.
 class AgentMarkdown extends StatelessWidget {
-  const AgentMarkdown(
-    this.text, {
-    super.key,
-    this.typed = false,
-    this.live = false,
-  });
+  const new(this.text, {super.key, this.typed = false, this.live = false});
 
   final String text;
 

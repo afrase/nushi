@@ -44,7 +44,7 @@ List<Object> _entries(List<Item> items) {
 /// subagent's steps) it shows those instead, between [header] and
 /// [footer], [live] while more come.
 class Transcript extends StatefulWidget {
-  const Transcript({
+  const new({
     super.key,
     required this.chat,
     required this.daemon,
@@ -307,7 +307,7 @@ class _TranscriptState extends State<Transcript> {
 /// Places its child centered just above [at] (a selection's top and bottom
 /// middle), or below it when there is no room above, inside the box.
 class _Above extends SingleChildLayoutDelegate {
-  _Above(this.at);
+  new(this.at);
 
   final Rect at;
 

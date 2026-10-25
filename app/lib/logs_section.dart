@@ -18,7 +18,7 @@ Future<void> showLogs() async {
 /// Settings' Logs: Show logs, and whether the daemon's log has DEBUG lines
 /// ([debug] null: the daemon didn't say, so no switch).
 class LogsSection extends StatelessWidget {
-  const LogsSection({
+  const new({
     super.key,
     required this.debug,
     required this.onDebug,

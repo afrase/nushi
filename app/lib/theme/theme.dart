@@ -20,7 +20,7 @@ BoxDecoration box(
 /// Material's theme is derived from the tokens, never the other way round.
 @immutable
 class NushiTheme extends ThemeExtension<NushiTheme> {
-  const NushiTheme(this.t);
+  const new(this.t);
 
   final Tokens t;
 
@@ -187,7 +187,7 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
 /// Scrolling as in a native macOS view: rubber-banding at the ends, and a
 /// thin overlay scrollbar that shows while scrolling, then fades.
 class NativeScroll extends MaterialScrollBehavior {
-  const NativeScroll();
+  const new();
 
   @override
   ScrollPhysics getScrollPhysics(BuildContext context) =>

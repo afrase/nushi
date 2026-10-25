@@ -6,7 +6,7 @@ import 'package:flutter/widgets.dart';
 /// and the light at the centre. The same drawing as the app icon
 /// (tools/icongen).
 class Logo extends StatelessWidget {
-  const Logo({required this.color, this.size = 72, super.key});
+  const new({required this.color, this.size = 72, super.key});
 
   final Color color;
   final double size;
@@ -32,7 +32,7 @@ const _beads = [
 ];
 
 class _Lake extends CustomPainter {
-  _Lake(this.color);
+  new(this.color);
 
   final Color color;
 

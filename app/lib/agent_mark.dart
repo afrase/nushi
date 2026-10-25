@@ -12,7 +12,7 @@ import 'theme/theme.dart';
 /// given): the agent's own icon where Nushi bundles one, else its initial
 /// on a rounded square. One mark per agent wherever a chat's agent shows.
 class AgentMark extends StatelessWidget {
-  const AgentMark(this.agent, {super.key, this.size = 14, this.color});
+  const new(this.agent, {super.key, this.size = 14, this.color});
 
   final String agent; // as Agent.name, such as "claude"
   final double size;
@@ -52,7 +52,7 @@ class AgentMark extends StatelessWidget {
 
 /// [path] drawn in [color], its [box] fitted and centred in the square.
 class _Mark extends CustomPainter {
-  _Mark(this.path, this.box, this.color);
+  new(this.path, this.box, this.color);
 
   final Path path;
   final Rect box;

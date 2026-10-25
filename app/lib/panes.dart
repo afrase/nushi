@@ -11,7 +11,7 @@ import 'theme/theme.dart';
 /// [initial]. The width is remembered across launches by [name]. With
 /// [top], the edge is on top and it is the pane's height.
 class Resizable extends StatefulWidget {
-  const Resizable({
+  const new({
     super.key,
     required this.name,
     required this.initial,
