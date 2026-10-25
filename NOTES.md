@@ -1147,6 +1147,7 @@ Open questions; what's settled is in `docs/adr/` or in the code.
 
 ## Later ideas
 
+- A redesign of the UI (the owner's wish, 2026-10-26): a fresh look at the whole app's design, not piecemeal fixes. To scope first with the owner: what feels wrong today, and the apps whose look to learn from.
 - Mobile, after milestone V (the research's plan, with the owner's decisions): the phone app (an iOS target in `app/`, a phone shell on `remote_transport` with `cryptography_flutter`, the device key in the Keychain, Face ID lock, reconnect and resync), an `Events` filter for cellular data, then pushes through a tiny gateway of the publisher's (ntfy until the $99 program). The phone app shows which Mac it is paired with (its name, and the relay; a forged QR code pairs it with someone else's daemon, ADR 0034), never replaces a pairing silently, and keeps `Remote.rendezvous` when it names another id than the one it dials (setting `RelayTransport.daemon`).
 
 - Show the plan's usage limits (session and weekly) for subscription users, if the agent exposes them. ACP doesn't today; claude-agent-acp 0.94.0 did put a `_meta._claude/rateLimit` (five-hour and seven-day utilization) on one `usage_update` (see ACP quirks), which isn't a stable interface.
