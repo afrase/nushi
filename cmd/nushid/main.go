@@ -45,6 +45,7 @@ import (
 	"github.com/afrase/nushi/internal/npm"
 	"github.com/afrase/nushi/internal/omp"
 	"github.com/afrase/nushi/internal/omptrust"
+	"github.com/afrase/nushi/internal/pig"
 	"github.com/afrase/nushi/internal/readonly"
 	"github.com/afrase/nushi/internal/store"
 	"github.com/afrase/nushi/internal/sysproxy"
@@ -56,6 +57,10 @@ import (
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == ante.Command { // the bridge Nushi runs Ante through
 		ante.Main()
+		return
+	}
+	if len(os.Args) > 1 && os.Args[1] == pig.Command { // and PiG
+		pig.Main()
 		return
 	}
 	// Until the daemon holds its socket, its lines go to stderr, which the
@@ -121,6 +126,7 @@ func run() error {
 			Adapter: &agents.Adapter{Lock: codex.Adapter, Package: codex.AdapterPackage, Bin: codex.AdapterBin, Download: codex.AdapterDownload, Disk: codex.AdapterDisk}},
 		{Name: "ante", Title: "Ante", CLI: ante.CLI, Also: ante.Also(), Page: ante.Page, Min: ante.Min, Tested: ante.Tested},
 		{Name: "omp", Title: "oh-my-pi", CLI: omp.CLI, Page: omp.Page, Needs: omp.Needs, Tested: omp.Tested},
+		{Name: "pig", Title: "PiG", CLI: pig.CLI, Page: pig.Page, Tested: pig.Tested},
 	}, readonly.Output, filepath.Join(dir, "agents"), npm.Installer{})
 	// The agents found on PATH, and their adapters (ADR 0037). A chat
 	// starts its agent through Run, and says more through Explain.
@@ -134,8 +140,8 @@ func run() error {
 		}
 	}
 	// What each agent does beyond ACP is in its own packages: internal/claude*,
-	// internal/codex*, internal/ante* (Ante's bridge too, ADR 0030) and
-	// internal/omp*.
+	// internal/codex*, internal/ante* (Ante's bridge too, ADR 0030),
+	// internal/omp* and internal/pig (PiG's bridge, ADR 0039).
 	claudeKind := chats.Kind{Name: "claude", Title: "Claude", Resume: "claude --resume", MCP: true,
 		Explain: agentSvc.Explain("claude"), Launch: launch("claude", func(r agents.Run, h acp.Handler, log *slog.Logger) (*acp.Client, error) {
 			return claude.Start(dir, r.Program, r.CLI, h, log)
@@ -163,9 +169,14 @@ func run() error {
 			return omp.Start(dir, r.CLI, h, log)
 		}),
 		Dialect: chats.Dialect{Other: omp.Other, ToolCall: omp.ToolCall}}
+	pigKind := chats.Kind{Name: "pig", Title: "PiG", Resume: pig.Resume,
+		Explain: agentSvc.Explain("pig"), Launch: launch("pig", func(_ agents.Run, h acp.Handler, log *slog.Logger) (*acp.Client, error) {
+			return pig.Start(dir, h, log)
+		}),
+		Dialect: chats.Dialect{ForkAt: pig.ForkAt}}
 	st := store.New(dir)
 	st.HadMessages = func(s model.Session) bool { return claudehistory.Has(projects, s.SessionID, s.Folder) }
-	chatSvc := chats.New([]chats.Kind{claudeKind, codexKind, anteKind, ompKind}, st, st, git.Worktrees{}, filepath.Join(dir, "scratch"), hub.Publish)
+	chatSvc := chats.New([]chats.Kind{claudeKind, codexKind, anteKind, ompKind, pigKind}, st, st, git.Worktrees{}, filepath.Join(dir, "scratch"), hub.Publish)
 	chatSvc.AutoSleep(st)
 	termSvc := terminals.New(startShell, filepath.Base(loginShell), chatSvc, hub.Publish)
 	chatSvc.UseTerminals(termSvc)
@@ -175,7 +186,7 @@ func run() error {
 	// paired device's channel (ADR 0034).
 	logs.SetDebug(st.DebugLog())
 	sv := api.Services{Log: st, Chats: chatSvc, Agents: agentSvc, MCP: mcp.New(claudemcp.Claude{}, chatSvc.MCPChanged), Terms: termSvc,
-		Trust: trust.New(map[string]trust.Agent{"claude": claudetrust.Trust{}, "codex": codextrust.Trust{}, "ante": antetrust.Trust{}, "omp": omptrust.Trust{}}, st),
+		Trust: trust.New(map[string]trust.Agent{"claude": claudetrust.Trust{}, "codex": codextrust.Trust{}, "ante": antetrust.Trust{}, "omp": omptrust.Trust{}, "pig": pig.Trust{}}, st),
 		Hub:   hub, Memory: memory.New(chatSvc)}
 	channels := newChannels()
 	if sv.Remote, err = remote.New(st, &relay.Dialer{Proxies: sysproxy.For}, channels.serve, keepAwake, hub.Publish); err != nil {

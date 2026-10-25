@@ -144,10 +144,11 @@ func lookPath(name string, also []string) string {
 	return ""
 }
 
-var versionRE = regexp.MustCompile(`\d+\.\d+(\.\d+)?([-+][0-9A-Za-z.-]+)?`)
+var versionRE = regexp.MustCompile(`\d+\.\d+(\.\d+)?(-[0-9A-Za-z.-]+)?`)
 
 // versionIn finds the version in what `--version` printed: "2.1.310
-// (Claude Code)", "codex-cli 0.163.0", "ante 0.2.14".
+// (Claude Code)", "codex-cli 0.163.0", "ante 0.2.14"; without build
+// metadata ("0.5.3+1.4.0.74f46864", PiG's, is 0.5.3).
 func versionIn(out string) string {
 	line, _, _ := strings.Cut(strings.TrimSpace(out), "\n")
 	return versionRE.FindString(line)
