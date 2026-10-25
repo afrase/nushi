@@ -12,7 +12,7 @@ import (
 // stuckWorktrees has a worktree with no work in it that won't go.
 type stuckWorktrees struct{}
 
-func (stuckWorktrees) Add(context.Context, string, string) (model.Worktree, string, error) {
+func (stuckWorktrees) Add(context.Context, string, string, string) (model.Worktree, string, error) {
 	return model.Worktree{}, "", errors.New("no")
 }
 func (stuckWorktrees) Inspect(context.Context, model.Worktree) (model.WorktreeState, error) {

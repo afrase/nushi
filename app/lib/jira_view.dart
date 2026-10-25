@@ -25,6 +25,13 @@ String _list = 'mine';
 String _jql = '';
 String? _key;
 
+/// Shows [key], an issue of [site], in the Jira view.
+void showIssue(Daemon daemon, String site, String key) {
+  _site = site;
+  _key = key;
+  daemon.showJira(open: true);
+}
+
 /// A list's tab: "mine", "sprint", "jql", or a saved search's index.
 String _label(String list, JiraSite site) => switch (list) {
   'mine' => 'Mine',
@@ -134,9 +141,7 @@ class _JiraViewState extends State<JiraView> {
         _issues = r.issues;
         _sprint = r.sprint;
         _error = null;
-        if (!_issues.any((i) => i.key == _key)) {
-          _key = _issues.firstOrNull?.key;
-        }
+        _key ??= _issues.firstOrNull?.key;
       });
     } on Object catch (e) {
       if (n == _asked && mounted && !quiet) {

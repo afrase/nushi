@@ -177,7 +177,17 @@ func (s *server) GetChat(_ context.Context, req *connect.Request[nushiv1.GetChat
 }
 
 func (s *server) StartChat(ctx context.Context, req *connect.Request[nushiv1.StartChatRequest]) (*connect.Response[nushiv1.StartChatResponse], error) {
-	id, err := s.chats.Start(ctx, req.Msg.Agent, req.Msg.Folder, req.Msg.Worktree)
+	var issue *model.ChatIssue
+	if m := req.Msg; m.JiraKey != "" {
+		if err := jira.CheckKey(m.JiraKey); err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		}
+		if m.Branch != "" && !jira.IsBranch(m.JiraKey, m.Branch) {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%q isn't a branch named after %s", m.Branch, m.JiraKey))
+		}
+		issue = &model.ChatIssue{Site: m.JiraSite, Key: m.JiraKey}
+	}
+	id, err := s.chats.StartOn(ctx, req.Msg.Agent, req.Msg.Folder, req.Msg.Worktree, issue, req.Msg.Branch)
 	if err != nil {
 		return nil, err
 	}

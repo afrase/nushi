@@ -32,6 +32,10 @@ class ChatState extends ChangeNotifier {
 
   String agent = ''; // the agent it runs, such as "claude"
   bool scratch = false; // its folder is a scratch folder: it has none yet
+
+  /// The Jira issue it was started from (its site and key), if it was.
+  String jiraSite = '';
+  String jiraKey = '';
   String title = '';
   bool archived = false; // no agent runs; read-only until unarchived
   DateTime created = DateTime.now();

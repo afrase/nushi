@@ -193,6 +193,12 @@ func (s *Service) Get(chatID string) (model.Chat, error) {
 // scratch folder of its own when folder is "". With worktree, the chat gets
 // a new git worktree of folder's repository and runs there.
 func (s *Service) Start(ctx context.Context, agent, folder string, worktree bool) (string, error) {
+	return s.StartOn(ctx, agent, folder, worktree, nil, "")
+}
+
+// StartOn is Start for a chat on a Jira issue, which it remembers; its
+// worktree, if it has one, is on branch (else a name of Nushi's).
+func (s *Service) StartOn(ctx context.Context, agent, folder string, worktree bool, issue *model.ChatIssue, branch string) (string, error) {
 	k, err := s.kindOf(agent)
 	if err != nil {
 		return "", err
@@ -207,7 +213,7 @@ func (s *Service) Start(ctx context.Context, agent, folder string, worktree bool
 		err = os.MkdirAll(folder, 0o700)
 	case worktree:
 		if err = CheckFolder(folder); err == nil {
-			wt, folder, err = s.addWorktree(ctx, folder)
+			wt, folder, err = s.addWorktree(ctx, folder, branch)
 		}
 	default:
 		err = CheckFolder(folder)
@@ -226,7 +232,7 @@ func (s *Service) Start(ctx context.Context, agent, folder string, worktree bool
 	}
 	c.mu.Lock()
 	s.useLocked(c, o)
-	c.session = model.Session{ID: c.id, SessionID: o.sid, Agent: k.Name, Folder: folder, Created: time.Now(), Worktree: wt, Scratch: scratch}
+	c.session = model.Session{ID: c.id, SessionID: o.sid, Agent: k.Name, Folder: folder, Created: time.Now(), Worktree: wt, Scratch: scratch, Issue: issue}
 	c.mu.Unlock()
 	if err := c.startMode(ctx, o.agent, o.sid, s.modes.Mode(k.Name)); err != nil {
 		c.log().Warn("starting mode", "err", err) // the chat keeps the agent's default

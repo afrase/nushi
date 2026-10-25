@@ -5,6 +5,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/chat_menu.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
+import 'package:nushi/jira_view.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/terminal_panel.dart';
@@ -109,6 +110,16 @@ class _ChatHeaderState extends State<ChatHeader> {
                     ),
                   ),
           ),
+          if (chat.jiraKey.isNotEmpty) ...[
+            const SizedBox(width: 10),
+            Tap(
+              tooltip: 'Show ${chat.jiraKey} in Jira',
+              onTap: () =>
+                  showIssue(widget.daemon, chat.jiraSite, chat.jiraKey),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              child: Text(chat.jiraKey, style: theme.code(t.link, size: 12)),
+            ),
+          ],
           const SizedBox(width: 14),
           AgentMark(chat.agent, size: 16, color: t.text),
           const SizedBox(width: 8),

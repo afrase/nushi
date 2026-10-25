@@ -24,21 +24,30 @@ class NewChatIntent extends Intent {
 
 /// Asks which agent a new chat in [folder] ('' for none) runs, then
 /// starts it there; or, a step further, opens one of the agent's sessions
-/// that isn't a chat (started in a terminal). Every way to start a chat
-/// comes through here.
-Future<void> newChat(BuildContext context, Daemon daemon, String folder) async {
+/// that isn't a chat (started in a terminal). A chat on a Jira [issue]
+/// also says whether it gets a worktree on the issue's branch. Every way
+/// to start a chat comes through here.
+Future<void> newChat(
+  BuildContext context,
+  Daemon daemon,
+  String folder, {
+  IssueChat? issue,
+}) async {
   if (daemon.starting != null) return;
   listAgents(daemon.client).ignore(); // as they are now, while it shows
   final pick = await showDialog<(String, FoundSession?)>(
     context: context,
-    builder: (_) => _NewChat(daemon, folder),
+    builder: (_) => _NewChat(daemon, folder, issue),
   );
   if (pick == null || !context.mounted) return;
   final (agent, session) = pick;
   if (agent.isEmpty || knownAgents[agent]?.ready == false) {
     await showSettings(context, daemon.client, agents: true);
   } else if (session == null) {
-    await tryOrShow(context, () => daemon.startChat(folder, agent));
+    await tryOrShow(
+      context,
+      () => daemon.startChat(folder, agent, issue: issue),
+    );
   } else if (await mayOpen(context, session) && context.mounted) {
     await tryOrShow(context, () => daemon.openSession(folder, agent, session));
   }
@@ -51,10 +60,11 @@ Future<void> newChat(BuildContext context, Daemon daemon, String folder) async {
 /// row under them) lists the selected agent's sessions instead
 /// (SessionList), ← comes back.
 class _NewChat extends StatefulWidget {
-  const new(this.daemon, this.folder);
+  const new(this.daemon, this.folder, this.issue);
 
   final Daemon daemon;
   final String folder;
+  final IssueChat? issue;
 
   @override
   State<_NewChat> createState() => _NewChatState();
@@ -106,8 +116,11 @@ class _NewChatState extends State<_NewChat> {
         setState(() => _at = (_at - 1 + n) % n);
       case LogicalKeyboardKey.enter || LogicalKeyboardKey.numpadEnter:
         _start(_at);
-      case LogicalKeyboardKey.arrowRight:
+      case LogicalKeyboardKey.arrowRight when widget.issue == null:
         _sessions(true);
+      case LogicalKeyboardKey.keyW
+          when widget.issue != null && widget.folder.isNotEmpty:
+        setState(() => widget.issue!.worktree = !widget.issue!.worktree);
       case _ when digit >= 1 && digit <= n && digit <= 9:
         _start(digit - 1);
       default:
@@ -153,9 +166,14 @@ class _NewChatState extends State<_NewChat> {
                       Padding(
                         padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
                         child: Text(
-                          folder.isEmpty
-                              ? 'New chat'
-                              : 'New chat in ${folderParts(folder).$1}',
+                          [
+                            if (widget.issue case final i?)
+                              'Chat on ${i.key}'
+                            else
+                              'New chat',
+                            if (folder.isNotEmpty)
+                              'in ${folderParts(folder).$1}',
+                          ].join(' '),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: theme.ui(t.text, weight: FontWeight.w600),
@@ -171,7 +189,17 @@ class _NewChatState extends State<_NewChat> {
                             onTap: () => Navigator.pop(context, ('', null)),
                           ),
                         ),
-                      if (agents.isNotEmpty) ...[
+                      if (widget.issue case final issue?
+                          when folder.isNotEmpty) ...[
+                        Divider(height: 9, color: t.borderSubtle),
+                        _WorktreeLine(
+                          issue,
+                          onTap: () => setState(() {
+                            issue.worktree = !issue.worktree;
+                          }),
+                        ),
+                      ],
+                      if (agents.isNotEmpty && widget.issue == null) ...[
                         Divider(height: 9, color: t.borderSubtle),
                         Tap(
                           onTap: () => _sessions(true),
@@ -321,6 +349,54 @@ class NothingOpen extends StatelessWidget {
             )
           else
             Text('Start a chat', style: theme.ui(theme.t.textMuted)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Whether a chat on an issue gets a worktree on the issue's branch; a
+/// click (or W) switches it.
+class _WorktreeLine extends StatelessWidget {
+  const new(this.issue, {required this.onTap});
+
+  final IssueChat issue;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    return Tap(
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      child: Row(
+        children: [
+          Icon(
+            issue.worktree ? Icons.check_box : Icons.check_box_outline_blank,
+            size: 16,
+            color: t.textSecondary,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: 'In a new worktree on ',
+                    style: theme.ui(t.textSecondary, size: 12.5),
+                  ),
+                  TextSpan(
+                    text: issue.branch,
+                    style: theme.code(t.text, size: 12),
+                  ),
+                ],
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          keyHint(context, 'W'),
         ],
       ),
     );

@@ -174,6 +174,14 @@ func (s *server) AddJiraComment(ctx context.Context, req *connect.Request[nushiv
 	return connect.NewResponse(&nushiv1.AddJiraCommentResponse{Comment: jiraCommentProto(cm)}), nil
 }
 
+func (s *server) GetJiraContext(ctx context.Context, req *connect.Request[nushiv1.GetJiraContextRequest]) (*connect.Response[nushiv1.GetJiraContextResponse], error) {
+	md, branch, err := s.jira.Context(ctx, req.Msg.Site, req.Msg.Key)
+	if err != nil {
+		return nil, jiraErr(err)
+	}
+	return connect.NewResponse(&nushiv1.GetJiraContextResponse{Markdown: md, Branch: branch}), nil
+}
+
 func (s *server) GetJiraAttachment(ctx context.Context, req *connect.Request[nushiv1.GetJiraAttachmentRequest]) (*connect.Response[nushiv1.GetJiraAttachmentResponse], error) {
 	b, mime, err := s.jira.Attachment(ctx, req.Msg.Site, req.Msg.Id, req.Msg.Thumbnail)
 	if err != nil {

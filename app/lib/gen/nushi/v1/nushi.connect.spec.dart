@@ -649,6 +649,15 @@ abstract final class NushiService {
     nushiv1nushi.AddJiraCommentResponse.new,
   );
 
+  /// An issue as a chat's first message (Markdown, for the user to see and
+  /// edit before sending it), and a branch named after it.
+  static const getJiraContext = connect.Spec(
+    '/$name/GetJiraContext',
+    connect.StreamType.unary,
+    nushiv1nushi.GetJiraContextRequest.new,
+    nushiv1nushi.GetJiraContextResponse.new,
+  );
+
   /// An attachment's file or thumbnail (20 MB at most).
   static const getJiraAttachment = connect.Spec(
     '/$name/GetJiraAttachment',

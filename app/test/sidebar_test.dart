@@ -8,7 +8,8 @@ import 'fake_daemon.dart';
 
 /// Chats of all five agents, in each status.
 final List<Chat> _chats = [
-  chat('a', 'claude', 'Fix the login redirect', status: ChatStatus(busy: true)),
+  chat('a', 'claude', 'Fix the login redirect', status: ChatStatus(busy: true))
+    ..jiraKey = 'ACME-12',
   chat(
     'b',
     'codex',

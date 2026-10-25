@@ -55,7 +55,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 	var wt *model.Worktree
 	switch {
 	case worktree:
-		wt, folder, err = s.addWorktree(ctx, folder)
+		wt, folder, err = s.addWorktree(ctx, folder, "")
 	case oldWT != nil && within(folder, oldWT.Path):
 		wt = oldWT // still in its worktree
 	}

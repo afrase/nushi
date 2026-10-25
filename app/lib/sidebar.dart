@@ -331,6 +331,14 @@ class _ChatRowState extends State<_ChatRow> {
                 ),
                 if (chat.waiting)
                   Text('needs you', style: theme.ui(t.needs, size: 11.5))
+                else if (chat.jiraKey.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 6),
+                    child: Text(
+                      chat.jiraKey,
+                      style: theme.code(t.textMuted, size: 10.5),
+                    ),
+                  )
                 else if (chat.worktree case final wt?)
                   Flexible(
                     child: Padding(

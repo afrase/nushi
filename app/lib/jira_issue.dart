@@ -1,14 +1,18 @@
 import 'dart:async';
 
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:nushi/agent_mark.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_issue_parts.dart';
 import 'package:nushi/jira_settings.dart';
 import 'package:nushi/jira_view_parts.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/new_chat.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -109,6 +113,32 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
         )..values.addAll(values),
       );
       await _load();
+    });
+  }
+
+  /// Starts a chat on the issue in [folder] (one to choose, when null):
+  /// the New chat dialog, the issue's context in its box.
+  Future<void> _chat(String? folder) async {
+    final f = folder ?? await getDirectoryPath(confirmButtonText: 'Choose');
+    if (f == null || !mounted) return;
+    final daemon = widget.daemon;
+    await tryOrShow(context, () async {
+      final r = await daemon.client.getJiraContext(
+        GetJiraContextRequest(site: widget.site, key: widget.issueKey),
+      );
+      if (!mounted) return;
+      await newChat(
+        context,
+        daemon,
+        f,
+        issue: IssueChat(
+          site: widget.site,
+          key: widget.issueKey,
+          markdown: r.markdown,
+          branch: r.branch,
+          worktree: daemon.wantsWorktree(f),
+        ),
+      );
     });
   }
 
@@ -239,6 +269,42 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
                   ),
                 ),
             ]),
+          ListenableBuilder(
+            listenable: widget.daemon,
+            builder: (context, _) {
+              final chats = [
+                for (final c in widget.daemon.chats.values)
+                  if (c.jiraSite == widget.site && c.jiraKey == i.key) c,
+              ]..sort((a, b) => b.created.compareTo(a.created));
+              return chats.isEmpty
+                  ? const SizedBox.shrink()
+                  : section('Chats', [
+                      for (final c in chats)
+                        Tap(
+                          onTap: () => widget.daemon.select(c.id),
+                          padding: const EdgeInsets.symmetric(vertical: 3),
+                          child: Row(
+                            children: [
+                              AgentMark(c.agent, color: t.textSecondary),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  c.title.isEmpty ? 'New chat' : c.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.ui(t.text),
+                                ),
+                              ),
+                              Text(
+                                age(c.created.millisecondsSinceEpoch),
+                                style: theme.ui(t.textMuted, size: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ]);
+            },
+          ),
           section('Comments', [
             for (final c in i.comments)
               Padding(
@@ -278,6 +344,11 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
         const SizedBox(width: 10),
         Text(i.assignee.isEmpty ? 'Unassigned' : i.assignee, style: dim),
         const Spacer(),
+        Menu(
+          entries: folderEntries(widget.daemon, onPick: _chat),
+          child: Text('Start a chat ▾', style: theme.ui(t.link, size: 12)),
+        ),
+        const SizedBox(width: 6),
         IconTap(Icons.refresh, tooltip: 'Refresh', onTap: _load),
         IconTap(
           Icons.open_in_new,

@@ -222,3 +222,38 @@ func TestWorktreeMovesKeepTheWork(t *testing.T) {
 		t.Errorf("after Delete: the worktree %v, terminals %v", err, left)
 	}
 }
+
+// A chat on a Jira issue remembers it, and its worktree is on a branch
+// named after it (another chat on it gets the next number).
+func TestChatOnAnIssue(t *testing.T) {
+	ctx := context.Background()
+	repo := gitRepo(t)
+	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
+	a := open(t, d)
+	start := func(branch string) (*nushiv1.Chat, error) {
+		r, err := a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: repo, Worktree: true,
+			JiraSite: "acme.atlassian.net", JiraKey: "ACME-12", Branch: branch}))
+		if err != nil {
+			return nil, err
+		}
+		return must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: r.Msg.ChatId}))).Chat, nil
+	}
+	for _, want := range []string{"ACME-12-log-in-with-a-passkey", "ACME-12-log-in-with-a-passkey-2"} {
+		c, err := start("ACME-12-log-in-with-a-passkey")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if c.JiraSite != "acme.atlassian.net" || c.JiraKey != "ACME-12" || c.Worktree.GetBranch() != want || filepath.Base(c.Worktree.GetPath()) != want {
+			t.Errorf("chat %v, want branch %s", c, want)
+		}
+	}
+	for _, bad := range []string{"ACME-1-x", "ACME-12/../../x", "-ACME-12", "ACME-12-Up"} {
+		if _, err := start(bad); err == nil {
+			t.Errorf("branch %q taken", bad)
+		}
+	}
+	list := must(a.c.ListChats(ctx, connect.NewRequest(&nushiv1.ListChatsRequest{}))).Chats
+	if len(list) != 2 || list[0].JiraKey != "ACME-12" {
+		t.Errorf("listed %v", list)
+	}
+}
