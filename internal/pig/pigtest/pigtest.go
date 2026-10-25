@@ -7,6 +7,7 @@
 //
 //   - "/ask": an extension's select dialog (Red, Blue), then the choice
 //     as a notification; the prompt is "handled", no run;
+//   - "/hang": a command that never ends;
 //   - containing "tool": a bash call (`ls`) and its output, then "Done";
 //   - containing "think": a thought, then an answer, not streamed;
 //   - containing "fail": a failed model call ("boom");
@@ -159,6 +160,9 @@ func (p *Pig) command(cmd map[string]any) {
 		text := cmd["message"].(string)
 		if p.running {
 			p.respond(cmd, nil, "Agent is already processing")
+			return
+		}
+		if text == "/hang" { // a command that never ends
 			return
 		}
 		if text == "/ask" {

@@ -107,11 +107,11 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	pigs := pigStores(dataDir)
 	pigKind := chats.Kind{Name: "pig", Title: "PiG", Resume: pig.Resume,
 		Launch: launch(func(r io.Reader, w io.Writer) {
-			spawn := func(cwd string, args ...string) (io.WriteCloser, io.Reader, func(), error) {
+			spawn := func(cwd string, args ...string) (pig.Pig, error) {
 				inR, inW := io.Pipe()
 				outR, outW := io.Pipe()
 				go func() { pigs.Serve(inR, outW, cwd, args); outW.Close() }()
-				return inW, outR, func() { inR.Close(); outW.Close() }, nil
+				return pig.Pig{In: inW, Out: outR, Kill: func() { inR.Close(); outW.Close() }}, nil
 			}
 			pig.Serve(r, w, pig.Config{Spawn: spawn, Dirs: pig.Dirs{Sessions: pigs.Sessions}, Version: pig.Version})
 		}),

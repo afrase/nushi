@@ -24,6 +24,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -59,18 +60,23 @@ func Start(dir string, h acp.Handler, log *slog.Logger) (*acp.Client, error) {
 	return acp.Start(cmd, h, log)
 }
 
-// stderr is where the bridge's own lines go: its stderr, which the daemon
+// logTo is where the bridge's own lines go: its stderr, which the daemon
 // logs with the chat's attributes.
-var stderr io.Writer = os.Stderr
+var (
+	logMu sync.Mutex
+	logTo io.Writer = os.Stderr
+)
 
-func warn(format string, args ...any) {
-	fmt.Fprintf(stderr, "pig-acp: "+format+"\n", args...)
+func logf(format string, args ...any) {
+	logMu.Lock()
+	defer logMu.Unlock()
+	fmt.Fprintf(logTo, format+"\n", args...)
 }
+
+func warn(format string, args ...any) { logf("pig-acp: "+format, args...) }
 
 // debug writes a line the daemon logs at DEBUG (acp's stderr lines).
-func debug(format string, args ...any) {
-	fmt.Fprintf(stderr, acp.DebugPrefix+"pig-acp: "+format+"\n", args...)
-}
+func debug(format string, args ...any) { logf(acp.DebugPrefix+"pig-acp: "+format, args...) }
 
 // Main runs the bridge on stdin and stdout: the Command.
 func Main() {
@@ -82,9 +88,7 @@ func Main() {
 		cfg.Version, err = version(bin)
 	}
 	cfg.Problem = err
-	cfg.Spawn = func(cwd string, args ...string) (io.WriteCloser, io.Reader, func(), error) {
-		return spawn(bin, cwd, args)
-	}
+	cfg.Spawn = func(cwd string, args ...string) (Pig, error) { return spawn(bin, cwd, args) }
 	Serve(os.Stdin, os.Stdout, cfg)
 }
 
@@ -105,22 +109,24 @@ func version(bin string) (string, error) {
 }
 
 // spawn starts pig with args in cwd, in a process group of its own, its
-// stderr to the bridge's; its start and exit go to the log.
-func spawn(bin, cwd string, args []string) (io.WriteCloser, io.Reader, func(), error) {
+// stderr to the bridge's (its last lines kept); its start and exit go to
+// the log.
+func spawn(bin, cwd string, args []string) (Pig, error) {
 	cmd := exec.Command(bin, args...)
 	cmd.Dir = cwd
-	cmd.Stderr = os.Stderr
+	said := &lastLines{}
+	cmd.Stderr = io.MultiWriter(os.Stderr, said)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	in, err := cmd.StdinPipe()
 	if err != nil {
-		return nil, nil, nil, err
+		return Pig{}, err
 	}
 	out, err := cmd.StdoutPipe()
 	if err != nil {
-		return nil, nil, nil, err
+		return Pig{}, err
 	}
 	if err := cmd.Start(); err != nil {
-		return nil, nil, nil, err
+		return Pig{}, err
 	}
 	started := time.Now()
 	warn("pig started pid=%d args=%q", cmd.Process.Pid, args)
@@ -137,7 +143,38 @@ func spawn(bin, cwd string, args []string) (io.WriteCloser, io.Reader, func(), e
 		syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 		<-exited
 	}
-	return in, out, kill, nil
+	return Pig{In: in, Out: out, Kill: kill, Said: said.String}, nil
+}
+
+// lastLines keeps the start of the last line written to it that has
+// anything in it ("Error: Failed to load extension …").
+type lastLines struct {
+	mu   sync.Mutex
+	line []byte
+	last string
+}
+
+func (l *lastLines) Write(p []byte) (int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	for _, c := range p {
+		switch {
+		case c == '\n':
+			if s := strings.TrimSpace(string(l.line)); s != "" && !strings.HasPrefix(s, "Hint:") {
+				l.last = s
+			}
+			l.line = l.line[:0]
+		case len(l.line) < 500:
+			l.line = append(l.line, c)
+		}
+	}
+	return len(p), nil
+}
+
+func (l *lastLines) String() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.last
 }
 
 // DirsFromEnv finds PiG's sessions folder as pig does (and as pig-acp's

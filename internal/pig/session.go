@@ -37,6 +37,7 @@ type session struct {
 type turn struct {
 	result    chan turnResult
 	done      bool
+	ran       bool // pig started a run for it
 	usage     acp.TurnUsage
 	stop      string // the last assistant message's stop reason
 	failed    string // and its error
@@ -60,7 +61,7 @@ func (s *session) pump() {
 	}
 	s.mu.Lock()
 	if t := s.turn; t != nil {
-		s.endLocked(t, nil, errors.New("pig stopped before the turn ended"))
+		s.endLocked(t, nil, s.p.stopped())
 	}
 	s.mu.Unlock()
 	close(s.ended)
@@ -145,6 +146,7 @@ func (s *session) handle(ev event) {
 		if s.turn == nil { // a run pig started itself
 			s.beginLocked(&turn{result: make(chan turnResult, 1)})
 		}
+		s.turn.ran = true
 	case "message_start":
 		if m := e.Message; m != nil && m.Role == "assistant" {
 			s.msgID, s.sent = messageID(m), map[int]string{}
@@ -294,27 +296,34 @@ func (s *session) prompt(ctx context.Context, text string, images []image) (*acp
 	t := &turn{result: make(chan turnResult, 1)}
 	s.beginLocked(t)
 	s.mu.Unlock()
-	var r struct {
-		Disposition string `json:"disposition"`
-	}
-	err := s.p.call(ctx, map[string]any{"type": "prompt", "message": text, "images": images}, &r)
-	s.mu.Lock()
-	switch {
-	case err != nil:
-		s.endLocked(t, nil, err)
-	case r.Disposition == "handled" && s.turn == t:
-		s.endLocked(t, &acp.PromptResult{PromptResponse: acp.PromptResponse{StopReason: "end_turn"}}, nil)
-	}
-	s.mu.Unlock()
+	go func() { // pig answers once it took the prompt, or once a command ran
+		var r struct {
+			Disposition string `json:"disposition"`
+		}
+		err := s.p.call(ctx, map[string]any{"type": "prompt", "message": text, "images": images}, &r)
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		switch {
+		case err != nil:
+			s.endLocked(t, nil, err)
+		case r.Disposition == "handled" && !t.ran:
+			s.endLocked(t, &acp.PromptResult{PromptResponse: acp.PromptResponse{StopReason: "end_turn"}}, nil)
+		}
+	}()
 	res := <-t.result // the turn ends, or pig does
 	return res.resp, res.err
 }
 
-// cancel stops the running turn; pig answers once it settled.
+// cancel stops the running turn; pig answers once it settled. A turn
+// with no run (an extension's command, which may wait on itself) ends at
+// once.
 func (s *session) cancel() {
 	s.mu.Lock()
-	if s.turn != nil {
-		s.turn.cancelled = true
+	if t := s.turn; t != nil {
+		t.cancelled = true
+		if !t.ran {
+			s.endLocked(t, &acp.PromptResult{PromptResponse: acp.PromptResponse{StopReason: "cancelled"}}, nil)
+		}
 	}
 	s.mu.Unlock()
 	go s.p.call(context.Background(), map[string]any{"type": "abort"}, nil)
