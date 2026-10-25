@@ -181,7 +181,7 @@ func (b *bridge) fork(ctx context.Context, from acp.SessionID, cwd, after string
 	if err != nil {
 		return nil, err
 	}
-	n := resp.(acp.NewSessionResponse)
+	n := resp.(acp.NewSessionResponse) //nolint:forcetypeassert // open without replay answers one
 	return acp.ForkSessionResponse{SessionID: acp.SessionID(forked.ID), Modes: n.Modes, ConfigOptions: n.ConfigOptions}, nil
 }
 

@@ -58,7 +58,7 @@ func main() {
 		log.Fatal(err) //nolint:gocritic // the process ends, the server with it
 	}
 	_, listen, _ := ed25519.GenerateKey(rand.Reader)
-	id, psk := relay.ListenID(listen.Public().(ed25519.PublicKey)), []byte(strings.Repeat("s", 32))
+	id, psk := relay.ListenID(listen.Public().(ed25519.PublicKey)), []byte(strings.Repeat("s", 32)) //nolint:forcetypeassert // an ed25519 key's Public is an ed25519.PublicKey
 	b64 := base64.RawURLEncoding.EncodeToString
 	line, _ := json.Marshal(map[string]string{"relay": "ws" + strings.TrimPrefix(srv.URL, "http"), "id": id, "key": b64(key.Public), "psk": b64(psk)})
 	fmt.Println(string(line)) //nolint:forbidigo // the test reads this line

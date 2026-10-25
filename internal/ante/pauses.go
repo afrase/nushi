@@ -136,7 +136,7 @@ func form(q questions) json.RawMessage {
 		if qu.MultiSelect {
 			field = map[string]any{"type": "array", "title": qu.Header, "description": qu.Question, "items": map[string]any{"anyOf": opts}}
 		}
-		f, _ := json.Marshal(field)
+		f, _ := json.Marshal(field) //nolint:errchkjson // strings, maps and slices of them
 		if i > 0 {
 			b.WriteByte(',')
 		}
