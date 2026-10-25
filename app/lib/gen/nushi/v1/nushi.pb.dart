@@ -1107,6 +1107,11 @@ class Agent extends $pb.GeneratedMessage {
     $core.String? resume,
     $core.bool? mcp,
     $core.bool? deleteArchives,
+    $core.String? path,
+    $core.String? version,
+    $core.String? page,
+    $core.String? problem,
+    $core.String? signedIn,
   }) {
     final result = Agent._();
     if (name != null) result.name = name;
@@ -1114,6 +1119,11 @@ class Agent extends $pb.GeneratedMessage {
     if (resume != null) result.resume = resume;
     if (mcp != null) result.mcp = mcp;
     if (deleteArchives != null) result.deleteArchives = deleteArchives;
+    if (path != null) result.path = path;
+    if (version != null) result.version = version;
+    if (page != null) result.page = page;
+    if (problem != null) result.problem = problem;
+    if (signedIn != null) result.signedIn = signedIn;
     return result;
   }
 
@@ -1135,6 +1145,11 @@ class Agent extends $pb.GeneratedMessage {
     ..aOS(3, _omitFieldNames ? '' : 'resume')
     ..aOB(4, _omitFieldNames ? '' : 'mcp')
     ..aOB(5, _omitFieldNames ? '' : 'deleteArchives')
+    ..aOS(6, _omitFieldNames ? '' : 'path')
+    ..aOS(7, _omitFieldNames ? '' : 'version')
+    ..aOS(8, _omitFieldNames ? '' : 'page')
+    ..aOS(9, _omitFieldNames ? '' : 'problem')
+    ..aOS(10, _omitFieldNames ? '' : 'signedIn')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1208,6 +1223,59 @@ class Agent extends $pb.GeneratedMessage {
   $core.bool hasDeleteArchives() => $_has(4);
   @$pb.TagNumber(5)
   void clearDeleteArchives() => $_clearField(5);
+
+  /// Its CLI, as found on the login shell's PATH (or where its installer
+  /// puts it); empty when it isn't installed.
+  @$pb.TagNumber(6)
+  $core.String get path => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set path($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasPath() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearPath() => $_clearField(6);
+
+  /// The CLI's version, as it says it; empty when that couldn't be read.
+  @$pb.TagNumber(7)
+  $core.String get version => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set version($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasVersion() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearVersion() => $_clearField(7);
+
+  /// Where to get it.
+  @$pb.TagNumber(8)
+  $core.String get page => $_getSZ(7);
+  @$pb.TagNumber(8)
+  set page($core.String value) => $_setString(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasPage() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearPage() => $_clearField(8);
+
+  /// Why it can't run, in a few words ("Not installed", "Needs Bun");
+  /// empty when it can.
+  @$pb.TagNumber(9)
+  $core.String get problem => $_getSZ(8);
+  @$pb.TagNumber(9)
+  set problem($core.String value) => $_setString(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasProblem() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearProblem() => $_clearField(9);
+
+  /// Whether the CLI is signed in, "yes" or "no", when it can tell
+  /// cheaply; empty otherwise.
+  @$pb.TagNumber(10)
+  $core.String get signedIn => $_getSZ(9);
+  @$pb.TagNumber(10)
+  set signedIn($core.String value) => $_setString(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasSignedIn() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearSignedIn() => $_clearField(10);
 }
 
 class StartChatRequest extends $pb.GeneratedMessage {
@@ -11375,7 +11443,9 @@ class NushiServiceApi {
       _client.invoke<StartChatResponse>(
           ctx, 'NushiService', 'StartChat', request, StartChatResponse());
 
-  /// Lists the agents chats can run, the default first.
+  /// Lists the agents chats can run, the default first, each as found on
+  /// this Mac now: its CLI on the login shell's PATH and its version. Each
+  /// CLI is only asked what it is, with file writes and the network denied.
   $async.Future<ListAgentsResponse> listAgents(
           $pb.ClientContext? ctx, ListAgentsRequest request) =>
       _client.invoke<ListAgentsResponse>(

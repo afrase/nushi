@@ -29,6 +29,12 @@ func Start(dir string, h acp.Handler) (*acp.Client, error) {
 	return acp.Start(cmd, h)
 }
 
+// CLI is Codex's program, and Page where to get it.
+const (
+	CLI  = "codex"
+	Page = "https://developers.openai.com/codex/cli"
+)
+
 // Resume is the terminal command that opens a Codex session by its id.
 const Resume = "codex resume"
 

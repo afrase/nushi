@@ -1004,8 +1004,21 @@ type Agent struct {
 	// Deleting a chat archives the agent's history of it rather than
 	// deleting it: the resume command still offers it.
 	DeleteArchives bool `protobuf:"varint,5,opt,name=delete_archives,json=deleteArchives,proto3" json:"delete_archives,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Its CLI, as found on the login shell's PATH (or where its installer
+	// puts it); empty when it isn't installed.
+	Path string `protobuf:"bytes,6,opt,name=path,proto3" json:"path,omitempty"`
+	// The CLI's version, as it says it; empty when that couldn't be read.
+	Version string `protobuf:"bytes,7,opt,name=version,proto3" json:"version,omitempty"`
+	// Where to get it.
+	Page string `protobuf:"bytes,8,opt,name=page,proto3" json:"page,omitempty"`
+	// Why it can't run, in a few words ("Not installed", "Needs Bun");
+	// empty when it can.
+	Problem string `protobuf:"bytes,9,opt,name=problem,proto3" json:"problem,omitempty"`
+	// Whether the CLI is signed in, "yes" or "no", when it can tell
+	// cheaply; empty otherwise.
+	SignedIn      string `protobuf:"bytes,10,opt,name=signed_in,json=signedIn,proto3" json:"signed_in,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Agent) Reset() {
@@ -1071,6 +1084,41 @@ func (x *Agent) GetDeleteArchives() bool {
 		return x.DeleteArchives
 	}
 	return false
+}
+
+func (x *Agent) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *Agent) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *Agent) GetPage() string {
+	if x != nil {
+		return x.Page
+	}
+	return ""
+}
+
+func (x *Agent) GetProblem() string {
+	if x != nil {
+		return x.Problem
+	}
+	return ""
+}
+
+func (x *Agent) GetSignedIn() string {
+	if x != nil {
+		return x.SignedIn
+	}
+	return ""
 }
 
 type StartChatRequest struct {
@@ -8947,13 +8995,19 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\bcommands\x18\x01 \x03(\v2\x11.nushi.v1.CommandR\bcommands\"\x13\n" +
 	"\x11ListAgentsRequest\"=\n" +
 	"\x12ListAgentsResponse\x12'\n" +
-	"\x06agents\x18\x01 \x03(\v2\x0f.nushi.v1.AgentR\x06agents\"\x84\x01\n" +
+	"\x06agents\x18\x01 \x03(\v2\x0f.nushi.v1.AgentR\x06agents\"\xfd\x01\n" +
 	"\x05Agent\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x16\n" +
 	"\x06resume\x18\x03 \x01(\tR\x06resume\x12\x10\n" +
 	"\x03mcp\x18\x04 \x01(\bR\x03mcp\x12'\n" +
-	"\x0fdelete_archives\x18\x05 \x01(\bR\x0edeleteArchives\"\\\n" +
+	"\x0fdelete_archives\x18\x05 \x01(\bR\x0edeleteArchives\x12\x12\n" +
+	"\x04path\x18\x06 \x01(\tR\x04path\x12\x18\n" +
+	"\aversion\x18\a \x01(\tR\aversion\x12\x12\n" +
+	"\x04page\x18\b \x01(\tR\x04page\x12\x18\n" +
+	"\aproblem\x18\t \x01(\tR\aproblem\x12\x1b\n" +
+	"\tsigned_in\x18\n" +
+	" \x01(\tR\bsignedIn\"\\\n" +
 	"\x10StartChatRequest\x12\x16\n" +
 	"\x06folder\x18\x01 \x01(\tR\x06folder\x12\x14\n" +
 	"\x05agent\x18\x03 \x01(\tR\x05agent\x12\x1a\n" +

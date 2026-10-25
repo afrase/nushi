@@ -64,3 +64,11 @@ func TestRelay(t *testing.T) {
 		}
 	}
 }
+
+func TestSignedIn(t *testing.T) {
+	for out, want := range map[string]string{`{"loggedIn": true, "authMethod": "claude.ai"}`: "yes", `{"loggedIn": false}`: "no", `{}`: "", `nope`: ""} {
+		if got := SignedIn(func(args ...string) ([]byte, error) { return []byte(out), nil }); got != want {
+			t.Errorf("%s: %q, want %q", out, got, want)
+		}
+	}
+}

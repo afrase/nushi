@@ -34,6 +34,29 @@ func Start(dir string, h acp.Handler) (*acp.Client, error) {
 	return acp.Start(cmd, h)
 }
 
+// CLI is Claude Code's program, and Page where to get it.
+const (
+	CLI  = "claude"
+	Page = "https://code.claude.com/docs/en/setup"
+)
+
+// SignedIn asks the CLI whether it's signed in (`claude auth status`,
+// JSON): "yes" or "no", or "" when it can't say. Claude reads its own
+// login for that; Nushi sees only the answer's loggedIn.
+func SignedIn(run func(args ...string) ([]byte, error)) string {
+	out, err := run("auth", "status", "--json")
+	var st struct {
+		LoggedIn *bool `json:"loggedIn"`
+	}
+	if err != nil || json.Unmarshal(out, &st) != nil || st.LoggedIn == nil {
+		return ""
+	}
+	if *st.LoggedIn {
+		return "yes"
+	}
+	return "no"
+}
+
 // InitMeta is initialize's client _meta: the adapter then sends a
 // subagent's text and thinking too.
 var InitMeta = map[string]any{"subagent-transcript": true}

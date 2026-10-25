@@ -15,6 +15,7 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/afrase/nushi/internal/events"
+	"github.com/afrase/nushi/internal/features/agents"
 	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/features/mcp"
 	"github.com/afrase/nushi/internal/features/memory"
@@ -27,7 +28,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 49
+const Version = 50
 
 // build is the daemon's executable as it started (PingResponse.build).
 var build = func() string {
@@ -44,6 +45,7 @@ var build = func() string {
 
 type server struct {
 	chats  *chats.Service
+	agents *agents.Service
 	mcp    *mcp.Service
 	terms  *terminals.Service
 	trust  *trust.Service
@@ -78,6 +80,7 @@ func (s *server) following(n int) {
 // Services are what the API serves.
 type Services struct {
 	Chats  *chats.Service
+	Agents *agents.Service
 	MCP    *mcp.Service
 	Terms  *terminals.Service
 	Trust  *trust.Service
@@ -90,7 +93,7 @@ type Services struct {
 // WithToken.
 func New(sv Services, opts ...connect.HandlerOption) http.Handler {
 	mux := http.NewServeMux()
-	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{chats: sv.Chats, mcp: sv.MCP, terms: sv.Terms, trust: sv.Trust,
+	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{chats: sv.Chats, agents: sv.Agents, mcp: sv.MCP, terms: sv.Terms, trust: sv.Trust,
 		hub: sv.Hub, memory: sv.Memory, remote: sv.Remote}, opts...))
 	return mux
 }
@@ -171,10 +174,16 @@ func (s *server) StartChat(ctx context.Context, req *connect.Request[nushiv1.Sta
 	return connect.NewResponse(&nushiv1.StartChatResponse{ChatId: id, Config: configProto(s.chats.Config(id))}), nil
 }
 
-func (s *server) ListAgents(context.Context, *connect.Request[nushiv1.ListAgentsRequest]) (*connect.Response[nushiv1.ListAgentsResponse], error) {
+func (s *server) ListAgents(ctx context.Context, _ *connect.Request[nushiv1.ListAgentsRequest]) (*connect.Response[nushiv1.ListAgentsResponse], error) {
+	found := map[string]agents.Status{}
+	for _, st := range s.agents.List(ctx) {
+		found[st.Name] = st
+	}
 	resp := &nushiv1.ListAgentsResponse{}
 	for _, k := range s.chats.Agents() {
-		resp.Agents = append(resp.Agents, &nushiv1.Agent{Name: k.Name, Title: k.Title, Resume: k.Resume, Mcp: k.MCP, DeleteArchives: k.DeleteArchives})
+		st := found[k.Name]
+		resp.Agents = append(resp.Agents, &nushiv1.Agent{Name: k.Name, Title: k.Title, Resume: k.Resume, Mcp: k.MCP, DeleteArchives: k.DeleteArchives,
+			Path: st.Path, Version: st.Version, Page: st.Page, Problem: st.Problem, SignedIn: st.SignedIn})
 	}
 	return connect.NewResponse(resp), nil
 }

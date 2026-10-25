@@ -358,6 +358,11 @@ const Agent$json = {
     {'1': 'resume', '3': 3, '4': 1, '5': 9, '10': 'resume'},
     {'1': 'mcp', '3': 4, '4': 1, '5': 8, '10': 'mcp'},
     {'1': 'delete_archives', '3': 5, '4': 1, '5': 8, '10': 'deleteArchives'},
+    {'1': 'path', '3': 6, '4': 1, '5': 9, '10': 'path'},
+    {'1': 'version', '3': 7, '4': 1, '5': 9, '10': 'version'},
+    {'1': 'page', '3': 8, '4': 1, '5': 9, '10': 'page'},
+    {'1': 'problem', '3': 9, '4': 1, '5': 9, '10': 'problem'},
+    {'1': 'signed_in', '3': 10, '4': 1, '5': 9, '10': 'signedIn'},
   ],
 };
 
@@ -365,7 +370,9 @@ const Agent$json = {
 final $typed_data.Uint8List agentDescriptor = $convert.base64Decode(
     'CgVBZ2VudBISCgRuYW1lGAEgASgJUgRuYW1lEhQKBXRpdGxlGAIgASgJUgV0aXRsZRIWCgZyZX'
     'N1bWUYAyABKAlSBnJlc3VtZRIQCgNtY3AYBCABKAhSA21jcBInCg9kZWxldGVfYXJjaGl2ZXMY'
-    'BSABKAhSDmRlbGV0ZUFyY2hpdmVz');
+    'BSABKAhSDmRlbGV0ZUFyY2hpdmVzEhIKBHBhdGgYBiABKAlSBHBhdGgSGAoHdmVyc2lvbhgHIA'
+    'EoCVIHdmVyc2lvbhISCgRwYWdlGAggASgJUgRwYWdlEhgKB3Byb2JsZW0YCSABKAlSB3Byb2Js'
+    'ZW0SGwoJc2lnbmVkX2luGAogASgJUghzaWduZWRJbg==');
 
 @$core.Deprecated('Use startChatRequestDescriptor instead')
 const StartChatRequest$json = {
