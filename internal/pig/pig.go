@@ -55,7 +55,7 @@ func Start(dir string, h acp.Handler, log *slog.Logger) (*acp.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	cmd := exec.Command(self, Command)
+	cmd := exec.Command(self, Command) //nolint:gosec // this nushid as the bridge
 	cmd.Dir = dir
 	return acp.Start(cmd, h, log)
 }
@@ -112,7 +112,7 @@ func version(bin string) (string, error) {
 // stderr to the bridge's (its last lines kept); its start and exit go to
 // the log.
 func spawn(bin, cwd string, args []string) (Pig, error) {
-	cmd := exec.Command(bin, args...)
+	cmd := exec.Command(bin, args...) //nolint:gosec // the user's pig (ADR 0039)
 	cmd.Dir = cwd
 	said := &lastLines{}
 	cmd.Stderr = io.MultiWriter(os.Stderr, said)
@@ -191,7 +191,7 @@ func DirsFromEnv() Dirs {
 	var settings struct {
 		SessionDir string `json:"sessionDir"`
 	}
-	if b, err := os.ReadFile(filepath.Join(agent, "settings.json")); err == nil && json.Unmarshal(b, &settings) == nil && settings.SessionDir != "" {
+	if b, err := os.ReadFile(filepath.Join(agent, "settings.json")); err == nil && json.Unmarshal(b, &settings) == nil && settings.SessionDir != "" { //nolint:gosec // PiG's own settings
 		d := tilde(settings.SessionDir)
 		if !filepath.IsAbs(d) {
 			d = filepath.Join(agent, d)

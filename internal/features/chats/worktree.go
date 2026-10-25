@@ -37,7 +37,7 @@ var (
 // in it.
 func (s *Service) addWorktree(ctx context.Context, folder string) (*model.Worktree, string, error) {
 	for range 20 {
-		name := adjectives[rand.IntN(len(adjectives))] + "-" + nouns[rand.IntN(len(nouns))]
+		name := adjectives[rand.IntN(len(adjectives))] + "-" + nouns[rand.IntN(len(nouns))] //nolint:gosec // a worktree's name, not a secret
 		wt, in, err := s.worktrees.Add(ctx, folder, name)
 		if err == nil {
 			if _, err := os.Stat(in); err != nil { // a folder git doesn't track

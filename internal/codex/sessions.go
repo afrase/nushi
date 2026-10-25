@@ -50,7 +50,7 @@ func forked(sessions string, ids []string) map[string]bool {
 		want[id] = true
 	}
 	out := map[string]bool{}
-	filepath.WalkDir(sessions, func(path string, d fs.DirEntry, err error) error {
+	filepath.WalkDir(sessions, func(path string, d fs.DirEntry, err error) error { //nolint:gosec // Codex's own sessions folder
 		if err != nil { // d is nil when sessions can't be read
 			return nil //nolint:nilerr // what can't be read is skipped; the walk goes on
 		}
@@ -78,7 +78,7 @@ func forked(sessions string, ids []string) map[string]bool {
 // firstLine is a file's first line (Codex's session_meta holds the whole
 // system prompt: tens of KB).
 func firstLine(path string) []byte {
-	f, err := os.Open(path)
+	f, err := os.Open(path) //nolint:gosec // a rollout found in Codex's sessions folder
 	if err != nil {
 		return nil
 	}

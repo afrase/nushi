@@ -53,7 +53,7 @@ func Start(dir string, h acp.Handler, log *slog.Logger) (*acp.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	cmd := exec.Command(self, Command)
+	cmd := exec.Command(self, Command) //nolint:gosec // this nushid as the bridge
 	cmd.Dir = dir
 	return acp.Start(cmd, h, log)
 }

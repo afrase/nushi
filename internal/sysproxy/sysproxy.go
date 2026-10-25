@@ -224,7 +224,7 @@ func pac(pacURL string, u *url.URL) ([]*url.URL, error) {
 	}
 	// CFNetwork knows http and https; a WebSocket URL is asked as either.
 	asked := url.URL{Scheme: map[string]string{"wss": "https", "ws": "http"}[u.Scheme], Host: u.Host, Path: "/"}
-	cmd := exec.CommandContext(ctx, "/usr/bin/osascript", "-l", "JavaScript", "-e", pacScript, asked.String())
+	cmd := exec.CommandContext(ctx, "/usr/bin/osascript", "-l", "JavaScript", "-e", pacScript, asked.String()) //nolint:gosec // osascript with our own script
 	cmd.Stdin = bytes.NewReader(script)
 	out, err := cmd.Output()
 	if err != nil {

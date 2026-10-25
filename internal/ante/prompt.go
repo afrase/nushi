@@ -91,7 +91,7 @@ func saveImage(dir func() (string, error), img *acp.ImageContent) (string, error
 	name := make([]byte, 8)
 	rand.Read(name)
 	path := filepath.Join(d, hex.EncodeToString(name)+ext)
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL|syscall.O_NOFOLLOW, 0o600)
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL|syscall.O_NOFOLLOW, 0o600) //nolint:gosec // a new file in the bridge's private temp folder, links not followed
 	if err != nil {
 		return "", err
 	}

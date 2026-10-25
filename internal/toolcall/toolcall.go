@@ -34,7 +34,7 @@ func ReadOld(path string) Old {
 	case fi.Size() > MaxOld:
 		return Old{Note: "Not shown: the file this replaces is over 1 MB."}
 	}
-	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
+	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0) //nolint:gosec // the file a tool call writes, at most 1 MB, links not followed
 	if err != nil {
 		return Old{Note: "Not shown: " + err.Error()}
 	}

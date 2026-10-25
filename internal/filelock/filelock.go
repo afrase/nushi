@@ -12,7 +12,7 @@ import (
 // Held says whether some process holds a lock on the file at path; false
 // when there is no such file.
 func Held(path string) bool {
-	f, err := os.Open(path)
+	f, err := os.Open(path) //nolint:gosec // an agent's lock file, opened read-only
 	if err != nil {
 		return false
 	}

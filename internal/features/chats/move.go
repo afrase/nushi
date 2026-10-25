@@ -90,7 +90,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 			}
 			old.Stop(stopGrace)
 		}
-		go s.discard(c, sides)
+		go s.discard(c, sides) //nolint:gosec // discarding outlives the request
 		if left := oldWT != nil && wt != oldWT; left && (!fresh || s.inUse(c, oldWT.Path) || !s.dropWorktree(oldWT)) {
 			c.mu.Lock()
 			c.saveLocked(func(s *model.Session) { // it stays, with the work in it, until Delete

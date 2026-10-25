@@ -39,7 +39,7 @@ func forked(sessions string, ids []string) map[string]bool {
 
 // hasParent reads a session file's first records for its header.
 func hasParent(path string) bool {
-	f, err := os.Open(path)
+	f, err := os.Open(path) //nolint:gosec // a session file found in omp's sessions folder
 	if err != nil {
 		return false
 	}

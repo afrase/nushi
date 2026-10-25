@@ -53,7 +53,7 @@ func ReadShell(id, file string) (output, end string, err error) {
 	if st, err := os.Lstat(file); err != nil || !st.Mode().IsRegular() {
 		return "", "", errors.New("not a regular file")
 	}
-	f, err := os.Open(file)
+	f, err := os.Open(file) //nolint:gosec // a background shell's output file, checked regular above
 	if err != nil {
 		return "", "", err
 	}

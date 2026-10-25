@@ -161,7 +161,7 @@ const maxFile = 64 << 20
 // readFile reads a regular file of at most 64 MiB, without waiting on a
 // fifo.
 func readFile(path string) ([]byte, error) {
-	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0)
+	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0) //nolint:gosec // a folder's .codex files, which the trust card shows
 	if err != nil {
 		return nil, err
 	}

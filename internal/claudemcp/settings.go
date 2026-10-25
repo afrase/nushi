@@ -119,7 +119,7 @@ func (Claude) SetOn(ctx context.Context, folder, name string, on bool) error {
 		}
 	}
 	out, _ := json.MarshalIndent(settings, "", "  ")
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil { //nolint:gosec // a project's .claude folder, as Claude makes it
 		return err
 	}
 	mode := os.FileMode(0o644)

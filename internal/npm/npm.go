@@ -57,7 +57,7 @@ func (in Installer) Install(ctx context.Context, lock fs.FS, folder string, read
 	}
 	profile := `(version 1)(allow default)(deny file-write* (require-not (require-any (literal "/dev/null") (subpath ` + strconv.Quote(resolved) + `))))`
 	cache := filepath.Join(tmp, ".npm")
-	cmd := exec.CommandContext(ctx, "/usr/bin/sandbox-exec", "-p", profile, "npm", "ci", "--omit=optional", "--omit=dev", "--ignore-scripts",
+	cmd := exec.CommandContext(ctx, "/usr/bin/sandbox-exec", "-p", profile, "npm", "ci", "--omit=optional", "--omit=dev", "--ignore-scripts", //nolint:gosec // npm ci under the sandbox, fixed arguments
 		"--no-audit", "--no-fund", "--update-notifier=false", "--logs-max=0", "--cache", cache)
 	cmd.Dir = tmp
 	cmd.Env = append(os.Environ(), in.Env...)
@@ -83,7 +83,7 @@ func (in Installer) Install(ctx context.Context, lock fs.FS, folder string, read
 // bin is; "" for both when it hasn't.
 func (Installer) Installed(folder, pkg, bin string) (version, program string) {
 	dir := filepath.Join(folder, "node_modules", filepath.FromSlash(pkg))
-	b, err := os.ReadFile(filepath.Join(dir, "package.json"))
+	b, err := os.ReadFile(filepath.Join(dir, "package.json")) //nolint:gosec // an adapter's package.json in the data folder
 	var p struct {
 		Version string          `json:"version"`
 		Bin     json.RawMessage `json:"bin"`

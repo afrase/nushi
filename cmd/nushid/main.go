@@ -101,7 +101,7 @@ func run() error {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
-	if err := os.Chmod(dir, 0o700); err != nil {
+	if err := os.Chmod(dir, 0o700); err != nil { //nolint:gosec // a folder: 0700 is owner-only
 		return err
 	}
 	token, err := loadToken(filepath.Join(dir, "token"))
@@ -195,10 +195,10 @@ func run() error {
 	}
 	// A handler's panic, which net/http recovers, is logged with its stack.
 	errorLog := slog.NewLogLogger(slog.Default().Handler(), slog.LevelError)
-	remoteSrv := &http.Server{Handler: api.ForDevices(sv), Protocols: new(http.Protocols), ErrorLog: errorLog}
+	remoteSrv := &http.Server{Handler: api.ForDevices(sv), Protocols: new(http.Protocols), ErrorLog: errorLog} //nolint:gosec // served only over paired devices' Noise channels
 	remoteSrv.Protocols.SetUnencryptedHTTP2(true)
 	go remoteSrv.Serve(channels)
-	srv := &http.Server{Handler: api.WithToken(token, api.New(sv)), Protocols: new(http.Protocols), ErrorLog: errorLog}
+	srv := &http.Server{Handler: api.WithToken(token, api.New(sv)), Protocols: new(http.Protocols), ErrorLog: errorLog} //nolint:gosec // a Unix socket in a 0700 folder; clients need the token
 	srv.Protocols.SetUnencryptedHTTP2(true)
 
 	// On SIGINT or SIGTERM, stop the agents too: their sessions reopen
@@ -267,7 +267,7 @@ func loadToken(path string) (string, error) {
 
 // listen takes over the socket at path unless another daemon is answering on it.
 func listen(path string) (net.Listener, error) {
-	if c, err := net.Dial("unix", path); err == nil {
+	if c, err := net.Dial("unix", path); err == nil { //nolint:gosec // the daemon's own socket
 		c.Close()
 		return nil, fmt.Errorf("a daemon is already listening on %s", path)
 	}

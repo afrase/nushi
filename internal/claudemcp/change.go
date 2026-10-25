@@ -33,7 +33,7 @@ func (Claude) Remove(ctx context.Context, folder, scope, name string) error {
 func (Claude) Login(ctx context.Context, folder, name string) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "script", "-q", "/dev/null", "claude", "mcp", "login", "--", name)
+	cmd := exec.CommandContext(ctx, "script", "-q", "/dev/null", "claude", "mcp", "login", "--", name) //nolint:gosec // the user's claude, the server name after --
 	cmd.Dir = folder
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -68,7 +68,7 @@ func (Claude) Project(folder string) string { return project(folder) }
 func run(ctx context.Context, folder string, args ...string) error {
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "claude", append([]string{"mcp"}, args...)...)
+	cmd := exec.CommandContext(ctx, "claude", append([]string{"mcp"}, args...)...) //nolint:gosec // the user's claude, names after --
 	cmd.Dir = folder
 	out, err := cmd.CombinedOutput()
 	if err != nil {
