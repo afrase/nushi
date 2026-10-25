@@ -370,3 +370,89 @@ func TestToolCalls(t *testing.T) {
 		t.Errorf("grep = %+v", call)
 	}
 }
+
+// /compact compacts with what follows it as instructions, shown as a tool
+// call holding the summary, live and after a reload; one with nothing to
+// compact says so in its call, a stopped one ends at once. /name names
+// the session. Both are slash commands; neither is steered into a turn.
+func TestCompactAndName(t *testing.T) {
+	store := &pigtest.Store{Sessions: t.TempDir()}
+	c := start(t, store, io.Discard)
+	cwd := t.TempDir()
+	s := openNew(t, c, cwd)
+	cmds := c.find(t, s.SessionID, "available_commands_update", nil).AvailableCommandsUpdate.AvailableCommands
+	if len(cmds) != 3 || cmds[0].Name != "compact" || cmds[0].Input == nil || cmds[1].Name != "name" || cmds[2].Name != "ask" {
+		t.Errorf("commands = %+v", cmds)
+	}
+	call := func(status string) acp.SessionUpdate {
+		return c.find(t, s.SessionID, "tool_call_update", func(u acp.SessionUpdate) bool { return u.ToolCallUpdate.Status == acp.ToolCallStatus(status) })
+	}
+	text := func(u acp.SessionUpdate) string { return u.ToolCallUpdate.Content[0].Content.Content.Text.Text }
+	if r := prompt(t, c, s.SessionID, "/compact"); r.StopReason != "end_turn" {
+		t.Errorf("stop = %s", r.StopReason)
+	}
+	if got := text(call("failed")); !strings.Contains(got, "Nothing to compact") {
+		t.Errorf("nothing to compact = %q", got)
+	}
+	prompt(t, c, s.SessionID, "hello")
+	prompt(t, c, s.SessionID, "again")
+	if r := prompt(t, c, s.SessionID, "/compact  keep the API notes"); r.StopReason != "end_turn" {
+		t.Errorf("stop = %s", r.StopReason)
+	}
+	if start := c.find(t, s.SessionID, "tool_call", nil).ToolCall; start.Title != "Compact conversation" || start.Kind != "think" {
+		t.Errorf("call = %+v", start)
+	}
+	if got := text(call("completed")); got != "Summary: keep the API notes" {
+		t.Errorf("summary = %q", got)
+	}
+	c.find(t, s.SessionID, "usage_update", func(u acp.SessionUpdate) bool { return u.UsageUpdate.Used == 42 })
+
+	done := make(chan *acp.PromptResult)
+	go func() { done <- prompt(t, c, s.SessionID, "/compact slow") }()
+	time.Sleep(50 * time.Millisecond)
+	if err := c.Cancel(acp.CancelNotification{SessionID: s.SessionID}); err != nil {
+		t.Error(err)
+	}
+	if r := <-done; r.StopReason != "cancelled" {
+		t.Errorf("stop = %s", r.StopReason)
+	}
+	c.find(t, s.SessionID, "tool_call_update", func(u acp.SessionUpdate) bool {
+		return u.ToolCallUpdate.Status == "failed" && text(u) == "Compaction cancelled"
+	})
+
+	prompt(t, c, s.SessionID, "/name Release notes")
+	c.find(t, s.SessionID, "session_info_update", func(u acp.SessionUpdate) bool { return u.SessionInfoUpdate.Title == "Release notes" })
+	if _, err := c.Prompt(context.Background(), acp.PromptRequest{SessionID: s.SessionID,
+		Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "/name"}}}}); err == nil {
+		t.Error("/name without a name")
+	}
+
+	go func() { done <- prompt(t, c, s.SessionID, "wait") }()
+	time.Sleep(50 * time.Millisecond)
+	steered := make(chan bool)
+	go func() {
+		ok, _ := c.Steer(context.Background(), s.SessionID, []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "/compact"}}})
+		steered <- ok
+	}()
+	time.Sleep(50 * time.Millisecond)
+	if err := c.Cancel(acp.CancelNotification{SessionID: s.SessionID}); err != nil {
+		t.Error(err)
+	}
+	<-done
+	if <-steered {
+		t.Error("/compact steered into a turn")
+	}
+
+	ctx := context.Background()
+	if l, _ := c.ListSessions(ctx, acp.ListSessionsRequest{Cwd: cwd}); len(l.Sessions) != 1 || l.Sessions[0].Title != "Release notes" {
+		t.Errorf("list = %+v", l.Sessions)
+	}
+	c2 := start(t, store, io.Discard)
+	if _, err := c2.LoadSession(ctx, acp.LoadSessionRequest{SessionID: s.SessionID, Cwd: cwd, MCPServers: []acp.MCPServer{}}); err != nil {
+		t.Fatal(err)
+	}
+	replayed := c2.find(t, s.SessionID, "tool_call", nil).ToolCall
+	if replayed.Title != "Compact conversation" || replayed.Status != "completed" || replayed.Content[0].Content.Content.Text.Text != "Summary: keep the API notes" {
+		t.Errorf("replayed = %+v", replayed)
+	}
+}

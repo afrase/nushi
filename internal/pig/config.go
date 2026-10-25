@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -123,16 +124,24 @@ func (b *bridge) usage(s *session) {
 			Window int64  `json:"contextWindow"`
 		} `json:"contextUsage"`
 	}
-	if s.p.call(ctx, map[string]any{"type": "get_session_stats"}, &st) != nil || st.Context.Tokens == nil || st.Context.Window == 0 {
+	if s.p.call(ctx, map[string]any{"type": "get_session_stats"}, &st) != nil || st.Context.Window == 0 {
+		return
+	}
+	s.mu.Lock()
+	used := s.estimate // PiG has no count right after a compaction
+	s.mu.Unlock()
+	if st.Context.Tokens != nil {
+		used = *st.Context.Tokens
+	} else if used == 0 {
 		return
 	}
 	b.update(s.id, acp.SessionUpdate{SessionUpdate: "usage_update", UsageUpdate: &acp.UsageUpdate{
-		Used: *st.Context.Tokens, Size: st.Context.Window, Cost: &acp.Cost{Amount: st.Cost, Currency: "USD"}}})
+		Used: used, Size: st.Context.Window, Cost: &acp.Cost{Amount: st.Cost, Currency: "USD"}}})
 }
 
-// commands tells the client the session's slash commands: extensions',
-// prompt templates' and skills' (pig's own, the terminal's, aren't
-// commands in RPC mode).
+// commands tells the client the session's slash commands: the bridge's
+// own (ownCommands), then extensions', prompt templates' and skills' (the
+// rest of pig's own, the terminal's, aren't commands in RPC mode).
 //
 //nolint:contextcheck // asked on the bridge's connection, after the session's answer
 func (b *bridge) commands(s *session) {
@@ -147,9 +156,11 @@ func (b *bridge) commands(s *session) {
 	if s.p.call(ctx, map[string]any{"type": "get_commands"}, &r) != nil {
 		return
 	}
-	var cmds []acp.AvailableCommand
+	cmds := slices.Clone(ownCommands)
 	for _, c := range r.Commands {
-		cmds = append(cmds, acp.AvailableCommand{Name: c.Name, Description: c.Description})
+		if _, _, own := ownCommand("/" + c.Name); !own {
+			cmds = append(cmds, acp.AvailableCommand{Name: c.Name, Description: c.Description})
+		}
 	}
 	b.update(s.id, acp.SessionUpdate{SessionUpdate: "available_commands_update", AvailableCommandsUpdate: &acp.AvailableCommandsUpdate{AvailableCommands: cmds}})
 }

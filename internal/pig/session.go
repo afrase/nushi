@@ -30,18 +30,22 @@ type session struct {
 	tools map[string]string
 	olds  map[string]toolcall.Old // what a write replaces, read before it runs
 	ended chan struct{}           // closed once pig is gone
+
+	compaction string // the tool call of the compaction under way
+	estimate   int64  // the context's tokens after the last compaction, PiG's estimate
 }
 
 // turn is a running turn: Nushi's prompt (result, which nobody reads for
 // a turn pig started itself), the tokens it used and how it ended.
 type turn struct {
-	result    chan turnResult
-	done      bool
-	ran       bool // pig started a run for it
-	usage     acp.TurnUsage
-	stop      string // the last assistant message's stop reason
-	failed    string // and its error
-	cancelled bool
+	result     chan turnResult
+	done       bool
+	ran        bool // pig started a run for it
+	usage      acp.TurnUsage
+	stop       string // the last assistant message's stop reason
+	failed     string // and its error
+	cancelled  bool
+	compactEnd chan struct{} // closed when the compaction /compact asked for ends
 }
 
 type turnResult struct {
@@ -174,8 +178,10 @@ func (s *session) handle(ev event) {
 		go s.ask(ev.Raw)
 	case "extension_error", "error":
 		warnf("%s", ev.Raw)
-	case "agent_end", "turn_start", "turn_end", "queue_update", "compaction_start", "compaction_end",
-		"auto_retry_start", "auto_retry_end", "bash_execution_update", "entry_appended":
+	case "compaction_start", "compaction_end":
+		out = s.compactionLocked(ev.Type, ev.Raw)
+	case "agent_end", "turn_start", "turn_end", "queue_update", "auto_retry_start", "auto_retry_end", "bash_execution_update",
+		"entry_appended", "summarization_retry_scheduled", "summarization_retry_attempt_start", "summarization_retry_finished":
 	default:
 		warnf("an event the bridge doesn't know: %q", ev.Type)
 	}
@@ -280,22 +286,13 @@ func (s *session) endLocked(t *turn, resp *acp.PromptResult, err error) {
 // ended. A prompt pig hands to an extension's command ("handled") ends
 // when the command does.
 func (s *session) prompt(ctx context.Context, text string, images []image) (*acp.PromptResult, error) {
-	s.mu.Lock()
-	for s.turn != nil {
-		idle := s.idle
-		s.mu.Unlock()
-		select {
-		case <-idle:
-		case <-s.ended:
-			return nil, errStopped
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		}
-		s.mu.Lock()
+	if name, arg, ok := ownCommand(text); ok {
+		return s.runOwn(ctx, name, arg)
 	}
-	t := &turn{result: make(chan turnResult, 1)}
-	s.beginLocked(t)
-	s.mu.Unlock()
+	t, err := s.nextTurn(ctx)
+	if err != nil {
+		return nil, err
+	}
 	go func() { // pig answers once it took the prompt, or once a command ran
 		var r struct {
 			Disposition string `json:"disposition"`
@@ -312,6 +309,29 @@ func (s *session) prompt(ctx context.Context, text string, images []image) (*acp
 	}()
 	res := <-t.result // the turn ends, or pig does
 	return res.resp, res.err
+}
+
+// nextTurn begins a turn once the running one, if any, has ended.
+func (s *session) nextTurn(ctx context.Context) (*turn, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for s.turn != nil {
+		idle := s.idle
+		s.mu.Unlock()
+		select {
+		case <-idle:
+		case <-s.ended:
+			s.mu.Lock()
+			return nil, errStopped
+		case <-ctx.Done():
+			s.mu.Lock()
+			return nil, ctx.Err()
+		}
+		s.mu.Lock()
+	}
+	t := &turn{result: make(chan turnResult, 1)}
+	s.beginLocked(t)
+	return t, nil
 }
 
 // cancel stops the running turn; pig answers once it settled. A turn
@@ -332,12 +352,21 @@ func (s *session) cancel() {
 }
 
 // steer hands text to the running turn, which takes it after the tools
-// running now; false when no turn runs.
+// running now; false when no turn runs. One of ownCommands isn't taken: it
+// waits for the turn to end, then runs as the next.
 func (s *session) steer(ctx context.Context, text string, images []image) (bool, error) {
 	s.mu.Lock()
-	running := s.turn != nil
+	running, idle := s.turn != nil, s.idle
 	s.mu.Unlock()
 	if !running {
+		return false, nil
+	}
+	if _, _, own := ownCommand(text); own { // a turn of its own, once this one ends
+		select {
+		case <-idle:
+		case <-s.ended:
+		case <-ctx.Done():
+		}
 		return false, nil
 	}
 	err := s.p.call(ctx, map[string]any{"type": "steer", "message": text, "images": images}, nil)
