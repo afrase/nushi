@@ -1384,25 +1384,6 @@ extension type NushiServiceClient (connect.Transport _transport) {
     );
   }
 
-  /// An issue as a chat's first message (Markdown, for the user to see and
-  /// edit before sending it), and a branch named after it.
-  Future<nushiv1nushi.GetJiraContextResponse> getJiraContext(
-    nushiv1nushi.GetJiraContextRequest input, {
-    connect.Headers? headers,
-    connect.AbortSignal? signal,
-    Function(connect.Headers)? onHeader,
-    Function(connect.Headers)? onTrailer,
-  }) {
-    return connect.Client(_transport).unary(
-      specs.NushiService.getJiraContext,
-      input,
-      signal: signal,
-      headers: headers,
-      onHeader: onHeader,
-      onTrailer: onTrailer,
-    );
-  }
-
   /// An attachment's file or thumbnail (20 MB at most).
   Future<nushiv1nushi.GetJiraAttachmentResponse> getJiraAttachment(
     nushiv1nushi.GetJiraAttachmentRequest input, {

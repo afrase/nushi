@@ -31,7 +31,7 @@ final String dataDir =
         : '$support/Nushi');
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 52;
+const apiVersion = 53;
 
 /// The app's link to nushid. [connected] follows a ping every few seconds;
 /// while connected, daemon events keep [chats] current. When no daemon
@@ -383,8 +383,9 @@ class Daemon extends ChangeNotifier {
 
   /// Starts a chat with [agent] in [folder], or in a scratch folder of its
   /// own (''); in a new worktree of its repository if that's the choice
-  /// remembered for it. A chat on a Jira [issue] remembers it, takes its
-  /// worktree choice, and gets its context in the box, to send or edit.
+  /// remembered for it. A chat on a Jira [issue] remembers it and takes
+  /// its worktree choice; its box stays empty (the agent's tools say which
+  /// issue it is).
   Future<void> startChat(
     String folder,
     String agent, {
@@ -404,7 +405,9 @@ class Daemon extends ChangeNotifier {
             worktree: issue?.worktree ?? wantsWorktree(folder),
             jiraSite: issue?.site,
             jiraKey: issue?.key,
-            branch: issue != null && issue.worktree ? issue.branch : null,
+            branch: issue != null && issue.worktree && folder.isNotEmpty
+                ? issue.branch
+                : null,
           ),
         );
       } on connect.ConnectException catch (e) {
@@ -414,10 +417,7 @@ class Daemon extends ChangeNotifier {
         rethrow;
       }
       cantStart.remove(agent);
-      final chat = chats[resp.chatId] ??= ChatState(resp.chatId, folder);
-      if (issue != null && chat.draft.text.text.isEmpty) {
-        chat.draft.text.text = issue.markdown;
-      }
+      chats[resp.chatId] ??= ChatState(resp.chatId, folder);
       // Not if the user went elsewhere meanwhile: a trust card or another
       // chat they're on stays.
       if ((selectedId, mcpFolder) == before && trustAsk == null) {
@@ -506,21 +506,29 @@ class Daemon extends ChangeNotifier {
   }
 }
 
-/// A chat to start on a Jira issue: its site and key, the issue as its
-/// first message (GetJiraContext), and a worktree on [branch] if
-/// [worktree].
+/// A chat to start on a Jira issue: its site, key and summary, and a
+/// worktree on [branch] if [worktree] (on when the issue is picked).
 class IssueChat {
   new({
     required this.site,
     required this.key,
-    required this.markdown,
+    required this.summary,
     required this.branch,
-    required this.worktree,
+    this.worktree = true,
   });
+
+  /// An issue FindJiraIssues found.
+  new found(FoundJiraIssue f)
+    : this(
+        site: f.site,
+        key: f.issue.key,
+        summary: f.issue.summary,
+        branch: f.branch,
+      );
 
   final String site;
   final String key;
-  final String markdown;
-  final String branch;
+  final String summary;
+  String branch;
   bool worktree;
 }

@@ -5,42 +5,23 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"unicode"
 
 	"github.com/afrase/nushi/internal/adf"
 	"github.com/afrase/nushi/internal/model"
 )
 
-// Branch is a branch's name for work on an issue: its key, uppercase so
-// Jira links it, then its summary as a slug of 40 characters at most, cut
-// between words ("SCRUM-5-fix-the-login").
-func Branch(key, summary string) string {
-	words := strings.FieldsFunc(strings.ToLower(summary), func(r rune) bool {
-		return r >= unicode.MaxASCII || !unicode.IsLetter(r) && !unicode.IsDigit(r)
-	})
-	slug := ""
-	for _, w := range words {
-		if len(slug)+1+len(w) > 41 {
-			break
-		}
-		slug += "-" + w
-	}
-	return key + slug
-}
-
-// recentComments is how many of the latest comments a context packet has.
+// recentComments is how many of the latest comments jira_issue gives.
 const recentComments = 5
 
 var attachmentImage = regexp.MustCompile(`!\[([^\]]*)\]\(jira-attachment:\d+\)`)
 
-// Context is an issue as a chat's first message: a Markdown packet of its
-// key, summary, type, status, description, acceptance criteria, recent
-// comments, links and subtasks. The user sees it in the box, and can edit
-// it, before it's sent.
-func (s *Service) Context(ctx context.Context, id, key string) (packet, branch string, err error) {
+// issueText is an issue for its chat's agent (jira_issue), in Markdown:
+// its key, summary, type, status, description, acceptance criteria, recent
+// comments, links and subtasks.
+func (s *Service) issueText(ctx context.Context, id, key string) (string, error) {
 	is, err := s.Issue(ctx, id, key)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 	var b strings.Builder
 	line := func(format string, args ...any) { fmt.Fprintf(&b, format+"\n", args...) }
@@ -92,7 +73,7 @@ func (s *Service) Context(ctx context.Context, id, key string) (packet, branch s
 		fmt.Fprintf(&comments, "**%s** (%s):\n\n%s\n\n", or(c.Author, "someone"), c.Created.Format("2006-01-02"), text(c.Body))
 	}
 	section("Recent comments", comments.String())
-	return strings.TrimSpace(b.String()) + "\n", Branch(is.Key, is.Summary), nil
+	return strings.TrimSpace(b.String()) + "\n", nil
 }
 
 func refs(rs []model.JiraIssueRef, before func(model.JiraIssueRef) string) string {

@@ -98,7 +98,7 @@ func (t toolSet) Call(ctx context.Context, g tools.Grant, tool string, raw json.
 	by := g.Agent + " in chat " + g.Chat
 	switch tool {
 	case "jira_issue":
-		md, _, err := t.s.Context(ctx, is.Site, is.Key)
+		md, err := t.s.issueText(ctx, is.Site, is.Key)
 		if err != nil {
 			return "", err
 		}

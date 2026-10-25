@@ -9,6 +9,7 @@ import 'package:nushi/jira_jql.dart';
 import 'package:nushi/jira_settings.dart';
 import 'package:nushi/jira_view_parts.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -18,9 +19,10 @@ const jiraKey = SingleActivator(LogicalKeyboardKey.keyJ, meta: true);
 /// How often the open list is asked for again while the view shows.
 const jiraPoll = Duration(minutes: 1);
 
-/// What the view had last (while the app runs): the site, the list, the
-/// JQL typed, and the issue picked.
-String? _site;
+/// What the view had last: the site (the one used last, kept), and while
+/// the app runs the list, the JQL typed, and the issue picked.
+String? get _site => lastJiraSite.value;
+set _site(String? site) => lastJiraSite.value = site;
 String _list = 'mine';
 String _jql = '';
 String? _key;

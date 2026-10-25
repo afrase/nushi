@@ -120,28 +120,17 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
   }
 
   /// Starts a chat on the issue in [folder] (one to choose, when null):
-  /// the New chat dialog, the issue's context in its box.
+  /// the New chat dialog with the issue picked (a worktree on its branch).
   Future<void> _chat(String? folder) async {
     final f = folder ?? await getDirectoryPath(confirmButtonText: 'Choose');
     if (f == null || !mounted) return;
     final daemon = widget.daemon;
     await tryOrShow(context, () async {
-      final r = await daemon.client.getJiraContext(
-        GetJiraContextRequest(site: widget.site, key: widget.issueKey),
+      final r = await daemon.client.findJiraIssues(
+        FindJiraIssuesRequest(text: widget.issueKey, site: widget.site),
       );
-      if (!mounted) return;
-      await newChat(
-        context,
-        daemon,
-        f,
-        issue: IssueChat(
-          site: widget.site,
-          key: widget.issueKey,
-          markdown: r.markdown,
-          branch: r.branch,
-          worktree: daemon.wantsWorktree(f),
-        ),
-      );
+      if (!mounted || r.issues.isEmpty) return;
+      await newChat(context, daemon, f, issue: IssueChat.found(r.issues.first));
     });
   }
 
