@@ -51,4 +51,4 @@ void main() {
   }
 }
 
-final _home = Platform.environment['HOME']!;
+final String _home = Platform.environment['HOME']!;

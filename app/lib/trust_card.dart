@@ -44,14 +44,16 @@ class TrustCard extends StatelessWidget {
                     Icon(Icons.warning_amber_rounded, size: 16, color: t.needs),
                     Flexible(
                       child: Text(
-                        '${folderParts(ask.folder).$1} brings its own code to run',
+                        '${folderParts(ask.folder).$1} brings its own code '
+                        'to run',
                         style: theme.ui(t.text, weight: FontWeight.w600),
                       ),
                     ),
                   ],
                 ),
                 Text(
-                  '${knownAgents[ask.agent]?.title ?? 'The agent'} runs these without asking as soon as a chat starts '
+                  '${knownAgents[ask.agent]?.title ?? 'The agent'} runs these '
+                  'without asking as soon as a chat starts '
                   'in ${tildePath(ask.folder)}, and it hasn’t been told to '
                   'trust the folder. Look before you start.',
                   style: theme.ui(t.textSecondary, size: 12),
@@ -94,12 +96,12 @@ class TrustCard extends StatelessWidget {
                     Button(
                       label: 'Cancel',
                       kind: ButtonKind.ghost,
-                      onPressed: () => ask.decide(false),
+                      onPressed: () => ask.decide(start: false),
                     ),
                     Button(
                       label: 'Start anyway',
                       kind: ButtonKind.primary,
-                      onPressed: () => ask.decide(true),
+                      onPressed: () => ask.decide(start: true),
                     ),
                   ],
                 ),
@@ -155,7 +157,7 @@ class TrustAsk {
   final String agent; // the agent that runs them (Agent.name)
   final answer = Completer<bool>();
 
-  void decide(bool start) {
+  void decide({required bool start}) {
     if (!answer.isCompleted) answer.complete(start);
   }
 }

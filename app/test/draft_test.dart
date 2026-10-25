@@ -12,7 +12,7 @@ void main() {
   ) async {
     final daemon = Daemon();
     final chat = ChatState('c', '/tmp');
-    Future<void> show(bool box) => tester.pumpWidget(
+    Future<void> show({required bool box}) => tester.pumpWidget(
       MaterialApp(
         theme: const NushiTheme(Tokens.dark).toThemeData(),
         home: Scaffold(
@@ -22,14 +22,14 @@ void main() {
         ),
       ),
     );
-    await show(true);
+    await show(box: true);
     await tester.enterText(find.byType(TextField), 'half a thought');
-    await show(false); // a peek at Changes, or another chat
+    await show(box: false); // a peek at Changes, or another chat
     chat.takeBack.value = QueuedMessage(text: 'taken back');
-    await show(true);
+    await show(box: true);
     expect(chat.draft.text.text, 'half a thought\n\ntaken back');
     expect(find.text('half a thought\n\ntaken back'), findsOneWidget);
-    await show(false);
+    await show(box: false);
     daemon.dispose(); // its ping timer
     await tester.pump(const Duration(seconds: 4)); // and the ping's timeout
   });

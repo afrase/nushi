@@ -148,7 +148,7 @@ class TermSession extends ChangeNotifier {
   final scroll = ScrollController();
 
   /// Whether its find bar shows (⌘F).
-  final finding = ValueNotifier(false);
+  final finding = ValueNotifier<bool>(false);
 
   /// The real target of the OSC 8 link under the pointer, if any.
   final hoveredLink = ValueNotifier<String?>(null);

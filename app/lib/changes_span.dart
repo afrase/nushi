@@ -14,7 +14,7 @@ enum Scope {
   branch('Branch'),
   commits('Commits');
 
-  const Scope(this.label);
+  Scope(this.label);
   final String label;
 }
 

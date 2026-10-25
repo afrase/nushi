@@ -165,7 +165,7 @@ class _CollapsibleState extends State<Collapsible> {
                       width: 18,
                       child: body == null
                           ? null
-                          : Chevron(_open, color: t.textSecondary),
+                          : Chevron(open: _open, color: t.textSecondary),
                     ),
                     Expanded(child: widget.header),
                   ],

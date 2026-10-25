@@ -6,7 +6,7 @@ import 'gen/nushi/v1/nushi.pb.dart';
 
 /// The agents the daemon runs (ListAgents), by name, the default first,
 /// as last found on this Mac.
-final agentList = ValueNotifier(<String, Agent>{});
+final agentList = ValueNotifier<Map<String, Agent>>({});
 
 Map<String, Agent> get knownAgents => agentList.value;
 

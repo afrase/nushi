@@ -245,7 +245,7 @@ class _Filtered extends StatefulWidget {
 
 class _FilteredState extends State<_Filtered> {
   final _text = TextEditingController();
-  final _lit = GlobalKey();
+  final GlobalKey<State<StatefulWidget>> _lit = GlobalKey();
   // The row Enter picks, of those shown: the current one at first.
   late int _at = max(0, _shown.indexWhere((e) => e.checked));
 

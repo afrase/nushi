@@ -265,7 +265,8 @@ class _SetUpState extends State<_SetUp> {
             Text(
               'Downloads ${ad.package} ${ad.pinned} and the '
               '${ad.packages - 1} packages it needs from npm, about '
-              '${_mb(ad.downloadBytes.toInt())} (${_mb(ad.diskBytes.toInt())} on disk), into '
+              '${_mb(ad.downloadBytes.toInt())} '
+              '(${_mb(ad.diskBytes.toInt())} on disk), into '
               '${tilde(ad.folder)}.${_sleeps(a)}',
               style: theme.ui(t.text),
             ),
@@ -310,7 +311,7 @@ Future<bool> _confirmRemove(
   await listAgents(client).catchError((_) {});
   if (!context.mounted) return false;
   final a = knownAgents[agent.name] ?? agent, ad = a.adapter;
-  return confirm(
+  return await confirm(
     context,
     "Remove ${a.title}'s adapter?",
     'Removes ${tilde(ad.folder)} (${_mb(ad.diskBytes.toInt())}). ${a.title} '

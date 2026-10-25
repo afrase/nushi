@@ -160,7 +160,7 @@ class _FinishedState extends State<_Finished> {
             spacing: 4,
             children: [
               Text(widget.label, style: theme.ui(t.textMuted, size: 12)),
-              Chevron(_open),
+              Chevron(open: _open),
             ],
           ),
         ),

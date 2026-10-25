@@ -12,7 +12,7 @@ import 'package:nushi/theme/theme.dart';
 import 'fake_daemon.dart';
 
 /// The newest chat is Codex's, so the dialog starts on Codex.
-final _chats = [
+final List<Chat> _chats = [
   chat('a', 'claude', 'Older', age: 5),
   chat('b', 'codex', 'Newer', age: 1),
 ];
@@ -134,8 +134,8 @@ void main() {
   testWidgets('with no agent ready, the empty pane says where to set one up', (
     tester,
   ) async {
-    final fake = FakeDaemon([]);
-    fake.agents = [for (final a in _notAllReady()) a.deepCopy()..ready = false];
+    final fake = FakeDaemon([])
+      ..agents = [for (final a in _notAllReady()) a.deepCopy()..ready = false];
     final d = await fake.connect(tester);
     await tester.pumpWidget(NushiApp(daemon: d));
     await tester.pumpAndSettle();

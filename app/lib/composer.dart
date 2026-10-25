@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:nushi/draft.dart';
 
 import 'chat.dart';
 import 'completions.dart';
@@ -50,8 +51,8 @@ class Composer extends StatefulWidget {
 
 class _ComposerState extends State<Composer> {
   final _focus = FocusNode();
-  late final _draft = widget.chat.draft;
-  late final _text = _draft.text;
+  late final Draft _draft = widget.chat.draft;
+  late final TextEditingController _text = _draft.text;
   late final _completions = Completions(
     _text,
     _draft.mentions,
@@ -60,7 +61,7 @@ class _ComposerState extends State<Composer> {
   );
   Set<String> get _mentions => _draft.mentions; // files picked with @
   List<String> _lastFiles = []; // the last prompt's, for Up
-  late final _images = _draft.images;
+  late final Attachments _images = _draft.images;
 
   @override
   void initState() {
@@ -313,7 +314,8 @@ class _ComposerState extends State<Composer> {
                               : null,
                           tooltip: chat.canImages
                               ? ''
-                              : '${chat.agentName} doesn’t take images in this chat',
+                              : '${chat.agentName} doesn’t take images '
+                                    'in this chat',
                         ),
                       ],
                       builder: (context, open) => boxButton(
@@ -337,7 +339,8 @@ class _ComposerState extends State<Composer> {
                           decoration: InputDecoration(
                             hintText: !chat.busy
                                 ? widget.hint
-                                : '⏎ queues it, ⌘⏎ stops ${chat.agentName} and sends',
+                                : '⏎ queues it, ⌘⏎ stops ${chat.agentName} '
+                                      'and sends',
                             border: InputBorder.none,
                             // One line (18.2) is as tall as the buttons.
                             contentPadding: const EdgeInsets.symmetric(

@@ -22,7 +22,7 @@ String withReplies(List<Reply> replies, String text) => [
       '<!-- reply ${i + 1} -->\n',
       [
         for (final line in r.quote.trim().split('\n'))
-          line.isEmpty ? '>' : '> $line',
+          if (line.isEmpty) '>' else '> $line',
       ].join('\n'),
       if (r.text.trim().isNotEmpty) '\n\n${r.text.trim()}',
     ].join(),
@@ -50,7 +50,7 @@ String withReplies(List<Reply> replies, String text) => [
     replies.add((
       quote: [
         for (final l in quoted)
-          l.startsWith('> ') ? l.substring(2) : l.substring(1),
+          if (l.startsWith('> ')) l.substring(2) else l.substring(1),
       ].join('\n'),
       text: text,
     ));

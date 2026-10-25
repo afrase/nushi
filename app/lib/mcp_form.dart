@@ -226,17 +226,18 @@ class _FormState extends State<_Form> {
               label('Scope'),
               Row(
                 children: [
-                  _editing
-                      ? Text(scopes[_scope]!.$1, style: theme.ui(t.text))
-                      : Segmented(
-                          value: _scope,
-                          segments: const [
-                            ('user', 'User'),
-                            ('project', 'Project'),
-                            ('local', 'Local'),
-                          ],
-                          onChanged: (v) => setState(() => _scope = v),
-                        ),
+                  if (_editing)
+                    Text(scopes[_scope]!.$1, style: theme.ui(t.text))
+                  else
+                    Segmented(
+                      value: _scope,
+                      segments: const [
+                        ('user', 'User'),
+                        ('project', 'Project'),
+                        ('local', 'Local'),
+                      ],
+                      onChanged: (v) => setState(() => _scope = v),
+                    ),
                 ],
               ),
               const SizedBox(height: 4),

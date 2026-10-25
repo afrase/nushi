@@ -69,10 +69,12 @@ class FolderButton extends StatelessWidget {
   /// Whether the one-line form shows the parent path after the name.
   final bool path;
 
-  Future<void> _move(BuildContext context, String? folder) async {
-    folder ??= await getDirectoryPath(
-      confirmButtonText: chat.fresh ? 'Open' : 'Move chat here',
-    );
+  Future<void> _move(BuildContext context, String? to) async {
+    final folder =
+        to ??
+        await getDirectoryPath(
+          confirmButtonText: chat.fresh ? 'Open' : 'Move chat here',
+        );
     if (folder == null || !context.mounted) return;
     final wt = chat.worktree;
     if (wt != null && !chat.fresh) {
@@ -85,7 +87,7 @@ class FolderButton extends StatelessWidget {
       );
       if (!move || !context.mounted) return;
     }
-    await tryOrShow(context, () => daemon.moveChat(chat, folder!));
+    await tryOrShow(context, () => daemon.moveChat(chat, folder));
   }
 
   @override

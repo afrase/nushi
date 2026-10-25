@@ -250,7 +250,7 @@ class _Clickable extends StatelessWidget {
 }
 
 /// The largest local file a markdown image reads.
-const maxImageFile = 20 << 20;
+const int maxImageFile = 20 << 20;
 
 /// A markdown image: a local file (an absolute path or a file: URL; a
 /// regular file of [maxImageFile] at most, never a device or a pipe) or a

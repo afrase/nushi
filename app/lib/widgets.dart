@@ -307,7 +307,7 @@ class Segmented<T> extends StatelessWidget {
 
 /// The chevron of something that opens: down while [open].
 class Chevron extends StatelessWidget {
-  const Chevron(this.open, {super.key, this.size = 14, this.color});
+  const Chevron({required this.open, super.key, this.size = 14, this.color});
 
   final bool open;
   final double size;

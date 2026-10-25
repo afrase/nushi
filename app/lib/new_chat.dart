@@ -188,7 +188,8 @@ class _NewChatState extends State<_NewChat> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
-                                  'Open ${_an(agentTitle(agents[_at]))} session…',
+                                  'Open ${_an(agentTitle(agents[_at]))} '
+                                  'session…',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: theme.ui(t.textSecondary, size: 12.5),
@@ -311,13 +312,13 @@ class NothingOpen extends StatelessWidget {
         children: [
           Logo(color: theme.t.borderStrong),
           const SizedBox(height: 16),
-          none
-              ? _SetUpLine(
-                  'Set up an agent in ',
-                  onTap: () =>
-                      showSettings(context, daemon.client, agents: true),
-                )
-              : Text('Start a chat', style: theme.ui(theme.t.textMuted)),
+          if (none)
+            _SetUpLine(
+              'Set up an agent in ',
+              onTap: () => showSettings(context, daemon.client, agents: true),
+            )
+          else
+            Text('Start a chat', style: theme.ui(theme.t.textMuted)),
         ],
       ),
     );

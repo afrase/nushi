@@ -92,7 +92,7 @@ class _DeleteDialog extends StatefulWidget {
 }
 
 class _DeleteDialogState extends State<_DeleteDialog> {
-  late final _plan = widget.daemon.client
+  late final Future<PlanDeleteChatResponse> _plan = widget.daemon.client
       .planDeleteChat(PlanDeleteChatRequest(chatId: widget.chat.id))
       .then((p) {
         _worktrees = p.worktrees;
@@ -173,6 +173,9 @@ class _DeleteDialogState extends State<_DeleteDialog> {
               snap.hasError ? '${snap.error}' : 'Checking what goes…',
             );
           }
+          final archived = p.sessions.length == 1
+              ? 'chat'
+              : '${p.sessions.length} sessions';
           return Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -183,7 +186,7 @@ class _DeleteDialogState extends State<_DeleteDialog> {
                       false)) ...[
                 line(
                   '• $name archives its history of the '
-                  '${p.sessions.length == 1 ? 'chat' : '${p.sessions.length} sessions'} '
+                  '$archived '
                   '($resume offers to unarchive it):',
                 ),
                 ...sessions(p),
@@ -216,7 +219,7 @@ class _DeleteDialogState extends State<_DeleteDialog> {
                   plan: w,
                   remove: _choices[w.worktree.path]!.$1,
                   branch: _choices[w.worktree.path]!.$2,
-                  onChanged: (remove, branch) => setState(
+                  onChanged: ({required remove, required branch}) => setState(
                     () => _choices[w.worktree.path] = (remove, branch),
                   ),
                 ),

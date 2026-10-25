@@ -25,7 +25,7 @@ final support = '${Platform.environment['HOME']}/Library/Application Support';
 
 /// The daemon's data folder; `NUSHI_DATA` picks another one (development),
 /// and tests get one in the temporary folder, never the user's.
-final dataDir =
+final String dataDir =
     Platform.environment['NUSHI_DATA'] ??
     (Platform.environment.containsKey('FLUTTER_TEST')
         ? '${Directory.systemTemp.path}/nushi-test'
@@ -99,14 +99,14 @@ class Daemon extends ChangeNotifier {
     // Read at every call: the daemon writes it on its first start.
     final token = await File('$dataDir/token').readAsString();
     req.headers['authorization'] = 'Bearer ${token.trim()}';
-    return next(req);
+    return await next(req);
   };
 
   /// The folder whose MCP servers show in place of the chat, if they do.
   String? mcpFolder;
 
   void showMcp(String? folder) {
-    trustAsk?.decide(false);
+    trustAsk?.decide(start: false);
     mcpFolder = folder;
     notifyListeners();
   }
@@ -129,7 +129,7 @@ class Daemon extends ChangeNotifier {
         CheckFolderRequest(folder: folder, agent: agent),
       );
       if (check.runs.isEmpty) return true;
-      trustAsk?.decide(false);
+      trustAsk?.decide(start: false);
       final ask = trustAsk = TrustAsk(folder, action, check.runs, agent);
       notifyListeners();
       final start = await ask.answer.future;
@@ -273,10 +273,8 @@ class Daemon extends ChangeNotifier {
     }
     terminals.stale();
     try {
-      final listed = (await client.listChats(ListChatsRequest())).chats;
-      for (final c in listed) {
-        _chat(c);
-      }
+      final listed = (await client.listChats(ListChatsRequest())).chats
+        ..forEach(_chat);
       // Chats deleted meanwhile go; side chats the daemon lost (it
       // restarted) end, the others catch up.
       final ids = {for (final c in listed) c.id};
@@ -354,7 +352,7 @@ class Daemon extends ChangeNotifier {
   }
 
   void select(String chatId) {
-    trustAsk?.decide(false);
+    trustAsk?.decide(start: false);
     selectedId = chatId;
     mcpFolder = null;
     final chat = chats[chatId];
@@ -408,13 +406,13 @@ class Daemon extends ChangeNotifier {
   }
 
   /// Opens [session], one of [agent]'s sessions that isn't a chat, as a
-  /// chat in [folder] (its own folder for ''), and shows it.
+  /// chat in [asked] (its own folder for ''), and shows it.
   Future<void> openSession(
-    String folder,
+    String asked,
     String agent,
     FoundSession session,
   ) async {
-    if (folder.isEmpty) folder = session.folder;
+    final folder = asked.isEmpty ? session.folder : asked;
     starting = folder;
     notifyListeners();
     try {

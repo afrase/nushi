@@ -75,8 +75,9 @@ Set<String> _strings(String key) => {
 /// Writes [file] whole or not at all: to a file beside it, renamed over
 /// it, so a crash mid-write can't leave half of it.
 void writeWhole(File file, String text) {
-  final tmp = File('${file.path}.tmp')..writeAsStringSync(text, flush: true);
-  tmp.renameSync(file.path);
+  File('${file.path}.tmp')
+    ..writeAsStringSync(text, flush: true)
+    ..renameSync(file.path);
 }
 
 void _save() {

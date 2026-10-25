@@ -80,6 +80,7 @@ String ago(Duration age, DateTime when) => switch (age) {
   _ when age.inHours < 1 => '${age.inMinutes}m ago',
   _ when age.inDays < 1 => '${age.inHours}h ago',
   _ when age.inDays < 30 => '${age.inDays}d ago',
-  _ =>
-    '${when.year}-${'${when.month}'.padLeft(2, '0')}-${'${when.day}'.padLeft(2, '0')}',
+  _ => '${when.year}-${_two(when.month)}-${_two(when.day)}',
 };
+
+String _two(int n) => '$n'.padLeft(2, '0');

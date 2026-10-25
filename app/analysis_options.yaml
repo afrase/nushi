@@ -18,18 +18,3 @@ linter:
     unnecessary_type_name_in_constructor: false
     always_put_required_named_parameters_first: false
     avoid_multiple_declarations_per_line: false
-    missing_whitespace_between_adjacent_strings: false
-    specify_nonobvious_property_types: false
-    avoid_positional_boolean_parameters: false
-    prefer_if_elements_to_conditional_expressions: false
-    cascade_invocations: false
-    parameter_assignments: false
-    async_return_with_no_await: false
-    sort_pub_dependencies: false
-    prefer_foreach: false
-    use_raw_strings: false
-    unnecessary_const_in_enum_constructor: false
-    sort_constructors_first: false
-    no_default_cases: false
-    avoid_slow_async_io: false
-    lines_longer_than_80_chars: false
