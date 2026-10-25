@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -33,6 +34,8 @@ import (
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/omp"
+	"github.com/afrase/nushi/internal/pig"
+	"github.com/afrase/nushi/internal/pig/pigtest"
 	"github.com/afrase/nushi/internal/store"
 )
 
@@ -101,7 +104,19 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 		}),
 		Dialect: chats.Dialect{ForkAt: ante.ForkAt, Other: ante.Other, Context: ante.Context}}
 	ompKind := chats.Kind{Name: "omp", Title: "oh-my-pi", Resume: omp.Resume, Launch: fake(false, true), Dialect: chats.Dialect{Other: omp.Other, ToolCall: omp.ToolCall}}
-	svc := chats.New([]chats.Kind{{Name: "fake", Launch: fake(false, false), History: copyHistory}, codexKind, anteKind, ompKind},
+	pigs := pigStores(dataDir)
+	pigKind := chats.Kind{Name: "pig", Title: "PiG", Resume: pig.Resume,
+		Launch: launch(func(r io.Reader, w io.Writer) {
+			spawn := func(cwd string, args ...string) (io.WriteCloser, io.Reader, func(), error) {
+				inR, inW := io.Pipe()
+				outR, outW := io.Pipe()
+				go func() { pigs.Serve(inR, outW, cwd, args); outW.Close() }()
+				return inW, outR, func() { inR.Close(); outW.Close() }, nil
+			}
+			pig.Serve(r, w, pig.Config{Spawn: spawn, Dirs: pig.Dirs{Sessions: pigs.Sessions}, Version: pig.Version})
+		}),
+		Dialect: chats.Dialect{ForkAt: pig.ForkAt}}
+	svc := chats.New([]chats.Kind{{Name: "fake", Launch: fake(false, false), History: copyHistory}, codexKind, anteKind, ompKind, pigKind},
 		st, st, git.Worktrees{}, filepath.Join(dataDir, "scratch"), hub.Publish)
 	terms := terminals.New(startSh, "sh", svc, hub.Publish)
 	svc.UseTerminals(terms)
@@ -136,6 +151,20 @@ func anteStores(dataDir string) *antetest.Store {
 		antes[dataDir] = &antetest.Store{Home: filepath.Join(dataDir, "ante")}
 	}
 	return antes[dataDir]
+}
+
+var pigs = map[string]*pigtest.Store{}
+
+// pigStores is the fake PiG's sessions for a data folder, as anteStores.
+func pigStores(dataDir string) *pigtest.Store {
+	anteMu.Lock()
+	defer anteMu.Unlock()
+	if pigs[dataDir] == nil {
+		dir := filepath.Join(dataDir, "pig")
+		os.MkdirAll(dir, 0o700)
+		pigs[dataDir] = &pigtest.Store{Sessions: dir}
+	}
+	return pigs[dataDir]
 }
 
 type bearer struct{}

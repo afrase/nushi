@@ -36,6 +36,7 @@ func TestList(t *testing.T) {
 	fakeCLI(t, bin, "odd", "Odd, no version here\n")
 	off := fakeCLI(t, other, "ante", "ante 0.2.9")
 	fakeCLI(t, bin, "omp", "18.12.6")
+	fakeCLI(t, bin, "pig", "0.5.3+1.4.0.74f46864")
 	t.Setenv("PATH", bin+":/usr/bin:/bin")
 	signedIn := func(run func(...string) ([]byte, error)) string {
 		out, err := run("auth", "status")
@@ -50,6 +51,7 @@ func TestList(t *testing.T) {
 		{Name: "odd", CLI: "odd"},
 		{Name: "ante", CLI: "ante", Also: []string{filepath.Join(other, "nope"), off}, Min: "0.2.14"},
 		{Name: "omp", CLI: "omp", Needs: "bun"},
+		{Name: "pig", CLI: "pig"},
 		{Name: "gone", CLI: "gone"},
 	}, "", &fakeInstaller{}, &fakeChats{})
 	want := []Status{
@@ -58,6 +60,7 @@ func TestList(t *testing.T) {
 		{Path: bin + "/odd"},
 		{Path: off, Version: "0.2.9", Problem: "Needs 0.2.14 or newer"},
 		{Path: bin + "/omp", Version: "18.12.6", Problem: "Needs Bun"},
+		{Path: bin + "/pig", Version: "0.5.3"},
 		{Problem: "Not installed"},
 	}
 	for i, got := range svc.List(context.Background()) {

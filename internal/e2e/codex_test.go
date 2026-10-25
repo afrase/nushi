@@ -21,7 +21,7 @@ func TestACodexChat(t *testing.T) {
 	d := startDaemon(t, dataDir, history, nil)
 	a := open(t, d)
 	agents := must(a.c.ListAgents(ctx, connect.NewRequest(&nushiv1.ListAgentsRequest{}))).Agents
-	if len(agents) != 4 || agents[1].Name != "codex" || agents[1].Resume != "codex resume" {
+	if len(agents) != 5 || agents[1].Name != "codex" || agents[1].Resume != "codex resume" {
 		t.Fatalf("agents = %v", agents)
 	}
 

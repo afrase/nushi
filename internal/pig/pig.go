@@ -38,7 +38,7 @@ const Command = "pig-acp"
 const (
 	CLI     = "pig"
 	Version = "0.5.3"
-	Page    = "https://pi-in-go.dev"
+	Page    = "https://pi-in-go.dev/install/"
 )
 
 // Tested are the PiG versions the bridge was run with.
