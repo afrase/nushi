@@ -11,6 +11,10 @@ Steps 180–187, one commit each on `main`, all pushed; `make check` passed befo
 - **`// ignore:` count: 9** (was 7): `close_sinks` 7 (as before, sinks handed to their owner), `no_default_cases` 1 (a switch on ItemKind, a protobuf enum, keeps its `default` for kinds a newer daemon sends), and one `ignore_for_file: missing_whitespace_between_adjacent_strings` (the marks' SVG path data in adjacent strings).
 - `make lint` takes about 17 s here (was 13: govulncheck twice, and the bigger rule set).
 
+**CI**: green on step 187 (1a84b61): both jobs passed, govulncheck included (180–186's runs were cancelled by the next push, as `concurrency` says).
+
+**Install check**: `make install` (the app and its daemon on go1.27.3, also copied to your iCloud Downloads), then the installed daemon (pid 66788, step 179's, go1.27.1) stopped by its PID from its socket and the helper opened as the app does (`open -n -g … --args -login`), since no Nushi was open: `nushid started version="1a84b61b16af go1.27.3" … api=51`. No API change and no change you'd see in the app.
+
 **Size**: the app went from 16,555 to 16,687 lines of Dart (one declaration a line), the packages from 1,867 to 1,924 (docs); Go unchanged. No step adds more than about 440 lines (185, one import a line).
 
 ## Summary (2026-10-25, after step 178: ACP as the library github.com/afrase/acp-go)
