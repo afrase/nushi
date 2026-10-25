@@ -107,7 +107,15 @@ func (s *session) toolLocked(typ string, e *pigEvent) []acp.SessionUpdate {
 			out = append(out, acp.SessionUpdate{SessionUpdate: "tool_call", ToolCall: &call})
 		}
 		delete(s.tools, id)
-		return append(out, toolcall.Update(u))
+		out = append(out, toolcall.Update(u))
+		var r struct {
+			Details json.RawMessage `json:"details"`
+		}
+		_ = json.Unmarshal(e.Result, &r)
+		if p := planOf(r.Details); p != nil {
+			out = append(out, *p)
+		}
+		return out
 	}
 	return nil
 }

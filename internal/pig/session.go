@@ -87,11 +87,12 @@ type message struct {
 		CacheWrite  int64 `json:"cacheWrite"`
 		TotalTokens int64 `json:"totalTokens"`
 	} `json:"usage"`
-	ToolCallID string `json:"toolCallId"`
-	ToolName   string `json:"toolName"`
-	IsError    bool   `json:"isError"`
-	Command    string `json:"command"`
-	Output     string `json:"output"`
+	ToolCallID string          `json:"toolCallId"`
+	ToolName   string          `json:"toolName"`
+	IsError    bool            `json:"isError"`
+	Details    json.RawMessage `json:"details"`
+	Command    string          `json:"command"`
+	Output     string          `json:"output"`
 }
 
 type block struct {
@@ -180,8 +181,16 @@ func (s *session) handle(ev event) {
 		warnf("%s", ev.Raw)
 	case "compaction_start", "compaction_end":
 		out = s.compactionLocked(ev.Type, ev.Raw)
+	case "entry_appended": // an extension's own entry, maybe its todo list
+		var a struct {
+			Entry entry `json:"entry"`
+		}
+		_ = json.Unmarshal(ev.Raw, &a)
+		if p := planOf(a.Entry.Data); p != nil {
+			out = []acp.SessionUpdate{*p}
+		}
 	case "agent_end", "turn_start", "turn_end", "queue_update", "auto_retry_start", "auto_retry_end", "bash_execution_update",
-		"entry_appended", "summarization_retry_scheduled", "summarization_retry_attempt_start", "summarization_retry_finished":
+		"summarization_retry_scheduled", "summarization_retry_attempt_start", "summarization_retry_finished":
 	default:
 		warnf("an event the bridge doesn't know: %q", ev.Type)
 	}
