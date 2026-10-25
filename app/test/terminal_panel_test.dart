@@ -15,8 +15,8 @@ import 'package:nushi/theme/theme.dart';
 class _Daemon implements Transport {
   final calls = <String>[];
   final written = <String>[];
-  var opened = 0;
-  var replay = '\$ ';
+  int opened = 0;
+  String replay = '\$ ';
   String? live; // what the shell writes after the replay
 
   @override
@@ -45,6 +45,8 @@ class _Daemon implements Transport {
     Stream<I> input, [
     CallOptions? options,
   ]) async {
+    // Handed to the response, whose stream the test reads.
+    // ignore: close_sinks
     final out = StreamController<O>()
       ..add(AttachTerminalResponse(data: utf8.encode(replay)) as O);
     if (live case final live?) {
@@ -151,7 +153,7 @@ void main() {
     expect(daemon.written.join(), startsWith('\x1b[?'));
   });
 
-  testWidgets('output can\'t have its title typed at the prompt', (
+  testWidgets("output can't have its title typed at the prompt", (
     tester,
   ) async {
     final daemon = _Daemon()..live = '\x1b]2;s; echo hi #\x07\x1b[21t\x1b[20t';

@@ -13,7 +13,7 @@ late String _peerBin;
 Future<Map<String, String>> _peer(List<String> args) async {
   final p = await Process.start(_peerBin, args);
   addTearDown(p.kill);
-  p.stderr.drain<void>();
+  unawaited(p.stderr.drain<void>());
   final line = await p.stdout
       .transform(utf8.decoder)
       .transform(const LineSplitter())
@@ -89,7 +89,7 @@ void main() {
     await ch.close();
   });
 
-  test('pairing gives up on a Mac that doesn\'t answer', () async {
+  test("pairing gives up on a Mac that doesn't answer", () async {
     final peer = await _peer(['-psk', '-mute']);
     final offer = PairingOffer(
       Uri.parse(peer['relay']!),
@@ -116,7 +116,7 @@ void main() {
     await expectLater(_open(peer, secret: Uint8List(32)), throwsA(anything));
   });
 
-  test('a daemon that isn\'t the pinned key fails', () async {
+  test("a daemon that isn't the pinned key fails", () async {
     final peer = await _peer([]);
     await expectLater(
       _open(peer, key: (await KeyPair.make()).public),

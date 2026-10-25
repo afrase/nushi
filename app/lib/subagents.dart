@@ -57,7 +57,7 @@ String subagentState(SubagentRun s) {
 
 /// What a subagent runs on: its model (the one it ran on, else the one it
 /// was asked for, else the chat's) and effort (asked for, else the
-/// chat's), by name; [inherited] when it is the chat's. The chat's is what
+/// chat's), by name; `inherited` when it is the chat's. The chat's is what
 /// it uses now, '' when unknown.
 typedef Setting = ({String name, bool inherited});
 

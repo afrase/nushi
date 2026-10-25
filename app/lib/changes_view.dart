@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -69,7 +70,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   }
 
   void _open() {
-    if (_take()) reload();
+    if (_take()) unawaited(reload());
   }
 
   /// The commits picked, as indices: newest, oldest.
@@ -88,7 +89,14 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
       if (asked != _reloads) return; // another reload took over
       final status = span.status;
       if (!status.git) {
-        throw status.gone ? 'The folder is gone.' : 'Not a git repository.';
+        if (mounted) {
+          setState(
+            () => _error = status.gone
+                ? 'The folder is gone.'
+                : 'Not a git repository.',
+          );
+        }
+        return;
       }
       _span = span;
       _commits = span.commits;
@@ -162,7 +170,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
         _last = null;
       }
     });
-    tryOrShow(context, _diff);
+    unawaited(tryOrShow(context, _diff));
   }
 
   @override

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -14,7 +15,7 @@ import 'theme/theme.dart';
 /// change outside Nushi too.
 class McpServers extends ChangeNotifier {
   McpServers._(this.daemon, this.folder) {
-    refresh();
+    unawaited(refresh());
   }
 
   static final _byFolder = <String, McpServers>{};
@@ -26,7 +27,7 @@ class McpServers extends ChangeNotifier {
     final list = _byFolder[folder] ??= McpServers._(daemon, folder);
     final at = list._at;
     if (!list.checking && at != null && DateTime.now().difference(at) > fresh) {
-      Future.microtask(list.refresh); // not while a build asks
+      unawaited(Future.microtask(list.refresh)); // not while a build asks
     }
     return list;
   }
@@ -65,7 +66,7 @@ class McpServers extends ChangeNotifier {
   /// After a change here: other folders' lists may be out of date too.
   void changed() {
     _byFolder.removeWhere((_, l) => l != this);
-    refresh();
+    unawaited(refresh());
   }
 
   Future<ListMcpServersResponse> _list(bool check) =>

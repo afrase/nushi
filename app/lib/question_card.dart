@@ -1,8 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'question_parts.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
+import 'question_parts.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
 
@@ -180,7 +182,7 @@ class _QuestionCardState extends State<QuestionCard> {
       } else if (_many && onQuestion) {
         _go(_tab + 1);
       } else if (_answer.isNotEmpty) {
-        _send(_answer);
+        unawaited(_send(_answer));
       }
     } else {
       return KeyEventResult.ignored;
@@ -274,11 +276,11 @@ class _QuestionCardState extends State<QuestionCard> {
       controller: _text[f.id],
       style: theme.ui(t.text),
       onSubmitted: (_) {
-        _many
-            ? _go(_tab + 1)
-            : _answer.isNotEmpty
-            ? _send(_answer)
-            : null;
+        if (_many) {
+          _go(_tab + 1);
+        } else if (_answer.isNotEmpty) {
+          unawaited(_send(_answer));
+        }
         _focus.requestFocus();
       },
       decoration: InputDecoration(

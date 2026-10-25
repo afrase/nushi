@@ -62,15 +62,21 @@ class _NushiAppState extends State<NushiApp> {
       PlatformMenu(
         label: 'Nushi',
         menus: [
-          PlatformProvidedMenuItem(type: PlatformProvidedMenuItemType.about),
+          const PlatformProvidedMenuItem(
+            type: PlatformProvidedMenuItemType.about,
+          ),
           PlatformMenuItem(
             label: 'Settings…',
             shortcut: settingsKey,
             onSelected: () =>
                 showSettings(_navigator.currentContext!, widget.daemon.client),
           ),
-          PlatformProvidedMenuItem(type: PlatformProvidedMenuItemType.hide),
-          PlatformProvidedMenuItem(type: PlatformProvidedMenuItemType.quit),
+          const PlatformProvidedMenuItem(
+            type: PlatformProvidedMenuItemType.hide,
+          ),
+          const PlatformProvidedMenuItem(
+            type: PlatformProvidedMenuItemType.quit,
+          ),
         ],
       ),
       PlatformMenu(

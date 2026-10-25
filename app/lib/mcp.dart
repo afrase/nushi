@@ -147,8 +147,8 @@ class _Group extends StatelessWidget {
           ),
           Text(about, style: muted),
           const SizedBox(height: 6),
-          Container(
-            decoration: box(t.borderSubtle, radius: NushiTheme.card),
+          DecoratedBox(
+            decoration: box(t.borderSubtle),
             child: Column(
               children: [
                 if (servers.isEmpty)
@@ -215,7 +215,7 @@ class _Row extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   server.name,
-                  style: theme.ui(t.text, size: 13, weight: FontWeight.w500),
+                  style: theme.ui(t.text, weight: FontWeight.w500),
                 ),
                 const SizedBox(width: 8),
                 Text(transport(c), style: theme.code(t.textMuted, size: 11)),

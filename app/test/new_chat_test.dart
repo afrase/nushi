@@ -1,8 +1,8 @@
+import 'package:fixnum/fixnum.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fixnum/fixnum.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
@@ -196,7 +196,7 @@ void main() {
     final (fake, d) = await _sidebar(tester);
     fake.startError =
         "couldn't start Codex: initialize: acp error -32603: the app-server "
-        "quit: exit status 1";
+        'quit: exit status 1';
     await _open(tester);
     await _key(tester, LogicalKeyboardKey.enter); // codex fails
     expect(find.textContaining("couldn't start Codex"), findsOneWidget);

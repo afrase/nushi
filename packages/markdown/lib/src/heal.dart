@@ -37,7 +37,7 @@ String healLine(String line) {
 
 // ---------------------------------------------------------------- fences
 
-final _fence = RegExp(r'^ {0,3}(`{3,}|~{3,})');
+final _fence = RegExp('^ {0,3}(`{3,}|~{3,})');
 final _partialFence = RegExp(r'^ {0,3}(`{1,2}|~{1,2})$');
 
 /// The closer of the fence still open at the end of [text], or null.

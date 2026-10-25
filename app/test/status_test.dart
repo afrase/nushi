@@ -65,7 +65,7 @@ void main() {
     expect(subagentState(subs.single), 'done · 1 tool call');
   });
 
-  test('what a subagent runs on: asked for, else the chat\'s', () {
+  test("what a subagent runs on: asked for, else the chat's", () {
     ConfigOption option(String category, String current, List<String> v) =>
         ConfigOption(
           category: category,

@@ -114,8 +114,8 @@ void main() {
       includeParentEnvironment: false,
     );
     procs.add(daemon);
-    daemon.stdout.drain<void>();
-    daemon.stderr.drain<void>();
+    unawaited(daemon.stdout.drain<void>());
+    unawaited(daemon.stderr.drain<void>());
     await _until(() async => File('${tmp.path}/data/nushid.sock').exists());
     final token = (await File('${tmp.path}/data/token').readAsString()).trim();
     final mac = _client(

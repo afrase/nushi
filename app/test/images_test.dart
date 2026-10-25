@@ -39,7 +39,7 @@ void main() {
         ..value = [ImageData(mimeType: 'image/png')];
       final adding = images.add(Uint8List(1));
       var ready = false;
-      images.ready().then((_) => ready = true);
+      unawaited(images.ready().then((_) => ready = true));
       images.clear(); // sent meanwhile
       await Future<void>.delayed(Duration.zero);
       expect(ready, isFalse);

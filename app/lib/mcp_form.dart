@@ -70,7 +70,7 @@ class _FormState extends State<_Form> {
   /// Fills the form from a config; false when the form can't show it.
   bool _load(Map<String, dynamic> c) {
     final t = transport(c);
-    final args = c['args'] ?? [];
+    final args = c['args'] ?? <Object?>[];
     // One argument a line: one that has a line break, is empty or isn't
     // text would come back changed, so the JSON shows instead.
     final lines =

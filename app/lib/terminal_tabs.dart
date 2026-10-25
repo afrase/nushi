@@ -1,10 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'gen/nushi/v1/nushi.pb.dart' as pb;
+import 'inline_edit.dart';
 import 'terminals.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
-import 'inline_edit.dart';
 
 /// Closes a terminal, asking first when a program other than the shell
 /// runs in it.
@@ -114,7 +116,9 @@ class _TabState extends State<_Tab> {
     setState(() => _renaming = false);
     widget.terms.session(widget.info).focus.requestFocus();
     if (name != null && name != terminalName(widget.info)) {
-      tryOrShow(context, () => widget.terms.rename(widget.info.id, name));
+      unawaited(
+        tryOrShow(context, () => widget.terms.rename(widget.info.id, name)),
+      );
     }
   }
 

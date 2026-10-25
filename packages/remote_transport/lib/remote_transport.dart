@@ -160,7 +160,7 @@ final class RelayTransport implements Http2ClientTransport {
         daemonKey: daemon.key,
       );
     } on Object catch (e) {
-      throw _unavailable('couldn\'t reach the Mac', e);
+      throw _unavailable("couldn't reach the Mac", e);
     }
     return _use(ch);
   }

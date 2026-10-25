@@ -25,7 +25,7 @@ List<int> prologue(String id) => [
 /// when pairing (IKpsk1).
 final class Channel {
   Channel._(this._ws, this._messages, this._hs) {
-    _pump();
+    unawaited(_pump());
   }
 
   final RelaySocket _ws;

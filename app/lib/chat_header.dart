@@ -50,7 +50,7 @@ class _ChatHeaderState extends State<ChatHeader> {
         .where((v) => v.value == model.current)
         .firstOrNull
         ?.name;
-    final titleStyle = theme.ui(t.text, size: 13, weight: FontWeight.w600);
+    final titleStyle = theme.ui(t.text, weight: FontWeight.w600);
     // The title and the model (a Codex model id is long) share what the
     // rest of the row leaves (it takes about 420 points), so a narrow
     // window cuts them short rather than overflow.

@@ -20,7 +20,7 @@ void main() {
     final d = await FakeDaemon([]).connect(tester);
     await tester.pumpWidget(
       MaterialApp(
-        theme: NushiTheme(Tokens.dark).toThemeData(),
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
         home: Builder(
           builder: (context) => TextButton(
             onPressed: () => mcpForm(context, McpServers.of(d, '/x')),

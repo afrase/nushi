@@ -9,6 +9,8 @@ import 'package:nushi/settings.dart';
 
 /// A daemon with chat "a" and its events in [events].
 class _Fake implements Transport {
+  // The test's stream, which lives as long as the test.
+  // ignore: close_sinks
   final events = StreamController<EventsResponse>();
 
   /// When set, the chat list answers once it completes; StartChat too.
@@ -21,7 +23,7 @@ class _Fake implements Transport {
     I input, [
     CallOptions? options,
   ]) async {
-    final Object out = switch (input) {
+    final out = switch (input) {
       PingRequest() => PingResponse(apiVersion: apiVersion),
       ListChatsRequest() =>
         await list?.future ??
