@@ -159,3 +159,14 @@ func TestAttachment(t *testing.T) {
 		t.Error("an attachment over the limit was read")
 	}
 }
+
+func TestRemoteLinksOnlySafe(t *testing.T) {
+	f := newFake(t)
+	f.routes["GET /rest/api/3/issue/A-1/remotelink"] = func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`[{"object":{"title":"run","url":" JavaScript:alert(1)"}},{"object":{"title":"file","url":"file:///etc/hosts"}},{"object":{"title":"pr","url":"https://e.com/1"}}]`))
+	}
+	ls, err := f.client().remoteLinks(t.Context(), "A-1")
+	if err != nil || len(ls) != 3 || ls[0].URL != "" || ls[1].URL != "" || ls[0].Title != "run" || ls[2].URL != "https://e.com/1" {
+		t.Fatalf("remote links %+v, %v", ls, err)
+	}
+}

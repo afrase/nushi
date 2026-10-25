@@ -7,6 +7,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/afrase/nushi/internal/adf"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -92,7 +93,7 @@ func (s *Service) Context(ctx context.Context, id, key string) (packet, branch s
 	}))
 	var remote strings.Builder
 	for _, r := range is.RemoteLinks {
-		fmt.Fprintf(&remote, "- [%s](%s)\n", or(r.Title, r.URL), r.URL)
+		fmt.Fprintf(&remote, "- %s\n", adf.Link(or(r.Title, r.URL), r.URL))
 	}
 	section("Remote links", remote.String())
 	var comments strings.Builder

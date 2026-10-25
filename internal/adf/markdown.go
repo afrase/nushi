@@ -111,7 +111,7 @@ func (w writer) block(n Node) string {
 	case "expand", "nestedExpand":
 		return "**" + escape(cmp.Or(n.attr("title"), "Details")) + "**\n\n" + w.blocks(n.Content, "\n\n")
 	case "blockCard", "embedCard":
-		return link(n.attr("url"), n.attr("url"))
+		return Link(n.attr("url"), n.attr("url"))
 	}
 	return w.unknown(n, true)
 }
@@ -253,7 +253,7 @@ func (w writer) inline(nodes []Node) string {
 		case "date":
 			b.WriteString(date(n.attr("timestamp")))
 		case "inlineCard":
-			b.WriteString(link(n.attr("url"), n.attr("url")))
+			b.WriteString(Link(n.attr("url"), n.attr("url")))
 		case "media", "mediaInline":
 			b.WriteString(w.mediaRef(n))
 		default:
@@ -334,7 +334,7 @@ func marked(n Node) string {
 			href = m.attr("href")
 		}
 	}
-	if safe(href) {
+	if SafeLink(href) {
 		s = "[" + s + "](" + dest(href) + ")"
 	}
 	return text[:lead] + s + text[len(text)-trail:]
@@ -365,8 +365,10 @@ func fence(s, lang string) string {
 	return f + lang + "\n" + strings.TrimSuffix(s, "\n") + "\n" + f
 }
 
-func link(text, href string) string {
-	if !safe(href) {
+// Link is a Markdown link for anyone's text and URL: the text escaped,
+// the URL kept only if SafeLink takes it (else the text alone).
+func Link(text, href string) string {
+	if !SafeLink(href) {
 		return escape(text)
 	}
 	return "[" + escape(text) + "](" + dest(href) + ")"
@@ -375,10 +377,10 @@ func link(text, href string) string {
 // AttachmentScheme is the scheme of the links a Media lookup may give.
 const AttachmentScheme = "jira-attachment:"
 
-// safe says a link may go into the Markdown: http, https and mailto only
-// (an issue's text is anyone's who can edit it; a file: or an app's own
-// scheme could open something on the Mac).
-func safe(href string) bool {
+// SafeLink says a link may be followed or put into Markdown: http, https
+// and mailto only (an issue's text is anyone's who can edit it; a file:
+// or an app's own scheme could open something on the Mac).
+func SafeLink(href string) bool {
 	h := strings.ToLower(strings.TrimSpace(href))
 	return strings.HasPrefix(h, "https://") || strings.HasPrefix(h, "http://") || strings.HasPrefix(h, "mailto:")
 }

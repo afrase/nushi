@@ -174,7 +174,7 @@ func onlySafe(out string) error {
 		case *gast.HTMLBlock, *gast.RawHTML:
 			return gast.WalkStop, fmt.Errorf("HTML %q", n.Text(src)) //nolint:staticcheck // the test's message
 		case *gast.Link:
-			if !safe(string(n.Destination)) {
+			if !SafeLink(string(n.Destination)) {
 				return gast.WalkStop, fmt.Errorf("a link to %q", n.Destination)
 			}
 		case *gast.Image: // only a media node's, from the lookup
