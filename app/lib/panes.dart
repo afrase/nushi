@@ -12,14 +12,14 @@ import 'theme/theme.dart';
 /// [top], the edge is on top and it is the pane's height.
 class Resizable extends StatefulWidget {
   const new({
-    super.key,
     required this.name,
     required this.initial,
     required this.min,
     required this.max,
+    required this.child,
+    super.key,
     this.left = false,
     this.top = false,
-    required this.child,
   });
 
   final String name;

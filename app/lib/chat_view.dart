@@ -27,9 +27,9 @@ import 'widgets.dart';
 /// (its draft and side), so they outlive the view.
 class ChatView extends StatefulWidget {
   const new({
-    super.key,
     required this.chat,
     required this.daemon,
+    super.key,
     this.details,
   });
 

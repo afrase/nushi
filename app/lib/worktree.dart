@@ -95,7 +95,7 @@ void _switch(BuildContext context, ChatState chat, Daemon daemon, bool on) =>
 /// Under the composer of a chat without messages, as in Claude Code: its
 /// folder and, in a git repository, the "New worktree" switch as a chip.
 class NewChatBar extends StatefulWidget {
-  const new({super.key, required this.chat, required this.daemon});
+  const new({required this.chat, required this.daemon, super.key});
 
   final ChatState chat;
   final Daemon daemon;
@@ -189,11 +189,11 @@ Future<void> _confirmMove(
 /// branch a worktree has checked out).
 class WorktreeChoices extends StatelessWidget {
   const new({
-    super.key,
     required this.plan,
     required this.remove,
     required this.branch,
     required this.onChanged,
+    super.key,
   });
 
   final WorktreePlan plan;

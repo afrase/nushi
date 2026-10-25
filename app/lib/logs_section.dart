@@ -19,9 +19,9 @@ Future<void> showLogs() async {
 /// ([debug] null: the daemon didn't say, so no switch).
 class LogsSection extends StatelessWidget {
   const new({
-    super.key,
     required this.debug,
     required this.onDebug,
+    super.key,
     this.reveal = showLogs,
   });
 

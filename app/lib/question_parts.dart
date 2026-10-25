@@ -10,12 +10,12 @@ import 'widgets.dart';
 class QuestionOption extends StatelessWidget {
   const new(
     this.option, {
-    super.key,
     required this.digit,
     required this.many,
     required this.picked,
     required this.at,
     required this.onTap,
+    super.key,
   });
 
   final Option option;

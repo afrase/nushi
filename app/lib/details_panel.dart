@@ -24,10 +24,10 @@ import 'worktree.dart';
 /// Changes view shows them. They reload when a turn ends or the chat moves.
 class DetailsPanel extends StatefulWidget {
   const new({
-    super.key,
     required this.chat,
     required this.daemon,
     required this.onChanges,
+    super.key,
   });
 
   static const width = 264.0;

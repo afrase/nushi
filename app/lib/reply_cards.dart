@@ -9,7 +9,7 @@ import 'widgets.dart';
 /// to edit its text, and hovering one shows a button that removes it.
 /// [onDone] runs when the editing ends (the composer takes the focus back).
 class ReplyCards extends StatelessWidget {
-  const new(this.replies, {super.key, required this.onDone});
+  const new(this.replies, {required this.onDone, super.key});
 
   final Replies replies;
   final VoidCallback onDone;

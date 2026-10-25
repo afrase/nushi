@@ -11,9 +11,9 @@ import 'widgets.dart';
 class CommentCard extends StatefulWidget {
   const new(
     this.comment, {
-    super.key,
     required this.onEdit,
     required this.onRemove,
+    super.key,
   });
 
   final ReviewComment comment;
@@ -90,12 +90,12 @@ class _CommentCardState extends State<CommentCard> {
 /// Shift-Enter adds a line, Escape drops it.
 class CommentBox extends StatefulWidget {
   const new({
-    super.key,
     required this.lines,
     required this.controller,
-    this.editing = false,
     required this.onSave,
     required this.onCancel,
+    super.key,
+    this.editing = false,
   });
 
   final String lines;

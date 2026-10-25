@@ -55,9 +55,9 @@ List<MenuEntry> folderEntries(
 /// picked. Not while the agent works or waits on the user.
 class FolderButton extends StatelessWidget {
   const new({
-    super.key,
     required this.chat,
     required this.daemon,
+    super.key,
     this.stacked = false,
     this.path = true,
   });

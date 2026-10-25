@@ -32,11 +32,11 @@ Future<void> closeTerminal(
 /// to rename), "+" for a new one, and a button that hides the panel.
 class TerminalTabs extends StatelessWidget {
   const new({
-    super.key,
     required this.chatId,
     required this.terms,
     required this.list,
     required this.onHide,
+    super.key,
   });
 
   final String chatId;

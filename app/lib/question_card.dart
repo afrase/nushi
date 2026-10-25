@@ -22,9 +22,9 @@ typedef _Question = ({Field field, Field? other});
 class QuestionCard extends StatefulWidget {
   const new(
     this.item, {
-    super.key,
     required this.agent,
     required this.onAnswer,
+    super.key,
   });
 
   final Item item;

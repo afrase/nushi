@@ -32,7 +32,7 @@ void main() => runZonedGuarded(() {
 }, (e, s) => appLog.error('uncaught error', e, s));
 
 class NushiApp extends StatefulWidget {
-  const new({super.key, required this.daemon});
+  const new({required this.daemon, super.key});
 
   final Daemon daemon;
 

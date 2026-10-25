@@ -89,7 +89,7 @@ String settingText(Setting s) => s.name.isEmpty
 /// [subagentState] in [style] (red once it failed), its time ticking while
 /// the subagent works.
 class SubagentState extends StatelessWidget {
-  const new(this.s, {super.key, required this.style});
+  const new(this.s, {required this.style, super.key});
 
   final SubagentRun s;
   final TextStyle style;
@@ -106,7 +106,7 @@ class SubagentState extends StatelessWidget {
 
 /// [text] on one line in [style], again every second while [live].
 class LiveText extends StatefulWidget {
-  const new(this.text, {super.key, required this.live, required this.style});
+  const new(this.text, {required this.live, required this.style, super.key});
 
   final String Function() text;
   final bool live;

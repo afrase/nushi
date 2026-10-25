@@ -265,10 +265,10 @@ class _DeleteDialogState extends State<_DeleteDialog> {
 /// Renames a chat in place (see InlineEdit); [onDone] when it's over.
 class RenameField extends StatelessWidget {
   const new({
-    super.key,
     required this.chat,
     required this.daemon,
     required this.onDone,
+    super.key,
     this.style,
   });
 

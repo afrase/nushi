@@ -45,10 +45,10 @@ List<Object> _entries(List<Item> items) {
 /// [footer], [live] while more come.
 class Transcript extends StatefulWidget {
   const new({
-    super.key,
     required this.chat,
     required this.daemon,
     required this.onReply,
+    super.key,
     this.onSide,
     this.items,
     this.live = false,

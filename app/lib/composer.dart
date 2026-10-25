@@ -30,9 +30,9 @@ import 'worktree.dart';
 /// last prompt.
 class Composer extends StatefulWidget {
   const new({
-    super.key,
     required this.chat,
     required this.daemon,
+    super.key,
     this.hint = 'Type / for commands',
     this.folder = false,
   });

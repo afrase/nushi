@@ -11,9 +11,9 @@ import 'widgets.dart';
 class QueuePills extends StatelessWidget {
   const new(
     this.chat, {
-    super.key,
     required this.onEdit,
     required this.onRemove,
+    super.key,
   });
 
   final ChatState chat;

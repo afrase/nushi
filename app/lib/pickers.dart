@@ -14,9 +14,9 @@ import 'widgets.dart';
 /// [onClose] runs when a menu closes (the composer takes the focus back).
 class Pickers extends StatelessWidget {
   const new({
-    super.key,
     required this.options,
     required this.onPick,
+    super.key,
     this.onClose,
     this.leading,
   });

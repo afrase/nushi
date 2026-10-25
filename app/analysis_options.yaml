@@ -15,5 +15,4 @@ linter:
     public_member_api_docs: false
     # Still to fix, one step each (until then off):
     always_use_package_imports: false
-    always_put_required_named_parameters_first: false
     avoid_multiple_declarations_per_line: false

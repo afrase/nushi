@@ -76,9 +76,9 @@ String _mb(int bytes) => '${(bytes / 1e6).round()} MB';
 class AgentRow extends StatelessWidget {
   const new(
     this.agent, {
-    super.key,
     required this.client,
     required this.onRemove,
+    super.key,
   });
 
   final Agent agent;

@@ -17,12 +17,12 @@ import 'widgets.dart';
 /// arrows move, Enter opens, ← or Esc goes [onBack].
 class SessionList extends StatefulWidget {
   const new({
-    super.key,
     required this.daemon,
     required this.agent,
     required this.folder,
     required this.onOpen,
     required this.onBack,
+    super.key,
   });
 
   final Daemon daemon;

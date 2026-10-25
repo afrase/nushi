@@ -41,9 +41,9 @@ class PanelCards extends StatelessWidget {
 /// label is a line of its own). With [onTap] the rows are a button.
 class PanelCard extends StatelessWidget {
   const new({
-    super.key,
     required this.title,
     required this.rows,
+    super.key,
     this.summary,
     this.onTap,
     this.index = 0,

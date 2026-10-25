@@ -17,7 +17,7 @@ import 'widgets.dart';
 /// The MCP servers view: a folder picker, then the servers by scope, each
 /// with its state, transport and command or URL (secrets masked).
 class McpView extends StatelessWidget {
-  const new({super.key, required this.daemon, required this.folder});
+  const new({required this.daemon, required this.folder, super.key});
 
   final Daemon daemon;
   final String folder;

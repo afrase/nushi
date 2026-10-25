@@ -19,11 +19,11 @@ class ChatHeader extends StatefulWidget {
   const new(
     this.chat,
     this.daemon, {
-    super.key,
     required this.changes,
     required this.onChanges,
     required this.panel,
     required this.onPanel,
+    super.key,
   });
 
   final ChatState chat;
