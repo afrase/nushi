@@ -461,6 +461,7 @@ const StartChatRequest$json = {
     {'1': 'worktree', '3': 2, '4': 1, '5': 8, '10': 'worktree'},
     {'1': 'jira_site', '3': 4, '4': 1, '5': 9, '10': 'jiraSite'},
     {'1': 'jira_key', '3': 5, '4': 1, '5': 9, '10': 'jiraKey'},
+    {'1': 'jira_summary', '3': 7, '4': 1, '5': 9, '10': 'jiraSummary'},
     {'1': 'branch', '3': 6, '4': 1, '5': 9, '10': 'branch'},
   ],
 };
@@ -469,8 +470,8 @@ const StartChatRequest$json = {
 final $typed_data.Uint8List startChatRequestDescriptor = $convert.base64Decode(
     'ChBTdGFydENoYXRSZXF1ZXN0EhYKBmZvbGRlchgBIAEoCVIGZm9sZGVyEhQKBWFnZW50GAMgAS'
     'gJUgVhZ2VudBIaCgh3b3JrdHJlZRgCIAEoCFIId29ya3RyZWUSGwoJamlyYV9zaXRlGAQgASgJ'
-    'UghqaXJhU2l0ZRIZCghqaXJhX2tleRgFIAEoCVIHamlyYUtleRIWCgZicmFuY2gYBiABKAlSBm'
-    'JyYW5jaA==');
+    'UghqaXJhU2l0ZRIZCghqaXJhX2tleRgFIAEoCVIHamlyYUtleRIhCgxqaXJhX3N1bW1hcnkYBy'
+    'ABKAlSC2ppcmFTdW1tYXJ5EhYKBmJyYW5jaBgGIAEoCVIGYnJhbmNo');
 
 @$core.Deprecated('Use listAgentSessionsRequestDescriptor instead')
 const ListAgentSessionsRequest$json = {
@@ -3669,6 +3670,63 @@ final $typed_data.Uint8List getJiraAttachmentResponseDescriptor =
         'ChlHZXRKaXJhQXR0YWNobWVudFJlc3BvbnNlEhIKBGRhdGEYASABKAxSBGRhdGESGwoJbWltZV'
         '90eXBlGAIgASgJUghtaW1lVHlwZQ==');
 
+@$core.Deprecated('Use findJiraIssuesRequestDescriptor instead')
+const FindJiraIssuesRequest$json = {
+  '1': 'FindJiraIssuesRequest',
+  '2': [
+    {'1': 'text', '3': 1, '4': 1, '5': 9, '10': 'text'},
+    {'1': 'site', '3': 2, '4': 1, '5': 9, '10': 'site'},
+  ],
+};
+
+/// Descriptor for `FindJiraIssuesRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List findJiraIssuesRequestDescriptor = $convert.base64Decode(
+    'ChVGaW5kSmlyYUlzc3Vlc1JlcXVlc3QSEgoEdGV4dBgBIAEoCVIEdGV4dBISCgRzaXRlGAIgAS'
+    'gJUgRzaXRl');
+
+@$core.Deprecated('Use findJiraIssuesResponseDescriptor instead')
+const FindJiraIssuesResponse$json = {
+  '1': 'FindJiraIssuesResponse',
+  '2': [
+    {
+      '1': 'issues',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.FoundJiraIssue',
+      '10': 'issues'
+    },
+    {'1': 'unknown_site', '3': 2, '4': 1, '5': 9, '10': 'unknownSite'},
+  ],
+};
+
+/// Descriptor for `FindJiraIssuesResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List findJiraIssuesResponseDescriptor = $convert.base64Decode(
+    'ChZGaW5kSmlyYUlzc3Vlc1Jlc3BvbnNlEjAKBmlzc3VlcxgBIAMoCzIYLm51c2hpLnYxLkZvdW'
+    '5kSmlyYUlzc3VlUgZpc3N1ZXMSIQoMdW5rbm93bl9zaXRlGAIgASgJUgt1bmtub3duU2l0ZQ==');
+
+@$core.Deprecated('Use foundJiraIssueDescriptor instead')
+const FoundJiraIssue$json = {
+  '1': 'FoundJiraIssue',
+  '2': [
+    {'1': 'site', '3': 1, '4': 1, '5': 9, '10': 'site'},
+    {
+      '1': 'issue',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.JiraIssue',
+      '10': 'issue'
+    },
+    {'1': 'branch', '3': 3, '4': 1, '5': 9, '10': 'branch'},
+  ],
+};
+
+/// Descriptor for `FoundJiraIssue`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List foundJiraIssueDescriptor = $convert.base64Decode(
+    'Cg5Gb3VuZEppcmFJc3N1ZRISCgRzaXRlGAEgASgJUgRzaXRlEikKBWlzc3VlGAIgASgLMhMubn'
+    'VzaGkudjEuSmlyYUlzc3VlUgVpc3N1ZRIWCgZicmFuY2gYAyABKAlSBmJyYW5jaA==');
+
 @$core.Deprecated('Use getJiraContextRequestDescriptor instead')
 const GetJiraContextRequest$json = {
   '1': 'GetJiraContextRequest',
@@ -4055,6 +4113,11 @@ const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
       '3': '.nushi.v1.AddJiraCommentResponse'
     },
     {
+      '1': 'FindJiraIssues',
+      '2': '.nushi.v1.FindJiraIssuesRequest',
+      '3': '.nushi.v1.FindJiraIssuesResponse'
+    },
+    {
       '1': 'GetJiraContext',
       '2': '.nushi.v1.GetJiraContextRequest',
       '3': '.nushi.v1.GetJiraContextResponse'
@@ -4272,6 +4335,9 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.TransitionJiraIssueResponse': TransitionJiraIssueResponse$json,
   '.nushi.v1.AddJiraCommentRequest': AddJiraCommentRequest$json,
   '.nushi.v1.AddJiraCommentResponse': AddJiraCommentResponse$json,
+  '.nushi.v1.FindJiraIssuesRequest': FindJiraIssuesRequest$json,
+  '.nushi.v1.FindJiraIssuesResponse': FindJiraIssuesResponse$json,
+  '.nushi.v1.FoundJiraIssue': FoundJiraIssue$json,
   '.nushi.v1.GetJiraContextRequest': GetJiraContextRequest$json,
   '.nushi.v1.GetJiraContextResponse': GetJiraContextResponse$json,
   '.nushi.v1.GetJiraAttachmentRequest': GetJiraAttachmentRequest$json,
@@ -4388,9 +4454,10 @@ final $typed_data.Uint8List nushiServiceDescriptor = $convert.base64Decode(
     '52MS5MaXN0SmlyYVRyYW5zaXRpb25zUmVzcG9uc2USYgoTVHJhbnNpdGlvbkppcmFJc3N1ZRIk'
     'Lm51c2hpLnYxLlRyYW5zaXRpb25KaXJhSXNzdWVSZXF1ZXN0GiUubnVzaGkudjEuVHJhbnNpdG'
     'lvbkppcmFJc3N1ZVJlc3BvbnNlElMKDkFkZEppcmFDb21tZW50Eh8ubnVzaGkudjEuQWRkSmly'
-    'YUNvbW1lbnRSZXF1ZXN0GiAubnVzaGkudjEuQWRkSmlyYUNvbW1lbnRSZXNwb25zZRJTCg5HZX'
-    'RKaXJhQ29udGV4dBIfLm51c2hpLnYxLkdldEppcmFDb250ZXh0UmVxdWVzdBogLm51c2hpLnYx'
-    'LkdldEppcmFDb250ZXh0UmVzcG9uc2USXAoRR2V0SmlyYUF0dGFjaG1lbnQSIi5udXNoaS52MS'
-    '5HZXRKaXJhQXR0YWNobWVudFJlcXVlc3QaIy5udXNoaS52MS5HZXRKaXJhQXR0YWNobWVudFJl'
-    'c3BvbnNlEj0KBkV2ZW50cxIXLm51c2hpLnYxLkV2ZW50c1JlcXVlc3QaGC5udXNoaS52MS5Fdm'
-    'VudHNSZXNwb25zZTAB');
+    'YUNvbW1lbnRSZXF1ZXN0GiAubnVzaGkudjEuQWRkSmlyYUNvbW1lbnRSZXNwb25zZRJTCg5GaW'
+    '5kSmlyYUlzc3VlcxIfLm51c2hpLnYxLkZpbmRKaXJhSXNzdWVzUmVxdWVzdBogLm51c2hpLnYx'
+    'LkZpbmRKaXJhSXNzdWVzUmVzcG9uc2USUwoOR2V0SmlyYUNvbnRleHQSHy5udXNoaS52MS5HZX'
+    'RKaXJhQ29udGV4dFJlcXVlc3QaIC5udXNoaS52MS5HZXRKaXJhQ29udGV4dFJlc3BvbnNlElwK'
+    'EUdldEppcmFBdHRhY2htZW50EiIubnVzaGkudjEuR2V0SmlyYUF0dGFjaG1lbnRSZXF1ZXN0Gi'
+    'MubnVzaGkudjEuR2V0SmlyYUF0dGFjaG1lbnRSZXNwb25zZRI9CgZFdmVudHMSFy5udXNoaS52'
+    'MS5FdmVudHNSZXF1ZXN0GhgubnVzaGkudjEuRXZlbnRzUmVzcG9uc2UwAQ==');

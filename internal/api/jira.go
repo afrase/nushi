@@ -186,6 +186,18 @@ func (s *server) GetJiraContext(ctx context.Context, req *connect.Request[nushiv
 	return connect.NewResponse(&nushiv1.GetJiraContextResponse{Markdown: md, Branch: branch}), nil
 }
 
+func (s *server) FindJiraIssues(ctx context.Context, req *connect.Request[nushiv1.FindJiraIssuesRequest]) (*connect.Response[nushiv1.FindJiraIssuesResponse], error) {
+	f, err := s.jira.Find(ctx, req.Msg.Text, req.Msg.Site)
+	if err != nil {
+		return nil, jiraErr(err)
+	}
+	out := &nushiv1.FindJiraIssuesResponse{UnknownSite: f.UnknownSite}
+	for _, x := range f.Issues {
+		out.Issues = append(out.Issues, &nushiv1.FoundJiraIssue{Site: x.Site, Issue: jiraIssueProto(x.Issue, ""), Branch: x.Branch})
+	}
+	return connect.NewResponse(out), nil
+}
+
 func (s *server) GetJiraAttachment(ctx context.Context, req *connect.Request[nushiv1.GetJiraAttachmentRequest]) (*connect.Response[nushiv1.GetJiraAttachmentResponse], error) {
 	b, mime, err := s.jira.Attachment(ctx, req.Msg.Site, req.Msg.Id, req.Msg.Thumbnail)
 	if err != nil {

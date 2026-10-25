@@ -223,8 +223,9 @@ func TestWorktreeMovesKeepTheWork(t *testing.T) {
 	}
 }
 
-// A chat on a Jira issue remembers it, and its worktree is on a branch
-// named after it (another chat on it gets the next number).
+// A chat on a Jira issue remembers it, and its worktree is on the branch
+// asked for (another chat on it gets the next number), in a folder named
+// after it.
 func TestChatOnAnIssue(t *testing.T) {
 	ctx := context.Background()
 	repo := gitRepo(t)
@@ -232,28 +233,33 @@ func TestChatOnAnIssue(t *testing.T) {
 	a := open(t, d)
 	start := func(branch string) (*nushiv1.Chat, error) {
 		r, err := a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: repo, Worktree: true,
-			JiraSite: "acme.atlassian.net", JiraKey: "ACME-12", Branch: branch}))
+			JiraSite: "acme.atlassian.net", JiraKey: "ACME-12", JiraSummary: "Log in with a passkey", Branch: branch}))
 		if err != nil {
 			return nil, err
 		}
 		return must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: r.Msg.ChatId}))).Chat, nil
 	}
-	for _, want := range []string{"ACME-12-log-in-with-a-passkey", "ACME-12-log-in-with-a-passkey-2"} {
-		c, err := start("ACME-12-log-in-with-a-passkey")
+	for _, c := range []struct{ branch, want, folder string }{
+		{"ACME-12-log-in-with-a-passkey", "ACME-12-log-in-with-a-passkey", "ACME-12-log-in-with-a-passkey"},
+		{"ACME-12-log-in-with-a-passkey", "ACME-12-log-in-with-a-passkey-2", "ACME-12-log-in-with-a-passkey-2"},
+		{"me/ACME-12", "me/ACME-12", "me-ACME-12"}, // the user's own
+	} {
+		chat, err := start(c.branch)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if c.JiraSite != "acme.atlassian.net" || c.JiraKey != "ACME-12" || c.Worktree.GetBranch() != want || filepath.Base(c.Worktree.GetPath()) != want {
-			t.Errorf("chat %v, want branch %s", c, want)
+		if chat.JiraSite != "acme.atlassian.net" || chat.JiraKey != "ACME-12" || chat.Worktree.GetBranch() != c.want ||
+			filepath.Base(chat.Worktree.GetPath()) != c.folder {
+			t.Errorf("chat %v, want branch %s in %s", chat, c.want, c.folder)
 		}
 	}
-	for _, bad := range []string{"ACME-1-x", "ACME-12/../../x", "-ACME-12", "ACME-12-Up"} {
+	for _, bad := range []string{"ACME-12/../../x", "-ACME-12", "a b", "x.lock"} {
 		if _, err := start(bad); err == nil {
 			t.Errorf("branch %q taken", bad)
 		}
 	}
 	list := must(a.c.ListChats(ctx, connect.NewRequest(&nushiv1.ListChatsRequest{}))).Chats
-	if len(list) != 2 || list[0].JiraKey != "ACME-12" {
+	if len(list) != 3 || list[0].JiraKey != "ACME-12" {
 		t.Errorf("listed %v", list)
 	}
 }

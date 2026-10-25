@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -141,5 +142,25 @@ func TestNoWritesThroughARepositorysLinks(t *testing.T) {
 	}
 	if b, _ := os.ReadFile(target); string(b) != "{}" {
 		t.Errorf("the link's target became %q", b)
+	}
+}
+
+func TestCheckBranch(t *testing.T) {
+	for _, name := range []string{
+		"SCRUM-5-fix-the-login", "feature/SCRUM-5", "a.b", "ünïcode", "x@y", "v1.0",
+		"", "a b", "a..b", "a//b", "/a", "a/", "a.", "a/.b", ".a", "a.lock", "a/b.lock/c", "a@{1}",
+		"a~1", "a^", "a:b", "a?", "a*", "a[b", `a\b`, "a\tb", "a\x7fb",
+	} {
+		// git's verdict (git check-ref-format --branch), against ours.
+		gitOK := exec.Command("git", "check-ref-format", "--branch", name).Run() == nil
+		if ours := CheckBranch(name) == nil; ours != gitOK {
+			t.Errorf("%q: CheckBranch says %v, git %v", name, ours, gitOK)
+		}
+	}
+	// What git takes but means something else: HEAD's branch, an option.
+	for _, name := range []string{"@", "-x", "--force", strings.Repeat("a", 201)} {
+		if CheckBranch(name) == nil {
+			t.Errorf("%q taken", name)
+		}
 	}
 }

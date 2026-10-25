@@ -4,7 +4,6 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
-
 import "nushi.pb.dart" as nushiv1nushi;
 
 abstract final class NushiService {
@@ -647,6 +646,14 @@ abstract final class NushiService {
     connect.StreamType.unary,
     nushiv1nushi.AddJiraCommentRequest.new,
     nushiv1nushi.AddJiraCommentResponse.new,
+  );
+
+  /// An issue for a new chat: from its link, its key, or words of it.
+  static const findJiraIssues = connect.Spec(
+    '/$name/FindJiraIssues',
+    connect.StreamType.unary,
+    nushiv1nushi.FindJiraIssuesRequest.new,
+    nushiv1nushi.FindJiraIssuesResponse.new,
   );
 
   /// An issue as a chat's first message (Markdown, for the user to see and

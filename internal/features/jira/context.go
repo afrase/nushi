@@ -28,15 +28,6 @@ func Branch(key, summary string) string {
 	return key + slug
 }
 
-var slugRE = regexp.MustCompile(`^(-[a-z0-9]+)*$`)
-
-// IsBranch says branch is one Branch could have named for key (the
-// worktree's folder takes its name).
-func IsBranch(key, branch string) bool {
-	rest, ok := strings.CutPrefix(branch, key)
-	return ok && CheckKey(key) == nil && len(branch) <= 100 && slugRE.MatchString(rest)
-}
-
 // recentComments is how many of the latest comments a context packet has.
 const recentComments = 5
 
