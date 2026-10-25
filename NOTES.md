@@ -1,6 +1,27 @@
 # Notes
 
-## Summary (2026-10-25, after step 122: milestone V and its review's fixes)
+## Summary (2026-10-25, after step 126: milestone W, picking the agent)
+
+Milestone W, steps 124–126, one commit each on `main`, all pushed. `make test` passes. App only: no API change (still 48), no daemon change.
+
+- **Agent marks** (step 124, `app/lib/agent_mark.dart`, NOTES "Agent marks"): one mark per agent in the sidebar's rows, the chat header (the monogram's place) and the status bar's memory list. Claude's and Codex's from the ACP registry, Ante's pixel ghost from its docs' logo, oh-my-pi's π with a plug from its repository; bundled as path data and drawn in one color by `packages/svg_path` (a small SVG path parser, no new dependency). An agent without one gets its initial on a rounded square.
+- **A sidebar row** is the status dot (unchanged, first), the mark, then the title. The status is what you scan the list for, so it keeps the left edge and is the only color in the row; the marks are in the row's secondary text color. A badge on the mark was the other choice: it would shrink the status to a corner, where the moon (asleep) and the idle ring don't read at 6 px.
+- **The New chat dialog** (step 125, `app/lib/new_chat.dart`): the button (no chevron now), ⌘N (new, also from a terminal; File → New Chat…), a folder's + and its "New chat here" all open it, for the folder they belong to. The agent of the newest chat is picked, so Enter starts at once: one click and a key, or ⌘N and Enter. Arrows move, 1–4 and a click start, Esc cancels. An agent whose start failed in this run shows dimmed with the daemon's reason in a few words ("Ante isn't installed"; the whole error on hover) and isn't the one picked; it can still be tried.
+- **Tests**: widget tests for the dialog (preselection, Enter, arrows, digits, a click, Esc, a dimmed agent and its reason) and each way in (button, +, the folder's menu, ⌘N); goldens (`app/test/goldens/`, macOS) of the dialog and of a sidebar with chats of all four agents in each status, both themes.
+
+**Tried by hand** (a debug app on a dev daemon in `/tmp/ndw`, a temp `HOME` and `CODEX_HOME`, Ante's real home; no prompts, so no key or model was used): a chat started through the dialog with each agent: Claude with ⌘N and Enter, Codex with a folder's + and 2, Ante with "New chat here" and ↓ Enter, oh-my-pi with the button and a click on its row; ⌘N from the composer and from a terminal opens one dialog; with Ante made unreachable, its start failed and the dialog then showed it dimmed, "Ante isn't installed"; a folder's dialog reads "New chat in repo"; the light theme; the status bar's list with marks.
+
+**Not tried by hand**: the packaged app (`make install` ran; its daemon is unchanged); a start failing for another agent than Ante (the test covers Codex's npx error); VoiceOver on the marks (they have no label of their own; the title is beside each).
+
+**Needs your attention**
+- The Claude and Codex icons are Anthropic's and OpenAI's marks. Anthropic's trademark guidelines allow use only with permission and without recoloring; Nushi draws it in one color, as the ACP registry serves it to clients. Fine for a personal app; before publishing Nushi, ask, or drop them (NOTES "Agent marks").
+- No restart needed: the API and the daemon's code are unchanged. The installed app may still offer "Restart daemon" (its bundled daemon is a new build of the same code); it changes nothing.
+
+**Size**: the app went from 14,857 to 15,182 lines of Dart, the packages from 1,759 to 1,864 (`svg_path`); no step over the tripwire. Step 123 now has its row in the line counts.
+
+**Left behind by the testing**: nothing. `/tmp/ndw` (data, homes, the test repository) was removed; Ante wrote two logs into `~/.ante/logs/2026-10-25/`, removed, and `~/.ante` matches its checksums from before; no Ante session was made (none was prompted). The installed daemon wasn't touched.
+
+## Summary of milestone V (after step 122: milestone V and its review's fixes)
 
 Milestone V is phase 1 of mobile: a relay, an end-to-end Noise channel, pairing and devices, remote access in the daemon and the app's settings, in steps 106–113 (plus two commits of security fixes from the review run during the milestone). One commit each on `main`, all pushed. `make test` passes. API 48. No phone UI yet.
 
@@ -76,6 +97,13 @@ Milestone V is phase 1 of mobile: a relay, an end-to-end Noise channel, pairing 
 **Dependencies**: none new (`golang.org/x/sys/unix` was already in).
 
 **Left behind by the testing**: nothing. The dev chats were deleted with Delete (Claude's and Ante's histories with them); the measuring harness's two Claude sessions and their project folders, its Ante session, eight Ante logs and `~/.ante/run/` were removed; `~/.ante` is as it was (file list and checksums). The dev data folder, the temp Codex and omp homes, the scratch folders and the harness were removed. The key is in no file under them, the scratchpad or the repository (grep, the key on stdin); the only hit elsewhere is the milestone S transcript above.
+
+## Demo (milestone W)
+
+1. Click "New chat" (or ⌘N): a small dialog lists the agents with their marks, the last one used picked. Enter starts it.
+2. Click a folder's +: "New chat in <folder>"; press 3 to start Ante there, or ↓ and Enter.
+3. The sidebar: each chat's status dot, then its agent's mark. The chat header shows the same mark.
+4. Make an agent fail to start (say, move `~/.ante/bin/ante` away): the error shows, and the next dialog shows Ante dimmed, "Ante isn't installed".
 
 ## Demo (milestone V)
 
@@ -263,6 +291,7 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 123. The icon, the still lake | 12698 | 984 | 14857 | 1759 | 1170 |
 | 124. Agent marks: one per agent, in the sidebar, the header and the status bar (`packages/svg_path`) | 12698 | 984 | 15027 | 1864 | 1170 |
 | 125. New chat asks which agent, in a dialog; ⌘N | 12698 | 984 | 15182 | 1864 | 1170 |
+| 126. By hand, and the docs | 12698 | 984 | 15182 | 1864 | 1170 |
 
 Steps over the ~500-line tripwire (code and tests, without generated code): 98 (2,384 with its tests: Ante's whole bridge and its fake), 99 (901: two agents, two trust packages, the shared trust files), 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 removed more than it added.
 
