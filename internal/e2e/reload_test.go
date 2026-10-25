@@ -6,7 +6,7 @@ import (
 
 	"connectrpc.com/connect"
 
-	"github.com/afrase/nushi/acp/acptest"
+	"github.com/afrase/nushi/internal/acptest"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 )
 

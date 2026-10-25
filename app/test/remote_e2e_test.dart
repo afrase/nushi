@@ -55,7 +55,7 @@ void main() {
     for (final (out, pkg) in [
       ('nushid', './cmd/nushid'),
       ('nushi-relay', './cmd/nushi-relay'),
-      ('fakeagent', './acp/acptest/fakeagent'),
+      ('fakeagent', './internal/acptest/fakeagent'),
     ]) {
       final r = await Process.run('go', [
         'build',

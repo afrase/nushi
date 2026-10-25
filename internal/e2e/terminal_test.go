@@ -10,7 +10,7 @@ import (
 
 	"connectrpc.com/connect"
 
-	"github.com/afrase/nushi/acp/acptest"
+	"github.com/afrase/nushi/internal/acptest"
 	"github.com/afrase/nushi/internal/features/terminals"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/terminal"
