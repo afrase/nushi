@@ -15,6 +15,8 @@ A macOS app for running coding agents as chats over the [Agent Client Protocol](
 make run     # starts nushid in the background (if it isn't running), then the app
 make stop    # stops nushid
 make test    # all tests
+make lint    # the linters and format checks (below)
+make check   # lint, then test
 make gen     # regenerate the API code after editing proto/
 make lines   # hand-written line counts
 make package # a release "Nushi.app" with nushid inside (ad-hoc signed)
@@ -25,6 +27,14 @@ make icons   # redraw the app icon and the mark (tools/icongen)
 The packaged app starts its bundled `nushid` (in `Contents/Helpers/Nushi Daemon.app`, a background-only app) when no daemon is running, and leaves it running when it quits; Settings › Start at login also starts it at login ([ADR 0013](docs/adr/0013-app-starts-its-daemon.md), [ADR 0036](docs/adr/0036-the-daemon-is-a-background-helper-app.md)). `make package` checks the bundle's layout and signatures (`tools/check-bundle.sh`). With `make run`, start and stop the daemon yourself.
 
 The daemon keeps its socket, token and log in `~/Library/Application Support/Nushi/`: `nushid.log` (rotated at 10 MB, two older copies), and `app.log` for what the app logged while the daemon didn't answer. Settings › Logs reveals them and turns on debug lines (or `NUSHI_LOG=debug`); one chat's lines are `grep 'chat=<id>' nushid.log` ([ADR 0038](docs/adr/0038-logs-you-can-debug-from.md) says what is logged and what never is). To try a build beside a Nushi that's in use, give both another folder: `NUSHI_DATA=~/Library/Application\ Support/Nushi\ Dev make run` (and the same for `make stop`).
+
+## Development
+
+`make lint` runs golangci-lint (with gofmt and goimports), `buf lint` and `buf format`, and `flutter analyze` and `dart format` for the app and each package; `make check` runs it and then the tests, as CI does (`.github/workflows/ci.yml`: macOS for everything, Linux for `acp`, `relay` and `noiseconn`).
+
+- **Go:** golangci-lint is pinned in its own module, `tools/lint/go.mod`, and runs through `go tool -modfile=tools/lint/go.mod golangci-lint`: nothing to install, and the daemon's `go.mod` doesn't take its dependencies. `.golangci.yml` turns every linter on and lists each one off with the reason. To format: `go tool -modfile=tools/lint/go.mod golangci-lint fmt ./...`.
+- **Dart:** `analysis_options.yaml` at the root (strict casts, inference and raw types, and lint rules on top of `flutter_lints`) is included by the app and every package. `dart fix --apply` in a package fixes much of what it reports.
+- A report that's wrong for one line takes `//nolint:<linter> // <why>` (nolintlint refuses one without both), or `// ignore: <rule>` under a comment saying why in Dart. NOTES.md says when to exclude by path instead.
 
 ## Agents
 

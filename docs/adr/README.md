@@ -39,3 +39,4 @@
 - [0037](0037-agents-you-set-up.md) Agents are found on PATH, read-only; an adapter is set up only when asked, from our own lockfile, into the data folder; agents run the user's own CLIs; no npx (supersedes part of 0003)
 - [0038](0038-logs-you-can-debug-from.md) Logs you can debug from: slog's text format, a line per thing that happened with the chat's attributes, rotated by the daemon, the app's errors in it; never what the user wrote
 - [0039](0039-our-own-bridge-for-pig.md) PiG runs through an ACP bridge of Nushi's own (`nushid pig-acp`) on its RPC mode, not `pig-acp`; no trust card (PiG's own trust gates what a folder loads)
+- [0040](0040-strict-linting.md) Strict linting: every golangci-lint linter on unless listed off with why, pinned in `tools/lint/go.mod`; strict Dart analysis; `make lint`, `make check` and CI
