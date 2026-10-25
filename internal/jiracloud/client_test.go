@@ -82,7 +82,7 @@ func (f *fake) client() *Client {
 func TestConnectClassic(t *testing.T) {
 	f := newFake(t)
 	f.file("GET /rest/api/3/myself", "myself.json")
-	c, err := Connect(t.Context(), f.srv.URL+"/", "me@example.com", "tok", f.srv.Client().Transport)
+	c, _, err := Connect(t.Context(), f.srv.URL+"/", "me@example.com", "tok", f.srv.Client().Transport)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +101,7 @@ func TestConnectScoped(t *testing.T) {
 	f.file("GET /rest/api/3/myself", "myself.json")
 	f.routes["GET /_edge/tenant_info"] = func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(`{"cloudId":"cloud-1"}`)) }
 	f.file("POST /rest/api/3/search/jql", "search.json")
-	c, err := Connect(t.Context(), f.srv.URL, "me@example.com", "tok", f.srv.Client().Transport)
+	c, _, err := Connect(t.Context(), f.srv.URL, "me@example.com", "tok", f.srv.Client().Transport)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,11 +120,11 @@ func TestConnectRefused(t *testing.T) {
 	f := newFake(t)
 	f.file("GET /rest/api/3/myself", "myself.json")
 	f.routes["GET /_edge/tenant_info"] = func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(`{"cloudId":"cloud-1"}`)) }
-	if _, err := Connect(t.Context(), f.srv.URL, "me@example.com", "wrong", f.srv.Client().Transport); !errors.Is(err, ErrUnauthorized) {
+	if _, _, err := Connect(t.Context(), f.srv.URL, "me@example.com", "wrong", f.srv.Client().Transport); !errors.Is(err, ErrUnauthorized) {
 		t.Errorf("a wrong token: %v", err)
 	}
 	for _, site := range []string{"example.atlassian.net", "http://example.atlassian.net", "https://e.atlassian.net/jira", "https://"} {
-		if _, err := Connect(t.Context(), site, "me@example.com", "tok", f.srv.Client().Transport); err == nil || errors.Is(err, ErrUnauthorized) {
+		if _, _, err := Connect(t.Context(), site, "me@example.com", "tok", f.srv.Client().Transport); err == nil || errors.Is(err, ErrUnauthorized) {
 			t.Errorf("%q: %v", site, err)
 		}
 	}

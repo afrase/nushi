@@ -182,6 +182,53 @@ const (
 	NushiServiceRevokeDeviceProcedure = "/nushi.v1.NushiService/RevokeDevice"
 	// NushiServiceLogProcedure is the fully-qualified name of the NushiService's Log RPC.
 	NushiServiceLogProcedure = "/nushi.v1.NushiService/Log"
+	// NushiServiceListJiraSitesProcedure is the fully-qualified name of the NushiService's
+	// ListJiraSites RPC.
+	NushiServiceListJiraSitesProcedure = "/nushi.v1.NushiService/ListJiraSites"
+	// NushiServiceAddJiraSiteProcedure is the fully-qualified name of the NushiService's AddJiraSite
+	// RPC.
+	NushiServiceAddJiraSiteProcedure = "/nushi.v1.NushiService/AddJiraSite"
+	// NushiServiceRemoveJiraSiteProcedure is the fully-qualified name of the NushiService's
+	// RemoveJiraSite RPC.
+	NushiServiceRemoveJiraSiteProcedure = "/nushi.v1.NushiService/RemoveJiraSite"
+	// NushiServiceCheckJiraSiteProcedure is the fully-qualified name of the NushiService's
+	// CheckJiraSite RPC.
+	NushiServiceCheckJiraSiteProcedure = "/nushi.v1.NushiService/CheckJiraSite"
+	// NushiServiceAllowJiraTokenProcedure is the fully-qualified name of the NushiService's
+	// AllowJiraToken RPC.
+	NushiServiceAllowJiraTokenProcedure = "/nushi.v1.NushiService/AllowJiraToken"
+	// NushiServiceListJiraBoardsProcedure is the fully-qualified name of the NushiService's
+	// ListJiraBoards RPC.
+	NushiServiceListJiraBoardsProcedure = "/nushi.v1.NushiService/ListJiraBoards"
+	// NushiServiceSetJiraBoardProcedure is the fully-qualified name of the NushiService's SetJiraBoard
+	// RPC.
+	NushiServiceSetJiraBoardProcedure = "/nushi.v1.NushiService/SetJiraBoard"
+	// NushiServiceSetJiraSearchesProcedure is the fully-qualified name of the NushiService's
+	// SetJiraSearches RPC.
+	NushiServiceSetJiraSearchesProcedure = "/nushi.v1.NushiService/SetJiraSearches"
+	// NushiServiceListJiraIssuesProcedure is the fully-qualified name of the NushiService's
+	// ListJiraIssues RPC.
+	NushiServiceListJiraIssuesProcedure = "/nushi.v1.NushiService/ListJiraIssues"
+	// NushiServiceGetJiraJqlProcedure is the fully-qualified name of the NushiService's GetJiraJql RPC.
+	NushiServiceGetJiraJqlProcedure = "/nushi.v1.NushiService/GetJiraJql"
+	// NushiServiceSuggestJiraJqlProcedure is the fully-qualified name of the NushiService's
+	// SuggestJiraJql RPC.
+	NushiServiceSuggestJiraJqlProcedure = "/nushi.v1.NushiService/SuggestJiraJql"
+	// NushiServiceGetJiraIssueProcedure is the fully-qualified name of the NushiService's GetJiraIssue
+	// RPC.
+	NushiServiceGetJiraIssueProcedure = "/nushi.v1.NushiService/GetJiraIssue"
+	// NushiServiceListJiraTransitionsProcedure is the fully-qualified name of the NushiService's
+	// ListJiraTransitions RPC.
+	NushiServiceListJiraTransitionsProcedure = "/nushi.v1.NushiService/ListJiraTransitions"
+	// NushiServiceTransitionJiraIssueProcedure is the fully-qualified name of the NushiService's
+	// TransitionJiraIssue RPC.
+	NushiServiceTransitionJiraIssueProcedure = "/nushi.v1.NushiService/TransitionJiraIssue"
+	// NushiServiceAddJiraCommentProcedure is the fully-qualified name of the NushiService's
+	// AddJiraComment RPC.
+	NushiServiceAddJiraCommentProcedure = "/nushi.v1.NushiService/AddJiraComment"
+	// NushiServiceGetJiraAttachmentProcedure is the fully-qualified name of the NushiService's
+	// GetJiraAttachment RPC.
+	NushiServiceGetJiraAttachmentProcedure = "/nushi.v1.NushiService/GetJiraAttachment"
 	// NushiServiceEventsProcedure is the fully-qualified name of the NushiService's Events RPC.
 	NushiServiceEventsProcedure = "/nushi.v1.NushiService/Events"
 )
@@ -365,6 +412,37 @@ type NushiServiceClient interface {
 	// Writes a line of the app's into the daemon's log (source=app): its
 	// errors with their stacks, and what helps afterwards.
 	Log(context.Context, *connect.Request[v1.LogRequest]) (*connect.Response[v1.LogResponse], error)
+	// Jira (ADR 0042): the sites added, their tokens in the keychain. Every
+	// call that reaches Jira is one the user made; nothing polls or writes on
+	// its own.
+	ListJiraSites(context.Context, *connect.Request[v1.ListJiraSitesRequest]) (*connect.Response[v1.ListJiraSitesResponse], error)
+	// Checks a token on a site (classic or scoped) and keeps it: the token
+	// in the keychain, the site in the list.
+	AddJiraSite(context.Context, *connect.Request[v1.AddJiraSiteRequest]) (*connect.Response[v1.AddJiraSiteResponse], error)
+	// Forgets a site and deletes its token from the keychain.
+	RemoveJiraSite(context.Context, *connect.Request[v1.RemoveJiraSiteRequest]) (*connect.Response[v1.RemoveJiraSiteResponse], error)
+	// Asks Jira who a site's token is, to see it still works.
+	CheckJiraSite(context.Context, *connect.Request[v1.CheckJiraSiteRequest]) (*connect.Response[v1.CheckJiraSiteResponse], error)
+	// Reads a site's token with macOS's prompt, which asks to let this
+	// build of Nushi read it (JiraSite.needs_ok).
+	AllowJiraToken(context.Context, *connect.Request[v1.AllowJiraTokenRequest]) (*connect.Response[v1.AllowJiraTokenResponse], error)
+	// The board whose active sprint is the sprint list, and saved searches.
+	ListJiraBoards(context.Context, *connect.Request[v1.ListJiraBoardsRequest]) (*connect.Response[v1.ListJiraBoardsResponse], error)
+	SetJiraBoard(context.Context, *connect.Request[v1.SetJiraBoardRequest]) (*connect.Response[v1.SetJiraBoardResponse], error)
+	SetJiraSearches(context.Context, *connect.Request[v1.SetJiraSearchesRequest]) (*connect.Response[v1.SetJiraSearchesResponse], error)
+	// A list's issues: "mine", "sprint", or a JQL search.
+	ListJiraIssues(context.Context, *connect.Request[v1.ListJiraIssuesRequest]) (*connect.Response[v1.ListJiraIssuesResponse], error)
+	// What the JQL field autocompletes from, and a field's values.
+	GetJiraJql(context.Context, *connect.Request[v1.GetJiraJqlRequest]) (*connect.Response[v1.GetJiraJqlResponse], error)
+	SuggestJiraJql(context.Context, *connect.Request[v1.SuggestJiraJqlRequest]) (*connect.Response[v1.SuggestJiraJqlResponse], error)
+	// An issue whole, text as Markdown.
+	GetJiraIssue(context.Context, *connect.Request[v1.GetJiraIssueRequest]) (*connect.Response[v1.GetJiraIssueResponse], error)
+	ListJiraTransitions(context.Context, *connect.Request[v1.ListJiraTransitionsRequest]) (*connect.Response[v1.ListJiraTransitionsResponse], error)
+	TransitionJiraIssue(context.Context, *connect.Request[v1.TransitionJiraIssueRequest]) (*connect.Response[v1.TransitionJiraIssueResponse], error)
+	// Posts a comment written in Markdown.
+	AddJiraComment(context.Context, *connect.Request[v1.AddJiraCommentRequest]) (*connect.Response[v1.AddJiraCommentResponse], error)
+	// An attachment's file or thumbnail (20 MB at most).
+	GetJiraAttachment(context.Context, *connect.Request[v1.GetJiraAttachmentRequest]) (*connect.Response[v1.GetJiraAttachmentResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
 	Events(context.Context, *connect.Request[v1.EventsRequest]) (*connect.ServerStreamForClient[v1.EventsResponse], error)
@@ -723,6 +801,102 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("Log")),
 			connect.WithClientOptions(opts...),
 		),
+		listJiraSites: connect.NewClient[v1.ListJiraSitesRequest, v1.ListJiraSitesResponse](
+			httpClient,
+			baseURL+NushiServiceListJiraSitesProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ListJiraSites")),
+			connect.WithClientOptions(opts...),
+		),
+		addJiraSite: connect.NewClient[v1.AddJiraSiteRequest, v1.AddJiraSiteResponse](
+			httpClient,
+			baseURL+NushiServiceAddJiraSiteProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("AddJiraSite")),
+			connect.WithClientOptions(opts...),
+		),
+		removeJiraSite: connect.NewClient[v1.RemoveJiraSiteRequest, v1.RemoveJiraSiteResponse](
+			httpClient,
+			baseURL+NushiServiceRemoveJiraSiteProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("RemoveJiraSite")),
+			connect.WithClientOptions(opts...),
+		),
+		checkJiraSite: connect.NewClient[v1.CheckJiraSiteRequest, v1.CheckJiraSiteResponse](
+			httpClient,
+			baseURL+NushiServiceCheckJiraSiteProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("CheckJiraSite")),
+			connect.WithClientOptions(opts...),
+		),
+		allowJiraToken: connect.NewClient[v1.AllowJiraTokenRequest, v1.AllowJiraTokenResponse](
+			httpClient,
+			baseURL+NushiServiceAllowJiraTokenProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("AllowJiraToken")),
+			connect.WithClientOptions(opts...),
+		),
+		listJiraBoards: connect.NewClient[v1.ListJiraBoardsRequest, v1.ListJiraBoardsResponse](
+			httpClient,
+			baseURL+NushiServiceListJiraBoardsProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ListJiraBoards")),
+			connect.WithClientOptions(opts...),
+		),
+		setJiraBoard: connect.NewClient[v1.SetJiraBoardRequest, v1.SetJiraBoardResponse](
+			httpClient,
+			baseURL+NushiServiceSetJiraBoardProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("SetJiraBoard")),
+			connect.WithClientOptions(opts...),
+		),
+		setJiraSearches: connect.NewClient[v1.SetJiraSearchesRequest, v1.SetJiraSearchesResponse](
+			httpClient,
+			baseURL+NushiServiceSetJiraSearchesProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("SetJiraSearches")),
+			connect.WithClientOptions(opts...),
+		),
+		listJiraIssues: connect.NewClient[v1.ListJiraIssuesRequest, v1.ListJiraIssuesResponse](
+			httpClient,
+			baseURL+NushiServiceListJiraIssuesProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ListJiraIssues")),
+			connect.WithClientOptions(opts...),
+		),
+		getJiraJql: connect.NewClient[v1.GetJiraJqlRequest, v1.GetJiraJqlResponse](
+			httpClient,
+			baseURL+NushiServiceGetJiraJqlProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("GetJiraJql")),
+			connect.WithClientOptions(opts...),
+		),
+		suggestJiraJql: connect.NewClient[v1.SuggestJiraJqlRequest, v1.SuggestJiraJqlResponse](
+			httpClient,
+			baseURL+NushiServiceSuggestJiraJqlProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("SuggestJiraJql")),
+			connect.WithClientOptions(opts...),
+		),
+		getJiraIssue: connect.NewClient[v1.GetJiraIssueRequest, v1.GetJiraIssueResponse](
+			httpClient,
+			baseURL+NushiServiceGetJiraIssueProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("GetJiraIssue")),
+			connect.WithClientOptions(opts...),
+		),
+		listJiraTransitions: connect.NewClient[v1.ListJiraTransitionsRequest, v1.ListJiraTransitionsResponse](
+			httpClient,
+			baseURL+NushiServiceListJiraTransitionsProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ListJiraTransitions")),
+			connect.WithClientOptions(opts...),
+		),
+		transitionJiraIssue: connect.NewClient[v1.TransitionJiraIssueRequest, v1.TransitionJiraIssueResponse](
+			httpClient,
+			baseURL+NushiServiceTransitionJiraIssueProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("TransitionJiraIssue")),
+			connect.WithClientOptions(opts...),
+		),
+		addJiraComment: connect.NewClient[v1.AddJiraCommentRequest, v1.AddJiraCommentResponse](
+			httpClient,
+			baseURL+NushiServiceAddJiraCommentProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("AddJiraComment")),
+			connect.WithClientOptions(opts...),
+		),
+		getJiraAttachment: connect.NewClient[v1.GetJiraAttachmentRequest, v1.GetJiraAttachmentResponse](
+			httpClient,
+			baseURL+NushiServiceGetJiraAttachmentProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("GetJiraAttachment")),
+			connect.WithClientOptions(opts...),
+		),
 		events: connect.NewClient[v1.EventsRequest, v1.EventsResponse](
 			httpClient,
 			baseURL+NushiServiceEventsProcedure,
@@ -734,64 +908,80 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 
 // nushiServiceClient implements NushiServiceClient.
 type nushiServiceClient struct {
-	ping              *connect.Client[v1.PingRequest, v1.PingResponse]
-	listChats         *connect.Client[v1.ListChatsRequest, v1.ListChatsResponse]
-	getChat           *connect.Client[v1.GetChatRequest, v1.GetChatResponse]
-	startChat         *connect.Client[v1.StartChatRequest, v1.StartChatResponse]
-	listAgents        *connect.Client[v1.ListAgentsRequest, v1.ListAgentsResponse]
-	setUpAgent        *connect.Client[v1.SetUpAgentRequest, v1.SetUpAgentResponse]
-	removeAgent       *connect.Client[v1.RemoveAgentRequest, v1.RemoveAgentResponse]
-	listAgentSessions *connect.Client[v1.ListAgentSessionsRequest, v1.ListAgentSessionsResponse]
-	openAgentSession  *connect.Client[v1.OpenAgentSessionRequest, v1.OpenAgentSessionResponse]
-	moveChat          *connect.Client[v1.MoveChatRequest, v1.MoveChatResponse]
-	sendPrompt        *connect.Client[v1.SendPromptRequest, v1.SendPromptResponse]
-	rewindChat        *connect.Client[v1.RewindChatRequest, v1.RewindChatResponse]
-	unqueue           *connect.Client[v1.UnqueueRequest, v1.UnqueueResponse]
-	cancelTurn        *connect.Client[v1.CancelTurnRequest, v1.CancelTurnResponse]
-	forkChat          *connect.Client[v1.ForkChatRequest, v1.ForkChatResponse]
-	closeSideChat     *connect.Client[v1.CloseSideChatRequest, v1.CloseSideChatResponse]
-	renameChat        *connect.Client[v1.RenameChatRequest, v1.RenameChatResponse]
-	archiveChat       *connect.Client[v1.ArchiveChatRequest, v1.ArchiveChatResponse]
-	sleepChat         *connect.Client[v1.SleepChatRequest, v1.SleepChatResponse]
-	getMemory         *connect.Client[v1.GetMemoryRequest, v1.GetMemoryResponse]
-	getSettings       *connect.Client[v1.GetSettingsRequest, v1.GetSettingsResponse]
-	setSettings       *connect.Client[v1.SetSettingsRequest, v1.SetSettingsResponse]
-	planDeleteChat    *connect.Client[v1.PlanDeleteChatRequest, v1.PlanDeleteChatResponse]
-	deleteChat        *connect.Client[v1.DeleteChatRequest, v1.DeleteChatResponse]
-	answerPermission  *connect.Client[v1.AnswerPermissionRequest, v1.AnswerPermissionResponse]
-	answerQuestion    *connect.Client[v1.AnswerQuestionRequest, v1.AnswerQuestionResponse]
-	setConfigOption   *connect.Client[v1.SetConfigOptionRequest, v1.SetConfigOptionResponse]
-	getDiff           *connect.Client[v1.GetDiffRequest, v1.GetDiffResponse]
-	listCommits       *connect.Client[v1.ListCommitsRequest, v1.ListCommitsResponse]
-	getFolderStatus   *connect.Client[v1.GetFolderStatusRequest, v1.GetFolderStatusResponse]
-	listFiles         *connect.Client[v1.ListFilesRequest, v1.ListFilesResponse]
-	getContextUsage   *connect.Client[v1.GetContextUsageRequest, v1.GetContextUsageResponse]
-	listMcpServers    *connect.Client[v1.ListMcpServersRequest, v1.ListMcpServersResponse]
-	addMcpServer      *connect.Client[v1.AddMcpServerRequest, v1.AddMcpServerResponse]
-	editMcpServer     *connect.Client[v1.EditMcpServerRequest, v1.EditMcpServerResponse]
-	removeMcpServer   *connect.Client[v1.RemoveMcpServerRequest, v1.RemoveMcpServerResponse]
-	setMcpServerOn    *connect.Client[v1.SetMcpServerOnRequest, v1.SetMcpServerOnResponse]
-	loginMcpServer    *connect.Client[v1.LoginMcpServerRequest, v1.LoginMcpServerResponse]
-	logoutMcpServer   *connect.Client[v1.LogoutMcpServerRequest, v1.LogoutMcpServerResponse]
-	reloadChat        *connect.Client[v1.ReloadChatRequest, v1.ReloadChatResponse]
-	openTerminal      *connect.Client[v1.OpenTerminalRequest, v1.OpenTerminalResponse]
-	listTerminals     *connect.Client[v1.ListTerminalsRequest, v1.ListTerminalsResponse]
-	attachTerminal    *connect.Client[v1.AttachTerminalRequest, v1.AttachTerminalResponse]
-	writeTerminal     *connect.Client[v1.WriteTerminalRequest, v1.WriteTerminalResponse]
-	resizeTerminal    *connect.Client[v1.ResizeTerminalRequest, v1.ResizeTerminalResponse]
-	renameTerminal    *connect.Client[v1.RenameTerminalRequest, v1.RenameTerminalResponse]
-	arrangeTerminals  *connect.Client[v1.ArrangeTerminalsRequest, v1.ArrangeTerminalsResponse]
-	restartTerminal   *connect.Client[v1.RestartTerminalRequest, v1.RestartTerminalResponse]
-	closeTerminal     *connect.Client[v1.CloseTerminalRequest, v1.CloseTerminalResponse]
-	checkFolder       *connect.Client[v1.CheckFolderRequest, v1.CheckFolderResponse]
-	trustFolder       *connect.Client[v1.TrustFolderRequest, v1.TrustFolderResponse]
-	getRemote         *connect.Client[v1.GetRemoteRequest, v1.GetRemoteResponse]
-	setRemote         *connect.Client[v1.SetRemoteRequest, v1.SetRemoteResponse]
-	startPairing      *connect.Client[v1.StartPairingRequest, v1.StartPairingResponse]
-	confirmPairing    *connect.Client[v1.ConfirmPairingRequest, v1.ConfirmPairingResponse]
-	revokeDevice      *connect.Client[v1.RevokeDeviceRequest, v1.RevokeDeviceResponse]
-	log               *connect.Client[v1.LogRequest, v1.LogResponse]
-	events            *connect.Client[v1.EventsRequest, v1.EventsResponse]
+	ping                *connect.Client[v1.PingRequest, v1.PingResponse]
+	listChats           *connect.Client[v1.ListChatsRequest, v1.ListChatsResponse]
+	getChat             *connect.Client[v1.GetChatRequest, v1.GetChatResponse]
+	startChat           *connect.Client[v1.StartChatRequest, v1.StartChatResponse]
+	listAgents          *connect.Client[v1.ListAgentsRequest, v1.ListAgentsResponse]
+	setUpAgent          *connect.Client[v1.SetUpAgentRequest, v1.SetUpAgentResponse]
+	removeAgent         *connect.Client[v1.RemoveAgentRequest, v1.RemoveAgentResponse]
+	listAgentSessions   *connect.Client[v1.ListAgentSessionsRequest, v1.ListAgentSessionsResponse]
+	openAgentSession    *connect.Client[v1.OpenAgentSessionRequest, v1.OpenAgentSessionResponse]
+	moveChat            *connect.Client[v1.MoveChatRequest, v1.MoveChatResponse]
+	sendPrompt          *connect.Client[v1.SendPromptRequest, v1.SendPromptResponse]
+	rewindChat          *connect.Client[v1.RewindChatRequest, v1.RewindChatResponse]
+	unqueue             *connect.Client[v1.UnqueueRequest, v1.UnqueueResponse]
+	cancelTurn          *connect.Client[v1.CancelTurnRequest, v1.CancelTurnResponse]
+	forkChat            *connect.Client[v1.ForkChatRequest, v1.ForkChatResponse]
+	closeSideChat       *connect.Client[v1.CloseSideChatRequest, v1.CloseSideChatResponse]
+	renameChat          *connect.Client[v1.RenameChatRequest, v1.RenameChatResponse]
+	archiveChat         *connect.Client[v1.ArchiveChatRequest, v1.ArchiveChatResponse]
+	sleepChat           *connect.Client[v1.SleepChatRequest, v1.SleepChatResponse]
+	getMemory           *connect.Client[v1.GetMemoryRequest, v1.GetMemoryResponse]
+	getSettings         *connect.Client[v1.GetSettingsRequest, v1.GetSettingsResponse]
+	setSettings         *connect.Client[v1.SetSettingsRequest, v1.SetSettingsResponse]
+	planDeleteChat      *connect.Client[v1.PlanDeleteChatRequest, v1.PlanDeleteChatResponse]
+	deleteChat          *connect.Client[v1.DeleteChatRequest, v1.DeleteChatResponse]
+	answerPermission    *connect.Client[v1.AnswerPermissionRequest, v1.AnswerPermissionResponse]
+	answerQuestion      *connect.Client[v1.AnswerQuestionRequest, v1.AnswerQuestionResponse]
+	setConfigOption     *connect.Client[v1.SetConfigOptionRequest, v1.SetConfigOptionResponse]
+	getDiff             *connect.Client[v1.GetDiffRequest, v1.GetDiffResponse]
+	listCommits         *connect.Client[v1.ListCommitsRequest, v1.ListCommitsResponse]
+	getFolderStatus     *connect.Client[v1.GetFolderStatusRequest, v1.GetFolderStatusResponse]
+	listFiles           *connect.Client[v1.ListFilesRequest, v1.ListFilesResponse]
+	getContextUsage     *connect.Client[v1.GetContextUsageRequest, v1.GetContextUsageResponse]
+	listMcpServers      *connect.Client[v1.ListMcpServersRequest, v1.ListMcpServersResponse]
+	addMcpServer        *connect.Client[v1.AddMcpServerRequest, v1.AddMcpServerResponse]
+	editMcpServer       *connect.Client[v1.EditMcpServerRequest, v1.EditMcpServerResponse]
+	removeMcpServer     *connect.Client[v1.RemoveMcpServerRequest, v1.RemoveMcpServerResponse]
+	setMcpServerOn      *connect.Client[v1.SetMcpServerOnRequest, v1.SetMcpServerOnResponse]
+	loginMcpServer      *connect.Client[v1.LoginMcpServerRequest, v1.LoginMcpServerResponse]
+	logoutMcpServer     *connect.Client[v1.LogoutMcpServerRequest, v1.LogoutMcpServerResponse]
+	reloadChat          *connect.Client[v1.ReloadChatRequest, v1.ReloadChatResponse]
+	openTerminal        *connect.Client[v1.OpenTerminalRequest, v1.OpenTerminalResponse]
+	listTerminals       *connect.Client[v1.ListTerminalsRequest, v1.ListTerminalsResponse]
+	attachTerminal      *connect.Client[v1.AttachTerminalRequest, v1.AttachTerminalResponse]
+	writeTerminal       *connect.Client[v1.WriteTerminalRequest, v1.WriteTerminalResponse]
+	resizeTerminal      *connect.Client[v1.ResizeTerminalRequest, v1.ResizeTerminalResponse]
+	renameTerminal      *connect.Client[v1.RenameTerminalRequest, v1.RenameTerminalResponse]
+	arrangeTerminals    *connect.Client[v1.ArrangeTerminalsRequest, v1.ArrangeTerminalsResponse]
+	restartTerminal     *connect.Client[v1.RestartTerminalRequest, v1.RestartTerminalResponse]
+	closeTerminal       *connect.Client[v1.CloseTerminalRequest, v1.CloseTerminalResponse]
+	checkFolder         *connect.Client[v1.CheckFolderRequest, v1.CheckFolderResponse]
+	trustFolder         *connect.Client[v1.TrustFolderRequest, v1.TrustFolderResponse]
+	getRemote           *connect.Client[v1.GetRemoteRequest, v1.GetRemoteResponse]
+	setRemote           *connect.Client[v1.SetRemoteRequest, v1.SetRemoteResponse]
+	startPairing        *connect.Client[v1.StartPairingRequest, v1.StartPairingResponse]
+	confirmPairing      *connect.Client[v1.ConfirmPairingRequest, v1.ConfirmPairingResponse]
+	revokeDevice        *connect.Client[v1.RevokeDeviceRequest, v1.RevokeDeviceResponse]
+	log                 *connect.Client[v1.LogRequest, v1.LogResponse]
+	listJiraSites       *connect.Client[v1.ListJiraSitesRequest, v1.ListJiraSitesResponse]
+	addJiraSite         *connect.Client[v1.AddJiraSiteRequest, v1.AddJiraSiteResponse]
+	removeJiraSite      *connect.Client[v1.RemoveJiraSiteRequest, v1.RemoveJiraSiteResponse]
+	checkJiraSite       *connect.Client[v1.CheckJiraSiteRequest, v1.CheckJiraSiteResponse]
+	allowJiraToken      *connect.Client[v1.AllowJiraTokenRequest, v1.AllowJiraTokenResponse]
+	listJiraBoards      *connect.Client[v1.ListJiraBoardsRequest, v1.ListJiraBoardsResponse]
+	setJiraBoard        *connect.Client[v1.SetJiraBoardRequest, v1.SetJiraBoardResponse]
+	setJiraSearches     *connect.Client[v1.SetJiraSearchesRequest, v1.SetJiraSearchesResponse]
+	listJiraIssues      *connect.Client[v1.ListJiraIssuesRequest, v1.ListJiraIssuesResponse]
+	getJiraJql          *connect.Client[v1.GetJiraJqlRequest, v1.GetJiraJqlResponse]
+	suggestJiraJql      *connect.Client[v1.SuggestJiraJqlRequest, v1.SuggestJiraJqlResponse]
+	getJiraIssue        *connect.Client[v1.GetJiraIssueRequest, v1.GetJiraIssueResponse]
+	listJiraTransitions *connect.Client[v1.ListJiraTransitionsRequest, v1.ListJiraTransitionsResponse]
+	transitionJiraIssue *connect.Client[v1.TransitionJiraIssueRequest, v1.TransitionJiraIssueResponse]
+	addJiraComment      *connect.Client[v1.AddJiraCommentRequest, v1.AddJiraCommentResponse]
+	getJiraAttachment   *connect.Client[v1.GetJiraAttachmentRequest, v1.GetJiraAttachmentResponse]
+	events              *connect.Client[v1.EventsRequest, v1.EventsResponse]
 }
 
 // Ping calls nushi.v1.NushiService.Ping.
@@ -1079,6 +1269,86 @@ func (c *nushiServiceClient) Log(ctx context.Context, req *connect.Request[v1.Lo
 	return c.log.CallUnary(ctx, req)
 }
 
+// ListJiraSites calls nushi.v1.NushiService.ListJiraSites.
+func (c *nushiServiceClient) ListJiraSites(ctx context.Context, req *connect.Request[v1.ListJiraSitesRequest]) (*connect.Response[v1.ListJiraSitesResponse], error) {
+	return c.listJiraSites.CallUnary(ctx, req)
+}
+
+// AddJiraSite calls nushi.v1.NushiService.AddJiraSite.
+func (c *nushiServiceClient) AddJiraSite(ctx context.Context, req *connect.Request[v1.AddJiraSiteRequest]) (*connect.Response[v1.AddJiraSiteResponse], error) {
+	return c.addJiraSite.CallUnary(ctx, req)
+}
+
+// RemoveJiraSite calls nushi.v1.NushiService.RemoveJiraSite.
+func (c *nushiServiceClient) RemoveJiraSite(ctx context.Context, req *connect.Request[v1.RemoveJiraSiteRequest]) (*connect.Response[v1.RemoveJiraSiteResponse], error) {
+	return c.removeJiraSite.CallUnary(ctx, req)
+}
+
+// CheckJiraSite calls nushi.v1.NushiService.CheckJiraSite.
+func (c *nushiServiceClient) CheckJiraSite(ctx context.Context, req *connect.Request[v1.CheckJiraSiteRequest]) (*connect.Response[v1.CheckJiraSiteResponse], error) {
+	return c.checkJiraSite.CallUnary(ctx, req)
+}
+
+// AllowJiraToken calls nushi.v1.NushiService.AllowJiraToken.
+func (c *nushiServiceClient) AllowJiraToken(ctx context.Context, req *connect.Request[v1.AllowJiraTokenRequest]) (*connect.Response[v1.AllowJiraTokenResponse], error) {
+	return c.allowJiraToken.CallUnary(ctx, req)
+}
+
+// ListJiraBoards calls nushi.v1.NushiService.ListJiraBoards.
+func (c *nushiServiceClient) ListJiraBoards(ctx context.Context, req *connect.Request[v1.ListJiraBoardsRequest]) (*connect.Response[v1.ListJiraBoardsResponse], error) {
+	return c.listJiraBoards.CallUnary(ctx, req)
+}
+
+// SetJiraBoard calls nushi.v1.NushiService.SetJiraBoard.
+func (c *nushiServiceClient) SetJiraBoard(ctx context.Context, req *connect.Request[v1.SetJiraBoardRequest]) (*connect.Response[v1.SetJiraBoardResponse], error) {
+	return c.setJiraBoard.CallUnary(ctx, req)
+}
+
+// SetJiraSearches calls nushi.v1.NushiService.SetJiraSearches.
+func (c *nushiServiceClient) SetJiraSearches(ctx context.Context, req *connect.Request[v1.SetJiraSearchesRequest]) (*connect.Response[v1.SetJiraSearchesResponse], error) {
+	return c.setJiraSearches.CallUnary(ctx, req)
+}
+
+// ListJiraIssues calls nushi.v1.NushiService.ListJiraIssues.
+func (c *nushiServiceClient) ListJiraIssues(ctx context.Context, req *connect.Request[v1.ListJiraIssuesRequest]) (*connect.Response[v1.ListJiraIssuesResponse], error) {
+	return c.listJiraIssues.CallUnary(ctx, req)
+}
+
+// GetJiraJql calls nushi.v1.NushiService.GetJiraJql.
+func (c *nushiServiceClient) GetJiraJql(ctx context.Context, req *connect.Request[v1.GetJiraJqlRequest]) (*connect.Response[v1.GetJiraJqlResponse], error) {
+	return c.getJiraJql.CallUnary(ctx, req)
+}
+
+// SuggestJiraJql calls nushi.v1.NushiService.SuggestJiraJql.
+func (c *nushiServiceClient) SuggestJiraJql(ctx context.Context, req *connect.Request[v1.SuggestJiraJqlRequest]) (*connect.Response[v1.SuggestJiraJqlResponse], error) {
+	return c.suggestJiraJql.CallUnary(ctx, req)
+}
+
+// GetJiraIssue calls nushi.v1.NushiService.GetJiraIssue.
+func (c *nushiServiceClient) GetJiraIssue(ctx context.Context, req *connect.Request[v1.GetJiraIssueRequest]) (*connect.Response[v1.GetJiraIssueResponse], error) {
+	return c.getJiraIssue.CallUnary(ctx, req)
+}
+
+// ListJiraTransitions calls nushi.v1.NushiService.ListJiraTransitions.
+func (c *nushiServiceClient) ListJiraTransitions(ctx context.Context, req *connect.Request[v1.ListJiraTransitionsRequest]) (*connect.Response[v1.ListJiraTransitionsResponse], error) {
+	return c.listJiraTransitions.CallUnary(ctx, req)
+}
+
+// TransitionJiraIssue calls nushi.v1.NushiService.TransitionJiraIssue.
+func (c *nushiServiceClient) TransitionJiraIssue(ctx context.Context, req *connect.Request[v1.TransitionJiraIssueRequest]) (*connect.Response[v1.TransitionJiraIssueResponse], error) {
+	return c.transitionJiraIssue.CallUnary(ctx, req)
+}
+
+// AddJiraComment calls nushi.v1.NushiService.AddJiraComment.
+func (c *nushiServiceClient) AddJiraComment(ctx context.Context, req *connect.Request[v1.AddJiraCommentRequest]) (*connect.Response[v1.AddJiraCommentResponse], error) {
+	return c.addJiraComment.CallUnary(ctx, req)
+}
+
+// GetJiraAttachment calls nushi.v1.NushiService.GetJiraAttachment.
+func (c *nushiServiceClient) GetJiraAttachment(ctx context.Context, req *connect.Request[v1.GetJiraAttachmentRequest]) (*connect.Response[v1.GetJiraAttachmentResponse], error) {
+	return c.getJiraAttachment.CallUnary(ctx, req)
+}
+
 // Events calls nushi.v1.NushiService.Events.
 func (c *nushiServiceClient) Events(ctx context.Context, req *connect.Request[v1.EventsRequest]) (*connect.ServerStreamForClient[v1.EventsResponse], error) {
 	return c.events.CallServerStream(ctx, req)
@@ -1263,6 +1533,37 @@ type NushiServiceHandler interface {
 	// Writes a line of the app's into the daemon's log (source=app): its
 	// errors with their stacks, and what helps afterwards.
 	Log(context.Context, *connect.Request[v1.LogRequest]) (*connect.Response[v1.LogResponse], error)
+	// Jira (ADR 0042): the sites added, their tokens in the keychain. Every
+	// call that reaches Jira is one the user made; nothing polls or writes on
+	// its own.
+	ListJiraSites(context.Context, *connect.Request[v1.ListJiraSitesRequest]) (*connect.Response[v1.ListJiraSitesResponse], error)
+	// Checks a token on a site (classic or scoped) and keeps it: the token
+	// in the keychain, the site in the list.
+	AddJiraSite(context.Context, *connect.Request[v1.AddJiraSiteRequest]) (*connect.Response[v1.AddJiraSiteResponse], error)
+	// Forgets a site and deletes its token from the keychain.
+	RemoveJiraSite(context.Context, *connect.Request[v1.RemoveJiraSiteRequest]) (*connect.Response[v1.RemoveJiraSiteResponse], error)
+	// Asks Jira who a site's token is, to see it still works.
+	CheckJiraSite(context.Context, *connect.Request[v1.CheckJiraSiteRequest]) (*connect.Response[v1.CheckJiraSiteResponse], error)
+	// Reads a site's token with macOS's prompt, which asks to let this
+	// build of Nushi read it (JiraSite.needs_ok).
+	AllowJiraToken(context.Context, *connect.Request[v1.AllowJiraTokenRequest]) (*connect.Response[v1.AllowJiraTokenResponse], error)
+	// The board whose active sprint is the sprint list, and saved searches.
+	ListJiraBoards(context.Context, *connect.Request[v1.ListJiraBoardsRequest]) (*connect.Response[v1.ListJiraBoardsResponse], error)
+	SetJiraBoard(context.Context, *connect.Request[v1.SetJiraBoardRequest]) (*connect.Response[v1.SetJiraBoardResponse], error)
+	SetJiraSearches(context.Context, *connect.Request[v1.SetJiraSearchesRequest]) (*connect.Response[v1.SetJiraSearchesResponse], error)
+	// A list's issues: "mine", "sprint", or a JQL search.
+	ListJiraIssues(context.Context, *connect.Request[v1.ListJiraIssuesRequest]) (*connect.Response[v1.ListJiraIssuesResponse], error)
+	// What the JQL field autocompletes from, and a field's values.
+	GetJiraJql(context.Context, *connect.Request[v1.GetJiraJqlRequest]) (*connect.Response[v1.GetJiraJqlResponse], error)
+	SuggestJiraJql(context.Context, *connect.Request[v1.SuggestJiraJqlRequest]) (*connect.Response[v1.SuggestJiraJqlResponse], error)
+	// An issue whole, text as Markdown.
+	GetJiraIssue(context.Context, *connect.Request[v1.GetJiraIssueRequest]) (*connect.Response[v1.GetJiraIssueResponse], error)
+	ListJiraTransitions(context.Context, *connect.Request[v1.ListJiraTransitionsRequest]) (*connect.Response[v1.ListJiraTransitionsResponse], error)
+	TransitionJiraIssue(context.Context, *connect.Request[v1.TransitionJiraIssueRequest]) (*connect.Response[v1.TransitionJiraIssueResponse], error)
+	// Posts a comment written in Markdown.
+	AddJiraComment(context.Context, *connect.Request[v1.AddJiraCommentRequest]) (*connect.Response[v1.AddJiraCommentResponse], error)
+	// An attachment's file or thumbnail (20 MB at most).
+	GetJiraAttachment(context.Context, *connect.Request[v1.GetJiraAttachmentRequest]) (*connect.Response[v1.GetJiraAttachmentResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
 	Events(context.Context, *connect.Request[v1.EventsRequest], *connect.ServerStream[v1.EventsResponse]) error
@@ -1617,6 +1918,102 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("Log")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceListJiraSitesHandler := connect.NewUnaryHandler(
+		NushiServiceListJiraSitesProcedure,
+		svc.ListJiraSites,
+		connect.WithSchema(nushiServiceMethods.ByName("ListJiraSites")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceAddJiraSiteHandler := connect.NewUnaryHandler(
+		NushiServiceAddJiraSiteProcedure,
+		svc.AddJiraSite,
+		connect.WithSchema(nushiServiceMethods.ByName("AddJiraSite")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceRemoveJiraSiteHandler := connect.NewUnaryHandler(
+		NushiServiceRemoveJiraSiteProcedure,
+		svc.RemoveJiraSite,
+		connect.WithSchema(nushiServiceMethods.ByName("RemoveJiraSite")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceCheckJiraSiteHandler := connect.NewUnaryHandler(
+		NushiServiceCheckJiraSiteProcedure,
+		svc.CheckJiraSite,
+		connect.WithSchema(nushiServiceMethods.ByName("CheckJiraSite")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceAllowJiraTokenHandler := connect.NewUnaryHandler(
+		NushiServiceAllowJiraTokenProcedure,
+		svc.AllowJiraToken,
+		connect.WithSchema(nushiServiceMethods.ByName("AllowJiraToken")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceListJiraBoardsHandler := connect.NewUnaryHandler(
+		NushiServiceListJiraBoardsProcedure,
+		svc.ListJiraBoards,
+		connect.WithSchema(nushiServiceMethods.ByName("ListJiraBoards")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceSetJiraBoardHandler := connect.NewUnaryHandler(
+		NushiServiceSetJiraBoardProcedure,
+		svc.SetJiraBoard,
+		connect.WithSchema(nushiServiceMethods.ByName("SetJiraBoard")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceSetJiraSearchesHandler := connect.NewUnaryHandler(
+		NushiServiceSetJiraSearchesProcedure,
+		svc.SetJiraSearches,
+		connect.WithSchema(nushiServiceMethods.ByName("SetJiraSearches")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceListJiraIssuesHandler := connect.NewUnaryHandler(
+		NushiServiceListJiraIssuesProcedure,
+		svc.ListJiraIssues,
+		connect.WithSchema(nushiServiceMethods.ByName("ListJiraIssues")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceGetJiraJqlHandler := connect.NewUnaryHandler(
+		NushiServiceGetJiraJqlProcedure,
+		svc.GetJiraJql,
+		connect.WithSchema(nushiServiceMethods.ByName("GetJiraJql")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceSuggestJiraJqlHandler := connect.NewUnaryHandler(
+		NushiServiceSuggestJiraJqlProcedure,
+		svc.SuggestJiraJql,
+		connect.WithSchema(nushiServiceMethods.ByName("SuggestJiraJql")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceGetJiraIssueHandler := connect.NewUnaryHandler(
+		NushiServiceGetJiraIssueProcedure,
+		svc.GetJiraIssue,
+		connect.WithSchema(nushiServiceMethods.ByName("GetJiraIssue")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceListJiraTransitionsHandler := connect.NewUnaryHandler(
+		NushiServiceListJiraTransitionsProcedure,
+		svc.ListJiraTransitions,
+		connect.WithSchema(nushiServiceMethods.ByName("ListJiraTransitions")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceTransitionJiraIssueHandler := connect.NewUnaryHandler(
+		NushiServiceTransitionJiraIssueProcedure,
+		svc.TransitionJiraIssue,
+		connect.WithSchema(nushiServiceMethods.ByName("TransitionJiraIssue")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceAddJiraCommentHandler := connect.NewUnaryHandler(
+		NushiServiceAddJiraCommentProcedure,
+		svc.AddJiraComment,
+		connect.WithSchema(nushiServiceMethods.ByName("AddJiraComment")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceGetJiraAttachmentHandler := connect.NewUnaryHandler(
+		NushiServiceGetJiraAttachmentProcedure,
+		svc.GetJiraAttachment,
+		connect.WithSchema(nushiServiceMethods.ByName("GetJiraAttachment")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceEventsHandler := connect.NewServerStreamHandler(
 		NushiServiceEventsProcedure,
 		svc.Events,
@@ -1739,6 +2136,38 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceRevokeDeviceHandler.ServeHTTP(w, r)
 		case NushiServiceLogProcedure:
 			nushiServiceLogHandler.ServeHTTP(w, r)
+		case NushiServiceListJiraSitesProcedure:
+			nushiServiceListJiraSitesHandler.ServeHTTP(w, r)
+		case NushiServiceAddJiraSiteProcedure:
+			nushiServiceAddJiraSiteHandler.ServeHTTP(w, r)
+		case NushiServiceRemoveJiraSiteProcedure:
+			nushiServiceRemoveJiraSiteHandler.ServeHTTP(w, r)
+		case NushiServiceCheckJiraSiteProcedure:
+			nushiServiceCheckJiraSiteHandler.ServeHTTP(w, r)
+		case NushiServiceAllowJiraTokenProcedure:
+			nushiServiceAllowJiraTokenHandler.ServeHTTP(w, r)
+		case NushiServiceListJiraBoardsProcedure:
+			nushiServiceListJiraBoardsHandler.ServeHTTP(w, r)
+		case NushiServiceSetJiraBoardProcedure:
+			nushiServiceSetJiraBoardHandler.ServeHTTP(w, r)
+		case NushiServiceSetJiraSearchesProcedure:
+			nushiServiceSetJiraSearchesHandler.ServeHTTP(w, r)
+		case NushiServiceListJiraIssuesProcedure:
+			nushiServiceListJiraIssuesHandler.ServeHTTP(w, r)
+		case NushiServiceGetJiraJqlProcedure:
+			nushiServiceGetJiraJqlHandler.ServeHTTP(w, r)
+		case NushiServiceSuggestJiraJqlProcedure:
+			nushiServiceSuggestJiraJqlHandler.ServeHTTP(w, r)
+		case NushiServiceGetJiraIssueProcedure:
+			nushiServiceGetJiraIssueHandler.ServeHTTP(w, r)
+		case NushiServiceListJiraTransitionsProcedure:
+			nushiServiceListJiraTransitionsHandler.ServeHTTP(w, r)
+		case NushiServiceTransitionJiraIssueProcedure:
+			nushiServiceTransitionJiraIssueHandler.ServeHTTP(w, r)
+		case NushiServiceAddJiraCommentProcedure:
+			nushiServiceAddJiraCommentHandler.ServeHTTP(w, r)
+		case NushiServiceGetJiraAttachmentProcedure:
+			nushiServiceGetJiraAttachmentHandler.ServeHTTP(w, r)
 		case NushiServiceEventsProcedure:
 			nushiServiceEventsHandler.ServeHTTP(w, r)
 		default:
@@ -1976,6 +2405,70 @@ func (UnimplementedNushiServiceHandler) RevokeDevice(context.Context, *connect.R
 
 func (UnimplementedNushiServiceHandler) Log(context.Context, *connect.Request[v1.LogRequest]) (*connect.Response[v1.LogResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.Log is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ListJiraSites(context.Context, *connect.Request[v1.ListJiraSitesRequest]) (*connect.Response[v1.ListJiraSitesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ListJiraSites is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) AddJiraSite(context.Context, *connect.Request[v1.AddJiraSiteRequest]) (*connect.Response[v1.AddJiraSiteResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.AddJiraSite is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) RemoveJiraSite(context.Context, *connect.Request[v1.RemoveJiraSiteRequest]) (*connect.Response[v1.RemoveJiraSiteResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.RemoveJiraSite is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) CheckJiraSite(context.Context, *connect.Request[v1.CheckJiraSiteRequest]) (*connect.Response[v1.CheckJiraSiteResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.CheckJiraSite is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) AllowJiraToken(context.Context, *connect.Request[v1.AllowJiraTokenRequest]) (*connect.Response[v1.AllowJiraTokenResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.AllowJiraToken is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ListJiraBoards(context.Context, *connect.Request[v1.ListJiraBoardsRequest]) (*connect.Response[v1.ListJiraBoardsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ListJiraBoards is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) SetJiraBoard(context.Context, *connect.Request[v1.SetJiraBoardRequest]) (*connect.Response[v1.SetJiraBoardResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.SetJiraBoard is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) SetJiraSearches(context.Context, *connect.Request[v1.SetJiraSearchesRequest]) (*connect.Response[v1.SetJiraSearchesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.SetJiraSearches is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ListJiraIssues(context.Context, *connect.Request[v1.ListJiraIssuesRequest]) (*connect.Response[v1.ListJiraIssuesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ListJiraIssues is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) GetJiraJql(context.Context, *connect.Request[v1.GetJiraJqlRequest]) (*connect.Response[v1.GetJiraJqlResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetJiraJql is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) SuggestJiraJql(context.Context, *connect.Request[v1.SuggestJiraJqlRequest]) (*connect.Response[v1.SuggestJiraJqlResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.SuggestJiraJql is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) GetJiraIssue(context.Context, *connect.Request[v1.GetJiraIssueRequest]) (*connect.Response[v1.GetJiraIssueResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetJiraIssue is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ListJiraTransitions(context.Context, *connect.Request[v1.ListJiraTransitionsRequest]) (*connect.Response[v1.ListJiraTransitionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ListJiraTransitions is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) TransitionJiraIssue(context.Context, *connect.Request[v1.TransitionJiraIssueRequest]) (*connect.Response[v1.TransitionJiraIssueResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.TransitionJiraIssue is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) AddJiraComment(context.Context, *connect.Request[v1.AddJiraCommentRequest]) (*connect.Response[v1.AddJiraCommentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.AddJiraComment is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) GetJiraAttachment(context.Context, *connect.Request[v1.GetJiraAttachmentRequest]) (*connect.Response[v1.GetJiraAttachmentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetJiraAttachment is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) Events(context.Context, *connect.Request[v1.EventsRequest], *connect.ServerStream[v1.EventsResponse]) error {

@@ -196,6 +196,7 @@ func run() error {
 	sv := api.Services{Log: st, Chats: chatSvc, Agents: agentSvc, MCP: mcp.New(claudemcp.Claude{}, chatSvc.MCPChanged), Terms: termSvc,
 		Trust: trust.New(map[string]trust.Agent{"claude": claudetrust.Trust{}, "codex": codextrust.Trust{}, "ante": antetrust.Trust{}, "omp": omptrust.Trust{}, "pig": pig.Trust{}}, st),
 		Hub:   hub, Memory: memory.New(chatSvc)}
+	sv.Jira = newJira(st, os.Getenv("NUSHI_DATA") != "")
 	channels := newChannels()
 	if sv.Remote, err = remote.New(st, &relay.Dialer{Proxies: sysproxy.For}, channels.serve, keepAwake, hub.Publish); err != nil {
 		return err

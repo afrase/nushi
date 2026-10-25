@@ -529,6 +529,133 @@ abstract final class NushiService {
     nushiv1nushi.LogResponse.new,
   );
 
+  /// Jira (ADR 0042): the sites added, their tokens in the keychain. Every
+  /// call that reaches Jira is one the user made; nothing polls or writes on
+  /// its own.
+  static const listJiraSites = connect.Spec(
+    '/$name/ListJiraSites',
+    connect.StreamType.unary,
+    nushiv1nushi.ListJiraSitesRequest.new,
+    nushiv1nushi.ListJiraSitesResponse.new,
+  );
+
+  /// Checks a token on a site (classic or scoped) and keeps it: the token
+  /// in the keychain, the site in the list.
+  static const addJiraSite = connect.Spec(
+    '/$name/AddJiraSite',
+    connect.StreamType.unary,
+    nushiv1nushi.AddJiraSiteRequest.new,
+    nushiv1nushi.AddJiraSiteResponse.new,
+  );
+
+  /// Forgets a site and deletes its token from the keychain.
+  static const removeJiraSite = connect.Spec(
+    '/$name/RemoveJiraSite',
+    connect.StreamType.unary,
+    nushiv1nushi.RemoveJiraSiteRequest.new,
+    nushiv1nushi.RemoveJiraSiteResponse.new,
+  );
+
+  /// Asks Jira who a site's token is, to see it still works.
+  static const checkJiraSite = connect.Spec(
+    '/$name/CheckJiraSite',
+    connect.StreamType.unary,
+    nushiv1nushi.CheckJiraSiteRequest.new,
+    nushiv1nushi.CheckJiraSiteResponse.new,
+  );
+
+  /// Reads a site's token with macOS's prompt, which asks to let this
+  /// build of Nushi read it (JiraSite.needs_ok).
+  static const allowJiraToken = connect.Spec(
+    '/$name/AllowJiraToken',
+    connect.StreamType.unary,
+    nushiv1nushi.AllowJiraTokenRequest.new,
+    nushiv1nushi.AllowJiraTokenResponse.new,
+  );
+
+  /// The board whose active sprint is the sprint list, and saved searches.
+  static const listJiraBoards = connect.Spec(
+    '/$name/ListJiraBoards',
+    connect.StreamType.unary,
+    nushiv1nushi.ListJiraBoardsRequest.new,
+    nushiv1nushi.ListJiraBoardsResponse.new,
+  );
+
+  static const setJiraBoard = connect.Spec(
+    '/$name/SetJiraBoard',
+    connect.StreamType.unary,
+    nushiv1nushi.SetJiraBoardRequest.new,
+    nushiv1nushi.SetJiraBoardResponse.new,
+  );
+
+  static const setJiraSearches = connect.Spec(
+    '/$name/SetJiraSearches',
+    connect.StreamType.unary,
+    nushiv1nushi.SetJiraSearchesRequest.new,
+    nushiv1nushi.SetJiraSearchesResponse.new,
+  );
+
+  /// A list's issues: "mine", "sprint", or a JQL search.
+  static const listJiraIssues = connect.Spec(
+    '/$name/ListJiraIssues',
+    connect.StreamType.unary,
+    nushiv1nushi.ListJiraIssuesRequest.new,
+    nushiv1nushi.ListJiraIssuesResponse.new,
+  );
+
+  /// What the JQL field autocompletes from, and a field's values.
+  static const getJiraJql = connect.Spec(
+    '/$name/GetJiraJql',
+    connect.StreamType.unary,
+    nushiv1nushi.GetJiraJqlRequest.new,
+    nushiv1nushi.GetJiraJqlResponse.new,
+  );
+
+  static const suggestJiraJql = connect.Spec(
+    '/$name/SuggestJiraJql',
+    connect.StreamType.unary,
+    nushiv1nushi.SuggestJiraJqlRequest.new,
+    nushiv1nushi.SuggestJiraJqlResponse.new,
+  );
+
+  /// An issue whole, text as Markdown.
+  static const getJiraIssue = connect.Spec(
+    '/$name/GetJiraIssue',
+    connect.StreamType.unary,
+    nushiv1nushi.GetJiraIssueRequest.new,
+    nushiv1nushi.GetJiraIssueResponse.new,
+  );
+
+  static const listJiraTransitions = connect.Spec(
+    '/$name/ListJiraTransitions',
+    connect.StreamType.unary,
+    nushiv1nushi.ListJiraTransitionsRequest.new,
+    nushiv1nushi.ListJiraTransitionsResponse.new,
+  );
+
+  static const transitionJiraIssue = connect.Spec(
+    '/$name/TransitionJiraIssue',
+    connect.StreamType.unary,
+    nushiv1nushi.TransitionJiraIssueRequest.new,
+    nushiv1nushi.TransitionJiraIssueResponse.new,
+  );
+
+  /// Posts a comment written in Markdown.
+  static const addJiraComment = connect.Spec(
+    '/$name/AddJiraComment',
+    connect.StreamType.unary,
+    nushiv1nushi.AddJiraCommentRequest.new,
+    nushiv1nushi.AddJiraCommentResponse.new,
+  );
+
+  /// An attachment's file or thumbnail (20 MB at most).
+  static const getJiraAttachment = connect.Spec(
+    '/$name/GetJiraAttachment',
+    connect.StreamType.unary,
+    nushiv1nushi.GetJiraAttachmentRequest.new,
+    nushiv1nushi.GetJiraAttachmentResponse.new,
+  );
+
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.
   static const events = connect.Spec(

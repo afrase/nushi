@@ -1,0 +1,54 @@
+package main
+
+import (
+	"context"
+	"errors"
+	"net/http"
+	"net/url"
+
+	"github.com/afrase/nushi/internal/features/jira"
+	"github.com/afrase/nushi/internal/jiracloud"
+	"github.com/afrase/nushi/internal/keychain"
+	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/store"
+	"github.com/afrase/nushi/internal/sysproxy"
+)
+
+// newJira is Jira Cloud through internal/jiracloud, its tokens in the
+// login keychain. A daemon on another data folder (NUSHI_DATA, for
+// development and tests) keeps its tokens under a test service name.
+func newJira(st *store.Store, dev bool) *jira.Service {
+	service := "Nushi Jira"
+	if dev {
+		service = "Nushi Jira (test)"
+	}
+	transport := http.DefaultTransport.(*http.Transport).Clone() //nolint:forcetypeassert // net/http's default is a *Transport
+	transport.Proxy = proxy
+	sites := jira.Sites{
+		Connect: func(ctx context.Context, site, email, token string) (jira.Client, model.JiraSite, error) {
+			c, me, err := jiracloud.Connect(ctx, site, email, token, transport)
+			if err != nil {
+				return nil, model.JiraSite{}, err
+			}
+			return c, model.JiraSite{URL: c.Site, CloudID: c.CloudID, AccountID: me.AccountID, Name: me.Name}, nil
+		},
+		Open: func(site model.JiraSite, token string) jira.Client {
+			return jiracloud.New(site.URL, site.CloudID, site.Email, token, transport)
+		},
+	}
+	return jira.New(sites, keychain.Keychain{Service: service}, st, func(err error) bool { return errors.Is(err, keychain.ErrNeedsOK) })
+}
+
+// proxy is the system's proxy for a request, as macOS would pick it
+// (internal/sysproxy speaks of WebSocket URLs: https is wss to it).
+func proxy(r *http.Request) (*url.URL, error) {
+	u := *r.URL
+	if u.Scheme == "https" {
+		u.Scheme = "wss"
+	}
+	ps, err := sysproxy.For(&u)
+	if err != nil || len(ps) == 0 {
+		return nil, err
+	}
+	return ps[0], nil
+}

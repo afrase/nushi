@@ -11934,6 +11934,3413 @@ class LogResponse extends $pb.GeneratedMessage {
   static LogResponse? _defaultInstance;
 }
 
+/// A Jira site Nushi has a token for; id is its host.
+class JiraSite extends $pb.GeneratedMessage {
+  factory JiraSite({
+    $core.String? id,
+    $core.String? url,
+    $core.String? email,
+    $core.String? name,
+    $core.String? accountId,
+    $core.bool? scoped,
+    $fixnum.Int64? expires,
+    $fixnum.Int64? board,
+    $core.String? boardName,
+    $core.Iterable<JiraSearch>? searches,
+    $core.String? problem,
+    $core.bool? needsOk,
+  }) {
+    final result = JiraSite._();
+    if (id != null) result.id = id;
+    if (url != null) result.url = url;
+    if (email != null) result.email = email;
+    if (name != null) result.name = name;
+    if (accountId != null) result.accountId = accountId;
+    if (scoped != null) result.scoped = scoped;
+    if (expires != null) result.expires = expires;
+    if (board != null) result.board = board;
+    if (boardName != null) result.boardName = boardName;
+    if (searches != null) result.searches.addAll(searches);
+    if (problem != null) result.problem = problem;
+    if (needsOk != null) result.needsOk = needsOk;
+    return result;
+  }
+
+  JiraSite._();
+
+  factory JiraSite.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraSite()..mergeFromBuffer(data, registry);
+  factory JiraSite.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraSite()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'JiraSite',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: JiraSite.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'url')
+    ..aOS(3, _omitFieldNames ? '' : 'email')
+    ..aOS(4, _omitFieldNames ? '' : 'name')
+    ..aOS(5, _omitFieldNames ? '' : 'accountId')
+    ..aOB(6, _omitFieldNames ? '' : 'scoped')
+    ..aInt64(7, _omitFieldNames ? '' : 'expires')
+    ..aInt64(8, _omitFieldNames ? '' : 'board')
+    ..aOS(9, _omitFieldNames ? '' : 'boardName')
+    ..pPM<JiraSearch>(10, _omitFieldNames ? '' : 'searches',
+        subBuilder: JiraSearch.$_createMessage)
+    ..aOS(11, _omitFieldNames ? '' : 'problem')
+    ..aOB(12, _omitFieldNames ? '' : 'needsOk')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraSite clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraSite copyWith(void Function(JiraSite) updates) =>
+      super.copyWith((message) => updates(message as JiraSite)) as JiraSite;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use JiraSite() / JiraSite.new instead')
+  static JiraSite create() => JiraSite._();
+  static $pb.GeneratedMessage $_createMessage() => JiraSite._();
+  @$core.override
+  JiraSite createEmptyInstance() => JiraSite._();
+  @$core.pragma('dart2js:noInline')
+  static JiraSite getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<JiraSite>(JiraSite.$_createMessage);
+  static JiraSite? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get url => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set url($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasUrl() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearUrl() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get email => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set email($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasEmail() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearEmail() => $_clearField(3);
+
+  /// Who the token is.
+  @$pb.TagNumber(4)
+  $core.String get name => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set name($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasName() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearName() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get accountId => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set accountId($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasAccountId() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearAccountId() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.bool get scoped => $_getBF(5);
+  @$pb.TagNumber(6)
+  set scoped($core.bool value) => $_setBool(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasScoped() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearScoped() => $_clearField(6);
+
+  /// When the token expires, if the user said (ms; 0: not known).
+  @$pb.TagNumber(7)
+  $fixnum.Int64 get expires => $_getI64(6);
+  @$pb.TagNumber(7)
+  set expires($fixnum.Int64 value) => $_setInt64(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasExpires() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearExpires() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $fixnum.Int64 get board => $_getI64(7);
+  @$pb.TagNumber(8)
+  set board($fixnum.Int64 value) => $_setInt64(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasBoard() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearBoard() => $_clearField(8);
+
+  @$pb.TagNumber(9)
+  $core.String get boardName => $_getSZ(8);
+  @$pb.TagNumber(9)
+  set boardName($core.String value) => $_setString(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasBoardName() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearBoardName() => $_clearField(9);
+
+  @$pb.TagNumber(10)
+  $pb.PbList<JiraSearch> get searches => $_getList(9);
+
+  /// Why Nushi can't use it now, if it can't; needs_ok: the keychain wants
+  /// the user's OK (AllowJiraToken).
+  @$pb.TagNumber(11)
+  $core.String get problem => $_getSZ(10);
+  @$pb.TagNumber(11)
+  set problem($core.String value) => $_setString(10, value);
+  @$pb.TagNumber(11)
+  $core.bool hasProblem() => $_has(10);
+  @$pb.TagNumber(11)
+  void clearProblem() => $_clearField(11);
+
+  @$pb.TagNumber(12)
+  $core.bool get needsOk => $_getBF(11);
+  @$pb.TagNumber(12)
+  set needsOk($core.bool value) => $_setBool(11, value);
+  @$pb.TagNumber(12)
+  $core.bool hasNeedsOk() => $_has(11);
+  @$pb.TagNumber(12)
+  void clearNeedsOk() => $_clearField(12);
+}
+
+class JiraSearch extends $pb.GeneratedMessage {
+  factory JiraSearch({
+    $core.String? name,
+    $core.String? jql,
+  }) {
+    final result = JiraSearch._();
+    if (name != null) result.name = name;
+    if (jql != null) result.jql = jql;
+    return result;
+  }
+
+  JiraSearch._();
+
+  factory JiraSearch.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraSearch()..mergeFromBuffer(data, registry);
+  factory JiraSearch.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraSearch()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'JiraSearch',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: JiraSearch.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'name')
+    ..aOS(2, _omitFieldNames ? '' : 'jql')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraSearch clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraSearch copyWith(void Function(JiraSearch) updates) =>
+      super.copyWith((message) => updates(message as JiraSearch)) as JiraSearch;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use JiraSearch() / JiraSearch.new instead')
+  static JiraSearch create() => JiraSearch._();
+  static $pb.GeneratedMessage $_createMessage() => JiraSearch._();
+  @$core.override
+  JiraSearch createEmptyInstance() => JiraSearch._();
+  @$core.pragma('dart2js:noInline')
+  static JiraSearch getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<JiraSearch>(JiraSearch.$_createMessage);
+  static JiraSearch? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get name => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set name($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearName() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get jql => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set jql($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasJql() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearJql() => $_clearField(2);
+}
+
+class JiraIssueRef extends $pb.GeneratedMessage {
+  factory JiraIssueRef({
+    $core.String? key,
+    $core.String? summary,
+    $core.String? type,
+    $core.String? status,
+    $core.String? statusCategory,
+  }) {
+    final result = JiraIssueRef._();
+    if (key != null) result.key = key;
+    if (summary != null) result.summary = summary;
+    if (type != null) result.type = type;
+    if (status != null) result.status = status;
+    if (statusCategory != null) result.statusCategory = statusCategory;
+    return result;
+  }
+
+  JiraIssueRef._();
+
+  factory JiraIssueRef.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraIssueRef()..mergeFromBuffer(data, registry);
+  factory JiraIssueRef.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraIssueRef()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'JiraIssueRef',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: JiraIssueRef.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'key')
+    ..aOS(2, _omitFieldNames ? '' : 'summary')
+    ..aOS(3, _omitFieldNames ? '' : 'type')
+    ..aOS(4, _omitFieldNames ? '' : 'status')
+    ..aOS(5, _omitFieldNames ? '' : 'statusCategory')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraIssueRef clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraIssueRef copyWith(void Function(JiraIssueRef) updates) =>
+      super.copyWith((message) => updates(message as JiraIssueRef))
+          as JiraIssueRef;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use JiraIssueRef() / JiraIssueRef.new instead')
+  static JiraIssueRef create() => JiraIssueRef._();
+  static $pb.GeneratedMessage $_createMessage() => JiraIssueRef._();
+  @$core.override
+  JiraIssueRef createEmptyInstance() => JiraIssueRef._();
+  @$core.pragma('dart2js:noInline')
+  static JiraIssueRef getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<JiraIssueRef>(
+          JiraIssueRef.$_createMessage);
+  static JiraIssueRef? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get key => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set key($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasKey() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearKey() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get summary => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set summary($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasSummary() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearSummary() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get type => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set type($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasType() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearType() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get status => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set status($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasStatus() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearStatus() => $_clearField(4);
+
+  /// "new", "indeterminate" or "done".
+  @$pb.TagNumber(5)
+  $core.String get statusCategory => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set statusCategory($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasStatusCategory() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearStatusCategory() => $_clearField(5);
+}
+
+/// An issue; a list fills only key to updated. Text is Markdown.
+class JiraIssue extends $pb.GeneratedMessage {
+  factory JiraIssue({
+    $core.String? key,
+    $core.String? summary,
+    $core.String? type,
+    $core.String? status,
+    $core.String? statusCategory,
+    $core.String? priority,
+    $core.String? assignee,
+    $fixnum.Int64? updated,
+    $core.String? reporter,
+    $fixnum.Int64? created,
+    $core.Iterable<$core.String>? labels,
+    $core.String? description,
+    $core.String? acceptanceCriteria,
+    JiraIssueRef? parent,
+    $core.Iterable<JiraIssueRef>? subtasks,
+    $core.Iterable<JiraLink>? links,
+    $core.Iterable<JiraAttachment>? attachments,
+    $core.Iterable<JiraComment>? comments,
+    $core.Iterable<JiraRemoteLink>? remoteLinks,
+    $core.String? url,
+  }) {
+    final result = JiraIssue._();
+    if (key != null) result.key = key;
+    if (summary != null) result.summary = summary;
+    if (type != null) result.type = type;
+    if (status != null) result.status = status;
+    if (statusCategory != null) result.statusCategory = statusCategory;
+    if (priority != null) result.priority = priority;
+    if (assignee != null) result.assignee = assignee;
+    if (updated != null) result.updated = updated;
+    if (reporter != null) result.reporter = reporter;
+    if (created != null) result.created = created;
+    if (labels != null) result.labels.addAll(labels);
+    if (description != null) result.description = description;
+    if (acceptanceCriteria != null)
+      result.acceptanceCriteria = acceptanceCriteria;
+    if (parent != null) result.parent = parent;
+    if (subtasks != null) result.subtasks.addAll(subtasks);
+    if (links != null) result.links.addAll(links);
+    if (attachments != null) result.attachments.addAll(attachments);
+    if (comments != null) result.comments.addAll(comments);
+    if (remoteLinks != null) result.remoteLinks.addAll(remoteLinks);
+    if (url != null) result.url = url;
+    return result;
+  }
+
+  JiraIssue._();
+
+  factory JiraIssue.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraIssue()..mergeFromBuffer(data, registry);
+  factory JiraIssue.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraIssue()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'JiraIssue',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: JiraIssue.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'key')
+    ..aOS(2, _omitFieldNames ? '' : 'summary')
+    ..aOS(3, _omitFieldNames ? '' : 'type')
+    ..aOS(4, _omitFieldNames ? '' : 'status')
+    ..aOS(5, _omitFieldNames ? '' : 'statusCategory')
+    ..aOS(6, _omitFieldNames ? '' : 'priority')
+    ..aOS(7, _omitFieldNames ? '' : 'assignee')
+    ..aInt64(8, _omitFieldNames ? '' : 'updated')
+    ..aOS(9, _omitFieldNames ? '' : 'reporter')
+    ..aInt64(10, _omitFieldNames ? '' : 'created')
+    ..pPS(11, _omitFieldNames ? '' : 'labels')
+    ..aOS(12, _omitFieldNames ? '' : 'description')
+    ..aOS(13, _omitFieldNames ? '' : 'acceptanceCriteria')
+    ..aOM<JiraIssueRef>(14, _omitFieldNames ? '' : 'parent',
+        subBuilder: JiraIssueRef.$_createMessage)
+    ..pPM<JiraIssueRef>(15, _omitFieldNames ? '' : 'subtasks',
+        subBuilder: JiraIssueRef.$_createMessage)
+    ..pPM<JiraLink>(16, _omitFieldNames ? '' : 'links',
+        subBuilder: JiraLink.$_createMessage)
+    ..pPM<JiraAttachment>(17, _omitFieldNames ? '' : 'attachments',
+        subBuilder: JiraAttachment.$_createMessage)
+    ..pPM<JiraComment>(18, _omitFieldNames ? '' : 'comments',
+        subBuilder: JiraComment.$_createMessage)
+    ..pPM<JiraRemoteLink>(19, _omitFieldNames ? '' : 'remoteLinks',
+        subBuilder: JiraRemoteLink.$_createMessage)
+    ..aOS(20, _omitFieldNames ? '' : 'url')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraIssue clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraIssue copyWith(void Function(JiraIssue) updates) =>
+      super.copyWith((message) => updates(message as JiraIssue)) as JiraIssue;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use JiraIssue() / JiraIssue.new instead')
+  static JiraIssue create() => JiraIssue._();
+  static $pb.GeneratedMessage $_createMessage() => JiraIssue._();
+  @$core.override
+  JiraIssue createEmptyInstance() => JiraIssue._();
+  @$core.pragma('dart2js:noInline')
+  static JiraIssue getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<JiraIssue>(JiraIssue.$_createMessage);
+  static JiraIssue? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get key => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set key($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasKey() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearKey() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get summary => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set summary($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasSummary() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearSummary() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get type => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set type($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasType() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearType() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get status => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set status($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasStatus() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearStatus() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get statusCategory => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set statusCategory($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasStatusCategory() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearStatusCategory() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get priority => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set priority($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasPriority() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearPriority() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.String get assignee => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set assignee($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasAssignee() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearAssignee() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $fixnum.Int64 get updated => $_getI64(7);
+  @$pb.TagNumber(8)
+  set updated($fixnum.Int64 value) => $_setInt64(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasUpdated() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearUpdated() => $_clearField(8);
+
+  @$pb.TagNumber(9)
+  $core.String get reporter => $_getSZ(8);
+  @$pb.TagNumber(9)
+  set reporter($core.String value) => $_setString(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasReporter() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearReporter() => $_clearField(9);
+
+  @$pb.TagNumber(10)
+  $fixnum.Int64 get created => $_getI64(9);
+  @$pb.TagNumber(10)
+  set created($fixnum.Int64 value) => $_setInt64(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasCreated() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearCreated() => $_clearField(10);
+
+  @$pb.TagNumber(11)
+  $pb.PbList<$core.String> get labels => $_getList(10);
+
+  @$pb.TagNumber(12)
+  $core.String get description => $_getSZ(11);
+  @$pb.TagNumber(12)
+  set description($core.String value) => $_setString(11, value);
+  @$pb.TagNumber(12)
+  $core.bool hasDescription() => $_has(11);
+  @$pb.TagNumber(12)
+  void clearDescription() => $_clearField(12);
+
+  @$pb.TagNumber(13)
+  $core.String get acceptanceCriteria => $_getSZ(12);
+  @$pb.TagNumber(13)
+  set acceptanceCriteria($core.String value) => $_setString(12, value);
+  @$pb.TagNumber(13)
+  $core.bool hasAcceptanceCriteria() => $_has(12);
+  @$pb.TagNumber(13)
+  void clearAcceptanceCriteria() => $_clearField(13);
+
+  @$pb.TagNumber(14)
+  JiraIssueRef get parent => $_getN(13);
+  @$pb.TagNumber(14)
+  set parent(JiraIssueRef value) => $_setField(14, value);
+  @$pb.TagNumber(14)
+  $core.bool hasParent() => $_has(13);
+  @$pb.TagNumber(14)
+  void clearParent() => $_clearField(14);
+  @$pb.TagNumber(14)
+  JiraIssueRef ensureParent() => $_ensure(13);
+
+  @$pb.TagNumber(15)
+  $pb.PbList<JiraIssueRef> get subtasks => $_getList(14);
+
+  @$pb.TagNumber(16)
+  $pb.PbList<JiraLink> get links => $_getList(15);
+
+  @$pb.TagNumber(17)
+  $pb.PbList<JiraAttachment> get attachments => $_getList(16);
+
+  @$pb.TagNumber(18)
+  $pb.PbList<JiraComment> get comments => $_getList(17);
+
+  @$pb.TagNumber(19)
+  $pb.PbList<JiraRemoteLink> get remoteLinks => $_getList(18);
+
+  /// The issue in the browser.
+  @$pb.TagNumber(20)
+  $core.String get url => $_getSZ(19);
+  @$pb.TagNumber(20)
+  set url($core.String value) => $_setString(19, value);
+  @$pb.TagNumber(20)
+  $core.bool hasUrl() => $_has(19);
+  @$pb.TagNumber(20)
+  void clearUrl() => $_clearField(20);
+}
+
+class JiraLink extends $pb.GeneratedMessage {
+  factory JiraLink({
+    $core.String? relation,
+    JiraIssueRef? issue,
+  }) {
+    final result = JiraLink._();
+    if (relation != null) result.relation = relation;
+    if (issue != null) result.issue = issue;
+    return result;
+  }
+
+  JiraLink._();
+
+  factory JiraLink.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraLink()..mergeFromBuffer(data, registry);
+  factory JiraLink.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraLink()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'JiraLink',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: JiraLink.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'relation')
+    ..aOM<JiraIssueRef>(2, _omitFieldNames ? '' : 'issue',
+        subBuilder: JiraIssueRef.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraLink clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraLink copyWith(void Function(JiraLink) updates) =>
+      super.copyWith((message) => updates(message as JiraLink)) as JiraLink;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use JiraLink() / JiraLink.new instead')
+  static JiraLink create() => JiraLink._();
+  static $pb.GeneratedMessage $_createMessage() => JiraLink._();
+  @$core.override
+  JiraLink createEmptyInstance() => JiraLink._();
+  @$core.pragma('dart2js:noInline')
+  static JiraLink getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<JiraLink>(JiraLink.$_createMessage);
+  static JiraLink? _defaultInstance;
+
+  /// As this issue reads it: "blocks", "is blocked by".
+  @$pb.TagNumber(1)
+  $core.String get relation => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set relation($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasRelation() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRelation() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  JiraIssueRef get issue => $_getN(1);
+  @$pb.TagNumber(2)
+  set issue(JiraIssueRef value) => $_setField(2, value);
+  @$pb.TagNumber(2)
+  $core.bool hasIssue() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearIssue() => $_clearField(2);
+  @$pb.TagNumber(2)
+  JiraIssueRef ensureIssue() => $_ensure(1);
+}
+
+class JiraAttachment extends $pb.GeneratedMessage {
+  factory JiraAttachment({
+    $core.String? id,
+    $core.String? name,
+    $core.String? mimeType,
+    $fixnum.Int64? size,
+  }) {
+    final result = JiraAttachment._();
+    if (id != null) result.id = id;
+    if (name != null) result.name = name;
+    if (mimeType != null) result.mimeType = mimeType;
+    if (size != null) result.size = size;
+    return result;
+  }
+
+  JiraAttachment._();
+
+  factory JiraAttachment.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraAttachment()..mergeFromBuffer(data, registry);
+  factory JiraAttachment.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraAttachment()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'JiraAttachment',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: JiraAttachment.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'name')
+    ..aOS(3, _omitFieldNames ? '' : 'mimeType')
+    ..aInt64(4, _omitFieldNames ? '' : 'size')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraAttachment clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraAttachment copyWith(void Function(JiraAttachment) updates) =>
+      super.copyWith((message) => updates(message as JiraAttachment))
+          as JiraAttachment;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use JiraAttachment() / JiraAttachment.new instead')
+  static JiraAttachment create() => JiraAttachment._();
+  static $pb.GeneratedMessage $_createMessage() => JiraAttachment._();
+  @$core.override
+  JiraAttachment createEmptyInstance() => JiraAttachment._();
+  @$core.pragma('dart2js:noInline')
+  static JiraAttachment getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<JiraAttachment>(
+          JiraAttachment.$_createMessage);
+  static JiraAttachment? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get name => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set name($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasName() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearName() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get mimeType => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set mimeType($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasMimeType() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearMimeType() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $fixnum.Int64 get size => $_getI64(3);
+  @$pb.TagNumber(4)
+  set size($fixnum.Int64 value) => $_setInt64(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasSize() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearSize() => $_clearField(4);
+}
+
+class JiraComment extends $pb.GeneratedMessage {
+  factory JiraComment({
+    $core.String? id,
+    $core.String? author,
+    $core.String? body,
+    $fixnum.Int64? created,
+    $fixnum.Int64? updated,
+  }) {
+    final result = JiraComment._();
+    if (id != null) result.id = id;
+    if (author != null) result.author = author;
+    if (body != null) result.body = body;
+    if (created != null) result.created = created;
+    if (updated != null) result.updated = updated;
+    return result;
+  }
+
+  JiraComment._();
+
+  factory JiraComment.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraComment()..mergeFromBuffer(data, registry);
+  factory JiraComment.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraComment()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'JiraComment',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: JiraComment.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'author')
+    ..aOS(3, _omitFieldNames ? '' : 'body')
+    ..aInt64(4, _omitFieldNames ? '' : 'created')
+    ..aInt64(5, _omitFieldNames ? '' : 'updated')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraComment clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraComment copyWith(void Function(JiraComment) updates) =>
+      super.copyWith((message) => updates(message as JiraComment))
+          as JiraComment;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use JiraComment() / JiraComment.new instead')
+  static JiraComment create() => JiraComment._();
+  static $pb.GeneratedMessage $_createMessage() => JiraComment._();
+  @$core.override
+  JiraComment createEmptyInstance() => JiraComment._();
+  @$core.pragma('dart2js:noInline')
+  static JiraComment getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<JiraComment>(
+          JiraComment.$_createMessage);
+  static JiraComment? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get author => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set author($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasAuthor() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearAuthor() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get body => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set body($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasBody() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearBody() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $fixnum.Int64 get created => $_getI64(3);
+  @$pb.TagNumber(4)
+  set created($fixnum.Int64 value) => $_setInt64(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasCreated() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearCreated() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $fixnum.Int64 get updated => $_getI64(4);
+  @$pb.TagNumber(5)
+  set updated($fixnum.Int64 value) => $_setInt64(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasUpdated() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearUpdated() => $_clearField(5);
+}
+
+class JiraRemoteLink extends $pb.GeneratedMessage {
+  factory JiraRemoteLink({
+    $core.String? title,
+    $core.String? url,
+  }) {
+    final result = JiraRemoteLink._();
+    if (title != null) result.title = title;
+    if (url != null) result.url = url;
+    return result;
+  }
+
+  JiraRemoteLink._();
+
+  factory JiraRemoteLink.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraRemoteLink()..mergeFromBuffer(data, registry);
+  factory JiraRemoteLink.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraRemoteLink()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'JiraRemoteLink',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: JiraRemoteLink.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'title')
+    ..aOS(2, _omitFieldNames ? '' : 'url')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraRemoteLink clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraRemoteLink copyWith(void Function(JiraRemoteLink) updates) =>
+      super.copyWith((message) => updates(message as JiraRemoteLink))
+          as JiraRemoteLink;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use JiraRemoteLink() / JiraRemoteLink.new instead')
+  static JiraRemoteLink create() => JiraRemoteLink._();
+  static $pb.GeneratedMessage $_createMessage() => JiraRemoteLink._();
+  @$core.override
+  JiraRemoteLink createEmptyInstance() => JiraRemoteLink._();
+  @$core.pragma('dart2js:noInline')
+  static JiraRemoteLink getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<JiraRemoteLink>(
+          JiraRemoteLink.$_createMessage);
+  static JiraRemoteLink? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get title => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set title($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasTitle() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearTitle() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get url => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set url($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasUrl() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearUrl() => $_clearField(2);
+}
+
+class JiraTransition extends $pb.GeneratedMessage {
+  factory JiraTransition({
+    $core.String? id,
+    $core.String? name,
+    $core.String? to,
+    $core.String? toCategory,
+    $core.Iterable<JiraField>? fields,
+  }) {
+    final result = JiraTransition._();
+    if (id != null) result.id = id;
+    if (name != null) result.name = name;
+    if (to != null) result.to = to;
+    if (toCategory != null) result.toCategory = toCategory;
+    if (fields != null) result.fields.addAll(fields);
+    return result;
+  }
+
+  JiraTransition._();
+
+  factory JiraTransition.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraTransition()..mergeFromBuffer(data, registry);
+  factory JiraTransition.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraTransition()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'JiraTransition',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: JiraTransition.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'name')
+    ..aOS(3, _omitFieldNames ? '' : 'to')
+    ..aOS(4, _omitFieldNames ? '' : 'toCategory')
+    ..pPM<JiraField>(5, _omitFieldNames ? '' : 'fields',
+        subBuilder: JiraField.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraTransition clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraTransition copyWith(void Function(JiraTransition) updates) =>
+      super.copyWith((message) => updates(message as JiraTransition))
+          as JiraTransition;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use JiraTransition() / JiraTransition.new instead')
+  static JiraTransition create() => JiraTransition._();
+  static $pb.GeneratedMessage $_createMessage() => JiraTransition._();
+  @$core.override
+  JiraTransition createEmptyInstance() => JiraTransition._();
+  @$core.pragma('dart2js:noInline')
+  static JiraTransition getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<JiraTransition>(
+          JiraTransition.$_createMessage);
+  static JiraTransition? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get name => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set name($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasName() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearName() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get to => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set to($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasTo() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearTo() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get toCategory => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set toCategory($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasToCategory() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearToCategory() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $pb.PbList<JiraField> get fields => $_getList(4);
+}
+
+/// A field a transition's screen asks for. type: "string", "text"
+/// (Markdown), "number", "user" (an account id), "option" and the like (an
+/// option's id), "array:<items>".
+class JiraField extends $pb.GeneratedMessage {
+  factory JiraField({
+    $core.String? id,
+    $core.String? name,
+    $core.String? type,
+    $core.bool? required,
+    $core.Iterable<JiraOption>? options,
+  }) {
+    final result = JiraField._();
+    if (id != null) result.id = id;
+    if (name != null) result.name = name;
+    if (type != null) result.type = type;
+    if (required != null) result.required = required;
+    if (options != null) result.options.addAll(options);
+    return result;
+  }
+
+  JiraField._();
+
+  factory JiraField.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraField()..mergeFromBuffer(data, registry);
+  factory JiraField.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraField()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'JiraField',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: JiraField.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'name')
+    ..aOS(3, _omitFieldNames ? '' : 'type')
+    ..aOB(4, _omitFieldNames ? '' : 'required')
+    ..pPM<JiraOption>(5, _omitFieldNames ? '' : 'options',
+        subBuilder: JiraOption.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraField clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraField copyWith(void Function(JiraField) updates) =>
+      super.copyWith((message) => updates(message as JiraField)) as JiraField;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use JiraField() / JiraField.new instead')
+  static JiraField create() => JiraField._();
+  static $pb.GeneratedMessage $_createMessage() => JiraField._();
+  @$core.override
+  JiraField createEmptyInstance() => JiraField._();
+  @$core.pragma('dart2js:noInline')
+  static JiraField getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<JiraField>(JiraField.$_createMessage);
+  static JiraField? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get name => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set name($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasName() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearName() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get type => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set type($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasType() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearType() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.bool get required => $_getBF(3);
+  @$pb.TagNumber(4)
+  set required($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasRequired() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearRequired() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $pb.PbList<JiraOption> get options => $_getList(4);
+}
+
+class JiraOption extends $pb.GeneratedMessage {
+  factory JiraOption({
+    $core.String? id,
+    $core.String? name,
+  }) {
+    final result = JiraOption._();
+    if (id != null) result.id = id;
+    if (name != null) result.name = name;
+    return result;
+  }
+
+  JiraOption._();
+
+  factory JiraOption.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraOption()..mergeFromBuffer(data, registry);
+  factory JiraOption.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraOption()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'JiraOption',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: JiraOption.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'name')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraOption clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraOption copyWith(void Function(JiraOption) updates) =>
+      super.copyWith((message) => updates(message as JiraOption)) as JiraOption;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use JiraOption() / JiraOption.new instead')
+  static JiraOption create() => JiraOption._();
+  static $pb.GeneratedMessage $_createMessage() => JiraOption._();
+  @$core.override
+  JiraOption createEmptyInstance() => JiraOption._();
+  @$core.pragma('dart2js:noInline')
+  static JiraOption getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<JiraOption>(JiraOption.$_createMessage);
+  static JiraOption? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get name => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set name($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasName() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearName() => $_clearField(2);
+}
+
+class JiraBoard extends $pb.GeneratedMessage {
+  factory JiraBoard({
+    $fixnum.Int64? id,
+    $core.String? name,
+    $core.String? project,
+  }) {
+    final result = JiraBoard._();
+    if (id != null) result.id = id;
+    if (name != null) result.name = name;
+    if (project != null) result.project = project;
+    return result;
+  }
+
+  JiraBoard._();
+
+  factory JiraBoard.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraBoard()..mergeFromBuffer(data, registry);
+  factory JiraBoard.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraBoard()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'JiraBoard',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: JiraBoard.$_createMessage)
+    ..aInt64(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'name')
+    ..aOS(3, _omitFieldNames ? '' : 'project')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraBoard clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraBoard copyWith(void Function(JiraBoard) updates) =>
+      super.copyWith((message) => updates(message as JiraBoard)) as JiraBoard;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use JiraBoard() / JiraBoard.new instead')
+  static JiraBoard create() => JiraBoard._();
+  static $pb.GeneratedMessage $_createMessage() => JiraBoard._();
+  @$core.override
+  JiraBoard createEmptyInstance() => JiraBoard._();
+  @$core.pragma('dart2js:noInline')
+  static JiraBoard getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<JiraBoard>(JiraBoard.$_createMessage);
+  static JiraBoard? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $fixnum.Int64 get id => $_getI64(0);
+  @$pb.TagNumber(1)
+  set id($fixnum.Int64 value) => $_setInt64(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get name => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set name($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasName() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearName() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get project => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set project($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasProject() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearProject() => $_clearField(3);
+}
+
+class ListJiraSitesRequest extends $pb.GeneratedMessage {
+  factory ListJiraSitesRequest() => ListJiraSitesRequest._();
+
+  ListJiraSitesRequest._();
+
+  factory ListJiraSitesRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListJiraSitesRequest()..mergeFromBuffer(data, registry);
+  factory ListJiraSitesRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListJiraSitesRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListJiraSitesRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListJiraSitesRequest.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListJiraSitesRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListJiraSitesRequest copyWith(void Function(ListJiraSitesRequest) updates) =>
+      super.copyWith((message) => updates(message as ListJiraSitesRequest))
+          as ListJiraSitesRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListJiraSitesRequest() / ListJiraSitesRequest.new instead')
+  static ListJiraSitesRequest create() => ListJiraSitesRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ListJiraSitesRequest._();
+  @$core.override
+  ListJiraSitesRequest createEmptyInstance() => ListJiraSitesRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ListJiraSitesRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListJiraSitesRequest>(
+          ListJiraSitesRequest.$_createMessage);
+  static ListJiraSitesRequest? _defaultInstance;
+}
+
+class ListJiraSitesResponse extends $pb.GeneratedMessage {
+  factory ListJiraSitesResponse({
+    $core.Iterable<JiraSite>? sites,
+  }) {
+    final result = ListJiraSitesResponse._();
+    if (sites != null) result.sites.addAll(sites);
+    return result;
+  }
+
+  ListJiraSitesResponse._();
+
+  factory ListJiraSitesResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListJiraSitesResponse()..mergeFromBuffer(data, registry);
+  factory ListJiraSitesResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListJiraSitesResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListJiraSitesResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListJiraSitesResponse.$_createMessage)
+    ..pPM<JiraSite>(1, _omitFieldNames ? '' : 'sites',
+        subBuilder: JiraSite.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListJiraSitesResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListJiraSitesResponse copyWith(
+          void Function(ListJiraSitesResponse) updates) =>
+      super.copyWith((message) => updates(message as ListJiraSitesResponse))
+          as ListJiraSitesResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListJiraSitesResponse() / ListJiraSitesResponse.new instead')
+  static ListJiraSitesResponse create() => ListJiraSitesResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ListJiraSitesResponse._();
+  @$core.override
+  ListJiraSitesResponse createEmptyInstance() => ListJiraSitesResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ListJiraSitesResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListJiraSitesResponse>(
+          ListJiraSitesResponse.$_createMessage);
+  static ListJiraSitesResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<JiraSite> get sites => $_getList(0);
+}
+
+class AddJiraSiteRequest extends $pb.GeneratedMessage {
+  factory AddJiraSiteRequest({
+    $core.String? url,
+    $core.String? email,
+    $core.String? token,
+    $fixnum.Int64? expires,
+  }) {
+    final result = AddJiraSiteRequest._();
+    if (url != null) result.url = url;
+    if (email != null) result.email = email;
+    if (token != null) result.token = token;
+    if (expires != null) result.expires = expires;
+    return result;
+  }
+
+  AddJiraSiteRequest._();
+
+  factory AddJiraSiteRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddJiraSiteRequest()..mergeFromBuffer(data, registry);
+  factory AddJiraSiteRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddJiraSiteRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'AddJiraSiteRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: AddJiraSiteRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'url')
+    ..aOS(2, _omitFieldNames ? '' : 'email')
+    ..aOS(3, _omitFieldNames ? '' : 'token')
+    ..aInt64(4, _omitFieldNames ? '' : 'expires')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddJiraSiteRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddJiraSiteRequest copyWith(void Function(AddJiraSiteRequest) updates) =>
+      super.copyWith((message) => updates(message as AddJiraSiteRequest))
+          as AddJiraSiteRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use AddJiraSiteRequest() / AddJiraSiteRequest.new instead')
+  static AddJiraSiteRequest create() => AddJiraSiteRequest._();
+  static $pb.GeneratedMessage $_createMessage() => AddJiraSiteRequest._();
+  @$core.override
+  AddJiraSiteRequest createEmptyInstance() => AddJiraSiteRequest._();
+  @$core.pragma('dart2js:noInline')
+  static AddJiraSiteRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<AddJiraSiteRequest>(
+          AddJiraSiteRequest.$_createMessage);
+  static AddJiraSiteRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get url => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set url($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasUrl() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearUrl() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get email => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set email($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasEmail() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearEmail() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get token => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set token($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasToken() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearToken() => $_clearField(3);
+
+  /// When the token expires, if known (ms).
+  @$pb.TagNumber(4)
+  $fixnum.Int64 get expires => $_getI64(3);
+  @$pb.TagNumber(4)
+  set expires($fixnum.Int64 value) => $_setInt64(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasExpires() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearExpires() => $_clearField(4);
+}
+
+class AddJiraSiteResponse extends $pb.GeneratedMessage {
+  factory AddJiraSiteResponse({
+    JiraSite? site,
+  }) {
+    final result = AddJiraSiteResponse._();
+    if (site != null) result.site = site;
+    return result;
+  }
+
+  AddJiraSiteResponse._();
+
+  factory AddJiraSiteResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddJiraSiteResponse()..mergeFromBuffer(data, registry);
+  factory AddJiraSiteResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddJiraSiteResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'AddJiraSiteResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: AddJiraSiteResponse.$_createMessage)
+    ..aOM<JiraSite>(1, _omitFieldNames ? '' : 'site',
+        subBuilder: JiraSite.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddJiraSiteResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddJiraSiteResponse copyWith(void Function(AddJiraSiteResponse) updates) =>
+      super.copyWith((message) => updates(message as AddJiraSiteResponse))
+          as AddJiraSiteResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use AddJiraSiteResponse() / AddJiraSiteResponse.new instead')
+  static AddJiraSiteResponse create() => AddJiraSiteResponse._();
+  static $pb.GeneratedMessage $_createMessage() => AddJiraSiteResponse._();
+  @$core.override
+  AddJiraSiteResponse createEmptyInstance() => AddJiraSiteResponse._();
+  @$core.pragma('dart2js:noInline')
+  static AddJiraSiteResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<AddJiraSiteResponse>(
+          AddJiraSiteResponse.$_createMessage);
+  static AddJiraSiteResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  JiraSite get site => $_getN(0);
+  @$pb.TagNumber(1)
+  set site(JiraSite value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSite() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSite() => $_clearField(1);
+  @$pb.TagNumber(1)
+  JiraSite ensureSite() => $_ensure(0);
+}
+
+class RemoveJiraSiteRequest extends $pb.GeneratedMessage {
+  factory RemoveJiraSiteRequest({
+    $core.String? site,
+  }) {
+    final result = RemoveJiraSiteRequest._();
+    if (site != null) result.site = site;
+    return result;
+  }
+
+  RemoveJiraSiteRequest._();
+
+  factory RemoveJiraSiteRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemoveJiraSiteRequest()..mergeFromBuffer(data, registry);
+  factory RemoveJiraSiteRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemoveJiraSiteRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RemoveJiraSiteRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RemoveJiraSiteRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'site')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemoveJiraSiteRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemoveJiraSiteRequest copyWith(
+          void Function(RemoveJiraSiteRequest) updates) =>
+      super.copyWith((message) => updates(message as RemoveJiraSiteRequest))
+          as RemoveJiraSiteRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RemoveJiraSiteRequest() / RemoveJiraSiteRequest.new instead')
+  static RemoveJiraSiteRequest create() => RemoveJiraSiteRequest._();
+  static $pb.GeneratedMessage $_createMessage() => RemoveJiraSiteRequest._();
+  @$core.override
+  RemoveJiraSiteRequest createEmptyInstance() => RemoveJiraSiteRequest._();
+  @$core.pragma('dart2js:noInline')
+  static RemoveJiraSiteRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RemoveJiraSiteRequest>(
+          RemoveJiraSiteRequest.$_createMessage);
+  static RemoveJiraSiteRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get site => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set site($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSite() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSite() => $_clearField(1);
+}
+
+class RemoveJiraSiteResponse extends $pb.GeneratedMessage {
+  factory RemoveJiraSiteResponse() => RemoveJiraSiteResponse._();
+
+  RemoveJiraSiteResponse._();
+
+  factory RemoveJiraSiteResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemoveJiraSiteResponse()..mergeFromBuffer(data, registry);
+  factory RemoveJiraSiteResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemoveJiraSiteResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RemoveJiraSiteResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RemoveJiraSiteResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemoveJiraSiteResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemoveJiraSiteResponse copyWith(
+          void Function(RemoveJiraSiteResponse) updates) =>
+      super.copyWith((message) => updates(message as RemoveJiraSiteResponse))
+          as RemoveJiraSiteResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RemoveJiraSiteResponse() / RemoveJiraSiteResponse.new instead')
+  static RemoveJiraSiteResponse create() => RemoveJiraSiteResponse._();
+  static $pb.GeneratedMessage $_createMessage() => RemoveJiraSiteResponse._();
+  @$core.override
+  RemoveJiraSiteResponse createEmptyInstance() => RemoveJiraSiteResponse._();
+  @$core.pragma('dart2js:noInline')
+  static RemoveJiraSiteResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RemoveJiraSiteResponse>(
+          RemoveJiraSiteResponse.$_createMessage);
+  static RemoveJiraSiteResponse? _defaultInstance;
+}
+
+class CheckJiraSiteRequest extends $pb.GeneratedMessage {
+  factory CheckJiraSiteRequest({
+    $core.String? site,
+  }) {
+    final result = CheckJiraSiteRequest._();
+    if (site != null) result.site = site;
+    return result;
+  }
+
+  CheckJiraSiteRequest._();
+
+  factory CheckJiraSiteRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CheckJiraSiteRequest()..mergeFromBuffer(data, registry);
+  factory CheckJiraSiteRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CheckJiraSiteRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CheckJiraSiteRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: CheckJiraSiteRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'site')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CheckJiraSiteRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CheckJiraSiteRequest copyWith(void Function(CheckJiraSiteRequest) updates) =>
+      super.copyWith((message) => updates(message as CheckJiraSiteRequest))
+          as CheckJiraSiteRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use CheckJiraSiteRequest() / CheckJiraSiteRequest.new instead')
+  static CheckJiraSiteRequest create() => CheckJiraSiteRequest._();
+  static $pb.GeneratedMessage $_createMessage() => CheckJiraSiteRequest._();
+  @$core.override
+  CheckJiraSiteRequest createEmptyInstance() => CheckJiraSiteRequest._();
+  @$core.pragma('dart2js:noInline')
+  static CheckJiraSiteRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<CheckJiraSiteRequest>(
+          CheckJiraSiteRequest.$_createMessage);
+  static CheckJiraSiteRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get site => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set site($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSite() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSite() => $_clearField(1);
+}
+
+class CheckJiraSiteResponse extends $pb.GeneratedMessage {
+  factory CheckJiraSiteResponse({
+    $core.String? name,
+  }) {
+    final result = CheckJiraSiteResponse._();
+    if (name != null) result.name = name;
+    return result;
+  }
+
+  CheckJiraSiteResponse._();
+
+  factory CheckJiraSiteResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CheckJiraSiteResponse()..mergeFromBuffer(data, registry);
+  factory CheckJiraSiteResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CheckJiraSiteResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CheckJiraSiteResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: CheckJiraSiteResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'name')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CheckJiraSiteResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CheckJiraSiteResponse copyWith(
+          void Function(CheckJiraSiteResponse) updates) =>
+      super.copyWith((message) => updates(message as CheckJiraSiteResponse))
+          as CheckJiraSiteResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use CheckJiraSiteResponse() / CheckJiraSiteResponse.new instead')
+  static CheckJiraSiteResponse create() => CheckJiraSiteResponse._();
+  static $pb.GeneratedMessage $_createMessage() => CheckJiraSiteResponse._();
+  @$core.override
+  CheckJiraSiteResponse createEmptyInstance() => CheckJiraSiteResponse._();
+  @$core.pragma('dart2js:noInline')
+  static CheckJiraSiteResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<CheckJiraSiteResponse>(
+          CheckJiraSiteResponse.$_createMessage);
+  static CheckJiraSiteResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get name => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set name($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearName() => $_clearField(1);
+}
+
+class AllowJiraTokenRequest extends $pb.GeneratedMessage {
+  factory AllowJiraTokenRequest({
+    $core.String? site,
+  }) {
+    final result = AllowJiraTokenRequest._();
+    if (site != null) result.site = site;
+    return result;
+  }
+
+  AllowJiraTokenRequest._();
+
+  factory AllowJiraTokenRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AllowJiraTokenRequest()..mergeFromBuffer(data, registry);
+  factory AllowJiraTokenRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AllowJiraTokenRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'AllowJiraTokenRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: AllowJiraTokenRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'site')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AllowJiraTokenRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AllowJiraTokenRequest copyWith(
+          void Function(AllowJiraTokenRequest) updates) =>
+      super.copyWith((message) => updates(message as AllowJiraTokenRequest))
+          as AllowJiraTokenRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use AllowJiraTokenRequest() / AllowJiraTokenRequest.new instead')
+  static AllowJiraTokenRequest create() => AllowJiraTokenRequest._();
+  static $pb.GeneratedMessage $_createMessage() => AllowJiraTokenRequest._();
+  @$core.override
+  AllowJiraTokenRequest createEmptyInstance() => AllowJiraTokenRequest._();
+  @$core.pragma('dart2js:noInline')
+  static AllowJiraTokenRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<AllowJiraTokenRequest>(
+          AllowJiraTokenRequest.$_createMessage);
+  static AllowJiraTokenRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get site => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set site($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSite() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSite() => $_clearField(1);
+}
+
+class AllowJiraTokenResponse extends $pb.GeneratedMessage {
+  factory AllowJiraTokenResponse() => AllowJiraTokenResponse._();
+
+  AllowJiraTokenResponse._();
+
+  factory AllowJiraTokenResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AllowJiraTokenResponse()..mergeFromBuffer(data, registry);
+  factory AllowJiraTokenResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AllowJiraTokenResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'AllowJiraTokenResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: AllowJiraTokenResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AllowJiraTokenResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AllowJiraTokenResponse copyWith(
+          void Function(AllowJiraTokenResponse) updates) =>
+      super.copyWith((message) => updates(message as AllowJiraTokenResponse))
+          as AllowJiraTokenResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use AllowJiraTokenResponse() / AllowJiraTokenResponse.new instead')
+  static AllowJiraTokenResponse create() => AllowJiraTokenResponse._();
+  static $pb.GeneratedMessage $_createMessage() => AllowJiraTokenResponse._();
+  @$core.override
+  AllowJiraTokenResponse createEmptyInstance() => AllowJiraTokenResponse._();
+  @$core.pragma('dart2js:noInline')
+  static AllowJiraTokenResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<AllowJiraTokenResponse>(
+          AllowJiraTokenResponse.$_createMessage);
+  static AllowJiraTokenResponse? _defaultInstance;
+}
+
+class ListJiraBoardsRequest extends $pb.GeneratedMessage {
+  factory ListJiraBoardsRequest({
+    $core.String? site,
+  }) {
+    final result = ListJiraBoardsRequest._();
+    if (site != null) result.site = site;
+    return result;
+  }
+
+  ListJiraBoardsRequest._();
+
+  factory ListJiraBoardsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListJiraBoardsRequest()..mergeFromBuffer(data, registry);
+  factory ListJiraBoardsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListJiraBoardsRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListJiraBoardsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListJiraBoardsRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'site')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListJiraBoardsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListJiraBoardsRequest copyWith(
+          void Function(ListJiraBoardsRequest) updates) =>
+      super.copyWith((message) => updates(message as ListJiraBoardsRequest))
+          as ListJiraBoardsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListJiraBoardsRequest() / ListJiraBoardsRequest.new instead')
+  static ListJiraBoardsRequest create() => ListJiraBoardsRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ListJiraBoardsRequest._();
+  @$core.override
+  ListJiraBoardsRequest createEmptyInstance() => ListJiraBoardsRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ListJiraBoardsRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListJiraBoardsRequest>(
+          ListJiraBoardsRequest.$_createMessage);
+  static ListJiraBoardsRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get site => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set site($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSite() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSite() => $_clearField(1);
+}
+
+class ListJiraBoardsResponse extends $pb.GeneratedMessage {
+  factory ListJiraBoardsResponse({
+    $core.Iterable<JiraBoard>? boards,
+  }) {
+    final result = ListJiraBoardsResponse._();
+    if (boards != null) result.boards.addAll(boards);
+    return result;
+  }
+
+  ListJiraBoardsResponse._();
+
+  factory ListJiraBoardsResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListJiraBoardsResponse()..mergeFromBuffer(data, registry);
+  factory ListJiraBoardsResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListJiraBoardsResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListJiraBoardsResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListJiraBoardsResponse.$_createMessage)
+    ..pPM<JiraBoard>(1, _omitFieldNames ? '' : 'boards',
+        subBuilder: JiraBoard.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListJiraBoardsResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListJiraBoardsResponse copyWith(
+          void Function(ListJiraBoardsResponse) updates) =>
+      super.copyWith((message) => updates(message as ListJiraBoardsResponse))
+          as ListJiraBoardsResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListJiraBoardsResponse() / ListJiraBoardsResponse.new instead')
+  static ListJiraBoardsResponse create() => ListJiraBoardsResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ListJiraBoardsResponse._();
+  @$core.override
+  ListJiraBoardsResponse createEmptyInstance() => ListJiraBoardsResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ListJiraBoardsResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListJiraBoardsResponse>(
+          ListJiraBoardsResponse.$_createMessage);
+  static ListJiraBoardsResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<JiraBoard> get boards => $_getList(0);
+}
+
+class SetJiraBoardRequest extends $pb.GeneratedMessage {
+  factory SetJiraBoardRequest({
+    $core.String? site,
+    JiraBoard? board,
+  }) {
+    final result = SetJiraBoardRequest._();
+    if (site != null) result.site = site;
+    if (board != null) result.board = board;
+    return result;
+  }
+
+  SetJiraBoardRequest._();
+
+  factory SetJiraBoardRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetJiraBoardRequest()..mergeFromBuffer(data, registry);
+  factory SetJiraBoardRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetJiraBoardRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SetJiraBoardRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SetJiraBoardRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'site')
+    ..aOM<JiraBoard>(2, _omitFieldNames ? '' : 'board',
+        subBuilder: JiraBoard.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetJiraBoardRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetJiraBoardRequest copyWith(void Function(SetJiraBoardRequest) updates) =>
+      super.copyWith((message) => updates(message as SetJiraBoardRequest))
+          as SetJiraBoardRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use SetJiraBoardRequest() / SetJiraBoardRequest.new instead')
+  static SetJiraBoardRequest create() => SetJiraBoardRequest._();
+  static $pb.GeneratedMessage $_createMessage() => SetJiraBoardRequest._();
+  @$core.override
+  SetJiraBoardRequest createEmptyInstance() => SetJiraBoardRequest._();
+  @$core.pragma('dart2js:noInline')
+  static SetJiraBoardRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SetJiraBoardRequest>(
+          SetJiraBoardRequest.$_createMessage);
+  static SetJiraBoardRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get site => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set site($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSite() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSite() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  JiraBoard get board => $_getN(1);
+  @$pb.TagNumber(2)
+  set board(JiraBoard value) => $_setField(2, value);
+  @$pb.TagNumber(2)
+  $core.bool hasBoard() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearBoard() => $_clearField(2);
+  @$pb.TagNumber(2)
+  JiraBoard ensureBoard() => $_ensure(1);
+}
+
+class SetJiraBoardResponse extends $pb.GeneratedMessage {
+  factory SetJiraBoardResponse() => SetJiraBoardResponse._();
+
+  SetJiraBoardResponse._();
+
+  factory SetJiraBoardResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetJiraBoardResponse()..mergeFromBuffer(data, registry);
+  factory SetJiraBoardResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetJiraBoardResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SetJiraBoardResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SetJiraBoardResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetJiraBoardResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetJiraBoardResponse copyWith(void Function(SetJiraBoardResponse) updates) =>
+      super.copyWith((message) => updates(message as SetJiraBoardResponse))
+          as SetJiraBoardResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use SetJiraBoardResponse() / SetJiraBoardResponse.new instead')
+  static SetJiraBoardResponse create() => SetJiraBoardResponse._();
+  static $pb.GeneratedMessage $_createMessage() => SetJiraBoardResponse._();
+  @$core.override
+  SetJiraBoardResponse createEmptyInstance() => SetJiraBoardResponse._();
+  @$core.pragma('dart2js:noInline')
+  static SetJiraBoardResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SetJiraBoardResponse>(
+          SetJiraBoardResponse.$_createMessage);
+  static SetJiraBoardResponse? _defaultInstance;
+}
+
+class SetJiraSearchesRequest extends $pb.GeneratedMessage {
+  factory SetJiraSearchesRequest({
+    $core.String? site,
+    $core.Iterable<JiraSearch>? searches,
+  }) {
+    final result = SetJiraSearchesRequest._();
+    if (site != null) result.site = site;
+    if (searches != null) result.searches.addAll(searches);
+    return result;
+  }
+
+  SetJiraSearchesRequest._();
+
+  factory SetJiraSearchesRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetJiraSearchesRequest()..mergeFromBuffer(data, registry);
+  factory SetJiraSearchesRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetJiraSearchesRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SetJiraSearchesRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SetJiraSearchesRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'site')
+    ..pPM<JiraSearch>(2, _omitFieldNames ? '' : 'searches',
+        subBuilder: JiraSearch.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetJiraSearchesRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetJiraSearchesRequest copyWith(
+          void Function(SetJiraSearchesRequest) updates) =>
+      super.copyWith((message) => updates(message as SetJiraSearchesRequest))
+          as SetJiraSearchesRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use SetJiraSearchesRequest() / SetJiraSearchesRequest.new instead')
+  static SetJiraSearchesRequest create() => SetJiraSearchesRequest._();
+  static $pb.GeneratedMessage $_createMessage() => SetJiraSearchesRequest._();
+  @$core.override
+  SetJiraSearchesRequest createEmptyInstance() => SetJiraSearchesRequest._();
+  @$core.pragma('dart2js:noInline')
+  static SetJiraSearchesRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SetJiraSearchesRequest>(
+          SetJiraSearchesRequest.$_createMessage);
+  static SetJiraSearchesRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get site => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set site($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSite() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSite() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $pb.PbList<JiraSearch> get searches => $_getList(1);
+}
+
+class SetJiraSearchesResponse extends $pb.GeneratedMessage {
+  factory SetJiraSearchesResponse() => SetJiraSearchesResponse._();
+
+  SetJiraSearchesResponse._();
+
+  factory SetJiraSearchesResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetJiraSearchesResponse()..mergeFromBuffer(data, registry);
+  factory SetJiraSearchesResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetJiraSearchesResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SetJiraSearchesResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SetJiraSearchesResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetJiraSearchesResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetJiraSearchesResponse copyWith(
+          void Function(SetJiraSearchesResponse) updates) =>
+      super.copyWith((message) => updates(message as SetJiraSearchesResponse))
+          as SetJiraSearchesResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use SetJiraSearchesResponse() / SetJiraSearchesResponse.new instead')
+  static SetJiraSearchesResponse create() => SetJiraSearchesResponse._();
+  static $pb.GeneratedMessage $_createMessage() => SetJiraSearchesResponse._();
+  @$core.override
+  SetJiraSearchesResponse createEmptyInstance() => SetJiraSearchesResponse._();
+  @$core.pragma('dart2js:noInline')
+  static SetJiraSearchesResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SetJiraSearchesResponse>(
+          SetJiraSearchesResponse.$_createMessage);
+  static SetJiraSearchesResponse? _defaultInstance;
+}
+
+class ListJiraIssuesRequest extends $pb.GeneratedMessage {
+  factory ListJiraIssuesRequest({
+    $core.String? site,
+    $core.String? list,
+    $core.String? jql,
+  }) {
+    final result = ListJiraIssuesRequest._();
+    if (site != null) result.site = site;
+    if (list != null) result.list = list;
+    if (jql != null) result.jql = jql;
+    return result;
+  }
+
+  ListJiraIssuesRequest._();
+
+  factory ListJiraIssuesRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListJiraIssuesRequest()..mergeFromBuffer(data, registry);
+  factory ListJiraIssuesRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListJiraIssuesRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListJiraIssuesRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListJiraIssuesRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'site')
+    ..aOS(2, _omitFieldNames ? '' : 'list')
+    ..aOS(3, _omitFieldNames ? '' : 'jql')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListJiraIssuesRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListJiraIssuesRequest copyWith(
+          void Function(ListJiraIssuesRequest) updates) =>
+      super.copyWith((message) => updates(message as ListJiraIssuesRequest))
+          as ListJiraIssuesRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListJiraIssuesRequest() / ListJiraIssuesRequest.new instead')
+  static ListJiraIssuesRequest create() => ListJiraIssuesRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ListJiraIssuesRequest._();
+  @$core.override
+  ListJiraIssuesRequest createEmptyInstance() => ListJiraIssuesRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ListJiraIssuesRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListJiraIssuesRequest>(
+          ListJiraIssuesRequest.$_createMessage);
+  static ListJiraIssuesRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get site => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set site($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSite() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSite() => $_clearField(1);
+
+  /// "mine", "sprint", or "" for jql.
+  @$pb.TagNumber(2)
+  $core.String get list => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set list($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasList() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearList() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get jql => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set jql($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasJql() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearJql() => $_clearField(3);
+}
+
+class ListJiraIssuesResponse extends $pb.GeneratedMessage {
+  factory ListJiraIssuesResponse({
+    $core.Iterable<JiraIssue>? issues,
+    $core.String? sprint,
+  }) {
+    final result = ListJiraIssuesResponse._();
+    if (issues != null) result.issues.addAll(issues);
+    if (sprint != null) result.sprint = sprint;
+    return result;
+  }
+
+  ListJiraIssuesResponse._();
+
+  factory ListJiraIssuesResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListJiraIssuesResponse()..mergeFromBuffer(data, registry);
+  factory ListJiraIssuesResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListJiraIssuesResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListJiraIssuesResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListJiraIssuesResponse.$_createMessage)
+    ..pPM<JiraIssue>(1, _omitFieldNames ? '' : 'issues',
+        subBuilder: JiraIssue.$_createMessage)
+    ..aOS(2, _omitFieldNames ? '' : 'sprint')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListJiraIssuesResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListJiraIssuesResponse copyWith(
+          void Function(ListJiraIssuesResponse) updates) =>
+      super.copyWith((message) => updates(message as ListJiraIssuesResponse))
+          as ListJiraIssuesResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListJiraIssuesResponse() / ListJiraIssuesResponse.new instead')
+  static ListJiraIssuesResponse create() => ListJiraIssuesResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ListJiraIssuesResponse._();
+  @$core.override
+  ListJiraIssuesResponse createEmptyInstance() => ListJiraIssuesResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ListJiraIssuesResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListJiraIssuesResponse>(
+          ListJiraIssuesResponse.$_createMessage);
+  static ListJiraIssuesResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<JiraIssue> get issues => $_getList(0);
+
+  /// The sprint list's sprint ("" when the board has none active).
+  @$pb.TagNumber(2)
+  $core.String get sprint => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set sprint($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasSprint() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearSprint() => $_clearField(2);
+}
+
+class GetJiraJqlRequest extends $pb.GeneratedMessage {
+  factory GetJiraJqlRequest({
+    $core.String? site,
+  }) {
+    final result = GetJiraJqlRequest._();
+    if (site != null) result.site = site;
+    return result;
+  }
+
+  GetJiraJqlRequest._();
+
+  factory GetJiraJqlRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetJiraJqlRequest()..mergeFromBuffer(data, registry);
+  factory GetJiraJqlRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetJiraJqlRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetJiraJqlRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetJiraJqlRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'site')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetJiraJqlRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetJiraJqlRequest copyWith(void Function(GetJiraJqlRequest) updates) =>
+      super.copyWith((message) => updates(message as GetJiraJqlRequest))
+          as GetJiraJqlRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GetJiraJqlRequest() / GetJiraJqlRequest.new instead')
+  static GetJiraJqlRequest create() => GetJiraJqlRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetJiraJqlRequest._();
+  @$core.override
+  GetJiraJqlRequest createEmptyInstance() => GetJiraJqlRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetJiraJqlRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GetJiraJqlRequest>(
+          GetJiraJqlRequest.$_createMessage);
+  static GetJiraJqlRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get site => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set site($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSite() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSite() => $_clearField(1);
+}
+
+class GetJiraJqlResponse extends $pb.GeneratedMessage {
+  factory GetJiraJqlResponse({
+    $core.Iterable<JiraJqlField>? fields,
+    $core.Iterable<$core.String>? functions,
+    $core.Iterable<$core.String>? words,
+  }) {
+    final result = GetJiraJqlResponse._();
+    if (fields != null) result.fields.addAll(fields);
+    if (functions != null) result.functions.addAll(functions);
+    if (words != null) result.words.addAll(words);
+    return result;
+  }
+
+  GetJiraJqlResponse._();
+
+  factory GetJiraJqlResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetJiraJqlResponse()..mergeFromBuffer(data, registry);
+  factory GetJiraJqlResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetJiraJqlResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetJiraJqlResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetJiraJqlResponse.$_createMessage)
+    ..pPM<JiraJqlField>(1, _omitFieldNames ? '' : 'fields',
+        subBuilder: JiraJqlField.$_createMessage)
+    ..pPS(2, _omitFieldNames ? '' : 'functions')
+    ..pPS(3, _omitFieldNames ? '' : 'words')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetJiraJqlResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetJiraJqlResponse copyWith(void Function(GetJiraJqlResponse) updates) =>
+      super.copyWith((message) => updates(message as GetJiraJqlResponse))
+          as GetJiraJqlResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GetJiraJqlResponse() / GetJiraJqlResponse.new instead')
+  static GetJiraJqlResponse create() => GetJiraJqlResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetJiraJqlResponse._();
+  @$core.override
+  GetJiraJqlResponse createEmptyInstance() => GetJiraJqlResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetJiraJqlResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetJiraJqlResponse>(
+          GetJiraJqlResponse.$_createMessage);
+  static GetJiraJqlResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<JiraJqlField> get fields => $_getList(0);
+
+  @$pb.TagNumber(2)
+  $pb.PbList<$core.String> get functions => $_getList(1);
+
+  @$pb.TagNumber(3)
+  $pb.PbList<$core.String> get words => $_getList(2);
+}
+
+class JiraJqlField extends $pb.GeneratedMessage {
+  factory JiraJqlField({
+    $core.String? name,
+    $core.String? display,
+    $core.Iterable<$core.String>? operators,
+  }) {
+    final result = JiraJqlField._();
+    if (name != null) result.name = name;
+    if (display != null) result.display = display;
+    if (operators != null) result.operators.addAll(operators);
+    return result;
+  }
+
+  JiraJqlField._();
+
+  factory JiraJqlField.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraJqlField()..mergeFromBuffer(data, registry);
+  factory JiraJqlField.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      JiraJqlField()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'JiraJqlField',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: JiraJqlField.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'name')
+    ..aOS(2, _omitFieldNames ? '' : 'display')
+    ..pPS(3, _omitFieldNames ? '' : 'operators')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraJqlField clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  JiraJqlField copyWith(void Function(JiraJqlField) updates) =>
+      super.copyWith((message) => updates(message as JiraJqlField))
+          as JiraJqlField;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use JiraJqlField() / JiraJqlField.new instead')
+  static JiraJqlField create() => JiraJqlField._();
+  static $pb.GeneratedMessage $_createMessage() => JiraJqlField._();
+  @$core.override
+  JiraJqlField createEmptyInstance() => JiraJqlField._();
+  @$core.pragma('dart2js:noInline')
+  static JiraJqlField getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<JiraJqlField>(
+          JiraJqlField.$_createMessage);
+  static JiraJqlField? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get name => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set name($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearName() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get display => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set display($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasDisplay() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearDisplay() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $pb.PbList<$core.String> get operators => $_getList(2);
+}
+
+class SuggestJiraJqlRequest extends $pb.GeneratedMessage {
+  factory SuggestJiraJqlRequest({
+    $core.String? site,
+    $core.String? field_2,
+    $core.String? prefix,
+  }) {
+    final result = SuggestJiraJqlRequest._();
+    if (site != null) result.site = site;
+    if (field_2 != null) result.field_2 = field_2;
+    if (prefix != null) result.prefix = prefix;
+    return result;
+  }
+
+  SuggestJiraJqlRequest._();
+
+  factory SuggestJiraJqlRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SuggestJiraJqlRequest()..mergeFromBuffer(data, registry);
+  factory SuggestJiraJqlRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SuggestJiraJqlRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SuggestJiraJqlRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SuggestJiraJqlRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'site')
+    ..aOS(2, _omitFieldNames ? '' : 'field')
+    ..aOS(3, _omitFieldNames ? '' : 'prefix')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SuggestJiraJqlRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SuggestJiraJqlRequest copyWith(
+          void Function(SuggestJiraJqlRequest) updates) =>
+      super.copyWith((message) => updates(message as SuggestJiraJqlRequest))
+          as SuggestJiraJqlRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use SuggestJiraJqlRequest() / SuggestJiraJqlRequest.new instead')
+  static SuggestJiraJqlRequest create() => SuggestJiraJqlRequest._();
+  static $pb.GeneratedMessage $_createMessage() => SuggestJiraJqlRequest._();
+  @$core.override
+  SuggestJiraJqlRequest createEmptyInstance() => SuggestJiraJqlRequest._();
+  @$core.pragma('dart2js:noInline')
+  static SuggestJiraJqlRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SuggestJiraJqlRequest>(
+          SuggestJiraJqlRequest.$_createMessage);
+  static SuggestJiraJqlRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get site => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set site($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSite() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSite() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get field_2 => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set field_2($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasField_2() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearField_2() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get prefix => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set prefix($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasPrefix() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearPrefix() => $_clearField(3);
+}
+
+class SuggestJiraJqlResponse extends $pb.GeneratedMessage {
+  factory SuggestJiraJqlResponse({
+    $core.Iterable<JiraOption>? values,
+  }) {
+    final result = SuggestJiraJqlResponse._();
+    if (values != null) result.values.addAll(values);
+    return result;
+  }
+
+  SuggestJiraJqlResponse._();
+
+  factory SuggestJiraJqlResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SuggestJiraJqlResponse()..mergeFromBuffer(data, registry);
+  factory SuggestJiraJqlResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SuggestJiraJqlResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SuggestJiraJqlResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SuggestJiraJqlResponse.$_createMessage)
+    ..pPM<JiraOption>(1, _omitFieldNames ? '' : 'values',
+        subBuilder: JiraOption.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SuggestJiraJqlResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SuggestJiraJqlResponse copyWith(
+          void Function(SuggestJiraJqlResponse) updates) =>
+      super.copyWith((message) => updates(message as SuggestJiraJqlResponse))
+          as SuggestJiraJqlResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use SuggestJiraJqlResponse() / SuggestJiraJqlResponse.new instead')
+  static SuggestJiraJqlResponse create() => SuggestJiraJqlResponse._();
+  static $pb.GeneratedMessage $_createMessage() => SuggestJiraJqlResponse._();
+  @$core.override
+  SuggestJiraJqlResponse createEmptyInstance() => SuggestJiraJqlResponse._();
+  @$core.pragma('dart2js:noInline')
+  static SuggestJiraJqlResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SuggestJiraJqlResponse>(
+          SuggestJiraJqlResponse.$_createMessage);
+  static SuggestJiraJqlResponse? _defaultInstance;
+
+  /// id: the value as JQL takes it; name: how it reads.
+  @$pb.TagNumber(1)
+  $pb.PbList<JiraOption> get values => $_getList(0);
+}
+
+class GetJiraIssueRequest extends $pb.GeneratedMessage {
+  factory GetJiraIssueRequest({
+    $core.String? site,
+    $core.String? key,
+  }) {
+    final result = GetJiraIssueRequest._();
+    if (site != null) result.site = site;
+    if (key != null) result.key = key;
+    return result;
+  }
+
+  GetJiraIssueRequest._();
+
+  factory GetJiraIssueRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetJiraIssueRequest()..mergeFromBuffer(data, registry);
+  factory GetJiraIssueRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetJiraIssueRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetJiraIssueRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetJiraIssueRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'site')
+    ..aOS(2, _omitFieldNames ? '' : 'key')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetJiraIssueRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetJiraIssueRequest copyWith(void Function(GetJiraIssueRequest) updates) =>
+      super.copyWith((message) => updates(message as GetJiraIssueRequest))
+          as GetJiraIssueRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use GetJiraIssueRequest() / GetJiraIssueRequest.new instead')
+  static GetJiraIssueRequest create() => GetJiraIssueRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetJiraIssueRequest._();
+  @$core.override
+  GetJiraIssueRequest createEmptyInstance() => GetJiraIssueRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetJiraIssueRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetJiraIssueRequest>(
+          GetJiraIssueRequest.$_createMessage);
+  static GetJiraIssueRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get site => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set site($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSite() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSite() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get key => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set key($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasKey() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearKey() => $_clearField(2);
+}
+
+class GetJiraIssueResponse extends $pb.GeneratedMessage {
+  factory GetJiraIssueResponse({
+    JiraIssue? issue,
+  }) {
+    final result = GetJiraIssueResponse._();
+    if (issue != null) result.issue = issue;
+    return result;
+  }
+
+  GetJiraIssueResponse._();
+
+  factory GetJiraIssueResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetJiraIssueResponse()..mergeFromBuffer(data, registry);
+  factory GetJiraIssueResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetJiraIssueResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetJiraIssueResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetJiraIssueResponse.$_createMessage)
+    ..aOM<JiraIssue>(1, _omitFieldNames ? '' : 'issue',
+        subBuilder: JiraIssue.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetJiraIssueResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetJiraIssueResponse copyWith(void Function(GetJiraIssueResponse) updates) =>
+      super.copyWith((message) => updates(message as GetJiraIssueResponse))
+          as GetJiraIssueResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetJiraIssueResponse() / GetJiraIssueResponse.new instead')
+  static GetJiraIssueResponse create() => GetJiraIssueResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetJiraIssueResponse._();
+  @$core.override
+  GetJiraIssueResponse createEmptyInstance() => GetJiraIssueResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetJiraIssueResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetJiraIssueResponse>(
+          GetJiraIssueResponse.$_createMessage);
+  static GetJiraIssueResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  JiraIssue get issue => $_getN(0);
+  @$pb.TagNumber(1)
+  set issue(JiraIssue value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasIssue() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearIssue() => $_clearField(1);
+  @$pb.TagNumber(1)
+  JiraIssue ensureIssue() => $_ensure(0);
+}
+
+class ListJiraTransitionsRequest extends $pb.GeneratedMessage {
+  factory ListJiraTransitionsRequest({
+    $core.String? site,
+    $core.String? key,
+  }) {
+    final result = ListJiraTransitionsRequest._();
+    if (site != null) result.site = site;
+    if (key != null) result.key = key;
+    return result;
+  }
+
+  ListJiraTransitionsRequest._();
+
+  factory ListJiraTransitionsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListJiraTransitionsRequest()..mergeFromBuffer(data, registry);
+  factory ListJiraTransitionsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListJiraTransitionsRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListJiraTransitionsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListJiraTransitionsRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'site')
+    ..aOS(2, _omitFieldNames ? '' : 'key')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListJiraTransitionsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListJiraTransitionsRequest copyWith(
+          void Function(ListJiraTransitionsRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as ListJiraTransitionsRequest))
+          as ListJiraTransitionsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListJiraTransitionsRequest() / ListJiraTransitionsRequest.new instead')
+  static ListJiraTransitionsRequest create() => ListJiraTransitionsRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      ListJiraTransitionsRequest._();
+  @$core.override
+  ListJiraTransitionsRequest createEmptyInstance() =>
+      ListJiraTransitionsRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ListJiraTransitionsRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListJiraTransitionsRequest>(
+          ListJiraTransitionsRequest.$_createMessage);
+  static ListJiraTransitionsRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get site => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set site($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSite() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSite() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get key => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set key($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasKey() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearKey() => $_clearField(2);
+}
+
+class ListJiraTransitionsResponse extends $pb.GeneratedMessage {
+  factory ListJiraTransitionsResponse({
+    $core.Iterable<JiraTransition>? transitions,
+  }) {
+    final result = ListJiraTransitionsResponse._();
+    if (transitions != null) result.transitions.addAll(transitions);
+    return result;
+  }
+
+  ListJiraTransitionsResponse._();
+
+  factory ListJiraTransitionsResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListJiraTransitionsResponse()..mergeFromBuffer(data, registry);
+  factory ListJiraTransitionsResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListJiraTransitionsResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListJiraTransitionsResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListJiraTransitionsResponse.$_createMessage)
+    ..pPM<JiraTransition>(1, _omitFieldNames ? '' : 'transitions',
+        subBuilder: JiraTransition.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListJiraTransitionsResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListJiraTransitionsResponse copyWith(
+          void Function(ListJiraTransitionsResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as ListJiraTransitionsResponse))
+          as ListJiraTransitionsResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListJiraTransitionsResponse() / ListJiraTransitionsResponse.new instead')
+  static ListJiraTransitionsResponse create() =>
+      ListJiraTransitionsResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      ListJiraTransitionsResponse._();
+  @$core.override
+  ListJiraTransitionsResponse createEmptyInstance() =>
+      ListJiraTransitionsResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ListJiraTransitionsResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListJiraTransitionsResponse>(
+          ListJiraTransitionsResponse.$_createMessage);
+  static ListJiraTransitionsResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<JiraTransition> get transitions => $_getList(0);
+}
+
+class TransitionJiraIssueRequest extends $pb.GeneratedMessage {
+  factory TransitionJiraIssueRequest({
+    $core.String? site,
+    $core.String? key,
+    $core.String? transition,
+    $core.Iterable<$core.MapEntry<$core.String, $core.String>>? values,
+  }) {
+    final result = TransitionJiraIssueRequest._();
+    if (site != null) result.site = site;
+    if (key != null) result.key = key;
+    if (transition != null) result.transition = transition;
+    if (values != null) result.values.addEntries(values);
+    return result;
+  }
+
+  TransitionJiraIssueRequest._();
+
+  factory TransitionJiraIssueRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      TransitionJiraIssueRequest()..mergeFromBuffer(data, registry);
+  factory TransitionJiraIssueRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      TransitionJiraIssueRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'TransitionJiraIssueRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: TransitionJiraIssueRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'site')
+    ..aOS(2, _omitFieldNames ? '' : 'key')
+    ..aOS(3, _omitFieldNames ? '' : 'transition')
+    ..m<$core.String, $core.String>(4, _omitFieldNames ? '' : 'values',
+        entryClassName: 'TransitionJiraIssueRequest.ValuesEntry',
+        keyFieldType: $pb.PbFieldType.OS,
+        valueFieldType: $pb.PbFieldType.OS,
+        packageName: const $pb.PackageName('nushi.v1'))
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  TransitionJiraIssueRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  TransitionJiraIssueRequest copyWith(
+          void Function(TransitionJiraIssueRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as TransitionJiraIssueRequest))
+          as TransitionJiraIssueRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use TransitionJiraIssueRequest() / TransitionJiraIssueRequest.new instead')
+  static TransitionJiraIssueRequest create() => TransitionJiraIssueRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      TransitionJiraIssueRequest._();
+  @$core.override
+  TransitionJiraIssueRequest createEmptyInstance() =>
+      TransitionJiraIssueRequest._();
+  @$core.pragma('dart2js:noInline')
+  static TransitionJiraIssueRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<TransitionJiraIssueRequest>(
+          TransitionJiraIssueRequest.$_createMessage);
+  static TransitionJiraIssueRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get site => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set site($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSite() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSite() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get key => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set key($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasKey() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearKey() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get transition => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set transition($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasTransition() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearTransition() => $_clearField(3);
+
+  /// By field id.
+  @$pb.TagNumber(4)
+  $pb.PbMap<$core.String, $core.String> get values => $_getMap(3);
+}
+
+class TransitionJiraIssueResponse extends $pb.GeneratedMessage {
+  factory TransitionJiraIssueResponse() => TransitionJiraIssueResponse._();
+
+  TransitionJiraIssueResponse._();
+
+  factory TransitionJiraIssueResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      TransitionJiraIssueResponse()..mergeFromBuffer(data, registry);
+  factory TransitionJiraIssueResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      TransitionJiraIssueResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'TransitionJiraIssueResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: TransitionJiraIssueResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  TransitionJiraIssueResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  TransitionJiraIssueResponse copyWith(
+          void Function(TransitionJiraIssueResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as TransitionJiraIssueResponse))
+          as TransitionJiraIssueResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use TransitionJiraIssueResponse() / TransitionJiraIssueResponse.new instead')
+  static TransitionJiraIssueResponse create() =>
+      TransitionJiraIssueResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      TransitionJiraIssueResponse._();
+  @$core.override
+  TransitionJiraIssueResponse createEmptyInstance() =>
+      TransitionJiraIssueResponse._();
+  @$core.pragma('dart2js:noInline')
+  static TransitionJiraIssueResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<TransitionJiraIssueResponse>(
+          TransitionJiraIssueResponse.$_createMessage);
+  static TransitionJiraIssueResponse? _defaultInstance;
+}
+
+class AddJiraCommentRequest extends $pb.GeneratedMessage {
+  factory AddJiraCommentRequest({
+    $core.String? site,
+    $core.String? key,
+    $core.String? markdown,
+  }) {
+    final result = AddJiraCommentRequest._();
+    if (site != null) result.site = site;
+    if (key != null) result.key = key;
+    if (markdown != null) result.markdown = markdown;
+    return result;
+  }
+
+  AddJiraCommentRequest._();
+
+  factory AddJiraCommentRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddJiraCommentRequest()..mergeFromBuffer(data, registry);
+  factory AddJiraCommentRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddJiraCommentRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'AddJiraCommentRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: AddJiraCommentRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'site')
+    ..aOS(2, _omitFieldNames ? '' : 'key')
+    ..aOS(3, _omitFieldNames ? '' : 'markdown')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddJiraCommentRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddJiraCommentRequest copyWith(
+          void Function(AddJiraCommentRequest) updates) =>
+      super.copyWith((message) => updates(message as AddJiraCommentRequest))
+          as AddJiraCommentRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use AddJiraCommentRequest() / AddJiraCommentRequest.new instead')
+  static AddJiraCommentRequest create() => AddJiraCommentRequest._();
+  static $pb.GeneratedMessage $_createMessage() => AddJiraCommentRequest._();
+  @$core.override
+  AddJiraCommentRequest createEmptyInstance() => AddJiraCommentRequest._();
+  @$core.pragma('dart2js:noInline')
+  static AddJiraCommentRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<AddJiraCommentRequest>(
+          AddJiraCommentRequest.$_createMessage);
+  static AddJiraCommentRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get site => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set site($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSite() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSite() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get key => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set key($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasKey() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearKey() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get markdown => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set markdown($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasMarkdown() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearMarkdown() => $_clearField(3);
+}
+
+class AddJiraCommentResponse extends $pb.GeneratedMessage {
+  factory AddJiraCommentResponse({
+    JiraComment? comment,
+  }) {
+    final result = AddJiraCommentResponse._();
+    if (comment != null) result.comment = comment;
+    return result;
+  }
+
+  AddJiraCommentResponse._();
+
+  factory AddJiraCommentResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddJiraCommentResponse()..mergeFromBuffer(data, registry);
+  factory AddJiraCommentResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddJiraCommentResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'AddJiraCommentResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: AddJiraCommentResponse.$_createMessage)
+    ..aOM<JiraComment>(1, _omitFieldNames ? '' : 'comment',
+        subBuilder: JiraComment.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddJiraCommentResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddJiraCommentResponse copyWith(
+          void Function(AddJiraCommentResponse) updates) =>
+      super.copyWith((message) => updates(message as AddJiraCommentResponse))
+          as AddJiraCommentResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use AddJiraCommentResponse() / AddJiraCommentResponse.new instead')
+  static AddJiraCommentResponse create() => AddJiraCommentResponse._();
+  static $pb.GeneratedMessage $_createMessage() => AddJiraCommentResponse._();
+  @$core.override
+  AddJiraCommentResponse createEmptyInstance() => AddJiraCommentResponse._();
+  @$core.pragma('dart2js:noInline')
+  static AddJiraCommentResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<AddJiraCommentResponse>(
+          AddJiraCommentResponse.$_createMessage);
+  static AddJiraCommentResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  JiraComment get comment => $_getN(0);
+  @$pb.TagNumber(1)
+  set comment(JiraComment value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasComment() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearComment() => $_clearField(1);
+  @$pb.TagNumber(1)
+  JiraComment ensureComment() => $_ensure(0);
+}
+
+class GetJiraAttachmentRequest extends $pb.GeneratedMessage {
+  factory GetJiraAttachmentRequest({
+    $core.String? site,
+    $core.String? id,
+    $core.bool? thumbnail,
+  }) {
+    final result = GetJiraAttachmentRequest._();
+    if (site != null) result.site = site;
+    if (id != null) result.id = id;
+    if (thumbnail != null) result.thumbnail = thumbnail;
+    return result;
+  }
+
+  GetJiraAttachmentRequest._();
+
+  factory GetJiraAttachmentRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetJiraAttachmentRequest()..mergeFromBuffer(data, registry);
+  factory GetJiraAttachmentRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetJiraAttachmentRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetJiraAttachmentRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetJiraAttachmentRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'site')
+    ..aOS(2, _omitFieldNames ? '' : 'id')
+    ..aOB(3, _omitFieldNames ? '' : 'thumbnail')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetJiraAttachmentRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetJiraAttachmentRequest copyWith(
+          void Function(GetJiraAttachmentRequest) updates) =>
+      super.copyWith((message) => updates(message as GetJiraAttachmentRequest))
+          as GetJiraAttachmentRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetJiraAttachmentRequest() / GetJiraAttachmentRequest.new instead')
+  static GetJiraAttachmentRequest create() => GetJiraAttachmentRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetJiraAttachmentRequest._();
+  @$core.override
+  GetJiraAttachmentRequest createEmptyInstance() =>
+      GetJiraAttachmentRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetJiraAttachmentRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetJiraAttachmentRequest>(
+          GetJiraAttachmentRequest.$_createMessage);
+  static GetJiraAttachmentRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get site => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set site($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSite() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSite() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get id => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set id($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearId() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.bool get thumbnail => $_getBF(2);
+  @$pb.TagNumber(3)
+  set thumbnail($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasThumbnail() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearThumbnail() => $_clearField(3);
+}
+
+class GetJiraAttachmentResponse extends $pb.GeneratedMessage {
+  factory GetJiraAttachmentResponse({
+    $core.List<$core.int>? data,
+    $core.String? mimeType,
+  }) {
+    final result = GetJiraAttachmentResponse._();
+    if (data != null) result.data = data;
+    if (mimeType != null) result.mimeType = mimeType;
+    return result;
+  }
+
+  GetJiraAttachmentResponse._();
+
+  factory GetJiraAttachmentResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetJiraAttachmentResponse()..mergeFromBuffer(data, registry);
+  factory GetJiraAttachmentResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetJiraAttachmentResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetJiraAttachmentResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetJiraAttachmentResponse.$_createMessage)
+    ..a<$core.List<$core.int>>(
+        1, _omitFieldNames ? '' : 'data', $pb.PbFieldType.OY)
+    ..aOS(2, _omitFieldNames ? '' : 'mimeType')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetJiraAttachmentResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetJiraAttachmentResponse copyWith(
+          void Function(GetJiraAttachmentResponse) updates) =>
+      super.copyWith((message) => updates(message as GetJiraAttachmentResponse))
+          as GetJiraAttachmentResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetJiraAttachmentResponse() / GetJiraAttachmentResponse.new instead')
+  static GetJiraAttachmentResponse create() => GetJiraAttachmentResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      GetJiraAttachmentResponse._();
+  @$core.override
+  GetJiraAttachmentResponse createEmptyInstance() =>
+      GetJiraAttachmentResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetJiraAttachmentResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetJiraAttachmentResponse>(
+          GetJiraAttachmentResponse.$_createMessage);
+  static GetJiraAttachmentResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.List<$core.int> get data => $_getN(0);
+  @$pb.TagNumber(1)
+  set data($core.List<$core.int> value) => $_setBytes(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasData() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearData() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get mimeType => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set mimeType($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasMimeType() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearMimeType() => $_clearField(2);
+}
+
 class NushiServiceApi {
   final $pb.RpcClient _client;
 
@@ -12332,6 +15739,96 @@ class NushiServiceApi {
   $async.Future<LogResponse> log($pb.ClientContext? ctx, LogRequest request) =>
       _client.invoke<LogResponse>(
           ctx, 'NushiService', 'Log', request, LogResponse());
+
+  /// Jira (ADR 0042): the sites added, their tokens in the keychain. Every
+  /// call that reaches Jira is one the user made; nothing polls or writes on
+  /// its own.
+  $async.Future<ListJiraSitesResponse> listJiraSites(
+          $pb.ClientContext? ctx, ListJiraSitesRequest request) =>
+      _client.invoke<ListJiraSitesResponse>(ctx, 'NushiService',
+          'ListJiraSites', request, ListJiraSitesResponse());
+
+  /// Checks a token on a site (classic or scoped) and keeps it: the token
+  /// in the keychain, the site in the list.
+  $async.Future<AddJiraSiteResponse> addJiraSite(
+          $pb.ClientContext? ctx, AddJiraSiteRequest request) =>
+      _client.invoke<AddJiraSiteResponse>(
+          ctx, 'NushiService', 'AddJiraSite', request, AddJiraSiteResponse());
+
+  /// Forgets a site and deletes its token from the keychain.
+  $async.Future<RemoveJiraSiteResponse> removeJiraSite(
+          $pb.ClientContext? ctx, RemoveJiraSiteRequest request) =>
+      _client.invoke<RemoveJiraSiteResponse>(ctx, 'NushiService',
+          'RemoveJiraSite', request, RemoveJiraSiteResponse());
+
+  /// Asks Jira who a site's token is, to see it still works.
+  $async.Future<CheckJiraSiteResponse> checkJiraSite(
+          $pb.ClientContext? ctx, CheckJiraSiteRequest request) =>
+      _client.invoke<CheckJiraSiteResponse>(ctx, 'NushiService',
+          'CheckJiraSite', request, CheckJiraSiteResponse());
+
+  /// Reads a site's token with macOS's prompt, which asks to let this
+  /// build of Nushi read it (JiraSite.needs_ok).
+  $async.Future<AllowJiraTokenResponse> allowJiraToken(
+          $pb.ClientContext? ctx, AllowJiraTokenRequest request) =>
+      _client.invoke<AllowJiraTokenResponse>(ctx, 'NushiService',
+          'AllowJiraToken', request, AllowJiraTokenResponse());
+
+  /// The board whose active sprint is the sprint list, and saved searches.
+  $async.Future<ListJiraBoardsResponse> listJiraBoards(
+          $pb.ClientContext? ctx, ListJiraBoardsRequest request) =>
+      _client.invoke<ListJiraBoardsResponse>(ctx, 'NushiService',
+          'ListJiraBoards', request, ListJiraBoardsResponse());
+  $async.Future<SetJiraBoardResponse> setJiraBoard(
+          $pb.ClientContext? ctx, SetJiraBoardRequest request) =>
+      _client.invoke<SetJiraBoardResponse>(
+          ctx, 'NushiService', 'SetJiraBoard', request, SetJiraBoardResponse());
+  $async.Future<SetJiraSearchesResponse> setJiraSearches(
+          $pb.ClientContext? ctx, SetJiraSearchesRequest request) =>
+      _client.invoke<SetJiraSearchesResponse>(ctx, 'NushiService',
+          'SetJiraSearches', request, SetJiraSearchesResponse());
+
+  /// A list's issues: "mine", "sprint", or a JQL search.
+  $async.Future<ListJiraIssuesResponse> listJiraIssues(
+          $pb.ClientContext? ctx, ListJiraIssuesRequest request) =>
+      _client.invoke<ListJiraIssuesResponse>(ctx, 'NushiService',
+          'ListJiraIssues', request, ListJiraIssuesResponse());
+
+  /// What the JQL field autocompletes from, and a field's values.
+  $async.Future<GetJiraJqlResponse> getJiraJql(
+          $pb.ClientContext? ctx, GetJiraJqlRequest request) =>
+      _client.invoke<GetJiraJqlResponse>(
+          ctx, 'NushiService', 'GetJiraJql', request, GetJiraJqlResponse());
+  $async.Future<SuggestJiraJqlResponse> suggestJiraJql(
+          $pb.ClientContext? ctx, SuggestJiraJqlRequest request) =>
+      _client.invoke<SuggestJiraJqlResponse>(ctx, 'NushiService',
+          'SuggestJiraJql', request, SuggestJiraJqlResponse());
+
+  /// An issue whole, text as Markdown.
+  $async.Future<GetJiraIssueResponse> getJiraIssue(
+          $pb.ClientContext? ctx, GetJiraIssueRequest request) =>
+      _client.invoke<GetJiraIssueResponse>(
+          ctx, 'NushiService', 'GetJiraIssue', request, GetJiraIssueResponse());
+  $async.Future<ListJiraTransitionsResponse> listJiraTransitions(
+          $pb.ClientContext? ctx, ListJiraTransitionsRequest request) =>
+      _client.invoke<ListJiraTransitionsResponse>(ctx, 'NushiService',
+          'ListJiraTransitions', request, ListJiraTransitionsResponse());
+  $async.Future<TransitionJiraIssueResponse> transitionJiraIssue(
+          $pb.ClientContext? ctx, TransitionJiraIssueRequest request) =>
+      _client.invoke<TransitionJiraIssueResponse>(ctx, 'NushiService',
+          'TransitionJiraIssue', request, TransitionJiraIssueResponse());
+
+  /// Posts a comment written in Markdown.
+  $async.Future<AddJiraCommentResponse> addJiraComment(
+          $pb.ClientContext? ctx, AddJiraCommentRequest request) =>
+      _client.invoke<AddJiraCommentResponse>(ctx, 'NushiService',
+          'AddJiraComment', request, AddJiraCommentResponse());
+
+  /// An attachment's file or thumbnail (20 MB at most).
+  $async.Future<GetJiraAttachmentResponse> getJiraAttachment(
+          $pb.ClientContext? ctx, GetJiraAttachmentRequest request) =>
+      _client.invoke<GetJiraAttachmentResponse>(ctx, 'NushiService',
+          'GetJiraAttachment', request, GetJiraAttachmentResponse());
 
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.

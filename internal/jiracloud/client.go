@@ -26,6 +26,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/afrase/nushi/internal/model"
 )
 
 // Gateway is where a scoped token's requests go, followed by the site's
@@ -63,31 +65,28 @@ func New(site, cloudID, email, token string, transport http.RoundTripper) *Clien
 // itself, else as a scoped one through the gateway (Jira refuses a scoped
 // token on the site with 401). It returns the client that worked and who
 // the token is.
-func Connect(ctx context.Context, site, email, token string, transport http.RoundTripper) (*Client, error) {
+func Connect(ctx context.Context, site, email, token string, transport http.RoundTripper) (*Client, model.JiraUser, error) {
 	u, err := url.Parse(strings.TrimSpace(site))
 	if err != nil || u.Scheme != "https" || u.Host == "" || u.Path != "" && u.Path != "/" {
-		return nil, fmt.Errorf("%q isn't a site's address, such as https://example.atlassian.net", site)
+		return nil, model.JiraUser{}, fmt.Errorf("%q isn't a site's address, such as https://example.atlassian.net", site)
 	}
 	site = "https://" + u.Host
 	c := New(site, "", email, token, transport)
-	_, err = c.Myself(ctx)
+	me, err := c.Myself(ctx)
 	if !errors.Is(err, ErrUnauthorized) {
-		return c, err
+		return c, me, err
 	}
 	var tenant struct {
 		CloudID string `json:"cloudId"`
 	}
 	if c.do(ctx, http.MethodGet, "/_edge/tenant_info", nil, nil, nil, &tenant) != nil || tenant.CloudID == "" {
-		return nil, err // the first answer says more
+		return nil, me, err // the first answer says more
 	}
 	scoped := New(site, tenant.CloudID, email, token, transport)
-	if _, err := scoped.Myself(ctx); err != nil {
-		if errors.Is(err, ErrUnauthorized) {
-			return nil, ErrUnauthorized
-		}
-		return nil, err
+	if me, err = scoped.Myself(ctx); err != nil {
+		return nil, me, err
 	}
-	return scoped, nil
+	return scoped, me, nil
 }
 
 var (
