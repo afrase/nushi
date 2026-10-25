@@ -4,6 +4,7 @@ BUF := go run github.com/bufbuild/buf/cmd/buf@v1.75.0
 # NUSHI_DATA=<folder> runs a second daemon and app beside the usual ones.
 DATA := $(or $(NUSHI_DATA),$(HOME)/Library/Application Support/Nushi)
 RELEASE := app/build/macos/Build/Products/Release/Nushi.app
+HELPER := $(RELEASE)/Contents/Helpers/Nushi Daemon.app
 # local.mk (not committed) can set COPY_TO=<folder>: make install also copies the app there.
 -include local.mk
 
@@ -24,12 +25,18 @@ stop:
 app:
 	cd app && flutter run -d macos
 
-# A release app with nushid inside, ad-hoc signed. The app starts its
-# nushid when no daemon is running.
+# A release app with nushid inside, in a background-only helper app
+# (ADR 0036), ad-hoc signed. The app starts it when no daemon is running.
 package:
 	cd app && flutter build macos --release
-	go build -o "$(RELEASE)/Contents/MacOS/nushid" ./cmd/nushid
+	rm -rf "$(RELEASE)/Contents/MacOS/nushid" "$(RELEASE)/Contents/Helpers"
+	mkdir -p "$(HELPER)/Contents/MacOS" "$(HELPER)/Contents/Resources"
+	go build -o "$(HELPER)/Contents/MacOS/nushid" ./cmd/nushid
+	cp app/macos/Daemon/Info.plist "$(HELPER)/Contents/"
+	cp "$(RELEASE)/Contents/Resources/AppIcon.icns" "$(HELPER)/Contents/Resources/"
+	codesign --force --sign - "$(HELPER)"
 	codesign --force --deep --sign - "$(RELEASE)"
+	tools/check-bundle.sh "$(RELEASE)"
 
 install: package
 	mkdir -p "$(HOME)/Applications"

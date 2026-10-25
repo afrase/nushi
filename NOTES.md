@@ -340,6 +340,7 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 131. The New chat dialog's second step: an agent's sessions, opened as a chat | 13109 | 990 | 15543 | 1864 | 1170 |
 | 132. By hand: open elsewhere per agent (Claude's records, Codex's and omp's locks, Ante's open file), forks left out, one-writer agents; the header gives way | 13460 | 990 | 15623 | 1864 | 1170 |
 | 133. The docs (ADR 0035); a terminal's Claude told by its entrypoint | 13461 | 990 | 15623 | 1864 | 1170 |
+| 134. The daemon in a background-only helper app (`Contents/Helpers/Nushi Daemon.app`), opened through Launch Services; `nushid -login` | 13531 | 990 | 15631 | 1864 | 1170 |
 
 Steps over the ~500-line tripwire (code and tests, without generated code): 132 (830, open sessions and forks for four agents), 131 (544, the sessions step), 127 (504, listing), 98 (2,384 with its tests: Ante's whole bridge and its fake), 99 (901: two agents, two trust packages, the shared trust files), 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 removed more than it added.
 

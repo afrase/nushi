@@ -52,6 +52,9 @@ func main() {
 		ante.Main()
 		return
 	}
+	if len(os.Args) > 1 && os.Args[1] == loginFlag {
+		log.Fatal(execLogin())
+	}
 	if err := run(); err != nil {
 		log.Fatal(err)
 	}
