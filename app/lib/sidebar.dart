@@ -20,7 +20,7 @@ import 'widgets.dart';
 /// the newest chat first. Archived chats are in a collapsed group at the
 /// bottom.
 class Sidebar extends StatefulWidget {
-  const Sidebar({super.key, required this.daemon});
+  const new({super.key, required this.daemon});
 
   final Daemon daemon;
 
@@ -137,7 +137,7 @@ class _SidebarState extends State<Sidebar> {
 /// The footer's way into the MCP servers view, for the open chat's folder
 /// (else the home folder).
 class _McpButton extends StatelessWidget {
-  const _McpButton(this.daemon);
+  const new(this.daemon);
 
   final Daemon daemon;
 
@@ -173,11 +173,7 @@ class _McpButton extends StatelessWidget {
 /// A group's header: the folder's name and path, or "No folder" ('') for
 /// chats in scratch folders.
 class _FolderHeader extends StatelessWidget {
-  const _FolderHeader(
-    this.folder, {
-    required this.onNew,
-    required this.onTerminal,
-  });
+  const new(this.folder, {required this.onNew, required this.onTerminal});
 
   final String folder;
   final VoidCallback? onNew;
@@ -237,7 +233,7 @@ class _FolderHeader extends StatelessWidget {
 /// A chat in the list: click opens it, double-click renames it, and a
 /// right-click opens its menu.
 class _ChatRow extends StatefulWidget {
-  const _ChatRow(this.chat, {super.key, required this.daemon});
+  const new(this.chat, {super.key, required this.daemon});
 
   final ChatState chat;
   final Daemon daemon;

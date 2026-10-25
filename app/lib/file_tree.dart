@@ -8,9 +8,9 @@ import 'widgets.dart';
 
 /// A row of the changed files: a folder (no [file]) or a file.
 class ChangeRow {
-  ChangeRow.folder(this.path, this.name, this.depth, this.added, this.removed)
+  new folder(this.path, this.name, this.depth, this.added, this.removed)
     : file = null;
-  ChangeRow.file(FileChange this.file, this.name, this.depth)
+  new file(FileChange this.file, this.name, this.depth)
     : path = file.path,
       added = file.added,
       removed = file.removed;
@@ -82,7 +82,7 @@ List<ChangeRow> changeRows(
 /// The changed files as a tree or a flat list ([changesFlat]): ↑/↓ move
 /// between files, and the selected one stays in view.
 class FileList extends StatefulWidget {
-  const FileList({
+  const new({
     super.key,
     required this.files,
     required this.selected,
@@ -185,7 +185,7 @@ class _FileListState extends State<FileList> {
 }
 
 class _Row extends StatelessWidget {
-  const _Row(
+  const new(
     this.row, {
     required this.flat,
     required this.selected,
@@ -268,7 +268,7 @@ class _Row extends StatelessWidget {
 
 /// `+3 −1` in green and red, each left out when zero.
 class LineCounts extends StatelessWidget {
-  const LineCounts(this.added, this.removed, {super.key});
+  const new(this.added, this.removed, {super.key});
 
   final int added, removed;
 

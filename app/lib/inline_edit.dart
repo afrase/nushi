@@ -21,7 +21,7 @@ class DoubleClick {
 /// Edits [text] in place, all of it selected: Enter or leaving the box
 /// gives [onDone] the text, trimmed; Escape gives it null.
 class InlineEdit extends StatefulWidget {
-  const InlineEdit({
+  const new({
     super.key,
     required this.text,
     required this.onDone,

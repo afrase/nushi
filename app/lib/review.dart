@@ -21,7 +21,7 @@ import 'widgets.dart';
 /// after the agent's reply: [seen] is the file's text as the first look
 /// after it found it.
 class ReviewComment {
-  ReviewComment({
+  new({
     required this.id,
     required this.where,
     required this.path,
@@ -37,7 +37,7 @@ class ReviewComment {
     this.seen,
   });
 
-  ReviewComment.fromJson(Map<String, dynamic> j)
+  new fromJson(Map<String, dynamic> j)
     : this(
         id: j['id'] as String,
         where: j['where'] as String,
@@ -277,7 +277,7 @@ void _untilSent(ChatState chat, String text, List<ReviewComment> comments) {
 /// "Send review": what goes, and a box for an overall note; pops the note
 /// ('' for none) or null when cancelled.
 class _SendDialog extends StatefulWidget {
-  const _SendDialog({required this.chat, required this.agent});
+  const new({required this.chat, required this.agent});
 
   final String chat, agent;
 

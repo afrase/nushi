@@ -50,7 +50,7 @@ class Pairs {
 
 /// Key/value rows, each removable, and a row to add one.
 class PairRows extends StatelessWidget {
-  const PairRows(this.pairs, this.hint, this.changed, {super.key});
+  const new(this.pairs, this.hint, this.changed, {super.key});
 
   final Pairs pairs;
   final String hint;

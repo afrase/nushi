@@ -18,7 +18,7 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
 }
 
 class _Tolerant extends LocalFileComparator {
-  _Tolerant(super.testFile);
+  new(super.testFile);
 
   @override
   Future<bool> compare(Uint8List imageBytes, Uri golden) async {

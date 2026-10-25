@@ -11,7 +11,7 @@ import 'widgets.dart';
 /// [submenu] it opens those rows beside it instead. Without either it
 /// shows unavailable. [tooltip] shows on hover.
 class MenuEntry {
-  const MenuEntry(
+  const new(
     this.label, {
     this.detail = '',
     this.checked = false,
@@ -21,7 +21,7 @@ class MenuEntry {
   }) : heading = false;
 
   /// A group's name over its rows.
-  const MenuEntry.heading(this.label)
+  const new heading(this.label)
     : detail = '',
       checked = false,
       onPick = null,
@@ -51,7 +51,7 @@ typedef OpenMenu = void Function([Offset? at]);
 /// With [digits] the keys 1–9 pick its first rows, numbered on their right.
 /// [onClose] runs once it has closed.
 class Menu extends StatefulWidget {
-  const Menu({
+  const new({
     super.key,
     required this.entries,
     this.child,
@@ -234,7 +234,7 @@ Widget _row(
 /// and description as you type. ↑ and ↓ move, Enter picks, Escape clears
 /// the field, then closes the menu.
 class _Filtered extends StatefulWidget {
-  const _Filtered(this.entries, this.close);
+  const new(this.entries, this.close);
 
   final List<MenuEntry> entries;
   final VoidCallback close;

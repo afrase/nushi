@@ -60,7 +60,7 @@ String withReplies(List<Reply> replies, String text) => [
 
 /// Quoted text, dimmed, with a bar on its left.
 class QuoteBlock extends StatelessWidget {
-  const QuoteBlock(this.text, {super.key, this.maxLines, this.size = 12.5});
+  const new(this.text, {super.key, this.maxLines, this.size = 12.5});
 
   final String text;
   final int? maxLines;
@@ -87,7 +87,7 @@ class QuoteBlock extends StatelessWidget {
 /// A user message: its replies, each a quote with the reply under it, then
 /// the rest of its text.
 class UserMessageText extends StatelessWidget {
-  const UserMessageText(this.message, {super.key});
+  const new(this.message, {super.key});
 
   final String message;
 
@@ -115,7 +115,7 @@ class UserMessageText extends StatelessWidget {
 
 /// The dark pill over a selection: "Start a side chat | Reply".
 class SelectionToolbar extends StatelessWidget {
-  const SelectionToolbar({super.key, this.onSide, this.onReply});
+  const new({super.key, this.onSide, this.onReply});
 
   final VoidCallback? onSide;
   final VoidCallback? onReply;
@@ -160,7 +160,7 @@ class SelectionToolbar extends StatelessWidget {
 /// Writing a reply to a selection: the quote, and one line to reply in.
 /// Enter (or the send button) hands the reply over; Escape closes.
 class ReplyBox extends StatefulWidget {
-  const ReplyBox({
+  const new({
     super.key,
     required this.quote,
     required this.onReply,

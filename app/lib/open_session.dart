@@ -16,7 +16,7 @@ import 'widgets.dart';
 /// every folder's) that aren't chats, newest first, for [onOpen]. The
 /// arrows move, Enter opens, ← or Esc goes [onBack].
 class SessionList extends StatefulWidget {
-  const SessionList({
+  const new({
     super.key,
     required this.daemon,
     required this.agent,

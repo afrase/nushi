@@ -16,7 +16,7 @@ import 'widgets.dart';
 /// result. Back ([onBack], when the panel was showing) returns to the
 /// panel's cards; × closes the side panel.
 class SubagentPane extends StatelessWidget {
-  const SubagentPane({
+  const new({
     super.key,
     required this.chat,
     required this.daemon,
@@ -131,7 +131,7 @@ class SubagentPane extends StatelessWidget {
 /// The subagent's prompt in a box, folded to a few lines, then its model
 /// and state; and, when its steps weren't kept, a line saying so.
 class _Head extends StatefulWidget {
-  const _Head(this.chat, this.s);
+  const new(this.chat, this.s);
 
   final ChatState chat;
   final SubagentRun s;
@@ -239,7 +239,7 @@ class _HeadState extends State<_Head> {
 /// SendMessage), which runs a finished subagent again: as any message,
 /// it goes into a running turn, or starts one.
 class _Relay extends StatefulWidget {
-  const _Relay({required this.chat, required this.daemon, required this.s});
+  const new({required this.chat, required this.daemon, required this.s});
 
   final ChatState chat;
   final Daemon daemon;

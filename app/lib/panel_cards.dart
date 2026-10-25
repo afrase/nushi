@@ -8,7 +8,7 @@ import 'widgets.dart';
 /// [cardOrder]; cards it doesn't name go last), each moved by dragging its
 /// title row, without a lifted look.
 class PanelCards extends StatelessWidget {
-  const PanelCards(this.cards, {super.key});
+  const new(this.cards, {super.key});
 
   final List<PanelCard> cards;
 
@@ -40,7 +40,7 @@ class PanelCards extends StatelessWidget {
 /// of a quiet label on the left and a value on the right (a row without a
 /// label is a line of its own). With [onTap] the rows are a button.
 class PanelCard extends StatelessWidget {
-  const PanelCard({
+  const new({
     super.key,
     required this.title,
     required this.rows,

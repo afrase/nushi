@@ -14,7 +14,7 @@ enum Scope {
   branch('Branch'),
   commits('Commits');
 
-  Scope(this.label);
+  new(this.label);
   final String label;
 }
 
@@ -24,7 +24,7 @@ enum Scope {
 /// (its branch, and its changes counted as the scope shows them), and in
 /// Commits the branch's [commits].
 class ChangeSpan {
-  ChangeSpan(this.scope, this.base, this.status, [this.commits = const []]);
+  new(this.scope, this.base, this.status, [this.commits = const []]);
 
   final Scope scope;
   final String base;

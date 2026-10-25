@@ -48,7 +48,7 @@ PanelCard? agentsCard(ChatState chat) {
 /// A background command: the command, its state, and the last line it
 /// wrote; a click opens its pane.
 class _ShellRow extends StatelessWidget {
-  const _ShellRow(this.chat, this.it);
+  const new(this.chat, this.it);
 
   final ChatState chat;
   final Item it;
@@ -87,7 +87,7 @@ class _ShellRow extends StatelessWidget {
 /// A subagent: its type and task, and its state under them; a click opens
 /// its pane.
 class _AgentRow extends StatelessWidget {
-  const _AgentRow(this.chat, this.s);
+  const new(this.chat, this.s);
 
   final ChatState chat;
   final SubagentRun s;
@@ -135,7 +135,7 @@ class _AgentRow extends StatelessWidget {
 
 /// "n finished", which opens to list them.
 class _Finished extends StatefulWidget {
-  const _Finished(this.label, this.rows);
+  const new(this.label, this.rows);
 
   final String label;
   final List<Widget> rows;

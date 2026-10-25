@@ -12,7 +12,7 @@ import 'gen/nushi/v1/nushi.pb.dart' as pb;
 /// one the app has shown. The daemon runs the shells; the emulators replay
 /// their output when the app attaches.
 class Terminals extends ChangeNotifier {
-  Terminals(this.client);
+  new(this.client);
 
   final NushiServiceClient client;
   final _lists = <String, List<pb.Terminal>>{}; // by chat, once known
@@ -137,7 +137,7 @@ String terminalName(pb.Terminal t) => t.name.isNotEmpty
 /// An emulator showing one of the daemon's terminals: it replays what the
 /// terminal kept, then follows it; keys go back to it, in order.
 class TermSession extends ChangeNotifier {
-  TermSession(this.client, this.id, this.chatId) {
+  new(this.client, this.id, this.chatId) {
     _create();
   }
 
@@ -284,7 +284,7 @@ class TermSession extends ChangeNotifier {
 /// and Option-←/→ move by word, as in Terminal.app with "Use Option as
 /// Meta key".
 class _OptionAsMeta implements TerminalInputHandler {
-  const _OptionAsMeta();
+  const new();
 
   @override
   String? call(TerminalKeyboardEvent e) {

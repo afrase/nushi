@@ -12,7 +12,7 @@ import 'widgets.dart';
 /// or moves there: each file and what it runs, exactly, with "Start
 /// anyway" and Cancel. A warning, not a rule (ADR 0023).
 class TrustCard extends StatelessWidget {
-  const TrustCard(this.ask, {super.key});
+  const new(this.ask, {super.key});
 
   final TrustAsk ask;
 
@@ -117,7 +117,7 @@ class TrustCard extends StatelessWidget {
 /// A run whose text has many lines (a file shown whole), in a box of its
 /// own that scrolls.
 class _Block extends StatelessWidget {
-  const _Block(this.run);
+  const new(this.run);
 
   final FolderRun run;
 
@@ -149,7 +149,7 @@ class _Block extends StatelessWidget {
 /// What [folder] would have the agent run, shown before a chat starts or
 /// moves there; [answer] is true for "Start anyway".
 class TrustAsk {
-  TrustAsk(this.folder, this.action, this.runs, this.agent);
+  new(this.folder, this.action, this.runs, this.agent);
 
   final String folder;
   final String action;

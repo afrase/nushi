@@ -10,7 +10,7 @@ const _channel = MethodChannel('nushi/login');
 /// daemon's helper app at login (ADR 0036). macOS keeps whether it's on;
 /// the row shows only once the app's Swift side answers.
 class StartAtLogin extends StatefulWidget {
-  const StartAtLogin({super.key});
+  const new({super.key});
 
   @override
   State<StartAtLogin> createState() => _StartAtLoginState();

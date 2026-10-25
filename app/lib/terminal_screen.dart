@@ -17,7 +17,7 @@ import 'widgets.dart';
 
 /// One terminal's screen, and its exit with Restart once its shell ended.
 class TerminalScreen extends StatelessWidget {
-  const TerminalScreen({
+  const new({
     super.key,
     required this.info,
     required this.list,

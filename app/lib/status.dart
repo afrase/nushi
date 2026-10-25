@@ -45,7 +45,7 @@ bool _still(BuildContext context) =>
 /// A dot of [color]; with [pulse] it breathes, a soft ring growing out of
 /// it.
 class _Mark extends CustomPainter {
-  _Mark(this.color, {required this.pulse})
+  new(this.color, {required this.pulse})
     : super(repaint: pulse ? _pulse : null);
 
   final Color color;
@@ -77,7 +77,7 @@ class _Mark extends CustomPainter {
 /// A chat's status dot: amber with a soft ring while it waits on the user,
 /// breathing while the agent works, a ring when idle.
 class ChatDot extends StatelessWidget {
-  const ChatDot({super.key, required this.chat});
+  const new({super.key, required this.chat});
 
   static const size = 7.0;
 
@@ -117,7 +117,7 @@ class ChatDot extends StatelessWidget {
 /// What a chat is doing, in a word: "needs you", "working", "asleep" or
 /// "idle".
 class ChatStatusWord extends StatelessWidget {
-  const ChatStatusWord(this.chat, {super.key, required this.style});
+  const new(this.chat, {super.key, required this.style});
 
   final ChatState chat;
   final TextStyle style;
@@ -140,7 +140,7 @@ class ChatStatusWord extends StatelessWidget {
 /// mark, what the agent is doing ([doing]), and for how long; "Waiting for
 /// you" while a permission prompt or question waits. [what] overrides it.
 class TurnStatus extends StatefulWidget {
-  const TurnStatus(this.chat, {super.key, this.what});
+  const new(this.chat, {super.key, this.what});
 
   final ChatState chat;
   final String? what;

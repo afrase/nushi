@@ -32,7 +32,7 @@ void main() => runZonedGuarded(() {
 }, (e, s) => appLog.error('uncaught error', e, s));
 
 class NushiApp extends StatefulWidget {
-  const NushiApp({super.key, required this.daemon});
+  const new({super.key, required this.daemon});
 
   final Daemon daemon;
 
@@ -131,7 +131,7 @@ class _NushiAppState extends State<NushiApp> {
 }
 
 class _Shell extends StatelessWidget {
-  const _Shell(this.daemon);
+  const new(this.daemon);
 
   final Daemon daemon;
 
@@ -206,7 +206,7 @@ class _Shell extends StatelessWidget {
 /// A chat under its header, with a switch between its transcript and its
 /// folder's changes.
 class _ChatPane extends StatefulWidget {
-  const _ChatPane(this.chat, this.daemon, {super.key});
+  const new(this.chat, this.daemon, {super.key});
 
   final ChatState chat;
   final Daemon daemon;
@@ -275,7 +275,7 @@ class _ChatPaneState extends State<_ChatPane> {
 /// Says a newer daemon was installed since the running one started (same
 /// API), with a way to restart into it.
 class _Replaced extends StatefulWidget {
-  const _Replaced(this.daemon);
+  const new(this.daemon);
 
   final Daemon daemon;
 
@@ -323,7 +323,7 @@ class _ReplacedState extends State<_Replaced> {
 /// Says the daemon is older than the app, with a way to restart it: the app
 /// shows nothing else until it has.
 class _Outdated extends StatefulWidget {
-  const _Outdated(this.daemon);
+  const new(this.daemon);
 
   final Daemon daemon;
 

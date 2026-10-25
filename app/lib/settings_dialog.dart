@@ -64,7 +64,7 @@ const _sleepAfter = {
 String _sleepLabel(int m) => _sleepAfter[m] ?? '$m minute${m == 1 ? '' : 's'}';
 
 class _Settings extends StatefulWidget {
-  const _Settings(this.client, {required this.agents});
+  const new(this.client, {required this.agents});
 
   final NushiServiceClient client;
   final bool agents;

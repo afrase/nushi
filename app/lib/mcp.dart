@@ -17,7 +17,7 @@ import 'widgets.dart';
 /// The MCP servers view: a folder picker, then the servers by scope, each
 /// with its state, transport and command or URL (secrets masked).
 class McpView extends StatelessWidget {
-  const McpView({super.key, required this.daemon, required this.folder});
+  const new({super.key, required this.daemon, required this.folder});
 
   final Daemon daemon;
   final String folder;
@@ -124,7 +124,7 @@ class McpView extends StatelessWidget {
 
 /// One scope's servers, under its heading.
 class _Group extends StatelessWidget {
-  const _Group(this.list, this.scope, this.title, this.about);
+  const new(this.list, this.scope, this.title, this.about);
 
   final McpServers list;
   final String scope, title, about;
@@ -184,7 +184,7 @@ class _Group extends StatelessWidget {
 /// A server: its state, name, transport and command or URL, its masked
 /// env vars and headers, and why it failed.
 class _Row extends StatelessWidget {
-  const _Row(this.list, this.server, {required this.first, this.shadowedBy});
+  const new(this.list, this.server, {required this.first, this.shadowedBy});
 
   final McpServers list;
   final McpServer server;

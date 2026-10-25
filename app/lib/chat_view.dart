@@ -26,7 +26,7 @@ import 'widgets.dart';
 /// turn. What's being written, and the side question, belong to the chat
 /// (its draft and side), so they outlive the view.
 class ChatView extends StatefulWidget {
-  const ChatView({
+  const new({
     super.key,
     required this.chat,
     required this.daemon,
@@ -237,7 +237,7 @@ class _ChatViewState extends State<ChatView> {
 /// In place of the composer for an archived chat: it is read-only until
 /// unarchived.
 class _Archived extends StatelessWidget {
-  const _Archived(this.chat, this.daemon);
+  const new(this.chat, this.daemon);
 
   final ChatState chat;
   final Daemon daemon;
@@ -280,7 +280,7 @@ class _Archived extends StatelessWidget {
 /// Over the composer once MCP servers changed for the chat's folder: the
 /// agent keeps the ones it started with until the chat reloads.
 class _McpChanged extends StatelessWidget {
-  const _McpChanged(this.chat, this.daemon);
+  const new(this.chat, this.daemon);
 
   final ChatState chat;
   final Daemon daemon;

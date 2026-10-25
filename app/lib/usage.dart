@@ -35,7 +35,7 @@ String cacheUse(Usage u) => [
 /// How full the agent's context is, as a small ring and a percentage, amber
 /// past 70% and red past 90%. Nothing until the agent reports it.
 class ContextMeter extends StatelessWidget {
-  const ContextMeter(this.usage, {super.key});
+  const new(this.usage, {super.key});
 
   final Usage usage;
 
@@ -75,7 +75,7 @@ Color _color(Tokens t, double fill) => fill > 0.9
 
 /// "4% used", colored as [ContextMeter]; nothing until the agent says.
 class ContextUsed extends StatelessWidget {
-  const ContextUsed(this.usage, {super.key});
+  const new(this.usage, {super.key});
 
   final Usage usage;
 
@@ -92,7 +92,7 @@ class ContextUsed extends StatelessWidget {
 
 /// The context's fill as a bar, when what fills it isn't known.
 class UsageBar extends StatelessWidget {
-  const UsageBar(this.usage, {super.key});
+  const new(this.usage, {super.key});
 
   final Usage usage;
 
@@ -129,7 +129,7 @@ List<(ContextCategory, double)> contextShares(List<ContextCategory> all) {
 /// category with its tokens and share; the deferred ones, outside the
 /// context, dimmed under them.
 class ContextBreakdown extends StatelessWidget {
-  const ContextBreakdown(this.categories, {super.key});
+  const new(this.categories, {super.key});
 
   final List<ContextCategory> categories;
 

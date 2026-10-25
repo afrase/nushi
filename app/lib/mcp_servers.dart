@@ -14,7 +14,7 @@ import 'theme/theme.dart';
 /// again once it is a few minutes old, since servers connect, sign in and
 /// change outside Nushi too.
 class McpServers extends ChangeNotifier {
-  factory McpServers.of(Daemon daemon, String folder) {
+  factory of(Daemon daemon, String folder) {
     final list = _byFolder[folder] ??= McpServers._(daemon, folder);
     final at = list._at;
     if (!list.checking && at != null && DateTime.now().difference(at) > fresh) {
@@ -22,7 +22,7 @@ class McpServers extends ChangeNotifier {
     }
     return list;
   }
-  McpServers._(this.daemon, this.folder) {
+  new _(this.daemon, this.folder) {
     unawaited(refresh());
   }
 
@@ -146,7 +146,7 @@ String secrets(Map<String, dynamic> c) => [
 /// A server's state as a dot: filled once known, a ring until then or
 /// while it is off.
 class McpDot extends StatelessWidget {
-  const McpDot(this.server, {super.key});
+  const new(this.server, {super.key});
 
   final McpServer server;
 

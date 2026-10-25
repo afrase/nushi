@@ -117,7 +117,7 @@ class _Spans implements HighlightRenderer {
 /// `lines` with syntax spans once they're in (`highlight`), for
 /// a diff view that is shown before they are.
 class SyntaxLines implements DiffLineSource {
-  SyntaxLines(MemoryLineSource lines, int oldCount, int newCount)
+  new(MemoryLineSource lines, int oldCount, int newCount)
     : _sides = [
         for (final (side, n) in [
           (PaneSide.old, oldCount),

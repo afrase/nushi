@@ -23,7 +23,7 @@ import 'worktree.dart';
 /// changes (uncommitted, or the branch's for a worktree chat), as the
 /// Changes view shows them. They reload when a turn ends or the chat moves.
 class DetailsPanel extends StatefulWidget {
-  const DetailsPanel({
+  const new({
     super.key,
     required this.chat,
     required this.daemon,

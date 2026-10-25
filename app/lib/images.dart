@@ -73,7 +73,7 @@ bool isImageFile(String path) =>
 /// The images attached to the prompt being written, each prepared with
 /// [prepare] ([prepareImage]), which takes a moment: [ready] waits for them.
 class Attachments extends ValueNotifier<List<ImageData>> {
-  Attachments({this.prepare = prepareImage}) : super(const []);
+  new({this.prepare = prepareImage}) : super(const []);
 
   final Future<ImageData> Function(Uint8List) prepare;
   int _preparing = 0;
@@ -152,7 +152,7 @@ void showImagePreview(BuildContext context, ImageProvider image) =>
 /// Small thumbnails of images; a click shows one large. With [onRemove]
 /// each has a button that removes it.
 class Thumbnails extends StatelessWidget {
-  const Thumbnails(this.images, {super.key, this.onRemove, this.size = 64});
+  const new(this.images, {super.key, this.onRemove, this.size = 64});
 
   final List<ImageData> images;
   final void Function(int index)? onRemove;
@@ -189,7 +189,7 @@ final _provider = Expando<ImageProvider>();
 
 /// The small round × on an attachment's top right corner, in a [Stack].
 class RemoveBadge extends StatelessWidget {
-  const RemoveBadge(this.onTap, {super.key});
+  const new(this.onTap, {super.key});
 
   final VoidCallback onTap;
 
@@ -215,7 +215,7 @@ class RemoveBadge extends StatelessWidget {
 
 /// An image that shows large when clicked, [size] tall at most.
 class _Clickable extends StatelessWidget {
-  const _Clickable({required this.image, required this.size, this.border});
+  const new({required this.image, required this.size, this.border});
 
   final ImageProvider image;
   final double size;
@@ -286,7 +286,7 @@ Widget markdownImage(Uri uri, String? alt) {
 }
 
 class _RemoteImage extends StatefulWidget {
-  const _RemoteImage(this.uri, this.alt);
+  const new(this.uri, this.alt);
 
   final Uri uri;
   final String? alt;

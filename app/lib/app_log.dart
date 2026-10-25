@@ -18,7 +18,7 @@ final appLog = AppLog('$dataDir/app.log');
 const _logApi = 51;
 
 class AppLog {
-  AppLog(this.path);
+  new(this.path);
 
   final String path;
 

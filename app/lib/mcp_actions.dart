@@ -12,7 +12,7 @@ import 'widgets.dart';
 /// switch (Approve and Reject while it waits for approval), "Log in" when
 /// it needs a sign-in, and a menu with Edit…, Remove… and Log out.
 class McpActions extends StatefulWidget {
-  const McpActions(this.list, this.server, {super.key});
+  const new(this.list, this.server, {super.key});
 
   final McpServers list;
   final McpServer server;

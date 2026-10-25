@@ -23,7 +23,7 @@ List<Agent> readyAgents() => [
 /// A daemon with [chats] and [agents] for widget tests; it records the
 /// chats asked for in [started], and fails them with [startError] if set.
 class FakeDaemon implements Transport {
-  FakeDaemon(this.chats);
+  new(this.chats);
 
   final List<Chat> chats;
 

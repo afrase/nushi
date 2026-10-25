@@ -8,7 +8,7 @@ import 'widgets.dart';
 
 /// A card for something the agent waits on: amber while it waits.
 class WaitingCard extends StatelessWidget {
-  const WaitingCard({super.key, required this.waiting, required this.children});
+  const new({super.key, required this.waiting, required this.children});
 
   final bool waiting;
   final List<Widget> children;
@@ -33,12 +33,7 @@ class WaitingCard extends StatelessWidget {
 
 /// The card's first line: an icon and what it is about.
 class CardTitle extends StatelessWidget {
-  const CardTitle(
-    this.title, {
-    super.key,
-    this.detail = '',
-    this.waiting = true,
-  });
+  const new(this.title, {super.key, this.detail = '', this.waiting = true});
 
   final String title;
   final String detail;
@@ -71,7 +66,7 @@ class CardTitle extends StatelessWidget {
 
 /// The agent's permission prompt, with its own options as buttons.
 class PermissionCard extends StatelessWidget {
-  const PermissionCard(this.item, {super.key, required this.onAnswer});
+  const new(this.item, {super.key, required this.onAnswer});
 
   final Item item;
   final Future<void> Function(String optionId) onAnswer;
