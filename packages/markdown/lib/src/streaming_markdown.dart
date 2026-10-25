@@ -88,6 +88,11 @@ class StreamingMarkdown extends StatelessWidget {
       data: streaming ? heal(text) : text,
       softLineBreak: lineBreaks,
       builders: {'pre': _CodeBlockBuilder(s)},
+      // A task list's box ("- [x]"), as text so it lines up with the item.
+      checkboxBuilder: (checked) => Padding(
+        padding: const EdgeInsets.only(right: 6),
+        child: Text(checked ? '☑' : '☐', style: body.copyWith(color: s.muted)),
+      ),
       onTapLink: (_, href, _) {
         if (href != null) onTapLink?.call(href);
       },
