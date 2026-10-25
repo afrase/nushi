@@ -77,7 +77,7 @@ func main() {
 
 func fatal(err error) {
 	slog.Error("nushid can't run", "why", err)
-	os.Exit(1)
+	os.Exit(1) //nolint:revive // main's own fatal, called before anything needs closing
 }
 
 func run() error {

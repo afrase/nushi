@@ -23,7 +23,7 @@ import (
 // too, by the same rules: the process is alive, and started when the record
 // says, so a pid used again doesn't count; a record without a start time
 // counts for a day.
-func Open(ids []string) map[string]string {
+func Open(_ []string) map[string]string {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return nil

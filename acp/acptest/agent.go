@@ -250,11 +250,11 @@ func (a *Agent) answer(f frame) {
 		}
 		result = map[string]any{}
 	case "session/prompt":
-		var text string
+		var text strings.Builder
 		for _, b := range p.Prompt {
-			text += b.Text
+			text.WriteString(b.Text)
 		}
-		result = map[string]any{"stopReason": a.prompt(p.SessionID, text)}
+		result = map[string]any{"stopReason": a.prompt(p.SessionID, text.String())}
 	default:
 		result = map[string]any{}
 	}

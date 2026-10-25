@@ -17,8 +17,8 @@ import (
 // after it (one the agent answered without words: a fork there would drop
 // it).
 func (c *chat) forkPointLocked() string {
-	for i := len(c.items) - 1; i >= 0; i-- {
-		if it := c.items[i]; it.Kind == model.UserMessage {
+	for _, it := range slices.Backward(c.items) {
+		if it.Kind == model.UserMessage {
 			return ""
 		} else if it.Kind == model.AgentMessage && it.Parent == "" {
 			if strings.HasPrefix(it.ID, "item-") { // no messageId: can't fork there

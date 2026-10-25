@@ -153,7 +153,7 @@ func ToolCall(it *model.Item, meta map[string]any, input json.RawMessage) (ownTe
 func modelName(id string) string {
 	id, _, _ = strings.Cut(strings.TrimPrefix(id, "claude-"), "[")
 	var words, version []string
-	for _, p := range strings.Split(id, "-") {
+	for p := range strings.SplitSeq(id, "-") {
 		switch _, err := strconv.Atoi(p); {
 		case err != nil && p != "":
 			words = append(words, strings.ToUpper(p[:1])+p[1:])

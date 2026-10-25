@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -219,7 +219,7 @@ func (b *bridge) list(cwd string) acp.ListSessionsResponse {
 		}
 		out.Sessions = append(out.Sessions, info)
 	}
-	sort.Slice(out.Sessions, func(i, j int) bool { return out.Sessions[i].UpdatedAt > out.Sessions[j].UpdatedAt })
+	slices.SortFunc(out.Sessions, func(a, b acp.SessionInfo) int { return strings.Compare(b.UpdatedAt, a.UpdatedAt) })
 	return out
 }
 

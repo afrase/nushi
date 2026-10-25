@@ -111,8 +111,7 @@ func TestPermissionWaitsForTheUsersPick(t *testing.T) {
 	svc := &Service{chats: map[string]*chat{"s1": c}}
 	c.addLocked(model.Item{ID: "t1", Kind: model.ToolCall, Title: "rm -rf build"})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	type result struct {
 		resp *acp.RequestPermissionResponse
 		err  error

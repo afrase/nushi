@@ -216,7 +216,7 @@ func (f *fakeAgent) turn(req acp.PromptRequest, gate chan struct{}) (*acp.Prompt
 		}
 		f.mu.Unlock()
 	}
-	return &acp.PromptResult{PromptResponse: acp.PromptResponse{StopReason: stop}, Usage: f.usage}, nil
+	return &acp.PromptResult{StopReason: stop, Usage: f.usage}, nil
 }
 
 func (f *fakeAgent) Close() error {

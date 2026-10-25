@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -103,10 +104,8 @@ func (s *session) await(ctx context.Context, op any, want ...string) (event, err
 				json.Unmarshal(ev.Payload, &msg)
 				return ev, errors.New(msg)
 			}
-			for _, w := range want {
-				if ev.Name == w {
-					return ev, nil
-				}
+			if slices.Contains(want, ev.Name) {
+				return ev, nil
 			}
 		case <-s.ended:
 			return event{}, errors.New("Ante's host has stopped")
@@ -188,11 +187,11 @@ func (s *session) messageID() acp.MessageID {
 
 // turnOf reads the turn's input id back from a messageID.
 func turnOf(messageID string) string {
-	i := strings.LastIndexByte(messageID, '.')
-	if i < 0 {
+	before, _, ok := strings.CutLast(messageID, ".")
+	if !ok {
 		return ""
 	}
-	return messageID[:i]
+	return before
 }
 
 // textLocked streams the agent's text and thoughts. Ante streams deltas,
@@ -277,9 +276,9 @@ func (s *session) turnEndLocked(ev event) {
 	name, payload := variant(p.Status)
 	switch name {
 	case "Completed":
-		s.endLocked(t, &acp.PromptResult{PromptResponse: acp.PromptResponse{StopReason: "end_turn"}, Usage: &t.usage}, nil)
+		s.endLocked(t, &acp.PromptResult{StopReason: "end_turn", Usage: &t.usage}, nil)
 	case "Interrupted":
-		s.endLocked(t, &acp.PromptResult{PromptResponse: acp.PromptResponse{StopReason: "cancelled"}, Usage: &t.usage}, nil)
+		s.endLocked(t, &acp.PromptResult{StopReason: "cancelled", Usage: &t.usage}, nil)
 	default:
 		var e struct {
 			Kind     string   `json:"kind"`

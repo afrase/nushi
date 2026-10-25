@@ -25,6 +25,7 @@ func TestDirNameIsClaudes(t *testing.T) {
 // apart from dirName: its real path (/var is /private/var on macOS), each
 // character but a letter or digit a "-".
 func claudeName(t *testing.T, folder string) string {
+	t.Helper()
 	resolved, err := filepath.EvalSymlinks(folder)
 	if err != nil {
 		t.Fatal(err)

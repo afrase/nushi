@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strconv"
 
 	"github.com/afrase/nushi/acp"
 	"github.com/afrase/nushi/internal/model"
@@ -140,7 +141,7 @@ func (c *chat) setConfig(ctx context.Context, agent Agent, sid, id, value string
 		}
 	case opt.Type == "boolean":
 		resp, err := agent.SetConfigOption(ctx, acp.SetSessionConfigOptionRequest{SessionID: acp.SessionID(sid),
-			ConfigID: acp.SessionConfigID(id), Type: "boolean", Value: json.RawMessage(fmt.Sprint(value == "true"))})
+			ConfigID: acp.SessionConfigID(id), Type: "boolean", Value: json.RawMessage(strconv.FormatBool(value == "true"))})
 		if err != nil {
 			return err
 		}

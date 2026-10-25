@@ -53,9 +53,7 @@ func (s *session) approve(turnID string, tools []toolUse, olds map[string]toolca
 	decisions := make([]decision, len(tools))
 	var wg sync.WaitGroup
 	for i, t := range tools {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			call := s.toolCall(t, "pending", olds)
 			req := acp.RequestPermissionRequest{SessionID: acp.SessionID(s.id), Options: permissionOptions,
 				ToolCall: acp.ToolCallUpdate{ToolCallID: call.ToolCallID, Title: call.Title, Kind: call.Kind, Status: call.Status,
@@ -71,7 +69,7 @@ func (s *session) approve(turnID string, tools []toolUse, olds map[string]toolca
 				}
 			}
 			decisions[i] = decision{t.ID, d}
-		}()
+		})
 	}
 	wg.Wait()
 	s.h.send(map[string]any{"ApprovalResponse": map[string]any{"turn_id": turnID, "responses": decisions}})

@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -237,7 +238,7 @@ func pac(pacURL string, u *url.URL) ([]*url.URL, error) {
 	for _, e := range entries {
 		host, _ := e["kCFProxyHostNameKey"].(string)
 		port, _ := e["kCFProxyPortNumberKey"].(float64)
-		addr := net.JoinHostPort(host, fmt.Sprint(int(port)))
+		addr := net.JoinHostPort(host, strconv.Itoa(int(port)))
 		switch e["kCFProxyTypeKey"] {
 		case "kCFProxyTypeNone":
 			proxies = append(proxies, nil)

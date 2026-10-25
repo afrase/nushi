@@ -63,7 +63,7 @@ const DeleteArchives = true
 // History makes a session ready to fork into another folder: nothing to
 // do, since Codex finds a session by its id whatever the folder, and forks
 // it with another cwd.
-func History(sessionID, from, to string) (remove func() error, err error) {
+func History(_, _, _ string) (remove func() error, err error) {
 	return func() error { return nil }, nil
 }
 

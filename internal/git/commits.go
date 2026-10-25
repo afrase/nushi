@@ -61,7 +61,7 @@ func Commits(ctx context.Context, folder, base string, limit int) ([]Commit, err
 		return nil, err
 	}
 	var commits []Commit
-	for _, rec := range strings.Split(string(out), "\x00") {
+	for rec := range strings.SplitSeq(string(out), "\x00") {
 		if head, ok := strings.CutPrefix(rec, "\x1e"); ok {
 			f := strings.SplitN(head, "\x1f", 4)
 			if len(f) < 4 {

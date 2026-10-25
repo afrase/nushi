@@ -176,6 +176,7 @@ func (c *Conn) WriteMessage(m []byte) error {
 	return c.ws.WriteMessage(websocket.BinaryMessage, m)
 }
 
+// Close ends the connection.
 func (c *Conn) Close() error {
 	c.once.Do(func() { close(c.done) })
 	return c.ws.Close()
