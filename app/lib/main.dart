@@ -44,11 +44,20 @@ class NushiApp extends StatefulWidget {
 class _NushiAppState extends State<NushiApp> {
   ThemeMode _mode = ThemeMode.system;
   final _navigator = GlobalKey<NavigatorState>();
+  late final AppLifecycleListener _lifecycle;
 
   @override
   void initState() {
     super.initState();
     watchPairings(_navigator, widget.daemon.client);
+    // The app coming to the front shows its chat again.
+    _lifecycle = AppLifecycleListener(onResume: widget.daemon.shown);
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
   }
 
   PlatformMenuItem _appearance(String label, ThemeMode mode) =>

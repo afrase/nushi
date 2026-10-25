@@ -65,6 +65,7 @@ final _found = [
 Future<(FakeDaemon, Daemon)> _settings(
   WidgetTester tester, {
   Tokens tokens = Tokens.dark,
+  String? agent,
 }) async {
   final fake = FakeDaemon([])..agents = _found;
   final d = await fake.connect(tester);
@@ -75,7 +76,8 @@ Future<(FakeDaemon, Daemon)> _settings(
       home: Builder(
         builder: (context) => Center(
           child: TextButton(
-            onPressed: () => showSettings(context, d.client, agents: true),
+            onPressed: () =>
+                showSettings(context, d.client, agents: true, agent: agent),
             child: const Text('open'),
           ),
         ),
@@ -165,6 +167,20 @@ void main() {
       await expectLater(
         find.byType(AlertDialog),
         matchesGoldenFile('goldens/agents_$name.png'),
+      );
+      d.dispose();
+    });
+
+    // A chat that couldn't start Codex sent you here: its row stands out.
+    testWidgets('the page, an agent marked ($name)', (tester) async {
+      tester.view
+        ..devicePixelRatio = 1
+        ..physicalSize = const Size(700, 560);
+      addTearDown(tester.view.reset);
+      final (_, d) = await _settings(tester, tokens: tokens, agent: 'codex');
+      await expectLater(
+        find.byType(AlertDialog),
+        matchesGoldenFile('goldens/agents_marked_$name.png'),
       );
       d.dispose();
     });

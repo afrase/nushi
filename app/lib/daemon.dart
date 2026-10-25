@@ -267,8 +267,13 @@ class Daemon extends ChangeNotifier {
       }
       if (selectedId == e.chatId) selectedId = null;
       notifyListeners();
-    } else {
-      chats[e.chatId]?.apply(e);
+    } else if (chats[e.chatId] case final chat?) {
+      final failed = chat.reopenFailed;
+      chat.apply(e);
+      // Its agent became ready (not a reopen starting): shown, it reopens.
+      if (failed && !chat.reopenFailed && !chat.busy && chat.id == selectedId) {
+        shown();
+      }
     }
   }
 
@@ -370,8 +375,24 @@ class Daemon extends ChangeNotifier {
     jiraOpen = false;
     final chat = chats[chatId];
     if (chat != null) unawaited(_load(chat));
+    shown();
     notifyListeners();
   }
+
+  /// The selected chat is shown: picked, or the app came to the front. A
+  /// chat whose agent should run but doesn't reopens, and one whose reopen
+  /// failed tries again, once a show (the daemon's ReopenChat). A sleeping
+  /// one stays asleep.
+  void shown() {
+    if (selected case final chat? when !chat.archived) reopen(chat);
+  }
+
+  /// ReopenChat for [chat] (Try again); how it goes shows in the chat.
+  void reopen(ChatState chat) => unawaited(
+    client
+        .reopenChat(ReopenChatRequest(chatId: chat.id))
+        .then((_) {}, onError: (Object _) {}),
+  );
 
   /// The folder a chat is starting in ('' for none), while one is.
   String? starting;

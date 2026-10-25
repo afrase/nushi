@@ -69,27 +69,6 @@ class FolderButton extends StatelessWidget {
   /// Whether the one-line form shows the parent path after the name.
   final bool path;
 
-  Future<void> _move(BuildContext context, String? to) async {
-    final folder =
-        to ??
-        await getDirectoryPath(
-          confirmButtonText: chat.fresh ? 'Open' : 'Move chat here',
-        );
-    if (folder == null || !context.mounted) return;
-    final wt = chat.worktree;
-    if (wt != null && !chat.fresh) {
-      final move = await confirm(
-        context,
-        'Move to ${folderParts(folder).$1}?',
-        'Its worktree ${tildePath(wt.path)} and branch ${wt.branch} stay, '
-            'with their work; Delete offers to remove them.',
-        'Move',
-      );
-      if (!move || !context.mounted) return;
-    }
-    await tryOrShow(context, () => daemon.moveChat(chat, folder));
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
@@ -103,7 +82,7 @@ class FolderButton extends StatelessWidget {
       entries: folderEntries(
         daemon,
         skip: chat.home,
-        onPick: (f) => _move(context, f),
+        onPick: (f) => moveChat(context, daemon, chat, to: f),
       ),
       builder: (context, open) => Tap(
         tooltip: chat.archived
@@ -180,4 +159,33 @@ List<String> recentFolders(Iterable<ChatState> chats) {
     for (final c in byNewest)
       if (!c.scratch) c.home,
   }.toList();
+}
+
+/// Moves [chat] to [to], or a folder picked, asking first when it leaves a
+/// worktree with its work; [gone]: its folder is gone, so it leaves nothing.
+Future<void> moveChat(
+  BuildContext context,
+  Daemon daemon,
+  ChatState chat, {
+  String? to,
+  bool gone = false,
+}) async {
+  final folder =
+      to ??
+      await getDirectoryPath(
+        confirmButtonText: chat.fresh ? 'Open' : 'Move chat here',
+      );
+  if (folder == null || !context.mounted) return;
+  final wt = chat.worktree;
+  if (wt != null && !chat.fresh && !gone) {
+    final move = await confirm(
+      context,
+      'Move to ${folderParts(folder).$1}?',
+      'Its worktree ${tildePath(wt.path)} and branch ${wt.branch} stay, '
+          'with their work; Delete offers to remove them.',
+      'Move',
+    );
+    if (!move || !context.mounted) return;
+  }
+  await tryOrShow(context, () => daemon.moveChat(chat, folder));
 }

@@ -3,15 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:nushi/cards.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/question_card.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/rewind.dart';
+import 'package:nushi/settings_dialog.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/thinking.dart';
 import 'package:nushi/tool_calls.dart';
+import 'package:nushi/widgets.dart';
 
 /// One item of a transcript, by its kind.
 class ItemView extends StatelessWidget {
@@ -98,8 +101,24 @@ class ItemView extends StatelessWidget {
         final (icon, color) = switch (item.status) {
           'cancelled' => (Icons.stop_circle_outlined, t.textMuted),
           'taken_back' => (Icons.undo, t.textMuted),
-          'error' => (Icons.error_outline, t.crashed),
+          'error' ||
+          'not_ready' ||
+          'folder_gone' ||
+          'reopen_failed' => (Icons.error_outline, t.crashed),
           _ => (Icons.info_outline, t.needs),
+        };
+        // A reopen that failed: what helps.
+        final fix = switch (item.status) {
+          'not_ready' => (
+            'Set up…',
+            () => showSettings(context, daemon.client, agent: chat.agent),
+          ),
+          'folder_gone' => (
+            'Move…',
+            () => moveChat(context, daemon, chat, gone: true),
+          ),
+          'reopen_failed' => ('Try again', () => daemon.reopen(chat)),
+          _ => null,
         };
         return Row(
           spacing: 6,
@@ -108,6 +127,12 @@ class ItemView extends StatelessWidget {
             Expanded(
               child: Text(item.text, style: theme.ui(color, size: 12.5)),
             ),
+            if (fix case (final label, final onPressed))
+              Button(
+                label: label,
+                height: 24,
+                onPressed: chat.busy ? null : onPressed,
+              ),
           ],
         );
       case ItemKind.ITEM_KIND_PERMISSION:
