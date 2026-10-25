@@ -179,6 +179,9 @@ service NushiService {
   rpc ConfirmPairing(ConfirmPairingRequest) returns (ConfirmPairingResponse);
   // Unpairs a phone and drops its connections.
   rpc RevokeDevice(RevokeDeviceRequest) returns (RevokeDeviceResponse);
+  // Writes a line of the app's into the daemon's log (source=app): its
+  // errors with their stacks, and what helps afterwards.
+  rpc Log(LogRequest) returns (LogResponse);
   // Streams every change to every chat from now on. The first message is
   // empty: it says the subscription is live.
   rpc Events(EventsRequest) returns (stream EventsResponse);
@@ -583,6 +586,9 @@ message Settings {
   // Chats sleep once idle this long, when nothing would be lost (no turn,
   // queue, prompt, background command, subagent or side chat); 0: never.
   int32 sleep_after_minutes = 1;
+  // The daemon's log has DEBUG lines too: every ACP method and API call,
+  // with how long it took (ADR 0038). SetSettings sets both fields.
+  bool debug_log = 2;
 }
 
 message GetSettingsResponse {
@@ -1341,3 +1347,15 @@ message RevokeDeviceRequest {
 }
 
 message RevokeDeviceResponse {}
+
+message LogRequest {
+  // "debug", "info", "warn" or "error".
+  string level = 1;
+  string message = 2;
+  // A Dart stack trace, for an error.
+  string stack = 3;
+  // More of the line, as key=value.
+  map<string, string> attrs = 4;
+}
+
+message LogResponse {}
