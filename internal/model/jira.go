@@ -104,10 +104,9 @@ type JiraJQLField struct {
 }
 
 // ChatIssue is the Jira issue a chat was started from: its site's id
-// (host), its key, and its summary as it was then.
+// (host) and its key.
 type ChatIssue struct {
 	Site, Key string
-	Summary   string `json:",omitempty"`
 }
 
 // JiraSite is a Jira site Nushi was given a token for: the token is in

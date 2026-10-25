@@ -1684,7 +1684,6 @@ class StartChatRequest extends $pb.GeneratedMessage {
     $core.String? jiraSite,
     $core.String? jiraKey,
     $core.String? branch,
-    $core.String? jiraSummary,
   }) {
     final result = StartChatRequest._();
     if (folder != null) result.folder = folder;
@@ -1693,7 +1692,6 @@ class StartChatRequest extends $pb.GeneratedMessage {
     if (jiraSite != null) result.jiraSite = jiraSite;
     if (jiraKey != null) result.jiraKey = jiraKey;
     if (branch != null) result.branch = branch;
-    if (jiraSummary != null) result.jiraSummary = jiraSummary;
     return result;
   }
 
@@ -1716,7 +1714,6 @@ class StartChatRequest extends $pb.GeneratedMessage {
     ..aOS(4, _omitFieldNames ? '' : 'jiraSite')
     ..aOS(5, _omitFieldNames ? '' : 'jiraKey')
     ..aOS(6, _omitFieldNames ? '' : 'branch')
-    ..aOS(7, _omitFieldNames ? '' : 'jiraSummary')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1802,15 +1799,6 @@ class StartChatRequest extends $pb.GeneratedMessage {
   $core.bool hasBranch() => $_has(5);
   @$pb.TagNumber(6)
   void clearBranch() => $_clearField(6);
-
-  @$pb.TagNumber(7)
-  $core.String get jiraSummary => $_getSZ(6);
-  @$pb.TagNumber(7)
-  set jiraSummary($core.String value) => $_setString(6, value);
-  @$pb.TagNumber(7)
-  $core.bool hasJiraSummary() => $_has(6);
-  @$pb.TagNumber(7)
-  void clearJiraSummary() => $_clearField(7);
 }
 
 class ListAgentSessionsRequest extends $pb.GeneratedMessage {
