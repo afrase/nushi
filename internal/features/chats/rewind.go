@@ -7,7 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -131,7 +132,7 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 	if err != nil {
 		return model.Message{}, err
 	}
-	if err := agent.CloseSession(ctx, acp.CloseSessionRequest{SessionID: acp.SessionID(sid)}); err != nil {
+	if _, err := agent.CloseSession(ctx, &acp.CloseSessionRequest{SessionID: acp.SessionID(sid)}); err != nil {
 		c.log().Warn("closing the session left by the rewind", "old", sid, "err", err)
 	}
 	if err := c.startMode(ctx, agent, next, mode); err != nil {

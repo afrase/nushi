@@ -7,14 +7,15 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/model"
 )
 
 func TestSideChatKeepsToItself(t *testing.T) {
 	agent := &fakeAgent{}
 	sessions := &memSessions{}
-	svc := New([]Kind{{Name: "fake", Launch: func(h acp.Handler, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }, Dialect: claudeDialect}}, &memModes{}, sessions, nil, "", func(model.Event) {})
+	svc := New([]Kind{{Name: "fake", Launch: func(h acp.Client, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }, Dialect: claudeDialect}}, &memModes{}, sessions, nil, "", func(model.Event) {})
 	ctx := context.Background()
 	id, err := svc.Start(ctx, "", t.TempDir(), false)
 	if err != nil {
@@ -25,7 +26,7 @@ func TestSideChatKeepsToItself(t *testing.T) {
 		t.Fatalf("Fork = %q, %v", side, err)
 	}
 	say := func(session acp.SessionID, text string) {
-		agent.h.SessionUpdate(acp.SessionNotification{SessionID: session, Update: acp.SessionUpdate{
+		_ = agent.h.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: session, Update: acp.SessionUpdate{
 			SessionUpdate: "agent_message_chunk", AgentMessageChunk: &acp.ContentChunk{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: text}}}}})
 	}
 	say("fork1", "aside")

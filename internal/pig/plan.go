@@ -3,7 +3,7 @@ package pig
 import (
 	"encoding/json"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
 )
 
 // planOf reads a todo list an extension keeps as the agent's plan: a

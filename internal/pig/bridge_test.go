@@ -12,34 +12,52 @@ import (
 	"testing"
 	"time"
 
-	"github.com/afrase/nushi/acp"
+	"github.com/afrase/acp-go/steering"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/pig/pigtest"
 	"github.com/afrase/nushi/internal/toolcall"
 )
 
-// client is the ACP client's side of a bridge running on a fake pig.
+// peer is the ACP client's side of a bridge running on a fake pig: the
+// connection, and the client that records what the bridge sends.
+type peer struct {
+	*acp.AgentConn
+	*client
+}
+
+// Steer hands prompt to the session's running turn (steering's
+// injected).
+func (p *peer) Steer(ctx context.Context, sid acp.SessionID, prompt []acp.ContentBlock) (bool, error) {
+	outcome, err := steering.Steer(ctx, p.AgentConn, string(sid), prompt)
+	return outcome == steering.Injected, err
+}
+
+// client records what the bridge sends.
 type client struct {
-	*acp.Client
+	acp.UnimplementedClient
 	mu      sync.Mutex
 	updates []acp.SessionNotification
 	forms   []acp.CreateElicitationRequest
 }
 
-func (c *client) SessionUpdate(n acp.SessionNotification) {
+func (c *client) SessionUpdate(_ context.Context, n *acp.SessionNotification) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.updates = append(c.updates, n)
+	c.updates = append(c.updates, *n)
+	return nil
 }
 
-func (c *client) RequestPermission(context.Context, acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
+func (c *client) RequestPermission(context.Context, *acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
 	return nil, io.EOF
 }
 
-func (c *client) CreateElicitation(_ context.Context, r acp.CreateElicitationRequest) (*acp.CreateElicitationResponse, error) {
+func (c *client) CreateElicitation(_ context.Context, r *acp.CreateElicitationRequest) (*acp.CreateElicitationResponse, error) {
 	c.mu.Lock()
-	c.forms = append(c.forms, r)
+	c.forms = append(c.forms, *r)
 	c.mu.Unlock()
-	return &acp.CreateElicitationResponse{Action: "accept", Content: json.RawMessage(`{"answer":"Blue"}`)}, nil
+	blue := "Blue"
+	return &acp.CreateElicitationResponse{Accept: &acp.ElicitationAcceptAction{Content: map[string]acp.ElicitationContentValue{"answer": {String: &blue}}}}, nil
 }
 
 // texts are the session's message chunks so far, joined per message, as
@@ -96,7 +114,7 @@ func (c *client) find(t *testing.T, sid acp.SessionID, kind string, ok func(acp.
 
 // start runs a bridge on a fake pig whose sessions are in store, and
 // initializes it; the bridge's own lines go to log.
-func start(t *testing.T, store *pigtest.Store, log io.Writer) *client {
+func start(t *testing.T, store *pigtest.Store, log io.Writer) *peer {
 	t.Helper()
 	logMu.Lock()
 	logTo = log
@@ -120,28 +138,28 @@ func start(t *testing.T, store *pigtest.Store, log io.Writer) *client {
 		_ = fromBridgeW.Close()
 		close(done)
 	}()
-	c := &client{}
-	c.Client = acp.Connect(fromBridgeR, toBridgeW, c, nil)
+	c := &peer{client: &client{}}
+	c.AgentConn = acp.NewAgentConn(fromBridgeR, toBridgeW, c.client)
 	t.Cleanup(func() { _ = toBridgeW.Close(); <-done })
-	if _, err := c.Initialize(context.Background(), acp.InitializeRequest{ProtocolVersion: 1,
+	if _, err := c.Initialize(context.Background(), &acp.InitializeRequest{ProtocolVersion: acp.LatestProtocolVersion,
 		ClientCapabilities: &acp.ClientCapabilities{Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}}}}); err != nil {
 		t.Fatal(err)
 	}
 	return c
 }
 
-func prompt(t *testing.T, c *client, sid acp.SessionID, text string) *acp.PromptResult {
+func prompt(t *testing.T, c *peer, sid acp.SessionID, text string) *acp.PromptResponse {
 	t.Helper()
-	r, err := c.Prompt(context.Background(), acp.PromptRequest{SessionID: sid, Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: text}}}})
+	r, err := c.Prompt(context.Background(), &acp.PromptRequest{SessionID: sid, Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: text}}}})
 	if err != nil {
 		t.Fatalf("%s: %v", text, err)
 	}
 	return r
 }
 
-func openNew(t *testing.T, c *client, cwd string) *acp.NewSessionResponse {
+func openNew(t *testing.T, c *peer, cwd string) *acp.NewSessionResponse {
 	t.Helper()
-	s, err := c.NewSession(context.Background(), acp.NewSessionRequest{Cwd: cwd, MCPServers: []acp.MCPServer{}})
+	s, err := c.NewSession(context.Background(), &acp.NewSessionRequest{Cwd: cwd})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,7 +169,7 @@ func openNew(t *testing.T, c *client, cwd string) *acp.NewSessionResponse {
 func options(opts []acp.SessionConfigOption) string {
 	var out []string
 	for _, o := range opts {
-		out = append(out, string(o.ID)+"/"+string(o.Category)+"="+strings.Trim(string(o.CurrentValue), `"`))
+		out = append(out, string(o.ID)+"/"+string(o.Category)+"="+string(o.Select.CurrentValue))
 	}
 	return strings.Join(out, " ")
 }
@@ -191,7 +209,7 @@ func TestATurn(t *testing.T) {
 	if got := strings.Join(texts[len(texts)-2:], " | "); !strings.Contains(got, ":Hmm. | agent:") || !strings.HasPrefix(got, "thought:") {
 		t.Errorf("thought = %q", got)
 	}
-	if _, err := c.Prompt(context.Background(), acp.PromptRequest{SessionID: s.SessionID,
+	if _, err := c.Prompt(context.Background(), &acp.PromptRequest{SessionID: s.SessionID,
 		Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "fail"}}}}); err == nil || !strings.Contains(err.Error(), "boom") {
 		t.Errorf("failed turn: %v", err)
 	}
@@ -202,10 +220,10 @@ func TestATurn(t *testing.T) {
 func TestCancelAndSteer(t *testing.T) {
 	c := start(t, &pigtest.Store{Sessions: t.TempDir()}, io.Discard)
 	s := openNew(t, c, t.TempDir())
-	done := make(chan *acp.PromptResult)
+	done := make(chan *acp.PromptResponse)
 	go func() { done <- prompt(t, c, s.SessionID, "wait") }()
 	time.Sleep(50 * time.Millisecond)
-	if err := c.Cancel(acp.CancelNotification{SessionID: s.SessionID}); err != nil {
+	if err := c.Cancel(context.Background(), &acp.CancelNotification{SessionID: s.SessionID}); err != nil {
 		t.Error(err)
 	}
 	if r := <-done; r.StopReason != "cancelled" {
@@ -228,7 +246,7 @@ func TestCancelAndSteer(t *testing.T) {
 	// An extension's command that never ends stops at once.
 	go func() { done <- prompt(t, c, s.SessionID, "/hang") }()
 	time.Sleep(50 * time.Millisecond)
-	if err := c.Cancel(acp.CancelNotification{SessionID: s.SessionID}); err != nil {
+	if err := c.Cancel(context.Background(), &acp.CancelNotification{SessionID: s.SessionID}); err != nil {
 		t.Error(err)
 	}
 	select {
@@ -256,7 +274,7 @@ func TestQuestionAndUnknownMessages(t *testing.T) {
 	if r := prompt(t, c, s.SessionID, "/ask"); r.StopReason != "end_turn" {
 		t.Errorf("stop = %s", r.StopReason)
 	}
-	if len(c.forms) != 1 || c.forms[0].Message != "Pick a colour" || !strings.Contains(string(c.forms[0].RequestedSchema.Properties), `"const":"Blue"`) {
+	if len(c.forms) != 1 || c.forms[0].Message != "Pick a colour" || c.forms[0].Form == nil || !strings.Contains(mustJSON(t, c.forms[0].Form.RequestedSchema.Properties), `"const":"Blue"`) {
 		t.Fatalf("forms = %+v", c.forms)
 	}
 	c.find(t, s.SessionID, "agent_message_chunk", func(u acp.SessionUpdate) bool { return u.AgentMessageChunk.Content.Text.Text == "Chose Blue" })
@@ -290,31 +308,31 @@ func TestSessions(t *testing.T) {
 	firstReply := strings.Split(live[0], ":")[1]
 	ctx := context.Background()
 
-	l, err := c.ListSessions(ctx, acp.ListSessionsRequest{Cwd: cwd})
+	l, err := c.ListSessions(ctx, &acp.ListSessionsRequest{Cwd: cwd})
 	if err != nil || len(l.Sessions) != 1 || l.Sessions[0].Title != "first" || l.Sessions[0].SessionID != s.SessionID {
 		t.Fatalf("list = %+v, %v", l, err)
 	}
-	if l, _ := c.ListSessions(ctx, acp.ListSessionsRequest{Cwd: t.TempDir()}); len(l.Sessions) != 0 {
+	if l, _ := c.ListSessions(ctx, &acp.ListSessionsRequest{Cwd: t.TempDir()}); len(l.Sessions) != 0 {
 		t.Errorf("another folder's list = %+v", l.Sessions)
 	}
 
-	f, err := c.ForkSession(ctx, acp.ForkSessionRequest{SessionID: s.SessionID, Cwd: cwd, MCPServers: []acp.MCPServer{},
+	f, err := c.ForkSession(ctx, &acp.ForkSessionRequest{SessionID: s.SessionID, Cwd: cwd,
 		Meta: ForkAt(&acp.InitializeResponse{AgentInfo: &acp.Implementation{Name: AgentName}})(firstReply)})
 	if err != nil {
 		t.Fatal(err)
 	}
-	whole, err := c.ForkSession(ctx, acp.ForkSessionRequest{SessionID: s.SessionID, Cwd: cwd, MCPServers: []acp.MCPServer{}})
+	whole, err := c.ForkSession(ctx, &acp.ForkSessionRequest{SessionID: s.SessionID, Cwd: cwd})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if l, _ := c.ListSessions(ctx, acp.ListSessionsRequest{Cwd: cwd}); len(l.Sessions) != 1 {
+	if l, _ := c.ListSessions(ctx, &acp.ListSessionsRequest{Cwd: cwd}); len(l.Sessions) != 1 {
 		t.Errorf("forks listed: %+v", l.Sessions)
 	}
 
 	// A second bridge (after a daemon restart) loads each.
 	c2 := start(t, store, io.Discard)
 	load := func(id acp.SessionID) []string {
-		if _, err := c2.LoadSession(ctx, acp.LoadSessionRequest{SessionID: id, Cwd: cwd, MCPServers: []acp.MCPServer{}}); err != nil {
+		if _, err := c2.LoadSession(ctx, &acp.LoadSessionRequest{SessionID: id, Cwd: cwd}); err != nil {
 			t.Fatal(err)
 		}
 		return c2.texts(id)
@@ -328,11 +346,11 @@ func TestSessions(t *testing.T) {
 	if got := load(whole.SessionID); len(got) != 4 {
 		t.Errorf("whole fork = %q", got)
 	}
-	if _, err := c2.LoadSession(ctx, acp.LoadSessionRequest{SessionID: s.SessionID, Cwd: t.TempDir(), MCPServers: []acp.MCPServer{}}); err == nil {
+	if _, err := c2.LoadSession(ctx, &acp.LoadSessionRequest{SessionID: s.SessionID, Cwd: t.TempDir()}); err == nil {
 		t.Error("loaded in another folder")
 	}
 
-	if err := c.DeleteSession(ctx, acp.DeleteSessionRequest{SessionID: s.SessionID}); err != nil {
+	if _, err := c.DeleteSession(ctx, &acp.DeleteSessionRequest{SessionID: s.SessionID}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(store.Sessions, string(s.SessionID)+".jsonl")); !os.IsNotExist(err) {
@@ -344,11 +362,11 @@ func TestSessions(t *testing.T) {
 func TestOptions(t *testing.T) {
 	c := start(t, &pigtest.Store{Sessions: t.TempDir()}, io.Discard)
 	s := openNew(t, c, t.TempDir())
-	r, err := c.SetConfigOption(context.Background(), acp.SetSessionConfigOptionRequest{SessionID: s.SessionID, ConfigID: "model", Value: json.RawMessage(`"fake/m2"`)})
+	r, err := c.SetSessionConfigOption(context.Background(), &acp.SetSessionConfigOptionRequest{SessionID: s.SessionID, ConfigID: "model", ValueID: &acp.SetSessionConfigOptionRequestValueID{Value: "fake/m2"}})
 	if err != nil || options(r.ConfigOptions) != "model/model=fake/m2 thinking/thought_level=low" {
 		t.Errorf("after the model = %v, %v", options(r.ConfigOptions), err)
 	}
-	r, err = c.SetConfigOption(context.Background(), acp.SetSessionConfigOptionRequest{SessionID: s.SessionID, ConfigID: "thinking", Value: json.RawMessage(`"high"`)})
+	r, err = c.SetSessionConfigOption(context.Background(), &acp.SetSessionConfigOptionRequest{SessionID: s.SessionID, ConfigID: "thinking", ValueID: &acp.SetSessionConfigOptionRequestValueID{Value: "high"}})
 	if err != nil || options(r.ConfigOptions) != "model/model=fake/m2 thinking/thought_level=high" {
 		t.Errorf("after thinking = %v, %v", options(r.ConfigOptions), err)
 	}
@@ -407,10 +425,10 @@ func TestCompactAndName(t *testing.T) {
 	}
 	c.find(t, s.SessionID, "usage_update", func(u acp.SessionUpdate) bool { return u.UsageUpdate.Used == 42 })
 
-	done := make(chan *acp.PromptResult)
+	done := make(chan *acp.PromptResponse)
 	go func() { done <- prompt(t, c, s.SessionID, "/compact slow") }()
 	time.Sleep(50 * time.Millisecond)
-	if err := c.Cancel(acp.CancelNotification{SessionID: s.SessionID}); err != nil {
+	if err := c.Cancel(context.Background(), &acp.CancelNotification{SessionID: s.SessionID}); err != nil {
 		t.Error(err)
 	}
 	if r := <-done; r.StopReason != "cancelled" {
@@ -421,8 +439,10 @@ func TestCompactAndName(t *testing.T) {
 	})
 
 	prompt(t, c, s.SessionID, "/name Release notes")
-	c.find(t, s.SessionID, "session_info_update", func(u acp.SessionUpdate) bool { return u.SessionInfoUpdate.Title == "Release notes" })
-	if _, err := c.Prompt(context.Background(), acp.PromptRequest{SessionID: s.SessionID,
+	c.find(t, s.SessionID, "session_info_update", func(u acp.SessionUpdate) bool {
+		return u.SessionInfoUpdate.Title.Value != nil && *u.SessionInfoUpdate.Title.Value == "Release notes"
+	})
+	if _, err := c.Prompt(context.Background(), &acp.PromptRequest{SessionID: s.SessionID,
 		Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "/name"}}}}); err == nil {
 		t.Error("/name without a name")
 	}
@@ -435,7 +455,7 @@ func TestCompactAndName(t *testing.T) {
 		steered <- ok
 	}()
 	time.Sleep(50 * time.Millisecond)
-	if err := c.Cancel(acp.CancelNotification{SessionID: s.SessionID}); err != nil {
+	if err := c.Cancel(context.Background(), &acp.CancelNotification{SessionID: s.SessionID}); err != nil {
 		t.Error(err)
 	}
 	<-done
@@ -444,11 +464,11 @@ func TestCompactAndName(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	if l, _ := c.ListSessions(ctx, acp.ListSessionsRequest{Cwd: cwd}); len(l.Sessions) != 1 || l.Sessions[0].Title != "Release notes" {
+	if l, _ := c.ListSessions(ctx, &acp.ListSessionsRequest{Cwd: cwd}); len(l.Sessions) != 1 || l.Sessions[0].Title != "Release notes" {
 		t.Errorf("list = %+v", l.Sessions)
 	}
 	c2 := start(t, store, io.Discard)
-	if _, err := c2.LoadSession(ctx, acp.LoadSessionRequest{SessionID: s.SessionID, Cwd: cwd, MCPServers: []acp.MCPServer{}}); err != nil {
+	if _, err := c2.LoadSession(ctx, &acp.LoadSessionRequest{SessionID: s.SessionID, Cwd: cwd}); err != nil {
 		t.Fatal(err)
 	}
 	replayed := c2.find(t, s.SessionID, "tool_call", nil).ToolCall
@@ -481,7 +501,7 @@ func TestPlans(t *testing.T) {
 	cwd := t.TempDir()
 	s := openNew(t, c, cwd)
 	prompt(t, c, s.SessionID, "update the todo list")
-	plans := func(c *client) string {
+	plans := func(c *peer) string {
 		var out []string
 		for range 100 {
 			c.mu.Lock()
@@ -508,7 +528,7 @@ func TestPlans(t *testing.T) {
 		t.Errorf("plans = %s", got)
 	}
 	c2 := start(t, store, io.Discard)
-	if _, err := c2.LoadSession(context.Background(), acp.LoadSessionRequest{SessionID: s.SessionID, Cwd: cwd, MCPServers: []acp.MCPServer{}}); err != nil {
+	if _, err := c2.LoadSession(context.Background(), &acp.LoadSessionRequest{SessionID: s.SessionID, Cwd: cwd}); err != nil {
 		t.Fatal(err)
 	}
 	if got := plans(c2); got != want {
@@ -517,4 +537,13 @@ func TestPlans(t *testing.T) {
 	if planOf([]byte(`{"todos":[]}`)) != nil || planOf([]byte(`{"todos":[{"text":"no state"}]}`)) != nil {
 		t.Error("a plan of no todos, or of todos without a state")
 	}
+}
+
+func mustJSON(t *testing.T, v any) string {
+	t.Helper()
+	b, err := json.Marshal(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
 }

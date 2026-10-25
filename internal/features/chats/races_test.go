@@ -7,7 +7,9 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
+	"github.com/afrase/nushi/internal/agentproc"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -102,9 +104,9 @@ func TestOneSteeringWorkerThatRespectsAStop(t *testing.T) {
 	noErr(t, svc.Prompt(c.id, model.Message{Text: "two"}, SendQueue))
 	noErr(t, svc.Prompt(c.id, model.Message{Text: "three"}, SendQueue))
 	toolDone := func(id string) {
-		c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call",
+		_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call",
 			ToolCall: &acp.ToolCall{ToolCallID: acp.ToolCallID(id), Title: "ls", Status: "in_progress"}}})
-		c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call_update",
+		_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call_update",
 			ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: acp.ToolCallID(id), Status: "completed"}}})
 	}
 	toolDone("t1")
@@ -157,7 +159,7 @@ func TestCloseEndsTheTurnFirst(t *testing.T) {
 
 func TestAMessageTooLargeIsRefused(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
-	big := model.Image{MimeType: "image/png", Data: make([]byte, acp.MaxFrame*3/4)}
+	big := model.Image{MimeType: "image/png", Data: make([]byte, agentproc.MaxMessage*3/4)}
 	if err := svc.Prompt(c.id, model.Message{Text: "look", Images: []model.Image{big}}, SendIdle); err == nil {
 		t.Error("a message past what the agent takes was sent")
 	}
@@ -176,8 +178,8 @@ func TestAFailedDeleteLeavesTheChatAsItWas(t *testing.T) {
 	go func() { deleted <- svc.Delete(context.Background(), c.id, nil) }()
 	eventually(t, c, func() bool { return c.halting })
 	// Saved while it stops.
-	c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "session_info_update",
-		SessionInfoUpdate: &acp.SessionInfoUpdate{Title: "Renamed"}}})
+	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "session_info_update",
+		SessionInfoUpdate: &acp.SessionInfoUpdate{Title: acp.Nullable[string]{Value: new("Renamed"), Present: true}}}})
 	agent.release()
 	if err := <-deleted; err == nil {
 		t.Fatal("Delete worked")

@@ -2,13 +2,13 @@ package chats
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
 	"strconv"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -45,24 +45,19 @@ func (c *chat) configFrom(opts []acp.SessionConfigOption, modes *acp.SessionMode
 
 func configOption(o acp.SessionConfigOption) model.ConfigOption {
 	co := model.ConfigOption{ID: string(o.ID), Name: o.Name, Description: o.Description, Category: string(o.Category), Type: o.Type}
-	var current any
-	_ = json.Unmarshal(o.CurrentValue, &current)
-	if current != nil {
-		co.Current = fmt.Sprint(current)
-	}
-	// Options are a list of values, or of groups of values.
-	var entries []struct {
-		acp.SessionConfigSelectOption
-		Options []acp.SessionConfigSelectOption `json:"options"`
-	}
-	_ = json.Unmarshal(o.Options, &entries)
-	for _, e := range entries {
-		if e.Options == nil {
-			co.Values = append(co.Values, configValue(e.SessionConfigSelectOption, ""))
+	switch {
+	case o.Select != nil: // its values are a list, or groups of them
+		co.Current = string(o.Select.CurrentValue)
+		for _, v := range o.Select.Options.Ungrouped {
+			co.Values = append(co.Values, configValue(v, ""))
 		}
-		for _, v := range e.Options {
-			co.Values = append(co.Values, configValue(v, e.Name))
+		for _, g := range o.Select.Options.Grouped {
+			for _, v := range g.Options {
+				co.Values = append(co.Values, configValue(v, g.Name))
+			}
 		}
+	case o.Boolean != nil:
+		co.Current = strconv.FormatBool(o.Boolean.CurrentValue)
 	}
 	return co
 }
@@ -136,20 +131,19 @@ func (c *chat) setConfig(ctx context.Context, agent Agent, sid, id, value string
 	var updated []acp.SessionConfigOption
 	switch {
 	case id == legacyMode:
-		if err := agent.SetMode(ctx, acp.SetSessionModeRequest{SessionID: acp.SessionID(sid), ModeID: acp.SessionModeID(value)}); err != nil {
+		if _, err := agent.SetSessionMode(ctx, &acp.SetSessionModeRequest{SessionID: acp.SessionID(sid), ModeID: acp.SessionModeID(value)}); err != nil {
 			return err
 		}
 	case opt.Type == "boolean":
-		resp, err := agent.SetConfigOption(ctx, acp.SetSessionConfigOptionRequest{SessionID: acp.SessionID(sid),
-			ConfigID: acp.SessionConfigID(id), Type: "boolean", Value: json.RawMessage(strconv.FormatBool(value == "true"))})
+		resp, err := agent.SetSessionConfigOption(ctx, &acp.SetSessionConfigOptionRequest{SessionID: acp.SessionID(sid),
+			ConfigID: acp.SessionConfigID(id), Boolean: &acp.SetSessionConfigOptionRequestBoolean{Value: value == "true"}})
 		if err != nil {
 			return err
 		}
 		updated = resp.ConfigOptions
 	default:
-		v, _ := json.Marshal(value)
-		resp, err := agent.SetConfigOption(ctx, acp.SetSessionConfigOptionRequest{SessionID: acp.SessionID(sid),
-			ConfigID: acp.SessionConfigID(id), Value: v})
+		resp, err := agent.SetSessionConfigOption(ctx, &acp.SetSessionConfigOptionRequest{SessionID: acp.SessionID(sid),
+			ConfigID: acp.SessionConfigID(id), ValueID: &acp.SetSessionConfigOptionRequestValueID{Value: acp.SessionConfigValueID(value)}})
 		if err != nil {
 			return err
 		}

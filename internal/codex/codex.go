@@ -13,18 +13,20 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
+	"github.com/afrase/nushi/internal/agentproc"
 	"github.com/afrase/nushi/internal/model"
 )
 
 // Start starts the adapter, as claude.Start does Claude's, running cli,
 // the user's Codex (codex-acp's CODEX_PATH). Codex reads its own config
 // and login ($CODEX_HOME, else ~/.codex); Nushi never does.
-func Start(dir, program, cli string, h acp.Handler, log *slog.Logger) (*acp.Client, error) {
+func Start(dir, program, cli string, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
 	cmd := exec.Command("node", program) //nolint:gosec,noctx // lives until Stop or Close, not a context; the adapter set up in the data folder (ADR 0037)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), "CODEX_PATH="+cli)
-	return acp.Start(cmd, h, log)
+	return agentproc.Start(cmd, client, log)
 }
 
 // Adapter is Codex's ACP adapter, as Nushi pins it (see claude.Adapter).

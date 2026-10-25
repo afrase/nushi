@@ -5,7 +5,8 @@ import (
 	"errors"
 	"slices"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -102,7 +103,7 @@ func (run *silentRun) add(m *acp.ContentChunk) {
 
 // prompt sends text to session sid and waits for the turn to end.
 func prompt(ctx context.Context, agent Agent, sid acp.SessionID, text string) error {
-	wait, err := agent.StartPrompt(acp.PromptRequest{SessionID: sid, Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: text}}}})
+	wait, err := agent.StartPrompt(ctx, &acp.PromptRequest{SessionID: sid, Prompt: []acp.ContentBlock{{Text: &acp.TextContent{Text: text}}}})
 	if err == nil {
 		_, err = wait(ctx)
 	}

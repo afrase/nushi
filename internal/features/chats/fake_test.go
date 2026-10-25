@@ -10,7 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/model"
 )
@@ -26,12 +27,12 @@ var claudeDialect = Dialect{InitMeta: claude.InitMeta, ForkAt: claude.ForkAt, Pa
 // keeps each prompt and what it answered, which session/load replays, and
 // its process can end (quit).
 type fakeAgent struct {
-	h       acp.Handler
+	h       acp.Client
 	updates []acp.SessionUpdate
 	session acp.NewSessionResponse
 	set     []string // config changes asked for, as id=value
 	prompt  []acp.ContentBlock
-	usage   *acp.TurnUsage // the prompt response's
+	usage   *acp.Usage // the prompt response's
 	deleted []acp.SessionID
 	// deletes makes it able to delete sessions, failing with deleteErr.
 	deletes   bool
@@ -76,7 +77,7 @@ type proc struct {
 }
 
 // launch is a Launch for f: each call starts a new process.
-func (f *fakeAgent) launch(h acp.Handler, _ *slog.Logger) (Agent, error) {
+func (f *fakeAgent) launch(h acp.Client, _ *slog.Logger) (Agent, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.h = h
@@ -112,7 +113,7 @@ func (p *proc) Stop(grace time.Duration) error {
 	go func() {
 		if last != nil {
 			time.Sleep(5 * time.Millisecond)
-			h.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: *last})
+			_ = h.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: *last})
 		}
 		p.mu.Lock()
 		defer p.mu.Unlock()
@@ -121,16 +122,16 @@ func (p *proc) Stop(grace time.Duration) error {
 	return nil
 }
 
-func (p *proc) DeleteSession(ctx context.Context, req acp.DeleteSessionRequest) error {
+func (p *proc) DeleteSession(ctx context.Context, req *acp.DeleteSessionRequest) (*acp.DeleteSessionResponse, error) {
 	select {
 	case <-p.done:
-		return errors.New("agent connection closed")
+		return nil, errors.New("agent connection closed")
 	default:
 	}
 	return p.fakeAgent.DeleteSession(ctx, req)
 }
 
-func (f *fakeAgent) Initialize(context.Context, acp.InitializeRequest) (*acp.InitializeResponse, error) {
+func (f *fakeAgent) Initialize(context.Context, *acp.InitializeRequest) (*acp.InitializeResponse, error) {
 	caps := &acp.AgentCapabilities{LoadSession: !f.noLoad, PromptCapabilities: &acp.PromptCapabilities{Image: true}}
 	caps.SessionCapabilities = &acp.SessionCapabilities{}
 	if f.deletes {
@@ -139,11 +140,11 @@ func (f *fakeAgent) Initialize(context.Context, acp.InitializeRequest) (*acp.Ini
 	if f.lists {
 		caps.SessionCapabilities.List = &acp.SessionListCapabilities{}
 	}
-	return &acp.InitializeResponse{ProtocolVersion: acp.Version, AgentInfo: &acp.Implementation{Name: "@agentclientprotocol/claude-agent-acp"},
+	return &acp.InitializeResponse{ProtocolVersion: acp.LatestProtocolVersion, AgentInfo: &acp.Implementation{Name: "@agentclientprotocol/claude-agent-acp"},
 		AgentCapabilities: caps}, nil
 }
 
-func (f *fakeAgent) NewSession(ctx context.Context, _ acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
+func (f *fakeAgent) NewSession(ctx context.Context, _ *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -152,10 +153,10 @@ func (f *fakeAgent) NewSession(ctx context.Context, _ acp.NewSessionRequest) (*a
 	return &resp, nil
 }
 
-func (f *fakeAgent) ListSessions(_ context.Context, req acp.ListSessionsRequest) (*acp.ListSessionsResponse, error) {
+func (f *fakeAgent) ListSessions(_ context.Context, req *acp.ListSessionsRequest) (*acp.ListSessionsResponse, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.listed1 = append(f.listed1, req)
+	f.listed1 = append(f.listed1, *req)
 	from, _ := strconv.Atoi(req.Cursor)
 	to := len(f.listed)
 	if f.listPage > 0 {
@@ -168,7 +169,7 @@ func (f *fakeAgent) ListSessions(_ context.Context, req acp.ListSessionsRequest)
 	return resp, nil
 }
 
-func (f *fakeAgent) LoadSession(_ context.Context, req acp.LoadSessionRequest) (*acp.LoadSessionResponse, error) {
+func (f *fakeAgent) LoadSession(ctx context.Context, req *acp.LoadSessionRequest) (*acp.LoadSessionResponse, error) {
 	if f.loadGate != nil {
 		<-f.loadGate
 	}
@@ -179,12 +180,12 @@ func (f *fakeAgent) LoadSession(_ context.Context, req acp.LoadSessionRequest) (
 	history := slices.Clone(f.history)
 	f.mu.Unlock()
 	for _, u := range history {
-		f.h.SessionUpdate(acp.SessionNotification{SessionID: req.SessionID, Update: u})
+		_ = f.h.SessionUpdate(ctx, &acp.SessionNotification{SessionID: req.SessionID, Update: u})
 	}
 	return &acp.LoadSessionResponse{ConfigOptions: f.session.ConfigOptions, Modes: f.session.Modes}, nil
 }
 
-func (f *fakeAgent) StartPrompt(req acp.PromptRequest) (func(context.Context) (*acp.PromptResult, error), error) {
+func (f *fakeAgent) StartPrompt(_ context.Context, req *acp.PromptRequest) (func(context.Context) (*acp.PromptResponse, error), error) {
 	if f.sendGate != nil {
 		<-f.sendGate
 	}
@@ -196,12 +197,12 @@ func (f *fakeAgent) StartPrompt(req acp.PromptRequest) (func(context.Context) (*
 		MessageID: acp.MessageID(fmt.Sprintf("u%d", len(f.prompts))), Content: req.Prompt[0]}})
 	gate := f.gate
 	f.mu.Unlock()
-	return func(context.Context) (*acp.PromptResult, error) { return f.turn(req, gate) }, nil
+	return func(ctx context.Context) (*acp.PromptResponse, error) { return f.turn(ctx, req, gate) }, nil
 }
 
-func (f *fakeAgent) turn(req acp.PromptRequest, gate chan struct{}) (*acp.PromptResult, error) {
+func (f *fakeAgent) turn(ctx context.Context, req *acp.PromptRequest, gate chan struct{}) (*acp.PromptResponse, error) {
 	for _, u := range f.updates {
-		f.h.SessionUpdate(acp.SessionNotification{SessionID: req.SessionID, Update: u})
+		_ = f.h.SessionUpdate(ctx, &acp.SessionNotification{SessionID: req.SessionID, Update: u})
 		f.mu.Lock()
 		f.history = append(f.history, u)
 		f.mu.Unlock()
@@ -216,7 +217,7 @@ func (f *fakeAgent) turn(req acp.PromptRequest, gate chan struct{}) (*acp.Prompt
 		}
 		f.mu.Unlock()
 	}
-	return &acp.PromptResult{StopReason: stop, Usage: f.usage}, nil
+	return &acp.PromptResponse{StopReason: stop, Usage: f.usage}, nil
 }
 
 func (f *fakeAgent) Close() error {
@@ -237,7 +238,7 @@ func (f *fakeAgent) Done() <-chan struct{} { return nil } // used without launch
 
 func (f *fakeAgent) Pid() int { return 0 }
 
-func (f *fakeAgent) Cancel(acp.CancelNotification) error {
+func (f *fakeAgent) Cancel(context.Context, *acp.CancelNotification) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.wire = append(f.wire, "cancel")
@@ -257,7 +258,9 @@ func (f *fakeAgent) release() {
 
 func (f *fakeAgent) CanSteer() bool { return f.steerable }
 
-func (f *fakeAgent) Call(context.Context, string, any, any) error { return acp.ErrMethodNotFound }
+func (f *fakeAgent) Call(context.Context, string, any, any) error {
+	return &acp.Error{Code: acp.ErrorCodeMethodNotFound, Message: "Method not found"}
+}
 
 func (f *fakeAgent) Steer(_ context.Context, _ acp.SessionID, prompt []acp.ContentBlock) (bool, error) {
 	if f.steerGate != nil {
@@ -274,7 +277,7 @@ func (f *fakeAgent) Steer(_ context.Context, _ acp.SessionID, prompt []acp.Conte
 
 func (f *fakeAgent) CanFork() bool { return true }
 
-func (f *fakeAgent) ForkSession(ctx context.Context, req acp.ForkSessionRequest) (*acp.ForkSessionResponse, error) {
+func (f *fakeAgent) ForkSession(ctx context.Context, req *acp.ForkSessionRequest) (*acp.ForkSessionResponse, error) {
 	if f.forkGate != nil {
 		<-f.forkGate
 	}
@@ -285,26 +288,38 @@ func (f *fakeAgent) ForkSession(ctx context.Context, req acp.ForkSessionRequest)
 	return &acp.ForkSessionResponse{SessionID: "fork1", ConfigOptions: f.session.ConfigOptions, Modes: f.session.Modes}, nil
 }
 
-func (f *fakeAgent) CloseSession(context.Context, acp.CloseSessionRequest) error { return nil }
+func (f *fakeAgent) CloseSession(context.Context, *acp.CloseSessionRequest) (*acp.CloseSessionResponse, error) {
+	return &acp.CloseSessionResponse{}, nil
+}
 
-func (f *fakeAgent) DeleteSession(_ context.Context, req acp.DeleteSessionRequest) error {
+func (f *fakeAgent) DeleteSession(_ context.Context, req *acp.DeleteSessionRequest) (*acp.DeleteSessionResponse, error) {
 	if f.deleteGate != nil {
 		<-f.deleteGate
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.deleted = append(f.deleted, req.SessionID)
-	return f.deleteErr
+	if f.deleteErr != nil {
+		return nil, f.deleteErr
+	}
+	return &acp.DeleteSessionResponse{}, nil
 }
 
-func (f *fakeAgent) SetConfigOption(_ context.Context, req acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error) {
-	f.set = append(f.set, string(req.ConfigID)+"="+string(req.Value))
+func (f *fakeAgent) SetSessionConfigOption(_ context.Context, req *acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error) {
+	value := ""
+	switch { // as it was on the wire: a JSON value
+	case req.ValueID != nil:
+		value = `"` + string(req.ValueID.Value) + `"`
+	case req.Boolean != nil:
+		value = strconv.FormatBool(req.Boolean.Value)
+	}
+	f.set = append(f.set, string(req.ConfigID)+"="+value)
 	return &acp.SetSessionConfigOptionResponse{}, nil
 }
 
-func (f *fakeAgent) SetMode(_ context.Context, req acp.SetSessionModeRequest) error {
+func (f *fakeAgent) SetSessionMode(_ context.Context, req *acp.SetSessionModeRequest) (*acp.SetSessionModeResponse, error) {
 	f.set = append(f.set, "mode="+string(req.ModeID))
-	return nil
+	return &acp.SetSessionModeResponse{}, nil
 }
 
 type memSessions struct {
@@ -340,6 +355,6 @@ func (m *memModes) SetMode(agent, mode string) error {
 func chunk(id, text string) acp.SessionUpdate {
 	return acp.SessionUpdate{SessionUpdate: "agent_message_chunk", AgentMessageChunk: &acp.ContentChunk{
 		MessageID: acp.MessageID(id),
-		Content:   acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: text}},
+		Content:   acp.ContentBlock{Text: &acp.TextContent{Text: text}},
 	}}
 }

@@ -11,7 +11,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/toolcall"
 )
 
@@ -37,8 +38,8 @@ func flatten(blocks []acp.ContentBlock, dir func() (string, error)) (string, err
 			} else {
 				token(block.ResourceLink.URI)
 			}
-		case block.Resource != nil && block.Resource.Resource.Text != "":
-			r := block.Resource.Resource
+		case block.Resource != nil && block.Resource.Resource.TextResourceContents != nil:
+			r := block.Resource.Resource.TextResourceContents
 			fmt.Fprintf(&b, "\n%s:\n%s\n", r.URI, toolcall.Fence(r.Text))
 		case block.Image != nil:
 			path, err := saveImage(dir, block.Image)

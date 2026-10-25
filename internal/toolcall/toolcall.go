@@ -11,7 +11,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
 )
 
 // Old is what a file held before a write, for its diff, or why it isn't
@@ -91,4 +91,17 @@ func Fence(output string) string {
 	}
 	f := strings.Repeat("`", max(3, longest+1))
 	return f + "\n" + strings.TrimSuffix(output, "\n") + "\n" + f
+}
+
+// AddUsage adds a model call's tokens to a turn's usage.
+func AddUsage(u *acp.Usage, input, output, cacheRead, cacheWrite, total int64) {
+	add := func(n *uint64, by int64) { *n += uint64(max(by, 0)) }
+	if u.CachedReadTokens == nil {
+		u.CachedReadTokens, u.CachedWriteTokens = new(uint64), new(uint64)
+	}
+	add(&u.InputTokens, input)
+	add(&u.OutputTokens, output)
+	add(u.CachedReadTokens, cacheRead)
+	add(u.CachedWriteTokens, cacheWrite)
+	add(&u.TotalTokens, total)
 }

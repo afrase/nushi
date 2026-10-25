@@ -15,7 +15,9 @@ import (
 
 	"connectrpc.com/connect"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
+	"github.com/afrase/nushi/internal/agentproc"
 	"github.com/afrase/nushi/internal/api"
 	"github.com/afrase/nushi/internal/events"
 	"github.com/afrase/nushi/internal/features/agents"
@@ -68,10 +70,14 @@ func TestNothingPrivateLogged(t *testing.T) {
 	if out, err := exec.Command("git", "-C", repo, "init", "-q").CombinedOutput(); err != nil {
 		t.Fatalf("git init: %v %s", err, out)
 	}
-	launch := func(h acp.Handler, log *slog.Logger) (chats.Agent, error) {
+	launch := func(h acp.Client, log *slog.Logger) (chats.Agent, error) {
 		cmd := exec.Command(bin)
 		cmd.Env = append(os.Environ(), "FAKE_KEY="+token)
-		return acp.Start(cmd, h, log)
+		a, err := agentproc.Start(cmd, h, log)
+		if err != nil {
+			return nil, err
+		}
+		return a, nil
 	}
 	hub, st := &events.Hub{}, store.New(data)
 	svc := chats.New([]chats.Kind{{Name: "fake", Launch: launch}}, st, st, git.Worktrees{}, filepath.Join(data, "scratch"), hub.Publish)

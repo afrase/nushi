@@ -8,7 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -27,7 +28,7 @@ func TestQuestionGetsExactlyWhatWasChosen(t *testing.T) {
 	ask := func() (chan *acp.CreateElicitationResponse, model.Item) {
 		got := make(chan *acp.CreateElicitationResponse, 1)
 		go func() {
-			resp, err := c.CreateElicitation(context.Background(), req)
+			resp, err := c.CreateElicitation(context.Background(), &req)
 			if err != nil {
 				t.Error(err)
 			}
@@ -68,24 +69,30 @@ func TestQuestionGetsExactlyWhatWasChosen(t *testing.T) {
 		t.Fatal(err)
 	}
 	resp := <-got
-	if want := `{"question_0":"Green","question_1":["Apple","Plum"],"question_1_custom":"figs"}`; resp.Action != "accept" || string(resp.Content) != want {
-		t.Errorf("agent got %s %s, want accept %s", resp.Action, resp.Content, want)
+	if want := `{"question_0":"Green","question_1":["Apple","Plum"],"question_1_custom":"figs"}`; resp.Accept == nil || mustJSON(t, resp.Accept.Content) != want {
+		t.Errorf("agent got %+v, want accept %s", resp, want)
 	}
 
 	got, it = ask()
 	if err := svc.AnswerQuestion("s1", it.ID, nil); err != nil {
 		t.Fatal(err)
 	}
-	if resp := <-got; resp.Action != "decline" || resp.Content != nil {
+	if resp := <-got; !resp.Decline || resp.Accept != nil {
 		t.Errorf("agent got %+v, want a bare decline", resp)
 	}
 }
 
 func TestMalformedFormIsAnError(t *testing.T) {
-	for _, props := range []string{`[1,2]`, `"x"`, ``, `{"a":1}`} {
-		if _, err := formFields(&acp.ElicitationSchema{Properties: json.RawMessage(props)}); err == nil {
+	for _, props := range []string{`[1,2]`, `"x"`, `{"a":1}`} {
+		var s acp.ElicitationSchema
+		if err := json.Unmarshal([]byte(`{"type":"object","properties":`+props+`}`), &s); err == nil {
 			t.Errorf("properties %s: no error", props)
 		}
+	}
+	var s acp.ElicitationSchema
+	noErr(t, json.Unmarshal([]byte(`{"type":"object","properties":{"a":{"type":"hologram"}}}`), &s))
+	if _, err := formFields(&s); err == nil {
+		t.Error("a field of a type Nushi doesn't show: no error")
 	}
 }
 
@@ -100,7 +107,7 @@ func TestStopCancelsAPendingQuestion(t *testing.T) {
 	}
 	got := make(chan *acp.CreateElicitationResponse, 1)
 	go func() {
-		resp, _ := c.CreateElicitation(context.Background(), req)
+		resp, _ := c.CreateElicitation(context.Background(), &req)
 		got <- resp
 	}()
 	eventually(t, c, func() bool { return len(c.questions) == 1 })
@@ -109,8 +116,8 @@ func TestStopCancelsAPendingQuestion(t *testing.T) {
 	}
 	select {
 	case resp := <-got:
-		if resp.Action != "cancel" {
-			t.Errorf("the agent got %q, want cancel", resp.Action)
+		if !resp.Cancel {
+			t.Errorf("the agent got %+v, want cancel", resp)
 		}
 	case <-time.After(time.Second):
 		t.Fatal("the question still waits")
@@ -147,4 +154,13 @@ func TestAnsweringTwiceFails(t *testing.T) {
 			t.Fatal("a second answer blocked")
 		}
 	}
+}
+
+func mustJSON(t *testing.T, v any) string {
+	t.Helper()
+	b, err := json.Marshal(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
 }

@@ -6,7 +6,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -67,7 +68,7 @@ func TestOneModePickerAndTheModeIsRemembered(t *testing.T) {
 	}
 
 	// A mode change the agent makes itself is shown but not remembered.
-	c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "current_mode_update",
+	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "current_mode_update",
 		CurrentModeUpdate: &acp.CurrentModeUpdate{CurrentModeID: "default"}}})
 	if current(c, "mode") != "default" || (*modes)["claude"] != "plan" {
 		t.Errorf("after the agent's change: mode %q, remembered %q", current(c, "mode"), (*modes)["claude"])

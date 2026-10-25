@@ -12,7 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -29,7 +30,7 @@ func TestPromptStreamsTheReply(t *testing.T) {
 		}
 	}
 	agent := &fakeAgent{updates: []acp.SessionUpdate{chunk("m1", "Hel"), chunk("m1", "lo"), chunk("", "!"), chunk("m2", "Bye")}}
-	svc := New([]Kind{{Name: "fake", Launch: func(h acp.Handler, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }, Dialect: claudeDialect}}, &memModes{}, &memSessions{}, nil, "", publish)
+	svc := New([]Kind{{Name: "fake", Launch: func(h acp.Client, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }, Dialect: claudeDialect}}, &memModes{}, &memSessions{}, nil, "", publish)
 
 	folder := t.TempDir()
 	id, err := svc.Start(context.Background(), "", folder, false)
@@ -93,7 +94,7 @@ func TestToolCallUpdatesMergeIntoOneItem(t *testing.T) {
 			{Type: "diff", Diff: &acp.Diff{Path: "/w/a.txt", OldText: "one\ntwo\n", NewText: "three"}},
 		}, Locations: []acp.ToolCallLocation{{Path: "/w/a.txt"}, {Path: "/elsewhere/b.txt"}}}},
 	} {
-		c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: u})
+		_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: u})
 	}
 	want := []model.Item{
 		{ID: "t1", Kind: model.ToolCall, Title: "ls -la", ToolKind: "execute", Status: "completed", Text: "a.txt"},
@@ -119,7 +120,7 @@ func TestPermissionWaitsForTheUsersPick(t *testing.T) {
 	ask := func(ctx context.Context) chan result {
 		got := make(chan result, 1)
 		go func() {
-			resp, err := c.RequestPermission(ctx, acp.RequestPermissionRequest{SessionID: "s1",
+			resp, err := c.RequestPermission(ctx, &acp.RequestPermissionRequest{SessionID: "s1",
 				ToolCall: acp.ToolCallUpdate{ToolCallID: "t1"},
 				Options: []acp.PermissionOption{
 					{OptionID: "allow", Name: "Allow", Kind: "allow_once"},
@@ -162,7 +163,7 @@ func TestPermissionWaitsForTheUsersPick(t *testing.T) {
 	got = ask(ctx2)
 	it = pending()
 	cancel2()
-	if r := <-got; r.resp.Outcome.Outcome != "cancelled" {
+	if r := <-got; !r.resp.Outcome.Cancelled {
 		t.Errorf("agent got %+v; want cancelled", r.resp)
 	}
 	if final := c.itemLocked(it.ID); final.Status != "cancelled" {
@@ -184,10 +185,10 @@ func TestPlanUpdatesInPlaceWithinATurn(t *testing.T) {
 	message := acp.SessionUpdate{SessionUpdate: "agent_message_chunk", AgentMessageChunk: &acp.ContentChunk{
 		MessageID: "m1", Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: "hi"}}}}
 	for _, u := range []acp.SessionUpdate{thought, message, plan("pending", "pending"), plan("completed", "in_progress")} {
-		c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: u})
+		_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: u})
 	}
 	c.addLocked(model.Item{Kind: model.UserMessage, Text: "again"})
-	c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: plan("pending")})
+	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: plan("pending")})
 
 	var kinds []model.ItemKind
 	for _, it := range c.items {
@@ -206,7 +207,7 @@ func TestPlanUpdatesInPlaceWithinATurn(t *testing.T) {
 }
 
 func TestUsageIsWhatTheAgentReported(t *testing.T) {
-	usage := func(used int64, cost *acp.Cost) acp.SessionUpdate {
+	usage := func(used uint64, cost *acp.Cost) acp.SessionUpdate {
 		return acp.SessionUpdate{SessionUpdate: "usage_update", UsageUpdate: &acp.UsageUpdate{Used: used, Size: 1000, Cost: cost}}
 	}
 	done := make(chan struct{})
@@ -217,9 +218,9 @@ func TestUsageIsWhatTheAgentReported(t *testing.T) {
 	}
 	agent := &fakeAgent{
 		updates: []acp.SessionUpdate{usage(100, &acp.Cost{Amount: 0.5, Currency: "USD"}), usage(120, nil)},
-		usage:   &acp.TurnUsage{InputTokens: 3, OutputTokens: 4, CachedReadTokens: 5, TotalTokens: 12},
+		usage:   &acp.Usage{InputTokens: 3, OutputTokens: 4, CachedReadTokens: new(uint64(5)), TotalTokens: 12},
 	}
-	svc := New([]Kind{{Name: "fake", Launch: func(h acp.Handler, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }, Dialect: claudeDialect}}, &memModes{}, &memSessions{}, nil, "", publish)
+	svc := New([]Kind{{Name: "fake", Launch: func(h acp.Client, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }, Dialect: claudeDialect}}, &memModes{}, &memSessions{}, nil, "", publish)
 	id, err := svc.Start(context.Background(), "", t.TempDir(), false)
 	if err != nil {
 		t.Fatal(err)
@@ -245,7 +246,7 @@ func TestImagesJoinTheirMessageOrToolCall(t *testing.T) {
 		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "Read a.png", Content: []acp.ToolCallContent{
 			{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "image", Image: img}}}}}},
 	} {
-		c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: u})
+		_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: u})
 	}
 	png := []model.Image{{MimeType: "image/png", Data: []byte("\x89PNG")}}
 	if len(c.items) != 2 || c.items[0].Text != "look" || !reflect.DeepEqual(c.items[0].Images, png) || !reflect.DeepEqual(c.items[1].Images, png) {
@@ -277,14 +278,14 @@ func TestSubagentUpdatesGoUnderTheirToolCall(t *testing.T) {
 		{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "h1", Status: "completed", Content: []acp.ToolCallContent{
 			{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: "ok"}}}}}}},
 	} {
-		c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: u})
+		_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: u})
 	}
 	if sa := c.items[0].Subagent; sa == nil || sa.State != "running" || sa.Started.IsZero() || !c.items[len(c.items)-1].Report {
 		t.Fatalf("while its call runs: %+v", c.items)
 	}
 	// Started in the background: the call completes at once; its report
 	// (already in) ends it.
-	c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call_update",
+	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call_update",
 		ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "a1", Status: "completed", Content: []acp.ToolCallContent{
 			{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: "Async agent launched"}}}}}}}})
 	if sa := c.items[0].Subagent; sa.State != "done" || sa.Result != "The report" || sa.Ended.IsZero() {
@@ -306,12 +307,12 @@ func TestSubagentUpdatesGoUnderTheirToolCall(t *testing.T) {
 	for _, u := range []acp.SessionUpdate{
 		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "r2", Title: "Read b.go", Kind: "read", Meta: under("a1")}},
 	} {
-		c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: u})
+		_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: u})
 	}
 	if sa := c.items[0].Subagent; sa.State != "running" || !sa.Ended.IsZero() {
 		t.Errorf("run again: %+v", sa)
 	}
-	c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{
+	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{
 		ToolCallID: "h2", Title: "SubagentHandback", RawInput: []byte(`{"message":"Second report"}`), Meta: map[string]any{
 			"claudeCode": map[string]any{"parentToolUseId": "a1", "toolName": "SubagentHandback"}}}}})
 	if sa := c.items[0].Subagent; sa.State != "done" || sa.Result != "Second report" {
@@ -326,7 +327,7 @@ func TestBackgroundShellsAreFollowed(t *testing.T) {
 	file := filepath.Join(dir, "b1.output")
 	noErr(t, os.WriteFile(file, []byte("half"), 0o600))
 	events := make(chan model.Event, 100)
-	c := &chat{id: "s1", sid: "s1", dialect: claudeDialect, publish: func(e model.Event) { events <- e }, agent: &acp.Client{},
+	c := &chat{id: "s1", sid: "s1", dialect: claudeDialect, publish: func(e model.Event) { events <- e }, agent: &fakeAgent{},
 		session: model.Session{Folder: "/w"}}
 	text := func(s string) []acp.ToolCallContent {
 		return []acp.ToolCallContent{{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: s}}}}}
@@ -338,7 +339,7 @@ func TestBackgroundShellsAreFollowed(t *testing.T) {
 			Content: text("Command running in background with ID: b1. Output is being written to: " + file + ". You will be notified."),
 			Meta:    map[string]any{"claudeCode": map[string]any{"toolName": "Bash", "toolResponse": map[string]any{"backgroundTaskId": "b1"}}}}},
 	} {
-		c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: u})
+		_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: u})
 	}
 	shell := func(want string) model.Shell {
 		t.Helper()
@@ -369,7 +370,7 @@ func TestBackgroundShellsAreFollowed(t *testing.T) {
 	c.mu.Lock()
 	c.items[0].Shell = nil
 	c.mu.Unlock()
-	c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call_update",
+	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call_update",
 		ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed"}}})
 	shell("running")
 	c.mu.Lock()
@@ -393,7 +394,7 @@ func TestAnEndLineTheCommandPrintedIsntItsEnd(t *testing.T) {
 		if e.Item != nil && e.Item.Shell != nil {
 			states = append(states, e.Item.Shell.State)
 		}
-	}, agent: &acp.Client{}, items: []model.Item{{ID: "t1", Shell: &model.Shell{State: "running"}}}}
+	}, agent: &fakeAgent{}, items: []model.Item{{ID: "t1", Shell: &model.Shell{State: "running"}}}}
 	c.followShell("t1", "b1", "f", c.agent)
 	if c.items[0].Shell.State != "done" || slices.Contains(states, "stopped") {
 		t.Errorf("states %q, the end %+v", states, c.items[0].Shell)

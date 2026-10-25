@@ -7,7 +7,8 @@ import (
 	"path/filepath"
 	"slices"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -153,7 +154,7 @@ func (s *Service) deleteHistory(ctx context.Context, c *chat, sessions []string)
 		return errors.New("the agent can't delete its history")
 	}
 	for _, sess := range sessions {
-		if err := agent.DeleteSession(ctx, acp.DeleteSessionRequest{SessionID: acp.SessionID(sess)}); err != nil {
+		if _, err := agent.DeleteSession(ctx, &acp.DeleteSessionRequest{SessionID: acp.SessionID(sess)}); err != nil {
 			return err
 		}
 	}

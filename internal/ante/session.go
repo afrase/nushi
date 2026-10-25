@@ -9,7 +9,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
+	"github.com/afrase/nushi/internal/toolcall"
 )
 
 // session is one ACP session: one Ante host running one of Ante's
@@ -54,11 +56,11 @@ type turn struct {
 	id      string
 	started bool
 	result  chan turnResult
-	usage   acp.TurnUsage
+	usage   acp.Usage
 }
 
 type turnResult struct {
-	resp *acp.PromptResult
+	resp *acp.PromptResponse
 	err  error
 }
 
@@ -168,7 +170,7 @@ func (s *session) beginLocked(t *turn) {
 }
 
 // endLocked ends the running turn t with its result.
-func (s *session) endLocked(t *turn, resp *acp.PromptResult, err error) {
+func (s *session) endLocked(t *turn, resp *acp.PromptResponse, err error) {
 	if s.turn == t {
 		s.turn = nil
 		close(s.idle)
@@ -245,12 +247,7 @@ func (s *session) usageLocked(ev event) []acp.SessionUpdate {
 	}
 	_ = json.Unmarshal(ev.Payload, &p)
 	if t := s.turn; t != nil {
-		u := &t.usage
-		u.InputTokens += p.Usage.Input
-		u.OutputTokens += p.Usage.Output
-		u.CachedReadTokens += p.Usage.CacheRead
-		u.CachedWriteTokens += p.Usage.CacheWrite
-		u.TotalTokens += p.Usage.Input + p.Usage.Output
+		toolcall.AddUsage(&t.usage, p.Usage.Input, p.Usage.Output, p.Usage.CacheRead, p.Usage.CacheWrite, p.Usage.Input+p.Usage.Output)
 	}
 	if p.Context == nil || p.Context.Limit == 0 {
 		return nil
@@ -259,7 +256,7 @@ func (s *session) usageLocked(ev event) []acp.SessionUpdate {
 }
 
 func usageUpdate(used, size int64) acp.SessionUpdate {
-	return acp.SessionUpdate{SessionUpdate: "usage_update", UsageUpdate: &acp.UsageUpdate{Used: used, Size: size}}
+	return acp.SessionUpdate{SessionUpdate: "usage_update", UsageUpdate: &acp.UsageUpdate{Used: uint64(max(used, 0)), Size: uint64(max(size, 0))}}
 }
 
 // turnEndLocked answers the turn's prompt. ACP has no stop reason for a
@@ -276,9 +273,9 @@ func (s *session) turnEndLocked(ev event) {
 	name, payload := variant(p.Status)
 	switch name {
 	case "Completed":
-		s.endLocked(t, &acp.PromptResult{StopReason: "end_turn", Usage: &t.usage}, nil)
+		s.endLocked(t, &acp.PromptResponse{StopReason: "end_turn", Usage: &t.usage}, nil)
 	case "Interrupted":
-		s.endLocked(t, &acp.PromptResult{StopReason: "cancelled", Usage: &t.usage}, nil)
+		s.endLocked(t, &acp.PromptResponse{StopReason: "cancelled", Usage: &t.usage}, nil)
 	default:
 		var e struct {
 			Kind     string   `json:"kind"`
@@ -296,7 +293,7 @@ func (s *session) turnEndLocked(ev event) {
 
 // prompt runs a turn (after the running one, if any) and returns how it
 // ended.
-func (s *session) prompt(ctx context.Context, text string) (*acp.PromptResult, error) {
+func (s *session) prompt(ctx context.Context, text string) (*acp.PromptResponse, error) {
 	s.mu.Lock()
 	for s.turn != nil {
 		idle := s.idle

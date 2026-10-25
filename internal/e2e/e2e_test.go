@@ -18,8 +18,10 @@ import (
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/acptest"
+	"github.com/afrase/nushi/internal/agentproc"
 	"github.com/afrase/nushi/internal/ante"
 	"github.com/afrase/nushi/internal/ante/antetest"
 	"github.com/afrase/nushi/internal/api"
@@ -49,13 +51,8 @@ type daemon struct {
 	kill func() // ends the last agent started, as if its process died
 }
 
-// pipeAgent is a fake agent "process": closing it closes its pipes.
-type pipeAgent struct {
-	*acp.Client
-	toAgent io.Closer
-}
-
-func (p pipeAgent) Close() error { return p.toAgent.Close() }
+// pipeAgent is a fake agent "process" over pipes.
+type pipeAgent struct{ *agentproc.Agent }
 
 func (p pipeAgent) Stop(time.Duration) error { return p.Close() }
 
@@ -66,7 +63,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	// serve runs an agent over pipes: the fake ACP agent, or Ante's bridge
 	// on a fake Ante.
 	launch := func(serve func(r io.Reader, w io.Writer)) chats.Launch {
-		return func(h acp.Handler, log *slog.Logger) (chats.Agent, error) {
+		return func(h acp.Client, log *slog.Logger) (chats.Agent, error) {
 			toAgentR, toAgentW := io.Pipe()
 			fromAgentR, fromAgentW := io.Pipe()
 			mu.Lock()
@@ -76,7 +73,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 				serve(toAgentR, fromAgentW)
 				_ = fromAgentW.Close()
 			}()
-			return pipeAgent{acp.Connect(fromAgentR, toAgentW, h, log), toAgentW}, nil
+			return pipeAgent{agentproc.Connect(acp.NewAgentConn(fromAgentR, toAgentW, h), log)}, nil
 		}
 	}
 	fake := func(codex, omp bool) chats.Launch {

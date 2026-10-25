@@ -8,12 +8,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/model"
 )
 
 // update turns the agent's updates into transcript items.
-func (c *chat) update(n acp.SessionNotification) { //nolint:gocognit,gocyclo // one case per ACP update kind
+func (c *chat) update(n *acp.SessionNotification) { //nolint:gocognit,gocyclo // one case per ACP update kind
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.kept && slices.Contains([]string{"user_message_chunk", "agent_message_chunk", "agent_thought_chunk", "plan", "tool_call", "tool_call_update"}, n.Update.SessionUpdate) {
@@ -53,8 +54,8 @@ func (c *chat) update(n acp.SessionNotification) { //nolint:gocognit,gocyclo // 
 		c.commands = []model.Command{}
 		for _, a := range u.AvailableCommandsUpdate.AvailableCommands {
 			cmd := model.Command{Name: a.Name, Description: a.Description}
-			if a.Input != nil {
-				cmd.Hint = a.Input.Hint
+			if a.Input != nil && a.Input.Unstructured != nil {
+				cmd.Hint = a.Input.Unstructured.Hint
 			}
 			c.commands = append(c.commands, cmd)
 		}
@@ -71,14 +72,18 @@ func (c *chat) update(n acp.SessionNotification) { //nolint:gocognit,gocyclo // 
 	case "usage_update":
 		c.ownTurn = false
 		u := u.UsageUpdate
-		c.usage.Used, c.usage.Size = u.Used, u.Size
-		if u.Cost != nil { // else the cost reported last still stands
+		c.usage.Used, c.usage.Size = int64(u.Used), int64(u.Size) //nolint:gosec // token counts, far below the limits
+		if u.Cost != nil {                                        // else the cost reported last still stands
 			c.usage.Cost, c.usage.Currency = u.Cost.Amount, u.Cost.Currency
 		}
 		c.usageChangedLocked()
 	case "session_info_update":
-		forkTitle := c.dialect.ForkTitle != nil && c.dialect.ForkTitle(u.SessionInfoUpdate.Title, c.session.Title)
-		if t := u.SessionInfoUpdate.Title; t != "" && !forkTitle {
+		var t string // a title cleared (null) is left as it was
+		if v := u.SessionInfoUpdate.Title.Value; v != nil {
+			t = *v
+		}
+		forkTitle := c.dialect.ForkTitle != nil && c.dialect.ForkTitle(t, c.session.Title)
+		if t != "" && !forkTitle {
 			c.saveLocked(func(s *model.Session) { s.Title = t })
 		}
 	case "tool_call_update":

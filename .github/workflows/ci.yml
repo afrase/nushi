@@ -1,7 +1,8 @@
 # make lint and the tests. The daemon and the app are macOS-only (proc_info,
 # sandbox-exec, launchd, the macOS app), so they run on a macOS runner; the
-# packages that also run elsewhere (the ACP client, the relay, the Noise
-# channel) are tested on Linux too. Actions are pinned by commit.
+# packages that also run elsewhere (the relay, the Noise channel) are
+# tested on Linux too; the ACP library, github.com/afrase/acp-go, has its
+# own CI. Actions are pinned by commit.
 name: CI
 
 on:
@@ -44,4 +45,4 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
-      - run: go test ./acp/... ./relay/... ./noiseconn/... ./cmd/nushi-relay/...
+      - run: go test ./relay/... ./noiseconn/... ./cmd/nushi-relay/...

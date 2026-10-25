@@ -14,27 +14,28 @@ import (
 	"sync"
 	"time"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/model"
 )
 
-// Agent is a connection to a running agent (an *acp.Client).
+// Agent is a connection to a running agent (an *agentproc.Agent).
 type Agent interface { //nolint:interfacebloat // the ACP calls a chat makes of its agent, which each Kind fills
-	Initialize(context.Context, acp.InitializeRequest) (*acp.InitializeResponse, error)
-	NewSession(context.Context, acp.NewSessionRequest) (*acp.NewSessionResponse, error)
-	LoadSession(context.Context, acp.LoadSessionRequest) (*acp.LoadSessionResponse, error)
+	Initialize(context.Context, *acp.InitializeRequest) (*acp.InitializeResponse, error)
+	NewSession(context.Context, *acp.NewSessionRequest) (*acp.NewSessionResponse, error)
+	LoadSession(context.Context, *acp.LoadSessionRequest) (*acp.LoadSessionResponse, error)
 	// StartPrompt returns once the prompt is written; wait returns its result.
-	StartPrompt(acp.PromptRequest) (wait func(context.Context) (*acp.PromptResult, error), err error)
-	SetConfigOption(context.Context, acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error)
-	SetMode(context.Context, acp.SetSessionModeRequest) error
-	ListSessions(context.Context, acp.ListSessionsRequest) (*acp.ListSessionsResponse, error)
-	Cancel(acp.CancelNotification) error
+	StartPrompt(context.Context, *acp.PromptRequest) (wait func(context.Context) (*acp.PromptResponse, error), err error)
+	SetSessionConfigOption(context.Context, *acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error)
+	SetSessionMode(context.Context, *acp.SetSessionModeRequest) (*acp.SetSessionModeResponse, error)
+	ListSessions(context.Context, *acp.ListSessionsRequest) (*acp.ListSessionsResponse, error)
+	Cancel(context.Context, *acp.CancelNotification) error
 	CanSteer() bool
 	Steer(context.Context, acp.SessionID, []acp.ContentBlock) (bool, error)
 	CanFork() bool
-	ForkSession(context.Context, acp.ForkSessionRequest) (*acp.ForkSessionResponse, error)
-	CloseSession(context.Context, acp.CloseSessionRequest) error
-	DeleteSession(context.Context, acp.DeleteSessionRequest) error
+	ForkSession(context.Context, *acp.ForkSessionRequest) (*acp.ForkSessionResponse, error)
+	CloseSession(context.Context, *acp.CloseSessionRequest) (*acp.CloseSessionResponse, error)
+	DeleteSession(context.Context, *acp.DeleteSessionRequest) (*acp.DeleteSessionResponse, error)
 	Close() error // kills it
 	// Stop ends it gently: it gets up to grace to end its sessions, then
 	// is killed.
@@ -49,9 +50,19 @@ type Agent interface { //nolint:interfacebloat // the ACP calls a chat makes of 
 // sessions.
 var stopGrace = 5 * time.Second
 
-// Launch starts an agent; its session updates go to h, and what happens
+// cancelTurn sends session/cancel, waiting at most stopGrace for the agent
+// to read it.
+//
+//nolint:contextcheck // a cancel goes out on its own, as its turn ran: a stop outlives the request that asked for it
+func cancelTurn(agent Agent, n *acp.CancelNotification) error {
+	ctx, done := context.WithTimeout(context.Background(), stopGrace)
+	defer done()
+	return agent.Cancel(ctx, n)
+}
+
+// Launch starts an agent; what it sends goes to client, and what happens
 // to it to log.
-type Launch func(h acp.Handler, log *slog.Logger) (Agent, error)
+type Launch func(client acp.Client, log *slog.Logger) (Agent, error)
 
 // Sessions stores what Nushi keeps of each chat.
 type Sessions interface {
@@ -97,6 +108,8 @@ func (s *Service) UseTerminals(t Terminals) { s.terminals = t }
 type CopyHistory func(sessionID, from, to string) (remove func() error, err error)
 
 type chat struct {
+	acp.UnimplementedClient // what the agent asks of a chat, beyond sides.go's
+
 	id       string // Nushi's id for the chat
 	sid      string // the agent's session id
 	kind     *kind  // the agent it runs, for good
@@ -333,20 +346,20 @@ func (c *chat) cancelLocked() error {
 	}
 	clear(c.waiting)
 	clear(c.questions)
-	agent, cancel := c.agent, acp.CancelNotification{SessionID: acp.SessionID(c.sid)}
+	agent, cancel := c.agent, &acp.CancelNotification{SessionID: acp.SessionID(c.sid)}
 	if own {
 		c.ownTurn = false
 		c.statusChangedLocked()
-		return agent.Cancel(cancel)
+		return cancelTurn(agent, cancel)
 	}
 	select {
 	case <-c.sent:
-		return agent.Cancel(cancel)
+		return cancelTurn(agent, cancel)
 	default: // the cancel must not reach the agent before the prompt
 		sent := c.sent
 		go func() {
 			<-sent
-			if err := agent.Cancel(cancel); err != nil {
+			if err := cancelTurn(agent, cancel); err != nil {
 				c.log().Warn("cancelling the turn", "err", err)
 			}
 		}()

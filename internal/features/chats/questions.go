@@ -1,24 +1,23 @@
 package chats
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"slices"
 	"strconv"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/model"
 )
 
 // createElicitation shows the agent's form as a question and waits for the
 // user's answer.
-func (c *chat) createElicitation(ctx context.Context, req acp.CreateElicitationRequest) (*acp.CreateElicitationResponse, error) {
-	if req.Mode != "form" || req.RequestedSchema == nil {
+func (c *chat) createElicitation(ctx context.Context, req *acp.CreateElicitationRequest) (*acp.CreateElicitationResponse, error) {
+	if req.Form == nil {
 		return nil, fmt.Errorf("unsupported elicitation mode %q", req.Mode)
 	}
-	fields, err := formFields(req.RequestedSchema)
+	fields, err := formFields(&req.Form.RequestedSchema)
 	if err != nil {
 		return nil, err
 	}
@@ -60,15 +59,15 @@ func (c *chat) createElicitation(ctx context.Context, req acp.CreateElicitationR
 	}
 	switch status {
 	case "cancelled":
-		return &acp.CreateElicitationResponse{Action: "cancel"}, nil
+		return &acp.CreateElicitationResponse{Cancel: true}, nil
 	case "declined":
-		return &acp.CreateElicitationResponse{Action: "decline"}, nil
+		return &acp.CreateElicitationResponse{Decline: true}, nil
 	}
 	content, err := formContent(answered)
 	if err != nil {
 		return nil, err
 	}
-	return &acp.CreateElicitationResponse{Action: "accept", Content: content}, nil
+	return &acp.CreateElicitationResponse{Accept: &acp.ElicitationAcceptAction{Content: content}}, nil
 }
 
 // AnswerQuestion sends the user's answer to a pending question: values by
@@ -118,21 +117,9 @@ func check(f model.Field) error {
 
 // formFields reads the form's properties, in their order.
 func formFields(schema *acp.ElicitationSchema) ([]model.Field, error) {
-	dec := json.NewDecoder(bytes.NewReader(schema.Properties))
-	if tok, err := dec.Token(); err != nil || tok != json.Delim('{') {
-		return nil, fmt.Errorf("elicitation schema: properties is not an object (%v)", err) //nolint:errorlint // err is nil when the token is wrong
-	}
 	var fields []model.Field
-	for dec.More() {
-		tok, err := dec.Token()
-		if err != nil {
-			return nil, fmt.Errorf("elicitation schema: %w", err)
-		}
-		id, _ := tok.(string) // an object's keys are strings
-		var p acp.ElicitationPropertySchema
-		if err := dec.Decode(&p); err != nil {
-			return nil, fmt.Errorf("elicitation schema: %w", err)
-		}
+	for _, prop := range schema.Properties {
+		id, p := prop.Name, prop.Schema
 		f := model.Field{ID: id, Required: slices.Contains(schema.Required, id)}
 		switch {
 		case p.String != nil:
@@ -145,8 +132,8 @@ func formFields(schema *acp.ElicitationSchema) ([]model.Field, error) {
 			f.Title, f.Description, f.Type = p.Array.Title, p.Array.Description, model.Choices
 			if it := p.Array.Items; it.String != nil {
 				f.Options = enumOptions(nil, it.String.Enum)
-			} else if it.TitledMultiSelectItems != nil {
-				f.Options = enumOptions(it.TitledMultiSelectItems.AnyOf, nil)
+			} else if it.Titled != nil {
+				f.Options = enumOptions(it.Titled.AnyOf, nil)
 			}
 		case p.Number != nil:
 			f.Title, f.Description, f.Type = p.Number.Title, p.Number.Description, model.Number
@@ -173,31 +160,39 @@ func enumOptions(titled []acp.EnumOption, plain []string) []model.Option {
 	return out
 }
 
-// formContent encodes the answered fields as the form's content; unanswered
+// formContent is the answered fields as the form's content; unanswered
 // fields are left out.
-func formContent(fields []model.Field) (json.RawMessage, error) {
-	content := map[string]any{}
+func formContent(fields []model.Field) (map[string]acp.ElicitationContentValue, error) {
+	content := map[string]acp.ElicitationContentValue{}
 	for _, f := range fields {
 		if len(f.Values) == 0 {
 			continue
 		}
 		v := f.Values[0]
+		var val acp.ElicitationContentValue
 		var err error
 		switch f.Type {
 		case model.Choices:
-			content[f.ID] = f.Values
+			val.StringArray = f.Values
 		case model.Number:
-			content[f.ID], err = strconv.ParseFloat(v, 64)
+			var n float64
+			n, err = strconv.ParseFloat(v, 64)
+			val.Number = &n
 		case model.Integer:
-			content[f.ID], err = strconv.ParseInt(v, 10, 64)
+			var i int64
+			i, err = strconv.ParseInt(v, 10, 64)
+			val.Integer = &i
 		case model.Boolean:
-			content[f.ID], err = strconv.ParseBool(v)
+			var b bool
+			b, err = strconv.ParseBool(v)
+			val.Boolean = &b
 		default:
-			content[f.ID] = v
+			val.String = &v
 		}
 		if err != nil {
 			return nil, fmt.Errorf("%q: %w", f.Title, err)
 		}
+		content[f.ID] = val
 	}
-	return json.Marshal(content)
+	return content, nil
 }

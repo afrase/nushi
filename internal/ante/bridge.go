@@ -10,13 +10,15 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/afrase/nushi/acp"
+	"github.com/afrase/acp-go/steering"
+	acp "github.com/afrase/acp-go/unstable"
 )
 
 // bridge is Nushi's ACP agent for Ante: it speaks ACP to the client and
 // runs each session on an `ante serve --stdio` of its own.
 type bridge struct {
-	peer    *acp.Peer
+	acp.UnimplementedAgent
+	client  *acp.ClientConn
 	ctx     context.Context //nolint:containedctx // ends with the client's connection
 	spawn   Spawn
 	home    string // Ante's home: its sessions are in home/sessions
@@ -56,9 +58,11 @@ func Serve(r io.Reader, w io.Writer, cfg Config) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	b.ctx = ctx
-	b.peer = acp.NewPeer(w, b.handle)
-	b.peer.Serve(r)
-	<-b.peer.Done()
+	conn := acp.NewClientConn(r, w, func(c *acp.ClientConn) acp.Agent {
+		b.client = c
+		return b
+	})
+	<-conn.Done()
 	cancel()
 	defer func() {
 		if b.imgDir != "" {
@@ -99,7 +103,7 @@ func (b *bridge) images() (string, error) {
 
 // update sends the client one of a session's updates.
 func (b *bridge) update(sid string, u acp.SessionUpdate) {
-	_ = b.peer.Notify("session/update", acp.SessionNotification{SessionID: acp.SessionID(sid), Update: u}) // the client is gone when it fails
+	_ = b.client.SessionUpdate(b.ctx, &acp.SessionNotification{SessionID: acp.SessionID(sid), Update: u}) // the client is gone when it fails
 }
 
 func (b *bridge) session(id acp.SessionID) (*session, error) {
@@ -108,7 +112,7 @@ func (b *bridge) session(id acp.SessionID) (*session, error) {
 	if s := b.sessions[string(id)]; s != nil {
 		return s, nil
 	}
-	return nil, &acp.Error{Code: -32602, Message: fmt.Sprintf("no open session %q", id)}
+	return nil, &acp.Error{Code: acp.ErrorCodeInvalidParams, Message: fmt.Sprintf("no open session %q", id)}
 }
 
 func (b *bridge) forget(s *session) {
@@ -119,110 +123,150 @@ func (b *bridge) forget(s *session) {
 	}
 }
 
-func (b *bridge) handle(ctx context.Context, method string, params json.RawMessage) (any, error) {
-	var p struct {
-		SessionID acp.SessionID      `json:"sessionId"`
-		Cwd       string             `json:"cwd"`
-		Prompt    []acp.ContentBlock `json:"prompt"`
-		ModeID    string             `json:"modeId"`
-		ConfigID  string             `json:"configId"`
-		Value     string             `json:"value"`
-		Meta      struct {
-			Ante struct {
-				After string `json:"afterMessage"`
-			} `json:"ante"`
-		} `json:"_meta"`
-		Caps struct {
-			Elicitation struct {
-				Form json.RawMessage `json:"form"`
-			} `json:"elicitation"`
-		} `json:"clientCapabilities"`
+func (b *bridge) Initialize(_ context.Context, req *acp.InitializeRequest) (*acp.InitializeResponse, error) {
+	if c := req.ClientCapabilities; c != nil && c.Elicitation != nil && c.Elicitation.Form != nil {
+		b.elicits.Store(true)
 	}
-	if err := json.Unmarshal(params, &p); err != nil {
-		return nil, &acp.Error{Code: -32602, Message: err.Error()}
+	if b.problem != nil {
+		return nil, b.problem
 	}
+	return &acp.InitializeResponse{
+		ProtocolVersion: acp.LatestProtocolVersion,
+		AgentInfo:       &acp.Implementation{Name: AgentName, Title: "Ante", Version: b.version},
+		AgentCapabilities: &acp.AgentCapabilities{
+			LoadSession:        true,
+			PromptCapabilities: &acp.PromptCapabilities{Image: true, EmbeddedContext: true},
+			SessionCapabilities: &acp.SessionCapabilities{
+				Fork: &acp.SessionForkCapabilities{}, List: &acp.SessionListCapabilities{},
+				Close: &acp.SessionCloseCapabilities{}, Delete: &acp.SessionDeleteCapabilities{},
+			},
+		},
+		Meta: steering.Advertise(nil),
+	}, nil
+}
+
+func (b *bridge) NewSession(ctx context.Context, req *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
+	return b.open(ctx, req.Cwd, map[string]any{"StartSession": map[string]any{"cwd": req.Cwd}}, false)
+}
+
+func (b *bridge) LoadSession(ctx context.Context, req *acp.LoadSessionRequest) (*acp.LoadSessionResponse, error) {
+	if _, err := b.session(req.SessionID); err == nil {
+		return nil, fmt.Errorf("session %s is open already", req.SessionID)
+	}
+	if !isSessionID(string(req.SessionID)) {
+		return nil, fmt.Errorf("%q isn't one of Ante's sessions", req.SessionID)
+	}
+	n, err := b.open(ctx, req.Cwd, resume(req.SessionID), true)
+	if err != nil {
+		return nil, err
+	}
+	return &acp.LoadSessionResponse{Modes: n.Modes, ConfigOptions: n.ConfigOptions}, nil
+}
+
+func (b *bridge) ForkSession(ctx context.Context, req *acp.ForkSessionRequest) (*acp.ForkSessionResponse, error) {
+	ante, _ := req.Meta["ante"].(map[string]any)
+	after, _ := ante["afterMessage"].(string)
+	return b.fork(ctx, req.SessionID, req.Cwd, after)
+}
+
+func (b *bridge) ListSessions(_ context.Context, req *acp.ListSessionsRequest) (*acp.ListSessionsResponse, error) {
+	resp := b.list(req.Cwd)
+	return &resp, nil
+}
+
+func (b *bridge) CloseSession(_ context.Context, req *acp.CloseSessionRequest) (*acp.CloseSessionResponse, error) {
+	if s, err := b.session(req.SessionID); err == nil {
+		s.h.stop(5 * time.Second)
+		<-s.ended
+	}
+	return &acp.CloseSessionResponse{}, nil
+}
+
+func (b *bridge) DeleteSession(_ context.Context, req *acp.DeleteSessionRequest) (*acp.DeleteSessionResponse, error) {
+	return &acp.DeleteSessionResponse{}, b.delete(req.SessionID)
+}
+
+func (b *bridge) Prompt(ctx context.Context, req *acp.PromptRequest) (*acp.PromptResponse, error) {
+	s, err := b.session(req.SessionID)
+	if err != nil {
+		return nil, err
+	}
+	text, err := flatten(req.Prompt, b.images)
+	if err != nil {
+		return nil, err
+	}
+	return s.prompt(ctx, text)
+}
+
+func (b *bridge) Cancel(_ context.Context, n *acp.CancelNotification) error {
+	if s, err := b.session(n.SessionID); err == nil {
+		_ = s.h.send("Interrupt") // a dead host has no turn to stop
+	}
+	return nil
+}
+
+func (b *bridge) SetSessionMode(ctx context.Context, req *acp.SetSessionModeRequest) (*acp.SetSessionModeResponse, error) {
+	s, err := b.session(req.SessionID)
+	if err != nil {
+		return nil, err
+	}
+	return &acp.SetSessionModeResponse{}, s.setMode(ctx, string(req.ModeID))
+}
+
+func (b *bridge) SetSessionConfigOption(ctx context.Context, req *acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error) {
+	s, err := b.session(req.SessionID)
+	if err != nil {
+		return nil, err
+	}
+	if req.ValueID == nil {
+		return nil, &acp.Error{Code: acp.ErrorCodeInvalidParams, Message: "Ante's options take a value"}
+	}
+	opts, err := s.setOption(ctx, string(req.ConfigID), string(req.ValueID.Value))
+	if err != nil {
+		return nil, err
+	}
+	return &acp.SetSessionConfigOptionResponse{ConfigOptions: opts}, nil
+}
+
+// ExtMethod takes the bridge's extensions: steering, and the Context
+// card's ContextMethod.
+func (b *bridge) ExtMethod(ctx context.Context, method string, params json.RawMessage) (any, error) {
 	switch method {
-	case "initialize":
-		b.elicits.Store(len(p.Caps.Elicitation.Form) > 0 && string(p.Caps.Elicitation.Form) != "null")
-		if b.problem != nil {
-			return nil, b.problem
+	case steering.Method:
+		var req steering.Request[acp.ContentBlock]
+		if err := json.Unmarshal(params, &req); err != nil {
+			return nil, &acp.Error{Code: acp.ErrorCodeInvalidParams, Message: err.Error()}
 		}
-		return b.initialize(), nil
-	case "session/new":
-		return b.open(ctx, p.Cwd, map[string]any{"StartSession": map[string]any{"cwd": p.Cwd}}, false)
-	case "session/load":
-		if _, err := b.session(p.SessionID); err == nil {
-			return nil, fmt.Errorf("session %s is open already", p.SessionID)
-		}
-		if !isSessionID(string(p.SessionID)) {
-			return nil, fmt.Errorf("%q isn't one of Ante's sessions", p.SessionID)
-		}
-		return b.open(ctx, p.Cwd, resume(p.SessionID), true)
-	case "session/fork":
-		return b.fork(ctx, p.SessionID, p.Cwd, p.Meta.Ante.After)
-	case "session/list":
-		return b.list(p.Cwd), nil
-	case "session/close":
-		if s, err := b.session(p.SessionID); err == nil {
-			s.h.stop(5 * time.Second)
-			<-s.ended
-		}
-		return struct{}{}, nil
-	case "session/delete":
-		return struct{}{}, b.delete(p.SessionID)
-	case "session/prompt":
-		s, err := b.session(p.SessionID)
+		s, err := b.session(acp.SessionID(req.SessionID))
 		if err != nil {
 			return nil, err
 		}
-		text, err := flatten(p.Prompt, b.images)
+		text, err := flatten(req.Prompt, b.images)
 		if err != nil {
 			return nil, err
 		}
-		return s.prompt(ctx, text)
-	case "session/cancel":
-		if s, err := b.session(p.SessionID); err == nil {
-			_ = s.h.send("Interrupt") // a dead host has no turn to stop
-		}
-		return nil, nil //nolint:nilnil // a notification has no result
-	case "session/set_mode":
-		s, err := b.session(p.SessionID)
-		if err != nil {
-			return nil, err
-		}
-		return struct{}{}, s.setMode(ctx, p.ModeID)
-	case "session/set_config_option":
-		s, err := b.session(p.SessionID)
-		if err != nil {
-			return nil, err
-		}
-		opts, err := s.setOption(ctx, p.ConfigID, p.Value)
-		return acp.SetSessionConfigOptionResponse{ConfigOptions: opts}, err
-	case "_session/steering":
-		s, err := b.session(p.SessionID)
-		if err != nil {
-			return nil, err
-		}
-		text, err := flatten(p.Prompt, b.images)
-		if err != nil {
-			return nil, err
-		}
-		outcome := "promptRequired"
+		outcome := steering.PromptRequired
 		if ok, err := s.steer(text); err != nil {
 			return nil, err
 		} else if ok {
-			outcome = "injected"
+			outcome = steering.Injected
 		}
-		return map[string]string{"outcome": outcome}, nil
+		return steering.Response{Outcome: outcome}, nil
 	case ContextMethod:
-		s, err := b.session(p.SessionID)
+		var req struct {
+			SessionID acp.SessionID `json:"sessionId"`
+		}
+		if err := json.Unmarshal(params, &req); err != nil {
+			return nil, &acp.Error{Code: acp.ErrorCodeInvalidParams, Message: err.Error()}
+		}
+		s, err := b.session(req.SessionID)
 		if err != nil {
 			return nil, err
 		}
 		ev, err := s.await(ctx, "ContextReport", "ContextReport")
 		return ev.Payload, err
 	}
-	return nil, acp.ErrMethodNotFound
+	return b.UnimplementedAgent.ExtMethod(ctx, method, params)
 }
 
 // ContextMethod is the bridge's extension that says what fills a session's
@@ -231,18 +275,3 @@ const ContextMethod = "_ante/context"
 
 // AgentName is the bridge's name in its initialize answer.
 const AgentName = "nushi-ante"
-
-func (b *bridge) initialize() any {
-	return map[string]any{
-		"protocolVersion": 1,
-		"agentInfo":       acp.Implementation{Name: AgentName, Title: "Ante", Version: b.version},
-		"agentCapabilities": map[string]any{
-			"loadSession":        true,
-			"promptCapabilities": acp.PromptCapabilities{Image: true, EmbeddedContext: true},
-			"sessionCapabilities": map[string]any{
-				"fork": map[string]any{}, "list": map[string]any{}, "close": map[string]any{}, "delete": map[string]any{},
-			},
-		},
-		"_meta": map[string]any{"steering": map[string]any{"supported": true}},
-	}
-}

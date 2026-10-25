@@ -12,7 +12,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
 )
 
 // Found is one of an agent's sessions that isn't a chat: started in a
@@ -82,7 +82,7 @@ func (s *Service) Find(ctx context.Context, agent, folder, cursor string) (Found
 	paths := map[string]string{} // a cwd's real path, once looked up
 	page := FoundPage{CanList: true, SeesOpen: k.OpenElsewhere != nil, OneWriter: k.OneWriter}
 	for calls := 1; ; calls++ {
-		resp, err := a.ListSessions(ctx, acp.ListSessionsRequest{Cwd: resolved, Cursor: cursor})
+		resp, err := a.ListSessions(ctx, &acp.ListSessionsRequest{Cwd: resolved, Cursor: cursor})
 		if err != nil {
 			return FoundPage{}, err
 		}
@@ -187,14 +187,12 @@ func realPath(path string) string {
 
 // quiet answers an agent that has no session open: there's nothing to ask
 // the user about.
-type quiet struct{}
+type quiet struct{ acp.UnimplementedClient }
 
-func (quiet) SessionUpdate(acp.SessionNotification) {}
-
-func (quiet) RequestPermission(context.Context, acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
+func (quiet) RequestPermission(context.Context, *acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
 	return nil, errors.New("no session is open")
 }
 
-func (quiet) CreateElicitation(context.Context, acp.CreateElicitationRequest) (*acp.CreateElicitationResponse, error) {
+func (quiet) CreateElicitation(context.Context, *acp.CreateElicitationRequest) (*acp.CreateElicitationResponse, error) {
 	return nil, errors.New("no session is open")
 }

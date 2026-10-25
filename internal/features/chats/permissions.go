@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/model"
 )
 
 // requestPermission shows the agent's permission prompt and waits for the
 // user's answer. Nushi never answers one itself.
-func (c *chat) requestPermission(ctx context.Context, req acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
+func (c *chat) requestPermission(ctx context.Context, req *acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
 	item := model.Item{Kind: model.Permission, Status: "pending", Title: req.ToolCall.Title}
 	for _, o := range req.Options {
 		item.Options = append(item.Options, model.Option{ID: string(o.OptionID), Name: o.Name, Kind: string(o.Kind)})
@@ -47,14 +48,14 @@ func (c *chat) requestPermission(ctx context.Context, req acp.RequestPermissionR
 			it.Status = "cancelled"
 			c.publishLocked(*it)
 		}
-		return &acp.RequestPermissionResponse{Outcome: acp.RequestPermissionOutcome{Outcome: "cancelled", Cancelled: &struct{}{}}}, nil
+		return &acp.RequestPermissionResponse{Outcome: acp.RequestPermissionOutcome{Cancelled: true}}, nil
 	}
 	if it != nil {
 		it.Status, it.Answer = "answered", picked
 		c.publishLocked(*it)
 	}
 	return &acp.RequestPermissionResponse{Outcome: acp.RequestPermissionOutcome{
-		Outcome: "selected", Selected: &acp.SelectedPermissionOutcome{OptionID: acp.PermissionOptionID(picked)},
+		Selected: &acp.SelectedPermissionOutcome{OptionID: acp.PermissionOptionID(picked)},
 	}}, nil
 }
 

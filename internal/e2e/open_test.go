@@ -11,7 +11,8 @@ import (
 
 	"connectrpc.com/connect"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/acptest"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 )
@@ -23,30 +24,30 @@ import (
 func inTerminal(t *testing.T, history *acptest.History, codex bool, dir string, prompts ...string) (string, func() []string) {
 	t.Helper()
 	ctx := context.Background()
-	connect := func(h acp.Handler) *acp.Client {
+	connect := func(h acp.Client) *acp.AgentConn {
 		toR, toW := io.Pipe()
 		fromR, fromW := io.Pipe()
 		go func() { (&acptest.Agent{History: history, Codex: codex}).Serve(toR, fromW); _ = fromW.Close() }()
 		t.Cleanup(func() { _ = toW.Close() })
-		c := acp.Connect(fromR, toW, h, nil)
-		if _, err := c.Initialize(ctx, acp.InitializeRequest{ProtocolVersion: acp.Version}); err != nil {
+		c := acp.NewAgentConn(fromR, toW, h)
+		if _, err := c.Initialize(ctx, &acp.InitializeRequest{ProtocolVersion: acp.LatestProtocolVersion}); err != nil {
 			t.Fatal(err)
 		}
 		return c
 	}
 	c := connect(&replay{})
-	s, err := c.NewSession(ctx, acp.NewSessionRequest{Cwd: dir, MCPServers: []acp.MCPServer{}})
+	s, err := c.NewSession(ctx, &acp.NewSessionRequest{Cwd: dir})
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, p := range prompts {
-		if _, err := c.Prompt(ctx, acp.PromptRequest{SessionID: s.SessionID, Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: p}}}}); err != nil {
+		if _, err := c.Prompt(ctx, &acp.PromptRequest{SessionID: s.SessionID, Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: p}}}}); err != nil {
 			t.Fatal(err)
 		}
 	}
 	return string(s.SessionID), func() []string {
 		r := &replay{}
-		if _, err := connect(r).LoadSession(ctx, acp.LoadSessionRequest{SessionID: s.SessionID, Cwd: dir, MCPServers: []acp.MCPServer{}}); err != nil {
+		if _, err := connect(r).LoadSession(ctx, &acp.LoadSessionRequest{SessionID: s.SessionID, Cwd: dir}); err != nil {
 			t.Fatal(err)
 		}
 		return r.texts
@@ -54,19 +55,19 @@ func inTerminal(t *testing.T, history *acptest.History, codex bool, dir string, 
 }
 
 // replay keeps the user's messages a session/load replays.
-type replay struct{ texts []string }
+type replay struct {
+	acp.UnimplementedClient
+	texts []string
+}
 
-func (r *replay) SessionUpdate(n acp.SessionNotification) {
+func (r *replay) SessionUpdate(_ context.Context, n *acp.SessionNotification) error {
 	if c := n.Update.UserMessageChunk; c != nil {
 		r.texts = append(r.texts, c.Content.Text.Text)
 	}
+	return nil
 }
 
-func (*replay) RequestPermission(context.Context, acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
-	return nil, errors.New("no")
-}
-
-func (*replay) CreateElicitation(context.Context, acp.CreateElicitationRequest) (*acp.CreateElicitationResponse, error) {
+func (*replay) RequestPermission(context.Context, *acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
 	return nil, errors.New("no")
 }
 

@@ -1,4 +1,4 @@
-package acp
+package agentproc
 
 import (
 	"bytes"
@@ -6,72 +6,8 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
-
-	"golang.org/x/sys/unix"
 )
-
-// What the client logs (ADR 0038): the agent's process, its stderr, and
-// the calls (conn.go), never what they carry.
-
-func orDiscard(log *slog.Logger) *slog.Logger {
-	if log == nil {
-		return slog.New(slog.DiscardHandler)
-	}
-	return log
-}
-
-// exited logs the agent's process ending: its exit code or signal, how
-// long it ran, and whether the client stopped it or it died.
-func (c *Client) exited(log *slog.Logger, ran time.Duration) {
-	args := []any{"ran", ran.Round(100 * time.Millisecond)}
-	if ws, ok := c.cmd.ProcessState.Sys().(syscall.WaitStatus); ok && ws.Signaled() {
-		args = append(args, "signal", unix.SignalName(ws.Signal()))
-	} else {
-		args = append(args, "code", c.cmd.ProcessState.ExitCode())
-	}
-	if c.stopped.Load() {
-		log.Info("agent exited", append(args, "stopped", true)...)
-	} else {
-		log.Warn("agent died", args...)
-	}
-}
-
-// initialized logs what the agent is and the capabilities Nushi uses.
-func (c *Client) initialized(resp *InitializeResponse, took time.Duration) {
-	args := []any{"protocol", resp.ProtocolVersion, "took", took.Round(time.Millisecond)}
-	if i := resp.AgentInfo; i != nil {
-		args = append(args, "impl", i.Name+" "+i.Version)
-	}
-	var caps []string
-	add := func(name string, ok bool) {
-		if ok {
-			caps = append(caps, name)
-		}
-	}
-	if a := resp.AgentCapabilities; a != nil {
-		add("load", a.LoadSession)
-		if s := a.SessionCapabilities; s != nil {
-			add("list", s.List != nil)
-			add("resume", s.Resume != nil)
-			add("close", s.Close != nil)
-			add("delete", s.Delete != nil)
-		}
-		add("images", a.PromptCapabilities != nil && a.PromptCapabilities.Image)
-	}
-	add("fork", c.canFork)
-	add("steer", c.canSteer)
-	c.conn.log.Info("agent initialized", append(args, "caps", strings.Join(caps, ","))...)
-}
-
-// opened logs a session the agent opened (new, loaded, forked), or failed
-// to (conn logs why).
-func (c *Client) opened(err error, method, session string, start time.Time, args ...any) {
-	if err == nil {
-		c.conn.log.Info(method, append([]any{"session", session, "took", time.Since(start).Round(time.Millisecond)}, args...)...)
-	}
-}
 
 // DebugPrefix starts a line of an agent's stderr that is logged at DEBUG,
 // and only then: a bridge of Nushi's own writes its calls so.
@@ -97,6 +33,13 @@ type stderrLines struct {
 	tokens  float64
 	last    time.Time
 	dropped int
+}
+
+// setLog has the lines logged to log from now on.
+func (s *stderrLines) setLog(log *slog.Logger) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.log = log
 }
 
 func (s *stderrLines) Write(p []byte) (int, error) {

@@ -1,13 +1,13 @@
 package ante
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/toolcall"
 )
 
@@ -55,12 +55,11 @@ func (s *session) approve(turnID string, tools []toolUse, olds map[string]toolca
 	for i, t := range tools {
 		wg.Go(func() {
 			call := s.toolCall(t, "pending", olds)
-			req := acp.RequestPermissionRequest{SessionID: acp.SessionID(s.id), Options: permissionOptions,
+			req := &acp.RequestPermissionRequest{SessionID: acp.SessionID(s.id), Options: permissionOptions,
 				ToolCall: acp.ToolCallUpdate{ToolCallID: call.ToolCallID, Title: call.Title, Kind: call.Kind, Status: call.Status,
 					Content: call.Content, Locations: call.Locations, RawInput: call.RawInput}}
-			var resp acp.RequestPermissionResponse
 			d := "Deny"
-			if s.b.peer.Call(s.b.ctx, "session/request_permission", req, &resp) == nil && resp.Outcome.Selected != nil {
+			if resp, err := s.b.client.RequestPermission(s.b.ctx, req); err == nil && resp.Outcome.Selected != nil {
 				switch resp.Outcome.Selected.OptionID {
 				case "allow_once":
 					d = "Accept"
@@ -105,11 +104,12 @@ type questions struct {
 func (s *session) ask(turnID string, q questions) {
 	reply := any("Dismissed")
 	if s.b.elicits.Load() {
-		var resp acp.CreateElicitationResponse
-		req := acp.CreateElicitationRequest{Mode: "form", Message: message(q), SessionID: acp.SessionID(s.id),
-			ToolCallID: acp.ToolCallID(q.ToolUseID), RequestedSchema: &acp.ElicitationSchema{Type: "object", Properties: form(q)}}
-		if s.b.peer.Call(s.b.ctx, "elicitation/create", req, &resp) == nil && resp.Action == "accept" {
-			reply = map[string]any{"Answered": answers(q, resp.Content)}
+		resp, err := s.b.client.CreateElicitation(s.b.ctx, &acp.CreateElicitationRequest{Message: message(q), Form: &acp.ElicitationFormMode{
+			SessionID: acp.SessionID(s.id), ToolCallID: acp.ToolCallID(q.ToolUseID),
+			RequestedSchema: acp.ElicitationSchema{Type: acp.ElicitationSchemaTypeObject, Properties: form(q)},
+		}})
+		if err == nil && resp.Accept != nil {
+			reply = map[string]any{"Answered": answers(q, resp.Accept.Content)}
 		}
 	}
 	_ = s.h.send(map[string]any{"QuestionResponse": map[string]any{"turn_id": turnID, "tool_use_id": q.ToolUseID, "reply": reply}}) // as above
@@ -122,48 +122,41 @@ func message(q questions) string {
 	return "Ante has some questions"
 }
 
-// form is the form's properties, in order (JSON objects keep it on the
-// wire, and the client reads it so).
-func form(q questions) json.RawMessage {
-	var b bytes.Buffer
-	b.WriteByte('{')
+// form is the form's properties, in order.
+func form(q questions) acp.ElicitationProperties {
+	var props acp.ElicitationProperties
 	for i, qu := range q.Questions {
 		var opts []acp.EnumOption
 		for _, o := range qu.Options {
 			opts = append(opts, acp.EnumOption{Const: o.Label, Title: o.Label, Description: o.Description})
 		}
-		field := map[string]any{"type": "string", "title": qu.Header, "description": qu.Question, "oneOf": opts}
+		field := acp.ElicitationPropertySchema{String: &acp.StringPropertySchema{Title: qu.Header, Description: qu.Question, OneOf: opts}}
 		if qu.MultiSelect {
-			field = map[string]any{"type": "array", "title": qu.Header, "description": qu.Question, "items": map[string]any{"anyOf": opts}}
+			field = acp.ElicitationPropertySchema{Array: &acp.MultiSelectPropertySchema{Title: qu.Header, Description: qu.Question,
+				Items: acp.MultiSelectItems{Titled: &acp.TitledMultiSelectItems{AnyOf: opts}}}}
 		}
-		f, _ := json.Marshal(field) //nolint:errchkjson // strings, maps and slices of them
-		if i > 0 {
-			b.WriteByte(',')
-		}
-		fmt.Fprintf(&b, `"q%d":%s,"q%d_other":{"type":"string","title":"Other"}`, i, f, i)
+		props = append(props, acp.ElicitationProperty{Name: fmt.Sprintf("q%d", i), Schema: field},
+			acp.ElicitationProperty{Name: fmt.Sprintf("q%d_other", i), Schema: acp.ElicitationPropertySchema{String: &acp.StringPropertySchema{Title: "Other"}}})
 	}
-	b.WriteByte('}')
-	return b.Bytes()
+	return props
 }
 
 // answers reads the form's content back, a QuestionAnswer per question:
 // the labels picked, and the "Other" text as its note.
-func answers(q questions, content json.RawMessage) []map[string]any {
-	var values map[string]json.RawMessage
-	_ = json.Unmarshal(content, &values)
+func answers(q questions, content map[string]acp.ElicitationContentValue) []map[string]any {
 	out := []map[string]any{}
 	for i := range q.Questions {
 		selected := []string{}
-		var one string
-		if json.Unmarshal(values[fmt.Sprintf("q%d", i)], &one) == nil && one != "" {
-			selected = append(selected, one)
-		} else {
-			_ = json.Unmarshal(values[fmt.Sprintf("q%d", i)], &selected)
+		v := content[fmt.Sprintf("q%d", i)]
+		switch {
+		case v.String != nil && *v.String != "":
+			selected = append(selected, *v.String)
+		case v.StringArray != nil:
+			selected = v.StringArray
 		}
 		a := map[string]any{"selected": selected}
-		var note string
-		if json.Unmarshal(values[fmt.Sprintf("q%d_other", i)], &note) == nil && strings.TrimSpace(note) != "" {
-			a["note"] = note
+		if note := content[fmt.Sprintf("q%d_other", i)].String; note != nil && strings.TrimSpace(*note) != "" {
+			a["note"] = *note
 		}
 		out = append(out, a)
 	}

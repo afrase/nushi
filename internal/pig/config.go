@@ -2,13 +2,12 @@ package pig
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
 	"time"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
 )
 
 // state is what pig's get_state says of the session it holds.
@@ -48,28 +47,23 @@ func (s *session) options(ctx context.Context, st *state) ([]acp.SessionConfigOp
 	if err := s.p.call(ctx, map[string]any{"type": "get_available_thinking_levels"}, &levels); err != nil {
 		return nil, err
 	}
-	type value struct {
-		Value string `json:"value"`
-		Name  string `json:"name"`
-	}
+	type value = acp.SessionConfigSelectOption
 	option := func(id, name, category, current string, values []value) acp.SessionConfigOption {
-		cur, _ := json.Marshal(current)
-		opts, _ := json.Marshal(values)
 		return acp.SessionConfigOption{ID: acp.SessionConfigID(id), Name: name, Category: acp.SessionConfigOptionCategory(category),
-			Type: "select", CurrentValue: cur, Options: opts}
+			Select: &acp.SessionConfigSelect{CurrentValue: acp.SessionConfigValueID(current), Options: acp.SessionConfigSelectOptions{Ungrouped: values}}}
 	}
 	var out []acp.SessionConfigOption
 	if len(models.Models) > 0 && st.Model != nil {
 		var values []value
 		for _, m := range models.Models {
-			values = append(values, value{m.Provider + "/" + m.ID, m.Name})
+			values = append(values, value{Value: acp.SessionConfigValueID(m.Provider + "/" + m.ID), Name: m.Name})
 		}
 		out = append(out, option("model", "Model", "model", st.Model.Provider+"/"+st.Model.ID, values))
 	}
 	if len(levels.Levels) > 1 {
 		var values []value
 		for _, l := range levels.Levels {
-			values = append(values, value{l, l})
+			values = append(values, value{Value: acp.SessionConfigValueID(l), Name: l})
 		}
 		out = append(out, option("thinking", "Thinking", "thought_level", st.ThinkingLevel, values))
 	}
@@ -136,7 +130,7 @@ func (b *bridge) usage(s *session) {
 		return
 	}
 	b.update(s.id, acp.SessionUpdate{SessionUpdate: "usage_update", UsageUpdate: &acp.UsageUpdate{
-		Used: used, Size: st.Context.Window, Cost: &acp.Cost{Amount: st.Cost, Currency: "USD"}}})
+		Used: uint64(max(used, 0)), Size: uint64(max(st.Context.Window, 0)), Cost: &acp.Cost{Amount: st.Cost, Currency: "USD"}}})
 }
 
 // commands tells the client the session's slash commands: the bridge's

@@ -8,7 +8,8 @@ import (
 	"slices"
 	"time"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -27,7 +28,7 @@ type opened struct {
 // fork a new one that starts with a copy of it (session/fork). The agent
 // stops if that fails.
 func (c *chat) openSession(ctx context.Context, sid, folder string, fork bool) (opened, error) {
-	// The agent's lines name the sessions it opens (see acp's log.go).
+	// The agent's lines name the sessions it opens (see internal/agentproc).
 	agent, init, err := initialize(ctx, c.kind.launch, c, c.dialect.InitMeta, c.logger("", folder))
 	if err != nil {
 		return opened{}, c.kind.explain(err)
@@ -51,7 +52,7 @@ func (c *chat) openSession(ctx context.Context, sid, folder string, fork bool) (
 		err = errors.New("the agent can't reopen sessions")
 	default:
 		var resp *acp.LoadSessionResponse
-		if resp, err = agent.LoadSession(ctx, acp.LoadSessionRequest{SessionID: acp.SessionID(sid), Cwd: folder, MCPServers: []acp.MCPServer{}}); err == nil {
+		if resp, err = agent.LoadSession(ctx, &acp.LoadSessionRequest{SessionID: acp.SessionID(sid), Cwd: folder}); err == nil {
 			o.config = c.configFrom(resp.ConfigOptions, resp.Modes)
 		}
 	}
@@ -64,7 +65,7 @@ func (c *chat) openSession(ctx context.Context, sid, folder string, fork bool) (
 
 // newSession has agent start a session in folder.
 func (c *chat) newSession(ctx context.Context, agent Agent, folder string) (string, []model.ConfigOption, error) {
-	resp, err := agent.NewSession(ctx, acp.NewSessionRequest{Cwd: folder, MCPServers: []acp.MCPServer{}})
+	resp, err := agent.NewSession(ctx, &acp.NewSessionRequest{Cwd: folder})
 	if err != nil {
 		return "", nil, err
 	}
@@ -78,7 +79,7 @@ func (c *chat) newSession(ctx context.Context, agent Agent, folder string) (stri
 func (c *chat) forkSession(ctx context.Context, agent Agent, sid, folder string, meta map[string]any) (string, []model.ConfigOption, error) {
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Minute)
 	defer cancel()
-	resp, err := agent.ForkSession(ctx, acp.ForkSessionRequest{SessionID: acp.SessionID(sid), Cwd: folder, MCPServers: []acp.MCPServer{}, Meta: meta})
+	resp, err := agent.ForkSession(ctx, &acp.ForkSessionRequest{SessionID: acp.SessionID(sid), Cwd: folder, Meta: meta})
 	if err != nil {
 		return "", nil, err
 	}
@@ -87,14 +88,14 @@ func (c *chat) forkSession(ctx context.Context, agent Agent, sid, folder string,
 
 // initialize launches an agent and initializes the connection, with meta
 // as the client's _meta; the agent stops if that fails.
-func initialize(ctx context.Context, launch Launch, h acp.Handler, meta map[string]any, log *slog.Logger) (Agent, *acp.InitializeResponse, error) {
+func initialize(ctx context.Context, launch Launch, h acp.Client, meta map[string]any, log *slog.Logger) (Agent, *acp.InitializeResponse, error) {
 	agent, err := launch(h, log)
 	if err != nil {
 		log.Warn("agent not started", "err", err)
 		return nil, nil, fmt.Errorf("start agent: %w", err)
 	}
-	init, err := agent.Initialize(ctx, acp.InitializeRequest{
-		ProtocolVersion: acp.Version,
+	init, err := agent.Initialize(ctx, &acp.InitializeRequest{
+		ProtocolVersion: acp.LatestProtocolVersion,
 		ClientCapabilities: &acp.ClientCapabilities{
 			Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}},
 			Meta:        meta,

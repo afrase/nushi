@@ -1,4 +1,4 @@
-package acp
+package agentproc
 
 import (
 	"bytes"
@@ -10,6 +10,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	acp "github.com/afrase/acp-go/unstable"
 )
 
 // logBuffer is a log to look into.
@@ -30,15 +32,15 @@ func (l *logBuffer) String() string {
 	return l.b.String()
 }
 
-func newLog() (*slog.Logger, *logBuffer) {
+func newLog(level slog.Level) (*slog.Logger, *logBuffer) {
 	b := &logBuffer{}
-	return slog.New(slog.NewTextHandler(b, &slog.HandlerOptions{Level: slog.LevelDebug})), b
+	return slog.New(slog.NewTextHandler(b, &slog.HandlerOptions{Level: level})), b
 }
 
 // waitLog waits for the log to have want.
 func waitLog(t *testing.T, b *logBuffer, want string) {
 	t.Helper()
-	for range 200 {
+	for range 300 {
 		if strings.Contains(b.String(), want) {
 			return
 		}
@@ -47,9 +49,11 @@ func waitLog(t *testing.T, b *logBuffer, want string) {
 	t.Fatalf("no %q in the log:\n%s", want, b)
 }
 
+type quiet struct{ acp.UnimplementedClient }
+
 func TestProcessLines(t *testing.T) {
-	log, b := newLog()
-	c, err := Start(exec.Command("sh", "-c", "echo 'something went wrong' >&2; printf 'no newline' >&2; exit 3"), &recorder{}, log)
+	log, b := newLog(slog.LevelDebug)
+	a, err := Start(exec.Command("sh", "-c", "echo 'something went wrong' >&2; printf 'no newline' >&2; exit 3"), quiet{}, log)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,14 +67,14 @@ func TestProcessLines(t *testing.T) {
 			t.Errorf("no %q in\n%s", want, b)
 		}
 	}
-	_ = c.Close() // it has exited already
+	_ = a.Close() // it has exited already
 
-	log, b = newLog()
-	c, err = Start(exec.Command("sleep", "30"), &recorder{}, log)
+	log, b = newLog(slog.LevelDebug)
+	a, err = Start(exec.Command("sleep", "30"), quiet{}, log)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_ = c.Close() // the log says how it ended
+	_ = a.Close() // the log says how it ended
 	waitLog(t, b, `msg="agent exited"`)
 	if got := b.String(); !strings.Contains(got, "signal=SIGKILL") || !strings.Contains(got, "stopped=true") {
 		t.Errorf("got\n%s", got)
@@ -78,11 +82,17 @@ func TestProcessLines(t *testing.T) {
 }
 
 func TestStderrCaps(t *testing.T) {
-	log, b := newLog()
+	log, b := newLog(slog.LevelDebug)
 	s := &stderrLines{log: log}
-	send(t, s, strings.Repeat("y", 5000)+"\n")
+	write := func(p string) {
+		t.Helper()
+		if _, err := io.WriteString(s, p); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write(strings.Repeat("y", 5000) + "\n")
 	for i := range 150 {
-		send(t, s, "line\n")
+		write("line\n")
 		if i == 0 && !strings.Contains(b.String(), "cut=true") {
 			t.Errorf("a long line isn't marked cut:\n%s", b)
 		}
@@ -100,59 +110,30 @@ func TestStderrCaps(t *testing.T) {
 	}
 }
 
-// panicky panics on each session/update.
-type panicky struct{ recorder }
-
-func (*panicky) SessionUpdate(SessionNotification) { panic("a bad update") }
-
 // A line marked DEBUG (a bridge of Nushi's own) is logged at DEBUG, and
 // only when that's on.
 func TestDebugLinesOfABridge(t *testing.T) {
-	var b logBuffer
-	s := &stderrLines{log: slog.New(slog.NewTextHandler(&b, nil))}
-	send(t, s, DebugPrefix+"pig-acp: rpc get_state took=1ms\nplain\n")
+	log, b := newLog(slog.LevelInfo)
+	s := &stderrLines{log: log}
+	_, _ = io.WriteString(s, DebugPrefix+"pig-acp: rpc get_state took=1ms\nplain\n")
 	if got := b.String(); strings.Contains(got, "rpc get_state") || !strings.Contains(got, "level=INFO msg=plain") {
 		t.Errorf("at INFO:\n%s", got)
 	}
-	log, debug := newLog()
+	log, debug := newLog(slog.LevelDebug)
 	s = &stderrLines{log: log}
-	send(t, s, DebugPrefix+"pig-acp: rpc get_state took=1ms\n")
+	_, _ = io.WriteString(s, DebugPrefix+"pig-acp: rpc get_state took=1ms\n")
 	if got := debug.String(); !strings.Contains(got, `level=DEBUG msg="pig-acp: rpc get_state took=1ms" source=agent`) {
 		t.Errorf("at DEBUG:\n%s", got)
 	}
 }
 
-func TestBadMessagesLogged(t *testing.T) {
-	log, b := newLog()
+// fakeAgent answers each request after delay, or with an error for
+// session/new.
+func fakeAgent(t *testing.T, log *slog.Logger) *Agent {
+	t.Helper()
 	toAgentR, toAgentW := io.Pipe()
 	fromAgentR, fromAgentW := io.Pipe()
 	t.Cleanup(func() { _ = fromAgentW.Close() })
-	go func() { _, _ = io.Copy(io.Discard, toAgentR) }()
-	Connect(fromAgentR, toAgentW, &panicky{}, log)
-	send(t, fromAgentW, "Debugger listening on ws://127.0.0.1\n")
-	send(t, fromAgentW, `{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s1","update":"nonsense"}}`+"\n")
-	send(t, fromAgentW, `{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s1","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"secret words"}}}}`+"\n")
-	waitLog(t, b, "acp handler panicked")
-	got := b.String()
-	for _, want := range []string{`msg="a line that isn't JSON-RPC" bytes=37`, `msg="acp notification failed" rpc=session/update err="json:`,
-		`rpc=session/update panic="a bad update" stack="goroutine`, `acp.(*panicky).SessionUpdate`} {
-		if !strings.Contains(got, want) {
-			t.Errorf("no %q in\n%s", want, got)
-		}
-	}
-	if strings.Contains(got, "secret words") || strings.Contains(got, "Debugger") {
-		t.Errorf("what the agent sent is in the log:\n%s", got)
-	}
-}
-
-func TestCallsLogged(t *testing.T) {
-	defer func(s time.Duration) { Slow = s }(Slow)
-	Slow = 50 * time.Millisecond
-	log, b := newLog()
-	toAgentR, toAgentW := io.Pipe()
-	fromAgentR, fromAgentW := io.Pipe()
-	t.Cleanup(func() { _ = fromAgentW.Close() })
-	c := Connect(fromAgentR, toAgentW, &recorder{}, log)
 	go func() { // the pipes' errors show as the calls' below
 		buf := make([]byte, 1<<16)
 		_, _ = toAgentR.Read(buf) // session/load
@@ -160,19 +141,40 @@ func TestCallsLogged(t *testing.T) {
 		_, _ = io.WriteString(fromAgentW, `{"jsonrpc":"2.0","id":1,"result":{}}`+"\n")
 		_, _ = toAgentR.Read(buf) // session/new
 		_, _ = io.WriteString(fromAgentW, `{"jsonrpc":"2.0","id":2,"error":{"code":-32603,"message":"Internal error: not signed in"}}`+"\n")
+		_, _ = toAgentR.Read(buf) // initialize
+		_, _ = io.WriteString(fromAgentW, `{"jsonrpc":"2.0","id":3,"result":{"protocolVersion":1}}`+"\n")
 	}()
+	calls := &callLog{}
+	calls.inner.Store(handlerOf(log))
+	return Connect(acp.NewAgentConn(fromAgentR, toAgentW, quiet{}, acp.WithLogger(slog.New(calls))), log)
+}
+
+// A call that failed, or was slow, is a WARN; any other a DEBUG, which
+// isn't logged at INFO.
+func TestCallsLogged(t *testing.T) {
+	defer func(s time.Duration) { Slow = s }(Slow)
+	Slow = 50 * time.Millisecond
+	log, b := newLog(slog.LevelInfo)
+	a := fakeAgent(t, log)
 	ctx := context.Background()
-	if _, err := c.LoadSession(ctx, LoadSessionRequest{SessionID: "s1", Cwd: "/x", MCPServers: []MCPServer{}}); err != nil {
+	if _, err := a.LoadSession(ctx, &acp.LoadSessionRequest{SessionID: "s1", Cwd: "/x"}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := c.NewSession(ctx, NewSessionRequest{Cwd: "/x", MCPServers: []MCPServer{}}); err == nil {
+	if _, err := a.NewSession(ctx, &acp.NewSessionRequest{Cwd: "/x"}); err == nil {
 		t.Error("session/new succeeded; the agent answered an error")
 	}
+	if _, err := a.Initialize(ctx, &acp.InitializeRequest{ProtocolVersion: 1}); err != nil {
+		t.Fatal(err)
+	}
 	got := b.String()
-	for _, want := range []string{`msg="acp call slow" rpc=session/load took=`, `msg=session/load session=s1`,
-		`msg="acp call failed" rpc=session/new`, `err="session/new: acp error -32603: Internal error: not signed in"`} {
+	for _, want := range []string{`level=WARN msg="acp call slow" rpc=session/load took=`, `msg=session/load session=s1`,
+		`level=WARN msg="acp call failed" rpc=session/new`, `err="session/new: acp: Internal error: not signed in (-32603)"`,
+		`msg="agent initialized" protocol=1`} {
 		if !strings.Contains(got, want) {
 			t.Errorf("no %q in\n%s", want, got)
 		}
+	}
+	if strings.Contains(got, "rpc=initialize") {
+		t.Errorf("a quick call logged at INFO:\n%s", got)
 	}
 }

@@ -1,11 +1,13 @@
 package chats
 
 import (
+	"context"
 	"reflect"
 	"testing"
 	"time"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -68,9 +70,9 @@ func TestQueueSteersBetweenToolCalls(t *testing.T) {
 	if _, steered := agent.texts(); len(steered) != 0 {
 		t.Fatalf("steered %q before the agent's chance", steered)
 	}
-	c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call",
+	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call",
 		ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "ls", Status: "in_progress"}}})
-	c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call_update",
+	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call_update",
 		ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed"}}})
 	eventually(t, c, func() bool { return len(c.items) == 3 && c.items[2].Text == "two" })
 	eventually(t, c, func() bool { _, steered := agent.texts(); return reflect.DeepEqual(steered, []string{"two"}) })
@@ -105,9 +107,9 @@ func TestQueueWaitsOutASubagentsSteps(t *testing.T) {
 	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
 	noErr(t, svc.Prompt(c.id, model.Message{Text: "two"}, SendQueue))
 	call := func(id string, meta map[string]any) {
-		c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call",
+		_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call",
 			ToolCall: &acp.ToolCall{ToolCallID: acp.ToolCallID(id), Title: "ls", Status: "in_progress", Meta: meta}}})
-		c.SessionUpdate(acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call_update",
+		_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call_update",
 			ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: acp.ToolCallID(id), Status: "completed"}}})
 	}
 	call("sub1", map[string]any{"claudeCode": map[string]any{"parentToolUseId": "agent1"}})

@@ -21,7 +21,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
+
+	"github.com/afrase/nushi/internal/agentproc"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -48,14 +50,14 @@ func Also() []string {
 // Start starts the bridge, as claude.Start does Claude's adapter: this
 // executable's Command, in dir (the daemon's folder), its stderr to
 // log.
-func Start(dir string, h acp.Handler, log *slog.Logger) (*acp.Client, error) {
+func Start(dir string, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
 	self, err := os.Executable()
 	if err != nil {
 		return nil, err
 	}
 	cmd := exec.Command(self, Command) //nolint:gosec,noctx // lives until Stop or Close, not a context; this nushid as the bridge
 	cmd.Dir = dir
-	return acp.Start(cmd, h, log)
+	return agentproc.Start(cmd, client, log)
 }
 
 // warnf writes a line to the bridge's stderr, which the daemon logs with

@@ -7,7 +7,7 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/afrase/nushi/acp"
+	acp "github.com/afrase/acp-go/unstable"
 )
 
 // Close stops every chat's agent, all at once, as stop does: a running turn
@@ -38,7 +38,7 @@ func (s *Service) Close() {
 // agents still running when it has ended the chats' (those a reopen or a
 // move was opening meanwhile) are closed too.
 func (s *Service) started(launch Launch) Launch {
-	return func(h acp.Handler, log *slog.Logger) (Agent, error) {
+	return func(h acp.Client, log *slog.Logger) (Agent, error) {
 		s.mu.Lock()
 		closing := s.closing
 		s.mu.Unlock()
