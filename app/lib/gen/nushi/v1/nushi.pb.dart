@@ -14496,12 +14496,12 @@ class JiraJqlField extends $pb.GeneratedMessage {
 class SuggestJiraJqlRequest extends $pb.GeneratedMessage {
   factory SuggestJiraJqlRequest({
     $core.String? site,
-    $core.String? field_2,
+    $core.String? fieldName,
     $core.String? prefix,
   }) {
     final result = SuggestJiraJqlRequest._();
     if (site != null) result.site = site;
-    if (field_2 != null) result.field_2 = field_2;
+    if (fieldName != null) result.fieldName = fieldName;
     if (prefix != null) result.prefix = prefix;
     return result;
   }
@@ -14520,7 +14520,7 @@ class SuggestJiraJqlRequest extends $pb.GeneratedMessage {
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: SuggestJiraJqlRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'site')
-    ..aOS(2, _omitFieldNames ? '' : 'field')
+    ..aOS(2, _omitFieldNames ? '' : 'fieldName')
     ..aOS(3, _omitFieldNames ? '' : 'prefix')
     ..hasRequiredFields = false;
 
@@ -14558,13 +14558,13 @@ class SuggestJiraJqlRequest extends $pb.GeneratedMessage {
   void clearSite() => $_clearField(1);
 
   @$pb.TagNumber(2)
-  $core.String get field_2 => $_getSZ(1);
+  $core.String get fieldName => $_getSZ(1);
   @$pb.TagNumber(2)
-  set field_2($core.String value) => $_setString(1, value);
+  set fieldName($core.String value) => $_setString(1, value);
   @$pb.TagNumber(2)
-  $core.bool hasField_2() => $_has(1);
+  $core.bool hasFieldName() => $_has(1);
   @$pb.TagNumber(2)
-  void clearField_2() => $_clearField(2);
+  void clearFieldName() => $_clearField(2);
 
   @$pb.TagNumber(3)
   $core.String get prefix => $_getSZ(2);

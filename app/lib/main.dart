@@ -12,6 +12,7 @@ import 'package:nushi/chat_view.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/details_panel.dart';
 import 'package:nushi/folder_button.dart';
+import 'package:nushi/jira_view.dart';
 import 'package:nushi/mcp.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/panes.dart';
@@ -93,6 +94,12 @@ class _NushiAppState extends State<NushiApp> {
       PlatformMenu(
         label: 'View',
         menus: [
+          PlatformMenuItem(
+            label: 'Jira',
+            shortcut: jiraKey,
+            onSelected: () =>
+                widget.daemon.showJira(open: !widget.daemon.jiraOpen),
+          ),
           _appearance('Light Appearance', ThemeMode.light),
           _appearance('Dark Appearance', ThemeMode.dark),
           _appearance('System Appearance', ThemeMode.system),
@@ -114,6 +121,8 @@ class _NushiAppState extends State<NushiApp> {
           bindings: {
             settingsKey: () => showSettings(context, widget.daemon.client),
             newChatKey: () => newChat(context, widget.daemon, ''),
+            jiraKey: () =>
+                widget.daemon.showJira(open: !widget.daemon.jiraOpen),
           },
           // A terminal, which keeps ⌘ keys, sends ⌘N here.
           child: Actions(
@@ -171,6 +180,8 @@ class _Shell extends StatelessWidget {
             Expanded(
               child: daemon.trustAsk != null
                   ? TrustCard(daemon.trustAsk!)
+                  : daemon.jiraOpen
+                  ? JiraView(daemon)
                   : daemon.mcpFolder != null
                   ? McpView(daemon: daemon, folder: daemon.mcpFolder!)
                   : chat == null

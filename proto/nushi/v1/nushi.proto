@@ -1597,7 +1597,7 @@ message JiraJqlField {
 
 message SuggestJiraJqlRequest {
   string site = 1;
-  string field = 2;
+  string field_name = 2;
   string prefix = 3;
 }
 

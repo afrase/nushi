@@ -107,6 +107,17 @@ class Daemon extends ChangeNotifier {
   void showMcp(String? folder) {
     trustAsk?.decide(start: false);
     mcpFolder = folder;
+    jiraOpen = false;
+    notifyListeners();
+  }
+
+  /// Whether Jira shows in place of the chat.
+  bool jiraOpen = false;
+
+  void showJira({required bool open}) {
+    trustAsk?.decide(start: false);
+    jiraOpen = open;
+    if (open) mcpFolder = null;
     notifyListeners();
   }
 
@@ -354,6 +365,7 @@ class Daemon extends ChangeNotifier {
     trustAsk?.decide(start: false);
     selectedId = chatId;
     mcpFolder = null;
+    jiraOpen = false;
     final chat = chats[chatId];
     if (chat != null) unawaited(_load(chat));
     notifyListeners();

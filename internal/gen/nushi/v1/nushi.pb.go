@@ -11302,7 +11302,7 @@ func (x *JiraJqlField) GetOperators() []string {
 type SuggestJiraJqlRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Site          string                 `protobuf:"bytes,1,opt,name=site,proto3" json:"site,omitempty"`
-	Field         string                 `protobuf:"bytes,2,opt,name=field,proto3" json:"field,omitempty"`
+	FieldName     string                 `protobuf:"bytes,2,opt,name=field_name,json=fieldName,proto3" json:"field_name,omitempty"`
 	Prefix        string                 `protobuf:"bytes,3,opt,name=prefix,proto3" json:"prefix,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -11345,9 +11345,9 @@ func (x *SuggestJiraJqlRequest) GetSite() string {
 	return ""
 }
 
-func (x *SuggestJiraJqlRequest) GetField() string {
+func (x *SuggestJiraJqlRequest) GetFieldName() string {
 	if x != nil {
-		return x.Field
+		return x.FieldName
 	}
 	return ""
 }
@@ -12663,10 +12663,11 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\fJiraJqlField\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
 	"\adisplay\x18\x02 \x01(\tR\adisplay\x12\x1c\n" +
-	"\toperators\x18\x03 \x03(\tR\toperators\"Y\n" +
+	"\toperators\x18\x03 \x03(\tR\toperators\"b\n" +
 	"\x15SuggestJiraJqlRequest\x12\x12\n" +
-	"\x04site\x18\x01 \x01(\tR\x04site\x12\x14\n" +
-	"\x05field\x18\x02 \x01(\tR\x05field\x12\x16\n" +
+	"\x04site\x18\x01 \x01(\tR\x04site\x12\x1d\n" +
+	"\n" +
+	"field_name\x18\x02 \x01(\tR\tfieldName\x12\x16\n" +
 	"\x06prefix\x18\x03 \x01(\tR\x06prefix\"F\n" +
 	"\x16SuggestJiraJqlResponse\x12,\n" +
 	"\x06values\x18\x01 \x03(\v2\x14.nushi.v1.JiraOptionR\x06values\";\n" +
