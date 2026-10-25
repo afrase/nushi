@@ -1,10 +1,11 @@
 // Package npm installs npm packages into a folder from a lockfile, as `npm
 // ci` does, so every package's version and hash is the lockfile's. Nothing
-// outside the folder is touched: npm's cache and logs go to a folder of the
-// install's own, removed after; no install scripts run; optional
-// dependencies (prebuilt programs for each platform) are left out. It runs
-// the npm on PATH, which reads the user's npm settings (a registry or
-// proxy of their own).
+// outside the folder's parent is touched: npm runs under macOS's sandbox
+// with every other file write denied; its cache goes to a folder of the
+// install's own, removed after, and it keeps no logs; no install scripts
+// run; optional dependencies (prebuilt programs for each platform) are
+// left out. It runs the npm on PATH, which reads the user's npm settings (a
+// registry or proxy of their own).
 package npm
 
 import (
@@ -16,6 +17,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -49,9 +51,14 @@ func (in Installer) Install(ctx context.Context, lock fs.FS, folder string, read
 			return err
 		}
 	}
+	real, err := filepath.EvalSymlinks(parent) // what the sandbox sees
+	if err != nil {
+		return err
+	}
+	profile := `(version 1)(allow default)(deny file-write* (require-not (require-any (literal "/dev/null") (subpath ` + strconv.Quote(real) + `))))`
 	cache := filepath.Join(tmp, ".npm")
-	cmd := exec.CommandContext(ctx, "npm", "ci", "--omit=optional", "--omit=dev", "--ignore-scripts",
-		"--no-audit", "--no-fund", "--update-notifier=false", "--cache", cache)
+	cmd := exec.CommandContext(ctx, "/usr/bin/sandbox-exec", "-p", profile, "npm", "ci", "--omit=optional", "--omit=dev", "--ignore-scripts",
+		"--no-audit", "--no-fund", "--update-notifier=false", "--logs-max=0", "--cache", cache)
 	cmd.Dir = tmp
 	cmd.Env = append(os.Environ(), in.Env...)
 	if out, err := cmd.CombinedOutput(); err != nil {

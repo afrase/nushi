@@ -389,6 +389,7 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 140. A failed start of a CLI version Nushi wasn't tested with says which versions it was (`Kind.Explain`) | 14110 | 990 | 15721 | 1864 | 1170 |
 | 141. Settings › Agents: each agent as found (version and path, or Not installed and Get it), Set up with what it downloads, Update, Remove | 14110 | 990 | 16041 | 1864 | 1170 |
 | 142. First run: with no agent ready the empty pane points to Settings › Agents; the New chat dialog leaves out agents not installed and dims one not set up, whose Set up goes there | 14110 | 990 | 16125 | 1864 | 1170 |
+| 143. Every change outside the data folder listed; `npm ci` under the sandbox, writes only in `agents/`, no logs | 14117 | 990 | 16125 | 1864 | 1170 |
 
 Steps over the ~500-line tripwire (code and tests, without generated code): 132 (830, open sessions and forks for four agents), 131 (544, the sessions step), 127 (504, listing), 98 (2,384 with its tests: Ante's whole bridge and its fake), 99 (901: two agents, two trust packages, the shared trust files), 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 removed more than it added.
 
@@ -582,6 +583,30 @@ modelRoles:
 ```
 
   For `omp` in a terminal (`omp --resume <id>`), install Bun and omp yourself: `brew install oven-sh/bun/bun` (or `npm i -g bun`) and `bun add -g @oh-my-pi/pi-coding-agent@18.12.6`.
+
+## What Nushi changes outside its data folder (milestone Z)
+
+Everything else Nushi writes is in its data folder (`~/Library/Application Support/Nushi`, or `NUSHI_DATA`): chats, settings (`app.json`), trust answers (`trusted.json`), remote keys, the log, scratch chats' folders, and the adapters (`agents/`). Outside it, each change is one you ask for, or the agent's own doing while you use it:
+
+| What | Where | Why |
+|---|---|---|
+| The agent's history and state | Claude: `~/.claude` (projects, sessions, `~/.claude.json`); Codex: `$CODEX_HOME` (sessions, state, shell snapshots, its app-server); Ante: `~/.ante` (sessions, logs, its update check); omp: `~/.omp` | Using the agent: it writes them as in a terminal. Nushi's own steps add to it the way the agent does: side chats, `/context` and rewinds are forks of the session (throwaway ones deleted after), a rename is the agent's, Delete takes a chat's history (Codex archives it). |
+| A copy of a Claude transcript | `~/.claude/projects/<folder>/` | Move (you asked): the copy lets Claude fork the session in the new folder; removed after. |
+| Claude's MCP servers | `~/.claude.json`, through `claude mcp add-json/remove/login/logout` | The MCP view's Add, Edit, Remove, Sign in and out. |
+| A project's MCP switch | `<repo>/.claude/settings.local.json` (its two MCP lists), and that file into `.git/info/exclude` | The MCP view's on/off switch. |
+| A worktree | `<repo>/.worktrees/<name>`, its branch, `.git/info/exclude` | A chat in a new worktree; Delete removes them when asked. |
+| MCP servers started | whatever each server does | Opening the MCP view runs `claude mcp list`, which starts every server to check it, as in a terminal. |
+| A shell | your shell's own files (history) | A terminal you open; the daemon's environment comes from your login shell (`nushid -login`, ADR 0028). |
+| A login item | launchd's per-user list, Login Items | Start at login (Settings). |
+| Ante's prompt images | a private folder in `$TMPDIR` | An image in an Ante prompt; removed when the bridge ends. |
+| The Mac kept awake | `caffeinate` (a process, no file) | Remote access on. |
+| Files you open | macOS's open-panel state (`com.nushihq.Nushi` preferences) | The folder picker. |
+
+What changed in milestone Z:
+- **npx's cache** (`~/.npm/_npx/<hash>`, about 330 MB per adapter with its own Claude Code or Codex, plus omp's Bun): gone. Adapters are set up only when asked, into `agents/` (ADR 0037). Those left in your npx cache from before are yours to delete: `1f872328d1400346` (claude-agent-acp 0.94.0), `4a4ca55c38a52b9f` (codex-acp 2.2.2), `0bc28aba708345f9` (omp 18.12.6 and Bun 1.4.3), `72bcd8a8dc4e8361` (claude-agent-acp 0.91.0).
+- **Finding agents** asks each CLI its version under macOS's sandbox (`sandbox-exec`) with file writes and the network denied: `codex --version` writes its PATH aliases (`$CODEX_HOME/tmp/arg0-macos/…`) otherwise.
+- **Setting up** runs `npm ci` under the sandbox too, with writes allowed only in `agents/`; its cache is a folder of the install's own, removed after; no logs, no update check, no audit.
+- Starting an agent changes nothing beyond the agent's own: Claude and Codex run your own CLIs, not copies; nothing is written to their configs (Codex's trust of a chat's folder is an override codex-acp passes, never written; ADR 0029).
 
 ## Decisions to revisit
 
