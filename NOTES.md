@@ -1,6 +1,39 @@
 # Notes
 
-## Summary (2026-10-25, after step 133: milestone X, opening sessions started elsewhere)
+## Summary (2026-10-25, after step 137: milestone Y, the daemon as a background helper)
+
+Milestone Y, steps 134–137, one commit each on `main`, all pushed (137 fixes what the by-hand check found). `make test` passes. No API change (still 49); the daemon's code changed only in how it starts (`nushid -login`).
+
+- **Why the Dock entry** (found with `lsappinfo`): a process the app spawns stays in the app's resource coalition, detached or not, so after a quit Launch Services kept Nushi as "exited-with-subordinates" and the Dock showed "Nushi Running in Background". Only launchd gives a process a coalition of its own.
+- **The helper** (step 134, ADR 0036): `Contents/Helpers/Nushi Daemon.app`, `com.nushihq.Nushi.daemon`, `LSBackgroundOnly`, the app's icon; the executable is still `nushid`. The app opens it with `open -n -g … --args -login` (`--env NUSHI_DATA=…` when set); `nushid -login` execs the login shell from the user database, which execs `nushid` (same pid, same helper app). `make package` builds and signs it and runs `tools/check-bundle.sh` (layout, Info.plist keys, `codesign --verify --strict` per part and `--deep` for the whole). Measured: no App Nap or background throttling on the helper (timers, CPU, disk and a child process as fast as from a terminal).
+- **Start at login** (steps 135, 137): in Settings, off by default, in the packaged app without `NUSHI_DATA`. `SMAppService` registers `Contents/Library/LaunchAgents/com.nushihq.Nushi.daemon.plist`, whose program is `Contents/Resources/start-daemon`, a script that opens the helper the same way. It works with ad-hoc signing on macOS 27, no approval asked. A script because launchd pins an ad-hoc signed Mach-O program to its cdhash: with `nushid` as the program, a rebuild failed "Launch Constraint Violation", and neither registering again nor launchd's repair (BTM: "Invalid argument", no Team ID) lifted it. No `KeepAlive` (ADR 0036). Step 137: macOS says "not found" for a job never registered, which had hidden the row.
+- **Moving over**: a daemon started from `Contents/MacOS/nushid` runs on; "Restart daemon" stops it by its socket and opens the helper. The data folder is the same.
+
+**Bundle layout**
+```
+Nushi.app/Contents/
+  MacOS/Nushi
+  Helpers/Nushi Daemon.app/Contents/{Info.plist, MacOS/nushid, Resources/AppIcon.icns}
+  Library/LaunchAgents/com.nushihq.Nushi.daemon.plist   (BundleProgram: Contents/Resources/start-daemon, RunAtLoad)
+  Resources/start-daemon                                  (open -n -g <helper> --args -login)
+  Frameworks/, Resources/… as before
+```
+
+**Tried by hand** (a packaged copy in the scratchpad with `NUSHI_DATA=/tmp/nyd`, then the installed app): an app opened through Launch Services (as Finder does) started the helper; its daemon's `PATH` finds `npx`, `codex`, `ante` and `node` (omp isn't on your terminal's `PATH` either; Nushi starts it through npx, which resolved it with that `PATH`); a Claude chat on Haiku in a throwaway repository ran `command -v npx codex ante node` and got the same four paths. "Restart daemon" from the bar (the copy) and from the outdated screen (the installed app, whose daemon from 09:19 was API 48): the old `nushid` stopped, the helper started. After quitting the app: no Nushi in the Dock (the Dock's items through accessibility; before, "Nushi" was there from the old daemon), `lsappinfo` lists only "Nushi Daemon" (BackgroundOnly, its own coalition); Activity Monitor shows "Nushi Daemon" with the Nushi icon. Start at login on: `launchctl print gui/501/com.nushihq.Nushi.daemon` showed it (program `Contents/Resources/start-daemon`, parent `com.nushihq.Nushi`); its first run met the running daemon, which stayed. Restart daemon with it on: the helper restarted, the job stayed "not running". Then `make install` again, the daemon stopped, the job kickstarted as at login, with the app closed: the new helper started with the login shell's `PATH`. Login Items › Allow in the Background lists "Nushi" with its icon. Off: the job is gone from launchd, the daemon kept running.
+
+**Not tried by hand**: a real login or reboot (the job was kickstarted instead); the approval flow ("requiresApproval": macOS didn't ask here; the widget test covers the row); Finder's double-click itself (`open` goes through the same Launch Services path); the iCloud copy on the work Mac.
+
+**Needs your attention**
+- Nothing to restart: I restarted the installed daemon (it now runs from the helper) and turned Start at login off. Turn it on in Settings if you want it; macOS may ask to allow Nushi in Login Items.
+- "Nushi" stays listed under Login Items › Allow in the Background now that it registered once, with its switch on; that switch is macOS's permission, not the setting (the job is unregistered).
+- The iCloud copy fails only `codesign --verify --strict` ("Finder information … not allowed"): iCloud puts `com.apple.FinderInfo` on every bundle folder, the app's and its frameworks' as before. `--verify --deep` passes, and the app runs as before.
+- launchd keeps an "enabled" override for `com.nushihq.Nushi.daemon` (and two for the experiment's labels, `com.nushihq.exp.outer.daemon` and `…daemon2`) in its per-user list; harmless, and only `launchctl` can see them.
+
+**Size**: the daemon went from 13,461 to 13,531 lines of Go, the app from 15,623 to 15,721 lines of Dart; no step over the tripwire.
+
+**Left behind by the testing**: the experiment app and the packaged copy were unregistered from Launch Services and removed (Login Items no longer lists the experiment); `/tmp/nyd` and the throwaway repository were removed. Claude's files of the one test session (its transcript went with Delete; the empty project folder, its `session-env`, `security_warnings_state` files, `sessions/<pid>.key` and shell snapshot) were removed; `~/.claude.json` doesn't name the folder. A `nushi-relay` left running by a failed relay test of milestone V was stopped, and the test now kills its relay when it fails (step 136).
+
+## Summary of milestone X (after step 133: opening sessions started elsewhere)
 
 Milestone X, steps 127–133, one commit each on `main`, all pushed (128 and 130 are the two layout fixes asked for during the milestone). `make test` passes. **API 49** (ListAgentSessions, OpenAgentSession).
 
@@ -131,6 +164,13 @@ Milestone V is phase 1 of mobile: a relay, an end-to-end Noise channel, pairing 
 **Dependencies**: none new (`golang.org/x/sys/unix` was already in).
 
 **Left behind by the testing**: nothing. The dev chats were deleted with Delete (Claude's and Ante's histories with them); the measuring harness's two Claude sessions and their project folders, its Ante session, eight Ante logs and `~/.ante/run/` were removed; `~/.ante` is as it was (file list and checksums). The dev data folder, the temp Codex and omp homes, the scratch folders and the harness were removed. The key is in no file under them, the scratchpad or the repository (grep, the key on stdin); the only hit elsewhere is the milestone S transcript above.
+
+## Demo (milestone Y)
+
+1. With Nushi open, quit it: no "Nushi" stays in the Dock. Activity Monitor lists "Nushi Daemon" with the Nushi icon.
+2. Settings › Start at login: turn it on. System Settings › General › Login Items lists Nushi under Allow in the Background.
+3. Log out and in: the daemon runs before the app is opened (`pgrep -l nushid`), with your PATH: start a Codex chat from the app.
+4. "Restart daemon" (when offered) brings up the helper; `make stop` still stops it.
 
 ## Demo (milestone X)
 
