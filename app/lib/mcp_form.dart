@@ -311,22 +311,32 @@ class _FormState extends State<_Form> {
           ),
         ),
       ),
+      // The switch to JSON at the left, under the fields; Cancel and Add
+      // at the right.
       actions: [
-        Button(
-          label: _asJson ? 'Edit in the form' : 'Edit as JSON',
-          kind: ButtonKind.ghost,
-          onPressed: _toggleJson,
-        ),
-        const SizedBox(width: 60),
-        Button(
-          label: 'Cancel',
-          kind: ButtonKind.ghost,
-          onPressed: () => Navigator.pop(context),
-        ),
-        Button(
-          label: _saving ? 'Saving…' : (_editing ? 'Save' : 'Add'),
-          kind: ButtonKind.primary,
-          onPressed: _saving ? null : _save,
+        SizedBox(
+          width: 520,
+          child: Row(
+            children: [
+              Button(
+                label: _asJson ? 'Edit in the form' : 'Edit as JSON',
+                kind: ButtonKind.ghost,
+                onPressed: _toggleJson,
+              ),
+              const Spacer(),
+              Button(
+                label: 'Cancel',
+                kind: ButtonKind.ghost,
+                onPressed: () => Navigator.pop(context),
+              ),
+              const SizedBox(width: 8),
+              Button(
+                label: _saving ? 'Saving…' : (_editing ? 'Save' : 'Add'),
+                kind: ButtonKind.primary,
+                onPressed: _saving ? null : _save,
+              ),
+            ],
+          ),
         ),
       ],
     );
