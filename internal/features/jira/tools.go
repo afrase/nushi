@@ -28,19 +28,47 @@ func schema(props string, required ...string) json.RawMessage {
 
 const keyProp = `"key":{"type":"string","description":"The issue's key; only this chat's issue is allowed."}`
 
+// named is the chat's issue for the agent: its key, and its summary as it
+// was when the chat started, quoted and on one line.
+func named(is *model.ChatIssue) string {
+	summary := strings.Join(strings.Fields(is.Summary), " ")
+	if summary == "" {
+		return is.Key
+	}
+	if r := []rune(summary); len(r) > 200 {
+		summary = string(r[:200]) + "…"
+	}
+	return fmt.Sprintf("%s (%q)", is.Key, summary)
+}
+
+// Instructions say which issue the chat works on: with no message in the
+// box, this is how the agent knows.
+func (t toolSet) Instructions(g tools.Grant) string {
+	if g.Issue == nil {
+		return ""
+	}
+	k := g.Issue.Key
+	text := "This chat works on Jira issue " + named(g.Issue)
+	if u := t.s.Browse(g.Issue.Site, k); u != "" {
+		text += ", " + u
+	}
+	return text + ". jira_issue reads it, with its recent comments; jira_comment comments on it and jira_transition moves it, " +
+		"when the user asks. These tools reach " + k + " only."
+}
+
 func (t toolSet) Tools(g tools.Grant) []tools.Tool {
 	if g.Issue == nil {
 		return nil
 	}
-	k := g.Issue.Key
+	k, this := g.Issue.Key, named(g.Issue)+", the Jira issue this chat works on"
 	return []tools.Tool{
-		{Name: "jira_issue", Description: "Reads Jira issue " + k + ", this chat's: its fields, description, acceptance criteria, recent comments, links and subtasks, as Markdown.",
+		{Name: "jira_issue", Description: "Reads " + this + ": its fields, description, acceptance criteria, recent comments, links and subtasks, as Markdown.",
 			InputSchema: schema(keyProp)},
-		{Name: "jira_comment", Description: "Adds a comment to Jira issue " + k + ". The comment is Markdown.",
+		{Name: "jira_comment", Description: "Adds a comment to " + this + ". The comment is Markdown.",
 			InputSchema: schema(keyProp+`,"body":{"type":"string","description":"The comment, in Markdown."}`, "body")},
-		{Name: "jira_transitions", Description: "Lists the moves Jira issue " + k + "'s workflow allows now (to which status), and the fields each needs.",
+		{Name: "jira_transitions", Description: "Lists the moves " + k + "'s workflow allows now (to which status), and the fields each needs; " + this + ".",
 			InputSchema: schema(keyProp)},
-		{Name: "jira_transition", Description: "Moves Jira issue " + k + " through one of the moves jira_transitions lists, by its id or name.",
+		{Name: "jira_transition", Description: "Moves " + this + " through one of the moves jira_transitions lists, by its id or name.",
 			InputSchema: schema(keyProp+`,"transition":{"type":"string","description":"The move's id or name."},`+
 				`"fields":{"type":"object","additionalProperties":{"type":"string"},"description":"Values for the fields the move needs, by field id."}`, "transition")},
 	}

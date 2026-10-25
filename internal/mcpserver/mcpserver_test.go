@@ -19,8 +19,15 @@ import (
 
 type fakeTools struct{}
 
-func (fakeTools) List(context.Context) (json.RawMessage, error) {
-	return json.RawMessage(`[{"name":"echo","description":"","inputSchema":{"type":"object"}}]`), nil
+func (fakeTools) List(context.Context) (json.RawMessage, string, error) {
+	return json.RawMessage(`[{"name":"echo","description":"","inputSchema":{"type":"object"}}]`), "This chat works on ACME-12.", nil
+}
+
+// noDaemon is tools whose daemon can't be reached.
+type noDaemon struct{ fakeTools }
+
+func (noDaemon) List(context.Context) (json.RawMessage, string, error) {
+	return nil, "", errors.New("can't reach Nushi")
 }
 
 func (fakeTools) Call(_ context.Context, name string, args json.RawMessage) (string, bool, error) {
@@ -64,7 +71,7 @@ func TestProtocol(t *testing.T) {
 	send := session(t, fakeTools{})
 	init := send(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"claude-code"}}}`, true)
 	res, _ := init["result"].(map[string]any)
-	if res["protocolVersion"] != "2025-06-18" || res["capabilities"] == nil {
+	if res["protocolVersion"] != "2025-06-18" || res["capabilities"] == nil || res["instructions"] != "This chat works on ACME-12." {
 		t.Errorf("initialize: %v", init)
 	}
 	send(`{"jsonrpc":"2.0","method":"notifications/initialized"}`, false)
@@ -90,6 +97,15 @@ func TestProtocol(t *testing.T) {
 	}
 }
 
+// Without the daemon, initialize still answers, without instructions.
+func TestInitializeWithoutDaemon(t *testing.T) {
+	init := session(t, noDaemon{})(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}`, true)
+	res, _ := init["result"].(map[string]any)
+	if _, has := res["instructions"]; res["protocolVersion"] == nil || has {
+		t.Errorf("initialize: %v", init)
+	}
+}
+
 func asJSON(m map[string]any) string {
 	b, _ := json.Marshal(m)
 	return string(b)
@@ -112,9 +128,9 @@ func TestDaemon(t *testing.T) {
 
 	key := svc.Key(tools.Grant{Chat: "c1", Agent: "claude", Issue: &model.ChatIssue{Key: "ACME-12"}})
 	d := Daemon{Socket: sock, Key: key}
-	list, err := d.List(t.Context())
-	if err != nil || !strings.Contains(string(list), `"name":"which"`) {
-		t.Fatalf("list %s, %v", list, err)
+	list, said, err := d.List(t.Context())
+	if err != nil || !strings.Contains(string(list), `"name":"which"`) || said != "For ACME-12." {
+		t.Fatalf("list %s, %q, %v", list, said, err)
 	}
 	text, failed, err := d.Call(t.Context(), "which", nil)
 	if err != nil || failed || text != "c1 ACME-12" {
@@ -124,7 +140,7 @@ func TestDaemon(t *testing.T) {
 		t.Errorf("a tool it doesn't have: %v %v", failed, err)
 	}
 	for _, bad := range []string{"", "not-a-key"} {
-		if _, err := (Daemon{Socket: sock, Key: bad}).List(t.Context()); err == nil {
+		if _, _, err := (Daemon{Socket: sock, Key: bad}).List(t.Context()); err == nil {
 			t.Errorf("key %q listed", bad)
 		}
 	}
@@ -135,6 +151,8 @@ type issueSet struct{}
 func (issueSet) Tools(tools.Grant) []tools.Tool {
 	return []tools.Tool{{Name: "which", InputSchema: json.RawMessage(`{"type":"object"}`)}}
 }
+
+func (issueSet) Instructions(g tools.Grant) string { return "For " + g.Issue.Key + "." }
 
 func (issueSet) Call(_ context.Context, g tools.Grant, _ string, _ json.RawMessage) (string, error) {
 	return g.Chat + " " + g.Issue.Key, nil

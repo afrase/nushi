@@ -11,7 +11,8 @@ import (
 )
 
 // Tools serves a chat's tools to its `nushid tools-mcp` (ADR 0043), on the
-// socket beside the API: /tools/list and /tools/call, the chat's key as
+// socket beside the API: /tools/list (with the sets' instructions) and
+// /tools/call, the chat's key as
 // the bearer token. A key grants that chat's tools and nothing else; the
 // client token isn't asked for, nor accepted in its place.
 func Tools(t *tools.Service) http.Handler {
@@ -24,7 +25,7 @@ func Tools(t *tools.Service) http.Handler {
 		var out any
 		switch r.URL.Path {
 		case "/tools/list":
-			list, err := t.List(key)
+			list, instructions, err := t.List(key)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusUnauthorized)
 				return
@@ -32,7 +33,7 @@ func Tools(t *tools.Service) http.Handler {
 			if list == nil {
 				list = []tools.Tool{}
 			}
-			out = map[string]any{"tools": list}
+			out = map[string]any{"tools": list, "instructions": instructions}
 		case "/tools/call":
 			var req struct {
 				Name      string          `json:"name"`

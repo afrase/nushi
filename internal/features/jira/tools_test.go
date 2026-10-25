@@ -17,15 +17,25 @@ func TestTools(t *testing.T) {
 	}
 	c := (*opened)[0]
 	set := s.Tools()
-	if len(set.Tools(tools.Grant{Chat: "c0"})) != 0 {
+	if len(set.Tools(tools.Grant{Chat: "c0"})) != 0 || set.Instructions(tools.Grant{Chat: "c0"}) != "" {
 		t.Error("tools for a chat without an issue")
 	}
-	g := tools.Grant{Chat: "c1", Agent: "claude", Issue: &model.ChatIssue{Site: "acme.atlassian.net", Key: "ACME-12"}}
+	g := tools.Grant{Chat: "c1", Agent: "claude", Issue: &model.ChatIssue{Site: "acme.atlassian.net", Key: "ACME-12",
+		Summary: "Log in with\na \"passkey\""}}
+	// The agent knows its issue from the tools alone: nothing in the box.
+	want := `This chat works on Jira issue ACME-12 ("Log in with a \"passkey\""), https://acme.atlassian.net/browse/ACME-12. `
+	if got := set.Instructions(g); !strings.HasPrefix(got, want) || !strings.HasSuffix(got, "These tools reach ACME-12 only.") {
+		t.Errorf("instructions %q", got)
+	}
+	old := tools.Grant{Issue: &model.ChatIssue{Site: "acme.atlassian.net", Key: "ACME-12"}} // a chat from before summaries
+	if got := set.Instructions(old); !strings.HasPrefix(got, "This chat works on Jira issue ACME-12, https://") {
+		t.Errorf("instructions %q", got)
+	}
 	var names []string
 	for _, tl := range set.Tools(g) {
 		names = append(names, tl.Name)
 		var schema map[string]any
-		if err := json.Unmarshal(tl.InputSchema, &schema); err != nil || !strings.Contains(tl.Description, "ACME-12") {
+		if err := json.Unmarshal(tl.InputSchema, &schema); err != nil || !strings.Contains(tl.Description, `ACME-12 ("Log in with a \"passkey\""), the Jira issue this chat works on`) {
 			t.Errorf("%s: %v, %q", tl.Name, err, tl.Description)
 		}
 	}
