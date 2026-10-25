@@ -41,12 +41,14 @@ const settingsKey = SingleActivator(LogicalKeyboardKey.comma, meta: true);
 /// The app's settings (⌘,), on two pages. General: the terminal's font and
 /// size, when idle chats sleep, remote access (both the daemon's), and
 /// whether the daemon starts at login (the packaged app's, for the usual
-/// data folder). Agents ([agents] opens on it): the agents found, and
-/// their adapters. Jira ([jira]): the sites and their tokens.
+/// data folder). Agents ([agents] opens on it, or [agent], whose row it
+/// marks): the agents found, and their adapters. Jira ([jira]): the sites
+/// and their tokens.
 Future<void> showSettings(
   BuildContext context,
   NushiServiceClient client, {
   bool agents = false,
+  String? agent,
   bool jira = false,
 }) => showDialog(
   context: context,
@@ -54,9 +56,10 @@ Future<void> showSettings(
     client,
     page: jira
         ? _Page.jira
-        : agents
+        : agents || agent != null
         ? _Page.agents
         : _Page.general,
+    agent: agent,
   ),
 );
 
@@ -74,10 +77,11 @@ const _sleepAfter = {
 String _sleepLabel(int m) => _sleepAfter[m] ?? '$m minute${m == 1 ? '' : 's'}';
 
 class _Settings extends StatefulWidget {
-  const new(this.client, {required this.page});
+  const new(this.client, {required this.page, this.agent});
 
   final NushiServiceClient client;
   final _Page page;
+  final String? agent; // the agent whose row Agents marks
 
   @override
   State<_Settings> createState() => _SettingsState();
@@ -247,7 +251,7 @@ class _SettingsState extends State<_Settings> {
           // A short window scrolls the page.
           Flexible(
             child: switch (_page) {
-              _Page.agents => AgentsPage(widget.client),
+              _Page.agents => AgentsPage(widget.client, marked: widget.agent),
               _Page.jira => JiraPage(widget.client),
               _Page.general => SingleChildScrollView(child: general),
             },

@@ -52,6 +52,7 @@ class ChatState extends ChangeNotifier {
   bool mcpChanged = false; // MCP servers changed since the agent started
   bool canAskContext = false; // the agent can say what fills its context
   bool asleep = false; // no agent runs for it: a message wakes it
+  bool reopenFailed = false; // no agent runs: its reopen failed (a notice)
   bool canSleep = false; // its agent runs and can reopen the session
   DateTime? started; // when the running turn started
   bool stopping = false; // the app asked the turn to stop
@@ -152,6 +153,7 @@ class ChatState extends ChangeNotifier {
     mcpChanged = s.mcpChanged;
     canAskContext = s.canAskContext;
     asleep = s.asleep;
+    reopenFailed = s.reopenFailed;
     canSleep = s.canSleep;
     started = s.started == 0
         ? null

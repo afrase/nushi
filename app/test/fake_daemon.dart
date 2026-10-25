@@ -50,8 +50,10 @@ class FakeDaemon implements Transport {
   final listed = <ListAgentSessionsRequest>[];
   final opened = <OpenAgentSessionRequest>[];
   // The fake's stream, which lives as long as the test.
-  // ignore: close_sinks
   final _events = StreamController<EventsResponse>()..add(EventsResponse());
+
+  /// Sends [e] down the events stream.
+  void emit(EventsResponse e) => _events.add(e);
 
   /// A [Daemon] on this fake, its chats and agents listed.
   Future<Daemon> connect(WidgetTester tester) async {

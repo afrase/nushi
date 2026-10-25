@@ -12,11 +12,13 @@ import 'package:url_launcher/url_launcher.dart';
 
 /// Settings › Agents: each agent as found on this Mac (its version and
 /// path, or "Not installed" with where to get it), and for one that runs
-/// through an adapter, Set up, Update and Remove (ADR 0037).
+/// through an adapter, Set up, Update and Remove (ADR 0037). The [marked]
+/// agent's row stands out: a chat that couldn't start it sent you here.
 class AgentsPage extends StatefulWidget {
-  const new(this.client, {super.key});
+  const new(this.client, {super.key, this.marked});
 
   final NushiServiceClient client;
+  final String? marked;
 
   @override
   State<AgentsPage> createState() => _AgentsPageState();
@@ -54,6 +56,7 @@ class _AgentsPageState extends State<AgentsPage> {
           AgentRow(
             a,
             client: widget.client,
+            marked: a.name == widget.marked,
             onRemove: _removing.contains(a.name) ? null : () => _remove(a),
           ),
       ],
@@ -78,11 +81,13 @@ class AgentRow extends StatelessWidget {
     required this.client,
     required this.onRemove,
     super.key,
+    this.marked = false,
   });
 
   final Agent agent;
   final NushiServiceClient client;
   final VoidCallback? onRemove; // null while it's being removed
+  final bool marked; // a chat that couldn't start it sent you here
 
   @override
   Widget build(BuildContext context) {
@@ -100,8 +105,9 @@ class AgentRow extends StatelessWidget {
       'Not installed' => '',
       final p => p,
     };
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 8, horizontal: marked ? 8 : 0),
+      decoration: marked ? box(t.accent, fill: t.accentSoft) : null,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
