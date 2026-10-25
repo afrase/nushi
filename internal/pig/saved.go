@@ -82,13 +82,13 @@ func (d Dirs) find(id, cwd string) (string, error) {
 
 // remove deletes the session id's file as PiG's /resume does: to the
 // Trash (`trash`, macOS's), else for good.
-func (d Dirs) remove(id string) error {
+func (d Dirs) remove(ctx context.Context, id string) error {
 	file, err := d.find(id, "")
 	if err != nil {
 		return nil //nolint:nilerr // not found: gone already
 	}
 	if d.Trash != "" {
-		exec.Command(d.Trash, file).Run() //nolint:gosec // trash, on a session file PiG keeps; file is absolute
+		exec.CommandContext(ctx, d.Trash, file).Run() //nolint:gosec // trash, on a session file PiG keeps; file is absolute
 		if _, err := os.Lstat(file); errors.Is(err, fs.ErrNotExist) {
 			return nil
 		}

@@ -1,6 +1,7 @@
 package git
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -62,7 +63,7 @@ func TrustRoot(folder string) (top, key string) {
 // worktreeSet says whether a repository's config file sets core.worktree
 // (includes followed); git's own environment is left out.
 func worktreeSet(config string) bool {
-	cmd := exec.Command("git", "config", "--file", config, "--includes", "--get", "core.worktree")
+	cmd := exec.CommandContext(context.Background(), "git", "config", "--file", config, "--includes", "--get", "core.worktree")
 	cmd.Env = slices.DeleteFunc(os.Environ(), func(e string) bool { return strings.HasPrefix(e, "GIT_") })
 	return cmd.Run() == nil
 }

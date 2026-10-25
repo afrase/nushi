@@ -53,7 +53,7 @@ func Start(argv []string, dir string, env []string, cols, rows int, changed func
 		return nil, err
 	}
 	defer tty.Close()
-	cmd := exec.Command(argv[0], argv[1:]...) //nolint:gosec // the user's login shell
+	cmd := exec.Command(argv[0], argv[1:]...) //nolint:gosec,noctx // lives until Stop or Close, not a context; the user's login shell
 	cmd.Dir, cmd.Env = dir, env
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = tty, tty, tty
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true, Setctty: true}

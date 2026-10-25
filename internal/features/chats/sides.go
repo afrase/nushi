@@ -159,6 +159,8 @@ func (s *Service) CloseSides() {
 // (Dialect.Redelete); then the chat forgets it. If the agent can't (it
 // went, or is going, meanwhile), the chat keeps it, and a fresh agent
 // deletes it once that one has stopped (see discard).
+//
+//nolint:contextcheck // the side chat's session is deleted after the request that closed it
 func (s *Service) throwAway(c *chat, agent Agent, sid string) {
 	del := func() error {
 		err := agent.DeleteSession(context.Background(), acp.DeleteSessionRequest{SessionID: acp.SessionID(sid)})

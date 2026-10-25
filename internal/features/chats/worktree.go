@@ -55,6 +55,8 @@ func (s *Service) addWorktree(ctx context.Context, folder string) (*model.Worktr
 
 // dropWorktree removes a worktree no chat uses any more, and its branch,
 // if they hold no work, and says whether it did; otherwise they stay.
+//
+//nolint:contextcheck // a worktree's removal shouldn't stop halfway because the app went away
 func (s *Service) dropWorktree(wt *model.Worktree) bool {
 	if wt == nil {
 		return false

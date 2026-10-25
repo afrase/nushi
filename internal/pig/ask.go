@@ -26,6 +26,8 @@ type uiRequest struct {
 // one field) and gives pig the answer; a notification becomes a message.
 // Without a client that shows forms, or when it declines, the dialog is
 // cancelled. A dialog with a timeout is withdrawn when pig gives up on it.
+//
+//nolint:contextcheck // the question goes out on the bridge's connection, as long as pig waits
 func (s *session) ask(raw json.RawMessage) {
 	var r uiRequest
 	json.Unmarshal(raw, &r)

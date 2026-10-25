@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -35,7 +36,7 @@ func renameData(old, dir string) error {
 	if _, err := os.Stat(old); errors.Is(err, fs.ErrNotExist) {
 		return nil
 	}
-	if c, err := net.Dial("unix", filepath.Join(old, "nushid.sock")); err == nil {
+	if c, err := new(net.Dialer).DialContext(context.Background(), "unix", filepath.Join(old, "nushid.sock")); err == nil {
 		c.Close()
 		return fmt.Errorf("a daemon still runs in %s", old)
 	}

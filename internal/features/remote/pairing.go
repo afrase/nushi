@@ -34,6 +34,8 @@ type pairing struct {
 // StartPairing makes a one-time id and secret and waits at the relay for a
 // phone, until PairingWait has passed; it returns the QR code's text. A
 // pairing already under way ends.
+//
+//nolint:contextcheck // a pairing waits for its phone after the request returns
 func (s *Service) StartPairing() (string, time.Time, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -6,6 +6,7 @@ package main
 
 import (
 	"cmp"
+	"context"
 	"flag"
 	"log"
 	"net"
@@ -41,7 +42,7 @@ func main() {
 
 	srv := relay.NewServer(lim)
 	if *host == "" {
-		ln, err := net.Listen("tcp", cmp.Or(*addr, ":8080"))
+		ln, err := new(net.ListenConfig).Listen(context.Background(), "tcp", cmp.Or(*addr, ":8080"))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -53,7 +54,7 @@ func main() {
 		m.Cache = autocert.DirCache(*cache)
 	}
 	srv.TLSConfig = m.TLSConfig()
-	ln, err := net.Listen("tcp", cmp.Or(*addr, ":443"))
+	ln, err := new(net.ListenConfig).Listen(context.Background(), "tcp", cmp.Or(*addr, ":443"))
 	if err != nil {
 		log.Fatal(err)
 	}

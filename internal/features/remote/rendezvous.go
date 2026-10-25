@@ -91,6 +91,8 @@ func (s *Service) waits(id string) bool {
 
 // relink starts the waits at the relay again: at the daemon's id, and at
 // each id given up that a device still needs. Called with s.mu.
+//
+//nolint:contextcheck // the relay link lasts as long as the daemon
 func (s *Service) relink() {
 	if s.stopLink != nil {
 		s.stopLink()

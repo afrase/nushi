@@ -42,7 +42,7 @@ var adapterFiles embed.FS
 // dir (the daemon's own folder); a chat's folder reaches the agent only as
 // the session's cwd. Its stderr goes to log.
 func Start(dir, program, cli string, h acp.Handler, log *slog.Logger) (*acp.Client, error) {
-	cmd := exec.Command("node", program) //nolint:gosec // the adapter set up in the data folder (ADR 0037)
+	cmd := exec.Command("node", program) //nolint:gosec,noctx // lives until Stop or Close, not a context; the adapter set up in the data folder (ADR 0037)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), "CLAUDE_CODE_EXECUTABLE="+cli)
 	return acp.Start(cmd, h, log)
