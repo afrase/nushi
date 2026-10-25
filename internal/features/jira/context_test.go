@@ -46,8 +46,9 @@ func (issueClient) Issue(context.Context, string) (model.JiraIssue, error) {
 		AcceptanceCriteria: "- A passkey signs in",
 		Subtasks:           []model.JiraIssueRef{{Key: "ACME-13", Summary: "The API", Status: "Done"}},
 		Links:              []model.JiraLink{{Relation: "is blocked by", Issue: model.JiraIssueRef{Key: "ACME-9", Summary: "Sessions", Status: "To Do"}}},
-		RemoteLinks:        []model.JiraRemoteLink{{Title: "PR #31", URL: "https://github.com/acme/app/pull/31"}},
-		Comments:           comments}, nil
+		RemoteLinks: []model.JiraRemoteLink{{Title: "PR #31", URL: "https://github.com/acme/app/pull/31"},
+			{Title: "![x](https://t.example/p.png)", URL: "javascript:alert(1)"}},
+		Comments: comments}, nil
 }
 
 func TestContext(t *testing.T) {
@@ -74,6 +75,7 @@ func TestContext(t *testing.T) {
 		"## Subtasks\n\n- ACME-13 The API (Done)",
 		"## Linked issues\n\n- is blocked by ACME-9 Sessions (To Do)",
 		"- [PR #31](https://github.com/acme/app/pull/31)",
+		"- !\\[x\\](https://t.example/p.png)\n", // anyone's title is text, an unsafe URL dropped
 		"**Ann** (2026-10-25):\n\ncomment g",
 	} {
 		if !strings.Contains(md, want) {
