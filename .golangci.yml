@@ -155,6 +155,10 @@ linters:
       - path: ^(internal|cmd|tools)/
         linters: [revive]
         text: "^exported:"
+      # cgo: the linters read the C preamble's NULLs and the "C" import's
+      # generated aliases as Go (duplicate words, imports, expressions).
+      - path: ^internal/keychain/
+        linters: [dupword, gocritic]
       # gosec, where a whole package is about what it reports (each other
       # report is fixed or marked on its line):
       # tests read and write files in their own t.TempDir(), run the fakes
