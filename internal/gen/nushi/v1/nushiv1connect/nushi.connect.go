@@ -76,6 +76,8 @@ const (
 	NushiServiceArchiveChatProcedure = "/nushi.v1.NushiService/ArchiveChat"
 	// NushiServiceSleepChatProcedure is the fully-qualified name of the NushiService's SleepChat RPC.
 	NushiServiceSleepChatProcedure = "/nushi.v1.NushiService/SleepChat"
+	// NushiServiceReopenChatProcedure is the fully-qualified name of the NushiService's ReopenChat RPC.
+	NushiServiceReopenChatProcedure = "/nushi.v1.NushiService/ReopenChat"
 	// NushiServiceGetMemoryProcedure is the fully-qualified name of the NushiService's GetMemory RPC.
 	NushiServiceGetMemoryProcedure = "/nushi.v1.NushiService/GetMemory"
 	// NushiServiceGetSettingsProcedure is the fully-qualified name of the NushiService's GetSettings
@@ -303,6 +305,12 @@ type NushiServiceClient interface {
 	// stays, its transcript too. A message, or anything else that needs the
 	// agent, reopens the session (ACP session/load); opening it doesn't.
 	SleepChat(context.Context, *connect.Request[v1.SleepChatRequest]) (*connect.Response[v1.SleepChatResponse], error)
+	// Says a chat is shown (selected, the app came to the front), or Try
+	// again: a chat whose agent should run but doesn't is reopened, as
+	// GetChat does, and one whose last reopen failed (status.reopen_failed)
+	// tries again, once a call, unless what stopped it still holds (its
+	// folder is gone, its agent isn't ready). A sleeping chat stays asleep.
+	ReopenChat(context.Context, *connect.Request[v1.ReopenChatRequest]) (*connect.Response[v1.ReopenChatResponse], error)
 	// The daemon's settings, and changing them.
 	// Says how much memory Nushi takes, as footprint (Activity Monitor's
 	// Memory), in bytes: a few milliseconds' work.
@@ -576,6 +584,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceSleepChatProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("SleepChat")),
+			connect.WithClientOptions(opts...),
+		),
+		reopenChat: connect.NewClient[v1.ReopenChatRequest, v1.ReopenChatResponse](
+			httpClient,
+			baseURL+NushiServiceReopenChatProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ReopenChat")),
 			connect.WithClientOptions(opts...),
 		),
 		getMemory: connect.NewClient[v1.GetMemoryRequest, v1.GetMemoryResponse](
@@ -938,6 +952,7 @@ type nushiServiceClient struct {
 	renameChat          *connect.Client[v1.RenameChatRequest, v1.RenameChatResponse]
 	archiveChat         *connect.Client[v1.ArchiveChatRequest, v1.ArchiveChatResponse]
 	sleepChat           *connect.Client[v1.SleepChatRequest, v1.SleepChatResponse]
+	reopenChat          *connect.Client[v1.ReopenChatRequest, v1.ReopenChatResponse]
 	getMemory           *connect.Client[v1.GetMemoryRequest, v1.GetMemoryResponse]
 	getSettings         *connect.Client[v1.GetSettingsRequest, v1.GetSettingsResponse]
 	setSettings         *connect.Client[v1.SetSettingsRequest, v1.SetSettingsResponse]
@@ -1089,6 +1104,11 @@ func (c *nushiServiceClient) ArchiveChat(ctx context.Context, req *connect.Reque
 // SleepChat calls nushi.v1.NushiService.SleepChat.
 func (c *nushiServiceClient) SleepChat(ctx context.Context, req *connect.Request[v1.SleepChatRequest]) (*connect.Response[v1.SleepChatResponse], error) {
 	return c.sleepChat.CallUnary(ctx, req)
+}
+
+// ReopenChat calls nushi.v1.NushiService.ReopenChat.
+func (c *nushiServiceClient) ReopenChat(ctx context.Context, req *connect.Request[v1.ReopenChatRequest]) (*connect.Response[v1.ReopenChatResponse], error) {
+	return c.reopenChat.CallUnary(ctx, req)
 }
 
 // GetMemory calls nushi.v1.NushiService.GetMemory.
@@ -1438,6 +1458,12 @@ type NushiServiceHandler interface {
 	// stays, its transcript too. A message, or anything else that needs the
 	// agent, reopens the session (ACP session/load); opening it doesn't.
 	SleepChat(context.Context, *connect.Request[v1.SleepChatRequest]) (*connect.Response[v1.SleepChatResponse], error)
+	// Says a chat is shown (selected, the app came to the front), or Try
+	// again: a chat whose agent should run but doesn't is reopened, as
+	// GetChat does, and one whose last reopen failed (status.reopen_failed)
+	// tries again, once a call, unless what stopped it still holds (its
+	// folder is gone, its agent isn't ready). A sleeping chat stays asleep.
+	ReopenChat(context.Context, *connect.Request[v1.ReopenChatRequest]) (*connect.Response[v1.ReopenChatResponse], error)
 	// The daemon's settings, and changing them.
 	// Says how much memory Nushi takes, as footprint (Activity Monitor's
 	// Memory), in bytes: a few milliseconds' work.
@@ -1707,6 +1733,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceSleepChatProcedure,
 		svc.SleepChat,
 		connect.WithSchema(nushiServiceMethods.ByName("SleepChat")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceReopenChatHandler := connect.NewUnaryHandler(
+		NushiServiceReopenChatProcedure,
+		svc.ReopenChat,
+		connect.WithSchema(nushiServiceMethods.ByName("ReopenChat")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceGetMemoryHandler := connect.NewUnaryHandler(
@@ -2085,6 +2117,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceArchiveChatHandler.ServeHTTP(w, r)
 		case NushiServiceSleepChatProcedure:
 			nushiServiceSleepChatHandler.ServeHTTP(w, r)
+		case NushiServiceReopenChatProcedure:
+			nushiServiceReopenChatHandler.ServeHTTP(w, r)
 		case NushiServiceGetMemoryProcedure:
 			nushiServiceGetMemoryHandler.ServeHTTP(w, r)
 		case NushiServiceGetSettingsProcedure:
@@ -2280,6 +2314,10 @@ func (UnimplementedNushiServiceHandler) ArchiveChat(context.Context, *connect.Re
 
 func (UnimplementedNushiServiceHandler) SleepChat(context.Context, *connect.Request[v1.SleepChatRequest]) (*connect.Response[v1.SleepChatResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.SleepChat is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ReopenChat(context.Context, *connect.Request[v1.ReopenChatRequest]) (*connect.Response[v1.ReopenChatResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ReopenChat is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) GetMemory(context.Context, *connect.Request[v1.GetMemoryRequest]) (*connect.Response[v1.GetMemoryResponse], error) {

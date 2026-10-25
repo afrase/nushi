@@ -41,6 +41,9 @@ type Kind struct {
 	// Explain adds to why the agent failed to start what may help: that
 	// its CLI is a version it wasn't tested with. nil: nothing to add.
 	Explain func(error) error
+	// Ready says, quickly, why the agent can't start now (it isn't
+	// installed or set up); nil when it can. nil: it always can.
+	Ready func() error
 }
 
 // kind is a Kind the service runs.
@@ -57,6 +60,13 @@ func (k *kind) explain(err error) error {
 		return err
 	}
 	return k.Explain(err)
+}
+
+func (k *kind) ready() error {
+	if k.Ready == nil {
+		return nil
+	}
+	return k.Ready()
 }
 
 // New makes the service for agents, the first of them the default.

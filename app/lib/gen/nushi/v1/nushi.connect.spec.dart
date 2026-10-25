@@ -189,6 +189,18 @@ abstract final class NushiService {
     nushiv1nushi.SleepChatResponse.new,
   );
 
+  /// Says a chat is shown (selected, the app came to the front), or Try
+  /// again: a chat whose agent should run but doesn't is reopened, as
+  /// GetChat does, and one whose last reopen failed (status.reopen_failed)
+  /// tries again, once a call, unless what stopped it still holds (its
+  /// folder is gone, its agent isn't ready). A sleeping chat stays asleep.
+  static const reopenChat = connect.Spec(
+    '/$name/ReopenChat',
+    connect.StreamType.unary,
+    nushiv1nushi.ReopenChatRequest.new,
+    nushiv1nushi.ReopenChatResponse.new,
+  );
+
   /// The daemon's settings, and changing them.
   /// Says how much memory Nushi takes, as footprint (Activity Monitor's
   /// Memory), in bytes: a few milliseconds' work.

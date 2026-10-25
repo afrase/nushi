@@ -128,7 +128,8 @@ type chat struct {
 	sendingNow   int                             // SendNow prompts waiting on the turn they stop: the queue waits too
 	ownTurn      bool                            // the agent works on its own, outside a turn of Nushi's
 	kept         bool                            // the transcript outlived its agent: reopening doesn't replay into it
-	reopenFailed bool                            // the last reopen failed: only a message or a reload tries again
+	reopenFailed bool                            // the last reopen failed: see failedLocked
+	failure      string                          // the notice saying why it failed (item id)
 	waiting      map[string]chan<- string        // permission prompts by item id, for the picked option
 	questions    map[string]chan<- []model.Field // questions by item id, for the answer (nil: declined)
 	config       []model.ConfigOption
@@ -323,10 +324,10 @@ func (c *chat) noticeLocked(reason, text string) {
 }
 
 func (c *chat) statusLocked() model.Status {
-	asleep := c.agent == nil && !c.busy && c.parent == nil && !c.session.Archived
+	idle := c.agent == nil && !c.busy && c.parent == nil && !c.session.Archived
 	return model.Status{Busy: c.busy, Started: c.started, Waiting: len(c.waiting)+len(c.questions) > 0, CanFork: c.canFork, Images: c.canImage,
-		CanRewind: c.forkAt != nil, MCPChanged: c.mcpChanged, CanAskContext: !asleep && c.canAskContextLocked() == nil,
-		Asleep: asleep, CanSleep: c.parent == nil && c.canSleepLocked() == nil}
+		CanRewind: c.forkAt != nil, MCPChanged: c.mcpChanged, CanAskContext: !idle && c.canAskContextLocked() == nil,
+		Asleep: idle && !c.reopenFailed, ReopenFailed: idle && c.reopenFailed, CanSleep: c.parent == nil && c.canSleepLocked() == nil}
 }
 
 func (c *chat) statusChangedLocked() {

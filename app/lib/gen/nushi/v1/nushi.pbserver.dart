@@ -59,6 +59,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.ArchiveChatRequest request);
   $async.Future<$0.SleepChatResponse> sleepChat(
       $pb.ServerContext ctx, $0.SleepChatRequest request);
+  $async.Future<$0.ReopenChatResponse> reopenChat(
+      $pb.ServerContext ctx, $0.ReopenChatRequest request);
   $async.Future<$0.GetMemoryResponse> getMemory(
       $pb.ServerContext ctx, $0.GetMemoryRequest request);
   $async.Future<$0.GetSettingsResponse> getSettings(
@@ -212,6 +214,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.ArchiveChatRequest();
       case 'SleepChat':
         return $0.SleepChatRequest();
+      case 'ReopenChat':
+        return $0.ReopenChatRequest();
       case 'GetMemory':
         return $0.GetMemoryRequest();
       case 'GetSettings':
@@ -370,6 +374,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return archiveChat(ctx, request as $0.ArchiveChatRequest);
       case 'SleepChat':
         return sleepChat(ctx, request as $0.SleepChatRequest);
+      case 'ReopenChat':
+        return reopenChat(ctx, request as $0.ReopenChatRequest);
       case 'GetMemory':
         return getMemory(ctx, request as $0.GetMemoryRequest);
       case 'GetSettings':

@@ -358,6 +358,9 @@ type Status struct {
 	// Asleep says no agent runs for the chat (it slept, or wasn't opened
 	// since the daemon started): what needs the agent reopens the session.
 	Asleep bool
+	// ReopenFailed says no agent runs for the chat because its last reopen
+	// failed (a notice says why); it isn't Asleep then.
+	ReopenFailed bool
 	// CanSleep says Sleep can stop its agent: the agent reopens sessions.
 	CanSleep bool
 }

@@ -1,10 +1,12 @@
 package chats
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"slices"
 	"time"
@@ -101,11 +103,72 @@ func (s *Service) resume(c *chat) {
 		c.woke = nil
 	}
 	if err != nil {
-		c.reopenFailed = true // not again until a message, a reload or a move
-		c.noticeLocked("error", "Couldn't reopen the chat: "+err.Error())
+		c.failedLocked(err)
 	}
 	c.statusChangedLocked()
 	c.deliverLocked()
+}
+
+// failedLocked marks the chat's reopen failed, not tried again until it's
+// shown (Reopen), a message, a reload or a move, or its agent becoming
+// ready, and says why in one notice, which replaces the last one's. Its
+// reason says what helps: "not_ready" setting its agent up (Settings ›
+// Agents), "folder_gone" moving the chat, "reopen_failed" trying again.
+func (c *chat) failedLocked(err error) {
+	c.reopenFailed = true
+	reason := "reopen_failed"
+	if gone := folderGone(c.session); gone != nil {
+		reason, err = "folder_gone", gone
+	} else if ready := c.kind.ready(); ready != nil {
+		reason, err = "not_ready", ready
+	}
+	text := "Couldn't reopen the chat: " + err.Error()
+	if i := c.indexLocked(c.failure); i >= 0 && i == len(c.items)-1 && c.items[i].Status == reason && c.items[i].Text == text {
+		return // said already
+	}
+	c.unsendLocked(c.failure)
+	c.failure = c.addLocked(model.Item{Kind: model.Notice, Status: reason, Text: text})
+}
+
+// Reopen is a chat being shown (or Try again): one whose agent should run
+// but doesn't is reopened, as opening it does, and one whose last reopen
+// failed tries again, once a call, unless what stopped it still holds (its
+// folder is gone, its agent isn't ready: the notice says so then). A
+// sleeping or archived chat stays as it is.
+func (s *Service) Reopen(id string) error {
+	c, err := s.lookup(id)
+	if err != nil {
+		return err
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.reopenFailed && c.agent == nil && !c.busy {
+		if err := cmp.Or(folderGone(c.session), c.kind.ready()); err != nil {
+			c.failedLocked(err)
+			return nil
+		}
+		c.reopenFailed = false
+		c.logLocked().Info("chat reopening again", "for", "shown")
+	}
+	s.reopenLocked(c)
+	return nil
+}
+
+// AgentReady is the agent named agent becoming ready to start (set up, or
+// found ready): its chats that failed to reopen because it wasn't may try
+// again, each when it's next shown (Reopen). None starts now.
+func (s *Service) AgentReady(agent string) {
+	s.mu.Lock()
+	open := slices.Collect(maps.Values(s.chats))
+	s.mu.Unlock()
+	for _, c := range open {
+		c.mu.Lock()
+		if i := c.indexLocked(c.failure); c.kind.Name == agent && c.reopenFailed && i >= 0 && c.items[i].Status == "not_ready" {
+			c.reopenFailed = false
+			c.statusChangedLocked()
+		}
+		c.mu.Unlock()
+	}
 }
 
 // load starts the chat's agent and has it replay the session, then puts the
