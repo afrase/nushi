@@ -28,9 +28,19 @@ import (
 // Command is the nushid subcommand that runs the bridge.
 const Command = "ante-acp"
 
-// pinned is the Ante whose protocol the bridge follows; older ones are
-// refused, newer ones tried.
-var pinned = [3]int{0, 2, 14}
+// CLI is Ante's program, Min the Ante whose protocol the bridge follows
+// (older ones are refused, newer ones tried), and Page where to get it.
+const (
+	CLI  = "ante"
+	Min  = "0.2.14"
+	Page = "https://github.com/AntigmaLabs/ante"
+)
+
+// Also is where Ante's installer puts it, for when it isn't on PATH.
+func Also() []string {
+	home, _ := os.UserHomeDir()
+	return []string{filepath.Join(Home(), "bin", "ante"), filepath.Join(home, ".ante", "bin", "ante")}
+}
 
 // Start starts the bridge, as claude.Start does Claude's adapter: this
 // executable's Command, in dir (the daemon's folder), its stderr to the
@@ -71,12 +81,10 @@ func Home() string {
 
 // binary finds ante: on PATH, else where its installer puts it.
 func binary() (string, error) {
-	if p, err := exec.LookPath("ante"); err == nil {
+	if p, err := exec.LookPath(CLI); err == nil {
 		return p, nil
 	}
-	home, _ := os.UserHomeDir()
-	for _, dir := range []string{Home(), filepath.Join(home, ".ante")} {
-		p := filepath.Join(dir, "bin", "ante")
+	for _, p := range Also() {
 		if st, err := os.Stat(p); err == nil && st.Mode().IsRegular() && st.Mode()&0o111 != 0 {
 			return p, nil
 		}
@@ -84,7 +92,7 @@ func binary() (string, error) {
 	return "", errors.New("Ante isn't installed: there's no ante on PATH or in ~/.ante/bin")
 }
 
-// version checks ante's version, refusing one older than pinned.
+// version checks ante's version, refusing one older than Min.
 func version(bin string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -93,21 +101,29 @@ func version(bin string) (string, error) {
 		return "", fmt.Errorf("couldn't run %s --version: %w", bin, err)
 	}
 	v := strings.TrimPrefix(strings.TrimSpace(string(out)), "ante ")
-	var got [3]int
-	parts := strings.Split(v, ".")
-	for i := 0; i < 3 && i < len(parts); i++ {
-		got[i], _ = strconv.Atoi(parts[i])
-	}
-	want := fmt.Sprintf("%d.%d.%d", pinned[0], pinned[1], pinned[2])
+	got, want := numbers(v), numbers(Min)
 	switch {
-	case len(parts) != 3:
+	case got == nil:
 		return "", fmt.Errorf("couldn't read ante's version from %q", out)
-	case got[0] != pinned[0] || got[1] < pinned[1] || got[1] == pinned[1] && got[2] < pinned[2]:
-		return "", fmt.Errorf("Ante %s is older than the %s Nushi needs: run `ante update`", v, want)
-	case v != want:
-		log.Printf("ante %s is newer than %s, whose protocol the bridge follows", v, want)
+	case got[0] != want[0] || got[1] < want[1] || got[1] == want[1] && got[2] < want[2]:
+		return "", fmt.Errorf("Ante %s is older than the %s Nushi needs: run `ante update`", v, Min)
+	case v != Min:
+		log.Printf("ante %s is newer than %s, whose protocol the bridge follows", v, Min)
 	}
 	return v, nil
+}
+
+// numbers reads a version's three numbers; nil if it hasn't three.
+func numbers(v string) []int {
+	parts := strings.Split(v, ".")
+	if len(parts) != 3 {
+		return nil
+	}
+	out := make([]int, 3)
+	for i, p := range parts {
+		out[i], _ = strconv.Atoi(p)
+	}
+	return out
 }
 
 // serve starts `ante serve --stdio` in cwd, in a process group of its

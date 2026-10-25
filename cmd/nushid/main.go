@@ -31,6 +31,7 @@ import (
 	"github.com/afrase/nushi/internal/codex"
 	"github.com/afrase/nushi/internal/codextrust"
 	"github.com/afrase/nushi/internal/events"
+	"github.com/afrase/nushi/internal/features/agents"
 	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/features/mcp"
 	"github.com/afrase/nushi/internal/features/memory"
@@ -41,6 +42,7 @@ import (
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/omp"
 	"github.com/afrase/nushi/internal/omptrust"
+	"github.com/afrase/nushi/internal/readonly"
 	"github.com/afrase/nushi/internal/store"
 	"github.com/afrase/nushi/internal/sysproxy"
 	"github.com/afrase/nushi/internal/terminal"
@@ -126,7 +128,13 @@ func run() error {
 	go hub.Subscribe(nil, func() bool { return true }, func(e model.Event) bool { termSvc.Follow(e); return true })
 	// The API, on the socket for the app (with the token) and on each
 	// paired device's channel (ADR 0034).
-	sv := api.Services{Chats: chatSvc, MCP: mcp.New(claudemcp.Claude{}, chatSvc.MCPChanged), Terms: termSvc,
+	agentSvc := agents.New([]agents.Agent{
+		{Name: "claude", Title: "Claude", CLI: claude.CLI, Page: claude.Page, SignedIn: claude.SignedIn},
+		{Name: "codex", Title: "Codex", CLI: codex.CLI, Page: codex.Page},
+		{Name: "ante", Title: "Ante", CLI: ante.CLI, Also: ante.Also(), Page: ante.Page, Min: ante.Min},
+		{Name: "omp", Title: "oh-my-pi", CLI: omp.CLI, Page: omp.Page, Needs: omp.Needs},
+	}, readonly.Output)
+	sv := api.Services{Chats: chatSvc, Agents: agentSvc, MCP: mcp.New(claudemcp.Claude{}, chatSvc.MCPChanged), Terms: termSvc,
 		Trust: trust.New(map[string]trust.Agent{"claude": claudetrust.Trust{}, "codex": codextrust.Trust{}, "ante": antetrust.Trust{}, "omp": omptrust.Trust{}}, st),
 		Hub:   hub, Memory: memory.New(chatSvc)}
 	channels := newChannels()

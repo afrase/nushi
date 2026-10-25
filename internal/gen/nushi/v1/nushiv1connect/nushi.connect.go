@@ -189,7 +189,9 @@ type NushiServiceClient interface {
 	GetChat(context.Context, *connect.Request[v1.GetChatRequest]) (*connect.Response[v1.GetChatResponse], error)
 	// Starts an agent in a folder and opens a chat with it.
 	StartChat(context.Context, *connect.Request[v1.StartChatRequest]) (*connect.Response[v1.StartChatResponse], error)
-	// Lists the agents chats can run, the default first.
+	// Lists the agents chats can run, the default first, each as found on
+	// this Mac now: its CLI on the login shell's PATH and its version. Each
+	// CLI is only asked what it is, with file writes and the network denied.
 	ListAgents(context.Context, *connect.Request[v1.ListAgentsRequest]) (*connect.Response[v1.ListAgentsResponse], error)
 	// Lists an agent's sessions in a folder that aren't chats (started in a
 	// terminal, say), newest first, a page at a time. It starts the agent to
@@ -1039,7 +1041,9 @@ type NushiServiceHandler interface {
 	GetChat(context.Context, *connect.Request[v1.GetChatRequest]) (*connect.Response[v1.GetChatResponse], error)
 	// Starts an agent in a folder and opens a chat with it.
 	StartChat(context.Context, *connect.Request[v1.StartChatRequest]) (*connect.Response[v1.StartChatResponse], error)
-	// Lists the agents chats can run, the default first.
+	// Lists the agents chats can run, the default first, each as found on
+	// this Mac now: its CLI on the login shell's PATH and its version. Each
+	// CLI is only asked what it is, with file writes and the network denied.
 	ListAgents(context.Context, *connect.Request[v1.ListAgentsRequest]) (*connect.Response[v1.ListAgentsResponse], error)
 	// Lists an agent's sessions in a folder that aren't chats (started in a
 	// terminal, say), newest first, a page at a time. It starts the agent to

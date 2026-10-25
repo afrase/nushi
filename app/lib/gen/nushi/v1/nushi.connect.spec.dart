@@ -42,7 +42,9 @@ abstract final class NushiService {
     nushiv1nushi.StartChatResponse.new,
   );
 
-  /// Lists the agents chats can run, the default first.
+  /// Lists the agents chats can run, the default first, each as found on
+  /// this Mac now: its CLI on the login shell's PATH and its version. Each
+  /// CLI is only asked what it is, with file writes and the network denied.
   static const listAgents = connect.Spec(
     '/$name/ListAgents',
     connect.StreamType.unary,

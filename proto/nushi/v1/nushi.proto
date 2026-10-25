@@ -13,7 +13,9 @@ service NushiService {
   rpc GetChat(GetChatRequest) returns (GetChatResponse);
   // Starts an agent in a folder and opens a chat with it.
   rpc StartChat(StartChatRequest) returns (StartChatResponse);
-  // Lists the agents chats can run, the default first.
+  // Lists the agents chats can run, the default first, each as found on
+  // this Mac now: its CLI on the login shell's PATH and its version. Each
+  // CLI is only asked what it is, with file writes and the network denied.
   rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse);
   // Lists an agent's sessions in a folder that aren't chats (started in a
   // terminal, say), newest first, a page at a time. It starts the agent to
@@ -298,6 +300,19 @@ message Agent {
   // Deleting a chat archives the agent's history of it rather than
   // deleting it: the resume command still offers it.
   bool delete_archives = 5;
+  // Its CLI, as found on the login shell's PATH (or where its installer
+  // puts it); empty when it isn't installed.
+  string path = 6;
+  // The CLI's version, as it says it; empty when that couldn't be read.
+  string version = 7;
+  // Where to get it.
+  string page = 8;
+  // Why it can't run, in a few words ("Not installed", "Needs Bun");
+  // empty when it can.
+  string problem = 9;
+  // Whether the CLI is signed in, "yes" or "no", when it can tell
+  // cheaply; empty otherwise.
+  string signed_in = 10;
 }
 
 message StartChatRequest {

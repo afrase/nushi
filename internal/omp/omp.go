@@ -33,6 +33,14 @@ func Start(dir string, h acp.Handler) (*acp.Client, error) {
 	return acp.Start(cmd, h)
 }
 
+// CLI is omp's program, which runs under Bun (Needs); Page is where to
+// get both.
+const (
+	CLI   = "omp"
+	Needs = "bun"
+	Page  = "https://github.com/can1357/oh-my-pi"
+)
+
 // Resume is the terminal command that opens an omp session by its id.
 const Resume = "omp --resume"
 

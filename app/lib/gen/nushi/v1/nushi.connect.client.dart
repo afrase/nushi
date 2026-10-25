@@ -80,7 +80,9 @@ extension type NushiServiceClient (connect.Transport _transport) {
     );
   }
 
-  /// Lists the agents chats can run, the default first.
+  /// Lists the agents chats can run, the default first, each as found on
+  /// this Mac now: its CLI on the login shell's PATH and its version. Each
+  /// CLI is only asked what it is, with file writes and the network denied.
   Future<nushiv1nushi.ListAgentsResponse> listAgents(
     nushiv1nushi.ListAgentsRequest input, {
     connect.Headers? headers,
