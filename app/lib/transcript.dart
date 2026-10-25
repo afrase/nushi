@@ -104,7 +104,7 @@ class _TranscriptState extends State<Transcript> {
     final same =
         was != null &&
         was.$1.length == from.length &&
-        Iterable.generate(from.length)
+        Iterable<int>.generate(from.length)
             .every((i) => identical(was.$1[i], from[i]));
     return (_built[key] = same
             ? was

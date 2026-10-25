@@ -35,7 +35,7 @@ class _StatusBarState extends State<StatusBar> {
   void initState() {
     super.initState();
     _timer = Timer.periodic(_every, (_) => _read());
-    _read();
+    unawaited(_read());
   }
 
   @override

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'agents.dart';
@@ -5,12 +7,12 @@ import 'chat.dart';
 import 'daemon.dart';
 import 'folder_button.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
+import 'inline_edit.dart';
 import 'menu.dart';
 import 'terminals.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
 import 'worktree.dart';
-import 'inline_edit.dart';
 
 /// The chat's menu: Rename, Sleep, Archive or Unarchive, MCP servers…,
 /// Delete….
@@ -27,7 +29,7 @@ List<MenuEntry> chatMenu(
     chat.archived ? 'Unarchive' : 'Archive',
     onPick: () => tryOrShow(context, () => _archive(context, chat, daemon)),
   ),
-  if (knownAgents[chat.agent]?.mcp != false)
+  if (knownAgents[chat.agent]?.mcp ?? true)
     MenuEntry('MCP servers…', onPick: () => daemon.showMcp(chat.folder)),
   MenuEntry(
     'Delete…',
@@ -177,7 +179,8 @@ class _DeleteDialogState extends State<_DeleteDialog> {
             children: [
               line('This deletes, for good:'),
               if (p.deletesHistory &&
-                  knownAgents[widget.chat.agent]?.deleteArchives == true) ...[
+                  (knownAgents[widget.chat.agent]?.deleteArchives ??
+                      false)) ...[
                 line(
                   '• $name archives its history of the '
                   '${p.sessions.length == 1 ? 'chat' : '${p.sessions.length} sessions'} '
@@ -277,10 +280,12 @@ class RenameField extends StatelessWidget {
     style: style,
     onDone: (title) {
       if (title != null && title != chat.title) {
-        tryOrShow(
-          context,
-          () => daemon.client.renameChat(
-            RenameChatRequest(chatId: chat.id, title: title),
+        unawaited(
+          tryOrShow(
+            context,
+            () => daemon.client.renameChat(
+              RenameChatRequest(chatId: chat.id, title: title),
+            ),
           ),
         );
       }

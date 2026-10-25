@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -50,11 +52,13 @@ class Completions extends ChangeNotifier {
         _files = files ?? const [];
         _filesOf = folder;
         _filesAt = DateTime.now();
-        daemon.client.listFiles(ListFilesRequest(folder: folder)).then((r) {
-          if (_filesOf != folder) return; // another folder's, asked since
-          _files = r.paths;
-          if (!_disposed) _update();
-        }, onError: (_) => _files = null);
+        unawaited(
+          daemon.client.listFiles(ListFilesRequest(folder: folder)).then((r) {
+            if (_filesOf != folder) return; // another folder's, asked since
+            _files = r.paths;
+            if (!_disposed) _update();
+          }, onError: (_) => _files = null),
+        );
       }
       found = [
         for (final f in rankChoices(files ?? const [], m[2]!))

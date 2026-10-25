@@ -7,13 +7,13 @@ import 'chat.dart';
 import 'chat_menu.dart';
 import 'daemon.dart';
 import 'folder_button.dart';
+import 'inline_edit.dart';
 import 'menu.dart';
 import 'new_chat.dart';
 import 'status.dart';
 import 'terminal_panel.dart';
 import 'theme/theme.dart';
 import 'widgets.dart';
-import 'inline_edit.dart';
 
 /// The chats, grouped by folder (a chat in a worktree under its
 /// repository): the folder with the newest chat first, and in each folder

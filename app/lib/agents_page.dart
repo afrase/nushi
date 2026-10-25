@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -221,8 +222,10 @@ class _SetUpState extends State<_SetUp> {
   void initState() {
     super.initState();
     // Its awake chats as they are now.
-    listAgents(widget.client)
-        .then((_) => mounted ? setState(() {}) : null, onError: (_) {});
+    unawaited(
+      listAgents(widget.client)
+          .then((_) => mounted ? setState(() {}) : null, onError: (_) {}),
+    );
   }
 
   Future<void> _run() async {
@@ -309,9 +312,9 @@ Future<bool> _confirmRemove(
   final a = knownAgents[agent.name] ?? agent, ad = a.adapter;
   return confirm(
     context,
-    'Remove ${a.title}\'s adapter?',
+    "Remove ${a.title}'s adapter?",
     'Removes ${tilde(ad.folder)} (${_mb(ad.diskBytes.toInt())}). ${a.title} '
-        'chats start again once it\'s set up.${_sleeps(a)}',
+        "chats start again once it's set up.${_sleeps(a)}",
     'Remove',
   );
 }

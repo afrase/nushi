@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 
 import 'chat.dart';
@@ -114,7 +116,7 @@ mixin FollowsChanges<T extends StatefulWidget> on State<T> {
     _folder = chat.folder;
     _scope = chat.scope;
     chat.addListener(_changed);
-    reload();
+    unawaited(reload());
   }
 
   @override
@@ -129,7 +131,7 @@ mixin FollowsChanges<T extends StatefulWidget> on State<T> {
         _scope != chat.scope) {
       _folder = chat.folder;
       _scope = chat.scope;
-      reload();
+      unawaited(reload());
     }
     _wasBusy = chat.busy;
   }

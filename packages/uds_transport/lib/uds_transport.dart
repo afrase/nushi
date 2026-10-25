@@ -51,6 +51,8 @@ final class UdsTransport implements Http2ClientTransport {
   }
 
   Future<http2.ClientTransportConnection> _dial() async {
+    // The connection owns it: closing the connection closes it.
+    // ignore: close_sinks
     final Socket socket;
     try {
       socket = await Socket.connect(
@@ -66,7 +68,7 @@ final class UdsTransport implements Http2ClientTransport {
     conn.onActiveStateChanged = (_) {
       if (!conn.isOpen) gone();
     };
-    socket.done.then(gone, onError: gone);
+    unawaited(socket.done.then(gone, onError: gone));
     return conn;
   }
 

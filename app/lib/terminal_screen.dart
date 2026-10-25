@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:xterm2/xterm.dart';
@@ -98,10 +100,12 @@ class TerminalScreen extends StatelessWidget {
                   // target, else the URL or file under the pointer.
                   onTapUp: (_, at) {
                     if (HardwareKeyboard.instance.isMetaPressed) {
-                      openLink(
-                        clickTarget(s.terminal, at),
-                        info.folder,
-                        showChange,
+                      unawaited(
+                        openLink(
+                          clickTarget(s.terminal, at),
+                          info.folder,
+                          showChange,
+                        ),
                       );
                     }
                   },

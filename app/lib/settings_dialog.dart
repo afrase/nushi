@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -77,12 +78,14 @@ class _SettingsState extends State<_Settings> {
   @override
   void initState() {
     super.initState();
-    widget.client
-        .getSettings(GetSettingsRequest())
-        .then(
-          (r) => mounted ? setState(() => _set = r.settings) : null,
-          onError: (_) {}, // the row stays out
-        );
+    unawaited(
+      widget.client
+          .getSettings(GetSettingsRequest())
+          .then(
+            (r) => mounted ? setState(() => _set = r.settings) : null,
+            onError: (_) {}, // the row stays out
+          ),
+    );
   }
 
   /// Sets the daemon's settings, both: [change] applied to them.

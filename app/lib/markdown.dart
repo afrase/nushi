@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:markdown_view/markdown_view.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -28,7 +30,7 @@ class AgentMarkdown extends StatelessWidget {
   static void _open(String href) {
     final uri = Uri.tryParse(href);
     if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
-      launchUrl(uri);
+      unawaited(launchUrl(uri));
     }
   }
 

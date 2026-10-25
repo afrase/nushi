@@ -91,12 +91,12 @@ class ChatDot extends StatelessWidget {
     }
     if (chat.busy && !chat.waiting) {
       return CustomPaint(
-        size: Size.square(size * 1.6),
+        size: const Size.square(size * 1.6),
         painter: _Mark(t.running, pulse: !_still(context)),
       );
     }
     return Padding(
-      padding: EdgeInsets.all(size * 0.3),
+      padding: const EdgeInsets.all(size * 0.3),
       child: DecoratedBox(
         decoration: chat.waiting
             ? BoxDecoration(
@@ -108,7 +108,7 @@ class ChatDot extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: t.idle, width: 1.5),
               ),
-        child: SizedBox.square(dimension: size),
+        child: const SizedBox.square(dimension: size),
       ),
     );
   }

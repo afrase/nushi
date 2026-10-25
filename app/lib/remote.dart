@@ -16,7 +16,7 @@ const _states = {
   'connected': 'Connected',
   'connecting': 'Connecting…',
   'off': 'Off',
-  'error': 'Can\'t reach the relay',
+  'error': "Can't reach the relay",
 };
 
 /// Settings → Remote access: the switch, the relay, the state, pairing a
@@ -146,7 +146,6 @@ class _RemoteSectionState extends State<RemoteSection> {
               alignment: Alignment.centerLeft,
               child: Button(
                 label: 'Pair a phone',
-                kind: ButtonKind.secondary,
                 onPressed: r.on ? () => _pair(context, widget.client) : null,
               ),
             ),
@@ -203,7 +202,7 @@ void watchPairings(
     final context = navigator.currentContext;
     if (code.isEmpty || code == asked || _open || context == null) return;
     asked = code;
-    _show(context, client, '');
+    unawaited(_show(context, client, ''));
   });
 }
 
@@ -229,7 +228,7 @@ class _Pairing extends StatelessWidget {
     return ValueListenableBuilder(
       valueListenable: remoteState,
       builder: (context, r, _) {
-        final p = r?.hasPairing() == true ? r!.pairing : null;
+        final p = r?.hasPairing() ?? false ? r!.pairing : null;
         final close = Button(
           label: 'Close',
           kind: ButtonKind.ghost,
@@ -244,13 +243,12 @@ class _Pairing extends StatelessWidget {
             ),
             [
               close,
-              if (r?.on == true)
+              if (r?.on ?? false)
                 Button(
                   label: 'New code',
-                  kind: ButtonKind.secondary,
                   onPressed: () {
                     final nav = Navigator.of(context)..pop();
-                    _pair(nav.context, client);
+                    unawaited(_pair(nav.context, client));
                   },
                 ),
             ],
@@ -318,12 +316,7 @@ class _Pairing extends StatelessWidget {
 
 class _QrPainter extends CustomPainter {
   _QrPainter(String text)
-    : _image = QrImage(
-        QrCode(
-          payload: QrPayload.fromString(text),
-          errorCorrectLevel: QrErrorCorrectLevel.medium,
-        ),
-      );
+    : _image = QrImage(QrCode(payload: QrPayload.fromString(text)));
 
   final QrImage _image;
 

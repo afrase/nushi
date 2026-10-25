@@ -11,6 +11,8 @@ Future<Uri> _server(List<Object> script, {Duration? ping}) async {
   final srv = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
   addTearDown(() => srv.close(force: true));
   srv.listen((req) async {
+    // Closed by the script, or by the server's close at teardown.
+    // ignore: close_sinks
     final ws = await WebSocketTransformer.upgrade(req);
     ws.pingInterval = ping;
     for (final m in script) {
@@ -61,11 +63,10 @@ void main() {
   test('a plain HTTP answer is refused', () async {
     final srv = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     addTearDown(() => srv.close(force: true));
-    srv.listen(
-      (req) => req.response
-        ..statusCode = 503
-        ..close(),
-    );
+    srv.listen((req) {
+      req.response.statusCode = 503;
+      unawaited(req.response.close());
+    });
     await expectLater(
       RelaySocket.connect(Uri.parse('ws://127.0.0.1:${srv.port}/v1/dial/x')),
       throwsA(isA<SocketException>()),

@@ -21,7 +21,7 @@ final _random = Random.secure();
 /// most [maxMessage] bytes each.
 final class RelaySocket {
   RelaySocket._(this._socket) {
-    _socket.done.catchError((Object e) => _fail(e));
+    unawaited(_socket.done.catchError(_fail));
     _ping = Timer.periodic(keepAlive, (_) {
       if (DateTime.now().difference(_heard) > keepAlive * 3) {
         _fail(const SocketException('the relay went quiet'));
@@ -53,7 +53,9 @@ final class RelaySocket {
       throw ArgumentError.value(url, 'url', 'not ws:// or wss://');
     }
     final port = url.hasPort ? url.port : (secure ? 443 : 80);
-    final Socket socket = secure
+    // Handed to the RelaySocket, which destroys it when it fails or closes.
+    // ignore: close_sinks
+    final socket = secure
         ? await SecureSocket.connect(url.host, port, timeout: timeout)
         : await Socket.connect(url.host, port, timeout: timeout);
     socket.setOption(SocketOption.tcpNoDelay, true);
@@ -84,7 +86,7 @@ final class RelaySocket {
         if (end < 0) {
           if (bytes.length > 8192) {
             upgraded.completeError(
-              const SocketException('the relay\'s answer is too long'),
+              const SocketException("the relay's answer is too long"),
             );
           }
           return;
@@ -183,7 +185,7 @@ final class RelaySocket {
   void _take(Uint8List data) {
     _heard = DateTime.now();
     _buf.add(data);
-    var b = _buf.takeBytes();
+    final b = _buf.takeBytes();
     var at = 0;
     while (!_closed) {
       if (b.length - at < 2) break;
@@ -219,7 +221,7 @@ final class RelaySocket {
         case 0xA:
           break;
         default:
-          return _fail(const SocketException('a message that isn\'t binary'));
+          return _fail(const SocketException("a message that isn't binary"));
       }
     }
     if (at < b.length) _buf.add(Uint8List.sublistView(b, at));
@@ -231,6 +233,6 @@ final class RelaySocket {
     _ping.cancel();
     _socket.destroy();
     if (error != null) _messages.addError(error);
-    _messages.close();
+    unawaited(_messages.close());
   }
 }

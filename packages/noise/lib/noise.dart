@@ -157,7 +157,6 @@ final class CipherState {
       Uint8List(32),
       secretKey: SecretKey(_k!),
       nonce: _nonce(0, max: true),
-      aad: const [],
     );
     _k = Uint8List.fromList(box.cipherText.sublist(0, 32));
   }

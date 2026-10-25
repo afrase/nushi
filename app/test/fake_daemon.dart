@@ -28,12 +28,12 @@ class FakeDaemon implements Transport {
   final List<Chat> chats;
 
   /// What ListAgents answers; the agents set up and removed.
-  var agents = readyAgents();
+  List<Agent> agents = readyAgents();
   final setUp = <String>[], removed = <String>[];
   final started = <StartChatRequest>[];
 
   /// What GetSettings answers, and each SetSettings.
-  var settings = Settings(sleepAfterMinutes: 30);
+  Settings settings = Settings(sleepAfterMinutes: 30);
   final setSettings = <Settings>[];
   String? startError;
 
@@ -42,6 +42,8 @@ class FakeDaemon implements Transport {
   ListAgentSessionsResponse Function(ListAgentSessionsRequest)? sessions;
   final listed = <ListAgentSessionsRequest>[];
   final opened = <OpenAgentSessionRequest>[];
+  // The fake's stream, which lives as long as the test.
+  // ignore: close_sinks
   final _events = StreamController<EventsResponse>()..add(EventsResponse());
 
   /// A [Daemon] on this fake, its chats and agents listed.
@@ -68,7 +70,7 @@ class FakeDaemon implements Transport {
       started.add(input);
       if (startError case final e?) throw ConnectException(Code.unknown, e);
     }
-    final Object out = switch (input) {
+    final out = switch (input) {
       PingRequest() => PingResponse(apiVersion: apiVersion),
       ListChatsRequest() => ListChatsResponse(chats: chats),
       ListAgentsRequest() => ListAgentsResponse(agents: agents),
@@ -120,7 +122,7 @@ Future<void> loadFonts() async {
       json.decode(await rootBundle.loadString('FontManifest.json')) as List;
   for (final family in manifest.cast<Map<String, dynamic>>()) {
     final loader = FontLoader(family['family'] as String);
-    for (final font in (family['fonts'] as List).cast<Map>()) {
+    for (final font in (family['fonts'] as List).cast<Map<String, dynamic>>()) {
       loader.addFont(rootBundle.load(font['asset'] as String));
     }
     await loader.load();

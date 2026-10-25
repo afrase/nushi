@@ -13,7 +13,7 @@ Uint8List _hex(String s) => Uint8List.fromList([
 String _toHex(List<int> b) =>
     [for (final x in b) x.toRadixString(16).padLeft(2, '0')].join();
 
-final _deferred = RegExp(r'^Noise_[NKXI]1|^Noise_[NKXI]{1,2}1');
+final _deferred = RegExp('^Noise_[NKXI]1|^Noise_[NKXI]{1,2}1');
 
 void main() {
   // cacophony's and snow's vectors, cut to 25519_ChaChaPoly_BLAKE2s: every
@@ -129,7 +129,7 @@ Future<void> _vector(Map<String, dynamic> v) async {
     psks: psks('resp_psks'),
     e: await key('resp_ephemeral'),
   );
-  final oneWay = RegExp(r'^Noise_[NKX](psk|_)').hasMatch(name);
+  final oneWay = RegExp('^Noise_[NKX](psk|_)').hasMatch(name);
   final messages = (v['messages'] as List).cast<Map<String, dynamic>>();
   for (var n = 0; n < messages.length; n++) {
     final payload = _hex(messages[n]['payload'] as String);

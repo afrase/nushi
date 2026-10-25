@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/panel_cards.dart';
 import 'package:nushi/cards.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/panel_cards.dart';
 import 'package:nushi/theme/theme.dart';
 
 void main() {

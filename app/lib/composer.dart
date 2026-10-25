@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -116,13 +118,15 @@ class _ComposerState extends State<Composer> {
     final shift = HardwareKeyboard.instance.isShiftPressed;
     if (_completions.onKey(key, shift: shift)) return KeyEventResult.handled;
     if (key == LogicalKeyboardKey.enter && !shift) {
-      _send(now: HardwareKeyboard.instance.isMetaPressed);
+      unawaited(_send(now: HardwareKeyboard.instance.isMetaPressed));
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.keyV &&
         HardwareKeyboard.instance.isMetaPressed &&
         widget.chat.canImages) {
-      tryOrShow(context, _images.paste); // text, if any, pastes as usual
+      unawaited(
+        tryOrShow(context, _images.paste),
+      ); // text, if any, pastes as usual
     }
     if (key == LogicalKeyboardKey.arrowUp && _text.text.isEmpty) {
       final last = widget.chat.items.lastWhere(
@@ -292,7 +296,6 @@ class _ComposerState extends State<Composer> {
                     ),
                   ),
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Menu(
                       entries: [

@@ -2,17 +2,17 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'agents_card.dart';
 import 'changes_span.dart';
 import 'chat.dart';
 import 'daemon.dart';
 import 'folder_button.dart';
 import 'gen/nushi/v1/nushi.pb.dart';
+import 'markdown.dart';
+import 'mcp_card.dart';
 import 'panel_cards.dart';
 import 'settings.dart';
 import 'terminal_panel.dart';
-import 'markdown.dart';
-import 'mcp_card.dart';
-import 'agents_card.dart';
 import 'theme/theme.dart';
 import 'usage.dart';
 import 'widgets.dart';
@@ -89,7 +89,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
       if (next > wait) wait = next;
     }
     _timer = Timer(wait, () {
-      if (ready()) _askContext();
+      if (ready()) unawaited(_askContext());
     });
   }
 

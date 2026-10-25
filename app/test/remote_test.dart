@@ -29,7 +29,7 @@ class _Daemon implements Transport {
 }
 
 void main() {
-  testWidgets('a pairing the Mac didn\'t start still asks Allow or Deny', (
+  testWidgets("a pairing the Mac didn't start still asks Allow or Deny", (
     tester,
   ) async {
     final daemon = _Daemon();

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:connectrpc/connect.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -70,7 +72,7 @@ class _SessionListState extends State<SessionList> {
   @override
   void initState() {
     super.initState();
-    _more();
+    unawaited(_more());
   }
 
   Future<void> _more() async {
@@ -104,7 +106,7 @@ class _SessionListState extends State<SessionList> {
 
   void _pick(int i) {
     if (i == _sessions.length) {
-      if (!_loading) _more();
+      if (!_loading) unawaited(_more());
     } else if (_why(_sessions[i]) == null) {
       widget.onOpen(_sessions[i]);
     }
@@ -135,7 +137,7 @@ class _SessionListState extends State<SessionList> {
     final theme = NushiTheme.of(context), t = theme.t;
     final title = agentTitle(widget.agent);
     final last = _last;
-    final String? note = switch (()) {
+    final note = switch (()) {
       _ when _error != null => _error,
       _ when last == null => 'Looking…',
       _ when !last.canList => "$title can't list its sessions.",
@@ -155,7 +157,6 @@ class _SessionListState extends State<SessionList> {
               children: [
                 IconTap(
                   Icons.arrow_back,
-                  size: 16,
                   tooltip: 'Back',
                   onTap: widget.onBack,
                 ),

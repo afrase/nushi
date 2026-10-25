@@ -237,7 +237,7 @@ final class HandshakeState {
   bool get _myTurn => (_next % 2 == 0) == _initiator;
 
   Future<Uint8List> writeMessage([List<int> payload = const []]) async {
-    if (finished || !_myTurn) throw StateError('not this side\'s message');
+    if (finished || !_myTurn) throw StateError("not this side's message");
     final out = BytesBuilder(copy: false);
     for (final token in _messages[_next]) {
       switch (token) {
@@ -263,7 +263,7 @@ final class HandshakeState {
 
   /// Reads the other side's next message and returns its payload.
   Future<Uint8List> readMessage(List<int> message) async {
-    if (finished || _myTurn) throw StateError('not the other side\'s message');
+    if (finished || _myTurn) throw StateError("not the other side's message");
     if (message.length > maxMessage) throw NoiseException('message too long');
     var rest = message;
     for (final token in _messages[_next]) {

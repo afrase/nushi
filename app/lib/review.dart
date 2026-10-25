@@ -39,19 +39,19 @@ class ReviewComment {
 
   ReviewComment.fromJson(Map<String, dynamic> j)
     : this(
-        id: j['id'],
-        where: j['where'],
-        path: j['path'],
-        old: j['old'],
-        start: j['start'],
-        end: j['end'],
-        quote: j['quote'],
-        text: j['text'],
-        before: j['before'] ?? '',
-        after: j['after'] ?? '',
-        sent: j['sent'] ?? false,
-        outdated: j['outdated'] ?? false,
-        seen: j['seen'],
+        id: j['id'] as String,
+        where: j['where'] as String,
+        path: j['path'] as String,
+        old: j['old'] as bool,
+        start: j['start'] as int,
+        end: j['end'] as int,
+        quote: j['quote'] as String,
+        text: j['text'] as String,
+        before: j['before'] as String? ?? '',
+        after: j['after'] as String? ?? '',
+        sent: j['sent'] as bool? ?? false,
+        outdated: j['outdated'] as bool? ?? false,
+        seen: j['seen'] as int?,
       );
 
   final String id, where, path, quote, before, after;
@@ -131,7 +131,10 @@ final reviews = ValueNotifier<Map<String, List<ReviewComment>>>(() {
     final j = jsonDecode(_file.readAsStringSync()) as Map<String, dynamic>;
     return {
       for (final MapEntry(:key, :value) in j.entries)
-        key: [for (final c in value as List) ReviewComment.fromJson(c)],
+        key: [
+          for (final c in value as List)
+            ReviewComment.fromJson(c as Map<String, dynamic>),
+        ],
     };
   } on Object {
     return <String, List<ReviewComment>>{};
@@ -193,10 +196,11 @@ String reviewMessage(List<ReviewComment> comments, String note) {
       if (c.old) ' (the old version, before the change)',
       if (c.outdated) ' (they have changed since; they were)',
     ].join();
-    var fence = '```';
-    while (c.quote.contains(fence)) {
-      fence += '`';
+    var ticks = 3;
+    while (c.quote.contains('`' * ticks)) {
+      ticks++;
     }
+    final fence = '`' * ticks;
     out
       ..write('\n${i + 1}. `${c.path}`, ${c.lines.toLowerCase()}$side:\n')
       ..write('$fence${languageOf(c.path) ?? ''}\n${c.quote}\n$fence\n')

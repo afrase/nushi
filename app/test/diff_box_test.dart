@@ -40,7 +40,7 @@ void main() {
     expect(lineCounts(change), (1, 0));
   });
 
-  testWidgets('the same file in another view shows that view\'s comments', (
+  testWidgets("the same file in another view shows that view's comments", (
     tester,
   ) async {
     final change = FileChange(

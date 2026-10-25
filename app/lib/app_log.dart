@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -118,7 +119,7 @@ class AppLog {
       attrs.forEach((k, v) => line.write(' $k=${quote(v)}'));
       f.writeAsStringSync('$line\n', mode: FileMode.append, flush: true);
     } on Object catch (e) {
-      debugPrint("app.log: $e");
+      debugPrint('app.log: $e');
     }
   }
 }
@@ -157,15 +158,17 @@ void catchErrors() {
   final present = FlutterError.onError;
   FlutterError.onError = (d) {
     present?.call(d);
-    appLog.write(
-      'error',
-      d.exceptionAsString(),
-      stack: '${d.stack ?? ''}',
-      attrs: {
-        'from': 'flutter',
-        'library': ?d.library,
-        'context': ?d.context?.toDescription(),
-      },
+    unawaited(
+      appLog.write(
+        'error',
+        d.exceptionAsString(),
+        stack: '${d.stack ?? ''}',
+        attrs: {
+          'from': 'flutter',
+          'library': ?d.library,
+          'context': ?d.context?.toDescription(),
+        },
+      ),
     );
   };
   PlatformDispatcher.instance.onError = (e, s) {

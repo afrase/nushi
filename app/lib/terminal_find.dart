@@ -34,7 +34,7 @@ String wordAt(Terminal terminal, CellOffset at) {
 /// it, if any (`main.dart:12:5`).
 ({Uri? url, String? path, int? line}) linkOf(String word, String folder) {
   word = word.replaceFirst(RegExp(r'[.,;:!?]+$'), '');
-  if (RegExp(r'^https?://').hasMatch(word)) {
+  if (RegExp('^https?://').hasMatch(word)) {
     return (url: Uri.tryParse(word), path: null, line: null);
   }
   final m = RegExp(r'^(.+?)(?::(\d+))?(?::\d+)?$').firstMatch(word);

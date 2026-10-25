@@ -28,7 +28,7 @@ void main() {
         ];
       await tester.pumpWidget(
         MaterialApp(
-          theme: NushiTheme(Tokens.dark).toThemeData(),
+          theme: const NushiTheme(Tokens.dark).toThemeData(),
           home: Scaffold(
             body: SizedBox(
               width: width,

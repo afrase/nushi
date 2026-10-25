@@ -215,6 +215,8 @@ class TermSession extends ChangeNotifier {
     // not the first text decoded.
     var first = true;
     final text = StringBuffer();
+    // One decoder per attach, dropped with the stream it decodes.
+    // ignore: close_sinks
     final utf8 = const Utf8Decoder(allowMalformed: true)
         .startChunkedConversion(StringConversionSink.fromStringSink(text));
     _sub = client

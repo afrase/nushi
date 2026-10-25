@@ -1,10 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/theme/theme.dart';
-
-import 'dart:io';
 
 import 'fake_daemon.dart';
 
@@ -21,7 +21,7 @@ void main() {
       final d = await FakeDaemon([]).connect(tester);
       await tester.pumpWidget(
         MaterialApp(
-          theme: NushiTheme(Tokens.dark).toThemeData(),
+          theme: const NushiTheme(Tokens.dark).toThemeData(),
           home: Scaffold(
             body: Align(
               alignment: Alignment.topRight,

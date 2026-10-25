@@ -35,7 +35,7 @@ void main() {
     expect(File('${dir.path}/app.log.3').existsSync(), isFalse);
   });
 
-  test('an error each frame can\'t flood the log', () async {
+  test("an error each frame can't flood the log", () async {
     final log = AppLog('${dir.path}/app.log');
     for (var i = 0; i < 50; i++) {
       await log.write('error', 'overflow');
@@ -44,7 +44,7 @@ void main() {
     expect(lines, hasLength(20));
   });
 
-  test('Flutter\'s errors reach the log with their stacks', () async {
+  test("Flutter's errors reach the log with their stacks", () async {
     final original = FlutterError.onError;
     final file = File(appLog.path);
     if (file.existsSync()) file.deleteSync();

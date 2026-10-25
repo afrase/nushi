@@ -130,7 +130,7 @@ class SelectionToolbar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Text(label, style: theme.ui(fg, size: 12.5)),
     );
-    return Container(
+    return DecoratedBox(
       decoration: const ShapeDecoration(
         color: Color(0xFF26272B),
         shape: StadiumBorder(side: BorderSide(color: Color(0x22FFFFFF))),

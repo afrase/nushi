@@ -14,7 +14,7 @@ class ReplyCards extends StatelessWidget {
   final Replies replies;
   final VoidCallback onDone;
 
-  void _edit(BuildContext context, int i) async {
+  Future<void> _edit(BuildContext context, int i) async {
     final text = await showDialog<String>(
       context: context,
       builder: (_) => _ReplyDialog(replies.value[i]),

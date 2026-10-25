@@ -114,7 +114,7 @@ class _Spans implements HighlightRenderer {
   void closeNode(DataNode node) => _scopes.removeLast();
 }
 
-/// [lines] with syntax spans once they're in ([highlight]), for
+/// `lines` with syntax spans once they're in (`highlight`), for
 /// a diff view that is shown before they are.
 class SyntaxLines implements DiffLineSource {
   SyntaxLines(MemoryLineSource lines, int oldCount, int newCount)

@@ -53,13 +53,15 @@ class Daemon extends ChangeNotifier {
     appLog.client = client;
     appLog.reachable = () => connected && hasLog(daemonApi);
     _timer = Timer.periodic(const Duration(seconds: 2), (_) => _ping());
-    _ping().then(
-      (_) => appLog.info('app started', {
-        'version': appVersion,
-        'api': '$apiVersion',
-        'pid': '$pid',
-        'daemon': connected ? 'answers' : 'not answering',
-      }),
+    unawaited(
+      _ping().then(
+        (_) => appLog.info('app started', {
+          'version': appVersion,
+          'api': '$apiVersion',
+          'pid': '$pid',
+          'daemon': connected ? 'answers' : 'not answering',
+        }),
+      ),
     );
   }
 
@@ -315,7 +317,7 @@ class Daemon extends ChangeNotifier {
     }
   }
 
-  /// Fetches a chat's snapshot; its events have been held since [loading].
+  /// Fetches a chat's snapshot; its events have been held since `loading`.
   Future<void> _load(ChatState chat) async {
     if (chat.loaded || chat.loading) return;
     chat.loading = true;
