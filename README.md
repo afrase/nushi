@@ -30,12 +30,12 @@ The daemon keeps its socket, token and log in `~/Library/Application Support/Nus
 
 ## Development
 
-`make lint` runs golangci-lint (with gofmt and goimports), `buf lint` and `buf format`, and `flutter analyze` and `dart format` for the app and each package; `make check` runs it and then the tests, as CI does (`.github/workflows/ci.yml`: macOS for everything, Linux for `relay` and `noiseconn`).
+`make lint` runs golangci-lint (with gofmt and goimports), govulncheck, `buf lint` and `buf format`, and `flutter analyze` and `dart format` for the app and each package; `make check` runs it and then the tests, as CI does (`.github/workflows/ci.yml`: macOS for everything, Linux for `relay` and `noiseconn`).
 
-- **Go:** golangci-lint is pinned in its own module, `tools/lint/go.mod`; `make lint` builds it into `bin/golangci-lint` and runs that: nothing to install, and the daemon's `go.mod` doesn't take its dependencies. `.golangci.yml` turns every linter on and lists each one off with the reason. To format: `bin/golangci-lint fmt ./...`.
+- **Go:** golangci-lint and govulncheck are pinned in their own module, `tools/lint/go.mod`; `make lint` builds them into `bin/` and runs them: nothing to install, and the daemon's `go.mod` doesn't take their dependencies. `.golangci.yml` turns every linter on and lists each one off with the reason. govulncheck checks the daemon, the relay and the tools against vuln.go.dev (so `make lint` needs the network) and fails on a vulnerability the code calls; the Go version is the `go` line in `go.mod`, which the go command fetches if yours is older. To format: `bin/golangci-lint fmt ./...`.
 - **ACP:** agents are spoken to through the library `github.com/afrase/acp-go` (its `unstable` package), at the version in `go.mod` ([ADR 0041](docs/adr/0041-acp-through-acp-go.md)). To change it and Nushi at once, clone it beside Nushi and run `go work init . ../acp-go` here: the `go.work` (ignored by git) makes Nushi build with your checkout. Remove it to build with the tagged version again; then `go get github.com/afrase/acp-go@vX.Y.Z` once the library has the release you need.
-- **Dart:** `analysis_options.yaml` at the root (strict casts, inference and raw types, and lint rules on top of `flutter_lints`) is included by the app and every package. `dart fix --apply` in a package fixes much of what it reports.
-- A report that's wrong for one line takes `//nolint:<linter> // <why>` (nolintlint refuses one without both), or `// ignore: <rule>` under a comment saying why in Dart. NOTES.md says when to exclude by path instead.
+- **Dart:** every package and the app include [very_good_analysis](https://pub.dev/packages/very_good_analysis) (strict casts, inference and raw types, and nearly every lint rule), then `analysis_options.yaml` at the root, which adds a few rules and turns off the ones that don't fit, each with why; the app also turns off `public_member_api_docs` (it isn't a library). `dart fix --apply` in a package fixes much of what it reports.
+- A report that's wrong for one line takes `//nolint:<linter> // <why>` (nolintlint refuses one without both), or `// ignore: <rule>` under a comment saying why in Dart (`// ignore_for_file:` when a whole file is about it). NOTES.md says when to exclude by path instead.
 
 ## Agents
 
