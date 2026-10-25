@@ -2,17 +2,17 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import 'agents.dart';
-import 'chat.dart';
-import 'daemon.dart';
-import 'folder_button.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'inline_edit.dart';
-import 'menu.dart';
-import 'terminals.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
-import 'worktree.dart';
+import 'package:nushi/agents.dart';
+import 'package:nushi/chat.dart';
+import 'package:nushi/daemon.dart';
+import 'package:nushi/folder_button.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/inline_edit.dart';
+import 'package:nushi/menu.dart';
+import 'package:nushi/terminals.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
+import 'package:nushi/worktree.dart';
 
 /// The chat's menu: Rename, Sleep, Archive or Unarchive, MCP servers…,
 /// Delete….

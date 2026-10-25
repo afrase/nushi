@@ -2,23 +2,22 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:nushi/chat.dart';
+import 'package:nushi/completions.dart';
+import 'package:nushi/composer_parts.dart';
+import 'package:nushi/daemon.dart';
 import 'package:nushi/draft.dart';
-
-import 'chat.dart';
-import 'completions.dart';
-import 'composer_parts.dart';
-import 'daemon.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'images.dart';
-import 'menu.dart';
-import 'pickers.dart';
-import 'queue.dart';
-import 'replies.dart';
-import 'reply_cards.dart';
-import 'theme/theme.dart';
-import 'thinking.dart';
-import 'widgets.dart';
-import 'worktree.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/images.dart';
+import 'package:nushi/menu.dart';
+import 'package:nushi/pickers.dart';
+import 'package:nushi/queue.dart';
+import 'package:nushi/replies.dart';
+import 'package:nushi/reply_cards.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/thinking.dart';
+import 'package:nushi/widgets.dart';
+import 'package:nushi/worktree.dart';
 
 /// The prompt box: "+" on its left mentions a file or attaches images
 /// (⌘V and dropping work too), and on its right a send button once there

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'images.dart';
-import 'replies.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/images.dart';
+import 'package:nushi/replies.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// The replies waiting in the composer, as small cards: a click opens one
 /// to edit its text, and hovering one shows a button that removes it.

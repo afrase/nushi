@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'menu.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/menu.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// The agent's config options under the prompt box, without labels, as in
 /// Claude Code: the mode's value on the left (`Auto`); on the right a "⋯"

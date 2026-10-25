@@ -2,14 +2,13 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:nushi/agent_mark.dart';
+import 'package:nushi/agents.dart';
+import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-import 'agent_mark.dart';
-import 'agents.dart';
-import 'gen/nushi/v1/nushi.connect.client.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
 
 /// Settings › Agents: each agent as found on this Mac (its version and
 /// path, or "Not installed" with where to get it), and for one that runs

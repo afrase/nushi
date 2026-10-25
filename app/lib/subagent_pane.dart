@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'chat.dart';
-import 'daemon.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'markdown.dart';
-import 'settings.dart';
-import 'subagents.dart';
-import 'theme/theme.dart';
-import 'transcript.dart';
-import 'widgets.dart';
+import 'package:nushi/chat.dart';
+import 'package:nushi/daemon.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/markdown.dart';
+import 'package:nushi/settings.dart';
+import 'package:nushi/subagents.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/transcript.dart';
+import 'package:nushi/widgets.dart';
 
 /// A subagent beside the chat, in place of the details panel: its prompt
 /// (folded), its model and state, then its steps as they come, and its

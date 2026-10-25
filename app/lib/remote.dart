@@ -1,13 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:nushi/commits.dart' show ago;
+import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 import 'package:qr/qr.dart';
-
-import 'commits.dart' show ago;
-import 'gen/nushi/v1/nushi.connect.client.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
 
 /// Remote access as the daemon last said (ADR 0034); null until it has.
 final remoteState = ValueNotifier<Remote?>(null);

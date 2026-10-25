@@ -3,18 +3,18 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-import 'changes_span.dart';
-import 'chat.dart';
-import 'commits.dart';
-import 'daemon.dart';
-import 'diff_box.dart';
-import 'file_tree.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'panes.dart';
-import 'review.dart';
-import 'settings.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/changes_span.dart';
+import 'package:nushi/chat.dart';
+import 'package:nushi/commits.dart';
+import 'package:nushi/daemon.dart';
+import 'package:nushi/diff_box.dart';
+import 'package:nushi/file_tree.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/panes.dart';
+import 'package:nushi/review.dart';
+import 'package:nushi/settings.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// The chat folder's changes in a [Scope]: a toolbar, the changed files
 /// (under the branch's commits in Commits) and the picked one side by

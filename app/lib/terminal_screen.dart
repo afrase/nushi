@@ -2,18 +2,17 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart' as pb;
+import 'package:nushi/new_chat.dart';
+import 'package:nushi/settings.dart';
+import 'package:nushi/settings_dialog.dart';
+import 'package:nushi/terminal_find.dart';
+import 'package:nushi/terminal_panel.dart';
+import 'package:nushi/terminal_tabs.dart';
+import 'package:nushi/terminals.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 import 'package:xterm2/xterm.dart';
-
-import 'gen/nushi/v1/nushi.pb.dart' as pb;
-import 'new_chat.dart';
-import 'settings.dart';
-import 'settings_dialog.dart';
-import 'terminal_find.dart';
-import 'terminal_panel.dart';
-import 'terminal_tabs.dart';
-import 'terminals.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
 
 /// One terminal's screen, and its exit with Restart once its shell ended.
 class TerminalScreen extends StatelessWidget {

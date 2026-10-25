@@ -2,8 +2,8 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-import 'settings.dart';
-import 'theme/theme.dart';
+import 'package:nushi/settings.dart';
+import 'package:nushi/theme/theme.dart';
 
 /// A pane of a remembered width, with a draggable edge on its [left] or
 /// right side: a thin line that highlights under the pointer. Dragging it

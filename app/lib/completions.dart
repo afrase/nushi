@@ -3,11 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'chat.dart';
-import 'daemon.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/chat.dart';
+import 'package:nushi/daemon.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// What the prompt box offers while typing in [text]: at its start after
 /// `/` the agent's commands, anywhere after `@` the chat folder's files.

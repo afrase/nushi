@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-import 'chat.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'settings.dart';
-import 'status.dart';
-import 'subagents.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/chat.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/settings.dart';
+import 'package:nushi/status.dart';
+import 'package:nushi/subagents.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// The tool calls that left a command running in the background, in order.
 List<Item> shellsOf(List<Item> items) => [

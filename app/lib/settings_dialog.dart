@@ -3,19 +3,18 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:nushi/agents_page.dart';
+import 'package:nushi/bundled_daemon.dart';
+import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/login_item.dart';
+import 'package:nushi/logs_section.dart';
+import 'package:nushi/menu.dart';
+import 'package:nushi/remote.dart';
+import 'package:nushi/settings.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 import 'package:xterm2/xterm.dart';
-
-import 'agents_page.dart';
-import 'bundled_daemon.dart';
-import 'gen/nushi/v1/nushi.connect.client.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'login_item.dart';
-import 'logs_section.dart';
-import 'menu.dart';
-import 'remote.dart';
-import 'settings.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
 
 /// The terminal's text: the picked font, then the bundled Nerd Font
 /// symbols, so file and prompt icons show whatever font is picked.

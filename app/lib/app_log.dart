@@ -3,9 +3,9 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
-import 'daemon.dart';
-import 'gen/nushi/v1/nushi.connect.client.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/daemon.dart';
+import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
 /// The app's log (ADR 0038): its errors with their stacks, and what helps
 /// afterwards (starting, connecting, an outdated daemon, restarts). Lines

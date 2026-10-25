@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 
-import 'images.dart';
-import 'replies.dart';
+import 'package:nushi/images.dart';
+import 'package:nushi/replies.dart';
 
 /// What the user is writing to a chat: the box's text, the files mentioned
 /// with @, the reply cards and the images. It lives on the chat, not in the

@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'chat.dart';
-import 'composer.dart';
-import 'composer_parts.dart';
-import 'daemon.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'status.dart';
-import 'theme/theme.dart';
-import 'transcript.dart';
-import 'widgets.dart';
+import 'package:nushi/chat.dart';
+import 'package:nushi/composer.dart';
+import 'package:nushi/composer_parts.dart';
+import 'package:nushi/daemon.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/status.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/transcript.dart';
+import 'package:nushi/widgets.dart';
 
 /// A side question: a forked session beside the chat, which knows the
 /// conversation so far but doesn't add to it. Closing it ends it.

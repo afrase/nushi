@@ -1,12 +1,12 @@
 import 'package:diff_view/diff_view.dart';
 import 'package:flutter/material.dart';
 
-import 'diff_box.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'images.dart';
-import 'markdown.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/diff_box.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/images.dart';
+import 'package:nushi/markdown.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// What a kind of tool call does: its icon, what it did ("read") to what
 /// ("file"), its verb on a path ("Read") and what it is doing ("Reading").

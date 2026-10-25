@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'theme/theme.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/theme/theme.dart';
 
 /// A token count in short: 950, 21.8k, 1M.
 String tokens(int n) => switch (n) {

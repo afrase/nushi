@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 
-import 'cards.dart';
-import 'chat.dart';
-import 'daemon.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'images.dart';
-import 'markdown.dart';
-import 'question_card.dart';
-import 'replies.dart';
-import 'rewind.dart';
-import 'theme/theme.dart';
-import 'thinking.dart';
-import 'tool_calls.dart';
+import 'package:nushi/cards.dart';
+import 'package:nushi/chat.dart';
+import 'package:nushi/daemon.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/images.dart';
+import 'package:nushi/markdown.dart';
+import 'package:nushi/question_card.dart';
+import 'package:nushi/replies.dart';
+import 'package:nushi/rewind.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/thinking.dart';
+import 'package:nushi/tool_calls.dart';
 
 /// One item of a transcript, by its kind.
 class ItemView extends StatelessWidget {

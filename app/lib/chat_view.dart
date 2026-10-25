@@ -4,22 +4,22 @@ import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'chat.dart';
-import 'composer.dart';
-import 'composer_parts.dart';
-import 'daemon.dart';
-import 'details_panel.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'images.dart';
-import 'panes.dart';
-import 'settings.dart';
-import 'shells.dart';
-import 'side_panel.dart';
-import 'status.dart';
-import 'subagent_pane.dart';
-import 'theme/theme.dart';
-import 'transcript.dart';
-import 'widgets.dart';
+import 'package:nushi/chat.dart';
+import 'package:nushi/composer.dart';
+import 'package:nushi/composer_parts.dart';
+import 'package:nushi/daemon.dart';
+import 'package:nushi/details_panel.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/images.dart';
+import 'package:nushi/panes.dart';
+import 'package:nushi/settings.dart';
+import 'package:nushi/shells.dart';
+import 'package:nushi/side_panel.dart';
+import 'package:nushi/status.dart';
+import 'package:nushi/subagent_pane.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/transcript.dart';
+import 'package:nushi/widgets.dart';
 
 /// A chat's transcript with the composer under it, and beside them a side
 /// question when one is open, or else [details]. Escape stops a running

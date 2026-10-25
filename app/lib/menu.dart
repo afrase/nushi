@@ -3,8 +3,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// One row of a [Menu]: [label], then [detail] dimmed on the same line, and
 /// a check on the right when [checked]. Picking it runs [onPick]; with

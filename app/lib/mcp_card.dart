@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-import 'agents.dart';
-import 'chat.dart';
-import 'daemon.dart';
-import 'mcp_servers.dart';
-import 'panel_cards.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/agents.dart';
+import 'package:nushi/chat.dart';
+import 'package:nushi/daemon.dart';
+import 'package:nushi/mcp_servers.dart';
+import 'package:nushi/panel_cards.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// The details panel's MCP card: the servers the agent uses in the chat's
 /// folder, each with its state; "Manage…" opens the MCP servers view. An

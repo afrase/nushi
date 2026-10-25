@@ -4,10 +4,9 @@ import 'dart:typed_data';
 
 import 'package:diff_view/diff_view.dart';
 import 'package:flutter/widgets.dart';
+import 'package:nushi/theme/theme.dart';
 import 'package:re_highlight/languages/all.dart';
 import 'package:re_highlight/re_highlight.dart';
-
-import 'theme/theme.dart';
 
 /// The syntax colors of code, in diffs and the transcript's code blocks,
 /// by capture id: the highlight.js scopes each colors, its color, and

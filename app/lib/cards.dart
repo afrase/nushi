@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import 'diff_box.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'markdown.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/diff_box.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/markdown.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// A card for something the agent waits on: amber while it waits.
 class WaitingCard extends StatelessWidget {

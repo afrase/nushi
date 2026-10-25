@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// Key/value rows: env vars or headers.
 class Pairs {

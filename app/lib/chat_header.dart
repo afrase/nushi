@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 
-import 'agent_mark.dart';
-import 'chat.dart';
-import 'chat_menu.dart';
-import 'daemon.dart';
-import 'folder_button.dart';
-import 'menu.dart';
-import 'status.dart';
-import 'terminal_panel.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/agent_mark.dart';
+import 'package:nushi/chat.dart';
+import 'package:nushi/chat_menu.dart';
+import 'package:nushi/daemon.dart';
+import 'package:nushi/folder_button.dart';
+import 'package:nushi/menu.dart';
+import 'package:nushi/status.dart';
+import 'package:nushi/terminal_panel.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// The chat's header: its title (double-click renames it), the agent, its
 /// model and status, the folder while the details panel is hidden, the

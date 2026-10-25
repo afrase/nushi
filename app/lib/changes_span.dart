@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
-import 'chat.dart';
-import 'daemon.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/chat.dart';
+import 'package:nushi/daemon.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
 /// What a chat's Changes view shows: what's uncommitted, the branch's
 /// work since it left its base (committed, uncommitted and untracked), or

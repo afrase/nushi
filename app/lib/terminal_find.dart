@@ -3,13 +3,12 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:nushi/settings_dialog.dart';
+import 'package:nushi/terminals.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:xterm2/xterm.dart';
-
-import 'settings_dialog.dart';
-import 'terminals.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
 
 /// Characters that end a path or URL in a terminal's text.
 final _stop = RegExp(r'''[\s"'`()<>\[\]{}|]''');

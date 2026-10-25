@@ -3,27 +3,27 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-import 'app_log.dart';
-import 'bundled_daemon.dart';
-import 'changes_view.dart';
-import 'chat.dart';
-import 'chat_header.dart';
-import 'chat_view.dart';
-import 'daemon.dart';
-import 'details_panel.dart';
-import 'folder_button.dart';
-import 'mcp.dart';
-import 'new_chat.dart';
-import 'panes.dart';
-import 'remote.dart';
-import 'settings.dart';
-import 'settings_dialog.dart';
-import 'sidebar.dart';
-import 'status_bar.dart';
-import 'terminal_panel.dart';
-import 'theme/theme.dart';
-import 'trust_card.dart';
-import 'widgets.dart';
+import 'package:nushi/app_log.dart';
+import 'package:nushi/bundled_daemon.dart';
+import 'package:nushi/changes_view.dart';
+import 'package:nushi/chat.dart';
+import 'package:nushi/chat_header.dart';
+import 'package:nushi/chat_view.dart';
+import 'package:nushi/daemon.dart';
+import 'package:nushi/details_panel.dart';
+import 'package:nushi/folder_button.dart';
+import 'package:nushi/mcp.dart';
+import 'package:nushi/new_chat.dart';
+import 'package:nushi/panes.dart';
+import 'package:nushi/remote.dart';
+import 'package:nushi/settings.dart';
+import 'package:nushi/settings_dialog.dart';
+import 'package:nushi/sidebar.dart';
+import 'package:nushi/status_bar.dart';
+import 'package:nushi/terminal_panel.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/trust_card.dart';
+import 'package:nushi/widgets.dart';
 
 void main() => runZonedGuarded(() {
   WidgetsFlutterBinding.ensureInitialized();

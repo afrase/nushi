@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import 'chat.dart';
-import 'daemon.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'widgets.dart';
+import 'package:nushi/chat.dart';
+import 'package:nushi/daemon.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/widgets.dart';
 
 /// Stops the chat's running turn. If the agent hasn't answered the last
 /// message yet, the daemon takes it back too, for the composer.

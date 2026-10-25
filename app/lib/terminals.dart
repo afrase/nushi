@@ -3,10 +3,9 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
+import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart' as pb;
 import 'package:xterm2/xterm.dart';
-
-import 'gen/nushi/v1/nushi.connect.client.dart';
-import 'gen/nushi/v1/nushi.pb.dart' as pb;
 
 /// The chats' terminals as the daemon lists them, and an emulator for each
 /// one the app has shown. The daemon runs the shells; the emulators replay

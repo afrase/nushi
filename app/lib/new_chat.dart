@@ -3,16 +3,16 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'agent_mark.dart';
-import 'agents.dart';
-import 'daemon.dart';
-import 'folder_button.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'logo.dart';
-import 'open_session.dart';
-import 'settings_dialog.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/agent_mark.dart';
+import 'package:nushi/agents.dart';
+import 'package:nushi/daemon.dart';
+import 'package:nushi/folder_button.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/logo.dart';
+import 'package:nushi/open_session.dart';
+import 'package:nushi/settings_dialog.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// ⌘N: a new chat, as the sidebar's button starts one.
 const newChatKey = SingleActivator(LogicalKeyboardKey.keyN, meta: true);

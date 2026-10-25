@@ -6,20 +6,19 @@ import 'package:connectrpc/http2.dart';
 import 'package:connectrpc/protobuf.dart';
 import 'package:connectrpc/protocol/connect.dart' as protocol;
 import 'package:flutter/foundation.dart';
+import 'package:nushi/agents.dart';
+import 'package:nushi/app_log.dart';
+import 'package:nushi/bundled_daemon.dart';
+import 'package:nushi/chat.dart';
+import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/remote.dart';
+import 'package:nushi/review.dart';
+import 'package:nushi/settings.dart';
+import 'package:nushi/side_panel.dart';
+import 'package:nushi/terminals.dart';
+import 'package:nushi/trust_card.dart';
 import 'package:uds_transport/uds_transport.dart';
-
-import 'agents.dart';
-import 'app_log.dart';
-import 'bundled_daemon.dart';
-import 'chat.dart';
-import 'gen/nushi/v1/nushi.connect.client.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'remote.dart';
-import 'review.dart';
-import 'settings.dart';
-import 'side_panel.dart';
-import 'terminals.dart';
-import 'trust_card.dart';
 
 final support = '${Platform.environment['HOME']}/Library/Application Support';
 

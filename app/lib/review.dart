@@ -4,13 +4,13 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
-import 'chat.dart';
-import 'daemon.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'settings.dart';
-import 'syntax.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/chat.dart';
+import 'package:nushi/daemon.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/settings.dart';
+import 'package:nushi/syntax.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// A review comment on lines [start]–[end] (from 1) of a file's [old] or
 /// new side, in the Changes view it was made in ([where]: the scope, and

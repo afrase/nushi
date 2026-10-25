@@ -4,13 +4,13 @@ import 'package:connectrpc/connect.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'agents.dart';
-import 'commits.dart';
-import 'daemon.dart';
-import 'folder_button.dart';
-import 'gen/nushi/v1/nushi.pb.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/agents.dart';
+import 'package:nushi/commits.dart';
+import 'package:nushi/daemon.dart';
+import 'package:nushi/folder_button.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// The New chat dialog's second step: [agent]'s sessions in [folder] ('':
 /// every folder's) that aren't chats, newest first, for [onOpen]. The

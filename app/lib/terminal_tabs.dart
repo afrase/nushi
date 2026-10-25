@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import 'gen/nushi/v1/nushi.pb.dart' as pb;
-import 'inline_edit.dart';
-import 'terminals.dart';
-import 'theme/theme.dart';
-import 'widgets.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart' as pb;
+import 'package:nushi/inline_edit.dart';
+import 'package:nushi/terminals.dart';
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 /// Closes a terminal, asking first when a program other than the shell
 /// runs in it.
