@@ -56,7 +56,7 @@ func (c *chat) openSession(ctx context.Context, sid, folder string, fork bool) (
 		}
 	}
 	if err != nil {
-		agent.Close()
+		_ = agent.Close() // its start failed; that error is the one to return
 		return opened{}, c.kind.explain(err)
 	}
 	return o, nil
@@ -102,7 +102,7 @@ func initialize(ctx context.Context, launch Launch, h acp.Handler, meta map[stri
 		ClientInfo: &acp.Implementation{Name: "nushi", Title: "Nushi"},
 	})
 	if err != nil {
-		agent.Close()
+		_ = agent.Close() // as above
 		return nil, nil, err
 	}
 	return agent, init, nil
@@ -165,6 +165,6 @@ func (c *chat) disconnect() {
 	c.orphanLocked()
 	c.mu.Unlock()
 	if agent != nil {
-		agent.Stop(stopGrace)
+		_ = agent.Stop(stopGrace) // its process is gone either way
 	}
 }

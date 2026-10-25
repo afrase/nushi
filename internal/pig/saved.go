@@ -45,7 +45,7 @@ type saved struct {
 // all reads the header of every session file.
 func (d Dirs) all() []saved {
 	var out []saved
-	filepath.WalkDir(d.Sessions, func(path string, e fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(d.Sessions, func(path string, e fs.DirEntry, err error) error {
 		if err != nil || !e.Type().IsRegular() || !strings.HasSuffix(path, ".jsonl") {
 			return nil
 		}
@@ -53,7 +53,7 @@ func (d Dirs) all() []saved {
 		if err != nil {
 			return nil
 		}
-		defer f.Close()
+		defer f.Close() //nolint:errcheck // read-only
 		line, _ := bufio.NewReader(io.LimitReader(f, 64<<10)).ReadBytes('\n')
 		var h header
 		if json.Unmarshal(line, &h) != nil || h.Type != "session" || h.ID == "" {
@@ -88,7 +88,7 @@ func (d Dirs) remove(ctx context.Context, id string) error {
 		return nil //nolint:nilerr // not found: gone already
 	}
 	if d.Trash != "" {
-		exec.CommandContext(ctx, d.Trash, file).Run() //nolint:gosec // trash, on a session file PiG keeps; file is absolute
+		_ = exec.CommandContext(ctx, d.Trash, file).Run() //nolint:gosec // trash, on a session file PiG keeps; file is absolute; whether it went is checked next
 		if _, err := os.Lstat(file); errors.Is(err, fs.ErrNotExist) {
 			return nil
 		}
@@ -132,7 +132,7 @@ func summary(file string) (title string, messages int) {
 	if err != nil {
 		return "", 0
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck // read-only
 	r := bufio.NewReader(f)
 	var first string
 	for {

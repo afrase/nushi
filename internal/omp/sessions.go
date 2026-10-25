@@ -43,7 +43,7 @@ func hasParent(path string) bool {
 	if err != nil {
 		return false
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck // read-only
 	sc := bufio.NewScanner(f)
 	sc.Buffer(nil, 4<<20)
 	for i := 0; i < 4 && sc.Scan(); i++ {

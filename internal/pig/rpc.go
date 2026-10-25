@@ -79,7 +79,7 @@ func (p *proc) read(out io.Reader) {
 			warnf("pig wrote a line that isn't JSON (%d bytes)", len(line))
 		case head.Type == "response" && head.ID != nil:
 			var resp response
-			json.Unmarshal(line, &resp)
+			_ = json.Unmarshal(line, &resp)
 			p.mu.Lock()
 			ch := p.waiting[*head.ID]
 			delete(p.waiting, *head.ID)
@@ -89,7 +89,7 @@ func (p *proc) read(out io.Reader) {
 			}
 		case head.Type == "response":
 			var resp response
-			json.Unmarshal(line, &resp)
+			_ = json.Unmarshal(line, &resp)
 			warnf("pig refused a command: %s", resp.Error)
 		default:
 			p.events <- event{Type: head.Type, Raw: line}
@@ -174,7 +174,7 @@ func (p *proc) write(v any) error {
 // cancelled what runs; it is killed if its output hasn't ended after
 // grace. Its events must be read meanwhile.
 func (p *proc) stop(grace time.Duration) {
-	p.in.Close()
+	_ = p.in.Close() // closing stdin asks pig to end; it is killed if it doesn't
 	select {
 	case <-p.exited:
 	case <-time.After(grace):

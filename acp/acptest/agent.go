@@ -109,7 +109,7 @@ func (a *Agent) Serve(r io.Reader, w io.Writer) {
 		var p struct {
 			SessionID string `json:"sessionId"`
 		}
-		json.Unmarshal(f.Params, &p)
+		_ = json.Unmarshal(f.Params, &p)
 		a.mu.Lock()
 		switch f.Method {
 		case "session/prompt": // in the order the frames come, before any cancel for it
@@ -145,7 +145,7 @@ func (a *Agent) send(f frame) {
 	b, _ := json.Marshal(f)
 	a.writeMu.Lock()
 	defer a.writeMu.Unlock()
-	a.w.Write(append(b, '\n'))
+	_, _ = a.w.Write(append(b, '\n'))
 }
 
 // request calls the client and waits for its result.
@@ -179,7 +179,7 @@ func (a *Agent) answer(f frame) {
 			Text string `json:"text"`
 		} `json:"prompt"`
 	}
-	json.Unmarshal(f.Params, &p)
+	_ = json.Unmarshal(f.Params, &p)
 	a.mu.Lock()
 	_, open := a.cwds[p.SessionID]
 	a.mu.Unlock()
@@ -206,7 +206,7 @@ func (a *Agent) answer(f frame) {
 		}
 	case "session/list":
 		var req struct{ Cwd, Cursor string }
-		json.Unmarshal(f.Params, &req)
+		_ = json.Unmarshal(f.Params, &req)
 		result = a.list(req.Cwd, req.Cursor)
 	case "session/new", "session/fork":
 		a.mu.Lock()
@@ -299,7 +299,7 @@ func (a *Agent) prompt(session, text string) string { //nolint:gocognit // one c
 	a.mu.Unlock()
 	a.History.add(cwd, session, map[string]any{"sessionUpdate": "user_message_chunk", "content": map[string]any{"type": "text", "text": text}})
 	if strings.Contains(text, "stderr") && a.Stderr != nil {
-		fmt.Fprintln(a.Stderr, "auth: using the key sk-ant-api03-Zr8fakeFAKEfake0123456789 from the environment")
+		_, _ = fmt.Fprintln(a.Stderr, "auth: using the key sk-ant-api03-Zr8fakeFAKEfake0123456789 from the environment")
 	}
 	switch {
 	case a.Codex && strings.Contains(text, "run"):
@@ -315,7 +315,7 @@ func (a *Agent) prompt(session, text string) string { //nolint:gocognit // one c
 		var r struct {
 			Outcome struct{ Outcome, OptionID string } `json:"outcome"`
 		}
-		json.Unmarshal(res, &r)
+		_ = json.Unmarshal(res, &r)
 		if r.Outcome.Outcome == "cancelled" { // the client stopped the turn
 			return "cancelled"
 		}
@@ -353,7 +353,7 @@ func (a *Agent) prompt(session, text string) string { //nolint:gocognit // one c
 		a.say(session, "Ran it.")
 	case strings.Contains(text, "garbage"):
 		a.writeMu.Lock()
-		io.WriteString(a.w, "this line isn't JSON-RPC\n")
+		_, _ = io.WriteString(a.w, "this line isn't JSON-RPC\n")
 		a.writeMu.Unlock()
 		a.send(frame{Method: "session/update", Params: json.RawMessage(`{"sessionId":"` + session + `","update":"nonsense"}`)})
 		a.say(session, "Sent garbage.")

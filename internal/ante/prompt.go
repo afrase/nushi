@@ -96,7 +96,7 @@ func saveImage(dir func() (string, error), img *acp.ImageContent) (string, error
 		return "", err
 	}
 	if _, err := f.Write(data); err != nil {
-		f.Close()
+		_ = f.Close() // the write failed; that error is the one to return
 		return "", err
 	}
 	return path, f.Close()

@@ -68,7 +68,7 @@ func state(c Config, initiator bool, peer []byte, rng io.Reader) (*noise.Handsha
 func Initiate(t Transport, c Config, peer []byte) (*Conn, error) {
 	conn, err := initiate(t, c, peer)
 	if err != nil {
-		t.Close()
+		_ = t.Close() // the handshake failed; that error is the one to return
 	}
 	return conn, err
 }
@@ -102,7 +102,7 @@ func initiate(t Transport, c Config, peer []byte) (*Conn, error) {
 func Respond(t Transport, c Config, allow func(peer []byte) error) (*Conn, error) {
 	conn, err := respond(t, c, allow)
 	if err != nil {
-		t.Close()
+		_ = t.Close() // as above
 	}
 	return conn, err
 }
@@ -191,7 +191,7 @@ func (c *Conn) next() error {
 	}
 	if err != nil {
 		c.rerr = err
-		c.t.Close()
+		_ = c.t.Close() // the read's error is the one to return
 		return err
 	}
 	if c.got++; c.got%RekeyEvery == 0 {
@@ -211,7 +211,7 @@ func (c *Conn) Write(p []byte) (int, error) {
 			c.werr = c.t.WriteMessage(m)
 		}
 		if c.werr != nil {
-			c.t.Close()
+			_ = c.t.Close() // the write's error is the one to return
 			break
 		}
 		if c.sent++; c.sent%RekeyEvery == 0 {

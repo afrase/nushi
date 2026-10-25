@@ -158,7 +158,7 @@ func replaceFile(path string, data []byte, mode os.FileMode) error {
 		err = os.Rename(f.Name(), path)
 	}
 	if err != nil {
-		os.Remove(f.Name())
+		_ = os.Remove(f.Name()) // the write's error is the one to return
 	}
 	return err
 }

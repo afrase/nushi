@@ -119,12 +119,12 @@ func writeJSON(path string, v any) error {
 		err = os.Rename(tmp, path)
 	}
 	if err != nil {
-		os.Remove(tmp)
+		_ = os.Remove(tmp) // the write's error is the one to return
 		return err
 	}
 	if dir, err := os.Open(filepath.Dir(path)); err == nil {
-		dir.Sync()
-		dir.Close()
+		_ = dir.Sync() // best effort: the rename is done
+		_ = dir.Close()
 	}
 	return nil
 }

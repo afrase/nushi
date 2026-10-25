@@ -81,7 +81,7 @@ func variant(raw json.RawMessage) (string, json.RawMessage) {
 		return name, nil
 	}
 	var m map[string]json.RawMessage
-	json.Unmarshal(raw, &m)
+	_ = json.Unmarshal(raw, &m)
 	for k, v := range m {
 		return k, v
 	}
@@ -92,7 +92,7 @@ func variant(raw json.RawMessage) (string, json.RawMessage) {
 func (h *Host) emit(parent string, ev any, logged bool) {
 	b, _ := json.Marshal(map[string]any{"timestamp": time.Now().UTC(), "id": "evt_x", "event": ev, "parent": parent})
 	h.wmu.Lock()
-	h.w.Write(append(b, '\n'))
+	_, _ = h.w.Write(append(b, '\n'))
 	h.wmu.Unlock()
 	if logged && h.s != nil {
 		h.store.mu.Lock()
@@ -111,7 +111,7 @@ func (h *Host) op(id string, raw json.RawMessage) (done bool) { //nolint:gocogni
 	switch name {
 	case "StartSession":
 		var req struct{ Cwd string }
-		json.Unmarshal(p, &req)
+		_ = json.Unmarshal(p, &req)
 		h.store.mu.Lock()
 		if h.store.sessions == nil {
 			h.store.sessions = map[string]*saved{}
@@ -128,7 +128,7 @@ func (h *Host) op(id string, raw json.RawMessage) (done bool) { //nolint:gocogni
 		var req struct {
 			ID string `json:"session_id"`
 		}
-		json.Unmarshal(p, &req)
+		_ = json.Unmarshal(p, &req)
 		h.store.mu.Lock()
 		s := h.store.sessions[req.ID]
 		log := append([]string(nil), s.logOrNil()...)
@@ -141,12 +141,12 @@ func (h *Host) op(id string, raw json.RawMessage) (done bool) { //nolint:gocogni
 		h.emit(id, map[string]any{"SessionStart": h.info()}, false)
 		h.wmu.Lock()
 		for _, l := range log {
-			h.w.Write([]byte(l + "\n"))
+			_, _ = h.w.Write([]byte(l + "\n"))
 		}
 		h.wmu.Unlock()
 	case "UserInput":
 		var text string
-		json.Unmarshal(p, &text)
+		_ = json.Unmarshal(p, &text)
 		h.store.mu.Lock()
 		h.s.inputs, h.s.cuts = append(h.s.inputs, id), append(h.s.cuts, len(h.s.log))
 		h.store.mu.Unlock()
@@ -157,7 +157,7 @@ func (h *Host) op(id string, raw json.RawMessage) (done bool) { //nolint:gocogni
 		go h.run(id, text)
 	case "Steer":
 		var text string
-		json.Unmarshal(p, &text)
+		_ = json.Unmarshal(p, &text)
 		h.emit(id, map[string]any{"UserInput": text}, true)
 		h.mu.Lock()
 		if h.steered != nil {
@@ -186,7 +186,7 @@ func (h *Host) op(id string, raw json.RawMessage) (done bool) { //nolint:gocogni
 		var req struct {
 			Mode string `json:"permission_mode"`
 		}
-		json.Unmarshal(p, &req)
+		_ = json.Unmarshal(p, &req)
 		if req.Mode != "" {
 			h.s.mode = req.Mode
 		}
@@ -196,7 +196,7 @@ func (h *Host) op(id string, raw json.RawMessage) (done bool) { //nolint:gocogni
 			"used_tokens": 150, "limit_tokens": 1000, "compact_buffer_tokens": 100}}, false)
 	case "ForkSession":
 		var req struct{ At string }
-		json.Unmarshal(p, &req)
+		_ = json.Unmarshal(p, &req)
 		h.store.mu.Lock()
 		cut := len(h.s.log)
 		for i, in := range h.s.inputs {
@@ -246,7 +246,7 @@ func (h *Host) run(turn, text string) {
 			var a struct {
 				Responses []struct{ Decision string }
 			}
-			json.Unmarshal(<-h.paused, &a)
+			_ = json.Unmarshal(<-h.paused, &a)
 			decision = "Deny"
 			if len(a.Responses) == 1 {
 				decision = a.Responses[0].Decision
@@ -297,9 +297,9 @@ func (st *Store) save(id string, s *saved) {
 		return
 	}
 	dir := filepath.Join(st.Home, "sessions", id)
-	os.MkdirAll(dir, 0o700)
+	_ = os.MkdirAll(dir, 0o700)
 	b, _ := json.Marshal(map[string]any{"id": id, "dir": s.cwd, "first_user_message": "hi", "last_active_time": time.Now().UTC()})
-	os.WriteFile(filepath.Join(dir, "meta.json"), b, 0o600)
+	_ = os.WriteFile(filepath.Join(dir, "meta.json"), b, 0o600)
 }
 
 // Saved says whether a session is still in the home folder.

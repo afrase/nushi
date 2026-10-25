@@ -75,7 +75,7 @@ func (h *History) list(cwd string) []map[string]any {
 		}
 		for _, u := range h.sessions[k] {
 			if strings.Contains(string(u), `"user_message_chunk"`) {
-				json.Unmarshal(u, &first)
+				_ = json.Unmarshal(u, &first)
 				break
 			}
 		}

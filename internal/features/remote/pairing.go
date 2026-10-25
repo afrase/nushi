@@ -105,7 +105,7 @@ func (s *Service) pair(ctx context.Context, p *pairing, relayURL string) {
 		if conn == nil {
 			continue
 		}
-		stop := context.AfterFunc(ctx, func() { conn.Close() })
+		stop := context.AfterFunc(ctx, func() { _ = conn.Close() })
 		defer stop() //nolint:gocritic,revive // every path from here returns: it runs once
 		code := codeOf(conn.Hash())
 		s.mu.Lock()
@@ -131,13 +131,13 @@ func (s *Service) pair(ctx context.Context, p *pairing, relayURL string) {
 		if !allow || err != nil {
 			slog.Info("pairing refused", "allowed", allow, "err", err)
 			reply, _ := json.Marshal(map[string]string{"error": "refused"})
-			conn.Write(reply)
-			conn.Close()
+			_, _ = conn.Write(reply) // refused either way
+			_ = conn.Close()
 			return
 		}
 		reply, _ := json.Marshal(map[string]string{"daemon": daemon})
 		if _, err := conn.Write(reply); err != nil || !stop() {
-			conn.Close()
+			_ = conn.Close()
 			return
 		}
 		slog.Info("device paired", "device", id, "name", name)
@@ -155,13 +155,13 @@ func (s *Service) meet(ctx context.Context, p *pairing, relayURL string) (conn *
 		sleep(ctx, jitter(2*time.Second))
 		return nil, "", false
 	}
-	stop := context.AfterFunc(ctx, func() { c.Close() })
+	stop := context.AfterFunc(ctx, func() { _ = c.Close() })
 	defer stop()
 	if c.Wait() != nil {
-		c.Close()
+		_ = c.Close()
 		return nil, "", false
 	}
-	timer := time.AfterFunc(HandshakeWait, func() { c.Close() })
+	timer := time.AfterFunc(HandshakeWait, func() { _ = c.Close() })
 	defer timer.Stop()
 	conn, err = noiseconn.Respond(c, noiseconn.Config{Static: s.key, Prologue: prologue(p.id), PSK: p.psk},
 		func([]byte) error { return nil })
@@ -173,7 +173,7 @@ func (s *Service) meet(ctx context.Context, p *pairing, relayURL string) (conn *
 	n, err := conn.Read(buf)
 	var hello struct{ Name string }
 	if err != nil || json.Unmarshal(buf[:n], &hello) != nil || !timer.Stop() || !stop() {
-		conn.Close()
+		_ = conn.Close()
 		return nil, "", true
 	}
 	return conn, cleanName(hello.Name), true

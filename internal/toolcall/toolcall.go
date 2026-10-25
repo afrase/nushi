@@ -38,7 +38,7 @@ func ReadOld(path string) Old {
 	if err != nil {
 		return Old{Note: "Not shown: " + err.Error()}
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck // read-only
 	if fi, err := f.Stat(); err != nil || !fi.Mode().IsRegular() {
 		return Old{Note: "Not shown: what this replaces isn't a regular file."}
 	}

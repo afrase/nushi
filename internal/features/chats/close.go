@@ -30,7 +30,7 @@ func (s *Service) Close() {
 	left := slices.Collect(maps.Keys(s.live))
 	s.mu.Unlock()
 	for _, agent := range left {
-		agent.Close() // being opened: no turn of it to end
+		_ = agent.Close() // being opened: no turn of it to end
 	}
 }
 
@@ -52,7 +52,7 @@ func (s *Service) started(launch Launch) Launch {
 		s.mu.Lock()
 		defer s.mu.Unlock()
 		if s.closing {
-			agent.Close()
+			_ = agent.Close() // its process is gone either way
 			return nil, errClosing
 		}
 		s.live[agent] = true

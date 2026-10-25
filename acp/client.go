@@ -133,7 +133,7 @@ func (c *Client) Stop(grace time.Duration) error {
 		return nil
 	}
 	c.stopped.Store(true)
-	c.stdin.Close()
+	_ = c.stdin.Close() // closing stdin asks the agent to end; Close kills it if it doesn't
 	select {
 	case <-c.conn.done:
 	case <-time.After(grace):
@@ -164,7 +164,7 @@ func (c *Client) Initialize(ctx context.Context, req InitializeRequest) (*Initia
 			} `json:"sessionCapabilities"`
 		} `json:"agentCapabilities"`
 	}
-	json.Unmarshal(raw, &caps)
+	_ = json.Unmarshal(raw, &caps)
 	fork := caps.AgentCapabilities.SessionCapabilities.Fork
 	c.canFork = len(fork) > 0 && string(fork) != "null"
 	c.canSteer = caps.Meta.Steering.Supported

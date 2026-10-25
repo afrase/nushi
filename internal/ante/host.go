@@ -107,8 +107,8 @@ func opID() string { return "op_" + ulid() }
 // too); it is killed if its output hasn't ended after grace. Its events
 // must be read meanwhile.
 func (h *host) stop(grace time.Duration) {
-	h.send("Shutdown")
-	h.in.Close()
+	_ = h.send("Shutdown") // stopping: a dead host is stopped already
+	_ = h.in.Close()
 	select {
 	case <-h.exited:
 	case <-time.After(grace):

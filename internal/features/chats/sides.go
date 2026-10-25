@@ -129,7 +129,7 @@ func (s *Service) CloseSide(id string) error {
 	c.parent.mu.Unlock()
 	c.log().Info("side chat closed")
 	c.mu.Lock()
-	c.cancelLocked()
+	_ = c.cancelLocked() // the agent may be gone already
 	agent := c.agent
 	c.agent = nil // what still follows it (a background command) stops
 	c.mu.Unlock()
@@ -149,7 +149,7 @@ func (s *Service) CloseSides() {
 	}
 	s.mu.Unlock()
 	for _, id := range sides {
-		s.CloseSide(id)
+		_ = s.CloseSide(id) // one already closed is fine
 	}
 }
 
@@ -186,6 +186,6 @@ func (s *Service) throwAway(c *chat, agent Agent, sid string) {
 		last()
 		return
 	}
-	del()
+	_ = del() // logged; last tries again
 	time.AfterFunc(c.dialect.Redelete, last)
 }

@@ -16,7 +16,7 @@ func Held(path string) bool {
 	if err != nil {
 		return false
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck // read-only
 	lk := unix.Flock_t{Type: unix.F_WRLCK}
 	return unix.FcntlFlock(f.Fd(), unix.F_GETLK, &lk) == nil && lk.Type != unix.F_UNLCK
 }

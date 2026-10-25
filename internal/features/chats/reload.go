@@ -44,7 +44,7 @@ func (s *Service) Reload(chatID string) error {
 		return errors.New("the chat is busy; reload it once the agent is done")
 	}
 	c.busy, c.mcpChanged, c.reopenFailed = true, false, false
-	c.cancelLocked() // a prompt or question of the agent's own turn: it won't be answered
+	_ = c.cancelLocked() // a prompt or question of the agent's own turn: it won't be answered
 	agent := c.agent
 	c.statusChangedLocked()
 	c.mu.Unlock()

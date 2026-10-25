@@ -38,10 +38,10 @@ func (d *Dialer) Listen(ctx context.Context, relay string, key ed25519.PrivateKe
 	if err != nil {
 		return nil, err
 	}
-	stop := context.AfterFunc(ctx, func() { c.Close() })
+	stop := context.AfterFunc(ctx, func() { _ = c.Close() })
 	defer stop()
 	if err := c.prove(id, key); err != nil {
-		c.Close()
+		_ = c.Close()
 		return nil, err
 	}
 	return c, nil
@@ -134,7 +134,7 @@ func newConn(ws *websocket.Conn) *Conn {
 				return
 			case <-t.C:
 				if ws.WriteControl(websocket.PingMessage, nil, time.Now().Add(every)) != nil {
-					c.Close()
+					_ = c.Close()
 					return
 				}
 			}

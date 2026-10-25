@@ -19,14 +19,14 @@ func (s *session) pauseLocked(ev event, olds map[string]toolcall.Old) []acp.Sess
 		TurnID string          `json:"turn_id"`
 		Reason json.RawMessage `json:"reason"`
 	}
-	json.Unmarshal(ev.Payload, &p)
+	_ = json.Unmarshal(ev.Payload, &p)
 	name, payload := variant(p.Reason)
 	switch name {
 	case "Approval":
 		var a struct {
 			Tools []toolUse `json:"tools"`
 		}
-		json.Unmarshal(payload, &a)
+		_ = json.Unmarshal(payload, &a)
 		var out []acp.SessionUpdate
 		for _, t := range a.Tools {
 			if _, ok := s.tools[t.ID]; !ok {
@@ -37,7 +37,7 @@ func (s *session) pauseLocked(ev event, olds map[string]toolcall.Old) []acp.Sess
 		return out
 	case "Question":
 		var q questions
-		json.Unmarshal(payload, &q)
+		_ = json.Unmarshal(payload, &q)
 		go s.ask(p.TurnID, q)
 	}
 	return nil
@@ -72,7 +72,7 @@ func (s *session) approve(turnID string, tools []toolUse, olds map[string]toolca
 		})
 	}
 	wg.Wait()
-	s.h.send(map[string]any{"ApprovalResponse": map[string]any{"turn_id": turnID, "responses": decisions}})
+	_ = s.h.send(map[string]any{"ApprovalResponse": map[string]any{"turn_id": turnID, "responses": decisions}}) // a dead host ends the turn, which the client hears
 }
 
 // The choices for an approval. "Always" is for the session: Ante's
@@ -112,7 +112,7 @@ func (s *session) ask(turnID string, q questions) {
 			reply = map[string]any{"Answered": answers(q, resp.Content)}
 		}
 	}
-	s.h.send(map[string]any{"QuestionResponse": map[string]any{"turn_id": turnID, "tool_use_id": q.ToolUseID, "reply": reply}})
+	_ = s.h.send(map[string]any{"QuestionResponse": map[string]any{"turn_id": turnID, "tool_use_id": q.ToolUseID, "reply": reply}}) // as above
 }
 
 func message(q questions) string {
@@ -150,7 +150,7 @@ func form(q questions) json.RawMessage {
 // the labels picked, and the "Other" text as its note.
 func answers(q questions, content json.RawMessage) []map[string]any {
 	var values map[string]json.RawMessage
-	json.Unmarshal(content, &values)
+	_ = json.Unmarshal(content, &values)
 	out := []map[string]any{}
 	for i := range q.Questions {
 		selected := []string{}
@@ -158,7 +158,7 @@ func answers(q questions, content json.RawMessage) []map[string]any {
 		if json.Unmarshal(values[fmt.Sprintf("q%d", i)], &one) == nil && one != "" {
 			selected = append(selected, one)
 		} else {
-			json.Unmarshal(values[fmt.Sprintf("q%d", i)], &selected)
+			_ = json.Unmarshal(values[fmt.Sprintf("q%d", i)], &selected)
 		}
 		a := map[string]any{"selected": selected}
 		var note string

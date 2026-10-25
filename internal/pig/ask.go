@@ -30,7 +30,7 @@ type uiRequest struct {
 //nolint:contextcheck // the question goes out on the bridge's connection, as long as pig waits
 func (s *session) ask(raw json.RawMessage) {
 	var r uiRequest
-	json.Unmarshal(raw, &r)
+	_ = json.Unmarshal(raw, &r)
 	field := map[string]any{"type": "string"}
 	switch r.Method {
 	case "notify":
@@ -65,12 +65,12 @@ func (s *session) ask(raw json.RawMessage) {
 			RequestedSchema: &acp.ElicitationSchema{Type: "object", Properties: schema, Required: []string{"answer"}}}
 		if s.b.peer.Call(ctx, "elicitation/create", req, &resp) == nil && resp.Action == "accept" {
 			var got map[string]string
-			json.Unmarshal(resp.Content, &got)
+			_ = json.Unmarshal(resp.Content, &got)
 			answer = map[string]any{"type": "extension_ui_response", "id": r.ID, "value": got["answer"]}
 			if r.Method == "confirm" {
 				answer = map[string]any{"type": "extension_ui_response", "id": r.ID, "confirmed": got["answer"] == "Yes"}
 			}
 		}
 	}
-	s.p.write(answer)
+	_ = s.p.write(answer) // a dead pig ends the turn, which the client hears
 }

@@ -188,7 +188,7 @@ func serverCommand(config string) string {
 		Args    []string `json:"args"`
 		URL     string   `json:"url"`
 	}
-	json.Unmarshal([]byte(config), &c)
+	_ = json.Unmarshal([]byte(config), &c)
 	return cmp.Or(strings.Join(append([]string{c.Command}, c.Args...), " "), c.URL)
 }
 
@@ -222,7 +222,7 @@ func settingsRuns(path string) ([]model.FolderRun, error) {
 			Prompt  string `json:"prompt"`
 		} `json:"hooks"`
 	}
-	json.Unmarshal(s["hooks"], &hooks)
+	_ = json.Unmarshal(s["hooks"], &hooks)
 	for _, event := range slices.Sorted(maps.Keys(hooks)) {
 		for _, m := range hooks[event] {
 			for _, h := range m.Hooks {

@@ -66,7 +66,7 @@ func (s *server) connState(c net.Conn, st http.ConnState) {
 		if s.lim.IPHeader == "" {
 			key = keyOf(c.RemoteAddr().String())
 			if !s.admitPlain(key, now) {
-				c.Close()
+				_ = c.Close()
 				return
 			}
 		}
@@ -75,7 +75,7 @@ func (s *server) connState(c net.Conn, st http.ConnState) {
 		}
 		if len(s.plain.conns) >= s.lim.Total && !s.shed(true) && !s.shed(false) {
 			s.unPlain(key, now)
-			c.Close()
+			_ = c.Close()
 			return
 		}
 		pc := &plainConn{key: key, idle: true, since: now}
@@ -119,7 +119,7 @@ func (s *server) late(c net.Conn, pc *plainConn) {
 	defer s.mu.Unlock()
 	if s.plain.conns[c] == pc && pc.fresh != nil {
 		s.drop(c)
-		c.Close()
+		_ = c.Close()
 	}
 }
 
@@ -201,6 +201,6 @@ func (s *server) shed(fresh bool) bool {
 		return false
 	}
 	s.drop(oldest)
-	oldest.Close()
+	_ = oldest.Close()
 	return true
 }

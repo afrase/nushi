@@ -27,7 +27,7 @@ func worktree(path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck // read-only
 	if fi, err := f.Stat(); err != nil || !fi.Mode().IsRegular() {
 		return nil, fmt.Errorf("%s is not a file", path)
 	}

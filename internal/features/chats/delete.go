@@ -72,7 +72,7 @@ func (s *Service) PlanDelete(ctx context.Context, chatID string) (DeletePlan, er
 		if err != nil {
 			return DeletePlan{}, err
 		}
-		agent.Close()
+		_ = agent.Close() // its process is gone either way
 		known = &deletes
 	}
 	p.History = *known
@@ -148,7 +148,7 @@ func (s *Service) deleteHistory(ctx context.Context, c *chat, sessions []string)
 	if err != nil {
 		return err
 	}
-	defer agent.Close()
+	defer agent.Close() //nolint:errcheck // a deleter, stopped when done
 	if !deletes {
 		return errors.New("the agent can't delete its history")
 	}

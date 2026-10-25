@@ -43,7 +43,7 @@ type toolArgs struct {
 // text is what old has (read before the call ran, live; none in a replay).
 func (s *session) toolCall(id, name string, args json.RawMessage, status string, old toolcall.Old) acp.ToolCall {
 	var a toolArgs
-	json.Unmarshal(args, &a)
+	_ = json.Unmarshal(args, &a)
 	call := acp.ToolCall{ToolCallID: acp.ToolCallID(id), Title: name, Kind: kindOf(name), Status: acp.ToolCallStatus(status), RawInput: args}
 	path := s.path(a.Path)
 	switch {
@@ -126,7 +126,7 @@ func resultText(raw json.RawMessage) string {
 	var r struct {
 		Content []block `json:"content"`
 	}
-	json.Unmarshal(raw, &r)
+	_ = json.Unmarshal(raw, &r)
 	var parts []string
 	for _, b := range r.Content {
 		if b.Type == "text" && b.Text != "" {
@@ -153,7 +153,7 @@ func (s *session) readOld(typ string, e *pigEvent) {
 		return
 	}
 	var a toolArgs
-	json.Unmarshal(call.Arguments, &a)
+	_ = json.Unmarshal(call.Arguments, &a)
 	old := toolcall.ReadOld(s.path(a.Path))
 	s.mu.Lock()
 	s.olds[call.ID] = old

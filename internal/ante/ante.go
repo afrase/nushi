@@ -151,9 +151,9 @@ func serve(bin, cwd string) (io.WriteCloser, io.Reader, func(), error) {
 		return nil, nil, nil, err
 	}
 	exited := make(chan struct{})
-	go func() { cmd.Wait(); close(exited) }()
+	go func() { _ = cmd.Wait(); close(exited) }() // its end is all that matters here
 	kill := func() {
-		syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) // the group may be gone already
 		<-exited
 	}
 	return in, out, kill, nil

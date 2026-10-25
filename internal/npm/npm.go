@@ -35,13 +35,13 @@ func (in Installer) Install(ctx context.Context, lock fs.FS, folder string, read
 	}
 	stale, _ := filepath.Glob(filepath.Join(parent, "."+name+"-*")) // a run that didn't finish
 	for _, p := range stale {
-		os.RemoveAll(p)
+		_ = os.RemoveAll(p) // a leftover; the next run tries again
 	}
 	tmp, err := os.MkdirTemp(parent, "."+name+"-")
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tmp)
+	defer os.RemoveAll(tmp) //nolint:errcheck // a temp folder; the next run removes what stays
 	for _, f := range []string{"package.json", "package-lock.json"} {
 		b, err := fs.ReadFile(lock, f)
 		if err == nil {
@@ -73,7 +73,9 @@ func (in Installer) Install(ctx context.Context, lock fs.FS, folder string, read
 		return err
 	}
 	if err := os.Rename(tmp, folder); err != nil {
-		os.Rename(old, folder)
+		if back := os.Rename(old, folder); back != nil && !errors.Is(back, fs.ErrNotExist) {
+			return fmt.Errorf("%w; putting the old one back failed too: %w", err, back)
+		}
 		return err
 	}
 	return os.RemoveAll(old)
@@ -94,7 +96,7 @@ func (Installer) Installed(folder, pkg, bin string) (version, program string) {
 	var bins map[string]string
 	if json.Unmarshal(p.Bin, &bins) != nil { // a lone program, named after the package
 		var one string
-		json.Unmarshal(p.Bin, &one)
+		_ = json.Unmarshal(p.Bin, &one)
 		bins = map[string]string{pkg[strings.LastIndex(pkg, "/")+1:]: one}
 	}
 	rel := filepath.Clean(filepath.FromSlash(bins[bin]))

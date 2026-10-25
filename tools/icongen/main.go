@@ -84,7 +84,7 @@ func main() {
 	// The icon set: an 824 body on a 1024 canvas, as Apple's template has it.
 	tmp, err := os.MkdirTemp("", "icongen")
 	check(err)
-	defer os.RemoveAll(tmp)
+	defer os.RemoveAll(tmp) //nolint:errcheck // a temp folder
 	set := "app/macos/Runner/Assets.xcassets/AppIcon.appiconset"
 	for i, d := range details {
 		src := filepath.Join(tmp, fmt.Sprintf("icon%d.svg", i))

@@ -78,7 +78,9 @@ func (s *Service) Open(ctx context.Context, agent, folder, sessionID, listed str
 			c.emitLocked(model.Event{ChatID: c.id, Removed: true})
 		}
 		c.mu.Unlock()
-		s.sessions.DeleteSession(c.id)
+		if err := s.sessions.DeleteSession(c.id); err != nil {
+			c.log().Warn("forgetting a chat that couldn't open", "err", err)
+		}
 		return "", fmt.Errorf("couldn't open the session: %w", err)
 	}
 	c.mu.Lock()

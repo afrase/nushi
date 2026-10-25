@@ -197,7 +197,7 @@ func Exclude(ctx context.Context, folder, line string) error {
 	if err != nil {
 		return fmt.Errorf("%s: %w (a link?)", path, err)
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck // for the paths that only read; the write's below
 	if fi, err := f.Stat(); err != nil || !fi.Mode().IsRegular() {
 		return fmt.Errorf("%s is not a file", path)
 	}
@@ -214,5 +214,5 @@ func Exclude(ctx context.Context, folder, line string) error {
 		line = "\n" + line
 	}
 	_, err = f.WriteString(line + "\n")
-	return err
+	return errors.Join(err, f.Close())
 }

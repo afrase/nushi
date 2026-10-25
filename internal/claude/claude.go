@@ -122,7 +122,7 @@ func ToolCall(it *model.Item, meta map[string]any, input json.RawMessage) (ownTe
 		Message    string `json:"message"`
 		Background bool   `json:"run_in_background"`
 	}
-	json.Unmarshal(input, &in)
+	_ = json.Unmarshal(input, &in)
 	cc, _ := meta["claudeCode"].(map[string]any)
 	resp, _ := cc["toolResponse"].(map[string]any)
 	switch it.Tool {

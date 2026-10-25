@@ -53,7 +53,7 @@ type toolArgs struct {
 // live; none in a replay).
 func (s *session) toolCall(t toolUse, status string, olds map[string]toolcall.Old) acp.ToolCall {
 	var a toolArgs
-	json.Unmarshal(t.Args, &a)
+	_ = json.Unmarshal(t.Args, &a)
 	call := acp.ToolCall{ToolCallID: acp.ToolCallID(t.ID), Title: t.Name, Kind: kindOf(t.Name), Status: acp.ToolCallStatus(status), RawInput: t.Args}
 	path := s.path(a.FilePath)
 	switch {
@@ -97,7 +97,7 @@ func (s *session) readOlds(ev event) map[string]toolcall.Old {
 	switch ev.Name {
 	case "ToolStart":
 		var t toolUse
-		json.Unmarshal(ev.Payload, &t)
+		_ = json.Unmarshal(ev.Payload, &t)
 		calls = []toolUse{t}
 	case "TurnPause":
 		var p struct {
@@ -107,14 +107,14 @@ func (s *session) readOlds(ev event) map[string]toolcall.Old {
 				}
 			} `json:"reason"`
 		}
-		json.Unmarshal(ev.Payload, &p)
+		_ = json.Unmarshal(ev.Payload, &p)
 		calls = p.Reason.Approval.Tools
 	}
 	olds := map[string]toolcall.Old{}
 	for _, t := range calls {
 		if t.Name == "Write" {
 			var a toolArgs
-			json.Unmarshal(t.Args, &a)
+			_ = json.Unmarshal(t.Args, &a)
 			olds[t.ID] = toolcall.ReadOld(s.path(a.FilePath))
 		}
 	}
@@ -134,7 +134,7 @@ func (s *session) toolLocked(ev event, olds map[string]toolcall.Old) []acp.Sessi
 	switch ev.Name {
 	case "ToolStart":
 		var t toolUse
-		json.Unmarshal(ev.Payload, &t)
+		_ = json.Unmarshal(ev.Payload, &t)
 		if _, ok := s.tools[t.ID]; ok { // shown with its approval
 			return []acp.SessionUpdate{toolcall.Update(acp.ToolCallUpdate{ToolCallID: acp.ToolCallID(t.ID), Status: "in_progress"})}
 		}
@@ -144,7 +144,7 @@ func (s *session) toolLocked(ev event, olds map[string]toolcall.Old) []acp.Sessi
 			ID      string `json:"tool_use_id"`
 			Message string `json:"message"`
 		}
-		json.Unmarshal(ev.Payload, &p)
+		_ = json.Unmarshal(ev.Payload, &p)
 		if name, ok := s.tools[p.ID]; ok && kindOf(name) != "edit" && p.Message != "" {
 			return []acp.SessionUpdate{toolcall.Update(acp.ToolCallUpdate{ToolCallID: acp.ToolCallID(p.ID), Content: toolcall.Text(p.Message)})}
 		}
@@ -155,7 +155,7 @@ func (s *session) toolLocked(ev event, olds map[string]toolcall.Old) []acp.Sessi
 			Status string          `json:"status"`
 			Result json.RawMessage `json:"result_json"`
 		}
-		json.Unmarshal(ev.Payload, &p)
+		_ = json.Unmarshal(ev.Payload, &p)
 		status := acp.ToolCallStatus("completed")
 		if p.Status != "Completed" {
 			status = "failed"
@@ -197,7 +197,7 @@ func result(raw json.RawMessage) string {
 		Summary string `json:"summary"`
 		Content string `json:"content"`
 	}
-	json.Unmarshal(raw, &r)
+	_ = json.Unmarshal(raw, &r)
 	switch {
 	case r.Completed != nil:
 		out := toolcall.Fence(r.Completed.Stdout + r.Completed.Stderr)

@@ -45,7 +45,7 @@ func Walk(roots []string, agent string) []File {
 			}
 			continue
 		}
-		filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		_ = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			switch {
 			case err != nil:
 				out = append(out, File{Path: path, Text: []byte(err.Error())})
@@ -76,7 +76,7 @@ func Hash(path string) File {
 	if err != nil {
 		return File{Path: path, Text: []byte(err.Error())}
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck // read-only
 	if fi, err := f.Stat(); err != nil || !fi.Mode().IsRegular() {
 		return File{Path: path, Text: []byte("not a regular file")}
 	}
@@ -108,7 +108,7 @@ func Key(agent, folder string, files []File) string {
 		if f.Sum == nil {
 			return ""
 		}
-		fmt.Fprintf(h, "%s\x00%x\x00", f.Path, f.Sum)
+		_, _ = fmt.Fprintf(h, "%s\x00%x\x00", f.Path, f.Sum) // a hash doesn't fail
 	}
 	return fmt.Sprintf("%s:%s#%x", agent, git.RealPath(folder), h.Sum(nil))
 }

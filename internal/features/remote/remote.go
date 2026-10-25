@@ -170,7 +170,7 @@ func (s *Service) apply() {
 	}
 	s.endPairing()
 	for c := range s.conns {
-		c.Close()
+		_ = c.Close()
 	}
 	if !s.settings.On {
 		if s.stopAwake != nil {
@@ -234,7 +234,7 @@ func (s *Service) link(ctx context.Context, relayURL string, listen ed25519.Priv
 		}
 		backoff = time.Second
 		s.setState(ctx, id, "connected", "")
-		stop := context.AfterFunc(ctx, func() { c.Close() })
+		stop := context.AfterFunc(ctx, func() { _ = c.Close() })
 		err = c.Wait()
 		stop()
 		if err != nil {
@@ -242,7 +242,7 @@ func (s *Service) link(ctx context.Context, relayURL string, listen ed25519.Priv
 			// went: wait again, at a random moment so many daemons don't
 			// come back at once.
 			slog.Info("relay dropped the wait", "err", err)
-			c.Close()
+			_ = c.Close()
 			sleep(ctx, jitter(time.Second))
 			continue
 		}
