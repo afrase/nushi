@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/afrase/nushi/acp/acptest"
+	"github.com/afrase/nushi/internal/acptest"
 )
 
 func main() {

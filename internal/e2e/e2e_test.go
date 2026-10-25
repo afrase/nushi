@@ -19,7 +19,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/afrase/nushi/acp"
-	"github.com/afrase/nushi/acp/acptest"
+	"github.com/afrase/nushi/internal/acptest"
 	"github.com/afrase/nushi/internal/ante"
 	"github.com/afrase/nushi/internal/ante/antetest"
 	"github.com/afrase/nushi/internal/api"

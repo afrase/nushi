@@ -51,7 +51,7 @@ func (s *syncBuffer) String() string {
 // looks for the markers in the log (ADR 0038's "never logged").
 func TestNothingPrivateLogged(t *testing.T) {
 	bin := filepath.Join(t.TempDir(), "fakeagent")
-	if out, err := exec.Command("go", "build", "-o", bin, "github.com/afrase/nushi/acp/acptest/fakeagent").CombinedOutput(); err != nil {
+	if out, err := exec.Command("go", "build", "-o", bin, "github.com/afrase/nushi/internal/acptest/fakeagent").CombinedOutput(); err != nil {
 		t.Fatalf("building the fake agent: %v\n%s", err, out)
 	}
 	log := &syncBuffer{}
