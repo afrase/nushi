@@ -66,8 +66,8 @@ func waitFor(t *testing.T, ok func() bool) {
 
 // offer is what a phone reads from the QR code.
 type offer struct {
-	relay, id  string
-	key, psk []byte
+	relay, id string
+	key, psk  []byte
 }
 
 func parseQR(t *testing.T, qr string) offer {
@@ -366,8 +366,10 @@ func TestRelayInTheMiddle(t *testing.T) {
 type wsTransport struct{ ws *websocket.Conn }
 
 func (w *wsTransport) ReadMessage() ([]byte, error) { _, m, err := w.ws.ReadMessage(); return m, err }
-func (w *wsTransport) WriteMessage(m []byte) error  { return w.ws.WriteMessage(websocket.BinaryMessage, m) }
-func (w *wsTransport) Close() error                 { return w.ws.Close() }
+func (w *wsTransport) WriteMessage(m []byte) error {
+	return w.ws.WriteMessage(websocket.BinaryMessage, m)
+}
+func (w *wsTransport) Close() error { return w.ws.Close() }
 
 func TestOffClosesEverything(t *testing.T) {
 	url := startRelay(t)
@@ -464,7 +466,10 @@ func TestRevokeMovesTheID(t *testing.T) {
 	// After a restart too, b still reaches the old id, and learns the new.
 	s.Close()
 	s = startRemote(t, dir, url)
-	waitFor(t, func() bool { c, err := phoneConnect(url, old, o.key, b); return err == nil && talks(c) && c.Close() == nil })
+	waitFor(t, func() bool {
+		c, err := phoneConnect(url, old, o.key, b)
+		return err == nil && talks(c) && c.Close() == nil
+	})
 	if c, err := phoneConnect(url, old, o.key, a); err == nil {
 		c.Close()
 		t.Fatal("the revoked device got an answer")

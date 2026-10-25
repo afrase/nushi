@@ -9,6 +9,7 @@ package agents
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"regexp"
@@ -60,6 +61,9 @@ type Service struct {
 	installer  Installer
 	chats      Chats
 	installing sync.Mutex // one install or removal at a time
+
+	mu    sync.Mutex
+	found map[string]string // each agent as last logged
 }
 
 func New(agents []Agent, probe Probe, dir string, installer Installer) *Service {
@@ -77,7 +81,25 @@ func (s *Service) List(ctx context.Context) []Status {
 		wg.Go(func() { out[i] = s.find(ctx, a) })
 	}
 	wg.Wait()
+	s.logFound(out)
 	return out
+}
+
+// logFound logs each agent found, when it changed since the last time.
+func (s *Service) logFound(found []Status) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.found == nil {
+		s.found = map[string]string{}
+	}
+	for _, st := range found {
+		args := []any{"agent", st.Name, "path", st.Path, "version", st.Version, "problem", st.Problem, "signed_in", st.SignedIn,
+			"adapter", st.Installed, "pinned", st.Pinned, "ready", st.Ready}
+		if line := fmt.Sprint(args...); s.found[st.Name] != line {
+			s.found[st.Name] = line
+			slog.Info("agent found", args...)
+		}
+	}
 }
 
 func (s *Service) find(ctx context.Context, a Agent) (st Status) {

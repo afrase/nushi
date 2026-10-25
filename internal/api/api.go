@@ -91,10 +91,13 @@ type Services struct {
 
 // New returns the whole API, unauthenticated: the local socket wraps it in
 // WithToken.
-func New(sv Services, opts ...connect.HandlerOption) http.Handler {
+func New(sv Services) http.Handler { return serve(sv, "socket") }
+
+// serve is the API for clients that come via, its calls logged.
+func serve(sv Services, via string, interceptors ...connect.Interceptor) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{chats: sv.Chats, agents: sv.Agents, mcp: sv.MCP, terms: sv.Terms, trust: sv.Trust,
-		hub: sv.Hub, memory: sv.Memory, remote: sv.Remote}, opts...))
+		hub: sv.Hub, memory: sv.Memory, remote: sv.Remote}, connect.WithInterceptors(append([]connect.Interceptor{logCalls{via}}, interceptors...)...)))
 	return mux
 }
 
@@ -110,14 +113,14 @@ var macOnly = map[string]bool{
 // ForDevices is the API a paired device's channel gets, which the
 // handshake has authenticated: all of it but the Mac's own calls.
 func ForDevices(sv Services) http.Handler {
-	return New(sv, connect.WithInterceptors(connect.UnaryInterceptorFunc(func(next connect.UnaryFunc) connect.UnaryFunc {
+	return serve(sv, "device", connect.UnaryInterceptorFunc(func(next connect.UnaryFunc) connect.UnaryFunc {
 		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 			if macOnly[req.Spec().Procedure] {
 				return nil, connect.NewError(connect.CodePermissionDenied, errors.New("only the Mac can do this"))
 			}
 			return next(ctx, req)
 		}
-	})))
+	}))
 }
 
 // WithToken refuses requests to h that don't carry token.

@@ -5,6 +5,7 @@ package terminals
 import (
 	"crypto/rand"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -74,6 +75,7 @@ func (s *Service) Open(chatID, folder string, cols, rows int) (model.Terminal, e
 	m := t.state()
 	s.mu.Unlock()
 	s.changed(chatID)
+	slog.Info("terminal opened", "chat", chatID, "terminal", t.ID, "folder", folder, "shell", s.shell)
 	return m, nil
 }
 
@@ -213,6 +215,7 @@ func (s *Service) Restart(id string, cols, rows int) error {
 	}
 	old.Close()
 	s.changed(t.ChatID)
+	slog.Info("terminal restarted", "chat", t.ChatID, "terminal", id)
 	return nil
 }
 
@@ -270,6 +273,7 @@ func (s *Service) unlist(which func(*term) bool) []Shell {
 	s.terms = slices.DeleteFunc(s.terms, func(t *term) bool {
 		if which(t) {
 			gone = append(gone, t.shell)
+			slog.Info("terminal closed", "chat", t.ChatID, "terminal", t.ID)
 			return true
 		}
 		return false

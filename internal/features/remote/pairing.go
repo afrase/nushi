@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"strings"
 	"time"
@@ -47,6 +48,7 @@ func (s *Service) StartPairing() (string, time.Time, error) {
 	p := &pairing{id: listenID(listen), listen: listen, psk: psk, expires: time.Now().Add(PairingWait), cancel: cancel, answer: make(chan bool, 1)}
 	s.pairing = p
 	s.changed()
+	slog.Info("pairing started", "until", p.expires.Format(time.TimeOnly))
 	go s.pair(ctx, p, s.settings.Relay)
 	q := url.Values{"r": {s.settings.Relay}, "i": {p.id}, "k": {b64(s.key.Public)}, "s": {b64(psk)}}
 	return "nushi://pair?" + q.Encode(), p.expires, nil
@@ -95,6 +97,7 @@ func (s *Service) pair(ctx context.Context, p *pairing, relayURL string) {
 	for waiting.Err() == nil {
 		conn, name, used := s.meet(waiting, p, relayURL)
 		if used && conn == nil {
+			slog.Info("pairing used up by a phone that sent no name")
 			return
 		}
 		if conn == nil {
@@ -107,6 +110,7 @@ func (s *Service) pair(ctx context.Context, p *pairing, relayURL string) {
 		p.name, p.code = name, code
 		s.changed()
 		s.mu.Unlock()
+		slog.Info("pairing: a phone waits for Allow", "name", name)
 		allow := false
 		select {
 		case allow = <-p.answer:
@@ -123,6 +127,7 @@ func (s *Service) pair(ctx context.Context, p *pairing, relayURL string) {
 		daemon := s.id
 		s.mu.Unlock()
 		if !allow || err != nil {
+			slog.Info("pairing refused", "allowed", allow, "err", err)
 			reply, _ := json.Marshal(map[string]string{"error": "refused"})
 			conn.Write(reply)
 			conn.Close()
@@ -133,6 +138,7 @@ func (s *Service) pair(ctx context.Context, p *pairing, relayURL string) {
 			conn.Close()
 			return
 		}
+		slog.Info("device paired", "device", id, "name", name)
 		go s.run(conn, id, daemon)
 		return
 	}

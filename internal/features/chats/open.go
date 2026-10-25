@@ -100,5 +100,6 @@ func (s *Service) Open(ctx context.Context, agent, folder, sessionID, listed str
 	s.mu.Lock()
 	s.chats[c.id] = c
 	s.mu.Unlock()
+	c.log().Info("chat opened from the agent's session")
 	return c.id, nil
 }

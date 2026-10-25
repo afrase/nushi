@@ -225,6 +225,7 @@ func (s *Service) Start(ctx context.Context, agent, folder string, worktree bool
 	s.mu.Lock()
 	s.chats[c.id] = c
 	s.mu.Unlock()
+	c.log().Info("chat created", "scratch", scratch, "worktree", wt != nil)
 	return c.id, nil
 }
 

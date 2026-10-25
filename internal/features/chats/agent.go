@@ -130,6 +130,7 @@ func (s *Service) watch(c *chat, agent Agent) {
 		return
 	}
 	c.agent, c.kept = nil, true
+	c.logLocked().Error("the chat's agent quit unexpectedly", "pid", agent.Pid())
 	c.orphanLocked()
 	c.noticeLocked("error", "The agent quit unexpectedly. Your next message reopens the chat.")
 	c.statusChangedLocked()

@@ -51,6 +51,7 @@ func (s *Service) Archive(chatID string, archived bool) error {
 		c.items, c.kept, c.reopenFailed, c.asleep = nil, false, false, false
 	}
 	c.saveLocked(func(s *model.Session) { s.Archived = archived })
+	c.logLocked().Info("chat archived", "archived", archived)
 	c.mu.Unlock()
 	if archived {
 		s.stop(c)

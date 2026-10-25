@@ -58,6 +58,9 @@ func (s *Service) Prompt(chatID string, m model.Message, how Send) error {
 		if err := folderGone(c.session); err != nil {
 			return fmt.Errorf("the chat can't go on: %w", err)
 		}
+		if c.asleep {
+			c.logLocked().Info("chat waking", "for", "a message")
+		}
 		c.reopenFailed, c.asleep = false, false // a message tries again, and wakes it
 		s.reopenLocked(c)
 		if how != SendNow || c.started.IsZero() || waited {
@@ -135,6 +138,7 @@ func (c *chat) startLocked(prompt []acp.ContentBlock) {
 	sent := make(chan struct{})
 	c.busy, c.started, c.done, c.sent, c.held = true, time.Now(), make(chan struct{}), sent, false
 	c.statusChangedLocked()
+	c.logLocked().Info("turn started", "queued", len(c.queue))
 	go c.run(c.agent, acp.PromptRequest{SessionID: acp.SessionID(c.sid), Prompt: prompt}, sent)
 }
 
@@ -186,6 +190,11 @@ func (c *chat) run(agent Agent, req acp.PromptRequest, sent chan struct{}) {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if log := c.logLocked().With("took", time.Since(c.started).Round(time.Millisecond)); err != nil {
+		log.Warn("turn failed", "err", err)
+	} else {
+		log.Info("turn ended", "stop", resp.StopReason)
+	}
 	c.busy, c.started = false, time.Time{}
 	close(c.done)
 	if err == nil && resp.Usage != nil {
