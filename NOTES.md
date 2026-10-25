@@ -1,6 +1,52 @@
 # Notes
 
-## Summary (2026-10-25, after step 152: milestone AA, logs you can debug from)
+## Summary (2026-10-25, after step 157: milestone AB, PiG as a fifth agent)
+
+Milestone AB, steps 153–157, one commit each on `main`, all pushed. `make test` passes. No API change (still 51); the daemon knows a fifth agent, so it needs a restart.
+
+- **The bridge** (step 153, `internal/pig`, `nushid pig-acp`, ADR 0039): Nushi's own ACP agent for PiG, running your `pig --mode rpc` per session, as the Ante bridge does. Not `pig-acp`: everything it uses is in RPC mode, and it would need npm, your Go toolchain and a build step, and keeps one pig per connection with no fork, close or steering. Not PiG's Go SDK (a PiG of Nushi's own, against ADR 0037).
+- **In the daemon** (step 154): found on `PATH` with its version (`0.5.3+1.4.0.74f46864` reads 0.5.3), Ready with nothing to set up, else "Not installed" with Get it (pi-in-go.dev/install/); another version is tried and the bridge logs which one it follows. **The mark** (step 155): PiG's own pig head, the 16×14 sprite its terminal draws (MIT), in one color. **By hand** (step 156) found two things, fixed: Stop couldn't end a turn stuck in an extension's command (PiG's own `/sprite` hangs pig in RPC mode), and a pig that died at start said only "pig has stopped".
+
+**What works with PiG, per item**
+
+| | |
+|---|---|
+| Prompts, streaming | yes: text and thinking streamed under the message's id (its timestamp); files as `@path`; images (`images`, checked: the model read a screenshot) |
+| Tool calls | yes: a command's output as it runs, an edit's changes and a write's diff from the file before, failures marked; extensions' and MCP tools as "other" |
+| Cancel, steering | yes: `abort`, `steer` (taken after the running tools, before the next model call) |
+| Models, thinking | yes: every model PiG has a key for (`provider/id`) and the model's thinking levels, kept by PiG in the session (a reload is on the same model) |
+| Modes, permissions | none: PiG has neither; its tools run without asking |
+| Questions | yes: an extension's `select`, `confirm`, `input`, `editor` as a one-field question card (withdrawn when PiG's timeout ends it); `notify` as a message. Stock PiG has no tool that asks; tried with a small Node extension (a command and a tool) |
+| New, load, fork, rewind, delete | yes: load after a restart or a sleep (the branch replayed); fork whole (`clone`) for side chats; rewind forks before the user's next message (keeps the whole turn); Delete moves the file to the Trash, as PiG's `/resume` |
+| Open a session… | yes: top-level sessions only (forks have `parentSession`), with title, when and how many messages |
+| Two writers | can't be told: PiG takes no lock; both write, each on its own branch, and a resume follows the last writer |
+| Slash commands | yes: extensions' commands, prompt templates, skills; PiG's own terminal commands (`/model`, `/compact`…) aren't in RPC mode |
+| Context card, usage | used and size, and cost (`get_session_stats`); no breakdown |
+| Trust | no card: PiG's own trust decides; in RPC mode a folder's `.pig` loads only for a folder you trusted in PiG (checked) |
+| MCP | the MCP view's note ("uses the MCP servers in its own config"): PiG reads `~/.pig/agent/mcp.json` and a trusted folder's `.pig/mcp.json` |
+| Logging | pig's start and exit, its stderr with the chat, each RPC call at DEBUG; a dying pig's last stderr line in the error |
+
+**Taken from `pig-acp`** (pigpen `components/acp`, MIT; a port of pi-acp, MIT; credited in `internal/pig`): how pig's events map to updates (deltas vs. the final message, where a streamed tool call sits, the tool kinds), select and confirm as choices and notify as a message, where PiG keeps its sessions (the environment, then `sessionDir` in the settings) and reading a session's header for the list, reading a file before a write for its diff, and sending a new session's commands and usage after its answer. No code or module: the bridge is written on Nushi's `acp` package.
+
+**Tested with** PiG 0.5.3 (the darwin-arm64 release in a temp folder, checked against `SHA256SUMS`), its built-in Fireworks provider, DeepSeek V4.1 Flash (`accounts/fireworks/models/deepseek-v4p1-flash`) at low thinking.
+
+**Tried by hand** (a dev daemon on a temp data folder with a temp `HOME`, `PIG_OFFLINE=1`, the key only in its environment; the dev app; a throwaway repository): a chat that read and edited a file and ran `cat`; a reload after a daemon restart; a rewind; Sleep and a wake on its model; a side chat; Delete; a `pig -p` session from a terminal listed and opened (the dialog's second step too), given a turn, slept, then resumed with `pig -p --session`: one history; both writing at once (above); an extension's tool asking through a question card in the app; `/sprite`'s select as a question card; an image; steering; Stop; a prompt template as a slash command; Settings › Agents. Over RPC directly: a folder's prompt template loading only once trusted.
+
+**Not tried by hand**: a PiG on your real `~/.pig` (yours isn't installed); a model with a 30-second-plus answer cut by Stop mid-text; PiG's MCP servers; a compaction; a version other than 0.5.3; the light theme in the app (goldens); `editor` dialogs (tests only); an Ante chat after its bridge's write and diff helpers moved to `internal/toolcall` (its tests pass); Claude's and Codex's chats (their code is unchanged).
+
+**Needs your attention**
+- **Install `pig`** (`curl -fsSL https://pi-in-go.dev/install.sh | sh`, or `npm i -g @pi-in-go/pig`) for PiG to show as Ready; "Ante, oh-my-pi and PiG for you" has a `settings.json` to start on DeepSeek.
+- **Restart daemon**: done (the install check below). **Quit and reopen Nushi**: the app you have open is milestone AA's, so it shows PiG's monogram, not its mark.
+- **PiG never asks before a tool call.** A PiG chat in a folder runs whatever the model decides, as PiG does in a terminal.
+- PiG's `/sprite` hangs pig in RPC mode once answered (PiG's bug, Later ideas); Stop then Sleep (or Reload) gets the chat back.
+
+**Size**: the daemon went from 14,696 to 16,526 lines of Go (the bridge is about 1,700, `internal/toolcall` took 90 from Ante's), `acp` from 1,231 to 1,270, the app from 16,469 to 16,503. Over the ~500-line tripwire: step 153 (about 1,620 of code and 1,000 of tests and the fake pig: the whole bridge, which couldn't be split without stubbing half of it).
+
+**Install check**: `make install`, then the installed daemon stopped by its socket; your open Nushi started the new helper at once: `nushid started version=bd0f29ed1a87-dirty … api=51`, `app connected`, and `agent found agent=pig … problem="Not installed"` beside the other four.
+
+**Left behind by the testing**: nothing of the test's. The temp folder (dev data, PiG's temp home with its sessions, the throwaway repositories, the RPC driver) and the PiG download are removed; the dev app and daemon are stopped, and no `pig` runs. Deleting chats moved three PiG session files from the temp home to your Trash (`trash` uses the real one); they were removed from it. `~/.pig` was never created. The key is in no file under the test folders, the scratchpad or the repository (grep, the key on stdin). The installed daemon was restarted only for the install check.
+
+## Summary of milestone AA (after step 152: logs you can debug from)
 
 Milestone AA, steps 146–152, one commit each on `main`, all pushed (plus one removing a 15 MB `nushid` binary committed by mistake in step 70). `make test` passes. **API 51** (`Log`; `Settings.debug_log`).
 
@@ -221,6 +267,14 @@ Milestone V is phase 1 of mobile: a relay, an end-to-end Noise channel, pairing 
 **Dependencies**: none new (`golang.org/x/sys/unix` was already in).
 
 **Left behind by the testing**: nothing. The dev chats were deleted with Delete (Claude's and Ante's histories with them); the measuring harness's two Claude sessions and their project folders, its Ante session, eight Ante logs and `~/.ante/run/` were removed; `~/.ante` is as it was (file list and checksums). The dev data folder, the temp Codex and omp homes, the scratch folders and the harness were removed. The key is in no file under them, the scratchpad or the repository (grep, the key on stdin); the only hit elsewhere is the milestone S transcript above.
+
+## Demo (milestone AB)
+
+1. Install `pig` and Restart daemon: Settings › Agents shows PiG with its pig, version and path, Ready.
+2. ⌘N, pick PiG: the header shows PiG, the model (your default) and the thinking level. Ask it to edit a file and run `ls`: the edit's diff and the command's output show; nothing asks first.
+3. Sleep the chat, send another message: it wakes on the model it had. Rewind to the second message; open a side chat.
+4. In a terminal, `pig -p "remember avocado"` in the same folder; ⌘N, PiG, →: the session is listed; Enter opens it; send a turn; `pig -p --session <id> "what did I say?"` in the terminal sees both.
+5. Delete the chat: its session file is in the Trash.
 
 ## Demo (milestone Z)
 
@@ -482,8 +536,9 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 154. PiG in the daemon: `nushid pig-acp`, the agent found on PATH (a version's build metadata left out: `0.5.3+1.4.0.74f46864` is 0.5.3), its chat kind (fork and rewind through the bridge's meta) and a trust card that shows nothing (PiG's own trust gates what a folder loads); an e2e PiG chat on the fake | 16460 | 1270 | 16469 | 1864 | 1170 |
 | 155. PiG's mark: its pig sprite in one color (eyes and snout cut out); PiG in the app's tests and goldens (Agents page, New chat, sidebar); golden failure images no longer committed | 16460 | 1270 | 16505 | 1864 | 1170 |
 | 156. By hand with PiG 0.5.3 on DeepSeek V4.1 Flash: Stop ends at once a turn that started no run (an extension's command waiting on itself, as PiG's `/sprite` does in RPC mode); a start or turn that pig ends says pig's last line on stderr ("pig has stopped: Error: Failed to load extension …"); a question card skips an empty line | 16526 | 1270 | 16503 | 1864 | 1170 |
+| 157. The docs: ADR 0039, PiG's facts and setup in NOTES, the README's agents, the summary | 16526 | 1270 | 16503 | 1864 | 1170 |
 
-Steps over the ~500-line tripwire (code and tests, without generated code): 139 (753 with NOTES: installing, running, the local-registry test), 141 (587, the Agents page), 132 (830, open sessions and forks for four agents), 131 (544, the sessions step), 127 (504, listing), 98 (2,384 with its tests: Ante's whole bridge and its fake), 99 (901: two agents, two trust packages, the shared trust files), 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 removed more than it added.
+Steps over the ~500-line tripwire (code and tests, without generated code): 153 (about 2,600 with its tests and the fake pig: PiG's whole bridge), 139 (753 with NOTES: installing, running, the local-registry test), 141 (587, the Agents page), 132 (830, open sessions and forks for four agents), 131 (544, the sessions step), 127 (504, listing), 98 (2,384 with its tests: Ante's whole bridge and its fake), 99 (901: two agents, two trust packages, the shared trust files), 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 removed more than it added.
 
 ## Agent facts (claude-agent-acp 0.94.0; Claude Code 2.1.303, then yours, 2.1.310)
 
@@ -584,6 +639,28 @@ What the code depends on (`internal/omp*`), from driving `omp --mode acp` and it
 
 - Listing (milestone X): `session/list` gives `{sessionId, cwd, title, updatedAt, _meta: {messageCount, size}}`, 50 a page (cursor an offset), the cwd matched either way (`/tmp` or `/private/tmp`); a `-p` run has an empty title. Session files start with a title record, then `{"type":"session", id, cwd, parentSession?}` (a fork names its parent). One process owns a session: a flock on `~/.omp/run/session-owners/<id>.lock`; another that writes to it saves to a new session instead, with `parentSession` ("Session … is open for writing in another omp process, so this session now saves to …").
 
+## Agent facts (PiG 0.5.3, through the bridge)
+
+What the bridge (`internal/pig`) depends on, from driving `pig --mode rpc` (the darwin-arm64 release, checked against its `SHA256SUMS`, in a temp `HOME`) and from PiG's source and bundled docs (`pig docs`; `coding/cli/rpc_*.go`). RPC mode is Pi 1.4.0's protocol.
+- `pig --version` prints `0.5.3+1.4.0.74f46864` (PiG, then the Pi it ports and Pi's commit) and writes nothing. Install: `curl -fsSL https://pi-in-go.dev/install.sh | sh`, `npm i -g @pi-in-go/pig`, or a GitHub release.
+- Framing: a command per line, with an `id` the response repeats (`{"type":"response","id","command","success","data"|"error"}`); events carry no id. Responses can come out of order. A line that isn't JSON answers `"command":"parse"` without an id; an unknown command `success:false`. Closing stdin ends RPC mode after it cancels what runs.
+- `prompt` (`message`, `images: [{type:"image", data, mimeType}]`) answers once accepted, before the run: `disposition` `started`, or `handled` when an extension's command took it (the answer comes after the command ends, its dialogs included). A run ends with `agent_settled {aborted}`; several `agent_end`s can come before it (retries, compaction). A second prompt during a run is refused without `streamingBehavior`.
+- Events: `message_start` (an assistant message has its `timestamp` and `responseId` from the start), `message_update` (`assistantMessageEvent`: `text_delta`, `thinking_delta`, `toolcall_start/delta/end` with the call in `toolCall` or `partial.content[contentIndex]`), `message_end` (the final message: `usage`, `stopReason` `stop`/`length`/`toolUse`/`error`/`aborted`, `errorMessage`); `tool_execution_start {toolCallId, toolName, args}`, `_update {partialResult}` (a command's output so far), `_end {result: {content, details|structuredContent}, isError, durationMs}`; `queue_update`, `session_info_changed {name}`, `thinking_level_changed`, `compaction_*`, `auto_retry_*`, `extension_ui_request`, `extension_error`. A message's `timestamp` is the one in the session file; no event carries a message's entry id.
+- Tools: `read {path, offset, limit}`, `bash {command, timeout}`, `edit {path, edits: [{oldText, newText}]}` (its result's `details.patch`), `write {path, content}`, `grep`, `find`, `ls`; extensions and MCP servers add theirs. Calls in one message run at once (an edit and a write started together). **No permission prompts and no modes**: every call runs without asking (only an extension can block one).
+- `abort` (answers after the run settled): a running command ends "Command aborted" (failed), a queued steer comes in as a user message and the next model call ends `stopReason: "error"`, "This operation was aborted". `steer` queues a message "after the current tool batch and before the next model call" (`disposition: queued`); it comes back as a user message's events.
+- Models: `get_available_models` lists every model PiG has a key for (`FIREWORKS_API_KEY`: Fireworks' 24, `fireworks/accounts/fireworks/models/…`); `set_model {provider, modelId}`. Thinking levels are the model's (`get_available_thinking_levels`: DeepSeek V4.1 Flash off, low, high, max). The session keeps both (`model_change`, `thinking_level_change` entries), so a reload is on the model it had. A new session starts on `defaultProvider`/`defaultModel`/`defaultThinkingLevel` from `<agent dir>/settings.json`, else (Fireworks) Kimi K3.
+- `get_session_stats`: `contextUsage {tokens (null right after a compaction), contextWindow, percent}`, `cost` (USD, the session's), `tokens`. No breakdown of the context.
+- `get_commands`: extensions' commands, prompt templates and skills (`/skill:<name>`); a prompt `/name args` runs or expands them. PiG's own commands (`/model`, `/compact`, `/tree`, `/trust`…) are the terminal's, not RPC's. Stock pig's built-in extensions: llama.cpp, codemode, tool-search, mcp, pig-login (`/llama`, `/mcp`, `/sprite`).
+- Extensions' dialogs: `extension_ui_request` `select {title, options}`, `confirm {title, message}`, `input {title, placeholder}`, `editor {title, prefill}`, each with an optional `timeout` (ms, after which it answers itself), answered by `extension_ui_response {id, value | confirmed | cancelled}`; `notify {message, notifyType}`, `setStatus`, `setWidget`, `setTitle`, `set_editor_text` want no answer. **PiG 0.5.3's `/sprite`, answered, hangs pig in RPC mode** (it stops answering anything, `abort` and `get_state` too, until stdin closes); an extension of ours (a Node `select`, `confirm`, `input`, and a tool that asks) worked.
+- Sessions: `<agent dir>/sessions/--<cwd, / as ->--/<time>_<uuid v7>.jsonl` (the agent folder `~/.pig/agent`, or `$PIG_CODING_AGENT_DIR`, `$PIG_HOME/agent`, `$XDG_CONFIG_HOME/pig/agent`; `$PIG_CODING_AGENT_SESSION_DIR` or the settings' `sessionDir` move the sessions; files 0644, folders 0700). A header line `{type:"session", version:3, id, timestamp, cwd, parentSession?}`, then entries `{type, id, parentId, timestamp, …}` making a tree; the leaf is the last appended. A new session's file is written with its first message: a session whose prompts were only extensions' commands has none.
+- `--session <file>` opens a session (pig moves to the header's cwd; a gone folder is an error); an id found only in another folder's sessions makes pig ask on stdin "Fork this session into current directory? [y/N]", so the bridge passes the file. Opening appends nothing (unless an old file migrates or the branch has no thinking level entry). `get_entries` answers every entry of every branch and `leafId`.
+- `fork {entryId}` (a user message's) and `clone` switch the process to a new session: the branch before that message, or all of it, entry ids kept, header `parentSession` = the source's path, written at once when it holds a message; the source isn't changed. A fork at the first message is an empty session.
+- Two writers: PiG takes no lock or owner file (each entry is appended by an open, write, close). Nushi and a terminal `pig -p --session` on one session each appended to their own branch; a later resume followed the last writer's.
+- Delete in PiG's `/resume` runs `trash <file>`, else unlinks.
+- Trust: RPC mode can't ask; a folder's `.pig/{settings.json, mcp.json, extensions, skills, prompts, themes, SYSTEM.md, APPEND_SYSTEM.md}` and `.agents/skills` load only with a decision in `<agent dir>/trust.json` (`{"<canonical path>": true|false}`, the nearest ancestor's), `defaultProjectTrust: "always"` in the user's settings, or `--approve` (checked: a project prompt template loaded only once `trust.json` said true). Regardless of trust: `AGENTS.md`/`CLAUDE.md` from the folder up to `/` and the agent folder, the project `sessionDir`, and a migration that renames a project's `.pig/commands` to `.pig/prompts`.
+- MCP: `<agent dir>/mcp.json` and a trusted folder's `.pig/mcp.json` (`{"mcpServers": {…}}`); the built-in mcp extension connects them in RPC mode too; `pig mcp list --json` starts every server to check it.
+- An extension that fails to load stops pig at start ("Error: Failed to load extension …: TypeScript extensions need Node.js 22.13 or newer"); the bridge's error then carries that line.
+
 ## Agent marks (step 124)
 
 One mark per agent wherever a chat's agent shows (`app/lib/agent_mark.dart`), drawn in one color from paths bundled in the source; nothing is fetched. An agent without one gets its initial on a rounded square.
@@ -669,7 +746,7 @@ curl -sL https://raw.githubusercontent.com/openai/codex/rust-v0.160.1/codex-rs/m
 
 The catalog replaces Codex's own list, so the model picker shows only this model. `FIREWORKS_API_KEY` must be exported by fish's config (it is): agents get the login shell's environment.
 
-## Ante and oh-my-pi for you
+## Ante, oh-my-pi and PiG for you
 
 - **Ante**: nothing to install. The bridge is inside `nushid`; it runs the `ante` on `PATH`, else `~/.ante/bin/ante` (yours is 0.2.14, the version it follows; 0.2.15, out on 2026-10-23, changed nothing in the protocol per its notes, so `ante update` should be fine). It uses your `~/.ante` as Ante does: your default model (Kimi K3 on Fireworks) until you pick another in the chat. `FIREWORKS_API_KEY` reaches it from fish, as it reaches Codex.
 - **oh-my-pi**: install Bun and omp yourself (below); Settings › Agents then shows it. omp reads `FIREWORKS_API_KEY` from the environment and lists Fireworks' models; it starts on Kimi K3 at max effort. To start on DeepSeek, put this in `~/.omp/agent/config.yml` (I didn't write it):
@@ -681,13 +758,21 @@ modelRoles:
 
   Nushi runs your `omp` (since milestone Z it brings none): `brew install oven-sh/bun/bun` (or `npm i -g bun`) and `bun add -g @oh-my-pi/pi-coding-agent@18.12.6` (the version Nushi was tried with; `~/.bun/bin` must be on your login shell's PATH).
 
+- **PiG**: install `pig` (`curl -fsSL https://pi-in-go.dev/install.sh | sh`, or `npm i -g @pi-in-go/pig`; Nushi was tried with 0.5.3) so it's on your login shell's `PATH`; Settings › Agents then says Ready. It uses your `~/.pig` as PiG does and reads `FIREWORKS_API_KEY` from the environment. To start new chats on DeepSeek, put this in `~/.pig/agent/settings.json` (I didn't write it):
+
+```json
+{ "defaultProvider": "fireworks", "defaultModel": "accounts/fireworks/models/deepseek-v4p1-flash", "defaultThinkingLevel": "low" }
+```
+
+  PiG never asks before a tool call. A repository's `.pig` settings and extensions load in Nushi only after you trust the folder in a terminal `pig` (`/trust`).
+
 ## What Nushi changes outside its data folder (milestone Z)
 
 Everything else Nushi writes is in its data folder (`~/Library/Application Support/Nushi`, or `NUSHI_DATA`): chats, settings (`app.json`), trust answers (`trusted.json`), remote keys, the log, scratch chats' folders, and the adapters (`agents/`). Outside it, each change is one you ask for, or the agent's own doing while you use it:
 
 | What | Where | Why |
 |---|---|---|
-| The agent's history and state | Claude: `~/.claude` (projects, sessions, `~/.claude.json`); Codex: `$CODEX_HOME` (sessions, state, shell snapshots, its app-server); Ante: `~/.ante` (sessions, logs, its update check); omp: `~/.omp` | Using the agent: it writes them as in a terminal. Nushi's own steps add to it the way the agent does: side chats, `/context` and rewinds are forks of the session (throwaway ones deleted after), a rename is the agent's, Delete takes a chat's history (Codex archives it). |
+| The agent's history and state | Claude: `~/.claude` (projects, sessions, `~/.claude.json`); Codex: `$CODEX_HOME` (sessions, state, shell snapshots, its app-server); Ante: `~/.ante` (sessions, logs, its update check); omp: `~/.omp`; PiG: `~/.pig` (or `$PIG_HOME`), and a folder's `.pig/commands` renamed to `.pig/prompts` by PiG's own migration | Using the agent: it writes them as in a terminal. Nushi's own steps add to it the way the agent does: side chats, `/context` and rewinds are forks of the session (throwaway ones deleted after), a rename is the agent's, Delete takes a chat's history (Codex archives it). |
 | A copy of a Claude transcript | `~/.claude/projects/<folder>/` | Move (you asked): the copy lets Claude fork the session in the new folder; removed after. |
 | Claude's MCP servers | `~/.claude.json`, through `claude mcp add-json/remove/login/logout` | The MCP view's Add, Edit, Remove, Sign in and out. |
 | A project's MCP switch | `<repo>/.claude/settings.local.json` (its two MCP lists), and that file into `.git/info/exclude` | The MCP view's on/off switch. |
@@ -696,6 +781,7 @@ Everything else Nushi writes is in its data folder (`~/Library/Application Suppo
 | A shell | your shell's own files (history) | A terminal you open; the daemon's environment comes from your login shell (`nushid -login`, ADR 0028). |
 | A login item | launchd's per-user list, Login Items | Start at login (Settings). |
 | Ante's prompt images | a private folder in `$TMPDIR` | An image in an Ante prompt; removed when the bridge ends. |
+| A PiG session's file in the Trash | `~/.Trash` | Delete (you asked), and a side chat closed: moved there with `trash`, as PiG's `/resume` deletes. |
 | The Mac kept awake | `caffeinate` (a process, no file) | Remote access on. |
 | Files you open | macOS's open-panel state (`com.nushihq.Nushi` preferences) | The folder picker. |
 
@@ -708,6 +794,14 @@ What changed in milestone Z:
 ## Decisions to revisit
 
 Open questions; what's settled is in `docs/adr/` or in the code.
+
+- New in AB: PiG never asks before a tool call, and has no modes: a PiG chat shows no mode picker and no permission cards. Nushi adds no control of its own (ADR 0007).
+- New in AB: no trust card for PiG: PiG's own trust (its `trust.json`) decides whether a folder's `.pig` loads; Nushi never passes `--approve`. A repository's PiG settings and extensions don't load in Nushi until you trust it in PiG.
+- New in AB: Delete moves a PiG session's file (and its rewinds' and closed side chats') to the Trash, as PiG's `/resume` does, rather than deleting it for good.
+- New in AB: a PiG message's id is its timestamp (which PiG keeps in the session file); a rewind forks before the user's next message, so it keeps the whole turn that has the message.
+- New in AB: Stop ends at once a turn that started no run (an extension's command still waiting); pig may go on waiting, and Sleep or Reload ends it.
+- New in AB: a PiG chat whose only prompts were extensions' commands (`/sprite`) has nothing in PiG's history: after it sleeps it can't reopen ("PiG has no session …").
+- New in AB: the model picker lists every model PiG has a key for, as `provider/id` with PiG's names; files mentioned go to PiG as `@path` in the message.
 
 - New in AA: an agent's stderr is logged at INFO, a record a line (Claude's adapter writes about 20 timing lines a start); a level per agent, or DEBUG for stderr, would make the log quieter and lose where a slow start went.
 - New in AA: at DEBUG, `session/update` notifications aren't logged one by one (each chunk of a reply is one); a turn shows as its start and end lines. A count per turn would tell a turn that streams from one that's stuck.
@@ -792,7 +886,7 @@ Open questions; what's settled is in `docs/adr/` or in the code.
 - Review comments by an agent (the owner's idea, from JetBrains AIR): a side chat reviews the changes and posts comments on the diff through a small MCP server Nushi gives it (`add_comment(file, line, text)`); the comments show in the Changes view, and the ones picked go back to the main chat as a message.
 - Git actions from the Changes view: stage and unstage files or hunks, commit with a message, maybe push. It's read-only toward git for now ([ADR 0019](docs/adr/0019-changes-read-only-toward-git.md)); doing it would mean revisiting that ADR (git writes next to an agent that may be writing too).
 - More agents, if wanted: opencode (`opencode acp`; Fireworks built in, no steering, delete or questions, permissions only in `opencode.json`), Gemini CLI (`gemini --acp`; Gemini API only), goose (`goose acp`). Each is a `chats.Kind` and its own `internal/<agent>*` packages. Nushi never reads the agents' keys; each agent reads its own config.
-- PiG (pi-in-go.dev, a Go port of Pi, MIT, v0.5.3 in October 2026): no ACP in its core; the author's `pig-acp` companion (`pig install npm:@pi-in-go/pigpen-acp`, then `pig acp install`, which builds it with the local Go) is an ACP agent like omp. Try that first, checked against what the other agents do (listing, load, fork, delete, modes, questions). If it falls short, our own bridge on PiG's Go SDK (`coding.NewRuntime`, `Session.Subscribe`, `Runtime.Open`/`Fork`), shipped in the bundle as its own process like the Ante bridge: no npm step. Not inside `nushid`: the SDK says to pin a commit (it changes), the module is large (v0.5.0 broke Go's module size limit), a hang would take down every chat, and the daemon would have to handle provider logins.
+- PiG, next: its MCP servers in the MCP view (`pig mcp list --json`, which starts every server, as `claude mcp list` does); `/compact` and `/name` mapped to RPC's `compact` and `set_session_name`; the images of a replayed message; compaction notices; a chat whose prompts never reached PiG's history reopening as an empty session (`--session-id <id>` makes one); `PIG_USE_PI_DIRS=1` (Pi's folders) in the bridge's listing; telling a session open in a terminal (PiG keeps no lock: only `ps` arguments, which go stale). Upstream: `/sprite` hanging RPC mode.
 - Ante: subagents (the `Agent` tool's child events carry no parent link) and background jobs (`TaskEnd`), skills as slash commands (`SlashCommand`), Ante's `Info` notices in the transcript, and its native `RewindSession` (Nushi rewinds by forking). Upstream, `ante-acp` could take the bridge's mapping; the bridge would then be one launch entry.
 - omp: its `/context` for the Context card, MCP servers sent on `session/new` (omp ignores project MCP configs in ACP mode), and deleting a session's files.
 - Codex's MCP servers (its `config.toml`'s `mcp_servers`, `/mcp` over ACP) in the MCP view; Codex's background terminals and subagent sessions (codex-acp offers them to clients that negotiate them).
@@ -809,6 +903,7 @@ Open questions; what's settled is in `docs/adr/` or in the code.
 
 ## Security notes to look at
 
+- PiG (ADR 0039) runs as you: your `pig` (found on the login shell's `PATH`), one `pig --mode rpc` per chat in its folder, through `nushid pig-acp`. **It runs every tool call without asking**: there is no mode or permission prompt to show. A folder's `.pig` (settings, MCP servers, extensions, prompts, skills) loads only when you trusted it in PiG; `AGENTS.md`/`CLAUDE.md` load regardless, as instructions. The bridge reads PiG's session files (headers, names, first messages) and moves a session's file to the Trash only for an id whose header it found in PiG's sessions folder. A write's old text, for its diff, is read from a regular file of at most 1 MB without following a link (`internal/toolcall`, shared with Ante's bridge).
 - The log (ADR 0038): what an agent writes to stderr is logged, through a redaction pass for known secret shapes; an agent that echoes a prompt or a key of another shape to stderr puts it in `nushid.log` (in the 0700 data folder; the file itself is 0644 when the launcher's `>>` created it, 0600 when the daemon did). The client token is masked by value. `Log` lets any client with the token, or a paired device, add lines (capped: 2 KB a message, 16 KB a stack, 16 attributes); `\n` and quotes are escaped, so a line can't pose as another.
 - The daemon's helper (ADR 0036): `start-daemon` (the launch agent's program) is a script sealed as a resource of the app's signature, not code of its own, so launchd doesn't pin it to a hash; it runs only `open` on the helper beside it. Turning Start at login on adds a background item macOS lists under Login Items.
 - Sessions started elsewhere (ADR 0035): listing starts the agent and reads, never writes: Claude's `~/.claude/sessions/*.json` and the first records of transcripts under `~/.claude/projects`, Codex rollouts' first lines and lock files, omp session headers and lock files (F_GETLK on a file opened read-only; no lock is taken), Ante's `meta.json`, and `lsof -F n -- <events.jsonl…>` for Ante. Opening runs the agent in the session's folder after the trust card, as a new chat. A paired phone can list and open too (a full client).
