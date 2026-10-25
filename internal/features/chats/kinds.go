@@ -38,6 +38,9 @@ type Kind struct {
 	// session, so one open elsewhere isn't offered: Codex refuses a second
 	// one, omp moves it to a new session.
 	OneWriter bool
+	// Explain adds to why the agent failed to start what may help: that
+	// its CLI is a version it wasn't tested with. nil: nothing to add.
+	Explain func(error) error
 }
 
 // kind is a Kind the service runs.
@@ -45,6 +48,14 @@ type kind struct {
 	Kind
 	launch  Launch // Launch, refused once the service closes
 	deletes *bool  // whether the agent deletes sessions, once known (under Service.mu)
+}
+
+// explain is Explain's, for a failed start.
+func (k *kind) explain(err error) error {
+	if k.Explain == nil {
+		return err
+	}
+	return k.Explain(err)
 }
 
 // New makes the service for agents, the first of them the default.

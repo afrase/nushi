@@ -36,6 +36,9 @@ const (
 	Page = "https://github.com/AntigmaLabs/ante"
 )
 
+// Tested are the Ante versions the bridge was run with.
+var Tested = []string{Min}
+
 // Also is where Ante's installer puts it, for when it isn't on PATH.
 func Also() []string {
 	home, _ := os.UserHomeDir()

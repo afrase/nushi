@@ -44,14 +44,14 @@ func TestList(t *testing.T) {
 		}
 		return "yes"
 	}
-	svc := New([]Agent{
+	svc := newService([]Agent{
 		{Name: "claude", CLI: "claude", SignedIn: signedIn},
 		{Name: "codex", CLI: "codex"},
 		{Name: "odd", CLI: "odd"},
 		{Name: "ante", CLI: "ante", Also: []string{filepath.Join(other, "nope"), off}, Min: "0.2.14"},
 		{Name: "omp", CLI: "omp", Needs: "bun"},
 		{Name: "gone", CLI: "gone"},
-	}, readonly.Output, Setup{Chats: &fakeChats{}, Installer: &fakeInstaller{}})
+	}, "", &fakeInstaller{}, &fakeChats{})
 	want := []Status{
 		{Path: bin + "/claude", Version: "2.1.310", SignedIn: "yes"},
 		{Path: bin + "/codex", Version: "0.163.0-alpha.2"},
@@ -82,6 +82,13 @@ func TestOlder(t *testing.T) {
 			t.Errorf("older(%s, %s) isn't %v", c.a, c.b, c.want)
 		}
 	}
+}
+
+// newService finds agents with readonly.Output.
+func newService(agents []Agent, dir string, in Installer, chats Chats) *Service {
+	s := New(agents, readonly.Output, dir, in)
+	s.UseChats(chats)
+	return s
 }
 
 type fakeChats struct{ awake, slept int }
@@ -128,8 +135,8 @@ func TestSetUp(t *testing.T) {
 	}
 	chats, in := &fakeChats{awake: 2}, &fakeInstaller{}
 	dir := t.TempDir()
-	svc := New([]Agent{{Name: "claude", Title: "Claude", CLI: "claude", Adapter: &Adapter{Lock: lock, Package: "adapter", Bin: "adapter"}}, {Name: "ante", Title: "Ante", CLI: "ante"}},
-		readonly.Output, Setup{Dir: dir, Installer: in, Chats: chats})
+	svc := newService([]Agent{{Name: "claude", Title: "Claude", CLI: "claude", Adapter: &Adapter{Lock: lock, Package: "adapter", Bin: "adapter"}}, {Name: "ante", Title: "Ante", CLI: "ante"}},
+		dir, in, chats)
 	st := svc.List(context.Background())[0]
 	if st.Ready || st.Pinned != "1.0.0" || st.Packages != 2 || st.Installed != "" || st.Folder != filepath.Join(dir, "claude") || st.Awake != 2 {
 		t.Fatalf("before: %+v", st)
@@ -167,5 +174,26 @@ func TestSetUp(t *testing.T) {
 	}
 	if _, err := svc.Run("claude"); err == nil {
 		t.Error("Run without Node")
+	}
+}
+
+// A failed start of a CLI version Nushi wasn't tested with says which it
+// was tested with; a tested one, or one that isn't set up, doesn't.
+func TestExplain(t *testing.T) {
+	bin := t.TempDir()
+	fakeCLI(t, bin, "codex", "codex-cli 0.170.0")
+	fakeCLI(t, bin, "ante", "ante 0.2.14")
+	t.Setenv("PATH", bin+":/usr/bin:/bin")
+	svc := newService([]Agent{{Name: "codex", Title: "Codex", CLI: "codex", Tested: []string{"0.160.1", "0.163.0"}}, {Name: "ante", Title: "Ante", CLI: "ante", Tested: []string{"0.2.14"}},
+		{Name: "claude", Title: "Claude", CLI: "claude", Tested: []string{"2.1.310"}}}, "", &fakeInstaller{}, &fakeChats{})
+	failed := errors.New("initialize: it quit")
+	for name, want := range map[string]string{
+		"codex":  "initialize: it quit (Nushi was tested with Codex 0.160.1 and 0.163.0; this is 0.170.0)",
+		"ante":   "initialize: it quit",
+		"claude": "initialize: it quit",
+	} {
+		if got := svc.Explain(name)(failed); got.Error() != want || !errors.Is(got, failed) {
+			t.Errorf("%s: %v", name, got)
+		}
 	}
 }

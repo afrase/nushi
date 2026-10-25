@@ -67,7 +67,7 @@ func (s *Service) Find(ctx context.Context, agent, folder, cursor string) (Found
 	defer cancel()
 	a, init, err := initialize(ctx, k.launch, quiet{}, k.Dialect.InitMeta)
 	if err != nil {
-		return FoundPage{}, fmt.Errorf("couldn't start %s: %w", k.Title, err)
+		return FoundPage{}, fmt.Errorf("couldn't start %s: %w", k.Title, k.explain(err))
 	}
 	defer a.Close()
 	if !lists(init) {

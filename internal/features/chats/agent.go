@@ -28,7 +28,7 @@ type opened struct {
 func (c *chat) openSession(ctx context.Context, sid, folder string, fork bool) (opened, error) {
 	agent, init, err := initialize(ctx, c.kind.launch, c, c.dialect.InitMeta)
 	if err != nil {
-		return opened{}, err
+		return opened{}, c.kind.explain(err)
 	}
 	o := opened{agent: agent, sid: sid}
 	if c.dialect.ForkAt != nil && agent.CanFork() {
@@ -55,7 +55,7 @@ func (c *chat) openSession(ctx context.Context, sid, folder string, fork bool) (
 	}
 	if err != nil {
 		agent.Close()
-		return opened{}, err
+		return opened{}, c.kind.explain(err)
 	}
 	return o, nil
 }

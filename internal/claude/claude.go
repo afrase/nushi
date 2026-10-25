@@ -55,6 +55,10 @@ const (
 	Page = "https://code.claude.com/docs/en/setup"
 )
 
+// Tested are the Claude Code versions the adapter was run with: its own
+// (until milestone Z), then the user's.
+var Tested = []string{"2.1.303", "2.1.310"}
+
 // SignedIn asks the CLI whether it's signed in (`claude auth status`,
 // JSON): "yes" or "no", or "" when it can't say. Claude reads its own
 // login for that; Nushi sees only the answer's loggedIn.

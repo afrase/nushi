@@ -32,6 +32,9 @@ const (
 	Page  = "https://github.com/can1357/oh-my-pi"
 )
 
+// Tested are the omp versions Nushi was run with.
+var Tested = []string{"18.12.6"}
+
 // Resume is the terminal command that opens an omp session by its id.
 const Resume = "omp --resume"
 
