@@ -146,7 +146,7 @@ func fakeAgent(t *testing.T, log *slog.Logger) *Agent {
 	}()
 	calls := &callLog{}
 	calls.inner.Store(handlerOf(log))
-	return Connect(acp.NewAgentConn(fromAgentR, toAgentW, quiet{}, acp.WithLogger(slog.New(calls))), log)
+	return Connect(acp.NewAgentConn(fromAgentR, toAgentW, func(*acp.AgentConn) acp.Client { return quiet{} }, acp.WithLogger(slog.New(calls))), log)
 }
 
 // A call that failed, or was slow, is a WARN; any other a DEBUG, which

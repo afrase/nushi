@@ -40,7 +40,7 @@ func Start(cmd *exec.Cmd, client acp.Client, log *slog.Logger) (*Agent, error) {
 	calls := &callLog{}
 	calls.inner.Store(handlerOf(log))
 	started := time.Now()
-	conn, err := acp.Start(cmd, client, acp.WithLogger(slog.New(calls)), acp.WithWriteLimit(MaxMessage))
+	conn, err := acp.Start(cmd, func(*acp.AgentConn) acp.Client { return client }, acp.WithLogger(slog.New(calls)), acp.WithWriteLimit(MaxMessage))
 	if err != nil {
 		return nil, err
 	}

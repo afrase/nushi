@@ -136,7 +136,7 @@ func start(t *testing.T, store *antetest.Store) *peer {
 		close(done)
 	}()
 	c := &peer{client: &client{}}
-	c.AgentConn = acp.NewAgentConn(fromBridgeR, toBridgeW, c.client)
+	c.AgentConn = acp.NewAgentConn(fromBridgeR, toBridgeW, func(*acp.AgentConn) acp.Client { return c.client })
 	t.Cleanup(func() { _ = toBridgeW.Close(); <-done })
 	init, err := c.Initialize(context.Background(), &acp.InitializeRequest{ProtocolVersion: acp.LatestProtocolVersion,
 		ClientCapabilities: &acp.ClientCapabilities{Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}}}})

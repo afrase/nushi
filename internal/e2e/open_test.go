@@ -29,7 +29,7 @@ func inTerminal(t *testing.T, history *acptest.History, codex bool, dir string, 
 		fromR, fromW := io.Pipe()
 		go func() { (&acptest.Agent{History: history, Codex: codex}).Serve(toR, fromW); _ = fromW.Close() }()
 		t.Cleanup(func() { _ = toW.Close() })
-		c := acp.NewAgentConn(fromR, toW, h)
+		c := acp.NewAgentConn(fromR, toW, func(*acp.AgentConn) acp.Client { return h })
 		if _, err := c.Initialize(ctx, &acp.InitializeRequest{ProtocolVersion: acp.LatestProtocolVersion}); err != nil {
 			t.Fatal(err)
 		}
