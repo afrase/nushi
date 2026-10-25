@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -24,7 +23,7 @@ func Start(dir, program, cli string, h acp.Handler) (*acp.Client, error) {
 	cmd := exec.Command("node", program)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), "CODEX_PATH="+cli)
-	cmd.Stderr = log.Writer()
+	cmd.Stderr = os.Stderr
 	return acp.Start(cmd, h)
 }
 

@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -215,7 +214,7 @@ func (s *Service) Start(ctx context.Context, agent, folder string, worktree bool
 	c.session = model.Session{ID: c.id, SessionID: o.sid, Agent: k.Name, Folder: folder, Created: time.Now(), Worktree: wt, Scratch: scratch}
 	c.mu.Unlock()
 	if err := c.startMode(ctx, o.agent, o.sid, s.modes.Mode(k.Name)); err != nil {
-		log.Printf("chat %s: starting mode: %v", c.id, err) // the chat keeps the agent's default
+		c.log().Warn("starting mode", "err", err) // the chat keeps the agent's default
 	}
 	c.mu.Lock()
 	c.saveLocked(c.modeLocked)
@@ -284,7 +283,7 @@ func (c *chat) saveLocked(change func(*model.Session)) {
 func (c *chat) storeLocked() {
 	if c.parent == nil { // side chats aren't stored
 		if err := c.sessions.SaveSession(c.session); err != nil {
-			log.Printf("chat %s: saving: %v", c.id, err)
+			c.logLocked().Error("saving the chat", "err", err)
 		}
 	}
 	sess := c.session
@@ -345,7 +344,7 @@ func (c *chat) cancelLocked() error {
 		go func() {
 			<-sent
 			if err := agent.Cancel(cancel); err != nil {
-				log.Printf("chat %s: cancelling: %v", c.id, err)
+				c.log().Warn("cancelling the turn", "err", err)
 			}
 		}()
 		return nil

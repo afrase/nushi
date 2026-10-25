@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"maps"
 	"slices"
 	"strings"
@@ -163,7 +162,7 @@ func (s *Service) discard(c *chat, ids []string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if err := s.deleteHistory(ctx, c, ids); err != nil {
-		log.Printf("chat %s: deleting sessions it threw away %v: %v", c.id, ids, err)
+		c.log().Warn("deleting thrown-away sessions", "sessions", strings.Join(ids, ","), "err", err)
 		return
 	}
 	c.mu.Lock()

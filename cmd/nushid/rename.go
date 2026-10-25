@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"log"
+	"log/slog"
 	"net"
 	"os"
 	"path/filepath"
@@ -42,7 +42,7 @@ func renameData(old, dir string) error {
 	if err := os.Rename(old, dir); err != nil {
 		return err
 	}
-	log.Printf("moved %s to %s", old, dir)
+	slog.Info("data folder moved", "from", old, "to", dir)
 	st := store.New(dir)
 	sessions, err := st.Sessions()
 	if err != nil {
@@ -83,7 +83,7 @@ func moveHistory(old, dir, projects string) error {
 		for _, sess := range append(s.Earlier, model.AgentSession{ID: s.SessionID, Folder: s.Folder}) {
 			if rest, ok := strings.CutPrefix(sess.Folder, scratch); ok {
 				if err := claudehistory.Move(projects, sess.ID, filepath.Join(old, "scratch", rest), sess.Folder); err != nil {
-					log.Printf("session %s: %v", sess.ID, err)
+					slog.Warn("moving a scratch chat's history", "session", sess.ID, "err", err)
 				}
 			}
 		}

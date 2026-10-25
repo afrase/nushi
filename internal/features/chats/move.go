@@ -3,7 +3,6 @@ package chats
 import (
 	"context"
 	"errors"
-	"log"
 	"path/filepath"
 	"slices"
 
@@ -86,7 +85,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 		if old != nil {
 			if fresh {
 				if err := old.DeleteSession(ctx, acp.DeleteSessionRequest{SessionID: acp.SessionID(sid)}); err != nil {
-					log.Printf("chat %s: deleting the empty session %s: %v", c.id, sid, err)
+					c.log().Warn("deleting the empty session left by the move", "old", sid, "err", err)
 				}
 			}
 			old.Stop(stopGrace)
@@ -102,7 +101,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 		if replay {
 			o.agent.Stop(stopGrace)
 		} else if err := c.startMode(ctx, o.agent, o.sid, mode); err != nil {
-			log.Printf("chat %s: mode after moving: %v", c.id, err)
+			c.log().Warn("mode after moving", "err", err)
 		}
 	} else if wt != oldWT {
 		s.dropWorktree(wt)
@@ -138,7 +137,7 @@ func (s *Service) fork(ctx context.Context, c *chat, sid, from, to string) (open
 	}
 	defer func() {
 		if err := remove(); err != nil {
-			log.Printf("chat %s: removing the copy of %s in %s: %v", c.id, sid, to, err)
+			c.log().Warn("removing the history copied for the move", "old", sid, "to", to, "err", err)
 		}
 	}()
 	return c.openSession(ctx, sid, to, true)

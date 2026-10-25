@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"log"
 	"slices"
 	"time"
 
@@ -92,7 +91,7 @@ func (s *Service) Open(ctx context.Context, agent, folder, sessionID, listed str
 	c.storeLocked()
 	c.mu.Unlock()
 	if err := c.startMode(ctx, o.agent, o.sid, s.modes.Mode(k.Name)); err != nil {
-		log.Printf("chat %s: starting mode: %v", c.id, err)
+		c.log().Warn("starting mode", "err", err)
 	}
 	c.mu.Lock()
 	c.saveLocked(c.modeLocked)

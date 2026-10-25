@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/afrase/nushi/acp"
@@ -162,7 +161,7 @@ func (s *Service) throwAway(c *chat, agent Agent, sid string) {
 	del := func() error {
 		err := agent.DeleteSession(context.Background(), acp.DeleteSessionRequest{SessionID: acp.SessionID(sid)})
 		if err != nil {
-			log.Printf("deleting session %s: %v", sid, err)
+			c.log().Warn("deleting a forked session", "fork", sid, "err", err)
 		}
 		return err
 	}

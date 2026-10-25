@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"log"
+	"log/slog"
 	"math/rand/v2"
 	"os"
 	"path/filepath"
@@ -71,7 +71,7 @@ func (s *Service) dropWorktree(wt *model.Worktree) bool {
 		}
 	}
 	if err != nil {
-		log.Printf("leaving the worktree %s: %v", wt.Path, err)
+		slog.Info("worktree left", "worktree", wt.Path, "why", err)
 	}
 	return err == nil
 }

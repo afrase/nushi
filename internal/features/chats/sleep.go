@@ -3,7 +3,7 @@ package chats
 import (
 	"context"
 	"errors"
-	"log"
+	"log/slog"
 	"maps"
 	"slices"
 	"time"
@@ -115,7 +115,7 @@ func (s *Service) doze(c *chat, after time.Duration) {
 	c.statusChangedLocked()
 	c.mu.Unlock()
 	if err := agent.Stop(stopGrace); err != nil {
-		log.Printf("chat %s: stopping its agent to sleep: %v", c.id, err)
+		c.log().Warn("stopping the agent to sleep", "err", err)
 	}
 }
 
@@ -164,7 +164,7 @@ func (c *chat) restoreConfig(ctx context.Context, agent Agent, sid string, befor
 		c.mu.Unlock()
 		if set {
 			if err := c.setConfig(ctx, agent, sid, o.ID, o.Current); err != nil {
-				log.Printf("chat %s: setting %s back after sleeping: %v", c.id, o.ID, err)
+				c.log().Warn("setting an option back after sleeping", "option", o.ID, "err", err)
 			}
 		}
 	}
@@ -213,7 +213,7 @@ func (s *Service) Awake(agent string) int { return len(s.awakeOf(agent)) }
 func (s *Service) SleepAgent(agent string) {
 	for _, id := range s.awakeOf(agent) {
 		if err := s.Sleep(id); err != nil {
-			log.Printf("chat %s: not put to sleep: %v", id, err)
+			slog.Warn("chat not put to sleep", "chat", id, "err", err)
 		}
 	}
 }
