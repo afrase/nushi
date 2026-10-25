@@ -73,7 +73,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 				serve(toAgentR, fromAgentW)
 				_ = fromAgentW.Close()
 			}()
-			return pipeAgent{agentproc.Connect(acp.NewAgentConn(fromAgentR, toAgentW, h), log)}, nil
+			return pipeAgent{agentproc.Connect(acp.NewAgentConn(fromAgentR, toAgentW, func(*acp.AgentConn) acp.Client { return h }), log)}, nil
 		}
 	}
 	fake := func(codex, omp bool) chats.Launch {
