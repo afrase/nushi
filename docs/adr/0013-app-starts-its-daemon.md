@@ -1,5 +1,7 @@
 # 0013. The packaged app starts its own daemon, never stops one on its own
 
+Amended by [0036](0036-the-daemon-is-a-background-helper-app.md): the daemon is a helper app the app opens through Launch Services (`nushid -login` goes through the login shell), and Start at login is a launch agent. The rest holds.
+
 ## Context
 The packaged app (`make package`) carries `nushid` inside its bundle. Agents must outlive the app ([0002](0002-separate-daemon.md)), and a daemon may be older than the app that finds it ([0004](0004-connect-over-unix-socket.md)). An app opened from Finder gets launchd's bare environment, while agents need the user's `PATH` (npx, and every tool the agent runs).
 
