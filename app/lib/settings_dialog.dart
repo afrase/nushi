@@ -7,6 +7,7 @@ import 'package:nushi/agents_page.dart';
 import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/jira_settings.dart';
 import 'package:nushi/login_item.dart';
 import 'package:nushi/logs_section.dart';
 import 'package:nushi/menu.dart';
@@ -41,15 +42,25 @@ const settingsKey = SingleActivator(LogicalKeyboardKey.comma, meta: true);
 /// size, when idle chats sleep, remote access (both the daemon's), and
 /// whether the daemon starts at login (the packaged app's, for the usual
 /// data folder). Agents ([agents] opens on it): the agents found, and
-/// their adapters.
+/// their adapters. Jira ([jira]): the sites and their tokens.
 Future<void> showSettings(
   BuildContext context,
   NushiServiceClient client, {
   bool agents = false,
+  bool jira = false,
 }) => showDialog(
   context: context,
-  builder: (_) => _Settings(client, agents: agents),
+  builder: (_) => _Settings(
+    client,
+    page: jira
+        ? _Page.jira
+        : agents
+        ? _Page.agents
+        : _Page.general,
+  ),
 );
+
+enum _Page { general, agents, jira }
 
 /// The choices for when idle chats sleep, in minutes; 0: never.
 const _sleepAfter = {
@@ -63,10 +74,10 @@ const _sleepAfter = {
 String _sleepLabel(int m) => _sleepAfter[m] ?? '$m minute${m == 1 ? '' : 's'}';
 
 class _Settings extends StatefulWidget {
-  const new(this.client, {required this.agents});
+  const new(this.client, {required this.page});
 
   final NushiServiceClient client;
-  final bool agents;
+  final _Page page;
 
   @override
   State<_Settings> createState() => _SettingsState();
@@ -75,7 +86,7 @@ class _Settings extends StatefulWidget {
 class _SettingsState extends State<_Settings> {
   final Future<List<String>> _families = _monospaced();
   Settings? _set; // the daemon's, once it said
-  late bool _agents = widget.agents; // the page shown
+  late _Page _page = widget.page; // the page shown
 
   @override
   void initState() {
@@ -224,16 +235,22 @@ class _SettingsState extends State<_Settings> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Segmented(
-            value: _agents,
-            segments: const [(false, 'General'), (true, 'Agents')],
-            onChanged: (v) => setState(() => _agents = v),
+            value: _page,
+            segments: const [
+              (_Page.general, 'General'),
+              (_Page.agents, 'Agents'),
+              (_Page.jira, 'Jira'),
+            ],
+            onChanged: (v) => setState(() => _page = v),
           ),
           const SizedBox(height: 12),
           // A short window scrolls the page.
           Flexible(
-            child: _agents
-                ? AgentsPage(widget.client)
-                : SingleChildScrollView(child: general),
+            child: switch (_page) {
+              _Page.agents => AgentsPage(widget.client),
+              _Page.jira => JiraPage(widget.client),
+              _Page.general => SingleChildScrollView(child: general),
+            },
           ),
         ],
       ),
