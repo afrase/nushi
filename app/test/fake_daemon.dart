@@ -8,13 +8,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
-/// The four agents, as the daemon lists them: installed, ready.
+/// The five agents, as the daemon lists them: installed, ready.
 List<Agent> readyAgents() => [
   for (final (name, title) in [
     ('claude', 'Claude'),
     ('codex', 'Codex'),
     ('ante', 'Ante'),
     ('omp', 'oh-my-pi'),
+    ('pig', 'PiG'),
   ])
     Agent(name: name, title: title, path: '/bin/$name', ready: true),
 ];

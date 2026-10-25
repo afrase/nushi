@@ -74,13 +74,14 @@ class _Mark extends CustomPainter {
 /// Codex's from the ACP registry (`cdn.agentclientprotocol.com`, as
 /// `claude-acp.svg` and `codex-acp.svg`), Ante's from its docs' logo
 /// (`ante.png` in AntigmaLabs/ante), oh-my-pi's from its repository
-/// (`assets/icon.svg`), all in one color. NOTES.md, "Agent marks", has
-/// their terms.
+/// (`assets/icon.svg`), PiG's from its pig sprite, all in one color.
+/// NOTES.md, "Agent marks", has their terms.
 final Map<String, (Path, Rect)> _marks = {
   'claude': (parseSvgPath(_claude), const Rect.fromLTWH(0, 0, 1200, 1200)),
   'codex': (parseSvgPath(_codex), const Rect.fromLTWH(0, 0, 24, 24)),
   'ante': (_ante(), const Rect.fromLTRB(14, 32, 248, 235)),
   'omp': (_omp(), const Rect.fromLTRB(10, 8, 110, 82)),
+  'pig': (_pig(), const Rect.fromLTRB(1, 0, 15, 12)),
 };
 
 /// Ante's pixel ghost, its pixels as runs of the 262×266 PNG.
@@ -131,6 +132,41 @@ Path _omp() {
     ..addRRect(r(76, 59, 3, 8, 1))
     ..addRRect(r(82, 59, 3, 8, 1));
   return Path.combine(PathOperation.difference, pi, pins);
+}
+
+/// PiG's pig head: the 16×14 sprite its terminal draws (`pigMascot` in
+/// `coding/piglogin/art.go` of MichaelKinsy/PiG, MIT), its empty first and
+/// last rows left out, in one color: the eyes and the snout cut out, the
+/// nostrils kept.
+Path _pig() {
+  const rows = [
+    '...####..####...',
+    '...####..####...',
+    '..############..',
+    '.##############.',
+    '.###..####..###.',
+    '.###..####..###.',
+    '.#####....#####.',
+    '.####.#..#.####.',
+    '.#####....#####.',
+    '.##############.',
+    '..############..',
+    '...##########...',
+  ];
+  final path = Path();
+  for (final (y, row) in rows.indexed) {
+    for (final run in RegExp('#+').allMatches(row)) {
+      path.addRect(
+        Rect.fromLTRB(
+          run.start.toDouble(),
+          y.toDouble(),
+          run.end.toDouble(),
+          y + 1.0,
+        ),
+      );
+    }
+  }
+  return path;
 }
 
 const _claude =

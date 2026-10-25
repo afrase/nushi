@@ -171,9 +171,9 @@ void main() {
 
     await _open(tester);
     await _key(tester, LogicalKeyboardKey.arrowUp); // codex → claude
-    await _key(tester, LogicalKeyboardKey.arrowUp); // wraps → omp
+    await _key(tester, LogicalKeyboardKey.arrowUp); // wraps → pig
     await _key(tester, LogicalKeyboardKey.enter);
-    expect(fake.started.last.agent, 'omp');
+    expect(fake.started.last.agent, 'pig');
 
     await _open(tester);
     await _key(tester, LogicalKeyboardKey.digit1);

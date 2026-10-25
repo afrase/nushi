@@ -4,3 +4,4 @@ bin/
 build/
 local.mk
 /nushid
+app/test/failures/
