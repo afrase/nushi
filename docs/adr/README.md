@@ -31,7 +31,7 @@
 - [0029](0029-warn-before-a-folder-runs-code-for-codex.md) Warn before a folder's own code runs, for Codex too; "Start anyway" is kept per agent
 - [0030](0030-our-own-bridge-for-ante.md) Ante runs through an ACP bridge of Nushi's own (`nushid ante-acp`), not `ante-acp`
 - [0031](0031-warn-before-a-folder-runs-code-for-ante-and-omp.md) Warn before a folder's own code runs, for Ante and omp; the files are read by `internal/folderfiles`
-- [0032](0032-idle-chats-sleep.md) Idle chats sleep: their agent stops, a message wakes them through `session/load`
+- [0032](0032-idle-chats-sleep.md) Idle chats sleep: their agent stops, a message wakes them through `session/load`; a chat that couldn't reopen isn't asleep, and showing it tries again
 - [0033](0033-the-relay-is-a-dumb-pipe.md) The relay is a dumb pipe that keeps nothing; what it can still see (replaces 0006)
 - [0034](0034-noise-between-phone-and-daemon.md) Noise (IKpsk1 to pair, IK after) between the phone and the daemon; pairing by QR code; a paired device is a full client; the threat model (replaces 0006, amends 0022)
 - [0035](0035-open-sessions-started-elsewhere.md) Sessions started elsewhere (a terminal) open as chats through `session/load`, not copies; forks left out; open elsewhere: warn where both can write, not offered where the agent allows one writer

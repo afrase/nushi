@@ -15,7 +15,7 @@ A chat's first start ran `npx --yes -p <pinned package>`: it downloaded and ran 
 - Nothing is downloaded until asked; Claude's adapter is 9 MB to download and 73 MB on disk (was about 324 MB in npx's cache), Codex's 2 MB and 19 MB (was 335 MB).
 - Updating an adapter is a change in the repository: its `package.json`, then `make adapters` for the lockfile and the sizes, then testing with the user's CLI versions.
 - A newer CLI than the adapter was tested with runs anyway; if it breaks the adapter, the start error says so. Codex runs through `codex.js`, the Node launcher npm installs for `codex`, as it does in a terminal.
-- After the change every user sets up Claude and Codex once (existing chats reopen once their agent is set up). The old npx cache is the user's to delete.
+- After the change every user sets up Claude and Codex once (existing chats reopen once their agent is set up, each when it's next shown: [0032](0032-idle-chats-sleep.md)). The old npx cache is the user's to delete.
 - The user's npm settings (a registry, a proxy) apply to the install, which is what a work Mac behind a proxy needs.
 
 ## Alternatives considered
