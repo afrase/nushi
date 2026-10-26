@@ -129,7 +129,7 @@ class _FieldsFormState extends State<_FieldsForm> {
               if (f.options.isNotEmpty)
                 Row(
                   children: [
-                    Menu(
+                    MenuField(
                       entries: [
                         for (final o in f.options)
                           MenuEntry(
@@ -138,10 +138,7 @@ class _FieldsFormState extends State<_FieldsForm> {
                             onPick: () => setState(() => _values[f.id] = o.id),
                           ),
                       ],
-                      child: Text(
-                        '${_picked(f) ?? 'Pick'} ▾',
-                        style: theme.ui(t.text),
-                      ),
+                      label: Text(_picked(f) ?? 'Pick'),
                     ),
                   ],
                 )

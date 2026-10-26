@@ -202,9 +202,14 @@ void main() {
     d.showJira(open: true);
     await tester.pumpAndSettle();
     // Its status, from the row.
-    await tester.tap(find.text('In Progress ▾'));
+    await tester.tap(find.text('In Progress'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Done').last);
+    await tester.tap(
+      find.descendant(
+        of: find.byType(MenuItemButton),
+        matching: find.text('Done'),
+      ),
+    );
     await tester.pumpAndSettle();
     final moved = fake.calls.whereType<TransitionJiraIssueRequest>().single;
     expect((moved.key, moved.transition), ('ACME-12', '31'));
@@ -228,7 +233,7 @@ void main() {
   testWidgets('every site’s issues, each row naming its site', (tester) async {
     final other = JiraSite(id: 'other.atlassian.net', url: 'https://other');
     final (fake, d) = await openView(tester, sites: [_site, other]);
-    await tester.tap(find.text('${_site.id} ▾'));
+    await tester.tap(find.text(_site.id));
     await tester.pumpAndSettle();
     await tester.tap(find.text('All sites'));
     await tester.pumpAndSettle();
@@ -294,7 +299,7 @@ void main() {
     );
     await tester.tap(find.text('Sprint'));
     await tester.pumpAndSettle();
-    expect(find.text('Pick the board'), findsOneWidget);
+    expect(find.text('Pick the board…'), findsOneWidget);
     expect(
       fake.calls.whereType<ListJiraIssuesRequest>().where(
         (r) => r.list == 'sprint',

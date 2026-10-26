@@ -171,25 +171,19 @@ class _IssuePickerState extends State<IssuePicker> {
         if (unknown.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(8, 4, 8, 10),
-            child: Tap(
-              onTap: () =>
-                  showSettings(context, widget.daemon.client, jira: true),
-              child: Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text:
-                          '${Uri.tryParse(unknown)?.host ?? unknown} '
-                          "isn't added. ",
-                    ),
-                    TextSpan(
-                      text: 'Settings › Jira',
-                      style: TextStyle(color: t.link),
-                    ),
-                  ],
+            child: Wrap(
+              children: [
+                Text(
+                  "${Uri.tryParse(unknown)?.host ?? unknown} isn't added. ",
+                  style: theme.ui(t.textMuted, size: 12.5),
                 ),
-                style: theme.ui(t.textMuted, size: 12.5),
-              ),
+                LinkText(
+                  'Settings › Jira',
+                  size: 12.5,
+                  onTap: () =>
+                      showSettings(context, widget.daemon.client, jira: true),
+                ),
+              ],
             ),
           )
         else if (note != null)

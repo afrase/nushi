@@ -314,7 +314,7 @@ void main() {
 
   testWidgets("only my folders' repositories", (tester) async {
     final (fake, d) = await openView(tester);
-    await tester.tap(find.text('All repositories ▾'));
+    await tester.tap(find.text('All repositories'));
     await tester.pumpAndSettle();
     await tester.tap(
       find.textContaining("My folders' repositories", findRichText: true).last,

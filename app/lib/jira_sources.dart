@@ -105,11 +105,11 @@ class JiraSources extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 2, 10, 4),
             child: site.board == 0
-                ? Tap(
-                    onTap: onPickBoard,
-                    child: Text(
-                      'Pick the board',
-                      style: theme.ui(t.link, size: 12),
+                ? Align(
+                    alignment: Alignment.centerLeft,
+                    child: Button(
+                      label: 'Pick the board…',
+                      onPressed: onPickBoard,
                     ),
                   )
                 : Text(

@@ -510,9 +510,9 @@ class _Whose extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
     final teams = githubTeamReviews.value;
-    return Menu(
+    return MenuField(
+      compact: true,
       entries: [
         MenuEntry('Only me', checked: !teams, onPick: () => onPick(false)),
         MenuEntry(
@@ -521,10 +521,7 @@ class _Whose extends StatelessWidget {
           onPick: () => onPick(true),
         ),
       ],
-      child: Text(
-        '${teams ? 'Me and my teams' : 'Only me'} ▾',
-        style: theme.ui(theme.t.textMuted, size: 12),
-      ),
+      label: Text(teams ? 'Me and my teams' : 'Only me'),
     );
   }
 }
@@ -574,7 +571,8 @@ class _Bar extends StatelessWidget {
           Text('GitHub', style: theme.ui(t.text, weight: FontWeight.w600)),
           const SizedBox(width: 12),
           if (hosts.length > 1)
-            Menu(
+            MenuField(
+              compact: true,
               entries: [
                 for (final x in hosts)
                   MenuEntry(
@@ -584,10 +582,7 @@ class _Bar extends StatelessWidget {
                     onPick: () => onHost(x.host),
                   ),
               ],
-              child: Text(
-                '${h?.host ?? ''} ▾',
-                style: theme.ui(t.textSecondary, size: 12),
-              ),
+              label: Text(h?.host ?? ''),
             )
           else if (h != null)
             Text(
@@ -596,7 +591,8 @@ class _Bar extends StatelessWidget {
             ),
           const SizedBox(width: 12),
           if (h != null)
-            Menu(
+            MenuField(
+              compact: true,
               entries: [
                 MenuEntry(
                   'All repositories',
@@ -610,9 +606,8 @@ class _Bar extends StatelessWidget {
                   onPick: knownRepos == 0 ? null : () => onKnown(true),
                 ),
               ],
-              child: Text(
-                '${known ? "My folders' repositories" : 'All repositories'} ▾',
-                style: theme.ui(t.textSecondary, size: 12),
+              label: Text(
+                known ? "My folders' repositories" : 'All repositories',
               ),
             ),
           const Spacer(),

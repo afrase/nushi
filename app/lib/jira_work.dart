@@ -114,11 +114,18 @@ class _StatusMenuState extends State<StatusMenu> {
         },
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+          padding: const EdgeInsets.fromLTRB(6, 1, 3, 1),
           decoration: box(color, radius: NushiTheme.control),
-          child: Text(
-            '${widget.issue.status} ▾',
-            style: theme.ui(color, size: 12, weight: FontWeight.w500),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                widget.issue.status,
+                style: theme.ui(color, size: 12, weight: FontWeight.w500),
+              ),
+              const SizedBox(width: 1),
+              Icon(Icons.keyboard_arrow_down, size: 14, color: color),
+            ],
           ),
         ),
       ),

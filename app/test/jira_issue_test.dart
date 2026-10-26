@@ -202,12 +202,12 @@ void main() {
 
   testWidgets('a move that asks for a field', (tester) async {
     final (fake, d, _) = await _open(tester);
-    await tester.tap(find.text('In Progress ▾'));
+    await tester.tap(find.text('In Progress'));
     await tester.pumpAndSettle();
     await tester.tap(menuRow('Done'));
     await tester.pumpAndSettle();
     expect(find.text('Resolution *'), findsOneWidget);
-    await tester.tap(find.text('Pick ▾'));
+    await tester.tap(find.text('Pick'));
     await tester.pumpAndSettle();
     await tester.tap(menuRow('Fixed'));
     await tester.pumpAndSettle();
@@ -247,7 +247,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Ann Lee · 5h ago'), findsOneWidget);
-    await tester.tap(find.text('Start a chat ▾'));
+    await tester.tap(find.text('Start a chat'));
     await tester.pumpAndSettle();
     await tester.tap(menuRow('nushi'));
     await tester.pumpAndSettle();

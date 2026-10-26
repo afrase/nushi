@@ -260,8 +260,6 @@ class StartWork extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
     final clones =
         githubFolders.value[(item.ref.host, item.ref.repo)] ?? const [];
     return Menu(
@@ -281,18 +279,13 @@ class StartWork extends StatelessWidget {
       ],
       builder: (context, open) {
         menu?.call(open);
-        return button
-            ? Button(
-                label: 'Start work',
-                icon: Icons.play_arrow,
-                onPressed: open,
-              )
-            : Tap(
-                onTap: open,
-                tooltip: menu != null ? 'Start work (⌘⏎)' : 'Start work',
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                child: Text('Start work', style: theme.ui(t.link, size: 12)),
-              );
+        return Button(
+          label: 'Start work',
+          icon: button ? Icons.play_arrow : null,
+          menu: true,
+          tooltip: menu != null ? '⌘⏎' : '',
+          onPressed: open,
+        );
       },
     );
   }
@@ -406,10 +399,7 @@ class NoHost extends StatelessWidget {
             textAlign: TextAlign.center,
             style: theme.ui(error == null ? t.textMuted : t.crashed),
           ),
-          Tap(
-            onTap: onSettings,
-            child: Text('Settings › GitHub', style: theme.ui(t.link)),
-          ),
+          LinkText('Settings › GitHub', onTap: onSettings),
         ],
       ),
     );

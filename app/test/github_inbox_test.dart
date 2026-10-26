@@ -205,13 +205,13 @@ void main() {
     var (fake, d) = await openView(tester);
     final first = asks(fake).single;
     expect(first.teams, isFalse);
-    await tester.tap(find.text('Only me ▾'));
+    await tester.tap(find.text('Only me'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Me and my teams').last);
     await tester.pumpAndSettle();
     final asked = asks(fake);
     expect((asked.length, asked.last.teams), (2, true));
-    expect(find.text('Me and my teams ▾'), findsOneWidget);
+    expect(find.text('Me and my teams'), findsOneWidget);
     expect(githubTeamReviews.value, isTrue);
     final saved = jsonDecode(File('$dataDir/app.json').readAsStringSync());
     expect((saved as Map)['githubTeams'], isTrue);
@@ -219,7 +219,7 @@ void main() {
     // Opened again (the app restarted keeps it in app.json): as left.
     (fake, d) = await openView(tester, teams: null);
     expect(asks(fake).single.teams, isTrue);
-    expect(find.text('Me and my teams ▾'), findsOneWidget);
+    expect(find.text('Me and my teams'), findsOneWidget);
     await closeView(tester, d);
   });
 
