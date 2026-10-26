@@ -157,6 +157,8 @@ const (
 	NushiServiceUninstallPluginProcedure = "/nushi.v1.NushiService/UninstallPlugin"
 	// NushiServiceTrashSkillProcedure is the fully-qualified name of the NushiService's TrashSkill RPC.
 	NushiServiceTrashSkillProcedure = "/nushi.v1.NushiService/TrashSkill"
+	// NushiServiceLinkSkillProcedure is the fully-qualified name of the NushiService's LinkSkill RPC.
+	NushiServiceLinkSkillProcedure = "/nushi.v1.NushiService/LinkSkill"
 	// NushiServiceReloadChatProcedure is the fully-qualified name of the NushiService's ReloadChat RPC.
 	NushiServiceReloadChatProcedure = "/nushi.v1.NushiService/ReloadChat"
 	// NushiServiceOpenTerminalProcedure is the fully-qualified name of the NushiService's OpenTerminal
@@ -480,6 +482,10 @@ type NushiServiceClient interface {
 	// Moves a skill's folder (yours or the project's, as listed) to the
 	// Trash.
 	TrashSkill(context.Context, *connect.Request[v1.TrashSkillRequest]) (*connect.Response[v1.TrashSkillResponse], error)
+	// Gives an agent a shared skill it doesn't read by a relative link of
+	// its own (Claude's .claude/skills/<name> → ../../.agents/skills/<name>):
+	// only a shared skill listed for the folder; nothing replaced.
+	LinkSkill(context.Context, *connect.Request[v1.LinkSkillRequest]) (*connect.Response[v1.LinkSkillResponse], error)
 	// Reopens a chat's session on a new agent (ACP session/load), which
 	// replays its transcript, so it uses the MCP servers as they are now.
 	// Refused while it is busy.
@@ -909,6 +915,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("TrashSkill")),
 			connect.WithClientOptions(opts...),
 		),
+		linkSkill: connect.NewClient[v1.LinkSkillRequest, v1.LinkSkillResponse](
+			httpClient,
+			baseURL+NushiServiceLinkSkillProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("LinkSkill")),
+			connect.WithClientOptions(opts...),
+		),
 		reloadChat: connect.NewClient[v1.ReloadChatRequest, v1.ReloadChatResponse](
 			httpClient,
 			baseURL+NushiServiceReloadChatProcedure,
@@ -1275,6 +1287,7 @@ type nushiServiceClient struct {
 	setPluginOn         *connect.Client[v1.SetPluginOnRequest, v1.SetPluginOnResponse]
 	uninstallPlugin     *connect.Client[v1.UninstallPluginRequest, v1.UninstallPluginResponse]
 	trashSkill          *connect.Client[v1.TrashSkillRequest, v1.TrashSkillResponse]
+	linkSkill           *connect.Client[v1.LinkSkillRequest, v1.LinkSkillResponse]
 	reloadChat          *connect.Client[v1.ReloadChatRequest, v1.ReloadChatResponse]
 	openTerminal        *connect.Client[v1.OpenTerminalRequest, v1.OpenTerminalResponse]
 	listTerminals       *connect.Client[v1.ListTerminalsRequest, v1.ListTerminalsResponse]
@@ -1572,6 +1585,11 @@ func (c *nushiServiceClient) UninstallPlugin(ctx context.Context, req *connect.R
 // TrashSkill calls nushi.v1.NushiService.TrashSkill.
 func (c *nushiServiceClient) TrashSkill(ctx context.Context, req *connect.Request[v1.TrashSkillRequest]) (*connect.Response[v1.TrashSkillResponse], error) {
 	return c.trashSkill.CallUnary(ctx, req)
+}
+
+// LinkSkill calls nushi.v1.NushiService.LinkSkill.
+func (c *nushiServiceClient) LinkSkill(ctx context.Context, req *connect.Request[v1.LinkSkillRequest]) (*connect.Response[v1.LinkSkillResponse], error) {
+	return c.linkSkill.CallUnary(ctx, req)
 }
 
 // ReloadChat calls nushi.v1.NushiService.ReloadChat.
@@ -2005,6 +2023,10 @@ type NushiServiceHandler interface {
 	// Moves a skill's folder (yours or the project's, as listed) to the
 	// Trash.
 	TrashSkill(context.Context, *connect.Request[v1.TrashSkillRequest]) (*connect.Response[v1.TrashSkillResponse], error)
+	// Gives an agent a shared skill it doesn't read by a relative link of
+	// its own (Claude's .claude/skills/<name> → ../../.agents/skills/<name>):
+	// only a shared skill listed for the folder; nothing replaced.
+	LinkSkill(context.Context, *connect.Request[v1.LinkSkillRequest]) (*connect.Response[v1.LinkSkillResponse], error)
 	// Reopens a chat's session on a new agent (ACP session/load), which
 	// replays its transcript, so it uses the MCP servers as they are now.
 	// Refused while it is busy.
@@ -2430,6 +2452,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("TrashSkill")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceLinkSkillHandler := connect.NewUnaryHandler(
+		NushiServiceLinkSkillProcedure,
+		svc.LinkSkill,
+		connect.WithSchema(nushiServiceMethods.ByName("LinkSkill")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceReloadChatHandler := connect.NewUnaryHandler(
 		NushiServiceReloadChatProcedure,
 		svc.ReloadChat,
@@ -2842,6 +2870,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceUninstallPluginHandler.ServeHTTP(w, r)
 		case NushiServiceTrashSkillProcedure:
 			nushiServiceTrashSkillHandler.ServeHTTP(w, r)
+		case NushiServiceLinkSkillProcedure:
+			nushiServiceLinkSkillHandler.ServeHTTP(w, r)
 		case NushiServiceReloadChatProcedure:
 			nushiServiceReloadChatHandler.ServeHTTP(w, r)
 		case NushiServiceOpenTerminalProcedure:
@@ -3149,6 +3179,10 @@ func (UnimplementedNushiServiceHandler) UninstallPlugin(context.Context, *connec
 
 func (UnimplementedNushiServiceHandler) TrashSkill(context.Context, *connect.Request[v1.TrashSkillRequest]) (*connect.Response[v1.TrashSkillResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.TrashSkill is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) LinkSkill(context.Context, *connect.Request[v1.LinkSkillRequest]) (*connect.Response[v1.LinkSkillResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.LinkSkill is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) ReloadChat(context.Context, *connect.Request[v1.ReloadChatRequest]) (*connect.Response[v1.ReloadChatResponse], error) {

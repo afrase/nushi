@@ -65,8 +65,6 @@ type SkillAgent struct {
 	// Via is the agent's own skill folder that is a link to it (Claude's
 	// .claude/skills/<name>), when that's how the agent loads it.
 	Via string
-	// NoSwitch says why the agent has no switch for it ("" when it has).
-	NoSwitch string
 }
 
 // Plugin is one installed plugin, with what it brings.

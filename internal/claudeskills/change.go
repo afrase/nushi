@@ -32,7 +32,17 @@ func errSetIn(what, file string) error {
 // SetSkillOn turns your skill or one of folder's project's skills on or
 // off. Off is "off"; on drops the skill's override, or says "on" when a
 // file below the one changed would keep it off.
-func (Claude) SetSkillOn(ctx context.Context, folder, source, name string, on bool) error {
+func (c Claude) SetSkillOn(ctx context.Context, folder, source, name string, on bool) error {
+	if source == "shared" { // a shared skill Claude has through a link of its own: that skill
+		i := slices.IndexFunc(c.Shared(ctx, folder), func(s model.Skill) bool { return s.Name == name })
+		if i < 0 {
+			return fmt.Errorf("Claude doesn't load a shared skill %q here", name)
+		}
+		source = "project"
+		if filepath.Dir(c.Shared(ctx, folder)[i].Agents[0].Via) == userRoot() {
+			source = "user"
+		}
+	}
 	roots := map[string][]string{"user": {userRoot()}, "project": projectRoots(ctx, folder)}[source]
 	found := false
 	for _, root := range roots {
