@@ -1,4 +1,5 @@
 import 'package:fixnum/fixnum.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -289,7 +290,10 @@ void main() {
     expect(find.text('My pull requests  2'), findsOneWidget);
     expect(find.text('Assigned issues  1'), findsOneWidget);
     expect(find.text('$_repo#1'), findsOneWidget);
-    expect(find.text('Review required'), findsOneWidget);
+    // A review only asked for says nothing; a row has no Start work at
+    // rest.
+    expect(find.byTooltip('Review required'), findsNothing);
+    expect(find.byTooltip('Start work'), findsNothing);
     // The inbox was asked of all repositories, not quietly.
     final asked = fake.calls.whereType<ListGitHubInboxRequest>().first;
     expect(
@@ -445,7 +449,17 @@ void main() {
       tester,
       chats: [chat('c0', 'claude', 'Other')],
     );
-    await tester.tap(find.text('Start work').last); // the issue's row
+    // The issue's row's right-click menu.
+    await tester.tap(
+      find.text('Add a Mul function'),
+      buttons: kSecondaryButton,
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('Hide this repository', findRichText: true),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Start work'));
     await tester.pumpAndSettle();
     await tester.tap(_clone.first); // a clone of its repository
     await tester.pumpAndSettle();
@@ -472,7 +486,13 @@ void main() {
       tester,
       chats: [chat('c0', 'claude', 'Other')],
     );
-    await tester.tap(find.text('Start work').at(1)); // pull request 1
+    // Pull request 1, selected, by ⌘⏎: its Start work shows.
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyJ);
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Start work (⌘⏎)'), findsOneWidget);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
     await tester.pumpAndSettle();
     await tester.tap(_clone.first);
     await tester.pumpAndSettle();

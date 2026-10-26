@@ -11,7 +11,7 @@ import 'package:nushi/daemon.dart';
 /// worktree, what each chat's Changes view shows, the panes' widths, whether
 /// changed files show flat, which chats show their terminals, the
 /// terminal's font, whether a subagent's pane shows wide, the Jira task
-/// list's groups, and whose review requests the GitHub view lists.
+/// list's groups, and the GitHub view's cards and filters.
 final showDetails = ValueNotifier<bool>(_saved['details'] != false)
   ..addListener(_save);
 final collapsedCards = ValueNotifier<Set<String>>(_strings('collapsed'))
@@ -60,6 +60,29 @@ final jiraCollapsed = ValueNotifier<Map<String, List<String>>>(
 /// a team of mine too ("Me and my teams"), not only of me by name.
 final githubTeamReviews = ValueNotifier<bool>(_saved['githubTeams'] == true)
   ..addListener(_save);
+
+/// The GitHub view's cards ("review", "mine", "assigned"): the order
+/// they were dragged into (those it doesn't name go last), and those
+/// collapsed.
+final githubCardOrder = ValueNotifier<List<String>>([
+  ..._strings('githubCards'),
+])..addListener(_save);
+final githubCollapsed = ValueNotifier<Set<String>>(_strings('githubCollapsed'))
+  ..addListener(_save);
+
+/// The GitHub view's filters: only what changed in the last this many
+/// days (0: any time; 90 at first), and by host the repositories
+/// (owner/name) and owners hidden, and the owners it's limited to.
+final githubDays = ValueNotifier<int>(switch (_saved['githubDays']) {
+  final int d when d >= 0 => d,
+  _ => 90,
+})..addListener(_save);
+final githubHidden = ValueNotifier<Map<String, List<String>>>(
+  _byPlace('githubHidden'),
+)..addListener(_save);
+final githubOwners = ValueNotifier<Map<String, List<String>>>(
+  _byPlace('githubOwners'),
+)..addListener(_save);
 
 /// The widths panes were dragged to, by pane (see `Resizable`).
 final paneWidths = ValueNotifier<Map<String, double>>({
@@ -128,6 +151,11 @@ void _save() {
         'githubTeams': githubTeamReviews.value,
         'jiraGroups': jiraGroupOrder.value,
         'jiraCollapsed': jiraCollapsed.value,
+        'githubCards': githubCardOrder.value,
+        'githubCollapsed': githubCollapsed.value.toList(),
+        'githubDays': githubDays.value,
+        'githubHidden': githubHidden.value,
+        'githubOwners': githubOwners.value,
       }),
     );
   } on Object {

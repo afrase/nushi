@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_inbox.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_view.dart';
 import 'package:nushi/settings.dart';
@@ -19,7 +20,7 @@ import 'fake_daemon.dart';
 import 'github_view_test.dart' show closeView, item, openView, testNow;
 
 /// An inbox with new and old items, long titles and every badge.
-ListGitHubInboxResponse _inbox() => ListGitHubInboxResponse(
+ListGitHubInboxResponse inboxForTests() => ListGitHubInboxResponse(
   review: [
     item(
       41,
@@ -126,7 +127,7 @@ void main() {
       final (_, d) = await openView(
         tester,
         size: Size(width, 640),
-        inbox: _inbox(),
+        inbox: inboxForTests(),
         chats: _chats,
       );
       for (final age in ['20m', '12d', '5w', '3h', '3mo', '11mo', '1y']) {
@@ -142,12 +143,34 @@ void main() {
       expect(widths, hasLength(1));
       await closeView(tester, d);
     }
-    final (_, d) = await openView(tester, inbox: _inbox());
+    final (_, d) = await openView(tester, inbox: inboxForTests());
     final tip = tester.widget<Tooltip>(
       find.ancestor(of: find.text('12d'), matching: find.byType(Tooltip)),
     );
     final when = testNow.subtract(const Duration(days: 12));
     expect(tip.message, 'Updated ${dateTime(when)}');
+    await closeView(tester, d);
+  });
+
+  testWidgets("a long repository's name never cuts the title: each has "
+      'its own line', (tester) async {
+    final (_, d) = await openView(
+      tester,
+      size: const Size(420, 640),
+      inbox: ListGitHubInboxResponse(
+        mine: [
+          item(
+            7,
+            'Retry flaky uploads',
+            repo: 'boltops-tools/puma-cloudwatch-and-a-much-longer-name',
+          ),
+        ],
+      ),
+    );
+    RenderParagraph p(String text) =>
+        tester.renderObject(find.textContaining(text)) as RenderParagraph;
+    expect(p('Retry flaky uploads').didExceedMaxLines, isFalse);
+    expect(p('boltops-tools/').didExceedMaxLines, isTrue); // cut instead
     await closeView(tester, d);
   });
 
@@ -233,7 +256,7 @@ void main() {
           tester,
           tokens: tokens,
           size: Size(width, 520),
-          inbox: _inbox(),
+          inbox: inboxForTests(),
           chats: _chats,
         );
         await expectLater(
