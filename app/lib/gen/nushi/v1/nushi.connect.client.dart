@@ -961,6 +961,26 @@ extension type NushiServiceClient (connect.Transport _transport) {
     );
   }
 
+  /// Gives an agent a shared skill it doesn't read by a relative link of
+  /// its own (Claude's .claude/skills/<name> → ../../.agents/skills/<name>):
+  /// only a shared skill listed for the folder; nothing replaced.
+  Future<nushiv1nushi.LinkSkillResponse> linkSkill(
+    nushiv1nushi.LinkSkillRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.linkSkill,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Reopens a chat's session on a new agent (ACP session/load), which
   /// replays its transcript, so it uses the MCP servers as they are now.
   /// Refused while it is busy.

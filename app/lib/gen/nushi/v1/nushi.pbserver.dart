@@ -119,6 +119,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.UninstallPluginRequest request);
   $async.Future<$0.TrashSkillResponse> trashSkill(
       $pb.ServerContext ctx, $0.TrashSkillRequest request);
+  $async.Future<$0.LinkSkillResponse> linkSkill(
+      $pb.ServerContext ctx, $0.LinkSkillRequest request);
   $async.Future<$0.ReloadChatResponse> reloadChat(
       $pb.ServerContext ctx, $0.ReloadChatRequest request);
   $async.Future<$0.OpenTerminalResponse> openTerminal(
@@ -324,6 +326,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.UninstallPluginRequest();
       case 'TrashSkill':
         return $0.TrashSkillRequest();
+      case 'LinkSkill':
+        return $0.LinkSkillRequest();
       case 'ReloadChat':
         return $0.ReloadChatRequest();
       case 'OpenTerminal':
@@ -535,6 +539,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return uninstallPlugin(ctx, request as $0.UninstallPluginRequest);
       case 'TrashSkill':
         return trashSkill(ctx, request as $0.TrashSkillRequest);
+      case 'LinkSkill':
+        return linkSkill(ctx, request as $0.LinkSkillRequest);
       case 'ReloadChat':
         return reloadChat(ctx, request as $0.ReloadChatRequest);
       case 'OpenTerminal':

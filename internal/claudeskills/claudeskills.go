@@ -87,6 +87,12 @@ func linked(dir string) bool {
 
 // List returns folder's skills and plugins.
 func (c Claude) List(ctx context.Context, folder string) (model.Skills, error) {
+	return c.list(ctx, folder, true)
+}
+
+// list returns folder's skills, and with plugins its plugins (`claude
+// plugin list`) and theirs.
+func (Claude) list(ctx context.Context, folder string, plugins bool) (model.Skills, error) {
 	var out model.Skills
 	out.Skills = read(userRoot(), "user")
 	seen := map[string]bool{}
@@ -102,11 +108,14 @@ func (c Claude) List(ctx context.Context, folder string) (model.Skills, error) {
 	for i, s := range out.Skills {
 		out.Skills[i].State, out.Skills[i].SetIn = state(files, s)
 	}
-	plugins, err := listPlugins(ctx, folder)
+	if !plugins {
+		return out, nil
+	}
+	installed, err := listPlugins(ctx, folder)
 	if err != nil {
 		out.PluginsError = err.Error()
 	}
-	for _, p := range plugins {
+	for _, p := range installed {
 		out.Plugins = append(out.Plugins, p.Plugin)
 		for _, s := range p.skills {
 			s.Name, s.Source, s.Plugin = p.Name+":"+s.Name, "plugin", p.ID

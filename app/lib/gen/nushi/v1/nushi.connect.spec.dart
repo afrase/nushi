@@ -473,6 +473,16 @@ abstract final class NushiService {
     nushiv1nushi.TrashSkillResponse.new,
   );
 
+  /// Gives an agent a shared skill it doesn't read by a relative link of
+  /// its own (Claude's .claude/skills/<name> → ../../.agents/skills/<name>):
+  /// only a shared skill listed for the folder; nothing replaced.
+  static const linkSkill = connect.Spec(
+    '/$name/LinkSkill',
+    connect.StreamType.unary,
+    nushiv1nushi.LinkSkillRequest.new,
+    nushiv1nushi.LinkSkillResponse.new,
+  );
+
   /// Reopens a chat's session on a new agent (ACP session/load), which
   /// replays its transcript, so it uses the MCP servers as they are now.
   /// Refused while it is busy.

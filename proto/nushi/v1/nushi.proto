@@ -154,9 +154,11 @@ service NushiService {
   // minutes at most). Logout forgets the sign-in.
   rpc LoginMcpServer(LoginMcpServerRequest) returns (LoginMcpServerResponse);
   rpc LogoutMcpServer(LogoutMcpServerRequest) returns (LogoutMcpServerResponse);
-  // The skills and plugins Claude uses in a folder (API 66, ADR 0051):
-  // read from Claude's files and `claude plugin list --json`, never run in
-  // the folder. Skills' descriptions and plugins' text are their authors'.
+  // The skills (and plugins) an agent uses in a folder (API 66, ADR 0051;
+  // every agent's from API 67, ADR 0052): read from the agent's files (and
+  // Claude's `claude plugin list --json`), never run in the folder; shared
+  // skills (.agents/skills) with every agent that loads each. Skills'
+  // descriptions and plugins' text are their authors'.
   rpc ListSkills(ListSkillsRequest) returns (ListSkillsResponse);
   // Turns a skill on or off: yours in your settings, a project's in the
   // project's local settings (skillOverrides, only that key); "builtin"
@@ -174,6 +176,10 @@ service NushiService {
   // Moves a skill's folder (yours or the project's, as listed) to the
   // Trash.
   rpc TrashSkill(TrashSkillRequest) returns (TrashSkillResponse);
+  // Gives an agent a shared skill it doesn't read by a relative link of
+  // its own (Claude's .claude/skills/<name> → ../../.agents/skills/<name>):
+  // only a shared skill listed for the folder; nothing replaced.
+  rpc LinkSkill(LinkSkillRequest) returns (LinkSkillResponse);
   // Reopens a chat's session on a new agent (ACP session/load), which
   // replays its transcript, so it uses the MCP servers as they are now.
   // Refused while it is busy.
@@ -1027,6 +1033,8 @@ message LogoutMcpServerResponse {}
 
 message ListSkillsRequest {
   string folder = 1;
+  // The agent whose skills these are ("claude" when empty).
+  string agent = 2;
 }
 
 message ListSkillsResponse {
@@ -1038,6 +1046,11 @@ message ListSkillsResponse {
   // file that decides it other than yours.
   bool built_in_off = 4;
   string built_in_set_in = 5;
+  // Why the agent has no skills to show, or no switches ("" when it has).
+  string no_skills = 6;
+  string no_switch = 7;
+  // The agent reads the project's .agents/skills (shared skills).
+  bool reads_shared = 8;
 }
 
 message Skill {
@@ -1045,7 +1058,8 @@ message Skill {
   string name = 1;
   // From its front matter, else its first line: its author's text.
   string description = 2;
-  // "user", "project" or "plugin" (plugin: the plugin's id).
+  // "user", "project", "plugin" (plugin: the plugin's id), "system" (the
+  // agent's own) or "shared" (.agents/skills, which several agents read).
   string source = 3;
   string plugin = 4;
   // Its folder, which holds SKILL.md.
@@ -1056,6 +1070,22 @@ message Skill {
   string set_in = 7;
   // About what listing it costs each session's context, in tokens.
   int32 tokens = 8;
+  // Where the skill's folder points when it is a symlink, as the link says.
+  string linked = 9;
+  // A shared skill in your own ~/.agents/skills, not the project's.
+  bool everywhere = 10;
+  // A shared skill's agents: those that load it, each with its state.
+  repeated SkillAgent agents = 11;
+}
+
+message SkillAgent {
+  string agent = 1;
+  // "on", "off", or "untrusted": it loads once the folder is trusted.
+  string state = 2;
+  string set_in = 3;
+  // The agent's own skill folder that links to it, when that's how it
+  // loads it.
+  string via = 4;
 }
 
 message Plugin {
@@ -1084,6 +1114,8 @@ message SetSkillOnRequest {
   string source = 2;
   string name = 3;
   bool on = 4;
+  // The agent ("claude" when empty).
+  string agent = 5;
 }
 
 message SetSkillOnResponse {}
@@ -1092,6 +1124,7 @@ message SetPluginOnRequest {
   string folder = 1;
   string id = 2;
   bool on = 3;
+  string agent = 4;
 }
 
 message SetPluginOnResponse {}
@@ -1099,6 +1132,7 @@ message SetPluginOnResponse {}
 message UninstallPluginRequest {
   string folder = 1;
   string id = 2;
+  string agent = 3;
 }
 
 message UninstallPluginResponse {}
@@ -1107,9 +1141,19 @@ message TrashSkillRequest {
   string folder = 1;
   // The skill's folder, as listed.
   string path = 2;
+  string agent = 3;
 }
 
 message TrashSkillResponse {}
+
+message LinkSkillRequest {
+  string folder = 1;
+  string agent = 2;
+  // The shared skill's folder, as listed.
+  string path = 3;
+}
+
+message LinkSkillResponse {}
 
 message ReloadChatRequest {
   string chat_id = 1;

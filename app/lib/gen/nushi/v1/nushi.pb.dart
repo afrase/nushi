@@ -7594,9 +7594,11 @@ class LogoutMcpServerResponse extends $pb.GeneratedMessage {
 class ListSkillsRequest extends $pb.GeneratedMessage {
   factory ListSkillsRequest({
     $core.String? folder,
+    $core.String? agent,
   }) {
     final result = ListSkillsRequest._();
     if (folder != null) result.folder = folder;
+    if (agent != null) result.agent = agent;
     return result;
   }
 
@@ -7614,6 +7616,7 @@ class ListSkillsRequest extends $pb.GeneratedMessage {
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: ListSkillsRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'folder')
+    ..aOS(2, _omitFieldNames ? '' : 'agent')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -7646,6 +7649,16 @@ class ListSkillsRequest extends $pb.GeneratedMessage {
   $core.bool hasFolder() => $_has(0);
   @$pb.TagNumber(1)
   void clearFolder() => $_clearField(1);
+
+  /// The agent whose skills these are ("claude" when empty).
+  @$pb.TagNumber(2)
+  $core.String get agent => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set agent($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasAgent() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearAgent() => $_clearField(2);
 }
 
 class ListSkillsResponse extends $pb.GeneratedMessage {
@@ -7655,6 +7668,9 @@ class ListSkillsResponse extends $pb.GeneratedMessage {
     $core.String? pluginsError,
     $core.bool? builtInOff,
     $core.String? builtInSetIn,
+    $core.String? noSkills,
+    $core.String? noSwitch,
+    $core.bool? readsShared,
   }) {
     final result = ListSkillsResponse._();
     if (skills != null) result.skills.addAll(skills);
@@ -7662,6 +7678,9 @@ class ListSkillsResponse extends $pb.GeneratedMessage {
     if (pluginsError != null) result.pluginsError = pluginsError;
     if (builtInOff != null) result.builtInOff = builtInOff;
     if (builtInSetIn != null) result.builtInSetIn = builtInSetIn;
+    if (noSkills != null) result.noSkills = noSkills;
+    if (noSwitch != null) result.noSwitch = noSwitch;
+    if (readsShared != null) result.readsShared = readsShared;
     return result;
   }
 
@@ -7685,6 +7704,9 @@ class ListSkillsResponse extends $pb.GeneratedMessage {
     ..aOS(3, _omitFieldNames ? '' : 'pluginsError')
     ..aOB(4, _omitFieldNames ? '' : 'builtInOff')
     ..aOS(5, _omitFieldNames ? '' : 'builtInSetIn')
+    ..aOS(6, _omitFieldNames ? '' : 'noSkills')
+    ..aOS(7, _omitFieldNames ? '' : 'noSwitch')
+    ..aOB(8, _omitFieldNames ? '' : 'readsShared')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -7744,6 +7766,35 @@ class ListSkillsResponse extends $pb.GeneratedMessage {
   $core.bool hasBuiltInSetIn() => $_has(4);
   @$pb.TagNumber(5)
   void clearBuiltInSetIn() => $_clearField(5);
+
+  /// Why the agent has no skills to show, or no switches ("" when it has).
+  @$pb.TagNumber(6)
+  $core.String get noSkills => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set noSkills($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasNoSkills() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearNoSkills() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.String get noSwitch => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set noSwitch($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasNoSwitch() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearNoSwitch() => $_clearField(7);
+
+  /// The agent reads the project's .agents/skills (shared skills).
+  @$pb.TagNumber(8)
+  $core.bool get readsShared => $_getBF(7);
+  @$pb.TagNumber(8)
+  set readsShared($core.bool value) => $_setBool(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasReadsShared() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearReadsShared() => $_clearField(8);
 }
 
 class Skill extends $pb.GeneratedMessage {
@@ -7756,6 +7807,9 @@ class Skill extends $pb.GeneratedMessage {
     $core.String? state,
     $core.String? setIn,
     $core.int? tokens,
+    $core.String? linked,
+    $core.bool? everywhere,
+    $core.Iterable<SkillAgent>? agents,
   }) {
     final result = Skill._();
     if (name != null) result.name = name;
@@ -7766,6 +7820,9 @@ class Skill extends $pb.GeneratedMessage {
     if (state != null) result.state = state;
     if (setIn != null) result.setIn = setIn;
     if (tokens != null) result.tokens = tokens;
+    if (linked != null) result.linked = linked;
+    if (everywhere != null) result.everywhere = everywhere;
+    if (agents != null) result.agents.addAll(agents);
     return result;
   }
 
@@ -7790,6 +7847,10 @@ class Skill extends $pb.GeneratedMessage {
     ..aOS(6, _omitFieldNames ? '' : 'state')
     ..aOS(7, _omitFieldNames ? '' : 'setIn')
     ..aI(8, _omitFieldNames ? '' : 'tokens')
+    ..aOS(9, _omitFieldNames ? '' : 'linked')
+    ..aOB(10, _omitFieldNames ? '' : 'everywhere')
+    ..pPM<SkillAgent>(11, _omitFieldNames ? '' : 'agents',
+        subBuilder: SkillAgent.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -7832,7 +7893,8 @@ class Skill extends $pb.GeneratedMessage {
   @$pb.TagNumber(2)
   void clearDescription() => $_clearField(2);
 
-  /// "user", "project" or "plugin" (plugin: the plugin's id).
+  /// "user", "project", "plugin" (plugin: the plugin's id), "system" (the
+  /// agent's own) or "shared" (.agents/skills, which several agents read).
   @$pb.TagNumber(3)
   $core.String get source => $_getSZ(2);
   @$pb.TagNumber(3)
@@ -7890,6 +7952,124 @@ class Skill extends $pb.GeneratedMessage {
   $core.bool hasTokens() => $_has(7);
   @$pb.TagNumber(8)
   void clearTokens() => $_clearField(8);
+
+  /// Where the skill's folder points when it is a symlink, as the link says.
+  @$pb.TagNumber(9)
+  $core.String get linked => $_getSZ(8);
+  @$pb.TagNumber(9)
+  set linked($core.String value) => $_setString(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasLinked() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearLinked() => $_clearField(9);
+
+  /// A shared skill in your own ~/.agents/skills, not the project's.
+  @$pb.TagNumber(10)
+  $core.bool get everywhere => $_getBF(9);
+  @$pb.TagNumber(10)
+  set everywhere($core.bool value) => $_setBool(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasEverywhere() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearEverywhere() => $_clearField(10);
+
+  /// A shared skill's agents: those that load it, each with its state.
+  @$pb.TagNumber(11)
+  $pb.PbList<SkillAgent> get agents => $_getList(10);
+}
+
+class SkillAgent extends $pb.GeneratedMessage {
+  factory SkillAgent({
+    $core.String? agent,
+    $core.String? state,
+    $core.String? setIn,
+    $core.String? via,
+  }) {
+    final result = SkillAgent._();
+    if (agent != null) result.agent = agent;
+    if (state != null) result.state = state;
+    if (setIn != null) result.setIn = setIn;
+    if (via != null) result.via = via;
+    return result;
+  }
+
+  SkillAgent._();
+
+  factory SkillAgent.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SkillAgent()..mergeFromBuffer(data, registry);
+  factory SkillAgent.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SkillAgent()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SkillAgent',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SkillAgent.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'agent')
+    ..aOS(2, _omitFieldNames ? '' : 'state')
+    ..aOS(3, _omitFieldNames ? '' : 'setIn')
+    ..aOS(4, _omitFieldNames ? '' : 'via')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SkillAgent clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SkillAgent copyWith(void Function(SkillAgent) updates) =>
+      super.copyWith((message) => updates(message as SkillAgent)) as SkillAgent;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use SkillAgent() / SkillAgent.new instead')
+  static SkillAgent create() => SkillAgent._();
+  static $pb.GeneratedMessage $_createMessage() => SkillAgent._();
+  @$core.override
+  SkillAgent createEmptyInstance() => SkillAgent._();
+  @$core.pragma('dart2js:noInline')
+  static SkillAgent getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SkillAgent>(SkillAgent.$_createMessage);
+  static SkillAgent? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get agent => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set agent($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasAgent() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearAgent() => $_clearField(1);
+
+  /// "on", "off", or "untrusted": it loads once the folder is trusted.
+  @$pb.TagNumber(2)
+  $core.String get state => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set state($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasState() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearState() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get setIn => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set setIn($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasSetIn() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearSetIn() => $_clearField(3);
+
+  /// The agent's own skill folder that links to it, when that's how it
+  /// loads it.
+  @$pb.TagNumber(4)
+  $core.String get via => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set via($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasVia() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearVia() => $_clearField(4);
 }
 
 class Plugin extends $pb.GeneratedMessage {
@@ -8090,12 +8270,14 @@ class SetSkillOnRequest extends $pb.GeneratedMessage {
     $core.String? source,
     $core.String? name,
     $core.bool? on,
+    $core.String? agent,
   }) {
     final result = SetSkillOnRequest._();
     if (folder != null) result.folder = folder;
     if (source != null) result.source = source;
     if (name != null) result.name = name;
     if (on != null) result.on = on;
+    if (agent != null) result.agent = agent;
     return result;
   }
 
@@ -8116,6 +8298,7 @@ class SetSkillOnRequest extends $pb.GeneratedMessage {
     ..aOS(2, _omitFieldNames ? '' : 'source')
     ..aOS(3, _omitFieldNames ? '' : 'name')
     ..aOB(4, _omitFieldNames ? '' : 'on')
+    ..aOS(5, _omitFieldNames ? '' : 'agent')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -8176,6 +8359,16 @@ class SetSkillOnRequest extends $pb.GeneratedMessage {
   $core.bool hasOn() => $_has(3);
   @$pb.TagNumber(4)
   void clearOn() => $_clearField(4);
+
+  /// The agent ("claude" when empty).
+  @$pb.TagNumber(5)
+  $core.String get agent => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set agent($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasAgent() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearAgent() => $_clearField(5);
 }
 
 class SetSkillOnResponse extends $pb.GeneratedMessage {
@@ -8224,11 +8417,13 @@ class SetPluginOnRequest extends $pb.GeneratedMessage {
     $core.String? folder,
     $core.String? id,
     $core.bool? on,
+    $core.String? agent,
   }) {
     final result = SetPluginOnRequest._();
     if (folder != null) result.folder = folder;
     if (id != null) result.id = id;
     if (on != null) result.on = on;
+    if (agent != null) result.agent = agent;
     return result;
   }
 
@@ -8248,6 +8443,7 @@ class SetPluginOnRequest extends $pb.GeneratedMessage {
     ..aOS(1, _omitFieldNames ? '' : 'folder')
     ..aOS(2, _omitFieldNames ? '' : 'id')
     ..aOB(3, _omitFieldNames ? '' : 'on')
+    ..aOS(4, _omitFieldNames ? '' : 'agent')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -8298,6 +8494,15 @@ class SetPluginOnRequest extends $pb.GeneratedMessage {
   $core.bool hasOn() => $_has(2);
   @$pb.TagNumber(3)
   void clearOn() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get agent => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set agent($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasAgent() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearAgent() => $_clearField(4);
 }
 
 class SetPluginOnResponse extends $pb.GeneratedMessage {
@@ -8346,10 +8551,12 @@ class UninstallPluginRequest extends $pb.GeneratedMessage {
   factory UninstallPluginRequest({
     $core.String? folder,
     $core.String? id,
+    $core.String? agent,
   }) {
     final result = UninstallPluginRequest._();
     if (folder != null) result.folder = folder;
     if (id != null) result.id = id;
+    if (agent != null) result.agent = agent;
     return result;
   }
 
@@ -8368,6 +8575,7 @@ class UninstallPluginRequest extends $pb.GeneratedMessage {
       createEmptyInstance: UninstallPluginRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'folder')
     ..aOS(2, _omitFieldNames ? '' : 'id')
+    ..aOS(3, _omitFieldNames ? '' : 'agent')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -8411,6 +8619,15 @@ class UninstallPluginRequest extends $pb.GeneratedMessage {
   $core.bool hasId() => $_has(1);
   @$pb.TagNumber(2)
   void clearId() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get agent => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set agent($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasAgent() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearAgent() => $_clearField(3);
 }
 
 class UninstallPluginResponse extends $pb.GeneratedMessage {
@@ -8460,10 +8677,12 @@ class TrashSkillRequest extends $pb.GeneratedMessage {
   factory TrashSkillRequest({
     $core.String? folder,
     $core.String? path,
+    $core.String? agent,
   }) {
     final result = TrashSkillRequest._();
     if (folder != null) result.folder = folder;
     if (path != null) result.path = path;
+    if (agent != null) result.agent = agent;
     return result;
   }
 
@@ -8482,6 +8701,7 @@ class TrashSkillRequest extends $pb.GeneratedMessage {
       createEmptyInstance: TrashSkillRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'folder')
     ..aOS(2, _omitFieldNames ? '' : 'path')
+    ..aOS(3, _omitFieldNames ? '' : 'agent')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -8524,6 +8744,15 @@ class TrashSkillRequest extends $pb.GeneratedMessage {
   $core.bool hasPath() => $_has(1);
   @$pb.TagNumber(2)
   void clearPath() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get agent => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set agent($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasAgent() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearAgent() => $_clearField(3);
 }
 
 class TrashSkillResponse extends $pb.GeneratedMessage {
@@ -8565,6 +8794,129 @@ class TrashSkillResponse extends $pb.GeneratedMessage {
       $pb.GeneratedMessage.$_defaultFor<TrashSkillResponse>(
           TrashSkillResponse.$_createMessage);
   static TrashSkillResponse? _defaultInstance;
+}
+
+class LinkSkillRequest extends $pb.GeneratedMessage {
+  factory LinkSkillRequest({
+    $core.String? folder,
+    $core.String? agent,
+    $core.String? path,
+  }) {
+    final result = LinkSkillRequest._();
+    if (folder != null) result.folder = folder;
+    if (agent != null) result.agent = agent;
+    if (path != null) result.path = path;
+    return result;
+  }
+
+  LinkSkillRequest._();
+
+  factory LinkSkillRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      LinkSkillRequest()..mergeFromBuffer(data, registry);
+  factory LinkSkillRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      LinkSkillRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'LinkSkillRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: LinkSkillRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'folder')
+    ..aOS(2, _omitFieldNames ? '' : 'agent')
+    ..aOS(3, _omitFieldNames ? '' : 'path')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  LinkSkillRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  LinkSkillRequest copyWith(void Function(LinkSkillRequest) updates) =>
+      super.copyWith((message) => updates(message as LinkSkillRequest))
+          as LinkSkillRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use LinkSkillRequest() / LinkSkillRequest.new instead')
+  static LinkSkillRequest create() => LinkSkillRequest._();
+  static $pb.GeneratedMessage $_createMessage() => LinkSkillRequest._();
+  @$core.override
+  LinkSkillRequest createEmptyInstance() => LinkSkillRequest._();
+  @$core.pragma('dart2js:noInline')
+  static LinkSkillRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<LinkSkillRequest>(
+          LinkSkillRequest.$_createMessage);
+  static LinkSkillRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get folder => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set folder($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasFolder() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearFolder() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get agent => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set agent($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasAgent() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearAgent() => $_clearField(2);
+
+  /// The shared skill's folder, as listed.
+  @$pb.TagNumber(3)
+  $core.String get path => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set path($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasPath() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearPath() => $_clearField(3);
+}
+
+class LinkSkillResponse extends $pb.GeneratedMessage {
+  factory LinkSkillResponse() => LinkSkillResponse._();
+
+  LinkSkillResponse._();
+
+  factory LinkSkillResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      LinkSkillResponse()..mergeFromBuffer(data, registry);
+  factory LinkSkillResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      LinkSkillResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'LinkSkillResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: LinkSkillResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  LinkSkillResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  LinkSkillResponse copyWith(void Function(LinkSkillResponse) updates) =>
+      super.copyWith((message) => updates(message as LinkSkillResponse))
+          as LinkSkillResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use LinkSkillResponse() / LinkSkillResponse.new instead')
+  static LinkSkillResponse create() => LinkSkillResponse._();
+  static $pb.GeneratedMessage $_createMessage() => LinkSkillResponse._();
+  @$core.override
+  LinkSkillResponse createEmptyInstance() => LinkSkillResponse._();
+  @$core.pragma('dart2js:noInline')
+  static LinkSkillResponse getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<LinkSkillResponse>(
+          LinkSkillResponse.$_createMessage);
+  static LinkSkillResponse? _defaultInstance;
 }
 
 class ReloadChatRequest extends $pb.GeneratedMessage {
@@ -22853,6 +23205,14 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, TrashSkillRequest request) =>
       _client.invoke<TrashSkillResponse>(
           ctx, 'NushiService', 'TrashSkill', request, TrashSkillResponse());
+
+  /// Gives an agent a shared skill it doesn't read by a relative link of
+  /// its own (Claude's .claude/skills/<name> → ../../.agents/skills/<name>):
+  /// only a shared skill listed for the folder; nothing replaced.
+  $async.Future<LinkSkillResponse> linkSkill(
+          $pb.ClientContext? ctx, LinkSkillRequest request) =>
+      _client.invoke<LinkSkillResponse>(
+          ctx, 'NushiService', 'LinkSkill', request, LinkSkillResponse());
 
   /// Reopens a chat's session on a new agent (ACP session/load), which
   /// replays its transcript, so it uses the MCP servers as they are now.
