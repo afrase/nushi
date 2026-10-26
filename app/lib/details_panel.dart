@@ -11,10 +11,8 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/mcp_card.dart';
 import 'package:nushi/panel_cards.dart';
-import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/usage.dart';
-import 'package:nushi/widgets.dart';
 import 'package:nushi/worktree.dart';
 
 /// The panel beside a chat: cards for its environment (folder or
@@ -54,6 +52,8 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
   /// panels, so switching chats doesn't ask again.
   static final _asked = <String, (DateTime, GetContextUsageResponse)>{};
   Timer? _timer;
+  bool _asking = false;
+  bool _couldAsk = false; // the last time the chat changed
 
   /// Whether the agent can be asked what fills its context: the daemon
   /// says so, and the chat is idle.
@@ -61,6 +61,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
 
   /// Asks the agent, unseen, what fills its context.
   Future<void> _askContext() async {
+    if (mounted) setState(() => _asking = true);
     try {
       final r = await daemon.client.getContextUsage(
         GetContextUsageRequest(chatId: chat.id),
@@ -69,15 +70,18 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
       if (mounted) setState(() => _context = r);
     } on Object {
       // The card keeps what it had; it asks again after the next turn.
+    } finally {
+      if (mounted) setState(() => _asking = false);
     }
   }
 
-  /// Asks on its own while the Context card is open and the chat idle: a
-  /// moment after a turn ends or the card opens, at most once a minute.
+  /// Asks on its own whenever the chat is idle, the Context card open or
+  /// not (so it's there when opened): a moment after a turn ends or the
+  /// chat becomes askable (woken, its commands listed), at most once a
+  /// minute.
   void _schedule() {
     _timer?.cancel();
-    bool ready() =>
-        mounted && _canAsk && !collapsedCards.value.contains('Context');
+    bool ready() => mounted && _canAsk;
     if (!ready()) return;
     final last = _asked[chat.id]?.$1;
     var wait = const Duration(seconds: 1);
@@ -92,16 +96,37 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
     });
   }
 
+  /// The chat became askable (idle, awake, its commands listed): ask.
+  void _onChat() {
+    final can = _canAsk;
+    if (can && !_couldAsk) _schedule();
+    _couldAsk = can;
+  }
+
   @override
   void initState() {
     super.initState();
-    collapsedCards.addListener(_schedule);
+    _couldAsk = _canAsk;
+    chat.addListener(_onChat);
+  }
+
+  @override
+  void didUpdateWidget(DetailsPanel old) {
+    super.didUpdateWidget(old);
+    if (old.chat == widget.chat) return;
+    // Another chat: follow it, with what was asked of it.
+    old.chat.removeListener(_onChat);
+    widget.chat.addListener(_onChat);
+    _timer?.cancel();
+    _context = _asked[chat.id]?.$2;
+    _couldAsk = _canAsk;
+    _schedule();
   }
 
   @override
   void dispose() {
     _timer?.cancel();
-    collapsedCards.removeListener(_schedule);
+    chat.removeListener(_onChat);
     super.dispose();
   }
 
@@ -182,17 +207,23 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
       PanelCard(
         title: 'Context',
         summary: ContextMeter(u),
-        action: _context != null || _canAsk
-            ? IconTap(
-                Icons.refresh,
-                tooltip: 'Ask again',
-                size: 13,
-                onTap: _canAsk ? _askContext : null,
-              )
-            : null,
         rows: [
           if (u.contextSize == 0 && cost(u).isEmpty && _context == null)
             (null, 'Not reported yet'),
+          // Why there's no breakdown yet.
+          if (_context == null && (u.contextSize > 0 || _asking))
+            (
+              null,
+              _asking
+                  ? 'Asking what fills it…'
+                  : chat.asleep
+                  ? 'What fills it, once the chat is awake'
+                  : chat.busy
+                  ? 'What fills it, after this turn'
+                  : _canAsk
+                  ? 'What fills it, in a moment'
+                  : "The agent can't say what fills it",
+            ),
           // "4% used … 37.4k / 1M", then the bar.
           if (u.contextSize > 0)
             (
