@@ -8,6 +8,8 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_view_parts.dart';
 import 'package:nushi/jira_work.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/panel_cards.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -37,6 +39,37 @@ List<Task> ordered(List<Task> tasks) {
   return [for (final s in statuses) ...tasks.where((t) => t.issue.status == s)];
 }
 
+/// The statuses of [tasks], in the order they come.
+List<String> statusesOf(List<Task> tasks) => [
+  ...{for (final t in tasks) t.issue.status},
+];
+
+/// [tasks] (already [ordered]) with their status groups in the order they
+/// were dragged into in [place] (a site's id, `*` for every site's list);
+/// a status not dragged yet (one Jira added since) goes last.
+List<Task> grouped(List<Task> tasks, String place) {
+  final saved = jiraGroupOrder.value[place] ?? const [];
+  final statuses = statusesOf(tasks);
+  return [
+    for (final s in [
+      ...saved.where(statuses.contains),
+      ...statuses.where((s) => !saved.contains(s)),
+    ])
+      ...tasks.where((t) => t.issue.status == s),
+  ];
+}
+
+/// Whether [status]'s group is collapsed in [place].
+bool collapsedGroup(String place, String status) =>
+    jiraCollapsed.value[place]?.contains(status) ?? false;
+
+/// [tasks] as the list shows them: [grouped], without collapsed groups'
+/// (the keys move through these).
+List<Task> visibleTasks(List<Task> tasks, String place) => [
+  for (final t in grouped(tasks, place))
+    if (!collapsedGroup(place, t.issue.status)) t,
+];
+
 /// The chats on an issue, the newest first.
 List<ChatState> chatsOn(Daemon daemon, Task t) =>
     daemon.chats.values
@@ -44,16 +77,18 @@ List<ChatState> chatsOn(Daemon daemon, Task t) =>
         .toList()
       ..sort((a, b) => b.created.compareTo(a.created));
 
-/// The task list, as Orca's task drawer: [tasks] (already [ordered])
-/// under a line for each status, each row with its key (and site, when
-/// [sites]), summary, priority, its chats (a click opens the newest),
-/// its status (a menu of the moves) and Start work (a menu of folders,
-/// then the New chat dialog with the issue picked). A click on a row
-/// [onOpen]s its details.
+/// The task list, as Orca's task drawer: [tasks] (already [ordered]) in a
+/// card for each status, the cards in the order they were dragged into
+/// and each collapsible, both remembered for [place] (see [grouped]);
+/// each row with its key (and site, when [sites]), summary, priority, its
+/// chats (a click opens the newest), its status (a menu of the moves)
+/// and Start work (a menu of folders, then the New chat dialog with the
+/// issue picked). A click on a row [onOpen]s its details.
 class TaskList extends StatelessWidget {
   const new({
     required this.daemon,
     required this.tasks,
+    required this.place,
     required this.selected,
     required this.sites,
     required this.onOpen,
@@ -64,63 +99,101 @@ class TaskList extends StatelessWidget {
 
   final Daemon daemon;
   final List<Task> tasks;
-  final int selected;
+  final String place;
+
+  /// The selected issue's key.
+  final String? selected;
   final bool sites;
-  final void Function(int i) onOpen;
+  final void Function(Task task) onOpen;
   final Future<void> Function() onMoved;
 
   /// Takes the selected row's Start work menu, for ⌘⏎.
   final void Function(OpenMenu open) startMenu;
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    // The priority only where the summary keeps room.
-    builder: (context, box) => _list(context, wide: box.maxWidth > 900),
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: Listenable.merge([jiraGroupOrder, jiraCollapsed]),
+    builder: (context, _) => LayoutBuilder(
+      // The priority only where the summary keeps room.
+      builder: (context, box) => _list(context, wide: box.maxWidth > 900),
+    ),
   );
 
   Widget _list(BuildContext context, {required bool wide}) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final rows = <Widget>[];
-    for (final (i, task) in tasks.indexed) {
-      final status = task.issue.status;
-      if (i == 0 || tasks[i - 1].issue.status != status) {
-        final n = tasks.where((x) => x.issue.status == status).length;
-        rows.add(
-          Padding(
-            padding: EdgeInsets.fromLTRB(18, i == 0 ? 10 : 18, 18, 4),
-            child: Text(
-              '$status  $n',
+    final shown = grouped(tasks, place);
+    final statuses = statusesOf(shown);
+    final collapsed = jiraCollapsed.value[place] ?? const [];
+    return CardList(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+      onReorder: (from, to) => jiraGroupOrder.value = {
+        ...jiraGroupOrder.value,
+        place: reordered(
+          jiraGroupOrder.value[place] ?? const [],
+          statuses,
+          from,
+          to,
+        ),
+      },
+      children: [
+        for (final (i, status) in statuses.indexed)
+          CardShell(
+            key: ValueKey(status),
+            index: i,
+            open: !collapsed.contains(status),
+            onToggle: () => jiraCollapsed.value = {
+              ...jiraCollapsed.value,
+              place: collapsed.contains(status)
+                  ? [...collapsed.where((s) => s != status)]
+                  : [...collapsed, status],
+            },
+            title: Text(
+              '$status  ${shown.where((x) => x.issue.status == status).length}',
               style: theme.ui(
-                statusColor(t, task.issue.statusCategory),
+                statusColor(
+                  t,
+                  shown
+                      .firstWhere((x) => x.issue.status == status)
+                      .issue
+                      .statusCategory,
+                ),
                 size: 12,
                 weight: FontWeight.w600,
               ),
             ),
+            body: Padding(
+              padding: const EdgeInsets.fromLTRB(4, 0, 4, 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final task in shown)
+                    if (task.issue.status == status)
+                      _row(context, theme, task, wide: wide),
+                ],
+              ),
+            ),
           ),
-        );
-      }
-      rows.add(_row(context, theme, i, task, wide: wide));
-    }
-    return ListView(padding: const EdgeInsets.only(bottom: 12), children: rows);
+      ],
+    );
   }
 
   Widget _row(
     BuildContext context,
     NushiTheme theme,
-    int i,
     Task task, {
     required bool wide,
   }) {
     final t = theme.t;
     final is_ = task.issue;
     final chats = chatsOn(daemon, task);
+    final picked = is_.key == selected;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+      padding: const EdgeInsets.symmetric(vertical: 1),
       child: Tap(
-        selected: i == selected,
-        onTap: () => onOpen(i),
-        padding: const EdgeInsets.fromLTRB(10, 4, 4, 4),
+        selected: picked,
+        onTap: () => onOpen(task),
+        padding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
         child: Row(
           children: [
             SizedBox(
@@ -185,10 +258,10 @@ class TaskList extends StatelessWidget {
                     startWork(context, daemon, task.site, is_.key, f),
               ),
               builder: (context, open) {
-                if (i == selected) startMenu(open);
+                if (picked) startMenu(open);
                 return Tap(
                   onTap: open,
-                  tooltip: i == selected ? 'Start work (⌘⏎)' : 'Start work',
+                  tooltip: picked ? 'Start work (⌘⏎)' : 'Start work',
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
                     vertical: 3,
