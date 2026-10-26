@@ -122,6 +122,7 @@ Open questions; what's settled is in `docs/adr/` or the code. Brackets name the 
 
 ## Later ideas
 
+- **The empty state as a visualisation** (the owner, 2026-10-26): step 271's gravity toy (an orrery in the empty pane) didn't look good enough and was reverted; its first version is on the branch `gravity-mark`. Revisit with a fresh agent and stronger visual references (the owner has seen better ones); a prototype in an HTML artifact first, as for 271's looks, before any Flutter.
 - **Themes** (the owner, 2026-10-26): a Settings › Appearance picker for light and dark. Every transcript color is a token in `app/lib/theme/tokens.dart` (step 235), so a theme is another pair of `Tokens` that `NushiApp` gives `MaterialApp`.
 - **A redesign** (the owner, 2026-10-26): a fresh look at the whole app, not piecemeal fixes. Scope it with the owner first: what feels wrong, and which apps' look to learn from.
 - **Mobile**: the phone app (an iOS target in `app/`, a phone shell on `remote_transport` with `cryptography_flutter`, the device key in the Keychain, Face ID, reconnect and resync), an `Events` filter for cellular, then pushes through a small gateway (ntfy until the $99 program). It shows which Mac it's paired with (a forged QR code pairs it with someone else's daemon, ADR 0034), never replaces a pairing silently, and keeps `Remote.rendezvous` when it names another id than the one it dials.
