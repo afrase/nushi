@@ -82,8 +82,6 @@ class Tokens {
     required this.scrim,
     required this.claude,
     required this.monogramText,
-    required this.mark,
-    required this.markLight,
     required this.syntax,
   });
 
@@ -152,11 +150,6 @@ class Tokens {
   final Color claude;
   final Color monogramText;
 
-  // Nushi's mark: its rings and agents, and the light at the centre (the
-  // app icon's amber).
-  final Color mark;
-  final Color markLight;
-
   /// Code's colors, in diffs and code blocks, by [Capture].
   final Map<Capture, CodeInk> syntax;
 
@@ -214,8 +207,6 @@ class Tokens {
     scrim: Color(0xDD000000),
     claude: Color(0xFFB0582B),
     monogramText: Color(0xFFFFFFFF),
-    mark: Color(0xFFC9CCD6),
-    markLight: Color(0xFFF5A524),
     syntax: {
       Capture.keyword: CodeInk(Color(0xFF0033B3)),
       Capture.declaration: CodeInk(Color(0xFF00627A)),
@@ -283,8 +274,6 @@ class Tokens {
     scrim: Color(0xDD000000),
     claude: Color(0xFFD98A5F),
     monogramText: Color(0xFF1E1F22),
-    mark: Color(0xFF4E5157),
-    markLight: Color(0xFFF5A524),
     syntax: {
       Capture.keyword: CodeInk(Color(0xFFCF8E6D)),
       Capture.declaration: CodeInk(Color(0xFF56A8F5)),
