@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/afrase/nushi/internal/skillfile"
 )
 
 // Claude doesn't read .agents/skills: a shared skill is Claude's only
@@ -55,9 +57,9 @@ func TestSharedThroughALink(t *testing.T) {
 	if err := os.Chmod(filepath.Join(bin, "trash"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	old := trashProgram
-	trashProgram = filepath.Join(bin, "trash")
-	defer func() { trashProgram = old }()
+	old := skillfile.TrashProgram
+	skillfile.TrashProgram = filepath.Join(bin, "trash")
+	defer func() { skillfile.TrashProgram = old }()
 	if err := (Claude{}).Trash(ctx, deeper, link); err != nil {
 		t.Fatal(err)
 	}

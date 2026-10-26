@@ -218,18 +218,29 @@ func (p PiG) SetSkillOn(ctx context.Context, folder, source, name string, on boo
 	case s.SetIn != "":
 		return fmt.Errorf("a pattern in %s turns it off; change it there", s.SetIn)
 	}
-	file := userSettings()
+	edit := func(change func(map[string]json.RawMessage) error) error {
+		file := userSettings()
+		if resolved, err := filepath.EvalSymlinks(file); err == nil {
+			file = resolved // your dotfiles' link: change what it points at
+		}
+		_, err := jsonsettings.Edit(file, change)
+		return err
+	}
 	if s.Source == "project" || s.Source == "shared" && !s.Everywhere {
-		file = projectSettings(folder)
+		file := projectSettings(folder)
 		for _, p := range []string{filepath.Dir(file), file} {
 			if fi, err := os.Lstat(p); err == nil && fi.Mode()&os.ModeSymlink != 0 {
 				return fmt.Errorf("%s is a symlink; not changing it", p)
 			}
 		}
-	} else if resolved, err := filepath.EvalSymlinks(file); err == nil {
-		file = resolved // your dotfiles' link: change what it points at
+		// Through the folder's root: a .pig swapped for a link meanwhile
+		// can't lead the write out of it.
+		edit = func(change func(map[string]json.RawMessage) error) error {
+			_, err := jsonsettings.EditIn(folder, filepath.Join(".pig", "settings.json"), change)
+			return err
+		}
 	}
-	_, err := jsonsettings.Edit(file, func(m map[string]json.RawMessage) error {
+	return edit(func(m map[string]json.RawMessage) error {
 		var list []string
 		if raw, ok := m["skills"]; ok && string(raw) != "null" && json.Unmarshal(raw, &list) != nil {
 			return errors.New("skills isn't a list")
@@ -246,17 +257,19 @@ func (p PiG) SetSkillOn(ctx context.Context, folder, source, name string, on boo
 		m["skills"] = b
 		return err
 	})
-	return err
 }
 
 // Trash moves one of PiG's own skill folders to the Trash: right in your
 // skills folder or the folder's .pig/skills.
 func (PiG) Trash(ctx context.Context, folder, path string) error {
-	var allowed []string
+	var project, yours []string
 	for _, r := range roots(folder) {
-		if r.source != "shared" {
-			allowed = append(allowed, r.path)
+		switch r.source {
+		case "user":
+			yours = append(yours, r.path)
+		case "project":
+			project = append(project, r.path)
 		}
 	}
-	return skillfile.Trash(ctx, allowed, path)
+	return skillfile.Trash(ctx, project, yours, path)
 }

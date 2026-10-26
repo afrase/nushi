@@ -10,7 +10,9 @@ package skillfile
 
 import (
 	"bytes"
+	"cmp"
 	"context"
+	"crypto/rand"
 	"fmt"
 	"io"
 	"math"
@@ -68,8 +70,8 @@ func List(root string) []Folder {
 	}
 	var out []Folder
 	for _, e := range entries {
-		if strings.HasPrefix(e.Name(), ".") {
-			continue
+		if strings.HasPrefix(e.Name(), ".") || Clean(e.Name()) != e.Name() {
+			continue // a name with control or invisible characters could pose as another in a confirmation
 		}
 		dir := filepath.Join(root, e.Name())
 		b, err := ReadFile(filepath.Join(dir, "SKILL.md"))
@@ -78,7 +80,8 @@ func List(root string) []Folder {
 		}
 		f := Folder{File: Parse(b), Dir: dir, Entry: e.Name()}
 		if e.Type()&os.ModeSymlink != 0 {
-			f.Linked, _ = os.Readlink(dir)
+			target, _ := os.Readlink(dir)
+			f.Linked = Clean(target)
 		}
 		if fi, err := os.Lstat(filepath.Join(dir, "SKILL.md")); err == nil && fi.Mode()&os.ModeSymlink != 0 {
 			f.FileLinked = true
@@ -149,13 +152,15 @@ func Parse(b []byte) File {
 // Clean keeps text's characters, a line break or tab as a space, but drops
 // control and bidirectional-override characters: the text is its
 // author's, shown as plain text, and shouldn't be able to reorder or hide
-// what's around it.
+// what's around it (bidi marks and overrides, zero-width characters, line
+// and paragraph separators).
 func Clean(text string) string {
 	return strings.Map(func(r rune) rune {
 		switch {
-		case r == '\n' || r == '\t':
+		case r == '\n' || r == '\t' || r == 0x2028 || r == 0x2029:
 			return ' '
-		case unicode.IsControl(r), r >= 0x202A && r <= 0x202E, r >= 0x2066 && r <= 0x2069, r == 0x200E, r == 0x200F:
+		case unicode.IsControl(r), r >= 0x202A && r <= 0x202E, r >= 0x2066 && r <= 0x2069, r >= 0x200B && r <= 0x200F,
+			r == 0x061C, r == 0x2060, r == 0xFEFF:
 			return -1
 		}
 		return r
@@ -219,22 +224,65 @@ func Top(folder string) string {
 	}
 }
 
-// trashProgram moves a file to the Trash (macOS's).
-var trashProgram = "/usr/bin/trash"
+// TrashProgram moves a file to the Trash (macOS's; tests swap in their
+// own).
+var TrashProgram = "/usr/bin/trash"
 
 // Trash moves a skill's folder (or the link in its place, not what it
-// points at) to the Trash: only a folder right in one of roots, not named
-// with a leading dot, holding a SKILL.md. A root that is a link is
-// refused unless it is listed as one (yours may be).
-func Trash(ctx context.Context, roots []string, path string) error {
+// points at) to the Trash: only a folder right in one of the project's
+// roots or yours, not named with a leading dot, holding a SKILL.md. One of
+// yours may be reached through a link (your dotfiles'); a project's root
+// must not be one. A project's skill is first moved, through an os.Root of
+// its repository (or the folder holding the root), into a fresh folder
+// there, and trashed from it: a root swapped for a link after the check
+// can't make the Trash take something outside.
+func Trash(ctx context.Context, project, yours []string, path string) error {
 	name := filepath.Base(path)
-	if !filepath.IsAbs(path) || filepath.Clean(path) != path || strings.HasPrefix(name, ".") || !slices.Contains(roots, filepath.Dir(path)) {
+	root := filepath.Dir(path)
+	if !filepath.IsAbs(path) || filepath.Clean(path) != path || strings.HasPrefix(name, ".") ||
+		!slices.Contains(project, root) && !slices.Contains(yours, root) {
 		return fmt.Errorf("%s isn't a skill's folder", path)
 	}
 	if _, err := os.Stat(filepath.Join(path, "SKILL.md")); err != nil {
 		return fmt.Errorf("%s isn't a skill's folder", path)
 	}
-	if out, err := exec.CommandContext(ctx, trashProgram, path).CombinedOutput(); err != nil { //nolint:gosec // an absolute path checked above
+	if !slices.Contains(project, root) {
+		return trash(ctx, path)
+	}
+	if resolved, err := filepath.EvalSymlinks(root); err != nil || resolved != root {
+		return fmt.Errorf("%s is a symlink; not moving what's in it", root)
+	}
+	base := cmp.Or(Top(root), filepath.Dir(filepath.Dir(root)))
+	r, err := os.OpenRoot(base)
+	if err != nil {
+		return err
+	}
+	defer r.Close() //nolint:errcheck // done with it
+	rel, err := filepath.Rel(base, path)
+	if err != nil {
+		return err
+	}
+	stage := ".nushi-trash-" + rand.Text()
+	if err := r.Mkdir(stage, 0o700); err != nil {
+		return err
+	}
+	defer r.Remove(stage) //nolint:errcheck // empty once trashed; left if the move back failed
+	staged := filepath.Join(stage, name)
+	if err := r.Rename(rel, staged); err != nil {
+		return fmt.Errorf("moving %s: %w", path, err)
+	}
+	if err := trash(ctx, filepath.Join(base, staged)); err != nil {
+		if back := r.Rename(staged, rel); back != nil {
+			return fmt.Errorf("%w; it is in %s", err, filepath.Join(base, stage))
+		}
+		return err
+	}
+	return nil
+}
+
+// trash runs the Trash on path (a link itself goes, not its target).
+func trash(ctx context.Context, path string) error {
+	if out, err := exec.CommandContext(ctx, TrashProgram, path).CombinedOutput(); err != nil { //nolint:gosec // an absolute path checked by the caller
 		return fmt.Errorf("moving %s to the Trash: %s", path, strings.TrimSpace(string(out)))
 	}
 	if _, err := os.Lstat(path); err == nil {

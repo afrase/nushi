@@ -62,13 +62,13 @@ type Service struct {
 	readers map[string]Reader
 	order   []string // the agents' names, as the app lists them
 	// trash moves a shared skill's folder to the Trash, only right in one
-	// of roots.
-	trash func(ctx context.Context, roots []string, path string) error
+	// of the project's roots or yours (skillfile.Trash).
+	trash func(ctx context.Context, project, yours []string, path string) error
 }
 
 // New takes each agent's reader, in the order the agents are listed, and
 // what moves a shared skill's folder to the Trash (skillfile.Trash).
-func New(order []string, readers map[string]Reader, trash func(ctx context.Context, roots []string, path string) error) *Service {
+func New(order []string, readers map[string]Reader, trash func(ctx context.Context, project, yours []string, path string) error) *Service {
 	return &Service{readers: readers, order: order, trash: trash}
 }
 
@@ -249,7 +249,10 @@ func (s *Service) Trash(ctx context.Context, agent, folder, path string) error {
 			}
 		}
 	}
-	return s.trash(ctx, []string{filepath.Dir(path)}, path)
+	if shared[i].Everywhere {
+		return s.trash(ctx, nil, []string{filepath.Dir(path)}, path)
+	}
+	return s.trash(ctx, []string{filepath.Dir(path)}, nil, path)
 }
 
 // Link gives agent a shared skill it doesn't load by a link of its own

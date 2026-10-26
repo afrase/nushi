@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/afrase/nushi/internal/claudemcp"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/skillfile"
 )
 
 // Nushi turns skills on and off with Claude's documented skillOverrides
@@ -188,9 +188,6 @@ func (Claude) Uninstall(ctx context.Context, folder, id string) error {
 	return err
 }
 
-// trashProgram moves a file to the Trash (macOS's).
-var trashProgram = "/usr/bin/trash"
-
 // Trash moves a skill's folder (or the link in its place) to the Trash
 // (macOS's trash): only a folder right in your skills folder or one of
 // folder's project's, holding a SKILL.md.
@@ -213,11 +210,5 @@ func (Claude) Trash(ctx context.Context, folder, path string) error {
 			}
 		}
 	}
-	if out, err := exec.CommandContext(ctx, trashProgram, path).CombinedOutput(); err != nil { //nolint:gosec // an absolute path checked above
-		return fmt.Errorf("moving %s to the Trash: %s", path, strings.TrimSpace(string(out)))
-	}
-	if _, err := os.Lstat(path); err == nil {
-		return fmt.Errorf("%s is still there", path)
-	}
-	return nil
+	return skillfile.Trash(ctx, projectRoots(ctx, folder), []string{userRoot()}, path)
 }

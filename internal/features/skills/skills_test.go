@@ -51,8 +51,8 @@ func fakes() (*Service, *[]string) {
 		list: model.Skills{Skills: []model.Skill{{Name: "b", Source: "project", Path: "/r/.claude/skills/b", Linked: "../../.agents/skills/b"},
 			{Name: "own", Source: "project", Path: "/r/.claude/skills/own"}}},
 		shared: []model.Skill{{Name: "b", Source: "shared", Path: "/r/.agents/skills/b", State: "on", Agents: []model.SkillAgent{{Via: "/r/.claude/skills/b"}}}}}}
-	trash := func(_ context.Context, roots []string, path string) error {
-		*calls = append(*calls, fmt.Sprintf("trash %s in %v", path, roots))
+	trash := func(_ context.Context, project, yours []string, path string) error {
+		*calls = append(*calls, fmt.Sprintf("trash %s in %v %v", path, project, yours))
 		return nil
 	}
 	return New([]string{"claude", "codex"}, map[string]Reader{"claude": claude, "codex": codex}, trash), calls
@@ -142,7 +142,7 @@ func TestTrashAndLink(t *testing.T) {
 			t.Errorf("linked %v", c)
 		}
 	}
-	want := []string{"claude trash /r/.claude/skills/b", "trash /r/.agents/skills/b in [/r/.agents/skills]",
+	want := []string{"claude trash /r/.claude/skills/b", "trash /r/.agents/skills/b in [/r/.agents/skills] []",
 		"claude trash /r/.claude/skills/own", "link /r/.agents/skills/a"}
 	if !reflect.DeepEqual(*calls, want) {
 		t.Errorf("calls:\n%q\nwant\n%q", *calls, want)
