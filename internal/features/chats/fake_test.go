@@ -17,7 +17,7 @@ import (
 )
 
 // claudeDialect is Claude's, as main fills it.
-var claudeDialect = Dialect{InitMeta: claude.InitMeta, SessionMeta: claude.SessionMeta, TurnDone: claude.TurnDone, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall,
+var claudeDialect = Dialect{InitMeta: claude.InitMeta, SessionMeta: claude.SessionMeta, UltracodeMeta: claude.UltracodeMeta, TurnDone: claude.TurnDone, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall,
 	Background: claude.Background, ReportElsewhere: claude.ReportElsewhere,
 	Shell: claude.Shell, ReadShell: claude.ReadShell,
 	SubagentID: claude.SubagentID, Relay: claude.Relay, Relayed: claude.Relayed, Relaying: claude.Relaying, Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle,
@@ -27,15 +27,16 @@ var claudeDialect = Dialect{InitMeta: claude.InitMeta, SessionMeta: claude.Sessi
 // keeps each prompt and what it answered, which session/load replays, and
 // its process can end (quit).
 type fakeAgent struct {
-	h       acp.Client
-	mcp     []acp.MCPServer // the last session/new's
-	newMeta map[string]any  // and its _meta
-	updates []acp.SessionUpdate
-	session acp.NewSessionResponse
-	set     []string // config changes asked for, as id=value
-	prompt  []acp.ContentBlock
-	usage   *acp.Usage // the prompt response's
-	deleted []acp.SessionID
+	h        acp.Client
+	mcp      []acp.MCPServer // the last session/new's
+	newMeta  map[string]any  // and its _meta
+	loadMeta map[string]any  // the last session/load's _meta
+	updates  []acp.SessionUpdate
+	session  acp.NewSessionResponse
+	set      []string // config changes asked for, as id=value
+	prompt   []acp.ContentBlock
+	usage    *acp.Usage // the prompt response's
+	deleted  []acp.SessionID
 	// deletes makes it able to delete sessions, failing with deleteErr.
 	deletes   bool
 	deleteErr error
@@ -183,6 +184,7 @@ func (f *fakeAgent) LoadSession(ctx context.Context, req *acp.LoadSessionRequest
 	}
 	f.mu.Lock()
 	history := slices.Clone(f.history)
+	f.loadMeta = req.Meta
 	f.mu.Unlock()
 	for _, u := range history {
 		_ = f.h.SessionUpdate(ctx, &acp.SessionNotification{SessionID: req.SessionID, Update: u})

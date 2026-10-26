@@ -46,8 +46,8 @@ func TestOneModePickerAndTheModeIsRemembered(t *testing.T) {
 	for _, o := range c.config {
 		ids = append(ids, o.ID)
 	}
-	if !slices.Equal(ids, []string{"mode", "model", "fast"}) {
-		t.Fatalf("options = %v, want mode, model, fast (no legacy mode)", ids)
+	if !slices.Equal(ids, []string{"mode", "model", "fast", ultracodeID}) {
+		t.Fatalf("options = %v, want mode, model, fast, Ultracode (no legacy mode)", ids)
 	}
 	if len(agent.set) != 0 {
 		t.Errorf("a new chat with nothing remembered changed %v", agent.set)
@@ -89,7 +89,7 @@ func TestOneModePickerAndTheModeIsRemembered(t *testing.T) {
 func TestLegacyModesBecomeOneOption(t *testing.T) {
 	modes := &memModes{"claude": "yolo"} // not offered: the chat keeps the agent's default
 	svc, agent, c := newChat(t, `{"modes":{"currentModeId":"default","availableModes":[{"id":"default","name":"Default"},{"id":"plan","name":"Plan"}]}}`, modes)
-	if len(c.config) != 1 || c.config[0].ID != legacyMode || current(c, legacyMode) != "default" {
+	if len(c.config) != 2 || c.config[1].ID != legacyMode || current(c, legacyMode) != "default" { // after Ultracode
 		t.Fatalf("config = %+v", c.config)
 	}
 	if err := svc.SetConfig(context.Background(), c.id, legacyMode, "plan"); err != nil {
@@ -97,5 +97,60 @@ func TestLegacyModesBecomeOneOption(t *testing.T) {
 	}
 	if !slices.Equal(agent.set, []string{"mode=plan"}) || current(c, legacyMode) != "plan" || (*modes)["claude"] != "plan" {
 		t.Errorf("set %v, current %q, remembered %q", agent.set, current(c, legacyMode), (*modes)["claude"])
+	}
+}
+
+// ultracodeOn says a session request's _meta turns on Claude Code's
+// ultracode.
+func ultracodeOn(meta map[string]any) bool {
+	opts, _ := meta["claudeCode"].(map[string]any)["options"].(map[string]any)
+	settings, _ := opts["settings"].(map[string]any)
+	on, _ := settings["ultracode"].(bool)
+	stop, _ := opts["perTaskStopAffordance"].(bool) // merged, not replaced
+	return on && stop
+}
+
+// Ultracode is the chat's: off at first; turned on, kept with the chat
+// and given to the session, which opens again at once (the model kept);
+// refused while a turn runs.
+func TestUltracode(t *testing.T) {
+	svc, agent, c := newChat(t, claudeSession, &memModes{})
+	if ultracodeOn(agent.newMeta) || current(c, ultracodeID) != "false" {
+		t.Fatalf("a new chat: %v, %s", agent.newMeta, current(c, ultracodeID))
+	}
+	noErr(t, svc.SetConfig(context.Background(), c.id, "model", "sonnet"))
+	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
+	turn(t, svc, c, "one")
+	launches, _, _ := agent.count()
+	noErr(t, svc.SetConfig(context.Background(), c.id, ultracodeID, "true"))
+	again, _, _ := agent.count()
+	agent.mu.Lock()
+	meta := agent.loadMeta
+	agent.mu.Unlock()
+	if again != launches+1 || !ultracodeOn(meta) || !c.session.Ultracode || current(c, ultracodeID) != "true" {
+		t.Errorf("turned on: %d launches (was %d), load _meta %v, stored %v", again, launches, meta, c.session.Ultracode)
+	}
+	if current(c, "model") != "sonnet" {
+		t.Errorf("the model after: %s", current(c, "model"))
+	}
+	noErr(t, svc.SetConfig(context.Background(), c.id, ultracodeID, "true")) // no change: nothing restarts
+	if n, _, _ := agent.count(); n != again {
+		t.Errorf("restarted for nothing: %d", n)
+	}
+
+	agent.gate = make(chan struct{})
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "two"}, SendIdle))
+	eventually(t, c, func() bool { return c.busy })
+	if err := svc.SetConfig(context.Background(), c.id, ultracodeID, "false"); err == nil || !c.session.Ultracode {
+		t.Errorf("during a turn: %v", err)
+	}
+	agent.release()
+	eventually(t, c, func() bool { return !c.busy })
+
+	// Asleep: kept, the agent left asleep until something needs it.
+	noErr(t, svc.Sleep(c.id))
+	noErr(t, svc.SetConfig(context.Background(), c.id, ultracodeID, "false"))
+	if c.agent != nil || c.session.Ultracode {
+		t.Errorf("asleep: agent %v, stored %v", c.agent, c.session.Ultracode)
 	}
 }

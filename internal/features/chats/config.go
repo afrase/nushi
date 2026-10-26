@@ -33,6 +33,9 @@ func (c *chat) configFrom(opts []acp.SessionConfigOption, modes *acp.SessionMode
 		}
 		out = append(out, co)
 	}
+	if c.dialect.UltracodeMeta != nil {
+		out = append(out, c.ultracodeOption())
+	}
 	if modes != nil && modeIndex(out) < 0 {
 		m := model.ConfigOption{ID: legacyMode, Name: "Mode", Category: "mode", Type: "select", Current: string(modes.CurrentModeID)}
 		for _, v := range modes.AvailableModes {
@@ -71,6 +74,16 @@ func modeIndex(opts []model.ConfigOption) int {
 	return slices.IndexFunc(opts, func(o model.ConfigOption) bool { return o.Category == "mode" })
 }
 
+// ultracodeID is the chat's Ultracode option, Nushi's own: the daemon
+// keeps it, and the agent gets it in its sessions' _meta.
+const ultracodeID = "nushi:ultracode"
+
+func (c *chat) ultracodeOption() model.ConfigOption {
+	return model.ConfigOption{ID: ultracodeID, Name: "Ultracode", Category: "ultracode", Type: "boolean",
+		Current:     strconv.FormatBool(c.ultracode.Load()),
+		Description: "Standing multi-agent workflows on every task (Claude Code's ultracode); changing it restarts the chat's agent"}
+}
+
 // Config returns a chat's config options.
 func (s *Service) Config(chatID string) []model.ConfigOption {
 	c, err := s.chat(chatID)
@@ -86,6 +99,9 @@ func (s *Service) Config(chatID string) []model.ConfigOption {
 // agent accepts, new chats with this agent start in it.
 func (s *Service) SetConfig(ctx context.Context, chatID, id, value string) error {
 	c, err := s.chat(chatID)
+	if err == nil && id == ultracodeID {
+		return s.setUltracode(ctx, c, value == "true")
+	}
 	if err == nil {
 		err = s.awake(ctx, c)
 	}
@@ -207,4 +223,44 @@ func (c *chat) startMode(ctx context.Context, agent Agent, sid, mode string) err
 		return nil
 	}
 	return c.setConfig(ctx, agent, sid, id, mode)
+}
+
+// setUltracode turns a chat's Ultracode on or off: kept with the chat,
+// and given to the agent when its session next opens. An agent running
+// is put to sleep and woken, so the session opens again now (model and
+// effort kept, as after any sleep); only while the chat is idle, since
+// that ends side chats and would stop a turn or a background task.
+func (s *Service) setUltracode(ctx context.Context, c *chat, on bool) error {
+	c.mu.Lock()
+	switch {
+	case c.dialect.UltracodeMeta == nil:
+		c.mu.Unlock()
+		return errors.New("the agent has no ultracode")
+	case c.ultracode.Load() == on:
+		c.mu.Unlock()
+		return nil
+	case c.parent != nil:
+		c.mu.Unlock()
+		return errors.New("a side chat has its chat's ultracode")
+	}
+	running := c.agent != nil
+	if running && !c.idleLocked(0) {
+		c.mu.Unlock()
+		return errors.New("Ultracode changes once the agent is done: no turn, background task or side chat running")
+	}
+	c.ultracode.Store(on)
+	c.saveLocked(func(s *model.Session) { s.Ultracode = on })
+	if i := slices.IndexFunc(c.config, func(o model.ConfigOption) bool { return o.ID == ultracodeID }); i >= 0 {
+		c.config[i] = c.ultracodeOption()
+	}
+	c.configChangedLocked()
+	c.logLocked().Info("chat ultracode", "on", on, "reopen", running)
+	c.mu.Unlock()
+	if !running {
+		return nil
+	}
+	if err := s.Sleep(c.id); err != nil {
+		return err
+	}
+	return s.awake(ctx, c)
 }

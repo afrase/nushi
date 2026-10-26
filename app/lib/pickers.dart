@@ -6,10 +6,11 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// The agent's config options under the prompt box, without labels, as in
-/// Claude Code: the mode's value on the left (`Auto`); on the right a "⋯"
-/// menu with every option that isn't mode, model or effort (fast mode,
-/// agent, ...), then the model menu (`Opus 5.5  High`): the agent's first
-/// four models (1–4 pick them), Effort ▸, and More models ▸ with the rest.
+/// Claude Code: the mode's value on the left (`Auto`); on the right
+/// "Ultracode" while that is on, a "⋯" menu with every option that isn't
+/// mode, model or effort (fast mode, agent, Ultracode, ...), then the
+/// model menu (`Opus 5.5  High`): the agent's first four models (1–4 pick
+/// them), Effort ▸, and More models ▸ with the rest.
 ///
 /// [onClose] runs when a menu closes (the composer takes the focus back).
 class Pickers extends StatelessWidget {
@@ -37,6 +38,7 @@ class Pickers extends StatelessWidget {
     final mode = of('mode');
     final model = of('model');
     final effort = of('thought_level');
+    final ultracode = of('ultracode');
     final rest = [
       for (final o in options)
         if (o != mode && o != model && o != effort) o,
@@ -92,6 +94,14 @@ class Pickers extends StatelessWidget {
           ),
         if (leading != null) Flexible(child: leading!) else const Spacer(),
         if (leading != null) const SizedBox(width: 12),
+        if (ultracode?.current == 'true')
+          Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: Tooltip(
+              message: ultracode!.description,
+              child: Text('Ultracode', style: theme.ui(t.accent, size: 12)),
+            ),
+          ),
         if (rest.isNotEmpty)
           Menu(
             tooltip: [for (final o in rest) o.name].join(', '),

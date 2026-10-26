@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -141,6 +142,7 @@ type chat struct {
 	commands     []model.Command
 	usage        model.Usage
 	session      model.Session
+	ultracode    atomic.Bool           // session.Ultracode, read where mu isn't held
 	canFork      bool                  // the agent can fork the session into side chats
 	canImage     bool                  // the agent takes images in prompts
 	sides        map[string]*chat      // the chat's side chats, by session id
