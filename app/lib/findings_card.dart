@@ -294,3 +294,47 @@ class _FindingsCardState extends State<FindingsCard> {
     ];
   }
 }
+
+/// Findings a message repeats as JSON that a card above already shows:
+/// one line saying so, the JSON behind "Show JSON".
+class FindingsAgain extends StatefulWidget {
+  const new(this.json, {super.key});
+
+  final String json;
+
+  @override
+  State<FindingsAgain> createState() => _FindingsAgainState();
+}
+
+class _FindingsAgainState extends State<FindingsAgain> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Text(
+              'The findings above, again as JSON',
+              style: theme.ui(t.textMuted, size: 12),
+            ),
+            const SizedBox(width: 6),
+            Tap(
+              onTap: () => setState(() => _open = !_open),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              child: Text(
+                _open ? 'Hide JSON' : 'Show JSON',
+                style: theme.ui(t.textSecondary, size: 12),
+              ),
+            ),
+          ],
+        ),
+        if (_open) AgentMarkdown(widget.json),
+      ],
+    );
+  }
+}
