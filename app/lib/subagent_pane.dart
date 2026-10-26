@@ -149,7 +149,8 @@ class _HeadState extends State<_Head> {
     final unknown =
         call.subagent.started == 0 &&
         !subagentRunning(s) &&
-        subagentSteps(s).isEmpty;
+        subagentSteps(s)
+            .every((it) => it.kind == ItemKind.ITEM_KIND_USER_MESSAGE);
     return Padding(
       padding: const EdgeInsets.only(top: 12),
       child: Column(

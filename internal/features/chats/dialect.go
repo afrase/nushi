@@ -53,10 +53,13 @@ type Dialect struct {
 	// (Claude's ToolCall sets it while the call runs; a replayed call has
 	// only its output). Relay wraps a message for a subagent into a prompt
 	// that asks the agent to pass it on unchanged; Relayed reads such a
-	// prompt back: the subagent's type and the message.
+	// prompt back: the subagent's type and id, and the message. Relaying
+	// says a tool call is the agent passing a message on, to the subagent
+	// with that id.
 	SubagentID func(output string) string
 	Relay      func(agent, agentID, text string) string
-	Relayed    func(prompt string) (agent, text string, ok bool)
+	Relayed    func(prompt string) (agent, agentID, text string, ok bool)
+	Relaying   func(call model.Item) (agentID string)
 	// Other says a form field is the free-text "Other" answer of the field
 	// before it.
 	Other func(field, before model.Field) bool

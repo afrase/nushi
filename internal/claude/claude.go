@@ -140,6 +140,7 @@ func ToolCall(it *model.Item, meta map[string]any, input json.RawMessage) (ownTe
 		Model      string `json:"model"`
 		Effort     string `json:"effort"`
 		Message    string `json:"message"`
+		To         string `json:"to"`
 		Background bool   `json:"run_in_background"`
 	}
 	_ = json.Unmarshal(input, &in)
@@ -160,6 +161,8 @@ func ToolCall(it *model.Item, meta map[string]any, input json.RawMessage) (ownTe
 		if id, _ := resp["agentId"].(string); id != "" {
 			it.AgentID = id
 		}
+	case "SendMessage": // to a subagent, by the agent's id for it
+		it.AgentID = cmp.Or(in.To, it.AgentID)
 	case "SubagentHandback":
 		it.Text, it.Report = cmp.Or(in.Message, it.Text), true
 		return true

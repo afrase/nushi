@@ -155,6 +155,7 @@ func (c *chat) releaseLocked() {
 	c.logLocked().Info("turn's work ended", "took", time.Since(c.started).Round(time.Millisecond), "held_for", "background subagents")
 	c.released, c.busy, c.started = true, false, time.Time{}
 	close(c.done)
+	c.unrelayedLocked()
 	c.statusChangedLocked()
 	c.deliverLocked()
 }
@@ -226,6 +227,7 @@ func (c *chat) run(agent Agent, req *acp.PromptRequest, sent, done chan struct{}
 	}
 	c.busy, c.started = false, time.Time{}
 	close(c.done)
+	c.unrelayedLocked()
 	if err == nil && resp.Usage != nil {
 		u := resp.Usage
 		c.usage.Input, c.usage.Output = int64(u.InputTokens), int64(u.OutputTokens) //nolint:gosec // token counts, far below the limits

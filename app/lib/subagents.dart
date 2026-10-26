@@ -11,11 +11,14 @@ import 'package:nushi/widgets.dart';
 /// A tool call that started a subagent, and what the subagent did.
 typedef SubagentRun = ({Item call, List<Item> items});
 
-/// The subagents in [items], each with the items it made, in order.
+/// The subagents in [items], each with the items it made, in order, and
+/// the user's messages the agent was asked to pass to it, where they were
+/// sent.
 List<SubagentRun> subagentsOf(List<Item> items) {
   final under = <String, List<Item>>{};
   for (final it in items) {
-    if (it.parent.isNotEmpty) (under[it.parent] ??= []).add(it);
+    final to = it.parent.isNotEmpty ? it.parent : it.relayCall;
+    if (to.isNotEmpty) (under[to] ??= []).add(it);
   }
   return [
     for (final it in items)

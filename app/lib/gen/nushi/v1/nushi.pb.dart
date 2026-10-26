@@ -8359,6 +8359,9 @@ class Item extends $pb.GeneratedMessage {
     Shell? shell,
     $core.String? agentId,
     $core.String? relayTo,
+    $core.String? relayCall,
+    $core.String? relayState,
+    $core.String? relayedBy,
   }) {
     final result = Item._();
     if (id != null) result.id = id;
@@ -8388,6 +8391,9 @@ class Item extends $pb.GeneratedMessage {
     if (shell != null) result.shell = shell;
     if (agentId != null) result.agentId = agentId;
     if (relayTo != null) result.relayTo = relayTo;
+    if (relayCall != null) result.relayCall = relayCall;
+    if (relayState != null) result.relayState = relayState;
+    if (relayedBy != null) result.relayedBy = relayedBy;
     return result;
   }
 
@@ -8439,6 +8445,9 @@ class Item extends $pb.GeneratedMessage {
         subBuilder: Shell.$_createMessage)
     ..aOS(26, _omitFieldNames ? '' : 'agentId')
     ..aOS(27, _omitFieldNames ? '' : 'relayTo')
+    ..aOS(28, _omitFieldNames ? '' : 'relayCall')
+    ..aOS(29, _omitFieldNames ? '' : 'relayState')
+    ..aOS(30, _omitFieldNames ? '' : 'relayedBy')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -8690,7 +8699,8 @@ class Item extends $pb.GeneratedMessage {
   void clearAgentId() => $_clearField(26);
 
   /// For a user message: the type of the subagent the agent was asked to
-  /// pass it to.
+  /// pass it to, and that subagent's tool call (not known after a replay
+  /// the agent's own call doesn't link).
   @$pb.TagNumber(27)
   $core.String get relayTo => $_getSZ(26);
   @$pb.TagNumber(27)
@@ -8699,6 +8709,36 @@ class Item extends $pb.GeneratedMessage {
   $core.bool hasRelayTo() => $_has(26);
   @$pb.TagNumber(27)
   void clearRelayTo() => $_clearField(27);
+
+  @$pb.TagNumber(28)
+  $core.String get relayCall => $_getSZ(27);
+  @$pb.TagNumber(28)
+  set relayCall($core.String value) => $_setString(27, value);
+  @$pb.TagNumber(28)
+  $core.bool hasRelayCall() => $_has(27);
+  @$pb.TagNumber(28)
+  void clearRelayCall() => $_clearField(28);
+
+  /// How the relay went: "sending" until the agent passes it on (its call
+  /// that does is relayed_by), "relayed" once that call completes, "failed"
+  /// when it fails or the turn ends without one; "" when unknown (replayed).
+  @$pb.TagNumber(29)
+  $core.String get relayState => $_getSZ(28);
+  @$pb.TagNumber(29)
+  set relayState($core.String value) => $_setString(28, value);
+  @$pb.TagNumber(29)
+  $core.bool hasRelayState() => $_has(28);
+  @$pb.TagNumber(29)
+  void clearRelayState() => $_clearField(29);
+
+  @$pb.TagNumber(30)
+  $core.String get relayedBy => $_getSZ(29);
+  @$pb.TagNumber(30)
+  set relayedBy($core.String value) => $_setString(29, value);
+  @$pb.TagNumber(30)
+  $core.bool hasRelayedBy() => $_has(29);
+  @$pb.TagNumber(30)
+  void clearRelayedBy() => $_clearField(30);
 }
 
 /// A command the agent runs in the background.
@@ -8879,7 +8919,7 @@ class Subagent extends $pb.GeneratedMessage {
       $pb.GeneratedMessage.$_defaultFor<Subagent>(Subagent.$_createMessage);
   static Subagent? _defaultInstance;
 
-  /// "running", "done" or "failed".
+  /// "running", "done", "failed", or "stopped" (with its agent, by Nushi).
   @$pb.TagNumber(1)
   $core.String get state => $_getSZ(0);
   @$pb.TagNumber(1)

@@ -128,13 +128,17 @@ type Item struct {
 	// RanModel the model it ran on, once the agent says.
 	Agent, Prompt, Model, Effort, RanModel string
 	// AgentID is the agent's id for the subagent, when it can pass it
-	// messages.
+	// messages; for a call that passes one a message (Dialect.Relaying),
+	// that subagent's.
 	AgentID string
 	// RelayTo is, for a user message, the type of the subagent the agent
 	// was asked to pass it to, and RelayCall that subagent's tool call
-	// (Message.To; not known after a replay).
-	RelayTo, RelayCall string
-	Files              []string // a user message's mentioned files (Message.Files)
+	// (Message.To; after a replay, when the agent's id for it is known).
+	// RelayState says how the relay goes: "sending", "relayed" once the
+	// agent's call that passes it on (RelayedBy) completes, "failed" when
+	// that call fails or the turn ends without one; "" unknown (replayed).
+	RelayTo, RelayCall, RelayState, RelayedBy string
+	Files                                     []string // a user message's mentioned files (Message.Files)
 	// Tool is a tool call's tool, when the agent names it ("Read").
 	Tool string
 	// TaskID is the agent's id for the command a tool call left running in

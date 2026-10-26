@@ -6630,8 +6630,15 @@ type Item struct {
 	// agent can pass it messages (SendPromptRequest.to_subagent).
 	AgentId string `protobuf:"bytes,26,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
 	// For a user message: the type of the subagent the agent was asked to
-	// pass it to.
-	RelayTo       string `protobuf:"bytes,27,opt,name=relay_to,json=relayTo,proto3" json:"relay_to,omitempty"`
+	// pass it to, and that subagent's tool call (not known after a replay
+	// the agent's own call doesn't link).
+	RelayTo   string `protobuf:"bytes,27,opt,name=relay_to,json=relayTo,proto3" json:"relay_to,omitempty"`
+	RelayCall string `protobuf:"bytes,28,opt,name=relay_call,json=relayCall,proto3" json:"relay_call,omitempty"`
+	// How the relay went: "sending" until the agent passes it on (its call
+	// that does is relayed_by), "relayed" once that call completes, "failed"
+	// when it fails or the turn ends without one; "" when unknown (replayed).
+	RelayState    string `protobuf:"bytes,29,opt,name=relay_state,json=relayState,proto3" json:"relay_state,omitempty"`
+	RelayedBy     string `protobuf:"bytes,30,opt,name=relayed_by,json=relayedBy,proto3" json:"relayed_by,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6855,6 +6862,27 @@ func (x *Item) GetRelayTo() string {
 	return ""
 }
 
+func (x *Item) GetRelayCall() string {
+	if x != nil {
+		return x.RelayCall
+	}
+	return ""
+}
+
+func (x *Item) GetRelayState() string {
+	if x != nil {
+		return x.RelayState
+	}
+	return ""
+}
+
+func (x *Item) GetRelayedBy() string {
+	if x != nil {
+		return x.RelayedBy
+	}
+	return ""
+}
+
 // A command the agent runs in the background.
 type Shell struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -6950,7 +6978,7 @@ func (x *Shell) GetEnd() string {
 // How a subagent goes.
 type Subagent struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// "running", "done" or "failed".
+	// "running", "done", "failed", or "stopped" (with its agent, by Nushi).
 	State string `protobuf:"bytes,1,opt,name=state,proto3" json:"state,omitempty"`
 	// When the daemon saw it start, and end, in Unix milliseconds; 0 when it
 	// didn't (a replayed chat).
@@ -12740,7 +12768,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x14\n" +
 	"\x05group\x18\x04 \x01(\tR\x05group\x12\x1d\n" +
 	"\n" +
-	"is_default\x18\x05 \x01(\bR\tisDefault\"\xa5\x06\n" +
+	"is_default\x18\x05 \x01(\bR\tisDefault\"\x84\a\n" +
 	"\x04Item\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12&\n" +
 	"\x04kind\x18\x02 \x01(\x0e2\x12.nushi.v1.ItemKindR\x04kind\x12\x12\n" +
@@ -12771,7 +12799,13 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\tran_model\x18\x18 \x01(\tR\branModel\x12%\n" +
 	"\x05shell\x18\x19 \x01(\v2\x0f.nushi.v1.ShellR\x05shell\x12\x19\n" +
 	"\bagent_id\x18\x1a \x01(\tR\aagentId\x12\x19\n" +
-	"\brelay_to\x18\x1b \x01(\tR\arelayTo\"\x87\x01\n" +
+	"\brelay_to\x18\x1b \x01(\tR\arelayTo\x12\x1d\n" +
+	"\n" +
+	"relay_call\x18\x1c \x01(\tR\trelayCall\x12\x1f\n" +
+	"\vrelay_state\x18\x1d \x01(\tR\n" +
+	"relayState\x12\x1d\n" +
+	"\n" +
+	"relayed_by\x18\x1e \x01(\tR\trelayedBy\"\x87\x01\n" +
 	"\x05Shell\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05state\x18\x02 \x01(\tR\x05state\x12\x18\n" +

@@ -51,6 +51,7 @@ func (c *chat) update(n *acp.SessionNotification) { //nolint:gocognit,gocyclo //
 			c.addLocked(item)
 		}
 		c.reportedLocked(item)
+		c.relayingLocked(item)
 	case "available_commands_update":
 		c.commands = []model.Command{}
 		for _, a := range u.AvailableCommandsUpdate.AvailableCommands {
@@ -120,6 +121,7 @@ func (c *chat) update(n *acp.SessionNotification) { //nolint:gocognit,gocyclo //
 		c.shellLocked(it)
 		c.publishLocked(*it)
 		c.reportedLocked(*it)
+		c.relayingLocked(*it)
 		if (t.Status == "completed" || t.Status == "failed") && it.Parent == "" && !c.started.IsZero() {
 			c.deliverLocked() // between tool calls: the agent's chance to take queued messages
 		}

@@ -2069,6 +2069,9 @@ const Item$json = {
     },
     {'1': 'agent_id', '3': 26, '4': 1, '5': 9, '10': 'agentId'},
     {'1': 'relay_to', '3': 27, '4': 1, '5': 9, '10': 'relayTo'},
+    {'1': 'relay_call', '3': 28, '4': 1, '5': 9, '10': 'relayCall'},
+    {'1': 'relay_state', '3': 29, '4': 1, '5': 9, '10': 'relayState'},
+    {'1': 'relayed_by', '3': 30, '4': 1, '5': 9, '10': 'relayedBy'},
   ],
 };
 
@@ -2088,7 +2091,9 @@ final $typed_data.Uint8List itemDescriptor = $convert.base64Decode(
     '9ydBIWCgZwcm9tcHQYFSABKAlSBnByb21wdBIUCgVtb2RlbBgWIAEoCVIFbW9kZWwSFgoGZWZm'
     'b3J0GBcgASgJUgZlZmZvcnQSGwoJcmFuX21vZGVsGBggASgJUghyYW5Nb2RlbBIlCgVzaGVsbB'
     'gZIAEoCzIPLm51c2hpLnYxLlNoZWxsUgVzaGVsbBIZCghhZ2VudF9pZBgaIAEoCVIHYWdlbnRJ'
-    'ZBIZCghyZWxheV90bxgbIAEoCVIHcmVsYXlUbw==');
+    'ZBIZCghyZWxheV90bxgbIAEoCVIHcmVsYXlUbxIdCgpyZWxheV9jYWxsGBwgASgJUglyZWxheU'
+    'NhbGwSHwoLcmVsYXlfc3RhdGUYHSABKAlSCnJlbGF5U3RhdGUSHQoKcmVsYXllZF9ieRgeIAEo'
+    'CVIJcmVsYXllZEJ5');
 
 @$core.Deprecated('Use shellDescriptor instead')
 const Shell$json = {
