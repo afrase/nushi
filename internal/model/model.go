@@ -40,6 +40,9 @@ type Session struct {
 	// GitHub is the GitHub pull request or issue the chat was started
 	// from, if it was.
 	GitHub *ChatGitHub `json:",omitempty"`
+	// Ultracode is the chat's Ultracode option (its agent's standing
+	// multi-agent workflows), off by default.
+	Ultracode bool `json:",omitempty"`
 	// Scratch says Folder is a scratch folder of the chat's own (the chat
 	// has no folder yet); worked out from the folder, not stored.
 	Scratch bool `json:"-"`

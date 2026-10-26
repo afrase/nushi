@@ -87,15 +87,39 @@ func (c *chat) forkSession(ctx context.Context, agent Agent, sid, folder string,
 	return string(resp.SessionID), c.configFrom(resp.ConfigOptions, resp.Modes), nil
 }
 
-// sessionMeta is a session request's _meta: the dialect's (SessionMeta),
-// with also's keys.
+// sessionMeta is a session request's _meta: the dialect's (SessionMeta,
+// and UltracodeMeta merged in when the chat has Ultracode on), with also's
+// keys.
 func (c *chat) sessionMeta(also map[string]any) map[string]any {
-	if c.dialect.SessionMeta == nil {
+	meta := c.dialect.SessionMeta
+	if c.ultracode.Load() {
+		meta = merged(meta, c.dialect.UltracodeMeta)
+	}
+	if meta == nil {
 		return also
 	}
-	meta := maps.Clone(c.dialect.SessionMeta)
+	meta = maps.Clone(meta)
 	maps.Copy(meta, also)
 	return meta
+}
+
+// merged is a and b in a new map, maps in both merged key by key, b's
+// values winning otherwise.
+func merged(a, b map[string]any) map[string]any {
+	out := maps.Clone(a)
+	if out == nil {
+		out = map[string]any{}
+	}
+	for k, v := range b {
+		am, aok := out[k].(map[string]any)
+		bm, bok := v.(map[string]any)
+		if aok && bok {
+			out[k] = merged(am, bm)
+		} else {
+			out[k] = v
+		}
+	}
+	return out
 }
 
 // Tools are the MCP servers of Nushi's own tools a chat's sessions get

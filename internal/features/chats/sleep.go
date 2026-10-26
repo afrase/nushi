@@ -162,7 +162,7 @@ func (c *chat) restoreConfig(ctx context.Context, agent Agent, sid string, befor
 	for _, o := range before {
 		c.mu.Lock()
 		i := slices.IndexFunc(c.config, func(n model.ConfigOption) bool { return n.ID == o.ID })
-		set := o.Category != "mode" && i >= 0 && c.config[i].Current != o.Current &&
+		set := o.Category != "mode" && o.ID != ultracodeID && i >= 0 && c.config[i].Current != o.Current &&
 			(c.config[i].Type == "boolean" || slices.ContainsFunc(c.config[i].Values, func(v model.ConfigValue) bool { return v.Value == o.Current }))
 		c.mu.Unlock()
 		if set {

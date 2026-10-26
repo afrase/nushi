@@ -19,6 +19,11 @@ type Dialect struct {
 	// SessionMeta goes in session/new's, session/load's and session/fork's
 	// _meta.
 	SessionMeta map[string]any
+	// UltracodeMeta joins SessionMeta (merged, key by key) in the sessions
+	// of a chat with Ultracode on: the agent's standing multi-agent
+	// workflows (Claude Code's ultracode). Nil when the agent has none:
+	// the chat then has no Ultracode option.
+	UltracodeMeta map[string]any
 	// TurnDone says a usage update reports the end of the running turn's
 	// own work: an agent that holds the prompt open for subagents it left
 	// running in the background (Claude) answers it only once they end,

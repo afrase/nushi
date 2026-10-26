@@ -94,6 +94,16 @@ var SessionMeta = map[string]any{"claudeCode": map[string]any{"options": map[str
 	"env":                   map[string]any{"CLAUDE_CODE_REPORT_FINDINGS": "1"},
 }}}
 
+// UltracodeMeta joins SessionMeta for a chat with Ultracode on: Claude
+// Code's ultracode (standing multi-agent workflow orchestration) for the
+// session, through host options' settings, which the adapter gives Claude
+// Code as its programmatic settings (as --settings would). It takes
+// effect only with workflows on and a model that supports it; the adapter
+// keeps it on across effort changes.
+var UltracodeMeta = map[string]any{"claudeCode": map[string]any{"options": map[string]any{
+	"settings": map[string]any{"ultracode": true},
+}}}
+
 // TurnDone says a usage update is the result of the user's turn: the one
 // with the cost, from a model cycle the user started
 // (`_claude/origin.kind` "human", not a task notification or a
