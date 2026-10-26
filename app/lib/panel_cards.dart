@@ -125,6 +125,7 @@ class _CardShellState extends State<CardShell> {
               child: Tap(
                 onTap: widget.onToggle,
                 cursor: cursor,
+                tint: false,
                 radius: NushiTheme.card * 1.5,
                 padding: const EdgeInsets.fromLTRB(12, 9, 10, 9),
                 child: Row(
@@ -220,6 +221,7 @@ class PanelCard extends StatelessWidget {
           trailing: open ? action : summary,
           body: Tap(
             onTap: onTap,
+            tint: false,
             padding: const EdgeInsets.fromLTRB(12, 0, 10, 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -32,48 +32,82 @@ String cacheUse(Usage u) => [
   if (u.cachedWriteTokens > 0) '${tokens(u.cachedWriteTokens.toInt())} written',
 ].join(' · ');
 
-/// How full the agent's context is, as a small ring and a percentage, amber
-/// past 70% and red past 90%. Nothing until the agent reports it.
+/// How full the agent's context is, as Claude's own panel shows it: a
+/// percentage and a small pill that fills, amber past 70% and red past 90%.
+/// From [usage] when the agent reported it; else from [breakdown] (what
+/// /context said, e.g. for a reopened chat before its first turn); else
+/// nothing.
 class ContextMeter extends StatelessWidget {
-  const new(this.usage, {super.key});
+  const new(this.usage, {super.key, this.breakdown});
 
   final Usage usage;
+  final GetContextUsageResponse? breakdown;
 
   @override
   Widget build(BuildContext context) {
-    if (usage.contextSize == 0) return const SizedBox.shrink();
+    final fill = usage.contextSize > 0
+        ? _fill(usage)
+        : breakdownFill(breakdown?.categories ?? const []);
+    if (fill == null) return const SizedBox.shrink();
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final fill = _fill(usage);
-    final color = _color(t, fill);
+    final color = _color(t, fill, t.accent);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        SizedBox.square(
-          dimension: 13,
-          child: CircularProgressIndicator(
-            value: fill,
-            strokeWidth: 2,
-            backgroundColor: t.borderStrong,
-            color: color,
+        Text(
+          '${(fill * 100).round()}%',
+          style: theme.ui(_color(t, fill, t.textMuted), size: 12),
+        ),
+        const SizedBox(width: 6),
+        Container(
+          width: 22,
+          height: 8,
+          decoration: BoxDecoration(
+            color: t.borderSubtle,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          alignment: Alignment.centerLeft,
+          child: FractionallySizedBox(
+            // At least a dot, as Claude's does at 1%.
+            widthFactor: fill.clamp(8 / 22, 1.0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
           ),
         ),
-        const SizedBox(width: 5),
-        Text('${(fill * 100).round()}%', style: theme.ui(color, size: 12)),
       ],
     );
   }
 }
 
+/// How full the context is by /context's categories: what's in it (not
+/// the free space, the autocompact buffer or what's deferred) over the
+/// window; null without them.
+double? breakdownFill(List<ContextCategory> cs) {
+  var used = 0;
+  var size = 0;
+  for (final c in cs.where((c) => c.kind != 'deferred')) {
+    size += c.tokens.toInt();
+    if (c.kind == '' && c.name != 'Autocompact buffer') {
+      used += c.tokens.toInt();
+    }
+  }
+  return size == 0 ? null : (used / size).clamp(0.0, 1.0);
+}
+
 double _fill(Usage u) =>
     (u.contextUsed.toInt() / u.contextSize.toInt()).clamp(0.0, 1.0);
 
-/// Quiet until it fills: amber past 70%, red past 90%.
-Color _color(Tokens t, double fill) => fill > 0.9
+/// [quiet] until it fills: amber past 70%, red past 90%.
+Color _color(Tokens t, double fill, Color quiet) => fill > 0.9
     ? t.crashed
     : fill > 0.7
     ? t.needs
-    : t.textSecondary;
+    : quiet;
 
 /// "4% used", colored as [ContextMeter]; nothing until the agent says.
 class ContextUsed extends StatelessWidget {
@@ -88,7 +122,7 @@ class ContextUsed extends StatelessWidget {
     final fill = _fill(usage);
     return Text(
       '${(fill * 100).round()}% used',
-      style: theme.ui(_color(theme.t, fill), size: 12),
+      style: theme.ui(_color(theme.t, fill, theme.t.textSecondary), size: 12),
     );
   }
 }
@@ -110,7 +144,9 @@ class UsageBar extends StatelessWidget {
       child: FractionallySizedBox(
         alignment: Alignment.centerLeft,
         widthFactor: fill,
-        child: ColoredBox(color: _color(t, fill).withValues(alpha: 0.75)),
+        child: ColoredBox(
+          color: _color(t, fill, t.textSecondary).withValues(alpha: 0.75),
+        ),
       ),
     );
   }

@@ -206,7 +206,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
       ),
       PanelCard(
         title: 'Context',
-        summary: ContextMeter(u),
+        summary: ContextMeter(u, breakdown: _context),
         rows: [
           if (u.contextSize == 0 && cost(u).isEmpty && _context == null)
             (null, 'Not reported yet'),

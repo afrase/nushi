@@ -29,7 +29,8 @@ Future<void> tryOrShow(
   }
 }
 
-/// A quiet pressable area: a light tint under the pointer or when
+/// A quiet pressable area: a light tint under the pointer (unless not
+/// [tint]: a card's title, which shows its grip instead) or when
 /// [selected], no ripple.
 class Tap extends StatefulWidget {
   const new({
@@ -42,6 +43,7 @@ class Tap extends StatefulWidget {
     this.radius = NushiTheme.control,
     this.tooltip = '',
     this.cursor,
+    this.tint = true,
   });
 
   final VoidCallback? onTap;
@@ -54,6 +56,9 @@ class Tap extends StatefulWidget {
 
   /// The pointer over it, when not the pointing hand (a drag's open hand).
   final MouseCursor? cursor;
+
+  /// Whether the pointer over it tints it.
+  final bool tint;
 
   @override
   State<Tap> createState() => _TapState();
@@ -80,7 +85,7 @@ class _TapState extends State<Tap> {
           decoration: BoxDecoration(
             color: widget.selected
                 ? t.selected
-                : _hover && on
+                : _hover && on && widget.tint
                 ? t.hover
                 : null,
             borderRadius: BorderRadius.circular(widget.radius),
