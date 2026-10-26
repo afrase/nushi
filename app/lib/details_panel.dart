@@ -204,29 +204,29 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
       PanelCard(
         title: 'Context',
         summary: ContextMeter(u),
+        action: _context != null || _canAsk
+            ? IconTap(
+                Icons.refresh,
+                tooltip: 'Ask again',
+                size: 13,
+                onTap: _canAsk ? _askContext : null,
+              )
+            : null,
         rows: [
           if (u.contextSize == 0 && cost(u).isEmpty && _context == null)
             (null, 'Not reported yet'),
           // "4% used … 37.4k / 1M", then the bar.
-          if (u.contextSize > 0 || _context != null || _canAsk)
+          if (u.contextSize > 0)
             (
               null,
               Row(
                 children: [
                   Expanded(child: ContextUsed(u)),
-                  if (u.contextSize > 0)
-                    Text(
-                      '${tokens(u.contextUsed.toInt())} / '
-                      '${tokens(u.contextSize.toInt())}',
-                      style: theme.ui(t.text, size: 12),
-                    ),
-                  if (_context != null || _canAsk)
-                    IconTap(
-                      Icons.refresh,
-                      tooltip: 'Ask again',
-                      size: 13,
-                      onTap: _canAsk ? _askContext : null,
-                    ),
+                  Text(
+                    '${tokens(u.contextUsed.toInt())} / '
+                    '${tokens(u.contextSize.toInt())}',
+                    style: theme.ui(t.text, size: 12),
+                  ),
                 ],
               ),
             ),
