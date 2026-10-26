@@ -54,24 +54,16 @@ class _Servers extends StatelessWidget {
             Text('…', style: muted)
           else if (list.loaded && list.used.isEmpty)
             Text('No MCP servers.', style: muted),
-          if (list.error.isNotEmpty && !list.checking)
-            Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(text: '${list.error} '),
-                  WidgetSpan(
-                    child: Tap(
-                      onTap: list.refresh,
-                      child: Text(
-                        'Try again',
-                        style: theme.ui(t.link, size: 12),
-                      ),
-                    ),
-                  ),
-                ],
+          if (list.error.isNotEmpty && !list.checking) ...[
+            Text(list.error, style: theme.ui(t.crashed, size: 12)),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Button(label: 'Try again', onPressed: list.refresh),
               ),
-              style: theme.ui(t.crashed, size: 12),
             ),
+          ],
           for (final s in list.used)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 2),
@@ -94,10 +86,9 @@ class _Servers extends StatelessWidget {
           const SizedBox(height: 4),
           Align(
             alignment: Alignment.centerLeft,
-            child: Tap(
-              onTap: () => daemon.showMcp(list.folder),
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              child: Text('Manage…', style: theme.ui(t.link, size: 12)),
+            child: Button(
+              label: 'Manage…',
+              onPressed: () => daemon.showMcp(list.folder),
             ),
           ),
         ],

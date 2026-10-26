@@ -22,6 +22,7 @@ Future<void> closeTerminal(
         'Close this terminal?',
         '“${t.program}” is still running in it. Closing the terminal ends it.',
         'Close',
+        destructive: true,
       )) {
     return;
   }

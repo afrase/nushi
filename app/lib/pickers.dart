@@ -86,11 +86,12 @@ class Pickers extends StatelessWidget {
     return Row(
       children: [
         if (mode != null)
-          Menu(
+          MenuField(
+            compact: true,
             tooltip: mode.description.isEmpty ? mode.name : mode.description,
             onClose: onClose,
             entries: rows(mode),
-            child: Text(_current(mode), style: value),
+            label: Text(_current(mode), style: value),
           ),
         if (leading != null) Flexible(child: leading!) else const Spacer(),
         if (leading != null) const SizedBox(width: 12),
@@ -103,14 +104,15 @@ class Pickers extends StatelessWidget {
             ),
           ),
         if (rest.isNotEmpty)
-          Menu(
+          MenuIcon(
+            Icons.more_horiz,
             tooltip: [for (final o in rest) o.name].join(', '),
             onClose: onClose,
             entries: [for (final o in rest) submenu(o.name, o)],
-            child: Icon(Icons.more_horiz, size: 16, color: t.textSecondary),
           ),
         if (model != null || effort != null)
-          Menu(
+          MenuField(
+            compact: true,
             tooltip: [?model?.name, ?effort?.name].join(', '),
             onClose: onClose,
             digits: true,
@@ -121,7 +123,7 @@ class Pickers extends StatelessWidget {
               if (model != null && more.isNotEmpty)
                 submenu('More models', model, more),
             ],
-            child: Text.rich(
+            label: Text.rich(
               TextSpan(
                 children: [
                   if (model != null) TextSpan(text: _current(model)),

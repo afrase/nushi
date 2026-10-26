@@ -98,20 +98,22 @@ Widget nushiDialog(String title, Widget content, List<Widget> actions) =>
       actions: actions,
     );
 
-/// Asks [title] with [text] in a dialog; true once [action] is pressed.
+/// Asks [title] with [text] in a dialog; true once [action] is pressed
+/// ([destructive]: it deletes or loses something, so it's in red).
 Future<bool> confirm(
   BuildContext context,
   String title,
   String text,
-  String action,
-) async =>
+  String action, {
+  bool destructive = false,
+}) async =>
     await showDialog<bool>(
       context: context,
       builder: (context) => nushiDialog(title, Text(text), [
         Button(label: 'Cancel', onPressed: () => Navigator.pop(context, false)),
         Button(
           label: action,
-          kind: ButtonKind.primary,
+          kind: destructive ? ButtonKind.destructive : ButtonKind.primary,
           autofocus: true,
           onPressed: () => Navigator.pop(context, true),
         ),

@@ -10,7 +10,6 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/mcp_actions.dart';
 import 'package:nushi/mcp_form.dart';
 import 'package:nushi/mcp_servers.dart';
-import 'package:nushi/menu.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -55,18 +54,19 @@ class McpView extends StatelessWidget {
                   _ => 'MCP servers',
                 }, style: theme.ui(t.text, weight: FontWeight.w600)),
                 const SizedBox(width: 12),
-                Menu(
+                MenuField(
+                  compact: true,
                   entries: folderEntries(
                     daemon,
                     checked: folder,
                     onPick: (f) => f == null ? _pick() : daemon.showMcp(f),
                   ),
-                  child: Text.rich(
+                  label: Text.rich(
                     TextSpan(
                       children: [
                         TextSpan(text: name, style: theme.ui(t.text, size: 12)),
                         TextSpan(
-                          text: '  $dir ▾',
+                          text: '  $dir',
                           style: theme.ui(t.textMuted, size: 12),
                         ),
                       ],
@@ -82,11 +82,11 @@ class McpView extends StatelessWidget {
                 const SizedBox(width: 8),
                 if (list.checking)
                   Text('Checking…', style: theme.ui(t.textMuted, size: 12)),
-                IconTap(
-                  Icons.refresh,
-                  tooltip: 'Check again',
-                  onTap: list.checking ? null : list.refresh,
+                Button(
+                  label: 'Check again',
+                  onPressed: list.checking ? null : list.refresh,
                 ),
+                const SizedBox(width: 4),
                 IconTap(
                   Icons.close,
                   tooltip: 'Close',

@@ -128,6 +128,7 @@ class _TranscriptsSectionState extends State<TranscriptsSection> {
           'from their agents alone; a chat whose session its agent deleted '
           'goes with its copy.',
       'Clear all',
+      destructive: true,
     )) {
       await _clear(ClearTranscriptsRequest(all: true));
     }
