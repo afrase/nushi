@@ -118,6 +118,7 @@ func read(t *testing.T, name string) []byte {
 // GFM's tag filter (the nine elements written as text).
 func rendered(md string) string {
 	var b bytes.Buffer
+	md = strings.NewReplacer("\r\n", "\n", "\r", "\n").Replace(md) // one line ending, as CommonMark reads them
 	_ = goldmark.New(goldmark.WithExtensions(extension.GFM), goldmark.WithRendererOptions(gmhtml.WithUnsafe())).Convert([]byte(md), &b)
 	out := b.String()
 	for _, name := range []string{"title", "textarea", "style", "xmp", "iframe", "noembed", "noframes", "script", "plaintext"} {
@@ -159,7 +160,8 @@ func visible(page string) string { return visibleAlt(page, false) }
 
 // visibleAlt is visible with images' alt text in their place, if alt.
 func visibleAlt(page string, alt bool) string {
-	nodes, _ := xhtml.ParseFragment(strings.NewReader(page), &xhtml.Node{Type: xhtml.ElementNode, DataAtom: atom.Body, Data: "body"})
+	nodes, _ := xhtml.ParseFragmentWithOptions(strings.NewReader(page), &xhtml.Node{Type: xhtml.ElementNode, DataAtom: atom.Body, Data: "body"},
+		xhtml.ParseOptionEnableScripting(false)) // a page whose scripts don't run (GitHub's are stripped)
 	var b strings.Builder
 	var walk func(*xhtml.Node)
 	walk = func(n *xhtml.Node) {
@@ -180,12 +182,23 @@ func visibleAlt(page string, alt bool) string {
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
 			walk(c)
 		}
-		b.WriteByte(' ')
+		if breaks[n.DataAtom] {
+			b.WriteByte(' ') // a block or a line break sets text apart; an inline element doesn't
+		}
 	}
 	for _, n := range nodes {
 		walk(n)
 	}
 	return b.String()
+}
+
+// breaks are the elements a browser lays out apart from the text around
+// them.
+var breaks = map[atom.Atom]bool{
+	atom.P: true, atom.Div: true, atom.Li: true, atom.Ul: true, atom.Ol: true, atom.Tr: true, atom.Td: true, atom.Th: true,
+	atom.Table: true, atom.Pre: true, atom.Blockquote: true, atom.H1: true, atom.H2: true, atom.H3: true, atom.H4: true,
+	atom.H5: true, atom.H6: true, atom.Br: true, atom.Hr: true, atom.Dl: true, atom.Dt: true, atom.Dd: true,
+	atom.Details: true, atom.Summary: true, atom.Img: true,
 }
 
 func squeeze(s string) string {
@@ -211,6 +224,8 @@ func FuzzMarkdownHidesComments(f *testing.F) {
 		{"", "", ""}, {"a\n\n", "\n```\n", "\n```\n-->b"}, {"`", "`", "``"}, {"```\n", "", "\n```"}, {"> ", "\n> ", ""},
 		{"- ", "\n  ", "\n- x"}, {"<div>\n", "", "</div>"}, {"| a |\n|---|\n| ", " |", ""}, {"x", "--", "->"},
 		{"    ", "\n    ", ""}, {"![", "", "](https://x)"}, {`<img alt="`, "", `" src="https://x">`},
+		{"<noscript>", "", "</noscript>"}, {"<svg>", "", "</svg>"}, {"<math><mi>", "", "</mi></math>"},
+		{"<template>", "", "</template>"}, {"<select>", "", "<option>o</option></select>"}, {"<table>", "", "<tr><td>x</td></tr></table>"},
 	} {
 		f.Add(seed[0], seed[1], seed[2])
 	}
