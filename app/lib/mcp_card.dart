@@ -2,15 +2,19 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/agents.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/chat_view.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/mcp_actions.dart';
 import 'package:nushi/mcp_servers.dart';
 import 'package:nushi/panel_cards.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// The details panel's MCP card: the servers the agent uses in the chat's
-/// folder, each with its state; "Manage…" opens the MCP servers view. An
-/// agent whose MCP config Nushi doesn't read gets a note.
+/// folder, each with its state and its switch for the project (a change
+/// reaches the chat when it restarts, which the card then offers);
+/// "Manage…" opens the MCP servers view. An agent whose MCP config Nushi
+/// doesn't read gets a note.
 PanelCard mcpCard(ChatState chat, Daemon daemon) {
   if (knownAgents[chat.agent]?.mcp == false) {
     return PanelCard(
@@ -30,15 +34,16 @@ PanelCard mcpCard(ChatState chat, Daemon daemon) {
         children: [for (final s in list.used.take(12)) McpDot(s)],
       ),
     ),
-    rows: [(null, _Servers(list, daemon))],
+    rows: [(null, _Servers(list, daemon, chat))],
   );
 }
 
 class _Servers extends StatelessWidget {
-  const new(this.list, this.daemon);
+  const new(this.list, this.daemon, this.chat);
 
   final McpServers list;
   final Daemon daemon;
+  final ChatState chat;
 
   @override
   Widget build(BuildContext context) {
@@ -80,6 +85,20 @@ class _Servers extends StatelessWidget {
                     ),
                   ),
                   Text(stateOf(s, t).$1, style: muted),
+                  const SizedBox(width: 4),
+                  McpSwitch(list, s, label: false),
+                ],
+              ),
+            ),
+          if (chat.mcpChanged && !chat.archived)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text('Applies when the chat restarts', style: muted),
+                  ),
+                  ReloadButton(chat, daemon),
                 ],
               ),
             ),
