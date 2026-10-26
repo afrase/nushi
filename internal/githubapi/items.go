@@ -195,8 +195,8 @@ func (c *Client) Status(ctx context.Context, ids []string) (map[string]model.Git
 // repoRE is a repository's owner/name, as GitHub allows them.
 var repoRE = regexp.MustCompile(`^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})/[A-Za-z0-9._-]{1,100}$`)
 
-// splitRepo checks a repository's owner/name and splits it.
-func splitRepo(repo string) (owner, name string, err error) {
+// SplitRepo checks a repository's owner/name and splits it.
+func SplitRepo(repo string) (owner, name string, err error) {
 	if !repoRE.MatchString(repo) || strings.HasSuffix(repo, "/.") || strings.HasSuffix(repo, "/..") {
 		return "", "", fmt.Errorf("%q isn't a repository's owner/name", repo)
 	}

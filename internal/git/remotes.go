@@ -2,7 +2,10 @@ package git
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strings"
+	"time"
 )
 
 // Remote is one of a repository's remotes: its name and the URL it
@@ -25,4 +28,27 @@ func Remotes(ctx context.Context, folder string) ([]Remote, error) {
 		}
 	}
 	return rs, nil
+}
+
+// Fetch fetches refspec from folder's repository's remote, with no tags,
+// never asking for a password on a terminal (the daemon has none: a
+// remote that needs one fails), and gives up after two minutes. It runs
+// the remote's transport, as the user's own git fetch would.
+func Fetch(ctx context.Context, folder, remote, refspec string) error {
+	if strings.HasPrefix(remote, "-") || strings.HasPrefix(refspec, "-") {
+		return errors.New("a remote or refspec that reads as an option")
+	}
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+	cmd := command(ctx, folder, nil, "fetch", "--quiet", "--no-tags", "--no-write-fetch-head", "--", remote, refspec)
+	cmd.Env = append(cmd.Env, "GIT_TERMINAL_PROMPT=0", "GIT_ASKPASS=", "SSH_ASKPASS=")
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		if msg := strings.TrimSpace(stderr.String()); msg != "" {
+			return fmt.Errorf("git fetch: %s", msg)
+		}
+		return fmt.Errorf("git fetch: %w", err)
+	}
+	return nil
 }

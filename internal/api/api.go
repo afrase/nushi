@@ -194,7 +194,22 @@ func (s *server) StartChat(ctx context.Context, req *connect.Request[nushiv1.Sta
 			return nil, connect.NewError(connect.CodeInvalidArgument, err)
 		}
 	}
-	id, err := s.chats.StartOn(ctx, req.Msg.Agent, req.Msg.Folder, req.Msg.Worktree, issue, req.Msg.Branch)
+	opts := chats.StartOptions{Worktree: req.Msg.Worktree, Branch: req.Msg.Branch, Issue: issue}
+	if l := req.Msg.Github; l != nil {
+		link, err := s.github.Link(model.ChatGitHub{Host: l.Host, Repo: l.Repo, Number: int(l.Number), Pull: l.Pull, ID: l.Id})
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		}
+		opts.GitHub = &link
+		if link.Pull && opts.Worktree && req.Msg.Folder != "" {
+			co, err := s.github.CheckOut(ctx, req.Msg.Folder, link.GitHubRef)
+			if err != nil {
+				return nil, githubErr(err)
+			}
+			opts.Branch, opts.From = co.Branch, co.From
+		}
+	}
+	id, err := s.chats.StartOn(ctx, req.Msg.Agent, req.Msg.Folder, opts)
 	if err != nil {
 		return nil, err
 	}

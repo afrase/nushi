@@ -18,10 +18,10 @@ import (
 // Worktrees makes and removes the git worktrees chats run in.
 type Worktrees interface {
 	// Add makes a worktree of folder's repository named name, on branch
-	// (else one named after it), and returns it and the folder in it that
-	// matches folder. A name or branch already taken fails with
-	// fs.ErrExist.
-	Add(ctx context.Context, folder, name, branch string) (model.Worktree, string, error)
+	// (else one named after it), starting at from (else folder's HEAD), and
+	// returns it and the folder in it that matches folder. A name or
+	// branch already taken fails with fs.ErrExist.
+	Add(ctx context.Context, folder, name, branch, from string) (model.Worktree, string, error)
 	// Inspect says what removing a worktree and its branch would lose.
 	Inspect(ctx context.Context, wt model.Worktree) (model.WorktreeState, error)
 	// Remove removes a worktree; without force, only a clean one.
@@ -37,8 +37,9 @@ var (
 // addWorktree makes a worktree for a chat in folder's repository, with a
 // short, readable name not yet taken there (or on branch, with a number
 // after it if it's taken, in a folder named after it with "-" for "/"),
-// and returns the chat's folder in it.
-func (s *Service) addWorktree(ctx context.Context, folder, branch string) (*model.Worktree, string, error) {
+// and returns the chat's folder in it. from, if given, is what the
+// branch starts from (a pull request's head), else folder's HEAD.
+func (s *Service) addWorktree(ctx context.Context, folder, branch, from string) (*model.Worktree, string, error) {
 	for i := range 20 {
 		name := adjectives[rand.IntN(len(adjectives))] + "-" + nouns[rand.IntN(len(nouns))] //nolint:gosec // a worktree's name, not a secret
 		named := ""                                                                         // the branch: Nushi's own, after the name
@@ -49,7 +50,7 @@ func (s *Service) addWorktree(ctx context.Context, folder, branch string) (*mode
 			}
 			name = strings.ReplaceAll(named, "/", "-") // one folder, not one in another
 		}
-		wt, in, err := s.worktrees.Add(ctx, folder, name, named)
+		wt, in, err := s.worktrees.Add(ctx, folder, name, named, from)
 		if err == nil {
 			if _, err := os.Stat(in); err != nil { // a folder git doesn't track
 				s.dropWorktree(&wt)

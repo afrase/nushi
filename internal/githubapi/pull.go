@@ -178,7 +178,7 @@ func (n checkNode) check() model.GitHubCheck {
 // conversation, its review threads (paged past 100), and its head's
 // checks.
 func (c *Client) Pull(ctx context.Context, repo string, number int) (model.GitHubPull, error) {
-	owner, name, err := splitRepo(repo)
+	owner, name, err := SplitRepo(repo)
 	if err != nil {
 		return model.GitHubPull{}, err
 	}
@@ -319,7 +319,7 @@ const issueQuery = `query Issue($owner: String!, $name: String!, $number: Int!) 
 // Issue is an issue whole: its text, labels, assignees and the latest
 // 100 comments.
 func (c *Client) Issue(ctx context.Context, repo string, number int) (model.GitHubIssue, error) {
-	owner, name, err := splitRepo(repo)
+	owner, name, err := SplitRepo(repo)
 	if err != nil {
 		return model.GitHubIssue{}, err
 	}

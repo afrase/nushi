@@ -23,11 +23,13 @@ import (
 type Worktrees struct{}
 
 // Add makes a worktree of folder's repository at <repo>/.worktrees/<name>,
-// on a new branch from folder's HEAD (branch, else nushi/<name>), and keeps .worktrees/
-// out of git through the repository's info/exclude. It returns the
-// worktree and the folder in it that matches folder (the same subfolder).
-// A name already taken (folder or branch) fails with fs.ErrExist.
-func (Worktrees) Add(ctx context.Context, folder, name, branch string) (model.Worktree, string, error) {
+// on a new branch (branch, else nushi/<name>) from folder's HEAD, or at
+// from (a ref: a remote's branch, which the new branch then tracks, or
+// another), and keeps .worktrees/ out of git through the repository's
+// info/exclude. It returns the worktree and the folder in it that matches
+// folder (the same subfolder). A name already taken (folder or branch)
+// fails with fs.ErrExist.
+func (Worktrees) Add(ctx context.Context, folder, name, branch, from string) (model.Worktree, string, error) {
 	var wt model.Worktree
 	repo, err := mainWorktree(ctx, folder)
 	if err != nil {
@@ -52,18 +54,37 @@ func (Worktrees) Add(ctx context.Context, folder, name, branch string) (model.Wo
 	if _, err := run(ctx, folder, "rev-parse", "--verify", "-q", "refs/heads/"+wt.Branch); err == nil {
 		return wt, "", fmt.Errorf("branch %s: %w", wt.Branch, fs.ErrExist)
 	}
-	out, err := run(ctx, folder, "rev-parse", "--verify", "-q", "HEAD")
-	if err != nil {
-		return wt, "", errors.New("the repository has no commits yet")
-	}
-	wt.BaseCommit, wt.Base = strings.TrimSpace(string(out)), strings.TrimSpace(string(out)) // detached
-	if out, err := run(ctx, folder, "symbolic-ref", "--short", "-q", "HEAD"); err == nil {
-		wt.Base = strings.TrimSpace(string(out))
+	add := []string{"worktree", "add", "-q"}
+	if from == "" {
+		out, err := run(ctx, folder, "rev-parse", "--verify", "-q", "HEAD")
+		if err != nil {
+			return wt, "", errors.New("the repository has no commits yet")
+		}
+		wt.BaseCommit, wt.Base = strings.TrimSpace(string(out)), strings.TrimSpace(string(out)) // detached
+		if out, err := run(ctx, folder, "symbolic-ref", "--short", "-q", "HEAD"); err == nil {
+			wt.Base = strings.TrimSpace(string(out))
+		}
+		add = append(add, "-b", wt.Branch, wt.Path, wt.BaseCommit)
+	} else {
+		if !strings.HasPrefix(from, "refs/") {
+			return wt, "", fmt.Errorf("%q isn't a ref", from)
+		}
+		out, err := run(ctx, folder, "rev-parse", "--verify", "-q", from+"^{commit}")
+		if err != nil {
+			return wt, "", fmt.Errorf("%s isn't in the repository", from)
+		}
+		// Work is counted from what was fetched: what the branch has past
+		// it is what pushing would add.
+		wt.BaseCommit, wt.Base = strings.TrimSpace(string(out)), from
+		if strings.HasPrefix(from, "refs/remotes/") {
+			add = append(add, "--track")
+		}
+		add = append(add, "-b", wt.Branch, wt.Path, from)
 	}
 	if err := Exclude(ctx, folder, "/.worktrees/"); err != nil {
 		return wt, "", err
 	}
-	if _, err := run(ctx, folder, "worktree", "add", "-q", "-b", wt.Branch, wt.Path, wt.BaseCommit); err != nil {
+	if _, err := run(ctx, folder, add...); err != nil {
 		return wt, "", err
 	}
 	return wt, filepath.Join(wt.Path, sub), nil

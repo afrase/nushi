@@ -421,7 +421,7 @@ func TestToolsForAChatOnAnIssue(t *testing.T) {
 	if len(agent.mcp) != 0 {
 		t.Errorf("a chat without an issue got %v", agent.mcp)
 	}
-	id, err := svc.StartOn(t.Context(), "", t.TempDir(), false, &model.ChatIssue{Site: "acme.atlassian.net", Key: "ACME-12"}, "")
+	id, err := svc.StartOn(t.Context(), "", t.TempDir(), StartOptions{Issue: &model.ChatIssue{Site: "acme.atlassian.net", Key: "ACME-12"}})
 	if err != nil {
 		t.Fatal(err)
 	}

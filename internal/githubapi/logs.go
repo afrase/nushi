@@ -29,7 +29,7 @@ const (
 // run's): GitHub answers with a link, good for a minute, to the plain
 // text, which is fetched without the token.
 func (c *Client) JobLog(ctx context.Context, repo string, job int64) (string, error) {
-	if _, _, err := splitRepo(repo); err != nil {
+	if _, _, err := SplitRepo(repo); err != nil {
 		return "", err
 	}
 	path := "/repos/{}/{}/actions/jobs/{}/logs"

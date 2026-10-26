@@ -49,5 +49,7 @@ func newGitHub(st *store.Store, dev bool) *github.Service {
 			}
 			return out, err
 		},
+		Fetch:       git.Fetch,
+		CheckBranch: git.CheckBranch,
 	})
 }

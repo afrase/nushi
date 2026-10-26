@@ -21,7 +21,7 @@ type File struct {
 // most, GitHub's cap). A comparison of two commits doesn't change, so its
 // ETag makes the next ask free.
 func (c *Client) Compare(ctx context.Context, repo, base, head string) (mergeBase string, files []File, err error) {
-	owner, name, err := splitRepo(repo)
+	owner, name, err := SplitRepo(repo)
 	if err != nil {
 		return "", nil, err
 	}
@@ -66,7 +66,7 @@ const MaxBlob = 1 << 20
 
 // Blobs reads files' texts at commits, 25 to a query.
 func (c *Client) Blobs(ctx context.Context, repo string, at []BlobAt) (map[BlobAt]Blob, error) {
-	owner, name, err := splitRepo(repo)
+	owner, name, err := SplitRepo(repo)
 	if err != nil {
 		return nil, err
 	}
