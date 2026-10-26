@@ -8,6 +8,8 @@ class MainFlutterWindow: NSWindow {
     let windowFrame = self.frame
     self.contentViewController = flutterViewController
     self.setFrame(windowFrame, display: true)
+    // macOS keeps the window's size and place across launches.
+    self.setFrameAutosaveName("Nushi")
 
     RegisterGeneratedPlugins(registry: flutterViewController)
 
