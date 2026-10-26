@@ -14,6 +14,11 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
 import 'package:nushi/widgets.dart';
 
+/// Whether [e] is a tool call that shows as a row, and can join a run of
+/// them (a review's findings show as a card of their own).
+bool _row(Object? e) =>
+    e is Item && e.kind == ItemKind.ITEM_KIND_TOOL_CALL && !e.hasFindings();
+
 /// The items, with each run of tool calls as one list, and each subagent
 /// as one [SubagentRun] with what it did.
 List<Object> _entries(List<Item> items) {
@@ -24,12 +29,10 @@ List<Object> _entries(List<Item> items) {
     if (subs.containsKey(it.parent)) continue;
     if (subs[it.id] case final sub?) {
       out.add(sub);
-    } else if (it.kind == ItemKind.ITEM_KIND_TOOL_CALL && last is List<Item>) {
+    } else if (_row(it) && last is List<Item>) {
       last.add(it);
-    } else if (it.kind == ItemKind.ITEM_KIND_TOOL_CALL &&
-        last is Item &&
-        last.kind == ItemKind.ITEM_KIND_TOOL_CALL) {
-      out.last = [last, it];
+    } else if (_row(it) && _row(last)) {
+      out.last = [last! as Item, it];
     } else {
       out.add(it);
     }

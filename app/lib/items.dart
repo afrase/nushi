@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:nushi/cards.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/findings.dart';
+import 'package:nushi/findings_card.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart';
@@ -71,6 +73,7 @@ class ItemView extends StatelessWidget {
           ),
         );
       case ItemKind.ITEM_KIND_TOOL_CALL:
+        if (item.hasFindings()) return FindingsCard(item.findings, chat);
         return ToolCallView(item, still: still);
       case ItemKind.ITEM_KIND_QUESTION:
         return QuestionCard(
@@ -144,11 +147,28 @@ class ItemView extends StatelessWidget {
       // a protobuf enum, so a switch on it can't be exhaustive.
       // ignore: no_default_cases
       default:
+        // A review's findings written as JSON show as their card.
+        final found = findingsInText(item.text);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           spacing: 4,
           children: [
-            AgentMarkdown(item.text, live: live),
+            if (found == null)
+              AgentMarkdown(item.text, live: live)
+            else ...[
+              if (found.before.isNotEmpty) AgentMarkdown(found.before),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: FindingsCard(
+                  found.findings,
+                  chat,
+                  json: found.json,
+                  key: const ValueKey('findings'),
+                ),
+              ),
+              if (found.after.isNotEmpty)
+                AgentMarkdown(found.after, live: live),
+            ],
             if (item.images.isNotEmpty) Thumbnails(item.images, size: 240),
           ],
         );
