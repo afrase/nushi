@@ -1,10 +1,13 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_bar.dart';
+import 'package:nushi/github_filters.dart';
 import 'package:nushi/github_inbox.dart';
 import 'package:nushi/github_issue.dart';
 import 'package:nushi/github_parts.dart';
@@ -13,7 +16,6 @@ import 'package:nushi/github_settings.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_dialog.dart';
-import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// ⌘G shows GitHub in place of the chat, and back.
@@ -31,11 +33,16 @@ bool _known = false;
 GitHubRef? _picked;
 bool _details = false;
 
+/// The cards whose older items show too ("Show"), until Nushi quits or
+/// the span or host changes.
+final _wide = <String>{};
+
 /// Forgets what the view had (tests start afresh).
 @visibleForTesting
 void forgetGitHubView() {
   _host = _picked = null;
   _known = _details = false;
+  _wide.clear();
 }
 
 /// GitHub in the app, in the chat's place as Jira's view is (the sidebar
@@ -157,8 +164,21 @@ class _GitHubViewState extends State<GitHubView> {
       repos: _known ? _knownRepos : const [],
       quiet: quiet,
       teams: githubTeamReviews.value,
+      updatedDays: githubDays.value,
+      wide: _wide.toList()..sort(),
+      hide: _hidden,
+      owners: _known ? const [] : _owners,
     );
-    final key = '${req.host}\n${req.repos.join(' ')}\n${req.teams}';
+    // Every part of the filter, so another's kept inbox never shows.
+    final key = [
+      req.host,
+      req.repos.join(' '),
+      req.teams,
+      req.updatedDays,
+      req.wide.join(' '),
+      req.hide.join(' '),
+      req.owners.join(' '),
+    ].join('\n');
     if (!quiet) {
       setState(() {
         _loading = true;
@@ -258,6 +278,32 @@ class _GitHubViewState extends State<GitHubView> {
     return KeyEventResult.handled;
   }
 
+  List<String> get _hidden => githubHidden.value[_hostNow?.host] ?? const [];
+  List<String> get _owners => githubOwners.value[_hostNow?.host] ?? const [];
+
+  void _setHidden(List<String> hidden) {
+    final host = _hostNow?.host;
+    if (host == null) return;
+    setState(() => githubHidden.value = {...githubHidden.value, host: hidden});
+    unawaited(_load());
+  }
+
+  void _setOwners(List<String> owners) {
+    final host = _hostNow?.host;
+    if (host == null || listEquals(owners, _owners)) return;
+    setState(() => githubOwners.value = {...githubOwners.value, host: owners});
+    unawaited(_load());
+  }
+
+  void _setDays(int days) {
+    if (days == githubDays.value) return;
+    setState(() {
+      githubDays.value = days;
+      _wide.clear();
+    });
+    unawaited(_load());
+  }
+
   /// Review requested of me only, or of my teams too: remembered, and
   /// asked again.
   void _whose(bool teams) {
@@ -297,11 +343,17 @@ class _GitHubViewState extends State<GitHubView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _Bar(
+            GitHubBar(
               hosts: hosts ?? const [],
               host: host,
               known: _known,
               knownRepos: _knownRepos.length,
+              owners: _owners,
+              hidden: _hidden,
+              seen: reposIn(_inbox),
+              onOwners: _setOwners,
+              onHidden: _setHidden,
+              onDays: _setDays,
               loading: _loading,
               updated: _cachedAt,
               now: widget.now,
@@ -310,10 +362,12 @@ class _GitHubViewState extends State<GitHubView> {
                   _host = h;
                   _inbox = null;
                   _details = false;
+                  _wide.clear();
                 });
                 unawaited(_load());
               },
               onKnown: (known) {
+                if (known == _known) return;
                 setState(() => _known = known);
                 unawaited(_load());
               },
@@ -432,14 +486,17 @@ class _GitHubViewState extends State<GitHubView> {
                       sections: _sections,
                       picked: _picked,
                       now: widget.now ?? DateTime.now(),
-                      days: 0,
-                      whose: _Whose(onPick: _whose),
+                      days: githubDays.value,
+                      whose: Whose(onPick: _whose),
                       onOpen: (it) {
                         _listFocus.requestFocus();
                         _open(it);
                       },
-                      onOlder: (_) {},
-                      onHide: (_) {},
+                      onOlder: (id) {
+                        setState(() => _wide.add(id));
+                        unawaited(_load());
+                      },
+                      onHide: (repo) => _setHidden({..._hidden, repo}.toList()),
                       startMenu: (open) => _start = open,
                     ),
                   ),
@@ -452,128 +509,5 @@ class _GitHubViewState extends State<GitHubView> {
   static String _time(int ms) {
     final d = DateTime.fromMillisecondsSinceEpoch(ms);
     return '${d.hour}:${'${d.minute}'.padLeft(2, '0')}';
-  }
-}
-
-/// Review requested's choice: "Only me" (pull requests asking me by
-/// name) or "Me and my teams" (a team of mine asked too).
-class _Whose extends StatelessWidget {
-  const new({required this.onPick});
-
-  final ValueChanged<bool> onPick;
-
-  @override
-  Widget build(BuildContext context) {
-    final teams = githubTeamReviews.value;
-    return MenuField(
-      compact: true,
-      entries: [
-        MenuEntry('Only me', checked: !teams, onPick: () => onPick(false)),
-        MenuEntry(
-          'Me and my teams',
-          checked: teams,
-          onPick: () => onPick(true),
-        ),
-      ],
-      label: Text(teams ? 'Me and my teams' : 'Only me'),
-    );
-  }
-}
-
-/// The view's bar: the host shown (a menu of the others), whether the
-/// inbox is the known folders' repositories or all, Refresh, Close.
-class _Bar extends StatelessWidget {
-  const new({
-    required this.hosts,
-    required this.host,
-    required this.known,
-    required this.knownRepos,
-    required this.loading,
-    required this.onHost,
-    required this.onKnown,
-    required this.onRefresh,
-    required this.onClose,
-    this.updated,
-    this.now,
-  });
-
-  final List<GitHubHost> hosts;
-  final GitHubHost? host;
-  final bool known;
-  final int knownRepos;
-  final bool loading;
-  final DateTime? updated;
-  final DateTime? now;
-  final ValueChanged<String> onHost;
-  final ValueChanged<bool> onKnown;
-  final VoidCallback onRefresh;
-  final VoidCallback onClose;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final h = host;
-    return Container(
-      height: 34,
-      padding: const EdgeInsets.only(left: 20, right: 8),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: t.borderSubtle)),
-      ),
-      child: Row(
-        children: [
-          Text('GitHub', style: theme.ui(t.text, weight: FontWeight.w600)),
-          const SizedBox(width: 12),
-          if (hosts.length > 1)
-            MenuField(
-              compact: true,
-              entries: [
-                for (final x in hosts)
-                  MenuEntry(
-                    x.host,
-                    detail: x.login,
-                    checked: x.host == h?.host,
-                    onPick: () => onHost(x.host),
-                  ),
-              ],
-              label: Text(h?.host ?? ''),
-            )
-          else if (h != null)
-            Text(
-              [h.host, if (h.login.isNotEmpty) h.login].join(' · '),
-              style: theme.ui(t.textSecondary, size: 12),
-            ),
-          const SizedBox(width: 12),
-          if (h != null)
-            MenuField(
-              compact: true,
-              entries: [
-                MenuEntry(
-                  'All repositories',
-                  checked: !known,
-                  onPick: () => onKnown(false),
-                ),
-                MenuEntry(
-                  "My folders' repositories",
-                  detail: '$knownRepos',
-                  checked: known,
-                  onPick: knownRepos == 0 ? null : () => onKnown(true),
-                ),
-              ],
-              label: Text(
-                known ? "My folders' repositories" : 'All repositories',
-              ),
-            ),
-          const Spacer(),
-          if (updatedLine(updated, loading: loading, now: now) case final line?)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: Text(line, style: theme.ui(t.textMuted, size: 12)),
-            ),
-          IconTap(Icons.refresh, tooltip: 'Refresh (⌘R)', onTap: onRefresh),
-          IconTap(Icons.close, tooltip: 'Close (⌘G)', onTap: onClose),
-        ],
-      ),
-    );
   }
 }

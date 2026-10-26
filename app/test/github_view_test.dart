@@ -171,9 +171,19 @@ Future<(FakeDaemon, Daemon)> openView(
   List<GitHubHost>? hosts,
   ListGitHubInboxResponse? inbox,
   bool? teams = false,
+  bool keep = false,
   Object? Function(Object input)? more,
 }) async {
   if (teams != null) githubTeamReviews.value = teams;
+  // Another test file may have left its choices in the tests' app.json,
+  // read as this one started: the view's own start afresh, unless [keep].
+  if (!keep) {
+    githubCardOrder.value = [];
+    githubCollapsed.value = {};
+    githubDays.value = 90;
+    githubHidden.value = {};
+    githubOwners.value = {};
+  }
   final fake = FakeDaemon(chats)
     ..answer = (input) =>
         more?.call(input) ??
