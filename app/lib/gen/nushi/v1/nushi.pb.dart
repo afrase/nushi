@@ -17523,12 +17523,14 @@ class ListGitHubInboxRequest extends $pb.GeneratedMessage {
     $core.Iterable<$core.String>? repos,
     $core.bool? quiet,
     $core.bool? teams,
+    $core.bool? cached,
   }) {
     final result = ListGitHubInboxRequest._();
     if (host != null) result.host = host;
     if (repos != null) result.repos.addAll(repos);
     if (quiet != null) result.quiet = quiet;
     if (teams != null) result.teams = teams;
+    if (cached != null) result.cached = cached;
     return result;
   }
 
@@ -17549,6 +17551,7 @@ class ListGitHubInboxRequest extends $pb.GeneratedMessage {
     ..pPS(2, _omitFieldNames ? '' : 'repos')
     ..aOB(3, _omitFieldNames ? '' : 'quiet')
     ..aOB(4, _omitFieldNames ? '' : 'teams')
+    ..aOB(5, _omitFieldNames ? '' : 'cached')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -17609,6 +17612,17 @@ class ListGitHubInboxRequest extends $pb.GeneratedMessage {
   $core.bool hasTeams() => $_has(3);
   @$pb.TagNumber(4)
   void clearTeams() => $_clearField(4);
+
+  /// The inbox as GitHub gave it last, kept by the daemon, without asking
+  /// GitHub: shown at once while it's asked for (at_ms 0 when none).
+  @$pb.TagNumber(5)
+  $core.bool get cached => $_getBF(4);
+  @$pb.TagNumber(5)
+  set cached($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasCached() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearCached() => $_clearField(5);
 }
 
 class ListGitHubInboxResponse extends $pb.GeneratedMessage {

@@ -8,6 +8,7 @@ package github
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -55,10 +56,14 @@ type Tokens interface {
 	Delete(account string) error
 }
 
-// Store keeps the hosts given a token.
+// Store keeps the hosts given a token, and each host's inbox as it was
+// last (the cache: area "github", a file a host).
 type Store interface {
 	GitHubTokenHosts() ([]string, error)
 	SaveGitHubTokenHosts([]string) error
+	Cached(area, name, key string) (time.Time, json.RawMessage, error)
+	Cache(area, name, key string, at time.Time, data json.RawMessage) error
+	ForgetCache(area, name string) error
 }
 
 // ErrNeedsOK is a pasted token the keychain gives only once the user
@@ -247,6 +252,7 @@ func (s *Service) AddToken(ctx context.Context, name, token string) (githubapi.U
 	s.mu.Lock()
 	s.clients[name] = &host{c: c, source: "token", kind: githubapi.TokenKind(token), user: u, asked: time.Now()}
 	s.mu.Unlock()
+	s.forget(name) // another account's inbox
 	slog.Info("github token added", "host", name, "kind", githubapi.TokenKind(token))
 	return u, nil
 }
@@ -268,6 +274,7 @@ func (s *Service) RemoveToken(name string) error {
 	s.mu.Lock()
 	delete(s.clients, name)
 	s.mu.Unlock()
+	s.forget(name)
 	slog.Info("github token removed", "host", name)
 	return s.Store.SaveGitHubTokenHosts(slices.DeleteFunc(hosts, func(h string) bool { return h == name }))
 }

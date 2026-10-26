@@ -9,7 +9,6 @@ import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_issue_parts.dart';
 import 'package:nushi/jira_settings.dart';
-import 'package:nushi/jira_view_parts.dart';
 import 'package:nushi/jira_work.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/menu.dart';

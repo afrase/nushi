@@ -66,6 +66,15 @@ class _GitHubViewState extends State<GitHubView> {
   bool _loading = false;
   int _asked = 0;
   Timer? _poll;
+
+  /// Which inbox [_inbox] is (host, repositories, teams), and when GitHub
+  /// said so if it's what the daemon kept from last time.
+  String? _shown;
+  DateTime? _cachedAt;
+
+  /// A load has gone on 150 ms with nothing to show: the skeleton shows.
+  bool _slow = false;
+  Timer? _slowTimer;
   final _listFocus = FocusNode(debugLabel: 'github list');
   final _viewFocus = FocusNode(debugLabel: 'github view');
 
@@ -112,6 +121,7 @@ class _GitHubViewState extends State<GitHubView> {
   @override
   void dispose() {
     _poll?.cancel();
+    _slowTimer?.cancel();
     _listFocus.dispose();
     _viewFocus.dispose();
     super.dispose();
@@ -142,28 +152,37 @@ class _GitHubViewState extends State<GitHubView> {
   }
 
   /// Asks for the inbox again; [quiet] (the timer) keeps what shows until
-  /// it answers, and an error then leaves it as it was.
+  /// it answers, and an error then leaves it as it was. Another inbox than
+  /// the one shown shows what the daemon kept of it meanwhile.
   Future<void> _load({bool quiet = false}) async {
     final host = _hostNow;
     if (host == null || host.needsOk) return; // its token can't be read yet
     final n = ++_asked;
-    if (!quiet) setState(() => _loading = true);
+    final req = ListGitHubInboxRequest(
+      host: host.host,
+      repos: _known ? _knownRepos : const [],
+      quiet: quiet,
+      teams: githubTeamReviews.value,
+    );
+    final key = '${req.host}\n${req.repos.join(' ')}\n${req.teams}';
+    if (!quiet) {
+      setState(() {
+        _loading = true;
+        _slow = false;
+      });
+      _slowTimer?.cancel();
+      _slowTimer = Timer(const Duration(milliseconds: 150), () {
+        if (mounted && n == _asked && _loading) setState(() => _slow = true);
+      });
+      if (_shown != key) unawaited(_showKept(n, key, req));
+    }
     try {
-      final r = await widget.daemon.client.listGitHubInbox(
-        ListGitHubInboxRequest(
-          host: host.host,
-          repos: _known ? _knownRepos : const [],
-          quiet: quiet,
-          teams: githubTeamReviews.value,
-        ),
-      );
+      final r = await widget.daemon.client.listGitHubInbox(req);
       if (n != _asked || !mounted) return;
       setState(() {
-        _inbox = r;
+        _show(key, r);
+        _cachedAt = null;
         _error = r.stale.isEmpty ? null : r.stale;
-        if (!_details && !_items.any((x) => _same(x.ref, _picked))) {
-          _picked = _items.firstOrNull?.ref;
-        }
       });
     } on Object catch (e) {
       if (n == _asked && mounted && !quiet) {
@@ -171,6 +190,31 @@ class _GitHubViewState extends State<GitHubView> {
       }
     } finally {
       if (n == _asked && mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// Shows the inbox the daemon kept from last time, until GitHub answers.
+  Future<void> _showKept(int n, String key, ListGitHubInboxRequest req) async {
+    try {
+      final r = await widget.daemon.client.listGitHubInbox(
+        req.deepCopy()..cached = true,
+      );
+      // GitHub answered first, or nothing was kept.
+      if (n != _asked || !mounted || !_loading || r.atMs == 0) return;
+      setState(() {
+        _show(key, r);
+        _cachedAt = DateTime.fromMillisecondsSinceEpoch(r.atMs.toInt());
+      });
+    } on Object {
+      // Nothing kept: GitHub's answer decides.
+    }
+  }
+
+  void _show(String key, ListGitHubInboxResponse r) {
+    _shown = key;
+    _inbox = r;
+    if (!_details && !_items.any((x) => _same(x.ref, _picked))) {
+      _picked = _items.firstOrNull?.ref;
     }
   }
 
@@ -259,6 +303,8 @@ class _GitHubViewState extends State<GitHubView> {
               known: _known,
               knownRepos: _knownRepos.length,
               loading: _loading,
+              updated: _cachedAt,
+              now: widget.now,
               onHost: (h) {
                 setState(() {
                   _host = h;
@@ -417,7 +463,9 @@ class _GitHubViewState extends State<GitHubView> {
             autofocus: true,
             onKeyEvent: _onKey,
             child: _inbox == null
-                ? const SizedBox()
+                ? _loading && _slow
+                      ? const RowsLoading()
+                      : const SizedBox()
                 : ListView(
                     padding: const EdgeInsets.only(bottom: 12),
                     children: rows,
@@ -504,6 +552,8 @@ class _Bar extends StatelessWidget {
     required this.onKnown,
     required this.onRefresh,
     required this.onClose,
+    this.updated,
+    this.now,
   });
 
   final List<GitHubHost> hosts;
@@ -511,6 +561,8 @@ class _Bar extends StatelessWidget {
   final bool known;
   final int knownRepos;
   final bool loading;
+  final DateTime? updated;
+  final DateTime? now;
   final ValueChanged<String> onHost;
   final ValueChanged<bool> onKnown;
   final VoidCallback onRefresh;
@@ -574,10 +626,10 @@ class _Bar extends StatelessWidget {
               ),
             ),
           const Spacer(),
-          if (loading)
+          if (updatedLine(updated, loading: loading, now: now) case final line?)
             Padding(
               padding: const EdgeInsets.only(right: 8),
-              child: Text('Loading…', style: theme.ui(t.textMuted, size: 12)),
+              child: Text(line, style: theme.ui(t.textMuted, size: 12)),
             ),
           IconTap(Icons.refresh, tooltip: 'Refresh (⌘R)', onTap: onRefresh),
           IconTap(Icons.close, tooltip: 'Close (⌘G)', onTap: onClose),

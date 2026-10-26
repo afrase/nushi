@@ -1938,6 +1938,9 @@ message ListGitHubInboxRequest {
   // (GitHub's review-requested:@me); else only those asking me by name
   // (user-review-requested:@me).
   bool teams = 4;
+  // The inbox as GitHub gave it last, kept by the daemon, without asking
+  // GitHub: shown at once while it's asked for (at_ms 0 when none).
+  bool cached = 5;
 }
 
 message ListGitHubInboxResponse {

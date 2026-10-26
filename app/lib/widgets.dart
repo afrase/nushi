@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nushi/commits.dart';
 
 import 'package:nushi/theme/theme.dart';
 
@@ -409,4 +410,13 @@ class RowsLoading extends StatelessWidget {
       ),
     );
   }
+}
+
+/// What the bar says of what shows: "Updated 3m ago · refreshing" for
+/// what was kept from last time while it's asked again, "Updated 3m ago"
+/// once asking failed, "Loading…" with nothing kept.
+String? updatedLine(DateTime? updated, {required bool loading, DateTime? now}) {
+  if (updated == null) return loading ? 'Loading…' : null;
+  final when = ago((now ?? DateTime.now()).difference(updated), updated);
+  return 'Updated $when${loading ? ' · refreshing' : ''}';
 }

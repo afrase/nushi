@@ -13575,7 +13575,10 @@ type ListGitHubInboxRequest struct {
 	// Review requested includes pull requests asked of a team of mine
 	// (GitHub's review-requested:@me); else only those asking me by name
 	// (user-review-requested:@me).
-	Teams         bool `protobuf:"varint,4,opt,name=teams,proto3" json:"teams,omitempty"`
+	Teams bool `protobuf:"varint,4,opt,name=teams,proto3" json:"teams,omitempty"`
+	// The inbox as GitHub gave it last, kept by the daemon, without asking
+	// GitHub: shown at once while it's asked for (at_ms 0 when none).
+	Cached        bool `protobuf:"varint,5,opt,name=cached,proto3" json:"cached,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -13634,6 +13637,13 @@ func (x *ListGitHubInboxRequest) GetQuiet() bool {
 func (x *ListGitHubInboxRequest) GetTeams() bool {
 	if x != nil {
 		return x.Teams
+	}
+	return false
+}
+
+func (x *ListGitHubInboxRequest) GetCached() bool {
+	if x != nil {
+		return x.Cached
 	}
 	return false
 }
@@ -16698,12 +16708,13 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\n" +
 	"unresolved\x18\f \x01(\x05R\n" +
 	"unresolved\x12\x1a\n" +
-	"\bcomments\x18\r \x01(\x05R\bcomments\"n\n" +
+	"\bcomments\x18\r \x01(\x05R\bcomments\"\x86\x01\n" +
 	"\x16ListGitHubInboxRequest\x12\x12\n" +
 	"\x04host\x18\x01 \x01(\tR\x04host\x12\x14\n" +
 	"\x05repos\x18\x02 \x03(\tR\x05repos\x12\x14\n" +
 	"\x05quiet\x18\x03 \x01(\bR\x05quiet\x12\x14\n" +
-	"\x05teams\x18\x04 \x01(\bR\x05teams\"\xb7\x02\n" +
+	"\x05teams\x18\x04 \x01(\bR\x05teams\x12\x16\n" +
+	"\x06cached\x18\x05 \x01(\bR\x06cached\"\xb7\x02\n" +
 	"\x17ListGitHubInboxResponse\x12,\n" +
 	"\x06review\x18\x01 \x03(\v2\x14.nushi.v1.GitHubItemR\x06review\x12(\n" +
 	"\x04mine\x18\x02 \x03(\v2\x14.nushi.v1.GitHubItemR\x04mine\x120\n" +
