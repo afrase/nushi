@@ -51,6 +51,7 @@ func (s *Service) FixChecks(ctx context.Context, ref model.GitHubRef) (string, e
 		return "", errors.New("no check of it failed")
 	}
 	var data strings.Builder
+	fmt.Fprintf(&data, "Branch: %s\n\n", p.Head) // a fork's author names it
 	for i, c := range failed {
 		if i == failedChecks {
 			fmt.Fprintf(&data, "(%d more failed checks not shown)\n", len(failed)-failedChecks)
@@ -77,10 +78,10 @@ func (s *Service) FixChecks(ctx context.Context, ref model.GitHubRef) (string, e
 		}
 		data.WriteString("\n")
 	}
-	return fmt.Sprintf("Fix the failing checks of pull request #%d in %s (its branch is %s).\n\n%s\n"+
+	return fmt.Sprintf("Fix the failing checks of pull request #%d in %s.\n\n%s\n"+
 		"Find why each check fails and fix the cause here, in this worktree; run the failing command locally if you can. "+
 		"Keep the change to what the checks need. Don't commit, push, or re-run the checks on GitHub.\n",
-		ref.Number, ref.Repo, p.Head, asData("the failed checks and the ends of their logs", data.String())), nil
+		ref.Number, ref.Repo, asData("the pull request's branch, its failed checks and the ends of their logs", data.String())), nil
 }
 
 // fence is text in a code fence longer than any it holds.
