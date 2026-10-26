@@ -11,16 +11,14 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
 import 'package:nushi/widgets.dart';
 
-/// A subagent beside the chat, in place of the details panel: its prompt
+/// A subagent beside the chat, left of the details panel: its prompt
 /// (folded), its model and state, then its steps as they come, and its
-/// result. Back ([onBack], when the panel was showing) returns to the
-/// panel's cards; × closes the side panel.
+/// result. × closes it.
 class SubagentPane extends StatelessWidget {
   const new({
     required this.chat,
     required this.daemon,
     required this.id,
-    required this.onBack,
     required this.onClose,
     super.key,
   });
@@ -28,7 +26,6 @@ class SubagentPane extends StatelessWidget {
   final ChatState chat;
   final Daemon daemon;
   final String id; // the subagent's call
-  final VoidCallback? onBack;
   final VoidCallback onClose;
 
   @override
@@ -47,20 +44,13 @@ class SubagentPane extends StatelessWidget {
           children: [
             Container(
               height: 34,
-              padding: EdgeInsets.only(left: onBack == null ? 14 : 4, right: 4),
+              padding: const EdgeInsets.only(left: 14, right: 4),
               decoration: BoxDecoration(
                 color: t.raised,
                 border: Border(bottom: BorderSide(color: t.borderSubtle)),
               ),
               child: Row(
                 children: [
-                  if (onBack != null)
-                    IconTap(
-                      Icons.arrow_back,
-                      tooltip: 'Back to the panel',
-                      size: 15,
-                      onTap: onBack,
-                    ),
                   const SizedBox(width: 4),
                   Expanded(
                     child: s == null

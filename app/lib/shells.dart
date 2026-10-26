@@ -65,21 +65,19 @@ Widget shellStateText(BuildContext context, Item it, TextStyle style) =>
           : style,
     );
 
-/// A background command beside the chat, in place of the details panel:
-/// the command, its state, and its output as far as the daemon has read
-/// it. Back and × as in SubagentPane.
+/// A background command beside the chat, left of the details panel: the
+/// command, its state, and its output as far as the daemon has read it.
+/// × closes it.
 class ShellPane extends StatelessWidget {
   const new({
     required this.chat,
     required this.id,
-    required this.onBack,
     required this.onClose,
     super.key,
   });
 
   final ChatState chat;
   final String id; // the tool call that started it
-  final VoidCallback? onBack;
   final VoidCallback onClose;
 
   @override
@@ -98,20 +96,13 @@ class ShellPane extends StatelessWidget {
           children: [
             Container(
               height: 34,
-              padding: EdgeInsets.only(left: onBack == null ? 14 : 4, right: 4),
+              padding: const EdgeInsets.only(left: 14, right: 4),
               decoration: BoxDecoration(
                 color: t.raised,
                 border: Border(bottom: BorderSide(color: t.borderSubtle)),
               ),
               child: Row(
                 children: [
-                  if (onBack != null)
-                    IconTap(
-                      Icons.arrow_back,
-                      tooltip: 'Back to the panel',
-                      size: 15,
-                      onTap: onBack,
-                    ),
                   const SizedBox(width: 4),
                   Icon(Icons.terminal, size: 14, color: t.textSecondary),
                   const SizedBox(width: 6),

@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -21,10 +19,10 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
 import 'package:nushi/widgets.dart';
 
-/// A chat's transcript with the composer under it, and beside them a side
-/// question when one is open, or else [details]. Escape stops a running
-/// turn. What's being written, and the side question, belong to the chat
-/// (its draft and side), so they outlive the view.
+/// A chat's transcript with the composer under it, and beside them its
+/// side question, a subagent's pane and [details], each when open. Escape
+/// stops a running turn. What's being written, and the side question,
+/// belong to the chat (its draft and side), so they outlive the view.
 class ChatView extends StatefulWidget {
   const new({
     required this.chat,
@@ -82,157 +80,124 @@ class _ChatViewState extends State<ChatView> {
   Widget build(BuildContext context) {
     final chat = widget.chat;
     final replies = chat.draft.replies;
-    return LayoutBuilder(
-      builder: (context, box) => Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: DropTarget(
-              onDragEntered: (_) => setState(() => _dragging = true),
-              onDragExited: (_) => setState(() => _dragging = false),
-              onDragDone: _drop,
-              child: Container(
-                foregroundDecoration: _dragging
-                    ? BoxDecoration(
-                        border: Border.all(
-                          color: NushiTheme.of(context).t.focus,
-                          width: 2,
-                        ),
-                      )
-                    : null,
-                child: CallbackShortcuts(
-                  bindings: {
-                    const SingleActivator(LogicalKeyboardKey.escape): () =>
-                        stopTurn(context, chat, widget.daemon),
-                  },
-                  child: ListenableBuilder(
-                    listenable: chat,
-                    builder: (context, _) => Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          child: Transcript(
-                            chat: chat,
-                            daemon: widget.daemon,
-                            onReply: chat.archived
-                                ? null
-                                : (r) => replies.value = [...replies.value, r],
-                            onSide: chat.archived ? null : _ask,
-                          ),
-                        ),
-                        if (chat.busy || _forking)
-                          TurnStatus(
-                            chat,
-                            what: _forking ? 'Starting a side chat' : null,
-                          ),
-                        if (chat.mcpChanged && !chat.archived)
-                          _McpChanged(chat, widget.daemon),
-                        if (chat.archived)
-                          _Archived(chat, widget.daemon)
-                        else
-                          Composer(
-                            chat: chat,
-                            daemon: widget.daemon,
-                            folder: true,
-                          ),
-                      ],
-                    ),
+    final transcript = DropTarget(
+      onDragEntered: (_) => setState(() => _dragging = true),
+      onDragExited: (_) => setState(() => _dragging = false),
+      onDragDone: _drop,
+      child: Container(
+        foregroundDecoration: _dragging
+            ? BoxDecoration(
+                border: Border.all(
+                  color: NushiTheme.of(context).t.focus,
+                  width: 2,
+                ),
+              )
+            : null,
+        child: CallbackShortcuts(
+          bindings: {
+            const SingleActivator(LogicalKeyboardKey.escape): () =>
+                stopTurn(context, chat, widget.daemon),
+          },
+          child: ListenableBuilder(
+            listenable: chat,
+            builder: (context, _) => Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: Transcript(
+                    chat: chat,
+                    daemon: widget.daemon,
+                    onReply: chat.archived
+                        ? null
+                        : (r) => replies.value = [...replies.value, r],
+                    onSide: chat.archived ? null : _ask,
                   ),
                 ),
-              ),
+                if (chat.busy || _forking)
+                  TurnStatus(
+                    chat,
+                    what: _forking ? 'Starting a side chat' : null,
+                  ),
+                if (chat.mcpChanged && !chat.archived)
+                  _McpChanged(chat, widget.daemon),
+                if (chat.archived)
+                  _Archived(chat, widget.daemon)
+                else
+                  Composer(chat: chat, daemon: widget.daemon, folder: true),
+              ],
             ),
           ),
-          ?_beside(box),
-        ],
+        ),
       ),
     );
-  }
-
-  /// Beside the transcript: the side question when one is open, else a
-  /// subagent's pane when one is open, else [ChatView.details].
-  Widget? _beside(BoxConstraints box) {
-    final chat = widget.chat;
-    final side = chat.side;
-    if (side != null && !chat.archived) {
-      return Resizable(
-        name: 'side',
-        initial: 380,
-        min: 300,
-        max: min(640, box.maxWidth - ChatView.minWidth),
-        left: true,
-        child: SidePanel(
-          key: ValueKey(side.id),
-          side: side,
-          daemon: widget.daemon,
-          onClose: () => setState(() => widget.daemon.closeSide(chat)),
-        ),
-      );
-    }
-    final details = widget.details;
     return ListenableBuilder(
       listenable: Listenable.merge([chat.pane, subagentWide]),
-      builder: (context, _) {
-        final id = chat.pane.value;
-        final wide = subagentWide.value;
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Kept behind the pane, so Back finds it as it was.
-            if (details != null)
-              Offstage(
-                offstage: id != null,
-                child: Resizable(
-                  name: 'details',
-                  initial: DetailsPanel.width,
-                  min: 220,
-                  max: min(480, box.maxWidth - ChatView.minWidth),
-                  left: true,
-                  child: details,
-                ),
-              ),
-            if (id != null) _pane(box, id, wide, details != null),
-          ],
-        );
-      },
+      builder: (context, _) => _beside(transcript),
     );
   }
 
-  /// A subagent's or background command's pane; wide, it may squeeze the
-  /// transcript below its usual minimum.
-  Widget _pane(BoxConstraints box, String id, bool wide, bool back) {
+  /// The transcript, and beside it, left to right: the side question, a
+  /// subagent's or background command's pane, and [ChatView.details], each
+  /// when open, at its own remembered width, each closed on its own.
+  Widget _beside(Widget transcript) {
     final chat = widget.chat;
-    final onBack = back ? () => chat.pane.value = null : null;
-    void onClose() {
-      chat.pane.value = null;
-      showDetails.value = false;
-    }
-
-    return Resizable(
-      key: ValueKey(wide),
-      name: wide ? 'subagent' : 'details',
-      initial: wide ? 640 : DetailsPanel.width,
-      min: 220,
-      max: box.maxWidth - (wide ? 360 : ChatView.minWidth),
-      left: true,
-      child: chat.items.any((it) => it.id == id && it.hasShell())
-          // Keyed: another subagent's pane is its own, its unsent text too.
-          ? ShellPane(
-              key: ValueKey(id),
-              chat: chat,
-              id: id,
-              onBack: onBack,
-              onClose: onClose,
-            )
-          : SubagentPane(
-              key: ValueKey(id),
-              chat: chat,
+    final side = chat.archived ? null : chat.side;
+    final id = chat.pane.value;
+    final wide = id != null && subagentWide.value;
+    final details = widget.details;
+    return Beside(
+      main: transcript,
+      least: wide ? 360 : ChatView.minWidth,
+      panes: [
+        if (side != null)
+          SidePane(
+            'side',
+            initial: 380,
+            min: 300,
+            cap: 640,
+            child: SidePanel(
+              key: ValueKey(side.id),
+              side: side,
               daemon: widget.daemon,
-              id: id,
-              onBack: onBack,
-              onClose: onClose,
+              onClose: () => setState(() => widget.daemon.closeSide(chat)),
+            ),
+          ),
+        if (id != null)
+          SidePane(
+            // A wide pane has a width of its own.
+            wide ? 'subagent' : 'pane',
+            initial: wide ? 640 : DetailsPanel.width,
+            min: 220,
+            cap: wide ? double.infinity : 480,
+            child: _pane(id),
+          ),
+      ],
+      details: details == null
+          ? null
+          : SidePane(
+              'details',
+              initial: DetailsPanel.width,
+              min: 220,
+              cap: 480,
+              child: details,
             ),
     );
+  }
+
+  /// A subagent's or background command's pane.
+  Widget _pane(String id) {
+    final chat = widget.chat;
+    void onClose() => chat.pane.value = null;
+    // Keyed: another subagent's pane is its own, its unsent text too.
+    return chat.items.any((it) => it.id == id && it.hasShell())
+        ? ShellPane(key: ValueKey(id), chat: chat, id: id, onClose: onClose)
+        : SubagentPane(
+            key: ValueKey(id),
+            chat: chat,
+            daemon: widget.daemon,
+            id: id,
+            onClose: onClose,
+          );
   }
 }
 

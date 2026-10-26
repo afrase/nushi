@@ -119,3 +119,154 @@ class _ResizableState extends State<Resizable> {
     },
   );
 }
+
+/// A pane beside a view: its remembered width's [name], the width it
+/// starts at, and its least and most.
+class SidePane {
+  new(
+    this.name, {
+    required this.initial,
+    required this.min,
+    required this.cap,
+    required this.child,
+  });
+
+  final String name;
+  final double initial;
+  final double min;
+  final double cap;
+  final Widget child;
+
+  double get width => paneWidth(name, initial).clamp(min, cap);
+}
+
+/// [main] with [panes] beside it, left to right, and [details] at the
+/// right, each resizable. When [main] would get narrower than [least], the
+/// panes lie over it, by the details, rather than beside it: the details
+/// stay, and so does [main]'s width under the panes.
+class Beside extends StatelessWidget {
+  const new({
+    required this.main,
+    required this.least,
+    required this.panes,
+    super.key,
+    this.details,
+  });
+
+  final Widget main;
+  final double least;
+  final List<SidePane> panes;
+  final SidePane? details;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) => ValueListenableBuilder(
+      valueListenable: paneWidths,
+      builder: (context, _, _) {
+        final room = box.maxWidth;
+        final details = this.details;
+        final detailsWidth = details?.width ?? 0;
+        final panesWidth = panes.fold(0.0, (w, p) => w + p.width);
+        final over = room - detailsWidth - panesWidth < least;
+        final t = NushiTheme.of(context).t;
+        Widget resizable(SidePane p, double most) => Resizable(
+          key: ValueKey(p.name),
+          name: p.name,
+          initial: p.initial,
+          min: p.min,
+          max: min(p.cap, most),
+          left: true,
+          child: p.child,
+        );
+        return CustomMultiChildLayout(
+          delegate: _Beside(least),
+          children: [
+            LayoutId(id: _Slot.main, child: main),
+            if (panes.isNotEmpty)
+              LayoutId(
+                id: _Slot.panes,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: t.base,
+                    boxShadow: [
+                      if (over)
+                        BoxShadow(
+                          color: const Color(0xFF000000).withValues(
+                            alpha: t.brightness == Brightness.dark ? 0.4 : 0.12,
+                          ),
+                          blurRadius: 12,
+                        ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Beside, a pane leaves [main] its least width; over
+                      // it, a strip of it.
+                      for (final p in panes)
+                        resizable(
+                          p,
+                          room -
+                              detailsWidth -
+                              (panesWidth - p.width) -
+                              (over ? 48 : least),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            if (details != null)
+              LayoutId(
+                id: _Slot.details,
+                child: resizable(
+                  details,
+                  room - (over ? 0 : panesWidth) - least,
+                ),
+              ),
+          ],
+        );
+      },
+    ),
+  );
+}
+
+enum _Slot { main, panes, details }
+
+/// Lays the details at the right, the panes left of them, and the main
+/// view in what's left; when that would be under [least], it runs under
+/// the panes instead. Measured as laid out, so a pane being resized moves the
+/// rest with it.
+class _Beside extends MultiChildLayoutDelegate {
+  new(this.least);
+
+  final double least;
+
+  @override
+  void performLayout(Size size) {
+    final tall = BoxConstraints(
+      maxWidth: size.width,
+      minHeight: size.height,
+      maxHeight: size.height,
+    );
+    var right = size.width;
+    if (hasChild(_Slot.details)) {
+      right -= layoutChild(_Slot.details, tall).width;
+      positionChild(_Slot.details, Offset(right, 0));
+    }
+    var main = right;
+    if (hasChild(_Slot.panes)) {
+      final panes = layoutChild(_Slot.panes, tall).width;
+      positionChild(_Slot.panes, Offset(right - panes, 0));
+      if (right - panes >= least) main = right - panes;
+    }
+    layoutChild(
+      _Slot.main,
+      BoxConstraints.tightFor(width: max(0, main), height: size.height),
+    );
+    positionChild(_Slot.main, Offset.zero);
+  }
+
+  @override
+  bool shouldRelayout(_Beside old) => old.least != least;
+}
