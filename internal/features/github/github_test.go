@@ -312,7 +312,7 @@ func TestInboxKeepsTheLastKnown(t *testing.T) {
 	if err != nil || len(in.Mine) != 1 {
 		t.Fatalf("%+v %v", in, err)
 	}
-	w.s.inboxes["github.com inbox false a/b"] = inboxCache{at: in.At.Add(-inboxFresh), inbox: in.Inbox}
+	w.s.inboxes["github.com "+inboxKey(githubapi.InboxFilter{Repos: []string{"a/b"}})] = inboxCache{at: in.At.Add(-inboxFresh), inbox: in.Inbox}
 	c.fail = errors.New("GitHub's graphql rate limit is spent")
 	in, err = w.s.Inbox(ctx, "github.com", githubapi.InboxFilter{Repos: []string{"a/b"}}, true)
 	if err != nil || in.Stale == nil || len(in.Mine) != 1 {
@@ -341,8 +341,11 @@ func TestInboxCache(t *testing.T) {
 	if err != nil || in.At.IsZero() || len(c.asked) != 1 {
 		t.Fatalf("%+v %v, asked %v", in, err, c.asked)
 	}
-	if in, _ := w.s.CachedInbox("github.com", githubapi.InboxFilter{Teams: true}); !in.At.IsZero() {
-		t.Error("another filter's inbox")
+	for _, f := range []githubapi.InboxFilter{{Teams: true}, {Days: 90}, {Days: 90, Wide: []string{"mine"}},
+		{Hide: []string{"a/b"}}, {Owners: []string{"a"}}, {Repos: []string{"a/b"}}} {
+		if in, _ := w.s.CachedInbox("github.com", f); !in.At.IsZero() {
+			t.Errorf("another filter's inbox: %+v", f)
+		}
 	}
 	if _, err := w.s.CachedInbox("evil.example", githubapi.InboxFilter{}); err == nil {
 		t.Error("a host never known")

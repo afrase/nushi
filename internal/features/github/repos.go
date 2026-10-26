@@ -7,6 +7,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/afrase/nushi/internal/githubapi"
 )
 
 // Repo is a GitHub repository some folders Nushi knows are clones of.
@@ -85,7 +87,8 @@ func (s *Service) remotesOf(ctx context.Context, folder string) [][2]string {
 		}
 		slices.Sort(names)
 		for _, name := range names {
-			if h, r, ok := ParseRemote(remotes[name]); ok && !slices.Contains(repos, [2]string{h, r}) {
+			h, r, ok := ParseRemote(remotes[name])
+			if _, _, err := githubapi.SplitRepo(r); ok && err == nil && !slices.Contains(repos, [2]string{h, r}) { // a name GitHub could have
 				repos = append(repos, [2]string{h, r})
 			}
 		}

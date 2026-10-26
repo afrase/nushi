@@ -14242,7 +14242,17 @@ type ListGitHubInboxRequest struct {
 	Teams bool `protobuf:"varint,4,opt,name=teams,proto3" json:"teams,omitempty"`
 	// The inbox as GitHub gave it last, kept by the daemon, without asking
 	// GitHub: shown at once while it's asked for (at_ms 0 when none).
-	Cached        bool `protobuf:"varint,5,opt,name=cached,proto3" json:"cached,omitempty"`
+	Cached bool `protobuf:"varint,5,opt,name=cached,proto3" json:"cached,omitempty"`
+	// Only what changed in the last this many days (0: any time), in the
+	// search itself; except the sections named in wide ("review", "mine",
+	// "assigned").
+	UpdatedDays int32    `protobuf:"varint,6,opt,name=updated_days,json=updatedDays,proto3" json:"updated_days,omitempty"`
+	Wide        []string `protobuf:"bytes,7,rep,name=wide,proto3" json:"wide,omitempty"`
+	// Never these repositories (owner/name) or owners' (a user or an
+	// organization), in the search itself.
+	Hide []string `protobuf:"bytes,8,rep,name=hide,proto3" json:"hide,omitempty"`
+	// Only these owners' repositories (10 at most); none for all.
+	Owners        []string `protobuf:"bytes,9,rep,name=owners,proto3" json:"owners,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -14312,6 +14322,34 @@ func (x *ListGitHubInboxRequest) GetCached() bool {
 	return false
 }
 
+func (x *ListGitHubInboxRequest) GetUpdatedDays() int32 {
+	if x != nil {
+		return x.UpdatedDays
+	}
+	return 0
+}
+
+func (x *ListGitHubInboxRequest) GetWide() []string {
+	if x != nil {
+		return x.Wide
+	}
+	return nil
+}
+
+func (x *ListGitHubInboxRequest) GetHide() []string {
+	if x != nil {
+		return x.Hide
+	}
+	return nil
+}
+
+func (x *ListGitHubInboxRequest) GetOwners() []string {
+	if x != nil {
+		return x.Owners
+	}
+	return nil
+}
+
 type ListGitHubInboxResponse struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	Review   []*GitHubItem          `protobuf:"bytes,1,rep,name=review,proto3" json:"review,omitempty"`
@@ -14322,8 +14360,13 @@ type ListGitHubInboxResponse struct {
 	MineTotal     int32 `protobuf:"varint,5,opt,name=mine_total,json=mineTotal,proto3" json:"mine_total,omitempty"`
 	AssignedTotal int32 `protobuf:"varint,6,opt,name=assigned_total,json=assignedTotal,proto3" json:"assigned_total,omitempty"`
 	// When GitHub said so; with stale, why it couldn't say again.
-	AtMs          int64  `protobuf:"varint,7,opt,name=at_ms,json=atMs,proto3" json:"at_ms,omitempty"`
-	Stale         string `protobuf:"bytes,8,opt,name=stale,proto3" json:"stale,omitempty"`
+	AtMs  int64  `protobuf:"varint,7,opt,name=at_ms,json=atMs,proto3" json:"at_ms,omitempty"`
+	Stale string `protobuf:"bytes,8,opt,name=stale,proto3" json:"stale,omitempty"`
+	// How many more each search finds without updated_days (0 without it,
+	// or for a wide section).
+	ReviewOlder   int32 `protobuf:"varint,9,opt,name=review_older,json=reviewOlder,proto3" json:"review_older,omitempty"`
+	MineOlder     int32 `protobuf:"varint,10,opt,name=mine_older,json=mineOlder,proto3" json:"mine_older,omitempty"`
+	AssignedOlder int32 `protobuf:"varint,11,opt,name=assigned_older,json=assignedOlder,proto3" json:"assigned_older,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -14412,6 +14455,27 @@ func (x *ListGitHubInboxResponse) GetStale() string {
 		return x.Stale
 	}
 	return ""
+}
+
+func (x *ListGitHubInboxResponse) GetReviewOlder() int32 {
+	if x != nil {
+		return x.ReviewOlder
+	}
+	return 0
+}
+
+func (x *ListGitHubInboxResponse) GetMineOlder() int32 {
+	if x != nil {
+		return x.MineOlder
+	}
+	return 0
+}
+
+func (x *ListGitHubInboxResponse) GetAssignedOlder() int32 {
+	if x != nil {
+		return x.AssignedOlder
+	}
+	return 0
 }
 
 // A pull request or an issue a chat is on: its host and node id, and its
@@ -17418,13 +17482,17 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\n" +
 	"unresolved\x18\f \x01(\x05R\n" +
 	"unresolved\x12\x1a\n" +
-	"\bcomments\x18\r \x01(\x05R\bcomments\"\x86\x01\n" +
+	"\bcomments\x18\r \x01(\x05R\bcomments\"\xe9\x01\n" +
 	"\x16ListGitHubInboxRequest\x12\x12\n" +
 	"\x04host\x18\x01 \x01(\tR\x04host\x12\x14\n" +
 	"\x05repos\x18\x02 \x03(\tR\x05repos\x12\x14\n" +
 	"\x05quiet\x18\x03 \x01(\bR\x05quiet\x12\x14\n" +
 	"\x05teams\x18\x04 \x01(\bR\x05teams\x12\x16\n" +
-	"\x06cached\x18\x05 \x01(\bR\x06cached\"\xb7\x02\n" +
+	"\x06cached\x18\x05 \x01(\bR\x06cached\x12!\n" +
+	"\fupdated_days\x18\x06 \x01(\x05R\vupdatedDays\x12\x12\n" +
+	"\x04wide\x18\a \x03(\tR\x04wide\x12\x12\n" +
+	"\x04hide\x18\b \x03(\tR\x04hide\x12\x16\n" +
+	"\x06owners\x18\t \x03(\tR\x06owners\"\xa0\x03\n" +
 	"\x17ListGitHubInboxResponse\x12,\n" +
 	"\x06review\x18\x01 \x03(\v2\x14.nushi.v1.GitHubItemR\x06review\x12(\n" +
 	"\x04mine\x18\x02 \x03(\v2\x14.nushi.v1.GitHubItemR\x04mine\x120\n" +
@@ -17434,7 +17502,12 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"mine_total\x18\x05 \x01(\x05R\tmineTotal\x12%\n" +
 	"\x0eassigned_total\x18\x06 \x01(\x05R\rassignedTotal\x12\x13\n" +
 	"\x05at_ms\x18\a \x01(\x03R\x04atMs\x12\x14\n" +
-	"\x05stale\x18\b \x01(\tR\x05stale\"p\n" +
+	"\x05stale\x18\b \x01(\tR\x05stale\x12!\n" +
+	"\freview_older\x18\t \x01(\x05R\vreviewOlder\x12\x1d\n" +
+	"\n" +
+	"mine_older\x18\n" +
+	" \x01(\x05R\tmineOlder\x12%\n" +
+	"\x0eassigned_older\x18\v \x01(\x05R\rassignedOlder\"p\n" +
 	"\n" +
 	"GitHubLink\x12\x12\n" +
 	"\x04host\x18\x01 \x01(\tR\x04host\x12\x0e\n" +

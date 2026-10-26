@@ -119,68 +119,216 @@ type Inbox struct {
 	Review, Mine, Assigned []model.GitHubItem
 	// Totals are how many each search found (more than 50 aren't listed).
 	ReviewTotal, MineTotal, AssignedTotal int
+	// Older are how many more each search finds without InboxFilter.Days
+	// (0 when it has none, or the section is Wide).
+	ReviewOlder, MineOlder, AssignedOlder int
 }
 
 // InboxFilter is which inbox: only Repos' (owner/name; none for all),
 // and whether Review requested has pull requests asked of a team of mine
-// too (else only those asking me by name).
+// too (else only those asking me by name); only what changed in the last
+// Days (0 for any time), except the sections named in Wide ("review",
+// "mine", "assigned"); never Hide's repositories (owner/name) or owners
+// (a user's or an organization's name); only Owners' when any are named.
 type InboxFilter struct {
-	Repos []string
-	Teams bool
+	Repos  []string
+	Teams  bool
+	Days   int
+	Hide   []string
+	Owners []string
+	Wide   []string
 }
 
-const inboxQuery = `query Inbox($review: String!, $mine: String!, $assigned: String!) {
+// Sections are the inbox's sections, as InboxFilter.Wide names them.
+var Sections = []string{"review", "mine", "assigned"}
+
+// ownerRE is a user's or an organization's name, as GitHub allows them.
+var ownerRE = regexp.MustCompile(`^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$`)
+
+// Check refuses a filter whose names could be anything else in a search:
+// every repository must be owner/name and every owner a name, in
+// GitHub's characters, so none can add a qualifier of its own.
+func (f InboxFilter) Check() error {
+	for _, r := range f.Repos {
+		if _, _, err := SplitRepo(r); err != nil {
+			return err
+		}
+	}
+	for _, h := range f.Hide {
+		if _, _, err := SplitRepo(h); err != nil && !ownerRE.MatchString(h) {
+			return fmt.Errorf("%q isn't a repository or an owner", h)
+		}
+	}
+	for _, o := range f.Owners {
+		if !ownerRE.MatchString(o) {
+			return fmt.Errorf("%q isn't a user's or an organization's name", o)
+		}
+	}
+	if len(f.Owners) > maxOwners {
+		return fmt.Errorf("at most %d owners", maxOwners)
+	}
+	for _, w := range f.Wide {
+		if !slices.Contains(Sections, w) {
+			return fmt.Errorf("%q isn't a section of the inbox", w)
+		}
+	}
+	if f.Days < 0 {
+		return errors.New("a negative number of days")
+	}
+	return nil
+}
+
+// shows is whether the filter lets a repository's item in: the daemon's
+// own check for what the search couldn't say (past repoQualifiers or
+// hideQualifiers).
+func (f InboxFilter) shows(repo string) bool {
+	owner, _, _ := strings.Cut(repo, "/")
+	return (len(f.Repos) == 0 || slices.Contains(f.Repos, repo)) &&
+		!slices.Contains(f.Hide, repo) && !slices.Contains(f.Hide, owner) &&
+		(len(f.Owners) == 0 || slices.Contains(f.Owners, owner))
+}
+
+// narrowed is the filter without the repositories and owners it both
+// names and hides (GitHub drops repo:a/b given -repo:a/b too, and finds
+// everyone's), and whether anything is left to search.
+func (f InboxFilter) narrowed() (InboxFilter, bool) {
+	keep := func(names []string) []string {
+		var out []string
+		for _, n := range names {
+			owner, _, _ := strings.Cut(n, "/")
+			if !slices.Contains(f.Hide, n) && !slices.Contains(f.Hide, owner) {
+				out = append(out, n)
+			}
+		}
+		return out
+	}
+	n := f
+	n.Repos, n.Owners = keep(f.Repos), keep(f.Owners)
+	n.Hide = slices.DeleteFunc(slices.Clone(f.Hide), func(h string) bool {
+		return slices.Contains(f.Repos, h) || slices.Contains(f.Owners, h)
+	})
+	return n, (len(f.Repos) == 0 || len(n.Repos) > 0) && (len(f.Owners) == 0 || len(n.Owners) > 0)
+}
+
+const inboxSearch = `
   review: search(type: ISSUE, query: $review, first: 50) { issueCount nodes { __typename ...PullRow } }
   mine: search(type: ISSUE, query: $mine, first: 50) { issueCount nodes { __typename ...PullRow } }
-  assigned: search(type: ISSUE, query: $assigned, first: 50) { issueCount nodes { __typename ...IssueRow } }
+  assigned: search(type: ISSUE, query: $assigned, first: 50) { issueCount nodes { __typename ...IssueRow } }`
+
+const inboxQuery = `query Inbox($review: String!, $mine: String!, $assigned: String!) {` + inboxSearch + `
+}` + pullRow + issueRow
+
+// inboxDatedQuery also counts each search without its date: three
+// searches of no rows, which cost nothing more (the query's cost stays 1
+// to 2 points).
+const inboxDatedQuery = `query Inbox($review: String!, $mine: String!, $assigned: String!, $reviewAll: String!, $mineAll: String!, $assignedAll: String!) {` + inboxSearch + `
+  reviewAll: search(type: ISSUE, query: $reviewAll, first: 0) { issueCount }
+  mineAll: search(type: ISSUE, query: $mineAll, first: 0) { issueCount }
+  assignedAll: search(type: ISSUE, query: $assignedAll, first: 0) { issueCount }
 }` + pullRow + issueRow
 
 // repoQualifiers is how many repositories a search names (repo:o/n
 // each, any of them); past it, Inbox searches everywhere and keeps
-// theirs, so the query stays under GitHub's 256 characters.
-const repoQualifiers = 6
+// theirs. hideQualifiers is how many it leaves out (-repo:, -user:);
+// past it, the daemon leaves the rest out (they then take places of the
+// 50). Qualifiers don't count toward GitHub's 256 characters: 120 were
+// tried. maxOwners is how many owners it may be limited to (user:, any
+// of them).
+const (
+	repoQualifiers = 6
+	hideQualifiers = 50
+	maxOwners      = 10
+)
 
-// inboxSearches are the inbox's three searches: review-requested:@me is
-// me or a team of mine, user-review-requested:@me me by name.
-func inboxSearches(f InboxFilter) map[string]any {
-	open := "is:open archived:false sort:updated-desc"
+// inboxSearches are the inbox's three searches (and, with Days, each
+// without its date: "reviewAll"…), today being the day Days counts back
+// from: review-requested:@me is me or a team of mine,
+// user-review-requested:@me me by name. Every name in them was checked
+// (InboxFilter.Check).
+func inboxSearches(f InboxFilter, today time.Time) map[string]any {
+	q := []string{"is:open", "archived:false", "sort:updated-desc"}
 	if len(f.Repos) <= repoQualifiers {
 		for _, r := range f.Repos {
-			open = open + " repo:" + r
+			q = append(q, "repo:"+r)
 		}
 	}
+	for _, o := range f.Owners {
+		q = append(q, "user:"+o)
+	}
+	for i, h := range f.Hide {
+		if i == hideQualifiers {
+			break
+		}
+		if strings.Contains(h, "/") {
+			q = append(q, "-repo:"+h)
+		} else {
+			q = append(q, "-user:"+h)
+		}
+	}
+	open := strings.Join(q, " ")
 	review := "user-review-requested:@me"
 	if f.Teams {
 		review = "review-requested:@me"
 	}
-	return map[string]any{
+	all := map[string]string{
 		"review":   "is:pr " + open + " " + review,
 		"mine":     "is:pr " + open + " author:@me",
 		"assigned": "is:issue " + open + " assignee:@me",
 	}
+	out := map[string]any{}
+	for name, s := range all {
+		out[name] = s
+		if f.Days > 0 {
+			out[name+"All"] = s
+			if !slices.Contains(f.Wide, name) {
+				since := today.UTC().AddDate(0, 0, -f.Days).Format(time.DateOnly)
+				out[name] = s + " updated:>=" + since
+			}
+		}
+	}
+	return out
 }
 
 // Inbox runs the three searches as one query (about two points).
 func (c *Client) Inbox(ctx context.Context, f InboxFilter) (Inbox, error) {
+	if err := f.Check(); err != nil {
+		return Inbox{}, err
+	}
 	type search struct {
 		IssueCount int   `json:"issueCount"`
 		Nodes      []row `json:"nodes"`
 	}
-	var data struct{ Review, Mine, Assigned search }
-	if _, err := c.graphql(ctx, inboxQuery, inboxSearches(f), &data); err != nil {
+	var data struct{ Review, Mine, Assigned, ReviewAll, MineAll, AssignedAll search }
+	f, left := f.narrowed()
+	if !left {
+		return Inbox{}, nil // every repository or owner asked for is hidden
+	}
+	query := inboxQuery
+	if f.Days > 0 {
+		query = inboxDatedQuery
+	}
+	if _, err := c.graphql(ctx, query, inboxSearches(f, time.Now()), &data); err != nil {
 		return Inbox{}, err
 	}
 	items := func(s search) []model.GitHubItem {
 		var out []model.GitHubItem
 		for _, r := range s.Nodes {
-			if r.ID != "" && (len(f.Repos) == 0 || slices.Contains(f.Repos, r.Repository.NameWithOwner)) { // not a node of another type
+			if r.ID != "" && f.shows(r.Repository.NameWithOwner) { // not a node of another type
 				out = append(out, r.item(c.Host))
 			}
 		}
 		return out
 	}
+	older := func(dated, all search) int {
+		if f.Days == 0 {
+			return 0
+		}
+		return max(0, all.IssueCount-dated.IssueCount)
+	}
 	return Inbox{Review: items(data.Review), Mine: items(data.Mine), Assigned: items(data.Assigned),
-		ReviewTotal: data.Review.IssueCount, MineTotal: data.Mine.IssueCount, AssignedTotal: data.Assigned.IssueCount}, nil
+		ReviewTotal: data.Review.IssueCount, MineTotal: data.Mine.IssueCount, AssignedTotal: data.Assigned.IssueCount,
+		ReviewOlder: older(data.Review, data.ReviewAll), MineOlder: older(data.Mine, data.MineAll),
+		AssignedOlder: older(data.Assigned, data.AssignedAll)}, nil
 }
 
 const statusQuery = `query Status($ids: [ID!]!) {

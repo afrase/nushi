@@ -4349,6 +4349,10 @@ const ListGitHubInboxRequest$json = {
     {'1': 'quiet', '3': 3, '4': 1, '5': 8, '10': 'quiet'},
     {'1': 'teams', '3': 4, '4': 1, '5': 8, '10': 'teams'},
     {'1': 'cached', '3': 5, '4': 1, '5': 8, '10': 'cached'},
+    {'1': 'updated_days', '3': 6, '4': 1, '5': 5, '10': 'updatedDays'},
+    {'1': 'wide', '3': 7, '4': 3, '5': 9, '10': 'wide'},
+    {'1': 'hide', '3': 8, '4': 3, '5': 9, '10': 'hide'},
+    {'1': 'owners', '3': 9, '4': 3, '5': 9, '10': 'owners'},
   ],
 };
 
@@ -4356,7 +4360,9 @@ const ListGitHubInboxRequest$json = {
 final $typed_data.Uint8List listGitHubInboxRequestDescriptor = $convert.base64Decode(
     'ChZMaXN0R2l0SHViSW5ib3hSZXF1ZXN0EhIKBGhvc3QYASABKAlSBGhvc3QSFAoFcmVwb3MYAi'
     'ADKAlSBXJlcG9zEhQKBXF1aWV0GAMgASgIUgVxdWlldBIUCgV0ZWFtcxgEIAEoCFIFdGVhbXMS'
-    'FgoGY2FjaGVkGAUgASgIUgZjYWNoZWQ=');
+    'FgoGY2FjaGVkGAUgASgIUgZjYWNoZWQSIQoMdXBkYXRlZF9kYXlzGAYgASgFUgt1cGRhdGVkRG'
+    'F5cxISCgR3aWRlGAcgAygJUgR3aWRlEhIKBGhpZGUYCCADKAlSBGhpZGUSFgoGb3duZXJzGAkg'
+    'AygJUgZvd25lcnM=');
 
 @$core.Deprecated('Use listGitHubInboxResponseDescriptor instead')
 const ListGitHubInboxResponse$json = {
@@ -4391,6 +4397,9 @@ const ListGitHubInboxResponse$json = {
     {'1': 'assigned_total', '3': 6, '4': 1, '5': 5, '10': 'assignedTotal'},
     {'1': 'at_ms', '3': 7, '4': 1, '5': 3, '10': 'atMs'},
     {'1': 'stale', '3': 8, '4': 1, '5': 9, '10': 'stale'},
+    {'1': 'review_older', '3': 9, '4': 1, '5': 5, '10': 'reviewOlder'},
+    {'1': 'mine_older', '3': 10, '4': 1, '5': 5, '10': 'mineOlder'},
+    {'1': 'assigned_older', '3': 11, '4': 1, '5': 5, '10': 'assignedOlder'},
   ],
 };
 
@@ -4401,7 +4410,9 @@ final $typed_data.Uint8List listGitHubInboxResponseDescriptor = $convert.base64D
     'bmUSMAoIYXNzaWduZWQYAyADKAsyFC5udXNoaS52MS5HaXRIdWJJdGVtUghhc3NpZ25lZBIhCg'
     'xyZXZpZXdfdG90YWwYBCABKAVSC3Jldmlld1RvdGFsEh0KCm1pbmVfdG90YWwYBSABKAVSCW1p'
     'bmVUb3RhbBIlCg5hc3NpZ25lZF90b3RhbBgGIAEoBVINYXNzaWduZWRUb3RhbBITCgVhdF9tcx'
-    'gHIAEoA1IEYXRNcxIUCgVzdGFsZRgIIAEoCVIFc3RhbGU=');
+    'gHIAEoA1IEYXRNcxIUCgVzdGFsZRgIIAEoCVIFc3RhbGUSIQoMcmV2aWV3X29sZGVyGAkgASgF'
+    'UgtyZXZpZXdPbGRlchIdCgptaW5lX29sZGVyGAogASgFUgltaW5lT2xkZXISJQoOYXNzaWduZW'
+    'Rfb2xkZXIYCyABKAVSDWFzc2lnbmVkT2xkZXI=');
 
 @$core.Deprecated('Use gitHubLinkDescriptor instead')
 const GitHubLink$json = {

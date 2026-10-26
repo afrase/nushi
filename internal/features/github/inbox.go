@@ -80,8 +80,11 @@ func (s *Service) Inbox(ctx context.Context, name string, f githubapi.InboxFilte
 // in the data folder (0600), never logged.
 const cacheArea = "github"
 
+// The key names every part of the filter, so one filter's inbox never
+// shows as another's.
 func inboxKey(f githubapi.InboxFilter) string {
-	return fmt.Sprint("inbox ", f.Teams, " ", strings.Join(f.Repos, " "))
+	return fmt.Sprint("inbox ", f.Teams, " ", strings.Join(f.Repos, " "), " days ", f.Days, " wide ", strings.Join(f.Wide, " "),
+		" hide ", strings.Join(f.Hide, " "), " owners ", strings.Join(f.Owners, " "))
 }
 
 func (s *Service) keep(name, key string, v any) {

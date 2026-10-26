@@ -18396,6 +18396,10 @@ class ListGitHubInboxRequest extends $pb.GeneratedMessage {
     $core.bool? quiet,
     $core.bool? teams,
     $core.bool? cached,
+    $core.int? updatedDays,
+    $core.Iterable<$core.String>? wide,
+    $core.Iterable<$core.String>? hide,
+    $core.Iterable<$core.String>? owners,
   }) {
     final result = ListGitHubInboxRequest._();
     if (host != null) result.host = host;
@@ -18403,6 +18407,10 @@ class ListGitHubInboxRequest extends $pb.GeneratedMessage {
     if (quiet != null) result.quiet = quiet;
     if (teams != null) result.teams = teams;
     if (cached != null) result.cached = cached;
+    if (updatedDays != null) result.updatedDays = updatedDays;
+    if (wide != null) result.wide.addAll(wide);
+    if (hide != null) result.hide.addAll(hide);
+    if (owners != null) result.owners.addAll(owners);
     return result;
   }
 
@@ -18424,6 +18432,10 @@ class ListGitHubInboxRequest extends $pb.GeneratedMessage {
     ..aOB(3, _omitFieldNames ? '' : 'quiet')
     ..aOB(4, _omitFieldNames ? '' : 'teams')
     ..aOB(5, _omitFieldNames ? '' : 'cached')
+    ..aI(6, _omitFieldNames ? '' : 'updatedDays')
+    ..pPS(7, _omitFieldNames ? '' : 'wide')
+    ..pPS(8, _omitFieldNames ? '' : 'hide')
+    ..pPS(9, _omitFieldNames ? '' : 'owners')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -18495,6 +18507,30 @@ class ListGitHubInboxRequest extends $pb.GeneratedMessage {
   $core.bool hasCached() => $_has(4);
   @$pb.TagNumber(5)
   void clearCached() => $_clearField(5);
+
+  /// Only what changed in the last this many days (0: any time), in the
+  /// search itself; except the sections named in wide ("review", "mine",
+  /// "assigned").
+  @$pb.TagNumber(6)
+  $core.int get updatedDays => $_getIZ(5);
+  @$pb.TagNumber(6)
+  set updatedDays($core.int value) => $_setSignedInt32(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasUpdatedDays() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearUpdatedDays() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $pb.PbList<$core.String> get wide => $_getList(6);
+
+  /// Never these repositories (owner/name) or owners' (a user or an
+  /// organization), in the search itself.
+  @$pb.TagNumber(8)
+  $pb.PbList<$core.String> get hide => $_getList(7);
+
+  /// Only these owners' repositories (10 at most); none for all.
+  @$pb.TagNumber(9)
+  $pb.PbList<$core.String> get owners => $_getList(8);
 }
 
 class ListGitHubInboxResponse extends $pb.GeneratedMessage {
@@ -18507,6 +18543,9 @@ class ListGitHubInboxResponse extends $pb.GeneratedMessage {
     $core.int? assignedTotal,
     $fixnum.Int64? atMs,
     $core.String? stale,
+    $core.int? reviewOlder,
+    $core.int? mineOlder,
+    $core.int? assignedOlder,
   }) {
     final result = ListGitHubInboxResponse._();
     if (review != null) result.review.addAll(review);
@@ -18517,6 +18556,9 @@ class ListGitHubInboxResponse extends $pb.GeneratedMessage {
     if (assignedTotal != null) result.assignedTotal = assignedTotal;
     if (atMs != null) result.atMs = atMs;
     if (stale != null) result.stale = stale;
+    if (reviewOlder != null) result.reviewOlder = reviewOlder;
+    if (mineOlder != null) result.mineOlder = mineOlder;
+    if (assignedOlder != null) result.assignedOlder = assignedOlder;
     return result;
   }
 
@@ -18544,6 +18586,9 @@ class ListGitHubInboxResponse extends $pb.GeneratedMessage {
     ..aI(6, _omitFieldNames ? '' : 'assignedTotal')
     ..aInt64(7, _omitFieldNames ? '' : 'atMs')
     ..aOS(8, _omitFieldNames ? '' : 'stale')
+    ..aI(9, _omitFieldNames ? '' : 'reviewOlder')
+    ..aI(10, _omitFieldNames ? '' : 'mineOlder')
+    ..aI(11, _omitFieldNames ? '' : 'assignedOlder')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -18625,6 +18670,35 @@ class ListGitHubInboxResponse extends $pb.GeneratedMessage {
   $core.bool hasStale() => $_has(7);
   @$pb.TagNumber(8)
   void clearStale() => $_clearField(8);
+
+  /// How many more each search finds without updated_days (0 without it,
+  /// or for a wide section).
+  @$pb.TagNumber(9)
+  $core.int get reviewOlder => $_getIZ(8);
+  @$pb.TagNumber(9)
+  set reviewOlder($core.int value) => $_setSignedInt32(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasReviewOlder() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearReviewOlder() => $_clearField(9);
+
+  @$pb.TagNumber(10)
+  $core.int get mineOlder => $_getIZ(9);
+  @$pb.TagNumber(10)
+  set mineOlder($core.int value) => $_setSignedInt32(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasMineOlder() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearMineOlder() => $_clearField(10);
+
+  @$pb.TagNumber(11)
+  $core.int get assignedOlder => $_getIZ(10);
+  @$pb.TagNumber(11)
+  set assignedOlder($core.int value) => $_setSignedInt32(10, value);
+  @$pb.TagNumber(11)
+  $core.bool hasAssignedOlder() => $_has(10);
+  @$pb.TagNumber(11)
+  void clearAssignedOlder() => $_clearField(11);
 }
 
 /// A pull request or an issue a chat is on: its host and node id, and its

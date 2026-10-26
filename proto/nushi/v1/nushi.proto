@@ -2051,6 +2051,16 @@ message ListGitHubInboxRequest {
   // The inbox as GitHub gave it last, kept by the daemon, without asking
   // GitHub: shown at once while it's asked for (at_ms 0 when none).
   bool cached = 5;
+  // Only what changed in the last this many days (0: any time), in the
+  // search itself; except the sections named in wide ("review", "mine",
+  // "assigned").
+  int32 updated_days = 6;
+  repeated string wide = 7;
+  // Never these repositories (owner/name) or owners' (a user or an
+  // organization), in the search itself.
+  repeated string hide = 8;
+  // Only these owners' repositories (10 at most); none for all.
+  repeated string owners = 9;
 }
 
 message ListGitHubInboxResponse {
@@ -2064,6 +2074,11 @@ message ListGitHubInboxResponse {
   // When GitHub said so; with stale, why it couldn't say again.
   int64 at_ms = 7;
   string stale = 8;
+  // How many more each search finds without updated_days (0 without it,
+  // or for a wide section).
+  int32 review_older = 9;
+  int32 mine_older = 10;
+  int32 assigned_older = 11;
 }
 
 // A pull request or an issue a chat is on: its host and node id, and its
