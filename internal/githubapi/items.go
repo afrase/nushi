@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/afrase/nushi/internal/mdwrite"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -83,7 +84,7 @@ func (l *login) name() string {
 func (r row) item(host string) model.GitHubItem {
 	it := model.GitHubItem{
 		Host: host, Repo: r.Repository.NameWithOwner, Number: r.Number,
-		ID: r.ID, Pull: r.Typename != "Issue", Title: r.Title, URL: r.URL, State: strings.ToLower(r.State),
+		ID: r.ID, Pull: r.Typename != "Issue", Title: r.Title, URL: webURL(r.URL), State: strings.ToLower(r.State),
 		Draft: r.IsDraft, Author: r.Author.name(), Updated: r.UpdatedAt, Review: strings.ToLower(r.ReviewDecision),
 		Comments: r.TotalCommentsCount + r.CommentCount.TotalCount,
 	}
@@ -201,4 +202,15 @@ func splitRepo(repo string) (owner, name string, err error) {
 	}
 	owner, name, _ = strings.Cut(repo, "/")
 	return owner, name, nil
+}
+
+// webURL is an address from GitHub's answer kept only if it's http or
+// https: a check's or a status's is whatever the app or token that posted
+// it said (any scheme), and none is trusted to open on the Mac. Others
+// are blanked before they leave the daemon.
+func webURL(u string) string {
+	if !mdwrite.SafeImage(u) { // http and https, no mailto
+		return ""
+	}
+	return u
 }

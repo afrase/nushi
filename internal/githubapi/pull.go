@@ -61,7 +61,7 @@ type said struct {
 
 func (s said) comment() model.GitHubComment {
 	return model.GitHubComment{ID: s.ID, Author: s.Author.name(), Association: s.AuthorAssociation, Body: Markdown(s.Body),
-		URL: s.URL, Bot: s.Author != nil && s.Author.Typename == "Bot", Created: cmp.Or(s.SubmittedAt, s.CreatedAt),
+		URL: webURL(s.URL), Bot: s.Author != nil && s.Author.Typename == "Bot", Created: cmp.Or(s.SubmittedAt, s.CreatedAt),
 		Review: strings.ToLower(s.State)}
 }
 
@@ -154,9 +154,9 @@ func (n checkNode) check() model.GitHubCheck {
 		if state == "expected" {
 			state = "pending"
 		}
-		return model.GitHubCheck{Name: n.Context, State: state, URL: n.TargetURL, Summary: n.Description, Required: n.IsRequired, Started: n.CreatedAt}
+		return model.GitHubCheck{Name: n.Context, State: state, URL: webURL(n.TargetURL), Summary: n.Description, Required: n.IsRequired, Started: n.CreatedAt}
 	}
-	c := model.GitHubCheck{ID: n.DatabaseID, Name: n.Name, State: "pending", URL: n.DetailsURL, Title: n.Title, Summary: Markdown(n.Summary),
+	c := model.GitHubCheck{ID: n.DatabaseID, Name: n.Name, State: "pending", URL: webURL(n.DetailsURL), Title: n.Title, Summary: Markdown(n.Summary),
 		Required: n.IsRequired, Started: n.StartedAt, Completed: n.CompletedAt}
 	if n.Status == "COMPLETED" {
 		c.State = strings.ToLower(n.Conclusion)
