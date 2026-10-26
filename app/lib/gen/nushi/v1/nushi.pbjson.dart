@@ -403,11 +403,29 @@ final $typed_data.Uint8List chatCommandsDescriptor = $convert.base64Decode(
 @$core.Deprecated('Use listAgentsRequestDescriptor instead')
 const ListAgentsRequest$json = {
   '1': 'ListAgentsRequest',
+  '2': [
+    {
+      '1': 'refresh_environment',
+      '3': 1,
+      '4': 1,
+      '5': 8,
+      '10': 'refreshEnvironment'
+    },
+    {
+      '1': 'reload_environment',
+      '3': 2,
+      '4': 1,
+      '5': 8,
+      '10': 'reloadEnvironment'
+    },
+  ],
 };
 
 /// Descriptor for `ListAgentsRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List listAgentsRequestDescriptor =
-    $convert.base64Decode('ChFMaXN0QWdlbnRzUmVxdWVzdA==');
+final $typed_data.Uint8List listAgentsRequestDescriptor = $convert.base64Decode(
+    'ChFMaXN0QWdlbnRzUmVxdWVzdBIvChNyZWZyZXNoX2Vudmlyb25tZW50GAEgASgIUhJyZWZyZX'
+    'NoRW52aXJvbm1lbnQSLQoScmVsb2FkX2Vudmlyb25tZW50GAIgASgIUhFyZWxvYWRFbnZpcm9u'
+    'bWVudA==');
 
 @$core.Deprecated('Use listAgentsResponseDescriptor instead')
 const ListAgentsResponse$json = {
@@ -421,13 +439,37 @@ const ListAgentsResponse$json = {
       '6': '.nushi.v1.Agent',
       '10': 'agents'
     },
+    {
+      '1': 'environment',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.ShellEnvironment',
+      '10': 'environment'
+    },
   ],
 };
 
 /// Descriptor for `ListAgentsResponse`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List listAgentsResponseDescriptor = $convert.base64Decode(
     'ChJMaXN0QWdlbnRzUmVzcG9uc2USJwoGYWdlbnRzGAEgAygLMg8ubnVzaGkudjEuQWdlbnRSBm'
-    'FnZW50cw==');
+    'FnZW50cxI8CgtlbnZpcm9ubWVudBgCIAEoCzIaLm51c2hpLnYxLlNoZWxsRW52aXJvbm1lbnRS'
+    'C2Vudmlyb25tZW50');
+
+@$core.Deprecated('Use shellEnvironmentDescriptor instead')
+const ShellEnvironment$json = {
+  '1': 'ShellEnvironment',
+  '2': [
+    {'1': 'shell', '3': 1, '4': 1, '5': 9, '10': 'shell'},
+    {'1': 'read_unix_ms', '3': 2, '4': 1, '5': 3, '10': 'readUnixMs'},
+    {'1': 'problem', '3': 3, '4': 1, '5': 9, '10': 'problem'},
+  ],
+};
+
+/// Descriptor for `ShellEnvironment`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List shellEnvironmentDescriptor = $convert.base64Decode(
+    'ChBTaGVsbEVudmlyb25tZW50EhQKBXNoZWxsGAEgASgJUgVzaGVsbBIgCgxyZWFkX3VuaXhfbX'
+    'MYAiABKANSCnJlYWRVbml4TXMSGAoHcHJvYmxlbRgDIAEoCVIHcHJvYmxlbQ==');
 
 @$core.Deprecated('Use agentDescriptor instead')
 const Agent$json = {
@@ -5545,6 +5587,7 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.ListAgentsResponse': ListAgentsResponse$json,
   '.nushi.v1.Agent': Agent$json,
   '.nushi.v1.Adapter': Adapter$json,
+  '.nushi.v1.ShellEnvironment': ShellEnvironment$json,
   '.nushi.v1.SetUpAgentRequest': SetUpAgentRequest$json,
   '.nushi.v1.SetUpAgentResponse': SetUpAgentResponse$json,
   '.nushi.v1.RemoveAgentRequest': RemoveAgentRequest$json,

@@ -31,7 +31,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 62
+const Version = 63
 
 // Build is the daemon's executable as it started (PingResponse.build).
 var Build = func() string {
@@ -221,12 +221,22 @@ func (s *server) StartChat(ctx context.Context, req *connect.Request[nushiv1.Sta
 	return connect.NewResponse(&nushiv1.StartChatResponse{ChatId: id, Config: configProto(s.chats.Config(id))}), nil
 }
 
-func (s *server) ListAgents(ctx context.Context, _ *connect.Request[nushiv1.ListAgentsRequest]) (*connect.Response[nushiv1.ListAgentsResponse], error) {
+func (s *server) ListAgents(ctx context.Context, req *connect.Request[nushiv1.ListAgentsRequest]) (*connect.Response[nushiv1.ListAgentsResponse], error) {
+	var env *nushiv1.ShellEnvironment
+	if m := req.Msg; m.RefreshEnvironment || m.ReloadEnvironment {
+		maxAge := time.Minute
+		if m.ReloadEnvironment {
+			maxAge = 0
+		}
+		if st := s.agents.Environment(ctx, maxAge); st.Shell != "" {
+			env = &nushiv1.ShellEnvironment{Shell: st.Shell, ReadUnixMs: st.Read.UnixMilli(), Problem: st.Problem}
+		}
+	}
 	found := map[string]agents.Status{}
 	for _, st := range s.agents.List(ctx) {
 		found[st.Name] = st
 	}
-	resp := &nushiv1.ListAgentsResponse{}
+	resp := &nushiv1.ListAgentsResponse{Environment: env}
 	for _, k := range s.chats.Agents() {
 		st := found[k.Name]
 		a := &nushiv1.Agent{Name: k.Name, Title: k.Title, Resume: k.Resume, Mcp: k.MCP, DeleteArchives: k.DeleteArchives,

@@ -29,6 +29,10 @@ class FakeDaemon implements Transport {
 
   /// What ListAgents answers; the agents set up and removed.
   List<Agent> agents = readyAgents();
+
+  /// How reading the shell's environment went, as ListAgents tells it
+  /// when asked to read it (Settings › Agents).
+  ShellEnvironment? environment;
   final setUp = <String>[];
   final removed = <String>[];
   final started = <StartChatRequest>[];
@@ -87,7 +91,16 @@ class FakeDaemon implements Transport {
         switch (input) {
           PingRequest() => PingResponse(apiVersion: apiVersion),
           ListChatsRequest() => ListChatsResponse(chats: chats),
-          ListAgentsRequest() => ListAgentsResponse(agents: agents),
+          ListAgentsRequest(
+            :final refreshEnvironment,
+            :final reloadEnvironment,
+          ) =>
+            ListAgentsResponse(
+              agents: agents,
+              environment: refreshEnvironment || reloadEnvironment
+                  ? environment
+                  : null,
+            ),
           GetSettingsRequest() => GetSettingsResponse(settings: settings),
           // A chat it has, so the app can show it.
           StartChatRequest() => StartChatResponse(chatId: chats.first.id),

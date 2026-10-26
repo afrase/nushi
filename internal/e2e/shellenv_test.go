@@ -3,17 +3,29 @@ package e2e
 import (
 	"context"
 	"io/fs"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"connectrpc.com/connect"
+	"google.golang.org/protobuf/encoding/protojson"
+
+	"github.com/afrase/nushi/internal/api"
 	"github.com/afrase/nushi/internal/claude"
+	"github.com/afrase/nushi/internal/events"
 	"github.com/afrase/nushi/internal/features/agents"
+	"github.com/afrase/nushi/internal/features/chats"
+	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
+	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
+	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/omp"
 	"github.com/afrase/nushi/internal/readonly"
 	"github.com/afrase/nushi/internal/shellenv"
+	"github.com/afrase/nushi/internal/store"
 )
 
 // An agent's process starts with a variable only the login shell sets,
@@ -108,3 +120,38 @@ type noChats struct{}
 func (noChats) Awake(string) int  { return 0 }
 func (noChats) SleepAgent(string) {}
 func (noChats) AgentReady(string) {}
+
+// Settings › Agents asks how reading the shell went: the shell, when, and
+// why it failed; nothing of the environment reaches the app. A plain list
+// doesn't read it again.
+func TestTheAppGetsNothingOfTheEnvironment(t *testing.T) {
+	shell := filepath.Join(t.TempDir(), "zsh")
+	if err := os.WriteFile(shell, []byte("#!/bin/sh\nexport SECRETISH=shell-only-value-31337\nexec /bin/sh -c \"$4\"\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	env := shellenv.New(shell, []string{"PATH=/usr/bin:/bin", "HOME=" + t.TempDir()})
+	env.Start()
+	agentSvc := agents.New([]agents.Agent{{Name: "fake", Title: "Fake", CLI: "sh"}},
+		func(context.Context, string, ...string) ([]byte, error) { return nil, nil }, t.TempDir(), setUp{})
+	agentSvc.UseEnv(env)
+	data := t.TempDir()
+	st := store.New(data)
+	svc := chats.New([]chats.Kind{{Name: "fake", Title: "Fake"}}, st, st, git.Worktrees{}, filepath.Join(data, "scratch"), (&events.Hub{}).Publish)
+	agentSvc.UseChats(svc)
+	srv := httptest.NewServer(api.WithToken("tok", api.New(api.Services{Chats: svc, Agents: agentSvc, Transcripts: st})))
+	defer srv.Close()
+	c := nushiv1connect.NewNushiServiceClient(&http.Client{Transport: bearer{}}, srv.URL)
+	ctx := context.Background()
+
+	if got := must(c.ListAgents(ctx, connect.NewRequest(&nushiv1.ListAgentsRequest{}))).Environment; got != nil {
+		t.Errorf("a plain list: %v", got)
+	}
+	read := env.Status().Read
+	resp := must(c.ListAgents(ctx, connect.NewRequest(&nushiv1.ListAgentsRequest{ReloadEnvironment: true})))
+	if e := resp.Environment; e.GetShell() != shell || e.GetProblem() != "" || e.GetReadUnixMs() <= read.UnixMilli() {
+		t.Errorf("reloaded: %v", e)
+	}
+	if b, _ := protojson.Marshal(resp); strings.Contains(string(b), "31337") || strings.Contains(string(b), "SECRETISH") {
+		t.Errorf("the environment reached the app: %s", b)
+	}
+}

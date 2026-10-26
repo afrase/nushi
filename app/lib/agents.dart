@@ -10,10 +10,26 @@ final agentList = ValueNotifier<Map<String, Agent>>({});
 
 Map<String, Agent> get knownAgents => agentList.value;
 
-/// Has the daemon find the agents again.
-Future<void> listAgents(NushiServiceClient client) async {
-  final list = (await client.listAgents(ListAgentsRequest())).agents;
-  agentList.value = {for (final a in list) a.name: a};
+/// How the daemon last read the login shell's environment, which agents
+/// start with (ADR 0048); null until Settings › Agents asked.
+final shellEnvironment = ValueNotifier<ShellEnvironment?>(null);
+
+/// Has the daemon find the agents again; with [refreshEnvironment], read
+/// the shell's environment first if it was read over a minute ago, with
+/// [reloadEnvironment] whatever its age.
+Future<void> listAgents(
+  NushiServiceClient client, {
+  bool refreshEnvironment = false,
+  bool reloadEnvironment = false,
+}) async {
+  final resp = await client.listAgents(
+    ListAgentsRequest(
+      refreshEnvironment: refreshEnvironment,
+      reloadEnvironment: reloadEnvironment,
+    ),
+  );
+  agentList.value = {for (final a in resp.agents) a.name: a};
+  if (resp.hasEnvironment()) shellEnvironment.value = resp.environment;
 }
 
 /// [agent]'s name to show: "Claude".
