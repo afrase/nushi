@@ -38,7 +38,8 @@ class PanelCards extends StatelessWidget {
 /// A rounded card: a title that collapses it (remembered in
 /// [collapsedCards]), with [summary] on its right while collapsed; then rows
 /// of a quiet label on the left and a value on the right (a row without a
-/// label is a line of its own). With [onTap] the rows are a button.
+/// label is a line of its own). With [onTap] the rows are a button; [action]
+/// (a small button) sits on the title's right while open.
 class PanelCard extends StatelessWidget {
   const new({
     required this.title,
@@ -46,6 +47,7 @@ class PanelCard extends StatelessWidget {
     super.key,
     this.summary,
     this.onTap,
+    this.action,
     this.index = 0,
   });
 
@@ -56,6 +58,7 @@ class PanelCard extends StatelessWidget {
     rows: rows,
     summary: summary,
     onTap: onTap,
+    action: action,
     index: i,
   );
 
@@ -63,6 +66,7 @@ class PanelCard extends StatelessWidget {
   final List<(String?, Object)> rows;
   final Widget? summary;
   final VoidCallback? onTap;
+  final Widget? action;
   final int index;
 
   @override
@@ -108,7 +112,7 @@ class PanelCard extends StatelessWidget {
                       Expanded(
                         child: Align(
                           alignment: Alignment.centerRight,
-                          child: open ? null : summary,
+                          child: open ? action : summary,
                         ),
                       ),
                     ],
