@@ -1626,6 +1626,27 @@ extension type NushiServiceClient (connect.Transport _transport) {
     );
   }
 
+  /// A message for a chat's agent, for the box (never sent by Nushi):
+  /// "fix_checks" (the failed checks with their logs' ends) or
+  /// "address_comments" (the threads named, else all not resolved), GitHub's
+  /// text in it marked as data.
+  Future<nushiv1nushi.GetGitHubPromptResponse> getGitHubPrompt(
+    nushiv1nushi.GetGitHubPromptRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.getGitHubPrompt,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// The user's writes.
   Future<nushiv1nushi.ReplyGitHubThreadResponse> replyGitHubThread(
     nushiv1nushi.ReplyGitHubThreadRequest input, {

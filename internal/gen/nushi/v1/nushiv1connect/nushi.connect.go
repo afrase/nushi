@@ -267,6 +267,9 @@ const (
 	// NushiServiceGetGitHubJobLogProcedure is the fully-qualified name of the NushiService's
 	// GetGitHubJobLog RPC.
 	NushiServiceGetGitHubJobLogProcedure = "/nushi.v1.NushiService/GetGitHubJobLog"
+	// NushiServiceGetGitHubPromptProcedure is the fully-qualified name of the NushiService's
+	// GetGitHubPrompt RPC.
+	NushiServiceGetGitHubPromptProcedure = "/nushi.v1.NushiService/GetGitHubPrompt"
 	// NushiServiceReplyGitHubThreadProcedure is the fully-qualified name of the NushiService's
 	// ReplyGitHubThread RPC.
 	NushiServiceReplyGitHubThreadProcedure = "/nushi.v1.NushiService/ReplyGitHubThread"
@@ -527,6 +530,11 @@ type NushiServiceClient interface {
 	GetGitHubFiles(context.Context, *connect.Request[v1.GetGitHubFilesRequest]) (*connect.Response[v1.GetGitHubFilesResponse], error)
 	// The end of a failed Actions job's log (16 KB).
 	GetGitHubJobLog(context.Context, *connect.Request[v1.GetGitHubJobLogRequest]) (*connect.Response[v1.GetGitHubJobLogResponse], error)
+	// A message for a chat's agent, for the box (never sent by Nushi):
+	// "fix_checks" (the failed checks with their logs' ends) or
+	// "address_comments" (the threads named, else all not resolved), GitHub's
+	// text in it marked as data.
+	GetGitHubPrompt(context.Context, *connect.Request[v1.GetGitHubPromptRequest]) (*connect.Response[v1.GetGitHubPromptResponse], error)
 	// The user's writes.
 	ReplyGitHubThread(context.Context, *connect.Request[v1.ReplyGitHubThreadRequest]) (*connect.Response[v1.ReplyGitHubThreadResponse], error)
 	ResolveGitHubThread(context.Context, *connect.Request[v1.ResolveGitHubThreadRequest]) (*connect.Response[v1.ResolveGitHubThreadResponse], error)
@@ -1064,6 +1072,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("GetGitHubJobLog")),
 			connect.WithClientOptions(opts...),
 		),
+		getGitHubPrompt: connect.NewClient[v1.GetGitHubPromptRequest, v1.GetGitHubPromptResponse](
+			httpClient,
+			baseURL+NushiServiceGetGitHubPromptProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("GetGitHubPrompt")),
+			connect.WithClientOptions(opts...),
+		),
 		replyGitHubThread: connect.NewClient[v1.ReplyGitHubThreadRequest, v1.ReplyGitHubThreadResponse](
 			httpClient,
 			baseURL+NushiServiceReplyGitHubThreadProcedure,
@@ -1185,6 +1199,7 @@ type nushiServiceClient struct {
 	getGitHubIssue      *connect.Client[v1.GetGitHubIssueRequest, v1.GetGitHubIssueResponse]
 	getGitHubFiles      *connect.Client[v1.GetGitHubFilesRequest, v1.GetGitHubFilesResponse]
 	getGitHubJobLog     *connect.Client[v1.GetGitHubJobLogRequest, v1.GetGitHubJobLogResponse]
+	getGitHubPrompt     *connect.Client[v1.GetGitHubPromptRequest, v1.GetGitHubPromptResponse]
 	replyGitHubThread   *connect.Client[v1.ReplyGitHubThreadRequest, v1.ReplyGitHubThreadResponse]
 	resolveGitHubThread *connect.Client[v1.ResolveGitHubThreadRequest, v1.ResolveGitHubThreadResponse]
 	addGitHubComment    *connect.Client[v1.AddGitHubCommentRequest, v1.AddGitHubCommentResponse]
@@ -1622,6 +1637,11 @@ func (c *nushiServiceClient) GetGitHubJobLog(ctx context.Context, req *connect.R
 	return c.getGitHubJobLog.CallUnary(ctx, req)
 }
 
+// GetGitHubPrompt calls nushi.v1.NushiService.GetGitHubPrompt.
+func (c *nushiServiceClient) GetGitHubPrompt(ctx context.Context, req *connect.Request[v1.GetGitHubPromptRequest]) (*connect.Response[v1.GetGitHubPromptResponse], error) {
+	return c.getGitHubPrompt.CallUnary(ctx, req)
+}
+
 // ReplyGitHubThread calls nushi.v1.NushiService.ReplyGitHubThread.
 func (c *nushiServiceClient) ReplyGitHubThread(ctx context.Context, req *connect.Request[v1.ReplyGitHubThreadRequest]) (*connect.Response[v1.ReplyGitHubThreadResponse], error) {
 	return c.replyGitHubThread.CallUnary(ctx, req)
@@ -1891,6 +1911,11 @@ type NushiServiceHandler interface {
 	GetGitHubFiles(context.Context, *connect.Request[v1.GetGitHubFilesRequest]) (*connect.Response[v1.GetGitHubFilesResponse], error)
 	// The end of a failed Actions job's log (16 KB).
 	GetGitHubJobLog(context.Context, *connect.Request[v1.GetGitHubJobLogRequest]) (*connect.Response[v1.GetGitHubJobLogResponse], error)
+	// A message for a chat's agent, for the box (never sent by Nushi):
+	// "fix_checks" (the failed checks with their logs' ends) or
+	// "address_comments" (the threads named, else all not resolved), GitHub's
+	// text in it marked as data.
+	GetGitHubPrompt(context.Context, *connect.Request[v1.GetGitHubPromptRequest]) (*connect.Response[v1.GetGitHubPromptResponse], error)
 	// The user's writes.
 	ReplyGitHubThread(context.Context, *connect.Request[v1.ReplyGitHubThreadRequest]) (*connect.Response[v1.ReplyGitHubThreadResponse], error)
 	ResolveGitHubThread(context.Context, *connect.Request[v1.ResolveGitHubThreadRequest]) (*connect.Response[v1.ResolveGitHubThreadResponse], error)
@@ -2424,6 +2449,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("GetGitHubJobLog")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceGetGitHubPromptHandler := connect.NewUnaryHandler(
+		NushiServiceGetGitHubPromptProcedure,
+		svc.GetGitHubPrompt,
+		connect.WithSchema(nushiServiceMethods.ByName("GetGitHubPrompt")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceReplyGitHubThreadHandler := connect.NewUnaryHandler(
 		NushiServiceReplyGitHubThreadProcedure,
 		svc.ReplyGitHubThread,
@@ -2628,6 +2659,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceGetGitHubFilesHandler.ServeHTTP(w, r)
 		case NushiServiceGetGitHubJobLogProcedure:
 			nushiServiceGetGitHubJobLogHandler.ServeHTTP(w, r)
+		case NushiServiceGetGitHubPromptProcedure:
+			nushiServiceGetGitHubPromptHandler.ServeHTTP(w, r)
 		case NushiServiceReplyGitHubThreadProcedure:
 			nushiServiceReplyGitHubThreadHandler.ServeHTTP(w, r)
 		case NushiServiceResolveGitHubThreadProcedure:
@@ -2989,6 +3022,10 @@ func (UnimplementedNushiServiceHandler) GetGitHubFiles(context.Context, *connect
 
 func (UnimplementedNushiServiceHandler) GetGitHubJobLog(context.Context, *connect.Request[v1.GetGitHubJobLogRequest]) (*connect.Response[v1.GetGitHubJobLogResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetGitHubJobLog is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) GetGitHubPrompt(context.Context, *connect.Request[v1.GetGitHubPromptRequest]) (*connect.Response[v1.GetGitHubPromptResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetGitHubPrompt is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) ReplyGitHubThread(context.Context, *connect.Request[v1.ReplyGitHubThreadRequest]) (*connect.Response[v1.ReplyGitHubThreadResponse], error) {

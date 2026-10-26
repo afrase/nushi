@@ -193,6 +193,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.GetGitHubFilesRequest request);
   $async.Future<$0.GetGitHubJobLogResponse> getGitHubJobLog(
       $pb.ServerContext ctx, $0.GetGitHubJobLogRequest request);
+  $async.Future<$0.GetGitHubPromptResponse> getGitHubPrompt(
+      $pb.ServerContext ctx, $0.GetGitHubPromptRequest request);
   $async.Future<$0.ReplyGitHubThreadResponse> replyGitHubThread(
       $pb.ServerContext ctx, $0.ReplyGitHubThreadRequest request);
   $async.Future<$0.ResolveGitHubThreadResponse> resolveGitHubThread(
@@ -378,6 +380,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.GetGitHubFilesRequest();
       case 'GetGitHubJobLog':
         return $0.GetGitHubJobLogRequest();
+      case 'GetGitHubPrompt':
+        return $0.GetGitHubPromptRequest();
       case 'ReplyGitHubThread':
         return $0.ReplyGitHubThreadRequest();
       case 'ResolveGitHubThread':
@@ -570,6 +574,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return getGitHubFiles(ctx, request as $0.GetGitHubFilesRequest);
       case 'GetGitHubJobLog':
         return getGitHubJobLog(ctx, request as $0.GetGitHubJobLogRequest);
+      case 'GetGitHubPrompt':
+        return getGitHubPrompt(ctx, request as $0.GetGitHubPromptRequest);
       case 'ReplyGitHubThread':
         return replyGitHubThread(ctx, request as $0.ReplyGitHubThreadRequest);
       case 'ResolveGitHubThread':

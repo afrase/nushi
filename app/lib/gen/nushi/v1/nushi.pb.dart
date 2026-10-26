@@ -19974,6 +19974,147 @@ class SubmitGitHubReviewResponse extends $pb.GeneratedMessage {
   static SubmitGitHubReviewResponse? _defaultInstance;
 }
 
+class GetGitHubPromptRequest extends $pb.GeneratedMessage {
+  factory GetGitHubPromptRequest({
+    GitHubRef? ref,
+    $core.String? kind,
+    $core.Iterable<$core.String>? threads,
+  }) {
+    final result = GetGitHubPromptRequest._();
+    if (ref != null) result.ref = ref;
+    if (kind != null) result.kind = kind;
+    if (threads != null) result.threads.addAll(threads);
+    return result;
+  }
+
+  GetGitHubPromptRequest._();
+
+  factory GetGitHubPromptRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubPromptRequest()..mergeFromBuffer(data, registry);
+  factory GetGitHubPromptRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubPromptRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetGitHubPromptRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetGitHubPromptRequest.$_createMessage)
+    ..aOM<GitHubRef>(1, _omitFieldNames ? '' : 'ref',
+        subBuilder: GitHubRef.$_createMessage)
+    ..aOS(2, _omitFieldNames ? '' : 'kind')
+    ..pPS(3, _omitFieldNames ? '' : 'threads')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubPromptRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubPromptRequest copyWith(
+          void Function(GetGitHubPromptRequest) updates) =>
+      super.copyWith((message) => updates(message as GetGitHubPromptRequest))
+          as GetGitHubPromptRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetGitHubPromptRequest() / GetGitHubPromptRequest.new instead')
+  static GetGitHubPromptRequest create() => GetGitHubPromptRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetGitHubPromptRequest._();
+  @$core.override
+  GetGitHubPromptRequest createEmptyInstance() => GetGitHubPromptRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetGitHubPromptRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetGitHubPromptRequest>(
+          GetGitHubPromptRequest.$_createMessage);
+  static GetGitHubPromptRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  GitHubRef get ref => $_getN(0);
+  @$pb.TagNumber(1)
+  set ref(GitHubRef value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasRef() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRef() => $_clearField(1);
+  @$pb.TagNumber(1)
+  GitHubRef ensureRef() => $_ensure(0);
+
+  /// "fix_checks" or "address_comments".
+  @$pb.TagNumber(2)
+  $core.String get kind => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set kind($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasKind() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearKind() => $_clearField(2);
+
+  /// The threads to address (GitHubThread.id); empty for all not resolved.
+  @$pb.TagNumber(3)
+  $pb.PbList<$core.String> get threads => $_getList(2);
+}
+
+class GetGitHubPromptResponse extends $pb.GeneratedMessage {
+  factory GetGitHubPromptResponse({
+    $core.String? text,
+  }) {
+    final result = GetGitHubPromptResponse._();
+    if (text != null) result.text = text;
+    return result;
+  }
+
+  GetGitHubPromptResponse._();
+
+  factory GetGitHubPromptResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubPromptResponse()..mergeFromBuffer(data, registry);
+  factory GetGitHubPromptResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubPromptResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetGitHubPromptResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetGitHubPromptResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'text')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubPromptResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubPromptResponse copyWith(
+          void Function(GetGitHubPromptResponse) updates) =>
+      super.copyWith((message) => updates(message as GetGitHubPromptResponse))
+          as GetGitHubPromptResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetGitHubPromptResponse() / GetGitHubPromptResponse.new instead')
+  static GetGitHubPromptResponse create() => GetGitHubPromptResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetGitHubPromptResponse._();
+  @$core.override
+  GetGitHubPromptResponse createEmptyInstance() => GetGitHubPromptResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetGitHubPromptResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetGitHubPromptResponse>(
+          GetGitHubPromptResponse.$_createMessage);
+  static GetGitHubPromptResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get text => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set text($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasText() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearText() => $_clearField(1);
+}
+
 class NushiServiceApi {
   final $pb.RpcClient _client;
 
@@ -20545,6 +20686,15 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, GetGitHubJobLogRequest request) =>
       _client.invoke<GetGitHubJobLogResponse>(ctx, 'NushiService',
           'GetGitHubJobLog', request, GetGitHubJobLogResponse());
+
+  /// A message for a chat's agent, for the box (never sent by Nushi):
+  /// "fix_checks" (the failed checks with their logs' ends) or
+  /// "address_comments" (the threads named, else all not resolved), GitHub's
+  /// text in it marked as data.
+  $async.Future<GetGitHubPromptResponse> getGitHubPrompt(
+          $pb.ClientContext? ctx, GetGitHubPromptRequest request) =>
+      _client.invoke<GetGitHubPromptResponse>(ctx, 'NushiService',
+          'GetGitHubPrompt', request, GetGitHubPromptResponse());
 
   /// The user's writes.
   $async.Future<ReplyGitHubThreadResponse> replyGitHubThread(
