@@ -54,6 +54,7 @@ import (
 	"github.com/afrase/nushi/internal/omptrust"
 	"github.com/afrase/nushi/internal/pig"
 	"github.com/afrase/nushi/internal/readonly"
+	"github.com/afrase/nushi/internal/shellenv"
 	"github.com/afrase/nushi/internal/store"
 	"github.com/afrase/nushi/internal/sysproxy"
 	"github.com/afrase/nushi/internal/terminal"
@@ -130,15 +131,7 @@ func run() error {
 		"log_level", logs.Level.Level())
 
 	hub := &events.Hub{}
-	agentSvc := agents.New([]agents.Agent{
-		{Name: "claude", Title: "Claude", CLI: claude.CLI, Page: claude.Page, SignedIn: claude.SignedIn, Tested: claude.Tested,
-			Adapter: &agents.Adapter{Lock: claude.Adapter, Package: claude.AdapterPackage, Bin: claude.AdapterBin, Download: claude.AdapterDownload, Disk: claude.AdapterDisk}},
-		{Name: "codex", Title: "Codex", CLI: codex.CLI, Page: codex.Page, Tested: codex.Tested,
-			Adapter: &agents.Adapter{Lock: codex.Adapter, Package: codex.AdapterPackage, Bin: codex.AdapterBin, Download: codex.AdapterDownload, Disk: codex.AdapterDisk}},
-		{Name: "ante", Title: "Ante", CLI: ante.CLI, Also: ante.Also(), Page: ante.Page, Min: ante.Min, Tested: ante.Tested},
-		{Name: "omp", Title: "oh-my-pi", CLI: omp.CLI, Page: omp.Page, Needs: omp.Needs, Tested: omp.Tested},
-		{Name: "pig", Title: "PiG", CLI: pig.CLI, Page: pig.Page, Tested: pig.Tested},
-	}, readonly.Output, filepath.Join(dir, "agents"), npm.Installer{})
+	agentSvc := newAgents(dir)
 	// The agents found on PATH, and their adapters (ADR 0037). A chat
 	// starts its agent through Run, says more through Explain, and asks
 	// Run whether it could start (Ready).
@@ -163,7 +156,7 @@ func run() error {
 	// internal/omp* and internal/pig (PiG's bridge, ADR 0039).
 	claudeKind := chats.Kind{Name: "claude", Title: "Claude", Resume: "claude --resume", MCP: true,
 		Explain: agentSvc.Explain("claude"), Ready: ready("claude"), Launch: launch("claude", func(r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
-			return claude.Start(dir, r.Program, r.CLI, h, log)
+			return claude.Start(dir, r.Node, r.Program, r.CLI, r.Env, h, log)
 		}),
 		Dialect: chats.Dialect{InitMeta: claude.InitMeta, SessionMeta: claude.SessionMeta, UltracodeMeta: claude.UltracodeMeta, TurnDone: claude.TurnDone, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall,
 			Background: claude.Background, ReportElsewhere: claude.ReportElsewhere,
@@ -177,22 +170,22 @@ func run() error {
 	codexKind := chats.Kind{Name: "codex", Title: "Codex", Resume: codex.Resume, History: codex.History, DeleteArchives: codex.DeleteArchives, Gone: codex.Gone,
 		OpenElsewhere: codex.OpenElsewhere, Forked: codex.Forked, OneWriter: true,
 		Explain: agentSvc.Explain("codex"), Ready: ready("codex"), Launch: launch("codex", func(r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
-			return codex.Start(dir, r.Program, r.CLI, h, log)
+			return codex.Start(dir, r.Node, r.Program, r.CLI, r.Env, h, log)
 		}),
 		Dialect: chats.Dialect{ForkAt: codex.ForkAt, ToolCall: codex.ToolCall, Other: codex.Other}}
 	anteKind := chats.Kind{Name: "ante", Title: "Ante", Resume: ante.Resume, OpenElsewhere: ante.OpenElsewhere,
-		Explain: agentSvc.Explain("ante"), Ready: ready("ante"), Launch: launch("ante", func(_ agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
-			return ante.Start(dir, h, log)
+		Explain: agentSvc.Explain("ante"), Ready: ready("ante"), Launch: launch("ante", func(r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
+			return ante.Start(dir, r.Env, h, log)
 		}),
 		Dialect: chats.Dialect{ForkAt: ante.ForkAt, Other: ante.Other, Context: ante.Context}}
 	ompKind := chats.Kind{Name: "omp", Title: "oh-my-pi", Resume: omp.Resume, Forked: omp.Forked, OpenElsewhere: omp.OpenElsewhere, OneWriter: true,
 		Explain: agentSvc.Explain("omp"), Ready: ready("omp"), Launch: launch("omp", func(r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
-			return omp.Start(dir, r.CLI, h, log)
+			return omp.Start(dir, r.CLI, r.Env, h, log)
 		}),
 		Dialect: chats.Dialect{Other: omp.Other, ToolCall: omp.ToolCall}}
 	pigKind := chats.Kind{Name: "pig", Title: "PiG", Resume: pig.Resume, Gone: chats.NotFound,
-		Explain: agentSvc.Explain("pig"), Ready: ready("pig"), Launch: launch("pig", func(_ agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
-			return pig.Start(dir, h, log)
+		Explain: agentSvc.Explain("pig"), Ready: ready("pig"), Launch: launch("pig", func(r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
+			return pig.Start(dir, r.Env, h, log)
 		}),
 		Dialect: chats.Dialect{ForkAt: pig.ForkAt, Context: pig.Context}}
 	st := store.New(dir)
@@ -260,6 +253,30 @@ func run() error {
 		return nil
 	}
 	return err
+}
+
+// newAgents is the agents feature: the agents Nushi knows, found on the
+// PATH of the environment they start with (ADR 0048), their adapters set
+// up in dir/agents.
+func newAgents(dir string) *agents.Service {
+	// Agents start with the login shell's environment, read now and when
+	// Settings › Agents asks, whatever started the daemon (ADR 0048).
+	shellEnv := shellenv.New(knownShell(loginShell), os.Environ())
+	shellEnv.Start()
+	probe := func(ctx context.Context, path string, args ...string) ([]byte, error) {
+		return readonly.Output(ctx, shellEnv.Environ(), path, args...)
+	}
+	svc := agents.New([]agents.Agent{
+		{Name: "claude", Title: "Claude", CLI: claude.CLI, Page: claude.Page, SignedIn: claude.SignedIn, Tested: claude.Tested,
+			Adapter: &agents.Adapter{Lock: claude.Adapter, Package: claude.AdapterPackage, Bin: claude.AdapterBin, Download: claude.AdapterDownload, Disk: claude.AdapterDisk}},
+		{Name: "codex", Title: "Codex", CLI: codex.CLI, Page: codex.Page, Tested: codex.Tested,
+			Adapter: &agents.Adapter{Lock: codex.Adapter, Package: codex.AdapterPackage, Bin: codex.AdapterBin, Download: codex.AdapterDownload, Disk: codex.AdapterDisk}},
+		{Name: "ante", Title: "Ante", CLI: ante.CLI, Also: ante.Also(), Page: ante.Page, Min: ante.Min, Tested: ante.Tested},
+		{Name: "omp", Title: "oh-my-pi", CLI: omp.CLI, Page: omp.Page, Needs: omp.Needs, Tested: omp.Tested},
+		{Name: "pig", Title: "PiG", CLI: pig.CLI, Page: pig.Page, Tested: pig.Tested},
+	}, probe, filepath.Join(dir, "agents"), npm.Installer{Environ: shellEnv.Environ})
+	svc.UseEnv(shellEnv)
+	return svc
 }
 
 // version is the commit the daemon was built from, "-dirty" with changes

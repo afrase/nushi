@@ -48,15 +48,15 @@ func Also() []string {
 }
 
 // Start starts the bridge, as claude.Start does Claude's adapter: this
-// executable's Command, in dir (the daemon's folder), its stderr to
-// log.
-func Start(dir string, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
+// executable's Command, in dir (the daemon's folder) and env (the login
+// shell's, ADR 0048), its stderr to log.
+func Start(dir string, env []string, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
 	self, err := os.Executable()
 	if err != nil {
 		return nil, err
 	}
 	cmd := exec.Command(self, Command) //nolint:gosec,noctx // lives until Stop or Close, not a context; this nushid as the bridge
-	cmd.Dir = dir
+	cmd.Dir, cmd.Env = dir, env        // the bridge finds the CLI on env's PATH
 	return agentproc.Start(cmd, client, log)
 }
 

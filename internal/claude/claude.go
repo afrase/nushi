@@ -12,8 +12,8 @@ import (
 	"io/fs"
 	"log/slog"
 	"math"
-	"os"
 	"os/exec"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -41,13 +41,14 @@ const (
 var adapterFiles embed.FS
 
 // Start starts the adapter set up in Nushi's data folder (its program,
-// under the Node on PATH), running cli, the user's Claude Code. It runs in
-// dir (the daemon's own folder); a chat's folder reaches the agent only as
-// the session's cwd. Its stderr goes to log.
-func Start(dir, program, cli string, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
-	cmd := exec.Command("node", program) //nolint:gosec,noctx // lives until Stop or Close, not a context; the adapter set up in the data folder (ADR 0037)
+// under node, the Node on PATH), running cli, the user's Claude Code, in
+// env (the login shell's, ADR 0048). It runs in dir (the daemon's own
+// folder); a chat's folder reaches the agent only as the session's cwd.
+// Its stderr goes to log.
+func Start(dir, node, program, cli string, env []string, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
+	cmd := exec.Command(node, program) //nolint:gosec,noctx // lives until Stop or Close, not a context; the adapter set up in the data folder (ADR 0037)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), "CLAUDE_CODE_EXECUTABLE="+cli)
+	cmd.Env = append(slices.Clone(env), "CLAUDE_CODE_EXECUTABLE="+cli)
 	return agentproc.Start(cmd, client, log)
 }
 
