@@ -12,7 +12,6 @@ import 'package:nushi/markdown.dart';
 import 'package:nushi/mcp_card.dart';
 import 'package:nushi/panel_cards.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/usage.dart';
 import 'package:nushi/widgets.dart';
@@ -160,17 +159,6 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
           style: muted,
           overflow: TextOverflow.ellipsis,
         ),
-        action: chat.archived
-            ? null
-            : IconTap(
-                Icons.terminal,
-                size: 14,
-                tooltip: 'Open in terminal',
-                onTap: () => tryOrShow(
-                  context,
-                  () => openTerminalIn(daemon, chat, chat.folder),
-                ),
-              ),
         rows: [
           (
             chat.worktree == null ? 'Folder' : 'Repository',

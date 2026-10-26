@@ -347,13 +347,10 @@ class _DiffBoxState extends State<DiffBox> {
       ),
     );
     if (!widget.fit) return diff;
-    return Container(
+    return framed(
       height: _height,
-      clipBehavior: Clip.antiAlias,
-      decoration: box(
-        NushiTheme.of(context).t.borderSubtle,
-        radius: NushiTheme.control,
-      ),
+      border: NushiTheme.of(context).t.borderSubtle,
+      radius: NushiTheme.control,
       child: diff,
     );
   }

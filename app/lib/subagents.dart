@@ -172,16 +172,13 @@ class SubagentLine extends StatelessWidget {
     final failed = s.call.subagent.state == 'failed';
     return ValueListenableBuilder(
       valueListenable: chat.pane,
-      builder: (context, open, _) => Container(
-        clipBehavior: Clip.antiAlias,
-        decoration: box(
-          failed
-              ? t.crashed
-              : open == s.call.id
-              ? t.focus
-              : t.borderSubtle,
-          fill: failed ? t.crashedSoft : t.raised,
-        ),
+      builder: (context, open, _) => framed(
+        border: failed
+            ? t.crashed
+            : open == s.call.id
+            ? t.focus
+            : t.borderSubtle,
+        fill: failed ? t.crashedSoft : t.raised,
         child: Tap(
           onTap: () => chat.pane.value = s.call.id,
           tooltip: 'Open its steps',
