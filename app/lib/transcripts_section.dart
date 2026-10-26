@@ -181,7 +181,7 @@ class _TranscriptsSectionState extends State<TranscriptsSection> {
               children: [
                 Text('Delete copies older than', style: secondary),
                 const SizedBox(width: 10),
-                Menu(
+                MenuField(
                   entries: [
                     for (final MapEntry(:key, :value) in {
                       ..._keepFor,
@@ -196,7 +196,7 @@ class _TranscriptsSectionState extends State<TranscriptsSection> {
                         ),
                       ),
                   ],
-                  child: Text(_keepFor[days] ?? '$days days', style: value),
+                  label: Text(_keepFor[days] ?? '$days days'),
                 ),
               ],
             ),

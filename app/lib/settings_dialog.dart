@@ -124,7 +124,7 @@ class _SettingsState extends State<_Settings> {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     Widget row(String label, Widget control) => Padding(
-      padding: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.only(top: 6),
       child: Row(
         children: [
           SizedBox(
@@ -135,7 +135,6 @@ class _SettingsState extends State<_Settings> {
         ],
       ),
     );
-    final value = theme.ui(t.text);
     final general = ListenableBuilder(
       listenable: Listenable.merge([terminalFont, terminalFontSize]),
       builder: (context, _) => Column(
@@ -147,7 +146,7 @@ class _SettingsState extends State<_Settings> {
             'Font',
             FutureBuilder(
               future: _families,
-              builder: (context, families) => Menu(
+              builder: (context, families) => MenuField(
                 entries: [
                   MenuEntry(
                     NushiTheme.codeFont,
@@ -163,16 +162,13 @@ class _SettingsState extends State<_Settings> {
                       onPick: () => terminalFont.value = f,
                     ),
                 ],
-                child: Text(
-                  terminalFont.value ?? NushiTheme.codeFont,
-                  style: value,
-                ),
+                label: Text(terminalFont.value ?? NushiTheme.codeFont),
               ),
             ),
           ),
           row(
             'Size',
-            Menu(
+            MenuField(
               entries: [
                 for (final s in _sizes)
                   MenuEntry(
@@ -181,10 +177,7 @@ class _SettingsState extends State<_Settings> {
                     onPick: () => terminalFontSize.value = s,
                   ),
               ],
-              child: Text(
-                '${terminalFontSize.value}'.replaceAll('.0', ''),
-                style: value,
-              ),
+              label: Text('${terminalFontSize.value}'.replaceAll('.0', '')),
             ),
           ),
           const SizedBox(height: 12),
@@ -203,7 +196,7 @@ class _SettingsState extends State<_Settings> {
             Text('Chats', style: theme.ui(t.text, weight: FontWeight.w600)),
             row(
               'Sleep idle',
-              Menu(
+              MenuField(
                 entries: [
                   for (final MapEntry(:key, :value) in {
                     ..._sleepAfter,
@@ -218,9 +211,8 @@ class _SettingsState extends State<_Settings> {
                       ),
                     ),
                 ],
-                child: Text(
+                label: Text(
                   sleep == 0 ? 'Never' : 'After ${_sleepLabel(sleep)}',
-                  style: value,
                 ),
               ),
             ),

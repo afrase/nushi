@@ -57,7 +57,7 @@ void main() {
     await show(tester);
     await tester.pump();
     expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
-    await tester.tap(find.textContaining('Login Items'));
+    await tester.tap(find.text('Open Login Items…'));
     await tester.pump();
     expect(calls.last.method, 'openSettings');
   });
