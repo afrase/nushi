@@ -261,7 +261,12 @@ func run() error {
 func newAgents(dir string) *agents.Service {
 	// Agents start with the login shell's environment, read now and when
 	// Settings › Agents asks, whatever started the daemon (ADR 0048).
+	// NUSHI_SHELL_ENV=off keeps the daemon's own (tests set PATH to their
+	// fake agents; the shell's would replace it).
 	shellEnv := shellenv.New(knownShell(loginShell), os.Environ())
+	if os.Getenv("NUSHI_SHELL_ENV") == "off" {
+		shellEnv = shellenv.Off(os.Environ())
+	}
 	shellEnv.Start()
 	probe := func(ctx context.Context, path string, args ...string) ([]byte, error) {
 		return readonly.Output(ctx, shellEnv.Environ(), path, args...)
