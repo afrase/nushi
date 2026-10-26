@@ -64,12 +64,20 @@ class _StartAtLoginState extends State<StartAtLogin> {
         ),
         const SizedBox(height: 6),
         if (waiting)
-          GestureDetector(
-            onTap: () => _call('openSettings'),
-            child: Text(
-              'Allow Nushi in Login Items to start it.',
-              style: theme.ui(t.accent, size: 12),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Allow Nushi in Login Items to start it.',
+                  style: theme.ui(t.needs, size: 12),
+                ),
+              ),
+              Button(
+                label: 'Open Login Items…',
+                onPressed: () =>
+                    tryOrShow(context, () => _call('openSettings')),
+              ),
+            ],
           )
         else
           Text(

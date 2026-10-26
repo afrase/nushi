@@ -248,7 +248,12 @@ class _HostRow extends StatelessWidget {
               padding: const EdgeInsets.only(right: 6),
               child: Button(label: 'Allow…', onPressed: onAllow),
             ),
-          if (h.pasted) Button(label: 'Remove', onPressed: onRemove),
+          if (h.pasted)
+            Button(
+              label: 'Remove',
+              kind: ButtonKind.destructive,
+              onPressed: onRemove,
+            ),
         ],
       ),
     );
@@ -366,9 +371,10 @@ class _AddTokenState extends State<_AddToken> {
           const SizedBox(height: 10),
           Row(
             children: [
-              Tap(
+              LinkText(
+                'Make a token',
+                size: 12,
                 onTap: () => unawaited(launchUrl(githubTokensPage)),
-                child: Text('Make a token', style: theme.ui(t.link, size: 12)),
               ),
               const Spacer(),
               if (widget.onCancel case final cancel?)

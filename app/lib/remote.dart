@@ -130,6 +130,7 @@ class _RemoteSectionState extends State<RemoteSection> {
                   ),
                   Button(
                     label: 'Revoke',
+                    kind: ButtonKind.destructive,
                     onPressed: () => tryOrShow(
                       context,
                       () => widget.client.revokeDevice(
