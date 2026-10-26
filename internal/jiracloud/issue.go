@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/afrase/nushi/internal/adf"
@@ -64,11 +65,52 @@ type rawDetail struct {
 }
 
 // Issue is an issue whole: its fields, comments (the latest 100) and
-// remote links, text as Markdown.
+// remote links, text as Markdown. The three are asked at once (the
+// fields after the site's acceptance criteria field, looked up once).
 func (c *Client) Issue(ctx context.Context, key string) (model.JiraIssue, error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	var (
+		wg       sync.WaitGroup
+		comments []rawComment
+		links    []model.JiraRemoteLink
+		errs     [2]error
+	)
+	wg.Go(func() {
+		if comments, errs[0] = c.comments(ctx, key); errs[0] != nil {
+			cancel()
+		}
+	})
+	wg.Go(func() {
+		if links, errs[1] = c.remoteLinks(ctx, key); errs[1] != nil {
+			cancel()
+		}
+	})
+	is, names, err := c.fields(ctx, key)
+	if err != nil {
+		cancel()
+	}
+	wg.Wait()
+	if err := cmp.Or(err, errs[0], errs[1]); err != nil {
+		return is, err
+	}
+	is.RemoteLinks = links
+	is.Comments = make([]model.JiraComment, 0, len(comments))
+	for _, r := range slices.Backward(comments) {
+		cm, err := r.comment(names)
+		if err != nil {
+			return is, err
+		}
+		is.Comments = append(is.Comments, cm)
+	}
+	return is, nil
+}
+
+// fields is an issue's fields, and its attachments' names by id.
+func (c *Client) fields(ctx context.Context, key string) (model.JiraIssue, map[string]string, error) {
 	accept, err := c.AcceptanceField(ctx)
 	if err != nil {
-		return model.JiraIssue{}, err
+		return model.JiraIssue{}, nil, err
 	}
 	fields := issueFields
 	if accept != "" {
@@ -81,14 +123,14 @@ func (c *Client) Issue(ctx context.Context, key string) (model.JiraIssue, error)
 	}
 	q := url.Values{"fields": {strings.Join(fields, ",")}, "expand": {"renderedFields"}}
 	if err := c.do(ctx, http.MethodGet, "/rest/api/3/issue/{}", []string{key}, q, nil, &raw); err != nil {
-		return model.JiraIssue{}, err
+		return model.JiraIssue{}, nil, err
 	}
 	base := rawIssue{Key: raw.Key}
 	var d rawDetail
 	var all map[string]json.RawMessage
 	for _, v := range []any{&base.Fields, &d, &all} {
 		if err := json.Unmarshal(raw.Fields, v); err != nil {
-			return model.JiraIssue{}, err
+			return model.JiraIssue{}, nil, err
 		}
 	}
 	is := base.listed()
@@ -100,7 +142,7 @@ func (c *Client) Issue(ctx context.Context, key string) (model.JiraIssue, error)
 	}
 	media := mediaOf(names, string(raw.Rendered["description"]))
 	if is.Description, err = markdown(d.Description, media); err != nil {
-		return is, err
+		return is, names, err
 	}
 	if accept != "" {
 		media := mediaOf(names, string(raw.Rendered[accept]))
@@ -121,11 +163,7 @@ func (c *Client) Issue(ctx context.Context, key string) (model.JiraIssue, error)
 			is.Links = append(is.Links, model.JiraLink{Relation: l.Type.Inward, Issue: l.InwardIssue.ref()})
 		}
 	}
-	if is.Comments, err = c.comments(ctx, key, names); err != nil {
-		return is, err
-	}
-	is.RemoteLinks, err = c.remoteLinks(ctx, key)
-	return is, err
+	return is, names, nil
 }
 
 // markdown renders an ADF field; a field that isn't ADF (a plain string)
@@ -156,24 +194,15 @@ func (r rawComment) comment(names map[string]string) (model.JiraComment, error) 
 	return model.JiraComment{ID: r.ID, Author: r.Author.name(), Body: body, Created: time.Time(r.Created), Updated: time.Time(r.Updated)}, err
 }
 
-// comments are an issue's latest 100 comments, oldest first.
-func (c *Client) comments(ctx context.Context, key string, names map[string]string) ([]model.JiraComment, error) {
+// comments are an issue's latest 100 comments, newest first, as Jira
+// sent them.
+func (c *Client) comments(ctx context.Context, key string) ([]rawComment, error) {
 	var page struct {
 		Comments []rawComment `json:"comments"`
 	}
 	q := url.Values{"orderBy": {"-created"}, "maxResults": {"100"}, "expand": {"renderedBody"}}
-	if err := c.do(ctx, http.MethodGet, "/rest/api/3/issue/{}/comment", []string{key}, q, nil, &page); err != nil {
-		return nil, err
-	}
-	out := make([]model.JiraComment, 0, len(page.Comments))
-	for _, r := range slices.Backward(page.Comments) {
-		cm, err := r.comment(names)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, cm)
-	}
-	return out, nil
+	err := c.do(ctx, http.MethodGet, "/rest/api/3/issue/{}/comment", []string{key}, q, nil, &page)
+	return page.Comments, err
 }
 
 // AddComment posts markdown as a comment on an issue.

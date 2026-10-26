@@ -1,8 +1,10 @@
 package jira
 
 import (
+	"cmp"
 	"context"
 	"errors"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -75,6 +77,7 @@ type fakeClient struct {
 	jql     []string
 	moves   []map[string]string
 	comment string
+	sprint  int64 // the board's active sprint, 3 when 0
 }
 
 func (f *fakeClient) Myself(context.Context) (model.JiraUser, error) {
@@ -94,7 +97,8 @@ func (f *fakeClient) ActiveSprint(_ context.Context, board int64) (int64, string
 	if board != 7 {
 		return 0, "", errors.New("no board")
 	}
-	return 3, "Sprint 3", nil
+	n := cmp.Or(f.sprint, 3)
+	return n, "Sprint " + strconv.FormatInt(n, 10), nil
 }
 
 func (f *fakeClient) JQL(context.Context) (model.JiraJQL, error) { return model.JiraJQL{}, nil }
@@ -257,5 +261,37 @@ func TestWrites(t *testing.T) {
 	}
 	if _, _, err := s.Attachment(t.Context(), "e.atlassian.net", "../1", false); err == nil {
 		t.Error("an attachment id that isn't one")
+	}
+}
+
+// The sprint found last is searched while Jira says which is active; a
+// new sprint is searched once that's known.
+func TestSprintGuess(t *testing.T) {
+	s, _, opened := newService(t)
+	if _, err := s.AddSite(t.Context(), "https://e.atlassian.net", "me@e.com", "good", time.Time{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetBoard("e.atlassian.net", model.JiraBoard{ID: 7}); err != nil {
+		t.Fatal(err)
+	}
+	c := (*opened)[0]
+	for range 2 {
+		if _, err := s.List(t.Context(), "e.atlassian.net", Sprint, ""); err != nil {
+			t.Fatal(err)
+		}
+	}
+	c.sprint = 4
+	l, err := s.List(t.Context(), "e.atlassian.net", Sprint, "")
+	if err != nil || l.Sprint != "Sprint 4" {
+		t.Fatalf("%+v, %v", l, err)
+	}
+	want := []string{"sprint = 3", "sprint = 3", "sprint = 3", "sprint = 4"}
+	for i, q := range c.jql {
+		if !strings.HasPrefix(q, want[i]) {
+			t.Errorf("search %d: %q, want %s", i, q, want[i])
+		}
+	}
+	if len(c.jql) != len(want) {
+		t.Errorf("searched %q", c.jql)
 	}
 }

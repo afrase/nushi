@@ -47,18 +47,57 @@ func (s *Service) List(ctx context.Context, id, list, jql string) (List, error) 
 		if site.Board == 0 {
 			return List{}, errors.New("pick the board whose sprint to show")
 		}
-		sprint, name, err := c.ActiveSprint(ctx, site.Board)
-		if err != nil || sprint == 0 {
-			return List{}, err
-		}
-		out.Sprint = name
-		jql = "sprint = " + strconv.FormatInt(sprint, 10) + " ORDER BY Rank ASC"
+		return s.sprint(ctx, c, id, site.Board)
 	}
 	if strings.TrimSpace(jql) == "" {
 		return List{}, errors.New("an empty search")
 	}
 	out.Issues, err = c.Search(ctx, jql, listLimit)
 	return out, err
+}
+
+// sprint lists a board's active sprint. The sprint found last time is
+// searched while Jira is asked which is active, and again only if that
+// changed: the two calls go together.
+func (s *Service) sprint(ctx context.Context, c Client, id string, board int64) (List, error) {
+	key := id + " " + strconv.FormatInt(board, 10)
+	s.mu.Lock()
+	known, ok := s.sprints[key]
+	s.mu.Unlock()
+	search := func(sprint sprintRef) (List, error) {
+		issues, err := c.Search(ctx, "sprint = "+strconv.FormatInt(sprint.id, 10)+" ORDER BY Rank ASC", listLimit)
+		return List{Issues: issues, Sprint: sprint.name}, err
+	}
+	var guess List
+	var guessErr error
+	done := make(chan struct{})
+	if ok {
+		go func() {
+			defer close(done)
+			guess, guessErr = search(known)
+		}()
+	} else {
+		close(done)
+	}
+	active, name, err := c.ActiveSprint(ctx, board)
+	<-done
+	if err != nil || active == 0 {
+		return List{}, err
+	}
+	now := sprintRef{active, name}
+	s.mu.Lock()
+	s.sprints[key] = now
+	s.mu.Unlock()
+	if ok && known.id == active {
+		guess.Sprint = name
+		return guess, guessErr
+	}
+	return search(now)
+}
+
+type sprintRef struct {
+	id   int64
+	name string
 }
 
 // Check asks Jira who a site's token is, to see it still works.

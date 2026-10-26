@@ -31,7 +31,7 @@ func (c *Client) Search(ctx context.Context, jql string, limit int) ([]model.Jir
 	seen := map[string]bool{}
 	token := ""
 	for len(out) < limit {
-		req := map[string]any{"jql": jql, "fields": listFields, "maxResults": min(limit-len(out), 100)}
+		req := map[string]any{"jql": jql, "fields": listFields, "maxResults": limit - len(out)}
 		if token != "" {
 			req["nextPageToken"] = token
 		}
