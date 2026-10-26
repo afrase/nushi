@@ -2,8 +2,6 @@ package githubapi
 
 import (
 	"fmt"
-	"html"
-	"regexp"
 	"strings"
 
 	"github.com/yuin/goldmark"
@@ -11,6 +9,7 @@ import (
 	"github.com/yuin/goldmark/extension"
 	east "github.com/yuin/goldmark/extension/ast"
 	"github.com/yuin/goldmark/text"
+	xhtml "golang.org/x/net/html"
 
 	"github.com/afrase/nushi/internal/mdwrite"
 )
@@ -19,12 +18,6 @@ import (
 // fence, a code span, an HTML block or comment and a table's cells begin
 // and end where GitHub's do.
 var gfm = goldmark.New(goldmark.WithExtensions(extension.GFM))
-
-var (
-	commentRE = regexp.MustCompile(`(?s)<!--.*?-->`)
-	tagRE     = regexp.MustCompile(`(?s)<(/?)([A-Za-z][A-Za-z0-9-]*)((?:\s[^<>]*)?)/?>`)
-	attrRE    = regexp.MustCompile(`(?i)\b(src|alt|href)\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)`)
-)
 
 // Markdown is GitHub-flavoured Markdown from GitHub (a pull request's
 // text, a comment, a check's summary) as Nushi shows it and gives it to an
@@ -49,6 +42,9 @@ type mdWriter struct {
 	hidden bool
 	hrefs  []string // the raw <a> tags open in the inline being written
 	cell   bool     // writing a table's cell
+	// skip is the hidden element (<script>, <style>…) whose contents are
+	// being passed over, until its end tag.
+	skip string
 }
 
 func (w *mdWriter) blocks(parent ast.Node, sep string) string {
@@ -62,6 +58,9 @@ func (w *mdWriter) blocks(parent ast.Node, sep string) string {
 }
 
 func (w *mdWriter) block(n ast.Node) string {
+	if _, ok := n.(*ast.HTMLBlock); w.skip != "" && !ok && !hasRaw(n) {
+		return "" // inside a <script> or <style> left open: none of it shows
+	}
 	switch n := n.(type) {
 	case *ast.Paragraph, *ast.TextBlock:
 		return w.inline(n)
@@ -171,6 +170,9 @@ func (w *mdWriter) inline(parent ast.Node) string {
 }
 
 func (w *mdWriter) span(n ast.Node) string {
+	if _, ok := n.(*ast.RawHTML); w.skip != "" && !ok && !hasRaw(n) {
+		return ""
+	}
 	switch n := n.(type) {
 	case *ast.Text:
 		s := mdwrite.Escape(string(n.Segment.Value(w.src)))
@@ -240,6 +242,20 @@ func image(alt, src string) string {
 	return "![" + mdwrite.Escape(alt) + "](" + mdwrite.Dest(src) + ")"
 }
 
+// hasRaw says n holds raw HTML, which may end a hidden element.
+func hasRaw(n ast.Node) bool {
+	found := false
+	_ = ast.Walk(n, func(c ast.Node, _ bool) (ast.WalkStatus, error) {
+		switch c.(type) {
+		case *ast.RawHTML, *ast.HTMLBlock:
+			found = true
+			return ast.WalkStop, nil
+		}
+		return ast.WalkContinue, nil
+	})
+	return found
+}
+
 // plain is a node's text without its marks (an image's alt text).
 func plain(n ast.Node, src []byte) string {
 	var b strings.Builder
@@ -252,67 +268,121 @@ func plain(n ast.Node, src []byte) string {
 	return b.String()
 }
 
-// html writes raw HTML as what it shows: comments gone (and the rest of
-// the page with one that never closes), <img> an image, <a href> a link
-// around what it holds (inline, the tags come one at a time), <br> a line
-// break (a space in an HTML block or a table's cell), any other tag
-// nothing, the text between them escaped.
+// hiddenElements are the elements whose contents a page doesn't show
+// (GitHub's sanitizer drops them with what they hold).
+var hiddenElements = map[string]bool{"script": true, "style": true, "template": true, "noscript": true,
+	"textarea": true, "title": true, "iframe": true, "object": true}
+
+// html writes raw HTML as what it shows, read as a browser reads it
+// (x/net/html's tokenizer): comments gone (and the rest of the page with
+// one that never closes), hidden elements' contents gone, <img> an image,
+// <a href> a link around what it holds (inline, the tags come one at a
+// time), <br> a line break (a space in an HTML block or a table's cell),
+// any other tag nothing, the text between them escaped.
 func (w *mdWriter) html(raw string, inline bool) string {
-	raw = commentRE.ReplaceAllString(raw, "")
-	if i := strings.Index(raw, "<!--"); i >= 0 {
-		raw, w.hidden = raw[:i], true
-	}
 	var b strings.Builder
-	at := 0
-	text := func(s string) {
-		s = html.UnescapeString(s)
-		if !inline {
-			s = strings.Join(strings.Fields(s), " ")
+	z := xhtml.NewTokenizer(strings.NewReader(raw))
+	for {
+		tt := z.Next()
+		switch tt {
+		case xhtml.ErrorToken:
+			if inline {
+				return b.String()
+			}
+			w.hrefs = nil // a block's links end with it
+			return strings.Join(strings.Fields(b.String()), " ")
+		case xhtml.CommentToken:
+			if !closed(string(z.Raw())) {
+				w.hidden = true
+			}
+		case xhtml.TextToken:
+			if w.skip == "" {
+				t := string(z.Text())
+				if !inline {
+					t = " " + strings.Join(strings.Fields(t), " ") + " "
+				}
+				b.WriteString(mdwrite.Escape(t))
+			}
+		case xhtml.StartTagToken, xhtml.SelfClosingTagToken:
+			w.start(&b, z, inline)
+		case xhtml.EndTagToken:
+			w.end(&b, z, inline)
+		case xhtml.DoctypeToken:
 		}
-		b.WriteString(mdwrite.Escape(s))
-	}
-	for _, m := range tagRE.FindAllStringSubmatchIndex(raw, -1) {
-		text(raw[at:m[0]])
-		at = m[1]
-		closing, name, attrsAt := raw[m[2]:m[3]] == "/", strings.ToLower(raw[m[4]:m[5]]), raw[m[6]:m[7]]
-		a := attrs(attrsAt)
-		switch {
-		case name == "img" && a["src"] != "":
-			b.WriteString(image(a["alt"], a["src"]))
-		case name == "a" && !closing:
-			href := a["href"]
-			if !mdwrite.SafeLink(href) {
-				href = "" // no link: its text alone
-			}
-			w.hrefs = append(w.hrefs, href)
-			if href != "" {
-				b.WriteString("[")
-			}
-		case name == "a" && len(w.hrefs) > 0:
-			href := w.hrefs[len(w.hrefs)-1]
-			w.hrefs = w.hrefs[:len(w.hrefs)-1]
-			if href != "" {
-				b.WriteString("](" + mdwrite.Dest(href) + ")")
-			}
-		case name == "br" && inline && !w.cell:
-			b.WriteString("\\\n")
-		case !inline || name == "br":
-			b.WriteString(" ")
+		if w.hidden {
+			return strings.TrimSpace(b.String())
 		}
 	}
-	text(raw[at:])
-	if inline {
-		return b.String()
-	}
-	w.hrefs = nil // a block's links end with it
-	return strings.TrimSpace(strings.Join(strings.Fields(b.String()), " "))
 }
 
-// attrs are a tag's src, alt and href, unquoted and unescaped.
-func attrs(tag string) map[string]string {
-	out := map[string]string{}
-	for _, m := range attrRE.FindAllStringSubmatch(tag, -1) {
-		out[strings.ToLower(m[1])] = html.UnescapeString(strings.Trim(m[2], `"'`))
+// start writes what a start tag shows, or starts passing over a hidden
+// element.
+func (w *mdWriter) start(b *strings.Builder, z *xhtml.Tokenizer, inline bool) {
+	name, a := tag(z)
+	switch {
+	case w.skip != "":
+	case hiddenElements[name]: // a browser ignores "/>" on them: they still open
+		w.skip = name
+	case name == "img":
+		b.WriteString(image(a["alt"], a["src"]))
+	case name == "a":
+		href := a["href"]
+		if !mdwrite.SafeLink(href) {
+			href = "" // no link: its text alone
+		}
+		w.hrefs = append(w.hrefs, href)
+		if href != "" {
+			b.WriteString("[")
+		}
+	case name == "br" && inline && !w.cell:
+		b.WriteString("\\\n")
+	case name == "br" || !inline:
+		b.WriteString(" ")
 	}
-	return out
+}
+
+// end writes what an end tag shows, or ends passing over a hidden
+// element.
+func (w *mdWriter) end(b *strings.Builder, z *xhtml.Tokenizer, inline bool) {
+	name, _ := tag(z)
+	switch {
+	case w.skip != "":
+		if name == w.skip {
+			w.skip = ""
+		}
+	case name == "a" && len(w.hrefs) > 0:
+		href := w.hrefs[len(w.hrefs)-1]
+		w.hrefs = w.hrefs[:len(w.hrefs)-1]
+		if href != "" {
+			b.WriteString("](" + mdwrite.Dest(href) + ")")
+		}
+	case !inline:
+		b.WriteString(" ")
+	}
+}
+
+// closed says a comment's raw text ends it, as a browser reads it; one
+// that doesn't runs to the end of the page.
+func closed(raw string) bool {
+	if !strings.HasPrefix(raw, "<!--") {
+		return strings.HasSuffix(raw, ">") // a bogus comment, <!x> or <?x>, ends at the first >
+	}
+	return raw == "<!-->" || raw == "<!--->" || strings.HasSuffix(raw, "-->") || strings.HasSuffix(raw, "--!>")
+}
+
+// tag is the tag the tokenizer is on: its name, and its src, alt and
+// href.
+func tag(z *xhtml.Tokenizer) (string, map[string]string) {
+	name, more := z.TagName()
+	a := map[string]string{}
+	for more {
+		var k, v []byte
+		k, v, more = z.TagAttr()
+		if key := string(k); key == "src" || key == "alt" || key == "href" {
+			if _, seen := a[key]; !seen { // a browser takes the first
+				a[key] = string(v)
+			}
+		}
+	}
+	return string(name), a
 }
