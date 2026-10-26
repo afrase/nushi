@@ -1,0 +1,2 @@
+go test fuzz v1
+string("0<prE>~0\xe6~\xb6\xa5")

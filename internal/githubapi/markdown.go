@@ -61,11 +61,16 @@ var removed = map[atom.Atom]bool{atom.Script: true}
 // fetched.
 func Markdown(s string) string {
 	var page bytes.Buffer
-	if err := gfm.Convert([]byte(strings.ReplaceAll(s, "\r\n", "\n")), &page); err != nil {
+	// CommonMark's line endings are \n, \r\n and \r alike.
+	s = strings.ReplaceAll(strings.ReplaceAll(s, "\r\n", "\n"), "\r", "\n")
+	if err := gfm.Convert([]byte(s), &page); err != nil {
 		return mdwrite.Escape(s) // goldmark fails only on a failing writer
 	}
 	filtered := tagFilterRE.ReplaceAllString(page.String(), "&lt;$1$2")
-	nodes, err := xhtml.ParseFragment(strings.NewReader(filtered), &xhtml.Node{Type: xhtml.ElementNode, DataAtom: atom.Body, Data: "body"})
+	// Scripting off, as GitHub parses: a <noscript>'s contents are markup
+	// (its comments comments), not one text.
+	nodes, err := xhtml.ParseFragmentWithOptions(strings.NewReader(filtered), &xhtml.Node{Type: xhtml.ElementNode, DataAtom: atom.Body, Data: "body"},
+		xhtml.ParseOptionEnableScripting(false))
 	if err != nil {
 		return ""
 	}
@@ -415,7 +420,7 @@ func alt(s string) string {
 		case xhtml.ErrorToken:
 			return oneLine(b.String())
 		case xhtml.TextToken:
-			b.Write(z.Text())
+			b.Write(z.Raw()) // as it is: the page's parser decoded it already
 		default:
 			b.WriteByte(' ')
 		}
@@ -435,7 +440,7 @@ func link(text, href string) string {
 // alt text.
 func image(alt, src string) string {
 	if !mdwrite.SafeImage(src) {
-		return mdwrite.Escape(alt)
+		return " " + mdwrite.Escape(alt) + " " // apart from the text around it, as the image would be
 	}
 	return "![" + mdwrite.Escape(alt) + "](" + mdwrite.Dest(src) + ")"
 }

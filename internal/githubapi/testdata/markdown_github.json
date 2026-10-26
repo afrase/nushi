@@ -166,5 +166,53 @@
   {
     "markdown": "<details><summary>Sum <!-- c --></summary><script>bad()</script>body</details>",
     "html": "<details><summary>Sum </summary>&lt;script&gt;bad()&lt;/script&gt;body</details>"
+  },
+  {
+    "markdown": "<noscript><!-- hidden in noscript --><b>ns</b></noscript> after",
+    "html": "<p><b>ns</b> after</p>"
+  },
+  {
+    "markdown": "<svg><![CDATA[ svg cdata ]]></svg> <math><![CDATA[ math cdata ]]></math> after",
+    "html": "<p> svg cdata   math cdata  after</p>"
+  },
+  {
+    "markdown": "<svg><style>svg style</style><desc>svg desc</desc><foreignObject><p>fo</p><!-- fo comment --></foreignObject></svg> after",
+    "html": "<p>&lt;style&gt;svg style&lt;/style&gt;svg desc</p><p>fo</p> after<p></p>"
+  },
+  {
+    "markdown": "<math><mi><!-- mi comment -->mi</mi><annotation-xml encoding=\"text/html\"><p>ax</p></annotation-xml></math> after",
+    "html": "<p>mi</p><p>ax</p> after<p></p>"
+  },
+  {
+    "markdown": "<template><!-- t comment -->tt<template>nested</template></template> after",
+    "html": "<p>ttnested after</p>"
+  },
+  {
+    "markdown": "<select><!-- s comment --><option>o</option>stray<b>bold</b></select> after",
+    "html": "<p>ostraybold after</p>"
+  },
+  {
+    "markdown": "<table><!-- tc -->foster text<tr><td>cell<!-- cc --></td></tr><b>fb</b></table> after",
+    "html": "foster text<b>fb</b><markdown-accessiblity-table><table role=\"table\"><tbody><tr><td>cell</td></tr></tbody></table></markdown-accessiblity-table> after"
+  },
+  {
+    "markdown": "<object><param name=x value=y>obj</object> <embed src=x> <frameset><frame></frameset> after",
+    "html": "<p>obj   after</p>"
+  },
+  {
+    "markdown": "<div>\n<noscript>\n<!-- block noscript comment -->\nshown?\n</noscript>\n</div>",
+    "html": "<div>\n\n\nshown?\n\n</div>"
+  },
+  {
+    "markdown": "<svg><script>alert(1)</script><a href=\"javascript:x\">svg link</a></svg> after",
+    "html": "<p>&lt;script&gt;alert(1)&lt;/script&gt;svg link after</p>"
+  },
+  {
+    "markdown": "<math><mtext><table><!-- mt --><td>mx</td></table></mtext></math> after",
+    "html": "<p><markdown-accessiblity-table></markdown-accessiblity-table></p><table role=\"table\"><tbody><tr><td>mx</td></tr></tbody></table> after<p></p>"
+  },
+  {
+    "markdown": "<details><summary><!-- s -->Sum</summary><noscript><!-- n -->ok</noscript></details>",
+    "html": "<details><summary>Sum</summary>ok</details>"
   }
 ]

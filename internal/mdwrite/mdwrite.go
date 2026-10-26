@@ -21,7 +21,7 @@ func Escape(s string) string {
 	for i := 0; i < len(r); i++ {
 		c := r[i]
 		switch {
-		case strings.ContainsRune("\\`*[]<~", c): // one ~ is a strikethrough too (GFM)
+		case strings.ContainsRune("\\`*[]<~&", c): // one ~ is a strikethrough too (GFM); & could start an entity
 			b.WriteRune('\\')
 		case c == '_' && (i == 0 || i == len(r)-1 || !isWord(r[i-1]) || !isWord(r[i+1])):
 			b.WriteRune('\\')
@@ -83,7 +83,8 @@ func Fence(s, lang string) string {
 // angle brackets, backslashes are percent-encoded).
 func Dest(href string) string {
 	var b strings.Builder
-	for _, c := range []byte(href) {
+	// The ends' spaces go, as SafeLink reads the address without them.
+	for _, c := range []byte(strings.TrimSpace(href)) {
 		if c <= ' ' || c == 0x7f || strings.IndexByte("()<>\\", c) >= 0 {
 			fmt.Fprintf(&b, "%%%02X", c)
 		} else {
