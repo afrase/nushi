@@ -20,6 +20,7 @@ var Timeout = 5 * time.Second
 type Env struct {
 	shell string
 	base  []string
+	off   bool // never read: agents get base (tests, NUSHI_SHELL_ENV=off)
 
 	reading sync.Mutex    // one reading at a time
 	first   chan struct{} // closed once the first reading ended
@@ -37,9 +38,22 @@ func New(shell string, base []string) *Env {
 	return &Env{shell: shell, base: slices.Clone(base), first: make(chan struct{})}
 }
 
+// Off is base alone, never read from a shell: for a daemon whose
+// environment must be exactly what started it (a test's fake agents on
+// its own PATH).
+func Off(base []string) *Env {
+	e := New("", base)
+	e.off = true
+	close(e.first)
+	return e
+}
+
 // Start reads the shell's environment in the background; Environ and
 // LookPath wait for it (Timeout at most).
 func (e *Env) Start() {
+	if e.off {
+		return
+	}
 	go func() {
 		defer close(e.first)
 		e.Refresh(context.Background(), 0)
@@ -50,6 +64,9 @@ func (e *Env) Start() {
 // is younger than maxAge (or one is under way: Refresh waits for it).
 // A reading that fails keeps the last that worked, and says why in Status.
 func (e *Env) Refresh(ctx context.Context, maxAge time.Duration) {
+	if e.off {
+		return
+	}
 	e.reading.Lock()
 	defer e.reading.Unlock()
 	e.mu.Lock()

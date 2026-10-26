@@ -110,6 +110,8 @@ void main() {
         'PATH': '${tmp.path}/bin:/usr/bin:/bin',
         'HOME': '${tmp.path}/home',
         'NUSHI_DATA': '${tmp.path}/data',
+        // Its fake agents are on this PATH: not the login shell's.
+        'NUSHI_SHELL_ENV': 'off',
       },
       includeParentEnvironment: false,
     );
