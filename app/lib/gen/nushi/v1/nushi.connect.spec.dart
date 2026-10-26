@@ -423,6 +423,54 @@ abstract final class NushiService {
     nushiv1nushi.LogoutMcpServerResponse.new,
   );
 
+  /// The skills and plugins Claude uses in a folder (API 66, ADR 0051):
+  /// read from Claude's files and `claude plugin list --json`, never run in
+  /// the folder. Skills' descriptions and plugins' text are their authors'.
+  static const listSkills = connect.Spec(
+    '/$name/ListSkills',
+    connect.StreamType.unary,
+    nushiv1nushi.ListSkillsRequest.new,
+    nushiv1nushi.ListSkillsResponse.new,
+  );
+
+  /// Turns a skill on or off: yours in your settings, a project's in the
+  /// project's local settings (skillOverrides, only that key); "builtin"
+  /// turns Claude's built-in skills on or off together, in your settings
+  /// (disableBundledSkills). A plugin's skills go with their plugin.
+  static const setSkillOn = connect.Spec(
+    '/$name/SetSkillOn',
+    connect.StreamType.unary,
+    nushiv1nushi.SetSkillOnRequest.new,
+    nushiv1nushi.SetSkillOnResponse.new,
+  );
+
+  /// Turns an installed plugin on or off (`claude plugin enable`, `disable`)
+  /// where Plugin.switch_scope says.
+  static const setPluginOn = connect.Spec(
+    '/$name/SetPluginOn',
+    connect.StreamType.unary,
+    nushiv1nushi.SetPluginOnRequest.new,
+    nushiv1nushi.SetPluginOnResponse.new,
+  );
+
+  /// Uninstalls a plugin installed for you or in the project's local
+  /// settings (`claude plugin uninstall`).
+  static const uninstallPlugin = connect.Spec(
+    '/$name/UninstallPlugin',
+    connect.StreamType.unary,
+    nushiv1nushi.UninstallPluginRequest.new,
+    nushiv1nushi.UninstallPluginResponse.new,
+  );
+
+  /// Moves a skill's folder (yours or the project's, as listed) to the
+  /// Trash.
+  static const trashSkill = connect.Spec(
+    '/$name/TrashSkill',
+    connect.StreamType.unary,
+    nushiv1nushi.TrashSkillRequest.new,
+    nushiv1nushi.TrashSkillResponse.new,
+  );
+
   /// Reopens a chat's session on a new agent (ACP session/load), which
   /// replays its transcript, so it uses the MCP servers as they are now.
   /// Refused while it is busy.

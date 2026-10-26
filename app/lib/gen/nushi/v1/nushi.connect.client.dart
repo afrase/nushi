@@ -861,6 +861,104 @@ extension type NushiServiceClient (connect.Transport _transport) {
     );
   }
 
+  /// The skills and plugins Claude uses in a folder (API 66, ADR 0051):
+  /// read from Claude's files and `claude plugin list --json`, never run in
+  /// the folder. Skills' descriptions and plugins' text are their authors'.
+  Future<nushiv1nushi.ListSkillsResponse> listSkills(
+    nushiv1nushi.ListSkillsRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.listSkills,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Turns a skill on or off: yours in your settings, a project's in the
+  /// project's local settings (skillOverrides, only that key); "builtin"
+  /// turns Claude's built-in skills on or off together, in your settings
+  /// (disableBundledSkills). A plugin's skills go with their plugin.
+  Future<nushiv1nushi.SetSkillOnResponse> setSkillOn(
+    nushiv1nushi.SetSkillOnRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.setSkillOn,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Turns an installed plugin on or off (`claude plugin enable`, `disable`)
+  /// where Plugin.switch_scope says.
+  Future<nushiv1nushi.SetPluginOnResponse> setPluginOn(
+    nushiv1nushi.SetPluginOnRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.setPluginOn,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Uninstalls a plugin installed for you or in the project's local
+  /// settings (`claude plugin uninstall`).
+  Future<nushiv1nushi.UninstallPluginResponse> uninstallPlugin(
+    nushiv1nushi.UninstallPluginRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.uninstallPlugin,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Moves a skill's folder (yours or the project's, as listed) to the
+  /// Trash.
+  Future<nushiv1nushi.TrashSkillResponse> trashSkill(
+    nushiv1nushi.TrashSkillRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.trashSkill,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Reopens a chat's session on a new agent (ACP session/load), which
   /// replays its transcript, so it uses the MCP servers as they are now.
   /// Refused while it is busy.

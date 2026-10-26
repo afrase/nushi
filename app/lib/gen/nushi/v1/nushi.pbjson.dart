@@ -1842,6 +1842,197 @@ const LogoutMcpServerResponse$json = {
 final $typed_data.Uint8List logoutMcpServerResponseDescriptor =
     $convert.base64Decode('ChdMb2dvdXRNY3BTZXJ2ZXJSZXNwb25zZQ==');
 
+@$core.Deprecated('Use listSkillsRequestDescriptor instead')
+const ListSkillsRequest$json = {
+  '1': 'ListSkillsRequest',
+  '2': [
+    {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
+  ],
+};
+
+/// Descriptor for `ListSkillsRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listSkillsRequestDescriptor = $convert.base64Decode(
+    'ChFMaXN0U2tpbGxzUmVxdWVzdBIWCgZmb2xkZXIYASABKAlSBmZvbGRlcg==');
+
+@$core.Deprecated('Use listSkillsResponseDescriptor instead')
+const ListSkillsResponse$json = {
+  '1': 'ListSkillsResponse',
+  '2': [
+    {
+      '1': 'skills',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.Skill',
+      '10': 'skills'
+    },
+    {
+      '1': 'plugins',
+      '3': 2,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.Plugin',
+      '10': 'plugins'
+    },
+    {'1': 'plugins_error', '3': 3, '4': 1, '5': 9, '10': 'pluginsError'},
+    {'1': 'built_in_off', '3': 4, '4': 1, '5': 8, '10': 'builtInOff'},
+    {'1': 'built_in_set_in', '3': 5, '4': 1, '5': 9, '10': 'builtInSetIn'},
+  ],
+};
+
+/// Descriptor for `ListSkillsResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listSkillsResponseDescriptor = $convert.base64Decode(
+    'ChJMaXN0U2tpbGxzUmVzcG9uc2USJwoGc2tpbGxzGAEgAygLMg8ubnVzaGkudjEuU2tpbGxSBn'
+    'NraWxscxIqCgdwbHVnaW5zGAIgAygLMhAubnVzaGkudjEuUGx1Z2luUgdwbHVnaW5zEiMKDXBs'
+    'dWdpbnNfZXJyb3IYAyABKAlSDHBsdWdpbnNFcnJvchIgCgxidWlsdF9pbl9vZmYYBCABKAhSCm'
+    'J1aWx0SW5PZmYSJQoPYnVpbHRfaW5fc2V0X2luGAUgASgJUgxidWlsdEluU2V0SW4=');
+
+@$core.Deprecated('Use skillDescriptor instead')
+const Skill$json = {
+  '1': 'Skill',
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'description', '3': 2, '4': 1, '5': 9, '10': 'description'},
+    {'1': 'source', '3': 3, '4': 1, '5': 9, '10': 'source'},
+    {'1': 'plugin', '3': 4, '4': 1, '5': 9, '10': 'plugin'},
+    {'1': 'path', '3': 5, '4': 1, '5': 9, '10': 'path'},
+    {'1': 'state', '3': 6, '4': 1, '5': 9, '10': 'state'},
+    {'1': 'set_in', '3': 7, '4': 1, '5': 9, '10': 'setIn'},
+    {'1': 'tokens', '3': 8, '4': 1, '5': 5, '10': 'tokens'},
+  ],
+};
+
+/// Descriptor for `Skill`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List skillDescriptor = $convert.base64Decode(
+    'CgVTa2lsbBISCgRuYW1lGAEgASgJUgRuYW1lEiAKC2Rlc2NyaXB0aW9uGAIgASgJUgtkZXNjcm'
+    'lwdGlvbhIWCgZzb3VyY2UYAyABKAlSBnNvdXJjZRIWCgZwbHVnaW4YBCABKAlSBnBsdWdpbhIS'
+    'CgRwYXRoGAUgASgJUgRwYXRoEhQKBXN0YXRlGAYgASgJUgVzdGF0ZRIVCgZzZXRfaW4YByABKA'
+    'lSBXNldEluEhYKBnRva2VucxgIIAEoBVIGdG9rZW5z');
+
+@$core.Deprecated('Use pluginDescriptor instead')
+const Plugin$json = {
+  '1': 'Plugin',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'name', '3': 2, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'version', '3': 3, '4': 1, '5': 9, '10': 'version'},
+    {'1': 'description', '3': 4, '4': 1, '5': 9, '10': 'description'},
+    {'1': 'scope', '3': 5, '4': 1, '5': 9, '10': 'scope'},
+    {'1': 'path', '3': 6, '4': 1, '5': 9, '10': 'path'},
+    {'1': 'enabled', '3': 7, '4': 1, '5': 8, '10': 'enabled'},
+    {'1': 'skills', '3': 8, '4': 1, '5': 5, '10': 'skills'},
+    {'1': 'commands', '3': 9, '4': 1, '5': 5, '10': 'commands'},
+    {'1': 'agents', '3': 10, '4': 1, '5': 5, '10': 'agents'},
+    {'1': 'mcp_servers', '3': 11, '4': 1, '5': 5, '10': 'mcpServers'},
+    {'1': 'switch_scope', '3': 12, '4': 1, '5': 9, '10': 'switchScope'},
+  ],
+};
+
+/// Descriptor for `Plugin`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List pluginDescriptor = $convert.base64Decode(
+    'CgZQbHVnaW4SDgoCaWQYASABKAlSAmlkEhIKBG5hbWUYAiABKAlSBG5hbWUSGAoHdmVyc2lvbh'
+    'gDIAEoCVIHdmVyc2lvbhIgCgtkZXNjcmlwdGlvbhgEIAEoCVILZGVzY3JpcHRpb24SFAoFc2Nv'
+    'cGUYBSABKAlSBXNjb3BlEhIKBHBhdGgYBiABKAlSBHBhdGgSGAoHZW5hYmxlZBgHIAEoCFIHZW'
+    '5hYmxlZBIWCgZza2lsbHMYCCABKAVSBnNraWxscxIaCghjb21tYW5kcxgJIAEoBVIIY29tbWFu'
+    'ZHMSFgoGYWdlbnRzGAogASgFUgZhZ2VudHMSHwoLbWNwX3NlcnZlcnMYCyABKAVSCm1jcFNlcn'
+    'ZlcnMSIQoMc3dpdGNoX3Njb3BlGAwgASgJUgtzd2l0Y2hTY29wZQ==');
+
+@$core.Deprecated('Use setSkillOnRequestDescriptor instead')
+const SetSkillOnRequest$json = {
+  '1': 'SetSkillOnRequest',
+  '2': [
+    {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
+    {'1': 'source', '3': 2, '4': 1, '5': 9, '10': 'source'},
+    {'1': 'name', '3': 3, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'on', '3': 4, '4': 1, '5': 8, '10': 'on'},
+  ],
+};
+
+/// Descriptor for `SetSkillOnRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List setSkillOnRequestDescriptor = $convert.base64Decode(
+    'ChFTZXRTa2lsbE9uUmVxdWVzdBIWCgZmb2xkZXIYASABKAlSBmZvbGRlchIWCgZzb3VyY2UYAi'
+    'ABKAlSBnNvdXJjZRISCgRuYW1lGAMgASgJUgRuYW1lEg4KAm9uGAQgASgIUgJvbg==');
+
+@$core.Deprecated('Use setSkillOnResponseDescriptor instead')
+const SetSkillOnResponse$json = {
+  '1': 'SetSkillOnResponse',
+};
+
+/// Descriptor for `SetSkillOnResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List setSkillOnResponseDescriptor =
+    $convert.base64Decode('ChJTZXRTa2lsbE9uUmVzcG9uc2U=');
+
+@$core.Deprecated('Use setPluginOnRequestDescriptor instead')
+const SetPluginOnRequest$json = {
+  '1': 'SetPluginOnRequest',
+  '2': [
+    {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
+    {'1': 'id', '3': 2, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'on', '3': 3, '4': 1, '5': 8, '10': 'on'},
+  ],
+};
+
+/// Descriptor for `SetPluginOnRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List setPluginOnRequestDescriptor = $convert.base64Decode(
+    'ChJTZXRQbHVnaW5PblJlcXVlc3QSFgoGZm9sZGVyGAEgASgJUgZmb2xkZXISDgoCaWQYAiABKA'
+    'lSAmlkEg4KAm9uGAMgASgIUgJvbg==');
+
+@$core.Deprecated('Use setPluginOnResponseDescriptor instead')
+const SetPluginOnResponse$json = {
+  '1': 'SetPluginOnResponse',
+};
+
+/// Descriptor for `SetPluginOnResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List setPluginOnResponseDescriptor =
+    $convert.base64Decode('ChNTZXRQbHVnaW5PblJlc3BvbnNl');
+
+@$core.Deprecated('Use uninstallPluginRequestDescriptor instead')
+const UninstallPluginRequest$json = {
+  '1': 'UninstallPluginRequest',
+  '2': [
+    {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
+    {'1': 'id', '3': 2, '4': 1, '5': 9, '10': 'id'},
+  ],
+};
+
+/// Descriptor for `UninstallPluginRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List uninstallPluginRequestDescriptor =
+    $convert.base64Decode(
+        'ChZVbmluc3RhbGxQbHVnaW5SZXF1ZXN0EhYKBmZvbGRlchgBIAEoCVIGZm9sZGVyEg4KAmlkGA'
+        'IgASgJUgJpZA==');
+
+@$core.Deprecated('Use uninstallPluginResponseDescriptor instead')
+const UninstallPluginResponse$json = {
+  '1': 'UninstallPluginResponse',
+};
+
+/// Descriptor for `UninstallPluginResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List uninstallPluginResponseDescriptor =
+    $convert.base64Decode('ChdVbmluc3RhbGxQbHVnaW5SZXNwb25zZQ==');
+
+@$core.Deprecated('Use trashSkillRequestDescriptor instead')
+const TrashSkillRequest$json = {
+  '1': 'TrashSkillRequest',
+  '2': [
+    {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
+    {'1': 'path', '3': 2, '4': 1, '5': 9, '10': 'path'},
+  ],
+};
+
+/// Descriptor for `TrashSkillRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List trashSkillRequestDescriptor = $convert.base64Decode(
+    'ChFUcmFzaFNraWxsUmVxdWVzdBIWCgZmb2xkZXIYASABKAlSBmZvbGRlchISCgRwYXRoGAIgAS'
+    'gJUgRwYXRo');
+
+@$core.Deprecated('Use trashSkillResponseDescriptor instead')
+const TrashSkillResponse$json = {
+  '1': 'TrashSkillResponse',
+};
+
+/// Descriptor for `TrashSkillResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List trashSkillResponseDescriptor =
+    $convert.base64Decode('ChJUcmFzaFNraWxsUmVzcG9uc2U=');
+
 @$core.Deprecated('Use reloadChatRequestDescriptor instead')
 const ReloadChatRequest$json = {
   '1': 'ReloadChatRequest',
@@ -5303,6 +5494,31 @@ const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
       '3': '.nushi.v1.LogoutMcpServerResponse'
     },
     {
+      '1': 'ListSkills',
+      '2': '.nushi.v1.ListSkillsRequest',
+      '3': '.nushi.v1.ListSkillsResponse'
+    },
+    {
+      '1': 'SetSkillOn',
+      '2': '.nushi.v1.SetSkillOnRequest',
+      '3': '.nushi.v1.SetSkillOnResponse'
+    },
+    {
+      '1': 'SetPluginOn',
+      '2': '.nushi.v1.SetPluginOnRequest',
+      '3': '.nushi.v1.SetPluginOnResponse'
+    },
+    {
+      '1': 'UninstallPlugin',
+      '2': '.nushi.v1.UninstallPluginRequest',
+      '3': '.nushi.v1.UninstallPluginResponse'
+    },
+    {
+      '1': 'TrashSkill',
+      '2': '.nushi.v1.TrashSkillRequest',
+      '3': '.nushi.v1.TrashSkillResponse'
+    },
+    {
       '1': 'ReloadChat',
       '2': '.nushi.v1.ReloadChatRequest',
       '3': '.nushi.v1.ReloadChatResponse'
@@ -5691,6 +5907,18 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.LoginMcpServerResponse': LoginMcpServerResponse$json,
   '.nushi.v1.LogoutMcpServerRequest': LogoutMcpServerRequest$json,
   '.nushi.v1.LogoutMcpServerResponse': LogoutMcpServerResponse$json,
+  '.nushi.v1.ListSkillsRequest': ListSkillsRequest$json,
+  '.nushi.v1.ListSkillsResponse': ListSkillsResponse$json,
+  '.nushi.v1.Skill': Skill$json,
+  '.nushi.v1.Plugin': Plugin$json,
+  '.nushi.v1.SetSkillOnRequest': SetSkillOnRequest$json,
+  '.nushi.v1.SetSkillOnResponse': SetSkillOnResponse$json,
+  '.nushi.v1.SetPluginOnRequest': SetPluginOnRequest$json,
+  '.nushi.v1.SetPluginOnResponse': SetPluginOnResponse$json,
+  '.nushi.v1.UninstallPluginRequest': UninstallPluginRequest$json,
+  '.nushi.v1.UninstallPluginResponse': UninstallPluginResponse$json,
+  '.nushi.v1.TrashSkillRequest': TrashSkillRequest$json,
+  '.nushi.v1.TrashSkillResponse': TrashSkillResponse$json,
   '.nushi.v1.ReloadChatRequest': ReloadChatRequest$json,
   '.nushi.v1.ReloadChatResponse': ReloadChatResponse$json,
   '.nushi.v1.OpenTerminalRequest': OpenTerminalRequest$json,
@@ -5900,83 +6128,90 @@ final $typed_data.Uint8List nushiServiceDescriptor = $convert.base64Decode(
     'ck9uUmVxdWVzdBogLm51c2hpLnYxLlNldE1jcFNlcnZlck9uUmVzcG9uc2USUwoOTG9naW5NY3'
     'BTZXJ2ZXISHy5udXNoaS52MS5Mb2dpbk1jcFNlcnZlclJlcXVlc3QaIC5udXNoaS52MS5Mb2dp'
     'bk1jcFNlcnZlclJlc3BvbnNlElYKD0xvZ291dE1jcFNlcnZlchIgLm51c2hpLnYxLkxvZ291dE'
-    '1jcFNlcnZlclJlcXVlc3QaIS5udXNoaS52MS5Mb2dvdXRNY3BTZXJ2ZXJSZXNwb25zZRJHCgpS'
-    'ZWxvYWRDaGF0EhsubnVzaGkudjEuUmVsb2FkQ2hhdFJlcXVlc3QaHC5udXNoaS52MS5SZWxvYW'
-    'RDaGF0UmVzcG9uc2USTQoMT3BlblRlcm1pbmFsEh0ubnVzaGkudjEuT3BlblRlcm1pbmFsUmVx'
-    'dWVzdBoeLm51c2hpLnYxLk9wZW5UZXJtaW5hbFJlc3BvbnNlElAKDUxpc3RUZXJtaW5hbHMSHi'
-    '5udXNoaS52MS5MaXN0VGVybWluYWxzUmVxdWVzdBofLm51c2hpLnYxLkxpc3RUZXJtaW5hbHNS'
-    'ZXNwb25zZRJVCg5BdHRhY2hUZXJtaW5hbBIfLm51c2hpLnYxLkF0dGFjaFRlcm1pbmFsUmVxdW'
-    'VzdBogLm51c2hpLnYxLkF0dGFjaFRlcm1pbmFsUmVzcG9uc2UwARJQCg1Xcml0ZVRlcm1pbmFs'
-    'Eh4ubnVzaGkudjEuV3JpdGVUZXJtaW5hbFJlcXVlc3QaHy5udXNoaS52MS5Xcml0ZVRlcm1pbm'
-    'FsUmVzcG9uc2USUwoOUmVzaXplVGVybWluYWwSHy5udXNoaS52MS5SZXNpemVUZXJtaW5hbFJl'
-    'cXVlc3QaIC5udXNoaS52MS5SZXNpemVUZXJtaW5hbFJlc3BvbnNlElMKDlJlbmFtZVRlcm1pbm'
-    'FsEh8ubnVzaGkudjEuUmVuYW1lVGVybWluYWxSZXF1ZXN0GiAubnVzaGkudjEuUmVuYW1lVGVy'
-    'bWluYWxSZXNwb25zZRJZChBBcnJhbmdlVGVybWluYWxzEiEubnVzaGkudjEuQXJyYW5nZVRlcm'
-    '1pbmFsc1JlcXVlc3QaIi5udXNoaS52MS5BcnJhbmdlVGVybWluYWxzUmVzcG9uc2USVgoPUmVz'
-    'dGFydFRlcm1pbmFsEiAubnVzaGkudjEuUmVzdGFydFRlcm1pbmFsUmVxdWVzdBohLm51c2hpLn'
-    'YxLlJlc3RhcnRUZXJtaW5hbFJlc3BvbnNlElAKDUNsb3NlVGVybWluYWwSHi5udXNoaS52MS5D'
-    'bG9zZVRlcm1pbmFsUmVxdWVzdBofLm51c2hpLnYxLkNsb3NlVGVybWluYWxSZXNwb25zZRJKCg'
-    'tDaGVja0ZvbGRlchIcLm51c2hpLnYxLkNoZWNrRm9sZGVyUmVxdWVzdBodLm51c2hpLnYxLkNo'
-    'ZWNrRm9sZGVyUmVzcG9uc2USSgoLVHJ1c3RGb2xkZXISHC5udXNoaS52MS5UcnVzdEZvbGRlcl'
-    'JlcXVlc3QaHS5udXNoaS52MS5UcnVzdEZvbGRlclJlc3BvbnNlEkQKCUdldFJlbW90ZRIaLm51'
-    'c2hpLnYxLkdldFJlbW90ZVJlcXVlc3QaGy5udXNoaS52MS5HZXRSZW1vdGVSZXNwb25zZRJECg'
-    'lTZXRSZW1vdGUSGi5udXNoaS52MS5TZXRSZW1vdGVSZXF1ZXN0GhsubnVzaGkudjEuU2V0UmVt'
-    'b3RlUmVzcG9uc2USTQoMU3RhcnRQYWlyaW5nEh0ubnVzaGkudjEuU3RhcnRQYWlyaW5nUmVxdW'
-    'VzdBoeLm51c2hpLnYxLlN0YXJ0UGFpcmluZ1Jlc3BvbnNlElMKDkNvbmZpcm1QYWlyaW5nEh8u'
-    'bnVzaGkudjEuQ29uZmlybVBhaXJpbmdSZXF1ZXN0GiAubnVzaGkudjEuQ29uZmlybVBhaXJpbm'
-    'dSZXNwb25zZRJNCgxSZXZva2VEZXZpY2USHS5udXNoaS52MS5SZXZva2VEZXZpY2VSZXF1ZXN0'
-    'Gh4ubnVzaGkudjEuUmV2b2tlRGV2aWNlUmVzcG9uc2USMgoDTG9nEhQubnVzaGkudjEuTG9nUm'
-    'VxdWVzdBoVLm51c2hpLnYxLkxvZ1Jlc3BvbnNlElAKDUxpc3RKaXJhU2l0ZXMSHi5udXNoaS52'
-    'MS5MaXN0SmlyYVNpdGVzUmVxdWVzdBofLm51c2hpLnYxLkxpc3RKaXJhU2l0ZXNSZXNwb25zZR'
-    'JKCgtBZGRKaXJhU2l0ZRIcLm51c2hpLnYxLkFkZEppcmFTaXRlUmVxdWVzdBodLm51c2hpLnYx'
-    'LkFkZEppcmFTaXRlUmVzcG9uc2USUwoOUmVtb3ZlSmlyYVNpdGUSHy5udXNoaS52MS5SZW1vdm'
-    'VKaXJhU2l0ZVJlcXVlc3QaIC5udXNoaS52MS5SZW1vdmVKaXJhU2l0ZVJlc3BvbnNlElAKDUNo'
-    'ZWNrSmlyYVNpdGUSHi5udXNoaS52MS5DaGVja0ppcmFTaXRlUmVxdWVzdBofLm51c2hpLnYxLk'
-    'NoZWNrSmlyYVNpdGVSZXNwb25zZRJTCg5BbGxvd0ppcmFUb2tlbhIfLm51c2hpLnYxLkFsbG93'
-    'SmlyYVRva2VuUmVxdWVzdBogLm51c2hpLnYxLkFsbG93SmlyYVRva2VuUmVzcG9uc2USUwoOTG'
-    'lzdEppcmFCb2FyZHMSHy5udXNoaS52MS5MaXN0SmlyYUJvYXJkc1JlcXVlc3QaIC5udXNoaS52'
-    'MS5MaXN0SmlyYUJvYXJkc1Jlc3BvbnNlEk0KDFNldEppcmFCb2FyZBIdLm51c2hpLnYxLlNldE'
-    'ppcmFCb2FyZFJlcXVlc3QaHi5udXNoaS52MS5TZXRKaXJhQm9hcmRSZXNwb25zZRJWCg9TZXRK'
-    'aXJhU2VhcmNoZXMSIC5udXNoaS52MS5TZXRKaXJhU2VhcmNoZXNSZXF1ZXN0GiEubnVzaGkudj'
-    'EuU2V0SmlyYVNlYXJjaGVzUmVzcG9uc2USUwoOTGlzdEppcmFJc3N1ZXMSHy5udXNoaS52MS5M'
-    'aXN0SmlyYUlzc3Vlc1JlcXVlc3QaIC5udXNoaS52MS5MaXN0SmlyYUlzc3Vlc1Jlc3BvbnNlEk'
-    'cKCkdldEppcmFKcWwSGy5udXNoaS52MS5HZXRKaXJhSnFsUmVxdWVzdBocLm51c2hpLnYxLkdl'
-    'dEppcmFKcWxSZXNwb25zZRJTCg5TdWdnZXN0SmlyYUpxbBIfLm51c2hpLnYxLlN1Z2dlc3RKaX'
-    'JhSnFsUmVxdWVzdBogLm51c2hpLnYxLlN1Z2dlc3RKaXJhSnFsUmVzcG9uc2USTQoMR2V0Smly'
-    'YUlzc3VlEh0ubnVzaGkudjEuR2V0SmlyYUlzc3VlUmVxdWVzdBoeLm51c2hpLnYxLkdldEppcm'
-    'FJc3N1ZVJlc3BvbnNlEmIKE0xpc3RKaXJhVHJhbnNpdGlvbnMSJC5udXNoaS52MS5MaXN0Smly'
-    'YVRyYW5zaXRpb25zUmVxdWVzdBolLm51c2hpLnYxLkxpc3RKaXJhVHJhbnNpdGlvbnNSZXNwb2'
-    '5zZRJiChNUcmFuc2l0aW9uSmlyYUlzc3VlEiQubnVzaGkudjEuVHJhbnNpdGlvbkppcmFJc3N1'
-    'ZVJlcXVlc3QaJS5udXNoaS52MS5UcmFuc2l0aW9uSmlyYUlzc3VlUmVzcG9uc2USUwoOQWRkSm'
-    'lyYUNvbW1lbnQSHy5udXNoaS52MS5BZGRKaXJhQ29tbWVudFJlcXVlc3QaIC5udXNoaS52MS5B'
-    'ZGRKaXJhQ29tbWVudFJlc3BvbnNlElMKDkZpbmRKaXJhSXNzdWVzEh8ubnVzaGkudjEuRmluZE'
-    'ppcmFJc3N1ZXNSZXF1ZXN0GiAubnVzaGkudjEuRmluZEppcmFJc3N1ZXNSZXNwb25zZRJcChFH'
-    'ZXRKaXJhQXR0YWNobWVudBIiLm51c2hpLnYxLkdldEppcmFBdHRhY2htZW50UmVxdWVzdBojLm'
-    '51c2hpLnYxLkdldEppcmFBdHRhY2htZW50UmVzcG9uc2USVgoPTGlzdEdpdEh1Ykhvc3RzEiAu'
-    'bnVzaGkudjEuTGlzdEdpdEh1Ykhvc3RzUmVxdWVzdBohLm51c2hpLnYxLkxpc3RHaXRIdWJIb3'
-    'N0c1Jlc3BvbnNlElMKDkFkZEdpdEh1YlRva2VuEh8ubnVzaGkudjEuQWRkR2l0SHViVG9rZW5S'
-    'ZXF1ZXN0GiAubnVzaGkudjEuQWRkR2l0SHViVG9rZW5SZXNwb25zZRJcChFSZW1vdmVHaXRIdW'
-    'JUb2tlbhIiLm51c2hpLnYxLlJlbW92ZUdpdEh1YlRva2VuUmVxdWVzdBojLm51c2hpLnYxLlJl'
-    'bW92ZUdpdEh1YlRva2VuUmVzcG9uc2USWQoQQWxsb3dHaXRIdWJUb2tlbhIhLm51c2hpLnYxLk'
-    'FsbG93R2l0SHViVG9rZW5SZXF1ZXN0GiIubnVzaGkudjEuQWxsb3dHaXRIdWJUb2tlblJlc3Bv'
-    'bnNlElYKD0xpc3RHaXRIdWJSZXBvcxIgLm51c2hpLnYxLkxpc3RHaXRIdWJSZXBvc1JlcXVlc3'
-    'QaIS5udXNoaS52MS5MaXN0R2l0SHViUmVwb3NSZXNwb25zZRJWCg9MaXN0R2l0SHViSW5ib3gS'
-    'IC5udXNoaS52MS5MaXN0R2l0SHViSW5ib3hSZXF1ZXN0GiEubnVzaGkudjEuTGlzdEdpdEh1Yk'
-    'luYm94UmVzcG9uc2USVgoPR2V0R2l0SHViU3RhdGVzEiAubnVzaGkudjEuR2V0R2l0SHViU3Rh'
-    'dGVzUmVxdWVzdBohLm51c2hpLnYxLkdldEdpdEh1YlN0YXRlc1Jlc3BvbnNlElAKDUdldEdpdE'
-    'h1YlB1bGwSHi5udXNoaS52MS5HZXRHaXRIdWJQdWxsUmVxdWVzdBofLm51c2hpLnYxLkdldEdp'
-    'dEh1YlB1bGxSZXNwb25zZRJTCg5HZXRHaXRIdWJJc3N1ZRIfLm51c2hpLnYxLkdldEdpdEh1Yk'
-    'lzc3VlUmVxdWVzdBogLm51c2hpLnYxLkdldEdpdEh1Yklzc3VlUmVzcG9uc2USUwoOR2V0R2l0'
-    'SHViRmlsZXMSHy5udXNoaS52MS5HZXRHaXRIdWJGaWxlc1JlcXVlc3QaIC5udXNoaS52MS5HZX'
-    'RHaXRIdWJGaWxlc1Jlc3BvbnNlElYKD0dldEdpdEh1YkpvYkxvZxIgLm51c2hpLnYxLkdldEdp'
-    'dEh1YkpvYkxvZ1JlcXVlc3QaIS5udXNoaS52MS5HZXRHaXRIdWJKb2JMb2dSZXNwb25zZRJWCg'
-    '9HZXRHaXRIdWJQcm9tcHQSIC5udXNoaS52MS5HZXRHaXRIdWJQcm9tcHRSZXF1ZXN0GiEubnVz'
-    'aGkudjEuR2V0R2l0SHViUHJvbXB0UmVzcG9uc2USXAoRUmVwbHlHaXRIdWJUaHJlYWQSIi5udX'
-    'NoaS52MS5SZXBseUdpdEh1YlRocmVhZFJlcXVlc3QaIy5udXNoaS52MS5SZXBseUdpdEh1YlRo'
-    'cmVhZFJlc3BvbnNlEmIKE1Jlc29sdmVHaXRIdWJUaHJlYWQSJC5udXNoaS52MS5SZXNvbHZlR2'
-    'l0SHViVGhyZWFkUmVxdWVzdBolLm51c2hpLnYxLlJlc29sdmVHaXRIdWJUaHJlYWRSZXNwb25z'
-    'ZRJZChBBZGRHaXRIdWJDb21tZW50EiEubnVzaGkudjEuQWRkR2l0SHViQ29tbWVudFJlcXVlc3'
-    'QaIi5udXNoaS52MS5BZGRHaXRIdWJDb21tZW50UmVzcG9uc2USXwoSU3VibWl0R2l0SHViUmV2'
-    'aWV3EiMubnVzaGkudjEuU3VibWl0R2l0SHViUmV2aWV3UmVxdWVzdBokLm51c2hpLnYxLlN1Ym'
-    '1pdEdpdEh1YlJldmlld1Jlc3BvbnNlEj0KBkV2ZW50cxIXLm51c2hpLnYxLkV2ZW50c1JlcXVl'
-    'c3QaGC5udXNoaS52MS5FdmVudHNSZXNwb25zZTAB');
+    '1jcFNlcnZlclJlcXVlc3QaIS5udXNoaS52MS5Mb2dvdXRNY3BTZXJ2ZXJSZXNwb25zZRJHCgpM'
+    'aXN0U2tpbGxzEhsubnVzaGkudjEuTGlzdFNraWxsc1JlcXVlc3QaHC5udXNoaS52MS5MaXN0U2'
+    'tpbGxzUmVzcG9uc2USRwoKU2V0U2tpbGxPbhIbLm51c2hpLnYxLlNldFNraWxsT25SZXF1ZXN0'
+    'GhwubnVzaGkudjEuU2V0U2tpbGxPblJlc3BvbnNlEkoKC1NldFBsdWdpbk9uEhwubnVzaGkudj'
+    'EuU2V0UGx1Z2luT25SZXF1ZXN0Gh0ubnVzaGkudjEuU2V0UGx1Z2luT25SZXNwb25zZRJWCg9V'
+    'bmluc3RhbGxQbHVnaW4SIC5udXNoaS52MS5Vbmluc3RhbGxQbHVnaW5SZXF1ZXN0GiEubnVzaG'
+    'kudjEuVW5pbnN0YWxsUGx1Z2luUmVzcG9uc2USRwoKVHJhc2hTa2lsbBIbLm51c2hpLnYxLlRy'
+    'YXNoU2tpbGxSZXF1ZXN0GhwubnVzaGkudjEuVHJhc2hTa2lsbFJlc3BvbnNlEkcKClJlbG9hZE'
+    'NoYXQSGy5udXNoaS52MS5SZWxvYWRDaGF0UmVxdWVzdBocLm51c2hpLnYxLlJlbG9hZENoYXRS'
+    'ZXNwb25zZRJNCgxPcGVuVGVybWluYWwSHS5udXNoaS52MS5PcGVuVGVybWluYWxSZXF1ZXN0Gh'
+    '4ubnVzaGkudjEuT3BlblRlcm1pbmFsUmVzcG9uc2USUAoNTGlzdFRlcm1pbmFscxIeLm51c2hp'
+    'LnYxLkxpc3RUZXJtaW5hbHNSZXF1ZXN0Gh8ubnVzaGkudjEuTGlzdFRlcm1pbmFsc1Jlc3Bvbn'
+    'NlElUKDkF0dGFjaFRlcm1pbmFsEh8ubnVzaGkudjEuQXR0YWNoVGVybWluYWxSZXF1ZXN0GiAu'
+    'bnVzaGkudjEuQXR0YWNoVGVybWluYWxSZXNwb25zZTABElAKDVdyaXRlVGVybWluYWwSHi5udX'
+    'NoaS52MS5Xcml0ZVRlcm1pbmFsUmVxdWVzdBofLm51c2hpLnYxLldyaXRlVGVybWluYWxSZXNw'
+    'b25zZRJTCg5SZXNpemVUZXJtaW5hbBIfLm51c2hpLnYxLlJlc2l6ZVRlcm1pbmFsUmVxdWVzdB'
+    'ogLm51c2hpLnYxLlJlc2l6ZVRlcm1pbmFsUmVzcG9uc2USUwoOUmVuYW1lVGVybWluYWwSHy5u'
+    'dXNoaS52MS5SZW5hbWVUZXJtaW5hbFJlcXVlc3QaIC5udXNoaS52MS5SZW5hbWVUZXJtaW5hbF'
+    'Jlc3BvbnNlElkKEEFycmFuZ2VUZXJtaW5hbHMSIS5udXNoaS52MS5BcnJhbmdlVGVybWluYWxz'
+    'UmVxdWVzdBoiLm51c2hpLnYxLkFycmFuZ2VUZXJtaW5hbHNSZXNwb25zZRJWCg9SZXN0YXJ0VG'
+    'VybWluYWwSIC5udXNoaS52MS5SZXN0YXJ0VGVybWluYWxSZXF1ZXN0GiEubnVzaGkudjEuUmVz'
+    'dGFydFRlcm1pbmFsUmVzcG9uc2USUAoNQ2xvc2VUZXJtaW5hbBIeLm51c2hpLnYxLkNsb3NlVG'
+    'VybWluYWxSZXF1ZXN0Gh8ubnVzaGkudjEuQ2xvc2VUZXJtaW5hbFJlc3BvbnNlEkoKC0NoZWNr'
+    'Rm9sZGVyEhwubnVzaGkudjEuQ2hlY2tGb2xkZXJSZXF1ZXN0Gh0ubnVzaGkudjEuQ2hlY2tGb2'
+    'xkZXJSZXNwb25zZRJKCgtUcnVzdEZvbGRlchIcLm51c2hpLnYxLlRydXN0Rm9sZGVyUmVxdWVz'
+    'dBodLm51c2hpLnYxLlRydXN0Rm9sZGVyUmVzcG9uc2USRAoJR2V0UmVtb3RlEhoubnVzaGkudj'
+    'EuR2V0UmVtb3RlUmVxdWVzdBobLm51c2hpLnYxLkdldFJlbW90ZVJlc3BvbnNlEkQKCVNldFJl'
+    'bW90ZRIaLm51c2hpLnYxLlNldFJlbW90ZVJlcXVlc3QaGy5udXNoaS52MS5TZXRSZW1vdGVSZX'
+    'Nwb25zZRJNCgxTdGFydFBhaXJpbmcSHS5udXNoaS52MS5TdGFydFBhaXJpbmdSZXF1ZXN0Gh4u'
+    'bnVzaGkudjEuU3RhcnRQYWlyaW5nUmVzcG9uc2USUwoOQ29uZmlybVBhaXJpbmcSHy5udXNoaS'
+    '52MS5Db25maXJtUGFpcmluZ1JlcXVlc3QaIC5udXNoaS52MS5Db25maXJtUGFpcmluZ1Jlc3Bv'
+    'bnNlEk0KDFJldm9rZURldmljZRIdLm51c2hpLnYxLlJldm9rZURldmljZVJlcXVlc3QaHi5udX'
+    'NoaS52MS5SZXZva2VEZXZpY2VSZXNwb25zZRIyCgNMb2cSFC5udXNoaS52MS5Mb2dSZXF1ZXN0'
+    'GhUubnVzaGkudjEuTG9nUmVzcG9uc2USUAoNTGlzdEppcmFTaXRlcxIeLm51c2hpLnYxLkxpc3'
+    'RKaXJhU2l0ZXNSZXF1ZXN0Gh8ubnVzaGkudjEuTGlzdEppcmFTaXRlc1Jlc3BvbnNlEkoKC0Fk'
+    'ZEppcmFTaXRlEhwubnVzaGkudjEuQWRkSmlyYVNpdGVSZXF1ZXN0Gh0ubnVzaGkudjEuQWRkSm'
+    'lyYVNpdGVSZXNwb25zZRJTCg5SZW1vdmVKaXJhU2l0ZRIfLm51c2hpLnYxLlJlbW92ZUppcmFT'
+    'aXRlUmVxdWVzdBogLm51c2hpLnYxLlJlbW92ZUppcmFTaXRlUmVzcG9uc2USUAoNQ2hlY2tKaX'
+    'JhU2l0ZRIeLm51c2hpLnYxLkNoZWNrSmlyYVNpdGVSZXF1ZXN0Gh8ubnVzaGkudjEuQ2hlY2tK'
+    'aXJhU2l0ZVJlc3BvbnNlElMKDkFsbG93SmlyYVRva2VuEh8ubnVzaGkudjEuQWxsb3dKaXJhVG'
+    '9rZW5SZXF1ZXN0GiAubnVzaGkudjEuQWxsb3dKaXJhVG9rZW5SZXNwb25zZRJTCg5MaXN0Smly'
+    'YUJvYXJkcxIfLm51c2hpLnYxLkxpc3RKaXJhQm9hcmRzUmVxdWVzdBogLm51c2hpLnYxLkxpc3'
+    'RKaXJhQm9hcmRzUmVzcG9uc2USTQoMU2V0SmlyYUJvYXJkEh0ubnVzaGkudjEuU2V0SmlyYUJv'
+    'YXJkUmVxdWVzdBoeLm51c2hpLnYxLlNldEppcmFCb2FyZFJlc3BvbnNlElYKD1NldEppcmFTZW'
+    'FyY2hlcxIgLm51c2hpLnYxLlNldEppcmFTZWFyY2hlc1JlcXVlc3QaIS5udXNoaS52MS5TZXRK'
+    'aXJhU2VhcmNoZXNSZXNwb25zZRJTCg5MaXN0SmlyYUlzc3VlcxIfLm51c2hpLnYxLkxpc3RKaX'
+    'JhSXNzdWVzUmVxdWVzdBogLm51c2hpLnYxLkxpc3RKaXJhSXNzdWVzUmVzcG9uc2USRwoKR2V0'
+    'SmlyYUpxbBIbLm51c2hpLnYxLkdldEppcmFKcWxSZXF1ZXN0GhwubnVzaGkudjEuR2V0SmlyYU'
+    'pxbFJlc3BvbnNlElMKDlN1Z2dlc3RKaXJhSnFsEh8ubnVzaGkudjEuU3VnZ2VzdEppcmFKcWxS'
+    'ZXF1ZXN0GiAubnVzaGkudjEuU3VnZ2VzdEppcmFKcWxSZXNwb25zZRJNCgxHZXRKaXJhSXNzdW'
+    'USHS5udXNoaS52MS5HZXRKaXJhSXNzdWVSZXF1ZXN0Gh4ubnVzaGkudjEuR2V0SmlyYUlzc3Vl'
+    'UmVzcG9uc2USYgoTTGlzdEppcmFUcmFuc2l0aW9ucxIkLm51c2hpLnYxLkxpc3RKaXJhVHJhbn'
+    'NpdGlvbnNSZXF1ZXN0GiUubnVzaGkudjEuTGlzdEppcmFUcmFuc2l0aW9uc1Jlc3BvbnNlEmIK'
+    'E1RyYW5zaXRpb25KaXJhSXNzdWUSJC5udXNoaS52MS5UcmFuc2l0aW9uSmlyYUlzc3VlUmVxdW'
+    'VzdBolLm51c2hpLnYxLlRyYW5zaXRpb25KaXJhSXNzdWVSZXNwb25zZRJTCg5BZGRKaXJhQ29t'
+    'bWVudBIfLm51c2hpLnYxLkFkZEppcmFDb21tZW50UmVxdWVzdBogLm51c2hpLnYxLkFkZEppcm'
+    'FDb21tZW50UmVzcG9uc2USUwoORmluZEppcmFJc3N1ZXMSHy5udXNoaS52MS5GaW5kSmlyYUlz'
+    'c3Vlc1JlcXVlc3QaIC5udXNoaS52MS5GaW5kSmlyYUlzc3Vlc1Jlc3BvbnNlElwKEUdldEppcm'
+    'FBdHRhY2htZW50EiIubnVzaGkudjEuR2V0SmlyYUF0dGFjaG1lbnRSZXF1ZXN0GiMubnVzaGku'
+    'djEuR2V0SmlyYUF0dGFjaG1lbnRSZXNwb25zZRJWCg9MaXN0R2l0SHViSG9zdHMSIC5udXNoaS'
+    '52MS5MaXN0R2l0SHViSG9zdHNSZXF1ZXN0GiEubnVzaGkudjEuTGlzdEdpdEh1Ykhvc3RzUmVz'
+    'cG9uc2USUwoOQWRkR2l0SHViVG9rZW4SHy5udXNoaS52MS5BZGRHaXRIdWJUb2tlblJlcXVlc3'
+    'QaIC5udXNoaS52MS5BZGRHaXRIdWJUb2tlblJlc3BvbnNlElwKEVJlbW92ZUdpdEh1YlRva2Vu'
+    'EiIubnVzaGkudjEuUmVtb3ZlR2l0SHViVG9rZW5SZXF1ZXN0GiMubnVzaGkudjEuUmVtb3ZlR2'
+    'l0SHViVG9rZW5SZXNwb25zZRJZChBBbGxvd0dpdEh1YlRva2VuEiEubnVzaGkudjEuQWxsb3dH'
+    'aXRIdWJUb2tlblJlcXVlc3QaIi5udXNoaS52MS5BbGxvd0dpdEh1YlRva2VuUmVzcG9uc2USVg'
+    'oPTGlzdEdpdEh1YlJlcG9zEiAubnVzaGkudjEuTGlzdEdpdEh1YlJlcG9zUmVxdWVzdBohLm51'
+    'c2hpLnYxLkxpc3RHaXRIdWJSZXBvc1Jlc3BvbnNlElYKD0xpc3RHaXRIdWJJbmJveBIgLm51c2'
+    'hpLnYxLkxpc3RHaXRIdWJJbmJveFJlcXVlc3QaIS5udXNoaS52MS5MaXN0R2l0SHViSW5ib3hS'
+    'ZXNwb25zZRJWCg9HZXRHaXRIdWJTdGF0ZXMSIC5udXNoaS52MS5HZXRHaXRIdWJTdGF0ZXNSZX'
+    'F1ZXN0GiEubnVzaGkudjEuR2V0R2l0SHViU3RhdGVzUmVzcG9uc2USUAoNR2V0R2l0SHViUHVs'
+    'bBIeLm51c2hpLnYxLkdldEdpdEh1YlB1bGxSZXF1ZXN0Gh8ubnVzaGkudjEuR2V0R2l0SHViUH'
+    'VsbFJlc3BvbnNlElMKDkdldEdpdEh1Yklzc3VlEh8ubnVzaGkudjEuR2V0R2l0SHViSXNzdWVS'
+    'ZXF1ZXN0GiAubnVzaGkudjEuR2V0R2l0SHViSXNzdWVSZXNwb25zZRJTCg5HZXRHaXRIdWJGaW'
+    'xlcxIfLm51c2hpLnYxLkdldEdpdEh1YkZpbGVzUmVxdWVzdBogLm51c2hpLnYxLkdldEdpdEh1'
+    'YkZpbGVzUmVzcG9uc2USVgoPR2V0R2l0SHViSm9iTG9nEiAubnVzaGkudjEuR2V0R2l0SHViSm'
+    '9iTG9nUmVxdWVzdBohLm51c2hpLnYxLkdldEdpdEh1YkpvYkxvZ1Jlc3BvbnNlElYKD0dldEdp'
+    'dEh1YlByb21wdBIgLm51c2hpLnYxLkdldEdpdEh1YlByb21wdFJlcXVlc3QaIS5udXNoaS52MS'
+    '5HZXRHaXRIdWJQcm9tcHRSZXNwb25zZRJcChFSZXBseUdpdEh1YlRocmVhZBIiLm51c2hpLnYx'
+    'LlJlcGx5R2l0SHViVGhyZWFkUmVxdWVzdBojLm51c2hpLnYxLlJlcGx5R2l0SHViVGhyZWFkUm'
+    'VzcG9uc2USYgoTUmVzb2x2ZUdpdEh1YlRocmVhZBIkLm51c2hpLnYxLlJlc29sdmVHaXRIdWJU'
+    'aHJlYWRSZXF1ZXN0GiUubnVzaGkudjEuUmVzb2x2ZUdpdEh1YlRocmVhZFJlc3BvbnNlElkKEE'
+    'FkZEdpdEh1YkNvbW1lbnQSIS5udXNoaS52MS5BZGRHaXRIdWJDb21tZW50UmVxdWVzdBoiLm51'
+    'c2hpLnYxLkFkZEdpdEh1YkNvbW1lbnRSZXNwb25zZRJfChJTdWJtaXRHaXRIdWJSZXZpZXcSIy'
+    '5udXNoaS52MS5TdWJtaXRHaXRIdWJSZXZpZXdSZXF1ZXN0GiQubnVzaGkudjEuU3VibWl0R2l0'
+    'SHViUmV2aWV3UmVzcG9uc2USPQoGRXZlbnRzEhcubnVzaGkudjEuRXZlbnRzUmVxdWVzdBoYLm'
+    '51c2hpLnYxLkV2ZW50c1Jlc3BvbnNlMAE=');
