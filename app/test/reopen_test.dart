@@ -248,8 +248,9 @@ void main() {
     ('dark', Tokens.dark),
     ('light', Tokens.light),
   ]) {
-    testWidgets('a chat whose session is gone says so quietly, with '
-        'Delete… ($name)', (tester) async {
+    testWidgets('a chat whose session is gone says so quietly ($name)', (
+      tester,
+    ) async {
       tester.view
         ..devicePixelRatio = 1
         ..physicalSize = const Size(760, 200);
@@ -280,7 +281,8 @@ void main() {
       expect(find.text('expired'), findsOneWidget);
       expect(find.text("couldn't start"), findsNothing);
       expect(find.text('Try again'), findsNothing);
-      expect(find.text('Delete…'), findsOneWidget);
+      // Delete… is in the composer's place (history_test.dart).
+      expect(find.text('Delete…'), findsNothing);
       await expectLater(
         find.byType(Scaffold),
         matchesGoldenFile('goldens/reopen_gone_$name.png'),
@@ -288,25 +290,4 @@ void main() {
       d.dispose();
     });
   }
-
-  testWidgets('Delete… on a chat whose session is gone asks what it '
-      'deletes', (tester) async {
-    tester.view
-      ..devicePixelRatio = 1
-      ..physicalSize = const Size(900, 700);
-    addTearDown(tester.view.reset);
-    final fake = FakeDaemon([]);
-    final chat = _chat()..sessionGone = true;
-    final d = await _show(
-      tester,
-      fake,
-      (d) => ItemView(gone, chat, d, live: false, still: true),
-    );
-    await tester.tap(find.text('Delete…'));
-    await tester.pumpAndSettle();
-    expect(find.text('Delete “Fix the login redirect”?'), findsOneWidget);
-    expect(fake.calls.whereType<PlanDeleteChatRequest>().length, 1);
-    expect(_reopens(fake), isEmpty);
-    d.dispose();
-  });
 }

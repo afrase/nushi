@@ -321,10 +321,13 @@ const _sides = EdgeInsets.symmetric(horizontal: 20);
 bool _isBand(Object e) =>
     e is Item && e.kind == ItemKind.ITEM_KIND_USER_MESSAGE;
 
-/// A user message's band, or the agent starting on its own.
+/// A user message's band, the agent starting on its own, or where a
+/// reopened chat's history comes from changes.
 bool _opens(Object e) =>
     _isBand(e) ||
-    e is Item && e.kind == ItemKind.ITEM_KIND_NOTICE && e.status == 'own_turn';
+    e is Item &&
+        e.kind == ItemKind.ITEM_KIND_NOTICE &&
+        const {'own_turn', 'compacted', 'history_differs'}.contains(e.status);
 
 /// The room above entry [i]: more around what opens a chapter than between
 /// the agent's steps, so each exchange reads as one.
