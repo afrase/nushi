@@ -113,6 +113,45 @@ func TestIssueAndStatus(t *testing.T) {
 	}
 }
 
+func TestCompareAndBlobs(t *testing.T) {
+	f := newFake(t)
+	f.file("GET /repos/afrase/nushi-gh-test/compare/a...b", "compare.json")
+	f.file("graphql Blobs", "graphql_Blobs.json")
+	c := f.client()
+	base, files, err := c.Compare(t.Context(), repo, "a", "b")
+	if err != nil || base != "521c8d9a1db6c75193e4fd2daf7ddf4c5d61940d" || len(files) != 3 || files[2].Path != "sub.go" || files[2].Added != 11 {
+		t.Fatalf("%s %+v %v", base, files, err)
+	}
+	head, at := "465b7a4b3bc29650bbef832800f4ad10db363aa7", "521c8d9a1db6c75193e4fd2daf7ddf4c5d61940d"
+	blobs, err := c.Blobs(t.Context(), repo, []BlobAt{{head, "sub.go"}, {at, "sub.go"}, {at, "add.go"}})
+	if err != nil || !strings.Contains(blobs[BlobAt{head, "sub.go"}].Text, "0 - a") || blobs[BlobAt{at, "sub.go"}].Found ||
+		!strings.Contains(blobs[BlobAt{at, "add.go"}].Text, "func Add") {
+		t.Fatalf("%+v %v", blobs, err)
+	}
+}
+
+func TestJobLog(t *testing.T) {
+	f := newFake(t)
+	f.route("GET /repos/afrase/nushi-gh-test/actions/jobs/7/logs", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Location", f.srv.URL+"/blob/log?sig=1")
+		w.WriteHeader(http.StatusFound)
+	})
+	f.route("GET /blob/log", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(strings.Repeat("2026-10-26T04:15:17.1234567Z noise\n", 20000) +
+			"2026-10-26T04:15:18.0000000Z \x1b[36;1mThe branch has a FAIL file:\x1b[0m\n" +
+			"2026-10-26T04:15:18.0000000Z ##[error]Process completed with exit code 1.\n"))
+	})
+	log, err := f.client().JobLog(t.Context(), repo, 7)
+	if err != nil || len(log) > logKept {
+		t.Fatalf("%d %v", len(log), err)
+	}
+	tail := Tail(log, 200)
+	if !strings.HasSuffix(tail, "noise\nThe branch has a FAIL file:\n##[error]Process completed with exit code 1.") || len(tail) > 200 ||
+		!strings.HasPrefix(tail, "noise") {
+		t.Fatalf("%q", tail)
+	}
+}
+
 func TestRateLimits(t *testing.T) {
 	f := newFake(t)
 	f.file("GET /rate_limit", "rate_limit.json")

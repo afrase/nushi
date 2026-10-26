@@ -68,9 +68,31 @@ func TestLive(t *testing.T) {
 	if strings.Contains(p.Body, "template comment") {
 		t.Fatal("the body kept its HTML comment")
 	}
+	var failed int64
+	for _, r := range p.Runs {
+		if r.Name == "on-demand" && r.State == "failure" {
+			failed = r.ID
+		}
+	}
+	if failed == 0 {
+		t.Fatalf("no failed on-demand check: %+v", p.Runs)
+	}
+	log, err := c.JobLog(ctx, testRepo, failed)
+	if err != nil || !strings.Contains(Tail(log, TailSize), "FAIL") {
+		t.Fatalf("job log: %v\n%s", err, Tail(log, 2000))
+	}
 	st, err := c.Status(ctx, []string{p.ID, in.Assigned[0].ID})
 	if err != nil || st[p.ID].Number != 1 || st[in.Assigned[0].ID].Pull {
 		t.Fatalf("status: %+v %v", st, err)
+	}
+	base, files, err := c.Compare(ctx, testRepo, p.BaseOID, p.HeadOID)
+	if err != nil || base == "" || len(files) == 0 {
+		t.Fatalf("compare: %s %+v %v", base, files, err)
+	}
+	blobs, err := c.Blobs(ctx, testRepo, []BlobAt{{p.HeadOID, "sub.go"}, {base, "sub.go"}, {base, "add.go"}})
+	if err != nil || !strings.Contains(blobs[BlobAt{p.HeadOID, "sub.go"}].Text, "func Sub") || blobs[BlobAt{base, "sub.go"}].Found ||
+		!blobs[BlobAt{base, "add.go"}].Found {
+		t.Fatalf("blobs: %+v %v", blobs, err)
 	}
 	is, err := c.Issue(ctx, testRepo, 2)
 	if err != nil || is.Pull || !strings.Contains(is.Body, "Mul") {
@@ -87,6 +109,9 @@ var nameRE = regexp.MustCompile(`[^A-Za-z0-9]+`)
 
 func (r recorder) RoundTrip(req *http.Request) (*http.Response, error) {
 	name := nameRE.ReplaceAllString(req.URL.Path[strings.LastIndex(req.URL.Path, "/")+1:], "_")
+	if strings.Contains(req.URL.Path, "/compare/") {
+		name = "compare"
+	}
 	if req.Body != nil && req.URL.Path == "/graphql" {
 		b, _ := io.ReadAll(req.Body)
 		req.Body = io.NopCloser(bytes.NewReader(b))
