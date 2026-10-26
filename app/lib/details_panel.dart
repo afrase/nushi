@@ -160,31 +160,21 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
           style: muted,
           overflow: TextOverflow.ellipsis,
         ),
+        action: chat.archived
+            ? null
+            : IconTap(
+                Icons.terminal,
+                size: 14,
+                tooltip: 'Open in terminal',
+                onTap: () => tryOrShow(
+                  context,
+                  () => openTerminalIn(daemon, chat, chat.folder),
+                ),
+              ),
         rows: [
           (
             chat.worktree == null ? 'Folder' : 'Repository',
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(
-                  child: FolderButton(
-                    chat: chat,
-                    daemon: daemon,
-                    stacked: true,
-                  ),
-                ),
-                if (!chat.archived)
-                  IconTap(
-                    Icons.terminal,
-                    size: 14,
-                    tooltip: 'Open in terminal',
-                    onTap: () => tryOrShow(
-                      context,
-                      () => openTerminalIn(daemon, chat, chat.folder),
-                    ),
-                  ),
-              ],
-            ),
+            FolderButton(chat: chat, daemon: daemon, stacked: true),
           ),
           if (status != null && status.git)
             ...worktreeRows(context, chat, daemon, status.branch),
