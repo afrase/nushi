@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/open_session.dart';
 import 'package:nushi/sidebar.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -263,7 +264,15 @@ void main() {
     fake.sessions = _found;
     await tester.tap(find.byTooltip('New chat here'));
     await tester.pumpAndSettle();
-    expect(find.text('Open a Codex session…'), findsOneWidget);
+    // The highlighted agent's row offers its sessions; no other row does.
+    expect(find.text('Sessions'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.ancestor(of: find.text('Codex'), matching: find.byType(Row)),
+        matching: find.text('Sessions'),
+      ),
+      findsOneWidget,
+    );
     await _key(tester, LogicalKeyboardKey.arrowRight);
     expect(find.text('Codex sessions in nushi'), findsOneWidget);
     expect(fake.listed.single.agent, 'codex');
@@ -287,7 +296,15 @@ void main() {
     expect(find.text('No other sessions here.'), findsOneWidget);
     await _key(tester, LogicalKeyboardKey.arrowLeft);
     await _key(tester, LogicalKeyboardKey.arrowDown); // codex → ante
-    await tester.tap(find.text('Open an Ante session…'));
+    // The hint follows the highlight; a click on it opens Ante's.
+    expect(
+      find.descendant(
+        of: find.ancestor(of: find.text('Ante'), matching: find.byType(Row)),
+        matching: find.text('Sessions'),
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Sessions'));
     await tester.pumpAndSettle();
     expect(find.text('Ante sessions'), findsOneWidget);
     await _key(tester, LogicalKeyboardKey.escape);
@@ -389,6 +406,11 @@ void main() {
     await _open(tester);
     await _key(tester, LogicalKeyboardKey.arrowRight);
     expect(find.text("Codex can't list its sessions."), findsOneWidget);
+    // Back, Codex offers no Sessions any more while the app runs.
+    await _key(tester, LogicalKeyboardKey.arrowLeft);
+    expect(find.text('Codex'), findsOneWidget);
+    expect(find.text('Sessions'), findsNothing);
+    cantListSessions.clear();
     d.dispose();
   });
 
