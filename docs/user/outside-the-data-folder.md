@@ -12,6 +12,9 @@ Everything else Nushi writes is in its data folder (`~/Library/Application Suppo
 | A copy of a Claude transcript | `~/.claude/projects/<folder>/` | Move (you asked): the copy lets Claude fork the session in the new folder; removed after. |
 | Claude's MCP servers | `~/.claude.json`, through `claude mcp add-json/remove/login/logout` | The MCP view's Add, Edit, Remove, Sign in and out. |
 | A project's MCP switch | `<repo>/.claude/settings.local.json` (its two MCP lists), and that file into `.git/info/exclude` | The MCP view's on/off switch. |
+| A user or local MCP server's switch | `~/.claude.json`'s `projects[<project>].disabledMcpServers`, written by Claude (a `claude -p --bare` run told to, ADR 0050) | The MCP view's or card's switch. |
+| Skills' and plugins' switches | `skillOverrides` and `disableBundledSkills` in `~/.claude/settings.json` (through a link to it), `skillOverrides` and `enabledPlugins` in `<repo>/.claude/settings.local.json` (and that file into `.git/info/exclude`); your plugins through `claude plugin enable/disable/uninstall` | The Skills view's switches and Uninstall… (ADR 0051). |
+| A deleted skill | its folder, moved to the Trash | The Skills view's Delete… |
 | A worktree | `<repo>/.worktrees/<name>`, its branch, `.git/info/exclude` | A chat in a new worktree; Delete removes them when asked. |
 | MCP servers started | whatever each server does | Opening the MCP view runs `claude mcp list`, which starts every server to check it, as in a terminal. |
 | A shell | your shell's own files (history) | A terminal you open; the daemon's start (`nushid -login`, ADR 0036); reading its environment for agents, at start and from Settings › Agents (`-l -i -c`, ADR 0048): your config runs as in a terminal. |

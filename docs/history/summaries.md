@@ -2,6 +2,19 @@
 
 Each milestone's summary as it was written when the milestone ended, newest first. An archive: what is current is in `NOTES.md`, `docs/adr/` and the code.
 
+## Summary of MCP servers turned off, and a skills manager (steps 296–302)
+
+Steps 296–302, one commit each on `main`, pushed after `make check`, from a worktree of their own (another session worked on the GitHub view in the checkout meanwhile and committed its own steps and a fix between). **API 66** (`SetMcpServerOn` takes `scope`, empty being project as before; `ListSkills`, `SetSkillOn`, `SetPluginOn`, `UninstallPlugin`, `TrashSkill`).
+
+- **MCP servers off** (the owner: "disable some of them and not just logout"; ADR 0050): a user or local server's switch, "in this project", asks Claude itself to do what `/mcp disable` does: a `claude -p --bare` run takes the SDK's `mcp_toggle` control request and writes `disabledMcpServers` in `~/.claude.json`, read back after. `claude mcp` has no such command; `disabledMcpjsonServers` covers only `.mcp.json` servers; `deniedMcpServers` works but hides the server as policy. Project servers keep their switch; plugins' servers and connectors say "Off only with /mcp in a terminal". Off servers stay listed, dimmed; the details card has the switches and, after a change, "Applies when the chat restarts" with Reload.
+- **Skills** (the owner: "a skills manager would also be nice"; ADR 0051): a Skills view beside MCP servers: yours, the project's, each plugin's and the built-in skills, with descriptions (plain text), an estimated cost and switches (`skillOverrides` in the file Claude advises; `disableBundledSkills`); search; Open SKILL.md, Show in Finder, Delete… to the Trash; plugins with what they bring, on/off and Uninstall… for yours; New skill… as a Claude chat with a request in its box.
+- **Security**: nothing runs Claude in a folder except `--bare` for the MCP toggle (a full run executed the folder's `apiKeyHelper` and hooks: seen); `claude plugin` runs in Claude's config folder; a project's plugin switch writes `enabledPlugins` in its local settings; linked `.claude`/`.claude/skills` are left out and never trashed through (step 300, from the commit security review); a toggled MCP server must exist in its scope; writes are one key, atomic, links in a project refused.
+- **Size**: the daemon from 28,442 to 29,501 lines of Go, the app from 27,328 to 28,293 lines of Dart (the other session's fix between included). Over the ~500-line tripwire: 298 (every source of skills and plugins), 299 (each change and the API), 301 (the view, its rows and goldens).
+
+**Tried by hand**: everything against Claude Code 2.1.310 in a throwaway `CLAUDE_CONFIG_DIR` and `HOME` (never the real config): the toggle from a repository, a subfolder and a worktree (off 0.5 s, on about 6 s with a failing server), what `--bare` and a full run execute, a plugin from a local marketplace (list, enable, disable, uninstall, scopes), the skills found and their states checked against Claude's own `/skills` list.
+
+**Not tried by hand**: the views in the window (no synthetic input: widget tests and goldens); a claude.ai connector or a plugin's server toggled from a terminal and shown as off; `/context`'s Skills numbers (need a login); the Trash with the real `trash` on a real skill; New skill… starting a real chat; uninstalling a real plugin; managed settings.
+
 ## Summary of the GitHub view as cards, with filters (steps 291–295)
 
 Steps 291–295, one commit each on `main`, pushed after `make check`. **API 64** (`ListGitHubInbox` takes `updated_days`, `wide`, `hide`, `owners`; answers `*_older`; all optional, so an older app's inbox is as before). Another session worked in the checkout meanwhile (MCP switches, a Skills page): only this work's files were committed.

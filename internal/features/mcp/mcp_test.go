@@ -226,7 +226,7 @@ func TestAnUnapprovedProjectServerGivesWay(t *testing.T) {
 // SetOn goes by scope: project (also when no scope is given), user and
 // local reach the config; a plugin's server and a connector are refused.
 func TestSetOnGoesByScope(t *testing.T) {
-	cfg := &fakeConfig{}
+	cfg := &fakeConfig{files: []model.MCPServer{{Name: "web", Scope: "user"}, {Name: "web", Scope: "local"}}}
 	var reached []string
 	svc := New(cfg, func(affected func(string) bool) {
 		for _, f := range []string{"/p", "/p/sub", "/q"} {
@@ -245,6 +245,9 @@ func TestSetOnGoesByScope(t *testing.T) {
 		if err := svc.SetOn(ctx, "/p", scope, "web", false); err == nil {
 			t.Errorf("%s: not refused", scope)
 		}
+	}
+	if err := svc.SetOn(ctx, "/p", "user", "nothere", true); err == nil {
+		t.Error("a user server that isn't one: not refused")
 	}
 	if err := svc.SetOn(ctx, "/p", "user", "-x", true); err == nil {
 		t.Error("a name like a flag: not refused")

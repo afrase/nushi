@@ -154,6 +154,11 @@ func (s *Service) SetOn(ctx context.Context, folder, scope, name string, on bool
 	if err := target(folder, scope, name); err != nil {
 		return err
 	}
+	if scope != "project" { // Claude toggles by name: only a server of the scope asked
+		if _, err := s.stored(folder, scope, name); err != nil {
+			return err
+		}
+	}
 	if err := s.config.SetOn(ctx, folder, scope, name, on); err != nil {
 		return err
 	}
