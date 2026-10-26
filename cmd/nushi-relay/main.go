@@ -38,8 +38,17 @@ func main() {
 	flag.DurationVar(&lim.HTTPIdle, "http-idle", lim.HTTPIdle, "close a plain HTTP connection (not a WebSocket) idle this long")
 	flag.DurationVar(&lim.FirstWait, "first-wait", lim.FirstWait, "how long a new connection has for its first request's headers")
 	flag.IntVar(&lim.PlainPerIP, "plain-per-ip", lim.PlainPerIP, "plain HTTP connections (not WebSockets) from one address")
+	web := flag.String("web", "", "serve the web app built into this folder (ADR 0054); needs -origin")
+	origin := flag.String("origin", "", "with -web: the origin the browser sees the app at (scheme://host[:port]), the only one whose pages may connect")
 	flag.Parse()
 
+	if *web != "" || *origin != "" {
+		site, err := relay.LoadSite(*web, *origin)
+		if err != nil {
+			log.Fatalf("-web and -origin: %v", err)
+		}
+		lim.Site = site
+	}
 	srv := relay.NewServer(lim)
 	if *host == "" {
 		ln, err := new(net.ListenConfig).Listen(context.Background(), "tcp", cmp.Or(*addr, ":8080"))
