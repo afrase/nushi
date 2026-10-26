@@ -768,6 +768,17 @@ abstract final class NushiService {
     nushiv1nushi.GetGitHubJobLogResponse.new,
   );
 
+  /// A message for a chat's agent, for the box (never sent by Nushi):
+  /// "fix_checks" (the failed checks with their logs' ends) or
+  /// "address_comments" (the threads named, else all not resolved), GitHub's
+  /// text in it marked as data.
+  static const getGitHubPrompt = connect.Spec(
+    '/$name/GetGitHubPrompt',
+    connect.StreamType.unary,
+    nushiv1nushi.GetGitHubPromptRequest.new,
+    nushiv1nushi.GetGitHubPromptResponse.new,
+  );
+
   /// The user's writes.
   static const replyGitHubThread = connect.Spec(
     '/$name/ReplyGitHubThread',

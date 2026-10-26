@@ -4716,6 +4716,41 @@ const SubmitGitHubReviewResponse$json = {
 final $typed_data.Uint8List submitGitHubReviewResponseDescriptor =
     $convert.base64Decode('ChpTdWJtaXRHaXRIdWJSZXZpZXdSZXNwb25zZQ==');
 
+@$core.Deprecated('Use getGitHubPromptRequestDescriptor instead')
+const GetGitHubPromptRequest$json = {
+  '1': 'GetGitHubPromptRequest',
+  '2': [
+    {
+      '1': 'ref',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubRef',
+      '10': 'ref'
+    },
+    {'1': 'kind', '3': 2, '4': 1, '5': 9, '10': 'kind'},
+    {'1': 'threads', '3': 3, '4': 3, '5': 9, '10': 'threads'},
+  ],
+};
+
+/// Descriptor for `GetGitHubPromptRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getGitHubPromptRequestDescriptor = $convert.base64Decode(
+    'ChZHZXRHaXRIdWJQcm9tcHRSZXF1ZXN0EiUKA3JlZhgBIAEoCzITLm51c2hpLnYxLkdpdEh1Yl'
+    'JlZlIDcmVmEhIKBGtpbmQYAiABKAlSBGtpbmQSGAoHdGhyZWFkcxgDIAMoCVIHdGhyZWFkcw==');
+
+@$core.Deprecated('Use getGitHubPromptResponseDescriptor instead')
+const GetGitHubPromptResponse$json = {
+  '1': 'GetGitHubPromptResponse',
+  '2': [
+    {'1': 'text', '3': 1, '4': 1, '5': 9, '10': 'text'},
+  ],
+};
+
+/// Descriptor for `GetGitHubPromptResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getGitHubPromptResponseDescriptor =
+    $convert.base64Decode(
+        'ChdHZXRHaXRIdWJQcm9tcHRSZXNwb25zZRISCgR0ZXh0GAEgASgJUgR0ZXh0');
+
 const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
   '1': 'NushiService',
   '2': [
@@ -5143,6 +5178,11 @@ const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
       '3': '.nushi.v1.GetGitHubJobLogResponse'
     },
     {
+      '1': 'GetGitHubPrompt',
+      '2': '.nushi.v1.GetGitHubPromptRequest',
+      '3': '.nushi.v1.GetGitHubPromptResponse'
+    },
+    {
       '1': 'ReplyGitHubThread',
       '2': '.nushi.v1.ReplyGitHubThreadRequest',
       '3': '.nushi.v1.ReplyGitHubThreadResponse'
@@ -5412,6 +5452,8 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.GetGitHubFilesResponse': GetGitHubFilesResponse$json,
   '.nushi.v1.GetGitHubJobLogRequest': GetGitHubJobLogRequest$json,
   '.nushi.v1.GetGitHubJobLogResponse': GetGitHubJobLogResponse$json,
+  '.nushi.v1.GetGitHubPromptRequest': GetGitHubPromptRequest$json,
+  '.nushi.v1.GetGitHubPromptResponse': GetGitHubPromptResponse$json,
   '.nushi.v1.ReplyGitHubThreadRequest': ReplyGitHubThreadRequest$json,
   '.nushi.v1.ReplyGitHubThreadResponse': ReplyGitHubThreadResponse$json,
   '.nushi.v1.ResolveGitHubThreadRequest': ResolveGitHubThreadRequest$json,
@@ -5555,12 +5597,14 @@ final $typed_data.Uint8List nushiServiceDescriptor = $convert.base64Decode(
     'N0GiAubnVzaGkudjEuR2V0R2l0SHViSXNzdWVSZXNwb25zZRJTCg5HZXRHaXRIdWJGaWxlcxIf'
     'Lm51c2hpLnYxLkdldEdpdEh1YkZpbGVzUmVxdWVzdBogLm51c2hpLnYxLkdldEdpdEh1YkZpbG'
     'VzUmVzcG9uc2USVgoPR2V0R2l0SHViSm9iTG9nEiAubnVzaGkudjEuR2V0R2l0SHViSm9iTG9n'
-    'UmVxdWVzdBohLm51c2hpLnYxLkdldEdpdEh1YkpvYkxvZ1Jlc3BvbnNlElwKEVJlcGx5R2l0SH'
-    'ViVGhyZWFkEiIubnVzaGkudjEuUmVwbHlHaXRIdWJUaHJlYWRSZXF1ZXN0GiMubnVzaGkudjEu'
-    'UmVwbHlHaXRIdWJUaHJlYWRSZXNwb25zZRJiChNSZXNvbHZlR2l0SHViVGhyZWFkEiQubnVzaG'
-    'kudjEuUmVzb2x2ZUdpdEh1YlRocmVhZFJlcXVlc3QaJS5udXNoaS52MS5SZXNvbHZlR2l0SHVi'
-    'VGhyZWFkUmVzcG9uc2USWQoQQWRkR2l0SHViQ29tbWVudBIhLm51c2hpLnYxLkFkZEdpdEh1Yk'
-    'NvbW1lbnRSZXF1ZXN0GiIubnVzaGkudjEuQWRkR2l0SHViQ29tbWVudFJlc3BvbnNlEl8KElN1'
-    'Ym1pdEdpdEh1YlJldmlldxIjLm51c2hpLnYxLlN1Ym1pdEdpdEh1YlJldmlld1JlcXVlc3QaJC'
-    '5udXNoaS52MS5TdWJtaXRHaXRIdWJSZXZpZXdSZXNwb25zZRI9CgZFdmVudHMSFy5udXNoaS52'
-    'MS5FdmVudHNSZXF1ZXN0GhgubnVzaGkudjEuRXZlbnRzUmVzcG9uc2UwAQ==');
+    'UmVxdWVzdBohLm51c2hpLnYxLkdldEdpdEh1YkpvYkxvZ1Jlc3BvbnNlElYKD0dldEdpdEh1Yl'
+    'Byb21wdBIgLm51c2hpLnYxLkdldEdpdEh1YlByb21wdFJlcXVlc3QaIS5udXNoaS52MS5HZXRH'
+    'aXRIdWJQcm9tcHRSZXNwb25zZRJcChFSZXBseUdpdEh1YlRocmVhZBIiLm51c2hpLnYxLlJlcG'
+    'x5R2l0SHViVGhyZWFkUmVxdWVzdBojLm51c2hpLnYxLlJlcGx5R2l0SHViVGhyZWFkUmVzcG9u'
+    'c2USYgoTUmVzb2x2ZUdpdEh1YlRocmVhZBIkLm51c2hpLnYxLlJlc29sdmVHaXRIdWJUaHJlYW'
+    'RSZXF1ZXN0GiUubnVzaGkudjEuUmVzb2x2ZUdpdEh1YlRocmVhZFJlc3BvbnNlElkKEEFkZEdp'
+    'dEh1YkNvbW1lbnQSIS5udXNoaS52MS5BZGRHaXRIdWJDb21tZW50UmVxdWVzdBoiLm51c2hpLn'
+    'YxLkFkZEdpdEh1YkNvbW1lbnRSZXNwb25zZRJfChJTdWJtaXRHaXRIdWJSZXZpZXcSIy5udXNo'
+    'aS52MS5TdWJtaXRHaXRIdWJSZXZpZXdSZXF1ZXN0GiQubnVzaGkudjEuU3VibWl0R2l0SHViUm'
+    'V2aWV3UmVzcG9uc2USPQoGRXZlbnRzEhcubnVzaGkudjEuRXZlbnRzUmVxdWVzdBoYLm51c2hp'
+    'LnYxLkV2ZW50c1Jlc3BvbnNlMAE=');

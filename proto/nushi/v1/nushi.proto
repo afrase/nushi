@@ -247,6 +247,11 @@ service NushiService {
   rpc GetGitHubFiles(GetGitHubFilesRequest) returns (GetGitHubFilesResponse);
   // The end of a failed Actions job's log (16 KB).
   rpc GetGitHubJobLog(GetGitHubJobLogRequest) returns (GetGitHubJobLogResponse);
+  // A message for a chat's agent, for the box (never sent by Nushi):
+  // "fix_checks" (the failed checks with their logs' ends) or
+  // "address_comments" (the threads named, else all not resolved), GitHub's
+  // text in it marked as data.
+  rpc GetGitHubPrompt(GetGitHubPromptRequest) returns (GetGitHubPromptResponse);
   // The user's writes.
   rpc ReplyGitHubThread(ReplyGitHubThreadRequest) returns (ReplyGitHubThreadResponse);
   rpc ResolveGitHubThread(ResolveGitHubThreadRequest) returns (ResolveGitHubThreadResponse);
@@ -2124,3 +2129,15 @@ message SubmitGitHubReviewRequest {
 }
 
 message SubmitGitHubReviewResponse {}
+
+message GetGitHubPromptRequest {
+  GitHubRef ref = 1;
+  // "fix_checks" or "address_comments".
+  string kind = 2;
+  // The threads to address (GitHubThread.id); empty for all not resolved.
+  repeated string threads = 3;
+}
+
+message GetGitHubPromptResponse {
+  string text = 1;
+}

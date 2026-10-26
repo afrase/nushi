@@ -148,6 +148,23 @@ func (s *server) GetGitHubJobLog(ctx context.Context, req *connect.Request[nushi
 	return connect.NewResponse(&nushiv1.GetGitHubJobLogResponse{Tail: tail}), nil
 }
 
+func (s *server) GetGitHubPrompt(ctx context.Context, req *connect.Request[nushiv1.GetGitHubPromptRequest]) (*connect.Response[nushiv1.GetGitHubPromptResponse], error) {
+	var text string
+	var err error
+	switch req.Msg.Kind {
+	case "fix_checks":
+		text, err = s.github.FixChecks(ctx, ref(req.Msg.Ref))
+	case "address_comments":
+		text, err = s.github.AddressComments(ctx, ref(req.Msg.Ref), req.Msg.Threads)
+	default:
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("fix_checks or address_comments"))
+	}
+	if err != nil {
+		return nil, githubErr(err)
+	}
+	return connect.NewResponse(&nushiv1.GetGitHubPromptResponse{Text: text}), nil
+}
+
 func (s *server) ReplyGitHubThread(ctx context.Context, req *connect.Request[nushiv1.ReplyGitHubThreadRequest]) (*connect.Response[nushiv1.ReplyGitHubThreadResponse], error) {
 	c, err := s.github.Reply(ctx, req.Msg.Host, req.Msg.Thread, req.Msg.Body)
 	if err != nil {
