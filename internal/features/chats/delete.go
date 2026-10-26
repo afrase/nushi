@@ -131,6 +131,9 @@ func (s *Service) Delete(ctx context.Context, chatID string, opts DeleteOptions)
 	if err == nil && p.Scratch != "" {
 		err = os.RemoveAll(p.Scratch)
 	}
+	if err == nil && s.copies != nil {
+		err = s.copies.Delete(c.id)
+	}
 	if err == nil {
 		err = s.forget(c)
 	}

@@ -90,6 +90,8 @@ func (c *chat) update(n *acp.SessionNotification) { //nolint:gocognit,gocyclo //
 				c.releaseLocked()
 			}
 		}
+		// A turn's end, the agent's own included: its items have settled.
+		c.copyLocked(true)
 		c.usage.Used, c.usage.Size = int64(u.Used), int64(u.Size) //nolint:gosec // token counts, far below the limits
 		if u.Cost != nil {                                        // else the cost reported last still stands
 			c.usage.Cost, c.usage.Currency = u.Cost.Amount, u.Cost.Currency
@@ -130,6 +132,9 @@ func (c *chat) update(n *acp.SessionNotification) { //nolint:gocognit,gocyclo //
 		c.publishLocked(*it)
 		c.reportedLocked(*it)
 		c.relayingLocked(*it)
+		if t.Status == "completed" || t.Status == "failed" {
+			c.copyLocked(false)
+		}
 		if (t.Status == "completed" || t.Status == "failed") && it.Parent == "" && !c.started.IsZero() {
 			c.deliverLocked() // between tool calls: the agent's chance to take queued messages
 		}

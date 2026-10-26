@@ -81,8 +81,10 @@ type Service struct {
 	scratch   string // the folder that holds chats' scratch folders
 	publish   func(model.Event)
 
-	terminals Terminals  // set once at startup, if there are any
-	prefs     SleepPrefs // set once at startup, if chats sleep
+	terminals Terminals   // set once at startup, if there are any
+	prefs     SleepPrefs  // set once at startup, if chats sleep
+	copies    Copies      // set once at startup, if chats keep copies of their transcripts
+	copiesOn  func() bool // whether they write them now
 
 	mu       sync.Mutex
 	chats    map[string]*chat
@@ -121,6 +123,8 @@ type chat struct {
 	dialect  Dialect // kind's
 	publish  func(model.Event)
 	sessions Sessions
+	copies   Copies      // the service's
+	copiesOn func() bool // and whether it writes them
 
 	mu           sync.Mutex
 	items        []model.Item
@@ -171,6 +175,7 @@ type chat struct {
 	retired    <-chan struct{}      // closed once the agent it fell asleep from has ended
 	woke       chan struct{}        // closed when the reopen under way ends
 	active     time.Time            // its last event
+	unsaved    map[string]bool      // items changed since the copy of the transcript last had them (copies.go)
 }
 
 // emitLocked numbers and publishes one of the chat's events. Holding the
@@ -179,6 +184,9 @@ func (c *chat) emitLocked(e model.Event) {
 	c.seq++
 	e.Seq = c.seq
 	c.active = time.Now()
+	if e.Item != nil && c.copies != nil && c.parent == nil {
+		c.unsaved[e.Item.ID] = true
+	}
 	c.publish(e)
 }
 
@@ -281,8 +289,8 @@ func CheckFolder(folder string) error {
 }
 
 func (s *Service) newChat(k *kind) *chat {
-	return &chat{kind: k, dialect: k.Dialect, publish: s.publish, sessions: s.sessions, waiting: map[string]chan<- string{},
-		questions: map[string]chan<- []model.Field{}, sides: map[string]*chat{}, probes: map[string]*silentRun{}}
+	return &chat{kind: k, dialect: k.Dialect, publish: s.publish, sessions: s.sessions, copies: s.copies, copiesOn: s.copiesOn, waiting: map[string]chan<- string{},
+		questions: map[string]chan<- []model.Field{}, sides: map[string]*chat{}, probes: map[string]*silentRun{}, unsaved: map[string]bool{}}
 }
 
 // List returns every stored chat.
@@ -420,5 +428,6 @@ func (c *chat) addLocked(it model.Item) string {
 	}
 	c.items = append(c.items, it)
 	c.emitLocked(model.Event{ChatID: c.id, Item: &it})
+	c.copyLocked(false) // the items before it have settled
 	return it.ID
 }
