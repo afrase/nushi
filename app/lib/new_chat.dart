@@ -10,9 +10,9 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/issue_picker.dart';
-import 'package:nushi/logo.dart';
 import 'package:nushi/new_chat_issue.dart';
 import 'package:nushi/open_session.dart';
+import 'package:nushi/orrery.dart';
 import 'package:nushi/settings_dialog.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -409,8 +409,8 @@ class _SetUpLine extends StatelessWidget {
   }
 }
 
-/// The pane with no chat open: "Start a chat", or, while no agent can
-/// start, where to set one up.
+/// The pane with no chat open: the mark, moving, over "Start a chat", or,
+/// while no agent can start, where to set one up.
 class NothingOpen extends StatelessWidget {
   const new(this.daemon, {super.key});
 
@@ -425,21 +425,13 @@ class NothingOpen extends StatelessWidget {
   Widget _pane(BuildContext context, Map<String, Agent> agents) {
     final theme = NushiTheme.of(context);
     final none = agents.isNotEmpty && !agents.values.any((a) => a.ready);
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Logo(color: theme.t.borderStrong),
-          const SizedBox(height: 16),
-          if (none)
-            _SetUpLine(
+    return Orrery(
+      label: none
+          ? _SetUpLine(
               'Set up an agent in ',
               onTap: () => showSettings(context, daemon.client, agents: true),
             )
-          else
-            Text('Start a chat', style: theme.ui(theme.t.textMuted)),
-        ],
-      ),
+          : Text('Start a chat', style: theme.ui(theme.t.textMuted)),
     );
   }
 }
