@@ -9,6 +9,7 @@ import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/inline_edit.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/subagents.dart';
 import 'package:nushi/terminals.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -41,12 +42,48 @@ List<MenuEntry> chatMenu(
   ),
 ];
 
-/// Stops a chat's agent to free its memory; a message wakes it.
-Future<void> sleepChat(BuildContext context, ChatState chat, Daemon daemon) =>
-    tryOrShow(
-      context,
-      () => daemon.client.sleepChat(SleepChatRequest(chatId: chat.id)),
-    );
+/// Stops a chat's agent to free its memory; a message wakes it. Subagents
+/// still running in the background stop with it: it asks first.
+Future<void> sleepChat(
+  BuildContext context,
+  ChatState chat,
+  Daemon daemon,
+) async {
+  if (!await stopsBackground(context, chat, 'Sleep the chat?', 'Sleep')) {
+    return;
+  }
+  if (!context.mounted) return;
+  await tryOrShow(
+    context,
+    () => daemon.client.sleepChat(SleepChatRequest(chatId: chat.id)),
+  );
+}
+
+/// Asks [title] before stopping [chat]'s agent while subagents it started
+/// run in the background, since they stop with it; true when none runs or
+/// [action] is pressed.
+Future<bool> stopsBackground(
+  BuildContext context,
+  ChatState chat,
+  String title,
+  String action,
+) async {
+  final running = [
+    for (final s in subagentsOf(chat.items))
+      if (subagentRunning(s)) s.call.agent,
+  ];
+  if (running.isEmpty) return true;
+  final which = running.length == 1
+      ? 'Its ${running.single} subagent is'
+      : 'Its subagents ${running.join(', ')} are';
+  return await confirm(
+    context,
+    title,
+    '$which still running in the background, and will stop with '
+    '${chat.agentName}.',
+    action,
+  );
+}
 
 /// Archives (or unarchives) a chat. Archiving ends its terminals: when a
 /// program runs in one, it asks first, as closing that terminal would.
@@ -56,6 +93,10 @@ Future<void> _archive(
   Daemon daemon,
 ) async {
   if (!chat.archived) {
+    if (!await stopsBackground(context, chat, 'Archive the chat?', 'Archive') ||
+        !context.mounted) {
+      return;
+    }
     final terms = await daemon.client.listTerminals(
       ListTerminalsRequest(chatId: chat.id),
     );

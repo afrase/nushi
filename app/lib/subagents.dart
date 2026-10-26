@@ -143,7 +143,8 @@ class _LiveTextState extends State<LiveText> {
 }
 
 /// A spinner while the subagent works (unless the agent waits on the user,
-/// [still]), a check once done, nothing when it failed.
+/// [still]), a check once done, a stop mark once stopped with its agent,
+/// nothing when it failed.
 Widget subagentMark(BuildContext context, SubagentRun s, {bool still = false}) {
   final t = NushiTheme.of(context).t;
   return switch (s.call.subagent.state) {
@@ -152,6 +153,7 @@ Widget subagentMark(BuildContext context, SubagentRun s, {bool still = false}) {
       child: CircularProgressIndicator(strokeWidth: 1.5),
     ),
     'done' => Icon(Icons.check, size: 13, color: t.done),
+    'stopped' => Icon(Icons.stop_circle_outlined, size: 13, color: t.textMuted),
     _ => const SizedBox.shrink(),
   };
 }
