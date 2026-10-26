@@ -95,7 +95,8 @@ func (e *APIError) Error() string { return "GitHub: " + e.Message }
 
 // get is a REST GET of path, a template whose {} are filled with args
 // (escaped). It sends the ETag of the last answer and takes a 304 as that
-// answer again. It returns the answer's headers.
+// answer again. It returns the answer's headers. A repository that moved
+// (a 301) is an error.
 func (c *Client) get(ctx context.Context, path string, args []string, query url.Values, out any) (http.Header, error) {
 	u := c.rest + fill(path, args)
 	if len(query) > 0 {
@@ -105,9 +106,12 @@ func (c *Client) get(ctx context.Context, path string, args []string, query url.
 	if err != nil {
 		return nil, err
 	}
-	if a.status == http.StatusNotModified {
+	switch {
+	case a.status == http.StatusNotModified:
 		a.body = c.etags.body(u)
-	} else {
+	case a.status/100 == 3:
+		return nil, &APIError{Status: a.status, Message: "it moved to " + a.header.Get("Location")}
+	default:
 		c.etags.keep(u, a.header.Get("ETag"), a.body)
 	}
 	if out == nil {
@@ -223,7 +227,7 @@ func (c *Client) send(ctx context.Context, method, what, u, bucket string, paylo
 	}
 	b := c.lim.saw(bucket, resp.Header)
 	c.log.Debug("github", "method", method, "what", what, "status", resp.StatusCode, "took", took, "bucket", b.Name, "left", b.Remaining)
-	if resp.StatusCode/100 == 2 || resp.StatusCode == http.StatusNotModified {
+	if resp.StatusCode/100 == 2 || resp.StatusCode/100 == 3 { // a 304, or a log's link
 		return &answer{status: resp.StatusCode, header: resp.Header, body: body}, nil
 	}
 	err = c.failure(resp, b.Name, body)

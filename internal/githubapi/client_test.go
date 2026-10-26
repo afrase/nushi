@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -54,7 +55,12 @@ func (f *fake) serve(w http.ResponseWriter, r *http.Request) {
 	f.calls = append(f.calls, route)
 	h := f.routes[route]
 	f.mu.Unlock()
-	if r.Header.Get("Authorization") != "Bearer "+token || r.Header.Get("X-Github-Api-Version") != Version {
+	if strings.HasPrefix(r.URL.Path, "/blob/") { // where a log's link goes: never with the token
+		if r.Header.Get("Authorization") != "" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	} else if r.Header.Get("Authorization") != "Bearer "+token || r.Header.Get("X-Github-Api-Version") != Version {
 		w.WriteHeader(http.StatusUnauthorized)
 		_, _ = w.Write([]byte(`{"message":"Bad credentials"}`))
 		return
@@ -71,6 +77,15 @@ func (f *fake) route(route string, h http.HandlerFunc) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.routes[route] = h
+}
+
+// file answers route with a testdata file.
+func (f *fake) file(route, name string) {
+	b, err := os.ReadFile("testdata/" + name)
+	if err != nil {
+		f.t.Fatal(err)
+	}
+	f.route(route, func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write(b) })
 }
 
 func (f *fake) count(route string) int {
