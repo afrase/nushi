@@ -15,6 +15,7 @@ import 'package:nushi/menu.dart';
 import 'package:nushi/remote.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/transcripts_section.dart';
 import 'package:nushi/widgets.dart';
 import 'package:xterm2/xterm.dart';
 
@@ -40,7 +41,8 @@ Future<List<String>> _monospaced() async {
 const settingsKey = SingleActivator(LogicalKeyboardKey.comma, meta: true);
 
 /// The app's settings (⌘,), on two pages. General: the terminal's font and
-/// size, when idle chats sleep, remote access (both the daemon's), and
+/// size, when idle chats sleep, transcripts' copies, remote access (the
+/// daemon's), and
 /// whether the daemon starts at login (the packaged app's, for the usual
 /// data folder). Agents ([agents] opens on it, or [agent], whose row it
 /// marks): the agents found, and their adapters. Jira ([jira]): the sites
@@ -223,6 +225,11 @@ class _SettingsState extends State<_Settings> {
               ),
             ),
           ],
+          TranscriptsSection(
+            client: widget.client,
+            settings: _set,
+            onChange: _change,
+          ),
           // The launch agent starts the usual data folder's daemon.
           if (bundledDaemon != null &&
               Platform.environment['NUSHI_DATA'] == null)
