@@ -19,7 +19,12 @@ List<JiraSite> _sites() => [
     url: 'https://acme.atlassian.net',
     email: 'me@acme.com',
     name: 'Test User',
-    expires: Int64(_now.add(const Duration(days: 5)).millisecondsSinceEpoch),
+    // "in 5 days" whenever it runs: the dialog reads the clock.
+    expires: Int64(
+      DateTime.now()
+          .add(const Duration(days: 5) - const Duration(hours: 1))
+          .millisecondsSinceEpoch,
+    ),
   ),
   JiraSite(
     id: 'side.atlassian.net',
