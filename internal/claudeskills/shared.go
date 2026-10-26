@@ -1,6 +1,7 @@
 package claudeskills
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -24,7 +25,7 @@ import (
 func sharedRoots(folder string) (project []string, yours string) {
 	home, _ := os.UserHomeDir()
 	folder = realOf(folder)
-	return skillfile.Roots(folder, skillfile.Top(folder), ".agents/skills"), filepath.Join(home, ".agents", "skills")
+	return skillfile.Roots(folder, skillfile.Top(folder), ".agents/skills"), realOf(filepath.Join(home, ".agents", "skills"))
 }
 
 // Shared returns the shared skills Claude loads in folder: those a skill
@@ -66,26 +67,44 @@ func (Claude) Link(_ context.Context, folder, path string) error {
 	if _, err := os.Stat(filepath.Join(path, "SKILL.md")); err != nil {
 		return fmt.Errorf("%s isn't a skill's folder", path)
 	}
-	at := userRoot()
-	if root != yours {
-		dir := filepath.Dir(filepath.Dir(root)) // the folder holding .agents
-		if home, _ := os.UserHomeDir(); dir == home || skillfile.Linked(dir, ".claude/skills") {
-			return fmt.Errorf("Claude doesn't read %s's .claude/skills as the project's", dir)
+	if root == yours {
+		link := filepath.Join(userRoot(), filepath.Base(path))
+		if _, err := os.Lstat(link); !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("%s is already there", link)
 		}
-		at = filepath.Join(dir, ".claude", "skills")
+		if err := os.MkdirAll(userRoot(), 0o755); err != nil { //nolint:gosec // your skills folder, as Claude makes it
+			return err
+		}
+		rel, err := filepath.Rel(realOf(userRoot()), path)
+		if err != nil {
+			rel = path
+		}
+		return os.Symlink(rel, link)
 	}
-	link := filepath.Join(at, filepath.Base(path))
-	if _, err := os.Lstat(link); !errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("%s is already there", link)
+	dir := filepath.Dir(filepath.Dir(root)) // the folder holding .agents
+	if home, _ := os.UserHomeDir(); dir == home || skillfile.Linked(dir, ".claude/skills") {
+		return fmt.Errorf("Claude doesn't read %s's .claude/skills as the project's", dir)
 	}
-	rel, err := filepath.Rel(realOf(at), path)
+	// Through an os.Root of the repository: a .claude swapped for a link
+	// meanwhile can't put the link outside it.
+	base := cmp.Or(skillfile.Top(dir), dir)
+	r, err := os.OpenRoot(base)
 	if err != nil {
-		rel = path
-	}
-	if err := os.MkdirAll(at, 0o755); err != nil { //nolint:gosec // a .claude/skills folder, as Claude makes it
 		return err
 	}
-	return os.Symlink(rel, link)
+	defer r.Close() //nolint:errcheck // done with it
+	at, err := filepath.Rel(base, filepath.Join(dir, ".claude", "skills"))
+	if err != nil {
+		return err
+	}
+	link := filepath.Join(at, filepath.Base(path))
+	if _, err := r.Lstat(link); !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("%s is already there", filepath.Join(base, link))
+	}
+	if err := r.MkdirAll(at, 0o755); err != nil {
+		return err
+	}
+	return r.Symlink(filepath.Join("..", "..", ".agents", "skills", filepath.Base(path)), link)
 }
 
 // realOf is p with its links resolved, as far as it exists.

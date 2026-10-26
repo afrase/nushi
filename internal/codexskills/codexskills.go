@@ -137,11 +137,14 @@ func (c Codex) SetSkillOn(ctx context.Context, folder, source, name string, on b
 // your skills folder or one of the project's .codex/skills (not Codex's
 // own .system ones, which it puts back).
 func (Codex) Trash(ctx context.Context, folder, path string) error {
-	var allowed []string
+	var project, yours []string
 	for _, r := range roots(folder) {
-		if r.source == "user" || r.source == "project" {
-			allowed = append(allowed, r.path)
+		switch r.source {
+		case "user":
+			yours = append(yours, r.path)
+		case "project":
+			project = append(project, r.path)
 		}
 	}
-	return skillfile.Trash(ctx, allowed, path)
+	return skillfile.Trash(ctx, project, yours, path)
 }

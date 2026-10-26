@@ -130,7 +130,7 @@ func EditLocal(ctx context.Context, folder string, change func(settings map[stri
 			return fmt.Errorf("%s is a symlink; not changing it", p)
 		}
 	}
-	created, err := jsonsettings.Edit(path, change)
+	created, err := jsonsettings.EditIn(project(folder), filepath.Join(".claude", "settings.local.json"), change) // a link swapped in meanwhile can't lead out
 	if err != nil {
 		return err
 	}

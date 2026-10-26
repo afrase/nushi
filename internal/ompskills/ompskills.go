@@ -159,11 +159,11 @@ func (o OMP) SetSkillOn(ctx context.Context, folder, source, name string, on boo
 // Trash moves one of omp's own skill folders to the Trash: right in your
 // skills folder or a .omp/skills omp reads here.
 func (OMP) Trash(ctx context.Context, folder, path string) error {
-	allowed := []string{filepath.Join(agentDir(), "skills")}
+	var project []string
 	for _, d := range walk(realPath(folder)) {
 		if !skillfile.Linked(d, ".omp/skills") {
-			allowed = append(allowed, filepath.Join(d, ".omp", "skills"))
+			project = append(project, filepath.Join(d, ".omp", "skills"))
 		}
 	}
-	return skillfile.Trash(ctx, allowed, path)
+	return skillfile.Trash(ctx, project, []string{filepath.Join(agentDir(), "skills")}, path)
 }

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/skillfile"
 )
 
 // calls are the fake's calls, each its arguments.
@@ -185,9 +186,9 @@ func TestTrashOnlyASkillsFolder(t *testing.T) {
 	if err := os.Chmod(filepath.Join(bin, "trash"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	old := trashProgram
-	trashProgram = filepath.Join(bin, "trash")
-	defer func() { trashProgram = old }()
+	old := skillfile.TrashProgram
+	skillfile.TrashProgram = filepath.Join(bin, "trash")
+	defer func() { skillfile.TrashProgram = old }()
 	skill(t, filepath.Join(top, ".claude", "skills"), "proj", "x")
 	write(t, filepath.Join(top, ".claude", "skills", "nofile", "README.md"), "x")
 	ctx := context.Background()
@@ -232,7 +233,11 @@ func TestTrashOnlyASkillsFolder(t *testing.T) {
 	if err := (Claude{}).Trash(ctx, deeper, path); err != nil {
 		t.Fatal(err)
 	}
-	if b, _ := os.ReadFile(trashed); string(b) != path+"\n" {
+	// Through a folder of Nushi's in the repository (skillfile.Trash).
+	if b, _ := os.ReadFile(trashed); !strings.HasPrefix(string(b), top+"/.nushi-trash-") || !strings.HasSuffix(string(b), "/proj\n") {
 		t.Errorf("trash got %q", b)
+	}
+	if _, err := os.Lstat(path); err == nil {
+		t.Error("still there")
 	}
 }

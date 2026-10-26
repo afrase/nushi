@@ -193,9 +193,9 @@ func (a Ante) SetSkillOn(ctx context.Context, folder, source, name string, on bo
 // your skills folder or the folder's .ante/skills (not Claude's, nor its
 // bundled ones).
 func (Ante) Trash(ctx context.Context, folder, path string) error {
-	allowed := []string{filepath.Join(ante.Home(), "skills")}
+	var project []string
 	if !skillfile.Linked(folder, ".ante/skills") {
-		allowed = append(allowed, filepath.Join(folder, ".ante", "skills"))
+		project = append(project, filepath.Join(folder, ".ante", "skills"))
 	}
-	return skillfile.Trash(ctx, allowed, path)
+	return skillfile.Trash(ctx, project, []string{filepath.Join(ante.Home(), "skills")}, path)
 }
