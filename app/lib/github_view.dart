@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_inbox.dart';
 import 'package:nushi/github_issue.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_pull.dart';
@@ -36,9 +37,6 @@ void forgetGitHubView() {
   _host = _picked = null;
   _known = _details = false;
 }
-
-/// An inbox's section: its title, items, and how many GitHub found.
-typedef Section = ({String title, List<GitHubItem> items, int total});
 
 /// GitHub in the app, in the chat's place as Jira's view is (the sidebar
 /// of chats stays): an inbox of pull requests whose review is asked of me
@@ -94,17 +92,10 @@ class _GitHubViewState extends State<GitHubView> {
       if (r.host == _hostNow?.host) r.repo,
   ];
 
-  List<Section> get _sections {
-    final i = _inbox;
-    if (i == null) return const [];
-    return [
-      (title: 'Review requested', items: i.review, total: i.reviewTotal),
-      (title: 'My pull requests', items: i.mine, total: i.mineTotal),
-      (title: 'Assigned issues', items: i.assigned, total: i.assignedTotal),
-    ];
-  }
+  List<Section> get _sections => sectionsOf(_inbox);
 
-  List<GitHubItem> get _items => [for (final s in _sections) ...s.items];
+  /// The items the keys move through: the open cards'.
+  List<GitHubItem> get _items => visibleItems(_sections);
 
   @override
   void initState() {
@@ -216,15 +207,12 @@ class _GitHubViewState extends State<GitHubView> {
   void _show(String key, ListGitHubInboxResponse r) {
     _shown = key;
     _inbox = r;
-    if (!_details && !_items.any((x) => _same(x.ref, _picked))) {
+    if (!_details && !_items.any((x) => sameRef(x.ref, _picked))) {
       _picked = _items.firstOrNull?.ref;
     }
   }
 
-  static bool _same(GitHubRef a, GitHubRef? b) =>
-      b != null && a.host == b.host && a.repo == b.repo && a.number == b.number;
-
-  int get _at => _items.indexWhere((x) => _same(x.ref, _picked));
+  int get _at => _items.indexWhere((x) => sameRef(x.ref, _picked));
 
   void _move(int by) {
     final items = _items;
@@ -348,7 +336,9 @@ class _GitHubViewState extends State<GitHubView> {
   }
 
   Widget _detailsPane(GitHubRef ref) {
-    final item = _items.where((x) => _same(x.ref, ref)).firstOrNull;
+    final item = [for (final s in _sections) ...s.items]
+        .where((x) => sameRef(x.ref, ref))
+        .firstOrNull;
     final pull =
         item?.pull ??
         widget.daemon.chats.values.any(
@@ -392,59 +382,6 @@ class _GitHubViewState extends State<GitHubView> {
   }
 
   Widget _list(GitHubHost host) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final now = widget.now ?? DateTime.now();
-    final rows = <Widget>[];
-    for (final s in _sections) {
-      final title = Text(
-        '${s.title}  '
-        '${s.total > s.items.length ? '${s.items.length} of ' : ''}'
-        '${s.total > s.items.length ? s.total : s.items.length}',
-        style: theme.ui(t.textSecondary, size: 12, weight: FontWeight.w600),
-      );
-      rows.add(
-        Padding(
-          padding: EdgeInsets.fromLTRB(18, rows.isEmpty ? 10 : 18, 18, 4),
-          child:
-              rows
-                  .isEmpty // Review requested: whose
-              ? Row(
-                  children: [
-                    title,
-                    const SizedBox(width: 12),
-                    _Whose(onPick: _whose),
-                  ],
-                )
-              : title,
-        ),
-      );
-      if (s.items.isEmpty) {
-        rows.add(
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 2, 18, 2),
-            child: Text('None', style: theme.ui(t.textMuted, size: 12)),
-          ),
-        );
-      }
-      for (final it in s.items) {
-        final selected = _same(it.ref, _picked);
-        rows.add(
-          ItemRow(
-            key: ValueKey('${s.title} ${it.id}'),
-            daemon: widget.daemon,
-            item: it,
-            selected: selected,
-            now: now,
-            onOpen: () {
-              _listFocus.requestFocus();
-              _open(it);
-            },
-            startMenu: (open) => _start = open,
-          ),
-        );
-      }
-    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -485,9 +422,26 @@ class _GitHubViewState extends State<GitHubView> {
                 ? _loading && _slow
                       ? const RowsLoading()
                       : const SizedBox()
-                : ListView(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    children: rows,
+                : ListenableBuilder(
+                    listenable: Listenable.merge([
+                      githubCardOrder,
+                      githubCollapsed,
+                    ]),
+                    builder: (context, _) => InboxCards(
+                      daemon: widget.daemon,
+                      sections: _sections,
+                      picked: _picked,
+                      now: widget.now ?? DateTime.now(),
+                      days: 0,
+                      whose: _Whose(onPick: _whose),
+                      onOpen: (it) {
+                        _listFocus.requestFocus();
+                        _open(it);
+                      },
+                      onOlder: (_) {},
+                      onHide: (_) {},
+                      startMenu: (open) => _start = open,
+                    ),
                   ),
           ),
         ),

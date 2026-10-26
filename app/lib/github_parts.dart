@@ -101,7 +101,7 @@ class ItemBadges extends StatelessWidget {
         if (it.unresolved > 0) ...[
           const SizedBox(width: 8),
           Tooltip(
-            message: _unresolved(it.unresolved),
+            message: unresolvedWords(it.unresolved),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -113,89 +113,6 @@ class ItemBadges extends StatelessWidget {
           ),
         ],
       ],
-    );
-  }
-}
-
-/// A row of the inbox: repository and number, title, state, checks,
-/// review, threads not resolved, its chats, when it changed, Start work.
-class ItemRow extends StatelessWidget {
-  const new({
-    required this.daemon,
-    required this.item,
-    required this.selected,
-    required this.now,
-    required this.onOpen,
-    required this.startMenu,
-    super.key,
-  });
-
-  final Daemon daemon;
-  final GitHubItem item;
-  final bool selected;
-  final DateTime now;
-  final VoidCallback onOpen;
-
-  /// Takes the row's Start work menu, for ⌘⏎ (when it's selected).
-  final void Function(OpenMenu open) startMenu;
-
-  @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, box) => _row(context, wide: box.maxWidth > 760),
-  );
-
-  Widget _row(BuildContext context, {required bool wide}) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final it = item;
-    final chats = chatsOnItem(daemon, it.ref);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-      child: Tap(
-        selected: selected,
-        onTap: onOpen,
-        padding: const EdgeInsets.fromLTRB(10, 4, 4, 4),
-        child: Row(
-          children: [
-            Tooltip(
-              message: itemState(it),
-              child: Icon(
-                it.pull ? Icons.merge_type : Icons.adjust,
-                size: 14,
-                color: itemColor(t, it),
-              ),
-            ),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: wide ? 190 : 120,
-              child: Text(
-                '${it.ref.repo}#${it.ref.number}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.code(t.textSecondary, size: 11.5),
-              ),
-            ),
-            Expanded(
-              child: Text(
-                it.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.ui(t.text),
-              ),
-            ),
-            const SizedBox(width: 8),
-            ItemBadges(it, wide: wide),
-            if (chats.isNotEmpty) ChatMarks(daemon, chats),
-            const SizedBox(width: 8),
-            ItemAge(it.updatedMs.toInt(), now: now),
-            StartWork(
-              daemon: daemon,
-              item: it,
-              menu: selected ? startMenu : null,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -259,36 +176,41 @@ class StartWork extends StatelessWidget {
   final bool button;
 
   @override
-  Widget build(BuildContext context) {
-    final clones =
-        githubFolders.value[(item.ref.host, item.ref.repo)] ?? const [];
-    return Menu(
-      digits: true,
-      entries: [
-        for (final f in clones)
-          MenuEntry(
-            folderParts(f).$1,
-            detail: folderParts(f).$2,
-            onPick: () => startOn(context, daemon, item, f),
-          ),
-        if (clones.isNotEmpty) MenuEntry.divider,
-        ...folderEntries(
-          daemon,
-          onPick: (f) => startOn(context, daemon, item, f),
-        ),
-      ],
-      builder: (context, open) {
-        menu?.call(open);
-        return Button(
-          label: 'Start work',
-          icon: button ? Icons.play_arrow : null,
-          menu: true,
-          tooltip: menu != null ? '⌘⏎' : '',
-          onPressed: open,
-        );
-      },
-    );
-  }
+  Widget build(BuildContext context) => Menu(
+    digits: true,
+    entries: startEntries(context, daemon, item),
+    builder: (context, open) {
+      menu?.call(open);
+      return Button(
+        label: 'Start work',
+        icon: button ? Icons.play_arrow : null,
+        menu: true,
+        tooltip: menu != null ? '⌘⏎' : '',
+        onPressed: open,
+      );
+    },
+  );
+}
+
+/// Start work's menu on [item]: the folders that are clones of its
+/// repository first, then the others.
+List<MenuEntry> startEntries(
+  BuildContext context,
+  Daemon daemon,
+  GitHubItem item,
+) {
+  final clones =
+      githubFolders.value[(item.ref.host, item.ref.repo)] ?? const [];
+  return [
+    for (final f in clones)
+      MenuEntry(
+        folderParts(f).$1,
+        detail: folderParts(f).$2,
+        onPick: () => startOn(context, daemon, item, f),
+      ),
+    if (clones.isNotEmpty) MenuEntry.divider,
+    ...folderEntries(daemon, onPick: (f) => startOn(context, daemon, item, f)),
+  ];
 }
 
 /// The folders that are clones of each repository, by host and
@@ -465,7 +387,7 @@ class _GitHubChipState extends State<GitHubChip> {
             itemState(it),
             ?checks?.$3,
             ?review?.$1,
-            if (it.unresolved > 0) _unresolved(it.unresolved),
+            if (it.unresolved > 0) unresolvedWords(it.unresolved),
           ].join('\n');
     return Tap(
       tooltip: details,
@@ -494,5 +416,6 @@ class _GitHubChipState extends State<GitHubChip> {
   }
 }
 
-String _unresolved(int n) =>
+/// "3 review threads not resolved".
+String unresolvedWords(int n) =>
     '$n review thread${n == 1 ? '' : 's'} not resolved';
