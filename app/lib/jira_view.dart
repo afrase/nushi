@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -93,16 +92,39 @@ class _JiraViewState extends State<JiraView> {
   /// Every site's issues show: only my open ones, the one list they share.
   bool get _every => _all && (_sites?.length ?? 0) > 1;
 
+  /// Where the list's groups are remembered: the site, or `*` for all.
+  String get _place => _every ? '*' : _siteNow?.id ?? '';
+
+  /// The rows the keys move through (not in collapsed groups).
+  List<Task> get _visible => visibleTasks(_tasks, _place);
+
   @override
   void initState() {
     super.initState();
     unawaited(_loadSites());
     _poll = Timer.periodic(jiraPoll, (_) => unawaited(_load(quiet: true)));
+    jiraCollapsed.addListener(_keepVisible);
+  }
+
+  /// A group collapsed over the selected row: the selection moves to the
+  /// next row shown (or the last).
+  void _keepVisible() {
+    final visible = _visible;
+    if (!mounted || visible.any((x) => x.issue.key == _key)) return;
+    final all = grouped(_tasks, _place);
+    final at = all.indexWhere((x) => x.issue.key == _key);
+    setState(() {
+      _start = null;
+      _key =
+          all.skip(at + 1).where(visible.contains).firstOrNull?.issue.key ??
+          visible.lastOrNull?.issue.key;
+    });
   }
 
   @override
   void dispose() {
     _poll?.cancel();
+    jiraCollapsed.removeListener(_keepVisible);
     _listFocus.dispose();
     _viewFocus.dispose();
     _jqlFocus.dispose();
@@ -178,7 +200,7 @@ class _JiraViewState extends State<JiraView> {
         _sprint = got.first.sprint;
         _error = null;
         if (!_tasks.any((t) => t.issue.key == _key)) {
-          _key = _tasks.firstOrNull?.issue.key;
+          _key = _visible.firstOrNull?.issue.key;
           _details = false;
         }
       });
@@ -194,8 +216,6 @@ class _JiraViewState extends State<JiraView> {
     }
   }
 
-  int get _at => max(0, _tasks.indexWhere((x) => x.issue.key == _key));
-
   void _pickList(String list) {
     setState(() => _list = list);
     unawaited(_load());
@@ -203,15 +223,16 @@ class _JiraViewState extends State<JiraView> {
   }
 
   void _move(int by) {
-    if (_tasks.isEmpty) return;
-    final i = _tasks.indexWhere((x) => x.issue.key == _key);
-    final next = (i + by).clamp(0, _tasks.length - 1);
-    setState(() => _key = _tasks[next].issue.key);
+    final visible = _visible;
+    if (visible.isEmpty) return;
+    final i = visible.indexWhere((x) => x.issue.key == _key);
+    final next = (i + by).clamp(0, visible.length - 1);
+    setState(() => _key = visible[next].issue.key);
   }
 
-  void _open(int i) {
+  void _open(Task task) {
     setState(() {
-      _key = _tasks[i].issue.key;
+      _key = task.issue.key;
       _details = true;
     });
     _viewFocus.requestFocus(); // the list, which had it, goes
@@ -262,8 +283,9 @@ class _JiraViewState extends State<JiraView> {
     }
     final k = e.logicalKey;
     final meta = HardwareKeyboard.instance.isMetaPressed;
-    if (k == LogicalKeyboardKey.enter && _tasks.isNotEmpty) {
-      meta ? _start?.call() : _open(_at);
+    final at = _visible.where((x) => x.issue.key == _key).firstOrNull;
+    if (k == LogicalKeyboardKey.enter && at != null) {
+      meta ? _start?.call() : _open(at);
     } else if (k == LogicalKeyboardKey.arrowDown ||
         k == LogicalKeyboardKey.keyJ && !meta) {
       _move(1);
@@ -417,11 +439,12 @@ class _JiraViewState extends State<JiraView> {
             child: TaskList(
               daemon: widget.daemon,
               tasks: _tasks,
-              selected: _tasks.indexWhere((x) => x.issue.key == _key),
+              place: _place,
+              selected: _key,
               sites: _every,
-              onOpen: (i) {
+              onOpen: (task) {
                 _listFocus.requestFocus();
-                _open(i);
+                _open(task);
               },
               onMoved: _load,
               startMenu: (open) => _start = open,

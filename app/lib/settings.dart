@@ -10,8 +10,8 @@ import 'package:nushi/daemon.dart';
 /// are collapsed and their order, the repositories whose new chats get a
 /// worktree, what each chat's Changes view shows, the panes' widths, whether
 /// changed files show flat, which chats show their terminals, the
-/// terminal's font, whether a subagent's pane shows wide, and whose review
-/// requests the GitHub view lists.
+/// terminal's font, whether a subagent's pane shows wide, the Jira task
+/// list's groups, and whose review requests the GitHub view lists.
 final showDetails = ValueNotifier<bool>(_saved['details'] != false)
   ..addListener(_save);
 final collapsedCards = ValueNotifier<Set<String>>(_strings('collapsed'))
@@ -45,6 +45,16 @@ final lastJiraSite = ValueNotifier<String?>(switch (_saved['jiraSite']) {
   final String s => s,
   _ => null,
 })..addListener(_save);
+
+/// The Jira task list's status groups, by site (`*` for every site's
+/// list): the order they were dragged into (statuses it doesn't name go
+/// last), and those collapsed.
+final jiraGroupOrder = ValueNotifier<Map<String, List<String>>>(
+  _byPlace('jiraGroups'),
+)..addListener(_save);
+final jiraCollapsed = ValueNotifier<Map<String, List<String>>>(
+  _byPlace('jiraCollapsed'),
+)..addListener(_save);
 
 /// Whether the GitHub view's Review requested has pull requests asked of
 /// a team of mine too ("Me and my teams"), not only of me by name.
@@ -85,6 +95,11 @@ Set<String> _strings(String key) => {
   ...?(_saved[key] as List?)?.whereType<String>(),
 };
 
+Map<String, List<String>> _byPlace(String name) => {
+  for (final MapEntry(:key, :value) in ((_saved[name] as Map?) ?? {}).entries)
+    if (key is String && value is List) key: [...value.whereType<String>()],
+};
+
 /// Writes [file] whole or not at all: to a file beside it, renamed over
 /// it, so a crash mid-write can't leave half of it.
 void writeWhole(File file, String text) {
@@ -111,6 +126,8 @@ void _save() {
         'subagentWide': subagentWide.value,
         'jiraSite': lastJiraSite.value,
         'githubTeams': githubTeamReviews.value,
+        'jiraGroups': jiraGroupOrder.value,
+        'jiraCollapsed': jiraCollapsed.value,
       }),
     );
   } on Object {

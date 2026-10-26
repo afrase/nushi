@@ -6,6 +6,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_issue.dart';
 import 'package:nushi/jira_view.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -38,7 +39,12 @@ Future<(FakeDaemon, Daemon)> openView(
   Size size = const Size(1000, 560),
   Tokens tokens = Tokens.dark,
   Object? Function(Object input)? more,
+  Map<String, List<String>> groups = const {},
+  Map<String, List<String>> collapsed = const {},
 }) async {
+  // As app.json had them at launch.
+  jiraGroupOrder.value = groups;
+  jiraCollapsed.value = collapsed;
   final fake = FakeDaemon(chats)
     ..answer = (input) =>
         more?.call(input) ??
