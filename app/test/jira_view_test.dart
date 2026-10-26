@@ -103,7 +103,7 @@ Future<(FakeDaemon, Daemon)> openView(
     MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: NushiTheme(tokens).toThemeData(),
-      home: Scaffold(body: JiraView(d)),
+      home: Scaffold(body: JiraView(d, now: DateTime(2026, 10, 25, 12))),
     ),
   );
   await tester.pumpAndSettle();
