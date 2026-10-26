@@ -168,7 +168,7 @@ func run() error {
 		Dialect: chats.Dialect{InitMeta: claude.InitMeta, SessionMeta: claude.SessionMeta, UltracodeMeta: claude.UltracodeMeta, TurnDone: claude.TurnDone, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall,
 			Background: claude.Background, ReportElsewhere: claude.ReportElsewhere,
 			Shell: claude.Shell, ReadShell: claude.ReadShell,
-			SubagentID: claude.SubagentID, Relay: claude.Relay, Relayed: claude.Relayed, Relaying: claude.Relaying, Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle,
+			SubagentID: claude.SubagentID, Relay: claude.Relay, Relayed: claude.Relayed, Relaying: claude.Relaying, Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle, Compacted: claude.Compacted,
 			ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete},
 		History:       func(id, from, to string) (func() error, error) { return claudehistory.Copy(projects, id, from, to) },
 		OpenElsewhere: claudehistory.Open, Forked: func(ids []string) map[string]bool { return claudehistory.Forked(projects, ids) },

@@ -37,6 +37,7 @@ func (s *Service) lookup(id string) (*chat, error) {
 	c.id, c.sid, c.session, c.issue = id, stored[i].SessionID, stored[i], stored[i].Issue
 	c.session.Scratch = s.isScratch(c.session.Folder)
 	c.ultracode.Store(stored[i].Ultracode)
+	c.loadCopy() // its transcript until the agent replays it, or for good when it can't
 	s.chats[id] = c
 	return c, nil
 }
@@ -187,6 +188,13 @@ func (s *Service) load(ctx context.Context, c *chat) error {
 	sid, folder, fresh, gone := c.sid, c.session.Folder, !c.session.HasMessages, folderGone(c.session)
 	retired, before := c.retired, c.before
 	c.retired, c.before = nil, nil
+	// A transcript that outlived its agent stays; else the replay is merged
+	// with the copy, which has everything shown till now.
+	replay := !c.kept
+	if replay {
+		c.copyLocked(true)
+		c.replaying, c.replay = true, nil
+	}
 	c.mu.Unlock()
 	if gone != nil {
 		return gone
@@ -201,6 +209,10 @@ func (s *Service) load(ctx context.Context, c *chat) error {
 	if err != nil && fresh {
 		o, err = c.openSession(ctx, "", folder, false)
 	}
+	c.mu.Lock()
+	replayed := c.replay
+	c.replaying, c.replay = false, nil
+	c.mu.Unlock()
 	if err != nil {
 		return err
 	}
@@ -208,6 +220,9 @@ func (s *Service) load(ctx context.Context, c *chat) error {
 	held := c.held // a queue held before (an archived chat's) stays held
 	s.useLocked(c, o)
 	c.held = held
+	if replay {
+		c.restoreLocked(replayed)
+	}
 	c.orphanLocked(false) // replayed calls whose agent died before their results
 	if o.sid != sid {
 		c.saveLocked(func(s *model.Session) { s.SessionID = o.sid })

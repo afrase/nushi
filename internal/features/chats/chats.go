@@ -176,11 +176,17 @@ type chat struct {
 	woke       chan struct{}        // closed when the reopen under way ends
 	active     time.Time            // its last event
 	unsaved    map[string]bool      // items changed since the copy of the transcript last had them (copies.go)
+	replaying  bool                 // a session/load's replay goes to replay, not the transcript (restore.go)
+	replay     []model.Item
+	quiet      bool // a replayed update is being taken: its events aren't the app's
 }
 
 // emitLocked numbers and publishes one of the chat's events. Holding the
 // lock keeps events in order and in step with snapshots.
 func (c *chat) emitLocked(e model.Event) {
+	if c.quiet {
+		return
+	}
 	c.seq++
 	e.Seq = c.seq
 	c.active = time.Now()

@@ -17,8 +17,13 @@ import (
 func (c *chat) update(n *acp.SessionNotification) { //nolint:gocognit,gocyclo // one case per ACP update kind
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.kept && slices.Contains([]string{"user_message_chunk", "agent_message_chunk", "agent_thought_chunk", "plan", "tool_call", "tool_call_update"}, n.Update.SessionUpdate) {
+	replayed := slices.Contains(replayKinds, n.Update.SessionUpdate)
+	if c.kept && replayed {
 		return // session/load's replay of a transcript the chat still has
+	}
+	if c.replaying && replayed { // it goes aside, to be merged with the copy
+		c.items, c.replay, c.quiet = c.replay, c.items, true
+		defer func() { c.items, c.replay, c.quiet = c.replay, c.items, false }()
 	}
 	if !c.busy && c.started.IsZero() && slices.Contains([]string{"agent_message_chunk", "agent_thought_chunk", "tool_call", "tool_call_update"}, n.Update.SessionUpdate) &&
 		c.parentLocked(n.Update) == "" { // a subagent's steps aren't the agent's own work

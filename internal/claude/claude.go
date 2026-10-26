@@ -269,6 +269,19 @@ func ForkTitle(title, of string) bool {
 	return ok && rest != "" && strings.Trim(strings.ReplaceAll(rest, " (fork)", ""), " ") == ""
 }
 
+// summaryStart is how the summary Claude Code writes when it compacts a
+// conversation begins; Claude's replay of a compacted session starts with
+// it, as a user message, and replays only what follows.
+const summaryStart = "This session is being continued from a previous conversation"
+
+// Compacted says an item is part of a compaction of the conversation: its
+// call while it runs (/compact, or Claude's own), or the summary a replay
+// after one starts with. Neither call nor command is replayed.
+func Compacted(it model.Item) bool {
+	return it.Kind == model.ToolCall && it.Tool == "compact" ||
+		it.Kind == model.UserMessage && strings.HasPrefix(it.Text, summaryStart)
+}
+
 // ContextCommand says what fills the context. The adapter answers it
 // itself, without the model, but Claude keeps the answer in the
 // conversation (ADR 0017).
