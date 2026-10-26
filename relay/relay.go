@@ -39,6 +39,9 @@ type Limits struct {
 	HTTPIdle   time.Duration // a plain HTTP connection (not a WebSocket) waits this long for its next request
 	PlainPerIP int           // plain connections from one address
 	FirstWait  time.Duration // a new connection has this long for its first request's headers
+	// Site is the web app the relay serves too (ADR 0054), or nil. Its
+	// origin is then the only one whose pages may open a WebSocket here.
+	Site *Site
 }
 
 // Defaults suit one person's phones and Macs.
@@ -100,9 +103,16 @@ func New(lim Limits) http.Handler {
 	lim.PerIP = min(lim.PerIP, max(1, lim.Total/2))
 	s := &server{lim: lim, rooms: map[string]*room{}, sources: map[string]*source{},
 		plain: plain{conns: map[net.Conn]*plainConn{}, by: map[string]*source{}}}
-	// No browser has a reason to be here: refuse any page's script.
-	s.up.CheckOrigin = func(r *http.Request) bool { return r.Header.Get("Origin") == "" }
+	// A page's script may connect only when it is the web app's own: no
+	// other page has a reason to be here.
+	s.up.CheckOrigin = func(r *http.Request) bool {
+		o := r.Header.Values("Origin")
+		return len(o) == 0 || len(o) == 1 && lim.Site != nil && o[0] == lim.Site.origin
+	}
 	mux := http.NewServeMux()
+	if lim.Site != nil {
+		mux.Handle("GET /", lim.Site)
+	}
 	mux.HandleFunc("GET /v1/listen/{id}", s.listen)
 	mux.HandleFunc("GET /v1/dial/{id}", s.dial)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("ok\n")) })
