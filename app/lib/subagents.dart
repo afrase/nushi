@@ -182,8 +182,8 @@ class SubagentLine extends StatelessWidget {
             ? t.crashed
             : open == s.call.id
             ? t.focus
-            : t.borderSubtle,
-        fill: failed ? t.crashedSoft : t.raised,
+            : t.subagentBorder,
+        fill: failed ? t.crashedSoft : t.subagentTint,
         child: Tap(
           onTap: () => chat.pane.value = s.call.id,
           tooltip: 'Open its steps',
@@ -197,7 +197,7 @@ class SubagentLine extends StatelessWidget {
                 Icon(
                   Icons.smart_toy_outlined,
                   size: 14,
-                  color: t.textSecondary,
+                  color: failed ? t.crashed : t.subagentAccent,
                 ),
                 Expanded(child: subagentName(context, s)),
                 // The name takes the room; the state ends the line.
@@ -219,7 +219,8 @@ class SubagentLine extends StatelessWidget {
   }
 }
 
-/// "Explore: find the scroll handling", the type in bold, on one line.
+/// "Explore: find the scroll handling", the type in bold and the subagents'
+/// accent, on one line.
 Widget subagentName(BuildContext context, SubagentRun s, {double size = 13}) {
   final theme = NushiTheme.of(context);
   final t = theme.t;
@@ -228,7 +229,11 @@ Widget subagentName(BuildContext context, SubagentRun s, {double size = 13}) {
       children: [
         TextSpan(
           text: '${s.call.agent}: ',
-          style: theme.ui(t.text, size: size, weight: FontWeight.w600),
+          style: theme.ui(
+            t.subagentAccent,
+            size: size,
+            weight: FontWeight.w600,
+          ),
         ),
         TextSpan(
           text: s.call.title,
