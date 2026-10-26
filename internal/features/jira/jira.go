@@ -74,6 +74,7 @@ type Service struct {
 	mu      sync.Mutex
 	clients map[string]Client // by site id, once its token was read
 	jql     map[string]jqlCache
+	sprints map[string]sprintRef // a site's board's active sprint, as found last
 }
 
 type jqlCache struct {
@@ -83,7 +84,7 @@ type jqlCache struct {
 
 // New makes the service.
 func New(sites Sites, tokens Tokens, store Store, needsOK func(error) bool) *Service {
-	return &Service{sites: sites, tokens: tokens, store: store, needsOK: needsOK, clients: map[string]Client{}, jql: map[string]jqlCache{}}
+	return &Service{sites: sites, tokens: tokens, store: store, needsOK: needsOK, clients: map[string]Client{}, jql: map[string]jqlCache{}, sprints: map[string]sprintRef{}}
 }
 
 // SiteID is a site's id in Nushi: its host.
