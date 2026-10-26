@@ -147,9 +147,8 @@ class _CollapsibleState extends State<Collapsible> {
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
     final body = widget.body;
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: box(widget.failed ? t.crashed : t.borderSubtle),
+    return framed(
+      border: widget.failed ? t.crashed : t.borderSubtle,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

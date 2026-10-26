@@ -123,8 +123,6 @@ class _NushiAppState extends State<NushiApp> {
       darkTheme: const NushiTheme(Tokens.dark).toThemeData(),
       themeMode: _mode,
       scrollBehavior: const NativeScroll(),
-      builder: (context, child) =>
-          MediaQuery(data: trackpadSlop(MediaQuery.of(context)), child: child!),
       // The menu's ⌘, and ⌘N don't reach the menu while Flutter has the
       // keys.
       home: Builder(

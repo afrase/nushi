@@ -91,7 +91,7 @@ void main() {
     await tester.pumpAndSettle();
     final p = f.scroll.position;
     final list = find.byType(SingleChildScrollView);
-    expect(p.physics, isA<ClampingScrollPhysics>());
+    expect(p.physics, isA<EdgeStopScrollPhysics>());
 
     // At the bottom, a fling down never goes past it: still following.
     final seen = <double>[];

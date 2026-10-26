@@ -103,10 +103,10 @@ class UsageBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
     final fill = _fill(usage);
-    return Container(
+    return framed(
       height: 8,
-      clipBehavior: Clip.antiAlias,
-      decoration: box(t.borderSubtle, radius: 3),
+      border: t.borderSubtle,
+      radius: 3,
       child: FractionallySizedBox(
         alignment: Alignment.centerLeft,
         widthFactor: fill,
@@ -193,11 +193,11 @@ class ContextBreakdown extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 3,
       children: [
-        Container(
+        framed(
           height: 8,
           margin: const EdgeInsets.only(bottom: 4),
-          clipBehavior: Clip.antiAlias,
-          decoration: box(t.borderSubtle, radius: 3),
+          border: t.borderSubtle,
+          radius: 3,
           child: LayoutBuilder(
             builder: (context, box) {
               // A used part gets a sliver at least; free space what's left.
