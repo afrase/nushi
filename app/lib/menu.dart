@@ -3,8 +3,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:nushi/controls.dart';
 import 'package:nushi/theme/theme.dart';
-import 'package:nushi/widgets.dart';
 
 /// One row of a [Menu]: [label], then [detail] dimmed on the same line, and
 /// a check on the right when [checked]. Picking it runs [onPick]; with
@@ -47,24 +47,22 @@ class MenuEntry {
 typedef OpenMenu = void Function([Offset? at]);
 
 /// The app's one menu: it opens at once, without an animation, under or
-/// over its button ([child], with [tooltip]), or wherever [builder] asks.
+/// over what [builder] draws (given the opener), or where it asks. What
+/// opens it is a control of `controls.dart` (a [MenuField], a
+/// [MenuButton], a [MenuIcon]) or a row's right-click: never bare text.
 /// With [digits] the keys 1–9 pick its first rows, numbered on their right.
 /// [onClose] runs once it has closed.
 class Menu extends StatefulWidget {
   const new({
     required this.entries,
+    required this.builder,
     super.key,
-    this.child,
-    this.tooltip = '',
-    this.builder,
     this.digits = false,
     this.onClose,
   });
 
   final List<MenuEntry> entries;
-  final Widget? child;
-  final String tooltip;
-  final Widget Function(BuildContext context, OpenMenu open)? builder;
+  final Widget Function(BuildContext context, OpenMenu open) builder;
   final bool digits;
   final VoidCallback? onClose;
 
@@ -116,14 +114,7 @@ class _MenuState extends State<Menu> {
       onClose: () => WidgetsBinding.instance.addPostFrameCallback(
         (_) => widget.onClose?.call(),
       ),
-      child:
-          widget.builder?.call(context, _open) ??
-          Tap(
-            tooltip: widget.tooltip,
-            onTap: _open,
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-            child: widget.child!,
-          ),
+      child: widget.builder(context, _open),
     ),
   );
 }

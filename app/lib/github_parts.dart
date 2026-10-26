@@ -355,23 +355,15 @@ class ChatMarks extends StatelessWidget {
 /// What an image in GitHub's text shows as: a link to it, opened in the
 /// browser when clicked; nothing is fetched (an author could make the app
 /// fetch anything, and tell who read it).
-Widget githubImage(Uri uri, String? alt) => Builder(
-  builder: (context) {
-    final theme = NushiTheme.of(context);
-    final link = webLink(uri.toString());
-    return Tap(
-      onTap: link == null ? null : () => unawaited(launchUrl(link)),
-      tooltip: link == null ? '' : 'Open the image in the browser',
-      child: Text(
-        '[image${alt == null || alt.isEmpty ? '' : ': $alt'}]',
-        style: theme.ui(
-          link == null ? theme.t.textMuted : theme.t.link,
-          size: 12.5,
-        ),
-      ),
-    );
-  },
-);
+Widget githubImage(Uri uri, String? alt) {
+  final link = webLink(uri.toString());
+  return LinkText(
+    '[image${alt == null || alt.isEmpty ? '' : ': $alt'}]',
+    size: 12.5,
+    tooltip: link == null ? '' : 'Open the image in the browser',
+    onTap: link == null ? null : () => unawaited(launchUrl(link)),
+  );
+}
 
 /// Opens [url] in the browser, http and https only.
 void openWeb(String url) {
