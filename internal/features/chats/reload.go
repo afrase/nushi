@@ -5,8 +5,6 @@ import (
 	"maps"
 	"slices"
 	"time"
-
-	"github.com/afrase/nushi/internal/model"
 )
 
 // MCPChanged marks the running chats whose folder affected says yes to,
@@ -57,11 +55,7 @@ func (s *Service) Reload(chatID string) error {
 		}
 	}
 	c.mu.Lock()
-	c.kept = false
-	if len(c.items) > 0 {
-		c.emitLocked(model.Event{ChatID: c.id, Cut: c.items[0].ID})
-		c.items = nil
-	}
+	c.kept = false // the replay is merged with the copy (restore.go)
 	c.mu.Unlock()
 	go s.discard(c, sides)
 	go s.resume(c)

@@ -69,9 +69,14 @@ func (s *Service) Open(ctx context.Context, agent, folder, sessionID, listed str
 	c.id = rand.Text()
 	c.mu.Lock()
 	c.sid, c.busy = sessionID, true // its replay is the transcript, not a turn of the agent's own
+	c.replaying = true
 	c.session = model.Session{ID: c.id, SessionID: sessionID, Agent: k.Name, Folder: folder, Title: listed, Created: time.Now(), HasMessages: true}
 	c.mu.Unlock()
 	o, err := c.openSession(ctx, sessionID, folder, false)
+	c.mu.Lock()
+	replayed := c.replay
+	c.replaying, c.replay = false, nil
+	c.mu.Unlock()
 	if err != nil {
 		c.mu.Lock()
 		if c.seq > 0 { // its title came, and with it the app heard of it
@@ -85,6 +90,7 @@ func (s *Service) Open(ctx context.Context, agent, folder, sessionID, listed str
 	}
 	c.mu.Lock()
 	s.useLocked(c, o)
+	c.restoreLocked(replayed)
 	c.orphanLocked(false) // calls whose agent ended before their results
 	c.busy = false
 	if i := slices.IndexFunc(c.items, func(it model.Item) bool { return it.Kind == model.UserMessage }); c.session.Title == "" && i >= 0 {

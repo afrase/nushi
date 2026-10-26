@@ -83,6 +83,10 @@ type Dialect struct {
 	// behind: no fork, no command. An agent with it needs no
 	// ContextCommand.
 	Context func(ctx context.Context, call func(ctx context.Context, method string, params, result any) error, sessionID string) (model.ContextUsage, error)
+	// Compacted says an item is part of a compaction of the conversation:
+	// its call, or the summary the agent's replay starts with after one,
+	// when it replays only what follows (see merge).
+	Compacted func(model.Item) bool
 	// Redelete is how long after deleting a session nobody will see again
 	// to delete it once more, for an agent that writes a little of it back
 	// as it ends; 0 for once.

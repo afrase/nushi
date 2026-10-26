@@ -1,0 +1,137 @@
+package chats
+
+import (
+	"testing"
+
+	acp "github.com/afrase/acp-go/unstable"
+
+	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/transcripts"
+)
+
+// restarted is the chats service again, as after a daemon restart: the
+// chat as stored, the same copies, the same agent (its history replays).
+func restarted(t *testing.T, agent *fakeAgent, c *chat, store *transcripts.Store) *Service {
+	t.Helper()
+	c.mu.Lock()
+	sess := c.session
+	c.mu.Unlock()
+	svc := New([]Kind{{Name: "claude", Title: "Claude", Launch: agent.launch, Dialect: claudeDialect}}, &memModes{}, &memSessions{stored: []model.Session{sess}}, nil, t.TempDir(), func(model.Event) {})
+	svc.UseCopies(store, func() bool { return true })
+	return svc
+}
+
+// reopened is the chat after a restart, once its agent replayed it.
+func reopened(t *testing.T, svc *Service, id string) *chat {
+	t.Helper()
+	_, err := svc.Get(id)
+	noErr(t, err)
+	c := svc.chats[id]
+	eventually(t, c, func() bool { return !c.busy && c.agent != nil })
+	return c
+}
+
+func shown(c *chat) string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return describe(c.items)
+}
+
+func summaryChunk() acp.SessionUpdate {
+	return acp.SessionUpdate{SessionUpdate: "user_message_chunk", UserMessageChunk: &acp.ContentChunk{MessageID: "sum",
+		Content: acp.ContentBlock{Text: &acp.TextContent{Text: "This session is being continued from a previous conversation that ran out of context. Summary: …"}}}}
+}
+
+func userChunk(id, text string) acp.SessionUpdate {
+	return acp.SessionUpdate{SessionUpdate: "user_message_chunk", UserMessageChunk: &acp.ContentChunk{MessageID: acp.MessageID(id),
+		Content: acp.ContentBlock{Text: &acp.TextContent{Text: text}}}}
+}
+
+// After a restart the chat shows its copy at once, and once the agent
+// replayed the session, still each item once; the copy stays as it was.
+func TestReopenShowsWhatBothHaveOnce(t *testing.T) {
+	svc, agent, c, store, _ := newCopyingChat(t)
+	turn := func(text string, updates ...acp.SessionUpdate) {
+		agent.updates = updates
+		noErr(t, svc.Prompt(c.id, model.Message{Text: text}, SendIdle))
+		eventually(t, c, func() bool { return !c.busy })
+	}
+	turn("one", chunk("m1", "a"), toolCall("t1", "completed"))
+	turn("two", chunk("m2", "b"))
+	want := "user:one agent:m1 tool:t1 user:two agent:m2"
+	if got := copied(t, store, c.id); got != want {
+		t.Fatalf("copy %s", got)
+	}
+
+	svc2 := restarted(t, agent, c, store)
+	looked, err := svc2.lookup(c.id)
+	noErr(t, err)
+	if got := shown(looked); got != want {
+		t.Fatalf("before the agent replays: %s", got)
+	}
+	c2 := reopened(t, svc2, c.id)
+	if got := shown(c2); got != want {
+		t.Errorf("after the replay: %s", got)
+	}
+	if got := copied(t, store, c.id); got != want {
+		t.Errorf("copy after the replay: %s", got)
+	}
+
+	// Reloading merges the replay the same way.
+	noErr(t, svc2.Reload(c.id))
+	eventually(t, c2, func() bool { return !c2.busy && c2.agent != nil })
+	if got := shown(c2); got != want {
+		t.Errorf("after a reload: %s", got)
+	}
+}
+
+// Claude replays only what follows its last compaction: the copy has the
+// rest, and a mark says where the agent's history starts again.
+func TestReopenAfterACompaction(t *testing.T) {
+	svc, agent, c, store, _ := newCopyingChat(t)
+	turn := func(text string, updates ...acp.SessionUpdate) {
+		agent.updates = updates
+		noErr(t, svc.Prompt(c.id, model.Message{Text: text}, SendIdle))
+		eventually(t, c, func() bool { return !c.busy })
+	}
+	turn("one", chunk("m1", "a"))
+	turn("two", chunk("m2", "b"))
+	turn("/compact", acp.SessionUpdate{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "c1", Title: "Compact conversation", Kind: "think", Status: "completed",
+		Meta: map[string]any{"claudeCode": map[string]any{"toolName": "compact"}}}})
+	turn("three", chunk("m3", "c"))
+	agent.history = []acp.SessionUpdate{summaryChunk(), chunk("m2", "b"), userChunk("r3", "three"), chunk("m3", "c")}
+
+	c2 := reopened(t, restarted(t, agent, c, store), c.id)
+	if got := shown(c2); got != "user:one agent:m1 user:two notice:compacted agent:m2 user:/compact tool:c1 user:three agent:m3" {
+		t.Fatalf("shown %s", got)
+	}
+	if got := copied(t, store, c.id); got != "user:one agent:m1 user:two agent:m2 user:/compact tool:c1 user:three agent:m3" {
+		t.Errorf("copy %s", got)
+	}
+	c2.mu.Lock()
+	mark := c2.items[3]
+	c2.mu.Unlock()
+	if mark.Title != "Compacted here" || mark.Text == "" {
+		t.Errorf("the mark %+v", mark)
+	}
+}
+
+// An archived chat shows its copy after a restart, its agent not started.
+func TestArchivedChatShowsItsCopy(t *testing.T) {
+	svc, agent, c, store, _ := newCopyingChat(t)
+	agent.updates = []acp.SessionUpdate{chunk("m1", "a")}
+	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
+	eventually(t, c, func() bool { return !c.busy })
+	noErr(t, svc.Archive(c.id, true))
+	launches, _, _ := agent.count()
+
+	svc2 := restarted(t, agent, c, store)
+	_, err := svc2.Get(c.id)
+	noErr(t, err)
+	if got := shown(svc2.chats[c.id]); got != "user:one agent:m1" {
+		t.Errorf("archived: %s", got)
+	}
+	if now, _, _ := agent.count(); now != launches {
+		t.Error("an archived chat started its agent")
+	}
+}
