@@ -4,6 +4,7 @@ import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_issue.dart';
@@ -210,7 +211,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(menuRow('Fixed'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(TextButton, 'Done'));
+    await tester.tap(find.widgetWithText(Button, 'Done'));
     await tester.pumpAndSettle();
     final move = fake.calls.whereType<TransitionJiraIssueRequest>().single;
     expect((move.key, move.transition), ('ACME-12', '31'));

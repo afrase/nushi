@@ -71,7 +71,6 @@ class _SidebarState extends State<Sidebar> {
               label: 'New chat',
               icon: Icons.add,
               kind: ButtonKind.primary,
-              height: 28,
               onPressed: starting == null ? () => _new('') : null,
             ),
           ),

@@ -452,19 +452,16 @@ class _ThreadCardState extends State<ThreadCard> {
                   if (x.canReply)
                     Button(
                       label: 'Reply',
-                      kind: ButtonKind.ghost,
                       onPressed: () => setState(() => _replying = true),
                     ),
                   if (x.canResolve && !x.resolved)
                     Button(
                       label: 'Resolve',
-                      kind: ButtonKind.ghost,
                       onPressed: _busy ? null : () => _resolve(true),
                     ),
                   if (x.canUnresolve && x.resolved)
                     Button(
                       label: 'Unresolve',
-                      kind: ButtonKind.ghost,
                       onPressed: _busy ? null : () => _resolve(false),
                     ),
                 ],

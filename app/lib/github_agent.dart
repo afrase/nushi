@@ -99,13 +99,7 @@ class _PickChat extends StatelessWidget {
             ),
         ],
       ),
-      [
-        Button(
-          label: 'Cancel',
-          kind: ButtonKind.ghost,
-          onPressed: () => Navigator.pop(context),
-        ),
-      ],
+      [Button(label: 'Cancel', onPressed: () => Navigator.pop(context))],
     );
   }
 }
@@ -184,11 +178,7 @@ class _PickThreadsState extends State<_PickThreads> {
         ),
       ),
       [
-        Button(
-          label: 'Cancel',
-          kind: ButtonKind.ghost,
-          onPressed: () => Navigator.pop(context),
-        ),
+        Button(label: 'Cancel', onPressed: () => Navigator.pop(context)),
         Button(
           label: 'Put in the box',
           kind: ButtonKind.primary,

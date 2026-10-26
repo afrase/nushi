@@ -57,7 +57,7 @@ Future<(FakeDaemon, Daemon)> _show(
   );
   tester.view
     ..devicePixelRatio = 1
-    ..physicalSize = const Size(520, 360);
+    ..physicalSize = const Size(520, 400);
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
     MaterialApp(

@@ -42,12 +42,7 @@ class LogsSection extends StatelessWidget {
           children: [
             Text('Logs', style: theme.ui(t.text, weight: FontWeight.w600)),
             const Spacer(),
-            Button(
-              label: 'Show logs',
-              kind: ButtonKind.ghost,
-              height: 24,
-              onPressed: reveal,
-            ),
+            Button(label: 'Show logs', onPressed: reveal),
           ],
         ),
         if (debug case final on?) ...[

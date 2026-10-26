@@ -132,11 +132,7 @@ class ItemView extends StatelessWidget {
               child: Text(item.text, style: theme.ui(color, size: 12.5)),
             ),
             if (fix case (final label, final onPressed))
-              Button(
-                label: label,
-                height: 24,
-                onPressed: chat.busy ? null : onPressed,
-              ),
+              Button(label: label, onPressed: chat.busy ? null : onPressed),
           ],
         );
       case ItemKind.ITEM_KIND_PERMISSION:

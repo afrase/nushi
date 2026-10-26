@@ -330,7 +330,6 @@ class _Header extends StatelessWidget {
                 ),
               Button(
                 label: pending > 0 ? 'Review ($pending)…' : 'Review…',
-                kind: ButtonKind.ghost,
                 onPressed: onReview,
               ),
               for (final c in chats.take(4))
@@ -605,11 +604,7 @@ class _CommentBoxState extends State<CommentBox> {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               if (widget.onCancel case final cancel?)
-                Button(
-                  label: 'Cancel',
-                  kind: ButtonKind.ghost,
-                  onPressed: cancel,
-                ),
+                Button(label: 'Cancel', onPressed: cancel),
               const SizedBox(width: 6),
               Button(
                 label: _busy ? 'Posting…' : widget.label,

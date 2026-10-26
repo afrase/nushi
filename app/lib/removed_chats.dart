@@ -67,12 +67,7 @@ class RemovedChatsBar extends StatelessWidget {
               ),
             ),
           ),
-          Button(
-            label: 'OK',
-            kind: ButtonKind.ghost,
-            height: 24,
-            onPressed: daemon.dismissRemoved,
-          ),
+          Button(label: 'OK', onPressed: daemon.dismissRemoved),
         ],
       ),
     );

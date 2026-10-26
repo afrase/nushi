@@ -276,8 +276,6 @@ class _McpChanged extends StatelessWidget {
             message: chat.busy ? 'Once ${chat.agentName} is done' : '',
             child: Button(
               label: 'Reload',
-              kind: ButtonKind.ghost,
-              height: 22,
               onPressed: chat.busy
                   ? null
                   : () async {
@@ -337,7 +335,6 @@ class _Expired extends StatelessWidget {
           ),
           Button(
             label: 'Delete…',
-            kind: ButtonKind.ghost,
             onPressed: () => showDeleteChat(context, chat, daemon),
           ),
           Button(

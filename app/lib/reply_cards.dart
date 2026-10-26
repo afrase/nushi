@@ -153,11 +153,7 @@ class _ReplyDialogState extends State<_ReplyDialog> {
         ],
       ),
       [
-        Button(
-          label: 'Cancel',
-          kind: ButtonKind.ghost,
-          onPressed: () => Navigator.pop(context),
-        ),
+        Button(label: 'Cancel', onPressed: () => Navigator.pop(context)),
         Button(label: 'Save', kind: ButtonKind.primary, onPressed: save),
       ],
     );

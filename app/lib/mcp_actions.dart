@@ -92,12 +92,7 @@ class _McpActionsState extends State<McpActions> {
     Widget button(String label, VoidCallback onPressed, {String tip = ''}) =>
         Tooltip(
           message: tip,
-          child: Button(
-            label: label,
-            kind: ButtonKind.ghost,
-            height: 22,
-            onPressed: _working ? null : onPressed,
-          ),
+          child: Button(label: label, onPressed: _working ? null : onPressed),
         );
     return Row(
       mainAxisSize: MainAxisSize.min,

@@ -77,8 +77,6 @@ class McpView extends StatelessWidget {
                 Button(
                   label: 'Add server',
                   icon: Icons.add,
-                  kind: ButtonKind.ghost,
-                  height: 24,
                   onPressed: () => mcpForm(context, list),
                 ),
                 const SizedBox(width: 8),

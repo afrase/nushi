@@ -73,8 +73,6 @@ List<(String?, Widget)> worktreeRows(
           child: Button(
             label: 'Move to new worktree',
             icon: worktreeIcon,
-            kind: ButtonKind.ghost,
-            height: 24,
             onPressed: can ? () => _confirmMove(context, chat, daemon) : null,
           ),
         ),

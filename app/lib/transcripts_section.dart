@@ -98,14 +98,10 @@ class _TranscriptsSectionState extends State<TranscriptsSection> {
           'it.',
         ),
         [
-          Button(
-            label: 'Cancel',
-            kind: ButtonKind.ghost,
-            onPressed: () => Navigator.pop(context),
-          ),
+          Button(label: 'Cancel', onPressed: () => Navigator.pop(context)),
           Button(
             label: 'Delete copies',
-            kind: ButtonKind.danger,
+            kind: ButtonKind.destructive,
             onPressed: () => Navigator.pop(context, true),
           ),
           Button(
@@ -220,7 +216,6 @@ class _TranscriptsSectionState extends State<TranscriptsSection> {
               if (copies.isNotEmpty)
                 Button(
                   label: 'Clear all',
-                  height: 24,
                   onPressed: () => tryOrShow(context, _clearAll),
                 ),
             ],
@@ -239,8 +234,6 @@ class _TranscriptsSectionState extends State<TranscriptsSection> {
               alignment: Alignment.centerLeft,
               child: Button(
                 label: 'Show all ${copies.length}',
-                kind: ButtonKind.ghost,
-                height: 24,
                 onPressed: () => setState(() => _all = true),
               ),
             ),
@@ -274,7 +267,6 @@ class _TranscriptsSectionState extends State<TranscriptsSection> {
                   const SizedBox(width: 10),
                   Button(
                     label: 'Clear',
-                    height: 24,
                     onPressed: () {
                       final n = int.tryParse(_older.text) ?? 0;
                       if (n < 1) return;
@@ -332,12 +324,7 @@ class _CopyRow extends StatelessWidget {
               style: theme.ui(t.textSecondary, size: 12),
             ),
           ),
-          Button(
-            label: 'Clear',
-            kind: ButtonKind.ghost,
-            height: 22,
-            onPressed: onClear,
-          ),
+          Button(label: 'Clear', onPressed: onClear),
         ],
       ),
     );

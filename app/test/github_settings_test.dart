@@ -3,6 +3,7 @@ import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_settings.dart';
@@ -144,7 +145,7 @@ void main() {
     );
     await tester.tap(find.text('Remove'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(TextButton, 'Remove').last);
+    await tester.tap(find.widgetWithText(Button, 'Remove').last);
     await tester.pumpAndSettle();
     expect(
       fake.calls.whereType<RemoveGitHubTokenRequest>().single.host,

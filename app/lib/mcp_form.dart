@@ -325,15 +325,10 @@ class _FormState extends State<_Form> {
             children: [
               Button(
                 label: _asJson ? 'Edit in the form' : 'Edit as JSON',
-                kind: ButtonKind.ghost,
                 onPressed: _toggleJson,
               ),
               const Spacer(),
-              Button(
-                label: 'Cancel',
-                kind: ButtonKind.ghost,
-                onPressed: () => Navigator.pop(context),
-              ),
+              Button(label: 'Cancel', onPressed: () => Navigator.pop(context)),
               const SizedBox(width: 8),
               Button(
                 label: _saving ? 'Saving…' : (_editing ? 'Save' : 'Add'),

@@ -25,13 +25,7 @@ Future<JiraBoard?> pickBoard(BuildContext context, List<JiraBoard> boards) =>
             if (boards.isEmpty) const Text('No boards on this site.'),
           ],
         ),
-        [
-          Button(
-            label: 'Cancel',
-            kind: ButtonKind.ghost,
-            onPressed: () => Navigator.pop(context),
-          ),
-        ],
+        [Button(label: 'Cancel', onPressed: () => Navigator.pop(context))],
       ),
     );
 
@@ -50,11 +44,7 @@ Future<String?> askName(BuildContext context) async {
         onSubmitted: (_) => Navigator.pop(context, true),
       ),
       [
-        Button(
-          label: 'Cancel',
-          kind: ButtonKind.ghost,
-          onPressed: () => Navigator.pop(context, false),
-        ),
+        Button(label: 'Cancel', onPressed: () => Navigator.pop(context, false)),
         Button(
           label: 'Save',
           kind: ButtonKind.primary,

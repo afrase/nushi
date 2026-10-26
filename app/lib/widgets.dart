@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:nushi/commits.dart';
+import 'package:nushi/controls.dart';
 
 import 'package:nushi/theme/theme.dart';
+
+export 'package:nushi/controls.dart';
 
 /// Shows [message] in a snack bar.
 void showError(BuildContext context, Object message) =>
@@ -87,146 +90,6 @@ class _TapState extends State<Tap> {
   }
 }
 
-/// A small icon button.
-class IconTap extends StatelessWidget {
-  const new(
-    this.icon, {
-    required this.tooltip,
-    required this.onTap,
-    super.key,
-    this.size = 16,
-    this.color,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback? onTap;
-  final double size;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = NushiTheme.of(context).t;
-    return Tap(
-      tooltip: tooltip,
-      onTap: onTap,
-      padding: const EdgeInsets.all(5),
-      child: Icon(
-        icon,
-        size: size,
-        color: onTap == null ? t.textMuted : color ?? t.textSecondary,
-      ),
-    );
-  }
-}
-
-enum ButtonKind {
-  /// The one main action: accent fill.
-  primary,
-
-  /// Outlined.
-  secondary,
-
-  /// A quiet toolbar action: no chrome.
-  ghost,
-
-  /// Stop or delete: in red.
-  danger,
-}
-
-/// A compact button with an optional leading [icon] and a shortcut [hint]
-/// after the label.
-class Button extends StatelessWidget {
-  const new({
-    required this.label,
-    required this.onPressed,
-    super.key,
-    this.kind = ButtonKind.secondary,
-    this.icon,
-    this.hint,
-    this.height = 26,
-    this.autofocus = false,
-  });
-
-  final String label;
-  final VoidCallback? onPressed;
-  final ButtonKind kind;
-  final IconData? icon;
-  final String? hint;
-  final double height;
-  final bool autofocus;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final enabled = onPressed != null;
-    final (Color? bg, Color fg, Color? border) = switch (kind) {
-      ButtonKind.primary => (t.accent, t.onAccent, null),
-      ButtonKind.secondary => (null, t.text, t.borderStrong),
-      ButtonKind.ghost => (null, t.textSecondary, null),
-      ButtonKind.danger => (null, t.crashed, t.crashed),
-    };
-    final color = enabled ? fg : t.textMuted;
-    final style = theme.ui(
-      color,
-      weight: kind == ButtonKind.primary ? FontWeight.w500 : null,
-    );
-    return TextButton(
-      onPressed: onPressed,
-      autofocus: autofocus,
-      style:
-          TextButton.styleFrom(
-            minimumSize: Size(0, height),
-            fixedSize: Size.fromHeight(height),
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            backgroundColor: enabled ? bg : (bg == null ? null : t.selected),
-            foregroundColor: color,
-            textStyle: style,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(NushiTheme.control),
-            ),
-          ).copyWith(
-            side: WidgetStateProperty.resolveWith(
-              (states) => states.contains(WidgetState.focused)
-                  ? BorderSide(color: t.focus, width: 2)
-                  : border == null
-                  ? null
-                  : BorderSide(color: enabled ? border : t.borderSubtle),
-            ),
-          ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 14, color: color),
-            const SizedBox(width: 6),
-          ],
-          Flexible(
-            child: Text(
-              label,
-              style: style,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          if (hint != null) ...[
-            const SizedBox(width: 6),
-            keyHint(
-              context,
-              hint!,
-              color: enabled && kind == ButtonKind.primary
-                  ? t.onAccent
-                  : t.textMuted,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
 /// A dialog: [title], [content] 460 wide, and its [actions].
 Widget nushiDialog(String title, Widget content, List<Widget> actions) =>
     AlertDialog(
@@ -245,11 +108,7 @@ Future<bool> confirm(
     await showDialog<bool>(
       context: context,
       builder: (context) => nushiDialog(title, Text(text), [
-        Button(
-          label: 'Cancel',
-          kind: ButtonKind.ghost,
-          onPressed: () => Navigator.pop(context, false),
-        ),
+        Button(label: 'Cancel', onPressed: () => Navigator.pop(context, false)),
         Button(
           label: action,
           kind: ButtonKind.primary,
@@ -259,12 +118,6 @@ Future<bool> confirm(
       ]),
     ) ??
     false;
-
-/// A shortcut in small monospace (`⏎`).
-Widget keyHint(BuildContext context, String keys, {Color? color}) {
-  final theme = NushiTheme.of(context);
-  return Text(keys, style: theme.code(color ?? theme.t.textMuted, size: 11));
-}
 
 /// One choice of a few (`Chat | Changes`).
 class Segmented<T> extends StatelessWidget {

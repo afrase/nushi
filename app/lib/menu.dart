@@ -99,6 +99,7 @@ class _MenuState extends State<Menu> {
   @override
   Widget build(BuildContext context) => Focus(
     focusNode: _focus,
+    skipTraversal: true, // focused only while the menu is open
     onKeyEvent: _onKey,
     child: MenuAnchor(
       controller: _menu,
