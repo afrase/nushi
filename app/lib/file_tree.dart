@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -81,7 +83,9 @@ List<ChangeRow> changeRows(
 }
 
 /// The changed files as a tree or a flat list ([changesFlat]): ↑/↓ move
-/// between files, and the selected one stays in view.
+/// between files, and the selected one stays in view. Rows are as wide as
+/// their names, never cut: the list scrolls sideways, as JetBrains' tree
+/// does, when the widest is wider than the pane.
 class FileList extends StatefulWidget {
   const new({
     required this.files,
@@ -102,9 +106,12 @@ class FileList extends StatefulWidget {
 
 class _FileListState extends State<FileList> {
   static const _row = 26.0;
+  static const _pad = 6.0; // the list's, each side
   final _scroll = ScrollController();
+  final _sideways = ScrollController();
   final _focus = FocusNode();
   final _collapsed = <String>{};
+  final _widths = <String, double>{}; // rows' widths, by what they show
   List<ChangeRow> _rows = [];
 
   @override
@@ -116,8 +123,15 @@ class _FileListState extends State<FileList> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _widths.clear(); // the text's size may have changed
+  }
+
+  @override
   void dispose() {
     _scroll.dispose();
+    _sideways.dispose();
     _focus.dispose();
     super.dispose();
   }
@@ -147,42 +161,136 @@ class _FileListState extends State<FileList> {
     return KeyEventResult.handled;
   }
 
+  /// The width of the widest row.
+  double _widest(NushiTheme theme, bool flat) {
+    final scaler = MediaQuery.textScalerOf(context);
+    var widest = 0.0;
+    for (final r in _rows) {
+      final comments = widget.marks[r.file?.path] ?? 0;
+      final key =
+          '${r.depth} ${r.file != null} $flat $comments '
+          '${r.added} ${r.removed} ${r.name}';
+      final w = _widths[key] ??= () {
+        final p = TextPainter(
+          // As Text lays it out: over the default text style.
+          text: TextSpan(
+            style: DefaultTextStyle.of(context).style,
+            children: [_label(theme, r, flat: flat, comments: comments)],
+          ),
+          textDirection: TextDirection.ltr,
+          textScaler: scaler,
+        )..layout();
+        final w = _Row.indent(r) + _Row.lead + p.width + _Row.end;
+        p.dispose();
+        return w.ceilToDouble();
+      }();
+      widest = max(widest, w);
+    }
+    return widest + 2 * _pad;
+  }
+
   @override
   Widget build(BuildContext context) => ValueListenableBuilder(
     valueListenable: changesFlat,
     builder: (context, flat, _) {
       _rows = changeRows(widget.files, flat: flat, collapsed: _collapsed);
+      final widest = _widest(NushiTheme.of(context), flat);
       return Focus(
         focusNode: _focus,
         onKeyEvent: _key,
-        child: ListView.builder(
-          controller: _scroll,
-          itemExtent: _row,
-          padding: const EdgeInsets.symmetric(horizontal: 6),
-          itemCount: _rows.length,
-          itemBuilder: (context, i) {
-            final row = _rows[i];
-            return _Row(
-              row,
-              flat: flat,
-              selected: row.file != null && row.path == widget.selected,
-              open: !_collapsed.contains(row.path),
-              comments: widget.marks[row.file?.path] ?? 0,
-              onTap: () {
-                _focus.requestFocus();
-                if (row.file == null) {
-                  setState(() {
-                    if (!_collapsed.remove(row.path)) _collapsed.add(row.path);
-                  });
-                } else {
-                  widget.onSelect(row.path);
-                }
-              },
-            );
-          },
+        child: LayoutBuilder(
+          builder: (context, box) => MacScrollbar(
+            controller: _scroll,
+            notificationPredicate: (n) => n.metrics.axis == Axis.vertical,
+            child: MacScrollbar(
+              controller: _sideways,
+              notificationPredicate: (n) =>
+                  n.depth == 0 && n.metrics.axis == Axis.horizontal,
+              child: ScrollConfiguration(
+                behavior: ScrollConfiguration.of(context)
+                    .copyWith(scrollbars: false),
+                child: SingleChildScrollView(
+                  controller: _sideways,
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(
+                    width: max(box.maxWidth, widest),
+                    child: _list(flat),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       );
     },
+  );
+
+  Widget _list(bool flat) => ListView.builder(
+    controller: _scroll,
+    itemExtent: _row,
+    padding: const EdgeInsets.symmetric(horizontal: _pad),
+    itemCount: _rows.length,
+    itemBuilder: (context, i) {
+      final row = _rows[i];
+      return _Row(
+        row,
+        flat: flat,
+        selected: row.file != null && row.path == widget.selected,
+        open: !_collapsed.contains(row.path),
+        comments: widget.marks[row.file?.path] ?? 0,
+        onTap: () {
+          _focus.requestFocus();
+          if (row.file == null) {
+            setState(() {
+              if (!_collapsed.remove(row.path)) _collapsed.add(row.path);
+            });
+          } else {
+            widget.onSelect(row.path);
+          }
+        },
+      );
+    },
+  );
+}
+
+/// A row's text: its name (a flat list's folders muted), its review
+/// comments and its line counts.
+TextSpan _label(
+  NushiTheme theme,
+  ChangeRow row, {
+  required bool flat,
+  required int comments,
+}) {
+  final t = theme.t;
+  final file = row.file;
+  final slash = flat && file != null ? row.name.lastIndexOf('/') + 1 : 0;
+  const mark = Icons.mode_comment_outlined;
+  return TextSpan(
+    style: theme.ui(t.text),
+    children: [
+      TextSpan(
+        text: row.name.substring(0, slash),
+        style: theme.ui(t.textMuted),
+      ),
+      TextSpan(
+        text: row.name.substring(slash),
+        style: theme.ui(file == null ? t.textSecondary : t.text),
+      ),
+      if (comments > 0) ...[
+        TextSpan(
+          text: '  ${String.fromCharCode(mark.codePoint)}',
+          style: TextStyle(
+            fontFamily: mark.fontFamily,
+            package: mark.fontPackage,
+            fontSize: 12,
+            color: t.accent,
+          ),
+        ),
+        TextSpan(text: ' $comments', style: theme.ui(t.accent, size: 11)),
+      ],
+      const TextSpan(text: ' '),
+      ...lineCounts(theme, row.added, row.removed),
+    ],
   );
 }
 
@@ -203,6 +311,12 @@ class _Row extends StatelessWidget {
   final int comments;
   final VoidCallback onTap;
 
+  /// Before the text: the indent, then the chevron or status letter's
+  /// column; after it, the end's padding.
+  static double indent(ChangeRow row) => 8.0 + row.depth * 14;
+  static const lead = 18.0;
+  static const end = 6.0;
+
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
@@ -215,56 +329,31 @@ class _Row extends StatelessWidget {
       'renamed' => ('R', t.running),
       _ => ('M', t.running),
     };
-    final slash = row.name.lastIndexOf('/') + 1;
+    final notes = comments == 0
+        ? ''
+        : ' · $comments review comment${comments == 1 ? '' : 's'}';
     return Tap(
       onTap: onTap,
       selected: selected,
       tooltip: file == null
           ? ''
           : file.status == 'renamed'
-          ? '${file.oldPath} → ${file.path}'
-          : file.path,
-      padding: EdgeInsets.only(left: 8.0 + row.depth * 14, right: 6),
+          ? '${file.oldPath} → ${file.path}$notes'
+          : '${file.path}$notes',
+      padding: EdgeInsets.only(left: indent(row), right: end),
       child: Row(
         children: [
           SizedBox(
-            width: 18,
+            width: lead,
             child: file == null
                 ? Chevron(open: open)
                 : Text(letter, style: theme.code(color, size: 12)),
           ),
-          Expanded(
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  if (file != null && flat)
-                    TextSpan(
-                      text: row.name.substring(0, slash),
-                      style: theme.ui(t.textMuted),
-                    ),
-                  TextSpan(
-                    text: file != null && flat
-                        ? row.name.substring(slash)
-                        : row.name,
-                    style: theme.ui(file == null ? t.textSecondary : t.text),
-                  ),
-                ],
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+          Text.rich(
+            _label(theme, row, flat: flat, comments: comments),
+            maxLines: 1,
+            softWrap: false,
           ),
-          if (comments > 0)
-            Tooltip(
-              message: '$comments review comment${comments == 1 ? '' : 's'}',
-              child: Row(
-                children: [
-                  Icon(Icons.mode_comment_outlined, size: 12, color: t.accent),
-                  Text(' $comments ', style: theme.ui(t.accent, size: 11)),
-                ],
-              ),
-            ),
-          LineCounts(row.added, row.removed),
         ],
       ),
     );
@@ -272,6 +361,14 @@ class _Row extends StatelessWidget {
 }
 
 /// `+3 −1` in green and red, each left out when zero.
+List<TextSpan> lineCounts(NushiTheme theme, int added, int removed) => [
+  if (added > 0)
+    TextSpan(text: ' +$added', style: theme.code(theme.t.done, size: 11)),
+  if (removed > 0)
+    TextSpan(text: ' −$removed', style: theme.code(theme.t.crashed, size: 11)),
+];
+
+/// [lineCounts] as a widget.
 class LineCounts extends StatelessWidget {
   const new(this.added, this.removed, {super.key});
 
@@ -279,21 +376,7 @@ class LineCounts extends StatelessWidget {
   final int removed;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    return Text.rich(
-      TextSpan(
-        children: [
-          if (added > 0)
-            TextSpan(text: ' +$added', style: theme.code(t.done, size: 11)),
-          if (removed > 0)
-            TextSpan(
-              text: ' −$removed',
-              style: theme.code(t.crashed, size: 11),
-            ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Text.rich(
+    TextSpan(children: lineCounts(NushiTheme.of(context), added, removed)),
+  );
 }
