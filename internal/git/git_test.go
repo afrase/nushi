@@ -276,3 +276,31 @@ func TestChangesLeavesOutWhatItCantShow(t *testing.T) {
 		t.Errorf("status = %+v, %v", st, err)
 	}
 }
+
+// One cat-file reads a commit's files in turn: past one too large to keep
+// whole, one that isn't there, and one with a newline in its name (through
+// git show).
+func TestBlobs(t *testing.T) {
+	ctx := context.Background()
+	repo := t.TempDir()
+	git(t, repo, "init", "-q", "-b", "main")
+	write(t, filepath.Join(repo, "big.txt"), strings.Repeat("x", maxText+5))
+	write(t, filepath.Join(repo, "sub", "a.txt"), "a\n")
+	write(t, filepath.Join(repo, "sub")+"/two\nlines", "b")
+	git(t, repo, "add", ".")
+	git(t, repo, "commit", "-q", "-m", "one")
+
+	files := openBlobs(repo)
+	defer files.close()
+	if b, err := files.read(ctx, "HEAD", "big.txt"); err != nil || len(b) != maxText+1 {
+		t.Errorf("big.txt: %d bytes, %v", len(b), err)
+	}
+	if _, err := files.read(ctx, "HEAD", "nope.txt"); err == nil {
+		t.Error("a file that isn't there was read")
+	}
+	for path, want := range map[string]string{"sub/a.txt": "a\n", "sub/two\nlines": "b"} {
+		if b, err := files.read(ctx, "HEAD", path); err != nil || string(b) != want {
+			t.Errorf("%q: %q, %v", path, b, err)
+		}
+	}
+}

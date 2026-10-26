@@ -1,10 +1,14 @@
 package git
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
+	"strconv"
+	"strings"
 	"syscall"
 )
 
@@ -40,6 +44,80 @@ func show(ctx context.Context, folder, rev, path string) ([]byte, error) {
 	var out capped
 	_, err := runTo(ctx, folder, nil, &out, "show", "--no-textconv", rev+":./"+path)
 	return out.b, err
+}
+
+// blobs reads files of commits through one git cat-file, rather than a
+// git show for each: a branch's hundreds of files took seconds.
+type blobs struct {
+	folder string
+	cmd    *exec.Cmd
+	in     io.WriteCloser
+	out    *bufio.Reader
+}
+
+// openBlobs starts the cat-file lazily, on the first read.
+func openBlobs(folder string) *blobs { return &blobs{folder: folder} }
+
+// read is show through the cat-file. A path with a newline, which the
+// cat-file's lines can't hold, goes through show.
+func (b *blobs) read(ctx context.Context, rev, path string) ([]byte, error) {
+	if strings.ContainsAny(rev+path, "\n") {
+		return show(ctx, b.folder, rev, path)
+	}
+	if b.cmd == nil {
+		if err := b.start(ctx); err != nil {
+			return nil, err
+		}
+	}
+	if _, err := io.WriteString(b.in, rev+":./"+path+"\n"); err != nil {
+		return nil, err
+	}
+	head, err := b.out.ReadString('\n')
+	if err != nil {
+		return nil, err
+	}
+	// "<oid> blob <size>", then the contents and a newline; else
+	// "<name> missing" (or "ambiguous").
+	f := strings.Fields(head)
+	if len(f) != 3 || f[1] != "blob" {
+		return nil, fmt.Errorf("%s:%s: %s", rev, path, strings.TrimSpace(head))
+	}
+	size, err := strconv.Atoi(f[2])
+	if err != nil {
+		return nil, err
+	}
+	var out capped
+	if _, err := io.CopyN(&out, b.out, int64(size)+1); err != nil {
+		return nil, err
+	}
+	out.b = out.b[:min(len(out.b), size)] // not the newline after it
+	return out.b, nil
+}
+
+func (b *blobs) start(ctx context.Context) error {
+	b.cmd = command(ctx, b.folder, nil, "cat-file", "--batch")
+	in, err := b.cmd.StdinPipe()
+	if err != nil {
+		return err
+	}
+	out, err := b.cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	if err := b.cmd.Start(); err != nil {
+		return err
+	}
+	b.in, b.out = in, bufio.NewReaderSize(out, 64<<10)
+	return nil
+}
+
+// close ends the cat-file, if it started.
+func (b *blobs) close() {
+	if b.cmd == nil {
+		return
+	}
+	_ = b.in.Close()
+	_ = b.cmd.Wait()
 }
 
 // capped keeps the first maxText+1 bytes written to it and drops the rest.
