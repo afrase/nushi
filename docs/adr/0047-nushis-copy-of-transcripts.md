@@ -1,0 +1,16 @@
+# 0047. Nushi keeps its own read-only copy of each chat's transcript
+
+## Context
+ADR 0008 made the agent's session the only history: Nushi rebuilt a transcript from `session/load`. Two things lose history that way. After a compaction Claude replays only what follows its last one (a summary, then the latest messages), so a reopened chat showed none of its earlier work. And Claude Code deletes sessions older than 30 days, after which a chat had nothing to show (ADR 0015's amendment removed such chats). A replay also never brings back what was Nushi's: permission prompts, questions and answers, notices, subagents' steps.
+
+## Decision
+- **Keep transcripts** (Settings › General, on by default): per chat, a folder in the data folder (`transcripts/<chat id>/`, 0700) with an append-only file of the transcript's items as they were shown (0600), written as they settle (a message once another item follows it, a tool call once it ended, the rest when a turn ends), never as they stream; images are files beside it. A torn last record is skipped and cut off; a rewrite goes through a temporary file. Off, nothing new is written; existing copies stay or go, as the user picks then.
+- **It's a copy, not a source.** Resuming goes through the agent's own session; the copy is never sent to the agent, and the chat stays the agent's (resumable from a terminal). A reopened chat shows the copy and the replay lined up (by the agent's ids, else by text): what both have once, the copy's version where they agree; before the replay's start, the copy alone, marked "Compacted here" where the replay starts with a compaction's summary; where they differ beyond it (a rewind or edit in a terminal), the agent's replay from there, after a divider. The copy then follows what the chat shows; the marks are never in it.
+- **It follows the chat**: a rewind cuts it where the transcript is cut; a move or rewind forks the session but keeps the chat, so the copy goes on (a fork's starts as its parent's up to the fork point); side chats have none (nobody sees them again). Delete removes it; Archive keeps it, and an archived chat shows it.
+- **A chat whose session the agent deleted stays when it has a copy**, read-only (no composer; Delete… and Start a new chat here); without one it goes as before.
+- **Storage**: Settings lists each chat's copy (size, last use), with Clear, Clear all, clear those older than n days, and an automatic cleanup (never, 30, 90 or 365 days since last written). Clearing a live chat's copy leaves it working: its history comes from the agent alone again, and what comes next is copied.
+
+## Consequences
+- A copy holds the user's code, prompts and tool output in the data folder, readable by anything running as the user (as Claude's own transcripts are); never logged (counts and sizes only), never sent anywhere but to Nushi's clients, as transcripts already are. A long chat's copy is about a third of Claude's own transcript of it.
+- What the copy shows before a compaction is Nushi's record, not the agent's: the agent kept only a summary of it. A rewind to a message there forks Claude's session at it, which works (its transcript keeps everything).
+- Edits elsewhere are caught only on a reopen, and only as far as ids and texts tell; a copy cleared or turned off falls back to the agent's replay, as before this ADR.
