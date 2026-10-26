@@ -32,8 +32,10 @@ List<MenuEntry> chatMenu(
   ),
   if (knownAgents[chat.agent]?.mcp ?? true)
     MenuEntry('MCP servers…', onPick: () => daemon.showMcp(chat.folder)),
-  if (knownAgents[chat.agent]?.mcp ?? true)
-    MenuEntry('Skills…', onPick: () => daemon.showSkills(chat.folder)),
+  MenuEntry(
+    'Skills…',
+    onPick: () => daemon.showSkills(chat.folder, agent: chat.agent),
+  ),
   MenuEntry('Delete…', onPick: () => showDeleteChat(context, chat, daemon)),
 ];
 
