@@ -92,6 +92,7 @@ class _TranscriptState extends State<Transcript> {
     Object e, {
     required bool live,
     required bool still,
+    required double top,
   }) {
     final (key, items) = switch (e) {
       // A call and the group it becomes keep their place (and state).
@@ -100,7 +101,7 @@ class _TranscriptState extends State<Transcript> {
       _ => ((e as Item).id, [e]),
     };
     final rewindable = e is Item && canRewindTo(widget.chat, e);
-    final from = [live, still, rewindable, ...items];
+    final from = [live, still, rewindable, top, ...items];
     final was = before[key];
     final same =
         was != null &&
@@ -114,7 +115,10 @@ class _TranscriptState extends State<Transcript> {
                 // Keyed, the item's state follows it as items arrive.
                 Padding(
                   key: ValueKey(key),
-                  padding: const EdgeInsets.only(top: 12),
+                  // A user message's band goes edge to edge.
+                  padding: _isBand(e)
+                      ? EdgeInsets.only(top: top)
+                      : _sides.copyWith(top: top),
                   child: RepaintBoundary(
                     child: _view(
                       e,
@@ -220,19 +224,22 @@ class _TranscriptState extends State<Transcript> {
                 // widget, so a streamed chunk rebuilds only its message.
                 child: SingleChildScrollView(
                   controller: _follower.scroll,
-                  padding: const EdgeInsets.fromLTRB(20, 2, 20, 14),
+                  padding: const EdgeInsets.only(top: 2, bottom: 14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      ?widget.header,
+                      if (widget.header case final h?)
+                        Padding(padding: _sides, child: h),
                       for (final (i, e) in entries.indexed)
                         _entry(
                           before,
                           e,
                           live: live && i == entries.length - 1,
                           still: chat.waiting,
+                          top: _gap(entries, i, header: widget.header != null),
                         ),
-                      ?widget.footer,
+                      if (widget.footer case final f?)
+                        Padding(padding: _sides, child: f),
                     ],
                   ),
                 ),
@@ -305,6 +312,18 @@ class _TranscriptState extends State<Transcript> {
     );
   }
 }
+
+const _sides = EdgeInsets.symmetric(horizontal: 20);
+
+bool _isBand(Object e) =>
+    e is Item && e.kind == ItemKind.ITEM_KIND_USER_MESSAGE;
+
+/// The room above entry [i]: more around a user message's band than
+/// between the agent's steps, so each exchange reads as one chapter.
+double _gap(List<Object> entries, int i, {required bool header}) =>
+    _isBand(entries[i])
+    ? (i == 0 && !header ? 8 : 28)
+    : (i > 0 && _isBand(entries[i - 1]) ? 18 : 12);
 
 /// Places its child centered just above [at] (a selection's top and bottom
 /// middle), or below it when there is no room above, inside the box.

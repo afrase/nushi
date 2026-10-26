@@ -83,6 +83,39 @@ void main() {
     // Painted over the selection, an opaque background would hide it.
     expect(code?.backgroundColor?.a, lessThan(0.2));
   });
+
+  testWidgets('bold stands out of semibold text; inline code takes its '
+      'own tint', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: StreamingMarkdown(
+          'a **b** `c`',
+          style: MarkdownStyle(
+            body: TextStyle(fontWeight: FontWeight.w600),
+            code: TextStyle(),
+            codeBackground: Colors.white,
+            inlineCode: Color(0x14112233),
+            border: Colors.grey,
+            muted: Colors.grey,
+            link: Colors.blue,
+            highlight: _plain,
+          ),
+          streaming: false,
+        ),
+      ),
+    );
+    final styles = <String, TextStyle?>{};
+    for (final t in tester.widgetList<RichText>(find.byType(RichText))) {
+      t.text.visitChildren((span) {
+        if (span is TextSpan && span.text != null) {
+          styles[span.text!] = span.style;
+        }
+        return true;
+      });
+    }
+    expect(styles['b']?.fontWeight, FontWeight.w800);
+    expect(styles['c']?.backgroundColor, const Color(0x14112233));
+  });
 }
 
 TextSpan? _plain(String language, String code, TextStyle style) => null;

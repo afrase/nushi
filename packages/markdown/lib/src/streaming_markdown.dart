@@ -16,6 +16,7 @@ class MarkdownStyle {
     required this.muted,
     required this.link,
     required this.highlight,
+    this.inlineCode,
   });
 
   /// Paragraph text.
@@ -24,8 +25,13 @@ class MarkdownStyle {
   /// Code, inline and in blocks.
   final TextStyle code;
 
-  /// Behind code blocks and inline code.
+  /// Behind code blocks (and tables' heads).
   final Color codeBackground;
+
+  /// Behind inline code: a tint, since a paragraph paints its selection
+  /// under the text and an opaque background would hide it. Null takes
+  /// the body's color, faintly.
+  final Color? inlineCode;
 
   /// Around code blocks and tables, and a quote's bar.
   final Color border;
@@ -105,14 +111,17 @@ class StreamingMarkdown extends StatelessWidget {
         p: body,
         a: body.copyWith(color: s.link, decoration: TextDecoration.underline),
         em: const TextStyle(fontStyle: FontStyle.italic),
-        strong: const TextStyle(fontWeight: FontWeight.w600),
+        // Bolder than the body, also when the body is semibold.
+        strong: TextStyle(
+          fontWeight: (body.fontWeight ?? FontWeight.normal).value >= 600
+              ? FontWeight.w800
+              : FontWeight.w600,
+        ),
         del: const TextStyle(decoration: TextDecoration.lineThrough),
-        // Inline code's background is a tint, not [codeBackground]: a
-        // paragraph paints its selection under the text, and an opaque
-        // background would hide the selection on code.
         code: s.code.copyWith(
           fontSize: size * 0.92,
-          backgroundColor: (body.color ?? s.muted).withValues(alpha: 0.07),
+          backgroundColor:
+              s.inlineCode ?? (body.color ?? s.muted).withValues(alpha: 0.07),
         ),
         h1: heading.copyWith(fontSize: size * 1.45),
         h2: heading.copyWith(fontSize: size * 1.25),

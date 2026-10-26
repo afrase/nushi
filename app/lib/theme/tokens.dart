@@ -56,6 +56,27 @@ class Tokens {
     required this.idle,
     required this.crashed,
     required this.crashedSoft,
+    required this.userBand,
+    required this.userBandBorder,
+    required this.userBandText,
+    required this.userBandMuted,
+    required this.userBandCode,
+    required this.userBandCodeBlock,
+    required this.agentText,
+    required this.inlineCode,
+    required this.codeBlock,
+    required this.toolTint,
+    required this.toolBorder,
+    required this.toolAccent,
+    required this.subagentTint,
+    required this.subagentBorder,
+    required this.subagentAccent,
+    required this.selectionBar,
+    required this.selectionBarText,
+    required this.selectionBarBorder,
+    required this.selectionBarDivider,
+    required this.shadow,
+    required this.scrim,
     required this.claude,
     required this.monogramText,
     required this.syntax,
@@ -89,6 +110,33 @@ class Tokens {
   final Color idle;
   final Color crashed;
   final Color crashedSoft;
+
+  // The transcript. A user message is a band across it (the chapter's
+  // heading), with its marker (a relay's), its inline code and code
+  // blocks; the agent's text and inline code; a tool call's row and a
+  // subagent's line, each a tint with an accent for its icon; the bar
+  // over a selection; and the scrim behind an image opened whole.
+  final Color userBand;
+  final Color userBandBorder;
+  final Color userBandText;
+  final Color userBandMuted;
+  final Color userBandCode;
+  final Color userBandCodeBlock;
+  final Color agentText;
+  final Color inlineCode;
+  final Color codeBlock;
+  final Color toolTint;
+  final Color toolBorder;
+  final Color toolAccent;
+  final Color subagentTint;
+  final Color subagentBorder;
+  final Color subagentAccent;
+  final Color selectionBar;
+  final Color selectionBarText;
+  final Color selectionBarBorder;
+  final Color selectionBarDivider;
+  final Color shadow;
+  final Color scrim;
 
   // Claude's color, and the letter on an agent's monogram.
   final Color claude;
@@ -125,6 +173,27 @@ class Tokens {
     idle: Color(0xFF5D6170),
     crashed: Color(0xFFB62B39),
     crashedSoft: Color(0xFFFCE8EA),
+    userBand: Color(0xFFE5EDFC),
+    userBandBorder: Color(0xFFB8CCF4),
+    userBandText: Color(0xFF142A5C),
+    userBandMuted: Color(0xFF3A5594),
+    userBandCode: Color(0x14142A5C),
+    userBandCodeBlock: Color(0xFFF5F8FE),
+    agentText: Color(0xFF1E1F22),
+    inlineCode: Color(0x121E1F22),
+    codeBlock: Color(0xFFF7F8FA),
+    toolTint: Color(0xFFEAF6F4),
+    toolBorder: Color(0xFFBFE0DA),
+    toolAccent: Color(0xFF0E8577),
+    subagentTint: Color(0xFFF1ECFC),
+    subagentBorder: Color(0xFFD6C9F5),
+    subagentAccent: Color(0xFF4E1FA8),
+    selectionBar: Color(0xFF26272B),
+    selectionBarText: Color(0xFFE8E9EC),
+    selectionBarBorder: Color(0x22FFFFFF),
+    selectionBarDivider: Color(0x33FFFFFF),
+    shadow: Color(0x33000000),
+    scrim: Color(0xDD000000),
     claude: Color(0xFFB0582B),
     monogramText: Color(0xFFFFFFFF),
     syntax: {
@@ -168,6 +237,27 @@ class Tokens {
     idle: Color(0xFFA2A6AE),
     crashed: Color(0xFFFA7681),
     crashedSoft: Color(0xFF3F2427),
+    userBand: Color(0xFF233049),
+    userBandBorder: Color(0xFF34497A),
+    userBandText: Color(0xFFE8EEFB),
+    userBandMuted: Color(0xFF9DB8F5),
+    userBandCode: Color(0x14E8EEFB),
+    userBandCodeBlock: Color(0xFF1A2338),
+    agentText: Color(0xFFDFE1E5),
+    inlineCode: Color(0x12DFE1E5),
+    codeBlock: Color(0xFF2B2D30),
+    toolTint: Color(0xFF1E2D2B),
+    toolBorder: Color(0xFF2F4A47),
+    toolAccent: Color(0xFF3AA597),
+    subagentTint: Color(0xFF29243D),
+    subagentBorder: Color(0xFF4B3F70),
+    subagentAccent: Color(0xFFD2BEFF),
+    selectionBar: Color(0xFF26272B),
+    selectionBarText: Color(0xFFE8E9EC),
+    selectionBarBorder: Color(0x22FFFFFF),
+    selectionBarDivider: Color(0x33FFFFFF),
+    shadow: Color(0x33000000),
+    scrim: Color(0xDD000000),
     claude: Color(0xFFD98A5F),
     monogramText: Color(0xFF1E1F22),
     syntax: {

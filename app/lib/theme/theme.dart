@@ -146,7 +146,7 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
           backgroundColor: WidgetStatePropertyAll(t.raised),
           surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
           elevation: const WidgetStatePropertyAll(3),
-          shadowColor: const WidgetStatePropertyAll(Color(0x33000000)),
+          shadowColor: WidgetStatePropertyAll(t.shadow),
           padding: const WidgetStatePropertyAll(EdgeInsets.all(4)),
           side: WidgetStatePropertyAll(BorderSide(color: t.borderStrong)),
           shape: const WidgetStatePropertyAll(
@@ -170,7 +170,7 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
         backgroundColor: t.raised,
         surfaceTintColor: Colors.transparent,
         elevation: 3,
-        shadowColor: const Color(0x33000000),
+        shadowColor: t.shadow,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
           side: BorderSide(color: t.borderStrong),

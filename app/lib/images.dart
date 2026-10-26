@@ -136,7 +136,7 @@ class Attachments extends ValueNotifier<List<ImageData>> {
 void showImagePreview(BuildContext context, ImageProvider image) =>
     showDialog<void>(
       context: context,
-      barrierColor: Colors.black87,
+      barrierColor: NushiTheme.of(context).t.scrim,
       builder: (context) => GestureDetector(
         onTap: () => Navigator.pop(context),
         child: Padding(

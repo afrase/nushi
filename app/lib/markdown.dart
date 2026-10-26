@@ -35,7 +35,8 @@ class AgentMarkdown extends StatelessWidget {
   /// What an image shows as (Jira's text: only its attachments).
   final Widget Function(Uri uri, String? alt) images;
 
-  /// The user typed it: its line breaks stay as typed.
+  /// The user typed it: its line breaks stay as typed, and it shows as a
+  /// user message's band does, a size up, semibold, in the band's colors.
   final bool typed;
 
   /// It is still streaming in: half-written syntax is healed until it ends.
@@ -57,11 +58,16 @@ class AgentMarkdown extends StatelessWidget {
       onTapLink: _open,
       imageBuilder: images,
       style: MarkdownStyle(
-        body: theme.ui(t.text, size: 13.5).copyWith(height: 1.5),
-        code: theme.code(t.text, size: 12.5),
-        codeBackground: typed ? t.base : t.raised, // a message box is raised
-        border: t.borderSubtle,
-        muted: t.textMuted,
+        body: typed
+            ? theme
+                  .ui(t.userBandText, size: 15, weight: FontWeight.w600)
+                  .copyWith(height: 1.45)
+            : theme.ui(t.agentText, size: 13.5).copyWith(height: 1.5),
+        code: theme.code(typed ? t.userBandText : t.agentText, size: 12.5),
+        codeBackground: typed ? t.userBandCodeBlock : t.codeBlock,
+        inlineCode: typed ? t.userBandCode : t.inlineCode,
+        border: typed ? t.userBandBorder : t.borderSubtle,
+        muted: typed ? t.userBandMuted : t.textMuted,
         link: t.link,
         highlight: codeHighlighter(t),
       ),

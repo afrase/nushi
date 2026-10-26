@@ -58,27 +58,41 @@ String withReplies(List<Reply> replies, String text) => [
   return (replies, rest.trim());
 }
 
-/// Quoted text, dimmed, with a bar on its left.
+/// Quoted text, dimmed, with a bar on its left; in a user message's band's
+/// colors when [band].
 class QuoteBlock extends StatelessWidget {
-  const new(this.text, {super.key, this.maxLines, this.size = 12.5});
+  const new(
+    this.text, {
+    super.key,
+    this.maxLines,
+    this.size = 12.5,
+    this.band = false,
+  });
 
   final String text;
   final int? maxLines;
   final double size;
+  final bool band;
 
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
+    final t = theme.t;
     return Container(
       padding: const EdgeInsets.only(left: 8),
       decoration: BoxDecoration(
-        border: Border(left: BorderSide(color: theme.t.borderStrong, width: 2)),
+        border: Border(
+          left: BorderSide(
+            color: band ? t.userBandBorder : t.borderStrong,
+            width: 2,
+          ),
+        ),
       ),
       child: Text(
         text,
         maxLines: maxLines,
         overflow: maxLines == null ? null : TextOverflow.ellipsis,
-        style: theme.ui(theme.t.textMuted, size: size),
+        style: theme.ui(band ? t.userBandMuted : t.textMuted, size: size),
       ),
     );
   }
@@ -103,7 +117,8 @@ class UserMessageText extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             spacing: 3,
             children: [
-              if (r.quote.isNotEmpty) QuoteBlock(r.quote),
+              if (r.quote.isNotEmpty)
+                QuoteBlock(r.quote, size: 13.5, band: true),
               if (r.text.isNotEmpty) AgentMarkdown(r.text, typed: true),
             ],
           ),
@@ -123,7 +138,8 @@ class SelectionToolbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
-    const fg = Color(0xFFE8E9EC);
+    final t = theme.t;
+    final fg = t.selectionBarText;
     Widget action(String label, VoidCallback run) => Tap(
       onTap: run,
       radius: 14,
@@ -131,10 +147,10 @@ class SelectionToolbar extends StatelessWidget {
       child: Text(label, style: theme.ui(fg, size: 12.5)),
     );
     return DecoratedBox(
-      decoration: const ShapeDecoration(
-        color: Color(0xFF26272B),
-        shape: StadiumBorder(side: BorderSide(color: Color(0x22FFFFFF))),
-        shadows: [BoxShadow(color: Color(0x33000000), blurRadius: 6)],
+      decoration: ShapeDecoration(
+        color: t.selectionBar,
+        shape: StadiumBorder(side: BorderSide(color: t.selectionBarBorder)),
+        shadows: [BoxShadow(color: t.shadow, blurRadius: 6)],
       ),
       child: IntrinsicHeight(
         child: Row(
@@ -142,12 +158,12 @@ class SelectionToolbar extends StatelessWidget {
           children: [
             if (onSide case final run?) action('Start a side chat', run),
             if (onSide != null && onReply != null)
-              const VerticalDivider(
+              VerticalDivider(
                 width: 1,
                 thickness: 1,
                 indent: 6,
                 endIndent: 6,
-                color: Color(0x33FFFFFF),
+                color: t.selectionBarDivider,
               ),
             if (onReply case final run?) action('Reply', run),
           ],
@@ -215,7 +231,7 @@ class _ReplyBoxState extends State<ReplyBox> {
             borderRadius: BorderRadius.circular(10),
             side: BorderSide(color: t.borderStrong),
           ),
-          shadows: const [BoxShadow(color: Color(0x33000000), blurRadius: 6)],
+          shadows: [BoxShadow(color: t.shadow, blurRadius: 6)],
         ),
         child: Material(
           type: MaterialType.transparency,
