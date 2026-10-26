@@ -93,6 +93,8 @@ class ItemView extends StatelessWidget {
         final (icon, color) = switch (item.status) {
           'cancelled' => (Icons.stop_circle_outlined, t.textMuted),
           'taken_back' => (Icons.undo, t.textMuted),
+          // The agent working on its own: a chapter without a message.
+          'own_turn' => (Icons.update, t.textMuted),
           'error' ||
           'not_ready' ||
           'folder_gone' ||

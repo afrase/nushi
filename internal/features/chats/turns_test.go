@@ -219,3 +219,26 @@ func TestAPermissionWhileTheSessionChanges(t *testing.T) {
 	}
 	<-done
 }
+
+// The agent working on its own (after a background task) starts with a
+// notice, once per such turn; a late update to a call it made before
+// doesn't count.
+func TestTheAgentsOwnTurnIsMarked(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.updates = []acp.SessionUpdate{
+		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "make build", Status: "in_progress"}},
+		chunk("m1", "Building in the background."),
+	}
+	turn(t, svc, c, "build it")
+	update(c, acp.SessionUpdate{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed"}})
+	update(c, chunk("m2", "The build "))
+	update(c, chunk("m2", "passed."))
+	update(c, acp.SessionUpdate{SessionUpdate: "usage_update", UsageUpdate: &acp.UsageUpdate{Used: 1, Size: 2}})
+	update(c, chunk("m3", "And the tests."))
+	want := []string{"user:build it", ":", "agent:Building in the background.",
+		"notice:On its own, after a background task", "agent:The build passed.",
+		"notice:On its own, after a background task", "agent:And the tests."}
+	if got := texts(c); !slices.Equal(got, want) {
+		t.Errorf("the transcript: %q", got)
+	}
+}

@@ -127,6 +127,7 @@ type chat struct {
 	steering     bool                            // a steering worker hands the queue to the running turn
 	sendingNow   int                             // SendNow prompts waiting on the turn they stop: the queue waits too
 	ownTurn      bool                            // the agent works on its own, outside a turn of Nushi's
+	ownNoted     bool                            // the transcript says so, since the last user message or usage report
 	released     bool                            // the running turn's work ended, but the agent holds its prompt (Dialect.TurnDone)
 	steered      int                             // messages steered into the running turn since the agent's last result
 	turnFrom     int                             // the running turn's first item, about (items may go)
@@ -397,6 +398,7 @@ func (c *chat) addLocked(it model.Item) string {
 		it.ID = "item-" + strconv.Itoa(c.lastItem)
 	}
 	if it.Kind == model.UserMessage {
+		c.ownNoted = false
 		it.ForkAt = c.forkPointLocked()
 		it.Rewindable = it.ForkAt != "" || !slices.ContainsFunc(c.items, func(it model.Item) bool { return it.Kind == model.UserMessage })
 	}
