@@ -26,8 +26,12 @@ class ChatState extends ChangeNotifier {
   /// review's finding); the chat shows its Changes then.
   String? openPath;
 
-  void showFile(String path) {
+  /// The line (from 1) of [openPath] to show; 0 for its top.
+  int openLine = 0;
+
+  void showFile(String path, {int line = 0}) {
     openPath = path;
+    openLine = line;
     notifyListeners();
   }
 

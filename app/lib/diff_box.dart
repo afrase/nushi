@@ -49,6 +49,7 @@ class DiffBox extends StatefulWidget {
     this.notes = const [],
     this.note,
     this.onLines,
+    this.line = 0,
   });
 
   final FileChange change;
@@ -57,6 +58,10 @@ class DiffBox extends StatefulWidget {
   final List<DiffNote> notes;
   final Widget Function(String id)? note;
   final ValueChanged<LineSelection>? onLines;
+
+  /// A line of the new side (from 1) to go to and select once the diff is
+  /// in; 0 for none.
+  final int line;
 
   @override
   State<DiffBox> createState() => _DiffBoxState();
@@ -73,6 +78,7 @@ class _DiffBoxState extends State<DiffBox> {
   late DiffThemeData _theme;
   double _height = 0;
   bool _selecting = false; // the line selection changed during this click
+  bool _went = false; // went to [DiffBox.line] already
   LineSelection? _draft; // the lines a comment is being written for
   ReviewComment? _editing; // the comment being changed, if one is
   final _comment = TextEditingController(); // its text; outlives a reload
@@ -185,6 +191,14 @@ class _DiffBoxState extends State<DiffBox> {
       if (_draft == null) _editing = null;
     }
     _showComments();
+    if (widget.line > 0 && !_went && doc.newLineCount > 0) {
+      _went = true;
+      final at = min(widget.line, doc.newLineCount) - 1;
+      _controller!
+        ..jumpToLine(PaneSide.neu, at)
+        ..selection.start(PaneSide.neu, at);
+      _selecting = false; // selected here, not by a click
+    }
     // Plain until the colors are in (a moment, off the UI thread).
     final controller = _controller;
     if (languageOf(d.path) case final language?) {

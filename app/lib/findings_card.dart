@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:nushi/changes_span.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/findings.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -154,7 +155,7 @@ class _FindingsCardState extends State<FindingsCard> {
       size: 12,
     );
     final where = Tap(
-      onTap: path == null ? null : () => widget.chat.showFile(path),
+      onTap: path == null ? null : () => _show(path, f.line),
       tooltip: path == null
           ? '${f.file}$line: outside the chat’s folder'
           : '${f.file}$line',
@@ -252,6 +253,14 @@ class _FindingsCardState extends State<FindingsCard> {
         ],
       ),
     );
+  }
+
+  /// Shows [path] at [line] in the chat's Changes, where the folder's
+  /// text is: Commits shows what a commit made, so Uncommitted then.
+  void _show(String path, int line) {
+    final chat = widget.chat;
+    if (chat.scope == Scope.commits.name) chat.scope = Scope.uncommitted.name;
+    chat.showFile(path, line: line);
   }
 
   Widget _chip(String text) {

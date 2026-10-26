@@ -42,6 +42,12 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   String? _error;
   String? _path; // the file shown
   String? _opening; // a file to show once the list is in (a terminal link)
+  int _openingLine = 0; // and its line, from 1
+  int _line = 0; // the line of the file shown to go to, from 1
+  int _jumps = 0; // how many times a line was asked for: each goes to it
+  // A file asked for that isn't among the changes (a review's finding):
+  // its text as it is, shown until another file is picked.
+  FileChange? _plain;
   // The last reload's or pick's number: an older answer is dropped.
   int _asked = 0;
   bool _reloading = false;
@@ -86,6 +92,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
     if (path == null) return false;
     chat.openPath = null;
     _opening = path;
+    _openingLine = chat.openLine;
     return true;
   }
 
@@ -170,7 +177,20 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   void _show(List<FileChange> files) {
     if (!chat.busy) forgetChanged(chat.id, _where, files);
     _files = files;
-    if (_files.any((f) => f.path == _opening)) _path = _opening;
+    if (_plain case final p? when files.any((f) => f.path == p.path)) {
+      _path = p.path;
+      _plain = null;
+    }
+    if (_opening case final open?) {
+      _line = _openingLine;
+      _jumps++;
+      if (_files.any((f) => f.path == open)) {
+        _path = open;
+        _plain = null;
+      } else {
+        unawaited(_showPlain(open));
+      }
+    }
     _opening = null;
     if (!_files.any((f) => f.path == _path)) {
       _path = changeRows(
@@ -178,6 +198,19 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
         flat: changesFlat.value,
       ).where((r) => r.file != null).firstOrNull?.path;
     }
+  }
+
+  /// Shows [path], which isn't among the changes, as it is now.
+  Future<void> _showPlain(String path) async {
+    FileChange file;
+    try {
+      file = (await daemon.client.getFile(
+        GetFileRequest(folder: chat.folder, path: path),
+      )).file;
+    } on Object {
+      file = FileChange(path: path, skipped: 'unreadable');
+    }
+    if (mounted) setState(() => _plain = file);
   }
 
   /// Reads the files of the commits picked.
@@ -239,7 +272,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
         ],
       );
     }
-    final file = _files.where((f) => f.path == _path).firstOrNull;
+    final file = _plain ?? _files.where((f) => f.path == _path).firstOrNull;
     final notShown = file == null
         ? ''
         : 'Not shown: ${file.path} is ${file.skipped}.';
@@ -302,8 +335,11 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
                                 valueListenable: reviews,
                                 builder: (context, _, _) => FileList(
                                   files: _files,
-                                  selected: _path,
-                                  onSelect: (p) => setState(() => _path = p),
+                                  selected: _plain == null ? _path : null,
+                                  onSelect: (p) => setState(() {
+                                    _path = p;
+                                    _plain = null;
+                                  }),
                                   marks: _marks(),
                                 ),
                               ),
@@ -315,11 +351,36 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
                   ),
                   Expanded(
                     child: file != null && file.skipped.isEmpty
-                        ? DiffBox(
-                            file,
-                            key: ValueKey(file.path),
-                            fit: false,
-                            review: (chat: chat.id, where: _where),
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (_plain != null)
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    12,
+                                    6,
+                                    12,
+                                    6,
+                                  ),
+                                  child: Text(
+                                    '${file.path} has no changes here',
+                                    style: theme.ui(t.textMuted, size: 12),
+                                  ),
+                                ),
+                              Expanded(
+                                child: DiffBox(
+                                  file,
+                                  key: ValueKey((file.path, _jumps)),
+                                  fit: false,
+                                  line: _line,
+                                  // Comments go with changes, not with a
+                                  // file shown as it is.
+                                  review: _plain == null
+                                      ? (chat: chat.id, where: _where)
+                                      : null,
+                                ),
+                              ),
+                            ],
                           )
                         : Center(
                             child: Text(notShown, style: theme.ui(t.textMuted)),
