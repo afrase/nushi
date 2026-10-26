@@ -1,5 +1,36 @@
 # Notes
 
+## Summary of the syntax colors and the file tree (after step 234)
+
+Steps 231–234, one commit each on `main`, pushed; `make check` passed before each push. No API change.
+
+- **Syntax colors** (step 231): fourteen captures, tokens in `tokens.dart` (`Capture`, `CodeInk`), the same for diffs and code blocks. Colors are JetBrains' New UI Dark and Light (read from RubyMine 2026.2's own scheme files: `expUI_darkScheme.xml`, `expUI_lightScheme.xml`, their Darcula and Default parents, and the Ruby plugin's for symbols and parameters):
+
+  | Capture | highlight.js scopes | Dark | Light |
+  |---|---|---|---|
+  | keyword | keyword, built_in, literal, variable.language (self, this), char.escape, section, bullet | #CF8E6D | #0033B3 |
+  | declaration | title (title.function, title.class) | #56A8F5 | #00627A |
+  | type | type, title.class.inherited | #16BAAC | #007E8A |
+  | string | string, code | #6AAB73 | #067D17 |
+  | number | number | #2AACB8 | #1750EB |
+  | regexp | regexp | #42C3D4 | #264EFF |
+  | constant | variable.constant | #C77DBB italic | #871094 italic |
+  | field | variable (@x, @@x, $x), property, attr, attribute | #C77DBB | #871094 |
+  | symbol | symbol | #89A6AF | #4E6D8C (mine: RubyMine Light leaves it to a default) |
+  | parameter | params | #D4B01D italic | #C37522 italic |
+  | meta | meta (annotations, decorators) | #B3AE60 | #9E880D |
+  | tag | tag, name, selector-* | #D5B778 | #0033B3 |
+  | comment | comment, quote | #7A7E85 | #8C8C8C italic |
+  | doc tag | doctag (@param, @return) | #67A37C | #8C8C8C bold italic (JetBrains underlines it) |
+
+  Plain: a string's interpolation (`subst`), operators, punctuation, calls (`title.function.invoke`). **Why Ruby's method name was plain**: re_highlight emits `title.function` (no trailing underscore), and the old table listed `title.function_`; now a dotted scope falls back to its parent and a run takes its innermost listed scope's capture. **diff_view unchanged**: it takes any number of captures (ids index `captureNames`; a dotted name falls back to its parent), with color, bold and italic. It has no underline, so the light theme's doc tags are bold rather than JetBrains' underlined.
+- **The file tree** (step 232): rows as wide as their text, never cut; it scrolls sideways (a `MacScrollbar` at the bottom), the selected row's highlight across the full width, counts and review comments right after the name; the full path is the row's tooltip. The pane's width was already remembered.
+- **Changes loading** (steps 233–234, added mid-milestone): the slowness was a `git show` per file per side. On a throwaway clone of Hugo (2,613 files) with a branch 120 commits past its base (892 changed files, 9 MB of text), through the dev daemon's API: GetDiff for Branch **5.2 s → 0.24 s**, Uncommitted (35 files) **0.23 s → 0.06 s**; GetFolderStatus (0.06 s, 0.11 s with the base) unchanged; answers identical. The app shows the old content until the new scope and files are both in; after 150 ms it dims them under a spinner.
+
+**Not tried by hand**: anything in the app window (no clicks or keys while you may be at the screen): the colors on a real screen, the tree's sideways scroll under a trackpad, the dimming's feel. Goldens (`syntax_*`, `file_tree_*`) and widget tests cover them. The timings are the daemon's, not the app's; a 900-file tree's first layout measures every row (about 0.1 s per 3,000 rows in a debug test).
+
+**Worth knowing**: the daemon runs git with `GIT_OPTIONAL_LOCKS=0`, so it never writes back a refreshed index; in a folder whose index is stale (the clone above, before a `git status`), each `git diff` against the work tree took ~0.16 s instead of ~0.02 s. Your own `git status` fixes it.
+
 ## Summary of the UI fixes (after step 225: the scrollbar and the side panes)
 
 Steps 224–225, one commit each on `main`, pushed. No API change. `make check` passed before 224's push; before 225's its lint stopped on the background-subagent work in progress in the same checkout (revive in the uncommitted `internal/features/chats/held_test.go`), so the app's part was checked alone: `flutter analyze --fatal-infos`, `dart format`, and the app's tests, all passing.
