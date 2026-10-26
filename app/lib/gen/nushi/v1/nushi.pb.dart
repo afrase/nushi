@@ -22831,15 +22831,17 @@ class NushiServiceApi {
       _client.invoke<SetSkillOnResponse>(
           ctx, 'NushiService', 'SetSkillOn', request, SetSkillOnResponse());
 
-  /// Turns an installed plugin on or off (`claude plugin enable`, `disable`)
-  /// where Plugin.switch_scope says.
+  /// Turns an installed plugin on or off where Plugin.switch_scope says:
+  /// for you through `claude plugin enable`/`disable` (run in Claude's config
+  /// folder, never the project's), for the project by its enabledPlugins
+  /// entry in the project's local settings.
   $async.Future<SetPluginOnResponse> setPluginOn(
           $pb.ClientContext? ctx, SetPluginOnRequest request) =>
       _client.invoke<SetPluginOnResponse>(
           ctx, 'NushiService', 'SetPluginOn', request, SetPluginOnResponse());
 
-  /// Uninstalls a plugin installed for you or in the project's local
-  /// settings (`claude plugin uninstall`).
+  /// Uninstalls a plugin installed for you (`claude plugin uninstall`);
+  /// refused for one installed for a project.
   $async.Future<UninstallPluginResponse> uninstallPlugin(
           $pb.ClientContext? ctx, UninstallPluginRequest request) =>
       _client.invoke<UninstallPluginResponse>(ctx, 'NushiService',

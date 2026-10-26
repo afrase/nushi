@@ -8,6 +8,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/afrase/nushi/internal/model"
 )
 
 // calls are the fake's calls, each its arguments.
@@ -114,43 +116,58 @@ func TestSetSkillOnChangesOnlyItsKey(t *testing.T) {
 	}
 }
 
-// Plugins go on and off through claude plugin, with the id after --, for
-// you unless the project's settings name it; uninstalling one the
-// project's shared settings install is refused.
+// Plugins are listed and changed through claude plugin run in Claude's
+// config folder, never the project's, with the id after --: for you unless
+// the project's settings name the plugin, then by its enabledPlugins entry
+// in the local settings. Another project's install isn't listed; one
+// installed for this project isn't uninstalled from here.
 func TestPluginsThroughTheCLI(t *testing.T) {
-	cfg := t.TempDir()
+	cfg, _ := filepath.EvalSymlinks(t.TempDir())
 	t.Setenv("CLAUDE_CONFIG_DIR", cfg)
 	top, _ := repo(t)
 	dir := fakeClaude(t)
 	plugin := t.TempDir()
-	t.Setenv("FAKE_OUT", `[{"id":"demo@mk","scope":"user","enabled":true,"installPath":"`+plugin+`"},{"id":"team@mk","scope":"project","enabled":true,"installPath":"`+plugin+`"}]`)
+	t.Setenv("FAKE_OUT", `[{"id":"demo@mk","scope":"user","enabled":true,"installPath":"`+plugin+`"},
+		{"id":"team@mk","scope":"local","enabled":false,"projectPath":"`+top+`","installPath":"`+plugin+`"},
+		{"id":"other@mk","scope":"local","enabled":true,"projectPath":"/elsewhere","installPath":"`+plugin+`"}]`)
 	ctx := context.Background()
+	write(t, filepath.Join(top, ".claude", "settings.local.json"), `{"enabledPlugins":{"team@mk":true}}`)
+	got, err := listPlugins(ctx, top)
+	if err != nil || len(got) != 2 || got[0].ID != "demo@mk" || !got[0].Enabled || got[1].ID != "team@mk" || !got[1].Enabled {
+		t.Fatalf("listed %+v, %v", got, err)
+	}
 	if err := (Claude{}).SetPluginOn(ctx, top, "demo@mk", false); err != nil {
 		t.Fatal(err)
 	}
 	write(t, filepath.Join(top, ".claude", "settings.json"), `{"enabledPlugins":{"demo@mk":true}}`)
-	if err := (Claude{}).SetPluginOn(ctx, top, "demo@mk", true); err != nil {
+	if err := (Claude{}).SetPluginOn(ctx, top, "demo@mk", false); err != nil {
 		t.Fatal(err)
+	}
+	if got := readJSON(t, filepath.Join(top, ".claude", "settings.local.json")); got != `{"enabledPlugins":{"demo@mk":false,"team@mk":true}}` {
+		t.Errorf("local settings: %s", got)
 	}
 	if err := (Claude{}).Uninstall(ctx, top, "demo@mk"); err != nil {
 		t.Fatal(err)
 	}
-	for _, bad := range []string{"team@mk", "-x", "nothere@mk"} {
+	for _, bad := range []string{"team@mk", "other@mk", "-x", "nothere@mk"} {
 		if err := (Claude{}).Uninstall(ctx, top, bad); err == nil {
 			t.Errorf("uninstalled %s", bad)
 		}
 	}
+	list := []string{"plugin", "list", "--json"}
 	want := [][]string{
-		{"plugin", "list", "--json"}, {"plugin", "disable", "--json", "--scope", "user", "--", "demo@mk"},
-		{"plugin", "list", "--json"}, {"plugin", "enable", "--json", "--scope", "local", "--", "demo@mk"},
-		{"plugin", "list", "--json"}, {"plugin", "uninstall", "--json", "--scope", "user", "--", "demo@mk"},
-		{"plugin", "list", "--json"}, {"plugin", "list", "--json"},
+		list, list, {"plugin", "disable", "--json", "--scope", "user", "--", "demo@mk"}, list,
+		list, {"plugin", "uninstall", "--json", "--scope", "user", "--", "demo@mk"}, list, list, list,
 	}
 	if got := calls(t, dir); !slices.EqualFunc(got, want, slices.Equal) {
 		t.Errorf("calls:\n%q\nwant\n%q", got, want)
 	}
-	// Claude's failure is its message; "already" isn't one.
-	_ = os.Remove(filepath.Join(dir, "args"))
+	pwd, _ := os.ReadFile(filepath.Join(dir, "pwd"))
+	for line := range strings.SplitSeq(strings.TrimSpace(string(pwd)), "\n") {
+		if line != cfg {
+			t.Errorf("claude ran in %s", line)
+		}
+	}
 	t.Setenv("FAKE_EXIT", "1")
 	if _, err := listPlugins(ctx, top); err == nil {
 		t.Error("a failed list: no error")
@@ -185,6 +202,31 @@ func TestTrashOnlyASkillsFolder(t *testing.T) {
 		if err := (Claude{}).Trash(ctx, deeper, bad); err == nil {
 			t.Errorf("trashed %s", bad)
 		}
+	}
+	// A project's .claude/skills that links elsewhere: not listed, and
+	// nothing moves.
+	elsewhere := t.TempDir()
+	skill(t, elsewhere, "victim", "x")
+	if err := os.Symlink(elsewhere, filepath.Join(top, "sub", ".claude")); err != nil {
+		t.Fatal(err)
+	}
+	if err := (Claude{}).Trash(ctx, deeper, filepath.Join(top, "sub", ".claude", "victim")); err == nil {
+		t.Error("trashed through a linked .claude")
+	}
+	if err := os.MkdirAll(filepath.Join(top, "sub", "deeper", ".claude"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(elsewhere, filepath.Join(top, "sub", "deeper", ".claude", "skills")); err != nil {
+		t.Fatal(err)
+	}
+	if err := (Claude{}).Trash(ctx, deeper, filepath.Join(top, "sub", "deeper", ".claude", "skills", "victim")); err == nil {
+		t.Error("trashed through a linked .claude/skills")
+	}
+	if l, _ := (Claude{}).List(ctx, deeper); slices.ContainsFunc(l.Skills, func(s model.Skill) bool { return s.Name == "victim" }) {
+		t.Error("listed a skill through a link")
+	}
+	if _, err := os.Stat(filepath.Join(elsewhere, "victim", "SKILL.md")); err != nil {
+		t.Errorf("the link's target was touched: %v", err)
 	}
 	path := filepath.Join(top, ".claude", "skills", "proj")
 	if err := (Claude{}).Trash(ctx, deeper, path); err != nil {

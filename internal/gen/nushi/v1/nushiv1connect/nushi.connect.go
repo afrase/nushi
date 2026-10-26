@@ -469,11 +469,13 @@ type NushiServiceClient interface {
 	// turns Claude's built-in skills on or off together, in your settings
 	// (disableBundledSkills). A plugin's skills go with their plugin.
 	SetSkillOn(context.Context, *connect.Request[v1.SetSkillOnRequest]) (*connect.Response[v1.SetSkillOnResponse], error)
-	// Turns an installed plugin on or off (`claude plugin enable`, `disable`)
-	// where Plugin.switch_scope says.
+	// Turns an installed plugin on or off where Plugin.switch_scope says:
+	// for you through `claude plugin enable`/`disable` (run in Claude's config
+	// folder, never the project's), for the project by its enabledPlugins
+	// entry in the project's local settings.
 	SetPluginOn(context.Context, *connect.Request[v1.SetPluginOnRequest]) (*connect.Response[v1.SetPluginOnResponse], error)
-	// Uninstalls a plugin installed for you or in the project's local
-	// settings (`claude plugin uninstall`).
+	// Uninstalls a plugin installed for you (`claude plugin uninstall`);
+	// refused for one installed for a project.
 	UninstallPlugin(context.Context, *connect.Request[v1.UninstallPluginRequest]) (*connect.Response[v1.UninstallPluginResponse], error)
 	// Moves a skill's folder (yours or the project's, as listed) to the
 	// Trash.
@@ -1992,11 +1994,13 @@ type NushiServiceHandler interface {
 	// turns Claude's built-in skills on or off together, in your settings
 	// (disableBundledSkills). A plugin's skills go with their plugin.
 	SetSkillOn(context.Context, *connect.Request[v1.SetSkillOnRequest]) (*connect.Response[v1.SetSkillOnResponse], error)
-	// Turns an installed plugin on or off (`claude plugin enable`, `disable`)
-	// where Plugin.switch_scope says.
+	// Turns an installed plugin on or off where Plugin.switch_scope says:
+	// for you through `claude plugin enable`/`disable` (run in Claude's config
+	// folder, never the project's), for the project by its enabledPlugins
+	// entry in the project's local settings.
 	SetPluginOn(context.Context, *connect.Request[v1.SetPluginOnRequest]) (*connect.Response[v1.SetPluginOnResponse], error)
-	// Uninstalls a plugin installed for you or in the project's local
-	// settings (`claude plugin uninstall`).
+	// Uninstalls a plugin installed for you (`claude plugin uninstall`);
+	// refused for one installed for a project.
 	UninstallPlugin(context.Context, *connect.Request[v1.UninstallPluginRequest]) (*connect.Response[v1.UninstallPluginResponse], error)
 	// Moves a skill's folder (yours or the project's, as listed) to the
 	// Trash.

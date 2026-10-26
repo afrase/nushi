@@ -116,7 +116,7 @@ func installed(ctx context.Context, folder, id string) (plugin, error) {
 // PluginScope is where SetPluginOn turns a plugin on or off: for you
 // ("user") when it's yours and the project's settings don't name it,
 // else the project's local settings ("local"), which win over the shared
-// ones (Claude's own `--scope` guess would change a shared file).
+// ones (Claude's own `--scope` guess changed a shared file, seen).
 func (Claude) PluginScope(folder string, p model.Plugin) string {
 	if p.Scope != "user" {
 		return "local"
@@ -129,15 +129,30 @@ func (Claude) PluginScope(folder string, p model.Plugin) string {
 	return "user"
 }
 
-// SetPluginOn turns an installed plugin on or off (`claude plugin enable`
-// or `disable`), and with it its skills, commands, agents and servers.
+// SetPluginOn turns an installed plugin on or off, and with it its
+// skills, commands, agents and servers: for you through `claude plugin
+// enable` or `disable` (run outside the folder); for the project by its
+// enabledPlugins entry in the project's local settings, the key Claude's
+// own advice names (only that entry changes).
 func (Claude) SetPluginOn(ctx context.Context, folder, id string, on bool) error {
 	p, err := installed(ctx, folder, id)
 	if err != nil {
 		return err
 	}
+	if (Claude{}).PluginScope(folder, p.Plugin) == "local" {
+		return claudemcp.EditLocal(ctx, folder, func(settings map[string]json.RawMessage) error {
+			enabled := map[string]json.RawMessage{}
+			if raw, ok := settings["enabledPlugins"]; ok && string(raw) != "null" && json.Unmarshal(raw, &enabled) != nil {
+				return errors.New("enabledPlugins isn't a map")
+			}
+			enabled[id], _ = json.Marshal(on)
+			b, err := json.Marshal(enabled)
+			settings["enabledPlugins"] = b
+			return err
+		})
+	}
 	verb := map[bool]string{true: "enable", false: "disable"}[on]
-	out, err := claudePlugin(ctx, folder, verb, "--json", "--scope", Claude{}.PluginScope(folder, p.Plugin), "--", id)
+	out, err := claudePlugin(ctx, verb, "--json", "--scope", "user", "--", id)
 	var result struct {
 		Done bool `json:"alreadyInGoalState"`
 	}
@@ -147,18 +162,19 @@ func (Claude) SetPluginOn(ctx context.Context, folder, id string, on bool) error
 	return err
 }
 
-// Uninstall uninstalls a plugin installed for you or in the project's
-// local settings (`claude plugin uninstall`). One the project's shared
-// settings install is the repository's to remove.
+// Uninstall uninstalls a plugin installed for you (`claude plugin
+// uninstall --scope user`, run outside the folder). One installed for a
+// project is uninstalled there, with /plugin in a terminal: Claude would
+// have to run in the folder.
 func (Claude) Uninstall(ctx context.Context, folder, id string) error {
 	p, err := installed(ctx, folder, id)
 	if err != nil {
 		return err
 	}
-	if p.Scope != "user" && p.Scope != "local" {
-		return fmt.Errorf("%s is installed by the project's shared settings; remove it there", id)
+	if p.Scope != "user" {
+		return fmt.Errorf("%s is installed for this project; uninstall it with /plugin in a terminal there", id)
 	}
-	_, err = claudePlugin(ctx, folder, "uninstall", "--json", "--scope", p.Scope, "--", id)
+	_, err = claudePlugin(ctx, "uninstall", "--json", "--scope", "user", "--", id)
 	return err
 }
 
@@ -176,6 +192,16 @@ func (Claude) Trash(ctx context.Context, folder, path string) error {
 	}
 	if _, err := os.Stat(filepath.Join(path, "SKILL.md")); err != nil {
 		return fmt.Errorf("%s isn't a skill's folder", path)
+	}
+	// A project's .claude and .claude/skills are the repository's: a link
+	// there could take the Trash elsewhere. Only the skill's own folder
+	// may be a link (the link itself goes).
+	if root := filepath.Dir(path); root != userRoot() {
+		for _, p := range []string{filepath.Dir(root), root} {
+			if fi, err := os.Lstat(p); err != nil || fi.Mode()&os.ModeSymlink != 0 {
+				return fmt.Errorf("%s is a symlink; not moving what's in it", p)
+			}
+		}
 	}
 	if out, err := exec.CommandContext(ctx, trashProgram, path).CombinedOutput(); err != nil { //nolint:gosec // an absolute path checked above
 		return fmt.Errorf("moving %s to the Trash: %s", path, strings.TrimSpace(string(out)))

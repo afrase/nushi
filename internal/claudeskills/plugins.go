@@ -20,18 +20,50 @@ import (
 // plugin is an installed plugin and its skills.
 type plugin struct {
 	model.Plugin
-	skills []model.Skill
+	skills      []model.Skill
+	projectPath string // for one installed for a project
 }
 
-// listPlugins asks Claude for the plugins installed for folder (`claude
-// plugin list --json`, run there: whether one is on is per project), and
-// reads what each brings from its folder.
+// listPlugins asks Claude for the plugins installed (`claude plugin list
+// --json`, run outside the folder: never in a folder that may be a
+// stranger's), keeps those that count for folder (yours, and those
+// installed for its project), and works out whether each is on there from
+// the settings files' enabledPlugins (local over shared over yours, as
+// Claude does). It reads what each brings from its folder.
 func listPlugins(ctx context.Context, folder string) ([]plugin, error) {
-	out, err := claudePlugin(ctx, folder, "list", "--json")
+	out, err := claudePlugin(ctx, "list", "--json")
 	if err != nil {
 		return nil, err
 	}
-	return parsePlugins(out)
+	plugins, err := parsePlugins(out)
+	if err != nil {
+		return nil, err
+	}
+	here := []string{folder, claudemcp.Claude{}.Project(folder)}
+	if resolved, err := filepath.EvalSymlinks(folder); err == nil {
+		here = append(here, resolved)
+	}
+	files := settingsFiles(folder)
+	var kept []plugin
+	for _, p := range plugins {
+		if p.Scope != "user" && !slices.Contains(here, p.projectPath) {
+			continue // another project's
+		}
+		if i := slices.IndexFunc(kept, func(k plugin) bool { return k.ID == p.ID }); i >= 0 {
+			if p.Scope == "user" {
+				continue // the project's install wins
+			}
+			kept = slices.Delete(kept, i, i+1)
+		}
+		for _, f := range files {
+			if on, ok := f.EnabledPlugins[p.ID].(bool); ok {
+				p.Enabled = on
+				break
+			}
+		}
+		kept = append(kept, p)
+	}
+	return kept, nil
 }
 
 // parsePlugins reads `claude plugin list --json`: an array of plugins
@@ -45,6 +77,7 @@ func parsePlugins(out []byte) ([]plugin, error) {
 		Enabled     bool                       `json:"enabled"`
 		InstallPath string                     `json:"installPath"`
 		MCPServers  map[string]json.RawMessage `json:"mcpServers"`
+		ProjectPath string                     `json:"projectPath"`
 	}
 	if err := json.Unmarshal(out, &list); err != nil {
 		return nil, fmt.Errorf("reading claude plugin list: %w", err)
@@ -57,6 +90,7 @@ func parsePlugins(out []byte) ([]plugin, error) {
 		name, _, _ := strings.Cut(l.ID, "@")
 		p := plugin{ID: l.ID, Name: name, Version: l.Version, Scope: l.Scope,
 			Path: l.InstallPath, Enabled: l.Enabled, MCPServers: len(l.MCPServers)}
+		p.projectPath = l.ProjectPath
 		p.read()
 		plugins = append(plugins, p)
 	}
@@ -128,13 +162,18 @@ func inside(root, path string) bool {
 	return err == nil && rel != ".." && !strings.HasPrefix(rel, "../") && !filepath.IsAbs(rel)
 }
 
-// claudePlugin runs `claude plugin <args>` in folder and returns its
-// output; on a failure, Claude's message (the JSON one's, if it gave one).
-func claudePlugin(ctx context.Context, folder string, args ...string) ([]byte, error) {
+// claudePlugin runs `claude plugin <args>` in Claude's config folder (a
+// folder of yours: never a project's, whose settings Claude would load)
+// and returns its output; on a failure, Claude's message (the JSON one's,
+// if it gave one).
+func claudePlugin(ctx context.Context, args ...string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "claude", append([]string{"plugin"}, args...)...) //nolint:gosec // the user's claude; ids checked and after --
-	cmd.Dir = folder
+	cmd.Dir = configDir()
+	if fi, err := os.Stat(cmd.Dir); err != nil || !fi.IsDir() {
+		cmd.Dir = os.TempDir()
+	}
 	var stderr strings.Builder
 	cmd.Stderr = &stderr
 	out, err := cmd.Output()
