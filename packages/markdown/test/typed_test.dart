@@ -13,7 +13,7 @@ void main() {
       border: Colors.grey,
       muted: Colors.grey,
       link: Colors.blue,
-      highlight: {},
+      highlight: _plain,
     );
     await tester.pumpWidget(
       const MaterialApp(
@@ -40,7 +40,7 @@ void main() {
       border: Colors.grey,
       muted: Colors.grey,
       link: Colors.blue,
-      highlight: {},
+      highlight: _plain,
     );
     await tester.pumpWidget(
       const MaterialApp(
@@ -67,7 +67,7 @@ void main() {
             border: Colors.grey,
             muted: Colors.grey,
             link: Colors.blue,
-            highlight: {},
+            highlight: _plain,
           ),
           streaming: false,
         ),
@@ -84,3 +84,5 @@ void main() {
     expect(code?.backgroundColor?.a, lessThan(0.2));
   });
 }
+
+TextSpan? _plain(String language, String code, TextStyle style) => null;

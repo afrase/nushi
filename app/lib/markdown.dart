@@ -63,7 +63,7 @@ class AgentMarkdown extends StatelessWidget {
         border: t.borderSubtle,
         muted: t.textMuted,
         link: t.link,
-        highlight: highlightStyles(t),
+        highlight: codeHighlighter(t),
       ),
     );
   }

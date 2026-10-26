@@ -8,37 +8,110 @@ import 'package:nushi/theme/theme.dart';
 import 'package:re_highlight/languages/all.dart';
 import 'package:re_highlight/re_highlight.dart';
 
-/// The syntax colors of code, in diffs and the transcript's code blocks,
-/// by capture id: the highlight.js scopes each colors, its color, and
-/// whether it is italic.
-const syntaxCaptures = ['keyword', 'function', 'string', 'comment'];
-const _scopesOf = [
-  ['keyword', 'built_in', 'type', 'literal', 'number'],
-  ['title', 'title.function_', 'title.class_'],
-  ['string', 'regexp', 'meta-string'],
-  ['comment', 'quote'],
-];
-List<(Color, bool)> _colors(Tokens t) => [
-  (t.keyword, false),
-  (t.function, false),
-  (t.string, false),
-  (t.textMuted, true),
-];
-
-/// highlight.js scopes to capture ids.
-final Map<String, int> _captures = {
-  for (final (i, scopes) in _scopesOf.indexed)
-    for (final k in scopes) k: i,
+/// highlight.js's scopes, as the common languages emit them, to the
+/// captures they take; a dotted scope not listed takes its parent's
+/// (`title.function` is `title`'s). null is plain: a string's
+/// interpolation, operators. A scope not listed at all (`function` and
+/// `class` around a declaration, an embedded `language:markdown`) takes
+/// the capture of the scope it's in.
+const Map<String, Capture?> _scopes = {
+  'keyword': Capture.keyword,
+  'built_in': Capture.keyword,
+  'literal': Capture.keyword,
+  'variable.language': Capture.keyword,
+  'char.escape': Capture.keyword,
+  'template-tag': Capture.keyword,
+  'template-variable': Capture.keyword,
+  'section': Capture.keyword,
+  'bullet': Capture.keyword,
+  'title': Capture.declaration,
+  'title.function.invoke': null,
+  'title.class.inherited': Capture.type,
+  'link': Capture.declaration,
+  'type': Capture.type,
+  'string': Capture.string,
+  'meta-string': Capture.string,
+  'meta.string': Capture.string,
+  'code': Capture.string,
+  'subst': null,
+  'number': Capture.number,
+  'regexp': Capture.regexp,
+  'variable.constant': Capture.constant,
+  'variable': Capture.field,
+  'property': Capture.field,
+  'attr': Capture.field,
+  'attribute': Capture.field,
+  'symbol': Capture.symbol,
+  'params': Capture.parameter,
+  'meta': Capture.meta,
+  'tag': Capture.tag,
+  'name': Capture.tag,
+  'selector-tag': Capture.tag,
+  'selector-class': Capture.tag,
+  'selector-id': Capture.tag,
+  'selector-attr': Capture.tag,
+  'selector-pseudo': Capture.tag,
+  'comment': Capture.comment,
+  'quote': Capture.comment,
+  'doctag': Capture.docTag,
+  'operator': null,
+  'punctuation': null,
 };
 
-/// highlight.js scopes to their styles, for code blocks.
-Map<String, TextStyle> highlightStyles(Tokens t) => {
-  for (final MapEntry(key: k, value: i) in _captures.entries)
-    k: TextStyle(
-      color: _colors(t)[i].$1,
-      fontStyle: _colors(t)[i].$2 ? FontStyle.italic : null,
-    ),
-};
+/// diff_view's capture names, by capture id ([Capture.index]).
+final List<String> syntaxCaptures = [for (final c in Capture.values) c.name];
+
+/// Whether [scope] is listed (itself or a parent), and its capture.
+(bool, Capture?) _lookup(String scope) {
+  var s = scope;
+  while (true) {
+    if (_scopes.containsKey(s)) return (true, _scopes[s]);
+    final dot = s.lastIndexOf('.');
+    if (dot < 0) return (false, null);
+    s = s.substring(0, dot);
+  }
+}
+
+/// Highlights a code block in a language over its style, in [t]'s colors
+/// (a diff's), or gives null for a language highlight.js doesn't know. The
+/// same function for the same [t], since code blocks are kept by it.
+TextSpan? Function(String language, String code, TextStyle style)
+codeHighlighter(Tokens t) =>
+    _highlighters[t] ??= (language, code, style) =>
+        _highlightCode(t, language, code, style);
+
+final _highlighters = <Tokens, TextSpan? Function(String, String, TextStyle)>{};
+
+TextSpan? _highlightCode(
+  Tokens t,
+  String language,
+  String code,
+  TextStyle style,
+) {
+  if (_highlight.getLanguage(language) == null) return null;
+  final spans = _Spans();
+  _highlight.highlight(code: code, language: language).render(spans);
+  final s = spans.out;
+  final children = <TextSpan>[];
+  var at = 0;
+  for (var i = 0; i < s.length; i += 3) {
+    if (s[i] > at) children.add(TextSpan(text: code.substring(at, s[i])));
+    final ink = t.ink(Capture.values[s[i + 2]]);
+    children.add(
+      TextSpan(
+        text: code.substring(s[i], s[i] + s[i + 1]),
+        style: TextStyle(
+          color: ink.color,
+          fontStyle: ink.italic ? FontStyle.italic : null,
+          fontWeight: ink.bold ? FontWeight.w700 : null,
+        ),
+      ),
+    );
+    at = s[i] + s[i + 1];
+  }
+  if (at < code.length) children.add(TextSpan(text: code.substring(at)));
+  return TextSpan(style: style, children: children);
+}
 
 /// Past this many characters a side isn't highlighted.
 const _maxText = 200000;
@@ -95,25 +168,40 @@ List<Uint32List?>? _lines(Highlight h, String language, String text) {
   return out;
 }
 
-/// Collects `(start, length, capture)` triples over the whole text: a
-/// text run takes its innermost scope's color, as in the transcript.
+/// Collects `(start, length, capture)` triples over the whole text, in
+/// order: a text run takes the capture of the innermost scope it's in that
+/// is listed in [_scopes].
 class _Spans implements HighlightRenderer {
   final out = <int>[];
-  final _scopes = <String?>[];
+  final _in = <Capture?>[];
   var _at = 0;
 
   @override
   void addText(String text) {
-    final c = _captures[_scopes.lastOrNull];
-    if (c != null) out.addAll([_at, text.length, c]);
+    if (_in.lastOrNull case final c?) {
+      final n = out.length;
+      // The same capture just before (a scope's text split by a plain
+      // child's): one span.
+      if (n > 0 && out[n - 1] == c.index && out[n - 3] + out[n - 2] == _at) {
+        out[n - 2] += text.length;
+      } else {
+        out.addAll([_at, text.length, c.index]);
+      }
+    }
     _at += text.length;
   }
 
   @override
-  void openNode(DataNode node) => _scopes.add(node.scope);
+  void openNode(DataNode node) {
+    final (listed, c) = switch (node.scope) {
+      final s? => _lookup(s),
+      null => (false, null),
+    };
+    _in.add(listed ? c : _in.lastOrNull);
+  }
 
   @override
-  void closeNode(DataNode node) => _scopes.removeLast();
+  void closeNode(DataNode node) => _in.removeLast();
 }
 
 /// `lines` with syntax spans once they're in (`highlight`), for
@@ -205,8 +293,8 @@ DiffThemeData diffTheme(Tokens t) {
     loadingBar: d.loadingBar,
     hoverAffordance: d.hoverAffordance,
     syntax: {
-      for (final (i, (color, italic)) in _colors(t).indexed)
-        syntaxCaptures[i]: SyntaxStyle(color, italic: italic),
+      for (final MapEntry(key: c, value: ink) in t.syntax.entries)
+        c.name: SyntaxStyle(ink.color, italic: ink.italic, bold: ink.bold),
     },
   );
 }
