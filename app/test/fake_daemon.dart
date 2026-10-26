@@ -38,9 +38,9 @@ class FakeDaemon implements Transport {
   final setSettings = <Settings>[];
   String? startError;
 
-  /// Answers calls the fake doesn't know (Jira's): an answer, or null for
-  /// the empty one; a thrown error fails the call. Every such call is in
-  /// [calls].
+  /// Answers calls the fake doesn't know (Jira's, git's): an answer (or a
+  /// Future of one, to answer later), or null for the empty one; a thrown
+  /// error fails the call. Every such call is in [calls].
   Object? Function(Object input)? answer;
   final calls = <Object>[];
 
@@ -79,7 +79,8 @@ class FakeDaemon implements Transport {
       started.add(input);
       if (startError case final e?) throw ConnectException(Code.unknown, e);
     }
-    final other = answer?.call(input);
+    var other = answer?.call(input);
+    if (other is Future) other = await other;
     calls.add(input);
     final out =
         other ??

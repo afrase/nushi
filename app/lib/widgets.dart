@@ -346,3 +346,22 @@ class FullTitle extends StatelessWidget {
     );
   }
 }
+
+/// [child] dimmed, and not to be clicked, while [on]: what it shows is
+/// being replaced.
+class Dimmed extends StatelessWidget {
+  const new({required this.on, required this.child, super.key});
+
+  final bool on;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+    ignoring: on,
+    child: AnimatedOpacity(
+      opacity: on ? 0.4 : 1,
+      duration: const Duration(milliseconds: 120),
+      child: child,
+    ),
+  );
+}
