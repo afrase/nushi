@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/diff_box.dart';
@@ -80,4 +81,39 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('why?'), findsNothing);
   });
+
+  testWidgets('the diff has a scrollbar the mouse drags', (tester) async {
+    tester.view
+      ..devicePixelRatio = 1
+      ..physicalSize = const Size(600, 400);
+    addTearDown(tester.view.reset);
+    // Every line changed: none folded away.
+    String text(String s) => [for (var i = 0; i < 400; i++) '$s $i'].join('\n');
+    await tester.pumpWidget(
+      box(FileChange(path: 'a.txt', oldText: text('a'), newText: text('b'))),
+    );
+    await tester.pump();
+    await tester.pump();
+    final panes = tester
+        .widgetList<Scrollable>(find.byType(Scrollable))
+        .map((s) => s.controller!)
+        .toList();
+    expect(panes, hasLength(2));
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: const Offset(300, 200));
+    addTearDown(mouse.removePointer);
+    await mouse.moveTo(const Offset(594, 10));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await mouse.down(const Offset(594, 10));
+    await tester.pump();
+    await mouse.moveBy(const Offset(0, 150));
+    await tester.pump();
+    await mouse.up();
+    await tester.pumpAndSettle();
+    // Both panes went down: the right one dragged, the left following.
+    for (final c in panes) {
+      expect(c.offset, greaterThan(1000));
+    }
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 }

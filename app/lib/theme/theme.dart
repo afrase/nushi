@@ -1,8 +1,9 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import 'package:nushi/theme/scrollbar.dart';
 import 'package:nushi/theme/tokens.dart';
 
+export 'scrollbar.dart';
 export 'tokens.dart';
 
 /// A box outlined in [border], filled with [fill], its corners rounded.
@@ -208,7 +209,7 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
 
 /// Scrolling everywhere in the app: Apple's feel without the rubber band
 /// (a list stops at its top and bottom, a chat's transcript too), and a
-/// thin overlay scrollbar that shows while scrolling, then fades.
+/// Mac's overlay scrollbar ([MacScrollbar]) on either axis.
 class NativeScroll extends MaterialScrollBehavior {
   const new();
 
@@ -221,7 +222,7 @@ class NativeScroll extends MaterialScrollBehavior {
     BuildContext context,
     Widget child,
     ScrollableDetails details,
-  ) => CupertinoScrollbar(controller: details.controller, child: child);
+  ) => MacScrollbar(controller: details.controller, child: child);
 }
 
 /// [BouncingScrollPhysics] in all but the ends: a drag, a flick's glide and

@@ -336,14 +336,23 @@ class _DiffBoxState extends State<DiffBox> {
           ? SizedBox(height: long ? 40 : _height, child: placeholder)
           : placeholder;
     }
+    final scroll = _controller!.scroll(PaneSide.neu);
     final diff = Listener(
       onPointerUp: _pointerUp,
-      child: SideBySideDiff(
-        controller: _controller!,
-        theme: _theme,
-        inlayBuilder: widget.review == null
-            ? (context, spec) => const SizedBox.shrink()
-            : _inlay,
+      // diff_view's panes have no scrollbar; one at the right edge, for
+      // the right pane (the left follows it).
+      child: MacScrollbar(
+        controller: scroll,
+        notificationPredicate: (n) =>
+            n.context != null &&
+            Scrollable.maybeOf(n.context!)?.widget.controller == scroll,
+        child: SideBySideDiff(
+          controller: _controller!,
+          theme: _theme,
+          inlayBuilder: widget.review == null
+              ? (context, spec) => const SizedBox.shrink()
+              : _inlay,
+        ),
       ),
     );
     if (!widget.fit) return diff;
