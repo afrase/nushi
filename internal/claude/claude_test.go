@@ -95,3 +95,31 @@ func TestTurnDone(t *testing.T) {
 		}
 	}
 }
+
+func TestReportFindings(t *testing.T) {
+	it := model.Item{}
+	meta := map[string]any{"claudeCode": map[string]any{"toolName": "ReportFindings"}}
+	ToolCall(&it, meta, []byte(`{}`))
+	ToolCall(&it, meta, []byte(`{"level":"medium"}`)) // the input as it grows
+	if it.Findings != nil {
+		t.Fatalf("findings before they came: %+v", it.Findings)
+	}
+	ToolCall(&it, meta, []byte(`{"level":"medium","findings":[`+
+		`{"file":"calc/calc.go","line":6,"category":"correctness","short_summary":"Average loop skips xs[0]","summary":"The loop starts at 1.","failure_scenario":"Average([]int{10, 20}) returns 10."},`+
+		`{"file":"go.mod","summary":"No line.","failure_scenario":"x","verdict":"PLAUSIBLE","outcome":"fixed"}]}`))
+	ToolCall(&it, nil, nil) // the result's update has no input
+	f := it.Findings
+	if f == nil || f.Level != "medium" || len(f.Items) != 2 {
+		t.Fatalf("got %+v", f)
+	}
+	want := model.Finding{File: "calc/calc.go", Line: 6, Summary: "The loop starts at 1.", ShortSummary: "Average loop skips xs[0]",
+		FailureScenario: "Average([]int{10, 20}) returns 10.", Category: "correctness"}
+	if f.Items[0] != want || f.Items[1].Line != 0 || f.Items[1].Verdict != "PLAUSIBLE" || f.Items[1].Outcome != "fixed" {
+		t.Errorf("got %+v", f.Items)
+	}
+	none := model.Item{Tool: "ReportFindings"}
+	ToolCall(&none, nil, []byte(`{"findings":[]}`))
+	if none.Findings == nil || len(none.Findings.Items) != 0 {
+		t.Errorf("an empty review: %+v", none.Findings)
+	}
+}

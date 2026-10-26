@@ -102,6 +102,8 @@ const (
 	NushiServiceSetConfigOptionProcedure = "/nushi.v1.NushiService/SetConfigOption"
 	// NushiServiceGetDiffProcedure is the fully-qualified name of the NushiService's GetDiff RPC.
 	NushiServiceGetDiffProcedure = "/nushi.v1.NushiService/GetDiff"
+	// NushiServiceGetFileProcedure is the fully-qualified name of the NushiService's GetFile RPC.
+	NushiServiceGetFileProcedure = "/nushi.v1.NushiService/GetFile"
 	// NushiServiceListCommitsProcedure is the fully-qualified name of the NushiService's ListCommits
 	// RPC.
 	NushiServiceListCommitsProcedure = "/nushi.v1.NushiService/ListCommits"
@@ -384,6 +386,11 @@ type NushiServiceClient interface {
 	// included, or everything since its branch left a base, or what commits
 	// changed.
 	GetDiff(context.Context, *connect.Request[v1.GetDiffRequest]) (*connect.Response[v1.GetDiffResponse], error)
+	// Reads one of a folder's files as it is now, as a change that changes
+	// nothing (status "unchanged", the text on both sides): a file a review
+	// names that isn't among the changes. Only a regular file inside the
+	// folder: no "..", no link.
+	GetFile(context.Context, *connect.Request[v1.GetFileRequest]) (*connect.Response[v1.GetFileResponse], error)
 	// Lists a branch's commits since a base, or the last ones.
 	ListCommits(context.Context, *connect.Request[v1.ListCommitsRequest]) (*connect.Response[v1.ListCommitsResponse], error)
 	// Sums up a folder's changes (as GetDiff lists them) and names its
@@ -728,6 +735,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceGetDiffProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("GetDiff")),
+			connect.WithClientOptions(opts...),
+		),
+		getFile: connect.NewClient[v1.GetFileRequest, v1.GetFileResponse](
+			httpClient,
+			baseURL+NushiServiceGetFileProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("GetFile")),
 			connect.WithClientOptions(opts...),
 		),
 		listCommits: connect.NewClient[v1.ListCommitsRequest, v1.ListCommitsResponse](
@@ -1142,6 +1155,7 @@ type nushiServiceClient struct {
 	answerQuestion      *connect.Client[v1.AnswerQuestionRequest, v1.AnswerQuestionResponse]
 	setConfigOption     *connect.Client[v1.SetConfigOptionRequest, v1.SetConfigOptionResponse]
 	getDiff             *connect.Client[v1.GetDiffRequest, v1.GetDiffResponse]
+	getFile             *connect.Client[v1.GetFileRequest, v1.GetFileResponse]
 	listCommits         *connect.Client[v1.ListCommitsRequest, v1.ListCommitsResponse]
 	getFolderStatus     *connect.Client[v1.GetFolderStatusRequest, v1.GetFolderStatusResponse]
 	listFiles           *connect.Client[v1.ListFilesRequest, v1.ListFilesResponse]
@@ -1350,6 +1364,11 @@ func (c *nushiServiceClient) SetConfigOption(ctx context.Context, req *connect.R
 // GetDiff calls nushi.v1.NushiService.GetDiff.
 func (c *nushiServiceClient) GetDiff(ctx context.Context, req *connect.Request[v1.GetDiffRequest]) (*connect.Response[v1.GetDiffResponse], error) {
 	return c.getDiff.CallUnary(ctx, req)
+}
+
+// GetFile calls nushi.v1.NushiService.GetFile.
+func (c *nushiServiceClient) GetFile(ctx context.Context, req *connect.Request[v1.GetFileRequest]) (*connect.Response[v1.GetFileResponse], error) {
+	return c.getFile.CallUnary(ctx, req)
 }
 
 // ListCommits calls nushi.v1.NushiService.ListCommits.
@@ -1765,6 +1784,11 @@ type NushiServiceHandler interface {
 	// included, or everything since its branch left a base, or what commits
 	// changed.
 	GetDiff(context.Context, *connect.Request[v1.GetDiffRequest]) (*connect.Response[v1.GetDiffResponse], error)
+	// Reads one of a folder's files as it is now, as a change that changes
+	// nothing (status "unchanged", the text on both sides): a file a review
+	// names that isn't among the changes. Only a regular file inside the
+	// folder: no "..", no link.
+	GetFile(context.Context, *connect.Request[v1.GetFileRequest]) (*connect.Response[v1.GetFileResponse], error)
 	// Lists a branch's commits since a base, or the last ones.
 	ListCommits(context.Context, *connect.Request[v1.ListCommitsRequest]) (*connect.Response[v1.ListCommitsResponse], error)
 	// Sums up a folder's changes (as GetDiff lists them) and names its
@@ -2105,6 +2129,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceGetDiffProcedure,
 		svc.GetDiff,
 		connect.WithSchema(nushiServiceMethods.ByName("GetDiff")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceGetFileHandler := connect.NewUnaryHandler(
+		NushiServiceGetFileProcedure,
+		svc.GetFile,
+		connect.WithSchema(nushiServiceMethods.ByName("GetFile")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceListCommitsHandler := connect.NewUnaryHandler(
@@ -2545,6 +2575,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceSetConfigOptionHandler.ServeHTTP(w, r)
 		case NushiServiceGetDiffProcedure:
 			nushiServiceGetDiffHandler.ServeHTTP(w, r)
+		case NushiServiceGetFileProcedure:
+			nushiServiceGetFileHandler.ServeHTTP(w, r)
 		case NushiServiceListCommitsProcedure:
 			nushiServiceListCommitsHandler.ServeHTTP(w, r)
 		case NushiServiceGetFolderStatusProcedure:
@@ -2794,6 +2826,10 @@ func (UnimplementedNushiServiceHandler) SetConfigOption(context.Context, *connec
 
 func (UnimplementedNushiServiceHandler) GetDiff(context.Context, *connect.Request[v1.GetDiffRequest]) (*connect.Response[v1.GetDiffResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetDiff is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) GetFile(context.Context, *connect.Request[v1.GetFileRequest]) (*connect.Response[v1.GetFileResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetFile is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) ListCommits(context.Context, *connect.Request[v1.ListCommitsRequest]) (*connect.Response[v1.ListCommitsResponse], error) {

@@ -7284,6 +7284,137 @@ class GetDiffRequest extends $pb.GeneratedMessage {
   void clearSince() => $_clearField(4);
 }
 
+class GetFileRequest extends $pb.GeneratedMessage {
+  factory GetFileRequest({
+    $core.String? folder,
+    $core.String? path,
+  }) {
+    final result = GetFileRequest._();
+    if (folder != null) result.folder = folder;
+    if (path != null) result.path = path;
+    return result;
+  }
+
+  GetFileRequest._();
+
+  factory GetFileRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetFileRequest()..mergeFromBuffer(data, registry);
+  factory GetFileRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetFileRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetFileRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetFileRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'folder')
+    ..aOS(2, _omitFieldNames ? '' : 'path')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetFileRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetFileRequest copyWith(void Function(GetFileRequest) updates) =>
+      super.copyWith((message) => updates(message as GetFileRequest))
+          as GetFileRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GetFileRequest() / GetFileRequest.new instead')
+  static GetFileRequest create() => GetFileRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetFileRequest._();
+  @$core.override
+  GetFileRequest createEmptyInstance() => GetFileRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetFileRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GetFileRequest>(
+          GetFileRequest.$_createMessage);
+  static GetFileRequest? _defaultInstance;
+
+  /// An absolute path.
+  @$pb.TagNumber(1)
+  $core.String get folder => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set folder($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasFolder() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearFolder() => $_clearField(1);
+
+  /// Relative to folder.
+  @$pb.TagNumber(2)
+  $core.String get path => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set path($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasPath() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPath() => $_clearField(2);
+}
+
+class GetFileResponse extends $pb.GeneratedMessage {
+  factory GetFileResponse({
+    FileChange? file,
+  }) {
+    final result = GetFileResponse._();
+    if (file != null) result.file = file;
+    return result;
+  }
+
+  GetFileResponse._();
+
+  factory GetFileResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetFileResponse()..mergeFromBuffer(data, registry);
+  factory GetFileResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetFileResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetFileResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetFileResponse.$_createMessage)
+    ..aOM<FileChange>(1, _omitFieldNames ? '' : 'file',
+        subBuilder: FileChange.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetFileResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetFileResponse copyWith(void Function(GetFileResponse) updates) =>
+      super.copyWith((message) => updates(message as GetFileResponse))
+          as GetFileResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GetFileResponse() / GetFileResponse.new instead')
+  static GetFileResponse create() => GetFileResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetFileResponse._();
+  @$core.override
+  GetFileResponse createEmptyInstance() => GetFileResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetFileResponse getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GetFileResponse>(
+          GetFileResponse.$_createMessage);
+  static GetFileResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  FileChange get file => $_getN(0);
+  @$pb.TagNumber(1)
+  set file(FileChange value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasFile() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearFile() => $_clearField(1);
+  @$pb.TagNumber(1)
+  FileChange ensureFile() => $_ensure(0);
+}
+
 class GetDiffResponse extends $pb.GeneratedMessage {
   factory GetDiffResponse({
     $core.Iterable<FileChange>? files,
@@ -8397,6 +8528,7 @@ class Item extends $pb.GeneratedMessage {
     $core.String? relayCall,
     $core.String? relayState,
     $core.String? relayedBy,
+    Findings? findings,
   }) {
     final result = Item._();
     if (id != null) result.id = id;
@@ -8429,6 +8561,7 @@ class Item extends $pb.GeneratedMessage {
     if (relayCall != null) result.relayCall = relayCall;
     if (relayState != null) result.relayState = relayState;
     if (relayedBy != null) result.relayedBy = relayedBy;
+    if (findings != null) result.findings = findings;
     return result;
   }
 
@@ -8483,6 +8616,8 @@ class Item extends $pb.GeneratedMessage {
     ..aOS(28, _omitFieldNames ? '' : 'relayCall')
     ..aOS(29, _omitFieldNames ? '' : 'relayState')
     ..aOS(30, _omitFieldNames ? '' : 'relayedBy')
+    ..aOM<Findings>(31, _omitFieldNames ? '' : 'findings',
+        subBuilder: Findings.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -8774,6 +8909,227 @@ class Item extends $pb.GeneratedMessage {
   $core.bool hasRelayedBy() => $_has(29);
   @$pb.TagNumber(30)
   void clearRelayedBy() => $_clearField(30);
+
+  /// For a tool call that reports a code review's result (Claude's
+  /// ReportFindings): what it found.
+  @$pb.TagNumber(31)
+  Findings get findings => $_getN(30);
+  @$pb.TagNumber(31)
+  set findings(Findings value) => $_setField(31, value);
+  @$pb.TagNumber(31)
+  $core.bool hasFindings() => $_has(30);
+  @$pb.TagNumber(31)
+  void clearFindings() => $_clearField(31);
+  @$pb.TagNumber(31)
+  Findings ensureFindings() => $_ensure(30);
+}
+
+/// A code review's result: the effort level it ran at ("medium"; "" when
+/// not said) and its findings, most severe first.
+class Findings extends $pb.GeneratedMessage {
+  factory Findings({
+    $core.String? level,
+    $core.Iterable<Finding>? items,
+  }) {
+    final result = Findings._();
+    if (level != null) result.level = level;
+    if (items != null) result.items.addAll(items);
+    return result;
+  }
+
+  Findings._();
+
+  factory Findings.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Findings()..mergeFromBuffer(data, registry);
+  factory Findings.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Findings()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'Findings',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: Findings.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'level')
+    ..pPM<Finding>(2, _omitFieldNames ? '' : 'items',
+        subBuilder: Finding.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Findings clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Findings copyWith(void Function(Findings) updates) =>
+      super.copyWith((message) => updates(message as Findings)) as Findings;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use Findings() / Findings.new instead')
+  static Findings create() => Findings._();
+  static $pb.GeneratedMessage $_createMessage() => Findings._();
+  @$core.override
+  Findings createEmptyInstance() => Findings._();
+  @$core.pragma('dart2js:noInline')
+  static Findings getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<Findings>(Findings.$_createMessage);
+  static Findings? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get level => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set level($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasLevel() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearLevel() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $pb.PbList<Finding> get items => $_getList(1);
+}
+
+/// One thing a review found. file is relative to the repository (or
+/// absolute), line from 1 (0: not given); short_summary (up to 60
+/// characters), category ("correctness"), verdict ("CONFIRMED",
+/// "PLAUSIBLE") and outcome after fixes ("fixed", "skipped",
+/// "no_change_needed") may be empty. All of it is the agent's text.
+class Finding extends $pb.GeneratedMessage {
+  factory Finding({
+    $core.String? file,
+    $core.int? line,
+    $core.String? summary,
+    $core.String? shortSummary,
+    $core.String? failureScenario,
+    $core.String? category,
+    $core.String? verdict,
+    $core.String? outcome,
+  }) {
+    final result = Finding._();
+    if (file != null) result.file = file;
+    if (line != null) result.line = line;
+    if (summary != null) result.summary = summary;
+    if (shortSummary != null) result.shortSummary = shortSummary;
+    if (failureScenario != null) result.failureScenario = failureScenario;
+    if (category != null) result.category = category;
+    if (verdict != null) result.verdict = verdict;
+    if (outcome != null) result.outcome = outcome;
+    return result;
+  }
+
+  Finding._();
+
+  factory Finding.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Finding()..mergeFromBuffer(data, registry);
+  factory Finding.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Finding()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'Finding',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: Finding.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'file')
+    ..aI(2, _omitFieldNames ? '' : 'line')
+    ..aOS(3, _omitFieldNames ? '' : 'summary')
+    ..aOS(4, _omitFieldNames ? '' : 'shortSummary')
+    ..aOS(5, _omitFieldNames ? '' : 'failureScenario')
+    ..aOS(6, _omitFieldNames ? '' : 'category')
+    ..aOS(7, _omitFieldNames ? '' : 'verdict')
+    ..aOS(8, _omitFieldNames ? '' : 'outcome')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Finding clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Finding copyWith(void Function(Finding) updates) =>
+      super.copyWith((message) => updates(message as Finding)) as Finding;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use Finding() / Finding.new instead')
+  static Finding create() => Finding._();
+  static $pb.GeneratedMessage $_createMessage() => Finding._();
+  @$core.override
+  Finding createEmptyInstance() => Finding._();
+  @$core.pragma('dart2js:noInline')
+  static Finding getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<Finding>(Finding.$_createMessage);
+  static Finding? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get file => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set file($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasFile() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearFile() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.int get line => $_getIZ(1);
+  @$pb.TagNumber(2)
+  set line($core.int value) => $_setSignedInt32(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasLine() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearLine() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get summary => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set summary($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasSummary() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearSummary() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get shortSummary => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set shortSummary($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasShortSummary() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearShortSummary() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get failureScenario => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set failureScenario($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasFailureScenario() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearFailureScenario() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get category => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set category($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasCategory() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearCategory() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.String get verdict => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set verdict($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasVerdict() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearVerdict() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.String get outcome => $_getSZ(7);
+  @$pb.TagNumber(8)
+  set outcome($core.String value) => $_setString(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasOutcome() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearOutcome() => $_clearField(8);
 }
 
 /// A command the agent runs in the background.
@@ -20328,6 +20684,15 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, GetDiffRequest request) =>
       _client.invoke<GetDiffResponse>(
           ctx, 'NushiService', 'GetDiff', request, GetDiffResponse());
+
+  /// Reads one of a folder's files as it is now, as a change that changes
+  /// nothing (status "unchanged", the text on both sides): a file a review
+  /// names that isn't among the changes. Only a regular file inside the
+  /// folder: no "..", no link.
+  $async.Future<GetFileResponse> getFile(
+          $pb.ClientContext? ctx, GetFileRequest request) =>
+      _client.invoke<GetFileResponse>(
+          ctx, 'NushiService', 'GetFile', request, GetFileResponse());
 
   /// Lists a branch's commits since a base, or the last ones.
   $async.Future<ListCommitsResponse> listCommits(

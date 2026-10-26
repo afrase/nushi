@@ -4,7 +4,6 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
-
 import "nushi.pb.dart" as nushiv1nushi;
 
 abstract final class NushiService {
@@ -279,6 +278,17 @@ abstract final class NushiService {
     connect.StreamType.unary,
     nushiv1nushi.GetDiffRequest.new,
     nushiv1nushi.GetDiffResponse.new,
+  );
+
+  /// Reads one of a folder's files as it is now, as a change that changes
+  /// nothing (status "unchanged", the text on both sides): a file a review
+  /// names that isn't among the changes. Only a regular file inside the
+  /// folder: no "..", no link.
+  static const getFile = connect.Spec(
+    '/$name/GetFile',
+    connect.StreamType.unary,
+    nushiv1nushi.GetFileRequest.new,
+    nushiv1nushi.GetFileResponse.new,
   );
 
   /// Lists a branch's commits since a base, or the last ones.

@@ -101,6 +101,11 @@ service NushiService {
   // included, or everything since its branch left a base, or what commits
   // changed.
   rpc GetDiff(GetDiffRequest) returns (GetDiffResponse);
+  // Reads one of a folder's files as it is now, as a change that changes
+  // nothing (status "unchanged", the text on both sides): a file a review
+  // names that isn't among the changes. Only a regular file inside the
+  // folder: no "..", no link.
+  rpc GetFile(GetFileRequest) returns (GetFileResponse);
   // Lists a branch's commits since a base, or the last ones.
   rpc ListCommits(ListCommitsRequest) returns (ListCommitsResponse);
   // Sums up a folder's changes (as GetDiff lists them) and names its
@@ -953,6 +958,17 @@ message GetDiffRequest {
   string since = 4;
 }
 
+message GetFileRequest {
+  // An absolute path.
+  string folder = 1;
+  // Relative to folder.
+  string path = 2;
+}
+
+message GetFileResponse {
+  FileChange file = 1;
+}
+
 message GetDiffResponse {
   // Sorted by path.
   repeated FileChange files = 1;
@@ -1151,6 +1167,32 @@ message Item {
   // when it fails or the turn ends without one; "" when unknown (replayed).
   string relay_state = 29;
   string relayed_by = 30;
+  // For a tool call that reports a code review's result (Claude's
+  // ReportFindings): what it found.
+  Findings findings = 31;
+}
+
+// A code review's result: the effort level it ran at ("medium"; "" when
+// not said) and its findings, most severe first.
+message Findings {
+  string level = 1;
+  repeated Finding items = 2;
+}
+
+// One thing a review found. file is relative to the repository (or
+// absolute), line from 1 (0: not given); short_summary (up to 60
+// characters), category ("correctness"), verdict ("CONFIRMED",
+// "PLAUSIBLE") and outcome after fixes ("fixed", "skipped",
+// "no_change_needed") may be empty. All of it is the agent's text.
+message Finding {
+  string file = 1;
+  int32 line = 2;
+  string summary = 3;
+  string short_summary = 4;
+  string failure_scenario = 5;
+  string category = 6;
+  string verdict = 7;
+  string outcome = 8;
 }
 
 // A command the agent runs in the background.

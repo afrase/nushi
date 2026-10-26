@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"io/fs"
 	"log/slog"
+	"math"
 	"os"
 	"os/exec"
 	"strconv"
@@ -81,12 +82,17 @@ func SignedIn(run func(args ...string) ([]byte, error)) string {
 // subagent's text and thinking too.
 var InitMeta = map[string]any{"subagent-transcript": true}
 
-// SessionMeta is the session requests' _meta: Nushi declares the host
-// option perTaskStopAffordance, as Claude Code's terminal has it, so that
-// stopping a turn (session/cancel) stops only the turn. Without it Claude
-// Code's interrupt kills the background subagents too, which no update
-// then tells.
-var SessionMeta = map[string]any{"claudeCode": map[string]any{"options": map[string]any{"perTaskStopAffordance": true}}}
+// SessionMeta is the session requests' _meta, the host options the adapter
+// passes Claude Code. perTaskStopAffordance, as Claude Code's terminal has
+// it, makes stopping a turn (session/cancel) stop only the turn: without
+// it Claude Code's interrupt kills the background subagents too, which no
+// update then tells. CLAUDE_CODE_REPORT_FINDINGS in Claude Code's
+// environment makes its /code-review report through its ReportFindings
+// tool, which the transcript draws as a card, instead of printing JSON.
+var SessionMeta = map[string]any{"claudeCode": map[string]any{"options": map[string]any{
+	"perTaskStopAffordance": true,
+	"env":                   map[string]any{"CLAUDE_CODE_REPORT_FINDINGS": "1"},
+}}}
 
 // TurnDone says a usage update is the result of the user's turn: the one
 // with the cost, from a model cycle the user started
@@ -130,8 +136,9 @@ func claudeCode(meta map[string]any, key string) string {
 // subagent's type, prompt, model and effort (its input comes in pieces),
 // the model it ran on once it has ended, and for a subagent's SubagentHandback, which ends it,
 // the report it hands back as its text (Report): true then, since the
-// call's own output is only an acknowledgement. Claude may send the input in a later
-// update than the name.
+// call's own output is only an acknowledgement; for ReportFindings the
+// review's findings. Claude may send the input in a later update than the
+// name.
 func ToolCall(it *model.Item, meta map[string]any, input json.RawMessage) (ownText bool) {
 	it.Parent, it.Tool = cmp.Or(it.Parent, Parent(meta)), cmp.Or(claudeCode(meta, "toolName"), it.Tool)
 	var in struct {
@@ -166,8 +173,42 @@ func ToolCall(it *model.Item, meta map[string]any, input json.RawMessage) (ownTe
 	case "SubagentHandback":
 		it.Text, it.Report = cmp.Or(in.Message, it.Text), true
 		return true
+	case "ReportFindings":
+		if f := findings(input); f != nil {
+			it.Findings = f
+		}
 	}
 	return false
+}
+
+// findings reads ReportFindings' input, once it holds the findings: the
+// adapter sends it as it grows.
+func findings(input json.RawMessage) *model.Findings {
+	var in struct {
+		Level    string `json:"level"`
+		Findings *[]struct {
+			File            string `json:"file"`
+			Line            int    `json:"line"`
+			Summary         string `json:"summary"`
+			ShortSummary    string `json:"short_summary"`
+			FailureScenario string `json:"failure_scenario"`
+			Category        string `json:"category"`
+			Verdict         string `json:"verdict"`
+			Outcome         string `json:"outcome"`
+		} `json:"findings"`
+	}
+	if json.Unmarshal(input, &in) != nil || in.Findings == nil {
+		return nil
+	}
+	out := &model.Findings{Level: in.Level, Items: []model.Finding{}}
+	for _, f := range *in.Findings {
+		if f.Line < 0 || f.Line > math.MaxInt32 {
+			f.Line = 0 // not a line
+		}
+		out.Items = append(out.Items, model.Finding{File: f.File, Line: f.Line, Summary: f.Summary,
+			ShortSummary: f.ShortSummary, FailureScenario: f.FailureScenario, Category: f.Category, Verdict: f.Verdict, Outcome: f.Outcome})
+	}
+	return out
 }
 
 // modelName names a model id as Claude's model picker does:

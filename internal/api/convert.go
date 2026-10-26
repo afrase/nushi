@@ -92,6 +92,14 @@ func itemProto(it *model.Item) *nushiv1.Item {
 	if sa := it.Subagent; sa != nil {
 		out.Subagent = &nushiv1.Subagent{State: sa.State, Started: unixMs(sa.Started), Ended: unixMs(sa.Ended), Result: sa.Result}
 	}
+	if f := it.Findings; f != nil {
+		out.Findings = &nushiv1.Findings{Level: f.Level}
+		for _, x := range f.Items {
+			out.Findings.Items = append(out.Findings.Items, &nushiv1.Finding{File: x.File, Line: int32(x.Line),
+				Summary: x.Summary, ShortSummary: x.ShortSummary, FailureScenario: x.FailureScenario,
+				Category: x.Category, Verdict: x.Verdict, Outcome: x.Outcome})
+		}
+	}
 	out.Options = optionsProto(it.Options)
 	out.Paths = it.Paths
 	for _, img := range it.Images {
