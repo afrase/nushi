@@ -12,6 +12,10 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
+/// The agents found not to list their sessions, while the app runs: the
+/// New chat dialog offers them no "Sessions →".
+final cantListSessions = <String>{};
+
 /// The New chat dialog's second step: [agent]'s sessions in [folder] ('':
 /// every folder's) that aren't chats, newest first, for [onOpen]. The
 /// arrows move, Enter opens, ← or Esc goes [onBack].
@@ -87,6 +91,7 @@ class _SessionListState extends State<SessionList> {
         ),
       );
       if (!mounted) return;
+      if (!r.canList) cantListSessions.add(widget.agent);
       setState(() {
         _last = r;
         _sessions.addAll(r.sessions);

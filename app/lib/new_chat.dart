@@ -60,8 +60,9 @@ Future<void> newChat(
 /// The agents installed, the last one used selected (one that isn't
 /// ready, or whose last start failed, shows dimmed and isn't, unless none
 /// is): Enter starts it, a click, or a digit, starts another; the arrows
-/// move. One that isn't ready goes to Settings › Agents instead. → (or the
-/// row under them) lists the selected agent's sessions instead
+/// move. One that isn't ready goes to Settings › Agents instead. → (or
+/// the selected row's "Sessions →", shown unless the agent was found not
+/// to list them) lists the selected agent's sessions instead
 /// (SessionList), ← comes back. Under them, the issue (IssueLines): I, or
 /// ⌘V with an issue's link, picks one (IssuePicker).
 class _NewChat extends StatefulWidget {
@@ -288,36 +289,6 @@ class _NewChatState extends State<_NewChat> {
                           onBranch: _branch,
                         ),
                       ],
-                      if (agents.isNotEmpty && issue == null) ...[
-                        Divider(height: 9, color: t.borderSubtle),
-                        Tap(
-                          onTap: () => _sessions(true),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 6,
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.history,
-                                size: 16,
-                                color: t.textSecondary,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  'Open ${_an(agentTitle(agents[_at]))} '
-                                  'session…',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.ui(t.textSecondary, size: 12.5),
-                                ),
-                              ),
-                              keyHint(context, '→'),
-                            ],
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ),
@@ -359,6 +330,20 @@ class _NewChatState extends State<_NewChat> {
             Text('Set up', style: theme.ui(t.link, size: 11.5)),
             const SizedBox(width: 10),
           ],
+          // The highlighted agent's sessions, by → or here.
+          if (i == _at &&
+              a.ready &&
+              _issue == null &&
+              !cantListSessions.contains(name)) ...[
+            LinkText(
+              'Sessions',
+              size: 11.5,
+              tooltip: "${agentTitle(name)} sessions that aren't chats (→)",
+              onTap: () => _sessions(true),
+            ),
+            keyHint(context, ' →'),
+            const SizedBox(width: 10),
+          ],
           if (i < 9) keyHint(context, '${i + 1}'),
         ],
       ),
@@ -379,10 +364,6 @@ String _reason(String error, String title) => error
     );
 
 final _step = RegExp(r'^(start agent|initialize|session/\w+|acp error -?\d+)$');
-
-/// [word] after "a" or "an".
-String _an(String word) =>
-    '${'aeiouAEIOU'.contains(word.isEmpty ? '-' : word[0]) ? 'an' : 'a'} $word';
 
 /// "[before]Settings › Agents" with the second part a link, for when no
 /// agent can start yet.
