@@ -18,6 +18,7 @@ import 'package:nushi/mcp.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/remote.dart';
+import 'package:nushi/removed_chats.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_dialog.dart';
 import 'package:nushi/sidebar.dart';
@@ -226,6 +227,8 @@ class _Shell extends StatelessWidget {
               ),
             ),
           if (daemon.connected && daemon.replaced) _Replaced(daemon),
+          if (daemon.connected && daemon.removedChats.isNotEmpty)
+            RemovedChatsBar(daemon),
           Expanded(child: app),
           StatusBar(daemon),
         ],

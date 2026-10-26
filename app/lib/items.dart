@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/cards.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/chat_menu.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/findings.dart';
 import 'package:nushi/findings_card.dart';
@@ -102,6 +103,8 @@ class ItemView extends StatelessWidget {
           'not_ready' ||
           'folder_gone' ||
           'reopen_failed' => (Icons.error_outline, t.crashed),
+          // Its agent deleted the session: nothing broke.
+          'session_gone' => (Icons.history_toggle_off, t.textMuted),
           _ => (Icons.info_outline, t.needs),
         };
         // A reopen that failed: what helps.
@@ -115,6 +118,10 @@ class ItemView extends StatelessWidget {
             () => moveChat(context, daemon, chat, gone: true),
           ),
           'reopen_failed' => ('Try again', () => daemon.reopen(chat)),
+          'session_gone' => (
+            'Delete…',
+            () => showDeleteChat(context, chat, daemon),
+          ),
           _ => null,
         };
         return Row(

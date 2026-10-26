@@ -89,6 +89,22 @@ class Daemon extends ChangeNotifier {
   /// Every stored chat, by id.
   final chats = <String, ChatState>{};
 
+  /// The chats the daemon removed because their agent no longer had their
+  /// sessions, until [dismissRemoved].
+  List<RemovedChat> removedChats = [];
+
+  /// Says the app has shown [removedChats]: the daemon forgets them.
+  void dismissRemoved() {
+    final ids = [for (final r in removedChats) r.id];
+    removedChats = [];
+    notifyListeners();
+    unawaited(
+      client
+          .dismissRemovedChats(DismissRemovedChatsRequest(ids: ids))
+          .then((_) {}, onError: (Object _) {}),
+    );
+  }
+
   /// The open side chats, by id: not stored, not listed.
   final sides = <String, ChatState>{};
   String? selectedId;
@@ -290,6 +306,9 @@ class Daemon extends ChangeNotifier {
   void _handle(EventsResponse e) {
     if (e.hasRemote()) {
       remoteState.value = e.remote;
+    } else if (e.hasRemovedChats()) {
+      removedChats = e.removedChats.chats;
+      notifyListeners();
     } else if (e.hasTerminals()) {
       terminals.apply(e.chatId, e.terminals.terminals);
     } else if (sides[e.chatId] case final side?) {
@@ -329,8 +348,9 @@ class Daemon extends ChangeNotifier {
     }
     terminals.stale();
     try {
-      final listed = (await client.listChats(ListChatsRequest())).chats
-        ..forEach(_chat);
+      final resp = await client.listChats(ListChatsRequest());
+      removedChats = resp.removed;
+      final listed = resp.chats..forEach(_chat);
       // Chats deleted meanwhile go; side chats the daemon lost (it
       // restarted) end, the others catch up.
       final ids = {for (final c in listed) c.id};
