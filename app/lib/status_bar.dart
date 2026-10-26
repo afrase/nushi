@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/agent_mark.dart';
+import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_menu.dart';
 import 'package:nushi/daemon.dart';
@@ -160,38 +161,41 @@ class _MemoryButton extends StatelessWidget {
     final asleep = daemon.chats.values
         .where((c) => c.asleep && !c.archived)
         .length;
-    Widget row(Widget name, int n, {ChatState? chat}) => Padding(
-      padding: const EdgeInsets.fromLTRB(10, 3, 6, 3),
-      child: SizedBox(
-        width: 340,
-        child: Row(
-          children: [
-            if (chat != null) ...[
-              AgentMark(chat.agent, size: 12),
-              const SizedBox(width: 6),
-            ],
-            Expanded(child: name),
-            Text(bytes(n), style: theme.ui(t.textSecondary, size: 12)),
-            SizedBox(
-              width: 58,
-              child: chat != null && chat.canSleep
-                  ? Align(
-                      alignment: Alignment.centerRight,
-                      child: Button(
-                        label: 'Sleep',
-                        onPressed: () => sleepChat(
-                          context,
-                          chat,
-                          daemon,
-                        ).then((_) => onOpen()),
-                      ),
-                    )
-                  : null,
+    Widget row(Widget name, int n, {ChatState? chat, Widget? action}) =>
+        Padding(
+          padding: const EdgeInsets.fromLTRB(10, 3, 6, 3),
+          child: SizedBox(
+            width: 340,
+            child: Row(
+              children: [
+                if (chat != null) ...[
+                  AgentMark(chat.agent, size: 12),
+                  const SizedBox(width: 6),
+                ],
+                Expanded(child: name),
+                Text(bytes(n), style: theme.ui(t.textSecondary, size: 12)),
+                SizedBox(
+                  width: 70,
+                  child: action != null
+                      ? Align(alignment: Alignment.centerRight, child: action)
+                      : chat != null && chat.canSleep
+                      ? Align(
+                          alignment: Alignment.centerRight,
+                          child: Button(
+                            label: 'Sleep',
+                            onPressed: () => sleepChat(
+                              context,
+                              chat,
+                              daemon,
+                            ).then((_) => onOpen()),
+                          ),
+                        )
+                      : null,
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
-    );
+          ),
+        );
     Widget label(String text, [String detail = '']) => Text.rich(
       TextSpan(
         children: [
@@ -209,7 +213,16 @@ class _MemoryButton extends StatelessWidget {
         for (final (c, n) in chats)
           row(label(c.title.isEmpty ? 'New chat' : c.title), n, chat: c),
         if (chats.isNotEmpty) const Divider(height: 9),
-        row(label('Nushi', 'daemon and app'), nushi),
+        row(
+          label('Nushi', 'daemon and app'),
+          nushi,
+          action: bundledDaemon == null
+              ? null
+              : Button(
+                  label: 'Restart',
+                  onPressed: () => restartDaemonAsking(context, daemon),
+                ),
+        ),
         if (m.other > 0) row(label('Terminals and other'), m.other.toInt()),
         if (asleep > 0)
           Padding(
@@ -237,4 +250,29 @@ class _MemoryButton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Restarts the daemon (the bundled one), first asking when that stops
+/// something: a turn running, or a chat with an agent or a terminal.
+Future<void> restartDaemonAsking(BuildContext context, Daemon daemon) async {
+  final awake = daemon.chats.values
+      .where((c) => !c.asleep && !c.archived && c.canSleep)
+      .length;
+  final busy = daemon.chats.values.where((c) => c.busy).length;
+  if (busy + awake > 0 &&
+      !await confirm(
+        context,
+        'Restart the daemon?',
+        busy > 0
+            ? 'It stops $busy running turn${busy == 1 ? '' : 's'} and closes '
+                  'terminals. Chats reopen when you next use them.'
+            : "Chats' agents stop and terminals close; chats reopen when "
+                  'you next use them.',
+        'Restart',
+        destructive: busy > 0,
+      )) {
+    return;
+  }
+  if (!context.mounted) return;
+  await tryOrShow(context, daemon.restartDaemon);
 }
