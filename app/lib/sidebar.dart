@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/agent_mark.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/chat_keys.dart';
 import 'package:nushi/chat_menu.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
@@ -18,7 +19,8 @@ import 'package:nushi/widgets.dart';
 /// The chats, grouped by folder (a chat in a worktree under its
 /// repository): the folder with the newest chat first, and in each folder
 /// the newest chat first. Archived chats are in a collapsed group at the
-/// bottom.
+/// bottom. While ⌘ is held alone, the first nine chats (archived left out)
+/// show the number ⌘ opens them with.
 class Sidebar extends StatefulWidget {
   const new({required this.daemon, super.key});
 
@@ -30,6 +32,13 @@ class Sidebar extends StatefulWidget {
 
 class _SidebarState extends State<Sidebar> {
   bool _showArchived = false;
+  final _hold = CommandHold();
+
+  @override
+  void dispose() {
+    _hold.dispose();
+    super.dispose();
+  }
 
   void _new(String folder) => newChat(context, widget.daemon, folder);
 
@@ -48,16 +57,14 @@ class _SidebarState extends State<Sidebar> {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final groups = <String, List<ChatState>>{};
-    final byNewest = widget.daemon.chats.values.toList()
-      ..sort((a, b) => b.created.compareTo(a.created));
-    final archived = [
-      for (final c in byNewest)
-        if (c.archived) c,
-    ];
-    for (final c in byNewest.where((c) => !c.archived)) {
-      (groups[c.scratch ? '' : c.home] ??= []).add(c);
-    }
+    final groups = chatGroups(widget.daemon);
+    final archived =
+        widget.daemon.chats.values.where((c) => c.archived).toList()
+          ..sort((a, b) => b.created.compareTo(a.created));
+    final numbers = {
+      for (final (i, c) in chatOrder(widget.daemon).take(9).indexed)
+        c.id: i + 1,
+    };
     final starting = widget.daemon.starting;
     if (starting != null) groups.putIfAbsent(starting, () => []);
     return DecoratedBox(
@@ -75,56 +82,64 @@ class _SidebarState extends State<Sidebar> {
             ),
           ),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: 10),
-              children: [
-                for (final MapEntry(key: folder, value: chats)
-                    in groups.entries) ...[
-                  _FolderHeader(
-                    folder,
-                    onNew: starting == null ? () => _new(folder) : null,
-                    onTerminal: folder.isEmpty || chats.isEmpty
-                        ? null
-                        : () => _terminal(folder, chats),
-                  ),
-                  if (starting == folder)
+            child: ValueListenableBuilder(
+              valueListenable: _hold,
+              builder: (context, held, _) => ListView(
+                padding: const EdgeInsets.only(bottom: 10),
+                children: [
+                  for (final MapEntry(key: folder, value: chats)
+                      in groups.entries) ...[
+                    _FolderHeader(
+                      folder,
+                      onNew: starting == null ? () => _new(folder) : null,
+                      onTerminal: folder.isEmpty || chats.isEmpty
+                          ? null
+                          : () => _terminal(folder, chats),
+                    ),
+                    if (starting == folder)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 10, 4),
+                        child: Text(
+                          'Starting…',
+                          style: theme.ui(t.textMuted, size: 12),
+                        ),
+                      ),
+                    for (final c in chats)
+                      _ChatRow(
+                        c,
+                        key: ValueKey(c.id),
+                        daemon: widget.daemon,
+                        number: held ? numbers[c.id] : null,
+                      ),
+                  ],
+                  if (archived.isNotEmpty) ...[
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 10, 4),
-                      child: Text(
-                        'Starting…',
-                        style: theme.ui(t.textMuted, size: 12),
+                      padding: const EdgeInsets.fromLTRB(6, 12, 6, 2),
+                      child: Tap(
+                        onTap: () =>
+                            setState(() => _showArchived = !_showArchived),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 4,
+                        ),
+                        child: Row(
+                          children: [
+                            Chevron(open: _showArchived, size: 16),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Archived  ${archived.length}',
+                              style: theme.ui(t.textSecondary, size: 12),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  for (final c in chats)
-                    _ChatRow(c, key: ValueKey(c.id), daemon: widget.daemon),
+                    if (_showArchived)
+                      for (final c in archived)
+                        _ChatRow(c, key: ValueKey(c.id), daemon: widget.daemon),
+                  ],
                 ],
-                if (archived.isNotEmpty) ...[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(6, 12, 6, 2),
-                    child: Tap(
-                      onTap: () =>
-                          setState(() => _showArchived = !_showArchived),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 4,
-                      ),
-                      child: Row(
-                        children: [
-                          Chevron(open: _showArchived, size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Archived  ${archived.length}',
-                            style: theme.ui(t.textSecondary, size: 12),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  if (_showArchived)
-                    for (final c in archived)
-                      _ChatRow(c, key: ValueKey(c.id), daemon: widget.daemon),
-                ],
-              ],
+              ),
             ),
           ),
           _Footer(widget.daemon),
@@ -263,10 +278,13 @@ class _FolderHeader extends StatelessWidget {
 /// A chat in the list: click opens it, double-click renames it, and a
 /// right-click opens its menu.
 class _ChatRow extends StatefulWidget {
-  const new(this.chat, {required this.daemon, super.key});
+  const new(this.chat, {required this.daemon, super.key, this.number});
 
   final ChatState chat;
   final Daemon daemon;
+
+  /// The number ⌘ opens it with, shown while ⌘ is held.
+  final int? number;
 
   @override
   State<_ChatRow> createState() => _ChatRowState();
@@ -360,6 +378,20 @@ class _ChatRowState extends State<_ChatRow> {
                   Text(
                     folderParts(chat.home).$1,
                     style: theme.ui(t.textMuted, size: 11.5),
+                  ),
+                if (widget.number case final n?)
+                  Container(
+                    margin: const EdgeInsets.only(left: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: box(
+                      t.fieldBorder,
+                      fill: t.fieldFill,
+                      radius: NushiTheme.control,
+                    ),
+                    child: Text(
+                      '⌘$n',
+                      style: theme.code(t.textSecondary, size: 11),
+                    ),
                   ),
               ],
             ),

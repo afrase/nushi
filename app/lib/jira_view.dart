@@ -56,7 +56,7 @@ void showIssue(Daemon daemon, String site, String key) {
 /// open issues (on a site, or every site), the active sprint of a board,
 /// a saved search or JQL; a row's details (JiraIssuePane) in the list's
 /// place. Keys: ↑↓ (or j k) pick, ⏎ the details, ⌘⏎ Start work, ⌘R asks
-/// again, ⌘1–9 a list, / the JQL, Esc back to the list, then closes.
+/// again, ⌥⌘1–9 a list, / the JQL, Esc back to the list, then closes.
 class JiraView extends StatefulWidget {
   const new(this.daemon, {super.key, this.now});
 
@@ -389,8 +389,13 @@ class _JiraViewState extends State<JiraView> {
         const SingleActivator(LogicalKeyboardKey.keyR, meta: true): _load,
         const SingleActivator(LogicalKeyboardKey.escape): () =>
             _details ? _back() : widget.daemon.showJira(open: false),
+        // ⌥⌘: ⌘1–9 switch chats.
         for (var i = 0; i < lists.length && i < 9; i++)
-          SingleActivator(LogicalKeyboardKey(0x31 + i), meta: true): () =>
+          SingleActivator(
+            LogicalKeyboardKey(0x31 + i),
+            meta: true,
+            alt: true,
+          ): () =>
               _pickList(lists[i]),
       },
       child: Focus(

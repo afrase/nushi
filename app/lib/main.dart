@@ -8,6 +8,7 @@ import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/changes_view.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_header.dart';
+import 'package:nushi/chat_keys.dart';
 import 'package:nushi/chat_view.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/details_panel.dart';
@@ -117,6 +118,32 @@ class _NushiAppState extends State<NushiApp> {
             onSelected: () =>
                 widget.daemon.showGitHub(open: !widget.daemon.githubOpen),
           ),
+          PlatformMenuItemGroup(
+            members: [
+              PlatformMenuItem(
+                label: 'Previous Chat',
+                shortcut: previousChatKey,
+                onSelected: () => stepChat(widget.daemon, -1),
+              ),
+              PlatformMenuItem(
+                label: 'Next Chat',
+                shortcut: nextChatKey,
+                onSelected: () => stepChat(widget.daemon, 1),
+              ),
+              // Hold ⌘ to see the numbers in the sidebar.
+              PlatformMenu(
+                label: 'Open Chat',
+                menus: [
+                  for (var n = 1; n <= 9; n++)
+                    PlatformMenuItem(
+                      label: 'Chat $n in the Sidebar',
+                      shortcut: chatNumberKey(n),
+                      onSelected: () => openNthChat(widget.daemon, n),
+                    ),
+                ],
+              ),
+            ],
+          ),
           _appearance('Light Appearance', ThemeMode.light),
           _appearance('Dark Appearance', ThemeMode.dark),
           _appearance('System Appearance', ThemeMode.system),
@@ -149,8 +176,23 @@ class _NushiAppState extends State<NushiApp> {
               NewChatIntent: CallbackAction<NewChatIntent>(
                 onInvoke: (_) => newChat(context, widget.daemon, ''),
               ),
+              OpenChatIntent: CallbackAction<OpenChatIntent>(
+                onInvoke: (i) => openNthChat(widget.daemon, i.n),
+              ),
+              StepChatIntent: CallbackAction<StepChatIntent>(
+                onInvoke: (i) => stepChat(widget.daemon, i.step),
+              ),
             },
-            child: Scaffold(body: _Shell(widget.daemon)),
+            // ⌘1–⌘9, ⌘[ and ⌘]: wherever the focus is.
+            child: Shortcuts(
+              shortcuts: chatKeys,
+              // Focused when nothing in the window is, so the keys still
+              // come here (an empty pane, after a click on the sidebar).
+              child: Focus(
+                autofocus: true,
+                child: Scaffold(body: _Shell(widget.daemon)),
+              ),
+            ),
           ),
         ),
       ),
