@@ -17,13 +17,17 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 )
 
-// Installer installs with Env added to npm's environment (tests: their
-// own npmrc and registry).
-type Installer struct{ Env []string }
+// Installer installs with npm in Environ's environment (the agents';
+// nil: the daemon's), Env added (tests: their own npmrc and registry).
+type Installer struct {
+	Environ func() []string
+	Env     []string
+}
 
 // Install installs lock's package.json and package-lock.json into a new
 // folder beside folder; once that has worked, ready runs and the new folder
@@ -60,7 +64,11 @@ func (in Installer) Install(ctx context.Context, lock fs.FS, folder string, read
 	cmd := exec.CommandContext(ctx, "/usr/bin/sandbox-exec", "-p", profile, "npm", "ci", "--omit=optional", "--omit=dev", "--ignore-scripts", //nolint:gosec // npm ci under the sandbox, fixed arguments
 		"--no-audit", "--no-fund", "--update-notifier=false", "--logs-max=0", "--cache", cache)
 	cmd.Dir = tmp
-	cmd.Env = append(os.Environ(), in.Env...)
+	env := os.Environ()
+	if in.Environ != nil {
+		env = in.Environ()
+	}
+	cmd.Env = slices.Concat(env, in.Env)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("npm ci: %w: %s", err, tail(string(out), 6))
 	}

@@ -1,5 +1,6 @@
 // Package agents finds the agents chats can run on this Mac: each one's
-// CLI on the login shell's PATH, its version, and what else it needs.
+// CLI on the login shell's PATH (Env: the environment agents start with),
+// its version, and what else it needs.
 // Finding them changes nothing: a CLI is only asked what it is, with
 // writes and the network denied (Probe). An agent whose ACP side is an
 // npm package (an adapter) runs once that's set up, which happens only
@@ -17,6 +18,9 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
+
+	"github.com/afrase/nushi/internal/model"
 )
 
 // Agent is one agent as main describes it.
@@ -54,9 +58,19 @@ type Status struct {
 	Awake                      int  // its chats whose agent runs
 }
 
+// Env is the environment agents start with (internal/shellenv): the login
+// shell's, read again when asked. Finding an agent looks on its PATH.
+type Env interface {
+	Environ() []string
+	LookPath(name string) string
+	Refresh(ctx context.Context, maxAge time.Duration)
+	Status() model.ShellEnv
+}
+
 type Service struct {
 	agents     []Agent
 	probe      Probe
+	env        Env
 	dir        string // <data>/agents: an adapter goes into dir/<agent>
 	installer  Installer
 	chats      Chats
@@ -72,6 +86,28 @@ func New(agents []Agent, probe Probe, dir string, installer Installer) *Service 
 
 // UseChats gives the service the chats feature, once there is one.
 func (s *Service) UseChats(c Chats) { s.chats = c }
+
+// UseEnv gives agents env rather than the daemon's own environment.
+func (s *Service) UseEnv(env Env) { s.env = env }
+
+// Environ is the environment an agent starts with.
+func (s *Service) Environ() []string {
+	if s.env == nil {
+		return os.Environ()
+	}
+	return s.env.Environ()
+}
+
+// Environment reads the shell's environment again if the last reading is
+// older than maxAge, and says how the last went; a zero ShellEnv when
+// agents get the daemon's own.
+func (s *Service) Environment(ctx context.Context, maxAge time.Duration) model.ShellEnv {
+	if s.env == nil {
+		return model.ShellEnv{}
+	}
+	s.env.Refresh(ctx, maxAge)
+	return s.env.Status()
+}
 
 // List finds every agent, all at once, and tells the chats which are ready.
 func (s *Service) List(ctx context.Context) []Status {
@@ -108,7 +144,7 @@ func (s *Service) logFound(found []Status) {
 }
 
 func (s *Service) find(ctx context.Context, a Agent) (st Status) {
-	st = Status{Agent: a, Path: lookPath(a.CLI, a.Also), Awake: s.chats.Awake(a.Name)}
+	st = Status{Agent: a, Path: s.lookPath(a.CLI, a.Also), Awake: s.chats.Awake(a.Name)}
 	if a.Adapter != nil {
 		st.Folder = s.folder(a.Name)
 		st.Pinned, st.Packages = a.Adapter.pinned()
@@ -125,9 +161,9 @@ func (s *Service) find(ctx context.Context, a Agent) (st Status) {
 	switch {
 	case a.Min != "" && st.Version != "" && older(st.Version, a.Min):
 		st.Problem = fmt.Sprintf("Needs %s or newer", a.Min)
-	case a.Needs != "" && lookPath(a.Needs, nil) == "":
+	case a.Needs != "" && s.lookPath(a.Needs, nil) == "":
 		st.Problem = "Needs " + strings.ToUpper(a.Needs[:1]) + a.Needs[1:]
-	case a.Adapter != nil && lookPath("node", nil) == "":
+	case a.Adapter != nil && s.lookPath("node", nil) == "":
 		st.Problem = "Needs Node"
 	}
 	if a.SignedIn != nil && st.Problem == "" {
@@ -136,9 +172,14 @@ func (s *Service) find(ctx context.Context, a Agent) (st Status) {
 	return st
 }
 
-// lookPath finds name on PATH, else the first of also that is a program.
-func lookPath(name string, also []string) string {
-	if p, err := exec.LookPath(name); err == nil {
+// lookPath finds name on the agents' PATH, else the first of also that is
+// a program.
+func (s *Service) lookPath(name string, also []string) string {
+	if s.env != nil {
+		if p := s.env.LookPath(name); p != "" {
+			return p
+		}
+	} else if p, err := exec.LookPath(name); err == nil {
 		return p
 	}
 	for _, p := range also {
@@ -177,8 +218,12 @@ func numbers(v string) [3]int {
 }
 
 // Run is what starting an agent takes: its CLI, and with an adapter, the
-// adapter's program (run by the Node on PATH).
-type Run struct{ CLI, Program string }
+// adapter's program and the Node on PATH that runs it; the environment
+// it starts with.
+type Run struct {
+	CLI, Program, Node string
+	Env                []string
+}
 
 // Run finds what starting the agent named name takes, or says why it
 // can't start. It asks no CLI anything, so it's quick.
@@ -188,15 +233,18 @@ func (s *Service) Run(name string) (Run, error) {
 		return Run{}, fmt.Errorf("Nushi doesn't know the agent %q", name)
 	}
 	a := s.agents[i]
-	r := Run{CLI: lookPath(a.CLI, a.Also)}
+	r := Run{CLI: s.lookPath(a.CLI, a.Also), Env: s.Environ()}
+	if a.Adapter != nil {
+		r.Node = s.lookPath("node", nil)
+	}
 	switch {
 	case r.CLI == "":
 		return r, fmt.Errorf("%s isn't installed: there's no %s on PATH", a.Title, a.CLI)
-	case a.Needs != "" && lookPath(a.Needs, nil) == "":
+	case a.Needs != "" && s.lookPath(a.Needs, nil) == "":
 		return r, fmt.Errorf("%s needs %s, and there's none on PATH", a.Title, a.Needs)
 	case a.Adapter == nil:
 		return r, nil
-	case lookPath("node", nil) == "":
+	case r.Node == "":
 		return r, fmt.Errorf("%s needs Node, and there's none on PATH", a.Title)
 	}
 	if _, r.Program = s.installer.Installed(s.folder(name), a.Adapter.Package, a.Adapter.Bin); r.Program == "" {

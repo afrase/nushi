@@ -90,7 +90,9 @@ func TestOlder(t *testing.T) {
 
 // newService finds agents with readonly.Output.
 func newService(agents []Agent, dir string, in Installer, chats Chats) *Service {
-	s := New(agents, readonly.Output, dir, in)
+	s := New(agents, func(ctx context.Context, path string, args ...string) ([]byte, error) {
+		return readonly.Output(ctx, nil, path, args...)
+	}, dir, in)
 	s.UseChats(chats)
 	return s
 }

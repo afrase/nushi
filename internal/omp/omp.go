@@ -16,12 +16,12 @@ import (
 )
 
 // Start starts the user's omp (cli) in its ACP mode, in dir (the
-// daemon's folder), its stderr to log; its `#!/usr/bin/env
-// bun` finds the user's Bun on PATH. omp reads its own config and keys
+// daemon's folder) and env (the login shell's, ADR 0048), its stderr to
+// log; its `#!/usr/bin/env bun` finds the user's Bun on env's PATH. omp reads its own config and keys
 // (~/.omp, the environment); Nushi never does.
-func Start(dir, cli string, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
+func Start(dir, cli string, env []string, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
 	cmd := exec.Command(cli, "--mode", "acp") //nolint:noctx // lives until Stop or Close, not a context
-	cmd.Dir = dir
+	cmd.Dir, cmd.Env = dir, env
 	return agentproc.Start(cmd, client, log)
 }
 

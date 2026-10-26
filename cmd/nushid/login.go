@@ -12,8 +12,17 @@ import (
 // gives a helper launchd's bare environment.
 const loginFlag = "-login"
 
-// knownShells are the shells whose `-l -c` the line below reads right in.
+// knownShells are the shells whose `-l -c` the line below reads right in,
+// and shellenv's.
 var knownShells = []string{"sh", "zsh", "bash", "fish", "dash", "ksh"}
+
+// knownShell is shell when it's one of knownShells, else zsh.
+func knownShell(shell string) string {
+	if !slices.Contains(knownShells, filepath.Base(shell)) {
+		return "/bin/zsh"
+	}
+	return shell
+}
 
 // execLogin replaces the process with the login shell, which replaces
 // itself with the daemon (the pid stays, and so does the helper app it
@@ -42,9 +51,7 @@ func execLogin() error {
 // paths go through the environment: no quoting, and the line reads the
 // same in each known shell; another shell gets zsh.
 func loginCommand(shell, bin, log string, env []string) ([]string, []string) {
-	if !slices.Contains(knownShells, filepath.Base(shell)) {
-		shell = "/bin/zsh"
-	}
+	shell = knownShell(shell)
 	env = append(slices.Clone(env), "NUSHID_BIN="+bin, "NUSHID_LOG="+log)
 	return []string{shell, "-l", "-c", `exec "$NUSHID_BIN" >>"$NUSHID_LOG" 2>&1`}, env
 }

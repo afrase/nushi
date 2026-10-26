@@ -71,7 +71,7 @@ func (s *Service) SetUp(ctx context.Context, name string) error {
 	if err != nil {
 		return err
 	}
-	if lookPath("npm", nil) == "" {
+	if s.lookPath("npm", nil) == "" {
 		return errors.New("setting up needs npm (Node), and there's none on PATH")
 	}
 	s.installing.Lock()
