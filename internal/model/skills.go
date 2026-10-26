@@ -13,6 +13,14 @@ type Skills struct {
 	// one Nushi changes.
 	BuiltInOff   bool
 	BuiltInSetIn string
+	// NoSkills says why the agent has no skills to show ("" when it has).
+	NoSkills string
+	// NoSwitch says why the agent's skills have no switch ("" when they
+	// have one).
+	NoSwitch string
+	// ReadsShared says the agent reads the project's .agents/skills (or
+	// will once the folder is trusted).
+	ReadsShared bool
 }
 
 // Skill is one skill, as its files give it.
@@ -23,7 +31,9 @@ type Skill struct {
 	// Description is its front matter's (else its first line): text of
 	// whoever wrote the skill, a third party's for a plugin's.
 	Description string
-	// Source is "user", "project" or "plugin"; Plugin is a plugin's id.
+	// Source is "user", "project", "plugin", "system" (the agent's own,
+	// installed with it) or "shared" (.agents/skills, which several agents
+	// read); Plugin is a plugin's id.
 	Source, Plugin string
 	// Path is the skill's folder (SKILL.md is in it).
 	Path string
@@ -34,6 +44,29 @@ type Skill struct {
 	// Tokens is about what listing the skill costs every session's
 	// context.
 	Tokens int
+	// Everywhere says a shared skill is in your own shared folder
+	// (~/.agents/skills), not the project's.
+	Everywhere bool
+	// Linked is where Path points when the skill's folder is a symlink,
+	// as the link says.
+	Linked string
+	// Agents are the agents that read a shared skill's folder, each with
+	// the skill's state for it.
+	Agents []SkillAgent
+}
+
+// SkillAgent is a shared skill as one agent has it.
+type SkillAgent struct {
+	// Agent is the agent's name ("codex").
+	Agent string
+	// State is "on", "off", or "untrusted": the agent loads it once the
+	// folder is trusted. SetIn is as Skill's.
+	State, SetIn string
+	// Via is the agent's own skill folder that is a link to it (Claude's
+	// .claude/skills/<name>), when that's how the agent loads it.
+	Via string
+	// NoSwitch says why the agent has no switch for it ("" when it has).
+	NoSwitch string
 }
 
 // Plugin is one installed plugin, with what it brings.
