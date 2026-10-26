@@ -19,8 +19,9 @@ final Uint8List _shot = base64.decode(
   'EABOjFHhjA0K5ShWj9AAAAAElFTkSuQmCC',
 );
 
-/// Three exchanges: text, a list, inline code, tool rows, an image in a
-/// message; and a message waiting in the queue.
+/// Three exchanges: text, a list, inline code, tool rows (one failed), a
+/// subagent, an image in a message, a message passed to the subagent; and
+/// a message waiting in the queue.
 final _items = [
   Item(
     id: 'u1',
@@ -63,6 +64,23 @@ final _items = [
     text: 'yes, and add a test for it',
   ),
   Item(
+    id: 'sa',
+    kind: ItemKind.ITEM_KIND_TOOL_CALL,
+    agent: 'Explore',
+    agentId: 'ab59',
+    title: 'Find the session tests',
+    status: 'completed',
+    subagent: Subagent(state: 'done'),
+  ),
+  Item(
+    id: 'u4',
+    kind: ItemKind.ITEM_KIND_USER_MESSAGE,
+    text: 'look at the cookie tests too',
+    relayTo: 'Explore',
+    relayCall: 'sa',
+    relayState: 'relayed',
+  ),
+  Item(
     id: 'e1',
     kind: ItemKind.ITEM_KIND_TOOL_CALL,
     toolKind: 'edit',
@@ -97,6 +115,13 @@ final _items = [
     text: 'thanks. what about the logout path?',
   ),
   Item(
+    id: 'f1',
+    kind: ItemKind.ITEM_KIND_TOOL_CALL,
+    toolKind: 'execute',
+    title: 'grep -rn Logout web/',
+    status: 'failed',
+  ),
+  Item(
     id: 'a3',
     kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
     text: 'Logout clears the cookie itself, so it can’t loop.',
@@ -112,7 +137,7 @@ void main() {
     testWidgets('the transcript as chapters ($name)', (tester) async {
       tester.view
         ..devicePixelRatio = 1
-        ..physicalSize = const Size(1000, 860);
+        ..physicalSize = const Size(1000, 1000);
       tester.platformDispatcher.platformBrightnessTestValue = brightness;
       addTearDown(tester.view.reset);
       addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);

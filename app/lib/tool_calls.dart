@@ -108,9 +108,10 @@ String groupLabel(List<Item> calls) {
   return label[0].toUpperCase() + label.substring(1);
 }
 
-/// A card with a one-line header that opens to show [body]; outlined in
-/// red when [failed]. Given [ids] (its call's, or its group's and its
-/// first call's), it opens as it was left, rebuilt or not.
+/// A tool call's card: a one-line header in the tool rows' tint that
+/// opens to show [body]; outlined in red when [failed]. Given [ids] (its
+/// call's, or its group's and its first call's), it opens as it was left,
+/// rebuilt or not.
 class Collapsible extends StatefulWidget {
   const new({
     required this.header,
@@ -148,12 +149,12 @@ class _CollapsibleState extends State<Collapsible> {
     final t = NushiTheme.of(context).t;
     final body = widget.body;
     return framed(
-      border: widget.failed ? t.crashed : t.borderSubtle,
+      border: widget.failed ? t.crashed : t.toolBorder,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ColoredBox(
-            color: widget.failed ? t.crashedSoft : t.raised,
+            color: widget.failed ? t.crashedSoft : t.toolTint,
             child: Tap(
               onTap: body == null ? null : _toggle,
               radius: 0,
@@ -247,7 +248,7 @@ class ToolCallView extends StatelessWidget {
             Icon(
               kindOf(it).icon,
               size: 13,
-              color: failed ? t.crashed : t.textSecondary,
+              color: failed ? t.crashed : t.toolAccent,
             ),
             const SizedBox(width: 6),
             Expanded(
@@ -340,7 +341,7 @@ class ToolGroupView extends StatelessWidget {
         failed: false, // its failed calls stand out inside, and in the count
         header: Row(
           children: [
-            Icon(Icons.layers_outlined, size: 13, color: t.textSecondary),
+            Icon(Icons.layers_outlined, size: 13, color: t.toolAccent),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
