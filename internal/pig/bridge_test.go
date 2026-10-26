@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -355,6 +356,12 @@ func TestSessions(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(store.Sessions, string(s.SessionID)+".jsonl")); !os.IsNotExist(err) {
 		t.Errorf("deleted session's file: %v", err)
+	}
+	// A session PiG doesn't have (any longer) is ACP's "Resource not found" (the chat's
+	// session is gone), unlike one in another folder.
+	var e *acp.Error
+	if _, err := c2.LoadSession(ctx, &acp.LoadSessionRequest{SessionID: "01a171d2-0000-7000-8000-00000000ffff", Cwd: cwd}); !errors.As(err, &e) || e.Code != acp.ErrorCodeResourceNotFound {
+		t.Errorf("loading a deleted session: %v", err)
 	}
 }
 

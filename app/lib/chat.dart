@@ -61,6 +61,7 @@ class ChatState extends ChangeNotifier {
   bool canAskContext = false; // the agent can say what fills its context
   bool asleep = false; // no agent runs for it: a message wakes it
   bool reopenFailed = false; // no agent runs: its reopen failed (a notice)
+  bool sessionGone = false; // and its agent no longer has its session
   bool canSleep = false; // its agent runs and can reopen the session
   DateTime? started; // when the running turn started
   bool stopping = false; // the app asked the turn to stop
@@ -162,6 +163,7 @@ class ChatState extends ChangeNotifier {
     canAskContext = s.canAskContext;
     asleep = s.asleep;
     reopenFailed = s.reopenFailed;
+    sessionGone = s.sessionGone;
     canSleep = s.canSleep;
     started = s.started == 0
         ? null
@@ -193,6 +195,7 @@ class ChatState extends ChangeNotifier {
           EventsResponse_Kind.removed ||
           EventsResponse_Kind.terminals ||
           EventsResponse_Kind.remote ||
+          EventsResponse_Kind.removedChats ||
           EventsResponse_Kind.notSet:
         return; // the daemon keeps a chat's title and folder
     }

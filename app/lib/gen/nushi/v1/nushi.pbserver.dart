@@ -71,6 +71,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.PlanDeleteChatRequest request);
   $async.Future<$0.DeleteChatResponse> deleteChat(
       $pb.ServerContext ctx, $0.DeleteChatRequest request);
+  $async.Future<$0.DismissRemovedChatsResponse> dismissRemovedChats(
+      $pb.ServerContext ctx, $0.DismissRemovedChatsRequest request);
   $async.Future<$0.AnswerPermissionResponse> answerPermission(
       $pb.ServerContext ctx, $0.AnswerPermissionRequest request);
   $async.Future<$0.AnswerQuestionResponse> answerQuestion(
@@ -260,6 +262,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.PlanDeleteChatRequest();
       case 'DeleteChat':
         return $0.DeleteChatRequest();
+      case 'DismissRemovedChats':
+        return $0.DismissRemovedChatsRequest();
       case 'AnswerPermission':
         return $0.AnswerPermissionRequest();
       case 'AnswerQuestion':
@@ -454,6 +458,9 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return planDeleteChat(ctx, request as $0.PlanDeleteChatRequest);
       case 'DeleteChat':
         return deleteChat(ctx, request as $0.DeleteChatRequest);
+      case 'DismissRemovedChats':
+        return dismissRemovedChats(
+            ctx, request as $0.DismissRemovedChatsRequest);
       case 'AnswerPermission':
         return answerPermission(ctx, request as $0.AnswerPermissionRequest);
       case 'AnswerQuestion':

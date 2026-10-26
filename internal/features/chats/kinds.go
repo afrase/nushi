@@ -44,6 +44,19 @@ type Kind struct {
 	// Ready says, quickly, why the agent can't start now (it isn't
 	// installed or set up); nil when it can. nil: it always can.
 	Ready func() error
+	// Gone says a session/load error means the agent no longer has the
+	// session (it deleted it). nil: never said.
+	Gone func(error) bool
+	// HistoryGone says, from the agent's own files alone, that it no
+	// longer has session sid of folder, for certain: false whenever that
+	// can't be told (its files for the folder missing or unreadable). nil:
+	// its files aren't read; a chat's sessions are then found gone only by
+	// reopening them (Gone).
+	HistoryGone func(sid, folder string) bool
+	// Expires says what deletes the agent's sessions on its own, such as
+	// "Claude Code deletes sessions after 30 days by default"; "" if
+	// nothing does.
+	Expires string
 }
 
 // kind is a Kind the service runs.

@@ -334,6 +334,7 @@ type memSessions struct {
 	saved     []model.Session
 	stored    []model.Session // what Sessions returns
 	deleteErr error
+	deleted   []string
 }
 
 func (m *memSessions) SaveSession(s model.Session) error {
@@ -343,9 +344,21 @@ func (m *memSessions) SaveSession(s model.Session) error {
 	return nil
 }
 
-func (m *memSessions) Sessions() ([]model.Session, error) { return m.stored, nil }
+func (m *memSessions) Sessions() ([]model.Session, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return slices.Clone(m.stored), nil
+}
 
-func (m *memSessions) DeleteSession(string) error { return m.deleteErr }
+func (m *memSessions) DeleteSession(id string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.deleteErr == nil {
+		m.deleted = append(m.deleted, id)
+		m.stored = slices.DeleteFunc(m.stored, func(s model.Session) bool { return s.ID == id })
+	}
+	return m.deleteErr
+}
 
 type memModes map[string]string
 

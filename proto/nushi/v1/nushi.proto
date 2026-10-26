@@ -90,6 +90,8 @@ service NushiService {
   // chat's sessions (ACP session/delete, when it can), the chat's scratch
   // folder goes, and Nushi's record of it.
   rpc DeleteChat(DeleteChatRequest) returns (DeleteChatResponse);
+  // Takes chats off ListChatsResponse.removed (the app has said so).
+  rpc DismissRemovedChats(DismissRemovedChatsRequest) returns (DismissRemovedChatsResponse);
   // Answers a pending permission prompt with one of its options.
   rpc AnswerPermission(AnswerPermissionRequest) returns (AnswerPermissionResponse);
   // Answers a pending question, or declines it.
@@ -282,7 +284,31 @@ message ListChatsRequest {}
 
 message ListChatsResponse {
   repeated Chat chats = 1;
+  // Chats the daemon removed since it started because their agent no
+  // longer has their sessions (Claude Code deletes old ones), until
+  // DismissRemovedChats; oldest first.
+  repeated RemovedChat removed = 2;
 }
+
+// A chat the daemon removed, its agent having deleted its session: what
+// Nushi kept of it. Its worktree and branch, if any, stay.
+message RemovedChat {
+  string id = 1;
+  string agent = 2;
+  string title = 3;
+  string folder = 4;
+  int64 removed_unix_ms = 5;
+}
+
+message RemovedChats {
+  repeated RemovedChat chats = 1;
+}
+
+message DismissRemovedChatsRequest {
+  repeated string ids = 1;
+}
+
+message DismissRemovedChatsResponse {}
 
 // What Nushi keeps of a chat; the agent keeps the rest.
 message Chat {
@@ -1043,6 +1069,9 @@ message EventsResponse {
     string dropped = 13;
     // Remote access changed (chat_id is empty).
     Remote remote = 14;
+    // The chats removed because their agent no longer has their sessions,
+    // all of them (ListChatsResponse.removed); chat_id is empty.
+    RemovedChats removed_chats = 15;
   }
 }
 
@@ -1096,7 +1125,9 @@ enum ItemKind {
   // "cancelled", "refusal", "max_tokens", "max_turn_requests" or "error",
   // and text says it in words. A reopen that failed has one notice, which
   // goes once the chat runs again: "not_ready" (its agent isn't set up or
-  // installed: Settings › Agents), "folder_gone" (MoveChat), or
+  // installed: Settings › Agents), "folder_gone" (MoveChat),
+  // "session_gone" (its agent no longer has the session, and the chat is
+  // kept only for its worktree's or scratch folder's work: DeleteChat), or
   // "reopen_failed" (ReopenChat tries again). "own_turn" marks where the
   // agent starts working on its own, outside a turn of the user's (after a
   // background task ended).
@@ -1304,6 +1335,10 @@ message ChatStatus {
   // says why); it isn't asleep. ReopenChat tries again; an agent that
   // becomes ready clears it where it wasn't (the next ReopenChat reopens).
   bool reopen_failed = 12;
+  // Of a chat whose reopen failed: its agent no longer has its session
+  // (it deleted it). The chat stays only for its worktree's or scratch
+  // folder's work; DeleteChat is what's left.
+  bool session_gone = 13;
 }
 
 // A shell the user runs beside a chat, in the daemon.

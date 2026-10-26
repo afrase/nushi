@@ -298,6 +298,9 @@ type Event struct {
 	Terminals *[]Terminal
 	// Remote, when not nil, is remote access as it stands; ChatID is "".
 	Remote *Remote
+	// RemovedChats, when not nil, are all the chats removed because their
+	// agent no longer has their sessions; ChatID is "".
+	RemovedChats *[]RemovedChat
 }
 
 // Terminal is a shell the user runs beside a chat, in the daemon.
@@ -393,8 +396,19 @@ type Status struct {
 	// ReopenFailed says no agent runs for the chat because its last reopen
 	// failed (a notice says why); it isn't Asleep then.
 	ReopenFailed bool
+	// SessionGone says, of a chat whose reopen failed, that its agent no
+	// longer has its session: the chat stays only for its worktree's or
+	// scratch folder's work, and Delete is what's left.
+	SessionGone bool
 	// CanSleep says Sleep can stop its agent: the agent reopens sessions.
 	CanSleep bool
+}
+
+// RemovedChat is a chat Nushi removed because its agent no longer has its
+// session (Claude Code deletes old ones): what Nushi kept of it.
+type RemovedChat struct {
+	ID, Agent, Title, Folder string
+	At                       time.Time
 }
 
 // FileChange is one file's uncommitted change: its text at HEAD and now.

@@ -10,6 +10,7 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -104,6 +105,32 @@ func paths(projects, id, from, to string) (src, dst string, err error) {
 func Has(projects, id, folder string) bool {
 	fi, err := os.Stat(filepath.Join(projects, dirName(folder), id+".jsonl"))
 	return err == nil && fi.Size() > 0
+}
+
+// Gone reports that Claude no longer keeps session id's transcript in
+// folder's history, for certain: the folder's history folder is there and
+// can be read, and the transcript isn't in it (Claude Code deletes those
+// older than cleanupPeriodDays when it starts). A history folder that's
+// missing or can't be read says nothing: another CLAUDE_CONFIG_DIR, or a
+// folder whose name Claude spells otherwise (see dirName).
+func Gone(projects, id, folder string) bool {
+	if _, _, err := paths(projects, id, folder, folder); err != nil {
+		return false
+	}
+	dir := filepath.Join(projects, dirName(folder))
+	f, err := os.Open(dir)
+	if err != nil {
+		return false
+	}
+	defer f.Close() //nolint:errcheck // read-only
+	if fi, err := f.Stat(); err != nil || !fi.IsDir() {
+		return false
+	}
+	if _, err := f.Readdirnames(1); err != nil && !errors.Is(err, io.EOF) {
+		return false
+	}
+	_, err = os.Lstat(filepath.Join(dir, id+".jsonl"))
+	return errors.Is(err, fs.ErrNotExist)
 }
 
 // dirName is the name Claude gives a folder's history: the folder's real

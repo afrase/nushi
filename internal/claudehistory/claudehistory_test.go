@@ -75,3 +75,35 @@ func TestCopyKeepsTheOriginal(t *testing.T) {
 		t.Error("a session id with a path in it was taken")
 	}
 }
+
+// Gone is true only when the folder's history folder can be read and the
+// transcript isn't in it.
+func TestGone(t *testing.T) {
+	projects, folder := t.TempDir(), t.TempDir()
+	if Gone(projects, "s1", folder) {
+		t.Error("gone with no history folder")
+	}
+	dir := filepath.Join(projects, dirName(folder))
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if !Gone(projects, "s1", folder) {
+		t.Error("not gone from an empty history folder")
+	}
+	if err := os.WriteFile(filepath.Join(dir, "s1.jsonl"), []byte("{}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if Gone(projects, "s1", folder) || !Gone(projects, "s2", folder) {
+		t.Error("s1 is there, s2 isn't")
+	}
+	if Gone(projects, "../s2", folder) || Gone(projects, "", folder) {
+		t.Error("gone for a bad id")
+	}
+	if err := os.Chmod(dir, 0); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chmod(dir, 0o700) //nolint:errcheck // for the cleanup
+	if Gone(projects, "s2", folder) {
+		t.Error("gone from a history folder that can't be read")
+	}
+}

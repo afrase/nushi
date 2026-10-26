@@ -78,7 +78,8 @@ func (d Dirs) find(id, cwd string) (string, error) {
 		}
 		return s.file, nil
 	}
-	return "", fmt.Errorf("PiG has no session %s", id)
+	// ACP's "Resource not found": the chat's session is gone (chats.NotFound).
+	return "", &acp.Error{Code: acp.ErrorCodeResourceNotFound, Message: "PiG has no session " + id}
 }
 
 // remove deletes the session id's file as PiG's /resume does: to the
