@@ -137,7 +137,7 @@ func TestJobLog(t *testing.T) {
 		w.WriteHeader(http.StatusFound)
 	})
 	f.route("GET /blob/log", func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(strings.Repeat("2026-10-26T04:15:17.1234567Z noise\n", 20000) +
+		_, _ = w.Write([]byte("\ufeff" + strings.Repeat("2026-10-26T04:15:17.1234567Z noise\n", 20000) +
 			"2026-10-26T04:15:18.0000000Z \x1b[36;1mThe branch has a FAIL file:\x1b[0m\n" +
 			"2026-10-26T04:15:18.0000000Z ##[error]Process completed with exit code 1.\n"))
 	})
@@ -149,6 +149,12 @@ func TestJobLog(t *testing.T) {
 	if !strings.HasSuffix(tail, "noise\nThe branch has a FAIL file:\n##[error]Process completed with exit code 1.") || len(tail) > 200 ||
 		!strings.HasPrefix(tail, "noise") {
 		t.Fatalf("%q", tail)
+	}
+}
+
+func TestTailOfAShortLog(t *testing.T) {
+	if got := Tail("\ufeff2026-10-26T04:25:53.6105613Z Current runner version\n2026-10-26T04:25:54.0Z ##[error]x", 100); got != "Current runner version\n##[error]x" {
+		t.Fatalf("%q", got)
 	}
 }
 
@@ -185,5 +191,38 @@ func TestUnsafeURLs(t *testing.T) {
 	}
 	if p.URL != "" || p.Conversation[0].URL != "" || p.Runs[0].URL != "" || p.Runs[1].URL != "" || p.Runs[2].URL != "https://ci.example/1" {
 		t.Fatalf("%q %q %+v", p.URL, p.Conversation[0].URL, p.Runs)
+	}
+}
+
+// TestEveryTextIsAsGitHubShowsIt: every Markdown field of a pull request
+// (its body, a comment, a review, a thread's comment, a check's summary)
+// comes out as GitHub's page shows it: a hidden comment in each is gone.
+func TestEveryTextIsAsGitHubShowsIt(t *testing.T) {
+	f := newFake(t)
+	const h = "shown <!-- HIDDEN -->"
+	f.route("graphql PullRequest", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"data":{"repository":{"pullRequest":{"id":"PR_1","number":1,"body":"` + h + `",` +
+			`"comments":{"nodes":[{"id":"C1","body":"` + h + `"}]},` +
+			`"reviews":{"nodes":[{"id":"R1","state":"COMMENTED","body":"` + h + `"}]},` +
+			`"threads":{"nodes":[{"id":"T1","path":"a","comments":{"nodes":[{"id":"C2","body":"` + h + `"}]}}]},` +
+			`"last":{"nodes":[{"commit":{"statusCheckRollup":{"contexts":{"nodes":[` +
+			`{"__typename":"CheckRun","name":"a","status":"COMPLETED","conclusion":"FAILURE","summary":"` + h + `"}]}}}}]}}}}}`))
+	})
+	p, err := f.client().Pull(t.Context(), repo, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	texts := []string{p.Body, p.Conversation[0].Body, p.Conversation[1].Body, p.Threads[0].Comments[0].Body, p.Runs[0].Summary}
+	for _, x := range texts {
+		if x != "shown" {
+			t.Errorf("%q", x)
+		}
+	}
+	f.route("graphql Issue", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"data":{"repository":{"issue":{"id":"I_1","number":2,"body":"` + h + `","comments":{"nodes":[{"id":"C3","body":"` + h + `"}]}}}}}`))
+	})
+	is, err := f.client().Issue(t.Context(), repo, 2)
+	if err != nil || is.Body != "shown" || is.Conversation[0].Body != "shown" {
+		t.Fatalf("%q %+v %v", is.Body, is.Conversation, err)
 	}
 }

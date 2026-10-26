@@ -522,3 +522,24 @@ func outside(t *testing.T, msg string, github ...string) {
 		}
 	}
 }
+
+// TestOnlyAskedWrites: reading everything there is (the inbox, states, a
+// pull request, an issue, files, a log, messages for an agent, a
+// checkout) writes nothing to GitHub; only the user's writes do.
+func TestOnlyAskedWrites(t *testing.T) {
+	w := newWorld(t)
+	ctx := t.Context()
+	ref := model.GitHubRef{Host: "github.com", Repo: "afrase/app", Number: 1}
+	_, _ = w.s.Inbox(ctx, "github.com", nil, true)
+	w.s.States(ctx, []model.ChatGitHub{{Host: "github.com", ID: "PR_1"}}, true)
+	_, _ = w.s.Pull(ctx, ref, true)
+	_, _ = w.s.Issue(ctx, ref, true)
+	_, _ = w.s.Files(ctx, ref, strings.Repeat("a", 40), strings.Repeat("b", 40))
+	_, _ = w.s.JobTail(ctx, ref, 7)
+	_, _ = w.s.FixChecks(ctx, ref)
+	_, _ = w.s.AddressComments(ctx, ref, nil)
+	_, _ = w.s.CheckOut(ctx, "app", ref)
+	if c := w.clients["gho_gh"]; len(c.written) != 0 {
+		t.Fatalf("wrote %v", c.written)
+	}
+}

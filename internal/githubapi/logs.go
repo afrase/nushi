@@ -87,6 +87,7 @@ func Tail(log string, size int) string {
 	if cut {
 		log = log[len(log)-size:]
 	}
+	log = strings.TrimPrefix(log, "\ufeff") // GitHub's logs start with a byte order mark
 	lines := strings.Split(strings.TrimRight(strings.ReplaceAll(log, "\r\n", "\n"), "\n"), "\n")
 	if cut && len(lines) > 1 {
 		lines = lines[1:]
