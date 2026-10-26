@@ -14,7 +14,7 @@ void main() {
   _goldens();
 
   testWidgets('the title row: the open hand, and the grip while hovered, '
-      'in a collapsed card in its summary\'s place', (tester) async {
+      "in a collapsed card in its summary's place", (tester) async {
     collapsedCards.value = {'Context'};
     addTearDown(() => collapsedCards.value = {});
     await tester.pumpWidget(_cards(Tokens.dark));
