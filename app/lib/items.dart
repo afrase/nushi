@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/cards.dart';
 import 'package:nushi/chat.dart';
-import 'package:nushi/chat_menu.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/findings.dart';
 import 'package:nushi/findings_card.dart';
@@ -10,6 +9,7 @@ import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/markdown.dart';
+import 'package:nushi/marks.dart';
 import 'package:nushi/question_card.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/rewind.dart';
@@ -93,6 +93,9 @@ class ItemView extends StatelessWidget {
         return ThoughtView(item, live: live);
       case ItemKind.ITEM_KIND_PLAN:
         return PlanView(item);
+      case ItemKind.ITEM_KIND_NOTICE
+          when item.status == 'compacted' || item.status == 'history_differs':
+        return HistoryMark(item, agent: chat.agentName);
       case ItemKind.ITEM_KIND_NOTICE:
         final (icon, color) = switch (item.status) {
           'cancelled' => (Icons.stop_circle_outlined, t.textMuted),
@@ -118,10 +121,7 @@ class ItemView extends StatelessWidget {
             () => moveChat(context, daemon, chat, gone: true),
           ),
           'reopen_failed' => ('Try again', () => daemon.reopen(chat)),
-          'session_gone' => (
-            'Delete…',
-            () => showDeleteChat(context, chat, daemon),
-          ),
+          // A session gone: the bar in the composer's place has Delete….
           _ => null,
         };
         return Row(

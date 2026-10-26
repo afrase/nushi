@@ -10,6 +10,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/details_panel.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart';
+import 'package:nushi/new_chat.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/shells.dart';
@@ -108,10 +109,10 @@ class _ChatViewState extends State<ChatView> {
                   child: Transcript(
                     chat: chat,
                     daemon: widget.daemon,
-                    onReply: chat.archived
+                    onReply: chat.archived || chat.sessionGone
                         ? null
                         : (r) => replies.value = [...replies.value, r],
-                    onSide: chat.archived ? null : _ask,
+                    onSide: chat.archived || chat.sessionGone ? null : _ask,
                   ),
                 ),
                 if (chat.busy || _forking)
@@ -123,6 +124,8 @@ class _ChatViewState extends State<ChatView> {
                   _McpChanged(chat, widget.daemon),
                 if (chat.archived)
                   _Archived(chat, widget.daemon)
+                else if (chat.sessionGone)
+                  _Expired(chat, widget.daemon)
                 else
                   Composer(chat: chat, daemon: widget.daemon, folder: true),
               ],
@@ -294,6 +297,54 @@ class _McpChanged extends StatelessWidget {
                       }
                     },
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// In place of the composer for a chat whose session its agent deleted
+/// (its notice says so): it is read-only, its transcript Nushi's copy, if
+/// it has one (ADR 0047). A new chat can start where it was.
+class _Expired extends StatelessWidget {
+  const new(this.chat, this.daemon);
+
+  final ChatState chat;
+  final Daemon daemon;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    return Container(
+      decoration: BoxDecoration(
+        color: t.raised,
+        border: Border(top: BorderSide(color: t.borderSubtle)),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
+      child: Row(
+        spacing: 8,
+        children: [
+          Icon(Icons.history_toggle_off, size: 15, color: t.textMuted),
+          Expanded(
+            child: Text(
+              chat.items.any((it) => it.kind != ItemKind.ITEM_KIND_NOTICE)
+                  ? 'Read-only: Nushi’s copy of the transcript.'
+                  : 'Read-only.',
+              style: theme.ui(t.textSecondary),
+            ),
+          ),
+          Button(
+            label: 'Delete…',
+            kind: ButtonKind.ghost,
+            onPressed: () => showDeleteChat(context, chat, daemon),
+          ),
+          Button(
+            label: 'Start a new chat here',
+            kind: ButtonKind.primary,
+            onPressed: () =>
+                newChat(context, daemon, chat.scratch ? '' : chat.folder),
           ),
         ],
       ),
