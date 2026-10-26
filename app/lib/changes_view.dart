@@ -40,13 +40,16 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   String? _first;
   String? _last; // the commits picked (hashes), a click and a shift-click
   String? _error;
-  bool _loading = false;
   String? _path; // the file shown
   String? _opening; // a file to show once the list is in (a terminal link)
-  // The last reload's and the last diff's numbers: older answers are
-  // dropped. Apart, so a commit picked during a reload doesn't drop it.
-  int _reloads = 0;
+  // The last reload's or pick's number: an older answer is dropped.
   int _asked = 0;
+  bool _reloading = false;
+  bool _repick = false; // commits were picked during a reload
+  // What's shown is of the scope or commits before the ones asked for, and
+  // has been for a moment: it's dimmed under a spinner.
+  bool _stale = false;
+  Timer? _slow;
 
   @override
   void initState() {
@@ -58,7 +61,23 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   @override
   void dispose() {
     chat.removeListener(_open);
+    _slow?.cancel();
     super.dispose();
+  }
+
+  /// A load was asked for: if it takes a while, what's shown dims (fast
+  /// ones don't flicker).
+  void _waiting() {
+    _slow?.cancel();
+    _slow = Timer(const Duration(milliseconds: 150), () {
+      if (mounted) setState(() => _stale = true);
+    });
+  }
+
+  /// The last load answered (or failed); call in setState.
+  void _settled() {
+    _slow?.cancel();
+    _stale = false;
   }
 
   /// Takes the file the chat asks to show (see ChatState.showFile).
@@ -75,42 +94,56 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   }
 
   /// The commits picked, as indices: newest, oldest.
-  (int, int)? get _picked {
-    final i = _commits.indexWhere((c) => c.hash == _first);
-    final j = _commits.indexWhere((c) => c.hash == (_last ?? _first));
-    return i < 0 || j < 0 ? null : (min(i, j), max(i, j));
-  }
+  (int, int)? get _picked => pickedCommits(_commits, _first, _last);
 
+  /// Reads the scope again, and its files; what's shown stays until both
+  /// are in, so it's never another scope's files under this one's name.
   @override
   Future<void> reload() async {
-    final asked = ++_reloads;
-    setState(() => _loading = true);
+    final asked = ++_asked;
+    setState(() => _reloading = true);
+    _repick = false;
+    _waiting();
     try {
       final span = await ChangeSpan.of(daemon, chat);
-      if (asked != _reloads) return; // another reload took over
+      if (!mounted || asked != _asked) return; // another load took over
       final status = span.status;
       if (!status.git) {
-        if (mounted) {
-          setState(
-            () => _error = status.gone
-                ? 'The folder is gone.'
-                : 'Not a git repository.',
-          );
-        }
+        setState(() {
+          _error = status.gone
+              ? 'The folder is gone.'
+              : 'Not a git repository.';
+        });
         return;
       }
-      _span = span;
-      _commits = span.commits;
-      if (_picked == null) {
-        _first = _commits.firstOrNull?.hash;
-        _last = null;
+      final commits = span.commits;
+      var (first, last) = (_first, _last);
+      if (pickedCommits(commits, first, last) == null) {
+        (first, last) = (commits.firstOrNull?.hash, null);
       }
-      await _diff();
-      if (asked == _reloads) _error = null;
+      final files = await span.files(daemon, chat.folder, first, last);
+      if (!mounted || asked != _asked) return;
+      setState(() {
+        _span = span;
+        _commits = commits;
+        if (!_repick) {
+          _first = first;
+          _last = last;
+        }
+        _show(files);
+        _error = null;
+        _reloading = false; // before _diff takes over
+      });
+      if (_repick) unawaited(tryOrShow(context, _diff));
     } on Object catch (e) {
-      if (mounted && asked == _reloads) setState(() => _error = '$e');
+      if (mounted && asked == _asked) setState(() => _error = '$e');
     } finally {
-      if (mounted && asked == _reloads) setState(() => _loading = false);
+      if (mounted && asked == _asked) {
+        setState(() {
+          _reloading = false;
+          _settled();
+        });
+      }
     }
   }
 
@@ -132,34 +165,32 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
     return marks;
   }
 
-  /// Reads the files of the scope (in Commits, of the commits picked).
+  /// Shows [files], keeping the file shown if it's among them; call in
+  /// setState.
+  void _show(List<FileChange> files) {
+    if (!chat.busy) forgetChanged(chat.id, _where, files);
+    _files = files;
+    if (_files.any((f) => f.path == _opening)) _path = _opening;
+    _opening = null;
+    if (!_files.any((f) => f.path == _path)) {
+      _path = changeRows(
+        _files,
+        flat: changesFlat.value,
+      ).where((r) => r.file != null).firstOrNull?.path;
+    }
+  }
+
+  /// Reads the files of the commits picked.
   Future<void> _diff() async {
     final asked = ++_asked;
-    final span = _span!;
-    final picked = _picked;
-    final req = span.diff(
-      chat.folder,
-      commit: picked == null ? null : _commits[picked.$1].hash,
-      since: picked == null || picked.$1 == picked.$2
-          ? null
-          : _commits[picked.$2].hash,
-    );
-    final files = span.scope == Scope.commits && picked == null
-        ? <FileChange>[]
-        : (await daemon.client.getDiff(req)).files;
-    if (!mounted || asked != _asked) return; // a newer one is coming
-    if (!chat.busy) forgetChanged(chat.id, _where, files);
-    setState(() {
-      _files = files;
-      if (_files.any((f) => f.path == _opening)) _path = _opening;
-      _opening = null;
-      if (!_files.any((f) => f.path == _path)) {
-        _path = changeRows(
-          _files,
-          flat: changesFlat.value,
-        ).where((r) => r.file != null).firstOrNull?.path;
-      }
-    });
+    _waiting();
+    try {
+      final files = await _span!.files(daemon, chat.folder, _first, _last);
+      if (!mounted || asked != _asked) return; // a newer one is coming
+      setState(() => _show(files));
+    } finally {
+      if (mounted && asked == _asked) setState(_settled);
+    }
   }
 
   void _pick(int i, {required bool extend}) {
@@ -171,7 +202,12 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
         _last = null;
       }
     });
-    unawaited(tryOrShow(context, _diff));
+    // A reload under way reads them again once its commits are in.
+    if (_reloading) {
+      _repick = true;
+    } else {
+      unawaited(tryOrShow(context, _diff));
+    }
   }
 
   @override
@@ -204,8 +240,11 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
       );
     }
     final file = _files.where((f) => f.path == _path).firstOrNull;
+    final notShown = file == null
+        ? ''
+        : 'Not shown: ${file.path} is ${file.skipped}.';
     final commits = _span?.scope == Scope.commits;
-    final empty = _loading
+    final empty = _reloading
         ? ''
         : commits && _commits.isEmpty
         ? 'No commits of its own yet'
@@ -217,79 +256,77 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
       children: [
         _toolbar(),
         Expanded(
-          child: LayoutBuilder(
-            builder: (context, box) => Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Resizable(
-                  name: 'files',
-                  initial: 240,
-                  min: 180,
-                  max: min(560, box.maxWidth - 360),
-                  child: ColoredBox(
-                    color: t.raised,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (commits && _commits.isNotEmpty)
-                          Container(
-                            height: min(
-                              _commits.length * CommitList.rowHeight + 8,
-                              box.maxHeight * 0.45,
-                            ),
-                            padding: const EdgeInsets.only(top: 4),
-                            decoration: BoxDecoration(
-                              border: Border(
-                                bottom: BorderSide(color: t.borderSubtle),
+          child: Dimmed(
+            on: _stale,
+            child: LayoutBuilder(
+              builder: (context, box) => Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Resizable(
+                    name: 'files',
+                    initial: 240,
+                    min: 180,
+                    max: min(560, box.maxWidth - 360),
+                    child: ColoredBox(
+                      color: t.raised,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (commits && _commits.isNotEmpty)
+                            Container(
+                              height: min(
+                                _commits.length * CommitList.rowHeight + 8,
+                                box.maxHeight * 0.45,
+                              ),
+                              padding: const EdgeInsets.only(top: 4),
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  bottom: BorderSide(color: t.borderSubtle),
+                                ),
+                              ),
+                              child: CommitList(
+                                commits: _commits,
+                                picked: _picked,
+                                onPick: _pick,
                               ),
                             ),
-                            child: CommitList(
-                              commits: _commits,
-                              picked: _picked,
-                              onPick: _pick,
+                          if (empty.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Text(empty, style: theme.ui(t.textMuted)),
                             ),
-                          ),
-                        if (empty.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.all(14),
-                            child: Text(empty, style: theme.ui(t.textMuted)),
-                          ),
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: ValueListenableBuilder(
-                              valueListenable: reviews,
-                              builder: (context, _, _) => FileList(
-                                files: _files,
-                                selected: _path,
-                                onSelect: (p) => setState(() => _path = p),
-                                marks: _marks(),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: ValueListenableBuilder(
+                                valueListenable: reviews,
+                                builder: (context, _, _) => FileList(
+                                  files: _files,
+                                  selected: _path,
+                                  onSelect: (p) => setState(() => _path = p),
+                                  marks: _marks(),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                Expanded(
-                  child: file != null && file.skipped.isEmpty
-                      ? DiffBox(
-                          file,
-                          key: ValueKey(file.path),
-                          fit: false,
-                          review: (chat: chat.id, where: _where),
-                        )
-                      : Center(
-                          child: Text(
-                            file == null
-                                ? ''
-                                : 'Not shown: ${file.path} is ${file.skipped}.',
-                            style: theme.ui(t.textMuted),
+                  Expanded(
+                    child: file != null && file.skipped.isEmpty
+                        ? DiffBox(
+                            file,
+                            key: ValueKey(file.path),
+                            fit: false,
+                            review: (chat: chat.id, where: _where),
+                          )
+                        : Center(
+                            child: Text(notShown, style: theme.ui(t.textMuted)),
                           ),
-                        ),
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -305,11 +342,13 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
     // Before anything loaded (it failed), every scope, to leave the one
     // that fails.
     final scopes = span?.scopes ?? Scope.values;
+    final asked = Scope.values.where((s) => s.name == chat.scope).firstOrNull;
+    // The scope shown, until another's load has taken a moment.
     final scope =
-        span?.scope ??
-        Scope.values.where((s) => s.name == chat.scope).firstOrNull ??
+        (_stale && scopes.contains(asked) ? asked : span?.scope) ??
+        asked ??
         Scope.uncommitted;
-    final files = _error == null ? _files : const <FileChange>[];
+    final files = _error == null && !_stale ? _files : const <FileChange>[];
     final n = files.length;
     return Container(
       height: 36,
@@ -325,6 +364,11 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
               value: scope,
               segments: [for (final s in scopes) (s, s.label)],
               onChanged: (s) => chat.scope = s.name,
+            ),
+          if (_stale)
+            const SizedBox.square(
+              dimension: 12,
+              child: CircularProgressIndicator(strokeWidth: 1.5),
             ),
           if (n > 0)
             Text(
@@ -365,7 +409,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
             Icons.refresh,
             tooltip: 'Reload',
             size: 15,
-            onTap: _loading ? null : reload,
+            onTap: _reloading ? null : reload,
           ),
         ],
       ),

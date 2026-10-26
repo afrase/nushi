@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/widgets.dart';
 
@@ -86,6 +87,27 @@ class ChangeSpan {
     return ChangeSpan(scope, base, status, commits.commits);
   }
 
+  /// The files of the scope; in Commits, of the commits picked ([first]
+  /// and [last] of [commits], as [pickedCommits] takes them), none if
+  /// none is.
+  Future<List<FileChange>> files(
+    Daemon daemon,
+    String folder,
+    String? first,
+    String? last,
+  ) async {
+    final picked = pickedCommits(commits, first, last);
+    if (scope == Scope.commits && picked == null) return [];
+    final req = diff(
+      folder,
+      commit: picked == null ? null : commits[picked.$1].hash,
+      since: picked == null || picked.$1 == picked.$2
+          ? null
+          : commits[picked.$2].hash,
+    );
+    return (await daemon.client.getDiff(req)).files;
+  }
+
   /// What GetDiff lists for the scope; in Commits, what the commits from
   /// [since] to [commit] changed.
   GetDiffRequest diff(String folder, {String? commit, String? since}) =>
@@ -98,6 +120,14 @@ class ChangeSpan {
           since: since,
         ),
       };
+}
+
+/// The commits picked, a click's ([a]) and a shift-click's ([b]), as
+/// indices into [commits]: newest, oldest; null if [a] isn't there.
+(int, int)? pickedCommits(List<Commit> commits, String? a, String? b) {
+  final i = commits.indexWhere((c) => c.hash == a);
+  final j = commits.indexWhere((c) => c.hash == (b ?? a));
+  return i < 0 || j < 0 ? null : (min(i, j), max(i, j));
 }
 
 /// Reloads (`reload`) a chat's changes when its turn ends, it moves, or its
