@@ -1,5 +1,29 @@
 # Notes
 
+## Summary of the transcript as chapters (after step 237)
+
+Steps 235–237, one commit each on `main`, pushed; `make check` passed before each push. No API change (the new notice's status is a string).
+
+- **Your messages as chapter headings** (step 235, the mockup's E without its dimming or labels): a user message is a band edge to edge across the transcript (no margins, no rounded box), its text 15 and semibold against the agent's 13.5 (bold inside it goes to 800 so it still shows), its images, quotes, inline code and code blocks fitted to the band, Rewind in its top right on hover. 28 px above a band and 18 after it, 12 between the agent's steps. No dimming anywhere. The subagent pane and the side question use the same transcript widget, so they look the same.
+- **Colors** (tokens in `app/lib/theme/tokens.dart`):
+
+  | Token | Dark | Light |
+  |---|---|---|
+  | `userBand` (fill) | #233049 | #E5EDFC (the light `accentSoft`) |
+  | `userBandBorder` (top and bottom, 1 px) | #34497A | #B8CCF4 |
+  | `userBandText` | #E8EEFB (11.4:1) | #142A5C (11.8:1) |
+  | `userBandMuted` (the relay marker, quotes) | #9DB8F5 (6.7:1) | #3A5594 (6.1:1) |
+  | `toolTint` / `toolBorder` / `toolAccent` | #1E2D2B / #2F4A47 / #3AA597 | #EAF6F4 / #BFE0DA / #0E8577 |
+  | `subagentTint` / `subagentBorder` / `subagentAccent` | #29243D / #4B3F70 / #D2BEFF | #F1ECFC / #D6C9F5 / #4E1FA8 |
+
+  Links (#7AA3F9 dark, #2A5CC8 light) are 5.3:1 and 5.2:1 on the band; text on the tool and subagent tints at least 5.3:1; the violet type 8.7:1 (light) and 8.9:1 (dark); the teal icons 4.1:1 (light) and 4.8:1 (dark). The accents differ in lightness from the band's blue, not only in hue (relative luminance, dark: teal 0.30, blue 0.48, violet 0.58; light: violet 0.05, blue 0.10, teal 0.18).
+- **Labels**: "You" and "Claude" are gone. Kept as markers: a message passed to a subagent ("→ Explore, through Claude · passed on", in the band, a click opens the subagent). Subagents keep their own line (the robot and its type). A side question is its own pane, already headed "Side question". A different agent replying can't happen (a chat has one agent; Move keeps it). No label said "background task" or "on its own" before (every agent message just said "Claude"), so step 237 adds one: Claude working on its own after a background task (a command's end or a subagent's report) opens with a small muted "On its own, after a background task" and a chapter's room around it; otherwise it would run into the chapter before.
+- **Tool rows and subagent lines** (step 236, asked mid-run): a teal tint with the tool's icon in teal; a violet tint with the robot and the subagent's type in violet (also in its pane's header); failed ones keep the red. Still one line each.
+- **Themable** (asked mid-run): every color the transcript uses is a named token (the band's, `agentText`, `inlineCode`, `codeBlock`, the tool and subagent ones, `selectionBar…`, `shadow`, `scrim`); no raw colors left in the transcript's widgets. markdown_view takes the inline code's color (`MarkdownStyle.inlineCode`). A theme picker is in Later ideas.
+- Goldens: `chapters_dark.png`, `chapters_light.png` (three exchanges with text, a list, inline code, tool rows and a failed one, a subagent, an image in a message, a relayed message, Claude on its own, and a queued message); `beside_*` updated.
+
+**Not tried by hand**: anything in the app window (no clicks or keys while you may be at the screen): the bands on a real screen and at other widths, Rewind's hover in the band, selecting across bands, the subagent pane's and side question's look. Goldens and widget tests cover them. The own-turn notice wasn't produced by a real Claude (a Go test drives it); it needs the installed daemon restarted, which I didn't do (it would stop your chats' agents): it comes with the next restart.
+
 ## Summary of the syntax colors and the file tree (after step 234)
 
 Steps 231–234, one commit each on `main`, pushed; `make check` passed before each push. No API change.
@@ -497,6 +521,13 @@ Milestone V is phase 1 of mobile: a relay, an end-to-end Noise channel, pairing 
 
 **Left behind by the testing**: nothing. The dev chats were deleted with Delete (Claude's and Ante's histories with them); the measuring harness's two Claude sessions and their project folders, its Ante session, eight Ante logs and `~/.ante/run/` were removed; `~/.ante` is as it was (file list and checksums). The dev data folder, the temp Codex and omp homes, the scratch folders and the harness were removed. The key is in no file under them, the scratchpad or the repository (grep, the key on stdin); the only hit elsewhere is the milestone S transcript above.
 
+## Demo (the transcript as chapters, steps 235–237)
+
+1. Open a chat with a few exchanges: each of your messages is a blue band across the transcript, bigger and semibold; Claude's replies run between them with no "Claude" above them.
+2. Tool rows are teal, subagent lines violet; a failed call is red.
+3. Ask Claude to run `sleep 20; echo done` in the background and end its turn: when the command ends, its answer starts under "On its own, after a background task" (after the installed daemon has restarted).
+4. Switch to the light theme: the same, in the light tokens.
+
 ## Demo (the background-subagent fix, steps 226–230)
 
 1. In a Claude chat: "Start a background general-purpose subagent that runs `sleep 90; date` and reports the date; don't wait for it." Claude answers in a few seconds; the status line and its timer go, the composer says its usual hint, the subagent's line runs on.
@@ -867,7 +898,7 @@ Hand-written, without tests or generated code (`make lines`). Go is split into t
 | 233. The Changes view's files are read through one `git cat-file --batch` (`blobs`) instead of a `git show` per file per side: on a throwaway clone of Hugo (2,613 files) with a branch 120 commits past its base (892 files, 9 MB of text), GetDiff for Branch took 5.2 s, now 0.24 s; Uncommitted (35 files) 0.23 s, now 0.06 s; the answers are the same, byte for byte once parsed. A path with a newline still goes through `git show` | 21679 | 0 | 20577 | 1929 | 1181 |
 | 234. Switching what the Changes view shows (a scope, a commit) keeps what's shown until the new scope and its files are both in, so another scope's files never show under its name; a load still going after 150 ms dims the tree and the diff (not clickable) and puts a spinner in the toolbar, whose scope then shows the one asked for and whose counts go; an answer overtaken by another switch is dropped, a commit picked during a reload is read after it. `changes_view.dart` is 418 lines (the loading state; `ChangeSpan.files`, `pickedCommits` and `Dimmed` moved out) | 21679 | 0 | 20670 | 1929 | 1181 |
 | 235. The transcript as chapters (the mockup's E): a user message is a band across the transcript, edge to edge, in a blue tint (`userBand`, `userBandBorder`, `userBandText`, `userBandMuted`), its text 15 and semibold (bold in it goes to 800); no "You" or agent label, only a relayed message's marker ("→ Explore, through Claude · passed on"); more room around a band (28 above, 18 after) than between the agent's steps (12). Rewind sits in the band's top right. Every color the transcript uses is a token (also the agent's text, inline code, code blocks, the selection bar, shadows, the image scrim); markdown_view takes an inline code color | 21679 | 0 | 20790 | 1938 | 1181 |
-| 236. Tool call rows and subagent lines stand out: a tool row (and a run of them) in a quiet teal tint with its icon in teal (`toolTint`, `toolBorder`, `toolAccent`), a subagent's line in a violet tint with the robot and its type in violet (`subagentTint`, `subagentBorder`, `subagentAccent`, also in its pane's header); failed ones keep the red. Text on each tint is at least 5:1 (the accents: icons 3.8:1 or more, the violet type 8:1); the three accents differ in lightness, not only hue | 21679 | 0 | 20800 | 1938 | 1181 |
+| 236. Tool call rows and subagent lines stand out: a tool row (and a run of them) in a quiet teal tint with its icon in teal (`toolTint`, `toolBorder`, `toolAccent`), a subagent's line in a violet tint with the robot and its type in violet (`subagentTint`, `subagentBorder`, `subagentAccent`, also in its pane's header); failed ones keep the red. Text on each tint is at least 5:1 (the accents: icons 4.1:1 or more, the violet type 8.7:1); the three accents differ in lightness, not only hue | 21679 | 0 | 20800 | 1938 | 1181 |
 | 237. Claude working on its own (after a background task) opens a chapter of its own: the daemon adds a notice, `own_turn`, "On its own, after a background task", before the first message, thought or call of such a turn, once per turn, and only in a chat with a user message (a late update to an earlier call doesn't count); the transcript shows it small and muted, with a chapter's room around it. No label carried this before (every agent message said "Claude"), so without the labels it would have run into the chapter before. Kept by the daemon like the other notices; a replay after a daemon restart doesn't bring it back. No API change (a notice's status is a string) | 21689 | 0 | 20803 | 1938 | 1181 |
 
 Steps over the ~500-line tripwire (code and tests, without generated code): 189, 190, 191, 193, 194, 195, 196, 197, 198, 199 (milestone AE: see its summary), 177 (about 960 added and 1,890 removed, without tests: `acp/` and everything that used it go together), 153 (about 2,600 with its tests and the fake pig: PiG's whole bridge), 139 (753 with NOTES: installing, running, the local-registry test), 141 (587, the Agents page), 132 (830, open sessions and forks for four agents), 131 (544, the sessions step), 127 (504, listing), 98 (2,384 with its tests: Ante's whole bridge and its fake), 99 (901: two agents, two trust packages, the shared trust files), 71 (616, the subagent pane), 72 (652, background shells), 1 (533, the socket transport), 2 (1,502, the whole ACP client and its type generator), 5 (739, the question card), 6 (639, config options), 8 (537, the fake agent and the e2e test the step asked for), 10, 11 (1,249, the POC's look), 12, 18, 19, 29, 30, 45 (580, review comments), 47 (560, the queue), 52, 53, 54, 55 (880, terminals in the daemon), 56 (1,100, the terminal panel), 60 (720, trust). Step 33 removed more than it added.
