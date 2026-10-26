@@ -54,4 +54,33 @@ void main() {
     expect(find.text('☑'), findsOneWidget);
     expect(find.text('☐'), findsOneWidget);
   });
+
+  testWidgets('a selection shows through inline code', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: StreamingMarkdown(
+          'run `make check` now',
+          style: MarkdownStyle(
+            body: TextStyle(),
+            code: TextStyle(),
+            codeBackground: Colors.white,
+            border: Colors.grey,
+            muted: Colors.grey,
+            link: Colors.blue,
+            highlight: {},
+          ),
+          streaming: false,
+        ),
+      ),
+    );
+    TextStyle? code;
+    for (final t in tester.widgetList<RichText>(find.byType(RichText))) {
+      t.text.visitChildren((span) {
+        if (span is TextSpan && span.text == 'make check') code = span.style;
+        return true;
+      });
+    }
+    // Painted over the selection, an opaque background would hide it.
+    expect(code?.backgroundColor?.a, lessThan(0.2));
+  });
 }

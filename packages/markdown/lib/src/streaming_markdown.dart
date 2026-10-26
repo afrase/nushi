@@ -105,9 +105,12 @@ class StreamingMarkdown extends StatelessWidget {
         em: const TextStyle(fontStyle: FontStyle.italic),
         strong: const TextStyle(fontWeight: FontWeight.w600),
         del: const TextStyle(decoration: TextDecoration.lineThrough),
+        // Inline code's background is a tint, not [codeBackground]: a
+        // paragraph paints its selection under the text, and an opaque
+        // background would hide the selection on code.
         code: s.code.copyWith(
           fontSize: size * 0.92,
-          backgroundColor: s.codeBackground,
+          backgroundColor: (body.color ?? s.muted).withValues(alpha: 0.07),
         ),
         h1: heading.copyWith(fontSize: size * 1.45),
         h2: heading.copyWith(fontSize: size * 1.25),
