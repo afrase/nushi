@@ -69,7 +69,7 @@ class ChatState extends ChangeNotifier {
   final takeBack = ValueNotifier<QueuedMessage?>(null);
 
   /// The subagent or background shell (its call's id) whose pane shows
-  /// beside the chat, in place of the details panel (see SubagentPane,
+  /// beside the chat, left of the details panel (see SubagentPane,
   /// ShellPane).
   final pane = ValueNotifier<String?>(null);
 
