@@ -1,0 +1,421 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "id": "PR_kwDOVXdqNc8AAAABKrwJXQ",
+        "number": 1,
+        "title": "Add Sub and Neg",
+        "url": "https://github.com/afrase/nushi-gh-test/pull/1",
+        "state": "OPEN",
+        "isDraft": false,
+        "updatedAt": "2026-10-26T04:25:48Z",
+        "author": {
+          "login": "afrase"
+        },
+        "repository": {
+          "nameWithOwner": "afrase/nushi-gh-test"
+        },
+        "reviewDecision": null,
+        "totalCommentsCount": 6,
+        "commits": {
+          "nodes": [
+            {
+              "commit": {
+                "statusCheckRollup": {
+                  "state": "FAILURE"
+                }
+              }
+            }
+          ]
+        },
+        "reviewThreads": {
+          "nodes": [
+            {
+              "isResolved": false
+            },
+            {
+              "isResolved": false
+            },
+            {
+              "isResolved": false
+            },
+            {
+              "isResolved": false
+            }
+          ]
+        },
+        "body": "Adds `Sub` and `Neg`.\n\n<!-- A template comment that should not show. -->\n\n- [x] tests\n- [ ] docs\n\nThe `FAIL` file makes the **on-demand** check fail on purpose.",
+        "authorAssociation": "OWNER",
+        "baseRefName": "main",
+        "headRefName": "subtract",
+        "baseRefOid": "521c8d9a1db6c75193e4fd2daf7ddf4c5d61940d",
+        "headRefOid": "465b7a4b3bc29650bbef832800f4ad10db363aa7",
+        "isCrossRepository": false,
+        "headRepository": {
+          "nameWithOwner": "afrase/nushi-gh-test"
+        },
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "UNSTABLE",
+        "additions": 18,
+        "deletions": 0,
+        "changedFiles": 3,
+        "viewerCanUpdate": true,
+        "reviewRequests": {
+          "nodes": []
+        },
+        "latestReviews": {
+          "nodes": []
+        },
+        "comments": {
+          "nodes": [
+            {
+              "id": "IC_kwDOVXdqNc8AAAABffOb4A",
+              "url": "https://github.com/afrase/nushi-gh-test/pull/1#issuecomment-6408084448",
+              "author": {
+                "login": "afrase",
+                "__typename": "User"
+              },
+              "authorAssociation": "OWNER",
+              "body": "Thanks! The on-demand check fails because of the `FAIL` file.",
+              "createdAt": "2026-10-26T04:15:17Z"
+            }
+          ]
+        },
+        "reviews": {
+          "nodes": [
+            {
+              "id": "PRR_kwDOVXdqNc8AAAABUJtZbQ",
+              "url": "https://github.com/afrase/nushi-gh-test/pull/1#pullrequestreview-5647325549",
+              "author": {
+                "login": "afrase",
+                "__typename": "User"
+              },
+              "authorAssociation": "OWNER",
+              "body": "A first look.",
+              "state": "COMMENTED",
+              "submittedAt": "2026-10-26T04:15:07Z"
+            },
+            {
+              "id": "PRR_kwDOVXdqNc8AAAABUJxVdg",
+              "url": "https://github.com/afrase/nushi-gh-test/pull/1#pullrequestreview-5647390070",
+              "author": {
+                "login": "afrase",
+                "__typename": "User"
+              },
+              "authorAssociation": "OWNER",
+              "body": "",
+              "state": "COMMENTED",
+              "submittedAt": "2026-10-26T04:25:45Z"
+            }
+          ]
+        },
+        "pending": {
+          "nodes": []
+        },
+        "threads": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "endCursor": "Y3Vyc29yOnYyOpK0MjAyNi0xMC0yNlQwNDoyNTo0NVrOsCKF9Q=="
+          },
+          "nodes": [
+            {
+              "id": "PRRT_kwDOVXdqNc6wIg1g",
+              "path": "sub.go",
+              "line": 5,
+              "startLine": 5,
+              "originalLine": 5,
+              "originalStartLine": null,
+              "diffSide": "RIGHT",
+              "subjectType": "LINE",
+              "isOutdated": false,
+              "isResolved": false,
+              "viewerCanReply": true,
+              "viewerCanResolve": true,
+              "viewerCanUnresolve": false,
+              "comments": {
+                "nodes": [
+                  {
+                    "id": "PRRC_kwDOVXdqNc8AAAABBLQ2DA",
+                    "url": "https://github.com/afrase/nushi-gh-test/pull/1#discussion_r4373886476",
+                    "author": {
+                      "login": "afrase",
+                      "__typename": "User"
+                    },
+                    "authorAssociation": "OWNER",
+                    "body": "Should this check for overflow?",
+                    "createdAt": "2026-10-26T04:15:07Z"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "PRRT_kwDOVXdqNc6wIg1o",
+              "path": "sub.go",
+              "line": 9,
+              "startLine": 9,
+              "originalLine": 9,
+              "originalStartLine": null,
+              "diffSide": "RIGHT",
+              "subjectType": "LINE",
+              "isOutdated": false,
+              "isResolved": false,
+              "viewerCanReply": true,
+              "viewerCanResolve": true,
+              "viewerCanUnresolve": false,
+              "comments": {
+                "nodes": [
+                  {
+                    "id": "PRRC_kwDOVXdqNc8AAAABBLQ2Fg",
+                    "url": "https://github.com/afrase/nushi-gh-test/pull/1#discussion_r4373886486",
+                    "author": {
+                      "login": "afrase",
+                      "__typename": "User"
+                    },
+                    "authorAssociation": "OWNER",
+                    "body": "`Neg` could just be `-a`.",
+                    "createdAt": "2026-10-26T04:15:08Z"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "PRRT_kwDOVXdqNc6wIg1r",
+              "path": "add_test.go",
+              "line": 15,
+              "startLine": 11,
+              "originalLine": 15,
+              "originalStartLine": 11,
+              "diffSide": "RIGHT",
+              "subjectType": "LINE",
+              "isOutdated": false,
+              "isResolved": false,
+              "viewerCanReply": true,
+              "viewerCanResolve": true,
+              "viewerCanUnresolve": false,
+              "comments": {
+                "nodes": [
+                  {
+                    "id": "PRRC_kwDOVXdqNc8AAAABBLQ2Gg",
+                    "url": "https://github.com/afrase/nushi-gh-test/pull/1#discussion_r4373886490",
+                    "author": {
+                      "login": "afrase",
+                      "__typename": "User"
+                    },
+                    "authorAssociation": "OWNER",
+                    "body": "A table test would cover more cases.",
+                    "createdAt": "2026-10-26T04:15:08Z"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "PRRT_kwDOVXdqNc6wIoX1",
+              "path": "sub.go",
+              "line": null,
+              "startLine": null,
+              "originalLine": 10,
+              "originalStartLine": null,
+              "diffSide": "RIGHT",
+              "subjectType": "LINE",
+              "isOutdated": true,
+              "isResolved": false,
+              "viewerCanReply": true,
+              "viewerCanResolve": true,
+              "viewerCanUnresolve": false,
+              "comments": {
+                "nodes": [
+                  {
+                    "id": "PRRC_kwDOVXdqNc8AAAABBLTxAw",
+                    "url": "https://github.com/afrase/nushi-gh-test/pull/1#discussion_r4373934339",
+                    "author": {
+                      "login": "afrase",
+                      "__typename": "User"
+                    },
+                    "authorAssociation": "OWNER",
+                    "body": "Is `-a` safe for the smallest int?",
+                    "createdAt": "2026-10-26T04:25:45Z"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "last": {
+          "nodes": [
+            {
+              "commit": {
+                "statusCheckRollup": {
+                  "contexts": {
+                    "nodes": [
+                      {
+                        "__typename": "CheckRun",
+                        "databaseId": 121397628255,
+                        "name": "test",
+                        "status": "IN_PROGRESS",
+                        "conclusion": null,
+                        "detailsUrl": "https://github.com/afrase/nushi-gh-test/actions/runs/40269032226/job/121397628255",
+                        "title": null,
+                        "summary": null,
+                        "startedAt": "2026-10-26T04:25:53Z",
+                        "completedAt": null,
+                        "isRequired": false,
+                        "checkSuite": {
+                          "app": {
+                            "name": "GitHub Actions"
+                          },
+                          "workflowRun": {
+                            "workflow": {
+                              "name": "checks"
+                            }
+                          }
+                        },
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "databaseId": 121397621549,
+                        "name": "test",
+                        "status": "IN_PROGRESS",
+                        "conclusion": null,
+                        "detailsUrl": "https://github.com/afrase/nushi-gh-test/actions/runs/40269030252/job/121397621549",
+                        "title": null,
+                        "summary": null,
+                        "startedAt": "2026-10-26T04:25:51Z",
+                        "completedAt": null,
+                        "isRequired": false,
+                        "checkSuite": {
+                          "app": {
+                            "name": "GitHub Actions"
+                          },
+                          "workflowRun": {
+                            "workflow": {
+                              "name": "checks"
+                            }
+                          }
+                        },
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "databaseId": 121397621823,
+                        "name": "on-demand",
+                        "status": "COMPLETED",
+                        "conclusion": "FAILURE",
+                        "detailsUrl": "https://github.com/afrase/nushi-gh-test/actions/runs/40269030252/job/121397621823",
+                        "title": null,
+                        "summary": null,
+                        "startedAt": "2026-10-26T04:25:51Z",
+                        "completedAt": "2026-10-26T04:25:54Z",
+                        "isRequired": false,
+                        "checkSuite": {
+                          "app": {
+                            "name": "GitHub Actions"
+                          },
+                          "workflowRun": {
+                            "workflow": {
+                              "name": "checks"
+                            }
+                          }
+                        },
+                        "annotations": {
+                          "nodes": [
+                            {
+                              "path": ".github",
+                              "title": "",
+                              "message": "Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+                              "annotationLevel": "WARNING",
+                              "location": {
+                                "start": {
+                                  "line": 2
+                                },
+                                "end": {
+                                  "line": 2
+                                }
+                              }
+                            },
+                            {
+                              "path": ".github",
+                              "title": "",
+                              "message": "Process completed with exit code 1.",
+                              "annotationLevel": "FAILURE",
+                              "location": {
+                                "start": {
+                                  "line": 14
+                                },
+                                "end": {
+                                  "line": 14
+                                }
+                              }
+                            },
+                            {
+                              "path": "FAIL",
+                              "title": "",
+                              "message": "Remove FAIL to make this check pass",
+                              "annotationLevel": "FAILURE",
+                              "location": {
+                                "start": {
+                                  "line": 1
+                                },
+                                "end": {
+                                  "line": 1
+                                }
+                              }
+                            },
+                            {
+                              "path": ".github",
+                              "title": "",
+                              "message": "\"The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748\"",
+                              "annotationLevel": "NOTICE",
+                              "location": {
+                                "start": {
+                                  "line": 1
+                                },
+                                "end": {
+                                  "line": 1
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "databaseId": 121397628141,
+                        "name": "on-demand",
+                        "status": "IN_PROGRESS",
+                        "conclusion": null,
+                        "detailsUrl": "https://github.com/afrase/nushi-gh-test/actions/runs/40269032226/job/121397628141",
+                        "title": null,
+                        "summary": null,
+                        "startedAt": "2026-10-26T04:25:52Z",
+                        "completedAt": null,
+                        "isRequired": false,
+                        "checkSuite": {
+                          "app": {
+                            "name": "GitHub Actions"
+                          },
+                          "workflowRun": {
+                            "workflow": {
+                              "name": "checks"
+                            }
+                          }
+                        },
+                        "annotations": {
+                          "nodes": []
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "data": {
+    "nodes": [
+      {
+        "__typename": "PullRequest",
+        "id": "PR_kwDOVXdqNc8AAAABKrwJXQ",
+        "number": 1,
+        "title": "Add Sub and Neg",
+        "url": "https://github.com/afrase/nushi-gh-test/pull/1",
+        "state": "OPEN",
+        "isDraft": false,
+        "updatedAt": "2026-10-26T04:25:48Z",
+        "author": {
+          "login": "afrase"
+        },
+        "repository": {
+          "nameWithOwner": "afrase/nushi-gh-test"
+        },
+        "reviewDecision": null,
+        "totalCommentsCount": 6,
+        "commits": {
+          "nodes": [
+            {
+              "commit": {
+                "statusCheckRollup": {
+                  "state": "FAILURE"
+                }
+              }
+            }
+          ]
+        },
+        "reviewThreads": {
+          "nodes": [
+            {
+              "isResolved": false
+            },
+            {
+              "isResolved": false
+            },
+            {
+              "isResolved": false
+            },
+            {
+              "isResolved": false
+            }
+          ]
+        }
+      },
+      {
+        "__typename": "Issue",
+        "id": "I_kwDOVXdqNc8AAAABZ5tuTg",
+        "number": 2,
+        "title": "Add a Mul function",
+        "url": "https://github.com/afrase/nushi-gh-test/issues/2",
+        "state": "OPEN",
+        "updatedAt": "2026-10-26T04:14:50Z",
+        "author": {
+          "login": "afrase"
+        },
+        "repository": {
+          "nameWithOwner": "afrase/nushi-gh-test"
+        },
+        "commentCount": {
+          "totalCount": 0
+        }
+      }
+    ]
+  }
+}
