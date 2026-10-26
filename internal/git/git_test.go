@@ -304,3 +304,24 @@ func TestBlobs(t *testing.T) {
 		}
 	}
 }
+
+func TestFileReadsOnlyInsideTheFolder(t *testing.T) {
+	dir, outside := t.TempDir(), t.TempDir()
+	write(t, filepath.Join(dir, "sub", "a.go"), "package a\n")
+	write(t, filepath.Join(dir, "bin"), "a\x00b")
+	write(t, filepath.Join(outside, "secret"), "no\n")
+	noErr(t, os.Symlink(filepath.Join(outside, "secret"), filepath.Join(dir, "link")))
+	noErr(t, os.Symlink(outside, filepath.Join(dir, "out")))
+	noErr(t, os.Symlink("sub/a.go", filepath.Join(dir, "near")))
+	if c, err := File(dir, "sub/../sub/a.go"); err != nil || c.Path != "sub/a.go" || c.Status != "unchanged" || c.Old != "package a\n" || c.New != c.Old {
+		t.Errorf("File = %+v, %v", c, err)
+	}
+	if c, err := File(dir, "bin"); err != nil || c.Skipped != "binary" || c.New != "" {
+		t.Errorf("a binary file: %+v, %v", c, err)
+	}
+	for _, p := range []string{"../" + filepath.Base(outside) + "/secret", filepath.Join(outside, "secret"), "", "link", "out/secret", "near", "sub", "missing"} {
+		if c, err := File(dir, p); err == nil {
+			t.Errorf("File(%q) read %+v", p, c)
+		}
+	}
+}

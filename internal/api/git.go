@@ -50,6 +50,17 @@ func (s *server) GetDiff(ctx context.Context, req *connect.Request[nushiv1.GetDi
 	return connect.NewResponse(resp), nil
 }
 
+func (s *server) GetFile(_ context.Context, req *connect.Request[nushiv1.GetFileRequest]) (*connect.Response[nushiv1.GetFileResponse], error) {
+	if err := absolute(req.Msg.Folder); err != nil {
+		return nil, err
+	}
+	c, err := git.File(req.Msg.Folder, req.Msg.Path)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	return connect.NewResponse(&nushiv1.GetFileResponse{File: fileChangeProto(c)}), nil
+}
+
 func fileChangeProto(c model.FileChange) *nushiv1.FileChange {
 	return &nushiv1.FileChange{Path: c.Path, Status: c.Status, OldText: c.Old, NewText: c.New, Skipped: c.Skipped,
 		OldPath: c.OldPath, Added: int32(c.Added), Removed: int32(c.Removed)}

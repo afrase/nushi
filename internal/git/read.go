@@ -2,15 +2,62 @@ package git
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
+
+	"github.com/afrase/nushi/internal/model"
 )
+
+// File reads one of folder's files as it is now, as a change that changes
+// nothing (status "unchanged", the text on both sides; Skipped "binary" or
+// "too large" as Changes says). path must be inside folder, and not
+// through a link that leads out of it; a link itself, or anything but a
+// regular file, isn't read.
+func File(folder, path string) (model.FileChange, error) {
+	if !filepath.IsLocal(path) {
+		return model.FileChange{}, fmt.Errorf("%q is not inside the folder", path)
+	}
+	root, err := os.OpenRoot(folder)
+	if err != nil {
+		return model.FileChange{}, err
+	}
+	defer root.Close() //nolint:errcheck // read-only
+	if fi, err := root.Lstat(path); err != nil {
+		return model.FileChange{}, err
+	} else if !fi.Mode().IsRegular() {
+		return model.FileChange{}, fmt.Errorf("%s is not a file", path)
+	}
+	f, err := root.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
+	if err != nil {
+		return model.FileChange{}, err
+	}
+	defer f.Close() //nolint:errcheck // read-only
+	if fi, err := f.Stat(); err != nil || !fi.Mode().IsRegular() {
+		return model.FileChange{}, fmt.Errorf("%s is not a file", path)
+	}
+	b, err := io.ReadAll(io.LimitReader(f, maxText+1))
+	if err != nil {
+		return model.FileChange{}, err
+	}
+	c := model.FileChange{Path: filepath.ToSlash(filepath.Clean(path)), Status: "unchanged"}
+	switch {
+	case bytes.IndexByte(b, 0) >= 0:
+		c.Skipped = "binary"
+	case len(b) > maxText:
+		c.Skipped = "too large"
+	default:
+		c.Old, c.New = string(b), string(b)
+	}
+	return c, nil
+}
 
 // worktree reads a file as git sees it, at most maxText+1 bytes of it: a
 // symlink is its target's path. Anything but a regular file (a folder, a

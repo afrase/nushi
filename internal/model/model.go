@@ -161,6 +161,8 @@ type Item struct {
 	Report bool
 	// Shell is the command a tool call left running in the background.
 	Shell *Shell
+	// Findings is a code review's result, for a tool call that reports one.
+	Findings *Findings
 	// Output is a command's output as the agent streams it in its _meta,
 	// from which the dialect makes Text; only the daemon has it.
 	Output string `json:"-"`
@@ -176,6 +178,26 @@ type Shell struct {
 	ID, State      string
 	Started, Ended time.Time
 	Output, End    string
+}
+
+// Findings is a code review's result as the agent reports it (Claude's
+// ReportFindings): the effort level the review ran at, if it says, and
+// what it found, most severe first.
+type Findings struct {
+	Level string
+	Items []Finding
+}
+
+// Finding is one thing a review found: its file (relative to the
+// repository) and line (from 1; 0 when not given), a sentence saying what's
+// wrong and a short label for it (up to 60 characters, maybe empty), how it
+// fails, and, when given, its kind ("correctness"), the verdict of a check
+// of it ("CONFIRMED", "PLAUSIBLE") and, after fixes, what came of it
+// ("fixed", "skipped", "no_change_needed").
+type Finding struct {
+	File, Summary, ShortSummary, FailureScenario string
+	Line                                         int
+	Category, Verdict, Outcome                   string
 }
 
 // Subagent is how a subagent goes: State is "running", "done" or "failed";
