@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -280,7 +281,17 @@ func (s *Service) writer(name string) (Client, error) {
 // states stay known meanwhile).
 func (s *Service) wrote(name, what string, err error) {
 	if err != nil {
-		slog.Info("github write failed", "host", name, "what", what, "err", err)
+		// What failed, not GitHub's words, which could quote what was sent.
+		why := "failed"
+		var api *githubapi.APIError
+		var limited *githubapi.RateLimitedError
+		switch {
+		case errors.As(err, &limited):
+			why = "rate limit " + limited.Bucket
+		case errors.As(err, &api):
+			why = "GitHub answered " + strconv.Itoa(api.Status)
+		}
+		slog.Info("github write failed", "host", name, "what", what, "why", why)
 		return
 	}
 	slog.Info("github write", "host", name, "what", what, "by", "you")
