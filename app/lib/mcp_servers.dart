@@ -102,7 +102,8 @@ const scopes = {
   'local': ('Local', 'Yours, in this project only.'),
   'plugin': (
     'Plugins',
-    'From installed plugins: add or remove them with /plugin in Claude Code.',
+    'From installed plugins: turn them on and off in Skills, add them with '
+        '/plugin in Claude Code.',
   ),
   'claudeai': (
     'claude.ai',

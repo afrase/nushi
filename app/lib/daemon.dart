@@ -125,6 +125,18 @@ class Daemon extends ChangeNotifier {
   void showMcp(String? folder) {
     trustAsk?.decide(start: false);
     mcpFolder = folder;
+    skillsFolder = null;
+    jiraOpen = githubOpen = false;
+    notifyListeners();
+  }
+
+  /// The folder whose skills show in place of the chat, if they do.
+  String? skillsFolder;
+
+  void showSkills(String? folder) {
+    trustAsk?.decide(start: false);
+    skillsFolder = folder;
+    mcpFolder = null;
     jiraOpen = githubOpen = false;
     notifyListeners();
   }
@@ -136,7 +148,7 @@ class Daemon extends ChangeNotifier {
     trustAsk?.decide(start: false);
     jiraOpen = open;
     if (open) {
-      mcpFolder = null;
+      mcpFolder = skillsFolder = null;
       githubOpen = false;
     }
     notifyListeners();
@@ -154,7 +166,7 @@ class Daemon extends ChangeNotifier {
     githubOpen = open;
     githubShow = item;
     if (open) {
-      mcpFolder = null;
+      mcpFolder = skillsFolder = null;
       jiraOpen = false;
     }
     notifyListeners();
@@ -433,7 +445,7 @@ class Daemon extends ChangeNotifier {
   void select(String chatId) {
     trustAsk?.decide(start: false);
     selectedId = chatId;
-    mcpFolder = null;
+    mcpFolder = skillsFolder = null;
     jiraOpen = githubOpen = false;
     final chat = chats[chatId];
     if (chat != null) unawaited(_load(chat));
@@ -478,7 +490,7 @@ class Daemon extends ChangeNotifier {
     notifyListeners();
     try {
       if (!await _mayRun(folder, 'Start a chat', agent)) return;
-      final before = (selectedId, mcpFolder);
+      final before = (selectedId, mcpFolder, skillsFolder);
       final StartChatResponse resp;
       try {
         resp = await client.startChat(
@@ -508,7 +520,7 @@ class Daemon extends ChangeNotifier {
       chats[resp.chatId] ??= ChatState(resp.chatId, folder);
       // Not if the user went elsewhere meanwhile: a trust card or another
       // chat they're on stays.
-      if ((selectedId, mcpFolder) == before && trustAsk == null) {
+      if ((selectedId, mcpFolder, skillsFolder) == before && trustAsk == null) {
         select(resp.chatId);
       }
     } finally {
@@ -529,7 +541,7 @@ class Daemon extends ChangeNotifier {
     notifyListeners();
     try {
       if (!await _mayRun(folder, 'Open the session', agent)) return;
-      final before = (selectedId, mcpFolder);
+      final before = (selectedId, mcpFolder, skillsFolder);
       final resp = await client.openAgentSession(
         OpenAgentSessionRequest(
           agent: agent,
@@ -539,7 +551,7 @@ class Daemon extends ChangeNotifier {
         ),
       );
       chats[resp.chatId] ??= ChatState(resp.chatId, folder);
-      if ((selectedId, mcpFolder) == before && trustAsk == null) {
+      if ((selectedId, mcpFolder, skillsFolder) == before && trustAsk == null) {
         select(resp.chatId);
       }
     } finally {

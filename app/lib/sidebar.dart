@@ -149,8 +149,8 @@ class _SidebarState extends State<Sidebar> {
   }
 }
 
-/// The footer: the ways into the MCP servers view (for the open chat's
-/// folder, else the home folder) and Jira.
+/// The footer: the ways into the MCP servers and Skills views (for the
+/// open chat's folder, else the home folder), Jira and GitHub.
 class _Footer extends StatelessWidget {
   const new(this.daemon);
 
@@ -192,6 +192,16 @@ class _Footer extends StatelessWidget {
             open: mcp,
             () => daemon.showMcp(
               mcp
+                  ? null
+                  : daemon.selected?.folder ?? Platform.environment['HOME']!,
+            ),
+          ),
+          row(
+            'Skills',
+            Icons.auto_awesome_outlined,
+            open: daemon.skillsFolder != null,
+            () => daemon.showSkills(
+              daemon.skillsFolder != null
                   ? null
                   : daemon.selected?.folder ?? Platform.environment['HOME']!,
             ),

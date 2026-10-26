@@ -23,6 +23,7 @@ import 'package:nushi/removed_chats.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_dialog.dart';
 import 'package:nushi/sidebar.dart';
+import 'package:nushi/skills.dart';
 import 'package:nushi/status_bar.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
@@ -247,6 +248,8 @@ class _Shell extends StatelessWidget {
                   ? GitHubView(daemon)
                   : daemon.mcpFolder != null
                   ? McpView(daemon: daemon, folder: daemon.mcpFolder!)
+                  : daemon.skillsFolder != null
+                  ? SkillsView(daemon: daemon, folder: daemon.skillsFolder!)
                   : chat == null
                   ? NothingOpen(daemon)
                   : _ChatPane(key: ValueKey(chat.id), chat, daemon),
