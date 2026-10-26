@@ -1,0 +1,170 @@
+[
+  {
+    "markdown": "Adds `Sub`.\n\n<!-- A template note. -->\n\n- [x] tests\n- [ ] docs",
+    "html": "<p>Adds <code class=\"notranslate\">Sub</code>.</p>\n\n<ul class=\"contains-task-list\">\n<li class=\"task-list-item\"><input type=\"checkbox\" id=\"\" disabled=\"\" class=\"task-list-item-checkbox\" aria-label=\"Completed task\" checked=\"\"> tests</li>\n<li class=\"task-list-item\"><input type=\"checkbox\" id=\"\" disabled=\"\" class=\"task-list-item-checkbox\" aria-label=\"Incomplete task\"> docs</li>\n</ul>"
+  },
+  {
+    "markdown": "Before\n\n<!--\n```\nsecret\n```\n-->\n\nAfter",
+    "html": "<p>Before</p>\n\n<p>After</p>"
+  },
+  {
+    "markdown": "```\n<!-- shown, it's code -->\n```",
+    "html": "<pre class=\"notranslate\"><code class=\"notranslate\">&lt;!-- shown, it's code --&gt;\n</code></pre>"
+  },
+  {
+    "markdown": "Shown\n\n<!-- never closed\n\nhidden too",
+    "html": "<p>Shown</p>"
+  },
+  {
+    "markdown": "`<!-- code -->` and <!-- hidden --> after",
+    "html": "<p><code class=\"notranslate\">&lt;!-- code --&gt;</code> and  after</p>"
+  },
+  {
+    "markdown": "`a <!--` b --> c",
+    "html": "<p><code class=\"notranslate\">a &lt;!--</code> b --&gt; c</p>"
+  },
+  {
+    "markdown": "<span title=\"a>b\">shown</span> and <span title='x>y'>more</span>",
+    "html": "<p><span title=\"a&gt;b\">shown</span> and <span title=\"x&gt;y\">more</span></p>"
+  },
+  {
+    "markdown": "<div><div><span>nested <b>bold</b></span></div></div>",
+    "html": "<div><div><span>nested <b>bold</b></span></div></div>"
+  },
+  {
+    "markdown": "<template><p>tp</p></template>x",
+    "html": "<p></p><p>tp</p>x<p></p>"
+  },
+  {
+    "markdown": "<noembed>ne</noembed> <noframes>nf</noframes> <noscript>ns</noscript>",
+    "html": "<p>&lt;noembed&gt;ne&lt;/noembed&gt; &lt;noframes&gt;nf&lt;/noframes&gt; ns</p>"
+  },
+  {
+    "markdown": "<script>alert(1)</script> after",
+    "html": "&lt;script&gt;alert(1)&lt;/script&gt; after"
+  },
+  {
+    "markdown": "<style>p{}</style> <textarea>t</textarea> <title>ti</title> <xmp>x</xmp> <iframe>i</iframe> <plaintext>p",
+    "html": "&lt;style&gt;p{}&lt;/style&gt; &lt;textarea&gt;t&lt;/textarea&gt; &lt;title&gt;ti&lt;/title&gt; &lt;xmp&gt;x&lt;/xmp&gt; &lt;iframe&gt;i&lt;/iframe&gt; &lt;plaintext&gt;p"
+  },
+  {
+    "markdown": "![alt <!-- hidden --> text](https://example.com/a.png)",
+    "html": "<p><a target=\"_blank\" rel=\"noopener noreferrer nofollow\" href=\"https://camo.githubusercontent.com/5c7e6565b3f40cc1fe6675de6ac726f61e38c25df5a1846bf86904af7b14d030/68747470733a2f2f6578616d706c652e636f6d2f612e706e67\"><img src=\"https://camo.githubusercontent.com/5c7e6565b3f40cc1fe6675de6ac726f61e38c25df5a1846bf86904af7b14d030/68747470733a2f2f6578616d706c652e636f6d2f612e706e67\" alt=\"alt &lt;!-- hidden --&gt; text\" data-canonical-src=\"https://example.com/a.png\" style=\"max-width: 100%;\"></a></p>"
+  },
+  {
+    "markdown": "<img src=\"https://example.com/a.png\" alt=\"<b>bold</b> alt\">",
+    "html": "<p><a target=\"_blank\" rel=\"noopener noreferrer nofollow\" href=\"https://camo.githubusercontent.com/5c7e6565b3f40cc1fe6675de6ac726f61e38c25df5a1846bf86904af7b14d030/68747470733a2f2f6578616d706c652e636f6d2f612e706e67\"><img src=\"https://camo.githubusercontent.com/5c7e6565b3f40cc1fe6675de6ac726f61e38c25df5a1846bf86904af7b14d030/68747470733a2f2f6578616d706c652e636f6d2f612e706e67\" alt=\"&lt;b&gt;bold&lt;/b&gt; alt\" data-canonical-src=\"https://example.com/a.png\" style=\"max-width: 100%;\"></a></p>"
+  },
+  {
+    "markdown": "[link <!-- hidden --> text](https://example.com/<!--x-->)",
+    "html": "<p><a href=\"https://example.com/%3C!--x--%3E\" rel=\"nofollow\">link  text</a></p>"
+  },
+  {
+    "markdown": "<a href=\"javascript:alert(1)\">js</a> <a href=\"https://example.com\">ok</a>",
+    "html": "<p>js <a href=\"https://example.com\" rel=\"nofollow\">ok</a></p>"
+  },
+  {
+    "markdown": "<details><summary>More</summary>\n\nInside **bold**\n</details>",
+    "html": "<details><summary>More</summary>\n<p>Inside <strong>bold</strong></p>\n</details>"
+  },
+  {
+    "markdown": "| a | b |\n|---|:-:|\n| x<br>y | z | extra |",
+    "html": "<markdown-accessiblity-table><table role=\"table\">\n<thead>\n<tr>\n<th>a</th>\n<th align=\"center\">b</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>x<br>y</td>\n<td align=\"center\">z</td>\n</tr>\n</tbody>\n</table></markdown-accessiblity-table>"
+  },
+  {
+    "markdown": "Shown\n\n[//]: # (hidden instructions)\n\n[ref]: https://example.com \"title\"",
+    "html": "<p>Shown</p>"
+  },
+  {
+    "markdown": "<svg><text>sv</text></svg> <math><mi>m</mi></math>",
+    "html": "<p>sv m</p>"
+  },
+  {
+    "markdown": "<object data=x>ob</object> <embed src=x> <select><option>op</option></select>",
+    "html": "<p>ob  op</p>"
+  },
+  {
+    "markdown": "Text<br>break and <br/> again",
+    "html": "<p>Text<br>break and <br> again</p>"
+  },
+  {
+    "markdown": "# Heading <!-- x -->\n\nPara",
+    "html": "<h1>Heading </h1>\n<p>Para</p>"
+  },
+  {
+    "markdown": "> quoted <!-- hidden --> text\n> > nested",
+    "html": "<blockquote>\n<p>quoted  text</p>\n<blockquote>\n<p>nested</p>\n</blockquote>\n</blockquote>"
+  },
+  {
+    "markdown": "1. one\n2. two\n   - sub\n\n3) three",
+    "html": "<ol>\n<li>one</li>\n<li>two\n<ul>\n<li>sub</li>\n</ul>\n</li>\n</ol>\n<ol start=\"3\">\n<li>three</li>\n</ol>"
+  },
+  {
+    "markdown": "<p hidden>hidden attr</p> <span style=\"display:none\">css hidden</span>",
+    "html": "<p>hidden attr</p> <span>css hidden</span>"
+  },
+  {
+    "markdown": "<div>\n\n*md inside div*\n\n</div>",
+    "html": "<div>\n<p><em>md inside div</em></p>\n</div>"
+  },
+  {
+    "markdown": "Line one\nline two  \nline three\\\nfour",
+    "html": "<p>Line one<br>\nline two<br>\nline three<br>\nfour</p>"
+  },
+  {
+    "markdown": "a <ins>ins</ins> <del>del</del> <kbd>K</kbd> <sub>s</sub> <sup>S</sup> <mark>m</mark>",
+    "html": "<p>a <ins>ins</ins> <del>del</del> <kbd>K</kbd> <sub>s</sub> <sup>S</sup> <mark>m</mark></p>"
+  },
+  {
+    "markdown": "<table><tr><td>raw cell</td></tr></table>",
+    "html": "<markdown-accessiblity-table><table role=\"table\"><tbody><tr><td>raw cell</td></tr></tbody></table></markdown-accessiblity-table>"
+  },
+  {
+    "markdown": "<li>stray item</li> <td>stray cell</td>",
+    "html": "<li>stray item</li> stray cell"
+  },
+  {
+    "markdown": "~~strike~~ www.example.com https://example.com/x?a=1 me@example.com",
+    "html": "<p><del>strike</del> <a href=\"http://www.example.com\" rel=\"nofollow\">www.example.com</a> <a href=\"https://example.com/x?a=1\" rel=\"nofollow\">https://example.com/x?a=1</a> <a href=\"mailto:me@example.com\">me@example.com</a></p>"
+  },
+  {
+    "markdown": "&lt;escaped&gt; &amp; &copy; &#65;",
+    "html": "<p>&lt;escaped&gt; &amp; © A</p>"
+  },
+  {
+    "markdown": "<!--> empty comment <!---> another <!-- a -- b --> end",
+    "html": " empty comment  another  end"
+  },
+  {
+    "markdown": "<? processing ?> <!DOCTYPE html> <![CDATA[ cdata ]]> after",
+    "html": "   after"
+  },
+  {
+    "markdown": "<a href=\"https://a.example\"><img src=\"https://b.example/i.png\" alt=\"pic\"></a>",
+    "html": "<p><a href=\"https://a.example\" rel=\"nofollow\"><img src=\"https://camo.githubusercontent.com/5ac09635a65cec1de56fc96d1446d71102417bdc075118db8006442235eae75e/68747470733a2f2f622e6578616d706c652f692e706e67\" alt=\"pic\" data-canonical-src=\"https://b.example/i.png\" style=\"max-width: 100%;\"></a></p>"
+  },
+  {
+    "markdown": "Some *emphasis* and **strong** and ***both***",
+    "html": "<p>Some <em>emphasis</em> and <strong>strong</strong> and <em><strong>both</strong></em></p>"
+  },
+  {
+    "markdown": "<dl><dt>term</dt><dd>def</dd></dl>",
+    "html": "<dl><dt>term</dt><dd>def</dd></dl>"
+  },
+  {
+    "markdown": "<pre><b>bold in pre</b>\nline</pre>",
+    "html": "<pre class=\"notranslate\"><b>bold in pre</b>\nline</pre>"
+  },
+  {
+    "markdown": "```go\nfunc main() {}\n```\n\n    indented code",
+    "html": "<div class=\"highlight highlight-source-go\"><pre class=\"notranslate\"><span class=\"pl-k\">func</span> <span class=\"pl-s1\">main</span>() {}</pre></div>\n<pre class=\"notranslate\"><code class=\"notranslate\">indented code\n</code></pre>"
+  },
+  {
+    "markdown": "<div><template><b>in template</b></template><noscript>in noscript</noscript></div> tail",
+    "html": "<div><b>in template</b>in noscript</div> tail"
+  },
+  {
+    "markdown": "<details><summary>Sum <!-- c --></summary><script>bad()</script>body</details>",
+    "html": "<details><summary>Sum </summary>&lt;script&gt;bad()&lt;/script&gt;body</details>"
+  }
+]

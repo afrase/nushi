@@ -1,233 +1,431 @@
 package githubapi
 
 import (
-	"fmt"
+	"bytes"
+	"cmp"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/yuin/goldmark"
-	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
-	east "github.com/yuin/goldmark/extension/ast"
-	"github.com/yuin/goldmark/text"
+	gmhtml "github.com/yuin/goldmark/renderer/html"
 	xhtml "golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
 
 	"github.com/afrase/nushi/internal/mdwrite"
 )
 
-// gfm parses as GitHub does: CommonMark with GitHub's extensions, so a
-// fence, a code span, an HTML block or comment and a table's cells begin
-// and end where GitHub's do.
-var gfm = goldmark.New(goldmark.WithExtensions(extension.GFM))
+// GitHub's text goes through what GitHub's own page does with it, then
+// is written again from what that leaves: Markdown to HTML as GitHub's
+// renderer makes it (CommonMark with GitHub's extensions; goldmark here),
+// GFM's tag filter, the HTML read as a browser reads it (x/net/html's
+// parser: nesting, implied end tags, comments that never close), and a
+// walk of the tree that writes what the page shows, as Markdown.
+
+// gfm renders as GitHub's renderer does: GFM, raw HTML kept (GitHub's
+// sanitizer, not the renderer, decides what of it shows).
+var gfm = goldmark.New(goldmark.WithExtensions(extension.GFM), goldmark.WithRendererOptions(gmhtml.WithUnsafe()))
+
+// tagFilterRE is GFM's tag filter, which GitHub applies: raw HTML naming
+// one of these elements is written as text (GitHub's page shows
+// "<script>…" as it was typed).
+var tagFilterRE = regexp.MustCompile(`(?i)<(/?(?:title|textarea|style|xmp|iframe|noembed|noframes|script|plaintext))([\s/>]|$)`)
+
+// GitHub's sanitizer (html-pipeline's SanitizationFilter, its ALLOWLIST:
+// the elements GitHub keeps) is the model: an element it keeps is written
+// as what it is (a heading, a list, a link…); one it doesn't keep is
+// unwrapped, its text kept, as GitHub does; a script goes with what it
+// holds (its remove_contents), and so do comments, doctypes and
+// processing instructions. Links keep only http, https and mailto, and
+// images only http and https (stricter than GitHub's schemes): else
+// their text.
+var blockElements = map[atom.Atom]bool{
+	atom.P: true, atom.Div: true, atom.H1: true, atom.H2: true, atom.H3: true, atom.H4: true, atom.H5: true, atom.H6: true,
+	atom.Pre: true, atom.Blockquote: true, atom.Ol: true, atom.Ul: true, atom.Li: true, atom.Table: true, atom.Hr: true,
+	atom.Dl: true, atom.Dt: true, atom.Dd: true, atom.Details: true, atom.Summary: true, atom.Figure: true,
+	atom.Figcaption: true, atom.Caption: true,
+}
+
+// removed are the elements whose contents GitHub drops with them.
+var removed = map[atom.Atom]bool{atom.Script: true}
 
 // Markdown is GitHub-flavoured Markdown from GitHub (a pull request's
 // text, a comment, a check's summary) as Nushi shows it and gives it to an
-// agent: what GitHub's page shows of it, written again as Markdown. It is
-// parsed as GitHub parses it (goldmark, GFM) and only what the page shows
-// is written: no HTML comment (GitHub hides it: a template's notes, or
-// text meant for an agent and not for the reader), nothing after a comment
-// that never closes, no link reference definition, no table cell past the
-// header's. Raw HTML becomes what it shows: an <img> an image (which the
-// app shows as a link, never fetched), an <a> a link, <br> a line break,
-// any other tag its text. Text is escaped, so nothing of it reads as
-// Markdown it wasn't; code stays as written.
+// agent: what GitHub's page shows of it, written again as Markdown. What
+// the page hides isn't written: HTML comments (a template's notes, or
+// text meant for an agent and not for the reader), everything after a
+// comment that never closes, link reference definitions, a table's cells
+// past the header's, scripts. Text is escaped, so none of it reads as
+// Markdown it wasn't; an image is the app's to show as a link, never
+// fetched.
 func Markdown(s string) string {
-	src := []byte(strings.ReplaceAll(s, "\r\n", "\n"))
-	w := &mdWriter{src: src}
-	return strings.TrimSpace(w.blocks(gfm.Parser().Parse(text.NewReader(src)), "\n\n"))
+	var page bytes.Buffer
+	if err := gfm.Convert([]byte(strings.ReplaceAll(s, "\r\n", "\n")), &page); err != nil {
+		return mdwrite.Escape(s) // goldmark fails only on a failing writer
+	}
+	filtered := tagFilterRE.ReplaceAllString(page.String(), "&lt;$1$2")
+	nodes, err := xhtml.ParseFragment(strings.NewReader(filtered), &xhtml.Node{Type: xhtml.ElementNode, DataAtom: atom.Body, Data: "body"})
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace((&mdWriter{}).blocks(nodes))
 }
 
 type mdWriter struct {
-	src []byte
-	// hidden says a comment never closed: the rest of the page is in it.
-	hidden bool
-	hrefs  []string // the raw <a> tags open in the inline being written
-	cell   bool     // writing a table's cell
-	// skip is the hidden element (<script>, <style>…) whose contents are
-	// being passed over, until its end tag.
-	skip string
+	cell bool // writing a table's cell: no line breaks
 }
 
-func (w *mdWriter) blocks(parent ast.Node, sep string) string {
-	var parts []string
-	for n := parent.FirstChild(); n != nil && !w.hidden; n = n.NextSibling() {
-		if b := w.block(n); b != "" {
-			parts = append(parts, b)
+// isBlock says n is written as a block: a block element, or one GitHub
+// unwraps that holds one.
+func isBlock(n *xhtml.Node) bool {
+	if n.Type != xhtml.ElementNode || removed[n.DataAtom] {
+		return false
+	}
+	if blockElements[n.DataAtom] {
+		return true
+	}
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		if isBlock(c) {
+			return true
 		}
 	}
+	return false
+}
+
+func children(n *xhtml.Node) []*xhtml.Node {
+	var out []*xhtml.Node
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		out = append(out, c)
+	}
+	return out
+}
+
+// blocks writes nodes as blocks: each block element as itself, the
+// inline nodes between them as paragraphs, a blank line between.
+func (w *mdWriter) blocks(ns []*xhtml.Node) string { return w.blocksSep(ns, "\n\n") }
+
+// blocksSep is blocks with sep between them (a tight list item's: a line
+// break).
+func (w *mdWriter) blocksSep(ns []*xhtml.Node, sep string) string {
+	var parts []string
+	var run []*xhtml.Node
+	var prev *xhtml.Node // the block written last, for lists in a row
+	flush := func() {
+		if t := strings.TrimSpace(w.inline(run)); t != "" {
+			parts, prev = append(parts, t), nil
+		}
+		run = nil
+	}
+	for _, n := range ns {
+		if !isBlock(n) {
+			run = append(run, n)
+			continue
+		}
+		flush()
+		if b := w.block(n, prev); b != "" {
+			parts, prev = append(parts, b), n
+		}
+	}
+	flush()
 	return strings.Join(parts, sep)
 }
 
-func (w *mdWriter) block(n ast.Node) string {
-	if _, ok := n.(*ast.HTMLBlock); w.skip != "" && !ok && !hasRaw(n) {
-		return "" // inside a <script> or <style> left open: none of it shows
-	}
-	switch n := n.(type) {
-	case *ast.Paragraph, *ast.TextBlock:
-		return w.inline(n)
-	case *ast.Heading:
-		return strings.Repeat("#", n.Level) + " " + w.inline(n)
-	case *ast.ThematicBreak:
+func (w *mdWriter) block(n, prev *xhtml.Node) string {
+	switch n.DataAtom {
+	case atom.H1, atom.H2, atom.H3, atom.H4, atom.H5, atom.H6:
+		level, _ := strconv.Atoi(n.Data[1:])
+		return strings.Repeat("#", level) + " " + oneLine(w.inline(children(n)))
+	case atom.Hr:
 		return "---"
-	case *ast.LinkReferenceDefinition:
-		return "" // GitHub shows none (Markdown's own "comment": [//]: # (…))
-	case *ast.FencedCodeBlock:
-		return mdwrite.Fence(w.lines(n), string(n.Language(w.src)))
-	case *ast.CodeBlock:
-		return mdwrite.Fence(w.lines(n), "")
-	case *ast.Blockquote:
-		return mdwrite.Quote(w.blocks(n, "\n\n"))
-	case *ast.List:
-		return w.list(n)
-	case *ast.HTMLBlock:
-		raw := w.lines(n)
-		if n.HasClosure() {
-			raw += string(n.ClosureLine.Value(w.src))
-		}
-		return w.html(raw, false)
-	case *east.Table:
+	case atom.Pre:
+		return mdwrite.Fence(text(n), language(n))
+	case atom.Blockquote:
+		return mdwrite.Quote(w.blocks(children(n)))
+	case atom.Ul, atom.Ol:
+		return w.list(n, prev != nil && prev.DataAtom == n.DataAtom)
+	case atom.Table:
 		return w.table(n)
+	default: // p, div, li astray, details, summary, and what GitHub unwraps
+		return w.blocks(children(n))
 	}
-	if n.FirstChild() != nil {
-		return w.blocks(n, "\n\n")
-	}
-	return mdwrite.Escape(w.lines(n))
 }
 
-func (w *mdWriter) lines(n ast.Node) string {
-	var b strings.Builder
-	for i := range n.Lines().Len() {
-		seg := n.Lines().At(i)
-		b.Write(seg.Value(w.src))
+// language is a code block's language, from its code's class.
+func language(pre *xhtml.Node) string {
+	for c := pre.FirstChild; c != nil; c = c.NextSibling {
+		if c.DataAtom == atom.Code {
+			for cl := range strings.FieldsSeq(attr(c, "class")) {
+				if l, ok := strings.CutPrefix(cl, "language-"); ok {
+					return l
+				}
+			}
+		}
 	}
+	return ""
+}
+
+// text is what n holds as text, as a code block shows it (no comments).
+func text(n *xhtml.Node) string {
+	var b strings.Builder
+	var walk func(*xhtml.Node)
+	walk = func(n *xhtml.Node) {
+		switch {
+		case n.Type == xhtml.TextNode:
+			b.WriteString(n.Data)
+		case n.Type == xhtml.ElementNode && removed[n.DataAtom]:
+		case n.DataAtom == atom.Br:
+			b.WriteString("\n")
+		default:
+			for c := n.FirstChild; c != nil; c = c.NextSibling {
+				walk(c)
+			}
+		}
+	}
+	walk(n)
 	return b.String()
 }
 
-func (w *mdWriter) list(l *ast.List) string {
-	// Two lists in a row stay two: the second with the other marker.
-	mark := "-"
-	if p, ok := l.PreviousSibling().(*ast.List); ok && p.IsOrdered() == l.IsOrdered() && p.Marker == l.Marker {
-		mark = "*"
+func attr(n *xhtml.Node, key string) string {
+	for _, a := range n.Attr {
+		if a.Key == key && a.Namespace == "" {
+			return a.Val
+		}
 	}
-	sep := "\n\n"
-	if l.IsTight {
-		sep = "\n"
+	return ""
+}
+
+func hasAttr(n *xhtml.Node, key string) bool {
+	for _, a := range n.Attr {
+		if a.Key == key {
+			return true
+		}
+	}
+	return false
+}
+
+func oneLine(s string) string { return strings.Join(strings.Fields(s), " ") }
+
+func (w *mdWriter) list(l *xhtml.Node, again bool) string {
+	ordered := l.DataAtom == atom.Ol
+	start, err := strconv.Atoi(attr(l, "start"))
+	if err != nil {
+		start = 1
+	}
+	mark, end := "-", "."
+	if again { // two lists in a row stay two: the second with the other marker
+		mark, end = "*", ")"
 	}
 	var items []string
-	i := 0
-	for it := l.FirstChild(); it != nil && !w.hidden; it = it.NextSibling() {
-		m := mark + " "
-		if l.IsOrdered() {
-			end := "."
-			if mark == "*" {
-				end = ")"
-			}
-			m = fmt.Sprintf("%d%s ", l.Start+i, end)
+	loose := false
+	for _, it := range children(l) {
+		for _, c := range children(it) {
+			loose = loose || c.DataAtom == atom.P
 		}
-		body := w.blocks(it, sep)
+	}
+	sep := "\n"
+	if loose {
+		sep = "\n\n"
+	}
+	for _, it := range children(l) {
+		if it.Type == xhtml.TextNode && strings.TrimSpace(it.Data) == "" {
+			continue
+		}
+		m := mark + " "
+		if ordered {
+			m = strconv.Itoa(start+len(items)) + end + " "
+		}
+		parts := []*xhtml.Node{it}
+		if it.DataAtom == atom.Li {
+			parts = children(it)
+		}
+		parts, box := taskBox(parts)
+		body := box + w.blocksSep(parts, sep)
 		items = append(items, m+mdwrite.Indent(body, strings.Repeat(" ", len(m))))
-		i++
 	}
 	return strings.Join(items, sep)
 }
 
-func (w *mdWriter) table(t *east.Table) string {
-	var rows []string
-	for r := t.FirstChild(); r != nil && !w.hidden; r = r.NextSibling() {
-		var cells []string
-		for c := r.FirstChild(); c != nil; c = c.NextSibling() {
-			w.cell = true
-			cells = append(cells, strings.ReplaceAll(strings.ReplaceAll(w.inline(c), "\n", " "), "|", `\|`))
-			w.cell = false
-		}
-		rows = append(rows, "| "+strings.Join(cells, " | ")+" |")
-		if _, ok := r.(*east.TableHeader); ok {
-			var line []string
-			for _, a := range t.Alignments {
-				switch a {
-				case east.AlignLeft:
-					line = append(line, ":---")
-				case east.AlignRight:
-					line = append(line, "---:")
-				case east.AlignCenter:
-					line = append(line, ":---:")
-				default:
-					line = append(line, "---")
-				}
+// taskBox takes a task list item's box (its first element, a checkbox)
+// out of its nodes, as Markdown's "[x] " or "[ ] ".
+func taskBox(parts []*xhtml.Node) ([]*xhtml.Node, string) {
+	for i, c := range parts {
+		if c.DataAtom == atom.Input && attr(c, "type") == "checkbox" {
+			box := "[ ] "
+			if hasAttr(c, "checked") {
+				box = "[x] "
 			}
-			rows = append(rows, "| "+strings.Join(line, " | ")+" |")
+			return append(parts[:i:i], parts[i+1:]...), box
+		}
+		if c.Type != xhtml.TextNode || strings.TrimSpace(c.Data) != "" {
+			break // a box comes first
 		}
 	}
-	return strings.Join(rows, "\n")
+	return parts, ""
 }
 
-// inline writes a node's inlines.
-func (w *mdWriter) inline(parent ast.Node) string {
+func (w *mdWriter) table(t *xhtml.Node) string {
+	var rows [][]string
+	var aligns []string
+	var walk func(*xhtml.Node)
+	walk = func(n *xhtml.Node) {
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			switch c.DataAtom {
+			case atom.Thead, atom.Tbody, atom.Tfoot:
+				walk(c)
+			case atom.Tr:
+				var cells []string
+				for cell := c.FirstChild; cell != nil; cell = cell.NextSibling {
+					if cell.DataAtom != atom.Td && cell.DataAtom != atom.Th {
+						continue
+					}
+					w.cell = true
+					cells = append(cells, strings.ReplaceAll(oneLine(w.inline(children(cell))), "|", `\|`))
+					w.cell = false
+					if len(rows) == 0 {
+						aligns = append(aligns, cmp.Or(attr(cell, "align"), attr(cell, "style")))
+					}
+				}
+				rows = append(rows, cells)
+			default: // what isn't a row (a caption)
+			}
+		}
+	}
+	walk(t)
+	if len(rows) == 0 || len(rows[0]) == 0 {
+		return ""
+	}
+	width := len(rows[0])
+	line := make([]string, width)
+	for i, a := range aligns {
+		switch {
+		case strings.Contains(a, "center"):
+			line[i] = ":---:"
+		case strings.Contains(a, "right"):
+			line[i] = "---:"
+		case strings.Contains(a, "left"):
+			line[i] = ":---"
+		default:
+			line[i] = "---"
+		}
+	}
+	out := make([]string, 0, len(rows)+1)
+	for i, r := range rows {
+		r = append(r, make([]string, max(0, width-len(r)))...)
+		out = append(out, "| "+strings.Join(r[:width], " | ")+" |")
+		if i == 0 {
+			out = append(out, "| "+strings.Join(line, " | ")+" |")
+		}
+	}
+	return strings.Join(out, "\n")
+}
+
+// inline writes nodes as a paragraph's text.
+func (w *mdWriter) inline(ns []*xhtml.Node) string {
 	var b strings.Builder
-	for n := parent.FirstChild(); n != nil && !w.hidden; n = n.NextSibling() {
-		b.WriteString(w.span(n))
+	for _, n := range ns {
+		s := w.span(n)
+		if strings.HasSuffix(b.String(), " ") { // one space, as the page lays it out
+			s = strings.TrimLeft(s, " ")
+		}
+		b.WriteString(s)
 	}
 	return b.String()
 }
 
-func (w *mdWriter) span(n ast.Node) string {
-	if _, ok := n.(*ast.RawHTML); w.skip != "" && !ok && !hasRaw(n) {
+func (w *mdWriter) span(n *xhtml.Node) string {
+	switch n.Type {
+	case xhtml.TextNode:
+		return mdwrite.Escape(collapse(n.Data))
+	case xhtml.ElementNode:
+	default:
+		return "" // comments, doctypes
+	}
+	inner := func() string { return w.inline(children(n)) }
+	switch n.DataAtom {
+	case atom.Script, atom.Input:
 		return ""
-	}
-	switch n := n.(type) {
-	case *ast.Text:
-		s := mdwrite.Escape(string(n.Segment.Value(w.src)))
-		switch {
-		case n.HardLineBreak() && !w.cell:
-			s += "\\\n"
-		case n.SoftLineBreak() || n.HardLineBreak():
-			s += "\n"
+	case atom.Br:
+		if w.cell {
+			return " "
 		}
-		return s
-	case *ast.String:
-		return mdwrite.Escape(string(n.Value))
-	case *ast.CodeSpan:
-		var b strings.Builder
-		for c := n.FirstChild(); c != nil; c = c.NextSibling() {
-			if t, ok := c.(*ast.Text); ok {
-				b.Write(t.Segment.Value(w.src))
+		return "\\\n"
+	case atom.B, atom.Strong:
+		return around("**", inner())
+	case atom.I, atom.Em:
+		return around("*", inner())
+	case atom.Del, atom.S, atom.Strike:
+		return around("~~", inner())
+	case atom.Code, atom.Tt, atom.Kbd, atom.Samp:
+		if t := text(n); t != "" {
+			return mdwrite.Code(t)
+		}
+		return ""
+	case atom.A:
+		return link(inner(), attr(n, "href"))
+	case atom.Img:
+		return image(alt(attr(n, "alt")), attr(n, "src"))
+	default:
+		if blockElements[n.DataAtom] {
+			return " " + inner() + " " // a block inside a line (a <p> in a <span>)
+		}
+		return inner() // what GitHub unwraps, and the inline elements it keeps as they are
+	}
+}
+
+// collapse is text as a page lays it out: each run of white space one
+// space.
+func collapse(s string) string {
+	var b strings.Builder
+	space := false
+	for _, r := range s {
+		if r == ' ' || r == '\t' || r == '\n' || r == '\r' || r == '\f' {
+			if !space {
+				b.WriteByte(' ')
 			}
+			space = true
+			continue
 		}
-		return mdwrite.Code(b.String())
-	case *ast.Emphasis:
-		m := strings.Repeat("*", n.Level)
-		return m + w.inline(n) + m
-	case *east.Strikethrough:
-		return "~~" + w.inline(n) + "~~"
-	case *east.TaskCheckBox:
-		if n.IsChecked {
-			return "[x] "
-		}
-		return "[ ] "
-	case *ast.Link:
-		return link(w.inline(n), string(n.Destination))
-	case *ast.Image:
-		return image(plain(n, w.src), string(n.Destination))
-	case *ast.AutoLink:
-		u := string(n.URL(w.src))
-		if n.AutoLinkType == ast.AutoLinkEmail && !strings.HasPrefix(u, "mailto:") {
-			u = "mailto:" + u
-		}
-		return link(mdwrite.Escape(string(n.Label(w.src))), u)
-	case *ast.RawHTML:
-		var b strings.Builder
-		for i := range n.Segments.Len() {
-			seg := n.Segments.At(i)
-			b.Write(seg.Value(w.src))
-		}
-		return w.html(b.String(), true)
+		space = false
+		b.WriteRune(r)
 	}
-	return w.inline(n)
+	return b.String()
+}
+
+// around puts a mark around text (its spaces outside, where Markdown
+// needs them), or is the text as it is when it's only space.
+func around(mark, s string) string {
+	t := strings.TrimSpace(s)
+	if t == "" {
+		return s
+	}
+	i := strings.Index(s, t)
+	return s[:i] + mark + t + mark + s[i+len(t):]
+}
+
+// alt is an image's alt text as Nushi shows it (as the image's link):
+// its text without anything that reads as markup (a tag, a comment), each
+// such piece a space, so no comment or tag in it is shown, or given to an
+// agent, as text.
+func alt(s string) string {
+	z := xhtml.NewTokenizer(strings.NewReader(s))
+	var b strings.Builder
+	for {
+		switch z.Next() {
+		case xhtml.ErrorToken:
+			return oneLine(b.String())
+		case xhtml.TextToken:
+			b.Write(z.Text())
+		default:
+			b.WriteByte(' ')
+		}
+	}
 }
 
 // link is a link to href around text (Markdown already), or text alone
-// when href isn't http, https or mailto.
+// when href isn't http, https or mailto, or there's no text.
 func link(text, href string) string {
-	if !mdwrite.SafeLink(href) {
+	if !mdwrite.SafeLink(href) || strings.TrimSpace(text) == "" {
 		return text
 	}
 	return "[" + text + "](" + mdwrite.Dest(href) + ")"
@@ -240,149 +438,4 @@ func image(alt, src string) string {
 		return mdwrite.Escape(alt)
 	}
 	return "![" + mdwrite.Escape(alt) + "](" + mdwrite.Dest(src) + ")"
-}
-
-// hasRaw says n holds raw HTML, which may end a hidden element.
-func hasRaw(n ast.Node) bool {
-	found := false
-	_ = ast.Walk(n, func(c ast.Node, _ bool) (ast.WalkStatus, error) {
-		switch c.(type) {
-		case *ast.RawHTML, *ast.HTMLBlock:
-			found = true
-			return ast.WalkStop, nil
-		}
-		return ast.WalkContinue, nil
-	})
-	return found
-}
-
-// plain is a node's text without its marks (an image's alt text).
-func plain(n ast.Node, src []byte) string {
-	var b strings.Builder
-	_ = ast.Walk(n, func(c ast.Node, entering bool) (ast.WalkStatus, error) {
-		if t, ok := c.(*ast.Text); ok && entering {
-			b.Write(t.Segment.Value(src))
-		}
-		return ast.WalkContinue, nil
-	})
-	return b.String()
-}
-
-// hiddenElements are the elements whose contents a page doesn't show
-// (GitHub's sanitizer drops them with what they hold).
-var hiddenElements = map[string]bool{"script": true, "style": true, "template": true, "noscript": true,
-	"textarea": true, "title": true, "iframe": true, "object": true}
-
-// html writes raw HTML as what it shows, read as a browser reads it
-// (x/net/html's tokenizer): comments gone (and the rest of the page with
-// one that never closes), hidden elements' contents gone, <img> an image,
-// <a href> a link around what it holds (inline, the tags come one at a
-// time), <br> a line break (a space in an HTML block or a table's cell),
-// any other tag nothing, the text between them escaped.
-func (w *mdWriter) html(raw string, inline bool) string {
-	var b strings.Builder
-	z := xhtml.NewTokenizer(strings.NewReader(raw))
-	for {
-		tt := z.Next()
-		switch tt {
-		case xhtml.ErrorToken:
-			if inline {
-				return b.String()
-			}
-			w.hrefs = nil // a block's links end with it
-			return strings.Join(strings.Fields(b.String()), " ")
-		case xhtml.CommentToken:
-			if !closed(string(z.Raw())) {
-				w.hidden = true
-			}
-		case xhtml.TextToken:
-			if w.skip == "" {
-				t := string(z.Text())
-				if !inline {
-					t = " " + strings.Join(strings.Fields(t), " ") + " "
-				}
-				b.WriteString(mdwrite.Escape(t))
-			}
-		case xhtml.StartTagToken, xhtml.SelfClosingTagToken:
-			w.start(&b, z, inline)
-		case xhtml.EndTagToken:
-			w.end(&b, z, inline)
-		case xhtml.DoctypeToken:
-		}
-		if w.hidden {
-			return strings.TrimSpace(b.String())
-		}
-	}
-}
-
-// start writes what a start tag shows, or starts passing over a hidden
-// element.
-func (w *mdWriter) start(b *strings.Builder, z *xhtml.Tokenizer, inline bool) {
-	name, a := tag(z)
-	switch {
-	case w.skip != "":
-	case hiddenElements[name]: // a browser ignores "/>" on them: they still open
-		w.skip = name
-	case name == "img":
-		b.WriteString(image(a["alt"], a["src"]))
-	case name == "a":
-		href := a["href"]
-		if !mdwrite.SafeLink(href) {
-			href = "" // no link: its text alone
-		}
-		w.hrefs = append(w.hrefs, href)
-		if href != "" {
-			b.WriteString("[")
-		}
-	case name == "br" && inline && !w.cell:
-		b.WriteString("\\\n")
-	case name == "br" || !inline:
-		b.WriteString(" ")
-	}
-}
-
-// end writes what an end tag shows, or ends passing over a hidden
-// element.
-func (w *mdWriter) end(b *strings.Builder, z *xhtml.Tokenizer, inline bool) {
-	name, _ := tag(z)
-	switch {
-	case w.skip != "":
-		if name == w.skip {
-			w.skip = ""
-		}
-	case name == "a" && len(w.hrefs) > 0:
-		href := w.hrefs[len(w.hrefs)-1]
-		w.hrefs = w.hrefs[:len(w.hrefs)-1]
-		if href != "" {
-			b.WriteString("](" + mdwrite.Dest(href) + ")")
-		}
-	case !inline:
-		b.WriteString(" ")
-	}
-}
-
-// closed says a comment's raw text ends it, as a browser reads it; one
-// that doesn't runs to the end of the page.
-func closed(raw string) bool {
-	if !strings.HasPrefix(raw, "<!--") {
-		return strings.HasSuffix(raw, ">") // a bogus comment, <!x> or <?x>, ends at the first >
-	}
-	return raw == "<!-->" || raw == "<!--->" || strings.HasSuffix(raw, "-->") || strings.HasSuffix(raw, "--!>")
-}
-
-// tag is the tag the tokenizer is on: its name, and its src, alt and
-// href.
-func tag(z *xhtml.Tokenizer) (string, map[string]string) {
-	name, more := z.TagName()
-	a := map[string]string{}
-	for more {
-		var k, v []byte
-		k, v, more = z.TagAttr()
-		if key := string(k); key == "src" || key == "alt" || key == "href" {
-			if _, seen := a[key]; !seen { // a browser takes the first
-				a[key] = string(v)
-			}
-		}
-	}
-	return string(name), a
 }
