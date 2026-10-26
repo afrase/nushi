@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -14,13 +15,13 @@ void main() {
       MaterialApp(
         theme: const NushiTheme(Tokens.dark).toThemeData(),
         home: Scaffold(
-          body: Menu(
+          body: MenuField(
             entries: [
               for (final n in names)
                 for (final c in ['red', 'green'])
                   MenuEntry('$c $n', onPick: () => picked = '$c $n'),
             ],
-            child: const Text('open'),
+            label: const Text('open'),
           ),
         ),
       ),

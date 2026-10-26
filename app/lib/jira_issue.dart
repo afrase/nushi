@@ -249,14 +249,13 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
               for (final r in i.remoteLinks)
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: Tap(
-                    onTap: () {
-                      if (webLink(r.url) case final u?) unawaited(launchUrl(u));
+                  child: LinkText(
+                    r.title.isEmpty ? r.url : r.title,
+                    tooltip: r.url,
+                    onTap: switch (webLink(r.url)) {
+                      final u? => () => unawaited(launchUrl(u)),
+                      null => null,
                     },
-                    child: Text(
-                      r.title.isEmpty ? r.url : r.title,
-                      style: theme.ui(t.link),
-                    ),
                   ),
                 ),
             ]),
