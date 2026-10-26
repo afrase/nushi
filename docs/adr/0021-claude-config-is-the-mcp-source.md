@@ -15,3 +15,6 @@ All of this is Claude-specific code in `internal/claudemcp`, behind an interface
 - Anything Claude records only in `~/.claude.json` (per-project on/off of user servers, the terminal's approvals) can be shown but not changed from Nushi.
 - Reading depends on Claude's private file layout and the list's text format; both are read tolerantly (an unknown status is "unknown", not an error).
 - Codex keeps its MCP servers in its own `config.toml`; Nushi doesn't show them, and a Codex chat's MCP card says so.
+
+## Amendments
+- 2026-10-26: a user or local server's per-project off is now changed by asking Claude to write it (ADR 0050); your `settings.json` and more keys of the local settings are written for skills and plugins (ADR 0051). Nushi still never writes `~/.claude.json`.

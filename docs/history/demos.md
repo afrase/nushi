@@ -2,6 +2,14 @@
 
 Each milestone's demo script (what to run, what to see), newest first. An archive.
 
+## Demo (MCP servers off, and skills, steps 296–302)
+
+1. The sidebar's footer › MCP servers: a user server's switch says "in this project"; turn it off: it dims, says Off, and `claude mcp list` in a terminal there says "⊘ Disabled for this project"; `/mcp` there shows it off. Turn it on again.
+2. A plugin's server: "Off only with /mcp in a terminal". A chat's details › MCP: the same switches; after a change, "Applies when the chat restarts" and Reload.
+3. Footer › Skills: Yours, This project, each plugin, Built in, Plugins. Type in Search: the lists narrow. Turn a skill off: `skillOverrides` in `~/.claude/settings.json` (yours) or `.claude/settings.local.json` (the project's).
+4. A skill's ⋯ › Open SKILL.md (in the text editor), Show in Finder; Delete… names the folder; Move to Trash puts it there.
+5. Plugins: a plugin's counts; its switch; ⋯ › Uninstall… asks first. New skill… opens a Claude chat with the request in its box.
+
 ## Demo (the GitHub view as cards, with filters, steps 291–295)
 
 1. ⌘G: three cards (Review requested, My pull requests, Assigned issues), each with a count; rows show the title with `owner/repo#123` under it, and checks, threads and age in columns on the right. No Start work buttons at rest.
