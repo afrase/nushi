@@ -154,6 +154,24 @@ service NushiService {
   // minutes at most). Logout forgets the sign-in.
   rpc LoginMcpServer(LoginMcpServerRequest) returns (LoginMcpServerResponse);
   rpc LogoutMcpServer(LogoutMcpServerRequest) returns (LogoutMcpServerResponse);
+  // The skills and plugins Claude uses in a folder (API 66, ADR 0051):
+  // read from Claude's files and `claude plugin list --json`, never run in
+  // the folder. Skills' descriptions and plugins' text are their authors'.
+  rpc ListSkills(ListSkillsRequest) returns (ListSkillsResponse);
+  // Turns a skill on or off: yours in your settings, a project's in the
+  // project's local settings (skillOverrides, only that key); "builtin"
+  // turns Claude's built-in skills on or off together, in your settings
+  // (disableBundledSkills). A plugin's skills go with their plugin.
+  rpc SetSkillOn(SetSkillOnRequest) returns (SetSkillOnResponse);
+  // Turns an installed plugin on or off (`claude plugin enable`, `disable`)
+  // where Plugin.switch_scope says.
+  rpc SetPluginOn(SetPluginOnRequest) returns (SetPluginOnResponse);
+  // Uninstalls a plugin installed for you or in the project's local
+  // settings (`claude plugin uninstall`).
+  rpc UninstallPlugin(UninstallPluginRequest) returns (UninstallPluginResponse);
+  // Moves a skill's folder (yours or the project's, as listed) to the
+  // Trash.
+  rpc TrashSkill(TrashSkillRequest) returns (TrashSkillResponse);
   // Reopens a chat's session on a new agent (ACP session/load), which
   // replays its transcript, so it uses the MCP servers as they are now.
   // Refused while it is busy.
@@ -1004,6 +1022,92 @@ message LogoutMcpServerRequest {
 }
 
 message LogoutMcpServerResponse {}
+
+message ListSkillsRequest {
+  string folder = 1;
+}
+
+message ListSkillsResponse {
+  repeated Skill skills = 1;
+  repeated Plugin plugins = 2;
+  // Why Claude couldn't list its plugins (their skills are then missing).
+  string plugins_error = 3;
+  // Claude's built-in skills are off; built_in_set_in names a settings
+  // file that decides it other than yours.
+  bool built_in_off = 4;
+  string built_in_set_in = 5;
+}
+
+message Skill {
+  // As Claude lists it; a plugin's is "<plugin>:<skill>".
+  string name = 1;
+  // From its front matter, else its first line: its author's text.
+  string description = 2;
+  // "user", "project" or "plugin" (plugin: the plugin's id).
+  string source = 3;
+  string plugin = 4;
+  // Its folder, which holds SKILL.md.
+  string path = 5;
+  // "on", "name-only", "user-invocable-only" or "off"; set_in names a
+  // settings file that decides it other than the one SetSkillOn changes.
+  string state = 6;
+  string set_in = 7;
+  // About what listing it costs each session's context, in tokens.
+  int32 tokens = 8;
+}
+
+message Plugin {
+  // "<name>@<marketplace>".
+  string id = 1;
+  string name = 2;
+  string version = 3;
+  // From its manifest: its author's text.
+  string description = 4;
+  // Where it's installed: "user", "project" or "local".
+  string scope = 5;
+  string path = 6;
+  bool enabled = 7;
+  int32 skills = 8;
+  int32 commands = 9;
+  int32 agents = 10;
+  int32 mcp_servers = 11;
+  // Where SetPluginOn changes it: "user" (everywhere) or "local" (this
+  // project).
+  string switch_scope = 12;
+}
+
+message SetSkillOnRequest {
+  string folder = 1;
+  // "user", "project" or "builtin" (name empty).
+  string source = 2;
+  string name = 3;
+  bool on = 4;
+}
+
+message SetSkillOnResponse {}
+
+message SetPluginOnRequest {
+  string folder = 1;
+  string id = 2;
+  bool on = 3;
+}
+
+message SetPluginOnResponse {}
+
+message UninstallPluginRequest {
+  string folder = 1;
+  string id = 2;
+}
+
+message UninstallPluginResponse {}
+
+message TrashSkillRequest {
+  string folder = 1;
+  // The skill's folder, as listed.
+  string path = 2;
+}
+
+message TrashSkillResponse {}
 
 message ReloadChatRequest {
   string chat_id = 1;

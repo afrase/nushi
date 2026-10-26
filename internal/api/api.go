@@ -22,6 +22,7 @@ import (
 	"github.com/afrase/nushi/internal/features/mcp"
 	"github.com/afrase/nushi/internal/features/memory"
 	"github.com/afrase/nushi/internal/features/remote"
+	"github.com/afrase/nushi/internal/features/skills"
 	"github.com/afrase/nushi/internal/features/terminals"
 	"github.com/afrase/nushi/internal/features/trust"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
@@ -31,7 +32,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 65
+const Version = 66
 
 // Build is the daemon's executable as it started (PingResponse.build).
 var Build = func() string {
@@ -50,6 +51,7 @@ type server struct {
 	chats    *chats.Service
 	agents   *agents.Service
 	mcp      *mcp.Service
+	skills   *skills.Service
 	terms    *terminals.Service
 	trust    *trust.Service
 	hub      *events.Hub
@@ -90,6 +92,7 @@ type Services struct {
 	Chats  *chats.Service
 	Agents *agents.Service
 	MCP    *mcp.Service
+	Skills *skills.Service
 	Terms  *terminals.Service
 	Trust  *trust.Service
 	Hub    *events.Hub
@@ -109,7 +112,7 @@ func New(sv Services) http.Handler { return serve(sv, "socket") }
 // serve is the API for clients that come via, its calls logged.
 func serve(sv Services, via string, interceptors ...connect.Interceptor) http.Handler {
 	mux := http.NewServeMux()
-	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{chats: sv.Chats, agents: sv.Agents, mcp: sv.MCP, terms: sv.Terms, trust: sv.Trust,
+	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{chats: sv.Chats, agents: sv.Agents, mcp: sv.MCP, skills: sv.Skills, terms: sv.Terms, trust: sv.Trust,
 		hub: sv.Hub, memory: sv.Memory, remote: sv.Remote, jira: sv.Jira, github: sv.GitHub, logPrefs: sv.Log, transcripts: sv.Transcripts}, connect.WithInterceptors(append([]connect.Interceptor{logCalls{via}}, interceptors...)...)))
 	return mux
 }

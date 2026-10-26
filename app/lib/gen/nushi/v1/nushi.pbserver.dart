@@ -109,6 +109,16 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.LoginMcpServerRequest request);
   $async.Future<$0.LogoutMcpServerResponse> logoutMcpServer(
       $pb.ServerContext ctx, $0.LogoutMcpServerRequest request);
+  $async.Future<$0.ListSkillsResponse> listSkills(
+      $pb.ServerContext ctx, $0.ListSkillsRequest request);
+  $async.Future<$0.SetSkillOnResponse> setSkillOn(
+      $pb.ServerContext ctx, $0.SetSkillOnRequest request);
+  $async.Future<$0.SetPluginOnResponse> setPluginOn(
+      $pb.ServerContext ctx, $0.SetPluginOnRequest request);
+  $async.Future<$0.UninstallPluginResponse> uninstallPlugin(
+      $pb.ServerContext ctx, $0.UninstallPluginRequest request);
+  $async.Future<$0.TrashSkillResponse> trashSkill(
+      $pb.ServerContext ctx, $0.TrashSkillRequest request);
   $async.Future<$0.ReloadChatResponse> reloadChat(
       $pb.ServerContext ctx, $0.ReloadChatRequest request);
   $async.Future<$0.OpenTerminalResponse> openTerminal(
@@ -304,6 +314,16 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.LoginMcpServerRequest();
       case 'LogoutMcpServer':
         return $0.LogoutMcpServerRequest();
+      case 'ListSkills':
+        return $0.ListSkillsRequest();
+      case 'SetSkillOn':
+        return $0.SetSkillOnRequest();
+      case 'SetPluginOn':
+        return $0.SetPluginOnRequest();
+      case 'UninstallPlugin':
+        return $0.UninstallPluginRequest();
+      case 'TrashSkill':
+        return $0.TrashSkillRequest();
       case 'ReloadChat':
         return $0.ReloadChatRequest();
       case 'OpenTerminal':
@@ -505,6 +525,16 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return loginMcpServer(ctx, request as $0.LoginMcpServerRequest);
       case 'LogoutMcpServer':
         return logoutMcpServer(ctx, request as $0.LogoutMcpServerRequest);
+      case 'ListSkills':
+        return listSkills(ctx, request as $0.ListSkillsRequest);
+      case 'SetSkillOn':
+        return setSkillOn(ctx, request as $0.SetSkillOnRequest);
+      case 'SetPluginOn':
+        return setPluginOn(ctx, request as $0.SetPluginOnRequest);
+      case 'UninstallPlugin':
+        return uninstallPlugin(ctx, request as $0.UninstallPluginRequest);
+      case 'TrashSkill':
+        return trashSkill(ctx, request as $0.TrashSkillRequest);
       case 'ReloadChat':
         return reloadChat(ctx, request as $0.ReloadChatRequest);
       case 'OpenTerminal':

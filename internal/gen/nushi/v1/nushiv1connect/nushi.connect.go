@@ -145,6 +145,18 @@ const (
 	// NushiServiceLogoutMcpServerProcedure is the fully-qualified name of the NushiService's
 	// LogoutMcpServer RPC.
 	NushiServiceLogoutMcpServerProcedure = "/nushi.v1.NushiService/LogoutMcpServer"
+	// NushiServiceListSkillsProcedure is the fully-qualified name of the NushiService's ListSkills RPC.
+	NushiServiceListSkillsProcedure = "/nushi.v1.NushiService/ListSkills"
+	// NushiServiceSetSkillOnProcedure is the fully-qualified name of the NushiService's SetSkillOn RPC.
+	NushiServiceSetSkillOnProcedure = "/nushi.v1.NushiService/SetSkillOn"
+	// NushiServiceSetPluginOnProcedure is the fully-qualified name of the NushiService's SetPluginOn
+	// RPC.
+	NushiServiceSetPluginOnProcedure = "/nushi.v1.NushiService/SetPluginOn"
+	// NushiServiceUninstallPluginProcedure is the fully-qualified name of the NushiService's
+	// UninstallPlugin RPC.
+	NushiServiceUninstallPluginProcedure = "/nushi.v1.NushiService/UninstallPlugin"
+	// NushiServiceTrashSkillProcedure is the fully-qualified name of the NushiService's TrashSkill RPC.
+	NushiServiceTrashSkillProcedure = "/nushi.v1.NushiService/TrashSkill"
 	// NushiServiceReloadChatProcedure is the fully-qualified name of the NushiService's ReloadChat RPC.
 	NushiServiceReloadChatProcedure = "/nushi.v1.NushiService/ReloadChat"
 	// NushiServiceOpenTerminalProcedure is the fully-qualified name of the NushiService's OpenTerminal
@@ -448,6 +460,24 @@ type NushiServiceClient interface {
 	// minutes at most). Logout forgets the sign-in.
 	LoginMcpServer(context.Context, *connect.Request[v1.LoginMcpServerRequest]) (*connect.Response[v1.LoginMcpServerResponse], error)
 	LogoutMcpServer(context.Context, *connect.Request[v1.LogoutMcpServerRequest]) (*connect.Response[v1.LogoutMcpServerResponse], error)
+	// The skills and plugins Claude uses in a folder (API 66, ADR 0051):
+	// read from Claude's files and `claude plugin list --json`, never run in
+	// the folder. Skills' descriptions and plugins' text are their authors'.
+	ListSkills(context.Context, *connect.Request[v1.ListSkillsRequest]) (*connect.Response[v1.ListSkillsResponse], error)
+	// Turns a skill on or off: yours in your settings, a project's in the
+	// project's local settings (skillOverrides, only that key); "builtin"
+	// turns Claude's built-in skills on or off together, in your settings
+	// (disableBundledSkills). A plugin's skills go with their plugin.
+	SetSkillOn(context.Context, *connect.Request[v1.SetSkillOnRequest]) (*connect.Response[v1.SetSkillOnResponse], error)
+	// Turns an installed plugin on or off (`claude plugin enable`, `disable`)
+	// where Plugin.switch_scope says.
+	SetPluginOn(context.Context, *connect.Request[v1.SetPluginOnRequest]) (*connect.Response[v1.SetPluginOnResponse], error)
+	// Uninstalls a plugin installed for you or in the project's local
+	// settings (`claude plugin uninstall`).
+	UninstallPlugin(context.Context, *connect.Request[v1.UninstallPluginRequest]) (*connect.Response[v1.UninstallPluginResponse], error)
+	// Moves a skill's folder (yours or the project's, as listed) to the
+	// Trash.
+	TrashSkill(context.Context, *connect.Request[v1.TrashSkillRequest]) (*connect.Response[v1.TrashSkillResponse], error)
 	// Reopens a chat's session on a new agent (ACP session/load), which
 	// replays its transcript, so it uses the MCP servers as they are now.
 	// Refused while it is busy.
@@ -847,6 +877,36 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("LogoutMcpServer")),
 			connect.WithClientOptions(opts...),
 		),
+		listSkills: connect.NewClient[v1.ListSkillsRequest, v1.ListSkillsResponse](
+			httpClient,
+			baseURL+NushiServiceListSkillsProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ListSkills")),
+			connect.WithClientOptions(opts...),
+		),
+		setSkillOn: connect.NewClient[v1.SetSkillOnRequest, v1.SetSkillOnResponse](
+			httpClient,
+			baseURL+NushiServiceSetSkillOnProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("SetSkillOn")),
+			connect.WithClientOptions(opts...),
+		),
+		setPluginOn: connect.NewClient[v1.SetPluginOnRequest, v1.SetPluginOnResponse](
+			httpClient,
+			baseURL+NushiServiceSetPluginOnProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("SetPluginOn")),
+			connect.WithClientOptions(opts...),
+		),
+		uninstallPlugin: connect.NewClient[v1.UninstallPluginRequest, v1.UninstallPluginResponse](
+			httpClient,
+			baseURL+NushiServiceUninstallPluginProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("UninstallPlugin")),
+			connect.WithClientOptions(opts...),
+		),
+		trashSkill: connect.NewClient[v1.TrashSkillRequest, v1.TrashSkillResponse](
+			httpClient,
+			baseURL+NushiServiceTrashSkillProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("TrashSkill")),
+			connect.WithClientOptions(opts...),
+		),
 		reloadChat: connect.NewClient[v1.ReloadChatRequest, v1.ReloadChatResponse](
 			httpClient,
 			baseURL+NushiServiceReloadChatProcedure,
@@ -1208,6 +1268,11 @@ type nushiServiceClient struct {
 	setMcpServerOn      *connect.Client[v1.SetMcpServerOnRequest, v1.SetMcpServerOnResponse]
 	loginMcpServer      *connect.Client[v1.LoginMcpServerRequest, v1.LoginMcpServerResponse]
 	logoutMcpServer     *connect.Client[v1.LogoutMcpServerRequest, v1.LogoutMcpServerResponse]
+	listSkills          *connect.Client[v1.ListSkillsRequest, v1.ListSkillsResponse]
+	setSkillOn          *connect.Client[v1.SetSkillOnRequest, v1.SetSkillOnResponse]
+	setPluginOn         *connect.Client[v1.SetPluginOnRequest, v1.SetPluginOnResponse]
+	uninstallPlugin     *connect.Client[v1.UninstallPluginRequest, v1.UninstallPluginResponse]
+	trashSkill          *connect.Client[v1.TrashSkillRequest, v1.TrashSkillResponse]
 	reloadChat          *connect.Client[v1.ReloadChatRequest, v1.ReloadChatResponse]
 	openTerminal        *connect.Client[v1.OpenTerminalRequest, v1.OpenTerminalResponse]
 	listTerminals       *connect.Client[v1.ListTerminalsRequest, v1.ListTerminalsResponse]
@@ -1480,6 +1545,31 @@ func (c *nushiServiceClient) LoginMcpServer(ctx context.Context, req *connect.Re
 // LogoutMcpServer calls nushi.v1.NushiService.LogoutMcpServer.
 func (c *nushiServiceClient) LogoutMcpServer(ctx context.Context, req *connect.Request[v1.LogoutMcpServerRequest]) (*connect.Response[v1.LogoutMcpServerResponse], error) {
 	return c.logoutMcpServer.CallUnary(ctx, req)
+}
+
+// ListSkills calls nushi.v1.NushiService.ListSkills.
+func (c *nushiServiceClient) ListSkills(ctx context.Context, req *connect.Request[v1.ListSkillsRequest]) (*connect.Response[v1.ListSkillsResponse], error) {
+	return c.listSkills.CallUnary(ctx, req)
+}
+
+// SetSkillOn calls nushi.v1.NushiService.SetSkillOn.
+func (c *nushiServiceClient) SetSkillOn(ctx context.Context, req *connect.Request[v1.SetSkillOnRequest]) (*connect.Response[v1.SetSkillOnResponse], error) {
+	return c.setSkillOn.CallUnary(ctx, req)
+}
+
+// SetPluginOn calls nushi.v1.NushiService.SetPluginOn.
+func (c *nushiServiceClient) SetPluginOn(ctx context.Context, req *connect.Request[v1.SetPluginOnRequest]) (*connect.Response[v1.SetPluginOnResponse], error) {
+	return c.setPluginOn.CallUnary(ctx, req)
+}
+
+// UninstallPlugin calls nushi.v1.NushiService.UninstallPlugin.
+func (c *nushiServiceClient) UninstallPlugin(ctx context.Context, req *connect.Request[v1.UninstallPluginRequest]) (*connect.Response[v1.UninstallPluginResponse], error) {
+	return c.uninstallPlugin.CallUnary(ctx, req)
+}
+
+// TrashSkill calls nushi.v1.NushiService.TrashSkill.
+func (c *nushiServiceClient) TrashSkill(ctx context.Context, req *connect.Request[v1.TrashSkillRequest]) (*connect.Response[v1.TrashSkillResponse], error) {
+	return c.trashSkill.CallUnary(ctx, req)
 }
 
 // ReloadChat calls nushi.v1.NushiService.ReloadChat.
@@ -1893,6 +1983,24 @@ type NushiServiceHandler interface {
 	// minutes at most). Logout forgets the sign-in.
 	LoginMcpServer(context.Context, *connect.Request[v1.LoginMcpServerRequest]) (*connect.Response[v1.LoginMcpServerResponse], error)
 	LogoutMcpServer(context.Context, *connect.Request[v1.LogoutMcpServerRequest]) (*connect.Response[v1.LogoutMcpServerResponse], error)
+	// The skills and plugins Claude uses in a folder (API 66, ADR 0051):
+	// read from Claude's files and `claude plugin list --json`, never run in
+	// the folder. Skills' descriptions and plugins' text are their authors'.
+	ListSkills(context.Context, *connect.Request[v1.ListSkillsRequest]) (*connect.Response[v1.ListSkillsResponse], error)
+	// Turns a skill on or off: yours in your settings, a project's in the
+	// project's local settings (skillOverrides, only that key); "builtin"
+	// turns Claude's built-in skills on or off together, in your settings
+	// (disableBundledSkills). A plugin's skills go with their plugin.
+	SetSkillOn(context.Context, *connect.Request[v1.SetSkillOnRequest]) (*connect.Response[v1.SetSkillOnResponse], error)
+	// Turns an installed plugin on or off (`claude plugin enable`, `disable`)
+	// where Plugin.switch_scope says.
+	SetPluginOn(context.Context, *connect.Request[v1.SetPluginOnRequest]) (*connect.Response[v1.SetPluginOnResponse], error)
+	// Uninstalls a plugin installed for you or in the project's local
+	// settings (`claude plugin uninstall`).
+	UninstallPlugin(context.Context, *connect.Request[v1.UninstallPluginRequest]) (*connect.Response[v1.UninstallPluginResponse], error)
+	// Moves a skill's folder (yours or the project's, as listed) to the
+	// Trash.
+	TrashSkill(context.Context, *connect.Request[v1.TrashSkillRequest]) (*connect.Response[v1.TrashSkillResponse], error)
 	// Reopens a chat's session on a new agent (ACP session/load), which
 	// replays its transcript, so it uses the MCP servers as they are now.
 	// Refused while it is busy.
@@ -2286,6 +2394,36 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceLogoutMcpServerProcedure,
 		svc.LogoutMcpServer,
 		connect.WithSchema(nushiServiceMethods.ByName("LogoutMcpServer")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceListSkillsHandler := connect.NewUnaryHandler(
+		NushiServiceListSkillsProcedure,
+		svc.ListSkills,
+		connect.WithSchema(nushiServiceMethods.ByName("ListSkills")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceSetSkillOnHandler := connect.NewUnaryHandler(
+		NushiServiceSetSkillOnProcedure,
+		svc.SetSkillOn,
+		connect.WithSchema(nushiServiceMethods.ByName("SetSkillOn")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceSetPluginOnHandler := connect.NewUnaryHandler(
+		NushiServiceSetPluginOnProcedure,
+		svc.SetPluginOn,
+		connect.WithSchema(nushiServiceMethods.ByName("SetPluginOn")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceUninstallPluginHandler := connect.NewUnaryHandler(
+		NushiServiceUninstallPluginProcedure,
+		svc.UninstallPlugin,
+		connect.WithSchema(nushiServiceMethods.ByName("UninstallPlugin")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceTrashSkillHandler := connect.NewUnaryHandler(
+		NushiServiceTrashSkillProcedure,
+		svc.TrashSkill,
+		connect.WithSchema(nushiServiceMethods.ByName("TrashSkill")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceReloadChatHandler := connect.NewUnaryHandler(
@@ -2690,6 +2828,16 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceLoginMcpServerHandler.ServeHTTP(w, r)
 		case NushiServiceLogoutMcpServerProcedure:
 			nushiServiceLogoutMcpServerHandler.ServeHTTP(w, r)
+		case NushiServiceListSkillsProcedure:
+			nushiServiceListSkillsHandler.ServeHTTP(w, r)
+		case NushiServiceSetSkillOnProcedure:
+			nushiServiceSetSkillOnHandler.ServeHTTP(w, r)
+		case NushiServiceSetPluginOnProcedure:
+			nushiServiceSetPluginOnHandler.ServeHTTP(w, r)
+		case NushiServiceUninstallPluginProcedure:
+			nushiServiceUninstallPluginHandler.ServeHTTP(w, r)
+		case NushiServiceTrashSkillProcedure:
+			nushiServiceTrashSkillHandler.ServeHTTP(w, r)
 		case NushiServiceReloadChatProcedure:
 			nushiServiceReloadChatHandler.ServeHTTP(w, r)
 		case NushiServiceOpenTerminalProcedure:
@@ -2977,6 +3125,26 @@ func (UnimplementedNushiServiceHandler) LoginMcpServer(context.Context, *connect
 
 func (UnimplementedNushiServiceHandler) LogoutMcpServer(context.Context, *connect.Request[v1.LogoutMcpServerRequest]) (*connect.Response[v1.LogoutMcpServerResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.LogoutMcpServer is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ListSkills(context.Context, *connect.Request[v1.ListSkillsRequest]) (*connect.Response[v1.ListSkillsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ListSkills is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) SetSkillOn(context.Context, *connect.Request[v1.SetSkillOnRequest]) (*connect.Response[v1.SetSkillOnResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.SetSkillOn is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) SetPluginOn(context.Context, *connect.Request[v1.SetPluginOnRequest]) (*connect.Response[v1.SetPluginOnResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.SetPluginOn is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) UninstallPlugin(context.Context, *connect.Request[v1.UninstallPluginRequest]) (*connect.Response[v1.UninstallPluginResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.UninstallPlugin is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) TrashSkill(context.Context, *connect.Request[v1.TrashSkillRequest]) (*connect.Response[v1.TrashSkillResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.TrashSkill is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) ReloadChat(context.Context, *connect.Request[v1.ReloadChatRequest]) (*connect.Response[v1.ReloadChatResponse], error) {
