@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"regexp"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -181,13 +182,46 @@ func (s *Service) check(ctx context.Context, name string, h *host) error {
 	return err
 }
 
-// hostRE is a host name, with a port maybe.
+// hostRE is a host name, with a port maybe: no user, no path.
 var hostRE = regexp.MustCompile(`^[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?(:\d{1,5})?$`)
+
+// NormalHost is a host's name as Nushi keys it: lowercase, without a
+// trailing dot or the default port; false for what isn't a host's name
+// (a user, a path, spaces).
+func NormalHost(name string) (string, bool) {
+	h := strings.TrimSuffix(strings.ToLower(strings.TrimSpace(name)), ":443")
+	h = strings.TrimSuffix(h, ".")
+	if !hostRE.MatchString(h) || strings.Contains(h, "..") {
+		return "", false
+	}
+	return h, true
+}
+
+// known checks a host may be given a token: github.com, a host gh is
+// signed in to (its own hosts), or one given a pasted token in Settings.
+// Any other (a host named by a link in someone's text, say) is refused
+// before a token is read, so no token ever goes to a server someone else
+// picked: gh's GH_ENTERPRISE_TOKEN would be given for any.
+func (s *Service) known(name string) (string, []string, error) {
+	h, ok := NormalHost(name)
+	if !ok {
+		return "", nil, fmt.Errorf("%q isn't a host's name", name)
+	}
+	pasted, err := s.Store.GitHubTokenHosts()
+	if err != nil {
+		return "", nil, err
+	}
+	if h != "github.com" && !slices.Contains(pasted, h) && !slices.Contains(s.Gh.Hosts(), h) {
+		return "", nil, fmt.Errorf("%s isn't a host gh is signed in to or one given a token in Settings › GitHub", h)
+	}
+	return h, pasted, nil
+}
 
 // AddToken checks a pasted token on a host and keeps it in the keychain.
 // It's used for the host instead of gh's login, until removed.
 func (s *Service) AddToken(ctx context.Context, name, token string) (githubapi.User, error) {
-	if !hostRE.MatchString(name) {
+	name, ok := NormalHost(name)
+	if !ok {
 		return githubapi.User{}, fmt.Errorf("%q isn't a host's name, such as github.com", name)
 	}
 	if token == "" {
@@ -218,6 +252,10 @@ func (s *Service) AddToken(ctx context.Context, name, token string) (githubapi.U
 // RemoveToken deletes a host's pasted token: the host goes back to gh's
 // login, if gh has one.
 func (s *Service) RemoveToken(name string) error {
+	name, ok := NormalHost(name)
+	if !ok {
+		return errors.New("not a host's name")
+	}
 	if err := s.Tokens.Delete(name); err != nil {
 		return fmt.Errorf("deleting the token from the keychain: %w", err)
 	}
@@ -243,15 +281,15 @@ func (s *Service) AllowToken(name string) error {
 // first time, with macOS's prompt only when asked), else gh's login's.
 // The token stays in the client only.
 func (s *Service) host(name string, prompt bool) (*host, error) {
+	name, pasted, err := s.known(name)
+	if err != nil {
+		return nil, err
+	}
 	s.mu.Lock()
 	h := s.clients[name]
 	s.mu.Unlock()
 	if h != nil {
 		return h, nil
-	}
-	pasted, err := s.Store.GitHubTokenHosts()
-	if err != nil {
-		return nil, err
 	}
 	var token []byte
 	source := "token"
