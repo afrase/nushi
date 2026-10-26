@@ -3,6 +3,8 @@ package claude
 import (
 	"fmt"
 	"regexp"
+
+	"github.com/afrase/nushi/internal/model"
 )
 
 // subagentID finds a subagent's id in its Agent call's output: a background
@@ -27,13 +29,23 @@ func Relay(agent, agentID, text string) string {
 		"<message>\n%s\n</message>", agent, agentID, text)
 }
 
-var relayed = regexp.MustCompile(`(?s)^Forward the message below, verbatim, to your (.+?) subagent whose agentId is [0-9a-z]+, with the SendMessage tool .*?\n\n<message>\n(.*)\n</message>$`)
+var relayed = regexp.MustCompile(`(?s)^Forward the message below, verbatim, to your (.+?) subagent whose agentId is ([0-9a-z]+), with the SendMessage tool .*?\n\n<message>\n(.*)\n</message>$`)
 
-// Relayed reads a prompt Relay made: the subagent's type and the message.
-func Relayed(prompt string) (agent, text string, ok bool) {
+// Relayed reads a prompt Relay made: the subagent's type and id, and the
+// message.
+func Relayed(prompt string) (agent, agentID, text string, ok bool) {
 	m := relayed.FindStringSubmatch(prompt)
 	if m == nil {
-		return "", "", false
+		return "", "", "", false
 	}
-	return m[1], m[2], true
+	return m[1], m[2], m[3], true
+}
+
+// Relaying says a tool call is Claude passing a message to a subagent (its
+// SendMessage), and to which: the agent's id for it.
+func Relaying(it model.Item) string {
+	if it.Tool != "SendMessage" {
+		return ""
+	}
+	return it.AgentID
 }

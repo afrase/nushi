@@ -2,6 +2,7 @@ package chats
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"testing"
 
@@ -57,5 +58,57 @@ func TestMessagesGoToSubagentsThroughTheAgent(t *testing.T) {
 	c.mu.Unlock()
 	if sa.State != "running" || sa.Started.IsZero() {
 		t.Errorf("run again: %+v", sa)
+	}
+}
+
+// A message for a subagent follows the agent's call that passes it on: sent,
+// then relayed (or failed); one the agent's turn ends without passing on
+// fails.
+func TestARelayFollowsTheAgentsCall(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	for _, u := range backgroundSubagent() {
+		update(c, u)
+	}
+	sendMessage := func(status string) []acp.SessionUpdate {
+		return []acp.SessionUpdate{
+			{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "sm1", Title: "SendMessage", Status: "pending",
+				Meta: map[string]any{"claudeCode": map[string]any{"toolName": "SendMessage"}}, RawInput: []byte(`{"to":"ab59","message":"and README.md"}`)}},
+			{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "sm1", Status: acp.ToolCallStatus(status)}},
+		}
+	}
+	last := func() model.Item {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		return c.items[slices.IndexFunc(c.items, func(it model.Item) bool { return it.Kind == model.UserMessage })]
+	}
+	for _, tc := range []struct {
+		calls    []acp.SessionUpdate
+		want, by string
+	}{
+		{sendMessage("completed"), "relayed", "sm1"},
+		{sendMessage("failed"), "failed", "sm1"},
+		{[]acp.SessionUpdate{chunk("m1", "I'll leave it.")}, "failed", ""},
+	} {
+		c.mu.Lock()
+		c.items = slices.DeleteFunc(c.items, func(it model.Item) bool { return it.Kind != model.ToolCall || it.ID != "a1" })
+		c.mu.Unlock()
+		agent.updates = tc.calls
+		if err := svc.Prompt(c.id, model.Message{Text: "and README.md", To: "a1"}, SendIdle); err != nil {
+			t.Fatal(err)
+		}
+		eventually(t, c, func() bool { return !c.busy })
+		if it := last(); it.RelayState != tc.want || it.RelayedBy != tc.by {
+			t.Errorf("after %s: %s by %q", tc.calls[len(tc.calls)-1].SessionUpdate, it.RelayState, it.RelayedBy)
+		}
+	}
+
+	// Replayed, the message names its subagent again.
+	update(c, acp.SessionUpdate{SessionUpdate: "user_message_chunk", UserMessageChunk: &acp.ContentChunk{MessageID: "u9",
+		Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: claude.Relay("general-purpose", "ab59", "hi")}}}})
+	c.mu.Lock()
+	it := c.items[len(c.items)-1]
+	c.mu.Unlock()
+	if it.RelayCall != "a1" || it.RelayState != "" {
+		t.Errorf("replayed: %+v", it)
 	}
 }

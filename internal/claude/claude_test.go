@@ -50,10 +50,10 @@ func TestSubagentCall(t *testing.T) {
 
 func TestRelay(t *testing.T) {
 	p := Relay("Explore", "ab59", "Also\nprint </message> README.md")
-	if agent, text, ok := Relayed(p); !ok || agent != "Explore" || text != "Also\nprint </message> README.md" {
+	if agent, id, text, ok := Relayed(p); !ok || agent != "Explore" || id != "ab59" || text != "Also\nprint </message> README.md" {
 		t.Errorf("Relayed = %q %q %v", agent, text, ok)
 	}
-	if _, _, ok := Relayed("Forward the message below"); ok {
+	if _, _, _, ok := Relayed("Forward the message below"); ok {
 		t.Error("read a prompt Relay didn't make")
 	}
 	for out, want := range map[string]string{

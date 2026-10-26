@@ -1097,8 +1097,15 @@ message Item {
   // agent can pass it messages (SendPromptRequest.to_subagent).
   string agent_id = 26;
   // For a user message: the type of the subagent the agent was asked to
-  // pass it to.
+  // pass it to, and that subagent's tool call (not known after a replay
+  // the agent's own call doesn't link).
   string relay_to = 27;
+  string relay_call = 28;
+  // How the relay went: "sending" until the agent passes it on (its call
+  // that does is relayed_by), "relayed" once that call completes, "failed"
+  // when it fails or the turn ends without one; "" when unknown (replayed).
+  string relay_state = 29;
+  string relayed_by = 30;
 }
 
 // A command the agent runs in the background.
@@ -1120,7 +1127,7 @@ message Shell {
 
 // How a subagent goes.
 message Subagent {
-  // "running", "done" or "failed".
+  // "running", "done", "failed", or "stopped" (with its agent, by Nushi).
   string state = 1;
   // When the daemon saw it start, and end, in Unix milliseconds; 0 when it
   // didn't (a replayed chat).

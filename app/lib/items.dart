@@ -53,13 +53,10 @@ class ItemView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             spacing: 4,
             children: [
-              // A message the agent was asked to pass to a subagent.
-              _who(
-                theme,
-                item.relayTo.isEmpty
-                    ? 'You'
-                    : 'You → ${item.relayTo}, through ${chat.agentName}',
-              ),
+              if (item.relayTo.isEmpty)
+                _who(theme, 'You')
+              else
+                _Relayed(item, chat),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
@@ -164,6 +161,52 @@ class ItemView extends StatelessWidget {
 }
 
 /// The small header above a message: who wrote it.
+/// Who wrote a message the agent was asked to pass to a subagent, and how
+/// that went: in the chat's transcript and in the subagent's pane, where
+/// it shows among the subagent's steps. A click opens the subagent's pane.
+class _Relayed extends StatelessWidget {
+  const new(this.item, this.chat);
+
+  final Item item;
+  final ChatState chat;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    final agent = chat.agentName;
+    final (state, color) = switch (item.relayState) {
+      'sending' => ('waiting for $agent to pass it on', t.textMuted),
+      'relayed' => ('passed on', t.textMuted),
+      'failed' => ('$agent didn’t pass it on', t.crashed),
+      _ => ('', t.textMuted),
+    };
+    final label = Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: 'You → ${item.relayTo}',
+            style: theme.ui(t.textSecondary, size: 12, weight: FontWeight.w600),
+          ),
+          TextSpan(
+            text: ', through $agent${state.isEmpty ? '' : ' · $state'}',
+            style: theme.ui(color, size: 12),
+          ),
+        ],
+      ),
+    );
+    if (item.relayCall.isEmpty) return label;
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Tap(
+        onTap: () => chat.pane.value = item.relayCall,
+        tooltip: 'Open ${item.relayTo}’s steps',
+        child: label,
+      ),
+    );
+  }
+}
+
 Widget _who(NushiTheme theme, String name) => Text(
   name,
   style: theme.ui(theme.t.textSecondary, size: 12, weight: FontWeight.w600),
