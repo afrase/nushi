@@ -3754,6 +3754,946 @@ final $typed_data.Uint8List foundJiraIssueDescriptor = $convert.base64Decode(
     'Cg5Gb3VuZEppcmFJc3N1ZRISCgRzaXRlGAEgASgJUgRzaXRlEikKBWlzc3VlGAIgASgLMhMubn'
     'VzaGkudjEuSmlyYUlzc3VlUgVpc3N1ZRIWCgZicmFuY2gYAyABKAlSBmJyYW5jaA==');
 
+@$core.Deprecated('Use gitHubBucketDescriptor instead')
+const GitHubBucket$json = {
+  '1': 'GitHubBucket',
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'limit', '3': 2, '4': 1, '5': 5, '10': 'limit'},
+    {'1': 'remaining', '3': 3, '4': 1, '5': 5, '10': 'remaining'},
+    {'1': 'reset_ms', '3': 4, '4': 1, '5': 3, '10': 'resetMs'},
+  ],
+};
+
+/// Descriptor for `GitHubBucket`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List gitHubBucketDescriptor = $convert.base64Decode(
+    'CgxHaXRIdWJCdWNrZXQSEgoEbmFtZRgBIAEoCVIEbmFtZRIUCgVsaW1pdBgCIAEoBVIFbGltaX'
+    'QSHAoJcmVtYWluaW5nGAMgASgFUglyZW1haW5pbmcSGQoIcmVzZXRfbXMYBCABKANSB3Jlc2V0'
+    'TXM=');
+
+@$core.Deprecated('Use gitHubHostDescriptor instead')
+const GitHubHost$json = {
+  '1': 'GitHubHost',
+  '2': [
+    {'1': 'host', '3': 1, '4': 1, '5': 9, '10': 'host'},
+    {'1': 'login', '3': 2, '4': 1, '5': 9, '10': 'login'},
+    {'1': 'name', '3': 3, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'source', '3': 4, '4': 1, '5': 9, '10': 'source'},
+    {'1': 'kind', '3': 5, '4': 1, '5': 9, '10': 'kind'},
+    {'1': 'scopes', '3': 6, '4': 3, '5': 9, '10': 'scopes'},
+    {
+      '1': 'budget',
+      '3': 7,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.GitHubBucket',
+      '10': 'budget'
+    },
+    {'1': 'problem', '3': 8, '4': 1, '5': 9, '10': 'problem'},
+    {'1': 'needs_ok', '3': 9, '4': 1, '5': 8, '10': 'needsOk'},
+    {'1': 'pasted', '3': 10, '4': 1, '5': 8, '10': 'pasted'},
+  ],
+};
+
+/// Descriptor for `GitHubHost`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List gitHubHostDescriptor = $convert.base64Decode(
+    'CgpHaXRIdWJIb3N0EhIKBGhvc3QYASABKAlSBGhvc3QSFAoFbG9naW4YAiABKAlSBWxvZ2luEh'
+    'IKBG5hbWUYAyABKAlSBG5hbWUSFgoGc291cmNlGAQgASgJUgZzb3VyY2USEgoEa2luZBgFIAEo'
+    'CVIEa2luZBIWCgZzY29wZXMYBiADKAlSBnNjb3BlcxIuCgZidWRnZXQYByADKAsyFi5udXNoaS'
+    '52MS5HaXRIdWJCdWNrZXRSBmJ1ZGdldBIYCgdwcm9ibGVtGAggASgJUgdwcm9ibGVtEhkKCG5l'
+    'ZWRzX29rGAkgASgIUgduZWVkc09rEhYKBnBhc3RlZBgKIAEoCFIGcGFzdGVk');
+
+@$core.Deprecated('Use listGitHubHostsRequestDescriptor instead')
+const ListGitHubHostsRequest$json = {
+  '1': 'ListGitHubHostsRequest',
+};
+
+/// Descriptor for `ListGitHubHostsRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listGitHubHostsRequestDescriptor =
+    $convert.base64Decode('ChZMaXN0R2l0SHViSG9zdHNSZXF1ZXN0');
+
+@$core.Deprecated('Use listGitHubHostsResponseDescriptor instead')
+const ListGitHubHostsResponse$json = {
+  '1': 'ListGitHubHostsResponse',
+  '2': [
+    {
+      '1': 'hosts',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.GitHubHost',
+      '10': 'hosts'
+    },
+  ],
+};
+
+/// Descriptor for `ListGitHubHostsResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listGitHubHostsResponseDescriptor =
+    $convert.base64Decode(
+        'ChdMaXN0R2l0SHViSG9zdHNSZXNwb25zZRIqCgVob3N0cxgBIAMoCzIULm51c2hpLnYxLkdpdE'
+        'h1Ykhvc3RSBWhvc3Rz');
+
+@$core.Deprecated('Use addGitHubTokenRequestDescriptor instead')
+const AddGitHubTokenRequest$json = {
+  '1': 'AddGitHubTokenRequest',
+  '2': [
+    {'1': 'host', '3': 1, '4': 1, '5': 9, '10': 'host'},
+    {'1': 'token', '3': 2, '4': 1, '5': 9, '10': 'token'},
+  ],
+};
+
+/// Descriptor for `AddGitHubTokenRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List addGitHubTokenRequestDescriptor = $convert.base64Decode(
+    'ChVBZGRHaXRIdWJUb2tlblJlcXVlc3QSEgoEaG9zdBgBIAEoCVIEaG9zdBIUCgV0b2tlbhgCIA'
+    'EoCVIFdG9rZW4=');
+
+@$core.Deprecated('Use addGitHubTokenResponseDescriptor instead')
+const AddGitHubTokenResponse$json = {
+  '1': 'AddGitHubTokenResponse',
+  '2': [
+    {'1': 'login', '3': 1, '4': 1, '5': 9, '10': 'login'},
+  ],
+};
+
+/// Descriptor for `AddGitHubTokenResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List addGitHubTokenResponseDescriptor =
+    $convert.base64Decode(
+        'ChZBZGRHaXRIdWJUb2tlblJlc3BvbnNlEhQKBWxvZ2luGAEgASgJUgVsb2dpbg==');
+
+@$core.Deprecated('Use removeGitHubTokenRequestDescriptor instead')
+const RemoveGitHubTokenRequest$json = {
+  '1': 'RemoveGitHubTokenRequest',
+  '2': [
+    {'1': 'host', '3': 1, '4': 1, '5': 9, '10': 'host'},
+  ],
+};
+
+/// Descriptor for `RemoveGitHubTokenRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List removeGitHubTokenRequestDescriptor =
+    $convert.base64Decode(
+        'ChhSZW1vdmVHaXRIdWJUb2tlblJlcXVlc3QSEgoEaG9zdBgBIAEoCVIEaG9zdA==');
+
+@$core.Deprecated('Use removeGitHubTokenResponseDescriptor instead')
+const RemoveGitHubTokenResponse$json = {
+  '1': 'RemoveGitHubTokenResponse',
+};
+
+/// Descriptor for `RemoveGitHubTokenResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List removeGitHubTokenResponseDescriptor =
+    $convert.base64Decode('ChlSZW1vdmVHaXRIdWJUb2tlblJlc3BvbnNl');
+
+@$core.Deprecated('Use allowGitHubTokenRequestDescriptor instead')
+const AllowGitHubTokenRequest$json = {
+  '1': 'AllowGitHubTokenRequest',
+  '2': [
+    {'1': 'host', '3': 1, '4': 1, '5': 9, '10': 'host'},
+  ],
+};
+
+/// Descriptor for `AllowGitHubTokenRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List allowGitHubTokenRequestDescriptor =
+    $convert.base64Decode(
+        'ChdBbGxvd0dpdEh1YlRva2VuUmVxdWVzdBISCgRob3N0GAEgASgJUgRob3N0');
+
+@$core.Deprecated('Use allowGitHubTokenResponseDescriptor instead')
+const AllowGitHubTokenResponse$json = {
+  '1': 'AllowGitHubTokenResponse',
+};
+
+/// Descriptor for `AllowGitHubTokenResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List allowGitHubTokenResponseDescriptor =
+    $convert.base64Decode('ChhBbGxvd0dpdEh1YlRva2VuUmVzcG9uc2U=');
+
+@$core.Deprecated('Use gitHubRepoDescriptor instead')
+const GitHubRepo$json = {
+  '1': 'GitHubRepo',
+  '2': [
+    {'1': 'host', '3': 1, '4': 1, '5': 9, '10': 'host'},
+    {'1': 'repo', '3': 2, '4': 1, '5': 9, '10': 'repo'},
+    {'1': 'folders', '3': 3, '4': 3, '5': 9, '10': 'folders'},
+  ],
+};
+
+/// Descriptor for `GitHubRepo`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List gitHubRepoDescriptor = $convert.base64Decode(
+    'CgpHaXRIdWJSZXBvEhIKBGhvc3QYASABKAlSBGhvc3QSEgoEcmVwbxgCIAEoCVIEcmVwbxIYCg'
+    'dmb2xkZXJzGAMgAygJUgdmb2xkZXJz');
+
+@$core.Deprecated('Use listGitHubReposRequestDescriptor instead')
+const ListGitHubReposRequest$json = {
+  '1': 'ListGitHubReposRequest',
+  '2': [
+    {'1': 'folders', '3': 1, '4': 3, '5': 9, '10': 'folders'},
+  ],
+};
+
+/// Descriptor for `ListGitHubReposRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listGitHubReposRequestDescriptor =
+    $convert.base64Decode(
+        'ChZMaXN0R2l0SHViUmVwb3NSZXF1ZXN0EhgKB2ZvbGRlcnMYASADKAlSB2ZvbGRlcnM=');
+
+@$core.Deprecated('Use listGitHubReposResponseDescriptor instead')
+const ListGitHubReposResponse$json = {
+  '1': 'ListGitHubReposResponse',
+  '2': [
+    {
+      '1': 'repos',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.GitHubRepo',
+      '10': 'repos'
+    },
+  ],
+};
+
+/// Descriptor for `ListGitHubReposResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listGitHubReposResponseDescriptor =
+    $convert.base64Decode(
+        'ChdMaXN0R2l0SHViUmVwb3NSZXNwb25zZRIqCgVyZXBvcxgBIAMoCzIULm51c2hpLnYxLkdpdE'
+        'h1YlJlcG9SBXJlcG9z');
+
+@$core.Deprecated('Use gitHubRefDescriptor instead')
+const GitHubRef$json = {
+  '1': 'GitHubRef',
+  '2': [
+    {'1': 'host', '3': 1, '4': 1, '5': 9, '10': 'host'},
+    {'1': 'repo', '3': 2, '4': 1, '5': 9, '10': 'repo'},
+    {'1': 'number', '3': 3, '4': 1, '5': 5, '10': 'number'},
+  ],
+};
+
+/// Descriptor for `GitHubRef`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List gitHubRefDescriptor = $convert.base64Decode(
+    'CglHaXRIdWJSZWYSEgoEaG9zdBgBIAEoCVIEaG9zdBISCgRyZXBvGAIgASgJUgRyZXBvEhYKBm'
+    '51bWJlchgDIAEoBVIGbnVtYmVy');
+
+@$core.Deprecated('Use gitHubItemDescriptor instead')
+const GitHubItem$json = {
+  '1': 'GitHubItem',
+  '2': [
+    {
+      '1': 'ref',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubRef',
+      '10': 'ref'
+    },
+    {'1': 'id', '3': 2, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'pull', '3': 3, '4': 1, '5': 8, '10': 'pull'},
+    {'1': 'title', '3': 4, '4': 1, '5': 9, '10': 'title'},
+    {'1': 'url', '3': 5, '4': 1, '5': 9, '10': 'url'},
+    {'1': 'state', '3': 6, '4': 1, '5': 9, '10': 'state'},
+    {'1': 'draft', '3': 7, '4': 1, '5': 8, '10': 'draft'},
+    {'1': 'author', '3': 8, '4': 1, '5': 9, '10': 'author'},
+    {'1': 'updated_ms', '3': 9, '4': 1, '5': 3, '10': 'updatedMs'},
+    {'1': 'checks', '3': 10, '4': 1, '5': 9, '10': 'checks'},
+    {'1': 'review', '3': 11, '4': 1, '5': 9, '10': 'review'},
+    {'1': 'unresolved', '3': 12, '4': 1, '5': 5, '10': 'unresolved'},
+    {'1': 'comments', '3': 13, '4': 1, '5': 5, '10': 'comments'},
+  ],
+};
+
+/// Descriptor for `GitHubItem`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List gitHubItemDescriptor = $convert.base64Decode(
+    'CgpHaXRIdWJJdGVtEiUKA3JlZhgBIAEoCzITLm51c2hpLnYxLkdpdEh1YlJlZlIDcmVmEg4KAm'
+    'lkGAIgASgJUgJpZBISCgRwdWxsGAMgASgIUgRwdWxsEhQKBXRpdGxlGAQgASgJUgV0aXRsZRIQ'
+    'CgN1cmwYBSABKAlSA3VybBIUCgVzdGF0ZRgGIAEoCVIFc3RhdGUSFAoFZHJhZnQYByABKAhSBW'
+    'RyYWZ0EhYKBmF1dGhvchgIIAEoCVIGYXV0aG9yEh0KCnVwZGF0ZWRfbXMYCSABKANSCXVwZGF0'
+    'ZWRNcxIWCgZjaGVja3MYCiABKAlSBmNoZWNrcxIWCgZyZXZpZXcYCyABKAlSBnJldmlldxIeCg'
+    'p1bnJlc29sdmVkGAwgASgFUgp1bnJlc29sdmVkEhoKCGNvbW1lbnRzGA0gASgFUghjb21tZW50'
+    'cw==');
+
+@$core.Deprecated('Use listGitHubInboxRequestDescriptor instead')
+const ListGitHubInboxRequest$json = {
+  '1': 'ListGitHubInboxRequest',
+  '2': [
+    {'1': 'host', '3': 1, '4': 1, '5': 9, '10': 'host'},
+    {'1': 'repos', '3': 2, '4': 3, '5': 9, '10': 'repos'},
+    {'1': 'quiet', '3': 3, '4': 1, '5': 8, '10': 'quiet'},
+  ],
+};
+
+/// Descriptor for `ListGitHubInboxRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listGitHubInboxRequestDescriptor =
+    $convert.base64Decode(
+        'ChZMaXN0R2l0SHViSW5ib3hSZXF1ZXN0EhIKBGhvc3QYASABKAlSBGhvc3QSFAoFcmVwb3MYAi'
+        'ADKAlSBXJlcG9zEhQKBXF1aWV0GAMgASgIUgVxdWlldA==');
+
+@$core.Deprecated('Use listGitHubInboxResponseDescriptor instead')
+const ListGitHubInboxResponse$json = {
+  '1': 'ListGitHubInboxResponse',
+  '2': [
+    {
+      '1': 'review',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.GitHubItem',
+      '10': 'review'
+    },
+    {
+      '1': 'mine',
+      '3': 2,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.GitHubItem',
+      '10': 'mine'
+    },
+    {
+      '1': 'assigned',
+      '3': 3,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.GitHubItem',
+      '10': 'assigned'
+    },
+    {'1': 'review_total', '3': 4, '4': 1, '5': 5, '10': 'reviewTotal'},
+    {'1': 'mine_total', '3': 5, '4': 1, '5': 5, '10': 'mineTotal'},
+    {'1': 'assigned_total', '3': 6, '4': 1, '5': 5, '10': 'assignedTotal'},
+    {'1': 'at_ms', '3': 7, '4': 1, '5': 3, '10': 'atMs'},
+    {'1': 'stale', '3': 8, '4': 1, '5': 9, '10': 'stale'},
+  ],
+};
+
+/// Descriptor for `ListGitHubInboxResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listGitHubInboxResponseDescriptor = $convert.base64Decode(
+    'ChdMaXN0R2l0SHViSW5ib3hSZXNwb25zZRIsCgZyZXZpZXcYASADKAsyFC5udXNoaS52MS5HaX'
+    'RIdWJJdGVtUgZyZXZpZXcSKAoEbWluZRgCIAMoCzIULm51c2hpLnYxLkdpdEh1Ykl0ZW1SBG1p'
+    'bmUSMAoIYXNzaWduZWQYAyADKAsyFC5udXNoaS52MS5HaXRIdWJJdGVtUghhc3NpZ25lZBIhCg'
+    'xyZXZpZXdfdG90YWwYBCABKAVSC3Jldmlld1RvdGFsEh0KCm1pbmVfdG90YWwYBSABKAVSCW1p'
+    'bmVUb3RhbBIlCg5hc3NpZ25lZF90b3RhbBgGIAEoBVINYXNzaWduZWRUb3RhbBITCgVhdF9tcx'
+    'gHIAEoA1IEYXRNcxIUCgVzdGFsZRgIIAEoCVIFc3RhbGU=');
+
+@$core.Deprecated('Use gitHubLinkDescriptor instead')
+const GitHubLink$json = {
+  '1': 'GitHubLink',
+  '2': [
+    {'1': 'host', '3': 1, '4': 1, '5': 9, '10': 'host'},
+    {'1': 'id', '3': 2, '4': 1, '5': 9, '10': 'id'},
+  ],
+};
+
+/// Descriptor for `GitHubLink`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List gitHubLinkDescriptor = $convert.base64Decode(
+    'CgpHaXRIdWJMaW5rEhIKBGhvc3QYASABKAlSBGhvc3QSDgoCaWQYAiABKAlSAmlk');
+
+@$core.Deprecated('Use getGitHubStatesRequestDescriptor instead')
+const GetGitHubStatesRequest$json = {
+  '1': 'GetGitHubStatesRequest',
+  '2': [
+    {
+      '1': 'items',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.GitHubLink',
+      '10': 'items'
+    },
+    {'1': 'quiet', '3': 2, '4': 1, '5': 8, '10': 'quiet'},
+  ],
+};
+
+/// Descriptor for `GetGitHubStatesRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getGitHubStatesRequestDescriptor =
+    $convert.base64Decode(
+        'ChZHZXRHaXRIdWJTdGF0ZXNSZXF1ZXN0EioKBWl0ZW1zGAEgAygLMhQubnVzaGkudjEuR2l0SH'
+        'ViTGlua1IFaXRlbXMSFAoFcXVpZXQYAiABKAhSBXF1aWV0');
+
+@$core.Deprecated('Use getGitHubStatesResponseDescriptor instead')
+const GetGitHubStatesResponse$json = {
+  '1': 'GetGitHubStatesResponse',
+  '2': [
+    {
+      '1': 'items',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.GitHubItem',
+      '10': 'items'
+    },
+  ],
+};
+
+/// Descriptor for `GetGitHubStatesResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getGitHubStatesResponseDescriptor =
+    $convert.base64Decode(
+        'ChdHZXRHaXRIdWJTdGF0ZXNSZXNwb25zZRIqCgVpdGVtcxgBIAMoCzIULm51c2hpLnYxLkdpdE'
+        'h1Ykl0ZW1SBWl0ZW1z');
+
+@$core.Deprecated('Use gitHubCommentDescriptor instead')
+const GitHubComment$json = {
+  '1': 'GitHubComment',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'author', '3': 2, '4': 1, '5': 9, '10': 'author'},
+    {'1': 'association', '3': 3, '4': 1, '5': 9, '10': 'association'},
+    {'1': 'outside', '3': 4, '4': 1, '5': 8, '10': 'outside'},
+    {'1': 'bot', '3': 5, '4': 1, '5': 8, '10': 'bot'},
+    {'1': 'body', '3': 6, '4': 1, '5': 9, '10': 'body'},
+    {'1': 'url', '3': 7, '4': 1, '5': 9, '10': 'url'},
+    {'1': 'created_ms', '3': 8, '4': 1, '5': 3, '10': 'createdMs'},
+    {'1': 'review', '3': 9, '4': 1, '5': 9, '10': 'review'},
+  ],
+};
+
+/// Descriptor for `GitHubComment`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List gitHubCommentDescriptor = $convert.base64Decode(
+    'Cg1HaXRIdWJDb21tZW50Eg4KAmlkGAEgASgJUgJpZBIWCgZhdXRob3IYAiABKAlSBmF1dGhvch'
+    'IgCgthc3NvY2lhdGlvbhgDIAEoCVILYXNzb2NpYXRpb24SGAoHb3V0c2lkZRgEIAEoCFIHb3V0'
+    'c2lkZRIQCgNib3QYBSABKAhSA2JvdBISCgRib2R5GAYgASgJUgRib2R5EhAKA3VybBgHIAEoCV'
+    'IDdXJsEh0KCmNyZWF0ZWRfbXMYCCABKANSCWNyZWF0ZWRNcxIWCgZyZXZpZXcYCSABKAlSBnJl'
+    'dmlldw==');
+
+@$core.Deprecated('Use gitHubThreadDescriptor instead')
+const GitHubThread$json = {
+  '1': 'GitHubThread',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'path', '3': 2, '4': 1, '5': 9, '10': 'path'},
+    {'1': 'side', '3': 3, '4': 1, '5': 9, '10': 'side'},
+    {'1': 'line', '3': 4, '4': 1, '5': 5, '10': 'line'},
+    {'1': 'start_line', '3': 5, '4': 1, '5': 5, '10': 'startLine'},
+    {'1': 'original_line', '3': 6, '4': 1, '5': 5, '10': 'originalLine'},
+    {
+      '1': 'original_start_line',
+      '3': 7,
+      '4': 1,
+      '5': 5,
+      '10': 'originalStartLine'
+    },
+    {'1': 'on_file', '3': 8, '4': 1, '5': 8, '10': 'onFile'},
+    {'1': 'outdated', '3': 9, '4': 1, '5': 8, '10': 'outdated'},
+    {'1': 'resolved', '3': 10, '4': 1, '5': 8, '10': 'resolved'},
+    {'1': 'can_reply', '3': 11, '4': 1, '5': 8, '10': 'canReply'},
+    {'1': 'can_resolve', '3': 12, '4': 1, '5': 8, '10': 'canResolve'},
+    {'1': 'can_unresolve', '3': 13, '4': 1, '5': 8, '10': 'canUnresolve'},
+    {
+      '1': 'comments',
+      '3': 14,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.GitHubComment',
+      '10': 'comments'
+    },
+  ],
+};
+
+/// Descriptor for `GitHubThread`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List gitHubThreadDescriptor = $convert.base64Decode(
+    'CgxHaXRIdWJUaHJlYWQSDgoCaWQYASABKAlSAmlkEhIKBHBhdGgYAiABKAlSBHBhdGgSEgoEc2'
+    'lkZRgDIAEoCVIEc2lkZRISCgRsaW5lGAQgASgFUgRsaW5lEh0KCnN0YXJ0X2xpbmUYBSABKAVS'
+    'CXN0YXJ0TGluZRIjCg1vcmlnaW5hbF9saW5lGAYgASgFUgxvcmlnaW5hbExpbmUSLgoTb3JpZ2'
+    'luYWxfc3RhcnRfbGluZRgHIAEoBVIRb3JpZ2luYWxTdGFydExpbmUSFwoHb25fZmlsZRgIIAEo'
+    'CFIGb25GaWxlEhoKCG91dGRhdGVkGAkgASgIUghvdXRkYXRlZBIaCghyZXNvbHZlZBgKIAEoCF'
+    'IIcmVzb2x2ZWQSGwoJY2FuX3JlcGx5GAsgASgIUghjYW5SZXBseRIfCgtjYW5fcmVzb2x2ZRgM'
+    'IAEoCFIKY2FuUmVzb2x2ZRIjCg1jYW5fdW5yZXNvbHZlGA0gASgIUgxjYW5VbnJlc29sdmUSMw'
+    'oIY29tbWVudHMYDiADKAsyFy5udXNoaS52MS5HaXRIdWJDb21tZW50Ughjb21tZW50cw==');
+
+@$core.Deprecated('Use gitHubAnnotationDescriptor instead')
+const GitHubAnnotation$json = {
+  '1': 'GitHubAnnotation',
+  '2': [
+    {'1': 'path', '3': 1, '4': 1, '5': 9, '10': 'path'},
+    {'1': 'level', '3': 2, '4': 1, '5': 9, '10': 'level'},
+    {'1': 'title', '3': 3, '4': 1, '5': 9, '10': 'title'},
+    {'1': 'message', '3': 4, '4': 1, '5': 9, '10': 'message'},
+    {'1': 'line', '3': 5, '4': 1, '5': 5, '10': 'line'},
+    {'1': 'end_line', '3': 6, '4': 1, '5': 5, '10': 'endLine'},
+  ],
+};
+
+/// Descriptor for `GitHubAnnotation`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List gitHubAnnotationDescriptor = $convert.base64Decode(
+    'ChBHaXRIdWJBbm5vdGF0aW9uEhIKBHBhdGgYASABKAlSBHBhdGgSFAoFbGV2ZWwYAiABKAlSBW'
+    'xldmVsEhQKBXRpdGxlGAMgASgJUgV0aXRsZRIYCgdtZXNzYWdlGAQgASgJUgdtZXNzYWdlEhIK'
+    'BGxpbmUYBSABKAVSBGxpbmUSGQoIZW5kX2xpbmUYBiABKAVSB2VuZExpbmU=');
+
+@$core.Deprecated('Use gitHubCheckDescriptor instead')
+const GitHubCheck$json = {
+  '1': 'GitHubCheck',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 3, '10': 'id'},
+    {'1': 'name', '3': 2, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'workflow', '3': 3, '4': 1, '5': 9, '10': 'workflow'},
+    {'1': 'app', '3': 4, '4': 1, '5': 9, '10': 'app'},
+    {'1': 'state', '3': 5, '4': 1, '5': 9, '10': 'state'},
+    {'1': 'failed', '3': 6, '4': 1, '5': 8, '10': 'failed'},
+    {'1': 'url', '3': 7, '4': 1, '5': 9, '10': 'url'},
+    {'1': 'title', '3': 8, '4': 1, '5': 9, '10': 'title'},
+    {'1': 'summary', '3': 9, '4': 1, '5': 9, '10': 'summary'},
+    {'1': 'required', '3': 10, '4': 1, '5': 8, '10': 'required'},
+    {
+      '1': 'annotations',
+      '3': 11,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.GitHubAnnotation',
+      '10': 'annotations'
+    },
+    {'1': 'started_ms', '3': 12, '4': 1, '5': 3, '10': 'startedMs'},
+    {'1': 'completed_ms', '3': 13, '4': 1, '5': 3, '10': 'completedMs'},
+  ],
+};
+
+/// Descriptor for `GitHubCheck`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List gitHubCheckDescriptor = $convert.base64Decode(
+    'CgtHaXRIdWJDaGVjaxIOCgJpZBgBIAEoA1ICaWQSEgoEbmFtZRgCIAEoCVIEbmFtZRIaCgh3b3'
+    'JrZmxvdxgDIAEoCVIId29ya2Zsb3cSEAoDYXBwGAQgASgJUgNhcHASFAoFc3RhdGUYBSABKAlS'
+    'BXN0YXRlEhYKBmZhaWxlZBgGIAEoCFIGZmFpbGVkEhAKA3VybBgHIAEoCVIDdXJsEhQKBXRpdG'
+    'xlGAggASgJUgV0aXRsZRIYCgdzdW1tYXJ5GAkgASgJUgdzdW1tYXJ5EhoKCHJlcXVpcmVkGAog'
+    'ASgIUghyZXF1aXJlZBI8Cgthbm5vdGF0aW9ucxgLIAMoCzIaLm51c2hpLnYxLkdpdEh1YkFubm'
+    '90YXRpb25SC2Fubm90YXRpb25zEh0KCnN0YXJ0ZWRfbXMYDCABKANSCXN0YXJ0ZWRNcxIhCgxj'
+    'b21wbGV0ZWRfbXMYDSABKANSC2NvbXBsZXRlZE1z');
+
+@$core.Deprecated('Use gitHubReviewerDescriptor instead')
+const GitHubReviewer$json = {
+  '1': 'GitHubReviewer',
+  '2': [
+    {'1': 'login', '3': 1, '4': 1, '5': 9, '10': 'login'},
+    {'1': 'state', '3': 2, '4': 1, '5': 9, '10': 'state'},
+    {'1': 'team', '3': 3, '4': 1, '5': 8, '10': 'team'},
+  ],
+};
+
+/// Descriptor for `GitHubReviewer`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List gitHubReviewerDescriptor = $convert.base64Decode(
+    'Cg5HaXRIdWJSZXZpZXdlchIUCgVsb2dpbhgBIAEoCVIFbG9naW4SFAoFc3RhdGUYAiABKAlSBX'
+    'N0YXRlEhIKBHRlYW0YAyABKAhSBHRlYW0=');
+
+@$core.Deprecated('Use gitHubPullDescriptor instead')
+const GitHubPull$json = {
+  '1': 'GitHubPull',
+  '2': [
+    {
+      '1': 'item',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubItem',
+      '10': 'item'
+    },
+    {'1': 'body', '3': 2, '4': 1, '5': 9, '10': 'body'},
+    {'1': 'association', '3': 3, '4': 1, '5': 9, '10': 'association'},
+    {'1': 'outside', '3': 4, '4': 1, '5': 8, '10': 'outside'},
+    {'1': 'base', '3': 5, '4': 1, '5': 9, '10': 'base'},
+    {'1': 'head', '3': 6, '4': 1, '5': 9, '10': 'head'},
+    {'1': 'head_repo', '3': 7, '4': 1, '5': 9, '10': 'headRepo'},
+    {'1': 'cross_repo', '3': 8, '4': 1, '5': 8, '10': 'crossRepo'},
+    {'1': 'base_oid', '3': 9, '4': 1, '5': 9, '10': 'baseOid'},
+    {'1': 'head_oid', '3': 10, '4': 1, '5': 9, '10': 'headOid'},
+    {'1': 'mergeable', '3': 11, '4': 1, '5': 9, '10': 'mergeable'},
+    {'1': 'merge_state', '3': 12, '4': 1, '5': 9, '10': 'mergeState'},
+    {'1': 'additions', '3': 13, '4': 1, '5': 5, '10': 'additions'},
+    {'1': 'deletions', '3': 14, '4': 1, '5': 5, '10': 'deletions'},
+    {'1': 'changed_files', '3': 15, '4': 1, '5': 5, '10': 'changedFiles'},
+    {
+      '1': 'reviewers',
+      '3': 16,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.GitHubReviewer',
+      '10': 'reviewers'
+    },
+    {
+      '1': 'conversation',
+      '3': 17,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.GitHubComment',
+      '10': 'conversation'
+    },
+    {
+      '1': 'threads',
+      '3': 18,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.GitHubThread',
+      '10': 'threads'
+    },
+    {
+      '1': 'checks',
+      '3': 19,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.GitHubCheck',
+      '10': 'checks'
+    },
+    {'1': 'pending_review', '3': 20, '4': 1, '5': 9, '10': 'pendingReview'},
+    {'1': 'pending_comments', '3': 21, '4': 1, '5': 5, '10': 'pendingComments'},
+  ],
+};
+
+/// Descriptor for `GitHubPull`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List gitHubPullDescriptor = $convert.base64Decode(
+    'CgpHaXRIdWJQdWxsEigKBGl0ZW0YASABKAsyFC5udXNoaS52MS5HaXRIdWJJdGVtUgRpdGVtEh'
+    'IKBGJvZHkYAiABKAlSBGJvZHkSIAoLYXNzb2NpYXRpb24YAyABKAlSC2Fzc29jaWF0aW9uEhgK'
+    'B291dHNpZGUYBCABKAhSB291dHNpZGUSEgoEYmFzZRgFIAEoCVIEYmFzZRISCgRoZWFkGAYgAS'
+    'gJUgRoZWFkEhsKCWhlYWRfcmVwbxgHIAEoCVIIaGVhZFJlcG8SHQoKY3Jvc3NfcmVwbxgIIAEo'
+    'CFIJY3Jvc3NSZXBvEhkKCGJhc2Vfb2lkGAkgASgJUgdiYXNlT2lkEhkKCGhlYWRfb2lkGAogAS'
+    'gJUgdoZWFkT2lkEhwKCW1lcmdlYWJsZRgLIAEoCVIJbWVyZ2VhYmxlEh8KC21lcmdlX3N0YXRl'
+    'GAwgASgJUgptZXJnZVN0YXRlEhwKCWFkZGl0aW9ucxgNIAEoBVIJYWRkaXRpb25zEhwKCWRlbG'
+    'V0aW9ucxgOIAEoBVIJZGVsZXRpb25zEiMKDWNoYW5nZWRfZmlsZXMYDyABKAVSDGNoYW5nZWRG'
+    'aWxlcxI2CglyZXZpZXdlcnMYECADKAsyGC5udXNoaS52MS5HaXRIdWJSZXZpZXdlclIJcmV2aW'
+    'V3ZXJzEjsKDGNvbnZlcnNhdGlvbhgRIAMoCzIXLm51c2hpLnYxLkdpdEh1YkNvbW1lbnRSDGNv'
+    'bnZlcnNhdGlvbhIwCgd0aHJlYWRzGBIgAygLMhYubnVzaGkudjEuR2l0SHViVGhyZWFkUgd0aH'
+    'JlYWRzEi0KBmNoZWNrcxgTIAMoCzIVLm51c2hpLnYxLkdpdEh1YkNoZWNrUgZjaGVja3MSJQoO'
+    'cGVuZGluZ19yZXZpZXcYFCABKAlSDXBlbmRpbmdSZXZpZXcSKQoQcGVuZGluZ19jb21tZW50cx'
+    'gVIAEoBVIPcGVuZGluZ0NvbW1lbnRz');
+
+@$core.Deprecated('Use getGitHubPullRequestDescriptor instead')
+const GetGitHubPullRequest$json = {
+  '1': 'GetGitHubPullRequest',
+  '2': [
+    {
+      '1': 'ref',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubRef',
+      '10': 'ref'
+    },
+    {'1': 'quiet', '3': 2, '4': 1, '5': 8, '10': 'quiet'},
+  ],
+};
+
+/// Descriptor for `GetGitHubPullRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getGitHubPullRequestDescriptor = $convert.base64Decode(
+    'ChRHZXRHaXRIdWJQdWxsUmVxdWVzdBIlCgNyZWYYASABKAsyEy5udXNoaS52MS5HaXRIdWJSZW'
+    'ZSA3JlZhIUCgVxdWlldBgCIAEoCFIFcXVpZXQ=');
+
+@$core.Deprecated('Use getGitHubPullResponseDescriptor instead')
+const GetGitHubPullResponse$json = {
+  '1': 'GetGitHubPullResponse',
+  '2': [
+    {
+      '1': 'pull',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubPull',
+      '10': 'pull'
+    },
+  ],
+};
+
+/// Descriptor for `GetGitHubPullResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getGitHubPullResponseDescriptor = $convert.base64Decode(
+    'ChVHZXRHaXRIdWJQdWxsUmVzcG9uc2USKAoEcHVsbBgBIAEoCzIULm51c2hpLnYxLkdpdEh1Yl'
+    'B1bGxSBHB1bGw=');
+
+@$core.Deprecated('Use gitHubIssueDescriptor instead')
+const GitHubIssue$json = {
+  '1': 'GitHubIssue',
+  '2': [
+    {
+      '1': 'item',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubItem',
+      '10': 'item'
+    },
+    {'1': 'body', '3': 2, '4': 1, '5': 9, '10': 'body'},
+    {'1': 'association', '3': 3, '4': 1, '5': 9, '10': 'association'},
+    {'1': 'outside', '3': 4, '4': 1, '5': 8, '10': 'outside'},
+    {'1': 'labels', '3': 5, '4': 3, '5': 9, '10': 'labels'},
+    {'1': 'assignees', '3': 6, '4': 3, '5': 9, '10': 'assignees'},
+    {
+      '1': 'conversation',
+      '3': 7,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.GitHubComment',
+      '10': 'conversation'
+    },
+  ],
+};
+
+/// Descriptor for `GitHubIssue`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List gitHubIssueDescriptor = $convert.base64Decode(
+    'CgtHaXRIdWJJc3N1ZRIoCgRpdGVtGAEgASgLMhQubnVzaGkudjEuR2l0SHViSXRlbVIEaXRlbR'
+    'ISCgRib2R5GAIgASgJUgRib2R5EiAKC2Fzc29jaWF0aW9uGAMgASgJUgthc3NvY2lhdGlvbhIY'
+    'CgdvdXRzaWRlGAQgASgIUgdvdXRzaWRlEhYKBmxhYmVscxgFIAMoCVIGbGFiZWxzEhwKCWFzc2'
+    'lnbmVlcxgGIAMoCVIJYXNzaWduZWVzEjsKDGNvbnZlcnNhdGlvbhgHIAMoCzIXLm51c2hpLnYx'
+    'LkdpdEh1YkNvbW1lbnRSDGNvbnZlcnNhdGlvbg==');
+
+@$core.Deprecated('Use getGitHubIssueRequestDescriptor instead')
+const GetGitHubIssueRequest$json = {
+  '1': 'GetGitHubIssueRequest',
+  '2': [
+    {
+      '1': 'ref',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubRef',
+      '10': 'ref'
+    },
+    {'1': 'quiet', '3': 2, '4': 1, '5': 8, '10': 'quiet'},
+  ],
+};
+
+/// Descriptor for `GetGitHubIssueRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getGitHubIssueRequestDescriptor = $convert.base64Decode(
+    'ChVHZXRHaXRIdWJJc3N1ZVJlcXVlc3QSJQoDcmVmGAEgASgLMhMubnVzaGkudjEuR2l0SHViUm'
+    'VmUgNyZWYSFAoFcXVpZXQYAiABKAhSBXF1aWV0');
+
+@$core.Deprecated('Use getGitHubIssueResponseDescriptor instead')
+const GetGitHubIssueResponse$json = {
+  '1': 'GetGitHubIssueResponse',
+  '2': [
+    {
+      '1': 'issue',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubIssue',
+      '10': 'issue'
+    },
+  ],
+};
+
+/// Descriptor for `GetGitHubIssueResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getGitHubIssueResponseDescriptor =
+    $convert.base64Decode(
+        'ChZHZXRHaXRIdWJJc3N1ZVJlc3BvbnNlEisKBWlzc3VlGAEgASgLMhUubnVzaGkudjEuR2l0SH'
+        'ViSXNzdWVSBWlzc3Vl');
+
+@$core.Deprecated('Use getGitHubFilesRequestDescriptor instead')
+const GetGitHubFilesRequest$json = {
+  '1': 'GetGitHubFilesRequest',
+  '2': [
+    {
+      '1': 'ref',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubRef',
+      '10': 'ref'
+    },
+    {'1': 'base_oid', '3': 2, '4': 1, '5': 9, '10': 'baseOid'},
+    {'1': 'head_oid', '3': 3, '4': 1, '5': 9, '10': 'headOid'},
+  ],
+};
+
+/// Descriptor for `GetGitHubFilesRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getGitHubFilesRequestDescriptor = $convert.base64Decode(
+    'ChVHZXRHaXRIdWJGaWxlc1JlcXVlc3QSJQoDcmVmGAEgASgLMhMubnVzaGkudjEuR2l0SHViUm'
+    'VmUgNyZWYSGQoIYmFzZV9vaWQYAiABKAlSB2Jhc2VPaWQSGQoIaGVhZF9vaWQYAyABKAlSB2hl'
+    'YWRPaWQ=');
+
+@$core.Deprecated('Use getGitHubFilesResponseDescriptor instead')
+const GetGitHubFilesResponse$json = {
+  '1': 'GetGitHubFilesResponse',
+  '2': [
+    {
+      '1': 'files',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.FileChange',
+      '10': 'files'
+    },
+  ],
+};
+
+/// Descriptor for `GetGitHubFilesResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getGitHubFilesResponseDescriptor =
+    $convert.base64Decode(
+        'ChZHZXRHaXRIdWJGaWxlc1Jlc3BvbnNlEioKBWZpbGVzGAEgAygLMhQubnVzaGkudjEuRmlsZU'
+        'NoYW5nZVIFZmlsZXM=');
+
+@$core.Deprecated('Use getGitHubJobLogRequestDescriptor instead')
+const GetGitHubJobLogRequest$json = {
+  '1': 'GetGitHubJobLogRequest',
+  '2': [
+    {
+      '1': 'ref',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubRef',
+      '10': 'ref'
+    },
+    {'1': 'job', '3': 2, '4': 1, '5': 3, '10': 'job'},
+  ],
+};
+
+/// Descriptor for `GetGitHubJobLogRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getGitHubJobLogRequestDescriptor =
+    $convert.base64Decode(
+        'ChZHZXRHaXRIdWJKb2JMb2dSZXF1ZXN0EiUKA3JlZhgBIAEoCzITLm51c2hpLnYxLkdpdEh1Yl'
+        'JlZlIDcmVmEhAKA2pvYhgCIAEoA1IDam9i');
+
+@$core.Deprecated('Use getGitHubJobLogResponseDescriptor instead')
+const GetGitHubJobLogResponse$json = {
+  '1': 'GetGitHubJobLogResponse',
+  '2': [
+    {'1': 'tail', '3': 1, '4': 1, '5': 9, '10': 'tail'},
+  ],
+};
+
+/// Descriptor for `GetGitHubJobLogResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getGitHubJobLogResponseDescriptor =
+    $convert.base64Decode(
+        'ChdHZXRHaXRIdWJKb2JMb2dSZXNwb25zZRISCgR0YWlsGAEgASgJUgR0YWls');
+
+@$core.Deprecated('Use replyGitHubThreadRequestDescriptor instead')
+const ReplyGitHubThreadRequest$json = {
+  '1': 'ReplyGitHubThreadRequest',
+  '2': [
+    {'1': 'host', '3': 1, '4': 1, '5': 9, '10': 'host'},
+    {'1': 'thread', '3': 2, '4': 1, '5': 9, '10': 'thread'},
+    {'1': 'body', '3': 3, '4': 1, '5': 9, '10': 'body'},
+  ],
+};
+
+/// Descriptor for `ReplyGitHubThreadRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List replyGitHubThreadRequestDescriptor =
+    $convert.base64Decode(
+        'ChhSZXBseUdpdEh1YlRocmVhZFJlcXVlc3QSEgoEaG9zdBgBIAEoCVIEaG9zdBIWCgZ0aHJlYW'
+        'QYAiABKAlSBnRocmVhZBISCgRib2R5GAMgASgJUgRib2R5');
+
+@$core.Deprecated('Use replyGitHubThreadResponseDescriptor instead')
+const ReplyGitHubThreadResponse$json = {
+  '1': 'ReplyGitHubThreadResponse',
+  '2': [
+    {
+      '1': 'comment',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubComment',
+      '10': 'comment'
+    },
+  ],
+};
+
+/// Descriptor for `ReplyGitHubThreadResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List replyGitHubThreadResponseDescriptor =
+    $convert.base64Decode(
+        'ChlSZXBseUdpdEh1YlRocmVhZFJlc3BvbnNlEjEKB2NvbW1lbnQYASABKAsyFy5udXNoaS52MS'
+        '5HaXRIdWJDb21tZW50Ugdjb21tZW50');
+
+@$core.Deprecated('Use resolveGitHubThreadRequestDescriptor instead')
+const ResolveGitHubThreadRequest$json = {
+  '1': 'ResolveGitHubThreadRequest',
+  '2': [
+    {'1': 'host', '3': 1, '4': 1, '5': 9, '10': 'host'},
+    {'1': 'thread', '3': 2, '4': 1, '5': 9, '10': 'thread'},
+    {'1': 'resolve', '3': 3, '4': 1, '5': 8, '10': 'resolve'},
+  ],
+};
+
+/// Descriptor for `ResolveGitHubThreadRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List resolveGitHubThreadRequestDescriptor =
+    $convert.base64Decode(
+        'ChpSZXNvbHZlR2l0SHViVGhyZWFkUmVxdWVzdBISCgRob3N0GAEgASgJUgRob3N0EhYKBnRocm'
+        'VhZBgCIAEoCVIGdGhyZWFkEhgKB3Jlc29sdmUYAyABKAhSB3Jlc29sdmU=');
+
+@$core.Deprecated('Use resolveGitHubThreadResponseDescriptor instead')
+const ResolveGitHubThreadResponse$json = {
+  '1': 'ResolveGitHubThreadResponse',
+};
+
+/// Descriptor for `ResolveGitHubThreadResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List resolveGitHubThreadResponseDescriptor =
+    $convert.base64Decode('ChtSZXNvbHZlR2l0SHViVGhyZWFkUmVzcG9uc2U=');
+
+@$core.Deprecated('Use addGitHubCommentRequestDescriptor instead')
+const AddGitHubCommentRequest$json = {
+  '1': 'AddGitHubCommentRequest',
+  '2': [
+    {'1': 'host', '3': 1, '4': 1, '5': 9, '10': 'host'},
+    {'1': 'subject', '3': 2, '4': 1, '5': 9, '10': 'subject'},
+    {'1': 'body', '3': 3, '4': 1, '5': 9, '10': 'body'},
+  ],
+};
+
+/// Descriptor for `AddGitHubCommentRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List addGitHubCommentRequestDescriptor =
+    $convert.base64Decode(
+        'ChdBZGRHaXRIdWJDb21tZW50UmVxdWVzdBISCgRob3N0GAEgASgJUgRob3N0EhgKB3N1YmplY3'
+        'QYAiABKAlSB3N1YmplY3QSEgoEYm9keRgDIAEoCVIEYm9keQ==');
+
+@$core.Deprecated('Use addGitHubCommentResponseDescriptor instead')
+const AddGitHubCommentResponse$json = {
+  '1': 'AddGitHubCommentResponse',
+  '2': [
+    {
+      '1': 'comment',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubComment',
+      '10': 'comment'
+    },
+  ],
+};
+
+/// Descriptor for `AddGitHubCommentResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List addGitHubCommentResponseDescriptor =
+    $convert.base64Decode(
+        'ChhBZGRHaXRIdWJDb21tZW50UmVzcG9uc2USMQoHY29tbWVudBgBIAEoCzIXLm51c2hpLnYxLk'
+        'dpdEh1YkNvbW1lbnRSB2NvbW1lbnQ=');
+
+@$core.Deprecated('Use gitHubDraftDescriptor instead')
+const GitHubDraft$json = {
+  '1': 'GitHubDraft',
+  '2': [
+    {'1': 'path', '3': 1, '4': 1, '5': 9, '10': 'path'},
+    {'1': 'side', '3': 2, '4': 1, '5': 9, '10': 'side'},
+    {'1': 'line', '3': 3, '4': 1, '5': 5, '10': 'line'},
+    {'1': 'start_line', '3': 4, '4': 1, '5': 5, '10': 'startLine'},
+    {'1': 'body', '3': 5, '4': 1, '5': 9, '10': 'body'},
+  ],
+};
+
+/// Descriptor for `GitHubDraft`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List gitHubDraftDescriptor = $convert.base64Decode(
+    'CgtHaXRIdWJEcmFmdBISCgRwYXRoGAEgASgJUgRwYXRoEhIKBHNpZGUYAiABKAlSBHNpZGUSEg'
+    'oEbGluZRgDIAEoBVIEbGluZRIdCgpzdGFydF9saW5lGAQgASgFUglzdGFydExpbmUSEgoEYm9k'
+    'eRgFIAEoCVIEYm9keQ==');
+
+@$core.Deprecated('Use submitGitHubReviewRequestDescriptor instead')
+const SubmitGitHubReviewRequest$json = {
+  '1': 'SubmitGitHubReviewRequest',
+  '2': [
+    {'1': 'host', '3': 1, '4': 1, '5': 9, '10': 'host'},
+    {'1': 'pull', '3': 2, '4': 1, '5': 9, '10': 'pull'},
+    {'1': 'head_oid', '3': 3, '4': 1, '5': 9, '10': 'headOid'},
+    {'1': 'pending_review', '3': 4, '4': 1, '5': 9, '10': 'pendingReview'},
+    {'1': 'event', '3': 5, '4': 1, '5': 9, '10': 'event'},
+    {'1': 'body', '3': 6, '4': 1, '5': 9, '10': 'body'},
+    {
+      '1': 'drafts',
+      '3': 7,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.GitHubDraft',
+      '10': 'drafts'
+    },
+  ],
+};
+
+/// Descriptor for `SubmitGitHubReviewRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List submitGitHubReviewRequestDescriptor = $convert.base64Decode(
+    'ChlTdWJtaXRHaXRIdWJSZXZpZXdSZXF1ZXN0EhIKBGhvc3QYASABKAlSBGhvc3QSEgoEcHVsbB'
+    'gCIAEoCVIEcHVsbBIZCghoZWFkX29pZBgDIAEoCVIHaGVhZE9pZBIlCg5wZW5kaW5nX3Jldmll'
+    'dxgEIAEoCVINcGVuZGluZ1JldmlldxIUCgVldmVudBgFIAEoCVIFZXZlbnQSEgoEYm9keRgGIA'
+    'EoCVIEYm9keRItCgZkcmFmdHMYByADKAsyFS5udXNoaS52MS5HaXRIdWJEcmFmdFIGZHJhZnRz');
+
+@$core.Deprecated('Use submitGitHubReviewResponseDescriptor instead')
+const SubmitGitHubReviewResponse$json = {
+  '1': 'SubmitGitHubReviewResponse',
+};
+
+/// Descriptor for `SubmitGitHubReviewResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List submitGitHubReviewResponseDescriptor =
+    $convert.base64Decode('ChpTdWJtaXRHaXRIdWJSZXZpZXdSZXNwb25zZQ==');
+
 const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
   '1': 'NushiService',
   '2': [
@@ -4126,6 +5066,81 @@ const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
       '3': '.nushi.v1.GetJiraAttachmentResponse'
     },
     {
+      '1': 'ListGitHubHosts',
+      '2': '.nushi.v1.ListGitHubHostsRequest',
+      '3': '.nushi.v1.ListGitHubHostsResponse'
+    },
+    {
+      '1': 'AddGitHubToken',
+      '2': '.nushi.v1.AddGitHubTokenRequest',
+      '3': '.nushi.v1.AddGitHubTokenResponse'
+    },
+    {
+      '1': 'RemoveGitHubToken',
+      '2': '.nushi.v1.RemoveGitHubTokenRequest',
+      '3': '.nushi.v1.RemoveGitHubTokenResponse'
+    },
+    {
+      '1': 'AllowGitHubToken',
+      '2': '.nushi.v1.AllowGitHubTokenRequest',
+      '3': '.nushi.v1.AllowGitHubTokenResponse'
+    },
+    {
+      '1': 'ListGitHubRepos',
+      '2': '.nushi.v1.ListGitHubReposRequest',
+      '3': '.nushi.v1.ListGitHubReposResponse'
+    },
+    {
+      '1': 'ListGitHubInbox',
+      '2': '.nushi.v1.ListGitHubInboxRequest',
+      '3': '.nushi.v1.ListGitHubInboxResponse'
+    },
+    {
+      '1': 'GetGitHubStates',
+      '2': '.nushi.v1.GetGitHubStatesRequest',
+      '3': '.nushi.v1.GetGitHubStatesResponse'
+    },
+    {
+      '1': 'GetGitHubPull',
+      '2': '.nushi.v1.GetGitHubPullRequest',
+      '3': '.nushi.v1.GetGitHubPullResponse'
+    },
+    {
+      '1': 'GetGitHubIssue',
+      '2': '.nushi.v1.GetGitHubIssueRequest',
+      '3': '.nushi.v1.GetGitHubIssueResponse'
+    },
+    {
+      '1': 'GetGitHubFiles',
+      '2': '.nushi.v1.GetGitHubFilesRequest',
+      '3': '.nushi.v1.GetGitHubFilesResponse'
+    },
+    {
+      '1': 'GetGitHubJobLog',
+      '2': '.nushi.v1.GetGitHubJobLogRequest',
+      '3': '.nushi.v1.GetGitHubJobLogResponse'
+    },
+    {
+      '1': 'ReplyGitHubThread',
+      '2': '.nushi.v1.ReplyGitHubThreadRequest',
+      '3': '.nushi.v1.ReplyGitHubThreadResponse'
+    },
+    {
+      '1': 'ResolveGitHubThread',
+      '2': '.nushi.v1.ResolveGitHubThreadRequest',
+      '3': '.nushi.v1.ResolveGitHubThreadResponse'
+    },
+    {
+      '1': 'AddGitHubComment',
+      '2': '.nushi.v1.AddGitHubCommentRequest',
+      '3': '.nushi.v1.AddGitHubCommentResponse'
+    },
+    {
+      '1': 'SubmitGitHubReview',
+      '2': '.nushi.v1.SubmitGitHubReviewRequest',
+      '3': '.nushi.v1.SubmitGitHubReviewResponse'
+    },
+    {
       '1': 'Events',
       '2': '.nushi.v1.EventsRequest',
       '3': '.nushi.v1.EventsResponse',
@@ -4340,6 +5355,50 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.FoundJiraIssue': FoundJiraIssue$json,
   '.nushi.v1.GetJiraAttachmentRequest': GetJiraAttachmentRequest$json,
   '.nushi.v1.GetJiraAttachmentResponse': GetJiraAttachmentResponse$json,
+  '.nushi.v1.ListGitHubHostsRequest': ListGitHubHostsRequest$json,
+  '.nushi.v1.ListGitHubHostsResponse': ListGitHubHostsResponse$json,
+  '.nushi.v1.GitHubHost': GitHubHost$json,
+  '.nushi.v1.GitHubBucket': GitHubBucket$json,
+  '.nushi.v1.AddGitHubTokenRequest': AddGitHubTokenRequest$json,
+  '.nushi.v1.AddGitHubTokenResponse': AddGitHubTokenResponse$json,
+  '.nushi.v1.RemoveGitHubTokenRequest': RemoveGitHubTokenRequest$json,
+  '.nushi.v1.RemoveGitHubTokenResponse': RemoveGitHubTokenResponse$json,
+  '.nushi.v1.AllowGitHubTokenRequest': AllowGitHubTokenRequest$json,
+  '.nushi.v1.AllowGitHubTokenResponse': AllowGitHubTokenResponse$json,
+  '.nushi.v1.ListGitHubReposRequest': ListGitHubReposRequest$json,
+  '.nushi.v1.ListGitHubReposResponse': ListGitHubReposResponse$json,
+  '.nushi.v1.GitHubRepo': GitHubRepo$json,
+  '.nushi.v1.ListGitHubInboxRequest': ListGitHubInboxRequest$json,
+  '.nushi.v1.ListGitHubInboxResponse': ListGitHubInboxResponse$json,
+  '.nushi.v1.GitHubItem': GitHubItem$json,
+  '.nushi.v1.GitHubRef': GitHubRef$json,
+  '.nushi.v1.GetGitHubStatesRequest': GetGitHubStatesRequest$json,
+  '.nushi.v1.GitHubLink': GitHubLink$json,
+  '.nushi.v1.GetGitHubStatesResponse': GetGitHubStatesResponse$json,
+  '.nushi.v1.GetGitHubPullRequest': GetGitHubPullRequest$json,
+  '.nushi.v1.GetGitHubPullResponse': GetGitHubPullResponse$json,
+  '.nushi.v1.GitHubPull': GitHubPull$json,
+  '.nushi.v1.GitHubReviewer': GitHubReviewer$json,
+  '.nushi.v1.GitHubComment': GitHubComment$json,
+  '.nushi.v1.GitHubThread': GitHubThread$json,
+  '.nushi.v1.GitHubCheck': GitHubCheck$json,
+  '.nushi.v1.GitHubAnnotation': GitHubAnnotation$json,
+  '.nushi.v1.GetGitHubIssueRequest': GetGitHubIssueRequest$json,
+  '.nushi.v1.GetGitHubIssueResponse': GetGitHubIssueResponse$json,
+  '.nushi.v1.GitHubIssue': GitHubIssue$json,
+  '.nushi.v1.GetGitHubFilesRequest': GetGitHubFilesRequest$json,
+  '.nushi.v1.GetGitHubFilesResponse': GetGitHubFilesResponse$json,
+  '.nushi.v1.GetGitHubJobLogRequest': GetGitHubJobLogRequest$json,
+  '.nushi.v1.GetGitHubJobLogResponse': GetGitHubJobLogResponse$json,
+  '.nushi.v1.ReplyGitHubThreadRequest': ReplyGitHubThreadRequest$json,
+  '.nushi.v1.ReplyGitHubThreadResponse': ReplyGitHubThreadResponse$json,
+  '.nushi.v1.ResolveGitHubThreadRequest': ResolveGitHubThreadRequest$json,
+  '.nushi.v1.ResolveGitHubThreadResponse': ResolveGitHubThreadResponse$json,
+  '.nushi.v1.AddGitHubCommentRequest': AddGitHubCommentRequest$json,
+  '.nushi.v1.AddGitHubCommentResponse': AddGitHubCommentResponse$json,
+  '.nushi.v1.SubmitGitHubReviewRequest': SubmitGitHubReviewRequest$json,
+  '.nushi.v1.GitHubDraft': GitHubDraft$json,
+  '.nushi.v1.SubmitGitHubReviewResponse': SubmitGitHubReviewResponse$json,
   '.nushi.v1.EventsRequest': EventsRequest$json,
   '.nushi.v1.EventsResponse': EventsResponse$json,
   '.nushi.v1.ItemEvent': ItemEvent$json,
@@ -4457,5 +5516,29 @@ final $typed_data.Uint8List nushiServiceDescriptor = $convert.base64Decode(
     'ZW50UmVzcG9uc2USUwoORmluZEppcmFJc3N1ZXMSHy5udXNoaS52MS5GaW5kSmlyYUlzc3Vlc1'
     'JlcXVlc3QaIC5udXNoaS52MS5GaW5kSmlyYUlzc3Vlc1Jlc3BvbnNlElwKEUdldEppcmFBdHRh'
     'Y2htZW50EiIubnVzaGkudjEuR2V0SmlyYUF0dGFjaG1lbnRSZXF1ZXN0GiMubnVzaGkudjEuR2'
-    'V0SmlyYUF0dGFjaG1lbnRSZXNwb25zZRI9CgZFdmVudHMSFy5udXNoaS52MS5FdmVudHNSZXF1'
-    'ZXN0GhgubnVzaGkudjEuRXZlbnRzUmVzcG9uc2UwAQ==');
+    'V0SmlyYUF0dGFjaG1lbnRSZXNwb25zZRJWCg9MaXN0R2l0SHViSG9zdHMSIC5udXNoaS52MS5M'
+    'aXN0R2l0SHViSG9zdHNSZXF1ZXN0GiEubnVzaGkudjEuTGlzdEdpdEh1Ykhvc3RzUmVzcG9uc2'
+    'USUwoOQWRkR2l0SHViVG9rZW4SHy5udXNoaS52MS5BZGRHaXRIdWJUb2tlblJlcXVlc3QaIC5u'
+    'dXNoaS52MS5BZGRHaXRIdWJUb2tlblJlc3BvbnNlElwKEVJlbW92ZUdpdEh1YlRva2VuEiIubn'
+    'VzaGkudjEuUmVtb3ZlR2l0SHViVG9rZW5SZXF1ZXN0GiMubnVzaGkudjEuUmVtb3ZlR2l0SHVi'
+    'VG9rZW5SZXNwb25zZRJZChBBbGxvd0dpdEh1YlRva2VuEiEubnVzaGkudjEuQWxsb3dHaXRIdW'
+    'JUb2tlblJlcXVlc3QaIi5udXNoaS52MS5BbGxvd0dpdEh1YlRva2VuUmVzcG9uc2USVgoPTGlz'
+    'dEdpdEh1YlJlcG9zEiAubnVzaGkudjEuTGlzdEdpdEh1YlJlcG9zUmVxdWVzdBohLm51c2hpLn'
+    'YxLkxpc3RHaXRIdWJSZXBvc1Jlc3BvbnNlElYKD0xpc3RHaXRIdWJJbmJveBIgLm51c2hpLnYx'
+    'Lkxpc3RHaXRIdWJJbmJveFJlcXVlc3QaIS5udXNoaS52MS5MaXN0R2l0SHViSW5ib3hSZXNwb2'
+    '5zZRJWCg9HZXRHaXRIdWJTdGF0ZXMSIC5udXNoaS52MS5HZXRHaXRIdWJTdGF0ZXNSZXF1ZXN0'
+    'GiEubnVzaGkudjEuR2V0R2l0SHViU3RhdGVzUmVzcG9uc2USUAoNR2V0R2l0SHViUHVsbBIeLm'
+    '51c2hpLnYxLkdldEdpdEh1YlB1bGxSZXF1ZXN0Gh8ubnVzaGkudjEuR2V0R2l0SHViUHVsbFJl'
+    'c3BvbnNlElMKDkdldEdpdEh1Yklzc3VlEh8ubnVzaGkudjEuR2V0R2l0SHViSXNzdWVSZXF1ZX'
+    'N0GiAubnVzaGkudjEuR2V0R2l0SHViSXNzdWVSZXNwb25zZRJTCg5HZXRHaXRIdWJGaWxlcxIf'
+    'Lm51c2hpLnYxLkdldEdpdEh1YkZpbGVzUmVxdWVzdBogLm51c2hpLnYxLkdldEdpdEh1YkZpbG'
+    'VzUmVzcG9uc2USVgoPR2V0R2l0SHViSm9iTG9nEiAubnVzaGkudjEuR2V0R2l0SHViSm9iTG9n'
+    'UmVxdWVzdBohLm51c2hpLnYxLkdldEdpdEh1YkpvYkxvZ1Jlc3BvbnNlElwKEVJlcGx5R2l0SH'
+    'ViVGhyZWFkEiIubnVzaGkudjEuUmVwbHlHaXRIdWJUaHJlYWRSZXF1ZXN0GiMubnVzaGkudjEu'
+    'UmVwbHlHaXRIdWJUaHJlYWRSZXNwb25zZRJiChNSZXNvbHZlR2l0SHViVGhyZWFkEiQubnVzaG'
+    'kudjEuUmVzb2x2ZUdpdEh1YlRocmVhZFJlcXVlc3QaJS5udXNoaS52MS5SZXNvbHZlR2l0SHVi'
+    'VGhyZWFkUmVzcG9uc2USWQoQQWRkR2l0SHViQ29tbWVudBIhLm51c2hpLnYxLkFkZEdpdEh1Yk'
+    'NvbW1lbnRSZXF1ZXN0GiIubnVzaGkudjEuQWRkR2l0SHViQ29tbWVudFJlc3BvbnNlEl8KElN1'
+    'Ym1pdEdpdEh1YlJldmlldxIjLm51c2hpLnYxLlN1Ym1pdEdpdEh1YlJldmlld1JlcXVlc3QaJC'
+    '5udXNoaS52MS5TdWJtaXRHaXRIdWJSZXZpZXdSZXNwb25zZRI9CgZFdmVudHMSFy5udXNoaS52'
+    'MS5FdmVudHNSZXF1ZXN0GhgubnVzaGkudjEuRXZlbnRzUmVzcG9uc2UwAQ==');

@@ -207,6 +207,7 @@ func run() error {
 		Trust: trust.New(map[string]trust.Agent{"claude": claudetrust.Trust{}, "codex": codextrust.Trust{}, "ante": antetrust.Trust{}, "omp": omptrust.Trust{}, "pig": pig.Trust{}}, st),
 		Hub:   hub, Memory: memory.New(chatSvc)}
 	sv.Jira = newJira(st, os.Getenv("NUSHI_DATA") != "")
+	sv.GitHub = newGitHub(st, os.Getenv("NUSHI_DATA") != "")
 	toolSvc := tools.New(sv.Jira.Tools())
 	chatSvc.UseTools(mcpTools(toolSvc, filepath.Join(dir, "nushid.sock")))
 	channels := newChannels()

@@ -221,6 +221,37 @@ service NushiService {
   rpc FindJiraIssues(FindJiraIssuesRequest) returns (FindJiraIssuesResponse);
   // An attachment's file or thumbnail (20 MB at most).
   rpc GetJiraAttachment(GetJiraAttachmentRequest) returns (GetJiraAttachmentResponse);
+  // GitHub (ADR 0045): the hosts gh is signed in to (its token read by the
+  // daemon through go-gh) and those given a pasted token (the keychain).
+  // Nothing reaches GitHub on its own: the app asks, and marks the asking
+  // on its timers quiet, which a rate limit running low holds back.
+  rpc ListGitHubHosts(ListGitHubHostsRequest) returns (ListGitHubHostsResponse);
+  // Checks a pasted token on a host and keeps it in the keychain; it's
+  // used for the host instead of gh's login until removed.
+  rpc AddGitHubToken(AddGitHubTokenRequest) returns (AddGitHubTokenResponse);
+  rpc RemoveGitHubToken(RemoveGitHubTokenRequest) returns (RemoveGitHubTokenResponse);
+  // Reads a host's pasted token with macOS's prompt (GitHubHost.needs_ok).
+  rpc AllowGitHubToken(AllowGitHubTokenRequest) returns (AllowGitHubTokenResponse);
+  // The GitHub repositories folders are clones of: the folders asked
+  // about and the chats'.
+  rpc ListGitHubRepos(ListGitHubReposRequest) returns (ListGitHubReposResponse);
+  // Review requested of me or my teams, my pull requests, issues assigned
+  // to me: the latest 50 each.
+  rpc ListGitHubInbox(ListGitHubInboxRequest) returns (ListGitHubInboxResponse);
+  // Items as they are now, by node id (a chat's status chip).
+  rpc GetGitHubStates(GetGitHubStatesRequest) returns (GetGitHubStatesResponse);
+  rpc GetGitHubPull(GetGitHubPullRequest) returns (GetGitHubPullResponse);
+  rpc GetGitHubIssue(GetGitHubIssueRequest) returns (GetGitHubIssueResponse);
+  // A pull request's files from its merge base to its head, both sides'
+  // texts, as GetDiff gives them.
+  rpc GetGitHubFiles(GetGitHubFilesRequest) returns (GetGitHubFilesResponse);
+  // The end of a failed Actions job's log (16 KB).
+  rpc GetGitHubJobLog(GetGitHubJobLogRequest) returns (GetGitHubJobLogResponse);
+  // The user's writes.
+  rpc ReplyGitHubThread(ReplyGitHubThreadRequest) returns (ReplyGitHubThreadResponse);
+  rpc ResolveGitHubThread(ResolveGitHubThreadRequest) returns (ResolveGitHubThreadResponse);
+  rpc AddGitHubComment(AddGitHubCommentRequest) returns (AddGitHubCommentResponse);
+  rpc SubmitGitHubReview(SubmitGitHubReviewRequest) returns (SubmitGitHubReviewResponse);
   // Streams every change to every chat from now on. The first message is
   // empty: it says the subscription is live.
   rpc Events(EventsRequest) returns (stream EventsResponse);
@@ -1730,3 +1761,356 @@ message FoundJiraIssue {
   // KEY-summary-slug, the key uppercase so Jira links it.
   string branch = 3;
 }
+
+// What's left of one of GitHub's rate limits ("core", "graphql",
+// "search"…), as GitHub said last.
+message GitHubBucket {
+  string name = 1;
+  int32 limit = 2;
+  int32 remaining = 3;
+  int64 reset_ms = 4;
+}
+
+message GitHubHost {
+  // github.com, or an Enterprise server's host.
+  string host = 1;
+  // Who its token is.
+  string login = 2;
+  string name = 3;
+  // Where its token is from: "gh" (gh's login), "GH_TOKEN" (the
+  // environment, through gh's rules), "token" (pasted).
+  string source = 4;
+  // "oauth" (gh's), "classic", "fine-grained", "app", or "".
+  string kind = 5;
+  // A classic or OAuth token's scopes.
+  repeated string scopes = 6;
+  repeated GitHubBucket budget = 7;
+  // Why Nushi can't use it now, if it can't.
+  string problem = 8;
+  // Its pasted token needs the user's OK for this build (AllowGitHubToken).
+  bool needs_ok = 9;
+  // A pasted token is kept for it (RemoveGitHubToken).
+  bool pasted = 10;
+}
+
+message ListGitHubHostsRequest {}
+
+message ListGitHubHostsResponse {
+  repeated GitHubHost hosts = 1;
+}
+
+message AddGitHubTokenRequest {
+  string host = 1;
+  string token = 2;
+}
+
+message AddGitHubTokenResponse {
+  string login = 1;
+}
+
+message RemoveGitHubTokenRequest {
+  string host = 1;
+}
+
+message RemoveGitHubTokenResponse {}
+
+message AllowGitHubTokenRequest {
+  string host = 1;
+}
+
+message AllowGitHubTokenResponse {}
+
+message GitHubRepo {
+  string host = 1;
+  // owner/name.
+  string repo = 2;
+  repeated string folders = 3;
+}
+
+message ListGitHubReposRequest {
+  repeated string folders = 1;
+}
+
+message ListGitHubReposResponse {
+  repeated GitHubRepo repos = 1;
+}
+
+// A pull request or an issue: its host, repository and number.
+message GitHubRef {
+  string host = 1;
+  string repo = 2;
+  int32 number = 3;
+}
+
+// A pull request or an issue as a list shows it.
+message GitHubItem {
+  GitHubRef ref = 1;
+  // GitHub's node id.
+  string id = 2;
+  bool pull = 3;
+  string title = 4;
+  string url = 5;
+  // "open", "closed" or "merged".
+  string state = 6;
+  bool draft = 7;
+  string author = 8;
+  int64 updated_ms = 9;
+  // A pull request's checks: "success", "failure", "pending", or "".
+  string checks = 10;
+  // Its review decision: "approved", "changes_requested",
+  // "review_required", or "".
+  string review = 11;
+  // Its review threads not resolved.
+  int32 unresolved = 12;
+  int32 comments = 13;
+}
+
+message ListGitHubInboxRequest {
+  string host = 1;
+  // Only these repositories' (owner/name); empty for all.
+  repeated string repos = 2;
+  // The app's timer asking: held back while a rate limit is low.
+  bool quiet = 3;
+}
+
+message ListGitHubInboxResponse {
+  repeated GitHubItem review = 1;
+  repeated GitHubItem mine = 2;
+  repeated GitHubItem assigned = 3;
+  // How many each search found (50 are listed at most).
+  int32 review_total = 4;
+  int32 mine_total = 5;
+  int32 assigned_total = 6;
+  // When GitHub said so; with stale, why it couldn't say again.
+  int64 at_ms = 7;
+  string stale = 8;
+}
+
+// A chat's item: its host and node id.
+message GitHubLink {
+  string host = 1;
+  string id = 2;
+}
+
+message GetGitHubStatesRequest {
+  repeated GitHubLink items = 1;
+  bool quiet = 2;
+}
+
+message GetGitHubStatesResponse {
+  // The ones known, as they are now (or last were).
+  repeated GitHubItem items = 1;
+}
+
+// A comment, or a review that said something; body is Markdown as
+// GitHub's page shows it.
+message GitHubComment {
+  string id = 1;
+  string author = 2;
+  // GitHub's author association: OWNER, MEMBER, COLLABORATOR,
+  // CONTRIBUTOR, FIRST_TIME_CONTRIBUTOR, NONE…
+  string association = 3;
+  // The author isn't the repository's owner, a member or a collaborator.
+  bool outside = 4;
+  bool bot = 5;
+  string body = 6;
+  string url = 7;
+  int64 created_ms = 8;
+  // A review's state ("approved", "changes_requested", "commented",
+  // "dismissed"); empty for a comment.
+  string review = 9;
+}
+
+// A review thread on line (from start_line) of path's side ("left", the
+// base; "right", the head), or on the file. An outdated one's lines are
+// the original ones.
+message GitHubThread {
+  string id = 1;
+  string path = 2;
+  string side = 3;
+  int32 line = 4;
+  int32 start_line = 5;
+  int32 original_line = 6;
+  int32 original_start_line = 7;
+  bool on_file = 8;
+  bool outdated = 9;
+  bool resolved = 10;
+  bool can_reply = 11;
+  bool can_resolve = 12;
+  bool can_unresolve = 13;
+  repeated GitHubComment comments = 14;
+}
+
+message GitHubAnnotation {
+  string path = 1;
+  // "failure", "warning", "notice".
+  string level = 2;
+  string title = 3;
+  string message = 4;
+  int32 line = 5;
+  int32 end_line = 6;
+}
+
+// A check run (id is its id, an Actions job's) or a commit status (id 0).
+message GitHubCheck {
+  int64 id = 1;
+  string name = 2;
+  string workflow = 3;
+  string app = 4;
+  // "pending" until it ends, then its conclusion: "success", "failure",
+  // "cancelled", "skipped", "neutral", "timed_out"…
+  string state = 5;
+  bool failed = 6;
+  string url = 7;
+  string title = 8;
+  // Markdown as GitHub's page shows it.
+  string summary = 9;
+  bool required = 10;
+  repeated GitHubAnnotation annotations = 11;
+  int64 started_ms = 12;
+  int64 completed_ms = 13;
+}
+
+// Someone asked to review ("requested"), or who did ("approved",
+// "changes_requested", "commented", "dismissed"); a team asked has team.
+message GitHubReviewer {
+  string login = 1;
+  string state = 2;
+  bool team = 3;
+}
+
+message GitHubPull {
+  GitHubItem item = 1;
+  string body = 2;
+  string association = 3;
+  bool outside = 4;
+  string base = 5;
+  string head = 6;
+  // The head's repository (owner/name): another one for a fork's.
+  string head_repo = 7;
+  bool cross_repo = 8;
+  string base_oid = 9;
+  string head_oid = 10;
+  // "mergeable", "conflicting", "unknown".
+  string mergeable = 11;
+  // "clean", "blocked", "behind", "dirty", "unstable", "has_hooks",
+  // "unknown".
+  string merge_state = 12;
+  int32 additions = 13;
+  int32 deletions = 14;
+  int32 changed_files = 15;
+  repeated GitHubReviewer reviewers = 16;
+  // Comments and reviews that said something, oldest first.
+  repeated GitHubComment conversation = 17;
+  repeated GitHubThread threads = 18;
+  repeated GitHubCheck checks = 19;
+  // My review pending on GitHub (made in the browser), which a review
+  // submitted here joins, and its comments' count.
+  string pending_review = 20;
+  int32 pending_comments = 21;
+}
+
+message GetGitHubPullRequest {
+  GitHubRef ref = 1;
+  bool quiet = 2;
+}
+
+message GetGitHubPullResponse {
+  GitHubPull pull = 1;
+}
+
+message GitHubIssue {
+  GitHubItem item = 1;
+  string body = 2;
+  string association = 3;
+  bool outside = 4;
+  repeated string labels = 5;
+  repeated string assignees = 6;
+  repeated GitHubComment conversation = 7;
+}
+
+message GetGitHubIssueRequest {
+  GitHubRef ref = 1;
+  bool quiet = 2;
+}
+
+message GetGitHubIssueResponse {
+  GitHubIssue issue = 1;
+}
+
+message GetGitHubFilesRequest {
+  GitHubRef ref = 1;
+  // The pull request's base and head commits (GitHubPull's).
+  string base_oid = 2;
+  string head_oid = 3;
+}
+
+message GetGitHubFilesResponse {
+  repeated FileChange files = 1;
+}
+
+message GetGitHubJobLogRequest {
+  GitHubRef ref = 1;
+  // The check run's id.
+  int64 job = 2;
+}
+
+message GetGitHubJobLogResponse {
+  string tail = 1;
+}
+
+message ReplyGitHubThreadRequest {
+  string host = 1;
+  string thread = 2;
+  string body = 3;
+}
+
+message ReplyGitHubThreadResponse {
+  GitHubComment comment = 1;
+}
+
+message ResolveGitHubThreadRequest {
+  string host = 1;
+  string thread = 2;
+  // False unresolves it.
+  bool resolve = 3;
+}
+
+message ResolveGitHubThreadResponse {}
+
+message AddGitHubCommentRequest {
+  string host = 1;
+  // The pull request's or issue's node id.
+  string subject = 2;
+  string body = 3;
+}
+
+message AddGitHubCommentResponse {
+  GitHubComment comment = 1;
+}
+
+// A comment of a review not yet sent, on line (from start_line, if more
+// than one) of path's side ("left" or "right").
+message GitHubDraft {
+  string path = 1;
+  string side = 2;
+  int32 line = 3;
+  int32 start_line = 4;
+  string body = 5;
+}
+
+message SubmitGitHubReviewRequest {
+  string host = 1;
+  // The pull request's node id, and the head the drafts are on.
+  string pull = 2;
+  string head_oid = 3;
+  // My review pending on GitHub, if there is one (GitHubPull's).
+  string pending_review = 4;
+  // "comment", "approve" or "request_changes".
+  string event = 5;
+  string body = 6;
+  repeated GitHubDraft drafts = 7;
+}
+
+message SubmitGitHubReviewResponse {}
+

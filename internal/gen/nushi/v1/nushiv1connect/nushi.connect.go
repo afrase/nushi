@@ -234,6 +234,51 @@ const (
 	// NushiServiceGetJiraAttachmentProcedure is the fully-qualified name of the NushiService's
 	// GetJiraAttachment RPC.
 	NushiServiceGetJiraAttachmentProcedure = "/nushi.v1.NushiService/GetJiraAttachment"
+	// NushiServiceListGitHubHostsProcedure is the fully-qualified name of the NushiService's
+	// ListGitHubHosts RPC.
+	NushiServiceListGitHubHostsProcedure = "/nushi.v1.NushiService/ListGitHubHosts"
+	// NushiServiceAddGitHubTokenProcedure is the fully-qualified name of the NushiService's
+	// AddGitHubToken RPC.
+	NushiServiceAddGitHubTokenProcedure = "/nushi.v1.NushiService/AddGitHubToken"
+	// NushiServiceRemoveGitHubTokenProcedure is the fully-qualified name of the NushiService's
+	// RemoveGitHubToken RPC.
+	NushiServiceRemoveGitHubTokenProcedure = "/nushi.v1.NushiService/RemoveGitHubToken"
+	// NushiServiceAllowGitHubTokenProcedure is the fully-qualified name of the NushiService's
+	// AllowGitHubToken RPC.
+	NushiServiceAllowGitHubTokenProcedure = "/nushi.v1.NushiService/AllowGitHubToken"
+	// NushiServiceListGitHubReposProcedure is the fully-qualified name of the NushiService's
+	// ListGitHubRepos RPC.
+	NushiServiceListGitHubReposProcedure = "/nushi.v1.NushiService/ListGitHubRepos"
+	// NushiServiceListGitHubInboxProcedure is the fully-qualified name of the NushiService's
+	// ListGitHubInbox RPC.
+	NushiServiceListGitHubInboxProcedure = "/nushi.v1.NushiService/ListGitHubInbox"
+	// NushiServiceGetGitHubStatesProcedure is the fully-qualified name of the NushiService's
+	// GetGitHubStates RPC.
+	NushiServiceGetGitHubStatesProcedure = "/nushi.v1.NushiService/GetGitHubStates"
+	// NushiServiceGetGitHubPullProcedure is the fully-qualified name of the NushiService's
+	// GetGitHubPull RPC.
+	NushiServiceGetGitHubPullProcedure = "/nushi.v1.NushiService/GetGitHubPull"
+	// NushiServiceGetGitHubIssueProcedure is the fully-qualified name of the NushiService's
+	// GetGitHubIssue RPC.
+	NushiServiceGetGitHubIssueProcedure = "/nushi.v1.NushiService/GetGitHubIssue"
+	// NushiServiceGetGitHubFilesProcedure is the fully-qualified name of the NushiService's
+	// GetGitHubFiles RPC.
+	NushiServiceGetGitHubFilesProcedure = "/nushi.v1.NushiService/GetGitHubFiles"
+	// NushiServiceGetGitHubJobLogProcedure is the fully-qualified name of the NushiService's
+	// GetGitHubJobLog RPC.
+	NushiServiceGetGitHubJobLogProcedure = "/nushi.v1.NushiService/GetGitHubJobLog"
+	// NushiServiceReplyGitHubThreadProcedure is the fully-qualified name of the NushiService's
+	// ReplyGitHubThread RPC.
+	NushiServiceReplyGitHubThreadProcedure = "/nushi.v1.NushiService/ReplyGitHubThread"
+	// NushiServiceResolveGitHubThreadProcedure is the fully-qualified name of the NushiService's
+	// ResolveGitHubThread RPC.
+	NushiServiceResolveGitHubThreadProcedure = "/nushi.v1.NushiService/ResolveGitHubThread"
+	// NushiServiceAddGitHubCommentProcedure is the fully-qualified name of the NushiService's
+	// AddGitHubComment RPC.
+	NushiServiceAddGitHubCommentProcedure = "/nushi.v1.NushiService/AddGitHubComment"
+	// NushiServiceSubmitGitHubReviewProcedure is the fully-qualified name of the NushiService's
+	// SubmitGitHubReview RPC.
+	NushiServiceSubmitGitHubReviewProcedure = "/nushi.v1.NushiService/SubmitGitHubReview"
 	// NushiServiceEventsProcedure is the fully-qualified name of the NushiService's Events RPC.
 	NushiServiceEventsProcedure = "/nushi.v1.NushiService/Events"
 )
@@ -456,6 +501,37 @@ type NushiServiceClient interface {
 	FindJiraIssues(context.Context, *connect.Request[v1.FindJiraIssuesRequest]) (*connect.Response[v1.FindJiraIssuesResponse], error)
 	// An attachment's file or thumbnail (20 MB at most).
 	GetJiraAttachment(context.Context, *connect.Request[v1.GetJiraAttachmentRequest]) (*connect.Response[v1.GetJiraAttachmentResponse], error)
+	// GitHub (ADR 0045): the hosts gh is signed in to (its token read by the
+	// daemon through go-gh) and those given a pasted token (the keychain).
+	// Nothing reaches GitHub on its own: the app asks, and marks the asking
+	// on its timers quiet, which a rate limit running low holds back.
+	ListGitHubHosts(context.Context, *connect.Request[v1.ListGitHubHostsRequest]) (*connect.Response[v1.ListGitHubHostsResponse], error)
+	// Checks a pasted token on a host and keeps it in the keychain; it's
+	// used for the host instead of gh's login until removed.
+	AddGitHubToken(context.Context, *connect.Request[v1.AddGitHubTokenRequest]) (*connect.Response[v1.AddGitHubTokenResponse], error)
+	RemoveGitHubToken(context.Context, *connect.Request[v1.RemoveGitHubTokenRequest]) (*connect.Response[v1.RemoveGitHubTokenResponse], error)
+	// Reads a host's pasted token with macOS's prompt (GitHubHost.needs_ok).
+	AllowGitHubToken(context.Context, *connect.Request[v1.AllowGitHubTokenRequest]) (*connect.Response[v1.AllowGitHubTokenResponse], error)
+	// The GitHub repositories folders are clones of: the folders asked
+	// about and the chats'.
+	ListGitHubRepos(context.Context, *connect.Request[v1.ListGitHubReposRequest]) (*connect.Response[v1.ListGitHubReposResponse], error)
+	// Review requested of me or my teams, my pull requests, issues assigned
+	// to me: the latest 50 each.
+	ListGitHubInbox(context.Context, *connect.Request[v1.ListGitHubInboxRequest]) (*connect.Response[v1.ListGitHubInboxResponse], error)
+	// Items as they are now, by node id (a chat's status chip).
+	GetGitHubStates(context.Context, *connect.Request[v1.GetGitHubStatesRequest]) (*connect.Response[v1.GetGitHubStatesResponse], error)
+	GetGitHubPull(context.Context, *connect.Request[v1.GetGitHubPullRequest]) (*connect.Response[v1.GetGitHubPullResponse], error)
+	GetGitHubIssue(context.Context, *connect.Request[v1.GetGitHubIssueRequest]) (*connect.Response[v1.GetGitHubIssueResponse], error)
+	// A pull request's files from its merge base to its head, both sides'
+	// texts, as GetDiff gives them.
+	GetGitHubFiles(context.Context, *connect.Request[v1.GetGitHubFilesRequest]) (*connect.Response[v1.GetGitHubFilesResponse], error)
+	// The end of a failed Actions job's log (16 KB).
+	GetGitHubJobLog(context.Context, *connect.Request[v1.GetGitHubJobLogRequest]) (*connect.Response[v1.GetGitHubJobLogResponse], error)
+	// The user's writes.
+	ReplyGitHubThread(context.Context, *connect.Request[v1.ReplyGitHubThreadRequest]) (*connect.Response[v1.ReplyGitHubThreadResponse], error)
+	ResolveGitHubThread(context.Context, *connect.Request[v1.ResolveGitHubThreadRequest]) (*connect.Response[v1.ResolveGitHubThreadResponse], error)
+	AddGitHubComment(context.Context, *connect.Request[v1.AddGitHubCommentRequest]) (*connect.Response[v1.AddGitHubCommentResponse], error)
+	SubmitGitHubReview(context.Context, *connect.Request[v1.SubmitGitHubReviewRequest]) (*connect.Response[v1.SubmitGitHubReviewResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
 	Events(context.Context, *connect.Request[v1.EventsRequest]) (*connect.ServerStreamForClient[v1.EventsResponse], error)
@@ -922,6 +998,96 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("GetJiraAttachment")),
 			connect.WithClientOptions(opts...),
 		),
+		listGitHubHosts: connect.NewClient[v1.ListGitHubHostsRequest, v1.ListGitHubHostsResponse](
+			httpClient,
+			baseURL+NushiServiceListGitHubHostsProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ListGitHubHosts")),
+			connect.WithClientOptions(opts...),
+		),
+		addGitHubToken: connect.NewClient[v1.AddGitHubTokenRequest, v1.AddGitHubTokenResponse](
+			httpClient,
+			baseURL+NushiServiceAddGitHubTokenProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("AddGitHubToken")),
+			connect.WithClientOptions(opts...),
+		),
+		removeGitHubToken: connect.NewClient[v1.RemoveGitHubTokenRequest, v1.RemoveGitHubTokenResponse](
+			httpClient,
+			baseURL+NushiServiceRemoveGitHubTokenProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("RemoveGitHubToken")),
+			connect.WithClientOptions(opts...),
+		),
+		allowGitHubToken: connect.NewClient[v1.AllowGitHubTokenRequest, v1.AllowGitHubTokenResponse](
+			httpClient,
+			baseURL+NushiServiceAllowGitHubTokenProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("AllowGitHubToken")),
+			connect.WithClientOptions(opts...),
+		),
+		listGitHubRepos: connect.NewClient[v1.ListGitHubReposRequest, v1.ListGitHubReposResponse](
+			httpClient,
+			baseURL+NushiServiceListGitHubReposProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ListGitHubRepos")),
+			connect.WithClientOptions(opts...),
+		),
+		listGitHubInbox: connect.NewClient[v1.ListGitHubInboxRequest, v1.ListGitHubInboxResponse](
+			httpClient,
+			baseURL+NushiServiceListGitHubInboxProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ListGitHubInbox")),
+			connect.WithClientOptions(opts...),
+		),
+		getGitHubStates: connect.NewClient[v1.GetGitHubStatesRequest, v1.GetGitHubStatesResponse](
+			httpClient,
+			baseURL+NushiServiceGetGitHubStatesProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("GetGitHubStates")),
+			connect.WithClientOptions(opts...),
+		),
+		getGitHubPull: connect.NewClient[v1.GetGitHubPullRequest, v1.GetGitHubPullResponse](
+			httpClient,
+			baseURL+NushiServiceGetGitHubPullProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("GetGitHubPull")),
+			connect.WithClientOptions(opts...),
+		),
+		getGitHubIssue: connect.NewClient[v1.GetGitHubIssueRequest, v1.GetGitHubIssueResponse](
+			httpClient,
+			baseURL+NushiServiceGetGitHubIssueProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("GetGitHubIssue")),
+			connect.WithClientOptions(opts...),
+		),
+		getGitHubFiles: connect.NewClient[v1.GetGitHubFilesRequest, v1.GetGitHubFilesResponse](
+			httpClient,
+			baseURL+NushiServiceGetGitHubFilesProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("GetGitHubFiles")),
+			connect.WithClientOptions(opts...),
+		),
+		getGitHubJobLog: connect.NewClient[v1.GetGitHubJobLogRequest, v1.GetGitHubJobLogResponse](
+			httpClient,
+			baseURL+NushiServiceGetGitHubJobLogProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("GetGitHubJobLog")),
+			connect.WithClientOptions(opts...),
+		),
+		replyGitHubThread: connect.NewClient[v1.ReplyGitHubThreadRequest, v1.ReplyGitHubThreadResponse](
+			httpClient,
+			baseURL+NushiServiceReplyGitHubThreadProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ReplyGitHubThread")),
+			connect.WithClientOptions(opts...),
+		),
+		resolveGitHubThread: connect.NewClient[v1.ResolveGitHubThreadRequest, v1.ResolveGitHubThreadResponse](
+			httpClient,
+			baseURL+NushiServiceResolveGitHubThreadProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ResolveGitHubThread")),
+			connect.WithClientOptions(opts...),
+		),
+		addGitHubComment: connect.NewClient[v1.AddGitHubCommentRequest, v1.AddGitHubCommentResponse](
+			httpClient,
+			baseURL+NushiServiceAddGitHubCommentProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("AddGitHubComment")),
+			connect.WithClientOptions(opts...),
+		),
+		submitGitHubReview: connect.NewClient[v1.SubmitGitHubReviewRequest, v1.SubmitGitHubReviewResponse](
+			httpClient,
+			baseURL+NushiServiceSubmitGitHubReviewProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("SubmitGitHubReview")),
+			connect.WithClientOptions(opts...),
+		),
 		events: connect.NewClient[v1.EventsRequest, v1.EventsResponse](
 			httpClient,
 			baseURL+NushiServiceEventsProcedure,
@@ -1008,6 +1174,21 @@ type nushiServiceClient struct {
 	addJiraComment      *connect.Client[v1.AddJiraCommentRequest, v1.AddJiraCommentResponse]
 	findJiraIssues      *connect.Client[v1.FindJiraIssuesRequest, v1.FindJiraIssuesResponse]
 	getJiraAttachment   *connect.Client[v1.GetJiraAttachmentRequest, v1.GetJiraAttachmentResponse]
+	listGitHubHosts     *connect.Client[v1.ListGitHubHostsRequest, v1.ListGitHubHostsResponse]
+	addGitHubToken      *connect.Client[v1.AddGitHubTokenRequest, v1.AddGitHubTokenResponse]
+	removeGitHubToken   *connect.Client[v1.RemoveGitHubTokenRequest, v1.RemoveGitHubTokenResponse]
+	allowGitHubToken    *connect.Client[v1.AllowGitHubTokenRequest, v1.AllowGitHubTokenResponse]
+	listGitHubRepos     *connect.Client[v1.ListGitHubReposRequest, v1.ListGitHubReposResponse]
+	listGitHubInbox     *connect.Client[v1.ListGitHubInboxRequest, v1.ListGitHubInboxResponse]
+	getGitHubStates     *connect.Client[v1.GetGitHubStatesRequest, v1.GetGitHubStatesResponse]
+	getGitHubPull       *connect.Client[v1.GetGitHubPullRequest, v1.GetGitHubPullResponse]
+	getGitHubIssue      *connect.Client[v1.GetGitHubIssueRequest, v1.GetGitHubIssueResponse]
+	getGitHubFiles      *connect.Client[v1.GetGitHubFilesRequest, v1.GetGitHubFilesResponse]
+	getGitHubJobLog     *connect.Client[v1.GetGitHubJobLogRequest, v1.GetGitHubJobLogResponse]
+	replyGitHubThread   *connect.Client[v1.ReplyGitHubThreadRequest, v1.ReplyGitHubThreadResponse]
+	resolveGitHubThread *connect.Client[v1.ResolveGitHubThreadRequest, v1.ResolveGitHubThreadResponse]
+	addGitHubComment    *connect.Client[v1.AddGitHubCommentRequest, v1.AddGitHubCommentResponse]
+	submitGitHubReview  *connect.Client[v1.SubmitGitHubReviewRequest, v1.SubmitGitHubReviewResponse]
 	events              *connect.Client[v1.EventsRequest, v1.EventsResponse]
 }
 
@@ -1386,6 +1567,81 @@ func (c *nushiServiceClient) GetJiraAttachment(ctx context.Context, req *connect
 	return c.getJiraAttachment.CallUnary(ctx, req)
 }
 
+// ListGitHubHosts calls nushi.v1.NushiService.ListGitHubHosts.
+func (c *nushiServiceClient) ListGitHubHosts(ctx context.Context, req *connect.Request[v1.ListGitHubHostsRequest]) (*connect.Response[v1.ListGitHubHostsResponse], error) {
+	return c.listGitHubHosts.CallUnary(ctx, req)
+}
+
+// AddGitHubToken calls nushi.v1.NushiService.AddGitHubToken.
+func (c *nushiServiceClient) AddGitHubToken(ctx context.Context, req *connect.Request[v1.AddGitHubTokenRequest]) (*connect.Response[v1.AddGitHubTokenResponse], error) {
+	return c.addGitHubToken.CallUnary(ctx, req)
+}
+
+// RemoveGitHubToken calls nushi.v1.NushiService.RemoveGitHubToken.
+func (c *nushiServiceClient) RemoveGitHubToken(ctx context.Context, req *connect.Request[v1.RemoveGitHubTokenRequest]) (*connect.Response[v1.RemoveGitHubTokenResponse], error) {
+	return c.removeGitHubToken.CallUnary(ctx, req)
+}
+
+// AllowGitHubToken calls nushi.v1.NushiService.AllowGitHubToken.
+func (c *nushiServiceClient) AllowGitHubToken(ctx context.Context, req *connect.Request[v1.AllowGitHubTokenRequest]) (*connect.Response[v1.AllowGitHubTokenResponse], error) {
+	return c.allowGitHubToken.CallUnary(ctx, req)
+}
+
+// ListGitHubRepos calls nushi.v1.NushiService.ListGitHubRepos.
+func (c *nushiServiceClient) ListGitHubRepos(ctx context.Context, req *connect.Request[v1.ListGitHubReposRequest]) (*connect.Response[v1.ListGitHubReposResponse], error) {
+	return c.listGitHubRepos.CallUnary(ctx, req)
+}
+
+// ListGitHubInbox calls nushi.v1.NushiService.ListGitHubInbox.
+func (c *nushiServiceClient) ListGitHubInbox(ctx context.Context, req *connect.Request[v1.ListGitHubInboxRequest]) (*connect.Response[v1.ListGitHubInboxResponse], error) {
+	return c.listGitHubInbox.CallUnary(ctx, req)
+}
+
+// GetGitHubStates calls nushi.v1.NushiService.GetGitHubStates.
+func (c *nushiServiceClient) GetGitHubStates(ctx context.Context, req *connect.Request[v1.GetGitHubStatesRequest]) (*connect.Response[v1.GetGitHubStatesResponse], error) {
+	return c.getGitHubStates.CallUnary(ctx, req)
+}
+
+// GetGitHubPull calls nushi.v1.NushiService.GetGitHubPull.
+func (c *nushiServiceClient) GetGitHubPull(ctx context.Context, req *connect.Request[v1.GetGitHubPullRequest]) (*connect.Response[v1.GetGitHubPullResponse], error) {
+	return c.getGitHubPull.CallUnary(ctx, req)
+}
+
+// GetGitHubIssue calls nushi.v1.NushiService.GetGitHubIssue.
+func (c *nushiServiceClient) GetGitHubIssue(ctx context.Context, req *connect.Request[v1.GetGitHubIssueRequest]) (*connect.Response[v1.GetGitHubIssueResponse], error) {
+	return c.getGitHubIssue.CallUnary(ctx, req)
+}
+
+// GetGitHubFiles calls nushi.v1.NushiService.GetGitHubFiles.
+func (c *nushiServiceClient) GetGitHubFiles(ctx context.Context, req *connect.Request[v1.GetGitHubFilesRequest]) (*connect.Response[v1.GetGitHubFilesResponse], error) {
+	return c.getGitHubFiles.CallUnary(ctx, req)
+}
+
+// GetGitHubJobLog calls nushi.v1.NushiService.GetGitHubJobLog.
+func (c *nushiServiceClient) GetGitHubJobLog(ctx context.Context, req *connect.Request[v1.GetGitHubJobLogRequest]) (*connect.Response[v1.GetGitHubJobLogResponse], error) {
+	return c.getGitHubJobLog.CallUnary(ctx, req)
+}
+
+// ReplyGitHubThread calls nushi.v1.NushiService.ReplyGitHubThread.
+func (c *nushiServiceClient) ReplyGitHubThread(ctx context.Context, req *connect.Request[v1.ReplyGitHubThreadRequest]) (*connect.Response[v1.ReplyGitHubThreadResponse], error) {
+	return c.replyGitHubThread.CallUnary(ctx, req)
+}
+
+// ResolveGitHubThread calls nushi.v1.NushiService.ResolveGitHubThread.
+func (c *nushiServiceClient) ResolveGitHubThread(ctx context.Context, req *connect.Request[v1.ResolveGitHubThreadRequest]) (*connect.Response[v1.ResolveGitHubThreadResponse], error) {
+	return c.resolveGitHubThread.CallUnary(ctx, req)
+}
+
+// AddGitHubComment calls nushi.v1.NushiService.AddGitHubComment.
+func (c *nushiServiceClient) AddGitHubComment(ctx context.Context, req *connect.Request[v1.AddGitHubCommentRequest]) (*connect.Response[v1.AddGitHubCommentResponse], error) {
+	return c.addGitHubComment.CallUnary(ctx, req)
+}
+
+// SubmitGitHubReview calls nushi.v1.NushiService.SubmitGitHubReview.
+func (c *nushiServiceClient) SubmitGitHubReview(ctx context.Context, req *connect.Request[v1.SubmitGitHubReviewRequest]) (*connect.Response[v1.SubmitGitHubReviewResponse], error) {
+	return c.submitGitHubReview.CallUnary(ctx, req)
+}
+
 // Events calls nushi.v1.NushiService.Events.
 func (c *nushiServiceClient) Events(ctx context.Context, req *connect.Request[v1.EventsRequest]) (*connect.ServerStreamForClient[v1.EventsResponse], error) {
 	return c.events.CallServerStream(ctx, req)
@@ -1609,6 +1865,37 @@ type NushiServiceHandler interface {
 	FindJiraIssues(context.Context, *connect.Request[v1.FindJiraIssuesRequest]) (*connect.Response[v1.FindJiraIssuesResponse], error)
 	// An attachment's file or thumbnail (20 MB at most).
 	GetJiraAttachment(context.Context, *connect.Request[v1.GetJiraAttachmentRequest]) (*connect.Response[v1.GetJiraAttachmentResponse], error)
+	// GitHub (ADR 0045): the hosts gh is signed in to (its token read by the
+	// daemon through go-gh) and those given a pasted token (the keychain).
+	// Nothing reaches GitHub on its own: the app asks, and marks the asking
+	// on its timers quiet, which a rate limit running low holds back.
+	ListGitHubHosts(context.Context, *connect.Request[v1.ListGitHubHostsRequest]) (*connect.Response[v1.ListGitHubHostsResponse], error)
+	// Checks a pasted token on a host and keeps it in the keychain; it's
+	// used for the host instead of gh's login until removed.
+	AddGitHubToken(context.Context, *connect.Request[v1.AddGitHubTokenRequest]) (*connect.Response[v1.AddGitHubTokenResponse], error)
+	RemoveGitHubToken(context.Context, *connect.Request[v1.RemoveGitHubTokenRequest]) (*connect.Response[v1.RemoveGitHubTokenResponse], error)
+	// Reads a host's pasted token with macOS's prompt (GitHubHost.needs_ok).
+	AllowGitHubToken(context.Context, *connect.Request[v1.AllowGitHubTokenRequest]) (*connect.Response[v1.AllowGitHubTokenResponse], error)
+	// The GitHub repositories folders are clones of: the folders asked
+	// about and the chats'.
+	ListGitHubRepos(context.Context, *connect.Request[v1.ListGitHubReposRequest]) (*connect.Response[v1.ListGitHubReposResponse], error)
+	// Review requested of me or my teams, my pull requests, issues assigned
+	// to me: the latest 50 each.
+	ListGitHubInbox(context.Context, *connect.Request[v1.ListGitHubInboxRequest]) (*connect.Response[v1.ListGitHubInboxResponse], error)
+	// Items as they are now, by node id (a chat's status chip).
+	GetGitHubStates(context.Context, *connect.Request[v1.GetGitHubStatesRequest]) (*connect.Response[v1.GetGitHubStatesResponse], error)
+	GetGitHubPull(context.Context, *connect.Request[v1.GetGitHubPullRequest]) (*connect.Response[v1.GetGitHubPullResponse], error)
+	GetGitHubIssue(context.Context, *connect.Request[v1.GetGitHubIssueRequest]) (*connect.Response[v1.GetGitHubIssueResponse], error)
+	// A pull request's files from its merge base to its head, both sides'
+	// texts, as GetDiff gives them.
+	GetGitHubFiles(context.Context, *connect.Request[v1.GetGitHubFilesRequest]) (*connect.Response[v1.GetGitHubFilesResponse], error)
+	// The end of a failed Actions job's log (16 KB).
+	GetGitHubJobLog(context.Context, *connect.Request[v1.GetGitHubJobLogRequest]) (*connect.Response[v1.GetGitHubJobLogResponse], error)
+	// The user's writes.
+	ReplyGitHubThread(context.Context, *connect.Request[v1.ReplyGitHubThreadRequest]) (*connect.Response[v1.ReplyGitHubThreadResponse], error)
+	ResolveGitHubThread(context.Context, *connect.Request[v1.ResolveGitHubThreadRequest]) (*connect.Response[v1.ResolveGitHubThreadResponse], error)
+	AddGitHubComment(context.Context, *connect.Request[v1.AddGitHubCommentRequest]) (*connect.Response[v1.AddGitHubCommentResponse], error)
+	SubmitGitHubReview(context.Context, *connect.Request[v1.SubmitGitHubReviewRequest]) (*connect.Response[v1.SubmitGitHubReviewResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
 	Events(context.Context, *connect.Request[v1.EventsRequest], *connect.ServerStream[v1.EventsResponse]) error
@@ -2071,6 +2358,96 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("GetJiraAttachment")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceListGitHubHostsHandler := connect.NewUnaryHandler(
+		NushiServiceListGitHubHostsProcedure,
+		svc.ListGitHubHosts,
+		connect.WithSchema(nushiServiceMethods.ByName("ListGitHubHosts")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceAddGitHubTokenHandler := connect.NewUnaryHandler(
+		NushiServiceAddGitHubTokenProcedure,
+		svc.AddGitHubToken,
+		connect.WithSchema(nushiServiceMethods.ByName("AddGitHubToken")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceRemoveGitHubTokenHandler := connect.NewUnaryHandler(
+		NushiServiceRemoveGitHubTokenProcedure,
+		svc.RemoveGitHubToken,
+		connect.WithSchema(nushiServiceMethods.ByName("RemoveGitHubToken")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceAllowGitHubTokenHandler := connect.NewUnaryHandler(
+		NushiServiceAllowGitHubTokenProcedure,
+		svc.AllowGitHubToken,
+		connect.WithSchema(nushiServiceMethods.ByName("AllowGitHubToken")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceListGitHubReposHandler := connect.NewUnaryHandler(
+		NushiServiceListGitHubReposProcedure,
+		svc.ListGitHubRepos,
+		connect.WithSchema(nushiServiceMethods.ByName("ListGitHubRepos")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceListGitHubInboxHandler := connect.NewUnaryHandler(
+		NushiServiceListGitHubInboxProcedure,
+		svc.ListGitHubInbox,
+		connect.WithSchema(nushiServiceMethods.ByName("ListGitHubInbox")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceGetGitHubStatesHandler := connect.NewUnaryHandler(
+		NushiServiceGetGitHubStatesProcedure,
+		svc.GetGitHubStates,
+		connect.WithSchema(nushiServiceMethods.ByName("GetGitHubStates")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceGetGitHubPullHandler := connect.NewUnaryHandler(
+		NushiServiceGetGitHubPullProcedure,
+		svc.GetGitHubPull,
+		connect.WithSchema(nushiServiceMethods.ByName("GetGitHubPull")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceGetGitHubIssueHandler := connect.NewUnaryHandler(
+		NushiServiceGetGitHubIssueProcedure,
+		svc.GetGitHubIssue,
+		connect.WithSchema(nushiServiceMethods.ByName("GetGitHubIssue")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceGetGitHubFilesHandler := connect.NewUnaryHandler(
+		NushiServiceGetGitHubFilesProcedure,
+		svc.GetGitHubFiles,
+		connect.WithSchema(nushiServiceMethods.ByName("GetGitHubFiles")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceGetGitHubJobLogHandler := connect.NewUnaryHandler(
+		NushiServiceGetGitHubJobLogProcedure,
+		svc.GetGitHubJobLog,
+		connect.WithSchema(nushiServiceMethods.ByName("GetGitHubJobLog")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceReplyGitHubThreadHandler := connect.NewUnaryHandler(
+		NushiServiceReplyGitHubThreadProcedure,
+		svc.ReplyGitHubThread,
+		connect.WithSchema(nushiServiceMethods.ByName("ReplyGitHubThread")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceResolveGitHubThreadHandler := connect.NewUnaryHandler(
+		NushiServiceResolveGitHubThreadProcedure,
+		svc.ResolveGitHubThread,
+		connect.WithSchema(nushiServiceMethods.ByName("ResolveGitHubThread")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceAddGitHubCommentHandler := connect.NewUnaryHandler(
+		NushiServiceAddGitHubCommentProcedure,
+		svc.AddGitHubComment,
+		connect.WithSchema(nushiServiceMethods.ByName("AddGitHubComment")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceSubmitGitHubReviewHandler := connect.NewUnaryHandler(
+		NushiServiceSubmitGitHubReviewProcedure,
+		svc.SubmitGitHubReview,
+		connect.WithSchema(nushiServiceMethods.ByName("SubmitGitHubReview")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceEventsHandler := connect.NewServerStreamHandler(
 		NushiServiceEventsProcedure,
 		svc.Events,
@@ -2229,6 +2606,36 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceFindJiraIssuesHandler.ServeHTTP(w, r)
 		case NushiServiceGetJiraAttachmentProcedure:
 			nushiServiceGetJiraAttachmentHandler.ServeHTTP(w, r)
+		case NushiServiceListGitHubHostsProcedure:
+			nushiServiceListGitHubHostsHandler.ServeHTTP(w, r)
+		case NushiServiceAddGitHubTokenProcedure:
+			nushiServiceAddGitHubTokenHandler.ServeHTTP(w, r)
+		case NushiServiceRemoveGitHubTokenProcedure:
+			nushiServiceRemoveGitHubTokenHandler.ServeHTTP(w, r)
+		case NushiServiceAllowGitHubTokenProcedure:
+			nushiServiceAllowGitHubTokenHandler.ServeHTTP(w, r)
+		case NushiServiceListGitHubReposProcedure:
+			nushiServiceListGitHubReposHandler.ServeHTTP(w, r)
+		case NushiServiceListGitHubInboxProcedure:
+			nushiServiceListGitHubInboxHandler.ServeHTTP(w, r)
+		case NushiServiceGetGitHubStatesProcedure:
+			nushiServiceGetGitHubStatesHandler.ServeHTTP(w, r)
+		case NushiServiceGetGitHubPullProcedure:
+			nushiServiceGetGitHubPullHandler.ServeHTTP(w, r)
+		case NushiServiceGetGitHubIssueProcedure:
+			nushiServiceGetGitHubIssueHandler.ServeHTTP(w, r)
+		case NushiServiceGetGitHubFilesProcedure:
+			nushiServiceGetGitHubFilesHandler.ServeHTTP(w, r)
+		case NushiServiceGetGitHubJobLogProcedure:
+			nushiServiceGetGitHubJobLogHandler.ServeHTTP(w, r)
+		case NushiServiceReplyGitHubThreadProcedure:
+			nushiServiceReplyGitHubThreadHandler.ServeHTTP(w, r)
+		case NushiServiceResolveGitHubThreadProcedure:
+			nushiServiceResolveGitHubThreadHandler.ServeHTTP(w, r)
+		case NushiServiceAddGitHubCommentProcedure:
+			nushiServiceAddGitHubCommentHandler.ServeHTTP(w, r)
+		case NushiServiceSubmitGitHubReviewProcedure:
+			nushiServiceSubmitGitHubReviewHandler.ServeHTTP(w, r)
 		case NushiServiceEventsProcedure:
 			nushiServiceEventsHandler.ServeHTTP(w, r)
 		default:
@@ -2538,6 +2945,66 @@ func (UnimplementedNushiServiceHandler) FindJiraIssues(context.Context, *connect
 
 func (UnimplementedNushiServiceHandler) GetJiraAttachment(context.Context, *connect.Request[v1.GetJiraAttachmentRequest]) (*connect.Response[v1.GetJiraAttachmentResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetJiraAttachment is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ListGitHubHosts(context.Context, *connect.Request[v1.ListGitHubHostsRequest]) (*connect.Response[v1.ListGitHubHostsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ListGitHubHosts is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) AddGitHubToken(context.Context, *connect.Request[v1.AddGitHubTokenRequest]) (*connect.Response[v1.AddGitHubTokenResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.AddGitHubToken is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) RemoveGitHubToken(context.Context, *connect.Request[v1.RemoveGitHubTokenRequest]) (*connect.Response[v1.RemoveGitHubTokenResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.RemoveGitHubToken is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) AllowGitHubToken(context.Context, *connect.Request[v1.AllowGitHubTokenRequest]) (*connect.Response[v1.AllowGitHubTokenResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.AllowGitHubToken is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ListGitHubRepos(context.Context, *connect.Request[v1.ListGitHubReposRequest]) (*connect.Response[v1.ListGitHubReposResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ListGitHubRepos is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ListGitHubInbox(context.Context, *connect.Request[v1.ListGitHubInboxRequest]) (*connect.Response[v1.ListGitHubInboxResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ListGitHubInbox is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) GetGitHubStates(context.Context, *connect.Request[v1.GetGitHubStatesRequest]) (*connect.Response[v1.GetGitHubStatesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetGitHubStates is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) GetGitHubPull(context.Context, *connect.Request[v1.GetGitHubPullRequest]) (*connect.Response[v1.GetGitHubPullResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetGitHubPull is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) GetGitHubIssue(context.Context, *connect.Request[v1.GetGitHubIssueRequest]) (*connect.Response[v1.GetGitHubIssueResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetGitHubIssue is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) GetGitHubFiles(context.Context, *connect.Request[v1.GetGitHubFilesRequest]) (*connect.Response[v1.GetGitHubFilesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetGitHubFiles is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) GetGitHubJobLog(context.Context, *connect.Request[v1.GetGitHubJobLogRequest]) (*connect.Response[v1.GetGitHubJobLogResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetGitHubJobLog is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ReplyGitHubThread(context.Context, *connect.Request[v1.ReplyGitHubThreadRequest]) (*connect.Response[v1.ReplyGitHubThreadResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ReplyGitHubThread is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ResolveGitHubThread(context.Context, *connect.Request[v1.ResolveGitHubThreadRequest]) (*connect.Response[v1.ResolveGitHubThreadResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ResolveGitHubThread is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) AddGitHubComment(context.Context, *connect.Request[v1.AddGitHubCommentRequest]) (*connect.Response[v1.AddGitHubCommentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.AddGitHubComment is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) SubmitGitHubReview(context.Context, *connect.Request[v1.SubmitGitHubReviewRequest]) (*connect.Response[v1.SubmitGitHubReviewResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.SubmitGitHubReview is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) Events(context.Context, *connect.Request[v1.EventsRequest], *connect.ServerStream[v1.EventsResponse]) error {

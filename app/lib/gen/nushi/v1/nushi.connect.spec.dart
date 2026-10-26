@@ -676,6 +676,127 @@ abstract final class NushiService {
     nushiv1nushi.GetJiraAttachmentResponse.new,
   );
 
+  /// GitHub (ADR 0045): the hosts gh is signed in to (its token read by the
+  /// daemon through go-gh) and those given a pasted token (the keychain).
+  /// Nothing reaches GitHub on its own: the app asks, and marks the asking
+  /// on its timers quiet, which a rate limit running low holds back.
+  static const listGitHubHosts = connect.Spec(
+    '/$name/ListGitHubHosts',
+    connect.StreamType.unary,
+    nushiv1nushi.ListGitHubHostsRequest.new,
+    nushiv1nushi.ListGitHubHostsResponse.new,
+  );
+
+  /// Checks a pasted token on a host and keeps it in the keychain; it's
+  /// used for the host instead of gh's login until removed.
+  static const addGitHubToken = connect.Spec(
+    '/$name/AddGitHubToken',
+    connect.StreamType.unary,
+    nushiv1nushi.AddGitHubTokenRequest.new,
+    nushiv1nushi.AddGitHubTokenResponse.new,
+  );
+
+  static const removeGitHubToken = connect.Spec(
+    '/$name/RemoveGitHubToken',
+    connect.StreamType.unary,
+    nushiv1nushi.RemoveGitHubTokenRequest.new,
+    nushiv1nushi.RemoveGitHubTokenResponse.new,
+  );
+
+  /// Reads a host's pasted token with macOS's prompt (GitHubHost.needs_ok).
+  static const allowGitHubToken = connect.Spec(
+    '/$name/AllowGitHubToken',
+    connect.StreamType.unary,
+    nushiv1nushi.AllowGitHubTokenRequest.new,
+    nushiv1nushi.AllowGitHubTokenResponse.new,
+  );
+
+  /// The GitHub repositories folders are clones of: the folders asked
+  /// about and the chats'.
+  static const listGitHubRepos = connect.Spec(
+    '/$name/ListGitHubRepos',
+    connect.StreamType.unary,
+    nushiv1nushi.ListGitHubReposRequest.new,
+    nushiv1nushi.ListGitHubReposResponse.new,
+  );
+
+  /// Review requested of me or my teams, my pull requests, issues assigned
+  /// to me: the latest 50 each.
+  static const listGitHubInbox = connect.Spec(
+    '/$name/ListGitHubInbox',
+    connect.StreamType.unary,
+    nushiv1nushi.ListGitHubInboxRequest.new,
+    nushiv1nushi.ListGitHubInboxResponse.new,
+  );
+
+  /// Items as they are now, by node id (a chat's status chip).
+  static const getGitHubStates = connect.Spec(
+    '/$name/GetGitHubStates',
+    connect.StreamType.unary,
+    nushiv1nushi.GetGitHubStatesRequest.new,
+    nushiv1nushi.GetGitHubStatesResponse.new,
+  );
+
+  static const getGitHubPull = connect.Spec(
+    '/$name/GetGitHubPull',
+    connect.StreamType.unary,
+    nushiv1nushi.GetGitHubPullRequest.new,
+    nushiv1nushi.GetGitHubPullResponse.new,
+  );
+
+  static const getGitHubIssue = connect.Spec(
+    '/$name/GetGitHubIssue',
+    connect.StreamType.unary,
+    nushiv1nushi.GetGitHubIssueRequest.new,
+    nushiv1nushi.GetGitHubIssueResponse.new,
+  );
+
+  /// A pull request's files from its merge base to its head, both sides'
+  /// texts, as GetDiff gives them.
+  static const getGitHubFiles = connect.Spec(
+    '/$name/GetGitHubFiles',
+    connect.StreamType.unary,
+    nushiv1nushi.GetGitHubFilesRequest.new,
+    nushiv1nushi.GetGitHubFilesResponse.new,
+  );
+
+  /// The end of a failed Actions job's log (16 KB).
+  static const getGitHubJobLog = connect.Spec(
+    '/$name/GetGitHubJobLog',
+    connect.StreamType.unary,
+    nushiv1nushi.GetGitHubJobLogRequest.new,
+    nushiv1nushi.GetGitHubJobLogResponse.new,
+  );
+
+  /// The user's writes.
+  static const replyGitHubThread = connect.Spec(
+    '/$name/ReplyGitHubThread',
+    connect.StreamType.unary,
+    nushiv1nushi.ReplyGitHubThreadRequest.new,
+    nushiv1nushi.ReplyGitHubThreadResponse.new,
+  );
+
+  static const resolveGitHubThread = connect.Spec(
+    '/$name/ResolveGitHubThread',
+    connect.StreamType.unary,
+    nushiv1nushi.ResolveGitHubThreadRequest.new,
+    nushiv1nushi.ResolveGitHubThreadResponse.new,
+  );
+
+  static const addGitHubComment = connect.Spec(
+    '/$name/AddGitHubComment',
+    connect.StreamType.unary,
+    nushiv1nushi.AddGitHubCommentRequest.new,
+    nushiv1nushi.AddGitHubCommentResponse.new,
+  );
+
+  static const submitGitHubReview = connect.Spec(
+    '/$name/SubmitGitHubReview',
+    connect.StreamType.unary,
+    nushiv1nushi.SubmitGitHubReviewRequest.new,
+    nushiv1nushi.SubmitGitHubReviewResponse.new,
+  );
+
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.
   static const events = connect.Spec(

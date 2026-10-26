@@ -11,6 +11,7 @@ import (
 
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/git"
+	"github.com/afrase/nushi/internal/model"
 )
 
 // The handlers that read a folder with git.
@@ -44,10 +45,14 @@ func (s *server) GetDiff(ctx context.Context, req *connect.Request[nushiv1.GetDi
 	}
 	resp := &nushiv1.GetDiffResponse{}
 	for _, c := range changes {
-		resp.Files = append(resp.Files, &nushiv1.FileChange{Path: c.Path, Status: c.Status, OldText: c.Old, NewText: c.New, Skipped: c.Skipped,
-			OldPath: c.OldPath, Added: int32(c.Added), Removed: int32(c.Removed)})
+		resp.Files = append(resp.Files, fileChangeProto(c))
 	}
 	return connect.NewResponse(resp), nil
+}
+
+func fileChangeProto(c model.FileChange) *nushiv1.FileChange {
+	return &nushiv1.FileChange{Path: c.Path, Status: c.Status, OldText: c.Old, NewText: c.New, Skipped: c.Skipped,
+		OldPath: c.OldPath, Added: int32(c.Added), Removed: int32(c.Removed)}
 }
 
 func (s *server) GetFolderStatus(ctx context.Context, req *connect.Request[nushiv1.GetFolderStatusRequest]) (*connect.Response[nushiv1.GetFolderStatusResponse], error) {
