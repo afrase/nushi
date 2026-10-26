@@ -2,6 +2,15 @@
 
 Each milestone's demo script (what to run, what to see), newest first. An archive.
 
+## Demo (controls that look like controls, steps 281–290)
+
+1. Settings › General: the terminal's font and size and Sleep idle are boxes with a ▾; hover one (it darkens), Tab to it (a blue ring), Space opens it. Show logs is an outlined button. The preview shows a folder, Go and Apple icon.
+2. A chat: the composer's mode and model end in a ▾ and tint under the pointer; the header's ⋯ is a button with a tooltip.
+3. The details panel: point at a card's title: the open hand and six dots on the right (on a collapsed card, in place of "57%"); drag it: the closed hand.
+4. Hold ⌘ for a moment: ⌘1, ⌘2… on the sidebar's chats. ⌘2 opens the second; ⌘] and ⌘[ step through them. A quick ⌘J shows no numbers.
+5. ⌘J: every row has a Start work ▾ button; the site is a picker with a ▾; ⌥⌘2 switches to the second list. In a terminal, ⌥⌘1 is the first tab, ⌘1 still the first chat.
+6. Delete… a chat, or Remove a Jira site: the button that loses something is red.
+
 ## Demo (Nushi's copy of transcripts, steps 272–280)
 
 1. In a throwaway folder, start a Claude chat; ask for two small changes (it reads and edits files). Send `/compact`, then one more message.
