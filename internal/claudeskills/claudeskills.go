@@ -6,15 +6,18 @@
 //   - the project's: .claude/skills/<name>/SKILL.md in the folder and each
 //     folder above it, up to the repository's top (to / outside git), the
 //     nearest winning a name;
-//   - plugins': `claude plugin list --json` for what is installed and on,
-//     then each plugin's skills/, commands/ and agents/ folders;
+//   - plugins': `claude plugin list --json` (run outside the folder) for
+//     what is installed, enabledPlugins in the settings files for whether
+//     each is on here, then each plugin's skills/, commands/ and agents/
+//     folders;
 //   - whether a skill is listed: "skillOverrides" in the settings files
 //     (local over project over user), else the skill's own
 //     disable-model-invocation.
 //
 // A skill's name is its folder's name, as Claude lists it; its description
 // is its front matter's, else its first line. Nothing here runs Claude in
-// the folder: a run outside --bare would run the folder's apiKeyHelper.
+// the folder: a run outside --bare would run the folder's apiKeyHelper. A
+// project's .claude or .claude/skills that is a symlink is left out.
 package claudeskills
 
 import (
@@ -26,6 +29,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"gopkg.in/yaml.v3"
@@ -64,13 +68,26 @@ func projectRoots(ctx context.Context, folder string) []string {
 	home, _ := os.UserHomeDir()
 	var roots []string
 	for dir := folder; ; dir = filepath.Dir(dir) {
-		if dir != home {
+		if dir != home && !linked(dir) {
 			roots = append(roots, filepath.Join(dir, ".claude", "skills"))
 		}
 		if dir == top || dir == filepath.Dir(dir) {
 			return roots
 		}
 	}
+}
+
+// linked says dir's .claude or .claude/skills is a symlink (or can't be
+// looked at): a repository's link could point the listing, and Trash,
+// anywhere, so Nushi leaves such a folder out.
+func linked(dir string) bool {
+	for _, p := range []string{filepath.Join(dir, ".claude"), filepath.Join(dir, ".claude", "skills")} {
+		fi, err := os.Lstat(p)
+		if err == nil && fi.Mode()&os.ModeSymlink != 0 || err != nil && !os.IsNotExist(err) {
+			return true
+		}
+	}
+	return false
 }
 
 // List returns folder's skills and plugins.
@@ -158,11 +175,25 @@ func frontMatter(b []byte) (desc, extra string, author bool) {
 			}
 		}
 	}
-	desc = strings.TrimSpace(desc)
+	desc = strings.TrimSpace(strings.Map(shown, desc))
 	if len(desc) > maxDescription {
 		desc = strings.ToValidUTF8(desc[:maxDescription], "") + "…"
 	}
 	return desc, extra, author
+}
+
+// shown keeps a description's character, a line break as a space, but
+// drops control and bidirectional-override characters: the text is its
+// author's, shown as plain text, and shouldn't be able to reorder or hide
+// what's around it.
+func shown(r rune) rune {
+	switch {
+	case r == '\n' || r == '\t':
+		return ' '
+	case unicode.IsControl(r), r >= 0x202A && r <= 0x202E, r >= 0x2066 && r <= 0x2069, r == 0x200E, r == 0x200F:
+		return -1
+	}
+	return r
 }
 
 // tokens is about what listing text costs: Claude Code 2.1.310's /skills

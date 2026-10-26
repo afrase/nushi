@@ -28,7 +28,7 @@ func write(t *testing.T, path, text string) {
 func fakeClaude(t *testing.T) (dir string) {
 	t.Helper()
 	dir = t.TempDir()
-	write(t, filepath.Join(dir, "claude"), "#!/bin/sh\n{ printf '%s\\n' \"$@\"; echo; } >> \""+dir+"/args\"\nprintf '%s' \"$FAKE_OUT\"\nexit ${FAKE_EXIT:-0}\n")
+	write(t, filepath.Join(dir, "claude"), "#!/bin/sh\npwd >> \""+dir+"/pwd\"\n{ printf '%s\\n' \"$@\"; echo; } >> \""+dir+"/args\"\nprintf '%s' \"$FAKE_OUT\"\nexit ${FAKE_EXIT:-0}\n")
 	if err := os.Chmod(filepath.Join(dir, "claude"), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +72,7 @@ func TestListReadsEachSource(t *testing.T) {
 	t.Setenv("CLAUDE_CONFIG_DIR", cfg)
 	top, deeper := repo(t)
 	skill(t, filepath.Join(cfg, "skills"), "mine", "---\nname: other\ndescription: A user skill in the config dir. It does things.\n---\nbody\n")
-	skill(t, filepath.Join(cfg, "skills"), "quiet", "---\ndescription: Off for me\n---\n")
+	skill(t, filepath.Join(cfg, "skills"), "quiet", "---\ndescription: \"Off\\u202e for\\x1b me\"\n---\n")
 	skill(t, filepath.Join(top, ".claude", "skills"), "projskill", "---\ndescription: A project skill\nwhen_to_use: when testing\n---\nb\n")
 	skill(t, filepath.Join(top, ".claude", "skills"), "noname", "no front matter here\n")
 	skill(t, filepath.Join(top, ".claude", "skills"), "dup", "---\ndescription: far\n---\n")
@@ -117,6 +117,9 @@ func TestListReadsEachSource(t *testing.T) {
 	}
 	if s := byName["projskill"]; s.SetIn != "" || s.Path != filepath.Join(top, ".claude", "skills", "projskill") {
 		t.Errorf("a project skill: %+v", s)
+	}
+	if s := byName["quiet"]; s.Description != "Off for me" {
+		t.Errorf("control and bidi characters: %q", s.Description)
 	}
 	if s := byName["dup"]; s.Description != "near" {
 		t.Errorf("the nearer of two: %+v", s)

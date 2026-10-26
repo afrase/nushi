@@ -902,8 +902,10 @@ extension type NushiServiceClient (connect.Transport _transport) {
     );
   }
 
-  /// Turns an installed plugin on or off (`claude plugin enable`, `disable`)
-  /// where Plugin.switch_scope says.
+  /// Turns an installed plugin on or off where Plugin.switch_scope says:
+  /// for you through `claude plugin enable`/`disable` (run in Claude's config
+  /// folder, never the project's), for the project by its enabledPlugins
+  /// entry in the project's local settings.
   Future<nushiv1nushi.SetPluginOnResponse> setPluginOn(
     nushiv1nushi.SetPluginOnRequest input, {
     connect.Headers? headers,
@@ -921,8 +923,8 @@ extension type NushiServiceClient (connect.Transport _transport) {
     );
   }
 
-  /// Uninstalls a plugin installed for you or in the project's local
-  /// settings (`claude plugin uninstall`).
+  /// Uninstalls a plugin installed for you (`claude plugin uninstall`);
+  /// refused for one installed for a project.
   Future<nushiv1nushi.UninstallPluginResponse> uninstallPlugin(
     nushiv1nushi.UninstallPluginRequest input, {
     connect.Headers? headers,

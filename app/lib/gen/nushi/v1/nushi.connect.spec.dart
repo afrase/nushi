@@ -444,8 +444,10 @@ abstract final class NushiService {
     nushiv1nushi.SetSkillOnResponse.new,
   );
 
-  /// Turns an installed plugin on or off (`claude plugin enable`, `disable`)
-  /// where Plugin.switch_scope says.
+  /// Turns an installed plugin on or off where Plugin.switch_scope says:
+  /// for you through `claude plugin enable`/`disable` (run in Claude's config
+  /// folder, never the project's), for the project by its enabledPlugins
+  /// entry in the project's local settings.
   static const setPluginOn = connect.Spec(
     '/$name/SetPluginOn',
     connect.StreamType.unary,
@@ -453,8 +455,8 @@ abstract final class NushiService {
     nushiv1nushi.SetPluginOnResponse.new,
   );
 
-  /// Uninstalls a plugin installed for you or in the project's local
-  /// settings (`claude plugin uninstall`).
+  /// Uninstalls a plugin installed for you (`claude plugin uninstall`);
+  /// refused for one installed for a project.
   static const uninstallPlugin = connect.Spec(
     '/$name/UninstallPlugin',
     connect.StreamType.unary,
