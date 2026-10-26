@@ -198,7 +198,9 @@ class SubagentLine extends StatelessWidget {
                   color: t.textSecondary,
                 ),
                 Expanded(child: subagentName(context, s)),
-                Flexible(
+                // The name takes the room; the state ends the line.
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 240),
                   child: SubagentState(
                     s,
                     style: theme.ui(t.textMuted, size: 12),
