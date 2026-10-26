@@ -47,6 +47,17 @@ func Failed(c model.GitHubCheck) bool {
 	return false
 }
 
+// Outside says an author isn't the repository's owner, a member of its
+// organization or a collaborator (GitHub's author association): their
+// text is a stranger's.
+func Outside(association string) bool {
+	switch association {
+	case "OWNER", "MEMBER", "COLLABORATOR":
+		return false
+	}
+	return true
+}
+
 // JobTail is the end of an Actions job's log (16 KB), kept once read: a
 // job that ended doesn't change (a re-run is another job).
 func (s *Service) JobTail(ctx context.Context, ref model.GitHubRef, job int64) (string, error) {

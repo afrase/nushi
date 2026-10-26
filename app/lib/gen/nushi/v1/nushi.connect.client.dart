@@ -1424,6 +1424,277 @@ extension type NushiServiceClient (connect.Transport _transport) {
     );
   }
 
+  /// GitHub (ADR 0045): the hosts gh is signed in to (its token read by the
+  /// daemon through go-gh) and those given a pasted token (the keychain).
+  /// Nothing reaches GitHub on its own: the app asks, and marks the asking
+  /// on its timers quiet, which a rate limit running low holds back.
+  Future<nushiv1nushi.ListGitHubHostsResponse> listGitHubHosts(
+    nushiv1nushi.ListGitHubHostsRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.listGitHubHosts,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Checks a pasted token on a host and keeps it in the keychain; it's
+  /// used for the host instead of gh's login until removed.
+  Future<nushiv1nushi.AddGitHubTokenResponse> addGitHubToken(
+    nushiv1nushi.AddGitHubTokenRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.addGitHubToken,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  Future<nushiv1nushi.RemoveGitHubTokenResponse> removeGitHubToken(
+    nushiv1nushi.RemoveGitHubTokenRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.removeGitHubToken,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Reads a host's pasted token with macOS's prompt (GitHubHost.needs_ok).
+  Future<nushiv1nushi.AllowGitHubTokenResponse> allowGitHubToken(
+    nushiv1nushi.AllowGitHubTokenRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.allowGitHubToken,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// The GitHub repositories folders are clones of: the folders asked
+  /// about and the chats'.
+  Future<nushiv1nushi.ListGitHubReposResponse> listGitHubRepos(
+    nushiv1nushi.ListGitHubReposRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.listGitHubRepos,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Review requested of me or my teams, my pull requests, issues assigned
+  /// to me: the latest 50 each.
+  Future<nushiv1nushi.ListGitHubInboxResponse> listGitHubInbox(
+    nushiv1nushi.ListGitHubInboxRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.listGitHubInbox,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Items as they are now, by node id (a chat's status chip).
+  Future<nushiv1nushi.GetGitHubStatesResponse> getGitHubStates(
+    nushiv1nushi.GetGitHubStatesRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.getGitHubStates,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  Future<nushiv1nushi.GetGitHubPullResponse> getGitHubPull(
+    nushiv1nushi.GetGitHubPullRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.getGitHubPull,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  Future<nushiv1nushi.GetGitHubIssueResponse> getGitHubIssue(
+    nushiv1nushi.GetGitHubIssueRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.getGitHubIssue,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// A pull request's files from its merge base to its head, both sides'
+  /// texts, as GetDiff gives them.
+  Future<nushiv1nushi.GetGitHubFilesResponse> getGitHubFiles(
+    nushiv1nushi.GetGitHubFilesRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.getGitHubFiles,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// The end of a failed Actions job's log (16 KB).
+  Future<nushiv1nushi.GetGitHubJobLogResponse> getGitHubJobLog(
+    nushiv1nushi.GetGitHubJobLogRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.getGitHubJobLog,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// The user's writes.
+  Future<nushiv1nushi.ReplyGitHubThreadResponse> replyGitHubThread(
+    nushiv1nushi.ReplyGitHubThreadRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.replyGitHubThread,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  Future<nushiv1nushi.ResolveGitHubThreadResponse> resolveGitHubThread(
+    nushiv1nushi.ResolveGitHubThreadRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.resolveGitHubThread,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  Future<nushiv1nushi.AddGitHubCommentResponse> addGitHubComment(
+    nushiv1nushi.AddGitHubCommentRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.addGitHubComment,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  Future<nushiv1nushi.SubmitGitHubReviewResponse> submitGitHubReview(
+    nushiv1nushi.SubmitGitHubReviewRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.submitGitHubReview,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.
   Stream<nushiv1nushi.EventsResponse> events(

@@ -17,6 +17,7 @@ import (
 	"github.com/afrase/nushi/internal/events"
 	"github.com/afrase/nushi/internal/features/agents"
 	"github.com/afrase/nushi/internal/features/chats"
+	"github.com/afrase/nushi/internal/features/github"
 	"github.com/afrase/nushi/internal/features/jira"
 	"github.com/afrase/nushi/internal/features/mcp"
 	"github.com/afrase/nushi/internal/features/memory"
@@ -30,7 +31,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 54
+const Version = 55
 
 // Build is the daemon's executable as it started (PingResponse.build).
 var Build = func() string {
@@ -55,6 +56,7 @@ type server struct {
 	memory   *memory.Service
 	remote   *remote.Service
 	jira     *jira.Service
+	github   *github.Service
 	logPrefs LogPrefs
 
 	mu      sync.Mutex
@@ -92,6 +94,7 @@ type Services struct {
 	Memory *memory.Service
 	Remote *remote.Service
 	Jira   *jira.Service
+	GitHub *github.Service
 	Log    LogPrefs // nil: the debug setting isn't kept
 }
 
@@ -103,7 +106,7 @@ func New(sv Services) http.Handler { return serve(sv, "socket") }
 func serve(sv Services, via string, interceptors ...connect.Interceptor) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{chats: sv.Chats, agents: sv.Agents, mcp: sv.MCP, terms: sv.Terms, trust: sv.Trust,
-		hub: sv.Hub, memory: sv.Memory, remote: sv.Remote, jira: sv.Jira, logPrefs: sv.Log}, connect.WithInterceptors(append([]connect.Interceptor{logCalls{via}}, interceptors...)...)))
+		hub: sv.Hub, memory: sv.Memory, remote: sv.Remote, jira: sv.Jira, github: sv.GitHub, logPrefs: sv.Log}, connect.WithInterceptors(append([]connect.Interceptor{logCalls{via}}, interceptors...)...)))
 	return mux
 }
 
@@ -115,7 +118,8 @@ var macOnly = map[string]bool{
 	nushiv1connect.NushiServiceConfirmPairingProcedure: true,
 	nushiv1connect.NushiServiceRevokeDeviceProcedure:   true,
 	// macOS's keychain prompt shows on the Mac's screen.
-	nushiv1connect.NushiServiceAllowJiraTokenProcedure: true,
+	nushiv1connect.NushiServiceAllowJiraTokenProcedure:   true,
+	nushiv1connect.NushiServiceAllowGitHubTokenProcedure: true,
 }
 
 // ForDevices is the API a paired device's channel gets, which the

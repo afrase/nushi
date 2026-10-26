@@ -15912,6 +15912,3996 @@ class FoundJiraIssue extends $pb.GeneratedMessage {
   void clearBranch() => $_clearField(3);
 }
 
+/// What's left of one of GitHub's rate limits ("core", "graphql",
+/// "search"…), as GitHub said last.
+class GitHubBucket extends $pb.GeneratedMessage {
+  factory GitHubBucket({
+    $core.String? name,
+    $core.int? limit,
+    $core.int? remaining,
+    $fixnum.Int64? resetMs,
+  }) {
+    final result = GitHubBucket._();
+    if (name != null) result.name = name;
+    if (limit != null) result.limit = limit;
+    if (remaining != null) result.remaining = remaining;
+    if (resetMs != null) result.resetMs = resetMs;
+    return result;
+  }
+
+  GitHubBucket._();
+
+  factory GitHubBucket.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubBucket()..mergeFromBuffer(data, registry);
+  factory GitHubBucket.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubBucket()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GitHubBucket',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GitHubBucket.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'name')
+    ..aI(2, _omitFieldNames ? '' : 'limit')
+    ..aI(3, _omitFieldNames ? '' : 'remaining')
+    ..aInt64(4, _omitFieldNames ? '' : 'resetMs')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubBucket clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubBucket copyWith(void Function(GitHubBucket) updates) =>
+      super.copyWith((message) => updates(message as GitHubBucket))
+          as GitHubBucket;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GitHubBucket() / GitHubBucket.new instead')
+  static GitHubBucket create() => GitHubBucket._();
+  static $pb.GeneratedMessage $_createMessage() => GitHubBucket._();
+  @$core.override
+  GitHubBucket createEmptyInstance() => GitHubBucket._();
+  @$core.pragma('dart2js:noInline')
+  static GitHubBucket getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GitHubBucket>(
+          GitHubBucket.$_createMessage);
+  static GitHubBucket? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get name => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set name($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearName() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.int get limit => $_getIZ(1);
+  @$pb.TagNumber(2)
+  set limit($core.int value) => $_setSignedInt32(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasLimit() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearLimit() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.int get remaining => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set remaining($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasRemaining() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearRemaining() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $fixnum.Int64 get resetMs => $_getI64(3);
+  @$pb.TagNumber(4)
+  set resetMs($fixnum.Int64 value) => $_setInt64(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasResetMs() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearResetMs() => $_clearField(4);
+}
+
+class GitHubHost extends $pb.GeneratedMessage {
+  factory GitHubHost({
+    $core.String? host,
+    $core.String? login,
+    $core.String? name,
+    $core.String? source,
+    $core.String? kind,
+    $core.Iterable<$core.String>? scopes,
+    $core.Iterable<GitHubBucket>? budget,
+    $core.String? problem,
+    $core.bool? needsOk,
+    $core.bool? pasted,
+  }) {
+    final result = GitHubHost._();
+    if (host != null) result.host = host;
+    if (login != null) result.login = login;
+    if (name != null) result.name = name;
+    if (source != null) result.source = source;
+    if (kind != null) result.kind = kind;
+    if (scopes != null) result.scopes.addAll(scopes);
+    if (budget != null) result.budget.addAll(budget);
+    if (problem != null) result.problem = problem;
+    if (needsOk != null) result.needsOk = needsOk;
+    if (pasted != null) result.pasted = pasted;
+    return result;
+  }
+
+  GitHubHost._();
+
+  factory GitHubHost.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubHost()..mergeFromBuffer(data, registry);
+  factory GitHubHost.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubHost()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GitHubHost',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GitHubHost.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'host')
+    ..aOS(2, _omitFieldNames ? '' : 'login')
+    ..aOS(3, _omitFieldNames ? '' : 'name')
+    ..aOS(4, _omitFieldNames ? '' : 'source')
+    ..aOS(5, _omitFieldNames ? '' : 'kind')
+    ..pPS(6, _omitFieldNames ? '' : 'scopes')
+    ..pPM<GitHubBucket>(7, _omitFieldNames ? '' : 'budget',
+        subBuilder: GitHubBucket.$_createMessage)
+    ..aOS(8, _omitFieldNames ? '' : 'problem')
+    ..aOB(9, _omitFieldNames ? '' : 'needsOk')
+    ..aOB(10, _omitFieldNames ? '' : 'pasted')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubHost clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubHost copyWith(void Function(GitHubHost) updates) =>
+      super.copyWith((message) => updates(message as GitHubHost)) as GitHubHost;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GitHubHost() / GitHubHost.new instead')
+  static GitHubHost create() => GitHubHost._();
+  static $pb.GeneratedMessage $_createMessage() => GitHubHost._();
+  @$core.override
+  GitHubHost createEmptyInstance() => GitHubHost._();
+  @$core.pragma('dart2js:noInline')
+  static GitHubHost getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GitHubHost>(GitHubHost.$_createMessage);
+  static GitHubHost? _defaultInstance;
+
+  /// github.com, or an Enterprise server's host.
+  @$pb.TagNumber(1)
+  $core.String get host => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set host($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasHost() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearHost() => $_clearField(1);
+
+  /// Who its token is.
+  @$pb.TagNumber(2)
+  $core.String get login => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set login($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasLogin() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearLogin() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get name => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set name($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasName() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearName() => $_clearField(3);
+
+  /// Where its token is from: "gh" (gh's login), "GH_TOKEN" (the
+  /// environment, through gh's rules), "token" (pasted).
+  @$pb.TagNumber(4)
+  $core.String get source => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set source($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasSource() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearSource() => $_clearField(4);
+
+  /// "oauth" (gh's), "classic", "fine-grained", "app", or "".
+  @$pb.TagNumber(5)
+  $core.String get kind => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set kind($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasKind() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearKind() => $_clearField(5);
+
+  /// A classic or OAuth token's scopes.
+  @$pb.TagNumber(6)
+  $pb.PbList<$core.String> get scopes => $_getList(5);
+
+  @$pb.TagNumber(7)
+  $pb.PbList<GitHubBucket> get budget => $_getList(6);
+
+  /// Why Nushi can't use it now, if it can't.
+  @$pb.TagNumber(8)
+  $core.String get problem => $_getSZ(7);
+  @$pb.TagNumber(8)
+  set problem($core.String value) => $_setString(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasProblem() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearProblem() => $_clearField(8);
+
+  /// Its pasted token needs the user's OK for this build (AllowGitHubToken).
+  @$pb.TagNumber(9)
+  $core.bool get needsOk => $_getBF(8);
+  @$pb.TagNumber(9)
+  set needsOk($core.bool value) => $_setBool(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasNeedsOk() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearNeedsOk() => $_clearField(9);
+
+  /// A pasted token is kept for it (RemoveGitHubToken).
+  @$pb.TagNumber(10)
+  $core.bool get pasted => $_getBF(9);
+  @$pb.TagNumber(10)
+  set pasted($core.bool value) => $_setBool(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasPasted() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearPasted() => $_clearField(10);
+}
+
+class ListGitHubHostsRequest extends $pb.GeneratedMessage {
+  factory ListGitHubHostsRequest() => ListGitHubHostsRequest._();
+
+  ListGitHubHostsRequest._();
+
+  factory ListGitHubHostsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListGitHubHostsRequest()..mergeFromBuffer(data, registry);
+  factory ListGitHubHostsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListGitHubHostsRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListGitHubHostsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListGitHubHostsRequest.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListGitHubHostsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListGitHubHostsRequest copyWith(
+          void Function(ListGitHubHostsRequest) updates) =>
+      super.copyWith((message) => updates(message as ListGitHubHostsRequest))
+          as ListGitHubHostsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListGitHubHostsRequest() / ListGitHubHostsRequest.new instead')
+  static ListGitHubHostsRequest create() => ListGitHubHostsRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ListGitHubHostsRequest._();
+  @$core.override
+  ListGitHubHostsRequest createEmptyInstance() => ListGitHubHostsRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ListGitHubHostsRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListGitHubHostsRequest>(
+          ListGitHubHostsRequest.$_createMessage);
+  static ListGitHubHostsRequest? _defaultInstance;
+}
+
+class ListGitHubHostsResponse extends $pb.GeneratedMessage {
+  factory ListGitHubHostsResponse({
+    $core.Iterable<GitHubHost>? hosts,
+  }) {
+    final result = ListGitHubHostsResponse._();
+    if (hosts != null) result.hosts.addAll(hosts);
+    return result;
+  }
+
+  ListGitHubHostsResponse._();
+
+  factory ListGitHubHostsResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListGitHubHostsResponse()..mergeFromBuffer(data, registry);
+  factory ListGitHubHostsResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListGitHubHostsResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListGitHubHostsResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListGitHubHostsResponse.$_createMessage)
+    ..pPM<GitHubHost>(1, _omitFieldNames ? '' : 'hosts',
+        subBuilder: GitHubHost.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListGitHubHostsResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListGitHubHostsResponse copyWith(
+          void Function(ListGitHubHostsResponse) updates) =>
+      super.copyWith((message) => updates(message as ListGitHubHostsResponse))
+          as ListGitHubHostsResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListGitHubHostsResponse() / ListGitHubHostsResponse.new instead')
+  static ListGitHubHostsResponse create() => ListGitHubHostsResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ListGitHubHostsResponse._();
+  @$core.override
+  ListGitHubHostsResponse createEmptyInstance() => ListGitHubHostsResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ListGitHubHostsResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListGitHubHostsResponse>(
+          ListGitHubHostsResponse.$_createMessage);
+  static ListGitHubHostsResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<GitHubHost> get hosts => $_getList(0);
+}
+
+class AddGitHubTokenRequest extends $pb.GeneratedMessage {
+  factory AddGitHubTokenRequest({
+    $core.String? host,
+    $core.String? token,
+  }) {
+    final result = AddGitHubTokenRequest._();
+    if (host != null) result.host = host;
+    if (token != null) result.token = token;
+    return result;
+  }
+
+  AddGitHubTokenRequest._();
+
+  factory AddGitHubTokenRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddGitHubTokenRequest()..mergeFromBuffer(data, registry);
+  factory AddGitHubTokenRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddGitHubTokenRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'AddGitHubTokenRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: AddGitHubTokenRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'host')
+    ..aOS(2, _omitFieldNames ? '' : 'token')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddGitHubTokenRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddGitHubTokenRequest copyWith(
+          void Function(AddGitHubTokenRequest) updates) =>
+      super.copyWith((message) => updates(message as AddGitHubTokenRequest))
+          as AddGitHubTokenRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use AddGitHubTokenRequest() / AddGitHubTokenRequest.new instead')
+  static AddGitHubTokenRequest create() => AddGitHubTokenRequest._();
+  static $pb.GeneratedMessage $_createMessage() => AddGitHubTokenRequest._();
+  @$core.override
+  AddGitHubTokenRequest createEmptyInstance() => AddGitHubTokenRequest._();
+  @$core.pragma('dart2js:noInline')
+  static AddGitHubTokenRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<AddGitHubTokenRequest>(
+          AddGitHubTokenRequest.$_createMessage);
+  static AddGitHubTokenRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get host => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set host($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasHost() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearHost() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get token => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set token($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasToken() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearToken() => $_clearField(2);
+}
+
+class AddGitHubTokenResponse extends $pb.GeneratedMessage {
+  factory AddGitHubTokenResponse({
+    $core.String? login,
+  }) {
+    final result = AddGitHubTokenResponse._();
+    if (login != null) result.login = login;
+    return result;
+  }
+
+  AddGitHubTokenResponse._();
+
+  factory AddGitHubTokenResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddGitHubTokenResponse()..mergeFromBuffer(data, registry);
+  factory AddGitHubTokenResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddGitHubTokenResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'AddGitHubTokenResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: AddGitHubTokenResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'login')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddGitHubTokenResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddGitHubTokenResponse copyWith(
+          void Function(AddGitHubTokenResponse) updates) =>
+      super.copyWith((message) => updates(message as AddGitHubTokenResponse))
+          as AddGitHubTokenResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use AddGitHubTokenResponse() / AddGitHubTokenResponse.new instead')
+  static AddGitHubTokenResponse create() => AddGitHubTokenResponse._();
+  static $pb.GeneratedMessage $_createMessage() => AddGitHubTokenResponse._();
+  @$core.override
+  AddGitHubTokenResponse createEmptyInstance() => AddGitHubTokenResponse._();
+  @$core.pragma('dart2js:noInline')
+  static AddGitHubTokenResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<AddGitHubTokenResponse>(
+          AddGitHubTokenResponse.$_createMessage);
+  static AddGitHubTokenResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get login => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set login($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasLogin() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearLogin() => $_clearField(1);
+}
+
+class RemoveGitHubTokenRequest extends $pb.GeneratedMessage {
+  factory RemoveGitHubTokenRequest({
+    $core.String? host,
+  }) {
+    final result = RemoveGitHubTokenRequest._();
+    if (host != null) result.host = host;
+    return result;
+  }
+
+  RemoveGitHubTokenRequest._();
+
+  factory RemoveGitHubTokenRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemoveGitHubTokenRequest()..mergeFromBuffer(data, registry);
+  factory RemoveGitHubTokenRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemoveGitHubTokenRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RemoveGitHubTokenRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RemoveGitHubTokenRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'host')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemoveGitHubTokenRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemoveGitHubTokenRequest copyWith(
+          void Function(RemoveGitHubTokenRequest) updates) =>
+      super.copyWith((message) => updates(message as RemoveGitHubTokenRequest))
+          as RemoveGitHubTokenRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RemoveGitHubTokenRequest() / RemoveGitHubTokenRequest.new instead')
+  static RemoveGitHubTokenRequest create() => RemoveGitHubTokenRequest._();
+  static $pb.GeneratedMessage $_createMessage() => RemoveGitHubTokenRequest._();
+  @$core.override
+  RemoveGitHubTokenRequest createEmptyInstance() =>
+      RemoveGitHubTokenRequest._();
+  @$core.pragma('dart2js:noInline')
+  static RemoveGitHubTokenRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RemoveGitHubTokenRequest>(
+          RemoveGitHubTokenRequest.$_createMessage);
+  static RemoveGitHubTokenRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get host => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set host($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasHost() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearHost() => $_clearField(1);
+}
+
+class RemoveGitHubTokenResponse extends $pb.GeneratedMessage {
+  factory RemoveGitHubTokenResponse() => RemoveGitHubTokenResponse._();
+
+  RemoveGitHubTokenResponse._();
+
+  factory RemoveGitHubTokenResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemoveGitHubTokenResponse()..mergeFromBuffer(data, registry);
+  factory RemoveGitHubTokenResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemoveGitHubTokenResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RemoveGitHubTokenResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RemoveGitHubTokenResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemoveGitHubTokenResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemoveGitHubTokenResponse copyWith(
+          void Function(RemoveGitHubTokenResponse) updates) =>
+      super.copyWith((message) => updates(message as RemoveGitHubTokenResponse))
+          as RemoveGitHubTokenResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RemoveGitHubTokenResponse() / RemoveGitHubTokenResponse.new instead')
+  static RemoveGitHubTokenResponse create() => RemoveGitHubTokenResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      RemoveGitHubTokenResponse._();
+  @$core.override
+  RemoveGitHubTokenResponse createEmptyInstance() =>
+      RemoveGitHubTokenResponse._();
+  @$core.pragma('dart2js:noInline')
+  static RemoveGitHubTokenResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RemoveGitHubTokenResponse>(
+          RemoveGitHubTokenResponse.$_createMessage);
+  static RemoveGitHubTokenResponse? _defaultInstance;
+}
+
+class AllowGitHubTokenRequest extends $pb.GeneratedMessage {
+  factory AllowGitHubTokenRequest({
+    $core.String? host,
+  }) {
+    final result = AllowGitHubTokenRequest._();
+    if (host != null) result.host = host;
+    return result;
+  }
+
+  AllowGitHubTokenRequest._();
+
+  factory AllowGitHubTokenRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AllowGitHubTokenRequest()..mergeFromBuffer(data, registry);
+  factory AllowGitHubTokenRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AllowGitHubTokenRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'AllowGitHubTokenRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: AllowGitHubTokenRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'host')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AllowGitHubTokenRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AllowGitHubTokenRequest copyWith(
+          void Function(AllowGitHubTokenRequest) updates) =>
+      super.copyWith((message) => updates(message as AllowGitHubTokenRequest))
+          as AllowGitHubTokenRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use AllowGitHubTokenRequest() / AllowGitHubTokenRequest.new instead')
+  static AllowGitHubTokenRequest create() => AllowGitHubTokenRequest._();
+  static $pb.GeneratedMessage $_createMessage() => AllowGitHubTokenRequest._();
+  @$core.override
+  AllowGitHubTokenRequest createEmptyInstance() => AllowGitHubTokenRequest._();
+  @$core.pragma('dart2js:noInline')
+  static AllowGitHubTokenRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<AllowGitHubTokenRequest>(
+          AllowGitHubTokenRequest.$_createMessage);
+  static AllowGitHubTokenRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get host => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set host($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasHost() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearHost() => $_clearField(1);
+}
+
+class AllowGitHubTokenResponse extends $pb.GeneratedMessage {
+  factory AllowGitHubTokenResponse() => AllowGitHubTokenResponse._();
+
+  AllowGitHubTokenResponse._();
+
+  factory AllowGitHubTokenResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AllowGitHubTokenResponse()..mergeFromBuffer(data, registry);
+  factory AllowGitHubTokenResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AllowGitHubTokenResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'AllowGitHubTokenResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: AllowGitHubTokenResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AllowGitHubTokenResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AllowGitHubTokenResponse copyWith(
+          void Function(AllowGitHubTokenResponse) updates) =>
+      super.copyWith((message) => updates(message as AllowGitHubTokenResponse))
+          as AllowGitHubTokenResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use AllowGitHubTokenResponse() / AllowGitHubTokenResponse.new instead')
+  static AllowGitHubTokenResponse create() => AllowGitHubTokenResponse._();
+  static $pb.GeneratedMessage $_createMessage() => AllowGitHubTokenResponse._();
+  @$core.override
+  AllowGitHubTokenResponse createEmptyInstance() =>
+      AllowGitHubTokenResponse._();
+  @$core.pragma('dart2js:noInline')
+  static AllowGitHubTokenResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<AllowGitHubTokenResponse>(
+          AllowGitHubTokenResponse.$_createMessage);
+  static AllowGitHubTokenResponse? _defaultInstance;
+}
+
+class GitHubRepo extends $pb.GeneratedMessage {
+  factory GitHubRepo({
+    $core.String? host,
+    $core.String? repo,
+    $core.Iterable<$core.String>? folders,
+  }) {
+    final result = GitHubRepo._();
+    if (host != null) result.host = host;
+    if (repo != null) result.repo = repo;
+    if (folders != null) result.folders.addAll(folders);
+    return result;
+  }
+
+  GitHubRepo._();
+
+  factory GitHubRepo.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubRepo()..mergeFromBuffer(data, registry);
+  factory GitHubRepo.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubRepo()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GitHubRepo',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GitHubRepo.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'host')
+    ..aOS(2, _omitFieldNames ? '' : 'repo')
+    ..pPS(3, _omitFieldNames ? '' : 'folders')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubRepo clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubRepo copyWith(void Function(GitHubRepo) updates) =>
+      super.copyWith((message) => updates(message as GitHubRepo)) as GitHubRepo;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GitHubRepo() / GitHubRepo.new instead')
+  static GitHubRepo create() => GitHubRepo._();
+  static $pb.GeneratedMessage $_createMessage() => GitHubRepo._();
+  @$core.override
+  GitHubRepo createEmptyInstance() => GitHubRepo._();
+  @$core.pragma('dart2js:noInline')
+  static GitHubRepo getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GitHubRepo>(GitHubRepo.$_createMessage);
+  static GitHubRepo? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get host => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set host($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasHost() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearHost() => $_clearField(1);
+
+  /// owner/name.
+  @$pb.TagNumber(2)
+  $core.String get repo => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set repo($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasRepo() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearRepo() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $pb.PbList<$core.String> get folders => $_getList(2);
+}
+
+class ListGitHubReposRequest extends $pb.GeneratedMessage {
+  factory ListGitHubReposRequest({
+    $core.Iterable<$core.String>? folders,
+  }) {
+    final result = ListGitHubReposRequest._();
+    if (folders != null) result.folders.addAll(folders);
+    return result;
+  }
+
+  ListGitHubReposRequest._();
+
+  factory ListGitHubReposRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListGitHubReposRequest()..mergeFromBuffer(data, registry);
+  factory ListGitHubReposRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListGitHubReposRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListGitHubReposRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListGitHubReposRequest.$_createMessage)
+    ..pPS(1, _omitFieldNames ? '' : 'folders')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListGitHubReposRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListGitHubReposRequest copyWith(
+          void Function(ListGitHubReposRequest) updates) =>
+      super.copyWith((message) => updates(message as ListGitHubReposRequest))
+          as ListGitHubReposRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListGitHubReposRequest() / ListGitHubReposRequest.new instead')
+  static ListGitHubReposRequest create() => ListGitHubReposRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ListGitHubReposRequest._();
+  @$core.override
+  ListGitHubReposRequest createEmptyInstance() => ListGitHubReposRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ListGitHubReposRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListGitHubReposRequest>(
+          ListGitHubReposRequest.$_createMessage);
+  static ListGitHubReposRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<$core.String> get folders => $_getList(0);
+}
+
+class ListGitHubReposResponse extends $pb.GeneratedMessage {
+  factory ListGitHubReposResponse({
+    $core.Iterable<GitHubRepo>? repos,
+  }) {
+    final result = ListGitHubReposResponse._();
+    if (repos != null) result.repos.addAll(repos);
+    return result;
+  }
+
+  ListGitHubReposResponse._();
+
+  factory ListGitHubReposResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListGitHubReposResponse()..mergeFromBuffer(data, registry);
+  factory ListGitHubReposResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListGitHubReposResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListGitHubReposResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListGitHubReposResponse.$_createMessage)
+    ..pPM<GitHubRepo>(1, _omitFieldNames ? '' : 'repos',
+        subBuilder: GitHubRepo.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListGitHubReposResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListGitHubReposResponse copyWith(
+          void Function(ListGitHubReposResponse) updates) =>
+      super.copyWith((message) => updates(message as ListGitHubReposResponse))
+          as ListGitHubReposResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListGitHubReposResponse() / ListGitHubReposResponse.new instead')
+  static ListGitHubReposResponse create() => ListGitHubReposResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ListGitHubReposResponse._();
+  @$core.override
+  ListGitHubReposResponse createEmptyInstance() => ListGitHubReposResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ListGitHubReposResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListGitHubReposResponse>(
+          ListGitHubReposResponse.$_createMessage);
+  static ListGitHubReposResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<GitHubRepo> get repos => $_getList(0);
+}
+
+/// A pull request or an issue: its host, repository and number.
+class GitHubRef extends $pb.GeneratedMessage {
+  factory GitHubRef({
+    $core.String? host,
+    $core.String? repo,
+    $core.int? number,
+  }) {
+    final result = GitHubRef._();
+    if (host != null) result.host = host;
+    if (repo != null) result.repo = repo;
+    if (number != null) result.number = number;
+    return result;
+  }
+
+  GitHubRef._();
+
+  factory GitHubRef.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubRef()..mergeFromBuffer(data, registry);
+  factory GitHubRef.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubRef()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GitHubRef',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GitHubRef.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'host')
+    ..aOS(2, _omitFieldNames ? '' : 'repo')
+    ..aI(3, _omitFieldNames ? '' : 'number')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubRef clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubRef copyWith(void Function(GitHubRef) updates) =>
+      super.copyWith((message) => updates(message as GitHubRef)) as GitHubRef;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GitHubRef() / GitHubRef.new instead')
+  static GitHubRef create() => GitHubRef._();
+  static $pb.GeneratedMessage $_createMessage() => GitHubRef._();
+  @$core.override
+  GitHubRef createEmptyInstance() => GitHubRef._();
+  @$core.pragma('dart2js:noInline')
+  static GitHubRef getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GitHubRef>(GitHubRef.$_createMessage);
+  static GitHubRef? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get host => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set host($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasHost() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearHost() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get repo => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set repo($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasRepo() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearRepo() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.int get number => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set number($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasNumber() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearNumber() => $_clearField(3);
+}
+
+/// A pull request or an issue as a list shows it.
+class GitHubItem extends $pb.GeneratedMessage {
+  factory GitHubItem({
+    GitHubRef? ref,
+    $core.String? id,
+    $core.bool? pull,
+    $core.String? title,
+    $core.String? url,
+    $core.String? state,
+    $core.bool? draft,
+    $core.String? author,
+    $fixnum.Int64? updatedMs,
+    $core.String? checks,
+    $core.String? review,
+    $core.int? unresolved,
+    $core.int? comments,
+  }) {
+    final result = GitHubItem._();
+    if (ref != null) result.ref = ref;
+    if (id != null) result.id = id;
+    if (pull != null) result.pull = pull;
+    if (title != null) result.title = title;
+    if (url != null) result.url = url;
+    if (state != null) result.state = state;
+    if (draft != null) result.draft = draft;
+    if (author != null) result.author = author;
+    if (updatedMs != null) result.updatedMs = updatedMs;
+    if (checks != null) result.checks = checks;
+    if (review != null) result.review = review;
+    if (unresolved != null) result.unresolved = unresolved;
+    if (comments != null) result.comments = comments;
+    return result;
+  }
+
+  GitHubItem._();
+
+  factory GitHubItem.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubItem()..mergeFromBuffer(data, registry);
+  factory GitHubItem.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubItem()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GitHubItem',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GitHubItem.$_createMessage)
+    ..aOM<GitHubRef>(1, _omitFieldNames ? '' : 'ref',
+        subBuilder: GitHubRef.$_createMessage)
+    ..aOS(2, _omitFieldNames ? '' : 'id')
+    ..aOB(3, _omitFieldNames ? '' : 'pull')
+    ..aOS(4, _omitFieldNames ? '' : 'title')
+    ..aOS(5, _omitFieldNames ? '' : 'url')
+    ..aOS(6, _omitFieldNames ? '' : 'state')
+    ..aOB(7, _omitFieldNames ? '' : 'draft')
+    ..aOS(8, _omitFieldNames ? '' : 'author')
+    ..aInt64(9, _omitFieldNames ? '' : 'updatedMs')
+    ..aOS(10, _omitFieldNames ? '' : 'checks')
+    ..aOS(11, _omitFieldNames ? '' : 'review')
+    ..aI(12, _omitFieldNames ? '' : 'unresolved')
+    ..aI(13, _omitFieldNames ? '' : 'comments')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubItem clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubItem copyWith(void Function(GitHubItem) updates) =>
+      super.copyWith((message) => updates(message as GitHubItem)) as GitHubItem;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GitHubItem() / GitHubItem.new instead')
+  static GitHubItem create() => GitHubItem._();
+  static $pb.GeneratedMessage $_createMessage() => GitHubItem._();
+  @$core.override
+  GitHubItem createEmptyInstance() => GitHubItem._();
+  @$core.pragma('dart2js:noInline')
+  static GitHubItem getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GitHubItem>(GitHubItem.$_createMessage);
+  static GitHubItem? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  GitHubRef get ref => $_getN(0);
+  @$pb.TagNumber(1)
+  set ref(GitHubRef value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasRef() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRef() => $_clearField(1);
+  @$pb.TagNumber(1)
+  GitHubRef ensureRef() => $_ensure(0);
+
+  /// GitHub's node id.
+  @$pb.TagNumber(2)
+  $core.String get id => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set id($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearId() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.bool get pull => $_getBF(2);
+  @$pb.TagNumber(3)
+  set pull($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasPull() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearPull() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get title => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set title($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasTitle() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearTitle() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get url => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set url($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasUrl() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearUrl() => $_clearField(5);
+
+  /// "open", "closed" or "merged".
+  @$pb.TagNumber(6)
+  $core.String get state => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set state($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasState() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearState() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.bool get draft => $_getBF(6);
+  @$pb.TagNumber(7)
+  set draft($core.bool value) => $_setBool(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasDraft() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearDraft() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.String get author => $_getSZ(7);
+  @$pb.TagNumber(8)
+  set author($core.String value) => $_setString(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasAuthor() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearAuthor() => $_clearField(8);
+
+  @$pb.TagNumber(9)
+  $fixnum.Int64 get updatedMs => $_getI64(8);
+  @$pb.TagNumber(9)
+  set updatedMs($fixnum.Int64 value) => $_setInt64(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasUpdatedMs() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearUpdatedMs() => $_clearField(9);
+
+  /// A pull request's checks: "success", "failure", "pending", or "".
+  @$pb.TagNumber(10)
+  $core.String get checks => $_getSZ(9);
+  @$pb.TagNumber(10)
+  set checks($core.String value) => $_setString(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasChecks() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearChecks() => $_clearField(10);
+
+  /// Its review decision: "approved", "changes_requested",
+  /// "review_required", or "".
+  @$pb.TagNumber(11)
+  $core.String get review => $_getSZ(10);
+  @$pb.TagNumber(11)
+  set review($core.String value) => $_setString(10, value);
+  @$pb.TagNumber(11)
+  $core.bool hasReview() => $_has(10);
+  @$pb.TagNumber(11)
+  void clearReview() => $_clearField(11);
+
+  /// Its review threads not resolved.
+  @$pb.TagNumber(12)
+  $core.int get unresolved => $_getIZ(11);
+  @$pb.TagNumber(12)
+  set unresolved($core.int value) => $_setSignedInt32(11, value);
+  @$pb.TagNumber(12)
+  $core.bool hasUnresolved() => $_has(11);
+  @$pb.TagNumber(12)
+  void clearUnresolved() => $_clearField(12);
+
+  @$pb.TagNumber(13)
+  $core.int get comments => $_getIZ(12);
+  @$pb.TagNumber(13)
+  set comments($core.int value) => $_setSignedInt32(12, value);
+  @$pb.TagNumber(13)
+  $core.bool hasComments() => $_has(12);
+  @$pb.TagNumber(13)
+  void clearComments() => $_clearField(13);
+}
+
+class ListGitHubInboxRequest extends $pb.GeneratedMessage {
+  factory ListGitHubInboxRequest({
+    $core.String? host,
+    $core.Iterable<$core.String>? repos,
+    $core.bool? quiet,
+  }) {
+    final result = ListGitHubInboxRequest._();
+    if (host != null) result.host = host;
+    if (repos != null) result.repos.addAll(repos);
+    if (quiet != null) result.quiet = quiet;
+    return result;
+  }
+
+  ListGitHubInboxRequest._();
+
+  factory ListGitHubInboxRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListGitHubInboxRequest()..mergeFromBuffer(data, registry);
+  factory ListGitHubInboxRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListGitHubInboxRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListGitHubInboxRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListGitHubInboxRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'host')
+    ..pPS(2, _omitFieldNames ? '' : 'repos')
+    ..aOB(3, _omitFieldNames ? '' : 'quiet')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListGitHubInboxRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListGitHubInboxRequest copyWith(
+          void Function(ListGitHubInboxRequest) updates) =>
+      super.copyWith((message) => updates(message as ListGitHubInboxRequest))
+          as ListGitHubInboxRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListGitHubInboxRequest() / ListGitHubInboxRequest.new instead')
+  static ListGitHubInboxRequest create() => ListGitHubInboxRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ListGitHubInboxRequest._();
+  @$core.override
+  ListGitHubInboxRequest createEmptyInstance() => ListGitHubInboxRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ListGitHubInboxRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListGitHubInboxRequest>(
+          ListGitHubInboxRequest.$_createMessage);
+  static ListGitHubInboxRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get host => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set host($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasHost() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearHost() => $_clearField(1);
+
+  /// Only these repositories' (owner/name); empty for all.
+  @$pb.TagNumber(2)
+  $pb.PbList<$core.String> get repos => $_getList(1);
+
+  /// The app's timer asking: held back while a rate limit is low.
+  @$pb.TagNumber(3)
+  $core.bool get quiet => $_getBF(2);
+  @$pb.TagNumber(3)
+  set quiet($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasQuiet() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearQuiet() => $_clearField(3);
+}
+
+class ListGitHubInboxResponse extends $pb.GeneratedMessage {
+  factory ListGitHubInboxResponse({
+    $core.Iterable<GitHubItem>? review,
+    $core.Iterable<GitHubItem>? mine,
+    $core.Iterable<GitHubItem>? assigned,
+    $core.int? reviewTotal,
+    $core.int? mineTotal,
+    $core.int? assignedTotal,
+    $fixnum.Int64? atMs,
+    $core.String? stale,
+  }) {
+    final result = ListGitHubInboxResponse._();
+    if (review != null) result.review.addAll(review);
+    if (mine != null) result.mine.addAll(mine);
+    if (assigned != null) result.assigned.addAll(assigned);
+    if (reviewTotal != null) result.reviewTotal = reviewTotal;
+    if (mineTotal != null) result.mineTotal = mineTotal;
+    if (assignedTotal != null) result.assignedTotal = assignedTotal;
+    if (atMs != null) result.atMs = atMs;
+    if (stale != null) result.stale = stale;
+    return result;
+  }
+
+  ListGitHubInboxResponse._();
+
+  factory ListGitHubInboxResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListGitHubInboxResponse()..mergeFromBuffer(data, registry);
+  factory ListGitHubInboxResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListGitHubInboxResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListGitHubInboxResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListGitHubInboxResponse.$_createMessage)
+    ..pPM<GitHubItem>(1, _omitFieldNames ? '' : 'review',
+        subBuilder: GitHubItem.$_createMessage)
+    ..pPM<GitHubItem>(2, _omitFieldNames ? '' : 'mine',
+        subBuilder: GitHubItem.$_createMessage)
+    ..pPM<GitHubItem>(3, _omitFieldNames ? '' : 'assigned',
+        subBuilder: GitHubItem.$_createMessage)
+    ..aI(4, _omitFieldNames ? '' : 'reviewTotal')
+    ..aI(5, _omitFieldNames ? '' : 'mineTotal')
+    ..aI(6, _omitFieldNames ? '' : 'assignedTotal')
+    ..aInt64(7, _omitFieldNames ? '' : 'atMs')
+    ..aOS(8, _omitFieldNames ? '' : 'stale')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListGitHubInboxResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListGitHubInboxResponse copyWith(
+          void Function(ListGitHubInboxResponse) updates) =>
+      super.copyWith((message) => updates(message as ListGitHubInboxResponse))
+          as ListGitHubInboxResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListGitHubInboxResponse() / ListGitHubInboxResponse.new instead')
+  static ListGitHubInboxResponse create() => ListGitHubInboxResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ListGitHubInboxResponse._();
+  @$core.override
+  ListGitHubInboxResponse createEmptyInstance() => ListGitHubInboxResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ListGitHubInboxResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListGitHubInboxResponse>(
+          ListGitHubInboxResponse.$_createMessage);
+  static ListGitHubInboxResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<GitHubItem> get review => $_getList(0);
+
+  @$pb.TagNumber(2)
+  $pb.PbList<GitHubItem> get mine => $_getList(1);
+
+  @$pb.TagNumber(3)
+  $pb.PbList<GitHubItem> get assigned => $_getList(2);
+
+  /// How many each search found (50 are listed at most).
+  @$pb.TagNumber(4)
+  $core.int get reviewTotal => $_getIZ(3);
+  @$pb.TagNumber(4)
+  set reviewTotal($core.int value) => $_setSignedInt32(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasReviewTotal() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearReviewTotal() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.int get mineTotal => $_getIZ(4);
+  @$pb.TagNumber(5)
+  set mineTotal($core.int value) => $_setSignedInt32(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasMineTotal() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearMineTotal() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.int get assignedTotal => $_getIZ(5);
+  @$pb.TagNumber(6)
+  set assignedTotal($core.int value) => $_setSignedInt32(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasAssignedTotal() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearAssignedTotal() => $_clearField(6);
+
+  /// When GitHub said so; with stale, why it couldn't say again.
+  @$pb.TagNumber(7)
+  $fixnum.Int64 get atMs => $_getI64(6);
+  @$pb.TagNumber(7)
+  set atMs($fixnum.Int64 value) => $_setInt64(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasAtMs() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearAtMs() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.String get stale => $_getSZ(7);
+  @$pb.TagNumber(8)
+  set stale($core.String value) => $_setString(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasStale() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearStale() => $_clearField(8);
+}
+
+/// A chat's item: its host and node id.
+class GitHubLink extends $pb.GeneratedMessage {
+  factory GitHubLink({
+    $core.String? host,
+    $core.String? id,
+  }) {
+    final result = GitHubLink._();
+    if (host != null) result.host = host;
+    if (id != null) result.id = id;
+    return result;
+  }
+
+  GitHubLink._();
+
+  factory GitHubLink.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubLink()..mergeFromBuffer(data, registry);
+  factory GitHubLink.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubLink()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GitHubLink',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GitHubLink.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'host')
+    ..aOS(2, _omitFieldNames ? '' : 'id')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubLink clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubLink copyWith(void Function(GitHubLink) updates) =>
+      super.copyWith((message) => updates(message as GitHubLink)) as GitHubLink;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GitHubLink() / GitHubLink.new instead')
+  static GitHubLink create() => GitHubLink._();
+  static $pb.GeneratedMessage $_createMessage() => GitHubLink._();
+  @$core.override
+  GitHubLink createEmptyInstance() => GitHubLink._();
+  @$core.pragma('dart2js:noInline')
+  static GitHubLink getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GitHubLink>(GitHubLink.$_createMessage);
+  static GitHubLink? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get host => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set host($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasHost() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearHost() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get id => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set id($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearId() => $_clearField(2);
+}
+
+class GetGitHubStatesRequest extends $pb.GeneratedMessage {
+  factory GetGitHubStatesRequest({
+    $core.Iterable<GitHubLink>? items,
+    $core.bool? quiet,
+  }) {
+    final result = GetGitHubStatesRequest._();
+    if (items != null) result.items.addAll(items);
+    if (quiet != null) result.quiet = quiet;
+    return result;
+  }
+
+  GetGitHubStatesRequest._();
+
+  factory GetGitHubStatesRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubStatesRequest()..mergeFromBuffer(data, registry);
+  factory GetGitHubStatesRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubStatesRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetGitHubStatesRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetGitHubStatesRequest.$_createMessage)
+    ..pPM<GitHubLink>(1, _omitFieldNames ? '' : 'items',
+        subBuilder: GitHubLink.$_createMessage)
+    ..aOB(2, _omitFieldNames ? '' : 'quiet')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubStatesRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubStatesRequest copyWith(
+          void Function(GetGitHubStatesRequest) updates) =>
+      super.copyWith((message) => updates(message as GetGitHubStatesRequest))
+          as GetGitHubStatesRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetGitHubStatesRequest() / GetGitHubStatesRequest.new instead')
+  static GetGitHubStatesRequest create() => GetGitHubStatesRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetGitHubStatesRequest._();
+  @$core.override
+  GetGitHubStatesRequest createEmptyInstance() => GetGitHubStatesRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetGitHubStatesRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetGitHubStatesRequest>(
+          GetGitHubStatesRequest.$_createMessage);
+  static GetGitHubStatesRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<GitHubLink> get items => $_getList(0);
+
+  @$pb.TagNumber(2)
+  $core.bool get quiet => $_getBF(1);
+  @$pb.TagNumber(2)
+  set quiet($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasQuiet() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearQuiet() => $_clearField(2);
+}
+
+class GetGitHubStatesResponse extends $pb.GeneratedMessage {
+  factory GetGitHubStatesResponse({
+    $core.Iterable<GitHubItem>? items,
+  }) {
+    final result = GetGitHubStatesResponse._();
+    if (items != null) result.items.addAll(items);
+    return result;
+  }
+
+  GetGitHubStatesResponse._();
+
+  factory GetGitHubStatesResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubStatesResponse()..mergeFromBuffer(data, registry);
+  factory GetGitHubStatesResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubStatesResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetGitHubStatesResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetGitHubStatesResponse.$_createMessage)
+    ..pPM<GitHubItem>(1, _omitFieldNames ? '' : 'items',
+        subBuilder: GitHubItem.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubStatesResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubStatesResponse copyWith(
+          void Function(GetGitHubStatesResponse) updates) =>
+      super.copyWith((message) => updates(message as GetGitHubStatesResponse))
+          as GetGitHubStatesResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetGitHubStatesResponse() / GetGitHubStatesResponse.new instead')
+  static GetGitHubStatesResponse create() => GetGitHubStatesResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetGitHubStatesResponse._();
+  @$core.override
+  GetGitHubStatesResponse createEmptyInstance() => GetGitHubStatesResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetGitHubStatesResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetGitHubStatesResponse>(
+          GetGitHubStatesResponse.$_createMessage);
+  static GetGitHubStatesResponse? _defaultInstance;
+
+  /// The ones known, as they are now (or last were).
+  @$pb.TagNumber(1)
+  $pb.PbList<GitHubItem> get items => $_getList(0);
+}
+
+/// A comment, or a review that said something; body is Markdown as
+/// GitHub's page shows it.
+class GitHubComment extends $pb.GeneratedMessage {
+  factory GitHubComment({
+    $core.String? id,
+    $core.String? author,
+    $core.String? association,
+    $core.bool? outside,
+    $core.bool? bot,
+    $core.String? body,
+    $core.String? url,
+    $fixnum.Int64? createdMs,
+    $core.String? review,
+  }) {
+    final result = GitHubComment._();
+    if (id != null) result.id = id;
+    if (author != null) result.author = author;
+    if (association != null) result.association = association;
+    if (outside != null) result.outside = outside;
+    if (bot != null) result.bot = bot;
+    if (body != null) result.body = body;
+    if (url != null) result.url = url;
+    if (createdMs != null) result.createdMs = createdMs;
+    if (review != null) result.review = review;
+    return result;
+  }
+
+  GitHubComment._();
+
+  factory GitHubComment.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubComment()..mergeFromBuffer(data, registry);
+  factory GitHubComment.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubComment()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GitHubComment',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GitHubComment.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'author')
+    ..aOS(3, _omitFieldNames ? '' : 'association')
+    ..aOB(4, _omitFieldNames ? '' : 'outside')
+    ..aOB(5, _omitFieldNames ? '' : 'bot')
+    ..aOS(6, _omitFieldNames ? '' : 'body')
+    ..aOS(7, _omitFieldNames ? '' : 'url')
+    ..aInt64(8, _omitFieldNames ? '' : 'createdMs')
+    ..aOS(9, _omitFieldNames ? '' : 'review')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubComment clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubComment copyWith(void Function(GitHubComment) updates) =>
+      super.copyWith((message) => updates(message as GitHubComment))
+          as GitHubComment;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GitHubComment() / GitHubComment.new instead')
+  static GitHubComment create() => GitHubComment._();
+  static $pb.GeneratedMessage $_createMessage() => GitHubComment._();
+  @$core.override
+  GitHubComment createEmptyInstance() => GitHubComment._();
+  @$core.pragma('dart2js:noInline')
+  static GitHubComment getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GitHubComment>(
+          GitHubComment.$_createMessage);
+  static GitHubComment? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get author => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set author($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasAuthor() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearAuthor() => $_clearField(2);
+
+  /// GitHub's author association: OWNER, MEMBER, COLLABORATOR,
+  /// CONTRIBUTOR, FIRST_TIME_CONTRIBUTOR, NONE…
+  @$pb.TagNumber(3)
+  $core.String get association => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set association($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasAssociation() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearAssociation() => $_clearField(3);
+
+  /// The author isn't the repository's owner, a member or a collaborator.
+  @$pb.TagNumber(4)
+  $core.bool get outside => $_getBF(3);
+  @$pb.TagNumber(4)
+  set outside($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasOutside() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearOutside() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.bool get bot => $_getBF(4);
+  @$pb.TagNumber(5)
+  set bot($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasBot() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearBot() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get body => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set body($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasBody() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearBody() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.String get url => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set url($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasUrl() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearUrl() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $fixnum.Int64 get createdMs => $_getI64(7);
+  @$pb.TagNumber(8)
+  set createdMs($fixnum.Int64 value) => $_setInt64(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasCreatedMs() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearCreatedMs() => $_clearField(8);
+
+  /// A review's state ("approved", "changes_requested", "commented",
+  /// "dismissed"); empty for a comment.
+  @$pb.TagNumber(9)
+  $core.String get review => $_getSZ(8);
+  @$pb.TagNumber(9)
+  set review($core.String value) => $_setString(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasReview() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearReview() => $_clearField(9);
+}
+
+/// A review thread on line (from start_line) of path's side ("left", the
+/// base; "right", the head), or on the file. An outdated one's lines are
+/// the original ones.
+class GitHubThread extends $pb.GeneratedMessage {
+  factory GitHubThread({
+    $core.String? id,
+    $core.String? path,
+    $core.String? side,
+    $core.int? line,
+    $core.int? startLine,
+    $core.int? originalLine,
+    $core.int? originalStartLine,
+    $core.bool? onFile,
+    $core.bool? outdated,
+    $core.bool? resolved,
+    $core.bool? canReply,
+    $core.bool? canResolve,
+    $core.bool? canUnresolve,
+    $core.Iterable<GitHubComment>? comments,
+  }) {
+    final result = GitHubThread._();
+    if (id != null) result.id = id;
+    if (path != null) result.path = path;
+    if (side != null) result.side = side;
+    if (line != null) result.line = line;
+    if (startLine != null) result.startLine = startLine;
+    if (originalLine != null) result.originalLine = originalLine;
+    if (originalStartLine != null) result.originalStartLine = originalStartLine;
+    if (onFile != null) result.onFile = onFile;
+    if (outdated != null) result.outdated = outdated;
+    if (resolved != null) result.resolved = resolved;
+    if (canReply != null) result.canReply = canReply;
+    if (canResolve != null) result.canResolve = canResolve;
+    if (canUnresolve != null) result.canUnresolve = canUnresolve;
+    if (comments != null) result.comments.addAll(comments);
+    return result;
+  }
+
+  GitHubThread._();
+
+  factory GitHubThread.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubThread()..mergeFromBuffer(data, registry);
+  factory GitHubThread.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubThread()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GitHubThread',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GitHubThread.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'path')
+    ..aOS(3, _omitFieldNames ? '' : 'side')
+    ..aI(4, _omitFieldNames ? '' : 'line')
+    ..aI(5, _omitFieldNames ? '' : 'startLine')
+    ..aI(6, _omitFieldNames ? '' : 'originalLine')
+    ..aI(7, _omitFieldNames ? '' : 'originalStartLine')
+    ..aOB(8, _omitFieldNames ? '' : 'onFile')
+    ..aOB(9, _omitFieldNames ? '' : 'outdated')
+    ..aOB(10, _omitFieldNames ? '' : 'resolved')
+    ..aOB(11, _omitFieldNames ? '' : 'canReply')
+    ..aOB(12, _omitFieldNames ? '' : 'canResolve')
+    ..aOB(13, _omitFieldNames ? '' : 'canUnresolve')
+    ..pPM<GitHubComment>(14, _omitFieldNames ? '' : 'comments',
+        subBuilder: GitHubComment.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubThread clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubThread copyWith(void Function(GitHubThread) updates) =>
+      super.copyWith((message) => updates(message as GitHubThread))
+          as GitHubThread;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GitHubThread() / GitHubThread.new instead')
+  static GitHubThread create() => GitHubThread._();
+  static $pb.GeneratedMessage $_createMessage() => GitHubThread._();
+  @$core.override
+  GitHubThread createEmptyInstance() => GitHubThread._();
+  @$core.pragma('dart2js:noInline')
+  static GitHubThread getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GitHubThread>(
+          GitHubThread.$_createMessage);
+  static GitHubThread? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get path => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set path($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasPath() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPath() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get side => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set side($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasSide() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearSide() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.int get line => $_getIZ(3);
+  @$pb.TagNumber(4)
+  set line($core.int value) => $_setSignedInt32(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasLine() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearLine() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.int get startLine => $_getIZ(4);
+  @$pb.TagNumber(5)
+  set startLine($core.int value) => $_setSignedInt32(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasStartLine() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearStartLine() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.int get originalLine => $_getIZ(5);
+  @$pb.TagNumber(6)
+  set originalLine($core.int value) => $_setSignedInt32(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasOriginalLine() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearOriginalLine() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.int get originalStartLine => $_getIZ(6);
+  @$pb.TagNumber(7)
+  set originalStartLine($core.int value) => $_setSignedInt32(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasOriginalStartLine() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearOriginalStartLine() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.bool get onFile => $_getBF(7);
+  @$pb.TagNumber(8)
+  set onFile($core.bool value) => $_setBool(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasOnFile() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearOnFile() => $_clearField(8);
+
+  @$pb.TagNumber(9)
+  $core.bool get outdated => $_getBF(8);
+  @$pb.TagNumber(9)
+  set outdated($core.bool value) => $_setBool(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasOutdated() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearOutdated() => $_clearField(9);
+
+  @$pb.TagNumber(10)
+  $core.bool get resolved => $_getBF(9);
+  @$pb.TagNumber(10)
+  set resolved($core.bool value) => $_setBool(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasResolved() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearResolved() => $_clearField(10);
+
+  @$pb.TagNumber(11)
+  $core.bool get canReply => $_getBF(10);
+  @$pb.TagNumber(11)
+  set canReply($core.bool value) => $_setBool(10, value);
+  @$pb.TagNumber(11)
+  $core.bool hasCanReply() => $_has(10);
+  @$pb.TagNumber(11)
+  void clearCanReply() => $_clearField(11);
+
+  @$pb.TagNumber(12)
+  $core.bool get canResolve => $_getBF(11);
+  @$pb.TagNumber(12)
+  set canResolve($core.bool value) => $_setBool(11, value);
+  @$pb.TagNumber(12)
+  $core.bool hasCanResolve() => $_has(11);
+  @$pb.TagNumber(12)
+  void clearCanResolve() => $_clearField(12);
+
+  @$pb.TagNumber(13)
+  $core.bool get canUnresolve => $_getBF(12);
+  @$pb.TagNumber(13)
+  set canUnresolve($core.bool value) => $_setBool(12, value);
+  @$pb.TagNumber(13)
+  $core.bool hasCanUnresolve() => $_has(12);
+  @$pb.TagNumber(13)
+  void clearCanUnresolve() => $_clearField(13);
+
+  @$pb.TagNumber(14)
+  $pb.PbList<GitHubComment> get comments => $_getList(13);
+}
+
+class GitHubAnnotation extends $pb.GeneratedMessage {
+  factory GitHubAnnotation({
+    $core.String? path,
+    $core.String? level,
+    $core.String? title,
+    $core.String? message,
+    $core.int? line,
+    $core.int? endLine,
+  }) {
+    final result = GitHubAnnotation._();
+    if (path != null) result.path = path;
+    if (level != null) result.level = level;
+    if (title != null) result.title = title;
+    if (message != null) result.message = message;
+    if (line != null) result.line = line;
+    if (endLine != null) result.endLine = endLine;
+    return result;
+  }
+
+  GitHubAnnotation._();
+
+  factory GitHubAnnotation.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubAnnotation()..mergeFromBuffer(data, registry);
+  factory GitHubAnnotation.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubAnnotation()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GitHubAnnotation',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GitHubAnnotation.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'path')
+    ..aOS(2, _omitFieldNames ? '' : 'level')
+    ..aOS(3, _omitFieldNames ? '' : 'title')
+    ..aOS(4, _omitFieldNames ? '' : 'message')
+    ..aI(5, _omitFieldNames ? '' : 'line')
+    ..aI(6, _omitFieldNames ? '' : 'endLine')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubAnnotation clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubAnnotation copyWith(void Function(GitHubAnnotation) updates) =>
+      super.copyWith((message) => updates(message as GitHubAnnotation))
+          as GitHubAnnotation;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GitHubAnnotation() / GitHubAnnotation.new instead')
+  static GitHubAnnotation create() => GitHubAnnotation._();
+  static $pb.GeneratedMessage $_createMessage() => GitHubAnnotation._();
+  @$core.override
+  GitHubAnnotation createEmptyInstance() => GitHubAnnotation._();
+  @$core.pragma('dart2js:noInline')
+  static GitHubAnnotation getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GitHubAnnotation>(
+          GitHubAnnotation.$_createMessage);
+  static GitHubAnnotation? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get path => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set path($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPath() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPath() => $_clearField(1);
+
+  /// "failure", "warning", "notice".
+  @$pb.TagNumber(2)
+  $core.String get level => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set level($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasLevel() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearLevel() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get title => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set title($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasTitle() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearTitle() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get message => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set message($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasMessage() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearMessage() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.int get line => $_getIZ(4);
+  @$pb.TagNumber(5)
+  set line($core.int value) => $_setSignedInt32(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasLine() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearLine() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.int get endLine => $_getIZ(5);
+  @$pb.TagNumber(6)
+  set endLine($core.int value) => $_setSignedInt32(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasEndLine() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearEndLine() => $_clearField(6);
+}
+
+/// A check run (id is its id, an Actions job's) or a commit status (id 0).
+class GitHubCheck extends $pb.GeneratedMessage {
+  factory GitHubCheck({
+    $fixnum.Int64? id,
+    $core.String? name,
+    $core.String? workflow,
+    $core.String? app,
+    $core.String? state,
+    $core.bool? failed,
+    $core.String? url,
+    $core.String? title,
+    $core.String? summary,
+    $core.bool? required,
+    $core.Iterable<GitHubAnnotation>? annotations,
+    $fixnum.Int64? startedMs,
+    $fixnum.Int64? completedMs,
+  }) {
+    final result = GitHubCheck._();
+    if (id != null) result.id = id;
+    if (name != null) result.name = name;
+    if (workflow != null) result.workflow = workflow;
+    if (app != null) result.app = app;
+    if (state != null) result.state = state;
+    if (failed != null) result.failed = failed;
+    if (url != null) result.url = url;
+    if (title != null) result.title = title;
+    if (summary != null) result.summary = summary;
+    if (required != null) result.required = required;
+    if (annotations != null) result.annotations.addAll(annotations);
+    if (startedMs != null) result.startedMs = startedMs;
+    if (completedMs != null) result.completedMs = completedMs;
+    return result;
+  }
+
+  GitHubCheck._();
+
+  factory GitHubCheck.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubCheck()..mergeFromBuffer(data, registry);
+  factory GitHubCheck.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubCheck()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GitHubCheck',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GitHubCheck.$_createMessage)
+    ..aInt64(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'name')
+    ..aOS(3, _omitFieldNames ? '' : 'workflow')
+    ..aOS(4, _omitFieldNames ? '' : 'app')
+    ..aOS(5, _omitFieldNames ? '' : 'state')
+    ..aOB(6, _omitFieldNames ? '' : 'failed')
+    ..aOS(7, _omitFieldNames ? '' : 'url')
+    ..aOS(8, _omitFieldNames ? '' : 'title')
+    ..aOS(9, _omitFieldNames ? '' : 'summary')
+    ..aOB(10, _omitFieldNames ? '' : 'required')
+    ..pPM<GitHubAnnotation>(11, _omitFieldNames ? '' : 'annotations',
+        subBuilder: GitHubAnnotation.$_createMessage)
+    ..aInt64(12, _omitFieldNames ? '' : 'startedMs')
+    ..aInt64(13, _omitFieldNames ? '' : 'completedMs')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubCheck clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubCheck copyWith(void Function(GitHubCheck) updates) =>
+      super.copyWith((message) => updates(message as GitHubCheck))
+          as GitHubCheck;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GitHubCheck() / GitHubCheck.new instead')
+  static GitHubCheck create() => GitHubCheck._();
+  static $pb.GeneratedMessage $_createMessage() => GitHubCheck._();
+  @$core.override
+  GitHubCheck createEmptyInstance() => GitHubCheck._();
+  @$core.pragma('dart2js:noInline')
+  static GitHubCheck getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GitHubCheck>(
+          GitHubCheck.$_createMessage);
+  static GitHubCheck? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $fixnum.Int64 get id => $_getI64(0);
+  @$pb.TagNumber(1)
+  set id($fixnum.Int64 value) => $_setInt64(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get name => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set name($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasName() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearName() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get workflow => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set workflow($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasWorkflow() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearWorkflow() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get app => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set app($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasApp() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearApp() => $_clearField(4);
+
+  /// "pending" until it ends, then its conclusion: "success", "failure",
+  /// "cancelled", "skipped", "neutral", "timed_out"…
+  @$pb.TagNumber(5)
+  $core.String get state => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set state($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasState() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearState() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.bool get failed => $_getBF(5);
+  @$pb.TagNumber(6)
+  set failed($core.bool value) => $_setBool(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasFailed() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearFailed() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.String get url => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set url($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasUrl() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearUrl() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.String get title => $_getSZ(7);
+  @$pb.TagNumber(8)
+  set title($core.String value) => $_setString(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasTitle() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearTitle() => $_clearField(8);
+
+  /// Markdown as GitHub's page shows it.
+  @$pb.TagNumber(9)
+  $core.String get summary => $_getSZ(8);
+  @$pb.TagNumber(9)
+  set summary($core.String value) => $_setString(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasSummary() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearSummary() => $_clearField(9);
+
+  @$pb.TagNumber(10)
+  $core.bool get required => $_getBF(9);
+  @$pb.TagNumber(10)
+  set required($core.bool value) => $_setBool(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasRequired() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearRequired() => $_clearField(10);
+
+  @$pb.TagNumber(11)
+  $pb.PbList<GitHubAnnotation> get annotations => $_getList(10);
+
+  @$pb.TagNumber(12)
+  $fixnum.Int64 get startedMs => $_getI64(11);
+  @$pb.TagNumber(12)
+  set startedMs($fixnum.Int64 value) => $_setInt64(11, value);
+  @$pb.TagNumber(12)
+  $core.bool hasStartedMs() => $_has(11);
+  @$pb.TagNumber(12)
+  void clearStartedMs() => $_clearField(12);
+
+  @$pb.TagNumber(13)
+  $fixnum.Int64 get completedMs => $_getI64(12);
+  @$pb.TagNumber(13)
+  set completedMs($fixnum.Int64 value) => $_setInt64(12, value);
+  @$pb.TagNumber(13)
+  $core.bool hasCompletedMs() => $_has(12);
+  @$pb.TagNumber(13)
+  void clearCompletedMs() => $_clearField(13);
+}
+
+/// Someone asked to review ("requested"), or who did ("approved",
+/// "changes_requested", "commented", "dismissed"); a team asked has team.
+class GitHubReviewer extends $pb.GeneratedMessage {
+  factory GitHubReviewer({
+    $core.String? login,
+    $core.String? state,
+    $core.bool? team,
+  }) {
+    final result = GitHubReviewer._();
+    if (login != null) result.login = login;
+    if (state != null) result.state = state;
+    if (team != null) result.team = team;
+    return result;
+  }
+
+  GitHubReviewer._();
+
+  factory GitHubReviewer.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubReviewer()..mergeFromBuffer(data, registry);
+  factory GitHubReviewer.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubReviewer()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GitHubReviewer',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GitHubReviewer.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'login')
+    ..aOS(2, _omitFieldNames ? '' : 'state')
+    ..aOB(3, _omitFieldNames ? '' : 'team')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubReviewer clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubReviewer copyWith(void Function(GitHubReviewer) updates) =>
+      super.copyWith((message) => updates(message as GitHubReviewer))
+          as GitHubReviewer;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GitHubReviewer() / GitHubReviewer.new instead')
+  static GitHubReviewer create() => GitHubReviewer._();
+  static $pb.GeneratedMessage $_createMessage() => GitHubReviewer._();
+  @$core.override
+  GitHubReviewer createEmptyInstance() => GitHubReviewer._();
+  @$core.pragma('dart2js:noInline')
+  static GitHubReviewer getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GitHubReviewer>(
+          GitHubReviewer.$_createMessage);
+  static GitHubReviewer? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get login => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set login($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasLogin() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearLogin() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get state => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set state($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasState() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearState() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.bool get team => $_getBF(2);
+  @$pb.TagNumber(3)
+  set team($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasTeam() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearTeam() => $_clearField(3);
+}
+
+class GitHubPull extends $pb.GeneratedMessage {
+  factory GitHubPull({
+    GitHubItem? item,
+    $core.String? body,
+    $core.String? association,
+    $core.bool? outside,
+    $core.String? base,
+    $core.String? head,
+    $core.String? headRepo,
+    $core.bool? crossRepo,
+    $core.String? baseOid,
+    $core.String? headOid,
+    $core.String? mergeable,
+    $core.String? mergeState,
+    $core.int? additions,
+    $core.int? deletions,
+    $core.int? changedFiles,
+    $core.Iterable<GitHubReviewer>? reviewers,
+    $core.Iterable<GitHubComment>? conversation,
+    $core.Iterable<GitHubThread>? threads,
+    $core.Iterable<GitHubCheck>? checks,
+    $core.String? pendingReview,
+    $core.int? pendingComments,
+  }) {
+    final result = GitHubPull._();
+    if (item != null) result.item = item;
+    if (body != null) result.body = body;
+    if (association != null) result.association = association;
+    if (outside != null) result.outside = outside;
+    if (base != null) result.base = base;
+    if (head != null) result.head = head;
+    if (headRepo != null) result.headRepo = headRepo;
+    if (crossRepo != null) result.crossRepo = crossRepo;
+    if (baseOid != null) result.baseOid = baseOid;
+    if (headOid != null) result.headOid = headOid;
+    if (mergeable != null) result.mergeable = mergeable;
+    if (mergeState != null) result.mergeState = mergeState;
+    if (additions != null) result.additions = additions;
+    if (deletions != null) result.deletions = deletions;
+    if (changedFiles != null) result.changedFiles = changedFiles;
+    if (reviewers != null) result.reviewers.addAll(reviewers);
+    if (conversation != null) result.conversation.addAll(conversation);
+    if (threads != null) result.threads.addAll(threads);
+    if (checks != null) result.checks.addAll(checks);
+    if (pendingReview != null) result.pendingReview = pendingReview;
+    if (pendingComments != null) result.pendingComments = pendingComments;
+    return result;
+  }
+
+  GitHubPull._();
+
+  factory GitHubPull.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubPull()..mergeFromBuffer(data, registry);
+  factory GitHubPull.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubPull()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GitHubPull',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GitHubPull.$_createMessage)
+    ..aOM<GitHubItem>(1, _omitFieldNames ? '' : 'item',
+        subBuilder: GitHubItem.$_createMessage)
+    ..aOS(2, _omitFieldNames ? '' : 'body')
+    ..aOS(3, _omitFieldNames ? '' : 'association')
+    ..aOB(4, _omitFieldNames ? '' : 'outside')
+    ..aOS(5, _omitFieldNames ? '' : 'base')
+    ..aOS(6, _omitFieldNames ? '' : 'head')
+    ..aOS(7, _omitFieldNames ? '' : 'headRepo')
+    ..aOB(8, _omitFieldNames ? '' : 'crossRepo')
+    ..aOS(9, _omitFieldNames ? '' : 'baseOid')
+    ..aOS(10, _omitFieldNames ? '' : 'headOid')
+    ..aOS(11, _omitFieldNames ? '' : 'mergeable')
+    ..aOS(12, _omitFieldNames ? '' : 'mergeState')
+    ..aI(13, _omitFieldNames ? '' : 'additions')
+    ..aI(14, _omitFieldNames ? '' : 'deletions')
+    ..aI(15, _omitFieldNames ? '' : 'changedFiles')
+    ..pPM<GitHubReviewer>(16, _omitFieldNames ? '' : 'reviewers',
+        subBuilder: GitHubReviewer.$_createMessage)
+    ..pPM<GitHubComment>(17, _omitFieldNames ? '' : 'conversation',
+        subBuilder: GitHubComment.$_createMessage)
+    ..pPM<GitHubThread>(18, _omitFieldNames ? '' : 'threads',
+        subBuilder: GitHubThread.$_createMessage)
+    ..pPM<GitHubCheck>(19, _omitFieldNames ? '' : 'checks',
+        subBuilder: GitHubCheck.$_createMessage)
+    ..aOS(20, _omitFieldNames ? '' : 'pendingReview')
+    ..aI(21, _omitFieldNames ? '' : 'pendingComments')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubPull clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubPull copyWith(void Function(GitHubPull) updates) =>
+      super.copyWith((message) => updates(message as GitHubPull)) as GitHubPull;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GitHubPull() / GitHubPull.new instead')
+  static GitHubPull create() => GitHubPull._();
+  static $pb.GeneratedMessage $_createMessage() => GitHubPull._();
+  @$core.override
+  GitHubPull createEmptyInstance() => GitHubPull._();
+  @$core.pragma('dart2js:noInline')
+  static GitHubPull getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GitHubPull>(GitHubPull.$_createMessage);
+  static GitHubPull? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  GitHubItem get item => $_getN(0);
+  @$pb.TagNumber(1)
+  set item(GitHubItem value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasItem() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearItem() => $_clearField(1);
+  @$pb.TagNumber(1)
+  GitHubItem ensureItem() => $_ensure(0);
+
+  @$pb.TagNumber(2)
+  $core.String get body => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set body($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasBody() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearBody() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get association => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set association($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasAssociation() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearAssociation() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.bool get outside => $_getBF(3);
+  @$pb.TagNumber(4)
+  set outside($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasOutside() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearOutside() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get base => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set base($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasBase() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearBase() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get head => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set head($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasHead() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearHead() => $_clearField(6);
+
+  /// The head's repository (owner/name): another one for a fork's.
+  @$pb.TagNumber(7)
+  $core.String get headRepo => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set headRepo($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasHeadRepo() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearHeadRepo() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.bool get crossRepo => $_getBF(7);
+  @$pb.TagNumber(8)
+  set crossRepo($core.bool value) => $_setBool(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasCrossRepo() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearCrossRepo() => $_clearField(8);
+
+  @$pb.TagNumber(9)
+  $core.String get baseOid => $_getSZ(8);
+  @$pb.TagNumber(9)
+  set baseOid($core.String value) => $_setString(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasBaseOid() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearBaseOid() => $_clearField(9);
+
+  @$pb.TagNumber(10)
+  $core.String get headOid => $_getSZ(9);
+  @$pb.TagNumber(10)
+  set headOid($core.String value) => $_setString(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasHeadOid() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearHeadOid() => $_clearField(10);
+
+  /// "mergeable", "conflicting", "unknown".
+  @$pb.TagNumber(11)
+  $core.String get mergeable => $_getSZ(10);
+  @$pb.TagNumber(11)
+  set mergeable($core.String value) => $_setString(10, value);
+  @$pb.TagNumber(11)
+  $core.bool hasMergeable() => $_has(10);
+  @$pb.TagNumber(11)
+  void clearMergeable() => $_clearField(11);
+
+  /// "clean", "blocked", "behind", "dirty", "unstable", "has_hooks",
+  /// "unknown".
+  @$pb.TagNumber(12)
+  $core.String get mergeState => $_getSZ(11);
+  @$pb.TagNumber(12)
+  set mergeState($core.String value) => $_setString(11, value);
+  @$pb.TagNumber(12)
+  $core.bool hasMergeState() => $_has(11);
+  @$pb.TagNumber(12)
+  void clearMergeState() => $_clearField(12);
+
+  @$pb.TagNumber(13)
+  $core.int get additions => $_getIZ(12);
+  @$pb.TagNumber(13)
+  set additions($core.int value) => $_setSignedInt32(12, value);
+  @$pb.TagNumber(13)
+  $core.bool hasAdditions() => $_has(12);
+  @$pb.TagNumber(13)
+  void clearAdditions() => $_clearField(13);
+
+  @$pb.TagNumber(14)
+  $core.int get deletions => $_getIZ(13);
+  @$pb.TagNumber(14)
+  set deletions($core.int value) => $_setSignedInt32(13, value);
+  @$pb.TagNumber(14)
+  $core.bool hasDeletions() => $_has(13);
+  @$pb.TagNumber(14)
+  void clearDeletions() => $_clearField(14);
+
+  @$pb.TagNumber(15)
+  $core.int get changedFiles => $_getIZ(14);
+  @$pb.TagNumber(15)
+  set changedFiles($core.int value) => $_setSignedInt32(14, value);
+  @$pb.TagNumber(15)
+  $core.bool hasChangedFiles() => $_has(14);
+  @$pb.TagNumber(15)
+  void clearChangedFiles() => $_clearField(15);
+
+  @$pb.TagNumber(16)
+  $pb.PbList<GitHubReviewer> get reviewers => $_getList(15);
+
+  /// Comments and reviews that said something, oldest first.
+  @$pb.TagNumber(17)
+  $pb.PbList<GitHubComment> get conversation => $_getList(16);
+
+  @$pb.TagNumber(18)
+  $pb.PbList<GitHubThread> get threads => $_getList(17);
+
+  @$pb.TagNumber(19)
+  $pb.PbList<GitHubCheck> get checks => $_getList(18);
+
+  /// My review pending on GitHub (made in the browser), which a review
+  /// submitted here joins, and its comments' count.
+  @$pb.TagNumber(20)
+  $core.String get pendingReview => $_getSZ(19);
+  @$pb.TagNumber(20)
+  set pendingReview($core.String value) => $_setString(19, value);
+  @$pb.TagNumber(20)
+  $core.bool hasPendingReview() => $_has(19);
+  @$pb.TagNumber(20)
+  void clearPendingReview() => $_clearField(20);
+
+  @$pb.TagNumber(21)
+  $core.int get pendingComments => $_getIZ(20);
+  @$pb.TagNumber(21)
+  set pendingComments($core.int value) => $_setSignedInt32(20, value);
+  @$pb.TagNumber(21)
+  $core.bool hasPendingComments() => $_has(20);
+  @$pb.TagNumber(21)
+  void clearPendingComments() => $_clearField(21);
+}
+
+class GetGitHubPullRequest extends $pb.GeneratedMessage {
+  factory GetGitHubPullRequest({
+    GitHubRef? ref,
+    $core.bool? quiet,
+  }) {
+    final result = GetGitHubPullRequest._();
+    if (ref != null) result.ref = ref;
+    if (quiet != null) result.quiet = quiet;
+    return result;
+  }
+
+  GetGitHubPullRequest._();
+
+  factory GetGitHubPullRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubPullRequest()..mergeFromBuffer(data, registry);
+  factory GetGitHubPullRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubPullRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetGitHubPullRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetGitHubPullRequest.$_createMessage)
+    ..aOM<GitHubRef>(1, _omitFieldNames ? '' : 'ref',
+        subBuilder: GitHubRef.$_createMessage)
+    ..aOB(2, _omitFieldNames ? '' : 'quiet')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubPullRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubPullRequest copyWith(void Function(GetGitHubPullRequest) updates) =>
+      super.copyWith((message) => updates(message as GetGitHubPullRequest))
+          as GetGitHubPullRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetGitHubPullRequest() / GetGitHubPullRequest.new instead')
+  static GetGitHubPullRequest create() => GetGitHubPullRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetGitHubPullRequest._();
+  @$core.override
+  GetGitHubPullRequest createEmptyInstance() => GetGitHubPullRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetGitHubPullRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetGitHubPullRequest>(
+          GetGitHubPullRequest.$_createMessage);
+  static GetGitHubPullRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  GitHubRef get ref => $_getN(0);
+  @$pb.TagNumber(1)
+  set ref(GitHubRef value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasRef() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRef() => $_clearField(1);
+  @$pb.TagNumber(1)
+  GitHubRef ensureRef() => $_ensure(0);
+
+  @$pb.TagNumber(2)
+  $core.bool get quiet => $_getBF(1);
+  @$pb.TagNumber(2)
+  set quiet($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasQuiet() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearQuiet() => $_clearField(2);
+}
+
+class GetGitHubPullResponse extends $pb.GeneratedMessage {
+  factory GetGitHubPullResponse({
+    GitHubPull? pull,
+  }) {
+    final result = GetGitHubPullResponse._();
+    if (pull != null) result.pull = pull;
+    return result;
+  }
+
+  GetGitHubPullResponse._();
+
+  factory GetGitHubPullResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubPullResponse()..mergeFromBuffer(data, registry);
+  factory GetGitHubPullResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubPullResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetGitHubPullResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetGitHubPullResponse.$_createMessage)
+    ..aOM<GitHubPull>(1, _omitFieldNames ? '' : 'pull',
+        subBuilder: GitHubPull.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubPullResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubPullResponse copyWith(
+          void Function(GetGitHubPullResponse) updates) =>
+      super.copyWith((message) => updates(message as GetGitHubPullResponse))
+          as GetGitHubPullResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetGitHubPullResponse() / GetGitHubPullResponse.new instead')
+  static GetGitHubPullResponse create() => GetGitHubPullResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetGitHubPullResponse._();
+  @$core.override
+  GetGitHubPullResponse createEmptyInstance() => GetGitHubPullResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetGitHubPullResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetGitHubPullResponse>(
+          GetGitHubPullResponse.$_createMessage);
+  static GetGitHubPullResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  GitHubPull get pull => $_getN(0);
+  @$pb.TagNumber(1)
+  set pull(GitHubPull value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPull() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPull() => $_clearField(1);
+  @$pb.TagNumber(1)
+  GitHubPull ensurePull() => $_ensure(0);
+}
+
+class GitHubIssue extends $pb.GeneratedMessage {
+  factory GitHubIssue({
+    GitHubItem? item,
+    $core.String? body,
+    $core.String? association,
+    $core.bool? outside,
+    $core.Iterable<$core.String>? labels,
+    $core.Iterable<$core.String>? assignees,
+    $core.Iterable<GitHubComment>? conversation,
+  }) {
+    final result = GitHubIssue._();
+    if (item != null) result.item = item;
+    if (body != null) result.body = body;
+    if (association != null) result.association = association;
+    if (outside != null) result.outside = outside;
+    if (labels != null) result.labels.addAll(labels);
+    if (assignees != null) result.assignees.addAll(assignees);
+    if (conversation != null) result.conversation.addAll(conversation);
+    return result;
+  }
+
+  GitHubIssue._();
+
+  factory GitHubIssue.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubIssue()..mergeFromBuffer(data, registry);
+  factory GitHubIssue.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubIssue()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GitHubIssue',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GitHubIssue.$_createMessage)
+    ..aOM<GitHubItem>(1, _omitFieldNames ? '' : 'item',
+        subBuilder: GitHubItem.$_createMessage)
+    ..aOS(2, _omitFieldNames ? '' : 'body')
+    ..aOS(3, _omitFieldNames ? '' : 'association')
+    ..aOB(4, _omitFieldNames ? '' : 'outside')
+    ..pPS(5, _omitFieldNames ? '' : 'labels')
+    ..pPS(6, _omitFieldNames ? '' : 'assignees')
+    ..pPM<GitHubComment>(7, _omitFieldNames ? '' : 'conversation',
+        subBuilder: GitHubComment.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubIssue clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubIssue copyWith(void Function(GitHubIssue) updates) =>
+      super.copyWith((message) => updates(message as GitHubIssue))
+          as GitHubIssue;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GitHubIssue() / GitHubIssue.new instead')
+  static GitHubIssue create() => GitHubIssue._();
+  static $pb.GeneratedMessage $_createMessage() => GitHubIssue._();
+  @$core.override
+  GitHubIssue createEmptyInstance() => GitHubIssue._();
+  @$core.pragma('dart2js:noInline')
+  static GitHubIssue getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GitHubIssue>(
+          GitHubIssue.$_createMessage);
+  static GitHubIssue? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  GitHubItem get item => $_getN(0);
+  @$pb.TagNumber(1)
+  set item(GitHubItem value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasItem() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearItem() => $_clearField(1);
+  @$pb.TagNumber(1)
+  GitHubItem ensureItem() => $_ensure(0);
+
+  @$pb.TagNumber(2)
+  $core.String get body => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set body($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasBody() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearBody() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get association => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set association($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasAssociation() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearAssociation() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.bool get outside => $_getBF(3);
+  @$pb.TagNumber(4)
+  set outside($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasOutside() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearOutside() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $pb.PbList<$core.String> get labels => $_getList(4);
+
+  @$pb.TagNumber(6)
+  $pb.PbList<$core.String> get assignees => $_getList(5);
+
+  @$pb.TagNumber(7)
+  $pb.PbList<GitHubComment> get conversation => $_getList(6);
+}
+
+class GetGitHubIssueRequest extends $pb.GeneratedMessage {
+  factory GetGitHubIssueRequest({
+    GitHubRef? ref,
+    $core.bool? quiet,
+  }) {
+    final result = GetGitHubIssueRequest._();
+    if (ref != null) result.ref = ref;
+    if (quiet != null) result.quiet = quiet;
+    return result;
+  }
+
+  GetGitHubIssueRequest._();
+
+  factory GetGitHubIssueRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubIssueRequest()..mergeFromBuffer(data, registry);
+  factory GetGitHubIssueRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubIssueRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetGitHubIssueRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetGitHubIssueRequest.$_createMessage)
+    ..aOM<GitHubRef>(1, _omitFieldNames ? '' : 'ref',
+        subBuilder: GitHubRef.$_createMessage)
+    ..aOB(2, _omitFieldNames ? '' : 'quiet')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubIssueRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubIssueRequest copyWith(
+          void Function(GetGitHubIssueRequest) updates) =>
+      super.copyWith((message) => updates(message as GetGitHubIssueRequest))
+          as GetGitHubIssueRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetGitHubIssueRequest() / GetGitHubIssueRequest.new instead')
+  static GetGitHubIssueRequest create() => GetGitHubIssueRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetGitHubIssueRequest._();
+  @$core.override
+  GetGitHubIssueRequest createEmptyInstance() => GetGitHubIssueRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetGitHubIssueRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetGitHubIssueRequest>(
+          GetGitHubIssueRequest.$_createMessage);
+  static GetGitHubIssueRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  GitHubRef get ref => $_getN(0);
+  @$pb.TagNumber(1)
+  set ref(GitHubRef value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasRef() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRef() => $_clearField(1);
+  @$pb.TagNumber(1)
+  GitHubRef ensureRef() => $_ensure(0);
+
+  @$pb.TagNumber(2)
+  $core.bool get quiet => $_getBF(1);
+  @$pb.TagNumber(2)
+  set quiet($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasQuiet() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearQuiet() => $_clearField(2);
+}
+
+class GetGitHubIssueResponse extends $pb.GeneratedMessage {
+  factory GetGitHubIssueResponse({
+    GitHubIssue? issue,
+  }) {
+    final result = GetGitHubIssueResponse._();
+    if (issue != null) result.issue = issue;
+    return result;
+  }
+
+  GetGitHubIssueResponse._();
+
+  factory GetGitHubIssueResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubIssueResponse()..mergeFromBuffer(data, registry);
+  factory GetGitHubIssueResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubIssueResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetGitHubIssueResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetGitHubIssueResponse.$_createMessage)
+    ..aOM<GitHubIssue>(1, _omitFieldNames ? '' : 'issue',
+        subBuilder: GitHubIssue.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubIssueResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubIssueResponse copyWith(
+          void Function(GetGitHubIssueResponse) updates) =>
+      super.copyWith((message) => updates(message as GetGitHubIssueResponse))
+          as GetGitHubIssueResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetGitHubIssueResponse() / GetGitHubIssueResponse.new instead')
+  static GetGitHubIssueResponse create() => GetGitHubIssueResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetGitHubIssueResponse._();
+  @$core.override
+  GetGitHubIssueResponse createEmptyInstance() => GetGitHubIssueResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetGitHubIssueResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetGitHubIssueResponse>(
+          GetGitHubIssueResponse.$_createMessage);
+  static GetGitHubIssueResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  GitHubIssue get issue => $_getN(0);
+  @$pb.TagNumber(1)
+  set issue(GitHubIssue value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasIssue() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearIssue() => $_clearField(1);
+  @$pb.TagNumber(1)
+  GitHubIssue ensureIssue() => $_ensure(0);
+}
+
+class GetGitHubFilesRequest extends $pb.GeneratedMessage {
+  factory GetGitHubFilesRequest({
+    GitHubRef? ref,
+    $core.String? baseOid,
+    $core.String? headOid,
+  }) {
+    final result = GetGitHubFilesRequest._();
+    if (ref != null) result.ref = ref;
+    if (baseOid != null) result.baseOid = baseOid;
+    if (headOid != null) result.headOid = headOid;
+    return result;
+  }
+
+  GetGitHubFilesRequest._();
+
+  factory GetGitHubFilesRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubFilesRequest()..mergeFromBuffer(data, registry);
+  factory GetGitHubFilesRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubFilesRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetGitHubFilesRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetGitHubFilesRequest.$_createMessage)
+    ..aOM<GitHubRef>(1, _omitFieldNames ? '' : 'ref',
+        subBuilder: GitHubRef.$_createMessage)
+    ..aOS(2, _omitFieldNames ? '' : 'baseOid')
+    ..aOS(3, _omitFieldNames ? '' : 'headOid')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubFilesRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubFilesRequest copyWith(
+          void Function(GetGitHubFilesRequest) updates) =>
+      super.copyWith((message) => updates(message as GetGitHubFilesRequest))
+          as GetGitHubFilesRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetGitHubFilesRequest() / GetGitHubFilesRequest.new instead')
+  static GetGitHubFilesRequest create() => GetGitHubFilesRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetGitHubFilesRequest._();
+  @$core.override
+  GetGitHubFilesRequest createEmptyInstance() => GetGitHubFilesRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetGitHubFilesRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetGitHubFilesRequest>(
+          GetGitHubFilesRequest.$_createMessage);
+  static GetGitHubFilesRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  GitHubRef get ref => $_getN(0);
+  @$pb.TagNumber(1)
+  set ref(GitHubRef value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasRef() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRef() => $_clearField(1);
+  @$pb.TagNumber(1)
+  GitHubRef ensureRef() => $_ensure(0);
+
+  /// The pull request's base and head commits (GitHubPull's).
+  @$pb.TagNumber(2)
+  $core.String get baseOid => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set baseOid($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasBaseOid() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearBaseOid() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get headOid => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set headOid($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasHeadOid() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearHeadOid() => $_clearField(3);
+}
+
+class GetGitHubFilesResponse extends $pb.GeneratedMessage {
+  factory GetGitHubFilesResponse({
+    $core.Iterable<FileChange>? files,
+  }) {
+    final result = GetGitHubFilesResponse._();
+    if (files != null) result.files.addAll(files);
+    return result;
+  }
+
+  GetGitHubFilesResponse._();
+
+  factory GetGitHubFilesResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubFilesResponse()..mergeFromBuffer(data, registry);
+  factory GetGitHubFilesResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubFilesResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetGitHubFilesResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetGitHubFilesResponse.$_createMessage)
+    ..pPM<FileChange>(1, _omitFieldNames ? '' : 'files',
+        subBuilder: FileChange.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubFilesResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubFilesResponse copyWith(
+          void Function(GetGitHubFilesResponse) updates) =>
+      super.copyWith((message) => updates(message as GetGitHubFilesResponse))
+          as GetGitHubFilesResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetGitHubFilesResponse() / GetGitHubFilesResponse.new instead')
+  static GetGitHubFilesResponse create() => GetGitHubFilesResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetGitHubFilesResponse._();
+  @$core.override
+  GetGitHubFilesResponse createEmptyInstance() => GetGitHubFilesResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetGitHubFilesResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetGitHubFilesResponse>(
+          GetGitHubFilesResponse.$_createMessage);
+  static GetGitHubFilesResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<FileChange> get files => $_getList(0);
+}
+
+class GetGitHubJobLogRequest extends $pb.GeneratedMessage {
+  factory GetGitHubJobLogRequest({
+    GitHubRef? ref,
+    $fixnum.Int64? job,
+  }) {
+    final result = GetGitHubJobLogRequest._();
+    if (ref != null) result.ref = ref;
+    if (job != null) result.job = job;
+    return result;
+  }
+
+  GetGitHubJobLogRequest._();
+
+  factory GetGitHubJobLogRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubJobLogRequest()..mergeFromBuffer(data, registry);
+  factory GetGitHubJobLogRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubJobLogRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetGitHubJobLogRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetGitHubJobLogRequest.$_createMessage)
+    ..aOM<GitHubRef>(1, _omitFieldNames ? '' : 'ref',
+        subBuilder: GitHubRef.$_createMessage)
+    ..aInt64(2, _omitFieldNames ? '' : 'job')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubJobLogRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubJobLogRequest copyWith(
+          void Function(GetGitHubJobLogRequest) updates) =>
+      super.copyWith((message) => updates(message as GetGitHubJobLogRequest))
+          as GetGitHubJobLogRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetGitHubJobLogRequest() / GetGitHubJobLogRequest.new instead')
+  static GetGitHubJobLogRequest create() => GetGitHubJobLogRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetGitHubJobLogRequest._();
+  @$core.override
+  GetGitHubJobLogRequest createEmptyInstance() => GetGitHubJobLogRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetGitHubJobLogRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetGitHubJobLogRequest>(
+          GetGitHubJobLogRequest.$_createMessage);
+  static GetGitHubJobLogRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  GitHubRef get ref => $_getN(0);
+  @$pb.TagNumber(1)
+  set ref(GitHubRef value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasRef() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRef() => $_clearField(1);
+  @$pb.TagNumber(1)
+  GitHubRef ensureRef() => $_ensure(0);
+
+  /// The check run's id.
+  @$pb.TagNumber(2)
+  $fixnum.Int64 get job => $_getI64(1);
+  @$pb.TagNumber(2)
+  set job($fixnum.Int64 value) => $_setInt64(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasJob() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearJob() => $_clearField(2);
+}
+
+class GetGitHubJobLogResponse extends $pb.GeneratedMessage {
+  factory GetGitHubJobLogResponse({
+    $core.String? tail,
+  }) {
+    final result = GetGitHubJobLogResponse._();
+    if (tail != null) result.tail = tail;
+    return result;
+  }
+
+  GetGitHubJobLogResponse._();
+
+  factory GetGitHubJobLogResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubJobLogResponse()..mergeFromBuffer(data, registry);
+  factory GetGitHubJobLogResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubJobLogResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetGitHubJobLogResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetGitHubJobLogResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'tail')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubJobLogResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubJobLogResponse copyWith(
+          void Function(GetGitHubJobLogResponse) updates) =>
+      super.copyWith((message) => updates(message as GetGitHubJobLogResponse))
+          as GetGitHubJobLogResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetGitHubJobLogResponse() / GetGitHubJobLogResponse.new instead')
+  static GetGitHubJobLogResponse create() => GetGitHubJobLogResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetGitHubJobLogResponse._();
+  @$core.override
+  GetGitHubJobLogResponse createEmptyInstance() => GetGitHubJobLogResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetGitHubJobLogResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetGitHubJobLogResponse>(
+          GetGitHubJobLogResponse.$_createMessage);
+  static GetGitHubJobLogResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get tail => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set tail($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasTail() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearTail() => $_clearField(1);
+}
+
+class ReplyGitHubThreadRequest extends $pb.GeneratedMessage {
+  factory ReplyGitHubThreadRequest({
+    $core.String? host,
+    $core.String? thread,
+    $core.String? body,
+  }) {
+    final result = ReplyGitHubThreadRequest._();
+    if (host != null) result.host = host;
+    if (thread != null) result.thread = thread;
+    if (body != null) result.body = body;
+    return result;
+  }
+
+  ReplyGitHubThreadRequest._();
+
+  factory ReplyGitHubThreadRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ReplyGitHubThreadRequest()..mergeFromBuffer(data, registry);
+  factory ReplyGitHubThreadRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ReplyGitHubThreadRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ReplyGitHubThreadRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ReplyGitHubThreadRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'host')
+    ..aOS(2, _omitFieldNames ? '' : 'thread')
+    ..aOS(3, _omitFieldNames ? '' : 'body')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReplyGitHubThreadRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReplyGitHubThreadRequest copyWith(
+          void Function(ReplyGitHubThreadRequest) updates) =>
+      super.copyWith((message) => updates(message as ReplyGitHubThreadRequest))
+          as ReplyGitHubThreadRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ReplyGitHubThreadRequest() / ReplyGitHubThreadRequest.new instead')
+  static ReplyGitHubThreadRequest create() => ReplyGitHubThreadRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ReplyGitHubThreadRequest._();
+  @$core.override
+  ReplyGitHubThreadRequest createEmptyInstance() =>
+      ReplyGitHubThreadRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ReplyGitHubThreadRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ReplyGitHubThreadRequest>(
+          ReplyGitHubThreadRequest.$_createMessage);
+  static ReplyGitHubThreadRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get host => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set host($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasHost() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearHost() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get thread => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set thread($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasThread() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearThread() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get body => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set body($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasBody() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearBody() => $_clearField(3);
+}
+
+class ReplyGitHubThreadResponse extends $pb.GeneratedMessage {
+  factory ReplyGitHubThreadResponse({
+    GitHubComment? comment,
+  }) {
+    final result = ReplyGitHubThreadResponse._();
+    if (comment != null) result.comment = comment;
+    return result;
+  }
+
+  ReplyGitHubThreadResponse._();
+
+  factory ReplyGitHubThreadResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ReplyGitHubThreadResponse()..mergeFromBuffer(data, registry);
+  factory ReplyGitHubThreadResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ReplyGitHubThreadResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ReplyGitHubThreadResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ReplyGitHubThreadResponse.$_createMessage)
+    ..aOM<GitHubComment>(1, _omitFieldNames ? '' : 'comment',
+        subBuilder: GitHubComment.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReplyGitHubThreadResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReplyGitHubThreadResponse copyWith(
+          void Function(ReplyGitHubThreadResponse) updates) =>
+      super.copyWith((message) => updates(message as ReplyGitHubThreadResponse))
+          as ReplyGitHubThreadResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ReplyGitHubThreadResponse() / ReplyGitHubThreadResponse.new instead')
+  static ReplyGitHubThreadResponse create() => ReplyGitHubThreadResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      ReplyGitHubThreadResponse._();
+  @$core.override
+  ReplyGitHubThreadResponse createEmptyInstance() =>
+      ReplyGitHubThreadResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ReplyGitHubThreadResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ReplyGitHubThreadResponse>(
+          ReplyGitHubThreadResponse.$_createMessage);
+  static ReplyGitHubThreadResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  GitHubComment get comment => $_getN(0);
+  @$pb.TagNumber(1)
+  set comment(GitHubComment value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasComment() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearComment() => $_clearField(1);
+  @$pb.TagNumber(1)
+  GitHubComment ensureComment() => $_ensure(0);
+}
+
+class ResolveGitHubThreadRequest extends $pb.GeneratedMessage {
+  factory ResolveGitHubThreadRequest({
+    $core.String? host,
+    $core.String? thread,
+    $core.bool? resolve,
+  }) {
+    final result = ResolveGitHubThreadRequest._();
+    if (host != null) result.host = host;
+    if (thread != null) result.thread = thread;
+    if (resolve != null) result.resolve = resolve;
+    return result;
+  }
+
+  ResolveGitHubThreadRequest._();
+
+  factory ResolveGitHubThreadRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ResolveGitHubThreadRequest()..mergeFromBuffer(data, registry);
+  factory ResolveGitHubThreadRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ResolveGitHubThreadRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ResolveGitHubThreadRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ResolveGitHubThreadRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'host')
+    ..aOS(2, _omitFieldNames ? '' : 'thread')
+    ..aOB(3, _omitFieldNames ? '' : 'resolve')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ResolveGitHubThreadRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ResolveGitHubThreadRequest copyWith(
+          void Function(ResolveGitHubThreadRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as ResolveGitHubThreadRequest))
+          as ResolveGitHubThreadRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ResolveGitHubThreadRequest() / ResolveGitHubThreadRequest.new instead')
+  static ResolveGitHubThreadRequest create() => ResolveGitHubThreadRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      ResolveGitHubThreadRequest._();
+  @$core.override
+  ResolveGitHubThreadRequest createEmptyInstance() =>
+      ResolveGitHubThreadRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ResolveGitHubThreadRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ResolveGitHubThreadRequest>(
+          ResolveGitHubThreadRequest.$_createMessage);
+  static ResolveGitHubThreadRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get host => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set host($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasHost() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearHost() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get thread => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set thread($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasThread() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearThread() => $_clearField(2);
+
+  /// False unresolves it.
+  @$pb.TagNumber(3)
+  $core.bool get resolve => $_getBF(2);
+  @$pb.TagNumber(3)
+  set resolve($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasResolve() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearResolve() => $_clearField(3);
+}
+
+class ResolveGitHubThreadResponse extends $pb.GeneratedMessage {
+  factory ResolveGitHubThreadResponse() => ResolveGitHubThreadResponse._();
+
+  ResolveGitHubThreadResponse._();
+
+  factory ResolveGitHubThreadResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ResolveGitHubThreadResponse()..mergeFromBuffer(data, registry);
+  factory ResolveGitHubThreadResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ResolveGitHubThreadResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ResolveGitHubThreadResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ResolveGitHubThreadResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ResolveGitHubThreadResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ResolveGitHubThreadResponse copyWith(
+          void Function(ResolveGitHubThreadResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as ResolveGitHubThreadResponse))
+          as ResolveGitHubThreadResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ResolveGitHubThreadResponse() / ResolveGitHubThreadResponse.new instead')
+  static ResolveGitHubThreadResponse create() =>
+      ResolveGitHubThreadResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      ResolveGitHubThreadResponse._();
+  @$core.override
+  ResolveGitHubThreadResponse createEmptyInstance() =>
+      ResolveGitHubThreadResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ResolveGitHubThreadResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ResolveGitHubThreadResponse>(
+          ResolveGitHubThreadResponse.$_createMessage);
+  static ResolveGitHubThreadResponse? _defaultInstance;
+}
+
+class AddGitHubCommentRequest extends $pb.GeneratedMessage {
+  factory AddGitHubCommentRequest({
+    $core.String? host,
+    $core.String? subject,
+    $core.String? body,
+  }) {
+    final result = AddGitHubCommentRequest._();
+    if (host != null) result.host = host;
+    if (subject != null) result.subject = subject;
+    if (body != null) result.body = body;
+    return result;
+  }
+
+  AddGitHubCommentRequest._();
+
+  factory AddGitHubCommentRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddGitHubCommentRequest()..mergeFromBuffer(data, registry);
+  factory AddGitHubCommentRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddGitHubCommentRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'AddGitHubCommentRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: AddGitHubCommentRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'host')
+    ..aOS(2, _omitFieldNames ? '' : 'subject')
+    ..aOS(3, _omitFieldNames ? '' : 'body')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddGitHubCommentRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddGitHubCommentRequest copyWith(
+          void Function(AddGitHubCommentRequest) updates) =>
+      super.copyWith((message) => updates(message as AddGitHubCommentRequest))
+          as AddGitHubCommentRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use AddGitHubCommentRequest() / AddGitHubCommentRequest.new instead')
+  static AddGitHubCommentRequest create() => AddGitHubCommentRequest._();
+  static $pb.GeneratedMessage $_createMessage() => AddGitHubCommentRequest._();
+  @$core.override
+  AddGitHubCommentRequest createEmptyInstance() => AddGitHubCommentRequest._();
+  @$core.pragma('dart2js:noInline')
+  static AddGitHubCommentRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<AddGitHubCommentRequest>(
+          AddGitHubCommentRequest.$_createMessage);
+  static AddGitHubCommentRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get host => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set host($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasHost() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearHost() => $_clearField(1);
+
+  /// The pull request's or issue's node id.
+  @$pb.TagNumber(2)
+  $core.String get subject => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set subject($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasSubject() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearSubject() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get body => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set body($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasBody() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearBody() => $_clearField(3);
+}
+
+class AddGitHubCommentResponse extends $pb.GeneratedMessage {
+  factory AddGitHubCommentResponse({
+    GitHubComment? comment,
+  }) {
+    final result = AddGitHubCommentResponse._();
+    if (comment != null) result.comment = comment;
+    return result;
+  }
+
+  AddGitHubCommentResponse._();
+
+  factory AddGitHubCommentResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddGitHubCommentResponse()..mergeFromBuffer(data, registry);
+  factory AddGitHubCommentResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddGitHubCommentResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'AddGitHubCommentResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: AddGitHubCommentResponse.$_createMessage)
+    ..aOM<GitHubComment>(1, _omitFieldNames ? '' : 'comment',
+        subBuilder: GitHubComment.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddGitHubCommentResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddGitHubCommentResponse copyWith(
+          void Function(AddGitHubCommentResponse) updates) =>
+      super.copyWith((message) => updates(message as AddGitHubCommentResponse))
+          as AddGitHubCommentResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use AddGitHubCommentResponse() / AddGitHubCommentResponse.new instead')
+  static AddGitHubCommentResponse create() => AddGitHubCommentResponse._();
+  static $pb.GeneratedMessage $_createMessage() => AddGitHubCommentResponse._();
+  @$core.override
+  AddGitHubCommentResponse createEmptyInstance() =>
+      AddGitHubCommentResponse._();
+  @$core.pragma('dart2js:noInline')
+  static AddGitHubCommentResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<AddGitHubCommentResponse>(
+          AddGitHubCommentResponse.$_createMessage);
+  static AddGitHubCommentResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  GitHubComment get comment => $_getN(0);
+  @$pb.TagNumber(1)
+  set comment(GitHubComment value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasComment() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearComment() => $_clearField(1);
+  @$pb.TagNumber(1)
+  GitHubComment ensureComment() => $_ensure(0);
+}
+
+/// A comment of a review not yet sent, on line (from start_line, if more
+/// than one) of path's side ("left" or "right").
+class GitHubDraft extends $pb.GeneratedMessage {
+  factory GitHubDraft({
+    $core.String? path,
+    $core.String? side,
+    $core.int? line,
+    $core.int? startLine,
+    $core.String? body,
+  }) {
+    final result = GitHubDraft._();
+    if (path != null) result.path = path;
+    if (side != null) result.side = side;
+    if (line != null) result.line = line;
+    if (startLine != null) result.startLine = startLine;
+    if (body != null) result.body = body;
+    return result;
+  }
+
+  GitHubDraft._();
+
+  factory GitHubDraft.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubDraft()..mergeFromBuffer(data, registry);
+  factory GitHubDraft.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubDraft()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GitHubDraft',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GitHubDraft.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'path')
+    ..aOS(2, _omitFieldNames ? '' : 'side')
+    ..aI(3, _omitFieldNames ? '' : 'line')
+    ..aI(4, _omitFieldNames ? '' : 'startLine')
+    ..aOS(5, _omitFieldNames ? '' : 'body')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubDraft clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubDraft copyWith(void Function(GitHubDraft) updates) =>
+      super.copyWith((message) => updates(message as GitHubDraft))
+          as GitHubDraft;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GitHubDraft() / GitHubDraft.new instead')
+  static GitHubDraft create() => GitHubDraft._();
+  static $pb.GeneratedMessage $_createMessage() => GitHubDraft._();
+  @$core.override
+  GitHubDraft createEmptyInstance() => GitHubDraft._();
+  @$core.pragma('dart2js:noInline')
+  static GitHubDraft getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GitHubDraft>(
+          GitHubDraft.$_createMessage);
+  static GitHubDraft? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get path => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set path($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPath() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPath() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get side => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set side($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasSide() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearSide() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.int get line => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set line($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasLine() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearLine() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.int get startLine => $_getIZ(3);
+  @$pb.TagNumber(4)
+  set startLine($core.int value) => $_setSignedInt32(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasStartLine() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearStartLine() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get body => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set body($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasBody() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearBody() => $_clearField(5);
+}
+
+class SubmitGitHubReviewRequest extends $pb.GeneratedMessage {
+  factory SubmitGitHubReviewRequest({
+    $core.String? host,
+    $core.String? pull,
+    $core.String? headOid,
+    $core.String? pendingReview,
+    $core.String? event,
+    $core.String? body,
+    $core.Iterable<GitHubDraft>? drafts,
+  }) {
+    final result = SubmitGitHubReviewRequest._();
+    if (host != null) result.host = host;
+    if (pull != null) result.pull = pull;
+    if (headOid != null) result.headOid = headOid;
+    if (pendingReview != null) result.pendingReview = pendingReview;
+    if (event != null) result.event = event;
+    if (body != null) result.body = body;
+    if (drafts != null) result.drafts.addAll(drafts);
+    return result;
+  }
+
+  SubmitGitHubReviewRequest._();
+
+  factory SubmitGitHubReviewRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SubmitGitHubReviewRequest()..mergeFromBuffer(data, registry);
+  factory SubmitGitHubReviewRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SubmitGitHubReviewRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SubmitGitHubReviewRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SubmitGitHubReviewRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'host')
+    ..aOS(2, _omitFieldNames ? '' : 'pull')
+    ..aOS(3, _omitFieldNames ? '' : 'headOid')
+    ..aOS(4, _omitFieldNames ? '' : 'pendingReview')
+    ..aOS(5, _omitFieldNames ? '' : 'event')
+    ..aOS(6, _omitFieldNames ? '' : 'body')
+    ..pPM<GitHubDraft>(7, _omitFieldNames ? '' : 'drafts',
+        subBuilder: GitHubDraft.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SubmitGitHubReviewRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SubmitGitHubReviewRequest copyWith(
+          void Function(SubmitGitHubReviewRequest) updates) =>
+      super.copyWith((message) => updates(message as SubmitGitHubReviewRequest))
+          as SubmitGitHubReviewRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use SubmitGitHubReviewRequest() / SubmitGitHubReviewRequest.new instead')
+  static SubmitGitHubReviewRequest create() => SubmitGitHubReviewRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      SubmitGitHubReviewRequest._();
+  @$core.override
+  SubmitGitHubReviewRequest createEmptyInstance() =>
+      SubmitGitHubReviewRequest._();
+  @$core.pragma('dart2js:noInline')
+  static SubmitGitHubReviewRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SubmitGitHubReviewRequest>(
+          SubmitGitHubReviewRequest.$_createMessage);
+  static SubmitGitHubReviewRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get host => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set host($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasHost() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearHost() => $_clearField(1);
+
+  /// The pull request's node id, and the head the drafts are on.
+  @$pb.TagNumber(2)
+  $core.String get pull => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set pull($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasPull() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPull() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get headOid => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set headOid($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasHeadOid() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearHeadOid() => $_clearField(3);
+
+  /// My review pending on GitHub, if there is one (GitHubPull's).
+  @$pb.TagNumber(4)
+  $core.String get pendingReview => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set pendingReview($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasPendingReview() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearPendingReview() => $_clearField(4);
+
+  /// "comment", "approve" or "request_changes".
+  @$pb.TagNumber(5)
+  $core.String get event => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set event($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasEvent() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearEvent() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get body => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set body($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasBody() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearBody() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $pb.PbList<GitHubDraft> get drafts => $_getList(6);
+}
+
+class SubmitGitHubReviewResponse extends $pb.GeneratedMessage {
+  factory SubmitGitHubReviewResponse() => SubmitGitHubReviewResponse._();
+
+  SubmitGitHubReviewResponse._();
+
+  factory SubmitGitHubReviewResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SubmitGitHubReviewResponse()..mergeFromBuffer(data, registry);
+  factory SubmitGitHubReviewResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SubmitGitHubReviewResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SubmitGitHubReviewResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SubmitGitHubReviewResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SubmitGitHubReviewResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SubmitGitHubReviewResponse copyWith(
+          void Function(SubmitGitHubReviewResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as SubmitGitHubReviewResponse))
+          as SubmitGitHubReviewResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use SubmitGitHubReviewResponse() / SubmitGitHubReviewResponse.new instead')
+  static SubmitGitHubReviewResponse create() => SubmitGitHubReviewResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      SubmitGitHubReviewResponse._();
+  @$core.override
+  SubmitGitHubReviewResponse createEmptyInstance() =>
+      SubmitGitHubReviewResponse._();
+  @$core.pragma('dart2js:noInline')
+  static SubmitGitHubReviewResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SubmitGitHubReviewResponse>(
+          SubmitGitHubReviewResponse.$_createMessage);
+  static SubmitGitHubReviewResponse? _defaultInstance;
+}
+
 class NushiServiceApi {
   final $pb.RpcClient _client;
 
@@ -16416,6 +20406,91 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, GetJiraAttachmentRequest request) =>
       _client.invoke<GetJiraAttachmentResponse>(ctx, 'NushiService',
           'GetJiraAttachment', request, GetJiraAttachmentResponse());
+
+  /// GitHub (ADR 0045): the hosts gh is signed in to (its token read by the
+  /// daemon through go-gh) and those given a pasted token (the keychain).
+  /// Nothing reaches GitHub on its own: the app asks, and marks the asking
+  /// on its timers quiet, which a rate limit running low holds back.
+  $async.Future<ListGitHubHostsResponse> listGitHubHosts(
+          $pb.ClientContext? ctx, ListGitHubHostsRequest request) =>
+      _client.invoke<ListGitHubHostsResponse>(ctx, 'NushiService',
+          'ListGitHubHosts', request, ListGitHubHostsResponse());
+
+  /// Checks a pasted token on a host and keeps it in the keychain; it's
+  /// used for the host instead of gh's login until removed.
+  $async.Future<AddGitHubTokenResponse> addGitHubToken(
+          $pb.ClientContext? ctx, AddGitHubTokenRequest request) =>
+      _client.invoke<AddGitHubTokenResponse>(ctx, 'NushiService',
+          'AddGitHubToken', request, AddGitHubTokenResponse());
+  $async.Future<RemoveGitHubTokenResponse> removeGitHubToken(
+          $pb.ClientContext? ctx, RemoveGitHubTokenRequest request) =>
+      _client.invoke<RemoveGitHubTokenResponse>(ctx, 'NushiService',
+          'RemoveGitHubToken', request, RemoveGitHubTokenResponse());
+
+  /// Reads a host's pasted token with macOS's prompt (GitHubHost.needs_ok).
+  $async.Future<AllowGitHubTokenResponse> allowGitHubToken(
+          $pb.ClientContext? ctx, AllowGitHubTokenRequest request) =>
+      _client.invoke<AllowGitHubTokenResponse>(ctx, 'NushiService',
+          'AllowGitHubToken', request, AllowGitHubTokenResponse());
+
+  /// The GitHub repositories folders are clones of: the folders asked
+  /// about and the chats'.
+  $async.Future<ListGitHubReposResponse> listGitHubRepos(
+          $pb.ClientContext? ctx, ListGitHubReposRequest request) =>
+      _client.invoke<ListGitHubReposResponse>(ctx, 'NushiService',
+          'ListGitHubRepos', request, ListGitHubReposResponse());
+
+  /// Review requested of me or my teams, my pull requests, issues assigned
+  /// to me: the latest 50 each.
+  $async.Future<ListGitHubInboxResponse> listGitHubInbox(
+          $pb.ClientContext? ctx, ListGitHubInboxRequest request) =>
+      _client.invoke<ListGitHubInboxResponse>(ctx, 'NushiService',
+          'ListGitHubInbox', request, ListGitHubInboxResponse());
+
+  /// Items as they are now, by node id (a chat's status chip).
+  $async.Future<GetGitHubStatesResponse> getGitHubStates(
+          $pb.ClientContext? ctx, GetGitHubStatesRequest request) =>
+      _client.invoke<GetGitHubStatesResponse>(ctx, 'NushiService',
+          'GetGitHubStates', request, GetGitHubStatesResponse());
+  $async.Future<GetGitHubPullResponse> getGitHubPull(
+          $pb.ClientContext? ctx, GetGitHubPullRequest request) =>
+      _client.invoke<GetGitHubPullResponse>(ctx, 'NushiService',
+          'GetGitHubPull', request, GetGitHubPullResponse());
+  $async.Future<GetGitHubIssueResponse> getGitHubIssue(
+          $pb.ClientContext? ctx, GetGitHubIssueRequest request) =>
+      _client.invoke<GetGitHubIssueResponse>(ctx, 'NushiService',
+          'GetGitHubIssue', request, GetGitHubIssueResponse());
+
+  /// A pull request's files from its merge base to its head, both sides'
+  /// texts, as GetDiff gives them.
+  $async.Future<GetGitHubFilesResponse> getGitHubFiles(
+          $pb.ClientContext? ctx, GetGitHubFilesRequest request) =>
+      _client.invoke<GetGitHubFilesResponse>(ctx, 'NushiService',
+          'GetGitHubFiles', request, GetGitHubFilesResponse());
+
+  /// The end of a failed Actions job's log (16 KB).
+  $async.Future<GetGitHubJobLogResponse> getGitHubJobLog(
+          $pb.ClientContext? ctx, GetGitHubJobLogRequest request) =>
+      _client.invoke<GetGitHubJobLogResponse>(ctx, 'NushiService',
+          'GetGitHubJobLog', request, GetGitHubJobLogResponse());
+
+  /// The user's writes.
+  $async.Future<ReplyGitHubThreadResponse> replyGitHubThread(
+          $pb.ClientContext? ctx, ReplyGitHubThreadRequest request) =>
+      _client.invoke<ReplyGitHubThreadResponse>(ctx, 'NushiService',
+          'ReplyGitHubThread', request, ReplyGitHubThreadResponse());
+  $async.Future<ResolveGitHubThreadResponse> resolveGitHubThread(
+          $pb.ClientContext? ctx, ResolveGitHubThreadRequest request) =>
+      _client.invoke<ResolveGitHubThreadResponse>(ctx, 'NushiService',
+          'ResolveGitHubThread', request, ResolveGitHubThreadResponse());
+  $async.Future<AddGitHubCommentResponse> addGitHubComment(
+          $pb.ClientContext? ctx, AddGitHubCommentRequest request) =>
+      _client.invoke<AddGitHubCommentResponse>(ctx, 'NushiService',
+          'AddGitHubComment', request, AddGitHubCommentResponse());
+  $async.Future<SubmitGitHubReviewResponse> submitGitHubReview(
+          $pb.ClientContext? ctx, SubmitGitHubReviewRequest request) =>
+      _client.invoke<SubmitGitHubReviewResponse>(ctx, 'NushiService',
+          'SubmitGitHubReview', request, SubmitGitHubReviewResponse());
 
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.

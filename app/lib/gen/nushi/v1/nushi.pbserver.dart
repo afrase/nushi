@@ -171,6 +171,36 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.FindJiraIssuesRequest request);
   $async.Future<$0.GetJiraAttachmentResponse> getJiraAttachment(
       $pb.ServerContext ctx, $0.GetJiraAttachmentRequest request);
+  $async.Future<$0.ListGitHubHostsResponse> listGitHubHosts(
+      $pb.ServerContext ctx, $0.ListGitHubHostsRequest request);
+  $async.Future<$0.AddGitHubTokenResponse> addGitHubToken(
+      $pb.ServerContext ctx, $0.AddGitHubTokenRequest request);
+  $async.Future<$0.RemoveGitHubTokenResponse> removeGitHubToken(
+      $pb.ServerContext ctx, $0.RemoveGitHubTokenRequest request);
+  $async.Future<$0.AllowGitHubTokenResponse> allowGitHubToken(
+      $pb.ServerContext ctx, $0.AllowGitHubTokenRequest request);
+  $async.Future<$0.ListGitHubReposResponse> listGitHubRepos(
+      $pb.ServerContext ctx, $0.ListGitHubReposRequest request);
+  $async.Future<$0.ListGitHubInboxResponse> listGitHubInbox(
+      $pb.ServerContext ctx, $0.ListGitHubInboxRequest request);
+  $async.Future<$0.GetGitHubStatesResponse> getGitHubStates(
+      $pb.ServerContext ctx, $0.GetGitHubStatesRequest request);
+  $async.Future<$0.GetGitHubPullResponse> getGitHubPull(
+      $pb.ServerContext ctx, $0.GetGitHubPullRequest request);
+  $async.Future<$0.GetGitHubIssueResponse> getGitHubIssue(
+      $pb.ServerContext ctx, $0.GetGitHubIssueRequest request);
+  $async.Future<$0.GetGitHubFilesResponse> getGitHubFiles(
+      $pb.ServerContext ctx, $0.GetGitHubFilesRequest request);
+  $async.Future<$0.GetGitHubJobLogResponse> getGitHubJobLog(
+      $pb.ServerContext ctx, $0.GetGitHubJobLogRequest request);
+  $async.Future<$0.ReplyGitHubThreadResponse> replyGitHubThread(
+      $pb.ServerContext ctx, $0.ReplyGitHubThreadRequest request);
+  $async.Future<$0.ResolveGitHubThreadResponse> resolveGitHubThread(
+      $pb.ServerContext ctx, $0.ResolveGitHubThreadRequest request);
+  $async.Future<$0.AddGitHubCommentResponse> addGitHubComment(
+      $pb.ServerContext ctx, $0.AddGitHubCommentRequest request);
+  $async.Future<$0.SubmitGitHubReviewResponse> submitGitHubReview(
+      $pb.ServerContext ctx, $0.SubmitGitHubReviewRequest request);
   $async.Future<$0.EventsResponse> events(
       $pb.ServerContext ctx, $0.EventsRequest request);
 
@@ -326,6 +356,36 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.FindJiraIssuesRequest();
       case 'GetJiraAttachment':
         return $0.GetJiraAttachmentRequest();
+      case 'ListGitHubHosts':
+        return $0.ListGitHubHostsRequest();
+      case 'AddGitHubToken':
+        return $0.AddGitHubTokenRequest();
+      case 'RemoveGitHubToken':
+        return $0.RemoveGitHubTokenRequest();
+      case 'AllowGitHubToken':
+        return $0.AllowGitHubTokenRequest();
+      case 'ListGitHubRepos':
+        return $0.ListGitHubReposRequest();
+      case 'ListGitHubInbox':
+        return $0.ListGitHubInboxRequest();
+      case 'GetGitHubStates':
+        return $0.GetGitHubStatesRequest();
+      case 'GetGitHubPull':
+        return $0.GetGitHubPullRequest();
+      case 'GetGitHubIssue':
+        return $0.GetGitHubIssueRequest();
+      case 'GetGitHubFiles':
+        return $0.GetGitHubFilesRequest();
+      case 'GetGitHubJobLog':
+        return $0.GetGitHubJobLogRequest();
+      case 'ReplyGitHubThread':
+        return $0.ReplyGitHubThreadRequest();
+      case 'ResolveGitHubThread':
+        return $0.ResolveGitHubThreadRequest();
+      case 'AddGitHubComment':
+        return $0.AddGitHubCommentRequest();
+      case 'SubmitGitHubReview':
+        return $0.SubmitGitHubReviewRequest();
       case 'Events':
         return $0.EventsRequest();
       default:
@@ -488,6 +548,37 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return findJiraIssues(ctx, request as $0.FindJiraIssuesRequest);
       case 'GetJiraAttachment':
         return getJiraAttachment(ctx, request as $0.GetJiraAttachmentRequest);
+      case 'ListGitHubHosts':
+        return listGitHubHosts(ctx, request as $0.ListGitHubHostsRequest);
+      case 'AddGitHubToken':
+        return addGitHubToken(ctx, request as $0.AddGitHubTokenRequest);
+      case 'RemoveGitHubToken':
+        return removeGitHubToken(ctx, request as $0.RemoveGitHubTokenRequest);
+      case 'AllowGitHubToken':
+        return allowGitHubToken(ctx, request as $0.AllowGitHubTokenRequest);
+      case 'ListGitHubRepos':
+        return listGitHubRepos(ctx, request as $0.ListGitHubReposRequest);
+      case 'ListGitHubInbox':
+        return listGitHubInbox(ctx, request as $0.ListGitHubInboxRequest);
+      case 'GetGitHubStates':
+        return getGitHubStates(ctx, request as $0.GetGitHubStatesRequest);
+      case 'GetGitHubPull':
+        return getGitHubPull(ctx, request as $0.GetGitHubPullRequest);
+      case 'GetGitHubIssue':
+        return getGitHubIssue(ctx, request as $0.GetGitHubIssueRequest);
+      case 'GetGitHubFiles':
+        return getGitHubFiles(ctx, request as $0.GetGitHubFilesRequest);
+      case 'GetGitHubJobLog':
+        return getGitHubJobLog(ctx, request as $0.GetGitHubJobLogRequest);
+      case 'ReplyGitHubThread':
+        return replyGitHubThread(ctx, request as $0.ReplyGitHubThreadRequest);
+      case 'ResolveGitHubThread':
+        return resolveGitHubThread(
+            ctx, request as $0.ResolveGitHubThreadRequest);
+      case 'AddGitHubComment':
+        return addGitHubComment(ctx, request as $0.AddGitHubCommentRequest);
+      case 'SubmitGitHubReview':
+        return submitGitHubReview(ctx, request as $0.SubmitGitHubReviewRequest);
       case 'Events':
         return events(ctx, request as $0.EventsRequest);
       default:
