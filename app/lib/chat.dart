@@ -22,7 +22,8 @@ class ChatState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// A file its Changes view is to show next (a terminal link to it).
+  /// A file its Changes view is to show next (a terminal link to it, a
+  /// review's finding); the chat shows its Changes then.
   String? openPath;
 
   void showFile(String path) {

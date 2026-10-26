@@ -250,6 +250,26 @@ class _ChatPaneState extends State<_ChatPane> {
   bool _changes = false;
 
   @override
+  void initState() {
+    super.initState();
+    widget.chat.addListener(_showFile);
+  }
+
+  @override
+  void dispose() {
+    widget.chat.removeListener(_showFile);
+    super.dispose();
+  }
+
+  /// A file to show (ChatState.showFile, from a review's finding) shows in
+  /// the Changes view.
+  void _showFile() {
+    if (widget.chat.openPath != null && !_changes) {
+      setState(() => _changes = true);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, box) => ValueListenableBuilder(
       valueListenable: showDetails,

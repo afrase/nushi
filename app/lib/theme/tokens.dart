@@ -71,6 +71,9 @@ class Tokens {
     required this.subagentTint,
     required this.subagentBorder,
     required this.subagentAccent,
+    required this.findingsTint,
+    required this.findingsBorder,
+    required this.findingsAccent,
     required this.selectionBar,
     required this.selectionBarText,
     required this.selectionBarBorder,
@@ -114,7 +117,9 @@ class Tokens {
   // The transcript. A user message is a band across it (the chapter's
   // heading), with its marker (a relay's), its inline code and code
   // blocks; the agent's text and inline code; a tool call's row and a
-  // subagent's line, each a tint with an accent for its icon; the bar
+  // subagent's line, each a tint with an accent for its icon; a review's
+  // findings card, its tint, border and accent (its icon, a row's file and
+  // line, its chips' outline); the bar
   // over a selection; and the scrim behind an image opened whole.
   final Color userBand;
   final Color userBandBorder;
@@ -131,6 +136,9 @@ class Tokens {
   final Color subagentTint;
   final Color subagentBorder;
   final Color subagentAccent;
+  final Color findingsTint;
+  final Color findingsBorder;
+  final Color findingsAccent;
   final Color selectionBar;
   final Color selectionBarText;
   final Color selectionBarBorder;
@@ -188,6 +196,9 @@ class Tokens {
     subagentTint: Color(0xFFF1ECFC),
     subagentBorder: Color(0xFFD6C9F5),
     subagentAccent: Color(0xFF4E1FA8),
+    findingsTint: Color(0xFFFCF6EC),
+    findingsBorder: Color(0xFFEDD9B4),
+    findingsAccent: Color(0xFF8A5300),
     selectionBar: Color(0xFF26272B),
     selectionBarText: Color(0xFFE8E9EC),
     selectionBarBorder: Color(0x22FFFFFF),
@@ -252,6 +263,9 @@ class Tokens {
     subagentTint: Color(0xFF29243D),
     subagentBorder: Color(0xFF4B3F70),
     subagentAccent: Color(0xFFD2BEFF),
+    findingsTint: Color(0xFF2B2720),
+    findingsBorder: Color(0xFF4C4231),
+    findingsAccent: Color(0xFFE6B062),
     selectionBar: Color(0xFF26272B),
     selectionBarText: Color(0xFFE8E9EC),
     selectionBarBorder: Color(0x22FFFFFF),
