@@ -1777,13 +1777,14 @@ const SetMcpServerOnRequest$json = {
     {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
     {'1': 'name', '3': 2, '4': 1, '5': 9, '10': 'name'},
     {'1': 'on', '3': 3, '4': 1, '5': 8, '10': 'on'},
+    {'1': 'scope', '3': 4, '4': 1, '5': 9, '10': 'scope'},
   ],
 };
 
 /// Descriptor for `SetMcpServerOnRequest`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List setMcpServerOnRequestDescriptor = $convert.base64Decode(
     'ChVTZXRNY3BTZXJ2ZXJPblJlcXVlc3QSFgoGZm9sZGVyGAEgASgJUgZmb2xkZXISEgoEbmFtZR'
-    'gCIAEoCVIEbmFtZRIOCgJvbhgDIAEoCFICb24=');
+    'gCIAEoCVIEbmFtZRIOCgJvbhgDIAEoCFICb24SFAoFc2NvcGUYBCABKAlSBXNjb3Bl');
 
 @$core.Deprecated('Use setMcpServerOnResponseDescriptor instead')
 const SetMcpServerOnResponse$json = {

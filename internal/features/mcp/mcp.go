@@ -25,9 +25,10 @@ type Config interface {
 	Remove(ctx context.Context, folder, scope, name string) error
 	// Project is the folder the agent files folder's local servers under.
 	Project(folder string) string
-	// SetOn approves (on) or rejects a project server for folder's
-	// project.
-	SetOn(ctx context.Context, folder, name string, on bool) error
+	// SetOn turns a server on or off for folder's project: a project
+	// server is approved (on) or rejected; a user or local one is turned
+	// off there as the agent's own /mcp does.
+	SetOn(ctx context.Context, folder, scope, name string, on bool) error
 	// Login signs in to a server through the browser, waiting until that
 	// is done; Logout forgets the sign-in.
 	Login(ctx context.Context, folder, name string) error

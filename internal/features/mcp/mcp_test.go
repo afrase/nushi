@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -37,10 +38,13 @@ func (f *fakeConfig) Remove(ctx context.Context, _, _, name string) error {
 	f.calls = append(f.calls, "remove "+name)
 	return nil
 }
-func (f *fakeConfig) Project(folder string) string                      { return folder }
-func (f *fakeConfig) SetOn(context.Context, string, string, bool) error { return nil }
-func (f *fakeConfig) Login(context.Context, string, string) error       { return nil }
-func (f *fakeConfig) Logout(context.Context, string, string) error      { return nil }
+func (f *fakeConfig) Project(folder string) string { return folder }
+func (f *fakeConfig) SetOn(_ context.Context, _, scope, name string, on bool) error {
+	f.calls = append(f.calls, fmt.Sprintf("on %s %s %v", scope, name, on))
+	return nil
+}
+func (f *fakeConfig) Login(context.Context, string, string) error  { return nil }
+func (f *fakeConfig) Logout(context.Context, string, string) error { return nil }
 
 func TestListMergesTheCheck(t *testing.T) {
 	svc := New(&fakeConfig{
@@ -216,5 +220,39 @@ func TestAnUnapprovedProjectServerGivesWay(t *testing.T) {
 	svc := New(&fakeConfig{files: []model.MCPServer{{Name: "github", Scope: "user"}, {Name: "github", Scope: "project", Approved: true}}}, nil)
 	if got, _, _ := svc.List(context.Background(), "/f", false); !got[0].Shadowed || got[1].Shadowed {
 		t.Errorf("an approved project server: %+v", got)
+	}
+}
+
+// SetOn goes by scope: project (also when no scope is given), user and
+// local reach the config; a plugin's server and a connector are refused.
+func TestSetOnGoesByScope(t *testing.T) {
+	cfg := &fakeConfig{}
+	var reached []string
+	svc := New(cfg, func(affected func(string) bool) {
+		for _, f := range []string{"/p", "/p/sub", "/q"} {
+			if affected(f) {
+				reached = append(reached, f)
+			}
+		}
+	})
+	ctx := context.Background()
+	for _, scope := range []string{"", "user", "local"} {
+		if err := svc.SetOn(ctx, "/p", scope, "web", false); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, scope := range []string{"plugin", "claudeai", "other"} {
+		if err := svc.SetOn(ctx, "/p", scope, "web", false); err == nil {
+			t.Errorf("%s: not refused", scope)
+		}
+	}
+	if err := svc.SetOn(ctx, "/p", "user", "-x", true); err == nil {
+		t.Error("a name like a flag: not refused")
+	}
+	if want := []string{"on project web false", "on user web false", "on local web false"}; !reflect.DeepEqual(cfg.calls, want) {
+		t.Errorf("calls = %q", cfg.calls)
+	}
+	if want := []string{"/p", "/p/sub", "/p", "/p/sub", "/p", "/p/sub"}; !reflect.DeepEqual(reached, want) {
+		t.Errorf("chats told = %q", reached) // the project's, not every folder's
 	}
 }

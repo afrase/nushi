@@ -75,11 +75,21 @@ func rejected(folder string, terminal []string) (out map[string][]string, approv
 	return out, approved
 }
 
-// SetOn approves (on) or rejects a .mcp.json server for folder's project,
-// in its .claude/settings.local.json. Other settings in the file stay; a
-// new file is kept out of git through the repository's info/exclude, as
-// Claude keeps it out through your global excludes.
-func (Claude) SetOn(ctx context.Context, folder, name string, on bool) error {
+// SetOn turns a server on or off for folder's project: a project server
+// (.mcp.json) through the approval lists below, a user or local one
+// through Claude's own toggle (Toggle).
+func (c Claude) SetOn(ctx context.Context, folder, scope, name string, on bool) error {
+	if scope == "project" {
+		return approve(ctx, folder, name, on)
+	}
+	return c.Toggle(ctx, folder, name, on)
+}
+
+// approve approves (on) or rejects a .mcp.json server for folder's
+// project, in its .claude/settings.local.json. Other settings in the file
+// stay; a new file is kept out of git through the repository's
+// info/exclude, as Claude keeps it out through your global excludes.
+func approve(ctx context.Context, folder, name string, on bool) error {
 	path := localSettings(folder)
 	// The repository decides what's in .claude/: refuse symlinks there, so
 	// a cloned repo can't point the write at a file elsewhere.

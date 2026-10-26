@@ -436,10 +436,12 @@ type NushiServiceClient interface {
 	AddMcpServer(context.Context, *connect.Request[v1.AddMcpServerRequest]) (*connect.Response[v1.AddMcpServerResponse], error)
 	EditMcpServer(context.Context, *connect.Request[v1.EditMcpServerRequest]) (*connect.Response[v1.EditMcpServerResponse], error)
 	RemoveMcpServer(context.Context, *connect.Request[v1.RemoveMcpServerRequest]) (*connect.Response[v1.RemoveMcpServerResponse], error)
-	// Turns a project's .mcp.json server on for the folder's project, which
-	// approves it, or off, which rejects it (Claude's
+	// Turns a server on or off for the folder's project (API 65: by scope).
+	// A project's .mcp.json server: on approves it, off rejects it (Claude's
 	// enabledMcpjsonServers and disabledMcpjsonServers in the project's
-	// .claude/settings.local.json).
+	// .claude/settings.local.json). A user or local server: as /mcp in a
+	// terminal does, which Claude records in ~/.claude.json, asked of Claude
+	// (ADR 0050). Refused for a plugin's server and a claude.ai connector.
 	SetMcpServerOn(context.Context, *connect.Request[v1.SetMcpServerOnRequest]) (*connect.Response[v1.SetMcpServerOnResponse], error)
 	// Signs in to a server that needs OAuth: the agent opens the browser and
 	// the call returns once the sign-in is done there, or failed (a few
@@ -1879,10 +1881,12 @@ type NushiServiceHandler interface {
 	AddMcpServer(context.Context, *connect.Request[v1.AddMcpServerRequest]) (*connect.Response[v1.AddMcpServerResponse], error)
 	EditMcpServer(context.Context, *connect.Request[v1.EditMcpServerRequest]) (*connect.Response[v1.EditMcpServerResponse], error)
 	RemoveMcpServer(context.Context, *connect.Request[v1.RemoveMcpServerRequest]) (*connect.Response[v1.RemoveMcpServerResponse], error)
-	// Turns a project's .mcp.json server on for the folder's project, which
-	// approves it, or off, which rejects it (Claude's
+	// Turns a server on or off for the folder's project (API 65: by scope).
+	// A project's .mcp.json server: on approves it, off rejects it (Claude's
 	// enabledMcpjsonServers and disabledMcpjsonServers in the project's
-	// .claude/settings.local.json).
+	// .claude/settings.local.json). A user or local server: as /mcp in a
+	// terminal does, which Claude records in ~/.claude.json, asked of Claude
+	// (ADR 0050). Refused for a plugin's server and a claude.ai connector.
 	SetMcpServerOn(context.Context, *connect.Request[v1.SetMcpServerOnRequest]) (*connect.Response[v1.SetMcpServerOnResponse], error)
 	// Signs in to a server that needs OAuth: the agent opens the browser and
 	// the call returns once the sign-in is done there, or failed (a few

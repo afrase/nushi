@@ -5278,8 +5278,10 @@ type McpServer struct {
 	Detail string `protobuf:"bytes,6,opt,name=detail,proto3" json:"detail,omitempty"`
 	// A server of the same name in a scope that wins hides it.
 	Shadowed bool `protobuf:"varint,7,opt,name=shadowed,proto3" json:"shadowed,omitempty"`
-	// A project server turned off (rejected) for the folder; off_by names a
-	// file that does it other than the one SetMcpServerOn changes.
+	// Turned off for the folder's project: a project server rejected, or a
+	// user or local one turned off by /mcp (or SetMcpServerOn); off_by
+	// names a file that does it other than what SetMcpServerOn changes. A
+	// plugin's server or connector turned off says so in its state.
 	Off   bool   `protobuf:"varint,8,opt,name=off,proto3" json:"off,omitempty"`
 	OffBy string `protobuf:"bytes,9,opt,name=off_by,json=offBy,proto3" json:"off_by,omitempty"`
 	// The project's local settings approve this project server (Claude in
@@ -5694,10 +5696,12 @@ func (*RemoveMcpServerResponse) Descriptor() ([]byte, []int) {
 }
 
 type SetMcpServerOnRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Folder        string                 `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	On            bool                   `protobuf:"varint,3,opt,name=on,proto3" json:"on,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Folder string                 `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
+	Name   string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	On     bool                   `protobuf:"varint,3,opt,name=on,proto3" json:"on,omitempty"`
+	// The server's scope: "project" (also when empty), "user" or "local".
+	Scope         string `protobuf:"bytes,4,opt,name=scope,proto3" json:"scope,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5751,6 +5755,13 @@ func (x *SetMcpServerOnRequest) GetOn() bool {
 		return x.On
 	}
 	return false
+}
+
+func (x *SetMcpServerOnRequest) GetScope() string {
+	if x != nil {
+		return x.Scope
+	}
+	return ""
 }
 
 type SetMcpServerOnResponse struct {
@@ -16892,11 +16903,12 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x06folder\x18\x01 \x01(\tR\x06folder\x12\x14\n" +
 	"\x05scope\x18\x02 \x01(\tR\x05scope\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\"\x19\n" +
-	"\x17RemoveMcpServerResponse\"S\n" +
+	"\x17RemoveMcpServerResponse\"i\n" +
 	"\x15SetMcpServerOnRequest\x12\x16\n" +
 	"\x06folder\x18\x01 \x01(\tR\x06folder\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x0e\n" +
-	"\x02on\x18\x03 \x01(\bR\x02on\"\x18\n" +
+	"\x02on\x18\x03 \x01(\bR\x02on\x12\x14\n" +
+	"\x05scope\x18\x04 \x01(\tR\x05scope\"\x18\n" +
 	"\x16SetMcpServerOnResponse\"C\n" +
 	"\x15LoginMcpServerRequest\x12\x16\n" +
 	"\x06folder\x18\x01 \x01(\tR\x06folder\x12\x12\n" +

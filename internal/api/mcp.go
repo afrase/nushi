@@ -44,7 +44,7 @@ func (s *server) RemoveMcpServer(ctx context.Context, req *connect.Request[nushi
 
 func (s *server) SetMcpServerOn(ctx context.Context, req *connect.Request[nushiv1.SetMcpServerOnRequest]) (*connect.Response[nushiv1.SetMcpServerOnResponse], error) {
 	m := req.Msg
-	return changed(s.mcp.SetOn(ctx, m.Folder, m.Name, m.On), &nushiv1.SetMcpServerOnResponse{})
+	return changed(s.mcp.SetOn(ctx, m.Folder, m.Scope, m.Name, m.On), &nushiv1.SetMcpServerOnResponse{})
 }
 
 func (s *server) LoginMcpServer(ctx context.Context, req *connect.Request[nushiv1.LoginMcpServerRequest]) (*connect.Response[nushiv1.LoginMcpServerResponse], error) {
