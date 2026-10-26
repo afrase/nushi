@@ -36,6 +36,9 @@ class ChatState extends ChangeNotifier {
   /// The Jira issue it was started from (its site and key), if it was.
   String jiraSite = '';
   String jiraKey = '';
+
+  /// The GitHub pull request or issue it was started from, if it was.
+  GitHubLink? github;
   String title = '';
   bool archived = false; // no agent runs; read-only until unarchived
   DateTime created = DateTime.now();

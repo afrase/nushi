@@ -187,7 +187,8 @@ class _NewChatState extends State<_NewChat> {
         setState(() => _issue = null);
       case LogicalKeyboardKey.keyW when worktree:
         setState(() => issue.worktree = !issue.worktree);
-      case LogicalKeyboardKey.keyB when worktree && issue.worktree:
+      case LogicalKeyboardKey.keyB
+          when worktree && issue.worktree && issue.github?.pull != true:
         setState(() => _editingBranch = true);
       case _ when digit >= 1 && digit <= n && digit <= 9:
         _start(digit - 1);

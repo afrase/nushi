@@ -110,7 +110,17 @@ class IssueLines extends StatelessWidget {
                 ),
               ),
               Expanded(
-                child: editingBranch
+                child: issue.github?.pull ?? false
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Text(
+                          "the pull request's head",
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: small,
+                        ),
+                      )
+                    : editingBranch
                     ? SizedBox(
                         height: 22,
                         child: InlineEdit(
