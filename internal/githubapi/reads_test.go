@@ -166,3 +166,24 @@ func TestRateLimits(t *testing.T) {
 	}
 	t.Fatalf("%+v", b)
 }
+
+// TestUnsafeURLs: a check's and a status's address are their poster's
+// (any scheme); only http and https leave the daemon.
+func TestUnsafeURLs(t *testing.T) {
+	f := newFake(t)
+	f.route("graphql PullRequest", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"data":{"repository":{"pullRequest":{"id":"PR_1","number":1,"url":"javascript:alert(1)",` +
+			`"comments":{"nodes":[{"id":"C1","url":"file:///etc/passwd","body":"x"}]},` +
+			`"last":{"nodes":[{"commit":{"statusCheckRollup":{"contexts":{"nodes":[` +
+			`{"__typename":"CheckRun","name":"a","status":"COMPLETED","conclusion":"FAILURE","detailsUrl":"javascript:alert(1)"},` +
+			`{"__typename":"StatusContext","context":"b","state":"FAILURE","targetUrl":"file:///tmp/x"},` +
+			`{"__typename":"CheckRun","name":"c","status":"COMPLETED","conclusion":"SUCCESS","detailsUrl":"https://ci.example/1"}]}}}}]}}}}}`))
+	})
+	p, err := f.client().Pull(t.Context(), repo, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.URL != "" || p.Conversation[0].URL != "" || p.Runs[0].URL != "" || p.Runs[1].URL != "" || p.Runs[2].URL != "https://ci.example/1" {
+		t.Fatalf("%q %q %+v", p.URL, p.Conversation[0].URL, p.Runs)
+	}
+}
