@@ -16,6 +16,14 @@ import (
 type Dialect struct {
 	// InitMeta goes in initialize's client capabilities, as _meta.
 	InitMeta map[string]any
+	// SessionMeta goes in session/new's, session/load's and session/fork's
+	// _meta.
+	SessionMeta map[string]any
+	// TurnDone says a usage update reports the end of the running turn's
+	// own work: an agent that holds the prompt open for subagents it left
+	// running in the background (Claude) answers it only once they end,
+	// so the chat counts as idle from here while one runs.
+	TurnDone func(*acp.UsageUpdate) bool
 	// ForkAt, given the agent's initialize answer, returns session/fork's
 	// _meta to fork a session at one of the agent's messages (its ACP
 	// messageId), the message included; nil when the agent can't.

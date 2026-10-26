@@ -137,11 +137,32 @@ func (c *chat) startLocked(prompt []acp.ContentBlock) {
 		c.noticeLocked("error", "The agent isn't running; send the message again to reopen the chat.")
 		return
 	}
-	sent := make(chan struct{})
-	c.busy, c.started, c.done, c.sent, c.held = true, time.Now(), make(chan struct{}), sent, false
+	sent, done := make(chan struct{}), make(chan struct{})
+	c.busy, c.started, c.done, c.sent, c.held = true, time.Now(), done, sent, false
+	c.released, c.steered, c.turnFrom, c.stopped = false, 0, len(c.items), false
 	c.statusChangedLocked()
 	c.logLocked().Info("turn started", "queued", len(c.queue))
-	go c.run(c.agent, &acp.PromptRequest{SessionID: acp.SessionID(c.sid), Prompt: prompt}, sent)
+	go c.run(c.agent, &acp.PromptRequest{SessionID: acp.SessionID(c.sid), Prompt: prompt}, sent, done)
+}
+
+// releaseLocked ends the running turn for the chat while the agent still
+// holds its prompt open for subagents the turn left running in the
+// background (see Dialect.TurnDone): the chat is idle, a message goes as
+// the next prompt (which the agent takes at once, answering the held one),
+// and the subagents' steps and the agent's answer to their reports come as
+// its own work. The held prompt's answer then changes nothing (run).
+func (c *chat) releaseLocked() {
+	c.logLocked().Info("turn's work ended", "took", time.Since(c.started).Round(time.Millisecond), "held_for", "background subagents")
+	c.released, c.busy, c.started = true, false, time.Time{}
+	close(c.done)
+	c.statusChangedLocked()
+	c.deliverLocked()
+}
+
+// backgroundLocked says a subagent the agent started (since item from)
+// runs on in the background.
+func (c *chat) backgroundLocked(from int) bool {
+	return slices.ContainsFunc(c.items[min(from, len(c.items)):], func(it model.Item) bool { return it.Subagent != nil && it.Subagent.State == "running" })
 }
 
 // blocks makes a message the agent's content: the text, links to the files
@@ -184,7 +205,7 @@ func title(prompt string) string {
 }
 
 //nolint:contextcheck // a turn outlives the request that started it
-func (c *chat) run(agent Agent, req *acp.PromptRequest, sent chan struct{}) {
+func (c *chat) run(agent Agent, req *acp.PromptRequest, sent, done chan struct{}) {
 	wait, err := agent.StartPrompt(context.Background(), req)
 	close(sent)
 	var resp *acp.PromptResponse
@@ -193,6 +214,11 @@ func (c *chat) run(agent Agent, req *acp.PromptRequest, sent chan struct{}) {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if c.done != done || c.released { // released: its end was the chat's already
+		c.released = c.released && c.done != done
+		c.logLocked().Info("held prompt answered", "err", err)
+		return
+	}
 	if log := c.logLocked().With("took", time.Since(c.started).Round(time.Millisecond)); err != nil {
 		log.Warn("turn failed", "err", err)
 	} else {
@@ -264,10 +290,15 @@ func (c *chat) steerQueue(agent Agent, sid acp.SessionID) {
 		c.queueChangedLocked()
 		id := c.addLocked(userItem(m))
 		blocks := c.blocks(m)
-		// The agent's updates may come before its answer: not under the lock.
+		// The agent's updates may come before its answer: not under the lock;
+		// counted before, as they may be the result of the work it cuts short.
+		c.steered++
 		c.mu.Unlock()
 		taken, err := agent.Steer(context.Background(), sid, blocks)
 		c.mu.Lock()
+		if !taken {
+			c.steered = max(c.steered-1, 0)
+		}
 		switch {
 		case taken:
 			continue

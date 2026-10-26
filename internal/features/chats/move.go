@@ -43,6 +43,8 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 		err = errors.New("the chat is busy; move it once the turn has ended")
 	case c.ownTurn:
 		err = errors.New("the agent is working on its own (a background task ended); move the chat once it's done")
+	case c.backgroundLocked(0):
+		err = errors.New("a subagent is still running in the background, and moving would stop it; move the chat once it's done")
 	}
 	if err != nil || from == folder && !worktree {
 		c.mu.Unlock()
@@ -70,7 +72,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 	if err == nil {
 		c.mu.Lock()
 		old := c.agent
-		c.orphanLocked() // what ran on the old agent ends with it
+		c.orphanLocked(true) // what ran on the old agent ends with it
 		s.useLocked(c, o)
 		c.saveLocked(func(s *model.Session) {
 			if !fresh { // an empty session is just dropped, not something the chat had

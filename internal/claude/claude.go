@@ -81,6 +81,24 @@ func SignedIn(run func(args ...string) ([]byte, error)) string {
 // subagent's text and thinking too.
 var InitMeta = map[string]any{"subagent-transcript": true}
 
+// SessionMeta is the session requests' _meta: Nushi declares the host
+// option perTaskStopAffordance, as Claude Code's terminal has it, so that
+// stopping a turn (session/cancel) stops only the turn. Without it Claude
+// Code's interrupt kills the background subagents too, which no update
+// then tells.
+var SessionMeta = map[string]any{"claudeCode": map[string]any{"options": map[string]any{"perTaskStopAffordance": true}}}
+
+// TurnDone says a usage update is the result of the user's turn: the one
+// with the cost, from a model cycle the user started
+// (`_claude/origin.kind` "human", not a task notification or a
+// subagent's report). The adapter answers the turn's prompt only once the
+// background subagents the turn started have ended, and their reports
+// have been answered.
+func TurnDone(u *acp.UsageUpdate) bool {
+	origin, _ := u.Meta["_claude/origin"].(map[string]any)
+	return u.Cost != nil && origin["kind"] == "human"
+}
+
 // ForkAt says how to fork a session at a message, if the agent is the
 // adapter. ACP's session/fork copies a whole conversation; the adapter cuts
 // the copy after an agent message (its ACP messageId, the message included)
