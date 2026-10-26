@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"slices"
 
-	"github.com/afrase/nushi/internal/atomicfile"
 	"github.com/afrase/nushi/internal/git"
+	"github.com/afrase/nushi/internal/jsonsettings"
 )
 
 // A .mcp.json server is approved or rejected per project through two
@@ -130,7 +130,7 @@ func EditLocal(ctx context.Context, folder string, change func(settings map[stri
 			return fmt.Errorf("%s is a symlink; not changing it", p)
 		}
 	}
-	created, err := edit(path, change)
+	created, err := jsonsettings.Edit(path, change)
 	if err != nil {
 		return err
 	}
@@ -149,37 +149,6 @@ func EditUser(change func(settings map[string]json.RawMessage) error) error {
 	if resolved, err := filepath.EvalSymlinks(path); err == nil {
 		path = resolved
 	}
-	_, err := edit(path, change)
+	_, err := jsonsettings.Edit(path, change)
 	return err
-}
-
-// edit reads the settings file at path, changes it and writes it back.
-func edit(path string, change func(map[string]json.RawMessage) error) (created bool, err error) {
-	settings := map[string]json.RawMessage{}
-	b, err := ReadFile(path)
-	created = os.IsNotExist(err)
-	if err == nil {
-		err = json.Unmarshal(b, &settings)
-	}
-	if err != nil && !created {
-		return false, fmt.Errorf("reading %s: %w", path, err)
-	}
-	if settings == nil { // the file holds null
-		settings = map[string]json.RawMessage{}
-	}
-	if err := change(settings); err != nil {
-		return false, fmt.Errorf("%s: %w", path, err)
-	}
-	out, err := json.MarshalIndent(settings, "", "  ")
-	if err != nil {
-		return false, err
-	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil { //nolint:gosec // a .claude folder, as Claude makes it
-		return false, err
-	}
-	mode := os.FileMode(0o644)
-	if fi, err := os.Lstat(path); err == nil {
-		mode = fi.Mode().Perm()
-	}
-	return created, atomicfile.Replace(path, append(out, '\n'), mode)
 }

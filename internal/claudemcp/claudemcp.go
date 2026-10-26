@@ -16,16 +16,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
-	"syscall"
 	"time"
 
+	"github.com/afrase/nushi/internal/jsonsettings"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -139,27 +138,10 @@ func readJSON(path string, v any) error {
 	return nil
 }
 
-// maxFile is the largest of Claude's files Nushi reads.
-const maxFile = 64 << 20
-
 // ReadFile reads one of Claude's files as Claude would: only a regular file
 // (a link is followed), of up to 64 MiB. A repository could bring a link to
 // /dev/zero, or a fifo, in the place of one.
-func ReadFile(path string) ([]byte, error) {
-	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0) //nolint:gosec // Claude's settings and .mcp.json, which the trust card shows; a fifo doesn't wait
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close() //nolint:errcheck // read-only
-	if fi, err := f.Stat(); err != nil || !fi.Mode().IsRegular() || fi.Size() > maxFile {
-		return nil, fmt.Errorf("%s isn't a regular file of at most 64 MiB", path)
-	}
-	b, err := io.ReadAll(io.LimitReader(f, maxFile+1))
-	if err == nil && len(b) > maxFile {
-		err = fmt.Errorf("%s grew past 64 MiB", path)
-	}
-	return b, err
-}
+func ReadFile(path string) ([]byte, error) { return jsonsettings.ReadFile(path) }
 
 func add(out []model.MCPServer, s servers, scope, source string) []model.MCPServer {
 	start := len(out)
