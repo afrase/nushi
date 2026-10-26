@@ -13,6 +13,11 @@ RELEASE := app/build/macos/Build/Products/Release/Nushi.app
 HELPER := $(RELEASE)/Contents/Helpers/Nushi Daemon.app
 # local.mk (not committed) can set COPY_TO=<folder>: make install also copies the app there.
 -include local.mk
+# The identity package signs with: NUSHI_SIGN, else the first Apple Development
+# certificate in the keychain (Xcode › Settings › Accounts › Manage
+# Certificates), else ad hoc ("-"). A real identity keeps the app the same app
+# to macOS across builds, so the keychain asks once, not after every install.
+SIGN := $(or $(NUSHI_SIGN),$(shell security find-identity -v -p codesigning 2>/dev/null | grep -m1 -o '"Apple Development: [^"]*"' | tr -d '"'),-)
 
 .PHONY: run daemon stop app package install gen test lint check lines relay icons adapters
 
@@ -32,7 +37,7 @@ app:
 	cd app && flutter run -d macos
 
 # A release app with nushid inside, in a background-only helper app
-# (ADR 0036), ad-hoc signed. The app starts it when no daemon is running,
+# (ADR 0036), signed with $(SIGN). The app starts it when no daemon is running,
 # and launchd at login through start-daemon when Start at login is on.
 package:
 	cd app && flutter build macos --release
@@ -44,8 +49,8 @@ package:
 	mkdir -p "$(RELEASE)/Contents/Library/LaunchAgents"
 	cp app/macos/Daemon/com.nushihq.Nushi.daemon.plist "$(RELEASE)/Contents/Library/LaunchAgents/"
 	cp app/macos/Daemon/start-daemon "$(RELEASE)/Contents/Resources/"
-	codesign --force --sign - "$(HELPER)"
-	codesign --force --deep --sign - "$(RELEASE)"
+	codesign --force --timestamp=none --sign "$(SIGN)" "$(HELPER)"
+	codesign --force --deep --timestamp=none --sign "$(SIGN)" "$(RELEASE)"
 	tools/check-bundle.sh "$(RELEASE)"
 
 install: package
