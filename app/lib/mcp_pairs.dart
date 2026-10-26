@@ -101,8 +101,6 @@ class PairRows extends StatelessWidget {
         Button(
           label: 'Add',
           icon: Icons.add,
-          kind: ButtonKind.ghost,
-          height: 22,
           onPressed: () {
             pairs.add();
             changed();

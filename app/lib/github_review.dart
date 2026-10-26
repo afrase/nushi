@@ -148,7 +148,6 @@ class _ReviewDialogState extends State<_ReviewDialog> {
       [
         Button(
           label: 'Cancel',
-          kind: ButtonKind.ghost,
           onPressed: _busy ? null : () => Navigator.pop(context, false),
         ),
         Button(

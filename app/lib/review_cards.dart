@@ -164,11 +164,7 @@ class _CommentBoxState extends State<CommentBox> {
             mainAxisAlignment: MainAxisAlignment.end,
             spacing: 6,
             children: [
-              Button(
-                label: 'Cancel',
-                kind: ButtonKind.ghost,
-                onPressed: widget.onCancel,
-              ),
+              Button(label: 'Cancel', onPressed: widget.onCancel),
               Button(
                 label: widget.editing ? 'Save' : 'Comment',
                 kind: ButtonKind.primary,

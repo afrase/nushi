@@ -130,8 +130,6 @@ class _RemoteSectionState extends State<RemoteSection> {
                   ),
                   Button(
                     label: 'Revoke',
-                    kind: ButtonKind.ghost,
-                    height: 22,
                     onPressed: () => tryOrShow(
                       context,
                       () => widget.client.revokeDevice(
@@ -232,7 +230,6 @@ class _Pairing extends StatelessWidget {
         final p = r?.hasPairing() ?? false ? r!.pairing : null;
         final close = Button(
           label: 'Close',
-          kind: ButtonKind.ghost,
           onPressed: () => Navigator.pop(context),
         );
         if (p == null || p.code.isEmpty && qr.isEmpty) {
@@ -300,7 +297,6 @@ class _Pairing extends StatelessWidget {
           [
             Button(
               label: 'Deny',
-              kind: ButtonKind.ghost,
               onPressed: () => answer(p.code, allow: false),
             ),
             Button(

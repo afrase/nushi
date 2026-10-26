@@ -359,8 +359,6 @@ class _ReplacedState extends State<_Replaced> {
           ),
           Button(
             label: _restarting ? 'Restarting…' : 'Restart daemon',
-            kind: ButtonKind.ghost,
-            height: 24,
             onPressed: _restarting
                 ? null
                 : () async {

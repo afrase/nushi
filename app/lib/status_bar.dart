@@ -179,8 +179,6 @@ class _MemoryButton extends StatelessWidget {
                       alignment: Alignment.centerRight,
                       child: Button(
                         label: 'Sleep',
-                        kind: ButtonKind.ghost,
-                        height: 22,
                         onPressed: () => sleepChat(
                           context,
                           chat,

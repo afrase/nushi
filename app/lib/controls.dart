@@ -1,0 +1,431 @@
+import 'package:flutter/material.dart';
+
+import 'package:nushi/menu.dart';
+import 'package:nushi/theme/theme.dart';
+
+// The app's controls: one look for each kind of thing that can be
+// pressed, so what's clickable looks it. [Button] for an action,
+// [MenuField] for a value picked from a list, [LinkText] for going
+// somewhere from within text, [IconTap] where an icon alone is clear,
+// [DragGrip] where something can be moved. Plain text is never clickable;
+// all of these show the pointing hand.
+
+/// A button's and a field's height.
+const controlHeight = 26.0;
+
+/// How a control is, to draw it: under the pointer, focused from the
+/// keyboard, pressable at all.
+typedef ControlLook = ({bool hover, bool focus, bool enabled});
+
+/// Hover, keyboard focus and press for a control that [builder] draws:
+/// the pointing hand, a click or Enter or Space press it. Without [onTap]
+/// it's disabled: no hand, no focus.
+class Pressable extends StatefulWidget {
+  const new({
+    required this.onTap,
+    required this.builder,
+    super.key,
+    this.tooltip = '',
+    this.autofocus = false,
+  });
+
+  final VoidCallback? onTap;
+  final Widget Function(BuildContext context, ControlLook look) builder;
+  final String tooltip;
+  final bool autofocus;
+
+  @override
+  State<Pressable> createState() => _PressableState();
+}
+
+class _PressableState extends State<Pressable> {
+  bool _hover = false;
+  bool _focus = false;
+
+  void _set(bool hover, bool focus) {
+    if (mounted && (hover != _hover || focus != _focus)) {
+      setState(() {
+        _hover = hover;
+        _focus = focus;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final on = widget.onTap != null;
+    final control = FocusableActionDetector(
+      enabled: on,
+      autofocus: widget.autofocus,
+      mouseCursor: on ? SystemMouseCursors.click : MouseCursor.defer,
+      actions: {
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (_) => widget.onTap?.call(),
+        ),
+      },
+      onShowHoverHighlight: (v) => _set(v, _focus),
+      onShowFocusHighlight: (v) => _set(_hover, v),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        child: widget.builder(context, (
+          hover: _hover && on,
+          focus: _focus && on,
+          enabled: on,
+        )),
+      ),
+    );
+    return widget.tooltip.isEmpty
+        ? control
+        : Tooltip(message: widget.tooltip, child: control);
+  }
+}
+
+/// The ring a focused control wears, over its border.
+BoxDecoration? focusRing(Tokens t, ControlLook look) => look.focus
+    ? BoxDecoration(
+        border: Border.all(color: t.focus, width: 2),
+        borderRadius: BorderRadius.circular(NushiTheme.control),
+      )
+    : null;
+
+/// [child] faded while [look] is disabled.
+Widget _faded(ControlLook look, Widget child) =>
+    look.enabled ? child : Opacity(opacity: 0.45, child: child);
+
+enum ButtonKind {
+  /// The one main action of a dialog or card: accent fill.
+  primary,
+
+  /// Every other action: outlined.
+  secondary,
+
+  /// One that deletes or loses something: red text, outlined.
+  destructive,
+}
+
+/// A button: [label], an optional leading [icon], a shortcut [hint] after
+/// the label. Every button has the same height and padding.
+class Button extends StatelessWidget {
+  const new({
+    required this.label,
+    required this.onPressed,
+    super.key,
+    this.kind = ButtonKind.secondary,
+    this.icon,
+    this.hint,
+    this.autofocus = false,
+    this.tooltip = '',
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final ButtonKind kind;
+  final IconData? icon;
+  final String? hint;
+  final bool autofocus;
+  final String tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    final primary = kind == ButtonKind.primary;
+    final fg = switch (kind) {
+      ButtonKind.primary => t.onAccent,
+      ButtonKind.secondary => t.text,
+      ButtonKind.destructive => t.crashed,
+    };
+    final style = theme.ui(fg, weight: primary ? FontWeight.w500 : null);
+    return Pressable(
+      onTap: onPressed,
+      autofocus: autofocus,
+      tooltip: tooltip,
+      builder: (context, look) => _faded(
+        look,
+        Container(
+          height: controlHeight,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: primary
+                ? (look.hover
+                      ? Color.alphaBlend(
+                          t.onAccent.withValues(alpha: 0.12),
+                          t.accent,
+                        )
+                      : t.accent)
+                : (look.hover
+                      ? Color.alphaBlend(t.hover, t.fieldFill)
+                      : t.fieldFill),
+            border: primary
+                ? null
+                : Border.all(
+                    color: look.hover ? t.fieldBorderHover : t.fieldBorder,
+                  ),
+            borderRadius: BorderRadius.circular(NushiTheme.control),
+          ),
+          foregroundDecoration: focusRing(t, look),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 14, color: fg),
+                const SizedBox(width: 6),
+              ],
+              Flexible(
+                child: Text(
+                  label,
+                  style: style,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (hint != null) ...[
+                const SizedBox(width: 6),
+                keyHint(
+                  context,
+                  hint!,
+                  color: primary ? t.onAccent : t.textMuted,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A value picked from a list ([entries]) that looks it: [label] and a ▾
+/// in a bordered box, the whole box the target. [compact], for a picker in
+/// a header or a row ("Only me ▾"), drops the box but keeps the ▾ and a
+/// tint under the pointer. With no [entries] it's disabled.
+class MenuField extends StatelessWidget {
+  const new({
+    required this.label,
+    required this.entries,
+    super.key,
+    this.compact = false,
+    this.tooltip = '',
+    this.digits = false,
+    this.onClose,
+  });
+
+  /// The value, usually a [Text]; styled as a field's unless it says.
+  final Widget label;
+  final List<MenuEntry> entries;
+  final bool compact;
+  final String tooltip;
+  final bool digits;
+  final VoidCallback? onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    return Menu(
+      entries: entries,
+      digits: digits,
+      onClose: onClose,
+      builder: (context, open) => Pressable(
+        onTap: entries.isEmpty ? null : open,
+        tooltip: tooltip,
+        builder: (context, look) {
+          final face = Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: DefaultTextStyle(
+                  style: compact
+                      ? theme.ui(t.textSecondary, size: 12)
+                      : theme.ui(t.text),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  child: label,
+                ),
+              ),
+              SizedBox(width: compact ? 1 : 6),
+              Icon(
+                Icons.keyboard_arrow_down,
+                size: compact ? 14 : 15,
+                color: t.textSecondary,
+              ),
+            ],
+          );
+          return _faded(
+            look,
+            Container(
+              height: compact ? null : controlHeight,
+              padding: compact
+                  ? const EdgeInsets.fromLTRB(5, 1, 3, 1)
+                  : const EdgeInsets.fromLTRB(8, 0, 5, 0),
+              decoration: BoxDecoration(
+                color: compact
+                    ? (look.hover ? t.hover : null)
+                    : (look.hover
+                          ? Color.alphaBlend(t.hover, t.fieldFill)
+                          : t.fieldFill),
+                border: compact
+                    ? null
+                    : Border.all(
+                        color: look.hover ? t.fieldBorderHover : t.fieldBorder,
+                      ),
+                borderRadius: BorderRadius.circular(NushiTheme.control),
+              ),
+              foregroundDecoration: focusRing(t, look),
+              child: face,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// An icon that opens a menu ("More": ⋯).
+class MenuIcon extends StatelessWidget {
+  const new(
+    this.icon, {
+    required this.tooltip,
+    required this.entries,
+    super.key,
+    this.size = 16,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final List<MenuEntry> entries;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => Menu(
+    entries: entries,
+    builder: (context, open) => IconTap(
+      icon,
+      tooltip: tooltip,
+      size: size,
+      onTap: entries.isEmpty ? null : open,
+    ),
+  );
+}
+
+/// A link inside text or beside it, to go somewhere ("Settings ›
+/// Agents"): the link color, underlined under the pointer or when focused.
+class LinkText extends StatelessWidget {
+  const new(
+    this.text, {
+    required this.onTap,
+    super.key,
+    this.size = 13,
+    this.mono = false,
+    this.tooltip = '',
+  });
+
+  final String text;
+  final VoidCallback? onTap;
+  final double size;
+  final bool mono;
+  final String tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    return Pressable(
+      onTap: onTap,
+      tooltip: tooltip,
+      builder: (context, look) {
+        final color = look.enabled ? t.link : t.textMuted;
+        final style = mono
+            ? theme.code(color, size: size)
+            : theme.ui(color, size: size);
+        return Text(
+          text,
+          style: style.copyWith(
+            decoration: look.hover || look.focus
+                ? TextDecoration.underline
+                : null,
+            decorationColor: color,
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// A small icon button: a tint under the pointer and its [tooltip]. Only
+/// where the icon alone says what it does.
+class IconTap extends StatelessWidget {
+  const new(
+    this.icon, {
+    required this.tooltip,
+    required this.onTap,
+    super.key,
+    this.size = 16,
+    this.color,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onTap;
+  final double size;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = NushiTheme.of(context).t;
+    return Pressable(
+      onTap: onTap,
+      tooltip: tooltip,
+      builder: (context, look) => Container(
+        padding: const EdgeInsets.all(5),
+        decoration: BoxDecoration(
+          color: look.hover ? t.hover : null,
+          borderRadius: BorderRadius.circular(NushiTheme.control),
+        ),
+        foregroundDecoration: focusRing(t, look),
+        child: Icon(
+          icon,
+          size: size,
+          color: look.enabled ? color ?? t.textSecondary : t.textMuted,
+        ),
+      ),
+    );
+  }
+}
+
+/// Six dots in two columns of three: what can be dragged by here.
+class DragGrip extends StatelessWidget {
+  const new({super.key});
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+    size: const Size(8, 12),
+    painter: _Dots(NushiTheme.of(context).t.grip),
+  );
+}
+
+class _Dots extends CustomPainter {
+  new(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = color;
+    for (final x in [2.0, 6.0]) {
+      for (final y in [2.0, 6.0, 10.0]) {
+        canvas.drawCircle(Offset(x, y), 1.1, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_Dots old) => old.color != color;
+}
+
+/// A shortcut in small monospace (`⏎`).
+Widget keyHint(BuildContext context, String keys, {Color? color}) {
+  final theme = NushiTheme.of(context);
+  return Text(keys, style: theme.code(color ?? theme.t.textMuted, size: 11));
+}

@@ -133,11 +133,7 @@ class JiraSources extends StatelessWidget {
                 if (jql.isNotEmpty)
                   Align(
                     alignment: Alignment.centerRight,
-                    child: Button(
-                      label: 'Save…',
-                      kind: ButtonKind.ghost,
-                      onPressed: onSave,
-                    ),
+                    child: Button(label: 'Save…', onPressed: onSave),
                   ),
               ],
             ),

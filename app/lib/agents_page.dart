@@ -155,7 +155,6 @@ class AgentRow extends StatelessWidget {
         Button(
           label: 'Get it',
           icon: Icons.open_in_new,
-          kind: ButtonKind.ghost,
           onPressed: () => launchUrl(Uri.parse(agent.page)),
         ),
       ];
@@ -175,7 +174,6 @@ class AgentRow extends StatelessWidget {
       if (!setUp)
         Button(
           label: onRemove == null ? 'Removing…' : 'Remove',
-          kind: ButtonKind.ghost,
           onPressed: onRemove,
         ),
       if (setUp || update) ...[
@@ -293,7 +291,6 @@ class _SetUpState extends State<_SetUp> {
         [
           Button(
             label: 'Cancel',
-            kind: ButtonKind.ghost,
             onPressed: _working ? null : () => Navigator.pop(context),
           ),
           Button(

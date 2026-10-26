@@ -248,12 +248,7 @@ class _HostRow extends StatelessWidget {
               padding: const EdgeInsets.only(right: 6),
               child: Button(label: 'Allow…', onPressed: onAllow),
             ),
-          if (h.pasted)
-            Button(
-              label: 'Remove',
-              kind: ButtonKind.ghost,
-              onPressed: onRemove,
-            ),
+          if (h.pasted) Button(label: 'Remove', onPressed: onRemove),
         ],
       ),
     );
@@ -377,11 +372,7 @@ class _AddTokenState extends State<_AddToken> {
               ),
               const Spacer(),
               if (widget.onCancel case final cancel?)
-                Button(
-                  label: 'Cancel',
-                  kind: ButtonKind.ghost,
-                  onPressed: _busy ? null : cancel,
-                ),
+                Button(label: 'Cancel', onPressed: _busy ? null : cancel),
               const SizedBox(width: 6),
               Button(
                 label: _busy ? 'Checking…' : 'Add',

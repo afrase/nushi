@@ -47,6 +47,10 @@ class Tokens {
     required this.textMuted,
     required this.link,
     required this.onAccent,
+    required this.fieldFill,
+    required this.fieldBorder,
+    required this.fieldBorderHover,
+    required this.grip,
     required this.accent,
     required this.accentSoft,
     required this.running,
@@ -101,6 +105,14 @@ class Tokens {
   final Color textMuted;
   final Color link;
   final Color onAccent;
+
+  // Controls (`controls.dart`): a field's box (a menu's value, a button's
+  // outline), darker under the pointer, readable on the page and on a
+  // raised panel or dialog alike; a drag grip's dots.
+  final Color fieldFill;
+  final Color fieldBorder;
+  final Color fieldBorderHover;
+  final Color grip;
 
   final Color accent;
   final Color accentSoft;
@@ -172,6 +184,10 @@ class Tokens {
     textMuted: Color(0xFF5D6170),
     link: Color(0xFF2A5CC8),
     onAccent: Color(0xFFFFFFFF),
+    fieldFill: Color(0xFFFFFFFF),
+    fieldBorder: Color(0xFFD3D6DE),
+    fieldBorderHover: Color(0xFFADB1BD),
+    grip: Color(0xFF8A8E9B),
     accent: Color(0xFF2F6AE0),
     accentSoft: Color(0xFFE5EDFC),
     running: Color(0xFF2A5CC8),
@@ -239,6 +255,10 @@ class Tokens {
     textMuted: Color(0xFFA2A6AE),
     link: Color(0xFF7AA3F9),
     onAccent: Color(0xFFFFFFFF),
+    fieldFill: Color(0xFF313338),
+    fieldBorder: Color(0xFF4A4D53),
+    fieldBorderHover: Color(0xFF686B72),
+    grip: Color(0xFF80848C),
     accent: Color(0xFF2F6AE0),
     accentSoft: Color(0xFF26334F),
     running: Color(0xFF7AA3F9),

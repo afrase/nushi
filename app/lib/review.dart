@@ -371,11 +371,7 @@ class _SendDialogState extends State<_SendDialog> {
         ],
       ),
       [
-        Button(
-          label: 'Cancel',
-          kind: ButtonKind.ghost,
-          onPressed: () => Navigator.pop(context),
-        ),
+        Button(label: 'Cancel', onPressed: () => Navigator.pop(context)),
         Button(
           label: 'Send',
           kind: ButtonKind.primary,

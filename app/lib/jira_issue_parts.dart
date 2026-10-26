@@ -167,11 +167,7 @@ class _FieldsFormState extends State<_FieldsForm> {
         ),
       ),
       [
-        Button(
-          label: 'Cancel',
-          kind: ButtonKind.ghost,
-          onPressed: () => Navigator.pop(context),
-        ),
+        Button(label: 'Cancel', onPressed: () => Navigator.pop(context)),
         Button(
           label: widget.transition.name,
           kind: ButtonKind.primary,

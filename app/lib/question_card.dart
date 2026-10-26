@@ -216,12 +216,7 @@ class _QuestionCardState extends State<QuestionCard> {
                     style: theme.ui(t.text, weight: FontWeight.w600),
                   ),
                 ),
-                Button(
-                  label: 'Skip',
-                  kind: ButtonKind.ghost,
-                  height: 22,
-                  onPressed: () => _send(null),
-                ),
+                Button(label: 'Skip', onPressed: () => _send(null)),
               ],
             ),
             if (_many)

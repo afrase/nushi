@@ -289,14 +289,13 @@ class _DeleteDialogState extends State<_DeleteDialog> {
       [
         Button(
           label: 'Cancel',
-          kind: ButtonKind.ghost,
           onPressed: _deleting ? null : () => Navigator.pop(context),
         ),
         FutureBuilder(
           future: _plan,
           builder: (context, snap) => Button(
             label: _deleting ? 'Deleting…' : 'Delete',
-            kind: ButtonKind.danger,
+            kind: ButtonKind.destructive,
             autofocus: true,
             onPressed: snap.hasData && !_deleting ? _delete : null,
           ),
