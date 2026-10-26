@@ -7,6 +7,7 @@ import 'package:nushi/agents_page.dart';
 import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_settings.dart';
 import 'package:nushi/jira_settings.dart';
 import 'package:nushi/login_item.dart';
 import 'package:nushi/logs_section.dart';
@@ -43,18 +44,21 @@ const settingsKey = SingleActivator(LogicalKeyboardKey.comma, meta: true);
 /// whether the daemon starts at login (the packaged app's, for the usual
 /// data folder). Agents ([agents] opens on it, or [agent], whose row it
 /// marks): the agents found, and their adapters. Jira ([jira]): the sites
-/// and their tokens.
+/// and their tokens. GitHub ([github]): the hosts and their tokens.
 Future<void> showSettings(
   BuildContext context,
   NushiServiceClient client, {
   bool agents = false,
   String? agent,
   bool jira = false,
+  bool github = false,
 }) => showDialog(
   context: context,
   builder: (_) => _Settings(
     client,
-    page: jira
+    page: github
+        ? _Page.github
+        : jira
         ? _Page.jira
         : agents || agent != null
         ? _Page.agents
@@ -63,7 +67,7 @@ Future<void> showSettings(
   ),
 );
 
-enum _Page { general, agents, jira }
+enum _Page { general, agents, jira, github }
 
 /// The choices for when idle chats sleep, in minutes; 0: never.
 const _sleepAfter = {
@@ -244,6 +248,7 @@ class _SettingsState extends State<_Settings> {
               (_Page.general, 'General'),
               (_Page.agents, 'Agents'),
               (_Page.jira, 'Jira'),
+              (_Page.github, 'GitHub'),
             ],
             onChanged: (v) => setState(() => _page = v),
           ),
@@ -253,6 +258,7 @@ class _SettingsState extends State<_Settings> {
             child: switch (_page) {
               _Page.agents => AgentsPage(widget.client, marked: widget.agent),
               _Page.jira => JiraPage(widget.client),
+              _Page.github => GitHubPage(widget.client),
               _Page.general => SingleChildScrollView(child: general),
             },
           ),
