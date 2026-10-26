@@ -107,6 +107,28 @@ List<String> findingIds(List<Finding> findings) {
   ];
 }
 
+/// The ids of the findings [items] showed as cards before [at] in the
+/// same turn (since the user's last message) and the same place (the
+/// transcript, or one subagent's steps): a ReportFindings call's, or a
+/// message's that held them as JSON.
+Set<String> findingsShownBefore(List<Item> items, int at) {
+  final parent = items[at].parent;
+  final out = <String>{};
+  for (var i = at - 1; i >= 0; i--) {
+    final it = items[i];
+    if (it.parent != parent) continue;
+    if (it.kind == ItemKind.ITEM_KIND_USER_MESSAGE) break;
+    if (it.hasFindings()) {
+      out.addAll(findingIds(it.findings.items));
+    } else if (it.kind == ItemKind.ITEM_KIND_AGENT_MESSAGE) {
+      if (findingsInText(it.text) case final f?) {
+        out.addAll(findingIds(f.findings.items));
+      }
+    }
+  }
+  return out;
+}
+
 /// FNV-1a, 32 bits, of [s]'s UTF-8, in hex.
 String _fnv(String s) {
   var h = 0x811c9dc5;

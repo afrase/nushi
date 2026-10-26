@@ -7,6 +7,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/findings.dart';
 import 'package:nushi/findings_card.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/items.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -213,6 +214,62 @@ void main() {
       findsWidgets,
     );
     expect(find.text('Hide JSON'), findsOneWidget);
+  });
+
+  testWidgets('findings a message repeats after their card show once', (
+    tester,
+  ) async {
+    final found = findingsInText(_message)!;
+    Item user(String id) =>
+        Item(id: id, kind: ItemKind.ITEM_KIND_USER_MESSAGE, text: 'review');
+    Item reported(String id) => Item(
+      id: id,
+      kind: ItemKind.ITEM_KIND_TOOL_CALL,
+      title: 'Report 2 findings',
+      findings: found.findings,
+    );
+    Item message(String id, [String text = _message]) =>
+        Item(id: id, kind: ItemKind.ITEM_KIND_AGENT_MESSAGE, text: text);
+    final d = await FakeDaemon(const []).connect(tester);
+    Future<void> show(List<Item> items) async {
+      final chat = ChatState('c', '/nowhere')..items.addAll(items);
+      await _pump(
+        tester,
+        Column(
+          children: [
+            for (final it in items)
+              ItemView(it, chat, d, live: false, still: false),
+          ],
+        ),
+        Tokens.dark,
+      );
+    }
+
+    // Reported, then printed too: one card, the message's words, the JSON
+    // folded.
+    await show([user('u1'), reported('r1'), message('m1')]);
+    expect(find.text('Review: 2 findings'), findsOneWidget);
+    expect(find.text('The findings above, again as JSON'), findsOneWidget);
+    expect(find.textContaining('Want me to fix them?'), findsOneWidget);
+    await tester.tap(find.text('Show JSON'));
+    await tester.pump();
+    expect(
+      find.textContaining('"failure_scenario"', findRichText: true),
+      findsWidgets,
+    );
+    // A review in another turn, or other findings, is a card of its own.
+    await show([user('u1'), reported('r1'), user('u2'), message('m2')]);
+    expect(find.text('Review: 2 findings'), findsNWidgets(2));
+    await show([
+      user('u1'),
+      reported('r1'),
+      message('m3', _message.replaceAll('index 1', 'index 2')),
+    ]);
+    expect(find.text('Review: 2 findings'), findsNWidgets(2));
+    // Printed twice as JSON: the second folds.
+    await show([user('u1'), message('m4'), message('m5')]);
+    expect(find.text('Review: 2 findings'), findsOneWidget);
+    d.dispose();
   });
 
   final twelve = [
