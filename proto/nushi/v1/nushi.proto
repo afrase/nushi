@@ -1695,12 +1695,17 @@ message ListJiraIssuesRequest {
   // "mine", "sprint", or "" for jql.
   string list = 2;
   string jql = 3;
+  // What the list showed last, kept by the daemon, without asking Jira:
+  // shown at once while the list is asked for (at_ms 0 when none).
+  bool cached = 4;
 }
 
 message ListJiraIssuesResponse {
   repeated JiraIssue issues = 1;
   // The sprint list's sprint ("" when the board has none active).
   string sprint = 2;
+  // When Jira said so.
+  int64 at_ms = 3;
 }
 
 message GetJiraJqlRequest {
@@ -1733,12 +1738,16 @@ message SuggestJiraJqlResponse {
 message GetJiraIssueRequest {
   string site = 1;
   string key = 2;
+  // As the issue showed last (ListJiraIssuesRequest.cached).
+  bool cached = 3;
 }
 
 message GetJiraIssueResponse {
   JiraIssue issue = 1;
   // What agents wrote to it through their tools, the latest last.
   repeated JiraWrite agent_writes = 2;
+  // When Jira said so (0 for a cached issue never kept).
+  int64 at_ms = 3;
 }
 
 // A write an agent made to an issue through its tools (ADR 0043).

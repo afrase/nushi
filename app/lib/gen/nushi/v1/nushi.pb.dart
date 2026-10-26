@@ -14759,11 +14759,13 @@ class ListJiraIssuesRequest extends $pb.GeneratedMessage {
     $core.String? site,
     $core.String? list,
     $core.String? jql,
+    $core.bool? cached,
   }) {
     final result = ListJiraIssuesRequest._();
     if (site != null) result.site = site;
     if (list != null) result.list = list;
     if (jql != null) result.jql = jql;
+    if (cached != null) result.cached = cached;
     return result;
   }
 
@@ -14783,6 +14785,7 @@ class ListJiraIssuesRequest extends $pb.GeneratedMessage {
     ..aOS(1, _omitFieldNames ? '' : 'site')
     ..aOS(2, _omitFieldNames ? '' : 'list')
     ..aOS(3, _omitFieldNames ? '' : 'jql')
+    ..aOB(4, _omitFieldNames ? '' : 'cached')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -14836,16 +14839,29 @@ class ListJiraIssuesRequest extends $pb.GeneratedMessage {
   $core.bool hasJql() => $_has(2);
   @$pb.TagNumber(3)
   void clearJql() => $_clearField(3);
+
+  /// What the list showed last, kept by the daemon, without asking Jira:
+  /// shown at once while the list is asked for (at_ms 0 when none).
+  @$pb.TagNumber(4)
+  $core.bool get cached => $_getBF(3);
+  @$pb.TagNumber(4)
+  set cached($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasCached() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearCached() => $_clearField(4);
 }
 
 class ListJiraIssuesResponse extends $pb.GeneratedMessage {
   factory ListJiraIssuesResponse({
     $core.Iterable<JiraIssue>? issues,
     $core.String? sprint,
+    $fixnum.Int64? atMs,
   }) {
     final result = ListJiraIssuesResponse._();
     if (issues != null) result.issues.addAll(issues);
     if (sprint != null) result.sprint = sprint;
+    if (atMs != null) result.atMs = atMs;
     return result;
   }
 
@@ -14865,6 +14881,7 @@ class ListJiraIssuesResponse extends $pb.GeneratedMessage {
     ..pPM<JiraIssue>(1, _omitFieldNames ? '' : 'issues',
         subBuilder: JiraIssue.$_createMessage)
     ..aOS(2, _omitFieldNames ? '' : 'sprint')
+    ..aInt64(3, _omitFieldNames ? '' : 'atMs')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -14903,6 +14920,16 @@ class ListJiraIssuesResponse extends $pb.GeneratedMessage {
   $core.bool hasSprint() => $_has(1);
   @$pb.TagNumber(2)
   void clearSprint() => $_clearField(2);
+
+  /// When Jira said so.
+  @$pb.TagNumber(3)
+  $fixnum.Int64 get atMs => $_getI64(2);
+  @$pb.TagNumber(3)
+  set atMs($fixnum.Int64 value) => $_setInt64(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasAtMs() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearAtMs() => $_clearField(3);
 }
 
 class GetJiraJqlRequest extends $pb.GeneratedMessage {
@@ -15243,10 +15270,12 @@ class GetJiraIssueRequest extends $pb.GeneratedMessage {
   factory GetJiraIssueRequest({
     $core.String? site,
     $core.String? key,
+    $core.bool? cached,
   }) {
     final result = GetJiraIssueRequest._();
     if (site != null) result.site = site;
     if (key != null) result.key = key;
+    if (cached != null) result.cached = cached;
     return result;
   }
 
@@ -15265,6 +15294,7 @@ class GetJiraIssueRequest extends $pb.GeneratedMessage {
       createEmptyInstance: GetJiraIssueRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'site')
     ..aOS(2, _omitFieldNames ? '' : 'key')
+    ..aOB(3, _omitFieldNames ? '' : 'cached')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -15307,16 +15337,28 @@ class GetJiraIssueRequest extends $pb.GeneratedMessage {
   $core.bool hasKey() => $_has(1);
   @$pb.TagNumber(2)
   void clearKey() => $_clearField(2);
+
+  /// As the issue showed last (ListJiraIssuesRequest.cached).
+  @$pb.TagNumber(3)
+  $core.bool get cached => $_getBF(2);
+  @$pb.TagNumber(3)
+  set cached($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasCached() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearCached() => $_clearField(3);
 }
 
 class GetJiraIssueResponse extends $pb.GeneratedMessage {
   factory GetJiraIssueResponse({
     JiraIssue? issue,
     $core.Iterable<JiraWrite>? agentWrites,
+    $fixnum.Int64? atMs,
   }) {
     final result = GetJiraIssueResponse._();
     if (issue != null) result.issue = issue;
     if (agentWrites != null) result.agentWrites.addAll(agentWrites);
+    if (atMs != null) result.atMs = atMs;
     return result;
   }
 
@@ -15337,6 +15379,7 @@ class GetJiraIssueResponse extends $pb.GeneratedMessage {
         subBuilder: JiraIssue.$_createMessage)
     ..pPM<JiraWrite>(2, _omitFieldNames ? '' : 'agentWrites',
         subBuilder: JiraWrite.$_createMessage)
+    ..aInt64(3, _omitFieldNames ? '' : 'atMs')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -15376,6 +15419,16 @@ class GetJiraIssueResponse extends $pb.GeneratedMessage {
   /// What agents wrote to it through their tools, the latest last.
   @$pb.TagNumber(2)
   $pb.PbList<JiraWrite> get agentWrites => $_getList(1);
+
+  /// When Jira said so (0 for a cached issue never kept).
+  @$pb.TagNumber(3)
+  $fixnum.Int64 get atMs => $_getI64(2);
+  @$pb.TagNumber(3)
+  set atMs($fixnum.Int64 value) => $_setInt64(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasAtMs() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearAtMs() => $_clearField(3);
 }
 
 /// A write an agent made to an issue through its tools (ADR 0043).

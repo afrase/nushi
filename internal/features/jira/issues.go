@@ -39,6 +39,7 @@ func (s *Service) List(ctx context.Context, id, list, jql string) (List, error) 
 	if err != nil {
 		return List{}, err
 	}
+	key := listKey(site, list, jql)
 	var out List
 	switch list {
 	case Mine:
@@ -47,12 +48,17 @@ func (s *Service) List(ctx context.Context, id, list, jql string) (List, error) 
 		if site.Board == 0 {
 			return List{}, errors.New("pick the board whose sprint to show")
 		}
-		return s.sprint(ctx, c, id, site.Board)
+		out, err = s.sprint(ctx, c, id, site.Board)
 	}
-	if strings.TrimSpace(jql) == "" {
-		return List{}, errors.New("an empty search")
+	if list != Sprint {
+		if strings.TrimSpace(jql) == "" {
+			return List{}, errors.New("an empty search")
+		}
+		out.Issues, err = c.Search(ctx, jql, listLimit)
 	}
-	out.Issues, err = c.Search(ctx, jql, listLimit)
+	if err == nil {
+		s.keep(id, key, out)
+	}
 	return out, err
 }
 
@@ -165,7 +171,11 @@ func (s *Service) Issue(ctx context.Context, id, key string) (model.JiraIssue, e
 	if err != nil {
 		return model.JiraIssue{}, err
 	}
-	return c.Issue(ctx, key)
+	is, err := c.Issue(ctx, key)
+	if err == nil {
+		s.keep(id, issueKey(key), is)
+	}
+	return is, err
 }
 
 // Transitions are the moves an issue allows now.

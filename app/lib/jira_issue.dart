@@ -9,6 +9,7 @@ import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_issue_parts.dart';
 import 'package:nushi/jira_settings.dart';
+import 'package:nushi/jira_view_parts.dart';
 import 'package:nushi/jira_work.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/menu.dart';
@@ -52,9 +53,15 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
   String? _error;
   Timer? _poll;
 
+  /// When Jira said what shows, while it's what the daemon kept from last
+  /// time; [_refreshing] while Jira is asked.
+  DateTime? _cachedAt;
+  bool _refreshing = true;
+
   @override
   void initState() {
     super.initState();
+    unawaited(_showKept());
     unawaited(_load());
     _poll = Timer.periodic(issuePoll, (_) => unawaited(_load(quiet: true)));
   }
@@ -75,10 +82,35 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
           _issue = r.issue;
           _writes = r.agentWrites;
           _error = null;
+          _cachedAt = null;
         });
       }
     } on Object catch (e) {
       if (mounted && !quiet) setState(() => _error = jiraError(e));
+    } finally {
+      if (mounted) setState(() => _refreshing = false);
+    }
+  }
+
+  /// Shows the issue as the daemon kept it from last time, until Jira
+  /// answers.
+  Future<void> _showKept() async {
+    try {
+      final r = await widget.daemon.client.getJiraIssue(
+        GetJiraIssueRequest(
+          site: widget.site,
+          key: widget.issueKey,
+          cached: true,
+        ),
+      );
+      if (!mounted || _issue != null || r.atMs == 0) return;
+      setState(() {
+        _issue = r.issue;
+        _writes = r.agentWrites;
+        _cachedAt = DateTime.fromMillisecondsSinceEpoch(r.atMs.toInt());
+      });
+    } on Object {
+      // Nothing kept: Jira's answer decides.
     }
   }
 
@@ -136,10 +168,22 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
         ],
       ),
     );
+    final kept = updatedLine(_cachedAt, loading: _refreshing, now: now);
     return SelectionArea(
       child: ListView(
         padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
         children: [
+          if (_cachedAt != null && kept != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                [kept, ?_error].join(' · '),
+                style: theme.ui(
+                  _error == null ? t.textMuted : t.crashed,
+                  size: 12,
+                ),
+              ),
+            ),
           _header(theme, i),
           const SizedBox(height: 6),
           Text(

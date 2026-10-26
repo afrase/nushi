@@ -11481,8 +11481,11 @@ type ListJiraIssuesRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Site  string                 `protobuf:"bytes,1,opt,name=site,proto3" json:"site,omitempty"`
 	// "mine", "sprint", or "" for jql.
-	List          string `protobuf:"bytes,2,opt,name=list,proto3" json:"list,omitempty"`
-	Jql           string `protobuf:"bytes,3,opt,name=jql,proto3" json:"jql,omitempty"`
+	List string `protobuf:"bytes,2,opt,name=list,proto3" json:"list,omitempty"`
+	Jql  string `protobuf:"bytes,3,opt,name=jql,proto3" json:"jql,omitempty"`
+	// What the list showed last, kept by the daemon, without asking Jira:
+	// shown at once while the list is asked for (at_ms 0 when none).
+	Cached        bool `protobuf:"varint,4,opt,name=cached,proto3" json:"cached,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -11538,11 +11541,20 @@ func (x *ListJiraIssuesRequest) GetJql() string {
 	return ""
 }
 
+func (x *ListJiraIssuesRequest) GetCached() bool {
+	if x != nil {
+		return x.Cached
+	}
+	return false
+}
+
 type ListJiraIssuesResponse struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	Issues []*JiraIssue           `protobuf:"bytes,1,rep,name=issues,proto3" json:"issues,omitempty"`
 	// The sprint list's sprint ("" when the board has none active).
-	Sprint        string `protobuf:"bytes,2,opt,name=sprint,proto3" json:"sprint,omitempty"`
+	Sprint string `protobuf:"bytes,2,opt,name=sprint,proto3" json:"sprint,omitempty"`
+	// When Jira said so.
+	AtMs          int64 `protobuf:"varint,3,opt,name=at_ms,json=atMs,proto3" json:"at_ms,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -11589,6 +11601,13 @@ func (x *ListJiraIssuesResponse) GetSprint() string {
 		return x.Sprint
 	}
 	return ""
+}
+
+func (x *ListJiraIssuesResponse) GetAtMs() int64 {
+	if x != nil {
+		return x.AtMs
+	}
+	return 0
 }
 
 type GetJiraJqlRequest struct {
@@ -11861,9 +11880,11 @@ func (x *SuggestJiraJqlResponse) GetValues() []*JiraOption {
 }
 
 type GetJiraIssueRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Site          string                 `protobuf:"bytes,1,opt,name=site,proto3" json:"site,omitempty"`
-	Key           string                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Site  string                 `protobuf:"bytes,1,opt,name=site,proto3" json:"site,omitempty"`
+	Key   string                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
+	// As the issue showed last (ListJiraIssuesRequest.cached).
+	Cached        bool `protobuf:"varint,3,opt,name=cached,proto3" json:"cached,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -11912,11 +11933,20 @@ func (x *GetJiraIssueRequest) GetKey() string {
 	return ""
 }
 
+func (x *GetJiraIssueRequest) GetCached() bool {
+	if x != nil {
+		return x.Cached
+	}
+	return false
+}
+
 type GetJiraIssueResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Issue *JiraIssue             `protobuf:"bytes,1,opt,name=issue,proto3" json:"issue,omitempty"`
 	// What agents wrote to it through their tools, the latest last.
-	AgentWrites   []*JiraWrite `protobuf:"bytes,2,rep,name=agent_writes,json=agentWrites,proto3" json:"agent_writes,omitempty"`
+	AgentWrites []*JiraWrite `protobuf:"bytes,2,rep,name=agent_writes,json=agentWrites,proto3" json:"agent_writes,omitempty"`
+	// When Jira said so (0 for a cached issue never kept).
+	AtMs          int64 `protobuf:"varint,3,opt,name=at_ms,json=atMs,proto3" json:"at_ms,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -11963,6 +11993,13 @@ func (x *GetJiraIssueResponse) GetAgentWrites() []*JiraWrite {
 		return x.AgentWrites
 	}
 	return nil
+}
+
+func (x *GetJiraIssueResponse) GetAtMs() int64 {
+	if x != nil {
+		return x.AtMs
+	}
+	return 0
 }
 
 // A write an agent made to an issue through its tools (ADR 0043).
@@ -16517,14 +16554,16 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x16SetJiraSearchesRequest\x12\x12\n" +
 	"\x04site\x18\x01 \x01(\tR\x04site\x120\n" +
 	"\bsearches\x18\x02 \x03(\v2\x14.nushi.v1.JiraSearchR\bsearches\"\x19\n" +
-	"\x17SetJiraSearchesResponse\"Q\n" +
+	"\x17SetJiraSearchesResponse\"i\n" +
 	"\x15ListJiraIssuesRequest\x12\x12\n" +
 	"\x04site\x18\x01 \x01(\tR\x04site\x12\x12\n" +
 	"\x04list\x18\x02 \x01(\tR\x04list\x12\x10\n" +
-	"\x03jql\x18\x03 \x01(\tR\x03jql\"]\n" +
+	"\x03jql\x18\x03 \x01(\tR\x03jql\x12\x16\n" +
+	"\x06cached\x18\x04 \x01(\bR\x06cached\"r\n" +
 	"\x16ListJiraIssuesResponse\x12+\n" +
 	"\x06issues\x18\x01 \x03(\v2\x13.nushi.v1.JiraIssueR\x06issues\x12\x16\n" +
-	"\x06sprint\x18\x02 \x01(\tR\x06sprint\"'\n" +
+	"\x06sprint\x18\x02 \x01(\tR\x06sprint\x12\x13\n" +
+	"\x05at_ms\x18\x03 \x01(\x03R\x04atMs\"'\n" +
 	"\x11GetJiraJqlRequest\x12\x12\n" +
 	"\x04site\x18\x01 \x01(\tR\x04site\"x\n" +
 	"\x12GetJiraJqlResponse\x12.\n" +
@@ -16541,13 +16580,15 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"field_name\x18\x02 \x01(\tR\tfieldName\x12\x16\n" +
 	"\x06prefix\x18\x03 \x01(\tR\x06prefix\"F\n" +
 	"\x16SuggestJiraJqlResponse\x12,\n" +
-	"\x06values\x18\x01 \x03(\v2\x14.nushi.v1.JiraOptionR\x06values\";\n" +
+	"\x06values\x18\x01 \x03(\v2\x14.nushi.v1.JiraOptionR\x06values\"S\n" +
 	"\x13GetJiraIssueRequest\x12\x12\n" +
 	"\x04site\x18\x01 \x01(\tR\x04site\x12\x10\n" +
-	"\x03key\x18\x02 \x01(\tR\x03key\"y\n" +
+	"\x03key\x18\x02 \x01(\tR\x03key\x12\x16\n" +
+	"\x06cached\x18\x03 \x01(\bR\x06cached\"\x8e\x01\n" +
 	"\x14GetJiraIssueResponse\x12)\n" +
 	"\x05issue\x18\x01 \x01(\v2\x13.nushi.v1.JiraIssueR\x05issue\x126\n" +
-	"\fagent_writes\x18\x02 \x03(\v2\x13.nushi.v1.JiraWriteR\vagentWrites\"\x83\x01\n" +
+	"\fagent_writes\x18\x02 \x03(\v2\x13.nushi.v1.JiraWriteR\vagentWrites\x12\x13\n" +
+	"\x05at_ms\x18\x03 \x01(\x03R\x04atMs\"\x83\x01\n" +
 	"\tJiraWrite\x12\x12\n" +
 	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x18\n" +
 	"\acomment\x18\x02 \x01(\tR\acomment\x12\x0e\n" +

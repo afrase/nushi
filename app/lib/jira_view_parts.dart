@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nushi/commits.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/menu.dart';
@@ -167,11 +168,19 @@ class JiraBar extends StatelessWidget {
     required this.onRefresh,
     required this.onClose,
     super.key,
+    this.updated,
+    this.now,
   });
 
   final List<JiraSite> sites;
   final JiraSite? site;
   final bool loading;
+
+  /// When Jira said what shows, if it's what was kept from last time.
+  final DateTime? updated;
+
+  /// The time ages are counted from (tests); now when null.
+  final DateTime? now;
   final void Function(String? id) onSite;
   final VoidCallback onRefresh;
   final VoidCallback onClose;
@@ -214,10 +223,10 @@ class JiraBar extends StatelessWidget {
               ),
             ),
           const Spacer(),
-          if (loading)
+          if (updatedLine(updated, loading: loading, now: now) case final line?)
             Padding(
               padding: const EdgeInsets.only(right: 8),
-              child: Text('Loading…', style: theme.ui(t.textMuted, size: 12)),
+              child: Text(line, style: theme.ui(t.textMuted, size: 12)),
             ),
           IconTap(Icons.refresh, tooltip: 'Refresh (⌘R)', onTap: onRefresh),
           IconTap(Icons.close, tooltip: 'Close (⌘J)', onTap: onClose),
@@ -257,4 +266,13 @@ class NeedsOk extends StatelessWidget {
       ),
     );
   }
+}
+
+/// What the bar says of what shows: "Updated 3m ago · refreshing" for
+/// what was kept from last time while it's asked again, "Updated 3m ago"
+/// once asking failed, "Loading…" with nothing kept.
+String? updatedLine(DateTime? updated, {required bool loading, DateTime? now}) {
+  if (updated == null) return loading ? 'Loading…' : null;
+  final when = ago((now ?? DateTime.now()).difference(updated), updated);
+  return 'Updated $when${loading ? ' · refreshing' : ''}';
 }
