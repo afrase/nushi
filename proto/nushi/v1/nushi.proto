@@ -82,6 +82,13 @@ service NushiService {
   rpc GetMemory(GetMemoryRequest) returns (GetMemoryResponse);
   rpc GetSettings(GetSettingsRequest) returns (GetSettingsResponse);
   rpc SetSettings(SetSettingsRequest) returns (SetSettingsResponse);
+  // Nushi's copies of chats' transcripts (ADR 0047): each one's size and
+  // whose it is, largest first.
+  rpc ListTranscripts(ListTranscriptsRequest) returns (ListTranscriptsResponse);
+  // Deletes copies of transcripts: a chat goes on, its history from its
+  // agent alone; one kept only for its copy (its agent deleted its
+  // session) goes unless its work keeps it.
+  rpc ClearTranscripts(ClearTranscriptsRequest) returns (ClearTranscriptsResponse);
   // Says what DeleteChat removes. The first time, the daemon starts the
   // agent to learn whether it can delete its history.
   rpc PlanDeleteChat(PlanDeleteChatRequest) returns (PlanDeleteChatResponse);
@@ -717,6 +724,47 @@ message Settings {
   // The daemon's log has DEBUG lines too: every ACP method and API call,
   // with how long it took (ADR 0038). SetSettings sets both fields.
   bool debug_log = 2;
+  // Nushi keeps its own read-only copy of each chat's transcript (ADR
+  // 0047); on by default. SetSettings leaves it as it is when not given.
+  optional bool keep_transcripts = 3;
+  // A copy goes this many days after it was last written; 0: never.
+  // SetSettings leaves it as it is when not given.
+  optional int32 transcript_days = 4;
+}
+
+message ListTranscriptsRequest {}
+
+message ListTranscriptsResponse {
+  // All of them, in bytes.
+  int64 total_bytes = 1;
+  repeated TranscriptCopy copies = 2;
+}
+
+// A chat's copy of its transcript.
+message TranscriptCopy {
+  string chat_id = 1;
+  // The chat's title and agent; empty when Nushi no longer has the chat.
+  string title = 2;
+  string agent = 3;
+  // Its size on disk, images included.
+  int64 bytes = 4;
+  // When it was last written, in Unix milliseconds.
+  int64 last_written_ms = 5;
+}
+
+message ClearTranscriptsRequest {
+  // These chats' copies.
+  repeated string chat_ids = 1;
+  // Every copy.
+  bool all = 2;
+  // The copies last written more than this many days ago (with neither
+  // of the above).
+  int32 older_than_days = 3;
+}
+
+message ClearTranscriptsResponse {
+  int32 cleared = 1;
+  int64 bytes = 2;
 }
 
 message GetSettingsResponse {

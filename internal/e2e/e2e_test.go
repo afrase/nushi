@@ -39,6 +39,7 @@ import (
 	"github.com/afrase/nushi/internal/pig"
 	"github.com/afrase/nushi/internal/pig/pigtest"
 	"github.com/afrase/nushi/internal/store"
+	"github.com/afrase/nushi/internal/transcripts"
 )
 
 // daemon is nushid with the fake agent, as two agents: "fake" (the
@@ -117,9 +118,15 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 		st, st, git.Worktrees{}, filepath.Join(dataDir, "scratch"), hub.Publish)
 	terms := terminals.New(startSh, "sh", svc, hub.Publish)
 	svc.UseTerminals(terms)
+	copies, err := transcripts.Open(filepath.Join(dataDir, "transcripts"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc.UseCopies(copies, st.KeepTranscripts)
+	svc.AutoSleep(st) // as main does: the settings are the daemon's
 	follow, unfollow := context.WithCancel(context.Background())
 	go hub.Subscribe(follow.Done(), func() bool { return true }, func(e model.Event) bool { terms.Follow(e); return true })
-	srv := httptest.NewServer(api.WithToken("tok", api.New(api.Services{Chats: svc, Agents: agents.New(nil, nil, "", nil), Terms: terms, Hub: hub, Memory: memory.New(svc)})))
+	srv := httptest.NewServer(api.WithToken("tok", api.New(api.Services{Chats: svc, Agents: agents.New(nil, nil, "", nil), Terms: terms, Hub: hub, Memory: memory.New(svc), Transcripts: st})))
 	stop := func() {
 		unfollow()
 		srv.CloseClientConnections()
@@ -359,8 +366,9 @@ func TestDaemonRestartReopensChats(t *testing.T) {
 	snap := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID})))
 	items := a.follow(chatID, snap)
 
-	// The agent's history has no permission prompts: those were Nushi's.
-	want := strings.ReplaceAll(before, "\nPERMISSION::answered", "")
+	// The agent's history has no permission prompts: Nushi's copy of the
+	// transcript keeps them.
+	want := before
 	if got := transcript(items); got != want {
 		t.Errorf("rebuilt transcript:\n%s\nwant:\n%s", got, want)
 	}

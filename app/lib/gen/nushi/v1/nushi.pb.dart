@@ -4520,10 +4520,14 @@ class Settings extends $pb.GeneratedMessage {
   factory Settings({
     $core.int? sleepAfterMinutes,
     $core.bool? debugLog,
+    $core.bool? keepTranscripts,
+    $core.int? transcriptDays,
   }) {
     final result = Settings._();
     if (sleepAfterMinutes != null) result.sleepAfterMinutes = sleepAfterMinutes;
     if (debugLog != null) result.debugLog = debugLog;
+    if (keepTranscripts != null) result.keepTranscripts = keepTranscripts;
+    if (transcriptDays != null) result.transcriptDays = transcriptDays;
     return result;
   }
 
@@ -4542,6 +4546,8 @@ class Settings extends $pb.GeneratedMessage {
       createEmptyInstance: Settings.$_createMessage)
     ..aI(1, _omitFieldNames ? '' : 'sleepAfterMinutes')
     ..aOB(2, _omitFieldNames ? '' : 'debugLog')
+    ..aOB(3, _omitFieldNames ? '' : 'keepTranscripts')
+    ..aI(4, _omitFieldNames ? '' : 'transcriptDays')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -4585,6 +4591,400 @@ class Settings extends $pb.GeneratedMessage {
   $core.bool hasDebugLog() => $_has(1);
   @$pb.TagNumber(2)
   void clearDebugLog() => $_clearField(2);
+
+  /// Nushi keeps its own read-only copy of each chat's transcript (ADR
+  /// 0047); on by default. SetSettings leaves it as it is when not given.
+  @$pb.TagNumber(3)
+  $core.bool get keepTranscripts => $_getBF(2);
+  @$pb.TagNumber(3)
+  set keepTranscripts($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasKeepTranscripts() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearKeepTranscripts() => $_clearField(3);
+
+  /// A copy goes this many days after it was last written; 0: never.
+  /// SetSettings leaves it as it is when not given.
+  @$pb.TagNumber(4)
+  $core.int get transcriptDays => $_getIZ(3);
+  @$pb.TagNumber(4)
+  set transcriptDays($core.int value) => $_setSignedInt32(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasTranscriptDays() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearTranscriptDays() => $_clearField(4);
+}
+
+class ListTranscriptsRequest extends $pb.GeneratedMessage {
+  factory ListTranscriptsRequest() => ListTranscriptsRequest._();
+
+  ListTranscriptsRequest._();
+
+  factory ListTranscriptsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListTranscriptsRequest()..mergeFromBuffer(data, registry);
+  factory ListTranscriptsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListTranscriptsRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListTranscriptsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListTranscriptsRequest.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListTranscriptsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListTranscriptsRequest copyWith(
+          void Function(ListTranscriptsRequest) updates) =>
+      super.copyWith((message) => updates(message as ListTranscriptsRequest))
+          as ListTranscriptsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListTranscriptsRequest() / ListTranscriptsRequest.new instead')
+  static ListTranscriptsRequest create() => ListTranscriptsRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ListTranscriptsRequest._();
+  @$core.override
+  ListTranscriptsRequest createEmptyInstance() => ListTranscriptsRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ListTranscriptsRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListTranscriptsRequest>(
+          ListTranscriptsRequest.$_createMessage);
+  static ListTranscriptsRequest? _defaultInstance;
+}
+
+class ListTranscriptsResponse extends $pb.GeneratedMessage {
+  factory ListTranscriptsResponse({
+    $fixnum.Int64? totalBytes,
+    $core.Iterable<TranscriptCopy>? copies,
+  }) {
+    final result = ListTranscriptsResponse._();
+    if (totalBytes != null) result.totalBytes = totalBytes;
+    if (copies != null) result.copies.addAll(copies);
+    return result;
+  }
+
+  ListTranscriptsResponse._();
+
+  factory ListTranscriptsResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListTranscriptsResponse()..mergeFromBuffer(data, registry);
+  factory ListTranscriptsResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListTranscriptsResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListTranscriptsResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListTranscriptsResponse.$_createMessage)
+    ..aInt64(1, _omitFieldNames ? '' : 'totalBytes')
+    ..pPM<TranscriptCopy>(2, _omitFieldNames ? '' : 'copies',
+        subBuilder: TranscriptCopy.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListTranscriptsResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListTranscriptsResponse copyWith(
+          void Function(ListTranscriptsResponse) updates) =>
+      super.copyWith((message) => updates(message as ListTranscriptsResponse))
+          as ListTranscriptsResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListTranscriptsResponse() / ListTranscriptsResponse.new instead')
+  static ListTranscriptsResponse create() => ListTranscriptsResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ListTranscriptsResponse._();
+  @$core.override
+  ListTranscriptsResponse createEmptyInstance() => ListTranscriptsResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ListTranscriptsResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListTranscriptsResponse>(
+          ListTranscriptsResponse.$_createMessage);
+  static ListTranscriptsResponse? _defaultInstance;
+
+  /// All of them, in bytes.
+  @$pb.TagNumber(1)
+  $fixnum.Int64 get totalBytes => $_getI64(0);
+  @$pb.TagNumber(1)
+  set totalBytes($fixnum.Int64 value) => $_setInt64(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasTotalBytes() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearTotalBytes() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $pb.PbList<TranscriptCopy> get copies => $_getList(1);
+}
+
+/// A chat's copy of its transcript.
+class TranscriptCopy extends $pb.GeneratedMessage {
+  factory TranscriptCopy({
+    $core.String? chatId,
+    $core.String? title,
+    $core.String? agent,
+    $fixnum.Int64? bytes,
+    $fixnum.Int64? lastWrittenMs,
+  }) {
+    final result = TranscriptCopy._();
+    if (chatId != null) result.chatId = chatId;
+    if (title != null) result.title = title;
+    if (agent != null) result.agent = agent;
+    if (bytes != null) result.bytes = bytes;
+    if (lastWrittenMs != null) result.lastWrittenMs = lastWrittenMs;
+    return result;
+  }
+
+  TranscriptCopy._();
+
+  factory TranscriptCopy.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      TranscriptCopy()..mergeFromBuffer(data, registry);
+  factory TranscriptCopy.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      TranscriptCopy()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'TranscriptCopy',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: TranscriptCopy.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOS(2, _omitFieldNames ? '' : 'title')
+    ..aOS(3, _omitFieldNames ? '' : 'agent')
+    ..aInt64(4, _omitFieldNames ? '' : 'bytes')
+    ..aInt64(5, _omitFieldNames ? '' : 'lastWrittenMs')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  TranscriptCopy clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  TranscriptCopy copyWith(void Function(TranscriptCopy) updates) =>
+      super.copyWith((message) => updates(message as TranscriptCopy))
+          as TranscriptCopy;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use TranscriptCopy() / TranscriptCopy.new instead')
+  static TranscriptCopy create() => TranscriptCopy._();
+  static $pb.GeneratedMessage $_createMessage() => TranscriptCopy._();
+  @$core.override
+  TranscriptCopy createEmptyInstance() => TranscriptCopy._();
+  @$core.pragma('dart2js:noInline')
+  static TranscriptCopy getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<TranscriptCopy>(
+          TranscriptCopy.$_createMessage);
+  static TranscriptCopy? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  /// The chat's title and agent; empty when Nushi no longer has the chat.
+  @$pb.TagNumber(2)
+  $core.String get title => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set title($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasTitle() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearTitle() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get agent => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set agent($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasAgent() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearAgent() => $_clearField(3);
+
+  /// Its size on disk, images included.
+  @$pb.TagNumber(4)
+  $fixnum.Int64 get bytes => $_getI64(3);
+  @$pb.TagNumber(4)
+  set bytes($fixnum.Int64 value) => $_setInt64(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasBytes() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearBytes() => $_clearField(4);
+
+  /// When it was last written, in Unix milliseconds.
+  @$pb.TagNumber(5)
+  $fixnum.Int64 get lastWrittenMs => $_getI64(4);
+  @$pb.TagNumber(5)
+  set lastWrittenMs($fixnum.Int64 value) => $_setInt64(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasLastWrittenMs() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearLastWrittenMs() => $_clearField(5);
+}
+
+class ClearTranscriptsRequest extends $pb.GeneratedMessage {
+  factory ClearTranscriptsRequest({
+    $core.Iterable<$core.String>? chatIds,
+    $core.bool? all,
+    $core.int? olderThanDays,
+  }) {
+    final result = ClearTranscriptsRequest._();
+    if (chatIds != null) result.chatIds.addAll(chatIds);
+    if (all != null) result.all = all;
+    if (olderThanDays != null) result.olderThanDays = olderThanDays;
+    return result;
+  }
+
+  ClearTranscriptsRequest._();
+
+  factory ClearTranscriptsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ClearTranscriptsRequest()..mergeFromBuffer(data, registry);
+  factory ClearTranscriptsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ClearTranscriptsRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ClearTranscriptsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ClearTranscriptsRequest.$_createMessage)
+    ..pPS(1, _omitFieldNames ? '' : 'chatIds')
+    ..aOB(2, _omitFieldNames ? '' : 'all')
+    ..aI(3, _omitFieldNames ? '' : 'olderThanDays')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ClearTranscriptsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ClearTranscriptsRequest copyWith(
+          void Function(ClearTranscriptsRequest) updates) =>
+      super.copyWith((message) => updates(message as ClearTranscriptsRequest))
+          as ClearTranscriptsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ClearTranscriptsRequest() / ClearTranscriptsRequest.new instead')
+  static ClearTranscriptsRequest create() => ClearTranscriptsRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ClearTranscriptsRequest._();
+  @$core.override
+  ClearTranscriptsRequest createEmptyInstance() => ClearTranscriptsRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ClearTranscriptsRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ClearTranscriptsRequest>(
+          ClearTranscriptsRequest.$_createMessage);
+  static ClearTranscriptsRequest? _defaultInstance;
+
+  /// These chats' copies.
+  @$pb.TagNumber(1)
+  $pb.PbList<$core.String> get chatIds => $_getList(0);
+
+  /// Every copy.
+  @$pb.TagNumber(2)
+  $core.bool get all => $_getBF(1);
+  @$pb.TagNumber(2)
+  set all($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasAll() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearAll() => $_clearField(2);
+
+  /// The copies last written more than this many days ago (with neither
+  /// of the above).
+  @$pb.TagNumber(3)
+  $core.int get olderThanDays => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set olderThanDays($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasOlderThanDays() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearOlderThanDays() => $_clearField(3);
+}
+
+class ClearTranscriptsResponse extends $pb.GeneratedMessage {
+  factory ClearTranscriptsResponse({
+    $core.int? cleared,
+    $fixnum.Int64? bytes,
+  }) {
+    final result = ClearTranscriptsResponse._();
+    if (cleared != null) result.cleared = cleared;
+    if (bytes != null) result.bytes = bytes;
+    return result;
+  }
+
+  ClearTranscriptsResponse._();
+
+  factory ClearTranscriptsResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ClearTranscriptsResponse()..mergeFromBuffer(data, registry);
+  factory ClearTranscriptsResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ClearTranscriptsResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ClearTranscriptsResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ClearTranscriptsResponse.$_createMessage)
+    ..aI(1, _omitFieldNames ? '' : 'cleared')
+    ..aInt64(2, _omitFieldNames ? '' : 'bytes')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ClearTranscriptsResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ClearTranscriptsResponse copyWith(
+          void Function(ClearTranscriptsResponse) updates) =>
+      super.copyWith((message) => updates(message as ClearTranscriptsResponse))
+          as ClearTranscriptsResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ClearTranscriptsResponse() / ClearTranscriptsResponse.new instead')
+  static ClearTranscriptsResponse create() => ClearTranscriptsResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ClearTranscriptsResponse._();
+  @$core.override
+  ClearTranscriptsResponse createEmptyInstance() =>
+      ClearTranscriptsResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ClearTranscriptsResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ClearTranscriptsResponse>(
+          ClearTranscriptsResponse.$_createMessage);
+  static ClearTranscriptsResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.int get cleared => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set cleared($core.int value) => $_setSignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasCleared() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearCleared() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $fixnum.Int64 get bytes => $_getI64(1);
+  @$pb.TagNumber(2)
+  set bytes($fixnum.Int64 value) => $_setInt64(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasBytes() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearBytes() => $_clearField(2);
 }
 
 class GetSettingsResponse extends $pb.GeneratedMessage {
@@ -21059,6 +21459,21 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, SetSettingsRequest request) =>
       _client.invoke<SetSettingsResponse>(
           ctx, 'NushiService', 'SetSettings', request, SetSettingsResponse());
+
+  /// Nushi's copies of chats' transcripts (ADR 0047): each one's size and
+  /// whose it is, largest first.
+  $async.Future<ListTranscriptsResponse> listTranscripts(
+          $pb.ClientContext? ctx, ListTranscriptsRequest request) =>
+      _client.invoke<ListTranscriptsResponse>(ctx, 'NushiService',
+          'ListTranscripts', request, ListTranscriptsResponse());
+
+  /// Deletes copies of transcripts: a chat goes on, its history from its
+  /// agent alone; one kept only for its copy (its agent deleted its
+  /// session) goes unless its work keeps it.
+  $async.Future<ClearTranscriptsResponse> clearTranscripts(
+          $pb.ClientContext? ctx, ClearTranscriptsRequest request) =>
+      _client.invoke<ClearTranscriptsResponse>(ctx, 'NushiService',
+          'ClearTranscripts', request, ClearTranscriptsResponse());
 
   /// Says what DeleteChat removes. The first time, the daemon starts the
   /// agent to learn whether it can delete its history.

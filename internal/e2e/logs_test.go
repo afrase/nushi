@@ -29,6 +29,7 @@ import (
 	"github.com/afrase/nushi/internal/logs"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/store"
+	"github.com/afrase/nushi/internal/transcripts"
 )
 
 type syncBuffer struct {
@@ -83,8 +84,11 @@ func TestNothingPrivateLogged(t *testing.T) {
 	svc := chats.New([]chats.Kind{{Name: "fake", Launch: launch}}, st, st, git.Worktrees{}, filepath.Join(data, "scratch"), hub.Publish)
 	terms := terminals.New(startSh, "sh", svc, hub.Publish)
 	svc.UseTerminals(terms)
+	copies, err := transcripts.Open(filepath.Join(data, "transcripts"))
+	check(t, err)
+	svc.UseCopies(copies, st.KeepTranscripts)
 	srv := httptest.NewServer(api.WithToken("tok", api.New(api.Services{Chats: svc, Agents: agents.New(nil, nil, "", nil), Terms: terms, Hub: hub,
-		Memory: memory.New(svc), Log: st})))
+		Memory: memory.New(svc), Log: st, Transcripts: st})))
 	go hub.Subscribe(nil, func() bool { return true }, func(e model.Event) bool { terms.Follow(e); return true })
 
 	ctx := context.Background()
@@ -108,6 +112,10 @@ func TestNothingPrivateLogged(t *testing.T) {
 		Stack: "#0 main (app.dart:1)", Attrs: map[string]string{"from": "zone"}})))
 	must(a.c.SleepChat(ctx, connect.NewRequest(&nushiv1.SleepChatRequest{ChatId: chatID})))
 	waitLog(t, log, `msg="agent exited"`)
+	must(a.c.ReloadChat(ctx, connect.NewRequest(&nushiv1.ReloadChatRequest{ChatId: chatID}))) // its replay merged with its copy
+	waitLog(t, log, `msg="transcript restored"`)
+	must(a.c.ListTranscripts(ctx, connect.NewRequest(&nushiv1.ListTranscriptsRequest{})))
+	must(a.c.ClearTranscripts(ctx, connect.NewRequest(&nushiv1.ClearTranscriptsRequest{All: true})))
 
 	got := log.String()
 	for _, marker := range []string{"MARKER-PROMPT", "MARKER-ASK", "MARKER-FILE", "MARKER-TITLE", "MARKER-TERM", "MARKER-ENV", "MARKER-TOKEN", "sk-ant-api03-Zr8"} {
@@ -117,7 +125,7 @@ func TestNothingPrivateLogged(t *testing.T) {
 	}
 	for _, want := range []string{`msg="agent started"`, `msg="turn ended"`, `msg="auth: using the key [redacted] from the environment"`, `source=agent`,
 		`msg="acp call" chat=` + chatID, `rpc=session/prompt`, `msg="api call" rpc=SendPrompt`, `msg="terminal opened"`, `msg="chat asleep"`,
-		`level=ERROR msg="Bad state: xxx`, `x…" source=app from=zone stack="#0 main (app.dart:1)"`} {
+		`level=ERROR msg="Bad state: xxx`, `x…" source=app from=zone stack="#0 main (app.dart:1)"`, `msg="transcript copies cleared" copies=1`} {
 		if !strings.Contains(got, want) {
 			t.Errorf("no %s in the log:\n%s", want, got)
 		}
