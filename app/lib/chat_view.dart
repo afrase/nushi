@@ -272,34 +272,46 @@ class _McpChanged extends StatelessWidget {
             style: theme.ui(t.textSecondary, size: 12),
           ),
           const SizedBox(width: 6),
-          Tooltip(
-            message: chat.busy ? 'Once ${chat.agentName} is done' : '',
-            child: Button(
-              label: 'Reload',
-              onPressed: chat.busy
-                  ? null
-                  : () async {
-                      if (await stopsBackground(
-                            context,
-                            chat,
-                            'Reload the chat?',
-                            'Reload',
-                          ) &&
-                          context.mounted) {
-                        await tryOrShow(
-                          context,
-                          () => daemon.client.reloadChat(
-                            ReloadChatRequest(chatId: chat.id),
-                          ),
-                        );
-                      }
-                    },
-            ),
-          ),
+          ReloadButton(chat, daemon),
         ],
       ),
     );
   }
+}
+
+/// Reloads a chat's agent (asking first when that stops background
+/// work), so it picks up changed MCP servers; disabled while it works.
+class ReloadButton extends StatelessWidget {
+  const new(this.chat, this.daemon, {super.key});
+
+  final ChatState chat;
+  final Daemon daemon;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: chat.busy ? 'Once ${chat.agentName} is done' : '',
+    child: Button(
+      label: 'Reload',
+      onPressed: chat.busy
+          ? null
+          : () async {
+              if (await stopsBackground(
+                    context,
+                    chat,
+                    'Reload the chat?',
+                    'Reload',
+                  ) &&
+                  context.mounted) {
+                await tryOrShow(
+                  context,
+                  () => daemon.client.reloadChat(
+                    ReloadChatRequest(chatId: chat.id),
+                  ),
+                );
+              }
+            },
+    ),
+  );
 }
 
 /// In place of the composer for a chat whose session its agent deleted

@@ -199,7 +199,8 @@ class _Row extends StatelessWidget {
     final t = theme.t;
     final c = config(server);
     final hidden = secrets(c);
-    final dim = shadowedBy != null;
+    final shadowed = shadowedBy != null;
+    final off = server.off || server.state == 'disabled';
     final failed = server.state == 'failed' && server.detail.isNotEmpty;
     final (word, color) = stateOf(server, t);
     return Container(
@@ -207,47 +208,63 @@ class _Row extends StatelessWidget {
       decoration: BoxDecoration(
         border: first ? null : Border(top: BorderSide(color: t.borderSubtle)),
       ),
-      child: Opacity(
-        opacity: dim ? 0.5 : 1,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                if (!dim) McpDot(server) else const SizedBox(width: 11),
-                const SizedBox(width: 8),
-                Text(
-                  server.name,
-                  style: theme.ui(t.text, weight: FontWeight.w500),
-                ),
-                const SizedBox(width: 8),
-                Text(transport(c), style: theme.code(t.textMuted, size: 11)),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Tooltip(
-                    message: server.source,
-                    child: Text(
-                      target(c),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.code(t.textSecondary, size: 11.5),
-                    ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Opacity(
+                  opacity: shadowed || off ? 0.5 : 1,
+                  child: Row(
+                    children: [
+                      if (!shadowed)
+                        McpDot(server)
+                      else
+                        const SizedBox(width: 11),
+                      const SizedBox(width: 8),
+                      Text(
+                        server.name,
+                        style: theme.ui(t.text, weight: FontWeight.w500),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        transport(c),
+                        style: theme.code(t.textMuted, size: 11),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Tooltip(
+                          message: server.source,
+                          child: Text(
+                            target(c),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.code(t.textSecondary, size: 11.5),
+                          ),
+                        ),
+                      ),
+                      if (!shadowed) ...[
+                        const SizedBox(width: 12),
+                        Text(word, style: theme.ui(color, size: 12)),
+                      ],
+                    ],
                   ),
                 ),
-                if (!dim) ...[
-                  const SizedBox(width: 12),
-                  Text(word, style: theme.ui(color, size: 12)),
-                ],
-                const SizedBox(width: 6),
-                McpActions(list, server),
-              ],
-            ),
-            if (hidden.isNotEmpty || dim || failed)
-              Padding(
+              ),
+              const SizedBox(width: 6),
+              McpActions(list, server),
+            ],
+          ),
+          if (hidden.isNotEmpty || shadowed || failed)
+            Opacity(
+              opacity: shadowed || off ? 0.5 : 1,
+              child: Padding(
                 padding: const EdgeInsets.only(left: 19, top: 3),
                 child: Text(
                   [
-                    if (dim) 'Not used: the $shadowedBy one has the same name',
+                    if (shadowed)
+                      'Not used: the $shadowedBy one has the same name',
                     if (failed) server.detail,
                     if (hidden.isNotEmpty) hidden,
                   ].join('  ·  '),
@@ -256,8 +273,8 @@ class _Row extends StatelessWidget {
                       : theme.code(t.textMuted, size: 11),
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }

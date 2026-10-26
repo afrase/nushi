@@ -132,6 +132,7 @@ String secrets(Map<String, dynamic> c) => [
 
 /// A server's state in words, and its color.
 (String, Color) stateOf(McpServer s, Tokens t) => switch (s.state) {
+  _ when s.off => ('Off', t.idle),
   'connected' => ('Connected', t.done),
   'failed' => ('Failed to connect', t.crashed),
   'needs_auth' => ('Needs login', t.needs),
@@ -154,7 +155,8 @@ class McpDot extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
     final (word, color) = stateOf(server, t);
-    final ring = ['', 'disabled', 'unknown'].contains(server.state);
+    final ring =
+        server.off || ['', 'disabled', 'unknown'].contains(server.state);
     return Tooltip(
       message: server.detail.isEmpty ? word : '$word: ${server.detail}',
       child: Container(
