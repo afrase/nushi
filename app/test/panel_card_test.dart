@@ -1,10 +1,68 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/panel_cards.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
+import 'fake_daemon.dart';
+
 void main() {
+  setUpAll(loadFonts);
+  _goldens();
+
+  testWidgets('the title row: the open hand, and the grip while hovered, '
+      'in a collapsed card in its summary\'s place', (tester) async {
+    collapsedCards.value = {'Context'};
+    addTearDown(() => collapsedCards.value = {});
+    await tester.pumpWidget(_cards(Tokens.dark));
+    expect(find.byType(DragGrip), findsNothing);
+    expect(find.text('57%'), findsOneWidget);
+
+    final mouse = await _pointer(tester);
+    await mouse.moveTo(tester.getCenter(find.text('Context')));
+    await tester.pump();
+    expect(_cursor(), SystemMouseCursors.grab);
+    expect(find.byType(DragGrip), findsOneWidget);
+    expect(find.text('57%'), findsNothing); // the grip in its place
+
+    // An open card keeps its action; the grip goes beside it.
+    await mouse.moveTo(tester.getCenter(find.text('Background tasks')));
+    await tester.pump();
+    expect(_cursor(), SystemMouseCursors.grab);
+    expect(find.text('57%'), findsOneWidget);
+    expect(find.text('Stop all'), findsOneWidget);
+    expect(find.byType(DragGrip), findsOneWidget);
+    expect(
+      tester.getCenter(find.byType(DragGrip)).dx,
+      greaterThan(tester.getCenter(find.text('Stop all')).dx),
+    );
+
+    // The body isn't the handle.
+    await mouse.moveTo(tester.getCenter(find.text('npm test')));
+    await tester.pump();
+    expect(find.byType(DragGrip), findsNothing);
+    expect(_cursor(), isNot(SystemMouseCursors.grab));
+  });
+
+  testWidgets('dragged: the closed hand and the grip', (tester) async {
+    await tester.pumpWidget(_cards(Tokens.light));
+    final mouse = await _pointer(tester);
+    await mouse.moveTo(tester.getCenter(find.text('Context')));
+    await mouse.down(tester.getCenter(find.text('Context')));
+    await tester.pump(kLongPressTimeout);
+    await mouse.moveBy(const Offset(0, 30));
+    await tester.pump();
+    await mouse.moveBy(const Offset(0, 10));
+    await tester.pump();
+    expect(_cursor(), SystemMouseCursors.grabbing);
+    expect(find.byType(DragGrip), findsOneWidget);
+    await mouse.up();
+    await tester.pumpAndSettle();
+  });
+
   testWidgets("a card's action sits on its title row while open", (
     tester,
   ) async {
@@ -36,4 +94,59 @@ void main() {
     expect(find.byIcon(Icons.refresh), findsNothing);
     collapsedCards.value = {};
   });
+}
+
+Widget _cards(Tokens tokens) => MaterialApp(
+  theme: NushiTheme(tokens).toThemeData(),
+  home: Scaffold(
+    body: SizedBox(
+      width: 300,
+      child: PanelCards([
+        const PanelCard(
+          title: 'Context',
+          summary: Text('57%'),
+          rows: [(null, 'a row')],
+        ),
+        PanelCard(
+          title: 'Background tasks',
+          summary: const Text('1 running'),
+          action: Text('Stop all', style: NushiTheme(tokens).ui(tokens.link)),
+          rows: const [(null, 'npm test')],
+        ),
+      ]),
+    ),
+  ),
+);
+
+Future<TestGesture> _pointer(WidgetTester tester) async {
+  final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+  await mouse.addPointer(location: const Offset(1, 1));
+  addTearDown(mouse.removePointer);
+  return mouse;
+}
+
+MouseCursor? _cursor() =>
+    RendererBinding.instance.mouseTracker.debugDeviceActiveCursor(1);
+
+void _goldens() {
+  for (final (name, tokens) in [
+    ('dark', Tokens.dark),
+    ('light', Tokens.light),
+  ]) {
+    testWidgets('golden, a card with its grip on hover, $name', (tester) async {
+      tester.view.devicePixelRatio = 2;
+      tester.view.physicalSize = const Size(300, 190) * 2;
+      addTearDown(tester.view.reset);
+      collapsedCards.value = {'Context'};
+      addTearDown(() => collapsedCards.value = {});
+      await tester.pumpWidget(_cards(tokens));
+      final mouse = await _pointer(tester);
+      await mouse.moveTo(tester.getCenter(find.text('Context')));
+      await tester.pumpAndSettle();
+      await expectLater(
+        find.byType(PanelCards),
+        matchesGoldenFile('goldens/card_grip_$name.png'),
+      );
+    });
+  }
 }

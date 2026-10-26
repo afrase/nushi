@@ -51,16 +51,30 @@ class CardList extends StatelessWidget {
   Widget build(BuildContext context) => ReorderableListView(
     padding: padding,
     buildDefaultDragHandles: false,
-    proxyDecorator: (child, _, _) => child,
+    // The card being dragged keeps its grip and the closed hand.
+    proxyDecorator: (child, _, _) => _Dragged(child: child),
     onReorderItem: onReorder,
     children: children,
   );
 }
 
+/// Marks the card a [CardList] is dragging (the copy under the pointer).
+class _Dragged extends InheritedWidget {
+  const new({required super.child});
+
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_Dragged>() != null;
+
+  @override
+  bool updateShouldNotify(_Dragged old) => false;
+}
+
 /// A card's look: rounded, a [title] row that collapses it ([onToggle])
 /// and drags it in a [CardList] (as its [index]th), [trailing] on that
-/// row's right, then [body] while [open].
-class CardShell extends StatelessWidget {
+/// row's right, then [body] while [open]. Under the pointer the title row
+/// shows the open hand and a six-dot grip on its right (in a collapsed
+/// card's [trailing] place, its summary); the closed hand while dragged.
+class CardShell extends StatefulWidget {
   const new({
     required this.title,
     required this.open,
@@ -79,8 +93,20 @@ class CardShell extends StatelessWidget {
   final int index;
 
   @override
+  State<CardShell> createState() => _CardShellState();
+}
+
+class _CardShellState extends State<CardShell> {
+  bool _hover = false;
+
+  @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
+    final dragged = _Dragged.of(context);
+    final grip = _hover || dragged;
+    final cursor = dragged
+        ? SystemMouseCursors.grabbing
+        : SystemMouseCursors.grab;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: box(
@@ -92,28 +118,46 @@ class CardShell extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ReorderableDragStartListener(
-            index: index,
-            child: Tap(
-              onTap: onToggle,
-              radius: NushiTheme.card * 1.5,
-              padding: const EdgeInsets.fromLTRB(12, 9, 10, 9),
-              child: Row(
-                children: [
-                  title,
-                  const SizedBox(width: 2),
-                  Chevron(open: open, size: 15),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: trailing,
+            index: widget.index,
+            child: MouseRegion(
+              onEnter: (_) => setState(() => _hover = true),
+              onExit: (_) => setState(() => _hover = false),
+              child: Tap(
+                onTap: widget.onToggle,
+                cursor: cursor,
+                radius: NushiTheme.card * 1.5,
+                padding: const EdgeInsets.fromLTRB(12, 9, 10, 9),
+                child: Row(
+                  children: [
+                    widget.title,
+                    const SizedBox(width: 2),
+                    Chevron(open: widget.open, size: 15),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        // Collapsed, the grip takes the summary's place.
+                        child: !widget.open && grip
+                            ? const DragGrip()
+                            : widget.trailing,
+                      ),
                     ),
-                  ),
-                ],
+                    if (widget.open)
+                      SizedBox(
+                        width: 14,
+                        child: grip
+                            ? const Align(
+                                alignment: Alignment.centerRight,
+                                child: DragGrip(),
+                              )
+                            : null,
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
-          if (open) body,
+          if (widget.open) widget.body,
         ],
       ),
     );

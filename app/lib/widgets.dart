@@ -41,6 +41,7 @@ class Tap extends StatefulWidget {
     this.padding = EdgeInsets.zero,
     this.radius = NushiTheme.control,
     this.tooltip = '',
+    this.cursor,
   });
 
   final VoidCallback? onTap;
@@ -50,6 +51,9 @@ class Tap extends StatefulWidget {
   final EdgeInsetsGeometry padding;
   final double radius;
   final String tooltip;
+
+  /// The pointer over it, when not the pointing hand (a drag's open hand).
+  final MouseCursor? cursor;
 
   @override
   State<Tap> createState() => _TapState();
@@ -63,7 +67,8 @@ class _TapState extends State<Tap> {
     final t = NushiTheme.of(context).t;
     final on = widget.onTap != null;
     final tap = MouseRegion(
-      cursor: on ? SystemMouseCursors.click : MouseCursor.defer,
+      cursor:
+          widget.cursor ?? (on ? SystemMouseCursors.click : MouseCursor.defer),
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
       child: GestureDetector(
