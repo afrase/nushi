@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_issue.dart';
@@ -471,6 +472,16 @@ class _JiraViewState extends State<JiraView> {
               await _loadSites();
             }),
           ),
+        if (site.needsRestart)
+          Notice(
+            '${site.problem}. Restarting stops running turns and closes '
+            'terminals.',
+            action: bundledDaemon == null ? null : 'Restart daemon',
+            onAction: () => tryOrShow(context, () async {
+              await widget.daemon.restartDaemon();
+              if (mounted) await _loadSites();
+            }),
+          ),
         JiraSources(
           daemon: widget.daemon,
           site: site,
@@ -494,7 +505,7 @@ class _JiraViewState extends State<JiraView> {
           onSave: () => _saveSearch(site),
         ),
         // The banner above says why, and what to do.
-        if (_error case final e? when !site.needsOk)
+        if (_error case final e? when !site.needsOk && !site.needsRestart)
           Padding(
             padding: const EdgeInsets.all(14),
             child: Text(e, style: theme.ui(t.crashed, size: 12)),

@@ -109,6 +109,32 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets('a daemon that must restart to reach the keychain says so '
+      'once, and offers no Allow', (tester) async {
+    const why =
+        "Nushi's daemon can't reach your keychain: it was started from a "
+        'build of Nushi that has been replaced or removed since, or outside '
+        'your login session. Restart the daemon';
+    final (_, d) = await openView(
+      tester,
+      sites: [
+        JiraSite(id: 'acme.atlassian.net', url: 'https://acme.atlassian.net')
+          ..needsRestart = true
+          ..problem = why,
+      ],
+      more: (input) => input is ListJiraIssuesRequest && !input.cached
+          ? throw Exception(why)
+          : null,
+    );
+    expect(find.textContaining("can't reach your keychain"), findsOneWidget);
+    expect(
+      find.textContaining('Restarting stops running turns'),
+      findsOneWidget,
+    );
+    expect(find.text('Allow…'), findsNothing);
+    await closeView(tester, d);
+  });
+
   testWidgets('an issue as it showed last, until Jira answers', (tester) async {
     final fresh = Completer<GetJiraIssueResponse>();
     final (_, d) = await openView(

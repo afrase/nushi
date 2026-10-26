@@ -23,7 +23,7 @@ func (s *server) ListJiraSites(context.Context, *connect.Request[nushiv1.ListJir
 	out := &nushiv1.ListJiraSitesResponse{}
 	for _, st := range sites {
 		p := jiraSiteProto(st.JiraSite)
-		p.Problem, p.NeedsOk = st.Problem, st.NeedsOK
+		p.Problem, p.NeedsOk, p.NeedsRestart = st.Problem, st.NeedsOK, st.Restart
 		out.Sites = append(out.Sites, p)
 	}
 	return connect.NewResponse(out), nil

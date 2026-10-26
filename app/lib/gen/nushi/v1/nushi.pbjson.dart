@@ -2957,6 +2957,7 @@ const JiraSite$json = {
     },
     {'1': 'problem', '3': 11, '4': 1, '5': 9, '10': 'problem'},
     {'1': 'needs_ok', '3': 12, '4': 1, '5': 8, '10': 'needsOk'},
+    {'1': 'needs_restart', '3': 13, '4': 1, '5': 8, '10': 'needsRestart'},
   ],
 };
 
@@ -2967,7 +2968,8 @@ final $typed_data.Uint8List jiraSiteDescriptor = $convert.base64Decode(
     'b3VudElkEhYKBnNjb3BlZBgGIAEoCFIGc2NvcGVkEhgKB2V4cGlyZXMYByABKANSB2V4cGlyZX'
     'MSFAoFYm9hcmQYCCABKANSBWJvYXJkEh0KCmJvYXJkX25hbWUYCSABKAlSCWJvYXJkTmFtZRIw'
     'CghzZWFyY2hlcxgKIAMoCzIULm51c2hpLnYxLkppcmFTZWFyY2hSCHNlYXJjaGVzEhgKB3Byb2'
-    'JsZW0YCyABKAlSB3Byb2JsZW0SGQoIbmVlZHNfb2sYDCABKAhSB25lZWRzT2s=');
+    'JsZW0YCyABKAlSB3Byb2JsZW0SGQoIbmVlZHNfb2sYDCABKAhSB25lZWRzT2sSIwoNbmVlZHNf'
+    'cmVzdGFydBgNIAEoCFIMbmVlZHNSZXN0YXJ0');
 
 @$core.Deprecated('Use jiraSearchDescriptor instead')
 const JiraSearch$json = {
@@ -3900,6 +3902,7 @@ const GitHubHost$json = {
     {'1': 'problem', '3': 8, '4': 1, '5': 9, '10': 'problem'},
     {'1': 'needs_ok', '3': 9, '4': 1, '5': 8, '10': 'needsOk'},
     {'1': 'pasted', '3': 10, '4': 1, '5': 8, '10': 'pasted'},
+    {'1': 'needs_restart', '3': 11, '4': 1, '5': 8, '10': 'needsRestart'},
   ],
 };
 
@@ -3909,7 +3912,8 @@ final $typed_data.Uint8List gitHubHostDescriptor = $convert.base64Decode(
     'IKBG5hbWUYAyABKAlSBG5hbWUSFgoGc291cmNlGAQgASgJUgZzb3VyY2USEgoEa2luZBgFIAEo'
     'CVIEa2luZBIWCgZzY29wZXMYBiADKAlSBnNjb3BlcxIuCgZidWRnZXQYByADKAsyFi5udXNoaS'
     '52MS5HaXRIdWJCdWNrZXRSBmJ1ZGdldBIYCgdwcm9ibGVtGAggASgJUgdwcm9ibGVtEhkKCG5l'
-    'ZWRzX29rGAkgASgIUgduZWVkc09rEhYKBnBhc3RlZBgKIAEoCFIGcGFzdGVk');
+    'ZWRzX29rGAkgASgIUgduZWVkc09rEhYKBnBhc3RlZBgKIAEoCFIGcGFzdGVkEiMKDW5lZWRzX3'
+    'Jlc3RhcnQYCyABKAhSDG5lZWRzUmVzdGFydA==');
 
 @$core.Deprecated('Use listGitHubHostsRequestDescriptor instead')
 const ListGitHubHostsRequest$json = {

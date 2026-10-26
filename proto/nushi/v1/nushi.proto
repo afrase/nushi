@@ -1533,6 +1533,10 @@ message JiraSite {
   // the user's OK (AllowJiraToken).
   string problem = 11;
   bool needs_ok = 12;
+  // The daemon can't reach the keychain until it starts again (its build
+  // was replaced or removed since it started, or it runs outside the
+  // user's login session): problem says so; Allow wouldn't help.
+  bool needs_restart = 13;
 }
 
 message JiraSearch {
@@ -1854,6 +1858,8 @@ message GitHubHost {
   bool needs_ok = 9;
   // A pasted token is kept for it (RemoveGitHubToken).
   bool pasted = 10;
+  // As JiraSite.needs_restart.
+  bool needs_restart = 11;
 }
 
 message ListGitHubHostsRequest {}

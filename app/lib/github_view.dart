@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_issue.dart';
@@ -156,7 +157,9 @@ class _GitHubViewState extends State<GitHubView> {
   /// the one shown shows what the daemon kept of it meanwhile.
   Future<void> _load({bool quiet = false}) async {
     final host = _hostNow;
-    if (host == null || host.needsOk) return; // its token can't be read yet
+    if (host == null || host.needsOk || host.needsRestart) {
+      return; // its token can't be read yet: the notice says why
+    }
     final n = ++_asked;
     final req = ListGitHubInboxRequest(
       host: host.host,
@@ -274,6 +277,15 @@ class _GitHubViewState extends State<GitHubView> {
     setState(() => githubTeamReviews.value = teams);
     unawaited(_load());
   }
+
+  /// Starts the daemon again (from the app, in the login session, as
+  /// this build), so it can reach the keychain.
+  void _restart() => unawaited(
+    tryOrShow(context, () async {
+      await widget.daemon.restartDaemon();
+      if (mounted) await _loadHosts();
+    }),
+  );
 
   void _settings() => unawaited(
     showSettings(context, widget.daemon.client, github: true).then((_) {
@@ -437,7 +449,7 @@ class _GitHubViewState extends State<GitHubView> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (host.needsOk)
-          _Notice(
+          Notice(
             'This build of Nushi needs your OK to read the token from the '
             'keychain; macOS asks for your password.',
             action: 'Allow…',
@@ -448,10 +460,17 @@ class _GitHubViewState extends State<GitHubView> {
               await _loadHosts();
             }),
           )
+        else if (host.needsRestart)
+          Notice(
+            '${host.problem}. Restarting stops running turns and closes '
+            'terminals.',
+            action: bundledDaemon == null ? null : 'Restart daemon',
+            onAction: _restart,
+          )
         else if (host.problem.isNotEmpty)
-          _Notice(host.problem, action: 'Settings…', onAction: _settings),
+          Notice(host.problem, action: 'Settings…', onAction: _settings),
         if (_error case final e?)
-          _Notice(
+          Notice(
             _inbox == null
                 ? e
                 : 'Showing what GitHub said at '
@@ -505,35 +524,6 @@ class _Whose extends StatelessWidget {
       child: Text(
         '${teams ? 'Me and my teams' : 'Only me'} ▾',
         style: theme.ui(theme.t.textMuted, size: 12),
-      ),
-    );
-  }
-}
-
-/// A line above the list: a problem, or what shows is old.
-class _Notice extends StatelessWidget {
-  const new(this.text, {this.action, this.onAction});
-
-  final String text;
-  final String? action;
-  final VoidCallback? onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(10, 8, 10, 0),
-      padding: const EdgeInsets.all(10),
-      decoration: box(t.needs, fill: t.needsSoft),
-      child: Row(
-        children: [
-          Expanded(child: Text(text, style: theme.ui(t.needs, size: 12))),
-          if (action case final a?) ...[
-            const SizedBox(width: 8),
-            Button(label: a, onPressed: onAction),
-          ],
-        ],
       ),
     );
   }

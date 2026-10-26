@@ -14,7 +14,17 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-var errLocked = errors.New("locked")
+var (
+	errLocked  = errors.New("locked")
+	errRestart = errors.New("Nushi's daemon can't reach your keychain: restart it")
+	errMissing = errors.New("not in the keychain")
+)
+
+var testKeys = Keys{
+	NeedsOK: func(err error) bool { return errors.Is(err, errLocked) },
+	Restart: func(err error) bool { return errors.Is(err, errRestart) },
+	Missing: func(err error) bool { return errors.Is(err, errMissing) },
+}
 
 // fakeTokens is a keychain in memory; locked makes reads without a
 // prompt fail as an earlier build's item does.
@@ -22,6 +32,7 @@ type fakeTokens struct {
 	mu     sync.Mutex
 	items  map[string]string
 	locked bool
+	fail   error // every read's
 }
 
 func (k *fakeTokens) Set(account, _ string, secret []byte) error {
@@ -37,9 +48,12 @@ func (k *fakeTokens) Get(account string, prompt bool) ([]byte, error) {
 	if k.locked && !prompt {
 		return nil, errLocked
 	}
+	if k.fail != nil {
+		return nil, k.fail
+	}
 	v, ok := k.items[account]
 	if !ok {
-		return nil, errors.New("not in the keychain")
+		return nil, errMissing
 	}
 	return []byte(v), nil
 }
@@ -175,7 +189,7 @@ func newService(t *testing.T) (*Service, *fakeTokens, *[]*fakeClient) {
 			return c
 		},
 	}
-	return New(sites, tokens, &memStore{}, func(err error) bool { return errors.Is(err, errLocked) }), tokens, &opened
+	return New(sites, tokens, &memStore{}, testKeys), tokens, &opened
 }
 
 func TestSites(t *testing.T) {
@@ -199,7 +213,7 @@ func TestSites(t *testing.T) {
 	}
 
 	// A new build of Nushi: the keychain wants the user's OK.
-	s2 := New(s.sites, tokens, s.store, s.needsOK)
+	s2 := New(s.sites, tokens, s.store, s.keys)
 	tokens.locked = true
 	states, err := s2.Sites()
 	if err != nil || len(states) != 1 || !states[0].NeedsOK || states[0].Board != 7 {
@@ -342,7 +356,7 @@ func TestCache(t *testing.T) {
 		t.Fatal(err)
 	}
 	tokens.locked = true // the cache needs no token
-	s2 := New(s.sites, tokens, s.store, s.needsOK)
+	s2 := New(s.sites, tokens, s.store, s.keys)
 	if l, at, err := s2.CachedList("e.atlassian.net", Mine, ""); err != nil || at.IsZero() || len(l.Issues) != 1 || l.Issues[0].Key != "A-1" {
 		t.Errorf("mine: %+v %v %v", l, at, err)
 	}
@@ -368,5 +382,29 @@ func TestCache(t *testing.T) {
 		if strings.Contains(k, "e.atlassian.net") {
 			t.Errorf("kept after the site went: %s", k)
 		}
+	}
+}
+
+// A keychain the daemon can't reach until it starts again is said as
+// such, not as needing an OK; a token gone says to add the site again.
+func TestTokenProblems(t *testing.T) {
+	s, tokens, _ := newService(t)
+	if _, err := s.AddSite(t.Context(), "https://e.atlassian.net", "me@e.com", "good", time.Time{}); err != nil {
+		t.Fatal(err)
+	}
+	tokens.fail = errRestart
+	s2 := New(s.sites, tokens, s.store, s.keys)
+	st, _ := s2.Sites()
+	if !st[0].Restart || st[0].NeedsOK || st[0].Problem != errRestart.Error() {
+		t.Errorf("%+v", st[0])
+	}
+	if err := s2.AllowToken("e.atlassian.net"); !errors.Is(err, errRestart) {
+		t.Errorf("Allow: %v", err)
+	}
+	tokens.fail = nil
+	delete(tokens.items, "me@e.com on e.atlassian.net")
+	st, _ = s2.Sites()
+	if st[0].Restart || st[0].NeedsOK || !strings.Contains(st[0].Problem, "add the site again") {
+		t.Errorf("%+v", st[0])
 	}
 }

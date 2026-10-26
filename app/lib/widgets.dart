@@ -420,3 +420,32 @@ String? updatedLine(DateTime? updated, {required bool loading, DateTime? now}) {
   final when = ago((now ?? DateTime.now()).difference(updated), updated);
   return 'Updated $when${loading ? ' · refreshing' : ''}';
 }
+
+/// A line above the list: a problem, or what shows is old.
+class Notice extends StatelessWidget {
+  const new(this.text, {super.key, this.action, this.onAction});
+
+  final String text;
+  final String? action;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(10, 8, 10, 0),
+      padding: const EdgeInsets.all(10),
+      decoration: box(t.needs, fill: t.needsSoft),
+      child: Row(
+        children: [
+          Expanded(child: Text(text, style: theme.ui(t.needs, size: 12))),
+          if (action case final a?) ...[
+            const SizedBox(width: 8),
+            Button(label: a, onPressed: onAction),
+          ],
+        ],
+      ),
+    );
+  }
+}

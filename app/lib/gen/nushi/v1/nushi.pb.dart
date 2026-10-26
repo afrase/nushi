@@ -12557,6 +12557,7 @@ class JiraSite extends $pb.GeneratedMessage {
     $core.Iterable<JiraSearch>? searches,
     $core.String? problem,
     $core.bool? needsOk,
+    $core.bool? needsRestart,
   }) {
     final result = JiraSite._();
     if (id != null) result.id = id;
@@ -12571,6 +12572,7 @@ class JiraSite extends $pb.GeneratedMessage {
     if (searches != null) result.searches.addAll(searches);
     if (problem != null) result.problem = problem;
     if (needsOk != null) result.needsOk = needsOk;
+    if (needsRestart != null) result.needsRestart = needsRestart;
     return result;
   }
 
@@ -12600,6 +12602,7 @@ class JiraSite extends $pb.GeneratedMessage {
         subBuilder: JiraSearch.$_createMessage)
     ..aOS(11, _omitFieldNames ? '' : 'problem')
     ..aOB(12, _omitFieldNames ? '' : 'needsOk')
+    ..aOB(13, _omitFieldNames ? '' : 'needsRestart')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -12727,6 +12730,18 @@ class JiraSite extends $pb.GeneratedMessage {
   $core.bool hasNeedsOk() => $_has(11);
   @$pb.TagNumber(12)
   void clearNeedsOk() => $_clearField(12);
+
+  /// The daemon can't reach the keychain until it starts again (its build
+  /// was replaced or removed since it started, or it runs outside the
+  /// user's login session): problem says so; Allow wouldn't help.
+  @$pb.TagNumber(13)
+  $core.bool get needsRestart => $_getBF(12);
+  @$pb.TagNumber(13)
+  set needsRestart($core.bool value) => $_setBool(12, value);
+  @$pb.TagNumber(13)
+  $core.bool hasNeedsRestart() => $_has(12);
+  @$pb.TagNumber(13)
+  void clearNeedsRestart() => $_clearField(13);
 }
 
 class JiraSearch extends $pb.GeneratedMessage {
@@ -16463,6 +16478,7 @@ class GitHubHost extends $pb.GeneratedMessage {
     $core.String? problem,
     $core.bool? needsOk,
     $core.bool? pasted,
+    $core.bool? needsRestart,
   }) {
     final result = GitHubHost._();
     if (host != null) result.host = host;
@@ -16475,6 +16491,7 @@ class GitHubHost extends $pb.GeneratedMessage {
     if (problem != null) result.problem = problem;
     if (needsOk != null) result.needsOk = needsOk;
     if (pasted != null) result.pasted = pasted;
+    if (needsRestart != null) result.needsRestart = needsRestart;
     return result;
   }
 
@@ -16502,6 +16519,7 @@ class GitHubHost extends $pb.GeneratedMessage {
     ..aOS(8, _omitFieldNames ? '' : 'problem')
     ..aOB(9, _omitFieldNames ? '' : 'needsOk')
     ..aOB(10, _omitFieldNames ? '' : 'pasted')
+    ..aOB(11, _omitFieldNames ? '' : 'needsRestart')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -16610,6 +16628,16 @@ class GitHubHost extends $pb.GeneratedMessage {
   $core.bool hasPasted() => $_has(9);
   @$pb.TagNumber(10)
   void clearPasted() => $_clearField(10);
+
+  /// As JiraSite.needs_restart.
+  @$pb.TagNumber(11)
+  $core.bool get needsRestart => $_getBF(10);
+  @$pb.TagNumber(11)
+  set needsRestart($core.bool value) => $_setBool(10, value);
+  @$pb.TagNumber(11)
+  $core.bool hasNeedsRestart() => $_has(10);
+  @$pb.TagNumber(11)
+  void clearNeedsRestart() => $_clearField(11);
 }
 
 class ListGitHubHostsRequest extends $pb.GeneratedMessage {
