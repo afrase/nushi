@@ -210,6 +210,17 @@ const (
 	// NushiServiceRevokeDeviceProcedure is the fully-qualified name of the NushiService's RevokeDevice
 	// RPC.
 	NushiServiceRevokeDeviceProcedure = "/nushi.v1.NushiService/RevokeDevice"
+	// NushiServiceGetPushKeyProcedure is the fully-qualified name of the NushiService's GetPushKey RPC.
+	NushiServiceGetPushKeyProcedure = "/nushi.v1.NushiService/GetPushKey"
+	// NushiServiceSetPushSubscriptionProcedure is the fully-qualified name of the NushiService's
+	// SetPushSubscription RPC.
+	NushiServiceSetPushSubscriptionProcedure = "/nushi.v1.NushiService/SetPushSubscription"
+	// NushiServiceSetDeviceViewProcedure is the fully-qualified name of the NushiService's
+	// SetDeviceView RPC.
+	NushiServiceSetDeviceViewProcedure = "/nushi.v1.NushiService/SetDeviceView"
+	// NushiServiceSendTestPushProcedure is the fully-qualified name of the NushiService's SendTestPush
+	// RPC.
+	NushiServiceSendTestPushProcedure = "/nushi.v1.NushiService/SendTestPush"
 	// NushiServiceLogProcedure is the fully-qualified name of the NushiService's Log RPC.
 	NushiServiceLogProcedure = "/nushi.v1.NushiService/Log"
 	// NushiServiceListJiraSitesProcedure is the fully-qualified name of the NushiService's
@@ -543,6 +554,17 @@ type NushiServiceClient interface {
 	ConfirmPairing(context.Context, *connect.Request[v1.ConfirmPairingRequest]) (*connect.Response[v1.ConfirmPairingResponse], error)
 	// Unpairs a phone and drops its connections.
 	RevokeDevice(context.Context, *connect.Request[v1.RevokeDeviceRequest]) (*connect.Response[v1.RevokeDeviceResponse], error)
+	// Web Push (ADR 0054). The daemon's VAPID public key, for a device's
+	// pushManager.subscribe.
+	GetPushKey(context.Context, *connect.Request[v1.GetPushKeyRequest]) (*connect.Response[v1.GetPushKeyResponse], error)
+	// A paired device's own push subscription (an empty endpoint: none);
+	// only on a device's channel. The endpoint must be a known push service.
+	SetPushSubscription(context.Context, *connect.Request[v1.SetPushSubscriptionRequest]) (*connect.Response[v1.SetPushSubscriptionResponse], error)
+	// The chat a paired device shows ("" none): no push for that chat goes
+	// to it while it's connected. Only on a device's channel.
+	SetDeviceView(context.Context, *connect.Request[v1.SetDeviceViewRequest]) (*connect.Response[v1.SetDeviceViewResponse], error)
+	// Sends a test notification to a device (the Mac's).
+	SendTestPush(context.Context, *connect.Request[v1.SendTestPushRequest]) (*connect.Response[v1.SendTestPushResponse], error)
 	// Writes a line of the app's into the daemon's log (source=app): its
 	// errors with their stacks, and what helps afterwards.
 	Log(context.Context, *connect.Request[v1.LogRequest]) (*connect.Response[v1.LogResponse], error)
@@ -1039,6 +1061,30 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("RevokeDevice")),
 			connect.WithClientOptions(opts...),
 		),
+		getPushKey: connect.NewClient[v1.GetPushKeyRequest, v1.GetPushKeyResponse](
+			httpClient,
+			baseURL+NushiServiceGetPushKeyProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("GetPushKey")),
+			connect.WithClientOptions(opts...),
+		),
+		setPushSubscription: connect.NewClient[v1.SetPushSubscriptionRequest, v1.SetPushSubscriptionResponse](
+			httpClient,
+			baseURL+NushiServiceSetPushSubscriptionProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("SetPushSubscription")),
+			connect.WithClientOptions(opts...),
+		),
+		setDeviceView: connect.NewClient[v1.SetDeviceViewRequest, v1.SetDeviceViewResponse](
+			httpClient,
+			baseURL+NushiServiceSetDeviceViewProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("SetDeviceView")),
+			connect.WithClientOptions(opts...),
+		),
+		sendTestPush: connect.NewClient[v1.SendTestPushRequest, v1.SendTestPushResponse](
+			httpClient,
+			baseURL+NushiServiceSendTestPushProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("SendTestPush")),
+			connect.WithClientOptions(opts...),
+		),
 		log: connect.NewClient[v1.LogRequest, v1.LogResponse](
 			httpClient,
 			baseURL+NushiServiceLogProcedure,
@@ -1322,6 +1368,10 @@ type nushiServiceClient struct {
 	startPairing        *connect.Client[v1.StartPairingRequest, v1.StartPairingResponse]
 	confirmPairing      *connect.Client[v1.ConfirmPairingRequest, v1.ConfirmPairingResponse]
 	revokeDevice        *connect.Client[v1.RevokeDeviceRequest, v1.RevokeDeviceResponse]
+	getPushKey          *connect.Client[v1.GetPushKeyRequest, v1.GetPushKeyResponse]
+	setPushSubscription *connect.Client[v1.SetPushSubscriptionRequest, v1.SetPushSubscriptionResponse]
+	setDeviceView       *connect.Client[v1.SetDeviceViewRequest, v1.SetDeviceViewResponse]
+	sendTestPush        *connect.Client[v1.SendTestPushRequest, v1.SendTestPushResponse]
 	log                 *connect.Client[v1.LogRequest, v1.LogResponse]
 	listJiraSites       *connect.Client[v1.ListJiraSitesRequest, v1.ListJiraSitesResponse]
 	addJiraSite         *connect.Client[v1.AddJiraSiteRequest, v1.AddJiraSiteResponse]
@@ -1697,6 +1747,26 @@ func (c *nushiServiceClient) ConfirmPairing(ctx context.Context, req *connect.Re
 // RevokeDevice calls nushi.v1.NushiService.RevokeDevice.
 func (c *nushiServiceClient) RevokeDevice(ctx context.Context, req *connect.Request[v1.RevokeDeviceRequest]) (*connect.Response[v1.RevokeDeviceResponse], error) {
 	return c.revokeDevice.CallUnary(ctx, req)
+}
+
+// GetPushKey calls nushi.v1.NushiService.GetPushKey.
+func (c *nushiServiceClient) GetPushKey(ctx context.Context, req *connect.Request[v1.GetPushKeyRequest]) (*connect.Response[v1.GetPushKeyResponse], error) {
+	return c.getPushKey.CallUnary(ctx, req)
+}
+
+// SetPushSubscription calls nushi.v1.NushiService.SetPushSubscription.
+func (c *nushiServiceClient) SetPushSubscription(ctx context.Context, req *connect.Request[v1.SetPushSubscriptionRequest]) (*connect.Response[v1.SetPushSubscriptionResponse], error) {
+	return c.setPushSubscription.CallUnary(ctx, req)
+}
+
+// SetDeviceView calls nushi.v1.NushiService.SetDeviceView.
+func (c *nushiServiceClient) SetDeviceView(ctx context.Context, req *connect.Request[v1.SetDeviceViewRequest]) (*connect.Response[v1.SetDeviceViewResponse], error) {
+	return c.setDeviceView.CallUnary(ctx, req)
+}
+
+// SendTestPush calls nushi.v1.NushiService.SendTestPush.
+func (c *nushiServiceClient) SendTestPush(ctx context.Context, req *connect.Request[v1.SendTestPushRequest]) (*connect.Response[v1.SendTestPushResponse], error) {
+	return c.sendTestPush.CallUnary(ctx, req)
 }
 
 // Log calls nushi.v1.NushiService.Log.
@@ -2103,6 +2173,17 @@ type NushiServiceHandler interface {
 	ConfirmPairing(context.Context, *connect.Request[v1.ConfirmPairingRequest]) (*connect.Response[v1.ConfirmPairingResponse], error)
 	// Unpairs a phone and drops its connections.
 	RevokeDevice(context.Context, *connect.Request[v1.RevokeDeviceRequest]) (*connect.Response[v1.RevokeDeviceResponse], error)
+	// Web Push (ADR 0054). The daemon's VAPID public key, for a device's
+	// pushManager.subscribe.
+	GetPushKey(context.Context, *connect.Request[v1.GetPushKeyRequest]) (*connect.Response[v1.GetPushKeyResponse], error)
+	// A paired device's own push subscription (an empty endpoint: none);
+	// only on a device's channel. The endpoint must be a known push service.
+	SetPushSubscription(context.Context, *connect.Request[v1.SetPushSubscriptionRequest]) (*connect.Response[v1.SetPushSubscriptionResponse], error)
+	// The chat a paired device shows ("" none): no push for that chat goes
+	// to it while it's connected. Only on a device's channel.
+	SetDeviceView(context.Context, *connect.Request[v1.SetDeviceViewRequest]) (*connect.Response[v1.SetDeviceViewResponse], error)
+	// Sends a test notification to a device (the Mac's).
+	SendTestPush(context.Context, *connect.Request[v1.SendTestPushRequest]) (*connect.Response[v1.SendTestPushResponse], error)
 	// Writes a line of the app's into the daemon's log (source=app): its
 	// errors with their stacks, and what helps afterwards.
 	Log(context.Context, *connect.Request[v1.LogRequest]) (*connect.Response[v1.LogResponse], error)
@@ -2595,6 +2676,30 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("RevokeDevice")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceGetPushKeyHandler := connect.NewUnaryHandler(
+		NushiServiceGetPushKeyProcedure,
+		svc.GetPushKey,
+		connect.WithSchema(nushiServiceMethods.ByName("GetPushKey")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceSetPushSubscriptionHandler := connect.NewUnaryHandler(
+		NushiServiceSetPushSubscriptionProcedure,
+		svc.SetPushSubscription,
+		connect.WithSchema(nushiServiceMethods.ByName("SetPushSubscription")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceSetDeviceViewHandler := connect.NewUnaryHandler(
+		NushiServiceSetDeviceViewProcedure,
+		svc.SetDeviceView,
+		connect.WithSchema(nushiServiceMethods.ByName("SetDeviceView")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceSendTestPushHandler := connect.NewUnaryHandler(
+		NushiServiceSendTestPushProcedure,
+		svc.SendTestPush,
+		connect.WithSchema(nushiServiceMethods.ByName("SendTestPush")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceLogHandler := connect.NewUnaryHandler(
 		NushiServiceLogProcedure,
 		svc.Log,
@@ -2943,6 +3048,14 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceConfirmPairingHandler.ServeHTTP(w, r)
 		case NushiServiceRevokeDeviceProcedure:
 			nushiServiceRevokeDeviceHandler.ServeHTTP(w, r)
+		case NushiServiceGetPushKeyProcedure:
+			nushiServiceGetPushKeyHandler.ServeHTTP(w, r)
+		case NushiServiceSetPushSubscriptionProcedure:
+			nushiServiceSetPushSubscriptionHandler.ServeHTTP(w, r)
+		case NushiServiceSetDeviceViewProcedure:
+			nushiServiceSetDeviceViewHandler.ServeHTTP(w, r)
+		case NushiServiceSendTestPushProcedure:
+			nushiServiceSendTestPushHandler.ServeHTTP(w, r)
 		case NushiServiceLogProcedure:
 			nushiServiceLogHandler.ServeHTTP(w, r)
 		case NushiServiceListJiraSitesProcedure:
@@ -3292,6 +3405,22 @@ func (UnimplementedNushiServiceHandler) ConfirmPairing(context.Context, *connect
 
 func (UnimplementedNushiServiceHandler) RevokeDevice(context.Context, *connect.Request[v1.RevokeDeviceRequest]) (*connect.Response[v1.RevokeDeviceResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.RevokeDevice is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) GetPushKey(context.Context, *connect.Request[v1.GetPushKeyRequest]) (*connect.Response[v1.GetPushKeyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetPushKey is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) SetPushSubscription(context.Context, *connect.Request[v1.SetPushSubscriptionRequest]) (*connect.Response[v1.SetPushSubscriptionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.SetPushSubscription is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) SetDeviceView(context.Context, *connect.Request[v1.SetDeviceViewRequest]) (*connect.Response[v1.SetDeviceViewResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.SetDeviceView is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) SendTestPush(context.Context, *connect.Request[v1.SendTestPushRequest]) (*connect.Response[v1.SendTestPushResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.SendTestPush is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) Log(context.Context, *connect.Request[v1.LogRequest]) (*connect.Response[v1.LogResponse], error) {

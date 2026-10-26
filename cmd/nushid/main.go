@@ -190,7 +190,8 @@ func run() error {
 		Dialect: chats.Dialect{ForkAt: pig.ForkAt, Context: pig.Context}}
 	st := store.New(dir)
 	st.HadMessages = func(s model.Session) bool { return claudehistory.Has(projects, s.SessionID, s.Folder) }
-	chatSvc := chats.New([]chats.Kind{claudeKind, codexKind, anteKind, ompKind, pigKind}, st, st, git.Worktrees{}, filepath.Join(dir, "scratch"), hub.Publish)
+	kinds := []chats.Kind{claudeKind, codexKind, anteKind, ompKind, pigKind}
+	chatSvc := chats.New(kinds, st, st, git.Worktrees{}, filepath.Join(dir, "scratch"), hub.Publish)
 	chatSvc.AutoSleep(st)
 	copies, err := transcripts.Open(filepath.Join(dir, "transcripts"))
 	if err != nil {
@@ -216,9 +217,13 @@ func run() error {
 	if sv.Remote, err = remote.New(st, &relay.Dialer{Proxies: sysproxy.For}, channels.serve, keepAwake, hub.Publish); err != nil {
 		return err
 	}
+	if err := usePush(st, sv.Remote, chatSvc, kinds); err != nil {
+		return err
+	}
+	go hub.Subscribe(nil, func() bool { return true }, func(e model.Event) bool { sv.Remote.Follow(e); return true })
 	// A handler's panic, which net/http recovers, is logged with its stack.
 	errorLog := slog.NewLogLogger(slog.Default().Handler(), slog.LevelError)
-	remoteSrv := &http.Server{Handler: api.ForDevices(sv), Protocols: new(http.Protocols), ErrorLog: errorLog} //nolint:gosec // served only over paired devices' Noise channels
+	remoteSrv := &http.Server{Handler: api.ForDevices(sv), ConnContext: api.DeviceConn, Protocols: new(http.Protocols), ErrorLog: errorLog} //nolint:gosec // served only over paired devices' Noise channels
 	remoteSrv.Protocols.SetUnencryptedHTTP2(true)
 	// Serve returns once remoteSrv.Close below closes channels.
 	go func() { _ = remoteSrv.Serve(channels) }()

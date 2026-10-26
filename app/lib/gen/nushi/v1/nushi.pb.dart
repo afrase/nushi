@@ -13994,6 +13994,8 @@ class Device extends $pb.GeneratedMessage {
     $fixnum.Int64? paired,
     $fixnum.Int64? lastSeen,
     $core.bool? connected,
+    $core.String? kind,
+    $core.bool? push,
   }) {
     final result = Device._();
     if (id != null) result.id = id;
@@ -14001,6 +14003,8 @@ class Device extends $pb.GeneratedMessage {
     if (paired != null) result.paired = paired;
     if (lastSeen != null) result.lastSeen = lastSeen;
     if (connected != null) result.connected = connected;
+    if (kind != null) result.kind = kind;
+    if (push != null) result.push = push;
     return result;
   }
 
@@ -14022,6 +14026,8 @@ class Device extends $pb.GeneratedMessage {
     ..aInt64(3, _omitFieldNames ? '' : 'paired')
     ..aInt64(4, _omitFieldNames ? '' : 'lastSeen')
     ..aOB(5, _omitFieldNames ? '' : 'connected')
+    ..aOS(6, _omitFieldNames ? '' : 'kind')
+    ..aOB(7, _omitFieldNames ? '' : 'push')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -14089,6 +14095,26 @@ class Device extends $pb.GeneratedMessage {
   $core.bool hasConnected() => $_has(4);
   @$pb.TagNumber(5)
   void clearConnected() => $_clearField(5);
+
+  /// "web" for the web app, "" for an app.
+  @$pb.TagNumber(6)
+  $core.String get kind => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set kind($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasKind() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearKind() => $_clearField(6);
+
+  /// It has a push subscription: notifications are on.
+  @$pb.TagNumber(7)
+  $core.bool get push => $_getBF(6);
+  @$pb.TagNumber(7)
+  set push($core.bool value) => $_setBool(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasPush() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearPush() => $_clearField(7);
 }
 
 class Pairing extends $pb.GeneratedMessage {
@@ -14708,6 +14734,442 @@ class RevokeDeviceResponse extends $pb.GeneratedMessage {
       $pb.GeneratedMessage.$_defaultFor<RevokeDeviceResponse>(
           RevokeDeviceResponse.$_createMessage);
   static RevokeDeviceResponse? _defaultInstance;
+}
+
+class GetPushKeyRequest extends $pb.GeneratedMessage {
+  factory GetPushKeyRequest() => GetPushKeyRequest._();
+
+  GetPushKeyRequest._();
+
+  factory GetPushKeyRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetPushKeyRequest()..mergeFromBuffer(data, registry);
+  factory GetPushKeyRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetPushKeyRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetPushKeyRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetPushKeyRequest.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetPushKeyRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetPushKeyRequest copyWith(void Function(GetPushKeyRequest) updates) =>
+      super.copyWith((message) => updates(message as GetPushKeyRequest))
+          as GetPushKeyRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GetPushKeyRequest() / GetPushKeyRequest.new instead')
+  static GetPushKeyRequest create() => GetPushKeyRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetPushKeyRequest._();
+  @$core.override
+  GetPushKeyRequest createEmptyInstance() => GetPushKeyRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetPushKeyRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GetPushKeyRequest>(
+          GetPushKeyRequest.$_createMessage);
+  static GetPushKeyRequest? _defaultInstance;
+}
+
+class GetPushKeyResponse extends $pb.GeneratedMessage {
+  factory GetPushKeyResponse({
+    $core.String? key,
+  }) {
+    final result = GetPushKeyResponse._();
+    if (key != null) result.key = key;
+    return result;
+  }
+
+  GetPushKeyResponse._();
+
+  factory GetPushKeyResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetPushKeyResponse()..mergeFromBuffer(data, registry);
+  factory GetPushKeyResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetPushKeyResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetPushKeyResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetPushKeyResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'key')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetPushKeyResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetPushKeyResponse copyWith(void Function(GetPushKeyResponse) updates) =>
+      super.copyWith((message) => updates(message as GetPushKeyResponse))
+          as GetPushKeyResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GetPushKeyResponse() / GetPushKeyResponse.new instead')
+  static GetPushKeyResponse create() => GetPushKeyResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetPushKeyResponse._();
+  @$core.override
+  GetPushKeyResponse createEmptyInstance() => GetPushKeyResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetPushKeyResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetPushKeyResponse>(
+          GetPushKeyResponse.$_createMessage);
+  static GetPushKeyResponse? _defaultInstance;
+
+  /// The VAPID public key, uncompressed P-256, base64url without padding.
+  @$pb.TagNumber(1)
+  $core.String get key => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set key($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasKey() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearKey() => $_clearField(1);
+}
+
+class SetPushSubscriptionRequest extends $pb.GeneratedMessage {
+  factory SetPushSubscriptionRequest({
+    $core.String? endpoint,
+    $core.List<$core.int>? p256dh,
+    $core.List<$core.int>? auth,
+  }) {
+    final result = SetPushSubscriptionRequest._();
+    if (endpoint != null) result.endpoint = endpoint;
+    if (p256dh != null) result.p256dh = p256dh;
+    if (auth != null) result.auth = auth;
+    return result;
+  }
+
+  SetPushSubscriptionRequest._();
+
+  factory SetPushSubscriptionRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetPushSubscriptionRequest()..mergeFromBuffer(data, registry);
+  factory SetPushSubscriptionRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetPushSubscriptionRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SetPushSubscriptionRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SetPushSubscriptionRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'endpoint')
+    ..a<$core.List<$core.int>>(
+        2, _omitFieldNames ? '' : 'p256dh', $pb.PbFieldType.OY)
+    ..a<$core.List<$core.int>>(
+        3, _omitFieldNames ? '' : 'auth', $pb.PbFieldType.OY)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetPushSubscriptionRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetPushSubscriptionRequest copyWith(
+          void Function(SetPushSubscriptionRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as SetPushSubscriptionRequest))
+          as SetPushSubscriptionRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use SetPushSubscriptionRequest() / SetPushSubscriptionRequest.new instead')
+  static SetPushSubscriptionRequest create() => SetPushSubscriptionRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      SetPushSubscriptionRequest._();
+  @$core.override
+  SetPushSubscriptionRequest createEmptyInstance() =>
+      SetPushSubscriptionRequest._();
+  @$core.pragma('dart2js:noInline')
+  static SetPushSubscriptionRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SetPushSubscriptionRequest>(
+          SetPushSubscriptionRequest.$_createMessage);
+  static SetPushSubscriptionRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get endpoint => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set endpoint($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasEndpoint() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearEndpoint() => $_clearField(1);
+
+  /// The subscription's keys: p256dh (65 bytes) and auth (16 bytes).
+  @$pb.TagNumber(2)
+  $core.List<$core.int> get p256dh => $_getN(1);
+  @$pb.TagNumber(2)
+  set p256dh($core.List<$core.int> value) => $_setBytes(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasP256dh() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearP256dh() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.List<$core.int> get auth => $_getN(2);
+  @$pb.TagNumber(3)
+  set auth($core.List<$core.int> value) => $_setBytes(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasAuth() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearAuth() => $_clearField(3);
+}
+
+class SetPushSubscriptionResponse extends $pb.GeneratedMessage {
+  factory SetPushSubscriptionResponse() => SetPushSubscriptionResponse._();
+
+  SetPushSubscriptionResponse._();
+
+  factory SetPushSubscriptionResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetPushSubscriptionResponse()..mergeFromBuffer(data, registry);
+  factory SetPushSubscriptionResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetPushSubscriptionResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SetPushSubscriptionResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SetPushSubscriptionResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetPushSubscriptionResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetPushSubscriptionResponse copyWith(
+          void Function(SetPushSubscriptionResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as SetPushSubscriptionResponse))
+          as SetPushSubscriptionResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use SetPushSubscriptionResponse() / SetPushSubscriptionResponse.new instead')
+  static SetPushSubscriptionResponse create() =>
+      SetPushSubscriptionResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      SetPushSubscriptionResponse._();
+  @$core.override
+  SetPushSubscriptionResponse createEmptyInstance() =>
+      SetPushSubscriptionResponse._();
+  @$core.pragma('dart2js:noInline')
+  static SetPushSubscriptionResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SetPushSubscriptionResponse>(
+          SetPushSubscriptionResponse.$_createMessage);
+  static SetPushSubscriptionResponse? _defaultInstance;
+}
+
+class SetDeviceViewRequest extends $pb.GeneratedMessage {
+  factory SetDeviceViewRequest({
+    $core.String? chatId,
+  }) {
+    final result = SetDeviceViewRequest._();
+    if (chatId != null) result.chatId = chatId;
+    return result;
+  }
+
+  SetDeviceViewRequest._();
+
+  factory SetDeviceViewRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetDeviceViewRequest()..mergeFromBuffer(data, registry);
+  factory SetDeviceViewRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetDeviceViewRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SetDeviceViewRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SetDeviceViewRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetDeviceViewRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetDeviceViewRequest copyWith(void Function(SetDeviceViewRequest) updates) =>
+      super.copyWith((message) => updates(message as SetDeviceViewRequest))
+          as SetDeviceViewRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use SetDeviceViewRequest() / SetDeviceViewRequest.new instead')
+  static SetDeviceViewRequest create() => SetDeviceViewRequest._();
+  static $pb.GeneratedMessage $_createMessage() => SetDeviceViewRequest._();
+  @$core.override
+  SetDeviceViewRequest createEmptyInstance() => SetDeviceViewRequest._();
+  @$core.pragma('dart2js:noInline')
+  static SetDeviceViewRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SetDeviceViewRequest>(
+          SetDeviceViewRequest.$_createMessage);
+  static SetDeviceViewRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+}
+
+class SetDeviceViewResponse extends $pb.GeneratedMessage {
+  factory SetDeviceViewResponse() => SetDeviceViewResponse._();
+
+  SetDeviceViewResponse._();
+
+  factory SetDeviceViewResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetDeviceViewResponse()..mergeFromBuffer(data, registry);
+  factory SetDeviceViewResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetDeviceViewResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SetDeviceViewResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SetDeviceViewResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetDeviceViewResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetDeviceViewResponse copyWith(
+          void Function(SetDeviceViewResponse) updates) =>
+      super.copyWith((message) => updates(message as SetDeviceViewResponse))
+          as SetDeviceViewResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use SetDeviceViewResponse() / SetDeviceViewResponse.new instead')
+  static SetDeviceViewResponse create() => SetDeviceViewResponse._();
+  static $pb.GeneratedMessage $_createMessage() => SetDeviceViewResponse._();
+  @$core.override
+  SetDeviceViewResponse createEmptyInstance() => SetDeviceViewResponse._();
+  @$core.pragma('dart2js:noInline')
+  static SetDeviceViewResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SetDeviceViewResponse>(
+          SetDeviceViewResponse.$_createMessage);
+  static SetDeviceViewResponse? _defaultInstance;
+}
+
+class SendTestPushRequest extends $pb.GeneratedMessage {
+  factory SendTestPushRequest({
+    $core.String? deviceId,
+  }) {
+    final result = SendTestPushRequest._();
+    if (deviceId != null) result.deviceId = deviceId;
+    return result;
+  }
+
+  SendTestPushRequest._();
+
+  factory SendTestPushRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SendTestPushRequest()..mergeFromBuffer(data, registry);
+  factory SendTestPushRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SendTestPushRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SendTestPushRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SendTestPushRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'deviceId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SendTestPushRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SendTestPushRequest copyWith(void Function(SendTestPushRequest) updates) =>
+      super.copyWith((message) => updates(message as SendTestPushRequest))
+          as SendTestPushRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use SendTestPushRequest() / SendTestPushRequest.new instead')
+  static SendTestPushRequest create() => SendTestPushRequest._();
+  static $pb.GeneratedMessage $_createMessage() => SendTestPushRequest._();
+  @$core.override
+  SendTestPushRequest createEmptyInstance() => SendTestPushRequest._();
+  @$core.pragma('dart2js:noInline')
+  static SendTestPushRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SendTestPushRequest>(
+          SendTestPushRequest.$_createMessage);
+  static SendTestPushRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get deviceId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set deviceId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasDeviceId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearDeviceId() => $_clearField(1);
+}
+
+class SendTestPushResponse extends $pb.GeneratedMessage {
+  factory SendTestPushResponse() => SendTestPushResponse._();
+
+  SendTestPushResponse._();
+
+  factory SendTestPushResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SendTestPushResponse()..mergeFromBuffer(data, registry);
+  factory SendTestPushResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SendTestPushResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SendTestPushResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SendTestPushResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SendTestPushResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SendTestPushResponse copyWith(void Function(SendTestPushResponse) updates) =>
+      super.copyWith((message) => updates(message as SendTestPushResponse))
+          as SendTestPushResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use SendTestPushResponse() / SendTestPushResponse.new instead')
+  static SendTestPushResponse create() => SendTestPushResponse._();
+  static $pb.GeneratedMessage $_createMessage() => SendTestPushResponse._();
+  @$core.override
+  SendTestPushResponse createEmptyInstance() => SendTestPushResponse._();
+  @$core.pragma('dart2js:noInline')
+  static SendTestPushResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SendTestPushResponse>(
+          SendTestPushResponse.$_createMessage);
+  static SendTestPushResponse? _defaultInstance;
 }
 
 class LogRequest extends $pb.GeneratedMessage {
@@ -23449,6 +23911,33 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, RevokeDeviceRequest request) =>
       _client.invoke<RevokeDeviceResponse>(
           ctx, 'NushiService', 'RevokeDevice', request, RevokeDeviceResponse());
+
+  /// Web Push (ADR 0054). The daemon's VAPID public key, for a device's
+  /// pushManager.subscribe.
+  $async.Future<GetPushKeyResponse> getPushKey(
+          $pb.ClientContext? ctx, GetPushKeyRequest request) =>
+      _client.invoke<GetPushKeyResponse>(
+          ctx, 'NushiService', 'GetPushKey', request, GetPushKeyResponse());
+
+  /// A paired device's own push subscription (an empty endpoint: none);
+  /// only on a device's channel. The endpoint must be a known push service.
+  $async.Future<SetPushSubscriptionResponse> setPushSubscription(
+          $pb.ClientContext? ctx, SetPushSubscriptionRequest request) =>
+      _client.invoke<SetPushSubscriptionResponse>(ctx, 'NushiService',
+          'SetPushSubscription', request, SetPushSubscriptionResponse());
+
+  /// The chat a paired device shows ("" none): no push for that chat goes
+  /// to it while it's connected. Only on a device's channel.
+  $async.Future<SetDeviceViewResponse> setDeviceView(
+          $pb.ClientContext? ctx, SetDeviceViewRequest request) =>
+      _client.invoke<SetDeviceViewResponse>(ctx, 'NushiService',
+          'SetDeviceView', request, SetDeviceViewResponse());
+
+  /// Sends a test notification to a device (the Mac's).
+  $async.Future<SendTestPushResponse> sendTestPush(
+          $pb.ClientContext? ctx, SendTestPushRequest request) =>
+      _client.invoke<SendTestPushResponse>(
+          ctx, 'NushiService', 'SendTestPush', request, SendTestPushResponse());
 
   /// Writes a line of the app's into the daemon's log (source=app): its
   /// errors with their stacks, and what helps afterwards.

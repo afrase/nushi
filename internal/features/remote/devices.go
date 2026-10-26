@@ -72,7 +72,7 @@ func (s *Service) run(conn *noiseconn.Conn, device, id string) {
 	}
 	s.seen(i)
 	s.mu.Unlock()
-	s.serve(&served{Conn: conn, s: s})
+	s.serve(&served{Conn: conn, s: s, device: device})
 }
 
 // seen moves device i's last-seen time and tells the clients. Called with
@@ -86,14 +86,21 @@ func (s *Service) seen(i int) {
 // served is a device's channel given to the API; closing it forgets it.
 type served struct {
 	*noiseconn.Conn
-	s *Service
+	s      *Service
+	device string
 }
+
+// Device is the paired device at the channel's other end.
+func (c *served) Device() string { return c.device }
 
 func (c *served) Close() error {
 	s := c.s
 	s.mu.Lock()
 	if device, ok := s.conns[c.Conn]; ok {
 		delete(s.conns, c.Conn)
+		if !s.connectedLocked(device) {
+			delete(s.views, device)
+		}
 		slog.Info("device disconnected", "device", device)
 		if i := slices.IndexFunc(s.devices, func(d model.Device) bool { return d.ID == device }); i >= 0 {
 			s.seen(i)
@@ -105,10 +112,10 @@ func (c *served) Close() error {
 
 var _ net.Conn = (*served)(nil)
 
-// add pairs a device with key. Called with s.mu.
-func (s *Service) add(name string, key []byte) (string, error) {
+// add pairs a device of kind with key. Called with s.mu.
+func (s *Service) add(name, kind string, key []byte) (string, error) {
 	sum := sha256.Sum256(key)
-	d := model.Device{ID: hex.EncodeToString(sum[:8]), Name: name, Key: key, Paired: time.Now()}
+	d := model.Device{ID: hex.EncodeToString(sum[:8]), Name: name, Kind: kind, Key: key, Paired: time.Now()}
 	devices := append(slices.DeleteFunc(slices.Clone(s.devices), func(o model.Device) bool { return o.ID == d.ID }), d)
 	if err := s.st.SaveDevices(devices); err != nil {
 		return "", err
@@ -129,6 +136,7 @@ func (s *Service) Revoke(id string) error {
 		return err
 	}
 	s.devices = devices
+	delete(s.views, id)
 	for c, d := range s.conns {
 		if d == id {
 			delete(s.conns, c)

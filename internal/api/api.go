@@ -32,7 +32,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 68
+const Version = 69
 
 // Build is the daemon's executable as it started (PingResponse.build).
 var Build = func() string {
@@ -124,6 +124,7 @@ var macOnly = map[string]bool{
 	nushiv1connect.NushiServiceStartPairingProcedure:   true,
 	nushiv1connect.NushiServiceConfirmPairingProcedure: true,
 	nushiv1connect.NushiServiceRevokeDeviceProcedure:   true,
+	nushiv1connect.NushiServiceSendTestPushProcedure:   true,
 	// macOS's keychain prompt shows on the Mac's screen.
 	nushiv1connect.NushiServiceAllowJiraTokenProcedure:   true,
 	nushiv1connect.NushiServiceAllowGitHubTokenProcedure: true,

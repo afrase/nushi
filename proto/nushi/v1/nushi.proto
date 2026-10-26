@@ -232,6 +232,17 @@ service NushiService {
   rpc ConfirmPairing(ConfirmPairingRequest) returns (ConfirmPairingResponse);
   // Unpairs a phone and drops its connections.
   rpc RevokeDevice(RevokeDeviceRequest) returns (RevokeDeviceResponse);
+  // Web Push (ADR 0054). The daemon's VAPID public key, for a device's
+  // pushManager.subscribe.
+  rpc GetPushKey(GetPushKeyRequest) returns (GetPushKeyResponse);
+  // A paired device's own push subscription (an empty endpoint: none);
+  // only on a device's channel. The endpoint must be a known push service.
+  rpc SetPushSubscription(SetPushSubscriptionRequest) returns (SetPushSubscriptionResponse);
+  // The chat a paired device shows ("" none): no push for that chat goes
+  // to it while it's connected. Only on a device's channel.
+  rpc SetDeviceView(SetDeviceViewRequest) returns (SetDeviceViewResponse);
+  // Sends a test notification to a device (the Mac's).
+  rpc SendTestPush(SendTestPushRequest) returns (SendTestPushResponse);
   // Writes a line of the app's into the daemon's log (source=app): its
   // errors with their stacks, and what helps afterwards.
   rpc Log(LogRequest) returns (LogResponse);
@@ -1734,6 +1745,10 @@ message Device {
   int64 paired = 3;
   int64 last_seen = 4;
   bool connected = 5;
+  // "web" for the web app, "" for an app.
+  string kind = 6;
+  // It has a push subscription: notifications are on.
+  bool push = 7;
 }
 
 message Pairing {
@@ -1777,6 +1792,34 @@ message RevokeDeviceRequest {
 }
 
 message RevokeDeviceResponse {}
+
+message GetPushKeyRequest {}
+
+message GetPushKeyResponse {
+  // The VAPID public key, uncompressed P-256, base64url without padding.
+  string key = 1;
+}
+
+message SetPushSubscriptionRequest {
+  string endpoint = 1;
+  // The subscription's keys: p256dh (65 bytes) and auth (16 bytes).
+  bytes p256dh = 2;
+  bytes auth = 3;
+}
+
+message SetPushSubscriptionResponse {}
+
+message SetDeviceViewRequest {
+  string chat_id = 1;
+}
+
+message SetDeviceViewResponse {}
+
+message SendTestPushRequest {
+  string device_id = 1;
+}
+
+message SendTestPushResponse {}
 
 message LogRequest {
   // "debug", "info", "warn" or "error".
