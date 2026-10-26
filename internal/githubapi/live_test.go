@@ -187,3 +187,34 @@ func TestLiveWrites(t *testing.T) {
 		t.Logf("approving my own: %v", err)
 	}
 }
+
+// TestLiveInboxFilters reads testRepo's inbox with the view's filters
+// (reads only): the date and the exclusions go into the searches GitHub
+// takes, and a dated section's count and its older ones add up to the
+// undated count.
+func TestLiveInboxFilters(t *testing.T) {
+	if os.Getenv("NUSHI_GITHUB_LIVE") != "1" {
+		t.Skip("NUSHI_GITHUB_LIVE=1 runs it against " + testRepo)
+	}
+	token, _ := auth.TokenForHost("github.com")
+	if token == "" {
+		t.Skip("no gh login for github.com")
+	}
+	c := New("github.com", token, http.DefaultTransport)
+	ctx := t.Context()
+	all, err := c.Inbox(ctx, InboxFilter{Repos: []string{testRepo}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	day, err := c.Inbox(ctx, InboxFilter{Repos: []string{testRepo}, Days: 1, Owners: []string{"afrase"}, Hide: []string{"afrase/elsewhere", "nobody-here"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if day.MineTotal+day.MineOlder != all.MineTotal || day.AssignedTotal+day.AssignedOlder != all.AssignedTotal {
+		t.Fatalf("a day: %+v; any time: %+v", day, all)
+	}
+	hidden, err := c.Inbox(ctx, InboxFilter{Repos: []string{testRepo}, Hide: []string{testRepo}})
+	if err != nil || hidden.MineTotal != 0 || hidden.AssignedTotal != 0 {
+		t.Fatalf("hidden: %+v %v", hidden, err)
+	}
+}

@@ -82,7 +82,11 @@ func (s *server) ListGitHubRepos(ctx context.Context, req *connect.Request[nushi
 }
 
 func (s *server) ListGitHubInbox(ctx context.Context, req *connect.Request[nushiv1.ListGitHubInboxRequest]) (*connect.Response[nushiv1.ListGitHubInboxResponse], error) {
-	f := githubapi.InboxFilter{Repos: req.Msg.Repos, Teams: req.Msg.Teams}
+	f := githubapi.InboxFilter{Repos: req.Msg.Repos, Teams: req.Msg.Teams, Days: int(req.Msg.UpdatedDays),
+		Wide: req.Msg.Wide, Hide: req.Msg.Hide, Owners: req.Msg.Owners}
+	if err := f.Check(); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
 	var in github.Inbox
 	var err error
 	if req.Msg.Cached {
@@ -94,7 +98,8 @@ func (s *server) ListGitHubInbox(ctx context.Context, req *connect.Request[nushi
 		return nil, githubErr(err)
 	}
 	out := &nushiv1.ListGitHubInboxResponse{Review: ghItemsProto(in.Review), Mine: ghItemsProto(in.Mine), Assigned: ghItemsProto(in.Assigned),
-		ReviewTotal: int32(in.ReviewTotal), MineTotal: int32(in.MineTotal), AssignedTotal: int32(in.AssignedTotal), AtMs: unixMs(in.At)}
+		ReviewTotal: int32(in.ReviewTotal), MineTotal: int32(in.MineTotal), AssignedTotal: int32(in.AssignedTotal), AtMs: unixMs(in.At),
+		ReviewOlder: int32(in.ReviewOlder), MineOlder: int32(in.MineOlder), AssignedOlder: int32(in.AssignedOlder)}
 	if in.Stale != nil {
 		out.Stale = in.Stale.Error()
 	}

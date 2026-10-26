@@ -114,6 +114,9 @@ func TestGitHubLogsNoTokenNorText(t *testing.T) {
 	if _, err := c.ListGitHubInbox(ctx, connect.NewRequest(&nushiv1.ListGitHubInboxRequest{Host: "evil.example"})); err == nil {
 		t.Fatal("an unknown host was asked")
 	}
+	if _, err := c.ListGitHubInbox(ctx, connect.NewRequest(&nushiv1.ListGitHubInboxRequest{Host: host, Hide: []string{"a/b is:closed"}})); connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("a hidden repository with a qualifier of its own: %v", err)
+	}
 	out := log.String()
 	for _, secret := range []string{good, bad, "MARKERGOOD", "MARKERBAD"} {
 		if strings.Contains(out, secret) {

@@ -2,8 +2,11 @@ package githubapi
 
 import (
 	"encoding/json"
+	"fmt"
+	"maps"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -265,5 +268,94 @@ func TestEveryTextIsAsGitHubShowsIt(t *testing.T) {
 	is, err := f.client().Issue(t.Context(), repo, 2)
 	if err != nil || is.Body != "shown" || is.Conversation[0].Body != "shown" {
 		t.Fatalf("%q %+v %v", is.Body, is.Conversation, err)
+	}
+}
+
+// The filters go into the searches themselves, so what they leave out
+// doesn't take the 50 places: the date (a section widened goes without
+// it, and with a date each search is counted without it too), hidden
+// repositories and owners, and only some owners.
+func TestInboxSearches(t *testing.T) {
+	today := time.Date(2026, 10, 26, 23, 30, 0, 0, time.FixedZone("JST", 9*3600)) // the 26th, 14:30 UTC
+	s := inboxSearches(InboxFilter{Days: 90, Wide: []string{"mine"}, Hide: []string{"boltops-tools/puma-cloudwatch", "spammy"},
+		Owners: []string{"afrase", "degica"}}, today)
+	const opts = "is:open archived:false sort:updated-desc user:afrase user:degica -repo:boltops-tools/puma-cloudwatch -user:spammy"
+	want := map[string]any{
+		"review":      "is:pr " + opts + " user-review-requested:@me updated:>=2026-07-28",
+		"reviewAll":   "is:pr " + opts + " user-review-requested:@me",
+		"mine":        "is:pr " + opts + " author:@me",
+		"mineAll":     "is:pr " + opts + " author:@me",
+		"assigned":    "is:issue " + opts + " assignee:@me updated:>=2026-07-28",
+		"assignedAll": "is:issue " + opts + " assignee:@me",
+	}
+	if !maps.Equal(s, want) {
+		t.Fatalf("%v", s)
+	}
+	if s := inboxSearches(InboxFilter{}, today); len(s) != 3 || strings.Contains(s["review"].(string), "updated:") {
+		t.Fatalf("any time: %v", s)
+	}
+	var many []string
+	for i := range hideQualifiers + 5 {
+		many = append(many, fmt.Sprintf("o/r%d", i))
+	}
+	f := InboxFilter{Hide: many}
+	if n := strings.Count(inboxSearches(f, today)["mine"].(string), "-repo:"); n != hideQualifiers {
+		t.Fatalf("%d left out by the search", n)
+	}
+	if f.shows("o/r54") || f.shows("o/r0") || !f.shows("o/x") || (InboxFilter{Hide: []string{"o"}}).shows("o/x") ||
+		!(InboxFilter{Owners: []string{"a"}}).shows("a/b") || (InboxFilter{Owners: []string{"a"}}).shows("b/a") {
+		t.Fatal("the daemon's own check")
+	}
+	// No name can bring a qualifier of its own, quoted or not.
+	for _, bad := range []InboxFilter{
+		{Hide: []string{"a/b user:evil"}}, {Hide: []string{`a/b"`}}, {Hide: []string{`"a b"`}}, {Hide: []string{"-a"}},
+		{Hide: []string{"a/b/c"}}, {Hide: []string{""}}, {Repos: []string{"a/b repo:c/d"}}, {Repos: []string{"a"}},
+		{Owners: []string{"a b"}}, {Owners: []string{"a/b"}}, {Owners: []string{"a:b"}}, {Owners: []string{`"a"`}},
+		{Owners: strings.Fields("a b c d e f g h i j k")}, {Wide: []string{"all"}}, {Days: -1},
+	} {
+		if bad.Check() == nil {
+			t.Errorf("%+v passed", bad)
+		}
+	}
+	// A name both asked for and hidden is neither (GitHub would drop the
+	// first and search everyone's); with nothing left, nothing is asked.
+	n, left := InboxFilter{Repos: []string{"a/b", "c/d", "e/f"}, Owners: []string{"x", "y"}, Hide: []string{"a/b", "e", "y", "z/z"}}.narrowed()
+	if !left || !slices.Equal(n.Repos, []string{"c/d"}) || !slices.Equal(n.Owners, []string{"x"}) || !slices.Equal(n.Hide, []string{"e", "z/z"}) {
+		t.Fatalf("%+v", n)
+	}
+	if _, left := (InboxFilter{Repos: []string{"a/b"}, Hide: []string{"a"}}).narrowed(); left {
+		t.Fatal("all hidden")
+	}
+	if _, left := (InboxFilter{Owners: []string{"a"}, Hide: []string{"a"}}).narrowed(); left {
+		t.Fatal("all hidden")
+	}
+	ok := InboxFilter{Repos: []string{"a-b/c.d_e"}, Hide: []string{"x", "x/y"}, Owners: []string{"Degica"}, Wide: Sections, Days: 30}
+	if err := ok.Check(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// With a date, each section says how many more it has without it; a
+// filter that isn't one is refused before GitHub is asked.
+func TestInboxOlder(t *testing.T) {
+	f := newFake(t)
+	var vars map[string]string
+	f.route("graphql Inbox", func(w http.ResponseWriter, r *http.Request) {
+		var q struct{ Variables map[string]string }
+		_ = json.NewDecoder(r.Body).Decode(&q)
+		vars = q.Variables
+		_, _ = w.Write([]byte(`{"data": {"review": {"issueCount": 2, "nodes": []}, "reviewAll": {"issueCount": 5},
+			"mine": {"issueCount": 1, "nodes": []}, "mineAll": {"issueCount": 1},
+			"assigned": {"issueCount": 0, "nodes": []}, "assignedAll": {"issueCount": 7}}}`))
+	})
+	in, err := f.client().Inbox(t.Context(), InboxFilter{Days: 30})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if in.ReviewOlder != 3 || in.MineOlder != 0 || in.AssignedOlder != 7 || !strings.Contains(vars["review"], " updated:>=") || strings.Contains(vars["reviewAll"], "updated:") {
+		t.Fatalf("%+v %v", in, vars)
+	}
+	if _, err := f.client().Inbox(t.Context(), InboxFilter{Hide: []string{"a/b is:closed"}}); err == nil || f.count("graphql Inbox") != 1 {
+		t.Fatal("asked with a bad filter")
 	}
 }
