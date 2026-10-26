@@ -404,6 +404,14 @@ type Status struct {
 	CanSleep bool
 }
 
+// TranscriptCopy is Nushi's copy of a chat's transcript (ADR 0047): its
+// size on disk, images included, and when it was last written.
+type TranscriptCopy struct {
+	Chat     string
+	Bytes    int64
+	Modified time.Time
+}
+
 // RemovedChat is a chat Nushi removed because its agent no longer has its
 // session (Claude Code deletes old ones): what Nushi kept of it.
 type RemovedChat struct {

@@ -20,7 +20,6 @@ import (
 	"regexp"
 	"slices"
 	"sync"
-	"time"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -372,29 +371,21 @@ func (s *Store) hasLocked(chat string) bool {
 	return err == nil
 }
 
-// Copy is one chat's copy: its size on disk, images included, and when it
-// was last written.
-type Copy struct {
-	Chat     string
-	Bytes    int64
-	Modified time.Time
-}
-
 // List returns every chat's copy, largest first. Links are counted as
 // themselves, never followed.
-func (s *Store) List() ([]Copy, error) {
+func (s *Store) List() ([]model.TranscriptCopy, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	dirs, err := fs.ReadDir(s.root.FS(), ".")
 	if err != nil {
 		return nil, err
 	}
-	var out []Copy
+	var out []model.TranscriptCopy
 	for _, d := range dirs {
 		if !d.IsDir() || checkChat(d.Name()) != nil {
 			continue
 		}
-		c := Copy{Chat: d.Name()}
+		c := model.TranscriptCopy{Chat: d.Name()}
 		_ = fs.WalkDir(s.root.FS(), d.Name(), func(_ string, e fs.DirEntry, err error) error {
 			if err != nil || e.IsDir() {
 				return nil //nolint:nilerr // what can't be read isn't counted
@@ -409,7 +400,7 @@ func (s *Store) List() ([]Copy, error) {
 		})
 		out = append(out, c)
 	}
-	slices.SortFunc(out, func(a, b Copy) int {
+	slices.SortFunc(out, func(a, b model.TranscriptCopy) int {
 		return cmp.Or(cmp.Compare(b.Bytes, a.Bytes), b.Modified.Compare(a.Modified))
 	})
 	return out, nil
