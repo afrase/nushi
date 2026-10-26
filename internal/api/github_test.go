@@ -18,6 +18,7 @@ import (
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
 	"github.com/afrase/nushi/internal/githubapi"
 	"github.com/afrase/nushi/internal/logs"
+	"github.com/afrase/nushi/internal/store"
 )
 
 type lockedBuffer struct {
@@ -49,7 +50,10 @@ func (m memTokens) Delete(account string) error {
 	return nil
 }
 
-type memHosts struct{ hosts []string }
+type memHosts struct {
+	*store.Store // the cache
+	hosts        []string
+}
 
 func (m *memHosts) GitHubTokenHosts() ([]string, error)   { return m.hosts, nil }
 func (m *memHosts) SaveGitHubTokenHosts(h []string) error { m.hosts = h; return nil }
@@ -85,7 +89,7 @@ func TestGitHubLogsNoTokenNorText(t *testing.T) {
 
 	svc := github.New(github.Deps{
 		Gh:     github.Gh{Token: func(string) (string, string) { return "", "" }, Hosts: func() []string { return nil }},
-		Tokens: memTokens{}, Store: &memHosts{},
+		Tokens: memTokens{}, Store: &memHosts{Store: store.New(t.TempDir())},
 		Open:    func(h, token string) github.Client { return githubapi.New(h, token, gh.Client().Transport) },
 		NeedsOK: func(error) bool { return false },
 	})

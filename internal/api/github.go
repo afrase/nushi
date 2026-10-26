@@ -82,7 +82,14 @@ func (s *server) ListGitHubRepos(ctx context.Context, req *connect.Request[nushi
 }
 
 func (s *server) ListGitHubInbox(ctx context.Context, req *connect.Request[nushiv1.ListGitHubInboxRequest]) (*connect.Response[nushiv1.ListGitHubInboxResponse], error) {
-	in, err := s.github.Inbox(ctx, req.Msg.Host, githubapi.InboxFilter{Repos: req.Msg.Repos, Teams: req.Msg.Teams}, req.Msg.Quiet)
+	f := githubapi.InboxFilter{Repos: req.Msg.Repos, Teams: req.Msg.Teams}
+	var in github.Inbox
+	var err error
+	if req.Msg.Cached {
+		in, err = s.github.CachedInbox(req.Msg.Host, f)
+	} else {
+		in, err = s.github.Inbox(ctx, req.Msg.Host, f, req.Msg.Quiet)
+	}
 	if err != nil {
 		return nil, githubErr(err)
 	}

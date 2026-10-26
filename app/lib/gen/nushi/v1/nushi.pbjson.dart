@@ -4121,13 +4121,15 @@ const ListGitHubInboxRequest$json = {
     {'1': 'repos', '3': 2, '4': 3, '5': 9, '10': 'repos'},
     {'1': 'quiet', '3': 3, '4': 1, '5': 8, '10': 'quiet'},
     {'1': 'teams', '3': 4, '4': 1, '5': 8, '10': 'teams'},
+    {'1': 'cached', '3': 5, '4': 1, '5': 8, '10': 'cached'},
   ],
 };
 
 /// Descriptor for `ListGitHubInboxRequest`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List listGitHubInboxRequestDescriptor = $convert.base64Decode(
     'ChZMaXN0R2l0SHViSW5ib3hSZXF1ZXN0EhIKBGhvc3QYASABKAlSBGhvc3QSFAoFcmVwb3MYAi'
-    'ADKAlSBXJlcG9zEhQKBXF1aWV0GAMgASgIUgVxdWlldBIUCgV0ZWFtcxgEIAEoCFIFdGVhbXM=');
+    'ADKAlSBXJlcG9zEhQKBXF1aWV0GAMgASgIUgVxdWlldBIUCgV0ZWFtcxgEIAEoCFIFdGVhbXMS'
+    'FgoGY2FjaGVkGAUgASgIUgZjYWNoZWQ=');
 
 @$core.Deprecated('Use listGitHubInboxResponseDescriptor instead')
 const ListGitHubInboxResponse$json = {

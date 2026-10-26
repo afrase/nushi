@@ -2,12 +2,14 @@ package github
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/afrase/nushi/internal/githubapi"
 	"github.com/afrase/nushi/internal/model"
@@ -155,7 +157,35 @@ func (k *fakeTokens) Delete(account string) error {
 	return nil
 }
 
-type fakeStore struct{ hosts []string }
+type fakeStore struct {
+	hosts []string
+	cache map[string]json.RawMessage // by area, name and key
+}
+
+func (s *fakeStore) Cached(area, name, key string) (time.Time, json.RawMessage, error) {
+	d, ok := s.cache[area+" "+name+" "+key]
+	if !ok {
+		return time.Time{}, nil, nil
+	}
+	return time.Unix(1, 0), d, nil
+}
+
+func (s *fakeStore) Cache(area, name, key string, _ time.Time, data json.RawMessage) error {
+	if s.cache == nil {
+		s.cache = map[string]json.RawMessage{}
+	}
+	s.cache[area+" "+name+" "+key] = data
+	return nil
+}
+
+func (s *fakeStore) ForgetCache(area, name string) error {
+	for k := range s.cache {
+		if strings.HasPrefix(k, area+" "+name+" ") {
+			delete(s.cache, k)
+		}
+	}
+	return nil
+}
 
 func (s *fakeStore) GitHubTokenHosts() ([]string, error)   { return slices.Clone(s.hosts), nil }
 func (s *fakeStore) SaveGitHubTokenHosts(h []string) error { s.hosts = h; return nil }
@@ -280,7 +310,7 @@ func TestInboxKeepsTheLastKnown(t *testing.T) {
 	if err != nil || len(in.Mine) != 1 {
 		t.Fatalf("%+v %v", in, err)
 	}
-	w.s.inboxes["github.com false a/b"] = inboxCache{at: in.At.Add(-inboxFresh), inbox: in.Inbox}
+	w.s.inboxes["github.com inbox false a/b"] = inboxCache{at: in.At.Add(-inboxFresh), inbox: in.Inbox}
 	c.fail = errors.New("GitHub's graphql rate limit is spent")
 	in, err = w.s.Inbox(ctx, "github.com", githubapi.InboxFilter{Repos: []string{"a/b"}}, true)
 	if err != nil || in.Stale == nil || len(in.Mine) != 1 {
@@ -289,6 +319,37 @@ func TestInboxKeepsTheLastKnown(t *testing.T) {
 	// The inbox told the chips: a state from it costs nothing.
 	if st := w.s.States(ctx, []model.ChatGitHub{{Host: "github.com", ID: "PR_1"}}, true); st["PR_1"].Number != 1 {
 		t.Fatalf("%+v", st)
+	}
+}
+
+// The inbox GitHub gave last is kept per host and filter, read back
+// without GitHub, and dropped when the host's token changes.
+func TestInboxCache(t *testing.T) {
+	w := newWorld(t)
+	ctx := t.Context()
+	if in, err := w.s.CachedInbox("github.com", githubapi.InboxFilter{}); err != nil || !in.At.IsZero() {
+		t.Fatalf("nothing kept yet: %+v %v", in, err)
+	}
+	if _, err := w.s.Inbox(ctx, "github.com", githubapi.InboxFilter{}, false); err != nil {
+		t.Fatal(err)
+	}
+	c := w.clients["gho_gh"]
+	c.fail = errors.New("not asked")
+	in, err := w.s.CachedInbox("github.com", githubapi.InboxFilter{})
+	if err != nil || in.At.IsZero() || len(c.asked) != 1 {
+		t.Fatalf("%+v %v, asked %v", in, err, c.asked)
+	}
+	if in, _ := w.s.CachedInbox("github.com", githubapi.InboxFilter{Teams: true}); !in.At.IsZero() {
+		t.Error("another filter's inbox")
+	}
+	if _, err := w.s.CachedInbox("evil.example", githubapi.InboxFilter{}); err == nil {
+		t.Error("a host never known")
+	}
+	if err := w.s.RemoveToken("github.com"); err != nil {
+		t.Fatal(err)
+	}
+	if in, _ := w.s.CachedInbox("github.com", githubapi.InboxFilter{}); !in.At.IsZero() {
+		t.Error("kept after the token changed")
 	}
 }
 

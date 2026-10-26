@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -12,6 +13,7 @@ import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_view.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
 import 'github_view_test.dart' show closeView, item, openView, testNow;
@@ -149,18 +151,65 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets('the inbox as it was last, until GitHub answers; rows that '
+      'are coming when nothing was kept', (tester) async {
+    for (final kept in [true, false]) {
+      final fresh = Completer<ListGitHubInboxResponse>();
+      final (_, d) = await openView(
+        tester,
+        more: (input) => switch (input) {
+          ListGitHubInboxRequest(cached: true) => ListGitHubInboxResponse(
+            mine: [if (kept) item(7, 'As it was')],
+            atMs: kept
+                ? Int64(
+                    testNow
+                        .subtract(const Duration(minutes: 5))
+                        .millisecondsSinceEpoch,
+                  )
+                : Int64.ZERO,
+          ),
+          ListGitHubInboxRequest() => fresh.future,
+          _ => null,
+        },
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.text('As it was'), kept ? findsOneWidget : findsNothing);
+      expect(
+        find.text('Updated 5m ago · refreshing'),
+        kept ? findsOneWidget : findsNothing,
+      );
+      expect(find.byType(RowsLoading), kept ? findsNothing : findsOneWidget);
+      fresh.complete(
+        ListGitHubInboxResponse(
+          mine: [item(8, 'As it is')],
+          atMs: Int64(testNow.millisecondsSinceEpoch),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('As it was'), findsNothing);
+      expect(find.text('As it is'), findsOneWidget);
+      expect(find.textContaining('Updated'), findsNothing);
+      await closeView(tester, d);
+    }
+  });
+
   testWidgets('Review requested: only me at first, or me and my teams, '
       'remembered', (tester) async {
     addTearDown(() => githubTeamReviews.value = false);
     Directory(dataDir).createSync(recursive: true); // the tests' own
+    // The asks that reach GitHub, not those for what the daemon kept.
+    List<ListGitHubInboxRequest> asks(FakeDaemon fake) => [
+      for (final r in fake.calls.whereType<ListGitHubInboxRequest>())
+        if (!r.cached) r,
+    ];
     var (fake, d) = await openView(tester);
-    final first = fake.calls.whereType<ListGitHubInboxRequest>().single;
+    final first = asks(fake).single;
     expect(first.teams, isFalse);
     await tester.tap(find.text('Only me ▾'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Me and my teams').last);
     await tester.pumpAndSettle();
-    final asked = fake.calls.whereType<ListGitHubInboxRequest>().toList();
+    final asked = asks(fake);
     expect((asked.length, asked.last.teams), (2, true));
     expect(find.text('Me and my teams ▾'), findsOneWidget);
     expect(githubTeamReviews.value, isTrue);
@@ -169,7 +218,7 @@ void main() {
     await closeView(tester, d);
     // Opened again (the app restarted keeps it in app.json): as left.
     (fake, d) = await openView(tester, teams: null);
-    expect(fake.calls.whereType<ListGitHubInboxRequest>().single.teams, isTrue);
+    expect(asks(fake).single.teams, isTrue);
     expect(find.text('Me and my teams ▾'), findsOneWidget);
     await closeView(tester, d);
   });

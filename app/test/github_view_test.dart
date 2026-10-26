@@ -170,87 +170,90 @@ Future<(FakeDaemon, Daemon)> openView(
   List<GitHubHost>? hosts,
   ListGitHubInboxResponse? inbox,
   bool? teams = false,
+  Object? Function(Object input)? more,
 }) async {
   if (teams != null) githubTeamReviews.value = teams;
   final fake = FakeDaemon(chats)
-    ..answer = (input) => switch (input) {
-      ListGitHubHostsRequest() => ListGitHubHostsResponse(
-        hosts:
-            hosts ??
-            [GitHubHost(host: 'github.com', login: 'afrase', source: 'gh')],
-      ),
-      ListGitHubReposRequest() => ListGitHubReposResponse(
-        repos: [
-          GitHubRepo(
-            host: 'github.com',
-            repo: _repo,
-            folders: ['/Users/me/nushi-gh-test'],
+    ..answer = (input) =>
+        more?.call(input) ??
+        switch (input) {
+          ListGitHubHostsRequest() => ListGitHubHostsResponse(
+            hosts:
+                hosts ??
+                [GitHubHost(host: 'github.com', login: 'afrase', source: 'gh')],
           ),
-        ],
-      ),
-      ListGitHubInboxRequest() when inbox != null => inbox,
-      ListGitHubInboxRequest() => ListGitHubInboxResponse(
-        review: [
-          item(
-            41,
-            'Speed up the diff of long files',
-            repo: 'octo/tools',
-            checks: 'pending',
-            review: 'review_required',
-            age: const Duration(minutes: 20),
+          ListGitHubReposRequest() => ListGitHubReposResponse(
+            repos: [
+              GitHubRepo(
+                host: 'github.com',
+                repo: _repo,
+                folders: ['/Users/me/nushi-gh-test'],
+              ),
+            ],
           ),
-        ],
-        mine: [
-          item(1, 'Add Sub and Neg', checks: 'failure', unresolved: 2),
-          item(
-            5,
-            'Try a merge queue',
-            checks: 'success',
-            review: 'approved',
-            draft: true,
-            age: const Duration(days: 3),
+          ListGitHubInboxRequest() when inbox != null => inbox,
+          ListGitHubInboxRequest() => ListGitHubInboxResponse(
+            review: [
+              item(
+                41,
+                'Speed up the diff of long files',
+                repo: 'octo/tools',
+                checks: 'pending',
+                review: 'review_required',
+                age: const Duration(minutes: 20),
+              ),
+            ],
+            mine: [
+              item(1, 'Add Sub and Neg', checks: 'failure', unresolved: 2),
+              item(
+                5,
+                'Try a merge queue',
+                checks: 'success',
+                review: 'approved',
+                draft: true,
+                age: const Duration(days: 3),
+              ),
+            ],
+            assigned: [item(2, 'Add a Mul function', pull: false)],
+            reviewTotal: 1,
+            mineTotal: 2,
+            assignedTotal: 1,
+            atMs: Int64(testNow.millisecondsSinceEpoch),
           ),
-        ],
-        assigned: [item(2, 'Add a Mul function', pull: false)],
-        reviewTotal: 1,
-        mineTotal: 2,
-        assignedTotal: 1,
-        atMs: Int64(testNow.millisecondsSinceEpoch),
-      ),
-      GetGitHubPullRequest() => GetGitHubPullResponse(pull: pull()),
-      GetGitHubIssueRequest() => GetGitHubIssueResponse(
-        issue: GitHubIssue(
-          item: item(2, 'Add a Mul function', pull: false),
-          body: 'We need `Mul(a, b int) int` beside `Add`.',
-          association: 'OWNER',
-          labels: ['enhancement'],
-          assignees: ['afrase'],
-          conversation: [
-            comment('octo', 'Shall I take it?', association: 'CONTRIBUTOR'),
-          ],
-        ),
-      ),
-      GetGitHubFilesRequest() => GetGitHubFilesResponse(
-        files: [
-          _sub(),
-          FileChange(
-            path: 'FAIL',
-            status: 'added',
-            newText: 'Fails on purpose.\n',
-            added: 1,
+          GetGitHubPullRequest() => GetGitHubPullResponse(pull: pull()),
+          GetGitHubIssueRequest() => GetGitHubIssueResponse(
+            issue: GitHubIssue(
+              item: item(2, 'Add a Mul function', pull: false),
+              body: 'We need `Mul(a, b int) int` beside `Add`.',
+              association: 'OWNER',
+              labels: ['enhancement'],
+              assignees: ['afrase'],
+              conversation: [
+                comment('octo', 'Shall I take it?', association: 'CONTRIBUTOR'),
+              ],
+            ),
           ),
-        ],
-      ),
-      GetGitHubJobLogRequest() => GetGitHubJobLogResponse(
-        tail:
-            'Run if [ -f FAIL ]; then\nThe branch has a FAIL file:\n'
-            '##[error]Process completed with exit code 1.',
-      ),
-      GetGitHubPromptRequest(:final kind) => GetGitHubPromptResponse(
-        text: 'A $kind message',
-      ),
-      _ => null,
-    };
+          GetGitHubFilesRequest() => GetGitHubFilesResponse(
+            files: [
+              _sub(),
+              FileChange(
+                path: 'FAIL',
+                status: 'added',
+                newText: 'Fails on purpose.\n',
+                added: 1,
+              ),
+            ],
+          ),
+          GetGitHubJobLogRequest() => GetGitHubJobLogResponse(
+            tail:
+                'Run if [ -f FAIL ]; then\nThe branch has a FAIL file:\n'
+                '##[error]Process completed with exit code 1.',
+          ),
+          GetGitHubPromptRequest(:final kind) => GetGitHubPromptResponse(
+            text: 'A $kind message',
+          ),
+          _ => null,
+        };
   final d = await fake.connect(tester);
   forgetGitHubView(); // it keeps what it had while the app runs
   await tester.binding.setSurfaceSize(size);
