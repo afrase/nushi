@@ -65,7 +65,10 @@ class _RewindTargetState extends State<RewindTarget> {
         onExit: (_) => setState(() => _hover = false),
         child: GestureDetector(
           onSecondaryTapUp: (d) => open(d.localPosition),
+          // Passthrough: the message keeps its row's width (a band spans
+          // the transcript) rather than shrinking to its text.
           child: Stack(
+            fit: StackFit.passthrough,
             children: [
               widget.child,
               if (_hover)

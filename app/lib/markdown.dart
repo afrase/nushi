@@ -59,9 +59,7 @@ class AgentMarkdown extends StatelessWidget {
       imageBuilder: images,
       style: MarkdownStyle(
         body: typed
-            ? theme
-                  .ui(t.userBandText, size: 15, weight: FontWeight.w600)
-                  .copyWith(height: 1.45)
+            ? theme.ui(t.userBandText, size: 13.5).copyWith(height: 1.5)
             : theme.ui(t.agentText, size: 13.5).copyWith(height: 1.5),
         code: theme.code(typed ? t.userBandText : t.agentText, size: 12.5),
         codeBackground: typed ? t.userBandCodeBlock : t.codeBlock,
