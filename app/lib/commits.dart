@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -83,5 +85,29 @@ String ago(Duration age, DateTime when) => switch (age) {
   _ when age.inDays < 30 => '${age.inDays}d ago',
   _ => '${when.year}-${_two(when.month)}-${_two(when.day)}',
 };
+
+/// How long ago, in a list's narrow column: [ago]'s steps without "ago"
+/// ("now", "5m", "3h", "12d"), then weeks ("5w", from 30 days), months
+/// ("3mo", from 13 weeks) and years ("1y"); "11mo" is the longest.
+String agoShort(Duration age) {
+  final d = age.inDays;
+  return switch (age) {
+    _ when age.inMinutes < 1 => 'now',
+    _ when age.inHours < 1 => '${age.inMinutes}m',
+    _ when d < 1 => '${age.inHours}h',
+    _ when d < 30 => '${d}d',
+    _ when d < 91 => '${d ~/ 7}w',
+    _ when d < 365 => '${min(d ~/ 30, 11)}mo',
+    _ => '${d ~/ 365}y',
+  };
+}
+
+/// [agoShort]'s longest form, which its column is sized for.
+const agoShortLongest = '11mo';
+
+/// A time as a hover says it: "2026-09-16 14:05".
+String dateTime(DateTime when) =>
+    '${when.year}-${_two(when.month)}-${_two(when.day)} '
+    '${_two(when.hour)}:${_two(when.minute)}';
 
 String _two(int n) => '$n'.padLeft(2, '0');

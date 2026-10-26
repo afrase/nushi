@@ -8,14 +8,16 @@ import 'package:nushi/github_issue.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_pull.dart';
 import 'package:nushi/github_view.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 
-final _now = DateTime(2026, 10, 26, 12);
+/// The time the tests' ages count from.
+final testNow = DateTime(2026, 10, 26, 12);
 const _repo = 'afrase/nushi-gh-test';
 
-Int64 _ago(Duration d) => Int64(_now.subtract(d).millisecondsSinceEpoch);
+Int64 _ago(Duration d) => Int64(testNow.subtract(d).millisecondsSinceEpoch);
 
 GitHubRef ref(int n, {String repo = _repo}) =>
     GitHubRef(host: 'github.com', repo: repo, number: n);
@@ -166,7 +168,10 @@ Future<(FakeDaemon, Daemon)> openView(
   Size size = const Size(1100, 640),
   Tokens tokens = Tokens.dark,
   List<GitHubHost>? hosts,
+  ListGitHubInboxResponse? inbox,
+  bool? teams = false,
 }) async {
+  if (teams != null) githubTeamReviews.value = teams;
   final fake = FakeDaemon(chats)
     ..answer = (input) => switch (input) {
       ListGitHubHostsRequest() => ListGitHubHostsResponse(
@@ -183,6 +188,7 @@ Future<(FakeDaemon, Daemon)> openView(
           ),
         ],
       ),
+      ListGitHubInboxRequest() when inbox != null => inbox,
       ListGitHubInboxRequest() => ListGitHubInboxResponse(
         review: [
           item(
@@ -209,7 +215,7 @@ Future<(FakeDaemon, Daemon)> openView(
         reviewTotal: 1,
         mineTotal: 2,
         assignedTotal: 1,
-        atMs: Int64(_now.millisecondsSinceEpoch),
+        atMs: Int64(testNow.millisecondsSinceEpoch),
       ),
       GetGitHubPullRequest() => GetGitHubPullResponse(pull: pull()),
       GetGitHubIssueRequest() => GetGitHubIssueResponse(
@@ -252,7 +258,7 @@ Future<(FakeDaemon, Daemon)> openView(
     MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: NushiTheme(tokens).toThemeData(),
-      home: Scaffold(body: GitHubView(d, now: _now)),
+      home: Scaffold(body: GitHubView(d, now: testNow)),
     ),
   );
   await tester.pumpAndSettle();

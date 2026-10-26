@@ -9,6 +9,7 @@ import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_pull.dart';
 import 'package:nushi/github_settings.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/settings_dialog.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -40,10 +41,11 @@ typedef Section = ({String title, List<GitHubItem> items, int total});
 
 /// GitHub in the app, in the chat's place as Jira's view is (the sidebar
 /// of chats stays): an inbox of pull requests whose review is asked of me
-/// or my teams, mine, and issues assigned to me, on a host, in the
-/// repositories of the folders Nushi knows or all; an item's details in
-/// the list's place. Keys: ↑↓ (or j k) pick, ⏎ the details, ⌘⏎ Start
-/// work, ⌘R asks again, Esc back to the list, then closes.
+/// (or my teams too: the section's choice, remembered), mine, and issues
+/// assigned to me, on a host, in the repositories of the folders Nushi
+/// knows or all; an item's details in the list's place. Keys: ↑↓ (or
+/// j k) pick, ⏎ the details, ⌘⏎ Start work, ⌘R asks again, Esc back to
+/// the list, then closes.
 class GitHubView extends StatefulWidget {
   const new(this.daemon, {super.key, this.now});
 
@@ -152,6 +154,7 @@ class _GitHubViewState extends State<GitHubView> {
           host: host.host,
           repos: _known ? _knownRepos : const [],
           quiet: quiet,
+          teams: githubTeamReviews.value,
         ),
       );
       if (n != _asked || !mounted) return;
@@ -218,6 +221,14 @@ class _GitHubViewState extends State<GitHubView> {
       return KeyEventResult.ignored;
     }
     return KeyEventResult.handled;
+  }
+
+  /// Review requested of me only, or of my teams too: remembered, and
+  /// asked again.
+  void _whose(bool teams) {
+    if (teams == githubTeamReviews.value) return;
+    setState(() => githubTeamReviews.value = teams);
+    unawaited(_load());
   }
 
   void _settings() => unawaited(
@@ -328,15 +339,26 @@ class _GitHubViewState extends State<GitHubView> {
     final now = widget.now ?? DateTime.now();
     final rows = <Widget>[];
     for (final s in _sections) {
+      final title = Text(
+        '${s.title}  '
+        '${s.total > s.items.length ? '${s.items.length} of ' : ''}'
+        '${s.total > s.items.length ? s.total : s.items.length}',
+        style: theme.ui(t.textSecondary, size: 12, weight: FontWeight.w600),
+      );
       rows.add(
         Padding(
           padding: EdgeInsets.fromLTRB(18, rows.isEmpty ? 10 : 18, 18, 4),
-          child: Text(
-            '${s.title}  '
-            '${s.total > s.items.length ? '${s.items.length} of ' : ''}'
-            '${s.total > s.items.length ? s.total : s.items.length}',
-            style: theme.ui(t.textSecondary, size: 12, weight: FontWeight.w600),
-          ),
+          child:
+              rows
+                  .isEmpty // Review requested: whose
+              ? Row(
+                  children: [
+                    title,
+                    const SizedBox(width: 12),
+                    _Whose(onPick: _whose),
+                  ],
+                )
+              : title,
         ),
       );
       if (s.items.isEmpty) {
@@ -409,6 +431,34 @@ class _GitHubViewState extends State<GitHubView> {
   static String _time(int ms) {
     final d = DateTime.fromMillisecondsSinceEpoch(ms);
     return '${d.hour}:${'${d.minute}'.padLeft(2, '0')}';
+  }
+}
+
+/// Review requested's choice: "Only me" (pull requests asking me by
+/// name) or "Me and my teams" (a team of mine asked too).
+class _Whose extends StatelessWidget {
+  const new({required this.onPick});
+
+  final ValueChanged<bool> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final teams = githubTeamReviews.value;
+    return Menu(
+      entries: [
+        MenuEntry('Only me', checked: !teams, onPick: () => onPick(false)),
+        MenuEntry(
+          'Me and my teams',
+          checked: teams,
+          onPick: () => onPick(true),
+        ),
+      ],
+      child: Text(
+        '${teams ? 'Me and my teams' : 'Only me'} ▾',
+        style: theme.ui(theme.t.textMuted, size: 12),
+      ),
+    );
   }
 }
 

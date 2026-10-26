@@ -4,7 +4,7 @@ What an agent needs before working on Nushi: what it is, how to build and run it
 
 ## What Nushi is
 
-A macOS app for running coding agents as chats, "a chat wrangler and a very very good diff viewer", for one user (the owner) for now. A Go daemon, `nushid`, runs the agents over the Agent Client Protocol (through the owner's library `github.com/afrase/acp-go`) and keeps them running when the app quits; a Flutter app is the window and talks to the daemon over Connect RPC on a Unix socket with a client token (API version 56). The packaged app carries the daemon in a background-only helper app and starts it when none runs; Start at login is a launch agent.
+A macOS app for running coding agents as chats, "a chat wrangler and a very very good diff viewer", for one user (the owner) for now. A Go daemon, `nushid`, runs the agents over the Agent Client Protocol (through the owner's library `github.com/afrase/acp-go`) and keeps them running when the app quits; a Flutter app is the window and talks to the daemon over Connect RPC on a Unix socket with a client token (API version 57). The packaged app carries the daemon in a background-only helper app and starts it when none runs; Start at login is a launch agent.
 
 Five agents, each run as the owner's own CLI with its own login, settings and history: **Claude** (`claude` through claude-agent-acp 0.94.0, which Settings › Agents › Set up installs into the data folder with `npm ci` from a pinned lockfile), **Codex** (`codex` through codex-acp 2.2.2, the same way), **Ante** and **PiG** (through bridges of Nushi's own inside `nushid`, `nushid ante-acp` and `nushid pig-acp`) and **oh-my-pi** (`omp --mode acp` under Bun). Chats belong to the agent: its history is the source of truth, and a chat resumes in a terminal (and a terminal's session opens in Nushi). The harness owns permissions: the agent's own mode is the only control, its prompts and questions (Claude's AskUserQuestion) are answerable cards, and Nushi never answers them. Nushi is unopinionated: options and warnings, few enforced flows.
 
@@ -48,7 +48,7 @@ Go, one module (`go.mod`); features declare the interfaces they need and `cmd/nu
 Open questions; what's settled is in `docs/adr/` or the code. Brackets name the milestone that made each.
 
 **GitHub** (ADRs 0045, 0046)
-- [AF] A view in the chat's place (⌘G), as Jira's; one host at a time, the first that works unless picked. The inbox is three searches (review requested of me or my teams, mine, assigned issues), 50 each; "my folders' repositories" is `repo:` qualifiers (six at most, then filtered in the daemon). Details replace the list.
+- [AF] A view in the chat's place (⌘G), as Jira's; one host at a time, the first that works unless picked. The inbox is three searches (review requested of me by name, or of my teams too when picked [AF fix: only me by default, remembered in `app.json`], mine, assigned issues), 50 each; "my folders' repositories" is `repo:` qualifiers (six at most, then filtered in the daemon). Details replace the list.
 - [AF] A pasted token beats gh's login for its host until removed; gh's login can't be removed from Nushi (`gh auth logout`).
 - [AF] Polls are quiet and stop below 200 left in their bucket; the user's own asks go until it's spent. The daemon keeps the inbox 20 s, states 30 s.
 - [AF] A review's inline comments live in the app while it runs (no pending review on GitHub until sent); a review sent while mine is pending on GitHub joins it.

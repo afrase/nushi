@@ -26,7 +26,7 @@ type Client interface { //nolint:interfacebloat // the GitHub calls the feature 
 	Viewer(ctx context.Context) (githubapi.User, error)
 	RateLimits(ctx context.Context) ([]githubapi.Bucket, error)
 	Budget() []githubapi.Bucket
-	Inbox(ctx context.Context, repos []string) (githubapi.Inbox, error)
+	Inbox(ctx context.Context, f githubapi.InboxFilter) (githubapi.Inbox, error)
 	Status(ctx context.Context, ids []string) (map[string]model.GitHubItem, error)
 	Pull(ctx context.Context, repo string, number int) (model.GitHubPull, error)
 	Issue(ctx context.Context, repo string, number int) (model.GitHubIssue, error)

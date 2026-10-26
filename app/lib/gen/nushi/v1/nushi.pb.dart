@@ -17469,11 +17469,13 @@ class ListGitHubInboxRequest extends $pb.GeneratedMessage {
     $core.String? host,
     $core.Iterable<$core.String>? repos,
     $core.bool? quiet,
+    $core.bool? teams,
   }) {
     final result = ListGitHubInboxRequest._();
     if (host != null) result.host = host;
     if (repos != null) result.repos.addAll(repos);
     if (quiet != null) result.quiet = quiet;
+    if (teams != null) result.teams = teams;
     return result;
   }
 
@@ -17493,6 +17495,7 @@ class ListGitHubInboxRequest extends $pb.GeneratedMessage {
     ..aOS(1, _omitFieldNames ? '' : 'host')
     ..pPS(2, _omitFieldNames ? '' : 'repos')
     ..aOB(3, _omitFieldNames ? '' : 'quiet')
+    ..aOB(4, _omitFieldNames ? '' : 'teams')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -17541,6 +17544,18 @@ class ListGitHubInboxRequest extends $pb.GeneratedMessage {
   $core.bool hasQuiet() => $_has(2);
   @$pb.TagNumber(3)
   void clearQuiet() => $_clearField(3);
+
+  /// Review requested includes pull requests asked of a team of mine
+  /// (GitHub's review-requested:@me); else only those asking me by name
+  /// (user-review-requested:@me).
+  @$pb.TagNumber(4)
+  $core.bool get teams => $_getBF(3);
+  @$pb.TagNumber(4)
+  set teams($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasTeams() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearTeams() => $_clearField(4);
 }
 
 class ListGitHubInboxResponse extends $pb.GeneratedMessage {

@@ -1925,6 +1925,10 @@ message ListGitHubInboxRequest {
   repeated string repos = 2;
   // The app's timer asking: held back while a rate limit is low.
   bool quiet = 3;
+  // Review requested includes pull requests asked of a team of mine
+  // (GitHub's review-requested:@me); else only those asking me by name
+  // (user-review-requested:@me).
+  bool teams = 4;
 }
 
 message ListGitHubInboxResponse {

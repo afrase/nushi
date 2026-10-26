@@ -2,6 +2,7 @@ package github
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"strings"
 	"time"
@@ -36,10 +37,11 @@ type Inbox struct {
 	Stale error
 }
 
-// Inbox asks the host for its inbox; poll says the app asks on its timer,
-// so a rate limit running low holds it back (the last inbox stays).
-func (s *Service) Inbox(ctx context.Context, name string, repos []string, poll bool) (Inbox, error) {
-	key := name + " " + strings.Join(repos, " ")
+// Inbox asks the host for its inbox (f says which); poll says the app
+// asks on its timer, so a rate limit running low holds it back (the last
+// inbox stays).
+func (s *Service) Inbox(ctx context.Context, name string, f githubapi.InboxFilter, poll bool) (Inbox, error) {
+	key := fmt.Sprint(name, " ", f.Teams, " ", strings.Join(f.Repos, " "))
 	s.mu.Lock()
 	kept, ok := s.inboxes[key]
 	s.mu.Unlock()
@@ -53,7 +55,7 @@ func (s *Service) Inbox(ctx context.Context, name string, repos []string, poll b
 	if poll {
 		ctx = githubapi.Poll(ctx)
 	}
-	in, err := c.Inbox(ctx, repos)
+	in, err := c.Inbox(ctx, f)
 	if err != nil {
 		if ok {
 			return Inbox{Inbox: kept.inbox, At: kept.at, Stale: err}, nil
