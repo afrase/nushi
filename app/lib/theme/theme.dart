@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/theme/tokens.dart';
@@ -185,15 +186,15 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
 }
 
 /// Scrolling everywhere in the app: no rubber-banding at the ends (a list
-/// stops at its top and bottom, a chat's transcript too), and a thin
-/// overlay scrollbar that shows while scrolling, then fades, as in a native
-/// macOS view.
+/// stops at its top and bottom, a chat's transcript too), a flick that
+/// glides as Apple's do, and a thin overlay scrollbar that shows while
+/// scrolling, then fades, as in a native macOS view.
 class NativeScroll extends MaterialScrollBehavior {
   const new();
 
   @override
   ScrollPhysics getScrollPhysics(BuildContext context) =>
-      const ClampingScrollPhysics(parent: RangeMaintainingScrollPhysics());
+      const EdgeStopScrollPhysics(parent: RangeMaintainingScrollPhysics());
 
   @override
   Widget buildScrollbar(
@@ -202,3 +203,39 @@ class NativeScroll extends MaterialScrollBehavior {
     ScrollableDetails details,
   ) => CupertinoScrollbar(controller: details.controller, child: child);
 }
+
+/// Stops at the ends as [ClampingScrollPhysics] does, but a flick glides
+/// and slows as [BouncingScrollPhysics]'s (Apple's curve, and repeated
+/// flicks add up); Android's curve stops sooner and feels heavy on a Mac.
+/// A glide that reaches an end stops there.
+class EdgeStopScrollPhysics extends ClampingScrollPhysics {
+  const new({super.parent});
+
+  static const _apple = BouncingScrollPhysics();
+
+  @override
+  EdgeStopScrollPhysics applyTo(ScrollPhysics? ancestor) =>
+      EdgeStopScrollPhysics(parent: buildParent(ancestor));
+
+  @override
+  Simulation? createBallisticSimulation(
+    ScrollMetrics position,
+    double velocity,
+  ) => _apple.createBallisticSimulation(position, velocity);
+
+  @override
+  double carriedMomentum(double existingVelocity) =>
+      _apple.carriedMomentum(existingVelocity);
+
+  @override
+  double get minFlingVelocity => _apple.minFlingVelocity;
+}
+
+/// A trackpad's scroll moves at once: Flutter takes a trackpad's pan for a
+/// touch, which must travel 18 points before it scrolls; the pointer's
+/// slop is a mouse's instead.
+MediaQueryData trackpadSlop(MediaQueryData data) => data.copyWith(
+  gestureSettings: const DeviceGestureSettings(
+    touchSlop: kPrecisePointerHitSlop,
+  ),
+);
