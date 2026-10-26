@@ -1,0 +1,28 @@
+{
+  "merge_base_commit": {
+    "sha": "521c8d9a1db6c75193e4fd2daf7ddf4c5d61940d"
+  },
+  "files": [
+    {
+      "filename": "FAIL",
+      "status": "added",
+      "additions": 1,
+      "deletions": 0,
+      "previous_filename": null
+    },
+    {
+      "filename": "add_test.go",
+      "status": "modified",
+      "additions": 6,
+      "deletions": 0,
+      "previous_filename": null
+    },
+    {
+      "filename": "sub.go",
+      "status": "added",
+      "additions": 11,
+      "deletions": 0,
+      "previous_filename": null
+    }
+  ]
+}

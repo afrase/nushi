@@ -1,0 +1,19 @@
+{
+  "data": {
+    "repository": {
+      "b0": {
+        "text": "package add\n\n// Sub returns a minus b.\nfunc Sub(a, b int) int {\n\treturn a - b\n}\n\n// Neg returns -a.\nfunc Neg(a int) int {\n\treturn 0 - a\n}\n",
+        "isBinary": false,
+        "isTruncated": false,
+        "byteSize": 138
+      },
+      "b1": null,
+      "b2": {
+        "text": "// Package add is a tiny module for testing Nushi's GitHub integration.\npackage add\n\n// Add returns the sum of a and b.\nfunc Add(a, b int) int {\n\treturn a + b\n}\n",
+        "isBinary": false,
+        "isTruncated": false,
+        "byteSize": 161
+      }
+    }
+  }
+}
