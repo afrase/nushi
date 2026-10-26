@@ -2,6 +2,14 @@
 
 Each milestone's demo script (what to run, what to see), newest first. An archive.
 
+## Demo (Nushi's copy of transcripts, steps 272–280)
+
+1. In a throwaway folder, start a Claude chat; ask for two small changes (it reads and edits files). Send `/compact`, then one more message.
+2. Quit Nushi and restart the daemon (or wait for a sleep and reopen): the whole chat shows again, with "Compacted here" where Claude's own history starts; a click on it shows the summary Claude kept.
+3. Settings › General › Transcripts: the chat's copy with its size and last use. Clear it, restart the daemon and reopen: only what follows the compaction shows, as before.
+4. Move the session's `<id>.jsonl` out of `~/.claude/projects/<the folder's name>/` (a chat with a copy) and restart the daemon: the chat stays, "expired", its transcript the copy, with Delete… and Start a new chat here in place of the box.
+5. Turn Keep transcripts off: it asks whether to keep or delete the copies.
+
 ## Demo (the expired sessions fix, steps 269–270)
 
 1. In a throwaway folder, start a Claude chat, send "say ok", Sleep it, quit the app.
