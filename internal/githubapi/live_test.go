@@ -141,3 +141,49 @@ func (r recorder) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 	return resp, nil
 }
+
+// TestLiveWrites writes to testRepo's pull request 1: a reply to its
+// first thread, resolving and unresolving it, a comment, and a review
+// with one inline comment. An approval of one's own pull request is
+// refused by GitHub, and says so.
+func TestLiveWrites(t *testing.T) {
+	if os.Getenv("NUSHI_GITHUB_LIVE") != "1" {
+		t.Skip("NUSHI_GITHUB_LIVE=1 runs it against " + testRepo)
+	}
+	token, _ := auth.TokenForHost("github.com")
+	if token == "" {
+		t.Skip("no gh login for github.com")
+	}
+	c := New("github.com", token, nil)
+	ctx := t.Context()
+	p, err := c.Pull(ctx, testRepo, 1)
+	if err != nil || len(p.Threads) == 0 {
+		t.Fatalf("%v %+v", err, p.Threads)
+	}
+	th := p.Threads[0]
+	if _, err := c.Reply(ctx, th.ID, "A reply from Nushi's live test."); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Resolve(ctx, th.ID, true); err != nil {
+		t.Fatal(err)
+	}
+	if p, err := c.Pull(ctx, testRepo, 1); err != nil || !p.Threads[0].Resolved || !p.Threads[0].CanUnresolve {
+		t.Fatalf("not resolved: %v %+v", err, p.Threads[0])
+	}
+	if err := c.Resolve(ctx, th.ID, false); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Comment(ctx, p.ID, "A comment from Nushi's live test."); err != nil {
+		t.Fatal(err)
+	}
+	err = c.SubmitReview(ctx, Review{Pull: p.ID, HeadOID: p.HeadOID, Event: "comment", Body: "A review from Nushi's live test.",
+		Drafts: []Draft{{Path: "sub.go", Side: "right", Line: 4, Body: "An inline comment from Nushi's live test."}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.SubmitReview(ctx, Review{Pull: p.ID, HeadOID: p.HeadOID, Event: "approve"}); err == nil {
+		t.Fatal("GitHub let me approve my own pull request")
+	} else {
+		t.Logf("approving my own: %v", err)
+	}
+}
