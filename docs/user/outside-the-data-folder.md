@@ -14,7 +14,7 @@ Everything else Nushi writes is in its data folder (`~/Library/Application Suppo
 | A project's MCP switch | `<repo>/.claude/settings.local.json` (its two MCP lists), and that file into `.git/info/exclude` | The MCP view's on/off switch. |
 | A worktree | `<repo>/.worktrees/<name>`, its branch, `.git/info/exclude` | A chat in a new worktree; Delete removes them when asked. |
 | MCP servers started | whatever each server does | Opening the MCP view runs `claude mcp list`, which starts every server to check it, as in a terminal. |
-| A shell | your shell's own files (history) | A terminal you open; the daemon's environment comes from your login shell (`nushid -login`, ADR 0028). |
+| A shell | your shell's own files (history) | A terminal you open; the daemon's start (`nushid -login`, ADR 0036); reading its environment for agents, at start and from Settings › Agents (`-l -i -c`, ADR 0048): your config runs as in a terminal. |
 | A login item | launchd's per-user list, Login Items | Start at login (Settings). |
 | A Jira site's API token | the login keychain, service "Nushi Jira", account "<email> on <host>" | Settings › Jira (you added it); Remove deletes it. |
 | Jira itself | the site | A move, a comment you make, or an agent's through its tools (its harness asks first). Nothing else: lists and issues are only read. |
