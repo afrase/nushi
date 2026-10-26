@@ -141,12 +141,16 @@ func TestCrashMidWrite(t *testing.T) {
 	// A crash while an image was written leaves only its temporary file,
 	// which the next start removes.
 	tmp := filepath.Join(dir, "C", imagesDir, strings.Repeat("0", 64)+".tmpXXXX")
+	half := filepath.Join(dir, "C", itemsFile+".tmp") // a copy being written anew
 	noErr(t, os.MkdirAll(filepath.Dir(tmp), 0o700))
 	noErr(t, os.WriteFile(tmp, []byte("half"), 0o600))
+	noErr(t, os.WriteFile(half, []byte("half"), 0o600))
 	_, err = Open(dir)
 	noErr(t, err)
-	if _, err := os.Stat(tmp); !os.IsNotExist(err) {
-		t.Errorf("the temporary image stayed: %v", err)
+	for _, p := range []string{tmp, half} {
+		if _, err := os.Stat(p); !os.IsNotExist(err) {
+			t.Errorf("%s stayed: %v", p, err)
+		}
 	}
 }
 

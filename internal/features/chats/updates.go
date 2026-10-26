@@ -95,8 +95,9 @@ func (c *chat) update(n *acp.SessionNotification) { //nolint:gocognit,gocyclo //
 				c.releaseLocked()
 			}
 		}
-		// A turn's end, the agent's own included: its items have settled.
-		c.copyLocked(true)
+		// The end of the agent's own turn: its items have settled. During one of
+		// Nushi's, which ends with the prompt's answer, a model call's.
+		c.copyLocked(c.started.IsZero())
 		c.usage.Used, c.usage.Size = int64(u.Used), int64(u.Size) //nolint:gosec // token counts, far below the limits
 		if u.Cost != nil {                                        // else the cost reported last still stands
 			c.usage.Cost, c.usage.Currency = u.Cost.Amount, u.Cost.Currency
