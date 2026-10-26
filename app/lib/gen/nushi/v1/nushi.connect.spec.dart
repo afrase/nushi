@@ -4,7 +4,6 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
-
 import "nushi.pb.dart" as nushiv1nushi;
 
 abstract final class NushiService {
@@ -244,6 +243,14 @@ abstract final class NushiService {
     connect.StreamType.unary,
     nushiv1nushi.DeleteChatRequest.new,
     nushiv1nushi.DeleteChatResponse.new,
+  );
+
+  /// Takes chats off ListChatsResponse.removed (the app has said so).
+  static const dismissRemovedChats = connect.Spec(
+    '/$name/DismissRemovedChats',
+    connect.StreamType.unary,
+    nushiv1nushi.DismissRemovedChatsRequest.new,
+    nushiv1nushi.DismissRemovedChatsResponse.new,
   );
 
   /// Answers a pending permission prompt with one of its options.

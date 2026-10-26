@@ -60,6 +60,9 @@ func (s *Service) Prompt(chatID string, m model.Message, how Send) error {
 		if err := folderGone(c.session); err != nil {
 			return fmt.Errorf("the chat can't go on: %w", err)
 		}
+		if c.sessionGone {
+			return errors.New("the chat can't go on: " + c.kind.goneText())
+		}
 		if c.asleep {
 			c.logLocked().Info("chat waking", "for", "a message")
 		}

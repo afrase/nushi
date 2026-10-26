@@ -119,10 +119,12 @@ func (s *Service) Delete(ctx context.Context, chatID string, opts DeleteOptions)
 	}
 	if err == nil && p.History {
 		c.mu.Lock()
-		ids := slices.Clone(c.session.Throwaway)
+		ids, gone := slices.Clone(c.session.Throwaway), c.sessionGone
 		c.mu.Unlock()
-		for _, sess := range p.Sessions {
-			ids = append(ids, sess.ID)
+		for i, sess := range p.Sessions {
+			if !gone || i < len(p.Sessions)-1 { // a session the agent deleted has nothing left to delete
+				ids = append(ids, sess.ID)
+			}
 		}
 		err = s.deleteHistory(ctx, c, ids)
 	}

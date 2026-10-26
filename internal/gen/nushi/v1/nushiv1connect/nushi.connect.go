@@ -91,6 +91,9 @@ const (
 	NushiServicePlanDeleteChatProcedure = "/nushi.v1.NushiService/PlanDeleteChat"
 	// NushiServiceDeleteChatProcedure is the fully-qualified name of the NushiService's DeleteChat RPC.
 	NushiServiceDeleteChatProcedure = "/nushi.v1.NushiService/DeleteChat"
+	// NushiServiceDismissRemovedChatsProcedure is the fully-qualified name of the NushiService's
+	// DismissRemovedChats RPC.
+	NushiServiceDismissRemovedChatsProcedure = "/nushi.v1.NushiService/DismissRemovedChats"
 	// NushiServiceAnswerPermissionProcedure is the fully-qualified name of the NushiService's
 	// AnswerPermission RPC.
 	NushiServiceAnswerPermissionProcedure = "/nushi.v1.NushiService/AnswerPermission"
@@ -375,6 +378,8 @@ type NushiServiceClient interface {
 	// chat's sessions (ACP session/delete, when it can), the chat's scratch
 	// folder goes, and Nushi's record of it.
 	DeleteChat(context.Context, *connect.Request[v1.DeleteChatRequest]) (*connect.Response[v1.DeleteChatResponse], error)
+	// Takes chats off ListChatsResponse.removed (the app has said so).
+	DismissRemovedChats(context.Context, *connect.Request[v1.DismissRemovedChatsRequest]) (*connect.Response[v1.DismissRemovedChatsResponse], error)
 	// Answers a pending permission prompt with one of its options.
 	AnswerPermission(context.Context, *connect.Request[v1.AnswerPermissionRequest]) (*connect.Response[v1.AnswerPermissionResponse], error)
 	// Answers a pending question, or declines it.
@@ -711,6 +716,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceDeleteChatProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("DeleteChat")),
+			connect.WithClientOptions(opts...),
+		),
+		dismissRemovedChats: connect.NewClient[v1.DismissRemovedChatsRequest, v1.DismissRemovedChatsResponse](
+			httpClient,
+			baseURL+NushiServiceDismissRemovedChatsProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("DismissRemovedChats")),
 			connect.WithClientOptions(opts...),
 		),
 		answerPermission: connect.NewClient[v1.AnswerPermissionRequest, v1.AnswerPermissionResponse](
@@ -1151,6 +1162,7 @@ type nushiServiceClient struct {
 	setSettings         *connect.Client[v1.SetSettingsRequest, v1.SetSettingsResponse]
 	planDeleteChat      *connect.Client[v1.PlanDeleteChatRequest, v1.PlanDeleteChatResponse]
 	deleteChat          *connect.Client[v1.DeleteChatRequest, v1.DeleteChatResponse]
+	dismissRemovedChats *connect.Client[v1.DismissRemovedChatsRequest, v1.DismissRemovedChatsResponse]
 	answerPermission    *connect.Client[v1.AnswerPermissionRequest, v1.AnswerPermissionResponse]
 	answerQuestion      *connect.Client[v1.AnswerQuestionRequest, v1.AnswerQuestionResponse]
 	setConfigOption     *connect.Client[v1.SetConfigOptionRequest, v1.SetConfigOptionResponse]
@@ -1344,6 +1356,11 @@ func (c *nushiServiceClient) PlanDeleteChat(ctx context.Context, req *connect.Re
 // DeleteChat calls nushi.v1.NushiService.DeleteChat.
 func (c *nushiServiceClient) DeleteChat(ctx context.Context, req *connect.Request[v1.DeleteChatRequest]) (*connect.Response[v1.DeleteChatResponse], error) {
 	return c.deleteChat.CallUnary(ctx, req)
+}
+
+// DismissRemovedChats calls nushi.v1.NushiService.DismissRemovedChats.
+func (c *nushiServiceClient) DismissRemovedChats(ctx context.Context, req *connect.Request[v1.DismissRemovedChatsRequest]) (*connect.Response[v1.DismissRemovedChatsResponse], error) {
+	return c.dismissRemovedChats.CallUnary(ctx, req)
 }
 
 // AnswerPermission calls nushi.v1.NushiService.AnswerPermission.
@@ -1773,6 +1790,8 @@ type NushiServiceHandler interface {
 	// chat's sessions (ACP session/delete, when it can), the chat's scratch
 	// folder goes, and Nushi's record of it.
 	DeleteChat(context.Context, *connect.Request[v1.DeleteChatRequest]) (*connect.Response[v1.DeleteChatResponse], error)
+	// Takes chats off ListChatsResponse.removed (the app has said so).
+	DismissRemovedChats(context.Context, *connect.Request[v1.DismissRemovedChatsRequest]) (*connect.Response[v1.DismissRemovedChatsResponse], error)
 	// Answers a pending permission prompt with one of its options.
 	AnswerPermission(context.Context, *connect.Request[v1.AnswerPermissionRequest]) (*connect.Response[v1.AnswerPermissionResponse], error)
 	// Answers a pending question, or declines it.
@@ -2105,6 +2124,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceDeleteChatProcedure,
 		svc.DeleteChat,
 		connect.WithSchema(nushiServiceMethods.ByName("DeleteChat")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceDismissRemovedChatsHandler := connect.NewUnaryHandler(
+		NushiServiceDismissRemovedChatsProcedure,
+		svc.DismissRemovedChats,
+		connect.WithSchema(nushiServiceMethods.ByName("DismissRemovedChats")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceAnswerPermissionHandler := connect.NewUnaryHandler(
@@ -2567,6 +2592,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServicePlanDeleteChatHandler.ServeHTTP(w, r)
 		case NushiServiceDeleteChatProcedure:
 			nushiServiceDeleteChatHandler.ServeHTTP(w, r)
+		case NushiServiceDismissRemovedChatsProcedure:
+			nushiServiceDismissRemovedChatsHandler.ServeHTTP(w, r)
 		case NushiServiceAnswerPermissionProcedure:
 			nushiServiceAnswerPermissionHandler.ServeHTTP(w, r)
 		case NushiServiceAnswerQuestionProcedure:
@@ -2810,6 +2837,10 @@ func (UnimplementedNushiServiceHandler) PlanDeleteChat(context.Context, *connect
 
 func (UnimplementedNushiServiceHandler) DeleteChat(context.Context, *connect.Request[v1.DeleteChatRequest]) (*connect.Response[v1.DeleteChatResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.DeleteChat is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) DismissRemovedChats(context.Context, *connect.Request[v1.DismissRemovedChatsRequest]) (*connect.Response[v1.DismissRemovedChatsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.DismissRemovedChats is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) AnswerPermission(context.Context, *connect.Request[v1.AnswerPermissionRequest]) (*connect.Response[v1.AnswerPermissionResponse], error) {

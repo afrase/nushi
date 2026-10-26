@@ -4,11 +4,10 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
-
 import "nushi.pb.dart" as nushiv1nushi;
 import "nushi.connect.spec.dart" as specs;
 
-extension type NushiServiceClient(connect.Transport _transport) {
+extension type NushiServiceClient (connect.Transport _transport) {
   Future<nushiv1nushi.PingResponse> ping(
     nushiv1nushi.PingRequest input, {
     connect.Headers? headers,
@@ -486,6 +485,24 @@ extension type NushiServiceClient(connect.Transport _transport) {
   }) {
     return connect.Client(_transport).unary(
       specs.NushiService.deleteChat,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Takes chats off ListChatsResponse.removed (the app has said so).
+  Future<nushiv1nushi.DismissRemovedChatsResponse> dismissRemovedChats(
+    nushiv1nushi.DismissRemovedChatsRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.dismissRemovedChats,
       input,
       signal: signal,
       headers: headers,

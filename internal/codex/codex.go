@@ -6,6 +6,7 @@ package codex
 import (
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -61,6 +62,23 @@ const Resume = "codex resume"
 // DeleteArchives says the adapter's session/delete archives the thread
 // ($CODEX_HOME/archived_sessions); codex resume offers to unarchive it.
 const DeleteArchives = true
+
+// Gone says a session/load error means Codex has no rollout of the
+// session (deleted, or never written): codex-acp 2.2.2 answers Internal
+// error (-32603) with data.details "no rollout found for thread id <id>".
+// An archived session ("session <id> is archived. Run `codex unarchive
+// <id>`…") is still Codex's, so it isn't gone.
+func Gone(err error) bool {
+	e, ok := errors.AsType[*acp.Error](err)
+	if !ok || e.Code != acp.ErrorCodeInternalError {
+		return false
+	}
+	var d struct {
+		Details string `json:"details"`
+	}
+	_ = json.Unmarshal(e.Data, &d)
+	return strings.HasPrefix(d.Details, "no rollout found for thread id ")
+}
 
 // History makes a session ready to fork into another folder: nothing to
 // do, since Codex finds a session by its id whatever the folder, and forks

@@ -31,7 +31,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 60
+const Version = 61
 
 // Build is the daemon's executable as it started (PingResponse.build).
 var Build = func() string {
@@ -153,12 +153,13 @@ func (s *server) Ping(context.Context, *connect.Request[nushiv1.PingRequest]) (*
 	return connect.NewResponse(&nushiv1.PingResponse{ApiVersion: Version, Build: Build}), nil
 }
 
-func (s *server) ListChats(context.Context, *connect.Request[nushiv1.ListChatsRequest]) (*connect.Response[nushiv1.ListChatsResponse], error) {
+func (s *server) ListChats(ctx context.Context, _ *connect.Request[nushiv1.ListChatsRequest]) (*connect.Response[nushiv1.ListChatsResponse], error) {
+	s.chats.Sweep(ctx)
 	sessions, err := s.chats.List()
 	if err != nil {
 		return nil, err
 	}
-	resp := &nushiv1.ListChatsResponse{}
+	resp := &nushiv1.ListChatsResponse{Removed: removedProto(s.chats.Removed())}
 	for _, sess := range sessions {
 		c := chatProto(sess)
 		c.Status = statusProto(s.chats.Status(sess))
@@ -448,6 +449,11 @@ func (s *server) DeleteChat(ctx context.Context, req *connect.Request[nushiv1.De
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
 	return connect.NewResponse(&nushiv1.DeleteChatResponse{}), nil
+}
+
+func (s *server) DismissRemovedChats(_ context.Context, req *connect.Request[nushiv1.DismissRemovedChatsRequest]) (*connect.Response[nushiv1.DismissRemovedChatsResponse], error) {
+	s.chats.DismissRemoved(req.Msg.Ids)
+	return connect.NewResponse(&nushiv1.DismissRemovedChatsResponse{}), nil
 }
 
 func (s *server) AnswerPermission(_ context.Context, req *connect.Request[nushiv1.AnswerPermissionRequest]) (*connect.Response[nushiv1.AnswerPermissionResponse], error) {

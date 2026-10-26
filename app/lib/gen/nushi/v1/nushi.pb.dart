@@ -180,9 +180,11 @@ class ListChatsRequest extends $pb.GeneratedMessage {
 class ListChatsResponse extends $pb.GeneratedMessage {
   factory ListChatsResponse({
     $core.Iterable<Chat>? chats,
+    $core.Iterable<RemovedChat>? removed,
   }) {
     final result = ListChatsResponse._();
     if (chats != null) result.chats.addAll(chats);
+    if (removed != null) result.removed.addAll(removed);
     return result;
   }
 
@@ -201,6 +203,8 @@ class ListChatsResponse extends $pb.GeneratedMessage {
       createEmptyInstance: ListChatsResponse.$_createMessage)
     ..pPM<Chat>(1, _omitFieldNames ? '' : 'chats',
         subBuilder: Chat.$_createMessage)
+    ..pPM<RemovedChat>(2, _omitFieldNames ? '' : 'removed',
+        subBuilder: RemovedChat.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -227,6 +231,274 @@ class ListChatsResponse extends $pb.GeneratedMessage {
 
   @$pb.TagNumber(1)
   $pb.PbList<Chat> get chats => $_getList(0);
+
+  /// Chats the daemon removed since it started because their agent no
+  /// longer has their sessions (Claude Code deletes old ones), until
+  /// DismissRemovedChats; oldest first.
+  @$pb.TagNumber(2)
+  $pb.PbList<RemovedChat> get removed => $_getList(1);
+}
+
+/// A chat the daemon removed, its agent having deleted its session: what
+/// Nushi kept of it. Its worktree and branch, if any, stay.
+class RemovedChat extends $pb.GeneratedMessage {
+  factory RemovedChat({
+    $core.String? id,
+    $core.String? agent,
+    $core.String? title,
+    $core.String? folder,
+    $fixnum.Int64? removedUnixMs,
+  }) {
+    final result = RemovedChat._();
+    if (id != null) result.id = id;
+    if (agent != null) result.agent = agent;
+    if (title != null) result.title = title;
+    if (folder != null) result.folder = folder;
+    if (removedUnixMs != null) result.removedUnixMs = removedUnixMs;
+    return result;
+  }
+
+  RemovedChat._();
+
+  factory RemovedChat.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemovedChat()..mergeFromBuffer(data, registry);
+  factory RemovedChat.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemovedChat()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RemovedChat',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RemovedChat.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'agent')
+    ..aOS(3, _omitFieldNames ? '' : 'title')
+    ..aOS(4, _omitFieldNames ? '' : 'folder')
+    ..aInt64(5, _omitFieldNames ? '' : 'removedUnixMs')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemovedChat clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemovedChat copyWith(void Function(RemovedChat) updates) =>
+      super.copyWith((message) => updates(message as RemovedChat))
+          as RemovedChat;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use RemovedChat() / RemovedChat.new instead')
+  static RemovedChat create() => RemovedChat._();
+  static $pb.GeneratedMessage $_createMessage() => RemovedChat._();
+  @$core.override
+  RemovedChat createEmptyInstance() => RemovedChat._();
+  @$core.pragma('dart2js:noInline')
+  static RemovedChat getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<RemovedChat>(
+          RemovedChat.$_createMessage);
+  static RemovedChat? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get agent => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set agent($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasAgent() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearAgent() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get title => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set title($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasTitle() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearTitle() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get folder => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set folder($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasFolder() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearFolder() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $fixnum.Int64 get removedUnixMs => $_getI64(4);
+  @$pb.TagNumber(5)
+  set removedUnixMs($fixnum.Int64 value) => $_setInt64(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasRemovedUnixMs() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearRemovedUnixMs() => $_clearField(5);
+}
+
+class RemovedChats extends $pb.GeneratedMessage {
+  factory RemovedChats({
+    $core.Iterable<RemovedChat>? chats,
+  }) {
+    final result = RemovedChats._();
+    if (chats != null) result.chats.addAll(chats);
+    return result;
+  }
+
+  RemovedChats._();
+
+  factory RemovedChats.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemovedChats()..mergeFromBuffer(data, registry);
+  factory RemovedChats.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemovedChats()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RemovedChats',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RemovedChats.$_createMessage)
+    ..pPM<RemovedChat>(1, _omitFieldNames ? '' : 'chats',
+        subBuilder: RemovedChat.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemovedChats clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemovedChats copyWith(void Function(RemovedChats) updates) =>
+      super.copyWith((message) => updates(message as RemovedChats))
+          as RemovedChats;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use RemovedChats() / RemovedChats.new instead')
+  static RemovedChats create() => RemovedChats._();
+  static $pb.GeneratedMessage $_createMessage() => RemovedChats._();
+  @$core.override
+  RemovedChats createEmptyInstance() => RemovedChats._();
+  @$core.pragma('dart2js:noInline')
+  static RemovedChats getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<RemovedChats>(
+          RemovedChats.$_createMessage);
+  static RemovedChats? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<RemovedChat> get chats => $_getList(0);
+}
+
+class DismissRemovedChatsRequest extends $pb.GeneratedMessage {
+  factory DismissRemovedChatsRequest({
+    $core.Iterable<$core.String>? ids,
+  }) {
+    final result = DismissRemovedChatsRequest._();
+    if (ids != null) result.ids.addAll(ids);
+    return result;
+  }
+
+  DismissRemovedChatsRequest._();
+
+  factory DismissRemovedChatsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DismissRemovedChatsRequest()..mergeFromBuffer(data, registry);
+  factory DismissRemovedChatsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DismissRemovedChatsRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'DismissRemovedChatsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: DismissRemovedChatsRequest.$_createMessage)
+    ..pPS(1, _omitFieldNames ? '' : 'ids')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DismissRemovedChatsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DismissRemovedChatsRequest copyWith(
+          void Function(DismissRemovedChatsRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as DismissRemovedChatsRequest))
+          as DismissRemovedChatsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use DismissRemovedChatsRequest() / DismissRemovedChatsRequest.new instead')
+  static DismissRemovedChatsRequest create() => DismissRemovedChatsRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      DismissRemovedChatsRequest._();
+  @$core.override
+  DismissRemovedChatsRequest createEmptyInstance() =>
+      DismissRemovedChatsRequest._();
+  @$core.pragma('dart2js:noInline')
+  static DismissRemovedChatsRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<DismissRemovedChatsRequest>(
+          DismissRemovedChatsRequest.$_createMessage);
+  static DismissRemovedChatsRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<$core.String> get ids => $_getList(0);
+}
+
+class DismissRemovedChatsResponse extends $pb.GeneratedMessage {
+  factory DismissRemovedChatsResponse() => DismissRemovedChatsResponse._();
+
+  DismissRemovedChatsResponse._();
+
+  factory DismissRemovedChatsResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DismissRemovedChatsResponse()..mergeFromBuffer(data, registry);
+  factory DismissRemovedChatsResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DismissRemovedChatsResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'DismissRemovedChatsResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: DismissRemovedChatsResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DismissRemovedChatsResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DismissRemovedChatsResponse copyWith(
+          void Function(DismissRemovedChatsResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as DismissRemovedChatsResponse))
+          as DismissRemovedChatsResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use DismissRemovedChatsResponse() / DismissRemovedChatsResponse.new instead')
+  static DismissRemovedChatsResponse create() =>
+      DismissRemovedChatsResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      DismissRemovedChatsResponse._();
+  @$core.override
+  DismissRemovedChatsResponse createEmptyInstance() =>
+      DismissRemovedChatsResponse._();
+  @$core.pragma('dart2js:noInline')
+  static DismissRemovedChatsResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<DismissRemovedChatsResponse>(
+          DismissRemovedChatsResponse.$_createMessage);
+  static DismissRemovedChatsResponse? _defaultInstance;
 }
 
 /// What Nushi keeps of a chat; the agent keeps the rest.
@@ -7908,6 +8180,7 @@ enum EventsResponse_Kind {
   terminals,
   dropped,
   remote,
+  removedChats,
   notSet
 }
 
@@ -7927,6 +8200,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     ChatTerminals? terminals,
     $core.String? dropped,
     Remote? remote,
+    RemovedChats? removedChats,
   }) {
     final result = EventsResponse._();
     if (chatId != null) result.chatId = chatId;
@@ -7943,6 +8217,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     if (terminals != null) result.terminals = terminals;
     if (dropped != null) result.dropped = dropped;
     if (remote != null) result.remote = remote;
+    if (removedChats != null) result.removedChats = removedChats;
     return result;
   }
 
@@ -7969,13 +8244,14 @@ class EventsResponse extends $pb.GeneratedMessage {
     12: EventsResponse_Kind.terminals,
     13: EventsResponse_Kind.dropped,
     14: EventsResponse_Kind.remote,
+    15: EventsResponse_Kind.removedChats,
     0: EventsResponse_Kind.notSet
   };
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'EventsResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: EventsResponse.$_createMessage)
-    ..oo(0, [2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14])
+    ..oo(0, [2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15])
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
     ..aOM<ItemEvent>(2, _omitFieldNames ? '' : 'item',
         subBuilder: ItemEvent.$_createMessage)
@@ -7999,6 +8275,8 @@ class EventsResponse extends $pb.GeneratedMessage {
     ..aOS(13, _omitFieldNames ? '' : 'dropped')
     ..aOM<Remote>(14, _omitFieldNames ? '' : 'remote',
         subBuilder: Remote.$_createMessage)
+    ..aOM<RemovedChats>(15, _omitFieldNames ? '' : 'removedChats',
+        subBuilder: RemovedChats.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -8035,6 +8313,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(12)
   @$pb.TagNumber(13)
   @$pb.TagNumber(14)
+  @$pb.TagNumber(15)
   EventsResponse_Kind whichKind() =>
       _EventsResponse_KindByTag[$_whichOneof(0)]!;
   @$pb.TagNumber(2)
@@ -8049,6 +8328,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(12)
   @$pb.TagNumber(13)
   @$pb.TagNumber(14)
+  @$pb.TagNumber(15)
   void clearKind() => $_clearField($_whichOneof(0));
 
   @$pb.TagNumber(1)
@@ -8206,6 +8486,19 @@ class EventsResponse extends $pb.GeneratedMessage {
   void clearRemote() => $_clearField(14);
   @$pb.TagNumber(14)
   Remote ensureRemote() => $_ensure(13);
+
+  /// The chats removed because their agent no longer has their sessions,
+  /// all of them (ListChatsResponse.removed); chat_id is empty.
+  @$pb.TagNumber(15)
+  RemovedChats get removedChats => $_getN(14);
+  @$pb.TagNumber(15)
+  set removedChats(RemovedChats value) => $_setField(15, value);
+  @$pb.TagNumber(15)
+  $core.bool hasRemovedChats() => $_has(14);
+  @$pb.TagNumber(15)
+  void clearRemovedChats() => $_clearField(15);
+  @$pb.TagNumber(15)
+  RemovedChats ensureRemovedChats() => $_ensure(14);
 }
 
 /// A chat's config options, all of them.
@@ -9731,6 +10024,7 @@ class ChatStatus extends $pb.GeneratedMessage {
     $core.bool? asleep,
     $core.bool? canSleep,
     $core.bool? reopenFailed,
+    $core.bool? sessionGone,
   }) {
     final result = ChatStatus._();
     if (busy != null) result.busy = busy;
@@ -9744,6 +10038,7 @@ class ChatStatus extends $pb.GeneratedMessage {
     if (asleep != null) result.asleep = asleep;
     if (canSleep != null) result.canSleep = canSleep;
     if (reopenFailed != null) result.reopenFailed = reopenFailed;
+    if (sessionGone != null) result.sessionGone = sessionGone;
     return result;
   }
 
@@ -9771,6 +10066,7 @@ class ChatStatus extends $pb.GeneratedMessage {
     ..aOB(10, _omitFieldNames ? '' : 'asleep')
     ..aOB(11, _omitFieldNames ? '' : 'canSleep')
     ..aOB(12, _omitFieldNames ? '' : 'reopenFailed')
+    ..aOB(13, _omitFieldNames ? '' : 'sessionGone')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -9907,6 +10203,18 @@ class ChatStatus extends $pb.GeneratedMessage {
   $core.bool hasReopenFailed() => $_has(10);
   @$pb.TagNumber(12)
   void clearReopenFailed() => $_clearField(12);
+
+  /// Of a chat whose reopen failed: its agent no longer has its session
+  /// (it deleted it). The chat stays only for its worktree's or scratch
+  /// folder's work; DeleteChat is what's left.
+  @$pb.TagNumber(13)
+  $core.bool get sessionGone => $_getBF(11);
+  @$pb.TagNumber(13)
+  set sessionGone($core.bool value) => $_setBool(11, value);
+  @$pb.TagNumber(13)
+  $core.bool hasSessionGone() => $_has(11);
+  @$pb.TagNumber(13)
+  void clearSessionGone() => $_clearField(13);
 }
 
 /// A shell the user runs beside a chat, in the daemon.
@@ -20767,6 +21075,12 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, DeleteChatRequest request) =>
       _client.invoke<DeleteChatResponse>(
           ctx, 'NushiService', 'DeleteChat', request, DeleteChatResponse());
+
+  /// Takes chats off ListChatsResponse.removed (the app has said so).
+  $async.Future<DismissRemovedChatsResponse> dismissRemovedChats(
+          $pb.ClientContext? ctx, DismissRemovedChatsRequest request) =>
+      _client.invoke<DismissRemovedChatsResponse>(ctx, 'NushiService',
+          'DismissRemovedChats', request, DismissRemovedChatsResponse());
 
   /// Answers a pending permission prompt with one of its options.
   $async.Future<AnswerPermissionResponse> answerPermission(

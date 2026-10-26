@@ -47,7 +47,9 @@ class ItemKind extends $pb.ProtobufEnum {
   /// "cancelled", "refusal", "max_tokens", "max_turn_requests" or "error",
   /// and text says it in words. A reopen that failed has one notice, which
   /// goes once the chat runs again: "not_ready" (its agent isn't set up or
-  /// installed: Settings › Agents), "folder_gone" (MoveChat), or
+  /// installed: Settings › Agents), "folder_gone" (MoveChat),
+  /// "session_gone" (its agent no longer has the session, and the chat is
+  /// kept only for its worktree's or scratch folder's work: DeleteChat), or
   /// "reopen_failed" (ReopenChat tries again). "own_turn" marks where the
   /// agent starts working on its own, outside a turn of the user's (after a
   /// background task ended).

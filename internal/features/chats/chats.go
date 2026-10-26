@@ -84,11 +84,14 @@ type Service struct {
 	terminals Terminals  // set once at startup, if there are any
 	prefs     SleepPrefs // set once at startup, if chats sleep
 
-	mu      sync.Mutex
-	chats   map[string]*chat
-	closing bool // Close began: no agent starts any more
-	live    map[Agent]bool
-	opening map[string]bool // sessions Open is making chats of
+	mu       sync.Mutex
+	chats    map[string]*chat
+	closing  bool // Close began: no agent starts any more
+	live     map[Agent]bool
+	opening  map[string]bool     // sessions Open is making chats of
+	removed  []model.RemovedChat // removed because their agent no longer had their sessions (gone.go)
+	swept    time.Time           // the last Sweep
+	sweeping bool
 }
 
 // Terminals are the shells beside chats (internal/features/terminals).
@@ -135,6 +138,7 @@ type chat struct {
 	stopped      bool                            // the running turn was told to stop: it ends with the agent's answer
 	kept         bool                            // the transcript outlived its agent: reopening doesn't replay into it
 	reopenFailed bool                            // the last reopen failed: see failedLocked
+	sessionGone  bool                            // and its agent no longer has its session: see goneLocked
 	failure      string                          // the notice saying why it failed (item id)
 	waiting      map[string]chan<- string        // permission prompts by item id, for the picked option
 	questions    map[string]chan<- []model.Field // questions by item id, for the answer (nil: declined)
@@ -344,7 +348,7 @@ func (c *chat) statusLocked() model.Status {
 	idle := c.agent == nil && !c.busy && c.parent == nil && !c.session.Archived
 	return model.Status{Busy: c.busy, Started: c.started, Waiting: len(c.waiting)+len(c.questions) > 0, CanFork: c.canFork, Images: c.canImage,
 		CanRewind: c.forkAt != nil, MCPChanged: c.mcpChanged, CanAskContext: !idle && c.canAskContextLocked() == nil,
-		Asleep: idle && !c.reopenFailed, ReopenFailed: idle && c.reopenFailed, CanSleep: c.parent == nil && c.canSleepLocked() == nil}
+		Asleep: idle && !c.reopenFailed, ReopenFailed: idle && c.reopenFailed, SessionGone: idle && c.reopenFailed && c.sessionGone, CanSleep: c.parent == nil && c.canSleepLocked() == nil}
 }
 
 func (c *chat) statusChangedLocked() {

@@ -74,6 +74,8 @@ func toProto(e model.Event) *nushiv1.EventsResponse {
 		out.Kind = &nushiv1.EventsResponse_Commands{Commands: &nushiv1.ChatCommands{Commands: commandsProto(e.Commands)}}
 	case e.Remote != nil:
 		out.Kind = &nushiv1.EventsResponse_Remote{Remote: remoteProto(*e.Remote)}
+	case e.RemovedChats != nil:
+		out.Kind = &nushiv1.EventsResponse_RemovedChats{RemovedChats: &nushiv1.RemovedChats{Chats: removedProto(*e.RemovedChats)}}
 	case e.Terminals != nil:
 		out.Kind = &nushiv1.EventsResponse_Terminals{Terminals: &nushiv1.ChatTerminals{Terminals: terminalsProto(*e.Terminals)}}
 	}
@@ -133,7 +135,15 @@ func usageProto(u model.Usage) *nushiv1.Usage {
 
 func statusProto(st model.Status) *nushiv1.ChatStatus {
 	return &nushiv1.ChatStatus{Busy: st.Busy, Waiting: st.Waiting, CanFork: st.CanFork, Images: st.Images, CanRewind: st.CanRewind,
-		McpChanged: st.MCPChanged, Started: unixMs(st.Started), CanAskContext: st.CanAskContext, Asleep: st.Asleep, CanSleep: st.CanSleep, ReopenFailed: st.ReopenFailed}
+		McpChanged: st.MCPChanged, Started: unixMs(st.Started), CanAskContext: st.CanAskContext, Asleep: st.Asleep, CanSleep: st.CanSleep, ReopenFailed: st.ReopenFailed, SessionGone: st.SessionGone}
+}
+
+func removedProto(removed []model.RemovedChat) []*nushiv1.RemovedChat {
+	out := make([]*nushiv1.RemovedChat, 0, len(removed))
+	for _, r := range removed {
+		out = append(out, &nushiv1.RemovedChat{Id: r.ID, Agent: r.Agent, Title: r.Title, Folder: r.Folder, RemovedUnixMs: unixMs(r.At)})
+	}
+	return out
 }
 
 // unixMs is t in Unix milliseconds, 0 for the zero time.

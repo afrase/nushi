@@ -60,7 +60,7 @@ func (s *Service) open(id string) (*chat, error) {
 // the last try failed, or the agent quit), unless it is archived, going or
 // asleep.
 func (s *Service) reopenLocked(c *chat) {
-	if c.agent == nil && !c.busy && !c.session.Archived && !c.halting && c.parent == nil && !c.reopenFailed && !c.asleep {
+	if c.agent == nil && !c.busy && !c.session.Archived && !c.halting && c.parent == nil && !c.reopenFailed && !c.asleep && !c.sessionGone {
 		c.busy, c.woke = true, make(chan struct{})
 		c.statusChangedLocked()
 		go s.resume(c)
@@ -91,6 +91,7 @@ func (s *Service) resume(c *chat) {
 	defer cancel()
 	start := time.Now()
 	err := s.load(ctx, c)
+	gone := err != nil && c.isGone(err)
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if log := c.logLocked().With("took", time.Since(start).Round(time.Millisecond)); err != nil {
@@ -103,7 +104,11 @@ func (s *Service) resume(c *chat) {
 		close(c.woke)
 		c.woke = nil
 	}
-	if err != nil {
+	switch {
+	case gone:
+		c.goneLocked("")
+		go s.expire(context.WithoutCancel(ctx), c, "the agent says so")
+	case err != nil:
 		c.failedLocked(err)
 	}
 	c.statusChangedLocked()
@@ -123,7 +128,7 @@ func (c *chat) failedLocked(err error) {
 	} else if ready := c.kind.ready(); ready != nil {
 		reason, err = "not_ready", ready
 	}
-	text := "Couldn't reopen the chat: " + err.Error()
+	text := "Couldn't reopen the chat: " + detail(err)
 	if i := c.indexLocked(c.failure); i >= 0 && i == len(c.items)-1 && c.items[i].Status == reason && c.items[i].Text == text {
 		return // said already
 	}
@@ -143,7 +148,7 @@ func (s *Service) Reopen(id string) error {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.reopenFailed && c.agent == nil && !c.busy {
+	if c.reopenFailed && c.agent == nil && !c.busy && !c.sessionGone {
 		if err := cmp.Or(folderGone(c.session), c.kind.ready()); err != nil {
 			c.failedLocked(err)
 			return nil

@@ -170,8 +170,10 @@ func run() error {
 			SubagentID: claude.SubagentID, Relay: claude.Relay, Relayed: claude.Relayed, Relaying: claude.Relaying, Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle,
 			ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete},
 		History:       func(id, from, to string) (func() error, error) { return claudehistory.Copy(projects, id, from, to) },
-		OpenElsewhere: claudehistory.Open, Forked: func(ids []string) map[string]bool { return claudehistory.Forked(projects, ids) }}
-	codexKind := chats.Kind{Name: "codex", Title: "Codex", Resume: codex.Resume, History: codex.History, DeleteArchives: codex.DeleteArchives,
+		OpenElsewhere: claudehistory.Open, Forked: func(ids []string) map[string]bool { return claudehistory.Forked(projects, ids) },
+		Gone: chats.NotFound, HistoryGone: func(sid, folder string) bool { return claudehistory.Gone(projects, sid, folder) },
+		Expires: "Claude Code deletes sessions after 30 days by default"}
+	codexKind := chats.Kind{Name: "codex", Title: "Codex", Resume: codex.Resume, History: codex.History, DeleteArchives: codex.DeleteArchives, Gone: codex.Gone,
 		OpenElsewhere: codex.OpenElsewhere, Forked: codex.Forked, OneWriter: true,
 		Explain: agentSvc.Explain("codex"), Ready: ready("codex"), Launch: launch("codex", func(r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
 			return codex.Start(dir, r.Program, r.CLI, h, log)
@@ -187,7 +189,7 @@ func run() error {
 			return omp.Start(dir, r.CLI, h, log)
 		}),
 		Dialect: chats.Dialect{Other: omp.Other, ToolCall: omp.ToolCall}}
-	pigKind := chats.Kind{Name: "pig", Title: "PiG", Resume: pig.Resume,
+	pigKind := chats.Kind{Name: "pig", Title: "PiG", Resume: pig.Resume, Gone: chats.NotFound,
 		Explain: agentSvc.Explain("pig"), Ready: ready("pig"), Launch: launch("pig", func(_ agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
 			return pig.Start(dir, h, log)
 		}),
