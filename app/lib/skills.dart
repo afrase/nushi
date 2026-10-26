@@ -8,16 +8,22 @@ import 'package:nushi/agents.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/menu.dart';
 import 'package:nushi/skills_list.dart';
+import 'package:nushi/skills_new.dart';
 import 'package:nushi/skills_rows.dart';
+import 'package:nushi/skills_shared.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// The Skills view, beside the MCP servers view and in its style (ADR
-/// 0051): a folder picker and a search box, then Claude's skills by where
-/// they come from (yours, the project's, each plugin's, built in), each
-/// with its description, cost and switch, and the installed plugins. What
-/// changed in a terminal shows when the view opens or on Refresh.
+/// The Skills view, beside the MCP servers view and in its style (ADRs
+/// 0051, 0052): an agent picker (Claude unless another was picked), a
+/// folder picker and a search box, then the agent's skills by where they
+/// come from (yours, the project's, the shared .agents/skills with the
+/// agents that load each, the agent's own, Claude's plugins' and built-in
+/// ones), each with its description, cost and switch, and Claude's
+/// plugins. What changed in a terminal shows when the view opens or on
+/// Refresh.
 class SkillsView extends StatefulWidget {
   const new({required this.daemon, required this.folder, super.key});
 
@@ -31,7 +37,13 @@ class SkillsView extends StatefulWidget {
 class _SkillsViewState extends State<SkillsView> {
   final _search = TextEditingController();
 
-  SkillsList get list => SkillsList.of(widget.daemon, widget.folder);
+  SkillsList get list =>
+      SkillsList.of(widget.daemon, widget.folder, widget.daemon.skillsAgent);
+
+  void _pickAgent(String agent) {
+    setState(() => widget.daemon.skillsAgent = agent);
+    unawaited(list.refresh());
+  }
 
   @override
   void initState() {
@@ -81,11 +93,28 @@ class _SkillsViewState extends State<SkillsView> {
             ),
             child: Row(
               children: [
-                Text(switch (mcpAgent) {
-                  final a? when knownAgents.length > 1 => '${a.title}’s skills',
-                  _ => 'Skills',
-                }, style: theme.ui(t.text, weight: FontWeight.w600)),
+                Text(
+                  'Skills',
+                  style: theme.ui(t.text, weight: FontWeight.w600),
+                ),
                 const SizedBox(width: 12),
+                MenuField(
+                  compact: true,
+                  tooltip: 'Whose skills',
+                  entries: [
+                    for (final a in knownAgents.values)
+                      MenuEntry(
+                        a.title,
+                        checked: a.name == daemon.skillsAgent,
+                        onPick: () => _pickAgent(a.name),
+                      ),
+                  ],
+                  label: Text(
+                    agentTitle(daemon.skillsAgent),
+                    style: theme.ui(t.text, size: 12),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 MenuField(
                   compact: true,
                   entries: folderEntries(
@@ -128,7 +157,7 @@ class _SkillsViewState extends State<SkillsView> {
                 Button(
                   label: 'New skill…',
                   icon: Icons.add,
-                  onPressed: () => newSkill(context, daemon, widget.folder),
+                  onPressed: () => newSkill(context, list),
                 ),
                 const SizedBox(width: 8),
                 if (list.loading)
@@ -170,13 +199,17 @@ class _SkillsViewState extends State<SkillsView> {
     final t = theme.t;
     final muted = theme.ui(t.textMuted, size: 12);
     final r = list.list;
+    final agent = list.agent;
+    final claude = agent == 'claude';
     final plugins = {for (final p in r.plugins) p.id: p};
     final groups = list.groups(r.skills.where((s) => skillMatches(s, query)));
     final shownPlugins = r.plugins.where((p) => pluginMatches(p, query));
-    final builtIn = skillMatches(
-      Skill(name: 'built-in', description: 'Claude Code’s own skills'),
-      query,
-    );
+    final builtIn =
+        claude &&
+        skillMatches(
+          Skill(name: 'built-in', description: 'Claude Code’s own skills'),
+          query,
+        );
     final any =
         groups.values.any((g) => g.isNotEmpty) ||
         shownPlugins.isNotEmpty ||
@@ -185,51 +218,65 @@ class _SkillsViewState extends State<SkillsView> {
       if (list.error.isNotEmpty)
         Text(list.error, style: theme.ui(t.crashed, size: 12)),
       if (!list.loaded && list.loading) Text('Reading…', style: muted),
-      if (list.loaded && !any)
-        Text('No skills or plugins match.', style: muted),
-      if (list.loaded)
-        for (final MapEntry(key: from, value: skills) in groups.entries)
-          if (skills.isNotEmpty || (query.isEmpty && from != 'user'))
-            SkillGroup(
-              list: list,
-              title: switch (from) {
-                'user' => 'Yours',
-                'project' => 'This project',
-                _ => plugins[from]?.name ?? from,
-              },
-              about: switch (from) {
-                'user' => 'In every folder: skills in your Claude folder.',
-                'project' =>
-                  'In this folder: .claude/skills here and in the folders '
-                      'above it.',
-                _ =>
-                  'From the plugin $from: on and off with it, under '
-                      'Plugins.',
-              },
-              skills: skills,
-            ),
-      if (list.loaded && builtIn) BuiltInGroup(list),
-      if (list.loaded && (shownPlugins.isNotEmpty || query.isEmpty))
-        PluginsGroup(list, shownPlugins.toList()),
+      if (list.loaded && r.noSkills.isNotEmpty)
+        Text(r.noSkills, style: muted)
+      else ...[
+        if (list.loaded && !any)
+          Text('No skills or plugins match.', style: muted),
+        if (list.loaded)
+          for (final MapEntry(key: from, value: skills) in groups.entries)
+            if (from == 'shared')
+              if (skills.isNotEmpty || query.isEmpty)
+                SharedGroup(list, skills)
+              else
+                const SizedBox()
+            else if (skills.isNotEmpty || (query.isEmpty && from == 'project'))
+              SkillGroup(
+                list: list,
+                title: switch (from) {
+                  'user' => 'Yours',
+                  'project' => 'This project',
+                  'system' => '${agentTitle(agent)}’s own',
+                  _ => plugins[from]?.name ?? from,
+                },
+                about: _about(agent, from),
+                skills: skills,
+              ),
+        if (list.loaded && builtIn) BuiltInGroup(list),
+        if (list.loaded && claude && (shownPlugins.isNotEmpty || query.isEmpty))
+          PluginsGroup(list, shownPlugins.toList()),
+      ],
     ];
   }
 }
 
-/// New skill…: a new Claude chat in [folder] with a message asking Claude
-/// to write the skill in its box, to read, change and send (Claude's own
-/// skill-creator can take it from there). Nothing is sent here.
-Future<void> newSkill(
-  BuildContext context,
-  Daemon daemon,
-  String folder,
-) async {
-  final before = daemon.selectedId;
-  await tryOrShow(context, () => daemon.startChat(folder, 'claude'));
-  final chat = daemon.selected; // the new chat, unless you went elsewhere
-  if (chat == null || chat.id == before || !chat.fresh) return;
-  chat.draft.text.text =
-      'Help me write a new Claude Code skill. First ask me what it should '
-      'do and whether it is for this project (.claude/skills) or for me '
-      'everywhere (~/.claude/skills), then write its SKILL.md. Use the '
-      'skill-creator skill if you have it.';
-}
+/// The line under a group's title: where the agent reads those skills.
+String _about(String agent, String from) => switch ((agent, from)) {
+  ('claude', 'user') => 'In every folder: skills in your Claude folder.',
+  ('claude', 'project') =>
+    'In this folder: .claude/skills here and in the folders above it.',
+  ('codex', 'user') => 'In every folder: skills in your Codex folder.',
+  ('codex', 'project') =>
+    'In this folder: .codex/skills here and in the folders above it, up to '
+        'the repository’s root.',
+  ('codex', 'system') => 'Installed with Codex, which puts them back.',
+  ('ante', 'user') =>
+    'In every folder: ~/.ante/skills, and Claude’s ~/.claude/skills.',
+  ('ante', 'project') =>
+    'In this folder only: .ante/skills and Claude’s .claude/skills.',
+  ('ante', 'system') => 'Bundled with Ante, which rewrites them on updates.',
+  ('omp', 'user') =>
+    'In every folder: ~/.omp/agent/skills and ~/.agent/skills.',
+  ('omp', 'project') =>
+    'In this folder: .omp/skills, Claude’s .claude/skills and .agent/skills '
+        'here and above it, up to the repository’s root; the nearest '
+        '.codex/skills; .github/skills.',
+  ('pig', 'user') => 'In every folder: skills in PiG’s agent folder.',
+  ('pig', 'project') =>
+    'In this folder only: .pig/skills, once PiG trusts the folder.',
+  (_, 'user') => 'In every folder.',
+  (_, 'project') => 'In this folder.',
+  (_, 'system') => 'The agent’s own.',
+  (_, final from) =>
+    'From the plugin $from: on and off with it, under Plugins.',
+};

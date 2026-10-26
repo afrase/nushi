@@ -9,8 +9,8 @@ import 'package:nushi/widgets.dart';
 
 /// A group's heading, the line under it and its rows in a box, as the MCP
 /// view's scopes.
-class _Group extends StatelessWidget {
-  const new(this.title, this.about, this.rows);
+class SkillsBox extends StatelessWidget {
+  const new(this.title, this.about, this.rows, {super.key});
 
   final String title;
   final String about;
@@ -68,12 +68,13 @@ class _Group extends StatelessWidget {
 
 /// A switch for where it acts ([where]: "everywhere", "in this project"),
 /// disabled with [why] when it can't act; [onChanged] runs the change.
-class _Switch extends StatefulWidget {
+class SkillSwitch extends StatefulWidget {
   const new({
     required this.on,
     required this.where,
     required this.onChanged,
     this.why = '',
+    super.key,
   });
 
   final bool on;
@@ -82,10 +83,10 @@ class _Switch extends StatefulWidget {
   final Future<void> Function({required bool on}) onChanged;
 
   @override
-  State<_Switch> createState() => _SwitchState();
+  State<SkillSwitch> createState() => _SkillSwitchState();
 }
 
-class _SwitchState extends State<_Switch> {
+class _SkillSwitchState extends State<SkillSwitch> {
   bool _working = false;
 
   Future<void> _set(bool on) async {
@@ -129,7 +130,7 @@ class _SwitchState extends State<_Switch> {
 
 /// A row's name and, under it, its author's text, plain (never Markdown or
 /// links), dimmed when [off].
-Widget _named(
+Widget skillNamed(
   BuildContext context,
   String name,
   String text, {
@@ -193,7 +194,7 @@ class SkillGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      _Group(title, about, [for (final s in skills) _SkillRow(list, s)]);
+      SkillsBox(title, about, [for (final s in skills) _SkillRow(list, s)]);
 }
 
 class _SkillRow extends StatelessWidget {
@@ -213,7 +214,11 @@ class _SkillRow extends StatelessWidget {
     if (!ok || !context.mounted) return;
     await tryOrShow(context, () async {
       await list.daemon.client.trashSkill(
-        TrashSkillRequest(folder: list.folder, path: skill.path),
+        TrashSkillRequest(
+          folder: list.folder,
+          path: skill.path,
+          agent: list.agent,
+        ),
       );
       await list.changed();
     });
@@ -224,11 +229,13 @@ class _SkillRow extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final muted = theme.ui(theme.t.textMuted, size: 11);
     final plugin = skill.source == 'plugin';
+    final deletable =
+        !plugin && skill.source != 'system' && ownSkill(list.agent, skill.path);
     final word = _stateWord(skill.state);
     return Row(
       children: [
         Expanded(
-          child: _named(
+          child: skillNamed(
             context,
             skill.name,
             skill.description,
@@ -236,6 +243,11 @@ class _SkillRow extends StatelessWidget {
             after: [
               const SizedBox(width: 8),
               if (word != null && word != 'Off') Text(word, style: muted),
+              if (skill.linked.isNotEmpty)
+                Tooltip(
+                  message: 'A link to ${skill.linked}',
+                  child: Text('linked', style: muted),
+                ),
             ],
           ),
         ),
@@ -250,23 +262,11 @@ class _SkillRow extends StatelessWidget {
             child: Text('with its plugin', style: muted),
           )
         else
-          _Switch(
+          SkillSwitch(
             on: skill.state != 'off',
-            where: skill.source == 'user' ? 'everywhere' : 'in this project',
-            why: skill.setIn.isEmpty
-                ? ''
-                : 'Set in ${tildePath(skill.setIn)}; change it there.',
-            onChanged: ({required on}) async {
-              await list.daemon.client.setSkillOn(
-                SetSkillOnRequest(
-                  folder: list.folder,
-                  source: skill.source,
-                  name: skill.name,
-                  on: on,
-                ),
-              );
-              await list.changed();
-            },
+            where: switchWhere(list.agent, skill),
+            why: switchWhy(list, skill.setIn),
+            onChanged: ({required on}) => setSkillOn(list, skill, on: on),
           ),
         MenuIcon(
           Icons.more_horiz,
@@ -278,7 +278,7 @@ class _SkillRow extends StatelessWidget {
               'Show in Finder',
               onPick: () => revealInFinder(skill.path),
             ),
-            if (!plugin) MenuEntry('Delete…', onPick: () => _delete(context)),
+            if (deletable) MenuEntry('Delete…', onPick: () => _delete(context)),
           ],
         ),
       ],
@@ -295,7 +295,7 @@ class BuiltInGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final r = list.list;
-    return _Group(
+    return SkillsBox(
       'Built in',
       'Claude Code’s own skills, which it doesn’t '
           'list for Nushi.',
@@ -303,7 +303,7 @@ class BuiltInGroup extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: _named(
+              child: skillNamed(
                 context,
                 'Built-in skills',
                 'All of them together (disableBundledSkills); built-in '
@@ -311,7 +311,7 @@ class BuiltInGroup extends StatelessWidget {
                 off: r.builtInOff,
               ),
             ),
-            _Switch(
+            SkillSwitch(
               on: !r.builtInOff,
               where: 'everywhere',
               why: r.builtInSetIn.isEmpty
@@ -323,6 +323,7 @@ class BuiltInGroup extends StatelessWidget {
                     folder: list.folder,
                     source: 'builtin',
                     on: on,
+                    agent: list.agent,
                   ),
                 );
                 await list.changed();
@@ -345,7 +346,7 @@ class PluginsGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final error = list.list.pluginsError;
-    return _Group(
+    return SkillsBox(
       'Plugins',
       error.isNotEmpty
           ? 'Claude didn’t list them: $error'
@@ -384,7 +385,11 @@ class _PluginRow extends StatelessWidget {
     if (!ok || !context.mounted) return;
     await tryOrShow(context, () async {
       await list.daemon.client.uninstallPlugin(
-        UninstallPluginRequest(folder: list.folder, id: plugin.id),
+        UninstallPluginRequest(
+          folder: list.folder,
+          id: plugin.id,
+          agent: list.agent,
+        ),
       );
       await list.changed();
     });
@@ -398,7 +403,7 @@ class _PluginRow extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: _named(
+          child: skillNamed(
             context,
             plugin.id,
             [
@@ -416,14 +421,19 @@ class _PluginRow extends StatelessWidget {
             ],
           ),
         ),
-        _Switch(
+        SkillSwitch(
           on: plugin.enabled,
           where: plugin.switchScope == 'user'
               ? 'everywhere'
               : 'in this project',
           onChanged: ({required on}) async {
             await list.daemon.client.setPluginOn(
-              SetPluginOnRequest(folder: list.folder, id: plugin.id, on: on),
+              SetPluginOnRequest(
+                folder: list.folder,
+                id: plugin.id,
+                on: on,
+                agent: list.agent,
+              ),
             );
             await list.changed();
           },

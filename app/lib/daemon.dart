@@ -133,9 +133,14 @@ class Daemon extends ChangeNotifier {
   /// The folder whose skills show in place of the chat, if they do.
   String? skillsFolder;
 
-  void showSkills(String? folder) {
+  /// The agent whose skills show: Claude unless another was picked, or
+  /// the view was opened from another agent's chat.
+  String skillsAgent = 'claude';
+
+  void showSkills(String? folder, {String? agent}) {
     trustAsk?.decide(start: false);
     skillsFolder = folder;
+    if (agent != null) skillsAgent = agent;
     mcpFolder = null;
     jiraOpen = githubOpen = false;
     notifyListeners();
