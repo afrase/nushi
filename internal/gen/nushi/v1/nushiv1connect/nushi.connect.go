@@ -86,6 +86,12 @@ const (
 	// NushiServiceSetSettingsProcedure is the fully-qualified name of the NushiService's SetSettings
 	// RPC.
 	NushiServiceSetSettingsProcedure = "/nushi.v1.NushiService/SetSettings"
+	// NushiServiceListTranscriptsProcedure is the fully-qualified name of the NushiService's
+	// ListTranscripts RPC.
+	NushiServiceListTranscriptsProcedure = "/nushi.v1.NushiService/ListTranscripts"
+	// NushiServiceClearTranscriptsProcedure is the fully-qualified name of the NushiService's
+	// ClearTranscripts RPC.
+	NushiServiceClearTranscriptsProcedure = "/nushi.v1.NushiService/ClearTranscripts"
 	// NushiServicePlanDeleteChatProcedure is the fully-qualified name of the NushiService's
 	// PlanDeleteChat RPC.
 	NushiServicePlanDeleteChatProcedure = "/nushi.v1.NushiService/PlanDeleteChat"
@@ -370,6 +376,13 @@ type NushiServiceClient interface {
 	GetMemory(context.Context, *connect.Request[v1.GetMemoryRequest]) (*connect.Response[v1.GetMemoryResponse], error)
 	GetSettings(context.Context, *connect.Request[v1.GetSettingsRequest]) (*connect.Response[v1.GetSettingsResponse], error)
 	SetSettings(context.Context, *connect.Request[v1.SetSettingsRequest]) (*connect.Response[v1.SetSettingsResponse], error)
+	// Nushi's copies of chats' transcripts (ADR 0047): each one's size and
+	// whose it is, largest first.
+	ListTranscripts(context.Context, *connect.Request[v1.ListTranscriptsRequest]) (*connect.Response[v1.ListTranscriptsResponse], error)
+	// Deletes copies of transcripts: a chat goes on, its history from its
+	// agent alone; one kept only for its copy (its agent deleted its
+	// session) goes unless its work keeps it.
+	ClearTranscripts(context.Context, *connect.Request[v1.ClearTranscriptsRequest]) (*connect.Response[v1.ClearTranscriptsResponse], error)
 	// Says what DeleteChat removes. The first time, the daemon starts the
 	// agent to learn whether it can delete its history.
 	PlanDeleteChat(context.Context, *connect.Request[v1.PlanDeleteChatRequest]) (*connect.Response[v1.PlanDeleteChatResponse], error)
@@ -704,6 +717,18 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceSetSettingsProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("SetSettings")),
+			connect.WithClientOptions(opts...),
+		),
+		listTranscripts: connect.NewClient[v1.ListTranscriptsRequest, v1.ListTranscriptsResponse](
+			httpClient,
+			baseURL+NushiServiceListTranscriptsProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ListTranscripts")),
+			connect.WithClientOptions(opts...),
+		),
+		clearTranscripts: connect.NewClient[v1.ClearTranscriptsRequest, v1.ClearTranscriptsResponse](
+			httpClient,
+			baseURL+NushiServiceClearTranscriptsProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ClearTranscripts")),
 			connect.WithClientOptions(opts...),
 		),
 		planDeleteChat: connect.NewClient[v1.PlanDeleteChatRequest, v1.PlanDeleteChatResponse](
@@ -1160,6 +1185,8 @@ type nushiServiceClient struct {
 	getMemory           *connect.Client[v1.GetMemoryRequest, v1.GetMemoryResponse]
 	getSettings         *connect.Client[v1.GetSettingsRequest, v1.GetSettingsResponse]
 	setSettings         *connect.Client[v1.SetSettingsRequest, v1.SetSettingsResponse]
+	listTranscripts     *connect.Client[v1.ListTranscriptsRequest, v1.ListTranscriptsResponse]
+	clearTranscripts    *connect.Client[v1.ClearTranscriptsRequest, v1.ClearTranscriptsResponse]
 	planDeleteChat      *connect.Client[v1.PlanDeleteChatRequest, v1.PlanDeleteChatResponse]
 	deleteChat          *connect.Client[v1.DeleteChatRequest, v1.DeleteChatResponse]
 	dismissRemovedChats *connect.Client[v1.DismissRemovedChatsRequest, v1.DismissRemovedChatsResponse]
@@ -1346,6 +1373,16 @@ func (c *nushiServiceClient) GetSettings(ctx context.Context, req *connect.Reque
 // SetSettings calls nushi.v1.NushiService.SetSettings.
 func (c *nushiServiceClient) SetSettings(ctx context.Context, req *connect.Request[v1.SetSettingsRequest]) (*connect.Response[v1.SetSettingsResponse], error) {
 	return c.setSettings.CallUnary(ctx, req)
+}
+
+// ListTranscripts calls nushi.v1.NushiService.ListTranscripts.
+func (c *nushiServiceClient) ListTranscripts(ctx context.Context, req *connect.Request[v1.ListTranscriptsRequest]) (*connect.Response[v1.ListTranscriptsResponse], error) {
+	return c.listTranscripts.CallUnary(ctx, req)
+}
+
+// ClearTranscripts calls nushi.v1.NushiService.ClearTranscripts.
+func (c *nushiServiceClient) ClearTranscripts(ctx context.Context, req *connect.Request[v1.ClearTranscriptsRequest]) (*connect.Response[v1.ClearTranscriptsResponse], error) {
+	return c.clearTranscripts.CallUnary(ctx, req)
 }
 
 // PlanDeleteChat calls nushi.v1.NushiService.PlanDeleteChat.
@@ -1782,6 +1819,13 @@ type NushiServiceHandler interface {
 	GetMemory(context.Context, *connect.Request[v1.GetMemoryRequest]) (*connect.Response[v1.GetMemoryResponse], error)
 	GetSettings(context.Context, *connect.Request[v1.GetSettingsRequest]) (*connect.Response[v1.GetSettingsResponse], error)
 	SetSettings(context.Context, *connect.Request[v1.SetSettingsRequest]) (*connect.Response[v1.SetSettingsResponse], error)
+	// Nushi's copies of chats' transcripts (ADR 0047): each one's size and
+	// whose it is, largest first.
+	ListTranscripts(context.Context, *connect.Request[v1.ListTranscriptsRequest]) (*connect.Response[v1.ListTranscriptsResponse], error)
+	// Deletes copies of transcripts: a chat goes on, its history from its
+	// agent alone; one kept only for its copy (its agent deleted its
+	// session) goes unless its work keeps it.
+	ClearTranscripts(context.Context, *connect.Request[v1.ClearTranscriptsRequest]) (*connect.Response[v1.ClearTranscriptsResponse], error)
 	// Says what DeleteChat removes. The first time, the daemon starts the
 	// agent to learn whether it can delete its history.
 	PlanDeleteChat(context.Context, *connect.Request[v1.PlanDeleteChatRequest]) (*connect.Response[v1.PlanDeleteChatResponse], error)
@@ -2112,6 +2156,18 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceSetSettingsProcedure,
 		svc.SetSettings,
 		connect.WithSchema(nushiServiceMethods.ByName("SetSettings")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceListTranscriptsHandler := connect.NewUnaryHandler(
+		NushiServiceListTranscriptsProcedure,
+		svc.ListTranscripts,
+		connect.WithSchema(nushiServiceMethods.ByName("ListTranscripts")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceClearTranscriptsHandler := connect.NewUnaryHandler(
+		NushiServiceClearTranscriptsProcedure,
+		svc.ClearTranscripts,
+		connect.WithSchema(nushiServiceMethods.ByName("ClearTranscripts")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServicePlanDeleteChatHandler := connect.NewUnaryHandler(
@@ -2588,6 +2644,10 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceGetSettingsHandler.ServeHTTP(w, r)
 		case NushiServiceSetSettingsProcedure:
 			nushiServiceSetSettingsHandler.ServeHTTP(w, r)
+		case NushiServiceListTranscriptsProcedure:
+			nushiServiceListTranscriptsHandler.ServeHTTP(w, r)
+		case NushiServiceClearTranscriptsProcedure:
+			nushiServiceClearTranscriptsHandler.ServeHTTP(w, r)
 		case NushiServicePlanDeleteChatProcedure:
 			nushiServicePlanDeleteChatHandler.ServeHTTP(w, r)
 		case NushiServiceDeleteChatProcedure:
@@ -2829,6 +2889,14 @@ func (UnimplementedNushiServiceHandler) GetSettings(context.Context, *connect.Re
 
 func (UnimplementedNushiServiceHandler) SetSettings(context.Context, *connect.Request[v1.SetSettingsRequest]) (*connect.Response[v1.SetSettingsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.SetSettings is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ListTranscripts(context.Context, *connect.Request[v1.ListTranscriptsRequest]) (*connect.Response[v1.ListTranscriptsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ListTranscripts is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ClearTranscripts(context.Context, *connect.Request[v1.ClearTranscriptsRequest]) (*connect.Response[v1.ClearTranscriptsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ClearTranscripts is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) PlanDeleteChat(context.Context, *connect.Request[v1.PlanDeleteChatRequest]) (*connect.Response[v1.PlanDeleteChatResponse], error) {

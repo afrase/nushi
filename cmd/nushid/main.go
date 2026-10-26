@@ -212,7 +212,7 @@ func run() error {
 	// The API, on the socket for the app (with the token) and on each
 	// paired device's channel (ADR 0034).
 	logs.SetDebug(st.DebugLog())
-	sv := api.Services{Log: st, Chats: chatSvc, Agents: agentSvc, MCP: mcp.New(claudemcp.Claude{}, chatSvc.MCPChanged), Terms: termSvc,
+	sv := api.Services{Log: st, Transcripts: st, Chats: chatSvc, Agents: agentSvc, MCP: mcp.New(claudemcp.Claude{}, chatSvc.MCPChanged), Terms: termSvc,
 		Trust: trust.New(map[string]trust.Agent{"claude": claudetrust.Trust{}, "codex": codextrust.Trust{}, "ante": antetrust.Trust{}, "omp": omptrust.Trust{}, "pig": pig.Trust{}}, st),
 		Hub:   hub, Memory: memory.New(chatSvc)}
 	sv.Jira = newJira(st, os.Getenv("NUSHI_DATA") != "")

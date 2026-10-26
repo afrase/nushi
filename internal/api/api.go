@@ -31,7 +31,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 61
+const Version = 62
 
 // Build is the daemon's executable as it started (PingResponse.build).
 var Build = func() string {
@@ -58,6 +58,8 @@ type server struct {
 	jira     *jira.Service
 	github   *github.Service
 	logPrefs LogPrefs
+
+	transcripts TranscriptPrefs
 
 	mu      sync.Mutex
 	clients int         // apps following the events
@@ -96,6 +98,8 @@ type Services struct {
 	Jira   *jira.Service
 	GitHub *github.Service
 	Log    LogPrefs // nil: the debug setting isn't kept
+	// Transcripts keeps the transcripts' copies' settings; nil: not kept.
+	Transcripts TranscriptPrefs
 }
 
 // New returns the whole API, unauthenticated: the local socket wraps it in
@@ -106,7 +110,7 @@ func New(sv Services) http.Handler { return serve(sv, "socket") }
 func serve(sv Services, via string, interceptors ...connect.Interceptor) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{chats: sv.Chats, agents: sv.Agents, mcp: sv.MCP, terms: sv.Terms, trust: sv.Trust,
-		hub: sv.Hub, memory: sv.Memory, remote: sv.Remote, jira: sv.Jira, github: sv.GitHub, logPrefs: sv.Log}, connect.WithInterceptors(append([]connect.Interceptor{logCalls{via}}, interceptors...)...)))
+		hub: sv.Hub, memory: sv.Memory, remote: sv.Remote, jira: sv.Jira, github: sv.GitHub, logPrefs: sv.Log, transcripts: sv.Transcripts}, connect.WithInterceptors(append([]connect.Interceptor{logCalls{via}}, interceptors...)...)))
 	return mux
 }
 
@@ -393,6 +397,10 @@ func (s *server) GetSettings(context.Context, *connect.Request[nushiv1.GetSettin
 	if s.logPrefs != nil {
 		set.DebugLog = s.logPrefs.DebugLog()
 	}
+	if s.transcripts != nil {
+		keep, days := s.transcripts.KeepTranscripts(), int32(s.transcripts.TranscriptDays())
+		set.KeepTranscripts, set.TranscriptDays = &keep, &days
+	}
 	return connect.NewResponse(&nushiv1.GetSettingsResponse{Settings: set}), nil
 }
 
@@ -406,6 +414,9 @@ func (s *server) SetSettings(_ context.Context, req *connect.Request[nushiv1.Set
 	}
 	if err := s.setDebugLog(req.Msg.GetSettings().GetDebugLog()); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	if err := s.setTranscripts(req.Msg.GetSettings()); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 	return connect.NewResponse(&nushiv1.SetSettingsResponse{}), nil
 }

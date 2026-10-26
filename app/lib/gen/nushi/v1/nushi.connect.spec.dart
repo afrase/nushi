@@ -225,6 +225,25 @@ abstract final class NushiService {
     nushiv1nushi.SetSettingsResponse.new,
   );
 
+  /// Nushi's copies of chats' transcripts (ADR 0047): each one's size and
+  /// whose it is, largest first.
+  static const listTranscripts = connect.Spec(
+    '/$name/ListTranscripts',
+    connect.StreamType.unary,
+    nushiv1nushi.ListTranscriptsRequest.new,
+    nushiv1nushi.ListTranscriptsResponse.new,
+  );
+
+  /// Deletes copies of transcripts: a chat goes on, its history from its
+  /// agent alone; one kept only for its copy (its agent deleted its
+  /// session) goes unless its work keeps it.
+  static const clearTranscripts = connect.Spec(
+    '/$name/ClearTranscripts',
+    connect.StreamType.unary,
+    nushiv1nushi.ClearTranscriptsRequest.new,
+    nushiv1nushi.ClearTranscriptsResponse.new,
+  );
+
   /// Says what DeleteChat removes. The first time, the daemon starts the
   /// agent to learn whether it can delete its history.
   static const planDeleteChat = connect.Spec(

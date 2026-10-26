@@ -453,6 +453,45 @@ extension type NushiServiceClient (connect.Transport _transport) {
     );
   }
 
+  /// Nushi's copies of chats' transcripts (ADR 0047): each one's size and
+  /// whose it is, largest first.
+  Future<nushiv1nushi.ListTranscriptsResponse> listTranscripts(
+    nushiv1nushi.ListTranscriptsRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.listTranscripts,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Deletes copies of transcripts: a chat goes on, its history from its
+  /// agent alone; one kept only for its copy (its agent deleted its
+  /// session) goes unless its work keeps it.
+  Future<nushiv1nushi.ClearTranscriptsResponse> clearTranscripts(
+    nushiv1nushi.ClearTranscriptsRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.clearTranscripts,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Says what DeleteChat removes. The first time, the daemon starts the
   /// agent to learn whether it can delete its history.
   Future<nushiv1nushi.PlanDeleteChatResponse> planDeleteChat(

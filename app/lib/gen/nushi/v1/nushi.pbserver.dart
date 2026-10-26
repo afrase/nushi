@@ -67,6 +67,10 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.GetSettingsRequest request);
   $async.Future<$0.SetSettingsResponse> setSettings(
       $pb.ServerContext ctx, $0.SetSettingsRequest request);
+  $async.Future<$0.ListTranscriptsResponse> listTranscripts(
+      $pb.ServerContext ctx, $0.ListTranscriptsRequest request);
+  $async.Future<$0.ClearTranscriptsResponse> clearTranscripts(
+      $pb.ServerContext ctx, $0.ClearTranscriptsRequest request);
   $async.Future<$0.PlanDeleteChatResponse> planDeleteChat(
       $pb.ServerContext ctx, $0.PlanDeleteChatRequest request);
   $async.Future<$0.DeleteChatResponse> deleteChat(
@@ -258,6 +262,10 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.GetSettingsRequest();
       case 'SetSettings':
         return $0.SetSettingsRequest();
+      case 'ListTranscripts':
+        return $0.ListTranscriptsRequest();
+      case 'ClearTranscripts':
+        return $0.ClearTranscriptsRequest();
       case 'PlanDeleteChat':
         return $0.PlanDeleteChatRequest();
       case 'DeleteChat':
@@ -454,6 +462,10 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return getSettings(ctx, request as $0.GetSettingsRequest);
       case 'SetSettings':
         return setSettings(ctx, request as $0.SetSettingsRequest);
+      case 'ListTranscripts':
+        return listTranscripts(ctx, request as $0.ListTranscriptsRequest);
+      case 'ClearTranscripts':
+        return clearTranscripts(ctx, request as $0.ClearTranscriptsRequest);
       case 'PlanDeleteChat':
         return planDeleteChat(ctx, request as $0.PlanDeleteChatRequest);
       case 'DeleteChat':
