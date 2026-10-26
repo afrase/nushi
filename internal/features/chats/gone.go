@@ -14,12 +14,13 @@ import (
 )
 
 // A chat whose session its agent deleted (Claude Code deletes sessions
-// older than cleanupPeriodDays when it starts) can't reopen, and Nushi
-// keeps no transcript of its own (ADR 0008). Once that is certain, Nushi
-// forgets the chat, leaving everything else as it is (its worktree and
-// branch, a scratch folder with files), and the app says so once
-// (ListChats' removed). A chat whose worktree or scratch folder holds work
-// stays instead, its session gone, with Delete what's left (ADR 0015).
+// older than cleanupPeriodDays when it starts) can't reopen. Once that is
+// certain, a chat with Nushi's copy of its transcript stays, read-only, its
+// transcript the copy (ADR 0047); one without is forgotten, leaving
+// everything else as it is (its worktree and branch, a scratch folder with
+// files), and the app says so once (ListChats' removed). A chat whose
+// worktree or scratch folder holds work stays too, its session gone, with
+// Delete what's left (ADR 0015).
 
 // NotFound says an agent's error is ACP's "Resource not found" (-32002),
 // which claude-agent-acp's session/load answers for a session Claude
@@ -87,7 +88,8 @@ func (c *chat) goneLocked(kept string) {
 }
 
 // expire forgets a chat whose agent no longer has its session (why says
-// how that was found), unless the chat holds work: then it stays, marked.
+// how that was found), unless the chat holds work or Nushi has its
+// transcript's copy: then it stays, marked.
 func (s *Service) expire(ctx context.Context, c *chat, why string) {
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
@@ -97,10 +99,11 @@ func (s *Service) expire(ctx context.Context, c *chat, why string) {
 	if halting || running {
 		return // being deleted or expired already, or it opened meanwhile (its session is there after all)
 	}
-	if kept := s.keeps(ctx, sess); kept != "" {
+	// Its work keeps it, or its transcript's copy, read-only.
+	if kept, copied := s.keeps(ctx, sess), s.copies != nil && s.copies.Has(c.id); kept != "" || copied {
 		c.mu.Lock()
 		c.goneLocked(kept)
-		c.logLocked().Info("chat's session gone; chat kept", "why", why, "kept", kept)
+		c.logLocked().Info("chat's session gone; chat kept", "why", why, "kept", kept, "copy", copied)
 		c.mu.Unlock()
 		return
 	}

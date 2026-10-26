@@ -223,7 +223,7 @@ func TestNames(t *testing.T) {
 	}
 	list, err := s.List()
 	noErr(t, err)
-	if slices.ContainsFunc(list, func(c Copy) bool { return c.Chat == "LINK" }) {
+	if slices.ContainsFunc(list, func(c model.TranscriptCopy) bool { return c.Chat == "LINK" }) {
 		t.Error("a link listed as a copy")
 	}
 }

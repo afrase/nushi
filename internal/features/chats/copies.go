@@ -1,7 +1,10 @@
 package chats
 
 import (
+	"context"
+	"log/slog"
 	"slices"
+	"time"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -33,6 +36,9 @@ type Copies interface {
 	// Read returns a chat's copy; nil when it has none.
 	Read(chat string) ([]model.Item, error)
 	Delete(chat string) error
+	Has(chat string) bool
+	// List returns every chat's copy, largest first.
+	List() ([]model.TranscriptCopy, error)
 }
 
 // UseCopies has chats keep copies of their transcripts in c while on
@@ -125,5 +131,120 @@ func (c *chat) dropCopyLocked(it model.Item) {
 	}
 	if err := c.copies.Drop(c.id, it.ID); err != nil {
 		c.logLocked().Warn("transcript copy: item not dropped", "err", err)
+	}
+}
+
+// CopyEntry is a chat's copy as Settings lists it: whose it is.
+type CopyEntry struct {
+	model.TranscriptCopy
+	Title, Agent string // "" for a chat Nushi no longer has
+}
+
+// ListCopies returns every chat's copy, largest first.
+func (s *Service) ListCopies() ([]CopyEntry, error) {
+	if s.copies == nil {
+		return nil, nil
+	}
+	list, err := s.copies.List()
+	if err != nil {
+		return nil, err
+	}
+	stored, err := s.sessions.Sessions()
+	if err != nil {
+		return nil, err
+	}
+	out := make([]CopyEntry, len(list))
+	for i, c := range list {
+		out[i].TranscriptCopy = c
+		if j := slices.IndexFunc(stored, func(sess model.Session) bool { return sess.ID == c.Chat }); j >= 0 {
+			out[i].Title, out[i].Agent = cmpTitle(stored[j]), stored[j].Agent
+		}
+	}
+	return out, nil
+}
+
+// ClearCopies deletes the copies of chats, and returns how many there were
+// and their size. A chat goes on as before, its history from its agent
+// alone; one whose session its agent deleted, kept for its copy, goes
+// unless its work keeps it (gone.go).
+func (s *Service) ClearCopies(ctx context.Context, chats []string) (n int, bytes int64, err error) {
+	if s.copies == nil {
+		return 0, 0, nil
+	}
+	list, err := s.copies.List()
+	if err != nil {
+		return 0, 0, err
+	}
+	for _, c := range list {
+		if !slices.Contains(chats, c.Chat) {
+			continue
+		}
+		if err := s.copies.Delete(c.Chat); err != nil {
+			return n, bytes, err
+		}
+		n, bytes = n+1, bytes+c.Bytes
+		s.mu.Lock()
+		ch := s.chats[c.Chat]
+		s.mu.Unlock()
+		if ch == nil {
+			continue
+		}
+		ch.mu.Lock()
+		gone := ch.sessionGone
+		ch.mu.Unlock()
+		if gone {
+			s.expire(ctx, ch, "its transcript's copy was cleared")
+		}
+	}
+	return n, bytes, nil
+}
+
+// Older returns the chats whose copies were last written before age ago.
+func (s *Service) Older(age time.Duration) ([]string, error) {
+	if s.copies == nil {
+		return nil, nil
+	}
+	list, err := s.copies.List()
+	var ids []string
+	for _, c := range list {
+		if time.Since(c.Modified) > age {
+			ids = append(ids, c.Chat)
+		}
+	}
+	return ids, err
+}
+
+// copiesCheck is how often copies past their days are looked for.
+var copiesCheck = time.Hour
+
+// AutoClearCopies deletes the copies last written more than days() ago
+// (0: none), now and each hour, until Close.
+func (s *Service) AutoClearCopies(days func() int) {
+	go func() {
+		for {
+			s.mu.Lock()
+			closing := s.closing
+			s.mu.Unlock()
+			if closing {
+				return
+			}
+			if d := days(); d > 0 {
+				s.clearOlder(time.Duration(d) * 24 * time.Hour)
+			}
+			time.Sleep(copiesCheck)
+		}
+	}()
+}
+
+func (s *Service) clearOlder(age time.Duration) {
+	ids, err := s.Older(age)
+	if err == nil && len(ids) > 0 {
+		var n int
+		var bytes int64
+		n, bytes, err = s.ClearCopies(context.Background(), ids)
+		slog.Info("transcript copies cleared", "why", "older than "+age.String(), "copies", n, "bytes", bytes)
+	}
+	if err != nil {
+		slog.Warn("clearing old transcript copies", "err", err)
 	}
 }

@@ -204,6 +204,7 @@ func run() error {
 		return err
 	}
 	chatSvc.UseCopies(copies, st.KeepTranscripts)
+	chatSvc.AutoClearCopies(st.TranscriptDays)
 	termSvc := terminals.New(startShell, filepath.Base(loginShell), chatSvc, hub.Publish)
 	chatSvc.UseTerminals(termSvc)
 	go hub.Subscribe(nil, func() bool { return true }, func(e model.Event) bool { termSvc.Follow(e); return true })
