@@ -4,10 +4,10 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:nushi/agent_mark.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/commits.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/github_settings.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/new_chat.dart';
@@ -186,20 +186,52 @@ class ItemRow extends StatelessWidget {
             const SizedBox(width: 8),
             ItemBadges(it, wide: wide),
             if (chats.isNotEmpty) ChatMarks(daemon, chats),
-            SizedBox(
-              width: 64,
-              child: Text(
-                githubAgo(it.updatedMs.toInt(), now),
-                textAlign: TextAlign.right,
-                style: theme.ui(t.textMuted, size: 11.5),
-              ),
-            ),
+            const SizedBox(width: 8),
+            ItemAge(it.updatedMs.toInt(), now: now),
             StartWork(
               daemon: daemon,
               item: it,
               menu: selected ? startMenu : null,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// When an item changed, in one line of a fixed width (sized for
+/// [agoShortLongest]): "12d", "5w", "3mo"; the date and time on hover.
+class ItemAge extends StatelessWidget {
+  const new(this.ms, {required this.now, super.key});
+
+  /// When (ms since the epoch).
+  final int ms;
+  final DateTime now;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final style = theme.ui(theme.t.textMuted, size: 11.5);
+    final when = DateTime.fromMillisecondsSinceEpoch(ms);
+    final longest = TextPainter(
+      text: TextSpan(text: agoShortLongest, style: style),
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    final width = longest.width.ceilToDouble();
+    longest.dispose();
+    return Tooltip(
+      message: 'Updated ${dateTime(when)}',
+      child: SizedBox(
+        width: width,
+        child: Text(
+          agoShort(now.difference(when)),
+          maxLines: 1,
+          softWrap: false,
+          textAlign: TextAlign.right,
+          style: style,
         ),
       ),
     );

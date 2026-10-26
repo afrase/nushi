@@ -46,7 +46,7 @@ func TestLive(t *testing.T) {
 	if b, err := c.RateLimits(ctx); err != nil || !slices.ContainsFunc(b, func(b Bucket) bool { return b.Name == "graphql" && b.Limit > 0 }) {
 		t.Fatalf("rate limits: %+v %v", b, err)
 	}
-	in, err := c.Inbox(ctx, []string{testRepo})
+	in, err := c.Inbox(ctx, InboxFilter{Repos: []string{testRepo}})
 	if err != nil {
 		t.Fatal(err)
 	}

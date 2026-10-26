@@ -112,12 +112,21 @@ func rollupState(s string) string {
 }
 
 // Inbox is what the GitHub view lists: pull requests whose review is
-// asked of me or my teams, my open pull requests, the open issues
-// assigned to me; the latest 50 of each, by when they changed.
+// asked of me (or my teams, with InboxFilter.Teams), my open pull
+// requests, the open issues assigned to me; the latest 50 of each, by
+// when they changed.
 type Inbox struct {
 	Review, Mine, Assigned []model.GitHubItem
 	// Totals are how many each search found (more than 50 aren't listed).
 	ReviewTotal, MineTotal, AssignedTotal int
+}
+
+// InboxFilter is which inbox: only Repos' (owner/name; none for all),
+// and whether Review requested has pull requests asked of a team of mine
+// too (else only those asking me by name).
+type InboxFilter struct {
+	Repos []string
+	Teams bool
 }
 
 const inboxQuery = `query Inbox($review: String!, $mine: String!, $assigned: String!) {
@@ -131,32 +140,40 @@ const inboxQuery = `query Inbox($review: String!, $mine: String!, $assigned: Str
 // theirs, so the query stays under GitHub's 256 characters.
 const repoQualifiers = 6
 
-// Inbox runs the three searches as one query (about two points), in
-// repos if any are given. review-requested:@me is me or a team of mine.
-func (c *Client) Inbox(ctx context.Context, repos []string) (Inbox, error) {
+// inboxSearches are the inbox's three searches: review-requested:@me is
+// me or a team of mine, user-review-requested:@me me by name.
+func inboxSearches(f InboxFilter) map[string]any {
+	open := "is:open archived:false sort:updated-desc"
+	if len(f.Repos) <= repoQualifiers {
+		for _, r := range f.Repos {
+			open = open + " repo:" + r
+		}
+	}
+	review := "user-review-requested:@me"
+	if f.Teams {
+		review = "review-requested:@me"
+	}
+	return map[string]any{
+		"review":   "is:pr " + open + " " + review,
+		"mine":     "is:pr " + open + " author:@me",
+		"assigned": "is:issue " + open + " assignee:@me",
+	}
+}
+
+// Inbox runs the three searches as one query (about two points).
+func (c *Client) Inbox(ctx context.Context, f InboxFilter) (Inbox, error) {
 	type search struct {
 		IssueCount int   `json:"issueCount"`
 		Nodes      []row `json:"nodes"`
 	}
 	var data struct{ Review, Mine, Assigned search }
-	open := "is:open archived:false sort:updated-desc"
-	if len(repos) <= repoQualifiers {
-		for _, r := range repos {
-			open = open + " repo:" + r
-		}
-	}
-	vars := map[string]any{
-		"review":   "is:pr " + open + " review-requested:@me",
-		"mine":     "is:pr " + open + " author:@me",
-		"assigned": "is:issue " + open + " assignee:@me",
-	}
-	if _, err := c.graphql(ctx, inboxQuery, vars, &data); err != nil {
+	if _, err := c.graphql(ctx, inboxQuery, inboxSearches(f), &data); err != nil {
 		return Inbox{}, err
 	}
 	items := func(s search) []model.GitHubItem {
 		var out []model.GitHubItem
 		for _, r := range s.Nodes {
-			if r.ID != "" && (len(repos) == 0 || slices.Contains(repos, r.Repository.NameWithOwner)) { // not a node of another type
+			if r.ID != "" && (len(f.Repos) == 0 || slices.Contains(f.Repos, r.Repository.NameWithOwner)) { // not a node of another type
 				out = append(out, r.item(c.Host))
 			}
 		}

@@ -10,7 +10,8 @@ import 'package:nushi/daemon.dart';
 /// are collapsed and their order, the repositories whose new chats get a
 /// worktree, what each chat's Changes view shows, the panes' widths, whether
 /// changed files show flat, which chats show their terminals, the
-/// terminal's font, and whether a subagent's pane shows wide.
+/// terminal's font, whether a subagent's pane shows wide, and whose review
+/// requests the GitHub view lists.
 final showDetails = ValueNotifier<bool>(_saved['details'] != false)
   ..addListener(_save);
 final collapsedCards = ValueNotifier<Set<String>>(_strings('collapsed'))
@@ -44,6 +45,11 @@ final lastJiraSite = ValueNotifier<String?>(switch (_saved['jiraSite']) {
   final String s => s,
   _ => null,
 })..addListener(_save);
+
+/// Whether the GitHub view's Review requested has pull requests asked of
+/// a team of mine too ("Me and my teams"), not only of me by name.
+final githubTeamReviews = ValueNotifier<bool>(_saved['githubTeams'] == true)
+  ..addListener(_save);
 
 /// The widths panes were dragged to, by pane (see `Resizable`).
 final paneWidths = ValueNotifier<Map<String, double>>({
@@ -104,6 +110,7 @@ void _save() {
         'termSize': terminalFontSize.value,
         'subagentWide': subagentWide.value,
         'jiraSite': lastJiraSite.value,
+        'githubTeams': githubTeamReviews.value,
       }),
     );
   } on Object {

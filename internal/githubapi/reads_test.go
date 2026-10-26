@@ -1,7 +1,9 @@
 package githubapi
 
 import (
+	"encoding/json"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -12,7 +14,7 @@ const repo = "afrase/nushi-gh-test"
 func TestInbox(t *testing.T) {
 	f := newFake(t)
 	f.file("graphql Inbox", "graphql_Inbox.json")
-	in, err := f.client().Inbox(t.Context(), nil)
+	in, err := f.client().Inbox(t.Context(), InboxFilter{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -26,8 +28,47 @@ func TestInbox(t *testing.T) {
 	if is.Pull || is.Number != 2 || is.Title != "Add a Mul function" || is.Host != f.client().Host {
 		t.Fatalf("%+v", is)
 	}
-	if in, err := f.client().Inbox(t.Context(), []string{"someone/else"}); err != nil || len(in.Mine)+len(in.Assigned) != 0 {
+	if in, err := f.client().Inbox(t.Context(), InboxFilter{Repos: []string{"someone/else"}}); err != nil || len(in.Mine)+len(in.Assigned) != 0 {
 		t.Fatalf("another repository's: %+v %v", in, err)
+	}
+}
+
+// Review requested is me by name (user-review-requested:@me) unless my
+// teams are asked for too (review-requested:@me); either way the inbox
+// is one query.
+func TestInboxReviewRequested(t *testing.T) {
+	answer, err := os.ReadFile("testdata/graphql_Inbox.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct {
+		filter      InboxFilter
+		review, not string
+	}{
+		{InboxFilter{}, " user-review-requested:@me", " review-requested:@me"},
+		{InboxFilter{Teams: true}, " review-requested:@me", "user-review-requested"},
+		{InboxFilter{Repos: []string{repo}}, "repo:" + repo + " user-review-requested:@me", " review-requested:@me"},
+	} {
+		f := newFake(t)
+		var vars map[string]string
+		f.route("graphql Inbox", func(w http.ResponseWriter, r *http.Request) {
+			var q struct{ Variables map[string]string }
+			_ = json.NewDecoder(r.Body).Decode(&q)
+			vars = q.Variables
+			_, _ = w.Write(answer)
+		})
+		if _, err := f.client().Inbox(t.Context(), c.filter); err != nil {
+			t.Fatal(err)
+		}
+		if !strings.HasSuffix(vars["review"], c.review) || strings.Contains(vars["review"], c.not) || !strings.HasPrefix(vars["review"], "is:pr is:open") {
+			t.Fatalf("%+v: review %q", c.filter, vars["review"])
+		}
+		if !strings.HasSuffix(vars["mine"], " author:@me") || !strings.HasSuffix(vars["assigned"], " assignee:@me") {
+			t.Fatalf("%+v: %v", c.filter, vars)
+		}
+		if n := f.count("graphql Inbox"); n != 1 {
+			t.Fatalf("%+v: %d queries", c.filter, n)
+		}
 	}
 }
 

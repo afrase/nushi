@@ -3,6 +3,7 @@ package github
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 	"strings"
 	"sync"
@@ -43,8 +44,8 @@ func (f *fakeClient) RateLimits(context.Context) ([]githubapi.Bucket, error) {
 	return []githubapi.Bucket{{Name: "graphql", Limit: 5000, Remaining: 4000}}, nil
 }
 func (f *fakeClient) Budget() []githubapi.Bucket { return nil }
-func (f *fakeClient) Inbox(_ context.Context, repos []string) (githubapi.Inbox, error) {
-	f.note("inbox " + strings.Join(repos, ","))
+func (f *fakeClient) Inbox(_ context.Context, in githubapi.InboxFilter) (githubapi.Inbox, error) {
+	f.note(fmt.Sprint("inbox ", in.Teams, " ", strings.Join(in.Repos, ",")))
 	return f.inbox, f.fail
 }
 
@@ -257,7 +258,7 @@ func TestHostsAndTokens(t *testing.T) {
 func TestNoToken(t *testing.T) {
 	w := newWorld(t)
 	w.ghHosts = append(w.ghHosts, "git.example.com") // gh knows it, but has no token for it
-	if _, err := w.s.Inbox(t.Context(), "git.example.com", nil, false); err == nil || !strings.Contains(err.Error(), "gh auth login") {
+	if _, err := w.s.Inbox(t.Context(), "git.example.com", githubapi.InboxFilter{}, false); err == nil || !strings.Contains(err.Error(), "gh auth login") {
 		t.Fatal(err)
 	}
 }
@@ -266,22 +267,22 @@ func TestInboxKeepsTheLastKnown(t *testing.T) {
 	w := newWorld(t)
 	ctx := t.Context()
 	pr := model.GitHubItem{ID: "PR_1", Pull: true, Number: 1}
-	if _, err := w.s.Inbox(ctx, "github.com", nil, false); err != nil {
+	if _, err := w.s.Inbox(ctx, "github.com", githubapi.InboxFilter{}, false); err != nil {
 		t.Fatal(err)
 	}
 	c := w.clients["gho_gh"]
 	c.inbox = githubapi.Inbox{Mine: []model.GitHubItem{pr}}
-	in, _ := w.s.Inbox(ctx, "github.com", nil, true)
+	in, _ := w.s.Inbox(ctx, "github.com", githubapi.InboxFilter{}, true)
 	if len(in.Mine) != 0 || len(c.asked) != 1 {
 		t.Fatalf("asked again within 20 s: %v", c.asked)
 	}
-	in, err := w.s.Inbox(ctx, "github.com", []string{"a/b"}, true) // another filter: asked
+	in, err := w.s.Inbox(ctx, "github.com", githubapi.InboxFilter{Repos: []string{"a/b"}}, true) // another filter: asked
 	if err != nil || len(in.Mine) != 1 {
 		t.Fatalf("%+v %v", in, err)
 	}
-	w.s.inboxes["github.com a/b"] = inboxCache{at: in.At.Add(-inboxFresh), inbox: in.Inbox}
+	w.s.inboxes["github.com false a/b"] = inboxCache{at: in.At.Add(-inboxFresh), inbox: in.Inbox}
 	c.fail = errors.New("GitHub's graphql rate limit is spent")
-	in, err = w.s.Inbox(ctx, "github.com", []string{"a/b"}, true)
+	in, err = w.s.Inbox(ctx, "github.com", githubapi.InboxFilter{Repos: []string{"a/b"}}, true)
 	if err != nil || in.Stale == nil || len(in.Mine) != 1 {
 		t.Fatalf("the last inbox goes on a failure: %+v %v", in, err)
 	}
@@ -294,7 +295,7 @@ func TestInboxKeepsTheLastKnown(t *testing.T) {
 func TestStates(t *testing.T) {
 	w := newWorld(t)
 	ctx := t.Context()
-	_, _ = w.s.Inbox(ctx, "github.com", nil, false)
+	_, _ = w.s.Inbox(ctx, "github.com", githubapi.InboxFilter{}, false)
 	c := w.clients["gho_gh"]
 	c.states["PR_1"] = model.GitHubItem{ID: "PR_1", State: "open"}
 	items := []model.ChatGitHub{{Host: "github.com", ID: "PR_1"}, {Host: "github.com", ID: "I_gone"}}
@@ -322,7 +323,7 @@ func TestStates(t *testing.T) {
 func TestFiles(t *testing.T) {
 	w := newWorld(t)
 	ctx := t.Context()
-	_, _ = w.s.Inbox(ctx, "github.com", nil, false)
+	_, _ = w.s.Inbox(ctx, "github.com", githubapi.InboxFilter{}, false)
 	c := w.clients["gho_gh"]
 	head := strings.Repeat("b", 40)
 	c.files = []githubapi.File{{Path: "new.go", Status: "added"}, {Path: "gone.go", Status: "removed"},
@@ -412,7 +413,7 @@ func TestUnknownHosts(t *testing.T) {
 	ctx := t.Context()
 	for _, h := range []string{"evil.example", "github.com.evil.example", "github.com@evil.example", "evil.example/github.com",
 		"github.com:8443", "git.corp.example.evil", "ev il", "", "github..com"} {
-		if _, err := w.s.Inbox(ctx, h, nil, false); err == nil {
+		if _, err := w.s.Inbox(ctx, h, githubapi.InboxFilter{}, false); err == nil {
 			t.Errorf("%q: asked", h)
 		}
 		if _, err := w.s.Pull(ctx, model.GitHubRef{Host: h, Repo: "a/b", Number: 1}, false); err == nil {
@@ -425,11 +426,11 @@ func TestUnknownHosts(t *testing.T) {
 	}
 	// Spellings of known hosts are the hosts.
 	for _, h := range []string{"GitHub.com", "github.com.", "github.com:443", " github.com "} {
-		if _, err := w.s.Inbox(ctx, h, nil, false); err != nil {
+		if _, err := w.s.Inbox(ctx, h, githubapi.InboxFilter{}, false); err != nil {
 			t.Errorf("%q: %v", h, err)
 		}
 	}
-	if _, err := w.s.Inbox(ctx, "Git.Corp.Example", nil, false); err != nil {
+	if _, err := w.s.Inbox(ctx, "Git.Corp.Example", githubapi.InboxFilter{}, false); err != nil {
 		t.Errorf("gh's own host: %v", err)
 	}
 	if slices.ContainsFunc(w.asked, func(h string) bool { return h != "github.com" && h != "git.corp.example" }) {
@@ -530,7 +531,7 @@ func TestOnlyAskedWrites(t *testing.T) {
 	w := newWorld(t)
 	ctx := t.Context()
 	ref := model.GitHubRef{Host: "github.com", Repo: "afrase/app", Number: 1}
-	_, _ = w.s.Inbox(ctx, "github.com", nil, true)
+	_, _ = w.s.Inbox(ctx, "github.com", githubapi.InboxFilter{}, true)
 	w.s.States(ctx, []model.ChatGitHub{{Host: "github.com", ID: "PR_1"}}, true)
 	_, _ = w.s.Pull(ctx, ref, true)
 	_, _ = w.s.Issue(ctx, ref, true)

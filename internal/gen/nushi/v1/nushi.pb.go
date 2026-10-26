@@ -13534,7 +13534,11 @@ type ListGitHubInboxRequest struct {
 	// Only these repositories' (owner/name); empty for all.
 	Repos []string `protobuf:"bytes,2,rep,name=repos,proto3" json:"repos,omitempty"`
 	// The app's timer asking: held back while a rate limit is low.
-	Quiet         bool `protobuf:"varint,3,opt,name=quiet,proto3" json:"quiet,omitempty"`
+	Quiet bool `protobuf:"varint,3,opt,name=quiet,proto3" json:"quiet,omitempty"`
+	// Review requested includes pull requests asked of a team of mine
+	// (GitHub's review-requested:@me); else only those asking me by name
+	// (user-review-requested:@me).
+	Teams         bool `protobuf:"varint,4,opt,name=teams,proto3" json:"teams,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -13586,6 +13590,13 @@ func (x *ListGitHubInboxRequest) GetRepos() []string {
 func (x *ListGitHubInboxRequest) GetQuiet() bool {
 	if x != nil {
 		return x.Quiet
+	}
+	return false
+}
+
+func (x *ListGitHubInboxRequest) GetTeams() bool {
+	if x != nil {
+		return x.Teams
 	}
 	return false
 }
@@ -16646,11 +16657,12 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\n" +
 	"unresolved\x18\f \x01(\x05R\n" +
 	"unresolved\x12\x1a\n" +
-	"\bcomments\x18\r \x01(\x05R\bcomments\"X\n" +
+	"\bcomments\x18\r \x01(\x05R\bcomments\"n\n" +
 	"\x16ListGitHubInboxRequest\x12\x12\n" +
 	"\x04host\x18\x01 \x01(\tR\x04host\x12\x14\n" +
 	"\x05repos\x18\x02 \x03(\tR\x05repos\x12\x14\n" +
-	"\x05quiet\x18\x03 \x01(\bR\x05quiet\"\xb7\x02\n" +
+	"\x05quiet\x18\x03 \x01(\bR\x05quiet\x12\x14\n" +
+	"\x05teams\x18\x04 \x01(\bR\x05teams\"\xb7\x02\n" +
 	"\x17ListGitHubInboxResponse\x12,\n" +
 	"\x06review\x18\x01 \x03(\v2\x14.nushi.v1.GitHubItemR\x06review\x12(\n" +
 	"\x04mine\x18\x02 \x03(\v2\x14.nushi.v1.GitHubItemR\x04mine\x120\n" +
