@@ -27,7 +27,7 @@
 - [0025](0025-claude-rules-in-one-place.md) Claude's rules live in `internal/claude*`; the chats feature takes a `Dialect` that `main` fills
 - [0026](0026-the-transcript-lays-out-every-item.md) The transcript lays out every item, not a lazy list
 - [0027](0027-what-lives-only-in-memory.md) What lives only in memory, in the daemon and the app
-- [0028](0028-agents-get-the-login-shells-environment.md) Agents get the login shell's environment, through the daemon's; Nushi doesn't read or filter it
+- [0028](0028-agents-get-the-login-shells-environment.md) Agents get the login shell's environment, through the daemon's; Nushi doesn't read or filter it (superseded by 0048)
 - [0029](0029-warn-before-a-folder-runs-code-for-codex.md) Warn before a folder's own code runs, for Codex too; "Start anyway" is kept per agent
 - [0030](0030-our-own-bridge-for-ante.md) Ante runs through an ACP bridge of Nushi's own (`nushid ante-acp`), not `ante-acp`
 - [0031](0031-warn-before-a-folder-runs-code-for-ante-and-omp.md) Warn before a folder's own code runs, for Ante and omp; the files are read by `internal/folderfiles`
@@ -47,3 +47,4 @@
 - [0045](0045-github-through-our-own-client-gh-login-first.md) GitHub through a thin client of Nushi's own in the daemon (GraphQL for pull requests, REST for logs and limits; go-gh for auth only); gh's login first, a pasted token in the keychain; a token only for a known host; rate limits gated from the start; GitHub's text as its page shows it; nothing reaches GitHub unless asked
 - [0046](0046-the-github-inbox-and-polling.md) The GitHub view is an inbox polled while it shows (a minute), a pull request's details every 30 s, a chat's status chip each minute; answers kept briefly, last known on failure; files read once a head
 - [0047](0047-nushis-copy-of-transcripts.md) Nushi keeps its own read-only copy of each chat's transcript as it was shown (on by default): a reopened chat shows the copy and the agent's replay once each ("Compacted here" where Claude's replay starts; the agent's from where they differ); a chat whose session is gone stays read-only with it; never sent to an agent
+- [0048](0048-agents-start-with-the-login-shells-environment.md) Agents start with the login shell's environment, which the daemon reads itself (`<shell> -l -i -c`, between marks, 5 s at most) at start and from Settings › Agents (a minute old, or Reload), over its own, without Nushi's own variables; a failure falls back and says so; values never logged or sent (supersedes 0028)
