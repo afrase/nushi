@@ -83,6 +83,7 @@ func (Claude) Read(folder string) (out []model.MCPServer, unread []Unread, err e
 		Projects   map[string]struct {
 			MCPServers servers `json:"mcpServers"`
 			Disabled   names   `json:"disabledMcpjsonServers"`
+			TurnedOff  names   `json:"disabledMcpServers"` // by /mcp (or Toggle)
 		} `json:"projects"`
 	}
 	file := ConfigFile()
@@ -92,6 +93,9 @@ func (Claude) Read(folder string) (out []model.MCPServer, unread []Unread, err e
 	out = add(nil, cfg.MCPServers, "user", file)
 	key := project(folder)
 	out = add(out, cfg.Projects[key].MCPServers, "local", key)
+	for i := range out {
+		out[i].Off = slices.Contains(cfg.Projects[key].TurnedOff, out[i].Name)
+	}
 	off, approved := rejected(folder, cfg.Projects[key].Disabled)
 	seen := map[string]bool{}
 	for dir := folder; ; dir = filepath.Dir(dir) {

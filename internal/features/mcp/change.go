@@ -138,17 +138,26 @@ func (s *Service) notify(folder, scope string) {
 	})
 }
 
-// SetOn turns a project's server (its .mcp.json) on, which approves it,
-// or off for the project.
-func (s *Service) SetOn(ctx context.Context, folder, name string, on bool) error {
+// SetOn turns a server on or off for folder's project: a project server
+// (its .mcp.json; on approves it) or a user or local one. The agent's
+// config keeps no on/off of its own for a plugin's server or a claude.ai
+// connector that Nushi can change; only /mcp in a terminal does it. An
+// empty scope is project, as before scopes were asked.
+func (s *Service) SetOn(ctx context.Context, folder, scope, name string, on bool) error {
 	ctx = context.WithoutCancel(ctx)
-	if err := target(folder, "project", name); err != nil {
+	if scope == "" {
+		scope = "project"
+	}
+	if scope == "plugin" || scope == "claudeai" {
+		return fmt.Errorf("claude only lets you turn %s off with /mcp in a terminal", name)
+	}
+	if err := target(folder, scope, name); err != nil {
 		return err
 	}
-	if err := s.config.SetOn(ctx, folder, name, on); err != nil {
+	if err := s.config.SetOn(ctx, folder, scope, name, on); err != nil {
 		return err
 	}
-	s.notify(folder, "project")
+	s.notify(folder, "project") // per project, whatever the scope
 	return nil
 }
 

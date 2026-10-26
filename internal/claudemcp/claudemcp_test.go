@@ -88,7 +88,7 @@ func TestSetOnKeepsOtherSettings(t *testing.T) {
 	}
 	write(t, filepath.Join(repo, ".mcp.json"), `{"mcpServers":{"web":{"type":"http","url":"http://x"}}}`)
 	ctx := context.Background()
-	if err := (Claude{}).SetOn(ctx, repo, "web", false); err != nil {
+	if err := (Claude{}).SetOn(ctx, repo, "project", "web", false); err != nil {
 		t.Fatal(err)
 	}
 	servers, _ := Claude{}.Servers(repo)
@@ -101,7 +101,7 @@ func TestSetOnKeepsOtherSettings(t *testing.T) {
 	}
 	path := filepath.Join(repo, ".claude", "settings.local.json")
 	write(t, path, `{"permissions":{"allow":["Bash(ls)"]},"disabledMcpjsonServers":["web","other"]}`)
-	if err := (Claude{}).SetOn(ctx, repo, "web", true); err != nil {
+	if err := (Claude{}).SetOn(ctx, repo, "project", "web", true); err != nil {
 		t.Fatal(err)
 	}
 	var got map[string]any
@@ -113,14 +113,14 @@ func TestSetOnKeepsOtherSettings(t *testing.T) {
 	}
 	// A file of null, and one name alone (which Claude takes for a list).
 	write(t, path, `null`)
-	if err := (Claude{}).SetOn(ctx, repo, "web", false); err != nil {
+	if err := (Claude{}).SetOn(ctx, repo, "project", "web", false); err != nil {
 		t.Fatal(err)
 	}
 	write(t, path, `{"enabledMcpjsonServers":"web"}`)
 	if servers, _ := (Claude{}).Servers(repo); !servers[0].Approved {
 		t.Errorf("approved by one name alone: %+v", servers[0])
 	}
-	if err := (Claude{}).SetOn(ctx, repo, "web", false); err != nil {
+	if err := (Claude{}).SetOn(ctx, repo, "project", "web", false); err != nil {
 		t.Fatal(err)
 	}
 	if b, _ := os.ReadFile(path); !strings.Contains(string(b), `"enabledMcpjsonServers": []`) {
@@ -151,7 +151,7 @@ func TestSetOnRefusesSymlinks(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		if err := (Claude{}).SetOn(ctx, repo, "web", true); err == nil {
+		if err := (Claude{}).SetOn(ctx, repo, "project", "web", true); err == nil {
 			t.Errorf("%s as a symlink: changed", link)
 		}
 		if b, _ := os.ReadFile(filepath.Join(target, "settings.local.json")); string(b) != "keep" {

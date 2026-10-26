@@ -6791,8 +6791,10 @@ class McpServer extends $pb.GeneratedMessage {
   @$pb.TagNumber(7)
   void clearShadowed() => $_clearField(7);
 
-  /// A project server turned off (rejected) for the folder; off_by names a
-  /// file that does it other than the one SetMcpServerOn changes.
+  /// Turned off for the folder's project: a project server rejected, or a
+  /// user or local one turned off by /mcp (or SetMcpServerOn); off_by
+  /// names a file that does it other than what SetMcpServerOn changes. A
+  /// plugin's server or connector turned off says so in its state.
   @$pb.TagNumber(8)
   $core.bool get off => $_getBF(7);
   @$pb.TagNumber(8)
@@ -7227,11 +7229,13 @@ class SetMcpServerOnRequest extends $pb.GeneratedMessage {
     $core.String? folder,
     $core.String? name,
     $core.bool? on,
+    $core.String? scope,
   }) {
     final result = SetMcpServerOnRequest._();
     if (folder != null) result.folder = folder;
     if (name != null) result.name = name;
     if (on != null) result.on = on;
+    if (scope != null) result.scope = scope;
     return result;
   }
 
@@ -7251,6 +7255,7 @@ class SetMcpServerOnRequest extends $pb.GeneratedMessage {
     ..aOS(1, _omitFieldNames ? '' : 'folder')
     ..aOS(2, _omitFieldNames ? '' : 'name')
     ..aOB(3, _omitFieldNames ? '' : 'on')
+    ..aOS(4, _omitFieldNames ? '' : 'scope')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -7303,6 +7308,16 @@ class SetMcpServerOnRequest extends $pb.GeneratedMessage {
   $core.bool hasOn() => $_has(2);
   @$pb.TagNumber(3)
   void clearOn() => $_clearField(3);
+
+  /// The server's scope: "project" (also when empty), "user" or "local".
+  @$pb.TagNumber(4)
+  $core.String get scope => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set scope($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasScope() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearScope() => $_clearField(4);
 }
 
 class SetMcpServerOnResponse extends $pb.GeneratedMessage {
@@ -21800,10 +21815,12 @@ class NushiServiceApi {
       _client.invoke<RemoveMcpServerResponse>(ctx, 'NushiService',
           'RemoveMcpServer', request, RemoveMcpServerResponse());
 
-  /// Turns a project's .mcp.json server on for the folder's project, which
-  /// approves it, or off, which rejects it (Claude's
+  /// Turns a server on or off for the folder's project (API 65: by scope).
+  /// A project's .mcp.json server: on approves it, off rejects it (Claude's
   /// enabledMcpjsonServers and disabledMcpjsonServers in the project's
-  /// .claude/settings.local.json).
+  /// .claude/settings.local.json). A user or local server: as /mcp in a
+  /// terminal does, which Claude records in ~/.claude.json, asked of Claude
+  /// (ADR 0050). Refused for a plugin's server and a claude.ai connector.
   $async.Future<SetMcpServerOnResponse> setMcpServerOn(
           $pb.ClientContext? ctx, SetMcpServerOnRequest request) =>
       _client.invoke<SetMcpServerOnResponse>(ctx, 'NushiService',

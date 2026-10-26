@@ -142,10 +142,12 @@ service NushiService {
   rpc AddMcpServer(AddMcpServerRequest) returns (AddMcpServerResponse);
   rpc EditMcpServer(EditMcpServerRequest) returns (EditMcpServerResponse);
   rpc RemoveMcpServer(RemoveMcpServerRequest) returns (RemoveMcpServerResponse);
-  // Turns a project's .mcp.json server on for the folder's project, which
-  // approves it, or off, which rejects it (Claude's
+  // Turns a server on or off for the folder's project (API 65: by scope).
+  // A project's .mcp.json server: on approves it, off rejects it (Claude's
   // enabledMcpjsonServers and disabledMcpjsonServers in the project's
-  // .claude/settings.local.json).
+  // .claude/settings.local.json). A user or local server: as /mcp in a
+  // terminal does, which Claude records in ~/.claude.json, asked of Claude
+  // (ADR 0050). Refused for a plugin's server and a claude.ai connector.
   rpc SetMcpServerOn(SetMcpServerOnRequest) returns (SetMcpServerOnResponse);
   // Signs in to a server that needs OAuth: the agent opens the browser and
   // the call returns once the sign-in is done there, or failed (a few
@@ -942,8 +944,10 @@ message McpServer {
   string detail = 6;
   // A server of the same name in a scope that wins hides it.
   bool shadowed = 7;
-  // A project server turned off (rejected) for the folder; off_by names a
-  // file that does it other than the one SetMcpServerOn changes.
+  // Turned off for the folder's project: a project server rejected, or a
+  // user or local one turned off by /mcp (or SetMcpServerOn); off_by
+  // names a file that does it other than what SetMcpServerOn changes. A
+  // plugin's server or connector turned off says so in its state.
   bool off = 8;
   string off_by = 9;
   // The project's local settings approve this project server (Claude in
@@ -981,6 +985,8 @@ message SetMcpServerOnRequest {
   string folder = 1;
   string name = 2;
   bool on = 3;
+  // The server's scope: "project" (also when empty), "user" or "local".
+  string scope = 4;
 }
 
 message SetMcpServerOnResponse {}
