@@ -27,7 +27,9 @@ final support = '${Platform.environment['HOME']}/Library/Application Support';
 final String dataDir =
     Platform.environment['NUSHI_DATA'] ??
     (Platform.environment.containsKey('FLUTTER_TEST')
-        ? '${Directory.systemTemp.path}/nushi-test'
+        // One per test process: test files run side by side, and a shared
+        // app.json would let one file's settings overwrite another's.
+        ? '${Directory.systemTemp.path}/nushi-test-$pid'
         : '$support/Nushi');
 
 /// The API version this app was built with (`internal/api.Version`).

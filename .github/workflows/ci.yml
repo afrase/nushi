@@ -36,6 +36,16 @@ jobs:
           cache: true
       - run: make lint
       - run: make test
+      # A golden that differs on the runner: its images, to see why.
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: golden-failures
+          path: |
+            app/test/failures/
+            packages/*/test/failures/
+          if-no-files-found: ignore
+          retention-days: 7
 
   linux:
     name: Go packages (Linux)
