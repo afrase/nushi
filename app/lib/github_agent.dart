@@ -109,3 +109,97 @@ class _PickChat extends StatelessWidget {
     );
   }
 }
+
+/// Asks which of a pull request's threads not resolved to address (all
+/// picked to start with); null when cancelled.
+Future<List<String>?> pickThreads(BuildContext context, GitHubPull pull) =>
+    showDialog<List<String>>(
+      context: context,
+      builder: (_) => _PickThreads(pull),
+    );
+
+class _PickThreads extends StatefulWidget {
+  const new(this.pull);
+
+  final GitHubPull pull;
+
+  @override
+  State<_PickThreads> createState() => _PickThreadsState();
+}
+
+class _PickThreadsState extends State<_PickThreads> {
+  late final List<GitHubThread> _threads = [
+    for (final x in widget.pull.threads)
+      if (!x.resolved) x,
+  ];
+  late final Set<String> _picked = {for (final x in _threads) x.id};
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    return nushiDialog(
+      'Address which threads?',
+      SizedBox(
+        width: 480,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final x in _threads)
+              Tap(
+                onTap: () => setState(
+                  () => _picked.contains(x.id)
+                      ? _picked.remove(x.id)
+                      : _picked.add(x.id),
+                ),
+                padding: const EdgeInsets.all(6),
+                child: Row(
+                  children: [
+                    Icon(
+                      _picked.contains(x.id)
+                          ? Icons.check_box
+                          : Icons.check_box_outline_blank,
+                      size: 16,
+                      color: t.textSecondary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${x.path}:${x.outdated ? x.originalLine : x.line}',
+                      style: theme.code(t.textSecondary, size: 12),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        x.comments.isEmpty ? '' : x.comments.first.body,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.ui(t.text, size: 12.5),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+      [
+        Button(
+          label: 'Cancel',
+          kind: ButtonKind.ghost,
+          onPressed: () => Navigator.pop(context),
+        ),
+        Button(
+          label: 'Put in the box',
+          kind: ButtonKind.primary,
+          onPressed: _picked.isEmpty
+              ? null
+              : () => Navigator.pop(context, [
+                  for (final x in _threads)
+                    if (_picked.contains(x.id)) x.id,
+                ]),
+        ),
+      ],
+    );
+  }
+}

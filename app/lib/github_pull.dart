@@ -314,8 +314,19 @@ class _Header extends StatelessWidget {
                 Button(
                   label: 'Address comments',
                   icon: Icons.forum_outlined,
-                  onPressed: () =>
-                      toAgent(context, daemon, it, kind: 'address_comments'),
+                  onPressed: () async {
+                    final picked = unresolved == 1
+                        ? const <String>[]
+                        : await pickThreads(context, p);
+                    if (picked == null || !context.mounted) return;
+                    await toAgent(
+                      context,
+                      daemon,
+                      it,
+                      kind: 'address_comments',
+                      threads: picked,
+                    );
+                  },
                 ),
               Button(
                 label: pending > 0 ? 'Review ($pending)…' : 'Review…',

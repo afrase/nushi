@@ -400,6 +400,36 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets('Address comments: the threads picked', (tester) async {
+    final (fake, d) = await openView(
+      tester,
+      chats: [
+        chat('c1', 'claude', 'Fix Sub')
+          ..github = GitHubLink(
+            host: 'github.com',
+            id: 'PR_1',
+            repo: _repo,
+            number: 1,
+            pull: true,
+          ),
+      ],
+    );
+    await tester.tap(find.text('Add Sub and Neg'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Address comments'));
+    await tester.pumpAndSettle();
+    expect(find.text('sub.go:5'), findsOneWidget);
+    expect(find.text('sub.go:10'), findsOneWidget); // outdated: its old line
+    await tester.tap(find.text('sub.go:5'));
+    await tester.tap(find.text('Put in the box'));
+    await tester.pumpAndSettle();
+    final asked = fake.calls.whereType<GetGitHubPromptRequest>().single;
+    expect(asked.kind, 'address_comments');
+    expect(asked.threads, ['T2']);
+    expect(d.chats['c1']!.draft.text.text, 'A address_comments message');
+    await closeView(tester, d);
+  });
+
   testWidgets('Start work on an issue: the New chat dialog with it, a '
       'worktree on its branch', (tester) async {
     final (fake, d) = await openView(
