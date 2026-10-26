@@ -2,6 +2,15 @@
 
 Each milestone's demo script (what to run, what to see), newest first. An archive.
 
+## Demo (the GitHub view as cards, with filters, steps 291–295)
+
+1. ⌘G: three cards (Review requested, My pull requests, Assigned issues), each with a count; rows show the title with `owner/repo#123` under it, and checks, threads and age in columns on the right. No Start work buttons at rest.
+2. Point at a row: a ▶ icon shows at its right (Start work); the selected row keeps it, and ⌘⏎ opens its menu. Right-click a row: Start work ›, Open in the browser, Hide this repository.
+3. Click My pull requests' title: it collapses; ↓ skips it. Drag Assigned issues' title (the grip shows) to the top. Quit and reopen Nushi: as left.
+4. The bar: "Last 90 days ▾". A card with old items ends with "2 older than 90 days · Show"; Show lists them in that card only. Pick "Any time": the line goes.
+5. "All repositories ▾": the owners and repositories listed, checked. Uncheck one: it's gone, and the menu says "· 1 hidden"; check it again to bring it back. "Only owners…": type `afrase degica`.
+6. ⌘N: the highlighted agent's row says "Sessions →"; ↓ moves it to the next agent; → opens that agent's sessions.
+
 ## Demo (controls that look like controls, steps 281–290)
 
 1. Settings › General: the terminal's font and size and Sleep idle are boxes with a ▾; hover one (it darkens), Tab to it (a blue ring), Space opens it. Show logs is an outlined button. The preview shows a folder, Go and Apple icon.
