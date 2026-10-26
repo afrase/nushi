@@ -85,7 +85,7 @@ func (s *Service) Open(ctx context.Context, agent, folder, sessionID, listed str
 	}
 	c.mu.Lock()
 	s.useLocked(c, o)
-	c.orphanLocked() // calls whose agent ended before their results
+	c.orphanLocked(false) // calls whose agent ended before their results
 	c.busy = false
 	if i := slices.IndexFunc(c.items, func(it model.Item) bool { return it.Kind == model.UserMessage }); c.session.Title == "" && i >= 0 {
 		c.session.Title = title(c.items[i].Text) // as for a chat's first prompt

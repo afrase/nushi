@@ -17,7 +17,7 @@ import (
 )
 
 // claudeDialect is Claude's, as main fills it.
-var claudeDialect = Dialect{InitMeta: claude.InitMeta, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall,
+var claudeDialect = Dialect{InitMeta: claude.InitMeta, SessionMeta: claude.SessionMeta, TurnDone: claude.TurnDone, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall,
 	Background: claude.Background, ReportElsewhere: claude.ReportElsewhere,
 	Shell: claude.Shell, ReadShell: claude.ReadShell,
 	SubagentID: claude.SubagentID, Relay: claude.Relay, Relayed: claude.Relayed, Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle,
@@ -29,6 +29,7 @@ var claudeDialect = Dialect{InitMeta: claude.InitMeta, ForkAt: claude.ForkAt, Pa
 type fakeAgent struct {
 	h       acp.Client
 	mcp     []acp.MCPServer // the last session/new's
+	newMeta map[string]any  // and its _meta
 	updates []acp.SessionUpdate
 	session acp.NewSessionResponse
 	set     []string // config changes asked for, as id=value
@@ -150,7 +151,7 @@ func (f *fakeAgent) NewSession(ctx context.Context, req *acp.NewSessionRequest) 
 		return nil, ctx.Err()
 	}
 	f.mu.Lock()
-	f.mcp = req.MCPServers
+	f.mcp, f.newMeta = req.MCPServers, req.Meta
 	f.mu.Unlock()
 	resp := f.session
 	resp.SessionID = "s1"

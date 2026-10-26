@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"slices"
 	"time"
 
@@ -52,7 +53,7 @@ func (c *chat) openSession(ctx context.Context, sid, folder string, fork bool) (
 		err = errors.New("the agent can't reopen sessions")
 	default:
 		var resp *acp.LoadSessionResponse
-		if resp, err = agent.LoadSession(ctx, &acp.LoadSessionRequest{SessionID: acp.SessionID(sid), Cwd: folder, MCPServers: c.mcpServers()}); err == nil {
+		if resp, err = agent.LoadSession(ctx, &acp.LoadSessionRequest{SessionID: acp.SessionID(sid), Cwd: folder, MCPServers: c.mcpServers(), Meta: c.sessionMeta(nil)}); err == nil {
 			o.config = c.configFrom(resp.ConfigOptions, resp.Modes)
 		}
 	}
@@ -65,7 +66,7 @@ func (c *chat) openSession(ctx context.Context, sid, folder string, fork bool) (
 
 // newSession has agent start a session in folder.
 func (c *chat) newSession(ctx context.Context, agent Agent, folder string) (string, []model.ConfigOption, error) {
-	resp, err := agent.NewSession(ctx, &acp.NewSessionRequest{Cwd: folder, MCPServers: c.mcpServers()})
+	resp, err := agent.NewSession(ctx, &acp.NewSessionRequest{Cwd: folder, MCPServers: c.mcpServers(), Meta: c.sessionMeta(nil)})
 	if err != nil {
 		return "", nil, err
 	}
@@ -79,11 +80,22 @@ func (c *chat) newSession(ctx context.Context, agent Agent, folder string) (stri
 func (c *chat) forkSession(ctx context.Context, agent Agent, sid, folder string, meta map[string]any) (string, []model.ConfigOption, error) {
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Minute)
 	defer cancel()
-	resp, err := agent.ForkSession(ctx, &acp.ForkSessionRequest{SessionID: acp.SessionID(sid), Cwd: folder, Meta: meta, MCPServers: c.mcpServers()})
+	resp, err := agent.ForkSession(ctx, &acp.ForkSessionRequest{SessionID: acp.SessionID(sid), Cwd: folder, Meta: c.sessionMeta(meta), MCPServers: c.mcpServers()})
 	if err != nil {
 		return "", nil, err
 	}
 	return string(resp.SessionID), c.configFrom(resp.ConfigOptions, resp.Modes), nil
+}
+
+// sessionMeta is a session request's _meta: the dialect's (SessionMeta),
+// with also's keys.
+func (c *chat) sessionMeta(also map[string]any) map[string]any {
+	if c.dialect.SessionMeta == nil {
+		return also
+	}
+	meta := maps.Clone(c.dialect.SessionMeta)
+	maps.Copy(meta, also)
+	return meta
 }
 
 // Tools are the MCP servers of Nushi's own tools a chat's sessions get
@@ -154,7 +166,7 @@ func (s *Service) watch(c *chat, agent Agent) {
 	}
 	c.agent, c.kept = nil, true
 	c.logLocked().Error("the chat's agent quit unexpectedly", "pid", agent.Pid())
-	c.orphanLocked()
+	c.orphanLocked(false)
 	c.noticeLocked("error", "The agent quit unexpectedly. Your next message reopens the chat.")
 	c.statusChangedLocked()
 	c.mu.Unlock()
@@ -164,14 +176,17 @@ func (s *Service) watch(c *chat, agent Agent) {
 // orphanLocked fails what can't finish once the agent that ran it is gone:
 // tool calls still pending or running (also as a replay brings them back,
 // when the agent died before their results), and subagents running in the
-// background.
-func (c *chat) orphanLocked() {
+// background, which are "stopped" when Nushi stopped the agent.
+func (c *chat) orphanLocked(stopped bool) {
 	c.ownTurn = false
 	for i, it := range c.items {
 		running := it.Status == "pending" || it.Status == "in_progress" || it.Subagent != nil && it.Subagent.State == "running"
 		if it.Kind == model.ToolCall && running {
 			c.items[i].Status = "failed"
 			c.subagentLocked(&c.items[i])
+			if sa := c.items[i].Subagent; sa != nil && stopped {
+				sa.State = "stopped"
+			}
 			c.publishLocked(c.items[i])
 		}
 	}
@@ -184,7 +199,7 @@ func (c *chat) disconnect() {
 	c.mu.Lock()
 	agent := c.agent
 	c.agent, c.kept = nil, len(c.items) > 0
-	c.orphanLocked()
+	c.orphanLocked(true)
 	c.mu.Unlock()
 	if agent != nil {
 		_ = agent.Stop(stopGrace) // its process is gone either way

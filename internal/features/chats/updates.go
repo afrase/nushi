@@ -20,7 +20,8 @@ func (c *chat) update(n *acp.SessionNotification) { //nolint:gocognit,gocyclo //
 	if c.kept && slices.Contains([]string{"user_message_chunk", "agent_message_chunk", "agent_thought_chunk", "plan", "tool_call", "tool_call_update"}, n.Update.SessionUpdate) {
 		return // session/load's replay of a transcript the chat still has
 	}
-	if !c.busy && c.started.IsZero() && slices.Contains([]string{"agent_message_chunk", "agent_thought_chunk", "tool_call", "tool_call_update"}, n.Update.SessionUpdate) {
+	if !c.busy && c.started.IsZero() && slices.Contains([]string{"agent_message_chunk", "agent_thought_chunk", "tool_call", "tool_call_update"}, n.Update.SessionUpdate) &&
+		c.parentLocked(n.Update) == "" { // a subagent's steps aren't the agent's own work
 		c.ownTurn = true // until its usage_update, which ends a turn
 	}
 	switch u := n.Update; u.SessionUpdate {
@@ -72,6 +73,14 @@ func (c *chat) update(n *acp.SessionNotification) { //nolint:gocognit,gocyclo //
 	case "usage_update":
 		c.ownTurn = false
 		u := u.UsageUpdate
+		if c.dialect.TurnDone != nil && !c.started.IsZero() && !c.stopped && c.dialect.TurnDone(u) {
+			switch {
+			case c.steered > 0: // the result of the work a steered message cut short: the turn goes on
+				c.steered = 0
+			case c.backgroundLocked(c.turnFrom): // the agent holds a turn for the subagents it started
+				c.releaseLocked()
+			}
+		}
 		c.usage.Used, c.usage.Size = int64(u.Used), int64(u.Size) //nolint:gosec // token counts, far below the limits
 		if u.Cost != nil {                                        // else the cost reported last still stands
 			c.usage.Cost, c.usage.Currency = u.Cost.Amount, u.Cost.Currency
@@ -115,6 +124,28 @@ func (c *chat) update(n *acp.SessionNotification) { //nolint:gocognit,gocyclo //
 			c.deliverLocked() // between tool calls: the agent's chance to take queued messages
 		}
 	}
+}
+
+// parentLocked is the subagent tool call an update comes from, if one
+// does (see Dialect.Parent).
+func (c *chat) parentLocked(u acp.SessionUpdate) string {
+	if c.dialect.Parent == nil {
+		return ""
+	}
+	switch {
+	case u.AgentMessageChunk != nil:
+		return c.dialect.Parent(u.AgentMessageChunk.Meta)
+	case u.AgentThoughtChunk != nil:
+		return c.dialect.Parent(u.AgentThoughtChunk.Meta)
+	case u.ToolCall != nil:
+		return c.dialect.Parent(u.ToolCall.Meta)
+	case u.ToolCallUpdate != nil:
+		if it := c.itemLocked(string(u.ToolCallUpdate.ToolCallID)); it != nil {
+			return it.Parent
+		}
+		return c.dialect.Parent(u.ToolCallUpdate.Meta)
+	}
+	return ""
 }
 
 // chunkLocked adds a chunk of a message (text or an image): to the message

@@ -164,7 +164,7 @@ func run() error {
 		Explain: agentSvc.Explain("claude"), Ready: ready("claude"), Launch: launch("claude", func(r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
 			return claude.Start(dir, r.Program, r.CLI, h, log)
 		}),
-		Dialect: chats.Dialect{InitMeta: claude.InitMeta, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall,
+		Dialect: chats.Dialect{InitMeta: claude.InitMeta, SessionMeta: claude.SessionMeta, TurnDone: claude.TurnDone, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall,
 			Background: claude.Background, ReportElsewhere: claude.ReportElsewhere,
 			Shell: claude.Shell, ReadShell: claude.ReadShell,
 			SubagentID: claude.SubagentID, Relay: claude.Relay, Relayed: claude.Relayed, Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle,

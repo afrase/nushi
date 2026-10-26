@@ -127,6 +127,10 @@ type chat struct {
 	steering     bool                            // a steering worker hands the queue to the running turn
 	sendingNow   int                             // SendNow prompts waiting on the turn they stop: the queue waits too
 	ownTurn      bool                            // the agent works on its own, outside a turn of Nushi's
+	released     bool                            // the running turn's work ended, but the agent holds its prompt (Dialect.TurnDone)
+	steered      int                             // messages steered into the running turn since the agent's last result
+	turnFrom     int                             // the running turn's first item, about (items may go)
+	stopped      bool                            // the running turn was told to stop: it ends with the agent's answer
 	kept         bool                            // the transcript outlived its agent: reopening doesn't replay into it
 	reopenFailed bool                            // the last reopen failed: see failedLocked
 	failure      string                          // the notice saying why it failed (item id)
@@ -346,6 +350,7 @@ func (c *chat) cancelLocked() error {
 	if c.started.IsZero() && !own {
 		return nil // no turn runs
 	}
+	c.stopped = !own
 	for _, answer := range c.waiting {
 		answer <- ""
 	}
