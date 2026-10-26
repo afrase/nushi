@@ -156,7 +156,7 @@ func (n checkNode) check() model.GitHubCheck {
 		}
 		return model.GitHubCheck{Name: n.Context, State: state, URL: n.TargetURL, Summary: n.Description, Required: n.IsRequired, Started: n.CreatedAt}
 	}
-	c := model.GitHubCheck{ID: n.DatabaseID, Name: n.Name, State: "pending", URL: n.DetailsURL, Title: n.Title, Summary: n.Summary,
+	c := model.GitHubCheck{ID: n.DatabaseID, Name: n.Name, State: "pending", URL: n.DetailsURL, Title: n.Title, Summary: Markdown(n.Summary),
 		Required: n.IsRequired, Started: n.StartedAt, Completed: n.CompletedAt}
 	if n.Status == "COMPLETED" {
 		c.State = strings.ToLower(n.Conclusion)

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/afrase/nushi/internal/adf"
+	"github.com/afrase/nushi/internal/mdwrite"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -197,7 +198,7 @@ func (c *Client) remoteLinks(ctx context.Context, key string) ([]model.JiraRemot
 	}
 	var out []model.JiraRemoteLink
 	for _, r := range raw {
-		if !adf.SafeLink(r.Object.URL) {
+		if !mdwrite.SafeLink(r.Object.URL) {
 			r.Object.URL = "" // anyone with edit rights sets it: no file: or app scheme
 		}
 		out = append(out, model.JiraRemoteLink{Title: r.Object.Title, URL: r.Object.URL})

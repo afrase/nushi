@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/afrase/nushi/internal/mdwrite"
 )
 
 // Media says what a media node (an image or file in the text, named by
@@ -89,15 +91,15 @@ func (w writer) block(n Node) string {
 		}
 		return w.list(n, func(i int) string { return strconv.Itoa(start+i) + delim })
 	case "codeBlock":
-		return fence(textOf(n), n.attr("language"))
+		return mdwrite.Fence(textOf(n), n.attr("language"))
 	case "blockquote":
-		return quote(w.blocks(n.Content, "\n\n"))
+		return mdwrite.Quote(w.blocks(n.Content, "\n\n"))
 	case "panel":
 		body := w.blocks(n.Content, "\n\n")
 		if label := panels[n.attr("panelType")]; label != "" {
 			body = "**" + label + ":** " + body
 		}
-		return quote(body)
+		return mdwrite.Quote(body)
 	case "rule":
 		return "---"
 	case "table":
@@ -109,7 +111,7 @@ func (w writer) block(n Node) string {
 		}
 		return strings.Join(out, " ")
 	case "expand", "nestedExpand":
-		return "**" + escape(cmp.Or(n.attr("title"), "Details")) + "**\n\n" + w.blocks(n.Content, "\n\n")
+		return "**" + mdwrite.Escape(cmp.Or(n.attr("title"), "Details")) + "**\n\n" + w.blocks(n.Content, "\n\n")
 	case "blockCard", "embedCard":
 		return Link(n.attr("url"), n.attr("url"))
 	}
@@ -125,11 +127,11 @@ func (w writer) unknown(n Node, block bool) string {
 	case len(n.Content) > 0:
 		return w.inline(n.Content)
 	case n.Text != "":
-		return escape(n.Text)
+		return mdwrite.Escape(n.Text)
 	case n.attr("text") != "":
-		return escape(n.attr("text"))
+		return mdwrite.Escape(n.attr("text"))
 	}
-	return "\\[" + escape(cmp.Or(n.attr("extensionKey"), n.Type)) + "\\]"
+	return "\\[" + mdwrite.Escape(cmp.Or(n.attr("extensionKey"), n.Type)) + "\\]"
 }
 
 // list renders a list's items, each after its marker, what follows the
@@ -153,12 +155,12 @@ func (w writer) list(n Node, marker func(int) string) string {
 			m += "✔ "
 			body = inner.blocks(it.Content, "\n")
 		case "taskList", "bulletList", "orderedList", "decisionList": // nested without an item
-			items = append(items, indent(inner.block(it), "  "))
+			items = append(items, mdwrite.Indent(inner.block(it), "  "))
 			continue
 		default:
 			body = inner.itemBody(it.Content)
 		}
-		items = append(items, m+indent(body, strings.Repeat(" ", len(m))))
+		items = append(items, m+mdwrite.Indent(body, strings.Repeat(" ", len(m))))
 	}
 	return strings.Join(items, "\n")
 }
@@ -231,9 +233,9 @@ func (w writer) mediaRef(m Node) string {
 	}
 	name = cmp.Or(name, m.attr("alt"), "attachment")
 	if !strings.HasPrefix(ref, AttachmentScheme) {
-		return "\\[" + escape(name) + "\\]"
+		return "\\[" + mdwrite.Escape(name) + "\\]"
 	}
-	return "![" + escape(name) + "](" + dest(ref) + ")"
+	return "![" + mdwrite.Escape(name) + "](" + mdwrite.Dest(ref) + ")"
 }
 
 func (w writer) inline(nodes []Node) string {
@@ -245,11 +247,11 @@ func (w writer) inline(nodes []Node) string {
 		case "hardBreak":
 			b.WriteString("\\\n")
 		case "mention":
-			b.WriteString("@" + escape(strings.TrimPrefix(cmp.Or(n.attr("text"), n.attr("id")), "@")))
+			b.WriteString("@" + mdwrite.Escape(strings.TrimPrefix(cmp.Or(n.attr("text"), n.attr("id")), "@")))
 		case "emoji":
 			b.WriteString(emoji(n))
 		case "status":
-			b.WriteString(code(n.attr("text")))
+			b.WriteString(mdwrite.Code(n.attr("text")))
 		case "date":
 			b.WriteString(date(n.attr("timestamp")))
 		case "inlineCard":
@@ -277,7 +279,7 @@ func emoji(n Node) string {
 	if e, ok := atlassianEmoji[strings.Trim(short, ":")]; ok {
 		return e
 	}
-	return escape(short)
+	return mdwrite.Escape(short)
 }
 
 // isEmoji says text is a few emoji or symbols, nothing Markdown reads.
@@ -308,7 +310,7 @@ func marked(n Node) string {
 	lead := len(text) - len(strings.TrimLeftFunc(text, unicode.IsSpace))
 	trail := len(text) - len(strings.TrimRightFunc(text, unicode.IsSpace))
 	if lead == len(text) || len(n.Marks) == 0 {
-		return escape(text)
+		return mdwrite.Escape(text)
 	}
 	core := text[lead : len(text)-trail]
 	var s string
@@ -318,9 +320,9 @@ func marked(n Node) string {
 		isCode = isCode || m.Type == "code"
 	}
 	if isCode {
-		s = code(core)
+		s = mdwrite.Code(core)
 	} else {
-		s = escape(core)
+		s = mdwrite.Escape(core)
 	}
 	for _, m := range n.Marks {
 		switch m.Type {
@@ -334,130 +336,30 @@ func marked(n Node) string {
 			href = m.attr("href")
 		}
 	}
-	if SafeLink(href) {
-		s = "[" + s + "](" + dest(href) + ")"
+	if mdwrite.SafeLink(href) {
+		s = "[" + s + "](" + mdwrite.Dest(href) + ")"
 	}
 	return text[:lead] + s + text[len(text)-trail:]
-}
-
-func code(s string) string {
-	// A code span reads a line break as a space; one left in could let
-	// the next line start a block (a heading, HTML) and end the span.
-	s = strings.NewReplacer("\r\n", " ", "\n", " ", "\r", " ").Replace(s)
-	ticks := "`"
-	for strings.Contains(s, ticks) {
-		ticks += "`"
-	}
-	if strings.HasPrefix(s, "`") || strings.HasSuffix(s, "`") {
-		s = " " + s + " "
-	}
-	return ticks + s + ticks
-}
-
-func fence(s, lang string) string {
-	if strings.TrimLeft(lang, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_+#.-") != "" {
-		lang = "" // only a language's name may follow the fence
-	}
-	f := "```"
-	for strings.Contains(s, f) {
-		f += "`"
-	}
-	return f + lang + "\n" + strings.TrimSuffix(s, "\n") + "\n" + f
 }
 
 // Link is a Markdown link for anyone's text and URL: the text escaped,
 // the URL kept only if SafeLink takes it (else the text alone).
 func Link(text, href string) string {
-	if !SafeLink(href) {
-		return escape(text)
+	if !mdwrite.SafeLink(href) {
+		return mdwrite.Escape(text)
 	}
-	return "[" + escape(text) + "](" + dest(href) + ")"
+	return "[" + mdwrite.Escape(text) + "](" + mdwrite.Dest(href) + ")"
 }
 
 // AttachmentScheme is the scheme of the links a Media lookup may give.
 const AttachmentScheme = "jira-attachment:"
 
-// SafeLink says a link may be followed or put into Markdown: http, https
-// and mailto only (an issue's text is anyone's who can edit it; a file:
-// or an app's own scheme could open something on the Mac).
-func SafeLink(href string) bool {
-	h := strings.ToLower(strings.TrimSpace(href))
-	return strings.HasPrefix(h, "https://") || strings.HasPrefix(h, "http://") || strings.HasPrefix(h, "mailto:")
-}
-
-// dest makes a URL safe as a link's destination: nothing in it can end
-// the destination or the link.
-func dest(href string) string {
-	return strings.NewReplacer(" ", "%20", "(", "%28", ")", "%29", "<", "%3C", ">", "%3E", "\n", "%0A", "\r", "%0D", "\\", "%5C").Replace(href)
-}
-
 func date(ms string) string {
 	n, err := strconv.ParseInt(ms, 10, 64)
 	if err != nil {
-		return escape(ms)
+		return mdwrite.Escape(ms)
 	}
 	return time.UnixMilli(n).UTC().Format("2006-01-02")
-}
-
-func quote(s string) string {
-	lines := strings.Split(s, "\n")
-	for i, l := range lines {
-		lines[i] = strings.TrimRight("> "+l, " ")
-	}
-	return strings.Join(lines, "\n")
-}
-
-func indent(s, pad string) string {
-	return strings.ReplaceAll(s, "\n", "\n"+pad)
-}
-
-// escape keeps a text's characters from reading as Markdown: an
-// underscore only where it could start or end emphasis (snake_case
-// stays), what starts a block only at a line's start, a "!" only at the
-// end (where a link that follows would make it an image).
-func escape(s string) string {
-	var b strings.Builder
-	r := []rune(s)
-	lineStart := true
-	for i := 0; i < len(r); i++ {
-		c := r[i]
-		switch {
-		case strings.ContainsRune("\\`*[]<", c),
-			c == '~' && (i > 0 && r[i-1] == '~' || i+1 < len(r) && r[i+1] == '~'):
-			b.WriteRune('\\')
-		case c == '_' && (i == 0 || i == len(r)-1 || !isWord(r[i-1]) || !isWord(r[i+1])):
-			b.WriteRune('\\')
-		case lineStart && strings.ContainsRune("#+-=>", c):
-			b.WriteRune('\\')
-		case lineStart && unicode.IsDigit(c): // "1." or "1)" would start a list
-			j := i
-			for j < len(r) && unicode.IsDigit(r[j]) {
-				j++
-			}
-			if j < len(r) && (r[j] == '.' || r[j] == ')') {
-				b.WriteString(string(r[i:j]) + "\\" + string(r[j]))
-				i, lineStart = j, false
-				continue
-			}
-		}
-		if c == '!' && i == len(r)-1 { // a link written after it would be an image
-			b.WriteRune('\\')
-		}
-		b.WriteRune(c)
-		lineStart = c == '\n' || c == '\r' || lineStart && c == ' '
-	}
-	return b.String()
-}
-
-func isWord(r rune) bool { return unicode.IsLetter(r) || unicode.IsDigit(r) }
-
-// textOf joins a node's text, as a code block holds it.
-func textOf(n Node) string {
-	var b strings.Builder
-	for _, c := range n.Content {
-		b.WriteString(c.Text)
-	}
-	return b.String()
 }
 
 // isBlock says a node sits among blocks rather than in a line of text.
@@ -467,4 +369,13 @@ func isBlock(n Node) bool {
 		return false
 	}
 	return true
+}
+
+// textOf joins a node's text, as a code block holds it.
+func textOf(n Node) string {
+	var b strings.Builder
+	for _, c := range n.Content {
+		b.WriteString(c.Text)
+	}
+	return b.String()
 }
