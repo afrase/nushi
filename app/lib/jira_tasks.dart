@@ -259,14 +259,11 @@ class TaskList extends StatelessWidget {
               ),
               builder: (context, open) {
                 if (picked) startMenu(open);
-                return Tap(
-                  onTap: open,
-                  tooltip: picked ? 'Start work (⌘⏎)' : 'Start work',
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  child: Text('Start work', style: theme.ui(t.link, size: 12)),
+                return Button(
+                  label: 'Start work',
+                  menu: true,
+                  tooltip: picked ? '⌘⏎' : '',
+                  onPressed: open,
                 );
               },
             ),

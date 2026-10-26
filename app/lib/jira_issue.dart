@@ -11,7 +11,6 @@ import 'package:nushi/jira_issue_parts.dart';
 import 'package:nushi/jira_settings.dart';
 import 'package:nushi/jira_work.dart';
 import 'package:nushi/markdown.dart';
-import 'package:nushi/menu.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -365,13 +364,13 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
         const SizedBox(width: 10),
         Text(i.assignee.isEmpty ? 'Unassigned' : i.assignee, style: dim),
         const Spacer(),
-        Menu(
+        MenuButton(
+          label: 'Start a chat',
           entries: folderEntries(
             widget.daemon,
             onPick: (f) =>
                 startWork(context, widget.daemon, widget.site, i.key, f),
           ),
-          child: Text('Start a chat ▾', style: theme.ui(t.link, size: 12)),
         ),
         const SizedBox(width: 6),
         IconTap(Icons.refresh, tooltip: 'Refresh', onTap: _load),

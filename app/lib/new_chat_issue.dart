@@ -133,11 +133,23 @@ class IssueLines extends StatelessWidget {
                         onTap: onEditBranch,
                         tooltip: 'Change the branch (B)',
                         padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Text(
-                          issue.branch,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.code(t.text, size: 12),
+                        child: Row(
+                          spacing: 4,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                issue.branch,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.code(t.text, size: 12),
+                              ),
+                            ),
+                            Icon(
+                              Icons.edit_outlined,
+                              size: 12,
+                              color: t.textSecondary,
+                            ),
+                          ],
                         ),
                       ),
               ),

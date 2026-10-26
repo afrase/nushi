@@ -128,19 +128,15 @@ class NoSite extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     return Center(
-      child: Tap(
-        onTap: () => showSettings(context, daemon.client, jira: true),
-        child: Text.rich(
-          TextSpan(
-            children: [
-              TextSpan(
-                text: 'Add a Jira site in ',
-                style: theme.ui(theme.t.textMuted),
-              ),
-              TextSpan(text: 'Settings › Jira', style: theme.ui(theme.t.link)),
-            ],
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('Add a Jira site in ', style: theme.ui(theme.t.textMuted)),
+          LinkText(
+            'Settings › Jira',
+            onTap: () => showSettings(context, daemon.client, jira: true),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -189,7 +185,8 @@ class JiraBar extends StatelessWidget {
           Text('Jira', style: theme.ui(t.text, weight: FontWeight.w600)),
           const SizedBox(width: 12),
           if (sites.isNotEmpty)
-            Menu(
+            MenuField(
+              compact: true,
               entries: [
                 for (final s in sites)
                   MenuEntry(
@@ -206,10 +203,7 @@ class JiraBar extends StatelessWidget {
                   ),
                 ],
               ],
-              child: Text(
-                '${site?.id ?? 'All sites'} ▾',
-                style: theme.ui(t.textSecondary, size: 12),
-              ),
+              label: Text(site?.id ?? 'All sites'),
             ),
           const Spacer(),
           if (updatedLine(updated, loading: loading, now: now) case final line?)
