@@ -157,6 +157,14 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.ConfirmPairingRequest request);
   $async.Future<$0.RevokeDeviceResponse> revokeDevice(
       $pb.ServerContext ctx, $0.RevokeDeviceRequest request);
+  $async.Future<$0.GetPushKeyResponse> getPushKey(
+      $pb.ServerContext ctx, $0.GetPushKeyRequest request);
+  $async.Future<$0.SetPushSubscriptionResponse> setPushSubscription(
+      $pb.ServerContext ctx, $0.SetPushSubscriptionRequest request);
+  $async.Future<$0.SetDeviceViewResponse> setDeviceView(
+      $pb.ServerContext ctx, $0.SetDeviceViewRequest request);
+  $async.Future<$0.SendTestPushResponse> sendTestPush(
+      $pb.ServerContext ctx, $0.SendTestPushRequest request);
   $async.Future<$0.LogResponse> log(
       $pb.ServerContext ctx, $0.LogRequest request);
   $async.Future<$0.ListJiraSitesResponse> listJiraSites(
@@ -366,6 +374,14 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.ConfirmPairingRequest();
       case 'RevokeDevice':
         return $0.RevokeDeviceRequest();
+      case 'GetPushKey':
+        return $0.GetPushKeyRequest();
+      case 'SetPushSubscription':
+        return $0.SetPushSubscriptionRequest();
+      case 'SetDeviceView':
+        return $0.SetDeviceViewRequest();
+      case 'SendTestPush':
+        return $0.SendTestPushRequest();
       case 'Log':
         return $0.LogRequest();
       case 'ListJiraSites':
@@ -581,6 +597,15 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return confirmPairing(ctx, request as $0.ConfirmPairingRequest);
       case 'RevokeDevice':
         return revokeDevice(ctx, request as $0.RevokeDeviceRequest);
+      case 'GetPushKey':
+        return getPushKey(ctx, request as $0.GetPushKeyRequest);
+      case 'SetPushSubscription':
+        return setPushSubscription(
+            ctx, request as $0.SetPushSubscriptionRequest);
+      case 'SetDeviceView':
+        return setDeviceView(ctx, request as $0.SetDeviceViewRequest);
+      case 'SendTestPush':
+        return sendTestPush(ctx, request as $0.SendTestPushRequest);
       case 'Log':
         return log(ctx, request as $0.LogRequest);
       case 'ListJiraSites':

@@ -72,6 +72,10 @@ func TestDevicesCantPairOrRevoke(t *testing.T) {
 				_, err := c.RevokeDevice(ctx, connect.NewRequest(&nushiv1.RevokeDeviceRequest{Id: "x"}))
 				return err
 			},
+			"SendTestPush": func() error {
+				_, err := c.SendTestPush(ctx, connect.NewRequest(&nushiv1.SendTestPushRequest{DeviceId: "x"}))
+				return err
+			},
 		} {
 			if err := call(); (connect.CodeOf(err) == connect.CodePermissionDenied) != (tc.want == connect.CodePermissionDenied) {
 				t.Errorf("%s: %v", name, err)
@@ -79,6 +83,14 @@ func TestDevicesCantPairOrRevoke(t *testing.T) {
 		}
 		if _, err := c.GetRemote(ctx, connect.NewRequest(&nushiv1.GetRemoteRequest{})); err != nil {
 			t.Errorf("GetRemote: %v", err)
+		}
+		// A device's own calls: the Mac's socket isn't a device, and a
+		// channel's device comes only from the channel (DeviceConn).
+		if _, err := c.SetPushSubscription(ctx, connect.NewRequest(&nushiv1.SetPushSubscriptionRequest{})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
+			t.Errorf("SetPushSubscription without a device: %v", err)
+		}
+		if _, err := c.SetDeviceView(ctx, connect.NewRequest(&nushiv1.SetDeviceViewRequest{ChatId: "c"})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
+			t.Errorf("SetDeviceView without a device: %v", err)
 		}
 		srv.Close()
 	}

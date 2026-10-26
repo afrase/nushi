@@ -645,6 +645,41 @@ abstract final class NushiService {
     nushiv1nushi.RevokeDeviceResponse.new,
   );
 
+  /// Web Push (ADR 0054). The daemon's VAPID public key, for a device's
+  /// pushManager.subscribe.
+  static const getPushKey = connect.Spec(
+    '/$name/GetPushKey',
+    connect.StreamType.unary,
+    nushiv1nushi.GetPushKeyRequest.new,
+    nushiv1nushi.GetPushKeyResponse.new,
+  );
+
+  /// A paired device's own push subscription (an empty endpoint: none);
+  /// only on a device's channel. The endpoint must be a known push service.
+  static const setPushSubscription = connect.Spec(
+    '/$name/SetPushSubscription',
+    connect.StreamType.unary,
+    nushiv1nushi.SetPushSubscriptionRequest.new,
+    nushiv1nushi.SetPushSubscriptionResponse.new,
+  );
+
+  /// The chat a paired device shows ("" none): no push for that chat goes
+  /// to it while it's connected. Only on a device's channel.
+  static const setDeviceView = connect.Spec(
+    '/$name/SetDeviceView',
+    connect.StreamType.unary,
+    nushiv1nushi.SetDeviceViewRequest.new,
+    nushiv1nushi.SetDeviceViewResponse.new,
+  );
+
+  /// Sends a test notification to a device (the Mac's).
+  static const sendTestPush = connect.Spec(
+    '/$name/SendTestPush',
+    connect.StreamType.unary,
+    nushiv1nushi.SendTestPushRequest.new,
+    nushiv1nushi.SendTestPushResponse.new,
+  );
+
   /// Writes a line of the app's into the daemon's log (source=app): its
   /// errors with their stacks, and what helps afterwards.
   static const log = connect.Spec(

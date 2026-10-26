@@ -34,8 +34,26 @@ type Device struct {
 	Key      []byte    `json:"key"` // its static public key
 	Paired   time.Time `json:"paired"`
 	LastSeen time.Time `json:"last_seen,omitzero"`
+	// Kind is "web" for the web app, "" for an app.
+	Kind string `json:"kind,omitempty"`
+	// Push is its Web Push subscription, when notifications are on.
+	Push *Push `json:"push,omitempty"`
 	// Connected says it has a connection open now.
 	Connected bool `json:"-"`
+}
+
+// Push is a device's Web Push subscription (ADR 0054).
+type Push struct {
+	Endpoint string `json:"endpoint"`
+	P256DH   []byte `json:"p256dh"`
+	Auth     []byte `json:"auth"`
+}
+
+// VAPIDKey is the key pair the daemon signs Web Push messages with
+// (P-256: the private scalar and the uncompressed public key), made once.
+type VAPIDKey struct {
+	Private []byte `json:"private"`
+	Public  []byte `json:"public"`
 }
 
 // Remote is remote access as it stands.

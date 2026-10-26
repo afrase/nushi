@@ -28,6 +28,7 @@ type pairing struct {
 	cancel  context.CancelFunc
 	// Once a phone holding the secret has connected:
 	name, code string
+	kind       string // "web", or "" for an app
 	answer     chan bool
 }
 
@@ -97,7 +98,7 @@ func (s *Service) pair(ctx context.Context, p *pairing, relayURL string) {
 	waiting, cancel := context.WithDeadline(ctx, p.expires)
 	defer cancel()
 	for waiting.Err() == nil {
-		conn, name, used := s.meet(waiting, p, relayURL)
+		conn, hello, used := s.meet(waiting, p, relayURL)
 		if used && conn == nil {
 			slog.Info("pairing used up by a phone that sent no name")
 			return
@@ -107,9 +108,9 @@ func (s *Service) pair(ctx context.Context, p *pairing, relayURL string) {
 		}
 		stop := context.AfterFunc(ctx, func() { _ = conn.Close() })
 		defer stop() //nolint:gocritic,revive // every path from here returns: it runs once
-		code := codeOf(conn.Hash())
+		code, name := codeOf(conn.Hash()), cleanName(hello.Name)
 		s.mu.Lock()
-		p.name, p.code = name, code
+		p.name, p.code, p.kind = name, code, cleanKind(hello.Kind)
 		s.changed()
 		s.mu.Unlock()
 		slog.Info("pairing: a phone waits for Allow", "name", name)
@@ -124,7 +125,7 @@ func (s *Service) pair(ctx context.Context, p *pairing, relayURL string) {
 		var id string
 		var err error
 		if allow {
-			id, err = s.add(name, conn.Peer())
+			id, err = s.add(name, p.kind, conn.Peer())
 		}
 		daemon := s.id
 		s.mu.Unlock()
@@ -146,37 +147,48 @@ func (s *Service) pair(ctx context.Context, p *pairing, relayURL string) {
 	}
 }
 
+// hello is a phone's first message when pairing: its name, and "web" for
+// the web app.
+type hello struct{ Name, Kind string }
+
 // meet waits for one phone on p's id and runs the handshake. It returns
-// the channel and the phone's name, or nil; used says the handshake
+// the channel and the phone's hello, or nil; used says the handshake
 // completed (the phone held the secret) even if no name came.
-func (s *Service) meet(ctx context.Context, p *pairing, relayURL string) (conn *noiseconn.Conn, name string, used bool) {
+func (s *Service) meet(ctx context.Context, p *pairing, relayURL string) (conn *noiseconn.Conn, h hello, used bool) {
 	c, err := s.dialer.Listen(ctx, relayURL, p.listen)
 	if err != nil {
 		sleep(ctx, jitter(2*time.Second))
-		return nil, "", false
+		return nil, h, false
 	}
 	stop := context.AfterFunc(ctx, func() { _ = c.Close() })
 	defer stop()
 	if c.Wait() != nil {
 		_ = c.Close()
-		return nil, "", false
+		return nil, h, false
 	}
 	timer := time.AfterFunc(HandshakeWait, func() { _ = c.Close() })
 	defer timer.Stop()
 	conn, err = noiseconn.Respond(c, noiseconn.Config{Static: s.key, Prologue: prologue(p.id), PSK: p.psk},
 		func([]byte) error { return nil })
 	if err != nil {
-		return nil, "", false
+		return nil, h, false
 	}
 	// The phone's first transport message is its name.
 	buf := make([]byte, noiseconn.MaxPlaintext)
 	n, err := conn.Read(buf)
-	var hello struct{ Name string }
-	if err != nil || json.Unmarshal(buf[:n], &hello) != nil || !timer.Stop() || !stop() {
+	if err != nil || json.Unmarshal(buf[:n], &h) != nil || !timer.Stop() || !stop() {
 		_ = conn.Close()
-		return nil, "", true
+		return nil, h, true
 	}
-	return conn, cleanName(hello.Name), true
+	return conn, h, true
+}
+
+// cleanKind keeps a device's kind to those Nushi knows.
+func cleanKind(kind string) string {
+	if kind == "web" {
+		return kind
+	}
+	return ""
 }
 
 // codeOf is the six digits both screens show, from the handshake hash.

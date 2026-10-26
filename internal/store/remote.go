@@ -10,9 +10,10 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-// Remote access keeps three files, each 0600: remote.json (the switch and
-// the relay), remote-key.json (the daemon's Noise key and listen keys)
-// and devices.json (the paired phones).
+// Remote access keeps four files, each 0600: remote.json (the switch and
+// the relay), remote-key.json (the daemon's Noise key and listen keys),
+// devices.json (the paired phones, their push subscriptions included) and
+// vapid.json (the key Web Push messages are signed with).
 
 func (s *Store) Remote() (model.RemoteSettings, error) {
 	var r model.RemoteSettings
@@ -38,6 +39,15 @@ func (s *Store) Devices() ([]model.Device, error) {
 }
 
 func (s *Store) SaveDevices(d []model.Device) error { return s.write("devices.json", d) }
+
+// VAPIDKey returns the daemon's Web Push key, or false when it has none yet.
+func (s *Store) VAPIDKey() (model.VAPIDKey, bool, error) {
+	var k model.VAPIDKey
+	ok, err := s.read("vapid.json", &k)
+	return k, ok, err
+}
+
+func (s *Store) SaveVAPIDKey(k model.VAPIDKey) error { return s.write("vapid.json", k) }
 
 func (s *Store) read(name string, v any) (bool, error) {
 	s.mu.Lock()

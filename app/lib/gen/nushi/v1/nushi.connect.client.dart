@@ -1323,6 +1323,81 @@ extension type NushiServiceClient (connect.Transport _transport) {
     );
   }
 
+  /// Web Push (ADR 0054). The daemon's VAPID public key, for a device's
+  /// pushManager.subscribe.
+  Future<nushiv1nushi.GetPushKeyResponse> getPushKey(
+    nushiv1nushi.GetPushKeyRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.getPushKey,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// A paired device's own push subscription (an empty endpoint: none);
+  /// only on a device's channel. The endpoint must be a known push service.
+  Future<nushiv1nushi.SetPushSubscriptionResponse> setPushSubscription(
+    nushiv1nushi.SetPushSubscriptionRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.setPushSubscription,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// The chat a paired device shows ("" none): no push for that chat goes
+  /// to it while it's connected. Only on a device's channel.
+  Future<nushiv1nushi.SetDeviceViewResponse> setDeviceView(
+    nushiv1nushi.SetDeviceViewRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.setDeviceView,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Sends a test notification to a device (the Mac's).
+  Future<nushiv1nushi.SendTestPushResponse> sendTestPush(
+    nushiv1nushi.SendTestPushRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.sendTestPush,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Writes a line of the app's into the daemon's log (source=app): its
   /// errors with their stacks, and what helps afterwards.
   Future<nushiv1nushi.LogResponse> log(

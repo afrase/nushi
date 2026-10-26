@@ -117,7 +117,7 @@ func phonePair(t *testing.T, o offer, key noise.DHKey, psk []byte) (*noiseconn.C
 	if err != nil {
 		return nil, "", err
 	}
-	if _, err := conn.Write([]byte(`{"name":"Test\u0007 phone"}`)); err != nil {
+	if _, err := conn.Write([]byte(`{"name":"Test\u0007 phone","kind":"web"}`)); err != nil {
 		return nil, "", err
 	}
 	return conn, codeOf(conn.Hash()), nil
