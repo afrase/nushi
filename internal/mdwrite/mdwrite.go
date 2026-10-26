@@ -5,6 +5,7 @@
 package mdwrite
 
 import (
+	"fmt"
 	"strings"
 	"unicode"
 )
@@ -20,8 +21,7 @@ func Escape(s string) string {
 	for i := 0; i < len(r); i++ {
 		c := r[i]
 		switch {
-		case strings.ContainsRune("\\`*[]<", c),
-			c == '~' && (i > 0 && r[i-1] == '~' || i+1 < len(r) && r[i+1] == '~'):
+		case strings.ContainsRune("\\`*[]<~", c): // one ~ is a strikethrough too (GFM)
 			b.WriteRune('\\')
 		case c == '_' && (i == 0 || i == len(r)-1 || !isWord(r[i-1]) || !isWord(r[i+1])):
 			b.WriteRune('\\')
@@ -79,9 +79,18 @@ func Fence(s, lang string) string {
 }
 
 // Dest makes a URL safe as a link's destination: nothing in it can end
-// the destination or the link.
+// the destination or the link (spaces and control characters, brackets,
+// angle brackets, backslashes are percent-encoded).
 func Dest(href string) string {
-	return strings.NewReplacer(" ", "%20", "(", "%28", ")", "%29", "<", "%3C", ">", "%3E", "\n", "%0A", "\r", "%0D", "\\", "%5C").Replace(href)
+	var b strings.Builder
+	for _, c := range []byte(href) {
+		if c <= ' ' || c == 0x7f || strings.IndexByte("()<>\\", c) >= 0 {
+			fmt.Fprintf(&b, "%%%02X", c)
+		} else {
+			b.WriteByte(c)
+		}
+	}
+	return b.String()
 }
 
 // Quote puts "> " before each of s's lines.
