@@ -143,6 +143,8 @@ func (s *fakeStore) SaveGitHubTokenHosts(h []string) error { s.hosts = h; return
 
 type world struct {
 	s       *Service
+	asked   []string // the hosts gh was asked a token for
+	ghHosts []string // the hosts gh is signed in to
 	tokens  *fakeTokens
 	store   *fakeStore
 	clients map[string]*fakeClient // by token
@@ -150,16 +152,17 @@ type world struct {
 
 func newWorld(t *testing.T) *world {
 	t.Helper()
-	w := &world{tokens: &fakeTokens{m: map[string]string{}}, store: &fakeStore{}, clients: map[string]*fakeClient{}}
+	w := &world{tokens: &fakeTokens{m: map[string]string{}}, store: &fakeStore{}, clients: map[string]*fakeClient{}, ghHosts: []string{"github.com"}}
 	w.s = New(Deps{
 		Gh: Gh{
 			Token: func(host string) (string, string) {
-				if host == "github.com" {
+				w.asked = append(w.asked, host)
+				if host == "github.com" || host == "git.corp.example" {
 					return "gho_gh", "gh"
 				}
 				return "", ""
 			},
-			Hosts: func() []string { return []string{"github.com"} },
+			Hosts: func() []string { return w.ghHosts },
 		},
 		Tokens: w.tokens, Store: w.store,
 		Open: func(_, token string) Client {
@@ -224,6 +227,7 @@ func TestHostsAndTokens(t *testing.T) {
 
 func TestNoToken(t *testing.T) {
 	w := newWorld(t)
+	w.ghHosts = append(w.ghHosts, "git.example.com") // gh knows it, but has no token for it
 	if _, err := w.s.Inbox(t.Context(), "git.example.com", nil, false); err == nil || !strings.Contains(err.Error(), "gh auth login") {
 		t.Fatal(err)
 	}
@@ -366,5 +370,40 @@ func TestRepos(t *testing.T) {
 	repos := w.s.Repos(t.Context(), []string{"one", "two", "one"})
 	if len(repos) != 4 || repos[0].Repo != "me/one" || repos[1].Repo != "afrase/one" || len(repos[1].Folders) != 1 {
 		t.Fatalf("%+v", repos)
+	}
+}
+
+// TestUnknownHosts: a host that's neither github.com, nor gh's, nor given
+// a token is refused before any token is read (gh would give its
+// GH_ENTERPRISE_TOKEN for any), so no token goes to a server someone's
+// text named.
+func TestUnknownHosts(t *testing.T) {
+	w := newWorld(t)
+	w.ghHosts = append(w.ghHosts, "git.corp.example")
+	ctx := t.Context()
+	for _, h := range []string{"evil.example", "github.com.evil.example", "github.com@evil.example", "evil.example/github.com",
+		"github.com:8443", "git.corp.example.evil", "ev il", "", "github..com"} {
+		if _, err := w.s.Inbox(ctx, h, nil, false); err == nil {
+			t.Errorf("%q: asked", h)
+		}
+		if _, err := w.s.Pull(ctx, model.GitHubRef{Host: h, Repo: "a/b", Number: 1}, false); err == nil {
+			t.Errorf("%q: asked", h)
+		}
+		w.s.States(ctx, []model.ChatGitHub{{Host: h, ID: "PR_1"}}, false)
+	}
+	if len(w.asked) != 0 || len(w.clients) != 0 {
+		t.Fatalf("a token was read for %v", w.asked)
+	}
+	// Spellings of known hosts are the hosts.
+	for _, h := range []string{"GitHub.com", "github.com.", "github.com:443", " github.com "} {
+		if _, err := w.s.Inbox(ctx, h, nil, false); err != nil {
+			t.Errorf("%q: %v", h, err)
+		}
+	}
+	if _, err := w.s.Inbox(ctx, "Git.Corp.Example", nil, false); err != nil {
+		t.Errorf("gh's own host: %v", err)
+	}
+	if slices.ContainsFunc(w.asked, func(h string) bool { return h != "github.com" && h != "git.corp.example" }) {
+		t.Fatalf("asked gh for %v", w.asked)
 	}
 }
