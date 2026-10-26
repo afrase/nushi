@@ -74,7 +74,7 @@ void main() {
     // Opened again: as left; the first row is the issue's, and ↓ goes to
     // Review requested's.
     final FakeDaemon fake;
-    (fake, d) = await openView(tester);
+    (fake, d) = await openView(tester, keep: true);
     expect(_cards(tester), order);
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
@@ -99,7 +99,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Shall I take it?'), findsOneWidget);
     await closeView(tester, d);
-    (_, d) = await openView(tester);
+    (_, d) = await openView(tester, keep: true);
     expect(find.text('Add Sub and Neg'), findsNothing);
     await tester.tap(find.text('My pull requests  2'));
     await tester.pumpAndSettle();
@@ -118,6 +118,7 @@ void main() {
         tester,
         tokens: tokens,
         size: const Size(900, 480),
+        keep: true,
         inbox: inboxForTests(),
       );
       await expectLater(

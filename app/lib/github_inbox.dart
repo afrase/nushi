@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_filters.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/panel_cards.dart';
@@ -63,9 +64,6 @@ List<GitHubItem> visibleItems(List<Section> sections) => [
   for (final s in sections)
     if (!githubCollapsed.value.contains(s.id)) ...s.items,
 ];
-
-/// "90 days", "a year": a span of [days] in words.
-String daysWords(int days) => days == 365 ? 'a year' : '$days days';
 
 /// The inbox as cards, as the Jira view's statuses: one a section, each
 /// collapsing by its title and dragged by its title row into another
@@ -182,41 +180,6 @@ class InboxCards extends StatelessWidget {
 /// Whether [a] and [b] are the same item.
 bool sameRef(GitHubRef a, GitHubRef? b) =>
     b != null && a.host == b.host && a.repo == b.repo && a.number == b.number;
-
-/// A card's quiet last line: "3 older than 90 days · Show".
-class OlderLine extends StatelessWidget {
-  const new({
-    required this.count,
-    required this.days,
-    required this.onShow,
-    super.key,
-  });
-
-  final int count;
-  final int days;
-  final VoidCallback onShow;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final muted = theme.ui(theme.t.textMuted, size: 12);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 8, 2),
-      child: Row(
-        children: [
-          Text('$count older than ${daysWords(days)}', style: muted),
-          Text('  ·  ', style: muted),
-          LinkText(
-            'Show',
-            size: 12,
-            tooltip: 'Show them in this card until Nushi quits',
-            onTap: onShow,
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 /// A row of the inbox: the kind's icon in its state's color, the title,
 /// and under it `owner/repo#123` muted (each cut on its own line, so
