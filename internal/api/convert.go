@@ -166,5 +166,8 @@ func chatProto(s model.Session) *nushiv1.Chat {
 	if is := s.Issue; is != nil {
 		out.JiraSite, out.JiraKey = is.Site, is.Key
 	}
+	if g := s.GitHub; g != nil {
+		out.Github = &nushiv1.GitHubLink{Host: g.Host, Id: g.ID, Repo: g.Repo, Number: int32(g.Number), Pull: g.Pull}
+	}
 	return out
 }

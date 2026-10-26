@@ -245,6 +245,7 @@ class Chat extends $pb.GeneratedMessage {
     $core.bool? scratch,
     $core.String? jiraSite,
     $core.String? jiraKey,
+    GitHubLink? github,
   }) {
     final result = Chat._();
     if (id != null) result.id = id;
@@ -260,6 +261,7 @@ class Chat extends $pb.GeneratedMessage {
     if (scratch != null) result.scratch = scratch;
     if (jiraSite != null) result.jiraSite = jiraSite;
     if (jiraKey != null) result.jiraKey = jiraKey;
+    if (github != null) result.github = github;
     return result;
   }
 
@@ -291,6 +293,8 @@ class Chat extends $pb.GeneratedMessage {
     ..aOB(11, _omitFieldNames ? '' : 'scratch')
     ..aOS(12, _omitFieldNames ? '' : 'jiraSite')
     ..aOS(13, _omitFieldNames ? '' : 'jiraKey')
+    ..aOM<GitHubLink>(14, _omitFieldNames ? '' : 'github',
+        subBuilder: GitHubLink.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -442,6 +446,18 @@ class Chat extends $pb.GeneratedMessage {
   $core.bool hasJiraKey() => $_has(12);
   @$pb.TagNumber(13)
   void clearJiraKey() => $_clearField(13);
+
+  /// The GitHub pull request or issue it was started from, if it was.
+  @$pb.TagNumber(14)
+  GitHubLink get github => $_getN(13);
+  @$pb.TagNumber(14)
+  set github(GitHubLink value) => $_setField(14, value);
+  @$pb.TagNumber(14)
+  $core.bool hasGithub() => $_has(13);
+  @$pb.TagNumber(14)
+  void clearGithub() => $_clearField(14);
+  @$pb.TagNumber(14)
+  GitHubLink ensureGithub() => $_ensure(13);
 }
 
 /// A git worktree of a repository, on a branch of its own.
@@ -1684,6 +1700,7 @@ class StartChatRequest extends $pb.GeneratedMessage {
     $core.String? jiraSite,
     $core.String? jiraKey,
     $core.String? branch,
+    GitHubLink? github,
   }) {
     final result = StartChatRequest._();
     if (folder != null) result.folder = folder;
@@ -1692,6 +1709,7 @@ class StartChatRequest extends $pb.GeneratedMessage {
     if (jiraSite != null) result.jiraSite = jiraSite;
     if (jiraKey != null) result.jiraKey = jiraKey;
     if (branch != null) result.branch = branch;
+    if (github != null) result.github = github;
     return result;
   }
 
@@ -1714,6 +1732,8 @@ class StartChatRequest extends $pb.GeneratedMessage {
     ..aOS(4, _omitFieldNames ? '' : 'jiraSite')
     ..aOS(5, _omitFieldNames ? '' : 'jiraKey')
     ..aOS(6, _omitFieldNames ? '' : 'branch')
+    ..aOM<GitHubLink>(7, _omitFieldNames ? '' : 'github',
+        subBuilder: GitHubLink.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1799,6 +1819,21 @@ class StartChatRequest extends $pb.GeneratedMessage {
   $core.bool hasBranch() => $_has(5);
   @$pb.TagNumber(6)
   void clearBranch() => $_clearField(6);
+
+  /// A chat on a GitHub pull request or issue, which it remembers. A pull
+  /// request's worktree starts from its head, fetched from the folder's
+  /// remote that is its repository (a fork's from refs/pull/<n>/head), on
+  /// its head's branch (a fork's: pr-<n>-<head>); branch is then unused.
+  @$pb.TagNumber(7)
+  GitHubLink get github => $_getN(6);
+  @$pb.TagNumber(7)
+  set github(GitHubLink value) => $_setField(7, value);
+  @$pb.TagNumber(7)
+  $core.bool hasGithub() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearGithub() => $_clearField(7);
+  @$pb.TagNumber(7)
+  GitHubLink ensureGithub() => $_ensure(6);
 }
 
 class ListAgentSessionsRequest extends $pb.GeneratedMessage {
@@ -17282,15 +17317,22 @@ class ListGitHubInboxResponse extends $pb.GeneratedMessage {
   void clearStale() => $_clearField(8);
 }
 
-/// A chat's item: its host and node id.
+/// A pull request or an issue a chat is on: its host and node id, and its
+/// repository and number.
 class GitHubLink extends $pb.GeneratedMessage {
   factory GitHubLink({
     $core.String? host,
     $core.String? id,
+    $core.String? repo,
+    $core.int? number,
+    $core.bool? pull,
   }) {
     final result = GitHubLink._();
     if (host != null) result.host = host;
     if (id != null) result.id = id;
+    if (repo != null) result.repo = repo;
+    if (number != null) result.number = number;
+    if (pull != null) result.pull = pull;
     return result;
   }
 
@@ -17309,6 +17351,9 @@ class GitHubLink extends $pb.GeneratedMessage {
       createEmptyInstance: GitHubLink.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'host')
     ..aOS(2, _omitFieldNames ? '' : 'id')
+    ..aOS(3, _omitFieldNames ? '' : 'repo')
+    ..aI(4, _omitFieldNames ? '' : 'number')
+    ..aOB(5, _omitFieldNames ? '' : 'pull')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -17348,6 +17393,33 @@ class GitHubLink extends $pb.GeneratedMessage {
   $core.bool hasId() => $_has(1);
   @$pb.TagNumber(2)
   void clearId() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get repo => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set repo($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasRepo() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearRepo() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.int get number => $_getIZ(3);
+  @$pb.TagNumber(4)
+  set number($core.int value) => $_setSignedInt32(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasNumber() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearNumber() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.bool get pull => $_getBF(4);
+  @$pb.TagNumber(5)
+  set pull($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasPull() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearPull() => $_clearField(5);
 }
 
 class GetGitHubStatesRequest extends $pb.GeneratedMessage {

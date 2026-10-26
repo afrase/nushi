@@ -200,27 +200,37 @@ func (s *Service) Get(chatID string) (model.Chat, error) {
 // scratch folder of its own when folder is "". With worktree, the chat gets
 // a new git worktree of folder's repository and runs there.
 func (s *Service) Start(ctx context.Context, agent, folder string, worktree bool) (string, error) {
-	return s.StartOn(ctx, agent, folder, worktree, nil, "")
+	return s.StartOn(ctx, agent, folder, StartOptions{Worktree: worktree})
 }
 
-// StartOn is Start for a chat on a Jira issue, which it remembers; its
-// worktree, if it has one, is on branch (else a name of Nushi's).
-func (s *Service) StartOn(ctx context.Context, agent, folder string, worktree bool, issue *model.ChatIssue, branch string) (string, error) {
+// StartOptions are a new chat's: a worktree of its own (on Branch, else
+// a name of Nushi's; from From, a commit or ref, else the folder's HEAD),
+// and the Jira issue or GitHub pull request or issue it's on, which it
+// remembers.
+type StartOptions struct {
+	Worktree     bool
+	Branch, From string
+	Issue        *model.ChatIssue
+	GitHub       *model.ChatGitHub
+}
+
+// StartOn is Start with options.
+func (s *Service) StartOn(ctx context.Context, agent, folder string, opts StartOptions) (string, error) {
 	k, err := s.kindOf(agent)
 	if err != nil {
 		return "", err
 	}
 	c := s.newChat(k)
-	c.id, c.issue = rand.Text(), issue
+	c.id, c.issue = rand.Text(), opts.Issue
 	scratch := folder == ""
 	var wt *model.Worktree
 	switch {
 	case scratch:
 		folder = filepath.Join(s.scratch, c.id)
 		err = os.MkdirAll(folder, 0o700)
-	case worktree:
+	case opts.Worktree:
 		if err = CheckFolder(folder); err == nil {
-			wt, folder, err = s.addWorktree(ctx, folder, branch)
+			wt, folder, err = s.addWorktree(ctx, folder, opts.Branch, opts.From)
 		}
 	default:
 		err = CheckFolder(folder)
@@ -239,7 +249,7 @@ func (s *Service) StartOn(ctx context.Context, agent, folder string, worktree bo
 	}
 	c.mu.Lock()
 	s.useLocked(c, o)
-	c.session = model.Session{ID: c.id, SessionID: o.sid, Agent: k.Name, Folder: folder, Created: time.Now(), Worktree: wt, Scratch: scratch, Issue: issue}
+	c.session = model.Session{ID: c.id, SessionID: o.sid, Agent: k.Name, Folder: folder, Created: time.Now(), Worktree: wt, Scratch: scratch, Issue: opts.Issue, GitHub: opts.GitHub}
 	c.mu.Unlock()
 	if err := c.startMode(ctx, o.agent, o.sid, s.modes.Mode(k.Name)); err != nil {
 		c.log().Warn("starting mode", "err", err) // the chat keeps the agent's default

@@ -298,6 +298,8 @@ message Chat {
   // The Jira issue it was started from, if it was.
   string jira_site = 12;
   string jira_key = 13;
+  // The GitHub pull request or issue it was started from, if it was.
+  GitHubLink github = 14;
 }
 
 // A git worktree of a repository, on a branch of its own.
@@ -448,6 +450,11 @@ message StartChatRequest {
   string jira_key = 5;
   // The worktree's branch, if not one of Nushi's (a name git takes).
   string branch = 6;
+  // A chat on a GitHub pull request or issue, which it remembers. A pull
+  // request's worktree starts from its head, fetched from the folder's
+  // remote that is its repository (a fork's from refs/pull/<n>/head), on
+  // its head's branch (a fork's: pr-<n>-<head>); branch is then unused.
+  GitHubLink github = 7;
 }
 
 message ListAgentSessionsRequest {
@@ -1886,10 +1893,14 @@ message ListGitHubInboxResponse {
   string stale = 8;
 }
 
-// A chat's item: its host and node id.
+// A pull request or an issue a chat is on: its host and node id, and its
+// repository and number.
 message GitHubLink {
   string host = 1;
   string id = 2;
+  string repo = 3;
+  int32 number = 4;
+  bool pull = 5;
 }
 
 message GetGitHubStatesRequest {

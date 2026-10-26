@@ -67,15 +67,17 @@ var ErrNeedsOK = errors.New("this build of Nushi needs your OK to read the GitHu
 
 // Deps are what the feature takes from main: gh's login, the keychain,
 // the store, a client of a host for a token, whether a keychain error
-// means the user's OK is needed, and a folder's git remotes (name to
-// URL).
+// means the user's OK is needed, a folder's git remotes (name to URL),
+// fetching a refspec from one, and whether git takes a branch's name.
 type Deps struct {
-	Gh      Gh
-	Tokens  Tokens
-	Store   Store
-	Open    func(host, token string) Client
-	NeedsOK func(error) bool
-	Remotes func(ctx context.Context, folder string) (map[string]string, error)
+	Gh          Gh
+	Tokens      Tokens
+	Store       Store
+	Open        func(host, token string) Client
+	NeedsOK     func(error) bool
+	Remotes     func(ctx context.Context, folder string) (map[string]string, error)
+	Fetch       func(ctx context.Context, folder, remote, refspec string) error
+	CheckBranch func(name string) error
 }
 
 // Service is GitHub's feature.

@@ -62,8 +62,11 @@ func (f *fakeClient) Status(_ context.Context, ids []string) (map[string]model.G
 	return out, nil
 }
 
-func (f *fakeClient) Pull(context.Context, string, int) (model.GitHubPull, error) {
-	return model.GitHubPull{}, nil
+func (f *fakeClient) Pull(_ context.Context, _ string, n int) (model.GitHubPull, error) {
+	if n == 9 { // a fork's
+		return model.GitHubPull{ID: "PR_9", Head: "Fix: the thing!", CrossRepo: true}, nil
+	}
+	return model.GitHubPull{ID: "PR_1", Head: "subtract"}, nil
 }
 
 func (f *fakeClient) Issue(context.Context, string, int) (model.GitHubIssue, error) {
@@ -145,6 +148,7 @@ type world struct {
 	s       *Service
 	asked   []string // the hosts gh was asked a token for
 	ghHosts []string // the hosts gh is signed in to
+	fetched []string
 	tokens  *fakeTokens
 	store   *fakeStore
 	clients map[string]*fakeClient // by token
@@ -176,6 +180,16 @@ func newWorld(t *testing.T) *world {
 		NeedsOK: func(err error) bool { return errors.Is(err, errOK) },
 		Remotes: func(_ context.Context, folder string) (map[string]string, error) {
 			return map[string]string{"origin": "git@github.com:afrase/" + folder + ".git", "fork": "https://github.com/me/" + folder}, nil
+		},
+		Fetch: func(_ context.Context, folder, remote, refspec string) error {
+			w.fetched = append(w.fetched, folder+" "+remote+" "+refspec)
+			return nil
+		},
+		CheckBranch: func(name string) error {
+			if strings.ContainsAny(name, " ~^:") {
+				return errors.New("bad")
+			}
+			return nil
 		},
 	})
 	return w
@@ -405,5 +419,38 @@ func TestUnknownHosts(t *testing.T) {
 	}
 	if slices.ContainsFunc(w.asked, func(h string) bool { return h != "github.com" && h != "git.corp.example" }) {
 		t.Fatalf("asked gh for %v", w.asked)
+	}
+}
+
+func TestCheckOut(t *testing.T) {
+	w := newWorld(t)
+	ctx := t.Context()
+	co, err := w.s.CheckOut(ctx, "app", model.GitHubRef{Host: "github.com", Repo: "afrase/app", Number: 1})
+	if err != nil || co.Branch != "subtract" || co.From != "refs/remotes/origin/subtract" || co.Link.ID != "PR_1" || !co.Link.Pull {
+		t.Fatalf("%+v %v", co, err)
+	}
+	co, err = w.s.CheckOut(ctx, "app", model.GitHubRef{Host: "github.com", Repo: "me/app", Number: 9})
+	if err != nil || co.Branch != "pr-9-fix-the-thing" || co.From != "refs/nushi/pull/9" {
+		t.Fatalf("%+v %v", co, err)
+	}
+	want := []string{"app origin +refs/heads/subtract:refs/remotes/origin/subtract", "app fork +refs/pull/9/head:refs/nushi/pull/9"}
+	if !slices.Equal(w.fetched, want) {
+		t.Fatalf("%v", w.fetched)
+	}
+	if _, err := w.s.CheckOut(ctx, "app", model.GitHubRef{Host: "github.com", Repo: "someone/else", Number: 1}); err == nil {
+		t.Fatal("a folder that isn't a clone of it")
+	}
+}
+
+func TestIssueBranch(t *testing.T) {
+	for in, want := range map[string]string{
+		"Add a Mul function":              "2-add-a-mul-function",
+		"":                                "2",
+		"Café: naïve résumé!!":            "2-caf-na-ve-r-sum",
+		"x" + strings.Repeat(" word", 20): "2-x-word-word-word-word-word-word-word",
+	} {
+		if got := IssueBranch(2, in); got != want {
+			t.Errorf("%q: %q", in, got)
+		}
 	}
 }

@@ -143,6 +143,14 @@ const Chat$json = {
     {'1': 'scratch', '3': 11, '4': 1, '5': 8, '10': 'scratch'},
     {'1': 'jira_site', '3': 12, '4': 1, '5': 9, '10': 'jiraSite'},
     {'1': 'jira_key', '3': 13, '4': 1, '5': 9, '10': 'jiraKey'},
+    {
+      '1': 'github',
+      '3': 14,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubLink',
+      '10': 'github'
+    },
   ],
 };
 
@@ -154,7 +162,8 @@ final $typed_data.Uint8List chatDescriptor = $convert.base64Decode(
     'IULm51c2hpLnYxLkNoYXRTdGF0dXNSBnN0YXR1cxIaCghhcmNoaXZlZBgIIAEoCFIIYXJjaGl2'
     'ZWQSHQoKc2Vzc2lvbl9pZBgJIAEoCVIJc2Vzc2lvbklkEi4KCHdvcmt0cmVlGAogASgLMhIubn'
     'VzaGkudjEuV29ya3RyZWVSCHdvcmt0cmVlEhgKB3NjcmF0Y2gYCyABKAhSB3NjcmF0Y2gSGwoJ'
-    'amlyYV9zaXRlGAwgASgJUghqaXJhU2l0ZRIZCghqaXJhX2tleRgNIAEoCVIHamlyYUtleQ==');
+    'amlyYV9zaXRlGAwgASgJUghqaXJhU2l0ZRIZCghqaXJhX2tleRgNIAEoCVIHamlyYUtleRIsCg'
+    'ZnaXRodWIYDiABKAsyFC5udXNoaS52MS5HaXRIdWJMaW5rUgZnaXRodWI=');
 
 @$core.Deprecated('Use worktreeDescriptor instead')
 const Worktree$json = {
@@ -462,6 +471,14 @@ const StartChatRequest$json = {
     {'1': 'jira_site', '3': 4, '4': 1, '5': 9, '10': 'jiraSite'},
     {'1': 'jira_key', '3': 5, '4': 1, '5': 9, '10': 'jiraKey'},
     {'1': 'branch', '3': 6, '4': 1, '5': 9, '10': 'branch'},
+    {
+      '1': 'github',
+      '3': 7,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubLink',
+      '10': 'github'
+    },
   ],
 };
 
@@ -470,7 +487,7 @@ final $typed_data.Uint8List startChatRequestDescriptor = $convert.base64Decode(
     'ChBTdGFydENoYXRSZXF1ZXN0EhYKBmZvbGRlchgBIAEoCVIGZm9sZGVyEhQKBWFnZW50GAMgAS'
     'gJUgVhZ2VudBIaCgh3b3JrdHJlZRgCIAEoCFIId29ya3RyZWUSGwoJamlyYV9zaXRlGAQgASgJ'
     'UghqaXJhU2l0ZRIZCghqaXJhX2tleRgFIAEoCVIHamlyYUtleRIWCgZicmFuY2gYBiABKAlSBm'
-    'JyYW5jaA==');
+    'JyYW5jaBIsCgZnaXRodWIYByABKAsyFC5udXNoaS52MS5HaXRIdWJMaW5rUgZnaXRodWI=');
 
 @$core.Deprecated('Use listAgentSessionsRequestDescriptor instead')
 const ListAgentSessionsRequest$json = {
@@ -4072,12 +4089,17 @@ const GitHubLink$json = {
   '2': [
     {'1': 'host', '3': 1, '4': 1, '5': 9, '10': 'host'},
     {'1': 'id', '3': 2, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'repo', '3': 3, '4': 1, '5': 9, '10': 'repo'},
+    {'1': 'number', '3': 4, '4': 1, '5': 5, '10': 'number'},
+    {'1': 'pull', '3': 5, '4': 1, '5': 8, '10': 'pull'},
   ],
 };
 
 /// Descriptor for `GitHubLink`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List gitHubLinkDescriptor = $convert.base64Decode(
-    'CgpHaXRIdWJMaW5rEhIKBGhvc3QYASABKAlSBGhvc3QSDgoCaWQYAiABKAlSAmlk');
+    'CgpHaXRIdWJMaW5rEhIKBGhvc3QYASABKAlSBGhvc3QSDgoCaWQYAiABKAlSAmlkEhIKBHJlcG'
+    '8YAyABKAlSBHJlcG8SFgoGbnVtYmVyGAQgASgFUgZudW1iZXISEgoEcHVsbBgFIAEoCFIEcHVs'
+    'bA==');
 
 @$core.Deprecated('Use getGitHubStatesRequestDescriptor instead')
 const GetGitHubStatesRequest$json = {
@@ -5159,6 +5181,7 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.Chat': Chat$json,
   '.nushi.v1.ChatStatus': ChatStatus$json,
   '.nushi.v1.Worktree': Worktree$json,
+  '.nushi.v1.GitHubLink': GitHubLink$json,
   '.nushi.v1.GetChatRequest': GetChatRequest$json,
   '.nushi.v1.GetChatResponse': GetChatResponse$json,
   '.nushi.v1.Item': Item$json,
@@ -5373,7 +5396,6 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.GitHubItem': GitHubItem$json,
   '.nushi.v1.GitHubRef': GitHubRef$json,
   '.nushi.v1.GetGitHubStatesRequest': GetGitHubStatesRequest$json,
-  '.nushi.v1.GitHubLink': GitHubLink$json,
   '.nushi.v1.GetGitHubStatesResponse': GetGitHubStatesResponse$json,
   '.nushi.v1.GetGitHubPullRequest': GetGitHubPullRequest$json,
   '.nushi.v1.GetGitHubPullResponse': GetGitHubPullResponse$json,
