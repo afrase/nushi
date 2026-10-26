@@ -1,7 +1,7 @@
 # 0032. Idle chats sleep
 
 ## Context
-Every chat that has been opened keeps its agent running until it is archived or the daemon stops. A Claude chat costs about 240 MB (its adapter and the `claude` CLI), so a day of chats leaves gigabytes idle (NOTES, "Memory and speed").
+Every chat that has been opened keeps its agent running until it is archived or the daemon stops. A Claude chat costs about 240 MB (its adapter and the `claude` CLI), so a day of chats leaves gigabytes idle ([docs/history/perf-2026-10.md](../history/perf-2026-10.md)).
 
 ## Decision
 - A chat can sleep: its agent stops as for Archive, and the chat stays where it is with its transcript. Opening it doesn't wake it; a message, or anything else that needs the agent (a side chat, rewind, a picker, the context breakdown), reopens the session through `session/load`, as after a daemon restart.

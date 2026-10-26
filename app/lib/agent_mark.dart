@@ -78,7 +78,7 @@ class _Mark extends CustomPainter {
 /// `claude-acp.svg` and `codex-acp.svg`), Ante's from its docs' logo
 /// (`ante.png` in AntigmaLabs/ante), oh-my-pi's from its repository
 /// (`assets/icon.svg`), PiG's from its pig sprite, all in one color.
-/// NOTES.md, "Agent marks", has their terms.
+/// docs/user/agent-marks.md has their terms.
 final Map<String, (Path, Rect)> _marks = {
   'claude': (parseSvgPath(_claude), const Rect.fromLTWH(0, 0, 1200, 1200)),
   'codex': (parseSvgPath(_codex), const Rect.fromLTWH(0, 0, 24, 24)),
