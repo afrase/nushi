@@ -17,8 +17,10 @@ Steps 238–257, one commit each on `main` (249 has a format fix of its own), al
 
 **Size**: the daemon went from 21,689 to 25,378 lines of Go (the client about 2,000, a third of it the Markdown writer; the feature about 1,150; the API 300; `mdwrite` moved out of `internal/adf`), the app from 20,803 to 24,247 lines of Dart. Over the ~500-line tripwire: 238 (the client's core and gate), 239 (the reads), 246 (the Markdown writer and its corpus), 247 (the API, about 400 lines of proto), 250 (worktrees from a ref, across git, chats and the API), 254 (the whole UI, about 2,300 lines with tests).
 
+**Install check**: `make install` (also copied to your iCloud Downloads); the installed daemon (pid 43400) ran no agent and no Nushi was open, so it was stopped by its PID and the helper opened as the app does: `nushid started version="00dc3f501708 go1.27.3" … api=55`.
+
 **Needs your attention**
-- **API 55**: see the install check below.
+- **API 55**: done: the installed daemon runs the new build. Open Nushi as usual.
 - The test repository `afrase/nushi-gh-test` stays (public, as you asked), with pull request 1 (a failing check, review threads, comments from the tests), issue 2, and the branch `subtract`; no fork or other repository was made.
 - After `make install`, a pasted GitHub token (if you add one) needs Allow… once per build, as Jira's.
 
