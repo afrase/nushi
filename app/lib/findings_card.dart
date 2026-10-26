@@ -102,13 +102,9 @@ class _FindingsCardState extends State<FindingsCard> {
             ),
           ),
           if (widget.json != null)
-            Tap(
-              onTap: () => setState(() => _json = !_json),
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              child: Text(
-                _json ? 'Hide JSON' : 'Show JSON',
-                style: theme.ui(t.textSecondary, size: 12),
-              ),
+            Button(
+              label: _json ? 'Hide JSON' : 'Show JSON',
+              onPressed: () => setState(() => _json = !_json),
             ),
         ],
       ),
@@ -323,13 +319,9 @@ class _FindingsAgainState extends State<FindingsAgain> {
               style: theme.ui(t.textMuted, size: 12),
             ),
             const SizedBox(width: 6),
-            Tap(
-              onTap: () => setState(() => _open = !_open),
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              child: Text(
-                _open ? 'Hide JSON' : 'Show JSON',
-                style: theme.ui(t.textSecondary, size: 12),
-              ),
+            Button(
+              label: _open ? 'Hide JSON' : 'Show JSON',
+              onPressed: () => setState(() => _open = !_open),
             ),
           ],
         ),

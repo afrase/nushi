@@ -400,10 +400,7 @@ class _SetUpLine extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(before, style: theme.ui(t.textMuted)),
-        Tap(
-          onTap: onTap,
-          child: Text('Settings › Agents', style: theme.ui(t.link)),
-        ),
+        LinkText('Settings › Agents', onTap: onTap),
       ],
     );
   }

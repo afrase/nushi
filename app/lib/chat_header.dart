@@ -7,7 +7,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/jira_view.dart';
-import 'package:nushi/menu.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
@@ -113,12 +112,13 @@ class _ChatHeaderState extends State<ChatHeader> {
           ),
           if (chat.jiraKey.isNotEmpty) ...[
             const SizedBox(width: 10),
-            Tap(
+            LinkText(
+              chat.jiraKey,
+              mono: true,
+              size: 12,
               tooltip: 'Show ${chat.jiraKey} in Jira',
               onTap: () =>
                   showIssue(widget.daemon, chat.jiraSite, chat.jiraKey),
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              child: Text(chat.jiraKey, style: theme.code(t.link, size: 12)),
             ),
           ],
           if (chat.github case final link?) ...[
@@ -186,7 +186,8 @@ class _ChatHeaderState extends State<ChatHeader> {
             color: widget.panel ? t.text : t.textSecondary,
             onTap: widget.onPanel,
           ),
-          Menu(
+          MenuIcon(
+            Icons.more_horiz,
             tooltip: 'Chat menu',
             entries: chatMenu(
               context,
@@ -194,7 +195,6 @@ class _ChatHeaderState extends State<ChatHeader> {
               widget.daemon,
               onRename: () => setState(() => _renaming = true),
             ),
-            child: Icon(Icons.more_horiz, size: 16, color: t.textSecondary),
           ),
         ],
       ),

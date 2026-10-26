@@ -107,6 +107,7 @@ class _GitHubPageState extends State<GitHubPage> {
           "Nushi deletes it from the keychain, and uses gh's login for "
               '${h.host} if gh has one.',
           'Remove',
+          destructive: true,
         ) ||
         !mounted) {
       return;

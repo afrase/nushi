@@ -335,6 +335,7 @@ class _Expired extends StatelessWidget {
           ),
           Button(
             label: 'Delete…',
+            kind: ButtonKind.destructive,
             onPressed: () => showDeleteChat(context, chat, daemon),
           ),
           Button(

@@ -329,9 +329,9 @@ class _RemoteImageState extends State<_RemoteImage> {
               ),
             ),
             const SizedBox(width: 8),
-            Tap(
-              onTap: () => setState(() => _load = true),
-              child: Text('Load image', style: theme.ui(t.link, size: 12)),
+            Button(
+              label: 'Load image',
+              onPressed: () => setState(() => _load = true),
             ),
           ],
         ),

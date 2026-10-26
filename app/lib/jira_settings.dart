@@ -91,6 +91,7 @@ class _JiraPageState extends State<JiraPage> {
           'Remove ${s.id}?',
           'Nushi forgets the site and deletes its token from the keychain.',
           'Remove',
+          destructive: true,
         ) ||
         !mounted) {
       return;

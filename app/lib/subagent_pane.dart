@@ -178,12 +178,12 @@ class _HeadState extends State<_Head> {
                         overflow: _open ? null : TextOverflow.fade,
                       ),
                       if (folds)
-                        Tap(
-                          onTap: () => setState(() => _open = !_open),
+                        Padding(
                           padding: const EdgeInsets.symmetric(vertical: 2),
-                          child: Text(
+                          child: LinkText(
                             _open ? 'Show less' : 'Show more',
-                            style: theme.ui(t.accent, size: 12),
+                            size: 12,
+                            onTap: () => setState(() => _open = !_open),
                           ),
                         ),
                     ],

@@ -324,5 +324,6 @@ Future<bool> _confirmRemove(
     'Removes ${tilde(ad.folder)} (${_mb(ad.diskBytes.toInt())}). ${a.title} '
         "chats start again once it's set up.${_sleeps(a)}",
     'Remove',
+    destructive: true,
   );
 }

@@ -50,6 +50,7 @@ class _McpActionsState extends State<McpActions> {
       'It goes from the $scope scope: ${about[0].toLowerCase()}'
           '${about.substring(1)}',
       'Remove',
+      destructive: true,
     );
     if (!ok || !mounted) return;
     await _do(
@@ -141,11 +142,7 @@ class _McpActionsState extends State<McpActions> {
             ),
           ),
         if (menu.isNotEmpty)
-          Menu(
-            tooltip: 'More',
-            entries: menu,
-            child: Icon(Icons.more_horiz, size: 15, color: t.textSecondary),
-          ),
+          MenuIcon(Icons.more_horiz, tooltip: 'More', size: 15, entries: menu),
       ],
     );
   }

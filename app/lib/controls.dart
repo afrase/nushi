@@ -116,6 +116,7 @@ class Button extends StatelessWidget {
     this.hint,
     this.autofocus = false,
     this.tooltip = '',
+    this.menu = false,
   });
 
   final String label;
@@ -125,6 +126,9 @@ class Button extends StatelessWidget {
   final String? hint;
   final bool autofocus;
   final String tooltip;
+
+  /// Whether it opens a menu: a ▾ after the label.
+  final bool menu;
 
   @override
   Widget build(BuildContext context) {
@@ -187,6 +191,10 @@ class Button extends StatelessWidget {
                   hint!,
                   color: primary ? t.onAccent : t.textMuted,
                 ),
+              ],
+              if (menu) ...[
+                const SizedBox(width: 3),
+                Icon(Icons.keyboard_arrow_down, size: 15, color: fg),
               ],
             ],
           ),
@@ -282,6 +290,45 @@ class MenuField extends StatelessWidget {
   }
 }
 
+/// A button that opens a menu of what it can do ("Start work ▾");
+/// [onOpener] takes the menu's opener (for a shortcut that opens it too).
+class MenuButton extends StatelessWidget {
+  const new({
+    required this.label,
+    required this.entries,
+    super.key,
+    this.kind = ButtonKind.secondary,
+    this.icon,
+    this.tooltip = '',
+    this.onOpener,
+  });
+
+  final String label;
+  final List<MenuEntry> entries;
+  final ButtonKind kind;
+  final IconData? icon;
+  final String tooltip;
+
+  /// Given the menu's opener on each build.
+  final void Function(OpenMenu open)? onOpener;
+
+  @override
+  Widget build(BuildContext context) => Menu(
+    entries: entries,
+    builder: (context, open) {
+      onOpener?.call(open);
+      return Button(
+        label: label,
+        kind: kind,
+        icon: icon,
+        tooltip: tooltip,
+        menu: true,
+        onPressed: entries.isEmpty ? null : open,
+      );
+    },
+  );
+}
+
 /// An icon that opens a menu ("More": ⋯).
 class MenuIcon extends StatelessWidget {
   const new(
@@ -290,16 +337,19 @@ class MenuIcon extends StatelessWidget {
     required this.entries,
     super.key,
     this.size = 16,
+    this.onClose,
   });
 
   final IconData icon;
   final String tooltip;
   final List<MenuEntry> entries;
   final double size;
+  final VoidCallback? onClose;
 
   @override
   Widget build(BuildContext context) => Menu(
     entries: entries,
+    onClose: onClose,
     builder: (context, open) => IconTap(
       icon,
       tooltip: tooltip,
