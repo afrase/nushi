@@ -103,6 +103,8 @@ func Changes(ctx context.Context, folder string, span Span) ([]model.FileChange,
 	}
 
 	slices.SortFunc(changes, func(a, b model.FileChange) int { return strings.Compare(a.Path, b.Path) })
+	files := openBlobs(folder)
+	defer files.close()
 	total := 0
 	for i := range changes {
 		c := &changes[i]
@@ -115,12 +117,12 @@ func Changes(ctx context.Context, folder string, span Span) ([]model.FileChange,
 		}
 		var old, cur []byte
 		if c.Status != "added" && c.Status != "untracked" {
-			old, err = show(ctx, folder, from, cmp.Or(c.OldPath, c.Path))
+			old, err = files.read(ctx, from, cmp.Or(c.OldPath, c.Path))
 		}
 		switch {
 		case err != nil || c.Status == "deleted":
 		case to != "":
-			cur, err = show(ctx, folder, to, c.Path)
+			cur, err = files.read(ctx, to, c.Path)
 		default:
 			cur, err = worktree(filepath.Join(folder, c.Path))
 		}
@@ -337,12 +339,7 @@ func runWith(ctx context.Context, dir string, blank []string, args ...string) ([
 
 // runTo is runWith with the output going to out, unless out is nil.
 func runTo(ctx context.Context, dir string, blank []string, out io.Writer, args ...string) ([]byte, error) {
-	global := []string{"-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null", "-c", "log.showSignature=false", "-C", dir}
-	cmd := exec.CommandContext(ctx, "git", append(global, args...)...)
-	cmd.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0", "GIT_NO_LAZY_FETCH=1", "GIT_CONFIG_COUNT="+strconv.Itoa(len(blank)))
-	for i, name := range blank {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("GIT_CONFIG_KEY_%d=%s", i, name), fmt.Sprintf("GIT_CONFIG_VALUE_%d=", i))
-	}
+	cmd := command(ctx, dir, blank, args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = cmp.Or[io.Writer](out, &stdout), &stderr
 	if err := cmd.Run(); err != nil {
@@ -352,6 +349,18 @@ func runTo(ctx context.Context, dir string, blank []string, out io.Writer, args 
 		return nil, err
 	}
 	return stdout.Bytes(), nil
+}
+
+// command is git in dir as run runs it, with the settings named in blank
+// set empty.
+func command(ctx context.Context, dir string, blank []string, args ...string) *exec.Cmd {
+	global := []string{"-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null", "-c", "log.showSignature=false", "-C", dir}
+	cmd := exec.CommandContext(ctx, "git", append(global, args...)...)
+	cmd.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0", "GIT_NO_LAZY_FETCH=1", "GIT_CONFIG_COUNT="+strconv.Itoa(len(blank)))
+	for i, name := range blank {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("GIT_CONFIG_KEY_%d=%s", i, name), fmt.Sprintf("GIT_CONFIG_VALUE_%d=", i))
+	}
+	return cmd
 }
 
 // noFilters returns the config settings to blank that turn off the filter
