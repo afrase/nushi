@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+	"unicode"
 
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/renderer/html"
 	"github.com/yuin/goldmark/text"
+	xhtml "golang.org/x/net/html"
 
 	"github.com/afrase/nushi/internal/mdwrite"
 )
@@ -22,7 +24,7 @@ func TestMarkdown(t *testing.T) {
 		"> quoted <!-- hidden --> text":                                                      "> quoted  text",
 		`<img width="200" alt="A chart" src="https://github.com/user-attachments/assets/1">`: "![A chart](https://github.com/user-attachments/assets/1)",
 		`An <img src='https://x/x.png'> inline`:                                              "An ![](https://x/x.png) inline",
-		`<img alt="no src">`:                                                                 "",
+		`<img alt="no src">`:                                                                 "no src",
 		`See <a href="https://example.com/a b">the <b>docs</b></a>.`:                         "See [the docs](https://example.com/a%20b).",
 		"one<br>two<br/>three":                                                               "one\\\ntwo\\\nthree",
 		"| a | b |\n|---|---|\n| x<br>y | z |":                                               "| a | b |\n| --- | --- |\n| x y | z |",
@@ -61,17 +63,52 @@ func TestMarkdown(t *testing.T) {
 // hidden is the marker a fuzzed comment holds.
 const hidden = "QZXHIDDENQZX"
 
-// visible is the HTML GitHub's page would show of Markdown: rendered as
-// it renders, raw HTML kept, then its comments taken out (and all after
-// one never closed, as a browser hides it).
-func visible(md string) string {
+// rendered is Markdown as GitHub renders it: GFM, raw HTML kept.
+func rendered(md string) string {
 	var b bytes.Buffer
 	_ = goldmark.New(goldmark.WithExtensions(extension.GFM), goldmark.WithRendererOptions(html.WithUnsafe())).Convert([]byte(md), &b)
-	out := commentRE.ReplaceAllString(b.String(), "")
-	if i := strings.Index(out, "<!--"); i >= 0 {
-		out = out[:i]
+	return b.String()
+}
+
+// visible is the text a browser shows of a page's HTML, as GitHub's
+// sanitizer leaves it: no comments (and nothing after one that never
+// closes), no hidden element's contents; an image's alt text counts.
+func visible(page string) string {
+	var b strings.Builder
+	z := xhtml.NewTokenizer(strings.NewReader(page))
+	skip := ""
+	for {
+		switch z.Next() {
+		case xhtml.ErrorToken:
+			return b.String()
+		case xhtml.CommentToken:
+			if !closed(string(z.Raw())) {
+				return b.String()
+			}
+		case xhtml.TextToken:
+			if skip == "" {
+				b.Write(z.Text())
+			}
+		case xhtml.StartTagToken, xhtml.SelfClosingTagToken:
+			name, a := tag(z)
+			switch {
+			case skip != "":
+			case hiddenElements[name]:
+				skip = name
+			case name == "img":
+				b.WriteString(" " + a["alt"] + " ")
+			}
+		case xhtml.EndTagToken:
+			if name, _ := tag(z); name == skip {
+				skip = ""
+			}
+		case xhtml.DoctypeToken:
+		}
 	}
-	return out
+}
+
+func words(s string) []string {
+	return strings.FieldsFunc(s, func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsDigit(r) })
 }
 
 // FuzzMarkdownHidesComments: text in an HTML comment, as GitHub renders
@@ -93,7 +130,7 @@ func FuzzMarkdownHidesComments(f *testing.F) {
 	}
 	f.Fuzz(func(t *testing.T, before, inside, after string) {
 		md := before + "<!--" + inside + hidden + "-->" + after
-		if strings.Count(md, hidden) != 1 || strings.Contains(visible(md), hidden) {
+		if strings.Count(md, hidden) != 1 || strings.Contains(visible(rendered(md)), hidden) {
 			return // shown on GitHub's page (in code, say): nothing to check
 		}
 		if got := Markdown(md); strings.Contains(got, hidden) {
@@ -137,5 +174,28 @@ func FuzzMarkdownLinks(f *testing.F) {
 			}
 			return ast.WalkContinue, nil
 		})
+	})
+}
+
+// FuzzMarkdownVisible: every word of what Nushi writes is in what GitHub's
+// page shows of the same text (nothing hidden there, an attribute or a
+// comment, comes out as text).
+func FuzzMarkdownVisible(f *testing.F) {
+	for _, seed := range []string{
+		`<span title="a>b">shown</span>`, "<script>alert(1)</script> after", "<style>x{}</style>", "a <!-- b --> c",
+		"<div>\n<textarea>hidden</textarea>\n</div>", "| a |\n|---|\n| b | c |", "[//]: # (hidden)", "`code` *em*",
+		`<img alt="pic" src="https://x">`, "<details><summary>More</summary>\n\nInside\n</details>", "x<script>\n\ny",
+	} {
+		f.Add(seed)
+	}
+	f.Fuzz(func(t *testing.T, md string) {
+		// Words, as tags split or join them, are pieces of what the page
+		// shows run together.
+		shown := strings.Join(words(visible(rendered(md))), "")
+		for _, w := range words(visible(rendered(Markdown(md)))) {
+			if !strings.Contains(shown, w) {
+				t.Fatalf("%q: %q isn't shown on GitHub's page, Nushi shows it:\n%s", md, w, Markdown(md))
+			}
+		}
 	})
 }
