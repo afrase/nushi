@@ -118,6 +118,10 @@ const _maxText = 200000;
 
 final _highlight = Highlight()..registerLanguages(builtinAllLanguages);
 
+/// A code block's language by name ("Ruby" for `rb`), if highlight.js
+/// knows it; else the tag as written.
+String languageName(String tag) => _highlight.getLanguage(tag)?.name ?? tag;
+
 /// The language of [path] by its extension (or name: `Makefile`), if
 /// highlight.js knows it.
 String? languageOf(String path) {

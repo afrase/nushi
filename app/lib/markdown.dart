@@ -68,6 +68,7 @@ class AgentMarkdown extends StatelessWidget {
         muted: typed ? t.userBandMuted : t.textMuted,
         link: t.link,
         highlight: codeHighlighter(t),
+        languageName: languageName,
       ),
     );
   }
