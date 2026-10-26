@@ -92,6 +92,8 @@ func TestGitHubLogsNoTokenNorText(t *testing.T) {
 		Tokens: memTokens{}, Store: &memHosts{Store: store.New(t.TempDir())},
 		Open:    func(h, token string) github.Client { return githubapi.New(h, token, gh.Client().Transport) },
 		NeedsOK: func(error) bool { return false },
+		Restart: func(error) bool { return false },
+		Missing: func(error) bool { return false },
 	})
 	srv := httptest.NewServer(New(Services{GitHub: svc}))
 	defer srv.Close()

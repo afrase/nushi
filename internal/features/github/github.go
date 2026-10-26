@@ -80,6 +80,8 @@ type Deps struct {
 	Store       Store
 	Open        func(host, token string) Client
 	NeedsOK     func(error) bool
+	Restart     func(error) bool // the daemon must start again to reach the keychain
+	Missing     func(error) bool // the item is gone
 	Remotes     func(ctx context.Context, folder string) (map[string]string, error)
 	Fetch       func(ctx context.Context, folder, remote, refspec string) error
 	CheckBranch func(name string) error
@@ -122,9 +124,10 @@ type HostState struct {
 	User   githubapi.User
 	Budget []githubapi.Bucket
 	// Problem says why Nushi can't use the host now; NeedsOK that the
-	// keychain wants the user's OK for its pasted token.
-	Problem string
-	NeedsOK bool
+	// keychain wants the user's OK for its pasted token, Restart that the
+	// daemon can't reach the keychain until it starts again.
+	Problem          string
+	NeedsOK, Restart bool
 	// Pasted says a pasted token is kept for it (Remove deletes it).
 	Pasted bool
 }
@@ -152,7 +155,7 @@ func (s *Service) Hosts(ctx context.Context) ([]HostState, error) {
 			err = s.check(ctx, name, h)
 		}
 		if err != nil {
-			st.Problem, st.NeedsOK = err.Error(), errors.Is(err, ErrNeedsOK)
+			st.Problem, st.NeedsOK, st.Restart = err.Error(), errors.Is(err, ErrNeedsOK), s.Restart(err)
 		}
 		if h != nil {
 			s.mu.Lock()
@@ -305,10 +308,15 @@ func (s *Service) host(name string, prompt bool) (*host, error) {
 	if slices.Contains(pasted, name) {
 		token, err = s.Tokens.Get(name, prompt)
 		switch {
-		case err != nil && s.NeedsOK(err):
+		case err == nil:
+		case s.NeedsOK(err):
 			return nil, ErrNeedsOK
-		case err != nil:
-			return nil, fmt.Errorf("reading the token from the keychain: %w", err)
+		case s.Restart(err):
+			return nil, err // says what to do
+		case s.Missing(err):
+			return nil, fmt.Errorf("the GitHub token for %s isn't in the keychain any more: add it again in Settings › GitHub", name)
+		default:
+			return nil, fmt.Errorf("reading the GitHub token from the keychain: %w", err)
 		}
 	} else {
 		var t string

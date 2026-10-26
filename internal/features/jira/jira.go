@@ -52,6 +52,13 @@ type Tokens interface {
 	Delete(account string) error
 }
 
+// Keys says what a keychain error means (internal/keychain's kinds): the
+// user's OK is needed (AllowToken asks), the daemon must start again to
+// reach the keychain (its error says so), or the token is gone.
+type Keys struct {
+	NeedsOK, Restart, Missing func(error) bool
+}
+
 // ErrNeedsOK is a token the keychain gives only once the user allows it
 // (a new build of Nushi): AllowToken asks.
 var ErrNeedsOK = errors.New("this build of Nushi needs your OK to read the Jira token from the keychain: Settings › Jira › Allow")
@@ -73,8 +80,7 @@ type Service struct {
 	sites  Sites
 	tokens Tokens
 	store  Store
-	// needsOK says a token read failed that way (the keychain's error).
-	needsOK func(error) bool
+	keys   Keys
 
 	mu      sync.Mutex
 	clients map[string]Client // by site id, once its token was read
@@ -88,8 +94,8 @@ type jqlCache struct {
 }
 
 // New makes the service.
-func New(sites Sites, tokens Tokens, store Store, needsOK func(error) bool) *Service {
-	return &Service{sites: sites, tokens: tokens, store: store, needsOK: needsOK, clients: map[string]Client{}, jql: map[string]jqlCache{}, sprints: map[string]sprintRef{}}
+func New(sites Sites, tokens Tokens, store Store, keys Keys) *Service {
+	return &Service{sites: sites, tokens: tokens, store: store, keys: keys, clients: map[string]Client{}, jql: map[string]jqlCache{}, sprints: map[string]sprintRef{}}
 }
 
 // SiteID is a site's id in Nushi: its host.
@@ -110,8 +116,10 @@ type SiteState struct {
 	// Problem says why Nushi can't use the site now ("" when it can, or
 	// hasn't tried yet).
 	Problem string
-	// NeedsOK says the keychain wants the user's OK (AllowToken).
-	NeedsOK bool
+	// NeedsOK says the keychain wants the user's OK (AllowToken);
+	// Restart that the daemon can't reach the keychain until it starts
+	// again.
+	NeedsOK, Restart bool
 }
 
 // Sites lists the sites added, each with what Nushi knows of its token
@@ -125,7 +133,7 @@ func (s *Service) Sites() ([]SiteState, error) {
 	for _, site := range sites {
 		st := SiteState{JiraSite: site}
 		if _, err := s.client(site, false); err != nil {
-			st.Problem, st.NeedsOK = err.Error(), errors.Is(err, ErrNeedsOK)
+			st.Problem, st.NeedsOK, st.Restart = err.Error(), errors.Is(err, ErrNeedsOK), s.keys.Restart(err)
 		}
 		out = append(out, st)
 	}
@@ -262,10 +270,15 @@ func (s *Service) client(site model.JiraSite, prompt bool) (Client, error) {
 	}
 	token, err := s.tokens.Get(account(site), prompt)
 	switch {
-	case err != nil && s.needsOK(err):
+	case err == nil:
+	case s.keys.NeedsOK(err):
 		return nil, ErrNeedsOK
-	case err != nil:
-		return nil, fmt.Errorf("reading the token from the keychain: %w", err)
+	case s.keys.Restart(err):
+		return nil, err // says what to do
+	case s.keys.Missing(err):
+		return nil, fmt.Errorf("the Jira token for %s isn't in the keychain any more: add the site again in Settings › Jira", id)
+	default:
+		return nil, fmt.Errorf("reading the Jira token from the keychain: %w", err)
 	}
 	c = s.sites.Open(site, string(token))
 	clear(token)

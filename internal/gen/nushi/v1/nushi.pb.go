@@ -9809,8 +9809,12 @@ type JiraSite struct {
 	Searches  []*JiraSearch `protobuf:"bytes,10,rep,name=searches,proto3" json:"searches,omitempty"`
 	// Why Nushi can't use it now, if it can't; needs_ok: the keychain wants
 	// the user's OK (AllowJiraToken).
-	Problem       string `protobuf:"bytes,11,opt,name=problem,proto3" json:"problem,omitempty"`
-	NeedsOk       bool   `protobuf:"varint,12,opt,name=needs_ok,json=needsOk,proto3" json:"needs_ok,omitempty"`
+	Problem string `protobuf:"bytes,11,opt,name=problem,proto3" json:"problem,omitempty"`
+	NeedsOk bool   `protobuf:"varint,12,opt,name=needs_ok,json=needsOk,proto3" json:"needs_ok,omitempty"`
+	// The daemon can't reach the keychain until it starts again (its build
+	// was replaced or removed since it started, or it runs outside the
+	// user's login session): problem says so; Allow wouldn't help.
+	NeedsRestart  bool `protobuf:"varint,13,opt,name=needs_restart,json=needsRestart,proto3" json:"needs_restart,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -9925,6 +9929,13 @@ func (x *JiraSite) GetProblem() string {
 func (x *JiraSite) GetNeedsOk() bool {
 	if x != nil {
 		return x.NeedsOk
+	}
+	return false
+}
+
+func (x *JiraSite) GetNeedsRestart() bool {
+	if x != nil {
+		return x.NeedsRestart
 	}
 	return false
 }
@@ -12767,7 +12778,9 @@ type GitHubHost struct {
 	// Its pasted token needs the user's OK for this build (AllowGitHubToken).
 	NeedsOk bool `protobuf:"varint,9,opt,name=needs_ok,json=needsOk,proto3" json:"needs_ok,omitempty"`
 	// A pasted token is kept for it (RemoveGitHubToken).
-	Pasted        bool `protobuf:"varint,10,opt,name=pasted,proto3" json:"pasted,omitempty"`
+	Pasted bool `protobuf:"varint,10,opt,name=pasted,proto3" json:"pasted,omitempty"`
+	// As JiraSite.needs_restart.
+	NeedsRestart  bool `protobuf:"varint,11,opt,name=needs_restart,json=needsRestart,proto3" json:"needs_restart,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -12868,6 +12881,13 @@ func (x *GitHubHost) GetNeedsOk() bool {
 func (x *GitHubHost) GetPasted() bool {
 	if x != nil {
 		return x.Pasted
+	}
+	return false
+}
+
+func (x *GitHubHost) GetNeedsRestart() bool {
+	if x != nil {
+		return x.NeedsRestart
 	}
 	return false
 }
@@ -16446,7 +16466,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"AttrsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\r\n" +
-	"\vLogResponse\"\xc3\x02\n" +
+	"\vLogResponse\"\xe8\x02\n" +
 	"\bJiraSite\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
 	"\x03url\x18\x02 \x01(\tR\x03url\x12\x14\n" +
@@ -16462,7 +16482,8 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\bsearches\x18\n" +
 	" \x03(\v2\x14.nushi.v1.JiraSearchR\bsearches\x12\x18\n" +
 	"\aproblem\x18\v \x01(\tR\aproblem\x12\x19\n" +
-	"\bneeds_ok\x18\f \x01(\bR\aneedsOk\"2\n" +
+	"\bneeds_ok\x18\f \x01(\bR\aneedsOk\x12#\n" +
+	"\rneeds_restart\x18\r \x01(\bR\fneedsRestart\"2\n" +
 	"\n" +
 	"JiraSearch\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x10\n" +
@@ -16649,7 +16670,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x1c\n" +
 	"\tremaining\x18\x03 \x01(\x05R\tremaining\x12\x19\n" +
-	"\breset_ms\x18\x04 \x01(\x03R\aresetMs\"\x8b\x02\n" +
+	"\breset_ms\x18\x04 \x01(\x03R\aresetMs\"\xb0\x02\n" +
 	"\n" +
 	"GitHubHost\x12\x12\n" +
 	"\x04host\x18\x01 \x01(\tR\x04host\x12\x14\n" +
@@ -16662,7 +16683,8 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\aproblem\x18\b \x01(\tR\aproblem\x12\x19\n" +
 	"\bneeds_ok\x18\t \x01(\bR\aneedsOk\x12\x16\n" +
 	"\x06pasted\x18\n" +
-	" \x01(\bR\x06pasted\"\x18\n" +
+	" \x01(\bR\x06pasted\x12#\n" +
+	"\rneeds_restart\x18\v \x01(\bR\fneedsRestart\"\x18\n" +
 	"\x16ListGitHubHostsRequest\"E\n" +
 	"\x17ListGitHubHostsResponse\x12*\n" +
 	"\x05hosts\x18\x01 \x03(\v2\x14.nushi.v1.GitHubHostR\x05hosts\"A\n" +

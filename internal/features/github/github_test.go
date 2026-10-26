@@ -224,6 +224,8 @@ func newWorld(t *testing.T) *world {
 			return c
 		},
 		NeedsOK: func(err error) bool { return errors.Is(err, errOK) },
+		Restart: func(error) bool { return false },
+		Missing: func(error) bool { return false },
 		Remotes: func(_ context.Context, folder string) (map[string]string, error) {
 			return map[string]string{"origin": "git@github.com:afrase/" + folder + ".git", "fork": "https://github.com/me/" + folder}, nil
 		},

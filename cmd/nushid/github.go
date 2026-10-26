@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"net/http"
 
 	"github.com/cli/go-gh/v2/pkg/auth"
@@ -40,7 +39,9 @@ func newGitHub(st *store.Store, dev bool) *github.Service {
 		Tokens:  keychain.Keychain{Service: service},
 		Store:   st,
 		Open:    func(host, token string) github.Client { return githubapi.New(host, token, transport) },
-		NeedsOK: func(err error) bool { return errors.Is(err, keychain.ErrNeedsOK) },
+		NeedsOK: is(keychain.ErrNeedsOK),
+		Restart: is(keychain.ErrRestart),
+		Missing: is(keychain.ErrNotFound),
 		Remotes: func(ctx context.Context, folder string) (map[string]string, error) {
 			rs, err := git.Remotes(ctx, folder)
 			out := map[string]string{}

@@ -30,7 +30,7 @@ func (s *server) ListGitHubHosts(ctx context.Context, _ *connect.Request[nushiv1
 	out := &nushiv1.ListGitHubHostsResponse{}
 	for _, h := range hosts {
 		p := &nushiv1.GitHubHost{Host: h.Host, Login: h.User.Login, Name: h.User.Name, Source: h.Source, Kind: h.Kind,
-			Scopes: h.User.Scopes, Problem: h.Problem, NeedsOk: h.NeedsOK, Pasted: h.Pasted}
+			Scopes: h.User.Scopes, Problem: h.Problem, NeedsOk: h.NeedsOK, NeedsRestart: h.Restart, Pasted: h.Pasted}
 		for _, b := range h.Budget {
 			p.Budget = append(p.Budget, &nushiv1.GitHubBucket{Name: b.Name, Limit: int32(b.Limit), Remaining: int32(b.Remaining), ResetMs: unixMs(b.Reset)})
 		}
