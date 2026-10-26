@@ -17,6 +17,7 @@ class MarkdownStyle {
     required this.link,
     required this.highlight,
     this.inlineCode,
+    this.languageName,
   });
 
   /// Paragraph text.
@@ -48,6 +49,10 @@ class MarkdownStyle {
   /// colors are the same.
   final TextSpan? Function(String language, String code, TextStyle style)
   highlight;
+
+  /// A code block's language as its label shows it ("Ruby" for `rb`);
+  /// null shows the fence's tag as written.
+  final String Function(String language)? languageName;
 }
 
 /// Markdown that may still be streaming in: healed before it is parsed (see
@@ -219,7 +224,12 @@ class _CodeBlockBuilder extends MarkdownElementBuilder {
             ),
             child: Row(
               children: [
-                Expanded(child: Text(language, style: label)),
+                Expanded(
+                  child: Text(
+                    style.languageName?.call(language) ?? language,
+                    style: label,
+                  ),
+                ),
                 _CopyButton(code, color: style.muted),
               ],
             ),
