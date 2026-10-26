@@ -44,7 +44,9 @@ const (
 	// and text says it in words. A reopen that failed has one notice, which
 	// goes once the chat runs again: "not_ready" (its agent isn't set up or
 	// installed: Settings › Agents), "folder_gone" (MoveChat), or
-	// "reopen_failed" (ReopenChat tries again).
+	// "reopen_failed" (ReopenChat tries again). "own_turn" marks where the
+	// agent starts working on its own, outside a turn of the user's (after a
+	// background task ended).
 	ItemKind_ITEM_KIND_NOTICE ItemKind = 8
 )
 

@@ -318,12 +318,17 @@ const _sides = EdgeInsets.symmetric(horizontal: 20);
 bool _isBand(Object e) =>
     e is Item && e.kind == ItemKind.ITEM_KIND_USER_MESSAGE;
 
-/// The room above entry [i]: more around a user message's band than
-/// between the agent's steps, so each exchange reads as one chapter.
+/// A user message's band, or the agent starting on its own.
+bool _opens(Object e) =>
+    _isBand(e) ||
+    e is Item && e.kind == ItemKind.ITEM_KIND_NOTICE && e.status == 'own_turn';
+
+/// The room above entry [i]: more around what opens a chapter than between
+/// the agent's steps, so each exchange reads as one.
 double _gap(List<Object> entries, int i, {required bool header}) =>
-    _isBand(entries[i])
+    _opens(entries[i])
     ? (i == 0 && !header ? 8 : 28)
-    : (i > 0 && _isBand(entries[i - 1]) ? 18 : 12);
+    : (i > 0 && _opens(entries[i - 1]) ? 18 : 12);
 
 /// Places its child centered just above [at] (a selection's top and bottom
 /// middle), or below it when there is no room above, inside the box.

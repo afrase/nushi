@@ -22,6 +22,14 @@ func (c *chat) update(n *acp.SessionNotification) { //nolint:gocognit,gocyclo //
 	}
 	if !c.busy && c.started.IsZero() && slices.Contains([]string{"agent_message_chunk", "agent_thought_chunk", "tool_call", "tool_call_update"}, n.Update.SessionUpdate) &&
 		c.parentLocked(n.Update) == "" { // a subagent's steps aren't the agent's own work
+		// Its work after a turn of the user's starts a chapter of its own in
+		// the transcript; an update to a call it made before (a late
+		// result) doesn't.
+		if !c.ownNoted && n.Update.SessionUpdate != "tool_call_update" &&
+			slices.ContainsFunc(c.items, func(it model.Item) bool { return it.Kind == model.UserMessage }) {
+			c.ownNoted = true
+			c.noticeLocked("own_turn", "On its own, after a background task")
+		}
 		c.ownTurn = true // until its usage_update, which ends a turn
 	}
 	switch u := n.Update; u.SessionUpdate {
@@ -72,7 +80,7 @@ func (c *chat) update(n *acp.SessionNotification) { //nolint:gocognit,gocyclo //
 			c.configChangedLocked()
 		}
 	case "usage_update":
-		c.ownTurn = false
+		c.ownTurn, c.ownNoted = false, false
 		u := u.UsageUpdate
 		if c.dialect.TurnDone != nil && !c.started.IsZero() && !c.stopped && c.dialect.TurnDone(u) {
 			switch {

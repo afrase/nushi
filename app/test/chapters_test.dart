@@ -20,8 +20,8 @@ final Uint8List _shot = base64.decode(
 );
 
 /// Three exchanges: text, a list, inline code, tool rows (one failed), a
-/// subagent, an image in a message, a message passed to the subagent; and
-/// a message waiting in the queue.
+/// subagent, an image in a message, a message passed to the subagent, the
+/// agent going on by itself; and a message waiting in the queue.
 final _items = [
   Item(
     id: 'u1',
@@ -126,6 +126,17 @@ final _items = [
     kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
     text: 'Logout clears the cookie itself, so it can’t loop.',
   ),
+  Item(
+    id: 'n1',
+    kind: ItemKind.ITEM_KIND_NOTICE,
+    status: 'own_turn',
+    text: 'On its own, after a background task',
+  ),
+  Item(
+    id: 'a4',
+    kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
+    text: 'The full test suite finished in the background: all 212 pass.',
+  ),
 ];
 
 void main() {
@@ -137,7 +148,7 @@ void main() {
     testWidgets('the transcript as chapters ($name)', (tester) async {
       tester.view
         ..devicePixelRatio = 1
-        ..physicalSize = const Size(1000, 1000);
+        ..physicalSize = const Size(1000, 1080);
       tester.platformDispatcher.platformBrightnessTestValue = brightness;
       addTearDown(tester.view.reset);
       addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
