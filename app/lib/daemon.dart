@@ -227,12 +227,30 @@ class Daemon extends ChangeNotifier {
       'restarting the daemon',
       attrs: {'build': _build, 'bundled': ?bundledBuild},
     );
+    final before = _build;
     stopDaemon(dataDir);
     // The first ping that fails starts the bundled daemon.
     _launcher.launched = DateTime(0);
     for (var i = 0; i < 50 && connected; i++) {
       await Future<void>.delayed(const Duration(milliseconds: 200));
       await _ping();
+    }
+    if (connected && _build == before) {
+      appLog.warn('the daemon did not stop', {'build': before});
+      throw StateError(
+        "The running daemon didn't stop: quit nushid in Activity Monitor, "
+        'then reopen Nushi',
+      );
+    }
+    // Then wait for the new one: callers reload from it, and a reload
+    // while none answers fails quietly and leaves what asked for the
+    // restart on screen.
+    for (var i = 0; i < 100 && !connected; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      await _ping();
+    }
+    if (!connected) {
+      throw StateError("The daemon didn't come back: Settings › Show logs");
     }
   }
 
