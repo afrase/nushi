@@ -188,6 +188,12 @@ class _Footer extends StatelessWidget {
             open: daemon.jiraOpen,
             () => daemon.showJira(open: !daemon.jiraOpen),
           ),
+          row(
+            'GitHub',
+            Icons.merge_type,
+            open: daemon.githubOpen,
+            () => daemon.showGitHub(open: !daemon.githubOpen),
+          ),
         ],
       ),
     );

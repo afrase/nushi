@@ -5,6 +5,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/chat_menu.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
+import 'package:nushi/github_parts.dart';
 import 'package:nushi/jira_view.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/status.dart';
@@ -118,6 +119,14 @@ class _ChatHeaderState extends State<ChatHeader> {
                   showIssue(widget.daemon, chat.jiraSite, chat.jiraKey),
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
               child: Text(chat.jiraKey, style: theme.code(t.link, size: 12)),
+            ),
+          ],
+          if (chat.github case final link?) ...[
+            const SizedBox(width: 10),
+            GitHubChip(
+              key: ValueKey(link.id),
+              daemon: widget.daemon,
+              link: link,
             ),
           ],
           const SizedBox(width: 14),

@@ -107,7 +107,7 @@ class Daemon extends ChangeNotifier {
   void showMcp(String? folder) {
     trustAsk?.decide(start: false);
     mcpFolder = folder;
-    jiraOpen = false;
+    jiraOpen = githubOpen = false;
     notifyListeners();
   }
 
@@ -117,7 +117,28 @@ class Daemon extends ChangeNotifier {
   void showJira({required bool open}) {
     trustAsk?.decide(start: false);
     jiraOpen = open;
-    if (open) mcpFolder = null;
+    if (open) {
+      mcpFolder = null;
+      githubOpen = false;
+    }
+    notifyListeners();
+  }
+
+  /// Whether GitHub shows in place of the chat.
+  bool githubOpen = false;
+
+  /// What the GitHub view is to show when it opens next (a chat's pull
+  /// request or issue), taken by the view.
+  GitHubRef? githubShow;
+
+  void showGitHub({required bool open, GitHubRef? item}) {
+    trustAsk?.decide(start: false);
+    githubOpen = open;
+    githubShow = item;
+    if (open) {
+      mcpFolder = null;
+      jiraOpen = false;
+    }
     notifyListeners();
   }
 
@@ -361,6 +382,7 @@ class Daemon extends ChangeNotifier {
       ..scratch = c.scratch
       ..jiraSite = c.jiraSite
       ..jiraKey = c.jiraKey
+      ..github = c.hasGithub() ? c.github : null
       ..title = c.title
       ..archived = c.archived
       ..created = DateTime.fromMillisecondsSinceEpoch(c.createdUnixMs.toInt())
@@ -372,7 +394,7 @@ class Daemon extends ChangeNotifier {
     trustAsk?.decide(start: false);
     selectedId = chatId;
     mcpFolder = null;
-    jiraOpen = false;
+    jiraOpen = githubOpen = false;
     final chat = chats[chatId];
     if (chat != null) unawaited(_load(chat));
     shown();
@@ -424,9 +446,14 @@ class Daemon extends ChangeNotifier {
             agent: agent,
             folder: folder,
             worktree: issue?.worktree ?? wantsWorktree(folder),
-            jiraSite: issue?.site,
-            jiraKey: issue?.key,
-            branch: issue != null && issue.worktree && folder.isNotEmpty
+            jiraSite: issue?.github == null ? issue?.site : null,
+            jiraKey: issue?.github == null ? issue?.key : null,
+            github: issue?.github,
+            branch:
+                issue != null &&
+                    issue.worktree &&
+                    folder.isNotEmpty &&
+                    issue.github?.pull != true
                 ? issue.branch
                 : null,
           ),
@@ -536,7 +563,26 @@ class IssueChat {
     required this.summary,
     required this.branch,
     this.worktree = true,
+    this.github,
   });
+
+  /// A GitHub pull request or issue: its worktree starts on a pull
+  /// request's head (the daemon fetches it), an issue's on a branch named
+  /// from it.
+  new github(GitHubItem it)
+    : this(
+        site: '',
+        key: '${it.ref.repo}#${it.ref.number}',
+        summary: it.title,
+        branch: it.pull ? '' : githubBranch(it.ref.number, it.title),
+        github: GitHubLink(
+          host: it.ref.host,
+          id: it.id,
+          repo: it.ref.repo,
+          number: it.ref.number,
+          pull: it.pull,
+        ),
+      );
 
   /// An issue FindJiraIssues found.
   new found(FoundJiraIssue f)
@@ -552,4 +598,24 @@ class IssueChat {
   final String summary;
   String branch;
   bool worktree;
+
+  /// The GitHub item it is, if it isn't a Jira issue.
+  final GitHubLink? github;
+}
+
+/// The branch for a chat on GitHub issue [n] (the daemon's IssueBranch):
+/// its number, then its title's letters and digits, lowercase, words
+/// joined by "-", 40 characters of title at most, cut between words.
+String githubBranch(int n, String title) {
+  final words = title
+      .toLowerCase()
+      .split(RegExp('[^a-z0-9]+'))
+      .where((w) => w.isNotEmpty);
+  var out = '';
+  for (final w in words) {
+    if (out.length + w.length + 1 > 40 && out.isNotEmpty) break;
+    out = out.isEmpty ? w : '$out-$w';
+  }
+  if (out.length > 40) out = out.substring(0, 40);
+  return out.isEmpty ? '$n' : '$n-$out';
 }

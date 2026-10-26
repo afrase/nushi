@@ -28,17 +28,35 @@ bool tooLongToDiff(FileChange d) =>
 TextDiff _diff((String, String, String) d) =>
     TextDiff.compute(d.$1, d.$2, path: d.$3);
 
+/// A note of someone else's under a line of a diff (a GitHub review
+/// thread): its id, its side (old: the left), its line (from 1; 0 above
+/// the file).
+typedef DiffNote = ({String id, bool old, int line});
+
 /// A file's change side by side. With [fit] it is only as tall as the
 /// change (up to fifteen lines, then it scrolls), in a thin frame; else as
 /// tall as its box. With [review], a click or a drag on line numbers opens
 /// a box for a comment on those lines, and the chat's comments made in
-/// that view show under their lines.
+/// that view show under their lines. Else [notes] show under their lines,
+/// as [note] builds each, and a click or a drag on line numbers goes to
+/// [onLines].
 class DiffBox extends StatefulWidget {
-  const new(this.change, {super.key, this.fit = true, this.review});
+  const new(
+    this.change, {
+    super.key,
+    this.fit = true,
+    this.review,
+    this.notes = const [],
+    this.note,
+    this.onLines,
+  });
 
   final FileChange change;
   final bool fit;
   final ({String chat, String where})? review;
+  final List<DiffNote> notes;
+  final Widget Function(String id)? note;
+  final ValueChanged<LineSelection>? onLines;
 
   @override
   State<DiffBox> createState() => _DiffBoxState();
@@ -98,6 +116,8 @@ class _DiffBoxState extends State<DiffBox> {
     super.didUpdateWidget(old);
     if (old.change != widget.change) {
       _build();
+    } else if (old.notes != widget.notes) {
+      _showComments();
     } else if (old.review != widget.review) {
       // Another view of the same file (another commit picked): its own
       // comments; the box half written for the last one waits for it.
@@ -221,12 +241,24 @@ class _DiffBoxState extends State<DiffBox> {
             afterLine: m.outdated ? -1 : below(m.end, old: m.old),
           ),
       if (d != null) InlaySpec(id: '', side: d.side, afterLine: d.span.end - 1),
+      for (final n in widget.notes)
+        InlaySpec(
+          id: 'note:${n.id}',
+          side: n.old ? PaneSide.old : PaneSide.neu,
+          afterLine: n.line <= 0 ? -1 : below(n.line, old: n.old),
+        ),
     ];
   }
 
   /// A click or drag on line numbers ended: a comment on those lines.
   void _pointerUp(PointerUpEvent _) {
     final sel = _controller?.selection.value;
+    if (_selecting && sel != null && widget.onLines != null) {
+      _selecting = false;
+      _controller!.selection.clear();
+      widget.onLines!(sel);
+      return;
+    }
     if (!_selecting || sel == null || widget.review == null) return;
     _selecting = false;
     _draft = sel;
@@ -280,6 +312,9 @@ class _DiffBoxState extends State<DiffBox> {
   }
 
   Widget _inlay(BuildContext context, InlaySpec spec) {
+    if (spec.id.startsWith('note:')) {
+      return widget.note?.call(spec.id.substring(5)) ?? const SizedBox.shrink();
+    }
     final r = widget.review!;
     if (spec.id.isEmpty) {
       final d = _draft!;
@@ -349,7 +384,7 @@ class _DiffBoxState extends State<DiffBox> {
         child: SideBySideDiff(
           controller: _controller!,
           theme: _theme,
-          inlayBuilder: widget.review == null
+          inlayBuilder: widget.review == null && widget.note == null
               ? (context, spec) => const SizedBox.shrink()
               : _inlay,
         ),
