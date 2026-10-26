@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:nushi/chat.dart';
+import 'package:nushi/chat_menu.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/composer_parts.dart';
 import 'package:nushi/daemon.dart';
@@ -276,12 +277,22 @@ class _McpChanged extends StatelessWidget {
               height: 22,
               onPressed: chat.busy
                   ? null
-                  : () => tryOrShow(
-                      context,
-                      () => daemon.client.reloadChat(
-                        ReloadChatRequest(chatId: chat.id),
-                      ),
-                    ),
+                  : () async {
+                      if (await stopsBackground(
+                            context,
+                            chat,
+                            'Reload the chat?',
+                            'Reload',
+                          ) &&
+                          context.mounted) {
+                        await tryOrShow(
+                          context,
+                          () => daemon.client.reloadChat(
+                            ReloadChatRequest(chatId: chat.id),
+                          ),
+                        );
+                      }
+                    },
             ),
           ),
         ],
