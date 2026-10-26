@@ -21,21 +21,16 @@
 package claudeskills
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"unicode"
-	"unicode/utf8"
-
-	"gopkg.in/yaml.v3"
 
 	"github.com/afrase/nushi/internal/claudemcp"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/skillfile"
 )
 
 // Claude reads and changes Claude Code's skills and plugins.
@@ -123,84 +118,19 @@ func (c Claude) List(ctx context.Context, folder string) (model.Skills, error) {
 	return out, nil
 }
 
-// read reads the skills in a skills folder: each folder in it with a
-// SKILL.md that is a regular file (a link to one counts, as for Claude).
+// read reads the skills in a skills folder (skillfile.List). A skill's
+// name is its folder's, as Claude lists it; a linked folder is marked.
 func read(root, source string) []model.Skill {
-	entries, err := os.ReadDir(root)
-	if err != nil {
-		return nil
-	}
 	var out []model.Skill
-	for _, e := range entries {
-		dir := filepath.Join(root, e.Name())
-		b, err := claudemcp.ReadFile(filepath.Join(dir, "SKILL.md"))
-		if err != nil || strings.HasPrefix(e.Name(), ".") {
-			continue
-		}
-		desc, extra, author := frontMatter(b)
-		s := model.Skill{Name: e.Name(), Description: desc, Source: source, Path: dir, State: "on"}
-		if author {
+	for _, f := range skillfile.List(root) {
+		s := model.Skill{Name: f.Entry, Description: f.Description, Source: source, Path: f.Dir, State: "on", Linked: f.Linked}
+		if f.NoModel {
 			s.State = "user-invocable-only"
 		}
-		s.Tokens = tokens(s.Name + desc + extra)
+		s.Tokens = skillfile.Tokens(s.Name + f.Description + f.WhenToUse)
 		out = append(out, s)
 	}
 	return out
-}
-
-// maxDescription is the most of a description kept.
-const maxDescription = 4000
-
-// frontMatter reads a SKILL.md's description (else its first line), the
-// rest Claude lists with it (when_to_use), and whether its author keeps
-// Claude from using it on its own (disable-model-invocation).
-func frontMatter(b []byte) (desc, extra string, author bool) {
-	body := b
-	if rest, ok := bytes.CutPrefix(b, []byte("---")); ok {
-		if yamlText, after, ok := bytes.Cut(rest, []byte("\n---")); ok {
-			var fm struct {
-				Description string `yaml:"description"`
-				WhenToUse   string `yaml:"when_to_use"`
-				NoModel     bool   `yaml:"disable-model-invocation"`
-			}
-			_ = yaml.Unmarshal(yamlText, &fm) // what doesn't decode stays empty
-			desc, extra, author, body = fm.Description, fm.WhenToUse, fm.NoModel, after
-		}
-	}
-	if strings.TrimSpace(desc) == "" {
-		for line := range strings.SplitSeq(string(body), "\n") {
-			if line = strings.TrimSpace(strings.TrimLeft(line, "-# ")); line != "" {
-				desc = line
-				break
-			}
-		}
-	}
-	desc = strings.TrimSpace(strings.Map(shown, desc))
-	if len(desc) > maxDescription {
-		desc = strings.ToValidUTF8(desc[:maxDescription], "") + "…"
-	}
-	return desc, extra, author
-}
-
-// shown keeps a description's character, a line break as a space, but
-// drops control and bidirectional-override characters: the text is its
-// author's, shown as plain text, and shouldn't be able to reorder or hide
-// what's around it.
-func shown(r rune) rune {
-	switch {
-	case r == '\n' || r == '\t':
-		return ' '
-	case unicode.IsControl(r), r >= 0x202A && r <= 0x202E, r >= 0x2066 && r <= 0x2069, r == 0x200E, r == 0x200F:
-		return -1
-	}
-	return r
-}
-
-// tokens is about what listing text costs: Claude Code 2.1.310's /skills
-// gave 5 to 21 tokens for skills whose name and description were 14 to 62
-// characters, about 0.35 a character.
-func tokens(text string) int {
-	return int(math.Round(float64(utf8.RuneCountInString(text)) * 0.35))
 }
 
 // settings is one settings file's keys that this package reads.
