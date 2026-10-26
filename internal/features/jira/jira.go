@@ -6,6 +6,7 @@ package jira
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -55,12 +56,16 @@ type Tokens interface {
 // (a new build of Nushi): AllowToken asks.
 var ErrNeedsOK = errors.New("this build of Nushi needs your OK to read the Jira token from the keychain: Settings › Jira › Allow")
 
-// Store keeps the sites, and the writes agents made.
+// Store keeps the sites, the writes agents made, and what each list and
+// issue showed last (the cache: area "jira", a file a site).
 type Store interface {
 	JiraSites() ([]model.JiraSite, error)
 	SaveJiraSites([]model.JiraSite) error
 	JiraWrites() ([]model.JiraWrite, error)
 	SaveJiraWrites([]model.JiraWrite) error
+	Cached(area, name, key string) (time.Time, json.RawMessage, error)
+	Cache(area, name, key string, at time.Time, data json.RawMessage) error
+	ForgetCache(area, name string) error
 }
 
 // Service is Jira's feature.
@@ -162,6 +167,7 @@ func (s *Service) AddSite(ctx context.Context, site, email, token string, expire
 	s.mu.Lock()
 	s.clients[id] = c
 	s.mu.Unlock()
+	s.forget(id) // what another token showed
 	slog.Info("jira site added", "site", id, "scoped", got.CloudID != "")
 	return got, nil
 }
@@ -179,6 +185,7 @@ func (s *Service) RemoveSite(id string) error {
 	delete(s.clients, id)
 	delete(s.jql, id)
 	s.mu.Unlock()
+	s.forget(id)
 	slog.Info("jira site removed", "site", id)
 	return s.change(func(sites []model.JiraSite) []model.JiraSite {
 		return slices.DeleteFunc(sites, func(x model.JiraSite) bool { return SiteID(x) == id })

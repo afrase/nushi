@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -75,6 +76,16 @@ class _JiraViewState extends State<JiraView> {
   bool _loading = false;
   int _asked = 0;
   Timer? _poll;
+
+  /// Which list [_tasks] are ([_listKey]), and when Jira said so if they
+  /// are what the daemon kept from last time (shown while it's asked).
+  String? _shown;
+  DateTime? _cachedAt;
+
+  /// A load has gone on a while (150 ms) with nothing to show: the
+  /// skeleton shows.
+  bool _slow = false;
+  Timer? _slowTimer;
   final _listFocus = FocusNode(debugLabel: 'jira list');
   final _viewFocus = FocusNode(debugLabel: 'jira view');
   final _jqlFocus = FocusNode(debugLabel: 'jql');
@@ -124,6 +135,7 @@ class _JiraViewState extends State<JiraView> {
   @override
   void dispose() {
     _poll?.cancel();
+    _slowTimer?.cancel();
     jiraCollapsed.removeListener(_keepVisible);
     _listFocus.dispose();
     _viewFocus.dispose();
@@ -153,7 +165,8 @@ class _JiraViewState extends State<JiraView> {
   }
 
   /// Asks for the list again; [quiet] keeps what shows until it answers
-  /// (the poll), and an error then leaves the list as it was.
+  /// (the poll), and an error then leaves the list as it was. Another
+  /// list than the one shown shows what the daemon kept of it meanwhile.
   Future<void> _load({bool quiet = false}) async {
     final site = _siteNow;
     if (int.tryParse(_list) case final i?
@@ -168,11 +181,11 @@ class _JiraViewState extends State<JiraView> {
       setState(() {
         _tasks = const [];
         _error = null;
+        _shown = _cachedAt = null;
       });
       return;
     }
     final n = ++_asked;
-    if (!quiet) setState(() => _loading = true);
     ListJiraIssuesRequest ask(String id) {
       final req = ListJiraIssuesRequest(site: id);
       switch (_list) {
@@ -186,33 +199,85 @@ class _JiraViewState extends State<JiraView> {
       return req;
     }
 
+    final on = _every ? [for (final s in _sites!) s.id] : [site.id];
+    final key = _listKey(on, ask(on.first));
+    if (!quiet) {
+      setState(() {
+        _loading = true;
+        _slow = false;
+      });
+      _slowTimer?.cancel();
+      _slowTimer = Timer(const Duration(milliseconds: 150), () {
+        if (mounted && n == _asked && _loading) setState(() => _slow = true);
+      });
+      if (_shown != key) unawaited(_showKept(n, key, on, ask));
+    }
     try {
-      final on = _every ? [for (final s in _sites!) s.id] : [site.id];
       final got = await Future.wait([
         for (final id in on) widget.daemon.client.listJiraIssues(ask(id)),
       ]);
       if (n != _asked || !mounted) return;
       setState(() {
-        _tasks = ordered([
-          for (final (i, r) in got.indexed)
-            for (final is_ in r.issues) (site: on[i], issue: is_),
-        ]);
-        _sprint = got.first.sprint;
+        _show(key, on, got);
+        _cachedAt = null;
         _error = null;
-        if (!_tasks.any((t) => t.issue.key == _key)) {
-          _key = _visible.firstOrNull?.issue.key;
-          _details = false;
-        }
       });
     } on Object catch (e) {
       if (n == _asked && mounted && !quiet) {
         setState(() {
-          _tasks = const [];
+          if (_shown != key) {
+            _tasks = const [];
+            _shown = _cachedAt = null;
+          }
           _error = jiraError(e);
         });
       }
     } finally {
       if (n == _asked && mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// A list's key: its sites and what is asked of them.
+  static String _listKey(List<String> on, ListJiraIssuesRequest req) =>
+      '${on.join(' ')}\n${req.list}\n${req.jql}';
+
+  /// Shows what the daemon kept of the list asked for, until Jira answers.
+  Future<void> _showKept(
+    int n,
+    String key,
+    List<String> on,
+    ListJiraIssuesRequest Function(String) ask,
+  ) async {
+    try {
+      final got = await Future.wait([
+        for (final id in on)
+          widget.daemon.client.listJiraIssues(ask(id)..cached = true),
+      ]);
+      final at = [
+        for (final r in got)
+          if (r.atMs > 0) r.atMs.toInt(),
+      ];
+      // Jira answered first, or nothing was kept.
+      if (n != _asked || !mounted || !_loading || at.isEmpty) return;
+      setState(() {
+        _show(key, on, got);
+        _cachedAt = DateTime.fromMillisecondsSinceEpoch(at.reduce(min));
+      });
+    } on Object {
+      // Nothing kept: Jira's answer decides.
+    }
+  }
+
+  void _show(String key, List<String> on, List<ListJiraIssuesResponse> got) {
+    _shown = key;
+    _tasks = ordered([
+      for (final (i, r) in got.indexed)
+        for (final is_ in r.issues) (site: on[i], issue: is_),
+    ]);
+    _sprint = got.first.sprint;
+    if (!_tasks.any((t) => t.issue.key == _key)) {
+      _key = _visible.firstOrNull?.issue.key;
+      _details = false;
     }
   }
 
@@ -336,6 +401,8 @@ class _JiraViewState extends State<JiraView> {
               sites: sites ?? const [],
               site: _every ? null : site,
               loading: _loading,
+              updated: _cachedAt,
+              now: widget.now,
               onSite: (id) {
                 setState(() {
                   _all = id == null;
@@ -426,7 +493,8 @@ class _JiraViewState extends State<JiraView> {
           },
           onSave: () => _saveSearch(site),
         ),
-        if (_error case final e?)
+        // The banner above says why, and what to do.
+        if (_error case final e? when !site.needsOk)
           Padding(
             padding: const EdgeInsets.all(14),
             child: Text(e, style: theme.ui(t.crashed, size: 12)),
@@ -436,19 +504,21 @@ class _JiraViewState extends State<JiraView> {
             focusNode: _listFocus,
             autofocus: true,
             onKeyEvent: _onKey,
-            child: TaskList(
-              daemon: widget.daemon,
-              tasks: _tasks,
-              place: _place,
-              selected: _key,
-              sites: _every,
-              onOpen: (task) {
-                _listFocus.requestFocus();
-                _open(task);
-              },
-              onMoved: _load,
-              startMenu: (open) => _start = open,
-            ),
+            child: _tasks.isEmpty && _loading && _slow
+                ? const RowsLoading()
+                : TaskList(
+                    daemon: widget.daemon,
+                    tasks: _tasks,
+                    place: _place,
+                    selected: _key,
+                    sites: _every,
+                    onOpen: (task) {
+                      _listFocus.requestFocus();
+                      _open(task);
+                    },
+                    onMoved: _load,
+                    startMenu: (open) => _start = open,
+                  ),
           ),
         ),
         if (_tasks.isEmpty && _error == null && !_loading)

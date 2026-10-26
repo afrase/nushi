@@ -365,3 +365,48 @@ class Dimmed extends StatelessWidget {
     ),
   );
 }
+
+/// A list's rows while the first answer is on its way: bars where a row's
+/// key, title and details will be, never a blank view.
+class RowsLoading extends StatelessWidget {
+  const new({super.key, this.rows = 6});
+
+  final int rows;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = NushiTheme.of(context).t;
+    Widget bar(double width, double height) => Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: t.borderSubtle,
+        borderRadius: BorderRadius.circular(3),
+      ),
+    );
+    return Semantics(
+      label: 'Loading',
+      child: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        children: [
+          for (var i = 0; i < rows; i++)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 7),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: 6,
+                children: [
+                  bar(72, 9),
+                  // Titles of a few widths, as a list's are.
+                  FractionallySizedBox(
+                    widthFactor: const [0.8, 0.55, 0.7][i % 3],
+                    child: bar(double.infinity, 11),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}

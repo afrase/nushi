@@ -104,11 +104,20 @@ func (s *server) SetJiraSearches(_ context.Context, req *connect.Request[nushiv1
 }
 
 func (s *server) ListJiraIssues(ctx context.Context, req *connect.Request[nushiv1.ListJiraIssuesRequest]) (*connect.Response[nushiv1.ListJiraIssuesResponse], error) {
-	l, err := s.jira.List(ctx, req.Msg.Site, req.Msg.List, req.Msg.Jql)
+	var (
+		l   jira.List
+		at  = time.Now()
+		err error
+	)
+	if req.Msg.Cached {
+		l, at, err = s.jira.CachedList(req.Msg.Site, req.Msg.List, req.Msg.Jql)
+	} else {
+		l, err = s.jira.List(ctx, req.Msg.Site, req.Msg.List, req.Msg.Jql)
+	}
 	if err != nil {
 		return nil, jiraErr(err)
 	}
-	out := &nushiv1.ListJiraIssuesResponse{Sprint: l.Sprint}
+	out := &nushiv1.ListJiraIssuesResponse{Sprint: l.Sprint, AtMs: unixMs(at)}
 	for _, is := range l.Issues {
 		out.Issues = append(out.Issues, jiraIssueProto(is, ""))
 	}
@@ -136,11 +145,23 @@ func (s *server) SuggestJiraJql(ctx context.Context, req *connect.Request[nushiv
 }
 
 func (s *server) GetJiraIssue(ctx context.Context, req *connect.Request[nushiv1.GetJiraIssueRequest]) (*connect.Response[nushiv1.GetJiraIssueResponse], error) {
-	is, err := s.jira.Issue(ctx, req.Msg.Site, req.Msg.Key)
+	var (
+		is  model.JiraIssue
+		at  = time.Now()
+		err error
+	)
+	if req.Msg.Cached {
+		is, at, err = s.jira.CachedIssue(req.Msg.Site, req.Msg.Key)
+	} else {
+		is, err = s.jira.Issue(ctx, req.Msg.Site, req.Msg.Key)
+	}
 	if err != nil {
 		return nil, jiraErr(err)
 	}
-	resp := &nushiv1.GetJiraIssueResponse{Issue: jiraIssueProto(is, s.jira.Browse(req.Msg.Site, is.Key))}
+	if at.IsZero() {
+		return connect.NewResponse(&nushiv1.GetJiraIssueResponse{}), nil
+	}
+	resp := &nushiv1.GetJiraIssueResponse{Issue: jiraIssueProto(is, s.jira.Browse(req.Msg.Site, is.Key)), AtMs: unixMs(at)}
 	for _, w := range s.jira.Writes(req.Msg.Site, is.Key) {
 		resp.AgentWrites = append(resp.AgentWrites, &nushiv1.JiraWrite{Kind: w.Kind, Comment: w.Comment, To: w.To, Chat: w.Chat, Agent: w.Agent, At: unixMs(w.At)})
 	}

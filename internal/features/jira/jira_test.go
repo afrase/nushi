@@ -3,6 +3,7 @@ package jira
 import (
 	"cmp"
 	"context"
+	"encoding/json"
 	"errors"
 	"strconv"
 	"strings"
@@ -53,6 +54,32 @@ func (k *fakeTokens) Delete(account string) error {
 type memStore struct {
 	sites  []model.JiraSite
 	writes []model.JiraWrite
+	cache  map[string]json.RawMessage // by area, name and key
+}
+
+func (m *memStore) Cached(area, name, key string) (time.Time, json.RawMessage, error) {
+	d, ok := m.cache[area+" "+name+" "+key]
+	if !ok {
+		return time.Time{}, nil, nil
+	}
+	return time.Unix(1, 0), d, nil
+}
+
+func (m *memStore) Cache(area, name, key string, _ time.Time, data json.RawMessage) error {
+	if m.cache == nil {
+		m.cache = map[string]json.RawMessage{}
+	}
+	m.cache[area+" "+name+" "+key] = data
+	return nil
+}
+
+func (m *memStore) ForgetCache(area, name string) error {
+	for k := range m.cache {
+		if strings.HasPrefix(k, area+" "+name+" ") {
+			delete(m.cache, k)
+		}
+	}
+	return nil
 }
 
 func (m *memStore) JiraWrites() ([]model.JiraWrite, error) { return m.writes, nil }
@@ -293,5 +320,53 @@ func TestSprintGuess(t *testing.T) {
 	}
 	if len(c.jql) != len(want) {
 		t.Errorf("searched %q", c.jql)
+	}
+}
+
+// What a list or an issue showed is kept per site, read back without
+// Jira or the keychain, and dropped with the site.
+func TestCache(t *testing.T) {
+	s, tokens, _ := newService(t)
+	for _, site := range []string{"https://e.atlassian.net", "https://f.atlassian.net"} {
+		if _, err := s.AddSite(t.Context(), site, "me@e.com", "good", time.Time{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if l, at, err := s.CachedList("e.atlassian.net", Mine, ""); err != nil || !at.IsZero() || len(l.Issues) != 0 {
+		t.Fatalf("before any list: %+v %v %v", l, at, err)
+	}
+	if _, err := s.List(t.Context(), "e.atlassian.net", Mine, ""); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Issue(t.Context(), "e.atlassian.net", "A-1"); err != nil {
+		t.Fatal(err)
+	}
+	tokens.locked = true // the cache needs no token
+	s2 := New(s.sites, tokens, s.store, s.needsOK)
+	if l, at, err := s2.CachedList("e.atlassian.net", Mine, ""); err != nil || at.IsZero() || len(l.Issues) != 1 || l.Issues[0].Key != "A-1" {
+		t.Errorf("mine: %+v %v %v", l, at, err)
+	}
+	if is, at, err := s2.CachedIssue("e.atlassian.net", "A-1"); err != nil || at.IsZero() || is.Key != "A-1" {
+		t.Errorf("the issue: %+v %v %v", is, at, err)
+	}
+	if l, at, _ := s2.CachedList("f.atlassian.net", Mine, ""); !at.IsZero() || len(l.Issues) != 0 {
+		t.Error("another site's list showed e's")
+	}
+	if l, at, _ := s2.CachedList("e.atlassian.net", "", "project = A"); !at.IsZero() || len(l.Issues) != 0 {
+		t.Error("a search showed mine")
+	}
+	if _, _, err := s2.CachedIssue("e.atlassian.net", "../A-1"); err == nil {
+		t.Error("a key that isn't one")
+	}
+	if err := s2.RemoveSite("e.atlassian.net"); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := s2.CachedList("e.atlassian.net", Mine, ""); err == nil {
+		t.Error("a removed site's list")
+	}
+	for k := range s.store.(*memStore).cache {
+		if strings.Contains(k, "e.atlassian.net") {
+			t.Errorf("kept after the site went: %s", k)
+		}
 	}
 }

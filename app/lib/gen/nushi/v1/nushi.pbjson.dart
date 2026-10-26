@@ -3474,13 +3474,14 @@ const ListJiraIssuesRequest$json = {
     {'1': 'site', '3': 1, '4': 1, '5': 9, '10': 'site'},
     {'1': 'list', '3': 2, '4': 1, '5': 9, '10': 'list'},
     {'1': 'jql', '3': 3, '4': 1, '5': 9, '10': 'jql'},
+    {'1': 'cached', '3': 4, '4': 1, '5': 8, '10': 'cached'},
   ],
 };
 
 /// Descriptor for `ListJiraIssuesRequest`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List listJiraIssuesRequestDescriptor = $convert.base64Decode(
     'ChVMaXN0SmlyYUlzc3Vlc1JlcXVlc3QSEgoEc2l0ZRgBIAEoCVIEc2l0ZRISCgRsaXN0GAIgAS'
-    'gJUgRsaXN0EhAKA2pxbBgDIAEoCVIDanFs');
+    'gJUgRsaXN0EhAKA2pxbBgDIAEoCVIDanFsEhYKBmNhY2hlZBgEIAEoCFIGY2FjaGVk');
 
 @$core.Deprecated('Use listJiraIssuesResponseDescriptor instead')
 const ListJiraIssuesResponse$json = {
@@ -3495,14 +3496,15 @@ const ListJiraIssuesResponse$json = {
       '10': 'issues'
     },
     {'1': 'sprint', '3': 2, '4': 1, '5': 9, '10': 'sprint'},
+    {'1': 'at_ms', '3': 3, '4': 1, '5': 3, '10': 'atMs'},
   ],
 };
 
 /// Descriptor for `ListJiraIssuesResponse`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List listJiraIssuesResponseDescriptor =
-    $convert.base64Decode(
-        'ChZMaXN0SmlyYUlzc3Vlc1Jlc3BvbnNlEisKBmlzc3VlcxgBIAMoCzITLm51c2hpLnYxLkppcm'
-        'FJc3N1ZVIGaXNzdWVzEhYKBnNwcmludBgCIAEoCVIGc3ByaW50');
+final $typed_data.Uint8List listJiraIssuesResponseDescriptor = $convert.base64Decode(
+    'ChZMaXN0SmlyYUlzc3Vlc1Jlc3BvbnNlEisKBmlzc3VlcxgBIAMoCzITLm51c2hpLnYxLkppcm'
+    'FJc3N1ZVIGaXNzdWVzEhYKBnNwcmludBgCIAEoCVIGc3ByaW50EhMKBWF0X21zGAMgASgDUgRh'
+    'dE1z');
 
 @$core.Deprecated('Use getJiraJqlRequestDescriptor instead')
 const GetJiraJqlRequest$json = {
@@ -3596,13 +3598,14 @@ const GetJiraIssueRequest$json = {
   '2': [
     {'1': 'site', '3': 1, '4': 1, '5': 9, '10': 'site'},
     {'1': 'key', '3': 2, '4': 1, '5': 9, '10': 'key'},
+    {'1': 'cached', '3': 3, '4': 1, '5': 8, '10': 'cached'},
   ],
 };
 
 /// Descriptor for `GetJiraIssueRequest`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List getJiraIssueRequestDescriptor = $convert.base64Decode(
     'ChNHZXRKaXJhSXNzdWVSZXF1ZXN0EhIKBHNpdGUYASABKAlSBHNpdGUSEAoDa2V5GAIgASgJUg'
-    'NrZXk=');
+    'NrZXkSFgoGY2FjaGVkGAMgASgIUgZjYWNoZWQ=');
 
 @$core.Deprecated('Use getJiraIssueResponseDescriptor instead')
 const GetJiraIssueResponse$json = {
@@ -3624,6 +3627,7 @@ const GetJiraIssueResponse$json = {
       '6': '.nushi.v1.JiraWrite',
       '10': 'agentWrites'
     },
+    {'1': 'at_ms', '3': 3, '4': 1, '5': 3, '10': 'atMs'},
   ],
 };
 
@@ -3631,7 +3635,7 @@ const GetJiraIssueResponse$json = {
 final $typed_data.Uint8List getJiraIssueResponseDescriptor = $convert.base64Decode(
     'ChRHZXRKaXJhSXNzdWVSZXNwb25zZRIpCgVpc3N1ZRgBIAEoCzITLm51c2hpLnYxLkppcmFJc3'
     'N1ZVIFaXNzdWUSNgoMYWdlbnRfd3JpdGVzGAIgAygLMhMubnVzaGkudjEuSmlyYVdyaXRlUgth'
-    'Z2VudFdyaXRlcw==');
+    'Z2VudFdyaXRlcxITCgVhdF9tcxgDIAEoA1IEYXRNcw==');
 
 @$core.Deprecated('Use jiraWriteDescriptor instead')
 const JiraWrite$json = {
