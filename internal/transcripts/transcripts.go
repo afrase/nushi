@@ -39,7 +39,8 @@ type Store struct {
 }
 
 // Open opens the store in dir, made 0700 if it isn't there, and removes
-// what a crash left half-written (an image's temporary file).
+// what a crash left half-written (the temporary file of an image or of a
+// copy written anew).
 func Open(dir string) (*Store, error) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, err
@@ -53,7 +54,8 @@ func Open(dir string) (*Store, error) {
 	}
 	s := &Store{root: root, repaired: map[string]bool{}}
 	tmps, _ := fs.Glob(root.FS(), "*/"+imagesDir+"/*.tmp*")
-	for _, t := range tmps {
+	half, _ := fs.Glob(root.FS(), "*/"+itemsFile+".tmp")
+	for _, t := range append(tmps, half...) {
 		_ = root.Remove(t) // best effort: the next Open tries again
 	}
 	return s, nil
