@@ -408,10 +408,31 @@ message ChatCommands {
   repeated Command commands = 1;
 }
 
-message ListAgentsRequest {}
+message ListAgentsRequest {
+  // Read the login shell's environment, which agents start with, again
+  // first when the last reading is over a minute old (Settings › Agents
+  // opening; ADR 0048).
+  bool refresh_environment = 1;
+  // Read it again now, whatever its age (Settings › Agents › Reload).
+  bool reload_environment = 2;
+}
 
 message ListAgentsResponse {
   repeated Agent agents = 1;
+  // How reading the login shell's environment went last; unset when
+  // agents get the daemon's own. Nothing of the environment itself.
+  ShellEnvironment environment = 2;
+}
+
+// How the daemon last read the login shell's environment (ADR 0048).
+message ShellEnvironment {
+  // The shell it ran: "/opt/homebrew/bin/fish".
+  string shell = 1;
+  // When the reading ended, worked or not.
+  int64 read_unix_ms = 2;
+  // Why it failed ("fish took over 5s"); empty when it worked. Agents
+  // then start with the last reading that worked, else the daemon's own.
+  string problem = 3;
 }
 
 // An agent chats can run.

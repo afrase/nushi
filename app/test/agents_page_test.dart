@@ -2,6 +2,7 @@ import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/agents.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings_dialog.dart';
@@ -66,8 +67,11 @@ Future<(FakeDaemon, Daemon)> _settings(
   WidgetTester tester, {
   Tokens tokens = Tokens.dark,
   String? agent,
+  ShellEnvironment? environment,
 }) async {
-  final fake = FakeDaemon([])..agents = _found;
+  final fake = FakeDaemon([])
+    ..agents = _found
+    ..environment = environment;
   final d = await fake.connect(tester);
   await tester.pumpWidget(
     MaterialApp(
@@ -91,13 +95,14 @@ Future<(FakeDaemon, Daemon)> _settings(
 
 void main() {
   setUpAll(loadFonts);
-  setUp(
-    () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+  setUp(() {
+    shellEnvironment.value = null; // as a test before left it
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           const MethodChannel('nushi/fonts'),
           (_) async => <String>[],
-        ),
-  );
+        );
+  });
 
   testWidgets('each agent as found, and what can be done', (tester) async {
     final (_, d) = await _settings(tester);
@@ -154,10 +159,67 @@ void main() {
     d.dispose();
   });
 
+  testWidgets("the shell's environment: when it was read, and Reload", (
+    tester,
+  ) async {
+    final (fake, d) = await _settings(
+      tester,
+      environment: ShellEnvironment(
+        shell: '/opt/homebrew/bin/fish',
+        readUnixMs: Int64(
+          DateTime.now()
+              .subtract(const Duration(minutes: 3))
+              .millisecondsSinceEpoch,
+        ),
+      ),
+    );
+    expect(
+      find.text("Agents start with fish's environment, read 3m ago."),
+      findsOneWidget,
+    );
+    expect(
+      fake.calls.whereType<ListAgentsRequest>().last.refreshEnvironment,
+      isTrue,
+    );
+    await tester.tap(find.text('Reload'));
+    await tester.pumpAndSettle();
+    final asked = fake.calls.whereType<ListAgentsRequest>().last;
+    expect(asked.reloadEnvironment, isTrue);
+    d.dispose();
+  });
+
   for (final (name, tokens) in [
     ('dark', Tokens.dark),
     ('light', Tokens.light),
   ]) {
+    // The shell didn't answer in time: said quietly, under the agents.
+    testWidgets("the page, the shell's environment not read ($name)", (
+      tester,
+    ) async {
+      tester.view
+        ..devicePixelRatio = 1
+        ..physicalSize = const Size(700, 600);
+      addTearDown(tester.view.reset);
+      final (_, d) = await _settings(
+        tester,
+        tokens: tokens,
+        environment: ShellEnvironment(
+          shell: '/opt/homebrew/bin/fish',
+          readUnixMs: Int64(DateTime.now().millisecondsSinceEpoch),
+          problem: 'fish took over 5s',
+        ),
+      );
+      expect(
+        find.text("Couldn't read your shell's environment: fish took over 5s."),
+        findsOneWidget,
+      );
+      await expectLater(
+        find.byType(AlertDialog),
+        matchesGoldenFile('goldens/agents_env_problem_$name.png'),
+      );
+      d.dispose();
+    });
+
     testWidgets('the page ($name)', (tester) async {
       tester.view
         ..devicePixelRatio = 1

@@ -1320,7 +1320,16 @@ class ChatCommands extends $pb.GeneratedMessage {
 }
 
 class ListAgentsRequest extends $pb.GeneratedMessage {
-  factory ListAgentsRequest() => ListAgentsRequest._();
+  factory ListAgentsRequest({
+    $core.bool? refreshEnvironment,
+    $core.bool? reloadEnvironment,
+  }) {
+    final result = ListAgentsRequest._();
+    if (refreshEnvironment != null)
+      result.refreshEnvironment = refreshEnvironment;
+    if (reloadEnvironment != null) result.reloadEnvironment = reloadEnvironment;
+    return result;
+  }
 
   ListAgentsRequest._();
 
@@ -1335,6 +1344,8 @@ class ListAgentsRequest extends $pb.GeneratedMessage {
       _omitMessageNames ? '' : 'ListAgentsRequest',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: ListAgentsRequest.$_createMessage)
+    ..aOB(1, _omitFieldNames ? '' : 'refreshEnvironment')
+    ..aOB(2, _omitFieldNames ? '' : 'reloadEnvironment')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1358,14 +1369,38 @@ class ListAgentsRequest extends $pb.GeneratedMessage {
       _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ListAgentsRequest>(
           ListAgentsRequest.$_createMessage);
   static ListAgentsRequest? _defaultInstance;
+
+  /// Read the login shell's environment, which agents start with, again
+  /// first when the last reading is over a minute old (Settings › Agents
+  /// opening; ADR 0048).
+  @$pb.TagNumber(1)
+  $core.bool get refreshEnvironment => $_getBF(0);
+  @$pb.TagNumber(1)
+  set refreshEnvironment($core.bool value) => $_setBool(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasRefreshEnvironment() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRefreshEnvironment() => $_clearField(1);
+
+  /// Read it again now, whatever its age (Settings › Agents › Reload).
+  @$pb.TagNumber(2)
+  $core.bool get reloadEnvironment => $_getBF(1);
+  @$pb.TagNumber(2)
+  set reloadEnvironment($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasReloadEnvironment() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearReloadEnvironment() => $_clearField(2);
 }
 
 class ListAgentsResponse extends $pb.GeneratedMessage {
   factory ListAgentsResponse({
     $core.Iterable<Agent>? agents,
+    ShellEnvironment? environment,
   }) {
     final result = ListAgentsResponse._();
     if (agents != null) result.agents.addAll(agents);
+    if (environment != null) result.environment = environment;
     return result;
   }
 
@@ -1384,6 +1419,8 @@ class ListAgentsResponse extends $pb.GeneratedMessage {
       createEmptyInstance: ListAgentsResponse.$_createMessage)
     ..pPM<Agent>(1, _omitFieldNames ? '' : 'agents',
         subBuilder: Agent.$_createMessage)
+    ..aOM<ShellEnvironment>(2, _omitFieldNames ? '' : 'environment',
+        subBuilder: ShellEnvironment.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1410,6 +1447,105 @@ class ListAgentsResponse extends $pb.GeneratedMessage {
 
   @$pb.TagNumber(1)
   $pb.PbList<Agent> get agents => $_getList(0);
+
+  /// How reading the login shell's environment went last; unset when
+  /// agents get the daemon's own. Nothing of the environment itself.
+  @$pb.TagNumber(2)
+  ShellEnvironment get environment => $_getN(1);
+  @$pb.TagNumber(2)
+  set environment(ShellEnvironment value) => $_setField(2, value);
+  @$pb.TagNumber(2)
+  $core.bool hasEnvironment() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearEnvironment() => $_clearField(2);
+  @$pb.TagNumber(2)
+  ShellEnvironment ensureEnvironment() => $_ensure(1);
+}
+
+/// How the daemon last read the login shell's environment (ADR 0048).
+class ShellEnvironment extends $pb.GeneratedMessage {
+  factory ShellEnvironment({
+    $core.String? shell,
+    $fixnum.Int64? readUnixMs,
+    $core.String? problem,
+  }) {
+    final result = ShellEnvironment._();
+    if (shell != null) result.shell = shell;
+    if (readUnixMs != null) result.readUnixMs = readUnixMs;
+    if (problem != null) result.problem = problem;
+    return result;
+  }
+
+  ShellEnvironment._();
+
+  factory ShellEnvironment.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ShellEnvironment()..mergeFromBuffer(data, registry);
+  factory ShellEnvironment.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ShellEnvironment()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ShellEnvironment',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ShellEnvironment.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'shell')
+    ..aInt64(2, _omitFieldNames ? '' : 'readUnixMs')
+    ..aOS(3, _omitFieldNames ? '' : 'problem')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ShellEnvironment clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ShellEnvironment copyWith(void Function(ShellEnvironment) updates) =>
+      super.copyWith((message) => updates(message as ShellEnvironment))
+          as ShellEnvironment;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ShellEnvironment() / ShellEnvironment.new instead')
+  static ShellEnvironment create() => ShellEnvironment._();
+  static $pb.GeneratedMessage $_createMessage() => ShellEnvironment._();
+  @$core.override
+  ShellEnvironment createEmptyInstance() => ShellEnvironment._();
+  @$core.pragma('dart2js:noInline')
+  static ShellEnvironment getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ShellEnvironment>(
+          ShellEnvironment.$_createMessage);
+  static ShellEnvironment? _defaultInstance;
+
+  /// The shell it ran: "/opt/homebrew/bin/fish".
+  @$pb.TagNumber(1)
+  $core.String get shell => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set shell($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasShell() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearShell() => $_clearField(1);
+
+  /// When the reading ended, worked or not.
+  @$pb.TagNumber(2)
+  $fixnum.Int64 get readUnixMs => $_getI64(1);
+  @$pb.TagNumber(2)
+  set readUnixMs($fixnum.Int64 value) => $_setInt64(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasReadUnixMs() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearReadUnixMs() => $_clearField(2);
+
+  /// Why it failed ("fish took over 5s"); empty when it worked. Agents
+  /// then start with the last reading that worked, else the daemon's own.
+  @$pb.TagNumber(3)
+  $core.String get problem => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set problem($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasProblem() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearProblem() => $_clearField(3);
 }
 
 /// An agent chats can run.

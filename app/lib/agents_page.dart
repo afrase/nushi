@@ -6,6 +6,7 @@ import 'package:nushi/agent_mark.dart';
 import 'package:nushi/agents.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/shell_env_line.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -30,7 +31,8 @@ class _AgentsPageState extends State<AgentsPage> {
   @override
   void initState() {
     super.initState();
-    listAgents(widget.client).ignore(); // as they are now
+    // As they are now, the shell's environment read again if it's old.
+    listAgents(widget.client, refreshEnvironment: true).ignore();
   }
 
   /// Removes [a]'s adapter once asked; its row says so meanwhile (its
@@ -59,6 +61,7 @@ class _AgentsPageState extends State<AgentsPage> {
             marked: a.name == widget.marked,
             onRemove: _removing.contains(a.name) ? null : () => _remove(a),
           ),
+        ShellEnvLine(widget.client),
       ],
     ),
   );
