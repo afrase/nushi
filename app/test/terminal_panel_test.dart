@@ -114,7 +114,10 @@ void main() {
     await tester.pump();
     expect(find.byType(TextField), findsNothing);
 
+    // ⌥⌘1 the first terminal (⌘1 is the first chat's).
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.altLeft);
     await _meta(tester, LogicalKeyboardKey.digit1);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
     expect(terms.active['chat'], 'a');
     await _meta(tester, LogicalKeyboardKey.keyT);
     await tester.pumpAndSettle();

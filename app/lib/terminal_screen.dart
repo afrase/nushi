@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:nushi/chat_keys.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' as pb;
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/settings.dart';
@@ -55,10 +56,11 @@ class TerminalScreen extends StatelessWidget {
       cmd(LogicalKeyboardKey.keyF): VoidCallbackIntent(
         () => s.finding.value = true,
       ),
+      // ⌥⌘1–9 a terminal; ⌘1–9, ⌘[ and ⌘] switch chats, as elsewhere.
       for (var i = 0; i < 9 && i < list.length; i++)
-        cmd(LogicalKeyboardKey(0x31 + i)): VoidCallbackIntent(
-          () => terms.show(info.chatId, list[i].id),
-        ),
+        SingleActivator(LogicalKeyboardKey(0x31 + i), meta: true, alt: true):
+            VoidCallbackIntent(() => terms.show(info.chatId, list[i].id)),
+      ...chatKeys,
     };
   }
 
