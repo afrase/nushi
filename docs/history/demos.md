@@ -2,6 +2,13 @@
 
 Each milestone's demo script (what to run, what to see), newest first. An archive.
 
+## Demo (the expired sessions fix, steps 269–270)
+
+1. In a throwaway folder, start a Claude chat, send "say ok", Sleep it, quit the app.
+2. Move the session's `<id>.jsonl` out of `~/.claude/projects/<the folder's name>/` (this chat's only), and restart the daemon.
+3. Open Nushi: a bar says "Removed “…”: Claude no longer had its session (Claude Code deletes sessions after 30 days by default)."; the chat is gone from the sidebar. OK dismisses the bar.
+4. The same with a chat in a worktree that has an uncommitted change: the chat stays, "expired" with a quiet clock, its notice says why, Delete… asks about the worktree.
+
 ## Demo (milestone AF)
 
 With gh signed in: ⌘G shows the inbox (Review requested, My pull requests, Assigned issues); "My folders' repositories" narrows it. ⏎ on a pull request: its header, Conversation, Checks (click a failed one for its log), Files (threads at their lines; select lines to write an inline comment; Review… sends it). Start work on it opens the New chat dialog: the chat runs in a worktree on the pull request's branch, and its header shows the pull request's state; Fix checks puts a message for the agent in its box. Settings › GitHub shows your login and what's left of the rate limits.

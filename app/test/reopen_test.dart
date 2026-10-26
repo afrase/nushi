@@ -231,4 +231,82 @@ void main() {
     expect(_reopens(fake), ['c', 'c', 'c']);
     d.dispose();
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  // A chat kept though its agent deleted its session (its worktree has
+  // work): quiet, not an error; Delete… instead of Try again.
+  final gone = Item(
+    id: 'g',
+    kind: ItemKind.ITEM_KIND_NOTICE,
+    status: 'session_gone',
+    text:
+        'Claude no longer has this session (Claude Code deletes sessions '
+        'after 30 days by default). The chat stays because its worktree '
+        '/Users/me/repo/.worktrees/quiet-yak has uncommitted changes: '
+        'Delete… removes it and asks what to do with that.',
+  );
+  for (final (name, tokens) in [
+    ('dark', Tokens.dark),
+    ('light', Tokens.light),
+  ]) {
+    testWidgets('a chat whose session is gone says so quietly, with '
+        'Delete… ($name)', (tester) async {
+      tester.view
+        ..devicePixelRatio = 1
+        ..physicalSize = const Size(760, 200);
+      addTearDown(tester.view.reset);
+      final chat = _chat()..sessionGone = true;
+      final d = await _show(
+        tester,
+        FakeDaemon([]),
+        (d) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ChatHeader(
+              chat,
+              d,
+              changes: false,
+              onChanges: (_) {},
+              panel: false,
+              onPanel: () {},
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: ItemView(gone, chat, d, live: false, still: true),
+            ),
+          ],
+        ),
+        tokens: tokens,
+      );
+      expect(find.text('expired'), findsOneWidget);
+      expect(find.text("couldn't start"), findsNothing);
+      expect(find.text('Try again'), findsNothing);
+      expect(find.text('Delete…'), findsOneWidget);
+      await expectLater(
+        find.byType(Scaffold),
+        matchesGoldenFile('goldens/reopen_gone_$name.png'),
+      );
+      d.dispose();
+    });
+  }
+
+  testWidgets('Delete… on a chat whose session is gone asks what it '
+      'deletes', (tester) async {
+    tester.view
+      ..devicePixelRatio = 1
+      ..physicalSize = const Size(900, 700);
+    addTearDown(tester.view.reset);
+    final fake = FakeDaemon([]);
+    final chat = _chat()..sessionGone = true;
+    final d = await _show(
+      tester,
+      fake,
+      (d) => ItemView(gone, chat, d, live: false, still: true),
+    );
+    await tester.tap(find.text('Delete…'));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete “Fix the login redirect”?'), findsOneWidget);
+    expect(fake.calls.whereType<PlanDeleteChatRequest>().length, 1);
+    expect(_reopens(fake), isEmpty);
+    d.dispose();
+  });
 }

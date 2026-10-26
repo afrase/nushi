@@ -14,7 +14,7 @@
 - [0012](0012-diff-view-package.md) The diff viewer uses the published diff_view package
 - [0013](0013-app-starts-its-daemon.md) The packaged app starts its own daemon, never stops one on its own (how it starts it: 0036)
 - [0014](0014-moving-a-chat-forks-it.md) Moving a chat forks its Claude session through a copy of Claude's history
-- [0015](0015-delete-takes-the-agents-history.md) Deleting a chat deletes the agent's history of it, through ACP
+- [0015](0015-delete-takes-the-agents-history.md) Deleting a chat deletes the agent's history of it, through ACP; a chat whose session the agent deleted is forgotten (amended)
 - [0016](0016-a-worktree-per-chat.md) A chat can have a git worktree of its own
 - [0017](0017-context-breakdown-from-claude.md) The context card reads Claude's /context output
 - [0018](0018-the-app-is-nushi.md) The app is Nushi

@@ -92,10 +92,10 @@ func (s *Service) expire(ctx context.Context, c *chat, why string) {
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 	c.mu.Lock()
-	sess, halting := c.session, c.halting
+	sess, halting, running := c.session, c.halting, c.agent != nil || c.busy
 	c.mu.Unlock()
-	if halting {
-		return // being deleted, or expired already
+	if halting || running {
+		return // being deleted or expired already, or it opened meanwhile (its session is there after all)
 	}
 	if kept := s.keeps(ctx, sess); kept != "" {
 		c.mu.Lock()

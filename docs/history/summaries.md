@@ -2,6 +2,17 @@
 
 Each milestone's summary as it was written when the milestone ended, newest first. An archive: what is current is in `NOTES.md`, `docs/adr/` and the code.
 
+## Summary of the expired sessions fix (steps 269–270)
+
+Steps 269–270, one commit each on `main`, pushed after `make check`. **API 61** (`ListChatsResponse.removed`, `RemovedChat`, the `removed_chats` event, `DismissRemovedChats`, `ChatStatus.session_gone`). The prompt asked for an "expired" chat with Start a new chat here and Delete; midway the owner changed it: forget the chat once it's certain, keep it (marked, with Delete…) only when its worktree or scratch folder holds work.
+
+- **What each agent says** (reproduced through a dev daemon with throwaway chats, moving or deleting only their own session files): Claude's `session/load` answers `-32002 "Resource not found: <id>"`, which claude-agent-acp 0.94.0 also answers when Claude Code quits before its first answer, so Nushi also checks Claude's project folder (readable, transcript missing). Codex: `-32603` with `data.details` "no rollout found for thread id <id>" after `codex delete --force`; "session <id> is archived. Run `codex unarchive <id>`…" for an archived one (not gone: the notice now quotes it, Try again after unarchiving). PiG's bridge now answers -32002. Ante and omp not looked at.
+- **What happens**: the record goes (logged with chat, agent and why), worktree and branch stay, an empty scratch folder goes; a chat with uncommitted changes or commits in its worktree, or files in its scratch folder, stays with a quiet "expired" and Delete…. Listing the chats checks Claude's files at most hourly, starting nothing. The app says once which chats went.
+
+**Tried by hand** (a dev daemon on `/tmp/ndexp`, the owner's Claude login, Codex on Fireworks with a temp `CODEX_HOME`; no app window): a Claude chat whose transcript was moved away, removed by the first `ListChats` after a daemon restart (the sweep); another removed when a message woke it (`session/load`); one in a worktree with an uncommitted change kept with its notice, a message refused, Delete removing it and leaving the worktree; a Codex chat archived through codex-acp (notice with the details, Try again failing the same), then deleted with `codex delete --force` and removed on Try again.
+
+**Not tried by hand**: the app's bar and the expired chat in the window (widget tests and goldens, both themes); Claude Code's own cleanup at its start (simulated by moving the transcript); a removed chat's queued message is lost with it.
+
 ## Summary of milestone AF (after step 257: GitHub)
 
 Steps 238–257, one commit each on `main` (249 has a format fix of its own), all pushed; `make check` passed before each push. **API 55** (GitHub's calls, a chat's GitHub link on `StartChat` and `Chat`). Between steps 240 and 241 two out-of-band fixes landed from another session: 8334d08 ("Step 238 (fix)": your message's band spans the transcript; its number clashes with this milestone's step 238, left as is) and 74f8bb5 (a code block's label names its language).

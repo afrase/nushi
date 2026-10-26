@@ -70,8 +70,9 @@ class _StatusBarState extends State<StatusBar> {
           final live = widget.daemon.chats.values.where((c) => !c.archived);
           final working = live.where((c) => c.started != null).length;
           final asleep = live.where((c) => c.asleep).length;
-          final failed = live.where((c) => c.reopenFailed).length;
-          final awake = live.length - asleep - failed;
+          final expired = live.where((c) => c.sessionGone).length;
+          final failed = live.where((c) => c.reopenFailed).length - expired;
+          final awake = live.length - asleep - failed - expired;
           return Container(
             height: 24,
             padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -84,7 +85,8 @@ class _StatusBarState extends State<StatusBar> {
                 Tooltip(
                   message:
                       '$working working, $awake awake, $asleep asleep'
-                      "${failed > 0 ? ", $failed couldn't start" : ''}",
+                      "${failed > 0 ? ", $failed couldn't start" : ''}"
+                      "${expired > 0 ? ', $expired expired' : ''}",
                   child: Row(
                     spacing: 4,
                     children: [

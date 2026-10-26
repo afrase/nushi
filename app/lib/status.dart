@@ -75,8 +75,9 @@ class _Mark extends CustomPainter {
 }
 
 /// A chat's status dot: amber with a soft ring while it waits on the user,
-/// breathing while the agent works, a ring when idle; a moon asleep, an
-/// error mark when it couldn't start.
+/// breathing while the agent works, a ring when idle; a moon asleep, a
+/// quiet clock when its agent deleted its session, an error mark when it
+/// couldn't start.
 class ChatDot extends StatelessWidget {
   const new({required this.chat, super.key});
 
@@ -89,6 +90,9 @@ class ChatDot extends StatelessWidget {
     final t = NushiTheme.of(context).t;
     if (chat.asleep && !chat.archived) {
       return Icon(Icons.bedtime_outlined, size: size * 1.6, color: t.idle);
+    }
+    if (chat.sessionGone && !chat.archived) {
+      return Icon(Icons.history_toggle_off, size: size * 1.6, color: t.idle);
     }
     if (chat.reopenFailed && !chat.archived) {
       return Icon(Icons.error_outline, size: size * 1.6, color: t.crashed);
@@ -119,7 +123,8 @@ class ChatDot extends StatelessWidget {
 }
 
 /// What a chat is doing, in a word: "needs you", "working", "asleep",
-/// "couldn't start" (its reopen failed) or "idle".
+/// "expired" (its agent deleted its session), "couldn't start" (its reopen
+/// failed) or "idle".
 class ChatStatusWord extends StatelessWidget {
   const new(this.chat, {required this.style, super.key});
 
@@ -135,6 +140,8 @@ class ChatStatusWord extends StatelessWidget {
         ? ('working', t.running)
         : chat.asleep
         ? ('asleep', t.idle)
+        : chat.sessionGone
+        ? ('expired', t.idle)
         : chat.reopenFailed
         ? ("couldn't start", t.crashed)
         : ('idle', t.idle);

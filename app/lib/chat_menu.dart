@@ -32,15 +32,19 @@ List<MenuEntry> chatMenu(
   ),
   if (knownAgents[chat.agent]?.mcp ?? true)
     MenuEntry('MCP servers…', onPick: () => daemon.showMcp(chat.folder)),
-  MenuEntry(
-    'Delete…',
-    onPick: () => showDialog<void>(
-      context: context,
-      barrierDismissible: false, // not while it deletes: see _DeleteDialog
-      builder: (_) => _DeleteDialog(chat, daemon),
-    ),
-  ),
+  MenuEntry('Delete…', onPick: () => showDeleteChat(context, chat, daemon)),
 ];
+
+/// Asks before deleting a chat, listing what goes, then deletes it.
+Future<void> showDeleteChat(
+  BuildContext context,
+  ChatState chat,
+  Daemon daemon,
+) => showDialog<void>(
+  context: context,
+  barrierDismissible: false, // not while it deletes: see _DeleteDialog
+  builder: (_) => _DeleteDialog(chat, daemon),
+);
 
 /// Stops a chat's agent to free its memory; a message wakes it. Subagents
 /// still running in the background stop with it: it asks first.
