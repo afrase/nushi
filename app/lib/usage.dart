@@ -143,9 +143,9 @@ class ContextBreakdown extends StatelessWidget {
     final t = theme.t;
     final palette = [
       t.accent,
-      t.function,
-      t.string,
-      t.keyword,
+      t.ink(Capture.declaration).color,
+      t.ink(Capture.string).color,
+      t.ink(Capture.keyword).color,
       t.claude,
       t.needs,
       t.done,

@@ -3,8 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:markdown_view/src/heal.dart';
-import 'package:re_highlight/languages/all.dart';
-import 'package:re_highlight/re_highlight.dart';
 
 /// The colors and fonts of [StreamingMarkdown].
 @immutable
@@ -38,8 +36,12 @@ class MarkdownStyle {
   /// Links.
   final Color link;
 
-  /// Syntax colors by highlight.js class (`keyword`, `string`, ...).
-  final Map<String, TextStyle> highlight;
+  /// A code block's code in its language, highlighted over the code's
+  /// [TextStyle]; null leaves it plain (a language it doesn't know). Code
+  /// blocks are kept by this function, so give the same one while the
+  /// colors are the same.
+  final TextSpan? Function(String language, String code, TextStyle style)
+  highlight;
 }
 
 /// Markdown that may still be streaming in: healed before it is parsed (see
@@ -150,12 +152,10 @@ class StreamingMarkdown extends StatelessWidget {
   }
 }
 
-final _highlighter = Highlight()..registerLanguages(builtinAllLanguages);
-
 /// Highlighted code blocks, by language, code and colors: a message is
 /// built again for every chunk that streams in, and only its open block
 /// changes.
-final _spans = <(String, String, TextStyle, TextStyle?), TextSpan>{};
+final _spans = <(String, String, TextStyle, Object), TextSpan>{};
 
 /// A fenced code block: its language and a copy button over the code,
 /// highlighted when the language is known.
@@ -168,14 +168,11 @@ class _CodeBlockBuilder extends MarkdownElementBuilder {
   bool isBlockElement() => true;
 
   TextSpan _highlighted(String language, String code, TextStyle codeStyle) {
-    final key = (language, code, codeStyle, style.highlight['keyword']);
+    final key = (language, code, codeStyle, style.highlight);
     if (_spans[key] case final span?) return span;
-    var span = TextSpan(text: code, style: codeStyle);
-    if (_highlighter.getLanguage(language) != null) {
-      final renderer = TextSpanRenderer(codeStyle, style.highlight);
-      _highlighter.highlight(code: code, language: language).render(renderer);
-      span = renderer.span ?? span;
-    }
+    final span =
+        style.highlight(language, code, codeStyle) ??
+        TextSpan(text: code, style: codeStyle);
     if (_spans.length >= 200) _spans.remove(_spans.keys.first);
     return _spans[key] = span;
   }

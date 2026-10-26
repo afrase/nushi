@@ -1,6 +1,37 @@
 import 'package:flutter/widgets.dart';
 
-/// The POC's Workbench colors for one brightness.
+/// The kinds of code that take a color of their own, in diffs and code
+/// blocks; `syntax.dart` says which highlight.js scopes are which.
+enum Capture {
+  keyword, // and literals (nil, true), self and this, built-ins, escapes
+  declaration, // a function's, method's or class's name where it's declared
+  type,
+  string,
+  number,
+  regexp,
+  constant,
+  field, // instance and class variables, properties, keys
+  symbol,
+  parameter,
+  meta, // annotations, decorators, attributes
+  tag, // markup's tags and CSS selectors
+  comment,
+  docTag, // @param, @return in a comment
+}
+
+/// How a [Capture] looks.
+@immutable
+class CodeInk {
+  const new(this.color, {this.italic = false, this.bold = false});
+
+  final Color color;
+  final bool italic;
+  final bool bold;
+}
+
+/// The POC's Workbench colors for one brightness. Code's colors are
+/// JetBrains' New UI Dark and Light schemes' (RubyMine's for symbols and
+/// parameters, which the platform leaves plain).
 @immutable
 class Tokens {
   const new({
@@ -27,9 +58,7 @@ class Tokens {
     required this.crashedSoft,
     required this.claude,
     required this.monogramText,
-    required this.keyword,
-    required this.function,
-    required this.string,
+    required this.syntax,
   });
 
   final Brightness brightness;
@@ -65,10 +94,11 @@ class Tokens {
   final Color claude;
   final Color monogramText;
 
-  // Syntax colors in code blocks.
-  final Color keyword;
-  final Color function;
-  final Color string;
+  /// Code's colors, in diffs and code blocks, by [Capture].
+  final Map<Capture, CodeInk> syntax;
+
+  /// How [c] looks.
+  CodeInk ink(Capture c) => syntax[c]!;
 
   /// The tint of a row or button under the pointer.
   Color get hover => text.withValues(alpha: 0.06);
@@ -97,9 +127,23 @@ class Tokens {
     crashedSoft: Color(0xFFFCE8EA),
     claude: Color(0xFFB0582B),
     monogramText: Color(0xFFFFFFFF),
-    keyword: Color(0xFF0033B3),
-    function: Color(0xFF00627A),
-    string: Color(0xFF067D17),
+    syntax: {
+      Capture.keyword: CodeInk(Color(0xFF0033B3)),
+      Capture.declaration: CodeInk(Color(0xFF00627A)),
+      Capture.type: CodeInk(Color(0xFF007E8A)),
+      Capture.string: CodeInk(Color(0xFF067D17)),
+      Capture.number: CodeInk(Color(0xFF1750EB)),
+      Capture.regexp: CodeInk(Color(0xFF264EFF)),
+      Capture.constant: CodeInk(Color(0xFF871094), italic: true),
+      Capture.field: CodeInk(Color(0xFF871094)),
+      Capture.symbol: CodeInk(Color(0xFF4E6D8C)),
+      Capture.parameter: CodeInk(Color(0xFFC37522), italic: true),
+      Capture.meta: CodeInk(Color(0xFF9E880D)),
+      Capture.tag: CodeInk(Color(0xFF0033B3)),
+      Capture.comment: CodeInk(Color(0xFF8C8C8C), italic: true),
+      // JetBrains underlines it; nothing here can.
+      Capture.docTag: CodeInk(Color(0xFF8C8C8C), italic: true, bold: true),
+    },
   );
 
   static const dark = Tokens(
@@ -126,8 +170,21 @@ class Tokens {
     crashedSoft: Color(0xFF3F2427),
     claude: Color(0xFFD98A5F),
     monogramText: Color(0xFF1E1F22),
-    keyword: Color(0xFFCF8E6D),
-    function: Color(0xFF56A8F5),
-    string: Color(0xFF6AAB73),
+    syntax: {
+      Capture.keyword: CodeInk(Color(0xFFCF8E6D)),
+      Capture.declaration: CodeInk(Color(0xFF56A8F5)),
+      Capture.type: CodeInk(Color(0xFF16BAAC)),
+      Capture.string: CodeInk(Color(0xFF6AAB73)),
+      Capture.number: CodeInk(Color(0xFF2AACB8)),
+      Capture.regexp: CodeInk(Color(0xFF42C3D4)),
+      Capture.constant: CodeInk(Color(0xFFC77DBB), italic: true),
+      Capture.field: CodeInk(Color(0xFFC77DBB)),
+      Capture.symbol: CodeInk(Color(0xFF89A6AF)),
+      Capture.parameter: CodeInk(Color(0xFFD4B01D), italic: true),
+      Capture.meta: CodeInk(Color(0xFFB3AE60)),
+      Capture.tag: CodeInk(Color(0xFFD5B778)),
+      Capture.comment: CodeInk(Color(0xFF7A7E85)),
+      Capture.docTag: CodeInk(Color(0xFF67A37C)),
+    },
   );
 }
