@@ -70,8 +70,8 @@ class _RewindTargetState extends State<RewindTarget> {
               widget.child,
               if (_hover)
                 Positioned(
-                  top: 0,
-                  right: 0,
+                  top: 8,
+                  right: 8,
                   child: IconTap(
                     Icons.history,
                     size: 15,

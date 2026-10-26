@@ -76,7 +76,7 @@ void main() {
 
     // The message's line in the chat opens the subagent's pane.
     await tester.tap(
-      find.textContaining('You → Explore', findRichText: true).first,
+      find.textContaining('→ Explore', findRichText: true).first,
     );
     await tester.pumpAndSettle();
     final pane = find.byType(SubagentPane);

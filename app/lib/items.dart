@@ -47,32 +47,27 @@ class ItemView extends StatelessWidget {
     final t = theme.t;
     switch (item.kind) {
       case ItemKind.ITEM_KIND_USER_MESSAGE:
+        // A band across the transcript, the heading of the agent's work
+        // that follows it; the right keeps room for Rewind.
         return RewindTarget(
           onRewind: onRewind,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 4,
-            children: [
-              if (item.relayTo.isEmpty)
-                _who(theme, 'You')
-              else
-                _Relayed(item, chat),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 8,
-                ),
-                decoration: box(t.borderSubtle, fill: t.raised),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 6,
-                  children: [
-                    if (item.images.isNotEmpty) Thumbnails(item.images),
-                    if (item.text.isNotEmpty) UserMessageText(item.text),
-                  ],
-                ),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(20, 12, 36, 12),
+            decoration: BoxDecoration(
+              color: t.userBand,
+              border: Border.symmetric(
+                horizontal: BorderSide(color: t.userBandBorder),
               ),
-            ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 6,
+              children: [
+                if (item.relayTo.isNotEmpty) _Relayed(item, chat),
+                if (item.images.isNotEmpty) Thumbnails(item.images),
+                if (item.text.isNotEmpty) UserMessageText(item.text),
+              ],
+            ),
           ),
         );
       case ItemKind.ITEM_KIND_TOOL_CALL:
@@ -151,7 +146,6 @@ class ItemView extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           spacing: 4,
           children: [
-            _who(theme, chat.agentName),
             AgentMarkdown(item.text, live: live),
             if (item.images.isNotEmpty) Thumbnails(item.images, size: 240),
           ],
@@ -160,10 +154,10 @@ class ItemView extends StatelessWidget {
   }
 }
 
-/// The small header above a message: who wrote it.
-/// Who wrote a message the agent was asked to pass to a subagent, and how
-/// that went: in the chat's transcript and in the subagent's pane, where
-/// it shows among the subagent's steps. A click opens the subagent's pane.
+/// Which subagent a message was for (the agent was asked to pass it on),
+/// and how that went: the band's marker, in the chat's transcript and in
+/// the subagent's pane, where it shows among the subagent's steps. A click
+/// opens the subagent's pane.
 class _Relayed extends StatelessWidget {
   const new(this.item, this.chat);
 
@@ -176,17 +170,17 @@ class _Relayed extends StatelessWidget {
     final t = theme.t;
     final agent = chat.agentName;
     final (state, color) = switch (item.relayState) {
-      'sending' => ('waiting for $agent to pass it on', t.textMuted),
-      'relayed' => ('passed on', t.textMuted),
+      'sending' => ('waiting for $agent to pass it on', t.userBandMuted),
+      'relayed' => ('passed on', t.userBandMuted),
       'failed' => ('$agent didn’t pass it on', t.crashed),
-      _ => ('', t.textMuted),
+      _ => ('', t.userBandMuted),
     };
     final label = Text.rich(
       TextSpan(
         children: [
           TextSpan(
-            text: 'You → ${item.relayTo}',
-            style: theme.ui(t.textSecondary, size: 12, weight: FontWeight.w600),
+            text: '→ ${item.relayTo}',
+            style: theme.ui(t.userBandMuted, size: 12, weight: FontWeight.w600),
           ),
           TextSpan(
             text: ', through $agent${state.isEmpty ? '' : ' · $state'}',
@@ -206,8 +200,3 @@ class _Relayed extends StatelessWidget {
     );
   }
 }
-
-Widget _who(NushiTheme theme, String name) => Text(
-  name,
-  style: theme.ui(theme.t.textSecondary, size: 12, weight: FontWeight.w600),
-);
