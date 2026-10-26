@@ -181,8 +181,10 @@ func (s *Store) Sessions() ([]model.Session, error) {
 
 // settings are the daemon's own settings (settings.json).
 type settings struct {
-	SleepAfterMinutes *int `json:"sleepAfterMinutes,omitempty"`
-	DebugLog          bool `json:"debugLog,omitempty"`
+	SleepAfterMinutes *int  `json:"sleepAfterMinutes,omitempty"`
+	DebugLog          bool  `json:"debugLog,omitempty"`
+	KeepTranscripts   *bool `json:"keepTranscripts,omitempty"`
+	TranscriptDays    int   `json:"transcriptDays,omitempty"`
 }
 
 // defaultSleepAfter is how long chats idle before they sleep, until the
@@ -239,4 +241,31 @@ func (s *Store) DebugLog() bool {
 // SetDebugLog remembers whether the log has DEBUG lines.
 func (s *Store) SetDebugLog(on bool) error {
 	return s.changeSettings(func(set *settings) { set.DebugLog = on })
+}
+
+// KeepTranscripts says whether Nushi keeps its own copy of chats'
+// transcripts (ADR 0047); on until turned off.
+func (s *Store) KeepTranscripts() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	keep := s.settingsLocked().KeepTranscripts
+	return keep == nil || *keep
+}
+
+// SetKeepTranscripts remembers whether Nushi keeps copies of transcripts.
+func (s *Store) SetKeepTranscripts(on bool) error {
+	return s.changeSettings(func(set *settings) { set.KeepTranscripts = &on })
+}
+
+// TranscriptDays is how many days a transcript's copy is kept after it
+// was last written; 0: for good.
+func (s *Store) TranscriptDays() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.settingsLocked().TranscriptDays
+}
+
+// SetTranscriptDays remembers how many days copies are kept; 0: for good.
+func (s *Store) SetTranscriptDays(days int) error {
+	return s.changeSettings(func(set *settings) { set.TranscriptDays = days })
 }

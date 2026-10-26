@@ -57,6 +57,7 @@ import (
 	"github.com/afrase/nushi/internal/store"
 	"github.com/afrase/nushi/internal/sysproxy"
 	"github.com/afrase/nushi/internal/terminal"
+	"github.com/afrase/nushi/internal/transcripts"
 	"github.com/afrase/nushi/relay"
 )
 
@@ -198,6 +199,11 @@ func run() error {
 	st.HadMessages = func(s model.Session) bool { return claudehistory.Has(projects, s.SessionID, s.Folder) }
 	chatSvc := chats.New([]chats.Kind{claudeKind, codexKind, anteKind, ompKind, pigKind}, st, st, git.Worktrees{}, filepath.Join(dir, "scratch"), hub.Publish)
 	chatSvc.AutoSleep(st)
+	copies, err := transcripts.Open(filepath.Join(dir, "transcripts"))
+	if err != nil {
+		return err
+	}
+	chatSvc.UseCopies(copies, st.KeepTranscripts)
 	termSvc := terminals.New(startShell, filepath.Base(loginShell), chatSvc, hub.Publish)
 	chatSvc.UseTerminals(termSvc)
 	go hub.Subscribe(nil, func() bool { return true }, func(e model.Event) bool { termSvc.Follow(e); return true })

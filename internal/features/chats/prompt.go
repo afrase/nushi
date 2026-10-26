@@ -159,6 +159,7 @@ func (c *chat) releaseLocked() {
 	c.released, c.busy, c.started = true, false, time.Time{}
 	close(c.done)
 	c.unrelayedLocked()
+	c.copyLocked(true)
 	c.statusChangedLocked()
 	c.deliverLocked()
 }
@@ -257,6 +258,7 @@ func (c *chat) run(agent Agent, req *acp.PromptRequest, sent, done chan struct{}
 		c.noticeLocked("max_turn_requests", "The agent stopped: it reached its limit of requests in one turn")
 	}
 	c.statusChangedLocked()
+	c.copyLocked(true)
 	// A stopped or failed turn holds the queue until the next one ends.
 	c.held = err != nil || resp.StopReason == "cancelled"
 	c.deliverLocked()
@@ -327,6 +329,7 @@ func (c *chat) steerQueue(agent Agent, sid acp.SessionID) {
 // wherever it is: what came after it stays.
 func (c *chat) unsendLocked(id string) {
 	if i := c.indexLocked(id); i >= 0 {
+		c.dropCopyLocked(c.items[i])
 		c.items = slices.Delete(c.items, i, i+1)
 		c.emitLocked(model.Event{ChatID: c.id, Dropped: id})
 	}

@@ -79,3 +79,17 @@ func TestOldAndBrokenSessionFiles(t *testing.T) {
 		t.Errorf("has messages = %v, want %v", has, want)
 	}
 }
+
+func TestTranscriptSettings(t *testing.T) {
+	dir := t.TempDir()
+	s := New(dir)
+	if !s.KeepTranscripts() || s.TranscriptDays() != 0 {
+		t.Fatalf("by default: keep %v, days %d", s.KeepTranscripts(), s.TranscriptDays())
+	}
+	noErr(t, s.SetKeepTranscripts(false))
+	noErr(t, s.SetTranscriptDays(90))
+	s = New(dir)
+	if s.KeepTranscripts() || s.TranscriptDays() != 90 || s.SleepAfter() != 30*time.Minute {
+		t.Errorf("kept: keep %v, days %d, sleep %v", s.KeepTranscripts(), s.TranscriptDays(), s.SleepAfter())
+	}
+}

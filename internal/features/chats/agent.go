@@ -214,6 +214,7 @@ func (c *chat) orphanLocked(stopped bool) {
 			c.publishLocked(c.items[i])
 		}
 	}
+	c.copyLocked(true) // what the agent left is as it stays
 }
 
 // disconnect stops the chat's agent, gently (Agent.Stop), and not under

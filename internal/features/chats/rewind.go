@@ -120,7 +120,9 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 		}
 		c.sid, c.config = next, config
 		c.emitLocked(model.Event{ChatID: c.id, Cut: c.items[i].ID})
+		cut := c.items[i].ID
 		c.items = c.items[:i]
+		c.cutCopyLocked(cut)
 		c.emitLocked(model.Event{ChatID: c.id, Config: slices.Clone(config)})
 		c.saveLocked(func(s *model.Session) {
 			s.Earlier = append(slices.Clip(s.Earlier), model.AgentSession{ID: s.SessionID, Folder: s.Folder})
