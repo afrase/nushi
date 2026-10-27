@@ -55,7 +55,7 @@ void main() {
       final setup = await next();
       final platform = PhonePlatform();
       await platform.clear();
-      final phone = Phone(platform);
+      final phone = Phone(platform, sameRelay: false);
       await phone.start();
       expect(phone.paired, isNull);
 
@@ -117,7 +117,7 @@ void main() {
 
       // The app comes back: its key and pairing from IndexedDB.
       await phone.close();
-      final again = Phone(PhonePlatform());
+      final again = Phone(PhonePlatform(), sameRelay: false);
       await again.start();
       expect(again.paired?.id, phone.paired!.id);
       await _until(() => again.daemon!.connected);

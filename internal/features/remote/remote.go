@@ -61,9 +61,9 @@ type Service struct {
 	devices   []model.Device
 	conns     map[*noiseconn.Conn]string // live connections and their devices
 	pairing   *pairing
-	push      *Push             // nil until UsePush
-	views     map[string]string // the chat each device shows
-	notes     notifier          // Follow's own
+	push      *Push           // nil until UsePush
+	views     map[string]view // the chat each device shows
+	notes     notifier        // Follow's own
 }
 
 // New loads remote access and, if it was on, starts it.
@@ -95,7 +95,7 @@ func New(st Store, dialer *relay.Dialer, serve func(net.Conn), awake func() func
 	}
 	s := &Service{st: st, dialer: dialer, serve: serve, awake: awake, publish: publish,
 		key: noise.DHKey{Private: k.Private, Public: k.Public}, listen: k.Listen, id: listenID(k.Listen), moving: k.Moving,
-		settings: settings, state: "off", devices: devices, conns: map[*noiseconn.Conn]string{}, views: map[string]string{}}
+		settings: settings, state: "off", devices: devices, conns: map[*noiseconn.Conn]string{}, views: map[string]view{}}
 	s.mu.Lock()
 	s.apply()
 	s.mu.Unlock()
@@ -124,7 +124,7 @@ func (s *Service) Get() model.Remote {
 }
 
 func (s *Service) snapshot() model.Remote {
-	r := model.Remote{RemoteSettings: s.settings, State: s.state, Error: s.err, Rendezvous: s.id}
+	r := model.Remote{RemoteSettings: s.settings, State: s.state, Error: s.err, Rendezvous: s.id, Key: s.key.Public}
 	for _, d := range s.devices {
 		for _, id := range s.conns {
 			d.Connected = d.Connected || id == d.ID

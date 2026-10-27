@@ -680,6 +680,15 @@ abstract final class NushiService {
     nushiv1nushi.SendTestPushResponse.new,
   );
 
+  /// Unpairs the device that calls (its Forget this Mac), as Revoke would;
+  /// only on a device's channel.
+  static const unpairThisDevice = connect.Spec(
+    '/$name/UnpairThisDevice',
+    connect.StreamType.unary,
+    nushiv1nushi.UnpairThisDeviceRequest.new,
+    nushiv1nushi.UnpairThisDeviceResponse.new,
+  );
+
   /// Writes a line of the app's into the daemon's log (source=app): its
   /// errors with their stacks, and what helps afterwards.
   static const log = connect.Spec(

@@ -152,6 +152,7 @@ void main() {
         on: true,
         relay: 'wss://nushi.taile2d635.ts.net',
         state: 'connected',
+        key: List.filled(32, 9),
         devices: [
           Device(
             id: 'w',
@@ -187,6 +188,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         find.textContaining('Web · notifications on · connected'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining(keyFingerprint(List.filled(32, 9))),
         findsOneWidget,
       );
       expect(

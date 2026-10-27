@@ -10,6 +10,7 @@ import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/phone/platform.dart';
 import 'package:nushi/phone/subscription.dart';
 import 'package:nushi/question_card.dart';
+import 'package:nushi/remote.dart' show keyFingerprint;
 
 import 'fake_daemon.dart';
 
@@ -125,7 +126,7 @@ Future<(Phone, PhonePlatform)> _app(
 
 /// Ends the phone's link, and its timers, before the test ends.
 Future<void> _end(WidgetTester tester, Phone phone) async {
-  phone.daemon?.dispose();
+  await phone.close();
   await tester.pumpWidget(const SizedBox());
   await tester.pump(const Duration(seconds: 5));
 }
@@ -154,7 +155,7 @@ void main() {
     testWidgets('a chat with its question card ($name)', (tester) async {
       final fake = FakeDaemon(_chats)
         ..answer = (input) => input is GetChatRequest ? _question() : null;
-      final (phone, _) = await _app(tester, fake, brightness: b);
+      final (phone, platform) = await _app(tester, fake, brightness: b);
       await tester.tap(find.text('Review the Noise channel'));
       await tester.pumpAndSettle();
       expect(find.byType(QuestionCard), findsOneWidget);
@@ -163,6 +164,7 @@ void main() {
         'b',
         reason: 'the daemon knows the chat shows: no push for it',
       );
+      expect(platform.closed, ['b'], reason: 'its notifications go');
       await expectLater(
         find.byType(PhoneApp),
         matchesGoldenFile('goldens/phone_question_$name.png'),
@@ -313,18 +315,68 @@ void main() {
     await _end(tester, phone);
   });
 
+  testWidgets('a link for another relay is refused, saying so', (tester) async {
+    final (phone, _) = await _app(tester, FakeDaemon(_chats), paired: false);
+    final k = 'A' * 43;
+    await tester.enterText(
+      find.byType(TextField).first,
+      'https://evil.example.com/#pair?r=wss%3A%2F%2Fevil.example.com'
+      '&i=abcdefghijklmnopqrstuv&k=$k&s=$k',
+    );
+    await tester.pump();
+    await tester.tap(find.text('Pair'));
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    await tester.pump();
+    expect(find.textContaining('for the relay at evil.example.com'), findsOne);
+    expect(phone.paired, isNull);
+    await _end(tester, phone);
+  });
+
+  testWidgets('a subscription made with an old VAPID key is turned off', (
+    tester,
+  ) async {
+    final fake = FakeDaemon(_chats)
+      ..answer = (input) =>
+          input is GetPushKeyRequest ? GetPushKeyResponse(key: _vapid) : null;
+    final platform = PhonePlatform()
+      ..saved = _paired()
+      ..push = PushState.on
+      ..subscribedKey = Uint8List(65);
+    final phone = Phone(
+      platform,
+      connectTo: (_) => Daemon(transport: fake, remote: true),
+    );
+    await tester.pumpWidget(PhoneApp(phone));
+    await phone.start();
+    for (var i = 0; i < 8; i++) {
+      await tester.pump();
+    }
+    expect(phone.push, PushState.off);
+    await _end(tester, phone);
+  });
+
   testWidgets('Forget this Mac forgets the key and the pairing', (
     tester,
   ) async {
-    final (phone, platform) = await _app(tester, FakeDaemon(_chats));
+    final fake = FakeDaemon(_chats);
+    final (phone, platform) = await _app(tester, fake);
     await tester.tap(find.bySemanticsLabel('Settings'));
     await tester.pumpAndSettle();
+    expect(
+      find.text(keyFingerprint(Uint8List(32)..[0] = 9)),
+      findsOneWidget,
+      reason: "the Mac's key, as the Mac shows it",
+    );
     await tester.tap(find.text('Forget this Mac'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Forget'));
     await tester.pumpAndSettle();
     expect(platform.saved, isNull);
+    expect(platform.wasReset, isTrue, reason: 'caches and the worker too');
     expect(phone.daemon, isNull);
+    expect(fake.calls.whereType<UnpairThisDeviceRequest>(), hasLength(1));
     expect(find.text('Pair with a Mac'), findsOneWidget);
     await _end(tester, phone);
   });

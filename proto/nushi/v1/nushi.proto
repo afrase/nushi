@@ -243,6 +243,9 @@ service NushiService {
   rpc SetDeviceView(SetDeviceViewRequest) returns (SetDeviceViewResponse);
   // Sends a test notification to a device (the Mac's).
   rpc SendTestPush(SendTestPushRequest) returns (SendTestPushResponse);
+  // Unpairs the device that calls (its Forget this Mac), as Revoke would;
+  // only on a device's channel.
+  rpc UnpairThisDevice(UnpairThisDeviceRequest) returns (UnpairThisDeviceResponse);
   // Writes a line of the app's into the daemon's log (source=app): its
   // errors with their stacks, and what helps afterwards.
   rpc Log(LogRequest) returns (LogResponse);
@@ -1736,6 +1739,9 @@ message Remote {
   // device is revoked: a phone that sees another than the one it dials
   // keeps this one from then on (its old one answers it for 30 days).
   string rendezvous = 7;
+  // The daemon's Noise public key (32 bytes), so a phone and the Mac can
+  // show the same fingerprint of it.
+  bytes key = 8;
 }
 
 message Device {
@@ -1820,6 +1826,10 @@ message SendTestPushRequest {
 }
 
 message SendTestPushResponse {}
+
+message UnpairThisDeviceRequest {}
+
+message UnpairThisDeviceResponse {}
 
 message LogRequest {
   // "debug", "info", "warn" or "error".

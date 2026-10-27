@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"net/http"
+	"net/url"
 
 	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/features/remote"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/store"
+	"github.com/afrase/nushi/internal/sysproxy"
 	"github.com/afrase/nushi/internal/webpush"
 )
 
@@ -17,7 +20,8 @@ func usePush(st *store.Store, r *remote.Service, chatSvc *chats.Service, kinds [
 	if err != nil {
 		return err
 	}
-	if !ok || len(k.Private) != 32 || len(k.Public) != 65 {
+	fresh := !ok || len(k.Private) != 32 || len(k.Public) != 65
+	if fresh {
 		keys, err := webpush.NewKeys()
 		if err != nil {
 			return err
@@ -32,10 +36,18 @@ func usePush(st *store.Store, r *remote.Service, chatSvc *chats.Service, kinds [
 	for _, kind := range kinds {
 		titles[kind.Name] = kind.Title
 	}
+	// Through the Mac's proxy, as the relay link goes (a company network).
+	client := &http.Client{Timeout: webpush.Timeout, Transport: &http.Transport{Proxy: func(req *http.Request) (*url.URL, error) {
+		proxies, err := sysproxy.For(req.URL)
+		if err != nil || len(proxies) == 0 {
+			return nil, err
+		}
+		return proxies[0], nil // nil: direct
+	}}, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	r.UsePush(remote.Push{
 		Key: keys.PublicKey(),
 		Send: func(ctx context.Context, subject string, s webpush.Subscription, m webpush.Message) error {
-			return (&webpush.Sender{Keys: keys, Subject: subject}).Send(ctx, s, m)
+			return (&webpush.Sender{Keys: keys, Subject: subject, Client: client}).Send(ctx, s, m)
 		},
 		Agent: func(chatID string) (string, bool) {
 			sessions, err := chatSvc.List()
@@ -49,6 +61,6 @@ func usePush(st *store.Store, r *remote.Service, chatSvc *chats.Service, kinds [
 			}
 			return "", false
 		},
-	})
+	}, fresh)
 	return nil
 }

@@ -63,10 +63,13 @@ func subscription(t *testing.T) *webpush.Subscription {
 // are on; chat "c1" is Claude's, anything else a side chat.
 func pushing(t *testing.T) (*Service, *pushes, string, string) {
 	t.Helper()
+	wait := FinishedWait
+	FinishedWait = 20 * time.Millisecond
+	t.Cleanup(func() { FinishedWait = wait })
 	dir := t.TempDir()
 	s := startRemote(t, dir, startRelay(t))
 	p := &pushes{}
-	s.UsePush(Push{Key: "key", Send: p.send, Agent: func(id string) (string, bool) { return "Claude", id == "c1" }})
+	s.UsePush(Push{Key: "key", Send: p.send, Agent: func(id string) (string, bool) { return "Claude", id == "c1" }}, false)
 	pairOne(t, s, newKey(t))
 	d := s.Get().Devices[0]
 	if d.Kind != "web" {
@@ -118,7 +121,7 @@ func TestPushSaysOnlyWhatHappened(t *testing.T) {
 			t.Errorf("chat content in a push: %s", b)
 		}
 	}
-	if p.subj[0] != "http://"+strings.TrimPrefix(s.Get().Relay, "ws://") {
+	if p.subj[0] != "https://"+strings.TrimPrefix(s.Get().Relay, "ws://") {
 		t.Errorf("subject %q", p.subj[0])
 	}
 }
@@ -202,5 +205,65 @@ func TestSubscriptionsOnlyToPushServices(t *testing.T) {
 	}
 	if err := s.SetPush(device, nil); err != nil || s.Get().Devices[0].Push != nil {
 		t.Errorf("turning off: %v", err)
+	}
+}
+
+// A stopped turn, and a turn the agent goes straight on from (the next
+// queued message), aren't "finished".
+func TestNoFinishedForAStopOrAQueue(t *testing.T) {
+	s, p, _, _ := pushing(t)
+	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Busy: true, Started: time.Now()}})
+	s.Follow(model.Event{ChatID: "c1", Item: &model.Item{ID: "n", Kind: model.Notice, Status: "cancelled"}})
+	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{}})
+	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Busy: true, Started: time.Now()}})
+	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{}})
+	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Busy: true, Started: time.Now()}}) // the queue's next
+	time.Sleep(100 * time.Millisecond)
+	if got := p.take(); len(got) != 0 {
+		t.Fatalf("pushed %+v", got)
+	}
+	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{}})
+	if got := p.settle(t, 1); len(got) != 1 || got[0].Kind != "finished" {
+		t.Fatalf("pushed %+v", got)
+	}
+}
+
+// An open chat counts only while the device keeps saying so.
+func TestTheViewLapses(t *testing.T) {
+	s, p, device, _ := pushing(t)
+	lease := ViewLease
+	ViewLease = 50 * time.Millisecond
+	t.Cleanup(func() { ViewLease = lease })
+	s.SetView(device, "c1")
+	time.Sleep(80 * time.Millisecond)
+	turn(s, "c1")
+	if got := p.settle(t, 1); len(got) != 1 {
+		t.Fatalf("a lapsed view: %+v", got)
+	}
+}
+
+// A new VAPID key: the subscriptions made with the old one are dropped.
+func TestFreshKeyDropsSubscriptions(t *testing.T) {
+	s, _, _, dir := pushing(t)
+	s.UsePush(Push{Key: "new"}, true)
+	if s.Get().Devices[0].Push != nil {
+		t.Fatal("kept a subscription to the old key")
+	}
+	if b, _ := os.ReadFile(filepath.Join(dir, "devices.json")); strings.Contains(string(b), "web.push.apple.com") {
+		t.Fatalf("devices.json keeps it: %s", b)
+	}
+}
+
+func TestSameSubscriptionWritesNothing(t *testing.T) {
+	s, _, device, dir := pushing(t)
+	path := filepath.Join(dir, "devices.json")
+	before, _ := os.Stat(path)
+	time.Sleep(20 * time.Millisecond)
+	d := s.Get().Devices[0].Push
+	if err := s.SetPush(device, &webpush.Subscription{Endpoint: d.Endpoint, P256DH: d.P256DH, Auth: d.Auth}); err != nil {
+		t.Fatal(err)
+	}
+	if after, _ := os.Stat(path); !after.ModTime().Equal(before.ModTime()) {
+		t.Error("rewrote devices.json for the same subscription")
 	}
 }

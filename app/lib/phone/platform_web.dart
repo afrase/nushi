@@ -11,23 +11,10 @@ import 'package:web/web.dart' as web;
 /// open arrive in its fragment, which never reaches a server).
 final class PhonePlatform {
   new() {
-    final hash = web.window.location.hash;
-    if (hash.startsWith('#pair?')) {
-      openedWith = web.window.location.href;
-      _clearHash(); // the secret doesn't stay in the address or history
-    } else if (hash.startsWith('#chat=')) {
-      _openChat = Uri.decodeComponent(hash.substring(6));
-      _clearHash();
-    }
+    _fromAddress(starting: true);
     web.window.addEventListener(
       'hashchange',
-      ((web.Event _) {
-        final h = web.window.location.hash;
-        if (h.startsWith('#chat=')) {
-          _clearHash();
-          onOpenChat?.call(Uri.decodeComponent(h.substring(6)));
-        }
-      }).toJS,
+      ((web.Event _) => _fromAddress(starting: false)).toJS,
     );
     if (_has(web.window.navigator, 'serviceWorker')) {
       web.window.navigator.serviceWorker.addEventListener(
@@ -37,7 +24,8 @@ final class PhonePlatform {
           if (data != null && data.isA<JSObject>()) {
             final chat = (data as JSObject)['chat'];
             if (chat != null && chat.isA<JSString>()) {
-              onOpenChat?.call((chat as JSString).toDart);
+              final id = (chat as JSString).toDart;
+              if (_chatId.hasMatch(id)) onOpenChat?.call(id);
             }
           }
         }).toJS,
@@ -45,9 +33,35 @@ final class PhonePlatform {
     }
   }
 
+  /// A chat's id, as the daemon makes them.
+  static final _chatId = RegExp(r'^[A-Za-z0-9_-]{1,64}$');
+
+  /// Takes a pairing link or a chat to open out of the address, so the
+  /// secret doesn't stay in it or in the history.
+  void _fromAddress({required bool starting}) {
+    final hash = web.window.location.hash;
+    if (hash.startsWith('#pair?')) {
+      openedWith = web.window.location.href;
+      _clearHash();
+      if (!starting) onPairLink?.call(openedWith!);
+    } else if (hash.startsWith('#chat=')) {
+      _clearHash();
+      final id = hash.substring(6); // an id needs no decoding
+      if (!_chatId.hasMatch(id)) return;
+      if (starting) {
+        _openChat = id;
+      } else {
+        onOpenChat?.call(id);
+      }
+    }
+  }
+
   /// A pairing link the page was opened with (a Mac's "Copy link" opened
   /// in the browser), taken out of the address.
   String? openedWith;
+
+  /// A pairing link that came while the app ran.
+  void Function(String link)? onPairLink;
   String? _openChat;
 
   /// The chat a notification asked to open while the app ran.
@@ -154,15 +168,87 @@ final class PhonePlatform {
     await _run('readwrite', (s) => s.delete('phone'.toJS));
   }
 
+  /// The page's origin's host, to tell a pairing link for another relay.
+  String get host => web.window.location.host;
+
   /// Registers the service worker: the app's shell offline, and
   /// notifications.
   Future<void> registerWorker() async {
     if (!_has(web.window.navigator, 'serviceWorker')) return;
     try {
-      await web.window.navigator.serviceWorker.register('sw.js'.toJS).toDart;
+      await web.window.navigator.serviceWorker.register(_workerUrl()).toDart;
     } on Object {
       // Without it the app still works, without notifications.
     }
+  }
+
+  static JSObject? _policy;
+
+  /// The service worker's address, as a Trusted Types script URL where the
+  /// browser asks for one (the relay's CSP): the policy "nushi" passes
+  /// sw.js and nothing else.
+  static JSAny _workerUrl() {
+    final tt = web.window.getProperty<JSObject?>('trustedTypes'.toJS);
+    if (tt == null) return 'sw.js'.toJS;
+    final rules = JSObject()
+      ..['createScriptURL'] = ((
+        JSString u,
+      ) => u.toDart == 'sw.js' ? u : throw ArgumentError(u.toDart)).toJS;
+    _policy ??= tt.callMethod<JSObject>(
+      'createPolicy'.toJS,
+      'nushi'.toJS,
+      rules,
+    );
+    return _policy!.callMethod<JSAny>('createScriptURL'.toJS, 'sw.js'.toJS);
+  }
+
+  /// Unregisters the service worker and empties its caches: Forget leaves
+  /// nothing that a script once run here could have changed.
+  Future<void> reset() async {
+    try {
+      final keys = await web.window.caches.keys().toDart;
+      for (final k in keys.toDart) {
+        await web.window.caches.delete(k.toDart).toDart;
+      }
+      if (_has(web.window.navigator, 'serviceWorker')) {
+        final reg = await web.window.navigator.serviceWorker
+            .getRegistration()
+            .toDart;
+        await reg?.unregister().toDart;
+      }
+    } on Object {
+      // Best effort: the next build's worker replaces its caches anyway.
+    }
+  }
+
+  /// Closes the notifications about [chat]: it's open.
+  Future<void> closeNotifications(String chat) async {
+    try {
+      final reg = await web.window.navigator.serviceWorker
+          .getRegistration()
+          .toDart;
+      final ns = await reg?.getNotifications().toDart;
+      for (final n in ns?.toDart ?? <web.Notification>[]) {
+        final data = n.data;
+        if (data != null &&
+            data.isA<JSObject>() &&
+            (data as JSObject)['chat'].dartify() == chat) {
+          n.close();
+        }
+      }
+    } on Object {
+      // Nothing to close.
+    }
+  }
+
+  /// The VAPID key the push subscription was made with, if there's one.
+  Future<Uint8List?> subscribedWith() async {
+    if (!_pushable) return null;
+    final reg = await web.window.navigator.serviceWorker
+        .getRegistration()
+        .toDart;
+    final sub = await reg?.pushManager.getSubscription().toDart;
+    return sub?.options.applicationServerKey?.toDart.asUint8List();
   }
 
   bool get _pushable =>

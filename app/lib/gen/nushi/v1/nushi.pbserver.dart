@@ -165,6 +165,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.SetDeviceViewRequest request);
   $async.Future<$0.SendTestPushResponse> sendTestPush(
       $pb.ServerContext ctx, $0.SendTestPushRequest request);
+  $async.Future<$0.UnpairThisDeviceResponse> unpairThisDevice(
+      $pb.ServerContext ctx, $0.UnpairThisDeviceRequest request);
   $async.Future<$0.LogResponse> log(
       $pb.ServerContext ctx, $0.LogRequest request);
   $async.Future<$0.ListJiraSitesResponse> listJiraSites(
@@ -382,6 +384,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.SetDeviceViewRequest();
       case 'SendTestPush':
         return $0.SendTestPushRequest();
+      case 'UnpairThisDevice':
+        return $0.UnpairThisDeviceRequest();
       case 'Log':
         return $0.LogRequest();
       case 'ListJiraSites':
@@ -606,6 +610,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return setDeviceView(ctx, request as $0.SetDeviceViewRequest);
       case 'SendTestPush':
         return sendTestPush(ctx, request as $0.SendTestPushRequest);
+      case 'UnpairThisDevice':
+        return unpairThisDevice(ctx, request as $0.UnpairThisDeviceRequest);
       case 'Log':
         return log(ctx, request as $0.LogRequest);
       case 'ListJiraSites':

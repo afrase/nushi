@@ -43,7 +43,7 @@ func (s *server) RevokeDevice(_ context.Context, req *connect.Request[nushiv1.Re
 }
 
 func remoteProto(r model.Remote) *nushiv1.Remote {
-	out := &nushiv1.Remote{On: r.On, Relay: r.Relay, State: r.State, Error: r.Error, Rendezvous: r.Rendezvous}
+	out := &nushiv1.Remote{On: r.On, Relay: r.Relay, State: r.State, Error: r.Error, Rendezvous: r.Rendezvous, Key: r.Key}
 	for _, d := range r.Devices {
 		out.Devices = append(out.Devices, &nushiv1.Device{Id: d.ID, Name: d.Name, Paired: d.Paired.UnixMilli(),
 			LastSeen: unixMs(d.LastSeen), Connected: d.Connected, Kind: d.Kind, Push: d.Push != nil})

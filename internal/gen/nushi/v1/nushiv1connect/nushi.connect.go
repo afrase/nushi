@@ -221,6 +221,9 @@ const (
 	// NushiServiceSendTestPushProcedure is the fully-qualified name of the NushiService's SendTestPush
 	// RPC.
 	NushiServiceSendTestPushProcedure = "/nushi.v1.NushiService/SendTestPush"
+	// NushiServiceUnpairThisDeviceProcedure is the fully-qualified name of the NushiService's
+	// UnpairThisDevice RPC.
+	NushiServiceUnpairThisDeviceProcedure = "/nushi.v1.NushiService/UnpairThisDevice"
 	// NushiServiceLogProcedure is the fully-qualified name of the NushiService's Log RPC.
 	NushiServiceLogProcedure = "/nushi.v1.NushiService/Log"
 	// NushiServiceListJiraSitesProcedure is the fully-qualified name of the NushiService's
@@ -565,6 +568,9 @@ type NushiServiceClient interface {
 	SetDeviceView(context.Context, *connect.Request[v1.SetDeviceViewRequest]) (*connect.Response[v1.SetDeviceViewResponse], error)
 	// Sends a test notification to a device (the Mac's).
 	SendTestPush(context.Context, *connect.Request[v1.SendTestPushRequest]) (*connect.Response[v1.SendTestPushResponse], error)
+	// Unpairs the device that calls (its Forget this Mac), as Revoke would;
+	// only on a device's channel.
+	UnpairThisDevice(context.Context, *connect.Request[v1.UnpairThisDeviceRequest]) (*connect.Response[v1.UnpairThisDeviceResponse], error)
 	// Writes a line of the app's into the daemon's log (source=app): its
 	// errors with their stacks, and what helps afterwards.
 	Log(context.Context, *connect.Request[v1.LogRequest]) (*connect.Response[v1.LogResponse], error)
@@ -1085,6 +1091,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("SendTestPush")),
 			connect.WithClientOptions(opts...),
 		),
+		unpairThisDevice: connect.NewClient[v1.UnpairThisDeviceRequest, v1.UnpairThisDeviceResponse](
+			httpClient,
+			baseURL+NushiServiceUnpairThisDeviceProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("UnpairThisDevice")),
+			connect.WithClientOptions(opts...),
+		),
 		log: connect.NewClient[v1.LogRequest, v1.LogResponse](
 			httpClient,
 			baseURL+NushiServiceLogProcedure,
@@ -1372,6 +1384,7 @@ type nushiServiceClient struct {
 	setPushSubscription *connect.Client[v1.SetPushSubscriptionRequest, v1.SetPushSubscriptionResponse]
 	setDeviceView       *connect.Client[v1.SetDeviceViewRequest, v1.SetDeviceViewResponse]
 	sendTestPush        *connect.Client[v1.SendTestPushRequest, v1.SendTestPushResponse]
+	unpairThisDevice    *connect.Client[v1.UnpairThisDeviceRequest, v1.UnpairThisDeviceResponse]
 	log                 *connect.Client[v1.LogRequest, v1.LogResponse]
 	listJiraSites       *connect.Client[v1.ListJiraSitesRequest, v1.ListJiraSitesResponse]
 	addJiraSite         *connect.Client[v1.AddJiraSiteRequest, v1.AddJiraSiteResponse]
@@ -1767,6 +1780,11 @@ func (c *nushiServiceClient) SetDeviceView(ctx context.Context, req *connect.Req
 // SendTestPush calls nushi.v1.NushiService.SendTestPush.
 func (c *nushiServiceClient) SendTestPush(ctx context.Context, req *connect.Request[v1.SendTestPushRequest]) (*connect.Response[v1.SendTestPushResponse], error) {
 	return c.sendTestPush.CallUnary(ctx, req)
+}
+
+// UnpairThisDevice calls nushi.v1.NushiService.UnpairThisDevice.
+func (c *nushiServiceClient) UnpairThisDevice(ctx context.Context, req *connect.Request[v1.UnpairThisDeviceRequest]) (*connect.Response[v1.UnpairThisDeviceResponse], error) {
+	return c.unpairThisDevice.CallUnary(ctx, req)
 }
 
 // Log calls nushi.v1.NushiService.Log.
@@ -2184,6 +2202,9 @@ type NushiServiceHandler interface {
 	SetDeviceView(context.Context, *connect.Request[v1.SetDeviceViewRequest]) (*connect.Response[v1.SetDeviceViewResponse], error)
 	// Sends a test notification to a device (the Mac's).
 	SendTestPush(context.Context, *connect.Request[v1.SendTestPushRequest]) (*connect.Response[v1.SendTestPushResponse], error)
+	// Unpairs the device that calls (its Forget this Mac), as Revoke would;
+	// only on a device's channel.
+	UnpairThisDevice(context.Context, *connect.Request[v1.UnpairThisDeviceRequest]) (*connect.Response[v1.UnpairThisDeviceResponse], error)
 	// Writes a line of the app's into the daemon's log (source=app): its
 	// errors with their stacks, and what helps afterwards.
 	Log(context.Context, *connect.Request[v1.LogRequest]) (*connect.Response[v1.LogResponse], error)
@@ -2700,6 +2721,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("SendTestPush")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceUnpairThisDeviceHandler := connect.NewUnaryHandler(
+		NushiServiceUnpairThisDeviceProcedure,
+		svc.UnpairThisDevice,
+		connect.WithSchema(nushiServiceMethods.ByName("UnpairThisDevice")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceLogHandler := connect.NewUnaryHandler(
 		NushiServiceLogProcedure,
 		svc.Log,
@@ -3056,6 +3083,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceSetDeviceViewHandler.ServeHTTP(w, r)
 		case NushiServiceSendTestPushProcedure:
 			nushiServiceSendTestPushHandler.ServeHTTP(w, r)
+		case NushiServiceUnpairThisDeviceProcedure:
+			nushiServiceUnpairThisDeviceHandler.ServeHTTP(w, r)
 		case NushiServiceLogProcedure:
 			nushiServiceLogHandler.ServeHTTP(w, r)
 		case NushiServiceListJiraSitesProcedure:
@@ -3421,6 +3450,10 @@ func (UnimplementedNushiServiceHandler) SetDeviceView(context.Context, *connect.
 
 func (UnimplementedNushiServiceHandler) SendTestPush(context.Context, *connect.Request[v1.SendTestPushRequest]) (*connect.Response[v1.SendTestPushResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.SendTestPush is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) UnpairThisDevice(context.Context, *connect.Request[v1.UnpairThisDeviceRequest]) (*connect.Response[v1.UnpairThisDeviceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.UnpairThisDevice is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) Log(context.Context, *connect.Request[v1.LogRequest]) (*connect.Response[v1.LogResponse], error) {

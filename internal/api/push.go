@@ -65,3 +65,14 @@ func (s *server) SendTestPush(ctx context.Context, req *connect.Request[nushiv1.
 	}
 	return connect.NewResponse(&nushiv1.SendTestPushResponse{}), nil
 }
+
+func (s *server) UnpairThisDevice(ctx context.Context, _ *connect.Request[nushiv1.UnpairThisDeviceRequest]) (*connect.Response[nushiv1.UnpairThisDeviceResponse], error) {
+	device, err := deviceOf(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.remote.Revoke(device); err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, err)
+	}
+	return connect.NewResponse(&nushiv1.UnpairThisDeviceResponse{}), nil
+}

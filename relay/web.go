@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/fs"
 	"mime"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -16,13 +17,24 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // maxWeb caps what the relay holds in memory of the app.
 const maxWeb = 64 << 20
 
+// A file's answer may take writeWait, and a second more per writeRate
+// bytes of it.
+var (
+	writeWait = 15 * time.Second
+	writeRate = 64 << 10
+)
+
 // Origin checks an origin given as a flag and gives it as a browser sends
-// it: lowercase, without a default port or anything after the host.
+// it: lowercase, without a default port or anything after the host. A
+// host is ASCII (an international name as punycode) with no trailing dot;
+// http only for this machine (over plain http anyone on the way could
+// change the app, and so take its key).
 func Origin(s string) (string, error) {
 	u, err := url.Parse(s)
 	if err != nil || u.Scheme != "https" && u.Scheme != "http" || u.Host == "" || u.User != nil ||
@@ -30,8 +42,22 @@ func Origin(s string) (string, error) {
 		return "", fmt.Errorf("the origin must be scheme://host[:port], not %q", s)
 	}
 	host := strings.ToLower(u.Hostname())
+	for _, r := range host {
+		if r > 0x7f {
+			return "", fmt.Errorf("the origin's host must be ASCII (punycode), not %q", host)
+		}
+	}
+	if strings.HasSuffix(host, ".") {
+		return "", fmt.Errorf("the origin's host has a trailing dot: %q", host)
+	}
+	if ip := net.ParseIP(host); u.Scheme == "http" && host != "localhost" && (ip == nil || !ip.IsLoopback()) {
+		return "", errors.New("the origin must be https, except on this machine (localhost)")
+	}
 	if p := u.Port(); p != "" && p != map[string]string{"https": "443", "http": "80"}[u.Scheme] {
-		host += ":" + p
+		return u.Scheme + "://" + net.JoinHostPort(host, p), nil
+	}
+	if strings.Contains(host, ":") {
+		host = "[" + host + "]"
 	}
 	return u.Scheme + "://" + host, nil
 }
@@ -77,8 +103,17 @@ func LoadSite(dir, origin string) (*Site, error) {
 	s := &Site{files: map[string]*file{}, origin: origin, csp: csp(origin)}
 	total := 0
 	err = fs.WalkDir(root.FS(), ".", func(name string, d fs.DirEntry, err error) error {
-		if err != nil || !d.Type().IsRegular() { // links and special files are left out
+		if err != nil {
 			return err
+		}
+		if strings.HasPrefix(d.Name(), ".") && name != "." { // .DS_Store and the like
+			if d.IsDir() {
+				return fs.SkipDir
+			}
+			return nil
+		}
+		if !d.Type().IsRegular() { // links and special files are left out
+			return nil
 		}
 		body, err := fs.ReadFile(root.FS(), name)
 		if err != nil {
@@ -129,9 +164,10 @@ func csp(origin string) string {
 	if host, ok := strings.CutPrefix(origin, "http://"); ok {
 		ws = "ws://" + host
 	}
-	return "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; " +
-		"img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' " + ws + "; " +
-		"worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'"
+	return "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; " +
+		"img-src 'self' blob:; font-src 'self'; connect-src 'self' " + ws + "; " +
+		"worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; " +
+		"require-trusted-types-for 'script'; trusted-types flutter-js flutter-engine nushi"
 }
 
 func (s *Site) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -142,6 +178,10 @@ func (s *Site) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.Set("X-Frame-Options", "DENY")
 	h.Set("Cross-Origin-Opener-Policy", "same-origin")
 	h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()")
+	h.Set("Cross-Origin-Resource-Policy", "same-origin")
+	if strings.HasPrefix(s.origin, "https://") {
+		h.Set("Strict-Transport-Security", "max-age=31536000")
+	}
 	name := strings.TrimPrefix(r.URL.Path, "/")
 	if name == "" {
 		name = "index.html"
@@ -154,9 +194,6 @@ func (s *Site) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.Set("Content-Type", f.ctype)
 	h.Set("Cache-Control", f.cache)
 	h.Set("Vary", "Accept-Encoding")
-	if name == "sw.js" {
-		h.Set("Service-Worker-Allowed", "/")
-	}
 	body, etag := f.body, f.etag
 	if f.gz != nil && acceptsGzip(r) {
 		h.Set("Content-Encoding", "gzip")
@@ -167,6 +204,9 @@ func (s *Site) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotModified)
 		return
 	}
+	// A client reading slowly can't hold the connection (and a place among
+	// the plain connections) for long.
+	_ = http.NewResponseController(w).SetWriteDeadline(time.Now().Add(writeWait + time.Duration(len(body)/writeRate)*time.Second))
 	h.Set("Content-Length", strconv.Itoa(len(body)))
 	if r.Method == http.MethodHead {
 		return

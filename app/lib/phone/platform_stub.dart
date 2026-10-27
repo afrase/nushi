@@ -18,6 +18,9 @@ final class PhonePlatform {
   /// A pairing link the page was opened with.
   String? openedWith;
 
+  /// A pairing link that came while the app ran.
+  void Function(String link)? onPairLink;
+
   /// The chat a notification asked to open.
   void Function(String chat)? onOpenChat;
 
@@ -25,10 +28,26 @@ final class PhonePlatform {
   Future<void> save(Map<String, Object?> record) async => saved = record;
   Future<void> clear() async => saved = null;
   Future<void> registerWorker() async {}
+
+  /// The page's origin's host.
+  String host = 'nushi.taile2d635.ts.net';
+
+  /// What [reset] and [closeNotifications] were asked.
+  bool wasReset = false;
+  final closed = <String>[];
+
+  /// The VAPID key the subscription was made with.
+  Uint8List? subscribedKey;
+
+  Future<void> reset() async => wasReset = true;
+  Future<void> closeNotifications(String chat) async => closed.add(chat);
+  Future<Uint8List?> subscribedWith() async =>
+      push == PushState.on ? subscribedKey : null;
   Future<PushState> pushState() async => push;
 
   Future<PushSub?> subscribe(Uint8List key) async {
     push = PushState.on;
+    subscribedKey = key;
     return sub;
   }
 
