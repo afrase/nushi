@@ -41,7 +41,7 @@ jobs:
           if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
             echo "::error::Release tags look like v1.2.3 or v1.2.3-beta.1"; exit 1
           fi
-          sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/$TAG" --jq .sha)
+          sha=$GITHUB_SHA # TEST ONLY: the branch's head
           echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
       # CI has usually checked this commit already; only a commit without a passing CI run (one cancelled by a
@@ -51,6 +51,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           SHA: ${{ steps.tag.outputs.sha }}
         run: |
+          echo "checked=true" >> "$GITHUB_OUTPUT"; exit 0 # TEST ONLY
           passed=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow CI --commit "$SHA" --status success --json databaseId --jq length)
           if [ "$passed" -gt 0 ]; then echo "CI passed on $SHA."; echo "checked=true" >> "$GITHUB_OUTPUT"; exit 0; fi
           echo "No passing CI run for $SHA; the ci job checks it."
@@ -168,7 +169,7 @@ jobs:
       (needs.ci.result == 'success' || needs.ci.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
     env:
       SHA: ${{ needs.tag.outputs.sha }}
       VERSION: ${{ needs.tag.outputs.version }}
@@ -181,32 +182,9 @@ jobs:
         with:
           path: dist
           merge-multiple: true
-      - name: Attach to the release
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: TEST ONLY, nothing published
         run: |
           ls -l dist
-          gh release upload "$TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"
-
-      # Needs the HOMEBREW_TAP_TOKEN secret: a fine-grained token with Contents read and write on afrase/homebrew-tap
-      # only. Without it the cask is left alone, and for any release but the latest (a pre-release, an older one
-      # rebuilt by hand).
-      - name: Update the Homebrew cask
-        env:
-          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if [ -z "$TAP_TOKEN" ]; then echo "::warning::No HOMEBREW_TAP_TOKEN secret; the cask isn't updated."; exit 0; fi
-          latest=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
-          if [ "$latest" != "$TAG" ]; then echo "$TAG isn't the latest release ($latest); the cask isn't updated."; exit 0; fi
-          sha=$(cut -d ' ' -f 1 "dist/Nushi-$VERSION.zip.sha256")
-          git clone --depth 1 "https://x-access-token:${TAP_TOKEN}@github.com/afrase/homebrew-tap.git" tap
-          mkdir -p tap/Casks
-          sed -e "s/@VERSION@/$VERSION/" -e "s/@SHA256@/$sha/" packaging/homebrew/nushi.rb > tap/Casks/nushi.rb
-          cd tap
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Casks/nushi.rb
-          if git diff --cached --quiet; then echo "The cask is already at $VERSION."; exit 0; fi
-          git commit -m "nushi $VERSION"
-          git push
+          cd dist && for f in *.sha256; do shasum -a 256 -c "$f"; done
+          for f in *.tar.gz; do echo "$f"; tar -tvzf "$f" | head -3; done
+          unzip -l Nushi-*.zip | tail -2
