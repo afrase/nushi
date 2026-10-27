@@ -50,25 +50,37 @@ class SettingsPage extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, box) {
         final pad = EdgeInsets.only(left: gutter, right: right(box.maxWidth));
+        final name = Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.ui(t.text, size: 20, weight: FontWeight.w600),
+        );
+        // Narrow, the actions go under the title rather than cut it.
+        final narrow =
+            box.maxWidth - gutter - right(box.maxWidth) < 520 &&
+            actions.isNotEmpty;
         final heading = Padding(
           padding: const EdgeInsets.only(bottom: 18),
-          child: SizedBox(
-            height: 30,
-            child: Row(
-              spacing: 8,
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.ui(t.text, size: 20, weight: FontWeight.w600),
+          child: narrow
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: 10,
+                  children: [
+                    SizedBox(height: 30, child: name),
+                    Row(spacing: 8, children: actions),
+                  ],
+                )
+              : SizedBox(
+                  height: 30,
+                  child: Row(
+                    spacing: 8,
+                    children: [
+                      Expanded(child: name),
+                      ...actions,
+                    ],
                   ),
                 ),
-                ...actions,
-              ],
-            ),
-          ),
         );
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
