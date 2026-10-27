@@ -31,6 +31,9 @@ class _PhoneAppState extends State<PhoneApp> with WidgetsBindingObserver {
     super.initState();
     // Before MaterialApp's own observer, which would push the route.
     WidgetsBinding.instance.addObserver(this);
+    // The browser's back (iOS's edge swipe) goes back a screen in the app,
+    // and at its root does nothing.
+    widget.phone.platform.onBack = () => _navigator.currentState?.maybePop();
     widget.phone
       ..addListener(_opening)
       ..opening.addListener(_opening);

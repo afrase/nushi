@@ -122,20 +122,29 @@ class Link extends ChangeNotifier {
     _timer?.cancel();
     if (_disposed) return;
     next = DateTime.now().add(d);
-    _timer = Timer(d, () => unawaited(check()));
+    // Not while hidden: iOS freezes a hidden app (a timer may still fire
+    // first, on a network that's gone), and coming back tries at once.
+    _timer = Timer(d, () {
+      if (_visible) unawaited(check());
+    });
   }
 
-  /// The page showed or hid. Back after a while, the channel is dropped at
-  /// once (iOS freezes a hidden app, and its socket rarely survives),
-  /// then dialled again.
+  /// The page showed or hid. Coming back, it reconnects at once and
+  /// quietly: what failed while hidden doesn't count (at most
+  /// "Reconnecting…" shows until a try after coming back fails twice).
+  /// Back after a while, the channel is dropped first (iOS freezes a
+  /// hidden app, and its socket rarely survives), then dialled again.
   void visible({required bool shown}) {
     if (!shown) {
       _visible = false;
       _hidden = DateTime.now();
+      _timer?.cancel();
       return;
     }
     if (_visible) return;
     _visible = true;
+    failures = 0;
+    asked = false;
     final gone = DateTime.now().difference(_hidden ?? DateTime.now());
     if (gone >= away || !daemon.connected) {
       unawaited(_fresh());
@@ -144,15 +153,33 @@ class Link extends ChangeNotifier {
     }
   }
 
+  /// The page came back some other way (restored from the back-forward
+  /// cache, or focused): as coming back to the front, or a quiet try if
+  /// the link is down.
+  void resume() {
+    if (!_visible) return visible(shown: true);
+    if (!daemon.connected && !trying) {
+      failures = 0;
+      unawaited(_fresh());
+    }
+  }
+
   /// The network came back: try at once.
   void online() => unawaited(daemon.connected ? check() : _fresh());
 
   Future<void> _fresh() async {
-    if (_try != null) return;
-    daemon.relink();
-    await reset();
-    await check();
+    if (_try != null || _freshening) return;
+    _freshening = true;
+    try {
+      daemon.relink();
+      await reset();
+      await check();
+    } finally {
+      _freshening = false;
+    }
   }
+
+  bool _freshening = false;
 
   void _notify() {
     if (!_disposed) notifyListeners();

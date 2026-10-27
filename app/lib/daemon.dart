@@ -35,7 +35,7 @@ final String dataDir =
         : '$support/Nushi');
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 70;
+const apiVersion = 71;
 
 /// The app's link to nushid. [connected] follows a ping every few seconds;
 /// while connected, daemon events keep [chats] current. When no daemon
@@ -486,7 +486,11 @@ class Daemon extends ChangeNotifier {
       // up: a long chat opens fast on a slow link.
       chat.load(
         await client.getChat(
-          GetChatRequest(chatId: chat.id, recent: remote ? recentItems : 0),
+          // From API 71, whose events say where each item is.
+          GetChatRequest(
+            chatId: chat.id,
+            recent: remote && daemonApi >= 71 ? recentItems : 0,
+          ),
         ),
       );
     } on Object catch (e) {
@@ -521,15 +525,24 @@ class Daemon extends ChangeNotifier {
     chat
       ..loadingOlder = true
       ..notifyListeners();
+    final before = chat.items.first.id;
+    final snapshot = chat.snapshots;
     try {
       final page = await client.getChatItems(
         GetChatItemsRequest(
           chatId: chat.id,
-          before: chat.items.first.id,
+          before: before,
           limit: recentItems,
         ),
       );
-      chat.prepend(page.items, page.older);
+      // Only onto what it was asked for: a reload meanwhile (a reconnect,
+      // a rewind) took another snapshot.
+      if (chat.loaded &&
+          chat.snapshots == snapshot &&
+          chat.items.isNotEmpty &&
+          chat.items.first.id == before) {
+        chat.prepend(page.items, page.older);
+      }
     } on Object {
       // Asked again on the next scroll up.
     } finally {
@@ -539,11 +552,14 @@ class Daemon extends ChangeNotifier {
     }
   }
 
+  Timer? _loadRetry;
+
   /// Tries a failed load again while the chat shows and the daemon
   /// answers: 2 s, then twice as long each time, up to 30 s.
   void _retryLoad(ChatState chat, [int tries = 0]) {
     final wait = Duration(seconds: [2, 4, 8, 16, 30][min(tries, 4)]);
-    Timer(wait, () {
+    _loadRetry?.cancel();
+    _loadRetry = Timer(wait, () {
       if (chat.loaded || chat.id != selectedId || !chats.containsKey(chat.id)) {
         return;
       }
@@ -735,6 +751,7 @@ class Daemon extends ChangeNotifier {
   @override
   void dispose() {
     _timer?.cancel();
+    _loadRetry?.cancel();
     unawaited(_events?.cancel());
     if (!remote) unawaited(_transport.close());
     super.dispose();

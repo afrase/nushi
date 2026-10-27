@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import 'package:nushi/agents.dart';
@@ -116,6 +118,10 @@ class ChatState extends ChangeNotifier {
   /// Asks for a fresh snapshot: an event reached past what's loaded (a
   /// rewind before the recent part). The daemon sets it.
   VoidCallback? stale;
+
+  /// How many snapshots it has taken: an older page asked for before the
+  /// last one doesn't fit it.
+  int snapshots = 0;
   int _seq = 0; // the last event applied
   final _early = <EventsResponse>[];
 
@@ -134,9 +140,10 @@ class ChatState extends ChangeNotifier {
     _seq = s.seq.toInt();
     loaded = true;
     loading = false;
-    _early
-      ..forEach(_apply)
-      ..clear();
+    snapshots++;
+    final early = [..._early];
+    _early.clear();
+    early.forEach(_apply);
     notifyListeners();
   }
 
@@ -180,6 +187,9 @@ class ChatState extends ChangeNotifier {
     }
   }
 
+  /// Asks for a fresh snapshot once the events at hand are applied.
+  void _stale() => scheduleMicrotask(() => stale?.call());
+
   void status(ChatStatus? s) {
     if (s == null) return;
     busy = s.busy;
@@ -214,10 +224,13 @@ class ChatState extends ChangeNotifier {
         queue = e.queue.messages;
       case EventsResponse_Kind.cut:
         final i = items.indexWhere((it) => it.id == e.cut);
-        if (i >= 0) {
+        if (i > 0 || i == 0 && older == 0) {
           items.removeRange(i, items.length);
         } else if (older > 0) {
-          stale?.call(); // cut before the recent part
+          // Cut before the recent part, or at its start: what shows is
+          // what came before, which a fresh snapshot brings.
+          if (i == 0) items.clear();
+          _stale();
         }
       case EventsResponse_Kind.dropped:
         items.removeWhere((it) => it.id == e.dropped);
@@ -235,8 +248,8 @@ class ChatState extends ChangeNotifier {
 
   void _applyItem(ItemEvent e) {
     final i = items.indexWhere((it) => it.id == e.item.id);
-    if (i < 0 && e.append && older > 0) {
-      return; // more of an item before the recent part: its page has it
+    if (i < 0 && older > 0 && (e.append || e.index < older)) {
+      return; // an item before the recent part: its page will have it
     } else if (i < 0) {
       items.add(e.item);
     } else if (e.append) {

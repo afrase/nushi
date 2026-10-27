@@ -83,7 +83,8 @@ class Phone extends ChangeNotifier {
         if (visible) unawaited(platform.checkForUpdate());
         unawaited(view(visible ? daemon?.selectedId : null));
       })
-      ..onOnline(() => link?.online());
+      ..onOnline(() => link?.online())
+      ..onResume(() => link?.resume());
     try {
       final r = await platform.load();
       if (r != null) {
@@ -120,7 +121,9 @@ class Phone extends ChangeNotifier {
   /// since kept another key: this one's then stale, and writing it would
   /// bring back a key that was forgotten or replaced.
   Future<void> _save() async {
+    if (_forgetting) return;
     final kept = (await platform.load())?['key'];
+    if (_forgetting) return;
     final mine = _key?.private;
     if (kept is Uint8List && (mine == null || !_same(kept, mine))) return;
     await platform.save({
@@ -340,6 +343,11 @@ class Phone extends ChangeNotifier {
   /// Forgets the Mac: notifications off, the pairing and the key gone. The
   /// Mac still lists this device until it's revoked there.
   Future<void> forget() async {
+    // Nothing may write the pairing back meanwhile (a ping answering would
+    // keep the last-seen time, and with it the key).
+    _forgetting = true;
+    link?.dispose();
+    link = null;
     if (push == PushState.on) await setPush(on: false);
     // The Mac forgets this device too, if it can be reached (else it still
     // lists it until it's revoked there).
@@ -357,6 +365,9 @@ class Phone extends ChangeNotifier {
     paired = _key = _pushKey = null;
     remoteState.value = null;
     push = await platform.pushState();
+    _forgetting = false;
     notifyListeners();
   }
+
+  bool _forgetting = false;
 }

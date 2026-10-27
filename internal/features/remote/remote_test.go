@@ -430,6 +430,8 @@ func TestOffClosesEverything(t *testing.T) {
 // When the relay ends the daemon's wait (its limit, a restart), the
 // daemon waits again, and a phone still gets through.
 func TestWaitsAgain(t *testing.T) {
+	defer func(b time.Duration) { MaxBackoff = b }(MaxBackoff)
+	MaxBackoff = 300 * time.Millisecond // waits this short back off, as flapping ones
 	lim := relay.Defaults
 	lim.MaxWait = 200 * time.Millisecond
 	lim.DialWait = 3 * time.Second

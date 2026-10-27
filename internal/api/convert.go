@@ -53,7 +53,7 @@ func toProto(e model.Event) *nushiv1.EventsResponse {
 	out := &nushiv1.EventsResponse{ChatId: e.ChatID, Seq: e.Seq}
 	switch {
 	case e.Item != nil:
-		out.Kind = &nushiv1.EventsResponse_Item{Item: &nushiv1.ItemEvent{Item: itemProto(e.Item), Append: e.Append}}
+		out.Kind = &nushiv1.EventsResponse_Item{Item: &nushiv1.ItemEvent{Item: itemProto(e.Item), Append: e.Append, Index: int32(e.Index)}}
 	case e.Session != nil:
 		out.Kind = &nushiv1.EventsResponse_Chat{Chat: chatProto(*e.Session)}
 	case e.Config != nil:

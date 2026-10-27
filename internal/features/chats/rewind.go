@@ -146,9 +146,15 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 	return msg, nil
 }
 
-// indexLocked returns the index of the item with id, or -1.
+// indexLocked returns the index of the item with id, or -1, looking from
+// the latest (an event's item is almost always one of them).
 func (c *chat) indexLocked(id string) int {
-	return slices.IndexFunc(c.items, func(it model.Item) bool { return it.ID == id })
+	for i, it := range slices.Backward(c.items) {
+		if it.ID == id {
+			return i
+		}
+	}
+	return -1
 }
 
 // Stop stops the chat's running turn. With takeBack, if the agent hasn't

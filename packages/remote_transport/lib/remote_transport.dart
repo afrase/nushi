@@ -182,6 +182,8 @@ final class RelayTransport implements Http2ClientTransport {
 
   http2.ClientTransportConnection? _live;
   Future<http2.ClientTransportConnection>? _dialing;
+  int _generation = 0; // a reset starts another: a dial from before is dropped
+  bool _closed = false;
 
   @override
   Future<http2.ClientTransportStream> makeRequest(
@@ -189,9 +191,8 @@ final class RelayTransport implements Http2ClientTransport {
     List<http2.Header> headers,
   ) async {
     for (var attempt = 0; ; attempt++) {
-      final conn =
-          _live ??
-          await (_dialing ??= _dial().whenComplete(() => _dialing = null));
+      if (_closed) throw _unavailable('closed', null);
+      final conn = _live ?? await (_dialing ??= _dialOnce());
       if (conn.isOpen) return conn.makeRequest(headers);
       _drop(conn);
       if (attempt == 1) throw _unavailable('connection closing', null);
@@ -202,18 +203,32 @@ final class RelayTransport implements Http2ClientTransport {
   /// was asleep holds sockets the network dropped).
   bool get live => _live?.isOpen ?? false;
 
-  /// Closes the channel; calls still open on it fail.
+  /// Closes the channel for good: calls still open on it fail, and no
+  /// call dials again.
   Future<void> close() async {
+    _closed = true;
+    await reset();
+  }
+
+  /// Drops the channel (one that stopped answering) and any dial under
+  /// way: calls on it fail, and the next call dials anew.
+  Future<void> reset() async {
+    _generation++;
+    _dialing = null;
     final conn = _live;
     _live = null;
     await conn?.terminate();
   }
 
-  /// Drops the channel (one that stopped answering): calls on it fail, and
-  /// the next call dials again.
-  Future<void> reset() => close();
+  Future<http2.ClientTransportConnection> _dialOnce() {
+    final generation = _generation;
+    Future<http2.ClientTransportConnection>? dialing;
+    return dialing = _dial(generation).whenComplete(() {
+      if (identical(_dialing, dialing)) _dialing = null;
+    });
+  }
 
-  Future<http2.ClientTransportConnection> _dial() async {
+  Future<http2.ClientTransportConnection> _dial(int generation) async {
     final RelaySocket ws;
     try {
       ws = await RelaySocket.connect(_at(daemon.relay, 'dial', daemon.id));
@@ -233,6 +248,10 @@ final class RelayTransport implements Http2ClientTransport {
       throw ws.closeCode == 4404
           ? _unavailable('no Mac at the relay', e, Unreachable.mac)
           : _unavailable("the Mac didn't answer", e, Unreachable.answer);
+    }
+    if (generation != _generation || _closed) {
+      await ch.close(); // reset or closed while it dialled
+      throw _unavailable('the link was dropped', null);
     }
     return _use(ch);
   }

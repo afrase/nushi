@@ -9451,7 +9451,11 @@ type ItemEvent struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Item  *Item                  `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty"`
 	// The item's text continues with item.text rather than being replaced.
-	Append        bool `protobuf:"varint,2,opt,name=append,proto3" json:"append,omitempty"`
+	Append bool `protobuf:"varint,2,opt,name=append,proto3" json:"append,omitempty"`
+	// Where the item is in the chat, from 0 (not with append): a client that
+	// has only the recent part (GetChatRequest.recent) leaves out what is
+	// before it.
+	Index         int32 `protobuf:"varint,3,opt,name=index,proto3" json:"index,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -9498,6 +9502,13 @@ func (x *ItemEvent) GetAppend() bool {
 		return x.Append
 	}
 	return false
+}
+
+func (x *ItemEvent) GetIndex() int32 {
+	if x != nil {
+		return x.Index
+	}
+	return 0
 }
 
 type ChatStatus struct {
@@ -18853,10 +18864,11 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\aoptions\x18\x05 \x03(\v2\x10.nushi.v1.OptionR\aoptions\x12\x1a\n" +
 	"\brequired\x18\x06 \x01(\bR\brequired\x12\x16\n" +
 	"\x06values\x18\a \x03(\tR\x06values\x12\x1b\n" +
-	"\tother_for\x18\b \x01(\tR\botherFor\"G\n" +
+	"\tother_for\x18\b \x01(\tR\botherFor\"]\n" +
 	"\tItemEvent\x12\"\n" +
 	"\x04item\x18\x01 \x01(\v2\x0e.nushi.v1.ItemR\x04item\x12\x16\n" +
-	"\x06append\x18\x02 \x01(\bR\x06append\"\xf9\x02\n" +
+	"\x06append\x18\x02 \x01(\bR\x06append\x12\x14\n" +
+	"\x05index\x18\x03 \x01(\x05R\x05index\"\xf9\x02\n" +
 	"\n" +
 	"ChatStatus\x12\x12\n" +
 	"\x04busy\x18\x01 \x01(\bR\x04busy\x12\x18\n" +

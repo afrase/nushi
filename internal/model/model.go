@@ -290,6 +290,8 @@ type Event struct {
 	Item    *Item
 	// Append means Item.Text continues the item's text rather than replacing it.
 	Append bool
+	// Index is the item's place in the chat (not with Append).
+	Index  int
 	Status *Status
 	// Config is the chat's whole set of config options.
 	Config []ConfigOption
