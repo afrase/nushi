@@ -2,6 +2,15 @@
 
 Each milestone's demo script (what to run, what to see), newest first. An archive.
 
+## Demo (Settings as a page, and chat history, steps 311–314)
+
+1. ⌘,: Settings takes the chat's place, the sidebar still there; the nav lists ten sections; General, Terminal and Logs & advanced are groups of rows with their controls at the right edge. Esc goes back to the chat; ⌘, again opens the same section.
+2. ⌘G, then the bar's Settings: Settings › GitHub; Close goes back to GitHub. The sidebar's footer › MCP servers: Settings › MCP servers for the open chat's folder; the footer row again leaves.
+3. Settings › Chat history: the switch, the size and count with Clear all…, the age menu; under them All / Archived / Read-only (with counts), a search, and the table, largest first. Click Last used: newest first; again: oldest.
+4. Type a folder's name in the search: only its chats. Click a row, ⇧-click another: a range, and "n selected · size" under the table; ⌘-click one more. Clear n copies… asks once.
+5. Point at a row: its Clear; click it: gone, nothing asked. Click a title: the chat opens, Settings closes.
+6. Settings › Terminal: the preview shows a prompt in the picked font, no icons.
+
 ## Demo (skills for every agent, and the shared .agents/skills, steps 303–308)
 
 1. In a repository, make `.agents/skills/release/SKILL.md` (front matter `name: release`, `description: …`). Footer › Skills: "Claude ▾" beside the title; Shared lists `release` with "Codex, oh-my-pi, Ante, PiG" (as installed) and "Not read by Claude"; the line under Shared says Claude doesn't read `.agents/skills` yet.
