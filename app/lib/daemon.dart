@@ -628,10 +628,10 @@ class Daemon extends ChangeNotifier {
   final cantStart = <String, String>{};
 
   /// Starts a chat with [agent] in [folder], or in a scratch folder of its
-  /// own (''); in a new worktree of its repository if that's the choice
-  /// remembered for it. A chat on a Jira [issue] remembers it and takes
-  /// its worktree choice; its box stays empty (the agent's tools say which
-  /// issue it is).
+  /// own (''); never in a worktree unless asked, as nothing is remembered
+  /// (the "New worktree" chip moves it). A chat on a Jira [issue] remembers
+  /// it and takes its worktree choice; its box stays empty (the agent's
+  /// tools say which issue it is).
   Future<void> startChat(
     String folder,
     String agent, {
@@ -648,7 +648,7 @@ class Daemon extends ChangeNotifier {
           StartChatRequest(
             agent: agent,
             folder: folder,
-            worktree: issue?.worktree ?? wantsWorktree(folder),
+            worktree: issue?.worktree ?? false,
             jiraSite: issue?.github == null ? issue?.site : null,
             jiraKey: issue?.github == null ? issue?.key : null,
             github: issue?.github,
@@ -711,20 +711,16 @@ class Daemon extends ChangeNotifier {
     }
   }
 
-  /// Whether new chats in [folder] get a worktree, as last chosen there.
-  bool wantsWorktree(String folder) => worktreeRepos.value.contains(folder);
-
-  /// Moves a chat to [folder], or to a new worktree of its repository, and
-  /// says whether it did (not when the user cancelled). A chat without
-  /// messages follows the choice remembered for [folder].
-  Future<bool> moveChat(ChatState chat, String folder, {bool? worktree}) async {
+  /// Moves a chat to [folder], or to a new worktree of its repository
+  /// ([worktree]), and says whether it did (not when the user cancelled).
+  Future<bool> moveChat(
+    ChatState chat,
+    String folder, {
+    bool worktree = false,
+  }) async {
     if (!await _mayRun(folder, 'Move the chat', chat.agent)) return false;
     await client.moveChat(
-      MoveChatRequest(
-        chatId: chat.id,
-        folder: folder,
-        worktree: worktree ?? (chat.fresh && wantsWorktree(folder)),
-      ),
+      MoveChatRequest(chatId: chat.id, folder: folder, worktree: worktree),
     );
     return true;
   }

@@ -4,7 +4,7 @@
 Several agents working in one repository step on each other's files. Git worktrees give each chat its own checkout and branch.
 
 ## Decision
-- A worktree is an option when a chat starts in (or moves into) a git repository, off by default and remembered per repository by the app; never forced.
+- A worktree is an option when a chat starts in (or moves into) a git repository, off by default and chosen per chat (remembered per repository until the third amendment); never forced.
 - Nushi makes it at `<repo>/.worktrees/<name>`, on a new branch `nushi/<name>` from the folder's current `HEAD`, and records the branch it started from (the base). `<name>` is two random words, unique in the repository. `.worktrees/` goes into the repository's `.git/info/exclude`, never into a tracked `.gitignore`.
 - The chat runs in the worktree and is listed under its repository.
 - A chat started from a Jira issue (ADR 0042) gets a worktree when the issue is picked (the user can turn it off), on a branch named after the issue: `<KEY>-<summary-slug>`, the key uppercase so Jira links the branch, which the user can change to any name git takes; the worktree's folder is the branch with `-` for `/`, and a number goes after both when the name is taken.
@@ -31,3 +31,8 @@ Several agents working in one repository step on each other's files. Git worktre
 - The note is in the agent's own history, as the first part of that prompt (Claude's transcript and Codex's rollout: the message's first text block; Ante's and PiG's sessions: its first paragraph, as their bridges join blocks with a blank line), so resuming in a terminal shows it there. Nushi takes it out of the user's message when the agent replays it.
 - The rename's line gets "· told the agent" once the note went with a prompt, rather than the prompt's bubble showing the note: quieter, and the line is where the rename was shown. Rename branch… draws the line too.
 - Alternatives: merged into the user's words (they'd change, and the copy and the replay would differ); a prompt of its own at the rename (a turn nobody asked for, in the user's quota); `_meta` (agents ignore it).
+
+## Amendment (step 337): the choice is per chat, not remembered
+- The owner's call, 2026-10-27, after a new chat opened in a worktree unasked: "I don't want it to auto create worktrees because I don't always want to work in one." Every plain new chat starts in the folder itself; the "New worktree" chip (and the Environment card's switch) moves that chat only, and the next new chat starts without one again. The app no longer keeps the repositories it was turned on in; an older `app.json`'s `worktrees` key is ignored and dropped by the next save.
+- A worktree comes only from a choice in sight: the chip or switch on the chat, Move to new worktree… on a chat with messages, or a Jira or GitHub issue's chat, whose New chat sheet shows its worktree switch (on when the issue is picked, as before). Moving a new chat to another folder (its folder button) never makes one. Side chats and rewinds stay in the chat's own folder (a worktree chat's worktree) and never make one; opening an agent's session runs in the folder picked; the API's `worktree` fields default to false.
+- Alternatives: remembering it with a visible "remembered" mark (still a surprise in a repository the user forgot they'd turned it on in); a setting for the default (one more control for what's one tap per chat).
