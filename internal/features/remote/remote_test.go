@@ -446,6 +446,72 @@ func TestWaitsAgain(t *testing.T) {
 	}
 }
 
+// A relay that restarts (the Pi's, to deploy) drops the daemon's wait:
+// the Mac says it's reconnecting, and the daemon waits there again once
+// the relay is back, however long it was gone, so a phone gets through.
+func TestRelayRestart(t *testing.T) {
+	defer func(b time.Duration) { MaxBackoff = b }(MaxBackoff)
+	MaxBackoff = 200 * time.Millisecond
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr := ln.Addr().String()
+	serve := func(ln net.Listener) *tracked {
+		lim := relay.Defaults
+		lim.DialWait = 3 * time.Second
+		tl := &tracked{Listener: ln}
+		go func() { _ = (&http.Server{Handler: relay.New(lim), ReadHeaderTimeout: time.Second}).Serve(tl) }()
+		return tl
+	}
+	srv := serve(ln)
+	url := "ws://" + addr
+	s := startRemote(t, t.TempDir(), url)
+	phone := newKey(t)
+	o, id := pairOne(t, s, phone)
+
+	srv.kill() // as the process going: every connection ends
+	waitFor(t, func() bool { st := s.Get().State; return st == "reconnecting" || st == "error" })
+	waitFor(t, func() bool { return s.Get().State == "error" }) // a try failed
+	time.Sleep(time.Second)                                     // several, backing off
+	if ln, err = net.Listen("tcp", addr); err != nil {
+		t.Fatal(err)
+	}
+	defer serve(ln).kill()
+	waitFor(t, func() bool { return s.Get().State == "connected" })
+	conn, err := phoneConnect(url, id, o.key, phone)
+	if err != nil || !talks(conn) {
+		t.Fatal("no connection after the relay came back", err)
+	}
+}
+
+// tracked is a listener that can end every connection it took, hijacked
+// (WebSockets) or not, as a relay's process going would.
+type tracked struct {
+	net.Listener
+	mu    sync.Mutex
+	conns []net.Conn
+}
+
+func (l *tracked) Accept() (net.Conn, error) {
+	c, err := l.Listener.Accept()
+	if err == nil {
+		l.mu.Lock()
+		l.conns = append(l.conns, c)
+		l.mu.Unlock()
+	}
+	return c, err
+}
+
+func (l *tracked) kill() {
+	_ = l.Close()
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	for _, c := range l.conns {
+		_ = c.Close()
+	}
+}
+
 // The first handshake with the secret uses the pairing up, even with no
 // name after it: someone with the QR code who sits on the path gets one
 // code, not one per try until it matches the real phone's.
