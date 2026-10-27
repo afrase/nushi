@@ -125,6 +125,9 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
+      # Built here in each job that shares this Go cache, so whichever saves it first (a shard whose tests build
+      # nothing, say) leaves them in it.
+      - run: go build ./cmd/nushid ./cmd/nushi-relay ./internal/acptest/fakeagent
       # The SDK cached without what the tests never use (below): 0.9 GB to fetch, not 2.1.
       - id: flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
@@ -165,6 +168,8 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
+      # As the app's tests do.
+      - run: go build ./cmd/nushid ./cmd/nushi-relay ./internal/acptest/fakeagent
       # The lean SDK, as the app's tests have it.
       - id: flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
