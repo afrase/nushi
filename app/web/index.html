@@ -22,6 +22,12 @@
 <body>
   <!-- Flutter draws into #app, which keeps clear of the notch and the home
        indicator (app.css); no script is inline (the relay's CSP). -->
+  <!-- Shown until the app draws (its first load is several MB), or with
+       why it couldn't start. -->
+  <div id="loading" role="status">
+    <div class="spinner"></div>
+    <p id="loading-text">Loading Nushi…</p>
+  </div>
   <div id="app"></div>
   <script src="flutter_bootstrap.js" async></script>
 </body>
