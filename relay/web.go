@@ -54,9 +54,9 @@ type Site struct {
 	csp    string
 }
 
-// hashed names a file whose name carries its content's hash, which may be
-// kept for good.
-var hashed = regexp.MustCompile(`\.[0-9a-f]{16,}\.`)
+// hashed names a file whose name, or folder's, carries its content's hash
+// (main.<hash>.dart.js, canvaskit-<hash>/): it may be kept for good.
+var hashed = regexp.MustCompile(`[.-][0-9a-f]{16,}[./]`)
 
 // fresh names the files a browser must ask for again each time: the page,
 // its loader, the service worker and the manifest.
@@ -115,7 +115,7 @@ func newFile(name string, body []byte) *file {
 			f.gz = b.Bytes()
 		}
 	}
-	if !fresh[name] && hashed.MatchString(path.Base(name)) {
+	if !fresh[name] && hashed.MatchString(name) {
 		f.cache = "public, max-age=31536000, immutable"
 	}
 	return f

@@ -27,6 +27,7 @@ func webDir(t *testing.T) string {
 		"assets/fonts/x.ttf":          "font",
 		"manifest.json":               `{"name": "Nushi"}`,
 		"canvaskit/canvaskit.wasm":    "\x00asm",
+		"ck-0123456789abcdef/ck.wasm": "\x00asm",
 		"icons/Icon-192.png":          "\x89PNG",
 		"assets/AssetManifest.bin.js": "x",
 	} {
@@ -162,11 +163,13 @@ func TestWebHeaders(t *testing.T) {
 		t.Errorf("the CSP lets scripts in: %s", csp)
 	}
 	for name, cache := range map[string]string{
-		"sw.js":                    "no-cache",
-		"flutter_bootstrap.js":     "no-cache",
-		"manifest.json":            "no-cache",
-		"assets/fonts/x.ttf":       "no-cache",
-		"main.0123456789abcdef.js": "public, max-age=31536000, immutable",
+		"sw.js":                       "no-cache",
+		"flutter_bootstrap.js":        "no-cache",
+		"manifest.json":               "no-cache",
+		"assets/fonts/x.ttf":          "no-cache",
+		"main.0123456789abcdef.js":    "public, max-age=31536000, immutable",
+		"ck-0123456789abcdef/ck.wasm": "public, max-age=31536000, immutable",
+		"canvaskit/canvaskit.wasm":    "no-cache",
 	} {
 		resp, _ := get(t, srv.URL+"/"+name, nil)
 		if resp.StatusCode != http.StatusOK || resp.Header.Get("Cache-Control") != cache {

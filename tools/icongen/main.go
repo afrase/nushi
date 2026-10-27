@@ -101,6 +101,18 @@ func main() {
 		}
 	}
 
+	// The web app's (ADR 0054): full-bleed squares, which the phone rounds
+	// itself (the art is well inside a maskable icon's safe circle), and
+	// the favicon from the small icon.
+	sq := filepath.Join(tmp, "square.svg")
+	write(sq, square(details[0]))
+	for name, px := range map[string]int{"Icon-180.png": 180, "Icon-192.png": 192, "Icon-512.png": 512} {
+		png(sq, px, filepath.Join("app", "web", "icons", name))
+	}
+	small := filepath.Join(tmp, "small.svg")
+	write(small, legacy(details[2]))
+	png(small, 32, "app/web/favicon.png")
+
 	// The bare mark, for the README.
 	write("docs/brand/mark.svg", mark("#15181D"))
 	write("docs/brand/mark-dark.svg", mark(ink))
@@ -180,6 +192,29 @@ func legacy(d detail) string {
 	}
 	fmt.Fprintf(&sb, `<path d="%s" fill="%s"/></svg>`+"\n", circle(cx, cy, d.light*s), amber)
 	return sb.String()
+}
+
+// square is the icon without its macOS shape: the gradient to the edges.
+func square(d detail) string {
+	const s = 10.24
+	var sb strings.Builder
+	sb.WriteString(`<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><defs>`)
+	fmt.Fprintf(&sb, `<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="%s"/><stop offset="1" stop-color="%s"/></linearGradient>`, tealTop, tealBot)
+	sb.WriteString(glowGradient(0.55))
+	sb.WriteString(`</defs><rect width="1024" height="1024" fill="url(#bg)"/>`)
+	fmt.Fprintf(&sb, `<path d="%s" fill="%s"/>`, rings(d, s, 0, 0), ink)
+	fmt.Fprintf(&sb, `<circle cx="512" cy="512" r="%.2f" fill="url(#glow)"/>`, d.glow*s)
+	fmt.Fprintf(&sb, `<path d="%s" fill="%s"/></svg>`+"\n", circle(512, 512, d.light*s), amber)
+	return sb.String()
+}
+
+// png renders the SVG src at px square into out, through sips.
+func png(src string, px int, out string) {
+	check(os.MkdirAll(filepath.Dir(out), 0o755))
+	cmd := exec.CommandContext(context.Background(), "sips", "-s", "format", "png", "-z", strconv.Itoa(px), strconv.Itoa(px), src, "--out", out)
+	if b, err := cmd.CombinedOutput(); err != nil {
+		log.Fatalf("sips: %v\n%s", err, b) //nolint:revive // the tool's own fatal
+	}
 }
 
 func mark(color string) string {

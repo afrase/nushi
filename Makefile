@@ -19,7 +19,7 @@ HELPER := $(RELEASE)/Contents/Helpers/Nushi Daemon.app
 # to macOS across builds, so the keychain asks once, not after every install.
 SIGN := $(or $(NUSHI_SIGN),$(shell security find-identity -v -p codesigning 2>/dev/null | grep -m1 -o '"Apple Development: [^"]*"' | tr -d '"'),-)
 
-.PHONY: run daemon stop app package install gen test lint check lines relay icons adapters
+.PHONY: run daemon stop app package install gen test lint check lines relay icons adapters web
 
 # Starts the daemon in the background (unless one is running), then the app.
 run: daemon app
@@ -63,6 +63,12 @@ install: package
 relay:
 	CGO_ENABLED=0 go build -o bin/nushi-relay ./cmd/nushi-relay
 
+# The phone's web app (ADR 0052), served by the relay's -web: app/build/web.
+web:
+	rm -rf app/build/web
+	cd app && flutter build web -t lib/phone_main.dart --release --no-web-resources-cdn --no-wasm-dry-run --no-source-maps
+	go run ./tools/webbuild app/build/web
+
 # The app icon (Icon Composer, and PNGs for macOS before 26) and the mark.
 icons:
 	go run ./tools/icongen
@@ -99,11 +105,12 @@ check: lint test
 test:
 	go test ./...
 	cd packages/uds_transport && dart test
-	cd packages/noise && dart test
+	cd packages/noise && dart test && dart test -p chrome
 	cd packages/remote_transport && dart test
 	cd packages/markdown && flutter test
 	cd packages/svg_path && flutter test
 	cd app && flutter test
+	cd app && flutter test --platform chrome test/web
 
 # Hand-written lines, without tests or generated code (the size limits).
 lines:
