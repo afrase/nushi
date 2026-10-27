@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:nushi/chat.dart';
+import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/status.dart';
@@ -67,16 +68,18 @@ Widget shellStateText(BuildContext context, Item it, TextStyle style) =>
 
 /// A background command beside the chat, left of the details panel: the
 /// command, its state, and its output as far as the daemon has read it.
-/// × closes it.
+/// Stop stops it while it runs; × closes it.
 class ShellPane extends StatelessWidget {
   const new({
     required this.chat,
+    required this.daemon,
     required this.id,
     required this.onClose,
     super.key,
   });
 
   final ChatState chat;
+  final Daemon daemon;
   final String id; // the tool call that started it
   final VoidCallback onClose;
 
@@ -114,6 +117,8 @@ class ShellPane extends StatelessWidget {
                       style: code,
                     ),
                   ),
+                  if (it != null && shellRunning(it))
+                    stopButton(context, daemon, chat, id),
                   IconTap(
                     wide ? Icons.close_fullscreen : Icons.open_in_full,
                     tooltip: wide ? 'Narrower' : 'Wider',

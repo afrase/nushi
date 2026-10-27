@@ -80,6 +80,7 @@ class QueuePills extends StatelessWidget {
 
 /// A queued message in one line: its text, or what it holds.
 String _label(QueuedMessage m) {
+  if (m.relayStop) return 'Stop ${m.relayTo}';
   final (replies, text) = splitReplies(m.text);
   final line = (text.isEmpty ? replies.firstOrNull?.text ?? '' : text)
       .replaceAll(RegExp(r'\s+'), ' ')

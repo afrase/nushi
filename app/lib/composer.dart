@@ -166,6 +166,7 @@ class _ComposerState extends State<Composer> {
   /// Puts a message taken back in the box: one for a subagent stays for it,
   /// or, when Nushi can't tell which one (a replayed message), says so.
   void _restoreMessage(QueuedMessage m) {
+    if (m.relayStop) return; // a stop has nothing to edit
     _restore(m.text, m.files, m.images);
     if (m.toSubagent.isNotEmpty) {
       _draft.relay.value = (m.toSubagent, m.relayTo);

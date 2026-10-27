@@ -198,10 +198,10 @@ class ItemView extends StatelessWidget {
   }
 }
 
-/// Which subagent a message was for (the agent was asked to pass it on),
-/// and how that went: the band's marker, in the chat's transcript and in
-/// the subagent's pane, where it shows among the subagent's steps. A click
-/// opens the subagent's pane.
+/// Which subagent a message was for (the agent was asked to pass it on, or
+/// to stop it or a background command), and how that went: the band's
+/// marker, in the chat's transcript and in the subagent's pane, where it
+/// shows among the subagent's steps. A click opens the subagent's pane.
 class _Relayed extends StatelessWidget {
   const new(this.item, this.chat);
 
@@ -213,17 +213,25 @@ class _Relayed extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final agent = chat.agentName;
+    final stop = item.relayStop;
     final (state, color) = switch (item.relayState) {
+      'sending' when stop => ('waiting for $agent to stop it', t.userBandMuted),
+      'relayed' when stop => ('stopped', t.userBandMuted),
+      'failed' when stop => ('$agent didn’t stop it', t.crashed),
       'sending' => ('waiting for $agent to pass it on', t.userBandMuted),
       'relayed' => ('passed on', t.userBandMuted),
       'failed' => ('$agent didn’t pass it on', t.crashed),
       _ => ('', t.userBandMuted),
     };
+    final shell = chat.items.any(
+      (it) => it.id == item.relayCall && it.hasShell(),
+    );
+    final target = shell ? '\$ ${item.relayTo}' : item.relayTo;
     final label = Text.rich(
       TextSpan(
         children: [
           TextSpan(
-            text: '→ ${item.relayTo}',
+            text: stop ? 'Stop $target' : '→ $target',
             style: theme.ui(t.userBandMuted, size: 12, weight: FontWeight.w600),
           ),
           TextSpan(

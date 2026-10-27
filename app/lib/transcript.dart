@@ -179,7 +179,12 @@ class _TranscriptState extends State<Transcript> {
     bool rewindable = false,
   }) => switch (e) {
     final List<Item> run => ToolGroupView(run, still: still),
-    final SubagentRun s => SubagentLine(s, widget.chat, still: still),
+    final SubagentRun s => SubagentLine(
+      s,
+      widget.chat,
+      still: still,
+      daemon: widget.daemon,
+    ),
     _ => ItemView(
       e as Item,
       widget.chat,
