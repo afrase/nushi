@@ -7,17 +7,15 @@ import 'package:nushi/daemon.dart';
 
 /// What the app remembers across launches, in `app.json` in the data folder:
 /// whether the details panel shows (its toolbar button), which of its cards
-/// are collapsed and their order, the repositories whose new chats get a
-/// worktree, what each chat's Changes view shows, the panes' widths, whether
-/// changed files show flat, which chats show their terminals, the
-/// terminal's font, whether a subagent's pane shows wide, the Jira task
-/// list's groups and assignee filters, and the GitHub view's cards and
-/// filters.
+/// are collapsed and their order, what each chat's Changes view shows, the
+/// panes' widths, whether changed files show flat, which chats show their
+/// terminals, the terminal's font, whether a subagent's pane shows wide,
+/// the Jira task list's groups and assignee filters, and the GitHub view's
+/// cards and filters. Not whether new chats get a worktree: an older
+/// `worktrees` key is ignored, and dropped by the next save.
 final showDetails = ValueNotifier<bool>(_saved['details'] != false)
   ..addListener(_save);
 final collapsedCards = ValueNotifier<Set<String>>(_strings('collapsed'))
-  ..addListener(_save);
-final worktreeRepos = ValueNotifier<Set<String>>(_strings('worktrees'))
   ..addListener(_save);
 
 /// The details panel's cards by title, in the order they were dragged into.
@@ -146,7 +144,6 @@ void _save() {
       jsonEncode({
         'details': showDetails.value,
         'collapsed': collapsedCards.value.toList(),
-        'worktrees': worktreeRepos.value.toList(),
         'scopes': changeScopes.value,
         'cards': cardOrder.value,
         'panes': paneWidths.value,

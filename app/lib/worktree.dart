@@ -6,7 +6,6 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -15,10 +14,10 @@ const IconData worktreeIcon = Icons.account_tree_outlined;
 
 /// The Environment card's worktree rows for a chat in a git repository:
 /// for a worktree chat its branch (with the worktree icon and Rename
-/// branch…, between turns) and base; for a
-/// chat without messages a "New worktree" switch, which moves it into a new
-/// worktree or back and is remembered for the repository; otherwise "Move to
-/// new worktree". [branch] is the branch checked out in the chat's folder;
+/// branch…, between turns) and base; for a chat without messages a "New
+/// worktree" switch, which moves it into a new worktree or back (this chat
+/// only: the next new chat starts without one); otherwise "Move to new
+/// worktree". [branch] is the branch checked out in the chat's folder;
 /// [onRenamed] once Rename branch… renamed it.
 List<(String?, Widget)> worktreeRows(
   BuildContext context,
@@ -112,15 +111,10 @@ List<(String?, Widget)> worktreeRows(
 }
 
 /// Moves a chat without messages into a new worktree ([on]) or back to its
-/// repository, and once it has moved remembers the choice for the
-/// repository.
+/// repository. Not remembered: every new chat starts in the folder itself
+/// (the owner, 2026-10-27; ADR 0016's third amendment).
 void _switch(BuildContext context, ChatState chat, Daemon daemon, bool on) =>
-    tryOrShow(context, () async {
-      if (!await daemon.moveChat(chat, chat.home, worktree: on)) return;
-      final repos = {...worktreeRepos.value};
-      on ? repos.add(chat.home) : repos.remove(chat.home);
-      worktreeRepos.value = repos;
-    });
+    tryOrShow(context, () => daemon.moveChat(chat, chat.home, worktree: on));
 
 /// Under the composer of a chat without messages, as in Claude Code: its
 /// folder and, in a git repository, the "New worktree" switch as a chip.
