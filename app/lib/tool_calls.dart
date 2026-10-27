@@ -5,6 +5,7 @@ import 'package:nushi/diff_box.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/markdown.dart';
+import 'package:nushi/preview.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -88,6 +89,18 @@ final _counted = Expando<(int, int)>();
     ops.where((o) => o == EditOp.insert).length,
     ops.where((o) => o == EditOp.delete).length,
   );
+}
+
+/// The file a tool call wrote or edited, when a preview can show it.
+String? previewPath(Item it) {
+  final path = it.paths.firstOrNull ?? it.diffs.firstOrNull?.path;
+  final wrote = it.toolKind == 'edit' || it.diffs.isNotEmpty;
+  return wrote &&
+          it.status != 'failed' &&
+          path != null &&
+          previewKind(path) != null
+      ? path
+      : null;
 }
 
 /// What a run of tool calls did: "Read 4 files, ran 2 commands".
@@ -237,6 +250,7 @@ class ToolCallView extends StatelessWidget {
     }
     final failed = it.status == 'failed';
     final command = it.toolKind == 'execute' && it.title.isNotEmpty;
+    final preview = previewPath(it);
     final hasBody = it.text.isNotEmpty || it.diffs.isNotEmpty || command;
     return _withImages(
       [if (images) ...it.images],
@@ -268,6 +282,10 @@ class ToolCallView extends StatelessWidget {
                 '−$removed',
                 style: code.copyWith(fontSize: 11, color: t.crashed),
               ),
+            ],
+            if (preview != null) ...[
+              const SizedBox(width: 8),
+              PreviewButton(preview),
             ],
             // The call ends at once; the command runs on (see shells.dart).
             if (it.hasShell())
@@ -305,6 +323,56 @@ class ToolCallView extends StatelessWidget {
   }
 }
 
+/// A tool row's Preview: opens [path]'s preview, marked while it's the
+/// one open. None without [Previews] above to open it.
+class PreviewButton extends StatelessWidget {
+  const new(this.path, {super.key});
+
+  final String path;
+
+  @override
+  Widget build(BuildContext context) {
+    final previews = Previews.of(context);
+    final open = previews?.open;
+    if (open == null) return const SizedBox.shrink();
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    Widget pill({required bool on}) => Pressable(
+      onTap: () => open(path),
+      tooltip: 'Preview ${baseName(path)}',
+      builder: (context, look) => Container(
+        height: 20,
+        padding: const EdgeInsets.symmetric(horizontal: 7),
+        decoration: BoxDecoration(
+          color: on
+              ? t.accentSoft
+              : look.hover
+              ? t.hover
+              : null,
+          border: Border.all(color: on ? t.accent : t.fieldBorder),
+          borderRadius: BorderRadius.circular(NushiTheme.control),
+        ),
+        foregroundDecoration: focusRing(t, look),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 4,
+          children: [
+            Icon(Icons.visibility_outlined, size: 12, color: t.textSecondary),
+            Text('Preview', style: theme.ui(t.text, size: 11.5)),
+          ],
+        ),
+      ),
+    );
+    final current = previews?.current;
+    return current == null
+        ? pill(on: false)
+        : ValueListenableBuilder(
+            valueListenable: current,
+            builder: (context, v, _) => pill(on: v == path),
+          );
+  }
+}
+
 /// A tool call, or a run of them, with the images they returned under it.
 Widget _withImages(List<ImageData> images, Widget child) => images.isEmpty
     ? child
@@ -333,6 +401,8 @@ class ToolGroupView extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final failed = calls.where((c) => c.status == 'failed').length;
+    // The last file it wrote that previews, so a folded run offers it too.
+    final preview = calls.map(previewPath).nonNulls.lastOrNull;
     return _withImages(
       [for (final c in calls) ...c.images],
       Collapsible(
@@ -351,6 +421,7 @@ class ToolGroupView extends StatelessWidget {
                 style: theme.ui(t.textSecondary),
               ),
             ),
+            if (preview != null) PreviewButton(preview),
             const SizedBox(width: 8),
             _status(
               theme,

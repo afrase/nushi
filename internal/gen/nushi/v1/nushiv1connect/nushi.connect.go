@@ -121,6 +121,9 @@ const (
 	NushiServiceGetDiffProcedure = "/nushi.v1.NushiService/GetDiff"
 	// NushiServiceGetFileProcedure is the fully-qualified name of the NushiService's GetFile RPC.
 	NushiServiceGetFileProcedure = "/nushi.v1.NushiService/GetFile"
+	// NushiServiceWatchChatFileProcedure is the fully-qualified name of the NushiService's
+	// WatchChatFile RPC.
+	NushiServiceWatchChatFileProcedure = "/nushi.v1.NushiService/WatchChatFile"
 	// NushiServiceListCommitsProcedure is the fully-qualified name of the NushiService's ListCommits
 	// RPC.
 	NushiServiceListCommitsProcedure = "/nushi.v1.NushiService/ListCommits"
@@ -459,6 +462,11 @@ type NushiServiceClient interface {
 	// names that isn't among the changes. Only a regular file inside the
 	// folder: no "..", no link.
 	GetFile(context.Context, *connect.Request[v1.GetFileRequest]) (*connect.Response[v1.GetFileResponse], error)
+	// Reads a file of a chat's (in its folder or its worktree) and sends it
+	// again each time it changes, until the call ends: the preview of what
+	// the agent wrote. A path that leads outside them, through a link too,
+	// is refused.
+	WatchChatFile(context.Context, *connect.Request[v1.WatchChatFileRequest]) (*connect.ServerStreamForClient[v1.WatchChatFileResponse], error)
 	// Lists a branch's commits since a base, or the last ones.
 	ListCommits(context.Context, *connect.Request[v1.ListCommitsRequest]) (*connect.Response[v1.ListCommitsResponse], error)
 	// Sums up a folder's changes (as GetDiff lists them) and names its
@@ -887,6 +895,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceGetFileProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("GetFile")),
+			connect.WithClientOptions(opts...),
+		),
+		watchChatFile: connect.NewClient[v1.WatchChatFileRequest, v1.WatchChatFileResponse](
+			httpClient,
+			baseURL+NushiServiceWatchChatFileProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("WatchChatFile")),
 			connect.WithClientOptions(opts...),
 		),
 		listCommits: connect.NewClient[v1.ListCommitsRequest, v1.ListCommitsResponse](
@@ -1374,6 +1388,7 @@ type nushiServiceClient struct {
 	setConfigOption     *connect.Client[v1.SetConfigOptionRequest, v1.SetConfigOptionResponse]
 	getDiff             *connect.Client[v1.GetDiffRequest, v1.GetDiffResponse]
 	getFile             *connect.Client[v1.GetFileRequest, v1.GetFileResponse]
+	watchChatFile       *connect.Client[v1.WatchChatFileRequest, v1.WatchChatFileResponse]
 	listCommits         *connect.Client[v1.ListCommitsRequest, v1.ListCommitsResponse]
 	getFolderStatus     *connect.Client[v1.GetFolderStatusRequest, v1.GetFolderStatusResponse]
 	listFiles           *connect.Client[v1.ListFilesRequest, v1.ListFilesResponse]
@@ -1628,6 +1643,11 @@ func (c *nushiServiceClient) GetDiff(ctx context.Context, req *connect.Request[v
 // GetFile calls nushi.v1.NushiService.GetFile.
 func (c *nushiServiceClient) GetFile(ctx context.Context, req *connect.Request[v1.GetFileRequest]) (*connect.Response[v1.GetFileResponse], error) {
 	return c.getFile.CallUnary(ctx, req)
+}
+
+// WatchChatFile calls nushi.v1.NushiService.WatchChatFile.
+func (c *nushiServiceClient) WatchChatFile(ctx context.Context, req *connect.Request[v1.WatchChatFileRequest]) (*connect.ServerStreamForClient[v1.WatchChatFileResponse], error) {
+	return c.watchChatFile.CallServerStream(ctx, req)
 }
 
 // ListCommits calls nushi.v1.NushiService.ListCommits.
@@ -2126,6 +2146,11 @@ type NushiServiceHandler interface {
 	// names that isn't among the changes. Only a regular file inside the
 	// folder: no "..", no link.
 	GetFile(context.Context, *connect.Request[v1.GetFileRequest]) (*connect.Response[v1.GetFileResponse], error)
+	// Reads a file of a chat's (in its folder or its worktree) and sends it
+	// again each time it changes, until the call ends: the preview of what
+	// the agent wrote. A path that leads outside them, through a link too,
+	// is refused.
+	WatchChatFile(context.Context, *connect.Request[v1.WatchChatFileRequest], *connect.ServerStream[v1.WatchChatFileResponse]) error
 	// Lists a branch's commits since a base, or the last ones.
 	ListCommits(context.Context, *connect.Request[v1.ListCommitsRequest]) (*connect.Response[v1.ListCommitsResponse], error)
 	// Sums up a folder's changes (as GetDiff lists them) and names its
@@ -2550,6 +2575,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceGetFileProcedure,
 		svc.GetFile,
 		connect.WithSchema(nushiServiceMethods.ByName("GetFile")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceWatchChatFileHandler := connect.NewServerStreamHandler(
+		NushiServiceWatchChatFileProcedure,
+		svc.WatchChatFile,
+		connect.WithSchema(nushiServiceMethods.ByName("WatchChatFile")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceListCommitsHandler := connect.NewUnaryHandler(
@@ -3070,6 +3101,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceGetDiffHandler.ServeHTTP(w, r)
 		case NushiServiceGetFileProcedure:
 			nushiServiceGetFileHandler.ServeHTTP(w, r)
+		case NushiServiceWatchChatFileProcedure:
+			nushiServiceWatchChatFileHandler.ServeHTTP(w, r)
 		case NushiServiceListCommitsProcedure:
 			nushiServiceListCommitsHandler.ServeHTTP(w, r)
 		case NushiServiceGetFolderStatusProcedure:
@@ -3369,6 +3402,10 @@ func (UnimplementedNushiServiceHandler) GetDiff(context.Context, *connect.Reques
 
 func (UnimplementedNushiServiceHandler) GetFile(context.Context, *connect.Request[v1.GetFileRequest]) (*connect.Response[v1.GetFileResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetFile is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) WatchChatFile(context.Context, *connect.Request[v1.WatchChatFileRequest], *connect.ServerStream[v1.WatchChatFileResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.WatchChatFile is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) ListCommits(context.Context, *connect.Request[v1.ListCommitsRequest]) (*connect.Response[v1.ListCommitsResponse], error) {

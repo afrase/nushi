@@ -157,7 +157,9 @@ void main() {
         );
 
         await p.link!.check();
-        p.link!.seen = DateTime(2026, 10, 27, 10, 42);
+        // Today at 10:42 (the golden's time; another day adds the date).
+        final now = DateTime.now();
+        p.link!.seen = DateTime(now.year, now.month, now.day, 10, 42);
         await tester.pump();
         expect(find.text("Can't reach your Mac"), findsOneWidget);
 

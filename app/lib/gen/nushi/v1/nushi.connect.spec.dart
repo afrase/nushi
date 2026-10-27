@@ -4,6 +4,7 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
+
 import "nushi.pb.dart" as nushiv1nushi;
 
 abstract final class NushiService {
@@ -348,6 +349,17 @@ abstract final class NushiService {
     connect.StreamType.unary,
     nushiv1nushi.GetFileRequest.new,
     nushiv1nushi.GetFileResponse.new,
+  );
+
+  /// Reads a file of a chat's (in its folder or its worktree) and sends it
+  /// again each time it changes, until the call ends: the preview of what
+  /// the agent wrote. A path that leads outside them, through a link too,
+  /// is refused.
+  static const watchChatFile = connect.Spec(
+    '/$name/WatchChatFile',
+    connect.StreamType.server,
+    nushiv1nushi.WatchChatFileRequest.new,
+    nushiv1nushi.WatchChatFileResponse.new,
   );
 
   /// Lists a branch's commits since a base, or the last ones.

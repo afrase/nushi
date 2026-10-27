@@ -208,3 +208,19 @@ func (s *Service) Folder(chatID string) (string, error) {
 	}
 	return c.session.Folder, nil
 }
+
+// Roots returns the folders a chat's files may be read from: its folder
+// and, for a worktree chat, the worktree (the folder may be inside it).
+func (s *Service) Roots(chatID string) ([]string, error) {
+	c, err := s.lookup(chatID)
+	if err != nil {
+		return nil, err
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	roots := []string{c.session.Folder}
+	if wt := c.session.Worktree; wt != nil && wt.Path != c.session.Folder {
+		roots = append(roots, wt.Path)
+	}
+	return roots, nil
+}

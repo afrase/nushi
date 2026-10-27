@@ -6,7 +6,9 @@ import 'package:nushi/composer.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/phone/connection_bar.dart';
 import 'package:nushi/phone/phone.dart';
+import 'package:nushi/phone/preview_screen.dart';
 import 'package:nushi/phone/ui.dart';
+import 'package:nushi/preview.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
@@ -34,17 +36,23 @@ class ChatScreen extends StatelessWidget {
             Expanded(
               child: !chat.loaded && chat.items.isEmpty
                   ? TranscriptSkeleton(chat)
-                  : Transcript(
-                      chat: chat,
-                      daemon: daemon,
-                      onTop: () => unawaited(daemon.loadOlder(chat)),
-                      header: chat.older > 0 ? Earlier(daemon, chat) : null,
-                      onReply: chat.archived || chat.sessionGone
-                          ? null
-                          : (r) => chat.draft.replies.value = [
-                              ...chat.draft.replies.value,
-                              r,
-                            ],
+                  : Previews(
+                      open: daemon.daemonApi >= previewApi
+                          ? (path) =>
+                                PreviewScreen.open(context, daemon, chat, path)
+                          : null,
+                      child: Transcript(
+                        chat: chat,
+                        daemon: daemon,
+                        onTop: () => unawaited(daemon.loadOlder(chat)),
+                        header: chat.older > 0 ? Earlier(daemon, chat) : null,
+                        onReply: chat.archived || chat.sessionGone
+                            ? null
+                            : (r) => chat.draft.replies.value = [
+                                ...chat.draft.replies.value,
+                                r,
+                              ],
+                      ),
                     ),
             ),
             if (chat.busy) TurnStatus(chat),

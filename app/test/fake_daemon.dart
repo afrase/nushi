@@ -114,13 +114,30 @@ class FakeDaemon implements Transport {
     return UnaryResponse(spec, Headers(), out as O, Headers());
   }
 
+  /// Answers a stream call (its request): its messages, or null for the
+  /// events' stream. Every such request is in [calls].
+  Stream<Object>? Function(Object input)? streams;
+
   @override
   Future<StreamResponse<I, O>> stream<I extends Object, O extends Object>(
     Spec<I, O> spec,
     Stream<I> input, [
     CallOptions? options,
-  ]) async =>
-      StreamResponse(spec, Headers(), _events.stream as Stream<O>, Headers());
+  ]) async {
+    if (streams case final answer?) {
+      final request = await input.first;
+      if (answer(request) case final s?) {
+        calls.add(request);
+        return StreamResponse(spec, Headers(), s.cast<O>(), Headers());
+      }
+    }
+    return StreamResponse(
+      spec,
+      Headers(),
+      _events.stream as Stream<O>,
+      Headers(),
+    );
+  }
 }
 
 /// A chat for [FakeDaemon], [age] minutes old.

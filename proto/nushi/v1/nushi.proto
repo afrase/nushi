@@ -129,6 +129,11 @@ service NushiService {
   // names that isn't among the changes. Only a regular file inside the
   // folder: no "..", no link.
   rpc GetFile(GetFileRequest) returns (GetFileResponse);
+  // Reads a file of a chat's (in its folder or its worktree) and sends it
+  // again each time it changes, until the call ends: the preview of what
+  // the agent wrote. A path that leads outside them, through a link too,
+  // is refused.
+  rpc WatchChatFile(WatchChatFileRequest) returns (stream WatchChatFileResponse);
   // Lists a branch's commits since a base, or the last ones.
   rpc ListCommits(ListCommitsRequest) returns (ListCommitsResponse);
   // Sums up a folder's changes (as GetDiff lists them) and names its
@@ -1285,6 +1290,25 @@ message GetFileRequest {
   string folder = 1;
   // Relative to folder.
   string path = 2;
+}
+
+message WatchChatFileRequest {
+  string chat_id = 1;
+  // Absolute, or relative to the chat's folder.
+  string path = 2;
+}
+
+// The file as it is now.
+message WatchChatFileResponse {
+  // Its absolute path.
+  string path = 1;
+  // Its bytes, left out when it's too large.
+  bytes data = 2;
+  int64 size = 3;
+  // Over the preview's cap (a few MB).
+  bool too_large = 4;
+  // It isn't there, or isn't a regular file (yet).
+  bool missing = 5;
 }
 
 message GetFileResponse {

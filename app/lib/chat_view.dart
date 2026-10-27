@@ -12,6 +12,8 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/panes.dart';
+import 'package:nushi/preview.dart';
+import 'package:nushi/preview_pane.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/shells.dart';
 import 'package:nushi/side_panel.dart';
@@ -134,20 +136,26 @@ class _ChatViewState extends State<ChatView> {
         ),
       ),
     );
-    return ListenableBuilder(
-      listenable: Listenable.merge([chat.pane, subagentWide]),
-      builder: (context, _) => _beside(transcript),
+    return Previews(
+      open: widget.daemon.daemonApi >= previewApi ? chat.openPreview : null,
+      current: chat.preview,
+      child: ListenableBuilder(
+        listenable: Listenable.merge([chat.pane, chat.preview, subagentWide]),
+        builder: (context, _) => _beside(transcript),
+      ),
     );
   }
 
   /// The transcript, and beside it, left to right: the side question, a
-  /// subagent's or background command's pane, and [ChatView.details], each
-  /// when open, at its own remembered width, each closed on its own.
+  /// subagent's or background command's pane (or a file's preview in its
+  /// place), and [ChatView.details], each when open, at its own remembered
+  /// width, each closed on its own.
   Widget _beside(Widget transcript) {
     final chat = widget.chat;
     final side = chat.archived ? null : chat.side;
     final id = chat.pane.value;
-    final wide = id != null && subagentWide.value;
+    final preview = id == null ? chat.preview.value : null;
+    final wide = id != null && subagentWide.value || preview != null;
     final details = widget.details;
     return Beside(
       main: transcript,
@@ -174,6 +182,20 @@ class _ChatViewState extends State<ChatView> {
             min: 220,
             cap: wide ? double.infinity : 480,
             child: _pane(id),
+          ),
+        if (preview != null)
+          SidePane(
+            'preview',
+            initial: 560,
+            min: 300,
+            cap: double.infinity,
+            child: PreviewPane(
+              key: ValueKey(preview),
+              chat: chat,
+              daemon: widget.daemon,
+              path: preview,
+              onClose: () => chat.preview.value = null,
+            ),
           ),
       ],
       details: details == null

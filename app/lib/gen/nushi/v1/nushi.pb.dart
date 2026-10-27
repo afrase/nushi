@@ -9937,6 +9937,190 @@ class GetFileRequest extends $pb.GeneratedMessage {
   void clearPath() => $_clearField(2);
 }
 
+class WatchChatFileRequest extends $pb.GeneratedMessage {
+  factory WatchChatFileRequest({
+    $core.String? chatId,
+    $core.String? path,
+  }) {
+    final result = WatchChatFileRequest._();
+    if (chatId != null) result.chatId = chatId;
+    if (path != null) result.path = path;
+    return result;
+  }
+
+  WatchChatFileRequest._();
+
+  factory WatchChatFileRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WatchChatFileRequest()..mergeFromBuffer(data, registry);
+  factory WatchChatFileRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WatchChatFileRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'WatchChatFileRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: WatchChatFileRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOS(2, _omitFieldNames ? '' : 'path')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WatchChatFileRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WatchChatFileRequest copyWith(void Function(WatchChatFileRequest) updates) =>
+      super.copyWith((message) => updates(message as WatchChatFileRequest))
+          as WatchChatFileRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use WatchChatFileRequest() / WatchChatFileRequest.new instead')
+  static WatchChatFileRequest create() => WatchChatFileRequest._();
+  static $pb.GeneratedMessage $_createMessage() => WatchChatFileRequest._();
+  @$core.override
+  WatchChatFileRequest createEmptyInstance() => WatchChatFileRequest._();
+  @$core.pragma('dart2js:noInline')
+  static WatchChatFileRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<WatchChatFileRequest>(
+          WatchChatFileRequest.$_createMessage);
+  static WatchChatFileRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  /// Absolute, or relative to the chat's folder.
+  @$pb.TagNumber(2)
+  $core.String get path => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set path($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasPath() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPath() => $_clearField(2);
+}
+
+/// The file as it is now.
+class WatchChatFileResponse extends $pb.GeneratedMessage {
+  factory WatchChatFileResponse({
+    $core.String? path,
+    $core.List<$core.int>? data,
+    $fixnum.Int64? size,
+    $core.bool? tooLarge,
+    $core.bool? missing,
+  }) {
+    final result = WatchChatFileResponse._();
+    if (path != null) result.path = path;
+    if (data != null) result.data = data;
+    if (size != null) result.size = size;
+    if (tooLarge != null) result.tooLarge = tooLarge;
+    if (missing != null) result.missing = missing;
+    return result;
+  }
+
+  WatchChatFileResponse._();
+
+  factory WatchChatFileResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WatchChatFileResponse()..mergeFromBuffer(data, registry);
+  factory WatchChatFileResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WatchChatFileResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'WatchChatFileResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: WatchChatFileResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'path')
+    ..a<$core.List<$core.int>>(
+        2, _omitFieldNames ? '' : 'data', $pb.PbFieldType.OY)
+    ..aInt64(3, _omitFieldNames ? '' : 'size')
+    ..aOB(4, _omitFieldNames ? '' : 'tooLarge')
+    ..aOB(5, _omitFieldNames ? '' : 'missing')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WatchChatFileResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WatchChatFileResponse copyWith(
+          void Function(WatchChatFileResponse) updates) =>
+      super.copyWith((message) => updates(message as WatchChatFileResponse))
+          as WatchChatFileResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use WatchChatFileResponse() / WatchChatFileResponse.new instead')
+  static WatchChatFileResponse create() => WatchChatFileResponse._();
+  static $pb.GeneratedMessage $_createMessage() => WatchChatFileResponse._();
+  @$core.override
+  WatchChatFileResponse createEmptyInstance() => WatchChatFileResponse._();
+  @$core.pragma('dart2js:noInline')
+  static WatchChatFileResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<WatchChatFileResponse>(
+          WatchChatFileResponse.$_createMessage);
+  static WatchChatFileResponse? _defaultInstance;
+
+  /// Its absolute path.
+  @$pb.TagNumber(1)
+  $core.String get path => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set path($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPath() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPath() => $_clearField(1);
+
+  /// Its bytes, left out when it's too large.
+  @$pb.TagNumber(2)
+  $core.List<$core.int> get data => $_getN(1);
+  @$pb.TagNumber(2)
+  set data($core.List<$core.int> value) => $_setBytes(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasData() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearData() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $fixnum.Int64 get size => $_getI64(2);
+  @$pb.TagNumber(3)
+  set size($fixnum.Int64 value) => $_setInt64(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasSize() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearSize() => $_clearField(3);
+
+  /// Over the preview's cap (a few MB).
+  @$pb.TagNumber(4)
+  $core.bool get tooLarge => $_getBF(3);
+  @$pb.TagNumber(4)
+  set tooLarge($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasTooLarge() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearTooLarge() => $_clearField(4);
+
+  /// It isn't there, or isn't a regular file (yet).
+  @$pb.TagNumber(5)
+  $core.bool get missing => $_getBF(4);
+  @$pb.TagNumber(5)
+  set missing($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasMissing() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearMissing() => $_clearField(5);
+}
+
 class GetFileResponse extends $pb.GeneratedMessage {
   factory GetFileResponse({
     FileChange? file,
@@ -24166,6 +24350,15 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, GetFileRequest request) =>
       _client.invoke<GetFileResponse>(
           ctx, 'NushiService', 'GetFile', request, GetFileResponse());
+
+  /// Reads a file of a chat's (in its folder or its worktree) and sends it
+  /// again each time it changes, until the call ends: the preview of what
+  /// the agent wrote. A path that leads outside them, through a link too,
+  /// is refused.
+  $async.Future<WatchChatFileResponse> watchChatFile(
+          $pb.ClientContext? ctx, WatchChatFileRequest request) =>
+      _client.invoke<WatchChatFileResponse>(ctx, 'NushiService',
+          'WatchChatFile', request, WatchChatFileResponse());
 
   /// Lists a branch's commits since a base, or the last ones.
   $async.Future<ListCommitsResponse> listCommits(

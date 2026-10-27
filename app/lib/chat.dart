@@ -10,7 +10,12 @@ import 'package:nushi/settings.dart';
 /// One chat's transcript and status: a snapshot from the daemon, kept
 /// current by the chat's later events.
 class ChatState extends ChangeNotifier {
-  new(this.id, this.folder);
+  new(this.id, this.folder) {
+    // A subagent's pane takes the preview's place.
+    pane.addListener(() {
+      if (pane.value != null) preview.value = null;
+    });
+  }
 
   final String id;
   String folder; // it can move (MoveChat)
@@ -84,6 +89,15 @@ class ChatState extends ChangeNotifier {
   /// beside the chat, left of the details panel (see SubagentPane,
   /// ShellPane).
   final pane = ValueNotifier<String?>(null);
+
+  /// The file (as its tool row names it) whose preview shows in [pane]'s
+  /// place: one or the other.
+  final preview = ValueNotifier<String?>(null);
+
+  void openPreview(String path) {
+    pane.value = null;
+    preview.value = path;
+  }
 
   /// The agent's name to show: "Claude".
   String get agentName => agentTitle(agent);

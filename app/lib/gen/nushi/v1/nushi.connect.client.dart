@@ -4,10 +4,11 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
+
 import "nushi.pb.dart" as nushiv1nushi;
 import "nushi.connect.spec.dart" as specs;
 
-extension type NushiServiceClient (connect.Transport _transport) {
+extension type NushiServiceClient(connect.Transport _transport) {
   Future<nushiv1nushi.PingResponse> ping(
     nushiv1nushi.PingRequest input, {
     connect.Headers? headers,
@@ -700,6 +701,27 @@ extension type NushiServiceClient (connect.Transport _transport) {
   }) {
     return connect.Client(_transport).unary(
       specs.NushiService.getFile,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Reads a file of a chat's (in its folder or its worktree) and sends it
+  /// again each time it changes, until the call ends: the preview of what
+  /// the agent wrote. A path that leads outside them, through a link too,
+  /// is refused.
+  Stream<nushiv1nushi.WatchChatFileResponse> watchChatFile(
+    nushiv1nushi.WatchChatFileRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).server(
+      specs.NushiService.watchChatFile,
       input,
       signal: signal,
       headers: headers,

@@ -119,7 +119,7 @@ Settings → Remote access connects the daemon to a relay you name (`wss://…`)
 
 ## The phone
 
-The phone is Nushi's web app, added to the Home Screen ([ADR 0054](docs/adr/0054-the-phone-is-a-web-app-with-web-push.md)): the chats with what each is doing, a chat's transcript and composer (send, Queue and Steer while a turn runs, Stop), its prompts and questions answered with a tap, New chat, and Settings. Your relay serves it (`-web`, below), so it comes from a server you run. On an iPhone (iOS 16.4 or later):
+The phone is Nushi's web app, added to the Home Screen ([ADR 0054](docs/adr/0054-the-phone-is-a-web-app-with-web-push.md)): the chats with what each is doing, a chat's transcript and composer (send, Queue and Steer while a turn runs, Stop), its prompts and questions answered with a tap, a Markdown file or image the agent wrote previewed full screen (its tool row's Preview), New chat, and Settings. Your relay serves it (`-web`, below), so it comes from a server you run. On an iPhone (iOS 16.4 or later):
 
 1. Open your relay's address in Safari (`https://<your relay>/`), tap Share › Add to Home Screen, and open Nushi from the Home Screen. Pair there, not in Safari: the Home Screen app keeps its own storage, and only it gets notifications.
 2. On the Mac: Settings › Remote access › Pair a phone. In Nushi on the iPhone, name the device and tap Scan QR code (allow the camera), point it at the Mac's code: pairing starts. Or Copy link on the Mac and paste it (Universal Clipboard) into Pairing link, then Pair. The iPhone's own Camera opens the code in Safari, which can only say to open Nushi and scan there.
