@@ -6,6 +6,9 @@ import 'package:nushi/phone/subscription.dart';
 final class PhonePlatform {
   new();
 
+  /// The on-screen keyboard's height over the app (a test sets it).
+  final keyboard = ValueNotifier<double>(0);
+
   /// What [save] kept.
   Map<String, Object?>? saved;
 

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/phone/chats_screen.dart';
+import 'package:nushi/phone/keyboard.dart';
 import 'package:nushi/phone/pair_screen.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/theme/theme.dart';
@@ -74,11 +75,15 @@ class _PhoneAppState extends State<PhoneApp> with WidgetsBindingObserver {
     theme: _phone(const NushiTheme(Tokens.light).toThemeData()),
     darkTheme: _phone(const NushiTheme(Tokens.dark).toThemeData()),
     // The Mac's transcript and controls are drawn for a desk: larger text,
-    // and targets for a finger, on a phone.
-    builder: (context, child) => TouchTargets(
-      child: MediaQuery.withClampedTextScaling(
-        minScaleFactor: 1.15,
-        child: child!,
+    // and targets for a finger, on a phone. Every screen, dialog and sheet
+    // keeps clear of the on-screen keyboard.
+    builder: (context, child) => KeyboardInset(
+      widget.phone.platform.keyboard,
+      child: TouchTargets(
+        child: MediaQuery.withClampedTextScaling(
+          minScaleFactor: 1.15,
+          child: child!,
+        ),
       ),
     ),
     // One root, whatever the address says: pairing until paired, then the

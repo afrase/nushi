@@ -4,6 +4,9 @@ import 'package:nushi/theme/theme.dart';
 /// The phone's touch target: 44 points, as iOS asks.
 const touch = 44.0;
 
+/// Below this height above the keyboard, a screen drops its bar.
+const crampedHeight = 200.0;
+
 /// The phone's text: larger than the Mac's.
 TextStyle phoneText(
   BuildContext context, {
@@ -40,6 +43,13 @@ class PhoneScreen extends StatelessWidget {
     // while another screen was on top would keep a back button after it
     // went (the chats showed one on the iPhone).
     final back = !(ModalRoute.of(context)?.isFirst ?? true);
+    // With the keyboard up in landscape (or in a browser's tab, under its
+    // bars) there may be room for little more than the field being typed
+    // in: the bar goes, so that field shows.
+    final mq = MediaQuery.of(context);
+    final cramped =
+        mq.viewInsets.bottom > 0 &&
+        mq.size.height - mq.viewInsets.bottom < crampedHeight;
     return Scaffold(
       backgroundColor: t.base,
       body: SafeArea(
@@ -47,40 +57,41 @@ class PhoneScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            DecoratedBox(
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: t.borderSubtle)),
-              ),
-              child: SizedBox(
-                height: touch + 8,
-                child: Row(
-                  children: [
-                    if (back)
-                      PhoneIcon(
-                        Icons.arrow_back_ios_new,
-                        label: 'Back',
-                        onTap: () => Navigator.of(context).maybePop(),
-                      )
-                    else
-                      const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: phoneText(
-                          context,
-                          size: 17,
-                          weight: FontWeight.w600,
+            if (!cramped)
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: t.borderSubtle)),
+                ),
+                child: SizedBox(
+                  height: touch + 8,
+                  child: Row(
+                    children: [
+                      if (back)
+                        PhoneIcon(
+                          Icons.arrow_back_ios_new,
+                          label: 'Back',
+                          onTap: () => Navigator.of(context).maybePop(),
+                        )
+                      else
+                        const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: phoneText(
+                            context,
+                            size: 17,
+                            weight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                    ),
-                    ...actions,
-                    const SizedBox(width: 4),
-                  ],
+                      ...actions,
+                      const SizedBox(width: 4),
+                    ],
+                  ),
                 ),
               ),
-            ),
             Expanded(child: body),
             if (bottom case final b?) SafeArea(top: false, child: b),
           ],

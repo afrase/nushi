@@ -1,6 +1,11 @@
 /* The page around the app: the theme's base color, and the app's box kept
-   inside the safe area (Flutter on the web doesn't read it itself). */
-html, body { margin: 0; height: 100%; background: #FFFFFF; overflow: hidden; }
+   inside the safe area (Flutter on the web doesn't read it itself). The
+   page never scrolls or bounces: the on-screen keyboard is an inset the app
+   lays out above (phone/keyboard_web.dart), not a reason to move the page. */
+html, body {
+  margin: 0; height: 100%; background: #FFFFFF; overflow: hidden;
+  overscroll-behavior: none;
+}
 @media (prefers-color-scheme: dark) { html, body { background: #1E1F22; } }
 #app {
   position: fixed;

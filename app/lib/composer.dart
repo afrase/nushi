@@ -339,7 +339,9 @@ class _ComposerState extends State<Composer> {
                           focusNode: _focus,
                           autofocus: !touch, // no keyboard popping up
                           minLines: 1,
-                          maxLines: 10,
+                          // A phone's keyboard leaves the transcript little
+                          // room: past six lines the field scrolls.
+                          maxLines: touch ? 6 : 10,
                           style: theme.ui(t.text),
                           textAlignVertical: TextAlignVertical.center,
                           decoration: InputDecoration(
