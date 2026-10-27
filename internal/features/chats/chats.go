@@ -195,6 +195,9 @@ func (c *chat) emitLocked(e model.Event) {
 	}
 	c.seq++
 	e.Seq = c.seq
+	if e.Item != nil && !e.Append {
+		e.Index = c.indexLocked(e.Item.ID)
+	}
 	c.active = time.Now()
 	if e.Item != nil && c.copies != nil && c.parent == nil {
 		c.unsaved[e.Item.ID] = true

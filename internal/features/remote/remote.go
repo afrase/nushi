@@ -237,19 +237,27 @@ func (s *Service) link(ctx context.Context, relayURL string, listen ed25519.Priv
 			backoff = min(2*backoff, MaxBackoff)
 			continue
 		}
-		backoff = time.Second
 		s.setState(ctx, id, "connected", "")
+		since := time.Now()
 		stop := context.AfterFunc(ctx, func() { _ = c.Close() })
 		err = c.Wait()
 		stop()
+		// A wait that held a while starts the backoff over; one dropped at
+		// once (another daemon with this key taking its place, a relay
+		// turning it away) keeps backing off rather than flap each second.
+		if err == nil || time.Since(since) > 10*time.Second {
+			backoff = time.Second
+		}
 		if err != nil {
 			// The relay ended the wait (its limit, a restart) or the network
 			// went: wait again, at a random moment so many daemons don't
 			// come back at once. The Mac shows it reconnecting meanwhile.
-			slog.Info("relay dropped the wait", "err", err, "id", short(id))
+			wait := jitter(backoff)
+			slog.Info("relay dropped the wait", "err", err, "id", short(id), "again_in", wait.Round(time.Second))
 			s.setState(ctx, id, "reconnecting", err.Error())
 			_ = c.Close()
-			sleep(ctx, jitter(time.Second))
+			sleep(ctx, wait)
+			backoff = min(2*backoff, MaxBackoff)
 			continue
 		}
 		go s.accept(ctx, c, id)

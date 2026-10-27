@@ -63,6 +63,12 @@ final class PhonePlatform {
   /// Calls [f] when the network comes back.
   void onOnline(void Function() f) {}
 
+  /// Calls [f] when the page comes back from the back-forward cache.
+  void onResume(void Function() f) {}
+
+  /// The browser's back, as the app's own.
+  void Function()? onBack;
+
   /// The chat a notification asked to open when the app started, if any.
   String? takeOpenChat() => null;
 }

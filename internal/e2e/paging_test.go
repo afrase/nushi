@@ -40,6 +40,15 @@ func TestRecentThenOlderPages(t *testing.T) {
 	if transcript(items) != transcript(all.Items) {
 		t.Errorf("pages:\n%s\nwhole:\n%s", transcript(items), transcript(all.Items))
 	}
+	// A new item's event says where it is, so a client with the recent
+	// part only can tell it from an update to an item it hasn't got.
+	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "six"})))
+	e := a.waitFor("the new message", func(e *nushiv1.EventsResponse) bool {
+		return e.GetItem().GetItem().GetText() == "six" && !e.GetItem().GetAppend()
+	})
+	if int(e.GetItem().GetIndex()) != len(all.Items) {
+		t.Errorf("the new message's index: %d, want %d", e.GetItem().GetIndex(), len(all.Items))
+	}
 	if _, err := a.c.GetChatItems(ctx, connect.NewRequest(&nushiv1.GetChatItemsRequest{ChatId: id, Before: "gone"})); connect.CodeOf(err) != connect.CodeNotFound {
 		t.Errorf("an unknown item: %v", err)
 	}

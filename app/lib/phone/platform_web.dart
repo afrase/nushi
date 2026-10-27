@@ -12,6 +12,7 @@ import 'package:web/web.dart' as web;
 final class PhonePlatform {
   new() {
     _fromAddress(starting: true);
+    _ownHistory();
     web.window.addEventListener(
       'hashchange',
       ((web.Event _) => _fromAddress(starting: false)).toJS,
@@ -74,8 +75,11 @@ final class PhonePlatform {
     return c;
   }
 
-  static void _clearHash() =>
-      web.window.history.replaceState(null, '', web.window.location.pathname);
+  static void _clearHash() => web.window.history.replaceState(
+    {'nushi': 'top'}.jsify(),
+    '',
+    web.window.location.pathname,
+  );
 
   static bool _has(JSObject o, String name) => o.has(name);
 
@@ -364,6 +368,47 @@ final class PhonePlatform {
   /// Calls [f] when the network comes back.
   void onOnline(void Function() f) =>
       web.window.addEventListener('online', ((web.Event _) => f()).toJS);
+
+  /// Calls [f] when the page comes back other than by showing: restored
+  /// from the back-forward cache, or focused.
+  void onResume(void Function() f) {
+    web.window
+      ..addEventListener(
+        'pageshow',
+        ((web.PageTransitionEvent e) {
+          if (e.persisted) f();
+        }).toJS,
+      )
+      ..addEventListener('focus', ((web.Event _) => f()).toJS);
+  }
+
+  /// The browser's back (iOS's edge swipe in a Home Screen app) as the
+  /// app's own back: the page keeps two history entries of its own, and
+  /// a back to the first puts the second again and calls [onBack]. The
+  /// browser never leaves the page (which would reload it); at the app's
+  /// root nothing happens.
+  void Function()? onBack;
+
+  void _ownHistory() {
+    final h = web.window.history
+      ..replaceState({'nushi': 'root'}.jsify(), '')
+      ..pushState({'nushi': 'top'}.jsify(), '');
+    web.window.addEventListener(
+      'popstate',
+      ((web.PopStateEvent e) {
+        // Only a back onto the page's first entry (a fragment's navigation,
+        // a pairing link coming in, is no back).
+        final state = e.state;
+        if (state == null ||
+            !state.isA<JSObject>() ||
+            (state as JSObject)['nushi'].dartify() != 'root') {
+          return;
+        }
+        h.pushState({'nushi': 'top'}.jsify(), '');
+        onBack?.call();
+      }).toJS,
+    );
+  }
 }
 
 JSObject? _policy;

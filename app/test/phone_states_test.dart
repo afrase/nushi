@@ -314,4 +314,57 @@ void main() {
       });
     }
   }
+
+  testWidgets('back from the background: it reconnects quietly', (
+    tester,
+  ) async {
+    var down = false;
+    Completer<void>? held;
+    final fake = FakeDaemon(_chats)
+      ..answer = (input) async {
+        if (input is! PingRequest) return null;
+        await held?.future;
+        if (down) {
+          throw connect.ConnectException(connect.Code.unavailable, 'gone');
+        }
+        return null;
+      };
+    final p = await _app(tester, fake, '390', Brightness.dark);
+    final link = p.link!..visible(shown: false);
+    // While hidden the network was gone: tries failed (a timer that fired
+    // before iOS froze the page, or a check).
+    down = true;
+    await link.check();
+    await link.check();
+    await tester.pump();
+    expect(link.failures, 2);
+    // Back to the front, the network back: at most "Reconnecting…" while
+    // it dials, never "Can't reach", and then nothing.
+    down = false;
+    held = Completer();
+    link.visible(shown: true);
+    await tester.pump();
+    expect(find.text("Can't reach your Mac"), findsNothing);
+    expect(find.text('Reconnecting…'), findsOneWidget);
+    held.complete();
+    held = null;
+    for (var i = 0; i < 5; i++) {
+      await tester.pump();
+    }
+    expect(p.daemon!.connected, isTrue);
+    expect(find.byType(ConnectionBar), findsOneWidget);
+    expect(find.text('Reconnecting…'), findsNothing);
+    // Restored from the back-forward cache while the link is down: the
+    // same quiet try.
+    down = true;
+    await link.check();
+    down = false;
+    link.resume();
+    for (var i = 0; i < 5; i++) {
+      await tester.pump();
+    }
+    expect(p.daemon!.connected, isTrue);
+    expect(link.failures, 0);
+    await _end(tester, p);
+  });
 }

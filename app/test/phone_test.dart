@@ -476,4 +476,22 @@ void main() {
     expect(Scanner.last!.stopped, isTrue);
     await _end(tester, phone);
   });
+
+  testWidgets('back from a chat: the chats have no back button', (
+    tester,
+  ) async {
+    final fake = FakeDaemon(_chats)
+      ..answer = (input) => input is GetChatRequest ? _question() : null;
+    final (phone, _) = await _app(tester, fake);
+    await tester.tap(find.text('Review the Noise channel'));
+    await tester.pumpAndSettle();
+    // The chats rebuild underneath while the chat shows (an event).
+    phone.daemon!.notifyListeners();
+    await tester.pump();
+    await tester.tap(find.bySemanticsLabel('Back').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Chats'), findsOneWidget);
+    expect(find.bySemanticsLabel('Back'), findsNothing);
+    await _end(tester, phone);
+  });
 }

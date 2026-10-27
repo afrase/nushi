@@ -1581,6 +1581,10 @@ message ItemEvent {
   Item item = 1;
   // The item's text continues with item.text rather than being replaced.
   bool append = 2;
+  // Where the item is in the chat, from 0 (not with append): a client that
+  // has only the recent part (GetChatRequest.recent) leaves out what is
+  // before it.
+  int32 index = 3;
 }
 
 message ChatStatus {

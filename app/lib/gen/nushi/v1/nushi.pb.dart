@@ -12116,10 +12116,12 @@ class ItemEvent extends $pb.GeneratedMessage {
   factory ItemEvent({
     Item? item,
     $core.bool? append,
+    $core.int? index,
   }) {
     final result = ItemEvent._();
     if (item != null) result.item = item;
     if (append != null) result.append = append;
+    if (index != null) result.index = index;
     return result;
   }
 
@@ -12139,6 +12141,7 @@ class ItemEvent extends $pb.GeneratedMessage {
     ..aOM<Item>(1, _omitFieldNames ? '' : 'item',
         subBuilder: Item.$_createMessage)
     ..aOB(2, _omitFieldNames ? '' : 'append')
+    ..aI(3, _omitFieldNames ? '' : 'index')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -12181,6 +12184,18 @@ class ItemEvent extends $pb.GeneratedMessage {
   $core.bool hasAppend() => $_has(1);
   @$pb.TagNumber(2)
   void clearAppend() => $_clearField(2);
+
+  /// Where the item is in the chat, from 0 (not with append): a client that
+  /// has only the recent part (GetChatRequest.recent) leaves out what is
+  /// before it.
+  @$pb.TagNumber(3)
+  $core.int get index => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set index($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasIndex() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearIndex() => $_clearField(3);
 }
 
 class ChatStatus extends $pb.GeneratedMessage {

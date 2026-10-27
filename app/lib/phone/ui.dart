@@ -36,7 +36,10 @@ class PhoneScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
-    final back = Navigator.of(context).canPop();
+    // This screen's own route, not the navigator's stack: the root built
+    // while another screen was on top would keep a back button after it
+    // went (the chats showed one on the iPhone).
+    final back = !(ModalRoute.of(context)?.isFirst ?? true);
     return Scaffold(
       backgroundColor: t.base,
       body: SafeArea(
