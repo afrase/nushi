@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:nushi/branch_rename.dart';
 import 'package:nushi/changes_span.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
@@ -13,16 +14,19 @@ import 'package:nushi/widgets.dart';
 const IconData worktreeIcon = Icons.account_tree_outlined;
 
 /// The Environment card's worktree rows for a chat in a git repository:
-/// for a worktree chat its branch (with the worktree icon) and base; for a
+/// for a worktree chat its branch (with the worktree icon and Rename
+/// branch…, between turns) and base; for a
 /// chat without messages a "New worktree" switch, which moves it into a new
 /// worktree or back and is remembered for the repository; otherwise "Move to
-/// new worktree". [branch] is the branch checked out in the chat's folder.
+/// new worktree". [branch] is the branch checked out in the chat's folder;
+/// [onRenamed] once Rename branch… renamed it.
 List<(String?, Widget)> worktreeRows(
   BuildContext context,
   ChatState chat,
   Daemon daemon,
-  String branch,
-) {
+  String branch, {
+  VoidCallback? onRenamed,
+}) {
   final theme = NushiTheme.of(context);
   final t = theme.t;
   final wt = chat.worktree;
@@ -33,7 +37,10 @@ List<(String?, Widget)> worktreeRows(
     (
       'Branch',
       Tooltip(
-        message: wt == null ? '' : 'A worktree at ${tildePath(wt.path)}',
+        // The whole name, which a narrow panel cuts.
+        message: wt == null
+            ? ''
+            : '$branch\nA worktree at ${tildePath(wt.path)}',
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -44,6 +51,30 @@ List<(String?, Widget)> worktreeRows(
             Flexible(
               child: Text(branch, style: code, overflow: TextOverflow.ellipsis),
             ),
+            if (wt != null) ...[
+              const SizedBox(width: 2),
+              // Within the row's height: the icon's tint overhangs it.
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: OverflowBox(
+                  maxWidth: 24,
+                  maxHeight: 24,
+                  child: IconTap(
+                    Icons.edit_outlined,
+                    size: 13,
+                    tooltip: 'Rename branch…',
+                    onTap: chat.busy
+                        ? null
+                        : () async {
+                            if (await renameBranch(context, chat, daemon)) {
+                              onRenamed?.call();
+                            }
+                          },
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
