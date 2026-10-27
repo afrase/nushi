@@ -172,6 +172,7 @@ func TestWebHeaders(t *testing.T) {
 		"Referrer-Policy":              "no-referrer",
 		"Strict-Transport-Security":    "max-age=31536000",
 		"Cross-Origin-Resource-Policy": "same-origin",
+		"Permissions-Policy":           "camera=(self), microphone=(), geolocation=(), payment=(), usb=()",
 	}
 	for k, v := range want {
 		if got := resp.Header.Get(k); got != v {

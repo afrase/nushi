@@ -8,6 +8,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/phone/platform.dart';
+import 'package:nushi/phone/scanner.dart';
 import 'package:nushi/phone/subscription.dart';
 import 'package:nushi/question_card.dart';
 import 'package:nushi/remote.dart' show keyFingerprint;
@@ -52,7 +53,7 @@ const _vapid =
 Map<String, Object?> _paired() => {
   'key': Uint8List(32)..[0] = 7,
   'name': 'iPhone',
-  'relay': 'wss://nushi.taile2d635.ts.net',
+  'relay': 'wss://nushi.aaronfrase.com',
   'daemon': 'ArJKFXeGeF5z4WCydMz-dOXinj4sE99eMxmb-oJ3qLE',
   'daemonKey': Uint8List(32)..[0] = 9,
 };
@@ -301,7 +302,7 @@ void main() {
   testWidgets('a link that isn’t a pairing link is refused', (tester) async {
     final (phone, _) = await _app(tester, FakeDaemon(_chats), paired: false);
     await tester.enterText(
-      find.byType(TextField).first,
+      find.byType(TextField).last,
       'https://example.com/?s=1',
     );
     await tester.pump();
@@ -319,7 +320,7 @@ void main() {
     final (phone, _) = await _app(tester, FakeDaemon(_chats), paired: false);
     final k = 'A' * 43;
     await tester.enterText(
-      find.byType(TextField).first,
+      find.byType(TextField).last,
       'https://evil.example.com/#pair?r=wss%3A%2F%2Fevil.example.com'
       '&i=abcdefghijklmnopqrstuv&k=$k&s=$k',
     );
@@ -427,6 +428,52 @@ void main() {
     expect(find.text('Nushi was updated'), findsOneWidget);
     await tester.tap(find.text('Reload'));
     expect(platform.updated, isTrue);
+    await _end(tester, phone);
+  });
+
+  testWidgets('Scan: the camera reads the Mac’s code, then pairing starts', (
+    tester,
+  ) async {
+    final (phone, platform) = await _app(
+      tester,
+      FakeDaemon(_chats),
+      paired: false,
+    );
+    await tester.tap(find.text('Scan QR code'));
+    await tester.pumpAndSettle();
+    expect(find.text('Scan the Mac’s code'), findsOneWidget);
+    final scanner = Scanner.last!..see('https://example.com/');
+    await tester.pump();
+    await tester.pump();
+    expect(find.text("That isn't a Nushi pairing code."), findsOneWidget);
+    // A Nushi code (for another relay here, so pairing stops at once,
+    // saying why: it was tried with what the camera read).
+    scanner.see(
+      'https://other.example/#pair?r=wss%3A%2F%2Fother.example&i=abc'
+      '&k=${'A' * 43}&s=${'A' * 43}',
+    );
+    await tester.pumpAndSettle();
+    expect(scanner.stopped, isTrue, reason: 'the camera is off');
+    expect(find.text('Scan the Mac’s code'), findsNothing);
+    expect(
+      find.textContaining('This link is for the relay at'),
+      findsOneWidget,
+    );
+    expect(phone.daemon, isNull);
+    expect(platform.saved?['daemon'], isNull);
+    await _end(tester, phone);
+  });
+
+  testWidgets('Scan: the camera refused says so', (tester) async {
+    Scanner.refuse = 'Nushi may not use the camera.';
+    addTearDown(() => Scanner.refuse = null);
+    final (phone, _) = await _app(tester, FakeDaemon(_chats), paired: false);
+    await tester.tap(find.text('Scan QR code'));
+    await tester.pumpAndSettle();
+    expect(find.text('Nushi may not use the camera.'), findsOneWidget);
+    await tester.tap(find.bySemanticsLabel('Back').first);
+    await tester.pumpAndSettle();
+    expect(Scanner.last!.stopped, isTrue);
     await _end(tester, phone);
   });
 }

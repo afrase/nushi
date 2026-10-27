@@ -191,7 +191,7 @@ func (s *Site) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.Set("Referrer-Policy", "no-referrer")
 	h.Set("X-Frame-Options", "DENY")
 	h.Set("Cross-Origin-Opener-Policy", "same-origin")
-	h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()")
+	h.Set("Permissions-Policy", "camera=(self), microphone=(), geolocation=(), payment=(), usb=()") // the camera for Scan only
 	h.Set("Cross-Origin-Resource-Policy", "same-origin")
 	if strings.HasPrefix(s.origin, "https://") {
 		h.Set("Strict-Transport-Security", "max-age=31536000")

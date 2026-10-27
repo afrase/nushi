@@ -186,7 +186,7 @@ final class PhonePlatform {
     if (!_has(web.window.navigator, 'serviceWorker')) return;
     final sw = web.window.navigator.serviceWorker;
     try {
-      final reg = _reg = await sw.register(_workerUrl()).toDart;
+      final reg = _reg = await sw.register(trustedScriptUrl('sw.js')).toDart;
       void watch(web.ServiceWorker? w) => w?.addEventListener(
         'statechange',
         ((web.Event _) {
@@ -240,26 +240,6 @@ final class PhonePlatform {
     if (waiting == null) return web.window.location.reload();
     _reloading = true;
     waiting.postMessage('skipWaiting'.toJS);
-  }
-
-  static JSObject? _policy;
-
-  /// The service worker's address, as a Trusted Types script URL where the
-  /// browser asks for one (the relay's CSP): the policy "nushi" passes
-  /// sw.js and nothing else.
-  static JSAny _workerUrl() {
-    final tt = web.window.getProperty<JSObject?>('trustedTypes'.toJS);
-    if (tt == null) return 'sw.js'.toJS;
-    final rules = JSObject()
-      ..['createScriptURL'] = ((
-        JSString u,
-      ) => u.toDart == 'sw.js' ? u : throw ArgumentError(u.toDart)).toJS;
-    _policy ??= tt.callMethod<JSObject>(
-      'createPolicy'.toJS,
-      'nushi'.toJS,
-      rules,
-    );
-    return _policy!.callMethod<JSAny>('createScriptURL'.toJS, 'sw.js'.toJS);
   }
 
   /// Unregisters the service worker and empties its caches: Forget leaves
@@ -384,4 +364,23 @@ final class PhonePlatform {
   /// Calls [f] when the network comes back.
   void onOnline(void Function() f) =>
       web.window.addEventListener('online', ((web.Event _) => f()).toJS);
+}
+
+JSObject? _policy;
+
+/// The app's own scripts a page may start as workers.
+const _workers = {'sw.js', 'qr_worker.js'};
+
+/// [name], one of the app's worker scripts, as a Trusted Types script URL
+/// where the browser asks for one (the relay's CSP): the policy "nushi"
+/// passes those and nothing else.
+JSAny trustedScriptUrl(String name) {
+  final tt = web.window.getProperty<JSObject?>('trustedTypes'.toJS);
+  if (tt == null) return name.toJS;
+  final rules = JSObject()
+    ..['createScriptURL'] = ((
+      JSString u,
+    ) => _workers.contains(u.toDart) ? u : throw ArgumentError(u.toDart)).toJS;
+  _policy ??= tt.callMethod<JSObject>('createPolicy'.toJS, 'nushi'.toJS, rules);
+  return _policy!.callMethod<JSAny>('createScriptURL'.toJS, name.toJS);
 }

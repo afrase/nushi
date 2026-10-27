@@ -69,8 +69,9 @@ Future<Phone> _app(
   WidgetTester tester,
   FakeDaemon fake,
   String phone,
-  Brightness b,
-) async {
+  Brightness b, {
+  PhonePlatform? platform,
+}) async {
   final (size, top, bottom) = _phones[phone]!;
   tester.view
     ..devicePixelRatio = 2
@@ -85,7 +86,7 @@ Future<Phone> _app(
   addTearDown(tester.view.reset);
   addTearDown(tester.platformDispatcher.clearAllTestValues);
   final p = Phone(
-    PhonePlatform()..saved = _paired(),
+    platform ?? (PhonePlatform()..saved = _paired()),
     connectTo: (_) => Daemon(transport: fake, remote: true),
   );
   await tester.pumpWidget(PhoneApp(p));
@@ -188,6 +189,45 @@ void main() {
         await tester.pump();
         expect(find.text("Still can't reach your Mac"), findsNothing);
         expect(find.text('Reconnecting…'), findsNothing);
+        await _end(tester, p);
+      });
+
+      testWidgets('pairing: Scan, or paste the link ($name)', (tester) async {
+        final p = await _app(
+          tester,
+          FakeDaemon(_chats),
+          phone,
+          b,
+          platform: PhonePlatform()..iPhone = true,
+        );
+        expect(find.text('Scan QR code'), findsOneWidget);
+        expect(find.bySemanticsLabel('Back'), findsNothing);
+        _inside(tester, find.text('Pair').last, phone);
+        await expectLater(
+          find.byType(PhoneApp),
+          matchesGoldenFile('goldens/phone_pair_scan_$name.png'),
+        );
+        await _end(tester, p);
+      });
+
+      testWidgets('the Mac’s QR code opened in Safari ($name)', (tester) async {
+        final p = await _app(
+          tester,
+          FakeDaemon(_chats),
+          phone,
+          b,
+          platform: PhonePlatform()
+            ..iPhone = true
+            ..installed = false
+            ..openedWith = 'https://nushi.aaronfrase.com/#pair?r=x',
+        );
+        expect(find.text('Open Nushi from your Home Screen'), findsOneWidget);
+        expect(find.text('Copy link'), findsOneWidget);
+        expect(find.text('Scan QR code'), findsNothing);
+        await expectLater(
+          find.byType(PhoneApp),
+          matchesGoldenFile('goldens/phone_pair_safari_$name.png'),
+        );
         await _end(tester, p);
       });
 

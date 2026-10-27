@@ -2,15 +2,19 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:nushi/phone/connection_bar.dart';
 import 'package:nushi/phone/phone.dart';
+import 'package:nushi/phone/scan_screen.dart';
 import 'package:nushi/phone/ui.dart';
 import 'package:nushi/theme/theme.dart';
 
-/// Pairing with a Mac (ADR 0054): the link the Mac's Pair dialog copies,
-/// pasted here, then the code both screens show. In Safari, before Nushi
-/// is on the Home Screen, it says how to put it there first: the Home
-/// Screen app keeps its storage apart from Safari's, so pairing must
-/// happen inside it.
+/// Pairing with a Mac (ADR 0054): Scan its QR code with the camera, or
+/// paste the link its Pair dialog copies; then the code both screens show.
+/// In Safari, before Nushi is on the Home Screen, it says how to put it
+/// there first: the Home Screen app keeps its storage apart from Safari's,
+/// so pairing must happen inside it. Opened from the Mac's QR code by the
+/// iPhone's Camera (which opens Safari), it says to open Nushi and scan
+/// there, and offers the link to copy.
 class PairScreen extends StatefulWidget {
   const new(this.phone, {super.key});
 
@@ -33,9 +37,26 @@ class _PairScreenState extends State<PairScreen> {
   @override
   void initState() {
     super.initState();
-    widget.phone.platform.onPairLink = (link) => setState(() {
-      _link.text = link;
-    });
+    final platform = widget.phone.platform
+      ..onPairLink = (link) => setState(() {
+        _link.text = link;
+      });
+    // Opened with a link inside the Home Screen app (no other page can
+    // open it there): pair at once; the code check still stands.
+    if (platform.openedWith != null && platform.installed && platform.iPhone) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_pair());
+      });
+    }
+  }
+
+  /// Scans the Mac's QR code, then pairs with it.
+  Future<void> _scan() async {
+    final link = await Navigator.of(context)
+        .push<String>(MaterialPageRoute(builder: (_) => const ScanScreen()));
+    if (link == null || !mounted) return;
+    setState(() => _link.text = link);
+    await _pair();
   }
 
   @override
@@ -81,7 +102,30 @@ class _PairScreenState extends State<PairScreen> {
           body: ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             children: [
-              if (notInstalled) ...[
+              UpdateBar(widget.phone),
+              if (notInstalled && platform.openedWith != null) ...[
+                Text(
+                  'Open Nushi from your Home Screen',
+                  style: phoneText(context, weight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'and tap Scan or Paste there: Nushi on the Home Screen keeps '
+                  'its own storage, apart from Safari’s. Not there yet? Tap '
+                  'Share, then “Add to Home Screen”.',
+                  style: muted,
+                ),
+                const SizedBox(height: 12),
+                PhoneButton(
+                  'Copy link',
+                  onTap: () => unawaited(
+                    Clipboard.setData(
+                      ClipboardData(text: platform.openedWith!),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 28),
+              ] else if (notInstalled) ...[
                 Text(
                   'Add Nushi to the Home Screen first',
                   style: phoneText(context, weight: FontWeight.w600),
@@ -93,19 +137,6 @@ class _PairScreenState extends State<PairScreen> {
                   'apart from Safari’s, and only it gets notifications.',
                   style: muted,
                 ),
-                if (platform.openedWith != null) ...[
-                  const SizedBox(height: 12),
-                  Text('Then paste this pairing link there:', style: muted),
-                  const SizedBox(height: 8),
-                  PhoneButton(
-                    'Copy pairing link',
-                    onTap: () => unawaited(
-                      Clipboard.setData(
-                        ClipboardData(text: platform.openedWith!),
-                      ),
-                    ),
-                  ),
-                ],
                 const SizedBox(height: 28),
               ],
               if (code != null) ...[
@@ -125,11 +156,26 @@ class _PairScreenState extends State<PairScreen> {
                 ),
               ] else if (!notInstalled) ...[
                 Text(
-                  'On the Mac: Settings › Remote access › Pair a phone, then '
-                  'Copy link, and paste it here.',
+                  'On the Mac: Settings › Remote access › Pair a phone.',
                   style: muted,
                 ),
                 const SizedBox(height: 16),
+                TextField(
+                  controller: _name,
+                  style: phoneText(context),
+                  decoration: const InputDecoration(
+                    labelText: 'This device’s name, as the Mac shows it',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                PhoneButton(
+                  _pairing ? 'Connecting…' : 'Scan QR code',
+                  primary: _link.text.trim().isEmpty,
+                  onTap: _pairing ? null : () => unawaited(_scan()),
+                ),
+                const SizedBox(height: 24),
+                Text('Or paste the link it copies:', style: muted),
+                const SizedBox(height: 8),
                 TextField(
                   controller: _link,
                   autocorrect: false,
@@ -144,17 +190,9 @@ class _PairScreenState extends State<PairScreen> {
                   onChanged: (_) => setState(() {}),
                 ),
                 const SizedBox(height: 12),
-                TextField(
-                  controller: _name,
-                  style: phoneText(context),
-                  decoration: const InputDecoration(
-                    labelText: 'This device’s name, as the Mac shows it',
-                  ),
-                ),
-                const SizedBox(height: 20),
                 PhoneButton(
-                  _pairing ? 'Connecting…' : 'Pair',
-                  primary: true,
+                  'Pair',
+                  primary: _link.text.trim().isNotEmpty,
                   onTap: _pairing || _link.text.trim().isEmpty ? null : _pair,
                 ),
               ],
