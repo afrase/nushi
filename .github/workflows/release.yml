@@ -51,7 +51,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           SHA: ${{ steps.tag.outputs.sha }}
         run: |
-          echo "checked=true" >> "$GITHUB_OUTPUT"; exit 0 # TEST ONLY
           passed=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow CI --commit "$SHA" --status success --json databaseId --jq length)
           if [ "$passed" -gt 0 ]; then echo "CI passed on $SHA."; echo "checked=true" >> "$GITHUB_OUTPUT"; exit 0; fi
           echo "No passing CI run for $SHA; the ci job checks it."
