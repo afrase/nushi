@@ -2,6 +2,19 @@
 
 Each milestone's summary as it was written when the milestone ended, newest first. An archive: what is current is in `NOTES.md`, `docs/adr/` and the code.
 
+## Summary of Settings as a roomy page, and chat history that scales (steps 311–314)
+
+Steps 311–314, one commit each on `main` (and a fix after 313), pushed after `make check`, while another session worked on the phone web app in a worktree of its own. No API change (67).
+
+- **Settings is a view** (step 311, ADR 0053; the owner: "very crammed, it's narrow"): in the chat's place beside the sidebar, ⌘, to open, Esc or Close to go back to what showed before; a 200 px nav of ten sections; each a page of rounded groups of rows (label and muted line left, the control at the group's edge, hairlines, one switch size), 720 px at most, left-aligned beside the nav (centered was drawn too: the content looked detached from the nav at 1700 px). MCP servers and Skills became sections; every way in is `openSettings(section:)`; Agents, Jira's sites, GitHub's hosts, the shell's environment, Start at login, logs and the daemon (API, build, Restart…) in groups.
+- **Chat history** (step 312; "how will the list grow at 200 chats?"): the switch, size and count with Clear all…, and Delete copies older than; then a lazy table (pinned header, fixed-extent rows) sorted by size, last used or title, searched, filtered (All, Archived, Read-only, Deleted chats when there are some), picked with click, ⇧ and ⌘ and cleared together after one confirmation; a row's Clear on hover; its title opens the chat. The daemon still sends every copy at once: 5,000 list in about 0.15 s (titles now joined through a map), and the app builds only the rows that show (opened over 5,000 in about 0.25 s in a widget test).
+- **The ? boxes** (step 313): not reproduced. The font is in the installed bundle under the manifest's name; the preview and the terminal pass it as the fallback; a release build of the real app drew Settings' preview with the icons on screen, and a release probe measured each icon through the bundled fallback for five fonts. The preview shows no icons now; the terminal keeps the fallback.
+- **Size**: the daemon from 31,610 to 31,615 lines of Go, the app from 28,694 to 29,888 lines of Dart. Over the ~500-line tripwire: 311 (the view, its rows, every section moved onto them, and the window tests), 312 (the table and its tests).
+
+**Tried by hand**: the release build of the real app (a throwaway data folder and dev daemon), Settings' old dialog captured from its window with `screencapture -l` (no input sent); the font probes (release builds that render and exit); `TestListCopiesAtScale` on this Mac.
+
+**Not tried by hand**: the new Settings in the window (no synthetic input: widget tests and goldens of every section at 1700×1000 and 900×700 in both themes, Chat history at 200 rows scrolled and picked, and searched); ⌘, from a terminal and from the menu bar in the real app; ⇧/⌘-click with a real keyboard; the ? boxes on the work Mac.
+
 ## Summary of skills for every agent, and the shared .agents/skills (steps 303–309)
 
 Steps 303–309, one commit each on `main`, pushed after `make check`, while another session worked on the phone web app in a worktree of its own. **API 67** (`ListSkills` and the changes take `agent`, Claude when empty; `Skill.linked`, `everywhere`, `agents`; `no_skills`, `no_switch`, `reads_shared`; `LinkSkill`).
