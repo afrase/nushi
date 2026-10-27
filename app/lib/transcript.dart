@@ -88,6 +88,15 @@ class Transcript extends StatefulWidget {
 class _TranscriptState extends State<Transcript> {
   final _follower = BottomFollower();
   final _area = GlobalKey<SelectionAreaState>();
+  // A click outside (the composer) takes the focus and clears the
+  // selection without reporting it: the toolbar goes with it. An open reply
+  // box stays, its quote kept.
+  late final FocusNode _areaFocus = FocusNode(debugLabel: 'transcript')
+    ..addListener(() {
+      if (!_areaFocus.hasFocus && _at != null && _replyTo == null) {
+        _closeToolbar();
+      }
+    });
   String _selected = '';
   bool _down = false; // a pointer is down on the transcript
   bool _touch = false; // the last pointer down was a finger (or a pen)
@@ -211,6 +220,7 @@ class _TranscriptState extends State<Transcript> {
   @override
   void dispose() {
     _follower.dispose();
+    _areaFocus.dispose();
     super.dispose();
   }
 
@@ -314,6 +324,7 @@ class _TranscriptState extends State<Transcript> {
               },
               child: SelectionArea(
                 key: _area,
+                focusNode: _areaFocus,
                 contextMenuBuilder: (context, region) =>
                     _menu(region, onSide: side, onReply: reply),
                 onSelectionChanged: (c) {

@@ -72,9 +72,9 @@ Future<(FakeDaemon, Future<void> Function())> _open(
   );
 }
 
-/// Selects [_quote] in the agent's message with the mouse and opens the
-/// reply box on it; where the selection starts.
-Future<Offset> _reply(WidgetTester tester) async {
+/// Selects [_quote] in the agent's message with the mouse and, [open],
+/// opens the reply box on it; where the selection starts.
+Future<Offset> _reply(WidgetTester tester, {bool open = true}) async {
   final text = find.textContaining('kept as a', findRichText: true).last;
   final para = tester.renderObject<RenderParagraph>(text);
   final whole = para.text.toPlainText();
@@ -99,6 +99,7 @@ Future<Offset> _reply(WidgetTester tester) async {
   await tester.pump();
   await drag.up();
   await tester.pumpAndSettle();
+  if (!open) return at(from);
   await tester.tap(find.text('Reply'));
   await tester.pumpAndSettle();
   expect(find.byType(ReplyBox), findsOneWidget);
@@ -186,6 +187,23 @@ void main() {
       withReplies([(quote: _quote, text: _lines.join('\n'))], ''),
     );
     expect(splitReplies(sent.text).$1.single.text, _lines.join('\n'));
+    await end();
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets('a click in the composer clears the selection and its toolbar', (
+    tester,
+  ) async {
+    final (_, end) = await _open(tester);
+    await _reply(tester, open: false);
+    expect(find.byType(SelectionToolbar), findsOneWidget);
+    await tester.tap(
+      find.descendant(
+        of: find.byType(Composer),
+        matching: find.byType(TextField),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(SelectionToolbar), findsNothing);
     await end();
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
