@@ -7,7 +7,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"unicode"
 
 	"github.com/afrase/nushi/internal/githubapi"
 	"github.com/afrase/nushi/internal/model"
@@ -46,7 +45,7 @@ func (s *Service) CheckOut(ctx context.Context, folder string, ref model.GitHubR
 		refspec = "+refs/heads/" + p.Head + ":" + out.From
 	} else {
 		n := strconv.Itoa(ref.Number)
-		out.Branch, out.From = "pr-"+n+"-"+slug(p.Head, 40), "refs/nushi/pull/"+n
+		out.Branch, out.From = "pr-"+n+"-"+model.Slug(p.Head, 40), "refs/nushi/pull/"+n
 		refspec = "+refs/pull/" + n + "/head:" + out.From
 	}
 	if err := s.Fetch(ctx, folder, remote, refspec); err != nil {
@@ -94,24 +93,8 @@ func (s *Service) remoteFor(ctx context.Context, folder string, ref model.GitHub
 // IssueBranch is the branch for a chat on an issue: its number and its
 // title's words ("123-summary-slug"), 40 characters of title at most.
 func IssueBranch(number int, title string) string {
-	if s := slug(title, 40); s != "" {
+	if s := model.Slug(title, 40); s != "" {
 		return strconv.Itoa(number) + "-" + s
 	}
 	return strconv.Itoa(number)
-}
-
-// slug is s's letters and digits, lowercase, words joined by "-", cut
-// between words at n characters.
-func slug(s string, n int) string {
-	words := strings.FieldsFunc(strings.ToLower(s), func(r rune) bool {
-		return r > unicode.MaxASCII || !unicode.IsLetter(r) && !unicode.IsDigit(r)
-	})
-	out := ""
-	for _, w := range words {
-		if len(out)+len(w)+1 > n && out != "" {
-			break
-		}
-		out = strings.TrimPrefix(out+"-"+w, "-")
-	}
-	return out[:min(len(out), n)]
 }

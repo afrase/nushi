@@ -170,6 +170,77 @@ func (Worktrees) DeleteBranch(ctx context.Context, wt model.Worktree) error {
 	return err
 }
 
+// BranchUse says who else has a worktree's branch: whether the worktree
+// still has it checked out, another worktree has, it tracks a remote's
+// branch, or a remote has one of its name (it was pushed). It reads only
+// the repository's own refs and config; it asks no remote.
+func (Worktrees) BranchUse(ctx context.Context, wt model.Worktree) (model.BranchUse, error) {
+	var u model.BranchUse
+	out, err := run(ctx, wt.Repo, "worktree", "list", "--porcelain", "-z")
+	if err != nil {
+		return u, err
+	}
+	here := realPath(wt.Path)
+	var path string
+	for _, field := range split(out) { // entries end with an empty field
+		if p, ok := strings.CutPrefix(field, "worktree "); ok {
+			path = p
+		} else if field == "branch refs/heads/"+wt.Branch {
+			on := realPath(path) == here
+			u.OnIt, u.Elsewhere = u.OnIt || on, u.Elsewhere || !on
+		}
+	}
+	up, err := run(ctx, wt.Repo, "for-each-ref", "--format=%(upstream)", "refs/heads/"+wt.Branch)
+	if err != nil {
+		return u, err
+	}
+	u.Upstream = strings.TrimSpace(string(up)) != ""
+	u.Pushed, err = remoteHas(ctx, wt.Repo, wt.Branch)
+	return u, err
+}
+
+// remoteHas says whether a remote of repo has a branch named branch, as
+// last fetched or pushed.
+func remoteHas(ctx context.Context, repo, branch string) (bool, error) {
+	out, err := run(ctx, repo, "for-each-ref", "--format=%(refname)", "refs/remotes")
+	for ref := range strings.Lines(string(out)) {
+		if strings.HasSuffix(strings.TrimSpace(ref), "/"+branch) { // the remote's name may hold "/" too
+			return true, nil
+		}
+	}
+	return false, err
+}
+
+// realPath is path with its links resolved, as git reports worktrees; path
+// itself when it can't be (a folder that's gone).
+func realPath(path string) string {
+	if p, err := filepath.EvalSymlinks(path); err == nil {
+		return p
+	}
+	return filepath.Clean(path)
+}
+
+// RenameBranch gives a worktree's branch the name to (git branch -m), which
+// the worktrees that have it checked out follow; their folders stay. A
+// name git doesn't take is refused, and one already taken (a branch of
+// the repository's, or a remote's) fails with fs.ErrExist.
+func (Worktrees) RenameBranch(ctx context.Context, wt model.Worktree, to string) error {
+	if err := CheckBranch(to); err != nil {
+		return err
+	}
+	if _, err := run(ctx, wt.Repo, "check-ref-format", "--branch", to); err != nil {
+		return fmt.Errorf("%q isn't a name git takes for a branch", to)
+	}
+	if _, err := run(ctx, wt.Repo, "rev-parse", "--verify", "-q", "refs/heads/"+to); err == nil {
+		return fmt.Errorf("a branch named %s: %w", to, fs.ErrExist)
+	}
+	if has, err := remoteHas(ctx, wt.Repo, to); err != nil || has {
+		return cmp.Or(err, fmt.Errorf("a remote's branch named %s: %w", to, fs.ErrExist))
+	}
+	_, err := run(ctx, wt.Repo, "branch", "-m", wt.Branch, to)
+	return err
+}
+
 // mainWorktree returns the folder of the main worktree of folder's
 // repository: the repository's own folder.
 func mainWorktree(ctx context.Context, folder string) (string, error) {
