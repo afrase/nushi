@@ -75,13 +75,14 @@ const PingResponse$json = {
   '2': [
     {'1': 'api_version', '3': 1, '4': 1, '5': 5, '10': 'apiVersion'},
     {'1': 'build', '3': 2, '4': 1, '5': 9, '10': 'build'},
+    {'1': 'version', '3': 3, '4': 1, '5': 9, '10': 'version'},
   ],
 };
 
 /// Descriptor for `PingResponse`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List pingResponseDescriptor = $convert.base64Decode(
     'CgxQaW5nUmVzcG9uc2USHwoLYXBpX3ZlcnNpb24YASABKAVSCmFwaVZlcnNpb24SFAoFYnVpbG'
-    'QYAiABKAlSBWJ1aWxk');
+    'QYAiABKAlSBWJ1aWxkEhgKB3ZlcnNpb24YAyABKAlSB3ZlcnNpb24=');
 
 @$core.Deprecated('Use listChatsRequestDescriptor instead')
 const ListChatsRequest$json = {

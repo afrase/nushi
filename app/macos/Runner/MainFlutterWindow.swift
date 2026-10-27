@@ -27,29 +27,27 @@ class MainFlutterWindow: NSWindow {
 
     // Start at login (ADR 0036): the launch agent in the bundle, which opens
     // the daemon's helper app. Answers its status after each call.
-    if #available(macOS 13.0, *) {
-      let agent = SMAppService.agent(plistName: "com.nushihq.Nushi.daemon.plist")
-      FlutterMethodChannel(name: "nushi/login", binaryMessenger: flutterViewController.engine.binaryMessenger)
-        .setMethodCallHandler { call, result in
-          do {
-            switch call.method {
-            case "status": break
-            case "set": try call.arguments as? Bool == true ? agent.register() : agent.unregister()
-            case "openSettings": SMAppService.openSystemSettingsLoginItems()
-            default: return result(FlutterMethodNotImplemented)
-            }
-          } catch {
-            return result(FlutterError(code: "failed", message: error.localizedDescription, details: nil))
+    let agent = SMAppService.agent(plistName: "com.nushihq.Nushi.daemon.plist")
+    FlutterMethodChannel(name: "nushi/login", binaryMessenger: flutterViewController.engine.binaryMessenger)
+      .setMethodCallHandler { call, result in
+        do {
+          switch call.method {
+          case "status": break
+          case "set": try call.arguments as? Bool == true ? agent.register() : agent.unregister()
+          case "openSettings": SMAppService.openSystemSettingsLoginItems()
+          default: return result(FlutterMethodNotImplemented)
           }
-          let status: String = switch agent.status {
-          case .enabled: "enabled"
-          case .requiresApproval: "requiresApproval"
-          case .notRegistered: "notRegistered"
-          default: "notFound"
-          }
-          result(status)
+        } catch {
+          return result(FlutterError(code: "failed", message: error.localizedDescription, details: nil))
         }
-    }
+        let status: String = switch agent.status {
+        case .enabled: "enabled"
+        case .requiresApproval: "requiresApproval"
+        case .notRegistered: "notRegistered"
+        default: "notFound"
+        }
+        result(status)
+      }
 
     super.awakeFromNib()
   }

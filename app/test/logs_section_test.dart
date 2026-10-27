@@ -63,6 +63,26 @@ void main() {
     d.dispose();
   });
 
+  testWidgets("a packaged daemon's release shows beside its API", (
+    tester,
+  ) async {
+    final fake = FakeDaemon([])
+      ..answer = (r) => r is PingRequest
+          ? PingResponse(apiVersion: apiVersion, version: '1.2.0')
+          : null;
+    final d = await fake.connect(tester);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: Scaffold(
+          body: LogsSection(daemon: d, debug: null, onDebug: (_) {}),
+        ),
+      ),
+    );
+    expect(find.text('Version 1.2.0 · API $apiVersion'), findsOneWidget);
+    d.dispose();
+  });
+
   testWidgets('no switch until the daemon says', (tester) async {
     final d = await _section(
       tester,

@@ -18,6 +18,17 @@ HELPER := $(RELEASE)/Contents/Helpers/Nushi Daemon.app
 # Certificates), else ad hoc ("-"). A real identity keeps the app the same app
 # to macOS across builds, so the keychain asks once, not after every install.
 SIGN := $(or $(NUSHI_SIGN),$(shell security find-identity -v -p codesigning 2>/dev/null | grep -m1 -o '"Apple Development: [^"]*"' | tr -d '"'),-)
+# The version package stamps into the app, its helper and the daemon:
+# NUSHI_VERSION (a release's, from its tag: tools/release.sh), else the
+# newest vX.Y.Z tag's, else 0.1.0; the build number is the commit count.
+VERSION := $(or $(NUSHI_VERSION),$(patsubst v%,%,$(shell git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null)),0.1.0)
+BUILD := $(or $(shell git rev-list --count HEAD 2>/dev/null),1)
+# The oldest macOS Nushi runs on: Go 1.27's minimum, and SMAppService's
+# (Start at login). The daemon is built for it too: cgo's clang would take
+# the building Mac's SDK (flags rather than MACOSX_DEPLOYMENT_TARGET,
+# which Go's build cache doesn't key on).
+MACOS_MIN := 13.0
+MACOS_CGO := -O2 -g -mmacosx-version-min=$(MACOS_MIN)
 
 .PHONY: run daemon stop app package install gen test lint check lines relay icons adapters web web-fonts web-plex
 
@@ -40,11 +51,14 @@ app:
 # (ADR 0036), signed with $(SIGN). The app starts it when no daemon is running,
 # and launchd at login through start-daemon when Start at login is on.
 package:
-	cd app && flutter build macos --release
+	cd app && flutter build macos --release --build-name "$(firstword $(subst -, ,$(VERSION)))" --build-number "$(BUILD)"
 	rm -rf "$(RELEASE)/Contents/MacOS/nushid" "$(RELEASE)/Contents/Helpers"
 	mkdir -p "$(HELPER)/Contents/MacOS" "$(HELPER)/Contents/Resources"
-	go build -o "$(HELPER)/Contents/MacOS/nushid" ./cmd/nushid
+	CGO_CFLAGS="$(MACOS_CGO)" CGO_LDFLAGS="$(MACOS_CGO)" go build -ldflags "-X github.com/afrase/nushi/internal/api.Release=$(VERSION)" -o "$(HELPER)/Contents/MacOS/nushid" ./cmd/nushid
 	cp app/macos/Daemon/Info.plist "$(HELPER)/Contents/"
+	plutil -replace CFBundleShortVersionString -string "$(VERSION)" "$(RELEASE)/Contents/Info.plist"
+	plutil -replace CFBundleShortVersionString -string "$(VERSION)" "$(HELPER)/Contents/Info.plist"
+	plutil -replace CFBundleVersion -string "$(BUILD)" "$(HELPER)/Contents/Info.plist"
 	cp "$(RELEASE)/Contents/Resources/AppIcon.icns" "$(HELPER)/Contents/Resources/"
 	mkdir -p "$(RELEASE)/Contents/Library/LaunchAgents"
 	cp app/macos/Daemon/com.nushihq.Nushi.daemon.plist "$(RELEASE)/Contents/Library/LaunchAgents/"

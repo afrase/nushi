@@ -4,6 +4,31 @@
 
 A macOS app for running coding agents as chats over the [Agent Client Protocol](https://agentclientprotocol.com), plus a diff viewer. A Go daemon (`nushid`) runs the agents; a Flutter app is the window.
 
+## Install
+
+On a Mac with Apple silicon and macOS 13 or later, from the owner's Homebrew tap ([ADR 0055](docs/adr/0055-releases-and-the-homebrew-cask.md)):
+
+```sh
+brew install --cask afrase/tap/nushi
+brew upgrade --cask nushi              # a newer release
+brew uninstall --cask nushi            # the app; chats' data stays
+brew uninstall --zap --cask nushi      # the app and Nushi's data
+```
+
+Releases are signed ad hoc, not notarized: the cask clears macOS's quarantine flag, so installing from the tap stands in for Gatekeeper's check. Without Homebrew, take `Nushi-X.Y.Z.zip` from [Releases](https://github.com/afrase/nushi/releases), check it (`shasum -a 256 -c Nushi-X.Y.Z.zip.sha256`), unzip it, move Nushi.app to Applications and open it; macOS refuses the first time: System Settings › Privacy & Security › Open Anyway.
+
+- **Upgrading** quits the app and opens the new one; the daemon keeps running, its chats too, until you take the app's Restart daemon (it stops the agents; chats reopen where they were). Each release is a new program to macOS, so after an upgrade a Jira token (and a GitHub token you pasted) needs your OK once more: Allow…, then Always Allow in macOS's prompt (Jira, below). gh's own login isn't affected.
+- **Uninstalling** quits the app; the daemon stops by itself within about a minute once the app is gone (also when you drag it to the Trash), and Start at login's item goes with the app. Chats' data stays in `~/Library/Application Support/Nushi`. **`--zap` deletes it**: Nushi's copies of every chat's transcript, settings, trust answers, remote access keys and paired devices, the adapters and the logs, and the app's preferences. Not the agents' own history (`~/.claude`, `~/.codex`, `~/.ante`, `~/.omp`, `~/.pig`): those chats still resume in a terminal. The keychain's "Nushi Jira" and "Nushi GitHub" items stay (remove the sites in Settings first, or in Keychain Access).
+- **On a Pi** (the relay and the phone's web app, below), each release has `nushi-relay-X.Y.Z-linux-arm64.tar.gz` (and `linux-amd64`, `darwin-arm64`: static binaries) and `nushi-web-X.Y.Z.tar.gz`; update the web app with the Mac:
+
+```sh
+tar -xzf nushi-relay-X.Y.Z-linux-arm64.tar.gz && sudo install nushi-relay /usr/local/bin/
+sudo rm -rf /usr/local/share/nushi-web && sudo tar -xzf nushi-web-X.Y.Z.tar.gz -C /usr/local/share
+nushi-relay -version                   # then restart its service
+```
+
+Settings › Logs & advanced shows the app's version and the running daemon's (`nushid -version` in the helper app says the same).
+
 ## Requirements
 
 - Go (current stable) and Flutter on `PATH`
@@ -19,14 +44,15 @@ make lint    # the linters and format checks (below)
 make check   # lint, then test
 make gen     # regenerate the API code after editing proto/
 make lines   # hand-written line counts
-make package # a release "Nushi.app" with nushid inside (ad-hoc signed)
+make package # a release "Nushi.app" with nushid inside (signed: NOTES.md says with what)
+tools/release.sh 1.2.0 # a release's files into dist/, as the release workflow builds them
 make install # package, then copy it to ~/Applications
 make icons   # redraw the app icon and the mark (tools/icongen)
 ```
 
 Settings (⌘,) takes the chat's place beside the sidebar, its sections in a list on the left; Esc or Close goes back ([ADR 0053](docs/adr/0053-settings-is-a-view.md)).
 
-The packaged app starts its bundled `nushid` (in `Contents/Helpers/Nushi Daemon.app`, a background-only app) when no daemon is running, and leaves it running when it quits; Settings › Start at login also starts it at login ([ADR 0013](docs/adr/0013-app-starts-its-daemon.md), [ADR 0036](docs/adr/0036-the-daemon-is-a-background-helper-app.md)). `make package` checks the bundle's layout and signatures (`tools/check-bundle.sh`). With `make run`, start and stop the daemon yourself.
+The packaged app starts its bundled `nushid` (in `Contents/Helpers/Nushi Daemon.app`, a background-only app) when no daemon is running, and leaves it running when it quits; Settings › Start at login also starts it at login ([ADR 0013](docs/adr/0013-app-starts-its-daemon.md), [ADR 0036](docs/adr/0036-the-daemon-is-a-background-helper-app.md)). `make package` checks the bundle's layout and signatures (`tools/check-bundle.sh`). A daemon whose app is deleted stops within about a minute; one whose app is replaced (an upgrade, `make install`) keeps running until you restart it. With `make run`, start and stop the daemon yourself.
 
 The daemon keeps its socket, token and log in `~/Library/Application Support/Nushi/`: `nushid.log` (rotated at 10 MB, two older copies), and `app.log` for what the app logged while the daemon didn't answer. Settings › Logs & advanced reveals them and turns on debug lines (or `NUSHI_LOG=debug`); one chat's lines are `grep 'chat=<id>' nushid.log` ([ADR 0038](docs/adr/0038-logs-you-can-debug-from.md) says what is logged and what never is). To try a build beside a Nushi that's in use, give both another folder: `NUSHI_DATA=~/Library/Application\ Support/Nushi\ Dev make run` (and the same for `make stop`). Everything Nushi writes outside its data folder, and why, is in [docs/user/outside-the-data-folder.md](docs/user/outside-the-data-folder.md).
 

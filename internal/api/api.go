@@ -33,7 +33,12 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 73
+const Version = 74
+
+// Release is the version a release build stamps in (make package's
+// VERSION, through -ldflags -X), "" in a build that isn't packaged
+// (PingResponse.version).
+var Release string
 
 // Build is the daemon's executable as it started (PingResponse.build).
 var Build = func() string {
@@ -162,7 +167,7 @@ func WithToken(token string, h http.Handler) http.Handler {
 }
 
 func (s *server) Ping(context.Context, *connect.Request[nushiv1.PingRequest]) (*connect.Response[nushiv1.PingResponse], error) {
-	return connect.NewResponse(&nushiv1.PingResponse{ApiVersion: Version, Build: Build}), nil
+	return connect.NewResponse(&nushiv1.PingResponse{ApiVersion: Version, Build: Build, Version: Release}), nil
 }
 
 func (s *server) ListChats(ctx context.Context, _ *connect.Request[nushiv1.ListChatsRequest]) (*connect.Response[nushiv1.ListChatsResponse], error) {

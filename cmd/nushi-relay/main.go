@@ -8,6 +8,7 @@ import (
 	"cmp"
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"net"
 
@@ -16,7 +17,12 @@ import (
 	"github.com/afrase/nushi/relay"
 )
 
+// version is the release the relay was built as (-ldflags -X
+// main.version=X.Y.Z, as tools/release.sh does).
+var version = "dev"
+
 func main() {
+	showVersion := flag.Bool("version", false, "print the relay's version and exit")
 	addr := flag.String("addr", "", "address to listen on (default :8080, or :443 with -host)")
 	host := flag.String("host", "", "serve TLS for this host name, with a Let's Encrypt certificate")
 	cache := flag.String("cert-cache", "", "folder to keep the certificate in (default: memory only, so each start asks for a new one)")
@@ -41,6 +47,10 @@ func main() {
 	web := flag.String("web", "", "serve the web app built into this folder (ADR 0054); needs -origin")
 	origin := flag.String("origin", "", "with -web: the origin the browser sees the app at (https://host[:port]), the only one whose pages may connect; with -host, https://<host> by default. Behind a reverse proxy (Tailscale Funnel, cloudflared, Caddy) it is the proxy's public address")
 	flag.Parse()
+	if *showVersion {
+		fmt.Println("nushi-relay", version) //nolint:forbidigo // -version's answer
+		return
+	}
 
 	if *origin == "" && *web != "" && *host != "" {
 		*origin = "https://" + *host

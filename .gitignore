@@ -7,3 +7,4 @@ local.mk
 app/test/failures/
 go.work
 go.work.sum
+dist/
