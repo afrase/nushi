@@ -1,9 +1,10 @@
-# What make check runs, as parallel jobs (step 344: 12 minutes in one job before). macOS for what needs it: the
-# daemon (proc_info, sandbox-exec, launchd, the keychain's cgo), so Go's lint and tests; the app's tests, whose
-# goldens are drawn with macOS's text rendering and whose end-to-end tests run nushid, in three shards of test
-# files; and the web app's end-to-end test. Linux for the rest: the protos' and Dart's lint, the Dart packages'
-# tests, and the packages that also run elsewhere (the relay, the Noise channel). The ACP library,
-# github.com/afrase/acp-go, has its own CI. Actions are pinned by commit.
+# What make check runs, as parallel jobs (step 344; one job of 12 minutes before). macOS for what needs it, in three
+# jobs (the account runs five macOS jobs at once, and other repositories' CI and releases need some): the daemon
+# (proc_info, sandbox-exec, launchd, the keychain's cgo), so Go's lint and tests, then the web app's end-to-end test
+# (nushid with Chrome); and the app's tests in two shards of test files (its goldens are drawn with macOS's text
+# rendering: on Linux a third of them differ by 1-4%; its end-to-end tests run nushid). Linux for the rest: the
+# protos' and Dart's lint, the Dart packages' tests, and the packages that also run elsewhere (the relay, the Noise
+# channel). The ACP library, github.com/afrase/acp-go, has its own CI. Actions are pinned by commit.
 name: CI
 
 on:
@@ -27,7 +28,7 @@ concurrency:
 
 jobs:
   go:
-    name: Go lint and tests (macOS)
+    name: Go, and the web app in Chrome (macOS)
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -59,7 +60,28 @@ jobs:
           key: golangci-lint-${{ runner.os }}-${{ hashFiles('tools/lint/go.sum', '.golangci.yml') }}-${{ github.sha }}
           restore-keys: golangci-lint-${{ runner.os }}-${{ hashFiles('tools/lint/go.sum', '.golangci.yml') }}-
       - run: make lint-go
-      - run: make test-go
+      # The tests run when the lint fails too, to see both.
+      - if: ${{ !cancelled() }}
+        run: make test-go
+      # Only now, as the web app's test needs it; the lean SDK, as the app's tests have it.
+      - id: flutter
+        if: ${{ !cancelled() }}
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.47.7
+          cache: true
+          cache-key: flutter-:os:-:channel:-:version:-:arch:-:hash:-lean
+      - if: ${{ !cancelled() }}
+        run: make test-web
+      # As the app's tests do.
+      - if: always() && steps.flutter.outputs.CACHE-HIT != 'true'
+        run: |
+          du -sh "$FLUTTER_ROOT"
+          cd "$FLUTTER_ROOT/bin/cache"
+          rm -rf artifacts/engine/ios* artifacts/engine/android-* artifacts/engine/darwin-x64-profile \
+            artifacts/engine/darwin-x64-release ios-sdk.stamp macos-sdk.stamp android-*.stamp
+          du -sh "$FLUTTER_ROOT"
 
   lint:
     name: Proto and Dart lint (Linux)
@@ -103,14 +125,14 @@ jobs:
       - run: make test-packages
 
   app:
-    name: App tests (macOS, ${{ matrix.shard }}/3)
+    name: App tests (macOS, ${{ matrix.shard }}/2)
     runs-on: macos-latest
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2]
     env:
-      SHARD: ${{ matrix.shard }}/3
+      SHARD: ${{ matrix.shard }}/2
       FLUTTER_TEST_FLAGS: --concurrency 3
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -141,34 +163,6 @@ jobs:
       # Before the cache is saved (a miss only): iOS's, Android's and macOS's release engines go, which only
       # builds use; flutter test needs the host's engine and the web SDK. Their stamps go too, so a build would
       # fetch them again.
-      - if: always() && steps.flutter.outputs.CACHE-HIT != 'true'
-        run: |
-          du -sh "$FLUTTER_ROOT"
-          cd "$FLUTTER_ROOT/bin/cache"
-          rm -rf artifacts/engine/ios* artifacts/engine/android-* artifacts/engine/darwin-x64-profile \
-            artifacts/engine/darwin-x64-release ios-sdk.stamp macos-sdk.stamp android-*.stamp
-          du -sh "$FLUTTER_ROOT"
-
-  web:
-    name: Web app in Chrome (macOS)
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ inputs.ref }}
-          persist-credentials: false
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-      - id: flutter
-        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
-        with:
-          channel: stable
-          flutter-version: 3.47.7
-          cache: true
-          cache-key: flutter-:os:-:channel:-:version:-:arch:-:hash:-lean
-      - run: make test-web
-      # As the app's tests do.
       - if: always() && steps.flutter.outputs.CACHE-HIT != 'true'
         run: |
           du -sh "$FLUTTER_ROOT"

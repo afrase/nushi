@@ -162,7 +162,7 @@ test-packages:
 # text rendering, and the end-to-end tests run nushid). SHARD=i/n runs
 # every nth test file from the ith, as CI's shards do (each file compiles
 # once, in one shard); FLUTTER_TEST_FLAGS adds flags (CI's --concurrency).
-APP_TESTS = $(if $(SHARD),$(shell ls app/test/*_test.dart | sed 's,^app/,,' | awk -v s='$(SHARD)' 'BEGIN { split(s, a, "/") } (NR - 1) % a[2] == a[1] - 1'))
+APP_TESTS = $(if $(SHARD),$(shell cd app && find test -name '*_test.dart' ! -path 'test/web/*' | LC_ALL=C sort | awk -v s='$(SHARD)' 'BEGIN { split(s, a, "/") } (NR - 1) % a[2] == a[1] - 1'))
 test-app:
 	cd app && flutter test $(FLUTTER_TEST_FLAGS) $(APP_TESTS)
 
