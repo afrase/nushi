@@ -197,7 +197,13 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
             FolderButton(chat: chat, daemon: daemon, stacked: true),
           ),
           if (status != null && status.git)
-            ...worktreeRows(context, chat, daemon, status.branch),
+            ...worktreeRows(
+              context,
+              chat,
+              daemon,
+              status.branch,
+              onRenamed: () => unawaited(reload()),
+            ),
           if (status != null && status.gone)
             (
               null,
