@@ -2,6 +2,23 @@
 
 Each milestone's summary as it was written when the milestone ended, newest first. An archive: what is current is in `NOTES.md`, `docs/adr/` and the code.
 
+## Summary of the phone as a web app, with Web Push (steps 319–326)
+
+Steps 319–326, one commit each on `main`, pushed after `make check`, from a worktree of their own while other sessions worked on skills and Settings in the checkout. **API 69** (`GetPushKey`, `SetPushSubscription`, `SetDeviceView`, `UnpairThisDevice` on a device's channel; `SendTestPush`, the Mac's; `Device.kind` and `.push`; `Remote.key`). The owner's decision (2026-10-27): no Apple Developer Program, so the phone is a web app on the Home Screen with Web Push (ADR 0054, amending 0033 and 0034).
+
+- **The relay serves the app** (step 319): `-web <folder> -origin <url>`, from memory, a strict CSP and headers, caching by name; WebSockets from that origin only, any other `Origin` still refused.
+- **Web Push in the daemon** (step 320): `internal/webpush` from RFCs 8291 and 8292 on the standard library (the RFC's vector byte for byte), an allowlist of push services, VAPID key in `vapid.json`, subscriptions with their devices, pushes on a turn's end, a prompt and a question, none for an open chat.
+- **The channel in a browser** (step 321): Noise's nonces web-safe and its vectors in Chrome, the browser's WebSocket, pairing links with the parameters in the fragment.
+- **The phone shell** (step 322): the chats with their states, a chat (the Mac's transcript and composer, Queue and Steer, cards answered by a tap), New chat, Settings, pairing by pasted link; the key and pairing in IndexedDB; 44-point targets.
+- **The PWA** (step 323): `make web` and `tools/webbuild` (hashed names, 16 MB), the manifest and icons from `make icons`, a page without inline script inside the safe area, a service worker for the shell and the pushes; a browser e2e through a real relay and daemon in `make test`.
+- **The Mac** (step 324): each device's kind and notifications, Send a test notification, Copy link, the owner's relay as the field's example.
+- **Security** (step 325, four adversarial reviews by subagents: the Origin change, the web key storage, Web Push, the CSP): a write deadline against slow readers holding the plain-connection slots; https-only origins; `default-src 'none'` and Trusted Types; an allowlist bypass through an IPv6 zone literal closed; endpoints out of error text; padded payloads; no false "finished" for a stop or a queue, no lost push for a phone put away (the open chat's lease); Forget unpairs on the Mac and clears the worker; a stale tab can't bring a forgotten key back; the daemon key's fingerprint on both sides. Written down rather than fixed: the relay is trusted for code when it serves the app; a raw key (no WebCrypto X25519 Noise can use); no bandwidth cap on static files; emoji and CJK fallback fonts not bundled.
+- **Size**: the daemon from 31,894 to 32,741 lines of Go, the relay and Noise from 1,181 to 1,424, the app from 30,031 to 32,042 lines of Dart, the packages from 1,948 to 2,081. Over the ~500-line tripwire: 320, 322, 323, 325 (see the step table).
+
+**Tried by hand**: in a headless Chrome of its own (a temporary profile, not the owner's browser) driven through the DevTools protocol, never the owner's apps: the real build under the relay's CSP with no violation; pairing a dev daemon (the fake agent as Claude) through a local relay and through the Pi's (`wss://nushi.taile2d635.ts.net`, Funnel): the code, Allow, the chats, a question card answered, Settings; notifications on (an FCM subscription), a test push accepted by Google's push service (201, so the VAPID signature and request were good). Headless Chrome doesn't show pushes, so delivery wasn't seen.
+
+**Not tried on a real iPhone**: installing from Safari, pairing in the Home Screen app, Web Push delivery from `web.push.apple.com` and the notification's tap opening the chat, the permission prompt from a tap in Flutter's event handling, the safe-area insets (`viewport-fit=cover` and `env()`), the keyboard over the composer, Universal Clipboard and AirDrop of the link, and iOS's Trusted Types (26+) and service worker caching.
+
 ## Summary of a worktree's branch named after the chat (steps 315–318)
 
 Steps 315–318, one commit each on `main`, pushed after `make check`, from a worktree of their own (two other sessions worked in the checkout meanwhile: the phone web app, and the Settings redesign, whose steps 311–314 came first). **API 68** (`RenameBranch`; the `branch_renamed` notice).

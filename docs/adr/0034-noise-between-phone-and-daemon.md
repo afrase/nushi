@@ -54,3 +54,6 @@ Also outside what this protects:
 ## Consequences
 - Remote access is off until turned on; while on, the daemon holds one waiting connection at the relay per id it waits at (its own, and after a revoke the old one until the other phones have moved), and nothing listens on the Mac.
 - A phone newer than the daemon will need the usual "Update Nushi on the Mac"; the protocol carries a version in its prologue (`/1`) for a later change.
+
+## Amendments
+- 2026-10-27: the phone is a web app on the Home Screen with Web Push from the daemon (ADR 0054): pairing by a link whose parameters are in the fragment (the QR code is unchanged), the device key raw in IndexedDB (script on the app's origin can take it; use the web app only from a relay you run), and a device's own calls for its push subscription and open chat. The Noise protocol is unchanged.

@@ -2,6 +2,15 @@
 
 Each milestone's demo script (what to run, what to see), newest first. An archive.
 
+## Demo (the phone as a web app, steps 319–326)
+
+1. On the Mac: Settings › Remote access on, relay `wss://nushi.taile2d635.ts.net`: Connected, and "This Mac's key: xxxx xxxx xxxx xxxx".
+2. On the iPhone, Safari: `https://nushi.taile2d635.ts.net/` says to add Nushi to the Home Screen first. Share › Add to Home Screen; open Nushi from there: Pair with a Mac.
+3. On the Mac: Pair a phone › Copy link. On the iPhone: paste into Pairing link, Pair: a six-digit code; the Mac asks "Pair iPhone?" with the same code: Allow. The Chats list shows, grouped by folder, each with running, needs you, done or asleep.
+4. Settings on the phone: the relay, the Mac's key (the same as the Mac shows), Notifications: turn on, Allow. On the Mac the device says "Web · notifications on · connected"; Send a test notification: "Nushi test notification" on the phone.
+5. Start a chat on the phone (+, a folder, Claude), ask something that needs a permission; lock the phone: "Claude needs you"; tap it: the chat opens at its card; Allow by tapping. Leave it; when the turn ends, "Claude finished" (none while the chat is open on the phone).
+6. Settings › Forget this Mac on the phone: back to pairing; the Mac no longer lists the device.
+
 ## Demo (a worktree's branch named after the chat, steps 315–318)
 
 1. In a repository, a new Claude chat with New worktree on: the details panel's Branch is `nushi/<two words>`. Send "Bump the Go version to 1.27.3" (anything short). When the turn ends, or a moment after (Claude's own title), the branch becomes `nushi/<Claude's title>` (`git branch` agrees), the transcript ends with a quiet "Branch renamed to nushi/…", and the folder is still `.worktrees/<two words>`. A second turn with another subject renames nothing.
