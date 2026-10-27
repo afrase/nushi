@@ -33,7 +33,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 72
+const Version = 73
 
 // Build is the daemon's executable as it started (PingResponse.build).
 var Build = func() string {
@@ -395,6 +395,13 @@ func (s *server) CancelTurn(ctx context.Context, req *connect.Request[nushiv1.Ca
 		out.Message = messageProto(*m)
 	}
 	return connect.NewResponse(out), nil
+}
+
+func (s *server) StopTask(_ context.Context, req *connect.Request[nushiv1.StopTaskRequest]) (*connect.Response[nushiv1.StopTaskResponse], error) {
+	if err := s.chats.StopTask(req.Msg.ChatId, req.Msg.CallId); err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	return connect.NewResponse(&nushiv1.StopTaskResponse{}), nil
 }
 
 func (s *server) ForkChat(ctx context.Context, req *connect.Request[nushiv1.ForkChatRequest]) (*connect.Response[nushiv1.ForkChatResponse], error) {

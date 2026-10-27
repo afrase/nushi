@@ -27,7 +27,7 @@ func (c *chat) relayLocked(callID string) (*model.Relay, error) {
 func userItem(m model.Message) model.Item {
 	it := model.Item{Kind: model.UserMessage, Text: m.Text, Images: m.Images, Files: m.Files}
 	if m.Relay != nil {
-		it.RelayTo, it.RelayCall, it.RelayState = m.Relay.Agent, m.To, "sending"
+		it.RelayTo, it.RelayCall, it.RelayState, it.RelayStop = m.Relay.Agent, m.To, "sending", m.Relay.Stop
 	}
 	return it
 }
@@ -37,7 +37,7 @@ func userItem(m model.Message) model.Item {
 func messageOf(it model.Item) model.Message {
 	m := model.Message{Text: it.Text, Files: it.Files, Images: it.Images, To: it.RelayCall}
 	if it.RelayTo != "" {
-		m.Relay = &model.Relay{Agent: it.RelayTo}
+		m.Relay = &model.Relay{Agent: it.RelayTo, Stop: it.RelayStop}
 	}
 	return m
 }
@@ -49,13 +49,29 @@ func (c *chat) relayedLocked(it *model.Item) bool {
 		return false
 	}
 	agent, id, text, ok := c.dialect.Relayed(it.Text)
+	if !ok && c.dialect.StopRelayed != nil {
+		agent, id, ok = c.dialect.StopRelayed(it.Text)
+		text, it.RelayStop = "", ok
+	}
 	if ok {
 		it.RelayTo, it.Text = agent, text
-		if i := slices.IndexFunc(c.items, func(call model.Item) bool { return call.Agent != "" && call.AgentID == id }); i >= 0 {
+		if i := slices.IndexFunc(c.items, func(call model.Item) bool { return taskOf(call) == id }); i >= 0 {
 			it.RelayCall = c.items[i].ID
 		}
 	}
 	return ok
+}
+
+// taskOf is the agent's id for the subagent or background command a tool
+// call started, "" when it started neither or the agent didn't say.
+func taskOf(call model.Item) string {
+	switch {
+	case call.Agent != "":
+		return call.AgentID
+	case call.Shell != nil:
+		return call.Shell.ID
+	}
+	return ""
 }
 
 // relayingLocked links a call of the agent's that passes a message on to a
@@ -66,11 +82,13 @@ func (c *chat) relayingLocked(call model.Item) {
 		return
 	}
 	id := c.dialect.Relaying(call)
-	sub := slices.IndexFunc(c.items, func(it model.Item) bool { return it.Agent != "" && it.AgentID == id })
+	sub := slices.IndexFunc(c.items, func(it model.Item) bool { return taskOf(it) == id })
 	if id == "" || sub < 0 {
 		return
 	}
-	relays := func(it model.Item) bool { return it.Kind == model.UserMessage && it.RelayCall == c.items[sub].ID }
+	relays := func(it model.Item) bool { // a stop is passed on by a call that stops
+		return it.Kind == model.UserMessage && it.RelayCall == c.items[sub].ID && it.RelayStop == (call.Stops != "")
+	}
 	i := slices.IndexFunc(c.items, func(it model.Item) bool { return relays(it) && it.RelayedBy == call.ID })
 	if i < 0 {
 		i = slices.IndexFunc(c.items, func(it model.Item) bool {

@@ -3239,6 +3239,7 @@ class QueuedMessage extends $pb.GeneratedMessage {
     $core.Iterable<ImageData>? images,
     $core.String? relayTo,
     $core.String? toSubagent,
+    $core.bool? relayStop,
   }) {
     final result = QueuedMessage._();
     if (id != null) result.id = id;
@@ -3247,6 +3248,7 @@ class QueuedMessage extends $pb.GeneratedMessage {
     if (images != null) result.images.addAll(images);
     if (relayTo != null) result.relayTo = relayTo;
     if (toSubagent != null) result.toSubagent = toSubagent;
+    if (relayStop != null) result.relayStop = relayStop;
     return result;
   }
 
@@ -3270,6 +3272,7 @@ class QueuedMessage extends $pb.GeneratedMessage {
         subBuilder: ImageData.$_createMessage)
     ..aOS(5, _omitFieldNames ? '' : 'relayTo')
     ..aOS(6, _omitFieldNames ? '' : 'toSubagent')
+    ..aOB(7, _omitFieldNames ? '' : 'relayStop')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -3338,6 +3341,17 @@ class QueuedMessage extends $pb.GeneratedMessage {
   $core.bool hasToSubagent() => $_has(5);
   @$pb.TagNumber(6)
   void clearToSubagent() => $_clearField(6);
+
+  /// It asks the agent to stop that subagent, or the background command
+  /// relay_to names (StopTask).
+  @$pb.TagNumber(7)
+  $core.bool get relayStop => $_getBF(6);
+  @$pb.TagNumber(7)
+  set relayStop($core.bool value) => $_setBool(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasRelayStop() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearRelayStop() => $_clearField(7);
 }
 
 /// Every message waiting in a chat's queue, in order.
@@ -3941,6 +3955,116 @@ class CancelTurnRequest extends $pb.GeneratedMessage {
   $core.bool hasTakeBack() => $_has(1);
   @$pb.TagNumber(2)
   void clearTakeBack() => $_clearField(2);
+}
+
+class StopTaskRequest extends $pb.GeneratedMessage {
+  factory StopTaskRequest({
+    $core.String? chatId,
+    $core.String? callId,
+  }) {
+    final result = StopTaskRequest._();
+    if (chatId != null) result.chatId = chatId;
+    if (callId != null) result.callId = callId;
+    return result;
+  }
+
+  StopTaskRequest._();
+
+  factory StopTaskRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StopTaskRequest()..mergeFromBuffer(data, registry);
+  factory StopTaskRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StopTaskRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'StopTaskRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: StopTaskRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOS(2, _omitFieldNames ? '' : 'callId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StopTaskRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StopTaskRequest copyWith(void Function(StopTaskRequest) updates) =>
+      super.copyWith((message) => updates(message as StopTaskRequest))
+          as StopTaskRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use StopTaskRequest() / StopTaskRequest.new instead')
+  static StopTaskRequest create() => StopTaskRequest._();
+  static $pb.GeneratedMessage $_createMessage() => StopTaskRequest._();
+  @$core.override
+  StopTaskRequest createEmptyInstance() => StopTaskRequest._();
+  @$core.pragma('dart2js:noInline')
+  static StopTaskRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<StopTaskRequest>(
+          StopTaskRequest.$_createMessage);
+  static StopTaskRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get callId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set callId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasCallId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearCallId() => $_clearField(2);
+}
+
+class StopTaskResponse extends $pb.GeneratedMessage {
+  factory StopTaskResponse() => StopTaskResponse._();
+
+  StopTaskResponse._();
+
+  factory StopTaskResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StopTaskResponse()..mergeFromBuffer(data, registry);
+  factory StopTaskResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StopTaskResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'StopTaskResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: StopTaskResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StopTaskResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StopTaskResponse copyWith(void Function(StopTaskResponse) updates) =>
+      super.copyWith((message) => updates(message as StopTaskResponse))
+          as StopTaskResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use StopTaskResponse() / StopTaskResponse.new instead')
+  static StopTaskResponse create() => StopTaskResponse._();
+  static $pb.GeneratedMessage $_createMessage() => StopTaskResponse._();
+  @$core.override
+  StopTaskResponse createEmptyInstance() => StopTaskResponse._();
+  @$core.pragma('dart2js:noInline')
+  static StopTaskResponse getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<StopTaskResponse>(
+          StopTaskResponse.$_createMessage);
+  static StopTaskResponse? _defaultInstance;
 }
 
 class CancelTurnResponse extends $pb.GeneratedMessage {
@@ -10994,6 +11118,7 @@ class Item extends $pb.GeneratedMessage {
     $core.String? relayState,
     $core.String? relayedBy,
     Findings? findings,
+    $core.bool? relayStop,
   }) {
     final result = Item._();
     if (id != null) result.id = id;
@@ -11027,6 +11152,7 @@ class Item extends $pb.GeneratedMessage {
     if (relayState != null) result.relayState = relayState;
     if (relayedBy != null) result.relayedBy = relayedBy;
     if (findings != null) result.findings = findings;
+    if (relayStop != null) result.relayStop = relayStop;
     return result;
   }
 
@@ -11083,6 +11209,7 @@ class Item extends $pb.GeneratedMessage {
     ..aOS(30, _omitFieldNames ? '' : 'relayedBy')
     ..aOM<Findings>(31, _omitFieldNames ? '' : 'findings',
         subBuilder: Findings.$_createMessage)
+    ..aOB(32, _omitFieldNames ? '' : 'relayStop')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -11387,6 +11514,17 @@ class Item extends $pb.GeneratedMessage {
   void clearFindings() => $_clearField(31);
   @$pb.TagNumber(31)
   Findings ensureFindings() => $_ensure(30);
+
+  /// For a user message: it asked the agent to stop that subagent, or the
+  /// background command relay_to names (StopTask), not to pass anything on.
+  @$pb.TagNumber(32)
+  $core.bool get relayStop => $_getBF(31);
+  @$pb.TagNumber(32)
+  set relayStop($core.bool value) => $_setBool(31, value);
+  @$pb.TagNumber(32)
+  $core.bool hasRelayStop() => $_has(31);
+  @$pb.TagNumber(32)
+  void clearRelayStop() => $_clearField(32);
 }
 
 /// A code review's result: the effort level it ran at ("medium"; "" when
@@ -11727,12 +11865,14 @@ class Subagent extends $pb.GeneratedMessage {
     $fixnum.Int64? started,
     $fixnum.Int64? ended,
     $core.String? result,
+    $core.String? session,
   }) {
     final result$ = Subagent._();
     if (state != null) result$.state = state;
     if (started != null) result$.started = started;
     if (ended != null) result$.ended = ended;
     if (result != null) result$.result = result;
+    if (session != null) result$.session = session;
     return result$;
   }
 
@@ -11753,6 +11893,7 @@ class Subagent extends $pb.GeneratedMessage {
     ..aInt64(2, _omitFieldNames ? '' : 'started')
     ..aInt64(3, _omitFieldNames ? '' : 'ended')
     ..aOS(4, _omitFieldNames ? '' : 'result')
+    ..aOS(5, _omitFieldNames ? '' : 'session')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -11775,7 +11916,8 @@ class Subagent extends $pb.GeneratedMessage {
       $pb.GeneratedMessage.$_defaultFor<Subagent>(Subagent.$_createMessage);
   static Subagent? _defaultInstance;
 
-  /// "running", "done", "failed", or "stopped" (with its agent, by Nushi).
+  /// "running", "done", "failed", or "stopped" (by the agent, StopTask, or
+  /// with its agent).
   @$pb.TagNumber(1)
   $core.String get state => $_getSZ(0);
   @$pb.TagNumber(1)
@@ -11805,7 +11947,8 @@ class Subagent extends $pb.GeneratedMessage {
   @$pb.TagNumber(3)
   void clearEnded() => $_clearField(3);
 
-  /// What it found, once it has ended: its report, or its call's output.
+  /// What it found, once it has ended: its report, its call's output, or
+  /// its last message.
   @$pb.TagNumber(4)
   $core.String get result => $_getSZ(3);
   @$pb.TagNumber(4)
@@ -11814,6 +11957,17 @@ class Subagent extends $pb.GeneratedMessage {
   $core.bool hasResult() => $_has(3);
   @$pb.TagNumber(4)
   void clearResult() => $_clearField(4);
+
+  /// The agent's session for it, when the agent shows it as one (ACP's
+  /// subagents): StopTask stops it there.
+  @$pb.TagNumber(5)
+  $core.String get session => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set session($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasSession() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearSession() => $_clearField(5);
 }
 
 /// A step of the agent's plan; status is "pending", "in_progress" or
@@ -23844,6 +23998,16 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, CancelTurnRequest request) =>
       _client.invoke<CancelTurnResponse>(
           ctx, 'NushiService', 'CancelTurn', request, CancelTurnResponse());
+
+  /// Stops a subagent or a background command (the tool call that started
+  /// it), alone: through its own session when the agent shows the subagent
+  /// as one (Subagent.session), else by asking the agent, as a message of
+  /// the user's (Item.relay_stop) that waits for its next chance. It shows
+  /// as stopped once the agent says so.
+  $async.Future<StopTaskResponse> stopTask(
+          $pb.ClientContext? ctx, StopTaskRequest request) =>
+      _client.invoke<StopTaskResponse>(
+          ctx, 'NushiService', 'StopTask', request, StopTaskResponse());
 
   /// Opens a side chat: a session the agent forks from the chat's (ACP
   /// session/fork, when status.can_fork). It knows the conversation so far

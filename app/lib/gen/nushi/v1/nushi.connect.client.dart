@@ -4,11 +4,10 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
-
 import "nushi.pb.dart" as nushiv1nushi;
 import "nushi.connect.spec.dart" as specs;
 
-extension type NushiServiceClient(connect.Transport _transport) {
+extension type NushiServiceClient (connect.Transport _transport) {
   Future<nushiv1nushi.PingResponse> ping(
     nushiv1nushi.PingRequest input, {
     connect.Headers? headers,
@@ -292,6 +291,28 @@ extension type NushiServiceClient(connect.Transport _transport) {
   }) {
     return connect.Client(_transport).unary(
       specs.NushiService.cancelTurn,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Stops a subagent or a background command (the tool call that started
+  /// it), alone: through its own session when the agent shows the subagent
+  /// as one (Subagent.session), else by asking the agent, as a message of
+  /// the user's (Item.relay_stop) that waits for its next chance. It shows
+  /// as stopped once the agent says so.
+  Future<nushiv1nushi.StopTaskResponse> stopTask(
+    nushiv1nushi.StopTaskRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.stopTask,
       input,
       signal: signal,
       headers: headers,

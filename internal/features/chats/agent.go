@@ -29,8 +29,11 @@ type opened struct {
 // fork a new one that starts with a copy of it (session/fork). The agent
 // stops if that fails.
 func (c *chat) openSession(ctx context.Context, sid, folder string, fork bool) (opened, error) {
+	c.mu.Lock()
+	clear(c.children) // the last agent's: a replay announces them again
+	c.mu.Unlock()
 	// The agent's lines name the sessions it opens (see internal/agentproc).
-	agent, init, err := initialize(ctx, c.kind.launch, c, c.dialect.InitMeta, c.logger("", folder))
+	agent, init, err := initialize(ctx, c.kind.launch, c, c.dialect, c.logger("", folder))
 	if err != nil {
 		return opened{}, c.kind.explain(err)
 	}
@@ -142,21 +145,26 @@ func (c *chat) mcpServers() []acp.MCPServer {
 	return c.kind.tools(c.id, c.kind.Name, c.issue)
 }
 
-// initialize launches an agent and initializes the connection, with meta
-// as the client's _meta; the agent stops if that fails.
-func initialize(ctx context.Context, launch Launch, h acp.Client, meta map[string]any, log *slog.Logger) (Agent, *acp.InitializeResponse, error) {
+// initialize launches an agent and initializes the connection, with what
+// the agent's dialect asks of the client's capabilities; the agent stops if
+// that fails.
+func initialize(ctx context.Context, launch Launch, h acp.Client, d Dialect, log *slog.Logger) (Agent, *acp.InitializeResponse, error) {
 	agent, err := launch(h, log)
 	if err != nil {
 		log.Warn("agent not started", "err", err)
 		return nil, nil, fmt.Errorf("start agent: %w", err)
 	}
+	caps := &acp.ClientCapabilities{
+		Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}},
+		Meta:        d.InitMeta,
+	}
+	if d.Subagents {
+		caps.Subagents = &acp.SubagentCapabilities{}
+	}
 	init, err := agent.Initialize(ctx, &acp.InitializeRequest{
-		ProtocolVersion: acp.LatestProtocolVersion,
-		ClientCapabilities: &acp.ClientCapabilities{
-			Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}},
-			Meta:        meta,
-		},
-		ClientInfo: &acp.Implementation{Name: "nushi", Title: "Nushi"},
+		ProtocolVersion:    acp.LatestProtocolVersion,
+		ClientCapabilities: caps,
+		ClientInfo:         &acp.Implementation{Name: "nushi", Title: "Nushi"},
 	})
 	if err != nil {
 		_ = agent.Close() // as above
@@ -207,6 +215,11 @@ func (c *chat) orphanLocked(stopped bool) {
 		running := it.Status == "pending" || it.Status == "in_progress" || it.Subagent != nil && it.Subagent.State == "running"
 		if it.Kind == model.ToolCall && running {
 			c.items[i].Status = "failed"
+			if sa := c.items[i].Subagent; sa != nil && sa.Said == "running" {
+				ended := *sa
+				ended.Said = "" // its session went with the agent
+				c.items[i].Subagent = &ended
+			}
 			c.subagentLocked(&c.items[i])
 			if sa := c.items[i].Subagent; sa != nil && stopped {
 				sa.State = "stopped"

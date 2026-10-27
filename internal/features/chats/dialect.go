@@ -65,6 +65,18 @@ type Dialect struct {
 	Relay      func(agent, agentID, text string) string
 	Relayed    func(prompt string) (agent, agentID, text string, ok bool)
 	Relaying   func(call model.Item) (agentID string)
+	// Subagents says the agent can show its subagents as sessions of
+	// their own (ACP's subagents RFD, which initialize advertises): it then
+	// says when each ends, and stops one when its session is cancelled.
+	Subagents bool
+	// StopTask asks the agent to stop one of its background tasks (a
+	// subagent, or a command it left running), named label, by the
+	// agent's id for it, when Nushi can't stop it itself; StopRelayed
+	// reads such a prompt back. Stopped says a tool call stopped one of
+	// the agent's tasks, or found it already ended: the task's id.
+	StopTask    func(label, taskID string) string
+	StopRelayed func(prompt string) (label, taskID string, ok bool)
+	Stopped     func(call model.Item) string
 	// Other says a form field is the free-text "Other" answer of the field
 	// before it.
 	Other func(field, before model.Field) bool

@@ -20,11 +20,18 @@ import (
 // agent sends to the chat or to one of its side chats. A side chat's
 // updates that arrive before it is set up are dropped.
 func (c *chat) SessionUpdate(_ context.Context, n *acp.SessionNotification) error {
-	if c.probe(n) {
+	if c.probe(n) || c.childUpdate(n) {
 		return nil
 	}
-	if to := c.route(n.SessionID); to != nil {
-		to.update(n)
+	c.mu.Lock()
+	to, ch := c.routeLocked(n.SessionID)
+	var from *child
+	if ch != nil {
+		from = &child{launch: ch.launch}
+	}
+	c.mu.Unlock()
+	if to != nil {
+		to.update(n, from)
 	}
 	return nil
 }
@@ -70,10 +77,24 @@ func (c *chat) CreateElicitation(ctx context.Context, req *acp.CreateElicitation
 func (c *chat) route(session acp.SessionID) *chat {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if session == "" || string(session) == c.sid {
-		return c
+	to, _ := c.routeLocked(session)
+	return to
+}
+
+// routeLocked finds the chat a session is: the chat, a side chat, or the
+// chat (or side chat) one of the agent's subagents works for, then with
+// that subagent's session.
+func (c *chat) routeLocked(session acp.SessionID) (*chat, *child) {
+	switch {
+	case session == "" || string(session) == c.sid:
+		return c, nil
+	case c.sides[string(session)] != nil:
+		return c.sides[string(session)], nil
+	case c.children[string(session)] != nil:
+		ch := c.children[string(session)]
+		return ch.owner, ch
 	}
-	return c.sides[string(session)]
+	return nil, nil
 }
 
 // Fork opens a side chat of a chat and returns its id.

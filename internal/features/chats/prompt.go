@@ -81,12 +81,8 @@ func (s *Service) Prompt(chatID string, m model.Message, how Send) error {
 		<-done
 		c.mu.Lock()
 	}
-	if m.To != "" {
-		r, err := c.relayLocked(m.To)
-		if err != nil {
-			return err
-		}
-		m.Relay = r
+	if err := c.relayOfLocked(&m); err != nil {
+		return err
 	}
 	switch {
 	case c.reopeningLocked() || c.busy && how == SendQueue:
@@ -105,6 +101,21 @@ func (s *Service) Prompt(chatID string, m model.Message, how Send) error {
 		sent = true
 	}
 	return nil
+}
+
+// relayOfLocked finds what a message for a subagent (or a stop of a task)
+// goes to, from the tool call it names (Message.To).
+func (c *chat) relayOfLocked(m *model.Message) error {
+	if m.To == "" {
+		return nil
+	}
+	relay := c.relayLocked
+	if m.Relay != nil && m.Relay.Stop {
+		relay = c.stopRelayLocked
+	}
+	r, err := relay(m.To)
+	m.Relay = r
+	return err
 }
 
 // closedLocked says why a chat takes no prompts: it is archived, being
@@ -179,8 +190,11 @@ func (c *chat) backgroundLocked(from int) bool {
 // and the images.
 func (c *chat) blocks(m model.Message) []acp.ContentBlock {
 	text := m.Text
-	if m.Relay != nil {
-		text = c.dialect.Relay(m.Relay.Agent, m.Relay.AgentID, text)
+	switch r := m.Relay; {
+	case r != nil && r.Stop:
+		text = c.dialect.StopTask(r.Agent, r.AgentID)
+	case r != nil:
+		text = c.dialect.Relay(r.Agent, r.AgentID, text)
 	}
 	prompt := []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: text}}}
 	for _, f := range m.Files {

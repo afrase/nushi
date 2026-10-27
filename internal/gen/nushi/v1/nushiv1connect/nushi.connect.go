@@ -67,6 +67,8 @@ const (
 	NushiServiceUnqueueProcedure = "/nushi.v1.NushiService/Unqueue"
 	// NushiServiceCancelTurnProcedure is the fully-qualified name of the NushiService's CancelTurn RPC.
 	NushiServiceCancelTurnProcedure = "/nushi.v1.NushiService/CancelTurn"
+	// NushiServiceStopTaskProcedure is the fully-qualified name of the NushiService's StopTask RPC.
+	NushiServiceStopTaskProcedure = "/nushi.v1.NushiService/StopTask"
 	// NushiServiceForkChatProcedure is the fully-qualified name of the NushiService's ForkChat RPC.
 	NushiServiceForkChatProcedure = "/nushi.v1.NushiService/ForkChat"
 	// NushiServiceCloseSideChatProcedure is the fully-qualified name of the NushiService's
@@ -384,6 +386,12 @@ type NushiServiceClient interface {
 	// "cancelled" notice, and prompts it was waiting on are cancelled. It can
 	// take the last message back too (take_back).
 	CancelTurn(context.Context, *connect.Request[v1.CancelTurnRequest]) (*connect.Response[v1.CancelTurnResponse], error)
+	// Stops a subagent or a background command (the tool call that started
+	// it), alone: through its own session when the agent shows the subagent
+	// as one (Subagent.session), else by asking the agent, as a message of
+	// the user's (Item.relay_stop) that waits for its next chance. It shows
+	// as stopped once the agent says so.
+	StopTask(context.Context, *connect.Request[v1.StopTaskRequest]) (*connect.Response[v1.StopTaskResponse], error)
 	// Opens a side chat: a session the agent forks from the chat's (ACP
 	// session/fork, when status.can_fork). It knows the conversation so far
 	// but doesn't add to it, isn't listed or stored, and ends with
@@ -753,6 +761,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceCancelTurnProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("CancelTurn")),
+			connect.WithClientOptions(opts...),
+		),
+		stopTask: connect.NewClient[v1.StopTaskRequest, v1.StopTaskResponse](
+			httpClient,
+			baseURL+NushiServiceStopTaskProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("StopTask")),
 			connect.WithClientOptions(opts...),
 		),
 		forkChat: connect.NewClient[v1.ForkChatRequest, v1.ForkChatResponse](
@@ -1339,6 +1353,7 @@ type nushiServiceClient struct {
 	rewindChat          *connect.Client[v1.RewindChatRequest, v1.RewindChatResponse]
 	unqueue             *connect.Client[v1.UnqueueRequest, v1.UnqueueResponse]
 	cancelTurn          *connect.Client[v1.CancelTurnRequest, v1.CancelTurnResponse]
+	stopTask            *connect.Client[v1.StopTaskRequest, v1.StopTaskResponse]
 	forkChat            *connect.Client[v1.ForkChatRequest, v1.ForkChatResponse]
 	closeSideChat       *connect.Client[v1.CloseSideChatRequest, v1.CloseSideChatResponse]
 	renameChat          *connect.Client[v1.RenameChatRequest, v1.RenameChatResponse]
@@ -1508,6 +1523,11 @@ func (c *nushiServiceClient) Unqueue(ctx context.Context, req *connect.Request[v
 // CancelTurn calls nushi.v1.NushiService.CancelTurn.
 func (c *nushiServiceClient) CancelTurn(ctx context.Context, req *connect.Request[v1.CancelTurnRequest]) (*connect.Response[v1.CancelTurnResponse], error) {
 	return c.cancelTurn.CallUnary(ctx, req)
+}
+
+// StopTask calls nushi.v1.NushiService.StopTask.
+func (c *nushiServiceClient) StopTask(ctx context.Context, req *connect.Request[v1.StopTaskRequest]) (*connect.Response[v1.StopTaskResponse], error) {
+	return c.stopTask.CallUnary(ctx, req)
 }
 
 // ForkChat calls nushi.v1.NushiService.ForkChat.
@@ -2033,6 +2053,12 @@ type NushiServiceHandler interface {
 	// "cancelled" notice, and prompts it was waiting on are cancelled. It can
 	// take the last message back too (take_back).
 	CancelTurn(context.Context, *connect.Request[v1.CancelTurnRequest]) (*connect.Response[v1.CancelTurnResponse], error)
+	// Stops a subagent or a background command (the tool call that started
+	// it), alone: through its own session when the agent shows the subagent
+	// as one (Subagent.session), else by asking the agent, as a message of
+	// the user's (Item.relay_stop) that waits for its next chance. It shows
+	// as stopped once the agent says so.
+	StopTask(context.Context, *connect.Request[v1.StopTaskRequest]) (*connect.Response[v1.StopTaskResponse], error)
 	// Opens a side chat: a session the agent forks from the chat's (ACP
 	// session/fork, when status.can_fork). It knows the conversation so far
 	// but doesn't add to it, isn't listed or stored, and ends with
@@ -2398,6 +2424,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceCancelTurnProcedure,
 		svc.CancelTurn,
 		connect.WithSchema(nushiServiceMethods.ByName("CancelTurn")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceStopTaskHandler := connect.NewUnaryHandler(
+		NushiServiceStopTaskProcedure,
+		svc.StopTask,
+		connect.WithSchema(nushiServiceMethods.ByName("StopTask")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceForkChatHandler := connect.NewUnaryHandler(
@@ -2996,6 +3028,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceUnqueueHandler.ServeHTTP(w, r)
 		case NushiServiceCancelTurnProcedure:
 			nushiServiceCancelTurnHandler.ServeHTTP(w, r)
+		case NushiServiceStopTaskProcedure:
+			nushiServiceStopTaskHandler.ServeHTTP(w, r)
 		case NushiServiceForkChatProcedure:
 			nushiServiceForkChatHandler.ServeHTTP(w, r)
 		case NushiServiceCloseSideChatProcedure:
@@ -3251,6 +3285,10 @@ func (UnimplementedNushiServiceHandler) Unqueue(context.Context, *connect.Reques
 
 func (UnimplementedNushiServiceHandler) CancelTurn(context.Context, *connect.Request[v1.CancelTurnRequest]) (*connect.Response[v1.CancelTurnResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.CancelTurn is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) StopTask(context.Context, *connect.Request[v1.StopTaskRequest]) (*connect.Response[v1.StopTaskResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.StopTask is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) ForkChat(context.Context, *connect.Request[v1.ForkChatRequest]) (*connect.Response[v1.ForkChatResponse], error) {

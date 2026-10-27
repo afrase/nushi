@@ -51,6 +51,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.UnqueueRequest request);
   $async.Future<$0.CancelTurnResponse> cancelTurn(
       $pb.ServerContext ctx, $0.CancelTurnRequest request);
+  $async.Future<$0.StopTaskResponse> stopTask(
+      $pb.ServerContext ctx, $0.StopTaskRequest request);
   $async.Future<$0.ForkChatResponse> forkChat(
       $pb.ServerContext ctx, $0.ForkChatRequest request);
   $async.Future<$0.CloseSideChatResponse> closeSideChat(
@@ -272,6 +274,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.UnqueueRequest();
       case 'CancelTurn':
         return $0.CancelTurnRequest();
+      case 'StopTask':
+        return $0.StopTaskRequest();
       case 'ForkChat':
         return $0.ForkChatRequest();
       case 'CloseSideChat':
@@ -498,6 +502,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return unqueue(ctx, request as $0.UnqueueRequest);
       case 'CancelTurn':
         return cancelTurn(ctx, request as $0.CancelTurnRequest);
+      case 'StopTask':
+        return stopTask(ctx, request as $0.StopTaskRequest);
       case 'ForkChat':
         return forkChat(ctx, request as $0.ForkChatRequest);
       case 'CloseSideChat':

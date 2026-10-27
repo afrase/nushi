@@ -13,20 +13,26 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-// update turns the agent's updates into transcript items.
-func (c *chat) update(n *acp.SessionNotification) { //nolint:gocognit,gocyclo // one case per ACP update kind
+// update turns the agent's updates into transcript items. from is the
+// subagent's session they came on, if they did (children.go): only its
+// steps are taken, as the steps of the subagent call it works for.
+func (c *chat) update(n *acp.SessionNotification, from *child) { //nolint:gocognit,gocyclo,maintidx // one case per ACP update kind
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	replayed := slices.Contains(replayKinds, n.Update.SessionUpdate)
 	if c.kept && replayed {
 		return // session/load's replay of a transcript the chat still has
 	}
+	parent, ok := c.stepOfLocked(n, from)
+	if !ok {
+		return
+	}
 	if c.replaying && replayed { // it goes aside, to be merged with the copy
 		c.items, c.replay, c.quiet = c.replay, c.items, true
 		defer func() { c.items, c.replay, c.quiet = c.replay, c.items, false }()
 	}
 	if !c.busy && c.started.IsZero() && slices.Contains([]string{"agent_message_chunk", "agent_thought_chunk", "tool_call", "tool_call_update"}, n.Update.SessionUpdate) &&
-		c.parentLocked(n.Update) == "" { // a subagent's steps aren't the agent's own work
+		parent == "" && c.parentLocked(n.Update) == "" { // a subagent's steps aren't the agent's own work
 		// Its work after a turn of the user's starts a chapter of its own in
 		// the transcript; an update to a call it made before (a late
 		// result) doesn't.
@@ -39,17 +45,17 @@ func (c *chat) update(n *acp.SessionNotification) { //nolint:gocognit,gocyclo //
 	}
 	switch u := n.Update; u.SessionUpdate {
 	case "user_message_chunk": // replayed by session/load
-		c.chunkLocked(model.UserMessage, u.UserMessageChunk)
+		c.chunkLocked(model.UserMessage, u.UserMessageChunk, "")
 	case "agent_message_chunk":
-		c.chunkLocked(model.AgentMessage, u.AgentMessageChunk)
+		c.chunkLocked(model.AgentMessage, u.AgentMessageChunk, parent)
 	case "agent_thought_chunk":
-		c.chunkLocked(model.Thought, u.AgentThoughtChunk)
+		c.chunkLocked(model.Thought, u.AgentThoughtChunk, parent)
 	case "plan":
 		c.planLocked(u.Plan.Entries)
 	case "tool_call":
 		t := u.ToolCall
 		item := model.Item{ID: string(t.ToolCallID), Kind: model.ToolCall, Title: t.Title,
-			ToolKind: string(t.Kind), Status: string(t.Status), Paths: c.paths(t.Locations)}
+			ToolKind: string(t.Kind), Status: string(t.Status), Paths: c.paths(t.Locations), Parent: parent}
 		c.setOutput(&item, t.Content)
 		c.toolCallLocked(&item, t.Meta, t.RawInput)
 		if it := c.itemLocked(item.ID); it != nil { // a repeated tool_call replaces the call
@@ -141,12 +147,27 @@ func (c *chat) update(n *acp.SessionNotification) { //nolint:gocognit,gocyclo //
 		c.reportedLocked(*it)
 		c.relayingLocked(*it)
 		if t.Status == "completed" || t.Status == "failed" {
+			c.stoppedLocked(*it)
 			c.copyLocked(false)
 		}
 		if (t.Status == "completed" || t.Status == "failed") && it.Parent == "" && !c.started.IsZero() {
 			c.deliverLocked() // between tool calls: the agent's chance to take queued messages
 		}
 	}
+}
+
+// stepOfLocked says whether to take an update, and which subagent call it
+// is a step of when it came on a subagent's session (from): only its steps
+// are taken, and not as replayed (the copy has them, as for an agent
+// without such sessions).
+func (c *chat) stepOfLocked(n *acp.SessionNotification, from *child) (parent string, ok bool) {
+	if from == nil {
+		return "", true
+	}
+	if !slices.Contains(stepKinds, n.Update.SessionUpdate) || c.replaying {
+		return "", false
+	}
+	return c.childOfLocked(from, string(n.SessionID)), true
 }
 
 // parentLocked is the subagent tool call an update comes from, if one
@@ -173,8 +194,9 @@ func (c *chat) parentLocked(u acp.SessionUpdate) string {
 
 // chunkLocked adds a chunk of a message (text or an image): to the message
 // with its id, or, when it has none, to the last item if that is a message
-// of the same kind.
-func (c *chat) chunkLocked(kind model.ItemKind, m *acp.ContentChunk) {
+// of the same kind. parent is the subagent call it is a step of, when its
+// session says (else its _meta may).
+func (c *chat) chunkLocked(kind model.ItemKind, m *acp.ContentChunk, parent string) {
 	var text string
 	var images []model.Image
 	switch {
@@ -193,8 +215,7 @@ func (c *chat) chunkLocked(kind model.ItemKind, m *acp.ContentChunk) {
 	if kind == model.Thought && id != "" {
 		id = "thought-" + id // a thought may share its message's id
 	}
-	var parent string
-	if c.dialect.Parent != nil {
+	if c.dialect.Parent != nil && parent == "" {
 		parent = c.dialect.Parent(m.Meta)
 	}
 	it := c.itemLocked(id)
@@ -247,18 +268,23 @@ func (c *chat) subagentLocked(call *model.Item) bool { //nolint:gocyclo // one t
 	if call.AgentID == "" && c.dialect.SubagentID != nil {
 		call.AgentID = c.dialect.SubagentID(call.Text)
 	}
-	r, last := -1, -1 // its last report, and its last item
+	r, last, said := -1, -1, -1 // its last report, its last item, and its last message
 	for i, it := range c.items {
 		if it.Parent == call.ID {
 			last = i
 			if it.Report {
 				r = i
 			}
+			if it.Kind == model.AgentMessage {
+				said = i
+			}
 		}
 	}
 	background := c.dialect.Background != nil && c.dialect.Background(call.Text)
 	elsewhere := c.dialect.ReportElsewhere != nil && c.dialect.ReportElsewhere(call.Text)
 	switch {
+	case sa.Said != "": // the agent said, of its session (children.go)
+		sa.State = sa.Said
 	case call.Status == "pending" || call.Status == "in_progress":
 		sa.State = "running"
 	case call.Status == "failed":
@@ -286,6 +312,10 @@ func (c *chat) subagentLocked(call *model.Item) bool { //nolint:gocyclo // one t
 		sa.Result = ""
 	case r >= 0:
 		sa.Result = c.items[r].Text
+	case said >= 0 && sa.Said != "": // it ended without a report: its last words
+		sa.Result = c.items[said].Text
+	case sa.Said == "stopped": // its call says only that it was
+		sa.Result = ""
 	case !background && !elsewhere:
 		sa.Result = call.Text
 	}

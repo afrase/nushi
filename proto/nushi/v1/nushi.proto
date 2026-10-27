@@ -56,6 +56,12 @@ service NushiService {
   // "cancelled" notice, and prompts it was waiting on are cancelled. It can
   // take the last message back too (take_back).
   rpc CancelTurn(CancelTurnRequest) returns (CancelTurnResponse);
+  // Stops a subagent or a background command (the tool call that started
+  // it), alone: through its own session when the agent shows the subagent
+  // as one (Subagent.session), else by asking the agent, as a message of
+  // the user's (Item.relay_stop) that waits for its next chance. It shows
+  // as stopped once the agent says so.
+  rpc StopTask(StopTaskRequest) returns (StopTaskResponse);
   // Opens a side chat: a session the agent forks from the chat's (ACP
   // session/fork, when status.can_fork). It knows the conversation so far
   // but doesn't add to it, isn't listed or stored, and ends with
@@ -692,6 +698,9 @@ message QueuedMessage {
   // That subagent's tool call (SendPromptRequest.to_subagent), to send it
   // there again; empty when not known (a replayed message).
   string to_subagent = 6;
+  // It asks the agent to stop that subagent, or the background command
+  // relay_to names (StopTask).
+  bool relay_stop = 7;
 }
 
 // Every message waiting in a chat's queue, in order.
@@ -744,6 +753,13 @@ message CancelTurnRequest {
   // returns once the turn has ended.
   bool take_back = 2;
 }
+
+message StopTaskRequest {
+  string chat_id = 1;
+  string call_id = 2;
+}
+
+message StopTaskResponse {}
 
 message CancelTurnResponse {
   // The message taken back, to edit, if it was.
@@ -1479,6 +1495,9 @@ message Item {
   // For a tool call that reports a code review's result (Claude's
   // ReportFindings): what it found.
   Findings findings = 31;
+  // For a user message: it asked the agent to stop that subagent, or the
+  // background command relay_to names (StopTask), not to pass anything on.
+  bool relay_stop = 32;
 }
 
 // A code review's result: the effort level it ran at ("medium"; "" when
@@ -1523,14 +1542,19 @@ message Shell {
 
 // How a subagent goes.
 message Subagent {
-  // "running", "done", "failed", or "stopped" (with its agent, by Nushi).
+  // "running", "done", "failed", or "stopped" (by the agent, StopTask, or
+  // with its agent).
   string state = 1;
   // When the daemon saw it start, and end, in Unix milliseconds; 0 when it
   // didn't (a replayed chat).
   int64 started = 2;
   int64 ended = 3;
-  // What it found, once it has ended: its report, or its call's output.
+  // What it found, once it has ended: its report, its call's output, or
+  // its last message.
   string result = 4;
+  // The agent's session for it, when the agent shows it as one (ACP's
+  // subagents): StopTask stops it there.
+  string session = 5;
 }
 
 // A step of the agent's plan; status is "pending", "in_progress" or

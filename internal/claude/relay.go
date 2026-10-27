@@ -3,6 +3,7 @@ package claude
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -42,10 +43,53 @@ func Relayed(prompt string) (agent, agentID, text string, ok bool) {
 }
 
 // Relaying says a tool call is Claude passing a message to a subagent (its
-// SendMessage), and to which: the agent's id for it.
+// SendMessage), or stopping a background task (its TaskStop), and which:
+// the agent's id for it.
 func Relaying(it model.Item) string {
-	if it.Tool != "SendMessage" {
-		return ""
+	switch it.Tool {
+	case "SendMessage":
+		return it.AgentID
+	case "TaskStop":
+		return it.Stops
 	}
-	return it.AgentID
+	return ""
+}
+
+// StopTask asks Claude to stop one of its background tasks, a subagent or a
+// command (what names it), with its TaskStop tool, by the task's id: a
+// subagent's agentId, a command's background task id. A client that
+// isn't JetBrains AIR has no way to stop one itself
+// (_session/async_task/stop answers {stopped: false}).
+func StopTask(what, taskID string) string {
+	what, _, _ = strings.Cut(what, "\n")
+	if r := []rune(what); len(r) > 80 {
+		what = string(r[:79]) + "…"
+	}
+	return fmt.Sprintf("Stop your background task %s (%s) now with your TaskStop tool (task_id: %s). "+
+		"Do nothing else, and say only whether it stopped.", taskID, what, taskID)
+}
+
+var stopRelayed = regexp.MustCompile(`^Stop your background task ([0-9a-z]+) \((.*)\) now with your TaskStop tool \(task_id: ([0-9a-z]+)\)\. Do nothing else, and say only whether it stopped\.$`)
+
+// StopRelayed reads a prompt StopTask made: what it names, and the task's
+// id.
+func StopRelayed(prompt string) (what, taskID string, ok bool) {
+	m := stopRelayed.FindStringSubmatch(prompt)
+	if len(m) != 4 || m[1] != m[3] {
+		return "", "", false
+	}
+	return m[2], m[1], true
+}
+
+// Stopped says a tool call is Claude's TaskStop having stopped a task, or
+// having found it no longer running ("Task <id> is not running (status:
+// killed)", an error): the task's id.
+func Stopped(it model.Item) string {
+	switch {
+	case it.Tool != "TaskStop":
+		return ""
+	case it.Status == "completed", it.Status == "failed" && strings.Contains(it.Text, it.Stops+" is not running"):
+		return it.Stops
+	}
+	return ""
 }
