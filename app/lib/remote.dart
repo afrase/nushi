@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:nushi/commits.dart' show ago;
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -85,7 +86,8 @@ class _RemoteSectionState extends State<RemoteSection> {
               controller: _relay,
               style: theme.code(t.text),
               decoration: const InputDecoration(
-                hintText: 'wss://relay.example.com',
+                // The owner's, as an example of what goes here.
+                hintText: 'For example wss://nushi.taile2d635.ts.net',
                 isDense: true,
               ),
               onSubmitted: (_) => r.on ? _set(true) : null,
@@ -104,42 +106,7 @@ class _RemoteSectionState extends State<RemoteSection> {
             ),
             if (r.on) Text('Keeps the Mac awake while on.', style: muted),
             const SizedBox(height: 8),
-            for (final d in r.devices)
-              Row(
-                children: [
-                  Expanded(
-                    child: Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(
-                            text: d.name,
-                            style: theme.ui(t.text, size: 12.5),
-                          ),
-                          TextSpan(
-                            text: d.connected
-                                ? '  connected'
-                                : d.lastSeen > 0
-                                ? '  ${_seen(d.lastSeen.toInt())}'
-                                : '',
-                            style: muted,
-                          ),
-                        ],
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Button(
-                    label: 'Revoke',
-                    kind: ButtonKind.destructive,
-                    onPressed: () => tryOrShow(
-                      context,
-                      () => widget.client.revokeDevice(
-                        RevokeDeviceRequest(id: d.id),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            for (final d in r.devices) _DeviceRow(d, widget.client),
             const SizedBox(height: 6),
             Align(
               alignment: Alignment.centerLeft,
@@ -153,6 +120,94 @@ class _RemoteSectionState extends State<RemoteSection> {
       },
     );
   }
+}
+
+/// A paired device: its name, whether it's the web app or an app, whether
+/// it gets notifications, and when it was last seen; Send a test
+/// notification and Revoke.
+class _DeviceRow extends StatelessWidget {
+  const new(this.d, this.client);
+
+  final Device d;
+  final NushiServiceClient client;
+
+  Future<void> _test(BuildContext context) async {
+    var sent = false;
+    await tryOrShow(context, () async {
+      await client.sendTestPush(SendTestPushRequest(deviceId: d.id));
+      sent = true;
+    });
+    if (sent && context.mounted) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(content: Text('Sent a test notification to ${d.name}')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    final muted = theme.ui(t.textMuted, size: 12);
+    final seen = d.connected
+        ? 'connected'
+        : d.lastSeen > 0
+        ? _seen(d.lastSeen.toInt())
+        : '';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(text: d.name, style: theme.ui(t.text, size: 12.5)),
+                  TextSpan(
+                    text:
+                        '  ${d.kind == 'web' ? 'Web' : 'iPhone app'}'
+                        ' · notifications ${d.push ? 'on' : 'off'}'
+                        '${seen.isEmpty ? '' : ' · $seen'}',
+                    style: muted,
+                  ),
+                ],
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Button(
+            label: 'Send a test notification',
+            tooltip: d.push ? '' : 'Notifications are off on this device',
+            onPressed: d.push ? () => _test(context) : null,
+          ),
+          const SizedBox(width: 6),
+          Button(
+            label: 'Revoke',
+            kind: ButtonKind.destructive,
+            onPressed: () => tryOrShow(
+              context,
+              () => client.revokeDevice(RevokeDeviceRequest(id: d.id)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The QR code's pairing as a link to the relay's web app (ADR 0054): the
+/// same parameters, in the fragment, so they never reach a server.
+String pairingLink(String qr) {
+  final q = Uri.parse(qr);
+  final relay = Uri.parse(q.queryParameters['r'] ?? '');
+  final web = Uri(
+    scheme: relay.scheme == 'ws' ? 'http' : 'https',
+    host: relay.host,
+    port: relay.hasPort ? relay.port : null,
+    path: '/',
+  );
+  return '$web#pair?${q.query}';
 }
 
 /// Shows the QR code, then, once a phone has connected, its name and the
@@ -269,12 +324,14 @@ class _Pairing extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Scan with Nushi on the phone.',
+                  'Scan with Nushi on the phone, or copy the link and paste '
+                  'it in Nushi on the phone’s Home Screen.',
+                  textAlign: TextAlign.center,
                   style: theme.ui(t.textSecondary),
                 ),
               ],
             ),
-            [close],
+            [_CopyLink(pairingLink(qr)), close],
           );
         }
         return nushiDialog(
@@ -310,6 +367,31 @@ class _Pairing extends StatelessWidget {
       },
     );
   }
+}
+
+/// Copies the pairing link, for the web app (AirDrop or Universal
+/// Clipboard to the phone).
+class _CopyLink extends StatefulWidget {
+  const new(this.link);
+
+  final String link;
+
+  @override
+  State<_CopyLink> createState() => _CopyLinkState();
+}
+
+class _CopyLinkState extends State<_CopyLink> {
+  bool _copied = false;
+
+  @override
+  Widget build(BuildContext context) => Button(
+    label: _copied ? 'Copied' : 'Copy link',
+    icon: Icons.link,
+    onPressed: () async {
+      await Clipboard.setData(ClipboardData(text: widget.link));
+      if (mounted) setState(() => _copied = true);
+    },
+  );
 }
 
 class _QrPainter extends CustomPainter {
