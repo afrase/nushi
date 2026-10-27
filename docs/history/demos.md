@@ -2,6 +2,16 @@
 
 Each milestone's demo script (what to run, what to see), newest first. An archive.
 
+## Demo (the phone on a real iPhone, steps 327–332)
+
+1. On the Mac: Settings › Remote access, relay `wss://nushi.aaronfrase.com`: Connected. Pair a phone: the QR code.
+2. On the iPhone, the Camera app at the code: it opens Safari, which says "Open Nushi from your Home Screen" with Copy link.
+3. In Nushi on the Home Screen: Scan QR code, allow the camera, point it at the code: the six-digit code; Allow on the Mac. The Chats list, with no back button.
+4. Open a long chat: a skeleton for a moment, then its latest part; scroll up: "N earlier items", and older messages come in without the screen jumping.
+5. Put the phone away for two minutes, come back: "Reconnecting…" for a second or two, then the chat as it is now, nothing in red.
+6. Quit Nushi on the Mac's side (Remote access off): within a few tries "Can't reach your Mac · it's asleep or offline, or its remote access is off · last seen 10:42"; Try again spins, then "Still can't reach your Mac". Turn it back on: it reconnects by itself. The Mac's Remote access says "Reconnecting…" when the relay restarts, then "Connected".
+7. After a deploy: "Nushi was updated · Reload".
+
 ## Demo (the phone as a web app, steps 319–326)
 
 1. On the Mac: Settings › Remote access on, relay `wss://nushi.taile2d635.ts.net`: Connected, and "This Mac's key: xxxx xxxx xxxx xxxx".

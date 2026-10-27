@@ -96,11 +96,13 @@ Settings → Remote access connects the daemon to a relay you name (`wss://…`)
 The phone is Nushi's web app, added to the Home Screen ([ADR 0054](docs/adr/0054-the-phone-is-a-web-app-with-web-push.md)): the chats with what each is doing, a chat's transcript and composer (send, Queue and Steer while a turn runs, Stop), its prompts and questions answered with a tap, New chat, and Settings. Your relay serves it (`-web`, below), so it comes from a server you run. On an iPhone (iOS 16.4 or later):
 
 1. Open your relay's address in Safari (`https://<your relay>/`), tap Share › Add to Home Screen, and open Nushi from the Home Screen. Pair there, not in Safari: the Home Screen app keeps its own storage, and only it gets notifications.
-2. On the Mac: Settings › Remote access › Pair a phone › Copy link. On the iPhone, paste it (Universal Clipboard) into Pairing link, name the device, tap Pair.
+2. On the Mac: Settings › Remote access › Pair a phone. In Nushi on the iPhone, name the device and tap Scan QR code (allow the camera), point it at the Mac's code: pairing starts. Or Copy link on the Mac and paste it (Universal Clipboard) into Pairing link, then Pair. The iPhone's own Camera opens the code in Safari, which can only say to open Nushi and scan there.
 3. Check the iPhone's six-digit code is the one the Mac shows, and Allow on the Mac.
 4. Settings › Notifications on, and Allow when iOS asks. A notification says only what happened ("Claude finished", "Codex needs you", "Claude has a question"); tapping it opens that chat. None comes for the chat you have open.
 
 Forget this Mac (Settings) forgets the pairing and the device's key on the phone; revoke the device on the Mac too. The web app works in a desktop browser the same way (Chrome on a Mac gets notifications too).
+
+When the Mac can't be reached the app says so quietly ("Reconnecting…") and keeps trying; after a couple of tries it says why ("it's asleep or offline, or its remote access is off") and when it last answered, with Try again. A long chat opens with its latest part; older parts come as you scroll up. After the first visit the app starts from its own cache; a new version shows "Nushi was updated" with Reload.
 
 ## The relay
 
@@ -115,7 +117,7 @@ make web                                     # the phone's web app, into app/bui
 bin/nushi-relay -addr 127.0.0.1:8090 -web app/build/web -origin https://relay.example.com
 ```
 
-With `-web` the relay serves the phone's web app at `-origin` (the address the browser sees, scheme, host and port) and takes WebSockets from pages there only; copy `app/build/web` to the relay's machine. The owner's runs on a Raspberry Pi behind Tailscale Funnel (which terminates TLS), as `nushi-relay -addr 127.0.0.1:8090 -ip-header X-Forwarded-For -web /usr/local/share/nushi-web -origin https://nushi.taile2d635.ts.net -plain-per-ip 32`, and the Mac's relay is `wss://nushi.taile2d635.ts.net`. A web app loads a few dozen files at once, hence the higher cap on plain connections per address.
+With `-web` the relay serves the phone's web app at `-origin` (the address the browser sees, scheme, host and port; with `-host`, `https://<host>` unless given) and takes WebSockets from pages there only; copy `app/build/web` to the relay's machine (`make web` writes a Brotli copy beside each file, which the relay serves to browsers that take it). Behind any HTTPS reverse proxy, `-origin` is the proxy's public address and `-ip-header` its header with the client's address. The owner's runs on a Raspberry Pi behind a Cloudflare named tunnel (`cloudflared`, which terminates TLS), as `nushi-relay -addr 127.0.0.1:8090 -ip-header CF-Connecting-IP -web /usr/local/share/nushi-web -origin https://nushi.aaronfrase.com -plain-per-ip 32`, and the Mac's relay is `wss://nushi.aaronfrase.com`; Cloudflare drops a WebSocket silent about 100 s, and both ends ping well within that. Whoever terminates TLS can serve the app's code (ADR 0054): a CDN in front is trusted for it, as the relay's host is. Tailscale Funnel worked too, but slowly (about 0.1–0.3 MB/s, seconds per connection). A web app loads a few dozen files at once, hence the higher cap on plain connections per address.
 
 Use `wss://`: company proxies tunnel 443 but often break a plain `ws://` upgrade, and iOS refuses plain connections by default.
 
