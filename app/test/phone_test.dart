@@ -418,4 +418,15 @@ void main() {
     );
     await _end(tester, phone);
   });
+
+  testWidgets('a newer version waits: Reload brings it in', (tester) async {
+    final (phone, platform) = await _app(tester, FakeDaemon(_chats));
+    expect(find.text('Nushi was updated'), findsNothing);
+    platform.updateReady.value = true;
+    await tester.pump();
+    expect(find.text('Nushi was updated'), findsOneWidget);
+    await tester.tap(find.text('Reload'));
+    expect(platform.updated, isTrue);
+    await _end(tester, phone);
+  });
 }

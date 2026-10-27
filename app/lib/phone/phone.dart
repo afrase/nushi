@@ -80,6 +80,7 @@ class Phone extends ChangeNotifier {
       ..onVisible(({required visible}) {
         _visible = visible;
         link?.visible(shown: visible);
+        if (visible) unawaited(platform.checkForUpdate());
         unawaited(view(visible ? daemon?.selectedId : null));
       })
       ..onOnline(() => link?.online());

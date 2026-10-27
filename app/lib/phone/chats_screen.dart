@@ -50,6 +50,7 @@ class ChatsScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               ConnectionBar(phone),
+              UpdateBar(phone),
               Expanded(
                 child: groups.isEmpty
                     ? Center(

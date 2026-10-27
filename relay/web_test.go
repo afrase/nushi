@@ -27,6 +27,8 @@ func webDir(t *testing.T) string {
 		"flutter_bootstrap.js":        "load()",
 		"sw.js":                       "self.onpush = () => {}",
 		"main.0123456789abcdef.js":    strings.Repeat("var x = 1;\n", 500),
+		"main.0123456789abcdef.js.br": "brotli's copy",
+		"orphan.js.br":                "a copy of nothing",
 		"assets/fonts/x.ttf":          "font",
 		"manifest.json":               `{"name": "Nushi"}`,
 		"canvaskit/canvaskit.wasm":    "\x00asm",
@@ -165,7 +167,7 @@ func TestWebHeaders(t *testing.T) {
 	want := map[string]string{
 		"Content-Type":                 "text/html; charset=utf-8",
 		"X-Content-Type-Options":       "nosniff",
-		"Cache-Control":                "no-cache",
+		"Cache-Control":                "no-store",
 		"X-Frame-Options":              "DENY",
 		"Referrer-Policy":              "no-referrer",
 		"Strict-Transport-Security":    "max-age=31536000",
@@ -186,9 +188,9 @@ func TestWebHeaders(t *testing.T) {
 		t.Errorf("the CSP lets scripts in: %s", csp)
 	}
 	for name, cache := range map[string]string{
-		"sw.js":                       "no-cache",
-		"flutter_bootstrap.js":        "no-cache",
-		"manifest.json":               "no-cache",
+		"sw.js":                       "no-store",
+		"flutter_bootstrap.js":        "no-store",
+		"manifest.json":               "no-store",
 		"assets/fonts/x.ttf":          "no-cache",
 		"main.0123456789abcdef.js":    "public, max-age=31536000, immutable",
 		"ck-0123456789abcdef/ck.wasm": "public, max-age=31536000, immutable",
@@ -205,7 +207,8 @@ func TestWebHeaders(t *testing.T) {
 	if resp, _ := get(t, srv.URL+"/sw.js", nil); resp.Header.Get("Content-Type") != "text/javascript; charset=utf-8" || resp.Header.Get("Service-Worker-Allowed") != "" {
 		t.Errorf("sw.js: %q", resp.Header)
 	}
-	for _, name := range []string{"secret.txt", "nothing.js", "../relay.go", "v1/dial", ".DS_Store", ".git/config"} {
+	for _, name := range []string{"secret.txt", "nothing.js", "../relay.go", "v1/dial", ".DS_Store", ".git/config",
+		"main.0123456789abcdef.js.br", "orphan.js.br"} {
 		if resp, body := get(t, srv.URL+"/"+name, nil); resp.StatusCode == http.StatusOK || bytes.Contains(body, []byte("secret")) {
 			t.Errorf("%s: %d %q", name, resp.StatusCode, body)
 		}
@@ -215,7 +218,15 @@ func TestWebHeaders(t *testing.T) {
 func TestWebCompressionAndETags(t *testing.T) {
 	srv := webRelay(t, "https://relay.example.com")
 	url := srv.URL + "/main.0123456789abcdef.js"
-	resp, body := get(t, url, http.Header{"Accept-Encoding": {"gzip, br"}})
+	// The build's Brotli copy, to a browser that takes it.
+	resp, body := get(t, url, http.Header{"Accept-Encoding": {"gzip, deflate, br"}})
+	if resp.Header.Get("Content-Encoding") != "br" || string(body) != "brotli's copy" || !strings.HasSuffix(resp.Header.Get("ETag"), `-br"`) {
+		t.Fatalf("br: %q %q", resp.Header.Get("Content-Encoding"), body)
+	}
+	if resp, _ := get(t, url, http.Header{"Accept-Encoding": {"gzip, br;q=0"}}); resp.Header.Get("Content-Encoding") != "gzip" {
+		t.Error("br for a client that refused it")
+	}
+	resp, body = get(t, url, http.Header{"Accept-Encoding": {"gzip"}})
 	if resp.Header.Get("Content-Encoding") != "gzip" {
 		t.Fatal("not compressed")
 	}

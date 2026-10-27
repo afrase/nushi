@@ -8,10 +8,21 @@
 const VERSION = "nushi-dev";
 const SHELL = ["./"];
 
+// The whole shell, checked with the server (a CDN may have stretched an
+// HTTP cache's hours; unchanged files cost a 304), before this
+// version takes over. The first one takes over at once; a later one waits
+// while a page runs the version before (whose files it would delete), until
+// the page says "Reload" (the app offers it once this one is installed).
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()),
+    caches.open(VERSION)
+      .then((c) => c.addAll(SHELL.map((u) => new Request(u, { cache: "no-cache" }))))
+      .then(() => (self.registration.active ? undefined : self.skipWaiting())),
   );
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data === "skipWaiting") self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
@@ -22,13 +33,17 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// The shell from the cache, the page from the network when it's there.
+// Everything from the cache, the page too: a launch costs no round trip,
+// and the page and its files are always one version. A newer version
+// installs in the background and waits for the app's Reload.
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   const url = new URL(req.url);
   if (req.method !== "GET" || url.origin !== self.location.origin) return;
   if (req.mode === "navigate") {
-    event.respondWith(fetch(req).catch(() => caches.match("./", { cacheName: VERSION })));
+    event.respondWith(
+      caches.match("./", { cacheName: VERSION }).then((hit) => hit || fetch(req)),
+    );
     return;
   }
   event.respondWith(
