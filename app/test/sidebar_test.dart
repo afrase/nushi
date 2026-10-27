@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/main.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -84,5 +87,36 @@ void main() {
       );
       d.dispose();
     });
+  }
+
+  // The owner: "New chat looks a little weird it's all the way to the left."
+  for (final width in [1700.0, 720.0]) {
+    testWidgets('New chat is centred in its button (${width.toInt()} wide)', (
+      tester,
+    ) async {
+      tester.view
+        ..devicePixelRatio = 1
+        ..physicalSize = Size(width, 600);
+      addTearDown(tester.view.reset);
+      paneWidths.value = {};
+      // Idle ones, so pumpAndSettle settles.
+      final d = await FakeDaemon([
+        for (final c in _chats)
+          if (!c.status.busy) c,
+      ]).connect(tester);
+      await tester.pumpWidget(NushiApp(daemon: d));
+      await tester.pumpAndSettle();
+      final button = find.widgetWithText(Button, 'New chat');
+      final box = tester.getRect(button);
+      final icon = tester.getRect(
+        find.descendant(of: button, matching: find.byIcon(Icons.add)),
+      );
+      final label = tester.getRect(
+        find.descendant(of: button, matching: find.text('New chat')),
+      );
+      expect(box.width, greaterThan(label.right - icon.left + 40));
+      expect((icon.left - box.left) - (box.right - label.right), closeTo(0, 1));
+      d.dispose();
+    }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
   }
 }

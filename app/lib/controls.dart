@@ -135,7 +135,8 @@ enum ButtonKind {
 }
 
 /// A button: [label], an optional leading [icon], a shortcut [hint] after
-/// the label. Every button has the same height and padding.
+/// the label. Every button has the same height and padding; stretched wider
+/// than its content, the content is centred.
 class Button extends StatelessWidget {
   const new({
     required this.label,
@@ -199,8 +200,11 @@ class Button extends StatelessWidget {
             borderRadius: BorderRadius.circular(NushiTheme.control),
           ),
           foregroundDecoration: focusRing(t, look),
+          // Centred when its parent stretches it (the sidebar's New chat);
+          // a value picker is a MenuField, which keeps its value at the left.
           child: Row(
             mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (icon != null) ...[
                 Icon(icon, size: 14, color: fg),
