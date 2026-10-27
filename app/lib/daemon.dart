@@ -35,7 +35,7 @@ final String dataDir =
         : '$support/Nushi');
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 73;
+const apiVersion = 74;
 
 /// The app's link to nushid. [connected] follows a ping every few seconds;
 /// while connected, daemon events keep [chats] current. When no daemon
@@ -88,6 +88,7 @@ class Daemon extends ChangeNotifier {
   Object? pingError;
   int daemonApi = 0; // the daemon's API version
   String _build = ''; // the running daemon's build
+  String daemonVersion = ''; // its release, "" when it isn't one (API 74)
 
   /// The running daemon's build: its program's `<size>-<mtime in ms>`.
   String get daemonBuild => _build;
@@ -273,10 +274,11 @@ class Daemon extends ChangeNotifier {
   Future<bool> ping({Duration wait = const Duration(seconds: 3)}) async {
     var api = 0;
     var build = '';
+    var version = '';
     try {
       // A daemon that hangs counts as gone, rather than stalling the pings.
       final r = await client.ping(PingRequest()).timeout(wait);
-      (api, build) = (r.apiVersion, r.build);
+      (api, build, version) = (r.apiVersion, r.build, r.version);
       pingError = null;
     } on Object catch (e) {
       pingError = e;
@@ -293,6 +295,7 @@ class Daemon extends ChangeNotifier {
       if (ok) {
         daemonApi = api; // kept while away: the app stays as it was
         _build = build;
+        daemonVersion = version;
       }
       notifyListeners();
       if (remote) {

@@ -28,7 +28,8 @@ DateTime? buildTime(String build) => switch (int.tryParse(
 
 /// Settings › Logs & advanced: Show logs, whether the daemon's log has
 /// DEBUG lines ([debug] null: the daemon didn't say, so no switch), and the
-/// daemon: its API, its build, and Restart (the packaged app's).
+/// daemon: its release, its API, its build, and Restart (the packaged
+/// app's).
 class LogsSection extends StatelessWidget {
   const new({
     required this.daemon,
@@ -86,6 +87,8 @@ class LogsSection extends StatelessWidget {
               SettingsRow(
                 'Daemon',
                 description: [
+                  if (daemon.daemonVersion.isNotEmpty)
+                    'Version ${daemon.daemonVersion}',
                   'API ${daemon.daemonApi}',
                   if (built != null) 'built ${dateTime(built)}',
                   if (daemon.replaced) 'a newer one is installed',

@@ -341,6 +341,9 @@ message PingResponse {
   // compares it with the daemon it bundles, to offer a restart into a
   // newer one.
   string build = 2;
+  // The release it was packaged as ("1.2.0"), "" for a build that wasn't
+  // (API 74).
+  string version = 3;
 }
 
 message ListChatsRequest {}

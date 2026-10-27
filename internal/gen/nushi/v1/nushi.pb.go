@@ -212,7 +212,10 @@ type PingResponse struct {
 	// The daemon's executable as it started, "<size>-<mtime in ms>": the app
 	// compares it with the daemon it bundles, to offer a restart into a
 	// newer one.
-	Build         string `protobuf:"bytes,2,opt,name=build,proto3" json:"build,omitempty"`
+	Build string `protobuf:"bytes,2,opt,name=build,proto3" json:"build,omitempty"`
+	// The release it was packaged as ("1.2.0"), "" for a build that wasn't
+	// (API 74).
+	Version       string `protobuf:"bytes,3,opt,name=version,proto3" json:"version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -257,6 +260,13 @@ func (x *PingResponse) GetApiVersion() int32 {
 func (x *PingResponse) GetBuild() string {
 	if x != nil {
 		return x.Build
+	}
+	return ""
+}
+
+func (x *PingResponse) GetVersion() string {
+	if x != nil {
+		return x.Version
 	}
 	return ""
 }
@@ -18360,11 +18370,12 @@ var File_nushi_v1_nushi_proto protoreflect.FileDescriptor
 const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\n" +
 	"\x14nushi/v1/nushi.proto\x12\bnushi.v1\"\r\n" +
-	"\vPingRequest\"E\n" +
+	"\vPingRequest\"_\n" +
 	"\fPingResponse\x12\x1f\n" +
 	"\vapi_version\x18\x01 \x01(\x05R\n" +
 	"apiVersion\x12\x14\n" +
-	"\x05build\x18\x02 \x01(\tR\x05build\"\x12\n" +
+	"\x05build\x18\x02 \x01(\tR\x05build\x12\x18\n" +
+	"\aversion\x18\x03 \x01(\tR\aversion\"\x12\n" +
 	"\x10ListChatsRequest\"j\n" +
 	"\x11ListChatsResponse\x12$\n" +
 	"\x05chats\x18\x01 \x03(\v2\x0e.nushi.v1.ChatR\x05chats\x12/\n" +

@@ -40,6 +40,22 @@ func TestPingNeedsToken(t *testing.T) {
 	}
 }
 
+// Ping says the release a packaged daemon was stamped with.
+func TestPingSaysTheRelease(t *testing.T) {
+	defer func(r string) { Release = r }(Release)
+	Release = "1.2.0-beta.1"
+	srv := httptest.NewServer(New(Services{}))
+	defer srv.Close()
+	c := nushiv1connect.NewNushiServiceClient(http.DefaultClient, srv.URL)
+	r, err := c.Ping(context.Background(), connect.NewRequest(&nushiv1.PingRequest{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.Msg.GetVersion() != "1.2.0-beta.1" || r.Msg.GetApiVersion() != Version {
+		t.Errorf("ping: %v", r.Msg)
+	}
+}
+
 // A paired device's channel can't pair another device, revoke one or move
 // remote access: those calls are the Mac's.
 func TestDevicesCantPairOrRevoke(t *testing.T) {

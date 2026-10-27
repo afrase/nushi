@@ -67,10 +67,12 @@ class PingResponse extends $pb.GeneratedMessage {
   factory PingResponse({
     $core.int? apiVersion,
     $core.String? build,
+    $core.String? version,
   }) {
     final result = PingResponse._();
     if (apiVersion != null) result.apiVersion = apiVersion;
     if (build != null) result.build = build;
+    if (version != null) result.version = version;
     return result;
   }
 
@@ -89,6 +91,7 @@ class PingResponse extends $pb.GeneratedMessage {
       createEmptyInstance: PingResponse.$_createMessage)
     ..aI(1, _omitFieldNames ? '' : 'apiVersion')
     ..aOS(2, _omitFieldNames ? '' : 'build')
+    ..aOS(3, _omitFieldNames ? '' : 'version')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -134,6 +137,17 @@ class PingResponse extends $pb.GeneratedMessage {
   $core.bool hasBuild() => $_has(1);
   @$pb.TagNumber(2)
   void clearBuild() => $_clearField(2);
+
+  /// The release it was packaged as ("1.2.0"), "" for a build that wasn't
+  /// (API 74).
+  @$pb.TagNumber(3)
+  $core.String get version => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set version($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasVersion() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearVersion() => $_clearField(3);
 }
 
 class ListChatsRequest extends $pb.GeneratedMessage {

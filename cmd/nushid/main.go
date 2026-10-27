@@ -75,6 +75,10 @@ func main() {
 		mcpserver.Main()
 		return
 	}
+	if len(os.Args) > 1 && os.Args[1] == "-version" {
+		fmt.Println("nushid", version()) //nolint:forbidigo // -version's answer
+		return
+	}
 	// Until the daemon holds its socket, its lines go to stderr, which the
 	// launcher points at nushid.log.
 	slog.SetDefault(slog.New(logs.Handler(os.Stderr)))
@@ -235,20 +239,13 @@ func run() error {
 	srv := &http.Server{Handler: mux, Protocols: new(http.Protocols), ErrorLog: errorLog} //nolint:gosec // a Unix socket in a 0700 folder; clients need the token
 	srv.Protocols.SetUnencryptedHTTP2(true)
 
-	// On SIGINT or SIGTERM, stop the agents too: their sessions reopen
-	// through session/load when the daemon is back.
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
-	signalled := make(chan os.Signal, 1)
-	go func() {
-		signalled <- <-stop
-		_ = srv.Close() // Serve returns ErrServerClosed, handled below
-	}()
-	err = srv.Serve(ln)
-	select {
-	case sig := <-signalled:
-		slog.Info("nushid stopping", "why", unix.SignalName(sig.(syscall.Signal))) //nolint:forcetypeassert // signal.Notify sends syscall.Signals
-	default:
+	// On SIGINT or SIGTERM, or once its app is deleted, stop the agents
+	// too: their sessions reopen through session/load when the daemon is
+	// back.
+	why, err := serve(srv, ln)
+	if why != "" {
+		slog.Info("nushid stopping", "why", why)
+	} else {
 		slog.Error("nushid stopping", "why", err)
 	}
 	sv.Remote.Close()
@@ -260,6 +257,33 @@ func run() error {
 		return nil
 	}
 	return err
+}
+
+// serve serves the API on ln until SIGINT or SIGTERM, or until the app
+// the daemon runs from is deleted (appDeleted), and says why it stopped:
+// "" when Serve failed by itself.
+func serve(srv *http.Server, ln net.Listener) (string, error) {
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	exe, _ := os.Executable() // "" (never deleted) if macOS can't say
+	deleted := appDeleted(exe, appCheck)
+	why := make(chan string, 1)
+	go func() {
+		select {
+		case sig := <-stop:
+			why <- unix.SignalName(sig.(syscall.Signal)) //nolint:forcetypeassert // signal.Notify sends syscall.Signals
+		case <-deleted:
+			why <- "its app was deleted"
+		}
+		_ = srv.Close() // Serve returns ErrServerClosed
+	}()
+	err := srv.Serve(ln)
+	select {
+	case w := <-why:
+		return w, err
+	default:
+		return "", err
+	}
 }
 
 // newAgents is the agents feature: the agents Nushi knows, found on the
@@ -291,12 +315,13 @@ func newAgents(dir string) *agents.Service {
 	return svc
 }
 
-// version is the commit the daemon was built from, "-dirty" with changes
-// not committed, and the Go it was built with.
+// version is the release the daemon was packaged as ("dev" when it
+// wasn't), the commit it was built from ("-dirty" with changes not
+// committed) and the Go it was built with.
 func version() string {
 	info, ok := debug.ReadBuildInfo()
 	if !ok {
-		return ""
+		return cmp.Or(api.Release, "dev")
 	}
 	var rev, dirty string
 	for _, s := range info.Settings {
@@ -307,7 +332,7 @@ func version() string {
 			dirty = "-dirty"
 		}
 	}
-	return strings.TrimSpace(cmp.Or(rev, "unknown") + dirty + " " + info.GoVersion)
+	return cmp.Or(api.Release, "dev") + " (" + cmp.Or(rev, "unknown") + dirty + " " + info.GoVersion + ")"
 }
 
 // loadToken reads the client token, making a new one on first start or

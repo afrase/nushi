@@ -93,6 +93,8 @@ FakeDaemon settingsFake({List<TranscriptCopy>? copies}) {
       transcriptDays: 90,
     )
     ..answer = (input) => switch (input) {
+      // A packaged daemon's, as Logs & advanced shows it.
+      PingRequest() => PingResponse(apiVersion: apiVersion, version: '1.2.0'),
       ListTranscriptsRequest() => ListTranscriptsResponse(
         totalBytes: Int64(list.fold(0, (n, c) => n + c.bytes.toInt())),
         copies: list,

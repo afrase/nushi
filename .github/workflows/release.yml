@@ -1,0 +1,93 @@
+name: Release
+
+# Publishing a GitHub release (Draft a new release, a new tag vX.Y.Z on main, Publish) builds that tag, attaches
+# Nushi-X.Y.Z.zip, the relay's and the web app's tarballs and a .sha256 for each to the release, and updates the cask
+# in afrase/homebrew-tap (ADR 0055). A draft triggers nothing until it is published. Run it by hand to rebuild an
+# existing release's files. Actions are pinned by commit, as in CI.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag of an existing release to build (vX.Y.Z)
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.release.tag_name || inputs.tag }}
+
+jobs:
+  release:
+    name: Build and publish
+    # What CI's macos-latest is (macos-26-arm64): the daemon is cgo, built for arm64.
+    runs-on: macos-26
+    timeout-minutes: 90
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - name: Check the tag
+        run: |
+          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
+            echo "::error::Release tags look like v1.2.3 or v1.2.3-beta.1"; exit 1
+          fi
+          echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
+
+      # Full history: the build number is the commit count.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: |
+            go.sum
+            tools/lint/go.sum
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.47.7
+          cache: true
+      # make web's fallback fonts (21 MB from Google's font host, each checked against fonts.lock's sha256).
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/Library/Caches/nushi/fallback-fonts
+          key: fallback-fonts-${{ hashFiles('tools/webbuild/fonts.lock') }}
+
+      - name: Check
+        run: make check
+
+      - name: Build
+        run: tools/release.sh "$VERSION"
+
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"
+
+      # Needs the HOMEBREW_TAP_TOKEN secret: a fine-grained token with Contents read and write on afrase/homebrew-tap
+      # only. Without it the cask is left alone, and for any release but the latest (a pre-release, an older one
+      # rebuilt by hand).
+      - name: Update the Homebrew cask
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$TAP_TOKEN" ]; then echo "::warning::No HOMEBREW_TAP_TOKEN secret; the cask isn't updated."; exit 0; fi
+          latest=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+          if [ "$latest" != "$TAG" ]; then echo "$TAG isn't the latest release ($latest); the cask isn't updated."; exit 0; fi
+          sha=$(cut -d ' ' -f 1 "dist/Nushi-$VERSION.zip.sha256")
+          git clone --depth 1 "https://x-access-token:${TAP_TOKEN}@github.com/afrase/homebrew-tap.git" tap
+          mkdir -p tap/Casks
+          sed -e "s/@VERSION@/$VERSION/" -e "s/@SHA256@/$sha/" packaging/homebrew/nushi.rb > tap/Casks/nushi.rb
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/nushi.rb
+          if git diff --cached --quiet; then echo "The cask is already at $VERSION."; exit 0; fi
+          git commit -m "nushi $VERSION"
+          git push
