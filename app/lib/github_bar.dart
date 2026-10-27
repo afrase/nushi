@@ -88,52 +88,59 @@ class GitHubBar extends StatelessWidget {
       child: Row(
         children: [
           Text('GitHub', style: theme.ui(t.text, weight: FontWeight.w600)),
-          const SizedBox(width: 12),
-          if (hosts.length > 1)
-            MenuField(
-              compact: true,
-              entries: [
-                for (final x in hosts)
-                  MenuEntry(
-                    x.host,
-                    detail: x.login,
-                    checked: x.host == h?.host,
-                    onPick: () => onHost(x.host),
+          // The filters in a row of their own: a Flexible beside a Spacer would
+          // take half the free width, leaving the buttons mid-bar.
+          Expanded(
+            child: Row(
+              children: [
+                const SizedBox(width: 12),
+                if (hosts.length > 1)
+                  MenuField(
+                    compact: true,
+                    entries: [
+                      for (final x in hosts)
+                        MenuEntry(
+                          x.host,
+                          detail: x.login,
+                          checked: x.host == h?.host,
+                          onPick: () => onHost(x.host),
+                        ),
+                    ],
+                    label: Text(h?.host ?? ''),
+                  )
+                else if (h != null)
+                  Flexible(
+                    child: Text(
+                      [h.host, if (h.login.isNotEmpty) h.login].join(' · '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.ui(t.textSecondary, size: 12),
+                    ),
                   ),
+                const SizedBox(width: 12),
+                if (h != null) ...[
+                  Flexible(
+                    child: ReposMenu(
+                      known: known,
+                      knownRepos: knownRepos,
+                      owners: owners,
+                      hidden: hidden,
+                      seen: seen,
+                      onKnown: onKnown,
+                      onOwners: onOwners,
+                      onHidden: onHidden,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  ValueListenableBuilder(
+                    valueListenable: githubDays,
+                    builder: (context, days, _) =>
+                        UpdatedMenu(days: days, onPick: onDays),
+                  ),
+                ],
               ],
-              label: Text(h?.host ?? ''),
-            )
-          else if (h != null)
-            Flexible(
-              child: Text(
-                [h.host, if (h.login.isNotEmpty) h.login].join(' · '),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.ui(t.textSecondary, size: 12),
-              ),
             ),
-          const SizedBox(width: 12),
-          if (h != null) ...[
-            Flexible(
-              child: ReposMenu(
-                known: known,
-                knownRepos: knownRepos,
-                owners: owners,
-                hidden: hidden,
-                seen: seen,
-                onKnown: onKnown,
-                onOwners: onOwners,
-                onHidden: onHidden,
-              ),
-            ),
-            const SizedBox(width: 12),
-            ValueListenableBuilder(
-              valueListenable: githubDays,
-              builder: (context, days, _) =>
-                  UpdatedMenu(days: days, onPick: onDays),
-            ),
-          ],
-          const Spacer(),
+          ),
           if (updatedLine(updated, loading: loading, now: now) case final line?)
             Padding(
               padding: const EdgeInsets.only(right: 8),
