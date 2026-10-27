@@ -198,16 +198,10 @@ class _HistorySectionState extends State<HistorySection> {
         HistoryRow(c, widget.daemon.chats[c.chatId]),
     ];
     final counts = {
-      for (final f in HistoryFilter.values)
-        f: f == HistoryFilter.all
-            ? rows.length
-            : historyView(
-                rows,
-                filter: f,
-                query: '',
-                sort: _sort,
-                up: _up,
-              ).length,
+      HistoryFilter.all: rows.length,
+      HistoryFilter.archived: rows.where((r) => r.archived).length,
+      HistoryFilter.gone: rows.where((r) => r.gone).length,
+      HistoryFilter.leftover: rows.where((r) => r.leftover).length,
     };
     // A filter left with nothing to show (its rows cleared) goes.
     final filter = counts[_filter] == 0 ? HistoryFilter.all : _filter;
