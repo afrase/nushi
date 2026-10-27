@@ -82,6 +82,12 @@ class _TapState extends State<Tap> {
         onSecondaryTapUp: widget.onSecondaryTapUp,
         child: Container(
           padding: widget.padding,
+          constraints: TouchTargets.of(context)
+              ? const BoxConstraints(minHeight: TouchTargets.size)
+              : null,
+          alignment: TouchTargets.of(context)
+              ? AlignmentDirectional.centerStart
+              : null,
           decoration: BoxDecoration(
             color: widget.selected
                 ? t.selected

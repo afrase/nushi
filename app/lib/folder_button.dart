@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/chat.dart';
@@ -11,7 +12,10 @@ import 'package:nushi/widgets.dart';
 
 /// [path] with the home folder as "~".
 String tildePath(String path) {
-  final home = Platform.environment['HOME'] ?? '';
+  // The phone doesn't know the Mac's home folder: /Users/<name> it is.
+  final home = kIsWeb
+      ? RegExp('^/Users/[^/]+').stringMatch(path) ?? ''
+      : Platform.environment['HOME'] ?? '';
   return home.isNotEmpty && (path == home || path.startsWith('$home/'))
       ? '~${path.substring(home.length)}'
       : path;

@@ -41,8 +41,11 @@ const apiVersion = 69;
 /// answers, the bundled one is started; a running daemon is only ever
 /// stopped by [restartDaemon].
 class Daemon extends ChangeNotifier {
-  /// A test passes a [transport] of its own.
-  new({connect.Transport? transport}) {
+  /// A test passes a [transport] of its own. The phone passes its
+  /// relay's, [remote]: then nothing of the Mac's runs (no bundled daemon,
+  /// no token, no app log), and it pings every 15 s, which also keeps its
+  /// relay connection alive.
+  new({connect.Transport? transport, this.remote = false}) {
     client = NushiServiceClient(
       transport ??
           protocol.Transport(
@@ -52,11 +55,18 @@ class Daemon extends ChangeNotifier {
             interceptors: [_auth],
           ),
     );
+    _timer = Timer.periodic(
+      Duration(seconds: remote ? 15 : 2),
+      (_) => unawaited(ping()),
+    );
+    if (remote) {
+      unawaited(ping());
+      return;
+    }
     appLog.client = client;
     appLog.reachable = () => connected && hasLog(daemonApi);
-    _timer = Timer.periodic(const Duration(seconds: 2), (_) => _ping());
     unawaited(
-      _ping().then(
+      ping().then(
         (_) => appLog.info('app started', {
           'version': appVersion,
           'api': '$apiVersion',
@@ -67,7 +77,10 @@ class Daemon extends ChangeNotifier {
     );
   }
 
-  final _transport = UdsTransport('$dataDir/nushid.sock');
+  /// Whether this is the phone's link to a Mac's daemon through a relay.
+  final bool remote;
+
+  late final _transport = UdsTransport('$dataDir/nushid.sock');
   late final NushiServiceClient client;
   late final Timer _timer;
   bool connected = false;
@@ -251,7 +264,9 @@ class Daemon extends ChangeNotifier {
     }
   }
 
-  Future<void> _ping() async {
+  /// Asks the daemon whether it's there (every few seconds, and when the
+  /// phone comes back to the front).
+  Future<void> ping() async {
     var api = 0;
     var build = '';
     try {
@@ -261,7 +276,9 @@ class Daemon extends ChangeNotifier {
           .timeout(const Duration(seconds: 3));
       (api, build) = (r.apiVersion, r.build);
     } on Object {
-      if (_launcher.launch() && _launcher.launches == 3) notifyListeners();
+      if (!remote && _launcher.launch() && _launcher.launches == 3) {
+        notifyListeners();
+      }
     }
     final ok = api > 0;
     if (ok) _launcher.launches = 0;
@@ -274,7 +291,9 @@ class Daemon extends ChangeNotifier {
         _build = build;
       }
       notifyListeners();
-      if (!ok) {
+      if (remote) {
+        // The phone has no app log.
+      } else if (!ok) {
         appLog.warn('lost the daemon');
       } else if (outdated) {
         appLog.warn('the daemon is older than the app', {
@@ -301,7 +320,7 @@ class Daemon extends ChangeNotifier {
     _launcher.launched = DateTime(0);
     for (var i = 0; i < 50 && connected; i++) {
       await Future<void>.delayed(const Duration(milliseconds: 200));
-      await _ping();
+      await ping();
     }
     if (connected && _build == before) {
       appLog.warn('the daemon did not stop', {'build': before});
@@ -315,7 +334,7 @@ class Daemon extends ChangeNotifier {
     // restart on screen.
     for (var i = 0; i < 100 && !connected; i++) {
       await Future<void>.delayed(const Duration(milliseconds: 200));
-      await _ping();
+      await ping();
     }
     if (!connected) {
       throw StateError("The daemon didn't come back: Settings › Show logs");
@@ -641,7 +660,7 @@ class Daemon extends ChangeNotifier {
   void dispose() {
     _timer.cancel();
     unawaited(_events?.cancel());
-    unawaited(_transport.close());
+    if (!remote) unawaited(_transport.close());
     super.dispose();
   }
 }
