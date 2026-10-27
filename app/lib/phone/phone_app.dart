@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:nushi/chat.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/phone/chats_screen.dart';
+import 'package:nushi/phone/history.dart';
 import 'package:nushi/phone/keyboard.dart';
 import 'package:nushi/phone/pair_screen.dart';
 import 'package:nushi/phone/phone.dart';
@@ -22,8 +24,13 @@ class PhoneApp extends StatefulWidget {
 class _PhoneAppState extends State<PhoneApp> with WidgetsBindingObserver {
   final _navigator = GlobalKey<NavigatorState>();
 
-  /// A route the browser asks for (its address, its history) is taken
-  /// here and dropped, before the app's Navigator would push it.
+  /// The browser's history in step with the screens: its back (iOS's edge
+  /// swipe) goes back a screen, and at the root leaves the page.
+  late final _history = PhoneHistory(widget.phone.platform);
+
+  /// A route the browser asks for (its address) is taken here and
+  /// dropped, before the app's Navigator would push it: the address names
+  /// no screen (history.dart keeps the entries).
   @override
   Future<bool> didPushRouteInformation(RouteInformation _) async => true;
 
@@ -32,9 +39,6 @@ class _PhoneAppState extends State<PhoneApp> with WidgetsBindingObserver {
     super.initState();
     // Before MaterialApp's own observer, which would push the route.
     WidgetsBinding.instance.addObserver(this);
-    // The browser's back (iOS's edge swipe) goes back a screen in the app,
-    // and at its root does nothing.
-    widget.phone.platform.onBack = () => _navigator.currentState?.maybePop();
     widget.phone
       ..addListener(_opening)
       ..opening.addListener(_opening);
@@ -64,12 +68,24 @@ class _PhoneAppState extends State<PhoneApp> with WidgetsBindingObserver {
     daemon.removeListener(_opening);
     phone.opening.value = null;
     _navigator.currentState!.popUntil((r) => r.isFirst);
-    unawaited(openPhoneChat(context, phone, chat));
+    unawaited(_open(chat));
+  }
+
+  /// Opens [chat] once the chats have drawn: iOS keeps a picture of what
+  /// a screen covers, taken as its entry is pushed, to show under the
+  /// swipe back (opened at launch, it was the chats not yet in).
+  Future<void> _open(ChatState chat) async {
+    await WidgetsBinding.instance.endOfFrame;
+    await WidgetsBinding.instance.endOfFrame;
+    final context = _navigator.currentContext;
+    if (!mounted || context == null || !context.mounted) return;
+    await openPhoneChat(context, widget.phone, chat);
   }
 
   @override
   Widget build(BuildContext context) => MaterialApp(
     navigatorKey: _navigator,
+    navigatorObservers: [_history],
     title: 'Nushi',
     debugShowCheckedModeBanner: false,
     theme: _phone(const NushiTheme(Tokens.light).toThemeData()),
@@ -129,4 +145,5 @@ ThemeData _phone(ThemeData d) => d.copyWith(
   materialTapTargetSize: MaterialTapTargetSize.padded,
   visualDensity: VisualDensity.standard,
   platform: TargetPlatform.iOS,
+  pageTransitionsTheme: browserBackTransitions,
 );

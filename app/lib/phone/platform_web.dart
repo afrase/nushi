@@ -80,10 +80,12 @@ final class PhonePlatform {
     return c;
   }
 
-  static void _clearHash() => web.window.history.replaceState(
-    {'nushi': 'top'}.jsify(),
+  /// Takes the fragment out of the address: in place, never an entry (a
+  /// back from the root mustn't reach a pairing link again).
+  void _clearHash() => web.window.history.replaceState(
+    _entry(_depth),
     '',
-    web.window.location.pathname,
+    web.window.location.pathname + web.window.location.search,
   );
 
   static bool _has(JSObject o, String name) => o.has(name);
@@ -387,30 +389,41 @@ final class PhonePlatform {
       ..addEventListener('focus', ((web.Event _) => f()).toJS);
   }
 
-  /// The browser's back (iOS's edge swipe in a Home Screen app) as the
-  /// app's own back: the page keeps two history entries of its own, and
-  /// a back to the first puts the second again and calls [onBack]. The
-  /// browser never leaves the page (which would reload it); at the app's
-  /// root nothing happens.
-  void Function()? onBack;
+  /// The browser's history as the app's screens (history.dart): the page's
+  /// entry is the root (depth 0), and each screen over it has an entry of
+  /// its own saying how many screens are over the root there. The address
+  /// is the page's own in every one.
+  void Function(int depth)? onEntry;
+
+  /// The depth of the entry the browser is at.
+  int _depth = 0;
+
+  static JSAny? _entry(int depth) => {'nushi': depth}.jsify();
+
+  /// A screen's entry, over the current one.
+  void pushEntry(int depth) {
+    _depth = depth;
+    web.window.history.pushState(_entry(depth), '');
+  }
+
+  /// Back (negative) or forward [delta] entries; [onEntry] says where it
+  /// landed.
+  void go(int delta) => web.window.history.go(delta);
 
   void _ownHistory() {
-    final h = web.window.history
-      ..replaceState({'nushi': 'root'}.jsify(), '')
-      ..pushState({'nushi': 'top'}.jsify(), '');
+    web.window.history.replaceState(_entry(0), '');
     web.window.addEventListener(
       'popstate',
       ((web.PopStateEvent e) {
-        // Only a back onto the page's first entry (a fragment's navigation,
-        // a pairing link coming in, is no back).
+        // Only the app's entries: a fragment's navigation (a pairing link
+        // coming in) has no state yet, and its fragment is then taken out
+        // in place, its entry given the depth it came at.
         final state = e.state;
-        if (state == null ||
-            !state.isA<JSObject>() ||
-            (state as JSObject)['nushi'].dartify() != 'root') {
-          return;
-        }
-        h.pushState({'nushi': 'top'}.jsify(), '');
-        onBack?.call();
+        if (state == null || !state.isA<JSObject>()) return;
+        final depth = (state as JSObject)['nushi'].dartify();
+        if (depth is! num) return;
+        _depth = depth.toInt();
+        onEntry?.call(_depth);
       }).toJS,
     );
   }

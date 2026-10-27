@@ -1,6 +1,7 @@
-// The browser's back in the phone's web app (iOS's edge swipe in a Home
-// Screen app): the page keeps its own history entries, and a back is the
-// app's back, never the browser leaving (and reloading) the page.
+// The phone's web app and the browser's history (history.dart): the
+// page's entry is the root, a screen's entry says its depth and nothing
+// else, and a back (iOS's edge swipe) or a go reaches the app as the
+// depth it landed on, the page staying.
 @TestOn('browser')
 library;
 
@@ -9,21 +10,32 @@ import 'package:nushi/phone/platform.dart';
 import 'package:web/web.dart' as web;
 
 void main() {
-  test('a back is the app’s, and the page stays', () async {
-    final platform = PhonePlatform();
-    var backs = 0;
-    platform.onBack = () => backs++;
-    final length = web.window.history.length;
+  test('entries by depth, at the page’s own address', () async {
     final href = web.window.location.href;
-    for (var i = 1; i <= 3; i++) {
-      web.window.history.back();
-      for (var w = 0; w < 100 && backs < i; w++) {
+    final platform = PhonePlatform();
+    final landed = <int>[];
+    platform.onEntry = landed.add;
+    Future<void> moved(int n) async {
+      for (var w = 0; w < 100 && landed.length < n; w++) {
         await Future<void>.delayed(const Duration(milliseconds: 20));
       }
-      expect(backs, i, reason: 'back $i reached the app');
+      expect(landed, hasLength(n));
     }
-    // Still this page, and the history didn't grow with each back.
+
+    final length = web.window.history.length;
+    platform
+      ..pushEntry(1)
+      ..pushEntry(2);
+    expect(web.window.history.length, length + 2);
+    expect(web.window.location.href, href, reason: 'no route in the address');
+    web.window.history.back();
+    await moved(1);
+    expect(landed.last, 1);
+    platform.go(-1);
+    await moved(2);
+    expect(landed.last, 0);
+    // Still this page, and nothing pushed by the moves.
     expect(web.window.location.href, href);
-    expect(web.window.history.length, length);
+    expect(web.window.history.length, length + 2);
   });
 }

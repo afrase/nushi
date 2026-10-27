@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import 'package:nushi/phone/subscription.dart';
@@ -69,8 +71,38 @@ final class PhonePlatform {
   /// Calls [f] when the page comes back from the back-forward cache.
   void onResume(void Function() f) {}
 
-  /// The browser's back, as the app's own.
-  void Function()? onBack;
+  /// The browser's history, as a test sees it: each entry's depth, the
+  /// first the page's own (the root), and the one it's at.
+  final entries = [0];
+  int at = 0;
+
+  /// The browser moved to an entry: its depth.
+  void Function(int depth)? onEntry;
+
+  /// A screen's entry over the current one (the ones after it go).
+  void pushEntry(int depth) {
+    entries
+      ..removeRange(at + 1, entries.length)
+      ..add(depth);
+    at++;
+  }
+
+  /// What a browser's `history.go` does: the move, and its popstate after.
+  void go(int delta) {
+    final to = at + delta;
+    if (to < 0 || to >= entries.length) return;
+    at = to;
+    scheduleMicrotask(() => onEntry?.call(entries[at]));
+  }
+
+  /// The browser's back (iOS's edge swipe, Safari's back button): at the
+  /// first entry it would leave the page, false here.
+  bool back() {
+    if (at == 0) return false;
+    at--;
+    onEntry?.call(entries[at]);
+    return true;
+  }
 
   /// The chat a notification asked to open when the app started, if any.
   String? takeOpenChat() => null;
