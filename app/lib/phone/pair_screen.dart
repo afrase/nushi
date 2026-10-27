@@ -31,7 +31,16 @@ class _PairScreenState extends State<PairScreen> {
   String _error = '';
 
   @override
+  void initState() {
+    super.initState();
+    widget.phone.platform.onPairLink = (link) => setState(() {
+      _link.text = link;
+    });
+  }
+
+  @override
   void dispose() {
+    widget.phone.platform.onPairLink = null;
     _link.dispose();
     _name.dispose();
     super.dispose();
@@ -44,8 +53,10 @@ class _PairScreenState extends State<PairScreen> {
     });
     try {
       await widget.phone.pair(_link.text, _name.text);
-    } on FormatException {
-      _error = "That isn't a Nushi pairing link: copy it again on the Mac.";
+    } on FormatException catch (e) {
+      _error = e.message.startsWith('This link is for')
+          ? '${e.message}.'
+          : "That isn't a Nushi pairing link: copy it again on the Mac.";
     } on Object catch (e) {
       _error = e.toString().contains('refused')
           ? 'The Mac refused this device, or no one answered in time.'
@@ -112,7 +123,7 @@ class _PairScreenState extends State<PairScreen> {
                   'then Allow there. If it shows another code, Deny it.',
                   style: muted,
                 ),
-              ] else ...[
+              ] else if (!notInstalled) ...[
                 Text(
                   'On the Mac: Settings › Remote access › Pair a phone, then '
                   'Copy link, and paste it here.',

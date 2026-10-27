@@ -41,7 +41,7 @@ func TestRFC8291Vector(t *testing.T) {
 		P256DH:   unb64(t, "BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4"),
 		Auth:     unb64(t, "BTBZMqHH6r4Tts7J_aSIgg"),
 	}
-	got, err := encrypt(sub, unb64(t, "V2hlbiBJIGdyb3cgdXAsIEkgd2FudCB0byBiZSBhIHdhdGVybWVsb24"), as, unb64(t, "DGv6ra1nlYgDCS1FRnbzlw"))
+	got, err := encrypt(sub, unb64(t, "V2hlbiBJIGdyb3cgdXAsIEkgd2FudCB0byBiZSBhIHdhdGVybWVsb24"), 0, as, unb64(t, "DGv6ra1nlYgDCS1FRnbzlw"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,6 +55,9 @@ func TestRFC8291Vector(t *testing.T) {
 	fresh, err := Encrypt(sub, []byte("Claude finished"))
 	if err != nil {
 		t.Fatal(err)
+	}
+	if long, _ := Encrypt(sub, []byte("Codex has a question, with a longer title")); len(long) != len(fresh) {
+		t.Errorf("payloads of %d and %d bytes: their length tells", len(fresh), len(long))
 	}
 	if plain := decrypt(t, ua, sub.Auth, fresh); string(plain) != "Claude finished" {
 		t.Fatalf("decrypted %q", plain)
@@ -87,6 +90,10 @@ func TestAllowlist(t *testing.T) {
 		"https://169.254.169.254/latest",
 		"https://evil.notify.windows.com.evil/x",
 		"file:///etc/passwd",
+		"https://[::ffff:127.0.0.1%25x.push.apple.com]/x", // a zone that ends like a push service
+		"https://web.push.apple.com:/x",                   // an empty port
+		"https://web.push.apple.com:443/x",
+		"https://web.push.apple.com/" + strings.Repeat("x", MaxEndpoint),
 		"ftp://fcm.googleapis.com/x",
 		"",
 	} {
@@ -153,6 +160,13 @@ func TestSend(t *testing.T) {
 	status = http.StatusTooManyRequests
 	if err := snd.Send(context.Background(), sub, m); err == nil || errors.Is(err, ErrGone) {
 		t.Errorf("429: %v", err)
+	}
+	// A failure doesn't name the endpoint: it's the subscription's secret.
+	down := &Sender{Keys: keys, Subject: snd.Subject, Client: &http.Client{Transport: roundTrip(func(*http.Request) (*http.Response, error) {
+		return nil, errors.New("connection refused")
+	})}}
+	if err := down.Send(context.Background(), sub, m); err == nil || strings.Contains(err.Error(), "abc") {
+		t.Errorf("a failure: %v", err)
 	}
 	got = nil
 	sub.Endpoint = "https://evil.example.com/x"

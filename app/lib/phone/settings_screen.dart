@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/subscription.dart';
 import 'package:nushi/phone/ui.dart';
+import 'package:nushi/remote.dart' show keyFingerprint;
 import 'package:nushi/theme/theme.dart';
 
 /// The phone's settings: the relay, this device's name, notifications, and
@@ -70,6 +71,10 @@ class SettingsScreen extends StatelessWidget {
             children: [
               const PhoneHeading('Mac'),
               _Line('Relay', phone.paired?.relay.toString() ?? ''),
+              _Line(
+                "Mac's key",
+                phone.paired == null ? '' : keyFingerprint(phone.paired!.key),
+              ),
               _Line('This device', phone.name),
               _Line('Connection', connected ? 'Connected' : 'Not connected'),
               const PhoneHeading('Notifications'),

@@ -3,13 +3,16 @@ package relay
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/rand"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -30,6 +33,8 @@ func webDir(t *testing.T) string {
 		"ck-0123456789abcdef/ck.wasm": "\x00asm",
 		"icons/Icon-192.png":          "\x89PNG",
 		"assets/AssetManifest.bin.js": "x",
+		".DS_Store":                   "secret",
+		".git/config":                 "secret",
 	} {
 		p := filepath.Join(dir, name)
 		check(t, os.MkdirAll(filepath.Dir(p), 0o755))
@@ -81,12 +86,18 @@ func TestOrigins(t *testing.T) {
 		"https://relay.example.com:8443": "https://relay.example.com:8443",
 		"http://127.0.0.1:80":            "http://127.0.0.1",
 		"http://127.0.0.1:8090":          "http://127.0.0.1:8090",
+		"http://localhost:8099":          "http://localhost:8099",
+		"http://[::1]:8090":              "http://[::1]:8090",
+		"https://[2001:db8::1]":          "https://[2001:db8::1]",
+		"https://xn--bcher-kva.example":  "https://xn--bcher-kva.example",
 	} {
 		if got, err := Origin(in); err != nil || got != want {
 			t.Errorf("Origin(%q) = %q, %v; want %q", in, got, err, want)
 		}
 	}
-	for _, bad := range []string{"", "relay.example.com", "wss://relay.example.com", "https://relay.example.com/app", "https://u@relay.example.com", "https://relay.example.com/?a", "null"} {
+	for _, bad := range []string{"", "relay.example.com", "wss://relay.example.com", "https://relay.example.com/app", "https://u@relay.example.com", "https://relay.example.com/?a", "null",
+		"http://pi.lan:8080", "http://10.0.0.2", // plain http off this machine
+		"https://relay.example.com.", "https://bücher.example"} {
 		if _, err := Origin(bad); err == nil {
 			t.Errorf("Origin(%q) passed", bad)
 		}
@@ -133,6 +144,16 @@ func TestWebSocketOrigin(t *testing.T) {
 	if dial(plain.URL, own) {
 		t.Error("a relay without the web app took a page's WebSocket")
 	}
+	// Two Origins, or an empty one: refused.
+	for _, h := range []http.Header{{"Origin": {own, own}}, {"Origin": {""}}} {
+		ws, resp, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(srv.URL, "http")+"/v1/dial/"+newID(), h) //nolint:bodyclose // as above
+		if err == nil {
+			_ = ws.Close()
+			t.Errorf("connected with %v", h)
+		} else if resp == nil || resp.StatusCode != http.StatusForbidden {
+			t.Errorf("%v: %v", h, err)
+		}
+	}
 }
 
 func TestWebHeaders(t *testing.T) {
@@ -142,11 +163,13 @@ func TestWebHeaders(t *testing.T) {
 		t.Fatalf("the page: %d %q", resp.StatusCode, body)
 	}
 	want := map[string]string{
-		"Content-Type":           "text/html; charset=utf-8",
-		"X-Content-Type-Options": "nosniff",
-		"Cache-Control":          "no-cache",
-		"X-Frame-Options":        "DENY",
-		"Referrer-Policy":        "no-referrer",
+		"Content-Type":                 "text/html; charset=utf-8",
+		"X-Content-Type-Options":       "nosniff",
+		"Cache-Control":                "no-cache",
+		"X-Frame-Options":              "DENY",
+		"Referrer-Policy":              "no-referrer",
+		"Strict-Transport-Security":    "max-age=31536000",
+		"Cross-Origin-Resource-Policy": "same-origin",
 	}
 	for k, v := range want {
 		if got := resp.Header.Get(k); got != v {
@@ -154,7 +177,7 @@ func TestWebHeaders(t *testing.T) {
 		}
 	}
 	csp := resp.Header.Get("Content-Security-Policy")
-	for _, part := range []string{"default-src 'self'", "script-src 'self' 'wasm-unsafe-eval';", "connect-src 'self' wss://relay.example.com;", "frame-ancestors 'none'", "object-src 'none'"} {
+	for _, part := range []string{"default-src 'none'", "script-src 'self' 'wasm-unsafe-eval';", "connect-src 'self' wss://relay.example.com;", "frame-ancestors 'none'", "object-src 'none'", "require-trusted-types-for 'script'"} {
 		if !strings.Contains(csp, part) {
 			t.Errorf("the CSP lacks %q: %s", part, csp)
 		}
@@ -179,10 +202,10 @@ func TestWebHeaders(t *testing.T) {
 			t.Errorf("%s: without the strict headers", name)
 		}
 	}
-	if resp, _ := get(t, srv.URL+"/sw.js", nil); resp.Header.Get("Content-Type") != "text/javascript; charset=utf-8" {
-		t.Errorf("sw.js: %q", resp.Header.Get("Content-Type"))
+	if resp, _ := get(t, srv.URL+"/sw.js", nil); resp.Header.Get("Content-Type") != "text/javascript; charset=utf-8" || resp.Header.Get("Service-Worker-Allowed") != "" {
+		t.Errorf("sw.js: %q", resp.Header)
 	}
-	for _, name := range []string{"secret.txt", "nothing.js", "../relay.go", "v1/dial"} {
+	for _, name := range []string{"secret.txt", "nothing.js", "../relay.go", "v1/dial", ".DS_Store", ".git/config"} {
 		if resp, body := get(t, srv.URL+"/"+name, nil); resp.StatusCode == http.StatusOK || bytes.Contains(body, []byte("secret")) {
 			t.Errorf("%s: %d %q", name, resp.StatusCode, body)
 		}
@@ -222,5 +245,34 @@ func TestLoadSiteRefuses(t *testing.T) {
 	}
 	if _, err := LoadSite(webDir(t), "relay.example.com"); err == nil {
 		t.Error("an origin without a scheme")
+	}
+}
+
+// A client that asks for a big file and never reads it loses the
+// connection once its time is up.
+func TestSlowReaderLetGo(t *testing.T) {
+	wait, rate := writeWait, writeRate
+	writeWait, writeRate = 200*time.Millisecond, 1<<30
+	t.Cleanup(func() { writeWait, writeRate = wait, rate })
+	dir := webDir(t)
+	big := make([]byte, 32<<20)
+	_, _ = rand.Read(big) // incompressible
+	check(t, os.WriteFile(filepath.Join(dir, "big.0123456789abcdef.wasm"), big, 0o600))
+	site, err := LoadSite(dir, "http://127.0.0.1")
+	check(t, err)
+	lim := Defaults
+	lim.Site = site
+	srv := httptest.NewServer(NewServer(lim).Handler)
+	t.Cleanup(srv.Close)
+	c, err := net.Dial("tcp", strings.TrimPrefix(srv.URL, "http://"))
+	check(t, err)
+	defer c.Close() //nolint:errcheck // a test's connection
+	_, err = io.WriteString(c, "GET /big.0123456789abcdef.wasm HTTP/1.1\r\nHost: x\r\n\r\n")
+	check(t, err)
+	time.Sleep(time.Second) // reading nothing, past its time
+	check(t, c.SetReadDeadline(time.Now().Add(10*time.Second)))
+	n, err := io.Copy(io.Discard, c)
+	if err != nil || n >= int64(len(big)) {
+		t.Fatalf("read %d of %d: %v", n, len(big), err)
 	}
 }

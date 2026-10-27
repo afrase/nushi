@@ -92,6 +92,9 @@ func TestDevicesCantPairOrRevoke(t *testing.T) {
 		if _, err := c.SetDeviceView(ctx, connect.NewRequest(&nushiv1.SetDeviceViewRequest{ChatId: "c"})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
 			t.Errorf("SetDeviceView without a device: %v", err)
 		}
+		if _, err := c.UnpairThisDevice(ctx, connect.NewRequest(&nushiv1.UnpairThisDeviceRequest{})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
+			t.Errorf("UnpairThisDevice without a device: %v", err)
+		}
 		srv.Close()
 	}
 }

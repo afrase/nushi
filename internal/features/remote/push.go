@@ -1,6 +1,7 @@
 package remote
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
@@ -9,6 +10,7 @@ import (
 	"log/slog"
 	"net/url"
 	"slices"
+	"sync"
 	"time"
 
 	"github.com/afrase/nushi/internal/model"
@@ -22,14 +24,35 @@ type Push struct {
 	Agent func(chatID string) (title string, ok bool) // a stored chat's agent, as people read it ("Claude")
 }
 
-// PushWait is how long one push may take.
-var PushWait = 30 * time.Second
+var (
+	// PushWait is how long one push may take.
+	PushWait = 30 * time.Second
+	// ViewLease is how long a device's open chat counts after it last said
+	// so: the phone says it again with each ping while it shows, so a phone
+	// put away (whose last word may never have left) gets pushes soon.
+	ViewLease = 40 * time.Second
+	// FinishedWait is how long a turn's end waits before it's pushed: a
+	// queued message's turn starting meanwhile means the agent goes on.
+	FinishedWait = 2 * time.Second
+)
 
 // UsePush turns notifications on: devices may subscribe, and Follow sends.
-func (s *Service) UsePush(p Push) {
+// fresh says the VAPID key is new: subscriptions made with another one no
+// longer work, so they're forgotten.
+func (s *Service) UsePush(p Push, fresh bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.push = &p
+	if !fresh {
+		return
+	}
+	devices := slices.Clone(s.devices)
+	for i := range devices {
+		devices[i].Push = nil
+	}
+	if err := s.st.SaveDevices(devices); err == nil {
+		s.devices = devices
+	}
 }
 
 // PushKey is the VAPID public key, or "" without push.
@@ -57,11 +80,22 @@ func (s *Service) SetPush(device string, sub *webpush.Subscription) error {
 	if s.push == nil && p != nil {
 		return errors.New("this daemon doesn't send notifications")
 	}
+	i := slices.IndexFunc(s.devices, func(d model.Device) bool { return d.ID == device })
+	if i >= 0 && samePush(s.devices[i].Push, p) {
+		return nil // nothing to write or tell
+	}
 	if err := s.setPushLocked(device, p); err != nil {
 		return err
 	}
 	slog.Info("push subscription", "device", device, "on", p != nil)
 	return nil
+}
+
+func samePush(a, b *model.Push) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return a.Endpoint == b.Endpoint && bytes.Equal(a.P256DH, b.P256DH) && bytes.Equal(a.Auth, b.Auth)
 }
 
 // setPushLocked stores device's subscription. Called with s.mu.
@@ -80,16 +114,29 @@ func (s *Service) setPushLocked(device string, p *model.Push) error {
 	return nil
 }
 
+// view is the chat a device shows, and when it last said so.
+type view struct {
+	chat string
+	at   time.Time
+}
+
 // SetView says which chat device shows ("" none); it gets no push for that
-// chat while it's connected. A device's view goes with its last connection.
+// chat while it's connected and keeps saying so (ViewLease). A device's
+// view goes with its last connection.
 func (s *Service) SetView(device, chatID string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if chatID == "" {
 		delete(s.views, device)
 	} else {
-		s.views[device] = chatID
+		s.views[device] = view{chatID, time.Now()}
 	}
+}
+
+// showingLocked says whether device shows chatID now. Called with s.mu.
+func (s *Service) showingLocked(device, chatID string) bool {
+	v, ok := s.views[device]
+	return ok && v.chat == chatID && time.Since(v.at) < ViewLease && s.connectedLocked(device)
 }
 
 // connectedLocked says whether device has a connection open. Called with
@@ -131,8 +178,12 @@ func (s *Service) send(ctx context.Context, device string, p payload) error {
 	s.mu.Unlock()
 	body, _ := json.Marshal(p)
 	topic := sha256.Sum256([]byte(p.Chat + "\x00" + p.Kind))
-	m := webpush.Message{Payload: body, Topic: base64.RawURLEncoding.EncodeToString(topic[:24]),
-		Urgent: p.Kind != "finished", TTL: 4 * time.Hour}
+	// A prompt or question goes stale: an hour; a turn's end can wait.
+	ttl := time.Hour
+	if p.Kind == "finished" {
+		ttl = 4 * time.Hour
+	}
+	m := webpush.Message{Payload: body, Topic: base64.RawURLEncoding.EncodeToString(topic[:24]), Urgent: p.Kind != "finished", TTL: ttl}
 	ctx, cancel := context.WithTimeout(ctx, PushWait)
 	defer cancel()
 	err := send(ctx, subject, webpush.Subscription{Endpoint: sub.Endpoint, P256DH: sub.P256DH, Auth: sub.Auth}, m)
@@ -153,62 +204,99 @@ func (s *Service) send(ctx context.Context, device string, p payload) error {
 	return err
 }
 
-// subjectOf is the VAPID contact: the relay's own address as https.
+// subjectOf is the VAPID contact: the relay's own address, as https (RFC
+// 8292 asks for https: or mailto:).
 func subjectOf(relay string) string {
-	u, err := url.Parse(relay)
-	if err != nil || u.Host == "" {
-		return "https://localhost"
+	if u, err := url.Parse(relay); err == nil && u.Host != "" {
+		return "https://" + u.Host
 	}
-	scheme := "https"
-	if u.Scheme == "ws" {
-		scheme = "http"
-	}
-	return scheme + "://" + u.Host
+	return "mailto:nushi@users.noreply.github.com"
 }
 
-// notifier turns chats' events into pushes: a turn that ended, and each
-// permission prompt or question when it comes. It runs in Follow's
-// goroutine only.
+// notifier turns chats' events into pushes: a turn that ended (unless it
+// was stopped, or the agent went straight on), and each permission prompt
+// or question when it comes.
 type notifier struct {
-	running map[string]bool            // chats with a turn running
-	asked   map[string]map[string]bool // per chat, prompts already pushed
+	mu        sync.Mutex
+	running   map[string]bool            // chats with a turn running
+	cancelled map[string]bool            // chats whose running turn was stopped
+	asked     map[string]map[string]bool // per chat, prompts already pushed
+	finishing map[string]*time.Timer     // turns' ends waiting FinishedWait
+	outbox    map[string]*outbox         // per device, the push in flight and the next
+}
+
+// outbox is one device's pushes: one in flight at a time, and of those
+// that come meanwhile only the newest waits.
+type outbox struct {
+	next *payload
 }
 
 // Follow sees every event (the hub's subscriber) and pushes what a device
 // should hear of.
 func (s *Service) Follow(e model.Event) {
 	n := &s.notes
+	n.mu.Lock()
+	defer n.mu.Unlock()
 	if n.running == nil {
-		n.running, n.asked = map[string]bool{}, map[string]map[string]bool{}
+		n.running, n.cancelled, n.asked = map[string]bool{}, map[string]bool{}, map[string]map[string]bool{}
+		n.finishing, n.outbox = map[string]*time.Timer{}, map[string]*outbox{}
 	}
-	if e.ChatID == "" {
+	chat := e.ChatID
+	if chat == "" {
 		return
 	}
 	if e.Removed {
-		delete(n.running, e.ChatID)
-		delete(n.asked, e.ChatID)
+		delete(n.running, chat)
+		delete(n.cancelled, chat)
+		delete(n.asked, chat)
+		if t := n.finishing[chat]; t != nil {
+			t.Stop()
+			delete(n.finishing, chat)
+		}
 		return
 	}
-	var kind string
 	switch {
 	case e.Status != nil && !e.Status.Started.IsZero():
-		n.running[e.ChatID] = true
-	case e.Status != nil && n.running[e.ChatID]:
-		delete(n.running, e.ChatID)
-		delete(n.asked, e.ChatID)
-		kind = "finished"
-	case e.Item != nil && (e.Item.Kind == model.Permission || e.Item.Kind == model.Question) && e.Item.Status == "pending":
-		if n.asked[e.ChatID] == nil {
-			n.asked[e.ChatID] = map[string]bool{}
+		n.running[chat] = true
+		if t := n.finishing[chat]; t != nil { // the agent went on: no "finished"
+			t.Stop()
+			delete(n.finishing, chat)
 		}
-		if n.asked[e.ChatID][e.Item.ID] {
+	case e.Status != nil && n.running[chat]:
+		stopped := n.cancelled[chat]
+		delete(n.running, chat)
+		delete(n.cancelled, chat)
+		delete(n.asked, chat)
+		if !stopped {
+			var t *time.Timer
+			t = time.AfterFunc(FinishedWait, func() {
+				n.mu.Lock()
+				waited := n.finishing[chat] == t
+				if waited {
+					delete(n.finishing, chat)
+				}
+				n.mu.Unlock()
+				if waited {
+					s.notify(chat, "finished")
+				}
+			})
+			n.finishing[chat] = t
+		}
+	case e.Item != nil && e.Item.Kind == model.Notice && e.Item.Status == "cancelled" && n.running[chat]:
+		n.cancelled[chat] = true // someone stopped it: they know
+	case e.Item != nil && (e.Item.Kind == model.Permission || e.Item.Kind == model.Question) && e.Item.Status == "pending":
+		if n.asked[chat] == nil {
+			n.asked[chat] = map[string]bool{}
+		}
+		if n.asked[chat][e.Item.ID] {
 			return
 		}
-		n.asked[e.ChatID][e.Item.ID] = true
-		kind = map[bool]string{true: "permission", false: "question"}[e.Item.Kind == model.Permission]
-	}
-	if kind != "" {
-		s.notify(e.ChatID, kind)
+		n.asked[chat][e.Item.ID] = true
+		kind := "question"
+		if e.Item.Kind == model.Permission {
+			kind = "permission"
+		}
+		go s.notify(chat, kind) // not under n.mu: queue takes it
 	}
 }
 
@@ -223,8 +311,7 @@ func (s *Service) notify(chatID, kind string) {
 	agent := s.push.Agent
 	var to []string
 	for _, d := range s.devices {
-		showing := s.views[d.ID] == chatID && s.connectedLocked(d.ID)
-		if d.Push != nil && !showing {
+		if d.Push != nil && !s.showingLocked(d.ID, chatID) {
 			to = append(to, d.ID)
 		}
 	}
@@ -239,6 +326,32 @@ func (s *Service) notify(chatID, kind string) {
 	p := payload{Kind: kind, Agent: title, Chat: chatID, Title: title + map[string]string{
 		"finished": " finished", "question": " has a question", "permission": " needs you"}[kind]}
 	for _, d := range to {
-		go func() { _ = s.send(context.Background(), d, p) }() // its failure is logged
+		s.queue(d, p)
 	}
+}
+
+// queue sends p to device, one push at a time per device: one that comes
+// while another is in flight waits, replacing any already waiting.
+func (s *Service) queue(device string, p payload) {
+	n := &s.notes
+	n.mu.Lock()
+	if ob := n.outbox[device]; ob != nil {
+		ob.next = &p
+		n.mu.Unlock()
+		return
+	}
+	n.outbox[device] = &outbox{}
+	n.mu.Unlock()
+	go func() {
+		for next := &p; next != nil; {
+			_ = s.send(context.Background(), device, *next) // its failure is logged
+			n.mu.Lock()
+			ob := n.outbox[device]
+			if next = ob.next; next == nil {
+				delete(n.outbox, device)
+			}
+			ob.next = nil
+			n.mu.Unlock()
+		}
+	}()
 }

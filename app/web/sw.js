@@ -49,9 +49,11 @@ self.addEventListener("push", (event) => {
   }
   const title = typeof data.title === "string" && data.title ? data.title.slice(0, 80) : "Nushi";
   const chat = chatId(data.chat);
+  const kind = ["finished", "question", "permission", "test"].includes(data.kind) ? data.kind : "";
   event.waitUntil(
     self.registration.showNotification(title, {
-      tag: chat || "nushi",
+      // One per chat and kind: a question doesn't silently replace a turn's end.
+      tag: chat ? chat + ":" + kind : "nushi",
       data: { chat },
       icon: "icons/Icon-192.png",
     }),

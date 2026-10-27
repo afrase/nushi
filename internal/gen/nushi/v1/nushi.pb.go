@@ -10792,7 +10792,10 @@ type Remote struct {
 	// The daemon's id at the relay, where its phones dial. It changes when a
 	// device is revoked: a phone that sees another than the one it dials
 	// keeps this one from then on (its old one answers it for 30 days).
-	Rendezvous    string `protobuf:"bytes,7,opt,name=rendezvous,proto3" json:"rendezvous,omitempty"`
+	Rendezvous string `protobuf:"bytes,7,opt,name=rendezvous,proto3" json:"rendezvous,omitempty"`
+	// The daemon's Noise public key (32 bytes), so a phone and the Mac can
+	// show the same fingerprint of it.
+	Key           []byte `protobuf:"bytes,8,opt,name=key,proto3" json:"key,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -10874,6 +10877,13 @@ func (x *Remote) GetRendezvous() string {
 		return x.Rendezvous
 	}
 	return ""
+}
+
+func (x *Remote) GetKey() []byte {
+	if x != nil {
+		return x.Key
+	}
+	return nil
 }
 
 type Device struct {
@@ -11796,6 +11806,78 @@ func (*SendTestPushResponse) Descriptor() ([]byte, []int) {
 	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{192}
 }
 
+type UnpairThisDeviceRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UnpairThisDeviceRequest) Reset() {
+	*x = UnpairThisDeviceRequest{}
+	mi := &file_nushi_v1_nushi_proto_msgTypes[193]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UnpairThisDeviceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UnpairThisDeviceRequest) ProtoMessage() {}
+
+func (x *UnpairThisDeviceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_nushi_v1_nushi_proto_msgTypes[193]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UnpairThisDeviceRequest.ProtoReflect.Descriptor instead.
+func (*UnpairThisDeviceRequest) Descriptor() ([]byte, []int) {
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{193}
+}
+
+type UnpairThisDeviceResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UnpairThisDeviceResponse) Reset() {
+	*x = UnpairThisDeviceResponse{}
+	mi := &file_nushi_v1_nushi_proto_msgTypes[194]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UnpairThisDeviceResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UnpairThisDeviceResponse) ProtoMessage() {}
+
+func (x *UnpairThisDeviceResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_nushi_v1_nushi_proto_msgTypes[194]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UnpairThisDeviceResponse.ProtoReflect.Descriptor instead.
+func (*UnpairThisDeviceResponse) Descriptor() ([]byte, []int) {
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{194}
+}
+
 type LogRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// "debug", "info", "warn" or "error".
@@ -11811,7 +11893,7 @@ type LogRequest struct {
 
 func (x *LogRequest) Reset() {
 	*x = LogRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[193]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[195]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11823,7 +11905,7 @@ func (x *LogRequest) String() string {
 func (*LogRequest) ProtoMessage() {}
 
 func (x *LogRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[193]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[195]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11836,7 +11918,7 @@ func (x *LogRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogRequest.ProtoReflect.Descriptor instead.
 func (*LogRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{193}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{195}
 }
 
 func (x *LogRequest) GetLevel() string {
@@ -11875,7 +11957,7 @@ type LogResponse struct {
 
 func (x *LogResponse) Reset() {
 	*x = LogResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[194]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[196]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11887,7 +11969,7 @@ func (x *LogResponse) String() string {
 func (*LogResponse) ProtoMessage() {}
 
 func (x *LogResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[194]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[196]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11900,7 +11982,7 @@ func (x *LogResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogResponse.ProtoReflect.Descriptor instead.
 func (*LogResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{194}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{196}
 }
 
 // A Jira site Nushi has a token for; id is its host.
@@ -11932,7 +12014,7 @@ type JiraSite struct {
 
 func (x *JiraSite) Reset() {
 	*x = JiraSite{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[195]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[197]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11944,7 +12026,7 @@ func (x *JiraSite) String() string {
 func (*JiraSite) ProtoMessage() {}
 
 func (x *JiraSite) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[195]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[197]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11957,7 +12039,7 @@ func (x *JiraSite) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JiraSite.ProtoReflect.Descriptor instead.
 func (*JiraSite) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{195}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{197}
 }
 
 func (x *JiraSite) GetId() string {
@@ -12061,7 +12143,7 @@ type JiraSearch struct {
 
 func (x *JiraSearch) Reset() {
 	*x = JiraSearch{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[196]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[198]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12073,7 +12155,7 @@ func (x *JiraSearch) String() string {
 func (*JiraSearch) ProtoMessage() {}
 
 func (x *JiraSearch) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[196]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[198]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12086,7 +12168,7 @@ func (x *JiraSearch) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JiraSearch.ProtoReflect.Descriptor instead.
 func (*JiraSearch) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{196}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{198}
 }
 
 func (x *JiraSearch) GetName() string {
@@ -12117,7 +12199,7 @@ type JiraIssueRef struct {
 
 func (x *JiraIssueRef) Reset() {
 	*x = JiraIssueRef{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[197]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[199]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12129,7 +12211,7 @@ func (x *JiraIssueRef) String() string {
 func (*JiraIssueRef) ProtoMessage() {}
 
 func (x *JiraIssueRef) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[197]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[199]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12142,7 +12224,7 @@ func (x *JiraIssueRef) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JiraIssueRef.ProtoReflect.Descriptor instead.
 func (*JiraIssueRef) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{197}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{199}
 }
 
 func (x *JiraIssueRef) GetKey() string {
@@ -12210,7 +12292,7 @@ type JiraIssue struct {
 
 func (x *JiraIssue) Reset() {
 	*x = JiraIssue{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[198]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[200]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12222,7 +12304,7 @@ func (x *JiraIssue) String() string {
 func (*JiraIssue) ProtoMessage() {}
 
 func (x *JiraIssue) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[198]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[200]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12235,7 +12317,7 @@ func (x *JiraIssue) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JiraIssue.ProtoReflect.Descriptor instead.
 func (*JiraIssue) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{198}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{200}
 }
 
 func (x *JiraIssue) GetKey() string {
@@ -12389,7 +12471,7 @@ type JiraLink struct {
 
 func (x *JiraLink) Reset() {
 	*x = JiraLink{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[199]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[201]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12401,7 +12483,7 @@ func (x *JiraLink) String() string {
 func (*JiraLink) ProtoMessage() {}
 
 func (x *JiraLink) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[199]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[201]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12414,7 +12496,7 @@ func (x *JiraLink) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JiraLink.ProtoReflect.Descriptor instead.
 func (*JiraLink) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{199}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{201}
 }
 
 func (x *JiraLink) GetRelation() string {
@@ -12443,7 +12525,7 @@ type JiraAttachment struct {
 
 func (x *JiraAttachment) Reset() {
 	*x = JiraAttachment{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[200]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[202]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12455,7 +12537,7 @@ func (x *JiraAttachment) String() string {
 func (*JiraAttachment) ProtoMessage() {}
 
 func (x *JiraAttachment) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[200]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[202]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12468,7 +12550,7 @@ func (x *JiraAttachment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JiraAttachment.ProtoReflect.Descriptor instead.
 func (*JiraAttachment) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{200}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{202}
 }
 
 func (x *JiraAttachment) GetId() string {
@@ -12512,7 +12594,7 @@ type JiraComment struct {
 
 func (x *JiraComment) Reset() {
 	*x = JiraComment{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[201]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[203]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12524,7 +12606,7 @@ func (x *JiraComment) String() string {
 func (*JiraComment) ProtoMessage() {}
 
 func (x *JiraComment) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[201]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[203]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12537,7 +12619,7 @@ func (x *JiraComment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JiraComment.ProtoReflect.Descriptor instead.
 func (*JiraComment) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{201}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{203}
 }
 
 func (x *JiraComment) GetId() string {
@@ -12585,7 +12667,7 @@ type JiraRemoteLink struct {
 
 func (x *JiraRemoteLink) Reset() {
 	*x = JiraRemoteLink{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[202]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[204]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12597,7 +12679,7 @@ func (x *JiraRemoteLink) String() string {
 func (*JiraRemoteLink) ProtoMessage() {}
 
 func (x *JiraRemoteLink) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[202]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[204]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12610,7 +12692,7 @@ func (x *JiraRemoteLink) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JiraRemoteLink.ProtoReflect.Descriptor instead.
 func (*JiraRemoteLink) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{202}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{204}
 }
 
 func (x *JiraRemoteLink) GetTitle() string {
@@ -12640,7 +12722,7 @@ type JiraTransition struct {
 
 func (x *JiraTransition) Reset() {
 	*x = JiraTransition{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[203]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[205]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12652,7 +12734,7 @@ func (x *JiraTransition) String() string {
 func (*JiraTransition) ProtoMessage() {}
 
 func (x *JiraTransition) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[203]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[205]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12665,7 +12747,7 @@ func (x *JiraTransition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JiraTransition.ProtoReflect.Descriptor instead.
 func (*JiraTransition) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{203}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{205}
 }
 
 func (x *JiraTransition) GetId() string {
@@ -12719,7 +12801,7 @@ type JiraField struct {
 
 func (x *JiraField) Reset() {
 	*x = JiraField{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[204]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[206]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12731,7 +12813,7 @@ func (x *JiraField) String() string {
 func (*JiraField) ProtoMessage() {}
 
 func (x *JiraField) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[204]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[206]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12744,7 +12826,7 @@ func (x *JiraField) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JiraField.ProtoReflect.Descriptor instead.
 func (*JiraField) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{204}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{206}
 }
 
 func (x *JiraField) GetId() string {
@@ -12792,7 +12874,7 @@ type JiraOption struct {
 
 func (x *JiraOption) Reset() {
 	*x = JiraOption{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[205]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[207]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12804,7 +12886,7 @@ func (x *JiraOption) String() string {
 func (*JiraOption) ProtoMessage() {}
 
 func (x *JiraOption) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[205]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[207]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12817,7 +12899,7 @@ func (x *JiraOption) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JiraOption.ProtoReflect.Descriptor instead.
 func (*JiraOption) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{205}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{207}
 }
 
 func (x *JiraOption) GetId() string {
@@ -12845,7 +12927,7 @@ type JiraBoard struct {
 
 func (x *JiraBoard) Reset() {
 	*x = JiraBoard{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[206]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[208]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12857,7 +12939,7 @@ func (x *JiraBoard) String() string {
 func (*JiraBoard) ProtoMessage() {}
 
 func (x *JiraBoard) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[206]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[208]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12870,7 +12952,7 @@ func (x *JiraBoard) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JiraBoard.ProtoReflect.Descriptor instead.
 func (*JiraBoard) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{206}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{208}
 }
 
 func (x *JiraBoard) GetId() int64 {
@@ -12902,7 +12984,7 @@ type ListJiraSitesRequest struct {
 
 func (x *ListJiraSitesRequest) Reset() {
 	*x = ListJiraSitesRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[207]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[209]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12914,7 +12996,7 @@ func (x *ListJiraSitesRequest) String() string {
 func (*ListJiraSitesRequest) ProtoMessage() {}
 
 func (x *ListJiraSitesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[207]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[209]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12927,7 +13009,7 @@ func (x *ListJiraSitesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListJiraSitesRequest.ProtoReflect.Descriptor instead.
 func (*ListJiraSitesRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{207}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{209}
 }
 
 type ListJiraSitesResponse struct {
@@ -12939,7 +13021,7 @@ type ListJiraSitesResponse struct {
 
 func (x *ListJiraSitesResponse) Reset() {
 	*x = ListJiraSitesResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[208]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[210]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12951,7 +13033,7 @@ func (x *ListJiraSitesResponse) String() string {
 func (*ListJiraSitesResponse) ProtoMessage() {}
 
 func (x *ListJiraSitesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[208]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[210]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12964,7 +13046,7 @@ func (x *ListJiraSitesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListJiraSitesResponse.ProtoReflect.Descriptor instead.
 func (*ListJiraSitesResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{208}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{210}
 }
 
 func (x *ListJiraSitesResponse) GetSites() []*JiraSite {
@@ -12987,7 +13069,7 @@ type AddJiraSiteRequest struct {
 
 func (x *AddJiraSiteRequest) Reset() {
 	*x = AddJiraSiteRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[209]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[211]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12999,7 +13081,7 @@ func (x *AddJiraSiteRequest) String() string {
 func (*AddJiraSiteRequest) ProtoMessage() {}
 
 func (x *AddJiraSiteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[209]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[211]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13012,7 +13094,7 @@ func (x *AddJiraSiteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddJiraSiteRequest.ProtoReflect.Descriptor instead.
 func (*AddJiraSiteRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{209}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{211}
 }
 
 func (x *AddJiraSiteRequest) GetUrl() string {
@@ -13052,7 +13134,7 @@ type AddJiraSiteResponse struct {
 
 func (x *AddJiraSiteResponse) Reset() {
 	*x = AddJiraSiteResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[210]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[212]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13064,7 +13146,7 @@ func (x *AddJiraSiteResponse) String() string {
 func (*AddJiraSiteResponse) ProtoMessage() {}
 
 func (x *AddJiraSiteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[210]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[212]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13077,7 +13159,7 @@ func (x *AddJiraSiteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddJiraSiteResponse.ProtoReflect.Descriptor instead.
 func (*AddJiraSiteResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{210}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{212}
 }
 
 func (x *AddJiraSiteResponse) GetSite() *JiraSite {
@@ -13096,7 +13178,7 @@ type RemoveJiraSiteRequest struct {
 
 func (x *RemoveJiraSiteRequest) Reset() {
 	*x = RemoveJiraSiteRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[211]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[213]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13108,7 +13190,7 @@ func (x *RemoveJiraSiteRequest) String() string {
 func (*RemoveJiraSiteRequest) ProtoMessage() {}
 
 func (x *RemoveJiraSiteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[211]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[213]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13121,7 +13203,7 @@ func (x *RemoveJiraSiteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveJiraSiteRequest.ProtoReflect.Descriptor instead.
 func (*RemoveJiraSiteRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{211}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{213}
 }
 
 func (x *RemoveJiraSiteRequest) GetSite() string {
@@ -13139,7 +13221,7 @@ type RemoveJiraSiteResponse struct {
 
 func (x *RemoveJiraSiteResponse) Reset() {
 	*x = RemoveJiraSiteResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[212]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[214]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13151,7 +13233,7 @@ func (x *RemoveJiraSiteResponse) String() string {
 func (*RemoveJiraSiteResponse) ProtoMessage() {}
 
 func (x *RemoveJiraSiteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[212]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[214]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13164,7 +13246,7 @@ func (x *RemoveJiraSiteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveJiraSiteResponse.ProtoReflect.Descriptor instead.
 func (*RemoveJiraSiteResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{212}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{214}
 }
 
 type CheckJiraSiteRequest struct {
@@ -13176,7 +13258,7 @@ type CheckJiraSiteRequest struct {
 
 func (x *CheckJiraSiteRequest) Reset() {
 	*x = CheckJiraSiteRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[213]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[215]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13188,7 +13270,7 @@ func (x *CheckJiraSiteRequest) String() string {
 func (*CheckJiraSiteRequest) ProtoMessage() {}
 
 func (x *CheckJiraSiteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[213]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[215]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13201,7 +13283,7 @@ func (x *CheckJiraSiteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckJiraSiteRequest.ProtoReflect.Descriptor instead.
 func (*CheckJiraSiteRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{213}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{215}
 }
 
 func (x *CheckJiraSiteRequest) GetSite() string {
@@ -13220,7 +13302,7 @@ type CheckJiraSiteResponse struct {
 
 func (x *CheckJiraSiteResponse) Reset() {
 	*x = CheckJiraSiteResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[214]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[216]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13232,7 +13314,7 @@ func (x *CheckJiraSiteResponse) String() string {
 func (*CheckJiraSiteResponse) ProtoMessage() {}
 
 func (x *CheckJiraSiteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[214]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[216]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13245,7 +13327,7 @@ func (x *CheckJiraSiteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CheckJiraSiteResponse.ProtoReflect.Descriptor instead.
 func (*CheckJiraSiteResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{214}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{216}
 }
 
 func (x *CheckJiraSiteResponse) GetName() string {
@@ -13264,7 +13346,7 @@ type AllowJiraTokenRequest struct {
 
 func (x *AllowJiraTokenRequest) Reset() {
 	*x = AllowJiraTokenRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[215]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[217]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13276,7 +13358,7 @@ func (x *AllowJiraTokenRequest) String() string {
 func (*AllowJiraTokenRequest) ProtoMessage() {}
 
 func (x *AllowJiraTokenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[215]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[217]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13289,7 +13371,7 @@ func (x *AllowJiraTokenRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AllowJiraTokenRequest.ProtoReflect.Descriptor instead.
 func (*AllowJiraTokenRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{215}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{217}
 }
 
 func (x *AllowJiraTokenRequest) GetSite() string {
@@ -13307,7 +13389,7 @@ type AllowJiraTokenResponse struct {
 
 func (x *AllowJiraTokenResponse) Reset() {
 	*x = AllowJiraTokenResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[216]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[218]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13319,7 +13401,7 @@ func (x *AllowJiraTokenResponse) String() string {
 func (*AllowJiraTokenResponse) ProtoMessage() {}
 
 func (x *AllowJiraTokenResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[216]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[218]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13332,7 +13414,7 @@ func (x *AllowJiraTokenResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AllowJiraTokenResponse.ProtoReflect.Descriptor instead.
 func (*AllowJiraTokenResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{216}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{218}
 }
 
 type ListJiraBoardsRequest struct {
@@ -13344,7 +13426,7 @@ type ListJiraBoardsRequest struct {
 
 func (x *ListJiraBoardsRequest) Reset() {
 	*x = ListJiraBoardsRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[217]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[219]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13356,7 +13438,7 @@ func (x *ListJiraBoardsRequest) String() string {
 func (*ListJiraBoardsRequest) ProtoMessage() {}
 
 func (x *ListJiraBoardsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[217]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[219]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13369,7 +13451,7 @@ func (x *ListJiraBoardsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListJiraBoardsRequest.ProtoReflect.Descriptor instead.
 func (*ListJiraBoardsRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{217}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{219}
 }
 
 func (x *ListJiraBoardsRequest) GetSite() string {
@@ -13388,7 +13470,7 @@ type ListJiraBoardsResponse struct {
 
 func (x *ListJiraBoardsResponse) Reset() {
 	*x = ListJiraBoardsResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[218]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[220]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13400,7 +13482,7 @@ func (x *ListJiraBoardsResponse) String() string {
 func (*ListJiraBoardsResponse) ProtoMessage() {}
 
 func (x *ListJiraBoardsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[218]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[220]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13413,7 +13495,7 @@ func (x *ListJiraBoardsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListJiraBoardsResponse.ProtoReflect.Descriptor instead.
 func (*ListJiraBoardsResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{218}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{220}
 }
 
 func (x *ListJiraBoardsResponse) GetBoards() []*JiraBoard {
@@ -13433,7 +13515,7 @@ type SetJiraBoardRequest struct {
 
 func (x *SetJiraBoardRequest) Reset() {
 	*x = SetJiraBoardRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[219]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[221]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13445,7 +13527,7 @@ func (x *SetJiraBoardRequest) String() string {
 func (*SetJiraBoardRequest) ProtoMessage() {}
 
 func (x *SetJiraBoardRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[219]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[221]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13458,7 +13540,7 @@ func (x *SetJiraBoardRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetJiraBoardRequest.ProtoReflect.Descriptor instead.
 func (*SetJiraBoardRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{219}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{221}
 }
 
 func (x *SetJiraBoardRequest) GetSite() string {
@@ -13483,7 +13565,7 @@ type SetJiraBoardResponse struct {
 
 func (x *SetJiraBoardResponse) Reset() {
 	*x = SetJiraBoardResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[220]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[222]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13495,7 +13577,7 @@ func (x *SetJiraBoardResponse) String() string {
 func (*SetJiraBoardResponse) ProtoMessage() {}
 
 func (x *SetJiraBoardResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[220]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[222]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13508,7 +13590,7 @@ func (x *SetJiraBoardResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetJiraBoardResponse.ProtoReflect.Descriptor instead.
 func (*SetJiraBoardResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{220}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{222}
 }
 
 type SetJiraSearchesRequest struct {
@@ -13521,7 +13603,7 @@ type SetJiraSearchesRequest struct {
 
 func (x *SetJiraSearchesRequest) Reset() {
 	*x = SetJiraSearchesRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[221]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[223]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13533,7 +13615,7 @@ func (x *SetJiraSearchesRequest) String() string {
 func (*SetJiraSearchesRequest) ProtoMessage() {}
 
 func (x *SetJiraSearchesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[221]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[223]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13546,7 +13628,7 @@ func (x *SetJiraSearchesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetJiraSearchesRequest.ProtoReflect.Descriptor instead.
 func (*SetJiraSearchesRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{221}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{223}
 }
 
 func (x *SetJiraSearchesRequest) GetSite() string {
@@ -13571,7 +13653,7 @@ type SetJiraSearchesResponse struct {
 
 func (x *SetJiraSearchesResponse) Reset() {
 	*x = SetJiraSearchesResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[222]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[224]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13583,7 +13665,7 @@ func (x *SetJiraSearchesResponse) String() string {
 func (*SetJiraSearchesResponse) ProtoMessage() {}
 
 func (x *SetJiraSearchesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[222]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[224]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13596,7 +13678,7 @@ func (x *SetJiraSearchesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetJiraSearchesResponse.ProtoReflect.Descriptor instead.
 func (*SetJiraSearchesResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{222}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{224}
 }
 
 type ListJiraIssuesRequest struct {
@@ -13614,7 +13696,7 @@ type ListJiraIssuesRequest struct {
 
 func (x *ListJiraIssuesRequest) Reset() {
 	*x = ListJiraIssuesRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[223]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[225]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13626,7 +13708,7 @@ func (x *ListJiraIssuesRequest) String() string {
 func (*ListJiraIssuesRequest) ProtoMessage() {}
 
 func (x *ListJiraIssuesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[223]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[225]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13639,7 +13721,7 @@ func (x *ListJiraIssuesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListJiraIssuesRequest.ProtoReflect.Descriptor instead.
 func (*ListJiraIssuesRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{223}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{225}
 }
 
 func (x *ListJiraIssuesRequest) GetSite() string {
@@ -13683,7 +13765,7 @@ type ListJiraIssuesResponse struct {
 
 func (x *ListJiraIssuesResponse) Reset() {
 	*x = ListJiraIssuesResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[224]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[226]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13695,7 +13777,7 @@ func (x *ListJiraIssuesResponse) String() string {
 func (*ListJiraIssuesResponse) ProtoMessage() {}
 
 func (x *ListJiraIssuesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[224]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[226]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13708,7 +13790,7 @@ func (x *ListJiraIssuesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListJiraIssuesResponse.ProtoReflect.Descriptor instead.
 func (*ListJiraIssuesResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{224}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{226}
 }
 
 func (x *ListJiraIssuesResponse) GetIssues() []*JiraIssue {
@@ -13741,7 +13823,7 @@ type GetJiraJqlRequest struct {
 
 func (x *GetJiraJqlRequest) Reset() {
 	*x = GetJiraJqlRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[225]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[227]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13753,7 +13835,7 @@ func (x *GetJiraJqlRequest) String() string {
 func (*GetJiraJqlRequest) ProtoMessage() {}
 
 func (x *GetJiraJqlRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[225]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[227]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13766,7 +13848,7 @@ func (x *GetJiraJqlRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetJiraJqlRequest.ProtoReflect.Descriptor instead.
 func (*GetJiraJqlRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{225}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{227}
 }
 
 func (x *GetJiraJqlRequest) GetSite() string {
@@ -13787,7 +13869,7 @@ type GetJiraJqlResponse struct {
 
 func (x *GetJiraJqlResponse) Reset() {
 	*x = GetJiraJqlResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[226]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[228]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13799,7 +13881,7 @@ func (x *GetJiraJqlResponse) String() string {
 func (*GetJiraJqlResponse) ProtoMessage() {}
 
 func (x *GetJiraJqlResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[226]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[228]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13812,7 +13894,7 @@ func (x *GetJiraJqlResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetJiraJqlResponse.ProtoReflect.Descriptor instead.
 func (*GetJiraJqlResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{226}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{228}
 }
 
 func (x *GetJiraJqlResponse) GetFields() []*JiraJqlField {
@@ -13847,7 +13929,7 @@ type JiraJqlField struct {
 
 func (x *JiraJqlField) Reset() {
 	*x = JiraJqlField{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[227]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[229]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13859,7 +13941,7 @@ func (x *JiraJqlField) String() string {
 func (*JiraJqlField) ProtoMessage() {}
 
 func (x *JiraJqlField) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[227]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[229]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13872,7 +13954,7 @@ func (x *JiraJqlField) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JiraJqlField.ProtoReflect.Descriptor instead.
 func (*JiraJqlField) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{227}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{229}
 }
 
 func (x *JiraJqlField) GetName() string {
@@ -13907,7 +13989,7 @@ type SuggestJiraJqlRequest struct {
 
 func (x *SuggestJiraJqlRequest) Reset() {
 	*x = SuggestJiraJqlRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[228]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[230]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13919,7 +14001,7 @@ func (x *SuggestJiraJqlRequest) String() string {
 func (*SuggestJiraJqlRequest) ProtoMessage() {}
 
 func (x *SuggestJiraJqlRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[228]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[230]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13932,7 +14014,7 @@ func (x *SuggestJiraJqlRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SuggestJiraJqlRequest.ProtoReflect.Descriptor instead.
 func (*SuggestJiraJqlRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{228}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{230}
 }
 
 func (x *SuggestJiraJqlRequest) GetSite() string {
@@ -13966,7 +14048,7 @@ type SuggestJiraJqlResponse struct {
 
 func (x *SuggestJiraJqlResponse) Reset() {
 	*x = SuggestJiraJqlResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[229]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[231]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13978,7 +14060,7 @@ func (x *SuggestJiraJqlResponse) String() string {
 func (*SuggestJiraJqlResponse) ProtoMessage() {}
 
 func (x *SuggestJiraJqlResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[229]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[231]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13991,7 +14073,7 @@ func (x *SuggestJiraJqlResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SuggestJiraJqlResponse.ProtoReflect.Descriptor instead.
 func (*SuggestJiraJqlResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{229}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{231}
 }
 
 func (x *SuggestJiraJqlResponse) GetValues() []*JiraOption {
@@ -14013,7 +14095,7 @@ type GetJiraIssueRequest struct {
 
 func (x *GetJiraIssueRequest) Reset() {
 	*x = GetJiraIssueRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[230]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[232]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14025,7 +14107,7 @@ func (x *GetJiraIssueRequest) String() string {
 func (*GetJiraIssueRequest) ProtoMessage() {}
 
 func (x *GetJiraIssueRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[230]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[232]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14038,7 +14120,7 @@ func (x *GetJiraIssueRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetJiraIssueRequest.ProtoReflect.Descriptor instead.
 func (*GetJiraIssueRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{230}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{232}
 }
 
 func (x *GetJiraIssueRequest) GetSite() string {
@@ -14075,7 +14157,7 @@ type GetJiraIssueResponse struct {
 
 func (x *GetJiraIssueResponse) Reset() {
 	*x = GetJiraIssueResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[231]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[233]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14087,7 +14169,7 @@ func (x *GetJiraIssueResponse) String() string {
 func (*GetJiraIssueResponse) ProtoMessage() {}
 
 func (x *GetJiraIssueResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[231]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[233]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14100,7 +14182,7 @@ func (x *GetJiraIssueResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetJiraIssueResponse.ProtoReflect.Descriptor instead.
 func (*GetJiraIssueResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{231}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{233}
 }
 
 func (x *GetJiraIssueResponse) GetIssue() *JiraIssue {
@@ -14141,7 +14223,7 @@ type JiraWrite struct {
 
 func (x *JiraWrite) Reset() {
 	*x = JiraWrite{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[232]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[234]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14153,7 +14235,7 @@ func (x *JiraWrite) String() string {
 func (*JiraWrite) ProtoMessage() {}
 
 func (x *JiraWrite) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[232]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[234]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14166,7 +14248,7 @@ func (x *JiraWrite) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JiraWrite.ProtoReflect.Descriptor instead.
 func (*JiraWrite) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{232}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{234}
 }
 
 func (x *JiraWrite) GetKind() string {
@@ -14221,7 +14303,7 @@ type ListJiraTransitionsRequest struct {
 
 func (x *ListJiraTransitionsRequest) Reset() {
 	*x = ListJiraTransitionsRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[233]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[235]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14233,7 +14315,7 @@ func (x *ListJiraTransitionsRequest) String() string {
 func (*ListJiraTransitionsRequest) ProtoMessage() {}
 
 func (x *ListJiraTransitionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[233]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[235]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14246,7 +14328,7 @@ func (x *ListJiraTransitionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListJiraTransitionsRequest.ProtoReflect.Descriptor instead.
 func (*ListJiraTransitionsRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{233}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{235}
 }
 
 func (x *ListJiraTransitionsRequest) GetSite() string {
@@ -14272,7 +14354,7 @@ type ListJiraTransitionsResponse struct {
 
 func (x *ListJiraTransitionsResponse) Reset() {
 	*x = ListJiraTransitionsResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[234]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[236]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14284,7 +14366,7 @@ func (x *ListJiraTransitionsResponse) String() string {
 func (*ListJiraTransitionsResponse) ProtoMessage() {}
 
 func (x *ListJiraTransitionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[234]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[236]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14297,7 +14379,7 @@ func (x *ListJiraTransitionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListJiraTransitionsResponse.ProtoReflect.Descriptor instead.
 func (*ListJiraTransitionsResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{234}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{236}
 }
 
 func (x *ListJiraTransitionsResponse) GetTransitions() []*JiraTransition {
@@ -14320,7 +14402,7 @@ type TransitionJiraIssueRequest struct {
 
 func (x *TransitionJiraIssueRequest) Reset() {
 	*x = TransitionJiraIssueRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[235]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[237]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14332,7 +14414,7 @@ func (x *TransitionJiraIssueRequest) String() string {
 func (*TransitionJiraIssueRequest) ProtoMessage() {}
 
 func (x *TransitionJiraIssueRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[235]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[237]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14345,7 +14427,7 @@ func (x *TransitionJiraIssueRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TransitionJiraIssueRequest.ProtoReflect.Descriptor instead.
 func (*TransitionJiraIssueRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{235}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{237}
 }
 
 func (x *TransitionJiraIssueRequest) GetSite() string {
@@ -14384,7 +14466,7 @@ type TransitionJiraIssueResponse struct {
 
 func (x *TransitionJiraIssueResponse) Reset() {
 	*x = TransitionJiraIssueResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[236]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[238]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14396,7 +14478,7 @@ func (x *TransitionJiraIssueResponse) String() string {
 func (*TransitionJiraIssueResponse) ProtoMessage() {}
 
 func (x *TransitionJiraIssueResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[236]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[238]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14409,7 +14491,7 @@ func (x *TransitionJiraIssueResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TransitionJiraIssueResponse.ProtoReflect.Descriptor instead.
 func (*TransitionJiraIssueResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{236}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{238}
 }
 
 type AddJiraCommentRequest struct {
@@ -14423,7 +14505,7 @@ type AddJiraCommentRequest struct {
 
 func (x *AddJiraCommentRequest) Reset() {
 	*x = AddJiraCommentRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[237]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[239]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14435,7 +14517,7 @@ func (x *AddJiraCommentRequest) String() string {
 func (*AddJiraCommentRequest) ProtoMessage() {}
 
 func (x *AddJiraCommentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[237]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[239]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14448,7 +14530,7 @@ func (x *AddJiraCommentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddJiraCommentRequest.ProtoReflect.Descriptor instead.
 func (*AddJiraCommentRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{237}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{239}
 }
 
 func (x *AddJiraCommentRequest) GetSite() string {
@@ -14481,7 +14563,7 @@ type AddJiraCommentResponse struct {
 
 func (x *AddJiraCommentResponse) Reset() {
 	*x = AddJiraCommentResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[238]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[240]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14493,7 +14575,7 @@ func (x *AddJiraCommentResponse) String() string {
 func (*AddJiraCommentResponse) ProtoMessage() {}
 
 func (x *AddJiraCommentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[238]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[240]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14506,7 +14588,7 @@ func (x *AddJiraCommentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddJiraCommentResponse.ProtoReflect.Descriptor instead.
 func (*AddJiraCommentResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{238}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{240}
 }
 
 func (x *AddJiraCommentResponse) GetComment() *JiraComment {
@@ -14527,7 +14609,7 @@ type GetJiraAttachmentRequest struct {
 
 func (x *GetJiraAttachmentRequest) Reset() {
 	*x = GetJiraAttachmentRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[239]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[241]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14539,7 +14621,7 @@ func (x *GetJiraAttachmentRequest) String() string {
 func (*GetJiraAttachmentRequest) ProtoMessage() {}
 
 func (x *GetJiraAttachmentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[239]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[241]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14552,7 +14634,7 @@ func (x *GetJiraAttachmentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetJiraAttachmentRequest.ProtoReflect.Descriptor instead.
 func (*GetJiraAttachmentRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{239}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{241}
 }
 
 func (x *GetJiraAttachmentRequest) GetSite() string {
@@ -14586,7 +14668,7 @@ type GetJiraAttachmentResponse struct {
 
 func (x *GetJiraAttachmentResponse) Reset() {
 	*x = GetJiraAttachmentResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[240]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[242]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14598,7 +14680,7 @@ func (x *GetJiraAttachmentResponse) String() string {
 func (*GetJiraAttachmentResponse) ProtoMessage() {}
 
 func (x *GetJiraAttachmentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[240]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[242]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14611,7 +14693,7 @@ func (x *GetJiraAttachmentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetJiraAttachmentResponse.ProtoReflect.Descriptor instead.
 func (*GetJiraAttachmentResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{240}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{242}
 }
 
 func (x *GetJiraAttachmentResponse) GetData() []byte {
@@ -14641,7 +14723,7 @@ type FindJiraIssuesRequest struct {
 
 func (x *FindJiraIssuesRequest) Reset() {
 	*x = FindJiraIssuesRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[241]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[243]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14653,7 +14735,7 @@ func (x *FindJiraIssuesRequest) String() string {
 func (*FindJiraIssuesRequest) ProtoMessage() {}
 
 func (x *FindJiraIssuesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[241]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[243]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14666,7 +14748,7 @@ func (x *FindJiraIssuesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FindJiraIssuesRequest.ProtoReflect.Descriptor instead.
 func (*FindJiraIssuesRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{241}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{243}
 }
 
 func (x *FindJiraIssuesRequest) GetText() string {
@@ -14695,7 +14777,7 @@ type FindJiraIssuesResponse struct {
 
 func (x *FindJiraIssuesResponse) Reset() {
 	*x = FindJiraIssuesResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[242]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[244]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14707,7 +14789,7 @@ func (x *FindJiraIssuesResponse) String() string {
 func (*FindJiraIssuesResponse) ProtoMessage() {}
 
 func (x *FindJiraIssuesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[242]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[244]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14720,7 +14802,7 @@ func (x *FindJiraIssuesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FindJiraIssuesResponse.ProtoReflect.Descriptor instead.
 func (*FindJiraIssuesResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{242}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{244}
 }
 
 func (x *FindJiraIssuesResponse) GetIssues() []*FoundJiraIssue {
@@ -14750,7 +14832,7 @@ type FoundJiraIssue struct {
 
 func (x *FoundJiraIssue) Reset() {
 	*x = FoundJiraIssue{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[243]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[245]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14762,7 +14844,7 @@ func (x *FoundJiraIssue) String() string {
 func (*FoundJiraIssue) ProtoMessage() {}
 
 func (x *FoundJiraIssue) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[243]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[245]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14775,7 +14857,7 @@ func (x *FoundJiraIssue) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FoundJiraIssue.ProtoReflect.Descriptor instead.
 func (*FoundJiraIssue) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{243}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{245}
 }
 
 func (x *FoundJiraIssue) GetSite() string {
@@ -14813,7 +14895,7 @@ type GitHubBucket struct {
 
 func (x *GitHubBucket) Reset() {
 	*x = GitHubBucket{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[244]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[246]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14825,7 +14907,7 @@ func (x *GitHubBucket) String() string {
 func (*GitHubBucket) ProtoMessage() {}
 
 func (x *GitHubBucket) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[244]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[246]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14838,7 +14920,7 @@ func (x *GitHubBucket) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GitHubBucket.ProtoReflect.Descriptor instead.
 func (*GitHubBucket) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{244}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{246}
 }
 
 func (x *GitHubBucket) GetName() string {
@@ -14898,7 +14980,7 @@ type GitHubHost struct {
 
 func (x *GitHubHost) Reset() {
 	*x = GitHubHost{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[245]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[247]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14910,7 +14992,7 @@ func (x *GitHubHost) String() string {
 func (*GitHubHost) ProtoMessage() {}
 
 func (x *GitHubHost) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[245]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[247]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14923,7 +15005,7 @@ func (x *GitHubHost) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GitHubHost.ProtoReflect.Descriptor instead.
 func (*GitHubHost) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{245}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{247}
 }
 
 func (x *GitHubHost) GetHost() string {
@@ -15011,7 +15093,7 @@ type ListGitHubHostsRequest struct {
 
 func (x *ListGitHubHostsRequest) Reset() {
 	*x = ListGitHubHostsRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[246]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[248]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15023,7 +15105,7 @@ func (x *ListGitHubHostsRequest) String() string {
 func (*ListGitHubHostsRequest) ProtoMessage() {}
 
 func (x *ListGitHubHostsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[246]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[248]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15036,7 +15118,7 @@ func (x *ListGitHubHostsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListGitHubHostsRequest.ProtoReflect.Descriptor instead.
 func (*ListGitHubHostsRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{246}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{248}
 }
 
 type ListGitHubHostsResponse struct {
@@ -15048,7 +15130,7 @@ type ListGitHubHostsResponse struct {
 
 func (x *ListGitHubHostsResponse) Reset() {
 	*x = ListGitHubHostsResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[247]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[249]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15060,7 +15142,7 @@ func (x *ListGitHubHostsResponse) String() string {
 func (*ListGitHubHostsResponse) ProtoMessage() {}
 
 func (x *ListGitHubHostsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[247]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[249]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15073,7 +15155,7 @@ func (x *ListGitHubHostsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListGitHubHostsResponse.ProtoReflect.Descriptor instead.
 func (*ListGitHubHostsResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{247}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{249}
 }
 
 func (x *ListGitHubHostsResponse) GetHosts() []*GitHubHost {
@@ -15093,7 +15175,7 @@ type AddGitHubTokenRequest struct {
 
 func (x *AddGitHubTokenRequest) Reset() {
 	*x = AddGitHubTokenRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[248]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[250]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15105,7 +15187,7 @@ func (x *AddGitHubTokenRequest) String() string {
 func (*AddGitHubTokenRequest) ProtoMessage() {}
 
 func (x *AddGitHubTokenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[248]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[250]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15118,7 +15200,7 @@ func (x *AddGitHubTokenRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddGitHubTokenRequest.ProtoReflect.Descriptor instead.
 func (*AddGitHubTokenRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{248}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{250}
 }
 
 func (x *AddGitHubTokenRequest) GetHost() string {
@@ -15144,7 +15226,7 @@ type AddGitHubTokenResponse struct {
 
 func (x *AddGitHubTokenResponse) Reset() {
 	*x = AddGitHubTokenResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[249]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[251]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15156,7 +15238,7 @@ func (x *AddGitHubTokenResponse) String() string {
 func (*AddGitHubTokenResponse) ProtoMessage() {}
 
 func (x *AddGitHubTokenResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[249]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[251]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15169,7 +15251,7 @@ func (x *AddGitHubTokenResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddGitHubTokenResponse.ProtoReflect.Descriptor instead.
 func (*AddGitHubTokenResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{249}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{251}
 }
 
 func (x *AddGitHubTokenResponse) GetLogin() string {
@@ -15188,7 +15270,7 @@ type RemoveGitHubTokenRequest struct {
 
 func (x *RemoveGitHubTokenRequest) Reset() {
 	*x = RemoveGitHubTokenRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[250]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[252]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15200,7 +15282,7 @@ func (x *RemoveGitHubTokenRequest) String() string {
 func (*RemoveGitHubTokenRequest) ProtoMessage() {}
 
 func (x *RemoveGitHubTokenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[250]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[252]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15213,7 +15295,7 @@ func (x *RemoveGitHubTokenRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveGitHubTokenRequest.ProtoReflect.Descriptor instead.
 func (*RemoveGitHubTokenRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{250}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{252}
 }
 
 func (x *RemoveGitHubTokenRequest) GetHost() string {
@@ -15231,7 +15313,7 @@ type RemoveGitHubTokenResponse struct {
 
 func (x *RemoveGitHubTokenResponse) Reset() {
 	*x = RemoveGitHubTokenResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[251]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[253]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15243,7 +15325,7 @@ func (x *RemoveGitHubTokenResponse) String() string {
 func (*RemoveGitHubTokenResponse) ProtoMessage() {}
 
 func (x *RemoveGitHubTokenResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[251]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[253]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15256,7 +15338,7 @@ func (x *RemoveGitHubTokenResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveGitHubTokenResponse.ProtoReflect.Descriptor instead.
 func (*RemoveGitHubTokenResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{251}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{253}
 }
 
 type AllowGitHubTokenRequest struct {
@@ -15268,7 +15350,7 @@ type AllowGitHubTokenRequest struct {
 
 func (x *AllowGitHubTokenRequest) Reset() {
 	*x = AllowGitHubTokenRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[252]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[254]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15280,7 +15362,7 @@ func (x *AllowGitHubTokenRequest) String() string {
 func (*AllowGitHubTokenRequest) ProtoMessage() {}
 
 func (x *AllowGitHubTokenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[252]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[254]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15293,7 +15375,7 @@ func (x *AllowGitHubTokenRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AllowGitHubTokenRequest.ProtoReflect.Descriptor instead.
 func (*AllowGitHubTokenRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{252}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{254}
 }
 
 func (x *AllowGitHubTokenRequest) GetHost() string {
@@ -15311,7 +15393,7 @@ type AllowGitHubTokenResponse struct {
 
 func (x *AllowGitHubTokenResponse) Reset() {
 	*x = AllowGitHubTokenResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[253]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[255]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15323,7 +15405,7 @@ func (x *AllowGitHubTokenResponse) String() string {
 func (*AllowGitHubTokenResponse) ProtoMessage() {}
 
 func (x *AllowGitHubTokenResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[253]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[255]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15336,7 +15418,7 @@ func (x *AllowGitHubTokenResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AllowGitHubTokenResponse.ProtoReflect.Descriptor instead.
 func (*AllowGitHubTokenResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{253}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{255}
 }
 
 type GitHubRepo struct {
@@ -15351,7 +15433,7 @@ type GitHubRepo struct {
 
 func (x *GitHubRepo) Reset() {
 	*x = GitHubRepo{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[254]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[256]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15363,7 +15445,7 @@ func (x *GitHubRepo) String() string {
 func (*GitHubRepo) ProtoMessage() {}
 
 func (x *GitHubRepo) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[254]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[256]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15376,7 +15458,7 @@ func (x *GitHubRepo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GitHubRepo.ProtoReflect.Descriptor instead.
 func (*GitHubRepo) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{254}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{256}
 }
 
 func (x *GitHubRepo) GetHost() string {
@@ -15409,7 +15491,7 @@ type ListGitHubReposRequest struct {
 
 func (x *ListGitHubReposRequest) Reset() {
 	*x = ListGitHubReposRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[255]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[257]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15421,7 +15503,7 @@ func (x *ListGitHubReposRequest) String() string {
 func (*ListGitHubReposRequest) ProtoMessage() {}
 
 func (x *ListGitHubReposRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[255]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[257]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15434,7 +15516,7 @@ func (x *ListGitHubReposRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListGitHubReposRequest.ProtoReflect.Descriptor instead.
 func (*ListGitHubReposRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{255}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{257}
 }
 
 func (x *ListGitHubReposRequest) GetFolders() []string {
@@ -15453,7 +15535,7 @@ type ListGitHubReposResponse struct {
 
 func (x *ListGitHubReposResponse) Reset() {
 	*x = ListGitHubReposResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[256]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[258]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15465,7 +15547,7 @@ func (x *ListGitHubReposResponse) String() string {
 func (*ListGitHubReposResponse) ProtoMessage() {}
 
 func (x *ListGitHubReposResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[256]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[258]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15478,7 +15560,7 @@ func (x *ListGitHubReposResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListGitHubReposResponse.ProtoReflect.Descriptor instead.
 func (*ListGitHubReposResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{256}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{258}
 }
 
 func (x *ListGitHubReposResponse) GetRepos() []*GitHubRepo {
@@ -15500,7 +15582,7 @@ type GitHubRef struct {
 
 func (x *GitHubRef) Reset() {
 	*x = GitHubRef{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[257]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[259]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15512,7 +15594,7 @@ func (x *GitHubRef) String() string {
 func (*GitHubRef) ProtoMessage() {}
 
 func (x *GitHubRef) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[257]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[259]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15525,7 +15607,7 @@ func (x *GitHubRef) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GitHubRef.ProtoReflect.Descriptor instead.
 func (*GitHubRef) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{257}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{259}
 }
 
 func (x *GitHubRef) GetHost() string {
@@ -15577,7 +15659,7 @@ type GitHubItem struct {
 
 func (x *GitHubItem) Reset() {
 	*x = GitHubItem{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[258]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[260]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15589,7 +15671,7 @@ func (x *GitHubItem) String() string {
 func (*GitHubItem) ProtoMessage() {}
 
 func (x *GitHubItem) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[258]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[260]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15602,7 +15684,7 @@ func (x *GitHubItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GitHubItem.ProtoReflect.Descriptor instead.
 func (*GitHubItem) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{258}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{260}
 }
 
 func (x *GitHubItem) GetRef() *GitHubRef {
@@ -15726,7 +15808,7 @@ type ListGitHubInboxRequest struct {
 
 func (x *ListGitHubInboxRequest) Reset() {
 	*x = ListGitHubInboxRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[259]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[261]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15738,7 +15820,7 @@ func (x *ListGitHubInboxRequest) String() string {
 func (*ListGitHubInboxRequest) ProtoMessage() {}
 
 func (x *ListGitHubInboxRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[259]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[261]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15751,7 +15833,7 @@ func (x *ListGitHubInboxRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListGitHubInboxRequest.ProtoReflect.Descriptor instead.
 func (*ListGitHubInboxRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{259}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{261}
 }
 
 func (x *ListGitHubInboxRequest) GetHost() string {
@@ -15840,7 +15922,7 @@ type ListGitHubInboxResponse struct {
 
 func (x *ListGitHubInboxResponse) Reset() {
 	*x = ListGitHubInboxResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[260]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[262]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15852,7 +15934,7 @@ func (x *ListGitHubInboxResponse) String() string {
 func (*ListGitHubInboxResponse) ProtoMessage() {}
 
 func (x *ListGitHubInboxResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[260]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[262]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15865,7 +15947,7 @@ func (x *ListGitHubInboxResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListGitHubInboxResponse.ProtoReflect.Descriptor instead.
 func (*ListGitHubInboxResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{260}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{262}
 }
 
 func (x *ListGitHubInboxResponse) GetReview() []*GitHubItem {
@@ -15960,7 +16042,7 @@ type GitHubLink struct {
 
 func (x *GitHubLink) Reset() {
 	*x = GitHubLink{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[261]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[263]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15972,7 +16054,7 @@ func (x *GitHubLink) String() string {
 func (*GitHubLink) ProtoMessage() {}
 
 func (x *GitHubLink) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[261]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[263]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15985,7 +16067,7 @@ func (x *GitHubLink) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GitHubLink.ProtoReflect.Descriptor instead.
 func (*GitHubLink) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{261}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{263}
 }
 
 func (x *GitHubLink) GetHost() string {
@@ -16033,7 +16115,7 @@ type GetGitHubStatesRequest struct {
 
 func (x *GetGitHubStatesRequest) Reset() {
 	*x = GetGitHubStatesRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[262]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[264]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16045,7 +16127,7 @@ func (x *GetGitHubStatesRequest) String() string {
 func (*GetGitHubStatesRequest) ProtoMessage() {}
 
 func (x *GetGitHubStatesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[262]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[264]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16058,7 +16140,7 @@ func (x *GetGitHubStatesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGitHubStatesRequest.ProtoReflect.Descriptor instead.
 func (*GetGitHubStatesRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{262}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{264}
 }
 
 func (x *GetGitHubStatesRequest) GetItems() []*GitHubLink {
@@ -16085,7 +16167,7 @@ type GetGitHubStatesResponse struct {
 
 func (x *GetGitHubStatesResponse) Reset() {
 	*x = GetGitHubStatesResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[263]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[265]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16097,7 +16179,7 @@ func (x *GetGitHubStatesResponse) String() string {
 func (*GetGitHubStatesResponse) ProtoMessage() {}
 
 func (x *GetGitHubStatesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[263]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[265]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16110,7 +16192,7 @@ func (x *GetGitHubStatesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGitHubStatesResponse.ProtoReflect.Descriptor instead.
 func (*GetGitHubStatesResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{263}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{265}
 }
 
 func (x *GetGitHubStatesResponse) GetItems() []*GitHubItem {
@@ -16144,7 +16226,7 @@ type GitHubComment struct {
 
 func (x *GitHubComment) Reset() {
 	*x = GitHubComment{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[264]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[266]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16156,7 +16238,7 @@ func (x *GitHubComment) String() string {
 func (*GitHubComment) ProtoMessage() {}
 
 func (x *GitHubComment) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[264]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[266]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16169,7 +16251,7 @@ func (x *GitHubComment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GitHubComment.ProtoReflect.Descriptor instead.
 func (*GitHubComment) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{264}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{266}
 }
 
 func (x *GitHubComment) GetId() string {
@@ -16260,7 +16342,7 @@ type GitHubThread struct {
 
 func (x *GitHubThread) Reset() {
 	*x = GitHubThread{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[265]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[267]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16272,7 +16354,7 @@ func (x *GitHubThread) String() string {
 func (*GitHubThread) ProtoMessage() {}
 
 func (x *GitHubThread) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[265]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[267]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16285,7 +16367,7 @@ func (x *GitHubThread) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GitHubThread.ProtoReflect.Descriptor instead.
 func (*GitHubThread) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{265}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{267}
 }
 
 func (x *GitHubThread) GetId() string {
@@ -16401,7 +16483,7 @@ type GitHubAnnotation struct {
 
 func (x *GitHubAnnotation) Reset() {
 	*x = GitHubAnnotation{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[266]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[268]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16413,7 +16495,7 @@ func (x *GitHubAnnotation) String() string {
 func (*GitHubAnnotation) ProtoMessage() {}
 
 func (x *GitHubAnnotation) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[266]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[268]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16426,7 +16508,7 @@ func (x *GitHubAnnotation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GitHubAnnotation.ProtoReflect.Descriptor instead.
 func (*GitHubAnnotation) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{266}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{268}
 }
 
 func (x *GitHubAnnotation) GetPath() string {
@@ -16496,7 +16578,7 @@ type GitHubCheck struct {
 
 func (x *GitHubCheck) Reset() {
 	*x = GitHubCheck{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[267]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[269]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16508,7 +16590,7 @@ func (x *GitHubCheck) String() string {
 func (*GitHubCheck) ProtoMessage() {}
 
 func (x *GitHubCheck) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[267]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[269]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16521,7 +16603,7 @@ func (x *GitHubCheck) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GitHubCheck.ProtoReflect.Descriptor instead.
 func (*GitHubCheck) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{267}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{269}
 }
 
 func (x *GitHubCheck) GetId() int64 {
@@ -16628,7 +16710,7 @@ type GitHubReviewer struct {
 
 func (x *GitHubReviewer) Reset() {
 	*x = GitHubReviewer{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[268]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[270]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16640,7 +16722,7 @@ func (x *GitHubReviewer) String() string {
 func (*GitHubReviewer) ProtoMessage() {}
 
 func (x *GitHubReviewer) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[268]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[270]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16653,7 +16735,7 @@ func (x *GitHubReviewer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GitHubReviewer.ProtoReflect.Descriptor instead.
 func (*GitHubReviewer) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{268}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{270}
 }
 
 func (x *GitHubReviewer) GetLogin() string {
@@ -16713,7 +16795,7 @@ type GitHubPull struct {
 
 func (x *GitHubPull) Reset() {
 	*x = GitHubPull{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[269]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[271]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16725,7 +16807,7 @@ func (x *GitHubPull) String() string {
 func (*GitHubPull) ProtoMessage() {}
 
 func (x *GitHubPull) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[269]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[271]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16738,7 +16820,7 @@ func (x *GitHubPull) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GitHubPull.ProtoReflect.Descriptor instead.
 func (*GitHubPull) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{269}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{271}
 }
 
 func (x *GitHubPull) GetItem() *GitHubItem {
@@ -16898,7 +16980,7 @@ type GetGitHubPullRequest struct {
 
 func (x *GetGitHubPullRequest) Reset() {
 	*x = GetGitHubPullRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[270]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[272]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16910,7 +16992,7 @@ func (x *GetGitHubPullRequest) String() string {
 func (*GetGitHubPullRequest) ProtoMessage() {}
 
 func (x *GetGitHubPullRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[270]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[272]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16923,7 +17005,7 @@ func (x *GetGitHubPullRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGitHubPullRequest.ProtoReflect.Descriptor instead.
 func (*GetGitHubPullRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{270}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{272}
 }
 
 func (x *GetGitHubPullRequest) GetRef() *GitHubRef {
@@ -16949,7 +17031,7 @@ type GetGitHubPullResponse struct {
 
 func (x *GetGitHubPullResponse) Reset() {
 	*x = GetGitHubPullResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[271]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[273]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16961,7 +17043,7 @@ func (x *GetGitHubPullResponse) String() string {
 func (*GetGitHubPullResponse) ProtoMessage() {}
 
 func (x *GetGitHubPullResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[271]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[273]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16974,7 +17056,7 @@ func (x *GetGitHubPullResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGitHubPullResponse.ProtoReflect.Descriptor instead.
 func (*GetGitHubPullResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{271}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{273}
 }
 
 func (x *GetGitHubPullResponse) GetPull() *GitHubPull {
@@ -16999,7 +17081,7 @@ type GitHubIssue struct {
 
 func (x *GitHubIssue) Reset() {
 	*x = GitHubIssue{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[272]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[274]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17011,7 +17093,7 @@ func (x *GitHubIssue) String() string {
 func (*GitHubIssue) ProtoMessage() {}
 
 func (x *GitHubIssue) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[272]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[274]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17024,7 +17106,7 @@ func (x *GitHubIssue) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GitHubIssue.ProtoReflect.Descriptor instead.
 func (*GitHubIssue) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{272}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{274}
 }
 
 func (x *GitHubIssue) GetItem() *GitHubItem {
@@ -17086,7 +17168,7 @@ type GetGitHubIssueRequest struct {
 
 func (x *GetGitHubIssueRequest) Reset() {
 	*x = GetGitHubIssueRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[273]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[275]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17098,7 +17180,7 @@ func (x *GetGitHubIssueRequest) String() string {
 func (*GetGitHubIssueRequest) ProtoMessage() {}
 
 func (x *GetGitHubIssueRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[273]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[275]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17111,7 +17193,7 @@ func (x *GetGitHubIssueRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGitHubIssueRequest.ProtoReflect.Descriptor instead.
 func (*GetGitHubIssueRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{273}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{275}
 }
 
 func (x *GetGitHubIssueRequest) GetRef() *GitHubRef {
@@ -17137,7 +17219,7 @@ type GetGitHubIssueResponse struct {
 
 func (x *GetGitHubIssueResponse) Reset() {
 	*x = GetGitHubIssueResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[274]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[276]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17149,7 +17231,7 @@ func (x *GetGitHubIssueResponse) String() string {
 func (*GetGitHubIssueResponse) ProtoMessage() {}
 
 func (x *GetGitHubIssueResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[274]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[276]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17162,7 +17244,7 @@ func (x *GetGitHubIssueResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGitHubIssueResponse.ProtoReflect.Descriptor instead.
 func (*GetGitHubIssueResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{274}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{276}
 }
 
 func (x *GetGitHubIssueResponse) GetIssue() *GitHubIssue {
@@ -17184,7 +17266,7 @@ type GetGitHubFilesRequest struct {
 
 func (x *GetGitHubFilesRequest) Reset() {
 	*x = GetGitHubFilesRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[275]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[277]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17196,7 +17278,7 @@ func (x *GetGitHubFilesRequest) String() string {
 func (*GetGitHubFilesRequest) ProtoMessage() {}
 
 func (x *GetGitHubFilesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[275]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[277]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17209,7 +17291,7 @@ func (x *GetGitHubFilesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGitHubFilesRequest.ProtoReflect.Descriptor instead.
 func (*GetGitHubFilesRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{275}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{277}
 }
 
 func (x *GetGitHubFilesRequest) GetRef() *GitHubRef {
@@ -17242,7 +17324,7 @@ type GetGitHubFilesResponse struct {
 
 func (x *GetGitHubFilesResponse) Reset() {
 	*x = GetGitHubFilesResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[276]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[278]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17254,7 +17336,7 @@ func (x *GetGitHubFilesResponse) String() string {
 func (*GetGitHubFilesResponse) ProtoMessage() {}
 
 func (x *GetGitHubFilesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[276]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[278]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17267,7 +17349,7 @@ func (x *GetGitHubFilesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGitHubFilesResponse.ProtoReflect.Descriptor instead.
 func (*GetGitHubFilesResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{276}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{278}
 }
 
 func (x *GetGitHubFilesResponse) GetFiles() []*FileChange {
@@ -17288,7 +17370,7 @@ type GetGitHubJobLogRequest struct {
 
 func (x *GetGitHubJobLogRequest) Reset() {
 	*x = GetGitHubJobLogRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[277]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[279]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17300,7 +17382,7 @@ func (x *GetGitHubJobLogRequest) String() string {
 func (*GetGitHubJobLogRequest) ProtoMessage() {}
 
 func (x *GetGitHubJobLogRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[277]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[279]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17313,7 +17395,7 @@ func (x *GetGitHubJobLogRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGitHubJobLogRequest.ProtoReflect.Descriptor instead.
 func (*GetGitHubJobLogRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{277}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{279}
 }
 
 func (x *GetGitHubJobLogRequest) GetRef() *GitHubRef {
@@ -17339,7 +17421,7 @@ type GetGitHubJobLogResponse struct {
 
 func (x *GetGitHubJobLogResponse) Reset() {
 	*x = GetGitHubJobLogResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[278]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[280]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17351,7 +17433,7 @@ func (x *GetGitHubJobLogResponse) String() string {
 func (*GetGitHubJobLogResponse) ProtoMessage() {}
 
 func (x *GetGitHubJobLogResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[278]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[280]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17364,7 +17446,7 @@ func (x *GetGitHubJobLogResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGitHubJobLogResponse.ProtoReflect.Descriptor instead.
 func (*GetGitHubJobLogResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{278}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{280}
 }
 
 func (x *GetGitHubJobLogResponse) GetTail() string {
@@ -17385,7 +17467,7 @@ type ReplyGitHubThreadRequest struct {
 
 func (x *ReplyGitHubThreadRequest) Reset() {
 	*x = ReplyGitHubThreadRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[279]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[281]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17397,7 +17479,7 @@ func (x *ReplyGitHubThreadRequest) String() string {
 func (*ReplyGitHubThreadRequest) ProtoMessage() {}
 
 func (x *ReplyGitHubThreadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[279]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[281]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17410,7 +17492,7 @@ func (x *ReplyGitHubThreadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReplyGitHubThreadRequest.ProtoReflect.Descriptor instead.
 func (*ReplyGitHubThreadRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{279}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{281}
 }
 
 func (x *ReplyGitHubThreadRequest) GetHost() string {
@@ -17443,7 +17525,7 @@ type ReplyGitHubThreadResponse struct {
 
 func (x *ReplyGitHubThreadResponse) Reset() {
 	*x = ReplyGitHubThreadResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[280]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[282]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17455,7 +17537,7 @@ func (x *ReplyGitHubThreadResponse) String() string {
 func (*ReplyGitHubThreadResponse) ProtoMessage() {}
 
 func (x *ReplyGitHubThreadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[280]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[282]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17468,7 +17550,7 @@ func (x *ReplyGitHubThreadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReplyGitHubThreadResponse.ProtoReflect.Descriptor instead.
 func (*ReplyGitHubThreadResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{280}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{282}
 }
 
 func (x *ReplyGitHubThreadResponse) GetComment() *GitHubComment {
@@ -17490,7 +17572,7 @@ type ResolveGitHubThreadRequest struct {
 
 func (x *ResolveGitHubThreadRequest) Reset() {
 	*x = ResolveGitHubThreadRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[281]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[283]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17502,7 +17584,7 @@ func (x *ResolveGitHubThreadRequest) String() string {
 func (*ResolveGitHubThreadRequest) ProtoMessage() {}
 
 func (x *ResolveGitHubThreadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[281]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[283]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17515,7 +17597,7 @@ func (x *ResolveGitHubThreadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveGitHubThreadRequest.ProtoReflect.Descriptor instead.
 func (*ResolveGitHubThreadRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{281}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{283}
 }
 
 func (x *ResolveGitHubThreadRequest) GetHost() string {
@@ -17547,7 +17629,7 @@ type ResolveGitHubThreadResponse struct {
 
 func (x *ResolveGitHubThreadResponse) Reset() {
 	*x = ResolveGitHubThreadResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[282]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[284]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17559,7 +17641,7 @@ func (x *ResolveGitHubThreadResponse) String() string {
 func (*ResolveGitHubThreadResponse) ProtoMessage() {}
 
 func (x *ResolveGitHubThreadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[282]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[284]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17572,7 +17654,7 @@ func (x *ResolveGitHubThreadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveGitHubThreadResponse.ProtoReflect.Descriptor instead.
 func (*ResolveGitHubThreadResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{282}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{284}
 }
 
 type AddGitHubCommentRequest struct {
@@ -17587,7 +17669,7 @@ type AddGitHubCommentRequest struct {
 
 func (x *AddGitHubCommentRequest) Reset() {
 	*x = AddGitHubCommentRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[283]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[285]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17599,7 +17681,7 @@ func (x *AddGitHubCommentRequest) String() string {
 func (*AddGitHubCommentRequest) ProtoMessage() {}
 
 func (x *AddGitHubCommentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[283]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[285]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17612,7 +17694,7 @@ func (x *AddGitHubCommentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddGitHubCommentRequest.ProtoReflect.Descriptor instead.
 func (*AddGitHubCommentRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{283}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{285}
 }
 
 func (x *AddGitHubCommentRequest) GetHost() string {
@@ -17645,7 +17727,7 @@ type AddGitHubCommentResponse struct {
 
 func (x *AddGitHubCommentResponse) Reset() {
 	*x = AddGitHubCommentResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[284]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[286]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17657,7 +17739,7 @@ func (x *AddGitHubCommentResponse) String() string {
 func (*AddGitHubCommentResponse) ProtoMessage() {}
 
 func (x *AddGitHubCommentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[284]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[286]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17670,7 +17752,7 @@ func (x *AddGitHubCommentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddGitHubCommentResponse.ProtoReflect.Descriptor instead.
 func (*AddGitHubCommentResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{284}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{286}
 }
 
 func (x *AddGitHubCommentResponse) GetComment() *GitHubComment {
@@ -17695,7 +17777,7 @@ type GitHubDraft struct {
 
 func (x *GitHubDraft) Reset() {
 	*x = GitHubDraft{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[285]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[287]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17707,7 +17789,7 @@ func (x *GitHubDraft) String() string {
 func (*GitHubDraft) ProtoMessage() {}
 
 func (x *GitHubDraft) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[285]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[287]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17720,7 +17802,7 @@ func (x *GitHubDraft) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GitHubDraft.ProtoReflect.Descriptor instead.
 func (*GitHubDraft) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{285}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{287}
 }
 
 func (x *GitHubDraft) GetPath() string {
@@ -17776,7 +17858,7 @@ type SubmitGitHubReviewRequest struct {
 
 func (x *SubmitGitHubReviewRequest) Reset() {
 	*x = SubmitGitHubReviewRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[286]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[288]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17788,7 +17870,7 @@ func (x *SubmitGitHubReviewRequest) String() string {
 func (*SubmitGitHubReviewRequest) ProtoMessage() {}
 
 func (x *SubmitGitHubReviewRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[286]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[288]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17801,7 +17883,7 @@ func (x *SubmitGitHubReviewRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubmitGitHubReviewRequest.ProtoReflect.Descriptor instead.
 func (*SubmitGitHubReviewRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{286}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{288}
 }
 
 func (x *SubmitGitHubReviewRequest) GetHost() string {
@@ -17861,7 +17943,7 @@ type SubmitGitHubReviewResponse struct {
 
 func (x *SubmitGitHubReviewResponse) Reset() {
 	*x = SubmitGitHubReviewResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[287]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[289]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17873,7 +17955,7 @@ func (x *SubmitGitHubReviewResponse) String() string {
 func (*SubmitGitHubReviewResponse) ProtoMessage() {}
 
 func (x *SubmitGitHubReviewResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[287]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[289]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17886,7 +17968,7 @@ func (x *SubmitGitHubReviewResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubmitGitHubReviewResponse.ProtoReflect.Descriptor instead.
 func (*SubmitGitHubReviewResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{287}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{289}
 }
 
 type GetGitHubPromptRequest struct {
@@ -17902,7 +17984,7 @@ type GetGitHubPromptRequest struct {
 
 func (x *GetGitHubPromptRequest) Reset() {
 	*x = GetGitHubPromptRequest{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[288]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[290]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17914,7 +17996,7 @@ func (x *GetGitHubPromptRequest) String() string {
 func (*GetGitHubPromptRequest) ProtoMessage() {}
 
 func (x *GetGitHubPromptRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[288]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[290]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17927,7 +18009,7 @@ func (x *GetGitHubPromptRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGitHubPromptRequest.ProtoReflect.Descriptor instead.
 func (*GetGitHubPromptRequest) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{288}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{290}
 }
 
 func (x *GetGitHubPromptRequest) GetRef() *GitHubRef {
@@ -17960,7 +18042,7 @@ type GetGitHubPromptResponse struct {
 
 func (x *GetGitHubPromptResponse) Reset() {
 	*x = GetGitHubPromptResponse{}
-	mi := &file_nushi_v1_nushi_proto_msgTypes[289]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[291]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17972,7 +18054,7 @@ func (x *GetGitHubPromptResponse) String() string {
 func (*GetGitHubPromptResponse) ProtoMessage() {}
 
 func (x *GetGitHubPromptResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_nushi_v1_nushi_proto_msgTypes[289]
+	mi := &file_nushi_v1_nushi_proto_msgTypes[291]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17985,7 +18067,7 @@ func (x *GetGitHubPromptResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGitHubPromptResponse.ProtoReflect.Descriptor instead.
 func (*GetGitHubPromptResponse) Descriptor() ([]byte, []int) {
-	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{289}
+	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{291}
 }
 
 func (x *GetGitHubPromptResponse) GetText() string {
@@ -18718,7 +18800,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x06folder\x18\x01 \x01(\tR\x06folder\x12\x14\n" +
 	"\x05agent\x18\x02 \x01(\tR\x05agent\x12\x10\n" +
 	"\x03key\x18\x03 \x01(\tR\x03key\"\x15\n" +
-	"\x13TrustFolderResponse\"\xd3\x01\n" +
+	"\x13TrustFolderResponse\"\xe5\x01\n" +
 	"\x06Remote\x12\x0e\n" +
 	"\x02on\x18\x01 \x01(\bR\x02on\x12\x14\n" +
 	"\x05relay\x18\x02 \x01(\tR\x05relay\x12\x14\n" +
@@ -18728,7 +18810,8 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\apairing\x18\x06 \x01(\v2\x11.nushi.v1.PairingR\apairing\x12\x1e\n" +
 	"\n" +
 	"rendezvous\x18\a \x01(\tR\n" +
-	"rendezvous\"\xa7\x01\n" +
+	"rendezvous\x12\x10\n" +
+	"\x03key\x18\b \x01(\fR\x03key\"\xa7\x01\n" +
 	"\x06Device\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
@@ -18772,7 +18855,9 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x15SetDeviceViewResponse\"2\n" +
 	"\x13SendTestPushRequest\x12\x1b\n" +
 	"\tdevice_id\x18\x01 \x01(\tR\bdeviceId\"\x16\n" +
-	"\x14SendTestPushResponse\"\xc3\x01\n" +
+	"\x14SendTestPushResponse\"\x19\n" +
+	"\x17UnpairThisDeviceRequest\"\x1a\n" +
+	"\x18UnpairThisDeviceResponse\"\xc3\x01\n" +
 	"\n" +
 	"LogRequest\x12\x14\n" +
 	"\x05level\x18\x01 \x01(\tR\x05level\x12\x18\n" +
@@ -19252,7 +19337,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x12FIELD_TYPE_CHOICES\x10\x03\x12\x15\n" +
 	"\x11FIELD_TYPE_NUMBER\x10\x04\x12\x16\n" +
 	"\x12FIELD_TYPE_INTEGER\x10\x05\x12\x16\n" +
-	"\x12FIELD_TYPE_BOOLEAN\x10\x062\xdaC\n" +
+	"\x12FIELD_TYPE_BOOLEAN\x10\x062\xb5D\n" +
 	"\fNushiService\x125\n" +
 	"\x04Ping\x12\x15.nushi.v1.PingRequest\x1a\x16.nushi.v1.PingResponse\x12D\n" +
 	"\tListChats\x12\x1a.nushi.v1.ListChatsRequest\x1a\x1b.nushi.v1.ListChatsResponse\x12>\n" +
@@ -19338,7 +19423,8 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"GetPushKey\x12\x1b.nushi.v1.GetPushKeyRequest\x1a\x1c.nushi.v1.GetPushKeyResponse\x12b\n" +
 	"\x13SetPushSubscription\x12$.nushi.v1.SetPushSubscriptionRequest\x1a%.nushi.v1.SetPushSubscriptionResponse\x12P\n" +
 	"\rSetDeviceView\x12\x1e.nushi.v1.SetDeviceViewRequest\x1a\x1f.nushi.v1.SetDeviceViewResponse\x12M\n" +
-	"\fSendTestPush\x12\x1d.nushi.v1.SendTestPushRequest\x1a\x1e.nushi.v1.SendTestPushResponse\x122\n" +
+	"\fSendTestPush\x12\x1d.nushi.v1.SendTestPushRequest\x1a\x1e.nushi.v1.SendTestPushResponse\x12Y\n" +
+	"\x10UnpairThisDevice\x12!.nushi.v1.UnpairThisDeviceRequest\x1a\".nushi.v1.UnpairThisDeviceResponse\x122\n" +
 	"\x03Log\x12\x14.nushi.v1.LogRequest\x1a\x15.nushi.v1.LogResponse\x12P\n" +
 	"\rListJiraSites\x12\x1e.nushi.v1.ListJiraSitesRequest\x1a\x1f.nushi.v1.ListJiraSitesResponse\x12J\n" +
 	"\vAddJiraSite\x12\x1c.nushi.v1.AddJiraSiteRequest\x1a\x1d.nushi.v1.AddJiraSiteResponse\x12S\n" +
@@ -19389,7 +19475,7 @@ func file_nushi_v1_nushi_proto_rawDescGZIP() []byte {
 }
 
 var file_nushi_v1_nushi_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_nushi_v1_nushi_proto_msgTypes = make([]protoimpl.MessageInfo, 293)
+var file_nushi_v1_nushi_proto_msgTypes = make([]protoimpl.MessageInfo, 295)
 var file_nushi_v1_nushi_proto_goTypes = []any{
 	(ItemKind)(0),                       // 0: nushi.v1.ItemKind
 	(FieldType)(0),                      // 1: nushi.v1.FieldType
@@ -19586,106 +19672,108 @@ var file_nushi_v1_nushi_proto_goTypes = []any{
 	(*SetDeviceViewResponse)(nil),       // 192: nushi.v1.SetDeviceViewResponse
 	(*SendTestPushRequest)(nil),         // 193: nushi.v1.SendTestPushRequest
 	(*SendTestPushResponse)(nil),        // 194: nushi.v1.SendTestPushResponse
-	(*LogRequest)(nil),                  // 195: nushi.v1.LogRequest
-	(*LogResponse)(nil),                 // 196: nushi.v1.LogResponse
-	(*JiraSite)(nil),                    // 197: nushi.v1.JiraSite
-	(*JiraSearch)(nil),                  // 198: nushi.v1.JiraSearch
-	(*JiraIssueRef)(nil),                // 199: nushi.v1.JiraIssueRef
-	(*JiraIssue)(nil),                   // 200: nushi.v1.JiraIssue
-	(*JiraLink)(nil),                    // 201: nushi.v1.JiraLink
-	(*JiraAttachment)(nil),              // 202: nushi.v1.JiraAttachment
-	(*JiraComment)(nil),                 // 203: nushi.v1.JiraComment
-	(*JiraRemoteLink)(nil),              // 204: nushi.v1.JiraRemoteLink
-	(*JiraTransition)(nil),              // 205: nushi.v1.JiraTransition
-	(*JiraField)(nil),                   // 206: nushi.v1.JiraField
-	(*JiraOption)(nil),                  // 207: nushi.v1.JiraOption
-	(*JiraBoard)(nil),                   // 208: nushi.v1.JiraBoard
-	(*ListJiraSitesRequest)(nil),        // 209: nushi.v1.ListJiraSitesRequest
-	(*ListJiraSitesResponse)(nil),       // 210: nushi.v1.ListJiraSitesResponse
-	(*AddJiraSiteRequest)(nil),          // 211: nushi.v1.AddJiraSiteRequest
-	(*AddJiraSiteResponse)(nil),         // 212: nushi.v1.AddJiraSiteResponse
-	(*RemoveJiraSiteRequest)(nil),       // 213: nushi.v1.RemoveJiraSiteRequest
-	(*RemoveJiraSiteResponse)(nil),      // 214: nushi.v1.RemoveJiraSiteResponse
-	(*CheckJiraSiteRequest)(nil),        // 215: nushi.v1.CheckJiraSiteRequest
-	(*CheckJiraSiteResponse)(nil),       // 216: nushi.v1.CheckJiraSiteResponse
-	(*AllowJiraTokenRequest)(nil),       // 217: nushi.v1.AllowJiraTokenRequest
-	(*AllowJiraTokenResponse)(nil),      // 218: nushi.v1.AllowJiraTokenResponse
-	(*ListJiraBoardsRequest)(nil),       // 219: nushi.v1.ListJiraBoardsRequest
-	(*ListJiraBoardsResponse)(nil),      // 220: nushi.v1.ListJiraBoardsResponse
-	(*SetJiraBoardRequest)(nil),         // 221: nushi.v1.SetJiraBoardRequest
-	(*SetJiraBoardResponse)(nil),        // 222: nushi.v1.SetJiraBoardResponse
-	(*SetJiraSearchesRequest)(nil),      // 223: nushi.v1.SetJiraSearchesRequest
-	(*SetJiraSearchesResponse)(nil),     // 224: nushi.v1.SetJiraSearchesResponse
-	(*ListJiraIssuesRequest)(nil),       // 225: nushi.v1.ListJiraIssuesRequest
-	(*ListJiraIssuesResponse)(nil),      // 226: nushi.v1.ListJiraIssuesResponse
-	(*GetJiraJqlRequest)(nil),           // 227: nushi.v1.GetJiraJqlRequest
-	(*GetJiraJqlResponse)(nil),          // 228: nushi.v1.GetJiraJqlResponse
-	(*JiraJqlField)(nil),                // 229: nushi.v1.JiraJqlField
-	(*SuggestJiraJqlRequest)(nil),       // 230: nushi.v1.SuggestJiraJqlRequest
-	(*SuggestJiraJqlResponse)(nil),      // 231: nushi.v1.SuggestJiraJqlResponse
-	(*GetJiraIssueRequest)(nil),         // 232: nushi.v1.GetJiraIssueRequest
-	(*GetJiraIssueResponse)(nil),        // 233: nushi.v1.GetJiraIssueResponse
-	(*JiraWrite)(nil),                   // 234: nushi.v1.JiraWrite
-	(*ListJiraTransitionsRequest)(nil),  // 235: nushi.v1.ListJiraTransitionsRequest
-	(*ListJiraTransitionsResponse)(nil), // 236: nushi.v1.ListJiraTransitionsResponse
-	(*TransitionJiraIssueRequest)(nil),  // 237: nushi.v1.TransitionJiraIssueRequest
-	(*TransitionJiraIssueResponse)(nil), // 238: nushi.v1.TransitionJiraIssueResponse
-	(*AddJiraCommentRequest)(nil),       // 239: nushi.v1.AddJiraCommentRequest
-	(*AddJiraCommentResponse)(nil),      // 240: nushi.v1.AddJiraCommentResponse
-	(*GetJiraAttachmentRequest)(nil),    // 241: nushi.v1.GetJiraAttachmentRequest
-	(*GetJiraAttachmentResponse)(nil),   // 242: nushi.v1.GetJiraAttachmentResponse
-	(*FindJiraIssuesRequest)(nil),       // 243: nushi.v1.FindJiraIssuesRequest
-	(*FindJiraIssuesResponse)(nil),      // 244: nushi.v1.FindJiraIssuesResponse
-	(*FoundJiraIssue)(nil),              // 245: nushi.v1.FoundJiraIssue
-	(*GitHubBucket)(nil),                // 246: nushi.v1.GitHubBucket
-	(*GitHubHost)(nil),                  // 247: nushi.v1.GitHubHost
-	(*ListGitHubHostsRequest)(nil),      // 248: nushi.v1.ListGitHubHostsRequest
-	(*ListGitHubHostsResponse)(nil),     // 249: nushi.v1.ListGitHubHostsResponse
-	(*AddGitHubTokenRequest)(nil),       // 250: nushi.v1.AddGitHubTokenRequest
-	(*AddGitHubTokenResponse)(nil),      // 251: nushi.v1.AddGitHubTokenResponse
-	(*RemoveGitHubTokenRequest)(nil),    // 252: nushi.v1.RemoveGitHubTokenRequest
-	(*RemoveGitHubTokenResponse)(nil),   // 253: nushi.v1.RemoveGitHubTokenResponse
-	(*AllowGitHubTokenRequest)(nil),     // 254: nushi.v1.AllowGitHubTokenRequest
-	(*AllowGitHubTokenResponse)(nil),    // 255: nushi.v1.AllowGitHubTokenResponse
-	(*GitHubRepo)(nil),                  // 256: nushi.v1.GitHubRepo
-	(*ListGitHubReposRequest)(nil),      // 257: nushi.v1.ListGitHubReposRequest
-	(*ListGitHubReposResponse)(nil),     // 258: nushi.v1.ListGitHubReposResponse
-	(*GitHubRef)(nil),                   // 259: nushi.v1.GitHubRef
-	(*GitHubItem)(nil),                  // 260: nushi.v1.GitHubItem
-	(*ListGitHubInboxRequest)(nil),      // 261: nushi.v1.ListGitHubInboxRequest
-	(*ListGitHubInboxResponse)(nil),     // 262: nushi.v1.ListGitHubInboxResponse
-	(*GitHubLink)(nil),                  // 263: nushi.v1.GitHubLink
-	(*GetGitHubStatesRequest)(nil),      // 264: nushi.v1.GetGitHubStatesRequest
-	(*GetGitHubStatesResponse)(nil),     // 265: nushi.v1.GetGitHubStatesResponse
-	(*GitHubComment)(nil),               // 266: nushi.v1.GitHubComment
-	(*GitHubThread)(nil),                // 267: nushi.v1.GitHubThread
-	(*GitHubAnnotation)(nil),            // 268: nushi.v1.GitHubAnnotation
-	(*GitHubCheck)(nil),                 // 269: nushi.v1.GitHubCheck
-	(*GitHubReviewer)(nil),              // 270: nushi.v1.GitHubReviewer
-	(*GitHubPull)(nil),                  // 271: nushi.v1.GitHubPull
-	(*GetGitHubPullRequest)(nil),        // 272: nushi.v1.GetGitHubPullRequest
-	(*GetGitHubPullResponse)(nil),       // 273: nushi.v1.GetGitHubPullResponse
-	(*GitHubIssue)(nil),                 // 274: nushi.v1.GitHubIssue
-	(*GetGitHubIssueRequest)(nil),       // 275: nushi.v1.GetGitHubIssueRequest
-	(*GetGitHubIssueResponse)(nil),      // 276: nushi.v1.GetGitHubIssueResponse
-	(*GetGitHubFilesRequest)(nil),       // 277: nushi.v1.GetGitHubFilesRequest
-	(*GetGitHubFilesResponse)(nil),      // 278: nushi.v1.GetGitHubFilesResponse
-	(*GetGitHubJobLogRequest)(nil),      // 279: nushi.v1.GetGitHubJobLogRequest
-	(*GetGitHubJobLogResponse)(nil),     // 280: nushi.v1.GetGitHubJobLogResponse
-	(*ReplyGitHubThreadRequest)(nil),    // 281: nushi.v1.ReplyGitHubThreadRequest
-	(*ReplyGitHubThreadResponse)(nil),   // 282: nushi.v1.ReplyGitHubThreadResponse
-	(*ResolveGitHubThreadRequest)(nil),  // 283: nushi.v1.ResolveGitHubThreadRequest
-	(*ResolveGitHubThreadResponse)(nil), // 284: nushi.v1.ResolveGitHubThreadResponse
-	(*AddGitHubCommentRequest)(nil),     // 285: nushi.v1.AddGitHubCommentRequest
-	(*AddGitHubCommentResponse)(nil),    // 286: nushi.v1.AddGitHubCommentResponse
-	(*GitHubDraft)(nil),                 // 287: nushi.v1.GitHubDraft
-	(*SubmitGitHubReviewRequest)(nil),   // 288: nushi.v1.SubmitGitHubReviewRequest
-	(*SubmitGitHubReviewResponse)(nil),  // 289: nushi.v1.SubmitGitHubReviewResponse
-	(*GetGitHubPromptRequest)(nil),      // 290: nushi.v1.GetGitHubPromptRequest
-	(*GetGitHubPromptResponse)(nil),     // 291: nushi.v1.GetGitHubPromptResponse
-	nil,                                 // 292: nushi.v1.GetMemoryResponse.ChatsEntry
-	nil,                                 // 293: nushi.v1.LogRequest.AttrsEntry
-	nil,                                 // 294: nushi.v1.TransitionJiraIssueRequest.ValuesEntry
+	(*UnpairThisDeviceRequest)(nil),     // 195: nushi.v1.UnpairThisDeviceRequest
+	(*UnpairThisDeviceResponse)(nil),    // 196: nushi.v1.UnpairThisDeviceResponse
+	(*LogRequest)(nil),                  // 197: nushi.v1.LogRequest
+	(*LogResponse)(nil),                 // 198: nushi.v1.LogResponse
+	(*JiraSite)(nil),                    // 199: nushi.v1.JiraSite
+	(*JiraSearch)(nil),                  // 200: nushi.v1.JiraSearch
+	(*JiraIssueRef)(nil),                // 201: nushi.v1.JiraIssueRef
+	(*JiraIssue)(nil),                   // 202: nushi.v1.JiraIssue
+	(*JiraLink)(nil),                    // 203: nushi.v1.JiraLink
+	(*JiraAttachment)(nil),              // 204: nushi.v1.JiraAttachment
+	(*JiraComment)(nil),                 // 205: nushi.v1.JiraComment
+	(*JiraRemoteLink)(nil),              // 206: nushi.v1.JiraRemoteLink
+	(*JiraTransition)(nil),              // 207: nushi.v1.JiraTransition
+	(*JiraField)(nil),                   // 208: nushi.v1.JiraField
+	(*JiraOption)(nil),                  // 209: nushi.v1.JiraOption
+	(*JiraBoard)(nil),                   // 210: nushi.v1.JiraBoard
+	(*ListJiraSitesRequest)(nil),        // 211: nushi.v1.ListJiraSitesRequest
+	(*ListJiraSitesResponse)(nil),       // 212: nushi.v1.ListJiraSitesResponse
+	(*AddJiraSiteRequest)(nil),          // 213: nushi.v1.AddJiraSiteRequest
+	(*AddJiraSiteResponse)(nil),         // 214: nushi.v1.AddJiraSiteResponse
+	(*RemoveJiraSiteRequest)(nil),       // 215: nushi.v1.RemoveJiraSiteRequest
+	(*RemoveJiraSiteResponse)(nil),      // 216: nushi.v1.RemoveJiraSiteResponse
+	(*CheckJiraSiteRequest)(nil),        // 217: nushi.v1.CheckJiraSiteRequest
+	(*CheckJiraSiteResponse)(nil),       // 218: nushi.v1.CheckJiraSiteResponse
+	(*AllowJiraTokenRequest)(nil),       // 219: nushi.v1.AllowJiraTokenRequest
+	(*AllowJiraTokenResponse)(nil),      // 220: nushi.v1.AllowJiraTokenResponse
+	(*ListJiraBoardsRequest)(nil),       // 221: nushi.v1.ListJiraBoardsRequest
+	(*ListJiraBoardsResponse)(nil),      // 222: nushi.v1.ListJiraBoardsResponse
+	(*SetJiraBoardRequest)(nil),         // 223: nushi.v1.SetJiraBoardRequest
+	(*SetJiraBoardResponse)(nil),        // 224: nushi.v1.SetJiraBoardResponse
+	(*SetJiraSearchesRequest)(nil),      // 225: nushi.v1.SetJiraSearchesRequest
+	(*SetJiraSearchesResponse)(nil),     // 226: nushi.v1.SetJiraSearchesResponse
+	(*ListJiraIssuesRequest)(nil),       // 227: nushi.v1.ListJiraIssuesRequest
+	(*ListJiraIssuesResponse)(nil),      // 228: nushi.v1.ListJiraIssuesResponse
+	(*GetJiraJqlRequest)(nil),           // 229: nushi.v1.GetJiraJqlRequest
+	(*GetJiraJqlResponse)(nil),          // 230: nushi.v1.GetJiraJqlResponse
+	(*JiraJqlField)(nil),                // 231: nushi.v1.JiraJqlField
+	(*SuggestJiraJqlRequest)(nil),       // 232: nushi.v1.SuggestJiraJqlRequest
+	(*SuggestJiraJqlResponse)(nil),      // 233: nushi.v1.SuggestJiraJqlResponse
+	(*GetJiraIssueRequest)(nil),         // 234: nushi.v1.GetJiraIssueRequest
+	(*GetJiraIssueResponse)(nil),        // 235: nushi.v1.GetJiraIssueResponse
+	(*JiraWrite)(nil),                   // 236: nushi.v1.JiraWrite
+	(*ListJiraTransitionsRequest)(nil),  // 237: nushi.v1.ListJiraTransitionsRequest
+	(*ListJiraTransitionsResponse)(nil), // 238: nushi.v1.ListJiraTransitionsResponse
+	(*TransitionJiraIssueRequest)(nil),  // 239: nushi.v1.TransitionJiraIssueRequest
+	(*TransitionJiraIssueResponse)(nil), // 240: nushi.v1.TransitionJiraIssueResponse
+	(*AddJiraCommentRequest)(nil),       // 241: nushi.v1.AddJiraCommentRequest
+	(*AddJiraCommentResponse)(nil),      // 242: nushi.v1.AddJiraCommentResponse
+	(*GetJiraAttachmentRequest)(nil),    // 243: nushi.v1.GetJiraAttachmentRequest
+	(*GetJiraAttachmentResponse)(nil),   // 244: nushi.v1.GetJiraAttachmentResponse
+	(*FindJiraIssuesRequest)(nil),       // 245: nushi.v1.FindJiraIssuesRequest
+	(*FindJiraIssuesResponse)(nil),      // 246: nushi.v1.FindJiraIssuesResponse
+	(*FoundJiraIssue)(nil),              // 247: nushi.v1.FoundJiraIssue
+	(*GitHubBucket)(nil),                // 248: nushi.v1.GitHubBucket
+	(*GitHubHost)(nil),                  // 249: nushi.v1.GitHubHost
+	(*ListGitHubHostsRequest)(nil),      // 250: nushi.v1.ListGitHubHostsRequest
+	(*ListGitHubHostsResponse)(nil),     // 251: nushi.v1.ListGitHubHostsResponse
+	(*AddGitHubTokenRequest)(nil),       // 252: nushi.v1.AddGitHubTokenRequest
+	(*AddGitHubTokenResponse)(nil),      // 253: nushi.v1.AddGitHubTokenResponse
+	(*RemoveGitHubTokenRequest)(nil),    // 254: nushi.v1.RemoveGitHubTokenRequest
+	(*RemoveGitHubTokenResponse)(nil),   // 255: nushi.v1.RemoveGitHubTokenResponse
+	(*AllowGitHubTokenRequest)(nil),     // 256: nushi.v1.AllowGitHubTokenRequest
+	(*AllowGitHubTokenResponse)(nil),    // 257: nushi.v1.AllowGitHubTokenResponse
+	(*GitHubRepo)(nil),                  // 258: nushi.v1.GitHubRepo
+	(*ListGitHubReposRequest)(nil),      // 259: nushi.v1.ListGitHubReposRequest
+	(*ListGitHubReposResponse)(nil),     // 260: nushi.v1.ListGitHubReposResponse
+	(*GitHubRef)(nil),                   // 261: nushi.v1.GitHubRef
+	(*GitHubItem)(nil),                  // 262: nushi.v1.GitHubItem
+	(*ListGitHubInboxRequest)(nil),      // 263: nushi.v1.ListGitHubInboxRequest
+	(*ListGitHubInboxResponse)(nil),     // 264: nushi.v1.ListGitHubInboxResponse
+	(*GitHubLink)(nil),                  // 265: nushi.v1.GitHubLink
+	(*GetGitHubStatesRequest)(nil),      // 266: nushi.v1.GetGitHubStatesRequest
+	(*GetGitHubStatesResponse)(nil),     // 267: nushi.v1.GetGitHubStatesResponse
+	(*GitHubComment)(nil),               // 268: nushi.v1.GitHubComment
+	(*GitHubThread)(nil),                // 269: nushi.v1.GitHubThread
+	(*GitHubAnnotation)(nil),            // 270: nushi.v1.GitHubAnnotation
+	(*GitHubCheck)(nil),                 // 271: nushi.v1.GitHubCheck
+	(*GitHubReviewer)(nil),              // 272: nushi.v1.GitHubReviewer
+	(*GitHubPull)(nil),                  // 273: nushi.v1.GitHubPull
+	(*GetGitHubPullRequest)(nil),        // 274: nushi.v1.GetGitHubPullRequest
+	(*GetGitHubPullResponse)(nil),       // 275: nushi.v1.GetGitHubPullResponse
+	(*GitHubIssue)(nil),                 // 276: nushi.v1.GitHubIssue
+	(*GetGitHubIssueRequest)(nil),       // 277: nushi.v1.GetGitHubIssueRequest
+	(*GetGitHubIssueResponse)(nil),      // 278: nushi.v1.GetGitHubIssueResponse
+	(*GetGitHubFilesRequest)(nil),       // 279: nushi.v1.GetGitHubFilesRequest
+	(*GetGitHubFilesResponse)(nil),      // 280: nushi.v1.GetGitHubFilesResponse
+	(*GetGitHubJobLogRequest)(nil),      // 281: nushi.v1.GetGitHubJobLogRequest
+	(*GetGitHubJobLogResponse)(nil),     // 282: nushi.v1.GetGitHubJobLogResponse
+	(*ReplyGitHubThreadRequest)(nil),    // 283: nushi.v1.ReplyGitHubThreadRequest
+	(*ReplyGitHubThreadResponse)(nil),   // 284: nushi.v1.ReplyGitHubThreadResponse
+	(*ResolveGitHubThreadRequest)(nil),  // 285: nushi.v1.ResolveGitHubThreadRequest
+	(*ResolveGitHubThreadResponse)(nil), // 286: nushi.v1.ResolveGitHubThreadResponse
+	(*AddGitHubCommentRequest)(nil),     // 287: nushi.v1.AddGitHubCommentRequest
+	(*AddGitHubCommentResponse)(nil),    // 288: nushi.v1.AddGitHubCommentResponse
+	(*GitHubDraft)(nil),                 // 289: nushi.v1.GitHubDraft
+	(*SubmitGitHubReviewRequest)(nil),   // 290: nushi.v1.SubmitGitHubReviewRequest
+	(*SubmitGitHubReviewResponse)(nil),  // 291: nushi.v1.SubmitGitHubReviewResponse
+	(*GetGitHubPromptRequest)(nil),      // 292: nushi.v1.GetGitHubPromptRequest
+	(*GetGitHubPromptResponse)(nil),     // 293: nushi.v1.GetGitHubPromptResponse
+	nil,                                 // 294: nushi.v1.GetMemoryResponse.ChatsEntry
+	nil,                                 // 295: nushi.v1.LogRequest.AttrsEntry
+	nil,                                 // 296: nushi.v1.TransitionJiraIssueRequest.ValuesEntry
 }
 var file_nushi_v1_nushi_proto_depIdxs = []int32{
 	10,  // 0: nushi.v1.ListChatsResponse.chats:type_name -> nushi.v1.Chat
@@ -19693,7 +19781,7 @@ var file_nushi_v1_nushi_proto_depIdxs = []int32{
 	6,   // 2: nushi.v1.RemovedChats.chats:type_name -> nushi.v1.RemovedChat
 	148, // 3: nushi.v1.Chat.status:type_name -> nushi.v1.ChatStatus
 	11,  // 4: nushi.v1.Chat.worktree:type_name -> nushi.v1.Worktree
-	263, // 5: nushi.v1.Chat.github:type_name -> nushi.v1.GitHubLink
+	265, // 5: nushi.v1.Chat.github:type_name -> nushi.v1.GitHubLink
 	10,  // 6: nushi.v1.GetChatResponse.chat:type_name -> nushi.v1.Chat
 	139, // 7: nushi.v1.GetChatResponse.items:type_name -> nushi.v1.Item
 	137, // 8: nushi.v1.GetChatResponse.config:type_name -> nushi.v1.ConfigOption
@@ -19705,7 +19793,7 @@ var file_nushi_v1_nushi_proto_depIdxs = []int32{
 	20,  // 14: nushi.v1.ListAgentsResponse.agents:type_name -> nushi.v1.Agent
 	19,  // 15: nushi.v1.ListAgentsResponse.environment:type_name -> nushi.v1.ShellEnvironment
 	21,  // 16: nushi.v1.Agent.adapter:type_name -> nushi.v1.Adapter
-	263, // 17: nushi.v1.StartChatRequest.github:type_name -> nushi.v1.GitHubLink
+	265, // 17: nushi.v1.StartChatRequest.github:type_name -> nushi.v1.GitHubLink
 	29,  // 18: nushi.v1.ListAgentSessionsResponse.sessions:type_name -> nushi.v1.FoundSession
 	137, // 19: nushi.v1.StartChatResponse.config:type_name -> nushi.v1.ConfigOption
 	42,  // 20: nushi.v1.SendPromptRequest.images:type_name -> nushi.v1.ImageData
@@ -19714,7 +19802,7 @@ var file_nushi_v1_nushi_proto_depIdxs = []int32{
 	36,  // 23: nushi.v1.RewindChatResponse.message:type_name -> nushi.v1.QueuedMessage
 	36,  // 24: nushi.v1.UnqueueResponse.message:type_name -> nushi.v1.QueuedMessage
 	36,  // 25: nushi.v1.CancelTurnResponse.message:type_name -> nushi.v1.QueuedMessage
-	292, // 26: nushi.v1.GetMemoryResponse.chats:type_name -> nushi.v1.GetMemoryResponse.ChatsEntry
+	294, // 26: nushi.v1.GetMemoryResponse.chats:type_name -> nushi.v1.GetMemoryResponse.ChatsEntry
 	68,  // 27: nushi.v1.ListTranscriptsResponse.copies:type_name -> nushi.v1.TranscriptCopy
 	65,  // 28: nushi.v1.GetSettingsResponse.settings:type_name -> nushi.v1.Settings
 	65,  // 29: nushi.v1.SetSettingsRequest.settings:type_name -> nushi.v1.Settings
@@ -19765,61 +19853,61 @@ var file_nushi_v1_nushi_proto_depIdxs = []int32{
 	175, // 74: nushi.v1.Remote.devices:type_name -> nushi.v1.Device
 	176, // 75: nushi.v1.Remote.pairing:type_name -> nushi.v1.Pairing
 	174, // 76: nushi.v1.GetRemoteResponse.remote:type_name -> nushi.v1.Remote
-	293, // 77: nushi.v1.LogRequest.attrs:type_name -> nushi.v1.LogRequest.AttrsEntry
-	198, // 78: nushi.v1.JiraSite.searches:type_name -> nushi.v1.JiraSearch
-	199, // 79: nushi.v1.JiraIssue.parent:type_name -> nushi.v1.JiraIssueRef
-	199, // 80: nushi.v1.JiraIssue.subtasks:type_name -> nushi.v1.JiraIssueRef
-	201, // 81: nushi.v1.JiraIssue.links:type_name -> nushi.v1.JiraLink
-	202, // 82: nushi.v1.JiraIssue.attachments:type_name -> nushi.v1.JiraAttachment
-	203, // 83: nushi.v1.JiraIssue.comments:type_name -> nushi.v1.JiraComment
-	204, // 84: nushi.v1.JiraIssue.remote_links:type_name -> nushi.v1.JiraRemoteLink
-	199, // 85: nushi.v1.JiraLink.issue:type_name -> nushi.v1.JiraIssueRef
-	206, // 86: nushi.v1.JiraTransition.fields:type_name -> nushi.v1.JiraField
-	207, // 87: nushi.v1.JiraField.options:type_name -> nushi.v1.JiraOption
-	197, // 88: nushi.v1.ListJiraSitesResponse.sites:type_name -> nushi.v1.JiraSite
-	197, // 89: nushi.v1.AddJiraSiteResponse.site:type_name -> nushi.v1.JiraSite
-	208, // 90: nushi.v1.ListJiraBoardsResponse.boards:type_name -> nushi.v1.JiraBoard
-	208, // 91: nushi.v1.SetJiraBoardRequest.board:type_name -> nushi.v1.JiraBoard
-	198, // 92: nushi.v1.SetJiraSearchesRequest.searches:type_name -> nushi.v1.JiraSearch
-	200, // 93: nushi.v1.ListJiraIssuesResponse.issues:type_name -> nushi.v1.JiraIssue
-	229, // 94: nushi.v1.GetJiraJqlResponse.fields:type_name -> nushi.v1.JiraJqlField
-	207, // 95: nushi.v1.SuggestJiraJqlResponse.values:type_name -> nushi.v1.JiraOption
-	200, // 96: nushi.v1.GetJiraIssueResponse.issue:type_name -> nushi.v1.JiraIssue
-	234, // 97: nushi.v1.GetJiraIssueResponse.agent_writes:type_name -> nushi.v1.JiraWrite
-	205, // 98: nushi.v1.ListJiraTransitionsResponse.transitions:type_name -> nushi.v1.JiraTransition
-	294, // 99: nushi.v1.TransitionJiraIssueRequest.values:type_name -> nushi.v1.TransitionJiraIssueRequest.ValuesEntry
-	203, // 100: nushi.v1.AddJiraCommentResponse.comment:type_name -> nushi.v1.JiraComment
-	245, // 101: nushi.v1.FindJiraIssuesResponse.issues:type_name -> nushi.v1.FoundJiraIssue
-	200, // 102: nushi.v1.FoundJiraIssue.issue:type_name -> nushi.v1.JiraIssue
-	246, // 103: nushi.v1.GitHubHost.budget:type_name -> nushi.v1.GitHubBucket
-	247, // 104: nushi.v1.ListGitHubHostsResponse.hosts:type_name -> nushi.v1.GitHubHost
-	256, // 105: nushi.v1.ListGitHubReposResponse.repos:type_name -> nushi.v1.GitHubRepo
-	259, // 106: nushi.v1.GitHubItem.ref:type_name -> nushi.v1.GitHubRef
-	260, // 107: nushi.v1.ListGitHubInboxResponse.review:type_name -> nushi.v1.GitHubItem
-	260, // 108: nushi.v1.ListGitHubInboxResponse.mine:type_name -> nushi.v1.GitHubItem
-	260, // 109: nushi.v1.ListGitHubInboxResponse.assigned:type_name -> nushi.v1.GitHubItem
-	263, // 110: nushi.v1.GetGitHubStatesRequest.items:type_name -> nushi.v1.GitHubLink
-	260, // 111: nushi.v1.GetGitHubStatesResponse.items:type_name -> nushi.v1.GitHubItem
-	266, // 112: nushi.v1.GitHubThread.comments:type_name -> nushi.v1.GitHubComment
-	268, // 113: nushi.v1.GitHubCheck.annotations:type_name -> nushi.v1.GitHubAnnotation
-	260, // 114: nushi.v1.GitHubPull.item:type_name -> nushi.v1.GitHubItem
-	270, // 115: nushi.v1.GitHubPull.reviewers:type_name -> nushi.v1.GitHubReviewer
-	266, // 116: nushi.v1.GitHubPull.conversation:type_name -> nushi.v1.GitHubComment
-	267, // 117: nushi.v1.GitHubPull.threads:type_name -> nushi.v1.GitHubThread
-	269, // 118: nushi.v1.GitHubPull.checks:type_name -> nushi.v1.GitHubCheck
-	259, // 119: nushi.v1.GetGitHubPullRequest.ref:type_name -> nushi.v1.GitHubRef
-	271, // 120: nushi.v1.GetGitHubPullResponse.pull:type_name -> nushi.v1.GitHubPull
-	260, // 121: nushi.v1.GitHubIssue.item:type_name -> nushi.v1.GitHubItem
-	266, // 122: nushi.v1.GitHubIssue.conversation:type_name -> nushi.v1.GitHubComment
-	259, // 123: nushi.v1.GetGitHubIssueRequest.ref:type_name -> nushi.v1.GitHubRef
-	274, // 124: nushi.v1.GetGitHubIssueResponse.issue:type_name -> nushi.v1.GitHubIssue
-	259, // 125: nushi.v1.GetGitHubFilesRequest.ref:type_name -> nushi.v1.GitHubRef
+	295, // 77: nushi.v1.LogRequest.attrs:type_name -> nushi.v1.LogRequest.AttrsEntry
+	200, // 78: nushi.v1.JiraSite.searches:type_name -> nushi.v1.JiraSearch
+	201, // 79: nushi.v1.JiraIssue.parent:type_name -> nushi.v1.JiraIssueRef
+	201, // 80: nushi.v1.JiraIssue.subtasks:type_name -> nushi.v1.JiraIssueRef
+	203, // 81: nushi.v1.JiraIssue.links:type_name -> nushi.v1.JiraLink
+	204, // 82: nushi.v1.JiraIssue.attachments:type_name -> nushi.v1.JiraAttachment
+	205, // 83: nushi.v1.JiraIssue.comments:type_name -> nushi.v1.JiraComment
+	206, // 84: nushi.v1.JiraIssue.remote_links:type_name -> nushi.v1.JiraRemoteLink
+	201, // 85: nushi.v1.JiraLink.issue:type_name -> nushi.v1.JiraIssueRef
+	208, // 86: nushi.v1.JiraTransition.fields:type_name -> nushi.v1.JiraField
+	209, // 87: nushi.v1.JiraField.options:type_name -> nushi.v1.JiraOption
+	199, // 88: nushi.v1.ListJiraSitesResponse.sites:type_name -> nushi.v1.JiraSite
+	199, // 89: nushi.v1.AddJiraSiteResponse.site:type_name -> nushi.v1.JiraSite
+	210, // 90: nushi.v1.ListJiraBoardsResponse.boards:type_name -> nushi.v1.JiraBoard
+	210, // 91: nushi.v1.SetJiraBoardRequest.board:type_name -> nushi.v1.JiraBoard
+	200, // 92: nushi.v1.SetJiraSearchesRequest.searches:type_name -> nushi.v1.JiraSearch
+	202, // 93: nushi.v1.ListJiraIssuesResponse.issues:type_name -> nushi.v1.JiraIssue
+	231, // 94: nushi.v1.GetJiraJqlResponse.fields:type_name -> nushi.v1.JiraJqlField
+	209, // 95: nushi.v1.SuggestJiraJqlResponse.values:type_name -> nushi.v1.JiraOption
+	202, // 96: nushi.v1.GetJiraIssueResponse.issue:type_name -> nushi.v1.JiraIssue
+	236, // 97: nushi.v1.GetJiraIssueResponse.agent_writes:type_name -> nushi.v1.JiraWrite
+	207, // 98: nushi.v1.ListJiraTransitionsResponse.transitions:type_name -> nushi.v1.JiraTransition
+	296, // 99: nushi.v1.TransitionJiraIssueRequest.values:type_name -> nushi.v1.TransitionJiraIssueRequest.ValuesEntry
+	205, // 100: nushi.v1.AddJiraCommentResponse.comment:type_name -> nushi.v1.JiraComment
+	247, // 101: nushi.v1.FindJiraIssuesResponse.issues:type_name -> nushi.v1.FoundJiraIssue
+	202, // 102: nushi.v1.FoundJiraIssue.issue:type_name -> nushi.v1.JiraIssue
+	248, // 103: nushi.v1.GitHubHost.budget:type_name -> nushi.v1.GitHubBucket
+	249, // 104: nushi.v1.ListGitHubHostsResponse.hosts:type_name -> nushi.v1.GitHubHost
+	258, // 105: nushi.v1.ListGitHubReposResponse.repos:type_name -> nushi.v1.GitHubRepo
+	261, // 106: nushi.v1.GitHubItem.ref:type_name -> nushi.v1.GitHubRef
+	262, // 107: nushi.v1.ListGitHubInboxResponse.review:type_name -> nushi.v1.GitHubItem
+	262, // 108: nushi.v1.ListGitHubInboxResponse.mine:type_name -> nushi.v1.GitHubItem
+	262, // 109: nushi.v1.ListGitHubInboxResponse.assigned:type_name -> nushi.v1.GitHubItem
+	265, // 110: nushi.v1.GetGitHubStatesRequest.items:type_name -> nushi.v1.GitHubLink
+	262, // 111: nushi.v1.GetGitHubStatesResponse.items:type_name -> nushi.v1.GitHubItem
+	268, // 112: nushi.v1.GitHubThread.comments:type_name -> nushi.v1.GitHubComment
+	270, // 113: nushi.v1.GitHubCheck.annotations:type_name -> nushi.v1.GitHubAnnotation
+	262, // 114: nushi.v1.GitHubPull.item:type_name -> nushi.v1.GitHubItem
+	272, // 115: nushi.v1.GitHubPull.reviewers:type_name -> nushi.v1.GitHubReviewer
+	268, // 116: nushi.v1.GitHubPull.conversation:type_name -> nushi.v1.GitHubComment
+	269, // 117: nushi.v1.GitHubPull.threads:type_name -> nushi.v1.GitHubThread
+	271, // 118: nushi.v1.GitHubPull.checks:type_name -> nushi.v1.GitHubCheck
+	261, // 119: nushi.v1.GetGitHubPullRequest.ref:type_name -> nushi.v1.GitHubRef
+	273, // 120: nushi.v1.GetGitHubPullResponse.pull:type_name -> nushi.v1.GitHubPull
+	262, // 121: nushi.v1.GitHubIssue.item:type_name -> nushi.v1.GitHubItem
+	268, // 122: nushi.v1.GitHubIssue.conversation:type_name -> nushi.v1.GitHubComment
+	261, // 123: nushi.v1.GetGitHubIssueRequest.ref:type_name -> nushi.v1.GitHubRef
+	276, // 124: nushi.v1.GetGitHubIssueResponse.issue:type_name -> nushi.v1.GitHubIssue
+	261, // 125: nushi.v1.GetGitHubFilesRequest.ref:type_name -> nushi.v1.GitHubRef
 	130, // 126: nushi.v1.GetGitHubFilesResponse.files:type_name -> nushi.v1.FileChange
-	259, // 127: nushi.v1.GetGitHubJobLogRequest.ref:type_name -> nushi.v1.GitHubRef
-	266, // 128: nushi.v1.ReplyGitHubThreadResponse.comment:type_name -> nushi.v1.GitHubComment
-	266, // 129: nushi.v1.AddGitHubCommentResponse.comment:type_name -> nushi.v1.GitHubComment
-	287, // 130: nushi.v1.SubmitGitHubReviewRequest.drafts:type_name -> nushi.v1.GitHubDraft
-	259, // 131: nushi.v1.GetGitHubPromptRequest.ref:type_name -> nushi.v1.GitHubRef
+	261, // 127: nushi.v1.GetGitHubJobLogRequest.ref:type_name -> nushi.v1.GitHubRef
+	268, // 128: nushi.v1.ReplyGitHubThreadResponse.comment:type_name -> nushi.v1.GitHubComment
+	268, // 129: nushi.v1.AddGitHubCommentResponse.comment:type_name -> nushi.v1.GitHubComment
+	289, // 130: nushi.v1.SubmitGitHubReviewRequest.drafts:type_name -> nushi.v1.GitHubDraft
+	261, // 131: nushi.v1.GetGitHubPromptRequest.ref:type_name -> nushi.v1.GitHubRef
 	2,   // 132: nushi.v1.NushiService.Ping:input_type -> nushi.v1.PingRequest
 	4,   // 133: nushi.v1.NushiService.ListChats:input_type -> nushi.v1.ListChatsRequest
 	12,  // 134: nushi.v1.NushiService.GetChat:input_type -> nushi.v1.GetChatRequest
@@ -19892,150 +19980,152 @@ var file_nushi_v1_nushi_proto_depIdxs = []int32{
 	189, // 201: nushi.v1.NushiService.SetPushSubscription:input_type -> nushi.v1.SetPushSubscriptionRequest
 	191, // 202: nushi.v1.NushiService.SetDeviceView:input_type -> nushi.v1.SetDeviceViewRequest
 	193, // 203: nushi.v1.NushiService.SendTestPush:input_type -> nushi.v1.SendTestPushRequest
-	195, // 204: nushi.v1.NushiService.Log:input_type -> nushi.v1.LogRequest
-	209, // 205: nushi.v1.NushiService.ListJiraSites:input_type -> nushi.v1.ListJiraSitesRequest
-	211, // 206: nushi.v1.NushiService.AddJiraSite:input_type -> nushi.v1.AddJiraSiteRequest
-	213, // 207: nushi.v1.NushiService.RemoveJiraSite:input_type -> nushi.v1.RemoveJiraSiteRequest
-	215, // 208: nushi.v1.NushiService.CheckJiraSite:input_type -> nushi.v1.CheckJiraSiteRequest
-	217, // 209: nushi.v1.NushiService.AllowJiraToken:input_type -> nushi.v1.AllowJiraTokenRequest
-	219, // 210: nushi.v1.NushiService.ListJiraBoards:input_type -> nushi.v1.ListJiraBoardsRequest
-	221, // 211: nushi.v1.NushiService.SetJiraBoard:input_type -> nushi.v1.SetJiraBoardRequest
-	223, // 212: nushi.v1.NushiService.SetJiraSearches:input_type -> nushi.v1.SetJiraSearchesRequest
-	225, // 213: nushi.v1.NushiService.ListJiraIssues:input_type -> nushi.v1.ListJiraIssuesRequest
-	227, // 214: nushi.v1.NushiService.GetJiraJql:input_type -> nushi.v1.GetJiraJqlRequest
-	230, // 215: nushi.v1.NushiService.SuggestJiraJql:input_type -> nushi.v1.SuggestJiraJqlRequest
-	232, // 216: nushi.v1.NushiService.GetJiraIssue:input_type -> nushi.v1.GetJiraIssueRequest
-	235, // 217: nushi.v1.NushiService.ListJiraTransitions:input_type -> nushi.v1.ListJiraTransitionsRequest
-	237, // 218: nushi.v1.NushiService.TransitionJiraIssue:input_type -> nushi.v1.TransitionJiraIssueRequest
-	239, // 219: nushi.v1.NushiService.AddJiraComment:input_type -> nushi.v1.AddJiraCommentRequest
-	243, // 220: nushi.v1.NushiService.FindJiraIssues:input_type -> nushi.v1.FindJiraIssuesRequest
-	241, // 221: nushi.v1.NushiService.GetJiraAttachment:input_type -> nushi.v1.GetJiraAttachmentRequest
-	248, // 222: nushi.v1.NushiService.ListGitHubHosts:input_type -> nushi.v1.ListGitHubHostsRequest
-	250, // 223: nushi.v1.NushiService.AddGitHubToken:input_type -> nushi.v1.AddGitHubTokenRequest
-	252, // 224: nushi.v1.NushiService.RemoveGitHubToken:input_type -> nushi.v1.RemoveGitHubTokenRequest
-	254, // 225: nushi.v1.NushiService.AllowGitHubToken:input_type -> nushi.v1.AllowGitHubTokenRequest
-	257, // 226: nushi.v1.NushiService.ListGitHubRepos:input_type -> nushi.v1.ListGitHubReposRequest
-	261, // 227: nushi.v1.NushiService.ListGitHubInbox:input_type -> nushi.v1.ListGitHubInboxRequest
-	264, // 228: nushi.v1.NushiService.GetGitHubStates:input_type -> nushi.v1.GetGitHubStatesRequest
-	272, // 229: nushi.v1.NushiService.GetGitHubPull:input_type -> nushi.v1.GetGitHubPullRequest
-	275, // 230: nushi.v1.NushiService.GetGitHubIssue:input_type -> nushi.v1.GetGitHubIssueRequest
-	277, // 231: nushi.v1.NushiService.GetGitHubFiles:input_type -> nushi.v1.GetGitHubFilesRequest
-	279, // 232: nushi.v1.NushiService.GetGitHubJobLog:input_type -> nushi.v1.GetGitHubJobLogRequest
-	290, // 233: nushi.v1.NushiService.GetGitHubPrompt:input_type -> nushi.v1.GetGitHubPromptRequest
-	281, // 234: nushi.v1.NushiService.ReplyGitHubThread:input_type -> nushi.v1.ReplyGitHubThreadRequest
-	283, // 235: nushi.v1.NushiService.ResolveGitHubThread:input_type -> nushi.v1.ResolveGitHubThreadRequest
-	285, // 236: nushi.v1.NushiService.AddGitHubComment:input_type -> nushi.v1.AddGitHubCommentRequest
-	288, // 237: nushi.v1.NushiService.SubmitGitHubReview:input_type -> nushi.v1.SubmitGitHubReviewRequest
-	134, // 238: nushi.v1.NushiService.Events:input_type -> nushi.v1.EventsRequest
-	3,   // 239: nushi.v1.NushiService.Ping:output_type -> nushi.v1.PingResponse
-	5,   // 240: nushi.v1.NushiService.ListChats:output_type -> nushi.v1.ListChatsResponse
-	13,  // 241: nushi.v1.NushiService.GetChat:output_type -> nushi.v1.GetChatResponse
-	34,  // 242: nushi.v1.NushiService.StartChat:output_type -> nushi.v1.StartChatResponse
-	18,  // 243: nushi.v1.NushiService.ListAgents:output_type -> nushi.v1.ListAgentsResponse
-	23,  // 244: nushi.v1.NushiService.SetUpAgent:output_type -> nushi.v1.SetUpAgentResponse
-	25,  // 245: nushi.v1.NushiService.RemoveAgent:output_type -> nushi.v1.RemoveAgentResponse
-	28,  // 246: nushi.v1.NushiService.ListAgentSessions:output_type -> nushi.v1.ListAgentSessionsResponse
-	31,  // 247: nushi.v1.NushiService.OpenAgentSession:output_type -> nushi.v1.OpenAgentSessionResponse
-	33,  // 248: nushi.v1.NushiService.MoveChat:output_type -> nushi.v1.MoveChatResponse
-	45,  // 249: nushi.v1.NushiService.SendPrompt:output_type -> nushi.v1.SendPromptResponse
-	39,  // 250: nushi.v1.NushiService.RewindChat:output_type -> nushi.v1.RewindChatResponse
-	41,  // 251: nushi.v1.NushiService.Unqueue:output_type -> nushi.v1.UnqueueResponse
-	47,  // 252: nushi.v1.NushiService.CancelTurn:output_type -> nushi.v1.CancelTurnResponse
-	49,  // 253: nushi.v1.NushiService.ForkChat:output_type -> nushi.v1.ForkChatResponse
-	51,  // 254: nushi.v1.NushiService.CloseSideChat:output_type -> nushi.v1.CloseSideChatResponse
-	53,  // 255: nushi.v1.NushiService.RenameChat:output_type -> nushi.v1.RenameChatResponse
-	55,  // 256: nushi.v1.NushiService.RenameBranch:output_type -> nushi.v1.RenameBranchResponse
-	57,  // 257: nushi.v1.NushiService.ArchiveChat:output_type -> nushi.v1.ArchiveChatResponse
-	59,  // 258: nushi.v1.NushiService.SleepChat:output_type -> nushi.v1.SleepChatResponse
-	61,  // 259: nushi.v1.NushiService.ReopenChat:output_type -> nushi.v1.ReopenChatResponse
-	63,  // 260: nushi.v1.NushiService.GetMemory:output_type -> nushi.v1.GetMemoryResponse
-	71,  // 261: nushi.v1.NushiService.GetSettings:output_type -> nushi.v1.GetSettingsResponse
-	73,  // 262: nushi.v1.NushiService.SetSettings:output_type -> nushi.v1.SetSettingsResponse
-	67,  // 263: nushi.v1.NushiService.ListTranscripts:output_type -> nushi.v1.ListTranscriptsResponse
-	70,  // 264: nushi.v1.NushiService.ClearTranscripts:output_type -> nushi.v1.ClearTranscriptsResponse
-	75,  // 265: nushi.v1.NushiService.PlanDeleteChat:output_type -> nushi.v1.PlanDeleteChatResponse
-	81,  // 266: nushi.v1.NushiService.DeleteChat:output_type -> nushi.v1.DeleteChatResponse
-	9,   // 267: nushi.v1.NushiService.DismissRemovedChats:output_type -> nushi.v1.DismissRemovedChatsResponse
-	83,  // 268: nushi.v1.NushiService.AnswerPermission:output_type -> nushi.v1.AnswerPermissionResponse
-	86,  // 269: nushi.v1.NushiService.AnswerQuestion:output_type -> nushi.v1.AnswerQuestionResponse
-	88,  // 270: nushi.v1.NushiService.SetConfigOption:output_type -> nushi.v1.SetConfigOptionResponse
-	129, // 271: nushi.v1.NushiService.GetDiff:output_type -> nushi.v1.GetDiffResponse
-	128, // 272: nushi.v1.NushiService.GetFile:output_type -> nushi.v1.GetFileResponse
-	132, // 273: nushi.v1.NushiService.ListCommits:output_type -> nushi.v1.ListCommitsResponse
-	125, // 274: nushi.v1.NushiService.GetFolderStatus:output_type -> nushi.v1.GetFolderStatusResponse
-	44,  // 275: nushi.v1.NushiService.ListFiles:output_type -> nushi.v1.ListFilesResponse
-	90,  // 276: nushi.v1.NushiService.GetContextUsage:output_type -> nushi.v1.GetContextUsageResponse
-	92,  // 277: nushi.v1.NushiService.ListMcpServers:output_type -> nushi.v1.ListMcpServersResponse
-	95,  // 278: nushi.v1.NushiService.AddMcpServer:output_type -> nushi.v1.AddMcpServerResponse
-	97,  // 279: nushi.v1.NushiService.EditMcpServer:output_type -> nushi.v1.EditMcpServerResponse
-	99,  // 280: nushi.v1.NushiService.RemoveMcpServer:output_type -> nushi.v1.RemoveMcpServerResponse
-	101, // 281: nushi.v1.NushiService.SetMcpServerOn:output_type -> nushi.v1.SetMcpServerOnResponse
-	103, // 282: nushi.v1.NushiService.LoginMcpServer:output_type -> nushi.v1.LoginMcpServerResponse
-	105, // 283: nushi.v1.NushiService.LogoutMcpServer:output_type -> nushi.v1.LogoutMcpServerResponse
-	107, // 284: nushi.v1.NushiService.ListSkills:output_type -> nushi.v1.ListSkillsResponse
-	112, // 285: nushi.v1.NushiService.SetSkillOn:output_type -> nushi.v1.SetSkillOnResponse
-	114, // 286: nushi.v1.NushiService.SetPluginOn:output_type -> nushi.v1.SetPluginOnResponse
-	116, // 287: nushi.v1.NushiService.UninstallPlugin:output_type -> nushi.v1.UninstallPluginResponse
-	118, // 288: nushi.v1.NushiService.TrashSkill:output_type -> nushi.v1.TrashSkillResponse
-	120, // 289: nushi.v1.NushiService.LinkSkill:output_type -> nushi.v1.LinkSkillResponse
-	122, // 290: nushi.v1.NushiService.ReloadChat:output_type -> nushi.v1.ReloadChatResponse
-	152, // 291: nushi.v1.NushiService.OpenTerminal:output_type -> nushi.v1.OpenTerminalResponse
-	154, // 292: nushi.v1.NushiService.ListTerminals:output_type -> nushi.v1.ListTerminalsResponse
-	156, // 293: nushi.v1.NushiService.AttachTerminal:output_type -> nushi.v1.AttachTerminalResponse
-	158, // 294: nushi.v1.NushiService.WriteTerminal:output_type -> nushi.v1.WriteTerminalResponse
-	160, // 295: nushi.v1.NushiService.ResizeTerminal:output_type -> nushi.v1.ResizeTerminalResponse
-	162, // 296: nushi.v1.NushiService.RenameTerminal:output_type -> nushi.v1.RenameTerminalResponse
-	164, // 297: nushi.v1.NushiService.ArrangeTerminals:output_type -> nushi.v1.ArrangeTerminalsResponse
-	166, // 298: nushi.v1.NushiService.RestartTerminal:output_type -> nushi.v1.RestartTerminalResponse
-	168, // 299: nushi.v1.NushiService.CloseTerminal:output_type -> nushi.v1.CloseTerminalResponse
-	170, // 300: nushi.v1.NushiService.CheckFolder:output_type -> nushi.v1.CheckFolderResponse
-	173, // 301: nushi.v1.NushiService.TrustFolder:output_type -> nushi.v1.TrustFolderResponse
-	178, // 302: nushi.v1.NushiService.GetRemote:output_type -> nushi.v1.GetRemoteResponse
-	180, // 303: nushi.v1.NushiService.SetRemote:output_type -> nushi.v1.SetRemoteResponse
-	182, // 304: nushi.v1.NushiService.StartPairing:output_type -> nushi.v1.StartPairingResponse
-	184, // 305: nushi.v1.NushiService.ConfirmPairing:output_type -> nushi.v1.ConfirmPairingResponse
-	186, // 306: nushi.v1.NushiService.RevokeDevice:output_type -> nushi.v1.RevokeDeviceResponse
-	188, // 307: nushi.v1.NushiService.GetPushKey:output_type -> nushi.v1.GetPushKeyResponse
-	190, // 308: nushi.v1.NushiService.SetPushSubscription:output_type -> nushi.v1.SetPushSubscriptionResponse
-	192, // 309: nushi.v1.NushiService.SetDeviceView:output_type -> nushi.v1.SetDeviceViewResponse
-	194, // 310: nushi.v1.NushiService.SendTestPush:output_type -> nushi.v1.SendTestPushResponse
-	196, // 311: nushi.v1.NushiService.Log:output_type -> nushi.v1.LogResponse
-	210, // 312: nushi.v1.NushiService.ListJiraSites:output_type -> nushi.v1.ListJiraSitesResponse
-	212, // 313: nushi.v1.NushiService.AddJiraSite:output_type -> nushi.v1.AddJiraSiteResponse
-	214, // 314: nushi.v1.NushiService.RemoveJiraSite:output_type -> nushi.v1.RemoveJiraSiteResponse
-	216, // 315: nushi.v1.NushiService.CheckJiraSite:output_type -> nushi.v1.CheckJiraSiteResponse
-	218, // 316: nushi.v1.NushiService.AllowJiraToken:output_type -> nushi.v1.AllowJiraTokenResponse
-	220, // 317: nushi.v1.NushiService.ListJiraBoards:output_type -> nushi.v1.ListJiraBoardsResponse
-	222, // 318: nushi.v1.NushiService.SetJiraBoard:output_type -> nushi.v1.SetJiraBoardResponse
-	224, // 319: nushi.v1.NushiService.SetJiraSearches:output_type -> nushi.v1.SetJiraSearchesResponse
-	226, // 320: nushi.v1.NushiService.ListJiraIssues:output_type -> nushi.v1.ListJiraIssuesResponse
-	228, // 321: nushi.v1.NushiService.GetJiraJql:output_type -> nushi.v1.GetJiraJqlResponse
-	231, // 322: nushi.v1.NushiService.SuggestJiraJql:output_type -> nushi.v1.SuggestJiraJqlResponse
-	233, // 323: nushi.v1.NushiService.GetJiraIssue:output_type -> nushi.v1.GetJiraIssueResponse
-	236, // 324: nushi.v1.NushiService.ListJiraTransitions:output_type -> nushi.v1.ListJiraTransitionsResponse
-	238, // 325: nushi.v1.NushiService.TransitionJiraIssue:output_type -> nushi.v1.TransitionJiraIssueResponse
-	240, // 326: nushi.v1.NushiService.AddJiraComment:output_type -> nushi.v1.AddJiraCommentResponse
-	244, // 327: nushi.v1.NushiService.FindJiraIssues:output_type -> nushi.v1.FindJiraIssuesResponse
-	242, // 328: nushi.v1.NushiService.GetJiraAttachment:output_type -> nushi.v1.GetJiraAttachmentResponse
-	249, // 329: nushi.v1.NushiService.ListGitHubHosts:output_type -> nushi.v1.ListGitHubHostsResponse
-	251, // 330: nushi.v1.NushiService.AddGitHubToken:output_type -> nushi.v1.AddGitHubTokenResponse
-	253, // 331: nushi.v1.NushiService.RemoveGitHubToken:output_type -> nushi.v1.RemoveGitHubTokenResponse
-	255, // 332: nushi.v1.NushiService.AllowGitHubToken:output_type -> nushi.v1.AllowGitHubTokenResponse
-	258, // 333: nushi.v1.NushiService.ListGitHubRepos:output_type -> nushi.v1.ListGitHubReposResponse
-	262, // 334: nushi.v1.NushiService.ListGitHubInbox:output_type -> nushi.v1.ListGitHubInboxResponse
-	265, // 335: nushi.v1.NushiService.GetGitHubStates:output_type -> nushi.v1.GetGitHubStatesResponse
-	273, // 336: nushi.v1.NushiService.GetGitHubPull:output_type -> nushi.v1.GetGitHubPullResponse
-	276, // 337: nushi.v1.NushiService.GetGitHubIssue:output_type -> nushi.v1.GetGitHubIssueResponse
-	278, // 338: nushi.v1.NushiService.GetGitHubFiles:output_type -> nushi.v1.GetGitHubFilesResponse
-	280, // 339: nushi.v1.NushiService.GetGitHubJobLog:output_type -> nushi.v1.GetGitHubJobLogResponse
-	291, // 340: nushi.v1.NushiService.GetGitHubPrompt:output_type -> nushi.v1.GetGitHubPromptResponse
-	282, // 341: nushi.v1.NushiService.ReplyGitHubThread:output_type -> nushi.v1.ReplyGitHubThreadResponse
-	284, // 342: nushi.v1.NushiService.ResolveGitHubThread:output_type -> nushi.v1.ResolveGitHubThreadResponse
-	286, // 343: nushi.v1.NushiService.AddGitHubComment:output_type -> nushi.v1.AddGitHubCommentResponse
-	289, // 344: nushi.v1.NushiService.SubmitGitHubReview:output_type -> nushi.v1.SubmitGitHubReviewResponse
-	135, // 345: nushi.v1.NushiService.Events:output_type -> nushi.v1.EventsResponse
-	239, // [239:346] is the sub-list for method output_type
-	132, // [132:239] is the sub-list for method input_type
+	195, // 204: nushi.v1.NushiService.UnpairThisDevice:input_type -> nushi.v1.UnpairThisDeviceRequest
+	197, // 205: nushi.v1.NushiService.Log:input_type -> nushi.v1.LogRequest
+	211, // 206: nushi.v1.NushiService.ListJiraSites:input_type -> nushi.v1.ListJiraSitesRequest
+	213, // 207: nushi.v1.NushiService.AddJiraSite:input_type -> nushi.v1.AddJiraSiteRequest
+	215, // 208: nushi.v1.NushiService.RemoveJiraSite:input_type -> nushi.v1.RemoveJiraSiteRequest
+	217, // 209: nushi.v1.NushiService.CheckJiraSite:input_type -> nushi.v1.CheckJiraSiteRequest
+	219, // 210: nushi.v1.NushiService.AllowJiraToken:input_type -> nushi.v1.AllowJiraTokenRequest
+	221, // 211: nushi.v1.NushiService.ListJiraBoards:input_type -> nushi.v1.ListJiraBoardsRequest
+	223, // 212: nushi.v1.NushiService.SetJiraBoard:input_type -> nushi.v1.SetJiraBoardRequest
+	225, // 213: nushi.v1.NushiService.SetJiraSearches:input_type -> nushi.v1.SetJiraSearchesRequest
+	227, // 214: nushi.v1.NushiService.ListJiraIssues:input_type -> nushi.v1.ListJiraIssuesRequest
+	229, // 215: nushi.v1.NushiService.GetJiraJql:input_type -> nushi.v1.GetJiraJqlRequest
+	232, // 216: nushi.v1.NushiService.SuggestJiraJql:input_type -> nushi.v1.SuggestJiraJqlRequest
+	234, // 217: nushi.v1.NushiService.GetJiraIssue:input_type -> nushi.v1.GetJiraIssueRequest
+	237, // 218: nushi.v1.NushiService.ListJiraTransitions:input_type -> nushi.v1.ListJiraTransitionsRequest
+	239, // 219: nushi.v1.NushiService.TransitionJiraIssue:input_type -> nushi.v1.TransitionJiraIssueRequest
+	241, // 220: nushi.v1.NushiService.AddJiraComment:input_type -> nushi.v1.AddJiraCommentRequest
+	245, // 221: nushi.v1.NushiService.FindJiraIssues:input_type -> nushi.v1.FindJiraIssuesRequest
+	243, // 222: nushi.v1.NushiService.GetJiraAttachment:input_type -> nushi.v1.GetJiraAttachmentRequest
+	250, // 223: nushi.v1.NushiService.ListGitHubHosts:input_type -> nushi.v1.ListGitHubHostsRequest
+	252, // 224: nushi.v1.NushiService.AddGitHubToken:input_type -> nushi.v1.AddGitHubTokenRequest
+	254, // 225: nushi.v1.NushiService.RemoveGitHubToken:input_type -> nushi.v1.RemoveGitHubTokenRequest
+	256, // 226: nushi.v1.NushiService.AllowGitHubToken:input_type -> nushi.v1.AllowGitHubTokenRequest
+	259, // 227: nushi.v1.NushiService.ListGitHubRepos:input_type -> nushi.v1.ListGitHubReposRequest
+	263, // 228: nushi.v1.NushiService.ListGitHubInbox:input_type -> nushi.v1.ListGitHubInboxRequest
+	266, // 229: nushi.v1.NushiService.GetGitHubStates:input_type -> nushi.v1.GetGitHubStatesRequest
+	274, // 230: nushi.v1.NushiService.GetGitHubPull:input_type -> nushi.v1.GetGitHubPullRequest
+	277, // 231: nushi.v1.NushiService.GetGitHubIssue:input_type -> nushi.v1.GetGitHubIssueRequest
+	279, // 232: nushi.v1.NushiService.GetGitHubFiles:input_type -> nushi.v1.GetGitHubFilesRequest
+	281, // 233: nushi.v1.NushiService.GetGitHubJobLog:input_type -> nushi.v1.GetGitHubJobLogRequest
+	292, // 234: nushi.v1.NushiService.GetGitHubPrompt:input_type -> nushi.v1.GetGitHubPromptRequest
+	283, // 235: nushi.v1.NushiService.ReplyGitHubThread:input_type -> nushi.v1.ReplyGitHubThreadRequest
+	285, // 236: nushi.v1.NushiService.ResolveGitHubThread:input_type -> nushi.v1.ResolveGitHubThreadRequest
+	287, // 237: nushi.v1.NushiService.AddGitHubComment:input_type -> nushi.v1.AddGitHubCommentRequest
+	290, // 238: nushi.v1.NushiService.SubmitGitHubReview:input_type -> nushi.v1.SubmitGitHubReviewRequest
+	134, // 239: nushi.v1.NushiService.Events:input_type -> nushi.v1.EventsRequest
+	3,   // 240: nushi.v1.NushiService.Ping:output_type -> nushi.v1.PingResponse
+	5,   // 241: nushi.v1.NushiService.ListChats:output_type -> nushi.v1.ListChatsResponse
+	13,  // 242: nushi.v1.NushiService.GetChat:output_type -> nushi.v1.GetChatResponse
+	34,  // 243: nushi.v1.NushiService.StartChat:output_type -> nushi.v1.StartChatResponse
+	18,  // 244: nushi.v1.NushiService.ListAgents:output_type -> nushi.v1.ListAgentsResponse
+	23,  // 245: nushi.v1.NushiService.SetUpAgent:output_type -> nushi.v1.SetUpAgentResponse
+	25,  // 246: nushi.v1.NushiService.RemoveAgent:output_type -> nushi.v1.RemoveAgentResponse
+	28,  // 247: nushi.v1.NushiService.ListAgentSessions:output_type -> nushi.v1.ListAgentSessionsResponse
+	31,  // 248: nushi.v1.NushiService.OpenAgentSession:output_type -> nushi.v1.OpenAgentSessionResponse
+	33,  // 249: nushi.v1.NushiService.MoveChat:output_type -> nushi.v1.MoveChatResponse
+	45,  // 250: nushi.v1.NushiService.SendPrompt:output_type -> nushi.v1.SendPromptResponse
+	39,  // 251: nushi.v1.NushiService.RewindChat:output_type -> nushi.v1.RewindChatResponse
+	41,  // 252: nushi.v1.NushiService.Unqueue:output_type -> nushi.v1.UnqueueResponse
+	47,  // 253: nushi.v1.NushiService.CancelTurn:output_type -> nushi.v1.CancelTurnResponse
+	49,  // 254: nushi.v1.NushiService.ForkChat:output_type -> nushi.v1.ForkChatResponse
+	51,  // 255: nushi.v1.NushiService.CloseSideChat:output_type -> nushi.v1.CloseSideChatResponse
+	53,  // 256: nushi.v1.NushiService.RenameChat:output_type -> nushi.v1.RenameChatResponse
+	55,  // 257: nushi.v1.NushiService.RenameBranch:output_type -> nushi.v1.RenameBranchResponse
+	57,  // 258: nushi.v1.NushiService.ArchiveChat:output_type -> nushi.v1.ArchiveChatResponse
+	59,  // 259: nushi.v1.NushiService.SleepChat:output_type -> nushi.v1.SleepChatResponse
+	61,  // 260: nushi.v1.NushiService.ReopenChat:output_type -> nushi.v1.ReopenChatResponse
+	63,  // 261: nushi.v1.NushiService.GetMemory:output_type -> nushi.v1.GetMemoryResponse
+	71,  // 262: nushi.v1.NushiService.GetSettings:output_type -> nushi.v1.GetSettingsResponse
+	73,  // 263: nushi.v1.NushiService.SetSettings:output_type -> nushi.v1.SetSettingsResponse
+	67,  // 264: nushi.v1.NushiService.ListTranscripts:output_type -> nushi.v1.ListTranscriptsResponse
+	70,  // 265: nushi.v1.NushiService.ClearTranscripts:output_type -> nushi.v1.ClearTranscriptsResponse
+	75,  // 266: nushi.v1.NushiService.PlanDeleteChat:output_type -> nushi.v1.PlanDeleteChatResponse
+	81,  // 267: nushi.v1.NushiService.DeleteChat:output_type -> nushi.v1.DeleteChatResponse
+	9,   // 268: nushi.v1.NushiService.DismissRemovedChats:output_type -> nushi.v1.DismissRemovedChatsResponse
+	83,  // 269: nushi.v1.NushiService.AnswerPermission:output_type -> nushi.v1.AnswerPermissionResponse
+	86,  // 270: nushi.v1.NushiService.AnswerQuestion:output_type -> nushi.v1.AnswerQuestionResponse
+	88,  // 271: nushi.v1.NushiService.SetConfigOption:output_type -> nushi.v1.SetConfigOptionResponse
+	129, // 272: nushi.v1.NushiService.GetDiff:output_type -> nushi.v1.GetDiffResponse
+	128, // 273: nushi.v1.NushiService.GetFile:output_type -> nushi.v1.GetFileResponse
+	132, // 274: nushi.v1.NushiService.ListCommits:output_type -> nushi.v1.ListCommitsResponse
+	125, // 275: nushi.v1.NushiService.GetFolderStatus:output_type -> nushi.v1.GetFolderStatusResponse
+	44,  // 276: nushi.v1.NushiService.ListFiles:output_type -> nushi.v1.ListFilesResponse
+	90,  // 277: nushi.v1.NushiService.GetContextUsage:output_type -> nushi.v1.GetContextUsageResponse
+	92,  // 278: nushi.v1.NushiService.ListMcpServers:output_type -> nushi.v1.ListMcpServersResponse
+	95,  // 279: nushi.v1.NushiService.AddMcpServer:output_type -> nushi.v1.AddMcpServerResponse
+	97,  // 280: nushi.v1.NushiService.EditMcpServer:output_type -> nushi.v1.EditMcpServerResponse
+	99,  // 281: nushi.v1.NushiService.RemoveMcpServer:output_type -> nushi.v1.RemoveMcpServerResponse
+	101, // 282: nushi.v1.NushiService.SetMcpServerOn:output_type -> nushi.v1.SetMcpServerOnResponse
+	103, // 283: nushi.v1.NushiService.LoginMcpServer:output_type -> nushi.v1.LoginMcpServerResponse
+	105, // 284: nushi.v1.NushiService.LogoutMcpServer:output_type -> nushi.v1.LogoutMcpServerResponse
+	107, // 285: nushi.v1.NushiService.ListSkills:output_type -> nushi.v1.ListSkillsResponse
+	112, // 286: nushi.v1.NushiService.SetSkillOn:output_type -> nushi.v1.SetSkillOnResponse
+	114, // 287: nushi.v1.NushiService.SetPluginOn:output_type -> nushi.v1.SetPluginOnResponse
+	116, // 288: nushi.v1.NushiService.UninstallPlugin:output_type -> nushi.v1.UninstallPluginResponse
+	118, // 289: nushi.v1.NushiService.TrashSkill:output_type -> nushi.v1.TrashSkillResponse
+	120, // 290: nushi.v1.NushiService.LinkSkill:output_type -> nushi.v1.LinkSkillResponse
+	122, // 291: nushi.v1.NushiService.ReloadChat:output_type -> nushi.v1.ReloadChatResponse
+	152, // 292: nushi.v1.NushiService.OpenTerminal:output_type -> nushi.v1.OpenTerminalResponse
+	154, // 293: nushi.v1.NushiService.ListTerminals:output_type -> nushi.v1.ListTerminalsResponse
+	156, // 294: nushi.v1.NushiService.AttachTerminal:output_type -> nushi.v1.AttachTerminalResponse
+	158, // 295: nushi.v1.NushiService.WriteTerminal:output_type -> nushi.v1.WriteTerminalResponse
+	160, // 296: nushi.v1.NushiService.ResizeTerminal:output_type -> nushi.v1.ResizeTerminalResponse
+	162, // 297: nushi.v1.NushiService.RenameTerminal:output_type -> nushi.v1.RenameTerminalResponse
+	164, // 298: nushi.v1.NushiService.ArrangeTerminals:output_type -> nushi.v1.ArrangeTerminalsResponse
+	166, // 299: nushi.v1.NushiService.RestartTerminal:output_type -> nushi.v1.RestartTerminalResponse
+	168, // 300: nushi.v1.NushiService.CloseTerminal:output_type -> nushi.v1.CloseTerminalResponse
+	170, // 301: nushi.v1.NushiService.CheckFolder:output_type -> nushi.v1.CheckFolderResponse
+	173, // 302: nushi.v1.NushiService.TrustFolder:output_type -> nushi.v1.TrustFolderResponse
+	178, // 303: nushi.v1.NushiService.GetRemote:output_type -> nushi.v1.GetRemoteResponse
+	180, // 304: nushi.v1.NushiService.SetRemote:output_type -> nushi.v1.SetRemoteResponse
+	182, // 305: nushi.v1.NushiService.StartPairing:output_type -> nushi.v1.StartPairingResponse
+	184, // 306: nushi.v1.NushiService.ConfirmPairing:output_type -> nushi.v1.ConfirmPairingResponse
+	186, // 307: nushi.v1.NushiService.RevokeDevice:output_type -> nushi.v1.RevokeDeviceResponse
+	188, // 308: nushi.v1.NushiService.GetPushKey:output_type -> nushi.v1.GetPushKeyResponse
+	190, // 309: nushi.v1.NushiService.SetPushSubscription:output_type -> nushi.v1.SetPushSubscriptionResponse
+	192, // 310: nushi.v1.NushiService.SetDeviceView:output_type -> nushi.v1.SetDeviceViewResponse
+	194, // 311: nushi.v1.NushiService.SendTestPush:output_type -> nushi.v1.SendTestPushResponse
+	196, // 312: nushi.v1.NushiService.UnpairThisDevice:output_type -> nushi.v1.UnpairThisDeviceResponse
+	198, // 313: nushi.v1.NushiService.Log:output_type -> nushi.v1.LogResponse
+	212, // 314: nushi.v1.NushiService.ListJiraSites:output_type -> nushi.v1.ListJiraSitesResponse
+	214, // 315: nushi.v1.NushiService.AddJiraSite:output_type -> nushi.v1.AddJiraSiteResponse
+	216, // 316: nushi.v1.NushiService.RemoveJiraSite:output_type -> nushi.v1.RemoveJiraSiteResponse
+	218, // 317: nushi.v1.NushiService.CheckJiraSite:output_type -> nushi.v1.CheckJiraSiteResponse
+	220, // 318: nushi.v1.NushiService.AllowJiraToken:output_type -> nushi.v1.AllowJiraTokenResponse
+	222, // 319: nushi.v1.NushiService.ListJiraBoards:output_type -> nushi.v1.ListJiraBoardsResponse
+	224, // 320: nushi.v1.NushiService.SetJiraBoard:output_type -> nushi.v1.SetJiraBoardResponse
+	226, // 321: nushi.v1.NushiService.SetJiraSearches:output_type -> nushi.v1.SetJiraSearchesResponse
+	228, // 322: nushi.v1.NushiService.ListJiraIssues:output_type -> nushi.v1.ListJiraIssuesResponse
+	230, // 323: nushi.v1.NushiService.GetJiraJql:output_type -> nushi.v1.GetJiraJqlResponse
+	233, // 324: nushi.v1.NushiService.SuggestJiraJql:output_type -> nushi.v1.SuggestJiraJqlResponse
+	235, // 325: nushi.v1.NushiService.GetJiraIssue:output_type -> nushi.v1.GetJiraIssueResponse
+	238, // 326: nushi.v1.NushiService.ListJiraTransitions:output_type -> nushi.v1.ListJiraTransitionsResponse
+	240, // 327: nushi.v1.NushiService.TransitionJiraIssue:output_type -> nushi.v1.TransitionJiraIssueResponse
+	242, // 328: nushi.v1.NushiService.AddJiraComment:output_type -> nushi.v1.AddJiraCommentResponse
+	246, // 329: nushi.v1.NushiService.FindJiraIssues:output_type -> nushi.v1.FindJiraIssuesResponse
+	244, // 330: nushi.v1.NushiService.GetJiraAttachment:output_type -> nushi.v1.GetJiraAttachmentResponse
+	251, // 331: nushi.v1.NushiService.ListGitHubHosts:output_type -> nushi.v1.ListGitHubHostsResponse
+	253, // 332: nushi.v1.NushiService.AddGitHubToken:output_type -> nushi.v1.AddGitHubTokenResponse
+	255, // 333: nushi.v1.NushiService.RemoveGitHubToken:output_type -> nushi.v1.RemoveGitHubTokenResponse
+	257, // 334: nushi.v1.NushiService.AllowGitHubToken:output_type -> nushi.v1.AllowGitHubTokenResponse
+	260, // 335: nushi.v1.NushiService.ListGitHubRepos:output_type -> nushi.v1.ListGitHubReposResponse
+	264, // 336: nushi.v1.NushiService.ListGitHubInbox:output_type -> nushi.v1.ListGitHubInboxResponse
+	267, // 337: nushi.v1.NushiService.GetGitHubStates:output_type -> nushi.v1.GetGitHubStatesResponse
+	275, // 338: nushi.v1.NushiService.GetGitHubPull:output_type -> nushi.v1.GetGitHubPullResponse
+	278, // 339: nushi.v1.NushiService.GetGitHubIssue:output_type -> nushi.v1.GetGitHubIssueResponse
+	280, // 340: nushi.v1.NushiService.GetGitHubFiles:output_type -> nushi.v1.GetGitHubFilesResponse
+	282, // 341: nushi.v1.NushiService.GetGitHubJobLog:output_type -> nushi.v1.GetGitHubJobLogResponse
+	293, // 342: nushi.v1.NushiService.GetGitHubPrompt:output_type -> nushi.v1.GetGitHubPromptResponse
+	284, // 343: nushi.v1.NushiService.ReplyGitHubThread:output_type -> nushi.v1.ReplyGitHubThreadResponse
+	286, // 344: nushi.v1.NushiService.ResolveGitHubThread:output_type -> nushi.v1.ResolveGitHubThreadResponse
+	288, // 345: nushi.v1.NushiService.AddGitHubComment:output_type -> nushi.v1.AddGitHubCommentResponse
+	291, // 346: nushi.v1.NushiService.SubmitGitHubReview:output_type -> nushi.v1.SubmitGitHubReviewResponse
+	135, // 347: nushi.v1.NushiService.Events:output_type -> nushi.v1.EventsResponse
+	240, // [240:348] is the sub-list for method output_type
+	132, // [132:240] is the sub-list for method input_type
 	132, // [132:132] is the sub-list for extension type_name
 	132, // [132:132] is the sub-list for extension extendee
 	0,   // [0:132] is the sub-list for field type_name
@@ -20068,7 +20158,7 @@ func file_nushi_v1_nushi_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_nushi_v1_nushi_proto_rawDesc), len(file_nushi_v1_nushi_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   293,
+			NumMessages:   295,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

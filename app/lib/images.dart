@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:file_selector/file_selector.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/theme/theme.dart';
@@ -281,6 +282,8 @@ Widget markdownImage(Uri uri, String? alt) {
     return Text('[image: ${alt ?? uri} (not an image file Nushi reads)]');
   }
   if (uri.scheme == 'http' || uri.scheme == 'https') {
+    // The phone's web app loads nothing from other origins (its CSP).
+    if (kIsWeb) return Text('[image: ${alt ?? uri}]');
     return _RemoteImage(uri, alt);
   }
   return Text('[image: ${alt ?? uri}]');

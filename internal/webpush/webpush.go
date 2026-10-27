@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"slices"
@@ -68,14 +69,22 @@ var (
 	pushSuffixes = []string{".push.apple.com", ".notify.windows.com"}
 )
 
+// MaxEndpoint is the longest endpoint taken (Apple's and Google's are a
+// few hundred bytes).
+const MaxEndpoint = 2048
+
 // Check says whether endpoint is an https URL at a known push service,
-// on the default port.
+// on the default port: a plain host name, no port (not even an empty
+// one), no IP literal or zone.
 func Check(endpoint string) error {
 	u, err := url.Parse(endpoint)
-	if err != nil || u.Scheme != "https" || u.User != nil || u.Port() != "" || u.Opaque != "" {
+	if err != nil || len(endpoint) > MaxEndpoint || u.Scheme != "https" || u.User != nil || u.Opaque != "" {
 		return errors.New("the push endpoint must be an https URL")
 	}
-	host := strings.ToLower(u.Hostname())
+	host := strings.ToLower(u.Host)
+	if strings.ContainsAny(host, "[]:%") || net.ParseIP(host) != nil || u.Hostname() != u.Host {
+		return errors.New("the push endpoint must name a push service")
+	}
 	if slices.Contains(pushHosts, host) {
 		return nil
 	}
@@ -102,8 +111,12 @@ func CheckSubscription(s Subscription) error {
 	return nil
 }
 
+// Padded is the size every payload is padded to, so its length doesn't
+// tell the push service what it says.
+const Padded = 256
+
 // Encrypt encrypts plaintext for s as one aes128gcm record (RFC 8291),
-// with a fresh key pair and salt.
+// with a fresh key pair and salt, padded to Padded bytes.
 func Encrypt(s Subscription, plaintext []byte) ([]byte, error) {
 	as, err := ecdh.P256().GenerateKey(rand.Reader)
 	if err != nil {
@@ -111,13 +124,13 @@ func Encrypt(s Subscription, plaintext []byte) ([]byte, error) {
 	}
 	salt := make([]byte, 16)
 	rand.Read(salt)
-	return encrypt(s, plaintext, as, salt)
+	return encrypt(s, plaintext, max(0, Padded-len(plaintext)-1), as, salt)
 }
 
 // recordSize is the header's rs: the payload is one record, at most this.
 const recordSize = 4096
 
-func encrypt(s Subscription, plaintext []byte, as *ecdh.PrivateKey, salt []byte) ([]byte, error) {
+func encrypt(s Subscription, plaintext []byte, pad int, as *ecdh.PrivateKey, salt []byte) ([]byte, error) {
 	ua, err := ecdh.P256().NewPublicKey(s.P256DH)
 	if err != nil {
 		return nil, err
@@ -125,7 +138,7 @@ func encrypt(s Subscription, plaintext []byte, as *ecdh.PrivateKey, salt []byte)
 	if len(s.Auth) != 16 {
 		return nil, errors.New("webpush: the auth secret is 16 bytes")
 	}
-	if len(plaintext)+1+16 > recordSize {
+	if len(plaintext)+1+pad+16 > recordSize {
 		return nil, errors.New("webpush: the message is too long")
 	}
 	secret, err := as.ECDH(ua)
@@ -165,8 +178,9 @@ func encrypt(s Subscription, plaintext []byte, as *ecdh.PrivateKey, salt []byte)
 	out = binary.BigEndian.AppendUint32(out, recordSize)
 	out = append(out, 65) // the key id's length: an uncompressed P-256 key
 	out = append(out, asPub...)
-	// The last (and only) record ends with the delimiter 2, no padding.
-	return gcm.Seal(out, nonce, append(append([]byte(nil), plaintext...), 2), nil), nil
+	// The last (and only) record: the text, the delimiter 2, then zeros.
+	record := append(append(append([]byte(nil), plaintext...), 2), make([]byte, pad)...)
+	return gcm.Seal(out, nonce, record, nil), nil
 }
 
 // ErrGone says the push service no longer knows the subscription (404 or
@@ -177,7 +191,7 @@ var ErrGone = errors.New("the push subscription has expired or was removed")
 type Sender struct {
 	Keys    Keys
 	Subject string       // a contact for the push service: https:// or mailto:
-	Client  *http.Client // nil: a client of its own, without redirects
+	Client  *http.Client // nil: a client of its own; never one that follows redirects
 }
 
 // Message is one push: its payload, and how the push service treats it.
@@ -188,7 +202,10 @@ type Message struct {
 	TTL     time.Duration // how long the service keeps it for an offline device
 }
 
-var defaultClient = &http.Client{Timeout: 30 * time.Second,
+// Timeout is how long a push service has to answer.
+const Timeout = 30 * time.Second
+
+var defaultClient = &http.Client{Timeout: Timeout,
 	CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 
 // Send encrypts m for s and posts it to s's endpoint, which must be a known
@@ -223,6 +240,10 @@ func (snd *Sender) Send(ctx context.Context, s Subscription, m Message) error {
 	}
 	resp, err := c.Do(req)
 	if err != nil {
+		// Without the URL: the endpoint is the subscription's secret.
+		if ue := (*url.Error)(nil); errors.As(err, &ue) {
+			return fmt.Errorf("the push service didn't answer: %w", ue.Err)
+		}
 		return err
 	}
 	defer resp.Body.Close() //nolint:errcheck // read-only

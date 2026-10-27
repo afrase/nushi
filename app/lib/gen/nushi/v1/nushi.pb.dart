@@ -13864,6 +13864,7 @@ class Remote extends $pb.GeneratedMessage {
     $core.Iterable<Device>? devices,
     Pairing? pairing,
     $core.String? rendezvous,
+    $core.List<$core.int>? key,
   }) {
     final result = Remote._();
     if (on != null) result.on = on;
@@ -13873,6 +13874,7 @@ class Remote extends $pb.GeneratedMessage {
     if (devices != null) result.devices.addAll(devices);
     if (pairing != null) result.pairing = pairing;
     if (rendezvous != null) result.rendezvous = rendezvous;
+    if (key != null) result.key = key;
     return result;
   }
 
@@ -13898,6 +13900,8 @@ class Remote extends $pb.GeneratedMessage {
     ..aOM<Pairing>(6, _omitFieldNames ? '' : 'pairing',
         subBuilder: Pairing.$_createMessage)
     ..aOS(7, _omitFieldNames ? '' : 'rendezvous')
+    ..a<$core.List<$core.int>>(
+        8, _omitFieldNames ? '' : 'key', $pb.PbFieldType.OY)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -13985,6 +13989,17 @@ class Remote extends $pb.GeneratedMessage {
   $core.bool hasRendezvous() => $_has(6);
   @$pb.TagNumber(7)
   void clearRendezvous() => $_clearField(7);
+
+  /// The daemon's Noise public key (32 bytes), so a phone and the Mac can
+  /// show the same fingerprint of it.
+  @$pb.TagNumber(8)
+  $core.List<$core.int> get key => $_getN(7);
+  @$pb.TagNumber(8)
+  set key($core.List<$core.int> value) => $_setBytes(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasKey() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearKey() => $_clearField(8);
 }
 
 class Device extends $pb.GeneratedMessage {
@@ -15170,6 +15185,93 @@ class SendTestPushResponse extends $pb.GeneratedMessage {
       $pb.GeneratedMessage.$_defaultFor<SendTestPushResponse>(
           SendTestPushResponse.$_createMessage);
   static SendTestPushResponse? _defaultInstance;
+}
+
+class UnpairThisDeviceRequest extends $pb.GeneratedMessage {
+  factory UnpairThisDeviceRequest() => UnpairThisDeviceRequest._();
+
+  UnpairThisDeviceRequest._();
+
+  factory UnpairThisDeviceRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UnpairThisDeviceRequest()..mergeFromBuffer(data, registry);
+  factory UnpairThisDeviceRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UnpairThisDeviceRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'UnpairThisDeviceRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: UnpairThisDeviceRequest.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UnpairThisDeviceRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UnpairThisDeviceRequest copyWith(
+          void Function(UnpairThisDeviceRequest) updates) =>
+      super.copyWith((message) => updates(message as UnpairThisDeviceRequest))
+          as UnpairThisDeviceRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use UnpairThisDeviceRequest() / UnpairThisDeviceRequest.new instead')
+  static UnpairThisDeviceRequest create() => UnpairThisDeviceRequest._();
+  static $pb.GeneratedMessage $_createMessage() => UnpairThisDeviceRequest._();
+  @$core.override
+  UnpairThisDeviceRequest createEmptyInstance() => UnpairThisDeviceRequest._();
+  @$core.pragma('dart2js:noInline')
+  static UnpairThisDeviceRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<UnpairThisDeviceRequest>(
+          UnpairThisDeviceRequest.$_createMessage);
+  static UnpairThisDeviceRequest? _defaultInstance;
+}
+
+class UnpairThisDeviceResponse extends $pb.GeneratedMessage {
+  factory UnpairThisDeviceResponse() => UnpairThisDeviceResponse._();
+
+  UnpairThisDeviceResponse._();
+
+  factory UnpairThisDeviceResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UnpairThisDeviceResponse()..mergeFromBuffer(data, registry);
+  factory UnpairThisDeviceResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UnpairThisDeviceResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'UnpairThisDeviceResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: UnpairThisDeviceResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UnpairThisDeviceResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UnpairThisDeviceResponse copyWith(
+          void Function(UnpairThisDeviceResponse) updates) =>
+      super.copyWith((message) => updates(message as UnpairThisDeviceResponse))
+          as UnpairThisDeviceResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use UnpairThisDeviceResponse() / UnpairThisDeviceResponse.new instead')
+  static UnpairThisDeviceResponse create() => UnpairThisDeviceResponse._();
+  static $pb.GeneratedMessage $_createMessage() => UnpairThisDeviceResponse._();
+  @$core.override
+  UnpairThisDeviceResponse createEmptyInstance() =>
+      UnpairThisDeviceResponse._();
+  @$core.pragma('dart2js:noInline')
+  static UnpairThisDeviceResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<UnpairThisDeviceResponse>(
+          UnpairThisDeviceResponse.$_createMessage);
+  static UnpairThisDeviceResponse? _defaultInstance;
 }
 
 class LogRequest extends $pb.GeneratedMessage {
@@ -23938,6 +24040,13 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, SendTestPushRequest request) =>
       _client.invoke<SendTestPushResponse>(
           ctx, 'NushiService', 'SendTestPush', request, SendTestPushResponse());
+
+  /// Unpairs the device that calls (its Forget this Mac), as Revoke would;
+  /// only on a device's channel.
+  $async.Future<UnpairThisDeviceResponse> unpairThisDevice(
+          $pb.ClientContext? ctx, UnpairThisDeviceRequest request) =>
+      _client.invoke<UnpairThisDeviceResponse>(ctx, 'NushiService',
+          'UnpairThisDevice', request, UnpairThisDeviceResponse());
 
   /// Writes a line of the app's into the daemon's log (source=app): its
   /// errors with their stacks, and what helps afterwards.

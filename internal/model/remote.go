@@ -67,6 +67,8 @@ type Remote struct {
 	Pairing *Pairing
 	// Rendezvous is the daemon's id at the relay, where its phones dial.
 	Rendezvous string
+	// Key is the daemon's Noise public key, for its fingerprint.
+	Key []byte
 }
 
 // Pairing is a phone being paired: waiting for it until Expires, then,

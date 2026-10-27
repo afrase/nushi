@@ -24,12 +24,22 @@ final class PairingCode {
 /// browser's storage, and while paired, the [Daemon] it reaches through
 /// the relay.
 class Phone extends ChangeNotifier {
-  new(this.platform, {this.connectTo});
+  new(this.platform, {this.connectTo, this.sameRelay = true});
 
   final PhonePlatform platform;
 
   /// Makes the Daemon for a paired Mac; tests give their own.
   final Daemon Function(connect.Transport transport)? connectTo;
+
+  /// Whether a pairing link must name the relay that serves this page (a
+  /// test's page comes from elsewhere): a link for another relay can't
+  /// work here (the CSP) and would pair in the wrong place.
+  final bool sameRelay;
+
+  /// Whether the page shows, and the timer that keeps telling the daemon
+  /// which chat does (its word lapses, ViewLease in the daemon).
+  bool _visible = true;
+  Timer? _viewing;
 
   /// Whether the stored pairing has been read.
   bool loaded = false;
@@ -59,6 +69,11 @@ class Phone extends ChangeNotifier {
 
   /// Reads the stored pairing and, if there's one, connects.
   Future<void> start() async {
+    platform.onVisible(({required visible}) {
+      _visible = visible;
+      if (visible) unawaited(daemon?.ping());
+      unawaited(view(visible ? daemon?.selectedId : null));
+    });
     try {
       final r = await platform.load();
       if (r != null) {
@@ -69,7 +84,10 @@ class Phone extends ChangeNotifier {
         final relay = Uri.tryParse(r['relay'] as String? ?? '');
         final id = r['daemon'] as String? ?? '';
         if (r['daemonKey'] case final Uint8List dk
-            when relay != null && id.isNotEmpty && _key != null) {
+            when dk.length == 32 &&
+                relay != null &&
+                id.isNotEmpty &&
+                _key != null) {
           paired = rt.PairedDaemon(relay, id, dk);
         }
       }
@@ -87,21 +105,44 @@ class Phone extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _save() => platform.save({
-    'key': _key?.private,
-    'name': name,
-    if (paired case final p?) ...{
-      'relay': p.relay.toString(),
-      'daemon': p.id,
-      'daemonKey': p.key,
-    },
-  });
+  /// Keeps the key and pairing, unless another tab (or an older run) has
+  /// since kept another key: this one's then stale, and writing it would
+  /// bring back a key that was forgotten or replaced.
+  Future<void> _save() async {
+    final kept = (await platform.load())?['key'];
+    final mine = _key?.private;
+    if (kept is Uint8List && (mine == null || !_same(kept, mine))) return;
+    await platform.save({
+      'key': mine,
+      'name': name,
+      if (paired case final p?) ...{
+        'relay': p.relay.toString(),
+        'daemon': p.id,
+        'daemonKey': p.key,
+      },
+    });
+  }
+
+  static bool _same(List<int> a, List<int> b) {
+    if (a.length != b.length) return false;
+    var d = 0;
+    for (var i = 0; i < a.length; i++) {
+      d |= a[i] ^ b[i];
+    }
+    return d == 0;
+  }
 
   /// Pairs with the Mac whose link (or QR code's text) is [link], as
   /// [deviceName]. [pairing] shows the code meanwhile; it throws when the
   /// Mac refuses or doesn't answer.
   Future<void> pair(String link, String deviceName) async {
     final offer = rt.PairingOffer.parse(link);
+    if (sameRelay && offer.relay.authority != platform.host) {
+      throw FormatException(
+        'This link is for the relay at ${offer.relay.authority}: open Nushi '
+        'from there',
+      );
+    }
     _key ??= await rt.KeyPair.make();
     name = deviceName.trim().isEmpty ? 'Phone' : deviceName.trim();
     await _save(); // the key, before any Mac knows it
@@ -136,12 +177,11 @@ class Phone extends ChangeNotifier {
         (connectTo?.call(t) ?? Daemon(transport: t, remote: true))
           ..addListener(_daemonChanged);
     remoteState.addListener(_remoteChanged);
-    platform
-      ..onVisible(({required visible}) {
-        if (visible) unawaited(d.ping());
-        unawaited(view(visible ? d.selectedId : null));
-      })
-      ..onOpenChat = ((chat) => opening.value = chat);
+    platform.onOpenChat = (chat) => opening.value = chat;
+    _viewing?.cancel();
+    _viewing = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (_visible && d.selectedId != null) unawaited(view(d.selectedId));
+    });
     if (platform.takeOpenChat() case final chat?) opening.value = chat;
   }
 
@@ -160,9 +200,16 @@ class Phone extends ChangeNotifier {
   Future<void> _askPushKey(Daemon d) async {
     try {
       final key = (await d.client.getPushKey(GetPushKeyRequest())).key;
-      _pushKey = key.isEmpty
+      final k = _pushKey = key.isEmpty
           ? null
           : base64Url.decode(key.padRight((key.length + 3) ~/ 4 * 4, '='));
+      // A subscription made with another key (the daemon's was made anew)
+      // gets nothing: it's off until turned on again.
+      final made = await platform.subscribedWith();
+      if (k != null && made != null && !_same(made, k)) {
+        await platform.unsubscribe();
+        push = await platform.pushState();
+      }
       notifyListeners();
     } on Object {
       // Asked again on the next connection.
@@ -188,6 +235,7 @@ class Phone extends ChangeNotifier {
   void open(String chatId) {
     daemon?.select(chatId);
     unawaited(view(chatId));
+    unawaited(platform.closeNotifications(chatId));
     notifyListeners();
   }
 
@@ -246,6 +294,8 @@ class Phone extends ChangeNotifier {
 
   /// Ends the link to the Mac (the page goes), keeping the pairing.
   Future<void> close() async {
+    _viewing?.cancel();
+    _viewing = null;
     remoteState.removeListener(_remoteChanged);
     daemon
       ?..removeListener(_daemonChanged)
@@ -260,10 +310,21 @@ class Phone extends ChangeNotifier {
   /// Mac still lists this device until it's revoked there.
   Future<void> forget() async {
     if (push == PushState.on) await setPush(on: false);
+    // The Mac forgets this device too, if it can be reached (else it still
+    // lists it until it's revoked there).
+    try {
+      await daemon?.client
+          .unpairThisDevice(UnpairThisDeviceRequest())
+          .timeout(const Duration(seconds: 5));
+    } on Object {
+      // Not connected: Revoke on the Mac.
+    }
+    // The storage first: if it fails, nothing here looks forgotten.
+    await platform.clear();
+    await platform.reset();
     await close();
     paired = _key = _pushKey = null;
     remoteState.value = null;
-    await platform.clear();
     push = await platform.pushState();
     notifyListeners();
   }

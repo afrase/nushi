@@ -130,11 +130,16 @@ Future<(PairedDaemon, RelayTransport)> pair(
   );
   ch.outgoing.add(utf8.encode(jsonEncode({'name': name, 'kind': ?kind})));
   onCode(ch.code);
-  final reply = await ch.read().timeout(wait, onTimeout: () => null);
-  final daemon = reply == null
-      ? null
-      : (jsonDecode(utf8.decode(reply)) as Map)['daemon'];
-  if (daemon is! String) {
+  Object? daemon;
+  try {
+    final reply = await ch.read().timeout(wait, onTimeout: () => null);
+    if (reply != null) {
+      daemon = (jsonDecode(utf8.decode(reply)) as Map)['daemon'];
+    }
+  } on Object {
+    daemon = null; // a reply that isn't one: refused
+  }
+  if (daemon is! String || daemon.isEmpty) {
     await ch.close();
     throw PairingRefused();
   }

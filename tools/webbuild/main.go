@@ -33,7 +33,8 @@ func main() {
 	}
 	check(os.RemoveAll(filepath.Join(dir, "flutter_service_worker.js")))
 	check(os.RemoveAll(filepath.Join(dir, ".last_build_id")))
-	dropFont(dir, "Symbols Nerd Font Mono") // the terminal's, which the phone hasn't
+	check(os.RemoveAll(filepath.Join(dir, "flutter.js"))) // flutter_bootstrap.js carries it
+	dropFont(dir, "Symbols Nerd Font Mono")               // the terminal's, which the phone hasn't
 
 	boot := read(filepath.Join(dir, "flutter_bootstrap.js"))
 	mainJS := "main." + hashOf(read(filepath.Join(dir, "main.dart.js"))) + ".dart.js"

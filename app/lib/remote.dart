@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nushi/commits.dart' show ago;
@@ -105,6 +106,12 @@ class _RemoteSectionState extends State<RemoteSection> {
               overflow: TextOverflow.ellipsis,
             ),
             if (r.on) Text('Keeps the Mac awake while on.', style: muted),
+            if (r.key.isNotEmpty)
+              Text(
+                "This Mac's key: ${keyFingerprint(r.key)}, as a paired "
+                'phone shows it.',
+                style: muted,
+              ),
             const SizedBox(height: 8),
             for (final d in r.devices) _DeviceRow(d, widget.client),
             const SizedBox(height: 6),
@@ -194,6 +201,14 @@ class _DeviceRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The daemon's key as both the Mac and a paired phone show it: the first
+/// 8 bytes of its SHA-256, in four groups ("3f9a c2e0 71b4 08d6"). A phone
+/// that shows another Mac's was paired with someone else's daemon.
+String keyFingerprint(List<int> key) {
+  final hex = sha256.convert(key).toString().substring(0, 16);
+  return [for (var i = 0; i < 16; i += 4) hex.substring(i, i + 4)].join(' ');
 }
 
 /// The QR code's pairing as a link to the relay's web app (ADR 0054): the

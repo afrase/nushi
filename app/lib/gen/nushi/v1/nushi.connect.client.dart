@@ -1398,6 +1398,25 @@ extension type NushiServiceClient (connect.Transport _transport) {
     );
   }
 
+  /// Unpairs the device that calls (its Forget this Mac), as Revoke would;
+  /// only on a device's channel.
+  Future<nushiv1nushi.UnpairThisDeviceResponse> unpairThisDevice(
+    nushiv1nushi.UnpairThisDeviceRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.unpairThisDevice,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Writes a line of the app's into the daemon's log (source=app): its
   /// errors with their stacks, and what helps afterwards.
   Future<nushiv1nushi.LogResponse> log(
