@@ -89,7 +89,18 @@ Start work on a pull request or an issue picks a folder (a clone of its reposito
 
 ## Remote access
 
-Settings → Remote access connects the daemon to a relay you name (`wss://…`), so a phone can reach it from anywhere; it's off until you turn it on, and nothing listens on the Mac: the daemon dials out, through the Mac's proxy settings (the environment's `HTTPS_PROXY`, else the system's proxy or PAC file; not WPAD, NTLM or Kerberos). While it's on, the Mac doesn't idle-sleep (`caffeinate`); a closed lid on battery still sleeps. "Pair a phone" shows a QR code; the phone then shows a six-digit code, and the Mac asks to allow it by name and code. Everything between the phone and the daemon is end-to-end encrypted with Noise, and a paired phone is a full client, like the app ([ADR 0034](docs/adr/0034-noise-between-phone-and-daemon.md), with the threat model). The phone app itself isn't built yet; `packages/remote_transport` is its side of the channel.
+Settings → Remote access connects the daemon to a relay you name (`wss://…`), so a phone can reach it from anywhere; it's off until you turn it on, and nothing listens on the Mac: the daemon dials out, through the Mac's proxy settings (the environment's `HTTPS_PROXY`, else the system's proxy or PAC file; not WPAD, NTLM or Kerberos). While it's on, the Mac doesn't idle-sleep (`caffeinate`); a closed lid on battery still sleeps. "Pair a phone" shows a QR code; the phone then shows a six-digit code, and the Mac asks to allow it by name and code. Everything between the phone and the daemon is end-to-end encrypted with Noise, and a paired phone is a full client, like the app ([ADR 0034](docs/adr/0034-noise-between-phone-and-daemon.md), with the threat model). Each paired device says whether it's the web app or an app and whether its notifications are on, with Send a test notification and Revoke.
+
+## The phone
+
+The phone is Nushi's web app, added to the Home Screen ([ADR 0054](docs/adr/0054-the-phone-is-a-web-app-with-web-push.md)): the chats with what each is doing, a chat's transcript and composer (send, Queue and Steer while a turn runs, Stop), its prompts and questions answered with a tap, New chat, and Settings. Your relay serves it (`-web`, below), so it comes from a server you run. On an iPhone (iOS 16.4 or later):
+
+1. Open your relay's address in Safari (`https://<your relay>/`), tap Share › Add to Home Screen, and open Nushi from the Home Screen. Pair there, not in Safari: the Home Screen app keeps its own storage, and only it gets notifications.
+2. On the Mac: Settings › Remote access › Pair a phone › Copy link. On the iPhone, paste it (Universal Clipboard) into Pairing link, name the device, tap Pair.
+3. Check the iPhone's six-digit code is the one the Mac shows, and Allow on the Mac.
+4. Settings › Notifications on, and Allow when iOS asks. A notification says only what happened ("Claude finished", "Codex needs you", "Claude has a question"); tapping it opens that chat. None comes for the chat you have open.
+
+Forget this Mac (Settings) forgets the pairing and the device's key on the phone; revoke the device on the Mac too. The web app works in a desktop browser the same way (Chrome on a Mac gets notifications too).
 
 ## The relay
 
@@ -100,7 +111,11 @@ make relay                                   # bin/nushi-relay, no cgo
 bin/nushi-relay -addr 127.0.0.1:8080         # plain ws://, e.g. behind a reverse proxy
 bin/nushi-relay -host relay.example.com      # wss:// on :443 with a Let's Encrypt certificate
 bin/nushi-relay -h                           # the caps: message size, rate, idle time, connections
+make web                                     # the phone's web app, into app/build/web
+bin/nushi-relay -addr 127.0.0.1:8090 -web app/build/web -origin https://relay.example.com
 ```
+
+With `-web` the relay serves the phone's web app at `-origin` (the address the browser sees, scheme, host and port) and takes WebSockets from pages there only; copy `app/build/web` to the relay's machine. The owner's runs on a Raspberry Pi behind Tailscale Funnel (which terminates TLS), as `nushi-relay -addr 127.0.0.1:8090 -ip-header X-Forwarded-For -web /usr/local/share/nushi-web -origin https://nushi.taile2d635.ts.net -plain-per-ip 32`, and the Mac's relay is `wss://nushi.taile2d635.ts.net`. A web app loads a few dozen files at once, hence the higher cap on plain connections per address.
 
 Use `wss://`: company proxies tunnel 443 but often break a plain `ws://` upgrade, and iOS refuses plain connections by default.
 

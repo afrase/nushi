@@ -29,3 +29,6 @@ A phone has to reach the daemon on a Mac that is often behind a company network,
 - Anyone who knows a daemon's id can dial it, which costs the daemon a handshake, and can hold its 16 dialer slots, which keeps its phones out while it does (availability); it can't listen there, so it never gets a phone's dial. Only a paired phone gets past the handshake.
 - The proof binds an honest relay. A dishonest one (its operator) can route a dial anywhere; against it only Noise protects, as above.
 - Running without `-cert-cache` asks Let's Encrypt for a certificate on every start; frequent restarts hit its rate limits, so a host that restarts often should keep one.
+
+## Amendments
+- 2026-10-27: with `-web` and `-origin` the relay also serves the phone's web app, from memory with a strict CSP, and takes a WebSocket from exactly that app's origin; any other `Origin` is still refused (ADR 0054).
