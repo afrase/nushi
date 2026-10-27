@@ -554,3 +554,14 @@ func mustJSON(t *testing.T, v any) string {
 	}
 	return string(b)
 }
+
+// Texts of their own (Nushi's note of a branch renamed, then the user's)
+// stay apart.
+func TestFlattenTexts(t *testing.T) {
+	text, _ := flatten([]acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "[Nushi] a note."}},
+		{Type: "text", Text: &acp.TextContent{Text: "go on"}},
+		{Type: "resource_link", ResourceLink: &acp.ResourceLink{URI: "file:///a/b.go", Name: "b.go"}}})
+	if text != "[Nushi] a note.\n\ngo on @/a/b.go" {
+		t.Errorf("flatten = %q", text)
+	}
+}

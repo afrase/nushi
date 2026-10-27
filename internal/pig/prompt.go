@@ -23,9 +23,13 @@ type image struct {
 func flatten(blocks []acp.ContentBlock) (string, []image) {
 	var b strings.Builder
 	var images []image
+	prevText := false
 	for _, block := range blocks {
 		switch {
 		case block.Text != nil:
+			if prevText {
+				b.WriteString("\n\n") // a text of its own: Nushi's note of a branch renamed, before the user's
+			}
 			b.WriteString(block.Text.Text)
 		case block.ResourceLink != nil:
 			uri := block.ResourceLink.URI
@@ -42,6 +46,7 @@ func flatten(blocks []acp.ContentBlock) (string, []image) {
 		case block.Image != nil:
 			images = append(images, image{Type: "image", Data: block.Image.Data, MimeType: block.Image.MimeType})
 		}
+		prevText = block.Text != nil
 	}
 	return b.String(), images
 }

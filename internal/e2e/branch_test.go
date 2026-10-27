@@ -166,7 +166,7 @@ func TestBranchNamedAfterTheChat(t *testing.T) {
 	if c := get(id7).Chat; c.Worktree.Branch != "me/my-name" || head(wt7.Path) != "me/my-name" || c.Worktree.Path != wt7.Path {
 		t.Errorf("after Rename branch: %v", c)
 	}
-	if r := turn(id7, "title: Named after this"); r.Chat.Worktree.Branch != "me/my-name" || len(renamed(r)) > 0 {
+	if r := turn(id7, "title: Named after this"); r.Chat.Worktree.Branch != "me/my-name" || len(renamed(r)) != 1 || !strings.HasPrefix(renamed(r)[0], "Branch renamed to me/my-name") {
 		t.Errorf("the title renamed a branch the user named: %v", r.Chat.Worktree)
 	}
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id7, Text: "wait"})))

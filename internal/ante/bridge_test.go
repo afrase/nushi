@@ -255,6 +255,11 @@ func TestFlatten(t *testing.T) {
 	if err != nil || got != `look at @/a\ b/c.go please` {
 		t.Errorf("flatten = %q, %v", got, err)
 	}
+	got, err = flatten([]acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "[Nushi] a note."}},
+		{Type: "text", Text: &acp.TextContent{Text: "go on"}}}, nil)
+	if err != nil || got != "[Nushi] a note.\n\ngo on" {
+		t.Errorf("two texts: %q, %v", got, err)
+	}
 }
 
 func TestResultText(t *testing.T) {

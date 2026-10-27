@@ -211,7 +211,7 @@ func (c *chat) chunkLocked(kind model.ItemKind, m *acp.ContentChunk) {
 	}
 	if it != nil && it.Kind == kind {
 		it.Text += text
-		if c.relayedLocked(it) { // whole now
+		if noted := c.unnotedLocked(it); c.relayedLocked(it) || noted { // whole now
 			c.publishLocked(*it)
 			return
 		}
@@ -219,6 +219,7 @@ func (c *chat) chunkLocked(kind model.ItemKind, m *acp.ContentChunk) {
 		return
 	}
 	item := model.Item{ID: id, Kind: kind, Text: text, Images: images, Parent: parent}
+	c.unnotedLocked(&item)
 	c.relayedLocked(&item)
 	c.addLocked(item)
 }

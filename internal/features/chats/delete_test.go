@@ -26,6 +26,7 @@ func (stuckWorktrees) BranchUse(context.Context, model.Worktree) (model.BranchUs
 	return model.BranchUse{OnIt: true}, nil
 }
 func (stuckWorktrees) RenameBranch(context.Context, model.Worktree, string) error { return nil }
+func (stuckWorktrees) CheckBranch(context.Context, string, string) error          { return nil }
 
 func TestAChatStaysIfItsWorktreeOrHistoryCantGo(t *testing.T) {
 	ctx := context.Background()

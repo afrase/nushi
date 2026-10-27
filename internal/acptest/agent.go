@@ -254,11 +254,11 @@ func (a *Agent) answer(f frame) {
 		}
 		result = map[string]any{}
 	case "session/prompt":
-		var text strings.Builder
+		var blocks []string
 		for _, b := range p.Prompt {
-			text.WriteString(b.Text)
+			blocks = append(blocks, b.Text)
 		}
-		result = map[string]any{"stopReason": a.prompt(p.SessionID, text.String())}
+		result = map[string]any{"stopReason": a.prompt(p.SessionID, blocks)}
 	default:
 		result = map[string]any{}
 	}
@@ -297,11 +297,15 @@ func (a *Agent) say(session, text string) {
 }
 
 // prompt runs the script for text and returns the turn's stop reason.
-func (a *Agent) prompt(session, text string) string { //nolint:gocognit // one case per script word
+func (a *Agent) prompt(session string, blocks []string) string { //nolint:gocognit,gocyclo // one case per script word
 	a.mu.Lock()
 	cwd := a.cwds[session]
 	a.mu.Unlock()
-	a.History.add(cwd, session, map[string]any{"sessionUpdate": "user_message_chunk", "content": map[string]any{"type": "text", "text": text}})
+	a.History.prompted(session, blocks)
+	for _, b := range blocks { // a chunk per block, as Claude replays them
+		a.History.add(cwd, session, map[string]any{"sessionUpdate": "user_message_chunk", "content": map[string]any{"type": "text", "text": b}})
+	}
+	text := strings.Join(blocks, "\n")
 	if strings.Contains(text, "stderr") && a.Stderr != nil {
 		_, _ = fmt.Fprintln(a.Stderr, "auth: using the key sk-ant-api03-Zr8fakeFAKEfake0123456789 from the environment")
 	}

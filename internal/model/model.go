@@ -61,6 +61,11 @@ type Worktree struct {
 	// words>), to be named after the chat once it has a title; off once it
 	// is, or when the user renamed it or it couldn't be.
 	AutoName bool `json:",omitempty"`
+	// Told is the branch's name as the agent last had it: Branch when its
+	// session started there (Claude's system prompt takes git's status
+	// then) or the chat's last prompt went. A rename since is told with
+	// the next prompt. Empty for worktrees made before Nushi kept it.
+	Told string `json:",omitempty"`
 }
 
 // BranchUse is who else has a worktree's branch, for renaming it.

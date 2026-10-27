@@ -18,6 +18,23 @@ type History struct {
 	deleted  map[string]bool
 	last     map[key]int // each session's last update, in order
 	n        int
+	prompts  map[string][][]string
+}
+
+// Prompts returns the text blocks of each prompt session had.
+func (h *History) Prompts(session string) [][]string {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return slices.Clone(h.prompts[session])
+}
+
+func (h *History) prompted(session string, blocks []string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.prompts == nil {
+		h.prompts = map[string][][]string{}
+	}
+	h.prompts[session] = append(h.prompts[session], blocks)
 }
 
 // key is a session in one folder's history, the folder by its real path,

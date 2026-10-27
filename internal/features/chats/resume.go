@@ -37,6 +37,7 @@ func (s *Service) lookup(id string) (*chat, error) {
 	c.id, c.sid, c.session, c.issue = id, stored[i].SessionID, stored[i], stored[i].Issue
 	c.session.Scratch = s.isScratch(c.session.Folder)
 	c.ultracode.Store(stored[i].Ultracode)
+	c.toldBeforeLocked()
 	c.loadCopy() // its transcript until the agent replays it, or for good when it can't
 	s.chats[id] = c
 	return c, nil
