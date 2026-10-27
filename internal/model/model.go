@@ -57,6 +57,18 @@ type Worktree struct {
 	// BaseCommit is the commit it started from; empty for worktrees made
 	// before Nushi kept it.
 	BaseCommit string `json:",omitempty"`
+	// AutoName says Branch is the name Nushi made up for it (nushi/<two
+	// words>), to be named after the chat once it has a title; off once it
+	// is, or when the user renamed it or it couldn't be.
+	AutoName bool `json:",omitempty"`
+}
+
+// BranchUse is who else has a worktree's branch, for renaming it.
+type BranchUse struct {
+	OnIt      bool // the worktree has it checked out
+	Elsewhere bool // another worktree has it checked out
+	Upstream  bool // it tracks a remote's branch
+	Pushed    bool // a remote has a branch of its name
 }
 
 // WorktreeState is what removing a worktree and deleting its branch would
