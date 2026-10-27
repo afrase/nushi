@@ -153,11 +153,16 @@ func (s *Service) ListCopies() ([]CopyEntry, error) {
 	if err != nil {
 		return nil, err
 	}
+	// By id: thousands of chats would make a search per copy quadratic.
+	byID := make(map[string]model.Session, len(stored))
+	for _, sess := range stored {
+		byID[sess.ID] = sess
+	}
 	out := make([]CopyEntry, len(list))
 	for i, c := range list {
 		out[i].TranscriptCopy = c
-		if j := slices.IndexFunc(stored, func(sess model.Session) bool { return sess.ID == c.Chat }); j >= 0 {
-			out[i].Title, out[i].Agent = cmpTitle(stored[j]), stored[j].Agent
+		if sess, ok := byID[c.Chat]; ok {
+			out[i].Title, out[i].Agent = cmpTitle(sess), sess.Agent
 		}
 	}
 	return out, nil

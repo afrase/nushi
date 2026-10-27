@@ -3,6 +3,7 @@ package chats
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -222,5 +223,38 @@ func TestListAndClearCopies(t *testing.T) {
 	eventually(t, c, func() bool { return !c.busy })
 	if got := copied(t, store, c.id); got != "user:two agent:m2" {
 		t.Errorf("copied after clearing: %s", got)
+	}
+}
+
+// Settings' Chat history lists every copy at once: 5,000 chats' copies
+// (a few KB each, one in ten with an image) list in well under a second
+// (about 0.15 s on an M-series Mac: a stat of each file).
+func TestListCopiesAtScale(t *testing.T) {
+	if testing.Short() {
+		t.Skip("writes 5,000 copies")
+	}
+	svc, _, _, store, _ := newCopyingChat(t)
+	const n = 5000
+	var sessions []model.Session
+	for i := range n {
+		id := fmt.Sprintf("chat-%04d", i)
+		it := model.Item{ID: "m", Kind: model.AgentMessage, Text: strings.Repeat("words ", 50*(1+i%20))}
+		if i%10 == 0 {
+			it.Images = []model.Image{{MimeType: "image/png", Data: []byte(id)}}
+		}
+		noErr(t, store.Append(id, []model.Item{it}, []string{""}))
+		sessions = append(sessions, model.Session{ID: id, Agent: "claude", Title: "Chat " + id})
+	}
+	svc.sessions.(*memSessions).stored = sessions
+	start := time.Now()
+	list, err := svc.ListCopies()
+	took := time.Since(start)
+	noErr(t, err)
+	if len(list) != n || list[0].Title == "" {
+		t.Fatalf("listed %d, the first %+v", len(list), list[0])
+	}
+	t.Logf("ListCopies of %d copies: %v", n, took)
+	if took > 2*time.Second {
+		t.Errorf("ListCopies of %d copies took %v", n, took)
 	}
 }
