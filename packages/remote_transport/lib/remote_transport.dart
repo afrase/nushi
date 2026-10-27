@@ -17,6 +17,7 @@ import 'package:remote_transport/src/websocket.dart';
 export 'package:noise/noise.dart' show KeyPair;
 
 export 'src/channel.dart' show Channel;
+export 'src/gzip.dart' show Gzip;
 export 'src/websocket.dart' show RelaySocket, maxMessage;
 
 /// What the Mac's QR code holds: the relay, a one-time rendezvous id, the
@@ -89,6 +90,21 @@ final class PairedDaemon {
 
   /// The daemon's public key (32 bytes).
   final Uint8List key;
+}
+
+/// Why a dial didn't reach the daemon: the cause of the `unavailable`
+/// [connect.ConnectException] a call fails with then.
+enum Unreachable {
+  /// The relay itself: no network, or the relay is down.
+  relay,
+
+  /// No daemon waits at the relay: the Mac is asleep or offline, or its
+  /// remote access is off.
+  mac,
+
+  /// The daemon was there but didn't answer this phone (it was revoked, or
+  /// the link broke during the handshake).
+  answer,
 }
 
 /// The Mac refused the phone (Deny, or no answer in time).
@@ -182,6 +198,10 @@ final class RelayTransport implements Http2ClientTransport {
     }
   }
 
+  /// Whether a channel is up (it may still turn out dead: a phone that
+  /// was asleep holds sockets the network dropped).
+  bool get live => _live?.isOpen ?? false;
+
   /// Closes the channel; calls still open on it fail.
   Future<void> close() async {
     final conn = _live;
@@ -189,12 +209,19 @@ final class RelayTransport implements Http2ClientTransport {
     await conn?.terminate();
   }
 
+  /// Drops the channel (one that stopped answering): calls on it fail, and
+  /// the next call dials again.
+  Future<void> reset() => close();
+
   Future<http2.ClientTransportConnection> _dial() async {
+    final RelaySocket ws;
+    try {
+      ws = await RelaySocket.connect(_at(daemon.relay, 'dial', daemon.id));
+    } on Object catch (e) {
+      throw _unavailable("couldn't reach the relay", e, Unreachable.relay);
+    }
     final Channel ch;
     try {
-      final ws = await RelaySocket.connect(
-        _at(daemon.relay, 'dial', daemon.id),
-      );
       ch = await Channel.open(
         ws,
         id: daemon.id,
@@ -202,7 +229,10 @@ final class RelayTransport implements Http2ClientTransport {
         daemonKey: daemon.key,
       );
     } on Object catch (e) {
-      throw _unavailable("couldn't reach the Mac", e);
+      // The relay says when no daemon waits at the id (4404).
+      throw ws.closeCode == 4404
+          ? _unavailable('no Mac at the relay', e, Unreachable.mac)
+          : _unavailable("the Mac didn't answer", e, Unreachable.answer);
     }
     return _use(ch);
   }
@@ -226,9 +256,12 @@ final class RelayTransport implements Http2ClientTransport {
   }
 }
 
-connect.ConnectException _unavailable(String what, Object? cause) =>
-    connect.ConnectException(
-      connect.Code.unavailable,
-      'daemon unavailable: $what',
-      cause: cause,
-    );
+connect.ConnectException _unavailable(
+  String what,
+  Object? cause, [
+  Unreachable? why,
+]) => connect.ConnectException(
+  connect.Code.unavailable,
+  'daemon unavailable: $what${cause == null ? '' : ' ($cause)'}',
+  cause: why ?? cause,
+);

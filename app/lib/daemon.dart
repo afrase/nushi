@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:connectrpc/connect.dart' as connect;
 import 'package:connectrpc/http2.dart';
@@ -34,7 +35,7 @@ final String dataDir =
         : '$support/Nushi');
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 69;
+const apiVersion = 70;
 
 /// The app's link to nushid. [connected] follows a ping every few seconds;
 /// while connected, daemon events keep [chats] current. When no daemon
@@ -43,8 +44,8 @@ const apiVersion = 69;
 class Daemon extends ChangeNotifier {
   /// A test passes a [transport] of its own. The phone passes its
   /// relay's, [remote]: then nothing of the Mac's runs (no bundled daemon,
-  /// no token, no app log), and it pings every 15 s, which also keeps its
-  /// relay connection alive.
+  /// no token, no app log), and its link pings (phone/link.dart), which
+  /// also keeps its relay connection alive.
   new({connect.Transport? transport, this.remote = false}) {
     client = NushiServiceClient(
       transport ??
@@ -55,14 +56,12 @@ class Daemon extends ChangeNotifier {
             interceptors: [_auth],
           ),
     );
+    // The phone's link pings on its own schedule (phone/link.dart).
+    if (remote) return;
     _timer = Timer.periodic(
-      Duration(seconds: remote ? 15 : 2),
+      const Duration(seconds: 2),
       (_) => unawaited(ping()),
     );
-    if (remote) {
-      unawaited(ping());
-      return;
-    }
     appLog.client = client;
     appLog.reachable = () => connected && hasLog(daemonApi);
     unawaited(
@@ -82,8 +81,11 @@ class Daemon extends ChangeNotifier {
 
   late final _transport = UdsTransport('$dataDir/nushid.sock');
   late final NushiServiceClient client;
-  late final Timer _timer;
+  Timer? _timer;
   bool connected = false;
+
+  /// Why the last ping failed (the phone shows it in details).
+  Object? pingError;
   int daemonApi = 0; // the daemon's API version
   String _build = ''; // the running daemon's build
 
@@ -266,16 +268,18 @@ class Daemon extends ChangeNotifier {
 
   /// Asks the daemon whether it's there (every few seconds, and when the
   /// phone comes back to the front).
-  Future<void> ping() async {
+  /// Whether it answered; a phone's link gives a longer [wait] when the
+  /// call has to dial the relay first.
+  Future<bool> ping({Duration wait = const Duration(seconds: 3)}) async {
     var api = 0;
     var build = '';
     try {
       // A daemon that hangs counts as gone, rather than stalling the pings.
-      final r = await client
-          .ping(PingRequest())
-          .timeout(const Duration(seconds: 3));
+      final r = await client.ping(PingRequest()).timeout(wait);
       (api, build) = (r.apiVersion, r.build);
-    } on Object {
+      pingError = null;
+    } on Object catch (e) {
+      pingError = e;
       if (!remote && _launcher.launch() && _launcher.launches == 3) {
         notifyListeners();
       }
@@ -304,6 +308,15 @@ class Daemon extends ChangeNotifier {
         appLog.info('connected to the daemon', {'api': '$api', 'build': build});
       }
     }
+    return ok;
+  }
+
+  /// The link to the daemon was dropped (the phone's, after a ping went
+  /// unanswered): the events subscribe again with the next ping that
+  /// answers, and what shows is fetched again.
+  void relink() {
+    unawaited(_events?.cancel());
+    _events = null;
   }
 
   /// Stops the running daemon (it stops its agents) and starts the bundled
@@ -463,17 +476,80 @@ class Daemon extends ChangeNotifier {
   }
 
   /// Fetches a chat's snapshot; its events have been held since `loading`.
-  Future<void> _load(ChatState chat) async {
+  Future<void> _load(ChatState chat, [int tries = 0]) async {
     if (chat.loaded || chat.loading) return;
-    chat.loading = true;
+    chat
+      ..loading = true
+      ..stale = () => _reload(chat);
     try {
-      chat.load(await client.getChat(GetChatRequest(chatId: chat.id)));
+      // The phone takes the recent part first, older pages on scrolling
+      // up: a long chat opens fast on a slow link.
+      chat.load(
+        await client.getChat(
+          GetChatRequest(chatId: chat.id, recent: remote ? recentItems : 0),
+        ),
+      );
     } on Object catch (e) {
-      chat
-        ..unload()
-        ..error = '$e';
+      chat.unload();
+      if (remote) {
+        // The phone: no raw error, but tries again (and again once the link
+        // is back); details show why.
+        chat.loadError = '$e';
+        _retryLoad(chat, tries);
+      } else {
+        chat.error = '$e';
+      }
       notifyListeners();
     }
+  }
+
+  /// How many of a chat's latest items the phone takes first.
+  static const recentItems = 80;
+
+  /// Takes a fresh snapshot of [chat] (an event reached past what the phone
+  /// has of it).
+  void _reload(ChatState chat) {
+    if (!chat.loaded) return;
+    chat.unload();
+    unawaited(_load(chat));
+  }
+
+  /// Takes the page of [chat]'s items before those it has, as the phone
+  /// scrolls up (nothing when it has them all, or a page is on its way).
+  Future<void> loadOlder(ChatState chat) async {
+    if (chat.older == 0 || chat.loadingOlder || chat.items.isEmpty) return;
+    chat
+      ..loadingOlder = true
+      ..notifyListeners();
+    try {
+      final page = await client.getChatItems(
+        GetChatItemsRequest(
+          chatId: chat.id,
+          before: chat.items.first.id,
+          limit: recentItems,
+        ),
+      );
+      chat.prepend(page.items, page.older);
+    } on Object {
+      // Asked again on the next scroll up.
+    } finally {
+      chat
+        ..loadingOlder = false
+        ..notifyListeners();
+    }
+  }
+
+  /// Tries a failed load again while the chat shows and the daemon
+  /// answers: 2 s, then twice as long each time, up to 30 s.
+  void _retryLoad(ChatState chat, [int tries = 0]) {
+    final wait = Duration(seconds: [2, 4, 8, 16, 30][min(tries, 4)]);
+    Timer(wait, () {
+      if (chat.loaded || chat.id != selectedId || !chats.containsKey(chat.id)) {
+        return;
+      }
+      if (!connected) return _retryLoad(chat, tries + 1); // relinking
+      unawaited(_load(chat, tries + 1)); // which comes back here if it fails
+    });
   }
 
   ChatState _chat(Chat c) {
@@ -658,7 +734,7 @@ class Daemon extends ChangeNotifier {
 
   @override
   void dispose() {
-    _timer.cancel();
+    _timer?.cancel();
     unawaited(_events?.cancel());
     if (!remote) unawaited(_transport.close());
     super.dispose();

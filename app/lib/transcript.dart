@@ -57,6 +57,7 @@ class Transcript extends StatefulWidget {
     this.live = false,
     this.header,
     this.footer,
+    this.onTop,
   });
 
   final ChatState chat;
@@ -74,6 +75,10 @@ class Transcript extends StatefulWidget {
   final Widget? header;
   final Widget? footer;
 
+  /// Called as the user scrolls near the top (the phone takes an older
+  /// page then); what shows stays put as items come in above it.
+  final VoidCallback? onTop;
+
   @override
   State<Transcript> createState() => _TranscriptState();
 }
@@ -89,6 +94,37 @@ class _TranscriptState extends State<Transcript> {
   // The widget built for each entry, by key, and what it was built from.
   var _built = <String, (List<Object>, Widget)>{};
 
+  // The first entry's key at the last build: when items come in above it,
+  // the list moves down by their height, so what shows stays put.
+  String? _first;
+
+  bool _onScroll(Notification n) {
+    if (widget.onTop case final top?
+        when n is ScrollUpdateNotification &&
+            n.depth == 0 &&
+            (n.scrollDelta ?? 0) < 0 &&
+            n.metrics.pixels < 800) {
+      top();
+    }
+    return _follower.onNotification(n);
+  }
+
+  void _keepPlace(List<Object> entries) {
+    if (widget.onTop == null || entries.isEmpty) return;
+    final was = _first;
+    final first = _first = _keyOf(entries.first);
+    if (was == null || was == first || !_follower.scroll.hasClients) return;
+    if (_follower.following || !entries.any((e) => _keyOf(e) == was)) return;
+    final max = _follower.scroll.position.maxScrollExtent;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_follower.scroll.hasClients) return;
+      final q = _follower.scroll.position;
+      q.jumpTo(
+        (q.pixels + q.maxScrollExtent - max).clamp(0, q.maxScrollExtent),
+      );
+    });
+  }
+
   /// An entry's widget, the one built before if its items are the same.
   Widget _entry(
     Map<String, (List<Object>, Widget)> before,
@@ -97,11 +133,11 @@ class _TranscriptState extends State<Transcript> {
     required bool still,
     required double top,
   }) {
-    final (key, items) = switch (e) {
-      // A call and the group it becomes keep their place (and state).
-      final List<Item> run => (run.first.id, run),
-      final SubagentRun s => ('agent ${s.call.id}', [s.call, ...s.items]),
-      _ => ((e as Item).id, [e]),
+    final key = _keyOf(e);
+    final items = switch (e) {
+      final List<Item> run => run,
+      final SubagentRun s => [s.call, ...s.items],
+      _ => [e],
     };
     final rewindable = e is Item && canRewindTo(widget.chat, e);
     final from = [live, still, rewindable, top, ...items];
@@ -192,6 +228,7 @@ class _TranscriptState extends State<Transcript> {
     final t = theme.t;
     final chat = widget.chat;
     final entries = _entries(widget.items ?? chat.items);
+    _keepPlace(entries);
     final live = widget.items == null ? chat.busy : widget.live;
     _follower.stick();
     final before = _built;
@@ -202,7 +239,7 @@ class _TranscriptState extends State<Transcript> {
       builder: (context, box) => Stack(
         children: [
           NotificationListener(
-            onNotification: _follower.onNotification,
+            onNotification: _onScroll,
             // One selection across the transcript, messages included whole;
             // when a drag or double-click leaves text selected, the popover
             // shows where the pointer went up.
@@ -317,6 +354,14 @@ class _TranscriptState extends State<Transcript> {
 }
 
 const _sides = EdgeInsets.symmetric(horizontal: 20);
+
+/// An entry's key: a call and the group it becomes keep their place (and
+/// state).
+String _keyOf(Object e) => switch (e) {
+  final List<Item> run => run.first.id,
+  final SubagentRun s => 'agent ${s.call.id}',
+  _ => (e as Item).id,
+};
 
 bool _isBand(Object e) =>
     e is Item && e.kind == ItemKind.ITEM_KIND_USER_MESSAGE;

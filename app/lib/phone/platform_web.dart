@@ -147,7 +147,14 @@ final class PhonePlatform {
     return {for (final k in _fields) k: field(k)};
   }
 
-  static const _fields = ['key', 'name', 'relay', 'daemon', 'daemonKey'];
+  static const _fields = [
+    'key',
+    'name',
+    'relay',
+    'daemon',
+    'daemonKey',
+    'seen',
+  ];
 
   /// Keeps [record]: strings and bytes (a Uint8Array each, so the key is
   /// never text).
@@ -320,4 +327,8 @@ final class PhonePlatform {
           visible: web.document.visibilityState == 'visible',
         )).toJS,
       );
+
+  /// Calls [f] when the network comes back.
+  void onOnline(void Function() f) =>
+      web.window.addEventListener('online', ((web.Event _) => f()).toJS);
 }

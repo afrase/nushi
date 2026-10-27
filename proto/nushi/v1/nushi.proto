@@ -11,6 +11,9 @@ service NushiService {
   // Returns everything a chat's events have built so far, to pick it up
   // after (re)connecting.
   rpc GetChat(GetChatRequest) returns (GetChatResponse);
+  // A chat's items before one of them, a page at a time: for a client that
+  // took only the recent part (GetChatRequest.recent), as it scrolls up.
+  rpc GetChatItems(GetChatItemsRequest) returns (GetChatItemsResponse);
   // Starts an agent in a folder and opens a chat with it.
   rpc StartChat(StartChatRequest) returns (StartChatResponse);
   // Lists the agents chats can run, the default first, each as found on
@@ -411,6 +414,10 @@ message Worktree {
 
 message GetChatRequest {
   string chat_id = 1;
+  // Only the last this many items (0: all), reaching back to the tool call
+  // that started a subagent whose steps are among them; `older` counts
+  // the ones left out. A phone on a slow link opens a long chat this way.
+  int32 recent = 2;
 }
 
 message GetChatResponse {
@@ -425,6 +432,23 @@ message GetChatResponse {
   Usage usage = 7;
   // Messages waiting for the agent.
   ChatQueue queue = 8;
+  // How many items come before `items` (with `recent`).
+  int32 older = 9;
+}
+
+message GetChatItemsRequest {
+  string chat_id = 1;
+  // The item the page ends before (the first one the client has).
+  string before = 2;
+  // How many items at most, reaching back to a subagent's call as
+  // `recent` does.
+  int32 limit = 3;
+}
+
+message GetChatItemsResponse {
+  repeated Item items = 1;
+  // How many items come before these.
+  int32 older = 2;
 }
 
 // What the agent last reported of a chat's usage; what it hasn't reported
@@ -1728,8 +1752,10 @@ message Remote {
   bool on = 1;
   // The relay's ws:// or wss:// URL.
   string relay = 2;
-  // "off", "connecting", "connected" (waiting at the relay for phones) or
-  // "error" (error says what; it tries again).
+  // "off", "connecting", "connected" (waiting at the relay for phones),
+  // "reconnecting" (the relay dropped the wait: a restart, the network;
+  // error says how) or "error" (error says what; it tries again, waiting
+  // up to 30 s between tries).
   string state = 3;
   string error = 4;
   repeated Device devices = 5;

@@ -208,3 +208,17 @@ void phoneSay(BuildContext context, String message) =>
     ScaffoldMessenger.maybeOf(context)
       ?..clearSnackBars()
       ..showSnackBar(SnackBar(content: Text(message)));
+
+/// A small spinner, for what's on its way.
+class PhoneSpinner extends StatelessWidget {
+  const new({super.key});
+
+  @override
+  Widget build(BuildContext context) => SizedBox.square(
+    dimension: 16,
+    child: CircularProgressIndicator(
+      strokeWidth: 2,
+      color: NushiTheme.of(context).t.textSecondary,
+    ),
+  );
+}

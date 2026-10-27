@@ -54,6 +54,9 @@ final class PhonePlatform {
   Future<void> unsubscribe() async => push = PushState.off;
   void onVisible(void Function({required bool visible}) f) {}
 
+  /// Calls [f] when the network comes back.
+  void onOnline(void Function() f) {}
+
   /// The chat a notification asked to open when the app started, if any.
   String? takeOpenChat() => null;
 }

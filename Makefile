@@ -106,7 +106,7 @@ test:
 	go test ./...
 	cd packages/uds_transport && dart test
 	cd packages/noise && dart test && dart test -p chrome
-	cd packages/remote_transport && dart test
+	cd packages/remote_transport && dart test && dart test -p chrome test/gzip_web_test.dart
 	cd packages/markdown && flutter test
 	cd packages/svg_path && flutter test
 	cd app && flutter test

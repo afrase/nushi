@@ -4,6 +4,7 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
+
 import "nushi.pb.dart" as nushiv1nushi;
 
 abstract final class NushiService {
@@ -32,6 +33,15 @@ abstract final class NushiService {
     connect.StreamType.unary,
     nushiv1nushi.GetChatRequest.new,
     nushiv1nushi.GetChatResponse.new,
+  );
+
+  /// A chat's items before one of them, a page at a time: for a client that
+  /// took only the recent part (GetChatRequest.recent), as it scrolls up.
+  static const getChatItems = connect.Spec(
+    '/$name/GetChatItems',
+    connect.StreamType.unary,
+    nushiv1nushi.GetChatItemsRequest.new,
+    nushiv1nushi.GetChatItemsResponse.new,
   );
 
   /// Starts an agent in a folder and opens a chat with it.
