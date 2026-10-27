@@ -32,15 +32,19 @@ func main() {
 	flag.IntVar(&lim.PerIP, "per-ip", lim.PerIP, "connections from one address (an IPv6 /64), at most half of -total")
 	flag.Float64Var(&lim.NewRate, "new-rate", lim.NewRate, "new connections a second from one address")
 	flag.Float64Var(&lim.NewBurst, "new-burst", lim.NewBurst, "new connections from one address at once")
-	flag.StringVar(&lim.IPHeader, "ip-header", "", "behind a reverse proxy: the header holding the client's address (e.g. Fly-Client-IP); of a list (X-Forwarded-For), the last entry")
+	flag.StringVar(&lim.IPHeader, "ip-header", "", "behind a reverse proxy: the header holding the client's address (e.g. CF-Connecting-IP for cloudflared, Fly-Client-IP); of a list (X-Forwarded-For), the last entry")
 	flag.IntVar(&lim.IPHops, "ip-hops", 1, "with -ip-header: how many proxies append to it (the client's address is this many from the right)")
 	flag.IntVar(&lim.Total, "total", lim.Total, "connections in all")
 	flag.DurationVar(&lim.HTTPIdle, "http-idle", lim.HTTPIdle, "close a plain HTTP connection (not a WebSocket) idle this long")
 	flag.DurationVar(&lim.FirstWait, "first-wait", lim.FirstWait, "how long a new connection has for its first request's headers")
 	flag.IntVar(&lim.PlainPerIP, "plain-per-ip", lim.PlainPerIP, "plain HTTP connections (not WebSockets) from one address")
 	web := flag.String("web", "", "serve the web app built into this folder (ADR 0054); needs -origin")
-	origin := flag.String("origin", "", "with -web: the origin the browser sees the app at (scheme://host[:port]), the only one whose pages may connect")
+	origin := flag.String("origin", "", "with -web: the origin the browser sees the app at (https://host[:port]), the only one whose pages may connect; with -host, https://<host> by default. Behind a reverse proxy (Tailscale Funnel, cloudflared, Caddy) it is the proxy's public address")
 	flag.Parse()
+
+	if *origin == "" && *web != "" && *host != "" {
+		*origin = "https://" + *host
+	}
 
 	if *web != "" || *origin != "" {
 		site, err := relay.LoadSite(*web, *origin)

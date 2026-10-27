@@ -16,6 +16,7 @@ final remoteState = ValueNotifier<Remote?>(null);
 const _states = {
   'connected': 'Connected',
   'connecting': 'Connecting…',
+  'reconnecting': 'Reconnecting…',
   'off': 'Off',
   'error': "Can't reach the relay",
 };
@@ -95,9 +96,13 @@ class _RemoteSectionState extends State<RemoteSection> {
             ),
             const SizedBox(height: 6),
             Text(
-              r.state == 'error'
-                  ? '${_states['error']}: ${r.error}'
-                  : _states[r.state] ?? r.state,
+              switch (r.state) {
+                'error' => "${_states['error']}: ${r.error} (trying again)",
+                'reconnecting' when r.error.isNotEmpty =>
+                  '${_states['reconnecting']} The relay dropped the link: '
+                      '${r.error}',
+                _ => _states[r.state] ?? r.state,
+              },
               style: theme.ui(
                 r.state == 'error' ? t.crashed : t.textSecondary,
                 size: 12,

@@ -230,9 +230,11 @@ func (s *Service) link(ctx context.Context, relayURL string, listen ed25519.Priv
 	for ctx.Err() == nil && s.waits(id) {
 		c, err := s.dialer.Listen(ctx, relayURL, listen)
 		if err != nil {
+			wait := jitter(backoff)
 			s.setState(ctx, id, "error", err.Error())
-			sleep(ctx, jitter(backoff))
-			backoff = min(2*backoff, time.Minute)
+			slog.Info("relay: trying again", "in", wait.Round(time.Second), "id", short(id))
+			sleep(ctx, wait)
+			backoff = min(2*backoff, MaxBackoff)
 			continue
 		}
 		backoff = time.Second
@@ -243,8 +245,9 @@ func (s *Service) link(ctx context.Context, relayURL string, listen ed25519.Priv
 		if err != nil {
 			// The relay ended the wait (its limit, a restart) or the network
 			// went: wait again, at a random moment so many daemons don't
-			// come back at once.
-			slog.Info("relay dropped the wait", "err", err)
+			// come back at once. The Mac shows it reconnecting meanwhile.
+			slog.Info("relay dropped the wait", "err", err, "id", short(id))
+			s.setState(ctx, id, "reconnecting", err.Error())
 			_ = c.Close()
 			sleep(ctx, jitter(time.Second))
 			continue
@@ -252,6 +255,13 @@ func (s *Service) link(ctx context.Context, relayURL string, listen ed25519.Priv
 		go s.accept(ctx, c, id)
 	}
 }
+
+// MaxBackoff caps the wait between tries at the relay.
+var MaxBackoff = 30 * time.Second
+
+// short is an id's start, enough to tell the daemon's waits apart in the
+// log.
+func short(id string) string { return id[:min(8, len(id))] }
 
 // jitter is d, give or take half.
 func jitter(d time.Duration) time.Duration {
