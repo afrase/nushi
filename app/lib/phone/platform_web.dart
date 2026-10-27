@@ -3,6 +3,7 @@ import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
 
 import 'package:flutter/foundation.dart';
+import 'package:nushi/phone/keyboard_web.dart';
 import 'package:nushi/phone/subscription.dart';
 import 'package:web/web.dart' as web;
 
@@ -13,6 +14,7 @@ final class PhonePlatform {
   new() {
     _fromAddress(starting: true);
     _ownHistory();
+    watchKeyboard(keyboard);
     web.window.addEventListener(
       'hashchange',
       ((web.Event _) => _fromAddress(starting: false)).toJS,
@@ -33,6 +35,9 @@ final class PhonePlatform {
       );
     }
   }
+
+  /// The on-screen keyboard's height over the app (keyboard_web.dart).
+  final keyboard = ValueNotifier<double>(0);
 
   /// A chat's id, as the daemon makes them.
   static final _chatId = RegExp(r'^[A-Za-z0-9_-]{1,64}$');
