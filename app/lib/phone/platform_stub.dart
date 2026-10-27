@@ -36,7 +36,7 @@ final class PhonePlatform {
   void applyUpdate() => updated = true;
 
   /// The page's origin's host.
-  String host = 'nushi.taile2d635.ts.net';
+  String host = 'nushi.aaronfrase.com';
 
   /// What [reset] and [closeNotifications] were asked.
   bool wasReset = false;

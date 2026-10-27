@@ -89,7 +89,7 @@ class _RemoteSectionState extends State<RemoteSection> {
               style: theme.code(t.text),
               decoration: const InputDecoration(
                 // The owner's, as an example of what goes here.
-                hintText: 'For example wss://nushi.taile2d635.ts.net',
+                hintText: 'For example wss://nushi.aaronfrase.com',
                 isDense: true,
               ),
               onSubmitted: (_) => r.on ? _set(true) : null,
@@ -339,13 +339,15 @@ class _Pairing extends StatelessWidget {
                   padding: const EdgeInsets.all(12),
                   child: SizedBox.square(
                     dimension: 220,
-                    child: CustomPaint(painter: _QrPainter(qr)),
+                    // The web app's link (parameters in the fragment): the
+                    // iPhone's Camera opens it, and Nushi's Scan reads it.
+                    child: CustomPaint(painter: _QrPainter(pairingLink(qr))),
                   ),
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Scan with Nushi on the phone, or copy the link and paste '
-                  'it in Nushi on the phone’s Home Screen.',
+                  'Scan it with Scan in Nushi on the phone’s Home Screen, or '
+                  'copy the link and paste it there.',
                   textAlign: TextAlign.center,
                   style: theme.ui(t.textSecondary),
                 ),
