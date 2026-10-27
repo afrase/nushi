@@ -123,8 +123,10 @@ type chat struct {
 	dialect  Dialect // kind's
 	publish  func(model.Event)
 	sessions Sessions
-	copies   Copies      // the service's
-	copiesOn func() bool // and whether it writes them
+	// worktrees are the service's, for naming the chat's branch (branch.go).
+	worktrees Worktrees
+	copies    Copies      // the service's
+	copiesOn  func() bool // and whether it writes them
 
 	mu           sync.Mutex
 	items        []model.Item
@@ -179,6 +181,10 @@ type chat struct {
 	replaying  bool                 // a session/load's replay goes to replay, not the transcript (restore.go)
 	replay     []model.Item
 	quiet      bool // a replayed update is being taken: its events aren't the app's
+	// titled says the agent titled the session while the daemon ran, and
+	// waitedTitle that a turn ended without that title, for naming the
+	// chat's branch (branch.go).
+	titled, waitedTitle bool
 }
 
 // emitLocked numbers and publishes one of the chat's events. Holding the
@@ -295,7 +301,7 @@ func CheckFolder(folder string) error {
 }
 
 func (s *Service) newChat(k *kind) *chat {
-	return &chat{kind: k, dialect: k.Dialect, publish: s.publish, sessions: s.sessions, copies: s.copies, copiesOn: s.copiesOn, waiting: map[string]chan<- string{},
+	return &chat{kind: k, dialect: k.Dialect, publish: s.publish, sessions: s.sessions, worktrees: s.worktrees, copies: s.copies, copiesOn: s.copiesOn, waiting: map[string]chan<- string{},
 		questions: map[string]chan<- []model.Field{}, sides: map[string]*chat{}, probes: map[string]*silentRun{}, unsaved: map[string]bool{}}
 }
 

@@ -257,6 +257,7 @@ func (c *chat) run(agent Agent, req *acp.PromptRequest, sent, done chan struct{}
 	case resp.StopReason == "max_turn_requests":
 		c.noticeLocked("max_turn_requests", "The agent stopped: it reached its limit of requests in one turn")
 	}
+	c.nameBranchLocked() // between turns, before the next one starts
 	c.statusChangedLocked()
 	c.copyLocked(true)
 	// A stopped or failed turn holds the queue until the next one ends.

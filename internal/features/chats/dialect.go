@@ -73,6 +73,11 @@ type Dialect struct {
 	// ForkTitle says whether title is the agent's own for a fork of a
 	// session titled of: a moved or rewound chat keeps its title.
 	ForkTitle func(title, of string) bool
+	// NamesSessions says the agent titles a session itself, soon after its
+	// first prompt (Claude, with a model call of its own that may end after
+	// a short first turn): a worktree's branch waits for that title, a
+	// turn at most, rather than take the prompt's line.
+	NamesSessions bool
 	// ContextCommand is the slash command that says what fills the
 	// context, run unseen in a throwaway fork; ReadContext reads its reply
 	// (the reply's messages, in order, at least one).

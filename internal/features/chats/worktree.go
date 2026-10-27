@@ -27,6 +27,11 @@ type Worktrees interface {
 	// Remove removes a worktree; without force, only a clean one.
 	Remove(ctx context.Context, wt model.Worktree, force bool) error
 	DeleteBranch(ctx context.Context, wt model.Worktree) error
+	// BranchUse says who else has a worktree's branch.
+	BranchUse(ctx context.Context, wt model.Worktree) (model.BranchUse, error)
+	// RenameBranch renames a worktree's branch, its folder staying; a name
+	// taken (a branch, or a remote's) fails with fs.ErrExist.
+	RenameBranch(ctx context.Context, wt model.Worktree, to string) error
 }
 
 var (
@@ -56,6 +61,7 @@ func (s *Service) addWorktree(ctx context.Context, folder, branch, from string) 
 				s.dropWorktree(&wt)
 				return nil, "", fmt.Errorf("a worktree has only what is committed, and %s isn't: commit it, or use the repository's own folder", filepath.Base(folder))
 			}
+			wt.AutoName = branch == "" // named after the chat once it has a title (branch.go)
 			return &wt, in, nil
 		}
 		if !errors.Is(err, fs.ErrExist) {

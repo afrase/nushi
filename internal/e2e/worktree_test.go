@@ -55,7 +55,7 @@ func TestChatsInWorktrees(t *testing.T) {
 			t.Fatalf("chat = %v", c)
 		}
 		must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "pwd"})))
-		a.waitFor("the reply", idle)
+		wt = settled(ctx, t, a, id).Chat.Worktree // named after the chat: nushi/pwd, then -2, -3
 		ids, wts = append(ids, id), append(wts, wt)
 	}
 	if wts[0].Path == wts[1].Path {
@@ -87,8 +87,7 @@ func TestChatsInWorktrees(t *testing.T) {
 	// offers it with what removing it would lose.
 	id = must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: repo, Worktree: true}))).ChatId
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "pwd"})))
-	a.waitFor("the reply", idle)
-	wt = chat(id).Worktree
+	wt = settled(ctx, t, a, id).Chat.Worktree
 	gitIn(t, wt.Path, "commit", "-q", "--allow-empty", "-m", "work")
 	must(a.c.MoveChat(ctx, connect.NewRequest(&nushiv1.MoveChatRequest{ChatId: id, Folder: repo})))
 	if c := chat(id); c.Worktree != nil || c.Folder != repo {

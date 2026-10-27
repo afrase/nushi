@@ -114,7 +114,8 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 			pig.Serve(r, w, pig.Config{Spawn: spawn, Dirs: pig.Dirs{Sessions: pigs.Sessions}, Version: pig.Version})
 		}),
 		Dialect: chats.Dialect{ForkAt: pig.ForkAt}}
-	svc := chats.New([]chats.Kind{{Name: "fake", Launch: fake(false, false), History: copyHistory}, codexKind, anteKind, ompKind, pigKind},
+	// The fake is shaped like Claude's adapter, which names its sessions.
+	svc := chats.New([]chats.Kind{{Name: "fake", Launch: fake(false, false), History: copyHistory, Dialect: chats.Dialect{NamesSessions: true}}, codexKind, anteKind, ompKind, pigKind},
 		st, st, git.Worktrees{}, filepath.Join(dataDir, "scratch"), hub.Publish)
 	terms := terminals.New(startSh, "sh", svc, hub.Publish)
 	svc.UseTerminals(terms)

@@ -111,6 +111,8 @@ func (c *chat) update(n *acp.SessionNotification) { //nolint:gocognit,gocyclo //
 		forkTitle := c.dialect.ForkTitle != nil && c.dialect.ForkTitle(t, c.session.Title)
 		if t != "" && !forkTitle {
 			c.saveLocked(func(s *model.Session) { s.Title = t })
+			c.titled = true
+			c.nameBranchLocked() // when it came between turns; else at the turn's end
 		}
 	case "tool_call_update":
 		t := u.ToolCallUpdate

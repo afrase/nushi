@@ -62,6 +62,11 @@ service NushiService {
   // Sets the chat's title; it wins over the agent's. An empty title goes
   // back to the agent's.
   rpc RenameChat(RenameChatRequest) returns (RenameChatResponse);
+  // Renames the branch of a chat's worktree (git branch -m; its folder
+  // stays), for good: the chat's title no longer names it. Refused during a
+  // turn, for a name git doesn't take or that's taken, and when the branch
+  // is on a remote or another worktree or chat has it. (API 68)
+  rpc RenameBranch(RenameBranchRequest) returns (RenameBranchResponse);
   // Archives a chat: its turn is cancelled and its agent stops; it stays
   // listed, read-only. Unarchiving reopens it (ACP session/load).
   rpc ArchiveChat(ArchiveChatRequest) returns (ArchiveChatResponse);
@@ -379,7 +384,9 @@ message Worktree {
   string repo = 1;
   // The worktree's folder; the chat's folder is in it.
   string path = 2;
-  // Its branch, nushi/<name>.
+  // Its branch: nushi/<two words> at first, named after the chat once it
+  // has a title (between turns, unless pushed or renamed), or as the user
+  // renamed it (RenameBranch).
   string branch = 3;
   // The branch it started from (a commit, if HEAD was detached).
   string base = 4;
@@ -726,6 +733,13 @@ message RenameChatRequest {
 }
 
 message RenameChatResponse {}
+
+message RenameBranchRequest {
+  string chat_id = 1;
+  string branch = 2;
+}
+
+message RenameBranchResponse {}
 
 message ArchiveChatRequest {
   string chat_id = 1;
@@ -1355,7 +1369,8 @@ enum ItemKind {
   // kept only for its worktree's or scratch folder's work: DeleteChat), or
   // "reopen_failed" (ReopenChat tries again). "own_turn" marks where the
   // agent starts working on its own, outside a turn of the user's (after a
-  // background task ended).
+  // background task ended). "branch_renamed" says Nushi named the chat's
+  // branch after it, between turns (the agent isn't told).
   ITEM_KIND_NOTICE = 8;
 }
 

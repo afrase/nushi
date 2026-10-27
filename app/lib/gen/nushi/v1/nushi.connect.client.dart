@@ -337,6 +337,27 @@ extension type NushiServiceClient (connect.Transport _transport) {
     );
   }
 
+  /// Renames the branch of a chat's worktree (git branch -m; its folder
+  /// stays), for good: the chat's title no longer names it. Refused during a
+  /// turn, for a name git doesn't take or that's taken, and when the branch
+  /// is on a remote or another worktree or chat has it. (API 68)
+  Future<nushiv1nushi.RenameBranchResponse> renameBranch(
+    nushiv1nushi.RenameBranchRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.renameBranch,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Archives a chat: its turn is cancelled and its agent stops; it stays
   /// listed, read-only. Unarchiving reopens it (ACP session/load).
   Future<nushiv1nushi.ArchiveChatResponse> archiveChat(
@@ -861,9 +882,11 @@ extension type NushiServiceClient (connect.Transport _transport) {
     );
   }
 
-  /// The skills and plugins Claude uses in a folder (API 66, ADR 0051):
-  /// read from Claude's files and `claude plugin list --json`, never run in
-  /// the folder. Skills' descriptions and plugins' text are their authors'.
+  /// The skills (and plugins) an agent uses in a folder (API 66, ADR 0051;
+  /// every agent's from API 67, ADR 0052): read from the agent's files (and
+  /// Claude's `claude plugin list --json`), never run in the folder; shared
+  /// skills (.agents/skills) with every agent that loads each. Skills'
+  /// descriptions and plugins' text are their authors'.
   Future<nushiv1nushi.ListSkillsResponse> listSkills(
     nushiv1nushi.ListSkillsRequest input, {
     connect.Headers? headers,

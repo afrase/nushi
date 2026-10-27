@@ -22,6 +22,10 @@ func (stuckWorktrees) Remove(context.Context, model.Worktree, bool) error {
 	return errors.New("locked")
 }
 func (stuckWorktrees) DeleteBranch(context.Context, model.Worktree) error { return nil }
+func (stuckWorktrees) BranchUse(context.Context, model.Worktree) (model.BranchUse, error) {
+	return model.BranchUse{OnIt: true}, nil
+}
+func (stuckWorktrees) RenameBranch(context.Context, model.Worktree, string) error { return nil }
 
 func TestAChatStaysIfItsWorktreeOrHistoryCantGo(t *testing.T) {
 	ctx := context.Background()
