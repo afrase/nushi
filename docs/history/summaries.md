@@ -2,6 +2,19 @@
 
 Each milestone's summary as it was written when the milestone ended, newest first. An archive: what is current is in `NOTES.md`, `docs/adr/` and the code.
 
+## Summary of a worktree's branch named after the chat (steps 315–318)
+
+Steps 315–318, one commit each on `main`, pushed after `make check`, from a worktree of their own (two other sessions worked in the checkout meanwhile: the phone web app, and the Settings redesign, whose steps 311–314 came first). **API 68** (`RenameBranch`; the `branch_renamed` notice).
+
+- **Named after the chat** (the owner: a plain chat's branch is two random words, a Jira chat's is named after its issue): between turns, once the chat has a title, `nushi/brave-otter` becomes `nushi/<slug>`, Jira's slug (ASCII words, lowercase, `-`, 40 characters cut between words), `-2` and on when taken (a remote's branch too). Once. Only while the branch is still Nushi's and the worktree's, tracks nothing, no remote has its name, and no other worktree or chat has it; otherwise it keeps its name for good. `git branch -m`; the folder keeps its name (the agent and terminals are in it). Never mid-turn: at the turn's end before the next queued message, the chat locked; or when the agent's title comes while idle. Claude's own title comes from a model call of its own, and after a short first turn it came 0.1 s after the turn's end, so it's waited for, a turn at most.
+- **What the agent sees**: nothing from Nushi; the transcript gets a quiet "Branch renamed to …" line for the user. Claude's system prompt keeps the session start's branch: asked to push after a rename, it ran `git push -u origin <old name>`, which failed, then checked and pushed the new name (once it stopped to ask instead). Nothing was ever pushed under the old name.
+- **Rename branch…** (a pencil beside the branch in the Environment card): any name git takes (its rules, `git check-ref-format --branch`), between turns; the title no longer names it. A branch on a remote is refused ("It's on the remote: rename it there too, or keep it") rather than renamed here alone.
+- **Size**: the daemon from 31,615 to 31,894 lines of Go, the app from 29,882 to 30,031 lines of Dart. No step over the ~500-line tripwire.
+
+**Tried by hand**: the real Claude through a dev daemon (`NUSHI_DATA` in `/tmp`, the adapter set up there) in a throwaway repository: a short first turn renamed after the prompt's line before the wait was added, and after Claude's own title ("Flaky login test in auth") with it; Rename branch through the API (a bad name refused, renamed, refused once pushed). Claude Code 2.1.310 alone (`claude -p` stream-json, one process) for what it does with a renamed branch.
+
+**Not tried by hand**: the pencil and dialog in the window (no synthetic input: widget tests and goldens); Codex, Ante, omp and PiG chats with real agents (the fake agent shaped like Codex in the e2e test); what agents other than Claude do with a stale branch name; a daemon restart between a short first turn and Claude's title (the wait is in memory: one more turn).
+
 ## Summary of Settings as a roomy page, and chat history that scales (steps 311–314)
 
 Steps 311–314, one commit each on `main` (and a fix after 313), pushed after `make check`, while another session worked on the phone web app in a worktree of its own. No API change (67).
