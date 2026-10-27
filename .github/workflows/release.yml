@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 concurrency:
   group: release-${{ github.event.release.tag_name || inputs.tag }}
@@ -58,8 +59,17 @@ jobs:
           path: ~/Library/Caches/nushi/fallback-fonts
           key: fallback-fonts-${{ hashFiles('tools/webbuild/fonts.lock') }}
 
+      # CI has usually checked this commit already (about 12 minutes); only a commit without a passing CI run (one
+      # cancelled by a newer push) is checked here.
       - name: Check
-        run: make check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sha=$(git rev-parse HEAD)
+          passed=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow CI --commit "$sha" --status success --json databaseId --jq length)
+          if [ "$passed" -gt 0 ]; then echo "CI passed on $sha."; exit 0; fi
+          echo "No passing CI run for $sha; checking it here."
+          make check
 
       - name: Build
         run: tools/release.sh "$VERSION"
