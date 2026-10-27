@@ -123,3 +123,35 @@ func TestReportFindings(t *testing.T) {
 		t.Errorf("an empty review: %+v", none.Findings)
 	}
 }
+
+// Claude is asked to stop a task by its id, with what it is in the words;
+// the prompt reads back, and TaskStop's call says which it stopped (its
+// error too, when the task had already ended).
+func TestStopTask(t *testing.T) {
+	p := StopTask("sleep 600 (or (so)); echo slept\nand more", "bgu2i75cc")
+	if what, id, ok := StopRelayed(p); !ok || what != "sleep 600 (or (so)); echo slept" || id != "bgu2i75cc" {
+		t.Errorf("StopRelayed(%q) = %q %q %v", p, what, id, ok)
+	}
+	if _, _, ok := StopRelayed(Relay("Explore", "ab59", "stop")); ok {
+		t.Error("read a relay as a stop")
+	}
+	it := model.Item{Tool: "TaskStop"}
+	ToolCall(&it, map[string]any{"claudeCode": map[string]any{"toolName": "TaskStop"}}, []byte(`{"task_id":"adddce0a14433f6d6"}`))
+	if it.Stops != "adddce0a14433f6d6" || Relaying(it) != it.Stops {
+		t.Fatalf("TaskStop: %+v", it)
+	}
+	for _, tc := range []struct {
+		status, text string
+		want         bool
+	}{
+		{"completed", `{"message":"Successfully stopped task: adddce0a14433f6d6 (Count)"}`, true},
+		{"failed", "Task adddce0a14433f6d6 is not running (status: killed)", true},
+		{"failed", "No task found with ID: adddce0a14433f6d6", false},
+		{"in_progress", "", false},
+	} {
+		it.Status, it.Text = tc.status, tc.text
+		if got := Stopped(it) != ""; got != tc.want {
+			t.Errorf("Stopped after %s %q: %v", tc.status, tc.text, got)
+		}
+	}
+}

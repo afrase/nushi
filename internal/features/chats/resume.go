@@ -223,6 +223,7 @@ func (s *Service) load(ctx context.Context, c *chat) error {
 	c.held = held
 	if replay {
 		c.restoreLocked(replayed)
+		c.childrenSaidLocked()
 	}
 	c.orphanLocked(false) // replayed calls whose agent died before their results
 	if o.sid != sid {

@@ -13,7 +13,7 @@ import (
 func messageProto(m model.Message) *nushiv1.QueuedMessage {
 	out := &nushiv1.QueuedMessage{Id: m.ID, Text: m.Text, Files: m.Files, ToSubagent: m.To}
 	if m.Relay != nil {
-		out.RelayTo = m.Relay.Agent
+		out.RelayTo, out.RelayStop = m.Relay.Agent, m.Relay.Stop
 	}
 	for _, img := range m.Images {
 		out.Images = append(out.Images, &nushiv1.ImageData{MimeType: img.MimeType, Data: img.Data})
@@ -86,13 +86,13 @@ func itemProto(it *model.Item) *nushiv1.Item {
 	out := &nushiv1.Item{Id: it.ID, Kind: itemKinds[it.Kind], Text: it.Text,
 		Title: it.Title, ToolKind: it.ToolKind, Status: it.Status, Answer: it.Answer, Parent: it.Parent, Agent: it.Agent, Tool: it.Tool, ForkAt: it.ForkAt,
 		Prompt: it.Prompt, Model: it.Model, Effort: it.Effort, RanModel: it.RanModel, AgentId: it.AgentID, RelayTo: it.RelayTo,
-		RelayCall: it.RelayCall, RelayState: it.RelayState, RelayedBy: it.RelayedBy,
+		RelayCall: it.RelayCall, RelayState: it.RelayState, RelayedBy: it.RelayedBy, RelayStop: it.RelayStop,
 		Rewindable: it.Rewindable, Report: it.Report}
 	if sh := it.Shell; sh != nil {
 		out.Shell = &nushiv1.Shell{Id: sh.ID, State: sh.State, Started: unixMs(sh.Started), Ended: unixMs(sh.Ended), Output: sh.Output, End: sh.End}
 	}
 	if sa := it.Subagent; sa != nil {
-		out.Subagent = &nushiv1.Subagent{State: sa.State, Started: unixMs(sa.Started), Ended: unixMs(sa.Ended), Result: sa.Result}
+		out.Subagent = &nushiv1.Subagent{State: sa.State, Started: unixMs(sa.Started), Ended: unixMs(sa.Ended), Result: sa.Result, Session: sa.Session}
 	}
 	if f := it.Findings; f != nil {
 		out.Findings = &nushiv1.Findings{Level: f.Level}

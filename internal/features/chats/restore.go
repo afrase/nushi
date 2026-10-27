@@ -19,6 +19,9 @@ import (
 // replayKinds are the updates session/load replays a transcript with.
 var replayKinds = []string{"user_message_chunk", "agent_message_chunk", "agent_thought_chunk", "plan", "tool_call", "tool_call_update"}
 
+// stepKinds are the updates of a subagent's session taken as its steps.
+var stepKinds = []string{"agent_message_chunk", "agent_thought_chunk", "tool_call", "tool_call_update"}
+
 // loadCopy makes a chat's copy its transcript, as a chat looked up after
 // a daemon start shows it: what was under way when it was written can't go
 // on now.
@@ -50,7 +53,7 @@ func ended(it *model.Item) {
 	}
 	if it.Subagent != nil && it.Subagent.State == "running" {
 		sa := *it.Subagent
-		sa.State = "failed"
+		sa.State, sa.Said = "failed", ""
 		it.Subagent = &sa
 	}
 	if it.Shell != nil && it.Shell.State == "running" {

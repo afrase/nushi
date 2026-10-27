@@ -20,7 +20,9 @@ import (
 var claudeDialect = Dialect{InitMeta: claude.InitMeta, SessionMeta: claude.SessionMeta, UltracodeMeta: claude.UltracodeMeta, TurnDone: claude.TurnDone, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall,
 	Background: claude.Background, ReportElsewhere: claude.ReportElsewhere,
 	Shell: claude.Shell, ReadShell: claude.ReadShell,
-	SubagentID: claude.SubagentID, Relay: claude.Relay, Relayed: claude.Relayed, Relaying: claude.Relaying, Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle, Compacted: claude.Compacted,
+	SubagentID: claude.SubagentID, Relay: claude.Relay, Relayed: claude.Relayed, Relaying: claude.Relaying,
+	Subagents: claude.Subagents, StopTask: claude.StopTask, StopRelayed: claude.StopRelayed, Stopped: claude.Stopped,
+	Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle, Compacted: claude.Compacted,
 	ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete}
 
 // fakeAgent replies to each prompt with the given updates. Like Claude, it
@@ -68,8 +70,10 @@ type fakeAgent struct {
 	steered      []string
 	wire         []string // prompts and cancels, in the order they reach the agent
 	forkMeta     map[string]any
-	history      []acp.SessionUpdate // what session/load replays
-	cur          *proc               // the last process launched
+	history      []acp.SessionUpdate       // what session/load replays
+	replay       []acp.SessionNotification // and then, on their sessions (s1 is the one loaded)
+	subagents    []acp.SessionID           // its subagents' sessions: a cancel stops only the one
+	cur          *proc                     // the last process launched
 }
 
 // proc is one of the fake agent's processes: each launch starts one, and
@@ -183,11 +187,17 @@ func (f *fakeAgent) LoadSession(ctx context.Context, req *acp.LoadSessionRequest
 		return nil, f.loadErr
 	}
 	f.mu.Lock()
-	history := slices.Clone(f.history)
+	history, replay := slices.Clone(f.history), slices.Clone(f.replay)
 	f.loadMeta = req.Meta
 	f.mu.Unlock()
 	for _, u := range history {
 		_ = f.h.SessionUpdate(ctx, &acp.SessionNotification{SessionID: req.SessionID, Update: u})
+	}
+	for _, n := range replay {
+		if n.SessionID == "s1" {
+			n.SessionID = req.SessionID
+		}
+		_ = f.h.SessionUpdate(ctx, &n)
 	}
 	return &acp.LoadSessionResponse{ConfigOptions: f.session.ConfigOptions, Modes: f.session.Modes}, nil
 }
@@ -245,9 +255,13 @@ func (f *fakeAgent) Done() <-chan struct{} { return nil } // used without launch
 
 func (f *fakeAgent) Pid() int { return 0 }
 
-func (f *fakeAgent) Cancel(context.Context, *acp.CancelNotification) error {
+func (f *fakeAgent) Cancel(_ context.Context, n *acp.CancelNotification) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if slices.Contains(f.subagents, n.SessionID) {
+		f.wire = append(f.wire, "cancel "+string(n.SessionID))
+		return nil
+	}
 	f.wire = append(f.wire, "cancel")
 	if f.gate != nil && !f.ignoreCancel {
 		f.cancelled = true

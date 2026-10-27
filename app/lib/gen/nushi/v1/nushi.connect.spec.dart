@@ -4,7 +4,6 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
-
 import "nushi.pb.dart" as nushiv1nushi;
 
 abstract final class NushiService {
@@ -150,6 +149,18 @@ abstract final class NushiService {
     connect.StreamType.unary,
     nushiv1nushi.CancelTurnRequest.new,
     nushiv1nushi.CancelTurnResponse.new,
+  );
+
+  /// Stops a subagent or a background command (the tool call that started
+  /// it), alone: through its own session when the agent shows the subagent
+  /// as one (Subagent.session), else by asking the agent, as a message of
+  /// the user's (Item.relay_stop) that waits for its next chance. It shows
+  /// as stopped once the agent says so.
+  static const stopTask = connect.Spec(
+    '/$name/StopTask',
+    connect.StreamType.unary,
+    nushiv1nushi.StopTaskRequest.new,
+    nushiv1nushi.StopTaskResponse.new,
   );
 
   /// Opens a side chat: a session the agent forks from the chat's (ACP

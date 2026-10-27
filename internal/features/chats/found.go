@@ -66,7 +66,7 @@ func (s *Service) Find(ctx context.Context, agent, folder, cursor string) (Found
 	}
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
-	a, init, err := initialize(ctx, k.launch, quiet{}, k.Dialect.InitMeta, slog.With("agent", k.Name, "for", "listing"))
+	a, init, err := initialize(ctx, k.launch, quiet{}, k.Dialect, slog.With("agent", k.Name, "for", "listing"))
 	if err != nil {
 		return FoundPage{}, fmt.Errorf("couldn't start %s: %w", k.Title, k.explain(err))
 	}

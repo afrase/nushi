@@ -161,7 +161,10 @@ type Item struct {
 	// agent's call that passes it on (RelayedBy) completes, "failed" when
 	// that call fails or the turn ends without one; "" unknown (replayed).
 	RelayTo, RelayCall, RelayState, RelayedBy string
-	Files                                     []string // a user message's mentioned files (Message.Files)
+	// RelayStop says the message asked the agent to stop that subagent or
+	// background command (RelayTo names it), not to pass anything on.
+	RelayStop bool
+	Files     []string // a user message's mentioned files (Message.Files)
 	// Tool is a tool call's tool, when the agent names it ("Read").
 	Tool string
 	// TaskID is the agent's id for the command a tool call left running in
@@ -169,6 +172,10 @@ type Item struct {
 	// InBackground says its input asked for that.
 	TaskID       string
 	InBackground bool
+	// Stops is, for a call that stops one of the agent's background tasks
+	// (Claude's TaskStop), the task's id: a subagent's AgentID or a
+	// background command's Shell.ID.
+	Stops string
 	// ForkAt is, for a user message, the agent's message the conversation
 	// before it ends with: where a rewind to it forks the session.
 	// Rewindable says a rewind to it can fork there (or it is the first).
@@ -220,13 +227,18 @@ type Finding struct {
 	Category, Verdict, Outcome                   string
 }
 
-// Subagent is how a subagent goes: State is "running", "done" or "failed";
-// Started and Ended are when the daemon saw that (zero when it didn't: a
-// replayed chat); Result is what it found, once it ended.
+// Subagent is how a subagent goes: State is "running", "done", "failed"
+// or "stopped"; Started and Ended are when the daemon saw that (zero when
+// it didn't: a replayed chat); Result is what it found, once it ended.
+// Said is its state as the agent last said it, for one the agent shows
+// as a session of its own (ACP's subagents): "running", "done",
+// "stopped", "failed"; "" when it never said. Session is that session,
+// through which it can be stopped.
 type Subagent struct {
 	State          string
 	Started, Ended time.Time
 	Result         string
+	Said, Session  string
 }
 
 // Image is an image in a message or a tool call's output.
@@ -278,9 +290,12 @@ type Message struct {
 }
 
 // Relay is a subagent a message goes to through the agent: its type and the
-// agent's id for it.
+// agent's id for it. With Stop, the message asks the agent to stop it, or
+// the background command it names (Agent is the command then, AgentID its
+// task's id).
 type Relay struct {
 	Agent, AgentID string
+	Stop           bool
 }
 
 // Event is a change to one chat. Exactly one of Item, Status, Config,

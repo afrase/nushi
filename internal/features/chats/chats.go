@@ -156,6 +156,7 @@ type chat struct {
 	canFork      bool                  // the agent can fork the session into side chats
 	canImage     bool                  // the agent takes images in prompts
 	sides        map[string]*chat      // the chat's side chats, by session id
+	children     map[string]*child     // its agent's subagents' sessions, by session id (children.go)
 	parent       *chat                 // a side chat's chat
 	started      time.Time             // when the running turn started
 	done         chan struct{}         // closed when the running turn ends
@@ -305,7 +306,7 @@ func CheckFolder(folder string) error {
 
 func (s *Service) newChat(k *kind) *chat {
 	return &chat{kind: k, dialect: k.Dialect, publish: s.publish, sessions: s.sessions, worktrees: s.worktrees, copies: s.copies, copiesOn: s.copiesOn, waiting: map[string]chan<- string{},
-		questions: map[string]chan<- []model.Field{}, sides: map[string]*chat{}, probes: map[string]*silentRun{}, unsaved: map[string]bool{}}
+		questions: map[string]chan<- []model.Field{}, sides: map[string]*chat{}, children: map[string]*child{}, probes: map[string]*silentRun{}, unsaved: map[string]bool{}}
 }
 
 // List returns every stored chat.

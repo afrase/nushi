@@ -83,6 +83,12 @@ func SignedIn(run func(args ...string) ([]byte, error)) string {
 // subagent's text and thinking too.
 var InitMeta = map[string]any{"subagent-transcript": true}
 
+// Subagents says the adapter shows subagents as sessions of their own
+// (ACP's subagents RFD) to a client that says it can take them: each
+// subagent's end, why it ended, and a stop of its own (session/cancel on
+// its session).
+const Subagents = true
+
 // SessionMeta is the session requests' _meta, the host options the adapter
 // passes Claude Code. perTaskStopAffordance, as Claude Code's terminal has
 // it, makes stopping a turn (session/cancel) stop only the turn: without
@@ -148,8 +154,8 @@ func claudeCode(meta map[string]any, key string) string {
 // the model it ran on once it has ended, and for a subagent's SubagentHandback, which ends it,
 // the report it hands back as its text (Report): true then, since the
 // call's own output is only an acknowledgement; for ReportFindings the
-// review's findings. Claude may send the input in a later update than the
-// name.
+// review's findings; for TaskStop the task it stops. Claude may send the
+// input in a later update than the name.
 func ToolCall(it *model.Item, meta map[string]any, input json.RawMessage) (ownText bool) {
 	it.Parent, it.Tool = cmp.Or(it.Parent, Parent(meta)), cmp.Or(claudeCode(meta, "toolName"), it.Tool)
 	var in struct {
@@ -159,6 +165,7 @@ func ToolCall(it *model.Item, meta map[string]any, input json.RawMessage) (ownTe
 		Effort     string `json:"effort"`
 		Message    string `json:"message"`
 		To         string `json:"to"`
+		TaskID     string `json:"task_id"`
 		Background bool   `json:"run_in_background"`
 	}
 	_ = json.Unmarshal(input, &in)
@@ -181,6 +188,8 @@ func ToolCall(it *model.Item, meta map[string]any, input json.RawMessage) (ownTe
 		}
 	case "SendMessage": // to a subagent, by the agent's id for it
 		it.AgentID = cmp.Or(in.To, it.AgentID)
+	case "TaskStop": // a subagent's or a background command's task, by its id
+		it.Stops = cmp.Or(in.TaskID, it.Stops)
 	case "SubagentHandback":
 		it.Text, it.Report = cmp.Or(in.Message, it.Text), true
 		return true
