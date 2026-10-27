@@ -1,58 +1,210 @@
-# make lint and the tests. The daemon and the app are macOS-only (proc_info,
-# sandbox-exec, launchd, the macOS app), so they run on a macOS runner; the
-# packages that also run elsewhere (the relay, the Noise channel) are
-# tested on Linux too; the ACP library, github.com/afrase/acp-go, has its
-# own CI. Actions are pinned by commit.
+# What make check runs, as parallel jobs (step 344: 12 minutes in one job before). macOS for what needs it: the
+# daemon (proc_info, sandbox-exec, launchd, the keychain's cgo), so Go's lint and tests; the app's tests, whose
+# goldens are drawn with macOS's text rendering and whose end-to-end tests run nushid, in three shards of test
+# files; and the web app's end-to-end test. Linux for the rest: the protos' and Dart's lint, the Dart packages'
+# tests, and the packages that also run elsewhere (the relay, the Noise channel). The ACP library,
+# github.com/afrase/acp-go, has its own CI. Actions are pinned by commit.
 name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
+  # The release's check, on a tag no CI run passed on.
+  workflow_call:
+    inputs:
+      ref:
+        description: The commit to check
+        type: string
+        required: true
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  macos:
-    name: Lint and test (macOS)
+  go:
+    name: Go lint and tests (macOS)
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - id: go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
           cache-dependency-path: |
             go.sum
             tools/lint/go.sum
+      # golangci-lint and govulncheck as built: they change with their module and Go.
+      - id: lint-tools
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            bin/golangci-lint
+            bin/govulncheck
+          key: lint-tools-${{ runner.os }}-${{ runner.arch }}-go${{ steps.go.outputs.go-version }}-${{ hashFiles('tools/lint/go.mod', 'tools/lint/go.sum') }}
+      # make goes by modification times, and the checkout's go.sum is newer than the cached binaries.
+      - if: steps.lint-tools.outputs.cache-hit == 'true'
+        run: touch bin/golangci-lint bin/govulncheck
+      # golangci-lint's results per package, kept from the last run (saved under each commit).
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/Library/Caches/golangci-lint
+          key: golangci-lint-${{ runner.os }}-${{ hashFiles('tools/lint/go.sum', '.golangci.yml') }}-${{ github.sha }}
+          restore-keys: golangci-lint-${{ runner.os }}-${{ hashFiles('tools/lint/go.sum', '.golangci.yml') }}-
+      - run: make lint-go
+      - run: make test-go
+
+  lint:
+    name: Proto and Dart lint (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      # buf is go run at the version the Makefile names.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: |
+            go.sum
+            Makefile
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: stable
           flutter-version: 3.47.7
           cache: true
-      - run: make lint
-      - run: make test
+      - run: make lint-dart
+
+  packages:
+    name: Dart packages (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      # remote_transport's interop test builds a Go peer.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.47.7
+          cache: true
+      - run: make test-packages
+
+  app:
+    name: App tests (macOS, ${{ matrix.shard }}/3)
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    env:
+      SHARD: ${{ matrix.shard }}/3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      # The end-to-end tests build nushid, nushi-relay and the fake agent.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      # The SDK cached without what the tests never use (below): half the download.
+      - id: flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.47.7
+          cache: true
+          cache-key: flutter-:os:-:channel:-:version:-:arch:-:hash:-tests
+      - run: make test-app
       # A golden that differs on the runner: its images, to see why.
       - if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: golden-failures
-          path: |
-            app/test/failures/
-            packages/*/test/failures/
+          name: golden-failures-${{ matrix.shard }}
+          path: app/test/failures/
           if-no-files-found: ignore
           retention-days: 7
+      # Before the cache is saved (a miss only): iOS's, Android's and macOS's release engines go, which only
+      # builds use; flutter test needs the host's engine and the web SDK. Their stamps go too, so a build would
+      # fetch them again.
+      - if: always() && steps.flutter.outputs.CACHE-HIT != 'true'
+        env:
+          SDK: ${{ steps.flutter.outputs.CACHE-PATH }}
+        run: |
+          du -sh "$SDK"
+          cd "$SDK/bin/cache"
+          rm -rf artifacts/engine/ios* artifacts/engine/android-* artifacts/engine/darwin-x64-profile \
+            artifacts/engine/darwin-x64-release ios-sdk.stamp macos-sdk.stamp android-*.stamp
+          du -sh "$SDK"
+
+  web:
+    name: Web app in Chrome (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.47.7
+          cache: true
+          cache-key: flutter-:os:-:channel:-:version:-:arch:-:hash:-tests
+      - run: make test-web
 
   linux:
     name: Go packages (Linux)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
       - run: go test ./relay/... ./noiseconn/... ./cmd/nushi-relay/...
+
+  # Experiment (step 344, to go): the app's tests on Linux, to see whether the goldens hold there.
+  app-linux:
+    name: App tests on Linux (experiment)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.47.7
+          cache: true
+      - run: nproc; free -g
+      - run: make test-app FLUTTER_TEST_FLAGS='--reporter expanded'
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: golden-failures-linux
+          path: app/test/failures/
+          if-no-files-found: ignore
+          retention-days: 3

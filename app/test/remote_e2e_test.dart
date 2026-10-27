@@ -93,9 +93,13 @@ void main() {
   });
 
   test('a phone through the relay', () async {
+    // A dialer waits 2 s for the Mac, not 10: a revoked phone dials an id
+    // nobody listens on any more, and is refused after that wait.
     final relay = await Process.start('${tmp.path}/bin/nushi-relay', [
       '-addr',
       '127.0.0.1:0',
+      '-dial-wait',
+      '2s',
     ]);
     procs.add(relay);
     final started = await relay.stderr

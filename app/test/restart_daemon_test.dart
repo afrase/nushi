@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:connectrpc/connect.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
@@ -35,14 +37,29 @@ void main() {
     expect((d.connected, phase), (true, 'new'));
   });
 
-  test('a daemon that never stops is said, not waited on quietly', () async {
+  // Ten seconds of tries, on the test's clock rather than waited out.
+  testWidgets('a daemon that never stops is said, not waited on quietly', (
+    tester,
+  ) async {
     final fake = FakeDaemon([])
       ..answer = (input) => input is PingRequest
           ? PingResponse(apiVersion: apiVersion, build: 'old')
           : null;
     final d = Daemon(transport: fake);
-    addTearDown(d.dispose);
-    await Future<void>.delayed(const Duration(milliseconds: 50));
-    await expectLater(d.restartDaemon(), throwsA(isA<StateError>()));
-  }, timeout: const Timeout(Duration(seconds: 30)));
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(d.connected, isTrue);
+    Object? error;
+    var done = false;
+    unawaited(
+      d.restartDaemon().then(
+        (_) => done = true,
+        onError: (Object e) => error = e,
+      ),
+    );
+    await tester.pump(const Duration(seconds: 9));
+    expect((done, error), (false, null)); // still trying
+    await tester.pump(const Duration(seconds: 2));
+    expect(error, isA<StateError>());
+    d.dispose();
+  });
 }
