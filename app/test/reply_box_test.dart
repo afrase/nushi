@@ -110,18 +110,16 @@ Finder get _field => find.descendant(
   matching: find.byType(TextField),
 );
 
-/// Shift-Enter in the reply: the key goes to the field, which starts a line
-/// as the platform's text input does on a Mac (a widget test has none, so
-/// the line is added here once the box let the key through).
+/// Shift-Enter in the reply: Nushi starts the line itself (`isSendKey`),
+/// and nothing is sent.
 Future<void> _shiftEnter(WidgetTester tester) async {
+  final was = tester.widget<TextField>(_field).controller!.text;
   await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
   await tester.sendKeyEvent(LogicalKeyboardKey.enter);
   await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
   await tester.pump();
   expect(find.byType(ReplyBox), findsOneWidget, reason: 'not sent');
-  final was = tester.widget<TextField>(_field).controller!.text;
-  if (!was.endsWith('\n')) await tester.enterText(_field, '$was\n');
-  await tester.pump();
+  expect(tester.widget<TextField>(_field).controller!.text, '$was\n');
 }
 
 Future<void> _type(WidgetTester tester, List<String> lines) async {

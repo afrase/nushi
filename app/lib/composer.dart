@@ -23,10 +23,10 @@ import 'package:nushi/worktree.dart';
 /// (⌘V and dropping work too), and on its right a send button once there
 /// is something to send, or a stop button while a turn runs. Reply cards
 /// and attached images show above the text; the replies go first in the
-/// message. Under it, the agent's pickers. Enter sends,
-/// Shift-Enter starts a line; `/` completes the agent's commands and `@`
-/// the folder's files (sent as links); Up in an empty box brings back the
-/// last prompt.
+/// message. Under it, the agent's pickers. Enter sends (⌘⏎ steers while a
+/// turn runs), Shift-Enter starts a line ([isSendKey]); `/` completes the
+/// agent's commands and `@` the folder's files (sent as links); Up in an
+/// empty box brings back the last prompt.
 class Composer extends StatefulWidget {
   const new({
     required this.chat,
@@ -117,10 +117,9 @@ class _ComposerState extends State<Composer> {
     final key = e.logicalKey;
     final shift = HardwareKeyboard.instance.isShiftPressed;
     if (_completions.onKey(key, shift: shift)) return KeyEventResult.handled;
-    if (isSendKey(e)) {
-      unawaited(_send(now: HardwareKeyboard.instance.isMetaPressed));
-      return KeyEventResult.handled;
-    }
+    final meta = HardwareKeyboard.instance.isMetaPressed;
+    final enter = enterKey(e, _text, () => unawaited(_send(now: meta)));
+    if (enter == KeyEventResult.handled) return enter;
     if (key == LogicalKeyboardKey.keyV &&
         HardwareKeyboard.instance.isMetaPressed &&
         widget.chat.canImages) {

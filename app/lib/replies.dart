@@ -286,7 +286,8 @@ class _ReplyBoxState extends State<ReplyBox> {
 
 /// A reply's text field, in the reply box and the dialog that edits it:
 /// it wraps and grows from one line to [lines], then scrolls; Enter runs
-/// [onEnter] and Shift-Enter starts a line, as in the composer.
+/// [onEnter] and Shift-Enter starts a line, as in the composer
+/// ([isSendKey]).
 class ReplyField extends StatelessWidget {
   const new(
     this.controller, {
@@ -309,6 +310,7 @@ class ReplyField extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     return EnterSends(
+      controller: controller,
       onEnter: onEnter,
       child: TextField(
         controller: controller,
