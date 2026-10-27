@@ -373,7 +373,7 @@ class _Title extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: theme
-                  .ui(look.enabled ? t.link : t.text)
+                  .ui(look.hover || look.focus ? t.link : t.text)
                   .copyWith(
                     decoration: look.hover || look.focus
                         ? TextDecoration.underline
