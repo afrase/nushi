@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
@@ -10,11 +8,12 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/mcp_actions.dart';
 import 'package:nushi/mcp_form.dart';
 import 'package:nushi/mcp_servers.dart';
+import 'package:nushi/settings_rows.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// The MCP servers view: a folder picker, then the servers by scope, each
-/// with its state, transport and command or URL (secrets masked).
+/// Settings › MCP servers: a folder picker, then the servers by scope,
+/// each with its state, transport and command or URL (secrets masked).
 class McpView extends StatelessWidget {
   const new({required this.daemon, required this.folder, super.key});
 
@@ -37,24 +36,30 @@ class McpView extends StatelessWidget {
     );
     return ListenableBuilder(
       listenable: list,
-      builder: (context, _) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      builder: (context, _) => SettingsPage(
+        title: switch (mcpAgent) {
+          final a? when knownAgents.length > 1 => '${a.title}’s MCP servers',
+          _ => 'MCP servers',
+        },
+        actions: [
+          if (list.checking)
+            Text('Checking…', style: theme.ui(t.textMuted, size: 12)),
+          Button(
+            label: 'Check again',
+            onPressed: list.checking ? null : list.refresh,
+          ),
+          Button(
+            label: 'Add server',
+            icon: Icons.add,
+            onPressed: () => mcpForm(context, list),
+          ),
+        ],
         children: [
-          Container(
-            height: 34,
-            padding: const EdgeInsets.only(left: 20, right: 8),
-            decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: t.borderSubtle)),
-            ),
-            child: Row(
-              children: [
-                Text(switch (mcpAgent) {
-                  final a? when knownAgents.length > 1 =>
-                    '${a.title}’s MCP servers',
-                  _ => 'MCP servers',
-                }, style: theme.ui(t.text, weight: FontWeight.w600)),
-                const SizedBox(width: 12),
-                MenuField(
+          Row(
+            children: [
+              Text('In ', style: theme.ui(t.textSecondary, size: 12)),
+              Flexible(
+                child: MenuField(
                   compact: true,
                   entries: folderEntries(
                     daemon,
@@ -73,48 +78,16 @@ class McpView extends StatelessWidget {
                     ),
                   ),
                 ),
-                const Spacer(),
-                Button(
-                  label: 'Add server',
-                  icon: Icons.add,
-                  onPressed: () => mcpForm(context, list),
-                ),
-                const SizedBox(width: 8),
-                if (list.checking)
-                  Text('Checking…', style: theme.ui(t.textMuted, size: 12)),
-                Button(
-                  label: 'Check again',
-                  onPressed: list.checking ? null : list.refresh,
-                ),
-                const SizedBox(width: 4),
-                IconTap(
-                  Icons.close,
-                  tooltip: 'Close',
-                  onTap: () => daemon.showMcp(null),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, box) {
-                // At most 900 wide, in the middle.
-                final side = max(20.0, (box.maxWidth - 900) / 2);
-                return ListView(
-                  padding: EdgeInsets.fromLTRB(side, 12, side, 20),
-                  children: [
-                    if (list.error.isNotEmpty)
-                      Text(list.error, style: theme.ui(t.crashed, size: 12)),
-                    for (final MapEntry(key: scope, value: (title, about))
-                        in scopes.entries)
-                      if (scope != 'other' ||
-                          list.servers.any((s) => s.scope == scope))
-                        _Group(list, scope, title, about),
-                  ],
-                );
-              },
-            ),
-          ),
+          const SizedBox(height: 4),
+          if (list.error.isNotEmpty)
+            Text(list.error, style: theme.ui(t.crashed, size: 12)),
+          for (final MapEntry(key: scope, value: (title, about))
+              in scopes.entries)
+            if (scope != 'other' || list.servers.any((s) => s.scope == scope))
+              _Group(list, scope, title, about),
         ],
       ),
     );
@@ -139,7 +112,7 @@ class _Group extends StatelessWidget {
     // Plugins' servers and connectors come with the check.
     final later = scope == 'plugin' || scope == 'claudeai' || !list.loaded;
     return Padding(
-      padding: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.only(top: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -149,8 +122,10 @@ class _Group extends StatelessWidget {
           ),
           Text(about, style: muted),
           const SizedBox(height: 6),
-          DecoratedBox(
-            decoration: box(t.borderSubtle),
+          framed(
+            border: t.borderSubtle,
+            fill: t.raised,
+            radius: 8,
             child: Column(
               children: [
                 if (servers.isEmpty)

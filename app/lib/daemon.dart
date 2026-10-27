@@ -15,6 +15,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/remote.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/settings_nav.dart';
 import 'package:nushi/side_panel.dart';
 import 'package:nushi/terminals.dart';
 import 'package:nushi/trust_card.dart';
@@ -73,6 +74,9 @@ class Daemon extends ChangeNotifier {
   int daemonApi = 0; // the daemon's API version
   String _build = ''; // the running daemon's build
 
+  /// The running daemon's build: its program's `<size>-<mtime in ms>`.
+  String get daemonBuild => _build;
+
   /// Whether the daemon is older than the app: it needs a restart.
   bool get outdated => daemonApi < apiVersion;
 
@@ -119,32 +123,63 @@ class Daemon extends ChangeNotifier {
     return await next(req);
   };
 
-  /// The folder whose MCP servers show in place of the chat, if they do.
-  String? mcpFolder;
+  /// Settings, in place of the chat: the section it shows, if it shows.
+  SettingsSection? settings;
 
-  void showMcp(String? folder) {
+  /// The section Settings opens on: the last one shown while the app runs.
+  SettingsSection lastSettings = SettingsSection.general;
+
+  /// The agent whose row Settings › Agents marks (a chat that couldn't
+  /// start it sent you there).
+  String? markedAgent;
+
+  /// What Settings closes back to: the Jira or GitHub view it opened from.
+  (bool, bool) _beforeSettings = (false, false);
+
+  /// Shows Settings at [section] (the last one shown when null); a
+  /// [folder] for MCP servers or Skills, an [agent] for Skills (whose
+  /// skills) or Agents (the row marked).
+  void openSettings({SettingsSection? section, String? folder, String? agent}) {
     trustAsk?.decide(start: false);
-    mcpFolder = folder;
-    skillsFolder = null;
+    final s = section ?? settings ?? lastSettings;
+    if (folder != null && s == SettingsSection.mcp) mcpFolder = folder;
+    if (folder != null && s == SettingsSection.skills) skillsFolder = folder;
+    if (agent != null && s == SettingsSection.skills) skillsAgent = agent;
+    markedAgent = s == SettingsSection.agents ? agent : null;
+    if (settings == null) _beforeSettings = (jiraOpen, githubOpen);
+    settings = lastSettings = s;
     jiraOpen = githubOpen = false;
     notifyListeners();
   }
 
-  /// The folder whose skills show in place of the chat, if they do.
+  /// Leaves Settings for what showed before it.
+  void closeSettings() {
+    if (settings == null) return;
+    settings = null;
+    jiraOpen = _beforeSettings.$1;
+    githubOpen = _beforeSettings.$2;
+    notifyListeners();
+  }
+
+  /// The folder whose MCP servers Settings › MCP servers shows: the one
+  /// picked there, else the open chat's, else the home folder.
+  String? mcpFolder;
+
+  void showMcp(String folder) =>
+      openSettings(section: SettingsSection.mcp, folder: folder);
+
+  /// The folder whose skills Settings › Skills shows, as [mcpFolder].
   String? skillsFolder;
 
   /// The agent whose skills show: Claude unless another was picked, or
   /// the view was opened from another agent's chat.
   String skillsAgent = 'claude';
 
-  void showSkills(String? folder, {String? agent}) {
-    trustAsk?.decide(start: false);
-    skillsFolder = folder;
-    if (agent != null) skillsAgent = agent;
-    mcpFolder = null;
-    jiraOpen = githubOpen = false;
-    notifyListeners();
-  }
+  void showSkills(String folder, {String? agent}) => openSettings(
+    section: SettingsSection.skills,
+    folder: folder,
+    agent: agent,
+  );
 
   /// Whether Jira shows in place of the chat.
   bool jiraOpen = false;
@@ -153,7 +188,7 @@ class Daemon extends ChangeNotifier {
     trustAsk?.decide(start: false);
     jiraOpen = open;
     if (open) {
-      mcpFolder = skillsFolder = null;
+      settings = null;
       githubOpen = false;
     }
     notifyListeners();
@@ -171,7 +206,7 @@ class Daemon extends ChangeNotifier {
     githubOpen = open;
     githubShow = item;
     if (open) {
-      mcpFolder = skillsFolder = null;
+      settings = null;
       jiraOpen = false;
     }
     notifyListeners();
@@ -450,7 +485,7 @@ class Daemon extends ChangeNotifier {
   void select(String chatId) {
     trustAsk?.decide(start: false);
     selectedId = chatId;
-    mcpFolder = skillsFolder = null;
+    settings = null;
     jiraOpen = githubOpen = false;
     final chat = chats[chatId];
     if (chat != null) unawaited(_load(chat));
@@ -495,7 +530,7 @@ class Daemon extends ChangeNotifier {
     notifyListeners();
     try {
       if (!await _mayRun(folder, 'Start a chat', agent)) return;
-      final before = (selectedId, mcpFolder, skillsFolder);
+      final before = (selectedId, settings);
       final StartChatResponse resp;
       try {
         resp = await client.startChat(
@@ -525,7 +560,7 @@ class Daemon extends ChangeNotifier {
       chats[resp.chatId] ??= ChatState(resp.chatId, folder);
       // Not if the user went elsewhere meanwhile: a trust card or another
       // chat they're on stays.
-      if ((selectedId, mcpFolder, skillsFolder) == before && trustAsk == null) {
+      if ((selectedId, settings) == before && trustAsk == null) {
         select(resp.chatId);
       }
     } finally {
@@ -546,7 +581,7 @@ class Daemon extends ChangeNotifier {
     notifyListeners();
     try {
       if (!await _mayRun(folder, 'Open the session', agent)) return;
-      final before = (selectedId, mcpFolder, skillsFolder);
+      final before = (selectedId, settings);
       final resp = await client.openAgentSession(
         OpenAgentSessionRequest(
           agent: agent,
@@ -556,7 +591,7 @@ class Daemon extends ChangeNotifier {
         ),
       );
       chats[resp.chatId] ??= ChatState(resp.chatId, folder);
-      if ((selectedId, mcpFolder, skillsFolder) == before && trustAsk == null) {
+      if ((selectedId, settings) == before && trustAsk == null) {
         select(resp.chatId);
       }
     } finally {

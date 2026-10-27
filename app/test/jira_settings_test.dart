@@ -7,10 +7,11 @@ import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_settings.dart';
-import 'package:nushi/settings_dialog.dart';
+import 'package:nushi/settings_nav.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'settings_harness.dart';
 
 final _now = DateTime(2026, 10, 25, 12);
 
@@ -62,23 +63,7 @@ Future<(FakeDaemon, Daemon)> _open(
     _ => null,
   };
   final d = await fake.connect(tester);
-  await tester.binding.setSurfaceSize(const Size(640, 640));
-  await tester.pumpWidget(
-    MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: NushiTheme(tokens).toThemeData(),
-      home: Builder(
-        builder: (context) => Center(
-          child: TextButton(
-            onPressed: () => showSettings(context, d.client, jira: true),
-            child: const Text('open'),
-          ),
-        ),
-      ),
-    ),
-  );
-  await tester.tap(find.text('open'));
-  await tester.pumpAndSettle();
+  await pumpSettings(tester, d, SettingsSection.jira, tokens: tokens);
   return (fake, d);
 }
 
@@ -159,18 +144,4 @@ void main() {
     expect(find.text('Add a site'), findsOneWidget);
     d.dispose();
   });
-
-  for (final (name, tokens) in [
-    ('dark', Tokens.dark),
-    ('light', Tokens.light),
-  ]) {
-    testWidgets('golden, $name', (tester) async {
-      final (_, d) = await _open(tester, tokens: tokens);
-      await expectLater(
-        find.byType(AlertDialog),
-        matchesGoldenFile('goldens/jira_settings_$name.png'),
-      );
-      d.dispose();
-    });
-  }
 }

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/settings_rows.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -131,56 +132,60 @@ class _GitHubPageState extends State<GitHubPage> {
     final t = theme.t;
     final hosts = _hosts;
     if (hosts == null) return const SizedBox(height: 40);
-    return SingleChildScrollView(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final h in hosts)
-            _HostRow(
-              h,
-              now: widget.now ?? DateTime.now(),
-              onAllow: () => _allow(h),
-              onRemove: () => _remove(h),
-            ),
-          if (_error case final e?)
-            Text(e, style: theme.ui(t.crashed, size: 12)),
-          if (hosts.isEmpty && !_adding)
-            Text(
-              'No GitHub host. Sign in with gh auth login in a terminal, '
-              'or add a token.',
-              style: theme.ui(t.textMuted, size: 12),
-            ),
-          const SizedBox(height: 8),
-          if (_adding)
-            _AddToken(
-              widget.client,
-              onAdded: () {
-                setState(() => _adding = false);
-                unawaited(_load());
-              },
-              onCancel: hosts.isEmpty
-                  ? null
-                  : () => setState(() => _adding = false),
-            )
-          else
-            Row(
-              children: [
-                Button(
-                  label: 'Add a token',
-                  icon: Icons.add,
-                  onPressed: () => setState(() => _adding = true),
-                ),
-              ],
-            ),
-          const SizedBox(height: 8),
-          Text(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SettingsGroup(
+          title: 'Hosts',
+          footer: const Text(
             'Nushi asks GitHub only while its view, a pull request or a '
             "chat's status shows, and writes only what you send.",
-            style: theme.ui(t.textMuted, size: 11.5),
           ),
-        ],
-      ),
+          children: [
+            for (final h in hosts)
+              _HostRow(
+                h,
+                now: widget.now ?? DateTime.now(),
+                onAllow: () => _allow(h),
+                onRemove: () => _remove(h),
+              ),
+            if (hosts.isEmpty)
+              const SettingsRow(
+                'No GitHub host',
+                description:
+                    'Sign in with gh auth login in a terminal, or add a '
+                    'token.',
+              ),
+          ],
+        ),
+        if (_error case final e?)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(e, style: theme.ui(t.crashed, size: 12)),
+          ),
+        if (_adding)
+          _AddToken(
+            widget.client,
+            onAdded: () {
+              setState(() => _adding = false);
+              unawaited(_load());
+            },
+            onCancel: hosts.isEmpty
+                ? null
+                : () => setState(() => _adding = false),
+          )
+        else
+          Row(
+            children: [
+              Button(
+                label: 'Add a token',
+                icon: Icons.add,
+                onPressed: () => setState(() => _adding = true),
+              ),
+            ],
+          ),
+      ],
     );
   }
 }
@@ -220,7 +225,7 @@ class _HostRow extends StatelessWidget {
     final kind = tokenKind(h.kind);
     final budget = budgetLine(h, now);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

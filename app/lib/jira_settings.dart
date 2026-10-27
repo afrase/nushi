@@ -5,6 +5,7 @@ import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/settings_rows.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -114,48 +115,57 @@ class _JiraPageState extends State<JiraPage> {
     final t = theme.t;
     final sites = _sites;
     if (sites == null) return const SizedBox(height: 40);
-    return SingleChildScrollView(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final s in sites)
-            _SiteRow(
-              s,
-              checked: _checked[s.id],
-              warning: expiryWarning(s, widget.now ?? DateTime.now()),
-              onAllow: () => _allow(s),
-              onRemove: () => _remove(s),
-            ),
-          const SizedBox(height: 8),
-          if (_adding)
-            _AddSite(
-              widget.client,
-              onAdded: (site) {
-                setState(() {
-                  _adding = false;
-                  _checked[site.id] = 'Connected as ${site.name}';
-                });
-                unawaited(_load());
-              },
-              onCancel: sites.isEmpty
-                  ? null
-                  : () => setState(() => _adding = false),
-            )
-          else
-            Row(
-              children: [
-                Button(
-                  label: 'Add a site',
-                  icon: Icons.add,
-                  onPressed: () => setState(() => _adding = true),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (sites.isNotEmpty)
+          SettingsGroup(
+            title: 'Sites',
+            children: [
+              for (final s in sites)
+                _SiteRow(
+                  s,
+                  checked: _checked[s.id],
+                  warning: expiryWarning(s, widget.now ?? DateTime.now()),
+                  onAllow: () => _allow(s),
+                  onRemove: () => _remove(s),
                 ),
-              ],
+            ],
+          ),
+        if (_adding)
+          _AddSite(
+            widget.client,
+            onAdded: (site) {
+              setState(() {
+                _adding = false;
+                _checked[site.id] = 'Connected as ${site.name}';
+              });
+              unawaited(_load());
+            },
+            onCancel: sites.isEmpty
+                ? null
+                : () => setState(() => _adding = false),
+          )
+        else
+          Row(
+            children: [
+              Button(
+                label: 'Add a site',
+                icon: Icons.add,
+                onPressed: () => setState(() => _adding = true),
+              ),
+            ],
+          ),
+        if (sites.isEmpty && !_adding)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              'No Jira sites.',
+              style: theme.ui(t.textMuted, size: 12),
             ),
-          if (sites.isEmpty && !_adding)
-            Text('No Jira sites.', style: theme.ui(t.textMuted, size: 12)),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }
@@ -193,7 +203,7 @@ class _SiteRow extends StatelessWidget {
         ? t.crashed
         : t.textMuted;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

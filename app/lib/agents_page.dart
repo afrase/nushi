@@ -6,6 +6,7 @@ import 'package:nushi/agent_mark.dart';
 import 'package:nushi/agents.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/settings_rows.dart';
 import 'package:nushi/shell_env_line.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -54,12 +55,19 @@ class _AgentsPageState extends State<AgentsPage> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final a in agents.values)
-          AgentRow(
-            a,
-            client: widget.client,
-            marked: a.name == widget.marked,
-            onRemove: _removing.contains(a.name) ? null : () => _remove(a),
+        if (agents.isNotEmpty)
+          SettingsGroup(
+            children: [
+              for (final a in agents.values)
+                AgentRow(
+                  a,
+                  client: widget.client,
+                  marked: a.name == widget.marked,
+                  onRemove: _removing.contains(a.name)
+                      ? null
+                      : () => _remove(a),
+                ),
+            ],
           ),
         ShellEnvLine(widget.client),
       ],
@@ -109,8 +117,8 @@ class AgentRow extends StatelessWidget {
       final p => p,
     };
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 8, horizontal: marked ? 8 : 0),
-      decoration: marked ? box(t.accent, fill: t.accentSoft) : null,
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+      color: marked ? t.accentSoft : null,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

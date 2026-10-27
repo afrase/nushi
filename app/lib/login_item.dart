@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:nushi/settings_rows.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 const _channel = MethodChannel('nushi/login');
 
-/// "Start at login" in Settings: the app's launch agent, which opens the
-/// daemon's helper app at login (ADR 0036). macOS keeps whether it's on;
-/// the row shows only once the app's Swift side answers.
+/// "Start at login" in Settings › General, a group of its own: the app's
+/// launch agent, which opens the daemon's helper app at login (ADR 0036).
+/// macOS keeps whether it's on; the row shows only once the app's Swift
+/// side answers.
 class StartAtLogin extends StatefulWidget {
   const new({super.key});
 
@@ -36,53 +38,28 @@ class _StartAtLoginState extends State<StartAtLogin> {
   Widget build(BuildContext context) {
     final status = _status;
     if (status == null) return const SizedBox.shrink();
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
+    final t = NushiTheme.of(context).t;
     final waiting = status == 'requiresApproval';
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return SettingsGroup(
       children: [
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Text(
-              'Start at login',
-              style: theme.ui(t.text, weight: FontWeight.w600),
-            ),
-            const Spacer(),
-            SizedBox(
-              height: 20,
-              child: FittedBox(
-                child: Switch(
-                  value: status == 'enabled' || waiting,
-                  onChanged: (on) => tryOrShow(context, () => _call('set', on)),
-                ),
-              ),
-            ),
-          ],
+        SettingsRow(
+          'Start at login',
+          description: waiting
+              ? 'Allow Nushi in Login Items to start it.'
+              : 'The daemon starts when you log in, without the app.',
+          descriptionColor: waiting ? t.needs : null,
+          control: SettingsSwitch(
+            value: status == 'enabled' || waiting,
+            onChanged: (on) => tryOrShow(context, () => _call('set', on)),
+          ),
         ),
-        const SizedBox(height: 6),
         if (waiting)
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Allow Nushi in Login Items to start it.',
-                  style: theme.ui(t.needs, size: 12),
-                ),
-              ),
-              Button(
-                label: 'Open Login Items…',
-                onPressed: () =>
-                    tryOrShow(context, () => _call('openSettings')),
-              ),
-            ],
-          )
-        else
-          Text(
-            'The daemon starts when you log in, without the app.',
-            style: theme.ui(t.textSecondary, size: 12),
+          SettingsRow(
+            'Login Items',
+            control: Button(
+              label: 'Open Login Items…',
+              onPressed: () => tryOrShow(context, () => _call('openSettings')),
+            ),
           ),
       ],
     );

@@ -2,8 +2,11 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import 'package:nushi/app_log.dart';
+import 'package:nushi/bundled_daemon.dart';
+import 'package:nushi/commits.dart' show dateTime;
 import 'package:nushi/daemon.dart';
-import 'package:nushi/theme/theme.dart';
+import 'package:nushi/settings_rows.dart';
 import 'package:nushi/widgets.dart';
 
 /// Reveals the daemon's log (nushid.log, app.log beside it) in Finder.
@@ -15,54 +18,90 @@ Future<void> showLogs() async {
   );
 }
 
-/// Settings' Logs: Show logs, and whether the daemon's log has DEBUG lines
-/// ([debug] null: the daemon didn't say, so no switch).
+/// When a daemon build (`<size>-<mtime in ms>`) was made, if it says.
+DateTime? buildTime(String build) => switch (int.tryParse(
+  build.split('-').last,
+)) {
+  final ms? when build.contains('-') => DateTime.fromMillisecondsSinceEpoch(ms),
+  _ => null,
+};
+
+/// Settings › Logs & advanced: Show logs, whether the daemon's log has
+/// DEBUG lines ([debug] null: the daemon didn't say, so no switch), and the
+/// daemon: its API, its build, and Restart (the packaged app's).
 class LogsSection extends StatelessWidget {
   const new({
+    required this.daemon,
     required this.debug,
     required this.onDebug,
     super.key,
     this.reveal = showLogs,
   });
 
+  final Daemon daemon;
   final bool? debug;
   final ValueChanged<bool> onDebug;
   final Future<void> Function() reveal;
 
+  Future<void> _restart(BuildContext context) async {
+    if (await confirm(
+          context,
+          'Restart the daemon?',
+          'Running turns stop and terminals close; chats reopen as you '
+              'open them.',
+          'Restart',
+        ) &&
+        context.mounted) {
+      await tryOrShow(context, daemon.restartDaemon);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    final built = buildTime(daemon.daemonBuild);
+    return SettingsPage(
+      title: 'Logs & advanced',
       children: [
-        const SizedBox(height: 16),
-        Row(
+        SettingsGroup(
+          title: 'Logs',
           children: [
-            Text('Logs', style: theme.ui(t.text, weight: FontWeight.w600)),
-            const Spacer(),
-            Button(label: 'Show logs', onPressed: reveal),
+            SettingsRow(
+              'Logs',
+              description: 'nushid.log, and app.log beside it.',
+              control: Button(label: 'Show logs', onPressed: reveal),
+            ),
+            if (debug case final on?)
+              SettingsRow(
+                'Debug lines',
+                description: 'Every agent and API call, with timings.',
+                control: SettingsSwitch(value: on, onChanged: onDebug),
+              ),
           ],
         ),
-        if (debug case final on?) ...[
-          Row(
+        ListenableBuilder(
+          listenable: daemon,
+          builder: (context, _) => SettingsGroup(
+            title: 'Daemon',
             children: [
-              Text('Debug lines', style: theme.ui(t.textSecondary)),
-              const Spacer(),
-              SizedBox(
-                height: 20,
-                child: FittedBox(
-                  child: Switch(value: on, onChanged: onDebug),
-                ),
+              SettingsRow(
+                'Daemon',
+                description: [
+                  'API ${daemon.daemonApi}',
+                  if (built != null) 'built ${dateTime(built)}',
+                  if (daemon.replaced) 'a newer one is installed',
+                ].join(' · '),
+                control: bundledDaemon == null
+                    ? null
+                    : Button(
+                        label: 'Restart…',
+                        onPressed: () => _restart(context),
+                      ),
               ),
+              if (appVersion.isNotEmpty)
+                SettingsRow('App', description: 'Version $appVersion'),
             ],
           ),
-          Text(
-            'Every agent and API call, with timings.',
-            style: theme.ui(t.textSecondary, size: 12),
-          ),
-        ],
+        ),
       ],
     );
   }

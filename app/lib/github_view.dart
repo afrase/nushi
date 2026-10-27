@@ -15,7 +15,7 @@ import 'package:nushi/github_pull.dart';
 import 'package:nushi/github_settings.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/settings_dialog.dart';
+import 'package:nushi/settings_nav.dart';
 import 'package:nushi/widgets.dart';
 
 /// ⌘G shows GitHub in place of the chat, and back.
@@ -321,11 +321,9 @@ class _GitHubViewState extends State<GitHubView> {
     }),
   );
 
-  void _settings() => unawaited(
-    showSettings(context, widget.daemon.client, github: true).then((_) {
-      if (mounted) unawaited(_loadHosts());
-    }),
-  );
+  // The view comes back anew when Settings closes, its hosts read again.
+  void _settings() =>
+      widget.daemon.openSettings(section: SettingsSection.github);
 
   @override
   Widget build(BuildContext context) {

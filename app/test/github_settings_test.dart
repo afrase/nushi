@@ -7,10 +7,11 @@ import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_settings.dart';
-import 'package:nushi/settings_dialog.dart';
+import 'package:nushi/settings_nav.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'settings_harness.dart';
 
 List<GitHubBucket> _budget() {
   // "resets in 42m" whenever it runs: the page reads the clock.
@@ -69,23 +70,7 @@ Future<(FakeDaemon, Daemon)> _open(
     _ => null,
   };
   final d = await fake.connect(tester);
-  await tester.binding.setSurfaceSize(const Size(640, 640));
-  await tester.pumpWidget(
-    MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: NushiTheme(tokens).toThemeData(),
-      home: Builder(
-        builder: (context) => Center(
-          child: TextButton(
-            onPressed: () => showSettings(context, d.client, github: true),
-            child: const Text('open'),
-          ),
-        ),
-      ),
-    ),
-  );
-  await tester.tap(find.text('open'));
-  await tester.pumpAndSettle();
+  await pumpSettings(tester, d, SettingsSection.github, tokens: tokens);
   return (fake, d);
 }
 
@@ -172,18 +157,4 @@ void main() {
     expect(find.text('Add a token'), findsOneWidget);
     d.dispose();
   });
-
-  for (final (name, tokens) in [
-    ('dark', Tokens.dark),
-    ('light', Tokens.light),
-  ]) {
-    testWidgets('golden, $name', (tester) async {
-      final (_, d) = await _open(tester, tokens: tokens);
-      await expectLater(
-        find.byType(AlertDialog),
-        matchesGoldenFile('goldens/github_settings_$name.png'),
-      );
-      d.dispose();
-    });
-  }
 }

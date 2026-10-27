@@ -15,15 +15,13 @@ import 'package:nushi/details_panel.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/github_view.dart';
 import 'package:nushi/jira_view.dart';
-import 'package:nushi/mcp.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/remote.dart';
 import 'package:nushi/removed_chats.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/settings_dialog.dart';
+import 'package:nushi/settings_view.dart';
 import 'package:nushi/sidebar.dart';
-import 'package:nushi/skills.dart';
 import 'package:nushi/status_bar.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
@@ -82,8 +80,7 @@ class _NushiAppState extends State<NushiApp> {
           PlatformMenuItem(
             label: 'Settings…',
             shortcut: settingsKey,
-            onSelected: () =>
-                showSettings(_navigator.currentContext!, widget.daemon.client),
+            onSelected: widget.daemon.openSettings,
           ),
           const PlatformProvidedMenuItem(
             type: PlatformProvidedMenuItemType.hide,
@@ -164,7 +161,7 @@ class _NushiAppState extends State<NushiApp> {
       home: Builder(
         builder: (context) => CallbackShortcuts(
           bindings: {
-            settingsKey: () => showSettings(context, widget.daemon.client),
+            settingsKey: widget.daemon.openSettings,
             newChatKey: () => newChat(context, widget.daemon, ''),
             jiraKey: () =>
                 widget.daemon.showJira(open: !widget.daemon.jiraOpen),
@@ -176,6 +173,9 @@ class _NushiAppState extends State<NushiApp> {
             actions: {
               NewChatIntent: CallbackAction<NewChatIntent>(
                 onInvoke: (_) => newChat(context, widget.daemon, ''),
+              ),
+              OpenSettingsIntent: CallbackAction<OpenSettingsIntent>(
+                onInvoke: (_) => widget.daemon.openSettings(),
               ),
               OpenChatIntent: CallbackAction<OpenChatIntent>(
                 onInvoke: (i) => openNthChat(widget.daemon, i.n),
@@ -246,10 +246,8 @@ class _Shell extends StatelessWidget {
                   ? JiraView(daemon)
                   : daemon.githubOpen
                   ? GitHubView(daemon)
-                  : daemon.mcpFolder != null
-                  ? McpView(daemon: daemon, folder: daemon.mcpFolder!)
-                  : daemon.skillsFolder != null
-                  ? SkillsView(daemon: daemon, folder: daemon.skillsFolder!)
+                  : daemon.settings != null
+                  ? SettingsView(daemon)
                   : chat == null
                   ? NothingOpen(daemon)
                   : _ChatPane(key: ValueKey(chat.id), chat, daemon),

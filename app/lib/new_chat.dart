@@ -13,7 +13,7 @@ import 'package:nushi/issue_picker.dart';
 import 'package:nushi/logo.dart';
 import 'package:nushi/new_chat_issue.dart';
 import 'package:nushi/open_session.dart';
-import 'package:nushi/settings_dialog.dart';
+import 'package:nushi/settings_nav.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -46,7 +46,7 @@ Future<void> newChat(
   if (pick == null || !context.mounted) return;
   final (agent, session, picked) = pick;
   if (agent.isEmpty || knownAgents[agent]?.ready == false) {
-    await showSettings(context, daemon.client, agents: true);
+    daemon.openSettings(section: SettingsSection.agents);
   } else if (session == null) {
     await tryOrShow(
       context,
@@ -412,7 +412,7 @@ class NothingOpen extends StatelessWidget {
           if (none)
             _SetUpLine(
               'Set up an agent in ',
-              onTap: () => showSettings(context, daemon.client, agents: true),
+              onTap: () => daemon.openSettings(section: SettingsSection.agents),
             )
           else
             Text('Start a chat', style: theme.ui(theme.t.textMuted)),

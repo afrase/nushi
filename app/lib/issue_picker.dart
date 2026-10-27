@@ -8,7 +8,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_view_parts.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/settings_dialog.dart';
+import 'package:nushi/settings_nav.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -180,8 +180,11 @@ class _IssuePickerState extends State<IssuePicker> {
                 LinkText(
                   'Settings › Jira',
                   size: 12.5,
-                  onTap: () =>
-                      showSettings(context, widget.daemon.client, jira: true),
+                  // Out of the New chat dialog, to Settings in the window.
+                  onTap: () {
+                    Navigator.popUntil(context, (r) => r.isFirst);
+                    widget.daemon.openSettings(section: SettingsSection.jira);
+                  },
                 ),
               ],
             ),

@@ -2,13 +2,13 @@ import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/agents_page.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_header.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/items.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/settings_nav.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -158,8 +158,8 @@ void main() {
     );
     await tester.tap(find.text('Set up…'));
     await tester.pumpAndSettle();
-    final rows = tester.widgetList<AgentRow>(find.byType(AgentRow));
-    expect(rows.where((r) => r.marked).map((r) => r.agent.name), ['claude']);
+    expect(d.settings, SettingsSection.agents);
+    expect(d.markedAgent, 'claude');
     d.dispose();
   });
 
