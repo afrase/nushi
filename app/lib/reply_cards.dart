@@ -88,8 +88,9 @@ class _ReplyCardState extends State<_ReplyCard> {
                   if (r.text.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 2),
+                      // Its lines run on, as many as fit.
                       child: Text(
-                        r.text,
+                        r.text.replaceAll(RegExp(r'\s+'), ' '),
                         maxLines: r.quote.isEmpty ? 2 : 1,
                         overflow: TextOverflow.ellipsis,
                         style: theme.ui(t.text, size: 11.5),
@@ -108,8 +109,9 @@ class _ReplyCardState extends State<_ReplyCard> {
   }
 }
 
-/// A reply opened from its card: the quote, and its text to edit. Save (or
-/// Enter) returns the text; Escape keeps it as it was.
+/// A reply opened from its card: the quote, and its text to edit, which
+/// grows as the reply box's does. Save (or Enter) returns the text,
+/// Shift-Enter starts a line; Escape keeps it as it was.
 class _ReplyDialog extends StatefulWidget {
   const new(this.reply);
 
@@ -130,7 +132,6 @@ class _ReplyDialogState extends State<_ReplyDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
     void save() => Navigator.pop(context, _text.text);
     return nushiDialog(
       'Reply',
@@ -143,11 +144,10 @@ class _ReplyDialogState extends State<_ReplyDialog> {
             constraints: const BoxConstraints(maxHeight: 240),
             child: SingleChildScrollView(child: QuoteBlock(widget.reply.quote)),
           ),
-          TextField(
-            controller: _text,
+          ReplyField(
+            _text,
             autofocus: true,
-            style: theme.ui(theme.t.text),
-            onSubmitted: (_) => save(),
+            onEnter: save,
             decoration: const InputDecoration(hintText: 'Your reply'),
           ),
         ],

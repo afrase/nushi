@@ -90,6 +90,7 @@ class _TranscriptState extends State<Transcript> {
   bool _down = false; // a pointer is down on the transcript
   Rect? _at; // the selection's top and bottom middle, where the toolbar shows
   String? _replyTo; // the selection a reply is being written to
+  _Anchor _anchor = _Anchor(); // where the reply box opened
 
   // The widget built for each entry, by key, and what it was built from.
   var _built = <String, (List<Object>, Widget)>{};
@@ -294,12 +295,15 @@ class _TranscriptState extends State<Transcript> {
           if (_at case final at? when onReply != null || onSide != null)
             Positioned.fill(
               child: CustomSingleChildLayout(
-                delegate: _Above(at),
+                delegate: _Above(at, _replyTo == null ? null : _anchor),
                 child: switch (_replyTo) {
-                  final quote? => ReplyBox(
-                    quote: quote,
-                    onReply: onReply!,
-                    onClose: _closeToolbar,
+                  // Its own layer: typing repaints only the box.
+                  final quote? => RepaintBoundary(
+                    child: ReplyBox(
+                      quote: quote,
+                      onReply: onReply!,
+                      onClose: _closeToolbar,
+                    ),
                   ),
                   null => SelectionToolbar(
                     onSide: onSide == null
@@ -311,7 +315,10 @@ class _TranscriptState extends State<Transcript> {
                           },
                     onReply: onReply == null
                         ? null
-                        : () => setState(() => _replyTo = _selected),
+                        : () => setState(() {
+                            _replyTo = _selected;
+                            _anchor = _Anchor();
+                          }),
                   ),
                 },
               ),
@@ -386,29 +393,49 @@ double _gap(List<Object> entries, int i, {required bool header}) =>
     ? (i == 0 && !header ? 8 : 28)
     : (i > 0 && _opens(entries[i - 1]) ? 18 : 12);
 
+/// Where a reply box's bottom edge went when it opened: it stays there as
+/// the box grows a line at a time, so the box grows upward, as Claude's.
+class _Anchor {
+  double? bottom;
+}
+
 /// Places its child centered just above [at] (a selection's top and bottom
-/// middle), or below it when there is no room above, inside the box.
+/// middle), or below it when there is no room above, inside the box. With
+/// an [anchor] (the reply box) the child keeps the bottom edge it first
+/// had, kept inside too.
 class _Above extends SingleChildLayoutDelegate {
-  new(this.at);
+  new(this.at, [this.anchor]);
 
   final Rect at;
+  final _Anchor? anchor;
 
   @override
-  BoxConstraints getConstraintsForChild(BoxConstraints c) => c.loosen();
+  BoxConstraints getConstraintsForChild(BoxConstraints c) => BoxConstraints(
+    maxWidth: max(0, c.maxWidth - 16),
+    maxHeight: max(0, c.maxHeight - 8),
+  );
 
   @override
   Offset getPositionForChild(Size size, Size child) {
-    var y = at.top - child.height - 6;
-    if (y < 4) y = at.bottom + 6;
+    double inside(double y) =>
+        y.clamp(4, max(4, size.height - child.height - 4));
+    final double y;
+    if (anchor?.bottom case final bottom?) {
+      y = inside(bottom - child.height);
+    } else {
+      final above = at.top - child.height - 6;
+      y = inside(above < 4 ? at.bottom + 6 : above);
+      anchor?.bottom = y + child.height;
+    }
     return Offset(
       (at.center.dx - child.width / 2).clamp(
         8,
         max(8, size.width - child.width - 8),
       ),
-      y.clamp(4, max(4, size.height - child.height - 4)),
+      y,
     );
   }
 
   @override
-  bool shouldRelayout(_Above old) => old.at != at;
+  bool shouldRelayout(_Above old) => old.at != at || old.anchor != anchor;
 }

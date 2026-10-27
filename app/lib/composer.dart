@@ -117,7 +117,7 @@ class _ComposerState extends State<Composer> {
     final key = e.logicalKey;
     final shift = HardwareKeyboard.instance.isShiftPressed;
     if (_completions.onKey(key, shift: shift)) return KeyEventResult.handled;
-    if (key == LogicalKeyboardKey.enter && !shift) {
+    if (isSendKey(e)) {
       unawaited(_send(now: HardwareKeyboard.instance.isMetaPressed));
       return KeyEventResult.handled;
     }

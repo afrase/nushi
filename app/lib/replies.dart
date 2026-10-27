@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:nushi/composer_parts.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -13,9 +14,13 @@ typedef Reply = ({String quote, String text});
 typedef Replies = ValueNotifier<List<Reply>>;
 
 final _marker = RegExp(r'^<!-- reply \d+ -->\n', multiLine: true);
+const _end = '<!-- end of replies -->';
+final _endLine = RegExp('^$_end\$', multiLine: true);
 
 /// A message's text: each reply as `<!-- reply n -->`, its quote as `> `
-/// lines and its text after a blank line, then [text].
+/// lines and its text (its lines as written) after a blank line, then
+/// [text]. When the last reply's text has a blank line of its own,
+/// `<!-- end of replies -->` says where the replies end.
 String withReplies(List<Reply> replies, String text) => [
   for (final (i, r) in replies.indexed)
     [
@@ -26,26 +31,31 @@ String withReplies(List<Reply> replies, String text) => [
       ].join('\n'),
       if (r.text.trim().isNotEmpty) '\n\n${r.text.trim()}',
     ].join(),
+  if (replies.lastOrNull?.text.trim().contains('\n\n') ?? false) _end,
   if (text.isNotEmpty) text,
 ].join('\n\n');
 
 /// The replies [message] starts with, and the rest of it ([withReplies]
-/// backwards). A reply's text ends at its first blank line.
+/// backwards). Without `<!-- end of replies -->`, the last reply's text
+/// ends at its first blank line.
 (List<Reply>, String) splitReplies(String message) {
   if (_marker.matchAsPrefix(message) == null) return (const [], message);
-  final blocks = message.split(_marker).skip(1).toList();
+  var head = message;
+  String? rest;
+  if (_endLine.firstMatch(message) case final m?) {
+    head = message.substring(0, m.start);
+    rest = message.substring(m.end);
+  }
+  final blocks = head.split(_marker).skip(1).toList();
   final replies = <Reply>[];
-  var rest = '';
   for (final (i, block) in blocks.indexed) {
     final lines = block.split('\n');
     final quoted = lines.takeWhile((l) => l.startsWith('>')).toList();
     var text = lines.skip(quoted.length).join('\n').trim();
-    if (i == blocks.length - 1) {
+    if (rest == null && i == blocks.length - 1) {
       final cut = text.indexOf('\n\n');
-      if (cut >= 0) {
-        rest = text.substring(cut + 2);
-        text = text.substring(0, cut);
-      }
+      rest = cut < 0 ? '' : text.substring(cut + 2);
+      if (cut >= 0) text = text.substring(0, cut);
     }
     replies.add((
       quote: [
@@ -55,7 +65,7 @@ String withReplies(List<Reply> replies, String text) => [
       text: text,
     ));
   }
-  return (replies, rest.trim());
+  return (replies, (rest ?? '').trim());
 }
 
 /// Quoted text, dimmed, with a bar on its left; in a user message's band's
@@ -173,8 +183,9 @@ class SelectionToolbar extends StatelessWidget {
   }
 }
 
-/// Writing a reply to a selection: the quote, and one line to reply in.
-/// Enter (or the send button) hands the reply over; Escape closes.
+/// Writing a reply to a selection: the quote, and the reply, which wraps
+/// and grows to [ReplyField.lines] lines, then scrolls. Enter (or the send
+/// button) hands the reply over, Shift-Enter starts a line; Escape closes.
 class ReplyBox extends StatefulWidget {
   const new({
     required this.quote,
@@ -223,7 +234,7 @@ class _ReplyBoxState extends State<ReplyBox> {
         const SingleActivator(LogicalKeyboardKey.escape): widget.onClose,
       },
       child: Container(
-        width: 340,
+        width: 400,
         padding: const EdgeInsets.fromLTRB(12, 10, 6, 4),
         decoration: ShapeDecoration(
           color: t.raised,
@@ -240,31 +251,73 @@ class _ReplyBoxState extends State<ReplyBox> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               QuoteBlock(widget.quote.trim(), maxLines: 2, size: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _text,
-                      focusNode: _focus,
-                      style: theme.ui(t.text),
-                      onSubmitted: (_) => _send(),
-                      decoration: const InputDecoration(
-                        hintText: 'Your reply',
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(vertical: 8),
+              // In a short window the field gives way, and scrolls.
+              Flexible(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: ReplyField(
+                        _text,
+                        focus: _focus,
+                        onEnter: _send,
+                        decoration: const InputDecoration(
+                          hintText: 'Your reply',
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(vertical: 8),
+                        ),
                       ),
                     ),
-                  ),
-                  IconTap(
-                    Icons.arrow_upward,
-                    tooltip: 'Add to the message (⏎)',
-                    onTap: _send,
-                  ),
-                ],
+                    IconTap(
+                      Icons.arrow_upward,
+                      tooltip: 'Add to the message (⏎)',
+                      onTap: _send,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// A reply's text field, in the reply box and the dialog that edits it:
+/// it wraps and grows from one line to [lines], then scrolls; Enter runs
+/// [onEnter] and Shift-Enter starts a line, as in the composer.
+class ReplyField extends StatelessWidget {
+  const new(
+    this.controller, {
+    required this.onEnter,
+    required this.decoration,
+    super.key,
+    this.focus,
+    this.autofocus = false,
+  });
+
+  static const lines = 8;
+
+  final TextEditingController controller;
+  final VoidCallback onEnter;
+  final InputDecoration decoration;
+  final FocusNode? focus;
+  final bool autofocus;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    return EnterSends(
+      onEnter: onEnter,
+      child: TextField(
+        controller: controller,
+        focusNode: focus,
+        autofocus: autofocus,
+        minLines: 1,
+        maxLines: lines,
+        style: theme.ui(theme.t.text),
+        decoration: decoration,
       ),
     );
   }

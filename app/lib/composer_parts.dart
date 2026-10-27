@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
@@ -42,3 +43,32 @@ Widget stopIcon(Color color) => Container(
   ),
   child: Container(width: 6, height: 6, color: color),
 );
+
+/// Whether [e] is Enter without Shift, which sends from the composer and a
+/// reply; Shift-Enter is left to the (multi-line) field, which starts a
+/// line. A phone's Return is Enter without Shift (the browser's keydown):
+/// it sends there too.
+bool isSendKey(KeyEvent e) =>
+    e is! KeyUpEvent &&
+    e.logicalKey == LogicalKeyboardKey.enter &&
+    !HardwareKeyboard.instance.isShiftPressed;
+
+/// [child], a multi-line text field, with the composer's keys: Enter runs
+/// [onEnter], Shift-Enter starts a line ([isSendKey]).
+class EnterSends extends StatelessWidget {
+  const new({required this.onEnter, required this.child, super.key});
+
+  final VoidCallback onEnter;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Focus(
+    skipTraversal: true,
+    onKeyEvent: (_, e) {
+      if (!isSendKey(e)) return KeyEventResult.ignored;
+      onEnter();
+      return KeyEventResult.handled;
+    },
+    child: child,
+  );
+}

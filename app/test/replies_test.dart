@@ -25,4 +25,33 @@ void main() {
     expect(got, isEmpty);
     expect(rest, '> a plain quote');
   });
+
+  test('a reply with lines, and with a blank line, comes back whole', () {
+    const lines = (
+      quote: 'kept as a DateTime',
+      text: 'Why?\nAnd why not a string?',
+    );
+    var message = withReplies([lines], 'the rest');
+    expect(message, isNot(contains('end of replies')));
+    var (got, rest) = splitReplies(message);
+    expect(got, [lines]);
+    expect(rest, 'the rest');
+
+    const paragraphs = (
+      quote: 'kept as a DateTime',
+      text: 'Why?\n\nAnd why not?',
+    );
+    for (final text in ['the rest', '']) {
+      message = withReplies([lines, paragraphs], text);
+      expect(
+        message,
+        '<!-- reply 1 -->\n> kept as a DateTime\n\nWhy?\nAnd why not a string?'
+        '\n\n<!-- reply 2 -->\n> kept as a DateTime\n\nWhy?\n\nAnd why not?'
+        '\n\n<!-- end of replies -->${text.isEmpty ? '' : '\n\n$text'}',
+      );
+      (got, rest) = splitReplies(message);
+      expect(got, [lines, paragraphs]);
+      expect(rest, text);
+    }
+  });
 }
