@@ -39,13 +39,13 @@ Settings › Logs & advanced shows the app's version and the running daemon's (`
 ```sh
 make run     # starts nushid in the background (if it isn't running), then the app
 make stop    # stops nushid
-make test    # all tests
-make lint    # the linters and format checks (below)
+make test    # all tests (test-go, test-packages, test-app, test-web)
+make lint    # the linters and format checks, below (lint-go, lint-dart)
 make check   # lint, then test
 make gen     # regenerate the API code after editing proto/
 make lines   # hand-written line counts
 make package # a release "Nushi.app" with nushid inside (signed: NOTES.md says with what)
-tools/release.sh 1.2.0 # a release's files into dist/, as the release workflow builds them
+tools/release.sh 1.2.0 # a release's files into dist/, as the release workflow builds them (or a part: app, relay, web)
 make install # package, then copy it to ~/Applications
 make icons   # redraw the app icon and the mark (tools/icongen)
 ```
@@ -58,7 +58,7 @@ The daemon keeps its socket, token and log in `~/Library/Application Support/Nus
 
 ## Development
 
-`make lint` runs golangci-lint (with gofmt and goimports), govulncheck, `buf lint` and `buf format`, and `flutter analyze` and `dart format` for the app and each package; `make check` runs it and then the tests, as CI does (`.github/workflows/ci.yml`: macOS for everything, Linux for `relay` and `noiseconn`).
+`make lint` runs golangci-lint (with gofmt and goimports), govulncheck, `buf lint` and `buf format`, and `flutter analyze` and `dart format` for the app and each package; `make check` runs it and then the tests. CI (`.github/workflows/ci.yml`) runs the same parts as parallel jobs, in under 3 minutes: on macOS Go's lint and tests and the web app's end-to-end test, and the app's tests in two shards (`make test-app SHARD=1/2`: every second test file); on Linux the protos' and Dart's lint, the Dart packages' tests, and the relay's and the Noise channel's Go tests.
 
 - **Go:** golangci-lint and govulncheck are pinned in their own module, `tools/lint/go.mod`; `make lint` builds them into `bin/` and runs them: nothing to install, and the daemon's `go.mod` doesn't take their dependencies. `.golangci.yml` turns every linter on and lists each one off with the reason. govulncheck checks the daemon, the relay and the tools against vuln.go.dev (so `make lint` needs the network) and fails on a vulnerability the code calls; the Go version is the `go` line in `go.mod`, which the go command fetches if yours is older. To format: `bin/golangci-lint fmt ./...`.
 - **ACP:** agents are spoken to through the library `github.com/afrase/acp-go` (its `unstable` package), at the version in `go.mod` ([ADR 0041](docs/adr/0041-acp-through-acp-go.md)). To change it and Nushi at once, clone it beside Nushi and run `go work init . ../acp-go` here: the `go.work` (ignored by git) makes Nushi build with your checkout. Remove it to build with the tagged version again; then `go get github.com/afrase/acp-go@vX.Y.Z` once the library has the release you need.

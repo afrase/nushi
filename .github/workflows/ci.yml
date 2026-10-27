@@ -1,6 +1,6 @@
-# What make check runs, as parallel jobs (step 344; one job of 12 minutes before). macOS for what needs it, in three
-# jobs (the account runs five macOS jobs at once, and other repositories' CI and releases need some): the daemon
-# (proc_info, sandbox-exec, launchd, the keychain's cgo), so Go's lint and tests, then the web app's end-to-end test
+# What make check runs, as parallel jobs (step 344; one job of 12 minutes before). macOS for what needs it, in four
+# jobs (the account runs five macOS jobs at once, and a release or another repository's CI needs one too): the
+# daemon (proc_info, sandbox-exec, launchd, the keychain's cgo), so Go's lint and tests; the web app's end-to-end test
 # (nushid with Chrome); and the app's tests in two shards of test files (its goldens are drawn with macOS's text
 # rendering: on Linux a third of them differ by 1-4%; its end-to-end tests run nushid). Linux for the rest: the
 # protos' and Dart's lint, the Dart packages' tests, and the packages that also run elsewhere (the relay, the Noise
@@ -28,7 +28,7 @@ concurrency:
 
 jobs:
   go:
-    name: Go, and the web app in Chrome (macOS)
+    name: Go lint and tests (macOS)
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -63,25 +63,6 @@ jobs:
       # The tests run when the lint fails too, to see both.
       - if: ${{ !cancelled() }}
         run: make test-go
-      # Only now, as the web app's test needs it; the lean SDK, as the app's tests have it.
-      - id: flutter
-        if: ${{ !cancelled() }}
-        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
-        with:
-          channel: stable
-          flutter-version: 3.47.7
-          cache: true
-          cache-key: flutter-:os:-:channel:-:version:-:arch:-:hash:-lean
-      - if: ${{ !cancelled() }}
-        run: make test-web
-      # As the app's tests do.
-      - if: always() && steps.flutter.outputs.CACHE-HIT != 'true'
-        run: |
-          du -sh "$FLUTTER_ROOT"
-          cd "$FLUTTER_ROOT/bin/cache"
-          rm -rf artifacts/engine/ios* artifacts/engine/android-* artifacts/engine/darwin-x64-profile \
-            artifacts/engine/darwin-x64-release ios-sdk.stamp macos-sdk.stamp android-*.stamp
-          du -sh "$FLUTTER_ROOT"
 
   lint:
     name: Proto and Dart lint (Linux)
@@ -131,6 +112,7 @@ jobs:
       fail-fast: false
       matrix:
         shard: [1, 2]
+    # Three test files at once: the runner has three cores, and flutter test takes half of them (one).
     env:
       SHARD: ${{ matrix.shard }}/2
       FLUTTER_TEST_FLAGS: --concurrency 3
@@ -143,7 +125,7 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
-      # The SDK cached without what the tests never use (below): half the download.
+      # The SDK cached without what the tests never use (below): 0.9 GB to fetch, not 2.1.
       - id: flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
@@ -163,7 +145,37 @@ jobs:
       # Before the cache is saved (a miss only): iOS's, Android's and macOS's release engines go, which only
       # builds use; flutter test needs the host's engine and the web SDK. Their stamps go too, so a build would
       # fetch them again.
-      - if: always() && steps.flutter.outputs.CACHE-HIT != 'true'
+      - if: always() && steps.flutter.outcome == 'success' && steps.flutter.outputs.CACHE-HIT != 'true'
+        run: |
+          du -sh "$FLUTTER_ROOT"
+          cd "$FLUTTER_ROOT/bin/cache"
+          rm -rf artifacts/engine/ios* artifacts/engine/android-* artifacts/engine/darwin-x64-profile \
+            artifacts/engine/darwin-x64-release ios-sdk.stamp macos-sdk.stamp android-*.stamp
+          du -sh "$FLUTTER_ROOT"
+
+  web:
+    name: Web app in Chrome (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      # Its test builds nushid, nushi-relay and the fake agent.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      # The lean SDK, as the app's tests have it.
+      - id: flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.47.7
+          cache: true
+          cache-key: flutter-:os:-:channel:-:version:-:arch:-:hash:-lean
+      - run: make test-web
+      # As the app's tests do.
+      - if: always() && steps.flutter.outcome == 'success' && steps.flutter.outputs.CACHE-HIT != 'true'
         run: |
           du -sh "$FLUTTER_ROOT"
           cd "$FLUTTER_ROOT/bin/cache"
