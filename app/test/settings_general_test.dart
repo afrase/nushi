@@ -1,4 +1,5 @@
 import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
@@ -59,6 +60,20 @@ void main() {
     await tester.tap(find.text('1 hour'));
     await tester.pumpAndSettle();
     expect(fake.setSettings.last.sleepAfterMinutes, 60);
+    d.dispose();
+  });
+
+  // The owner saw ? boxes where the preview's Nerd Font icons were, which
+  // no build here reproduced (step 313): the preview shows none.
+  testWidgets('the terminal preview has no private-use characters', (
+    tester,
+  ) async {
+    final (_, d) = await _open(tester, SettingsSection.terminal);
+    final text = tester
+        .widget<Text>(find.byKey(const ValueKey('terminal-preview')))
+        .data!;
+    bool private(int r) => (r >= 0xe000 && r <= 0xf8ff) || r >= 0xf0000;
+    expect(text.runes.where(private), isEmpty);
     d.dispose();
   });
 }

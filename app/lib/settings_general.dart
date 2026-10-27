@@ -86,6 +86,10 @@ TerminalStyle terminalStyle() => TerminalStyle(
   height: 1.25,
 );
 
+/// What Settings › Terminal shows in the picked font.
+const terminalPreview =
+    '~/nushi (main) \$ go test ./...\nok  app  0.42s  0O1lI{}[]';
+
 const _sizes = [10.0, 11.0, 12.0, 12.5, 13.0, 14.0, 15.0, 16.0, 18.0, 20.0];
 
 /// The installed monospaced families (from the app's Swift side), but the
@@ -168,10 +172,11 @@ class _TerminalSectionState extends State<TerminalSection> {
                   horizontal: 14,
                   vertical: 12,
                 ),
+                // No Nerd Font icons: the owner saw ? boxes for them here
+                // that no build on the test Mac drew (step 313).
                 child: Text(
-                  // Nerd Font icons: folder, Go, git branch, Apple.
-                  '~/nushi \u{e0a0} main\n\u{f07b} app  \u{e627} main.go  '
-                  '\u{f179} 0O1lI{}',
+                  terminalPreview,
+                  key: const ValueKey('terminal-preview'),
                   style: terminalStyle().toTextStyle(color: t.text),
                 ),
               ),
