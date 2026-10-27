@@ -162,7 +162,7 @@ func run() error {
 			Background: claude.Background, ReportElsewhere: claude.ReportElsewhere,
 			Shell: claude.Shell, ReadShell: claude.ReadShell,
 			SubagentID: claude.SubagentID, Relay: claude.Relay, Relayed: claude.Relayed, Relaying: claude.Relaying, Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle, Compacted: claude.Compacted,
-			ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete},
+			ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete, NamesSessions: true},
 		History:       func(id, from, to string) (func() error, error) { return claudehistory.Copy(projects, id, from, to) },
 		OpenElsewhere: claudehistory.Open, Forked: func(ids []string) map[string]bool { return claudehistory.Forked(projects, ids) },
 		Gone: chats.NotFound, HistoryGone: func(sid, folder string) bool { return claudehistory.Gone(projects, sid, folder) },

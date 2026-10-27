@@ -169,6 +169,17 @@ abstract final class NushiService {
     nushiv1nushi.RenameChatResponse.new,
   );
 
+  /// Renames the branch of a chat's worktree (git branch -m; its folder
+  /// stays), for good: the chat's title no longer names it. Refused during a
+  /// turn, for a name git doesn't take or that's taken, and when the branch
+  /// is on a remote or another worktree or chat has it. (API 68)
+  static const renameBranch = connect.Spec(
+    '/$name/RenameBranch',
+    connect.StreamType.unary,
+    nushiv1nushi.RenameBranchRequest.new,
+    nushiv1nushi.RenameBranchResponse.new,
+  );
+
   /// Archives a chat: its turn is cancelled and its agent stops; it stays
   /// listed, read-only. Unarchiving reopens it (ACP session/load).
   static const archiveChat = connect.Spec(
@@ -423,9 +434,11 @@ abstract final class NushiService {
     nushiv1nushi.LogoutMcpServerResponse.new,
   );
 
-  /// The skills and plugins Claude uses in a folder (API 66, ADR 0051):
-  /// read from Claude's files and `claude plugin list --json`, never run in
-  /// the folder. Skills' descriptions and plugins' text are their authors'.
+  /// The skills (and plugins) an agent uses in a folder (API 66, ADR 0051;
+  /// every agent's from API 67, ADR 0052): read from the agent's files (and
+  /// Claude's `claude plugin list --json`), never run in the folder; shared
+  /// skills (.agents/skills) with every agent that loads each. Skills'
+  /// descriptions and plugins' text are their authors'.
   static const listSkills = connect.Spec(
     '/$name/ListSkills',
     connect.StreamType.unary,

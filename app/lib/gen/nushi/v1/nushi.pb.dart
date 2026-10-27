@@ -810,7 +810,9 @@ class Worktree extends $pb.GeneratedMessage {
   @$pb.TagNumber(2)
   void clearPath() => $_clearField(2);
 
-  /// Its branch, nushi/<name>.
+  /// Its branch: nushi/<two words> at first, named after the chat once it
+  /// has a title (between turns, unless pushed or renamed), or as the user
+  /// renamed it (RenameBranch).
   @$pb.TagNumber(3)
   $core.String get branch => $_getSZ(2);
   @$pb.TagNumber(3)
@@ -4147,6 +4149,118 @@ class RenameChatResponse extends $pb.GeneratedMessage {
       $pb.GeneratedMessage.$_defaultFor<RenameChatResponse>(
           RenameChatResponse.$_createMessage);
   static RenameChatResponse? _defaultInstance;
+}
+
+class RenameBranchRequest extends $pb.GeneratedMessage {
+  factory RenameBranchRequest({
+    $core.String? chatId,
+    $core.String? branch,
+  }) {
+    final result = RenameBranchRequest._();
+    if (chatId != null) result.chatId = chatId;
+    if (branch != null) result.branch = branch;
+    return result;
+  }
+
+  RenameBranchRequest._();
+
+  factory RenameBranchRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RenameBranchRequest()..mergeFromBuffer(data, registry);
+  factory RenameBranchRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RenameBranchRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RenameBranchRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RenameBranchRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOS(2, _omitFieldNames ? '' : 'branch')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RenameBranchRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RenameBranchRequest copyWith(void Function(RenameBranchRequest) updates) =>
+      super.copyWith((message) => updates(message as RenameBranchRequest))
+          as RenameBranchRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use RenameBranchRequest() / RenameBranchRequest.new instead')
+  static RenameBranchRequest create() => RenameBranchRequest._();
+  static $pb.GeneratedMessage $_createMessage() => RenameBranchRequest._();
+  @$core.override
+  RenameBranchRequest createEmptyInstance() => RenameBranchRequest._();
+  @$core.pragma('dart2js:noInline')
+  static RenameBranchRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RenameBranchRequest>(
+          RenameBranchRequest.$_createMessage);
+  static RenameBranchRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get branch => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set branch($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasBranch() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearBranch() => $_clearField(2);
+}
+
+class RenameBranchResponse extends $pb.GeneratedMessage {
+  factory RenameBranchResponse() => RenameBranchResponse._();
+
+  RenameBranchResponse._();
+
+  factory RenameBranchResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RenameBranchResponse()..mergeFromBuffer(data, registry);
+  factory RenameBranchResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RenameBranchResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RenameBranchResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RenameBranchResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RenameBranchResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RenameBranchResponse copyWith(void Function(RenameBranchResponse) updates) =>
+      super.copyWith((message) => updates(message as RenameBranchResponse))
+          as RenameBranchResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RenameBranchResponse() / RenameBranchResponse.new instead')
+  static RenameBranchResponse create() => RenameBranchResponse._();
+  static $pb.GeneratedMessage $_createMessage() => RenameBranchResponse._();
+  @$core.override
+  RenameBranchResponse createEmptyInstance() => RenameBranchResponse._();
+  @$core.pragma('dart2js:noInline')
+  static RenameBranchResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RenameBranchResponse>(
+          RenameBranchResponse.$_createMessage);
+  static RenameBranchResponse? _defaultInstance;
 }
 
 class ArchiveChatRequest extends $pb.GeneratedMessage {
@@ -22971,6 +23085,15 @@ class NushiServiceApi {
       _client.invoke<RenameChatResponse>(
           ctx, 'NushiService', 'RenameChat', request, RenameChatResponse());
 
+  /// Renames the branch of a chat's worktree (git branch -m; its folder
+  /// stays), for good: the chat's title no longer names it. Refused during a
+  /// turn, for a name git doesn't take or that's taken, and when the branch
+  /// is on a remote or another worktree or chat has it. (API 68)
+  $async.Future<RenameBranchResponse> renameBranch(
+          $pb.ClientContext? ctx, RenameBranchRequest request) =>
+      _client.invoke<RenameBranchResponse>(
+          ctx, 'NushiService', 'RenameBranch', request, RenameBranchResponse());
+
   /// Archives a chat: its turn is cancelled and its agent stops; it stays
   /// listed, read-only. Unarchiving reopens it (ACP session/load).
   $async.Future<ArchiveChatResponse> archiveChat(
@@ -23166,9 +23289,11 @@ class NushiServiceApi {
       _client.invoke<LogoutMcpServerResponse>(ctx, 'NushiService',
           'LogoutMcpServer', request, LogoutMcpServerResponse());
 
-  /// The skills and plugins Claude uses in a folder (API 66, ADR 0051):
-  /// read from Claude's files and `claude plugin list --json`, never run in
-  /// the folder. Skills' descriptions and plugins' text are their authors'.
+  /// The skills (and plugins) an agent uses in a folder (API 66, ADR 0051;
+  /// every agent's from API 67, ADR 0052): read from the agent's files (and
+  /// Claude's `claude plugin list --json`), never run in the folder; shared
+  /// skills (.agents/skills) with every agent that loads each. Skills'
+  /// descriptions and plugins' text are their authors'.
   $async.Future<ListSkillsResponse> listSkills(
           $pb.ClientContext? ctx, ListSkillsRequest request) =>
       _client.invoke<ListSkillsResponse>(

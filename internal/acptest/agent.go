@@ -21,6 +21,10 @@
 //     it on Stderr;
 //   - anything else: "You said: <text>", streamed in two chunks.
 //
+// A line "title: <title>" in any prompt first names the session, as
+// Claude does (session_info_update); "late title: <title>" names it 100 ms
+// after the turn has ended, as Claude may after a short first turn.
+//
 // Pause slows the "think" and "plan" scripts down, to watch them stream.
 //
 // Cancelling a turn (session/cancel) ends "think", "plan" and "many"
@@ -300,6 +304,16 @@ func (a *Agent) prompt(session, text string) string { //nolint:gocognit // one c
 	a.History.add(cwd, session, map[string]any{"sessionUpdate": "user_message_chunk", "content": map[string]any{"type": "text", "text": text}})
 	if strings.Contains(text, "stderr") && a.Stderr != nil {
 		_, _ = fmt.Fprintln(a.Stderr, "auth: using the key sk-ant-api03-Zr8fakeFAKEfake0123456789 from the environment")
+	}
+	for line := range strings.Lines(text) {
+		if title, ok := strings.CutPrefix(strings.TrimSpace(line), "title: "); ok {
+			a.update(session, map[string]any{"sessionUpdate": "session_info_update", "title": title})
+		}
+		if title, ok := strings.CutPrefix(strings.TrimSpace(line), "late title: "); ok {
+			time.AfterFunc(100*time.Millisecond, func() {
+				a.update(session, map[string]any{"sessionUpdate": "session_info_update", "title": title})
+			})
+		}
 	}
 	switch {
 	case a.Codex && strings.Contains(text, "run"):

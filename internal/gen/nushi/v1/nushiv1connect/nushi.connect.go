@@ -71,6 +71,9 @@ const (
 	NushiServiceCloseSideChatProcedure = "/nushi.v1.NushiService/CloseSideChat"
 	// NushiServiceRenameChatProcedure is the fully-qualified name of the NushiService's RenameChat RPC.
 	NushiServiceRenameChatProcedure = "/nushi.v1.NushiService/RenameChat"
+	// NushiServiceRenameBranchProcedure is the fully-qualified name of the NushiService's RenameBranch
+	// RPC.
+	NushiServiceRenameBranchProcedure = "/nushi.v1.NushiService/RenameBranch"
 	// NushiServiceArchiveChatProcedure is the fully-qualified name of the NushiService's ArchiveChat
 	// RPC.
 	NushiServiceArchiveChatProcedure = "/nushi.v1.NushiService/ArchiveChat"
@@ -370,6 +373,11 @@ type NushiServiceClient interface {
 	// Sets the chat's title; it wins over the agent's. An empty title goes
 	// back to the agent's.
 	RenameChat(context.Context, *connect.Request[v1.RenameChatRequest]) (*connect.Response[v1.RenameChatResponse], error)
+	// Renames the branch of a chat's worktree (git branch -m; its folder
+	// stays), for good: the chat's title no longer names it. Refused during a
+	// turn, for a name git doesn't take or that's taken, and when the branch
+	// is on a remote or another worktree or chat has it. (API 68)
+	RenameBranch(context.Context, *connect.Request[v1.RenameBranchRequest]) (*connect.Response[v1.RenameBranchResponse], error)
 	// Archives a chat: its turn is cancelled and its agent stops; it stays
 	// listed, read-only. Unarchiving reopens it (ACP session/load).
 	ArchiveChat(context.Context, *connect.Request[v1.ArchiveChatRequest]) (*connect.Response[v1.ArchiveChatResponse], error)
@@ -462,9 +470,11 @@ type NushiServiceClient interface {
 	// minutes at most). Logout forgets the sign-in.
 	LoginMcpServer(context.Context, *connect.Request[v1.LoginMcpServerRequest]) (*connect.Response[v1.LoginMcpServerResponse], error)
 	LogoutMcpServer(context.Context, *connect.Request[v1.LogoutMcpServerRequest]) (*connect.Response[v1.LogoutMcpServerResponse], error)
-	// The skills and plugins Claude uses in a folder (API 66, ADR 0051):
-	// read from Claude's files and `claude plugin list --json`, never run in
-	// the folder. Skills' descriptions and plugins' text are their authors'.
+	// The skills (and plugins) an agent uses in a folder (API 66, ADR 0051;
+	// every agent's from API 67, ADR 0052): read from the agent's files (and
+	// Claude's `claude plugin list --json`), never run in the folder; shared
+	// skills (.agents/skills) with every agent that loads each. Skills'
+	// descriptions and plugins' text are their authors'.
 	ListSkills(context.Context, *connect.Request[v1.ListSkillsRequest]) (*connect.Response[v1.ListSkillsResponse], error)
 	// Turns a skill on or off: yours in your settings, a project's in the
 	// project's local settings (skillOverrides, only that key); "builtin"
@@ -721,6 +731,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceRenameChatProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("RenameChat")),
+			connect.WithClientOptions(opts...),
+		),
+		renameBranch: connect.NewClient[v1.RenameBranchRequest, v1.RenameBranchResponse](
+			httpClient,
+			baseURL+NushiServiceRenameBranchProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("RenameBranch")),
 			connect.WithClientOptions(opts...),
 		),
 		archiveChat: connect.NewClient[v1.ArchiveChatRequest, v1.ArchiveChatResponse](
@@ -1255,6 +1271,7 @@ type nushiServiceClient struct {
 	forkChat            *connect.Client[v1.ForkChatRequest, v1.ForkChatResponse]
 	closeSideChat       *connect.Client[v1.CloseSideChatRequest, v1.CloseSideChatResponse]
 	renameChat          *connect.Client[v1.RenameChatRequest, v1.RenameChatResponse]
+	renameBranch        *connect.Client[v1.RenameBranchRequest, v1.RenameBranchResponse]
 	archiveChat         *connect.Client[v1.ArchiveChatRequest, v1.ArchiveChatResponse]
 	sleepChat           *connect.Client[v1.SleepChatRequest, v1.SleepChatResponse]
 	reopenChat          *connect.Client[v1.ReopenChatRequest, v1.ReopenChatResponse]
@@ -1425,6 +1442,11 @@ func (c *nushiServiceClient) CloseSideChat(ctx context.Context, req *connect.Req
 // RenameChat calls nushi.v1.NushiService.RenameChat.
 func (c *nushiServiceClient) RenameChat(ctx context.Context, req *connect.Request[v1.RenameChatRequest]) (*connect.Response[v1.RenameChatResponse], error) {
 	return c.renameChat.CallUnary(ctx, req)
+}
+
+// RenameBranch calls nushi.v1.NushiService.RenameBranch.
+func (c *nushiServiceClient) RenameBranch(ctx context.Context, req *connect.Request[v1.RenameBranchRequest]) (*connect.Response[v1.RenameBranchResponse], error) {
+	return c.renameBranch.CallUnary(ctx, req)
 }
 
 // ArchiveChat calls nushi.v1.NushiService.ArchiveChat.
@@ -1911,6 +1933,11 @@ type NushiServiceHandler interface {
 	// Sets the chat's title; it wins over the agent's. An empty title goes
 	// back to the agent's.
 	RenameChat(context.Context, *connect.Request[v1.RenameChatRequest]) (*connect.Response[v1.RenameChatResponse], error)
+	// Renames the branch of a chat's worktree (git branch -m; its folder
+	// stays), for good: the chat's title no longer names it. Refused during a
+	// turn, for a name git doesn't take or that's taken, and when the branch
+	// is on a remote or another worktree or chat has it. (API 68)
+	RenameBranch(context.Context, *connect.Request[v1.RenameBranchRequest]) (*connect.Response[v1.RenameBranchResponse], error)
 	// Archives a chat: its turn is cancelled and its agent stops; it stays
 	// listed, read-only. Unarchiving reopens it (ACP session/load).
 	ArchiveChat(context.Context, *connect.Request[v1.ArchiveChatRequest]) (*connect.Response[v1.ArchiveChatResponse], error)
@@ -2003,9 +2030,11 @@ type NushiServiceHandler interface {
 	// minutes at most). Logout forgets the sign-in.
 	LoginMcpServer(context.Context, *connect.Request[v1.LoginMcpServerRequest]) (*connect.Response[v1.LoginMcpServerResponse], error)
 	LogoutMcpServer(context.Context, *connect.Request[v1.LogoutMcpServerRequest]) (*connect.Response[v1.LogoutMcpServerResponse], error)
-	// The skills and plugins Claude uses in a folder (API 66, ADR 0051):
-	// read from Claude's files and `claude plugin list --json`, never run in
-	// the folder. Skills' descriptions and plugins' text are their authors'.
+	// The skills (and plugins) an agent uses in a folder (API 66, ADR 0051;
+	// every agent's from API 67, ADR 0052): read from the agent's files (and
+	// Claude's `claude plugin list --json`), never run in the folder; shared
+	// skills (.agents/skills) with every agent that loads each. Skills'
+	// descriptions and plugins' text are their authors'.
 	ListSkills(context.Context, *connect.Request[v1.ListSkillsRequest]) (*connect.Response[v1.ListSkillsResponse], error)
 	// Turns a skill on or off: yours in your settings, a project's in the
 	// project's local settings (skillOverrides, only that key); "builtin"
@@ -2258,6 +2287,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceRenameChatProcedure,
 		svc.RenameChat,
 		connect.WithSchema(nushiServiceMethods.ByName("RenameChat")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceRenameBranchHandler := connect.NewUnaryHandler(
+		NushiServiceRenameBranchProcedure,
+		svc.RenameBranch,
+		connect.WithSchema(nushiServiceMethods.ByName("RenameBranch")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceArchiveChatHandler := connect.NewUnaryHandler(
@@ -2806,6 +2841,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceCloseSideChatHandler.ServeHTTP(w, r)
 		case NushiServiceRenameChatProcedure:
 			nushiServiceRenameChatHandler.ServeHTTP(w, r)
+		case NushiServiceRenameBranchProcedure:
+			nushiServiceRenameBranchHandler.ServeHTTP(w, r)
 		case NushiServiceArchiveChatProcedure:
 			nushiServiceArchiveChatHandler.ServeHTTP(w, r)
 		case NushiServiceSleepChatProcedure:
@@ -3051,6 +3088,10 @@ func (UnimplementedNushiServiceHandler) CloseSideChat(context.Context, *connect.
 
 func (UnimplementedNushiServiceHandler) RenameChat(context.Context, *connect.Request[v1.RenameChatRequest]) (*connect.Response[v1.RenameChatResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.RenameChat is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) RenameBranch(context.Context, *connect.Request[v1.RenameBranchRequest]) (*connect.Response[v1.RenameBranchResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.RenameBranch is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) ArchiveChat(context.Context, *connect.Request[v1.ArchiveChatRequest]) (*connect.Response[v1.ArchiveChatResponse], error) {

@@ -32,7 +32,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 67
+const Version = 68
 
 // Build is the daemon's executable as it started (PingResponse.build).
 var Build = func() string {
@@ -370,6 +370,16 @@ func (s *server) RenameChat(_ context.Context, req *connect.Request[nushiv1.Rena
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 	return connect.NewResponse(&nushiv1.RenameChatResponse{}), nil
+}
+
+func (s *server) RenameBranch(ctx context.Context, req *connect.Request[nushiv1.RenameBranchRequest]) (*connect.Response[nushiv1.RenameBranchResponse], error) {
+	if err := git.CheckBranch(req.Msg.Branch); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	if err := s.chats.RenameBranch(ctx, req.Msg.ChatId, req.Msg.Branch); err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	return connect.NewResponse(&nushiv1.RenameBranchResponse{}), nil
 }
 
 func (s *server) ArchiveChat(_ context.Context, req *connect.Request[nushiv1.ArchiveChatRequest]) (*connect.Response[nushiv1.ArchiveChatResponse], error) {
