@@ -2,7 +2,7 @@
 
 # Nushi
 
-A macOS app for running coding agents as chats over the [Agent Client Protocol](https://agentclientprotocol.com), plus a diff viewer. A Go daemon (`nushid`) runs the agents; a Flutter app is the window.
+An agentic development environment (ADE) for macOS: coding agents (Claude, Codex and others) run as chats over the [Agent Client Protocol](https://agentclientprotocol.com), beside a diff viewer, terminals, Jira and GitHub, and a phone web app to follow them. A Go daemon (`nushid`) runs the agents; a Flutter app is the window. Linux and Windows aren't supported yet (the daemon uses macOS's keychain, sandbox and launchd); the relay runs anywhere.
 
 ## Install
 
