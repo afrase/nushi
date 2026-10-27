@@ -16001,6 +16001,7 @@ class JiraIssue extends $pb.GeneratedMessage {
     $core.Iterable<JiraComment>? comments,
     $core.Iterable<JiraRemoteLink>? remoteLinks,
     $core.String? url,
+    $core.String? assigneeId,
   }) {
     final result = JiraIssue._();
     if (key != null) result.key = key;
@@ -16024,6 +16025,7 @@ class JiraIssue extends $pb.GeneratedMessage {
     if (comments != null) result.comments.addAll(comments);
     if (remoteLinks != null) result.remoteLinks.addAll(remoteLinks);
     if (url != null) result.url = url;
+    if (assigneeId != null) result.assigneeId = assigneeId;
     return result;
   }
 
@@ -16066,6 +16068,7 @@ class JiraIssue extends $pb.GeneratedMessage {
     ..pPM<JiraRemoteLink>(19, _omitFieldNames ? '' : 'remoteLinks',
         subBuilder: JiraRemoteLink.$_createMessage)
     ..aOS(20, _omitFieldNames ? '' : 'url')
+    ..aOS(21, _omitFieldNames ? '' : 'assigneeId')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -16234,6 +16237,16 @@ class JiraIssue extends $pb.GeneratedMessage {
   $core.bool hasUrl() => $_has(19);
   @$pb.TagNumber(20)
   void clearUrl() => $_clearField(20);
+
+  /// The assignee's account id ("" when unassigned; assignee is the name).
+  @$pb.TagNumber(21)
+  $core.String get assigneeId => $_getSZ(20);
+  @$pb.TagNumber(21)
+  set assigneeId($core.String value) => $_setString(20, value);
+  @$pb.TagNumber(21)
+  $core.bool hasAssigneeId() => $_has(20);
+  @$pb.TagNumber(21)
+  void clearAssigneeId() => $_clearField(21);
 }
 
 class JiraLink extends $pb.GeneratedMessage {

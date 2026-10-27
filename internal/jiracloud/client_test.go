@@ -135,17 +135,22 @@ func TestSearchPages(t *testing.T) {
 	var tokens []string
 	pages := map[string]string{ // token asked for -> the page's issues and next token
 		"":   `{"issues":[{"key":"A-1","fields":{"summary":"one","status":{"name":"To Do","statusCategory":{"key":"new"}},"updated":"2026-10-25T21:15:39.083+0900"}}],"nextPageToken":"t1"}`,
-		"t1": `{"issues":[{"key":"A-2","fields":{"summary":"two","assignee":{"displayName":"Ann"},"priority":{"name":"High"}}}],"nextPageToken":"t2"}`,
-		"t2": `{"issues":[{"key":"A-3","fields":{"summary":"three"}}],"nextPageToken":"t1"}`, // goes round
+		"t1": `{"issues":[{"key":"A-2","fields":{"summary":"two","assignee":{"accountId":"712020:ann","displayName":"Ann Lee","avatarUrls":{"24x24":"https://secure.gravatar.com/avatar/x"}},"priority":{"name":"High"}}}],"nextPageToken":"t2"}`,
+		"t2": `{"issues":[{"key":"A-3","fields":{"summary":"three","assignee":null}}],"nextPageToken":"t1"}`, // goes round
 	}
 	f.routes["POST /rest/api/3/search/jql"] = func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
-			JQL           string `json:"jql"`
-			NextPageToken string `json:"nextPageToken"`
-			MaxResults    int    `json:"maxResults"`
+			JQL           string   `json:"jql"`
+			Fields        []string `json:"fields"`
+			NextPageToken string   `json:"nextPageToken"`
+			MaxResults    int      `json:"maxResults"`
 		}
 		_ = json.NewDecoder(r.Body).Decode(&req)
 		tokens = append(tokens, req.NextPageToken)
+		// Only what a row shows; the assignee among them.
+		if strings.Join(req.Fields, ",") != "summary,status,priority,assignee" {
+			t.Errorf("fields asked for: %q", req.Fields)
+		}
 		_, _ = w.Write([]byte(pages[req.NextPageToken]))
 	}
 	c := f.client()
@@ -153,11 +158,14 @@ func TestSearchPages(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got) != 3 || got[0].Key != "A-1" || got[1].Assignee != "Ann" || got[1].Priority != "High" || got[0].StatusCategory != "new" {
+	if len(got) != 3 || got[0].Key != "A-1" || got[1].Priority != "High" || got[0].StatusCategory != "new" {
 		t.Errorf("got %+v", got)
 	}
-	if got[0].Updated.IsZero() {
-		t.Error("no updated time")
+	if got[1].Assignee != "Ann Lee" || got[1].AssigneeID != "712020:ann" {
+		t.Errorf("the assignee: %q %q", got[1].Assignee, got[1].AssigneeID)
+	}
+	if got[0].Assignee != "" || got[0].AssigneeID != "" || got[2].AssigneeID != "" {
+		t.Errorf("unassigned issues have an assignee: %+v", got)
 	}
 	if strings.Join(tokens, ",") != ",t1,t2" {
 		t.Errorf("asked for pages %q: a token seen before must end it", tokens)

@@ -3730,6 +3730,7 @@ const JiraIssue$json = {
       '10': 'remoteLinks'
     },
     {'1': 'url', '3': 20, '4': 1, '5': 9, '10': 'url'},
+    {'1': 'assignee_id', '3': 21, '4': 1, '5': 9, '10': 'assigneeId'},
   ],
 };
 
@@ -3747,7 +3748,8 @@ final $typed_data.Uint8List jiraIssueDescriptor = $convert.base64Decode(
     'IubnVzaGkudjEuSmlyYUxpbmtSBWxpbmtzEjoKC2F0dGFjaG1lbnRzGBEgAygLMhgubnVzaGku'
     'djEuSmlyYUF0dGFjaG1lbnRSC2F0dGFjaG1lbnRzEjEKCGNvbW1lbnRzGBIgAygLMhUubnVzaG'
     'kudjEuSmlyYUNvbW1lbnRSCGNvbW1lbnRzEjsKDHJlbW90ZV9saW5rcxgTIAMoCzIYLm51c2hp'
-    'LnYxLkppcmFSZW1vdGVMaW5rUgtyZW1vdGVMaW5rcxIQCgN1cmwYFCABKAlSA3VybA==');
+    'LnYxLkppcmFSZW1vdGVMaW5rUgtyZW1vdGVMaW5rcxIQCgN1cmwYFCABKAlSA3VybBIfCgthc3'
+    'NpZ25lZV9pZBgVIAEoCVIKYXNzaWduZWVJZA==');
 
 @$core.Deprecated('Use jiraLinkDescriptor instead')
 const JiraLink$json = {

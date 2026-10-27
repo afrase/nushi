@@ -5,6 +5,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/jira_people.dart';
 import 'package:nushi/jira_view_parts.dart';
 import 'package:nushi/jira_work.dart';
 import 'package:nushi/menu.dart';
@@ -79,11 +80,8 @@ List<ChatState> chatsOn(Daemon daemon, Task t) =>
 
 /// The task list, as Orca's task drawer: [tasks] (already [ordered]) in a
 /// card for each status, the cards in the order they were dragged into
-/// and each collapsible, both remembered for [place] (see [grouped]);
-/// each row with its key (and site, when [sites]), summary, priority, its
-/// chats (a click opens the newest), its status (a menu of the moves)
-/// and Start work (a menu of folders, then the New chat dialog with the
-/// issue picked). A click on a row [onOpen]s its details.
+/// and each collapsible, both remembered for [place] (see [grouped]).
+/// A click on a row [onOpen]s its details.
 class TaskList extends StatelessWidget {
   const new({
     required this.daemon,
@@ -95,6 +93,7 @@ class TaskList extends StatelessWidget {
     required this.onMoved,
     required this.startMenu,
     super.key,
+    this.people = true,
   });
 
   final Daemon daemon;
@@ -104,6 +103,9 @@ class TaskList extends StatelessWidget {
   /// The selected issue's key.
   final String? selected;
   final bool sites;
+
+  /// With each row's assignee (not in a list of my issues).
+  final bool people;
   final void Function(Task task) onOpen;
   final Future<void> Function() onMoved;
 
@@ -115,7 +117,7 @@ class TaskList extends StatelessWidget {
     listenable: Listenable.merge([jiraGroupOrder, jiraCollapsed]),
     builder: (context, _) => LayoutBuilder(
       // The priority only where the summary keeps room.
-      builder: (context, box) => _list(context, wide: box.maxWidth > 900),
+      builder: (context, box) => _list(context, wide: box.maxWidth > 700),
     ),
   );
 
@@ -125,6 +127,11 @@ class TaskList extends StatelessWidget {
     final shown = grouped(tasks, place);
     final statuses = statusesOf(shown);
     final collapsed = jiraCollapsed.value[place] ?? const [];
+    final columns = (
+      key: _keyWidth(context, theme),
+      priority: wide,
+      people: people,
+    );
     return CardList(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
       onReorder: (from, to) => jiraGroupOrder.value = {
@@ -169,7 +176,17 @@ class TaskList extends StatelessWidget {
                 children: [
                   for (final task in shown)
                     if (task.issue.status == status)
-                      _row(context, theme, task, wide: wide),
+                      TaskRow(
+                        key: ValueKey('${task.site} ${task.issue.key}'),
+                        daemon: daemon,
+                        task: task,
+                        selected: task.issue.key == selected,
+                        site: sites,
+                        columns: columns,
+                        onOpen: () => onOpen(task),
+                        onMoved: onMoved,
+                        startMenu: startMenu,
+                      ),
                 ],
               ),
             ),
@@ -178,100 +195,189 @@ class TaskList extends StatelessWidget {
     );
   }
 
-  Widget _row(
-    BuildContext context,
-    NushiTheme theme,
-    Task task, {
-    required bool wide,
-  }) {
+  /// The key's column: as wide as a long key (`ABCD-12345`).
+  static double _keyWidth(BuildContext context, NushiTheme theme) {
+    final p = TextPainter(
+      text: TextSpan(
+        text: 'ABCD-12345',
+        style: theme.code(theme.t.textSecondary, size: 11.5),
+      ),
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    final w = p.width.ceilToDouble() + 16;
+    p.dispose();
+    return w;
+  }
+}
+
+/// A row's columns, the same in every row and card: the key's width,
+/// whether the priority and the assignee show.
+typedef TaskColumns = ({double key, bool priority, bool people});
+
+/// A row of the task list: its key (and site, when [site]), summary, its
+/// chats (a click opens the newest), and in columns of their own the
+/// priority, the status (a menu of the moves) and the assignee. Start
+/// work (a menu of folders, then the New chat dialog with the issue
+/// picked) shows on hover and on the selected row (⌘⏎ too); a
+/// right-click has it.
+class TaskRow extends StatefulWidget {
+  const new({
+    required this.daemon,
+    required this.task,
+    required this.selected,
+    required this.site,
+    required this.columns,
+    required this.onOpen,
+    required this.onMoved,
+    required this.startMenu,
+    super.key,
+  });
+
+  final Daemon daemon;
+  final Task task;
+  final bool selected;
+  final bool site;
+  final TaskColumns columns;
+  final VoidCallback onOpen;
+  final Future<void> Function() onMoved;
+  final void Function(OpenMenu open) startMenu;
+
+  @override
+  State<TaskRow> createState() => _TaskRowState();
+}
+
+class _TaskRowState extends State<TaskRow> {
+  bool _hover = false;
+
+  List<MenuEntry> _folders(BuildContext context) => folderEntries(
+    widget.daemon,
+    onPick: (f) => startWork(
+      context,
+      widget.daemon,
+      widget.task.site,
+      widget.task.issue.key,
+      f,
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
     final t = theme.t;
+    final task = widget.task;
     final is_ = task.issue;
-    final chats = chatsOn(daemon, task);
-    final picked = is_.key == selected;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 1),
-      child: Tap(
-        selected: picked,
-        onTap: () => onOpen(task),
-        padding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 86,
-              child: Text(
-                is_.key,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.code(t.textSecondary, size: 11.5),
-              ),
-            ),
-            Expanded(
-              child: Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(text: is_.summary),
-                    if (sites)
-                      TextSpan(
-                        text: '  ${task.site}',
-                        style: theme.ui(t.textMuted, size: 11.5),
-                      ),
-                  ],
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.ui(t.text),
-              ),
-            ),
-            if (wide && is_.priority.isNotEmpty)
-              SizedBox(
-                width: 80,
-                child: Text(
-                  is_.priority,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.ui(t.textMuted, size: 11.5),
-                ),
-              ),
-            if (chats.isNotEmpty) _Chats(daemon, chats),
-            // A column of its own, so the priorities line up.
-            SizedBox(
-              width: 130,
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: StatusMenu(
-                  is_,
-                  load: () => issueMoves(
-                    context,
-                    daemon,
-                    task.site,
-                    is_,
-                    onMoved: onMoved,
+    final cols = widget.columns;
+    final chats = chatsOn(widget.daemon, task);
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: Menu(
+        entries: [MenuEntry('Start work', submenu: _folders(context))],
+        builder: (context, open) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 1),
+          child: Tap(
+            selected: widget.selected,
+            onTap: widget.onOpen,
+            onSecondaryTapUp: (d) => open(d.localPosition),
+            padding: const EdgeInsets.fromLTRB(8, 4, 2, 4),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: cols.key,
+                  child: Text(
+                    is_.key,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.code(t.textSecondary, size: 11.5),
                   ),
                 ),
-              ),
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(text: is_.summary),
+                        if (widget.site)
+                          TextSpan(
+                            text: '  ${task.site}',
+                            style: theme.ui(t.textMuted, size: 11.5),
+                          ),
+                      ],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.ui(t.text),
+                  ),
+                ),
+                if (chats.isNotEmpty) _Chats(widget.daemon, chats),
+                if (cols.priority)
+                  SizedBox(
+                    width: 76,
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 12),
+                      child: Text(
+                        is_.priority,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.ui(t.textMuted, size: 11.5),
+                      ),
+                    ),
+                  ),
+                SizedBox(
+                  width: 128,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: StatusMenu(
+                      is_,
+                      quiet: true,
+                      load: () => issueMoves(
+                        context,
+                        widget.daemon,
+                        task.site,
+                        is_,
+                        onMoved: widget.onMoved,
+                      ),
+                    ),
+                  ),
+                ),
+                if (cols.people)
+                  SizedBox(
+                    width: 26,
+                    child: Center(
+                      child: Avatar(name: is_.assignee, id: is_.assigneeId),
+                    ),
+                  ),
+                SizedBox(
+                  width: 30,
+                  child: _hover || widget.selected
+                      ? Align(
+                          alignment: Alignment.centerRight,
+                          child: _start(context),
+                        )
+                      : null,
+                ),
+              ],
             ),
-            Menu(
-              digits: true,
-              entries: folderEntries(
-                daemon,
-                onPick: (f) =>
-                    startWork(context, daemon, task.site, is_.key, f),
-              ),
-              builder: (context, open) {
-                if (picked) startMenu(open);
-                return Button(
-                  label: 'Start work',
-                  menu: true,
-                  tooltip: picked ? '⌘⏎' : '',
-                  onPressed: open,
-                );
-              },
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
+
+  Widget _start(BuildContext context) => Menu(
+    digits: true,
+    entries: _folders(context),
+    builder: (context, open) {
+      if (widget.selected) widget.startMenu(open);
+      return IconTap(
+        Icons.play_arrow_outlined,
+        size: 15,
+        tooltip: widget.selected ? 'Start work (⌘⏎)' : 'Start work',
+        onTap: open,
+      );
+    },
+  );
 }
 
 /// The agents of an issue's chats (three at most, then how many more); a

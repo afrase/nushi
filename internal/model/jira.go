@@ -9,13 +9,15 @@ type JiraUser struct {
 
 // JiraIssue is an issue as lists and the issue view show it. Text fields
 // (Description, AcceptanceCriteria, comments) are Markdown; lists fill
-// only the first fields, up to Updated.
+// only the key, summary, status, priority and assignee.
 type JiraIssue struct {
 	Key, Summary, Type, Status string
 	// StatusCategory is Jira's "new", "indeterminate" or "done".
 	StatusCategory     string
 	Priority, Assignee string
-	Updated            time.Time
+	// AssigneeID is the assignee's account id ("" when unassigned).
+	AssigneeID string
+	Updated    time.Time
 
 	Reporter           string
 	Created            time.Time

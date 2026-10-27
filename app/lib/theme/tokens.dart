@@ -86,6 +86,7 @@ class Tokens {
     required this.scrim,
     required this.claude,
     required this.monogramText,
+    required this.avatars,
     required this.syntax,
   });
 
@@ -162,6 +163,10 @@ class Tokens {
   final Color claude;
   final Color monogramText;
 
+  /// People's colors (a Jira assignee's avatar), each under
+  /// [monogramText]'s initials.
+  final List<Color> avatars;
+
   /// Code's colors, in diffs and code blocks, by [Capture].
   final Map<Capture, CodeInk> syntax;
 
@@ -223,6 +228,16 @@ class Tokens {
     scrim: Color(0xDD000000),
     claude: Color(0xFFB0582B),
     monogramText: Color(0xFFFFFFFF),
+    avatars: [
+      Color(0xFF2A5CC8), // blue
+      Color(0xFF0E7A6D), // teal
+      Color(0xFF6A3FC4), // violet
+      Color(0xFF8A5300), // amber
+      Color(0xFFA9512A), // rust
+      Color(0xFFA23C83), // magenta
+      Color(0xFF4E6D8C), // slate
+      Color(0xFF4A7526), // green
+    ],
     syntax: {
       Capture.keyword: CodeInk(Color(0xFF0033B3)),
       Capture.declaration: CodeInk(Color(0xFF00627A)),
@@ -294,6 +309,16 @@ class Tokens {
     scrim: Color(0xDD000000),
     claude: Color(0xFFD98A5F),
     monogramText: Color(0xFF1E1F22),
+    avatars: [
+      Color(0xFF7AA3F9), // blue
+      Color(0xFF4DB6A8), // teal
+      Color(0xFFB79CF5), // violet
+      Color(0xFFE6B062), // amber
+      Color(0xFFE0956A), // rust
+      Color(0xFFE48BC4), // magenta
+      Color(0xFF9DB4C0), // slate
+      Color(0xFF9CC572), // green
+    ],
     syntax: {
       Capture.keyword: CodeInk(Color(0xFFCF8E6D)),
       Capture.declaration: CodeInk(Color(0xFF56A8F5)),

@@ -21,8 +21,9 @@ func (c *Client) Myself(ctx context.Context) (model.JiraUser, error) {
 	return model.JiraUser{AccountID: u.AccountID, Name: u.DisplayName, Email: u.EmailAddress}, err
 }
 
-// listFields are what a list of issues shows.
-var listFields = []string{"summary", "status", "issuetype", "priority", "assignee", "updated"}
+// listFields are what a list of issues shows (its rows: the summary,
+// status, priority and assignee), nothing more.
+var listFields = []string{"summary", "status", "priority", "assignee"}
 
 // Search returns up to limit issues jql finds (a bounded query: Jira
 // refuses one without a restriction), following nextPageToken.
@@ -165,6 +166,13 @@ func (u *rawUser) name() string {
 	return u.DisplayName
 }
 
+func (u *rawUser) id() string {
+	if u == nil {
+		return ""
+	}
+	return u.AccountID
+}
+
 type rawStatus struct {
 	Name     string `json:"name"`
 	Category struct {
@@ -192,7 +200,7 @@ type rawIssue struct {
 func (r rawIssue) listed() model.JiraIssue {
 	f := r.Fields
 	is := model.JiraIssue{Key: r.Key, Summary: f.Summary, Type: f.IssueType.Name, Status: f.Status.Name,
-		StatusCategory: f.Status.Category.Key, Assignee: f.Assignee.name(), Updated: time.Time(f.Updated)}
+		StatusCategory: f.Status.Category.Key, Assignee: f.Assignee.name(), AssigneeID: f.Assignee.id(), Updated: time.Time(f.Updated)}
 	if f.Priority != nil {
 		is.Priority = f.Priority.Name
 	}

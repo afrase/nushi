@@ -11,7 +11,8 @@ import 'package:nushi/daemon.dart';
 /// worktree, what each chat's Changes view shows, the panes' widths, whether
 /// changed files show flat, which chats show their terminals, the
 /// terminal's font, whether a subagent's pane shows wide, the Jira task
-/// list's groups, and the GitHub view's cards and filters.
+/// list's groups and assignee filters, and the GitHub view's cards and
+/// filters.
 final showDetails = ValueNotifier<bool>(_saved['details'] != false)
   ..addListener(_save);
 final collapsedCards = ValueNotifier<Set<String>>(_strings('collapsed'))
@@ -54,6 +55,13 @@ final jiraGroupOrder = ValueNotifier<Map<String, List<String>>>(
 )..addListener(_save);
 final jiraCollapsed = ValueNotifier<Map<String, List<String>>>(
   _byPlace('jiraCollapsed'),
+)..addListener(_save);
+
+/// The Jira lists' assignee filters, by site and list (`jira_people.dart`'s
+/// `filterPlace`): `["me"]`, `["none"]` or `["person", id, name]`; a list
+/// not named shows everyone's.
+final jiraAssignee = ValueNotifier<Map<String, List<String>>>(
+  _byPlace('jiraAssignee'),
 )..addListener(_save);
 
 /// Whether the GitHub view's Review requested has pull requests asked of
@@ -151,6 +159,7 @@ void _save() {
         'githubTeams': githubTeamReviews.value,
         'jiraGroups': jiraGroupOrder.value,
         'jiraCollapsed': jiraCollapsed.value,
+        'jiraAssignee': jiraAssignee.value,
         'githubCards': githubCardOrder.value,
         'githubCollapsed': githubCollapsed.value.toList(),
         'githubDays': githubDays.value,

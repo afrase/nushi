@@ -1934,6 +1934,8 @@ message JiraIssue {
   repeated JiraRemoteLink remote_links = 19;
   // The issue in the browser.
   string url = 20;
+  // The assignee's account id ("" when unassigned; assignee is the name).
+  string assignee_id = 21;
 }
 
 message JiraLink {

@@ -213,8 +213,9 @@ void main() {
     await tester.pumpAndSettle();
     final moved = fake.calls.whereType<TransitionJiraIssueRequest>().single;
     expect((moved.key, moved.transition), ('ACME-12', '31'));
-    // Start work: a folder, then the New chat dialog with the issue.
-    await tester.tap(find.text('Start work').first);
+    // Start work (the selected row's): a folder, then the New chat
+    // dialog with the issue.
+    await tester.tap(find.byTooltip('Start work (⌘⏎)'));
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('nushi', findRichText: true).last);
     await tester.pumpAndSettle();
