@@ -20,7 +20,9 @@
   <title>Nushi</title>
 </head>
 <body>
-  <!-- Flutter draws into #app, which keeps clear of the notch and the home
+  <!-- data-cfasync="false": Cloudflare's Rocket Loader, if the zone has it
+       on, leaves the script alone (its own loader is refused by the CSP).
+       Flutter draws into #app, which keeps clear of the notch and the home
        indicator (app.css); no script is inline (the relay's CSP). -->
   <!-- Shown until the app draws (its first load is several MB), or with
        why it couldn't start. -->
@@ -29,6 +31,6 @@
     <p id="loading-text">Loading Nushi…</p>
   </div>
   <div id="app"></div>
-  <script src="flutter_bootstrap.js" async></script>
+  <script src="flutter_bootstrap.js" async data-cfasync="false"></script>
 </body>
 </html>
