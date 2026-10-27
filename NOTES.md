@@ -151,7 +151,7 @@ Open questions; what's settled is in `docs/adr/` or the code. Brackets name the 
 
 ## Later ideas
 
-- **The empty state as a visualisation** (the owner, 2026-10-26): step 271's gravity toy (an orrery in the empty pane) didn't look good enough and was reverted; its first version is on the branch `gravity-mark`. Revisit with a fresh agent and stronger visual references (the owner has seen better ones); a prototype in an HTML artifact first, as for 271's looks, before any Flutter.
+- **The empty state as a visualisation** (the owner, 2026-10-26): step 271's gravity toy (an orrery in the empty pane) didn't look good enough and was reverted; (the branch `gravity-mark` is deleted, 2026-10-28). Revisit with a fresh agent and stronger visual references (the owner has seen better ones); a prototype in an HTML artifact first, as for 271's looks, before any Flutter.
 - **Themes** (the owner, 2026-10-26): a Settings › Appearance picker for light and dark. Every transcript color is a token in `app/lib/theme/tokens.dart` (step 235), so a theme is another pair of `Tokens` that `NushiApp` gives `MaterialApp`.
 - **A redesign** (the owner, 2026-10-26): a fresh look at the whole app, not piecemeal fixes. Scope it with the owner first: what feels wrong, and which apps' look to learn from.
 - **Mobile, next**: an `Events` filter for cellular; tool output and diffs fetched on expanding them (the API would need an item's own call); JetBrains Mono cut as Plex was (79 KB with Brotli, loaded at start); renaming the device after pairing; a native iOS app with the Keychain and Face ID if the developer program ever works out.
