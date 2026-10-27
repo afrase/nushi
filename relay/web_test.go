@@ -288,3 +288,55 @@ func TestSlowReaderLetGo(t *testing.T) {
 		t.Fatalf("read %d of %d: %v", n, len(big), err)
 	}
 }
+
+// The engine's fallback fonts are read from the folder when asked for, not
+// held in memory: as they are (woff2 is compressed), kept for good (their
+// paths are versioned), and only those there when the site was loaded.
+func TestFallbackFontsFromDisk(t *testing.T) {
+	dir := webDir(t)
+	font := "assets/fonts/fallback/notosansjp/v53/abc-_XYZ.0.woff2"
+	for name, body := range map[string]string{
+		font:                            "wOF2 font",
+		"assets/fonts/fallback/OFL.txt": "SIL Open Font License",
+		"assets/fonts/fallback/Roboto-Regular.ttf": "roboto",
+	} {
+		p := filepath.Join(dir, filepath.FromSlash(name))
+		check(t, os.MkdirAll(filepath.Dir(p), 0o755))
+		check(t, os.WriteFile(p, []byte(body), 0o600))
+	}
+	secret := filepath.Join(t.TempDir(), "secret")
+	check(t, os.WriteFile(secret, []byte("secret"), 0o600))
+	check(t, os.Symlink(secret, filepath.Join(dir, filepath.FromSlash("assets/fonts/fallback/notosansjp/v53/link.woff2"))))
+	site, err := LoadSite(dir, "https://relay.example.com")
+	check(t, err)
+	if site.files[font] != nil || site.files["assets/fonts/fallback/OFL.txt"] != nil || site.files["assets/fonts/fallback/Roboto-Regular.ttf"] == nil {
+		t.Fatal("the fallback fonts in memory, or Roboto (loaded at start) not")
+	}
+	lim := Defaults
+	lim.Site = site
+	srv := httptest.NewServer(New(lim))
+	t.Cleanup(srv.Close)
+
+	resp, body := get(t, srv.URL+"/"+font, http.Header{"Accept-Encoding": {"gzip, br"}})
+	if resp.StatusCode != http.StatusOK || string(body) != "wOF2 font" || resp.Header.Get("Content-Encoding") != "" ||
+		resp.Header.Get("Content-Type") != "font/woff2" || resp.Header.Get("Cache-Control") != "public, max-age=31536000, immutable" ||
+		resp.Header.Get("Content-Security-Policy") == "" || resp.Header.Get("X-Content-Type-Options") != "nosniff" {
+		t.Errorf("the font: %d %q %v", resp.StatusCode, body, resp.Header)
+	}
+	if resp, body := get(t, srv.URL+"/assets/fonts/fallback/OFL.txt", nil); resp.StatusCode != http.StatusOK || string(body) != "SIL Open Font License" ||
+		resp.Header.Get("Content-Type") != "text/plain; charset=utf-8" || resp.Header.Get("Cache-Control") != "no-cache" {
+		t.Errorf("the licence: %d %q %v", resp.StatusCode, body, resp.Header)
+	}
+	late := "assets/fonts/fallback/notosansjp/v53/late.woff2"
+	check(t, os.WriteFile(filepath.Join(dir, filepath.FromSlash(late)), []byte("late"), 0o600))
+	for _, name := range []string{late, "assets/fonts/fallback/notosansjp/v53/link.woff2", "assets/fonts/fallback/notosansjp/v53/../../../../../index.html"} {
+		if resp, body := get(t, srv.URL+"/"+name, nil); resp.StatusCode == http.StatusOK && !bytes.Contains(body, []byte("doctype")) || bytes.Contains(body, []byte("secret")) {
+			t.Errorf("%s: %d %q", name, resp.StatusCode, body)
+		}
+	}
+	// Gone from the folder since: not found, as any other missing file.
+	check(t, os.Remove(filepath.Join(dir, filepath.FromSlash(font))))
+	if resp, _ := get(t, srv.URL+"/"+font, nil); resp.StatusCode != http.StatusNotFound {
+		t.Errorf("a removed font: %d", resp.StatusCode)
+	}
+}

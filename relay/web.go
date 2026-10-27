@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"mime"
 	"net"
@@ -74,12 +75,31 @@ type file struct {
 // Site is the web app a relay may serve beside its WebSockets (ADR 0054):
 // its built files, held in memory and served with strict headers, and the
 // origin a browser sees them at, the only one whose pages may open a
-// WebSocket here.
+// WebSocket here. The engine's fallback fonts (about 21 MB, of which a
+// phone fetches a few) are read from the folder when asked for.
 type Site struct {
 	files  map[string]*file
+	fonts  map[string]bool // the fallback fonts' names, in root
+	root   *os.Root
 	origin string
 	csp    string
 }
+
+// fallbackDir is where the engine asks for its fallback fonts (Noto for
+// CJK, emoji and other scripts; flutter_bootstrap.js's
+// fontFallbackBaseUrl), in folders by family and version
+// (notosansjp/v53/…woff2): their paths are versioned.
+const fallbackDir = "assets/fonts/fallback/"
+
+// onDisk says whether name is one of the fallback fonts or their licence,
+// served from the folder (tools/webbuild has the same rule).
+func onDisk(name string) bool {
+	rest, ok := strings.CutPrefix(name, fallbackDir)
+	return ok && (strings.Contains(rest, "/") || rest == "OFL.txt")
+}
+
+// types are the types of files whose type the system's table may not know.
+var types = map[string]string{".woff2": "font/woff2", ".ttf": "font/ttf", ".otf": "font/otf", ".txt": "text/plain; charset=utf-8"}
 
 // hashed names a file whose name, or folder's, carries its content's hash
 // (main.<hash>.dart.js, canvaskit-<hash>/): it may be kept for good.
@@ -102,8 +122,7 @@ func LoadSite(dir, origin string) (*Site, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer root.Close() //nolint:errcheck // read-only
-	s := &Site{files: map[string]*file{}, origin: origin, csp: csp(origin)}
+	s := &Site{files: map[string]*file{}, fonts: map[string]bool{}, root: root, origin: origin, csp: csp(origin)}
 	total := 0
 	err = fs.WalkDir(root.FS(), ".", func(name string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -118,6 +137,10 @@ func LoadSite(dir, origin string) (*Site, error) {
 		if !d.Type().IsRegular() { // links and special files are left out
 			return nil
 		}
+		if onDisk(name) {
+			s.fonts[name] = true
+			return nil
+		}
 		body, err := fs.ReadFile(root.FS(), name)
 		if err != nil {
 			return err
@@ -128,11 +151,15 @@ func LoadSite(dir, origin string) (*Site, error) {
 		s.files[name] = newFile(name, body)
 		return nil
 	})
+	if err == nil && s.files["index.html"] == nil {
+		err = errors.New("no index.html in the web app's folder")
+	}
 	if err != nil {
+		_ = root.Close()
 		return nil, err
 	}
-	if s.files["index.html"] == nil {
-		return nil, errors.New("no index.html in the web app's folder")
+	if len(s.fonts) == 0 { // the folder is needed only for them
+		_ = root.Close()
 	}
 	// name.br is name's Brotli copy, served in its place, never by itself.
 	for name, f := range s.files {
@@ -148,10 +175,7 @@ func LoadSite(dir, origin string) (*Site, error) {
 
 func newFile(name string, body []byte) *file {
 	sum := sha256.Sum256(body)
-	f := &file{body: body, etag: `"` + hex.EncodeToString(sum[:16]) + `"`, cache: "no-cache"}
-	if f.ctype = mime.TypeByExtension(path.Ext(name)); f.ctype == "" {
-		f.ctype = "application/octet-stream"
-	}
+	f := &file{body: body, etag: `"` + hex.EncodeToString(sum[:16]) + `"`, cache: "no-cache", ctype: typeOf(name)}
 	switch path.Ext(name) {
 	case ".js", ".wasm", ".json", ".html", ".css", ".svg", ".otf", ".ttf", ".frag":
 		var b bytes.Buffer
@@ -168,6 +192,17 @@ func newFile(name string, body []byte) *file {
 		f.cache = "public, max-age=31536000, immutable"
 	}
 	return f
+}
+
+func typeOf(name string) string {
+	ext := path.Ext(name)
+	if t := types[ext]; t != "" {
+		return t
+	}
+	if t := mime.TypeByExtension(ext); t != "" {
+		return t
+	}
+	return "application/octet-stream"
 }
 
 // csp is the pages' Content-Security-Policy: everything from the app's own
@@ -200,6 +235,10 @@ func (s *Site) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if name == "" {
 		name = "index.html"
 	}
+	if s.fonts[name] {
+		s.serveFont(w, r, name)
+		return
+	}
 	f := s.files[name]
 	if f == nil {
 		http.NotFound(w, r)
@@ -229,6 +268,35 @@ func (s *Site) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, _ = w.Write(body) //nolint:gosec // the app's own files, typed by their names, with nosniff and the CSP
+}
+
+// serveFont serves a fallback font (or their licence) from the folder:
+// woff2 is compressed already, and its path is versioned.
+func (s *Site) serveFont(w http.ResponseWriter, r *http.Request, name string) {
+	f, err := s.root.Open(name)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	defer f.Close() //nolint:errcheck // read-only
+	info, err := f.Stat()
+	if err != nil || !info.Mode().IsRegular() {
+		http.NotFound(w, r)
+		return
+	}
+	h := w.Header()
+	h.Set("Content-Type", typeOf(name))
+	cache := "public, max-age=31536000, immutable"
+	if path.Ext(name) != ".woff2" {
+		cache = "no-cache"
+	}
+	h.Set("Cache-Control", cache)
+	_ = http.NewResponseController(w).SetWriteDeadline(time.Now().Add(writeWait + time.Duration(info.Size()/int64(writeRate))*time.Second))
+	h.Set("Content-Length", strconv.FormatInt(info.Size(), 10))
+	if r.Method == http.MethodHead {
+		return
+	}
+	_, _ = io.Copy(w, f)
 }
 
 // accepts says whether r takes the encoding enc ("gzip", "br").

@@ -5,7 +5,12 @@
 // browsers and a CDN keep them for good, and only the page must be asked
 // for again), writes the build's files and version into sw.js, and puts a
 // Brotli copy beside each file that compresses (name.br; the relay serves
-// it to a browser that takes br).
+// it to a browser that takes br). It mirrors the engine's fallback fonts
+// into the app and puts in IBM Plex Sans cut to what the app needs
+// (fonts.go).
+//
+// With -lock-fonts it writes fonts.lock anew for an app built by flutter
+// build web (make web-fonts) and does nothing else.
 package main
 
 import (
@@ -26,8 +31,12 @@ import (
 )
 
 func main() {
+	if len(os.Args) == 3 && os.Args[1] == "-lock-fonts" {
+		lockFonts(os.Args[2])
+		return
+	}
 	if len(os.Args) != 2 {
-		log.Fatal("usage: webbuild <app/build/web>")
+		log.Fatal("usage: webbuild [-lock-fonts] <app/build/web>")
 	}
 	dir := os.Args[1]
 	ck := filepath.Join(dir, "canvaskit")
@@ -42,8 +51,10 @@ func main() {
 	check(os.RemoveAll(filepath.Join(dir, ".last_build_id")))
 	check(os.RemoveAll(filepath.Join(dir, "flutter.js"))) // flutter_bootstrap.js carries it
 	dropFont(dir, "Symbols Nerd Font Mono")               // the terminal's, which the phone hasn't
+	subsetPlex(dir)
 
 	boot := read(filepath.Join(dir, "flutter_bootstrap.js"))
+	fonts, fontsSize := mirrorFonts(dir, read(filepath.Join(dir, "main.dart.js")), boot)
 	mainJS := "main." + hashOf(read(filepath.Join(dir, "main.dart.js"))) + ".dart.js"
 	check(os.Rename(filepath.Join(dir, "main.dart.js"), filepath.Join(dir, mainJS)))
 	boot = replaceOnce(boot, `"mainJsPath":"main.dart.js"`, `"mainJsPath":"`+mainJS+`"`)
@@ -56,11 +67,12 @@ func main() {
 	index := filepath.Join(dir, "index.html")
 	write(index, replaceOnce(read(index), `src="flutter_bootstrap.js"`, `src="`+bootJS+`"`))
 
-	// The shell the service worker keeps: every file but itself.
+	// The shell the service worker keeps: every file but itself, the
+	// licences and the fallback fonts (fetched when a character needs one).
 	var shell []string
 	all := sha256.New()
 	check(fs.WalkDir(os.DirFS(dir), ".", func(name string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || name == "sw.js" || name == "assets/NOTICES" {
+		if err != nil || d.IsDir() || name == "sw.js" || name == "assets/NOTICES" || onDemand(name) {
 			return err
 		}
 		_, _ = fmt.Fprintf(all, "%s\x00%s\x00", name, hashOf(read(filepath.Join(dir, name))))
@@ -74,9 +86,10 @@ func main() {
 	sw := read(filepath.Join(dir, "sw.js"))
 	sw = replaceOnce(sw, `const VERSION = "nushi-dev";`, `const VERSION = "nushi-`+hex.EncodeToString(all.Sum(nil))[:16]+`";`)
 	sw = replaceOnce(sw, `const SHELL = ["./"];`, `const SHELL = `+string(list)+`;`)
+	sw = replaceOnce(sw, `const FONTS = "nushi-fonts-dev";`, `const FONTS = "nushi-fonts-`+hashOf(fontsLock)+`";`)
 	write(filepath.Join(dir, "sw.js"), sw)
 	saved := compress(dir)
-	log.Printf("web app: %s, %s, %d files in the shell; Brotli saves %d KB over gzip", mainJS, ckDir, len(shell)+1, saved>>10)
+	log.Printf("web app: %s, %s, %d files in the shell; Brotli saves %d KB over gzip; %d fallback fonts, %d KB", mainJS, ckDir, len(shell)+1, saved>>10, fonts, fontsSize>>10)
 }
 
 // compress writes name.br beside each file of a type that compresses,

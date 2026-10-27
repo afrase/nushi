@@ -19,7 +19,7 @@ HELPER := $(RELEASE)/Contents/Helpers/Nushi Daemon.app
 # to macOS across builds, so the keychain asks once, not after every install.
 SIGN := $(or $(NUSHI_SIGN),$(shell security find-identity -v -p codesigning 2>/dev/null | grep -m1 -o '"Apple Development: [^"]*"' | tr -d '"'),-)
 
-.PHONY: run daemon stop app package install gen test lint check lines relay icons adapters web
+.PHONY: run daemon stop app package install gen test lint check lines relay icons adapters web web-fonts web-plex
 
 # Starts the daemon in the background (unless one is running), then the app.
 run: daemon app
@@ -64,10 +64,30 @@ relay:
 	CGO_ENABLED=0 go build -o bin/nushi-relay ./cmd/nushi-relay
 
 # The phone's web app (ADR 0052), served by the relay's -web: app/build/web.
+# The engine's fallback fonts come once from Google's font host into a
+# cache outside the repository, checked against tools/webbuild/fonts.lock.
+FLUTTER_WEB = cd app && flutter build web -t lib/phone_main.dart --release --no-web-resources-cdn --no-wasm-dry-run --no-source-maps
 web:
 	rm -rf app/build/web
-	cd app && flutter build web -t lib/phone_main.dart --release --no-web-resources-cdn --no-wasm-dry-run --no-source-maps
+	$(FLUTTER_WEB)
 	go run ./tools/webbuild app/build/web
+
+# The web app's IBM Plex Sans cut to Latin and the punctuation and symbols
+# the app uses, its width fixed and its hinting dropped (0.5 MB less at
+# start; the engine's fallback fonts draw the rest): after app/fonts
+# changes (make web stops). Needs HarfBuzz's hb-subset (brew install harfbuzz).
+PLEX_UNICODES = 20-7E,A0-17F,192,2C6,2C7,2D8-2DD,300-36F,3C0,2000-206F,20AC,20B9,20BD,2113,2116,2122,2126,212E,2190-2193,2202,2206,220F,2211,2212,2215,2219,221A,221E,222B,2248,2260,2264,2265,25CA,FB01,FB02
+web-plex:
+	for f in IBMPlexSans IBMPlexSans-Italic; do \
+		hb-subset app/fonts/$$f.ttf --unicodes="$(PLEX_UNICODES)" --instance=wdth=100 --no-hinting -o tools/webbuild/plex/$$f.ttf || exit 1; done
+	cd app/fonts && shasum -a 256 IBMPlexSans.ttf IBMPlexSans-Italic.ttf > ../../tools/webbuild/plex/source.sha256
+
+# After a Flutter upgrade (make web stops): the engine's fallback fonts
+# anew in tools/webbuild/fonts.lock. Check the diff before committing it.
+web-fonts:
+	rm -rf app/build/web
+	$(FLUTTER_WEB)
+	go run ./tools/webbuild -lock-fonts app/build/web
 
 # The app icon (Icon Composer, and PNGs for macOS before 26) and the mark.
 icons:

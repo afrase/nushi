@@ -7,6 +7,12 @@
 // with them.
 const VERSION = "nushi-dev";
 const SHELL = ["./"];
+// The engine's fallback fonts (Noto for CJK, emoji and other scripts) aren't
+// in the shell: the engine asks for one when a character on screen needs it.
+// Each is kept, once fetched, in a cache of its own named for the font list,
+// so app updates keep it.
+const FONTS = "nushi-fonts-dev";
+const FONTS_PATH = new URL("assets/fonts/fallback/", self.location).pathname;
 
 // The whole shell, checked with the server (a CDN may have stretched an
 // HTTP cache's hours; unchanged files cost a 304), before this
@@ -28,7 +34,7 @@ self.addEventListener("message", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k !== VERSION && k !== FONTS).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   );
 });
@@ -40,6 +46,10 @@ self.addEventListener("fetch", (event) => {
   const req = event.request;
   const url = new URL(req.url);
   if (req.method !== "GET" || url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith(FONTS_PATH) && url.pathname.endsWith(".woff2")) {
+    event.respondWith(fallbackFont(req));
+    return;
+  }
   if (req.mode === "navigate") {
     event.respondWith(
       caches.match("./", { cacheName: VERSION }).then((hit) => hit || fetch(req)),
@@ -50,6 +60,19 @@ self.addEventListener("fetch", (event) => {
     caches.match(req, { cacheName: VERSION }).then((hit) => hit || fetch(req)),
   );
 });
+
+// A fallback font from its cache, else from the relay, kept if it came
+// whole from this origin.
+async function fallbackFont(req) {
+  const cache = await caches.open(FONTS);
+  const hit = await cache.match(req);
+  if (hit) return hit;
+  const res = await fetch(req);
+  if (res.ok && res.status === 200 && res.type === "basic") {
+    await cache.put(req, res.clone());
+  }
+  return res;
+}
 
 // A chat's id, as the daemon makes them; anything else opens the list.
 const chatId = (v) => (typeof v === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(v) ? v : "");
