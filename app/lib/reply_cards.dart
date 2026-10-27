@@ -67,7 +67,8 @@ class _ReplyCardState extends State<_ReplyCard> {
         children: [
           Container(
             width: 168,
-            height: 64,
+            // Taller with the text (the phone's is 1.15 times the Mac's).
+            height: MediaQuery.textScalerOf(context).scale(64),
             decoration: box(
               t.borderSubtle,
               fill: t.raised,

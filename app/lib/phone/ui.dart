@@ -54,47 +54,59 @@ class PhoneScreen extends StatelessWidget {
       backgroundColor: t.base,
       body: SafeArea(
         bottom: bottom == null,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (!cramped)
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(color: t.borderSubtle)),
-                ),
-                child: SizedBox(
-                  height: touch + 8,
-                  child: Row(
-                    children: [
-                      if (back)
-                        PhoneIcon(
-                          Icons.arrow_back_ios_new,
-                          label: 'Back',
-                          onTap: () => Navigator.of(context).maybePop(),
-                        )
-                      else
-                        const SizedBox(width: 16),
-                      Expanded(
-                        child: Text(
-                          title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: phoneText(
-                            context,
-                            size: 17,
-                            weight: FontWeight.w600,
+        child: LayoutBuilder(
+          builder: (context, box) => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (!cramped)
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border(bottom: BorderSide(color: t.borderSubtle)),
+                  ),
+                  child: SizedBox(
+                    height: touch + 8,
+                    child: Row(
+                      children: [
+                        if (back)
+                          PhoneIcon(
+                            Icons.arrow_back_ios_new,
+                            label: 'Back',
+                            onTap: () => Navigator.of(context).maybePop(),
+                          )
+                        else
+                          const SizedBox(width: 16),
+                        Expanded(
+                          child: Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: phoneText(
+                              context,
+                              size: 17,
+                              weight: FontWeight.w600,
+                            ),
                           ),
                         ),
-                      ),
-                      ...actions,
-                      const SizedBox(width: 4),
-                    ],
+                        ...actions,
+                        const SizedBox(width: 4),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            Expanded(child: body),
-            if (bottom case final b?) SafeArea(top: false, child: b),
-          ],
+              Expanded(child: body),
+              // A composer taller than the strip left (a reply's card and the
+              // field, over the keyboard in landscape) scrolls, its field at
+              // the bottom.
+              if (bottom case final b?)
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: box.maxHeight),
+                  child: SingleChildScrollView(
+                    reverse: true,
+                    child: SafeArea(top: false, child: b),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/bottom_follower.dart';
@@ -43,7 +44,8 @@ List<Object> _entries(List<Item> items) {
 /// A chat's items, built as they scroll into view. It opens at the bottom
 /// and follows it while the agent writes; scrolled up, it stays put and
 /// offers a way back to the latest. Selected text gets a toolbar above it
-/// to start a side chat about it, or to reply to it. Given [items] (a
+/// to start a side chat about it, or to reply to it; selected by touch, the
+/// selection's own menu has those beside Copy. Given [items] (a
 /// subagent's steps) it shows those instead, between [header] and
 /// [footer], [live] while more come.
 class Transcript extends StatefulWidget {
@@ -88,6 +90,7 @@ class _TranscriptState extends State<Transcript> {
   final _area = GlobalKey<SelectionAreaState>();
   String _selected = '';
   bool _down = false; // a pointer is down on the transcript
+  bool _touch = false; // the last pointer down was a finger (or a pen)
   Rect? _at; // the selection's top and bottom middle, where the toolbar shows
   String? _replyTo; // the selection a reply is being written to
   _Anchor _anchor = _Anchor(); // where the reply box opened
@@ -213,16 +216,58 @@ class _TranscriptState extends State<Transcript> {
 
   // The selection is reported a frame after the pointer goes up: offer the
   // toolbar once both have happened.
+  // On touch the selection's own menu offers the actions instead (_menu).
   void _offer() {
-    if (_down || _at != null || _selected.trim().isEmpty) return;
+    if (_touch || _down || _at != null || _selected.trim().isEmpty) return;
+    if (_anchors() case final at?) setState(() => _at = at);
+  }
+
+  /// The selection's top and bottom middle, in the transcript's box.
+  Rect? _anchors() {
     final a = _area.currentState?.selectableRegion.contextMenuAnchors;
     final box = context.findRenderObject() as RenderBox?;
-    if (a == null || box == null) return;
-    setState(
-      () => _at = Rect.fromPoints(
-        box.globalToLocal(a.primaryAnchor),
-        box.globalToLocal(a.secondaryAnchor ?? a.primaryAnchor),
-      ),
+    if (a == null || box == null) return null;
+    return Rect.fromPoints(
+      box.globalToLocal(a.primaryAnchor),
+      box.globalToLocal(a.secondaryAnchor ?? a.primaryAnchor),
+    );
+  }
+
+  void _openReply() => setState(() {
+    _at ??= _anchors();
+    _replyTo = _selected;
+    _anchor = _Anchor();
+  });
+
+  /// The selection's menu: as the platform's on a mouse; on touch, one menu
+  /// of Copy, the side chat and Reply where the platform draws its own, so
+  /// nothing of Nushi's sits under it (iOS's Copy | Select All hid the
+  /// toolbar on the phone).
+  Widget _menu(
+    SelectableRegionState region, {
+    required VoidCallback? onSide,
+    required VoidCallback? onReply,
+  }) {
+    if (!_touch || (onSide == null && onReply == null)) {
+      return AdaptiveTextSelectionToolbar.selectableRegion(
+        selectableRegionState: region,
+      );
+    }
+    VoidCallback then(VoidCallback run) => () {
+      region.hideToolbar();
+      run();
+    };
+    return AdaptiveTextSelectionToolbar.buttonItems(
+      anchors: region.contextMenuAnchors,
+      buttonItems: [
+        ...region.contextMenuButtonItems.where(
+          (b) => b.type == ContextMenuButtonType.copy,
+        ),
+        if (onSide != null)
+          ContextMenuButtonItem(label: 'Side chat', onPressed: then(onSide)),
+        if (onReply != null)
+          ContextMenuButtonItem(label: 'Reply', onPressed: then(onReply)),
+      ],
     );
   }
 
@@ -241,6 +286,14 @@ class _TranscriptState extends State<Transcript> {
     _built = {};
     final onReply = widget.onReply;
     final onSide = chat.canFork ? widget.onSide : null;
+    final side = onSide == null
+        ? null
+        : () {
+            final selected = _selected;
+            _closeToolbar();
+            onSide(selected);
+          };
+    final reply = onReply == null ? null : _openReply;
     return LayoutBuilder(
       builder: (context, box) => Stack(
         children: [
@@ -250,8 +303,9 @@ class _TranscriptState extends State<Transcript> {
             // when a drag or double-click leaves text selected, the popover
             // shows where the pointer went up.
             child: Listener(
-              onPointerDown: (_) => setState(() {
+              onPointerDown: (e) => setState(() {
                 _down = true;
+                _touch = e.kind != PointerDeviceKind.mouse;
                 _at = _replyTo = null;
               }),
               onPointerUp: (_) {
@@ -260,6 +314,8 @@ class _TranscriptState extends State<Transcript> {
               },
               child: SelectionArea(
                 key: _area,
+                contextMenuBuilder: (context, region) =>
+                    _menu(region, onSide: side, onReply: reply),
                 onSelectionChanged: (c) {
                   _selected = c?.plainText ?? '';
                   _offer();
@@ -305,21 +361,7 @@ class _TranscriptState extends State<Transcript> {
                       onClose: _closeToolbar,
                     ),
                   ),
-                  null => SelectionToolbar(
-                    onSide: onSide == null
-                        ? null
-                        : () {
-                            final selected = _selected;
-                            _closeToolbar();
-                            onSide(selected);
-                          },
-                    onReply: onReply == null
-                        ? null
-                        : () => setState(() {
-                            _replyTo = _selected;
-                            _anchor = _Anchor();
-                          }),
-                  ),
+                  null => SelectionToolbar(onSide: side, onReply: reply),
                 },
               ),
             ),
