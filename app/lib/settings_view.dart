@@ -8,6 +8,7 @@ import 'package:nushi/agents_page.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_settings.dart';
+import 'package:nushi/history_section.dart';
 import 'package:nushi/jira_settings.dart';
 import 'package:nushi/logs_section.dart';
 import 'package:nushi/mcp.dart';
@@ -17,7 +18,6 @@ import 'package:nushi/settings_nav.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/skills.dart';
 import 'package:nushi/theme/theme.dart';
-import 'package:nushi/transcripts_section.dart';
 import 'package:nushi/widgets.dart';
 
 const settingsKey = SingleActivator(LogicalKeyboardKey.comma, meta: true);
@@ -86,15 +86,10 @@ class _SettingsViewState extends State<SettingsView> {
       onChange: _change,
     ),
     SettingsSection.terminal => const TerminalSection(),
-    SettingsSection.history => SettingsPage(
-      title: s.title,
-      children: [
-        TranscriptsSection(
-          client: daemon.client,
-          settings: _set,
-          onChange: _change,
-        ),
-      ],
+    SettingsSection.history => HistorySection(
+      daemon: daemon,
+      settings: _set,
+      onChange: _change,
     ),
     SettingsSection.remote => SettingsPage(
       title: s.title,
