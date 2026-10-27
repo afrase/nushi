@@ -66,6 +66,7 @@ class ChatState extends ChangeNotifier {
   DateTime? started; // when the running turn started
   bool stopping = false; // the app asked the turn to stop
   String error = ''; // why the snapshot didn't load
+  String loadError = ''; // the same on the phone, which tries again
 
   /// What the user is writing to it.
   final draft = Draft();
@@ -104,6 +105,17 @@ class ChatState extends ChangeNotifier {
   /// Whether the snapshot is in; until then events wait in [_early].
   bool loaded = false;
   bool loading = false;
+
+  /// How many items come before [items] (the phone takes the recent part
+  /// first, GetChatRequest.recent); 0 when it has them all.
+  int older = 0;
+
+  /// Whether an older page is on its way.
+  bool loadingOlder = false;
+
+  /// Asks for a fresh snapshot: an event reached past what's loaded (a
+  /// rewind before the recent part). The daemon sets it.
+  VoidCallback? stale;
   int _seq = 0; // the last event applied
   final _early = <EventsResponse>[];
 
@@ -112,18 +124,34 @@ class ChatState extends ChangeNotifier {
     items
       ..clear()
       ..addAll(s.items);
+    older = s.older;
     config = s.config;
     commands = s.commands;
     usage = s.usage;
     queue = s.queue.messages;
     status(s.status);
-    error = '';
+    error = loadError = '';
     _seq = s.seq.toInt();
     loaded = true;
     loading = false;
     _early
       ..forEach(_apply)
       ..clear();
+    notifyListeners();
+  }
+
+  /// Puts an older page before the items; an item the page has that came
+  /// meanwhile as new (its event reached past the recent part) takes its
+  /// place in the page.
+  void prepend(List<Item> page, int olderNow) {
+    final ids = {for (final it in page) it.id};
+    final late = {
+      for (final it in items.where((it) => ids.contains(it.id))) it.id: it,
+    };
+    items
+      ..removeWhere((it) => ids.contains(it.id))
+      ..insertAll(0, [for (final it in page) late[it.id] ?? it]);
+    older = olderNow;
     notifyListeners();
   }
 
@@ -186,7 +214,11 @@ class ChatState extends ChangeNotifier {
         queue = e.queue.messages;
       case EventsResponse_Kind.cut:
         final i = items.indexWhere((it) => it.id == e.cut);
-        if (i >= 0) items.removeRange(i, items.length);
+        if (i >= 0) {
+          items.removeRange(i, items.length);
+        } else if (older > 0) {
+          stale?.call(); // cut before the recent part
+        }
       case EventsResponse_Kind.dropped:
         items.removeWhere((it) => it.id == e.dropped);
       case EventsResponse_Kind.status:
@@ -203,7 +235,9 @@ class ChatState extends ChangeNotifier {
 
   void _applyItem(ItemEvent e) {
     final i = items.indexWhere((it) => it.id == e.item.id);
-    if (i < 0) {
+    if (i < 0 && e.append && older > 0) {
+      return; // more of an item before the recent part: its page has it
+    } else if (i < 0) {
       items.add(e.item);
     } else if (e.append) {
       items[i] = items[i].deepCopy()..text = items[i].text + e.item.text;

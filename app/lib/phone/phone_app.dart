@@ -18,12 +18,19 @@ class PhoneApp extends StatefulWidget {
   State<PhoneApp> createState() => _PhoneAppState();
 }
 
-class _PhoneAppState extends State<PhoneApp> {
+class _PhoneAppState extends State<PhoneApp> with WidgetsBindingObserver {
   final _navigator = GlobalKey<NavigatorState>();
+
+  /// A route the browser asks for (its address, its history) is taken
+  /// here and dropped, before the app's Navigator would push it.
+  @override
+  Future<bool> didPushRouteInformation(RouteInformation _) async => true;
 
   @override
   void initState() {
     super.initState();
+    // Before MaterialApp's own observer, which would push the route.
+    WidgetsBinding.instance.addObserver(this);
     widget.phone
       ..addListener(_opening)
       ..opening.addListener(_opening);
@@ -31,6 +38,7 @@ class _PhoneAppState extends State<PhoneApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     widget.phone
       ..removeListener(_opening)
       ..opening.removeListener(_opening);
@@ -70,14 +78,41 @@ class _PhoneAppState extends State<PhoneApp> {
         child: child!,
       ),
     ),
-    home: ListenableBuilder(
-      listenable: widget.phone,
-      builder: (context, _) => !widget.phone.loaded
-          ? const SizedBox.shrink()
-          : widget.phone.daemon == null
-          ? PairScreen(widget.phone)
-          : ChatsScreen(widget.phone),
-    ),
+    // One root, whatever the address says: pairing until paired, then the
+    // chats (pairing gives way to them, Forget brings it back), never a
+    // screen on top of another root.
+    home: _Root(widget.phone),
+  );
+}
+
+class _Root extends StatefulWidget {
+  const new(this.phone);
+
+  final Phone phone;
+
+  @override
+  State<_Root> createState() => _RootState();
+}
+
+class _RootState extends State<_Root> {
+  bool? _paired;
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: widget.phone,
+    builder: (context, _) {
+      final phone = widget.phone;
+      if (!phone.loaded) return const SizedBox.shrink();
+      final paired = phone.daemon != null;
+      if (_paired != null && _paired != paired) {
+        // Paired or forgotten: what was on top of the root goes.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
+        });
+      }
+      _paired = paired;
+      return paired ? ChatsScreen(phone) : PairScreen(phone);
+    },
   );
 }
 

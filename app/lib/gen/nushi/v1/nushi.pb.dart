@@ -847,9 +847,11 @@ class Worktree extends $pb.GeneratedMessage {
 class GetChatRequest extends $pb.GeneratedMessage {
   factory GetChatRequest({
     $core.String? chatId,
+    $core.int? recent,
   }) {
     final result = GetChatRequest._();
     if (chatId != null) result.chatId = chatId;
+    if (recent != null) result.recent = recent;
     return result;
   }
 
@@ -867,6 +869,7 @@ class GetChatRequest extends $pb.GeneratedMessage {
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: GetChatRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aI(2, _omitFieldNames ? '' : 'recent')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -899,6 +902,18 @@ class GetChatRequest extends $pb.GeneratedMessage {
   $core.bool hasChatId() => $_has(0);
   @$pb.TagNumber(1)
   void clearChatId() => $_clearField(1);
+
+  /// Only the last this many items (0: all), reaching back to the tool call
+  /// that started a subagent whose steps are among them; `older` counts
+  /// the ones left out. A phone on a slow link opens a long chat this way.
+  @$pb.TagNumber(2)
+  $core.int get recent => $_getIZ(1);
+  @$pb.TagNumber(2)
+  set recent($core.int value) => $_setSignedInt32(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasRecent() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearRecent() => $_clearField(2);
 }
 
 class GetChatResponse extends $pb.GeneratedMessage {
@@ -911,6 +926,7 @@ class GetChatResponse extends $pb.GeneratedMessage {
     $core.Iterable<Command>? commands,
     Usage? usage,
     ChatQueue? queue,
+    $core.int? older,
   }) {
     final result = GetChatResponse._();
     if (chat != null) result.chat = chat;
@@ -921,6 +937,7 @@ class GetChatResponse extends $pb.GeneratedMessage {
     if (commands != null) result.commands.addAll(commands);
     if (usage != null) result.usage = usage;
     if (queue != null) result.queue = queue;
+    if (older != null) result.older = older;
     return result;
   }
 
@@ -952,6 +969,7 @@ class GetChatResponse extends $pb.GeneratedMessage {
         subBuilder: Usage.$_createMessage)
     ..aOM<ChatQueue>(8, _omitFieldNames ? '' : 'queue',
         subBuilder: ChatQueue.$_createMessage)
+    ..aI(9, _omitFieldNames ? '' : 'older')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1040,6 +1058,167 @@ class GetChatResponse extends $pb.GeneratedMessage {
   void clearQueue() => $_clearField(8);
   @$pb.TagNumber(8)
   ChatQueue ensureQueue() => $_ensure(7);
+
+  /// How many items come before `items` (with `recent`).
+  @$pb.TagNumber(9)
+  $core.int get older => $_getIZ(8);
+  @$pb.TagNumber(9)
+  set older($core.int value) => $_setSignedInt32(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasOlder() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearOlder() => $_clearField(9);
+}
+
+class GetChatItemsRequest extends $pb.GeneratedMessage {
+  factory GetChatItemsRequest({
+    $core.String? chatId,
+    $core.String? before,
+    $core.int? limit,
+  }) {
+    final result = GetChatItemsRequest._();
+    if (chatId != null) result.chatId = chatId;
+    if (before != null) result.before = before;
+    if (limit != null) result.limit = limit;
+    return result;
+  }
+
+  GetChatItemsRequest._();
+
+  factory GetChatItemsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetChatItemsRequest()..mergeFromBuffer(data, registry);
+  factory GetChatItemsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetChatItemsRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetChatItemsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetChatItemsRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOS(2, _omitFieldNames ? '' : 'before')
+    ..aI(3, _omitFieldNames ? '' : 'limit')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetChatItemsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetChatItemsRequest copyWith(void Function(GetChatItemsRequest) updates) =>
+      super.copyWith((message) => updates(message as GetChatItemsRequest))
+          as GetChatItemsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use GetChatItemsRequest() / GetChatItemsRequest.new instead')
+  static GetChatItemsRequest create() => GetChatItemsRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetChatItemsRequest._();
+  @$core.override
+  GetChatItemsRequest createEmptyInstance() => GetChatItemsRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetChatItemsRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetChatItemsRequest>(
+          GetChatItemsRequest.$_createMessage);
+  static GetChatItemsRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  /// The item the page ends before (the first one the client has).
+  @$pb.TagNumber(2)
+  $core.String get before => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set before($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasBefore() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearBefore() => $_clearField(2);
+
+  /// How many items at most, reaching back to a subagent's call as
+  /// `recent` does.
+  @$pb.TagNumber(3)
+  $core.int get limit => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set limit($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasLimit() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearLimit() => $_clearField(3);
+}
+
+class GetChatItemsResponse extends $pb.GeneratedMessage {
+  factory GetChatItemsResponse({
+    $core.Iterable<Item>? items,
+    $core.int? older,
+  }) {
+    final result = GetChatItemsResponse._();
+    if (items != null) result.items.addAll(items);
+    if (older != null) result.older = older;
+    return result;
+  }
+
+  GetChatItemsResponse._();
+
+  factory GetChatItemsResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetChatItemsResponse()..mergeFromBuffer(data, registry);
+  factory GetChatItemsResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetChatItemsResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetChatItemsResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetChatItemsResponse.$_createMessage)
+    ..pPM<Item>(1, _omitFieldNames ? '' : 'items',
+        subBuilder: Item.$_createMessage)
+    ..aI(2, _omitFieldNames ? '' : 'older')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetChatItemsResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetChatItemsResponse copyWith(void Function(GetChatItemsResponse) updates) =>
+      super.copyWith((message) => updates(message as GetChatItemsResponse))
+          as GetChatItemsResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetChatItemsResponse() / GetChatItemsResponse.new instead')
+  static GetChatItemsResponse create() => GetChatItemsResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetChatItemsResponse._();
+  @$core.override
+  GetChatItemsResponse createEmptyInstance() => GetChatItemsResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetChatItemsResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetChatItemsResponse>(
+          GetChatItemsResponse.$_createMessage);
+  static GetChatItemsResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<Item> get items => $_getList(0);
+
+  /// How many items come before these.
+  @$pb.TagNumber(2)
+  $core.int get older => $_getIZ(1);
+  @$pb.TagNumber(2)
+  set older($core.int value) => $_setSignedInt32(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasOlder() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearOlder() => $_clearField(2);
 }
 
 /// What the agent last reported of a chat's usage; what it hasn't reported
@@ -13943,8 +14122,10 @@ class Remote extends $pb.GeneratedMessage {
   @$pb.TagNumber(2)
   void clearRelay() => $_clearField(2);
 
-  /// "off", "connecting", "connected" (waiting at the relay for phones) or
-  /// "error" (error says what; it tries again).
+  /// "off", "connecting", "connected" (waiting at the relay for phones),
+  /// "reconnecting" (the relay dropped the wait: a restart, the network;
+  /// error says how) or "error" (error says what; it tries again, waiting
+  /// up to 30 s between tries).
   @$pb.TagNumber(3)
   $core.String get state => $_getSZ(2);
   @$pb.TagNumber(3)
@@ -23542,6 +23723,13 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, GetChatRequest request) =>
       _client.invoke<GetChatResponse>(
           ctx, 'NushiService', 'GetChat', request, GetChatResponse());
+
+  /// A chat's items before one of them, a page at a time: for a client that
+  /// took only the recent part (GetChatRequest.recent), as it scrolls up.
+  $async.Future<GetChatItemsResponse> getChatItems(
+          $pb.ClientContext? ctx, GetChatItemsRequest request) =>
+      _client.invoke<GetChatItemsResponse>(
+          ctx, 'NushiService', 'GetChatItems', request, GetChatItemsResponse());
 
   /// Starts an agent in a folder and opens a chat with it.
   $async.Future<StartChatResponse> startChat(

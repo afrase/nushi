@@ -4,10 +4,11 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
+
 import "nushi.pb.dart" as nushiv1nushi;
 import "nushi.connect.spec.dart" as specs;
 
-extension type NushiServiceClient (connect.Transport _transport) {
+extension type NushiServiceClient(connect.Transport _transport) {
   Future<nushiv1nushi.PingResponse> ping(
     nushiv1nushi.PingRequest input, {
     connect.Headers? headers,
@@ -54,6 +55,25 @@ extension type NushiServiceClient (connect.Transport _transport) {
   }) {
     return connect.Client(_transport).unary(
       specs.NushiService.getChat,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// A chat's items before one of them, a page at a time: for a client that
+  /// took only the recent part (GetChatRequest.recent), as it scrolls up.
+  Future<nushiv1nushi.GetChatItemsResponse> getChatItems(
+    nushiv1nushi.GetChatItemsRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.getChatItems,
       input,
       signal: signal,
       headers: headers,

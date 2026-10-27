@@ -378,6 +378,44 @@ void main() {
     expect(phone.daemon, isNull);
     expect(fake.calls.whereType<UnpairThisDeviceRequest>(), hasLength(1));
     expect(find.text('Pair with a Mac'), findsOneWidget);
+    // Pairing is the root again: nothing to go back to.
+    expect(find.bySemanticsLabel('Back'), findsNothing);
+    await _end(tester, phone);
+  });
+
+  testWidgets('paired, the chats are the root: no back, whatever comes', (
+    tester,
+  ) async {
+    final (phone, _) = await _app(
+      tester,
+      FakeDaemon(_chats),
+      paired: false,
+      size: const Size(390, 844),
+    );
+    expect(find.text('Pair with a Mac'), findsOneWidget);
+    // Paired (as pair() ends): the chats take pairing's place.
+    phone.platform.saved = _paired();
+    await phone.start();
+    for (var i = 0; i < 8; i++) {
+      await tester.pump();
+    }
+    expect(find.text('Chats'), findsOneWidget);
+    expect(find.bySemanticsLabel('Back'), findsNothing);
+    final nav = tester.state<NavigatorState>(find.byType(Navigator).first);
+    expect(nav.canPop(), isFalse);
+    // A route the browser pushes (its history) doesn't stack a screen.
+    await tester.binding.handlePushRoute('/');
+    await tester.pump();
+    expect(nav.canPop(), isFalse);
+    expect(find.bySemanticsLabel('Back'), findsNothing);
+    // Back from the chats doesn't reach pairing.
+    expect(await nav.maybePop(), isFalse);
+    await tester.pump();
+    expect(find.text('Pair with a Mac'), findsNothing);
+    await expectLater(
+      find.byType(PhoneApp),
+      matchesGoldenFile('goldens/phone_root_390.png'),
+    );
     await _end(tester, phone);
   });
 }

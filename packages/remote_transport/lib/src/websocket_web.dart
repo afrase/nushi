@@ -16,10 +16,17 @@ final class RelaySocket {
       ..onerror = ((web.Event _) => _fail(
         const _SocketError('the relay connection failed'),
       )).toJS
-      ..onclose = ((web.CloseEvent _) => _fail(null)).toJS;
+      ..onclose = ((web.CloseEvent e) {
+        closeCode = e.code;
+        _fail(null);
+      }).toJS;
   }
 
   final web.WebSocket _ws;
+
+  /// The close code the relay ended the connection with, if it sent one
+  /// (4404: no daemon waits at the id).
+  int? closeCode;
   final _messages = StreamController<Uint8List>();
   bool _closed = false;
 

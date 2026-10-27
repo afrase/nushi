@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:nushi/agent_mark.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_keys.dart';
-import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/phone/chat_screen.dart';
+import 'package:nushi/phone/connection_bar.dart';
 import 'package:nushi/phone/new_chat_screen.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/settings_screen.dart';
@@ -49,7 +49,7 @@ class ChatsScreen extends StatelessWidget {
           body: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (!daemon.connected) Offline(daemon),
+              ConnectionBar(phone),
               Expanded(
                 child: groups.isEmpty
                     ? Center(
@@ -165,44 +165,6 @@ class ChatRow extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-/// Says the Mac can't be reached, with Try again.
-class Offline extends StatelessWidget {
-  const new(this.daemon, {super.key});
-
-  final Daemon daemon;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = NushiTheme.of(context).t;
-    return ColoredBox(
-      color: t.crashedSoft,
-      child: Padding(
-        padding: const EdgeInsets.only(left: 16),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                "Can't reach the Mac",
-                style: phoneText(context, size: 14),
-              ),
-            ),
-            TextButton(
-              onPressed: () => unawaited(daemon.ping()),
-              style: TextButton.styleFrom(
-                minimumSize: const Size(touch, touch),
-              ),
-              child: Text(
-                'Try again',
-                style: phoneText(context, color: t.link, size: 14),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

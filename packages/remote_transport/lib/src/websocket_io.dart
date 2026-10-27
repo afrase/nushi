@@ -139,6 +139,10 @@ final class RelaySocket {
     _frame(0x2, data);
   }
 
+  /// The close code the relay ended the connection with, if it sent one
+  /// (4404: no daemon waits at the id).
+  int? closeCode;
+
   /// Sends a close frame and closes the socket.
   Future<void> close() async {
     if (_closed) return;
@@ -208,6 +212,7 @@ final class RelaySocket {
           _message.add(Uint8List.fromList(payload));
           if (fin) _messages.add(_message.takeBytes());
         case 0x8:
+          if (payload.length >= 2) closeCode = payload[0] << 8 | payload[1];
           return _fail(null);
         case 0x9:
           _frame(0xA, payload);

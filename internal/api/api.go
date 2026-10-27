@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"slices"
 	"sync"
 	"time"
 
@@ -32,7 +33,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 69
+const Version = 70
 
 // Build is the daemon's executable as it started (PingResponse.build).
 var Build = func() string {
@@ -113,7 +114,10 @@ func New(sv Services) http.Handler { return serve(sv, "socket") }
 func serve(sv Services, via string, interceptors ...connect.Interceptor) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{chats: sv.Chats, agents: sv.Agents, mcp: sv.MCP, skills: sv.Skills, terms: sv.Terms, trust: sv.Trust,
-		hub: sv.Hub, memory: sv.Memory, remote: sv.Remote, jira: sv.Jira, github: sv.GitHub, logPrefs: sv.Log, transcripts: sv.Transcripts}, connect.WithInterceptors(append([]connect.Interceptor{logCalls{via}}, interceptors...)...)))
+		hub: sv.Hub, memory: sv.Memory, remote: sv.Remote, jira: sv.Jira, github: sv.GitHub, logPrefs: sv.Log, transcripts: sv.Transcripts}, connect.WithInterceptors(append([]connect.Interceptor{logCalls{via}}, interceptors...)...),
+		// Gzip only for a client that asks (the phone, over a slow link;
+		// never the Mac's socket), and only where it pays.
+		connect.WithCompressMinBytes(1024)))
 	return mux
 }
 
@@ -181,13 +185,55 @@ func (s *server) GetChat(_ context.Context, req *connect.Request[nushiv1.GetChat
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
+	start := 0
+	if n := int(req.Msg.Recent); n > 0 {
+		start = pageStart(c.Items, len(c.Items), n)
+	}
 	resp := &nushiv1.GetChatResponse{Chat: chatProto(c.Session), Config: configProto(c.Config),
 		Status: statusProto(c.Status), Seq: c.Seq, Commands: commandsProto(c.Commands), Usage: usageProto(c.Usage),
-		Queue: queueProto(c.Queue)}
-	for _, it := range c.Items {
+		Queue: queueProto(c.Queue), Older: int32(start)}
+	for _, it := range c.Items[start:] {
 		resp.Items = append(resp.Items, itemProto(&it))
 	}
 	return connect.NewResponse(resp), nil
+}
+
+func (s *server) GetChatItems(_ context.Context, req *connect.Request[nushiv1.GetChatItemsRequest]) (*connect.Response[nushiv1.GetChatItemsResponse], error) {
+	c, err := s.chats.Get(req.Msg.ChatId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, err)
+	}
+	end := slices.IndexFunc(c.Items, func(it model.Item) bool { return it.ID == req.Msg.Before })
+	if end < 0 {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("no such item: the chat changed"))
+	}
+	n := int(req.Msg.Limit)
+	if n <= 0 || n > 500 {
+		n = 500
+	}
+	start := pageStart(c.Items, end, n)
+	resp := &nushiv1.GetChatItemsResponse{Older: int32(start)}
+	for _, it := range c.Items[start:end] {
+		resp.Items = append(resp.Items, itemProto(&it))
+	}
+	return connect.NewResponse(resp), nil
+}
+
+// pageStart is where a page of items ending before end starts: n items
+// back, and further back to the call that started a subagent whose steps
+// are in the page, so the subagent shows whole.
+func pageStart(items []model.Item, end, n int) int {
+	start := max(0, end-n)
+	index := map[string]int{}
+	for i, it := range items[:end] {
+		index[it.ID] = i
+	}
+	for i := end - 1; i >= start; i-- {
+		if j, ok := index[items[i].Parent]; ok && j < start {
+			start = j
+		}
+	}
+	return start
 }
 
 func (s *server) StartChat(ctx context.Context, req *connect.Request[nushiv1.StartChatRequest]) (*connect.Response[nushiv1.StartChatResponse], error) {

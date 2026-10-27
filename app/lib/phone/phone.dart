@@ -8,6 +8,7 @@ import 'package:connectrpc/protocol/connect.dart' as protocol;
 import 'package:flutter/foundation.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/phone/link.dart';
 import 'package:nushi/phone/platform.dart';
 import 'package:nushi/phone/subscription.dart';
 import 'package:nushi/remote.dart';
@@ -57,6 +58,12 @@ class Phone extends ChangeNotifier {
   Daemon? daemon;
   rt.RelayTransport? _transport;
 
+  /// What keeps it up, and says how it stands.
+  Link? link;
+
+  /// When the Mac last answered, kept across launches.
+  DateTime? _seen;
+
   /// A pairing under way, once it has its code.
   PairingCode? pairing;
 
@@ -69,11 +76,13 @@ class Phone extends ChangeNotifier {
 
   /// Reads the stored pairing and, if there's one, connects.
   Future<void> start() async {
-    platform.onVisible(({required visible}) {
-      _visible = visible;
-      if (visible) unawaited(daemon?.ping());
-      unawaited(view(visible ? daemon?.selectedId : null));
-    });
+    platform
+      ..onVisible(({required visible}) {
+        _visible = visible;
+        link?.visible(shown: visible);
+        unawaited(view(visible ? daemon?.selectedId : null));
+      })
+      ..onOnline(() => link?.online());
     try {
       final r = await platform.load();
       if (r != null) {
@@ -81,6 +90,7 @@ class Phone extends ChangeNotifier {
           _key = await rt.KeyPair.make(k);
         }
         name = r['name'] as String? ?? '';
+        _seen = DateTime.tryParse(r['seen'] as String? ?? '');
         final relay = Uri.tryParse(r['relay'] as String? ?? '');
         final id = r['daemon'] as String? ?? '';
         if (r['daemonKey'] case final Uint8List dk
@@ -115,6 +125,7 @@ class Phone extends ChangeNotifier {
     await platform.save({
       'key': mine,
       'name': name,
+      if (_seen case final seen?) 'seen': seen.toIso8601String(),
       if (paired case final p?) ...{
         'relay': p.relay.toString(),
         'daemon': p.id,
@@ -172,10 +183,27 @@ class Phone extends ChangeNotifier {
       baseUrl: 'http://nushid',
       codec: const ProtoCodec(),
       httpClient: createHttpClient(transport: transport),
+      // The daemon gzips what's over 1 KiB for a client that asks: a long
+      // chat's transcript comes in about a third of the bytes.
+      acceptCompressions: const [rt.Gzip()],
     );
     final d = daemon =
         (connectTo?.call(t) ?? Daemon(transport: t, remote: true))
           ..addListener(_daemonChanged);
+    link = Link(
+      d,
+      reset: transport.reset,
+      live: () => transport.live,
+      seen: _seen,
+      onSeen: (seen) {
+        // Kept once a minute at most: it's for "last seen" after a relaunch.
+        final was = _seen;
+        _seen = seen;
+        if (was == null || seen.difference(was).inMinutes >= 1) {
+          unawaited(_save().catchError((Object _) {}));
+        }
+      },
+    )..start();
     remoteState.addListener(_remoteChanged);
     platform.onOpenChat = (chat) => opening.value = chat;
     _viewing?.cancel();
@@ -296,6 +324,8 @@ class Phone extends ChangeNotifier {
   Future<void> close() async {
     _viewing?.cancel();
     _viewing = null;
+    link?.dispose();
+    link = null;
     remoteState.removeListener(_remoteChanged);
     daemon
       ?..removeListener(_daemonChanged)

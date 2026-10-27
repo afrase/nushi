@@ -35,13 +35,15 @@ final class Channel {
   int _sent = 0;
   int _got = 0;
 
-  /// Runs the handshake on [ws], which is closed if it fails.
+  /// Runs the handshake on [ws], which is closed if it fails; the daemon
+  /// has [wait] to answer (the relay alone waits 10 s for it to be there).
   static Future<Channel> open(
     RelaySocket ws, {
     required String id,
     required KeyPair device,
     required List<int> daemonKey,
     List<int>? secret,
+    Duration wait = const Duration(seconds: 30),
   }) async {
     final messages = StreamIterator(ws.messages);
     try {
@@ -56,7 +58,9 @@ final class Channel {
         psks: [?secret],
       );
       ws.send(await hs.writeMessage());
-      if (!await messages.moveNext()) throw NoiseException('no answer');
+      if (!await messages.moveNext().timeout(wait, onTimeout: () => false)) {
+        throw NoiseException('no answer');
+      }
       await hs.readMessage(messages.current);
       return Channel._(ws, messages, hs);
     } on Object {
