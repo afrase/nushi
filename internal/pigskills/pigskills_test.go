@@ -121,7 +121,7 @@ func TestSetSkillOn(t *testing.T) {
 		t.Fatal(err)
 	}
 	b, _ := os.ReadFile(filepath.Join(deeper, ".pig", "settings.json"))
-	if want := "{\n  \"skills\": [\n    \"-" + filepath.Join(top, ".agents", "skills", "release") + "\"\n  ]\n}\n"; string(b) != want {
+	if want := "{\n  \"skills\": [\"-skills/release\"]\n}\n"; string(b) != want {
 		t.Errorf("project settings:\n%s", b)
 	}
 	l, _ := PiG{}.List(ctx, deeper)
@@ -134,9 +134,41 @@ func TestSetSkillOn(t *testing.T) {
 	if err := (PiG{}).SetSkillOn(ctx, deeper, "shared", "release", true); err != nil {
 		t.Fatal(err)
 	}
-	if b, _ := os.ReadFile(filepath.Join(deeper, ".pig", "settings.json")); string(b) != "{}\n" {
+	if b, _ := os.ReadFile(filepath.Join(deeper, ".pig", "settings.json")); string(b) != "{\n  \"skills\": []\n}\n" {
 		t.Errorf("on again: %s", b)
 	}
+
+	// A project file of its own shape: only the skills value changes, every
+	// other byte kept; an old absolute entry goes; no path of yours goes in.
+	own := "{\"theme\":\"light\",   \"skills\" : [\"!old*\", \"-" + filepath.Join(top, ".agents", "skills", "release") + "\"],\n\t\"z\": {\"a\": 1}\n}"
+	write(t, filepath.Join(deeper, ".pig", "settings.json"), own)
+	if err := (PiG{}).SetSkillOn(ctx, deeper, "shared", "release", true); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(filepath.Join(deeper, ".pig", "settings.json")); string(b) != "{\"theme\":\"light\",   \"skills\" : [\"!old*\"],\n\t\"z\": {\"a\": 1}\n}" {
+		t.Errorf("kept:\n%s", b)
+	}
+	write(t, filepath.Join(deeper, ".pig", "settings.json"), "{\"theme\": \"light\"}")
+	if err := (PiG{}).SetSkillOn(ctx, deeper, "shared", "release", false); err != nil {
+		t.Fatal(err)
+	}
+	b, _ = os.ReadFile(filepath.Join(deeper, ".pig", "settings.json"))
+	if string(b) != "{\"theme\": \"light\",\n  \"skills\": [\"-skills/release\"]}" || strings.Contains(string(b), top) {
+		t.Errorf("added:\n%s", b)
+	}
+	for _, bad := range []string{"{\"skills\": [], \"skills\": []}", "[1]", "{\"skills\": \"x\"}"} {
+		write(t, filepath.Join(deeper, ".pig", "settings.json"), bad)
+		if err := (PiG{}).SetSkillOn(ctx, deeper, "shared", "release", false); err == nil {
+			t.Errorf("%s: not refused", bad)
+		}
+		if b, _ := os.ReadFile(filepath.Join(deeper, ".pig", "settings.json")); string(b) != bad {
+			t.Errorf("%s changed: %s", bad, b)
+		}
+	}
+	if err := os.Remove(filepath.Join(deeper, ".pig", "settings.json")); err != nil {
+		t.Fatal(err)
+	}
+
 	// A linked .pig is refused.
 	elsewhere := t.TempDir()
 	if err := os.RemoveAll(filepath.Join(deeper, ".pig")); err != nil {

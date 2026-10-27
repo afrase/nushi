@@ -82,7 +82,7 @@ func EditIn(base, name string, change func(map[string]json.RawMessage) error) (c
 	if fi, err := root.Lstat(name); err == nil {
 		mode = fi.Mode().Perm()
 	}
-	return created, atomicfile.ReplaceIn(root, name, append(out, '\n'), mode)
+	return created, replaceIn(root, name, append(out, '\n'), mode)
 }
 
 // readIn is ReadFile for name inside root.
@@ -100,4 +100,9 @@ func readIn(root *os.Root, name string) ([]byte, error) {
 		err = fmt.Errorf("%s grew past 64 MiB", name)
 	}
 	return b, err
+}
+
+// replaceIn replaces name inside root at once (atomicfile.ReplaceIn).
+func replaceIn(root *os.Root, name string, data []byte, mode os.FileMode) error {
+	return atomicfile.ReplaceIn(root, name, data, mode)
 }

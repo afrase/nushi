@@ -136,10 +136,12 @@ func trusted(folder string, user settings) bool {
 }
 
 // off says a settings file's skills list turns off the skill in dir:
-// "-<dir>" exactly, or a "!<glob>" on its folder's name; "+<dir>" keeps it
-// on. by is the entry that does.
+// "-<dir>" or "-skills/<folder>" (relative to the root's base folder, .pig
+// or .agents, as PiG matches it) exactly, or a "!<glob>" on its folder's
+// name; "+" with either keeps it on. by is the entry that does.
 func off(list []string, dir string) (bool, string) {
-	if slices.Contains(list, "+"+dir) {
+	rel := "skills/" + filepath.Base(dir)
+	if slices.Contains(list, "+"+dir) || slices.Contains(list, "+"+rel) {
 		return false, ""
 	}
 	for _, e := range list {
@@ -148,7 +150,7 @@ func off(list []string, dir string) (bool, string) {
 				return true, e
 			}
 		}
-		if e == "-"+dir {
+		if e == "-"+dir || e == "-"+rel {
 			return true, e
 		}
 	}
@@ -218,45 +220,56 @@ func (p PiG) SetSkillOn(ctx context.Context, folder, source, name string, on boo
 	case s.SetIn != "":
 		return fmt.Errorf("a pattern in %s turns it off; change it there", s.SetIn)
 	}
-	edit := func(change func(map[string]json.RawMessage) error) error {
+	// The entries this skill's switch writes and drops: yours by its
+	// folder's path (your own file); the project's relative to the root's
+	// base folder ("skills/<folder>", which PiG matches against .pig and
+	// each .agents alike), so no path of yours goes into a file the
+	// repository may commit.
+	entry := s.Path
+	drop := []string{"-" + s.Path, "+" + s.Path}
+	project := s.Source == "project" || s.Source == "shared" && !s.Everywhere
+	if project {
+		entry = "skills/" + filepath.Base(s.Path)
+		drop = append(drop, "-"+entry, "+"+entry)
+	}
+	change := func(raw json.RawMessage) (json.RawMessage, error) {
+		var list []string
+		if len(raw) > 0 && string(raw) != "null" && json.Unmarshal(raw, &list) != nil {
+			return nil, errors.New("skills isn't a list")
+		}
+		list = slices.DeleteFunc(list, func(e string) bool { return slices.Contains(drop, e) })
+		if !on {
+			list = append(list, "-"+entry)
+		}
+		if list == nil {
+			list = []string{}
+		}
+		return json.Marshal(list)
+	}
+	if !project {
 		file := userSettings()
 		if resolved, err := filepath.EvalSymlinks(file); err == nil {
 			file = resolved // your dotfiles' link: change what it points at
 		}
-		_, err := jsonsettings.Edit(file, change)
-		return err
-	}
-	if s.Source == "project" || s.Source == "shared" && !s.Everywhere {
-		file := projectSettings(folder)
-		for _, p := range []string{filepath.Dir(file), file} {
-			if fi, err := os.Lstat(p); err == nil && fi.Mode()&os.ModeSymlink != 0 {
-				return fmt.Errorf("%s is a symlink; not changing it", p)
+		_, err := jsonsettings.Edit(file, func(m map[string]json.RawMessage) error {
+			b, err := change(m["skills"])
+			m["skills"] = b
+			if string(b) == "[]" {
+				delete(m, "skills")
 			}
-		}
-		// Through the folder's root: a .pig swapped for a link meanwhile
-		// can't lead the write out of it.
-		edit = func(change func(map[string]json.RawMessage) error) error {
-			_, err := jsonsettings.EditIn(folder, filepath.Join(".pig", "settings.json"), change)
 			return err
+		})
+		return err
+	}
+	file := projectSettings(folder)
+	for _, p := range []string{filepath.Dir(file), file} {
+		if fi, err := os.Lstat(p); err == nil && fi.Mode()&os.ModeSymlink != 0 {
+			return fmt.Errorf("%s is a symlink; not changing it", p)
 		}
 	}
-	return edit(func(m map[string]json.RawMessage) error {
-		var list []string
-		if raw, ok := m["skills"]; ok && string(raw) != "null" && json.Unmarshal(raw, &list) != nil {
-			return errors.New("skills isn't a list")
-		}
-		list = slices.DeleteFunc(list, func(e string) bool { return e == "-"+s.Path || e == "+"+s.Path })
-		if !on {
-			list = append(list, "-"+s.Path)
-		}
-		if len(list) == 0 {
-			delete(m, "skills")
-			return nil
-		}
-		b, err := json.Marshal(list)
-		m["skills"] = b
-		return err
-	})
+	// Only the skills key, every other byte kept, through the folder's
+	// root (a .pig swapped for a link meanwhile can't lead out of it).
+	return jsonsettings.SetKeyIn(folder, filepath.Join(".pig", "settings.json"), "skills", change)
 }
 
 // Trash moves one of PiG's own skill folders to the Trash: right in your
