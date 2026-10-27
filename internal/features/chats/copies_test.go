@@ -233,7 +233,10 @@ func TestListCopiesAtScale(t *testing.T) {
 	if testing.Short() {
 		t.Skip("writes 5,000 copies")
 	}
-	svc, _, _, store, _ := newCopyingChat(t)
+	store, err := transcripts.Open(filepath.Join(t.TempDir(), "transcripts"))
+	noErr(t, err)
+	svc := New(nil, &memModes{}, &memSessions{}, nil, t.TempDir(), func(model.Event) {})
+	svc.UseCopies(store, func() bool { return true })
 	const n = 5000
 	var sessions []model.Session
 	for i := range n {
