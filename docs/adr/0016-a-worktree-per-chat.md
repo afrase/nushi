@@ -16,3 +16,10 @@ Several agents working in one repository step on each other's files. Git worktre
 
 ## Alternatives considered
 - Worktrees outside the repository (`~/.nushi/worktrees/...`, as some tools do): harder to find and to clean up by hand.
+
+## Amendment (steps 315–317): a plain chat's branch is named after the chat
+- Nushi's two words (`nushi/brave-otter`) are a placeholder: once the chat has a title between turns (the user's name for it, else the agent's, else the first prompt's line; Claude's own title is waited for, a turn at most, since it can come just after a short first turn), the branch becomes `nushi/<title-slug>`, the slug as a Jira issue's (ASCII letters and digits, lowercase, `-` between words, 40 characters at most, cut between words), a number after it when a branch or a remote's branch has the name. A title with none of those words leaves the two words until one has. Once only.
+- Only while the branch still has Nushi's name and the worktree is on it, it tracks nothing and no remote has a branch of its name, and no other worktree or chat has it; otherwise it keeps its name for good. Never during a turn (or while background subagents run): the title often comes mid-turn, and the rename waits for the turn's end.
+- `git branch -m`; the worktree's folder keeps its name (the agent's session and terminals have it as their cwd), so the folder and branch differ from then on.
+- The transcript gets a quiet line ("Branch renamed to nushi/…"); the agent isn't told. Claude's prompt keeps the old name from the session's start, so it may run one command with it first, which fails (`docs/facts/claude.md`).
+- Rename branch… in the Environment card renames it to any name git takes, between turns, and turns the naming off. A branch on a remote (an upstream, or a remote's branch of its name) is refused, "It's on the remote: rename it there too, or keep it", rather than renamed here alone, which would leave the local and the remote names apart (a plain `git push` then refuses, or pushes another branch).

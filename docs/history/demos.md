@@ -2,6 +2,15 @@
 
 Each milestone's demo script (what to run, what to see), newest first. An archive.
 
+## Demo (a worktree's branch named after the chat, steps 315–318)
+
+1. In a repository, a new Claude chat with New worktree on: the details panel's Branch is `nushi/<two words>`. Send "Bump the Go version to 1.27.3" (anything short). When the turn ends, or a moment after (Claude's own title), the branch becomes `nushi/<Claude's title>` (`git branch` agrees), the transcript ends with a quiet "Branch renamed to nushi/…", and the folder is still `.worktrees/<two words>`. A second turn with another subject renames nothing.
+2. Another chat with the same title: `…-2`.
+3. A third chat: push its branch (`git push -u origin HEAD` in its worktree) before the first message. After the turn it keeps its two words; the pencil beside the branch, a new name, Rename: "It's on the remote: rename it there too, or keep it".
+4. A fourth chat: the pencil before the first message, `me/my-work`, Rename: the Branch row says `me/my-work`; after the first turn it still does.
+5. In the first chat ask Claude to push the branch: it may first try the old name (the start of its session told it that one), see it fail, and push the new one.
+6. Delete… the first chat: it offers deleting `nushi/<Claude's title>`.
+
 ## Demo (Settings as a page, and chat history, steps 311–314)
 
 1. ⌘,: Settings takes the chat's place, the sidebar still there; the nav lists ten sections; General, Terminal and Logs & advanced are groups of rows with their controls at the right edge. Esc goes back to the chat; ⌘, again opens the same section.
