@@ -106,9 +106,10 @@ final class CipherState {
   Uint8List? _k;
   int _n = 0;
 
-  /// The largest nonce a message may use: Dart's ints stop at 2^63-1, so
-  /// this is below Noise's 2^64-2. No connection gets near it.
-  static const int maxNonce = 0x7fffffffffffffff - 1;
+  /// The largest nonce a message may use: 2^53-1, the largest integer a
+  /// browser's numbers hold exactly (Dart on the web), so below Noise's
+  /// 2^64-2. No connection gets near it.
+  static const int maxNonce = 9007199254740991;
 
   /// Whether it has a key, so it encrypts.
   bool get hasKey => _k != null;
@@ -118,7 +119,10 @@ final class CipherState {
     if (max) {
       b.fillRange(4, 12, 0xff);
     } else {
-      ByteData.sublistView(b).setUint64(4, n, Endian.little);
+      // Two 32-bit halves: the web has no 64-bit setter.
+      ByteData.sublistView(b)
+        ..setUint32(4, n % 0x100000000, Endian.little)
+        ..setUint32(8, n ~/ 0x100000000, Endian.little);
     }
     return b;
   }

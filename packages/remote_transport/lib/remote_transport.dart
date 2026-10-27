@@ -26,21 +26,37 @@ final class PairingOffer {
   /// [key], proved by [secret].
   new(this.relay, this.id, this.key, this.secret);
 
-  /// Reads `nushi://pair?r=…&i=…&k=…&s=…`.
+  /// Reads `nushi://pair?r=…&i=…&k=…&s=…`, or the same as a web app's
+  /// link: `https://<host>/#pair?r=…`, the parameters in the fragment, so
+  /// they never reach a server.
   factory parse(String qr) {
-    final u = Uri.parse(qr);
+    var u = Uri.tryParse(qr.trim()) ?? Uri();
+    if ((u.scheme == 'https' || u.scheme == 'http') &&
+        u.fragment.startsWith('pair?') &&
+        !u.hasQuery) {
+      u = Uri.tryParse('nushi://${u.fragment}') ?? Uri();
+    }
     final q = u.queryParameters;
     if (u.scheme != 'nushi' ||
         u.host != 'pair' ||
         [q['r'], q['i'], q['k'], q['s']].contains(null)) {
       throw const FormatException('not a Nushi pairing code');
     }
-    final key = _unb64(q['k']!);
-    final secret = _unb64(q['s']!);
+    final Uint8List key;
+    final Uint8List secret;
+    final relay = Uri.tryParse(q['r']!);
+    try {
+      (key, secret) = (_unb64(q['k']!), _unb64(q['s']!));
+    } on FormatException {
+      throw const FormatException('not a Nushi pairing code');
+    }
+    if (relay == null || relay.scheme != 'wss' && relay.scheme != 'ws') {
+      throw const FormatException('not a Nushi pairing code');
+    }
     if (key.length != 32 || secret.length != 32) {
       throw const FormatException('not a Nushi pairing code');
     }
-    return PairingOffer(Uri.parse(q['r']!), q['i']!, key, secret);
+    return PairingOffer(relay, q['i']!, key, secret);
   }
 
   /// The relay both sides meet at.
@@ -90,7 +106,8 @@ Uri _at(Uri relay, String side, String id) => relay.replace(
   ],
 );
 
-/// Pairs [device] from [offer]: the handshake, then the phone's [name].
+/// Pairs [device] from [offer]: the handshake, then the phone's [name]
+/// (and [kind], "web" for the web app).
 /// [onCode] gets the code to show while the Mac's user compares it and
 /// allows the phone; with no answer within [wait] (the Mac gives up after
 /// 2 minutes) the code is stale and it fails. Returns the daemon, and a
@@ -100,6 +117,7 @@ Future<(PairedDaemon, RelayTransport)> pair(
   required KeyPair device,
   required String name,
   required void Function(String code) onCode,
+  String? kind,
   Duration wait = const Duration(seconds: 150),
 }) async {
   final ws = await RelaySocket.connect(_at(offer.relay, 'dial', offer.id));
@@ -110,7 +128,7 @@ Future<(PairedDaemon, RelayTransport)> pair(
     daemonKey: offer.key,
     secret: offer.secret,
   );
-  ch.outgoing.add(utf8.encode(jsonEncode({'name': name})));
+  ch.outgoing.add(utf8.encode(jsonEncode({'name': name, 'kind': ?kind})));
   onCode(ch.code);
   final reply = await ch.read().timeout(wait, onTimeout: () => null);
   final daemon = reply == null

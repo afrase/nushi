@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:noise/noise.dart';
@@ -18,16 +17,14 @@ final _deferred = RegExp('^Noise_[NKXI]1|^Noise_[NKXI]{1,2}1');
 void main() {
   // cacophony's and snow's vectors, cut to 25519_ChaChaPoly_BLAKE2s: every
   // fundamental pattern and psk modifier in them (deferred ones aren't
-  // implemented).
+  // implemented). Read by a hybrid isolate on the VM, so the same test runs
+  // in a browser (dart test -p chrome).
   for (final file in ['cacophony', 'snow']) {
-    final vectors =
-        (jsonDecode(File('test/vectors/$file.json').readAsStringSync())
-                as Map)['vectors']
-            as List;
-    final run = vectors.cast<Map<String, dynamic>>().where(
-      (v) => !_deferred.hasMatch(v['protocol_name'] as String),
-    );
-    test('$file: ${run.length} vectors', () async {
+    test('$file vectors', () async {
+      final vectors = (jsonDecode(await _read(file)) as Map)['vectors'] as List;
+      final run = vectors.cast<Map<String, dynamic>>().where(
+        (v) => !_deferred.hasMatch(v['protocol_name'] as String),
+      );
       expect(run.length, greaterThan(20));
       for (final v in run) {
         await _vector(v);
@@ -99,6 +96,16 @@ void main() {
     );
   });
 }
+
+Future<String> _read(String file) async =>
+    await spawnHybridCode('''
+import 'dart:io';
+import 'package:stream_channel/stream_channel.dart';
+void hybridMain(StreamChannel<Object?> channel) {
+  channel.sink.add(File('test/vectors/$file.json').readAsStringSync());
+}
+''').stream.first
+        as String;
 
 Future<void> _vector(Map<String, dynamic> v) async {
   final name = v['protocol_name'] as String;
