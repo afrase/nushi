@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/agents_card.dart';
 import 'package:nushi/changes_span.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/context_cache.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -46,11 +47,16 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
   Scope _scope = Scope.uncommitted;
   List<Commit> _commits = []; // in Commits
   String? _error;
-  late GetContextUsageResponse? _context = _asked[chat.id]?.$2;
+  late GetContextUsageResponse? _context = _last(chat.id)?.$2;
 
   /// What fills each chat's context, and when it was asked: kept across
   /// panels, so switching chats doesn't ask again.
   static final _asked = <String, (DateTime, GetContextUsageResponse)>{};
+
+  /// What was last asked of [id]'s chat: in this run, else as remembered
+  /// from an earlier one.
+  static (DateTime, GetContextUsageResponse)? _last(String id) =>
+      _asked[id] ?? recalledContext(id);
   Timer? _timer;
   bool _asking = false;
   bool _couldAsk = false; // the last time the chat changed
@@ -67,6 +73,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
         GetContextUsageRequest(chatId: chat.id),
       );
       _asked[chat.id] = (DateTime.now(), r);
+      rememberContext(chat.id, r);
       if (mounted) setState(() => _context = r);
     } on Object {
       // The card keeps what it had; it asks again after the next turn.
@@ -118,7 +125,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
     old.chat.removeListener(_onChat);
     widget.chat.addListener(_onChat);
     _timer?.cancel();
-    _context = _asked[chat.id]?.$2;
+    _context = _last(chat.id)?.$2;
     _couldAsk = _canAsk;
     _schedule();
   }
@@ -242,7 +249,8 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
           switch (_context) {
             final c? when c.categories.isNotEmpty => (
               null,
-              ContextBreakdown(c.categories),
+              // As last asked, brought up to the agent's latest count.
+              ContextBreakdown(liveCategories(c.categories, u)),
             ),
             final c? => (null, AgentMarkdown(c.markdown)),
             null when u.contextSize > 0 => (null, UsageBar(u)),
