@@ -13,7 +13,7 @@ import 'package:nushi/widgets.dart';
 
 /// A subagent beside the chat, left of the details panel: its prompt
 /// (folded), its model and state, then its steps as they come, and its
-/// result. × closes it.
+/// result. Stop stops it while it runs; × closes it.
 class SubagentPane extends StatelessWidget {
   const new({
     required this.chat,
@@ -57,6 +57,8 @@ class SubagentPane extends StatelessWidget {
                         ? const SizedBox.shrink()
                         : subagentName(context, s, size: 12),
                   ),
+                  if (s != null && subagentStoppable(s))
+                    stopButton(context, daemon, chat, id),
                   IconTap(
                     wide ? Icons.close_fullscreen : Icons.open_in_full,
                     tooltip: wide ? 'Narrower' : 'Wider',

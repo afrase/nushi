@@ -297,7 +297,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
           ],
         ],
       ),
-      ?agentsCard(chat),
+      ?agentsCard(chat, daemon),
       mcpCard(chat, daemon),
     ]);
   }

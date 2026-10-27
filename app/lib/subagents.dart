@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/chat.dart';
+import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
@@ -28,6 +29,39 @@ List<SubagentRun> subagentsOf(List<Item> items) {
 
 /// Whether the subagent works, as the daemon says.
 bool subagentRunning(SubagentRun s) => s.call.subagent.state == 'running';
+
+/// Whether the subagent can be stopped on its own (StopTask): it runs, and
+/// the agent shows it as a session of its own or said how to reach it.
+bool subagentStoppable(SubagentRun s) =>
+    subagentRunning(s) &&
+    (s.call.subagent.session.isNotEmpty || s.call.agentId.isNotEmpty);
+
+/// Stops the subagent or background command [callId] started, alone; it
+/// shows as stopped once the agent says so.
+Future<void> stopTask(
+  BuildContext context,
+  Daemon daemon,
+  ChatState chat,
+  String callId,
+) => tryOrShow(
+  context,
+  () =>
+      daemon.client.stopTask(StopTaskRequest(chatId: chat.id, callId: callId)),
+);
+
+/// The stop button of a running subagent or background command.
+Widget stopButton(
+  BuildContext context,
+  Daemon daemon,
+  ChatState chat,
+  String callId, {
+  double size = 14,
+}) => IconTap(
+  Icons.stop_rounded,
+  tooltip: 'Stop',
+  size: size,
+  onTap: () => stopTask(context, daemon, chat, callId),
+);
 
 /// The subagent's own steps, without its report (that shows as its result).
 List<Item> subagentSteps(SubagentRun s) => [
@@ -162,55 +196,75 @@ Widget subagentMark(BuildContext context, SubagentRun s, {bool still = false}) {
 }
 
 /// A subagent in the transcript, on one line: its type and task ("Explore:
-/// find the scroll handling") and its state, live. A click opens its pane.
-class SubagentLine extends StatelessWidget {
-  const new(this.s, this.chat, {super.key, this.still = false});
+/// find the scroll handling") and its state, live. A click opens its pane;
+/// under the pointer, a running one's mark becomes its Stop.
+class SubagentLine extends StatefulWidget {
+  const new(this.s, this.chat, {super.key, this.still = false, this.daemon});
 
   final SubagentRun s;
   final ChatState chat;
   final bool still;
 
+  /// The daemon to stop it through; none, no Stop.
+  final Daemon? daemon;
+
+  @override
+  State<SubagentLine> createState() => _SubagentLineState();
+}
+
+class _SubagentLineState extends State<SubagentLine> {
+  bool _hover = false;
+
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
+    final (s, chat, daemon) = (widget.s, widget.chat, widget.daemon);
     final failed = s.call.subagent.state == 'failed';
-    return ValueListenableBuilder(
-      valueListenable: chat.pane,
-      builder: (context, open, _) => framed(
-        border: failed
-            ? t.crashed
-            : open == s.call.id
-            ? t.focus
-            : t.subagentBorder,
-        fill: failed ? t.crashedSoft : t.subagentTint,
-        child: Tap(
-          onTap: () => chat.pane.value = s.call.id,
-          tooltip: 'Open its steps',
-          radius: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: SizedBox(
-            height: 28,
-            child: Row(
-              spacing: 6,
-              children: [
-                Icon(
-                  Icons.smart_toy_outlined,
-                  size: 14,
-                  color: failed ? t.crashed : t.subagentAccent,
-                ),
-                Expanded(child: subagentName(context, s)),
-                // The name takes the room; the state ends the line.
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 240),
-                  child: SubagentState(
-                    s,
-                    style: theme.ui(t.textMuted, size: 12),
+    final stop = _hover && daemon != null && subagentStoppable(s);
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: ValueListenableBuilder(
+        valueListenable: chat.pane,
+        builder: (context, open, _) => framed(
+          border: failed
+              ? t.crashed
+              : open == s.call.id
+              ? t.focus
+              : t.subagentBorder,
+          fill: failed ? t.crashedSoft : t.subagentTint,
+          child: Tap(
+            onTap: () => chat.pane.value = s.call.id,
+            tooltip: 'Open its steps',
+            radius: 0,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: SizedBox(
+              height: 28,
+              child: Row(
+                spacing: 6,
+                children: [
+                  Icon(
+                    Icons.smart_toy_outlined,
+                    size: 14,
+                    color: failed ? t.crashed : t.subagentAccent,
                   ),
-                ),
-                subagentMark(context, s, still: still),
-                Icon(Icons.chevron_right, size: 14, color: t.textMuted),
-              ],
+                  Expanded(child: subagentName(context, s)),
+                  // The name takes the room; the state ends the line.
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 240),
+                    child: SubagentState(
+                      s,
+                      style: theme.ui(t.textMuted, size: 12),
+                    ),
+                  ),
+                  if (stop)
+                    stopButton(context, daemon, chat, s.call.id, size: 13)
+                  else
+                    subagentMark(context, s, still: widget.still),
+                  Icon(Icons.chevron_right, size: 14, color: t.textMuted),
+                ],
+              ),
             ),
           ),
         ),
