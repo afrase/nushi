@@ -3,7 +3,8 @@ name: Release
 # Publishing a GitHub release (Draft a new release, a new tag vX.Y.Z on main, Publish) builds that tag, attaches
 # Nushi-X.Y.Z.zip, the relay's and the web app's tarballs and a .sha256 for each to the release, and updates the cask
 # in afrase/homebrew-tap (ADR 0055). A draft triggers nothing until it is published. Run it by hand to rebuild an
-# existing release's files. Actions are pinned by commit, as in CI.
+# existing release's files. The app (macOS), the relays and the web app (Linux) build in parallel jobs, beside the
+# check; publish attaches them once all are built and the commit is checked. Actions are pinned by commit, as in CI.
 on:
   release:
     types: [published]
@@ -13,41 +14,132 @@ on:
         description: Tag of an existing release to build (vX.Y.Z)
         required: true
 
-permissions:
-  contents: write
-  actions: read
+permissions: {}
 
 concurrency:
   group: release-${{ github.event.release.tag_name || inputs.tag }}
 
+env:
+  TAG: ${{ github.event.release.tag_name || inputs.tag }}
+
 jobs:
-  release:
-    name: Build and publish
-    # What CI's macos-latest is (macos-26-arm64): the daemon is cgo, built for arm64.
-    runs-on: macos-26
-    timeout-minutes: 90
-    env:
-      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+  tag:
+    name: Check the tag and CI
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+      sha: ${{ steps.tag.outputs.sha }}
+      checked: ${{ steps.ci.outputs.checked }}
     steps:
-      - name: Check the tag
+      - id: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
             echo "::error::Release tags look like v1.2.3 or v1.2.3-beta.1"; exit 1
           fi
-          echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
+          sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/$TAG" --jq .sha)
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      # CI has usually checked this commit already; only a commit without a passing CI run (one cancelled by a
+      # newer push) is checked here, by the ci job.
+      - id: ci
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.tag.outputs.sha }}
+        run: |
+          passed=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow CI --commit "$SHA" --status success --json databaseId --jq length)
+          if [ "$passed" -gt 0 ]; then echo "CI passed on $SHA."; echo "checked=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          echo "No passing CI run for $SHA; the ci job checks it."
+          echo "checked=false" >> "$GITHUB_OUTPUT"
 
+  ci:
+    needs: tag
+    if: needs.tag.outputs.checked != 'true'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ needs.tag.outputs.sha }}
+
+  app:
+    name: Build the app (macOS)
+    needs: tag
+    # What CI's macos-latest is (macos-26-arm64): the daemon is cgo, built for arm64.
+    runs-on: macos-26
+    permissions:
+      contents: read
+    env:
+      SHA: ${{ needs.tag.outputs.sha }}
+      VERSION: ${{ needs.tag.outputs.version }}
+    steps:
       # Full history: the build number is the commit count.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ env.SHA }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
-          cache-dependency-path: |
-            go.sum
-            tools/lint/go.sum
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.47.7
+          cache: true
+      - run: tools/release.sh "$VERSION" app
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: app
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  relay:
+    name: Build the relays (Linux)
+    needs: tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      SHA: ${{ needs.tag.outputs.sha }}
+      VERSION: ${{ needs.tag.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.SHA }}
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - run: tools/release.sh "$VERSION" relay
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: relay
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  web:
+    name: Build the web app (Linux)
+    needs: tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      SHA: ${{ needs.tag.outputs.sha }}
+      VERSION: ${{ needs.tag.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.SHA }}
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: stable
@@ -56,28 +148,45 @@ jobs:
       # make web's fallback fonts (21 MB from Google's font host, each checked against fonts.lock's sha256).
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: ~/Library/Caches/nushi/fallback-fonts
-          key: fallback-fonts-${{ hashFiles('tools/webbuild/fonts.lock') }}
+          path: ~/.cache/nushi/fallback-fonts
+          key: fallback-fonts-${{ runner.os }}-${{ hashFiles('tools/webbuild/fonts.lock') }}
+      - run: tools/release.sh "$VERSION" web
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: web
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
 
-      # CI has usually checked this commit already (about 12 minutes); only a commit without a passing CI run (one
-      # cancelled by a newer push) is checked here.
-      - name: Check
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          sha=$(git rev-parse HEAD)
-          passed=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow CI --commit "$sha" --status success --json databaseId --jq length)
-          if [ "$passed" -gt 0 ]; then echo "CI passed on $sha."; exit 0; fi
-          echo "No passing CI run for $sha; checking it here."
-          make check
-
-      - name: Build
-        run: tools/release.sh "$VERSION"
-
+  publish:
+    name: Attach and update the cask
+    needs: [tag, ci, app, relay, web]
+    # The ci job is skipped when CI already passed on the commit; anything else must have succeeded.
+    if: >-
+      !cancelled() && needs.tag.result == 'success' && needs.app.result == 'success' &&
+      needs.relay.result == 'success' && needs.web.result == 'success' &&
+      (needs.ci.result == 'success' || needs.ci.result == 'skipped')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      SHA: ${{ needs.tag.outputs.sha }}
+      VERSION: ${{ needs.tag.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.SHA }}
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: dist
+          merge-multiple: true
       - name: Attach to the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"
+        run: |
+          ls -l dist
+          gh release upload "$TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"
 
       # Needs the HOMEBREW_TAP_TOKEN secret: a fine-grained token with Contents read and write on afrase/homebrew-tap
       # only. Without it the cask is left alone, and for any release but the latest (a pre-release, an older one

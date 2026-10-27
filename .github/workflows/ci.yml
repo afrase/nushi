@@ -141,14 +141,12 @@ jobs:
       # builds use; flutter test needs the host's engine and the web SDK. Their stamps go too, so a build would
       # fetch them again.
       - if: always() && steps.flutter.outputs.CACHE-HIT != 'true'
-        env:
-          SDK: ${{ steps.flutter.outputs.CACHE-PATH }}
         run: |
-          du -sh "$SDK"
-          cd "$SDK/bin/cache"
+          du -sh "$FLUTTER_ROOT"
+          cd "$FLUTTER_ROOT/bin/cache"
           rm -rf artifacts/engine/ios* artifacts/engine/android-* artifacts/engine/darwin-x64-profile \
             artifacts/engine/darwin-x64-release ios-sdk.stamp macos-sdk.stamp android-*.stamp
-          du -sh "$SDK"
+          du -sh "$FLUTTER_ROOT"
 
   web:
     name: Web app in Chrome (macOS)
