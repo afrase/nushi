@@ -27,7 +27,7 @@ const maxWeb = 64 << 20
 // bytes of it.
 var (
 	writeWait = 15 * time.Second
-	writeRate = 64 << 10
+	writeRate = 16 << 10 // a phone on a slow link still gets the 1.4 MB script (Funnel gave about 60 KB/s)
 )
 
 // Origin checks an origin given as a flag and gives it as a browser sends
