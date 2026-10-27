@@ -50,6 +50,9 @@ class Link extends ChangeNotifier {
   /// Whether a try is under way.
   bool trying = false;
 
+  /// Whether the Mac has answered since the app started.
+  bool answered = false;
+
   /// Tries that failed in a row since the Mac last answered.
   int failures = 0;
 
@@ -90,6 +93,7 @@ class Link extends ChangeNotifier {
     trying = false;
     if (_disposed) return ok;
     if (ok) {
+      answered = true;
       failures = 0;
       why = null;
       error = null;

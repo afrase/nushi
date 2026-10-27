@@ -65,8 +65,9 @@ func Origin(s string) (string, error) {
 // file is one of the app's files, ready to serve.
 type file struct {
 	body, gz []byte // gz is nil when compressing doesn't pay
+	br       []byte // the build's Brotli copy (name.br), if it made one
 	ctype    string
-	etag     string // of body; gz's has "-gz" before the closing quote
+	etag     string // of body; gz's has "-gz" before the closing quote, br's "-br"
 	cache    string
 }
 
@@ -85,7 +86,9 @@ type Site struct {
 var hashed = regexp.MustCompile(`[.-][0-9a-f]{16,}[./]`)
 
 // fresh names the files a browser must ask for again each time: the page,
-// its loader, the service worker and the manifest.
+// the service worker and the manifest (the loader's name has its hash).
+// They're no-store: a CDN in front (Cloudflare's Browser Cache TTL) turns
+// no-cache on a script into hours of caching, but leaves no-store alone.
 var fresh = map[string]bool{"index.html": true, "flutter_bootstrap.js": true, "sw.js": true, "manifest.json": true}
 
 // LoadSite reads the built app in dir, to be served at origin
@@ -131,6 +134,15 @@ func LoadSite(dir, origin string) (*Site, error) {
 	if s.files["index.html"] == nil {
 		return nil, errors.New("no index.html in the web app's folder")
 	}
+	// name.br is name's Brotli copy, served in its place, never by itself.
+	for name, f := range s.files {
+		if base, ok := strings.CutSuffix(name, ".br"); ok {
+			if b := s.files[base]; b != nil {
+				b.br = f.body
+			}
+			delete(s.files, name)
+		}
+	}
 	return s, nil
 }
 
@@ -150,7 +162,9 @@ func newFile(name string, body []byte) *file {
 			f.gz = b.Bytes()
 		}
 	}
-	if !fresh[name] && hashed.MatchString(name) {
+	if fresh[name] {
+		f.cache = "no-store"
+	} else if hashed.MatchString(name) {
 		f.cache = "public, max-age=31536000, immutable"
 	}
 	return f
@@ -195,7 +209,10 @@ func (s *Site) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.Set("Cache-Control", f.cache)
 	h.Set("Vary", "Accept-Encoding")
 	body, etag := f.body, f.etag
-	if f.gz != nil && acceptsGzip(r) {
+	if f.br != nil && accepts(r, "br") {
+		h.Set("Content-Encoding", "br")
+		body, etag = f.br, strings.TrimSuffix(f.etag, `"`)+`-br"`
+	} else if f.gz != nil && accepts(r, "gzip") {
 		h.Set("Content-Encoding", "gzip")
 		body, etag = f.gz, strings.TrimSuffix(f.etag, `"`)+`-gz"`
 	}
@@ -214,9 +231,10 @@ func (s *Site) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(body) //nolint:gosec // the app's own files, typed by their names, with nosniff and the CSP
 }
 
-func acceptsGzip(r *http.Request) bool {
+// accepts says whether r takes the encoding enc ("gzip", "br").
+func accepts(r *http.Request, enc string) bool {
 	for v := range strings.SplitSeq(r.Header.Get("Accept-Encoding"), ",") {
-		if enc, q, _ := strings.Cut(strings.TrimSpace(v), ";"); strings.EqualFold(enc, "gzip") && strings.ReplaceAll(q, " ", "") != "q=0" {
+		if e, q, _ := strings.Cut(strings.TrimSpace(v), ";"); strings.EqualFold(e, enc) && strings.ReplaceAll(q, " ", "") != "q=0" {
 			return true
 		}
 	}

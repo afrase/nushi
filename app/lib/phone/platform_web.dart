@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:js_interop';
 import 'dart:js_interop_unsafe';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:nushi/phone/subscription.dart';
 import 'package:web/web.dart' as web;
 
@@ -179,14 +179,67 @@ final class PhonePlatform {
   String get host => web.window.location.host;
 
   /// Registers the service worker: the app's shell offline, and
-  /// notifications.
+  /// notifications. A newer version it finds installs beside the running
+  /// one and waits: [updateReady] says so, and [applyUpdate] reloads into
+  /// it (never a page half on one version, half on the next).
   Future<void> registerWorker() async {
     if (!_has(web.window.navigator, 'serviceWorker')) return;
+    final sw = web.window.navigator.serviceWorker;
     try {
-      await web.window.navigator.serviceWorker.register(_workerUrl()).toDart;
+      final reg = _reg = await sw.register(_workerUrl()).toDart;
+      void watch(web.ServiceWorker? w) => w?.addEventListener(
+        'statechange',
+        ((web.Event _) {
+          if (w.state == 'installed' && sw.controller != null) {
+            updateReady.value = true;
+          }
+        }).toJS,
+      );
+      if (reg.waiting != null && sw.controller != null) {
+        updateReady.value = true;
+      }
+      watch(reg.installing);
+      reg.addEventListener(
+        'updatefound',
+        ((web.Event _) => watch(reg.installing)).toJS,
+      );
+      sw.addEventListener(
+        'controllerchange',
+        ((web.Event _) {
+          if (_reloading) web.window.location.reload();
+        }).toJS,
+      );
     } on Object {
       // Without it the app still works, without notifications.
     }
+  }
+
+  web.ServiceWorkerRegistration? _reg;
+  bool _reloading = false;
+  DateTime _checked = DateTime(0);
+
+  /// Whether a newer version is installed and waits for a reload.
+  final updateReady = ValueNotifier<bool>(false);
+
+  /// Asks the server for a newer version (a Home Screen app that comes back
+  /// to the front isn't a navigation, which is when browsers look), at
+  /// most every ten minutes.
+  Future<void> checkForUpdate() async {
+    if (DateTime.now().difference(_checked).inMinutes < 10) return;
+    _checked = DateTime.now();
+    try {
+      await _reg?.update().toDart;
+    } on Object {
+      // Offline: looked for next time.
+    }
+  }
+
+  /// Reloads into the version that waits.
+  void applyUpdate() {
+    final waiting = _reg?.waiting;
+    if (waiting == null) return web.window.location.reload();
+    _reloading = true;
+    waiting.postMessage('skipWaiting'.toJS);
   }
 
   static JSObject? _policy;

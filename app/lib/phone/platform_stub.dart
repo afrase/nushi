@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 
 import 'package:nushi/phone/subscription.dart';
 
@@ -28,6 +28,12 @@ final class PhonePlatform {
   Future<void> save(Map<String, Object?> record) async => saved = record;
   Future<void> clear() async => saved = null;
   Future<void> registerWorker() async {}
+
+  /// Whether a newer version waits (a test sets it).
+  final updateReady = ValueNotifier<bool>(false);
+  bool updated = false;
+  Future<void> checkForUpdate() async {}
+  void applyUpdate() => updated = true;
 
   /// The page's origin's host.
   String host = 'nushi.taile2d635.ts.net';

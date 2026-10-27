@@ -41,7 +41,12 @@ class ConnectionBar extends StatelessWidget {
                       children: [
                         const PhoneSpinner(),
                         const SizedBox(width: 10),
-                        Expanded(child: Text('Reconnecting…', style: small)),
+                        Expanded(
+                          child: Text(
+                            link.answered ? 'Reconnecting…' : 'Connecting…',
+                            style: small,
+                          ),
+                        ),
                         const SizedBox(height: touch),
                       ],
                     )
@@ -150,4 +155,47 @@ String seenAt(DateTime s, {DateTime? now}) {
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
   ];
   return 'last seen ${months[s.month - 1]} ${s.day}, $time';
+}
+
+/// A newer version of the app is installed and waits: Reload brings it in
+/// (the service worker never swaps it under a running page).
+class UpdateBar extends StatelessWidget {
+  const new(this.phone, {super.key});
+
+  final Phone phone;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: phone.platform.updateReady,
+    builder: (context, ready, _) {
+      if (!ready) return const SizedBox.shrink();
+      final t = NushiTheme.of(context).t;
+      return ColoredBox(
+        color: t.raised,
+        child: Padding(
+          padding: const EdgeInsets.only(left: 16, right: 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Nushi was updated',
+                  style: phoneText(context, size: 14),
+                ),
+              ),
+              TextButton(
+                onPressed: phone.platform.applyUpdate,
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(touch, touch),
+                ),
+                child: Text(
+                  'Reload',
+                  style: phoneText(context, color: t.link, size: 14),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }

@@ -1,11 +1,16 @@
 // Command webbuild finishes the phone's web app after flutter build web
 // (make web; ADR 0054): it drops what the app doesn't use (the other
-// renderers, debug symbols, Flutter's own service worker), gives the big
-// files names with their content's hash (so the relay lets browsers keep
-// them for good), and writes the build's files and version into sw.js.
+// renderers, debug symbols, Flutter's own service worker), gives the
+// script, its loader and CanvasKit names with their content's hash (so
+// browsers and a CDN keep them for good, and only the page must be asked
+// for again), writes the build's files and version into sw.js, and puts a
+// Brotli copy beside each file that compresses (name.br; the relay serves
+// it to a browser that takes br).
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -16,6 +21,8 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/andybalholm/brotli"
 )
 
 func main() {
@@ -43,7 +50,11 @@ func main() {
 	ckDir := "canvaskit-" + hashOf(read(filepath.Join(ck, "canvaskit.js"))+read(filepath.Join(ck, "canvaskit.wasm")))
 	check(os.Rename(ck, filepath.Join(dir, ckDir)))
 	boot = replaceOnce(boot, `canvasKitBaseUrl: "canvaskit/"`, `canvasKitBaseUrl: "`+ckDir+`/"`)
-	write(filepath.Join(dir, "flutter_bootstrap.js"), boot)
+	check(os.Remove(filepath.Join(dir, "flutter_bootstrap.js")))
+	bootJS := "flutter_bootstrap." + hashOf(boot) + ".js"
+	write(filepath.Join(dir, bootJS), boot)
+	index := filepath.Join(dir, "index.html")
+	write(index, replaceOnce(read(index), `src="flutter_bootstrap.js"`, `src="`+bootJS+`"`))
 
 	// The shell the service worker keeps: every file but itself.
 	var shell []string
@@ -64,8 +75,39 @@ func main() {
 	sw = replaceOnce(sw, `const VERSION = "nushi-dev";`, `const VERSION = "nushi-`+hex.EncodeToString(all.Sum(nil))[:16]+`";`)
 	sw = replaceOnce(sw, `const SHELL = ["./"];`, `const SHELL = `+string(list)+`;`)
 	write(filepath.Join(dir, "sw.js"), sw)
-	log.Printf("web app: %s, %s, %d files in the shell", mainJS, ckDir, len(shell)+1)
+	saved := compress(dir)
+	log.Printf("web app: %s, %s, %d files in the shell; Brotli saves %d KB over gzip", mainJS, ckDir, len(shell)+1, saved>>10)
 }
+
+// compress writes name.br beside each file of a type that compresses,
+// at Brotli's best, when it comes out smaller than gzip would; it returns
+// how many bytes that saves over gzip.
+func compress(dir string) int {
+	saved := 0
+	check(fs.WalkDir(os.DirFS(dir), ".", func(name string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !compressible[filepath.Ext(name)] {
+			return err
+		}
+		body := []byte(read(filepath.Join(dir, name)))
+		var br, gz bytes.Buffer
+		w := brotli.NewWriterLevel(&br, brotli.BestCompression)
+		_, _ = w.Write(body)
+		check(w.Close())
+		z, _ := gzip.NewWriterLevel(&gz, gzip.BestCompression)
+		_, _ = z.Write(body)
+		check(z.Close())
+		if br.Len() < gz.Len() && br.Len() < len(body)*9/10 {
+			check(os.WriteFile(filepath.Join(dir, name+".br"), br.Bytes(), 0o644))
+			saved += gz.Len() - br.Len()
+		}
+		return nil
+	}))
+	return saved
+}
+
+// compressible are the types the relay compresses (relay/web.go).
+var compressible = map[string]bool{".js": true, ".wasm": true, ".json": true, ".html": true, ".css": true,
+	".svg": true, ".otf": true, ".ttf": true, ".frag": true}
 
 // family is a font family in Flutter's FontManifest.json.
 type family struct {
