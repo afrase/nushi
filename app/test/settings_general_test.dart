@@ -4,6 +4,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/settings_general.dart';
 import 'package:nushi/settings_nav.dart';
 
 import 'fake_daemon.dart';
@@ -63,17 +64,45 @@ void main() {
     d.dispose();
   });
 
-  // The owner saw ? boxes where the preview's Nerd Font icons were, which
-  // no build here reproduced (step 313): the preview shows none.
-  testWidgets('the terminal preview has no private-use characters', (
-    tester,
-  ) async {
+  // The preview draws its Nerd Font icons as the terminal does: through
+  // the bundled fallback, not the picked font's ?-box (NOTES, [controls]).
+  testWidgets('the terminal preview draws its icons from the bundled Nerd '
+      'Font', (tester) async {
     final (_, d) = await _open(tester, SettingsSection.terminal);
-    final text = tester
-        .widget<Text>(find.byKey(const ValueKey('terminal-preview')))
-        .data!;
-    bool private(int r) => (r >= 0xe000 && r <= 0xf8ff) || r >= 0xf0000;
-    expect(text.runes.where(private), isEmpty);
+    final preview = tester.widget<Text>(
+      find.byKey(const ValueKey('terminal-preview')),
+    );
+    final style = preview.style!;
+    expect(style.fontFamilyFallback, terminalStyle().fontFamilyFallback);
+    double width(String s, TextStyle style) {
+      final p = TextPainter(
+        text: TextSpan(text: s, style: style),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      final w = p.width;
+      p.dispose();
+      return w;
+    }
+
+    final icons = {
+      for (final r in preview.data!.runes)
+        if (r >= 0xe000 && r <= 0xf8ff) String.fromCharCode(r),
+    };
+    expect(icons, hasLength(6)); // two folders, branch, Go, Dart, Markdown
+    final symbols = TextStyle(
+      fontFamily: 'Symbols Nerd Font Mono',
+      fontSize: style.fontSize,
+    );
+    final alone = TextStyle(
+      fontFamily: style.fontFamily,
+      fontSize: style.fontSize,
+    );
+    for (final icon in icons) {
+      final code = icon.runes.single.toRadixString(16);
+      expect(width(icon, style), width(icon, symbols), reason: code);
+      // JetBrains Mono alone draws its ?-box, of another width.
+      expect(width(icon, alone), isNot(width(icon, symbols)), reason: code);
+    }
     d.dispose();
   });
 }

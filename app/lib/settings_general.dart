@@ -86,9 +86,14 @@ TerminalStyle terminalStyle() => TerminalStyle(
   height: 1.25,
 );
 
-/// What Settings › Terminal shows in the picked font.
+/// What Settings › Terminal shows in the picked font: a prompt with a
+/// folder and a branch, `ls` with file-type icons (folder, Go, Dart,
+/// Markdown) and a test's output, its icons drawn as the terminal's.
 const terminalPreview =
-    '~/nushi (main) \$ go test ./...\nok  app  0.42s  0O1lI{}[]';
+    '\u{f07b} ~/nushi  \u{f418} main \$ ls\n'
+    '\u{e5ff} cmd  \u{e65e} main.go  \u{e64c} l10n.dart  \u{f48a} NOTES.md\n'
+    '\u{f07b} ~/nushi  \u{f418} main \$ go test ./app\n'
+    'ok  nushi/app  0.42s';
 
 const _sizes = [10.0, 11.0, 12.0, 12.5, 13.0, 14.0, 15.0, 16.0, 18.0, 20.0];
 
@@ -172,8 +177,8 @@ class _TerminalSectionState extends State<TerminalSection> {
                   horizontal: 14,
                   vertical: 12,
                 ),
-                // No Nerd Font icons: the owner saw ? boxes for them here
-                // that no build on the test Mac drew (step 313).
+                // The terminal's style, its fallback too: ? boxes here are
+                // the terminal's (NOTES, [controls]).
                 child: Text(
                   terminalPreview,
                   key: const ValueKey('terminal-preview'),
