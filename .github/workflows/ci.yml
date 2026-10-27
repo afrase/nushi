@@ -111,6 +111,7 @@ jobs:
         shard: [1, 2, 3]
     env:
       SHARD: ${{ matrix.shard }}/3
+      FLUTTER_TEST_FLAGS: --concurrency 3
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -127,7 +128,7 @@ jobs:
           channel: stable
           flutter-version: 3.47.7
           cache: true
-          cache-key: flutter-:os:-:channel:-:version:-:arch:-:hash:-tests
+          cache-key: flutter-:os:-:channel:-:version:-:arch:-:hash:-lean
       - run: make test-app
       # A golden that differs on the runner: its images, to see why.
       - if: failure()
@@ -159,13 +160,22 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
-      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+      - id: flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: stable
           flutter-version: 3.47.7
           cache: true
-          cache-key: flutter-:os:-:channel:-:version:-:arch:-:hash:-tests
+          cache-key: flutter-:os:-:channel:-:version:-:arch:-:hash:-lean
       - run: make test-web
+      # As the app's tests do.
+      - if: always() && steps.flutter.outputs.CACHE-HIT != 'true'
+        run: |
+          du -sh "$FLUTTER_ROOT"
+          cd "$FLUTTER_ROOT/bin/cache"
+          rm -rf artifacts/engine/ios* artifacts/engine/android-* artifacts/engine/darwin-x64-profile \
+            artifacts/engine/darwin-x64-release ios-sdk.stamp macos-sdk.stamp android-*.stamp
+          du -sh "$FLUTTER_ROOT"
 
   linux:
     name: Go packages (Linux)
@@ -179,30 +189,3 @@ jobs:
         with:
           go-version-file: go.mod
       - run: go test ./relay/... ./noiseconn/... ./cmd/nushi-relay/...
-
-  # Experiment (step 344, to go): the app's tests on Linux, to see whether the goldens hold there.
-  app-linux:
-    name: App tests on Linux (experiment)
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
-        with:
-          channel: stable
-          flutter-version: 3.47.7
-          cache: true
-      - run: nproc; free -g
-      - run: make test-app FLUTTER_TEST_FLAGS='--reporter expanded'
-      - if: failure()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: golden-failures-linux
-          path: app/test/failures/
-          if-no-files-found: ignore
-          retention-days: 3
