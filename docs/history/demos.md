@@ -2,6 +2,16 @@
 
 Each milestone's demo script (what to run, what to see), newest first. An archive.
 
+## Demo (skills for every agent, and the shared .agents/skills, steps 303–308)
+
+1. In a repository, make `.agents/skills/release/SKILL.md` (front matter `name: release`, `description: …`). Footer › Skills: "Claude ▾" beside the title; Shared lists `release` with "Codex, oh-my-pi, Ante, PiG" (as installed) and "Not read by Claude"; the line under Shared says Claude doesn't read `.agents/skills` yet.
+2. `release`'s ⋯ › Link for Claude…: asked, then Link. The row says "Claude (linked), …" with a switch "for Claude"; `.claude/skills/release` is a link to `../../.agents/skills/release`, and `/skills` in a terminal there lists it.
+3. Pick Codex: Yours, This project (`.codex/skills`), Shared, Codex's own. Turn `release` off "for Codex": `$CODEX_HOME/config.toml` ends with a `[[skills.config]]` entry for its `SKILL.md` (comments above untouched); the row says "Off for Codex" in every agent's view. On again removes it.
+4. Pick PiG in a folder PiG doesn't trust: "Loads once the folder is trusted", no switch. `/trust` in pig there, Refresh: the switch shows ("for PiG").
+5. Pick Ante or oh-my-pi: the switches say "by name, everywhere".
+6. `release`'s ⋯ › Delete…: names every agent that loses it and Claude's link that goes too. Cancel.
+7. New skill… with Claude picked: "Claude doesn't read .agents/skills yet: put it in .claude/skills instead, or link it there"; In .agents/skills starts a Claude chat asking for `.agents/skills/<name>/SKILL.md` in the box, unsent. With Codex picked it goes straight to a Codex chat.
+
 ## Demo (MCP servers off, and skills, steps 296–302)
 
 1. The sidebar's footer › MCP servers: a user server's switch says "in this project"; turn it off: it dims, says Off, and `claude mcp list` in a terminal there says "⊘ Disabled for this project"; `/mcp` there shows it off. Turn it on again.

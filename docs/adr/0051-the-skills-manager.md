@@ -13,3 +13,6 @@ The owner asked for a skills manager. Claude Code (2.1.310) loads skills from yo
 - What the page shows can differ from Claude's own list where Claude's rules aren't the files' (managed settings, a skills-dir plugin, a name in two places); what it writes is what Claude reads.
 - A change reaches a chat when it restarts.
 - Codex, Ante, omp and PiG have their own skills; the page is Claude's.
+
+## Amendments
+- 2026-10-27: the page is every agent's, with the shared `.agents/skills` (ADR 0052); Claude's part is as above.
