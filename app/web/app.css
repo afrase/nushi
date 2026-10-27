@@ -1,0 +1,11 @@
+/* The page around the app: the theme's base color, and the app's box kept
+   inside the safe area (Flutter on the web doesn't read it itself). */
+html, body { margin: 0; height: 100%; background: #FFFFFF; overflow: hidden; }
+@media (prefers-color-scheme: dark) { html, body { background: #1E1F22; } }
+#app {
+  position: fixed;
+  top: env(safe-area-inset-top, 0px);
+  right: env(safe-area-inset-right, 0px);
+  bottom: env(safe-area-inset-bottom, 0px);
+  left: env(safe-area-inset-left, 0px);
+}
