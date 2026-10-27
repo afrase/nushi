@@ -224,12 +224,9 @@ func realPath(path string) string {
 // the worktrees that have it checked out follow; their folders stay. A
 // name git doesn't take is refused, and one already taken (a branch of
 // the repository's, or a remote's) fails with fs.ErrExist.
-func (Worktrees) RenameBranch(ctx context.Context, wt model.Worktree, to string) error {
-	if err := CheckBranch(to); err != nil {
+func (w Worktrees) RenameBranch(ctx context.Context, wt model.Worktree, to string) error {
+	if err := w.CheckBranch(ctx, wt.Repo, to); err != nil {
 		return err
-	}
-	if _, err := run(ctx, wt.Repo, "check-ref-format", "--branch", to); err != nil {
-		return fmt.Errorf("%q isn't a name git takes for a branch", to)
 	}
 	if _, err := run(ctx, wt.Repo, "rev-parse", "--verify", "-q", "refs/heads/"+to); err == nil {
 		return fmt.Errorf("a branch named %s: %w", to, fs.ErrExist)
@@ -239,6 +236,18 @@ func (Worktrees) RenameBranch(ctx context.Context, wt model.Worktree, to string)
 	}
 	_, err := run(ctx, wt.Repo, "branch", "-m", wt.Branch, to)
 	return err
+}
+
+// CheckBranch refuses a name git wouldn't take for a branch in repo:
+// CheckBranch's rules, then git check-ref-format --branch.
+func (Worktrees) CheckBranch(ctx context.Context, repo, name string) error {
+	if err := CheckBranch(name); err != nil {
+		return err
+	}
+	if _, err := run(ctx, repo, "check-ref-format", "--branch", name); err != nil {
+		return fmt.Errorf("%q isn't a name git takes for a branch", name)
+	}
+	return nil
 }
 
 // mainWorktree returns the folder of the main worktree of folder's

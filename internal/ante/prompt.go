@@ -28,9 +28,13 @@ func flatten(blocks []acp.ContentBlock, dir func() (string, error)) (string, err
 		}
 		b.WriteString(t + " ")
 	}
+	prevText := false
 	for _, block := range blocks {
 		switch {
 		case block.Text != nil:
+			if prevText {
+				b.WriteString("\n\n") // a text of its own: Nushi's note of a branch renamed, before the user's
+			}
 			b.WriteString(block.Text.Text)
 		case block.ResourceLink != nil:
 			if path, ok := filePath(block.ResourceLink.URI); ok {
@@ -48,6 +52,7 @@ func flatten(blocks []acp.ContentBlock, dir func() (string, error)) (string, err
 			}
 			token(mention(path))
 		}
+		prevText = block.Text != nil
 	}
 	return strings.TrimRight(b.String(), " "), nil
 }

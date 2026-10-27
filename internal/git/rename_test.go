@@ -58,7 +58,11 @@ func TestRenameBranch(t *testing.T) {
 		if err := (Worktrees{}).RenameBranch(ctx, wt, name); err == nil || errors.Is(err, fs.ErrExist) {
 			t.Errorf("%q: %v", name, err)
 		}
+		if (Worktrees{}).CheckBranch(ctx, repo, name) == nil {
+			t.Errorf("%q checked", name)
+		}
 	}
+	noErr(t, Worktrees{}.CheckBranch(ctx, repo, "nushi/taken")) // a name git takes, taken or not
 	if head(wt.Path) != wt.Branch {
 		t.Fatal("a refused rename renamed")
 	}

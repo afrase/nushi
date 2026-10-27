@@ -27,8 +27,9 @@ const branchSlug = 40
 // checked out in the worktree, tracks nothing and was never pushed, and
 // no other worktree or chat has it; otherwise it keeps its name for good.
 // The worktree's folder stays where it is (the agent and terminals are
-// in it). The transcript says so; the agent isn't told. It runs git with
-// the chat locked, once, so no turn starts meanwhile.
+// in it). The transcript says so, and the agent is told with the next
+// prompt (branchnote.go). It runs git with the chat locked, once, so no
+// turn starts meanwhile.
 //
 //nolint:contextcheck // between turns, after the request that started the turn (or the agent's update) is gone
 func (c *chat) nameBranchLocked() {
@@ -132,7 +133,8 @@ func usesBranch(s model.Session, wt model.Worktree) bool {
 }
 
 // RenameBranch renames the branch of a chat's worktree to name, as the
-// user asked, and names it so for good (the chat's title no longer does).
+// user asked, and names it so for good (the chat's title no longer does);
+// the transcript says so, and the agent is told with the next prompt.
 // Refused during a turn, and when the branch is on a remote or another
 // worktree or chat has it; the worktree's folder stays.
 func (s *Service) RenameBranch(ctx context.Context, chatID, name string) error {
@@ -162,5 +164,6 @@ func (s *Service) RenameBranch(ctx context.Context, chatID, name string) error {
 	}
 	c.logLocked().Info("branch renamed", "from", wt.Branch, "to", name)
 	c.branchNamedLocked(name)
+	c.noticeLocked("branch_renamed", "Branch renamed to "+name)
 	return nil
 }

@@ -32,6 +32,8 @@ type Worktrees interface {
 	// RenameBranch renames a worktree's branch, its folder staying; a name
 	// taken (a branch, or a remote's) fails with fs.ErrExist.
 	RenameBranch(ctx context.Context, wt model.Worktree, to string) error
+	// CheckBranch refuses a name git wouldn't take for a branch in repo.
+	CheckBranch(ctx context.Context, repo, name string) error
 }
 
 var (
@@ -62,6 +64,7 @@ func (s *Service) addWorktree(ctx context.Context, folder, branch, from string) 
 				return nil, "", fmt.Errorf("a worktree has only what is committed, and %s isn't: commit it, or use the repository's own folder", filepath.Base(folder))
 			}
 			wt.AutoName = branch == "" // named after the chat once it has a title (branch.go)
+			wt.Told = wt.Branch        // the agent's session starts on it (Claude's prompt has git's status)
 			return &wt, in, nil
 		}
 		if !errors.Is(err, fs.ErrExist) {
