@@ -30,7 +30,7 @@ BUILD := $(or $(shell git rev-list --count HEAD 2>/dev/null),1)
 MACOS_MIN := 13.0
 MACOS_CGO := -O2 -g -mmacosx-version-min=$(MACOS_MIN)
 
-.PHONY: run daemon stop app package install gen test lint check lines relay icons adapters web web-fonts web-plex
+.PHONY: run daemon stop app package install gen test test-go test-packages test-app test-web lint lint-go lint-dart check lines relay icons adapters web web-fonts web-plex
 
 # Starts the daemon in the background (unless one is running), then the app.
 run: daemon app
@@ -124,11 +124,19 @@ $(GOVULNCHECK): tools/lint/go.mod tools/lint/go.sum
 
 # Linters and format checks (.golangci.yml says which are on and why), and
 # known vulnerabilities in the code the daemon, the relay and the tools call
-# (govulncheck asks vuln.go.dev, so this needs the network).
-lint: $(GOLANGCI) $(GOVULNCHECK)
+# (govulncheck asks vuln.go.dev, so this needs the network). CI runs the
+# parts as jobs of their own (.github/workflows/ci.yml); make check runs
+# everything they do.
+lint: lint-go lint-dart
+
+# Go's: on macOS (the keychain's cgo needs its SDK).
+lint-go: $(GOLANGCI) $(GOVULNCHECK)
 	$(GOLANGCI) run ./...
 	$(GOVULNCHECK) ./...
 	GOWORK=off $(GOVULNCHECK) -C tools/lint github.com/golangci/golangci-lint/v2/cmd/golangci-lint golang.org/x/vuln/cmd/govulncheck
+
+# The protos' and Dart's: anywhere.
+lint-dart:
 	$(BUF) lint
 	$(BUF) format --diff --exit-code
 	@for d in $(DART_DIRS); do echo "flutter analyze $$d"; (cd $$d && flutter analyze --fatal-infos) || exit 1; done
@@ -136,14 +144,30 @@ lint: $(GOLANGCI) $(GOVULNCHECK)
 
 check: lint test
 
-test:
+test: test-go test-packages test-app test-web
+
+test-go:
 	go test ./...
+
+# The packages run anywhere with Go (remote_transport's interop builds a
+# Go peer) and Chrome.
+test-packages:
 	cd packages/uds_transport && dart test
 	cd packages/noise && dart test && dart test -p chrome
 	cd packages/remote_transport && dart test && dart test -p chrome test/gzip_web_test.dart
 	cd packages/markdown && flutter test
 	cd packages/svg_path && flutter test
-	cd app && flutter test
+
+# The app's widget tests and goldens (macOS: the goldens are drawn with its
+# text rendering, and the end-to-end tests run nushid). SHARD=i/n runs
+# every nth test file from the ith, as CI's shards do (each file compiles
+# once, in one shard); FLUTTER_TEST_FLAGS adds flags (CI's --concurrency).
+APP_TESTS = $(if $(SHARD),$(shell cd app && find test -name '*_test.dart' ! -path 'test/web/*' | LC_ALL=C sort | awk -v s='$(SHARD)' 'BEGIN { split(s, a, "/") } (NR - 1) % a[2] == a[1] - 1'))
+test-app:
+	cd app && flutter test $(FLUTTER_TEST_FLAGS) $(APP_TESTS)
+
+# The web app in Chrome with the real nushid and nushi-relay (macOS).
+test-web:
 	cd app && flutter test --platform chrome test/web
 
 # Hand-written lines, without tests or generated code (the size limits).

@@ -19,3 +19,6 @@ Nushi was installed only by `make install`. The owner asked for a Homebrew tap, 
 - Install: `brew install --cask afrase/tap/nushi`. A zip opened by hand meets Gatekeeper (Open Anyway).
 - A daemon whose app was deleted stops within about a minute; one started from `app/build` may stop while `make package` rebuilds it.
 - If Homebrew restricts `run` steps in third-party taps, the fix is a Developer ID and notarization, as for Sextant.
+
+## Amendments
+- 2026-10-27 (step 344, the owner: "It took 20min for a release"): **The parts build in parallel, beside the check.** v0.1.0 took 19.5 minutes: `make check` (12) then `tools/release.sh` (5) in one macOS job. Now `tools/release.sh X.Y.Z [app] [relay] [web]` builds the named parts (all three without one, as here), and the workflow runs the app on `macos-26` and the relays and the web app on Linux (the same `main.<hash>.dart.js` as a Mac builds) as jobs of their own, while a first job checks the tag and looks for a passing CI run on its commit; without one, CI's workflow is called on that commit (`workflow_call`, its checkouts at the commit given). The last job, the only one with `contents: write`, waits for the builds and the check, then attaches the files and updates the cask. About 5 minutes; "within about half an hour" above is now that.
