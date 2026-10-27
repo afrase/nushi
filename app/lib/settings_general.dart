@@ -23,6 +23,7 @@ const _sleepAfter = {
   30: '30 minutes',
   60: '1 hour',
   120: '2 hours',
+  300: '5 hours',
 };
 
 String _sleepLabel(int m) => _sleepAfter[m] ?? '$m minute${m == 1 ? '' : 's'}';
