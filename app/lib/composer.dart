@@ -236,6 +236,11 @@ class _ComposerState extends State<Composer> {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final chat = widget.chat;
+    final touch = TouchTargets.of(context);
+    final written =
+        _text.text.trim().isNotEmpty ||
+        _images.value.isNotEmpty ||
+        _draft.replies.value.isNotEmpty;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
       child: Column(
@@ -331,7 +336,7 @@ class _ComposerState extends State<Composer> {
                         child: TextField(
                           controller: _text,
                           focusNode: _focus,
-                          autofocus: true,
+                          autofocus: !touch, // no keyboard popping up
                           minLines: 1,
                           maxLines: 10,
                           style: theme.ui(t.text),
@@ -339,6 +344,8 @@ class _ComposerState extends State<Composer> {
                           decoration: InputDecoration(
                             hintText: !chat.busy
                                 ? widget.hint
+                                : touch
+                                ? 'Queue a message, or steer'
                                 : '⏎ queues it, ⌘⏎ stops ${chat.agentName} '
                                       'and sends',
                             border: InputBorder.none,
@@ -351,16 +358,32 @@ class _ComposerState extends State<Composer> {
                         ),
                       ),
                     ),
+                    // A phone has no ⏎ or ⌘⏎ to send with: Queue (after
+                    // this turn) and Steer (stop it, and this goes now).
+                    if (touch && written && chat.busy) ...[
+                      boxButton(
+                        'Queue',
+                        _send,
+                        Icon(Icons.queue, size: 16, color: t.textSecondary),
+                      ),
+                      if (chat.started != null)
+                        boxButton(
+                          'Steer: stop and send now',
+                          () => _send(now: true),
+                          Icon(
+                            Icons.fast_forward,
+                            size: 16,
+                            color: t.textSecondary,
+                          ),
+                        ),
+                    ],
                     if (chat.started != null)
                       boxButton(
                         'Stop (esc)',
                         () => stopTurn(context, chat, widget.daemon),
                         stopIcon(t.textSecondary),
                       )
-                    else if ((_text.text.trim().isNotEmpty ||
-                            _images.value.isNotEmpty ||
-                            _draft.replies.value.isNotEmpty) &&
-                        !chat.busy)
+                    else if (written && !chat.busy)
                       boxButton(
                         'Send (⏎)',
                         _send,

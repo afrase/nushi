@@ -10,7 +10,7 @@ packages:
     source: hosted
     version: "2.7.0"
   async:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: async
       sha256: e2eb0491ba5ddb6177742d2da23904574082139b07c1e33b8503b9f46f3e1a37
@@ -391,7 +391,7 @@ packages:
     source: hosted
     version: "0.0.3"
   remote_transport:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       path: "../packages/remote_transport"
       relative: true
@@ -419,7 +419,7 @@ packages:
     source: hosted
     version: "1.12.2"
   stream_channel:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: stream_channel
       sha256: "969e04c80b8bcdf826f8f16579c7b14d780458bd97f56d107d3950fdbeef059d"
@@ -577,7 +577,7 @@ packages:
     source: hosted
     version: "15.4.0"
   web:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: web
       sha256: "868d88a33d8a87b18ffc05f9f030ba328ffefba92d6c127917a2ba740f9cfe4a"

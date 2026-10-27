@@ -20,18 +20,21 @@ dependencies:
   protobuf: ^6.1.0
   qr: ^4.0.0
   re_highlight: ^0.0.3
+  remote_transport:
+    path: ../packages/remote_transport
   svg_path:
     path: ../packages/svg_path
   uds_transport:
     path: ../packages/uds_transport
   url_launcher: ^6.3.3
+  web: ^1.1.1
   xterm2: ^5.4.0
 
 dev_dependencies:
+  async: ^2.13.1
   flutter_test:
     sdk: flutter
-  remote_transport:
-    path: ../packages/remote_transport
+  stream_channel: ^2.1.4
   very_good_analysis: ^11.0.0
 
 flutter:

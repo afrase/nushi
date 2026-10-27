@@ -17,6 +17,33 @@ const controlHeight = 26.0;
 /// keyboard, pressable at all.
 typedef ControlLook = ({bool hover, bool focus, bool enabled});
 
+/// Says the controls below are for a finger (the phone): each gets a
+/// target of at least [TouchTargets.size] points, as iOS asks.
+class TouchTargets extends InheritedWidget {
+  const new({required super.child, super.key});
+
+  static const size = 44.0;
+
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<TouchTargets>() != null;
+
+  @override
+  bool updateShouldNotify(TouchTargets oldWidget) => false;
+}
+
+/// [child] centred in a target of at least 44 points under [TouchTargets],
+/// else as it is.
+Widget touchTarget(BuildContext context, Widget child) =>
+    TouchTargets.of(context)
+    ? ConstrainedBox(
+        constraints: const BoxConstraints(
+          minWidth: TouchTargets.size,
+          minHeight: TouchTargets.size,
+        ),
+        child: Center(widthFactor: 1, heightFactor: 1, child: child),
+      )
+    : child;
+
 /// Hover, keyboard focus and press for a control that [builder] draws:
 /// the pointing hand, a click or Enter or Space press it. Without [onTap]
 /// it's disabled: no hand, no focus.
@@ -68,11 +95,14 @@ class _PressableState extends State<Pressable> {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
-        child: widget.builder(context, (
-          hover: _hover && on,
-          focus: _focus && on,
-          enabled: on,
-        )),
+        child: touchTarget(
+          context,
+          widget.builder(context, (
+            hover: _hover && on,
+            focus: _focus && on,
+            enabled: on,
+          )),
+        ),
       ),
     );
     return widget.tooltip.isEmpty
