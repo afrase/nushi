@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/agents.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
+import 'package:nushi/settings_rows.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -34,35 +35,26 @@ class _ShellEnvLineState extends State<ShellEnvLine> {
     valueListenable: shellEnvironment,
     builder: (context, env, _) {
       if (env == null) return const SizedBox.shrink();
-      final theme = NushiTheme.of(context);
-      final t = theme.t;
+      final t = NushiTheme.of(context).t;
       final shell = env.shell.split('/').last;
       final when = DateTime.fromMillisecondsSinceEpoch(env.readUnixMs.toInt());
       final text = env.problem.isEmpty
           ? "Agents start with $shell's environment, read "
                 '${ago(DateTime.now().difference(when), when)}.'
           : "Couldn't read your shell's environment: ${env.problem}.";
-      return Padding(
-        padding: const EdgeInsets.only(top: 12),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                text,
-                style: theme.ui(
-                  env.problem.isEmpty ? t.textMuted : t.needs,
-                  size: 12,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Button(
+      return SettingsGroup(
+        children: [
+          SettingsRow(
+            'Shell environment',
+            description: text,
+            descriptionColor: env.problem.isEmpty ? null : t.needs,
+            control: Button(
               label: _reloading ? 'Reloading…' : 'Reload',
               tooltip: "Read your login shell's environment again",
               onPressed: _reloading ? null : _reload,
             ),
-          ],
-        ),
+          ),
+        ],
       );
     },
   );

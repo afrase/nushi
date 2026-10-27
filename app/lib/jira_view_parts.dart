@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/menu.dart';
-import 'package:nushi/settings_dialog.dart';
+import 'package:nushi/settings_nav.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -134,7 +134,7 @@ class NoSite extends StatelessWidget {
           Text('Add a Jira site in ', style: theme.ui(theme.t.textMuted)),
           LinkText(
             'Settings › Jira',
-            onTap: () => showSettings(context, daemon.client, jira: true),
+            onTap: () => daemon.openSettings(section: SettingsSection.jira),
           ),
         ],
       ),

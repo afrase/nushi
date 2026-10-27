@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +8,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/settings_rows.dart';
 import 'package:nushi/skills_list.dart';
 import 'package:nushi/skills_new.dart';
 import 'package:nushi/skills_rows.dart';
@@ -16,8 +16,8 @@ import 'package:nushi/skills_shared.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// The Skills view, beside the MCP servers view and in its style (ADRs
-/// 0051, 0052): an agent picker (Claude unless another was picked), a
+/// Settings › Skills, beside MCP servers and in its style (ADRs 0051,
+/// 0052): an agent picker (Claude unless another was picked), a
 /// folder picker and a search box, then the agent's skills by where they
 /// come from (yours, the project's, the shared .agents/skills with the
 /// agents that load each, the agent's own, Claude's plugins' and built-in
@@ -80,115 +80,112 @@ class _SkillsViewState extends State<SkillsView> {
         (c) => c.scratch && c.folder == widget.folder,
       ),
     );
+    final small = theme.ui(t.textSecondary, size: 12);
     return ListenableBuilder(
       listenable: list,
-      builder: (context, _) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      builder: (context, _) => SettingsPage(
+        title: 'Skills',
+        actions: [
+          if (list.loading)
+            Text('Reading…', style: theme.ui(t.textMuted, size: 12)),
+          Button(
+            label: 'Refresh',
+            onPressed: list.loading ? null : list.refresh,
+          ),
+          Button(
+            label: 'New skill…',
+            icon: Icons.add,
+            onPressed: () => newSkill(context, list),
+          ),
+        ],
         children: [
-          Container(
-            height: 34,
-            padding: const EdgeInsets.only(left: 20, right: 8),
-            decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: t.borderSubtle)),
-            ),
-            child: Row(
-              children: [
-                Text(
-                  'Skills',
-                  style: theme.ui(t.text, weight: FontWeight.w600),
-                ),
-                const SizedBox(width: 12),
-                MenuField(
-                  compact: true,
-                  tooltip: 'Whose skills',
-                  entries: [
-                    for (final a in knownAgents.values)
-                      MenuEntry(
-                        a.title,
-                        checked: a.name == daemon.skillsAgent,
-                        onPick: () => _pickAgent(a.name),
-                      ),
-                  ],
-                  label: Text(
-                    agentTitle(daemon.skillsAgent),
-                    style: theme.ui(t.text, size: 12),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                MenuField(
-                  compact: true,
-                  entries: folderEntries(
-                    daemon,
-                    checked: widget.folder,
-                    onPick: (f) => f == null ? _pick() : daemon.showSkills(f),
-                  ),
-                  label: Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(text: name, style: theme.ui(t.text, size: 12)),
-                        TextSpan(
-                          text: '  $dir',
-                          style: theme.ui(t.textMuted, size: 12),
+          LayoutBuilder(
+            builder: (context, box) {
+              final pickers = Row(
+                children: [
+                  Text('For ', style: small),
+                  MenuField(
+                    compact: true,
+                    tooltip: 'Whose skills',
+                    entries: [
+                      for (final a in knownAgents.values)
+                        MenuEntry(
+                          a.title,
+                          checked: a.name == daemon.skillsAgent,
+                          onPick: () => _pickAgent(a.name),
                         ),
-                      ],
+                    ],
+                    label: Text(
+                      agentTitle(daemon.skillsAgent),
+                      style: theme.ui(t.text, size: 12),
                     ),
                   ),
-                ),
-                const Spacer(),
-                SizedBox(
-                  width: 200,
-                  height: 26,
-                  child: TextField(
-                    controller: _search,
-                    style: theme.ui(t.text, size: 12),
-                    decoration: InputDecoration(
-                      isDense: true,
-                      hintText: 'Search skills and plugins',
-                      prefixIcon: Icon(
-                        Icons.search,
-                        size: 14,
-                        color: t.textMuted,
+                  Text('  in ', style: small),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: MenuField(
+                        compact: true,
+                        entries: folderEntries(
+                          daemon,
+                          checked: widget.folder,
+                          onPick: (f) =>
+                              f == null ? _pick() : daemon.showSkills(f),
+                        ),
+                        label: Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: name,
+                                style: theme.ui(t.text, size: 12),
+                              ),
+                              TextSpan(
+                                text: '  $dir',
+                                style: theme.ui(t.textMuted, size: 12),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                      prefixIconConstraints: const BoxConstraints(minWidth: 26),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Button(
-                  label: 'New skill…',
-                  icon: Icons.add,
-                  onPressed: () => newSkill(context, list),
-                ),
-                const SizedBox(width: 8),
-                if (list.loading)
-                  Text('Reading…', style: theme.ui(t.textMuted, size: 12)),
-                Button(
-                  label: 'Refresh',
-                  onPressed: list.loading ? null : list.refresh,
-                ),
-                const SizedBox(width: 4),
-                IconTap(
-                  Icons.close,
-                  tooltip: 'Close',
-                  onTap: () => daemon.showSkills(null),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, box) {
-                final side = max(20.0, (box.maxWidth - 900) / 2);
-                return ListView(
-                  padding: EdgeInsets.fromLTRB(side, 12, side, 20),
-                  children: _sections(
-                    context,
-                    _search.text.trim().toLowerCase(),
+                ],
+              );
+              final search = SizedBox(
+                height: 26,
+                child: TextField(
+                  controller: _search,
+                  style: theme.ui(t.text, size: 12),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    hintText: 'Search skills and plugins',
+                    prefixIcon: Icon(
+                      Icons.search,
+                      size: 14,
+                      color: t.textMuted,
+                    ),
+                    prefixIconConstraints: const BoxConstraints(minWidth: 26),
                   ),
-                );
-              },
-            ),
+                ),
+              );
+              // Narrow, the search goes under the pickers.
+              return box.maxWidth < 600
+                  ? Column(
+                      spacing: 8,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [pickers, search],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(child: pickers),
+                        const SizedBox(width: 12),
+                        SizedBox(width: 240, child: search),
+                      ],
+                    );
+            },
           ),
+          const SizedBox(height: 4),
+          ..._sections(context, _search.text.trim().toLowerCase()),
         ],
       ),
     );

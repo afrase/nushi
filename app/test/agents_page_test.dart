@@ -1,14 +1,15 @@
 import 'package:fixnum/fixnum.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/agents.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/settings_dialog.dart';
+import 'package:nushi/settings_nav.dart';
+import 'package:nushi/settings_view.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'settings_harness.dart';
 
 Adapter _adapter(String package, String pinned, String installed) => Adapter(
   package: package,
@@ -73,23 +74,13 @@ Future<(FakeDaemon, Daemon)> _settings(
     ..agents = _found
     ..environment = environment;
   final d = await fake.connect(tester);
-  await tester.pumpWidget(
-    MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: NushiTheme(tokens).toThemeData(),
-      home: Builder(
-        builder: (context) => Center(
-          child: TextButton(
-            onPressed: () =>
-                showSettings(context, d.client, agents: true, agent: agent),
-            child: const Text('open'),
-          ),
-        ),
-      ),
-    ),
+  await pumpSettings(
+    tester,
+    d,
+    SettingsSection.agents,
+    tokens: tokens,
+    agent: agent,
   );
-  await tester.tap(find.text('open'));
-  await tester.pumpAndSettle();
   return (fake, d);
 }
 
@@ -196,10 +187,6 @@ void main() {
     testWidgets("the page, the shell's environment not read ($name)", (
       tester,
     ) async {
-      tester.view
-        ..devicePixelRatio = 1
-        ..physicalSize = const Size(700, 600);
-      addTearDown(tester.view.reset);
       final (_, d) = await _settings(
         tester,
         tokens: tokens,
@@ -214,34 +201,17 @@ void main() {
         findsOneWidget,
       );
       await expectLater(
-        find.byType(AlertDialog),
+        find.byType(SettingsView),
         matchesGoldenFile('goldens/agents_env_problem_$name.png'),
-      );
-      d.dispose();
-    });
-
-    testWidgets('the page ($name)', (tester) async {
-      tester.view
-        ..devicePixelRatio = 1
-        ..physicalSize = const Size(700, 560);
-      addTearDown(tester.view.reset);
-      final (_, d) = await _settings(tester, tokens: tokens);
-      await expectLater(
-        find.byType(AlertDialog),
-        matchesGoldenFile('goldens/agents_$name.png'),
       );
       d.dispose();
     });
 
     // A chat that couldn't start Codex sent you here: its row stands out.
     testWidgets('the page, an agent marked ($name)', (tester) async {
-      tester.view
-        ..devicePixelRatio = 1
-        ..physicalSize = const Size(700, 560);
-      addTearDown(tester.view.reset);
       final (_, d) = await _settings(tester, tokens: tokens, agent: 'codex');
       await expectLater(
-        find.byType(AlertDialog),
+        find.byType(SettingsView),
         matchesGoldenFile('goldens/agents_marked_$name.png'),
       );
       d.dispose();

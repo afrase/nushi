@@ -11,6 +11,7 @@ import 'package:nushi/folder_button.dart';
 import 'package:nushi/inline_edit.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/new_chat.dart';
+import 'package:nushi/settings_nav.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
@@ -149,7 +150,7 @@ class _SidebarState extends State<Sidebar> {
   }
 }
 
-/// The footer: the ways into the MCP servers and Skills views (for the
+/// The footer: the ways into Settings' MCP servers and Skills (for the
 /// open chat's folder, else the home folder), Jira and GitHub.
 class _Footer extends StatelessWidget {
   const new(this.daemon);
@@ -160,7 +161,8 @@ class _Footer extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final mcp = daemon.mcpFolder != null;
+    final mcp = daemon.settings == SettingsSection.mcp;
+    final skills = daemon.settings == SettingsSection.skills;
     Widget row(
       String label,
       IconData icon,
@@ -190,21 +192,21 @@ class _Footer extends StatelessWidget {
             'MCP servers',
             Icons.hub_outlined,
             open: mcp,
-            () => daemon.showMcp(
-              mcp
-                  ? null
-                  : daemon.selected?.folder ?? Platform.environment['HOME']!,
-            ),
+            () => mcp
+                ? daemon.closeSettings()
+                : daemon.showMcp(
+                    daemon.selected?.folder ?? Platform.environment['HOME']!,
+                  ),
           ),
           row(
             'Skills',
             Icons.auto_awesome_outlined,
-            open: daemon.skillsFolder != null,
-            () => daemon.showSkills(
-              daemon.skillsFolder != null
-                  ? null
-                  : daemon.selected?.folder ?? Platform.environment['HOME']!,
-            ),
+            open: skills,
+            () => skills
+                ? daemon.closeSettings()
+                : daemon.showSkills(
+                    daemon.selected?.folder ?? Platform.environment['HOME']!,
+                  ),
           ),
           row(
             'Jira',

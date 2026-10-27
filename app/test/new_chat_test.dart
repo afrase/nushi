@@ -7,6 +7,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/open_session.dart';
+import 'package:nushi/settings_nav.dart';
 import 'package:nushi/sidebar.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -127,8 +128,8 @@ void main() {
     expect(find.text('Set up'), findsOneWidget);
     await _key(tester, LogicalKeyboardKey.digit1); // Claude
     expect(fake.started, isEmpty);
-    expect(find.text('Settings'), findsOneWidget);
-    expect(find.text('Get it'), findsOneWidget); // on the Agents page
+    // Settings › Agents, in the window's main area.
+    expect(d.settings, SettingsSection.agents);
     d.dispose();
   });
 

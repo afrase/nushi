@@ -13,7 +13,7 @@ import 'package:nushi/marks.dart';
 import 'package:nushi/question_card.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/rewind.dart';
-import 'package:nushi/settings_dialog.dart';
+import 'package:nushi/settings_nav.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/thinking.dart';
 import 'package:nushi/tool_calls.dart';
@@ -114,7 +114,10 @@ class ItemView extends StatelessWidget {
         final fix = switch (item.status) {
           'not_ready' => (
             'Set up…',
-            () => showSettings(context, daemon.client, agent: chat.agent),
+            () => daemon.openSettings(
+              section: SettingsSection.agents,
+              agent: chat.agent,
+            ),
           ),
           'folder_gone' => (
             'Move…',
