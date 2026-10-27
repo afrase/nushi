@@ -127,7 +127,7 @@ func (f *fakeClient) Myself(context.Context) (model.JiraUser, error) {
 
 func (f *fakeClient) Search(_ context.Context, jql string, _ int) ([]model.JiraIssue, error) {
 	f.jql = append(f.jql, jql)
-	return []model.JiraIssue{{Key: "A-1"}}, nil
+	return []model.JiraIssue{{Key: "A-1", Assignee: "Ann Lee", AssigneeID: "712020:ann"}}, nil
 }
 
 func (f *fakeClient) Boards(context.Context) ([]model.JiraBoard, error) {
@@ -359,6 +359,8 @@ func TestCache(t *testing.T) {
 	s2 := New(s.sites, tokens, s.store, s.keys)
 	if l, at, err := s2.CachedList("e.atlassian.net", Mine, ""); err != nil || at.IsZero() || len(l.Issues) != 1 || l.Issues[0].Key != "A-1" {
 		t.Errorf("mine: %+v %v %v", l, at, err)
+	} else if is := l.Issues[0]; is.Assignee != "Ann Lee" || is.AssigneeID != "712020:ann" {
+		t.Errorf("the assignee wasn't kept: %+v", is)
 	}
 	if is, at, err := s2.CachedIssue("e.atlassian.net", "A-1"); err != nil || at.IsZero() || is.Key != "A-1" {
 		t.Errorf("the issue: %+v %v %v", is, at, err)

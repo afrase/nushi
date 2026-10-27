@@ -7,6 +7,7 @@ import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_issue.dart';
+import 'package:nushi/jira_people.dart';
 import 'package:nushi/jira_settings.dart';
 import 'package:nushi/jira_sources.dart';
 import 'package:nushi/jira_tasks.dart';
@@ -107,8 +108,28 @@ class _JiraViewState extends State<JiraView> {
   /// Where the list's groups are remembered: the site, or `*` for all.
   String get _place => _every ? '*' : _siteNow?.id ?? '';
 
+  /// Whose issues show: everyone's in Mine and every site's list, else as
+  /// picked for the site and list.
+  Assignee get _assignee => switch (_siteNow) {
+    final site? when _list != 'mine' && !_every => assigneeAt(
+      filterPlace(site, _list),
+    ),
+    _ => const .everyone(),
+  };
+
+  /// The rows the filter leaves.
+  List<Task> get _filtered {
+    final (who, site) = (_assignee, _siteNow);
+    return who.everyone || site == null
+        ? _tasks
+        : [
+            for (final x in _tasks)
+              if (who.shows(x.issue, site)) x,
+          ];
+  }
+
   /// The rows the keys move through (not in collapsed groups).
-  List<Task> get _visible => visibleTasks(_tasks, _place);
+  List<Task> get _visible => visibleTasks(_filtered, _place);
 
   @override
   void initState() {
@@ -116,6 +137,7 @@ class _JiraViewState extends State<JiraView> {
     unawaited(_loadSites());
     _poll = Timer.periodic(jiraPoll, (_) => unawaited(_load(quiet: true)));
     jiraCollapsed.addListener(_keepVisible);
+    jiraAssignee.addListener(_keepVisible);
   }
 
   /// A group collapsed over the selected row: the selection moves to the
@@ -125,6 +147,11 @@ class _JiraViewState extends State<JiraView> {
     if (!mounted || visible.any((x) => x.issue.key == _key)) return;
     final all = grouped(_tasks, _place);
     final at = all.indexWhere((x) => x.issue.key == _key);
+    // A row the filter hid: the first shown.
+    if (!_filtered.any((x) => x.issue.key == _key)) {
+      setState(() => _key = visible.firstOrNull?.issue.key);
+      return;
+    }
     setState(() {
       _start = null;
       _key =
@@ -138,6 +165,7 @@ class _JiraViewState extends State<JiraView> {
     _poll?.cancel();
     _slowTimer?.cancel();
     jiraCollapsed.removeListener(_keepVisible);
+    jiraAssignee.removeListener(_keepVisible);
     _listFocus.dispose();
     _viewFocus.dispose();
     _jqlFocus.dispose();
@@ -276,7 +304,7 @@ class _JiraViewState extends State<JiraView> {
         for (final is_ in r.issues) (site: on[i], issue: is_),
     ]);
     _sprint = got.first.sprint;
-    if (!_tasks.any((t) => t.issue.key == _key)) {
+    if (!_visible.any((t) => t.issue.key == _key)) {
       _key = _visible.firstOrNull?.issue.key;
       _details = false;
     }
@@ -465,6 +493,8 @@ class _JiraViewState extends State<JiraView> {
 
   Widget _lists(NushiTheme theme, JiraSite site, List<String> lists) {
     final t = theme.t;
+    final who = _assignee;
+    final rows = _filtered;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -508,6 +538,17 @@ class _JiraViewState extends State<JiraView> {
             _listFocus.requestFocus();
           },
           onSave: () => _saveSearch(site),
+          filter: _list == 'mine' || _every || _tasks.isEmpty && who.everyone
+              ? null
+              : AssigneeMenu(
+                  site: site,
+                  issues: [for (final x in _tasks) x.issue],
+                  value: who,
+                  onPick: (a) {
+                    setAssignee(filterPlace(site, _list), a);
+                    setState(() {}); // the rows it leaves
+                  },
+                ),
         ),
         // The banner above says why, and what to do.
         if (_error case final e? when !site.needsOk && !site.needsRestart)
@@ -524,10 +565,11 @@ class _JiraViewState extends State<JiraView> {
                 ? const RowsLoading()
                 : TaskList(
                     daemon: widget.daemon,
-                    tasks: _tasks,
+                    tasks: rows,
                     place: _place,
                     selected: _key,
                     sites: _every,
+                    people: _list != 'mine',
                     onOpen: (task) {
                       _listFocus.requestFocus();
                       _open(task);
@@ -537,13 +579,15 @@ class _JiraViewState extends State<JiraView> {
                   ),
           ),
         ),
-        if (_tasks.isEmpty && _error == null && !_loading)
+        if (rows.isEmpty && _error == null && !_loading)
           Padding(
             padding: const EdgeInsets.all(14),
             child: Text(
               _list == 'jql' && _jql.isEmpty
                   ? 'Type JQL, then Enter'
-                  : 'Nothing here',
+                  : _tasks.isEmpty
+                  ? 'Nothing here'
+                  : 'Nothing here for ${who.label}',
               style: theme.ui(t.textMuted, size: 12),
             ),
           ),

@@ -35,6 +35,7 @@ class JiraSources extends StatelessWidget {
     required this.onRunJql,
     required this.onSave,
     super.key,
+    this.filter,
   });
 
   final Daemon daemon;
@@ -55,6 +56,9 @@ class JiraSources extends StatelessWidget {
   final ValueChanged<String> onRunJql;
   final VoidCallback onSave;
 
+  /// At the tabs' row's end: whose issues show.
+  final Widget? filter;
+
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
@@ -64,40 +68,10 @@ class JiraSources extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(10, 8, 10, 4),
-          child: Wrap(
-            spacing: 4,
-            runSpacing: 4,
+          child: Row(
             children: [
-              for (final l in lists)
-                Menu(
-                  entries: [
-                    if (l == 'sprint')
-                      MenuEntry('Pick the board…', onPick: onPickBoard),
-                    if (int.tryParse(l) case final i?)
-                      MenuEntry(
-                        'Remove the search',
-                        onPick: () => onRemoveSearch(i),
-                      ),
-                  ],
-                  builder: (context, open) => GestureDetector(
-                    onSecondaryTapUp: (d) => open(d.localPosition),
-                    child: Tap(
-                      selected: l == list,
-                      onTap: () => onPick(l),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      child: Text(
-                        label(l, site),
-                        style: theme.ui(
-                          l == list ? t.text : t.textSecondary,
-                          size: 12,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+              Expanded(child: _tabs(theme)),
+              ?filter,
             ],
           ),
         ),
@@ -136,6 +110,41 @@ class JiraSources extends StatelessWidget {
                     child: Button(label: 'Save…', onPressed: onSave),
                   ),
               ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// A tab for each list.
+  Widget _tabs(NushiTheme theme) {
+    final t = theme.t;
+    return Wrap(
+      spacing: 4,
+      runSpacing: 4,
+      children: [
+        for (final l in lists)
+          Menu(
+            entries: [
+              if (l == 'sprint')
+                MenuEntry('Pick the board…', onPick: onPickBoard),
+              if (int.tryParse(l) case final i?)
+                MenuEntry('Remove the search', onPick: () => onRemoveSearch(i)),
+            ],
+            builder: (context, open) => GestureDetector(
+              onSecondaryTapUp: (d) => open(d.localPosition),
+              child: Tap(
+                selected: l == list,
+                onTap: () => onPick(l),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                child: Text(
+                  label(l, site),
+                  style: theme.ui(
+                    l == list ? t.text : t.textSecondary,
+                    size: 12,
+                  ),
+                ),
+              ),
             ),
           ),
       ],

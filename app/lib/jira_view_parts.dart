@@ -63,62 +63,6 @@ Color statusColor(Tokens t, String category) => switch (category) {
   _ => t.textMuted,
 };
 
-class IssueRow extends StatelessWidget {
-  const new(
-    this.issue, {
-    required this.selected,
-    required this.onTap,
-    super.key,
-  });
-
-  final JiraIssue issue;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final i = issue;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-      child: Tap(
-        selected: selected,
-        onTap: onTap,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(i.key, style: theme.code(t.textSecondary, size: 11.5)),
-                const SizedBox(width: 8),
-                Text(i.type, style: theme.ui(t.textMuted, size: 11.5)),
-                const Spacer(),
-                Text(
-                  i.status,
-                  style: theme.ui(statusColor(t, i.statusCategory), size: 11.5),
-                ),
-              ],
-            ),
-            Text(
-              i.summary,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: theme.ui(t.text),
-            ),
-            if (i.assignee.isNotEmpty || i.priority.isNotEmpty)
-              Text(
-                [i.assignee, i.priority].where((s) => s.isNotEmpty).join(' · '),
-                style: theme.ui(t.textMuted, size: 11.5),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class NoSite extends StatelessWidget {
   const new(this.daemon, {super.key});
 

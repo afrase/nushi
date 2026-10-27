@@ -75,12 +75,14 @@ Future<List<MenuEntry>> issueMoves(
 }
 
 /// The status, which opens the moves the workflow allows now (asked of
-/// Jira as it opens).
+/// Jira as it opens). [quiet] (a list's rows): its border only under the
+/// pointer.
 class StatusMenu extends StatefulWidget {
-  const new(this.issue, {required this.load, super.key});
+  const new(this.issue, {required this.load, super.key, this.quiet = false});
 
   final JiraIssue issue;
   final Future<List<MenuEntry>> Function() load;
+  final bool quiet;
 
   @override
   State<StatusMenu> createState() => _StatusMenuState();
@@ -89,6 +91,22 @@ class StatusMenu extends StatefulWidget {
 class _StatusMenuState extends State<StatusMenu> {
   List<MenuEntry> _entries = const [MenuEntry('Loading…')];
 
+  Future<void> _open(OpenMenu open) async {
+    try {
+      final entries = await widget.load();
+      if (!mounted) return;
+      setState(
+        () => _entries = entries.isEmpty
+            ? const [MenuEntry('No moves now')]
+            : entries,
+      );
+    } on Object catch (e) {
+      if (mounted) setState(() => _entries = [MenuEntry(jiraError(e))]);
+    }
+    // Once the menu has its rows.
+    WidgetsBinding.instance.addPostFrameCallback((_) => open());
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
@@ -96,32 +114,31 @@ class _StatusMenuState extends State<StatusMenu> {
     final color = statusColor(t, widget.issue.statusCategory);
     return Menu(
       entries: _entries,
-      builder: (context, open) => Tap(
-        onTap: () async {
-          try {
-            final entries = await widget.load();
-            if (!mounted) return;
-            setState(
-              () => _entries = entries.isEmpty
-                  ? const [MenuEntry('No moves now')]
-                  : entries,
-            );
-          } on Object catch (e) {
-            if (mounted) setState(() => _entries = [MenuEntry(jiraError(e))]);
-          }
-          // Once the menu has its rows.
-          WidgetsBinding.instance.addPostFrameCallback((_) => open());
-        },
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        child: Container(
+      builder: (context, open) => Pressable(
+        onTap: () => unawaited(_open(open)),
+        tooltip: widget.quiet ? 'Move to another status' : '',
+        builder: (context, look) => Container(
+          // The issue's header keeps room around it, as before.
+          margin: widget.quiet
+              ? null
+              : const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           padding: const EdgeInsets.fromLTRB(6, 1, 3, 1),
-          decoration: box(color, radius: NushiTheme.control),
+          decoration: box(
+            widget.quiet && !look.hover && !look.focus
+                ? const Color(0x00000000)
+                : color,
+            radius: NushiTheme.control,
+          ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                widget.issue.status,
-                style: theme.ui(color, size: 12, weight: FontWeight.w500),
+              Flexible(
+                child: Text(
+                  widget.issue.status,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.ui(color, size: 12, weight: FontWeight.w500),
+                ),
               ),
               const SizedBox(width: 1),
               Icon(Icons.keyboard_arrow_down, size: 14, color: color),

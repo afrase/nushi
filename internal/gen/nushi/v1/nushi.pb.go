@@ -12434,7 +12434,9 @@ type JiraIssue struct {
 	Comments           []*JiraComment         `protobuf:"bytes,18,rep,name=comments,proto3" json:"comments,omitempty"`
 	RemoteLinks        []*JiraRemoteLink      `protobuf:"bytes,19,rep,name=remote_links,json=remoteLinks,proto3" json:"remote_links,omitempty"`
 	// The issue in the browser.
-	Url           string `protobuf:"bytes,20,opt,name=url,proto3" json:"url,omitempty"`
+	Url string `protobuf:"bytes,20,opt,name=url,proto3" json:"url,omitempty"`
+	// The assignee's account id ("" when unassigned; assignee is the name).
+	AssigneeId    string `protobuf:"bytes,21,opt,name=assignee_id,json=assigneeId,proto3" json:"assignee_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -12605,6 +12607,13 @@ func (x *JiraIssue) GetRemoteLinks() []*JiraRemoteLink {
 func (x *JiraIssue) GetUrl() string {
 	if x != nil {
 		return x.Url
+	}
+	return ""
+}
+
+func (x *JiraIssue) GetAssigneeId() string {
+	if x != nil {
+		return x.AssigneeId
 	}
 	return ""
 }
@@ -19054,7 +19063,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\asummary\x18\x02 \x01(\tR\asummary\x12\x12\n" +
 	"\x04type\x18\x03 \x01(\tR\x04type\x12\x16\n" +
 	"\x06status\x18\x04 \x01(\tR\x06status\x12'\n" +
-	"\x0fstatus_category\x18\x05 \x01(\tR\x0estatusCategory\"\xcb\x05\n" +
+	"\x0fstatus_category\x18\x05 \x01(\tR\x0estatusCategory\"\xec\x05\n" +
 	"\tJiraIssue\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x18\n" +
 	"\asummary\x18\x02 \x01(\tR\asummary\x12\x12\n" +
@@ -19076,7 +19085,9 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\vattachments\x18\x11 \x03(\v2\x18.nushi.v1.JiraAttachmentR\vattachments\x121\n" +
 	"\bcomments\x18\x12 \x03(\v2\x15.nushi.v1.JiraCommentR\bcomments\x12;\n" +
 	"\fremote_links\x18\x13 \x03(\v2\x18.nushi.v1.JiraRemoteLinkR\vremoteLinks\x12\x10\n" +
-	"\x03url\x18\x14 \x01(\tR\x03url\"T\n" +
+	"\x03url\x18\x14 \x01(\tR\x03url\x12\x1f\n" +
+	"\vassignee_id\x18\x15 \x01(\tR\n" +
+	"assigneeId\"T\n" +
 	"\bJiraLink\x12\x1a\n" +
 	"\brelation\x18\x01 \x01(\tR\brelation\x12,\n" +
 	"\x05issue\x18\x02 \x01(\v2\x16.nushi.v1.JiraIssueRefR\x05issue\"e\n" +

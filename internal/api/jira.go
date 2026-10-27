@@ -237,7 +237,7 @@ func jiraCommentProto(c model.JiraComment) *nushiv1.JiraComment {
 
 func jiraIssueProto(is model.JiraIssue, url string) *nushiv1.JiraIssue {
 	p := &nushiv1.JiraIssue{Key: is.Key, Summary: is.Summary, Type: is.Type, Status: is.Status, StatusCategory: is.StatusCategory,
-		Priority: is.Priority, Assignee: is.Assignee, Updated: unixMs(is.Updated), Reporter: is.Reporter, Created: unixMs(is.Created),
+		Priority: is.Priority, Assignee: is.Assignee, AssigneeId: is.AssigneeID, Updated: unixMs(is.Updated), Reporter: is.Reporter, Created: unixMs(is.Created),
 		Labels: is.Labels, Description: is.Description, AcceptanceCriteria: is.AcceptanceCriteria, Url: url}
 	if is.Parent != nil {
 		p.Parent = jiraRef(*is.Parent)
