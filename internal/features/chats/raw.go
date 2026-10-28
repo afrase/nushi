@@ -32,18 +32,15 @@ func keepRaw(it *model.Item, input, output json.RawMessage) {
 	}
 }
 
-// inputText is a tool call's input as indented JSON; "" when it holds
-// nothing ({}, null).
+// inputText is a tool call's input as indented JSON, what looks secret
+// masked (maskSecrets) before it is cut; "" when it holds nothing ({},
+// null).
 func inputText(raw json.RawMessage) string {
 	raw = bytes.TrimSpace(raw)
 	if empty(raw) {
 		return ""
 	}
-	var b bytes.Buffer
-	if json.Indent(&b, raw, "", "  ") != nil {
-		return cut(string(raw))
-	}
-	return cut(b.String())
+	return cut(maskSecrets(string(raw)))
 }
 
 // outputText is a tool call's raw result: a string as it is, a list of text
