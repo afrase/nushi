@@ -116,6 +116,7 @@ class _PermissionCardState extends State<PermissionCard> {
                   kind: i == 0 ? ButtonKind.primary : ButtonKind.secondary,
                   runner: _answering,
                   run: () => widget.onAnswer(o.id),
+                  wrap: true, // a phone shows what it allows whole
                 ),
             ],
           )
