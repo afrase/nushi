@@ -43,7 +43,7 @@ func TestSecretsMaskedInInput(t *testing.T) {
 
 	raw := json.RawMessage(`{"url": "https://x.dev", "headers": {"Authorization": "Bearer abcdefgh12345678", "Accept": "json"},
 		"api_key": "plain-value", "password": "hunter2", "client_secret": "s3cr3t", "Cookie": "sid=abc", "private_key": "k",
-		"tokens": ["one", "two"], "max_tokens": 4096, "env": "GITHUB_TOKEN=abcd1234 make", "note": "Bearer token rotation",
+		"tokens": ["one", "two"], "max_tokens": 4096, "input_tokens": 12, "token_count": 3, "env": "GITHUB_TOKEN=abcd1234 make", "note": "Bearer token rotation",
 		"git": "https://me:pa55word@github.com/x.git"}`)
 	want := `{
   "url": "https://x.dev",
@@ -60,7 +60,9 @@ func TestSecretsMaskedInInput(t *testing.T) {
     "••••",
     "••••"
   ],
-  "max_tokens": "••••",
+  "max_tokens": 4096,
+  "input_tokens": 12,
+  "token_count": 3,
   "env": "GITHUB_TOKEN=•••• make",
   "note": "Bearer token rotation",
   "git": "https://me:••••@github.com/x.git"
