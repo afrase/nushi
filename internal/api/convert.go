@@ -87,7 +87,7 @@ func itemProto(it *model.Item) *nushiv1.Item {
 		Title: it.Title, ToolKind: it.ToolKind, Status: it.Status, Answer: it.Answer, Parent: it.Parent, Agent: it.Agent, Tool: it.Tool, ForkAt: it.ForkAt,
 		Prompt: it.Prompt, Model: it.Model, Effort: it.Effort, RanModel: it.RanModel, AgentId: it.AgentID, RelayTo: it.RelayTo,
 		RelayCall: it.RelayCall, RelayState: it.RelayState, RelayedBy: it.RelayedBy, RelayStop: it.RelayStop,
-		Rewindable: it.Rewindable, Report: it.Report}
+		Rewindable: it.Rewindable, Report: it.Report, Sent: unixMs(it.Sent)}
 	if sh := it.Shell; sh != nil {
 		out.Shell = &nushiv1.Shell{Id: sh.ID, State: sh.State, Started: unixMs(sh.Started), Ended: unixMs(sh.Ended), Output: sh.Output, End: sh.End}
 	}

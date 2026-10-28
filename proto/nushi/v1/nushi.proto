@@ -1543,6 +1543,9 @@ message Item {
   // For a user message: it asked the agent to stop that subagent, or the
   // background command relay_to names (StopTask), not to pass anything on.
   bool relay_stop = 32;
+  // For a user message sent through Nushi: when, in Unix milliseconds; 0
+  // when not known (one the agent replayed). API 78.
+  int64 sent = 33;
 }
 
 // A code review's result: the effort level it ran at ("medium"; "" when

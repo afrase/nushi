@@ -11418,6 +11418,7 @@ class Item extends $pb.GeneratedMessage {
     $core.String? relayedBy,
     Findings? findings,
     $core.bool? relayStop,
+    $fixnum.Int64? sent,
   }) {
     final result = Item._();
     if (id != null) result.id = id;
@@ -11452,6 +11453,7 @@ class Item extends $pb.GeneratedMessage {
     if (relayedBy != null) result.relayedBy = relayedBy;
     if (findings != null) result.findings = findings;
     if (relayStop != null) result.relayStop = relayStop;
+    if (sent != null) result.sent = sent;
     return result;
   }
 
@@ -11509,6 +11511,7 @@ class Item extends $pb.GeneratedMessage {
     ..aOM<Findings>(31, _omitFieldNames ? '' : 'findings',
         subBuilder: Findings.$_createMessage)
     ..aOB(32, _omitFieldNames ? '' : 'relayStop')
+    ..aInt64(33, _omitFieldNames ? '' : 'sent')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -11824,6 +11827,17 @@ class Item extends $pb.GeneratedMessage {
   $core.bool hasRelayStop() => $_has(31);
   @$pb.TagNumber(32)
   void clearRelayStop() => $_clearField(32);
+
+  /// For a user message sent through Nushi: when, in Unix milliseconds; 0
+  /// when not known (one the agent replayed). API 78.
+  @$pb.TagNumber(33)
+  $fixnum.Int64 get sent => $_getI64(32);
+  @$pb.TagNumber(33)
+  set sent($fixnum.Int64 value) => $_setInt64(32, value);
+  @$pb.TagNumber(33)
+  $core.bool hasSent() => $_has(32);
+  @$pb.TagNumber(33)
+  void clearSent() => $_clearField(33);
 }
 
 /// A code review's result: the effort level it ran at ("medium"; "" when

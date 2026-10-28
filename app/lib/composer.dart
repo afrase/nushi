@@ -15,6 +15,7 @@ import 'package:nushi/pickers.dart';
 import 'package:nushi/queue.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/reply_cards.dart';
+import 'package:nushi/rewind_picker.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/thinking.dart';
 import 'package:nushi/widgets.dart';
@@ -27,7 +28,8 @@ import 'package:nushi/worktree.dart';
 /// message. Under it, the agent's pickers. Enter sends (⌘⏎ steers while a
 /// turn runs), Shift-Enter starts a line ([isSendKey]); `/` completes the
 /// agent's commands and `@` the folder's files (sent as links); Up in an
-/// empty box brings back the last prompt.
+/// empty box brings back the last prompt; Esc Esc lists your messages to
+/// rewind to (on a Mac).
 class Composer extends StatefulWidget {
   const new({
     required this.chat,
@@ -62,6 +64,7 @@ class _ComposerState extends State<Composer> {
   Set<String> get _mentions => _draft.mentions; // files picked with @
   List<String> _lastFiles = []; // the last prompt's, for Up
   late final Attachments _images = _draft.images;
+  Timer? _esc; // a first Esc's time to be followed by a second
 
   @override
   void initState() {
@@ -92,6 +95,7 @@ class _ComposerState extends State<Composer> {
     _draft.replies.removeListener(_repliesChanged);
     _draft.quote.removeListener(_quote);
     widget.chat.takeBack.removeListener(_takeBack);
+    _esc?.cancel();
     _completions.dispose();
     _focus.dispose();
     super.dispose();
@@ -117,7 +121,21 @@ class _ComposerState extends State<Composer> {
     if (e is KeyUpEvent) return KeyEventResult.ignored;
     final key = e.logicalKey;
     final shift = HardwareKeyboard.instance.isShiftPressed;
+    final esc = key == LogicalKeyboardKey.escape;
+    if (esc && e is KeyRepeatEvent) return KeyEventResult.ignored;
+    final second = esc && (_esc?.isActive ?? false);
+    _esc?.cancel();
+    _esc = null;
+    // An Esc that closes the choices isn't the first of two.
     if (_completions.onKey(key, shift: shift)) return KeyEventResult.handled;
+    if (esc && !TouchTargets.of(context)) {
+      if (second) {
+        unawaited(pickRewind(context, widget.daemon, widget.chat));
+        return KeyEventResult.handled;
+      }
+      _esc = Timer(escEscWithin, () {});
+      return KeyEventResult.ignored; // and goes on: it stops a turn
+    }
     final meta = HardwareKeyboard.instance.isMetaPressed;
     final enter = enterKey(e, _text, () => unawaited(_send(now: meta)));
     if (enter == KeyEventResult.handled) return enter;

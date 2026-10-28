@@ -29,6 +29,9 @@ func TestRewindForksBeforeTheMessage(t *testing.T) {
 	if c.items[3].ForkAt != "m1" || c.items[0].ForkAt != "" {
 		t.Fatalf("fork points: %+v", c.items)
 	}
+	if c.items[3].Sent.IsZero() || !c.items[4].Sent.IsZero() {
+		t.Errorf("a sent message has its time, the agent's none: %v, %v", c.items[3].Sent, c.items[4].Sent)
+	}
 	m, err := svc.Rewind(context.Background(), c.id, c.items[3].ID)
 	if err != nil || m.Text != "two" {
 		t.Fatalf("Rewind = %+v, %v", m, err)

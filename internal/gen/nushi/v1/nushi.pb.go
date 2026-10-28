@@ -8970,7 +8970,10 @@ type Item struct {
 	Findings *Findings `protobuf:"bytes,31,opt,name=findings,proto3" json:"findings,omitempty"`
 	// For a user message: it asked the agent to stop that subagent, or the
 	// background command relay_to names (StopTask), not to pass anything on.
-	RelayStop     bool `protobuf:"varint,32,opt,name=relay_stop,json=relayStop,proto3" json:"relay_stop,omitempty"`
+	RelayStop bool `protobuf:"varint,32,opt,name=relay_stop,json=relayStop,proto3" json:"relay_stop,omitempty"`
+	// For a user message sent through Nushi: when, in Unix milliseconds; 0
+	// when not known (one the agent replayed). API 78.
+	Sent          int64 `protobuf:"varint,33,opt,name=sent,proto3" json:"sent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -9227,6 +9230,13 @@ func (x *Item) GetRelayStop() bool {
 		return x.RelayStop
 	}
 	return false
+}
+
+func (x *Item) GetSent() int64 {
+	if x != nil {
+		return x.Sent
+	}
+	return 0
 }
 
 // A code review's result: the effort level it ran at ("medium"; "" when
@@ -19160,7 +19170,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x14\n" +
 	"\x05group\x18\x04 \x01(\tR\x05group\x12\x1d\n" +
 	"\n" +
-	"is_default\x18\x05 \x01(\bR\tisDefault\"\xd3\a\n" +
+	"is_default\x18\x05 \x01(\bR\tisDefault\"\xe7\a\n" +
 	"\x04Item\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12&\n" +
 	"\x04kind\x18\x02 \x01(\x0e2\x12.nushi.v1.ItemKindR\x04kind\x12\x12\n" +
@@ -19200,7 +19210,8 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"relayed_by\x18\x1e \x01(\tR\trelayedBy\x12.\n" +
 	"\bfindings\x18\x1f \x01(\v2\x12.nushi.v1.FindingsR\bfindings\x12\x1d\n" +
 	"\n" +
-	"relay_stop\x18  \x01(\bR\trelayStop\"I\n" +
+	"relay_stop\x18  \x01(\bR\trelayStop\x12\x12\n" +
+	"\x04sent\x18! \x01(\x03R\x04sent\"I\n" +
 	"\bFindings\x12\x14\n" +
 	"\x05level\x18\x01 \x01(\tR\x05level\x12'\n" +
 	"\x05items\x18\x02 \x03(\v2\x11.nushi.v1.FindingR\x05items\"\xeb\x01\n" +

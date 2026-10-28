@@ -3,6 +3,7 @@ package chats
 import (
 	"errors"
 	"slices"
+	"time"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -22,10 +23,10 @@ func (c *chat) relayLocked(callID string) (*model.Relay, error) {
 	return &model.Relay{Agent: call.Agent, AgentID: call.AgentID}, nil
 }
 
-// userItem is a message as the transcript shows it: one for a subagent
-// says which.
+// userItem is a message as the transcript shows it, sent now: one for a
+// subagent says which.
 func userItem(m model.Message) model.Item {
-	it := model.Item{Kind: model.UserMessage, Text: m.Text, Images: m.Images, Files: m.Files}
+	it := model.Item{Kind: model.UserMessage, Text: m.Text, Images: m.Images, Files: m.Files, Sent: time.Now()}
 	if m.Relay != nil {
 		it.RelayTo, it.RelayCall, it.RelayState, it.RelayStop = m.Relay.Agent, m.To, "sending", m.Relay.Stop
 	}

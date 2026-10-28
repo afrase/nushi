@@ -31,16 +31,26 @@ Future<void> rewind(
       !context.mounted) {
     return;
   }
-  await tryOrShow(context, () async {
-    final r = await daemon.client.rewindChat(
-      RewindChatRequest(chatId: chat.id, itemId: item.id),
-    );
-    chat.takeBack.value = r.message;
-  });
+  await rewindTo(context, daemon, chat, item);
 }
 
+/// Cuts the chat back to just before [item], without asking, and puts the
+/// message in the composer to edit.
+Future<void> rewindTo(
+  BuildContext context,
+  Daemon daemon,
+  ChatState chat,
+  Item item,
+) => tryOrShow(context, () async {
+  final r = await daemon.client.rewindChat(
+    RewindChatRequest(chatId: chat.id, itemId: item.id),
+  );
+  chat.takeBack.value = r.message;
+});
+
 /// A user message with "Rewind to here" on hover (top right) and in its
-/// context menu, when [onRewind] is set.
+/// context menu, when [onRewind] is set; Esc Esc in the box lists them all
+/// (`rewind_picker.dart`).
 class RewindTarget extends StatefulWidget {
   const new({required this.child, super.key, this.onRewind});
 
@@ -79,7 +89,7 @@ class _RewindTargetState extends State<RewindTarget> {
                     Icons.history,
                     size: 15,
                     color: NushiTheme.of(context).t.textMuted,
-                    tooltip: 'Rewind to here',
+                    tooltip: 'Rewind to here (Esc Esc)',
                     onTap: run,
                   ),
                 ),

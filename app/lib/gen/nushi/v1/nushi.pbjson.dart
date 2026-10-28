@@ -2750,6 +2750,7 @@ const Item$json = {
       '10': 'findings'
     },
     {'1': 'relay_stop', '3': 32, '4': 1, '5': 8, '10': 'relayStop'},
+    {'1': 'sent', '3': 33, '4': 1, '5': 3, '10': 'sent'},
   ],
 };
 
@@ -2772,7 +2773,7 @@ final $typed_data.Uint8List itemDescriptor = $convert.base64Decode(
     'ZBIZCghyZWxheV90bxgbIAEoCVIHcmVsYXlUbxIdCgpyZWxheV9jYWxsGBwgASgJUglyZWxheU'
     'NhbGwSHwoLcmVsYXlfc3RhdGUYHSABKAlSCnJlbGF5U3RhdGUSHQoKcmVsYXllZF9ieRgeIAEo'
     'CVIJcmVsYXllZEJ5Ei4KCGZpbmRpbmdzGB8gASgLMhIubnVzaGkudjEuRmluZGluZ3NSCGZpbm'
-    'RpbmdzEh0KCnJlbGF5X3N0b3AYICABKAhSCXJlbGF5U3RvcA==');
+    'RpbmdzEh0KCnJlbGF5X3N0b3AYICABKAhSCXJlbGF5U3RvcBISCgRzZW50GCEgASgDUgRzZW50');
 
 @$core.Deprecated('Use findingsDescriptor instead')
 const Findings$json = {
