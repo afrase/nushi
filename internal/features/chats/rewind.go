@@ -21,7 +21,7 @@ func (c *chat) forkPointLocked() string {
 	for _, it := range slices.Backward(c.items) {
 		if it.Kind == model.UserMessage {
 			return ""
-		} else if it.Kind == model.AgentMessage && it.Parent == "" {
+		} else if it.Kind == model.AgentMessage && it.Parent == "" && it.Status != model.StoppedBySafeguards { // the agent keeps nothing of a stopped one
 			if strings.HasPrefix(it.ID, "item-") { // no messageId: can't fork there
 				return ""
 			}

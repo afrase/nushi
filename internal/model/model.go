@@ -127,9 +127,24 @@ const (
 	// Plan is the agent's plan as a checklist (Plan), updated in place.
 	Plan
 	// Notice says how a turn ended when it didn't end normally, or an error.
-	// Status is the reason ("cancelled", "refusal", "error", ...).
+	// Status is the reason ("cancelled", "refusal", "error", ...);
+	// "agent_notice" and "agent_warning" are the agent's own (AgentNotice).
 	Notice
 )
+
+// StoppedBySafeguards is the Status of an agent's message whose response
+// the model's safeguards stopped (AgentNotice.Stopped): what streamed of
+// it before, which the agent drops from its history.
+const StoppedBySafeguards = "stopped_by_safeguards"
+
+// AgentNotice is a notice of the agent's own that it sends as message
+// text (Claude Code's, as agent text to a client without ACP's notices):
+// Text without its label; Warning says it warns; Stopped says the model's
+// safeguards stopped the response just before it, and the agent goes on.
+type AgentNotice struct {
+	Text             string
+	Warning, Stopped bool
+}
 
 // PlanEntry is a step of the agent's plan; Status is ACP's ("pending",
 // "in_progress", "completed").

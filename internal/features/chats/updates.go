@@ -220,6 +220,12 @@ func (c *chat) chunkLocked(kind model.ItemKind, m *acp.ContentChunk, parent stri
 	if c.dialect.Parent != nil && parent == "" {
 		parent = c.dialect.Parent(m.Meta)
 	}
+	if kind == model.AgentMessage && parent == "" && text != "" && c.dialect.Notice != nil {
+		if n, ok := c.dialect.Notice(m.Meta, text); ok {
+			c.agentNoticeLocked(n)
+			return
+		}
+	}
 	it := c.itemLocked(id)
 	if m.MessageID == "" && len(c.items) > 0 {
 		it = &c.items[len(c.items)-1]
@@ -245,6 +251,19 @@ func (c *chat) chunkLocked(kind model.ItemKind, m *acp.ContentChunk, parent stri
 	c.unnotedLocked(&item)
 	c.relayedLocked(&item)
 	c.addLocked(item)
+}
+
+// agentNoticeLocked adds a notice of the agent's own (Dialect.Notice). One
+// that says the model's safeguards stopped the response before it marks
+// what streamed of that response, the message just before, if any.
+func (c *chat) agentNoticeLocked(n model.AgentNotice) {
+	if last := len(c.items) - 1; n.Stopped && last >= 0 {
+		if it := &c.items[last]; it.Kind == model.AgentMessage && it.Parent == "" {
+			it.Status = model.StoppedBySafeguards
+			c.publishLocked(*it)
+		}
+	}
+	c.noticeLocked(map[bool]string{false: "agent_notice", true: "agent_warning"}[n.Warning], n.Text)
 }
 
 // toolCallLocked adds what the agent tells of a tool call beyond ACP (see

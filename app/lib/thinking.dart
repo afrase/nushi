@@ -7,17 +7,42 @@ import 'package:nushi/widgets.dart';
 
 /// The agent's thinking: a dim "Thinking" line that opens to the thoughts,
 /// shining while they stream ([live]).
-class ThoughtView extends StatefulWidget {
+class ThoughtView extends StatelessWidget {
   const new(this.item, {required this.live, super.key});
 
   final Item item;
   final bool live;
 
   @override
-  State<ThoughtView> createState() => _ThoughtViewState();
+  Widget build(BuildContext context) =>
+      Folded(live ? 'Thinking…' : 'Thought', item.text, live: live);
 }
 
-class _ThoughtViewState extends State<ThoughtView> {
+/// What streamed of a response the model's safeguards stopped (the agent
+/// dropped it and went on): folded and dim, above the agent's notice.
+class StoppedView extends StatelessWidget {
+  const new(this.item, {super.key});
+
+  final Item item;
+
+  @override
+  Widget build(BuildContext context) =>
+      Folded('Stopped by safeguards', item.text, live: false);
+}
+
+/// A dim, italic [label] that opens to [text], shining while [live].
+class Folded extends StatefulWidget {
+  const new(this.label, this.text, {required this.live, super.key});
+
+  final String label;
+  final String text;
+  final bool live;
+
+  @override
+  State<Folded> createState() => _FoldedState();
+}
+
+class _FoldedState extends State<Folded> {
   bool _open = false;
 
   @override
@@ -39,10 +64,7 @@ class _ThoughtViewState extends State<ThoughtView> {
               Chevron(open: _open),
               Shine(
                 on: widget.live,
-                child: Text(
-                  widget.live ? 'Thinking…' : 'Thought',
-                  style: style,
-                ),
+                child: Text(widget.label, style: style),
               ),
             ],
           ),
@@ -56,7 +78,7 @@ class _ThoughtViewState extends State<ThoughtView> {
                 left: BorderSide(color: theme.t.borderStrong, width: 2),
               ),
             ),
-            child: Text(widget.item.text, style: style),
+            child: Text(widget.text, style: style),
           ),
       ],
     );
