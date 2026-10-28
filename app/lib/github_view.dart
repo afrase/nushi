@@ -84,8 +84,13 @@ class _GitHubViewState extends State<GitHubView> {
   final _listFocus = FocusNode(debugLabel: 'github list');
   final _viewFocus = FocusNode(debugLabel: 'github view');
 
-  /// The selected row's Start work menu, for ⌘⏎.
-  OpenMenu? _start;
+  /// The selected row's, to keep it in view.
+  final GlobalKey _selectedRow = GlobalKey(debugLabel: 'github selected');
+
+  /// The selected row's Start work menu, for ⌘⏎, and whose it is: the
+  /// row registers it as it's built, and a row not built (scrolled away)
+  /// can't, so it may be another's.
+  (GitHubRef, OpenMenu)? _start;
 
   GitHubHost? get _hostNow {
     final hosts = _hosts ?? const <GitHubHost>[];
@@ -239,7 +244,21 @@ class _GitHubViewState extends State<GitHubView> {
     if (items.isEmpty) return;
     final next = (_at + by).clamp(0, items.length - 1);
     setState(() => _picked = items[next].ref);
+    revealRow(_selectedRow, down: by > 0);
   }
+
+  /// ⌘⏎: the selected row's Start work, once it's in view (its menu opens
+  /// by it).
+  void _startWork() => revealRow(
+    _selectedRow,
+    down: true,
+    then: () {
+      if (_start case (final ref, final open)
+          when sameRef(ref, _picked) && _selectedRow.currentContext != null) {
+        open();
+      }
+    },
+  );
 
   void _open(GitHubItem it) {
     setState(() {
@@ -265,7 +284,7 @@ class _GitHubViewState extends State<GitHubView> {
     final meta = HardwareKeyboard.instance.isMetaPressed;
     final items = _items;
     if (k == LogicalKeyboardKey.enter && items.isNotEmpty && _at >= 0) {
-      meta ? _start?.call() : _open(items[_at]);
+      meta ? _startWork() : _open(items[_at]);
     } else if (k == LogicalKeyboardKey.arrowDown ||
         k == LogicalKeyboardKey.keyJ && !meta) {
       _move(1);
@@ -495,7 +514,8 @@ class _GitHubViewState extends State<GitHubView> {
                         unawaited(_load());
                       },
                       onHide: (repo) => _setHidden({..._hidden, repo}.toList()),
-                      startMenu: (open) => _start = open,
+                      selectedRow: _selectedRow,
+                      startMenu: (ref, open) => _start = (ref, open),
                     ),
                   ),
           ),

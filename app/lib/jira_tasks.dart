@@ -94,6 +94,7 @@ class TaskList extends StatelessWidget {
     required this.startMenu,
     super.key,
     this.people = true,
+    this.selectedRow,
   });
 
   final Daemon daemon;
@@ -109,8 +110,12 @@ class TaskList extends StatelessWidget {
   final void Function(Task task) onOpen;
   final Future<void> Function() onMoved;
 
-  /// Takes the selected row's Start work menu, for ⌘⏎.
-  final void Function(OpenMenu open) startMenu;
+  /// The selected row's key, to scroll it into view.
+  final GlobalKey? selectedRow;
+
+  /// Takes the selected row's Start work menu (and its issue's key), for
+  /// ⌘⏎.
+  final void Function(String key, OpenMenu open) startMenu;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -125,6 +130,8 @@ class TaskList extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final shown = grouped(tasks, place);
+    // The one row [selectedRow] keys (a key may be on two sites).
+    final first = shown.where((x) => x.issue.key == selected).firstOrNull;
     final statuses = statusesOf(shown);
     final collapsed = jiraCollapsed.value[place] ?? const [];
     final columns = (
@@ -134,6 +141,7 @@ class TaskList extends StatelessWidget {
     );
     return CardList(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+      buildAll: true,
       onReorder: (from, to) => jiraGroupOrder.value = {
         ...jiraGroupOrder.value,
         place: reordered(
@@ -177,7 +185,9 @@ class TaskList extends StatelessWidget {
                   for (final task in shown)
                     if (task.issue.status == status)
                       TaskRow(
-                        key: ValueKey('${task.site} ${task.issue.key}'),
+                        key:
+                            (identical(task, first) ? selectedRow : null) ??
+                            ValueKey('${task.site} ${task.issue.key}'),
                         daemon: daemon,
                         task: task,
                         selected: task.issue.key == selected,
@@ -185,7 +195,7 @@ class TaskList extends StatelessWidget {
                         columns: columns,
                         onOpen: () => onOpen(task),
                         onMoved: onMoved,
-                        startMenu: startMenu,
+                        startMenu: (open) => startMenu(task.issue.key, open),
                       ),
                 ],
               ),

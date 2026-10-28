@@ -1,4 +1,5 @@
 import 'package:fixnum/fixnum.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -164,6 +165,75 @@ void main() {
       find.textContaining('Choose folder', findRichText: true),
       findsOneWidget,
     );
+    await closeView(tester, d);
+  });
+
+  testWidgets('↓ keeps the selection in view; ⌘⏎ starts work on it, not '
+      'on the row before', (tester) async {
+    // 40 issues, in two cards: far more than the window shows.
+    final many = [
+      for (var i = 1; i <= 40; i++)
+        issue(
+          'ACME-$i',
+          'Issue $i',
+          i <= 20 ? 'To Do' : 'In Progress',
+          i <= 20 ? 'new' : 'indeterminate',
+        ),
+    ];
+    final (fake, d) = await openView(
+      tester,
+      chats: [chat('c1', 'claude', 'Elsewhere')],
+      more: (input) => switch (input) {
+        ListJiraIssuesRequest(list: 'mine') => ListJiraIssuesResponse(
+          issues: many,
+        ),
+        FindJiraIssuesRequest(:final text) => FindJiraIssuesResponse(
+          issues: [
+            FoundJiraIssue(
+              site: _site.id,
+              issue: issue(text, 'Issue', 'To Do', 'new'),
+              branch: text,
+            ),
+          ],
+        ),
+        _ => null,
+      },
+    );
+    final view = tester.getRect(find.byType(JiraView));
+    for (var i = 0; i < 39; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
+    }
+    await tester.pumpAndSettle();
+    // The last, In Progress's 20th, on screen.
+    final last = find.text('ACME-40');
+    expect(last, findsOneWidget);
+    expect(tester.getRect(last).bottom, lessThanOrEqualTo(view.bottom));
+    expect(tester.getRect(last).top, greaterThanOrEqualTo(view.top));
+    // Scrolled back to the top: the selected row isn't built.
+    await tester.drag(
+      find.text('ACME-30'),
+      const Offset(0, 3000),
+      kind: PointerDeviceKind.trackpad,
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.text('ACME-40', skipOffstage: false).evaluate().isEmpty ||
+          tester.getRect(find.text('ACME-40', skipOffstage: false)).top >
+              view.bottom,
+      isTrue,
+      reason: 'out of view',
+    );
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('nushi', findRichText: true).last);
+    await tester.pumpAndSettle();
+    expect(find.text('Chat on ACME-40 in nushi'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(fake.started, isEmpty);
     await closeView(tester, d);
   });
 

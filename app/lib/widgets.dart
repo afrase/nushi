@@ -114,6 +114,32 @@ class _RunButtonState extends State<RunButton> {
   );
 }
 
+/// Scrolls the row keyed [row] (a list's selected row) into view once this
+/// frame is drawn: at the list's end when moving [down], else its start;
+/// then, a frame later (rows the scroll brought in are built), [then].
+/// A lazy list builds the rows near the screen only, so the selection moves
+/// a row at a time with this, never past what's built.
+void revealRow(GlobalKey row, {required bool down, VoidCallback? then}) {
+  final binding = WidgetsBinding.instance;
+  binding
+    ..addPostFrameCallback((_) async {
+      if (row.currentContext case final c? when c.mounted) {
+        await Scrollable.ensureVisible(
+          c,
+          alignmentPolicy: down
+              ? ScrollPositionAlignmentPolicy.keepVisibleAtEnd
+              : ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+        );
+      }
+      if (then != null) {
+        binding
+          ..addPostFrameCallback((_) => then())
+          ..scheduleFrame();
+      }
+    })
+    ..scheduleFrame();
+}
+
 /// A quiet pressable area: a light tint under the pointer (unless not
 /// [tint]: a card's title, which shows its grip instead) or when
 /// [selected], no ripple.

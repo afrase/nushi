@@ -490,6 +490,47 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets('↓ keeps the selection in view; ⌘⏎ starts work on it', (
+    tester,
+  ) async {
+    final (fake, d) = await openView(
+      tester,
+      chats: [chat('c0', 'claude', 'Other')],
+      inbox: ListGitHubInboxResponse(
+        mine: [for (var n = 1; n <= 40; n++) item(n, 'Pull request $n')],
+        mineTotal: 40,
+        atMs: Int64(testNow.millisecondsSinceEpoch),
+      ),
+    );
+    final view = tester.getRect(find.byType(GitHubView));
+    for (var i = 0; i < 39; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
+    }
+    await tester.pumpAndSettle();
+    final last = find.text('Pull request 40');
+    expect(last, findsOneWidget);
+    expect(tester.getRect(last).bottom, lessThanOrEqualTo(view.bottom));
+    // Scrolled back to the top: ⌘⏎ brings it back, and its menu.
+    await tester.drag(
+      find.text('Pull request 30'),
+      const Offset(0, 3000),
+      kind: PointerDeviceKind.trackpad,
+    );
+    await tester.pumpAndSettle();
+    expect(tester.getRect(last).top, greaterThan(view.bottom));
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+    await tester.pumpAndSettle();
+    await tester.tap(_clone.first);
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(fake.started.single.github.number, 40);
+    await closeView(tester, d);
+  });
+
   testWidgets("Start work on a pull request: its head's branch, which the "
       'daemon fetches', (tester) async {
     final (fake, d) = await openView(

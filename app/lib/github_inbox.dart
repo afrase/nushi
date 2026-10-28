@@ -82,6 +82,7 @@ class InboxCards extends StatelessWidget {
     required this.onOlder,
     required this.onHide,
     required this.startMenu,
+    this.selectedRow,
     super.key,
   });
 
@@ -101,17 +102,27 @@ class InboxCards extends StatelessWidget {
   /// Hides a repository (owner/name).
   final ValueChanged<String> onHide;
 
-  /// Takes the selected row's Start work menu, for ⌘⏎.
-  final void Function(OpenMenu open) startMenu;
+  /// The selected row's key, to scroll it into view.
+  final GlobalKey? selectedRow;
+
+  /// Takes the selected row's Start work menu (and its item), for ⌘⏎.
+  final void Function(GitHubRef ref, OpenMenu open) startMenu;
 
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final ids = [for (final s in sections) s.id];
+    // The one row [selectedRow] keys (an item may be in two cards).
+    final first = [
+      for (final s in sections)
+        for (final it in s.items)
+          if (sameRef(it.ref, picked)) it,
+    ].firstOrNull;
     final collapsed = githubCollapsed.value;
     return CardList(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+      buildAll: true,
       onReorder: (from, to) => githubCardOrder.value = reordered(
         githubCardOrder.value,
         ids,
@@ -145,14 +156,16 @@ class InboxCards extends StatelessWidget {
                 children: [
                   for (final it in s.items)
                     ItemRow(
-                      key: ValueKey('${s.id} ${it.id}'),
+                      key:
+                          (identical(it, first) ? selectedRow : null) ??
+                          ValueKey('${s.id} ${it.id}'),
                       daemon: daemon,
                       item: it,
                       selected: sameRef(it.ref, picked),
                       now: now,
                       onOpen: () => onOpen(it),
                       onHide: () => onHide(it.ref.repo),
-                      startMenu: startMenu,
+                      startMenu: (open) => startMenu(it.ref, open),
                     ),
                   if (s.items.isEmpty && s.older == 0)
                     Padding(

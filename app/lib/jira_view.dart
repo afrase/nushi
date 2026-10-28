@@ -92,10 +92,14 @@ class _JiraViewState extends State<JiraView> {
   final _viewFocus = FocusNode(debugLabel: 'jira view');
   final _jqlFocus = FocusNode(debugLabel: 'jql');
   final _jqlText = TextEditingController(text: _jql);
-  final _scroll = ScrollController();
 
-  /// The selected row's Start work menu, for ⌘⏎.
-  OpenMenu? _start;
+  /// The selected row's, to keep it in view.
+  final GlobalKey _selectedRow = GlobalKey(debugLabel: 'jira selected');
+
+  /// The selected row's Start work menu, for ⌘⏎, and whose it is: the
+  /// row registers it as it's built, and a row not built (scrolled away)
+  /// can't, so it may be another's.
+  (String, OpenMenu)? _start;
 
   JiraSite? get _siteNow {
     final sites = _sites ?? const <JiraSite>[];
@@ -153,7 +157,6 @@ class _JiraViewState extends State<JiraView> {
       return;
     }
     setState(() {
-      _start = null;
       _key =
           all.skip(at + 1).where(visible.contains).firstOrNull?.issue.key ??
           visible.lastOrNull?.issue.key;
@@ -170,7 +173,6 @@ class _JiraViewState extends State<JiraView> {
     _viewFocus.dispose();
     _jqlFocus.dispose();
     _jqlText.dispose();
-    _scroll.dispose();
     super.dispose();
   }
 
@@ -322,7 +324,21 @@ class _JiraViewState extends State<JiraView> {
     final i = visible.indexWhere((x) => x.issue.key == _key);
     final next = (i + by).clamp(0, visible.length - 1);
     setState(() => _key = visible[next].issue.key);
+    revealRow(_selectedRow, down: by > 0);
   }
+
+  /// ⌘⏎: the selected row's Start work, once it's in view (its menu opens
+  /// by it).
+  void _startWork() => revealRow(
+    _selectedRow,
+    down: true,
+    then: () {
+      if (_start case (final key, final open)
+          when key == _key && _selectedRow.currentContext != null) {
+        open();
+      }
+    },
+  );
 
   void _open(Task task) {
     setState(() {
@@ -379,7 +395,7 @@ class _JiraViewState extends State<JiraView> {
     final meta = HardwareKeyboard.instance.isMetaPressed;
     final at = _visible.where((x) => x.issue.key == _key).firstOrNull;
     if (k == LogicalKeyboardKey.enter && at != null) {
-      meta ? _start?.call() : _open(at);
+      meta ? _startWork() : _open(at);
     } else if (k == LogicalKeyboardKey.arrowDown ||
         k == LogicalKeyboardKey.keyJ && !meta) {
       _move(1);
@@ -575,7 +591,8 @@ class _JiraViewState extends State<JiraView> {
                       _open(task);
                     },
                     onMoved: _load,
-                    startMenu: (open) => _start = open,
+                    selectedRow: _selectedRow,
+                    startMenu: (key, open) => _start = (key, open),
                   ),
           ),
         ),
