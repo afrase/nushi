@@ -33,12 +33,15 @@ class ChatScreen extends StatelessWidget {
       builder: (context, _) => PhoneScreen(
         title: chat.title.isEmpty ? 'New chat' : chat.title,
         actions: [
-          if (daemon.daemonApi >= previewApi)
-            if (chatFiles(chat.items) case final files when files.isNotEmpty)
-              FilesAction(
-                files.length,
+          if (daemon.daemonApi >= previewApi &&
+              chatFiles(chat.items).isNotEmpty)
+            ListenableBuilder(
+              listenable: chat.opened,
+              builder: (context, _) => FilesAction(
+                chatArtifacts(chat, pins: false).recent.length,
                 onTap: () => FilesScreen.open(context, daemon, chat),
               ),
+            ),
         ],
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

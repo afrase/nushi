@@ -12,9 +12,9 @@ import 'package:nushi/daemon.dart';
 /// terminals, the terminal's font, whether a subagent's pane shows wide,
 /// the Jira task list's groups and assignee filters, the GitHub view's
 /// cards and filters, the sidebar's project groups' order and which are
-/// collapsed, and the models picked last. Not whether new chats get a
-/// worktree: an older `worktrees` key is ignored, and dropped by the next
-/// save.
+/// collapsed, the models picked last, and each chat's pinned artifacts.
+/// Not whether new chats get a worktree: an older `worktrees` key is
+/// ignored, and dropped by the next save.
 final showDetails = ValueNotifier<bool>(_saved['details'] != false)
   ..addListener(_save);
 final collapsedCards = ValueNotifier<Set<String>>(_strings('collapsed'))
@@ -105,6 +105,15 @@ final sidebarCollapsed = ValueNotifier<Set<String>>(
 final recentModels = ValueNotifier<List<String>>([..._strings('models')])
   ..addListener(_save);
 
+/// Each chat's pinned artifacts (as `chatFiles` names them), by chat id,
+/// in the order pinned.
+final pinnedFiles = ValueNotifier<Map<String, List<String>>>(savedPins(_saved))
+  ..addListener(_save);
+
+/// The pins kept in [saved] (`app.json` read whole, as [readSaved] does).
+Map<String, List<String>> savedPins(Map<String, Object?> saved) =>
+    _byPlace('pins', saved);
+
 /// The widths panes were dragged to, by pane (see `Resizable`).
 final paneWidths = ValueNotifier<Map<String, double>>({
   for (final MapEntry(:key, :value)
@@ -127,22 +136,27 @@ final terminalFontSize = ValueNotifier<double>(
 
 File get _settings => File('$dataDir/app.json');
 
-final Map<String, Object?> _saved = () {
+final Map<String, Object?> _saved = readSaved();
+
+/// `app.json` as it is on disk now; empty when it can't be read.
+Map<String, Object?> readSaved() {
   try {
     return jsonDecode(_settings.readAsStringSync()) as Map<String, Object?>;
   } on Object {
     return <String, Object?>{};
   }
-}();
+}
 
 Set<String> _strings(String key) => {
   ...?(_saved[key] as List?)?.whereType<String>(),
 };
 
-Map<String, List<String>> _byPlace(String name) => {
-  for (final MapEntry(:key, :value) in ((_saved[name] as Map?) ?? {}).entries)
-    if (key is String && value is List) key: [...value.whereType<String>()],
-};
+Map<String, List<String>> _byPlace(String name, [Map<String, Object?>? from]) =>
+    {
+      for (final MapEntry(:key, :value)
+          in (((from ?? _saved)[name] as Map?) ?? {}).entries)
+        if (key is String && value is List) key: [...value.whereType<String>()],
+    };
 
 /// Writes [file] whole or not at all: to a file beside it, renamed over
 /// it, so a crash mid-write can't leave half of it.
@@ -180,6 +194,7 @@ void _save() {
         'sidebarOrder': sidebarOrder.value,
         'sidebarCollapsed': sidebarCollapsed.value.toList(),
         'models': recentModels.value,
+        'pins': pinnedFiles.value,
       }),
     );
   } on Object {

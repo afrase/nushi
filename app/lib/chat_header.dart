@@ -16,7 +16,8 @@ import 'package:nushi/widgets.dart';
 
 /// The chat's header: its title (double-click renames it), the agent, its
 /// model and status, the folder while the details panel is hidden, the
-/// files it wrote that preview (Artifacts, while there are some), the
+/// files it wrote that preview (Artifacts, while there are some, counting
+/// those pinned or recent), the
 /// Chat | Changes switch, the terminal's and the panel's buttons and the
 /// chat's menu.
 class ChatHeader extends StatefulWidget {
@@ -183,14 +184,16 @@ class _ChatHeaderState extends State<ChatHeader> {
           if (files.isNotEmpty) ...[
             FilesMenu(
               chat: chat,
-              files: files,
-              tooltip: 'Artifacts: the files this chat wrote, to preview',
-              label: Text.rich(
+              tooltip: (a) =>
+                  'Artifacts: the files this chat wrote, to preview '
+                  '(${a.pinned.length + a.recent.length} pinned or recent, '
+                  '${files.length} in all)',
+              label: (a) => Text.rich(
                 TextSpan(
                   text: 'Artifacts',
                   children: [
                     TextSpan(
-                      text: ' ${files.length}',
+                      text: ' ${a.pinned.length + a.recent.length}',
                       style: TextStyle(color: t.textMuted),
                     ),
                   ],

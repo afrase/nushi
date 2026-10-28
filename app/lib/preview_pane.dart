@@ -98,17 +98,13 @@ class _PreviewPaneState extends State<PreviewPane> {
                 Expanded(
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: ListenableBuilder(
-                      listenable: widget.chat,
-                      builder: (context, _) => FilesMenu(
-                        chat: widget.chat,
-                        files: chatFiles(widget.chat.items),
-                        current: widget.path,
-                        tooltip: _watch.file?.path ?? widget.path,
-                        label: Text(
-                          baseName(widget.path),
-                          style: theme.code(t.text, size: 12),
-                        ),
+                    child: FilesMenu(
+                      chat: widget.chat,
+                      current: widget.path,
+                      tooltip: (_) => _watch.file?.path ?? widget.path,
+                      label: (_) => Text(
+                        baseName(widget.path),
+                        style: theme.code(t.text, size: 12),
                       ),
                     ),
                   ),
