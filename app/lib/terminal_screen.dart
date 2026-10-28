@@ -2,12 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:nushi/app_actions.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' as pb;
-import 'package:nushi/new_chat.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_general.dart';
-import 'package:nushi/settings_view.dart';
 import 'package:nushi/terminal_find.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/terminal_tabs.dart';
@@ -38,6 +37,10 @@ class TerminalScreen extends StatelessWidget {
     SingleActivator cmd(LogicalKeyboardKey key) =>
         SingleActivator(key, meta: true);
     return {
+      // The app's actions' keys (⌘N, ⌘,, ⌃⌘1–3…) and ⌘⇧P, the palette,
+      // passed on; ⌘K clears here, as in Terminal.
+      ...actKeys,
+      paletteKeyToo: const OpenPaletteIntent(),
       cmd(LogicalKeyboardKey.keyC): CopySelectionTextIntent.copy,
       cmd(LogicalKeyboardKey.keyV): const PasteTextIntent(
         SelectionChangedCause.keyboard,
@@ -50,12 +53,11 @@ class TerminalScreen extends StatelessWidget {
         () => closeTerminal(context, terms, info),
       ),
       toggleTerminalKey: VoidCallbackIntent(onHide),
-      settingsKey: const OpenSettingsIntent(),
-      newChatKey: const NewChatIntent(),
       cmd(LogicalKeyboardKey.keyF): VoidCallbackIntent(
         () => s.finding.value = true,
       ),
-      // ⌥⌘1–9 a terminal; ⌘1–9, ⌘[ and ⌘] switch chats, as elsewhere.
+      // ⌥⌘1–9 a terminal; ⌘1–9, ⌘[ and ⌘] switch chats, ⌃Tab and ⌃⇧Tab
+      // the chat's tabs, as elsewhere.
       for (var i = 0; i < 9 && i < list.length; i++)
         SingleActivator(LogicalKeyboardKey(0x31 + i), meta: true, alt: true):
             VoidCallbackIntent(() => terms.show(info.chatId, list[i].id)),

@@ -9,7 +9,7 @@ import 'package:nushi/settings.dart';
 
 // Switching chats by keyboard, as Claude Code does: ⌘ held alone numbers
 // the sidebar's chats, ⌘1–⌘9 opens one, ⌘[ and ⌘] go to the one before
-// and after.
+// and after. And the chat's tabs: ⌃Tab and ⌃⇧Tab go through them.
 
 /// The sidebar's groups: each folder's chats (a chat in a worktree under
 /// its repository; scratch chats under ''), the folder with the newest
@@ -111,12 +111,60 @@ const nextChatKey = SingleActivator(
   meta: true,
 );
 
-/// ⌘1–⌘9, ⌘[ and ⌘]: the keys that switch chats, wherever the focus is
-/// (a terminal, which keeps ⌘ keys, passes them on as these intents).
+/// Shows the tab [step] places on (⌃Tab is 1, ⌃⇧Tab -1) in the chat shown.
+class StepTabIntent extends Intent {
+  const new(this.step);
+
+  final int step;
+}
+
+const nextTabKey = SingleActivator(LogicalKeyboardKey.tab, control: true);
+const previousTabKey = SingleActivator(
+  LogicalKeyboardKey.tab,
+  control: true,
+  shift: true,
+);
+
+/// ⌃⌘1–⌃⌘3 show Chat, Changes and Pull request (⌘⇧3 is macOS's
+/// screenshot, so not ⌘⇧).
+const chatTabKey = SingleActivator(
+  LogicalKeyboardKey.digit1,
+  control: true,
+  meta: true,
+);
+const changesTabKey = SingleActivator(
+  LogicalKeyboardKey.digit2,
+  control: true,
+  meta: true,
+);
+const pullTabKey = SingleActivator(
+  LogicalKeyboardKey.digit3,
+  control: true,
+  meta: true,
+);
+
+SingleActivator tabKey(ChatTab tab) => switch (tab) {
+  .chat => chatTabKey,
+  .changes => changesTabKey,
+  .pull => pullTabKey,
+};
+
+/// Shows the tab of [chat] [step] places after the one shown (before,
+/// negative), wrapping: Chat, Changes, then Pull request while it has one.
+void stepTab(ChatState chat, int step) {
+  final tabs = chat.tabs;
+  chat.tab.value = tabs[(tabs.indexOf(chat.shownTab) + step) % tabs.length];
+}
+
+/// ⌘1–⌘9, ⌘[ and ⌘] that switch chats, ⌃Tab and ⌃⇧Tab that switch its
+/// tabs, wherever the focus is (a terminal, which keeps ⌘ and ⌃ keys,
+/// passes them on as these intents).
 final Map<ShortcutActivator, Intent> chatKeys = {
   for (var n = 1; n <= 9; n++) chatNumberKey(n): OpenChatIntent(n),
   previousChatKey: const StepChatIntent(-1),
   nextChatKey: const StepChatIntent(1),
+  nextTabKey: const StepTabIntent(1),
+  previousTabKey: const StepTabIntent(-1),
 };
 
 /// How long ⌘ is held alone before the chats show their numbers, so a

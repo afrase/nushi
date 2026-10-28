@@ -5,6 +5,10 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
+/// The title of a card to open and scroll into view once it's built (the
+/// palette's Artifacts…); cleared once it is.
+final revealCard = ValueNotifier<String?>(null);
+
 /// The cards in the order they were dragged into (remembered in
 /// [cardOrder]; cards it doesn't name go last).
 class PanelCards extends StatelessWidget {
@@ -22,6 +26,7 @@ class PanelCards extends StatelessWidget {
         ...byTitle.keys.where((k) => !saved.contains(k)),
       ];
       return CardList(
+        buildAll: true, // a card asked for is there to scroll to
         onReorder: (from, to) =>
             cardOrder.value = reordered(saved, titles, from, to),
         children: [
@@ -208,15 +213,35 @@ class PanelCard extends StatelessWidget {
   final Widget? action;
   final int index;
 
+  /// Opens this card (asked by [revealCard]) and, once laid out, scrolls
+  /// it into view.
+  void _reveal(BuildContext context, {required bool open}) =>
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (revealCard.value != title) return;
+        if (!open) {
+          collapsedCards.value = {...collapsedCards.value}..remove(title);
+          return; // open now: built again, and revealed then
+        }
+        revealCard.value = null;
+        if (context.mounted) {
+          Scrollable.ensureVisible(
+            context,
+            duration: const Duration(milliseconds: 200),
+          );
+        }
+      });
+
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final muted = theme.ui(t.textMuted, size: 12);
-    return ValueListenableBuilder(
-      valueListenable: collapsedCards,
-      builder: (context, collapsed, _) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([collapsedCards, revealCard]),
+      builder: (context, _) {
+        final collapsed = collapsedCards.value;
         final open = !collapsed.contains(title);
+        if (revealCard.value == title) _reveal(context, open: open);
         return CardShell(
           index: index,
           open: open,

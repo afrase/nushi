@@ -1,29 +1,24 @@
 import 'package:flutter/material.dart';
 
 import 'package:nushi/agent_mark.dart';
+import 'package:nushi/app_actions.dart';
 import 'package:nushi/chat.dart';
-import 'package:nushi/chat_files.dart';
+import 'package:nushi/chat_keys.dart';
 import 'package:nushi/chat_menu.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/jira_view.dart';
-import 'package:nushi/preview.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// What shows in a chat's place: its transcript, its changes, or its pull
-/// request.
-enum ChatTab { chat, changes, pull }
-
 /// The chat's header: its title (double-click renames it), the agent, its
 /// model and status, the folder while the details panel is hidden, the
-/// files it wrote that preview (Artifacts, while there are some, counting
-/// those pinned or recent), the
 /// Chat | Changes (| Pull request, while it has one) switch, the
-/// terminal's and the panel's buttons and the chat's menu.
+/// terminal's and the panel's buttons and the chat's menu. (The files it
+/// wrote are in the details panel's Artifacts card.)
 class ChatHeader extends StatefulWidget {
   const new(
     this.chat,
@@ -61,17 +56,13 @@ class _ChatHeaderState extends State<ChatHeader> {
         .firstOrNull
         ?.name;
     final titleStyle = theme.ui(t.text, weight: FontWeight.w600);
-    final files = widget.daemon.daemonApi >= previewApi
-        ? chatFiles(chat.items)
-        : const <String>[];
     // The title and the model (a Codex model id is long) share what the
-    // rest of the row leaves (it takes about 420 points, Artifacts 95
-    // more, the Pull request tab 85), so a narrow window cuts them short
-    // rather than overflow; with Artifacts or the tab, the title gets
-    // shorter still (at 720 points wide it would overflow).
+    // rest of the row leaves (it takes about 420 points, the Pull request
+    // tab 85 more), so a narrow window cuts them short rather than
+    // overflow; with the tab, the title gets shorter still.
     return LayoutBuilder(
       builder: (context, box) {
-        final more = (files.isEmpty ? 0 : 95) + (chat.pull == null ? 0 : 85);
+        final more = chat.pull == null ? 0 : 85;
         final room = box.maxWidth - 420 - more;
         final title = (room * 0.6).clamp(more == 0 ? 80.0 : 40.0, 320.0);
         return _row(
@@ -79,7 +70,6 @@ class _ChatHeaderState extends State<ChatHeader> {
           titleStyle,
           meta,
           modelName,
-          files,
           titleMax: title,
           modelMax: (room - title).clamp(40.0, 200.0),
         );
@@ -91,8 +81,7 @@ class _ChatHeaderState extends State<ChatHeader> {
     BuildContext context,
     TextStyle titleStyle,
     TextStyle meta,
-    String? modelName,
-    List<String> files, {
+    String? modelName, {
     required double titleMax,
     required double modelMax,
   }) {
@@ -185,27 +174,6 @@ class _ChatHeaderState extends State<ChatHeader> {
             ),
           ),
           const SizedBox(width: 12),
-          if (files.isNotEmpty) ...[
-            FilesMenu(
-              chat: chat,
-              tooltip: (a) =>
-                  'Artifacts: the files this chat wrote, to preview '
-                  '(${a.pinned.length + a.recent.length} pinned or recent, '
-                  '${files.length} in all)',
-              label: (a) => Text.rich(
-                TextSpan(
-                  text: 'Artifacts',
-                  children: [
-                    TextSpan(
-                      text: ' ${a.pinned.length + a.recent.length}',
-                      style: TextStyle(color: t.textMuted),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
           Segmented(
             value: widget.tab,
             segments: [
@@ -214,6 +182,8 @@ class _ChatHeaderState extends State<ChatHeader> {
               if (chat.pull != null) (ChatTab.pull, 'Pull request'),
             ],
             onChanged: widget.onTab,
+            tooltip: (t) =>
+                '${keyLabel(tabKey(t))}   ⌃⇥ the next tab, ⌃⇧⇥ the one before',
           ),
           const SizedBox(width: 4),
           TerminalButton(chat: chat, daemon: widget.daemon),

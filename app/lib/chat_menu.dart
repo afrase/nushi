@@ -28,7 +28,7 @@ List<MenuEntry> chatMenu(
     MenuEntry('Sleep', onPick: () => sleepChat(context, chat, daemon)),
   MenuEntry(
     chat.archived ? 'Unarchive' : 'Archive',
-    onPick: () => tryOrShow(context, () => _archive(context, chat, daemon)),
+    onPick: () => tryOrShow(context, () => archiveChat(context, chat, daemon)),
   ),
   if (knownAgents[chat.agent]?.mcp ?? true)
     MenuEntry('MCP servers…', onPick: () => daemon.showMcp(chat.folder)),
@@ -95,7 +95,7 @@ Future<bool> stopsBackground(
 
 /// Archives (or unarchives) a chat. Archiving ends its terminals: when a
 /// program runs in one, it asks first, as closing that terminal would.
-Future<void> _archive(
+Future<void> archiveChat(
   BuildContext context,
   ChatState chat,
   Daemon daemon,

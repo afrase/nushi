@@ -23,6 +23,10 @@ enum ChatPhase {
   idle,
 }
 
+/// What shows in a chat's place on the Mac: its transcript, its changes,
+/// or its pull request.
+enum ChatTab { chat, changes, pull }
+
 /// The time now; tests set their own.
 DateTime Function() clock = DateTime.now;
 
@@ -158,6 +162,19 @@ class ChatState extends ChangeNotifier {
   /// The file (as its tool row names it) whose preview shows in [pane]'s
   /// place: one or the other.
   final preview = ValueNotifier<String?>(null);
+
+  /// The tab its pane shows on the Mac (Chat whenever the pane opens):
+  /// here so the app's keys and the palette reach it wherever the focus is.
+  final tab = ValueNotifier<ChatTab>(ChatTab.chat);
+
+  /// Whether its pane, as last laid out, has room for the details panel.
+  bool panelFits = true;
+
+  /// The tabs it has: Pull request only while it has one.
+  List<ChatTab> get tabs => [.chat, .changes, if (pull != null) .pull];
+
+  /// [tab] as it shows: Chat in place of a pull request it no longer has.
+  ChatTab get shownTab => tabs.contains(tab.value) ? tab.value : .chat;
 
   /// Which files its messages name are there (links to their preview).
   final fileLinks = FileLinks();
