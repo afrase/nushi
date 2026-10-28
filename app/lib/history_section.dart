@@ -43,6 +43,7 @@ class HistorySection extends StatefulWidget {
 
 class _HistorySectionState extends State<HistorySection> {
   ListTranscriptsResponse? _list; // once the daemon said
+  String? _error; // why it didn't, until it does
   bool _slow = false; // no answer after 150 ms: rows that are coming
   late final Timer _slowTimer;
   HistoryFilter _filter = HistoryFilter.all;
@@ -78,11 +79,13 @@ class _HistorySectionState extends State<HistorySection> {
       if (!mounted) return;
       setState(() {
         _list = list;
+        _error = null;
         final ids = {for (final c in list.copies) c.chatId};
         _selected.retainWhere(ids.contains);
       });
-    } on Object {
-      // An older daemon: the table stays out.
+    } on Object catch (e) {
+      // Said in the table's place, not rows coming for good.
+      if (mounted) setState(() => _error = errorText(e));
     }
   }
 
@@ -225,7 +228,20 @@ class _HistorySectionState extends State<HistorySection> {
             final wide = historyWide(c.crossAxisExtent);
             if (list == null) {
               return SliverToBoxAdapter(
-                child: _slow ? const HistoryLoading() : const SizedBox(),
+                child: switch (_error) {
+                  final e? => SettingsGroup(
+                    children: [
+                      SettingsRow(
+                        "Couldn't list the copies",
+                        description: e,
+                        descriptionColor: NushiTheme.of(context).t.crashed,
+                        control: RunButton(label: 'Try again', run: _load),
+                      ),
+                    ],
+                  ),
+                  null when _slow => const HistoryLoading(),
+                  null => const SizedBox(),
+                },
               );
             }
             if (view.isEmpty) {

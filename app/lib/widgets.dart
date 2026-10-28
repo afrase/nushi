@@ -1,3 +1,4 @@
+import 'package:connectrpc/connect.dart';
 import 'package:flutter/material.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/controls.dart';
@@ -5,6 +6,13 @@ import 'package:nushi/controls.dart';
 import 'package:nushi/theme/theme.dart';
 
 export 'package:nushi/controls.dart';
+
+/// What a failed call says, to show: a daemon's error is its message
+/// (a `ConnectException`'s own text starts with its code: `[unknown] `).
+String errorText(Object e) => switch (e) {
+  ConnectException(:final message) => message,
+  _ => '$e',
+};
 
 /// Shows [message] in a snack bar.
 void showError(BuildContext context, Object message) =>

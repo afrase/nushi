@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/skills.dart';
+import 'package:nushi/skills_list.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -112,6 +115,32 @@ Future<void> _close(WidgetTester tester, Daemon d) async {
 
 void main() {
   setUpAll(loadFonts);
+
+  testWidgets('a refresh asked while one runs comes after it', (tester) async {
+    final held = Completer<void>();
+    var lists = 0;
+    final fake = FakeDaemon([])
+      ..answer = (input) async {
+        if (input is! ListSkillsRequest) return null;
+        final n = ++lists;
+        if (n == 1) await held.future;
+        return ListSkillsResponse(skills: [Skill(name: 'list $n')]);
+      };
+    final d = await fake.connect(tester);
+    final l = SkillsList.of(d, '/tmp/refresh', 'claude');
+    unawaited(l.refresh()); // the view opening
+    await tester.pump();
+    // A switch changed meanwhile: its write may come after that list.
+    unawaited(l.changed());
+    held.complete();
+    for (var i = 0; i < 4; i++) {
+      await tester.pump();
+    }
+    expect(lists, 2);
+    expect(l.list.skills.single.name, 'list 2');
+    expect(l.loading, isFalse);
+    d.dispose();
+  });
 
   testWidgets('the agent picker lists the agents and reads the one picked; '
       'Claude is the default', (tester) async {

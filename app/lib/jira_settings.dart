@@ -50,6 +50,7 @@ class JiraPage extends StatefulWidget {
 
 class _JiraPageState extends State<JiraPage> {
   List<JiraSite>? _sites;
+  String? _error; // why the sites couldn't be listed
   final _checked = <String, String>{}; // site id -> "Connected as …" or why not
   bool _adding = false;
 
@@ -60,10 +61,18 @@ class _JiraPageState extends State<JiraPage> {
   }
 
   Future<void> _load({bool check = false}) async {
-    final r = await widget.client.listJiraSites(ListJiraSitesRequest());
+    final ListJiraSitesResponse r;
+    try {
+      r = await widget.client.listJiraSites(ListJiraSitesRequest());
+    } on Object catch (e) {
+      // The daemon restarting, say: what went wrong, not a blank page.
+      if (mounted) setState(() => _error = jiraError(e));
+      return;
+    }
     if (!mounted) return;
     setState(() {
       _sites = r.sites;
+      _error = null;
       _adding = _adding || r.sites.isEmpty;
     });
     if (check) {
@@ -113,12 +122,28 @@ class _JiraPageState extends State<JiraPage> {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
+    final error = _error == null
+        ? null
+        : Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(_error!, style: theme.ui(t.crashed, size: 12)),
+          );
     final sites = _sites;
-    if (sites == null) return const SizedBox(height: 40);
+    if (sites == null) {
+      if (error == null) return const SizedBox(height: 40);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          error,
+          RunButton(label: 'Try again', run: () => _load(check: true)),
+        ],
+      );
+    }
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        ?error,
         if (sites.isNotEmpty)
           SettingsGroup(
             title: 'Sites',

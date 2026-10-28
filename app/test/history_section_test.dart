@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:connectrpc/connect.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -353,6 +354,27 @@ void main() {
     answer.complete(ListTranscriptsResponse());
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('history-loading')), findsNothing);
+    expect(find.text('No copies yet'), findsOneWidget);
+    d.dispose();
+  });
+
+  testWidgets('a list that fails says why, not rows coming for good; Try '
+      'again', (tester) async {
+    var fail = true;
+    final fake = _fake(
+      0,
+      answer: (list) => fail
+          ? throw ConnectException(Code.unavailable, 'daemon unavailable')
+          : list,
+    );
+    final d = await fake.connect(tester);
+    await pumpSettings(tester, d, SettingsSection.history);
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(find.byKey(const ValueKey('history-loading')), findsNothing);
+    expect(find.text('daemon unavailable'), findsOneWidget);
+    fail = false;
+    await tester.tap(find.text('Try again'));
+    await tester.pumpAndSettle();
     expect(find.text('No copies yet'), findsOneWidget);
     d.dispose();
   });

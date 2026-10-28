@@ -11,17 +11,40 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// Attachments fetched through the daemon (Jira's own, from the site
-/// added), by site and id, while the app runs.
+/// added), by site and id: the last [_keep]. One that failed isn't kept:
+/// shown again, it's asked for again (after Allow…, or the daemon back).
 final _fetched = <String, Future<GetJiraAttachmentResponse>>{};
+const _keep = 64;
 
 Future<GetJiraAttachmentResponse> _fetch(
   NushiServiceClient client,
   String site,
   String id, {
   required bool thumbnail,
-}) => _fetched['$site $id $thumbnail'] ??= client.getJiraAttachment(
-  GetJiraAttachmentRequest(site: site, id: id, thumbnail: thumbnail),
-)..ignore();
+}) {
+  final key = '$site $id $thumbnail';
+  if (_fetched[key] case final kept?) return kept;
+  final f = _fetched[key] = client.getJiraAttachment(
+    GetJiraAttachmentRequest(site: site, id: id, thumbnail: thumbnail),
+  );
+  unawaited(_dropIfFailed(key, f));
+  if (_fetched.length > _keep) {
+    final old = _fetched.keys.take(_fetched.length - _keep).toSet();
+    _fetched.removeWhere((k, _) => old.contains(k));
+  }
+  return f;
+}
+
+Future<void> _dropIfFailed(
+  String key,
+  Future<GetJiraAttachmentResponse> f,
+) async {
+  try {
+    await f;
+  } on Object {
+    _fetched.removeWhere((k, v) => k == key && identical(v, f));
+  }
+}
 
 /// What an image in an issue's text shows as: an attachment of the
 /// issue's, fetched through the daemon (never a URL of the text's own: an

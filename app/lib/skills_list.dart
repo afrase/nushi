@@ -27,19 +27,29 @@ class SkillsList extends ChangeNotifier {
   bool loading = false;
   String error = ''; // why listing failed
 
+  bool _again = false; // refresh once the running one is done
+
+  /// Lists them again; asked while a list is on its way (a switch changed
+  /// as the view opened), once more after it, which may predate the change.
   Future<void> refresh() async {
-    if (loading) return;
+    if (loading) {
+      _again = true;
+      return;
+    }
     loading = true;
     notifyListeners();
-    try {
-      list = await daemon.client.listSkills(
-        ListSkillsRequest(folder: folder, agent: agent),
-      );
-      error = '';
-      loaded = true;
-    } on Object catch (e) {
-      error = '$e';
-    }
+    do {
+      _again = false;
+      try {
+        list = await daemon.client.listSkills(
+          ListSkillsRequest(folder: folder, agent: agent),
+        );
+        error = '';
+        loaded = true;
+      } on Object catch (e) {
+        error = '$e';
+      }
+    } while (_again);
     loading = false;
     notifyListeners();
   }

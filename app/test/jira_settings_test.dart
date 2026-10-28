@@ -118,6 +118,28 @@ void main() {
     d.dispose();
   });
 
+  testWidgets('a list that fails says why, not a blank page', (tester) async {
+    var fail = true;
+    final fake = FakeDaemon([])
+      ..answer = (input) => switch (input) {
+        ListJiraSitesRequest() when fail => throw ConnectException(
+          Code.unavailable,
+          'daemon unavailable',
+        ),
+        ListJiraSitesRequest() => ListJiraSitesResponse(sites: _sites()),
+        _ => null,
+      };
+    final d = await fake.connect(tester);
+    await pumpSettings(tester, d, SettingsSection.jira);
+    expect(find.text('daemon unavailable'), findsOneWidget);
+    fail = false;
+    await tester.tap(find.text('Try again'));
+    await tester.pumpAndSettle();
+    expect(find.text('acme.atlassian.net'), findsOneWidget);
+    expect(find.text('daemon unavailable'), findsNothing);
+    d.dispose();
+  });
+
   testWidgets('adding a site checks its token', (tester) async {
     final (fake, d) = await _open(tester, sites: []);
     // No site yet: the form is open.

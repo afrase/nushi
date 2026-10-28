@@ -8,6 +8,7 @@ import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_issue.dart';
+import 'package:nushi/jira_issue_parts.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -177,6 +178,34 @@ Future<void> _close(WidgetTester tester, Daemon d) async {
 
 void main() {
   setUpAll(loadFonts);
+
+  testWidgets('an attachment that failed is asked for again when shown '
+      'again', (tester) async {
+    var asked = 0;
+    final fake = FakeDaemon([])
+      ..answer = (input) => input is GetJiraAttachmentRequest
+          ? ++asked == 1
+                ? throw StateError('the keychain needs your OK')
+                : GetJiraAttachmentResponse(mimeType: 'application/pdf')
+          : null;
+    final d = await fake.connect(tester);
+    Widget image() => MaterialApp(
+      theme: const NushiTheme(Tokens.dark).toThemeData(),
+      home: Scaffold(
+        body: AttachmentImage(d.client, 'retry.example', '7', size: 100),
+      ),
+    );
+    await tester.pumpWidget(image());
+    await tester.pump();
+    expect(find.byIcon(Icons.broken_image), findsOneWidget);
+    // Shown again (the issue opened again, after Allow…).
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(image());
+    await tester.pump();
+    expect(asked, 2);
+    expect(find.text('[application/pdf]'), findsOneWidget);
+    d.dispose();
+  });
 
   testWidgets('the issue whole; only its attachments load as images', (
     tester,
