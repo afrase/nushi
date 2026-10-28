@@ -8,6 +8,21 @@ import (
 	"path/filepath"
 )
 
+// Rewrite replaces an agent's settings file at path with data (Replace):
+// an existing file keeps its mode, and a new one is the owner's alone
+// (0600), its folder made 0700 if it's missing too. A link at path is
+// replaced, not followed: resolve one first to change what it points at.
+func Rewrite(path string, data []byte) error {
+	mode := os.FileMode(0o600)
+	if fi, err := os.Stat(path); err == nil {
+		mode = fi.Mode().Perm()
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return err
+	}
+	return Replace(path, data, mode)
+}
+
 // Replace writes data to path through a new temporary file beside it
 // (a fresh name, never an existing file or symlink), then renames it over
 // path.

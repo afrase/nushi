@@ -173,14 +173,7 @@ func setDisabled(file, item string, add bool) error {
 	if !only(b, out, item, add) {
 		return errUnsafe("more than disabledExtensions would change")
 	}
-	mode := os.FileMode(0o600)
-	if fi, err := os.Stat(file); err == nil {
-		mode = fi.Mode().Perm()
-	}
-	if err := os.MkdirAll(filepath.Dir(file), 0o700); err != nil {
-		return err
-	}
-	return atomicfile.Replace(file, out, mode)
+	return atomicfile.Rewrite(file, out)
 }
 
 // only says after decodes to before with item added to or taken out of

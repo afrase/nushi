@@ -36,13 +36,16 @@ func ReadFile(path string) ([]byte, error) {
 
 // Edit reads the JSON settings file at path, changes it through change
 // (which gets its settings by key; none for a new file) and writes it
-// back: other keys kept, the file replaced at once with its mode, a new
-// one made with its folder. created says there was none.
+// back through atomicfile.Rewrite: other keys kept, the file replaced at
+// once with its mode, a new one made private with its folder. created
+// says there was none.
 func Edit(path string, change func(map[string]json.RawMessage) error) (created bool, err error) {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil { //nolint:gosec // an agent's settings folder, as the agent makes it
+	b, err := ReadFile(path)
+	out, created, err := apply(path, b, err, change)
+	if err != nil {
 		return false, err
 	}
-	return EditIn(filepath.Dir(path), filepath.Base(path), change)
+	return created, atomicfile.Rewrite(path, out)
 }
 
 // EditIn is Edit for the file name (a relative path) inside the folder
@@ -55,23 +58,8 @@ func EditIn(base, name string, change func(map[string]json.RawMessage) error) (c
 		return false, err
 	}
 	defer root.Close() //nolint:errcheck // nothing written through it
-	path := filepath.Join(base, name)
-	settings := map[string]json.RawMessage{}
 	b, err := readIn(root, name)
-	created = os.IsNotExist(err)
-	if err == nil {
-		err = json.Unmarshal(b, &settings)
-	}
-	if err != nil && !created {
-		return false, fmt.Errorf("reading %s: %w", path, err)
-	}
-	if settings == nil { // the file holds null
-		settings = map[string]json.RawMessage{}
-	}
-	if err := change(settings); err != nil {
-		return false, fmt.Errorf("%s: %w", path, err)
-	}
-	out, err := json.MarshalIndent(settings, "", "  ")
+	out, created, err := apply(filepath.Join(base, name), b, err, change)
 	if err != nil {
 		return false, err
 	}
@@ -82,7 +70,33 @@ func EditIn(base, name string, change func(map[string]json.RawMessage) error) (c
 	if fi, err := root.Lstat(name); err == nil {
 		mode = fi.Mode().Perm()
 	}
-	return created, replaceIn(root, name, append(out, '\n'), mode)
+	return created, replaceIn(root, name, out, mode)
+}
+
+// apply changes the settings file at path, b as read (readErr: a missing
+// file has none), through change, and returns its new text; created says
+// it was missing.
+func apply(path string, b []byte, readErr error, change func(map[string]json.RawMessage) error) (out []byte, created bool, err error) {
+	settings := map[string]json.RawMessage{}
+	created = os.IsNotExist(readErr)
+	err = readErr
+	if err == nil {
+		err = json.Unmarshal(b, &settings)
+	}
+	if err != nil && !created {
+		return nil, false, fmt.Errorf("reading %s: %w", path, err)
+	}
+	if settings == nil { // the file holds null
+		settings = map[string]json.RawMessage{}
+	}
+	if err := change(settings); err != nil {
+		return nil, false, fmt.Errorf("%s: %w", path, err)
+	}
+	out, err = json.MarshalIndent(settings, "", "  ")
+	if err != nil {
+		return nil, false, err
+	}
+	return append(out, '\n'), created, nil
 }
 
 // readIn is ReadFile for name inside root.

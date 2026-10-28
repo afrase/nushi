@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/fs"
 	"maps"
-	"os"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -153,14 +152,7 @@ func setOn(path, file, name string, on bool) error {
 	if !only(before, got, file, name, on) {
 		return errUnsafe("its skills.config isn't [[skills.config]] tables Nushi can edit")
 	}
-	mode := os.FileMode(0o600)
-	if fi, err := os.Stat(path); err == nil {
-		mode = fi.Mode().Perm()
-	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return err
-	}
-	return atomicfile.Replace(path, []byte(after), mode)
+	return atomicfile.Rewrite(path, []byte(after))
 }
 
 // edit changes the file's text for the skill (file, name) going on or
