@@ -494,7 +494,9 @@ type NushiServiceClient interface {
 	// agent's own files, env and header values masked. With check_health, the
 	// agent connects to each and says how that went (Claude's `claude mcp list`,
 	// seconds), and servers only it knows (plugins', claude.ai connectors)
-	// are added.
+	// are added. Ante's (API 80): yours in $ANTE_HOME/settings.json, checked
+	// by a throwaway `ante serve`; it has no off switch nor sign-in, so
+	// SetMcpServerOn and Login are refused for it.
 	ListMcpServers(context.Context, *connect.Request[v1.ListMcpServersRequest]) (*connect.Response[v1.ListMcpServersResponse], error)
 	// Add, edit and remove an MCP server in a scope ("user", "project",
 	// "local"), through the agent's own CLI; the folder names the project.
@@ -2200,7 +2202,9 @@ type NushiServiceHandler interface {
 	// agent's own files, env and header values masked. With check_health, the
 	// agent connects to each and says how that went (Claude's `claude mcp list`,
 	// seconds), and servers only it knows (plugins', claude.ai connectors)
-	// are added.
+	// are added. Ante's (API 80): yours in $ANTE_HOME/settings.json, checked
+	// by a throwaway `ante serve`; it has no off switch nor sign-in, so
+	// SetMcpServerOn and Login are refused for it.
 	ListMcpServers(context.Context, *connect.Request[v1.ListMcpServersRequest]) (*connect.Response[v1.ListMcpServersResponse], error)
 	// Add, edit and remove an MCP server in a scope ("user", "project",
 	// "local"), through the agent's own CLI; the folder names the project.

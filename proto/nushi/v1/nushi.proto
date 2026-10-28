@@ -158,7 +158,9 @@ service NushiService {
   // agent's own files, env and header values masked. With check_health, the
   // agent connects to each and says how that went (Claude's `claude mcp list`,
   // seconds), and servers only it knows (plugins', claude.ai connectors)
-  // are added.
+  // are added. Ante's (API 80): yours in $ANTE_HOME/settings.json, checked
+  // by a throwaway `ante serve`; it has no off switch nor sign-in, so
+  // SetMcpServerOn and Login are refused for it.
   rpc ListMcpServers(ListMcpServersRequest) returns (ListMcpServersResponse);
   // Add, edit and remove an MCP server in a scope ("user", "project",
   // "local"), through the agent's own CLI; the folder names the project.
@@ -549,7 +551,8 @@ message Agent {
   // The terminal command that opens one of its sessions, followed by the
   // session id, such as "claude --resume".
   string resume = 3;
-  // Nushi shows and changes its MCP servers (ListMcpServers).
+  // Nushi shows and changes its MCP servers (ListMcpServers): Claude's,
+  // and Ante's from API 80.
   bool mcp = 4;
   // Deleting a chat archives the agent's history of it rather than
   // deleting it: the resume command still offers it.
@@ -1041,6 +1044,9 @@ message GetContextUsageResponse {
 message ListMcpServersRequest {
   string folder = 1;
   bool check_health = 2;
+  // The agent whose servers these are ("claude" when empty; API 80:
+  // "ante" too, user scope only).
+  string agent = 3;
 }
 
 message ListMcpServersResponse {
@@ -1080,6 +1086,9 @@ message AddMcpServerRequest {
   string scope = 2;
   string name = 3;
   string config_json = 4;
+  // The agent whose servers these are ("claude" when empty; API 80:
+  // "ante" too, user scope only).
+  string agent = 5;
 }
 
 message AddMcpServerResponse {}
@@ -1089,6 +1098,9 @@ message EditMcpServerRequest {
   string scope = 2;
   string name = 3;
   string config_json = 4;
+  // The agent whose servers these are ("claude" when empty; API 80:
+  // "ante" too, user scope only).
+  string agent = 5;
 }
 
 message EditMcpServerResponse {}
@@ -1097,6 +1109,9 @@ message RemoveMcpServerRequest {
   string folder = 1;
   string scope = 2;
   string name = 3;
+  // The agent whose servers these are ("claude" when empty; API 80:
+  // "ante" too, user scope only).
+  string agent = 4;
 }
 
 message RemoveMcpServerResponse {}
@@ -1107,6 +1122,9 @@ message SetMcpServerOnRequest {
   bool on = 3;
   // The server's scope: "project" (also when empty), "user" or "local".
   string scope = 4;
+  // The agent whose servers these are ("claude" when empty; API 80:
+  // "ante" too, user scope only).
+  string agent = 5;
 }
 
 message SetMcpServerOnResponse {}
@@ -1114,6 +1132,9 @@ message SetMcpServerOnResponse {}
 message LoginMcpServerRequest {
   string folder = 1;
   string name = 2;
+  // The agent whose servers these are ("claude" when empty; API 80:
+  // "ante" too, user scope only).
+  string agent = 3;
 }
 
 message LoginMcpServerResponse {}
@@ -1121,6 +1142,9 @@ message LoginMcpServerResponse {}
 message LogoutMcpServerRequest {
   string folder = 1;
   string name = 2;
+  // The agent whose servers these are ("claude" when empty; API 80:
+  // "ante" too, user scope only).
+  string agent = 3;
 }
 
 message LogoutMcpServerResponse {}

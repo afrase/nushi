@@ -1958,7 +1958,8 @@ class Agent extends $pb.GeneratedMessage {
   @$pb.TagNumber(3)
   void clearResume() => $_clearField(3);
 
-  /// Nushi shows and changes its MCP servers (ListMcpServers).
+  /// Nushi shows and changes its MCP servers (ListMcpServers): Claude's,
+  /// and Ante's from API 80.
   @$pb.TagNumber(4)
   $core.bool get mcp => $_getBF(3);
   @$pb.TagNumber(4)
@@ -7047,10 +7048,12 @@ class ListMcpServersRequest extends $pb.GeneratedMessage {
   factory ListMcpServersRequest({
     $core.String? folder,
     $core.bool? checkHealth,
+    $core.String? agent,
   }) {
     final result = ListMcpServersRequest._();
     if (folder != null) result.folder = folder;
     if (checkHealth != null) result.checkHealth = checkHealth;
+    if (agent != null) result.agent = agent;
     return result;
   }
 
@@ -7069,6 +7072,7 @@ class ListMcpServersRequest extends $pb.GeneratedMessage {
       createEmptyInstance: ListMcpServersRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'folder')
     ..aOB(2, _omitFieldNames ? '' : 'checkHealth')
+    ..aOS(3, _omitFieldNames ? '' : 'agent')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -7112,6 +7116,17 @@ class ListMcpServersRequest extends $pb.GeneratedMessage {
   $core.bool hasCheckHealth() => $_has(1);
   @$pb.TagNumber(2)
   void clearCheckHealth() => $_clearField(2);
+
+  /// The agent whose servers these are ("claude" when empty; API 80:
+  /// "ante" too, user scope only).
+  @$pb.TagNumber(3)
+  $core.String get agent => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set agent($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasAgent() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearAgent() => $_clearField(3);
 }
 
 class ListMcpServersResponse extends $pb.GeneratedMessage {
@@ -7363,12 +7378,14 @@ class AddMcpServerRequest extends $pb.GeneratedMessage {
     $core.String? scope,
     $core.String? name,
     $core.String? configJson,
+    $core.String? agent,
   }) {
     final result = AddMcpServerRequest._();
     if (folder != null) result.folder = folder;
     if (scope != null) result.scope = scope;
     if (name != null) result.name = name;
     if (configJson != null) result.configJson = configJson;
+    if (agent != null) result.agent = agent;
     return result;
   }
 
@@ -7389,6 +7406,7 @@ class AddMcpServerRequest extends $pb.GeneratedMessage {
     ..aOS(2, _omitFieldNames ? '' : 'scope')
     ..aOS(3, _omitFieldNames ? '' : 'name')
     ..aOS(4, _omitFieldNames ? '' : 'configJson')
+    ..aOS(5, _omitFieldNames ? '' : 'agent')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -7449,6 +7467,17 @@ class AddMcpServerRequest extends $pb.GeneratedMessage {
   $core.bool hasConfigJson() => $_has(3);
   @$pb.TagNumber(4)
   void clearConfigJson() => $_clearField(4);
+
+  /// The agent whose servers these are ("claude" when empty; API 80:
+  /// "ante" too, user scope only).
+  @$pb.TagNumber(5)
+  $core.String get agent => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set agent($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasAgent() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearAgent() => $_clearField(5);
 }
 
 class AddMcpServerResponse extends $pb.GeneratedMessage {
@@ -7499,12 +7528,14 @@ class EditMcpServerRequest extends $pb.GeneratedMessage {
     $core.String? scope,
     $core.String? name,
     $core.String? configJson,
+    $core.String? agent,
   }) {
     final result = EditMcpServerRequest._();
     if (folder != null) result.folder = folder;
     if (scope != null) result.scope = scope;
     if (name != null) result.name = name;
     if (configJson != null) result.configJson = configJson;
+    if (agent != null) result.agent = agent;
     return result;
   }
 
@@ -7525,6 +7556,7 @@ class EditMcpServerRequest extends $pb.GeneratedMessage {
     ..aOS(2, _omitFieldNames ? '' : 'scope')
     ..aOS(3, _omitFieldNames ? '' : 'name')
     ..aOS(4, _omitFieldNames ? '' : 'configJson')
+    ..aOS(5, _omitFieldNames ? '' : 'agent')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -7585,6 +7617,17 @@ class EditMcpServerRequest extends $pb.GeneratedMessage {
   $core.bool hasConfigJson() => $_has(3);
   @$pb.TagNumber(4)
   void clearConfigJson() => $_clearField(4);
+
+  /// The agent whose servers these are ("claude" when empty; API 80:
+  /// "ante" too, user scope only).
+  @$pb.TagNumber(5)
+  $core.String get agent => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set agent($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasAgent() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearAgent() => $_clearField(5);
 }
 
 class EditMcpServerResponse extends $pb.GeneratedMessage {
@@ -7635,11 +7678,13 @@ class RemoveMcpServerRequest extends $pb.GeneratedMessage {
     $core.String? folder,
     $core.String? scope,
     $core.String? name,
+    $core.String? agent,
   }) {
     final result = RemoveMcpServerRequest._();
     if (folder != null) result.folder = folder;
     if (scope != null) result.scope = scope;
     if (name != null) result.name = name;
+    if (agent != null) result.agent = agent;
     return result;
   }
 
@@ -7659,6 +7704,7 @@ class RemoveMcpServerRequest extends $pb.GeneratedMessage {
     ..aOS(1, _omitFieldNames ? '' : 'folder')
     ..aOS(2, _omitFieldNames ? '' : 'scope')
     ..aOS(3, _omitFieldNames ? '' : 'name')
+    ..aOS(4, _omitFieldNames ? '' : 'agent')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -7711,6 +7757,17 @@ class RemoveMcpServerRequest extends $pb.GeneratedMessage {
   $core.bool hasName() => $_has(2);
   @$pb.TagNumber(3)
   void clearName() => $_clearField(3);
+
+  /// The agent whose servers these are ("claude" when empty; API 80:
+  /// "ante" too, user scope only).
+  @$pb.TagNumber(4)
+  $core.String get agent => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set agent($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasAgent() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearAgent() => $_clearField(4);
 }
 
 class RemoveMcpServerResponse extends $pb.GeneratedMessage {
@@ -7762,12 +7819,14 @@ class SetMcpServerOnRequest extends $pb.GeneratedMessage {
     $core.String? name,
     $core.bool? on,
     $core.String? scope,
+    $core.String? agent,
   }) {
     final result = SetMcpServerOnRequest._();
     if (folder != null) result.folder = folder;
     if (name != null) result.name = name;
     if (on != null) result.on = on;
     if (scope != null) result.scope = scope;
+    if (agent != null) result.agent = agent;
     return result;
   }
 
@@ -7788,6 +7847,7 @@ class SetMcpServerOnRequest extends $pb.GeneratedMessage {
     ..aOS(2, _omitFieldNames ? '' : 'name')
     ..aOB(3, _omitFieldNames ? '' : 'on')
     ..aOS(4, _omitFieldNames ? '' : 'scope')
+    ..aOS(5, _omitFieldNames ? '' : 'agent')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -7850,6 +7910,17 @@ class SetMcpServerOnRequest extends $pb.GeneratedMessage {
   $core.bool hasScope() => $_has(3);
   @$pb.TagNumber(4)
   void clearScope() => $_clearField(4);
+
+  /// The agent whose servers these are ("claude" when empty; API 80:
+  /// "ante" too, user scope only).
+  @$pb.TagNumber(5)
+  $core.String get agent => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set agent($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasAgent() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearAgent() => $_clearField(5);
 }
 
 class SetMcpServerOnResponse extends $pb.GeneratedMessage {
@@ -7899,10 +7970,12 @@ class LoginMcpServerRequest extends $pb.GeneratedMessage {
   factory LoginMcpServerRequest({
     $core.String? folder,
     $core.String? name,
+    $core.String? agent,
   }) {
     final result = LoginMcpServerRequest._();
     if (folder != null) result.folder = folder;
     if (name != null) result.name = name;
+    if (agent != null) result.agent = agent;
     return result;
   }
 
@@ -7921,6 +7994,7 @@ class LoginMcpServerRequest extends $pb.GeneratedMessage {
       createEmptyInstance: LoginMcpServerRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'folder')
     ..aOS(2, _omitFieldNames ? '' : 'name')
+    ..aOS(3, _omitFieldNames ? '' : 'agent')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -7964,6 +8038,17 @@ class LoginMcpServerRequest extends $pb.GeneratedMessage {
   $core.bool hasName() => $_has(1);
   @$pb.TagNumber(2)
   void clearName() => $_clearField(2);
+
+  /// The agent whose servers these are ("claude" when empty; API 80:
+  /// "ante" too, user scope only).
+  @$pb.TagNumber(3)
+  $core.String get agent => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set agent($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasAgent() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearAgent() => $_clearField(3);
 }
 
 class LoginMcpServerResponse extends $pb.GeneratedMessage {
@@ -8013,10 +8098,12 @@ class LogoutMcpServerRequest extends $pb.GeneratedMessage {
   factory LogoutMcpServerRequest({
     $core.String? folder,
     $core.String? name,
+    $core.String? agent,
   }) {
     final result = LogoutMcpServerRequest._();
     if (folder != null) result.folder = folder;
     if (name != null) result.name = name;
+    if (agent != null) result.agent = agent;
     return result;
   }
 
@@ -8035,6 +8122,7 @@ class LogoutMcpServerRequest extends $pb.GeneratedMessage {
       createEmptyInstance: LogoutMcpServerRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'folder')
     ..aOS(2, _omitFieldNames ? '' : 'name')
+    ..aOS(3, _omitFieldNames ? '' : 'agent')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -8078,6 +8166,17 @@ class LogoutMcpServerRequest extends $pb.GeneratedMessage {
   $core.bool hasName() => $_has(1);
   @$pb.TagNumber(2)
   void clearName() => $_clearField(2);
+
+  /// The agent whose servers these are ("claude" when empty; API 80:
+  /// "ante" too, user scope only).
+  @$pb.TagNumber(3)
+  $core.String get agent => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set agent($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasAgent() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearAgent() => $_clearField(3);
 }
 
 class LogoutMcpServerResponse extends $pb.GeneratedMessage {
@@ -24546,7 +24645,9 @@ class NushiServiceApi {
   /// agent's own files, env and header values masked. With check_health, the
   /// agent connects to each and says how that went (Claude's `claude mcp list`,
   /// seconds), and servers only it knows (plugins', claude.ai connectors)
-  /// are added.
+  /// are added. Ante's (API 80): yours in $ANTE_HOME/settings.json, checked
+  /// by a throwaway `ante serve`; it has no off switch nor sign-in, so
+  /// SetMcpServerOn and Login are refused for it.
   $async.Future<ListMcpServersResponse> listMcpServers(
           $pb.ClientContext? ctx, ListMcpServersRequest request) =>
       _client.invoke<ListMcpServersResponse>(ctx, 'NushiService',

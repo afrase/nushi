@@ -1572,7 +1572,8 @@ type Agent struct {
 	// The terminal command that opens one of its sessions, followed by the
 	// session id, such as "claude --resume".
 	Resume string `protobuf:"bytes,3,opt,name=resume,proto3" json:"resume,omitempty"`
-	// Nushi shows and changes its MCP servers (ListMcpServers).
+	// Nushi shows and changes its MCP servers (ListMcpServers): Claude's,
+	// and Ante's from API 80.
 	Mcp bool `protobuf:"varint,4,opt,name=mcp,proto3" json:"mcp,omitempty"`
 	// Deleting a chat archives the agent's history of it rather than
 	// deleting it: the resume command still offers it.
@@ -5576,9 +5577,12 @@ func (x *GetContextUsageResponse) GetMarkdown() string {
 }
 
 type ListMcpServersRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Folder        string                 `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
-	CheckHealth   bool                   `protobuf:"varint,2,opt,name=check_health,json=checkHealth,proto3" json:"check_health,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Folder      string                 `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
+	CheckHealth bool                   `protobuf:"varint,2,opt,name=check_health,json=checkHealth,proto3" json:"check_health,omitempty"`
+	// The agent whose servers these are ("claude" when empty; API 80:
+	// "ante" too, user scope only).
+	Agent         string `protobuf:"bytes,3,opt,name=agent,proto3" json:"agent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5625,6 +5629,13 @@ func (x *ListMcpServersRequest) GetCheckHealth() bool {
 		return x.CheckHealth
 	}
 	return false
+}
+
+func (x *ListMcpServersRequest) GetAgent() string {
+	if x != nil {
+		return x.Agent
+	}
+	return ""
 }
 
 type ListMcpServersResponse struct {
@@ -5810,11 +5821,14 @@ func (x *McpServer) GetApproved() bool {
 }
 
 type AddMcpServerRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Folder        string                 `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
-	Scope         string                 `protobuf:"bytes,2,opt,name=scope,proto3" json:"scope,omitempty"`
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	ConfigJson    string                 `protobuf:"bytes,4,opt,name=config_json,json=configJson,proto3" json:"config_json,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	Folder     string                 `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
+	Scope      string                 `protobuf:"bytes,2,opt,name=scope,proto3" json:"scope,omitempty"`
+	Name       string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	ConfigJson string                 `protobuf:"bytes,4,opt,name=config_json,json=configJson,proto3" json:"config_json,omitempty"`
+	// The agent whose servers these are ("claude" when empty; API 80:
+	// "ante" too, user scope only).
+	Agent         string `protobuf:"bytes,5,opt,name=agent,proto3" json:"agent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5877,6 +5891,13 @@ func (x *AddMcpServerRequest) GetConfigJson() string {
 	return ""
 }
 
+func (x *AddMcpServerRequest) GetAgent() string {
+	if x != nil {
+		return x.Agent
+	}
+	return ""
+}
+
 type AddMcpServerResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -5914,11 +5935,14 @@ func (*AddMcpServerResponse) Descriptor() ([]byte, []int) {
 }
 
 type EditMcpServerRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Folder        string                 `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
-	Scope         string                 `protobuf:"bytes,2,opt,name=scope,proto3" json:"scope,omitempty"`
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	ConfigJson    string                 `protobuf:"bytes,4,opt,name=config_json,json=configJson,proto3" json:"config_json,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	Folder     string                 `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
+	Scope      string                 `protobuf:"bytes,2,opt,name=scope,proto3" json:"scope,omitempty"`
+	Name       string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	ConfigJson string                 `protobuf:"bytes,4,opt,name=config_json,json=configJson,proto3" json:"config_json,omitempty"`
+	// The agent whose servers these are ("claude" when empty; API 80:
+	// "ante" too, user scope only).
+	Agent         string `protobuf:"bytes,5,opt,name=agent,proto3" json:"agent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5981,6 +6005,13 @@ func (x *EditMcpServerRequest) GetConfigJson() string {
 	return ""
 }
 
+func (x *EditMcpServerRequest) GetAgent() string {
+	if x != nil {
+		return x.Agent
+	}
+	return ""
+}
+
 type EditMcpServerResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -6018,10 +6049,13 @@ func (*EditMcpServerResponse) Descriptor() ([]byte, []int) {
 }
 
 type RemoveMcpServerRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Folder        string                 `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
-	Scope         string                 `protobuf:"bytes,2,opt,name=scope,proto3" json:"scope,omitempty"`
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Folder string                 `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
+	Scope  string                 `protobuf:"bytes,2,opt,name=scope,proto3" json:"scope,omitempty"`
+	Name   string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	// The agent whose servers these are ("claude" when empty; API 80:
+	// "ante" too, user scope only).
+	Agent         string `protobuf:"bytes,4,opt,name=agent,proto3" json:"agent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6077,6 +6111,13 @@ func (x *RemoveMcpServerRequest) GetName() string {
 	return ""
 }
 
+func (x *RemoveMcpServerRequest) GetAgent() string {
+	if x != nil {
+		return x.Agent
+	}
+	return ""
+}
+
 type RemoveMcpServerResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -6119,7 +6160,10 @@ type SetMcpServerOnRequest struct {
 	Name   string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	On     bool                   `protobuf:"varint,3,opt,name=on,proto3" json:"on,omitempty"`
 	// The server's scope: "project" (also when empty), "user" or "local".
-	Scope         string `protobuf:"bytes,4,opt,name=scope,proto3" json:"scope,omitempty"`
+	Scope string `protobuf:"bytes,4,opt,name=scope,proto3" json:"scope,omitempty"`
+	// The agent whose servers these are ("claude" when empty; API 80:
+	// "ante" too, user scope only).
+	Agent         string `protobuf:"bytes,5,opt,name=agent,proto3" json:"agent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6182,6 +6226,13 @@ func (x *SetMcpServerOnRequest) GetScope() string {
 	return ""
 }
 
+func (x *SetMcpServerOnRequest) GetAgent() string {
+	if x != nil {
+		return x.Agent
+	}
+	return ""
+}
+
 type SetMcpServerOnResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -6219,9 +6270,12 @@ func (*SetMcpServerOnResponse) Descriptor() ([]byte, []int) {
 }
 
 type LoginMcpServerRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Folder        string                 `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Folder string                 `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
+	Name   string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// The agent whose servers these are ("claude" when empty; API 80:
+	// "ante" too, user scope only).
+	Agent         string `protobuf:"bytes,3,opt,name=agent,proto3" json:"agent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6270,6 +6324,13 @@ func (x *LoginMcpServerRequest) GetName() string {
 	return ""
 }
 
+func (x *LoginMcpServerRequest) GetAgent() string {
+	if x != nil {
+		return x.Agent
+	}
+	return ""
+}
+
 type LoginMcpServerResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -6307,9 +6368,12 @@ func (*LoginMcpServerResponse) Descriptor() ([]byte, []int) {
 }
 
 type LogoutMcpServerRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Folder        string                 `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Folder string                 `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
+	Name   string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// The agent whose servers these are ("claude" when empty; API 80:
+	// "ante" too, user scope only).
+	Agent         string `protobuf:"bytes,3,opt,name=agent,proto3" json:"agent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6354,6 +6418,13 @@ func (x *LogoutMcpServerRequest) GetFolder() string {
 func (x *LogoutMcpServerRequest) GetName() string {
 	if x != nil {
 		return x.Name
+	}
+	return ""
+}
+
+func (x *LogoutMcpServerRequest) GetAgent() string {
+	if x != nil {
+		return x.Agent
 	}
 	return ""
 }
@@ -18959,10 +19030,11 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\n" +
 	"categories\x18\x01 \x03(\v2\x19.nushi.v1.ContextCategoryR\n" +
 	"categories\x12\x1a\n" +
-	"\bmarkdown\x18\x02 \x01(\tR\bmarkdown\"R\n" +
+	"\bmarkdown\x18\x02 \x01(\tR\bmarkdown\"h\n" +
 	"\x15ListMcpServersRequest\x12\x16\n" +
 	"\x06folder\x18\x01 \x01(\tR\x06folder\x12!\n" +
-	"\fcheck_health\x18\x02 \x01(\bR\vcheckHealth\"h\n" +
+	"\fcheck_health\x18\x02 \x01(\bR\vcheckHealth\x12\x14\n" +
+	"\x05agent\x18\x03 \x01(\tR\x05agent\"h\n" +
 	"\x16ListMcpServersResponse\x12-\n" +
 	"\aservers\x18\x01 \x03(\v2\x13.nushi.v1.McpServerR\aservers\x12\x1f\n" +
 	"\vcheck_error\x18\x02 \x01(\tR\n" +
@@ -18979,39 +19051,45 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x03off\x18\b \x01(\bR\x03off\x12\x15\n" +
 	"\x06off_by\x18\t \x01(\tR\x05offBy\x12\x1a\n" +
 	"\bapproved\x18\n" +
-	" \x01(\bR\bapproved\"x\n" +
+	" \x01(\bR\bapproved\"\x8e\x01\n" +
 	"\x13AddMcpServerRequest\x12\x16\n" +
 	"\x06folder\x18\x01 \x01(\tR\x06folder\x12\x14\n" +
 	"\x05scope\x18\x02 \x01(\tR\x05scope\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x1f\n" +
 	"\vconfig_json\x18\x04 \x01(\tR\n" +
-	"configJson\"\x16\n" +
-	"\x14AddMcpServerResponse\"y\n" +
+	"configJson\x12\x14\n" +
+	"\x05agent\x18\x05 \x01(\tR\x05agent\"\x16\n" +
+	"\x14AddMcpServerResponse\"\x8f\x01\n" +
 	"\x14EditMcpServerRequest\x12\x16\n" +
 	"\x06folder\x18\x01 \x01(\tR\x06folder\x12\x14\n" +
 	"\x05scope\x18\x02 \x01(\tR\x05scope\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12\x1f\n" +
 	"\vconfig_json\x18\x04 \x01(\tR\n" +
-	"configJson\"\x17\n" +
-	"\x15EditMcpServerResponse\"Z\n" +
+	"configJson\x12\x14\n" +
+	"\x05agent\x18\x05 \x01(\tR\x05agent\"\x17\n" +
+	"\x15EditMcpServerResponse\"p\n" +
 	"\x16RemoveMcpServerRequest\x12\x16\n" +
 	"\x06folder\x18\x01 \x01(\tR\x06folder\x12\x14\n" +
 	"\x05scope\x18\x02 \x01(\tR\x05scope\x12\x12\n" +
-	"\x04name\x18\x03 \x01(\tR\x04name\"\x19\n" +
-	"\x17RemoveMcpServerResponse\"i\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x14\n" +
+	"\x05agent\x18\x04 \x01(\tR\x05agent\"\x19\n" +
+	"\x17RemoveMcpServerResponse\"\x7f\n" +
 	"\x15SetMcpServerOnRequest\x12\x16\n" +
 	"\x06folder\x18\x01 \x01(\tR\x06folder\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x0e\n" +
 	"\x02on\x18\x03 \x01(\bR\x02on\x12\x14\n" +
-	"\x05scope\x18\x04 \x01(\tR\x05scope\"\x18\n" +
-	"\x16SetMcpServerOnResponse\"C\n" +
+	"\x05scope\x18\x04 \x01(\tR\x05scope\x12\x14\n" +
+	"\x05agent\x18\x05 \x01(\tR\x05agent\"\x18\n" +
+	"\x16SetMcpServerOnResponse\"Y\n" +
 	"\x15LoginMcpServerRequest\x12\x16\n" +
 	"\x06folder\x18\x01 \x01(\tR\x06folder\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"\x18\n" +
-	"\x16LoginMcpServerResponse\"D\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
+	"\x05agent\x18\x03 \x01(\tR\x05agent\"\x18\n" +
+	"\x16LoginMcpServerResponse\"Z\n" +
 	"\x16LogoutMcpServerRequest\x12\x16\n" +
 	"\x06folder\x18\x01 \x01(\tR\x06folder\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"\x19\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
+	"\x05agent\x18\x03 \x01(\tR\x05agent\"\x19\n" +
 	"\x17LogoutMcpServerResponse\"A\n" +
 	"\x11ListSkillsRequest\x12\x16\n" +
 	"\x06folder\x18\x01 \x01(\tR\x06folder\x12\x14\n" +

@@ -4,6 +4,7 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
+
 import "nushi.pb.dart" as nushiv1nushi;
 
 abstract final class NushiService {
@@ -415,7 +416,9 @@ abstract final class NushiService {
   /// agent's own files, env and header values masked. With check_health, the
   /// agent connects to each and says how that went (Claude's `claude mcp list`,
   /// seconds), and servers only it knows (plugins', claude.ai connectors)
-  /// are added.
+  /// are added. Ante's (API 80): yours in $ANTE_HOME/settings.json, checked
+  /// by a throwaway `ante serve`; it has no off switch nor sign-in, so
+  /// SetMcpServerOn and Login are refused for it.
   static const listMcpServers = connect.Spec(
     '/$name/ListMcpServers',
     connect.StreamType.unary,

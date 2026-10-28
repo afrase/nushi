@@ -1746,13 +1746,14 @@ const ListMcpServersRequest$json = {
   '2': [
     {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
     {'1': 'check_health', '3': 2, '4': 1, '5': 8, '10': 'checkHealth'},
+    {'1': 'agent', '3': 3, '4': 1, '5': 9, '10': 'agent'},
   ],
 };
 
 /// Descriptor for `ListMcpServersRequest`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List listMcpServersRequestDescriptor = $convert.base64Decode(
     'ChVMaXN0TWNwU2VydmVyc1JlcXVlc3QSFgoGZm9sZGVyGAEgASgJUgZmb2xkZXISIQoMY2hlY2'
-    'tfaGVhbHRoGAIgASgIUgtjaGVja0hlYWx0aA==');
+    'tfaGVhbHRoGAIgASgIUgtjaGVja0hlYWx0aBIUCgVhZ2VudBgDIAEoCVIFYWdlbnQ=');
 
 @$core.Deprecated('Use listMcpServersResponseDescriptor instead')
 const ListMcpServersResponse$json = {
@@ -1809,6 +1810,7 @@ const AddMcpServerRequest$json = {
     {'1': 'scope', '3': 2, '4': 1, '5': 9, '10': 'scope'},
     {'1': 'name', '3': 3, '4': 1, '5': 9, '10': 'name'},
     {'1': 'config_json', '3': 4, '4': 1, '5': 9, '10': 'configJson'},
+    {'1': 'agent', '3': 5, '4': 1, '5': 9, '10': 'agent'},
   ],
 };
 
@@ -1816,7 +1818,7 @@ const AddMcpServerRequest$json = {
 final $typed_data.Uint8List addMcpServerRequestDescriptor = $convert.base64Decode(
     'ChNBZGRNY3BTZXJ2ZXJSZXF1ZXN0EhYKBmZvbGRlchgBIAEoCVIGZm9sZGVyEhQKBXNjb3BlGA'
     'IgASgJUgVzY29wZRISCgRuYW1lGAMgASgJUgRuYW1lEh8KC2NvbmZpZ19qc29uGAQgASgJUgpj'
-    'b25maWdKc29u');
+    'b25maWdKc29uEhQKBWFnZW50GAUgASgJUgVhZ2VudA==');
 
 @$core.Deprecated('Use addMcpServerResponseDescriptor instead')
 const AddMcpServerResponse$json = {
@@ -1835,6 +1837,7 @@ const EditMcpServerRequest$json = {
     {'1': 'scope', '3': 2, '4': 1, '5': 9, '10': 'scope'},
     {'1': 'name', '3': 3, '4': 1, '5': 9, '10': 'name'},
     {'1': 'config_json', '3': 4, '4': 1, '5': 9, '10': 'configJson'},
+    {'1': 'agent', '3': 5, '4': 1, '5': 9, '10': 'agent'},
   ],
 };
 
@@ -1842,7 +1845,7 @@ const EditMcpServerRequest$json = {
 final $typed_data.Uint8List editMcpServerRequestDescriptor = $convert.base64Decode(
     'ChRFZGl0TWNwU2VydmVyUmVxdWVzdBIWCgZmb2xkZXIYASABKAlSBmZvbGRlchIUCgVzY29wZR'
     'gCIAEoCVIFc2NvcGUSEgoEbmFtZRgDIAEoCVIEbmFtZRIfCgtjb25maWdfanNvbhgEIAEoCVIK'
-    'Y29uZmlnSnNvbg==');
+    'Y29uZmlnSnNvbhIUCgVhZ2VudBgFIAEoCVIFYWdlbnQ=');
 
 @$core.Deprecated('Use editMcpServerResponseDescriptor instead')
 const EditMcpServerResponse$json = {
@@ -1860,14 +1863,15 @@ const RemoveMcpServerRequest$json = {
     {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
     {'1': 'scope', '3': 2, '4': 1, '5': 9, '10': 'scope'},
     {'1': 'name', '3': 3, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'agent', '3': 4, '4': 1, '5': 9, '10': 'agent'},
   ],
 };
 
 /// Descriptor for `RemoveMcpServerRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List removeMcpServerRequestDescriptor =
-    $convert.base64Decode(
-        'ChZSZW1vdmVNY3BTZXJ2ZXJSZXF1ZXN0EhYKBmZvbGRlchgBIAEoCVIGZm9sZGVyEhQKBXNjb3'
-        'BlGAIgASgJUgVzY29wZRISCgRuYW1lGAMgASgJUgRuYW1l');
+final $typed_data.Uint8List removeMcpServerRequestDescriptor = $convert.base64Decode(
+    'ChZSZW1vdmVNY3BTZXJ2ZXJSZXF1ZXN0EhYKBmZvbGRlchgBIAEoCVIGZm9sZGVyEhQKBXNjb3'
+    'BlGAIgASgJUgVzY29wZRISCgRuYW1lGAMgASgJUgRuYW1lEhQKBWFnZW50GAQgASgJUgVhZ2Vu'
+    'dA==');
 
 @$core.Deprecated('Use removeMcpServerResponseDescriptor instead')
 const RemoveMcpServerResponse$json = {
@@ -1886,13 +1890,15 @@ const SetMcpServerOnRequest$json = {
     {'1': 'name', '3': 2, '4': 1, '5': 9, '10': 'name'},
     {'1': 'on', '3': 3, '4': 1, '5': 8, '10': 'on'},
     {'1': 'scope', '3': 4, '4': 1, '5': 9, '10': 'scope'},
+    {'1': 'agent', '3': 5, '4': 1, '5': 9, '10': 'agent'},
   ],
 };
 
 /// Descriptor for `SetMcpServerOnRequest`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List setMcpServerOnRequestDescriptor = $convert.base64Decode(
     'ChVTZXRNY3BTZXJ2ZXJPblJlcXVlc3QSFgoGZm9sZGVyGAEgASgJUgZmb2xkZXISEgoEbmFtZR'
-    'gCIAEoCVIEbmFtZRIOCgJvbhgDIAEoCFICb24SFAoFc2NvcGUYBCABKAlSBXNjb3Bl');
+    'gCIAEoCVIEbmFtZRIOCgJvbhgDIAEoCFICb24SFAoFc2NvcGUYBCABKAlSBXNjb3BlEhQKBWFn'
+    'ZW50GAUgASgJUgVhZ2VudA==');
 
 @$core.Deprecated('Use setMcpServerOnResponseDescriptor instead')
 const SetMcpServerOnResponse$json = {
@@ -1909,13 +1915,14 @@ const LoginMcpServerRequest$json = {
   '2': [
     {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
     {'1': 'name', '3': 2, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'agent', '3': 3, '4': 1, '5': 9, '10': 'agent'},
   ],
 };
 
 /// Descriptor for `LoginMcpServerRequest`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List loginMcpServerRequestDescriptor = $convert.base64Decode(
     'ChVMb2dpbk1jcFNlcnZlclJlcXVlc3QSFgoGZm9sZGVyGAEgASgJUgZmb2xkZXISEgoEbmFtZR'
-    'gCIAEoCVIEbmFtZQ==');
+    'gCIAEoCVIEbmFtZRIUCgVhZ2VudBgDIAEoCVIFYWdlbnQ=');
 
 @$core.Deprecated('Use loginMcpServerResponseDescriptor instead')
 const LoginMcpServerResponse$json = {
@@ -1932,6 +1939,7 @@ const LogoutMcpServerRequest$json = {
   '2': [
     {'1': 'folder', '3': 1, '4': 1, '5': 9, '10': 'folder'},
     {'1': 'name', '3': 2, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'agent', '3': 3, '4': 1, '5': 9, '10': 'agent'},
   ],
 };
 
@@ -1939,7 +1947,7 @@ const LogoutMcpServerRequest$json = {
 final $typed_data.Uint8List logoutMcpServerRequestDescriptor =
     $convert.base64Decode(
         'ChZMb2dvdXRNY3BTZXJ2ZXJSZXF1ZXN0EhYKBmZvbGRlchgBIAEoCVIGZm9sZGVyEhIKBG5hbW'
-        'UYAiABKAlSBG5hbWU=');
+        'UYAiABKAlSBG5hbWUSFAoFYWdlbnQYAyABKAlSBWFnZW50');
 
 @$core.Deprecated('Use logoutMcpServerResponseDescriptor instead')
 const LogoutMcpServerResponse$json = {

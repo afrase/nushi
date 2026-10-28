@@ -9,8 +9,9 @@ import 'package:nushi/mcp_servers.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// Opens the form that adds a server to [list]'s folder, or edits [server]
-/// (its name and scope stay).
+/// Opens the form that adds a server to [list]'s folder (for its agent),
+/// or edits [server] (its name and scope stay). Ante's are only yours, and
+/// it doesn't speak SSE.
 Future<void> mcpForm(
   BuildContext context,
   McpServers list, {
@@ -166,6 +167,7 @@ class _FormState extends State<_Form> {
       if (_editing) {
         await l.daemon.client.editMcpServer(
           EditMcpServerRequest(
+            agent: l.agent,
             folder: l.folder,
             scope: _scope,
             name: name,
@@ -175,6 +177,7 @@ class _FormState extends State<_Form> {
       } else {
         await l.daemon.client.addMcpServer(
           AddMcpServerRequest(
+            agent: l.agent,
             folder: l.folder,
             scope: _scope,
             name: name,
@@ -201,7 +204,11 @@ class _FormState extends State<_Form> {
     final muted = theme.ui(t.textMuted, size: 12);
     final mono = theme.code(t.text, size: 12);
     final stdio = _transport == 'stdio';
+    final ante = widget.list.ante;
     final where = switch (_scope) {
+      _ when ante =>
+        'Yours, in every folder: Ante reads no project’s MCP servers, so '
+            'there’s no other scope.',
       'user' => 'Yours, in every folder.',
       'project' => 'In the repository’s .mcp.json, shared with everyone on it.',
       _ => 'Yours, in ${folderParts(widget.list.folder).$1} only.',
@@ -211,7 +218,13 @@ class _FormState extends State<_Form> {
       child: Text(text, style: theme.ui(t.textSecondary, size: 12)),
     );
     return AlertDialog(
-      title: Text(_editing ? 'Edit ${widget.server!.name}' : 'Add MCP server'),
+      title: Text(
+        _editing
+            ? 'Edit ${widget.server!.name}'
+            : ante
+            ? 'Add an MCP server for Ante'
+            : 'Add MCP server',
+      ),
       content: SizedBox(
         width: 520,
         child: SingleChildScrollView(
@@ -230,7 +243,7 @@ class _FormState extends State<_Form> {
               label('Scope'),
               Row(
                 children: [
-                  if (_editing)
+                  if (_editing || ante)
                     Text(scopes[_scope]!.$1, style: theme.ui(t.text))
                   else
                     Segmented(
@@ -260,10 +273,10 @@ class _FormState extends State<_Form> {
                   children: [
                     Segmented(
                       value: _transport,
-                      segments: const [
+                      segments: [
                         ('stdio', 'stdio'),
                         ('http', 'HTTP'),
-                        ('sse', 'SSE'),
+                        if (!ante || _transport == 'sse') ('sse', 'SSE'),
                       ],
                       onChanged: (v) => setState(() => _transport = v),
                     ),
@@ -296,6 +309,14 @@ class _FormState extends State<_Form> {
                   ),
                   label('Headers'),
                   PairRows(_headers, 'Header', () => setState(() {})),
+                  if (ante)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        'Ante sends headers from version 0.2.15 on.',
+                        style: muted,
+                      ),
+                    ),
                 ],
                 if (_editing)
                   Padding(

@@ -129,11 +129,11 @@ func (s *Service) notify(folder, scope string) {
 		return
 	}
 	if scope == "user" {
-		s.changed(func(string) bool { return true })
+		s.changed(s.agent, func(string) bool { return true })
 		return
 	}
 	project := s.config.Project(folder)
-	s.changed(func(f string) bool {
+	s.changed(s.agent, func(f string) bool {
 		return f == folder || strings.HasPrefix(f, folder+"/") || s.config.Project(f) == project
 	})
 }

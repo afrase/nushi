@@ -18,3 +18,4 @@ All of this is Claude-specific code in `internal/claudemcp`, behind an interface
 
 ## Amendments
 - 2026-10-26: a user or local server's per-project off is now changed by asking Claude to write it (ADR 0050); your `settings.json` and more keys of the local settings are written for skills and plugins (ADR 0051). Nushi still never writes `~/.claude.json`.
+- 2026-10-28: Ante's MCP servers are shown and changed too, written by Nushi in Ante's settings under Ante's lock, since Ante has no CLI for them (ADR 0058).

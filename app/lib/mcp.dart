@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
@@ -8,17 +10,25 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/mcp_actions.dart';
 import 'package:nushi/mcp_form.dart';
 import 'package:nushi/mcp_servers.dart';
+import 'package:nushi/menu.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// Settings › MCP servers: a folder picker, then the servers by scope,
-/// each with its state, transport and command or URL (secrets masked).
+/// Settings › MCP servers: a folder picker, then each agent's servers
+/// (Claude's by scope, Ante's yours only), each with its state, transport
+/// and command or URL (secrets masked).
 class McpView extends StatelessWidget {
   const new({required this.daemon, required this.folder, super.key});
 
   final Daemon daemon;
   final String folder;
+
+  /// What Ante's group says: it has yours only, and no off switch.
+  static const anteAbout =
+      'Yours, in every folder: Ante reads no project’s MCP servers. It has '
+      'no off switch (remove a server instead), and a change applies to new '
+      'Ante sessions.';
 
   Future<void> _pick() async {
     final f = await getDirectoryPath(confirmButtonText: 'Show');
@@ -29,67 +39,110 @@ class McpView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final list = McpServers.of(daemon, folder);
+    final agents = [for (final a in mcpAgents) a.name];
+    final lists = [
+      for (final a in agents.isEmpty ? ['claude'] : agents)
+        McpServers.of(daemon, folder, agent: a),
+    ];
     final (name, dir) = folderParts(
       folder,
       scratch: daemon.chats.values.any((c) => c.scratch && c.folder == folder),
     );
     return ListenableBuilder(
-      listenable: list,
-      builder: (context, _) => SettingsPage(
-        title: switch (mcpAgent) {
-          final a? when knownAgents.length > 1 => '${a.title}’s MCP servers',
-          _ => 'MCP servers',
-        },
-        actions: [
-          if (list.checking)
-            Text('Checking…', style: theme.ui(t.textMuted, size: 12)),
-          Button(
-            label: 'Check again',
-            onPressed: list.checking ? null : list.refresh,
-          ),
-          Button(
-            label: 'Add server',
-            icon: Icons.add,
-            onPressed: () => mcpForm(context, list),
-          ),
-        ],
-        children: [
-          Row(
-            children: [
-              Text('In ', style: theme.ui(t.textSecondary, size: 12)),
-              Flexible(
-                child: MenuField(
-                  compact: true,
-                  entries: folderEntries(
-                    daemon,
-                    checked: folder,
-                    onPick: (f) => f == null ? _pick() : daemon.showMcp(f),
-                  ),
-                  label: Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(text: name, style: theme.ui(t.text, size: 12)),
-                        TextSpan(
-                          text: '  $dir',
-                          style: theme.ui(t.textMuted, size: 12),
-                        ),
-                      ],
+      listenable: Listenable.merge(lists),
+      builder: (context, _) {
+        final checking = lists.any((l) => l.checking);
+        return SettingsPage(
+          title: 'MCP servers',
+          actions: [
+            if (checking)
+              Text('Checking…', style: theme.ui(t.textMuted, size: 12)),
+            Button(
+              label: 'Check again',
+              onPressed: checking
+                  ? null
+                  : () {
+                      for (final l in lists) {
+                        unawaited(l.refresh());
+                      }
+                    },
+            ),
+            if (lists.length == 1)
+              Button(
+                label: 'Add server',
+                icon: Icons.add,
+                onPressed: () => mcpForm(context, lists.single),
+              )
+            else
+              MenuButton(
+                label: 'Add server',
+                icon: Icons.add,
+                entries: [
+                  for (final l in lists)
+                    MenuEntry(
+                      'For ${agentTitle(l.agent)}…',
+                      onPick: () => mcpForm(context, l),
+                    ),
+                ],
+              ),
+          ],
+          children: [
+            Row(
+              children: [
+                Text('In ', style: theme.ui(t.textSecondary, size: 12)),
+                Flexible(
+                  child: MenuField(
+                    compact: true,
+                    entries: folderEntries(
+                      daemon,
+                      checked: folder,
+                      onPick: (f) => f == null ? _pick() : daemon.showMcp(f),
+                    ),
+                    label: Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: name,
+                            style: theme.ui(t.text, size: 12),
+                          ),
+                          TextSpan(
+                            text: '  $dir',
+                            style: theme.ui(t.textMuted, size: 12),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            for (final list in lists) ...[
+              if (lists.length > 1)
+                Padding(
+                  padding: const EdgeInsets.only(top: 20),
+                  child: Text(
+                    agentTitle(list.agent),
+                    style: theme.ui(t.text, size: 14, weight: FontWeight.w600),
+                  ),
+                ),
+              if (list.error.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(list.error, style: theme.ui(t.crashed, size: 12)),
+                ),
+              if (list.ante)
+                _Group(list, 'user', 'User', anteAbout)
+              else
+                for (final MapEntry(key: scope, value: (title, about))
+                    in scopes.entries)
+                  if (scope != 'other' ||
+                      list.servers.any((s) => s.scope == scope))
+                    _Group(list, scope, title, about),
             ],
-          ),
-          const SizedBox(height: 4),
-          if (list.error.isNotEmpty)
-            Text(list.error, style: theme.ui(t.crashed, size: 12)),
-          for (final MapEntry(key: scope, value: (title, about))
-              in scopes.entries)
-            if (scope != 'other' || list.servers.any((s) => s.scope == scope))
-              _Group(list, scope, title, about),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
 }
