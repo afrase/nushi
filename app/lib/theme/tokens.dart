@@ -41,7 +41,6 @@ class Tokens {
     required this.selected,
     required this.borderSubtle,
     required this.borderStrong,
-    required this.focus,
     required this.text,
     required this.textSecondary,
     required this.textMuted,
@@ -53,6 +52,7 @@ class Tokens {
     required this.grip,
     required this.accent,
     required this.accentSoft,
+    required this.accentInk,
     required this.running,
     required this.needs,
     required this.needsSoft,
@@ -101,7 +101,6 @@ class Tokens {
 
   final Color borderSubtle;
   final Color borderStrong;
-  final Color focus;
 
   final Color text;
   final Color textSecondary;
@@ -117,8 +116,18 @@ class Tokens {
   final Color fieldBorderHover;
   final Color grip;
 
+  // The accent: [accent] fills (a primary button, a switch that's on),
+  // [accentSoft] behind it; [accentInk] where the accent is text or an
+  // icon, or the focus ring: [accent] is too dark for that on the dark
+  // theme's surfaces (3.34:1 on base, 2.80 on raised). [accentInk] passes
+  // AA in both: light 6.06 on base, 5.71 on raised, 5.08 on selected,
+  // 5.15 on accentSoft; dark 6.62, 5.55, 4.93, 5.05.
   final Color accent;
   final Color accentSoft;
+  final Color accentInk;
+
+  /// The ring a focused control wears.
+  Color get focus => accentInk;
 
   // Status: a running chat, one that needs the user, done, idle, failed.
   final Color running;
@@ -191,7 +200,6 @@ class Tokens {
     selected: Color(0xFFE9EBF0),
     borderSubtle: Color(0xFFEBECF0),
     borderStrong: Color(0xFFC9CCD6),
-    focus: Color(0xFF2F6AE0),
     text: Color(0xFF1E1F22),
     textSecondary: Color(0xFF494B57),
     textMuted: Color(0xFF5D6170),
@@ -203,6 +211,7 @@ class Tokens {
     grip: Color(0xFF8A8E9B),
     accent: Color(0xFF2F6AE0),
     accentSoft: Color(0xFFE5EDFC),
+    accentInk: Color(0xFF2A5CC8),
     running: Color(0xFF2A5CC8),
     needs: Color(0xFF8F5200),
     needsSoft: Color(0xFFFBF0DC),
@@ -274,7 +283,6 @@ class Tokens {
     selected: Color(0xFF33353A),
     borderSubtle: Color(0xFF393B40),
     borderStrong: Color(0xFF4E5157),
-    focus: Color(0xFF2F6AE0),
     text: Color(0xFFDFE1E5),
     textSecondary: Color(0xFFB4B8BF),
     textMuted: Color(0xFFA2A6AE),
@@ -286,6 +294,7 @@ class Tokens {
     grip: Color(0xFF80848C),
     accent: Color(0xFF2F6AE0),
     accentSoft: Color(0xFF26334F),
+    accentInk: Color(0xFF7AA3F9),
     running: Color(0xFF7AA3F9),
     needs: Color(0xFFE9AC4C),
     needsSoft: Color(0xFF3A3121),

@@ -50,7 +50,7 @@ class QuestionOption extends StatelessWidget {
               (true, true) => Icons.check_box,
             },
             size: 16,
-            color: picked ? t.accent : t.textSecondary,
+            color: picked ? t.accentInk : t.textSecondary,
           ),
           Expanded(
             child: Text.rich(

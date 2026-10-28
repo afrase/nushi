@@ -204,7 +204,7 @@ class _Choice extends StatelessWidget {
               Icon(
                 picked ? Icons.check_circle : Icons.circle_outlined,
                 size: 22,
-                color: picked ? t.accent : t.borderStrong,
+                color: picked ? t.accentInk : t.borderStrong,
               ),
             ],
           ),

@@ -145,7 +145,12 @@ class FolderButton extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (enabled) chevron,
+                  // Flush with the card's other values (MenuField's flush).
+                  if (enabled)
+                    Transform.translate(
+                      offset: const Offset(2, 0),
+                      child: chevron,
+                    ),
                 ],
               )
             : Row(

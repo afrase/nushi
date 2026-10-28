@@ -111,11 +111,14 @@ void main() {
       final icon = tester.getRect(
         find.descendant(of: button, matching: find.byIcon(Icons.add)),
       );
+      // The label, then its key.
       final label = tester.getRect(
-        find.descendant(of: button, matching: find.text('New chat')),
+        find.descendant(of: button, matching: find.text('⌘N')),
       );
       expect(box.width, greaterThan(label.right - icon.left + 40));
       expect((icon.left - box.left) - (box.right - label.right), closeTo(0, 1));
+      // A secondary button: the accent is for the one action of a card.
+      expect(tester.widget<Button>(button).kind, ButtonKind.secondary);
       d.dispose();
     }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
   }

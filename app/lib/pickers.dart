@@ -118,7 +118,7 @@ class Pickers extends StatelessWidget {
             padding: const EdgeInsets.only(right: 10),
             child: Tooltip(
               message: ultracode!.description,
-              child: Text('Ultracode', style: theme.ui(t.accent, size: 12)),
+              child: Text('Ultracode', style: theme.ui(t.accentInk, size: 12)),
             ),
           ),
         if (rest.isNotEmpty)

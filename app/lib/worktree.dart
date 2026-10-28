@@ -18,9 +18,10 @@ const IconData worktreeIcon = Icons.account_tree_outlined;
 /// worktree move to another), with the worktree icon and Rename branch…
 /// (between turns) for a worktree chat, and its base; for a chat without
 /// messages a "New worktree" switch, which moves it into a new worktree or
-/// back (this chat only: the next new chat starts without one); otherwise
-/// "Move to new worktree"; and beside either, "Move to worktree" for the
-/// repository's other worktrees. [branch] is the branch checked out in
+/// back (this chat only: the next new chat starts without one); outside a
+/// worktree, the Worktree row ([WorktreeMenu]): New worktree… (but for a
+/// chat without messages, which has the switch) and the repository's
+/// other worktrees. [branch] is the branch checked out in
 /// the chat's folder, [list] what ListBranches said of it, asked again
 /// by [onOpen]; [onChanged] once Rename branch… renamed it or a switch
 /// switched it, [onChanges] shows the Changes view.
@@ -37,8 +38,14 @@ List<(String?, Widget)> worktreeRows(
   final wt = chat.worktree;
   final offer = !chat.archived;
   final can = offer && !chat.busy && !chat.waiting;
-  final others = offer && wt == null
-      ? MoveToWorktree(chat: chat, daemon: daemon, list: list, enabled: can)
+  final menu = offer && wt == null
+      ? WorktreeMenu(
+          chat: chat,
+          daemon: daemon,
+          list: list,
+          onOpen: onOpen,
+          onNew: chat.fresh ? null : () => _confirmMove(context, chat, daemon),
+        )
       : null;
   return [
     (
@@ -109,23 +116,10 @@ List<(String?, Widget)> worktreeRows(
           ),
         ),
       ),
-      if (others != null) (null, others),
-    ] else if (offer && wt == null)
-      (
-        null,
-        Wrap(
-          spacing: 8,
-          runSpacing: 6,
-          children: [
-            Button(
-              label: 'Move to new worktree',
-              icon: worktreeIcon,
-              onPressed: can ? () => _confirmMove(context, chat, daemon) : null,
-            ),
-            ?others,
-          ],
-        ),
-      ),
+      // The switch makes a new one: the row only for those there.
+      if (menu != null && menu.others.isNotEmpty) ('Worktree', menu),
+    ] else if (menu != null)
+      ('Worktree', menu),
   ];
 }
 
@@ -182,7 +176,7 @@ class _NewChatBarState extends State<NewChatBar> with FollowsChanges {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final on = chat.worktree != null;
-    final color = on ? t.accent : t.textSecondary;
+    final color = on ? t.accentInk : t.textSecondary;
     return Row(
       children: [
         Flexible(

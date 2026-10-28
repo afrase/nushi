@@ -87,7 +87,7 @@ class _SidebarState extends State<Sidebar> {
             child: Button(
               label: 'New chat',
               icon: Icons.add,
-              kind: ButtonKind.primary,
+              hint: '⌘N',
               onPressed: starting == null ? () => _new('') : null,
             ),
           ),
@@ -285,7 +285,12 @@ class _ChatRowState extends State<_ChatRow> {
             ),
             child: Row(
               children: [
-                ChatDot(chat: chat),
+                // Its state in a word on hover ("needs you"), which the
+                // row leaves to the dot so the title keeps its width.
+                Tooltip(
+                  message: phaseWord(chat.phase, t).$1,
+                  child: ChatDot(chat: chat),
+                ),
                 const SizedBox(width: 6),
                 Tooltip(
                   message: chat.agentName,
@@ -311,9 +316,7 @@ class _ChatRowState extends State<_ChatRow> {
                           ),
                         ),
                 ),
-                if (chat.waiting)
-                  Text('needs you', style: theme.ui(t.needs, size: 11.5))
-                else if (chat.jiraKey.isNotEmpty)
+                if (chat.jiraKey.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(left: 6),
                     child: Text(

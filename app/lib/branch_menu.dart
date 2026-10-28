@@ -271,42 +271,77 @@ Future<void> openWorktree(
   await tryOrShow(context, () => daemon.moveChat(chat, w.path));
 }
 
-/// "Move to worktree ▾" beside "Move to new worktree": the repository's
-/// other worktrees, by branch; picking one moves the chat there. Nothing
-/// when there are none.
-class MoveToWorktree extends StatelessWidget {
+/// The Environment card's Worktree row for a chat outside a worktree: its
+/// value "None", and a menu of [onNew] ("New worktree…", when given), a
+/// divider, then the repository's other worktrees by branch; picking one
+/// moves the chat there. Mid-turn, as the Branch row: the value shows and
+/// the rows are unavailable, under why. [list] is what ListBranches last
+/// said; [onOpen] asks again.
+class WorktreeMenu extends StatelessWidget {
   const new({
     required this.chat,
     required this.daemon,
     required this.list,
     super.key,
-    this.enabled = true,
+    this.onNew,
+    this.onOpen,
   });
 
   final ChatState chat;
   final Daemon daemon;
   final ListBranchesResponse? list;
-  final bool enabled;
+  final VoidCallback? onNew;
+  final VoidCallback? onOpen;
+
+  /// The repository's worktrees but the chat's own folder.
+  List<GitWorktree> get others => [
+    ...?list?.worktrees.where((w) => !w.current),
+  ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => IntrinsicWidth(
+    // Within the row's height, as the Branch row: the tint overhangs it.
+    child: SizedBox(
+      height: 16,
+      child: OverflowBox(
+        maxHeight: 24,
+        child: MenuField(
+          compact: true,
+          onOpen: onOpen,
+          entries: worktreeEntries(context),
+          label: const Text('None'),
+        ),
+      ),
+    ),
+  );
+
+  /// The menu's rows.
+  List<MenuEntry> worktreeEntries(BuildContext context) {
     final list = this.list;
-    final others = [...?list?.worktrees.where((w) => !w.current)];
-    if (list == null || others.isEmpty) return const SizedBox.shrink();
-    return MenuButton(
-      label: 'Move to worktree',
-      icon: Icons.account_tree_outlined,
-      entries: [
-        if (enabled)
-          for (final w in others)
-            MenuEntry(
-              w.branch.isEmpty ? 'detached HEAD' : w.branch,
-              detail: worktreePlace(w, list),
-              tooltip: tildePath(w.path),
-              onPick: () => unawaited(openWorktree(context, chat, daemon, w)),
-            ),
+    final others = this.others;
+    final working = chat.busy || chat.waiting;
+    return [
+      if (working)
+        const MenuEntry.heading(
+          'Once the agent is done: it’s working in this folder',
+        ),
+      if (onNew case final add?) ...[
+        MenuEntry('New worktree…', onPick: working ? null : add),
+        if (list == null || others.isNotEmpty) MenuEntry.divider,
       ],
-    );
+      if (list == null)
+        const MenuEntry('Loading…')
+      else
+        for (final w in others)
+          MenuEntry(
+            w.branch.isEmpty ? 'detached HEAD' : w.branch,
+            detail: worktreePlace(w, list),
+            tooltip: tildePath(w.path),
+            onPick: working
+                ? null
+                : () => unawaited(openWorktree(context, chat, daemon, w)),
+          ),
+    ];
   }
 }
 
