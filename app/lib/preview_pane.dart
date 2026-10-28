@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:nushi/chat.dart';
+import 'package:nushi/chat_files.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/preview.dart';
@@ -8,8 +9,9 @@ import 'package:nushi/skills_list.dart';
 import 'package:nushi/theme/theme.dart';
 
 /// A file the agent wrote, beside the chat where a subagent's pane opens:
-/// its name, Live while the daemon keeps it current, Preview or Source
-/// (Markdown), Open in Finder and Close. Read-only.
+/// its name (a menu of the chat's other files), Live while the daemon
+/// keeps it current, Preview or Source (Markdown), Open in Finder and
+/// Close. Read-only.
 class PreviewPane extends StatefulWidget {
   const new({
     required this.chat,
@@ -73,14 +75,22 @@ class _PreviewPaneState extends State<PreviewPane> {
                   size: 14,
                   color: t.textSecondary,
                 ),
+                // The name opens the chat's other files.
                 Expanded(
-                  child: Tooltip(
-                    message: _watch.file?.path ?? widget.path,
-                    child: Text(
-                      baseName(widget.path),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.code(t.text, size: 12),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: ListenableBuilder(
+                      listenable: widget.chat,
+                      builder: (context, _) => FilesMenu(
+                        chat: widget.chat,
+                        files: chatFiles(widget.chat.items),
+                        current: widget.path,
+                        tooltip: _watch.file?.path ?? widget.path,
+                        label: Text(
+                          baseName(widget.path),
+                          style: theme.code(t.text, size: 12),
+                        ),
+                      ),
                     ),
                   ),
                 ),

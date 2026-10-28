@@ -51,19 +51,21 @@ typedef OpenMenu = void Function([Offset? at]);
 /// opens it is a control of `controls.dart` (a [MenuField], a
 /// [MenuButton], a [MenuIcon]) or a row's right-click: never bare text.
 /// With [digits] the keys 1–9 pick its first rows, numbered on their right.
-/// [onClose] runs once it has closed.
+/// [onOpen] runs as it opens, [onClose] once it has closed.
 class Menu extends StatefulWidget {
   const new({
     required this.entries,
     required this.builder,
     super.key,
     this.digits = false,
+    this.onOpen,
     this.onClose,
   });
 
   final List<MenuEntry> entries;
   final Widget Function(BuildContext context, OpenMenu open) builder;
   final bool digits;
+  final VoidCallback? onOpen;
   final VoidCallback? onClose;
 
   @override
@@ -109,6 +111,7 @@ class _MenuState extends State<Menu> {
       ),
       onOpen: () {
         if (widget.digits) _focus.requestFocus();
+        widget.onOpen?.call();
       },
       // After the menu has settled its own focus.
       onClose: () => WidgetsBinding.instance.addPostFrameCallback(

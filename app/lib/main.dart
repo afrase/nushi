@@ -16,6 +16,7 @@ import 'package:nushi/folder_button.dart';
 import 'package:nushi/github_view.dart';
 import 'package:nushi/jira_view.dart';
 import 'package:nushi/new_chat.dart';
+import 'package:nushi/open_file.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/remote.dart';
 import 'package:nushi/removed_chats.dart';
@@ -104,6 +105,12 @@ class _NushiAppState extends State<NushiApp> {
             onSelected: () =>
                 newChat(_navigator.currentContext!, widget.daemon, ''),
           ),
+          PlatformMenuItem(
+            label: 'Open File…',
+            shortcut: openFileKey,
+            onSelected: () =>
+                unawaited(openFile(_navigator.currentContext!, widget.daemon)),
+          ),
         ],
       ),
       PlatformMenu(
@@ -168,6 +175,7 @@ class _NushiAppState extends State<NushiApp> {
           bindings: {
             settingsKey: widget.daemon.openSettings,
             newChatKey: () => newChat(context, widget.daemon, ''),
+            openFileKey: () => unawaited(openFile(context, widget.daemon)),
             jiraKey: () =>
                 widget.daemon.showJira(open: !widget.daemon.jiraOpen),
             githubKey: () =>
@@ -304,12 +312,21 @@ class _ChatPaneState extends State<_ChatPane> {
   void initState() {
     super.initState();
     widget.chat.addListener(_showFile);
+    widget.chat.preview.addListener(_showPreview);
   }
 
   @override
   void dispose() {
     widget.chat.removeListener(_showFile);
+    widget.chat.preview.removeListener(_showPreview);
     super.dispose();
+  }
+
+  /// A file's preview opened (from Files, or ⌘P) shows beside the chat.
+  void _showPreview() {
+    if (widget.chat.preview.value != null && _changes) {
+      setState(() => _changes = false);
+    }
   }
 
   /// A file to show (ChatState.showFile, from a review's finding) shows in

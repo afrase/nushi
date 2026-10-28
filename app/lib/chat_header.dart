@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/agent_mark.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/chat_files.dart';
 import 'package:nushi/chat_menu.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/jira_view.dart';
+import 'package:nushi/preview.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
@@ -14,6 +16,7 @@ import 'package:nushi/widgets.dart';
 
 /// The chat's header: its title (double-click renames it), the agent, its
 /// model and status, the folder while the details panel is hidden, the
+/// files it wrote that preview (Files, while there are some), the
 /// Chat | Changes switch, the terminal's and the panel's buttons and the
 /// chat's menu.
 class ChatHeader extends StatefulWidget {
@@ -53,18 +56,23 @@ class _ChatHeaderState extends State<ChatHeader> {
         .firstOrNull
         ?.name;
     final titleStyle = theme.ui(t.text, weight: FontWeight.w600);
+    final files = widget.daemon.daemonApi >= previewApi
+        ? chatFiles(chat.items)
+        : const <String>[];
     // The title and the model (a Codex model id is long) share what the
-    // rest of the row leaves (it takes about 420 points), so a narrow
-    // window cuts them short rather than overflow.
+    // rest of the row leaves (it takes about 420 points, Files 70 more),
+    // so a narrow window cuts them short rather than overflow; with Files,
+    // the title gets shorter still (at 720 points wide it would overflow).
     return LayoutBuilder(
       builder: (context, box) {
-        final room = box.maxWidth - 420;
-        final title = (room * 0.6).clamp(80.0, 320.0);
+        final room = box.maxWidth - 420 - (files.isEmpty ? 0 : 70);
+        final title = (room * 0.6).clamp(files.isEmpty ? 80.0 : 56.0, 320.0);
         return _row(
           context,
           titleStyle,
           meta,
           modelName,
+          files,
           titleMax: title,
           modelMax: (room - title).clamp(40.0, 200.0),
         );
@@ -76,7 +84,8 @@ class _ChatHeaderState extends State<ChatHeader> {
     BuildContext context,
     TextStyle titleStyle,
     TextStyle meta,
-    String? modelName, {
+    String? modelName,
+    List<String> files, {
     required double titleMax,
     required double modelMax,
   }) {
@@ -169,6 +178,25 @@ class _ChatHeaderState extends State<ChatHeader> {
             ),
           ),
           const SizedBox(width: 12),
+          if (files.isNotEmpty) ...[
+            FilesMenu(
+              chat: chat,
+              files: files,
+              tooltip: 'The files this chat wrote, to preview',
+              label: Text.rich(
+                TextSpan(
+                  text: 'Files',
+                  children: [
+                    TextSpan(
+                      text: ' ${files.length}',
+                      style: TextStyle(color: t.textMuted),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
           Segmented(
             value: widget.changes,
             segments: const [(false, 'Chat'), (true, 'Changes')],

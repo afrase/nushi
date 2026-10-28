@@ -250,6 +250,7 @@ class MenuField extends StatelessWidget {
     this.compact = false,
     this.tooltip = '',
     this.digits = false,
+    this.onOpen,
     this.onClose,
   });
 
@@ -259,6 +260,7 @@ class MenuField extends StatelessWidget {
   final bool compact;
   final String tooltip;
   final bool digits;
+  final VoidCallback? onOpen;
   final VoidCallback? onClose;
 
   @override
@@ -268,6 +270,7 @@ class MenuField extends StatelessWidget {
     return Menu(
       entries: entries,
       digits: digits,
+      onOpen: onOpen,
       onClose: onClose,
       builder: (context, open) => Pressable(
         onTap: entries.isEmpty ? null : open,

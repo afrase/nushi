@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/chat_files.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/phone/connection_bar.dart';
+import 'package:nushi/phone/files_screen.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/preview_screen.dart';
 import 'package:nushi/phone/ui.dart';
@@ -15,7 +17,8 @@ import 'package:nushi/transcript.dart';
 
 /// A chat on the phone: the Mac's transcript (messages, tool rows
 /// collapsed, plans, subagents, answerable prompts and questions) and its
-/// composer (send, queue, steer, stop).
+/// composer (send, queue, steer, stop); Files in its bar lists the files
+/// it wrote, to preview.
 class ChatScreen extends StatelessWidget {
   const new(this.phone, this.chat, {super.key});
 
@@ -29,6 +32,14 @@ class ChatScreen extends StatelessWidget {
       listenable: Listenable.merge([chat, daemon]),
       builder: (context, _) => PhoneScreen(
         title: chat.title.isEmpty ? 'New chat' : chat.title,
+        actions: [
+          if (daemon.daemonApi >= previewApi)
+            if (chatFiles(chat.items) case final files when files.isNotEmpty)
+              FilesAction(
+                files.length,
+                onTap: () => FilesScreen.open(context, daemon, chat),
+              ),
+        ],
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
