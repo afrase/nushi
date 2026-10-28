@@ -55,6 +55,7 @@ type info struct {
 type turn struct {
 	id      string
 	started bool
+	done    bool // ended: result has its answer
 	result  chan turnResult
 	usage   acp.Usage
 }
@@ -169,8 +170,13 @@ func (s *session) beginLocked(t *turn) {
 	s.turn, s.idle = t, make(chan struct{})
 }
 
-// endLocked ends the running turn t with its result.
+// endLocked ends turn t with its result, once: a write to the host that
+// fails as the host goes, and the host going, both end it.
 func (s *session) endLocked(t *turn, resp *acp.PromptResponse, err error) {
+	if t.done {
+		return
+	}
+	t.done = true
 	if s.turn == t {
 		s.turn = nil
 		close(s.idle)
