@@ -9,7 +9,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/markdown.dart';
-import 'package:nushi/motion.dart';
+import 'package:nushi/preview_text.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -17,15 +17,54 @@ import 'package:nushi/widgets.dart';
 const previewApi = 75;
 
 /// What a preview shows a file as.
-enum PreviewKind { markdown, image }
+enum PreviewKind {
+  markdown,
+  image,
+  html,
+  svg,
+  pdf,
+  csv,
 
-/// How [path] previews, or null for a file the preview can't show.
+  /// Code and text: its source only, highlighted.
+  code;
+
+  /// Drawn by a web view (the Mac) or a frame (the phone).
+  bool get page => this == html || this == svg || this == pdf;
+
+  /// Has Preview and Source.
+  bool get rendered =>
+      this == markdown || this == html || this == svg || this == csv;
+}
+
+/// Extensions of code and text files a preview shows as source.
+const _code = {
+  'json', 'jsonl', 'yaml', 'yml', 'toml', 'txt', 'log', 'ini', 'cfg', //
+  'conf', 'xml', 'go', 'dart', 'py', 'js', 'mjs', 'cjs', 'ts', 'tsx', //
+  'jsx', 'swift', 'rs', 'rb', 'java', 'kt', 'kts', 'scala', 'c', 'h', //
+  'cc', 'cpp', 'hpp', 'm', 'mm', 'cs', 'sh', 'bash', 'zsh', 'fish', //
+  'sql', 'css', 'scss', 'less', 'proto', 'lua', 'php', 'pl', 'r', 'ex', //
+  'exs', 'erl', 'hs', 'ml', 'clj', 'el', 'vim', 'tf', 'hcl', 'graphql', //
+  'vue', 'svelte', 'zig', 'nix', 'gradle', 'diff', 'patch', 'mk', //
+};
+
+/// Files named without an extension that are code.
+const _codeNames = {'Makefile', 'Dockerfile', 'Justfile', 'Gemfile'};
+
+/// How [path] previews, or null for a file the preview can't show (a
+/// binary, an unknown type).
 PreviewKind? previewKind(String path) {
-  final dot = path.lastIndexOf('.');
-  if (dot < 0 || dot < path.lastIndexOf('/')) return null;
-  return switch (path.substring(dot + 1).toLowerCase()) {
+  final name = baseName(path);
+  if (_codeNames.contains(name)) return PreviewKind.code;
+  final dot = name.lastIndexOf('.');
+  if (dot < 0) return null;
+  return switch (name.substring(dot + 1).toLowerCase()) {
     'md' || 'markdown' => PreviewKind.markdown,
     'png' || 'jpg' || 'jpeg' || 'gif' || 'webp' => PreviewKind.image,
+    'html' || 'htm' => PreviewKind.html,
+    'svg' => PreviewKind.svg,
+    'pdf' => PreviewKind.pdf,
+    'csv' => PreviewKind.csv,
+    final e when _code.contains(e) => PreviewKind.code,
     _ => null,
   };
 }
@@ -122,71 +161,118 @@ class FileWatch extends ChangeNotifier {
   }
 }
 
-/// What a preview shows of [watch]'s file: the Markdown rendered (or its
-/// [source] in the code font), the image, or why it can't show it. Too
-/// large a file offers [onReveal] (Open in Finder) when given.
+/// Why [watch]'s file shows nothing yet, as a note in its place: the
+/// daemon refused it, it hasn't come, it isn't there, or it's over the
+/// daemon's cap (unless [capped] is false: a web view reads it from disk),
+/// offering [onReveal] (Open in Finder) when given. Null once it can show.
+Widget? previewStatus(
+  BuildContext context,
+  FileWatch watch, {
+  VoidCallback? onReveal,
+  bool capped = true,
+}) {
+  final f = watch.file;
+  if (watch.error.isNotEmpty) return PreviewNote(watch.error);
+  if (f == null) {
+    return const Center(
+      child: SizedBox.square(
+        dimension: 16,
+        child: CircularProgressIndicator(strokeWidth: 1.5),
+      ),
+    );
+  }
+  if (f.missing) return const PreviewNote('The file isn’t there (yet).');
+  if (f.tooLarge && capped) {
+    return PreviewNote(
+      'Too large to preview (${_size(f.size.toInt())}).',
+      action: onReveal == null
+          ? null
+          : Button(
+              label: 'Open in Finder',
+              icon: Icons.folder_open_outlined,
+              onPressed: onReveal,
+            ),
+    );
+  }
+  return null;
+}
+
+/// A few words in a preview's place, centered, with an [action] under.
+class PreviewNote extends StatelessWidget {
+  const new(this.text, {super.key, this.action});
+
+  final String text;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 12,
+          children: [
+            Text(
+              text,
+              textAlign: TextAlign.center,
+              style: theme.ui(theme.t.textSecondary),
+            ),
+            ?action,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// What a preview shows of [watch]'s file, by its kind ([previewKind]):
+/// Markdown rendered, an image, a CSV's table, a page through [page] (the
+/// Mac's web view or the phone's frame, which follow [watch] themselves),
+/// or, for code and with [source], its text highlighted ([SourceView]).
 class PreviewBody extends StatelessWidget {
   const new({
     required this.watch,
     required this.source,
     super.key,
     this.onReveal,
+    this.page,
     this.padding = const EdgeInsets.fromLTRB(28, 22, 28, 28),
   });
 
   final FileWatch watch;
   final bool source;
   final VoidCallback? onReveal;
+  final Widget Function(FileWatch watch)? page;
   final EdgeInsets padding;
 
   @override
   Widget build(BuildContext context) {
+    final kind = previewKind(watch.path) ?? PreviewKind.code;
+    final page = this.page;
+    if (!kind.page || page == null) return _file(context, kind, source);
+    if (kind == PreviewKind.pdf) return page(watch);
+    // Both stay built, so the web view is made once.
+    return IndexedStack(
+      index: source ? 1 : 0,
+      sizing: StackFit.expand,
+      children: [page(watch), _file(context, kind, true)],
+    );
+  }
+
+  Widget _file(BuildContext context, PreviewKind kind, bool source) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     return ListenableBuilder(
       listenable: watch,
       builder: (context, _) {
-        final f = watch.file;
-        Widget note(String text, {Widget? action}) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 12,
-              children: [
-                Text(
-                  text,
-                  textAlign: TextAlign.center,
-                  style: theme.ui(t.textSecondary),
-                ),
-                ?action,
-              ],
-            ),
-          ),
-        );
-        if (watch.error.isNotEmpty) return note(watch.error);
-        if (f == null) {
-          return const Center(
-            child: SizedBox.square(
-              dimension: 16,
-              child: CircularProgressIndicator(strokeWidth: 1.5),
-            ),
-          );
+        if (previewStatus(context, watch, onReveal: onReveal)
+            case final status?) {
+          return status;
         }
-        if (f.missing) return note('The file isn’t there (yet).');
-        if (f.tooLarge) {
-          return note(
-            'Too large to preview (${_size(f.size.toInt())}).',
-            action: onReveal == null
-                ? null
-                : Button(
-                    label: 'Open in Finder',
-                    icon: Icons.folder_open_outlined,
-                    onPressed: onReveal,
-                  ),
-          );
-        }
-        if (previewKind(watch.path) == PreviewKind.image) {
+        final f = watch.file!;
+        if (kind == PreviewKind.image) {
           return Padding(
             padding: padding,
             child: Center(
@@ -201,22 +287,29 @@ class PreviewBody extends StatelessWidget {
             ),
           );
         }
+        if (kind == PreviewKind.pdf) {
+          return const PreviewNote('Open it on your Mac to see it.');
+        }
         final text = utf8.decode(f.data, allowMalformed: true);
+        if (kind == PreviewKind.csv && !source) {
+          return CsvTable(text, padding: padding);
+        }
+        if (kind != PreviewKind.markdown || source) {
+          return SourceView(text, path: watch.path, padding: padding);
+        }
         return SelectionArea(
           child: SingleChildScrollView(
             padding: padding,
-            child: source
-                ? Text(text, style: theme.code(t.textSecondary, size: 12))
-                : Align(
-                    alignment: Alignment.topLeft,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 760),
-                      child: AgentMarkdown(
-                        text,
-                        images: (uri, alt) => _image(f.path, uri, alt),
-                      ),
-                    ),
-                  ),
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 760),
+                child: AgentMarkdown(
+                  text,
+                  images: (uri, alt) => _image(f.path, uri, alt),
+                ),
+              ),
+            ),
           ),
         );
       },
@@ -292,99 +385,4 @@ class _ChatImageState extends State<_ChatImage> {
       );
     },
   );
-}
-
-/// The Preview and Source switch over a Markdown file.
-class SourceSwitch extends StatelessWidget {
-  const new({required this.source, required this.onChanged, super.key});
-
-  final bool source;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) => Segmented(
-    value: source,
-    segments: const [(false, 'Preview'), (true, 'Source')],
-    onChanged: onChanged,
-  );
-}
-
-/// The green mark of a preview the daemon keeps current; its dot pulses
-/// once each time [version] (the file as last sent) changes.
-class LiveMark extends StatefulWidget {
-  const new({super.key, this.size = 12, this.version});
-
-  final double size;
-  final Object? version;
-
-  @override
-  State<LiveMark> createState() => _LiveMarkState();
-}
-
-class _LiveMarkState extends State<LiveMark>
-    with SingleTickerProviderStateMixin {
-  late final _pulse = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 500),
-    value: 1,
-  );
-  late final Animation<double> _grow = _scale.animate(_pulse);
-
-  // Up to 1.8 times its size and back, each way easing out.
-  static final Animatable<double> _scale = TweenSequence([
-    TweenSequenceItem(
-      tween: Tween(
-        begin: 1.0,
-        end: 1.8,
-      ).chain(CurveTween(curve: Curves.easeOut)),
-      weight: 30,
-    ),
-    TweenSequenceItem(
-      tween: Tween(
-        begin: 1.8,
-        end: 1.0,
-      ).chain(CurveTween(curve: Curves.easeOut)),
-      weight: 70,
-    ),
-  ]);
-
-  @override
-  void didUpdateWidget(LiveMark old) {
-    super.didUpdateWidget(old);
-    if (old.version != null &&
-        !identical(old.version, widget.version) &&
-        !reduceMotion(context)) {
-      _pulse.forward(from: 0).ignore();
-    }
-  }
-
-  @override
-  void dispose() {
-    _pulse.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    return Tooltip(
-      message: 'Updates as the file changes',
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        spacing: 5,
-        children: [
-          ScaleTransition(
-            scale: _grow,
-            child: Container(
-              width: 6,
-              height: 6,
-              decoration: BoxDecoration(color: t.done, shape: BoxShape.circle),
-            ),
-          ),
-          Text('Live', style: theme.ui(t.done, size: widget.size)),
-        ],
-      ),
-    );
-  }
 }

@@ -59,7 +59,7 @@ final _items = <Item>[
   _call('r', 'README.md', kind: 'read'),
   _call('t', 'tmp.md'),
   _call('d', 'tmp.md', kind: 'delete'),
-  _call('g', 'internal/api/api.go'),
+  _call('g', 'go.sum'),
   _call('w2', 'docs/report.md'),
   Item(id: 'm', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE, text: 'Done.'),
 ];
@@ -132,8 +132,8 @@ void main() {
   setUpAll(loadFonts);
 
   test('the files a chat wrote: previewable, once, newest first', () {
-    // Not the Go file, the one read, the failed write or the deleted one;
-    // the subagent's note; the report once, where it changed last.
+    // Not go.sum (no preview), the one read, the failed write or the
+    // deleted one; the subagent's note; the report once, where it changed last.
     expect(chatFiles(_items), [
       'docs/report.md',
       'docs/img/chart.png',

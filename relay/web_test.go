@@ -31,6 +31,7 @@ func webDir(t *testing.T) string {
 		"orphan.js.br":                "a copy of nothing",
 		"assets/fonts/x.ttf":          "font",
 		"manifest.json":               `{"name": "Nushi"}`,
+		"frame.html":                  "<script>addEventListener(\"message\", () => {})</script>",
 		"canvaskit/canvaskit.wasm":    "\x00asm",
 		"ck-0123456789abcdef/ck.wasm": "\x00asm",
 		"icons/Icon-192.png":          "\x89PNG",
@@ -204,6 +205,17 @@ func TestWebHeaders(t *testing.T) {
 		if resp.Header.Get("Content-Security-Policy") == "" || resp.Header.Get("X-Content-Type-Options") != "nosniff" {
 			t.Errorf("%s: without the strict headers", name)
 		}
+	}
+	// The phone's frame for agents' pages: sandboxed, its own CSP, framed
+	// only by the app.
+	if resp, _ := get(t, srv.URL+"/frame.html", nil); resp.StatusCode != http.StatusOK ||
+		!strings.HasPrefix(resp.Header.Get("Content-Security-Policy"), "sandbox allow-scripts;") ||
+		!strings.Contains(resp.Header.Get("Content-Security-Policy"), "frame-ancestors 'self'") ||
+		resp.Header.Get("X-Frame-Options") != "SAMEORIGIN" || resp.Header.Get("Permissions-Policy") != "camera=(), microphone=(), geolocation=(), payment=(), usb=()" {
+		t.Errorf("frame.html: %d %q", resp.StatusCode, resp.Header)
+	}
+	if !strings.Contains(csp, "frame-src 'self'") {
+		t.Errorf("the CSP: %s", csp)
 	}
 	if resp, _ := get(t, srv.URL+"/sw.js", nil); resp.Header.Get("Content-Type") != "text/javascript; charset=utf-8" || resp.Header.Get("Service-Worker-Allowed") != "" {
 		t.Errorf("sw.js: %q", resp.Header)

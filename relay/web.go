@@ -207,7 +207,8 @@ func typeOf(name string) string {
 
 // csp is the pages' Content-Security-Policy: everything from the app's own
 // origin, and WebSockets to it. CanvasKit needs WebAssembly, and Flutter
-// sets styles on the elements it makes.
+// sets styles on the elements it makes. Frames only of the app's own files:
+// framePage.
 func csp(origin string) string {
 	ws := "wss://" + strings.TrimPrefix(origin, "https://")
 	if host, ok := strings.CutPrefix(origin, "http://"); ok {
@@ -215,8 +216,22 @@ func csp(origin string) string {
 	}
 	return "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; " +
 		"img-src 'self' blob:; font-src 'self'; connect-src 'self' " + ws + "; " +
-		"worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; " +
+		"frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; " +
 		"require-trusted-types-for 'script'; trusted-types flutter-js flutter-engine nushi"
+}
+
+// framePage is where the phone shows a page an agent wrote
+// (`app/web/frame.html`, `page_frame.dart`): the app sends the page's text
+// and the frame writes it. Sandboxed, it has an origin of its own (no
+// storage of the app's, nothing of the app's page), so its CSP can let the
+// page's scripts and the network run as in a browser (the owner's call,
+// step 376). A srcdoc or blob: frame would take the app's CSP instead.
+const framePage = "frame.html"
+
+func frameHeaders(h http.Header) {
+	h.Set("Content-Security-Policy", "sandbox allow-scripts; default-src * data: blob: 'unsafe-inline' 'unsafe-eval'; frame-ancestors 'self'")
+	h.Set("X-Frame-Options", "SAMEORIGIN")
+	h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()")
 }
 
 func (s *Site) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -238,6 +253,9 @@ func (s *Site) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if s.fonts[name] {
 		s.serveFont(w, r, name)
 		return
+	}
+	if name == framePage {
+		frameHeaders(h)
 	}
 	f := s.files[name]
 	if f == nil {
