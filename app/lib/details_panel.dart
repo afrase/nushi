@@ -56,6 +56,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
   GetFolderStatusResponse? _status; // counted as the Changes view shows
   Scope _scope = Scope.uncommitted;
   List<Commit> _commits = []; // in Commits
+  ListBranchesResponse? _branches; // for the Branch row's menu
   String? _error;
   late GetContextUsageResponse? _context = _last(chat.id)?.$2;
 
@@ -152,9 +153,23 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
     super.dispose();
   }
 
+  /// The folder's branches and worktrees, for the Branch row's menu: asked
+  /// with the rest, and again as the menu opens.
+  Future<void> _listBranches() async {
+    try {
+      final r = await daemon.client.listBranches(
+        ListBranchesRequest(folder: chat.folder),
+      );
+      if (mounted) setState(() => _branches = r);
+    } on Object {
+      // Outside git, or gone: the menu says Loading… until asked again.
+    }
+  }
+
   @override
   Future<void> reload() async {
     _schedule();
+    unawaited(_listBranches());
     try {
       final span = await ChangeSpan.of(daemon, chat);
       if (mounted) {
@@ -219,7 +234,10 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
               chat,
               daemon,
               status.branch,
-              onRenamed: () => unawaited(reload()),
+              list: _branches,
+              onOpen: () => unawaited(_listBranches()),
+              onChanged: () => unawaited(reload()),
+              onChanges: widget.onChanges,
             ),
           if (status != null && status.gone)
             (

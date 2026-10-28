@@ -107,8 +107,10 @@ class ItemView extends StatelessWidget {
           'taken_back' => (Icons.undo, t.textMuted),
           // The agent working on its own: a chapter without a message.
           'own_turn' => (Icons.update, t.textMuted),
-          // Nushi named the worktree's branch after the chat.
-          'branch_renamed' => (Icons.account_tree_outlined, t.textMuted),
+          // Nushi named the worktree's branch after the chat, or the
+          // folder was switched to another branch.
+          'branch_renamed' ||
+          'branch_switched' => (Icons.account_tree_outlined, t.textMuted),
           'error' ||
           'not_ready' ||
           'folder_gone' ||
