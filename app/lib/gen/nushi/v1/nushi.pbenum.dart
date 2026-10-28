@@ -53,7 +53,9 @@ class ItemKind extends $pb.ProtobufEnum {
   /// "reopen_failed" (ReopenChat tries again). "own_turn" marks where the
   /// agent starts working on its own, outside a turn of the user's (after a
   /// background task ended). "branch_renamed" says Nushi named the chat's
-  /// branch after it, between turns (the agent isn't told).
+  /// branch after it, between turns (the agent isn't told);
+  /// "branch_switched" that the chat's folder was switched to another
+  /// branch (SwitchBranch).
   static const ItemKind ITEM_KIND_NOTICE =
       ItemKind._(8, _omitEnumNames ? '' : 'ITEM_KIND_NOTICE');
 

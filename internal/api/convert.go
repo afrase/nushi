@@ -180,7 +180,7 @@ func chatProto(s model.Session) *nushiv1.Chat {
 	out := &nushiv1.Chat{Id: s.ID, Agent: s.Agent, Folder: s.Folder, Title: cmp.Or(s.Name, s.Title), Mode: s.Mode,
 		CreatedUnixMs: s.Created.UnixMilli(), Archived: s.Archived, SessionId: s.SessionID, Scratch: s.Scratch, Unseen: s.Unseen}
 	if wt := s.Worktree; wt != nil {
-		out.Worktree = &nushiv1.Worktree{Repo: wt.Repo, Path: wt.Path, Branch: wt.Branch, Base: wt.Base, BaseCommit: wt.BaseCommit}
+		out.Worktree = &nushiv1.Worktree{Repo: wt.Repo, Path: wt.Path, Branch: wt.Branch, Base: wt.Base, BaseCommit: wt.BaseCommit, Found: wt.Found}
 	}
 	if is := s.Issue; is != nil {
 		out.JiraSite, out.JiraKey = is.Site, is.Key

@@ -12,7 +12,10 @@ import (
 )
 
 // Move moves a chat to another folder, or with worktree to a new git
-// worktree of folder's repository. A chat without messages gets a new
+// worktree of folder's repository. A folder in a worktree that's there
+// already (another of the repository's worktrees) runs the chat in it,
+// as one Nushi didn't make (Found), never removed by Nushi. A chat with
+// messages is told where it went with its next prompt. A chat without messages gets a new
 // session there. A chat with messages gets a fork of its session there: the
 // agent's record of the session is copied into the folder's history, forked
 // with the folder as its cwd (a new session id, with the whole conversation),
@@ -60,6 +63,8 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 		wt, folder, err = s.addWorktree(ctx, folder, "", "")
 	case oldWT != nil && within(folder, oldWT.Path):
 		wt = oldWT // still in its worktree
+	default:
+		wt = s.foundWorktree(ctx, c, folder)
 	}
 	var o opened
 	switch {
@@ -79,6 +84,10 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 				s.Earlier = append(slices.Clip(s.Earlier), model.AgentSession{ID: s.SessionID, Folder: s.Folder})
 			}
 			s.Folder, s.SessionID, s.Worktree, s.Scratch = folder, o.sid, wt, false
+			// Back in one it ran in before: it's the chat's own again.
+			s.EarlierWorktrees = slices.DeleteFunc(slices.Clone(s.EarlierWorktrees), func(e model.Worktree) bool { return wt != nil && e.Path == wt.Path })
+			// Told where it is with the next prompt; a fresh chat's session starts there.
+			s.Moved, s.BranchFrom = !fresh, ""
 		})
 		if replay {
 			c.agent = nil // reopened below
@@ -94,7 +103,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 			_ = old.Stop(stopGrace) // its process is gone either way
 		}
 		go s.discard(c, sides) //nolint:gosec // discarding outlives the request
-		if left := oldWT != nil && wt != oldWT; left && (!fresh || s.inUse(c, oldWT.Path) || !s.dropWorktree(oldWT)) {
+		if left := oldWT != nil && wt != oldWT && !oldWT.Found; left && (!fresh || s.inUse(c, oldWT.Path) || !s.dropWorktree(oldWT)) {
 			c.mu.Lock()
 			c.saveLocked(func(s *model.Session) { // it stays, with the work in it, until Delete
 				s.EarlierWorktrees = append(slices.Clip(s.EarlierWorktrees), *oldWT)
@@ -124,6 +133,25 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 	c.statusChangedLocked()
 	c.deliverLocked()
 	return err
+}
+
+// foundWorktree is the worktree a chat moving to folder runs in when folder
+// is in one that isn't its repository's own folder: one Nushi made for the
+// chat before it moved out (its own again), else one that was there
+// (Found); nil otherwise.
+func (s *Service) foundWorktree(ctx context.Context, c *chat, folder string) *model.Worktree {
+	c.mu.Lock()
+	earlier := slices.Clone(c.session.EarlierWorktrees)
+	c.mu.Unlock()
+	for _, wt := range earlier {
+		if within(folder, wt.Path) {
+			return &wt
+		}
+	}
+	if s.worktrees == nil {
+		return nil
+	}
+	return s.worktrees.Found(ctx, folder)
 }
 
 // within says whether folder is dir or a folder in it.

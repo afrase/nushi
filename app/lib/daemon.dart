@@ -38,7 +38,7 @@ final String dataDir =
         : '$support/Nushi');
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 82;
+const apiVersion = 83;
 
 /// The API from which a daemon restarts itself once nothing runs, when
 /// asked (RestartWhenIdle).

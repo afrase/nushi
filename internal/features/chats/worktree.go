@@ -9,6 +9,7 @@ import (
 	"math/rand/v2"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -34,6 +35,26 @@ type Worktrees interface {
 	RenameBranch(ctx context.Context, wt model.Worktree, to string) error
 	// CheckBranch refuses a name git wouldn't take for a branch in repo.
 	CheckBranch(ctx context.Context, repo, name string) error
+	Checkouts
+}
+
+// Checkouts reads and switches a repository's checkouts: its worktrees
+// and the branch each has.
+type Checkouts interface {
+	// List lists folder's repository's worktrees, the main one first,
+	// the one folder is in Current; those git would prune left out.
+	List(ctx context.Context, folder string) ([]model.WorktreeEntry, error)
+	// Found returns the worktree folder is in when it isn't its
+	// repository's own folder, as one that was there (Found); else nil.
+	Found(ctx context.Context, folder string) *model.Worktree
+	// Branch is the branch folder has checked out ("" when detached).
+	Branch(ctx context.Context, folder string) string
+	// Changed counts folder's uncommitted changes to tracked files.
+	Changed(ctx context.Context, folder string) (int, error)
+	// Switch checks out a local branch in folder (git switch), or a new
+	// one from HEAD with create; a branch that isn't there fails with
+	// fs.ErrNotExist, a new one whose name is taken with fs.ErrExist.
+	Switch(ctx context.Context, folder, branch string, create bool) error
 }
 
 var (
@@ -74,13 +95,23 @@ func (s *Service) addWorktree(ctx context.Context, folder, branch, from string) 
 	return nil, "", errors.New("couldn't find a free name for the worktree")
 }
 
+// made is the worktrees Nushi made for a chat (the one it runs in first),
+// which Delete offers to remove: never one it found there.
+func made(sess model.Session) []model.Worktree {
+	wts := slices.Clone(sess.EarlierWorktrees)
+	if wt := sess.Worktree; wt != nil && !wt.Found {
+		wts = append([]model.Worktree{*wt}, wts...)
+	}
+	return wts
+}
+
 // dropWorktree removes a worktree no chat uses any more, and its branch,
 // if they hold no work, and says whether it did; otherwise they stay.
 //
 //nolint:contextcheck // a worktree's removal shouldn't stop halfway because the app went away
 func (s *Service) dropWorktree(wt *model.Worktree) bool {
-	if wt == nil {
-		return false
+	if wt == nil || wt.Found {
+		return false // one that was there isn't Nushi's to remove
 	}
 	ctx := context.Background()
 	st, err := s.worktrees.Inspect(ctx, *wt)

@@ -242,7 +242,7 @@ func folderGone(sess model.Session) error {
 	if _, err := os.Stat(sess.Folder); !errors.Is(err, fs.ErrNotExist) {
 		return nil
 	}
-	if wt := sess.Worktree; wt != nil {
+	if wt := sess.Worktree; wt != nil && !wt.Found {
 		return fmt.Errorf("its worktree %s was removed outside Nushi; deleting the chat cleans up its branch %s", wt.Path, wt.Branch)
 	}
 	return fmt.Errorf("its folder %s is gone", sess.Folder)

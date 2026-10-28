@@ -4,7 +4,6 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
-
 import "nushi.pb.dart" as nushiv1nushi;
 
 abstract final class NushiService {
@@ -216,6 +215,20 @@ abstract final class NushiService {
     nushiv1nushi.RenameBranchResponse.new,
   );
 
+  /// Checks out a branch in a chat's folder (git switch), or a new one from
+  /// HEAD. Refused (an error) for a worktree chat and while it, or another
+  /// chat in the same checkout, works; answered without switching when the
+  /// branch is another worktree's, the folder has uncommitted changes (not
+  /// for a new branch), or other chats work there and with_others isn't
+  /// set. Each chat there gets a "branch_switched" line and is told with its
+  /// next prompt. (API 83)
+  static const switchBranch = connect.Spec(
+    '/$name/SwitchBranch',
+    connect.StreamType.unary,
+    nushiv1nushi.SwitchBranchRequest.new,
+    nushiv1nushi.SwitchBranchResponse.new,
+  );
+
   /// Archives a chat: its turn is cancelled and its agent stops; it stays
   /// listed, read-only. Unarchiving reopens it (ACP session/load).
   static const archiveChat = connect.Spec(
@@ -402,6 +415,15 @@ abstract final class NushiService {
     connect.StreamType.unary,
     nushiv1nushi.GetFolderStatusRequest.new,
     nushiv1nushi.GetFolderStatusResponse.new,
+  );
+
+  /// Lists a folder's repository's local branches, the newest commit first,
+  /// and its worktrees, the main one first. (API 83)
+  static const listBranches = connect.Spec(
+    '/$name/ListBranches',
+    connect.StreamType.unary,
+    nushiv1nushi.ListBranchesRequest.new,
+    nushiv1nushi.ListBranchesResponse.new,
   );
 
   /// Lists a folder's files (up to 20,000) for @-mentions: in a git

@@ -24,8 +24,9 @@ type Session struct {
 	// Earlier are the agent's sessions the chat had before it moved, oldest
 	// first.
 	Earlier []AgentSession `json:",omitempty"`
-	// Worktree is the git worktree Nushi made for the chat, if it runs in
-	// one; Folder is in it.
+	// Worktree is the git worktree the chat runs in, if it runs in one
+	// that isn't its repository's own folder: one Nushi made for it, or
+	// one that was there (Found); Folder is in it.
 	Worktree *Worktree `json:",omitempty"`
 	// EarlierWorktrees are the worktrees Nushi made for the chat before it
 	// moved out of them, oldest first. They stay until the chat is deleted.
@@ -52,6 +53,13 @@ type Session struct {
 	// and Ultracode (the model, the effort, ...), by option ID, at what the
 	// agent is on now: put back whenever its session opens again.
 	Picks map[string]string `json:",omitempty"`
+	// Moved says the chat moved to another folder since its last prompt,
+	// which tells the agent where it is now (and clears it).
+	Moved bool `json:",omitempty"`
+	// BranchFrom is the folder's branch as the agent last had it, when
+	// Nushi switched the folder to another since (SwitchBranch); the next
+	// prompt tells the agent, if the branch is still another, and clears it.
+	BranchFrom string `json:",omitempty"`
 	// Unseen says a turn ended (it finished, or failed with an error to
 	// read; not one the user stopped) while no client showed the chat; a
 	// client showing it clears it, and so does archiving.
@@ -88,6 +96,30 @@ type Worktree struct {
 	// then) or the chat's last prompt went. A rename since is told with
 	// the next prompt. Empty for worktrees made before Nushi kept it.
 	Told string `json:",omitempty"`
+	// Found says the worktree was there already (made outside Nushi, or
+	// for another chat) when the chat moved or started in it: Nushi never
+	// removes it or deletes its branch, and doesn't name it after the chat.
+	Found bool `json:",omitempty"`
+}
+
+// WorktreeEntry is one of a repository's worktrees, as git lists them.
+type WorktreeEntry struct {
+	Path   string // its folder
+	Branch string // its branch; "" when HEAD is detached
+	Head   string // its HEAD commit
+	Main   bool   // the repository's own folder (its main worktree)
+	Locked bool   // git worktree lock: kept from pruning and removal
+	// Current says the folder asked about is in it.
+	Current bool
+}
+
+// Branch is one of a repository's local branches.
+type Branch struct {
+	Name string
+	Time int64 // its last commit's time (Unix seconds)
+	// Worktree is the folder of the worktree that has it checked out, if
+	// one does.
+	Worktree string
 }
 
 // BranchUse is who else has a worktree's branch, for renaming it.

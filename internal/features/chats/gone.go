@@ -141,11 +141,7 @@ func cmpTitle(sess model.Session) string {
 // changes or commits, its scratch folder's files, or that they can't be
 // told), or "".
 func (s *Service) keeps(ctx context.Context, sess model.Session) string {
-	wts := sess.EarlierWorktrees
-	if sess.Worktree != nil {
-		wts = append([]model.Worktree{*sess.Worktree}, wts...)
-	}
-	for _, wt := range wts {
+	for _, wt := range made(sess) {
 		if s.worktrees == nil {
 			return "its worktree " + wt.Path + " can't be checked"
 		}

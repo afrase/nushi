@@ -109,3 +109,25 @@ func (s *server) ListCommits(ctx context.Context, req *connect.Request[nushiv1.L
 	}
 	return connect.NewResponse(resp), nil
 }
+
+func (s *server) ListBranches(ctx context.Context, req *connect.Request[nushiv1.ListBranchesRequest]) (*connect.Response[nushiv1.ListBranchesResponse], error) {
+	if err := absolute(req.Msg.Folder); err != nil {
+		return nil, err
+	}
+	branches, err := git.Branches(ctx, req.Msg.Folder, 500)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	wts, err := git.Worktrees{}.List(ctx, req.Msg.Folder)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	resp := &nushiv1.ListBranchesResponse{}
+	for _, b := range branches {
+		resp.Branches = append(resp.Branches, &nushiv1.GitBranch{Name: b.Name, UnixSeconds: b.Time, Worktree: b.Worktree})
+	}
+	for _, w := range wts {
+		resp.Worktrees = append(resp.Worktrees, &nushiv1.GitWorktree{Path: w.Path, Branch: w.Branch, Main: w.Main, Locked: w.Locked, Current: w.Current})
+	}
+	return connect.NewResponse(resp), nil
+}

@@ -57,11 +57,7 @@ func (s *Service) PlanDelete(ctx context.Context, chatID string) (DeletePlan, er
 	if fi, err := os.Lstat(filepath.Join(s.scratch, c.id)); err == nil && fi.IsDir() {
 		p.Scratch = filepath.Join(s.scratch, c.id)
 	}
-	wts := sess.EarlierWorktrees
-	if sess.Worktree != nil {
-		wts = append([]model.Worktree{*sess.Worktree}, wts...)
-	}
-	for _, wt := range wts {
+	for _, wt := range made(sess) {
 		st, err := s.worktrees.Inspect(ctx, wt)
 		p.Worktrees = append(p.Worktrees, WorktreePlan{wt, st, err})
 	}
