@@ -4,10 +4,10 @@ import 'dart:convert';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/artifacts_card.dart';
 import 'package:nushi/chat_files.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/details_panel.dart';
-import 'package:nushi/files_card.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/preview_pane.dart';
@@ -108,12 +108,12 @@ final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 void main() {
   setUpAll(loadFonts);
 
-  testWidgets('the Files card lists the files, newest first; a click opens '
+  testWidgets('the Artifacts card lists the files, newest first; a click opens '
       'the preview and marks its row; a new file joins it', (tester) async {
     final (d, fake) = await _app(tester, _three);
     final panel = find.byType(DetailsPanel);
     expect(
-      find.descendant(of: panel, matching: find.text('Files')),
+      find.descendant(of: panel, matching: find.text('Artifacts')),
       findsOneWidget,
     );
     expect(_names(tester), ['notes.md', 'chart.png', 'report.md']);
@@ -174,16 +174,20 @@ void main() {
     expect(_names(tester), [for (var i = 11; i > 0; i--) 'f$i.md']);
     expect(find.text('Show all (11)'), findsNothing);
     final panel = find.byType(DetailsPanel);
-    await tester.tap(find.descendant(of: panel, matching: find.text('Files')));
+    await tester.tap(
+      find.descendant(of: panel, matching: find.text('Artifacts')),
+    );
     await tester.pumpAndSettle();
-    expect(collapsedCards.value, contains('Files'));
+    expect(collapsedCards.value, contains('Artifacts'));
     expect(_card, findsNothing);
     expect(find.descendant(of: panel, matching: find.text('11')), findsOne);
     collapsedCards.value = {};
     d.dispose();
   }, variant: _mac);
 
-  testWidgets('golden: the panel with the Files card, dark', (tester) async {
+  testWidgets('golden: the panel with the Artifacts card, dark', (
+    tester,
+  ) async {
     final (d, _) = await _app(tester, _three);
     tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
     addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
@@ -191,7 +195,7 @@ void main() {
     await tester.pumpAndSettle();
     await expectLater(
       find.byType(NushiApp),
-      matchesGoldenFile('goldens/files_card_dark.png'),
+      matchesGoldenFile('goldens/artifacts_card_dark.png'),
     );
     d.dispose();
   }, variant: _mac);

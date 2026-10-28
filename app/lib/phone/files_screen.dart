@@ -30,7 +30,7 @@ class FilesScreen extends StatelessWidget {
       builder: (context, _) {
         final files = chatFiles(chat.items);
         return PhoneScreen(
-          title: 'Files',
+          title: 'Artifacts',
           body: ListView(
             padding: const EdgeInsets.symmetric(vertical: 6),
             children: [
@@ -76,7 +76,7 @@ class FilesScreen extends StatelessWidget {
   }
 }
 
-/// The chat screen's bar's "Files 4": opens [FilesScreen].
+/// The chat screen's bar's "Artifacts 4": opens [FilesScreen].
 class FilesAction extends StatelessWidget {
   const new(this.count, {required this.onTap, super.key});
 
@@ -88,7 +88,7 @@ class FilesAction extends StatelessWidget {
     final t = NushiTheme.of(context).t;
     return Semantics(
       button: true,
-      label: 'Files, $count',
+      label: 'Artifacts, $count',
       excludeSemantics: true,
       child: InkResponse(
         onTap: onTap,
@@ -99,7 +99,7 @@ class FilesAction extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Center(
               child: Text(
-                'Files $count',
+                'Artifacts $count',
                 style: phoneText(context, size: 15, color: t.link),
               ),
             ),

@@ -10,15 +10,15 @@ import 'package:nushi/preview.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// The panel's Files card: the files the chat wrote ([chatFiles], newest
+/// The panel's Artifacts card: the files the chat wrote ([chatFiles], newest
 /// first), each its name and, muted, its folder and when it changed; a
 /// click opens its preview, the open one's row marked. Null (no card) when
 /// there are none.
-PanelCard? filesCard(ChatState chat) {
+PanelCard? artifactsCard(ChatState chat) {
   final files = chatFiles(chat.items);
   if (files.isEmpty) return null;
   return PanelCard(
-    title: 'Files',
+    title: 'Artifacts',
     summary: Builder(
       builder: (context) {
         final theme = NushiTheme.of(context);

@@ -327,7 +327,7 @@ class _ChatPaneState extends State<_ChatPane> {
     super.dispose();
   }
 
-  /// A file's preview opened (from Files, or ⌘P) shows beside the chat.
+  /// A file's preview opened (from Artifacts, or ⌘P) shows beside the chat.
   void _showPreview() {
     if (widget.chat.preview.value != null && _changes) {
       setState(() => _changes = false);

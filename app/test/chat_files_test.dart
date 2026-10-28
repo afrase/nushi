@@ -144,13 +144,13 @@ void main() {
     expect(folderOf('report.md'), '');
   });
 
-  testWidgets('Files in the header opens a file in the pane, from Changes '
+  testWidgets('Artifacts in the header opens a file in the pane, from Changes '
       'too', (tester) async {
     final d = await _app(tester);
-    expect(find.text('Files 3', findRichText: true), findsOneWidget);
+    expect(find.text('Artifacts 3', findRichText: true), findsOneWidget);
     await tester.tap(find.text('Changes'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Files 3', findRichText: true));
+    await tester.tap(find.text('Artifacts 3', findRichText: true));
     await tester.pumpAndSettle();
     // Each row: the name, its folder and when it changed.
     for (final (name, detail) in [
@@ -249,7 +249,7 @@ void main() {
     d.dispose();
   }, variant: _mac);
 
-  testWidgets('the phone: Files in the bar, then a file full screen', (
+  testWidgets('the phone: Artifacts in the bar, then a file full screen', (
     tester,
   ) async {
     tester.view
@@ -279,7 +279,7 @@ void main() {
     }
     await tester.tap(find.text('Write the report'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Files 3'));
+    await tester.tap(find.text('Artifacts 3'));
     await tester.pumpAndSettle();
     final screen = find.byType(FilesScreen);
     expect(screen, findsOneWidget);
@@ -287,7 +287,7 @@ void main() {
     expect(
       [for (final e in names.evaluate()) (e.widget as Text).data],
       [
-        'Files',
+        'Artifacts',
         'report.md',
         'docs',
         'chart.png',
@@ -304,12 +304,12 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
   }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
-  testWidgets('golden: the Files menu over a chat, dark', (tester) async {
+  testWidgets('golden: the Artifacts menu over a chat, dark', (tester) async {
     final d = await _app(tester);
     tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
     addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Files 3', findRichText: true));
+    await tester.tap(find.text('Artifacts 3', findRichText: true));
     await tester.pumpAndSettle();
     await expectLater(
       find.byType(NushiApp),

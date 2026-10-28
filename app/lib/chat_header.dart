@@ -16,7 +16,7 @@ import 'package:nushi/widgets.dart';
 
 /// The chat's header: its title (double-click renames it), the agent, its
 /// model and status, the folder while the details panel is hidden, the
-/// files it wrote that preview (Files, while there are some), the
+/// files it wrote that preview (Artifacts, while there are some), the
 /// Chat | Changes switch, the terminal's and the panel's buttons and the
 /// chat's menu.
 class ChatHeader extends StatefulWidget {
@@ -60,13 +60,15 @@ class _ChatHeaderState extends State<ChatHeader> {
         ? chatFiles(chat.items)
         : const <String>[];
     // The title and the model (a Codex model id is long) share what the
-    // rest of the row leaves (it takes about 420 points, Files 70 more),
-    // so a narrow window cuts them short rather than overflow; with Files,
+    // rest of the row leaves (it takes about 420 points, Artifacts 95
+    // more),
+    // so a narrow window cuts them short rather than overflow; with
+    // Artifacts,
     // the title gets shorter still (at 720 points wide it would overflow).
     return LayoutBuilder(
       builder: (context, box) {
-        final room = box.maxWidth - 420 - (files.isEmpty ? 0 : 70);
-        final title = (room * 0.6).clamp(files.isEmpty ? 80.0 : 56.0, 320.0);
+        final room = box.maxWidth - 420 - (files.isEmpty ? 0 : 95);
+        final title = (room * 0.6).clamp(files.isEmpty ? 80.0 : 48.0, 320.0);
         return _row(
           context,
           titleStyle,
@@ -182,10 +184,10 @@ class _ChatHeaderState extends State<ChatHeader> {
             FilesMenu(
               chat: chat,
               files: files,
-              tooltip: 'The files this chat wrote, to preview',
+              tooltip: 'Artifacts: the files this chat wrote, to preview',
               label: Text.rich(
                 TextSpan(
-                  text: 'Files',
+                  text: 'Artifacts',
                   children: [
                     TextSpan(
                       text: ' ${files.length}',

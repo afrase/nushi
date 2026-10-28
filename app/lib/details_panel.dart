@@ -3,11 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/agents_card.dart';
+import 'package:nushi/artifacts_card.dart';
 import 'package:nushi/changes_span.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/context_cache.dart';
 import 'package:nushi/daemon.dart';
-import 'package:nushi/files_card.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/markdown.dart';
@@ -22,7 +22,7 @@ import 'package:nushi/worktree.dart';
 /// The panel beside a chat: cards for its environment (folder or
 /// repository, branch, worktree), its context and cost, and its folder's
 /// changes (uncommitted, or the branch's for a worktree chat), as the
-/// Changes view shows them, its background tasks, MCP servers and files.
+/// Changes view shows them, its background tasks, MCP servers and artifacts.
 /// They reload when a turn ends or the chat moves.
 class DetailsPanel extends StatefulWidget {
   const new({
@@ -303,7 +303,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
       ),
       ?agentsCard(chat, daemon),
       mcpCard(chat, daemon),
-      if (daemon.daemonApi >= previewApi) ?filesCard(chat),
+      if (daemon.daemonApi >= previewApi) ?artifactsCard(chat),
     ]);
   }
 }
