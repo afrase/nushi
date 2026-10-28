@@ -39,8 +39,8 @@ String agentTitle(String agent) => switch (agent) {
   _ => agent[0].toUpperCase() + agent.substring(1),
 };
 
-/// The agent whose MCP servers Nushi shows and changes, if one is known.
-Agent? get mcpAgent => knownAgents.values.where((a) => a.mcp).firstOrNull;
+/// The agents whose MCP servers Nushi shows and changes (Claude, Ante).
+List<Agent> get mcpAgents => knownAgents.values.where((a) => a.mcp).toList();
 
 /// The agent new chats start with: the newest of [chats]'s, else the
 /// default.

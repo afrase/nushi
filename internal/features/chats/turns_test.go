@@ -192,7 +192,7 @@ func TestReloadLeavesNothingOfTheOldAgent(t *testing.T) {
 func TestANewAgentClearsTheMCPChange(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	turn(t, svc, c, "one")
-	svc.MCPChanged(func(string) bool { return true })
+	svc.MCPChanged("fake", func(string) bool { return true })
 	agent.quit()
 	eventually(t, c, func() bool { return c.agent == nil })
 	turn(t, svc, c, "two")

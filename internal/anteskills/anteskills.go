@@ -66,15 +66,13 @@ type settings struct {
 	Exclude []string `json:"exclude_skills"`
 }
 
-func userSettings() string { return filepath.Join(ante.Home(), "settings.json") }
-
 // readSettings reads the project's nearest .ante/settings.json (if any)
 // and yours, in that order.
 func readSettings(folder string) ([]settings, error) {
 	files := []string{}
 	for dir := folder; ; dir = filepath.Dir(dir) {
 		p := filepath.Join(dir, ".ante", "settings.json")
-		if _, err := os.Stat(p); err == nil && p != userSettings() {
+		if _, err := os.Stat(p); err == nil && p != ante.SettingsFile() {
 			files = append(files, p)
 			break
 		}
@@ -84,7 +82,7 @@ func readSettings(folder string) ([]settings, error) {
 	}
 	var out []settings
 	var errs []error
-	for _, f := range append(files, userSettings()) {
+	for _, f := range append(files, ante.SettingsFile()) {
 		s := settings{path: f}
 		b, err := jsonsettings.ReadFile(f)
 		if err == nil {
@@ -111,7 +109,7 @@ func state(files []settings, name string) (on bool, setIn string) {
 	}
 	for _, f := range files {
 		if slices.Contains(f.Exclude, name) {
-			if f.path != userSettings() {
+			if f.path != ante.SettingsFile() {
 				return false, f.path
 			}
 			return false, ""
@@ -165,11 +163,7 @@ func (a Ante) SetSkillOn(ctx context.Context, folder, source, name string, on bo
 	if set := l.Skills[i].SetIn; set != "" {
 		return fmt.Errorf("it's off in %s; change it there", set)
 	}
-	file := userSettings()
-	if resolved, err := filepath.EvalSymlinks(file); err == nil {
-		file = resolved
-	}
-	_, err := jsonsettings.Edit(file, func(m map[string]json.RawMessage) error {
+	return ante.EditSettings(func(m map[string]json.RawMessage) error {
 		var list []string
 		if raw, ok := m["exclude_skills"]; ok && string(raw) != "null" && json.Unmarshal(raw, &list) != nil {
 			return errors.New("exclude_skills isn't a list")
@@ -186,7 +180,6 @@ func (a Ante) SetSkillOn(ctx context.Context, folder, source, name string, on bo
 		m["exclude_skills"] = b
 		return err
 	})
-	return err
 }
 
 // Trash moves one of Ante's own skill folders to the Trash: right in

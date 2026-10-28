@@ -13,8 +13,9 @@ import 'package:nushi/widgets.dart';
 /// The details panel's MCP card: the servers the agent uses in the chat's
 /// folder, each with its state and its switch for the project (a change
 /// reaches the chat when it restarts, which the card then offers);
-/// "Manage…" opens the MCP servers view. An agent whose MCP config Nushi
-/// doesn't read gets a note.
+/// "Manage…" opens the MCP servers view. Claude's and Ante's (no switch:
+/// Ante can't turn one off); an agent whose MCP config Nushi doesn't read
+/// gets a note.
 PanelCard mcpCard(ChatState chat, Daemon daemon) {
   if (knownAgents[chat.agent]?.mcp == false) {
     return PanelCard(
@@ -24,7 +25,11 @@ PanelCard mcpCard(ChatState chat, Daemon daemon) {
       ],
     );
   }
-  final list = McpServers.of(daemon, chat.folder);
+  final list = McpServers.of(
+    daemon,
+    chat.folder,
+    agent: chat.agent.isEmpty ? 'claude' : chat.agent,
+  );
   return PanelCard(
     title: 'MCP',
     summary: ListenableBuilder(

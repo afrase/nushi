@@ -8,32 +8,42 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart' show errorText;
 
-/// The MCP servers the agent's config gives a folder, from the daemon (API
-/// 32): read from the config at once, then checked (the agent connects to
-/// each, a few seconds), which fills in their states. One per folder,
-/// shared by the view and the panel card while the app runs; asked for
-/// again once it is a few minutes old, since servers connect, sign in and
-/// change outside Nushi too.
+/// The MCP servers an agent's config gives a folder, from the daemon (API
+/// 32; Ante's from API 80): read from the config at once, then checked
+/// (the agent connects to each, a few seconds), which fills in their
+/// states. One per agent and folder, shared by the view and the panel card
+/// while the app runs; asked for again once it is a few minutes old, since
+/// servers connect, sign in and change outside Nushi too.
 class McpServers extends ChangeNotifier {
-  factory of(Daemon daemon, String folder) {
-    final list = _byFolder[folder] ??= McpServers._(daemon, folder);
+  factory of(Daemon daemon, String folder, {String agent = 'claude'}) {
+    final list = _byFolder[(agent, folder)] ??= McpServers._(
+      daemon,
+      folder,
+      agent,
+    );
     final at = list._at;
     if (!list.checking && at != null && DateTime.now().difference(at) > fresh) {
       unawaited(Future.microtask(list.refresh)); // not while a build asks
     }
     return list;
   }
-  new _(this.daemon, this.folder) {
+  new _(this.daemon, this.folder, this.agent) {
     unawaited(refresh());
   }
 
-  static final _byFolder = <String, McpServers>{};
+  static final _byFolder = <(String, String), McpServers>{};
 
   /// How long a list is taken as current.
   static const fresh = Duration(minutes: 5);
 
   final Daemon daemon;
   final String folder;
+
+  /// Whose servers: "claude" or "ante".
+  final String agent;
+
+  /// Ante's are only yours, with no off switch or sign-in.
+  bool get ante => agent == 'ante';
   List<McpServer> servers = [];
   bool loaded = false;
   bool checking = false;
@@ -63,15 +73,16 @@ class McpServers extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// After a change here: other folders' lists may be out of date too.
+  /// After a change here: the agent's other folders' lists may be out of
+  /// date too.
   void changed() {
-    _byFolder.removeWhere((_, l) => l != this);
+    _byFolder.removeWhere((k, l) => l != this && k.$1 == agent);
     unawaited(refresh());
   }
 
   Future<ListMcpServersResponse> _list(bool check) =>
       daemon.client.listMcpServers(
-        ListMcpServersRequest(folder: folder, checkHealth: check),
+        ListMcpServersRequest(folder: folder, checkHealth: check, agent: agent),
       );
 
   void _take(ListMcpServersResponse r) {
@@ -118,9 +129,14 @@ const scopes = {
 Map<String, dynamic> config(McpServer s) =>
     (jsonDecode(s.configJson) as Map).cast<String, dynamic>();
 
-/// "stdio", "http", "sse", ...
+/// "stdio", "http", "sse", ... (Ante's "transport" too, its
+/// "streamable-http" as "http").
 String transport(Map<String, dynamic> c) =>
-    c['type'] as String? ?? (c['url'] == null ? 'stdio' : 'http');
+    switch (c['type'] as String? ?? c['transport'] as String?) {
+      'streamable-http' => 'http',
+      final String t => t,
+      null => c['url'] == null ? 'stdio' : 'http',
+    };
 
 /// Its command line, or its URL.
 String target(Map<String, dynamic> c) =>

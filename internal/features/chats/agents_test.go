@@ -45,7 +45,7 @@ func TestChatsKeepTheirAgent(t *testing.T) {
 	if (*modes)["b"] != "plan" || (*modes)["a"] != "" {
 		t.Errorf("modes = %v, want plan for b only", *modes)
 	}
-	svc.MCPChanged(func(string) bool { return true })
+	svc.MCPChanged("a", func(string) bool { return true })
 	if !svc.chats[first].mcpChanged || svc.chats[second].mcpChanged {
 		t.Error("an MCP change should mark only the MCP agent's chats")
 	}

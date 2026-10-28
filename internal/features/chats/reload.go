@@ -7,17 +7,16 @@ import (
 	"time"
 )
 
-// MCPChanged marks the running chats whose folder affected says yes to,
-// of the agent whose MCP servers the mcp feature changes:
-// their agent keeps the MCP servers it started with until the chat is
+// MCPChanged marks agent's running chats whose folder affected says yes
+// to: their agent keeps the MCP servers it started with until the chat is
 // reloaded.
-func (s *Service) MCPChanged(affected func(folder string) bool) {
+func (s *Service) MCPChanged(agent string, affected func(folder string) bool) {
 	s.mu.Lock()
 	open := slices.Collect(maps.Values(s.chats))
 	s.mu.Unlock()
 	for _, c := range open {
 		c.mu.Lock()
-		folder, running := c.session.Folder, c.agent != nil && c.parent == nil && c.kind.MCP
+		folder, running := c.session.Folder, c.agent != nil && c.parent == nil && c.kind.MCP && c.kind.Name == agent
 		c.mu.Unlock()
 		if running && affected(folder) {
 			c.mu.Lock()

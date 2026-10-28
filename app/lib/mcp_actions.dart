@@ -11,7 +11,8 @@ import 'package:nushi/widgets.dart';
 /// What can be done to a server, on its row: its on/off switch for the
 /// project (a project server's Approve and Reject while it waits for
 /// approval), "Log in" when it needs a sign-in, and a menu with Edit…,
-/// Remove… and Log out.
+/// Remove… and Log out. Ante's have Edit… and Remove… only: it has no off
+/// switch nor sign-in Nushi can use.
 class McpActions extends StatefulWidget {
   const new(this.list, this.server, {super.key});
 
@@ -44,8 +45,10 @@ class _McpActionsState extends State<McpActions> {
     final ok = await confirm(
       context,
       'Remove ${server.name}?',
-      'It goes from the $scope scope: ${about[0].toLowerCase()}'
-          '${about.substring(1)}',
+      list.ante
+          ? 'It goes from your Ante settings (${tildePath(server.source)}).'
+          : 'It goes from the $scope scope: ${about[0].toLowerCase()}'
+                '${about.substring(1)}',
       'Remove',
       destructive: true,
     );
@@ -53,6 +56,7 @@ class _McpActionsState extends State<McpActions> {
     await _do(
       () => list.daemon.client.removeMcpServer(
         RemoveMcpServerRequest(
+          agent: list.agent,
           folder: list.folder,
           scope: server.scope,
           name: server.name,
@@ -67,7 +71,7 @@ class _McpActionsState extends State<McpActions> {
     final t = theme.t;
     final daemon = list.daemon;
     final project = server.scope == 'project';
-    final remote = config(server)['url'] != null;
+    final remote = config(server)['url'] != null && !list.ante;
     final menu = [
       if ({'user', 'project', 'local'}.contains(server.scope)) ...[
         MenuEntry(
@@ -82,7 +86,11 @@ class _McpActionsState extends State<McpActions> {
           tooltip: 'Forget its sign-in',
           onPick: () => _do(
             () => daemon.client.logoutMcpServer(
-              LogoutMcpServerRequest(folder: list.folder, name: server.name),
+              LogoutMcpServerRequest(
+                agent: list.agent,
+                folder: list.folder,
+                name: server.name,
+              ),
             ),
           ),
         ),
@@ -102,7 +110,11 @@ class _McpActionsState extends State<McpActions> {
             'Log in',
             () => _do(
               () => daemon.client.loginMcpServer(
-                LoginMcpServerRequest(folder: list.folder, name: server.name),
+                LoginMcpServerRequest(
+                  agent: list.agent,
+                  folder: list.folder,
+                  name: server.name,
+                ),
               ),
             ),
           ),
@@ -134,6 +146,7 @@ Future<void> setServerOn(
   required bool on,
 }) => list.daemon.client.setMcpServerOn(
   SetMcpServerOnRequest(
+    agent: list.agent,
     folder: list.folder,
     scope: server.scope,
     name: server.name,
@@ -147,8 +160,8 @@ const switchable = {'project', 'user', 'local'};
 
 /// What turns a server on or off, and for where: a switch, "in this
 /// project" beside it ([label]), for the scopes Nushi can; otherwise a
-/// note that only /mcp in a terminal does. A change reaches a chat when
-/// it restarts.
+/// note that only /mcp in a terminal does; nothing for Ante's, which
+/// can't be turned off. A change reaches a chat when it restarts.
 class McpSwitch extends StatefulWidget {
   const new(this.list, this.server, {super.key, this.label = true});
 
@@ -178,6 +191,7 @@ class _McpSwitchState extends State<McpSwitch> {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final muted = theme.ui(theme.t.textMuted, size: 11);
+    if (widget.list.ante) return const SizedBox.shrink(); // no off switch
     if (!switchable.contains(server.scope)) {
       return Tooltip(
         message:

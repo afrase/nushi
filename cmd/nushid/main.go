@@ -33,14 +33,12 @@ import (
 	"github.com/afrase/nushi/internal/api"
 	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/claudehistory"
-	"github.com/afrase/nushi/internal/claudemcp"
 	"github.com/afrase/nushi/internal/claudetrust"
 	"github.com/afrase/nushi/internal/codex"
 	"github.com/afrase/nushi/internal/codextrust"
 	"github.com/afrase/nushi/internal/events"
 	"github.com/afrase/nushi/internal/features/agents"
 	"github.com/afrase/nushi/internal/features/chats"
-	"github.com/afrase/nushi/internal/features/mcp"
 	"github.com/afrase/nushi/internal/features/memory"
 	"github.com/afrase/nushi/internal/features/remote"
 	"github.com/afrase/nushi/internal/features/restart"
@@ -181,7 +179,7 @@ func run() error {
 			return codex.Start(dir, r.Node, r.Program, r.CLI, r.Env, h, log)
 		}),
 		Dialect: chats.Dialect{ForkAt: codex.ForkAt, ToolCall: codex.ToolCall, Other: codex.Other}}
-	anteKind := chats.Kind{Name: "ante", Title: "Ante", Resume: ante.Resume, OpenElsewhere: ante.OpenElsewhere,
+	anteKind := chats.Kind{Name: "ante", Title: "Ante", Resume: ante.Resume, OpenElsewhere: ante.OpenElsewhere, MCP: true,
 		Explain: agentSvc.Explain("ante"), Ready: ready("ante"), Launch: launch("ante", func(r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
 			return ante.Start(dir, r.Env, h, log)
 		}),
@@ -215,7 +213,7 @@ func run() error {
 	// paired device's channel (ADR 0034).
 	logs.SetDebug(st.DebugLog())
 	restarts := restart.New(chatSvc, termSvc)
-	sv := api.Services{Log: st, Transcripts: st, Chats: chatSvc, Agents: agentSvc, MCP: mcp.New(claudemcp.Claude{}, chatSvc.MCPChanged), Skills: newSkills(), Terms: termSvc,
+	sv := api.Services{Log: st, Transcripts: st, Chats: chatSvc, Agents: agentSvc, MCP: newMCP(agentSvc, chatSvc.MCPChanged), Skills: newSkills(), Terms: termSvc,
 		Trust: trust.New(map[string]trust.Agent{"claude": claudetrust.Trust{}, "codex": codextrust.Trust{}, "ante": antetrust.Trust{}, "omp": omptrust.Trust{}, "pig": pig.Trust{}}, st),
 		Hub:   hub, Memory: memory.New(chatSvc), Restart: restarts}
 	sv.Jira = newJira(st, os.Getenv("NUSHI_DATA") != "")

@@ -47,7 +47,7 @@ func (f *fakeConfig) Login(context.Context, string, string) error  { return nil 
 func (f *fakeConfig) Logout(context.Context, string, string) error { return nil }
 
 func TestListMergesTheCheck(t *testing.T) {
-	svc := New(&fakeConfig{
+	svc := New("claude", &fakeConfig{
 		files: []model.MCPServer{{Name: "a", Scope: "user", Config: `{"env":{"K":"secret"}}`}, {Name: "a", Scope: "local"},
 			{Name: "gone", Scope: "project"}},
 		checked: []model.MCPServer{{Name: "a", State: "connected"}, {Name: "plugin:x:y", Scope: "plugin", State: "failed"},
@@ -76,7 +76,7 @@ func TestListMergesTheCheck(t *testing.T) {
 func TestEditKeepsMaskedValuesAndPutsTheOldOneBack(t *testing.T) {
 	cfg := &fakeConfig{files: []model.MCPServer{{Name: "s", Scope: "local", Config: `{"command":"x","env":{"K":"secret"}}`}}}
 	var notified []string
-	svc := New(cfg, func(affected func(string) bool) {
+	svc := New("claude", cfg, func(_ string, affected func(string) bool) {
 		for _, f := range []string{"/repo", "/repo/sub", "/other"} {
 			if affected(f) {
 				notified = append(notified, f)
@@ -108,7 +108,7 @@ func TestEditKeepsMaskedValuesAndPutsTheOldOneBack(t *testing.T) {
 
 func TestRemoveRefusesWhatIsntAServer(t *testing.T) {
 	cfg := &fakeConfig{}
-	svc := New(cfg, nil)
+	svc := New("claude", cfg, nil)
 	for _, c := range []struct{ folder, scope, name string }{
 		{"/repo", "user", "-s user"},
 		{"/repo", "user", "-x"},
@@ -174,7 +174,7 @@ func decoded(s string) map[string]any {
 func TestAChangeReachesTheChatsItAffects(t *testing.T) {
 	folders := []string{"/r", "/r/sub", "/other", "/rx"}
 	var reached []string
-	svc := New(&fakeConfig{}, func(affected func(string) bool) {
+	svc := New("claude", &fakeConfig{}, func(_ string, affected func(string) bool) {
 		reached = nil
 		for _, f := range folders {
 			if affected(f) {
@@ -198,7 +198,7 @@ func TestAnEditOutlivesTheApp(t *testing.T) {
 	cfg := &fakeConfig{files: []model.MCPServer{{Name: "s", Scope: "user", Config: `{"command":"x"}`}}}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if err := New(cfg, nil).Edit(ctx, "/repo", "user", "s", `{"command":"y"}`); err != nil {
+	if err := New("claude", cfg, nil).Edit(ctx, "/repo", "user", "s", `{"command":"y"}`); err != nil {
 		t.Fatal(err)
 	}
 	if want := []string{"remove s", `add s {"command":"y"}`}; !reflect.DeepEqual(cfg.calls, want) {
@@ -210,14 +210,14 @@ func TestAnEditOutlivesTheApp(t *testing.T) {
 // to the user's of the same name, which gets its state.
 func TestAnUnapprovedProjectServerGivesWay(t *testing.T) {
 	for _, project := range []model.MCPServer{{Name: "github", Scope: "project"}, {Name: "github", Scope: "project", Approved: true, Off: true}} {
-		svc := New(&fakeConfig{files: []model.MCPServer{{Name: "github", Scope: "user"}, project},
+		svc := New("claude", &fakeConfig{files: []model.MCPServer{{Name: "github", Scope: "user"}, project},
 			checked: []model.MCPServer{{Name: "github", State: "connected"}}}, nil)
 		got, _, _ := svc.List(context.Background(), "/f", true)
 		if got[0].Shadowed || got[0].State != "connected" || !got[1].Shadowed || got[1].State == "connected" {
 			t.Errorf("%+v: user %+v, project %+v", project, got[0], got[1])
 		}
 	}
-	svc := New(&fakeConfig{files: []model.MCPServer{{Name: "github", Scope: "user"}, {Name: "github", Scope: "project", Approved: true}}}, nil)
+	svc := New("claude", &fakeConfig{files: []model.MCPServer{{Name: "github", Scope: "user"}, {Name: "github", Scope: "project", Approved: true}}}, nil)
 	if got, _, _ := svc.List(context.Background(), "/f", false); !got[0].Shadowed || got[1].Shadowed {
 		t.Errorf("an approved project server: %+v", got)
 	}
@@ -228,7 +228,7 @@ func TestAnUnapprovedProjectServerGivesWay(t *testing.T) {
 func TestSetOnGoesByScope(t *testing.T) {
 	cfg := &fakeConfig{files: []model.MCPServer{{Name: "web", Scope: "user"}, {Name: "web", Scope: "local"}}}
 	var reached []string
-	svc := New(cfg, func(affected func(string) bool) {
+	svc := New("claude", cfg, func(_ string, affected func(string) bool) {
 		for _, f := range []string{"/p", "/p/sub", "/q"} {
 			if affected(f) {
 				reached = append(reached, f)

@@ -1,8 +1,10 @@
-// Package mcp shows and changes the MCP servers the agent uses in a
-// folder. The agent's own config is the source of truth: Nushi keeps no
-// copy of it (ADR 0021). The feature is Claude-only: its scopes (user,
-// project, local, plugin, claudeai), which one wins, and project approvals
-// are Claude Code's model; another agent's MCP config needs its own.
+// Package mcp shows and changes the MCP servers an agent uses in a
+// folder, one Service per agent whose config Nushi knows (Claude's,
+// Ante's). The agent's own config is the source of truth: Nushi keeps no
+// copy of it (ADR 0021). The scopes (user, project, local, plugin,
+// claudeai), which one wins, and project approvals are Claude Code's
+// model; an agent with less (Ante: user scope only) refuses the rest in
+// its Config.
 package mcp
 
 import (
@@ -11,7 +13,7 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-// Config is the agent's MCP config (Claude's: internal/claudemcp).
+// Config is the agent's MCP config (internal/claudemcp, internal/antemcp).
 type Config interface {
 	// Servers returns the servers the agent's config files give folder,
 	// with their config as stored (secrets in clear).
@@ -35,16 +37,20 @@ type Config interface {
 	Logout(ctx context.Context, folder, name string) error
 }
 
-// Changed tells the chats that the servers changed for chats in the
-// folders affected says yes to.
-type Changed func(affected func(folder string) bool)
+// Changed tells the chats that agent's servers changed for its chats in
+// the folders affected says yes to.
+type Changed func(agent string, affected func(folder string) bool)
 
 type Service struct {
+	agent   string
 	config  Config
 	changed Changed
 }
 
-func New(config Config, changed Changed) *Service { return &Service{config: config, changed: changed} }
+// New is the MCP servers of agent (as chats name it, "claude").
+func New(agent string, config Config, changed Changed) *Service {
+	return &Service{agent: agent, config: config, changed: changed}
+}
 
 // rank orders scopes as the agent picks between servers of the same name:
 // local wins, then project, user, plugins and claude.ai.

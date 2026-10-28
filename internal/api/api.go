@@ -32,7 +32,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 79
+const Version = 80
 
 // Release is the version a release build stamps in (make package's
 // VERSION, through -ldflags -X), "" in a build that isn't packaged
@@ -55,7 +55,7 @@ var Build = func() string {
 type server struct {
 	chats    *chats.Service
 	agents   *agents.Service
-	mcp      *mcp.Service
+	mcp      map[string]*mcp.Service
 	skills   *skills.Service
 	terms    *terminals.Service
 	trust    *trust.Service
@@ -74,7 +74,7 @@ type server struct {
 type Services struct {
 	Chats  *chats.Service
 	Agents *agents.Service
-	MCP    *mcp.Service
+	MCP    map[string]*mcp.Service // by agent: "claude", "ante"
 	Skills *skills.Service
 	Terms  *terminals.Service
 	Trust  *trust.Service
