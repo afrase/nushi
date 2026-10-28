@@ -5,6 +5,7 @@ import 'dart:js_interop_unsafe';
 import 'package:flutter/foundation.dart';
 import 'package:nushi/phone/keyboard_web.dart';
 import 'package:nushi/phone/subscription.dart';
+import 'package:nushi/phone/update_ready.dart';
 import 'package:web/web.dart' as web;
 
 /// The browser: IndexedDB for the device's key and pairing, the service
@@ -197,22 +198,9 @@ final class PhonePlatform {
     if (!_has(web.window.navigator, 'serviceWorker')) return;
     final sw = web.window.navigator.serviceWorker;
     try {
-      final reg = _reg = await sw.register(trustedScriptUrl('sw.js')).toDart;
-      void watch(web.ServiceWorker? w) => w?.addEventListener(
-        'statechange',
-        ((web.Event _) {
-          if (w.state == 'installed' && sw.controller != null) {
-            updateReady.value = true;
-          }
-        }).toJS,
-      );
-      if (reg.waiting != null && sw.controller != null) {
-        updateReady.value = true;
-      }
-      watch(reg.installing);
-      reg.addEventListener(
-        'updatefound',
-        ((web.Event _) => watch(reg.installing)).toJS,
+      watchUpdates(
+        _reg = await sw.register(trustedScriptUrl('sw.js')).toDart,
+        updateReady,
       );
       sw.addEventListener(
         'controllerchange',
@@ -446,4 +434,31 @@ JSAny trustedScriptUrl(String name) {
     ) => _workers.contains(u.toDart) ? u : throw ArgumentError(u.toDart)).toJS;
   _policy ??= tt.callMethod<JSObject>('createPolicy'.toJS, 'nushi'.toJS, rules);
   return _policy!.callMethod<JSAny>('createScriptURL'.toJS, name.toJS);
+}
+
+/// Sets [ready] once a newer version of the app waits in [reg] to replace
+/// the running one ([updateWaits]): now, or when one of its workers is
+/// installed.
+void watchUpdates(
+  web.ServiceWorkerRegistration reg,
+  ValueNotifier<bool> ready,
+) {
+  void check() {
+    if (updateWaits(waiting: reg.waiting != null, active: reg.active != null)) {
+      ready.value = true;
+    }
+  }
+
+  void watch(web.ServiceWorker? w) => w?.addEventListener(
+    'statechange',
+    ((web.Event _) {
+      if (w.state == 'installed') check();
+    }).toJS,
+  );
+  check();
+  watch(reg.installing);
+  reg.addEventListener(
+    'updatefound',
+    ((web.Event _) => watch(reg.installing)).toJS,
+  );
 }
