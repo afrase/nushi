@@ -47,17 +47,14 @@ String itemState(GitHubItem it) => switch (it.state) {
       _ => null,
     };
 
-/// The chats on a GitHub item, the newest first.
-List<ChatState> chatsOnItem(Daemon daemon, GitHubRef ref) =>
-    daemon.chats.values
-        .where(
-          (c) =>
-              c.github?.host == ref.host &&
-              c.github?.repo == ref.repo &&
-              c.github?.number == ref.number,
-        )
-        .toList()
-      ..sort((a, b) => b.created.compareTo(a.created));
+/// The chats on a GitHub item (started from it, or on its branch), the
+/// newest first.
+List<ChatState> chatsOnItem(Daemon daemon, GitHubRef ref) {
+  bool on(GitHubLink? l) =>
+      l?.host == ref.host && l?.repo == ref.repo && l?.number == ref.number;
+  return daemon.chats.values.where((c) => on(c.github) || on(c.pull)).toList()
+    ..sort((a, b) => b.created.compareTo(a.created));
+}
 
 /// An item's small state line: its state, checks, review decision and
 /// review threads not resolved.

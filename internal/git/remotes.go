@@ -52,3 +52,23 @@ func Fetch(ctx context.Context, folder, remote, refspec string) error {
 	}
 	return nil
 }
+
+// Head is the branch folder has checked out ("" when HEAD is detached or
+// the folder isn't a repository) and the remote it is pushed to: its
+// upstream's remote (branch.<name>.pushRemote, then remote.pushDefault,
+// then branch.<name>.remote), "" when none is set.
+func Head(ctx context.Context, folder string) (branch, remote string) {
+	out, err := run(ctx, folder, "symbolic-ref", "--short", "-q", "HEAD")
+	if err != nil {
+		return "", ""
+	}
+	branch = strings.TrimSpace(string(out))
+	for _, key := range []string{"branch." + branch + ".pushRemote", "remote.pushDefault", "branch." + branch + ".remote"} {
+		if out, err := run(ctx, folder, "config", "--get", key); err == nil {
+			if r := strings.TrimSpace(string(out)); r != "" && r != "." {
+				return branch, r
+			}
+		}
+	}
+	return branch, ""
+}

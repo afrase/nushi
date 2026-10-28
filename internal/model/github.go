@@ -115,10 +115,13 @@ type GitHubIssue struct {
 	Conversation      []GitHubComment
 }
 
-// ChatGitHub is the pull request or issue a chat was started from (ID is
-// its node id).
+// ChatGitHub is the pull request or issue a chat was started from, or the
+// pull request of its branch (ID is its node id). Branch is the head
+// branch a pull request was found by; empty when it was linked by hand
+// (or the chat started from it).
 type ChatGitHub struct {
 	GitHubRef
-	Pull bool   `json:"pull,omitempty"`
-	ID   string `json:"id"`
+	Pull   bool   `json:"pull,omitempty"`
+	ID     string `json:"id"`
+	Branch string `json:"branch,omitempty"`
 }

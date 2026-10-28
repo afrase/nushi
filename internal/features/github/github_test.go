@@ -26,6 +26,7 @@ type fakeClient struct {
 	blobs   map[githubapi.BlobAt]githubapi.Blob
 	files   []githubapi.File
 	written []string
+	heads   map[string][]githubapi.HeadPull // by repository and head
 }
 
 func (f *fakeClient) note(s string) {
@@ -85,6 +86,11 @@ func (f *fakeClient) Pull(_ context.Context, _ string, n int) (model.GitHubPull,
 		{ID: "T2", Path: "sub.go", Line: 0, OriginalLine: 10, Outdated: true, Side: "right", Comments: []model.GitHubComment{{Author: "afrase", Association: "OWNER", Body: "-a?"}}},
 		{ID: "T3", Path: "add.go", Line: 3, Resolved: true, Side: "right", Comments: []model.GitHubComment{{Author: "afrase", Association: "OWNER", Body: "done"}}},
 	}}, nil
+}
+
+func (f *fakeClient) PullsByHead(_ context.Context, repo, head string) ([]githubapi.HeadPull, time.Duration, error) {
+	f.note("heads " + repo + " " + head)
+	return f.heads[repo+" "+head], 0, f.fail
 }
 
 func (f *fakeClient) Issue(context.Context, string, int) (model.GitHubIssue, error) {
@@ -198,11 +204,13 @@ type world struct {
 	tokens  *fakeTokens
 	store   *fakeStore
 	clients map[string]*fakeClient // by token
+	branch  map[string][2]string   // by folder: its branch and the remote it's pushed to
 }
 
 func newWorld(t *testing.T) *world {
 	t.Helper()
-	w := &world{tokens: &fakeTokens{m: map[string]string{}}, store: &fakeStore{}, clients: map[string]*fakeClient{}, ghHosts: []string{"github.com"}}
+	w := &world{tokens: &fakeTokens{m: map[string]string{}}, store: &fakeStore{}, clients: map[string]*fakeClient{}, ghHosts: []string{"github.com"},
+		branch: map[string][2]string{}}
 	w.s = New(Deps{
 		Gh: Gh{
 			Token: func(host string) (string, string) {
@@ -227,6 +235,9 @@ func newWorld(t *testing.T) *world {
 		Restart: func(error) bool { return false },
 		Missing: func(error) bool { return false },
 		Remotes: func(_ context.Context, folder string) (map[string]string, error) {
+			if folder == "lab" {
+				return map[string]string{"origin": "https://gitlab.com/me/lab"}, nil
+			}
 			return map[string]string{"origin": "git@github.com:afrase/" + folder + ".git", "fork": "https://github.com/me/" + folder}, nil
 		},
 		Fetch: func(_ context.Context, folder, remote, refspec string) error {
@@ -239,6 +250,11 @@ func newWorld(t *testing.T) *world {
 			}
 			return nil
 		},
+		Head: func(_ context.Context, folder string) (string, string) {
+			b := w.branch[folder]
+			return b[0], b[1]
+		},
+		DefaultBranch: func(context.Context, string) string { return "origin/main" },
 	})
 	return w
 }

@@ -1016,6 +1016,25 @@ abstract final class NushiService {
     nushiv1nushi.SubmitGitHubReviewResponse.new,
   );
 
+  /// A chat's pull request: the one it was started from, else the one whose
+  /// head is its folder's branch, looked for on GitHub (and linked when
+  /// found), with the folder's repository and branch. API 81.
+  static const findChatPull = connect.Spec(
+    '/$name/FindChatPull',
+    connect.StreamType.unary,
+    nushiv1nushi.FindChatPullRequest.new,
+    nushiv1nushi.FindChatPullResponse.new,
+  );
+
+  /// Links a pull request picked by hand to a chat, or unlinks its own.
+  /// API 81.
+  static const linkChatPull = connect.Spec(
+    '/$name/LinkChatPull',
+    connect.StreamType.unary,
+    nushiv1nushi.LinkChatPullRequest.new,
+    nushiv1nushi.LinkChatPullResponse.new,
+  );
+
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.
   static const events = connect.Spec(

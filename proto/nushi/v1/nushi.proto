@@ -344,6 +344,13 @@ service NushiService {
   rpc ResolveGitHubThread(ResolveGitHubThreadRequest) returns (ResolveGitHubThreadResponse);
   rpc AddGitHubComment(AddGitHubCommentRequest) returns (AddGitHubCommentResponse);
   rpc SubmitGitHubReview(SubmitGitHubReviewRequest) returns (SubmitGitHubReviewResponse);
+  // A chat's pull request: the one it was started from, else the one whose
+  // head is its folder's branch, looked for on GitHub (and linked when
+  // found), with the folder's repository and branch. API 81.
+  rpc FindChatPull(FindChatPullRequest) returns (FindChatPullResponse);
+  // Links a pull request picked by hand to a chat, or unlinks its own.
+  // API 81.
+  rpc LinkChatPull(LinkChatPullRequest) returns (LinkChatPullResponse);
   // Streams every change to every chat from now on. The first message is
   // empty: it says the subscription is live.
   rpc Events(EventsRequest) returns (stream EventsResponse);
@@ -427,6 +434,9 @@ message Chat {
   // the user stopped) while no client showed the chat (SetDeviceView);
   // showing it, or archiving it, clears it. API 76.
   bool unseen = 15;
+  // The chat's pull request: the one it was started from (github), else the
+  // one whose head is its branch, found or linked by hand. API 81.
+  GitHubLink pull = 16;
 }
 
 // A git worktree of a repository, on a branch of its own.
@@ -2447,6 +2457,35 @@ message GitHubLink {
   int32 number = 4;
   bool pull = 5;
 }
+
+message FindChatPullRequest {
+  string chat_id = 1;
+  // Asked on the app's timer: held back while the rate limit runs low.
+  bool quiet = 2;
+}
+
+message FindChatPullResponse {
+  // The folder's GitHub repository and branch; host is empty when the
+  // folder isn't a clone of one on a host signed in to, or has no branch
+  // checked out.
+  string host = 1;
+  string repo = 2;
+  string branch = 3;
+  // The branch is the repository's default: no pull request is looked for.
+  bool default_branch = 4;
+  // The chat's pull request, if it has one.
+  GitHubLink pull = 5;
+  // Why GitHub couldn't be asked this time (the link stays as it was).
+  string error = 6;
+}
+
+message LinkChatPullRequest {
+  string chat_id = 1;
+  // The pull request to link; none unlinks the chat's.
+  GitHubLink pull = 2;
+}
+
+message LinkChatPullResponse {}
 
 message GetGitHubStatesRequest {
   repeated GitHubLink items = 1;

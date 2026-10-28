@@ -619,6 +619,7 @@ class Chat extends $pb.GeneratedMessage {
     $core.String? jiraKey,
     GitHubLink? github,
     $core.bool? unseen,
+    GitHubLink? pull,
   }) {
     final result = Chat._();
     if (id != null) result.id = id;
@@ -636,6 +637,7 @@ class Chat extends $pb.GeneratedMessage {
     if (jiraKey != null) result.jiraKey = jiraKey;
     if (github != null) result.github = github;
     if (unseen != null) result.unseen = unseen;
+    if (pull != null) result.pull = pull;
     return result;
   }
 
@@ -670,6 +672,8 @@ class Chat extends $pb.GeneratedMessage {
     ..aOM<GitHubLink>(14, _omitFieldNames ? '' : 'github',
         subBuilder: GitHubLink.$_createMessage)
     ..aOB(15, _omitFieldNames ? '' : 'unseen')
+    ..aOM<GitHubLink>(16, _omitFieldNames ? '' : 'pull',
+        subBuilder: GitHubLink.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -845,6 +849,19 @@ class Chat extends $pb.GeneratedMessage {
   $core.bool hasUnseen() => $_has(14);
   @$pb.TagNumber(15)
   void clearUnseen() => $_clearField(15);
+
+  /// The chat's pull request: the one it was started from (github), else the
+  /// one whose head is its branch, found or linked by hand. API 81.
+  @$pb.TagNumber(16)
+  GitHubLink get pull => $_getN(15);
+  @$pb.TagNumber(16)
+  set pull(GitHubLink value) => $_setField(16, value);
+  @$pb.TagNumber(16)
+  $core.bool hasPull() => $_has(15);
+  @$pb.TagNumber(16)
+  void clearPull() => $_clearField(16);
+  @$pb.TagNumber(16)
+  GitHubLink ensurePull() => $_ensure(15);
 }
 
 /// A git worktree of a repository, on a branch of its own.
@@ -21629,6 +21646,320 @@ class GitHubLink extends $pb.GeneratedMessage {
   void clearPull() => $_clearField(5);
 }
 
+class FindChatPullRequest extends $pb.GeneratedMessage {
+  factory FindChatPullRequest({
+    $core.String? chatId,
+    $core.bool? quiet,
+  }) {
+    final result = FindChatPullRequest._();
+    if (chatId != null) result.chatId = chatId;
+    if (quiet != null) result.quiet = quiet;
+    return result;
+  }
+
+  FindChatPullRequest._();
+
+  factory FindChatPullRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FindChatPullRequest()..mergeFromBuffer(data, registry);
+  factory FindChatPullRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FindChatPullRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'FindChatPullRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: FindChatPullRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOB(2, _omitFieldNames ? '' : 'quiet')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FindChatPullRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FindChatPullRequest copyWith(void Function(FindChatPullRequest) updates) =>
+      super.copyWith((message) => updates(message as FindChatPullRequest))
+          as FindChatPullRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use FindChatPullRequest() / FindChatPullRequest.new instead')
+  static FindChatPullRequest create() => FindChatPullRequest._();
+  static $pb.GeneratedMessage $_createMessage() => FindChatPullRequest._();
+  @$core.override
+  FindChatPullRequest createEmptyInstance() => FindChatPullRequest._();
+  @$core.pragma('dart2js:noInline')
+  static FindChatPullRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<FindChatPullRequest>(
+          FindChatPullRequest.$_createMessage);
+  static FindChatPullRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  /// Asked on the app's timer: held back while the rate limit runs low.
+  @$pb.TagNumber(2)
+  $core.bool get quiet => $_getBF(1);
+  @$pb.TagNumber(2)
+  set quiet($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasQuiet() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearQuiet() => $_clearField(2);
+}
+
+class FindChatPullResponse extends $pb.GeneratedMessage {
+  factory FindChatPullResponse({
+    $core.String? host,
+    $core.String? repo,
+    $core.String? branch,
+    $core.bool? defaultBranch,
+    GitHubLink? pull,
+    $core.String? error,
+  }) {
+    final result = FindChatPullResponse._();
+    if (host != null) result.host = host;
+    if (repo != null) result.repo = repo;
+    if (branch != null) result.branch = branch;
+    if (defaultBranch != null) result.defaultBranch = defaultBranch;
+    if (pull != null) result.pull = pull;
+    if (error != null) result.error = error;
+    return result;
+  }
+
+  FindChatPullResponse._();
+
+  factory FindChatPullResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FindChatPullResponse()..mergeFromBuffer(data, registry);
+  factory FindChatPullResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FindChatPullResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'FindChatPullResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: FindChatPullResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'host')
+    ..aOS(2, _omitFieldNames ? '' : 'repo')
+    ..aOS(3, _omitFieldNames ? '' : 'branch')
+    ..aOB(4, _omitFieldNames ? '' : 'defaultBranch')
+    ..aOM<GitHubLink>(5, _omitFieldNames ? '' : 'pull',
+        subBuilder: GitHubLink.$_createMessage)
+    ..aOS(6, _omitFieldNames ? '' : 'error')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FindChatPullResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FindChatPullResponse copyWith(void Function(FindChatPullResponse) updates) =>
+      super.copyWith((message) => updates(message as FindChatPullResponse))
+          as FindChatPullResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use FindChatPullResponse() / FindChatPullResponse.new instead')
+  static FindChatPullResponse create() => FindChatPullResponse._();
+  static $pb.GeneratedMessage $_createMessage() => FindChatPullResponse._();
+  @$core.override
+  FindChatPullResponse createEmptyInstance() => FindChatPullResponse._();
+  @$core.pragma('dart2js:noInline')
+  static FindChatPullResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<FindChatPullResponse>(
+          FindChatPullResponse.$_createMessage);
+  static FindChatPullResponse? _defaultInstance;
+
+  /// The folder's GitHub repository and branch; host is empty when the
+  /// folder isn't a clone of one on a host signed in to, or has no branch
+  /// checked out.
+  @$pb.TagNumber(1)
+  $core.String get host => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set host($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasHost() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearHost() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get repo => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set repo($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasRepo() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearRepo() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get branch => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set branch($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasBranch() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearBranch() => $_clearField(3);
+
+  /// The branch is the repository's default: no pull request is looked for.
+  @$pb.TagNumber(4)
+  $core.bool get defaultBranch => $_getBF(3);
+  @$pb.TagNumber(4)
+  set defaultBranch($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasDefaultBranch() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearDefaultBranch() => $_clearField(4);
+
+  /// The chat's pull request, if it has one.
+  @$pb.TagNumber(5)
+  GitHubLink get pull => $_getN(4);
+  @$pb.TagNumber(5)
+  set pull(GitHubLink value) => $_setField(5, value);
+  @$pb.TagNumber(5)
+  $core.bool hasPull() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearPull() => $_clearField(5);
+  @$pb.TagNumber(5)
+  GitHubLink ensurePull() => $_ensure(4);
+
+  /// Why GitHub couldn't be asked this time (the link stays as it was).
+  @$pb.TagNumber(6)
+  $core.String get error => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set error($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasError() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearError() => $_clearField(6);
+}
+
+class LinkChatPullRequest extends $pb.GeneratedMessage {
+  factory LinkChatPullRequest({
+    $core.String? chatId,
+    GitHubLink? pull,
+  }) {
+    final result = LinkChatPullRequest._();
+    if (chatId != null) result.chatId = chatId;
+    if (pull != null) result.pull = pull;
+    return result;
+  }
+
+  LinkChatPullRequest._();
+
+  factory LinkChatPullRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      LinkChatPullRequest()..mergeFromBuffer(data, registry);
+  factory LinkChatPullRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      LinkChatPullRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'LinkChatPullRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: LinkChatPullRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOM<GitHubLink>(2, _omitFieldNames ? '' : 'pull',
+        subBuilder: GitHubLink.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  LinkChatPullRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  LinkChatPullRequest copyWith(void Function(LinkChatPullRequest) updates) =>
+      super.copyWith((message) => updates(message as LinkChatPullRequest))
+          as LinkChatPullRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use LinkChatPullRequest() / LinkChatPullRequest.new instead')
+  static LinkChatPullRequest create() => LinkChatPullRequest._();
+  static $pb.GeneratedMessage $_createMessage() => LinkChatPullRequest._();
+  @$core.override
+  LinkChatPullRequest createEmptyInstance() => LinkChatPullRequest._();
+  @$core.pragma('dart2js:noInline')
+  static LinkChatPullRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<LinkChatPullRequest>(
+          LinkChatPullRequest.$_createMessage);
+  static LinkChatPullRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  /// The pull request to link; none unlinks the chat's.
+  @$pb.TagNumber(2)
+  GitHubLink get pull => $_getN(1);
+  @$pb.TagNumber(2)
+  set pull(GitHubLink value) => $_setField(2, value);
+  @$pb.TagNumber(2)
+  $core.bool hasPull() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPull() => $_clearField(2);
+  @$pb.TagNumber(2)
+  GitHubLink ensurePull() => $_ensure(1);
+}
+
+class LinkChatPullResponse extends $pb.GeneratedMessage {
+  factory LinkChatPullResponse() => LinkChatPullResponse._();
+
+  LinkChatPullResponse._();
+
+  factory LinkChatPullResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      LinkChatPullResponse()..mergeFromBuffer(data, registry);
+  factory LinkChatPullResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      LinkChatPullResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'LinkChatPullResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: LinkChatPullResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  LinkChatPullResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  LinkChatPullResponse copyWith(void Function(LinkChatPullResponse) updates) =>
+      super.copyWith((message) => updates(message as LinkChatPullResponse))
+          as LinkChatPullResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use LinkChatPullResponse() / LinkChatPullResponse.new instead')
+  static LinkChatPullResponse create() => LinkChatPullResponse._();
+  static $pb.GeneratedMessage $_createMessage() => LinkChatPullResponse._();
+  @$core.override
+  LinkChatPullResponse createEmptyInstance() => LinkChatPullResponse._();
+  @$core.pragma('dart2js:noInline')
+  static LinkChatPullResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<LinkChatPullResponse>(
+          LinkChatPullResponse.$_createMessage);
+  static LinkChatPullResponse? _defaultInstance;
+}
+
 class GetGitHubStatesRequest extends $pb.GeneratedMessage {
   factory GetGitHubStatesRequest({
     $core.Iterable<GitHubLink>? items,
@@ -25087,6 +25418,21 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, SubmitGitHubReviewRequest request) =>
       _client.invoke<SubmitGitHubReviewResponse>(ctx, 'NushiService',
           'SubmitGitHubReview', request, SubmitGitHubReviewResponse());
+
+  /// A chat's pull request: the one it was started from, else the one whose
+  /// head is its folder's branch, looked for on GitHub (and linked when
+  /// found), with the folder's repository and branch. API 81.
+  $async.Future<FindChatPullResponse> findChatPull(
+          $pb.ClientContext? ctx, FindChatPullRequest request) =>
+      _client.invoke<FindChatPullResponse>(
+          ctx, 'NushiService', 'FindChatPull', request, FindChatPullResponse());
+
+  /// Links a pull request picked by hand to a chat, or unlinks its own.
+  /// API 81.
+  $async.Future<LinkChatPullResponse> linkChatPull(
+          $pb.ClientContext? ctx, LinkChatPullRequest request) =>
+      _client.invoke<LinkChatPullResponse>(
+          ctx, 'NushiService', 'LinkChatPull', request, LinkChatPullResponse());
 
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.

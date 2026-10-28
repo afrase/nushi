@@ -335,6 +335,12 @@ const (
 	// NushiServiceSubmitGitHubReviewProcedure is the fully-qualified name of the NushiService's
 	// SubmitGitHubReview RPC.
 	NushiServiceSubmitGitHubReviewProcedure = "/nushi.v1.NushiService/SubmitGitHubReview"
+	// NushiServiceFindChatPullProcedure is the fully-qualified name of the NushiService's FindChatPull
+	// RPC.
+	NushiServiceFindChatPullProcedure = "/nushi.v1.NushiService/FindChatPull"
+	// NushiServiceLinkChatPullProcedure is the fully-qualified name of the NushiService's LinkChatPull
+	// RPC.
+	NushiServiceLinkChatPullProcedure = "/nushi.v1.NushiService/LinkChatPull"
 	// NushiServiceEventsProcedure is the fully-qualified name of the NushiService's Events RPC.
 	NushiServiceEventsProcedure = "/nushi.v1.NushiService/Events"
 )
@@ -680,6 +686,13 @@ type NushiServiceClient interface {
 	ResolveGitHubThread(context.Context, *connect.Request[v1.ResolveGitHubThreadRequest]) (*connect.Response[v1.ResolveGitHubThreadResponse], error)
 	AddGitHubComment(context.Context, *connect.Request[v1.AddGitHubCommentRequest]) (*connect.Response[v1.AddGitHubCommentResponse], error)
 	SubmitGitHubReview(context.Context, *connect.Request[v1.SubmitGitHubReviewRequest]) (*connect.Response[v1.SubmitGitHubReviewResponse], error)
+	// A chat's pull request: the one it was started from, else the one whose
+	// head is its folder's branch, looked for on GitHub (and linked when
+	// found), with the folder's repository and branch. API 81.
+	FindChatPull(context.Context, *connect.Request[v1.FindChatPullRequest]) (*connect.Response[v1.FindChatPullResponse], error)
+	// Links a pull request picked by hand to a chat, or unlinks its own.
+	// API 81.
+	LinkChatPull(context.Context, *connect.Request[v1.LinkChatPullRequest]) (*connect.Response[v1.LinkChatPullResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
 	Events(context.Context, *connect.Request[v1.EventsRequest]) (*connect.ServerStreamForClient[v1.EventsResponse], error)
@@ -1362,6 +1375,18 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("SubmitGitHubReview")),
 			connect.WithClientOptions(opts...),
 		),
+		findChatPull: connect.NewClient[v1.FindChatPullRequest, v1.FindChatPullResponse](
+			httpClient,
+			baseURL+NushiServiceFindChatPullProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("FindChatPull")),
+			connect.WithClientOptions(opts...),
+		),
+		linkChatPull: connect.NewClient[v1.LinkChatPullRequest, v1.LinkChatPullResponse](
+			httpClient,
+			baseURL+NushiServiceLinkChatPullProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("LinkChatPull")),
+			connect.WithClientOptions(opts...),
+		),
 		events: connect.NewClient[v1.EventsRequest, v1.EventsResponse](
 			httpClient,
 			baseURL+NushiServiceEventsProcedure,
@@ -1484,6 +1509,8 @@ type nushiServiceClient struct {
 	resolveGitHubThread *connect.Client[v1.ResolveGitHubThreadRequest, v1.ResolveGitHubThreadResponse]
 	addGitHubComment    *connect.Client[v1.AddGitHubCommentRequest, v1.AddGitHubCommentResponse]
 	submitGitHubReview  *connect.Client[v1.SubmitGitHubReviewRequest, v1.SubmitGitHubReviewResponse]
+	findChatPull        *connect.Client[v1.FindChatPullRequest, v1.FindChatPullResponse]
+	linkChatPull        *connect.Client[v1.LinkChatPullRequest, v1.LinkChatPullResponse]
 	events              *connect.Client[v1.EventsRequest, v1.EventsResponse]
 }
 
@@ -2042,6 +2069,16 @@ func (c *nushiServiceClient) SubmitGitHubReview(ctx context.Context, req *connec
 	return c.submitGitHubReview.CallUnary(ctx, req)
 }
 
+// FindChatPull calls nushi.v1.NushiService.FindChatPull.
+func (c *nushiServiceClient) FindChatPull(ctx context.Context, req *connect.Request[v1.FindChatPullRequest]) (*connect.Response[v1.FindChatPullResponse], error) {
+	return c.findChatPull.CallUnary(ctx, req)
+}
+
+// LinkChatPull calls nushi.v1.NushiService.LinkChatPull.
+func (c *nushiServiceClient) LinkChatPull(ctx context.Context, req *connect.Request[v1.LinkChatPullRequest]) (*connect.Response[v1.LinkChatPullResponse], error) {
+	return c.linkChatPull.CallUnary(ctx, req)
+}
+
 // Events calls nushi.v1.NushiService.Events.
 func (c *nushiServiceClient) Events(ctx context.Context, req *connect.Request[v1.EventsRequest]) (*connect.ServerStreamForClient[v1.EventsResponse], error) {
 	return c.events.CallServerStream(ctx, req)
@@ -2388,6 +2425,13 @@ type NushiServiceHandler interface {
 	ResolveGitHubThread(context.Context, *connect.Request[v1.ResolveGitHubThreadRequest]) (*connect.Response[v1.ResolveGitHubThreadResponse], error)
 	AddGitHubComment(context.Context, *connect.Request[v1.AddGitHubCommentRequest]) (*connect.Response[v1.AddGitHubCommentResponse], error)
 	SubmitGitHubReview(context.Context, *connect.Request[v1.SubmitGitHubReviewRequest]) (*connect.Response[v1.SubmitGitHubReviewResponse], error)
+	// A chat's pull request: the one it was started from, else the one whose
+	// head is its folder's branch, looked for on GitHub (and linked when
+	// found), with the folder's repository and branch. API 81.
+	FindChatPull(context.Context, *connect.Request[v1.FindChatPullRequest]) (*connect.Response[v1.FindChatPullResponse], error)
+	// Links a pull request picked by hand to a chat, or unlinks its own.
+	// API 81.
+	LinkChatPull(context.Context, *connect.Request[v1.LinkChatPullRequest]) (*connect.Response[v1.LinkChatPullResponse], error)
 	// Streams every change to every chat from now on. The first message is
 	// empty: it says the subscription is live.
 	Events(context.Context, *connect.Request[v1.EventsRequest], *connect.ServerStream[v1.EventsResponse]) error
@@ -3066,6 +3110,18 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("SubmitGitHubReview")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceFindChatPullHandler := connect.NewUnaryHandler(
+		NushiServiceFindChatPullProcedure,
+		svc.FindChatPull,
+		connect.WithSchema(nushiServiceMethods.ByName("FindChatPull")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceLinkChatPullHandler := connect.NewUnaryHandler(
+		NushiServiceLinkChatPullProcedure,
+		svc.LinkChatPull,
+		connect.WithSchema(nushiServiceMethods.ByName("LinkChatPull")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceEventsHandler := connect.NewServerStreamHandler(
 		NushiServiceEventsProcedure,
 		svc.Events,
@@ -3296,6 +3352,10 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceAddGitHubCommentHandler.ServeHTTP(w, r)
 		case NushiServiceSubmitGitHubReviewProcedure:
 			nushiServiceSubmitGitHubReviewHandler.ServeHTTP(w, r)
+		case NushiServiceFindChatPullProcedure:
+			nushiServiceFindChatPullHandler.ServeHTTP(w, r)
+		case NushiServiceLinkChatPullProcedure:
+			nushiServiceLinkChatPullHandler.ServeHTTP(w, r)
 		case NushiServiceEventsProcedure:
 			nushiServiceEventsHandler.ServeHTTP(w, r)
 		default:
@@ -3749,6 +3809,14 @@ func (UnimplementedNushiServiceHandler) AddGitHubComment(context.Context, *conne
 
 func (UnimplementedNushiServiceHandler) SubmitGitHubReview(context.Context, *connect.Request[v1.SubmitGitHubReviewRequest]) (*connect.Response[v1.SubmitGitHubReviewResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.SubmitGitHubReview is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) FindChatPull(context.Context, *connect.Request[v1.FindChatPullRequest]) (*connect.Response[v1.FindChatPullResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.FindChatPull is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) LinkChatPull(context.Context, *connect.Request[v1.LinkChatPullRequest]) (*connect.Response[v1.LinkChatPullResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.LinkChatPull is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) Events(context.Context, *connect.Request[v1.EventsRequest], *connect.ServerStream[v1.EventsResponse]) error {
