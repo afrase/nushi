@@ -5,15 +5,18 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/chat_files.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/markdown.dart';
 import 'package:nushi/phone/connection_bar.dart';
 import 'package:nushi/phone/files_screen.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/preview_screen.dart';
 import 'package:nushi/phone/ui.dart';
 import 'package:nushi/preview.dart';
+import 'package:nushi/pull_states.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// A chat on the phone: the Mac's transcript (messages, tool rows
 /// collapsed, plans, subagents, answerable prompts and questions) and its
@@ -33,6 +36,14 @@ class ChatScreen extends StatelessWidget {
       builder: (context, _) => PhoneScreen(
         title: chat.title.isEmpty ? 'New chat' : chat.title,
         actions: [
+          if (chat.pull != null)
+            PullChip(
+              daemon,
+              chat,
+              onOpen: (url) {
+                if (webLink(url) case final uri?) unawaited(launchUrl(uri));
+              },
+            ),
           if (daemon.daemonApi >= previewApi &&
               chatFiles(chat.items).isNotEmpty)
             ListenableBuilder(
