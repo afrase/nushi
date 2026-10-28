@@ -1,6 +1,7 @@
 package chats
 
 import (
+	"cmp"
 	"context"
 	"regexp"
 	"strings"
@@ -31,18 +32,43 @@ func branchNote(from, to string) string {
 	return "[Nushi] This worktree's branch was renamed from " + from + " to " + to + ". Use the new name."
 }
 
-// noteText matches a note at the start of a user's message as the agent
-// replays it (its own text block, or run into the user's text).
-var noteText = regexp.MustCompile(`^\[Nushi\] This worktree's branch was renamed from \S+ to \S+\. Use the new name\.\s*`)
+// switchNote tells the agent its folder's branch was switched
+// (SwitchBranch); the names are checked by git first. Its fixed end
+// keeps a name with dots apart from the user's text run into it.
+func switchNote(from, to string) string {
+	return "[Nushi] This folder's branch changed from " + from + " to " + to + ". Work on " + to + " from now on."
+}
 
-// unnoted is a replayed user message's text without the note that went
+// moveNote tells the agent its chat moved to folder (no backquote or line
+// break in it), on branch if it's on one (checked by git first).
+func moveNote(folder, branch string) string {
+	if branch == "" {
+		return "[Nushi] This chat moved to `" + folder + "`. Work there from now on."
+	}
+	return "[Nushi] This chat moved to `" + folder + "`, on branch " + branch + ". Work there from now on."
+}
+
+// noteTexts match the notes at the start of a user's message as the agent
+// replays it (its own text block, or run into the user's text).
+var noteTexts = []*regexp.Regexp{
+	regexp.MustCompile(`^\[Nushi\] This worktree's branch was renamed from \S+ to \S+\. Use the new name\.\s*`),
+	regexp.MustCompile(`^\[Nushi\] This folder's branch changed from \S+ to \S+\. Work on \S+ from now on\.\s*`),
+	regexp.MustCompile("^\\[Nushi\\] This chat moved to `[^`\n]*`(?:, on branch \\S+)?\\. Work there from now on\\.\\s*"),
+}
+
+// unnoted is a replayed user message's text without the notes that went
 // before it, and whether it had one.
 func unnoted(text string) (string, bool) {
-	loc := noteText.FindStringIndex(text)
-	if loc == nil {
-		return text, false
+	noted := false
+	for again := true; again; {
+		again = false
+		for _, re := range noteTexts {
+			if loc := re.FindStringIndex(text); loc != nil {
+				text, noted, again = text[loc[1]:], true, true
+			}
+		}
 	}
-	return text[loc[1]:], true
+	return text, noted
 }
 
 // told is what a prompt tells the agent of its branch: the name it then
@@ -51,6 +77,27 @@ type told struct {
 	branch  string
 	noted   bool     // a note went with it
 	notices []string // the renames' lines it told of
+	placed  *placed  // where the chat works, told too (switch.go)
+}
+
+// notesLocked returns the notes for the prompt starting now (where the
+// chat works, then its worktree's branch renamed), and what to record
+// once the prompt went.
+func (c *chat) notesLocked() ([]acp.ContentBlock, *told) {
+	var notes []acp.ContentBlock
+	place, p := c.placeNoteLocked()
+	if place != nil {
+		notes = append(notes, *place)
+	}
+	note, t := c.branchNoteLocked()
+	if note != nil {
+		notes = append(notes, *note)
+	}
+	if p != nil {
+		t = cmp.Or(t, &told{})
+		t.placed = p
+	}
+	return notes, t
 }
 
 // branchNoteLocked returns the note for the prompt starting now, if the
@@ -93,6 +140,9 @@ func (c *chat) branchNoteLocked() (*acp.ContentBlock, *told) {
 // toldLocked records that a prompt went to the agent with t: the branch
 // as the agent now has it, and its note's renames marked as told.
 func (c *chat) toldLocked(t *told) {
+	if t.placed != nil {
+		c.placedLocked(t.placed)
+	}
 	if wt := c.session.Worktree; wt == nil || wt.Branch != t.branch {
 		return // moved meanwhile
 	}

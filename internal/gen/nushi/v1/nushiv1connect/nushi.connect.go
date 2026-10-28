@@ -82,6 +82,9 @@ const (
 	// NushiServiceRenameBranchProcedure is the fully-qualified name of the NushiService's RenameBranch
 	// RPC.
 	NushiServiceRenameBranchProcedure = "/nushi.v1.NushiService/RenameBranch"
+	// NushiServiceSwitchBranchProcedure is the fully-qualified name of the NushiService's SwitchBranch
+	// RPC.
+	NushiServiceSwitchBranchProcedure = "/nushi.v1.NushiService/SwitchBranch"
 	// NushiServiceArchiveChatProcedure is the fully-qualified name of the NushiService's ArchiveChat
 	// RPC.
 	NushiServiceArchiveChatProcedure = "/nushi.v1.NushiService/ArchiveChat"
@@ -136,6 +139,9 @@ const (
 	// NushiServiceGetFolderStatusProcedure is the fully-qualified name of the NushiService's
 	// GetFolderStatus RPC.
 	NushiServiceGetFolderStatusProcedure = "/nushi.v1.NushiService/GetFolderStatus"
+	// NushiServiceListBranchesProcedure is the fully-qualified name of the NushiService's ListBranches
+	// RPC.
+	NushiServiceListBranchesProcedure = "/nushi.v1.NushiService/ListBranches"
 	// NushiServiceListFilesProcedure is the fully-qualified name of the NushiService's ListFiles RPC.
 	NushiServiceListFilesProcedure = "/nushi.v1.NushiService/ListFiles"
 	// NushiServiceGetContextUsageProcedure is the fully-qualified name of the NushiService's
@@ -429,6 +435,14 @@ type NushiServiceClient interface {
 	// turn, for a name git doesn't take or that's taken, and when the branch
 	// is on a remote or another worktree or chat has it. (API 68)
 	RenameBranch(context.Context, *connect.Request[v1.RenameBranchRequest]) (*connect.Response[v1.RenameBranchResponse], error)
+	// Checks out a branch in a chat's folder (git switch), or a new one from
+	// HEAD. Refused (an error) for a worktree chat and while it, or another
+	// chat in the same checkout, works; answered without switching when the
+	// branch is another worktree's, the folder has uncommitted changes (not
+	// for a new branch), or other chats work there and with_others isn't
+	// set. Each chat there gets a "branch_switched" line and is told with its
+	// next prompt. (API 83)
+	SwitchBranch(context.Context, *connect.Request[v1.SwitchBranchRequest]) (*connect.Response[v1.SwitchBranchResponse], error)
 	// Archives a chat: its turn is cancelled and its agent stops; it stays
 	// listed, read-only. Unarchiving reopens it (ACP session/load).
 	ArchiveChat(context.Context, *connect.Request[v1.ArchiveChatRequest]) (*connect.Response[v1.ArchiveChatResponse], error)
@@ -497,6 +511,9 @@ type NushiServiceClient interface {
 	// Sums up a folder's changes (as GetDiff lists them) and names its
 	// branch.
 	GetFolderStatus(context.Context, *connect.Request[v1.GetFolderStatusRequest]) (*connect.Response[v1.GetFolderStatusResponse], error)
+	// Lists a folder's repository's local branches, the newest commit first,
+	// and its worktrees, the main one first. (API 83)
+	ListBranches(context.Context, *connect.Request[v1.ListBranchesRequest]) (*connect.Response[v1.ListBranchesResponse], error)
 	// Lists a folder's files (up to 20,000) for @-mentions: in a git
 	// repository the ones git doesn't ignore.
 	ListFiles(context.Context, *connect.Request[v1.ListFilesRequest]) (*connect.Response[v1.ListFilesResponse], error)
@@ -843,6 +860,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("RenameBranch")),
 			connect.WithClientOptions(opts...),
 		),
+		switchBranch: connect.NewClient[v1.SwitchBranchRequest, v1.SwitchBranchResponse](
+			httpClient,
+			baseURL+NushiServiceSwitchBranchProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("SwitchBranch")),
+			connect.WithClientOptions(opts...),
+		),
 		archiveChat: connect.NewClient[v1.ArchiveChatRequest, v1.ArchiveChatResponse](
 			httpClient,
 			baseURL+NushiServiceArchiveChatProcedure,
@@ -961,6 +984,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceGetFolderStatusProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("GetFolderStatus")),
+			connect.WithClientOptions(opts...),
+		),
+		listBranches: connect.NewClient[v1.ListBranchesRequest, v1.ListBranchesResponse](
+			httpClient,
+			baseURL+NushiServiceListBranchesProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ListBranches")),
 			connect.WithClientOptions(opts...),
 		),
 		listFiles: connect.NewClient[v1.ListFilesRequest, v1.ListFilesResponse](
@@ -1433,6 +1462,7 @@ type nushiServiceClient struct {
 	closeSideChat       *connect.Client[v1.CloseSideChatRequest, v1.CloseSideChatResponse]
 	renameChat          *connect.Client[v1.RenameChatRequest, v1.RenameChatResponse]
 	renameBranch        *connect.Client[v1.RenameBranchRequest, v1.RenameBranchResponse]
+	switchBranch        *connect.Client[v1.SwitchBranchRequest, v1.SwitchBranchResponse]
 	archiveChat         *connect.Client[v1.ArchiveChatRequest, v1.ArchiveChatResponse]
 	sleepChat           *connect.Client[v1.SleepChatRequest, v1.SleepChatResponse]
 	reopenChat          *connect.Client[v1.ReopenChatRequest, v1.ReopenChatResponse]
@@ -1453,6 +1483,7 @@ type nushiServiceClient struct {
 	findChatFiles       *connect.Client[v1.FindChatFilesRequest, v1.FindChatFilesResponse]
 	listCommits         *connect.Client[v1.ListCommitsRequest, v1.ListCommitsResponse]
 	getFolderStatus     *connect.Client[v1.GetFolderStatusRequest, v1.GetFolderStatusResponse]
+	listBranches        *connect.Client[v1.ListBranchesRequest, v1.ListBranchesResponse]
 	listFiles           *connect.Client[v1.ListFilesRequest, v1.ListFilesResponse]
 	getContextUsage     *connect.Client[v1.GetContextUsageRequest, v1.GetContextUsageResponse]
 	listMcpServers      *connect.Client[v1.ListMcpServersRequest, v1.ListMcpServersResponse]
@@ -1634,6 +1665,11 @@ func (c *nushiServiceClient) RenameBranch(ctx context.Context, req *connect.Requ
 	return c.renameBranch.CallUnary(ctx, req)
 }
 
+// SwitchBranch calls nushi.v1.NushiService.SwitchBranch.
+func (c *nushiServiceClient) SwitchBranch(ctx context.Context, req *connect.Request[v1.SwitchBranchRequest]) (*connect.Response[v1.SwitchBranchResponse], error) {
+	return c.switchBranch.CallUnary(ctx, req)
+}
+
 // ArchiveChat calls nushi.v1.NushiService.ArchiveChat.
 func (c *nushiServiceClient) ArchiveChat(ctx context.Context, req *connect.Request[v1.ArchiveChatRequest]) (*connect.Response[v1.ArchiveChatResponse], error) {
 	return c.archiveChat.CallUnary(ctx, req)
@@ -1732,6 +1768,11 @@ func (c *nushiServiceClient) ListCommits(ctx context.Context, req *connect.Reque
 // GetFolderStatus calls nushi.v1.NushiService.GetFolderStatus.
 func (c *nushiServiceClient) GetFolderStatus(ctx context.Context, req *connect.Request[v1.GetFolderStatusRequest]) (*connect.Response[v1.GetFolderStatusResponse], error) {
 	return c.getFolderStatus.CallUnary(ctx, req)
+}
+
+// ListBranches calls nushi.v1.NushiService.ListBranches.
+func (c *nushiServiceClient) ListBranches(ctx context.Context, req *connect.Request[v1.ListBranchesRequest]) (*connect.Response[v1.ListBranchesResponse], error) {
+	return c.listBranches.CallUnary(ctx, req)
 }
 
 // ListFiles calls nushi.v1.NushiService.ListFiles.
@@ -2185,6 +2226,14 @@ type NushiServiceHandler interface {
 	// turn, for a name git doesn't take or that's taken, and when the branch
 	// is on a remote or another worktree or chat has it. (API 68)
 	RenameBranch(context.Context, *connect.Request[v1.RenameBranchRequest]) (*connect.Response[v1.RenameBranchResponse], error)
+	// Checks out a branch in a chat's folder (git switch), or a new one from
+	// HEAD. Refused (an error) for a worktree chat and while it, or another
+	// chat in the same checkout, works; answered without switching when the
+	// branch is another worktree's, the folder has uncommitted changes (not
+	// for a new branch), or other chats work there and with_others isn't
+	// set. Each chat there gets a "branch_switched" line and is told with its
+	// next prompt. (API 83)
+	SwitchBranch(context.Context, *connect.Request[v1.SwitchBranchRequest]) (*connect.Response[v1.SwitchBranchResponse], error)
 	// Archives a chat: its turn is cancelled and its agent stops; it stays
 	// listed, read-only. Unarchiving reopens it (ACP session/load).
 	ArchiveChat(context.Context, *connect.Request[v1.ArchiveChatRequest]) (*connect.Response[v1.ArchiveChatResponse], error)
@@ -2253,6 +2302,9 @@ type NushiServiceHandler interface {
 	// Sums up a folder's changes (as GetDiff lists them) and names its
 	// branch.
 	GetFolderStatus(context.Context, *connect.Request[v1.GetFolderStatusRequest]) (*connect.Response[v1.GetFolderStatusResponse], error)
+	// Lists a folder's repository's local branches, the newest commit first,
+	// and its worktrees, the main one first. (API 83)
+	ListBranches(context.Context, *connect.Request[v1.ListBranchesRequest]) (*connect.Response[v1.ListBranchesResponse], error)
 	// Lists a folder's files (up to 20,000) for @-mentions: in a git
 	// repository the ones git doesn't ignore.
 	ListFiles(context.Context, *connect.Request[v1.ListFilesRequest]) (*connect.Response[v1.ListFilesResponse], error)
@@ -2595,6 +2647,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("RenameBranch")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceSwitchBranchHandler := connect.NewUnaryHandler(
+		NushiServiceSwitchBranchProcedure,
+		svc.SwitchBranch,
+		connect.WithSchema(nushiServiceMethods.ByName("SwitchBranch")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceArchiveChatHandler := connect.NewUnaryHandler(
 		NushiServiceArchiveChatProcedure,
 		svc.ArchiveChat,
@@ -2713,6 +2771,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceGetFolderStatusProcedure,
 		svc.GetFolderStatus,
 		connect.WithSchema(nushiServiceMethods.ByName("GetFolderStatus")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceListBranchesHandler := connect.NewUnaryHandler(
+		NushiServiceListBranchesProcedure,
+		svc.ListBranches,
+		connect.WithSchema(nushiServiceMethods.ByName("ListBranches")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceListFilesHandler := connect.NewUnaryHandler(
@@ -3203,6 +3267,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceRenameChatHandler.ServeHTTP(w, r)
 		case NushiServiceRenameBranchProcedure:
 			nushiServiceRenameBranchHandler.ServeHTTP(w, r)
+		case NushiServiceSwitchBranchProcedure:
+			nushiServiceSwitchBranchHandler.ServeHTTP(w, r)
 		case NushiServiceArchiveChatProcedure:
 			nushiServiceArchiveChatHandler.ServeHTTP(w, r)
 		case NushiServiceSleepChatProcedure:
@@ -3243,6 +3309,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceListCommitsHandler.ServeHTTP(w, r)
 		case NushiServiceGetFolderStatusProcedure:
 			nushiServiceGetFolderStatusHandler.ServeHTTP(w, r)
+		case NushiServiceListBranchesProcedure:
+			nushiServiceListBranchesHandler.ServeHTTP(w, r)
 		case NushiServiceListFilesProcedure:
 			nushiServiceListFilesHandler.ServeHTTP(w, r)
 		case NushiServiceGetContextUsageProcedure:
@@ -3484,6 +3552,10 @@ func (UnimplementedNushiServiceHandler) RenameBranch(context.Context, *connect.R
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.RenameBranch is not implemented"))
 }
 
+func (UnimplementedNushiServiceHandler) SwitchBranch(context.Context, *connect.Request[v1.SwitchBranchRequest]) (*connect.Response[v1.SwitchBranchResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.SwitchBranch is not implemented"))
+}
+
 func (UnimplementedNushiServiceHandler) ArchiveChat(context.Context, *connect.Request[v1.ArchiveChatRequest]) (*connect.Response[v1.ArchiveChatResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ArchiveChat is not implemented"))
 }
@@ -3562,6 +3634,10 @@ func (UnimplementedNushiServiceHandler) ListCommits(context.Context, *connect.Re
 
 func (UnimplementedNushiServiceHandler) GetFolderStatus(context.Context, *connect.Request[v1.GetFolderStatusRequest]) (*connect.Response[v1.GetFolderStatusResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetFolderStatus is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ListBranches(context.Context, *connect.Request[v1.ListBranchesRequest]) (*connect.Response[v1.ListBranchesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ListBranches is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) ListFiles(context.Context, *connect.Request[v1.ListFilesRequest]) (*connect.Response[v1.ListFilesResponse], error) {

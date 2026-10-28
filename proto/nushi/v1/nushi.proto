@@ -84,6 +84,14 @@ service NushiService {
   // turn, for a name git doesn't take or that's taken, and when the branch
   // is on a remote or another worktree or chat has it. (API 68)
   rpc RenameBranch(RenameBranchRequest) returns (RenameBranchResponse);
+  // Checks out a branch in a chat's folder (git switch), or a new one from
+  // HEAD. Refused (an error) for a worktree chat and while it, or another
+  // chat in the same checkout, works; answered without switching when the
+  // branch is another worktree's, the folder has uncommitted changes (not
+  // for a new branch), or other chats work there and with_others isn't
+  // set. Each chat there gets a "branch_switched" line and is told with its
+  // next prompt. (API 83)
+  rpc SwitchBranch(SwitchBranchRequest) returns (SwitchBranchResponse);
   // Archives a chat: its turn is cancelled and its agent stops; it stays
   // listed, read-only. Unarchiving reopens it (ACP session/load).
   rpc ArchiveChat(ArchiveChatRequest) returns (ArchiveChatResponse);
@@ -152,6 +160,9 @@ service NushiService {
   // Sums up a folder's changes (as GetDiff lists them) and names its
   // branch.
   rpc GetFolderStatus(GetFolderStatusRequest) returns (GetFolderStatusResponse);
+  // Lists a folder's repository's local branches, the newest commit first,
+  // and its worktrees, the main one first. (API 83)
+  rpc ListBranches(ListBranchesRequest) returns (ListBranchesResponse);
   // Lists a folder's files (up to 20,000) for @-mentions: in a git
   // repository the ones git doesn't ignore.
   rpc ListFiles(ListFilesRequest) returns (ListFilesResponse);
@@ -426,7 +437,8 @@ message Chat {
   bool archived = 8;
   // The agent's session id (claude --resume <id>).
   string session_id = 9;
-  // The git worktree Nushi made for the chat, if it runs in one.
+  // The git worktree the chat runs in, if it's one Nushi made for it or
+  // another than its repository's own folder (found).
   Worktree worktree = 10;
   // Its folder is a scratch folder of its own: it has no folder yet.
   bool scratch = 11;
@@ -459,6 +471,9 @@ message Worktree {
   // The commit it started from, for when its base branch is gone; empty
   // for worktrees made before daemon API 42.
   string base_commit = 5;
+  // It was there already (made outside Nushi, or for another chat) when
+  // the chat moved or started in it: Nushi never removes it. API 83.
+  bool found = 6;
 }
 
 message GetChatRequest {
@@ -838,6 +853,26 @@ message RenameBranchRequest {
 }
 
 message RenameBranchResponse {}
+
+message SwitchBranchRequest {
+  string chat_id = 1;
+  string branch = 2;
+  // A new branch from HEAD, with uncommitted changes going along.
+  bool new_branch = 3;
+  // Switch though other chats work in the same checkout (they move too).
+  bool with_others = 4;
+}
+
+// Either switched, or one of the rest says why not.
+message SwitchBranchResponse {
+  bool switched = 1;
+  // The worktree that has the branch checked out: move there instead.
+  string worktree = 2;
+  // Uncommitted changes to tracked files in the folder.
+  int32 changed = 3;
+  // The other chats in the folder's checkout (titles), to confirm.
+  repeated string others = 4;
+}
 
 message ArchiveChatRequest {
   string chat_id = 1;
@@ -1328,6 +1363,37 @@ message GetFolderStatusResponse {
   int32 ahead = 8;
 }
 
+message ListBranchesRequest {
+  string folder = 1;
+}
+
+message ListBranchesResponse {
+  // 500 at most.
+  repeated GitBranch branches = 1;
+  // Not those whose folders are gone (git would prune them).
+  repeated GitWorktree worktrees = 2;
+}
+
+message GitBranch {
+  string name = 1;
+  // Its last commit's time.
+  int64 unix_seconds = 2;
+  // The worktree that has it checked out, if one does.
+  string worktree = 3;
+}
+
+message GitWorktree {
+  string path = 1;
+  // "" when its HEAD is detached.
+  string branch = 2;
+  // The repository's own folder.
+  bool main = 3;
+  // Locked (git worktree lock).
+  bool locked = 4;
+  // The folder asked about is in it.
+  bool current = 5;
+}
+
 message GetDiffRequest {
   // An absolute path; it may be anywhere inside a repository.
   string folder = 1;
@@ -1519,7 +1585,9 @@ enum ItemKind {
   // "reopen_failed" (ReopenChat tries again). "own_turn" marks where the
   // agent starts working on its own, outside a turn of the user's (after a
   // background task ended). "branch_renamed" says Nushi named the chat's
-  // branch after it, between turns (the agent isn't told).
+  // branch after it, between turns (the agent isn't told);
+  // "branch_switched" that the chat's folder was switched to another
+  // branch (SwitchBranch).
   ITEM_KIND_NOTICE = 8;
 }
 

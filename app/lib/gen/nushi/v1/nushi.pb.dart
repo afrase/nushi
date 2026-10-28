@@ -785,7 +785,8 @@ class Chat extends $pb.GeneratedMessage {
   @$pb.TagNumber(9)
   void clearSessionId() => $_clearField(9);
 
-  /// The git worktree Nushi made for the chat, if it runs in one.
+  /// The git worktree the chat runs in, if it's one Nushi made for it or
+  /// another than its repository's own folder (found).
   @$pb.TagNumber(10)
   Worktree get worktree => $_getN(9);
   @$pb.TagNumber(10)
@@ -872,6 +873,7 @@ class Worktree extends $pb.GeneratedMessage {
     $core.String? branch,
     $core.String? base,
     $core.String? baseCommit,
+    $core.bool? found,
   }) {
     final result = Worktree._();
     if (repo != null) result.repo = repo;
@@ -879,6 +881,7 @@ class Worktree extends $pb.GeneratedMessage {
     if (branch != null) result.branch = branch;
     if (base != null) result.base = base;
     if (baseCommit != null) result.baseCommit = baseCommit;
+    if (found != null) result.found = found;
     return result;
   }
 
@@ -900,6 +903,7 @@ class Worktree extends $pb.GeneratedMessage {
     ..aOS(3, _omitFieldNames ? '' : 'branch')
     ..aOS(4, _omitFieldNames ? '' : 'base')
     ..aOS(5, _omitFieldNames ? '' : 'baseCommit')
+    ..aOB(6, _omitFieldNames ? '' : 'found')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -974,6 +978,17 @@ class Worktree extends $pb.GeneratedMessage {
   $core.bool hasBaseCommit() => $_has(4);
   @$pb.TagNumber(5)
   void clearBaseCommit() => $_clearField(5);
+
+  /// It was there already (made outside Nushi, or for another chat) when
+  /// the chat moved or started in it: Nushi never removes it. API 83.
+  @$pb.TagNumber(6)
+  $core.bool get found => $_getBF(5);
+  @$pb.TagNumber(6)
+  set found($core.bool value) => $_setBool(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasFound() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearFound() => $_clearField(6);
 }
 
 class GetChatRequest extends $pb.GeneratedMessage {
@@ -4697,6 +4712,194 @@ class RenameBranchResponse extends $pb.GeneratedMessage {
       $pb.GeneratedMessage.$_defaultFor<RenameBranchResponse>(
           RenameBranchResponse.$_createMessage);
   static RenameBranchResponse? _defaultInstance;
+}
+
+class SwitchBranchRequest extends $pb.GeneratedMessage {
+  factory SwitchBranchRequest({
+    $core.String? chatId,
+    $core.String? branch,
+    $core.bool? newBranch,
+    $core.bool? withOthers,
+  }) {
+    final result = SwitchBranchRequest._();
+    if (chatId != null) result.chatId = chatId;
+    if (branch != null) result.branch = branch;
+    if (newBranch != null) result.newBranch = newBranch;
+    if (withOthers != null) result.withOthers = withOthers;
+    return result;
+  }
+
+  SwitchBranchRequest._();
+
+  factory SwitchBranchRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SwitchBranchRequest()..mergeFromBuffer(data, registry);
+  factory SwitchBranchRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SwitchBranchRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SwitchBranchRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SwitchBranchRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOS(2, _omitFieldNames ? '' : 'branch')
+    ..aOB(3, _omitFieldNames ? '' : 'newBranch')
+    ..aOB(4, _omitFieldNames ? '' : 'withOthers')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SwitchBranchRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SwitchBranchRequest copyWith(void Function(SwitchBranchRequest) updates) =>
+      super.copyWith((message) => updates(message as SwitchBranchRequest))
+          as SwitchBranchRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use SwitchBranchRequest() / SwitchBranchRequest.new instead')
+  static SwitchBranchRequest create() => SwitchBranchRequest._();
+  static $pb.GeneratedMessage $_createMessage() => SwitchBranchRequest._();
+  @$core.override
+  SwitchBranchRequest createEmptyInstance() => SwitchBranchRequest._();
+  @$core.pragma('dart2js:noInline')
+  static SwitchBranchRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SwitchBranchRequest>(
+          SwitchBranchRequest.$_createMessage);
+  static SwitchBranchRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get branch => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set branch($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasBranch() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearBranch() => $_clearField(2);
+
+  /// A new branch from HEAD, with uncommitted changes going along.
+  @$pb.TagNumber(3)
+  $core.bool get newBranch => $_getBF(2);
+  @$pb.TagNumber(3)
+  set newBranch($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasNewBranch() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearNewBranch() => $_clearField(3);
+
+  /// Switch though other chats work in the same checkout (they move too).
+  @$pb.TagNumber(4)
+  $core.bool get withOthers => $_getBF(3);
+  @$pb.TagNumber(4)
+  set withOthers($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasWithOthers() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearWithOthers() => $_clearField(4);
+}
+
+/// Either switched, or one of the rest says why not.
+class SwitchBranchResponse extends $pb.GeneratedMessage {
+  factory SwitchBranchResponse({
+    $core.bool? switched,
+    $core.String? worktree,
+    $core.int? changed,
+    $core.Iterable<$core.String>? others,
+  }) {
+    final result = SwitchBranchResponse._();
+    if (switched != null) result.switched = switched;
+    if (worktree != null) result.worktree = worktree;
+    if (changed != null) result.changed = changed;
+    if (others != null) result.others.addAll(others);
+    return result;
+  }
+
+  SwitchBranchResponse._();
+
+  factory SwitchBranchResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SwitchBranchResponse()..mergeFromBuffer(data, registry);
+  factory SwitchBranchResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SwitchBranchResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SwitchBranchResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SwitchBranchResponse.$_createMessage)
+    ..aOB(1, _omitFieldNames ? '' : 'switched')
+    ..aOS(2, _omitFieldNames ? '' : 'worktree')
+    ..aI(3, _omitFieldNames ? '' : 'changed')
+    ..pPS(4, _omitFieldNames ? '' : 'others')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SwitchBranchResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SwitchBranchResponse copyWith(void Function(SwitchBranchResponse) updates) =>
+      super.copyWith((message) => updates(message as SwitchBranchResponse))
+          as SwitchBranchResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use SwitchBranchResponse() / SwitchBranchResponse.new instead')
+  static SwitchBranchResponse create() => SwitchBranchResponse._();
+  static $pb.GeneratedMessage $_createMessage() => SwitchBranchResponse._();
+  @$core.override
+  SwitchBranchResponse createEmptyInstance() => SwitchBranchResponse._();
+  @$core.pragma('dart2js:noInline')
+  static SwitchBranchResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SwitchBranchResponse>(
+          SwitchBranchResponse.$_createMessage);
+  static SwitchBranchResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.bool get switched => $_getBF(0);
+  @$pb.TagNumber(1)
+  set switched($core.bool value) => $_setBool(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSwitched() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSwitched() => $_clearField(1);
+
+  /// The worktree that has the branch checked out: move there instead.
+  @$pb.TagNumber(2)
+  $core.String get worktree => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set worktree($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasWorktree() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearWorktree() => $_clearField(2);
+
+  /// Uncommitted changes to tracked files in the folder.
+  @$pb.TagNumber(3)
+  $core.int get changed => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set changed($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasChanged() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearChanged() => $_clearField(3);
+
+  /// The other chats in the folder's checkout (titles), to confirm.
+  @$pb.TagNumber(4)
+  $pb.PbList<$core.String> get others => $_getList(3);
 }
 
 class ArchiveChatRequest extends $pb.GeneratedMessage {
@@ -9981,6 +10184,316 @@ class GetFolderStatusResponse extends $pb.GeneratedMessage {
   $core.bool hasAhead() => $_has(7);
   @$pb.TagNumber(8)
   void clearAhead() => $_clearField(8);
+}
+
+class ListBranchesRequest extends $pb.GeneratedMessage {
+  factory ListBranchesRequest({
+    $core.String? folder,
+  }) {
+    final result = ListBranchesRequest._();
+    if (folder != null) result.folder = folder;
+    return result;
+  }
+
+  ListBranchesRequest._();
+
+  factory ListBranchesRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListBranchesRequest()..mergeFromBuffer(data, registry);
+  factory ListBranchesRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListBranchesRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListBranchesRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListBranchesRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'folder')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListBranchesRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListBranchesRequest copyWith(void Function(ListBranchesRequest) updates) =>
+      super.copyWith((message) => updates(message as ListBranchesRequest))
+          as ListBranchesRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use ListBranchesRequest() / ListBranchesRequest.new instead')
+  static ListBranchesRequest create() => ListBranchesRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ListBranchesRequest._();
+  @$core.override
+  ListBranchesRequest createEmptyInstance() => ListBranchesRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ListBranchesRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListBranchesRequest>(
+          ListBranchesRequest.$_createMessage);
+  static ListBranchesRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get folder => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set folder($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasFolder() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearFolder() => $_clearField(1);
+}
+
+class ListBranchesResponse extends $pb.GeneratedMessage {
+  factory ListBranchesResponse({
+    $core.Iterable<GitBranch>? branches,
+    $core.Iterable<GitWorktree>? worktrees,
+  }) {
+    final result = ListBranchesResponse._();
+    if (branches != null) result.branches.addAll(branches);
+    if (worktrees != null) result.worktrees.addAll(worktrees);
+    return result;
+  }
+
+  ListBranchesResponse._();
+
+  factory ListBranchesResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListBranchesResponse()..mergeFromBuffer(data, registry);
+  factory ListBranchesResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListBranchesResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListBranchesResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListBranchesResponse.$_createMessage)
+    ..pPM<GitBranch>(1, _omitFieldNames ? '' : 'branches',
+        subBuilder: GitBranch.$_createMessage)
+    ..pPM<GitWorktree>(2, _omitFieldNames ? '' : 'worktrees',
+        subBuilder: GitWorktree.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListBranchesResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListBranchesResponse copyWith(void Function(ListBranchesResponse) updates) =>
+      super.copyWith((message) => updates(message as ListBranchesResponse))
+          as ListBranchesResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListBranchesResponse() / ListBranchesResponse.new instead')
+  static ListBranchesResponse create() => ListBranchesResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ListBranchesResponse._();
+  @$core.override
+  ListBranchesResponse createEmptyInstance() => ListBranchesResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ListBranchesResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListBranchesResponse>(
+          ListBranchesResponse.$_createMessage);
+  static ListBranchesResponse? _defaultInstance;
+
+  /// 500 at most.
+  @$pb.TagNumber(1)
+  $pb.PbList<GitBranch> get branches => $_getList(0);
+
+  /// Not those whose folders are gone (git would prune them).
+  @$pb.TagNumber(2)
+  $pb.PbList<GitWorktree> get worktrees => $_getList(1);
+}
+
+class GitBranch extends $pb.GeneratedMessage {
+  factory GitBranch({
+    $core.String? name,
+    $fixnum.Int64? unixSeconds,
+    $core.String? worktree,
+  }) {
+    final result = GitBranch._();
+    if (name != null) result.name = name;
+    if (unixSeconds != null) result.unixSeconds = unixSeconds;
+    if (worktree != null) result.worktree = worktree;
+    return result;
+  }
+
+  GitBranch._();
+
+  factory GitBranch.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitBranch()..mergeFromBuffer(data, registry);
+  factory GitBranch.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitBranch()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GitBranch',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GitBranch.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'name')
+    ..aInt64(2, _omitFieldNames ? '' : 'unixSeconds')
+    ..aOS(3, _omitFieldNames ? '' : 'worktree')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitBranch clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitBranch copyWith(void Function(GitBranch) updates) =>
+      super.copyWith((message) => updates(message as GitBranch)) as GitBranch;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GitBranch() / GitBranch.new instead')
+  static GitBranch create() => GitBranch._();
+  static $pb.GeneratedMessage $_createMessage() => GitBranch._();
+  @$core.override
+  GitBranch createEmptyInstance() => GitBranch._();
+  @$core.pragma('dart2js:noInline')
+  static GitBranch getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GitBranch>(GitBranch.$_createMessage);
+  static GitBranch? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get name => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set name($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearName() => $_clearField(1);
+
+  /// Its last commit's time.
+  @$pb.TagNumber(2)
+  $fixnum.Int64 get unixSeconds => $_getI64(1);
+  @$pb.TagNumber(2)
+  set unixSeconds($fixnum.Int64 value) => $_setInt64(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasUnixSeconds() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearUnixSeconds() => $_clearField(2);
+
+  /// The worktree that has it checked out, if one does.
+  @$pb.TagNumber(3)
+  $core.String get worktree => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set worktree($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasWorktree() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearWorktree() => $_clearField(3);
+}
+
+class GitWorktree extends $pb.GeneratedMessage {
+  factory GitWorktree({
+    $core.String? path,
+    $core.String? branch,
+    $core.bool? main,
+    $core.bool? locked,
+    $core.bool? current,
+  }) {
+    final result = GitWorktree._();
+    if (path != null) result.path = path;
+    if (branch != null) result.branch = branch;
+    if (main != null) result.main = main;
+    if (locked != null) result.locked = locked;
+    if (current != null) result.current = current;
+    return result;
+  }
+
+  GitWorktree._();
+
+  factory GitWorktree.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitWorktree()..mergeFromBuffer(data, registry);
+  factory GitWorktree.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitWorktree()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GitWorktree',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GitWorktree.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'path')
+    ..aOS(2, _omitFieldNames ? '' : 'branch')
+    ..aOB(3, _omitFieldNames ? '' : 'main')
+    ..aOB(4, _omitFieldNames ? '' : 'locked')
+    ..aOB(5, _omitFieldNames ? '' : 'current')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitWorktree clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitWorktree copyWith(void Function(GitWorktree) updates) =>
+      super.copyWith((message) => updates(message as GitWorktree))
+          as GitWorktree;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GitWorktree() / GitWorktree.new instead')
+  static GitWorktree create() => GitWorktree._();
+  static $pb.GeneratedMessage $_createMessage() => GitWorktree._();
+  @$core.override
+  GitWorktree createEmptyInstance() => GitWorktree._();
+  @$core.pragma('dart2js:noInline')
+  static GitWorktree getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GitWorktree>(
+          GitWorktree.$_createMessage);
+  static GitWorktree? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get path => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set path($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPath() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPath() => $_clearField(1);
+
+  /// "" when its HEAD is detached.
+  @$pb.TagNumber(2)
+  $core.String get branch => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set branch($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasBranch() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearBranch() => $_clearField(2);
+
+  /// The repository's own folder.
+  @$pb.TagNumber(3)
+  $core.bool get main => $_getBF(2);
+  @$pb.TagNumber(3)
+  set main($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasMain() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearMain() => $_clearField(3);
+
+  /// Locked (git worktree lock).
+  @$pb.TagNumber(4)
+  $core.bool get locked => $_getBF(3);
+  @$pb.TagNumber(4)
+  set locked($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasLocked() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearLocked() => $_clearField(4);
+
+  /// The folder asked about is in it.
+  @$pb.TagNumber(5)
+  $core.bool get current => $_getBF(4);
+  @$pb.TagNumber(5)
+  set current($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasCurrent() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearCurrent() => $_clearField(5);
 }
 
 class GetDiffRequest extends $pb.GeneratedMessage {
@@ -24939,6 +25452,18 @@ class NushiServiceApi {
       _client.invoke<RenameBranchResponse>(
           ctx, 'NushiService', 'RenameBranch', request, RenameBranchResponse());
 
+  /// Checks out a branch in a chat's folder (git switch), or a new one from
+  /// HEAD. Refused (an error) for a worktree chat and while it, or another
+  /// chat in the same checkout, works; answered without switching when the
+  /// branch is another worktree's, the folder has uncommitted changes (not
+  /// for a new branch), or other chats work there and with_others isn't
+  /// set. Each chat there gets a "branch_switched" line and is told with its
+  /// next prompt. (API 83)
+  $async.Future<SwitchBranchResponse> switchBranch(
+          $pb.ClientContext? ctx, SwitchBranchRequest request) =>
+      _client.invoke<SwitchBranchResponse>(
+          ctx, 'NushiService', 'SwitchBranch', request, SwitchBranchResponse());
+
   /// Archives a chat: its turn is cancelled and its agent stops; it stays
   /// listed, read-only. Unarchiving reopens it (ACP session/load).
   $async.Future<ArchiveChatResponse> archiveChat(
@@ -25084,6 +25609,13 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, GetFolderStatusRequest request) =>
       _client.invoke<GetFolderStatusResponse>(ctx, 'NushiService',
           'GetFolderStatus', request, GetFolderStatusResponse());
+
+  /// Lists a folder's repository's local branches, the newest commit first,
+  /// and its worktrees, the main one first. (API 83)
+  $async.Future<ListBranchesResponse> listBranches(
+          $pb.ClientContext? ctx, ListBranchesRequest request) =>
+      _client.invoke<ListBranchesResponse>(
+          ctx, 'NushiService', 'ListBranches', request, ListBranchesResponse());
 
   /// Lists a folder's files (up to 20,000) for @-mentions: in a git
   /// repository the ones git doesn't ignore.

@@ -268,7 +268,9 @@ func (s *Service) StartOn(ctx context.Context, agent, folder string, opts StartO
 			wt, folder, err = s.addWorktree(ctx, folder, opts.Branch, opts.From)
 		}
 	default:
-		err = CheckFolder(folder)
+		if err = CheckFolder(folder); err == nil && s.worktrees != nil {
+			wt = s.worktrees.Found(ctx, folder) // a worktree that was there: listed under its repository
+		}
 	}
 	if err != nil {
 		return "", err

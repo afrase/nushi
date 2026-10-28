@@ -63,6 +63,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.RenameChatRequest request);
   $async.Future<$0.RenameBranchResponse> renameBranch(
       $pb.ServerContext ctx, $0.RenameBranchRequest request);
+  $async.Future<$0.SwitchBranchResponse> switchBranch(
+      $pb.ServerContext ctx, $0.SwitchBranchRequest request);
   $async.Future<$0.ArchiveChatResponse> archiveChat(
       $pb.ServerContext ctx, $0.ArchiveChatRequest request);
   $async.Future<$0.SleepChatResponse> sleepChat(
@@ -103,6 +105,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.ListCommitsRequest request);
   $async.Future<$0.GetFolderStatusResponse> getFolderStatus(
       $pb.ServerContext ctx, $0.GetFolderStatusRequest request);
+  $async.Future<$0.ListBranchesResponse> listBranches(
+      $pb.ServerContext ctx, $0.ListBranchesRequest request);
   $async.Future<$0.ListFilesResponse> listFiles(
       $pb.ServerContext ctx, $0.ListFilesRequest request);
   $async.Future<$0.GetContextUsageResponse> getContextUsage(
@@ -296,6 +300,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.RenameChatRequest();
       case 'RenameBranch':
         return $0.RenameBranchRequest();
+      case 'SwitchBranch':
+        return $0.SwitchBranchRequest();
       case 'ArchiveChat':
         return $0.ArchiveChatRequest();
       case 'SleepChat':
@@ -336,6 +342,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.ListCommitsRequest();
       case 'GetFolderStatus':
         return $0.GetFolderStatusRequest();
+      case 'ListBranches':
+        return $0.ListBranchesRequest();
       case 'ListFiles':
         return $0.ListFilesRequest();
       case 'GetContextUsage':
@@ -534,6 +542,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return renameChat(ctx, request as $0.RenameChatRequest);
       case 'RenameBranch':
         return renameBranch(ctx, request as $0.RenameBranchRequest);
+      case 'SwitchBranch':
+        return switchBranch(ctx, request as $0.SwitchBranchRequest);
       case 'ArchiveChat':
         return archiveChat(ctx, request as $0.ArchiveChatRequest);
       case 'SleepChat':
@@ -575,6 +585,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return listCommits(ctx, request as $0.ListCommitsRequest);
       case 'GetFolderStatus':
         return getFolderStatus(ctx, request as $0.GetFolderStatusRequest);
+      case 'ListBranches':
+        return listBranches(ctx, request as $0.ListBranchesRequest);
       case 'ListFiles':
         return listFiles(ctx, request as $0.ListFilesRequest);
       case 'GetContextUsage':

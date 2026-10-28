@@ -164,18 +164,17 @@ func (c *chat) sendLocked(m model.Message) {
 	c.startLocked(c.blocks(m))
 }
 
-// startLocked starts a turn with prompt, after a note of the worktree's
-// branch renamed since the last one, if it was. The prompt is written to
+// startLocked starts a turn with prompt, after notes of where the chat
+// works (moved, its folder's branch switched) and its worktree's branch
+// renamed since the last one, if they were. The prompt is written to
 // the agent in the background; a cancel waits for it (see cancelLocked).
 func (c *chat) startLocked(prompt []acp.ContentBlock) {
 	if c.agent == nil {
 		c.noticeLocked("error", "The agent isn't running; send the message again to reopen the chat.")
 		return
 	}
-	note, told := c.branchNoteLocked()
-	if note != nil {
-		prompt = append([]acp.ContentBlock{*note}, prompt...)
-	}
+	notes, told := c.notesLocked()
+	prompt = append(notes, prompt...)
 	sent, done := make(chan struct{}), make(chan struct{})
 	c.busy, c.started, c.done, c.sent, c.held = true, time.Now(), done, sent, false
 	c.released, c.steered, c.turnFrom, c.stopped = false, 0, len(c.items), false

@@ -32,7 +32,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 82
+const Version = 83
 
 // Release is the version a release build stamps in (make package's
 // VERSION, through -ldflags -X), "" in a build that isn't packaged
@@ -438,6 +438,18 @@ func (s *server) RenameChat(_ context.Context, req *connect.Request[nushiv1.Rena
 	return connect.NewResponse(&nushiv1.RenameChatResponse{}), nil
 }
 
+func (s *server) SwitchBranch(ctx context.Context, req *connect.Request[nushiv1.SwitchBranchRequest]) (*connect.Response[nushiv1.SwitchBranchResponse], error) {
+	m := req.Msg
+	if err := git.CheckBranch(m.Branch); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	r, err := s.chats.SwitchBranch(ctx, m.ChatId, m.Branch, m.NewBranch, m.WithOthers)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	}
+	return connect.NewResponse(&nushiv1.SwitchBranchResponse{Switched: r.Switched, Worktree: r.Worktree, Changed: int32(r.Changed), Others: r.Others}), nil
+}
+
 func (s *server) RenameBranch(ctx context.Context, req *connect.Request[nushiv1.RenameBranchRequest]) (*connect.Response[nushiv1.RenameBranchResponse], error) {
 	if err := git.CheckBranch(req.Msg.Branch); err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
@@ -519,7 +531,7 @@ func (s *server) PlanDeleteChat(ctx context.Context, req *connect.Request[nushiv
 	for _, w := range p.Worktrees {
 		wt, st := w.Worktree, w.State
 		plan := &nushiv1.WorktreePlan{
-			Worktree: &nushiv1.Worktree{Repo: wt.Repo, Path: wt.Path, Branch: wt.Branch, Base: wt.Base, BaseCommit: wt.BaseCommit},
+			Worktree: &nushiv1.Worktree{Repo: wt.Repo, Path: wt.Path, Branch: wt.Branch, Base: wt.Base, BaseCommit: wt.BaseCommit, Found: wt.Found},
 			State:    &nushiv1.WorktreeState{Gone: st.Gone, Changed: int32(st.Changed), Ignored: int32(st.Ignored), Commits: int32(st.Commits), BranchGone: st.BranchGone},
 		}
 		if w.StateErr != nil {

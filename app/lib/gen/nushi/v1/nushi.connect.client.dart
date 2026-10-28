@@ -4,11 +4,10 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
-
 import "nushi.pb.dart" as nushiv1nushi;
 import "nushi.connect.spec.dart" as specs;
 
-extension type NushiServiceClient(connect.Transport _transport) {
+extension type NushiServiceClient (connect.Transport _transport) {
   Future<nushiv1nushi.PingResponse> ping(
     nushiv1nushi.PingRequest input, {
     connect.Headers? headers,
@@ -424,6 +423,30 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Checks out a branch in a chat's folder (git switch), or a new one from
+  /// HEAD. Refused (an error) for a worktree chat and while it, or another
+  /// chat in the same checkout, works; answered without switching when the
+  /// branch is another worktree's, the folder has uncommitted changes (not
+  /// for a new branch), or other chats work there and with_others isn't
+  /// set. Each chat there gets a "branch_switched" line and is told with its
+  /// next prompt. (API 83)
+  Future<nushiv1nushi.SwitchBranchResponse> switchBranch(
+    nushiv1nushi.SwitchBranchRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.switchBranch,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Archives a chat: its turn is cancelled and its agent stops; it stays
   /// listed, read-only. Unarchiving reopens it (ACP session/load).
   Future<nushiv1nushi.ArchiveChatResponse> archiveChat(
@@ -804,6 +827,25 @@ extension type NushiServiceClient(connect.Transport _transport) {
   }) {
     return connect.Client(_transport).unary(
       specs.NushiService.getFolderStatus,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Lists a folder's repository's local branches, the newest commit first,
+  /// and its worktrees, the main one first. (API 83)
+  Future<nushiv1nushi.ListBranchesResponse> listBranches(
+    nushiv1nushi.ListBranchesRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.listBranches,
       input,
       signal: signal,
       headers: headers,

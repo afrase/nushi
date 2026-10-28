@@ -25,8 +25,13 @@ func (stuckWorktrees) DeleteBranch(context.Context, model.Worktree) error { retu
 func (stuckWorktrees) BranchUse(context.Context, model.Worktree) (model.BranchUse, error) {
 	return model.BranchUse{OnIt: true}, nil
 }
-func (stuckWorktrees) RenameBranch(context.Context, model.Worktree, string) error { return nil }
-func (stuckWorktrees) CheckBranch(context.Context, string, string) error          { return nil }
+func (stuckWorktrees) RenameBranch(context.Context, model.Worktree, string) error  { return nil }
+func (stuckWorktrees) CheckBranch(context.Context, string, string) error           { return nil }
+func (stuckWorktrees) List(context.Context, string) ([]model.WorktreeEntry, error) { return nil, nil }
+func (stuckWorktrees) Found(context.Context, string) *model.Worktree               { return nil }
+func (stuckWorktrees) Branch(context.Context, string) string                       { return "" }
+func (stuckWorktrees) Changed(context.Context, string) (int, error)                { return 0, nil }
+func (stuckWorktrees) Switch(context.Context, string, string, bool) error          { return nil }
 
 func TestAChatStaysIfItsWorktreeOrHistoryCantGo(t *testing.T) {
 	ctx := context.Background()
