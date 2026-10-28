@@ -8973,7 +8973,12 @@ type Item struct {
 	RelayStop bool `protobuf:"varint,32,opt,name=relay_stop,json=relayStop,proto3" json:"relay_stop,omitempty"`
 	// For a user message sent through Nushi: when, in Unix milliseconds; 0
 	// when not known (one the agent replayed). API 78.
-	Sent          int64 `protobuf:"varint,33,opt,name=sent,proto3" json:"sent,omitempty"`
+	Sent int64 `protobuf:"varint,33,opt,name=sent,proto3" json:"sent,omitempty"`
+	// A tool call's input as the agent gave it, as indented JSON, and its
+	// result as the agent gave it (text or indented JSON), only while its
+	// text, diffs and images show nothing; each cut to about 8 KB. API 79.
+	Input         string `protobuf:"bytes,34,opt,name=input,proto3" json:"input,omitempty"`
+	RawOutput     string `protobuf:"bytes,35,opt,name=raw_output,json=rawOutput,proto3" json:"raw_output,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -9237,6 +9242,20 @@ func (x *Item) GetSent() int64 {
 		return x.Sent
 	}
 	return 0
+}
+
+func (x *Item) GetInput() string {
+	if x != nil {
+		return x.Input
+	}
+	return ""
+}
+
+func (x *Item) GetRawOutput() string {
+	if x != nil {
+		return x.RawOutput
+	}
+	return ""
 }
 
 // A code review's result: the effort level it ran at ("medium"; "" when
@@ -19170,7 +19189,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x14\n" +
 	"\x05group\x18\x04 \x01(\tR\x05group\x12\x1d\n" +
 	"\n" +
-	"is_default\x18\x05 \x01(\bR\tisDefault\"\xe7\a\n" +
+	"is_default\x18\x05 \x01(\bR\tisDefault\"\x9c\b\n" +
 	"\x04Item\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12&\n" +
 	"\x04kind\x18\x02 \x01(\x0e2\x12.nushi.v1.ItemKindR\x04kind\x12\x12\n" +
@@ -19211,7 +19230,10 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\bfindings\x18\x1f \x01(\v2\x12.nushi.v1.FindingsR\bfindings\x12\x1d\n" +
 	"\n" +
 	"relay_stop\x18  \x01(\bR\trelayStop\x12\x12\n" +
-	"\x04sent\x18! \x01(\x03R\x04sent\"I\n" +
+	"\x04sent\x18! \x01(\x03R\x04sent\x12\x14\n" +
+	"\x05input\x18\" \x01(\tR\x05input\x12\x1d\n" +
+	"\n" +
+	"raw_output\x18# \x01(\tR\trawOutput\"I\n" +
 	"\bFindings\x12\x14\n" +
 	"\x05level\x18\x01 \x01(\tR\x05level\x12'\n" +
 	"\x05items\x18\x02 \x03(\v2\x11.nushi.v1.FindingR\x05items\"\xeb\x01\n" +

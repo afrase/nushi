@@ -100,6 +100,7 @@ class StreamingMarkdown extends StatelessWidget {
     return MarkdownBody(
       data: streaming ? heal(text) : text,
       softLineBreak: lineBreaks,
+      blockSyntaxes: const [_HtmlAsText()],
       builders: {'pre': _CodeBlockBuilder(s)},
       // A task list's box ("- [x]"), as text so it lines up with the item.
       checkboxBuilder: (checked) => Padding(
@@ -275,4 +276,28 @@ class _CopyButtonState extends State<_CopyButton> {
     onPressed: _copy,
     icon: Icon(_copied ? Icons.check : Icons.copy),
   );
+}
+
+/// An HTML block (a line that starts with a tag, such as
+/// `<persisted-output>`, through the next blank line) as a paragraph of
+/// its lines, as written: the default makes it a bare text node, which
+/// draws nothing.
+class _HtmlAsText extends md.HtmlBlockSyntax {
+  const new();
+
+  @override
+  md.Node parse(md.BlockParser parser) {
+    final lines = parseChildLines(parser)
+        .map((l) => l.content.trimRight())
+        .toList();
+    while (lines.isNotEmpty && lines.last.isEmpty) {
+      lines.removeLast();
+    }
+    return md.Element('p', [
+      for (final (i, line) in lines.indexed) ...[
+        if (i > 0) md.Element.empty('br'),
+        md.Text(line),
+      ],
+    ]);
+  }
 }

@@ -58,6 +58,7 @@ func (c *chat) update(n *acp.SessionNotification, from *child) { //nolint:gocogn
 			ToolKind: string(t.Kind), Status: string(t.Status), Paths: c.paths(t.Locations), Parent: parent}
 		c.setOutput(&item, t.Content)
 		c.toolCallLocked(&item, t.Meta, t.RawInput)
+		keepRaw(&item, t.RawInput, t.RawOutput)
 		if it := c.itemLocked(item.ID); it != nil { // a repeated tool_call replaces the call
 			item.Subagent, item.Shell = it.Subagent, it.Shell
 			*it = item
@@ -141,6 +142,7 @@ func (c *chat) update(n *acp.SessionNotification, from *child) { //nolint:gocogn
 		if own := c.toolCallLocked(it, t.Meta, t.RawInput); !own && t.Content != nil {
 			c.setOutput(it, t.Content)
 		}
+		keepRaw(it, t.RawInput, t.RawOutput)
 		c.subagentLocked(it)
 		c.shellLocked(it)
 		c.publishLocked(*it)

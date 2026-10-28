@@ -2751,6 +2751,8 @@ const Item$json = {
     },
     {'1': 'relay_stop', '3': 32, '4': 1, '5': 8, '10': 'relayStop'},
     {'1': 'sent', '3': 33, '4': 1, '5': 3, '10': 'sent'},
+    {'1': 'input', '3': 34, '4': 1, '5': 9, '10': 'input'},
+    {'1': 'raw_output', '3': 35, '4': 1, '5': 9, '10': 'rawOutput'},
   ],
 };
 
@@ -2773,7 +2775,8 @@ final $typed_data.Uint8List itemDescriptor = $convert.base64Decode(
     'ZBIZCghyZWxheV90bxgbIAEoCVIHcmVsYXlUbxIdCgpyZWxheV9jYWxsGBwgASgJUglyZWxheU'
     'NhbGwSHwoLcmVsYXlfc3RhdGUYHSABKAlSCnJlbGF5U3RhdGUSHQoKcmVsYXllZF9ieRgeIAEo'
     'CVIJcmVsYXllZEJ5Ei4KCGZpbmRpbmdzGB8gASgLMhIubnVzaGkudjEuRmluZGluZ3NSCGZpbm'
-    'RpbmdzEh0KCnJlbGF5X3N0b3AYICABKAhSCXJlbGF5U3RvcBISCgRzZW50GCEgASgDUgRzZW50');
+    'RpbmdzEh0KCnJlbGF5X3N0b3AYICABKAhSCXJlbGF5U3RvcBISCgRzZW50GCEgASgDUgRzZW50'
+    'EhQKBWlucHV0GCIgASgJUgVpbnB1dBIdCgpyYXdfb3V0cHV0GCMgASgJUglyYXdPdXRwdXQ=');
 
 @$core.Deprecated('Use findingsDescriptor instead')
 const Findings$json = {

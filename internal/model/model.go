@@ -129,6 +129,11 @@ type Item struct {
 	Kind ItemKind
 	// Text is the message, or a tool call's output as markdown.
 	Text string
+	// Input is a tool call's input as the agent gave it (rawInput), as
+	// indented JSON; RawOutput its result as the agent gave it (rawOutput),
+	// as text or indented JSON, kept only while its content shows nothing.
+	// Each is cut to about 8 KB.
+	Input, RawOutput string
 	// Title, ToolKind and Status describe a tool call, in the agent's words
 	// (ToolKind and Status use ACP's values, such as "execute" and "completed").
 	Title    string

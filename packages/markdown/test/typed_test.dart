@@ -32,6 +32,41 @@ void main() {
     expect(text, 'one\ntwo bold <b>x</b>');
   });
 
+  testWidgets('an HTML block shows as the text it is, line by line', (
+    tester,
+  ) async {
+    const style = MarkdownStyle(
+      body: TextStyle(),
+      code: TextStyle(),
+      codeBackground: Colors.white,
+      border: Colors.grey,
+      muted: Colors.grey,
+      link: Colors.blue,
+      highlight: _plain,
+    );
+    // An MCP result wrapped in a tag, and a long one Claude Code saved.
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: StreamingMarkdown(
+          '<result>\nfound **1**\n</result>\n\n'
+          '<persisted-output>\nOutput too large (141.7KB).\n\n'
+          'Preview (first 2KB):\n</persisted-output>',
+          style: style,
+          streaming: false,
+        ),
+      ),
+    );
+    final text = tester
+        .widgetList<RichText>(find.byType(RichText))
+        .map((t) => t.text.toPlainText())
+        .join('|');
+    expect(text.split('|'), [
+      '<result>\nfound **1**\n</result>',
+      '<persisted-output>\nOutput too large (141.7KB).',
+      'Preview (first 2KB): </persisted-output>',
+    ]);
+  });
+
   testWidgets("a task list's boxes show", (tester) async {
     const style = MarkdownStyle(
       body: TextStyle(),
