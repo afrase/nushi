@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:nushi/branch_menu.dart';
 import 'package:nushi/branch_rename.dart';
 import 'package:nushi/changes_span.dart';
 import 'package:nushi/chat.dart';
@@ -13,74 +14,87 @@ import 'package:nushi/widgets.dart';
 const IconData worktreeIcon = Icons.account_tree_outlined;
 
 /// The Environment card's worktree rows for a chat in a git repository:
-/// for a worktree chat its branch (with the worktree icon and Rename
-/// branch…, between turns) and base; for a chat without messages a "New
-/// worktree" switch, which moves it into a new worktree or back (this chat
-/// only: the next new chat starts without one); otherwise "Move to new
-/// worktree". [branch] is the branch checked out in the chat's folder;
-/// [onRenamed] once Rename branch… renamed it.
+/// its branch, a menu ([BranchMenu]: switch the folder's branch, or in a
+/// worktree move to another), with the worktree icon and Rename branch…
+/// (between turns) for a worktree chat, and its base; for a chat without
+/// messages a "New worktree" switch, which moves it into a new worktree or
+/// back (this chat only: the next new chat starts without one); otherwise
+/// "Move to new worktree"; and beside either, "Move to worktree" for the
+/// repository's other worktrees. [branch] is the branch checked out in
+/// the chat's folder, [list] what ListBranches said of it, asked again
+/// by [onOpen]; [onChanged] once Rename branch… renamed it or a switch
+/// switched it, [onChanges] shows the Changes view.
 List<(String?, Widget)> worktreeRows(
   BuildContext context,
   ChatState chat,
   Daemon daemon,
   String branch, {
-  VoidCallback? onRenamed,
+  ListBranchesResponse? list,
+  VoidCallback? onOpen,
+  VoidCallback? onChanged,
+  VoidCallback? onChanges,
 }) {
-  final theme = NushiTheme.of(context);
-  final t = theme.t;
   final wt = chat.worktree;
-  final code = theme.code(t.text, size: 12);
   final offer = !chat.archived;
   final can = offer && !chat.busy && !chat.waiting;
+  final others = offer && wt == null
+      ? MoveToWorktree(chat: chat, daemon: daemon, list: list, enabled: can)
+      : null;
   return [
     (
       'Branch',
-      Tooltip(
-        // The whole name, which a narrow panel cuts.
-        message: wt == null
-            ? ''
-            : '$branch\nA worktree at ${tildePath(wt.path)}',
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (wt != null) ...[
-              Icon(worktreeIcon, size: 13, color: t.textSecondary),
-              const SizedBox(width: 5),
-            ],
-            Flexible(
-              child: Text(branch, style: code, overflow: TextOverflow.ellipsis),
+      Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: BranchMenu(
+              chat: chat,
+              daemon: daemon,
+              branch: branch,
+              list: list,
+              onOpen: onOpen,
+              onSwitched: onChanged,
+              onChanges: onChanges,
             ),
-            if (wt != null) ...[
-              const SizedBox(width: 2),
-              // Within the row's height: the icon's tint overhangs it.
-              SizedBox(
-                width: 16,
-                height: 16,
-                child: OverflowBox(
-                  maxWidth: 24,
-                  maxHeight: 24,
-                  child: IconTap(
-                    Icons.edit_outlined,
-                    size: 13,
-                    tooltip: 'Rename branch…',
-                    onTap: chat.busy
-                        ? null
-                        : () async {
-                            if (await renameBranch(context, chat, daemon)) {
-                              onRenamed?.call();
-                            }
-                          },
-                  ),
+          ),
+          if (wt != null) ...[
+            const SizedBox(width: 2),
+            // Within the row's height: the icon's tint overhangs it.
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: OverflowBox(
+                maxWidth: 24,
+                maxHeight: 24,
+                child: IconTap(
+                  Icons.edit_outlined,
+                  size: 13,
+                  tooltip: 'Rename branch…',
+                  onTap: chat.busy
+                      ? null
+                      : () async {
+                          if (await renameBranch(context, chat, daemon)) {
+                            onChanged?.call();
+                          }
+                        },
                 ),
               ),
-            ],
+            ),
           ],
-        ),
+        ],
       ),
     ),
     if (wt != null)
-      ('Base', Text(wt.base, style: code, overflow: TextOverflow.ellipsis)),
-    if (offer && chat.fresh)
+      (
+        'Base',
+        Text(
+          wt.base,
+          style: NushiTheme.of(context)
+              .code(NushiTheme.of(context).t.text, size: 12),
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    if (offer && chat.fresh) ...[
       (
         'New worktree',
         SizedBox(
@@ -94,17 +108,22 @@ List<(String?, Widget)> worktreeRows(
             ),
           ),
         ),
-      )
-    else if (offer && wt == null)
+      ),
+      if (others != null) (null, others),
+    ] else if (offer && wt == null)
       (
         null,
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Button(
-            label: 'Move to new worktree',
-            icon: worktreeIcon,
-            onPressed: can ? () => _confirmMove(context, chat, daemon) : null,
-          ),
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          children: [
+            Button(
+              label: 'Move to new worktree',
+              icon: worktreeIcon,
+              onPressed: can ? () => _confirmMove(context, chat, daemon) : null,
+            ),
+            ?others,
+          ],
         ),
       ),
   ];
@@ -134,6 +153,7 @@ class _NewChatBarState extends State<NewChatBar> with FollowsChanges {
   @override
   Daemon get daemon => widget.daemon;
   bool _git = false;
+  List<GitWorktree> _worktrees = const []; // offered in the folder's menu
 
   @override
   Future<void> reload() async {
@@ -141,7 +161,17 @@ class _NewChatBarState extends State<NewChatBar> with FollowsChanges {
       final s = await daemon.client.getFolderStatus(
         GetFolderStatusRequest(folder: chat.folder),
       );
-      if (mounted) setState(() => _git = s.git);
+      final l = s.git
+          ? await daemon.client
+                .listBranches(ListBranchesRequest(folder: chat.folder))
+                .then<ListBranchesResponse?>((l) => l, onError: (_) => null)
+          : null;
+      if (mounted) {
+        setState(() {
+          _git = s.git;
+          _worktrees = l?.worktrees ?? const [];
+        });
+      }
     } on Object {
       // No chip, as outside git.
     }
@@ -156,7 +186,12 @@ class _NewChatBarState extends State<NewChatBar> with FollowsChanges {
     return Row(
       children: [
         Flexible(
-          child: FolderButton(chat: chat, daemon: daemon, path: false),
+          child: FolderButton(
+            chat: chat,
+            daemon: daemon,
+            path: false,
+            worktrees: _worktrees,
+          ),
         ),
         if (_git)
           DecoratedBox(

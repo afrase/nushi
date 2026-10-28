@@ -44,6 +44,16 @@ FakeDaemon _fake(String branch, {Object? Function()? rename}) =>
           branch: branch,
         ),
         RenameBranchRequest() => rename?.call(),
+        ListBranchesRequest() => ListBranchesResponse(
+          worktrees: [
+            GitWorktree(path: _repo, branch: 'main', main: true),
+            GitWorktree(
+              path: '$_repo/.worktrees/brave-otter',
+              branch: branch,
+              current: true,
+            ),
+          ],
+        ),
         _ => null,
       };
 

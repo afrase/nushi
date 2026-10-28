@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -55,8 +56,9 @@ List<MenuEntry> folderEntries(
 
 /// The chat's folder (in a worktree, its repository's): its name, then its
 /// parent path, dimmed, on one line or, [stacked], on two. A click offers
-/// the recent folders and "Choose folder…", and moves the chat to the one
-/// picked. Not while the agent works or waits on the user.
+/// the repository's other [worktrees] (given for a new chat, so it can
+/// start in one), the recent folders and "Choose folder…", and moves the
+/// chat to the one picked. Not while the agent works or waits on the user.
 class FolderButton extends StatelessWidget {
   const new({
     required this.chat,
@@ -64,11 +66,13 @@ class FolderButton extends StatelessWidget {
     super.key,
     this.stacked = false,
     this.path = true,
+    this.worktrees = const [],
   });
 
   final ChatState chat;
   final Daemon daemon;
   final bool stacked;
+  final List<GitWorktree> worktrees;
 
   /// Whether the one-line form shows the parent path after the name.
   final bool path;
@@ -82,12 +86,28 @@ class FolderButton extends StatelessWidget {
     final nameStyle = theme.ui(t.text, size: 12, weight: FontWeight.w500);
     final parentStyle = theme.ui(t.textMuted, size: 11.5);
     final chevron = Icon(Icons.expand_more, size: 14, color: t.textMuted);
+    final others = worktrees.where((w) => !w.current).toList();
     return Menu(
-      entries: folderEntries(
-        daemon,
-        skip: chat.home,
-        onPick: (f) => moveChat(context, daemon, chat, to: f),
-      ),
+      entries: [
+        if (others.isNotEmpty) ...[
+          MenuEntry.heading('Worktrees of $name'),
+          for (final w in others)
+            MenuEntry(
+              w.branch.isEmpty ? 'detached HEAD' : w.branch,
+              detail: w.main
+                  ? 'the repository'
+                  : folderParts(w.path).$1 + (w.locked ? ' · locked' : ''),
+              tooltip: tildePath(w.path),
+              onPick: () => moveChat(context, daemon, chat, to: w.path),
+            ),
+          MenuEntry.divider,
+        ],
+        ...folderEntries(
+          daemon,
+          skip: chat.home,
+          onPick: (f) => moveChat(context, daemon, chat, to: f),
+        ),
+      ],
       builder: (context, open) => Tap(
         tooltip: chat.archived
             ? chat.home
@@ -181,7 +201,7 @@ Future<void> moveChat(
       );
   if (folder == null || !context.mounted) return;
   final wt = chat.worktree;
-  if (wt != null && !chat.fresh && !gone) {
+  if (wt != null && !wt.found && !chat.fresh && !gone) {
     final move = await confirm(
       context,
       'Move to ${folderParts(folder).$1}?',
