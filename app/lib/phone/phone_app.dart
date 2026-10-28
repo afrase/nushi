@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/mermaid.dart';
 import 'package:nushi/phone/chats_screen.dart';
+import 'package:nushi/phone/diagram_screen.dart';
 import 'package:nushi/phone/history.dart';
 import 'package:nushi/phone/keyboard.dart';
 import 'package:nushi/phone/pair_screen.dart';
@@ -40,6 +42,8 @@ class _PhoneAppState extends State<PhoneApp> with WidgetsBindingObserver {
     super.initState();
     // Before MaterialApp's own observer, which would push the route.
     WidgetsBinding.instance.addObserver(this);
+    // A transcript's diagram opens full screen.
+    showDiagram = DiagramScreen.open;
     widget.phone
       ..addListener(_opening)
       ..opening.addListener(_opening);
@@ -48,6 +52,7 @@ class _PhoneAppState extends State<PhoneApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    if (showDiagram == DiagramScreen.open) showDiagram = null;
     widget.phone
       ..removeListener(_opening)
       ..opening.removeListener(_opening);

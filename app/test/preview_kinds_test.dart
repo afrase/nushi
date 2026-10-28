@@ -7,8 +7,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat_files.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/diagram_page.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/phone/diagram_screen.dart';
 import 'package:nushi/phone/page_frame.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/phone_app.dart';
@@ -37,6 +39,9 @@ const _json =
     '"hours":["8-12","13-18"]}}';
 
 const _note = '"a note, with a comma"';
+
+/// A Mermaid file, opened by its path (not among the chat's writes).
+const _flow = 'graph LR\n  Plan --> Build --> Ship\n';
 
 final String _csv = [
   'id,name,city,notes',
@@ -95,6 +100,27 @@ class _Host implements PageHost {
   void dispose() => disposed = true;
 }
 
+/// A diagram host that records what it's asked to draw.
+class _Diagram implements DiagramHost {
+  final shown = <(String, bool)>[];
+  bool disposed = false;
+
+  @override
+  Widget view(BuildContext context) =>
+      const SizedBox.expand(key: Key('diagram'));
+
+  @override
+  Future<void> show(
+    String source, {
+    required bool dark,
+    required Color background,
+    required Color foreground,
+  }) async => shown.add((source, dark));
+
+  @override
+  void dispose() => disposed = true;
+}
+
 /// The daemon: each file answered once, its stream kept in [streams] to
 /// send it again.
 FakeDaemon _fake(Map<String, StreamController<WatchChatFileResponse>> streams) {
@@ -120,7 +146,9 @@ FakeDaemon _fake(Map<String, StreamController<WatchChatFileResponse>> streams) {
 }
 
 WatchChatFileResponse _answer(String path, [String? text]) {
-  final data = utf8.encode(text ?? _files[path] ?? _csv);
+  final data = utf8.encode(
+    text ?? _files[path] ?? (path.endsWith('.mmd') ? _flow : _csv),
+  );
   return WatchChatFileResponse(
     path: '/Users/me/nushi/$path',
     data: data,
@@ -183,10 +211,11 @@ void main() {
       ('Makefile', PreviewKind.code),
       ('notes.md', PreviewKind.markdown),
       ('logo.png', PreviewKind.image),
-      // Binaries, unknown types, Mermaid (later).
+      ('docs/flow.mmd', PreviewKind.mermaid),
+      ('flow.MERMAID', PreviewKind.mermaid),
+      // Binaries, unknown types.
       ('dist/app.zip', null),
       ('bin/nushid', null),
-      ('flow.mmd', null),
       ('.gitignore', null),
       ('go.sum', null),
     ]) {
@@ -195,6 +224,10 @@ void main() {
     expect(PreviewKind.html.page && PreviewKind.html.rendered, isTrue);
     expect(PreviewKind.pdf.page && !PreviewKind.pdf.rendered, isTrue);
     expect(PreviewKind.code.page || PreviewKind.code.rendered, isFalse);
+    expect(
+      PreviewKind.mermaid.rendered && PreviewKind.mermaid.artifact,
+      isTrue,
+    );
   });
 
   test('CSV: quoted commas, quotes and line breaks; the first rows kept', () {
@@ -393,6 +426,39 @@ void main() {
     d.dispose();
   }, variant: _mac);
 
+  testWidgets('Mermaid on the Mac: drawn by the app’s page, again as it '
+      'changes and with the theme; its source', (tester) async {
+    final streams = <String, StreamController<WatchChatFileResponse>>{};
+    final (d, host) = await _app(tester, streams);
+    final diagram = _Diagram();
+    final was = newDiagramHost;
+    newDiagramHost = () => diagram;
+    addTearDown(() => newDiagramHost = was);
+    d.chats['c']!.openPreview('docs/flow.mmd');
+    await tester.pumpAndSettle();
+    expect(diagram.shown, [(_flow, false)]);
+    expect(host.loads, isEmpty); // not a page of the agent's
+    expect(_inPane(find.byKey(const Key('diagram'))), findsOneWidget);
+    expect(_inPane(find.text('Preview')), findsOneWidget);
+    expect(_inPane(find.byTooltip('Reload')), findsNothing);
+    expect(_inPane(find.byTooltip('Open in browser')), findsNothing);
+    streams['docs/flow.mmd']!.add(
+      _answer('docs/flow.mmd', _flow.replaceAll('Ship', 'Ship it')),
+    );
+    await tester.pumpAndSettle();
+    expect(diagram.shown.last, (_flow.replaceAll('Ship', 'Ship it'), false));
+    await _dark(tester);
+    expect(diagram.shown.last.$2, isTrue);
+    expect(diagram.shown, hasLength(3));
+    await tester.tap(_inPane(find.text('Source')));
+    await tester.pumpAndSettle();
+    expect(_inPane(find.textContaining('Plan --> Build')), findsOneWidget);
+    d.chats['c']!.preview.value = null;
+    await tester.pumpAndSettle();
+    expect(diagram.disposed, isTrue);
+    d.dispose();
+  }, variant: _mac);
+
   group('the phone', () {
     Future<Phone> phone(WidgetTester tester) async {
       tester.view
@@ -462,6 +528,27 @@ void main() {
       await tester.tap(find.text('Source'));
       await tester.pumpAndSettle();
       expect(find.textContaining('<h1>The Still Kettle</h1>'), findsOneWidget);
+      await end(tester, p);
+    }, variant: ios);
+
+    testWidgets('Mermaid in a frame of the app’s page; its source', (
+      tester,
+    ) async {
+      final p = await phone(tester);
+      await open(tester, p, 'docs/flow.mmd');
+      expect(find.byType(DiagramFrame), findsOneWidget);
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await tester.pumpAndSettle();
+      final frame = tester.widget<PageFrame>(find.byType(PageFrame));
+      expect(frame.html, contains('<base href="assets/assets/mermaid/">'));
+      expect(frame.html, contains(r'show("graph LR\n  Plan --> Build'));
+      expect(
+        find.text('Files beside it (CSS, images) don’t load here.'),
+        findsNothing,
+      );
+      await tester.tap(find.text('Source'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Plan --> Build'), findsOneWidget);
       await end(tester, p);
     }, variant: ios);
 

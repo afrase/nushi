@@ -1,6 +1,6 @@
 #!/bin/sh
 # Checks a packaged Nushi.app: the daemon's helper app where the app
-# looks for it (ADR 0036), and every part signed.
+# looks for it (ADR 0036), Mermaid among its assets, and every part signed.
 set -eu
 app=$1
 helper="$app/Contents/Helpers/Nushi Daemon.app"
@@ -16,6 +16,8 @@ key() { plutil -extract "$2" raw -o - "$1/Contents/Info.plist" 2>/dev/null || tr
 agent="$app/Contents/Library/LaunchAgents/com.nushihq.Nushi.daemon.plist"
 [ "$(plutil -extract BundleProgram raw -o - "$agent" 2>/dev/null)" = Contents/Resources/start-daemon ] || fail "no launch agent"
 [ -x "$app/Contents/Resources/start-daemon" ] || fail "no start-daemon"
+mermaid="$app/Contents/Frameworks/App.framework/Resources/flutter_assets/assets/mermaid"
+[ -f "$mermaid/mermaid.html" ] && [ -f "$mermaid/mermaid.min.js" ] || fail "no mermaid.html and mermaid.min.js (make mermaid)"
 for part in "$helper" "$app"; do
   codesign --verify --strict "$part" || fail "$part isn't signed"
 done

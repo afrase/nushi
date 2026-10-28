@@ -30,7 +30,7 @@ BUILD := $(or $(shell git rev-list --count HEAD 2>/dev/null),1)
 MACOS_MIN := 13.0
 MACOS_CGO := -O2 -g -mmacosx-version-min=$(MACOS_MIN)
 
-.PHONY: run daemon stop app package install gen test test-go test-packages test-app test-web lint lint-go lint-dart check lines relay icons adapters web web-fonts web-plex
+.PHONY: run daemon stop app package install gen test test-go test-packages test-app test-web lint lint-go lint-dart check lines relay icons adapters web web-fonts web-plex mermaid
 
 # Starts the daemon in the background (unless one is running), then the app.
 run: daemon app
@@ -44,13 +44,19 @@ daemon:
 stop:
 	lsof -a -c nushid -t "$(DATA)/nushid.sock" | xargs kill 2>/dev/null || true
 
-app:
+app: mermaid
 	cd app && flutter run -d macos
+
+# mermaid.min.js into the app's assets (the Mac app's and the phone's), as
+# tools/mermaid/mermaid.lock pins it: fetched once into a cache outside the
+# repository and checked. A new release: go run ./tools/mermaid -lock X.Y.Z.
+mermaid:
+	go run ./tools/mermaid
 
 # A release app with nushid inside, in a background-only helper app
 # (ADR 0036), signed with $(SIGN). The app starts it when no daemon is running,
 # and launchd at login through start-daemon when Start at login is on.
-package:
+package: mermaid
 	cd app && flutter build macos --release --build-name "$(firstword $(subst -, ,$(VERSION)))" --build-number "$(BUILD)"
 	rm -rf "$(RELEASE)/Contents/MacOS/nushid" "$(RELEASE)/Contents/Helpers"
 	mkdir -p "$(HELPER)/Contents/MacOS" "$(HELPER)/Contents/Resources"
@@ -81,7 +87,7 @@ relay:
 # The engine's fallback fonts come once from Google's font host into a
 # cache outside the repository, checked against tools/webbuild/fonts.lock.
 FLUTTER_WEB = cd app && flutter build web -t lib/phone_main.dart --release --no-web-resources-cdn --no-wasm-dry-run --no-source-maps
-web:
+web: mermaid
 	rm -rf app/build/web
 	$(FLUTTER_WEB)
 	go run ./tools/webbuild app/build/web
@@ -98,7 +104,7 @@ web-plex:
 
 # After a Flutter upgrade (make web stops): the engine's fallback fonts
 # anew in tools/webbuild/fonts.lock. Check the diff before committing it.
-web-fonts:
+web-fonts: mermaid
 	rm -rf app/build/web
 	$(FLUTTER_WEB)
 	go run ./tools/webbuild -lock-fonts app/build/web

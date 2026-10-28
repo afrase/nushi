@@ -32,6 +32,7 @@ func webDir(t *testing.T) string {
 		"assets/fonts/x.ttf":          "font",
 		"manifest.json":               `{"name": "Nushi"}`,
 		"frame.html":                  "<script>addEventListener(\"message\", () => {})</script>",
+		mermaidScript:                 "globalThis.mermaid = {}",
 		"canvaskit/canvaskit.wasm":    "\x00asm",
 		"ck-0123456789abcdef/ck.wasm": "\x00asm",
 		"icons/Icon-192.png":          "\x89PNG",
@@ -216,6 +217,15 @@ func TestWebHeaders(t *testing.T) {
 	}
 	if !strings.Contains(csp, "frame-src 'self'") {
 		t.Errorf("the CSP: %s", csp)
+	}
+	// Mermaid's script, for the frame's opaque origin; the app's other
+	// files stay its own.
+	if resp, _ := get(t, srv.URL+"/"+mermaidScript, nil); resp.StatusCode != http.StatusOK ||
+		resp.Header.Get("Cross-Origin-Resource-Policy") != "cross-origin" {
+		t.Errorf("mermaid: %d %q", resp.StatusCode, resp.Header)
+	}
+	if resp, _ := get(t, srv.URL+"/flutter_bootstrap.js", nil); resp.Header.Get("Cross-Origin-Resource-Policy") != "same-origin" {
+		t.Errorf("flutter_bootstrap.js: %q", resp.Header)
 	}
 	if resp, _ := get(t, srv.URL+"/sw.js", nil); resp.Header.Get("Content-Type") != "text/javascript; charset=utf-8" || resp.Header.Get("Service-Worker-Allowed") != "" {
 		t.Errorf("sw.js: %q", resp.Header)

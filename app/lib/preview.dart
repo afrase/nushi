@@ -25,15 +25,23 @@ enum PreviewKind {
   pdf,
   csv,
 
+  /// A Mermaid diagram (`.mmd`, `.mermaid`).
+  mermaid,
+
   /// Code and text: its source only, highlighted.
   code;
 
   /// Drawn by a web view (the Mac) or a frame (the phone).
-  bool get page => this == html || this == svg || this == pdf;
+  bool get page =>
+      this == html || this == svg || this == pdf || this == mermaid;
 
   /// Has Preview and Source.
   bool get rendered =>
-      this == markdown || this == html || this == svg || this == csv;
+      this == markdown ||
+      this == html ||
+      this == svg ||
+      this == csv ||
+      this == mermaid;
 
   /// Made to be looked at: listed in Artifacts, with a Preview button on
   /// its tool row. Code and text show only through ⌘P's Open file
@@ -69,6 +77,7 @@ PreviewKind? previewKind(String path) {
     'svg' => PreviewKind.svg,
     'pdf' => PreviewKind.pdf,
     'csv' => PreviewKind.csv,
+    'mmd' || 'mermaid' => PreviewKind.mermaid,
     final e when _code.contains(e) => PreviewKind.code,
     _ => null,
   };

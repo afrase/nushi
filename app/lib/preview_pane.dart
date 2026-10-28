@@ -4,6 +4,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/chat_files.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/diagram_page.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/preview_marks.dart';
 import 'package:nushi/skills_list.dart';
@@ -13,7 +14,8 @@ import 'package:nushi/web_page.dart';
 /// A file the agent wrote, beside the chat where a subagent's pane opens:
 /// its name (a menu of the chat's other files), Live while the daemon
 /// keeps it current, Preview or Source (a file that renders), Reload and
-/// Open in browser (a page), Open in Finder and Close. Read-only.
+/// Open in browser (a page, not a diagram), Open in Finder and Close.
+/// Read-only.
 class PreviewPane extends StatefulWidget {
   const new({
     required this.chat,
@@ -35,13 +37,19 @@ class PreviewPane extends StatefulWidget {
 class _PreviewPaneState extends State<PreviewPane> {
   late final _watch = FileWatch(widget.daemon, widget.chat.id, widget.path);
   late final PreviewKind _kind = previewKind(widget.path) ?? PreviewKind.code;
-  late final PageHost? _page = _kind.page ? newPageHost() : null;
+  late final PageHost? _page = _kind.page && _kind != PreviewKind.mermaid
+      ? newPageHost()
+      : null;
+  late final DiagramHost? _diagram = _kind == PreviewKind.mermaid
+      ? newDiagramHost()
+      : null;
   bool _source = false;
 
   @override
   void dispose() {
     _watch.dispose();
     _page?.dispose();
+    _diagram?.dispose();
     super.dispose();
   }
 
@@ -59,6 +67,7 @@ class _PreviewPaneState extends State<PreviewPane> {
     final t = theme.t;
     final kind = _kind;
     final page = _page;
+    final diagram = _diagram;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -78,6 +87,7 @@ class _PreviewPaneState extends State<PreviewPane> {
                   switch (kind) {
                     PreviewKind.image => Icons.image_outlined,
                     PreviewKind.html || PreviewKind.svg => Icons.web_outlined,
+                    PreviewKind.mermaid => Icons.account_tree_outlined,
                     PreviewKind.code => Icons.code,
                     _ => Icons.description_outlined,
                   },
@@ -151,13 +161,18 @@ class _PreviewPaneState extends State<PreviewPane> {
               watch: _watch,
               source: _source,
               onReveal: _reveal,
-              page: page == null
-                  ? null
-                  : (watch) => WebPage(
-                      host: page,
-                      watch: watch,
-                      roots: [widget.chat.folder, ?widget.chat.worktree?.path],
-                    ),
+              page: switch ((page, diagram)) {
+                (final page?, _) => (watch) => WebPage(
+                  host: page,
+                  watch: watch,
+                  roots: [widget.chat.folder, ?widget.chat.worktree?.path],
+                ),
+                (_, final diagram?) => (watch) => DiagramView(
+                  host: diagram,
+                  watch: watch,
+                ),
+                _ => null,
+              },
             ),
           ),
         ),

@@ -228,6 +228,10 @@ func csp(origin string) string {
 // step 376). A srcdoc or blob: frame would take the app's CSP instead.
 const framePage = "frame.html"
 
+// mermaidScript is mermaid.js in the web app's assets: the frame draws a
+// diagram with it (`lib/phone/diagram_screen.dart`).
+const mermaidScript = "assets/assets/mermaid/mermaid.min.js"
+
 func frameHeaders(h http.Header) {
 	h.Set("Content-Security-Policy", "sandbox allow-scripts; default-src * data: blob: 'unsafe-inline' 'unsafe-eval'; frame-ancestors 'self'")
 	h.Set("X-Frame-Options", "SAMEORIGIN")
@@ -256,6 +260,10 @@ func (s *Site) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if name == framePage {
 		frameHeaders(h)
+	}
+	if name == mermaidScript {
+		// Loaded by the frame's page, whose origin is its sandbox's own.
+		h.Set("Cross-Origin-Resource-Policy", "cross-origin")
 	}
 	f := s.files[name]
 	if f == nil {

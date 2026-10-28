@@ -44,6 +44,10 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # mermaid.html, and mermaid.min.js put there by make mermaid (pinned in
+  # tools/mermaid/mermaid.lock; not committed).
+  assets:
+    - assets/mermaid/
   fonts:
     - family: IBM Plex Sans
       fonts:

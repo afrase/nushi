@@ -1,0 +1,7 @@
+# mermaid.min.js, which make mermaid puts into app/assets/mermaid/ for the
+# Mac app and the phone's web app (tools/mermaid): the release, and the
+# file's sha256 and size: npm's package's dist/mermaid.min.js, from jsDelivr.
+# Written by go run ./tools/mermaid -lock <version>.
+version 12.2.0
+sha256 a8a6a6f805b074a8261a2825c86f99c8054acb3b35f50bb7e24a4f9f2c3c3b9f
+size 5494801

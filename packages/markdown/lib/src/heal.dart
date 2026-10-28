@@ -9,14 +9,28 @@
 ///   destination is still open renders as its text, an unclosed code span
 ///   gets its closing backticks, and unclosed emphasis (`*`, `**`, `_`,
 ///   `~~`, ...) gets its closers.
-String heal(String text) {
-  if (text.isEmpty) return text;
+///
+/// With [markOpen], the open fence's info string ends in [openMark], so
+/// whoever draws the block knows it's still coming (a diagram is drawn
+/// only once whole).
+String heal(String markdown, {bool markOpen = false}) {
+  if (markdown.isEmpty) return markdown;
+  var text = markdown;
+  final open = _openFence(text);
+  if (open != null && markOpen) {
+    final lines = text.split('\n');
+    final line = lines[open.line];
+    final cr = line.endsWith('\r') ? 1 : 0;
+    lines[open.line] =
+        '${line.substring(0, line.length - cr)} $openMark${'\r' * cr}';
+    text = lines.join('\n');
+  }
   final lastBreak = text.lastIndexOf('\n');
   final head = text.substring(0, lastBreak + 1);
   final last = text.substring(lastBreak + 1);
 
-  final closer = _openFence(text);
-  if (closer != null) {
+  if (open != null) {
+    final closer = open.run;
     if (_partialFence.hasMatch(last) && head.isNotEmpty) return '$head$closer';
     return '${text.endsWith('\n') ? text : '$text\n'}$closer';
   }
@@ -40,10 +54,15 @@ String healLine(String line) {
 final _fence = RegExp('^ {0,3}(`{3,}|~{3,})');
 final _partialFence = RegExp(r'^ {0,3}(`{1,2}|~{1,2})$');
 
-/// The closer of the fence still open at the end of [text], or null.
-String? _openFence(String text) {
-  String? open;
-  for (var line in text.split('\n')) {
+/// Ends the info string of a fence [heal] closed, when asked to mark it: a
+/// character of Unicode's private use area, which no one types.
+const openMark = '\u{E000}';
+
+/// The fence still open at the end of [text] (its run, which closes it,
+/// and its line's index), or null.
+({String run, int line})? _openFence(String text) {
+  ({String run, int line})? open;
+  for (var (i, line) in text.split('\n').indexed) {
     if (line.endsWith('\r')) line = line.substring(0, line.length - 1);
     final m = _fence.firstMatch(line);
     if (m == null) continue;
@@ -51,9 +70,9 @@ String? _openFence(String text) {
     if (open == null) {
       // A backtick fence's info string can't hold backticks.
       if (run[0] == '`' && line.substring(m.end).contains('`')) continue;
-      open = run;
-    } else if (run[0] == open[0] &&
-        run.length >= open.length &&
+      open = (run: run, line: i);
+    } else if (run[0] == open.run[0] &&
+        run.length >= open.run.length &&
         line.substring(m.end).trim().isEmpty) {
       open = null;
     }
