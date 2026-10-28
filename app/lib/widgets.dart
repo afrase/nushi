@@ -17,7 +17,7 @@ String errorText(Object e) => switch (e) {
 /// Shows [message] in a snack bar.
 void showError(BuildContext context, Object message) =>
     ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('$message')));
+        .showSnackBar(SnackBar(content: Text(errorText(message))));
 
 /// Runs a call, showing its error, if any, in a snack bar: the app's, also
 /// once the widget that asked is gone (a trust card replaced it).
@@ -32,7 +32,7 @@ Future<void> tryOrShow(
     if (context.mounted) {
       showError(context, e);
     } else {
-      messenger?.showSnackBar(SnackBar(content: Text('$e')));
+      messenger?.showSnackBar(SnackBar(content: Text(errorText(e))));
     }
   }
 }

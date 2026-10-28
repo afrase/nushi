@@ -14,6 +14,7 @@ import 'package:nushi/mcp_card.dart';
 import 'package:nushi/panel_cards.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/usage.dart';
+import 'package:nushi/widgets.dart';
 import 'package:nushi/worktree.dart';
 
 /// The panel beside a chat: cards for its environment (folder or
@@ -151,7 +152,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
         });
       }
     } on Object catch (e) {
-      if (mounted) setState(() => _error = '$e');
+      if (mounted) setState(() => _error = errorText(e));
     }
   }
 

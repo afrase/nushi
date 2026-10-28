@@ -1,4 +1,3 @@
-import 'package:connectrpc/connect.dart';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/chat.dart';
@@ -62,7 +61,7 @@ class _RenameBranchDialogState extends State<RenameBranchDialog> {
       if (!mounted) return;
       setState(() {
         _renaming = false;
-        _error = e is ConnectException ? e.message : '$e';
+        _error = errorText(e);
       });
     }
   }

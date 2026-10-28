@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/github_settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -84,7 +83,7 @@ class _ReviewDialogState extends State<_ReviewDialog> {
       );
       if (mounted) Navigator.pop(context, true);
     } on Object catch (e) {
-      if (mounted) setState(() => _error = githubError(e));
+      if (mounted) setState(() => _error = errorText(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

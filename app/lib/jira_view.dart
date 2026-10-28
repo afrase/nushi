@@ -8,7 +8,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_issue.dart';
 import 'package:nushi/jira_people.dart';
-import 'package:nushi/jira_settings.dart';
 import 'package:nushi/jira_sources.dart';
 import 'package:nushi/jira_tasks.dart';
 import 'package:nushi/jira_view_parts.dart';
@@ -189,7 +188,7 @@ class _JiraViewState extends State<JiraView> {
       if (mounted) {
         setState(() {
           _sites = const [];
-          _error = jiraError(e);
+          _error = errorText(e);
         });
       }
     }
@@ -260,7 +259,7 @@ class _JiraViewState extends State<JiraView> {
             _tasks = const [];
             _shown = _cachedAt = null;
           }
-          _error = jiraError(e);
+          _error = errorText(e);
         });
       }
     } finally {

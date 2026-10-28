@@ -12,7 +12,6 @@ import 'package:nushi/github_inbox.dart';
 import 'package:nushi/github_issue.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_pull.dart';
-import 'package:nushi/github_settings.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_nav.dart';
@@ -149,7 +148,7 @@ class _GitHubViewState extends State<GitHubView> {
       if (mounted) {
         setState(() {
           _hosts = const [];
-          _error = githubError(e);
+          _error = errorText(e);
         });
       }
     }
@@ -205,7 +204,7 @@ class _GitHubViewState extends State<GitHubView> {
       });
     } on Object catch (e) {
       if (n == _asked && mounted && !quiet) {
-        setState(() => _error = githubError(e));
+        setState(() => _error = errorText(e));
       }
     } finally {
       if (n == _asked && mounted) setState(() => _loading = false);

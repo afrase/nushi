@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:connectrpc/connect.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
@@ -9,9 +8,6 @@ import 'package:nushi/settings_rows.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-/// What a failed Jira call says: the daemon's message.
-String jiraError(Object e) => e is ConnectException ? e.message : '$e';
 
 /// Where Atlassian makes API tokens.
 final Uri tokensPage = Uri.parse(
@@ -66,7 +62,7 @@ class _JiraPageState extends State<JiraPage> {
       r = await widget.client.listJiraSites(ListJiraSitesRequest());
     } on Object catch (e) {
       // The daemon restarting, say: what went wrong, not a blank page.
-      if (mounted) setState(() => _error = jiraError(e));
+      if (mounted) setState(() => _error = errorText(e));
       return;
     }
     if (!mounted) return;
@@ -90,7 +86,7 @@ class _JiraPageState extends State<JiraPage> {
       );
       said = 'Connected as ${r.name}';
     } on Object catch (e) {
-      said = jiraError(e);
+      said = errorText(e);
     }
     if (mounted) setState(() => _checked[id] = said);
   }
@@ -320,7 +316,7 @@ class _AddSiteState extends State<_AddSite> {
       _token.clear();
       widget.onAdded(r.site);
     } on Object catch (e) {
-      if (mounted) setState(() => _error = jiraError(e));
+      if (mounted) setState(() => _error = errorText(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

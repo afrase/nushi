@@ -22,6 +22,7 @@ import 'package:nushi/settings_nav.dart';
 import 'package:nushi/side_panel.dart';
 import 'package:nushi/terminals.dart';
 import 'package:nushi/trust_card.dart';
+import 'package:nushi/widgets.dart' show errorText;
 import 'package:uds_transport/uds_transport.dart';
 
 final support = '${Platform.environment['HOME']}/Library/Application Support';
@@ -533,10 +534,10 @@ class Daemon extends ChangeNotifier {
       if (remote) {
         // The phone: no raw error, but tries again (and again once the link
         // is back); details show why.
-        chat.loadError = '$e';
+        chat.loadError = errorText(e);
         _retryLoad(chat, tries);
       } else {
-        chat.error = '$e';
+        chat.error = errorText(e);
       }
       notifyListeners();
     }

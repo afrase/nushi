@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:connectrpc/connect.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -98,7 +97,7 @@ class _SessionListState extends State<SessionList> {
       });
     } on Object catch (e) {
       if (mounted) {
-        setState(() => _error = e is ConnectException ? e.message : '$e');
+        setState(() => _error = errorText(e));
       }
     } finally {
       if (mounted) setState(() => _loading = false);

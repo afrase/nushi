@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:connectrpc/connect.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -88,7 +87,7 @@ class _IssuePickerState extends State<IssuePicker> {
       });
     } on Object catch (e) {
       if (!mounted || text != _asked) return;
-      setState(() => _error = e is ConnectException ? e.message : '$e');
+      setState(() => _error = errorText(e));
     }
   }
 

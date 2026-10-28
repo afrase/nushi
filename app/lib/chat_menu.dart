@@ -175,7 +175,7 @@ class _DeleteDialogState extends State<_DeleteDialog> {
       if (mounted) {
         setState(() {
           _deleting = false;
-          _error = '$e';
+          _error = errorText(e);
         });
       }
     }

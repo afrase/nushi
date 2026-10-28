@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_issue_parts.dart';
-import 'package:nushi/jira_settings.dart';
 import 'package:nushi/jira_view_parts.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/new_chat.dart';
@@ -101,7 +100,7 @@ class _StatusMenuState extends State<StatusMenu> {
             : entries,
       );
     } on Object catch (e) {
-      if (mounted) setState(() => _entries = [MenuEntry(jiraError(e))]);
+      if (mounted) setState(() => _entries = [MenuEntry(errorText(e))]);
     }
     // Once the menu has its rows.
     WidgetsBinding.instance.addPostFrameCallback((_) => open());

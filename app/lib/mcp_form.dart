@@ -187,7 +187,7 @@ class _FormState extends State<_Form> {
     } on Object catch (e) {
       if (mounted) {
         setState(() {
-          _error = '$e';
+          _error = errorText(e);
           _saving = false;
         });
       }

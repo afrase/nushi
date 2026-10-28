@@ -67,7 +67,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
       }
     } on Object catch (e) {
       // A failed poll keeps what shows, and says why.
-      if (mounted) setState(() => _error = githubError(e));
+      if (mounted) setState(() => _error = errorText(e));
     }
   }
 
@@ -567,7 +567,7 @@ class _CommentBoxState extends State<CommentBox> {
       await widget.onPost(text);
       _text.clear();
     } on Object catch (e) {
-      if (mounted) setState(() => _error = githubError(e));
+      if (mounted) setState(() => _error = errorText(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

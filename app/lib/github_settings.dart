@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:connectrpc/connect.dart';
 import 'package:flutter/material.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
@@ -9,9 +8,6 @@ import 'package:nushi/settings_rows.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-/// What a failed GitHub call says: the daemon's message.
-String githubError(Object e) => e is ConnectException ? e.message : '$e';
 
 /// Where GitHub makes tokens.
 final Uri githubTokensPage = Uri.parse('https://github.com/settings/tokens');
@@ -95,7 +91,7 @@ class _GitHubPageState extends State<GitHubPage> {
       if (mounted) {
         setState(() {
           _hosts = const [];
-          _error = githubError(e);
+          _error = errorText(e);
         });
       }
     }
@@ -307,7 +303,7 @@ class _AddTokenState extends State<_AddToken> {
       _token.clear();
       widget.onAdded();
     } on Object catch (e) {
-      if (mounted) setState(() => _error = githubError(e));
+      if (mounted) setState(() => _error = errorText(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

@@ -143,7 +143,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
       });
       if (_repick) unawaited(tryOrShow(context, _diff));
     } on Object catch (e) {
-      if (mounted && asked == _asked) setState(() => _error = '$e');
+      if (mounted && asked == _asked) setState(() => _error = errorText(e));
     } finally {
       if (mounted && asked == _asked) {
         setState(() {

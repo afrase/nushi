@@ -259,7 +259,7 @@ class _SetUpState extends State<_SetUp> {
       if (mounted) {
         setState(() {
           _working = false;
-          _error = '$e';
+          _error = errorText(e);
         });
       }
     }

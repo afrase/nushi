@@ -76,7 +76,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
         await openPhoneChat(context, widget.phone, chat);
       }
     } on Object catch (e) {
-      if (mounted) phoneSay(context, '$e');
+      if (mounted) phoneSay(context, errorText(e));
     } finally {
       if (mounted) setState(() => _starting = false);
     }

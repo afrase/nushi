@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart';
-import 'package:nushi/jira_settings.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -231,7 +230,7 @@ class _CommentBoxState extends State<CommentBox> {
       await widget.onPost(md);
       _text.clear();
     } on Object catch (e) {
-      if (mounted) setState(() => _error = jiraError(e));
+      if (mounted) setState(() => _error = errorText(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

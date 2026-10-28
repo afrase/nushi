@@ -8,7 +8,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_issue_parts.dart';
-import 'package:nushi/jira_settings.dart';
 import 'package:nushi/jira_work.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/theme/theme.dart';
@@ -84,7 +83,7 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
         });
       }
     } on Object catch (e) {
-      if (mounted && !quiet) setState(() => _error = jiraError(e));
+      if (mounted && !quiet) setState(() => _error = errorText(e));
     } finally {
       if (mounted) setState(() => _refreshing = false);
     }

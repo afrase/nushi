@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/widgets.dart' show errorText;
 
 /// The skills (and Claude's plugins) an agent uses in a folder, from the
 /// daemon (API 67), read from the agent's files each time the Skills view
@@ -47,7 +48,7 @@ class SkillsList extends ChangeNotifier {
         error = '';
         loaded = true;
       } on Object catch (e) {
-        error = '$e';
+        error = errorText(e);
       }
     } while (_again);
     loading = false;

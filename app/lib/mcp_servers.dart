@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart' show errorText;
 
 /// The MCP servers the agent's config gives a folder, from the daemon (API
 /// 32): read from the config at once, then checked (the agent connects to
@@ -54,7 +55,7 @@ class McpServers extends ChangeNotifier {
         _take(await _list(false));
         _take(await _list(true));
       } on Object catch (e) {
-        error = '$e';
+        error = errorText(e);
       }
     } while (_again);
     checking = false;

@@ -12,6 +12,7 @@ import 'package:nushi/phone/link.dart';
 import 'package:nushi/phone/platform.dart';
 import 'package:nushi/phone/subscription.dart';
 import 'package:nushi/remote.dart';
+import 'package:nushi/widgets.dart' show errorText;
 import 'package:remote_transport/remote_transport.dart' as rt;
 
 /// Where pairing stands while it runs: the code to compare with the Mac's.
@@ -317,10 +318,8 @@ class Phone extends ChangeNotifier {
         notifyListeners();
       }
       return null;
-    } on connect.ConnectException catch (e) {
-      return e.message;
     } on Object catch (e) {
-      return '$e';
+      return errorText(e);
     }
   }
 
