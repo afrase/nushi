@@ -48,6 +48,10 @@ type Session struct {
 	// Ultracode is the chat's Ultracode option (its agent's standing
 	// multi-agent workflows), off by default.
 	Ultracode bool `json:",omitempty"`
+	// Picks are the chat's options the user picked, other than the mode
+	// and Ultracode (the model, the effort, ...), by option ID, at what the
+	// agent is on now: put back whenever its session opens again.
+	Picks map[string]string `json:",omitempty"`
 	// Unseen says a turn ended (it finished, or failed with an error to
 	// read; not one the user stopped) while no client showed the chat; a
 	// client showing it clears it, and so does archiving.

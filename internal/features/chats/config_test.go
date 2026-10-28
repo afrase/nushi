@@ -57,8 +57,8 @@ func TestOneModePickerAndTheModeIsRemembered(t *testing.T) {
 	if err := svc.SetConfig(ctx, c.id, "model", "sonnet"); err != nil {
 		t.Fatal(err)
 	}
-	if len(*modes) != 0 {
-		t.Errorf("a model change was remembered as the mode: %v", *modes)
+	if (*modes)["claude"] != "" || (*modes)["claude/model"] != "sonnet" {
+		t.Errorf("a model change wasn't remembered as a pick: %v", *modes)
 	}
 	if err := svc.SetConfig(ctx, c.id, "mode", "plan"); err != nil {
 		t.Fatal(err)
@@ -79,9 +79,9 @@ func TestOneModePickerAndTheModeIsRemembered(t *testing.T) {
 		t.Errorf("stored mode = %q, want default", c.session.Mode)
 	}
 
-	// The next chat starts in the remembered mode.
+	// The next chat starts in the remembered mode, on the remembered model.
 	_, agent2, c2 := newChat(t, claudeSession, modes)
-	if !slices.Equal(agent2.set, []string{`mode="plan"`}) || current(c2, "mode") != "plan" {
+	if !slices.Equal(agent2.set, []string{`model="sonnet"`, `mode="plan"`}) || current(c2, "mode") != "plan" {
 		t.Errorf("new chat: set %v, mode %q; want plan", agent2.set, current(c2, "mode"))
 	}
 }

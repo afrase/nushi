@@ -91,12 +91,9 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 	} else {
 		next, config, err = c.forkSession(ctx, agent, sid, folder, forkAt(at))
 	}
-	mode, err := func() (string, error) {
+	mode, picks, err := func() (string, map[string]string, error) {
 		c.mu.Lock()
 		defer c.mu.Unlock()
-		c.busy = false
-		defer c.statusChangedLocked()
-		defer c.deliverLocked()
 		i := c.indexLocked(itemID) // looked up again: the lock was let go
 		switch {
 		case err != nil:
@@ -110,7 +107,7 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 				c.throwawayLocked([]string{next}, false)
 			}
 			c.noticeLocked("error", "Couldn't rewind the chat: "+err.Error())
-			return "", err
+			return "", nil, err
 		}
 		first := !slices.ContainsFunc(c.items[:i], func(it model.Item) bool { return it.Kind == model.UserMessage })
 		// The fork ends with the agent's message at: what came after it
@@ -118,7 +115,7 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 		if j := c.indexLocked(at); at != "" && j >= 0 && j < i {
 			i = j + 1
 		}
-		c.sid, c.config = next, config
+		c.sid, c.config, c.reapplying = next, config, true
 		c.emitLocked(model.Event{ChatID: c.id, Cut: c.items[i].ID})
 		cut := c.items[i].ID
 		c.items = c.items[:i]
@@ -131,16 +128,23 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 				s.Title, s.HasMessages = "", false
 			}
 		})
-		return c.session.Mode, nil
+		return c.session.Mode, c.session.Picks, nil
 	}()
+	if err == nil {
+		if _, err := agent.CloseSession(ctx, &acp.CloseSessionRequest{SessionID: acp.SessionID(sid)}); err != nil {
+			c.log().Warn("closing the session left by the rewind", "old", sid, "err", err)
+		}
+		if err := c.reapply(ctx, agent, next, mode, picks); err != nil {
+			c.log().Warn("mode after rewinding", "err", err)
+		}
+	}
+	c.mu.Lock() // busy until the fork is on the chat's picks: no prompt before
+	c.busy = false
+	c.statusChangedLocked()
+	c.deliverLocked()
+	c.mu.Unlock()
 	if err != nil {
 		return model.Message{}, err
-	}
-	if _, err := agent.CloseSession(ctx, &acp.CloseSessionRequest{SessionID: acp.SessionID(sid)}); err != nil {
-		c.log().Warn("closing the session left by the rewind", "old", sid, "err", err)
-	}
-	if err := c.startMode(ctx, agent, next, mode); err != nil {
-		c.log().Warn("mode after rewinding", "err", err)
 	}
 	c.log().Info("chat rewound", "old", sid, "to", itemID)
 	return msg, nil

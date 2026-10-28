@@ -26,7 +26,7 @@ func (s *Service) Sleep(chatID string) error {
 	c.mu.Lock()
 	err = c.canSleepLocked()
 	if err == nil {
-		c.asleep, c.before = true, slices.Clone(c.config)
+		c.asleep = true
 	}
 	c.mu.Unlock()
 	if err != nil {
@@ -111,7 +111,7 @@ func (s *Service) doze(c *chat, after time.Duration) {
 		return
 	}
 	agent := c.agent
-	c.asleep, c.before, c.retired = true, slices.Clone(c.config), agent.Done()
+	c.asleep, c.retired = true, agent.Done()
 	c.agent, c.kept = nil, len(c.items) > 0
 	c.statusChangedLocked()
 	c.logLocked().Info("chat asleep", "why", "idle", "after", after)
@@ -159,24 +159,6 @@ func (s *Service) awake(ctx context.Context, c *chat) error {
 		}
 	}
 	return nil
-}
-
-// restoreConfig sets a woken chat's options back to what they were before
-// it slept (the model, the effort), where the agent reopened the session
-// with others; startMode sees to the mode.
-func (c *chat) restoreConfig(ctx context.Context, agent Agent, sid string, before []model.ConfigOption) {
-	for _, o := range before {
-		c.mu.Lock()
-		i := slices.IndexFunc(c.config, func(n model.ConfigOption) bool { return n.ID == o.ID })
-		set := o.Category != "mode" && o.ID != ultracodeID && i >= 0 && c.config[i].Current != o.Current &&
-			(c.config[i].Type == "boolean" || slices.ContainsFunc(c.config[i].Values, func(v model.ConfigValue) bool { return v.Value == o.Current }))
-		c.mu.Unlock()
-		if set {
-			if err := c.setConfig(ctx, agent, sid, o.ID, o.Current); err != nil {
-				c.log().Warn("setting an option back after sleeping", "option", o.ID, "err", err)
-			}
-		}
-	}
 }
 
 // AgentPids returns the process of each chat's running agent, by chat id

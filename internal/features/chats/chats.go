@@ -74,12 +74,12 @@ type Sessions interface {
 
 // Service holds the open chats, each with one of the agents.
 type Service struct {
-	kinds     []*kind // the first is the default
-	modes     Modes
-	sessions  Sessions
-	worktrees Worktrees
-	scratch   string // the folder that holds chats' scratch folders
-	publish   func(model.Event)
+	kinds      []*kind // the first is the default
+	remembered Remembered
+	sessions   Sessions
+	worktrees  Worktrees
+	scratch    string // the folder that holds chats' scratch folders
+	publish    func(model.Event)
 
 	terminals Terminals   // set once at startup, if there are any
 	viewers   Viewers     // set once at startup, for unseen turns' ends (seen.go)
@@ -176,15 +176,15 @@ type chat struct {
 	forkAt func(messageID string) map[string]any
 	// mcpChanged says the MCP servers changed since the agent started.
 	mcpChanged bool
-	issue      *model.ChatIssue     // the Jira issue it was started from; its tools are for it
-	canLoad    bool                 // the agent can reopen the session, so it can sleep
-	asleep     bool                 // its agent was stopped to sleep: opening the chat doesn't reopen it
-	before     []model.ConfigOption // the options it had when it fell asleep, for its waking
-	retired    <-chan struct{}      // closed once the agent it fell asleep from has ended
-	woke       chan struct{}        // closed when the reopen under way ends
-	active     time.Time            // its last event
-	unsaved    map[string]bool      // items changed since the copy of the transcript last had them (copies.go)
-	replaying  bool                 // a session/load's replay goes to replay, not the transcript (restore.go)
+	issue      *model.ChatIssue // the Jira issue it was started from; its tools are for it
+	canLoad    bool             // the agent can reopen the session, so it can sleep
+	asleep     bool             // its agent was stopped to sleep: opening the chat doesn't reopen it
+	reapplying bool             // its session just opened: its picks aren't back on it yet (reapply)
+	retired    <-chan struct{}  // closed once the agent it fell asleep from has ended
+	woke       chan struct{}    // closed when the reopen under way ends
+	active     time.Time        // its last event
+	unsaved    map[string]bool  // items changed since the copy of the transcript last had them (copies.go)
+	replaying  bool             // a session/load's replay goes to replay, not the transcript (restore.go)
 	replay     []model.Item
 	quiet      bool // a replayed update is being taken: its events aren't the app's
 	// titled says the agent titled the session while the daemon ran, and
@@ -286,7 +286,7 @@ func (s *Service) StartOn(ctx context.Context, agent, folder string, opts StartO
 	s.useLocked(c, o)
 	c.session = model.Session{ID: c.id, SessionID: o.sid, Agent: k.Name, Folder: folder, Created: time.Now(), Worktree: wt, Scratch: scratch, Issue: opts.Issue, GitHub: opts.GitHub}
 	c.mu.Unlock()
-	if err := c.startMode(ctx, o.agent, o.sid, s.modes.Mode(k.Name)); err != nil {
+	if err := c.reapply(ctx, o.agent, o.sid, s.remembered.Mode(k.Name), s.remembered.Picks(k.Name)); err != nil {
 		c.log().Warn("starting mode", "err", err) // the chat keeps the agent's default
 	}
 	c.mu.Lock()

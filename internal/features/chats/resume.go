@@ -181,14 +181,15 @@ func (s *Service) AgentReady(agent string) {
 }
 
 // load starts the chat's agent and has it replay the session, then puts the
-// session back in the mode it was last in. A chat that never had a message
-// may have nothing to replay (Claude keeps a session only once it has one):
-// it gets a new session instead.
+// session back on the chat's picks and in the mode it was last in (an agent
+// may reopen a session on its defaults: Claude does). A chat that never had
+// a message may have nothing to replay (Claude keeps a session only once it
+// has one): it gets a new session instead.
 func (s *Service) load(ctx context.Context, c *chat) error {
 	c.mu.Lock()
 	sid, folder, fresh, gone := c.sid, c.session.Folder, !c.session.HasMessages, folderGone(c.session)
-	retired, before := c.retired, c.before
-	c.retired, c.before = nil, nil
+	retired := c.retired
+	c.retired = nil
 	// A transcript that outlived its agent stays; else the replay is merged
 	// with the copy, which has everything shown till now.
 	replay := !c.kept
@@ -229,11 +230,10 @@ func (s *Service) load(ctx context.Context, c *chat) error {
 	if o.sid != sid {
 		c.saveLocked(func(s *model.Session) { s.SessionID = o.sid })
 	}
-	mode, throwaway := c.session.Mode, slices.Clone(c.session.Throwaway)
+	mode, picks, throwaway := c.session.Mode, c.session.Picks, slices.Clone(c.session.Throwaway)
 	c.mu.Unlock()
 	go s.discard(c, throwaway) //nolint:gosec // discarding outlives the request; left by an agent that stopped before it could
-	c.restoreConfig(ctx, o.agent, o.sid, before)
-	return c.startMode(ctx, o.agent, o.sid, mode)
+	return c.reapply(ctx, o.agent, o.sid, mode, picks)
 }
 
 // folderGone says why a chat can't run when its folder no longer exists

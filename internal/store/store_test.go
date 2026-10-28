@@ -13,7 +13,10 @@ import (
 func TestStateSurvivesANewStore(t *testing.T) {
 	dir := t.TempDir()
 	s := New(dir)
-	if err := s.SetMode("claude", "plan"); err != nil {
+	if err := s.SetPick("claude", "model", "sonnet"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetMode("claude", "plan"); err != nil { // keeps the picks
 		t.Fatal(err)
 	}
 	if got := s.SleepAfter(); got != 30*time.Minute {
@@ -36,6 +39,9 @@ func TestStateSurvivesANewStore(t *testing.T) {
 	s = New(dir)
 	if got := s.Mode("claude"); got != "plan" || s.SleepAfter() != 0 {
 		t.Errorf("mode = %q, want plan; sleep after %v, want never", got, s.SleepAfter())
+	}
+	if got := s.Picks("claude"); !reflect.DeepEqual(got, map[string]string{"model": "sonnet"}) {
+		t.Errorf("picks = %v", got)
 	}
 	got, err := s.Sessions()
 	if err != nil {
