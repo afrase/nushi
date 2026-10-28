@@ -144,7 +144,7 @@ void main() {
       tester,
     ) async {
       final (phone, _) = await _app(tester, FakeDaemon(_chats), brightness: b);
-      expect(find.text('running'), findsOneWidget);
+      expect(find.text('working'), findsOneWidget);
       expect(find.text('needs you'), findsOneWidget);
       expect(find.text('done'), findsOneWidget);
       expect(find.text('asleep'), findsOneWidget);

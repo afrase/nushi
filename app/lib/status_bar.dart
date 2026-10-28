@@ -70,9 +70,10 @@ class _StatusBarState extends State<StatusBar> {
         builder: (context, _) {
           final live = widget.daemon.chats.values.where((c) => !c.archived);
           final working = live.where((c) => c.started != null).length;
+          // Asleep counts what runs no agent, unseen or not.
           final asleep = live.where((c) => c.asleep).length;
-          final expired = live.where((c) => c.sessionGone).length;
-          final failed = live.where((c) => c.reopenFailed).length - expired;
+          final expired = live.where((c) => c.phase == .expired).length;
+          final failed = live.where((c) => c.phase == .failed).length;
           final awake = live.length - asleep - failed - expired;
           return Container(
             height: 24,

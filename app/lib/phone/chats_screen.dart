@@ -114,8 +114,7 @@ class _Folder extends StatelessWidget {
 }
 
 /// A chat in the list: its state, its agent, its title, and its state in
-/// a word: "done" while a turn's end is unseen, then "idle" (always "done"
-/// from a daemon that doesn't keep it).
+/// a word, as the Mac says it ([phaseWord]).
 class ChatRow extends StatelessWidget {
   const new(this.chat, {required this.onTap, super.key});
 
@@ -128,21 +127,7 @@ class ChatRow extends StatelessWidget {
     return ListenableBuilder(
       listenable: chat,
       builder: (context, _) {
-        final (word, color) = chat.waiting
-            ? ('needs you', t.needs)
-            : chat.busy
-            ? ('running', t.running)
-            : chat.reopenFailed
-            ? ("couldn't start", t.crashed)
-            : chat.unseen ?? false
-            ? ('done', t.done)
-            : chat.asleep
-            ? ('asleep', t.idle)
-            : chat.fresh
-            ? ('new', t.idle)
-            : chat.unseen == false
-            ? ('idle', t.idle)
-            : ('done', t.done);
+        final (word, color) = phaseWord(chat.phase, t);
         return InkWell(
           onTap: onTap,
           child: ConstrainedBox(

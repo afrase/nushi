@@ -93,7 +93,7 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
   late bool _busy = widget.chat.busy;
   late bool _waiting = widget.chat.waiting;
   late bool _stopped = widget.chat.stopping; // the user stopped the turn
-  late bool? _unseen = widget.chat.unseen;
+  late ChatPhase _phase = widget.chat.phase;
   AnimationController? _hop; // once, as the chat starts waiting
   AnimationController? _check; // drawn, held, then the ring again
 
@@ -132,7 +132,7 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
     widget.chat.addListener(_changed);
     _busy = widget.chat.busy;
     _waiting = widget.chat.waiting;
-    _unseen = widget.chat.unseen;
+    _phase = widget.chat.phase;
     _hop?.value = 1;
     _check?.value = 1;
   }
@@ -164,12 +164,12 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
       (_check ??= _once(_checkFor)).forward(from: 0).ignore();
     }
     // Every streamed chunk notifies: only a change of state rebuilds.
-    if (c.busy == _busy && c.waiting == _waiting && c.unseen == _unseen) {
+    if (c.busy == _busy && c.waiting == _waiting && c.phase == _phase) {
       return;
     }
     _busy = c.busy;
     _waiting = c.waiting;
-    _unseen = c.unseen;
+    _phase = c.phase;
     setState(() {});
   }
 
@@ -178,23 +178,24 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
     const size = ChatDot.size;
     final t = NushiTheme.of(context).t;
     final chat = widget.chat;
+    final phase = chat.phase;
     // An unseen end shows through sleep: the user hasn't seen it yet.
-    final unseen = (chat.unseen ?? false) && !chat.archived && !chat.waiting;
-    if (chat.asleep && !chat.archived && !unseen) {
-      return Icon(Icons.bedtime_outlined, size: size * 1.6, color: t.idle);
-    }
-    if (chat.sessionGone && !chat.archived) {
-      return Icon(Icons.history_toggle_off, size: size * 1.6, color: t.idle);
-    }
-    if (chat.reopenFailed && !chat.archived) {
-      return Icon(Icons.error_outline, size: size * 1.6, color: t.crashed);
-    }
+    final unseen = phase == .unseen;
     final still = reduceMotion(context);
-    if (chat.busy && !chat.waiting) {
-      return CustomPaint(
-        size: const Size.square(size * 1.6),
-        painter: _Mark(t.running, ringing: !still),
-      );
+    switch (phase) {
+      case .asleep:
+        return Icon(Icons.bedtime_outlined, size: size * 1.6, color: t.idle);
+      case .expired:
+        return Icon(Icons.history_toggle_off, size: size * 1.6, color: t.idle);
+      case .failed:
+        return Icon(Icons.error_outline, size: size * 1.6, color: t.crashed);
+      case .working:
+        return CustomPaint(
+          size: const Size.square(size * 1.6),
+          painter: _Mark(t.running, ringing: !still),
+        );
+      case .archived || .waiting || .unseen || .fresh || .idle:
+        break;
     }
     final done = Padding(
       padding: const EdgeInsets.all(size * 0.3),
@@ -258,9 +259,22 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
   }
 }
 
-/// What a chat is doing, in a word: "needs you", "working", "asleep",
-/// "expired" (its agent deleted its session), "couldn't start" (its reopen
-/// failed) or "idle".
+/// A chat's [ChatPhase] in a word, and its color: the same on the Mac and
+/// the phone. "done" is a turn's end not yet seen; "expired", a chat whose
+/// agent deleted its session; "couldn't start", one whose reopen failed.
+(String, Color) phaseWord(ChatPhase p, Tokens t) => switch (p) {
+  .waiting => ('needs you', t.needs),
+  .working => ('working', t.running),
+  .expired => ('expired', t.idle),
+  .failed => ("couldn't start", t.crashed),
+  .unseen => ('done', t.done),
+  .asleep => ('asleep', t.idle),
+  .fresh => ('new', t.idle),
+  .idle => ('idle', t.idle),
+  .archived => ('archived', t.idle),
+};
+
+/// What a chat is doing, in a word ([phaseWord]).
 class ChatStatusWord extends StatelessWidget {
   const new(this.chat, {required this.style, super.key});
 
@@ -269,18 +283,7 @@ class ChatStatusWord extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = NushiTheme.of(context).t;
-    final (word, color) = chat.waiting
-        ? ('needs you', t.needs)
-        : chat.busy
-        ? ('working', t.running)
-        : chat.asleep
-        ? ('asleep', t.idle)
-        : chat.sessionGone
-        ? ('expired', t.idle)
-        : chat.reopenFailed
-        ? ("couldn't start", t.crashed)
-        : ('idle', t.idle);
+    final (word, color) = phaseWord(chat.phase, NushiTheme.of(context).t);
     return Text(word, style: style.copyWith(color: color));
   }
 }

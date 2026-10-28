@@ -7,6 +7,21 @@ import 'package:nushi/draft.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings.dart';
 
+/// A chat's state in a word, worked out in one place ([ChatState.phase]):
+/// the Mac's dot and word, the phone's row and the status bar read it, so
+/// they agree. In order of precedence.
+enum ChatPhase {
+  archived, // no agent runs; read-only until unarchived
+  waiting, // on the user: a permission prompt or a question
+  working, // a turn runs
+  expired, // its agent deleted its session: it can't reopen
+  failed, // its reopen failed
+  unseen, // a turn ended that no client has shown yet (API 76)
+  asleep, // no agent runs: a message wakes it
+  fresh, // no messages yet
+  idle,
+}
+
 /// One chat's transcript and status: a snapshot from the daemon, kept
 /// current by the chat's later events.
 class ChatState extends ChangeNotifier {
@@ -85,6 +100,25 @@ class ChatState extends ChangeNotifier {
   bool stopping = false; // the app asked the turn to stop
   String error = ''; // why the snapshot didn't load
   String loadError = ''; // the same on the phone, which tries again
+
+  /// Its state in a word: the one reading of the flags above.
+  ChatPhase get phase => archived
+      ? .archived
+      : waiting
+      ? .waiting
+      : busy
+      ? .working
+      : sessionGone
+      ? .expired
+      : reopenFailed
+      ? .failed
+      : unseen ?? false
+      ? .unseen
+      : asleep
+      ? .asleep
+      : fresh
+      ? .fresh
+      : .idle;
 
   /// What the user is writing to it.
   final draft = Draft();
