@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import 'package:nushi/agent_mark.dart';
@@ -9,6 +11,8 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/jira_view.dart';
+import 'package:nushi/menu.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
@@ -57,19 +61,34 @@ class _ChatHeaderState extends State<ChatHeader> {
         ?.name;
     final titleStyle = theme.ui(t.text, weight: FontWeight.w600);
     // The title and the model (a Codex model id is long) share what the
-    // rest of the row leaves (it takes about 420 points, the Pull request
-    // tab 85 more), so a narrow window cuts them short rather than
-    // overflow; with the tab, the title gets shorter still.
+    // rest of the row leaves (it takes about 450 points, the Pull request
+    // tab 88 more), so a narrow window cuts them short rather than
+    // overflow. Narrower still, the least needed parts fold, so the
+    // chat's menu (⋯) stays at the row's end: the model, the agent's name
+    // (its mark stays), the details button while the panel can't show,
+    // the tabs into a menu field, the status word (the dot's tooltip says
+    // it), then the terminal's and the details' buttons into ⋯.
     return LayoutBuilder(
       builder: (context, box) {
-        final more = chat.pull == null ? 0 : 85;
-        final room = box.maxWidth - 420 - more;
-        final title = (room * 0.6).clamp(more == 0 ? 80.0 : 40.0, 320.0);
+        final more = chat.pull == null ? 0 : 88;
+        final folds = headerFolds(
+          box.maxWidth,
+          pull: chat.pull != null,
+          panel: widget.onPanel != null,
+          model: modelName != null,
+        );
+        final shown = modelName != null && !folds.model;
+        // What the title and the model (its gap taken out) share.
+        final room = box.maxWidth - 450 - more + folds.saved - (shown ? 10 : 0);
+        const least = 80.0;
+        var title = (room * 0.6).clamp(least, 320.0);
+        if (shown) title = min(title, max(least, room - 40));
         return _row(
           context,
           titleStyle,
           meta,
           modelName,
+          folds,
           titleMax: title,
           modelMax: (room - title).clamp(40.0, 200.0),
         );
@@ -81,7 +100,8 @@ class _ChatHeaderState extends State<ChatHeader> {
     BuildContext context,
     TextStyle titleStyle,
     TextStyle meta,
-    String? modelName, {
+    String? modelName,
+    HeaderFolds folds, {
     required double titleMax,
     required double modelMax,
   }) {
@@ -135,13 +155,18 @@ class _ChatHeaderState extends State<ChatHeader> {
             ),
           ],
           const SizedBox(width: 14),
-          AgentMark(chat.agent, size: 16, color: t.text),
-          const SizedBox(width: 8),
-          Text(
-            chat.agentName,
-            style: theme.ui(t.text, size: 12, weight: FontWeight.w500),
+          Tooltip(
+            message: folds.name ? chat.agentName : '',
+            child: AgentMark(chat.agent, size: 16, color: t.text),
           ),
-          if (modelName != null) ...[
+          if (!folds.name) ...[
+            const SizedBox(width: 8),
+            Text(
+              chat.agentName,
+              style: theme.ui(t.text, size: 12, weight: FontWeight.w500),
+            ),
+          ],
+          if (modelName != null && !folds.model) ...[
             const SizedBox(width: 10),
             ConstrainedBox(
               constraints: BoxConstraints(maxWidth: modelMax),
@@ -156,6 +181,11 @@ class _ChatHeaderState extends State<ChatHeader> {
           const SizedBox(width: 10),
           if (chat.archived)
             Text('archived', style: meta)
+          else if (folds.word)
+            Tooltip(
+              message: phaseWord(chat.phase, t).$1,
+              child: ChatDot(chat: chat),
+            )
           else ...[
             ChatDot(chat: chat),
             const SizedBox(width: 5),
@@ -163,9 +193,11 @@ class _ChatHeaderState extends State<ChatHeader> {
           ],
           const SizedBox(width: 16),
           Expanded(
-            // The folder, unless the panel has it or there's no room.
+            // The folder, unless the panel has it or there's no room: it
+            // goes before anything folds.
             child: LayoutBuilder(
-              builder: (context, box) => widget.panel || box.maxWidth < 90
+              builder: (context, box) =>
+                  widget.panel || box.maxWidth < 90 || folds.any
                   ? const SizedBox.shrink()
                   : Align(
                       alignment: Alignment.centerRight,
@@ -174,41 +206,134 @@ class _ChatHeaderState extends State<ChatHeader> {
             ),
           ),
           const SizedBox(width: 12),
-          Segmented(
-            value: widget.tab,
-            segments: [
-              (ChatTab.chat, 'Chat'),
-              (ChatTab.changes, 'Changes'),
-              if (chat.pull != null) (ChatTab.pull, 'Pull request'),
-            ],
-            onChanged: widget.onTab,
-            tooltip: (t) =>
-                '${keyLabel(tabKey(t))}   ⌃⇥ the next tab, ⌃⇧⇥ the one before',
-          ),
+          if (folds.tabs)
+            MenuField(
+              compact: true,
+              tooltip: '⌃⇥ the next tab, ⌃⇧⇥ the one before',
+              entries: [
+                for (final (tab, label) in _tabs(chat))
+                  MenuEntry(
+                    label,
+                    detail: keyLabel(tabKey(tab)),
+                    checked: tab == widget.tab,
+                    onPick: () => widget.onTab(tab),
+                  ),
+              ],
+              label: Text(_tabs(chat).firstWhere((s) => s.$1 == widget.tab).$2),
+            )
+          else
+            Segmented(
+              value: widget.tab,
+              segments: _tabs(chat),
+              onChanged: widget.onTab,
+              tooltip: (t) =>
+                  '${keyLabel(tabKey(t))}   ⌃⇥ the next tab, ⌃⇧⇥ the one '
+                  'before',
+            ),
           const SizedBox(width: 4),
-          TerminalButton(chat: chat, daemon: widget.daemon),
-          IconTap(
-            Icons.view_sidebar_outlined,
-            tooltip: widget.onPanel == null
-                ? 'The window is too narrow'
-                : widget.panel
-                ? 'Hide details'
-                : 'Show details',
-            color: widget.panel ? t.text : t.textSecondary,
-            onTap: widget.onPanel,
-          ),
+          if (!folds.buttons) TerminalButton(chat: chat, daemon: widget.daemon),
+          if (!folds.buttons && !folds.panel)
+            IconTap(
+              Icons.view_sidebar_outlined,
+              tooltip: widget.onPanel == null
+                  ? 'The window is too narrow'
+                  : widget.panel
+                  ? 'Hide details'
+                  : 'Show details',
+              color: widget.panel ? t.text : t.textSecondary,
+              onTap: widget.onPanel,
+            ),
           MenuIcon(
             Icons.more_horiz,
             tooltip: 'Chat menu',
-            entries: chatMenu(
-              context,
-              chat,
-              widget.daemon,
-              onRename: () => setState(() => _renaming = true),
-            ),
+            entries: [
+              if (folds.buttons) ...[
+                if (!chat.archived)
+                  MenuEntry(
+                    terminalChats.value.contains(chat.id)
+                        ? 'Hide terminal'
+                        : 'Show terminal',
+                    detail: '⌃`',
+                    onPick: () => toggleTerminal(chat.id),
+                  ),
+                if (widget.onPanel case final toggle?)
+                  MenuEntry(
+                    widget.panel ? 'Hide details' : 'Show details',
+                    onPick: toggle,
+                  ),
+                MenuEntry.divider,
+              ],
+              ...chatMenu(
+                context,
+                chat,
+                widget.daemon,
+                onRename: () => setState(() => _renaming = true),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
+
+  List<(ChatTab, String)> _tabs(ChatState chat) => [
+    (ChatTab.chat, 'Chat'),
+    (ChatTab.changes, 'Changes'),
+    if (chat.pull != null) (ChatTab.pull, 'Pull request'),
+  ];
+}
+
+/// What of the chat's header folds at a width, the least needed first,
+/// and the points that frees of the row's 450 (the model's aren't in it).
+typedef HeaderFolds = ({
+  bool model,
+  bool name,
+  bool word,
+  bool panel,
+  bool tabs,
+  bool buttons,
+  bool any,
+  double saved,
+});
+
+/// The parts of the header that fold in [width] (see [ChatHeader]): each
+/// in turn until the title has its 80 points. [pull]: the chat has the
+/// Pull request tab; [panel]: the details panel can show; [model]: the
+/// header names a model (40 points at least, and its gap).
+HeaderFolds headerFolds(
+  double width, {
+  required bool pull,
+  required bool panel,
+  bool model = false,
+}) {
+  // Measured: the row without its title and model takes about 450
+  // points (oh-my-pi's name, "couldn't start"), the Pull request tab 88
+  // more.
+  final need = 450.0 + (pull ? 88 : 0) + 80 + (model ? 50 : 0);
+  var saved = 0.0;
+  final folds = <String>{};
+  // Each part and about how much folding it frees.
+  for (final (part, points) in [
+    if (model) ('model', 50.0),
+    ('name', 48.0),
+    if (!panel) ('panel', 26.0),
+    ('tabs', pull ? 115.0 : 50.0),
+    ('word', 45.0),
+    ('buttons', panel ? 52.0 : 26.0),
+  ]) {
+    if (width + saved >= need) break;
+    folds.add(part);
+    saved += points;
+  }
+  return (
+    model: folds.contains('model'),
+    name: folds.contains('name'),
+    word: folds.contains('word'),
+    panel: folds.contains('panel'),
+    tabs: folds.contains('tabs'),
+    buttons: folds.contains('buttons'),
+    any: folds.isNotEmpty,
+    // The model's points were never in the row's 450.
+    saved: saved - (folds.contains('model') ? 50 : 0),
+  );
 }
