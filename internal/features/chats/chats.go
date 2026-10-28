@@ -87,14 +87,16 @@ type Service struct {
 	copies    Copies      // set once at startup, if chats keep copies of their transcripts
 	copiesOn  func() bool // whether they write them now
 
-	mu       sync.Mutex
-	chats    map[string]*chat
-	closing  bool // Close began: no agent starts any more
-	live     map[Agent]bool
-	opening  map[string]bool     // sessions Open is making chats of
-	removed  []model.RemovedChat // removed because their agent no longer had their sessions (gone.go)
-	swept    time.Time           // the last Sweep
-	sweeping bool
+	mu        sync.Mutex
+	chats     map[string]*chat
+	closing   bool // Close began: no agent starts any more
+	live      map[Agent]bool
+	opening   map[string]bool     // sessions Open is making chats of
+	removed   []model.RemovedChat // removed because their agent no longer had their sessions (gone.go)
+	swept     time.Time           // the last Sweep
+	sweeping  bool
+	following int         // apps following the events (Following)
+	idle      *time.Timer // closes the side chats once none has for SidesGrace
 }
 
 // Terminals are the shells beside chats (internal/features/terminals).

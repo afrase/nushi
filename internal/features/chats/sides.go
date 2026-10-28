@@ -167,6 +167,25 @@ func (s *Service) CloseSide(id string) error {
 	return nil
 }
 
+// SidesGrace is how long side chats outlive the last app following: one
+// that reconnects within it still has them.
+var SidesGrace = 2 * time.Minute
+
+// Following counts an app following the events (by +1, then -1), on the
+// Mac's socket and devices' channels alike. Side chats live only in the
+// apps (ADR 0027): once none has followed for SidesGrace, they're closed.
+func (s *Service) Following(n int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.following += n
+	if s.idle != nil {
+		s.idle.Stop()
+	}
+	if s.following == 0 {
+		s.idle = time.AfterFunc(SidesGrace, s.CloseSides)
+	}
+}
+
 // CloseSides ends every side chat (see CloseSide): the app keeps them only
 // while it runs, so once no app is left, nobody will see them again.
 func (s *Service) CloseSides() {

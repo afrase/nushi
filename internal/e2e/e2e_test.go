@@ -47,9 +47,10 @@ import (
 // Claude's sessions outlive its processes. A nil copyHistory copies through
 // the History, as Claude's projects folder would be copied.
 type daemon struct {
-	url  string
-	stop func()
-	kill func() // ends the last agent started, as if its process died
+	url     string // the API as the Mac's socket serves it
+	devices string // as a paired device's channel does
+	stop    func()
+	kill    func() // ends the last agent started, as if its process died
 }
 
 // pipeAgent is a fake agent "process" over pipes.
@@ -127,15 +128,19 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	svc.AutoSleep(st) // as main does: the settings are the daemon's
 	follow, unfollow := context.WithCancel(context.Background())
 	go hub.Subscribe(follow.Done(), func() bool { return true }, func(e model.Event) bool { terms.Follow(e); return true })
-	srv := httptest.NewServer(api.WithToken("tok", api.New(api.Services{Chats: svc, Agents: agents.New(nil, nil, "", nil), Terms: terms, Hub: hub, Memory: memory.New(svc), Transcripts: st})))
+	sv := api.Services{Chats: svc, Agents: agents.New(nil, nil, "", nil), Terms: terms, Hub: hub, Memory: memory.New(svc), Transcripts: st}
+	srv := httptest.NewServer(api.WithToken("tok", api.New(sv)))
+	devices := httptest.NewServer(api.ForDevices(sv))
 	stop := func() {
 		unfollow()
-		srv.CloseClientConnections()
-		srv.Close()
+		for _, s := range []*httptest.Server{srv, devices} {
+			s.CloseClientConnections()
+			s.Close()
+		}
 		svc.Close()
 	}
 	t.Cleanup(stop)
-	return &daemon{url: srv.URL, stop: stop, kill: func() {
+	return &daemon{url: srv.URL, devices: devices.URL, stop: stop, kill: func() {
 		mu.Lock()
 		defer mu.Unlock()
 		kill()
@@ -191,8 +196,15 @@ type app struct {
 
 func open(t *testing.T, d *daemon) *app {
 	t.Helper()
+	return openAt(t, d.url)
+}
+
+// openAt is an app on the API at url: the Mac's (d.url) or a phone's
+// (d.devices).
+func openAt(t *testing.T, url string) *app {
+	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
-	a := &app{t: t, c: nushiv1connect.NewNushiServiceClient(&http.Client{Transport: bearer{}}, d.url),
+	a := &app{t: t, c: nushiv1connect.NewNushiServiceClient(&http.Client{Transport: bearer{}}, url),
 		events: make(chan *nushiv1.EventsResponse, 1000), quit: cancel}
 	t.Cleanup(cancel)
 	stream, err := a.c.Events(ctx, connect.NewRequest(&nushiv1.EventsRequest{}))
