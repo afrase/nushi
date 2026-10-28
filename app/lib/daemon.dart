@@ -11,6 +11,7 @@ import 'package:nushi/agents.dart';
 import 'package:nushi/app_log.dart';
 import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/context_cache.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/mac_view.dart';
@@ -414,15 +415,7 @@ class Daemon extends ChangeNotifier {
       _chat(e.chat);
       notifyListeners();
     } else if (e.removed) {
-      chats.remove(e.chatId);
-      if (changeScopes.value.containsKey(e.chatId)) {
-        changeScopes.value = {...changeScopes.value}..remove(e.chatId);
-      }
-      if (commentsOf(e.chatId).isNotEmpty) setComments(e.chatId, []);
-      if (terminalChats.value.contains(e.chatId)) {
-        terminalChats.value = {...terminalChats.value}..remove(e.chatId);
-      }
-      if (selectedId == e.chatId) selectedId = null;
+      _forget(e.chatId);
       notifyListeners();
     } else if (chats[e.chatId] case final chat?) {
       final failed = chat.reopenFailed;
@@ -451,7 +444,18 @@ class Daemon extends ChangeNotifier {
       // Chats deleted meanwhile go; side chats the daemon lost (it
       // restarted) end, the others catch up.
       final ids = {for (final c in listed) c.id};
-      chats.removeWhere((id, _) => !ids.contains(id));
+      // And what's kept for chats deleted while the app was away: the
+      // stores keep the chats of the app's whole life.
+      final kept = {
+        ...chats.keys,
+        if (!remote) ...[
+          ...changeScopes.value.keys,
+          ...reviews.value.keys,
+          ...terminalChats.value,
+          ...rememberedContexts,
+        ],
+      };
+      kept.difference(ids).difference(sides.keys.toSet()).forEach(_forget);
       for (final side in sides.values) {
         side.loading = true; // its events wait for its snapshot
       }
@@ -478,6 +482,23 @@ class Daemon extends ChangeNotifier {
     }
     if (selected != null) unawaited(_load(selected!));
     notifyListeners();
+  }
+
+  /// Forgets chat [id], gone (deleted here, or while the app was away),
+  /// and everything kept for it: its Changes scope, review comments,
+  /// terminals panel, context breakdown and terminals.
+  void _forget(String id) {
+    chats.remove(id);
+    if (changeScopes.value.containsKey(id)) {
+      changeScopes.value = {...changeScopes.value}..remove(id);
+    }
+    if (commentsOf(id).isNotEmpty) setComments(id, []);
+    if (terminalChats.value.contains(id)) {
+      terminalChats.value = {...terminalChats.value}..remove(id);
+    }
+    if (!remote) forgetContext(id);
+    terminals.forget(id);
+    if (selectedId == id) selectedId = null;
   }
 
   Future<void> _listAgents() async {

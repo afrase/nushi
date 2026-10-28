@@ -55,6 +55,14 @@ final Map<String, (DateTime, GetContextUsageResponse)> _known = () {
 (DateTime, GetContextUsageResponse)? recalledContext(String chatId) =>
     _known[chatId];
 
+/// The chats whose context is remembered.
+Iterable<String> get rememberedContexts => _known.keys;
+
+/// Forgets [chatId]'s context (the chat is gone).
+void forgetContext(String chatId) {
+  if (_known.remove(chatId) != null) _write();
+}
+
 /// Keeps [r] as what fills [chatId]'s context now (only when it has
 /// categories: a markdown-only answer isn't kept).
 void rememberContext(String chatId, GetContextUsageResponse r) {
@@ -68,6 +76,10 @@ void rememberContext(String chatId, GetContextUsageResponse r) {
   for (final e in oldest.skip(_keep)) {
     _known.remove(e.key);
   }
+  _write();
+}
+
+void _write() {
   try {
     writeWhole(
       _file,

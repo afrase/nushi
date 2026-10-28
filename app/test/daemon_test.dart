@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:connectrpc/connect.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/context_cache.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
 
 /// A daemon with chat "a" and its events in [events].
@@ -110,6 +112,47 @@ void main() {
     expect(d.chats.keys, ['b']);
     expect(d.selectedId, isNull);
     expect(changeScopes.value, isEmpty);
+  });
+
+  test('a chat deleted while the app was away: what was kept goes', () async {
+    // Kept from an earlier run for "a", listed, and "gone", deleted since.
+    ReviewComment comment(String chat) => ReviewComment(
+      id: chat,
+      where: 'branch',
+      path: 'main.go',
+      old: false,
+      start: 1,
+      end: 1,
+      quote: 'x',
+      text: 'why?',
+    );
+    changeScopes.value = {'a': 'branch', 'gone': 'branch'};
+    terminalChats.value = {'a', 'gone'};
+    setComments('a', [comment('a')]);
+    setComments('gone', [comment('gone')]);
+    final context = GetContextUsageResponse(
+      categories: [ContextCategory(name: 'Messages', tokens: Int64(5))],
+    );
+    rememberContext('a', context);
+    rememberContext('gone', context);
+    addTearDown(() {
+      changeScopes.value = {};
+      terminalChats.value = {};
+      setComments('a', []);
+      forgetContext('a');
+    });
+
+    final fake = _Fake();
+    final d = Daemon(transport: fake);
+    addTearDown(d.dispose);
+    fake.events.add(EventsResponse()); // live: the chats are listed
+    await pumpEventQueue();
+    expect(d.chats.keys, ['a']);
+    expect(changeScopes.value.keys, ['a']);
+    expect(terminalChats.value, {'a'});
+    expect(reviews.value.keys, ['a']);
+    expect(rememberedContexts, contains('a'));
+    expect(rememberedContexts, isNot(contains('gone')));
   });
 
   test('events while the list is on its way come after it', () async {

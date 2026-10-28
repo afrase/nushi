@@ -51,6 +51,16 @@ class Terminals extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Forgets a chat's terminals and their emulators (the chat is gone).
+  void forget(String chatId) {
+    _lists.remove(chatId);
+    active.remove(chatId);
+    _sessions.removeWhere((_, s) {
+      if (s.chatId == chatId) s.dispose();
+      return s.chatId == chatId;
+    });
+  }
+
   /// Forgets the lists, which may have changed while disconnected; open
   /// panels list them again.
   void stale() {
