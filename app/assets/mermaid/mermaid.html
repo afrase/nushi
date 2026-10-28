@@ -37,6 +37,11 @@
       darkMode: !!opts.dark,
       securityLevel: "strict",
       suppressErrorRendering: true,
+      // Edge labels on the page's own ground: the dark theme's grey box
+      // left light text on a light grey.
+      themeVariables: opts.background
+        ? { edgeLabelBackground: opts.background, labelBackground: opts.background }
+        : {},
     });
     const id = "nushi-diagram-" + ++count;
     try {
