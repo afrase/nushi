@@ -223,7 +223,7 @@ class _QuestionCardState extends State<QuestionCard> {
             Row(
               spacing: 8,
               children: [
-                Icon(Icons.help_outline, size: 15, color: t.accent),
+                Icon(Icons.help_outline, size: 15, color: t.accentInk),
                 Expanded(
                   child: Text(
                     item.text.isEmpty ? '${widget.agent} asks' : item.text,

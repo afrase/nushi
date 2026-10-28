@@ -381,16 +381,86 @@ void main() {
     d.dispose();
   });
 
-  testWidgets('Move to worktree, beside Move to new worktree, lists the '
-      'others', (tester) async {
+  testWidgets('the Worktree row: New worktree…, a divider, then the other '
+      'worktrees; each moves the chat', (tester) async {
     final fake = _fake();
     final d = await _panel(tester, fake, _chat());
-    expect(find.text('Move to new worktree'), findsOneWidget);
-    await tester.tap(find.text('Move to worktree'));
-    await tester.pumpAndSettle();
-    expect(_row('try-sqrly'), findsOneWidget);
+    expect(find.text('Move to new worktree'), findsNothing);
+    await _open(tester, 'None');
+    final add = tester.getRect(_row('New worktree…'));
+    expect(tester.getRect(_row('try-sqrly')).top, greaterThan(add.bottom));
     expect(_row('kept'), findsOneWidget);
-    expect(_row('main'), findsNothing);
+    expect(_row('main'), findsNothing); // the chat's own folder
+    await tester.tap(_row('New worktree…'));
+    await tester.pumpAndSettle();
+    expect(find.text('Move to a new worktree?'), findsOneWidget);
+    await tester.tap(find.text('Move'));
+    await tester.pumpAndSettle();
+    final moved = fake.calls.whereType<MoveChatRequest>().single;
+    expect((moved.folder, moved.worktree), (_repo, true));
+
+    await _open(tester, 'None');
+    await tester.tap(_row('try-sqrly'));
+    await tester.pumpAndSettle();
+    expect(find.text('Move to the worktree of try-sqrly?'), findsOneWidget);
+    d.dispose();
+  });
+
+  testWidgets('golden, the Worktree menu open, light', (tester) async {
+    final d = await _panel(tester, _fake(), _chat(), tokens: Tokens.light);
+    await _open(tester, 'None');
+    expect(tester.takeException(), isNull);
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('goldens/worktree_menu_light.png'),
+    );
+    d.dispose();
+  });
+
+  testWidgets('the Worktree row mid-turn: its value as it is, the rows '
+      'unavailable under why', (tester) async {
+    final fake = _fake();
+    final d = await _panel(tester, fake, _chat(busy: true));
+    final field = find.ancestor(
+      of: find.text('None'),
+      matching: find.byType(MenuField),
+    );
+    expect(
+      find.descendant(of: field, matching: find.byType(Opacity)),
+      findsNothing, // not faded
+    );
+    await _open(tester, 'None');
+    expect(find.textContaining('Once the agent is done'), findsOneWidget);
+    await tester.tap(_row('New worktree…'), warnIfMissed: false);
+    await tester.tap(_row('try-sqrly'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+    expect(find.text('Move to a new worktree?'), findsNothing);
+    expect(fake.calls.whereType<MoveChatRequest>(), isEmpty);
+    d.dispose();
+  });
+
+  testWidgets('the card’s values end at one right edge, menus too', (
+    tester,
+  ) async {
+    final d = await _panel(tester, _fake(), _chat(), tokens: Tokens.light);
+    final card = find.widgetWithText(PanelCard, 'Environment');
+    // Inside the card's border and right inset, where text values end.
+    final edge = tester.getRect(card).right - 11;
+    final carets = find.descendant(
+      of: find.descendant(of: card, matching: find.byType(FlushMenus)),
+      matching: find.byWidgetPredicate(
+        (w) =>
+            w is Icon &&
+            (w.icon == Icons.keyboard_arrow_down ||
+                w.icon == Icons.expand_more),
+      ),
+    );
+    expect(carets, findsNWidgets(3)); // Folder, Branch and Worktree
+    for (final c in carets.evaluate()) {
+      // The ▾'s glyph ends 3.5 px inside its box.
+      final glyph = tester.getRect(find.byWidget(c.widget)).right - 3.5;
+      expect(glyph, closeTo(edge, 2));
+    }
     d.dispose();
   });
 

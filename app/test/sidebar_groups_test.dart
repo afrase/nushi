@@ -11,6 +11,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar.dart';
+import 'package:nushi/sidebar_groups.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -240,6 +241,75 @@ void main() {
     d.select('a');
     await tester.pump();
     expect(find.text('Cap the rates'), findsNothing);
+    d.dispose();
+  });
+
+  testWidgets('a header is one line, its path in the tooltip; the + shows '
+      'under the pointer or with keyboard focus', (tester) async {
+    final d = await _sidebar(tester);
+    final header = tester.getRect(_header('cappy'));
+    expect(header.height, lessThan(40)); // no second line
+    expect(find.byTooltip('/Users/me/cappy'), findsOneWidget);
+    double plus() => tester
+        .widget<Opacity>(
+          find
+              .ancestor(
+                of: find.descendant(
+                  of: _header('cappy'),
+                  matching: find.byTooltip('New chat here'),
+                ),
+                matching: find.byType(Opacity),
+              )
+              .first,
+        )
+        .opacity;
+    expect(plus(), 0);
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    addTearDown(mouse.removePointer);
+    await mouse.addPointer(location: tester.getCenter(find.text('cappy')));
+    await tester.pump();
+    expect(plus(), 1);
+    await mouse.moveTo(tester.getCenter(find.text('Jot it down')));
+    await tester.pump();
+    expect(plus(), 0);
+    // Tabbed to, it shows.
+    Focus.of(
+      tester.element(
+        find.descendant(of: _header('cappy'), matching: find.byIcon(Icons.add)),
+      ),
+    ).requestFocus();
+    await tester.pump();
+    await tester.pump();
+    expect(plus(), 1);
+    d.dispose();
+  });
+
+  testWidgets('two projects of the same name show their parents; a chat '
+      'that needs you says so in its dot’s tooltip, not its row', (
+    tester,
+  ) async {
+    final d = await _sidebar(
+      tester,
+      chats: [
+        ..._chats(),
+        chat('w', 'claude', 'Ship it', folder: '/Users/me/work/cappy', age: 7),
+      ],
+    );
+    expect(find.text('cappy  · me'), findsOneWidget);
+    expect(find.text('cappy  · work'), findsOneWidget);
+    expect(find.text('ledger-poc'), findsOneWidget); // no twin: the name
+    expect(find.text('needs you'), findsNothing);
+    expect(
+      find.ancestor(
+        of: find.byType(ChatDot).first,
+        matching: find.byTooltip('needs you'),
+      ),
+      findsOneWidget,
+    );
+    expect(twinParents(['/a/x/app', '/b/x/app', '/c/web']), {
+      '/a/x/app': '/a/x',
+      '/b/x/app': '/b/x',
+    });
     d.dispose();
   });
 

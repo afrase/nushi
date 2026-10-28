@@ -251,6 +251,19 @@ class Button extends StatelessWidget {
   }
 }
 
+/// Says the compact [MenuField]s below end flush with their room: a
+/// panel card's values, so a menu's ▾ lines up with the text values'
+/// right edge.
+class FlushMenus extends InheritedWidget {
+  const new({required super.child, super.key});
+
+  static bool of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<FlushMenus>() != null;
+
+  @override
+  bool updateShouldNotify(FlushMenus oldWidget) => false;
+}
+
 /// A value picked from a list ([entries]) that looks it: [label] and a ▾
 /// in a bordered box, the whole box the target. [compact], for a picker in
 /// a header or a row ("Only me ▾"), drops the box but keeps the ▾ and a
@@ -280,6 +293,12 @@ class MenuField extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
+    final flush = compact && FlushMenus.of(context);
+    final caret = Icon(
+      Icons.keyboard_arrow_down,
+      size: compact ? 14 : 15,
+      color: t.textSecondary,
+    );
     return Menu(
       entries: entries,
       digits: digits,
@@ -303,11 +322,11 @@ class MenuField extends StatelessWidget {
                 ),
               ),
               SizedBox(width: compact ? 1 : 6),
-              Icon(
-                Icons.keyboard_arrow_down,
-                size: compact ? 14 : 15,
-                color: t.textSecondary,
-              ),
+              // Flush, the glyph's own margin goes past the edge too.
+              if (flush)
+                Transform.translate(offset: const Offset(2, 0), child: caret)
+              else
+                caret,
             ],
           );
           return _faded(
@@ -315,7 +334,7 @@ class MenuField extends StatelessWidget {
             Container(
               height: compact ? null : controlHeight,
               padding: compact
-                  ? const EdgeInsets.fromLTRB(5, 1, 3, 1)
+                  ? EdgeInsets.fromLTRB(5, 1, flush ? 0 : 3, 1)
                   : const EdgeInsets.fromLTRB(8, 0, 5, 0),
               decoration: BoxDecoration(
                 color: compact

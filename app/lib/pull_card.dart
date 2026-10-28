@@ -38,6 +38,34 @@ import 'package:nushi/widgets.dart';
   );
 }
 
+/// The checks in words as [checksWords] says them, each count in its own
+/// color (failing red, running amber, passed green) and the dots between
+/// muted: "1 passed" beside "1 failing" isn't red.
+TextSpan checksSpan(NushiTheme theme, GitHubPull p) {
+  final t = theme.t;
+  final n = checkCounts(p);
+  final parts = [
+    if (n.failing > 0) ('${n.failing} failing', t.crashed),
+    if (n.running > 0) ('${n.running} running', t.needs),
+    if (n.passed > 0) ('${n.passed} passed', t.done),
+  ];
+  if (parts.isEmpty) {
+    return TextSpan(
+      text: '${p.checks.length} skipped',
+      style: theme.ui(t.textMuted, size: 12),
+    );
+  }
+  return TextSpan(
+    children: [
+      for (final (i, (words, color)) in parts.indexed) ...[
+        if (i > 0)
+          TextSpan(text: ' · ', style: theme.ui(t.textMuted, size: 12)),
+        TextSpan(text: words, style: theme.ui(color, size: 12)),
+      ],
+    ],
+  );
+}
+
 /// The details panel's Pull request card: the chat's pull request (the
 /// one it started from, else its branch's) as a summary, collapsed (its
 /// number in its state's color, its checks, review, unread comments),
@@ -190,22 +218,23 @@ class _Rows extends StatelessWidget {
     final merge = mergeWords(t, p);
     final unread = unreadComments(cp.chat.id, p);
     final total = commentTimes(p).length;
-    Widget row(String label, String value, Color color) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(width: 72, child: Text(label, style: muted)),
-          Expanded(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              style: theme.ui(color, size: 12),
-            ),
+    Widget row(String label, String value, Color color, {TextSpan? span}) =>
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 3),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(width: 72, child: Text(label, style: muted)),
+              Expanded(
+                child: Text.rich(
+                  span ?? TextSpan(text: value),
+                  textAlign: TextAlign.right,
+                  style: theme.ui(color, size: 12),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
+        );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -227,7 +256,12 @@ class _Rows extends StatelessWidget {
           ),
         ),
         row('State', itemState(it), itemColor(t, it)),
-        row('Checks', checks?.$1 ?? 'None', checks?.$2 ?? t.textMuted),
+        row(
+          'Checks',
+          checks?.$1 ?? 'None',
+          t.textMuted,
+          span: checks == null ? null : checksSpan(theme, p),
+        ),
         row('Review', review?.$1 ?? 'None yet', review?.$2 ?? t.textMuted),
         if (it.state == 'open') row('Merge', merge.$1, merge.$2),
         row(

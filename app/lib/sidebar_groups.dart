@@ -11,8 +11,10 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// The sidebar's project groups ([sidebarGroups]), each a header and its
-/// chats. A group moves by dragging its header, a line showing where it
-/// will go (the order is kept in [sidebarOrder]); the header's chevron
+/// chats. A header is the folder's name on one line, its path in its
+/// tooltip; two projects of the same name show their parents after it. A
+/// group moves by dragging its header, a line showing where it will go
+/// (the order is kept in [sidebarOrder]); the header's chevron
 /// collapses it (kept in [sidebarCollapsed]). A collapsed group shows the
 /// most urgent of its chats' states as one dot beside its name, and of
 /// its rows only the selected chat's.
@@ -115,6 +117,7 @@ class _SidebarGroupsState extends State<SidebarGroups> {
     final t = theme.t;
     final n = widget.groups.length;
     final line = _moves ? _dropAt : null;
+    final parents = twinParents(widget.groups.keys);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -137,6 +140,7 @@ class _SidebarGroupsState extends State<SidebarGroups> {
                 children: [
                   _Header(
                     folder,
+                    twin: parents[folder] ?? '',
                     chats: chats,
                     collapsed: sidebarCollapsed.value.contains(folder),
                     onNew: switch (widget.onNew) {
@@ -222,13 +226,36 @@ class _Target extends StatelessWidget {
   }
 }
 
-/// A group's header: the folder's name and path, or "No folder" ('') for
-/// chats in scratch folders; a chevron button that collapses the group,
-/// with the summary dot beside the name while it's collapsed. Dragged, it
-/// moves the group.
-class _Header extends StatelessWidget {
+/// For the folders of [folders] that share their name with another: what
+/// tells them apart, their parent's name ("work" for ~/work/app), or its
+/// path when that's shared too.
+Map<String, String> twinParents(Iterable<String> folders) {
+  final byName = <String, List<String>>{};
+  for (final f in folders.where((f) => f.isNotEmpty)) {
+    (byName[folderParts(f).$1] ??= []).add(f);
+  }
+  final out = <String, String>{};
+  for (final twins in byName.values.where((l) => l.length > 1)) {
+    final names = [for (final f in twins) folderParts(folderParts(f).$2).$1];
+    final unique = names.toSet().length == names.length;
+    for (final (i, f) in twins.indexed) {
+      out[f] = unique && names[i].isNotEmpty ? names[i] : folderParts(f).$2;
+    }
+  }
+  return out;
+}
+
+/// A group's header: the folder's name (its path in the tooltip; [twin]
+/// after it, muted, when another project has the same name), or "No
+/// folder" ('') for chats in scratch folders; a chevron button that
+/// collapses the group, with the summary dot beside the name while it's
+/// collapsed; a + for a new chat there, shown under the pointer or with
+/// keyboard focus (its room kept, so names don't move). Dragged, it moves
+/// the group.
+class _Header extends StatefulWidget {
   const new(
     this.folder, {
+    required this.twin,
     required this.chats,
     required this.collapsed,
     required this.onNew,
@@ -239,6 +266,7 @@ class _Header extends StatelessWidget {
   });
 
   final String folder;
+  final String twin;
   final List<ChatState> chats;
   final bool collapsed;
   final VoidCallback? onNew;
@@ -247,49 +275,80 @@ class _Header extends StatelessWidget {
   final void Function(DragUpdateDetails) onDragUpdate;
   final VoidCallback onDragEnd;
 
-  void _toggle() => sidebarCollapsed.value = collapsed
-      ? ({...sidebarCollapsed.value}..remove(folder))
-      : {...sidebarCollapsed.value, folder};
+  @override
+  State<_Header> createState() => _HeaderState();
+}
+
+class _HeaderState extends State<_Header> {
+  bool _hover = false;
+  bool _focus = false; // the + has keyboard focus
+
+  void _toggle() => sidebarCollapsed.value = widget.collapsed
+      ? ({...sidebarCollapsed.value}..remove(widget.folder))
+      : {...sidebarCollapsed.value, widget.folder};
 
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final (name, parent) = folder.isEmpty
-        ? ('No folder', '')
-        : folderParts(folder);
+    final folder = widget.folder;
+    final name = folder.isEmpty ? 'No folder' : folderParts(folder).$1;
     return Menu(
       entries: [
-        MenuEntry('New chat here', onPick: onNew),
-        MenuEntry('Open in terminal', onPick: onTerminal),
+        MenuEntry('New chat here', onPick: widget.onNew),
+        MenuEntry('Open in terminal', onPick: widget.onTerminal),
       ],
       builder: (context, open) => LayoutBuilder(
         builder: (context, box) => Draggable<_Moving>(
           data: _Moving(folder),
           dragAnchorStrategy: pointerDragAnchorStrategy,
           feedback: _Lifted(name, width: box.maxWidth),
-          onDragStarted: onDragStarted,
-          onDragUpdate: onDragUpdate,
-          onDragEnd: (_) => onDragEnd(),
+          onDragStarted: widget.onDragStarted,
+          onDragUpdate: widget.onDragUpdate,
+          onDragEnd: (_) => widget.onDragEnd(),
           child: MouseRegion(
             cursor: SystemMouseCursors.grab,
+            onEnter: (_) => setState(() => _hover = true),
+            onExit: (_) => setState(() => _hover = false),
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onSecondaryTapUp: (d) => open(d.localPosition),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(4, 8, 6, 2),
+                padding: const EdgeInsets.fromLTRB(4, 10, 6, 2),
                 child: Row(
                   children: [
                     IconTap(
-                      collapsed ? Icons.chevron_right : Icons.expand_more,
-                      tooltip: collapsed ? 'Expand' : 'Collapse',
-                      size: 14,
+                      widget.collapsed
+                          ? Icons.chevron_right
+                          : Icons.expand_more,
+                      tooltip: widget.collapsed ? 'Expand' : 'Collapse',
+                      size: 12,
+                      padding: 6,
                       color: t.textMuted,
                       onTap: _toggle,
                     ),
                     const SizedBox(width: 2),
-                    Expanded(child: _name(theme, name, parent)),
-                    IconTap(Icons.add, tooltip: 'New chat here', onTap: onNew),
+                    Expanded(
+                      child: folder.isEmpty
+                          ? _name(theme, name)
+                          : Tooltip(
+                              message: tildePath(folder),
+                              child: _name(theme, name),
+                            ),
+                    ),
+                    Focus(
+                      canRequestFocus: false,
+                      skipTraversal: true,
+                      onFocusChange: (f) => setState(() => _focus = f),
+                      child: Opacity(
+                        opacity: _hover || _focus ? 1 : 0,
+                        child: IconTap(
+                          Icons.add,
+                          tooltip: 'New chat here',
+                          onTap: widget.onNew,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -300,40 +359,38 @@ class _Header extends StatelessWidget {
     );
   }
 
-  Widget _name(NushiTheme theme, String name, String parent) {
+  Widget _name(NushiTheme theme, String name) {
     final t = theme.t;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final chats = widget.chats;
+    return Row(
       children: [
-        Row(
-          children: [
-            Flexible(
-              child: Text(
-                name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.ui(t.text, weight: FontWeight.w600),
-              ),
-            ),
-            if (collapsed)
-              ListenableBuilder(
-                listenable: Listenable.merge(chats),
-                builder: (context, _) => switch (groupPhase(chats)) {
-                  final phase? => Padding(
-                    padding: const EdgeInsets.only(left: 5),
-                    child: PhaseDot(phase),
+        Flexible(
+          child: Text.rich(
+            TextSpan(
+              text: name,
+              children: [
+                if (widget.twin.isNotEmpty)
+                  TextSpan(
+                    text: '  · ${widget.twin}',
+                    style: theme.ui(t.textMuted, size: 12),
                   ),
-                  null => const SizedBox.shrink(),
-                },
-              ),
-          ],
-        ),
-        if (parent.isNotEmpty)
-          Text(
-            parent,
+              ],
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: theme.code(t.textMuted, size: 11),
+            style: theme.ui(t.text, weight: FontWeight.w600),
+          ),
+        ),
+        if (widget.collapsed)
+          ListenableBuilder(
+            listenable: Listenable.merge(chats),
+            builder: (context, _) => switch (groupPhase(chats)) {
+              final phase? => Padding(
+                padding: const EdgeInsets.only(left: 5),
+                child: PhaseDot(phase),
+              ),
+              null => const SizedBox.shrink(),
+            },
           ),
       ],
     );

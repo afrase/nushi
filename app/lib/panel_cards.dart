@@ -281,7 +281,7 @@ class PanelCard extends StatelessWidget {
                                           v,
                                           style: theme.ui(t.text, size: 12),
                                         )
-                                      : v as Widget,
+                                      : FlushMenus(child: v as Widget),
                                 ),
                               ),
                             ],

@@ -102,14 +102,14 @@ class _Check extends CustomPainter {
       old.color != color || old.drawn != drawn || old.opacity != opacity;
 }
 
-/// A chat's status dot: amber with a soft ring while it waits on the user
-/// (it hops once when that starts), a ring growing out of it while the
-/// agent works, a ring when idle (a check draws itself there for a moment
-/// when a turn ends), solid green while a turn's end is unseen (the check
-/// settles into it); a ring that pulses slowly while subagents or commands
-/// run in the background after the turn; a moon asleep, a quiet clock
-/// when its agent deleted its session, an error mark when it couldn't
-/// start.
+/// A chat's status dot: amber, a size up, with a soft ring while it waits
+/// on the user (it hops once when that starts), a ring growing out of it
+/// while the agent works, a ring when idle (a check draws itself there for
+/// a moment when a turn ends), solid green while a turn's end is unseen
+/// (the check settles into it); a ring that pulses slowly while subagents
+/// or commands run in the background after the turn; a moon asleep, a
+/// quiet clock when its agent deleted its session, an error mark when it
+/// couldn't start.
 class ChatDot extends StatefulWidget {
   const new({required this.chat, super.key});
 
@@ -270,22 +270,18 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
       );
     }
     if (unseen) return done;
-    final dot = Padding(
-      padding: const EdgeInsets.all(size * 0.3),
-      child: DecoratedBox(
-        decoration: chat.waiting
-            ? BoxDecoration(
-                color: t.needs,
-                shape: BoxShape.circle,
-                boxShadow: [BoxShadow(color: t.needsSoft, spreadRadius: 2)],
-              )
-            : BoxDecoration(
+    final dot = chat.waiting
+        ? _waitingDot(t)
+        : Padding(
+            padding: const EdgeInsets.all(size * 0.3),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(color: t.idle, width: 1.5),
               ),
-        child: const SizedBox.square(dimension: size),
-      ),
-    );
+              child: const SizedBox.square(dimension: size),
+            ),
+          );
     final hop = _hop;
     if (hop == null || !chat.waiting) return dot;
     return AnimatedBuilder(
@@ -303,6 +299,20 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
 String backgroundWords(int n) =>
     'Working in the background: $n '
     '${n == 1 ? 'subagent or command' : 'subagents or commands'}';
+
+/// The dot of a chat that needs the user: a size up from the others, in a
+/// wider soft ring, in the same room.
+Widget _waitingDot(Tokens t) => Padding(
+  padding: const EdgeInsets.all(ChatDot.size * 0.3 - 0.5),
+  child: DecoratedBox(
+    decoration: BoxDecoration(
+      color: t.needs,
+      shape: BoxShape.circle,
+      boxShadow: [BoxShadow(color: t.needsSoft, spreadRadius: 3)],
+    ),
+    child: const SizedBox.square(dimension: ChatDot.size + 1),
+  ),
+);
 
 /// The most urgent state among [chats], as a collapsed group shows it:
 /// waiting on the user, then working, then working in the background,
@@ -331,30 +341,24 @@ class PhaseDot extends StatelessWidget {
     final (word, color) = phaseWord(phase, t);
     return Tooltip(
       message: word,
-      child: phase == .working
-          ? CustomPaint(
-              size: const Size.square(size * 1.6),
-              painter: _Mark(color, ringing: !reduceMotion(context)),
-            )
-          : phase == .background
-          ? CustomPaint(
-              size: const Size.square(size * 1.6),
-              painter: _Ring(color, pulsing: !reduceMotion(context)),
-            )
-          : Padding(
-              padding: const EdgeInsets.all(size * 0.3),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: color,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    if (phase == .waiting)
-                      BoxShadow(color: t.needsSoft, spreadRadius: 2),
-                  ],
-                ),
-                child: const SizedBox.square(dimension: size),
-              ),
-            ),
+      child: switch (phase) {
+        .working => CustomPaint(
+          size: const Size.square(size * 1.6),
+          painter: _Mark(color, ringing: !reduceMotion(context)),
+        ),
+        .background => CustomPaint(
+          size: const Size.square(size * 1.6),
+          painter: _Ring(color, pulsing: !reduceMotion(context)),
+        ),
+        .waiting => _waitingDot(t),
+        _ => Padding(
+          padding: const EdgeInsets.all(size * 0.3),
+          child: DecoratedBox(
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            child: const SizedBox.square(dimension: size),
+          ),
+        ),
+      },
     );
   }
 }

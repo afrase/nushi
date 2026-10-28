@@ -9,6 +9,7 @@ import 'package:nushi/main.dart';
 import 'package:nushi/panel_cards.dart';
 import 'package:nushi/pull_link_dialog.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'github_view_test.dart' show comment, item, pull;
@@ -126,7 +127,21 @@ void main() {
       findsOneWidget,
     );
     expect(_inCard(find.text('Open')), findsOneWidget);
-    expect(_inCard(find.text('1 failing · 1 passed')), findsOneWidget);
+    final checks = _inCard(find.text('1 failing · 1 passed'));
+    expect(checks, findsOneWidget);
+    // Each count in its own color: the passed one isn't red.
+    final t = NushiTheme.of(tester.element(checks)).t;
+    Color? color(String words) {
+      Color? found;
+      tester.widget<Text>(checks).textSpan!.visitChildren((s) {
+        if (s is TextSpan && s.text == words) found = s.style?.color;
+        return found == null;
+      });
+      return found;
+    }
+
+    expect(color('1 failing'), t.crashed);
+    expect(color('1 passed'), t.done);
     expect(_inCard(find.text('Checks failing')), findsOneWidget);
     expect(_inCard(find.text('5')), findsOneWidget); // comments, none new
     // Collapsed: its number and the failing count.
