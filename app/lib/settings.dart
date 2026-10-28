@@ -114,6 +114,14 @@ final pinnedFiles = ValueNotifier<Map<String, List<String>>>(savedPins(_saved))
 Map<String, List<String>> savedPins(Map<String, Object?> saved) =>
     _byPlace('pins', saved);
 
+/// The newest comment seen of each chat's pull request (ms since the
+/// epoch), by chat id: newer ones are unread.
+final pullSeen = ValueNotifier<Map<String, int>>({
+  for (final MapEntry(:key, :value)
+      in ((_saved['pullSeen'] as Map?) ?? {}).entries)
+    if (key is String && value is num) key: value.toInt(),
+})..addListener(_save);
+
 /// The widths panes were dragged to, by pane (see `Resizable`).
 final paneWidths = ValueNotifier<Map<String, double>>({
   for (final MapEntry(:key, :value)
@@ -195,6 +203,7 @@ void _save() {
         'sidebarCollapsed': sidebarCollapsed.value.toList(),
         'models': recentModels.value,
         'pins': pinnedFiles.value,
+        'pullSeen': pullSeen.value,
       }),
     );
   } on Object {
