@@ -109,14 +109,12 @@ final _counted = Expando<(int, int)>();
   );
 }
 
-/// The file a tool call wrote or edited, when a preview can show it.
+/// The file a tool call wrote or edited, when it's an artifact
+/// ([isArtifact]): code gets no Preview button.
 String? previewPath(Item it) {
   final path = it.paths.firstOrNull ?? it.diffs.firstOrNull?.path;
   final wrote = it.toolKind == 'edit' || it.diffs.isNotEmpty;
-  return wrote &&
-          it.status != 'failed' &&
-          path != null &&
-          previewKind(path) != null
+  return wrote && it.status != 'failed' && path != null && isArtifact(path)
       ? path
       : null;
 }

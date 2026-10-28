@@ -332,18 +332,17 @@ void main() {
     d.dispose();
   }, variant: _mac);
 
-  testWidgets('a binary has no Preview; code has its source only', (
-    tester,
-  ) async {
+  testWidgets('a binary has no Preview; code has its source only, and '
+      "isn't an artifact", (tester) async {
     final (d, _) = await _app(tester, {});
-    // Every file written but the zip.
+    // Every file written but the zip and the JSON.
     expect(chatFiles(d.chats['c']!.items), [
       'data.csv',
       'report.pdf',
-      'config.json',
       'site/pic.svg',
       'site/index.html',
     ]);
+    expect(isArtifact('config.json'), isFalse);
     d.chats['c']!.openPreview('config.json');
     await tester.pumpAndSettle();
     expect(_inPane(find.text('Source')), findsNothing);

@@ -84,8 +84,10 @@ final _items = <Item>[
     kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
     text: 'The report is written. Now the plan, and the chart.',
   ),
-  _call('g', 'edit', 'Edit', 'go.sum')
-    ..diffs.add(FileChange(path: 'go.sum', oldText: 'a\n', newText: 'b\n')),
+  _call('g', 'edit', 'Edit', 'internal/api/api.go')
+    ..diffs.add(
+      FileChange(path: 'internal/api/api.go', oldText: 'a\n', newText: 'b\n'),
+    ),
   _call('p', 'edit', 'Write', 'docs/plan.md'),
   _call('i', 'edit', 'Write', 'docs/history/img/timings.png'),
   Item(
@@ -236,7 +238,7 @@ void main() {
       findsOneWidget,
     );
     expect(_groupPreview, findsOneWidget);
-    // Opened, the run's rows: the plan and the image; not go.sum.
+    // Opened, the run's rows: the plan and the image; not the Go file.
     await tester.tap(find.text('Edited 3 files'));
     await tester.pumpAndSettle();
     expect(_buttons, findsNWidgets(4));

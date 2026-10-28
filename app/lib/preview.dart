@@ -34,6 +34,11 @@ enum PreviewKind {
   /// Has Preview and Source.
   bool get rendered =>
       this == markdown || this == html || this == svg || this == csv;
+
+  /// Made to be looked at: listed in Artifacts, with a Preview button on
+  /// its tool row. Code and text show only through ⌘P's Open file
+  /// (Changes shows what the agent did to them).
+  bool get artifact => this != code;
 }
 
 /// Extensions of code and text files a preview shows as source.
@@ -68,6 +73,10 @@ PreviewKind? previewKind(String path) {
     _ => null,
   };
 }
+
+/// Whether [path] is an artifact: a file of a kind that renders
+/// ([PreviewKind.artifact]).
+bool isArtifact(String path) => previewKind(path)?.artifact ?? false;
 
 /// The last part of [path].
 String baseName(String path) => path.substring(path.lastIndexOf('/') + 1);
