@@ -444,7 +444,11 @@ class Daemon extends ChangeNotifier {
   /// Events that came while the chat list was on its way.
   List<EventsResponse>? _held;
 
+  /// Sees each event before it's applied (the Mac's notifications).
+  void Function(EventsResponse)? onEvent;
+
   void _handle(EventsResponse e) {
+    onEvent?.call(e);
     if (e.hasRemote()) {
       remoteState.value = e.remote;
     } else if (e.hasRemovedChats()) {
