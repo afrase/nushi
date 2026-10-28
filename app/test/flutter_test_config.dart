@@ -3,12 +3,15 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/motion.dart';
 
 /// On CI (GitHub's macOS image draws text a few pixels differently from a
 /// Mac), a golden may differ in up to 1% of its pixels (a card dense with
 /// text, as a review's findings, reaches 0.56% from anti-aliasing alone);
-/// here it must match.
+/// here it must match. Every shine stands still, its band before the text,
+/// so goldens are one frame and pumpAndSettle settles while a call runs.
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
+  Shine.stopAt = 0;
   final local = goldenFileComparator;
   if (Platform.environment['CI'] == 'true' && local is LocalFileComparator) {
     goldenFileComparator = _Tolerant(

@@ -1,13 +1,17 @@
 import 'package:diff_view/diff_view.dart';
 import 'package:flutter/material.dart';
 
+import 'package:nushi/collapsible.dart';
 import 'package:nushi/diff_box.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/markdown.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
+
+export 'package:nushi/collapsible.dart';
 
 /// What a kind of tool call does: its icon, what it did ("read") to what
 /// ("file"), its verb on a path ("Read") and what it is doing ("Reading").
@@ -56,6 +60,18 @@ ToolKind kindOf(Item it) =>
     _kinds[it.toolKind] ?? const ToolKind(Icons.build_outlined, 'used', 'tool');
 
 bool _running(Item it) => it.status == 'pending' || it.status == 'in_progress';
+
+/// What a running call is doing: "Reading notes.md", "Running make test".
+String doingOf(Item it) {
+  final path = it.paths.firstOrNull ?? it.diffs.firstOrNull?.path;
+  final verb = kindOf(it).doing;
+  return switch ((verb, path)) {
+    _ when it.toolKind == 'execute' => 'Running ${it.title}',
+    (final v?, final p?) => '$v $p',
+    (final v?, null) => v,
+    _ => it.title,
+  };
+}
 
 final _counted = Expando<(int, int)>();
 
@@ -121,95 +137,9 @@ String groupLabel(List<Item> calls) {
   return label[0].toUpperCase() + label.substring(1);
 }
 
-/// A tool call's card: a one-line header in the tool rows' tint that
-/// opens to show [body]; outlined in red when [failed]. Given [ids] (its
-/// call's, or its group's and its first call's), it opens as it was left,
-/// rebuilt or not.
-class Collapsible extends StatefulWidget {
-  const new({
-    required this.header,
-    required this.body,
-    required this.failed,
-    super.key,
-    this.ids = const [],
-  });
-
-  final Widget header;
-  final Widget? body;
-  final bool failed;
-  final List<String> ids;
-
-  /// The ids of what the user opened.
-  static final opened = <String>{};
-
-  @override
-  State<Collapsible> createState() => _CollapsibleState();
-}
-
-class _CollapsibleState extends State<Collapsible> {
-  late bool _open = widget.ids.any(Collapsible.opened.contains);
-
-  void _toggle() => setState(() {
-    _open = !_open;
-    if (widget.ids.isEmpty) return;
-    _open
-        ? Collapsible.opened.add(widget.ids.first)
-        : Collapsible.opened.removeAll(widget.ids);
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final t = NushiTheme.of(context).t;
-    final body = widget.body;
-    return framed(
-      border: widget.failed ? t.crashed : t.toolBorder,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ColoredBox(
-            color: widget.failed ? t.crashedSoft : t.toolTint,
-            child: Tap(
-              onTap: body == null ? null : _toggle,
-              radius: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: SizedBox(
-                height: 28,
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 18,
-                      child: body == null
-                          ? null
-                          : Chevron(open: _open, color: t.textSecondary),
-                    ),
-                    Expanded(child: widget.header),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          if (_open && body != null) body,
-        ],
-      ),
-    );
-  }
-}
-
-/// The end of a tool call's header: [failed] in red, and a spinner while
-/// it runs.
-Widget _status(NushiTheme theme, {required bool running, String failed = ''}) =>
-    Row(
-      mainAxisSize: MainAxisSize.min,
-      spacing: 6,
-      children: [
-        Text(failed, style: theme.ui(theme.t.crashed, size: 12)),
-        if (running)
-          const SizedBox.square(
-            dimension: 10,
-            child: CircularProgressIndicator(strokeWidth: 1.5),
-          ),
-      ],
-    );
+/// The end of a tool call's header: [failed] in red.
+Widget _failed(NushiTheme theme, String failed) =>
+    Text(failed, style: theme.ui(theme.t.crashed, size: 12));
 
 /// One tool call: a one-line summary by kind (the file read or edited, the
 /// command run, `+n −m` for an edit) that opens to its output and diffs.
@@ -218,7 +148,7 @@ class ToolCallView extends StatelessWidget {
 
   final Item item;
 
-  /// Whether the agent waits on the user: nothing spins.
+  /// Whether the agent waits on the user: nothing shines.
   final bool still;
 
   /// Whether its images show under it (a run of calls shows them itself).
@@ -265,11 +195,19 @@ class ToolCallView extends StatelessWidget {
               color: failed ? t.crashed : t.toolAccent,
             ),
             const SizedBox(width: 6),
+            // The title shines while the call runs, the band across the
+            // text alone.
             Expanded(
-              child: Text.rich(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Shine(
+                  on: _running(it) && !still,
+                  child: Text.rich(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ),
             ),
             if (it.diffs.isNotEmpty) ...[
@@ -294,11 +232,7 @@ class ToolCallView extends StatelessWidget {
                 style: theme.ui(t.textMuted, size: 11.5),
               ),
             const SizedBox(width: 8),
-            _status(
-              theme,
-              running: _running(it) && !still,
-              failed: failed ? 'failed' : '',
-            ),
+            _failed(theme, failed ? 'failed' : ''),
           ],
         ),
         body: !hasBody
@@ -389,7 +323,8 @@ Widget _withImages(List<ImageData> images, Widget child) => images.isEmpty
       );
 
 /// A run of tool calls as one line ("Read 4 files, ran 2 commands") that
-/// opens to each call.
+/// opens to each call; while one runs, what it's doing ends the line and
+/// shines ("Read 4 files, searching").
 class ToolGroupView extends StatelessWidget {
   const new(this.calls, {super.key, this.still = false});
 
@@ -413,21 +348,10 @@ class ToolGroupView extends StatelessWidget {
           children: [
             Icon(Icons.layers_outlined, size: 13, color: t.toolAccent),
             const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                groupLabel(calls),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.ui(t.textSecondary),
-              ),
-            ),
+            Expanded(child: _groupTitle(theme, calls, still: still)),
             if (preview != null) PreviewButton(preview),
             const SizedBox(width: 8),
-            _status(
-              theme,
-              running: calls.any(_running) && !still,
-              failed: failed == 0 ? '' : '$failed failed',
-            ),
+            _failed(theme, failed == 0 ? '' : '$failed failed'),
           ],
         ),
         body: Padding(
@@ -449,4 +373,27 @@ class ToolGroupView extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A run's line: what it did, and what its running call is doing, shining.
+Widget _groupTitle(NushiTheme theme, List<Item> calls, {required bool still}) {
+  final style = theme.ui(theme.t.textSecondary);
+  Widget text(String s) =>
+      Text(s, maxLines: 1, overflow: TextOverflow.ellipsis, style: style);
+  final running = still ? null : calls.where(_running).firstOrNull;
+  if (running == null) return text(groupLabel(calls));
+  final done = calls.where((c) => !_running(c)).toList();
+  final now = doingOf(running);
+  return Row(
+    children: [
+      if (done.isNotEmpty) Flexible(child: text('${groupLabel(done)}, ')),
+      Flexible(
+        child: Shine(
+          child: text(
+            done.isEmpty ? now : now[0].toLowerCase() + now.substring(1),
+          ),
+        ),
+      ),
+    ],
+  );
 }

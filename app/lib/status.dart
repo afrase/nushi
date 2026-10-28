@@ -1,84 +1,83 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
 
-/// One clock for every moving mark: a phase from 0 to 1 and back, every
-/// 1.6 seconds. It ticks only while a mark listens, and the marks paint
-/// from it without rebuilding anything.
-class _Pulse extends ChangeNotifier {
-  Ticker? _ticker;
-  double value = 0;
-
-  @override
-  void addListener(VoidCallback listener) {
-    super.addListener(listener);
-    _ticker ??= Ticker((t) {
-      value = (1 - cos(t.inMilliseconds / 1600 * 2 * pi)) / 2;
-      notifyListeners();
-    })..start();
-  }
-
-  @override
-  void removeListener(VoidCallback listener) {
-    super.removeListener(listener);
-    if (!hasListeners) {
-      _ticker?.dispose();
-      _ticker = null;
-    }
-  }
-}
-
-final _pulse = _Pulse();
-
-/// Whether macOS asks for reduced motion.
-bool _still(BuildContext context) =>
-    MediaQuery.disableAnimationsOf(context) ||
-    View.of(context).platformDispatcher.accessibilityFeatures.reduceMotion;
-
-/// A dot of [color]; with [pulse] it breathes, a soft ring growing out of
-/// it.
+/// A dot of [color]; [ringing], a soft ring grows out of it and fades,
+/// again every 1.6 seconds, from the shared clock.
 class _Mark extends CustomPainter {
-  new(this.color, {required this.pulse})
-    : super(repaint: pulse ? _pulse : null);
+  new(this.color, {required this.ringing})
+    : super(repaint: ringing ? loopClock : null);
 
   final Color color;
-  final bool pulse;
+  final bool ringing;
+
+  static const period = Duration(milliseconds: 1600);
 
   @override
   void paint(Canvas canvas, Size size) {
     final c = size.center(Offset.zero);
-    final r = size.shortestSide / 2;
-    final v = pulse ? _pulse.value : 0.0;
-    if (pulse) {
+    final r = size.shortestSide / 2 * 0.55;
+    if (ringing) {
+      final v = Curves.easeOut.transform(loopClock.phase(period));
       canvas.drawCircle(
         c,
-        r * (0.55 + 0.45 * v),
-        Paint()..color = color.withValues(alpha: 0.35 * (1 - v)),
+        r * (1 + 1.6 * v),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.2
+          ..color = color.withValues(alpha: 0.7 * (1 - v)),
       );
     }
-    canvas.drawCircle(
-      c,
-      r * 0.55,
-      Paint()..color = color.withValues(alpha: 1 - 0.35 * v),
-    );
+    canvas.drawCircle(c, r, Paint()..color = color);
   }
 
   @override
-  bool shouldRepaint(_Mark old) => old.color != color || old.pulse != pulse;
+  bool shouldRepaint(_Mark old) => old.color != color || old.ringing != ringing;
 }
 
-/// A chat's status dot: amber with a soft ring while it waits on the user,
-/// breathing while the agent works, a ring when idle; a moon asleep, a
-/// quiet clock when its agent deleted its session, an error mark when it
-/// couldn't start.
-class ChatDot extends StatelessWidget {
+/// A check drawn [drawn] of the way, at [opacity].
+class _Check extends CustomPainter {
+  new(this.color, this.drawn, this.opacity);
+
+  final Color color;
+  final double drawn;
+  final double opacity;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final s = size.shortestSide / 10;
+    final path = Path()
+      ..moveTo(1.5 * s, 5.2 * s)
+      ..lineTo(4 * s, 7.5 * s)
+      ..lineTo(8.5 * s, 2.5 * s);
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..color = color.withValues(alpha: opacity);
+    for (final m in path.computeMetrics()) {
+      canvas.drawPath(m.extractPath(0, m.length * drawn), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_Check old) =>
+      old.color != color || old.drawn != drawn || old.opacity != opacity;
+}
+
+/// A chat's status dot: amber with a soft ring while it waits on the user
+/// (it hops once when that starts), a ring growing out of it while the
+/// agent works, a ring when idle (a check draws itself there for a moment
+/// when a turn ends); a moon asleep, a quiet clock when its agent deleted
+/// its session, an error mark when it couldn't start.
+class ChatDot extends StatefulWidget {
   const new({required this.chat, super.key});
 
   static const size = 7.0;
@@ -86,8 +85,93 @@ class ChatDot extends StatelessWidget {
   final ChatState chat;
 
   @override
+  State<ChatDot> createState() => _ChatDotState();
+}
+
+class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
+  late bool _busy = widget.chat.busy;
+  late bool _waiting = widget.chat.waiting;
+  late bool _stopped = widget.chat.stopping; // the user stopped the turn
+  AnimationController? _hop; // once, as the chat starts waiting
+  AnimationController? _check; // drawn, held, then the ring again
+
+  static const _hopFor = Duration(milliseconds: 1200);
+  static const _checkFor = Duration(milliseconds: 2700);
+
+  // The hop: up 3 px, down, up 1.5, down, still.
+  static final Animatable<double> _rise = TweenSequence([
+    for (final (from, to, weight) in const [
+      (0.0, 3.0, 20.0),
+      (3.0, 0.0, 20.0),
+      (0.0, 1.5, 15.0),
+      (1.5, 0.0, 15.0),
+      (0.0, 0.0, 30.0),
+    ])
+      TweenSequenceItem(
+        tween: Tween(
+          begin: from,
+          end: to,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
+        weight: weight,
+      ),
+  ]);
+
+  @override
+  void initState() {
+    super.initState();
+    widget.chat.addListener(_changed);
+  }
+
+  @override
+  void didUpdateWidget(ChatDot old) {
+    super.didUpdateWidget(old);
+    if (old.chat == widget.chat) return;
+    old.chat.removeListener(_changed);
+    widget.chat.addListener(_changed);
+    _busy = widget.chat.busy;
+    _waiting = widget.chat.waiting;
+    _hop?.value = 1;
+    _check?.value = 1;
+  }
+
+  @override
+  void dispose() {
+    widget.chat.removeListener(_changed);
+    _hop?.dispose();
+    _check?.dispose();
+    super.dispose();
+  }
+
+  AnimationController _once(Duration d) =>
+      AnimationController(vsync: this, duration: d)..addStatusListener((s) {
+        if (s == AnimationStatus.completed && mounted) setState(() {});
+      });
+
+  void _changed() {
+    final c = widget.chat;
+    if (c.busy && !_busy) {
+      _stopped = false;
+      _check?.value = 1; // a new turn: the check goes
+    }
+    if (c.stopping) _stopped = true;
+    if (c.waiting && !_waiting && !reduceMotion(context)) {
+      (_hop ??= _once(_hopFor)).forward(from: 0).ignore();
+    }
+    if (_busy && !c.busy && !c.waiting && !_stopped) {
+      (_check ??= _once(_checkFor)).forward(from: 0).ignore();
+    }
+    // Every streamed chunk notifies: only a change of state rebuilds.
+    if (c.busy == _busy && c.waiting == _waiting) return;
+    _busy = c.busy;
+    _waiting = c.waiting;
+    setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
+    const size = ChatDot.size;
     final t = NushiTheme.of(context).t;
+    final chat = widget.chat;
     if (chat.asleep && !chat.archived) {
       return Icon(Icons.bedtime_outlined, size: size * 1.6, color: t.idle);
     }
@@ -97,13 +181,30 @@ class ChatDot extends StatelessWidget {
     if (chat.reopenFailed && !chat.archived) {
       return Icon(Icons.error_outline, size: size * 1.6, color: t.crashed);
     }
+    final still = reduceMotion(context);
     if (chat.busy && !chat.waiting) {
       return CustomPaint(
         size: const Size.square(size * 1.6),
-        painter: _Mark(t.running, pulse: !_still(context)),
+        painter: _Mark(t.running, ringing: !still),
       );
     }
-    return Padding(
+    if (_check case final check? when check.isAnimating && !chat.waiting) {
+      return AnimatedBuilder(
+        animation: check,
+        builder: (context, _) {
+          final ms = check.value * _checkFor.inMilliseconds;
+          return CustomPaint(
+            size: const Size.square(size * 1.6),
+            painter: _Check(
+              t.done,
+              still ? 1 : Curves.easeOut.transform((ms / 350).clamp(0, 1)),
+              still ? 1 : 1 - ((ms - 2400) / 300).clamp(0, 1),
+            ),
+          );
+        },
+      );
+    }
+    final dot = Padding(
       padding: const EdgeInsets.all(size * 0.3),
       child: DecoratedBox(
         decoration: chat.waiting
@@ -118,6 +219,16 @@ class ChatDot extends StatelessWidget {
               ),
         child: const SizedBox.square(dimension: size),
       ),
+    );
+    final hop = _hop;
+    if (hop == null || !chat.waiting) return dot;
+    return AnimatedBuilder(
+      animation: hop,
+      builder: (context, child) => Transform.translate(
+        offset: Offset(0, -_rise.transform(hop.value)),
+        child: child,
+      ),
+      child: dot,
     );
   }
 }
@@ -149,8 +260,8 @@ class ChatStatusWord extends StatelessWidget {
   }
 }
 
-/// Under the transcript while a turn runs, as in Claude Code: a breathing
-/// mark, what the agent is doing ([doing]), and for how long; "Waiting for
+/// Under the transcript while a turn runs, as in Claude Code: a mark, what
+/// the agent is doing ([doing]), shining, and for how long; "Waiting for
 /// you" while a permission prompt or question waits. [what] overrides it.
 class TurnStatus extends StatefulWidget {
   const new(this.chat, {super.key, this.what});
@@ -193,17 +304,21 @@ class _TurnStatusState extends State<TurnStatus> {
         children: [
           CustomPaint(
             size: const Size.square(12),
-            painter: _Mark(
-              waiting ? t.needs : t.accent,
-              pulse: !waiting && !_still(context),
-            ),
+            painter: _Mark(waiting ? t.needs : t.accent, ringing: false),
           ),
           Flexible(
-            child: Text(
-              widget.what ?? (waiting ? 'Waiting for you' : doing(chat.items)),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.ui(waiting ? t.needs : t.textSecondary, size: 12.5),
+            child: Shine(
+              on: !waiting,
+              child: Text(
+                widget.what ??
+                    (waiting ? 'Waiting for you' : doing(chat.items)),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.ui(
+                  waiting ? t.needs : t.textSecondary,
+                  size: 12.5,
+                ),
+              ),
             ),
           ),
           if (started != null && !waiting)
@@ -236,16 +351,7 @@ String doing(List<Item> items) {
             (it.status == 'pending' || it.status == 'in_progress'),
       )
       .firstOrNull;
-  if (running != null) {
-    final path = running.paths.firstOrNull ?? running.diffs.firstOrNull?.path;
-    final verb = kindOf(running).doing;
-    return switch ((verb, path)) {
-      _ when running.toolKind == 'execute' => 'Running ${running.title}',
-      (final v?, final p?) => '$v $p',
-      (final v?, null) => v,
-      _ => running.title,
-    };
-  }
+  if (running != null) return doingOf(running);
   return turn.firstOrNull?.kind == ItemKind.ITEM_KIND_AGENT_MESSAGE
       ? 'Writing'
       : 'Thinking';

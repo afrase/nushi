@@ -10,6 +10,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/details_panel.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/preview.dart';
@@ -148,8 +149,8 @@ class _ChatViewState extends State<ChatView> {
 
   /// The transcript, and beside it, left to right: the side question, a
   /// subagent's or background command's pane (or a file's preview in its
-  /// place), and [ChatView.details], each when open, at its own remembered
-  /// width, each closed on its own.
+  /// place; either slides in as it opens), and [ChatView.details], each
+  /// when open, at its own remembered width, each closed on its own.
   Widget _beside(Widget transcript) {
     final chat = widget.chat;
     final side = chat.archived ? null : chat.side;
@@ -181,7 +182,7 @@ class _ChatViewState extends State<ChatView> {
             initial: wide ? 640 : DetailsPanel.width,
             min: 220,
             cap: wide ? double.infinity : 480,
-            child: _pane(id),
+            child: Enter.slide(child: _pane(id)),
           ),
         if (preview != null)
           SidePane(
@@ -189,12 +190,14 @@ class _ChatViewState extends State<ChatView> {
             initial: 560,
             min: 300,
             cap: double.infinity,
-            child: PreviewPane(
-              key: ValueKey(preview),
-              chat: chat,
-              daemon: widget.daemon,
-              path: preview,
-              onClose: () => chat.preview.value = null,
+            child: Enter.slide(
+              child: PreviewPane(
+                key: ValueKey(preview),
+                chat: chat,
+                daemon: widget.daemon,
+                path: preview,
+                onClose: () => chat.preview.value = null,
+              ),
             ),
           ),
       ],

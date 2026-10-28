@@ -9,6 +9,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/markdown.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -308,11 +309,60 @@ class SourceSwitch extends StatelessWidget {
   );
 }
 
-/// The green mark of a preview the daemon keeps current.
-class LiveMark extends StatelessWidget {
-  const new({super.key, this.size = 12});
+/// The green mark of a preview the daemon keeps current; its dot pulses
+/// once each time [version] (the file as last sent) changes.
+class LiveMark extends StatefulWidget {
+  const new({super.key, this.size = 12, this.version});
 
   final double size;
+  final Object? version;
+
+  @override
+  State<LiveMark> createState() => _LiveMarkState();
+}
+
+class _LiveMarkState extends State<LiveMark>
+    with SingleTickerProviderStateMixin {
+  late final _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 500),
+    value: 1,
+  );
+  late final Animation<double> _grow = _scale.animate(_pulse);
+
+  // Up to 1.8 times its size and back, each way easing out.
+  static final Animatable<double> _scale = TweenSequence([
+    TweenSequenceItem(
+      tween: Tween(
+        begin: 1.0,
+        end: 1.8,
+      ).chain(CurveTween(curve: Curves.easeOut)),
+      weight: 30,
+    ),
+    TweenSequenceItem(
+      tween: Tween(
+        begin: 1.8,
+        end: 1.0,
+      ).chain(CurveTween(curve: Curves.easeOut)),
+      weight: 70,
+    ),
+  ]);
+
+  @override
+  void didUpdateWidget(LiveMark old) {
+    super.didUpdateWidget(old);
+    if (old.version != null &&
+        !identical(old.version, widget.version) &&
+        !reduceMotion(context)) {
+      _pulse.forward(from: 0).ignore();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -324,12 +374,15 @@ class LiveMark extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         spacing: 5,
         children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(color: t.done, shape: BoxShape.circle),
+          ScaleTransition(
+            scale: _grow,
+            child: Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(color: t.done, shape: BoxShape.circle),
+            ),
           ),
-          Text('Live', style: theme.ui(t.done, size: size)),
+          Text('Live', style: theme.ui(t.done, size: widget.size)),
         ],
       ),
     );

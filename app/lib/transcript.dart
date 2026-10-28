@@ -8,6 +8,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/items.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/rewind.dart';
 import 'package:nushi/subagents.dart';
@@ -111,6 +112,26 @@ class _TranscriptState extends State<Transcript> {
   // the list moves down by their height, so what shows stays put.
   String? _first;
 
+  // The entries' keys at the last build, once the chat had loaded: what
+  // comes in after them rises in. Not what a load or an older page brings.
+  List<String>? _shown;
+  ChatState? _shownChat;
+
+  /// The keys of [entries] that are new since the last build, after the
+  /// last of what was there; none on the first build or a load.
+  Set<String> _arrived(List<Object> entries) {
+    final keys = [for (final e in entries) _keyOf(e)];
+    final was = _shownChat == widget.chat ? _shown : null;
+    final loaded = widget.items != null || widget.chat.loaded;
+    _shown = loaded ? keys : null;
+    _shownChat = widget.chat;
+    if (was == null || was.isEmpty) return const {};
+    final known = was.toSet();
+    final last = keys.lastIndexWhere(known.contains);
+    if (last < 0) return const {}; // all of it anew: a reload
+    return {for (final k in keys.skip(last + 1)) k};
+  }
+
   bool _onScroll(Notification n) {
     if (widget.onTop case final top?
         when n is ScrollUpdateNotification &&
@@ -145,6 +166,7 @@ class _TranscriptState extends State<Transcript> {
     required bool live,
     required bool still,
     required double top,
+    bool rise = false,
   }) {
     final key = _keyOf(e);
     final items = switch (e) {
@@ -171,12 +193,16 @@ class _TranscriptState extends State<Transcript> {
                   padding: _isBand(e)
                       ? EdgeInsets.only(top: top)
                       : _sides.copyWith(top: top),
-                  child: RepaintBoundary(
-                    child: _view(
-                      e,
-                      live: live,
-                      still: still,
-                      rewindable: rewindable,
+                  // New while the chat is open, it rises in, once.
+                  child: Enter.rise(
+                    play: rise,
+                    child: RepaintBoundary(
+                      child: _view(
+                        e,
+                        live: live,
+                        still: still,
+                        rewindable: rewindable,
+                      ),
                     ),
                   ),
                 ),
@@ -290,6 +316,7 @@ class _TranscriptState extends State<Transcript> {
     final chat = widget.chat;
     final entries = _entries(widget.items ?? chat.items);
     _keepPlace(entries);
+    final arrived = _arrived(entries);
     final live = widget.items == null ? chat.busy : widget.live;
     _follower.stick();
     final before = _built;
@@ -350,6 +377,7 @@ class _TranscriptState extends State<Transcript> {
                           live: live && i == entries.length - 1,
                           still: chat.waiting,
                           top: _gap(entries, i, header: widget.header != null),
+                          rise: arrived.contains(_keyOf(e)),
                         ),
                       if (widget.footer case final f?)
                         Padding(padding: _sides, child: f),

@@ -84,7 +84,7 @@ class _PreviewPaneState extends State<PreviewPane> {
                     ),
                   ),
                 ),
-                if (_watch.live) const LiveMark(),
+                if (_watch.live) LiveMark(version: _watch.file),
                 if (kind == PreviewKind.markdown)
                   SourceSwitch(
                     source: _source,

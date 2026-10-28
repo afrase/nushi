@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// The agent's thinking: a dim "Thinking" line that opens to the thoughts,
-/// with a spinner while they stream ([live]).
+/// shining while they stream ([live]).
 class ThoughtView extends StatefulWidget {
   const new(this.item, {required this.live, super.key});
 
@@ -36,12 +37,13 @@ class _ThoughtViewState extends State<ThoughtView> {
             spacing: 6,
             children: [
               Chevron(open: _open),
-              Text(widget.live ? 'Thinking…' : 'Thought', style: style),
-              if (widget.live)
-                const SizedBox.square(
-                  dimension: 10,
-                  child: CircularProgressIndicator(strokeWidth: 1.5),
+              Shine(
+                on: widget.live,
+                child: Text(
+                  widget.live ? 'Thinking…' : 'Thought',
+                  style: style,
                 ),
+              ),
             ],
           ),
         ),

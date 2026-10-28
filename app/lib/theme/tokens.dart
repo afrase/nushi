@@ -60,6 +60,8 @@ class Tokens {
     required this.idle,
     required this.crashed,
     required this.crashedSoft,
+    required this.shine,
+    required this.shineBand,
     required this.userBand,
     required this.userBandBorder,
     required this.userBandText,
@@ -126,6 +128,12 @@ class Tokens {
   final Color idle;
   final Color crashed;
   final Color crashedSoft;
+
+  // What's still going (a running call's title, "Thinking…"): its text,
+  // and the band that sweeps across it (motion.dart's Shine). Dark, a light
+  // band over a muted grey; light, a dark band over a lighter grey.
+  final Color shine;
+  final Color shineBand;
 
   // The transcript. A user message is a band across it (the chapter's
   // heading), with its marker (a relay's), its inline code and code
@@ -202,6 +210,8 @@ class Tokens {
     idle: Color(0xFF5D6170),
     crashed: Color(0xFFB62B39),
     crashedSoft: Color(0xFFFCE8EA),
+    shine: Color(0xFF6E727E),
+    shineBand: Color(0xFF1E1F22),
     userBand: Color(0xFFE5EDFC),
     userBandBorder: Color(0xFFB8CCF4),
     userBandText: Color(0xFF142A5C),
@@ -283,6 +293,8 @@ class Tokens {
     idle: Color(0xFFA2A6AE),
     crashed: Color(0xFFFA7681),
     crashedSoft: Color(0xFF3F2427),
+    shine: Color(0xFF9DA1AA),
+    shineBand: Color(0xFFF4F6FA),
     userBand: Color(0xFF233049),
     userBandBorder: Color(0xFF34497A),
     userBandText: Color(0xFFE8EEFB),

@@ -48,7 +48,7 @@ class _PreviewScreenState extends State<PreviewScreen> {
       title: baseName(widget.path),
       actions: [
         if (_watch.live) ...[
-          const LiveMark(size: 13),
+          LiveMark(size: 13, version: _watch.file),
           const SizedBox(width: 10),
         ],
         if (previewKind(widget.path) == PreviewKind.markdown)
