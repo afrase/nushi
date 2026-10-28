@@ -11,7 +11,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/preview.dart';
 
-/// The files a preview shows that [items] wrote or edited (a subagent's
+/// The artifacts ([isArtifact]) [items] wrote or edited (a subagent's
 /// calls too), each once, the one changed last first; a file deleted
 /// since is left out. As the tool rows name them: relative to the chat's
 /// folder when inside it.
@@ -25,7 +25,7 @@ List<String> chatFiles(Iterable<Item> items) {
       files.removeAll(it.paths);
     } else if (it.toolKind == 'edit' || it.diffs.isNotEmpty) {
       for (final p in {...it.paths, for (final d in it.diffs) d.path}) {
-        if (previewKind(p) == null) continue;
+        if (!isArtifact(p)) continue;
         files
           ..remove(p)
           ..add(p);

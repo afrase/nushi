@@ -59,7 +59,7 @@ final _items = <Item>[
   _call('r', 'README.md', kind: 'read'),
   _call('t', 'tmp.md'),
   _call('d', 'tmp.md', kind: 'delete'),
-  _call('g', 'go.sum'),
+  _call('g', 'internal/api/api.go'),
   _call('w2', 'docs/report.md'),
   Item(id: 'm', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE, text: 'Done.'),
 ];
@@ -77,7 +77,13 @@ FakeDaemon _fake() {
     ..answer = ((input) => switch (input) {
       GetChatRequest() => GetChatResponse(chat: _chat, items: _items),
       ListFilesRequest() => ListFilesResponse(
-        paths: ['go.mod', 'docs/plan.md', 'docs/report.md', 'logo.png'],
+        paths: [
+          'go.mod',
+          'docs/plan.md',
+          'docs/report.md',
+          'logo.png',
+          'internal/api/api.go',
+        ],
       ),
       _ => null,
     })
@@ -132,8 +138,9 @@ void main() {
   setUpAll(loadFonts);
 
   test('the files a chat wrote: previewable, once, newest first', () {
-    // Not go.sum (no preview), the one read, the failed write or the
-    // deleted one; the subagent's note; the report once, where it changed last.
+    // Not the Go file (code isn't an artifact), the one read, the failed
+    // write or the deleted one; the subagent's note; the report once,
+    // where it changed last.
     expect(chatFiles(_items), [
       'docs/report.md',
       'docs/img/chart.png',
@@ -246,6 +253,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(box, findsNothing);
     expect(_inPane(find.text('plan.md')), findsOneWidget);
+    // Code isn't an artifact, but ⌘P opens it.
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyP);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+    await tester.pumpAndSettle();
+    await tester.enterText(inBox(find.byType(TextField)), 'api.go');
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(_inPane(find.text('api.go')), findsOneWidget);
     d.dispose();
   }, variant: _mac);
 
