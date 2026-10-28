@@ -32,7 +32,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 76
+const Version = 77
 
 // Release is the version a release build stamps in (make package's
 // VERSION, through -ldflags -X), "" in a build that isn't packaged
@@ -65,6 +65,7 @@ type server struct {
 	jira     *jira.Service
 	github   *github.Service
 	logPrefs LogPrefs
+	restart  Restart
 
 	transcripts TranscriptPrefs
 }
@@ -85,6 +86,14 @@ type Services struct {
 	Log    LogPrefs // nil: the debug setting isn't kept
 	// Transcripts keeps the transcripts' copies' settings; nil: not kept.
 	Transcripts TranscriptPrefs
+	// Restart stops the daemon for a newer build; nil: it isn't offered.
+	Restart Restart
+}
+
+// Restart stops the daemon for a newer build once nothing would be lost
+// (internal/features/restart).
+type Restart interface {
+	WhenIdle()
 }
 
 // New returns the whole API, unauthenticated: the local socket wraps it in
@@ -95,7 +104,7 @@ func New(sv Services) http.Handler { return serve(sv, "socket") }
 func serve(sv Services, via string, interceptors ...connect.Interceptor) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{chats: sv.Chats, agents: sv.Agents, mcp: sv.MCP, skills: sv.Skills, terms: sv.Terms, trust: sv.Trust,
-		hub: sv.Hub, memory: sv.Memory, remote: sv.Remote, jira: sv.Jira, github: sv.GitHub, logPrefs: sv.Log, transcripts: sv.Transcripts}, connect.WithInterceptors(append([]connect.Interceptor{logCalls{via}}, interceptors...)...),
+		hub: sv.Hub, memory: sv.Memory, remote: sv.Remote, jira: sv.Jira, github: sv.GitHub, logPrefs: sv.Log, transcripts: sv.Transcripts, restart: sv.Restart}, connect.WithInterceptors(append([]connect.Interceptor{logCalls{via}}, interceptors...)...),
 		// Gzip only for a client that asks (the phone, over a slow link;
 		// never the Mac's socket), and only where it pays.
 		connect.WithCompressMinBytes(1024)))
@@ -110,6 +119,8 @@ var macOnly = map[string]bool{
 	nushiv1connect.NushiServiceConfirmPairingProcedure: true,
 	nushiv1connect.NushiServiceRevokeDeviceProcedure:   true,
 	nushiv1connect.NushiServiceSendTestPushProcedure:   true,
+	// The Mac's app starts the new daemon.
+	nushiv1connect.NushiServiceRestartWhenIdleProcedure: true,
 	// macOS's keychain prompt shows on the Mac's screen.
 	nushiv1connect.NushiServiceAllowJiraTokenProcedure:   true,
 	nushiv1connect.NushiServiceAllowGitHubTokenProcedure: true,
@@ -144,6 +155,14 @@ func WithToken(token string, h http.Handler) http.Handler {
 
 func (s *server) Ping(context.Context, *connect.Request[nushiv1.PingRequest]) (*connect.Response[nushiv1.PingResponse], error) {
 	return connect.NewResponse(&nushiv1.PingResponse{ApiVersion: Version, Build: Build, Version: Release}), nil
+}
+
+func (s *server) RestartWhenIdle(context.Context, *connect.Request[nushiv1.RestartWhenIdleRequest]) (*connect.Response[nushiv1.RestartWhenIdleResponse], error) {
+	if s.restart == nil {
+		return nil, connect.NewError(connect.CodeUnimplemented, errors.New("this daemon doesn't restart itself"))
+	}
+	s.restart.WhenIdle()
+	return connect.NewResponse(&nushiv1.RestartWhenIdleResponse{}), nil
 }
 
 func (s *server) ListChats(ctx context.Context, _ *connect.Request[nushiv1.ListChatsRequest]) (*connect.Response[nushiv1.ListChatsResponse], error) {
@@ -344,7 +363,9 @@ func (s *server) SendPrompt(ctx context.Context, req *connect.Request[nushiv1.Se
 	case m.Queue:
 		how = chats.SendQueue
 	}
-	if err := s.chats.Prompt(ctx, m.ChatId, msg, how); err != nil {
+	if err := s.chats.Prompt(ctx, m.ChatId, msg, how); errors.Is(err, chats.ErrRestarting) {
+		return nil, connect.NewError(connect.CodeUnavailable, err) // the app sends it again
+	} else if err != nil {
 		return nil, waitErr(ctx, err)
 	}
 	return connect.NewResponse(&nushiv1.SendPromptResponse{}), nil

@@ -20,6 +20,7 @@ import (
 	"runtime/debug"
 	"slices"
 	"strings"
+	"sync"
 	"syscall"
 
 	"golang.org/x/sys/unix"
@@ -42,6 +43,7 @@ import (
 	"github.com/afrase/nushi/internal/features/mcp"
 	"github.com/afrase/nushi/internal/features/memory"
 	"github.com/afrase/nushi/internal/features/remote"
+	"github.com/afrase/nushi/internal/features/restart"
 	"github.com/afrase/nushi/internal/features/terminals"
 	"github.com/afrase/nushi/internal/features/tools"
 	"github.com/afrase/nushi/internal/features/trust"
@@ -212,9 +214,10 @@ func run() error {
 	// The API, on the socket for the app (with the token) and on each
 	// paired device's channel (ADR 0034).
 	logs.SetDebug(st.DebugLog())
+	restarts := restart.New(chatSvc, termSvc)
 	sv := api.Services{Log: st, Transcripts: st, Chats: chatSvc, Agents: agentSvc, MCP: mcp.New(claudemcp.Claude{}, chatSvc.MCPChanged), Skills: newSkills(), Terms: termSvc,
 		Trust: trust.New(map[string]trust.Agent{"claude": claudetrust.Trust{}, "codex": codextrust.Trust{}, "ante": antetrust.Trust{}, "omp": omptrust.Trust{}, "pig": pig.Trust{}}, st),
-		Hub:   hub, Memory: memory.New(chatSvc)}
+		Hub:   hub, Memory: memory.New(chatSvc), Restart: restarts}
 	sv.Jira = newJira(st, os.Getenv("NUSHI_DATA") != "")
 	sv.GitHub = newGitHub(st, os.Getenv("NUSHI_DATA") != "")
 	toolSvc := tools.New(sv.Jira.Tools())
@@ -240,10 +243,11 @@ func run() error {
 	srv := &http.Server{Handler: mux, Protocols: new(http.Protocols), ErrorLog: errorLog} //nolint:gosec // a Unix socket in a 0700 folder; clients need the token
 	srv.Protocols.SetUnencryptedHTTP2(true)
 
-	// On SIGINT or SIGTERM, or once its app is deleted, stop the agents
-	// too: their sessions reopen through session/load when the daemon is
-	// back.
-	why, err := serve(srv, ln)
+	// On SIGINT or SIGTERM, once its app is deleted, or for a restart
+	// into a newer build, stop the agents too: their sessions reopen
+	// through session/load when the daemon is back.
+	closeChats := sync.OnceFunc(func() { chatSvc.Close(); termSvc.CloseAll() })
+	why, err := serve(srv, ln, restarts.Due(), closeChats)
 	if why != "" {
 		slog.Info("nushid stopping", "why", why)
 	} else {
@@ -251,8 +255,7 @@ func run() error {
 	}
 	sv.Remote.Close()
 	_ = remoteSrv.Close() // stopping: nothing is left to tell
-	chatSvc.Close()
-	termSvc.CloseAll()
+	closeChats()
 	if errors.Is(err, http.ErrServerClosed) {
 		slog.Info("nushid stopped")
 		return nil
@@ -260,10 +263,14 @@ func run() error {
 	return err
 }
 
-// serve serves the API on ln until SIGINT or SIGTERM, or until the app
-// the daemon runs from is deleted (appDeleted), and says why it stopped:
-// "" when Serve failed by itself.
-func serve(srv *http.Server, ln net.Listener) (string, error) {
+// serve serves the API on ln until SIGINT or SIGTERM, until the app the
+// daemon runs from is deleted (appDeleted), or until a restart is due
+// (internal/features/restart), and says why it stopped: "" when Serve
+// failed by itself. For a restart the chats and terminals close first,
+// while the socket still answers (prompts refused, to be sent again): the
+// app starts the new daemon once the socket is gone, so the two never run
+// at once.
+func serve(srv *http.Server, ln net.Listener, restartDue <-chan struct{}, closeChats func()) (string, error) {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 	exe, _ := os.Executable() // "" (never deleted) if macOS can't say
@@ -275,6 +282,9 @@ func serve(srv *http.Server, ln net.Listener) (string, error) {
 			why <- unix.SignalName(sig.(syscall.Signal)) //nolint:forcetypeassert // signal.Notify sends syscall.Signals
 		case <-deleted:
 			why <- "its app was deleted"
+		case <-restartDue:
+			closeChats()
+			why <- "restarting into a newer build"
 		}
 		_ = srv.Close() // Serve returns ErrServerClosed
 	}()

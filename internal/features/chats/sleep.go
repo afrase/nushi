@@ -122,13 +122,19 @@ func (s *Service) doze(c *chat, after time.Duration) {
 }
 
 // idleLocked says the chat has been idle for after and that stopping its
-// agent loses nothing: no turn runs or waits on the user, nothing is
-// queued, no background command or subagent runs, no side chat is open,
-// and nothing moves, rewinds or reopens it.
+// agent loses nothing (quietLocked), with no side chat open.
 func (c *chat) idleLocked(after time.Duration) bool {
 	return c.parent == nil && c.canSleepLocked() == nil && time.Since(c.active) >= after &&
-		!c.busy && c.started.IsZero() && !c.ownTurn && !c.steering && c.sendingNow == 0 &&
-		len(c.queue) == 0 && len(c.waiting)+len(c.questions) == 0 && len(c.sides) == 0 && len(c.probes) == 0 &&
+		len(c.sides) == 0 && c.quietLocked()
+}
+
+// quietLocked says stopping the chat's agent loses nothing: no turn runs
+// or waits on the user, nothing is queued (the queue lives only in the
+// daemon), no background command or subagent runs, and nothing moves,
+// rewinds or reopens it.
+func (c *chat) quietLocked() bool {
+	return !c.busy && c.started.IsZero() && !c.ownTurn && !c.steering && c.sendingNow == 0 &&
+		len(c.queue) == 0 && len(c.waiting)+len(c.questions) == 0 && len(c.probes) == 0 &&
 		!slices.ContainsFunc(c.items, func(it model.Item) bool {
 			return it.Shell != nil && it.Shell.State == "running" || it.Subagent != nil && it.Subagent.State == "running"
 		})

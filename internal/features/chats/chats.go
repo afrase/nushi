@@ -89,7 +89,8 @@ type Service struct {
 
 	mu        sync.Mutex
 	chats     map[string]*chat
-	closing   bool // Close began: no agent starts any more
+	closing   bool        // Close began: no agent starts any more
+	resting   atomic.Bool // Rest: no prompt is taken any more
 	live      map[Agent]bool
 	opening   map[string]bool     // sessions Open is making chats of
 	removed   []model.RemovedChat // removed because their agent no longer had their sessions (gone.go)

@@ -20,8 +20,8 @@ cask "nushi" do
   end
 
   # The app quits (an upgrade opens it again). The daemon isn't stopped here: an upgrade leaves it and its chats
-  # running (the app offers Restart daemon), and it stops by itself about a minute after its app is gone for good
-  # (ADR 0055). No launchctl: Start at login's agent only opens the daemon at login and goes with the app, and
+  # running until they're idle, when the app has it restart into the new one (ADR 0056); it stops by itself about a
+  # minute after its app is gone for good (ADR 0055). No launchctl: Start at login's agent only opens the daemon at login and goes with the app, and
   # Homebrew's launchctl asks for sudo, on upgrades too. Chats' data stays; zap removes it.
   uninstall quit: "com.nushihq.Nushi"
 

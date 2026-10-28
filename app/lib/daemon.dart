@@ -38,7 +38,11 @@ final String dataDir =
         : '$support/Nushi');
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 76;
+const apiVersion = 77;
+
+/// The API from which a daemon restarts itself once nothing runs, when
+/// asked (RestartWhenIdle).
+const restartWhenIdleApi = 77;
 
 /// The app's link to nushid. [connected] follows a ping every few seconds;
 /// while connected, daemon events keep [chats] current. When no daemon
@@ -100,10 +104,34 @@ class Daemon extends ChangeNotifier {
   /// Whether the daemon is older than the app: it needs a restart.
   bool get outdated => daemonApi < apiVersion;
 
-  /// Whether the app bundles another build of the daemon than the one that
-  /// runs (installed since it started): a restart would bring it in.
+  /// The bundled daemon's build ([bundledBuild]): none on the phone, or
+  /// when the app isn't packaged. Tests set one.
+  late String? bundled = remote ? null : bundledBuild;
+
+  /// Whether the app bundles a newer build of the daemon than the one that
+  /// runs (installed since it started): a restart would bring it in. Newer
+  /// by its program's time, so a second, older copy of the app open at
+  /// once never takes the daemon back.
   bool get replaced =>
-      bundledBuild != null && _build.isNotEmpty && _build != bundledBuild;
+      _build.isNotEmpty && _builtAt(bundled ?? '') > _builtAt(_build);
+
+  static int _builtAt(String build) => int.tryParse(build.split('-').last) ?? 0;
+
+  /// Whether the daemon is older than the bundled one and restarts into it
+  /// by itself once nothing runs: the pings ask it to (an ask lapses unless
+  /// repeated, so an app that quit leaves it running), and the app starts
+  /// the new one when it has gone. Meanwhile the app works as usual, the
+  /// daemon behind or not (its API only grew), so what runs can be seen
+  /// and answered.
+  bool get updatesWhenIdle =>
+      !remote &&
+      bundled != null &&
+      daemonApi >= restartWhenIdleApi &&
+      (outdated || replaced);
+
+  /// Whether the daemon last answered [updatesWhenIdle]: when it's gone,
+  /// it's restarting.
+  bool updating = false;
   final _launcher = Launcher();
 
   /// Whether starting the bundled daemon keeps failing.
@@ -307,6 +335,13 @@ class Daemon extends ChangeNotifier {
         daemonApi = api; // kept while away: the app stays as it was
         _build = build;
         daemonVersion = version;
+        if (updatesWhenIdle && !updating) {
+          appLog.info('the daemon restarts into the bundled one when idle', {
+            'build': build,
+            'bundled': ?bundled,
+          });
+        }
+        updating = updatesWhenIdle;
       }
       notifyListeners();
       if (remote) {
@@ -323,6 +358,13 @@ class Daemon extends ChangeNotifier {
       }
     }
     if (ok && !remote) macView.tick(); // said again within the lease
+    if (ok && updating) {
+      unawaited(
+        client
+            .restartWhenIdle(RestartWhenIdleRequest())
+            .then((_) {}, onError: (Object _) {}),
+      );
+    }
     return ok;
   }
 

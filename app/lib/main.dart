@@ -11,6 +11,7 @@ import 'package:nushi/chat_header.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/chat_view.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/daemon_update.dart';
 import 'package:nushi/details_panel.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/github_view.dart';
@@ -27,7 +28,6 @@ import 'package:nushi/status_bar.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/trust_card.dart';
-import 'package:nushi/widgets.dart';
 
 void main() => runZonedGuarded(() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -239,7 +239,9 @@ class _Shell extends StatelessWidget {
           ),
         );
       }
-      if (daemon.outdated) return _Outdated(daemon);
+      if (daemon.outdated && !daemon.updatesWhenIdle) {
+        return OutdatedScreen(daemon);
+      }
       final chat = daemon.selected;
       final app = LayoutBuilder(
         builder: (context, box) => Row(
@@ -278,11 +280,14 @@ class _Shell extends StatelessWidget {
               color: theme.t.needsSoft,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               child: Text(
-                'Lost the connection to the daemon; reconnecting…',
+                daemon.updating
+                    ? 'Starting the new daemon…'
+                    : 'Lost the connection to the daemon; reconnecting…',
                 style: theme.ui(theme.t.needs, size: 12),
               ),
             ),
-          if (daemon.connected && daemon.replaced) _Replaced(daemon),
+          if (daemon.connected && daemon.updatesWhenIdle)
+            DaemonUpdateBar(daemon),
           if (daemon.connected && daemon.removedChats.isNotEmpty)
             RemovedChatsBar(daemon),
           Expanded(child: app),
@@ -389,104 +394,4 @@ class _ChatPaneState extends State<_ChatPane> {
       },
     ),
   );
-}
-
-/// Says a newer daemon was installed since the running one started (same
-/// API), with a way to restart into it.
-class _Replaced extends StatefulWidget {
-  const new(this.daemon);
-
-  final Daemon daemon;
-
-  @override
-  State<_Replaced> createState() => _ReplacedState();
-}
-
-class _ReplacedState extends State<_Replaced> {
-  bool _restarting = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    return Container(
-      color: t.raised,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Row(
-        spacing: 12,
-        children: [
-          Expanded(
-            child: Text(
-              'A newer daemon is installed. Restarting stops running turns '
-              'and closes terminals.',
-              style: theme.ui(t.textSecondary, size: 12),
-            ),
-          ),
-          Button(
-            label: _restarting ? 'Restarting…' : 'Restart daemon',
-            onPressed: _restarting
-                ? null
-                : () async {
-                    setState(() => _restarting = true);
-                    await tryOrShow(context, widget.daemon.restartDaemon);
-                    if (mounted) setState(() => _restarting = false);
-                  },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Says the daemon is older than the app, with a way to restart it: the app
-/// shows nothing else until it has.
-class _Outdated extends StatefulWidget {
-  const new(this.daemon);
-
-  final Daemon daemon;
-
-  @override
-  State<_Outdated> createState() => _OutdatedState();
-}
-
-class _OutdatedState extends State<_Outdated> {
-  bool _restarting = false;
-
-  Future<void> _restart() async {
-    setState(() => _restarting = true);
-    await tryOrShow(context, widget.daemon.restartDaemon);
-    if (mounted) setState(() => _restarting = false);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'The daemon is older than this app. Restarting it stops '
-              'running turns and closes terminals; chats reopen as you open '
-              'them.',
-              textAlign: TextAlign.center,
-              style: theme.ui(t.textSecondary),
-            ),
-            const SizedBox(height: 14),
-            if (bundledDaemon != null)
-              Button(
-                label: _restarting ? 'Restarting…' : 'Restart daemon',
-                kind: ButtonKind.primary,
-                onPressed: _restarting ? null : _restart,
-              )
-            else
-              Text('make stop daemon', style: theme.code(t.textMuted)),
-          ],
-        ),
-      ),
-    );
-  }
 }

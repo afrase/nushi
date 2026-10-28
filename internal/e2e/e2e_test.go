@@ -30,6 +30,7 @@ import (
 	"github.com/afrase/nushi/internal/features/agents"
 	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/features/memory"
+	"github.com/afrase/nushi/internal/features/restart"
 	"github.com/afrase/nushi/internal/features/terminals"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
@@ -51,6 +52,7 @@ type daemon struct {
 	devices string // as a paired device's channel does
 	stop    func()
 	kill    func() // ends the last agent started, as if its process died
+	restart *restart.Service
 }
 
 // pipeAgent is a fake agent "process" over pipes.
@@ -130,7 +132,9 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	go func() {
 		_ = hub.Subscribe(follow, func(e model.Event) bool { terms.Follow(e); return true }, events.Unbounded())
 	}()
-	sv := api.Services{Chats: svc, Agents: agents.New(nil, nil, "", nil), Terms: terms, Hub: hub, Memory: memory.New(svc), Transcripts: st}
+	restarts := restart.New(svc, terms)
+	restarts.Every = 20 * time.Millisecond
+	sv := api.Services{Chats: svc, Agents: agents.New(nil, nil, "", nil), Terms: terms, Hub: hub, Memory: memory.New(svc), Transcripts: st, Restart: restarts}
 	srv := httptest.NewServer(api.WithToken("tok", api.New(sv)))
 	devices := httptest.NewServer(api.ForDevices(sv))
 	stop := func() {
@@ -142,7 +146,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 		svc.Close()
 	}
 	t.Cleanup(stop)
-	return &daemon{url: srv.URL, devices: devices.URL, stop: stop, kill: func() {
+	return &daemon{url: srv.URL, devices: devices.URL, stop: stop, restart: restarts, kill: func() {
 		mu.Lock()
 		defer mu.Unlock()
 		kill()

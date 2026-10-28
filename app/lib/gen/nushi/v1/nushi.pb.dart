@@ -150,6 +150,92 @@ class PingResponse extends $pb.GeneratedMessage {
   void clearVersion() => $_clearField(3);
 }
 
+class RestartWhenIdleRequest extends $pb.GeneratedMessage {
+  factory RestartWhenIdleRequest() => RestartWhenIdleRequest._();
+
+  RestartWhenIdleRequest._();
+
+  factory RestartWhenIdleRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RestartWhenIdleRequest()..mergeFromBuffer(data, registry);
+  factory RestartWhenIdleRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RestartWhenIdleRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RestartWhenIdleRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RestartWhenIdleRequest.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RestartWhenIdleRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RestartWhenIdleRequest copyWith(
+          void Function(RestartWhenIdleRequest) updates) =>
+      super.copyWith((message) => updates(message as RestartWhenIdleRequest))
+          as RestartWhenIdleRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RestartWhenIdleRequest() / RestartWhenIdleRequest.new instead')
+  static RestartWhenIdleRequest create() => RestartWhenIdleRequest._();
+  static $pb.GeneratedMessage $_createMessage() => RestartWhenIdleRequest._();
+  @$core.override
+  RestartWhenIdleRequest createEmptyInstance() => RestartWhenIdleRequest._();
+  @$core.pragma('dart2js:noInline')
+  static RestartWhenIdleRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RestartWhenIdleRequest>(
+          RestartWhenIdleRequest.$_createMessage);
+  static RestartWhenIdleRequest? _defaultInstance;
+}
+
+class RestartWhenIdleResponse extends $pb.GeneratedMessage {
+  factory RestartWhenIdleResponse() => RestartWhenIdleResponse._();
+
+  RestartWhenIdleResponse._();
+
+  factory RestartWhenIdleResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RestartWhenIdleResponse()..mergeFromBuffer(data, registry);
+  factory RestartWhenIdleResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RestartWhenIdleResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RestartWhenIdleResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RestartWhenIdleResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RestartWhenIdleResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RestartWhenIdleResponse copyWith(
+          void Function(RestartWhenIdleResponse) updates) =>
+      super.copyWith((message) => updates(message as RestartWhenIdleResponse))
+          as RestartWhenIdleResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RestartWhenIdleResponse() / RestartWhenIdleResponse.new instead')
+  static RestartWhenIdleResponse create() => RestartWhenIdleResponse._();
+  static $pb.GeneratedMessage $_createMessage() => RestartWhenIdleResponse._();
+  @$core.override
+  RestartWhenIdleResponse createEmptyInstance() => RestartWhenIdleResponse._();
+  @$core.pragma('dart2js:noInline')
+  static RestartWhenIdleResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RestartWhenIdleResponse>(
+          RestartWhenIdleResponse.$_createMessage);
+  static RestartWhenIdleResponse? _defaultInstance;
+}
+
 class ListChatsRequest extends $pb.GeneratedMessage {
   factory ListChatsRequest() => ListChatsRequest._();
 
@@ -24105,6 +24191,18 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, PingRequest request) =>
       _client.invoke<PingResponse>(
           ctx, 'NushiService', 'Ping', request, PingResponse());
+
+  /// Stops the daemon once no chat has a turn running or waiting on the
+  /// user, nothing is queued and no terminal runs a command; prompts are
+  /// refused from then on (Unavailable), to be sent again to the new one.
+  /// The Mac's app asks while it bundles a newer daemon than the one
+  /// running, again every few seconds (an ask lapses after 15 s, so an app
+  /// that quit leaves the daemon running), and starts the new one once
+  /// this one has gone. Not on a device's channel. API 77.
+  $async.Future<RestartWhenIdleResponse> restartWhenIdle(
+          $pb.ClientContext? ctx, RestartWhenIdleRequest request) =>
+      _client.invoke<RestartWhenIdleResponse>(ctx, 'NushiService',
+          'RestartWhenIdle', request, RestartWhenIdleResponse());
 
   /// Lists every stored chat.
   $async.Future<ListChatsResponse> listChats(

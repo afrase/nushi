@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/daemon_update.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/syntax.dart';
@@ -239,7 +240,7 @@ Future<void> sendReview(
   if (note == null || unsent.isEmpty || !context.mounted) return;
   await tryOrShow(context, () async {
     final text = reviewMessage(unsent, note);
-    await daemon.client.sendPrompt(
+    await daemon.sendPrompt(
       SendPromptRequest(chatId: chat, text: text, queue: true),
     );
     for (final c in unsent) {

@@ -25,6 +25,30 @@ extension type NushiServiceClient (connect.Transport _transport) {
     );
   }
 
+  /// Stops the daemon once no chat has a turn running or waiting on the
+  /// user, nothing is queued and no terminal runs a command; prompts are
+  /// refused from then on (Unavailable), to be sent again to the new one.
+  /// The Mac's app asks while it bundles a newer daemon than the one
+  /// running, again every few seconds (an ask lapses after 15 s, so an app
+  /// that quit leaves the daemon running), and starts the new one once
+  /// this one has gone. Not on a device's channel. API 77.
+  Future<nushiv1nushi.RestartWhenIdleResponse> restartWhenIdle(
+    nushiv1nushi.RestartWhenIdleRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.restartWhenIdle,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Lists every stored chat.
   Future<nushiv1nushi.ListChatsResponse> listChats(
     nushiv1nushi.ListChatsRequest input, {

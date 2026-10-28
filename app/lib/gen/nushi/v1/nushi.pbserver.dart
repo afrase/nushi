@@ -23,6 +23,8 @@ export 'nushi.pb.dart';
 abstract class NushiServiceBase extends $pb.GeneratedService {
   $async.Future<$0.PingResponse> ping(
       $pb.ServerContext ctx, $0.PingRequest request);
+  $async.Future<$0.RestartWhenIdleResponse> restartWhenIdle(
+      $pb.ServerContext ctx, $0.RestartWhenIdleRequest request);
   $async.Future<$0.ListChatsResponse> listChats(
       $pb.ServerContext ctx, $0.ListChatsRequest request);
   $async.Future<$0.GetChatResponse> getChat(
@@ -248,6 +250,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
     switch (methodName) {
       case 'Ping':
         return $0.PingRequest();
+      case 'RestartWhenIdle':
+        return $0.RestartWhenIdleRequest();
       case 'ListChats':
         return $0.ListChatsRequest();
       case 'GetChat':
@@ -478,6 +482,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
     switch (methodName) {
       case 'Ping':
         return ping(ctx, request as $0.PingRequest);
+      case 'RestartWhenIdle':
+        return restartWhenIdle(ctx, request as $0.RestartWhenIdleRequest);
       case 'ListChats':
         return listChats(ctx, request as $0.ListChatsRequest);
       case 'GetChat':

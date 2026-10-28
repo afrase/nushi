@@ -35,6 +35,9 @@ const (
 const (
 	// NushiServicePingProcedure is the fully-qualified name of the NushiService's Ping RPC.
 	NushiServicePingProcedure = "/nushi.v1.NushiService/Ping"
+	// NushiServiceRestartWhenIdleProcedure is the fully-qualified name of the NushiService's
+	// RestartWhenIdle RPC.
+	NushiServiceRestartWhenIdleProcedure = "/nushi.v1.NushiService/RestartWhenIdle"
 	// NushiServiceListChatsProcedure is the fully-qualified name of the NushiService's ListChats RPC.
 	NushiServiceListChatsProcedure = "/nushi.v1.NushiService/ListChats"
 	// NushiServiceGetChatProcedure is the fully-qualified name of the NushiService's GetChat RPC.
@@ -339,6 +342,14 @@ const (
 // NushiServiceClient is a client for the nushi.v1.NushiService service.
 type NushiServiceClient interface {
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
+	// Stops the daemon once no chat has a turn running or waiting on the
+	// user, nothing is queued and no terminal runs a command; prompts are
+	// refused from then on (Unavailable), to be sent again to the new one.
+	// The Mac's app asks while it bundles a newer daemon than the one
+	// running, again every few seconds (an ask lapses after 15 s, so an app
+	// that quit leaves the daemon running), and starts the new one once
+	// this one has gone. Not on a device's channel. API 77.
+	RestartWhenIdle(context.Context, *connect.Request[v1.RestartWhenIdleRequest]) (*connect.Response[v1.RestartWhenIdleResponse], error)
 	// Lists every stored chat.
 	ListChats(context.Context, *connect.Request[v1.ListChatsRequest]) (*connect.Response[v1.ListChatsResponse], error)
 	// Returns everything a chat's events have built so far, to pick it up
@@ -687,6 +698,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServicePingProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("Ping")),
+			connect.WithClientOptions(opts...),
+		),
+		restartWhenIdle: connect.NewClient[v1.RestartWhenIdleRequest, v1.RestartWhenIdleResponse](
+			httpClient,
+			baseURL+NushiServiceRestartWhenIdleProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("RestartWhenIdle")),
 			connect.WithClientOptions(opts...),
 		),
 		listChats: connect.NewClient[v1.ListChatsRequest, v1.ListChatsResponse](
@@ -1355,6 +1372,7 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 // nushiServiceClient implements NushiServiceClient.
 type nushiServiceClient struct {
 	ping                *connect.Client[v1.PingRequest, v1.PingResponse]
+	restartWhenIdle     *connect.Client[v1.RestartWhenIdleRequest, v1.RestartWhenIdleResponse]
 	listChats           *connect.Client[v1.ListChatsRequest, v1.ListChatsResponse]
 	getChat             *connect.Client[v1.GetChatRequest, v1.GetChatResponse]
 	getChatItems        *connect.Client[v1.GetChatItemsRequest, v1.GetChatItemsResponse]
@@ -1470,6 +1488,11 @@ type nushiServiceClient struct {
 // Ping calls nushi.v1.NushiService.Ping.
 func (c *nushiServiceClient) Ping(ctx context.Context, req *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error) {
 	return c.ping.CallUnary(ctx, req)
+}
+
+// RestartWhenIdle calls nushi.v1.NushiService.RestartWhenIdle.
+func (c *nushiServiceClient) RestartWhenIdle(ctx context.Context, req *connect.Request[v1.RestartWhenIdleRequest]) (*connect.Response[v1.RestartWhenIdleResponse], error) {
+	return c.restartWhenIdle.CallUnary(ctx, req)
 }
 
 // ListChats calls nushi.v1.NushiService.ListChats.
@@ -2025,6 +2048,14 @@ func (c *nushiServiceClient) Events(ctx context.Context, req *connect.Request[v1
 // NushiServiceHandler is an implementation of the nushi.v1.NushiService service.
 type NushiServiceHandler interface {
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
+	// Stops the daemon once no chat has a turn running or waiting on the
+	// user, nothing is queued and no terminal runs a command; prompts are
+	// refused from then on (Unavailable), to be sent again to the new one.
+	// The Mac's app asks while it bundles a newer daemon than the one
+	// running, again every few seconds (an ask lapses after 15 s, so an app
+	// that quit leaves the daemon running), and starts the new one once
+	// this one has gone. Not on a device's channel. API 77.
+	RestartWhenIdle(context.Context, *connect.Request[v1.RestartWhenIdleRequest]) (*connect.Response[v1.RestartWhenIdleResponse], error)
 	// Lists every stored chat.
 	ListChats(context.Context, *connect.Request[v1.ListChatsRequest]) (*connect.Response[v1.ListChatsResponse], error)
 	// Returns everything a chat's events have built so far, to pick it up
@@ -2369,6 +2400,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServicePingProcedure,
 		svc.Ping,
 		connect.WithSchema(nushiServiceMethods.ByName("Ping")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceRestartWhenIdleHandler := connect.NewUnaryHandler(
+		NushiServiceRestartWhenIdleProcedure,
+		svc.RestartWhenIdle,
+		connect.WithSchema(nushiServiceMethods.ByName("RestartWhenIdle")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceListChatsHandler := connect.NewUnaryHandler(
@@ -3035,6 +3072,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		switch r.URL.Path {
 		case NushiServicePingProcedure:
 			nushiServicePingHandler.ServeHTTP(w, r)
+		case NushiServiceRestartWhenIdleProcedure:
+			nushiServiceRestartWhenIdleHandler.ServeHTTP(w, r)
 		case NushiServiceListChatsProcedure:
 			nushiServiceListChatsHandler.ServeHTTP(w, r)
 		case NushiServiceGetChatProcedure:
@@ -3266,6 +3305,10 @@ type UnimplementedNushiServiceHandler struct{}
 
 func (UnimplementedNushiServiceHandler) Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.Ping is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) RestartWhenIdle(context.Context, *connect.Request[v1.RestartWhenIdleRequest]) (*connect.Response[v1.RestartWhenIdleResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.RestartWhenIdle is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) ListChats(context.Context, *connect.Request[v1.ListChatsRequest]) (*connect.Response[v1.ListChatsResponse], error) {

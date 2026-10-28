@@ -56,14 +56,8 @@ func (s *Service) Prompt(ctx context.Context, chatID string, m model.Message, ho
 		}
 	}()
 	for {
-		if err := c.closedLocked(); err != nil {
+		if err := s.refusesLocked(c); err != nil {
 			return err
-		}
-		if err := folderGone(c.session); err != nil {
-			return fmt.Errorf("the chat can't go on: %w", err)
-		}
-		if c.sessionGone {
-			return errors.New("the chat can't go on: " + c.kind.goneText())
 		}
 		if c.asleep {
 			c.logLocked().Info("chat waking", "for", "a message")
@@ -106,6 +100,25 @@ func (s *Service) Prompt(ctx context.Context, chatID string, m model.Message, ho
 	default:
 		c.sendLocked(m)
 		sent = true
+	}
+	return nil
+}
+
+// refusesLocked says why the chat takes no prompt now; nil when it does.
+// Prompt holds the chat's lock from this check until the turn has started
+// or the message is queued, both of which Rest sees.
+func (s *Service) refusesLocked(c *chat) error {
+	if s.resting.Load() {
+		return ErrRestarting
+	}
+	if err := c.closedLocked(); err != nil {
+		return err
+	}
+	if err := folderGone(c.session); err != nil {
+		return fmt.Errorf("the chat can't go on: %w", err)
+	}
+	if c.sessionGone {
+		return errors.New("the chat can't go on: " + c.kind.goneText())
 	}
 	return nil
 }

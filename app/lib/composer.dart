@@ -6,6 +6,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/completions.dart';
 import 'package:nushi/composer_parts.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/daemon_update.dart';
 import 'package:nushi/draft.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart';
@@ -208,7 +209,7 @@ class _ComposerState extends State<Composer> {
     _mentions.clear();
     _lastFiles = files;
     try {
-      await widget.daemon.client.sendPrompt(
+      await widget.daemon.sendPrompt(
         SendPromptRequest(
           chatId: widget.chat.id,
           text: withReplies(replies, text),

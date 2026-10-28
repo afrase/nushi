@@ -17,6 +17,20 @@ abstract final class NushiService {
     nushiv1nushi.PingResponse.new,
   );
 
+  /// Stops the daemon once no chat has a turn running or waiting on the
+  /// user, nothing is queued and no terminal runs a command; prompts are
+  /// refused from then on (Unavailable), to be sent again to the new one.
+  /// The Mac's app asks while it bundles a newer daemon than the one
+  /// running, again every few seconds (an ask lapses after 15 s, so an app
+  /// that quit leaves the daemon running), and starts the new one once
+  /// this one has gone. Not on a device's channel. API 77.
+  static const restartWhenIdle = connect.Spec(
+    '/$name/RestartWhenIdle',
+    connect.StreamType.unary,
+    nushiv1nushi.RestartWhenIdleRequest.new,
+    nushiv1nushi.RestartWhenIdleResponse.new,
+  );
+
   /// Lists every stored chat.
   static const listChats = connect.Spec(
     '/$name/ListChats',

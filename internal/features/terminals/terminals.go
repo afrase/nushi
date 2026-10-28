@@ -250,6 +250,18 @@ func (s *Service) Within(dir string) bool {
 	})
 }
 
+// Busy says whether a terminal runs a command: a program other than its
+// shell in the foreground. One at its prompt has nothing to lose but its
+// scrollback.
+func (s *Service) Busy() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return slices.ContainsFunc(s.terms, func(t *term) bool {
+		exited, _ := t.shell.Exit()
+		return !exited && t.shell.Program() != ""
+	})
+}
+
 // CloseChat ends a chat's terminals.
 func (s *Service) CloseChat(chatID string) {
 	gone := s.unlist(func(t *term) bool { return t.ChatID == chatID })
