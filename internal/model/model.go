@@ -513,6 +513,9 @@ type Status struct {
 	SessionGone bool
 	// CanSleep says Sleep can stop its agent: the agent reopens sessions.
 	CanSleep bool
+	// Background is how many subagents and background commands its agent
+	// started still run; a turn can end while they do.
+	Background int
 }
 
 // TranscriptCopy is Nushi's copy of a chat's transcript (ADR 0047): its

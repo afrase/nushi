@@ -61,7 +61,7 @@ class _ChatHeaderState extends State<ChatHeader> {
         ?.name;
     final titleStyle = theme.ui(t.text, weight: FontWeight.w600);
     // The title and the model (a Codex model id is long) share what the
-    // rest of the row leaves (it takes about 450 points, the Pull request
+    // rest of the row leaves (it takes about 455 points, the Pull request
     // tab 88 more), so a narrow window cuts them short rather than
     // overflow. Narrower still, the least needed parts fold, so the
     // chat's menu (⋯) stays at the row's end: the model, the agent's name
@@ -79,7 +79,7 @@ class _ChatHeaderState extends State<ChatHeader> {
         );
         final shown = modelName != null && !folds.model;
         // What the title and the model (its gap taken out) share.
-        final room = box.maxWidth - 450 - more + folds.saved - (shown ? 10 : 0);
+        final room = box.maxWidth - 455 - more + folds.saved - (shown ? 10 : 0);
         const least = 80.0;
         var title = (room * 0.6).clamp(least, 320.0);
         if (shown) title = min(title, max(least, room - 40));
@@ -284,7 +284,7 @@ class _ChatHeaderState extends State<ChatHeader> {
 }
 
 /// What of the chat's header folds at a width, the least needed first,
-/// and the points that frees of the row's 450 (the model's aren't in it).
+/// and the points that frees of the row's 455 (the model's aren't in it).
 typedef HeaderFolds = ({
   bool model,
   bool name,
@@ -306,10 +306,10 @@ HeaderFolds headerFolds(
   required bool panel,
   bool model = false,
 }) {
-  // Measured: the row without its title and model takes about 450
-  // points (oh-my-pi's name, "couldn't start"), the Pull request tab 88
+  // Measured: the row without its title and model takes about 455
+  // points (oh-my-pi's name, "in background"), the Pull request tab 88
   // more.
-  final need = 450.0 + (pull ? 88 : 0) + 80 + (model ? 50 : 0);
+  final need = 455.0 + (pull ? 88 : 0) + 80 + (model ? 50 : 0);
   var saved = 0.0;
   final folds = <String>{};
   // Each part and about how much folding it frees.
@@ -333,7 +333,7 @@ HeaderFolds headerFolds(
     tabs: folds.contains('tabs'),
     buttons: folds.contains('buttons'),
     any: folds.isNotEmpty,
-    // The model's points were never in the row's 450.
+    // The model's points were never in the row's 455.
     saved: saved - (folds.contains('model') ? 50 : 0),
   );
 }

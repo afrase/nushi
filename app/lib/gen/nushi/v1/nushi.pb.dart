@@ -13454,6 +13454,7 @@ class ChatStatus extends $pb.GeneratedMessage {
     $core.bool? canSleep,
     $core.bool? reopenFailed,
     $core.bool? sessionGone,
+    $core.int? background,
   }) {
     final result = ChatStatus._();
     if (busy != null) result.busy = busy;
@@ -13468,6 +13469,7 @@ class ChatStatus extends $pb.GeneratedMessage {
     if (canSleep != null) result.canSleep = canSleep;
     if (reopenFailed != null) result.reopenFailed = reopenFailed;
     if (sessionGone != null) result.sessionGone = sessionGone;
+    if (background != null) result.background = background;
     return result;
   }
 
@@ -13496,6 +13498,7 @@ class ChatStatus extends $pb.GeneratedMessage {
     ..aOB(11, _omitFieldNames ? '' : 'canSleep')
     ..aOB(12, _omitFieldNames ? '' : 'reopenFailed')
     ..aOB(13, _omitFieldNames ? '' : 'sessionGone')
+    ..aI(14, _omitFieldNames ? '' : 'background')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -13644,6 +13647,17 @@ class ChatStatus extends $pb.GeneratedMessage {
   $core.bool hasSessionGone() => $_has(11);
   @$pb.TagNumber(13)
   void clearSessionGone() => $_clearField(13);
+
+  /// How many subagents and background commands the chat's agent started
+  /// still run (API 84): a turn can end while they do.
+  @$pb.TagNumber(14)
+  $core.int get background => $_getIZ(12);
+  @$pb.TagNumber(14)
+  set background($core.int value) => $_setSignedInt32(12, value);
+  @$pb.TagNumber(14)
+  $core.bool hasBackground() => $_has(12);
+  @$pb.TagNumber(14)
+  void clearBackground() => $_clearField(14);
 }
 
 /// A shell the user runs beside a chat, in the daemon.

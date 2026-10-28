@@ -74,6 +74,10 @@ class _StatusBarState extends State<StatusBar> {
           final asleep = live.where((c) => c.asleep).length;
           final expired = live.where((c) => c.phase == .expired).length;
           final failed = live.where((c) => c.phase == .failed).length;
+          final background = live.where((c) => c.phase == .background);
+          final inBackground = background.isEmpty
+              ? ''
+              : ' (${background.length} working in the background)';
           final awake = live.length - asleep - failed - expired;
           return Container(
             height: 24,
@@ -86,7 +90,8 @@ class _StatusBarState extends State<StatusBar> {
               children: [
                 Tooltip(
                   message:
-                      '$working working, $awake awake, $asleep asleep'
+                      '$working working, $awake awake$inBackground, '
+                      '$asleep asleep'
                       "${failed > 0 ? ", $failed couldn't start" : ''}"
                       "${expired > 0 ? ', $expired expired' : ''}",
                   child: Row(

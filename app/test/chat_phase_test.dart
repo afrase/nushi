@@ -20,6 +20,10 @@ final Map<String, Chat> _chats = {
     status: ChatStatus(busy: true, waiting: true),
   ),
   'done': chat('u', 'claude', 'U')..unseen = true,
+  // A turn's end while subagents or commands run on: not "idle", nor
+  // "done" while unseen.
+  'in background': chat('b', 'claude', 'B', status: ChatStatus(background: 2))
+    ..unseen = true,
   'idle': chat('i', 'ante', 'I')..unseen = false,
   'asleep': chat('s', 'omp', 'S', status: ChatStatus(asleep: true)),
   "couldn't start": chat(
@@ -89,5 +93,19 @@ void main() {
     }
     expect(d.chats['e']!.phase, ChatPhase.expired);
     d.dispose();
+  });
+
+  test('a collapsed group: working in the background is under working, '
+      'over an unseen end', () {
+    ChatState of(ChatStatus s, {bool unseen = false}) => ChatState('x', '/f')
+      ..status(s)
+      ..unseen = unseen;
+    final background = of(ChatStatus(background: 1));
+    final unseen = of(ChatStatus(), unseen: true);
+    final working = of(ChatStatus(busy: true));
+    expect(groupPhase([unseen, background]), ChatPhase.background);
+    expect(groupPhase([background, working]), ChatPhase.working);
+    expect(background.phase, ChatPhase.background);
+    expect(of(ChatStatus(busy: true, background: 1)).phase, ChatPhase.working);
   });
 }

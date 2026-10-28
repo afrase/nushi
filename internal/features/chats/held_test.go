@@ -45,7 +45,7 @@ func TestABackgroundSubagentLeavesTheChatIdle(t *testing.T) {
 		t.Fatal(err)
 	}
 	eventually(t, c, func() bool { return !c.busy && c.started.IsZero() })
-	if st := c.statusLocked(); st.Busy || !st.Started.IsZero() {
+	if st := c.statusLocked(); st.Busy || !st.Started.IsZero() || st.Background != 1 {
 		t.Errorf("status while only the subagent runs: %+v", st)
 	}
 	if sa := c.itemLocked("a1").Subagent; sa == nil || sa.State != "running" {

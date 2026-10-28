@@ -372,8 +372,14 @@ func TestBackgroundShellsAreFollowed(t *testing.T) {
 	file := filepath.Join(dir, "b1.output")
 	noErr(t, os.WriteFile(file, []byte("half"), 0o600))
 	events := make(chan model.Event, 100)
-	c := &chat{id: "s1", sid: "s1", dialect: claudeDialect, publish: func(e model.Event) { events <- e }, agent: &fakeAgent{},
-		session: model.Session{Folder: "/w"}}
+	var counts []int // how many run in the background, as each status said (under c.mu)
+	c := &chat{id: "s1", sid: "s1", dialect: claudeDialect, agent: &fakeAgent{}, session: model.Session{Folder: "/w"},
+		publish: func(e model.Event) {
+			if e.Status != nil {
+				counts = append(counts, e.Status.Background)
+			}
+			events <- e
+		}}
 	text := func(s string) []acp.ToolCallContent {
 		return []acp.ToolCallContent{{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: s}}}}}
 	}
@@ -408,6 +414,12 @@ func TestBackgroundShellsAreFollowed(t *testing.T) {
 	noErr(t, os.WriteFile(file, []byte("all\n\n[exited with code 0]\n"), 0o600))
 	if sh := shell("done"); sh.Output != "all" || sh.End != "exited with code 0" || sh.Ended.IsZero() {
 		t.Errorf("done: %+v", sh)
+	}
+	c.mu.Lock()
+	said := slices.Compact(slices.Clone(counts))
+	c.mu.Unlock()
+	if !slices.Equal(said, []int{1, 0}) {
+		t.Errorf("the status said %v running in the background, want 1, then 0", said)
 	}
 
 	// Its agent gone without a word of its end: only that it started.

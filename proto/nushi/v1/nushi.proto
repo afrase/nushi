@@ -1816,6 +1816,9 @@ message ChatStatus {
   // (it deleted it). The chat stays only for its worktree's or scratch
   // folder's work; DeleteChat is what's left.
   bool session_gone = 13;
+  // How many subagents and background commands the chat's agent started
+  // still run (API 84): a turn can end while they do.
+  int32 background = 14;
 }
 
 // A shell the user runs beside a chat, in the daemon.

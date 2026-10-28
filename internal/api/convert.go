@@ -136,7 +136,8 @@ func usageProto(u model.Usage) *nushiv1.Usage {
 
 func statusProto(st model.Status) *nushiv1.ChatStatus {
 	return &nushiv1.ChatStatus{Busy: st.Busy, Waiting: st.Waiting, CanFork: st.CanFork, Images: st.Images, CanRewind: st.CanRewind,
-		McpChanged: st.MCPChanged, Started: unixMs(st.Started), CanAskContext: st.CanAskContext, Asleep: st.Asleep, CanSleep: st.CanSleep, ReopenFailed: st.ReopenFailed, SessionGone: st.SessionGone}
+		McpChanged: st.MCPChanged, Started: unixMs(st.Started), CanAskContext: st.CanAskContext, Asleep: st.Asleep, CanSleep: st.CanSleep, ReopenFailed: st.ReopenFailed, SessionGone: st.SessionGone,
+		Background: int32(st.Background)}
 }
 
 func removedProto(removed []model.RemovedChat) []*nushiv1.RemovedChat {

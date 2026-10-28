@@ -7,8 +7,6 @@ import (
 	"maps"
 	"slices"
 	"time"
-
-	"github.com/afrase/nushi/internal/model"
 )
 
 // A chat sleeps when its agent was stopped to free its memory: it stays
@@ -135,9 +133,7 @@ func (c *chat) idleLocked(after time.Duration) bool {
 func (c *chat) quietLocked() bool {
 	return !c.busy && c.started.IsZero() && !c.ownTurn && !c.steering && c.sendingNow == 0 &&
 		len(c.queue) == 0 && len(c.waiting)+len(c.questions) == 0 && len(c.probes) == 0 &&
-		!slices.ContainsFunc(c.items, func(it model.Item) bool {
-			return it.Shell != nil && it.Shell.State == "running" || it.Subagent != nil && it.Subagent.State == "running"
-		})
+		!slices.ContainsFunc(c.items, running)
 }
 
 // awake wakes a sleeping chat for something that needs its agent, and

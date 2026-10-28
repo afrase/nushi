@@ -3110,6 +3110,7 @@ const ChatStatus$json = {
     {'1': 'can_sleep', '3': 11, '4': 1, '5': 8, '10': 'canSleep'},
     {'1': 'reopen_failed', '3': 12, '4': 1, '5': 8, '10': 'reopenFailed'},
     {'1': 'session_gone', '3': 13, '4': 1, '5': 8, '10': 'sessionGone'},
+    {'1': 'background', '3': 14, '4': 1, '5': 5, '10': 'background'},
   ],
   '9': [
     {'1': 2, '2': 3},
@@ -3125,7 +3126,8 @@ final $typed_data.Uint8List chatStatusDescriptor = $convert.base64Decode(
     'IfCgttY3BfY2hhbmdlZBgIIAEoCFIKbWNwQ2hhbmdlZBImCg9jYW5fYXNrX2NvbnRleHQYCSAB'
     'KAhSDWNhbkFza0NvbnRleHQSFgoGYXNsZWVwGAogASgIUgZhc2xlZXASGwoJY2FuX3NsZWVwGA'
     'sgASgIUghjYW5TbGVlcBIjCg1yZW9wZW5fZmFpbGVkGAwgASgIUgxyZW9wZW5GYWlsZWQSIQoM'
-    'c2Vzc2lvbl9nb25lGA0gASgIUgtzZXNzaW9uR29uZUoECAIQA1IFZXJyb3I=');
+    'c2Vzc2lvbl9nb25lGA0gASgIUgtzZXNzaW9uR29uZRIeCgpiYWNrZ3JvdW5kGA4gASgFUgpiYW'
+    'NrZ3JvdW5kSgQIAhADUgVlcnJvcg==');
 
 @$core.Deprecated('Use terminalDescriptor instead')
 const Terminal$json = {

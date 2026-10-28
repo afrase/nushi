@@ -65,9 +65,14 @@ void main() {
     const model = 'claude-opus-5-5[1m]';
     for (final pull in [false, true]) {
       for (final panel in [false, true]) {
-        for (final (agent, failed) in [('claude', false), ('omp', true)]) {
+        for (final (agent, failed, background) in [
+          ('claude', false, 0),
+          ('omp', true, 0),
+          ('omp', false, 2), // "in background"
+        ]) {
           final chat = ChatState('c', '/Users/me/repo')
             ..agent = agent
+            ..background = background
             ..title = 'Fix the login redirect after the session expires'
             ..reopenFailed =
                 failed // "couldn't start", the longest word
