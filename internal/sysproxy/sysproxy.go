@@ -33,7 +33,18 @@ import (
 // evaluating it.
 var Timeout = 10 * time.Second
 
-// For returns the proxies to try for u (a ws:// or wss:// URL), in order;
+// Proxy is the proxy for an HTTP request (an http.Transport's Proxy): the
+// first For names, nil for a direct connection.
+func Proxy(r *http.Request) (*url.URL, error) {
+	ps, err := For(r.URL)
+	if err != nil || len(ps) == 0 {
+		return nil, err
+	}
+	return ps[0], nil
+}
+
+// For returns the proxies to try for u (a ws://, wss://, http:// or
+// https:// URL), in order;
 // a nil entry is a direct connection. Only u's scheme, host and port count:
 // a PAC file never sees its path (which holds the rendezvous id).
 func For(u *url.URL) ([]*url.URL, error) {
@@ -223,7 +234,7 @@ func pac(pacURL string, u *url.URL) ([]*url.URL, error) {
 		return nil, err
 	}
 	// CFNetwork knows http and https; a WebSocket URL is asked as either.
-	asked := url.URL{Scheme: map[string]string{"wss": "https", "ws": "http"}[u.Scheme], Host: u.Host, Path: "/"}
+	asked := url.URL{Scheme: map[string]string{"wss": "https", "ws": "http", "https": "https", "http": "http"}[u.Scheme], Host: u.Host, Path: "/"}
 	cmd := exec.CommandContext(ctx, "/usr/bin/osascript", "-l", "JavaScript", "-e", pacScript, asked.String()) //nolint:gosec // osascript with our own script
 	cmd.Stdin = bytes.NewReader(script)
 	out, err := cmd.Output()

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"net/url"
 	"os"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -28,8 +27,7 @@ func newJira(st *store.Store, dev bool) *jira.Service {
 	if dev {
 		service = "Nushi Jira (test)"
 	}
-	transport := http.DefaultTransport.(*http.Transport).Clone() //nolint:forcetypeassert // net/http's default is a *Transport
-	transport.Proxy = proxy
+	transport := proxiedTransport()
 	sites := jira.Sites{
 		Connect: func(ctx context.Context, site, email, token string) (jira.Client, model.JiraSite, error) {
 			c, me, err := jiracloud.Connect(ctx, site, email, token, transport)
@@ -63,18 +61,13 @@ func mcpTools(t *tools.Service, socket string) chats.Tools {
 	}
 }
 
-// proxy is the system's proxy for a request, as macOS would pick it
-// (internal/sysproxy speaks of WebSocket URLs: https is wss to it).
-func proxy(r *http.Request) (*url.URL, error) {
-	u := *r.URL
-	if u.Scheme == "https" {
-		u.Scheme = "wss"
-	}
-	ps, err := sysproxy.For(&u)
-	if err != nil || len(ps) == 0 {
-		return nil, err
-	}
-	return ps[0], nil
+// proxiedTransport is net/http's default transport through the system's
+// proxy, as macOS would pick it (a company network): Jira's, GitHub's and
+// Web Push's.
+func proxiedTransport() *http.Transport {
+	t := http.DefaultTransport.(*http.Transport).Clone() //nolint:forcetypeassert // net/http's default is a *Transport
+	t.Proxy = sysproxy.Proxy
+	return t
 }
 
 // is says an error is target.

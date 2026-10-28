@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"net/http"
 
 	"github.com/cli/go-gh/v2/pkg/auth"
 
@@ -23,8 +22,7 @@ func newGitHub(st *store.Store, dev bool) *github.Service {
 	if dev {
 		service = "Nushi GitHub (test)"
 	}
-	transport := http.DefaultTransport.(*http.Transport).Clone() //nolint:forcetypeassert // net/http's default is a *Transport
-	transport.Proxy = proxy
+	transport := proxiedTransport()
 	return github.New(github.Deps{
 		Gh: github.Gh{
 			Token: func(host string) (string, string) {

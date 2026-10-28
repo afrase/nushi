@@ -80,6 +80,11 @@ func TestPAC(t *testing.T) {
 	if !ok || len(got) != 3 || got[0].String() != "http://p.corp:8080" || got[1].String() != "socks5://s.corp:1080" || got[2] != nil {
 		t.Fatalf("PAC: %v", got)
 	}
+	// An https URL (Web Push, Jira, GitHub) is asked as itself.
+	u, _ = url.Parse("https://relay.example.com:8443/")
+	if got, ok := fromSettings(s, u, true); !ok || len(got) != 3 || got[0].String() != "http://p.corp:8080" {
+		t.Fatalf("PAC, https: %v", got)
+	}
 	u, _ = url.Parse("wss://relay.other.org/")
 	if got, _ := fromSettings(s, u, true); len(got) != 1 || got[0] != nil {
 		t.Fatalf("PAC, direct: %v", got)
