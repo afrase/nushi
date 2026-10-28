@@ -80,7 +80,7 @@ func TestAStoppedTurnIsntUnseen(t *testing.T) {
 	v := &viewers{shown: map[string]bool{}}
 	svc, agent, c := newSeenChat(t, &memSessions{}, v)
 	agent.gate = make(chan struct{})
-	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
 	if _, err := svc.Stop(context.Background(), c.id, false); err != nil {
 		t.Fatal(err)
 	}

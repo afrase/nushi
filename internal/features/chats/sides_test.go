@@ -44,7 +44,7 @@ func TestSideChatKeepsToItself(t *testing.T) {
 	// Asked something, it isn't stored either; closed mid-turn, the turn stops.
 	sideChat := svc.chats[side]
 	agent.gate = make(chan struct{})
-	if err := svc.Prompt(side, model.Message{Text: "aside?"}, SendIdle); err != nil {
+	if err := svc.Prompt(t.Context(), side, model.Message{Text: "aside?"}, SendIdle); err != nil {
 		t.Fatal(err)
 	}
 	eventually(t, sideChat, func() bool { return len(agent.onWire()) == 1 })

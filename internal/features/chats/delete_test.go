@@ -72,7 +72,7 @@ func TestNothingReopensAChatBeingDeleted(t *testing.T) {
 	if _, err := svc.Get(c.id); err != nil {
 		t.Fatal(err)
 	}
-	if err := svc.Prompt(c.id, model.Message{Text: "hi"}, SendQueue); err == nil {
+	if err := svc.Prompt(t.Context(), c.id, model.Message{Text: "hi"}, SendQueue); err == nil {
 		t.Error("a chat being deleted took a message")
 	}
 	if _, err := svc.Fork(context.Background(), c.id); err == nil {

@@ -26,7 +26,7 @@ func TestCloseStopsAnAgentStillOpening(t *testing.T) {
 	agent.quit()
 	eventually(t, c, func() bool { return c.agent == nil })
 	agent.loadGate = make(chan struct{})
-	if err := svc.Prompt(c.id, model.Message{Text: "queued while reopening"}, SendQueue); err != nil {
+	if err := svc.Prompt(t.Context(), c.id, model.Message{Text: "queued while reopening"}, SendQueue); err != nil {
 		t.Fatal(err)
 	}
 	eventually(t, c, func() bool { return c.busy })
@@ -72,7 +72,7 @@ func TestAFailedReopenIsntRetriedOnEveryCall(t *testing.T) {
 	if n != 1 {
 		t.Errorf("%d notices", n)
 	}
-	noErr(t, svc.Prompt(c.id, model.Message{Text: "again"}, SendQueue))
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "again"}, SendQueue))
 	eventually(t, c, func() bool { again, _, _ := agent.count(); return !c.busy && again == launches+1 })
 	if n := notices(); n != 1 {
 		t.Errorf("%d notices after trying again: the new one replaces the old", n)

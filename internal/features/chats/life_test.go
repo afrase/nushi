@@ -28,7 +28,7 @@ func texts(c *chat) []string {
 
 func turn(t *testing.T, svc *Service, c *chat, text string) {
 	t.Helper()
-	if err := svc.Prompt(c.id, model.Message{Text: text}, SendIdle); err != nil {
+	if err := svc.Prompt(t.Context(), c.id, model.Message{Text: text}, SendIdle); err != nil {
 		t.Fatal(err)
 	}
 	eventually(t, c, func() bool { return !c.busy && len(c.queue) == 0 })
@@ -111,7 +111,7 @@ func TestTheModeSurvivesANewSession(t *testing.T) {
 	}
 	plan("moved")
 	agent.gate = make(chan struct{})
-	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
 	if _, err := svc.Stop(ctx, c.id, true); err != nil {
 		t.Fatal(err)
 	}

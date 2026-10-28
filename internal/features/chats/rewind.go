@@ -191,7 +191,11 @@ func (s *Service) Stop(ctx context.Context, chatID string, takeBack bool) (*mode
 	if err != nil || id == "" {
 		return nil, err
 	}
-	<-done
+	select {
+	case <-done:
+	case <-ctx.Done(): // an agent that ignores the cancel: the message stays
+		return nil, ctx.Err()
+	}
 	can, gone := func() (bool, bool) {
 		c.mu.Lock()
 		defer c.mu.Unlock()

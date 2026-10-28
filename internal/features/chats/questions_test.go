@@ -100,7 +100,7 @@ func TestMalformedFormIsAnError(t *testing.T) {
 func TestStopCancelsAPendingQuestion(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.gate = make(chan struct{})
-	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
 	var req acp.CreateElicitationRequest
 	if err := json.Unmarshal([]byte(claudeForm), &req); err != nil {
 		t.Fatal(err)

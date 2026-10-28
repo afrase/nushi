@@ -18,10 +18,10 @@ func TestMessagesGoToSubagentsThroughTheAgent(t *testing.T) {
 		ToolCallID: "a1", Title: "Find it", Status: "completed", Meta: map[string]any{"claudeCode": map[string]any{"toolName": "Agent"}},
 		RawInput: []byte(`{"subagent_type":"Explore"}`), Content: []acp.ToolCallContent{{Type: "content", Content: &acp.Content{
 			Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: "Async agent launched successfully.\nagentId: ab59"}}}}}}}})
-	if err := svc.Prompt(c.id, model.Message{Text: "and README.md", To: "nope"}, SendQueue); err == nil {
+	if err := svc.Prompt(t.Context(), c.id, model.Message{Text: "and README.md", To: "nope"}, SendQueue); err == nil {
 		t.Error("a message for no subagent went")
 	}
-	if err := svc.Prompt(c.id, model.Message{Text: "and README.md", To: "a1"}, SendQueue); err != nil {
+	if err := svc.Prompt(t.Context(), c.id, model.Message{Text: "and README.md", To: "a1"}, SendQueue); err != nil {
 		t.Fatal(err)
 	}
 	eventually(t, c, func() bool { return !c.busy })
@@ -93,7 +93,7 @@ func TestARelayFollowsTheAgentsCall(t *testing.T) {
 		c.items = slices.DeleteFunc(c.items, func(it model.Item) bool { return it.Kind != model.ToolCall || it.ID != "a1" })
 		c.mu.Unlock()
 		agent.updates = tc.calls
-		if err := svc.Prompt(c.id, model.Message{Text: "and README.md", To: "a1"}, SendIdle); err != nil {
+		if err := svc.Prompt(t.Context(), c.id, model.Message{Text: "and README.md", To: "a1"}, SendIdle); err != nil {
 			t.Fatal(err)
 		}
 		eventually(t, c, func() bool { return !c.busy })

@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"slices"
 	"testing"
+	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -22,7 +23,7 @@ func (f *fakeAgent) onWire() []string {
 func TestACancelNeverOvertakesItsPrompt(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.gate, agent.sendGate = make(chan struct{}), make(chan struct{})
-	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
 	if _, err := svc.Stop(context.Background(), c.id, false); err != nil {
 		t.Fatal(err)
 	}
@@ -36,9 +37,9 @@ func TestACancelNeverOvertakesItsPrompt(t *testing.T) {
 func TestSendNowRechecksTheChatAfterWaiting(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.gate, agent.ignoreCancel = make(chan struct{}), true
-	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
 	now := make(chan error)
-	go func() { now <- svc.Prompt(c.id, model.Message{Text: "now"}, SendNow) }()
+	go func() { now <- svc.Prompt(t.Context(), c.id, model.Message{Text: "now"}, SendNow) }()
 	archived := make(chan error)
 	go func() { archived <- svc.Archive(c.id, true) }()
 	eventually(t, c, func() bool { return c.session.Archived && c.stopping })
@@ -57,8 +58,8 @@ func TestSendNowRechecksTheChatAfterWaiting(t *testing.T) {
 func TestArchiveDeliversNothingToTheAgentItStops(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.gate, agent.ignoreCancel = make(chan struct{}), true
-	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
-	noErr(t, svc.Prompt(c.id, model.Message{Text: "two"}, SendQueue))
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendQueue))
 	archived := make(chan error)
 	go func() { archived <- svc.Archive(c.id, true) }()
 	eventually(t, c, func() bool { return c.stopping })
@@ -100,9 +101,9 @@ func TestOneSteeringWorkerThatRespectsAStop(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.steerable, c.steer = true, true
 	agent.gate, agent.steerGate = make(chan struct{}), make(chan struct{})
-	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
-	noErr(t, svc.Prompt(c.id, model.Message{Text: "two"}, SendQueue))
-	noErr(t, svc.Prompt(c.id, model.Message{Text: "three"}, SendQueue))
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendQueue))
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "three"}, SendQueue))
 	toolDone := func(id string) {
 		_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call",
 			ToolCall: &acp.ToolCall{ToolCallID: acp.ToolCallID(id), Title: "ls", Status: "in_progress"}}})
@@ -149,7 +150,7 @@ func TestOneSteeringWorkerThatRespectsAStop(t *testing.T) {
 func TestCloseEndsTheTurnFirst(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.gate = make(chan struct{})
-	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
 	eventually(t, c, func() bool { return len(agent.onWire()) == 1 })
 	svc.Close()
 	if got := agent.onWire(); !reflect.DeepEqual(got, []string{"prompt one", "cancel", "stop"}) {
@@ -160,7 +161,7 @@ func TestCloseEndsTheTurnFirst(t *testing.T) {
 func TestAMessageTooLargeIsRefused(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	big := model.Image{MimeType: "image/png", Data: make([]byte, agentproc.MaxMessage*3/4)}
-	if err := svc.Prompt(c.id, model.Message{Text: "look", Images: []model.Image{big}}, SendIdle); err == nil {
+	if err := svc.Prompt(t.Context(), c.id, model.Message{Text: "look", Images: []model.Image{big}}, SendIdle); err == nil {
 		t.Error("a message past what the agent takes was sent")
 	}
 	if got, _ := agent.texts(); len(got) > 0 || len(c.items) > 0 {
@@ -173,7 +174,7 @@ func TestAFailedDeleteLeavesTheChatAsItWas(t *testing.T) {
 	sessions := svc.sessions.(*memSessions)
 	sessions.deleteErr = errors.New("disk full")
 	agent.gate, agent.ignoreCancel = make(chan struct{}), true
-	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
 	deleted := make(chan error)
 	go func() { deleted <- svc.Delete(context.Background(), c.id, nil) }()
 	eventually(t, c, func() bool { return c.halting })
@@ -189,4 +190,53 @@ func TestAFailedDeleteLeavesTheChatAsItWas(t *testing.T) {
 	if slices.ContainsFunc(sessions.saved, func(s model.Session) bool { return s.Archived }) || c.halting {
 		t.Errorf("after a failed delete: halting %v, saved %+v", c.halting, sessions.saved)
 	}
+}
+
+// A SendNow whose agent ignores the cancel gives up with its context, and
+// the chat takes messages again: the call doesn't wait for good.
+func TestSendNowGivesUpWithItsContext(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.gate, agent.ignoreCancel = make(chan struct{}), true
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	ctx, cancel := context.WithCancel(t.Context())
+	now := make(chan error, 1)
+	go func() { now <- svc.Prompt(ctx, c.id, model.Message{Text: "now"}, SendNow) }()
+	eventually(t, c, func() bool { return c.sendingNow == 1 })
+	cancel()
+	select {
+	case err := <-now:
+		if !errors.Is(err, context.Canceled) {
+			t.Errorf("gave up with %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("SendNow waited past its context")
+	}
+	eventually(t, c, func() bool { return c.sendingNow == 0 })
+	agent.release()
+	eventually(t, c, func() bool { return !c.busy })
+	if got, _ := agent.texts(); !reflect.DeepEqual(got, []string{"one"}) {
+		t.Errorf("prompts = %q", got)
+	}
+}
+
+// Stop with takeBack waits for the stopped turn's end, or for its context.
+func TestTakeBackGivesUpWithItsContext(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.gate, agent.ignoreCancel = make(chan struct{}), true
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	eventually(t, c, func() bool { return !c.started.IsZero() })
+	ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
+	defer cancel()
+	stopped := make(chan error, 1)
+	go func() { _, err := svc.Stop(ctx, c.id, true); stopped <- err }()
+	select {
+	case err := <-stopped:
+		if !errors.Is(err, context.DeadlineExceeded) {
+			t.Errorf("gave up with %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("Stop waited past its context")
+	}
+	agent.release()
+	eventually(t, c, func() bool { return !c.busy })
 }

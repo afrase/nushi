@@ -74,7 +74,7 @@ func TestCopyWrittenAsItemsSettle(t *testing.T) {
 	svc, agent, c, store, _ := newCopyingChat(t)
 	agent.gate = make(chan struct{})
 	agent.updates = []acp.SessionUpdate{chunk("m1", "looking"), toolCall("t1", "in_progress"), toolCall("t2", "in_progress"), toolDone("t2"), chunk("m2", "still")}
-	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
 	eventually(t, c, func() bool { return len(c.items) == 5 })
 	// t1 runs on, m2 streams: written once they settle, t2 placed after t1.
 	if got := copied(t, store, c.id); got != "user:one agent:m1 tool:t2" {
@@ -98,7 +98,7 @@ func TestCopyFollowsTheTranscript(t *testing.T) {
 	ctx := context.Background()
 	turn := func(text, reply string) {
 		agent.updates = []acp.SessionUpdate{chunk(reply, "ok")}
-		noErr(t, svc.Prompt(c.id, model.Message{Text: text}, SendIdle))
+		noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: text}, SendIdle))
 		eventually(t, c, func() bool { return !c.busy })
 	}
 	turn("one", "m1")
@@ -126,7 +126,7 @@ func TestCopyFollowsTheTranscript(t *testing.T) {
 	side, err := svc.Fork(ctx, c.id)
 	noErr(t, err)
 	agent.updates = []acp.SessionUpdate{chunk("s1", "aside")}
-	noErr(t, svc.Prompt(side, model.Message{Text: "aside?"}, SendIdle))
+	noErr(t, svc.Prompt(t.Context(), side, model.Message{Text: "aside?"}, SendIdle))
 	eventually(t, svc.chats[side], func() bool { return !svc.chats[side].busy })
 	if store.Has(side) {
 		t.Error("a side chat has a copy")
@@ -144,14 +144,14 @@ func TestCopiesOff(t *testing.T) {
 	svc, agent, c, store, on := newCopyingChat(t)
 	on.Store(false)
 	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
-	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
 	eventually(t, c, func() bool { return !c.busy })
 	if store.Has(c.id) {
 		t.Fatal("written while off")
 	}
 	on.Store(true)
 	agent.updates = []acp.SessionUpdate{chunk("m2", "ok")}
-	noErr(t, svc.Prompt(c.id, model.Message{Text: "two"}, SendIdle))
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendIdle))
 	eventually(t, c, func() bool { return !c.busy })
 	if got := copied(t, store, c.id); got != "user:two agent:m2" {
 		t.Fatalf("on again: %s", got)
@@ -178,7 +178,7 @@ func TestExpiredChatKeptForItsCopy(t *testing.T) {
 	if ids, _ := ev.removed(); len(ids) != 0 || len(sessions.deleted) != 0 {
 		t.Fatalf("removed %v", ids)
 	}
-	if err := svc.Prompt("c", model.Message{Text: "more"}, SendIdle); err == nil {
+	if err := svc.Prompt(t.Context(), "c", model.Message{Text: "more"}, SendIdle); err == nil {
 		t.Error("a message went to a session that's gone")
 	}
 
@@ -196,7 +196,7 @@ func TestExpiredChatKeptForItsCopy(t *testing.T) {
 func TestListAndClearCopies(t *testing.T) {
 	svc, agent, c, store, _ := newCopyingChat(t)
 	agent.updates = []acp.SessionUpdate{chunk("m1", strings.Repeat("long ", 400))}
-	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
 	eventually(t, c, func() bool { return !c.busy })
 	noErr(t, store.Append("ORPHAN", []model.Item{{ID: "x", Kind: model.AgentMessage, Text: "left"}}, []string{""}))
 	c.mu.Lock()
@@ -219,7 +219,7 @@ func TestListAndClearCopies(t *testing.T) {
 		t.Fatal("not cleared")
 	}
 	agent.updates = []acp.SessionUpdate{chunk("m2", "ok")}
-	noErr(t, svc.Prompt(c.id, model.Message{Text: "two"}, SendIdle))
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendIdle))
 	eventually(t, c, func() bool { return !c.busy })
 	if got := copied(t, store, c.id); got != "user:two agent:m2" {
 		t.Errorf("copied after clearing: %s", got)

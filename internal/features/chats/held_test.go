@@ -41,7 +41,7 @@ func TestABackgroundSubagentLeavesTheChatIdle(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.gate = make(chan struct{})
 	agent.updates = append(backgroundSubagent(), chunk("m1", "It runs in the background."), result())
-	if err := svc.Prompt(c.id, model.Message{Text: "start one"}, SendIdle); err != nil {
+	if err := svc.Prompt(t.Context(), c.id, model.Message{Text: "start one"}, SendIdle); err != nil {
 		t.Fatal(err)
 	}
 	eventually(t, c, func() bool { return !c.busy && c.started.IsZero() })
@@ -66,7 +66,7 @@ func TestABackgroundSubagentLeavesTheChatIdle(t *testing.T) {
 	}
 
 	agent.updates = []acp.SessionUpdate{chunk("m2", "51")}
-	if err := svc.Prompt(c.id, model.Message{Text: "17 times 3?"}, SendIdle); err != nil {
+	if err := svc.Prompt(t.Context(), c.id, model.Message{Text: "17 times 3?"}, SendIdle); err != nil {
 		t.Fatalf("a message while only the subagent runs: %v", err)
 	}
 	eventually(t, c, func() bool { prompts, _ := agent.texts(); return len(prompts) == 2 })
@@ -88,7 +88,7 @@ func TestASteeredTurnEndsAtItsLastResult(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.gate = make(chan struct{})
 	agent.updates = backgroundSubagent()
-	if err := svc.Prompt(c.id, model.Message{Text: "start one"}, SendIdle); err != nil {
+	if err := svc.Prompt(t.Context(), c.id, model.Message{Text: "start one"}, SendIdle); err != nil {
 		t.Fatal(err)
 	}
 	eventually(t, c, func() bool { return c.itemLocked("a1") != nil && c.itemLocked("a1").Status == "completed" })
@@ -113,7 +113,7 @@ func TestAResultAloneDoesntEndTheTurn(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.gate = make(chan struct{})
 	agent.updates = []acp.SessionUpdate{chunk("m1", "done"), result()}
-	if err := svc.Prompt(c.id, model.Message{Text: "hi"}, SendIdle); err != nil {
+	if err := svc.Prompt(t.Context(), c.id, model.Message{Text: "hi"}, SendIdle); err != nil {
 		t.Fatal(err)
 	}
 	eventually(t, c, func() bool { return c.itemLocked("m1") != nil })
@@ -158,7 +158,7 @@ func TestAStoppedTurnWaitsForItsAnswer(t *testing.T) {
 	agent.gate = make(chan struct{})
 	agent.ignoreCancel = true
 	agent.updates = backgroundSubagent()
-	if err := svc.Prompt(c.id, model.Message{Text: "start one"}, SendIdle); err != nil {
+	if err := svc.Prompt(t.Context(), c.id, model.Message{Text: "start one"}, SendIdle); err != nil {
 		t.Fatal(err)
 	}
 	eventually(t, c, func() bool { return c.itemLocked("a1") != nil && c.itemLocked("a1").Status == "completed" })

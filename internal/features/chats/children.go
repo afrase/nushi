@@ -1,6 +1,7 @@
 package chats
 
 import (
+	"context"
 	"errors"
 	"slices"
 
@@ -171,7 +172,7 @@ func (c *chat) childOfLocked(ch *child, sid string) string {
 // is stopped by asking the agent (Dialect.StopTask), as a message of the
 // user's that waits for the agent's next chance. Either way it shows as
 // stopped only once the agent says so.
-func (s *Service) StopTask(chatID, callID string) error {
+func (s *Service) StopTask(ctx context.Context, chatID, callID string) error {
 	c, err := s.chat(chatID)
 	if err != nil {
 		return err
@@ -193,7 +194,7 @@ func (s *Service) StopTask(chatID, callID string) error {
 		return cancelTurn(agent, &acp.CancelNotification{SessionID: acp.SessionID(sid)})
 	}
 	c.mu.Unlock()
-	return s.Prompt(chatID, model.Message{To: callID, Relay: &model.Relay{Stop: true}}, SendQueue)
+	return s.Prompt(ctx, chatID, model.Message{To: callID, Relay: &model.Relay{Stop: true}}, SendQueue)
 }
 
 // runs says the subagent or background command a tool call started runs.

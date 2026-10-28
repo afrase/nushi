@@ -38,7 +38,7 @@ func TestPromptStreamsTheReply(t *testing.T) {
 		t.Fatalf("Start = %q, %v", id, err)
 	}
 	png := model.Image{MimeType: "image/png", Data: []byte("\x89PNG")}
-	if err := svc.Prompt(id, model.Message{Text: "hi", Files: []string{"a b.go"}, Images: []model.Image{png}}, SendIdle); err != nil {
+	if err := svc.Prompt(t.Context(), id, model.Message{Text: "hi", Files: []string{"a b.go"}, Images: []model.Image{png}}, SendIdle); err != nil {
 		t.Fatal(err)
 	}
 	<-done
@@ -225,7 +225,7 @@ func TestUsageIsWhatTheAgentReported(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := svc.Prompt(id, model.Message{Text: "hi"}, SendIdle); err != nil {
+	if err := svc.Prompt(t.Context(), id, model.Message{Text: "hi"}, SendIdle); err != nil {
 		t.Fatal(err)
 	}
 	<-done

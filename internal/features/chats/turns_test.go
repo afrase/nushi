@@ -37,8 +37,8 @@ func TestAFailedSteerTakesTheMessageOut(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.steerable, c.steer = true, true
 	agent.gate, agent.steerGate = make(chan struct{}), make(chan struct{})
-	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
-	noErr(t, svc.Prompt(c.id, model.Message{Text: "two"}, SendQueue))
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendQueue))
 	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call",
 		ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "ls", Status: "in_progress"}}})
 	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call_update",
@@ -96,10 +96,10 @@ func TestAPromptInTheAgentsOwnTurn(t *testing.T) {
 func TestSendNowStopsOnlyTheTurnItCameFor(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.gate, agent.ignoreCancel = make(chan struct{}), true
-	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
-	noErr(t, svc.Prompt(c.id, model.Message{Text: "held"}, SendQueue))
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "held"}, SendQueue))
 	now := make(chan error)
-	go func() { now <- svc.Prompt(c.id, model.Message{Text: "now"}, SendNow) }()
+	go func() { now <- svc.Prompt(t.Context(), c.id, model.Message{Text: "now"}, SendNow) }()
 	eventually(t, c, func() bool { return slices.Contains(agent.onWire(), "cancel") })
 	agent.release() // the turn ends on its own (end_turn), crossing the cancel
 	if err := <-now; err != nil {
@@ -120,8 +120,8 @@ func TestTakingBackKeepsWhatAMessageHad(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	side, _ := svc.Fork(context.Background(), c.id)
 	agent.gate = make(chan struct{})
-	noErr(t, svc.Prompt(side, model.Message{Text: "one"}, SendIdle))
-	noErr(t, svc.Prompt(side, model.Message{Text: "two"}, SendQueue))
+	noErr(t, svc.Prompt(t.Context(), side, model.Message{Text: "one"}, SendIdle))
+	noErr(t, svc.Prompt(t.Context(), side, model.Message{Text: "two"}, SendQueue))
 	q := svc.chats[side]
 	q.mu.Lock()
 	id := q.queue[0].ID
@@ -133,7 +133,7 @@ func TestTakingBackKeepsWhatAMessageHad(t *testing.T) {
 	eventually(t, q, func() bool { return !q.busy })
 
 	agent.gate = make(chan struct{})
-	noErr(t, svc.Prompt(c.id, model.Message{Text: "look at @a.go", Files: []string{"a.go"}}, SendIdle))
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "look at @a.go", Files: []string{"a.go"}}, SendIdle))
 	m, err := svc.Stop(context.Background(), c.id, true)
 	if err != nil || m == nil || !slices.Equal(m.Files, []string{"a.go"}) {
 		t.Errorf("taken back: %+v, %v", m, err)

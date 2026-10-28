@@ -355,7 +355,7 @@ func (s *server) MoveChat(ctx context.Context, req *connect.Request[nushiv1.Move
 	return connect.NewResponse(&nushiv1.MoveChatResponse{}), nil
 }
 
-func (s *server) SendPrompt(_ context.Context, req *connect.Request[nushiv1.SendPromptRequest]) (*connect.Response[nushiv1.SendPromptResponse], error) {
+func (s *server) SendPrompt(ctx context.Context, req *connect.Request[nushiv1.SendPromptRequest]) (*connect.Response[nushiv1.SendPromptResponse], error) {
 	m := req.Msg
 	msg := model.Message{Text: m.Text, Files: m.Files, To: m.ToSubagent}
 	for _, img := range m.Images {
@@ -368,8 +368,8 @@ func (s *server) SendPrompt(_ context.Context, req *connect.Request[nushiv1.Send
 	case m.Queue:
 		how = chats.SendQueue
 	}
-	if err := s.chats.Prompt(m.ChatId, msg, how); err != nil {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+	if err := s.chats.Prompt(ctx, m.ChatId, msg, how); err != nil {
+		return nil, waitErr(ctx, err)
 	}
 	return connect.NewResponse(&nushiv1.SendPromptResponse{}), nil
 }
@@ -393,7 +393,7 @@ func (s *server) Unqueue(_ context.Context, req *connect.Request[nushiv1.Unqueue
 func (s *server) CancelTurn(ctx context.Context, req *connect.Request[nushiv1.CancelTurnRequest]) (*connect.Response[nushiv1.CancelTurnResponse], error) {
 	m, err := s.chats.Stop(ctx, req.Msg.ChatId, req.Msg.TakeBack)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+		return nil, waitErr(ctx, err)
 	}
 	out := &nushiv1.CancelTurnResponse{}
 	if m != nil {
@@ -402,11 +402,21 @@ func (s *server) CancelTurn(ctx context.Context, req *connect.Request[nushiv1.Ca
 	return connect.NewResponse(out), nil
 }
 
-func (s *server) StopTask(_ context.Context, req *connect.Request[nushiv1.StopTaskRequest]) (*connect.Response[nushiv1.StopTaskResponse], error) {
-	if err := s.chats.StopTask(req.Msg.ChatId, req.Msg.CallId); err != nil {
+func (s *server) StopTask(ctx context.Context, req *connect.Request[nushiv1.StopTaskRequest]) (*connect.Response[nushiv1.StopTaskResponse], error) {
+	if err := s.chats.StopTask(ctx, req.Msg.ChatId, req.Msg.CallId); err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
 	}
 	return connect.NewResponse(&nushiv1.StopTaskResponse{}), nil
+}
+
+// waitErr is a chat call's failure: its context's own when the call gave
+// up waiting (connect codes it Canceled or DeadlineExceeded), else
+// FailedPrecondition.
+func waitErr(ctx context.Context, err error) error {
+	if ctx.Err() != nil && errors.Is(err, ctx.Err()) {
+		return err
+	}
+	return connect.NewError(connect.CodeFailedPrecondition, err)
 }
 
 func (s *server) ForkChat(ctx context.Context, req *connect.Request[nushiv1.ForkChatRequest]) (*connect.Response[nushiv1.ForkChatResponse], error) {

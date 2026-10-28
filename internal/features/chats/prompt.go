@@ -30,8 +30,10 @@ const (
 // Prompt sends a message to the chat's agent, with links to the files it
 // mentions and its images. The turn runs in the background; its progress
 // arrives as events. A chat whose agent isn't running is reopened, and the
-// message waits in the queue until it is.
-func (s *Service) Prompt(chatID string, m model.Message, how Send) error {
+// message waits in the queue until it is. SendNow waits for the stopped
+// turn to end, or for ctx: an agent that ignores the cancel doesn't keep
+// the call.
+func (s *Service) Prompt(ctx context.Context, chatID string, m model.Message, how Send) error {
 	if n := size(m); n > agentproc.MaxMessage-64<<10 {
 		return fmt.Errorf("the message is too large to send: %d MB with its images, and the agent takes about %d MB", n>>20, agentproc.MaxMessage>>20)
 	}
@@ -78,7 +80,12 @@ func (s *Service) Prompt(chatID string, m model.Message, how Send) error {
 		waited = true
 		c.sendingNow++
 		c.mu.Unlock()
-		<-done
+		select {
+		case <-done:
+		case <-ctx.Done():
+			c.mu.Lock() // the deferred unlock's, and sendingNow's
+			return ctx.Err()
+		}
 		c.mu.Lock()
 	}
 	if err := c.relayOfLocked(&m); err != nil {

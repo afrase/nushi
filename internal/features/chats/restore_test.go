@@ -53,7 +53,7 @@ func TestReopenShowsWhatBothHaveOnce(t *testing.T) {
 	svc, agent, c, store, _ := newCopyingChat(t)
 	turn := func(text string, updates ...acp.SessionUpdate) {
 		agent.updates = updates
-		noErr(t, svc.Prompt(c.id, model.Message{Text: text}, SendIdle))
+		noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: text}, SendIdle))
 		eventually(t, c, func() bool { return !c.busy })
 	}
 	turn("one", chunk("m1", "a"), toolCall("t1", "completed"))
@@ -91,7 +91,7 @@ func TestReopenAfterACompaction(t *testing.T) {
 	svc, agent, c, store, _ := newCopyingChat(t)
 	turn := func(text string, updates ...acp.SessionUpdate) {
 		agent.updates = updates
-		noErr(t, svc.Prompt(c.id, model.Message{Text: text}, SendIdle))
+		noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: text}, SendIdle))
 		eventually(t, c, func() bool { return !c.busy })
 	}
 	turn("one", chunk("m1", "a"))
@@ -120,7 +120,7 @@ func TestReopenAfterACompaction(t *testing.T) {
 func TestArchivedChatShowsItsCopy(t *testing.T) {
 	svc, agent, c, store, _ := newCopyingChat(t)
 	agent.updates = []acp.SessionUpdate{chunk("m1", "a")}
-	noErr(t, svc.Prompt(c.id, model.Message{Text: "one"}, SendIdle))
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
 	eventually(t, c, func() bool { return !c.busy })
 	noErr(t, svc.Archive(c.id, true))
 	launches, _, _ := agent.count()

@@ -149,7 +149,7 @@ func TestSubagentsStoppedEachWay(t *testing.T) {
 		t.Fatalf("the one left running: %+v", sa)
 	}
 	agent.subagents = []acp.SessionID{"adab021219769ae55"}
-	noErr(t, svc.StopTask(c.id, counterD))
+	noErr(t, svc.StopTask(t.Context(), c.id, counterD))
 	if wire := agent.wired(); !slices.Contains(wire, "cancel adab021219769ae55") || slices.Contains(wire, "cancel") {
 		t.Errorf("sent %q", wire)
 	}
@@ -161,7 +161,7 @@ func TestSubagentsStoppedEachWay(t *testing.T) {
 	if sa := subagentOf(t, c, counterD); sa.State != "stopped" {
 		t.Errorf("after the agent said: %+v", sa)
 	}
-	if err := svc.StopTask(c.id, counterA); err == nil {
+	if err := svc.StopTask(t.Context(), c.id, counterA); err == nil {
 		t.Error("stopped a subagent that had ended")
 	}
 }
@@ -181,7 +181,7 @@ func TestABackgroundCommandIsStoppedThroughClaude(t *testing.T) {
 			agent.updates = append(agent.updates, n.Update)
 		}
 	}
-	noErr(t, svc.StopTask(c.id, sleeping))
+	noErr(t, svc.StopTask(t.Context(), c.id, sleeping))
 	eventually(t, c, func() bool { return !c.busy })
 	if prompts, _ := agent.texts(); len(prompts) != 1 || prompts[0] != claude.StopTask("sleep 600; echo slept", "bgu2i75cc") {
 		t.Errorf("asked %q", prompts)
