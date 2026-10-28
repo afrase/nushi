@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/afrase/nushi/internal/api"
@@ -120,14 +121,15 @@ func TestDaemon(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	counted := &counting{Listener: ln}
 	svc := tools.New(issueSet{})
 	srv := &http.Server{Handler: api.Tools(svc), Protocols: new(http.Protocols)} //nolint:gosec // a test's server
 	srv.Protocols.SetUnencryptedHTTP2(true)
-	go func() { _ = srv.Serve(ln) }()
+	go func() { _ = srv.Serve(counted) }()
 	t.Cleanup(func() { _ = srv.Close() })
 
 	key := svc.Key(tools.Grant{Chat: "c1", Agent: "claude", Issue: &model.ChatIssue{Key: "ACME-12"}})
-	d := Daemon{Socket: sock, Key: key}
+	d := NewDaemon(sock, key)
 	list, said, err := d.List(t.Context())
 	if err != nil || !strings.Contains(string(list), `"name":"which"`) || said != "For ACME-12." {
 		t.Fatalf("list %s, %q, %v", list, said, err)
@@ -139,11 +141,30 @@ func TestDaemon(t *testing.T) {
 	if _, failed, err := d.Call(t.Context(), "nope", nil); err != nil || !failed {
 		t.Errorf("a tool it doesn't have: %v %v", failed, err)
 	}
+	// One connection for every call: each used to make its own client,
+	// whose idle connection stayed open as long as the agent ran.
+	if n := counted.n.Load(); n != 1 {
+		t.Errorf("%d connections for three calls", n)
+	}
 	for _, bad := range []string{"", "not-a-key"} {
-		if _, _, err := (Daemon{Socket: sock, Key: bad}).List(t.Context()); err == nil {
+		if _, _, err := NewDaemon(sock, bad).List(t.Context()); err == nil {
 			t.Errorf("key %q listed", bad)
 		}
 	}
+}
+
+// counting is a listener that counts the connections it took.
+type counting struct {
+	net.Listener
+	n atomic.Int32
+}
+
+func (l *counting) Accept() (net.Conn, error) {
+	c, err := l.Listener.Accept()
+	if err == nil {
+		l.n.Add(1)
+	}
+	return c, err
 }
 
 type issueSet struct{}

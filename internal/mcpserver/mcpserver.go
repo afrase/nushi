@@ -32,12 +32,12 @@ const (
 
 // Main serves MCP on stdin and stdout until stdin ends.
 func Main() {
-	d := Daemon{Socket: os.Getenv(SocketEnv), Key: os.Getenv(KeyEnv)}
-	if d.Socket == "" || d.Key == "" {
+	socket, key := os.Getenv(SocketEnv), os.Getenv(KeyEnv)
+	if socket == "" || key == "" {
 		fmt.Fprintln(os.Stderr, "nushid tools-mcp: Nushi starts this for an agent, with its socket and a key")
 		os.Exit(2) //nolint:revive // a command's own exit
 	}
-	if err := Serve(context.Background(), os.Stdin, os.Stdout, d); err != nil {
+	if err := Serve(context.Background(), os.Stdin, os.Stdout, NewDaemon(socket, key)); err != nil {
 		fmt.Fprintln(os.Stderr, "nushid tools-mcp:", err)
 		os.Exit(1) //nolint:revive // as above
 	}
@@ -163,23 +163,26 @@ func handle(ctx context.Context, m message, tools Tools) (any, error) {
 }
 
 // Daemon is the daemon's tools, asked over its socket (HTTP/2 without
-// TLS, as the app talks to it) with the chat's key.
+// TLS, as the app talks to it) with the chat's key, on one connection for
+// the process's life.
 type Daemon struct {
-	Socket, Key string
+	key    string
+	client *http.Client
 }
 
-func (d Daemon) client() *http.Client {
+// NewDaemon is the daemon listening on socket, asked with key.
+func NewDaemon(socket, key string) *Daemon {
 	p := new(http.Protocols)
 	p.SetUnencryptedHTTP2(true)
-	return &http.Client{Timeout: 2 * time.Minute, Transport: &http.Transport{
+	return &Daemon{key: key, client: &http.Client{Timeout: 2 * time.Minute, Transport: &http.Transport{
 		Protocols: p,
 		DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-			return new(net.Dialer).DialContext(ctx, "unix", d.Socket)
+			return new(net.Dialer).DialContext(ctx, "unix", socket)
 		},
-	}}
+	}}}
 }
 
-func (d Daemon) post(ctx context.Context, path string, body, out any) error {
+func (d *Daemon) post(ctx context.Context, path string, body, out any) error {
 	b, err := json.Marshal(body)
 	if err != nil {
 		return err
@@ -190,9 +193,9 @@ func (d Daemon) post(ctx context.Context, path string, body, out any) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", "Bearer "+d.Key)
+	req.Header.Set("Authorization", "Bearer "+d.key)
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := d.client().Do(req)
+	resp, err := d.client.Do(req)
 	if err != nil {
 		return fmt.Errorf("can't reach Nushi: %w", err)
 	}
@@ -205,7 +208,7 @@ func (d Daemon) post(ctx context.Context, path string, body, out any) error {
 }
 
 // List asks the daemon for the chat's tools and their instructions.
-func (d Daemon) List(ctx context.Context) (json.RawMessage, string, error) {
+func (d *Daemon) List(ctx context.Context) (json.RawMessage, string, error) {
 	var r struct {
 		Tools        json.RawMessage `json:"tools"`
 		Instructions string          `json:"instructions"`
@@ -215,7 +218,7 @@ func (d Daemon) List(ctx context.Context) (json.RawMessage, string, error) {
 }
 
 // Call asks the daemon to run one.
-func (d Daemon) Call(ctx context.Context, name string, args json.RawMessage) (string, bool, error) {
+func (d *Daemon) Call(ctx context.Context, name string, args json.RawMessage) (string, bool, error) {
 	var r struct {
 		Text    string `json:"text"`
 		IsError bool   `json:"isError"`
