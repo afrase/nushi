@@ -9,6 +9,7 @@ import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_pull.dart';
 import 'package:nushi/github_review.dart';
 import 'package:nushi/markdown.dart';
+import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -425,7 +426,11 @@ class _ThreadCardState extends State<ThreadCard> {
           ),
           if (_open) ...[
             for (final c in x.comments)
-              CommentEntry(c, now: widget.now ?? DateTime.now()),
+              CommentEntry(
+                c,
+                now: widget.now ?? DateTime.now(),
+                sendable: false,
+              ),
             const SizedBox(height: 8),
             if (_replying)
               CommentBox(
@@ -462,6 +467,12 @@ class _ThreadCardState extends State<ThreadCard> {
                     Button(
                       label: 'Unresolve',
                       onPressed: _busy ? null : () => _resolve(false),
+                    ),
+                  if (SendToAgent.maybeOf(context) case final to?)
+                    Button(
+                      label: 'Send to agent',
+                      icon: Icons.subdirectory_arrow_right,
+                      onPressed: () => to.onSend(threadReply(x)),
                     ),
                 ],
               ),

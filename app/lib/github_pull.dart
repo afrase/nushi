@@ -13,6 +13,7 @@ import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_review.dart';
 import 'package:nushi/github_settings.dart';
 import 'package:nushi/markdown.dart';
+import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -417,11 +418,15 @@ class _Pill extends StatelessWidget {
 
 /// A comment or a review in the conversation: its author (marked when
 /// outside the repository, or a bot), when, a review's state, its text.
+///
+/// In a chat's tab it can be sent to the agent ([SendToAgent]), unless
+/// it's part of a thread ([sendable] false: the thread is sent whole).
 class CommentEntry extends StatelessWidget {
-  const new(this.comment, {required this.now, super.key});
+  const new(this.comment, {required this.now, super.key, this.sendable = true});
 
   final GitHubComment comment;
   final DateTime now;
+  final bool sendable;
 
   @override
   Widget build(BuildContext context) {
@@ -464,6 +469,8 @@ class CommentEntry extends StatelessWidget {
                 style: theme.ui(t.textMuted, size: 11.5),
               ),
               const Spacer(),
+              if (sendable && c.body.isNotEmpty)
+                SendIcon(() async => commentReply(c)),
               if (c.url.isNotEmpty)
                 IconTap(
                   Icons.open_in_new,

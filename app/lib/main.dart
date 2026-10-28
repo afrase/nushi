@@ -394,6 +394,7 @@ class _ChatPaneState extends State<_ChatPane> {
                   ChatTab.pull => PullTab(
                     chat: widget.chat,
                     daemon: widget.daemon,
+                    onChat: () => setState(() => _tab = ChatTab.chat),
                   ),
                   ChatTab.chat => ChatView(
                     chat: widget.chat,
