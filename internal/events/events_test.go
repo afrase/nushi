@@ -3,7 +3,6 @@ package events
 import (
 	"context"
 	"errors"
-	"sync"
 	"testing"
 	"time"
 
@@ -45,19 +44,30 @@ func TestAStuckSubscriberIsDropped(t *testing.T) {
 		<-release
 		return true
 	})
-	var mu sync.Mutex
-	var got []int64
+	// The other takes each event before the next is published, so it
+	// never falls behind, however slowly the runner schedules it.
+	got := make(chan int64, 1)
 	ctx, cancel := context.WithCancel(t.Context())
 	fineEnded := subscribe(ctx, t, h, func(e model.Event) bool {
-		mu.Lock()
-		got = append(got, e.Seq)
-		mu.Unlock()
+		got <- e.Seq
 		return true
 	})
-	h.Publish(model.Event{Seq: 1})
+	publish := func(seq int64) {
+		t.Helper()
+		h.Publish(model.Event{Seq: seq})
+		select {
+		case g := <-got:
+			if g != seq {
+				t.Fatalf("event %d came as %d", seq, g)
+			}
+		case <-time.After(5 * time.Second): // only if it never comes
+			t.Fatalf("event %d never came", seq)
+		}
+	}
+	publish(1)
 	<-stuck // it holds the first event, and takes no more
-	for i := range int64(150) {
-		h.Publish(model.Event{Seq: i + 2})
+	for seq := range int64(150) {
+		publish(seq + 2)
 	}
 	h.mu.Lock()
 	for s := range h.subs {
@@ -72,24 +82,6 @@ func TestAStuckSubscriberIsDropped(t *testing.T) {
 	if err := ended(t, stuckEnded); !errors.Is(err, ErrBehind) {
 		t.Errorf("the stuck subscriber ended with %v", err)
 	}
-	for deadline := time.Now().Add(5 * time.Second); ; time.Sleep(time.Millisecond) {
-		mu.Lock()
-		n := len(got)
-		mu.Unlock()
-		if n == 151 || time.Now().After(deadline) {
-			break
-		}
-	}
-	mu.Lock()
-	for i, seq := range got {
-		if seq != int64(i+1) {
-			t.Fatalf("event %d is %d", i, seq)
-		}
-	}
-	if len(got) != 151 {
-		t.Errorf("the other subscriber got %d of 151", len(got))
-	}
-	mu.Unlock()
 	cancel()
 	if err := ended(t, fineEnded); err != nil {
 		t.Errorf("a subscription whose context ended: %v", err)

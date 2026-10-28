@@ -99,9 +99,10 @@ func TestNothingPrivateLogged(t *testing.T) {
 	chatID := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: repo}))).ChatId
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "MARKER-PROMPT-1b2e tool stderr",
 		Files: []string{filepath.Join(repo, "notes.txt")}})))
-	a.waitFor("the turn to end", func(e *nushiv1.EventsResponse) bool {
+	a.waitFor("the reply", func(e *nushiv1.EventsResponse) bool {
 		return e.GetItem().GetItem().GetText() == "Ran it."
 	})
+	a.waitFor("the turn to end", idle) // the reply comes before the end: a prompt between them is refused
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "MARKER-ASK-77aa permission"})))
 	perm := a.waitFor("the permission", pendingPermission).GetItem().GetItem()
 	must(a.c.AnswerPermission(ctx, connect.NewRequest(&nushiv1.AnswerPermissionRequest{ChatId: chatID, ItemId: perm.Id, OptionId: "allow"})))
