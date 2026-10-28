@@ -79,32 +79,45 @@ class ChatPull extends ChangeNotifier {
   /// Why the last ask failed (what shows stays).
   String? error;
 
+  int _followers = 0;
   int _watchers = 0;
   Timer? _timer;
   Timer? _soon;
   bool _busy = false;
   final _seen = <String>{};
+  Future<void>? _asking;
+  DateTime? _asked;
 
   /// The chat's link: the daemon's last word, else the chat's.
   GitHubLink? get link => chat.pull;
 
-  /// Whether there's anything to show: a GitHub repository with a
-  /// sign-in, or a link.
-  bool get shows => link != null || (found?.host.isNotEmpty ?? false);
+  /// Follows the chat (its pane shows): asks now, after a tool call that
+  /// pushed or opened a pull request, and when a turn ends; no timer.
+  void follow() {
+    if (_followers++ == 0) {
+      _busy = chat.busy;
+      _seen.addAll(chat.items.map((i) => i.id));
+      chat.addListener(_chatChanged);
+    }
+    unawaited(refresh(again: false));
+  }
 
+  void unfollow() {
+    if (--_followers > 0) return;
+    chat.removeListener(_chatChanged);
+    _soon?.cancel();
+  }
+
+  /// Follows the chat, and asks on [pullCardPoll] too (the card shows).
   void watch() {
-    if (_watchers++ > 0) return;
-    _busy = chat.busy;
-    _seen.addAll(chat.items.map((i) => i.id));
-    chat.addListener(_chatChanged);
-    unawaited(refresh());
+    _watchers++;
+    follow();
+    if (_asking == null) _schedule();
   }
 
   void unwatch() {
-    if (--_watchers > 0) return;
-    chat.removeListener(_chatChanged);
-    _timer?.cancel();
-    _soon?.cancel();
+    if (--_watchers == 0) _timer?.cancel();
+    unfollow();
   }
 
   /// A turn ended, or a tool call pushed or opened a pull request: ask
@@ -133,15 +146,30 @@ class ChatPull extends ChangeNotifier {
   }
 
   /// Asks the daemon for the chat's pull request (it looks on GitHub and
-  /// links what it finds), then for the linked one whole.
-  Future<void> refresh({bool quiet = false}) async {
+  /// links what it finds), then for the linked one whole; one ask at a
+  /// time, and with [again] false none within 10 s of the last.
+  Future<void> refresh({bool quiet = false, bool again = true}) {
+    final asked = _asked;
+    if (_asking case final a?) return a;
+    if (!again &&
+        asked != null &&
+        DateTime.now().difference(asked) < const Duration(seconds: 10)) {
+      return Future.value();
+    }
+    return _asking = _ask(quiet).whenComplete(() {
+      _asking = null;
+      _asked = DateTime.now();
+    });
+  }
+
+  Future<void> _ask(bool quiet) async {
     if (daemon.daemonApi < chatPullApi) return;
     try {
       final f = await daemon.client.findChatPull(
         FindChatPullRequest(chatId: chat.id, quiet: quiet),
       );
       found = f;
-      chat.pull = f.hasPull() ? f.pull : null;
+      chat.linkPull(f.hasPull() ? f.pull : null);
       error = f.error.isEmpty ? null : f.error;
       final l = chat.pull;
       if (l == null) {
@@ -169,7 +197,7 @@ class ChatPull extends ChangeNotifier {
     await daemon.client.linkChatPull(
       LinkChatPullRequest(chatId: chat.id, pull: link),
     );
-    chat.pull = link;
+    chat.linkPull(link);
     pull = null;
     notifyListeners();
     await refresh();

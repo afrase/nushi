@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nushi/agent_mark.dart';
+import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_agent.dart';
@@ -22,12 +23,24 @@ const pullPoll = Duration(seconds: 30);
 /// author, reviewers and their states, whether it can merge), Start work,
 /// Fix checks and Address comments, its chats; then its conversation, its
 /// checks, or its files with the review threads at their lines.
+///
+/// In a chat's Pull request tab ([inChat]) it has no Start work or chats'
+/// links (the chat is the one); [onLoad] gets each answer.
 class GitHubPullPane extends StatefulWidget {
-  const new({required this.daemon, required this.ref, super.key, this.now});
+  const new({
+    required this.daemon,
+    required this.ref,
+    super.key,
+    this.now,
+    this.inChat = false,
+    this.onLoad,
+  });
 
   final Daemon daemon;
   final GitHubRef ref;
   final DateTime? now;
+  final bool inChat;
+  final ValueChanged<GitHubPull>? onLoad;
 
   @override
   State<GitHubPullPane> createState() => _GitHubPullPaneState();
@@ -64,6 +77,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
           _pull = r.pull;
           _error = null;
         });
+        widget.onLoad?.call(r.pull);
       }
     } on Object catch (e) {
       // A failed poll keeps what shows, and says why.
@@ -90,6 +104,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
       children: [
         _Header(
           daemon: widget.daemon,
+          inChat: widget.inChat,
           pull: p,
           now: widget.now ?? DateTime.now(),
           error: _error,
@@ -168,6 +183,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
 class _Header extends StatelessWidget {
   const new({
     required this.daemon,
+    required this.inChat,
     required this.pull,
     required this.now,
     required this.error,
@@ -175,6 +191,7 @@ class _Header extends StatelessWidget {
   });
 
   final Daemon daemon;
+  final bool inChat;
   final GitHubPull pull;
   final DateTime now;
   final String? error;
@@ -190,7 +207,7 @@ class _Header extends StatelessWidget {
     final merge = mergeWords(t, p);
     final review = reviewWords(t, it.review);
     final pending = p.pendingComments + reviewDrafts(it.ref).length;
-    final chats = chatsOnItem(daemon, it.ref);
+    final chats = inChat ? const <ChatState>[] : chatsOnItem(daemon, it.ref);
     final unresolved = p.threads.where((x) => !x.resolved).length;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 16, 0),
@@ -302,7 +319,7 @@ class _Header extends StatelessWidget {
             runSpacing: 6,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              StartWork(daemon: daemon, item: it, button: true),
+              if (!inChat) StartWork(daemon: daemon, item: it, button: true),
               if (p.checks.any((c) => c.failed))
                 Button(
                   label: 'Fix checks',

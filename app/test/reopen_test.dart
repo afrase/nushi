@@ -96,8 +96,8 @@ void main() {
               ChatHeader(
                 chat,
                 d,
-                changes: false,
-                onChanges: (_) {},
+                tab: ChatTab.chat,
+                onTab: (_) {},
                 panel: false,
                 onPanel: () {},
               ),
@@ -265,8 +265,8 @@ void main() {
             ChatHeader(
               chat,
               d,
-              changes: false,
-              onChanges: (_) {},
+              tab: ChatTab.chat,
+              onTab: (_) {},
               panel: false,
               onPanel: () {},
             ),
