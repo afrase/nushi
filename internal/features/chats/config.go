@@ -1,9 +1,11 @@
 package chats
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strconv"
 
@@ -15,10 +17,13 @@ import (
 // legacyMode is the option made from an agent's legacy ACP modes.
 const legacyMode = "legacy:mode"
 
-// Modes remembers the mode the user last picked for each agent.
-type Modes interface {
+// Remembered keeps what the user last picked for each agent: the mode, and
+// the other options (the model, the effort, ...) by option ID.
+type Remembered interface {
 	Mode(agent string) string
 	SetMode(agent, mode string) error
+	Picks(agent string) map[string]string
+	SetPick(agent, id, value string) error
 }
 
 // configFrom turns the agent's config options and legacy modes into options.
@@ -96,7 +101,8 @@ func (s *Service) Config(chatID string) []model.ConfigOption {
 }
 
 // SetConfig sets one of a chat's options. When the user picks a mode the
-// agent accepts, new chats with this agent start in it.
+// agent accepts, new chats with this agent start in it; any other option
+// is one of the chat's picks, and new chats with this agent start on it too.
 func (s *Service) SetConfig(ctx context.Context, chatID, id, value string) error {
 	c, err := s.chat(chatID)
 	if err == nil && id == ultracodeID {
@@ -124,9 +130,23 @@ func (s *Service) SetConfig(ctx context.Context, chatID, id, value string) error
 	isMode := modeIndex(c.config) >= 0 && c.config[modeIndex(c.config)].ID == id
 	c.mu.Unlock()
 	if isMode {
-		return s.modes.SetMode(c.kind.Name, value)
+		return s.remembered.SetMode(c.kind.Name, value)
 	}
-	return nil
+	c.mu.Lock()
+	c.saveLocked(func(s *model.Session) { s.Picks = withPick(s.Picks, id, value) })
+	c.mu.Unlock()
+	return s.remembered.SetPick(c.kind.Name, id, value)
+}
+
+// withPick is picks with id set to value: a new map, so the session's
+// stays as it was until it is saved.
+func withPick(picks map[string]string, id, value string) map[string]string {
+	out := maps.Clone(picks)
+	if out == nil {
+		out = map[string]string{}
+	}
+	out[id] = value
+	return out
 }
 
 // setConfig asks agent to change an option of session sid. The lock isn't
@@ -182,12 +202,37 @@ func (c *chat) setConfig(ctx context.Context, agent Agent, sid, id, value string
 
 // configChangedLocked publishes the chat's options, and stores its mode once
 // the chat is stored. Only a change the agent reports or the user makes is
-// the chat's mode: a new session's default isn't.
+// the chat's mode: a new session's default isn't. The picks follow what the
+// agent says an option they have is on (its own /model, a fallback it made
+// for the session), except while they're being put back on a session.
 func (c *chat) configChangedLocked() {
 	c.emitLocked(model.Event{ChatID: c.id, Config: slices.Clone(c.config)})
 	if c.session.ID != "" {
-		c.saveLocked(c.modeLocked)
+		c.saveLocked(func(s *model.Session) {
+			c.modeLocked(s)
+			if c.agent != nil && !c.reapplying { // not a replay's, nor before reapply
+				s.Picks = c.followedLocked(s.Picks)
+			}
+		})
 	}
+}
+
+// followedLocked is picks with each option the agent still has at its
+// current value: a new map, or picks itself when nothing changed.
+func (c *chat) followedLocked(picks map[string]string) map[string]string {
+	var out map[string]string
+	for id, value := range picks {
+		if i := slices.IndexFunc(c.config, func(o model.ConfigOption) bool { return o.ID == id }); i >= 0 && c.config[i].Current != value {
+			if out == nil {
+				out = maps.Clone(picks)
+			}
+			out[id] = c.config[i].Current
+		}
+	}
+	if out == nil {
+		return picks
+	}
+	return out
 }
 
 // modeLocked sets a session's mode to the chat's mode option's.
@@ -205,6 +250,65 @@ func (c *chat) replaceConfigLocked(opts []acp.SessionConfigOption) {
 		out = append(out, c.config[i])
 	}
 	c.config = out
+}
+
+// reapply puts session sid, just opened on agent, back on picks (the
+// chat's, or for a new chat those last picked for its agent), then on mode
+// (see startMode); the chat keeps the picks the agent still offers. Until
+// then (from useLocked on) what the agent reports doesn't move the picks.
+func (c *chat) reapply(ctx context.Context, agent Agent, sid, mode string, picks map[string]string) error {
+	kept := c.applyPicks(ctx, agent, sid, picks)
+	c.mu.Lock()
+	c.saveLocked(func(s *model.Session) { s.Picks = kept })
+	c.mu.Unlock()
+	err := c.startMode(ctx, agent, sid, mode)
+	c.mu.Lock()
+	c.reapplying = false
+	c.mu.Unlock()
+	return err
+}
+
+// applyPicks sets each of picks the agent offers on session sid, the model
+// first, since the effort's values depend on it, then the others in the
+// agent's order. A value set already isn't set again (an agent that keeps
+// them in its sessions is left alone). One the agent no longer offers (a
+// retired model) is left out of what it returns, and logged; one it fails
+// to set is kept for the next time.
+func (c *chat) applyPicks(ctx context.Context, agent Agent, sid string, picks map[string]string) map[string]string {
+	c.mu.Lock()
+	rank := func(id string) int {
+		i := slices.IndexFunc(c.config, func(o model.ConfigOption) bool { return o.ID == id })
+		switch {
+		case i < 0:
+			return len(c.config)
+		case c.config[i].Category == "model":
+			return -1
+		}
+		return i
+	}
+	ids := slices.Sorted(maps.Keys(picks))
+	slices.SortStableFunc(ids, func(a, b string) int { return cmp.Compare(rank(a), rank(b)) })
+	c.mu.Unlock()
+	var kept map[string]string
+	for _, id := range ids {
+		value := picks[id]
+		c.mu.Lock()
+		i := slices.IndexFunc(c.config, func(o model.ConfigOption) bool { return o.ID == id })
+		offered := i >= 0 && (c.config[i].Type == "boolean" || slices.ContainsFunc(c.config[i].Values, func(v model.ConfigValue) bool { return v.Value == value }))
+		set := offered && c.config[i].Current != value
+		c.mu.Unlock()
+		if !offered {
+			c.log().Info("a picked option dropped: the agent doesn't offer it", "option", id, "value", value)
+			continue
+		}
+		if set {
+			if err := c.setConfig(ctx, agent, sid, id, value); err != nil {
+				c.log().Warn("putting a picked option back", "option", id, "value", value, "err", err)
+			}
+		}
+		kept = withPick(kept, id, value)
+	}
+	return kept
 }
 
 // startMode switches session sid, just opened on agent, to mode (the one

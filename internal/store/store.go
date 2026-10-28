@@ -29,7 +29,8 @@ type Store struct {
 func New(dir string) *Store { return &Store{dir: dir} }
 
 type agentPrefs struct {
-	Mode string `json:"mode,omitempty"`
+	Mode  string            `json:"mode,omitempty"`
+	Picks map[string]string `json:"picks,omitempty"` // the model, the effort, ... by option ID
 }
 
 // Mode returns the mode last picked for agent, or "" for the agent's default.
@@ -42,13 +43,38 @@ func (s *Store) Mode(agent string) string {
 
 // SetMode remembers mode as the one last picked for agent.
 func (s *Store) SetMode(agent, mode string) error {
+	return s.changeAgent(agent, func(p *agentPrefs) { p.Mode = mode })
+}
+
+// Picks returns the other options last picked for agent (the model, the
+// effort, ...), by option ID.
+func (s *Store) Picks(agent string) map[string]string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	prefs, _ := s.agents()
+	return prefs[agent].Picks
+}
+
+// SetPick remembers value as the one last picked for agent's option id.
+func (s *Store) SetPick(agent, id, value string) error {
+	return s.changeAgent(agent, func(p *agentPrefs) {
+		if p.Picks == nil {
+			p.Picks = map[string]string{}
+		}
+		p.Picks[id] = value
+	})
+}
+
+func (s *Store) changeAgent(agent string, change func(*agentPrefs)) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	prefs, err := s.agents()
 	if err != nil {
 		return err
 	}
-	prefs[agent] = agentPrefs{Mode: mode}
+	p := prefs[agent]
+	change(&p)
+	prefs[agent] = p
 	return writeJSON(filepath.Join(s.dir, "agents.json"), prefs)
 }
 

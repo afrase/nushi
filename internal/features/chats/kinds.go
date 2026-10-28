@@ -83,8 +83,8 @@ func (k *kind) ready() error {
 }
 
 // New makes the service for agents, the first of them the default.
-func New(agents []Kind, modes Modes, sessions Sessions, worktrees Worktrees, scratch string, publish func(model.Event)) *Service {
-	s := &Service{modes: modes, sessions: sessions, worktrees: worktrees,
+func New(agents []Kind, remembered Remembered, sessions Sessions, worktrees Worktrees, scratch string, publish func(model.Event)) *Service {
+	s := &Service{remembered: remembered, sessions: sessions, worktrees: worktrees,
 		scratch: scratch, publish: publish, chats: map[string]*chat{}, live: map[Agent]bool{}, opening: map[string]bool{}}
 	for _, k := range agents {
 		s.kinds = append(s.kinds, &kind{Kind: k, launch: s.started(k.Launch)})

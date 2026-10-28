@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -374,9 +375,23 @@ func (m *memSessions) DeleteSession(id string) error {
 	return m.deleteErr
 }
 
+// memModes keeps each agent's mode under its name, and its picks under
+// "<name>/<option>".
 type memModes map[string]string
 
 func (m *memModes) Mode(agent string) string { return (*m)[agent] }
+
+func (m *memModes) Picks(agent string) map[string]string {
+	var out map[string]string
+	for k, v := range *m {
+		if id, ok := strings.CutPrefix(k, agent+"/"); ok {
+			out = withPick(out, id, v)
+		}
+	}
+	return out
+}
+
+func (m *memModes) SetPick(agent, id, value string) error { return m.SetMode(agent+"/"+id, value) }
 
 func (m *memModes) SetMode(agent, mode string) error {
 	if *m == nil {

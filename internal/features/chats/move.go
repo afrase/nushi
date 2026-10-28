@@ -32,7 +32,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 		return err
 	}
 	c.mu.Lock()
-	from, sid, fresh, oldWT, mode := c.session.Folder, c.sid, !c.session.HasMessages, c.session.Worktree, c.session.Mode
+	from, sid, fresh, oldWT, mode, picks := c.session.Folder, c.sid, !c.session.HasMessages, c.session.Worktree, c.session.Mode, c.session.Picks
 	// A chat whose reopen failed (its folder gone) has an empty transcript:
 	// the moved session is reopened, which replays it.
 	replay := !fresh && c.agent == nil && !c.kept
@@ -103,7 +103,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 		}
 		if replay {
 			_ = o.agent.Stop(stopGrace) // its process is gone either way
-		} else if err := c.startMode(ctx, o.agent, o.sid, mode); err != nil {
+		} else if err := c.reapply(ctx, o.agent, o.sid, mode, picks); err != nil {
 			c.log().Warn("mode after moving", "err", err)
 		}
 	} else if wt != oldWT {

@@ -1,7 +1,7 @@
 # 0027. What lives only in memory
 
 ## Context
-Nushi keeps little on disk: a JSON file per chat (ADR 0010), the remembered mode, the trusted folders, and the app's settings. The agent keeps the conversation (ADR 0008).
+Nushi keeps little on disk: a JSON file per chat (ADR 0010), each agent's remembered mode and picks, the trusted folders, and the app's settings. The agent keeps the conversation (ADR 0008).
 
 ## Decision
 - The daemon keeps in memory only: each chat's transcript (rebuilt from the agent with `session/load` after a restart), its queue of messages, its usage and cost, side chats, terminals, and whether the agent can delete its history (learned by starting it once per run).
