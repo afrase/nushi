@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -9,8 +10,9 @@ import 'package:nushi/widgets.dart';
 /// Claude Code: the mode's value on the left (`Auto`); on the right
 /// "Ultracode" while that is on, a "⋯" menu with every option that isn't
 /// mode, model or effort (fast mode, agent, Ultracode, ...), then the
-/// model menu (`Opus 5.5  High`): the agent's first four models (1–4 pick
-/// them), Effort ▸, and More models ▸ with the rest.
+/// model menu (`Opus 5.5  High`): four models, the ones picked last first,
+/// then the agent's first (1–4 pick them), Effort ▸, and More models ▸ with
+/// the rest.
 ///
 /// [onClose] runs when a menu closes (the composer takes the focus back).
 class Pickers extends StatelessWidget {
@@ -61,7 +63,15 @@ class Pickers extends StatelessWidget {
             detail: tips ? '' : v.description,
             tooltip: tips ? v.description : '',
             checked: v.value == o.current,
-            onPick: () => tryOrShow(context, () => onPick(o.id, v.value)),
+            onPick: () => tryOrShow(context, () async {
+              await onPick(o.id, v.value);
+              if (o == model) {
+                recentModels.value = [
+                  v.value,
+                  ...recentModels.value.where((r) => r != v.value),
+                ].take(20).toList();
+              }
+            }),
           ),
         ],
       ];
@@ -74,10 +84,18 @@ class Pickers extends StatelessWidget {
           submenu: rows(o, values: vs, tips: o == model),
         );
 
-    // The first four models, skipping the agent's "use the default"; the
-    // rest (that one included) under More models.
+    // Four models: those picked last, the last first, then the agent's
+    // first, skipping its "use the default"; the rest (that one included)
+    // under More models.
     final models = model == null ? <ConfigValue>[] : _values(model);
-    final top = models.where((v) => !v.isDefault).take(4).toList();
+    final picked = [
+      for (final r in recentModels.value)
+        ?models.where((v) => v.value == r && !v.isDefault).firstOrNull,
+    ];
+    final top = [
+      ...picked,
+      ...models.where((v) => !v.isDefault && !picked.contains(v)),
+    ].take(4).toList();
     final more = [
       for (final v in models)
         if (!top.contains(v)) v,

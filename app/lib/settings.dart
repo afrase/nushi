@@ -11,9 +11,10 @@ import 'package:nushi/daemon.dart';
 /// panes' widths, whether changed files show flat, which chats show their
 /// terminals, the terminal's font, whether a subagent's pane shows wide,
 /// the Jira task list's groups and assignee filters, the GitHub view's
-/// cards and filters, and the sidebar's project groups' order and which
-/// are collapsed. Not whether new chats get a worktree: an older
-/// `worktrees` key is ignored, and dropped by the next save.
+/// cards and filters, the sidebar's project groups' order and which are
+/// collapsed, and the models picked last. Not whether new chats get a
+/// worktree: an older `worktrees` key is ignored, and dropped by the next
+/// save.
 final showDetails = ValueNotifier<bool>(_saved['details'] != false)
   ..addListener(_save);
 final collapsedCards = ValueNotifier<Set<String>>(_strings('collapsed'))
@@ -99,6 +100,11 @@ final sidebarCollapsed = ValueNotifier<Set<String>>(
   _strings('sidebarCollapsed'),
 )..addListener(_save);
 
+/// The models picked from the model menu, by value, the last first: the
+/// menu's first four are the ones used last.
+final recentModels = ValueNotifier<List<String>>([..._strings('models')])
+  ..addListener(_save);
+
 /// The widths panes were dragged to, by pane (see `Resizable`).
 final paneWidths = ValueNotifier<Map<String, double>>({
   for (final MapEntry(:key, :value)
@@ -173,6 +179,7 @@ void _save() {
         'githubOwners': githubOwners.value,
         'sidebarOrder': sidebarOrder.value,
         'sidebarCollapsed': sidebarCollapsed.value.toList(),
+        'models': recentModels.value,
       }),
     );
   } on Object {
