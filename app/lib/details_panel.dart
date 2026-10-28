@@ -14,6 +14,8 @@ import 'package:nushi/markdown.dart';
 import 'package:nushi/mcp_card.dart';
 import 'package:nushi/panel_cards.dart';
 import 'package:nushi/preview.dart';
+import 'package:nushi/pull_card.dart';
+import 'package:nushi/pull_link.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/usage.dart';
 import 'package:nushi/widgets.dart';
@@ -30,6 +32,7 @@ class DetailsPanel extends StatefulWidget {
     required this.daemon,
     required this.onChanges,
     super.key,
+    this.onPull,
   });
 
   static const width = 264.0;
@@ -37,6 +40,9 @@ class DetailsPanel extends StatefulWidget {
   final ChatState chat;
   final Daemon daemon;
   final VoidCallback onChanges;
+
+  /// Shows the chat's pull request's tab.
+  final VoidCallback? onPull;
 
   @override
   State<DetailsPanel> createState() => _DetailsPanelState();
@@ -64,6 +70,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
   Timer? _timer;
   bool _asking = false;
   bool _couldAsk = false; // the last time the chat changed
+  late ChatPull _pull;
 
   /// Whether the agent can be asked what fills its context: the daemon
   /// says so, and the chat is idle.
@@ -119,6 +126,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
     super.initState();
     _couldAsk = _canAsk;
     chat.addListener(_onChat);
+    _pull = ChatPull.of(daemon, chat)..watch();
   }
 
   @override
@@ -128,6 +136,8 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
     // Another chat: follow it, with what was asked of it.
     old.chat.removeListener(_onChat);
     widget.chat.addListener(_onChat);
+    _pull.unwatch();
+    _pull = ChatPull.of(daemon, chat)..watch();
     _timer?.cancel();
     _context = _last(chat.id)?.$2;
     _couldAsk = _canAsk;
@@ -138,6 +148,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
   void dispose() {
     _timer?.cancel();
     chat.removeListener(_onChat);
+    _pull.unwatch();
     super.dispose();
   }
 
@@ -161,8 +172,10 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
 
   // Live with the chat (usage, subagents), not only when a turn ends.
   @override
-  Widget build(BuildContext context) =>
-      ListenableBuilder(listenable: chat, builder: (context, _) => _panel());
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: Listenable.merge([chat, _pull]),
+    builder: (context, _) => _panel(),
+  );
 
   Widget _panel() {
     final theme = NushiTheme.of(context);
@@ -301,6 +314,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
           ],
         ],
       ),
+      ?pullCard(_pull, onShow: widget.onPull),
       ?agentsCard(chat, daemon),
       mcpCard(chat, daemon),
       if (daemon.daemonApi >= previewApi) ?artifactsCard(chat),

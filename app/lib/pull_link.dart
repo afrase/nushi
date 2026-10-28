@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/widgets.dart';
 
 /// The daemon finds and links a chat's pull request (FindChatPull,
@@ -27,6 +28,29 @@ bool pushedOrOpened(Item it) {
   return RegExp(r'\bgit\b[^\n|;&]*\spush\b').hasMatch(what) ||
       RegExp(r'\bgh\s+pr\s+create\b').hasMatch(what) ||
       what.contains('create_pull_request');
+}
+
+/// The times of a pull request's comments: its conversation's and its
+/// review threads'.
+Iterable<int> commentTimes(GitHubPull p) => [
+  for (final c in p.conversation) c.createdMs.toInt(),
+  for (final x in p.threads)
+    for (final c in x.comments) c.createdMs.toInt(),
+];
+
+/// The comments of [chat]'s pull request newer than those seen (when its
+/// tab last showed, or when the card first saw it).
+int unreadComments(String chat, GitHubPull p) {
+  final times = commentTimes(p);
+  final seen = pullSeen.value[chat];
+  return seen == null ? 0 : times.where((ms) => ms > seen).length;
+}
+
+/// Marks [p]'s comments seen in [chat].
+void markPullSeen(String chat, GitHubPull p) {
+  final newest = commentTimes(p).fold(0, (a, b) => a > b ? a : b);
+  if ((pullSeen.value[chat] ?? -1) >= newest) return;
+  pullSeen.value = {...pullSeen.value, chat: newest};
 }
 
 /// A chat's pull request, as its card and the phone's chip show it: what
@@ -130,6 +154,8 @@ class ChatPull extends ChangeNotifier {
           ),
         );
         pull = r.pull;
+        // The comments there when the chat first saw it aren't new.
+        if (!pullSeen.value.containsKey(chat.id)) markPullSeen(chat.id, r.pull);
       }
     } on Object catch (e) {
       error = errorText(e);
