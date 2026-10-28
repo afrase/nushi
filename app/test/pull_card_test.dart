@@ -229,6 +229,15 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    // A comment sent to the agent: the bar counts it.
+    await tester.tap(
+      find
+          .byTooltip(
+            "Send to the agent: a reply card in the chat's box, to send",
+          )
+          .at(1),
+    );
+    await tester.pumpAndSettle();
     await expectLater(
       find.byType(NushiApp),
       matchesGoldenFile('goldens/pull_tab_dark.png'),
