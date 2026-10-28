@@ -111,6 +111,9 @@ class Daemon extends ChangeNotifier {
   /// Every stored chat, by id.
   final chats = <String, ChatState>{};
 
+  /// Whether [chats] has been listed once: a chat not in it is gone.
+  bool chatsListed = false;
+
   /// The chats the daemon removed because their agent no longer had their
   /// sessions, until [dismissRemoved].
   List<RemovedChat> removedChats = [];
@@ -452,6 +455,7 @@ class Daemon extends ChangeNotifier {
       for (final side in sides.values) {
         side.loading = true; // its events wait for its snapshot
       }
+      chatsListed = true;
     } on Object {
       unawaited(_events?.cancel());
       _events = null; // the next ping subscribes again

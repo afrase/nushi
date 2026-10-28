@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/controls.dart';
+import 'package:nushi/daemon.dart';
 import 'package:nushi/phone/chats_screen.dart';
 import 'package:nushi/phone/history.dart';
 import 'package:nushi/phone/keyboard.dart';
@@ -50,22 +51,35 @@ class _PhoneAppState extends State<PhoneApp> with WidgetsBindingObserver {
     widget.phone
       ..removeListener(_opening)
       ..opening.removeListener(_opening);
+    _watch(null);
     super.dispose();
   }
 
-  /// Opens the chat a notification asked for, once the chats are known.
+  /// The daemon listened to while a notification's chat waits to open:
+  /// one listener, on the daemon of the moment (it changes on a new link).
+  Daemon? _watched;
+
+  void _watch(Daemon? daemon) {
+    if (daemon == _watched) return;
+    _watched?.removeListener(_opening);
+    _watched = daemon?..addListener(_opening);
+  }
+
+  /// Opens the chat a notification asked for, once the chats are known;
+  /// a chat not among them once listed is gone (deleted on the Mac, or
+  /// forgotten with its session): nothing opens.
   void _opening() {
     final phone = widget.phone;
-    final daemon = phone.daemon;
     final id = phone.opening.value;
+    final daemon = id == null ? null : phone.daemon;
+    _watch(daemon);
     final context = _navigator.currentContext;
     if (id == null || daemon == null || context == null) return;
     final chat = daemon.chats[id];
     if (chat == null) {
-      daemon.addListener(_opening); // the list may not be in yet
+      if (daemon.chatsListed) phone.opening.value = null;
       return;
     }
-    daemon.removeListener(_opening);
     phone.opening.value = null;
     _navigator.currentState!.popUntil((r) => r.isFirst);
     unawaited(_open(chat));

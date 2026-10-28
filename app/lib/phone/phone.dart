@@ -345,27 +345,31 @@ class Phone extends ChangeNotifier {
   Future<void> forget() async {
     // Nothing may write the pairing back meanwhile (a ping answering would
     // keep the last-seen time, and with it the key).
+    // A failure on the way (the storage) leaves it as it was: kept again.
     _forgetting = true;
-    link?.dispose();
-    link = null;
-    if (push == PushState.on) await setPush(on: false);
-    // The Mac forgets this device too, if it can be reached (else it still
-    // lists it until it's revoked there).
     try {
-      await daemon?.client
-          .unpairThisDevice(UnpairThisDeviceRequest())
-          .timeout(const Duration(seconds: 5));
-    } on Object {
-      // Not connected: Revoke on the Mac.
+      link?.dispose();
+      link = null;
+      if (push == PushState.on) await setPush(on: false);
+      // The Mac forgets this device too, if it can be reached (else it
+      // still lists it until it's revoked there).
+      try {
+        await daemon?.client
+            .unpairThisDevice(UnpairThisDeviceRequest())
+            .timeout(const Duration(seconds: 5));
+      } on Object {
+        // Not connected: Revoke on the Mac.
+      }
+      // The storage first: if it fails, nothing here looks forgotten.
+      await platform.clear();
+      await platform.reset();
+      await close();
+      paired = _key = _pushKey = null;
+      remoteState.value = null;
+      push = await platform.pushState();
+    } finally {
+      _forgetting = false;
     }
-    // The storage first: if it fails, nothing here looks forgotten.
-    await platform.clear();
-    await platform.reset();
-    await close();
-    paired = _key = _pushKey = null;
-    remoteState.value = null;
-    push = await platform.pushState();
-    _forgetting = false;
     notifyListeners();
   }
 

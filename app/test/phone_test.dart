@@ -11,7 +11,7 @@ import 'package:nushi/phone/platform.dart';
 import 'package:nushi/phone/scanner.dart';
 import 'package:nushi/phone/subscription.dart';
 import 'package:nushi/question_card.dart';
-import 'package:nushi/remote.dart' show keyFingerprint;
+import 'package:nushi/remote.dart' show keyFingerprint, remoteState;
 
 import 'fake_daemon.dart';
 
@@ -101,6 +101,7 @@ Future<(Phone, PhonePlatform)> _app(
   bool paired = true,
   Brightness brightness = Brightness.dark,
   Size size = const Size(390, 760),
+  Map<String, Object?>? record,
 }) async {
   tester.view
     ..devicePixelRatio = 2
@@ -112,7 +113,8 @@ Future<(Phone, PhonePlatform)> _app(
     );
   addTearDown(tester.view.reset);
   addTearDown(tester.platformDispatcher.clearAllTestValues);
-  final platform = PhonePlatform()..saved = paired ? _paired() : null;
+  final platform = PhonePlatform()
+    ..saved = record ?? (paired ? _paired() : null);
   final phone = Phone(
     platform,
     connectTo: (_) => Daemon(transport: fake, remote: true),
@@ -381,6 +383,56 @@ void main() {
     expect(find.text('Pair with a Mac'), findsOneWidget);
     // Pairing is the root again: nothing to go back to.
     expect(find.bySemanticsLabel('Back'), findsNothing);
+    await _end(tester, phone);
+  });
+
+  testWidgets('Forget this Mac that fails on the way keeps the pairing', (
+    tester,
+  ) async {
+    // A key as X25519 keeps it (clamped): the record is this one's.
+    final (phone, platform) = await _app(
+      tester,
+      FakeDaemon(_chats),
+      record: {
+        ..._paired(),
+        'key': Uint8List(32)
+          ..[0] = 8
+          ..[31] = 64,
+      },
+    );
+    platform.clearFails = StateError('storage');
+    await expectLater(phone.forget(), throwsStateError);
+    // Not forgotten: what keeps the pairing current still writes it (the
+    // daemon's new id here), not shut off for the rest of the session.
+    remoteState.value = Remote(rendezvous: 'moved');
+    for (var i = 0; i < 4; i++) {
+      await tester.pump();
+    }
+    expect(platform.saved?['daemon'], 'moved');
+    await _end(tester, phone);
+  });
+
+  testWidgets('a notification for a chat that is gone opens nothing', (
+    tester,
+  ) async {
+    final fake = FakeDaemon(_chats);
+    final (phone, _) = await _app(tester, fake);
+    expect(phone.daemon!.chatsListed, isTrue);
+    phone.opening.value = 'gone';
+    await tester.pump();
+    expect(phone.opening.value, isNull, reason: 'not among the chats listed');
+    // Chat events after it: each one used to double the daemon's
+    // listeners (2^n calls; the page froze).
+    for (var i = 0; i < 40; i++) {
+      fake.emit(EventsResponse(chat: _chats[0]));
+      await tester.pump();
+    }
+    expect(find.text('Chats'), findsOneWidget);
+    // A chat that is there still opens.
+    phone.opening.value = 'b';
+    await tester.pumpAndSettle();
+    expect(find.text('Chats'), findsNothing);
+    expect(phone.opening.value, isNull);
     await _end(tester, phone);
   });
 

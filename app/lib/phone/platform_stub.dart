@@ -31,7 +31,13 @@ final class PhonePlatform {
 
   Future<Map<String, Object?>?> load() async => saved;
   Future<void> save(Map<String, Object?> record) async => saved = record;
-  Future<void> clear() async => saved = null;
+  Future<void> clear() async {
+    if (clearFails case final e?) throw e;
+    saved = null;
+  }
+
+  /// What [clear] throws (a test sets it).
+  Error? clearFails;
   Future<void> registerWorker() async {}
 
   /// Whether a newer version waits (a test sets it).
