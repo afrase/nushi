@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/pull_states.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/widgets.dart';
 
@@ -182,6 +183,7 @@ class ChatPull extends ChangeNotifier {
           ),
         );
         pull = r.pull;
+        PullStates.of(daemon).put(r.pull.item);
         // The comments there when the chat first saw it aren't new.
         if (!pullSeen.value.containsKey(chat.id)) markPullSeen(chat.id, r.pull);
       }

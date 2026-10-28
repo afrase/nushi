@@ -11,24 +11,12 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/new_chat.dart';
+import 'package:nushi/pull_states.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-/// An item's state's color: open green (gray when a draft), merged
-/// violet, closed red.
-Color itemColor(Tokens t, GitHubItem it) => switch (it.state) {
-  'merged' => t.subagentAccent,
-  'closed' => t.crashed,
-  _ => it.draft ? t.textMuted : t.done,
-};
-
-/// An item's state as a word: "Open", "Draft", "Merged", "Closed".
-String itemState(GitHubItem it) => switch (it.state) {
-  'merged' => 'Merged',
-  'closed' => 'Closed',
-  _ => it.draft ? 'Draft' : 'Open',
-};
+export 'package:nushi/pull_states.dart' show itemColor, itemState;
 
 /// A review decision in words, and its color.
 (String, Color)? reviewWords(Tokens t, String review) => switch (review) {

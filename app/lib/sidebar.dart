@@ -11,6 +11,7 @@ import 'package:nushi/folder_button.dart';
 import 'package:nushi/inline_edit.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/new_chat.dart';
+import 'package:nushi/pull_states.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_nav.dart';
 import 'package:nushi/sidebar_groups.dart';
@@ -38,9 +39,20 @@ class _SidebarState extends State<Sidebar> {
   bool _showArchived = false;
   final _hold = CommandHold();
 
+  /// The chats' pull requests' checks, for their rows' dots, asked while
+  /// the list shows.
+  late final PullStates _pulls;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulls = PullStates.of(widget.daemon)..watch();
+  }
+
   @override
   void dispose() {
     _hold.dispose();
+    _pulls.unwatch();
     super.dispose();
   }
 
@@ -321,6 +333,7 @@ class _ChatRowState extends State<_ChatRow> {
                       ),
                     ),
                   ),
+                if (chat.pull != null) PullDot(chat, PullStates.of(daemon)),
                 if (chat.archived && !chat.scratch)
                   Text(
                     folderParts(chat.home).$1,
