@@ -432,3 +432,27 @@ func TestToolsForAChatOnAnIssue(t *testing.T) {
 		t.Errorf("the chat doesn't remember its issue: %+v", s.Issue)
 	}
 }
+
+// A file a chat's tool call worked on counts as the chat's, inside its
+// folder or not (an agent's notes in its own folder); others don't.
+func TestWroteIsWhatTheChatsToolCallsWorkedOn(t *testing.T) {
+	svc := New(nil, &memModes{}, &memSessions{}, nil, "", func(model.Event) {})
+	svc.chats = map[string]*chat{"c": {id: "c", session: model.Session{ID: "c", Folder: "/work/app"}, items: []model.Item{
+		{ID: "w", Kind: model.ToolCall, Paths: []string{"docs/report.md"}},
+		{ID: "m", Kind: model.ToolCall, Parent: "a1", Diffs: []model.FileChange{{Path: "/home/me/.claude/memory/MEMORY.md"}}},
+		{ID: "u", Kind: model.UserMessage, Files: []string{"/etc/hosts"}},
+	}}}
+	for path, want := range map[string]bool{
+		"/work/app/docs/report.md":          true,
+		"/home/me/.claude/memory/MEMORY.md": true,
+		"/home/me/.claude/memory/../x.md":   false,
+		"/etc/hosts":                        false,
+	} {
+		if got := svc.Wrote("c", path); got != want {
+			t.Errorf("Wrote(%s) = %v, want %v", path, got, want)
+		}
+	}
+	if svc.Wrote("none", "/work/app/docs/report.md") {
+		t.Error("an unknown chat wrote something")
+	}
+}

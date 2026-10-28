@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -223,4 +224,39 @@ func (s *Service) Roots(chatID string) ([]string, error) {
 		roots = append(roots, wt.Path)
 	}
 	return roots, nil
+}
+
+// Wrote reports whether one of a chat's tool calls (a subagent's too)
+// worked on the file at path (absolute), wherever it is: an agent's notes
+// outside the chat's folder can be previewed too.
+func (s *Service) Wrote(chatID, path string) bool {
+	c, err := s.lookup(chatID)
+	if err != nil {
+		return false
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	path = filepath.Clean(path)
+	abs := func(p string) string {
+		if !filepath.IsAbs(p) {
+			p = filepath.Join(c.session.Folder, p)
+		}
+		return filepath.Clean(p)
+	}
+	for _, it := range c.items {
+		if it.Kind != model.ToolCall {
+			continue
+		}
+		for _, p := range it.Paths {
+			if abs(p) == path {
+				return true
+			}
+		}
+		for _, d := range it.Diffs {
+			if abs(d.Path) == path {
+				return true
+			}
+		}
+	}
+	return false
 }
