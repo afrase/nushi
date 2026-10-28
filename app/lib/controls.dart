@@ -450,6 +450,7 @@ class IconTap extends StatelessWidget {
     super.key,
     this.size = 16,
     this.color,
+    this.padding = 5,
   });
 
   final IconData icon;
@@ -458,6 +459,9 @@ class IconTap extends StatelessWidget {
   final double size;
   final Color? color;
 
+  /// The room around the icon, on each side (5; 3 in a menu's row).
+  final double padding;
+
   @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
@@ -465,7 +469,7 @@ class IconTap extends StatelessWidget {
       onTap: onTap,
       tooltip: tooltip,
       builder: (context, look) => Container(
-        padding: const EdgeInsets.all(5),
+        padding: EdgeInsets.all(padding),
         decoration: BoxDecoration(
           color: look.hover ? t.hover : null,
           borderRadius: BorderRadius.circular(NushiTheme.control),

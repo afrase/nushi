@@ -10,38 +10,37 @@ import 'package:nushi/preview.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// The panel's Artifacts card: the files the chat wrote ([chatFiles], newest
-/// first), each its name and, muted, its folder and when it changed; a
-/// click opens its preview, the open one's row marked. Null (no card) when
-/// there are none.
+/// The panel's Artifacts card: the files the chat wrote as [chatArtifacts]
+/// sorts them, the pinned and the recent, then "Older (n)" folding the
+/// rest; each its name and, muted, its folder and when it changed, with a
+/// pin on hover (always on a pinned one); a click opens its preview, the
+/// open one's row marked. Collapsed, it counts the pinned and recent. Null
+/// (no card) when there are none.
 PanelCard? artifactsCard(ChatState chat) {
-  final files = chatFiles(chat.items);
-  if (files.isEmpty) return null;
+  if (chatFiles(chat.items).isEmpty) return null;
   return PanelCard(
     title: 'Artifacts',
-    summary: Builder(
-      builder: (context) {
+    summary: ListenableBuilder(
+      listenable: artifactsOf(chat),
+      builder: (context, _) {
         final theme = NushiTheme.of(context);
+        final a = chatArtifacts(chat);
         return Text(
-          '${files.length}',
+          '${a.pinned.length + a.recent.length}',
           style: theme.ui(theme.t.textMuted, size: 12),
         );
       },
     ),
-    rows: [(null, FileRows(chat, files, key: ValueKey(chat.id)))],
+    rows: [(null, FileRows(chat, key: ValueKey(chat.id)))],
   );
 }
 
-/// The card's rows: the first [shown] of [files], then "Show all (n)",
-/// which opens the rest in place.
+/// The card's rows: the pinned and the recent, then "Older (n)", which
+/// opens the rest in place.
 class FileRows extends StatefulWidget {
-  const new(this.chat, this.files, {super.key});
-
-  /// How many rows show before "Show all".
-  static const shown = 8;
+  const new(this.chat, {super.key});
 
   final ChatState chat;
-  final List<String> files;
 
   @override
   State<FileRows> createState() => _FileRowsState();
@@ -51,14 +50,15 @@ class FileRows extends StatefulWidget {
 const _inset = 6.0;
 
 class _FileRowsState extends State<FileRows> {
-  bool _all = false;
+  bool _older = false;
 
   late final Timer _tick;
 
   @override
   void initState() {
     super.initState();
-    // "2m ago" goes on aging while nothing else changes.
+    // "2m ago" goes on aging while nothing else changes, and a file opened
+    // an hour ago leaves the recent.
     _tick = Timer.periodic(const Duration(minutes: 1), (_) => setState(() {}));
   }
 
@@ -71,7 +71,6 @@ class _FileRowsState extends State<FileRows> {
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
-    final cut = !_all && widget.files.length > FileRows.shown;
     // The rows' names line up with the other cards' text, their marks
     // reaching past it into the card's padding.
     return LayoutBuilder(
@@ -79,66 +78,106 @@ class _FileRowsState extends State<FileRows> {
         minWidth: box.maxWidth + 2 * _inset,
         maxWidth: box.maxWidth + 2 * _inset,
         fit: OverflowBoxFit.deferToChild,
-        child: _rows(theme, cut),
+        child: ListenableBuilder(
+          listenable: artifactsOf(widget.chat),
+          builder: (context, _) => _rows(theme, chatArtifacts(widget.chat)),
+        ),
       ),
     );
   }
 
-  Widget _rows(NushiTheme theme, bool cut) {
+  Widget _rows(NushiTheme theme, Artifacts a) {
     final t = theme.t;
-    final files = widget.files;
-    return ValueListenableBuilder(
-      valueListenable: widget.chat.preview,
-      builder: (context, open, _) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final f in cut ? files.take(FileRows.shown) : files)
-            _row(theme, f, open: f == open),
-          if (cut)
-            Tap(
-              onTap: () => setState(() => _all = true),
-              padding: const EdgeInsets.symmetric(
-                horizontal: _inset,
-                vertical: 3,
-              ),
-              child: Text(
-                'Show all (${files.length})',
-                style: theme.ui(t.textMuted, size: 12),
-              ),
+    final open = widget.chat.preview.value;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final f in [...a.pinned, ...a.recent])
+          _FileRow(widget.chat, f, open: f == open),
+        if (a.older.isNotEmpty) ...[
+          Tap(
+            onTap: () => setState(() => _older = !_older),
+            padding: const EdgeInsets.symmetric(
+              horizontal: _inset,
+              vertical: 3,
             ),
+            child: Row(
+              spacing: 4,
+              children: [
+                Text(
+                  'Older (${a.older.length})',
+                  style: theme.ui(t.textMuted, size: 12),
+                ),
+                Chevron(open: _older),
+              ],
+            ),
+          ),
+          if (_older)
+            for (final f in a.older) _FileRow(widget.chat, f, open: f == open),
         ],
-      ),
+      ],
     );
   }
+}
 
-  Widget _row(NushiTheme theme, String f, {required bool open}) {
+/// A file's row: its name and, muted, its folder and when it changed; its
+/// pin at the right end on hover, or always when pinned.
+class _FileRow extends StatefulWidget {
+  const new(this.chat, this.file, {required this.open});
+
+  final ChatState chat;
+  final String file;
+  final bool open;
+
+  @override
+  State<_FileRow> createState() => _FileRowState();
+}
+
+class _FileRowState extends State<_FileRow> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
     final t = theme.t;
+    final f = widget.file;
     final detail = fileDetail(
       f,
       fileChanged(absoluteIn(widget.chat.folder, f)),
     );
-    return Tap(
-      onTap: () => widget.chat.openPreview(f),
-      selected: open,
-      tooltip: f,
-      padding: const EdgeInsets.symmetric(horizontal: _inset, vertical: 3),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            baseName(f),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.ui(t.text, size: 12),
-          ),
-          if (detail.isNotEmpty)
-            Text(
-              detail,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.ui(t.textMuted, size: 11.5),
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: Tap(
+        onTap: () => widget.chat.openPreview(f),
+        selected: widget.open,
+        tooltip: f,
+        padding: const EdgeInsets.fromLTRB(_inset, 3, 0, 3),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    baseName(f),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.ui(t.text, size: 12),
+                  ),
+                  if (detail.isNotEmpty)
+                    Text(
+                      detail,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.ui(t.textMuted, size: 11.5),
+                    ),
+                ],
+              ),
             ),
-        ],
+            pinMark(widget.chat, f, hover: _hover),
+          ],
+        ),
       ),
     );
   }

@@ -28,13 +28,16 @@ class PreviewScreen extends StatefulWidget {
     Daemon daemon,
     ChatState chat,
     String path,
-  ) => Navigator.of(context)
-      .push(
-        MaterialPageRoute<void>(
-          builder: (_) => PreviewScreen(daemon, chat, path),
-        ),
-      )
-      .ignore();
+  ) {
+    chat.sawFile(path);
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute<void>(
+            builder: (_) => PreviewScreen(daemon, chat, path),
+          ),
+        )
+        .ignore();
+  }
 
   @override
   State<PreviewScreen> createState() => _PreviewScreenState();

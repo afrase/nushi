@@ -22,6 +22,9 @@ enum ChatPhase {
   idle,
 }
 
+/// The time now; tests set their own.
+DateTime Function() clock = DateTime.now;
+
 /// One chat's transcript and status: a snapshot from the daemon, kept
 /// current by the chat's later events.
 class ChatState extends ChangeNotifier {
@@ -146,7 +149,16 @@ class ChatState extends ChangeNotifier {
   void openPreview(String path) {
     pane.value = null;
     preview.value = path;
+    sawFile(path);
   }
+
+  /// When the user last opened each file (as [preview] names it), while
+  /// the app runs: one opened in the last hour is among the chat's recent
+  /// artifacts (`chatArtifacts`).
+  final opened = ValueNotifier<Map<String, DateTime>>(const {});
+
+  /// Notes that the user opened [path] now (the phone's preview too).
+  void sawFile(String path) => opened.value = {...opened.value, path: clock()};
 
   /// The agent's name to show: "Claude".
   String get agentName => agentTitle(agent);
