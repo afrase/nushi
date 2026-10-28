@@ -5,13 +5,15 @@ import 'package:nushi/chat_files.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/preview.dart';
+import 'package:nushi/preview_marks.dart';
 import 'package:nushi/skills_list.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/web_page.dart';
 
 /// A file the agent wrote, beside the chat where a subagent's pane opens:
 /// its name (a menu of the chat's other files), Live while the daemon
-/// keeps it current, Preview or Source (Markdown), Open in Finder and
-/// Close. Read-only.
+/// keeps it current, Preview or Source (a file that renders), Reload and
+/// Open in browser (a page), Open in Finder and Close. Read-only.
 class PreviewPane extends StatefulWidget {
   const new({
     required this.chat,
@@ -32,27 +34,31 @@ class PreviewPane extends StatefulWidget {
 
 class _PreviewPaneState extends State<PreviewPane> {
   late final _watch = FileWatch(widget.daemon, widget.chat.id, widget.path);
+  late final PreviewKind _kind = previewKind(widget.path) ?? PreviewKind.code;
+  late final PageHost? _page = _kind.page ? newPageHost() : null;
   bool _source = false;
 
   @override
   void dispose() {
     _watch.dispose();
+    _page?.dispose();
     super.dispose();
   }
 
-  void _reveal() {
+  String get _abs {
     final p = widget.path;
-    final abs =
-        _watch.file?.path ??
+    return _watch.file?.path ??
         (p.startsWith('/') ? p : '${widget.chat.folder}/$p');
-    revealInFinder(abs).ignore();
   }
+
+  void _reveal() => revealInFinder(_abs).ignore();
 
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final kind = previewKind(widget.path);
+    final kind = _kind;
+    final page = _page;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -69,9 +75,12 @@ class _PreviewPaneState extends State<PreviewPane> {
               spacing: 8,
               children: [
                 Icon(
-                  kind == PreviewKind.image
-                      ? Icons.image_outlined
-                      : Icons.description_outlined,
+                  switch (kind) {
+                    PreviewKind.image => Icons.image_outlined,
+                    PreviewKind.html || PreviewKind.svg => Icons.web_outlined,
+                    PreviewKind.code => Icons.code,
+                    _ => Icons.description_outlined,
+                  },
                   size: 14,
                   color: t.textSecondary,
                 ),
@@ -95,7 +104,7 @@ class _PreviewPaneState extends State<PreviewPane> {
                   ),
                 ),
                 if (_watch.live) LiveMark(version: _watch.file),
-                if (kind == PreviewKind.markdown)
+                if (kind.rendered)
                   SourceSwitch(
                     source: _source,
                     onChanged: (v) => setState(() => _source = v),
@@ -103,6 +112,20 @@ class _PreviewPaneState extends State<PreviewPane> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    if (page != null) ...[
+                      IconTap(
+                        Icons.refresh,
+                        tooltip: 'Reload',
+                        size: 15,
+                        onTap: () => page.reload().ignore(),
+                      ),
+                      IconTap(
+                        Icons.open_in_new,
+                        tooltip: 'Open in browser',
+                        size: 14,
+                        onTap: () => openInBrowser(Uri.file(_abs)).ignore(),
+                      ),
+                    ],
                     IconTap(
                       Icons.folder_open_outlined,
                       tooltip: 'Open in Finder',
@@ -128,6 +151,13 @@ class _PreviewPaneState extends State<PreviewPane> {
               watch: _watch,
               source: _source,
               onReveal: _reveal,
+              page: page == null
+                  ? null
+                  : (watch) => WebPage(
+                      host: page,
+                      watch: watch,
+                      roots: [widget.chat.folder, ?widget.chat.worktree?.path],
+                    ),
             ),
           ),
         ),

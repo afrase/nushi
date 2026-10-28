@@ -1,0 +1,17 @@
+<!doctype html>
+<meta charset="utf-8">
+<script>
+  // A page an agent wrote, previewed on the phone (page_frame.dart): the
+  // app sends its text and this frame becomes it. The relay serves this
+  // file sandboxed (an origin of its own) with a CSP that lets the page's
+  // scripts and the network run.
+  "use strict";
+  function take(e) {
+    if (e.source !== parent || typeof e.data !== "string") return;
+    removeEventListener("message", take);
+    document.open();
+    document.write(e.data);
+    document.close();
+  }
+  addEventListener("message", take);
+</script>

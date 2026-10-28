@@ -25,6 +25,23 @@ class MainFlutterWindow: NSWindow {
         })
       }
 
+    // Opens an address in the default browser (a preview's Open in browser and
+    // its links): the app that opens https, for a file too, so a file a page
+    // links is never run by the app its type has.
+    FlutterMethodChannel(name: "nushi/browser", binaryMessenger: flutterViewController.engine.binaryMessenger)
+      .setMethodCallHandler { call, result in
+        guard call.method == "open" else { return result(FlutterMethodNotImplemented) }
+        guard let text = call.arguments as? String, let url = URL(string: text),
+          ["http", "https", "file"].contains(url.scheme?.lowercased() ?? ""),
+          let browser = NSWorkspace.shared.urlForApplication(toOpen: URL(string: "https://example.com")!)
+        else { return result(FlutterError(code: "refused", message: "Not an address to open", details: nil)) }
+        NSWorkspace.shared.open([url], withApplicationAt: browser, configuration: NSWorkspace.OpenConfiguration()) { _, error in
+          DispatchQueue.main.async {
+            result(error.map { FlutterError(code: "failed", message: $0.localizedDescription, details: nil) })
+          }
+        }
+      }
+
     // Start at login (ADR 0036): the launch agent in the bundle, which opens
     // the daemon's helper app. Answers its status after each call.
     let agent = SMAppService.agent(plistName: "com.nushihq.Nushi.daemon.plist")

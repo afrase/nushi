@@ -13,6 +13,9 @@ const SHELL = ["./"];
 // so app updates keep it.
 const FONTS = "nushi-fonts-dev";
 const FONTS_PATH = new URL("assets/fonts/fallback/", self.location).pathname;
+// The phone's frame for agents' pages: a navigation of its own (in an
+// iframe), not the app's page.
+const FRAME_PATH = new URL("frame.html", self.location).pathname;
 
 // The whole shell, checked with the server (a CDN may have stretched an
 // HTTP cache's hours; unchanged files cost a 304), before this
@@ -50,7 +53,7 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(fallbackFont(req));
     return;
   }
-  if (req.mode === "navigate") {
+  if (req.mode === "navigate" && url.pathname !== FRAME_PATH) {
     event.respondWith(
       caches.match("./", { cacheName: VERSION }).then((hit) => hit || fetch(req)),
     );

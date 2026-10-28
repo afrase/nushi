@@ -31,6 +31,8 @@ dependencies:
     path: ../packages/uds_transport
   url_launcher: ^6.3.3
   web: ^1.1.1
+  webview_flutter_platform_interface: ^2.15.1
+  webview_flutter_wkwebview: ^3.27.2
   xterm2: ^5.4.0
 
 dev_dependencies:
