@@ -19,6 +19,8 @@ import 'package:nushi/jira_view.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/open_file.dart';
 import 'package:nushi/panes.dart';
+import 'package:nushi/pull_link.dart';
+import 'package:nushi/pull_tab.dart';
 import 'package:nushi/remote.dart';
 import 'package:nushi/removed_chats.dart';
 import 'package:nushi/settings.dart';
@@ -298,8 +300,8 @@ class _Shell extends StatelessWidget {
   );
 }
 
-/// A chat under its header, with a switch between its transcript and its
-/// folder's changes.
+/// A chat under its header, with a switch between its transcript, its
+/// folder's changes and its pull request.
 class _ChatPane extends StatefulWidget {
   const new(this.chat, this.daemon, {super.key});
 
@@ -311,26 +313,33 @@ class _ChatPane extends StatefulWidget {
 }
 
 class _ChatPaneState extends State<_ChatPane> {
-  bool _changes = false;
+  ChatTab _tab = ChatTab.chat;
+
+  bool get _changes => _tab == ChatTab.changes;
+
+  /// Its pull request, looked for while the chat shows (for the tab).
+  late final ChatPull _pull;
 
   @override
   void initState() {
     super.initState();
     widget.chat.addListener(_showFile);
     widget.chat.preview.addListener(_showPreview);
+    _pull = ChatPull.of(widget.daemon, widget.chat)..follow();
   }
 
   @override
   void dispose() {
     widget.chat.removeListener(_showFile);
     widget.chat.preview.removeListener(_showPreview);
+    _pull.unfollow();
     super.dispose();
   }
 
   /// A file's preview opened (from Artifacts, or ⌘P) shows beside the chat.
   void _showPreview() {
-    if (widget.chat.preview.value != null && _changes) {
-      setState(() => _changes = false);
+    if (widget.chat.preview.value != null && _tab != ChatTab.chat) {
+      setState(() => _tab = ChatTab.chat);
     }
   }
 
@@ -338,7 +347,7 @@ class _ChatPaneState extends State<_ChatPane> {
   /// the Changes view.
   void _showFile() {
     if (widget.chat.openPath != null && !_changes) {
-      setState(() => _changes = true);
+      setState(() => _tab = ChatTab.changes);
     }
   }
 
@@ -351,7 +360,11 @@ class _ChatPaneState extends State<_ChatPane> {
         final fits =
             box.maxWidth >=
             paneWidth('details', DetailsPanel.width) + ChatView.minWidth;
-        final panel = show && fits && !_changes;
+        // The pull request's tab goes with its link.
+        final tab = _tab == ChatTab.pull && widget.chat.pull == null
+            ? ChatTab.chat
+            : _tab;
+        final panel = show && fits && tab == ChatTab.chat;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -360,10 +373,10 @@ class _ChatPaneState extends State<_ChatPane> {
               builder: (context, _) => ChatHeader(
                 widget.chat,
                 widget.daemon,
-                changes: _changes,
-                onChanges: (v) => setState(() => _changes = v),
+                tab: tab,
+                onTab: (v) => setState(() => _tab = v),
                 panel: panel,
-                onPanel: fits && !_changes
+                onPanel: fits && tab == ChatTab.chat
                     ? () => showDetails.value = !show
                     : null,
               ),
@@ -372,21 +385,30 @@ class _ChatPaneState extends State<_ChatPane> {
               child: TerminalArea(
                 chat: widget.chat,
                 daemon: widget.daemon,
-                onChanges: () => setState(() => _changes = true),
-                child: _changes
-                    ? ChangesView(chat: widget.chat, daemon: widget.daemon)
-                    : ChatView(
-                        chat: widget.chat,
-                        daemon: widget.daemon,
-                        details: panel
-                            ? DetailsPanel(
-                                chat: widget.chat,
-                                daemon: widget.daemon,
-                                onChanges: () =>
-                                    setState(() => _changes = true),
-                              )
-                            : null,
-                      ),
+                onChanges: () => setState(() => _tab = ChatTab.changes),
+                child: switch (tab) {
+                  ChatTab.changes => ChangesView(
+                    chat: widget.chat,
+                    daemon: widget.daemon,
+                  ),
+                  ChatTab.pull => PullTab(
+                    chat: widget.chat,
+                    daemon: widget.daemon,
+                  ),
+                  ChatTab.chat => ChatView(
+                    chat: widget.chat,
+                    daemon: widget.daemon,
+                    details: panel
+                        ? DetailsPanel(
+                            chat: widget.chat,
+                            daemon: widget.daemon,
+                            onChanges: () =>
+                                setState(() => _tab = ChatTab.changes),
+                            onPull: () => setState(() => _tab = ChatTab.pull),
+                          )
+                        : null,
+                  ),
+                },
               ),
             ),
           ],

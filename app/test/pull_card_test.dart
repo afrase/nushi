@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/chat_header.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_checks.dart';
+import 'package:nushi/github_pull.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/panel_cards.dart';
 import 'package:nushi/pull_link_dialog.dart';
@@ -127,7 +130,7 @@ void main() {
     expect(_inCard(find.text('Checks failing')), findsOneWidget);
     expect(_inCard(find.text('5')), findsOneWidget); // comments, none new
     // Collapsed: its number and the failing count.
-    await tester.tap(find.text('Pull request'));
+    await tester.tap(_inCard(find.text('Pull request')));
     await tester.pumpAndSettle();
     expect(_inCard(find.text('#1')), findsOneWidget);
     expect(_inCard(find.byIcon(Icons.close)), findsOneWidget);
@@ -166,6 +169,72 @@ void main() {
     );
     expect(parsePullRef('javascript:alert(1)'), isNull);
   });
+
+  testWidgets("the Pull request tab: the GitHub view's pull request, no "
+      'Start work; its comments seen', (tester) async {
+    final (d, fake) = await _app(tester, whole: pull());
+    // A comment came since the chat first saw it.
+    pullSeen.value = {'c': pullSeen.value['c']! - 1};
+    await tester.pump();
+    expect(find.text('Pull request'), findsNWidgets(2)); // the switch, the card
+    await tester.tap(find.text('1 new of 5'));
+    await tester.pumpAndSettle();
+    expect(find.byType(GitHubPullPane), findsOneWidget);
+    expect(
+      find.byType(PanelCard),
+      findsNothing,
+    ); // the panel goes, as for Changes
+    expect(find.text('Add Sub and Neg', findRichText: true), findsWidgets);
+    expect(find.text('Start work'), findsNothing);
+    expect(find.text('Fix checks'), findsOneWidget);
+    expect(find.text('Should this check for overflow?'), findsNothing);
+    expect(find.text('A first look.'), findsOneWidget);
+    expect(pullSeen.value['c'], greaterThan(0));
+    await tester.tap(find.text('Checks · 1 failed'));
+    await tester.pumpAndSettle();
+    expect(find.byType(GitHubChecks), findsOneWidget);
+    expect(fake.calls.whereType<GetGitHubPullRequest>().last.ref.number, 1);
+    // Unlinked: the tab goes, and the chat shows.
+    final was = fake.answer!;
+    fake
+      ..answer = ((input) => input is FindChatPullRequest
+          ? FindChatPullResponse(host: 'github.com', repo: _repo, branch: 'x')
+          : was(input))
+      ..emit(
+        EventsResponse(
+          chatId: 'c',
+          chat: chat('c', 'claude', 'Add Sub and Neg'),
+        ),
+      );
+    await tester.pumpAndSettle();
+    expect(find.byType(GitHubPullPane), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(ChatHeader),
+        matching: find.text('Pull request'),
+      ),
+      findsNothing,
+    );
+    d.dispose();
+  }, variant: _mac);
+
+  testWidgets('golden: the Pull request tab, dark', (tester) async {
+    final (d, _) = await _app(tester, whole: pull());
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+    addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+    await tester.tap(
+      find.descendant(
+        of: find.byType(ChatHeader),
+        matching: find.text('Pull request'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await expectLater(
+      find.byType(NushiApp),
+      matchesGoldenFile('goldens/pull_tab_dark.png'),
+    );
+    d.dispose();
+  }, variant: _mac);
 
   testWidgets('golden: the card, open with a failing check, dark', (
     tester,

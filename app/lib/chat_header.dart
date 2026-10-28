@@ -14,18 +14,22 @@ import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
+/// What shows in a chat's place: its transcript, its changes, or its pull
+/// request.
+enum ChatTab { chat, changes, pull }
+
 /// The chat's header: its title (double-click renames it), the agent, its
 /// model and status, the folder while the details panel is hidden, the
 /// files it wrote that preview (Artifacts, while there are some, counting
 /// those pinned or recent), the
-/// Chat | Changes switch, the terminal's and the panel's buttons and the
-/// chat's menu.
+/// Chat | Changes (| Pull request, while it has one) switch, the
+/// terminal's and the panel's buttons and the chat's menu.
 class ChatHeader extends StatefulWidget {
   const new(
     this.chat,
     this.daemon, {
-    required this.changes,
-    required this.onChanges,
+    required this.tab,
+    required this.onTab,
     required this.panel,
     required this.onPanel,
     super.key,
@@ -33,8 +37,8 @@ class ChatHeader extends StatefulWidget {
 
   final ChatState chat;
   final Daemon daemon;
-  final bool changes;
-  final ValueChanged<bool> onChanges;
+  final ChatTab tab;
+  final ValueChanged<ChatTab> onTab;
   final bool panel; // the details panel shows, with the folder in it
   final VoidCallback? onPanel; // shows or hides it; null when it can't show
 
@@ -62,14 +66,14 @@ class _ChatHeaderState extends State<ChatHeader> {
         : const <String>[];
     // The title and the model (a Codex model id is long) share what the
     // rest of the row leaves (it takes about 420 points, Artifacts 95
-    // more),
-    // so a narrow window cuts them short rather than overflow; with
-    // Artifacts,
-    // the title gets shorter still (at 720 points wide it would overflow).
+    // more, the Pull request tab 85), so a narrow window cuts them short
+    // rather than overflow; with Artifacts or the tab, the title gets
+    // shorter still (at 720 points wide it would overflow).
     return LayoutBuilder(
       builder: (context, box) {
-        final room = box.maxWidth - 420 - (files.isEmpty ? 0 : 95);
-        final title = (room * 0.6).clamp(files.isEmpty ? 80.0 : 48.0, 320.0);
+        final more = (files.isEmpty ? 0 : 95) + (chat.pull == null ? 0 : 85);
+        final room = box.maxWidth - 420 - more;
+        final title = (room * 0.6).clamp(more == 0 ? 80.0 : 40.0, 320.0);
         return _row(
           context,
           titleStyle,
@@ -203,9 +207,13 @@ class _ChatHeaderState extends State<ChatHeader> {
             const SizedBox(width: 8),
           ],
           Segmented(
-            value: widget.changes,
-            segments: const [(false, 'Chat'), (true, 'Changes')],
-            onChanged: widget.onChanges,
+            value: widget.tab,
+            segments: [
+              (ChatTab.chat, 'Chat'),
+              (ChatTab.changes, 'Changes'),
+              if (chat.pull != null) (ChatTab.pull, 'Pull request'),
+            ],
+            onChanged: widget.onTab,
           ),
           const SizedBox(width: 4),
           TerminalButton(chat: chat, daemon: widget.daemon),

@@ -73,6 +73,14 @@ class ChatState extends ChangeNotifier {
   /// Its pull request: the one it was started from, else the one whose
   /// head is its branch (found, or linked by hand). API 81.
   GitHubLink? pull;
+
+  /// Sets [pull] as the daemon just said it, ahead of the chat's event.
+  void linkPull(GitHubLink? link) {
+    if (link == pull) return;
+    pull = link;
+    notifyListeners();
+  }
+
   String title = '';
   bool archived = false; // no agent runs; read-only until unarchived
 
