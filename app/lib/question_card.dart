@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:nushi/draft.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/question_parts.dart';
 import 'package:nushi/theme/theme.dart';
@@ -24,11 +25,16 @@ class QuestionCard extends StatefulWidget {
     this.item, {
     required this.agent,
     required this.onAnswer,
+    this.draft,
     super.key,
   });
 
   final Item item;
   final String agent; // its name
+
+  /// The answers so far, kept by the chat (ChatState.answers) so they
+  /// outlive the card; its own when null.
+  final QuestionDraft? draft;
 
   /// Sends the answers, or null to decline.
   final Future<void> Function(List<FieldAnswer>? answer) onAnswer;
@@ -38,11 +44,13 @@ class QuestionCard extends StatefulWidget {
 }
 
 class _QuestionCardState extends State<QuestionCard> {
-  final _picked = <String, List<String>>{}; // option ids by field id
-  final _text = <String, TextEditingController>{}; // by field id
+  late final QuestionDraft _draft = widget.draft ?? QuestionDraft();
+  Map<String, List<String>> get _picked => _draft.picked; // by field id
+  Map<String, TextEditingController> get _text => _draft.text;
   final _focus = FocusNode();
   late final List<_Question> _qs = _questions(widget.item.fields);
-  int _tab = 0; // the question shown; _qs.length is Submit
+  int get _tab => _draft.tab; // the question shown; _qs.length is Submit
+  set _tab(int v) => _draft.tab = v;
   int _at = 0; // the option ↑/↓ are on
 
   static List<_Question> _questions(List<Field> fields) {
@@ -62,8 +70,7 @@ class _QuestionCardState extends State<QuestionCard> {
     super.initState();
     for (final f in widget.item.fields) {
       if (f.options.isEmpty) {
-        _text[f.id] = TextEditingController()
-          ..addListener(() => setState(() {}));
+        (_text[f.id] ??= TextEditingController()).addListener(_typed);
       }
     }
     // The agent is waiting on this: take the keyboard, when nothing else
@@ -75,12 +82,16 @@ class _QuestionCardState extends State<QuestionCard> {
     });
   }
 
+  void _typed() => setState(() {});
+
   @override
   void dispose() {
+    // The text outlives the card when the chat keeps it.
     for (final c in _text.values) {
-      c.dispose();
+      widget.draft == null ? c.dispose() : c.removeListener(_typed);
     }
     _focus.dispose();
+    _sending.dispose();
     super.dispose();
   }
 
@@ -140,8 +151,11 @@ class _QuestionCardState extends State<QuestionCard> {
     _many ? _go(_tab + 1) : _send(_answer);
   }
 
+  /// Sends once at a time: a double click, or Enter twice, answers once.
+  final Runner _sending = Runner();
+
   Future<void> _send(List<FieldAnswer>? answer) =>
-      tryOrShow(context, () => widget.onAnswer(answer));
+      _sending.run(context, () => widget.onAnswer(answer));
 
   KeyEventResult _onKey(FocusNode _, KeyEvent e) {
     // Keys typed into a box on the card (an "Other" answer) are its own.
@@ -216,7 +230,11 @@ class _QuestionCardState extends State<QuestionCard> {
                     style: theme.ui(t.text, weight: FontWeight.w600),
                   ),
                 ),
-                Button(label: 'Skip', onPressed: () => _send(null)),
+                RunButton(
+                  label: 'Skip',
+                  runner: _sending,
+                  run: () => widget.onAnswer(null),
+                ),
               ],
             ),
             if (_many)
@@ -303,11 +321,12 @@ class _QuestionCardState extends State<QuestionCard> {
       if (f.options.isEmpty) field(f, f.title),
       if (q.other case final other?) field(other, '${other.title}…'),
       if (!_many && (many || f.options.isEmpty))
-        Button(
+        RunButton(
           label: 'Submit',
           hint: '⏎',
           kind: ButtonKind.primary,
-          onPressed: _answer.isEmpty ? null : () => _send(_answer),
+          runner: _sending,
+          run: _answer.isEmpty ? null : () => widget.onAnswer(_answer),
         ),
     ];
   }
@@ -331,11 +350,12 @@ class _QuestionCardState extends State<QuestionCard> {
             ],
           ),
         ),
-      Button(
+      RunButton(
         label: 'Submit',
         hint: '⏎',
         kind: ButtonKind.primary,
-        onPressed: _answer.isEmpty ? null : () => _send(_answer),
+        runner: _sending,
+        run: _answer.isEmpty ? null : () => widget.onAnswer(_answer),
       ),
     ];
   }

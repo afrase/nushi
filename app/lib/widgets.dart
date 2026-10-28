@@ -29,6 +29,83 @@ Future<void> tryOrShow(
   }
 }
 
+/// One call at a time: [run] does nothing while a call it started runs (a
+/// double click answers once), and shows the call's error, if any, as
+/// [tryOrShow] does. [value] says whether one runs.
+class Runner extends ValueNotifier<bool> {
+  new() : super(false);
+
+  bool _disposed = false;
+
+  Future<void> run(BuildContext context, Future<void> Function() call) async {
+    if (value) return;
+    value = true;
+    try {
+      await tryOrShow(context, call);
+    } finally {
+      if (!_disposed) value = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+}
+
+/// A [Button] whose action is a call: off while it runs, so a double click
+/// sends once; [runner] shares that with other buttons (a card's answers),
+/// else it's the button's own. Off when [run] is null.
+class RunButton extends StatefulWidget {
+  const new({
+    required this.label,
+    required this.run,
+    super.key,
+    this.runner,
+    this.kind = ButtonKind.secondary,
+    this.icon,
+    this.hint,
+  });
+
+  final String label;
+  final Future<void> Function()? run;
+  final Runner? runner;
+  final ButtonKind kind;
+  final IconData? icon;
+  final String? hint;
+
+  @override
+  State<RunButton> createState() => _RunButtonState();
+}
+
+class _RunButtonState extends State<RunButton> {
+  Runner? _own;
+
+  Runner get _runner => widget.runner ?? (_own ??= Runner());
+
+  @override
+  void dispose() {
+    _own?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: _runner,
+    builder: (context, running, _) => Button(
+      label: widget.label,
+      kind: widget.kind,
+      icon: widget.icon,
+      hint: widget.hint,
+      onPressed: switch (widget.run) {
+        final run? when !running => () => _runner.run(context, run),
+        _ => null,
+      },
+    ),
+  );
+}
+
 /// A quiet pressable area: a light tint under the pointer (unless not
 /// [tint]: a card's title, which shows its grip instead) or when
 /// [selected], no ripple.

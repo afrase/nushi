@@ -20,3 +20,17 @@ class Draft {
   /// message goes there again.
   final relay = ValueNotifier<(String call, String agent)?>(null);
 }
+
+/// An agent's question form half answered (QuestionCard): what's picked
+/// and written, and the question it's on. It lives on the chat, so a look
+/// at another chat or at Settings doesn't lose it.
+final class QuestionDraft {
+  /// The options picked, by field id.
+  final picked = <String, List<String>>{};
+
+  /// The text written, by field id.
+  final text = <String, TextEditingController>{};
+
+  /// The question shown (the last is Submit).
+  int tab = 0;
+}

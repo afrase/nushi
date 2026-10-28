@@ -65,15 +65,30 @@ class CardTitle extends StatelessWidget {
   }
 }
 
-/// The agent's permission prompt, with its own options as buttons.
-class PermissionCard extends StatelessWidget {
+/// The agent's permission prompt, with its own options as buttons: one
+/// answer goes, however many clicks.
+class PermissionCard extends StatefulWidget {
   const new(this.item, {required this.onAnswer, super.key});
 
   final Item item;
   final Future<void> Function(String optionId) onAnswer;
 
   @override
+  State<PermissionCard> createState() => _PermissionCardState();
+}
+
+class _PermissionCardState extends State<PermissionCard> {
+  final _answering = Runner();
+
+  @override
+  void dispose() {
+    _answering.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final item = widget.item;
     final theme = NushiTheme.of(context);
     final pending = item.status == 'pending';
     final picked = item.options.where((o) => o.id == item.answer).firstOrNull;
@@ -96,10 +111,11 @@ class PermissionCard extends StatelessWidget {
             runSpacing: 6,
             children: [
               for (final (i, o) in item.options.indexed)
-                Button(
+                RunButton(
                   label: o.name,
                   kind: i == 0 ? ButtonKind.primary : ButtonKind.secondary,
-                  onPressed: () => tryOrShow(context, () => onAnswer(o.id)),
+                  runner: _answering,
+                  run: () => widget.onAnswer(o.id),
                 ),
             ],
           )

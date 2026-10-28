@@ -264,15 +264,11 @@ class _Archived extends StatelessWidget {
               style: theme.ui(t.textSecondary),
             ),
           ),
-          Button(
+          RunButton(
             label: 'Unarchive',
             kind: ButtonKind.primary,
-            onPressed: () => tryOrShow(
-              context,
-              () => daemon.client.archiveChat(
-                ArchiveChatRequest(chatId: chat.id),
-              ),
-            ),
+            run: () =>
+                daemon.client.archiveChat(ArchiveChatRequest(chatId: chat.id)),
           ),
         ],
       ),
@@ -321,9 +317,9 @@ class ReloadButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Tooltip(
     message: chat.busy ? 'Once ${chat.agentName} is done' : '',
-    child: Button(
+    child: RunButton(
       label: 'Reload',
-      onPressed: chat.busy
+      run: chat.busy
           ? null
           : () async {
               if (await stopsBackground(
@@ -333,11 +329,8 @@ class ReloadButton extends StatelessWidget {
                     'Reload',
                   ) &&
                   context.mounted) {
-                await tryOrShow(
-                  context,
-                  () => daemon.client.reloadChat(
-                    ReloadChatRequest(chatId: chat.id),
-                  ),
+                await daemon.client.reloadChat(
+                  ReloadChatRequest(chatId: chat.id),
                 );
               }
             },

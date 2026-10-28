@@ -123,6 +123,10 @@ class ChatState extends ChangeNotifier {
   /// What the user is writing to it.
   final draft = Draft();
 
+  /// Its question forms' answers so far, by the question's item id, until
+  /// sent.
+  final answers = <String, QuestionDraft>{};
+
   /// Its open side question, if any (see SidePanel).
   ChatState? side;
 

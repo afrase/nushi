@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/items.dart';
 import 'package:nushi/question_card.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
+
+import 'fake_daemon.dart';
 
 Field choice(
   String id,
@@ -96,6 +101,60 @@ void main() {
         'question_2': ['big'],
       },
     );
+  });
+
+  testWidgets('half an answer outlives the card: another chat, then back', (
+    tester,
+  ) async {
+    final fake = FakeDaemon([]);
+    final d = await fake.connect(tester);
+    final chat = ChatState('c', '/tmp');
+    final item = Item(
+      id: 'q',
+      kind: ItemKind.ITEM_KIND_QUESTION,
+      status: 'pending',
+      fields: [
+        choice('question_0', 'Color', ['red', 'green']),
+        Field(
+          id: 'question_1',
+          title: 'Why',
+          description: 'Why?',
+          type: FieldType.FIELD_TYPE_TEXT,
+        ),
+      ],
+    );
+    Future<void> show() => tester.pumpWidget(
+      MaterialApp(
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: Scaffold(body: ItemView(item, chat, d, live: false, still: true)),
+      ),
+    );
+    await show();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit2); // green, then on
+    await tester.pump();
+    await tester.enterText(find.byType(TextField), 'it calms');
+    await tester.pump();
+    // Another chat shows: the card goes.
+    await tester.pumpWidget(const SizedBox());
+    await show();
+    await tester.pump();
+    expect(find.text('Why?'), findsOneWidget, reason: 'the question it was on');
+    expect(find.text('it calms'), findsOneWidget);
+    await tester.tap(find.text('Submit').first); // the review
+    await tester.pump();
+    await tester.tap(find.widgetWithText(Button, 'Submit'));
+    await tester.pump();
+    final sent = fake.calls.whereType<AnswerQuestionRequest>().single;
+    expect(
+      {for (final a in sent.answers) a.fieldId: a.values},
+      {
+        'question_0': ['green'],
+        'question_1': ['it calms'],
+      },
+    );
+    expect(chat.answers, isEmpty, reason: 'sent: nothing kept');
+    d.dispose();
   });
 
   testWidgets('a single question is sent as soon as it is picked', (

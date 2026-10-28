@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/cards.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/draft.dart';
 import 'package:nushi/findings.dart';
 import 'package:nushi/findings_card.dart';
 import 'package:nushi/folder_button.dart';
@@ -80,14 +81,18 @@ class ItemView extends StatelessWidget {
         return QuestionCard(
           item,
           agent: chat.agentName,
-          onAnswer: (answer) => daemon.client.answerQuestion(
-            AnswerQuestionRequest(
-              chatId: chat.id,
-              itemId: item.id,
-              decline: answer == null,
-              answers: answer,
-            ),
-          ),
+          draft: chat.answers.putIfAbsent(item.id, QuestionDraft.new),
+          onAnswer: (answer) async {
+            await daemon.client.answerQuestion(
+              AnswerQuestionRequest(
+                chatId: chat.id,
+                itemId: item.id,
+                decline: answer == null,
+                answers: answer,
+              ),
+            );
+            chat.answers.remove(item.id); // sent: nothing to keep
+          },
         );
       case ItemKind.ITEM_KIND_THOUGHT:
         return ThoughtView(item, live: live);
