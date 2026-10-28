@@ -164,6 +164,7 @@ type chat struct {
 	children     map[string]*child     // its agent's subagents' sessions, by session id (children.go)
 	parent       *chat                 // a side chat's chat
 	started      time.Time             // when the running turn started
+	background   int                   // subagents and background commands running, as last said
 	done         chan struct{}         // closed when the running turn ends
 	sent         chan struct{}         // closed once the running turn's prompt is written
 	seq          int64                 // the last event's number
@@ -209,6 +210,14 @@ func (c *chat) emitLocked(e model.Event) {
 		c.unsaved[e.Item.ID] = true
 	}
 	c.publish(e)
+	// A subagent or background command started or ended: the status says
+	// how many run.
+	if e.Item != nil && (e.Item.Shell != nil || e.Item.Subagent != nil) {
+		if n := c.runningLocked(); n != c.background {
+			c.background = n
+			c.statusChangedLocked()
+		}
+	}
 }
 
 // Get returns a snapshot of a chat.
@@ -379,7 +388,24 @@ func (c *chat) statusLocked() model.Status {
 	idle := c.agent == nil && !c.busy && c.parent == nil && !c.session.Archived
 	return model.Status{Busy: c.busy, Started: c.started, Waiting: len(c.waiting)+len(c.questions) > 0, CanFork: c.canFork, Images: c.canImage,
 		CanRewind: c.forkAt != nil, MCPChanged: c.mcpChanged, CanAskContext: !idle && c.canAskContextLocked() == nil,
-		Asleep: idle && !c.reopenFailed, ReopenFailed: idle && c.reopenFailed, SessionGone: idle && c.reopenFailed && c.sessionGone, CanSleep: c.parent == nil && c.canSleepLocked() == nil}
+		Asleep: idle && !c.reopenFailed, ReopenFailed: idle && c.reopenFailed, SessionGone: idle && c.reopenFailed && c.sessionGone, CanSleep: c.parent == nil && c.canSleepLocked() == nil,
+		Background: c.runningLocked()}
+}
+
+// runningLocked counts the subagents and background commands that run.
+func (c *chat) runningLocked() int {
+	n := 0
+	for _, it := range c.items {
+		if running(it) {
+			n++
+		}
+	}
+	return n
+}
+
+// running says whether it is a subagent or background command that runs.
+func running(it model.Item) bool {
+	return it.Shell != nil && it.Shell.State == "running" || it.Subagent != nil && it.Subagent.State == "running"
 }
 
 func (c *chat) statusChangedLocked() {

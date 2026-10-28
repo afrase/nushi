@@ -112,10 +112,12 @@ Future<(Daemon, FakeDaemon)> _app(WidgetTester tester, double width) async {
   showDetails.value = true;
   paneWidths.value = {};
   subagentWide.value = false;
-  final c = chat('c', 'claude', 'ClickHouse time binding');
+  // The turn ended; the running subagent and make watch go on (API 84).
+  final running = ChatStatus(background: 2);
+  final c = chat('c', 'claude', 'ClickHouse time binding', status: running);
   final fake = FakeDaemon([c])
     ..answer = (input) => input is GetChatRequest
-        ? GetChatResponse(chat: c, items: _items)
+        ? GetChatResponse(chat: c, items: _items, status: running)
         : null;
   final d = await fake.connect(tester);
   d.select('c');

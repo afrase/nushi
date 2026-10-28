@@ -10493,7 +10493,10 @@ type ChatStatus struct {
 	// Of a chat whose reopen failed: its agent no longer has its session
 	// (it deleted it). The chat stays only for its worktree's or scratch
 	// folder's work; DeleteChat is what's left.
-	SessionGone   bool `protobuf:"varint,13,opt,name=session_gone,json=sessionGone,proto3" json:"session_gone,omitempty"`
+	SessionGone bool `protobuf:"varint,13,opt,name=session_gone,json=sessionGone,proto3" json:"session_gone,omitempty"`
+	// How many subagents and background commands the chat's agent started
+	// still run (API 84): a turn can end while they do.
+	Background    int32 `protobuf:"varint,14,opt,name=background,proto3" json:"background,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -10610,6 +10613,13 @@ func (x *ChatStatus) GetSessionGone() bool {
 		return x.SessionGone
 	}
 	return false
+}
+
+func (x *ChatStatus) GetBackground() int32 {
+	if x != nil {
+		return x.Background
+	}
+	return 0
 }
 
 // A shell the user runs beside a chat, in the daemon.
@@ -20126,7 +20136,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\tItemEvent\x12\"\n" +
 	"\x04item\x18\x01 \x01(\v2\x0e.nushi.v1.ItemR\x04item\x12\x16\n" +
 	"\x06append\x18\x02 \x01(\bR\x06append\x12\x14\n" +
-	"\x05index\x18\x03 \x01(\x05R\x05index\"\xf9\x02\n" +
+	"\x05index\x18\x03 \x01(\x05R\x05index\"\x99\x03\n" +
 	"\n" +
 	"ChatStatus\x12\x12\n" +
 	"\x04busy\x18\x01 \x01(\bR\x04busy\x12\x18\n" +
@@ -20143,7 +20153,10 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	" \x01(\bR\x06asleep\x12\x1b\n" +
 	"\tcan_sleep\x18\v \x01(\bR\bcanSleep\x12#\n" +
 	"\rreopen_failed\x18\f \x01(\bR\freopenFailed\x12!\n" +
-	"\fsession_gone\x18\r \x01(\bR\vsessionGoneJ\x04\b\x02\x10\x03R\x05error\"\xc4\x01\n" +
+	"\fsession_gone\x18\r \x01(\bR\vsessionGone\x12\x1e\n" +
+	"\n" +
+	"background\x18\x0e \x01(\x05R\n" +
+	"backgroundJ\x04\b\x02\x10\x03R\x05error\"\xc4\x01\n" +
 	"\bTerminal\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\achat_id\x18\x02 \x01(\tR\x06chatId\x12\x16\n" +

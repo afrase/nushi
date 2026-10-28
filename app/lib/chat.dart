@@ -15,6 +15,7 @@ enum ChatPhase {
   archived, // no agent runs; read-only until unarchived
   waiting, // on the user: a permission prompt or a question
   working, // a turn runs
+  background, // no turn runs, but subagents or commands it started do
   expired, // its agent deleted its session: it can't reopen
   failed, // its reopen failed
   unseen, // a turn ended that no client has shown yet (API 76)
@@ -116,6 +117,7 @@ class ChatState extends ChangeNotifier {
   bool reopenFailed = false; // no agent runs: its reopen failed (a notice)
   bool sessionGone = false; // and its agent no longer has its session
   bool canSleep = false; // its agent runs and can reopen the session
+  int background = 0; // subagents and background commands running (API 84)
   DateTime? started; // when the running turn started
   bool stopping = false; // the app asked the turn to stop
   String error = ''; // why the snapshot didn't load
@@ -128,6 +130,8 @@ class ChatState extends ChangeNotifier {
       ? .waiting
       : busy
       ? .working
+      : background > 0
+      ? .background
       : sessionGone
       ? .expired
       : reopenFailed
@@ -311,6 +315,7 @@ class ChatState extends ChangeNotifier {
     reopenFailed = s.reopenFailed;
     sessionGone = s.sessionGone;
     canSleep = s.canSleep;
+    background = s.background;
     started = s.started == 0
         ? null
         : DateTime.fromMillisecondsSinceEpoch(s.started.toInt());

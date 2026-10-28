@@ -41,6 +41,36 @@ class _Mark extends CustomPainter {
   bool shouldRepaint(_Mark old) => old.color != color || old.ringing != ringing;
 }
 
+/// A ring of [color], its line fading in and out slowly ([pulsing]) every
+/// 2.4 seconds: work runs in the background, no turn.
+class _Ring extends CustomPainter {
+  new(this.color, {required this.pulsing})
+    : super(repaint: pulsing ? loopClock : null);
+
+  final Color color;
+  final bool pulsing;
+
+  static const period = Duration(milliseconds: 2400);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final v = pulsing ? loopClock.phase(period) : 0.0;
+    // 1 → 0.35 → 1, eased.
+    final alpha = 1 - 0.65 * Curves.easeInOut.transform(1 - (2 * v - 1).abs());
+    canvas.drawCircle(
+      size.center(Offset.zero),
+      size.shortestSide / 2 * 0.55,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5
+        ..color = color.withValues(alpha: alpha),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_Ring old) => old.color != color || old.pulsing != pulsing;
+}
+
 /// A check drawn [drawn] of the way, at [opacity].
 class _Check extends CustomPainter {
   new(this.color, this.drawn, this.opacity);
@@ -76,8 +106,10 @@ class _Check extends CustomPainter {
 /// (it hops once when that starts), a ring growing out of it while the
 /// agent works, a ring when idle (a check draws itself there for a moment
 /// when a turn ends), solid green while a turn's end is unseen (the check
-/// settles into it); a moon asleep, a quiet clock when its agent deleted
-/// its session, an error mark when it couldn't start.
+/// settles into it); a ring that pulses slowly while subagents or commands
+/// run in the background after the turn; a moon asleep, a quiet clock
+/// when its agent deleted its session, an error mark when it couldn't
+/// start.
 class ChatDot extends StatefulWidget {
   const new({required this.chat, super.key});
 
@@ -194,6 +226,14 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
           size: const Size.square(size * 1.6),
           painter: _Mark(t.running, ringing: !still),
         );
+      case .background:
+        return Tooltip(
+          message: backgroundWords(chat.background),
+          child: CustomPaint(
+            size: const Size.square(size * 1.6),
+            painter: _Ring(t.running, pulsing: !still),
+          ),
+        );
       case .archived || .waiting || .unseen || .fresh || .idle:
         break;
     }
@@ -259,27 +299,26 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
   }
 }
 
+/// "2 subagents or commands running in the background".
+String backgroundWords(int n) =>
+    'Working in the background: $n '
+    '${n == 1 ? 'subagent or command' : 'subagents or commands'}';
+
 /// The most urgent state among [chats], as a collapsed group shows it:
-/// waiting on the user, then working, then a turn's end unseen; null when
-/// none is (all idle, asleep, new…).
+/// waiting on the user, then working, then working in the background,
+/// then a turn's end unseen; null when none is (all idle, asleep, new…).
 ChatPhase? groupPhase(Iterable<ChatState> chats) {
+  const order = <ChatPhase>[.waiting, .working, .background, .unseen];
   ChatPhase? most;
   for (final c in chats) {
-    switch (c.phase) {
-      case .waiting:
-        return .waiting;
-      case .working:
-        most = .working;
-      case .unseen:
-        most ??= .unseen;
-      case _:
-    }
+    final i = order.indexOf(c.phase);
+    if (i >= 0 && (most == null || i < order.indexOf(most))) most = c.phase;
   }
   return most;
 }
 
-/// [phase] (waiting, working or unseen) as a still [ChatDot] draws it,
-/// its word on hover: a collapsed group's summary.
+/// [phase] (waiting, working, in the background or unseen) as a still
+/// [ChatDot] draws it, its word on hover: a collapsed group's summary.
 class PhaseDot extends StatelessWidget {
   const new(this.phase, {super.key});
 
@@ -296,6 +335,11 @@ class PhaseDot extends StatelessWidget {
           ? CustomPaint(
               size: const Size.square(size * 1.6),
               painter: _Mark(color, ringing: !reduceMotion(context)),
+            )
+          : phase == .background
+          ? CustomPaint(
+              size: const Size.square(size * 1.6),
+              painter: _Ring(color, pulsing: !reduceMotion(context)),
             )
           : Padding(
               padding: const EdgeInsets.all(size * 0.3),
@@ -316,11 +360,14 @@ class PhaseDot extends StatelessWidget {
 }
 
 /// A chat's [ChatPhase] in a word, and its color: the same on the Mac and
-/// the phone. "done" is a turn's end not yet seen; "expired", a chat whose
-/// agent deleted its session; "couldn't start", one whose reopen failed.
+/// the phone. "done" is a turn's end not yet seen; "in background", a turn
+/// that ended while subagents or commands it started still run (not
+/// "idle": the user would take it as done); "expired", a chat whose agent
+/// deleted its session; "couldn't start", one whose reopen failed.
 (String, Color) phaseWord(ChatPhase p, Tokens t) => switch (p) {
   .waiting => ('needs you', t.needs),
   .working => ('working', t.running),
+  .background => ('in background', t.running),
   .expired => ('expired', t.idle),
   .failed => ("couldn't start", t.crashed),
   .unseen => ('done', t.done),
