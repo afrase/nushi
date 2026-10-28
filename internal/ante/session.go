@@ -32,6 +32,7 @@ type session struct {
 	msg     int                   // the running turn's agent messages so far
 	deltas  bool                  // the message under way streamed as deltas
 	thinks  bool                  // and the thought
+	compact compaction            // the last compaction shown
 	ended   chan struct{}         // closed once the host is gone
 }
 
@@ -48,6 +49,7 @@ type info struct {
 	Provider struct {
 		ID string `json:"id"`
 	} `json:"provider"`
+	Skills []skill `json:"skills"`
 }
 
 // turn is a running turn: Nushi's prompt (result, which nobody reads for
@@ -128,6 +130,7 @@ func (s *session) handle(ev event) {
 		}
 	}
 	var out []acp.SessionUpdate
+	var done *turn // a /compact's turn, ended once its updates are out
 	switch ev.Name {
 	case "TurnStart":
 		var p struct {
@@ -149,8 +152,22 @@ func (s *session) handle(ev event) {
 		out = s.usageLocked(ev)
 	case "TurnEnd":
 		s.turnEndLocked(ev)
-	case "SessionUpdated":
-		_ = json.Unmarshal(ev.Payload, &s.info)
+	case "CompactStart", "CompactEnd", "InfoBlockAppend":
+		var over bool
+		out, over = s.compactionLocked(ev)
+		if t := s.turn; over && t != nil && !t.started && t.id == ev.Parent {
+			done = t
+		}
+	case "ExtensionRefreshed":
+		s.refreshedLocked(ev)
+		out = []acp.SessionUpdate{s.commandsLocked()}
+	case "SessionUpdated": // the whole info: a model without effort has none
+		var in info
+		_ = json.Unmarshal(ev.Payload, &in)
+		if in.Skills == nil {
+			in.Skills = s.info.Skills
+		}
+		s.info = in
 		out = s.b.configUpdates(s.info)
 	case "Error":
 		var msg string
@@ -162,6 +179,11 @@ func (s *session) handle(ev event) {
 	s.mu.Unlock()
 	for _, u := range out {
 		s.b.update(s.id, u)
+	}
+	if done != nil {
+		s.mu.Lock()
+		s.endLocked(done, &acp.PromptResponse{StopReason: "end_turn", Usage: &done.usage}, nil)
+		s.mu.Unlock()
 	}
 }
 
@@ -298,31 +320,47 @@ func (s *session) turnEndLocked(ev event) {
 }
 
 // prompt runs a turn (after the running one, if any) and returns how it
-// ended.
+// ended: the user's input, a skill, or one of the bridge's own commands.
 func (s *session) prompt(ctx context.Context, text string) (*acp.PromptResponse, error) {
-	s.mu.Lock()
-	for s.turn != nil {
-		idle := s.idle
-		s.mu.Unlock()
-		select {
-		case <-idle:
-		case <-s.ended:
-			return nil, errors.New("Ante's host has stopped")
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		}
-		s.mu.Lock()
+	if name, arg, ok := slash(text); ok && (name == "model" || name == "effort") {
+		return s.setting(ctx, name, arg)
 	}
-	t := &turn{id: opID(), result: make(chan turnResult, 1)}
-	s.beginLocked(t)
-	s.mu.Unlock()
-	if err := s.h.write(t.id, map[string]string{"UserInput": text}); err != nil {
+	op := s.opOf(text)
+	t, err := s.next(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.h.write(t.id, op); err != nil {
 		s.mu.Lock()
 		s.endLocked(t, nil, err)
 		s.mu.Unlock()
 	}
 	r := <-t.result // the turn ends, or the host does
 	return r.resp, r.err
+}
+
+// next begins a turn once the running one, if any, has ended; its id is
+// the op's that runs it.
+func (s *session) next(ctx context.Context) (*turn, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for s.turn != nil {
+		idle := s.idle
+		s.mu.Unlock()
+		select {
+		case <-idle:
+		case <-s.ended:
+			s.mu.Lock()
+			return nil, errors.New("Ante's host has stopped")
+		case <-ctx.Done():
+			s.mu.Lock()
+			return nil, ctx.Err()
+		}
+		s.mu.Lock()
+	}
+	t := &turn{id: opID(), result: make(chan turnResult, 1)}
+	s.beginLocked(t)
+	return t, nil
 }
 
 // steer hands text to the running turn, which takes it at its next step;

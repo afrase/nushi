@@ -46,24 +46,18 @@ func (b *bridge) options(in info) []acp.SessionConfigOption {
 		Name  string `json:"name"`
 	}
 	var models []value
-	efforts := in.Model.Supported
 	for _, p := range b.catalog() {
 		if p.ID != in.Provider.ID {
 			continue
 		}
 		for _, m := range p.Models {
 			models = append(models, value{m.ID, cmp(m.Description, m.ID)})
-			if m.ID == in.Model.ID && len(efforts) == 0 {
-				efforts = m.Supported
-			}
 		}
 	}
 	if !slices.ContainsFunc(models, func(v value) bool { return v.Value == in.Model.ID }) {
 		models = append([]value{{in.Model.ID, in.Model.ID}}, models...)
 	}
-	if len(efforts) == 0 && in.Model.Effort != "" {
-		efforts = ladder
-	}
+	efforts := b.efforts(in)
 	option := func(id, name, category, current string, values []value) acp.SessionConfigOption {
 		var opts []acp.SessionConfigSelectOption
 		for _, v := range values {
@@ -81,6 +75,23 @@ func (b *bridge) options(in info) []acp.SessionConfigOption {
 		out = append(out, option("effort", "Effort", "thought_level", in.Model.Effort, values))
 	}
 	return out
+}
+
+// efforts are the session's model's effort levels: its own, else its
+// catalog entry's, else Ante's whole ladder when it reasons at all.
+func (b *bridge) efforts(in info) []string {
+	efforts := in.Model.Supported
+	for _, p := range b.catalog() {
+		for _, m := range p.Models {
+			if p.ID == in.Provider.ID && m.ID == in.Model.ID && len(efforts) == 0 {
+				efforts = m.Supported
+			}
+		}
+	}
+	if len(efforts) == 0 && in.Model.Effort != "" {
+		efforts = ladder
+	}
+	return efforts
 }
 
 func cmp(a, b string) string {

@@ -10,7 +10,15 @@
 //   - containing "ask": an AskUser call and its Question pause, then the
 //     answer as a message;
 //   - containing "wait": nothing, until Interrupt or a Steer;
+//   - containing "mcp": first an ExtensionRefreshed that adds the skill
+//     "late", as an MCP server coming online would;
 //   - anything else: "You said: <text>", as two deltas and the whole text.
+//
+// A session has the skill "review" (argument hint "<path>"); SlashCommand
+// runs a skill as a turn without echoing an input, its text the skill's
+// instructions ("<skill>\n<name>review</name>\n\nReview <args>\n</skill>"),
+// and any other name as the input "/name args". Compact compacts, its
+// summary "the summary", in an info block as Ante's.
 package antetest
 
 import (
@@ -36,6 +44,9 @@ type Store struct {
 
 type saved struct {
 	cwd, mode string
+	model     string // "" is m1
+	effort    string // "" is low
+	skills    []string
 	log       []string // the events a resume replays, as JSON
 	inputs    []string // the inputs' ids, where a fork can cut (log index after)
 	cuts      []int
@@ -102,8 +113,52 @@ func (h *Host) emit(parent string, ev any, logged bool) {
 }
 
 func (h *Host) info() map[string]any {
+	model, effort := h.s.model, h.s.effort
+	if model == "" {
+		model, effort = "m1", "low"
+	}
+	m := map[string]any{"id": model}
+	if effort != "" {
+		m["effort"] = effort
+	}
 	return map[string]any{"session_id": h.id, "cwd": h.s.cwd, "permission_mode": h.s.mode,
-		"model": map[string]any{"id": "m1", "effort": "low"}, "provider": map[string]any{"id": "fake"}}
+		"model": m, "provider": map[string]any{"id": "fake"}, "skills": h.skills()}
+}
+
+// skills lists the session's skills, as SessionStart and
+// ExtensionRefreshed do.
+func (h *Host) skills() []any {
+	h.store.mu.Lock()
+	defer h.store.mu.Unlock()
+	out := []any{map[string]any{"name": "review", "description": "Review code", "scope": "user", "argument_hint": "<path>"}}
+	for _, n := range h.s.skills {
+		out = append(out, map[string]any{"name": n, "description": nil, "scope": "project", "argument_hint": nil})
+	}
+	return out
+}
+
+func (h *Host) refreshed(parent string) {
+	h.emit(parent, map[string]any{"ExtensionRefreshed": map[string]any{"session_id": h.id, "skills": h.skills(), "subagents": []any{}}}, false)
+}
+
+// input starts a turn for op id, which runs text.
+func (h *Host) input(id, text string, echo bool) {
+	h.store.mu.Lock()
+	h.s.inputs, h.s.cuts = append(h.s.inputs, id), append(h.s.cuts, len(h.s.log))
+	h.store.mu.Unlock()
+	h.mu.Lock()
+	h.turn, h.paused, h.steered = id, make(chan json.RawMessage, 1), make(chan string, 1)
+	h.mu.Unlock()
+	if echo {
+		h.emit(id, map[string]any{"UserInput": text}, true)
+	}
+	if strings.Contains(text, "mcp") {
+		h.store.mu.Lock()
+		h.s.skills = append(h.s.skills, "late")
+		h.store.mu.Unlock()
+		h.refreshed(id)
+	}
+	go h.run(id, text)
 }
 
 func (h *Host) op(id string, raw json.RawMessage) (done bool) { //nolint:gocognit // one case per op the fake takes
@@ -123,7 +178,7 @@ func (h *Host) op(id string, raw json.RawMessage) (done bool) { //nolint:gocogni
 		h.store.mu.Unlock()
 		h.store.save(h.id, h.s)
 		h.emit(id, map[string]any{"SessionStart": h.info()}, false)
-		h.emit(id, map[string]any{"ExtensionRefreshed": map[string]any{"session_id": h.id}}, false)
+		h.refreshed(id)
 	case "ResumeSession":
 		var req struct {
 			ID string `json:"session_id"`
@@ -139,6 +194,7 @@ func (h *Host) op(id string, raw json.RawMessage) (done bool) { //nolint:gocogni
 		}
 		h.id, h.s = req.ID, s
 		h.emit(id, map[string]any{"SessionStart": h.info()}, false)
+		h.refreshed(id)
 		h.wmu.Lock()
 		for _, l := range log {
 			_, _ = h.w.Write([]byte(l + "\n"))
@@ -147,14 +203,21 @@ func (h *Host) op(id string, raw json.RawMessage) (done bool) { //nolint:gocogni
 	case "UserInput":
 		var text string
 		_ = json.Unmarshal(p, &text)
-		h.store.mu.Lock()
-		h.s.inputs, h.s.cuts = append(h.s.inputs, id), append(h.s.cuts, len(h.s.log))
-		h.store.mu.Unlock()
-		h.mu.Lock()
-		h.turn, h.paused, h.steered = id, make(chan json.RawMessage, 1), make(chan string, 1)
-		h.mu.Unlock()
-		h.emit(id, map[string]any{"UserInput": text}, true)
-		go h.run(id, text)
+		h.input(id, text, true)
+	case "SlashCommand":
+		var req struct{ Name, Args string }
+		_ = json.Unmarshal(p, &req)
+		if req.Name == "review" {
+			h.input(id, "<skill>\n<name>review</name>\n\nReview "+req.Args+"\n</skill>", false)
+		} else {
+			h.input(id, strings.TrimSpace("/"+req.Name+" "+req.Args), true)
+		}
+	case "Compact":
+		block := "compact-" + id
+		h.emit(id, map[string]any{"InfoBlockStart": map[string]any{"id": block, "header": "Compacting conversation history", "loading": true}}, true)
+		h.emit(id, "CompactStart", true)
+		h.emit(id, map[string]any{"CompactEnd": map[string]any{"summary": "the summary"}}, true)
+		h.emit(id, map[string]any{"InfoBlockAppend": map[string]any{"id": block, "detail": "Compaction complete"}}, true)
 	case "Steer":
 		var text string
 		_ = json.Unmarshal(p, &text)
@@ -184,11 +247,21 @@ func (h *Host) op(id string, raw json.RawMessage) (done bool) { //nolint:gocogni
 		h.mu.Unlock()
 	case "UpdateSession":
 		var req struct {
-			Mode string `json:"permission_mode"`
+			Mode  string `json:"permission_mode"`
+			Model *struct {
+				ID     string `json:"id"`
+				Effort string `json:"effort"`
+			} `json:"model"`
 		}
 		_ = json.Unmarshal(p, &req)
 		if req.Mode != "" {
 			h.s.mode = req.Mode
+		}
+		if m := req.Model; m != nil {
+			h.s.model, h.s.effort = m.ID, m.Effort
+			if m.Effort == "" && m.ID == "m1" { // the catalog's
+				h.s.effort = "low"
+			}
 		}
 		h.emit(id, map[string]any{"SessionUpdated": h.info()}, false)
 	case "ContextReport":

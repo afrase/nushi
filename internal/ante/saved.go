@@ -34,6 +34,7 @@ func (b *bridge) open(ctx context.Context, cwd string, op any, replay bool) (*ac
 		h.stop(time.Second)
 		return nil, err
 	}
+	go b.commands(s, replay)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return &acp.NewSessionResponse{SessionID: acp.SessionID(s.id), Modes: modes(s.info.PermissionMode), ConfigOptions: b.options(s.info)}, nil
@@ -128,6 +129,11 @@ func (s *session) replayLocked(ev event) []acp.SessionUpdate {
 		}
 	case "AgentMessage", "Thinking":
 		return s.textLocked(ev)
+	case "CompactStart", "CompactEnd", "InfoBlockAppend":
+		out, _ := s.compactionLocked(ev)
+		return out
+	case "ExtensionRefreshed":
+		s.refreshedLocked(ev)
 	case "ToolStart", "ToolEnd":
 		return s.toolLocked(ev, nil)
 	}
@@ -209,7 +215,7 @@ func (b *bridge) list(cwd string) acp.ListSessionsResponse {
 		if err != nil || json.Unmarshal(raw, &m) != nil || !isSessionID(m.ID) || cwd != "" && realPath(m.Dir) != cwd {
 			continue
 		}
-		info := acp.SessionInfo{SessionID: acp.SessionID(m.ID), Cwd: m.Dir, Title: cmp(m.Title, firstLine(m.First)), UpdatedAt: m.Active}
+		info := acp.SessionInfo{SessionID: acp.SessionID(m.ID), Cwd: m.Dir, Title: cmp(m.Title, firstLine(skillRun(m.First))), UpdatedAt: m.Active}
 		if m.Messages > 0 {
 			info.Meta = map[string]any{"messageCount": m.Messages}
 		}
@@ -224,6 +230,17 @@ func (b *bridge) list(cwd string) acp.ListSessionsResponse {
 func firstLine(s string) string {
 	s, _, _ = strings.Cut(strings.TrimSpace(s), "\n")
 	return s
+}
+
+// skillRun is a message that ran a skill as the user's command: Ante
+// keeps the skill's instructions (`<skill>\n<name>…</name>…`) as the
+// message, so it reads as the command.
+func skillRun(text string) string {
+	rest, ok := strings.CutPrefix(text, "<skill>\n<name>")
+	if name, _, found := strings.Cut(rest, "</name>"); ok && found && !strings.Contains(name, "\n") {
+		return "/" + name
+	}
+	return text
 }
 
 // withoutFolder is a message without the list of the folder's files Ante's
