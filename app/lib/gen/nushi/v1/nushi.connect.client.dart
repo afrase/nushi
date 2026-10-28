@@ -754,6 +754,27 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Says which of the paths an agent's message names are regular files
+  /// the chat's preview opens (WatchChatFile's rules: in its folder or
+  /// worktree, no link out, or one its tool calls worked on), so the app
+  /// links only those.
+  Future<nushiv1nushi.FindChatFilesResponse> findChatFiles(
+    nushiv1nushi.FindChatFilesRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.findChatFiles,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Lists a branch's commits since a base, or the last ones.
   Future<nushiv1nushi.ListCommitsResponse> listCommits(
     nushiv1nushi.ListCommitsRequest input, {

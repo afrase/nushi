@@ -55,6 +55,18 @@ func Locate(roots []string, path string) (root, rel string, err error) {
 	return "", "", fmt.Errorf("%s is outside the chat's folder", path)
 }
 
+// Exists says rel inside root is a regular file, reached without leaving
+// root.
+func Exists(root, rel string) bool {
+	r, err := os.OpenRoot(root)
+	if err != nil {
+		return false
+	}
+	defer r.Close() //nolint:errcheck // read-only
+	fi, err := r.Stat(rel)
+	return err == nil && fi.Mode().IsRegular()
+}
+
 // Read reads rel inside root. A missing file or one that isn't a regular
 // file is Missing; a path that leads outside root is an error.
 func Read(root, rel string) (File, error) {

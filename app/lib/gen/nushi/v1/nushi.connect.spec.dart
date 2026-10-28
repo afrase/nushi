@@ -376,6 +376,17 @@ abstract final class NushiService {
     nushiv1nushi.WatchChatFileResponse.new,
   );
 
+  /// Says which of the paths an agent's message names are regular files
+  /// the chat's preview opens (WatchChatFile's rules: in its folder or
+  /// worktree, no link out, or one its tool calls worked on), so the app
+  /// links only those.
+  static const findChatFiles = connect.Spec(
+    '/$name/FindChatFiles',
+    connect.StreamType.unary,
+    nushiv1nushi.FindChatFilesRequest.new,
+    nushiv1nushi.FindChatFilesResponse.new,
+  );
+
   /// Lists a branch's commits since a base, or the last ones.
   static const listCommits = connect.Spec(
     '/$name/ListCommits',

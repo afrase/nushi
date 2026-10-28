@@ -30,6 +30,8 @@ class AgentMarkdown extends StatelessWidget {
     this.typed = false,
     this.live = false,
     this.images = markdownImage,
+    this.files,
+    this.onTapFile,
   });
 
   final String text;
@@ -44,6 +46,11 @@ class AgentMarkdown extends StatelessWidget {
   /// It is still streaming in: half-written syntax is healed until it ends.
   /// A finished message shows as written ("[1, 2, 3]", "a*b").
   final bool live;
+
+  /// Paths of files that are links, as written, to what [onTapFile] opens
+  /// ([StreamingMarkdown.files]).
+  final Map<String, String>? files;
+  final void Function(String path)? onTapFile;
 
   static void _open(String href) {
     if (webLink(href) case final uri?) unawaited(launchUrl(uri));
@@ -73,6 +80,8 @@ class AgentMarkdown extends StatelessWidget {
       onTapLink: _open,
       imageBuilder: images,
       style: style,
+      files: files,
+      onTapFile: onTapFile,
       codeBlock: (language, code, {required open}) => language == 'mermaid'
           ? MermaidBlock(code, style: style, open: open)
           : null,

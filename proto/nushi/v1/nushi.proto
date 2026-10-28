@@ -142,6 +142,11 @@ service NushiService {
   // the agent wrote. A path that leads outside them, through a link too,
   // is refused.
   rpc WatchChatFile(WatchChatFileRequest) returns (stream WatchChatFileResponse);
+  // Says which of the paths an agent's message names are regular files
+  // the chat's preview opens (WatchChatFile's rules: in its folder or
+  // worktree, no link out, or one its tool calls worked on), so the app
+  // links only those.
+  rpc FindChatFiles(FindChatFilesRequest) returns (FindChatFilesResponse);
   // Lists a branch's commits since a base, or the last ones.
   rpc ListCommits(ListCommitsRequest) returns (ListCommitsResponse);
   // Sums up a folder's changes (as GetDiff lists them) and names its
@@ -1348,6 +1353,17 @@ message WatchChatFileRequest {
   string chat_id = 1;
   // Absolute, or relative to the chat's folder.
   string path = 2;
+}
+
+message FindChatFilesRequest {
+  string chat_id = 1;
+  // Absolute, or relative to the chat's folder; 200 at most.
+  repeated string paths = 2;
+}
+
+message FindChatFilesResponse {
+  // Those of the paths that are there, as given.
+  repeated string found = 1;
 }
 
 // The file as it is now.
