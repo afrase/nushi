@@ -60,14 +60,13 @@ func subscription(t *testing.T) *webpush.Subscription {
 }
 
 // pushing is remote access with a paired web device whose notifications
-// are on; chat "c1" is Claude's, anything else a side chat.
-func pushing(t *testing.T) (*Service, *pushes, string, string) {
+// are on; chat "c1" is Claude's, anything else a side chat. A turn's end
+// is pushed after 20 ms, and tune may shorten other waits.
+func pushing(t *testing.T, tune ...func(*timing)) (*Service, *pushes, string, string) {
 	t.Helper()
-	wait := FinishedWait
-	FinishedWait = 20 * time.Millisecond
-	t.Cleanup(func() { FinishedWait = wait })
 	dir := t.TempDir()
-	s := startRemote(t, dir, startRelay(t))
+	tune = append([]func(*timing){func(tm *timing) { tm.finished = 20 * time.Millisecond }}, tune...)
+	s := startRemote(t, dir, startRelay(t), tune...)
 	p := &pushes{}
 	s.UsePush(Push{Key: "key", Send: p.send, Agent: func(id string) (string, bool) { return "Claude", id == "c1" }}, false)
 	pairOne(t, s, newKey(t))
@@ -230,10 +229,7 @@ func TestNoFinishedForAStopOrAQueue(t *testing.T) {
 
 // An open chat counts only while the device keeps saying so.
 func TestTheViewLapses(t *testing.T) {
-	s, p, device, _ := pushing(t)
-	lease := ViewLease
-	ViewLease = 50 * time.Millisecond
-	t.Cleanup(func() { ViewLease = lease })
+	s, p, device, _ := pushing(t, func(tm *timing) { tm.viewLease = 50 * time.Millisecond })
 	s.SetView(device, "c1")
 	time.Sleep(80 * time.Millisecond)
 	turn(s, "c1")
@@ -245,10 +241,7 @@ func TestTheViewLapses(t *testing.T) {
 // Shown counts the Mac's view (device "", no connection) and a connected
 // device's, each while its lease holds; the Mac's view sends no push.
 func TestShownByTheMacOrADevice(t *testing.T) {
-	s, p, device, _ := pushing(t)
-	lease := ViewLease
-	ViewLease = 50 * time.Millisecond
-	t.Cleanup(func() { ViewLease = lease })
+	s, p, device, _ := pushing(t, func(tm *timing) { tm.viewLease = 50 * time.Millisecond })
 	s.SetView("", "c1")
 	s.SetView(device, "c2")
 	if !s.Shown("c1") || !s.Shown("c2") || s.Shown("c3") {

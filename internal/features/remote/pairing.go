@@ -33,10 +33,10 @@ type pairing struct {
 }
 
 // StartPairing makes a one-time id and secret and waits at the relay for a
-// phone, until PairingWait has passed; it returns the QR code's text. A
-// pairing already under way ends.
+// phone, until the pairing's wait has passed; it returns the QR code's
+// text. A pairing already under way ends.
 //
-//nolint:contextcheck // a pairing waits for its phone after the request returns
+//nolint:contextcheck // a pairing waits for its phone after the request returns, as long as the service
 func (s *Service) StartPairing() (string, time.Time, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -46,13 +46,14 @@ func (s *Service) StartPairing() (string, time.Time, error) {
 	s.endPairing()
 	psk := make([]byte, 32)
 	rand.Read(psk)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(s.ctx)
 	listen := newListenKey()
-	p := &pairing{id: listenID(listen), listen: listen, psk: psk, expires: time.Now().Add(PairingWait), cancel: cancel, answer: make(chan bool, 1)}
+	p := &pairing{id: listenID(listen), listen: listen, psk: psk, expires: time.Now().Add(s.timing.pairing), cancel: cancel, answer: make(chan bool, 1)}
 	s.pairing = p
 	s.changed()
 	slog.Info("pairing started", "until", p.expires.Format(time.TimeOnly))
-	go s.pair(ctx, p, s.settings.Relay)
+	relayURL := s.settings.Relay
+	s.goLocked(func() { s.pair(ctx, p, relayURL) })
 	q := url.Values{"r": {s.settings.Relay}, "i": {p.id}, "k": {b64(s.key.Public)}, "s": {b64(psk)}}
 	return "nushi://pair?" + q.Encode(), p.expires, nil
 }
@@ -117,7 +118,7 @@ func (s *Service) pair(ctx context.Context, p *pairing, relayURL string) {
 		allow := false
 		select {
 		case allow = <-p.answer:
-		case <-time.After(ConfirmWait):
+		case <-time.After(s.timing.confirm):
 		case <-ctx.Done():
 			return
 		}
@@ -142,7 +143,7 @@ func (s *Service) pair(ctx context.Context, p *pairing, relayURL string) {
 			return
 		}
 		slog.Info("device paired", "device", id, "name", name)
-		go s.run(conn, id, daemon)
+		s.wg.Go(func() { s.run(conn, id, daemon) }) // pair is one of wg's
 		return
 	}
 }
@@ -166,7 +167,7 @@ func (s *Service) meet(ctx context.Context, p *pairing, relayURL string) (conn *
 		_ = c.Close()
 		return nil, h, false
 	}
-	timer := time.AfterFunc(HandshakeWait, func() { _ = c.Close() })
+	timer := time.AfterFunc(s.timing.handshake, func() { _ = c.Close() })
 	defer timer.Stop()
 	conn, err = noiseconn.Respond(c, noiseconn.Config{Static: s.key, Prologue: prologue(p.id), PSK: p.psk},
 		func([]byte) error { return nil })

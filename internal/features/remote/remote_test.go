@@ -45,10 +45,15 @@ func startRelay(t *testing.T) string {
 	return "ws" + strings.TrimPrefix(srv.URL, "http")
 }
 
-// startRemote is remote access on, at relayURL, with the store in dir.
-func startRemote(t *testing.T, dir, relayURL string) *Service {
+// startRemote is remote access on, at relayURL, with the store in dir,
+// and its waits as tune leaves them.
+func startRemote(t *testing.T, dir, relayURL string, tune ...func(*timing)) *Service {
 	t.Helper()
-	s, err := New(store.New(dir), &relay.Dialer{}, echo, func() func() { return func() {} }, func(model.Event) {})
+	tm := defaultTiming()
+	for _, f := range tune {
+		f(&tm)
+	}
+	s, err := newService(store.New(dir), &relay.Dialer{}, echo, func() func() { return func() {} }, func(model.Event) {}, tm)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -291,11 +296,8 @@ func TestDeny(t *testing.T) {
 }
 
 func TestPairingExpires(t *testing.T) {
-	old := PairingWait
-	PairingWait = 300 * time.Millisecond
-	defer func() { PairingWait = old }()
 	url := startRelay(t)
-	s := startRemote(t, t.TempDir(), url)
+	s := startRemote(t, t.TempDir(), url, func(tm *timing) { tm.pairing = 300 * time.Millisecond })
 	qr, _, _ := s.StartPairing()
 	waitFor(t, func() bool { return s.Get().Pairing == nil })
 	o := parseQR(t, qr)
@@ -430,15 +432,14 @@ func TestOffClosesEverything(t *testing.T) {
 // When the relay ends the daemon's wait (its limit, a restart), the
 // daemon waits again, and a phone still gets through.
 func TestWaitsAgain(t *testing.T) {
-	defer func(b time.Duration) { MaxBackoff = b }(MaxBackoff)
-	MaxBackoff = 300 * time.Millisecond // waits this short back off, as flapping ones
 	lim := relay.Defaults
 	lim.MaxWait = 200 * time.Millisecond
 	lim.DialWait = 3 * time.Second
 	srv := httptest.NewServer(relay.New(lim))
 	defer srv.Close()
 	url := "ws" + strings.TrimPrefix(srv.URL, "http")
-	s := startRemote(t, t.TempDir(), url)
+	// Waits this short back off, as flapping ones.
+	s := startRemote(t, t.TempDir(), url, func(tm *timing) { tm.maxBackoff = 300 * time.Millisecond })
 	phone := newKey(t)
 	o, id := pairOne(t, s, phone)
 	time.Sleep(time.Second) // several waits ended
@@ -452,8 +453,6 @@ func TestWaitsAgain(t *testing.T) {
 // the Mac says it's reconnecting, and the daemon waits there again once
 // the relay is back, however long it was gone, so a phone gets through.
 func TestRelayRestart(t *testing.T) {
-	defer func(b time.Duration) { MaxBackoff = b }(MaxBackoff)
-	MaxBackoff = 200 * time.Millisecond
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -468,7 +467,7 @@ func TestRelayRestart(t *testing.T) {
 	}
 	srv := serve(ln)
 	url := "ws://" + addr
-	s := startRemote(t, t.TempDir(), url)
+	s := startRemote(t, t.TempDir(), url, func(tm *timing) { tm.maxBackoff = 200 * time.Millisecond })
 	phone := newKey(t)
 	o, id := pairOne(t, s, phone)
 

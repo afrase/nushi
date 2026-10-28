@@ -22,7 +22,7 @@ var errUnknown = errors.New("not a paired device")
 // gets an answer (on an id given up, only a device still to move), and it
 // counts as connected once its first transport message decrypts.
 func (s *Service) accept(ctx context.Context, c *relay.Conn, id string) {
-	timer := time.AfterFunc(HandshakeWait, func() { _ = c.Close() })
+	timer := time.AfterFunc(s.timing.handshake, func() { _ = c.Close() })
 	defer timer.Stop()
 	stop := context.AfterFunc(ctx, func() { _ = c.Close() })
 	defer stop()

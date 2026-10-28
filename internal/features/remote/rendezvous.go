@@ -8,10 +8,6 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-// MovingWait is how long the daemon still waits at an id it gave up, for
-// the devices that haven't moved to the new one; after it they pair again.
-var MovingWait = 30 * 24 * time.Hour
-
 // rotate gives up the daemon's id after revoked was revoked, which knows
 // it: the daemon waits at a new one, and at the old one only for the
 // devices still paired until they move (Remote.Rendezvous tells them).
@@ -64,7 +60,7 @@ func (s *Service) moved(device string) {
 func (s *Service) prune() bool {
 	n := len(s.moving)
 	s.moving = slices.DeleteFunc(s.moving, func(m model.Moving) bool {
-		return len(m.Devices) == 0 || time.Since(m.Since) > MovingWait
+		return len(m.Devices) == 0 || time.Since(m.Since) > s.timing.moving
 	})
 	return len(s.moving) != n
 }
@@ -73,7 +69,7 @@ func (s *Service) prune() bool {
 // with s.mu.
 func (s *Service) mayMove(device, id string) bool {
 	for _, m := range s.moving {
-		if listenID(m.Listen) == id && time.Since(m.Since) <= MovingWait {
+		if listenID(m.Listen) == id && time.Since(m.Since) <= s.timing.moving {
 			return slices.Contains(m.Devices, device)
 		}
 	}
@@ -85,14 +81,14 @@ func (s *Service) waits(id string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return id == s.id || slices.ContainsFunc(s.moving, func(m model.Moving) bool {
-		return listenID(m.Listen) == id && time.Since(m.Since) <= MovingWait
+		return listenID(m.Listen) == id && time.Since(m.Since) <= s.timing.moving
 	})
 }
 
 // relink starts the waits at the relay again: at the daemon's id, and at
 // each id given up that a device still needs. Called with s.mu.
 //
-//nolint:contextcheck // the relay link lasts as long as the daemon
+//nolint:contextcheck // the waits last as long as the service (s.ctx), not a caller
 func (s *Service) relink() {
 	if s.stopLink != nil {
 		s.stopLink()
@@ -100,11 +96,12 @@ func (s *Service) relink() {
 	if s.prune() {
 		_ = s.saveKey(s.listen, s.moving)
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(s.ctx)
 	s.stopLink = cancel
-	go s.link(ctx, s.settings.Relay, s.listen)
+	relayURL, listen := s.settings.Relay, s.listen
+	s.goLocked(func() { s.link(ctx, relayURL, listen) })
 	for _, m := range s.moving {
-		go s.link(ctx, s.settings.Relay, m.Listen)
+		s.goLocked(func() { s.link(ctx, relayURL, m.Listen) })
 	}
 }
 

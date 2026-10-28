@@ -146,8 +146,10 @@ check: lint test
 
 test: test-go test-packages test-app test-web
 
+# With the race detector: about twice the time, still under the app's
+# tests in CI, and a goroutine nothing waits for shows up here first.
 test-go:
-	go test ./...
+	go test -race ./...
 
 # The packages run anywhere with Go (remote_transport's interop builds a
 # Go peer) and Chrome.

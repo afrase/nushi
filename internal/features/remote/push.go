@@ -24,18 +24,6 @@ type Push struct {
 	Agent func(chatID string) (title string, ok bool) // a stored chat's agent, as people read it ("Claude")
 }
 
-var (
-	// PushWait is how long one push may take.
-	PushWait = 30 * time.Second
-	// ViewLease is how long a device's open chat counts after it last said
-	// so: the phone says it again with each ping while it shows, so a phone
-	// put away (whose last word may never have left) gets pushes soon.
-	ViewLease = 40 * time.Second
-	// FinishedWait is how long a turn's end waits before it's pushed: a
-	// queued message's turn starting meanwhile means the agent goes on.
-	FinishedWait = 2 * time.Second
-)
-
 // UsePush turns notifications on: devices may subscribe, and Follow sends.
 // fresh says the VAPID key is new: subscriptions made with another one no
 // longer work, so they're forgotten.
@@ -121,7 +109,7 @@ type view struct {
 }
 
 // SetView says which chat device shows ("" none); it gets no push for that
-// chat while it's connected and keeps saying so (ViewLease). A device's
+// chat while it's connected and keeps saying so (the view lease). A device's
 // view goes with its last connection. The Mac is device "": its socket
 // has no connection to lose, so only the lease ends its view.
 func (s *Service) SetView(device, chatID string) {
@@ -137,7 +125,7 @@ func (s *Service) SetView(device, chatID string) {
 // showingLocked says whether device shows chatID now. Called with s.mu.
 func (s *Service) showingLocked(device, chatID string) bool {
 	v, ok := s.views[device]
-	return ok && v.chat == chatID && time.Since(v.at) < ViewLease && (device == "" || s.connectedLocked(device))
+	return ok && v.chat == chatID && time.Since(v.at) < s.timing.viewLease && (device == "" || s.connectedLocked(device))
 }
 
 // Shown says whether any client, the Mac or a device, shows chatID now.
@@ -197,7 +185,7 @@ func (s *Service) send(ctx context.Context, device string, p payload) error {
 		ttl = 4 * time.Hour
 	}
 	m := webpush.Message{Payload: body, Topic: base64.RawURLEncoding.EncodeToString(topic[:24]), Urgent: p.Kind != "finished", TTL: ttl}
-	ctx, cancel := context.WithTimeout(ctx, PushWait)
+	ctx, cancel := context.WithTimeout(ctx, s.timing.push)
 	defer cancel()
 	err := send(ctx, subject, webpush.Subscription{Endpoint: sub.Endpoint, P256DH: sub.P256DH, Auth: sub.Auth}, m)
 	if errors.Is(err, webpush.ErrGone) {
@@ -234,7 +222,7 @@ type notifier struct {
 	running   map[string]bool            // chats with a turn running
 	cancelled map[string]bool            // chats whose running turn was stopped
 	asked     map[string]map[string]bool // per chat, prompts already pushed
-	finishing map[string]*time.Timer     // turns' ends waiting FinishedWait
+	finishing map[string]*time.Timer     // turns' ends waiting timing.finished
 	outbox    map[string]*outbox         // per device, the push in flight and the next
 }
 
@@ -282,7 +270,7 @@ func (s *Service) Follow(e model.Event) {
 		delete(n.asked, chat)
 		if !stopped {
 			var t *time.Timer
-			t = time.AfterFunc(FinishedWait, func() {
+			t = time.AfterFunc(s.timing.finished, func() {
 				n.mu.Lock()
 				waited := n.finishing[chat] == t
 				if waited {
@@ -309,7 +297,7 @@ func (s *Service) Follow(e model.Event) {
 		if e.Item.Kind == model.Permission {
 			kind = "permission"
 		}
-		go s.notify(chat, kind) // not under n.mu: queue takes it
+		s.spawn(func() { s.notify(chat, kind) }) // not under n.mu: queue takes it
 	}
 }
 
@@ -355,9 +343,9 @@ func (s *Service) queue(device string, p payload) {
 	}
 	n.outbox[device] = &outbox{}
 	n.mu.Unlock()
-	go func() {
+	sending := s.spawn(func() {
 		for next := &p; next != nil; {
-			_ = s.send(context.Background(), device, *next) // its failure is logged
+			_ = s.send(s.ctx, device, *next) // its failure is logged
 			n.mu.Lock()
 			ob := n.outbox[device]
 			if next = ob.next; next == nil {
@@ -366,5 +354,18 @@ func (s *Service) queue(device string, p payload) {
 			ob.next = nil
 			n.mu.Unlock()
 		}
-	}()
+	})
+	if !sending {
+		n.mu.Lock()
+		delete(n.outbox, device)
+		n.mu.Unlock()
+	}
+}
+
+// spawn runs f in a goroutine Close waits for, unless the service is
+// closed.
+func (s *Service) spawn(f func()) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.goLocked(f)
 }

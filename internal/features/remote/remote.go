@@ -32,13 +32,35 @@ type Store interface {
 	SaveDevices([]model.Device) error
 }
 
-// Timeouts, and the cap on live connections.
-var (
-	HandshakeWait = 30 * time.Second // from a dialer's first message to its first transport message
-	PairingWait   = 5 * time.Minute  // a QR code's life
-	ConfirmWait   = 2 * time.Minute  // for Allow or Deny once a phone has connected
-	MaxConns      = 16
-)
+// MaxConns caps the live connections.
+const MaxConns = 16
+
+// timing is remote access's waits: a field of the service, not package
+// variables, so a test's shorter ones touch no other test's goroutines.
+type timing struct {
+	handshake  time.Duration // from a dialer's first message to its first transport message
+	pairing    time.Duration // a QR code's life
+	confirm    time.Duration // for Allow or Deny once a phone has connected
+	maxBackoff time.Duration // the most between tries at the relay
+	push       time.Duration // how long one push may take
+	// viewLease is how long a device's open chat counts after it last
+	// said so: the phone says it again with each ping while it shows, so
+	// a phone put away (whose last word may never have left) gets pushes
+	// soon.
+	viewLease time.Duration
+	// finished is how long a turn's end waits before it's pushed: a queued
+	// message's turn starting meanwhile means the agent goes on.
+	finished time.Duration
+	// moving is how long the daemon still waits at an id it gave up, for
+	// the devices that haven't moved to the new one; after it they pair
+	// again.
+	moving time.Duration
+}
+
+func defaultTiming() timing {
+	return timing{handshake: 30 * time.Second, pairing: 5 * time.Minute, confirm: 2 * time.Minute, maxBackoff: 30 * time.Second,
+		push: 30 * time.Second, viewLease: 40 * time.Second, finished: 2 * time.Second, moving: 30 * 24 * time.Hour}
+}
 
 // Service is remote access.
 type Service struct {
@@ -48,8 +70,15 @@ type Service struct {
 	awake   func() (stop func()) // keeps the Mac from idle sleep
 	publish func(model.Event)
 	key     noise.DHKey
+	timing  timing
+	// ctx ends with Close, and with it everything the service started,
+	// which wg counts: Close returns once they have.
+	ctx    context.Context //nolint:containedctx // the service's life, which Close ends
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
 
 	mu        sync.Mutex
+	closed    bool               // Close was called: nothing more starts
 	listen    ed25519.PrivateKey // proves to the relay the daemon may listen at id
 	id        string
 	moving    []model.Moving // ids given up, still waited on for some devices
@@ -68,6 +97,10 @@ type Service struct {
 
 // New loads remote access and, if it was on, starts it.
 func New(st Store, dialer *relay.Dialer, serve func(net.Conn), awake func() func(), publish func(model.Event)) (*Service, error) {
+	return newService(st, dialer, serve, awake, publish, defaultTiming())
+}
+
+func newService(st Store, dialer *relay.Dialer, serve func(net.Conn), awake func() func(), publish func(model.Event), tm timing) (*Service, error) {
 	k, ok, err := st.RemoteKey()
 	if err != nil {
 		return nil, err
@@ -93,9 +126,10 @@ func New(st Store, dialer *relay.Dialer, serve func(net.Conn), awake func() func
 	if err != nil {
 		return nil, err
 	}
-	s := &Service{st: st, dialer: dialer, serve: serve, awake: awake, publish: publish,
+	s := &Service{st: st, dialer: dialer, serve: serve, awake: awake, publish: publish, timing: tm,
 		key: noise.DHKey{Private: k.Private, Public: k.Public}, listen: k.Listen, id: listenID(k.Listen), moving: k.Moving,
 		settings: settings, state: "off", devices: devices, conns: map[*noiseconn.Conn]string{}, views: map[string]view{}}
+	s.ctx, s.cancel = context.WithCancel(context.Background())
 	s.mu.Lock()
 	s.apply()
 	s.mu.Unlock()
@@ -196,12 +230,26 @@ func (s *Service) apply() {
 	s.relink()
 }
 
-// Close stops remote access for the daemon's end, leaving it on.
+// Close stops remote access for the daemon's end, leaving it on, and
+// returns once everything it started has stopped.
 func (s *Service) Close() {
 	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.closed = true
 	s.settings.On = false
 	s.apply()
+	s.cancel()
+	s.mu.Unlock()
+	s.wg.Wait()
+}
+
+// goLocked runs f in a goroutine Close waits for, unless the service is
+// closed. Called with s.mu.
+func (s *Service) goLocked(f func()) bool {
+	if s.closed {
+		return false
+	}
+	s.wg.Go(f)
+	return true
 }
 
 // setState tells how the wait on id stands, which counts only for the
@@ -234,7 +282,7 @@ func (s *Service) link(ctx context.Context, relayURL string, listen ed25519.Priv
 			s.setState(ctx, id, "error", err.Error())
 			slog.Info("relay: trying again", "in", wait.Round(time.Second), "id", short(id))
 			sleep(ctx, wait)
-			backoff = min(2*backoff, MaxBackoff)
+			backoff = min(2*backoff, s.timing.maxBackoff)
 			continue
 		}
 		s.setState(ctx, id, "connected", "")
@@ -257,15 +305,12 @@ func (s *Service) link(ctx context.Context, relayURL string, listen ed25519.Priv
 			s.setState(ctx, id, "reconnecting", err.Error())
 			_ = c.Close()
 			sleep(ctx, wait)
-			backoff = min(2*backoff, MaxBackoff)
+			backoff = min(2*backoff, s.timing.maxBackoff)
 			continue
 		}
-		go s.accept(ctx, c, id)
+		s.wg.Go(func() { s.accept(ctx, c, id) }) // link is one of wg's: Close can't be waiting at zero
 	}
 }
-
-// MaxBackoff caps the wait between tries at the relay.
-var MaxBackoff = 30 * time.Second
 
 // short is an id's start, enough to tell the daemon's waits apart in the
 // log.
