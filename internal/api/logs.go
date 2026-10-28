@@ -46,9 +46,12 @@ func (l logCalls) WrapStreamingHandler(next connect.StreamingHandlerFunc) connec
 			slog.Info("app connected", "via", l.via)
 		}
 		err := next(ctx, conn)
-		if events {
+		switch {
+		case events && connect.CodeOf(err) == connect.CodeResourceExhausted:
+			slog.Warn("app disconnected: it fell behind the events", "via", l.via, "after", time.Since(start).Round(time.Second))
+		case events:
 			slog.Info("app disconnected", "via", l.via, "after", time.Since(start).Round(time.Second))
-		} else {
+		default:
 			l.ended(conn.Spec().Procedure, 0, err) // a stream lasts as long as it's wanted
 		}
 		return err

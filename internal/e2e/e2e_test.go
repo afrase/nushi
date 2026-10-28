@@ -127,7 +127,9 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	svc.UseCopies(copies, st.KeepTranscripts)
 	svc.AutoSleep(st) // as main does: the settings are the daemon's
 	follow, unfollow := context.WithCancel(context.Background())
-	go hub.Subscribe(follow.Done(), func() bool { return true }, func(e model.Event) bool { terms.Follow(e); return true })
+	go func() {
+		_ = hub.Subscribe(follow, func(e model.Event) bool { terms.Follow(e); return true }, events.Unbounded())
+	}()
 	sv := api.Services{Chats: svc, Agents: agents.New(nil, nil, "", nil), Terms: terms, Hub: hub, Memory: memory.New(svc), Transcripts: st}
 	srv := httptest.NewServer(api.WithToken("tok", api.New(sv)))
 	devices := httptest.NewServer(api.ForDevices(sv))

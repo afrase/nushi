@@ -207,7 +207,7 @@ func run() error {
 	chatSvc.AutoClearCopies(st.TranscriptDays)
 	termSvc := terminals.New(startShell, filepath.Base(loginShell), chatSvc, hub.Publish)
 	chatSvc.UseTerminals(termSvc)
-	go hub.Subscribe(nil, func() bool { return true }, func(e model.Event) bool { termSvc.Follow(e); return true })
+	go follow(hub, termSvc.Follow)
 	agentSvc.UseChats(chatSvc)
 	// The API, on the socket for the app (with the token) and on each
 	// paired device's channel (ADR 0034).
@@ -227,7 +227,7 @@ func run() error {
 	if err := usePush(st, sv.Remote, chatSvc, kinds); err != nil {
 		return err
 	}
-	go hub.Subscribe(nil, func() bool { return true }, func(e model.Event) bool { sv.Remote.Follow(e); return true })
+	go follow(hub, sv.Remote.Follow)
 	// A handler's panic, which net/http recovers, is logged with its stack.
 	errorLog := slog.NewLogLogger(slog.Default().Handler(), slog.LevelError)
 	remoteSrv := &http.Server{Handler: api.ForDevices(sv), ConnContext: api.DeviceConn, Protocols: new(http.Protocols), ErrorLog: errorLog} //nolint:gosec // served only over paired devices' Noise channels
@@ -334,6 +334,12 @@ func version() string {
 		}
 	}
 	return cmp.Or(api.Release, "dev") + " (" + cmp.Or(rev, "unknown") + dirty + " " + info.GoVersion + ")"
+}
+
+// follow gives fn every event, in the daemon, for its life: never
+// dropped, however far behind (events.Unbounded).
+func follow(hub *events.Hub, fn func(model.Event)) {
+	_ = hub.Subscribe(context.Background(), func(e model.Event) bool { fn(e); return true }, events.Unbounded()) // ends only with fn's false
 }
 
 // loadToken reads the client token, making a new one on first start or

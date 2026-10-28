@@ -89,7 +89,9 @@ func TestNothingPrivateLogged(t *testing.T) {
 	svc.UseCopies(copies, st.KeepTranscripts)
 	srv := httptest.NewServer(api.WithToken("tok", api.New(api.Services{Chats: svc, Agents: agents.New(nil, nil, "", nil), Terms: terms, Hub: hub,
 		Memory: memory.New(svc), Log: st, Transcripts: st})))
-	go hub.Subscribe(nil, func() bool { return true }, func(e model.Event) bool { terms.Follow(e); return true })
+	go func() {
+		_ = hub.Subscribe(context.Background(), func(e model.Event) bool { terms.Follow(e); return true }, events.Unbounded())
+	}()
 
 	ctx := context.Background()
 	a := open(t, &daemon{url: srv.URL})

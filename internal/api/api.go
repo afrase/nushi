@@ -604,12 +604,18 @@ func (s *server) Events(ctx context.Context, _ *connect.Request[nushiv1.EventsRe
 	s.chats.Following(1)
 	defer s.chats.Following(-1)
 	// An empty first message tells the client the subscription is live.
-	s.hub.Subscribe(ctx.Done(), func() bool {
-		err = stream.Send(&nushiv1.EventsResponse{})
-		return err == nil
-	}, func(e model.Event) bool {
+	behind := s.hub.Subscribe(ctx, func(e model.Event) bool {
 		err = stream.Send(toProto(e))
 		return err == nil
-	})
+	}, events.OnLive(func() bool {
+		err = stream.Send(&nushiv1.EventsResponse{})
+		return err == nil
+	}))
+	if behind != nil {
+		// A client that stopped reading (a frozen app, a phone on a bad
+		// link): its events were dropped, and it subscribes again and
+		// reloads what it shows, as after any reconnect.
+		return connect.NewError(connect.CodeResourceExhausted, behind)
+	}
 	return err
 }
