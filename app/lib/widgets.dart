@@ -74,6 +74,7 @@ class RunButton extends StatefulWidget {
     this.kind = ButtonKind.secondary,
     this.icon,
     this.hint,
+    this.wrap = false,
   });
 
   final String label;
@@ -82,6 +83,7 @@ class RunButton extends StatefulWidget {
   final ButtonKind kind;
   final IconData? icon;
   final String? hint;
+  final bool wrap; // Button.wrap
 
   @override
   State<RunButton> createState() => _RunButtonState();
@@ -106,6 +108,7 @@ class _RunButtonState extends State<RunButton> {
       kind: widget.kind,
       icon: widget.icon,
       hint: widget.hint,
+      wrap: widget.wrap,
       onPressed: switch (widget.run) {
         final run? when !running => () => _runner.run(context, run),
         _ => null,

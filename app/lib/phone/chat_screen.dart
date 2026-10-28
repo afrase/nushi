@@ -5,9 +5,11 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/chat_files.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/phone/connection_bar.dart';
 import 'package:nushi/phone/files_screen.dart';
+import 'package:nushi/phone/new_chat_screen.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/preview_screen.dart';
 import 'package:nushi/phone/ui.dart';
@@ -85,10 +87,59 @@ class ChatScreen extends StatelessWidget {
         ),
         bottom: chat.archived
             ? null
+            : chat.sessionGone
+            ? ExpiredBar(phone, chat)
             : Padding(
                 padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
                 child: Composer(chat: chat, daemon: daemon, folder: true),
               ),
+      ),
+    );
+  }
+}
+
+/// In place of the composer for a chat whose agent deleted its session, as
+/// the Mac has it: read-only (a message would fail), with a new chat in
+/// its folder.
+class ExpiredBar extends StatelessWidget {
+  const new(this.phone, this.chat, {super.key});
+
+  final Phone phone;
+  final ChatState chat;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = NushiTheme.of(context).t;
+    return Container(
+      decoration: BoxDecoration(
+        color: t.raised,
+        border: Border(top: BorderSide(color: t.borderSubtle)),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+      child: Row(
+        spacing: 8,
+        children: [
+          Icon(Icons.history_toggle_off, size: 16, color: t.textMuted),
+          Expanded(
+            child: Text(
+              chat.items.any((it) => it.kind != ItemKind.ITEM_KIND_NOTICE)
+                  ? 'Read-only: Nushi’s copy of the transcript.'
+                  : 'Read-only.',
+              style: phoneText(context, color: t.textSecondary, size: 14),
+            ),
+          ),
+          TextButton(
+            onPressed: () => newPhoneChat(
+              context,
+              phone,
+              folder: chat.scratch ? '' : chat.folder,
+            ),
+            child: Text(
+              'New chat here',
+              style: phoneText(context, color: t.link, size: 14),
+            ),
+          ),
+        ],
       ),
     );
   }

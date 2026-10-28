@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -270,6 +271,107 @@ void main() {
       await _end(tester, phone);
     });
   }
+
+  // UX review, findings 17 and 18.
+  testWidgets('the chats that need you are a group at the top', (tester) async {
+    final (phone, _) = await _app(tester, FakeDaemon(_chats));
+    final heading = tester.getRect(find.text('Needs you'));
+    final waiting = tester.getRect(find.text('Review the Noise channel'));
+    final working = tester.getRect(find.text('Fix the flaky relay test'));
+    expect(heading.top, lessThan(waiting.top));
+    expect(waiting.top, lessThan(working.top));
+    expect(find.text('Review the Noise channel'), findsOne); // moved, once
+    await _end(tester, phone);
+  });
+
+  testWidgets("a permission's long option wraps on the phone, whole; a "
+      "question's options have no digits", (tester) async {
+    const long =
+        "Yes, and don't ask again for make in this folder and its "
+        'subfolders';
+    final fake = FakeDaemon(_chats)
+      ..answer = (input) => input is GetChatRequest
+          ? GetChatResponse(
+              chat: _chats[1],
+              status: _chats[1].status,
+              items: [
+                Item(
+                  id: 'p',
+                  kind: ItemKind.ITEM_KIND_PERMISSION,
+                  status: 'pending',
+                  title: 'make check',
+                  options: [
+                    Option(id: 'y', name: 'Yes'),
+                    Option(id: 'a', name: long),
+                    Option(id: 'n', name: 'No'),
+                  ],
+                ),
+              ],
+            )
+          : null;
+    final (phone, _) = await _app(tester, fake);
+    await tester.tap(find.text('Review the Noise channel'));
+    await tester.pumpAndSettle();
+    final text = find.text(long);
+    expect(tester.widget<Text>(text).maxLines, 3);
+    final paragraph = tester.renderObject<RenderParagraph>(
+      find.descendant(of: text, matching: find.byType(RichText)),
+    );
+    expect(paragraph.didExceedMaxLines, isFalse);
+    expect(tester.getSize(text).height, greaterThan(20)); // two lines
+    await expectLater(
+      find.byType(PhoneApp),
+      matchesGoldenFile('goldens/phone_permission_390.png'),
+    );
+    await _end(tester, phone);
+  });
+
+  testWidgets('an expired chat is read-only, with a new chat in its folder', (
+    tester,
+  ) async {
+    final expired = chat(
+      'e',
+      'claude',
+      'Move the session store',
+      status: ChatStatus(reopenFailed: true, sessionGone: true),
+    );
+    final fake = FakeDaemon([expired])
+      ..answer = (input) => input is GetChatRequest
+          ? GetChatResponse(
+              chat: expired,
+              status: expired.status,
+              items: [
+                Item(
+                  id: 'u',
+                  kind: ItemKind.ITEM_KIND_USER_MESSAGE,
+                  text: 'Move the session store into its own package.',
+                ),
+              ],
+            )
+          : null;
+    final (phone, _) = await _app(tester, fake);
+    await tester.tap(find.text('Move the session store'));
+    await tester.pumpAndSettle();
+    expect(find.byType(TextField), findsNothing);
+    expect(find.text('Read-only: Nushi’s copy of the transcript.'), findsOne);
+    await expectLater(
+      find.byType(PhoneApp),
+      matchesGoldenFile('goldens/phone_expired_390.png'),
+    );
+    await tester.tap(find.text('New chat here'));
+    await tester.pumpAndSettle();
+    // The New chat screen, its folder first.
+    expect(find.text('Folder'), findsOne);
+    expect(
+      tester.getRect(find.textContaining('nushi', findRichText: true)).top,
+      lessThan(
+        tester
+            .getRect(find.textContaining('No folder', findRichText: true))
+            .top,
+      ),
+    );
+    await _end(tester, phone);
+  });
 
   testWidgets('notifications on and off: the subscription to the daemon', (
     tester,

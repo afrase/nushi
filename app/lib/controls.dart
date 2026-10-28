@@ -135,8 +135,11 @@ enum ButtonKind {
 }
 
 /// A button: [label], an optional leading [icon], a shortcut [hint] after
-/// the label. Every button has the same height and padding; stretched wider
-/// than its content, the content is centred.
+/// the label (not on a phone). Every button has the same height and
+/// padding; stretched wider than its content, the content is centred.
+/// [wrap]: on a phone, a long label wraps to three lines, the button
+/// growing, rather than being cut (a permission's option says what it
+/// allows).
 class Button extends StatelessWidget {
   const new({
     required this.label,
@@ -148,10 +151,12 @@ class Button extends StatelessWidget {
     this.autofocus = false,
     this.tooltip = '',
     this.menu = false,
+    this.wrap = false,
   });
 
   final String label;
   final VoidCallback? onPressed;
+  final bool wrap;
   final ButtonKind kind;
   final IconData? icon;
   final String? hint;
@@ -172,6 +177,8 @@ class Button extends StatelessWidget {
       ButtonKind.destructive => t.crashed,
     };
     final style = theme.ui(fg, weight: primary ? FontWeight.w500 : null);
+    final touch = TouchTargets.of(context);
+    final lines = wrap && touch ? 3 : 1;
     return Pressable(
       onTap: onPressed,
       autofocus: autofocus,
@@ -179,8 +186,13 @@ class Button extends StatelessWidget {
       builder: (context, look) => _faded(
         look,
         Container(
-          height: controlHeight,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          height: lines > 1 ? null : controlHeight,
+          constraints: lines > 1
+              ? const BoxConstraints(minHeight: controlHeight)
+              : null,
+          padding: lines > 1
+              ? const EdgeInsets.symmetric(horizontal: 10, vertical: 5)
+              : const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
             color: primary
                 ? (look.hover
@@ -214,11 +226,12 @@ class Button extends StatelessWidget {
                 child: Text(
                   label,
                   style: style,
-                  maxLines: 1,
+                  maxLines: lines,
                   overflow: TextOverflow.ellipsis,
+                  textAlign: lines > 1 ? TextAlign.center : null,
                 ),
               ),
-              if (hint != null) ...[
+              if (hint != null && !touch) ...[
                 const SizedBox(width: 6),
                 keyHint(
                   context,
@@ -515,8 +528,10 @@ class _Dots extends CustomPainter {
   bool shouldRepaint(_Dots old) => old.color != color;
 }
 
-/// A shortcut in small monospace (`⏎`).
+/// A shortcut in small monospace (`⏎`); nothing on a phone, which has no
+/// keys ([TouchTargets]).
 Widget keyHint(BuildContext context, String keys, {Color? color}) {
+  if (TouchTargets.of(context)) return const SizedBox.shrink();
   final theme = NushiTheme.of(context);
   return Text(keys, style: theme.code(color ?? theme.t.textMuted, size: 11));
 }

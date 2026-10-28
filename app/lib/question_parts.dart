@@ -36,10 +36,12 @@ class QuestionOption extends StatelessWidget {
       child: Row(
         spacing: 8,
         children: [
-          SizedBox(
-            width: 12,
-            child: digit == null ? null : keyHint(context, digit!),
-          ),
+          // A phone has no keys: no digit, nor its place.
+          if (!TouchTargets.of(context))
+            SizedBox(
+              width: 12,
+              child: digit == null ? null : keyHint(context, digit!),
+            ),
           Icon(
             switch ((many, picked)) {
               (false, false) => Icons.radio_button_unchecked,

@@ -12,17 +12,25 @@ import 'package:nushi/phone/ui.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// Opens the New chat screen; a chat started there opens.
-Future<void> newPhoneChat(BuildContext context, Phone phone) =>
-    Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (_) => NewChatScreen(phone)));
+/// Opens the New chat screen, on [folder] if given ('' for none); a chat
+/// started there opens.
+Future<void> newPhoneChat(
+  BuildContext context,
+  Phone phone, {
+  String? folder,
+}) => Navigator.of(context).push(
+  MaterialPageRoute<void>(builder: (_) => NewChatScreen(phone, folder: folder)),
+);
 
 /// A new chat: a folder (one of the chats', none, or a path typed) and an
 /// agent.
 class NewChatScreen extends StatefulWidget {
-  const new(this.phone, {super.key});
+  const new(this.phone, {super.key, this.folder});
 
   final Phone phone;
+
+  /// The folder picked at first; the most recent one when null.
+  final String? folder;
 
   @override
   State<NewChatScreen> createState() => _NewChatScreenState();
@@ -30,8 +38,12 @@ class NewChatScreen extends StatefulWidget {
 
 class _NewChatScreenState extends State<NewChatScreen> {
   late final Daemon _daemon = widget.phone.daemon!;
-  late final List<String> _recent = recentFolders(_daemon.chats.values);
-  late String _folder = _recent.firstOrNull ?? '';
+  // The folder asked for first, even when no live chat has it.
+  late final List<String> _recent = {
+    if (widget.folder case final f? when f.isNotEmpty) f,
+    ...recentFolders(_daemon.chats.values),
+  }.toList();
+  late String _folder = widget.folder ?? _recent.firstOrNull ?? '';
   late String _agent = lastAgent(_daemon.chats.values);
   final _typed = TextEditingController();
   bool _starting = false;
