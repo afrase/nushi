@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/chat.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/reply_cards.dart';
+import 'package:nushi/review_cards.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/subagent_pane.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -159,6 +162,87 @@ void main() {
     expect(sent.text, 'abcd');
     expect(sent.now, isFalse, reason: 'nothing to stop');
     expect(c.text, isEmpty);
+    await tester.pumpWidget(const SizedBox()); // its timers end
+    d.dispose();
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets('a review comment: the same keys; the keypad’s Enter saves, '
+      'Escape drops it', (tester) async {
+    final saved = <String>[];
+    var dropped = false;
+    final text = TextEditingController();
+    addTearDown(text.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: Scaffold(
+          body: CommentBox(
+            lines: 'Line 3',
+            controller: text,
+            onSave: saved.add,
+            onCancel: () => dropped = true,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    final field = find.byType(TextField);
+    for (final MapEntry(key: name, value: holding) in _lineKeys.entries) {
+      final c = await _abcd(tester, field);
+      await _enter(tester, holding);
+      _startedLine(c);
+      expect(saved, isEmpty, reason: name);
+    }
+    await _abcd(tester, field);
+    await _enter(tester, [LogicalKeyboardKey.metaLeft]);
+    expect(saved, ['abcd']);
+    await tester.sendKeyEvent(LogicalKeyboardKey.numpadEnter);
+    await tester.pump();
+    expect(saved, ['abcd', 'abcd']);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    expect(dropped, isTrue);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets('a subagent’s box: the same keys', (tester) async {
+    final fake = FakeDaemon([]);
+    final d = await fake.connect(tester);
+    final c = ChatState('c', '/tmp')
+      ..agent = 'claude'
+      ..items.add(
+        Item(
+          id: 'a',
+          kind: ItemKind.ITEM_KIND_TOOL_CALL,
+          agent: 'Explore',
+          agentId: 'ab59',
+          title: 'Find the redirect',
+          status: 'in_progress',
+          subagent: Subagent(state: 'running'),
+        ),
+      );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: Scaffold(
+          body: SubagentPane(chat: c, daemon: d, id: 'a', onClose: () {}),
+        ),
+      ),
+    );
+    await tester.pump();
+    final field = find.byType(TextField);
+    await tester.tap(field);
+    await tester.pump();
+    for (final MapEntry(key: name, value: holding) in _lineKeys.entries) {
+      final text = await _abcd(tester, field);
+      await _enter(tester, holding);
+      _startedLine(text);
+      expect(fake.calls.whereType<SendPromptRequest>(), isEmpty, reason: name);
+    }
+    await _abcd(tester, field);
+    await _enter(tester, [LogicalKeyboardKey.metaLeft]);
+    await tester.pump();
+    final sent = fake.calls.whereType<SendPromptRequest>().single;
+    expect(sent.text, 'abcd');
+    expect(sent.toSubagent, 'a');
     await tester.pumpWidget(const SizedBox()); // its timers end
     d.dispose();
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));

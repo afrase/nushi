@@ -44,7 +44,8 @@ Widget stopIcon(Color color) => Container(
   child: Container(width: 6, height: 6, color: color),
 );
 
-/// Enter in a box that sends (the composer, a reply, the reply dialog), one
+/// Enter in a box that sends (the composer, a reply, the reply dialog, a
+/// subagent's box, a review comment; the keypad's Enter too), one
 /// rule for all of them: Enter sends, alone or with ⌘ (the usual "send" on a
 /// Mac, as ⌘⏎ posts from GitHub's comment box); with ⇧, ⌥ or ⌃ it starts a
 /// line. Nushi writes that line itself ([startLine]) and keeps the key from
@@ -58,7 +59,9 @@ bool isSendKey(KeyEvent e) => _isEnter(e) && !_lineModifier;
 bool isLineKey(KeyEvent e) => _isEnter(e) && _lineModifier;
 
 bool _isEnter(KeyEvent e) =>
-    e is! KeyUpEvent && e.logicalKey == LogicalKeyboardKey.enter;
+    e is! KeyUpEvent &&
+    (e.logicalKey == LogicalKeyboardKey.enter ||
+        e.logicalKey == LogicalKeyboardKey.numpadEnter);
 
 bool get _lineModifier {
   final k = HardwareKeyboard.instance;

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'package:nushi/chat.dart';
+import 'package:nushi/composer_parts.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/markdown.dart';
@@ -286,10 +286,9 @@ class _RelayState extends State<_Relay> {
       child: Row(
         children: [
           Expanded(
-            child: CallbackShortcuts(
-              bindings: {
-                const SingleActivator(LogicalKeyboardKey.enter): _send,
-              },
+            child: EnterSends(
+              controller: _text,
+              onEnter: _send,
               child: TextField(
                 controller: _text,
                 minLines: 1,

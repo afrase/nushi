@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:nushi/composer_parts.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -88,8 +89,8 @@ class _CommentCardState extends State<CommentCard> {
   }
 }
 
-/// The box to write a comment in, under the lines it's on: Enter saves it,
-/// Shift-Enter adds a line, Escape drops it.
+/// The box to write a comment in, under the lines it's on: Enter (or ⌘⏎)
+/// saves it, ⇧⏎ (⌥⏎, ⌃⏎) adds a line ([isSendKey]), Escape drops it.
 class CommentBox extends StatefulWidget {
   const new({
     required this.lines,
@@ -145,18 +146,21 @@ class _CommentBoxState extends State<CommentBox> {
           Text(widget.lines, style: theme.ui(t.textMuted, size: 11.5)),
           CallbackShortcuts(
             bindings: {
-              const SingleActivator(LogicalKeyboardKey.enter): _save,
               const SingleActivator(LogicalKeyboardKey.escape): widget.onCancel,
             },
-            child: TextField(
+            child: EnterSends(
               controller: _text,
-              focusNode: _focus,
-              minLines: 1,
-              maxLines: 8,
-              style: theme.ui(t.text),
-              decoration: const InputDecoration(
-                hintText: 'Your comment',
-                isDense: true,
+              onEnter: _save,
+              child: TextField(
+                controller: _text,
+                focusNode: _focus,
+                minLines: 1,
+                maxLines: 8,
+                style: theme.ui(t.text),
+                decoration: const InputDecoration(
+                  hintText: 'Your comment',
+                  isDense: true,
+                ),
               ),
             ),
           ),
