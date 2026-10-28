@@ -29,7 +29,7 @@ final List<Chat> _chats = [
     age: 5,
     status: ChatStatus(busy: true, started: _started, waiting: true),
   ),
-  chat('c', 'claude', 'Web Push from the daemon', age: 30),
+  chat('c', 'claude', 'Web Push from the daemon', age: 30)..unseen = true,
   chat(
     'd',
     'pig',

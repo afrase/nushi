@@ -4,11 +4,10 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
-
 import "nushi.pb.dart" as nushiv1nushi;
 import "nushi.connect.spec.dart" as specs;
 
-extension type NushiServiceClient(connect.Transport _transport) {
+extension type NushiServiceClient (connect.Transport _transport) {
   Future<nushiv1nushi.PingResponse> ping(
     nushiv1nushi.PingRequest input, {
     connect.Headers? headers,
@@ -1424,8 +1423,10 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
-  /// The chat a paired device shows ("" none): no push for that chat goes
-  /// to it while it's connected. Only on a device's channel.
+  /// The chat a client shows ("" none), said again within 40 s while it
+  /// does: that chat is seen (Chat.unseen), and no push for it goes to the
+  /// device while it's connected. On the Mac's socket it's the Mac's window
+  /// (API 76; before, only on a device's channel).
   Future<nushiv1nushi.SetDeviceViewResponse> setDeviceView(
     nushiv1nushi.SetDeviceViewRequest input, {
     connect.Headers? headers,

@@ -252,8 +252,10 @@ service NushiService {
   // A paired device's own push subscription (an empty endpoint: none);
   // only on a device's channel. The endpoint must be a known push service.
   rpc SetPushSubscription(SetPushSubscriptionRequest) returns (SetPushSubscriptionResponse);
-  // The chat a paired device shows ("" none): no push for that chat goes
-  // to it while it's connected. Only on a device's channel.
+  // The chat a client shows ("" none), said again within 40 s while it
+  // does: that chat is seen (Chat.unseen), and no push for it goes to the
+  // device while it's connected. On the Mac's socket it's the Mac's window
+  // (API 76; before, only on a device's channel).
   rpc SetDeviceView(SetDeviceViewRequest) returns (SetDeviceViewResponse);
   // Sends a test notification to a device (the Mac's).
   rpc SendTestPush(SendTestPushRequest) returns (SendTestPushResponse);
@@ -407,6 +409,10 @@ message Chat {
   string jira_key = 13;
   // The GitHub pull request or issue it was started from, if it was.
   GitHubLink github = 14;
+  // A turn ended (it finished, or failed with an error to read; not one
+  // the user stopped) while no client showed the chat (SetDeviceView);
+  // showing it, or archiving it, clears it. API 76.
+  bool unseen = 15;
 }
 
 // A git worktree of a repository, on a branch of its own.

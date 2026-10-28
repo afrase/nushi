@@ -585,8 +585,10 @@ type NushiServiceClient interface {
 	// A paired device's own push subscription (an empty endpoint: none);
 	// only on a device's channel. The endpoint must be a known push service.
 	SetPushSubscription(context.Context, *connect.Request[v1.SetPushSubscriptionRequest]) (*connect.Response[v1.SetPushSubscriptionResponse], error)
-	// The chat a paired device shows ("" none): no push for that chat goes
-	// to it while it's connected. Only on a device's channel.
+	// The chat a client shows ("" none), said again within 40 s while it
+	// does: that chat is seen (Chat.unseen), and no push for it goes to the
+	// device while it's connected. On the Mac's socket it's the Mac's window
+	// (API 76; before, only on a device's channel).
 	SetDeviceView(context.Context, *connect.Request[v1.SetDeviceViewRequest]) (*connect.Response[v1.SetDeviceViewResponse], error)
 	// Sends a test notification to a device (the Mac's).
 	SendTestPush(context.Context, *connect.Request[v1.SendTestPushRequest]) (*connect.Response[v1.SendTestPushResponse], error)
@@ -2269,8 +2271,10 @@ type NushiServiceHandler interface {
 	// A paired device's own push subscription (an empty endpoint: none);
 	// only on a device's channel. The endpoint must be a known push service.
 	SetPushSubscription(context.Context, *connect.Request[v1.SetPushSubscriptionRequest]) (*connect.Response[v1.SetPushSubscriptionResponse], error)
-	// The chat a paired device shows ("" none): no push for that chat goes
-	// to it while it's connected. Only on a device's channel.
+	// The chat a client shows ("" none), said again within 40 s while it
+	// does: that chat is seen (Chat.unseen), and no push for it goes to the
+	// device while it's connected. On the Mac's socket it's the Mac's window
+	// (API 76; before, only on a device's channel).
 	SetDeviceView(context.Context, *connect.Request[v1.SetDeviceViewRequest]) (*connect.Response[v1.SetDeviceViewResponse], error)
 	// Sends a test notification to a device (the Mac's).
 	SendTestPush(context.Context, *connect.Request[v1.SendTestPushRequest]) (*connect.Response[v1.SendTestPushResponse], error)

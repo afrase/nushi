@@ -122,7 +122,8 @@ type view struct {
 
 // SetView says which chat device shows ("" none); it gets no push for that
 // chat while it's connected and keeps saying so (ViewLease). A device's
-// view goes with its last connection.
+// view goes with its last connection. The Mac is device "": its socket
+// has no connection to lose, so only the lease ends its view.
 func (s *Service) SetView(device, chatID string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -136,7 +137,19 @@ func (s *Service) SetView(device, chatID string) {
 // showingLocked says whether device shows chatID now. Called with s.mu.
 func (s *Service) showingLocked(device, chatID string) bool {
 	v, ok := s.views[device]
-	return ok && v.chat == chatID && time.Since(v.at) < ViewLease && s.connectedLocked(device)
+	return ok && v.chat == chatID && time.Since(v.at) < ViewLease && (device == "" || s.connectedLocked(device))
+}
+
+// Shown says whether any client, the Mac or a device, shows chatID now.
+func (s *Service) Shown(chatID string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for device := range s.views {
+		if s.showingLocked(device, chatID) {
+			return true
+		}
+	}
+	return false
 }
 
 // connectedLocked says whether device has a connection open. Called with

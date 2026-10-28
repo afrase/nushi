@@ -52,8 +52,13 @@ class _NushiAppState extends State<NushiApp> {
   void initState() {
     super.initState();
     watchPairings(_navigator, widget.daemon.client);
-    // The app coming to the front shows its chat again.
-    _lifecycle = AppLifecycleListener(onResume: widget.daemon.shown);
+    // The app coming to the front shows its chat again; the daemon knows
+    // whether the window shows (focused or not) or is hidden.
+    _lifecycle = AppLifecycleListener(
+      onResume: widget.daemon.shown,
+      onStateChange: (s) => widget.daemon.macView.window =
+          s == AppLifecycleState.resumed || s == AppLifecycleState.inactive,
+    );
   }
 
   @override

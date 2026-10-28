@@ -176,6 +176,7 @@ func (c *chat) releaseLocked() {
 	close(c.done)
 	c.unrelayedLocked()
 	c.copyLocked(true)
+	c.endedLocked()
 	c.statusChangedLocked()
 	c.deliverLocked()
 }
@@ -282,6 +283,11 @@ func (c *chat) run(agent Agent, req *acp.PromptRequest, t *told, sent, done chan
 		c.noticeLocked("max_turn_requests", "The agent stopped: it reached its limit of requests in one turn")
 	}
 	c.nameBranchLocked() // between turns, before the next one starts
+	// Unseen unless stopped or the agent went (watch says so); marked
+	// before the status, so a client has it as the turn ends.
+	if stopped := err == nil && resp.StopReason == "cancelled"; !stopped && (err == nil || !quit) {
+		c.endedLocked()
+	}
 	c.statusChangedLocked()
 	c.copyLocked(true)
 	// A stopped or failed turn holds the queue until the next one ends.

@@ -53,6 +53,17 @@ class ChatState extends ChangeNotifier {
   GitHubLink? github;
   String title = '';
   bool archived = false; // no agent runs; read-only until unarchived
+
+  /// A turn ended while no client showed the chat, until one does (the
+  /// daemon keeps it); null from a daemon older than API 76.
+  bool? get unseen => _unseen;
+  bool? _unseen;
+  set unseen(bool? v) {
+    if (v == _unseen) return;
+    _unseen = v;
+    notifyListeners();
+  }
+
   DateTime created = DateTime.now();
   final List<Item> items = [];
   List<ConfigOption> config = [];

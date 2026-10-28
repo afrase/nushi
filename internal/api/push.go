@@ -50,12 +50,15 @@ func (s *server) SetPushSubscription(ctx context.Context, req *connect.Request[n
 	return connect.NewResponse(&nushiv1.SetPushSubscriptionResponse{}), nil
 }
 
+// SetDeviceView keeps the chat a client shows: a device's, or on the
+// Mac's socket the Mac's (device ""). The chat shown is seen.
 func (s *server) SetDeviceView(ctx context.Context, req *connect.Request[nushiv1.SetDeviceViewRequest]) (*connect.Response[nushiv1.SetDeviceViewResponse], error) {
-	device, err := deviceOf(ctx)
-	if err != nil {
-		return nil, err
+	device, _ := deviceOf(ctx) // "": the Mac
+	id := req.Msg.ChatId
+	s.remote.SetView(device, id)
+	if id != "" {
+		_ = s.chats.Seen(id) // a chat that's gone has nothing to see
 	}
-	s.remote.SetView(device, req.Msg.ChatId)
 	return connect.NewResponse(&nushiv1.SetDeviceViewResponse{}), nil
 }
 

@@ -242,6 +242,28 @@ func TestTheViewLapses(t *testing.T) {
 	}
 }
 
+// Shown counts the Mac's view (device "", no connection) and a connected
+// device's, each while its lease holds; the Mac's view sends no push.
+func TestShownByTheMacOrADevice(t *testing.T) {
+	s, p, device, _ := pushing(t)
+	lease := ViewLease
+	ViewLease = 50 * time.Millisecond
+	t.Cleanup(func() { ViewLease = lease })
+	s.SetView("", "c1")
+	s.SetView(device, "c2")
+	if !s.Shown("c1") || !s.Shown("c2") || s.Shown("c3") {
+		t.Fatalf("shown: c1 %v, c2 %v, c3 %v", s.Shown("c1"), s.Shown("c2"), s.Shown("c3"))
+	}
+	turn(s, "c1")
+	if got := p.settle(t, 1); len(got) != 1 {
+		t.Fatalf("the Mac's view kept the phone's push: %+v", got)
+	}
+	time.Sleep(80 * time.Millisecond)
+	if s.Shown("c1") || s.Shown("c2") {
+		t.Error("a lapsed view still shows")
+	}
+}
+
 // A new VAPID key: the subscriptions made with the old one are dropped.
 func TestFreshKeyDropsSubscriptions(t *testing.T) {
 	s, _, _, dir := pushing(t)

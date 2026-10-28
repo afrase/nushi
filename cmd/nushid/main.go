@@ -223,6 +223,7 @@ func run() error {
 	if sv.Remote, err = remote.New(st, &relay.Dialer{Proxies: sysproxy.For}, channels.serve, keepAwake, hub.Publish); err != nil {
 		return err
 	}
+	chatSvc.UseViewers(sv.Remote)
 	if err := usePush(st, sv.Remote, chatSvc, kinds); err != nil {
 		return err
 	}

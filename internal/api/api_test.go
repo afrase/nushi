@@ -105,8 +105,9 @@ func TestDevicesCantPairOrRevoke(t *testing.T) {
 		if _, err := c.SetPushSubscription(ctx, connect.NewRequest(&nushiv1.SetPushSubscriptionRequest{})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
 			t.Errorf("SetPushSubscription without a device: %v", err)
 		}
-		if _, err := c.SetDeviceView(ctx, connect.NewRequest(&nushiv1.SetDeviceViewRequest{ChatId: "c"})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
-			t.Errorf("SetDeviceView without a device: %v", err)
+		// The Mac says which chat its window shows (API 76).
+		if _, err := c.SetDeviceView(ctx, connect.NewRequest(&nushiv1.SetDeviceViewRequest{})); err != nil {
+			t.Errorf("SetDeviceView from the Mac: %v", err)
 		}
 		if _, err := c.UnpairThisDevice(ctx, connect.NewRequest(&nushiv1.UnpairThisDeviceRequest{})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
 			t.Errorf("UnpairThisDevice without a device: %v", err)

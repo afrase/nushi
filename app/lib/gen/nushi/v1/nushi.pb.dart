@@ -532,6 +532,7 @@ class Chat extends $pb.GeneratedMessage {
     $core.String? jiraSite,
     $core.String? jiraKey,
     GitHubLink? github,
+    $core.bool? unseen,
   }) {
     final result = Chat._();
     if (id != null) result.id = id;
@@ -548,6 +549,7 @@ class Chat extends $pb.GeneratedMessage {
     if (jiraSite != null) result.jiraSite = jiraSite;
     if (jiraKey != null) result.jiraKey = jiraKey;
     if (github != null) result.github = github;
+    if (unseen != null) result.unseen = unseen;
     return result;
   }
 
@@ -581,6 +583,7 @@ class Chat extends $pb.GeneratedMessage {
     ..aOS(13, _omitFieldNames ? '' : 'jiraKey')
     ..aOM<GitHubLink>(14, _omitFieldNames ? '' : 'github',
         subBuilder: GitHubLink.$_createMessage)
+    ..aOB(15, _omitFieldNames ? '' : 'unseen')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -744,6 +747,18 @@ class Chat extends $pb.GeneratedMessage {
   void clearGithub() => $_clearField(14);
   @$pb.TagNumber(14)
   GitHubLink ensureGithub() => $_ensure(13);
+
+  /// A turn ended (it finished, or failed with an error to read; not one
+  /// the user stopped) while no client showed the chat (SetDeviceView);
+  /// showing it, or archiving it, clears it. API 76.
+  @$pb.TagNumber(15)
+  $core.bool get unseen => $_getBF(14);
+  @$pb.TagNumber(15)
+  set unseen($core.bool value) => $_setBool(14, value);
+  @$pb.TagNumber(15)
+  $core.bool hasUnseen() => $_has(14);
+  @$pb.TagNumber(15)
+  void clearUnseen() => $_clearField(15);
 }
 
 /// A git worktree of a repository, on a branch of its own.
@@ -24615,8 +24630,10 @@ class NushiServiceApi {
       _client.invoke<SetPushSubscriptionResponse>(ctx, 'NushiService',
           'SetPushSubscription', request, SetPushSubscriptionResponse());
 
-  /// The chat a paired device shows ("" none): no push for that chat goes
-  /// to it while it's connected. Only on a device's channel.
+  /// The chat a client shows ("" none), said again within 40 s while it
+  /// does: that chat is seen (Chat.unseen), and no push for it goes to the
+  /// device while it's connected. On the Mac's socket it's the Mac's window
+  /// (API 76; before, only on a device's channel).
   $async.Future<SetDeviceViewResponse> setDeviceView(
           $pb.ClientContext? ctx, SetDeviceViewRequest request) =>
       _client.invoke<SetDeviceViewResponse>(ctx, 'NushiService',

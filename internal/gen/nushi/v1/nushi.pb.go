@@ -590,7 +590,11 @@ type Chat struct {
 	JiraSite string `protobuf:"bytes,12,opt,name=jira_site,json=jiraSite,proto3" json:"jira_site,omitempty"`
 	JiraKey  string `protobuf:"bytes,13,opt,name=jira_key,json=jiraKey,proto3" json:"jira_key,omitempty"`
 	// The GitHub pull request or issue it was started from, if it was.
-	Github        *GitHubLink `protobuf:"bytes,14,opt,name=github,proto3" json:"github,omitempty"`
+	Github *GitHubLink `protobuf:"bytes,14,opt,name=github,proto3" json:"github,omitempty"`
+	// A turn ended (it finished, or failed with an error to read; not one
+	// the user stopped) while no client showed the chat (SetDeviceView);
+	// showing it, or archiving it, clears it. API 76.
+	Unseen        bool `protobuf:"varint,15,opt,name=unseen,proto3" json:"unseen,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -721,6 +725,13 @@ func (x *Chat) GetGithub() *GitHubLink {
 		return x.Github
 	}
 	return nil
+}
+
+func (x *Chat) GetUnseen() bool {
+	if x != nil {
+		return x.Unseen
+	}
+	return false
 }
 
 // A git worktree of a repository, on a branch of its own.
@@ -18524,7 +18535,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x05chats\x18\x01 \x03(\v2\x15.nushi.v1.RemovedChatR\x05chats\".\n" +
 	"\x1aDismissRemovedChatsRequest\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"\x1d\n" +
-	"\x1bDismissRemovedChatsResponse\"\xaf\x03\n" +
+	"\x1bDismissRemovedChatsResponse\"\xc7\x03\n" +
 	"\x04Chat\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05agent\x18\x02 \x01(\tR\x05agent\x12\x16\n" +
@@ -18541,7 +18552,8 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\ascratch\x18\v \x01(\bR\ascratch\x12\x1b\n" +
 	"\tjira_site\x18\f \x01(\tR\bjiraSite\x12\x19\n" +
 	"\bjira_key\x18\r \x01(\tR\ajiraKey\x12,\n" +
-	"\x06github\x18\x0e \x01(\v2\x14.nushi.v1.GitHubLinkR\x06github\"\x7f\n" +
+	"\x06github\x18\x0e \x01(\v2\x14.nushi.v1.GitHubLinkR\x06github\x12\x16\n" +
+	"\x06unseen\x18\x0f \x01(\bR\x06unseen\"\x7f\n" +
 	"\bWorktree\x12\x12\n" +
 	"\x04repo\x18\x01 \x01(\tR\x04repo\x12\x12\n" +
 	"\x04path\x18\x02 \x01(\tR\x04path\x12\x16\n" +

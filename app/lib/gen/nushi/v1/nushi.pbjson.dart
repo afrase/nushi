@@ -220,6 +220,7 @@ const Chat$json = {
       '6': '.nushi.v1.GitHubLink',
       '10': 'github'
     },
+    {'1': 'unseen', '3': 15, '4': 1, '5': 8, '10': 'unseen'},
   ],
 };
 
@@ -232,7 +233,8 @@ final $typed_data.Uint8List chatDescriptor = $convert.base64Decode(
     'ZWQSHQoKc2Vzc2lvbl9pZBgJIAEoCVIJc2Vzc2lvbklkEi4KCHdvcmt0cmVlGAogASgLMhIubn'
     'VzaGkudjEuV29ya3RyZWVSCHdvcmt0cmVlEhgKB3NjcmF0Y2gYCyABKAhSB3NjcmF0Y2gSGwoJ'
     'amlyYV9zaXRlGAwgASgJUghqaXJhU2l0ZRIZCghqaXJhX2tleRgNIAEoCVIHamlyYUtleRIsCg'
-    'ZnaXRodWIYDiABKAsyFC5udXNoaS52MS5HaXRIdWJMaW5rUgZnaXRodWI=');
+    'ZnaXRodWIYDiABKAsyFC5udXNoaS52MS5HaXRIdWJMaW5rUgZnaXRodWISFgoGdW5zZWVuGA8g'
+    'ASgIUgZ1bnNlZW4=');
 
 @$core.Deprecated('Use worktreeDescriptor instead')
 const Worktree$json = {

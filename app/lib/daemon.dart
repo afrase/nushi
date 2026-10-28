@@ -13,6 +13,7 @@ import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/mac_view.dart';
 import 'package:nushi/remote.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
@@ -35,7 +36,7 @@ final String dataDir =
         : '$support/Nushi');
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 75;
+const apiVersion = 76;
 
 /// The app's link to nushid. [connected] follows a ping every few seconds;
 /// while connected, daemon events keep [chats] current. When no daemon
@@ -58,6 +59,7 @@ class Daemon extends ChangeNotifier {
     );
     // The phone's link pings on its own schedule (phone/link.dart).
     if (remote) return;
+    addListener(macView.tick);
     _timer = Timer.periodic(
       const Duration(seconds: 2),
       (_) => unawaited(ping()),
@@ -124,6 +126,9 @@ class Daemon extends ChangeNotifier {
           .then((_) {}, onError: (Object _) {}),
     );
   }
+
+  /// What the Mac's window shows, told to the daemon (not the phone's).
+  late final macView = MacView(this);
 
   /// The open side chats, by id: not stored, not listed.
   final sides = <String, ChatState>{};
@@ -289,6 +294,7 @@ class Daemon extends ChangeNotifier {
     final ok = api > 0;
     if (ok) _launcher.launches = 0;
     if (ok && _events == null) _subscribe();
+    if (ok && (!connected || build != _build)) macView.forget();
     if (ok != connected || ok && (api != daemonApi || build != _build)) {
       final was = connected;
       connected = ok;
@@ -311,6 +317,7 @@ class Daemon extends ChangeNotifier {
         appLog.info('connected to the daemon', {'api': '$api', 'build': build});
       }
     }
+    if (ok && !remote) macView.tick(); // said again within the lease
     return ok;
   }
 
@@ -591,6 +598,7 @@ class Daemon extends ChangeNotifier {
       ..github = c.hasGithub() ? c.github : null
       ..title = c.title
       ..archived = c.archived
+      ..unseen = daemonApi >= unseenApi ? c.unseen : null
       ..created = DateTime.fromMillisecondsSinceEpoch(c.createdUnixMs.toInt())
       // Only the list carries a status; a chat event would clear it.
       ..status(c.hasStatus() ? c.status : null);

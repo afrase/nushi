@@ -75,7 +75,8 @@ class _Check extends CustomPainter {
 /// A chat's status dot: amber with a soft ring while it waits on the user
 /// (it hops once when that starts), a ring growing out of it while the
 /// agent works, a ring when idle (a check draws itself there for a moment
-/// when a turn ends); a moon asleep, a quiet clock when its agent deleted
+/// when a turn ends), solid green while a turn's end is unseen (the check
+/// settles into it); a moon asleep, a quiet clock when its agent deleted
 /// its session, an error mark when it couldn't start.
 class ChatDot extends StatefulWidget {
   const new({required this.chat, super.key});
@@ -92,6 +93,7 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
   late bool _busy = widget.chat.busy;
   late bool _waiting = widget.chat.waiting;
   late bool _stopped = widget.chat.stopping; // the user stopped the turn
+  late bool? _unseen = widget.chat.unseen;
   AnimationController? _hop; // once, as the chat starts waiting
   AnimationController? _check; // drawn, held, then the ring again
 
@@ -130,6 +132,7 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
     widget.chat.addListener(_changed);
     _busy = widget.chat.busy;
     _waiting = widget.chat.waiting;
+    _unseen = widget.chat.unseen;
     _hop?.value = 1;
     _check?.value = 1;
   }
@@ -161,9 +164,12 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
       (_check ??= _once(_checkFor)).forward(from: 0).ignore();
     }
     // Every streamed chunk notifies: only a change of state rebuilds.
-    if (c.busy == _busy && c.waiting == _waiting) return;
+    if (c.busy == _busy && c.waiting == _waiting && c.unseen == _unseen) {
+      return;
+    }
     _busy = c.busy;
     _waiting = c.waiting;
+    _unseen = c.unseen;
     setState(() {});
   }
 
@@ -172,7 +178,9 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
     const size = ChatDot.size;
     final t = NushiTheme.of(context).t;
     final chat = widget.chat;
-    if (chat.asleep && !chat.archived) {
+    // An unseen end shows through sleep: the user hasn't seen it yet.
+    final unseen = (chat.unseen ?? false) && !chat.archived && !chat.waiting;
+    if (chat.asleep && !chat.archived && !unseen) {
       return Icon(Icons.bedtime_outlined, size: size * 1.6, color: t.idle);
     }
     if (chat.sessionGone && !chat.archived) {
@@ -188,22 +196,39 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
         painter: _Mark(t.running, ringing: !still),
       );
     }
+    final done = Padding(
+      padding: const EdgeInsets.all(size * 0.3),
+      child: DecoratedBox(
+        decoration: BoxDecoration(color: t.done, shape: BoxShape.circle),
+        child: const SizedBox.square(dimension: size),
+      ),
+    );
     if (_check case final check? when check.isAnimating && !chat.waiting) {
       return AnimatedBuilder(
         animation: check,
         builder: (context, _) {
           final ms = check.value * _checkFor.inMilliseconds;
-          return CustomPaint(
+          final out = still ? 0.0 : ((ms - 2400) / 300).clamp(0.0, 1.0);
+          final mark = CustomPaint(
             size: const Size.square(size * 1.6),
             painter: _Check(
               t.done,
               still ? 1 : Curves.easeOut.transform((ms / 350).clamp(0, 1)),
-              still ? 1 : 1 - ((ms - 2400) / 300).clamp(0, 1),
+              1 - out,
             ),
+          );
+          // Unseen, the check settles into the green dot as it fades.
+          if (!unseen) return mark;
+          return Stack(
+            children: [
+              Opacity(opacity: out, child: done),
+              mark,
+            ],
           );
         },
       );
     }
+    if (unseen) return done;
     final dot = Padding(
       padding: const EdgeInsets.all(size * 0.3),
       child: DecoratedBox(

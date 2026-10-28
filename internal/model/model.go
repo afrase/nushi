@@ -43,6 +43,10 @@ type Session struct {
 	// Ultracode is the chat's Ultracode option (its agent's standing
 	// multi-agent workflows), off by default.
 	Ultracode bool `json:",omitempty"`
+	// Unseen says a turn ended (it finished, or failed with an error to
+	// read; not one the user stopped) while no client showed the chat; a
+	// client showing it clears it, and so does archiving.
+	Unseen bool `json:",omitempty"`
 	// Scratch says Folder is a scratch folder of the chat's own (the chat
 	// has no folder yet); worked out from the folder, not stored.
 	Scratch bool `json:"-"`
