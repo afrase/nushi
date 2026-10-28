@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diagram</title>
+<style>
+  html, body { margin: 0; }
+  body { font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; }
+  #out { padding: 12px; }
+  #out svg { display: block; max-width: 100%; height: auto; }
+  .center #out svg { margin: 0 auto; }
+  .error pre { font: 12px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; margin: 0 0 8px; }
+  .error p { margin: 0; opacity: 0.6; }
+</style>
+<script src="mermaid.min.js"></script>
+</head>
+<body>
+<div id="out"></div>
+<script>
+  // Nushi's page for a Mermaid diagram (lib/mermaid.dart): the Mac's
+  // preview pane and its hidden renderer load it from the app's assets,
+  // the phone writes it into its sandboxed frame. show() draws a diagram
+  // and says how big it came out, or why it couldn't. Mermaid's strict
+  // security level: labels are text, no clicks or links run.
+  "use strict";
+  let count = 0;
+
+  async function show(source, opts) {
+    const out = document.getElementById("out");
+    document.body.style.background = opts.background || "";
+    document.body.style.color = opts.foreground || "";
+    document.body.className = opts.center ? "center" : "";
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: opts.dark ? "dark" : "default",
+      darkMode: !!opts.dark,
+      securityLevel: "strict",
+      suppressErrorRendering: true,
+    });
+    const id = "nushi-diagram-" + ++count;
+    try {
+      const { svg } = await mermaid.render(id, source);
+      out.className = "";
+      out.innerHTML = svg;
+    } catch (e) {
+      // What a failed render may leave behind.
+      for (const stray of [id, "d" + id]) document.getElementById(stray)?.remove();
+      const message = String((e && e.message) || e).split("\n").filter((l) => l.trim()).join(" ");
+      const pre = document.createElement("pre");
+      pre.textContent = source;
+      const line = document.createElement("p");
+      line.textContent = message;
+      out.className = "error";
+      out.replaceChildren(pre, line);
+      return { error: message };
+    }
+    const r = out.querySelector("svg").getBoundingClientRect();
+    return { width: Math.ceil(r.right + 12), height: Math.ceil(r.bottom + 12) };
+  }
+</script>
+</body>
+</html>

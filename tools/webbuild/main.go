@@ -68,11 +68,13 @@ func main() {
 	write(index, replaceOnce(read(index), `src="flutter_bootstrap.js"`, `src="`+bootJS+`"`))
 
 	// The shell the service worker keeps: every file but itself, the
-	// licences and the fallback fonts (fetched when a character needs one).
+	// licences, the fallback fonts (fetched when a character needs one) and
+	// mermaid's script (fetched by the diagram's frame, which the worker
+	// doesn't serve).
 	var shell []string
 	all := sha256.New()
 	check(fs.WalkDir(os.DirFS(dir), ".", func(name string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || name == "sw.js" || name == "assets/NOTICES" || onDemand(name) {
+		if err != nil || d.IsDir() || name == "sw.js" || name == "assets/NOTICES" || onDemand(name) || name == mermaidJS {
 			return err
 		}
 		_, _ = fmt.Fprintf(all, "%s\x00%s\x00", name, hashOf(read(filepath.Join(dir, name))))
@@ -91,6 +93,11 @@ func main() {
 	saved := compress(dir)
 	log.Printf("web app: %s, %s, %d files in the shell; Brotli saves %d KB over gzip; %d fallback fonts, %d KB", mainJS, ckDir, len(shell)+1, saved>>10, fonts, fontsSize>>10)
 }
+
+// mermaidJS is mermaid's script in the build (make mermaid puts it among
+// the app's assets): the phone's diagram frame loads it from the relay
+// (relay/web.go serves it to that frame's opaque origin).
+const mermaidJS = "assets/assets/mermaid/mermaid.min.js"
 
 // compress writes name.br beside each file of a type that compresses,
 // at Brotli's best, when it comes out smaller than gzip would; it returns

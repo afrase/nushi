@@ -14,6 +14,17 @@ void main() {
     expect(heal('````\n```\n'), '````\n```\n````');
   });
 
+  test('marks the open fence when asked', () {
+    expect(
+      heal('a\n```mermaid\ngraph TD', markOpen: true),
+      'a\n```mermaid $openMark\ngraph TD\n```',
+    );
+    expect(heal('```\nx\n`', markOpen: true), '``` $openMark\nx\n```');
+    // A closed block isn't marked.
+    const done = '```mermaid\ngraph TD\n```\n';
+    expect(heal(done, markOpen: true), done);
+  });
+
   test('closes emphasis and code spans on the last line', () {
     expect(heal('a **bold'), 'a **bold**');
     expect(heal('a ***both'), 'a ***both***');

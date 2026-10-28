@@ -70,6 +70,7 @@ class StreamingMarkdown extends StatelessWidget {
     this.imageBuilder,
     this.streaming = true,
     this.lineBreaks = false,
+    this.codeBlock,
   });
 
   /// The markdown so far.
@@ -91,6 +92,12 @@ class StreamingMarkdown extends StatelessWidget {
   /// Builds an image from its URL and alt text.
   final Widget Function(Uri uri, String? alt)? imageBuilder;
 
+  /// Draws a fenced code block of its own, by its language (a diagram), or
+  /// gives null for the usual [CodeBlockView]. `open` while the block is
+  /// still streaming in (its closing fence not come yet).
+  final Widget? Function(String language, String code, {required bool open})?
+  codeBlock;
+
   @override
   Widget build(BuildContext context) {
     final s = style;
@@ -98,10 +105,10 @@ class StreamingMarkdown extends StatelessWidget {
     final heading = body.copyWith(fontWeight: FontWeight.w600);
     final size = body.fontSize ?? 14;
     return MarkdownBody(
-      data: streaming ? heal(text) : text,
+      data: streaming ? heal(text, markOpen: true) : text,
       softLineBreak: lineBreaks,
       blockSyntaxes: const [_HtmlAsText()],
-      builders: {'pre': _CodeBlockBuilder(s)},
+      builders: {'pre': _CodeBlockBuilder(s, codeBlock)},
       // A task list's box ("- [x]"), as text so it lines up with the item.
       checkboxBuilder: (checked) => Padding(
         padding: const EdgeInsets.only(right: 6),
@@ -175,22 +182,14 @@ final _spans = <(String, String, TextStyle, Object), TextSpan>{};
 /// A fenced code block: its language and a copy button over the code,
 /// highlighted when the language is known.
 class _CodeBlockBuilder extends MarkdownElementBuilder {
-  new(this.style);
+  new(this.style, this.custom);
 
   final MarkdownStyle style;
+  final Widget? Function(String language, String code, {required bool open})?
+  custom;
 
   @override
   bool isBlockElement() => true;
-
-  TextSpan _highlighted(String language, String code, TextStyle codeStyle) {
-    final key = (language, code, codeStyle, style.highlight);
-    if (_spans[key] case final span?) return span;
-    final span =
-        style.highlight(language, code, codeStyle) ??
-        TextSpan(text: code, style: codeStyle);
-    if (_spans.length >= 200) _spans.remove(_spans.keys.first);
-    return _spans[key] = span;
-  }
 
   @override
   Widget visitElementAfterWithContext(
@@ -203,15 +202,67 @@ class _CodeBlockBuilder extends MarkdownElementBuilder {
     final cls = codeElement is md.Element
         ? codeElement.attributes['class']
         : null;
-    final language = cls?.startsWith('language-') ?? false
+    var language = cls?.startsWith('language-') ?? false
         ? cls!.substring('language-'.length)
         : '';
+    // heal's mark on a block still streaming in: after the language, or
+    // in its place when there's none.
+    final open =
+        language == openMark ||
+        (element.attributes['data-metadata']?.endsWith(openMark) ?? false);
+    if (language == openMark) language = '';
     var code = element.textContent;
     if (code.endsWith('\n')) code = code.substring(0, code.length - 1);
-    final codeStyle = style.code.copyWith(color: style.body.color);
-    // Text draws a tab as one space.
-    final shown = code.replaceAll('\t', '    ');
-    final span = _highlighted(language, shown, codeStyle);
+    return custom?.call(language, code, open: open) ??
+        CodeBlockView(language: language, code: code, style: style);
+  }
+}
+
+/// A code block as [StreamingMarkdown] draws one: a bar with its language
+/// ([MarkdownStyle.languageName]), [actions] and a copy button, over its
+/// code highlighted, or over [body] when given; [footer] under.
+class CodeBlockView extends StatelessWidget {
+  /// The block of [code] in [language].
+  const new({
+    required this.language,
+    required this.code,
+    required this.style,
+    super.key,
+    this.actions = const [],
+    this.body,
+    this.footer,
+  });
+
+  /// The fence's language, as written.
+  final String language;
+
+  /// The block's text, which Copy copies.
+  final String code;
+
+  /// The markdown's colors and fonts.
+  final MarkdownStyle style;
+
+  /// More in the bar, before Copy.
+  final List<Widget> actions;
+
+  /// What shows in the code's place.
+  final Widget? body;
+
+  /// Under the code (or [body]).
+  final Widget? footer;
+
+  TextSpan _highlighted(String code, TextStyle codeStyle) {
+    final key = (language, code, codeStyle, style.highlight);
+    if (_spans[key] case final span?) return span;
+    final span =
+        style.highlight(language, code, codeStyle) ??
+        TextSpan(text: code, style: codeStyle);
+    if (_spans.length >= 200) _spans.remove(_spans.keys.first);
+    return _spans[key] = span;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final label = style.code.copyWith(fontSize: 11, color: style.muted);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -231,17 +282,27 @@ class _CodeBlockBuilder extends MarkdownElementBuilder {
                     style: label,
                   ),
                 ),
+                ...actions,
                 _CopyButton(code, color: style.muted),
               ],
             ),
           ),
         ),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.all(10),
-          child: Text.rich(span, softWrap: false),
-        ),
+        body ?? codeText(code),
+        ?footer,
       ],
+    );
+  }
+
+  /// [code] highlighted, scrolling sideways.
+  Widget codeText(String code) {
+    final codeStyle = style.code.copyWith(color: style.body.color);
+    // Text draws a tab as one space.
+    final span = _highlighted(code.replaceAll('\t', '    '), codeStyle);
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.all(10),
+      child: Text.rich(span, softWrap: false),
     );
   }
 }

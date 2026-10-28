@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/phone/diagram_screen.dart';
 import 'package:nushi/phone/page_frame.dart';
 import 'package:nushi/phone/ui.dart';
 import 'package:nushi/preview.dart';
@@ -12,7 +13,8 @@ import 'package:nushi/theme/theme.dart';
 /// A file the agent wrote, full screen on the phone, from its tool row's
 /// Preview: Back, Live, and Preview or Source for a file that renders.
 /// A page (HTML, SVG) shows in a sandboxed frame ([PageFrame]) without the
-/// files beside it; a PDF only on the Mac. Read-only.
+/// files beside it, a Mermaid diagram in one too ([DiagramFrame]); a PDF
+/// only on the Mac. Read-only.
 class PreviewScreen extends StatefulWidget {
   const new(this.daemon, this.chat, this.path, {super.key});
 
@@ -83,6 +85,10 @@ class _PreviewScreenState extends State<PreviewScreen> {
       }
       final theme = NushiTheme.of(context);
       final f = watch.file!;
+      final text = utf8.decode(f.data, allowMalformed: true);
+      if (previewKind(watch.path) == PreviewKind.mermaid) {
+        return DiagramFrame(text);
+      }
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -93,12 +99,7 @@ class _PreviewScreenState extends State<PreviewScreen> {
               style: theme.ui(theme.t.textMuted, size: 12),
             ),
           ),
-          Expanded(
-            child: PageFrame(
-              utf8.decode(f.data, allowMalformed: true),
-              key: ValueKey(f),
-            ),
-          ),
+          Expanded(child: PageFrame(text, key: ValueKey(f))),
         ],
       );
     },

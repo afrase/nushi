@@ -151,6 +151,43 @@ void main() {
     expect(styles['b']?.fontWeight, FontWeight.w800);
     expect(styles['c']?.backgroundColor, const Color(0x14112233));
   });
+
+  testWidgets('a code block of its own, told whether it is still open', (
+    tester,
+  ) async {
+    const style = MarkdownStyle(
+      body: TextStyle(),
+      code: TextStyle(),
+      codeBackground: Colors.white,
+      border: Colors.grey,
+      muted: Colors.grey,
+      link: Colors.blue,
+      highlight: _plain,
+    );
+    final seen = <(String, String, bool)>[];
+    Widget md(String text, {bool streaming = true}) => MaterialApp(
+      home: StreamingMarkdown(
+        text,
+        style: style,
+        streaming: streaming,
+        codeBlock: (language, code, {required open}) {
+          seen.add((language, code, open));
+          return language == 'mermaid' ? Text('diagram $open') : null;
+        },
+      ),
+    );
+    await tester.pumpWidget(md('```go\nx\n```\n\n```mermaid\ngraph TD\nA'));
+    expect(seen, [('go', 'x', false), ('mermaid', 'graph TD\nA', true)]);
+    expect(find.text('diagram true'), findsOneWidget);
+    expect(find.text('x'), findsOneWidget); // the usual block
+    seen.clear();
+    await tester.pumpWidget(md('```\ny'));
+    expect(seen, [('', 'y', true)]);
+    await tester.pumpWidget(md('```mermaid\ngraph TD\nA\n```'));
+    expect(find.text('diagram false'), findsOneWidget);
+    await tester.pumpWidget(md('```mermaid\ngraph TD', streaming: false));
+    expect(find.text('diagram false'), findsOneWidget);
+  });
 }
 
 TextSpan? _plain(String language, String code, TextStyle style) => null;
