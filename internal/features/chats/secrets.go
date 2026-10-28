@@ -16,6 +16,9 @@ const secretMask = "••••" //nolint:gosec // a mask, not a credential
 var (
 	// secretKey is a JSON key whose string value is a secret.
 	secretKey = regexp.MustCompile(`(?i)token|secret|passw(?:or)?d|api[_-]?key|authorization|cookie|private[_-]?key|credential`)
+	// countKey is a key about how many tokens (a model's max_tokens, a
+	// usage's input_tokens), not a token: its value shows.
+	countKey = regexp.MustCompile(`(?i)(max|min|input|output|total|cached|reasoning|thinking)[_-]?tokens?|tokens?[_-]?(count|limit|budget|used|usage)`)
 	// secretShape is what a key or token looks like in any string: vendors'
 	// prefixes, AWS key ids, JWTs, PEM blocks, and the values of bearer
 	// and basic credentials (as internal/logs redacts a log's lines).
@@ -123,7 +126,7 @@ func (m *jsonMasker) token(tok json.Token) error {
 	if top != nil && !top.object && top.n > 0 {
 		m.out.WriteByte(',')
 	}
-	secret := top != nil && (top.secret || top.object && secretKey.MatchString(top.key))
+	secret := top != nil && (top.secret || top.object && secretKey.MatchString(top.key) && !countKey.MatchString(top.key))
 	if top != nil {
 		top.n++
 		top.keyed = false
