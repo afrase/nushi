@@ -192,21 +192,10 @@ void main() {
   }, variant: _mac);
 
   testWidgets("the last turn's files are recent, the others fold under "
-      '"Older (n)", newest first; the header counts the recent', (
-    tester,
-  ) async {
+      '"Older (n)", newest first', (tester) async {
     final (d, _) = await _app(tester, _turns);
     expect(_names(tester), ['chart.png', 'report.md']);
     expect(_inCard(find.text('Older (6)')), findsOneWidget);
-    final header = find.text('Artifacts 2', findRichText: true);
-    expect(header, findsOneWidget);
-    expect(
-      find.byTooltip(
-        'Artifacts: the files this chat wrote, to preview '
-        '(2 pinned or recent, 8 in all)',
-      ),
-      findsOneWidget,
-    );
     await tester.tap(_inCard(find.text('Older (6)')));
     await tester.pumpAndSettle();
     expect(_names(tester), [
@@ -219,25 +208,6 @@ void main() {
       'flows.md',
       'brief.md',
     ]);
-    // The header's menu: the recent, then Older opening the rest.
-    await tester.tap(header);
-    await tester.pumpAndSettle();
-    expect(find.text('Older (6)'), findsNWidgets(2)); // the card's and it
-    expect(
-      find.textContaining('notes.md', findRichText: true),
-      findsOneWidget, // the card's only
-    );
-    await tester.tap(
-      find.descendant(
-        of: find.byType(SubmenuButton),
-        matching: find.text('Older (6)'),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(
-      find.textContaining('notes.md', findRichText: true),
-      findsNWidgets(2),
-    );
     d.dispose();
   }, variant: _mac);
 
@@ -268,7 +238,6 @@ void main() {
     ]);
     expect(_inCard(find.byIcon(Icons.push_pin)), findsNWidgets(2));
     expect(_inCard(find.text('Older (4)')), findsOneWidget);
-    expect(find.text('Artifacts 4', findRichText: true), findsOneWidget);
     expect(pinnedFiles.value, {
       'c': ['mock/home.html', 'docs/brief.md'],
     });
@@ -331,7 +300,6 @@ void main() {
     ]);
     expect(_names(tester), ['notes.md', 'map.svg', 'list.html']);
     expect(_inCard(find.text('Older (3)')), findsOneWidget);
-    expect(find.text('Artifacts 3', findRichText: true), findsOneWidget);
     d.dispose();
   }, variant: _mac);
 

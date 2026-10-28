@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import 'package:nushi/app_actions.dart';
 import 'package:nushi/app_log.dart';
 import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/changes_view.dart';
@@ -17,7 +18,7 @@ import 'package:nushi/folder_button.dart';
 import 'package:nushi/github_view.dart';
 import 'package:nushi/jira_view.dart';
 import 'package:nushi/new_chat.dart';
-import 'package:nushi/open_file.dart';
+import 'package:nushi/palette.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_tab.dart';
@@ -76,6 +77,19 @@ class _NushiAppState extends State<NushiApp> {
         onSelected: () => setState(() => _mode = mode),
       );
 
+  /// [act]'s item in the menu bar: its label and key; it runs as from
+  /// the palette.
+  PlatformMenuItem _item(Act act) => PlatformMenuItem(
+    label: act.menuLabel!,
+    shortcut: act.key,
+    onSelected: () => runAct(_navigator.currentContext!, widget.daemon, act),
+  );
+
+  List<PlatformMenuItem> _items(ActMenu menu) => [
+    for (final a in Act.values)
+      if (a.menu == menu) _item(a),
+  ];
+
   @override
   Widget build(BuildContext context) => PlatformMenuBar(
     menus: [
@@ -85,11 +99,7 @@ class _NushiAppState extends State<NushiApp> {
           const PlatformProvidedMenuItem(
             type: PlatformProvidedMenuItemType.about,
           ),
-          PlatformMenuItem(
-            label: 'Settings…',
-            shortcut: settingsKey,
-            onSelected: widget.daemon.openSettings,
-          ),
+          ..._items(ActMenu.nushi),
           const PlatformProvidedMenuItem(
             type: PlatformProvidedMenuItemType.hide,
           ),
@@ -98,38 +108,18 @@ class _NushiAppState extends State<NushiApp> {
           ),
         ],
       ),
-      PlatformMenu(
-        label: 'File',
-        menus: [
-          PlatformMenuItem(
-            label: 'New Chat…',
-            shortcut: newChatKey,
-            onSelected: () =>
-                newChat(_navigator.currentContext!, widget.daemon, ''),
-          ),
-          PlatformMenuItem(
-            label: 'Open File…',
-            shortcut: openFileKey,
-            onSelected: () =>
-                unawaited(openFile(_navigator.currentContext!, widget.daemon)),
-          ),
-        ],
-      ),
+      PlatformMenu(label: 'File', menus: _items(ActMenu.file)),
       PlatformMenu(
         label: 'View',
         menus: [
           PlatformMenuItem(
-            label: 'Jira',
-            shortcut: jiraKey,
-            onSelected: () =>
-                widget.daemon.showJira(open: !widget.daemon.jiraOpen),
+            label: 'Command Palette…',
+            shortcut: paletteKey,
+            onSelected: () => unawaited(
+              showPalette(_navigator.currentContext!, widget.daemon),
+            ),
           ),
-          PlatformMenuItem(
-            label: 'GitHub',
-            shortcut: githubKey,
-            onSelected: () =>
-                widget.daemon.showGitHub(open: !widget.daemon.githubOpen),
-          ),
+          PlatformMenuItemGroup(members: _items(ActMenu.view)),
           PlatformMenuItemGroup(
             members: [
               PlatformMenuItem(
@@ -170,44 +160,47 @@ class _NushiAppState extends State<NushiApp> {
       darkTheme: const NushiTheme(Tokens.dark).toThemeData(),
       themeMode: _mode,
       scrollBehavior: const NativeScroll(),
-      // The menu's ⌘, and ⌘N don't reach the menu while Flutter has the
-      // keys.
+      // The menu's keys don't reach the menu while Flutter has the keys:
+      // they're bound here too, and a terminal, which keeps ⌘ and ⌃ keys,
+      // passes them on as the same intents.
       home: Builder(
-        builder: (context) => CallbackShortcuts(
-          bindings: {
-            settingsKey: widget.daemon.openSettings,
-            newChatKey: () => newChat(context, widget.daemon, ''),
-            openFileKey: () => unawaited(openFile(context, widget.daemon)),
-            jiraKey: () =>
-                widget.daemon.showJira(open: !widget.daemon.jiraOpen),
-            githubKey: () =>
-                widget.daemon.showGitHub(open: !widget.daemon.githubOpen),
+        builder: (context) => Actions(
+          actions: {
+            RunActIntent: CallbackAction<RunActIntent>(
+              onInvoke: (i) => runAct(context, widget.daemon, i.act),
+            ),
+            OpenPaletteIntent: CallbackAction<OpenPaletteIntent>(
+              onInvoke: (_) => unawaited(showPalette(context, widget.daemon)),
+            ),
+            OpenChatIntent: CallbackAction<OpenChatIntent>(
+              onInvoke: (i) => openNthChat(widget.daemon, i.n),
+            ),
+            StepChatIntent: CallbackAction<StepChatIntent>(
+              onInvoke: (i) => stepChat(widget.daemon, i.step),
+            ),
+            StepTabIntent: CallbackAction<StepTabIntent>(
+              onInvoke: (i) {
+                if (chatShown(widget.daemon)) {
+                  stepTab(widget.daemon.selected!, i.step);
+                }
+                return null;
+              },
+            ),
           },
-          // A terminal, which keeps ⌘ keys, sends ⌘N here.
-          child: Actions(
-            actions: {
-              NewChatIntent: CallbackAction<NewChatIntent>(
-                onInvoke: (_) => newChat(context, widget.daemon, ''),
-              ),
-              OpenSettingsIntent: CallbackAction<OpenSettingsIntent>(
-                onInvoke: (_) => widget.daemon.openSettings(),
-              ),
-              OpenChatIntent: CallbackAction<OpenChatIntent>(
-                onInvoke: (i) => openNthChat(widget.daemon, i.n),
-              ),
-              StepChatIntent: CallbackAction<StepChatIntent>(
-                onInvoke: (i) => stepChat(widget.daemon, i.step),
-              ),
+          // The actions' keys, ⌘K, ⌘1–⌘9, ⌘[ and ⌘], ⌃Tab and ⌃⇧Tab:
+          // wherever the focus is.
+          child: Shortcuts(
+            shortcuts: {
+              ...actKeys,
+              paletteKey: const OpenPaletteIntent(),
+              paletteKeyToo: const OpenPaletteIntent(),
+              ...chatKeys,
             },
-            // ⌘1–⌘9, ⌘[ and ⌘]: wherever the focus is.
-            child: Shortcuts(
-              shortcuts: chatKeys,
-              // Focused when nothing in the window is, so the keys still
-              // come here (an empty pane, after a click on the sidebar).
-              child: Focus(
-                autofocus: true,
-                child: Scaffold(body: _Shell(widget.daemon)),
-              ),
+            // Focused when nothing in the window is, so the keys still
+            // come here (an empty pane, after a click on the sidebar).
+            child: Focus(
+              autofocus: true,
+              child: Scaffold(body: _Shell(widget.daemon)),
             ),
           ),
         ),
@@ -313,9 +306,7 @@ class _ChatPane extends StatefulWidget {
 }
 
 class _ChatPaneState extends State<_ChatPane> {
-  ChatTab _tab = ChatTab.chat;
-
-  bool get _changes => _tab == ChatTab.changes;
+  ValueNotifier<ChatTab> get _tab => widget.chat.tab;
 
   /// Its pull request, looked for while the chat shows (for the tab).
   late final ChatPull _pull;
@@ -323,6 +314,7 @@ class _ChatPaneState extends State<_ChatPane> {
   @override
   void initState() {
     super.initState();
+    _tab.value = ChatTab.chat; // a chat opens on its transcript
     widget.chat.addListener(_showFile);
     widget.chat.preview.addListener(_showPreview);
     _pull = ChatPull.of(widget.daemon, widget.chat)..follow();
@@ -338,32 +330,28 @@ class _ChatPaneState extends State<_ChatPane> {
 
   /// A file's preview opened (from Artifacts, or ⌘P) shows beside the chat.
   void _showPreview() {
-    if (widget.chat.preview.value != null && _tab != ChatTab.chat) {
-      setState(() => _tab = ChatTab.chat);
-    }
+    if (widget.chat.preview.value != null) _tab.value = ChatTab.chat;
   }
 
   /// A file to show (ChatState.showFile, from a review's finding) shows in
   /// the Changes view.
   void _showFile() {
-    if (widget.chat.openPath != null && !_changes) {
-      setState(() => _tab = ChatTab.changes);
-    }
+    if (widget.chat.openPath != null) _tab.value = ChatTab.changes;
   }
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, box) => ValueListenableBuilder(
-      valueListenable: showDetails,
-      builder: (context, show, _) {
+    builder: (context, box) => ListenableBuilder(
+      listenable: Listenable.merge([showDetails, _tab]),
+      builder: (context, _) {
+        final show = showDetails.value;
         // The panel goes when the chat would get too narrow.
         final fits =
             box.maxWidth >=
             paneWidth('details', DetailsPanel.width) + ChatView.minWidth;
+        widget.chat.panelFits = fits;
         // The pull request's tab goes with its link.
-        final tab = _tab == ChatTab.pull && widget.chat.pull == null
-            ? ChatTab.chat
-            : _tab;
+        final tab = widget.chat.shownTab;
         final panel = show && fits && tab == ChatTab.chat;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -373,8 +361,8 @@ class _ChatPaneState extends State<_ChatPane> {
               builder: (context, _) => ChatHeader(
                 widget.chat,
                 widget.daemon,
-                tab: tab,
-                onTab: (v) => setState(() => _tab = v),
+                tab: widget.chat.shownTab,
+                onTab: (t) => _tab.value = t,
                 panel: panel,
                 onPanel: fits && tab == ChatTab.chat
                     ? () => showDetails.value = !show
@@ -385,7 +373,7 @@ class _ChatPaneState extends State<_ChatPane> {
               child: TerminalArea(
                 chat: widget.chat,
                 daemon: widget.daemon,
-                onChanges: () => setState(() => _tab = ChatTab.changes),
+                onChanges: () => _tab.value = ChatTab.changes,
                 child: switch (tab) {
                   ChatTab.changes => ChangesView(
                     chat: widget.chat,
@@ -394,7 +382,7 @@ class _ChatPaneState extends State<_ChatPane> {
                   ChatTab.pull => PullTab(
                     chat: widget.chat,
                     daemon: widget.daemon,
-                    onChat: () => setState(() => _tab = ChatTab.chat),
+                    onChat: () => _tab.value = ChatTab.chat,
                   ),
                   ChatTab.chat => ChatView(
                     chat: widget.chat,
@@ -403,9 +391,8 @@ class _ChatPaneState extends State<_ChatPane> {
                         ? DetailsPanel(
                             chat: widget.chat,
                             daemon: widget.daemon,
-                            onChanges: () =>
-                                setState(() => _tab = ChatTab.changes),
-                            onPull: () => setState(() => _tab = ChatTab.pull),
+                            onChanges: () => _tab.value = ChatTab.changes,
+                            onPull: () => _tab.value = ChatTab.pull,
                           )
                         : null,
                   ),

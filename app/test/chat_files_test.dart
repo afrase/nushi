@@ -5,11 +5,14 @@ import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/chat.dart';
 import 'package:nushi/chat_files.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/details_panel.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/open_file.dart';
+import 'package:nushi/palette.dart';
 import 'package:nushi/phone/files_screen.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/phone_app.dart';
@@ -151,35 +154,72 @@ void main() {
     expect(folderOf('report.md'), '');
   });
 
-  testWidgets('Artifacts in the header opens a file in the pane, from Changes '
-      'too', (tester) async {
-    final d = await _app(tester);
-    expect(find.text('Artifacts 3', findRichText: true), findsOneWidget);
+  /// ⌘K, then Artifacts… picked by typing.
+  Future<void> paletteArtifacts(WidgetTester tester) async {
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyK);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(Palette),
+        matching: find.byType(TextField),
+      ),
+      'artif',
+    );
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('no Artifacts in the header; the palette’s Artifacts… shows '
+      'the panel, from Changes too, and opens its card in view', (
+    tester,
+  ) async {
+    final d = await _app(tester); // the panel hidden
+    collapsedCards.value = {'Artifacts'};
+    addTearDown(() {
+      collapsedCards.value = {};
+      showDetails.value = false;
+    });
+    expect(find.textContaining('Artifacts'), findsNothing);
     await tester.tap(find.text('Changes'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Artifacts 3', findRichText: true));
+
+    await paletteArtifacts(tester);
+    expect(d.chats['c']!.shownTab, ChatTab.chat);
+    final panel = find.byType(DetailsPanel);
+    expect(panel, findsOneWidget);
+    expect(collapsedCards.value, isEmpty); // the card opened
+    final row = find.descendant(of: panel, matching: find.text('sub.md'));
+    expect(row, findsOneWidget);
+    final view = tester.getRect(panel);
+    expect(view.contains(tester.getCenter(row)), isTrue); // in view
+    await tester.tap(row);
     await tester.pumpAndSettle();
-    // Each row: the name, its folder and when it changed.
-    for (final (name, detail) in [
-      ('report.md', 'docs · 2m ago'),
-      ('chart.png', 'docs/img · 15m ago'),
-      ('sub.md', 'notes · 2h ago'),
-    ]) {
-      expect(
-        find.textContaining(RegExp('^$name   $detail\$'), findRichText: true),
-        findsOneWidget,
-      );
-    }
-    final rows = [
-      for (final n in ['report.md', 'chart.png', 'sub.md'])
-        tester.getTopLeft(find.textContaining(n, findRichText: true)).dy,
-    ];
-    expect(rows, orderedEquals([...rows]..sort()));
-    await tester.tap(find.textContaining('sub.md', findRichText: true));
-    await tester.pumpAndSettle();
-    expect(_pane, findsOneWidget); // back in the chat, beside it
-    expect(_inPane(find.text('sub.md')), findsOneWidget);
     expect(d.chats['c']!.preview.value, 'notes/sub.md');
+    d.dispose();
+  }, variant: _mac);
+
+  testWidgets('with no room for the panel, Artifacts… lists them in the '
+      'palette', (tester) async {
+    final d = await _app(tester);
+    tester.view.physicalSize = const Size(900, 900);
+    await tester.pumpAndSettle();
+    await paletteArtifacts(tester);
+    final rows = find.descendant(
+      of: find.byType(Palette),
+      matching: find.byType(Text),
+    );
+    expect([
+      for (final r in tester.widgetList<Text>(rows)) r.data,
+    ], containsAllInOrder(['report.md', 'chart.png', 'sub.md']));
+    await tester.tap(
+      find.descendant(of: find.byType(Palette), matching: find.text('sub.md')),
+    );
+    await tester.pumpAndSettle();
+    expect(d.chats['c']!.preview.value, 'notes/sub.md');
+    expect(showDetails.value, isFalse);
     d.dispose();
   }, variant: _mac);
 
@@ -321,12 +361,15 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
   }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
-  testWidgets('golden: the Artifacts menu over a chat, dark', (tester) async {
+  testWidgets('golden: the Artifacts menu of the pane’s name, dark', (
+    tester,
+  ) async {
     final d = await _app(tester);
     tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
     addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+    d.chats['c']!.openPreview('docs/report.md');
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Artifacts 3', findRichText: true));
+    await tester.tap(_inPane(find.text('report.md')));
     await tester.pumpAndSettle();
     await expectLater(
       find.byType(NushiApp),

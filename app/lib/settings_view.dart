@@ -22,11 +22,6 @@ import 'package:nushi/widgets.dart';
 
 const settingsKey = SingleActivator(LogicalKeyboardKey.comma, meta: true);
 
-/// ⌘, from somewhere that keeps the keys (a terminal): opens Settings.
-class OpenSettingsIntent extends Intent {
-  const new();
-}
-
 /// Settings, in place of the chat beside the sidebar (⌘,; Esc or Close
 /// leave it): a nav of sections and the picked one's page. The daemon's
 /// settings are asked for once it opens.

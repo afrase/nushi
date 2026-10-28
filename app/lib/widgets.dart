@@ -255,11 +255,13 @@ class Segmented<T> extends StatelessWidget {
     required this.segments,
     required this.onChanged,
     super.key,
+    this.tooltip,
   });
 
   final T value;
   final List<(T, String)> segments;
   final ValueChanged<T> onChanged;
+  final String Function(T)? tooltip; // a segment's, such as its key
 
   @override
   Widget build(BuildContext context) {
@@ -275,6 +277,7 @@ class Segmented<T> extends StatelessWidget {
             Tap(
               onTap: () => onChanged(v),
               selected: v == value,
+              tooltip: tooltip?.call(v) ?? '',
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
               child: Text(
                 text,

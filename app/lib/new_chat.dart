@@ -20,11 +20,6 @@ import 'package:nushi/widgets.dart';
 /// ⌘N: a new chat, as the sidebar's button starts one.
 const newChatKey = SingleActivator(LogicalKeyboardKey.keyN, meta: true);
 
-/// ⌘N from a widget that keeps the key for itself (a terminal).
-class NewChatIntent extends Intent {
-  const new();
-}
-
 /// Asks which agent a new chat in [folder] ('' for none) runs, then
 /// starts it there; or, a step further, opens one of the agent's sessions
 /// that isn't a chat (started in a terminal). It can take a Jira issue
