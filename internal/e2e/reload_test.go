@@ -51,3 +51,31 @@ func TestAnEmptyChatReopensAfterARestart(t *testing.T) {
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "hello"})))
 	a.waitFor("the reply", idle)
 }
+
+// When Claude's safeguards stop a response (the fake's "safeguards", as
+// recorded from Claude Code 2.1.312), what streamed of it stays as its own
+// message, marked, with Claude Code's notice as a notice line, and the
+// reply it went on with after; Claude's history keeps only the reply, so
+// after a restart Nushi's copy brings back the rest.
+func TestAResponseStoppedBySafeguards(t *testing.T) {
+	ctx := context.Background()
+	dataDir, history := t.TempDir(), &acptest.History{}
+	d := startDaemon(t, dataDir, history, nil)
+	a := open(t, d)
+	chatID := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
+	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "safeguards"})))
+	a.waitFor("the reply", idle)
+	want := "USER_MESSAGE:safeguards:\n" +
+		"AGENT_MESSAGE:Here is the first part of an answer:stopped_by_safeguards\n" +
+		"NOTICE:Opus 5.5's safeguards stopped the response above · continuing once with that noted:agent_notice\n" +
+		"AGENT_MESSAGE:Continued reply after the stop.:"
+	if got := transcript(must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID}))).Items); got != want {
+		t.Errorf("transcript:\n%s\nwant:\n%s", got, want)
+	}
+
+	d.stop()
+	a = open(t, startDaemon(t, dataDir, history, nil))
+	if got := transcript(a.follow(chatID, must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID}))))); got != want {
+		t.Errorf("after a restart:\n%s\nwant:\n%s", got, want)
+	}
+}

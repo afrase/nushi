@@ -17,6 +17,10 @@
 //     output;
 //   - containing "garbage": a line that isn't JSON-RPC and an update that
 //     isn't one, then a message;
+//   - containing "safeguards": as Claude Code 2.1.312 when its safeguards
+//     stop a response (docs/facts/claude.md): a message's start, then its
+//     notice, then the reply it goes on with; its history keeps only the
+//     reply;
 //   - containing "stderr" (with any of the others): a line with a key in
 //     it on Stderr;
 //   - anything else: "You said: <text>", streamed in two chunks.
@@ -171,6 +175,12 @@ func (a *Agent) update(session string, update map[string]any) {
 	cwd := a.cwds[session]
 	a.mu.Unlock()
 	a.History.add(cwd, session, update)
+	p, _ := json.Marshal(map[string]any{"sessionId": session, "update": update})
+	a.send(frame{Method: "session/update", Params: p})
+}
+
+// live sends an update that the session's history doesn't keep.
+func (a *Agent) live(session string, update map[string]any) {
 	p, _ := json.Marshal(map[string]any{"sessionId": session, "update": update})
 	a.send(frame{Method: "session/update", Params: p})
 }
@@ -369,6 +379,13 @@ func (a *Agent) prompt(session string, blocks []string) string { //nolint:gocogn
 		a.update(session, map[string]any{"sessionUpdate": "tool_call_update", "toolCallId": "t2", "status": "completed",
 			"content": []map[string]any{{"type": "content", "content": map[string]any{"type": "text", "text": "output of " + text}}}})
 		a.say(session, "Ran it.")
+	case strings.Contains(text, "safeguards"):
+		for _, t := range []string{"Here is the first ", "part of an answer"} {
+			a.live(session, map[string]any{"sessionUpdate": "agent_message_chunk", "messageId": "msg_stopped", "content": map[string]any{"type": "text", "text": t}})
+		}
+		a.live(session, map[string]any{"sessionUpdate": "agent_message_chunk", "_meta": map[string]any{"claudeCode": map[string]any{"kind": "informational", "level": "notice"}},
+			"content": map[string]any{"type": "text", "text": "**Notice:** Opus 5.5's safeguards stopped the response above · continuing once with that noted"}})
+		a.update(session, map[string]any{"sessionUpdate": "agent_message_chunk", "messageId": "msg_after", "content": map[string]any{"type": "text", "text": "Continued reply after the stop."}})
 	case strings.Contains(text, "garbage"):
 		a.writeMu.Lock()
 		_, _ = io.WriteString(a.w, "this line isn't JSON-RPC\n")

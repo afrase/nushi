@@ -25,6 +25,7 @@ import (
 	"github.com/afrase/nushi/internal/ante"
 	"github.com/afrase/nushi/internal/ante/antetest"
 	"github.com/afrase/nushi/internal/api"
+	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/codex"
 	"github.com/afrase/nushi/internal/events"
 	"github.com/afrase/nushi/internal/features/agents"
@@ -118,7 +119,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 		}),
 		Dialect: chats.Dialect{ForkAt: pig.ForkAt}}
 	// The fake is shaped like Claude's adapter, which names its sessions.
-	svc := chats.New([]chats.Kind{{Name: "fake", Launch: fake(false, false), History: copyHistory, Dialect: chats.Dialect{NamesSessions: true}}, codexKind, anteKind, ompKind, pigKind},
+	svc := chats.New([]chats.Kind{{Name: "fake", Launch: fake(false, false), History: copyHistory, Dialect: chats.Dialect{NamesSessions: true, Notice: claude.Notice}}, codexKind, anteKind, ompKind, pigKind},
 		st, st, git.Worktrees{}, filepath.Join(dataDir, "scratch"), hub.Publish)
 	terms := terminals.New(startSh, "sh", svc, hub.Publish)
 	svc.UseTerminals(terms)

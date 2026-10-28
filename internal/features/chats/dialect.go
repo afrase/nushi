@@ -108,4 +108,8 @@ type Dialect struct {
 	// to delete it once more, for an agent that writes a little of it back
 	// as it ends; 0 for once.
 	Redelete time.Duration
+	// Notice reads a message chunk that is a notice of the agent's own,
+	// not its model's words (Claude Code's, which it sends as agent text):
+	// it shows as a notice line, not in a message.
+	Notice func(meta map[string]any, text string) (model.AgentNotice, bool)
 }

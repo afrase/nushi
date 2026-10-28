@@ -115,6 +115,9 @@ class ItemView extends StatelessWidget {
           'reopen_failed' => (Icons.error_outline, t.crashed),
           // Its agent deleted the session: nothing broke.
           'session_gone' => (Icons.history_toggle_off, t.textMuted),
+          // The agent's own notice, not its model's words (Claude Code's).
+          'agent_notice' => (Icons.info_outline, t.textMuted),
+          'agent_warning' => (Icons.warning_amber_rounded, t.needs),
           _ => (Icons.info_outline, t.needs),
         };
         // A reopen that failed: what helps.
@@ -145,6 +148,9 @@ class ItemView extends StatelessWidget {
               Button(label: label, onPressed: chat.busy ? null : onPressed),
           ],
         );
+      case ItemKind.ITEM_KIND_AGENT_MESSAGE
+          when item.status == 'stopped_by_safeguards':
+        return StoppedView(item);
       case ItemKind.ITEM_KIND_PERMISSION:
         return PermissionCard(
           item,
