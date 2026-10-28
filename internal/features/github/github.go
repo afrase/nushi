@@ -31,6 +31,7 @@ type Client interface { //nolint:interfacebloat // the GitHub calls the feature 
 	Status(ctx context.Context, ids []string) (map[string]model.GitHubItem, error)
 	Pull(ctx context.Context, repo string, number int) (model.GitHubPull, error)
 	Issue(ctx context.Context, repo string, number int) (model.GitHubIssue, error)
+	PullsByHead(ctx context.Context, repo, head string) ([]githubapi.HeadPull, time.Duration, error)
 	JobLog(ctx context.Context, repo string, job int64) (string, error)
 	Compare(ctx context.Context, repo, base, head string) (string, []githubapi.File, error)
 	Blobs(ctx context.Context, repo string, at []githubapi.BlobAt) (map[githubapi.BlobAt]githubapi.Blob, error)
@@ -73,31 +74,36 @@ var ErrNeedsOK = errors.New("this build of Nushi needs your OK to read the GitHu
 // Deps are what the feature takes from main: gh's login, the keychain,
 // the store, a client of a host for a token, whether a keychain error
 // means the user's OK is needed, a folder's git remotes (name to URL),
-// fetching a refspec from one, and whether git takes a branch's name.
+// fetching a refspec from one, whether git takes a branch's name, a
+// folder's branch and the remote it's pushed to, and its repository's
+// default branch.
 type Deps struct {
-	Gh          Gh
-	Tokens      Tokens
-	Store       Store
-	Open        func(host, token string) Client
-	NeedsOK     func(error) bool
-	Restart     func(error) bool // the daemon must start again to reach the keychain
-	Missing     func(error) bool // the item is gone
-	Remotes     func(ctx context.Context, folder string) (map[string]string, error)
-	Fetch       func(ctx context.Context, folder, remote, refspec string) error
-	CheckBranch func(name string) error
+	Gh            Gh
+	Tokens        Tokens
+	Store         Store
+	Open          func(host, token string) Client
+	NeedsOK       func(error) bool
+	Restart       func(error) bool // the daemon must start again to reach the keychain
+	Missing       func(error) bool // the item is gone
+	Remotes       func(ctx context.Context, folder string) (map[string]string, error)
+	Fetch         func(ctx context.Context, folder, remote, refspec string) error
+	CheckBranch   func(name string) error
+	Head          func(ctx context.Context, folder string) (branch, remote string)
+	DefaultBranch func(ctx context.Context, folder string) string
 }
 
 // Service is GitHub's feature.
 type Service struct {
 	Deps
 
-	mu      sync.Mutex
-	clients map[string]*host // by host, once its token was read
-	inboxes map[string]inboxCache
-	states  map[string]stateCache // by node id
-	logs    map[int64]string      // finished jobs' log tails
-	blobs   *blobCache
-	repos   map[string]repoCache // by folder
+	mu       sync.Mutex
+	clients  map[string]*host // by host, once its token was read
+	inboxes  map[string]inboxCache
+	states   map[string]stateCache // by node id
+	logs     map[int64]string      // finished jobs' log tails
+	blobs    *blobCache
+	repos    map[string]repoCache  // by folder
+	branches map[string]headsCache // by host, repository and head
 }
 
 // host is a host's client and what Nushi learned of its token.
@@ -113,7 +119,7 @@ type host struct {
 // New makes the service.
 func New(d Deps) *Service {
 	return &Service{Deps: d, clients: map[string]*host{}, inboxes: map[string]inboxCache{}, states: map[string]stateCache{},
-		logs: map[int64]string{}, blobs: newBlobCache(), repos: map[string]repoCache{}}
+		logs: map[int64]string{}, blobs: newBlobCache(), repos: map[string]repoCache{}, branches: map[string]headsCache{}}
 }
 
 // HostState is a host as Settings › GitHub shows it.

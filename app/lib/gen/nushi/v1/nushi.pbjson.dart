@@ -239,6 +239,14 @@ const Chat$json = {
       '10': 'github'
     },
     {'1': 'unseen', '3': 15, '4': 1, '5': 8, '10': 'unseen'},
+    {
+      '1': 'pull',
+      '3': 16,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubLink',
+      '10': 'pull'
+    },
   ],
 };
 
@@ -252,7 +260,7 @@ final $typed_data.Uint8List chatDescriptor = $convert.base64Decode(
     'VzaGkudjEuV29ya3RyZWVSCHdvcmt0cmVlEhgKB3NjcmF0Y2gYCyABKAhSB3NjcmF0Y2gSGwoJ'
     'amlyYV9zaXRlGAwgASgJUghqaXJhU2l0ZRIZCghqaXJhX2tleRgNIAEoCVIHamlyYUtleRIsCg'
     'ZnaXRodWIYDiABKAsyFC5udXNoaS52MS5HaXRIdWJMaW5rUgZnaXRodWISFgoGdW5zZWVuGA8g'
-    'ASgIUgZ1bnNlZW4=');
+    'ASgIUgZ1bnNlZW4SKAoEcHVsbBgQIAEoCzIULm51c2hpLnYxLkdpdEh1YkxpbmtSBHB1bGw=');
 
 @$core.Deprecated('Use worktreeDescriptor instead')
 const Worktree$json = {
@@ -4959,6 +4967,77 @@ final $typed_data.Uint8List gitHubLinkDescriptor = $convert.base64Decode(
     '8YAyABKAlSBHJlcG8SFgoGbnVtYmVyGAQgASgFUgZudW1iZXISEgoEcHVsbBgFIAEoCFIEcHVs'
     'bA==');
 
+@$core.Deprecated('Use findChatPullRequestDescriptor instead')
+const FindChatPullRequest$json = {
+  '1': 'FindChatPullRequest',
+  '2': [
+    {'1': 'chat_id', '3': 1, '4': 1, '5': 9, '10': 'chatId'},
+    {'1': 'quiet', '3': 2, '4': 1, '5': 8, '10': 'quiet'},
+  ],
+};
+
+/// Descriptor for `FindChatPullRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List findChatPullRequestDescriptor = $convert.base64Decode(
+    'ChNGaW5kQ2hhdFB1bGxSZXF1ZXN0EhcKB2NoYXRfaWQYASABKAlSBmNoYXRJZBIUCgVxdWlldB'
+    'gCIAEoCFIFcXVpZXQ=');
+
+@$core.Deprecated('Use findChatPullResponseDescriptor instead')
+const FindChatPullResponse$json = {
+  '1': 'FindChatPullResponse',
+  '2': [
+    {'1': 'host', '3': 1, '4': 1, '5': 9, '10': 'host'},
+    {'1': 'repo', '3': 2, '4': 1, '5': 9, '10': 'repo'},
+    {'1': 'branch', '3': 3, '4': 1, '5': 9, '10': 'branch'},
+    {'1': 'default_branch', '3': 4, '4': 1, '5': 8, '10': 'defaultBranch'},
+    {
+      '1': 'pull',
+      '3': 5,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubLink',
+      '10': 'pull'
+    },
+    {'1': 'error', '3': 6, '4': 1, '5': 9, '10': 'error'},
+  ],
+};
+
+/// Descriptor for `FindChatPullResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List findChatPullResponseDescriptor = $convert.base64Decode(
+    'ChRGaW5kQ2hhdFB1bGxSZXNwb25zZRISCgRob3N0GAEgASgJUgRob3N0EhIKBHJlcG8YAiABKA'
+    'lSBHJlcG8SFgoGYnJhbmNoGAMgASgJUgZicmFuY2gSJQoOZGVmYXVsdF9icmFuY2gYBCABKAhS'
+    'DWRlZmF1bHRCcmFuY2gSKAoEcHVsbBgFIAEoCzIULm51c2hpLnYxLkdpdEh1YkxpbmtSBHB1bG'
+    'wSFAoFZXJyb3IYBiABKAlSBWVycm9y');
+
+@$core.Deprecated('Use linkChatPullRequestDescriptor instead')
+const LinkChatPullRequest$json = {
+  '1': 'LinkChatPullRequest',
+  '2': [
+    {'1': 'chat_id', '3': 1, '4': 1, '5': 9, '10': 'chatId'},
+    {
+      '1': 'pull',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubLink',
+      '10': 'pull'
+    },
+  ],
+};
+
+/// Descriptor for `LinkChatPullRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List linkChatPullRequestDescriptor = $convert.base64Decode(
+    'ChNMaW5rQ2hhdFB1bGxSZXF1ZXN0EhcKB2NoYXRfaWQYASABKAlSBmNoYXRJZBIoCgRwdWxsGA'
+    'IgASgLMhQubnVzaGkudjEuR2l0SHViTGlua1IEcHVsbA==');
+
+@$core.Deprecated('Use linkChatPullResponseDescriptor instead')
+const LinkChatPullResponse$json = {
+  '1': 'LinkChatPullResponse',
+};
+
+/// Descriptor for `LinkChatPullResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List linkChatPullResponseDescriptor =
+    $convert.base64Decode('ChRMaW5rQ2hhdFB1bGxSZXNwb25zZQ==');
+
 @$core.Deprecated('Use getGitHubStatesRequestDescriptor instead')
 const GetGitHubStatesRequest$json = {
   '1': 'GetGitHubStatesRequest',
@@ -6162,6 +6241,16 @@ const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
       '3': '.nushi.v1.SubmitGitHubReviewResponse'
     },
     {
+      '1': 'FindChatPull',
+      '2': '.nushi.v1.FindChatPullRequest',
+      '3': '.nushi.v1.FindChatPullResponse'
+    },
+    {
+      '1': 'LinkChatPull',
+      '2': '.nushi.v1.LinkChatPullRequest',
+      '3': '.nushi.v1.LinkChatPullResponse'
+    },
+    {
       '1': 'Events',
       '2': '.nushi.v1.EventsRequest',
       '3': '.nushi.v1.EventsResponse',
@@ -6470,6 +6559,10 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.SubmitGitHubReviewRequest': SubmitGitHubReviewRequest$json,
   '.nushi.v1.GitHubDraft': GitHubDraft$json,
   '.nushi.v1.SubmitGitHubReviewResponse': SubmitGitHubReviewResponse$json,
+  '.nushi.v1.FindChatPullRequest': FindChatPullRequest$json,
+  '.nushi.v1.FindChatPullResponse': FindChatPullResponse$json,
+  '.nushi.v1.LinkChatPullRequest': LinkChatPullRequest$json,
+  '.nushi.v1.LinkChatPullResponse': LinkChatPullResponse$json,
   '.nushi.v1.EventsRequest': EventsRequest$json,
   '.nushi.v1.EventsResponse': EventsResponse$json,
   '.nushi.v1.ItemEvent': ItemEvent$json,
@@ -6643,5 +6736,8 @@ final $typed_data.Uint8List nushiServiceDescriptor = $convert.base64Decode(
     'JZChBBZGRHaXRIdWJDb21tZW50EiEubnVzaGkudjEuQWRkR2l0SHViQ29tbWVudFJlcXVlc3Qa'
     'Ii5udXNoaS52MS5BZGRHaXRIdWJDb21tZW50UmVzcG9uc2USXwoSU3VibWl0R2l0SHViUmV2aW'
     'V3EiMubnVzaGkudjEuU3VibWl0R2l0SHViUmV2aWV3UmVxdWVzdBokLm51c2hpLnYxLlN1Ym1p'
-    'dEdpdEh1YlJldmlld1Jlc3BvbnNlEj0KBkV2ZW50cxIXLm51c2hpLnYxLkV2ZW50c1JlcXVlc3'
-    'QaGC5udXNoaS52MS5FdmVudHNSZXNwb25zZTAB');
+    'dEdpdEh1YlJldmlld1Jlc3BvbnNlEk0KDEZpbmRDaGF0UHVsbBIdLm51c2hpLnYxLkZpbmRDaG'
+    'F0UHVsbFJlcXVlc3QaHi5udXNoaS52MS5GaW5kQ2hhdFB1bGxSZXNwb25zZRJNCgxMaW5rQ2hh'
+    'dFB1bGwSHS5udXNoaS52MS5MaW5rQ2hhdFB1bGxSZXF1ZXN0Gh4ubnVzaGkudjEuTGlua0NoYX'
+    'RQdWxsUmVzcG9uc2USPQoGRXZlbnRzEhcubnVzaGkudjEuRXZlbnRzUmVxdWVzdBoYLm51c2hp'
+    'LnYxLkV2ZW50c1Jlc3BvbnNlMAE=');

@@ -38,7 +38,7 @@ final String dataDir =
         : '$support/Nushi');
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 80;
+const apiVersion = 81;
 
 /// The API from which a daemon restarts itself once nothing runs, when
 /// asked (RestartWhenIdle).
@@ -664,6 +664,11 @@ class Daemon extends ChangeNotifier {
       ..jiraSite = c.jiraSite
       ..jiraKey = c.jiraKey
       ..github = c.hasGithub() ? c.github : null
+      ..pull = c.hasPull()
+          ? c.pull
+          : c.github.pull
+          ? c.github
+          : null
       ..title = c.title
       ..archived = c.archived
       ..unseen = daemonApi >= unseenApi ? c.unseen : null

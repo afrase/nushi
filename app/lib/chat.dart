@@ -69,6 +69,10 @@ class ChatState extends ChangeNotifier {
 
   /// The GitHub pull request or issue it was started from, if it was.
   GitHubLink? github;
+
+  /// Its pull request: the one it was started from, else the one whose
+  /// head is its branch (found, or linked by hand). API 81.
+  GitHubLink? pull;
   String title = '';
   bool archived = false; // no agent runs; read-only until unarchived
 

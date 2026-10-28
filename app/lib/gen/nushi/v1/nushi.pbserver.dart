@@ -243,6 +243,10 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.AddGitHubCommentRequest request);
   $async.Future<$0.SubmitGitHubReviewResponse> submitGitHubReview(
       $pb.ServerContext ctx, $0.SubmitGitHubReviewRequest request);
+  $async.Future<$0.FindChatPullResponse> findChatPull(
+      $pb.ServerContext ctx, $0.FindChatPullRequest request);
+  $async.Future<$0.LinkChatPullResponse> linkChatPull(
+      $pb.ServerContext ctx, $0.LinkChatPullRequest request);
   $async.Future<$0.EventsResponse> events(
       $pb.ServerContext ctx, $0.EventsRequest request);
 
@@ -470,6 +474,10 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.AddGitHubCommentRequest();
       case 'SubmitGitHubReview':
         return $0.SubmitGitHubReviewRequest();
+      case 'FindChatPull':
+        return $0.FindChatPullRequest();
+      case 'LinkChatPull':
+        return $0.LinkChatPullRequest();
       case 'Events':
         return $0.EventsRequest();
       default:
@@ -707,6 +715,10 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return addGitHubComment(ctx, request as $0.AddGitHubCommentRequest);
       case 'SubmitGitHubReview':
         return submitGitHubReview(ctx, request as $0.SubmitGitHubReviewRequest);
+      case 'FindChatPull':
+        return findChatPull(ctx, request as $0.FindChatPullRequest);
+      case 'LinkChatPull':
+        return linkChatPull(ctx, request as $0.LinkChatPullRequest);
       case 'Events':
         return events(ctx, request as $0.EventsRequest);
       default:

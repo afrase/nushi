@@ -2124,6 +2124,45 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// A chat's pull request: the one it was started from, else the one whose
+  /// head is its folder's branch, looked for on GitHub (and linked when
+  /// found), with the folder's repository and branch. API 81.
+  Future<nushiv1nushi.FindChatPullResponse> findChatPull(
+    nushiv1nushi.FindChatPullRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.findChatPull,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Links a pull request picked by hand to a chat, or unlinks its own.
+  /// API 81.
+  Future<nushiv1nushi.LinkChatPullResponse> linkChatPull(
+    nushiv1nushi.LinkChatPullRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.linkChatPull,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Streams every change to every chat from now on. The first message is
   /// empty: it says the subscription is live.
   Stream<nushiv1nushi.EventsResponse> events(

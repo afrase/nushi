@@ -83,3 +83,34 @@ func upstream(t *testing.T, dir string) string {
 	noErr(t, err)
 	return strings.TrimSpace(string(out))
 }
+
+// TestHead: the branch checked out and the remote it's pushed to.
+func TestHead(t *testing.T) {
+	ctx := t.Context()
+	repo := t.TempDir()
+	git(t, repo, "init", "-q", "-b", "main")
+	write(t, filepath.Join(repo, "a.txt"), "a\n")
+	git(t, repo, "add", ".")
+	git(t, repo, "commit", "-q", "-m", "a")
+	if b, r := Head(ctx, repo); b != "main" || r != "" {
+		t.Fatalf("%q %q", b, r)
+	}
+	git(t, repo, "remote", "add", "origin", "https://github.com/afrase/nushi")
+	git(t, repo, "remote", "add", "fork", "https://github.com/me/nushi")
+	git(t, repo, "checkout", "-q", "-b", "feat/x")
+	git(t, repo, "config", "branch.feat/x.remote", "origin")
+	if b, r := Head(ctx, repo); b != "feat/x" || r != "origin" {
+		t.Fatalf("%q %q", b, r)
+	}
+	git(t, repo, "config", "branch.feat/x.pushRemote", "fork")
+	if _, r := Head(ctx, repo); r != "fork" {
+		t.Fatalf("the push remote: %q", r)
+	}
+	git(t, repo, "checkout", "-q", "--detach")
+	if b, _ := Head(ctx, repo); b != "" {
+		t.Fatalf("detached: %q", b)
+	}
+	if b, _ := Head(ctx, t.TempDir()); b != "" {
+		t.Fatalf("outside git: %q", b)
+	}
+}

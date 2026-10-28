@@ -40,6 +40,11 @@ type Session struct {
 	// GitHub is the GitHub pull request or issue the chat was started
 	// from, if it was.
 	GitHub *ChatGitHub `json:",omitempty"`
+	// Pull is the pull request whose head is the chat's branch, found or
+	// linked by hand, unless the chat was started from one (GitHub).
+	// NoPull is the pull request unlinked by hand, not found again.
+	Pull   *ChatGitHub `json:",omitempty"`
+	NoPull int         `json:",omitempty"`
 	// Ultracode is the chat's Ultracode option (its agent's standing
 	// multi-agent workflows), off by default.
 	Ultracode bool `json:",omitempty"`
@@ -50,6 +55,15 @@ type Session struct {
 	// Scratch says Folder is a scratch folder of the chat's own (the chat
 	// has no folder yet); worked out from the folder, not stored.
 	Scratch bool `json:"-"`
+}
+
+// PullLink is the chat's pull request: the one it was started from, else
+// the one of its branch; nil when it has none.
+func (s Session) PullLink() *ChatGitHub {
+	if s.GitHub != nil && s.GitHub.Pull {
+		return s.GitHub
+	}
+	return s.Pull
 }
 
 // Worktree is a git worktree of a repository, on a branch of its own.
