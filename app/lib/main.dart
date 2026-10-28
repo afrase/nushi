@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import 'package:nushi/alerts.dart';
 import 'package:nushi/app_actions.dart';
 import 'package:nushi/app_log.dart';
 import 'package:nushi/bundled_daemon.dart';
@@ -51,22 +52,29 @@ class _NushiAppState extends State<NushiApp> {
   ThemeMode _mode = ThemeMode.system;
   final _navigator = GlobalKey<NavigatorState>();
   late final AppLifecycleListener _lifecycle;
+  late final MacAlerts _alerts;
 
   @override
   void initState() {
     super.initState();
     watchPairings(_navigator, widget.daemon.client);
+    _alerts = MacAlerts(widget.daemon);
     // The app coming to the front shows its chat again; the daemon knows
-    // whether the window shows (focused or not) or is hidden.
+    // whether the window shows (focused or not) or is hidden, and the
+    // notifications whether it's in front.
     _lifecycle = AppLifecycleListener(
       onResume: widget.daemon.shown,
-      onStateChange: (s) => widget.daemon.macView.window =
-          s == AppLifecycleState.resumed || s == AppLifecycleState.inactive,
+      onStateChange: (s) {
+        widget.daemon.macView.window =
+            s == AppLifecycleState.resumed || s == AppLifecycleState.inactive;
+        _alerts.focused = s == AppLifecycleState.resumed;
+      },
     );
   }
 
   @override
   void dispose() {
+    _alerts.dispose();
     _lifecycle.dispose();
     super.dispose();
   }

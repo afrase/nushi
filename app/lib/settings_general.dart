@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:nushi/alerts_settings.dart';
 import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/login_item.dart';
@@ -28,8 +29,9 @@ const _sleepAfter = {
 
 String _sleepLabel(int m) => _sleepAfter[m] ?? '$m minute${m == 1 ? '' : 's'}';
 
-/// Settings › General: when idle chats sleep, and whether the daemon
-/// starts at login (the packaged app's, for the usual data folder).
+/// Settings › General: when idle chats sleep, the Mac's notifications,
+/// and whether the daemon starts at login (the packaged app's, for the
+/// usual data folder).
 /// [settings] is the daemon's, null until it said.
 class GeneralSection extends StatelessWidget {
   const new({required this.settings, required this.onChange, super.key});
@@ -71,6 +73,7 @@ class GeneralSection extends StatelessWidget {
             ),
           ],
         ),
+      const NotificationsGroup(),
       // The launch agent starts the usual data folder's daemon.
       if (bundledDaemon != null && Platform.environment['NUSHI_DATA'] == null)
         const StartAtLogin(),

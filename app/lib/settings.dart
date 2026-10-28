@@ -12,7 +12,8 @@ import 'package:nushi/daemon.dart';
 /// terminals, the terminal's font, whether a subagent's pane shows wide,
 /// the Jira task list's groups and assignee filters, the GitHub view's
 /// cards and filters, the sidebar's project groups' order and which are
-/// collapsed, the models picked last, and each chat's pinned artifacts.
+/// collapsed, the models picked last, each chat's pinned artifacts, and
+/// the Mac's notifications and Dock badge.
 /// Not whether new chats get a worktree: an older `worktrees` key is
 /// ignored, and dropped by the next save.
 final showDetails = ValueNotifier<bool>(_saved['details'] != false)
@@ -142,6 +143,21 @@ final terminalFontSize = ValueNotifier<double>(
   (_saved['termSize'] as num?)?.toDouble() ?? 12.5,
 )..addListener(_save);
 
+/// The Mac's notifications (`alerts.dart`), each kind on or off: a chat
+/// needs you (a permission prompt or a question), a turn ends, a turn
+/// fails; whether they play a sound; and the Dock badge counting the
+/// chats that need you.
+final alertNeedsYou = ValueNotifier<bool>(_saved['alertNeedsYou'] != false)
+  ..addListener(_save);
+final alertFinished = ValueNotifier<bool>(_saved['alertFinished'] != false)
+  ..addListener(_save);
+final alertFailed = ValueNotifier<bool>(_saved['alertFailed'] != false)
+  ..addListener(_save);
+final alertSound = ValueNotifier<bool>(_saved['alertSound'] == true)
+  ..addListener(_save);
+final dockBadge = ValueNotifier<bool>(_saved['dockBadge'] != false)
+  ..addListener(_save);
+
 File get _settings => File('$dataDir/app.json');
 
 final Map<String, Object?> _saved = readSaved();
@@ -204,6 +220,11 @@ void _save() {
         'models': recentModels.value,
         'pins': pinnedFiles.value,
         'pullSeen': pullSeen.value,
+        'alertNeedsYou': alertNeedsYou.value,
+        'alertFinished': alertFinished.value,
+        'alertFailed': alertFailed.value,
+        'alertSound': alertSound.value,
+        'dockBadge': dockBadge.value,
       }),
     );
   } on Object {
