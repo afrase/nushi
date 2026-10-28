@@ -1,0 +1,257 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/chat.dart';
+import 'package:nushi/chat_keys.dart';
+import 'package:nushi/daemon.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/settings.dart';
+import 'package:nushi/sidebar.dart';
+import 'package:nushi/status.dart';
+import 'package:nushi/theme/theme.dart';
+
+import 'fake_daemon.dart';
+
+/// Four projects, newest chat first: ledger-poc (one chat waiting on you,
+/// one idle), cappy (working), garden (a turn's end unseen), notes (idle).
+List<Chat> _chats() => [
+  chat(
+    'a',
+    'claude',
+    'Wire the ledger',
+    folder: '/Users/me/ledger-poc',
+    status: ChatStatus(busy: true, waiting: true),
+  ),
+  chat(
+    'c',
+    'codex',
+    'Cap the rates',
+    folder: '/Users/me/cappy',
+    age: 1,
+    status: ChatStatus(busy: true),
+  ),
+  chat('d', 'claude', 'Plant the beds', folder: '/Users/me/garden', age: 2)
+    ..unseen = true,
+  chat('e', 'ante', 'Jot it down', folder: '/Users/me/notes', age: 3),
+  chat('b', 'pig', 'Seed data', folder: '/Users/me/ledger-poc', age: 5),
+];
+
+Future<Daemon> _sidebar(
+  WidgetTester tester, {
+  List<Chat>? chats,
+  Tokens tokens = Tokens.dark,
+}) async {
+  tester.view
+    ..devicePixelRatio = 1
+    ..physicalSize = const Size(400, 600);
+  addTearDown(tester.view.reset);
+  final d = await FakeDaemon(chats ?? _chats()).connect(tester);
+  await tester.pumpWidget(
+    MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: NushiTheme(tokens).toThemeData(),
+      home: MediaQuery(
+        // Still, so the working chat's ring doesn't move.
+        data: const MediaQueryData(disableAnimations: true),
+        child: Scaffold(
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: RepaintBoundary(
+              key: const Key('shot'),
+              child: SizedBox(
+                width: 260,
+                height: 560,
+                child: ListenableBuilder(
+                  listenable: d,
+                  builder: (context, _) => Sidebar(daemon: d),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pump();
+  return d;
+}
+
+const _projects = ['ledger-poc', 'cappy', 'garden', 'notes'];
+
+/// The projects' headers, top to bottom.
+List<String> _order(WidgetTester tester) => [
+  for (final p in [..._projects, 'zeta'])
+    if (find.text(p).evaluate().isNotEmpty) p,
+]..sort((a, b) => _y(tester, a).compareTo(_y(tester, b)));
+
+double _y(WidgetTester tester, String text) =>
+    tester.getCenter(find.text(text)).dy;
+
+/// The header of [project].
+Finder _header(String project) => find.ancestor(
+  of: find.text(project),
+  matching: find.byWidgetPredicate((w) => w is Draggable),
+);
+
+/// The summary dot's phase in [project]'s header, if it shows one.
+ChatPhase? _dot(WidgetTester tester, String project) {
+  final dot = find.descendant(
+    of: _header(project),
+    matching: find.byType(PhaseDot),
+  );
+  return dot.evaluate().isEmpty ? null : tester.widget<PhaseDot>(dot).phase;
+}
+
+Map<String, Object?> _appJson() =>
+    jsonDecode(File('$dataDir/app.json').readAsStringSync())
+        as Map<String, Object?>;
+
+void main() {
+  setUpAll(() async {
+    await loadFonts();
+    Directory(dataDir).createSync(recursive: true); // the tests' own
+  });
+  tearDown(() {
+    sidebarOrder.value = [];
+    sidebarCollapsed.value = {};
+  });
+
+  testWidgets('a project is dragged by its header into another place, '
+      'a line showing where; remembered, a new project first', (tester) async {
+    var d = await _sidebar(tester);
+    expect(_order(tester), _projects);
+    // With the mouse, as on the Mac (a touch drag scrolls the list); up,
+    // into the top half of ledger-poc's group.
+    var at = tester.getCenter(find.text('notes'));
+    final drag = await tester.startGesture(at, kind: PointerDeviceKind.mouse);
+    while (at.dy > _y(tester, 'ledger-poc') - 4) {
+      at -= const Offset(0, 12);
+      await drag.moveTo(at);
+      await tester.pump();
+    }
+    expect(find.byKey(const Key('drop line')), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.byKey(const Key('drop line'))).dy,
+      lessThan(_y(tester, 'ledger-poc')),
+    );
+    await drag.up();
+    await tester.pump();
+    expect(find.byKey(const Key('drop line')), findsNothing);
+    final order = ['notes', 'ledger-poc', 'cappy', 'garden'];
+    expect(_order(tester), order);
+    final paths = [for (final p in order) '/Users/me/$p'];
+    expect(sidebarOrder.value, paths);
+    expect(_appJson()['sidebarOrder'], paths);
+    // ⌘1–⌘9 go through them as they show.
+    expect(chatOrder(d).map((c) => c.id), ['e', 'a', 'b', 'c', 'd']);
+    d.dispose();
+
+    // Again, as after a restart, with a new project's chat: it goes first.
+    d = await _sidebar(
+      tester,
+      chats: [
+        ..._chats(),
+        chat('z', 'claude', 'Start zeta', folder: '/Users/me/zeta', age: 9),
+      ],
+    );
+    expect(_order(tester), ['zeta', ...order]);
+    d.dispose();
+  });
+
+  testWidgets('the chevron collapses a project: its rows hidden, the most '
+      'urgent state as one dot, remembered', (tester) async {
+    final d = await _sidebar(tester);
+    expect(_dot(tester, 'ledger-poc'), isNull); // open: no summary
+    await tester.tap(
+      find.descendant(
+        of: _header('ledger-poc'),
+        matching: find.byTooltip('Collapse'),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('Wire the ledger'), findsNothing);
+    expect(find.text('Seed data'), findsNothing);
+    expect(_dot(tester, 'ledger-poc'), ChatPhase.waiting); // over idle
+    expect(_appJson()['sidebarCollapsed'], ['/Users/me/ledger-poc']);
+
+    // The chevron is a button the keyboard presses.
+    Focus.of(
+      tester.element(
+        find.descendant(
+          of: _header('cappy'),
+          matching: find.byIcon(Icons.expand_more),
+        ),
+      ),
+    ).requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    expect(find.text('Cap the rates'), findsNothing);
+    expect(_dot(tester, 'cappy'), ChatPhase.working);
+
+    sidebarCollapsed.value = {
+      ...sidebarCollapsed.value,
+      '/Users/me/garden',
+      '/Users/me/notes',
+    };
+    await tester.pump();
+    expect(_dot(tester, 'garden'), ChatPhase.unseen);
+    expect(_dot(tester, 'notes'), isNull); // all idle: nothing
+    // A turn's end in notes goes unseen: its dot shows.
+    d.chats['e']!.unseen = true;
+    await tester.pump();
+    expect(_dot(tester, 'notes'), ChatPhase.unseen);
+    expect(chatOrder(d), isEmpty); // nothing shows for the keys
+
+    await tester.tap(
+      find.descendant(
+        of: _header('ledger-poc'),
+        matching: find.byTooltip('Expand'),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('Wire the ledger'), findsOneWidget);
+    expect(_dot(tester, 'ledger-poc'), isNull);
+    expect(sidebarCollapsed.value, {
+      '/Users/me/cappy',
+      '/Users/me/garden',
+      '/Users/me/notes',
+    });
+    d.dispose();
+  });
+
+  testWidgets('the selected chat of a collapsed project still shows its row, '
+      'until another is selected', (tester) async {
+    sidebarCollapsed.value = {'/Users/me/cappy'};
+    final d = await _sidebar(tester);
+    expect(find.text('Cap the rates'), findsNothing);
+    expect(chatOrder(d).map((c) => c.id), ['a', 'b', 'd', 'e']);
+    d.select('c'); // as ⌘1–9, a notification or New chat do
+    await tester.pump();
+    expect(find.text('Cap the rates'), findsOneWidget);
+    expect(_y(tester, 'Cap the rates'), greaterThan(_y(tester, 'cappy')));
+    expect(_y(tester, 'Cap the rates'), lessThan(_y(tester, 'garden')));
+    expect(chatOrder(d).map((c) => c.id), ['a', 'b', 'c', 'd', 'e']);
+    expect(sidebarCollapsed.value, {'/Users/me/cappy'}); // still collapsed
+    d.select('a');
+    await tester.pump();
+    expect(find.text('Cap the rates'), findsNothing);
+    d.dispose();
+  });
+
+  testWidgets('golden: ledger-poc collapsed, its dot amber (dark)', (
+    tester,
+  ) async {
+    sidebarCollapsed.value = {'/Users/me/ledger-poc'};
+    final d = await _sidebar(tester);
+    await expectLater(
+      find.byKey(const Key('shot')),
+      matchesGoldenFile('goldens/sidebar_collapsed_dark.png'),
+    );
+    d.dispose();
+  });
+}

@@ -259,6 +259,62 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
   }
 }
 
+/// The most urgent state among [chats], as a collapsed group shows it:
+/// waiting on the user, then working, then a turn's end unseen; null when
+/// none is (all idle, asleep, new…).
+ChatPhase? groupPhase(Iterable<ChatState> chats) {
+  ChatPhase? most;
+  for (final c in chats) {
+    switch (c.phase) {
+      case .waiting:
+        return .waiting;
+      case .working:
+        most = .working;
+      case .unseen:
+        most ??= .unseen;
+      case _:
+    }
+  }
+  return most;
+}
+
+/// [phase] (waiting, working or unseen) as a still [ChatDot] draws it,
+/// its word on hover: a collapsed group's summary.
+class PhaseDot extends StatelessWidget {
+  const new(this.phase, {super.key});
+
+  final ChatPhase phase;
+
+  @override
+  Widget build(BuildContext context) {
+    const size = ChatDot.size;
+    final t = NushiTheme.of(context).t;
+    final (word, color) = phaseWord(phase, t);
+    return Tooltip(
+      message: word,
+      child: phase == .working
+          ? CustomPaint(
+              size: const Size.square(size * 1.6),
+              painter: _Mark(color, ringing: !reduceMotion(context)),
+            )
+          : Padding(
+              padding: const EdgeInsets.all(size * 0.3),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    if (phase == .waiting)
+                      BoxShadow(color: t.needsSoft, spreadRadius: 2),
+                  ],
+                ),
+                child: const SizedBox.square(dimension: size),
+              ),
+            ),
+    );
+  }
+}
+
 /// A chat's [ChatPhase] in a word, and its color: the same on the Mac and
 /// the phone. "done" is a turn's end not yet seen; "expired", a chat whose
 /// agent deleted its session; "couldn't start", one whose reopen failed.

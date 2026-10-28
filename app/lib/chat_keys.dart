@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/settings.dart';
 
 // Switching chats by keyboard, as Claude Code does: ⌘ held alone numbers
 // the sidebar's chats, ⌘1–⌘9 opens one, ⌘[ and ⌘] go to the one before
@@ -23,10 +24,46 @@ Map<String, List<ChatState>> chatGroups(Daemon daemon) {
   return groups;
 }
 
-/// The chats as the sidebar lists them, top to bottom, the archived (in
-/// their collapsed group) left out: what ⌘1–⌘9, ⌘[ and ⌘] go through.
+/// The Mac sidebar's groups ([chatGroups]) in the order they were dragged
+/// into ([sidebarOrder]); a folder it doesn't name goes first, as one
+/// with the newest chat, and with [starting] (the folder a chat is
+/// starting in) a folder with no chats yet goes first too. The phone
+/// keeps [chatGroups]' order.
+Map<String, List<ChatState>> sidebarGroups(Daemon daemon, {String? starting}) {
+  final byFolder = chatGroups(daemon);
+  final groups = {
+    if (starting != null && !byFolder.containsKey(starting))
+      starting: <ChatState>[],
+    ...byFolder,
+  };
+  final saved = sidebarOrder.value;
+  final placed = saved.toSet();
+  return {
+    for (final MapEntry(:key, :value) in groups.entries)
+      if (!placed.contains(key)) key: value,
+    for (final k in saved) k: ?groups[k],
+  };
+}
+
+/// Those of [chats] (the group of [folder]) the sidebar shows: all, or
+/// with the group collapsed ([sidebarCollapsed]), only the selected one,
+/// if it's one of them.
+Iterable<ChatState> shownChats(
+  String folder,
+  List<ChatState> chats,
+  String? selectedId,
+) => sidebarCollapsed.value.contains(folder)
+    ? chats.where((c) => c.id == selectedId)
+    : chats;
+
+/// The chats as the sidebar shows them, top to bottom, the archived (in
+/// their collapsed group) and those of collapsed groups left out: what
+/// ⌘1–⌘9, ⌘[ and ⌘] go through.
 List<ChatState> chatOrder(Daemon daemon) => [
-  for (final chats in chatGroups(daemon).values) ...chats,
+  for (final MapEntry(key: folder, value: chats) in sidebarGroups(
+    daemon,
+  ).entries)
+    ...shownChats(folder, chats, daemon.selectedId),
 ];
 
 /// Opens the [n]th chat (1–9) of [chatOrder], if there's one.

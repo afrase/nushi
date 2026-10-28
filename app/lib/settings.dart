@@ -10,8 +10,9 @@ import 'package:nushi/daemon.dart';
 /// are collapsed and their order, what each chat's Changes view shows, the
 /// panes' widths, whether changed files show flat, which chats show their
 /// terminals, the terminal's font, whether a subagent's pane shows wide,
-/// the Jira task list's groups and assignee filters, and the GitHub view's
-/// cards and filters. Not whether new chats get a worktree: an older
+/// the Jira task list's groups and assignee filters, the GitHub view's
+/// cards and filters, and the sidebar's project groups' order and which
+/// are collapsed. Not whether new chats get a worktree: an older
 /// `worktrees` key is ignored, and dropped by the next save.
 final showDetails = ValueNotifier<bool>(_saved['details'] != false)
   ..addListener(_save);
@@ -90,6 +91,14 @@ final githubOwners = ValueNotifier<Map<String, List<String>>>(
   _byPlace('githubOwners'),
 )..addListener(_save);
 
+/// The sidebar's project groups, by folder path: the order they were
+/// dragged into (folders it doesn't name go first), and those collapsed.
+final sidebarOrder = ValueNotifier<List<String>>([..._strings('sidebarOrder')])
+  ..addListener(_save);
+final sidebarCollapsed = ValueNotifier<Set<String>>(
+  _strings('sidebarCollapsed'),
+)..addListener(_save);
+
 /// The widths panes were dragged to, by pane (see `Resizable`).
 final paneWidths = ValueNotifier<Map<String, double>>({
   for (final MapEntry(:key, :value)
@@ -162,6 +171,8 @@ void _save() {
         'githubDays': githubDays.value,
         'githubHidden': githubHidden.value,
         'githubOwners': githubOwners.value,
+        'sidebarOrder': sidebarOrder.value,
+        'sidebarCollapsed': sidebarCollapsed.value.toList(),
       }),
     );
   } on Object {

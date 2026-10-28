@@ -11,17 +11,20 @@ import 'package:nushi/folder_button.dart';
 import 'package:nushi/inline_edit.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/new_chat.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/settings_nav.dart';
+import 'package:nushi/sidebar_groups.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// The chats, grouped by folder (a chat in a worktree under its
-/// repository): the folder with the newest chat first, and in each folder
-/// the newest chat first. Archived chats are in a collapsed group at the
-/// bottom. While ⌘ is held alone, the first nine chats (archived left out)
-/// show the number ⌘ opens them with.
+/// repository; [SidebarGroups]): the groups in the order they were
+/// dragged into, a new folder's first, and in each the newest chat first.
+/// Archived chats are in a collapsed group at the bottom. While ⌘ is held
+/// alone, the first nine chats shown (archived left out) show the number
+/// ⌘ opens them with.
 class Sidebar extends StatefulWidget {
   const new({required this.daemon, super.key});
 
@@ -58,16 +61,10 @@ class _SidebarState extends State<Sidebar> {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final groups = chatGroups(widget.daemon);
-    final archived =
-        widget.daemon.chats.values.where((c) => c.archived).toList()
-          ..sort((a, b) => b.created.compareTo(a.created));
-    final numbers = {
-      for (final (i, c) in chatOrder(widget.daemon).take(9).indexed)
-        c.id: i + 1,
-    };
-    final starting = widget.daemon.starting;
-    if (starting != null) groups.putIfAbsent(starting, () => []);
+    final daemon = widget.daemon;
+    final archived = daemon.chats.values.where((c) => c.archived).toList()
+      ..sort((a, b) => b.created.compareTo(a.created));
+    final starting = daemon.starting;
     return DecoratedBox(
       decoration: BoxDecoration(color: t.raised),
       child: Column(
@@ -83,67 +80,66 @@ class _SidebarState extends State<Sidebar> {
             ),
           ),
           Expanded(
-            child: ValueListenableBuilder(
-              valueListenable: _hold,
-              builder: (context, held, _) => ListView(
-                padding: const EdgeInsets.only(bottom: 10),
-                children: [
-                  for (final MapEntry(key: folder, value: chats)
-                      in groups.entries) ...[
-                    _FolderHeader(
-                      folder,
-                      onNew: starting == null ? () => _new(folder) : null,
-                      onTerminal: folder.isEmpty || chats.isEmpty
-                          ? null
-                          : () => _terminal(folder, chats),
-                    ),
-                    if (starting == folder)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 4, 10, 4),
-                        child: Text(
-                          'Starting…',
-                          style: theme.ui(t.textMuted, size: 12),
-                        ),
-                      ),
-                    for (final c in chats)
-                      _ChatRow(
+            child: ListenableBuilder(
+              listenable: Listenable.merge([
+                _hold,
+                sidebarOrder,
+                sidebarCollapsed,
+              ]),
+              builder: (context, _) {
+                final held = _hold.value;
+                final numbers = {
+                  for (final (i, c) in chatOrder(daemon).take(9).indexed)
+                    c.id: i + 1,
+                };
+                return ListView(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  children: [
+                    SidebarGroups(
+                      groups: sidebarGroups(daemon, starting: starting),
+                      selectedId: daemon.selectedId,
+                      starting: starting,
+                      onNew: starting == null ? _new : null,
+                      onTerminal: _terminal,
+                      row: (c) => _ChatRow(
                         c,
                         key: ValueKey(c.id),
-                        daemon: widget.daemon,
+                        daemon: daemon,
                         number: held ? numbers[c.id] : null,
                       ),
-                  ],
-                  if (archived.isNotEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(6, 12, 6, 2),
-                      child: Tap(
-                        onTap: () =>
-                            setState(() => _showArchived = !_showArchived),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 4,
-                        ),
-                        child: Row(
-                          children: [
-                            Chevron(open: _showArchived, size: 16),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Archived  ${archived.length}',
-                              style: theme.ui(t.textSecondary, size: 12),
-                            ),
-                          ],
+                    ),
+                    if (archived.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(6, 12, 6, 2),
+                        child: Tap(
+                          onTap: () =>
+                              setState(() => _showArchived = !_showArchived),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 4,
+                          ),
+                          child: Row(
+                            children: [
+                              Chevron(open: _showArchived, size: 16),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Archived  ${archived.length}',
+                                style: theme.ui(t.textSecondary, size: 12),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    if (_showArchived)
-                      for (final c in archived)
-                        _ChatRow(c, key: ValueKey(c.id), daemon: widget.daemon),
+                      if (_showArchived)
+                        for (final c in archived)
+                          _ChatRow(c, key: ValueKey(c.id), daemon: daemon),
+                    ],
                   ],
-                ],
-              ),
+                );
+              },
             ),
           ),
-          _Footer(widget.daemon),
+          _Footer(daemon),
         ],
       ),
     );
@@ -220,67 +216,6 @@ class _Footer extends StatelessWidget {
             open: daemon.githubOpen,
             () => daemon.showGitHub(open: !daemon.githubOpen),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-/// A group's header: the folder's name and path, or "No folder" ('') for
-/// chats in scratch folders.
-class _FolderHeader extends StatelessWidget {
-  const new(this.folder, {required this.onNew, required this.onTerminal});
-
-  final String folder;
-  final VoidCallback? onNew;
-  final VoidCallback? onTerminal; // a terminal there, in one of its chats
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final (name, parent) = folder.isEmpty
-        ? ('No folder', '')
-        : folderParts(folder);
-    return Menu(
-      entries: [
-        MenuEntry('New chat here', onPick: onNew),
-        MenuEntry('Open in terminal', onPick: onTerminal),
-      ],
-      builder: (context, open) => GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onSecondaryTapUp: (d) => open(d.localPosition),
-        child: _header(theme, t, name, parent),
-      ),
-    );
-  }
-
-  Widget _header(NushiTheme theme, Tokens t, String name, String parent) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 6, 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.ui(t.text, weight: FontWeight.w600),
-                ),
-                if (parent.isNotEmpty)
-                  Text(
-                    parent,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.code(t.textMuted, size: 11),
-                  ),
-              ],
-            ),
-          ),
-          IconTap(Icons.add, tooltip: 'New chat here', onTap: onNew),
         ],
       ),
     );
