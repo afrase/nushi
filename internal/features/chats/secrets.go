@@ -33,8 +33,9 @@ var (
 )
 
 // maskSecrets masks what looks secret in a tool call's input, as JSON
-// (its keys' order kept) or as text: the string values of keys named like
-// a secret, and anything shaped like a key or token in any string.
+// (its keys' order kept) or as text: every value under a key named like a
+// secret (strings, numbers, bools, however deep), and anything shaped
+// like a key or token in any string or key.
 func maskSecrets(input string) string {
 	if out, err := maskJSON(input); err == nil {
 		return out
@@ -91,7 +92,7 @@ type jsonMasker struct {
 // jsonLevel is an object or array being written.
 type jsonLevel struct {
 	object bool
-	secret bool   // an array a secret key holds: its strings are secrets
+	secret bool   // under a secret key: every value in it is a secret
 	n      int    // values written
 	key    string // the object's key being given its value
 	keyed  bool   // a key was written, its value comes next
@@ -113,7 +114,7 @@ func (m *jsonMasker) token(tok json.Token) error {
 		}
 		top.key, _ = tok.(string)
 		top.keyed = true
-		if err := m.write(top.key); err != nil {
+		if err := m.write(maskShapes(top.key)); err != nil { // a token as a key too
 			return err
 		}
 		m.out.WriteByte(':')
@@ -122,7 +123,7 @@ func (m *jsonMasker) token(tok json.Token) error {
 	if top != nil && !top.object && top.n > 0 {
 		m.out.WriteByte(',')
 	}
-	secret := top != nil && (top.object && secretKey.MatchString(top.key) || top.secret)
+	secret := top != nil && (top.secret || top.object && secretKey.MatchString(top.key))
 	if top != nil {
 		top.n++
 		top.keyed = false
@@ -130,14 +131,19 @@ func (m *jsonMasker) token(tok json.Token) error {
 	switch v := tok.(type) {
 	case json.Delim:
 		m.out.WriteString(v.String())
-		m.stack = append(m.stack, jsonLevel{object: v == '{', secret: secret && v == '['})
+		m.stack = append(m.stack, jsonLevel{object: v == '{', secret: secret})
 		return nil
 	case string:
 		if secret && v != "" {
 			v = secretMask
 		}
 		return m.write(maskShapes(v))
-	default:
+	case nil:
+		return m.write(v)
+	default: // a number or a bool
+		if secret {
+			return m.write(secretMask)
+		}
 		return m.write(v)
 	}
 }

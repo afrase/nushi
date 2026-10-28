@@ -60,13 +60,37 @@ func TestSecretsMaskedInInput(t *testing.T) {
     "••••",
     "••••"
   ],
-  "max_tokens": 4096,
+  "max_tokens": "••••",
   "env": "GITHUB_TOKEN=•••• make",
   "note": "Bearer token rotation",
   "git": "https://me:••••@github.com/x.git"
 }`
 	if got := inputText(raw); got != want {
 		t.Errorf("by key, in order:\n%s\nwant:\n%s", got, want)
+	}
+
+	// Under a secret key, however deep, every value; a token as a key.
+	nested := json.RawMessage(`{"password": {"value": "x", "pin": 1234, "on": true, "none": null},
+		"token": [["x"], {"k": "y"}], "ghp_abcdefghijklmnopqrstuvwxyz0123456789": true}`)
+	wantNested := `{
+  "password": {
+    "value": "••••",
+    "pin": "••••",
+    "on": "••••",
+    "none": null
+  },
+  "token": [
+    [
+      "••••"
+    ],
+    {
+      "k": "••••"
+    }
+  ],
+  "••••": true
+}`
+	if got := inputText(nested); got != wantNested {
+		t.Errorf("nested:\n%s\nwant:\n%s", got, wantNested)
 	}
 
 	// Not JSON: the shapes still go.
