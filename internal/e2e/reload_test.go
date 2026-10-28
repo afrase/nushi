@@ -2,6 +2,9 @@ package e2e
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+	"slices"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -77,5 +80,39 @@ func TestAResponseStoppedBySafeguards(t *testing.T) {
 	a = open(t, startDaemon(t, dataDir, history, nil))
 	if got := transcript(a.follow(chatID, must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID}))))); got != want {
 		t.Errorf("after a restart:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+// FindChatFiles says which paths a message names are files the preview
+// opens: regular files in the chat's folder, not a folder, a missing
+// file, a way out of the folder or a link out of it.
+func TestFindChatFiles(t *testing.T) {
+	ctx := context.Background()
+	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
+	a := open(t, d)
+	folder, outside := t.TempDir(), t.TempDir()
+	for _, f := range []string{"docs/plan.md", "main.go"} {
+		if err := os.MkdirAll(filepath.Join(folder, filepath.Dir(f)), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(folder, f), []byte("x"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	secret := filepath.Join(outside, "secret.md")
+	if err := os.WriteFile(secret, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(secret, filepath.Join(folder, "link.md")); err != nil {
+		t.Fatal(err)
+	}
+	chatID := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: folder}))).ChatId
+	asked := []string{"docs/plan.md", filepath.Join(folder, "main.go"), "missing.md", "docs", "../" + filepath.Base(outside) + "/secret.md", secret, "link.md"}
+	got := must(a.c.FindChatFiles(ctx, connect.NewRequest(&nushiv1.FindChatFilesRequest{ChatId: chatID, Paths: asked}))).Found
+	if want := []string{"docs/plan.md", filepath.Join(folder, "main.go")}; !slices.Equal(got, want) {
+		t.Errorf("found %q, want %q", got, want)
+	}
+	if _, err := a.c.FindChatFiles(ctx, connect.NewRequest(&nushiv1.FindChatFilesRequest{ChatId: chatID, Paths: make([]string, 201)})); err == nil {
+		t.Error("201 paths taken")
 	}
 }

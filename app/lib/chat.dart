@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import 'package:nushi/agents.dart';
 import 'package:nushi/draft.dart';
+import 'package:nushi/file_links.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings.dart';
 
@@ -157,6 +158,9 @@ class ChatState extends ChangeNotifier {
   /// The file (as its tool row names it) whose preview shows in [pane]'s
   /// place: one or the other.
   final preview = ValueNotifier<String?>(null);
+
+  /// Which files its messages name are there (links to their preview).
+  final fileLinks = FileLinks();
 
   void openPreview(String path) {
     pane.value = null;

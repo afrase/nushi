@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"time"
 
@@ -18,15 +19,9 @@ func (s *server) WatchChatFile(ctx context.Context, req *connect.Request[nushiv1
 	if err != nil {
 		return connect.NewError(connect.CodeNotFound, err)
 	}
-	root, rel, err := filewatch.Locate(roots, req.Msg.Path)
+	root, rel, err := s.chatFile(req.Msg.ChatId, roots, req.Msg.Path)
 	if err != nil {
-		// Outside the chat's folders: a file one of its tool calls worked
-		// on (an agent's notes in its own folder) still shows.
-		p := filepath.Clean(req.Msg.Path)
-		if !filepath.IsAbs(p) || !s.chats.Wrote(req.Msg.ChatId, p) {
-			return connect.NewError(connect.CodePermissionDenied, err)
-		}
-		root, rel = filepath.Dir(p), filepath.Base(p)
+		return connect.NewError(connect.CodePermissionDenied, err)
 	}
 	var sendErr error
 	err = filewatch.Watch(ctx, root, rel, time.Second, func(f filewatch.File) error {
@@ -39,4 +34,41 @@ func (s *server) WatchChatFile(ctx context.Context, req *connect.Request[nushiv1
 	}
 	// A link out of the folder, or a read that failed.
 	return connect.NewError(connect.CodeFailedPrecondition, err)
+}
+
+// chatFile is where the preview may read path from: inside one of the
+// chat's roots, or, outside them, a file one of its tool calls worked on
+// (an agent's notes in its own folder).
+func (s *server) chatFile(chatID string, roots []string, path string) (root, rel string, err error) {
+	root, rel, err = filewatch.Locate(roots, path)
+	if err != nil {
+		p := filepath.Clean(path)
+		if !filepath.IsAbs(p) || !s.chats.Wrote(chatID, p) {
+			return "", "", err
+		}
+		root, rel = filepath.Dir(p), filepath.Base(p)
+	}
+	return root, rel, nil
+}
+
+// maxFindFiles is how many paths FindChatFiles takes at once.
+const maxFindFiles = 200
+
+// FindChatFiles says which of the paths an agent's message names are
+// files the preview opens: the app links only those.
+func (s *server) FindChatFiles(_ context.Context, req *connect.Request[nushiv1.FindChatFilesRequest]) (*connect.Response[nushiv1.FindChatFilesResponse], error) {
+	if len(req.Msg.Paths) > maxFindFiles {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%d paths, %d at most", len(req.Msg.Paths), maxFindFiles))
+	}
+	roots, err := s.chats.Roots(req.Msg.ChatId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, err)
+	}
+	found := []string{}
+	for _, p := range req.Msg.Paths {
+		if root, rel, err := s.chatFile(req.Msg.ChatId, roots, p); err == nil && filewatch.Exists(root, rel) {
+			found = append(found, p)
+		}
+	}
+	return connect.NewResponse(&nushiv1.FindChatFilesResponse{Found: found}), nil
 }

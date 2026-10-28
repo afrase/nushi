@@ -71,6 +71,8 @@ class StreamingMarkdown extends StatelessWidget {
     this.streaming = true,
     this.lineBreaks = false,
     this.codeBlock,
+    this.files,
+    this.onTapFile,
   });
 
   /// The markdown so far.
@@ -98,17 +100,37 @@ class StreamingMarkdown extends StatelessWidget {
   final Widget? Function(String language, String code, {required bool open})?
   codeBlock;
 
+  /// Paths of files to make links of, once [text] has finished streaming:
+  /// each as written, in inline code or plain text, to what [onTapFile]
+  /// gets. Written elsewhere (in a word, a path or a URL) it stays text.
+  final Map<String, String>? files;
+
+  /// Runs when one of [files] is clicked, with its path.
+  final void Function(String path)? onTapFile;
+
   @override
   Widget build(BuildContext context) {
     final s = style;
     final body = s.body;
+    final files = streaming || onTapFile == null ? null : this.files;
+    final linking = files != null && files.isNotEmpty;
     final heading = body.copyWith(fontWeight: FontWeight.w600);
     final size = body.fontSize ?? 14;
     return MarkdownBody(
+      // The body parses again only for new text or a new style sheet:
+      // other links, another body.
+      key: linking ? ValueKey(Object.hashAllUnordered(files.keys)) : null,
       data: streaming ? heal(text, markOpen: true) : text,
       softLineBreak: lineBreaks,
       blockSyntaxes: const [_HtmlAsText()],
-      builders: {'pre': _CodeBlockBuilder(s, codeBlock)},
+      inlineSyntaxes: linking ? [_FilePathSyntax(files.keys)] : null,
+      builders: {
+        'pre': _CodeBlockBuilder(s, codeBlock),
+        if (linking) ...{
+          'code': _FileLinkBuilder(files, onTapFile!),
+          _FilePathSyntax.tag: _FileLinkBuilder(files, onTapFile!),
+        },
+      },
       // A task list's box ("- [x]"), as text so it lines up with the item.
       checkboxBuilder: (checked) => Padding(
         padding: const EdgeInsets.only(right: 6),
@@ -361,4 +383,104 @@ class _HtmlAsText extends md.HtmlBlockSyntax {
       ],
     ]);
   }
+}
+
+/// A file's path in plain text, written exactly as one of the paths given, with
+/// nothing of a word, a path or a URL around it.
+class _FilePathSyntax extends md.InlineSyntax {
+  new(Iterable<String> paths) : super(_pattern(paths));
+
+  static const tag = 'filepath';
+
+  static String _pattern(Iterable<String> paths) {
+    final longest = paths.toList()..sort((a, b) => b.length - a.length);
+    return '(?<![\\w/.~:@-])(?:${longest.map(RegExp.escape).join('|')})(?![\\w/])';
+  }
+
+  @override
+  bool onMatch(md.InlineParser parser, Match match) {
+    parser.addNode(md.Element.text(tag, match[0]!));
+    return true;
+  }
+}
+
+/// One of the files a message names, in inline code or plain text, as a
+/// link (its text in place, so it flows with the line); inline code that
+/// isn't one stays as it was.
+class _FileLinkBuilder extends MarkdownElementBuilder {
+  new(this.files, this.onTap);
+
+  final Map<String, String> files;
+  final void Function(String path) onTap;
+
+  @override
+  Widget? visitElementAfterWithContext(
+    BuildContext context,
+    md.Element element,
+    TextStyle? preferredStyle,
+    TextStyle? parentStyle,
+  ) {
+    final text = element.textContent;
+    final path = files[text.trim()];
+    if (path == null) return null;
+    // A widget span: the spans of a paragraph's text are made again as
+    // they're merged, without their hover.
+    return Text.rich(
+      TextSpan(
+        children: [
+          WidgetSpan(
+            alignment: PlaceholderAlignment.baseline,
+            baseline: TextBaseline.alphabetic,
+            child: FileLink(
+              text,
+              style: (parentStyle ?? const TextStyle()).merge(preferredStyle),
+              onTap: () => onTap(path),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A file's name in a message, as a link: the hand over it, underlined
+/// while the pointer is.
+class FileLink extends StatefulWidget {
+  /// [text] in [style], running [onTap] when clicked.
+  const new(this.text, {required this.style, required this.onTap, super.key});
+
+  /// The path as written.
+  final String text;
+
+  /// The text's style where it's written (inline code's, or the body's).
+  final TextStyle style;
+
+  /// Opens the file.
+  final VoidCallback onTap;
+
+  @override
+  State<FileLink> createState() => _FileLinkState();
+}
+
+class _FileLinkState extends State<FileLink> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+    cursor: SystemMouseCursors.click,
+    onEnter: (_) => setState(() => _hover = true),
+    onExit: (_) => setState(() => _hover = false),
+    child: GestureDetector(
+      onTap: widget.onTap,
+      child: Text(
+        widget.text,
+        style: _hover
+            ? widget.style.copyWith(
+                decoration: TextDecoration.underline,
+                decorationColor: widget.style.color,
+              )
+            : widget.style,
+      ),
+    ),
+  );
 }

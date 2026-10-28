@@ -4,12 +4,12 @@ import 'package:nushi/cards.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/draft.dart';
+import 'package:nushi/file_links.dart';
 import 'package:nushi/findings.dart';
 import 'package:nushi/findings_card.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart';
-import 'package:nushi/markdown.dart';
 import 'package:nushi/marks.dart';
 import 'package:nushi/question_card.dart';
 import 'package:nushi/replies.dart';
@@ -184,9 +184,10 @@ class ItemView extends StatelessWidget {
           spacing: 4,
           children: [
             if (found == null)
-              AgentMarkdown(item.text, live: live)
+              LinkedMarkdown(item.text, chat, daemon, live: live)
             else ...[
-              if (found.before.isNotEmpty) AgentMarkdown(found.before),
+              if (found.before.isNotEmpty)
+                LinkedMarkdown(found.before, chat, daemon, live: false),
               if (again)
                 FindingsAgain(found.json)
               else
@@ -200,7 +201,7 @@ class ItemView extends StatelessWidget {
                   ),
                 ),
               if (found.after.isNotEmpty)
-                AgentMarkdown(found.after, live: live),
+                LinkedMarkdown(found.after, chat, daemon, live: live),
             ],
             if (item.images.isNotEmpty) Thumbnails(item.images, size: 240),
           ],

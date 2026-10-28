@@ -10225,6 +10225,125 @@ class WatchChatFileRequest extends $pb.GeneratedMessage {
   void clearPath() => $_clearField(2);
 }
 
+class FindChatFilesRequest extends $pb.GeneratedMessage {
+  factory FindChatFilesRequest({
+    $core.String? chatId,
+    $core.Iterable<$core.String>? paths,
+  }) {
+    final result = FindChatFilesRequest._();
+    if (chatId != null) result.chatId = chatId;
+    if (paths != null) result.paths.addAll(paths);
+    return result;
+  }
+
+  FindChatFilesRequest._();
+
+  factory FindChatFilesRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FindChatFilesRequest()..mergeFromBuffer(data, registry);
+  factory FindChatFilesRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FindChatFilesRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'FindChatFilesRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: FindChatFilesRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..pPS(2, _omitFieldNames ? '' : 'paths')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FindChatFilesRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FindChatFilesRequest copyWith(void Function(FindChatFilesRequest) updates) =>
+      super.copyWith((message) => updates(message as FindChatFilesRequest))
+          as FindChatFilesRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use FindChatFilesRequest() / FindChatFilesRequest.new instead')
+  static FindChatFilesRequest create() => FindChatFilesRequest._();
+  static $pb.GeneratedMessage $_createMessage() => FindChatFilesRequest._();
+  @$core.override
+  FindChatFilesRequest createEmptyInstance() => FindChatFilesRequest._();
+  @$core.pragma('dart2js:noInline')
+  static FindChatFilesRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<FindChatFilesRequest>(
+          FindChatFilesRequest.$_createMessage);
+  static FindChatFilesRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  /// Absolute, or relative to the chat's folder; 200 at most.
+  @$pb.TagNumber(2)
+  $pb.PbList<$core.String> get paths => $_getList(1);
+}
+
+class FindChatFilesResponse extends $pb.GeneratedMessage {
+  factory FindChatFilesResponse({
+    $core.Iterable<$core.String>? found,
+  }) {
+    final result = FindChatFilesResponse._();
+    if (found != null) result.found.addAll(found);
+    return result;
+  }
+
+  FindChatFilesResponse._();
+
+  factory FindChatFilesResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FindChatFilesResponse()..mergeFromBuffer(data, registry);
+  factory FindChatFilesResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FindChatFilesResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'FindChatFilesResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: FindChatFilesResponse.$_createMessage)
+    ..pPS(1, _omitFieldNames ? '' : 'found')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FindChatFilesResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FindChatFilesResponse copyWith(
+          void Function(FindChatFilesResponse) updates) =>
+      super.copyWith((message) => updates(message as FindChatFilesResponse))
+          as FindChatFilesResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use FindChatFilesResponse() / FindChatFilesResponse.new instead')
+  static FindChatFilesResponse create() => FindChatFilesResponse._();
+  static $pb.GeneratedMessage $_createMessage() => FindChatFilesResponse._();
+  @$core.override
+  FindChatFilesResponse createEmptyInstance() => FindChatFilesResponse._();
+  @$core.pragma('dart2js:noInline')
+  static FindChatFilesResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<FindChatFilesResponse>(
+          FindChatFilesResponse.$_createMessage);
+  static FindChatFilesResponse? _defaultInstance;
+
+  /// Those of the paths that are there, as given.
+  @$pb.TagNumber(1)
+  $pb.PbList<$core.String> get found => $_getList(0);
+}
+
 /// The file as it is now.
 class WatchChatFileResponse extends $pb.GeneratedMessage {
   factory WatchChatFileResponse({
@@ -24943,6 +25062,15 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, WatchChatFileRequest request) =>
       _client.invoke<WatchChatFileResponse>(ctx, 'NushiService',
           'WatchChatFile', request, WatchChatFileResponse());
+
+  /// Says which of the paths an agent's message names are regular files
+  /// the chat's preview opens (WatchChatFile's rules: in its folder or
+  /// worktree, no link out, or one its tool calls worked on), so the app
+  /// links only those.
+  $async.Future<FindChatFilesResponse> findChatFiles(
+          $pb.ClientContext? ctx, FindChatFilesRequest request) =>
+      _client.invoke<FindChatFilesResponse>(ctx, 'NushiService',
+          'FindChatFiles', request, FindChatFilesResponse());
 
   /// Lists a branch's commits since a base, or the last ones.
   $async.Future<ListCommitsResponse> listCommits(
