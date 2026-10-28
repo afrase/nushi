@@ -9,9 +9,11 @@ import 'package:nushi/markdown.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/tool_parts.dart';
 import 'package:nushi/widgets.dart';
 
 export 'package:nushi/collapsible.dart';
+export 'package:nushi/tool_parts.dart';
 
 /// What a kind of tool call does: its icon, what it did ("read") to what
 /// ("file"), its verb on a path ("Read") and what it is doing ("Reading").
@@ -69,7 +71,7 @@ String doingOf(Item it) {
     _ when it.toolKind == 'execute' => 'Running ${it.title}',
     (final v?, final p?) => '$v $p',
     (final v?, null) => v,
-    _ => it.title,
+    _ => toolTitle(it),
   };
 }
 
@@ -171,7 +173,9 @@ class ToolCallView extends StatelessWidget {
               TextSpan(text: path, style: code),
             ],
           )
-        : TextSpan(text: it.title, style: theme.ui(t.textSecondary));
+        : TextSpan(text: toolTitle(it), style: theme.ui(t.textSecondary));
+    // An MCP call's title is its server and tool; its raw name on hover.
+    final rawName = mcpName(it.title) == null ? null : it.title;
     var (added, removed) = (0, 0);
     for (final d in it.diffs) {
       final (a, r) = lineCounts(d);
@@ -179,9 +183,10 @@ class ToolCallView extends StatelessWidget {
       removed += r;
     }
     final failed = it.status == 'failed';
-    final command = it.toolKind == 'execute' && it.title.isNotEmpty;
+    final command = isCommand(it);
     final preview = previewPath(it);
-    final hasBody = it.text.isNotEmpty || it.diffs.isNotEmpty || command;
+    final input = showsInput(it);
+    final output = it.text.trim().isNotEmpty;
     return _withImages(
       [if (images) ...it.images],
       Collapsible(
@@ -202,10 +207,13 @@ class ToolCallView extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: Shine(
                   on: _running(it) && !still,
-                  child: Text.rich(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: _tooltip(
+                    rawName,
+                    Text.rich(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
               ),
@@ -235,7 +243,8 @@ class ToolCallView extends StatelessWidget {
             _failed(theme, failed ? 'failed' : ''),
           ],
         ),
-        body: !hasBody
+        // A call with nothing to show only has its title.
+        body: !hasToolBody(it)
             ? null
             : Padding(
                 padding: const EdgeInsets.all(8),
@@ -248,7 +257,13 @@ class ToolCallView extends StatelessWidget {
                         '\$ ${it.title}',
                       ), // the header cuts it to a line
                     for (final d in it.diffs) DiffBox(d),
-                    if (it.text.isNotEmpty) AgentMarkdown(it.text),
+                    if (input) ToolSection('Input', RawText(it.input)),
+                    if (output && input)
+                      ToolSection('Output', AgentMarkdown(it.text))
+                    else if (output)
+                      AgentMarkdown(it.text)
+                    else if (showsRawOutput(it))
+                      ToolSection('Output', RawText(it.rawOutput, folded: 12)),
                   ],
                 ),
               ),
@@ -257,55 +272,8 @@ class ToolCallView extends StatelessWidget {
   }
 }
 
-/// A tool row's Preview: opens [path]'s preview, marked while it's the
-/// one open. None without [Previews] above to open it.
-class PreviewButton extends StatelessWidget {
-  const new(this.path, {super.key});
-
-  final String path;
-
-  @override
-  Widget build(BuildContext context) {
-    final previews = Previews.of(context);
-    final open = previews?.open;
-    if (open == null) return const SizedBox.shrink();
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    Widget pill({required bool on}) => Pressable(
-      onTap: () => open(path),
-      tooltip: 'Preview ${baseName(path)}',
-      builder: (context, look) => Container(
-        height: 20,
-        padding: const EdgeInsets.symmetric(horizontal: 7),
-        decoration: BoxDecoration(
-          color: on
-              ? t.accentSoft
-              : look.hover
-              ? t.hover
-              : null,
-          border: Border.all(color: on ? t.accent : t.fieldBorder),
-          borderRadius: BorderRadius.circular(NushiTheme.control),
-        ),
-        foregroundDecoration: focusRing(t, look),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          spacing: 4,
-          children: [
-            Icon(Icons.visibility_outlined, size: 12, color: t.textSecondary),
-            Text('Preview', style: theme.ui(t.text, size: 11.5)),
-          ],
-        ),
-      ),
-    );
-    final current = previews?.current;
-    return current == null
-        ? pill(on: false)
-        : ValueListenableBuilder(
-            valueListenable: current,
-            builder: (context, v, _) => pill(on: v == path),
-          );
-  }
-}
+Widget _tooltip(String? message, Widget child) =>
+    message == null ? child : Tooltip(message: message, child: child);
 
 /// A tool call, or a run of them, with the images they returned under it.
 Widget _withImages(List<ImageData> images, Widget child) => images.isEmpty

@@ -11419,6 +11419,8 @@ class Item extends $pb.GeneratedMessage {
     Findings? findings,
     $core.bool? relayStop,
     $fixnum.Int64? sent,
+    $core.String? input,
+    $core.String? rawOutput,
   }) {
     final result = Item._();
     if (id != null) result.id = id;
@@ -11454,6 +11456,8 @@ class Item extends $pb.GeneratedMessage {
     if (findings != null) result.findings = findings;
     if (relayStop != null) result.relayStop = relayStop;
     if (sent != null) result.sent = sent;
+    if (input != null) result.input = input;
+    if (rawOutput != null) result.rawOutput = rawOutput;
     return result;
   }
 
@@ -11512,6 +11516,8 @@ class Item extends $pb.GeneratedMessage {
         subBuilder: Findings.$_createMessage)
     ..aOB(32, _omitFieldNames ? '' : 'relayStop')
     ..aInt64(33, _omitFieldNames ? '' : 'sent')
+    ..aOS(34, _omitFieldNames ? '' : 'input')
+    ..aOS(35, _omitFieldNames ? '' : 'rawOutput')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -11838,6 +11844,27 @@ class Item extends $pb.GeneratedMessage {
   $core.bool hasSent() => $_has(32);
   @$pb.TagNumber(33)
   void clearSent() => $_clearField(33);
+
+  /// A tool call's input as the agent gave it, as indented JSON, and its
+  /// result as the agent gave it (text or indented JSON), only while its
+  /// text, diffs and images show nothing; each cut to about 8 KB. API 79.
+  @$pb.TagNumber(34)
+  $core.String get input => $_getSZ(33);
+  @$pb.TagNumber(34)
+  set input($core.String value) => $_setString(33, value);
+  @$pb.TagNumber(34)
+  $core.bool hasInput() => $_has(33);
+  @$pb.TagNumber(34)
+  void clearInput() => $_clearField(34);
+
+  @$pb.TagNumber(35)
+  $core.String get rawOutput => $_getSZ(34);
+  @$pb.TagNumber(35)
+  set rawOutput($core.String value) => $_setString(34, value);
+  @$pb.TagNumber(35)
+  $core.bool hasRawOutput() => $_has(34);
+  @$pb.TagNumber(35)
+  void clearRawOutput() => $_clearField(35);
 }
 
 /// A code review's result: the effort level it ran at ("medium"; "" when

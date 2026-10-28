@@ -1546,6 +1546,11 @@ message Item {
   // For a user message sent through Nushi: when, in Unix milliseconds; 0
   // when not known (one the agent replayed). API 78.
   int64 sent = 33;
+  // A tool call's input as the agent gave it, as indented JSON, and its
+  // result as the agent gave it (text or indented JSON), only while its
+  // text, diffs and images show nothing; each cut to about 8 KB. API 79.
+  string input = 34;
+  string raw_output = 35;
 }
 
 // A code review's result: the effort level it ran at ("medium"; "" when

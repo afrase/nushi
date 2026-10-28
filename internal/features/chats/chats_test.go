@@ -2,6 +2,7 @@ package chats
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 	"sync"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -106,6 +108,46 @@ func TestToolCallUpdatesMergeIntoOneItem(t *testing.T) {
 	}
 	if !reflect.DeepEqual(c.items, want) {
 		t.Errorf("items = %+v\nwant %+v", c.items, want)
+	}
+}
+
+func TestToolCallKeepsItsRawInputAndOutput(t *testing.T) {
+	text := []acp.ToolCallContent{{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: "found 1"}}}}}
+	long := `{"jql": "` + strings.Repeat("é", 6000) + `"}`
+	c := &chat{id: "s1", sid: "s1", publish: func(model.Event) {}, session: model.Session{Folder: "/w"}}
+	for _, u := range []acp.SessionUpdate{
+		// Claude's MCP call: an empty input first, then the whole of it; its
+		// result both as content and as rawOutput.
+		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "mcp__gw__invoke_tool", Kind: "other", Status: "pending", RawInput: json.RawMessage(`{}`)}},
+		{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", RawInput: json.RawMessage(`{"tool":"jira_search","arguments":{"jql":"project = ABC"}}`)}},
+		{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed", Content: text,
+			RawOutput: json.RawMessage(`[{"type":"text","text":"found 1"}]`)}},
+		// No content: the raw result is all there is.
+		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t2", Title: "search", Status: "completed", RawOutput: json.RawMessage(`{"issues":[{"key":"ABC-1"}]}`)}},
+		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t3", Title: "fetch", Status: "pending"}},
+		{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t3", Status: "completed", RawOutput: json.RawMessage(`[{"type":"text","text":"plain"},{"type":"text","text":"text"}]`)}},
+		// A long input is cut.
+		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t4", Title: "long", RawInput: json.RawMessage(long), RawOutput: json.RawMessage(`"done"`)}},
+	} {
+		_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: u})
+	}
+	got := map[string][2]string{}
+	for _, it := range c.items {
+		got[it.ID] = [2]string{it.Input, it.RawOutput}
+	}
+	want := map[string][2]string{
+		"t1": {"{\n  \"tool\": \"jira_search\",\n  \"arguments\": {\n    \"jql\": \"project = ABC\"\n  }\n}", ""},
+		"t2": {"", "{\n  \"issues\": [\n    {\n      \"key\": \"ABC-1\"\n    }\n  ]\n}"},
+		"t3": {"", "plain\n\ntext"},
+	}
+	for id, w := range want {
+		if got[id] != w {
+			t.Errorf("%s: input, output = %q\nwant %q", id, got[id], w)
+		}
+	}
+	in := got["t4"][0]
+	if len(in) > rawCap+len("\n…") || !strings.HasSuffix(in, "é\n…") || !utf8.ValidString(in) || got["t4"][1] != "done" {
+		t.Errorf("t4: input of %d bytes ending %q, output %q", len(in), in[len(in)-10:], got["t4"][1])
 	}
 }
 
