@@ -13,7 +13,8 @@ import (
 // A subagent's state, as claude's task events and the agent's own
 // requests tell it, and its stop.
 
-// taskUpdated is a change to a task: a subagent backgrounded, or ended.
+// taskUpdated is a change to a task: a subagent backgrounded, running
+// again, or ended.
 func (s *session) taskUpdated(m *claudeagent.TaskUpdated) {
 	k := &s.kids
 	k.mu.Lock()
@@ -24,6 +25,9 @@ func (s *session) taskUpdated(m *claudeagent.TaskUpdated) {
 	}
 	if b := m.Patch.IsBackgrounded; b != nil {
 		sa.background = *b
+	}
+	if m.Patch.Status == "running" && sa.ended { // claude ran it again, with no new start
+		s.againLocked(sa, "", "")
 	}
 	k.mu.Unlock()
 	s.taskEnded(m.TaskID, m.RunID, "", m.Patch.Status, m.Patch.Error)
@@ -122,6 +126,25 @@ func (s *session) subagentsGone() {
 	}
 	for len(k.order) > 0 {
 		s.flushLocked(k.order[0], s.id)
+	}
+}
+
+// resumed is a SendMessage's result: when it ran a subagent that had
+// ended again, the call delegated to it.
+func (s *session) resumed(call string, structured json.RawMessage) {
+	var r struct {
+		Success        bool   `json:"success"`
+		ResumedAgentID string `json:"resumedAgentId"`
+	}
+	if json.Unmarshal(structured, &r) != nil || !r.Success || r.ResumedAgentID == "" {
+		return
+	}
+	in, _ := s.callInput(call)
+	k := &s.kids
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	if sa := k.byID[r.ResumedAgentID]; sa != nil {
+		s.againLocked(sa, call, in.Message)
 	}
 }
 

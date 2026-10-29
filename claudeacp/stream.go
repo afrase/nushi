@@ -115,6 +115,7 @@ func (s *session) user(m *claudeagent.User) {
 		if !s.planResult(b, structured) {
 			s.toolResult(b)
 		}
+		s.resumed(b.ToolUseID, structured)
 	}
 	if m.UUID != "" {
 		s.echo(m.UUID)

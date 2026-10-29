@@ -274,6 +274,57 @@ func TestSubagentAsks(t *testing.T) {
 	})
 }
 
+// A subagent that ended runs again for a SendMessage that resumed it,
+// whose message is its next; or when claude says it runs, with no
+// message to show.
+func TestSubagentAgain(t *testing.T) {
+	sendMessage := []claudetest.Step{
+		assistant(`{"type":"tool_use","id":"toolu_m","name":"SendMessage","input":{"to":"a1","message":"count again"}}`),
+		sendf(`{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_m","content":"sent"}]},` +
+			`"tool_use_result":{"success":true,"resumedAgentId":"a1"}}`),
+		subagentCall("toolu_m", "toolu_2"),
+	}
+	for _, tc := range []struct {
+		name  string
+		again []claudetest.Step
+		want  []string
+	}{
+		{"SendMessage", sendMessage, []string{
+			"s1 call toolu_m SendMessage pending",
+			"s1 update toolu_m completed",
+			`s1 subagent {"sessionId":"a1","state":{"state":"running"}}`,
+			"a1 message toolu_m to a1",
+			"a1 call toolu_2 Bash pending parent=toolu_m",
+		}},
+		{"running", []claudetest.Step{sendf(`{"type":"system","subtype":"task_updated","task_id":"a1","patch":{"status":"running"}}`)}, []string{
+			`s1 subagent {"sessionId":"a1","state":{"state":"running"}}`,
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			steps := []claudetest.Step{user("id2"), echo("id2"), agentCall(true), taskStarted(""), agentDone,
+				taskEnd("completed")}
+			steps = append(append(steps, tc.again...), result(names("id2")), claudetest.Send(idle))
+			p := start(t, withSubagents, fake(steps...))
+			sid := p.open(t)
+			if got := stopReason(p.prompt(t, sid, "go")); got != "end_turn" {
+				t.Fatal(got)
+			}
+			got := shape(p.notes(), sid)
+			end := slices.Index(got, `s1 subagent {"sessionId":"a1","state":{"state":"idle","stopReason":"end_turn"}}`)
+			if end < 0 || !slices.Equal(got[end+1:len(got)-1], tc.want) {
+				t.Errorf("got:\n%s\nwant after its end:\n%s", strings.Join(got, "\n"), strings.Join(tc.want, "\n"))
+			}
+			if tc.name != "SendMessage" {
+				return
+			}
+			ms := p.of("session_message")
+			if m := ms[len(ms)-1].SessionMessage; m.Content.Value == nil || (*m.Content.Value)[0].Text.Text != "count again" {
+				t.Errorf("its message: %+v", m)
+			}
+		})
+	}
+}
+
 // When claude exits, a subagent still running ends with no reason given.
 func TestSubagentsGone(t *testing.T) {
 	p := start(t, withSubagents, fake(user("id2"), echo("id2"), agentCall(true), taskStarted(""), agentDone,

@@ -152,6 +152,7 @@ type launch struct {
 	Description  string `json:"description"`
 	SubagentType string `json:"subagent_type"`
 	Prompt       string `json:"prompt"`
+	Message      string `json:"message"` // a SendMessage's
 }
 
 // callInput is the input of the call id as the client was last shown it,
@@ -167,7 +168,8 @@ func (s *session) callInput(id string) (in launch, stream string) {
 	return in, ""
 }
 
-// taskStarted is claude starting a task: a subagent's is announced.
+// taskStarted is claude starting a task. A subagent's is announced, or,
+// when it ran before, runs again for the call that started it now.
 func (s *session) taskStarted(m *claudeagent.TaskStarted) {
 	if m.SubagentType == "" && m.TaskType != "local_agent" {
 		return // a background command's
@@ -178,6 +180,7 @@ func (s *session) taskStarted(m *claudeagent.TaskStarted) {
 	defer k.mu.Unlock()
 	if sa := k.byID[m.TaskID]; sa != nil {
 		sa.run, sa.background = m.RunID, m.IsBackgrounded
+		s.againLocked(sa, m.ToolUseID, cmp.Or(m.Prompt, in.Message, in.Prompt))
 		return
 	}
 	sa := &subagent{id: m.TaskID, call: m.ToolUseID, run: m.RunID, background: m.IsBackgrounded}
@@ -212,6 +215,29 @@ func (s *session) taskStarted(m *claudeagent.TaskStarted) {
 	s.a.update(sa.on, acp.SessionUpdate{SessionUpdate: "subagent_update", SubagentUpdate: su})
 	sa.shown = true
 	s.delegatedLocked(sa, sa.call, cmp.Or(in.Prompt, m.Prompt))
+}
+
+// againLocked is the subagent sa running again for call (a SendMessage's,
+// or a new start of it) with prompt: it runs, and call delegated to it,
+// unless it had already (claude may say so twice: the SendMessage's
+// result, then the task's start).
+func (s *session) againLocked(sa *subagent, call, prompt string) {
+	k := &s.kids
+	fresh := call != "" && k.byCall[call] != sa
+	if fresh {
+		sa.call = call
+		k.byCall[call] = sa
+	}
+	if !sa.shown {
+		return
+	}
+	if sa.ended {
+		sa.ended = false
+		s.childStateLocked(sa, acp.StateUpdate{Running: &acp.RunningStateUpdate{}})
+	}
+	if fresh {
+		s.delegatedLocked(sa, call, prompt)
+	}
 }
 
 // delegatedLocked sends the child sa its message from call, which names
