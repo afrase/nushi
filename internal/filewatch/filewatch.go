@@ -8,12 +8,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
-	"syscall"
 	"time"
+
+	"github.com/afrase/nushi/internal/regularfile"
 )
 
 // MaxSize is the largest file sent whole; a larger one is only named.
@@ -76,18 +76,8 @@ func Read(root, rel string) (File, error) {
 		return f, err
 	}
 	defer r.Close() //nolint:errcheck // read-only
-	// Only a regular file is opened (never a fifo or a device), and the
-	// open checks again.
-	fi, err := r.Stat(rel)
-	if errors.Is(err, fs.ErrNotExist) || err == nil && !fi.Mode().IsRegular() {
-		f.Missing = true
-		return f, nil
-	}
-	if err != nil {
-		return f, err
-	}
-	file, err := r.OpenFile(rel, os.O_RDONLY|syscall.O_NONBLOCK, 0)
-	if errors.Is(err, fs.ErrNotExist) {
+	file, fi, err := regularfile.OpenIn(r, rel, true)
+	if errors.Is(err, fs.ErrNotExist) || errors.Is(err, regularfile.ErrNotRegular) {
 		f.Missing = true
 		return f, nil
 	}
@@ -95,26 +85,13 @@ func Read(root, rel string) (File, error) {
 		return f, err
 	}
 	defer file.Close() //nolint:errcheck // read-only
-	fi, err = file.Stat()
+	b, err := regularfile.ReadAll(file, fi, MaxSize)
+	if errors.Is(err, regularfile.ErrTooLarge) { // or it grew past while read
+		f.Size, f.TooLarge = max(fi.Size(), MaxSize+1), true
+		return f, nil
+	}
 	if err != nil {
 		return f, err
-	}
-	if !fi.Mode().IsRegular() {
-		f.Missing = true
-		return f, nil
-	}
-	f.Size = fi.Size()
-	if f.Size > MaxSize {
-		f.TooLarge = true
-		return f, nil
-	}
-	b, err := io.ReadAll(io.LimitReader(file, MaxSize+1))
-	if err != nil {
-		return f, err
-	}
-	if len(b) > MaxSize { // it grew while read
-		f.Size, f.TooLarge = int64(len(b)), true
-		return f, nil
 	}
 	f.Data, f.Size = b, int64(len(b))
 	return f, nil

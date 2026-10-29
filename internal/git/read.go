@@ -11,9 +11,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/regularfile"
 )
 
 // File reads one of folder's files as it is now, as a change that changes
@@ -30,19 +30,11 @@ func File(folder, path string) (model.FileChange, error) {
 		return model.FileChange{}, err
 	}
 	defer root.Close() //nolint:errcheck // read-only
-	if fi, err := root.Lstat(path); err != nil {
-		return model.FileChange{}, err
-	} else if !fi.Mode().IsRegular() {
-		return model.FileChange{}, fmt.Errorf("%s is not a file", path)
-	}
-	f, err := root.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
+	f, _, err := regularfile.OpenIn(root, path, false)
 	if err != nil {
 		return model.FileChange{}, err
 	}
 	defer f.Close() //nolint:errcheck // read-only
-	if fi, err := f.Stat(); err != nil || !fi.Mode().IsRegular() {
-		return model.FileChange{}, fmt.Errorf("%s is not a file", path)
-	}
 	b, err := io.ReadAll(io.LimitReader(f, maxText+1))
 	if err != nil {
 		return model.FileChange{}, err
@@ -70,18 +62,12 @@ func worktree(path string) ([]byte, error) {
 	case fi.Mode()&os.ModeSymlink != 0:
 		target, err := os.Readlink(path)
 		return []byte(target), err
-	case !fi.Mode().IsRegular():
-		return nil, fmt.Errorf("%s is not a file", path)
 	}
-	// Not following a link, nor waiting on a fifo, put there since.
-	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
+	f, _, err := regularfile.Open(path, false)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close() //nolint:errcheck // read-only
-	if fi, err := f.Stat(); err != nil || !fi.Mode().IsRegular() {
-		return nil, fmt.Errorf("%s is not a file", path)
-	}
 	return io.ReadAll(io.LimitReader(f, maxText+1))
 }
 

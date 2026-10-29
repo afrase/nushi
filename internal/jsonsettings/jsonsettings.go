@@ -5,13 +5,12 @@ package jsonsettings
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sync"
-	"syscall"
 
 	"github.com/afrase/nushi/internal/atomicfile"
+	"github.com/afrase/nushi/internal/regularfile"
 )
 
 // maxFile is the largest settings file read.
@@ -21,23 +20,10 @@ const maxFile = 64 << 20
 // can't lose one another (an agent's own write still can: it doesn't ask).
 var mu sync.Mutex
 
-// ReadFile reads a regular file of at most 64 MiB (a link to one
-// followed); a fifo or device fails at once rather than waiting.
-func ReadFile(path string) ([]byte, error) {
-	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0) //nolint:gosec // an agent's settings; a fifo doesn't wait
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close() //nolint:errcheck // read-only
-	if fi, err := f.Stat(); err != nil || !fi.Mode().IsRegular() || fi.Size() > maxFile {
-		return nil, fmt.Errorf("%s isn't a regular file of at most 64 MiB", path)
-	}
-	b, err := io.ReadAll(io.LimitReader(f, maxFile+1))
-	if err == nil && len(b) > maxFile {
-		err = fmt.Errorf("%s grew past 64 MiB", path)
-	}
-	return b, err
-}
+// ReadFile reads an agent's settings file (JSON, or Codex's TOML, omp's
+// YAML): a regular file of at most 64 MiB, a link to one followed; a
+// fifo or device fails at once rather than waiting.
+func ReadFile(path string) ([]byte, error) { return regularfile.Read(path, maxFile) }
 
 // Edit reads the JSON settings file at path, changes it through change
 // (which gets its settings by key; none for a new file) and writes it
@@ -68,7 +54,7 @@ func EditIn(base, name string, change func(map[string]json.RawMessage) error) (c
 	defer root.Close() //nolint:errcheck // nothing written through it
 	mu.Lock()
 	defer mu.Unlock()
-	b, err := readIn(root, name)
+	b, err := regularfile.ReadIn(root, name, maxFile)
 	out, created, err := apply(filepath.Join(base, name), b, err, change)
 	if err != nil {
 		return false, err
@@ -100,23 +86,6 @@ func apply(path string, b []byte, readErr error, change func(map[string]json.Raw
 		return nil, false, err
 	}
 	return append(out, '\n'), created, nil
-}
-
-// readIn is ReadFile for name inside root.
-func readIn(root *os.Root, name string) ([]byte, error) {
-	f, err := root.OpenFile(name, os.O_RDONLY|syscall.O_NONBLOCK, 0)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close() //nolint:errcheck // read-only
-	if fi, err := f.Stat(); err != nil || !fi.Mode().IsRegular() || fi.Size() > maxFile {
-		return nil, fmt.Errorf("%s isn't a regular file of at most 64 MiB", name)
-	}
-	b, err := io.ReadAll(io.LimitReader(f, maxFile+1))
-	if err == nil && len(b) > maxFile {
-		err = fmt.Errorf("%s grew past 64 MiB", name)
-	}
-	return b, err
 }
 
 // writeIn replaces name inside root with data at once

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/afrase/nushi/internal/claudemcp"
+	"github.com/afrase/nushi/internal/jsonsettings"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/procgroup"
 )
@@ -109,7 +110,7 @@ func (p *plugin) read() {
 		Commands    json.RawMessage `json:"commands"`
 		Agents      json.RawMessage `json:"agents"`
 	}
-	if b, err := claudemcp.ReadFile(filepath.Join(p.Path, ".claude-plugin", "plugin.json")); err == nil {
+	if b, err := jsonsettings.ReadFile(filepath.Join(p.Path, ".claude-plugin", "plugin.json")); err == nil {
 		_ = json.Unmarshal(b, &manifest) // what's missing stays empty
 	}
 	p.Description = manifest.Description

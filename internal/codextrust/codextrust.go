@@ -13,19 +13,18 @@ package codextrust
 import (
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"maps"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
-	"syscall"
 
 	"github.com/BurntSushi/toml"
 
 	"github.com/afrase/nushi/internal/folderfiles"
 	"github.com/afrase/nushi/internal/git"
+	"github.com/afrase/nushi/internal/jsonsettings"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -60,7 +59,7 @@ func (t Trust) Trusted(folder string, also []string) (bool, error) {
 			TrustLevel string `toml:"trust_level"`
 		} `toml:"projects"`
 	}
-	b, err := readFile(configFile())
+	b, err := jsonsettings.ReadFile(configFile())
 	if err == nil {
 		_, err = toml.Decode(string(b), &cfg)
 	}
@@ -154,20 +153,4 @@ func configRuns(path string, b []byte) []model.FolderRun {
 		out = append(out, model.FolderRun{File: path, What: "Environment for commands", Command: strings.Join(slices.Sorted(maps.Keys(cfg.Env.Set)), " ")})
 	}
 	return out
-}
-
-const maxFile = 64 << 20
-
-// readFile reads a regular file of at most 64 MiB, without waiting on a
-// fifo.
-func readFile(path string) ([]byte, error) {
-	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0) //nolint:gosec // a folder's .codex files, which the trust card shows
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close() //nolint:errcheck // read-only
-	if fi, err := f.Stat(); err != nil || !fi.Mode().IsRegular() || fi.Size() > maxFile {
-		return nil, fmt.Errorf("%s isn't a regular file of at most 64 MiB", path)
-	}
-	return io.ReadAll(io.LimitReader(f, maxFile))
 }

@@ -17,7 +17,7 @@ import (
 	"github.com/BurntSushi/toml"
 
 	"github.com/afrase/nushi/internal/atomicfile"
-	"github.com/afrase/nushi/internal/skillfile"
+	"github.com/afrase/nushi/internal/jsonsettings"
 )
 
 // Codex's switch for a skill is a [[skills.config]] entry in its
@@ -44,7 +44,7 @@ type entry struct {
 // readEntries reads the [[skills.config]] entries of Codex's config.toml
 // (none when there is no file).
 func readEntries() ([]entry, error) {
-	b, err := skillfile.ReadFile(configFile())
+	b, err := jsonsettings.ReadFile(configFile())
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
 	}
@@ -140,7 +140,7 @@ var setMu sync.Mutex
 func setOn(path, file, name string, on bool) error {
 	setMu.Lock()
 	defer setMu.Unlock()
-	b, err := skillfile.ReadFile(path)
+	b, err := jsonsettings.ReadFile(path)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}

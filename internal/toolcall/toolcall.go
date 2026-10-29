@@ -5,14 +5,12 @@ package toolcall
 
 import (
 	"errors"
-	"io"
 	"io/fs"
-	"os"
-	"syscall"
 
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/mdwrite"
+	"github.com/afrase/nushi/internal/regularfile"
 )
 
 // Old is what a file held before a write, for its diff, or why it isn't
@@ -26,29 +24,25 @@ const MaxOld = 1 << 20
 // without following a link or waiting on a fifo, and at most MaxOld, so
 // whatever path the model names, it can't block or fill memory.
 func ReadOld(path string) Old {
-	fi, err := os.Lstat(path)
-	switch {
-	case path == "" || errors.Is(err, fs.ErrNotExist):
+	if path == "" {
 		return Old{} // a new file
-	case err != nil || !fi.Mode().IsRegular():
-		return Old{Note: "Not shown: what this replaces isn't a regular file."}
-	case fi.Size() > MaxOld:
-		return Old{Note: "Not shown: the file this replaces is over 1 MB."}
 	}
-	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0) //nolint:gosec // the file a tool call writes, at most 1 MB, links not followed
-	if err != nil {
+	f, fi, err := regularfile.Open(path, false)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return Old{} // a new file
+	case errors.Is(err, regularfile.ErrNotRegular):
+		return Old{Note: "Not shown: what this replaces isn't a regular file."}
+	case err != nil:
 		return Old{Note: "Not shown: " + err.Error()}
 	}
 	defer f.Close() //nolint:errcheck // read-only
-	if fi, err := f.Stat(); err != nil || !fi.Mode().IsRegular() {
-		return Old{Note: "Not shown: what this replaces isn't a regular file."}
-	}
-	b, err := io.ReadAll(io.LimitReader(f, MaxOld+1))
+	b, err := regularfile.ReadAll(f, fi, MaxOld)
 	switch {
+	case errors.Is(err, regularfile.ErrTooLarge):
+		return Old{Note: "Not shown: the file this replaces is over 1 MB."}
 	case err != nil:
 		return Old{Note: "Not shown: " + err.Error()}
-	case len(b) > MaxOld:
-		return Old{Note: "Not shown: the file this replaces is over 1 MB."}
 	}
 	return Old{Text: string(b)}
 }

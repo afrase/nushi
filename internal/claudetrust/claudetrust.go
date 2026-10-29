@@ -31,6 +31,7 @@ import (
 
 	"github.com/afrase/nushi/internal/claudemcp"
 	"github.com/afrase/nushi/internal/git"
+	"github.com/afrase/nushi/internal/jsonsettings"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -57,7 +58,7 @@ func (Trust) Trusted(folder string, also []string) (bool, error) {
 			Accepted bool `json:"hasTrustDialogAccepted"`
 		} `json:"projects"`
 	}
-	b, err := claudemcp.ReadFile(claudemcp.ConfigFile())
+	b, err := jsonsettings.ReadFile(claudemcp.ConfigFile())
 	if err == nil {
 		err = json.Unmarshal(b, &cfg)
 	}
@@ -109,7 +110,7 @@ func runs(folder string) ([]model.FolderRun, error) {
 	// it (or read it later): it shows, and the card still asks.
 	for _, u := range unread {
 		what, text := "MCP servers Nushi couldn't read", u.Err.Error()
-		if b, err := claudemcp.ReadFile(u.Path); err == nil {
+		if b, err := jsonsettings.ReadFile(u.Path); err == nil {
 			text = whole(u.Path, b)
 		}
 		out = append(out, model.FolderRun{File: u.Path, What: what, Command: text})
@@ -204,7 +205,7 @@ func helper(setting string) bool {
 // env block (the names only) and its helper commands.
 func settingsRuns(path string) ([]model.FolderRun, error) {
 	var s map[string]json.RawMessage
-	b, err := claudemcp.ReadFile(path)
+	b, err := jsonsettings.ReadFile(path)
 	if os.IsNotExist(err) {
 		return nil, nil
 	}
@@ -249,7 +250,7 @@ func settingsRuns(path string) ([]model.FolderRun, error) {
 // that doesn't decode. Nushi doesn't guess which commands Claude would read
 // out of it. Without a closing "---" line, the whole file counts.
 func skillHooks(path string) ([]byte, bool) {
-	b, err := claudemcp.ReadFile(path)
+	b, err := jsonsettings.ReadFile(path)
 	if err != nil || !bytes.HasPrefix(b, []byte("---")) {
 		return nil, false
 	}

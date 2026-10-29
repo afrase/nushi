@@ -29,6 +29,7 @@ import (
 	"strings"
 
 	"github.com/afrase/nushi/internal/claudemcp"
+	"github.com/afrase/nushi/internal/jsonsettings"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/procgroup"
 	"github.com/afrase/nushi/internal/skillfile"
@@ -164,7 +165,7 @@ func settingsFiles(folder string) []settings {
 		claudemcp.UserSettings(),
 	} {
 		s := settings{path: path}
-		if b, err := claudemcp.ReadFile(path); err == nil {
+		if b, err := jsonsettings.ReadFile(path); err == nil {
 			_ = json.Unmarshal(b, &s) // a key of another shape counts as unset
 		}
 		out = append(out, s)

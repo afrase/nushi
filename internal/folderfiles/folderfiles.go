@@ -7,15 +7,16 @@ package folderfiles
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
-	"syscall"
 
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/regularfile"
 )
 
 // File is one of a folder's files: what the card shows (its first Shown+1
@@ -72,14 +73,14 @@ func link(path, agent string) File {
 // Hash reads a regular file, without following a link or waiting on a
 // fifo: its SHA-256, whole, and its first Shown+1 bytes.
 func Hash(path string) File {
-	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0) //nolint:gosec // a folder's file for the trust card, links not followed
+	f, _, err := regularfile.Open(path, false)
+	if errors.Is(err, regularfile.ErrNotRegular) {
+		return File{Path: path, Text: []byte("not a regular file")}
+	}
 	if err != nil {
 		return File{Path: path, Text: []byte(err.Error())}
 	}
 	defer f.Close() //nolint:errcheck // read-only
-	if fi, err := f.Stat(); err != nil || !fi.Mode().IsRegular() {
-		return File{Path: path, Text: []byte("not a regular file")}
-	}
 	h := sha256.New()
 	var head capped
 	if _, err := io.Copy(io.MultiWriter(h, &head), f); err != nil {
