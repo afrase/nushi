@@ -37,12 +37,22 @@ func (s *session) canUseTool(ctx context.Context, r claudeagent.PermissionReques
 	if r.BlockedPath != "" {
 		call.Locations = append(call.Locations, acp.ToolCallLocation{Path: r.BlockedPath})
 	}
+	opts := permissionOptions(r)
+	switch r.ToolName {
+	case "ExitPlanMode":
+		opts = s.exitPlanOptions()
+	case "EnterPlanMode":
+		opts = enterPlanOptions
+	}
 	ctx, done := s.opened(ctx)
 	defer done()
 	resp, err := s.a.client.RequestPermission(ctx, &acp.RequestPermissionRequest{
-		SessionID: acp.SessionID(s.id), ToolCall: call, Options: permissionOptions(r)})
+		SessionID: acp.SessionID(s.id), ToolCall: call, Options: opts})
 	if err != nil {
 		s.log.Info("asking for a permission", "err", err)
+	}
+	if r.ToolName == "ExitPlanMode" && err == nil && resp != nil && resp.Outcome.Selected != nil {
+		return s.exitPlan(string(resp.Outcome.Selected.OptionID)), nil
 	}
 	return permissionResult(r, resp, err), nil
 }
