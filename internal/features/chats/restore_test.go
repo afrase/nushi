@@ -2,6 +2,7 @@ package chats
 
 import (
 	"testing"
+	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -133,6 +134,62 @@ func TestArchivedChatShowsItsCopy(t *testing.T) {
 	}
 	if now, _, _ := agent.count(); now != launches {
 		t.Error("an archived chat started its agent")
+	}
+}
+
+// slowCopies holds a read of chat until held is closed.
+type slowCopies struct {
+	Copies
+	chat    string
+	reading chan struct{}
+	held    chan struct{}
+}
+
+func (s *slowCopies) Read(chat string) ([]model.Item, error) {
+	if chat == s.chat {
+		close(s.reading)
+		<-s.held
+	}
+	return s.Copies.Read(chat)
+}
+
+// A stored chat's copy is read with only that chat locked: another chat
+// is looked up meanwhile, and the chat itself, found again, is the one
+// being read, its transcript there once its lock is had.
+func TestLookupReadsTheCopyOutsideTheServiceLock(t *testing.T) {
+	store, err := transcripts.Open(t.TempDir())
+	noErr(t, err)
+	noErr(t, store.Append("slow", []model.Item{{ID: "m1", Kind: model.AgentMessage, Text: "kept"}}, []string{""}))
+	copies := &slowCopies{Copies: store, chat: "slow", reading: make(chan struct{}), held: make(chan struct{})}
+	stored := []model.Session{{ID: "slow", Agent: "claude", Archived: true}, {ID: "fast", Agent: "claude", Archived: true}}
+	svc := New([]Kind{{Name: "claude", Dialect: claudeDialect}}, &memModes{}, &memSessions{stored: stored}, nil, t.TempDir(), func(model.Event) {})
+	svc.UseCopies(copies, func() bool { return true })
+	first := make(chan *chat)
+	go func() {
+		c, _ := svc.lookup("slow")
+		first <- c
+	}()
+	<-copies.reading
+	fast := make(chan error)
+	go func() {
+		_, err := svc.lookup("fast")
+		fast <- err
+	}()
+	select {
+	case err := <-fast:
+		noErr(t, err)
+	case <-time.After(5 * time.Second):
+		close(copies.held)
+		t.Fatal("another chat's lookup waited for the copy")
+	}
+	again, err := svc.lookup("slow")
+	noErr(t, err)
+	close(copies.held)
+	if c := <-first; c != again {
+		t.Fatal("two chats for one id")
+	}
+	if got := shown(again); got != "agent:m1" {
+		t.Errorf("shown: %s", got)
 	}
 }
 

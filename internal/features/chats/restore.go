@@ -22,16 +22,16 @@ var replayKinds = []string{"user_message_chunk", "agent_message_chunk", "agent_t
 // stepKinds are the updates of a subagent's session taken as its steps.
 var stepKinds = []string{"agent_message_chunk", "agent_thought_chunk", "tool_call", "tool_call_update"}
 
-// loadCopy makes a chat's copy its transcript, as a chat looked up after
-// a daemon start shows it: what was under way when it was written can't go
-// on now.
-func (c *chat) loadCopy() {
+// loadCopyLocked makes a chat's copy its transcript, as a chat looked up
+// after a daemon start shows it: what was under way when it was written
+// can't go on now.
+func (c *chat) loadCopyLocked() {
 	if c.copies == nil {
 		return
 	}
 	items, err := c.copies.Read(c.id)
 	if err != nil {
-		c.log().Warn("transcript copy not read", "err", err)
+		c.logLocked().Warn("transcript copy not read", "err", err)
 		return
 	}
 	for i := range items {
