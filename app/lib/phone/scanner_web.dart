@@ -118,7 +118,7 @@ final class Scanner {
     final s = _stream;
     if (v == null || s == null) return;
     v.srcObject = s;
-    unawaited(v.play().toDart.then((_) {}, onError: (Object _) {}));
+    v.play().toDart.ignore();
   }
 
   Future<void> _frame() async {

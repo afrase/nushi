@@ -205,17 +205,11 @@ class TermSession extends ChangeNotifier {
     terminal
       ..resize(1, 1)
       ..onResize = (cols, rows, _, _) {
-        unawaited(
-          client
-              .resizeTerminal(
-                pb.ResizeTerminalRequest(
-                  terminalId: id,
-                  cols: cols,
-                  rows: rows,
-                ),
-              )
-              .then((_) {}, onError: (_) {}),
-        );
+        client
+            .resizeTerminal(
+              pb.ResizeTerminalRequest(terminalId: id, cols: cols, rows: rows),
+            )
+            .ignore();
         if (_sub == null) _attach();
       };
   }

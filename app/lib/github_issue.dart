@@ -150,10 +150,7 @@ class _GitHubIssuePaneState extends State<GitHubIssuePane> {
                     children: [
                       AgentMark(c.agent, size: 13, color: t.textSecondary),
                       const SizedBox(width: 4),
-                      Text(
-                        c.title.isEmpty ? 'New chat' : c.title,
-                        style: theme.ui(t.link, size: 12),
-                      ),
+                      Text(c.shownTitle, style: theme.ui(t.link, size: 12)),
                     ],
                   ),
                 ),

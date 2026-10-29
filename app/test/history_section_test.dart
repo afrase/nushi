@@ -11,7 +11,6 @@ import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/history_table.dart';
-import 'package:nushi/settings_nav.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -289,7 +288,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(d.selectedId, next.id);
-    expect(d.settings, isNull);
+    expect(d.place, const ChatPlace());
     d.dispose();
   }, variant: macOS);
 

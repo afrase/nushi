@@ -111,6 +111,48 @@ void main() {
     expect(line.style?.color, Tokens.dark.textMuted);
   });
 
+  testWidgets('a drawing that failed for a passing reason (the web view '
+      "stopped) is drawn again; a diagram's own error isn't", (tester) async {
+    var stopped = true;
+    drawDiagram =
+        (
+          source, {
+          required dark,
+          required width,
+          required background,
+          required foreground,
+        }) async {
+          if (stopped && !source.contains('oops')) {
+            stopped = false;
+            _asked.add((source, dark, width));
+            return const DrawnDiagram(
+              error: "The diagram's web view stopped",
+              retry: true,
+            );
+          }
+          return await _draw(
+            source,
+            dark: dark,
+            width: width,
+            background: background,
+            foreground: foreground,
+          );
+        };
+    const text = '```mermaid\n$_flow\n```\n\n```mermaid\ngraph TD\n  oops\n```';
+    await _show(tester, text);
+    await tester.pumpAndSettle();
+    expect(find.text("The diagram's web view stopped"), findsOneWidget);
+    expect(_asked, hasLength(2));
+    await _show(tester, '$text\n'); // built again: asked again, drawn
+    await tester.pumpAndSettle();
+    expect(find.text("The diagram's web view stopped"), findsNothing);
+    expect(find.byType(Image), findsOneWidget);
+    expect(
+      [for (final a in _asked) a.$1.contains('oops')],
+      [false, true, false],
+    );
+  });
+
   testWidgets('a block still streaming in isn’t drawn: its source shows', (
     tester,
   ) async {

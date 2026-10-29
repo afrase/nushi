@@ -1,7 +1,13 @@
+import 'dart:async';
+
+import 'package:connectrpc/connect.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/mcp.dart';
+import 'package:nushi/place.dart';
+import 'package:nushi/settings_general.dart';
 import 'package:nushi/settings_nav.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/settings_view.dart';
@@ -9,6 +15,7 @@ import 'package:nushi/sidebar.dart';
 import 'package:nushi/skills.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 import 'settings_harness.dart';
 
 Future<void> _key(
@@ -95,13 +102,13 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('settings-nav-jira')));
     await tester.pumpAndSettle();
-    expect(d.settings, SettingsSection.jira);
+    expect(d.place, const SettingsPlace(SettingsSection.jira));
     expect(find.text('acme.atlassian.net'), findsOneWidget);
     await _key(tester, LogicalKeyboardKey.escape);
-    expect(d.settings, isNull);
+    expect(d.place, const ChatPlace());
     expect(find.byType(SettingsView), findsNothing);
     await _key(tester, LogicalKeyboardKey.comma, meta: true);
-    expect(d.settings, SettingsSection.jira);
+    expect(d.place, const SettingsPlace(SettingsSection.jira));
     await tester.tap(find.byTooltip('Close (esc)'));
     await tester.pumpAndSettle();
     expect(find.byType(SettingsView), findsNothing);
@@ -120,7 +127,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'rel');
     await tester.pumpAndSettle();
     await _key(tester, LogicalKeyboardKey.escape);
-    expect(d.settings, isNull);
+    expect(d.place, const ChatPlace());
     d.dispose();
   }, variant: macOS);
 
@@ -140,19 +147,19 @@ void main() {
     expect(_footer('Skills'), findsNothing);
     d.showMcp(d.selected!.folder); // as its ⋯'s MCP servers… does
     await tester.pumpAndSettle();
-    expect(d.settings, SettingsSection.mcp);
+    expect(d.place, const SettingsPlace(SettingsSection.mcp));
     expect(find.byType(McpView), findsOneWidget);
     expect(
       tester.widget<McpView>(find.byType(McpView)).folder,
       '/Users/me/site',
     );
-    d.closeSettings();
+    d.back();
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Chat menu'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Skills…', findRichText: true));
     await tester.pumpAndSettle();
-    expect(d.settings, SettingsSection.skills);
+    expect(d.place, const SettingsPlace(SettingsSection.skills));
     expect(
       tester.widget<SkillsView>(find.byType(SkillsView)).folder,
       '/Users/me/site',
@@ -160,25 +167,84 @@ void main() {
     // The footer's Settings, open, leaves it; again, opens it.
     await tester.tap(_footer('Settings'));
     await tester.pumpAndSettle();
-    expect(d.settings, isNull);
+    expect(d.place, const ChatPlace());
     await tester.tap(_footer('Settings'));
     await tester.pumpAndSettle();
-    expect(d.settings, isNotNull);
-    d.closeSettings();
+    expect(d.place, isA<SettingsPlace>());
+    d.back();
     await tester.pumpAndSettle();
 
     d.openSettings(section: SettingsSection.agents, agent: 'codex');
     await tester.pumpAndSettle();
-    expect(d.markedAgent, 'codex');
+    expect(
+      d.place,
+      const SettingsPlace(SettingsSection.agents, agent: 'codex'),
+    );
 
-    d.showGitHub(open: true);
+    d.go(const GitHubPlace());
     await tester.pumpAndSettle();
     d.openSettings(section: SettingsSection.github);
     await tester.pumpAndSettle();
-    expect(d.githubOpen, isFalse);
-    d.closeSettings();
+    expect(d.place, const SettingsPlace(SettingsSection.github));
+    d.back();
     await tester.pumpAndSettle();
-    expect(d.githubOpen, isTrue);
+    expect(d.place, const GitHubPlace());
     d.dispose();
   }, variant: macOS);
+
+  testWidgets("two changes inside one round trip don't undo each other", (
+    tester,
+  ) async {
+    final fake = settingsFake();
+    final held = Completer<SetSettingsResponse>();
+    final inner = fake.answer!;
+    fake.answer = (input) => input is SetSettingsRequest && !held.isCompleted
+        ? held.future
+        : inner(input);
+    final d = await fake.connect(tester);
+    await pumpSettings(tester, d, SettingsSection.general);
+    final change = tester
+        .widget<GeneralSection>(find.byType(GeneralSection))
+        .onChange;
+    final first = change((s) => s.sleepAfterMinutes = 60);
+    final second = change((s) => s.debugLog = true);
+    await tester.pump();
+    expect(fake.setSettings, hasLength(1)); // the second waits
+    held.complete(SetSettingsResponse());
+    await tester.pumpAndSettle();
+    await Future.wait([first, second]);
+    final last = fake.setSettings.last;
+    expect((last.sleepAfterMinutes, last.debugLog), (60, true));
+    await closeView(tester, d);
+  });
+
+  testWidgets('settings not read while the daemon was away are asked for '
+      'once it is back', (tester) async {
+    final fake = settingsFake();
+    final inner = fake.answer!;
+    var down = false;
+    var asked = 0;
+    fake.answer = (input) {
+      if (input is GetSettingsRequest && asked++ == 0) {
+        throw ConnectException(Code.unavailable, 'no daemon');
+      }
+      if (input is PingRequest && down) {
+        throw ConnectException(Code.unavailable, 'no daemon');
+      }
+      return inner(input);
+    };
+    final d = await fake.connect(tester);
+    await pumpSettings(tester, d, SettingsSection.general);
+    expect(find.text('Sleep idle chats'), findsNothing); // needs the settings
+    down = true;
+    await tester.pump(const Duration(seconds: 2));
+    expect(d.connected, isFalse);
+    down = false;
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+    expect(d.connected, isTrue);
+    expect(asked, 2);
+    expect(find.text('Sleep idle chats'), findsOneWidget);
+    await closeView(tester, d);
+  });
 }

@@ -210,21 +210,21 @@ class _Footer extends StatelessWidget {
           row(
             'Jira',
             Icons.task_alt,
-            open: daemon.jiraOpen,
-            () => daemon.showJira(open: !daemon.jiraOpen),
+            open: daemon.place is JiraPlace,
+            () => daemon.toggle(const JiraPlace()),
           ),
           row(
             'GitHub',
             Icons.merge_type,
-            open: daemon.githubOpen,
-            () => daemon.showGitHub(open: !daemon.githubOpen),
+            open: daemon.place is GitHubPlace,
+            () => daemon.toggle(const GitHubPlace()),
           ),
           row(
             'Settings',
             Icons.settings_outlined,
-            open: daemon.settings != null,
-            () => daemon.settings != null
-                ? daemon.closeSettings()
+            open: daemon.place is SettingsPlace,
+            () => daemon.place is SettingsPlace
+                ? daemon.back()
                 : daemon.openSettings(),
           ),
         ],
@@ -322,7 +322,7 @@ class _ChatRowState extends State<_ChatRow> {
                             onDone: () => setState(() => _renaming = false),
                           )
                         : Text(
-                            chat.title.isEmpty ? 'New chat' : chat.title,
+                            chat.shownTitle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: theme.ui(

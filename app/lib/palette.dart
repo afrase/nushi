@@ -58,7 +58,7 @@ Future<void> showPalette(BuildContext context, Daemon d) async {
       if (chat != shown)
         PaletteRow(
           'chat:${chat.id}',
-          chat.title.isEmpty ? 'New chat' : chat.title,
+          chat.shownTitle,
           () => d.select(chat.id),
           detail: chat.scratch ? '' : baseName(chat.home),
           agent: chat.agent,
@@ -79,7 +79,7 @@ Future<void> showPalette(BuildContext context, Daemon d) async {
       if (chat != shown)
         PaletteRow(
           'chat:${chat.id}',
-          chat.title.isEmpty ? 'New chat' : chat.title,
+          chat.shownTitle,
           () => d.select(chat.id),
           detail: [
             'archived',

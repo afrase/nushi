@@ -8,7 +8,6 @@ import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/logo.dart';
 import 'package:nushi/new_chat.dart';
-import 'package:nushi/settings_nav.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 

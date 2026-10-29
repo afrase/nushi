@@ -80,7 +80,7 @@ class _ChatHeaderState extends State<ChatHeader> {
     final t = theme.t;
     final chat = widget.chat;
     final meta = theme.ui(t.textSecondary, size: 12);
-    final model = chat.config.where((o) => o.category == 'model').firstOrNull;
+    final model = chat.option('model');
     final modelName = model?.values
         .where((v) => v.value == model.current)
         .firstOrNull
@@ -161,7 +161,7 @@ class _ChatHeaderState extends State<ChatHeader> {
                 : GestureDetector(
                     onDoubleTap: () => _renaming = true,
                     child: Text(
-                      chat.title.isEmpty ? 'New chat' : chat.title,
+                      chat.shownTitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: titleStyle,

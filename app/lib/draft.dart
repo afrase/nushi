@@ -30,7 +30,7 @@ class Draft extends ChangeNotifier {
     return true;
   }
 
-  /// Text to quote in the box (a side question's start), taken by the box.
+  /// Text to quote in the box (a side chat's start), taken by the box.
   final quote = ValueNotifier<String?>(null);
 
   /// The subagent a message taken back was for: its call and type. The

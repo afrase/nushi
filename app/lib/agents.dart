@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'package:nushi/chat.dart';
+import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
@@ -53,4 +54,17 @@ String lastAgent(Iterable<ChatState> chats) {
     }
   }
   return newest?.agent ?? knownAgents.keys.firstOrNull ?? '';
+}
+
+/// The agent a new chat's dialog picks among [offered], on the Mac and the
+/// phone alike: the last used ([lastAgent]) if it's ready and didn't fail
+/// to start in this run ([Daemon.cantStart]), else the first that is,
+/// else the last used anyway (or the first offered); '' when none is.
+String defaultAgent(Daemon d, List<String> offered) {
+  bool ok(String a) =>
+      (knownAgents[a]?.ready ?? false) && !d.cantStart.containsKey(a);
+  final last = lastAgent(d.chats.values);
+  final picked = offered.contains(last) ? last : offered.firstOrNull ?? '';
+  if (picked.isEmpty || ok(picked)) return picked;
+  return offered.where(ok).firstOrNull ?? picked;
 }

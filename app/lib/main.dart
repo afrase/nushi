@@ -289,15 +289,17 @@ class _Shell extends StatelessWidget {
             Expanded(
               child: daemon.trustAsk != null
                   ? TrustCard(daemon.trustAsk!)
-                  : daemon.jiraOpen
-                  ? JiraView(daemon)
-                  : daemon.githubOpen
-                  ? GitHubView(daemon)
-                  : daemon.settings != null
-                  ? SettingsView(daemon)
-                  : chat == null
-                  ? NothingOpen(daemon)
-                  : _ChatPane(key: ValueKey(chat.id), chat, daemon),
+                  : switch (daemon.place) {
+                      JiraPlace() => JiraView(daemon),
+                      GitHubPlace() => GitHubView(daemon),
+                      SettingsPlace() => SettingsView(daemon),
+                      ChatPlace() when chat == null => NothingOpen(daemon),
+                      ChatPlace() => _ChatPane(
+                        key: ValueKey(chat!.id),
+                        chat,
+                        daemon,
+                      ),
+                    },
             ),
           ],
         ),
@@ -431,6 +433,8 @@ class _ChatPaneState extends State<_ChatPane> {
                     daemon: widget.daemon,
                     details: panel
                         ? DetailsPanel(
+                            // It follows the chat it was made for.
+                            key: ObjectKey(widget.chat),
                             chat: widget.chat,
                             daemon: widget.daemon,
                             onChanges: () => _tab.value = ChatTab.changes,

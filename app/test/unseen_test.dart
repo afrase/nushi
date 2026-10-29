@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/phone/chats_screen.dart';
-import 'package:nushi/settings_nav.dart';
+import 'package:nushi/place.dart';
 import 'package:nushi/sidebar.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
@@ -175,7 +175,7 @@ void main() {
     d.openSettings(section: SettingsSection.general);
     await tester.pump();
     d
-      ..closeSettings()
+      ..back()
       ..macView.window = false;
     await tester.pump();
     d.macView.window = true;

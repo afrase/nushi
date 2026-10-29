@@ -91,7 +91,7 @@ class _ChatSheetState extends State<ChatSheet> {
     final t = NushiTheme.of(context).t;
     final chat = widget.chat;
     final d = widget.daemon;
-    final model = chat.config.where((o) => o.category == 'model').firstOrNull;
+    final model = chat.option('model');
     final modelName = model?.values
         .where((v) => v.value == model.current)
         .firstOrNull

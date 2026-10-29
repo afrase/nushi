@@ -6,7 +6,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/remote.dart';
-import 'package:nushi/settings_nav.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/settings_view.dart';
 import 'package:nushi/theme/theme.dart';
@@ -41,7 +40,7 @@ Future<void> pumpSettings(
         body: ListenableBuilder(
           listenable: d,
           builder: (context, _) =>
-              d.settings == null ? const Text('closed') : SettingsView(d),
+              d.place is SettingsPlace ? SettingsView(d) : const Text('closed'),
         ),
       ),
     ),

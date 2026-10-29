@@ -37,7 +37,7 @@ class ChatScreen extends StatelessWidget {
     return ListenableBuilder(
       listenable: Listenable.merge([chat, daemon]),
       builder: (context, _) => PhoneScreen(
-        title: chat.title.isEmpty ? 'New chat' : chat.title,
+        title: chat.shownTitle,
         actions: [
           if (chat.pull != null)
             PullChip(
@@ -47,8 +47,7 @@ class ChatScreen extends StatelessWidget {
                 if (webLink(url) case final uri?) unawaited(launchUrl(uri));
               },
             ),
-          if (daemon.daemonApi >= previewApi &&
-              chatFiles(chat.items).isNotEmpty)
+          if (daemon.daemonApi >= previewApi && chatFilesOf(chat).isNotEmpty)
             ListenableBuilder(
               listenable: chat.opened,
               builder: (context, _) => FilesAction(

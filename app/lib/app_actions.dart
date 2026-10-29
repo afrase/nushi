@@ -18,15 +18,13 @@ import 'package:nushi/jira_view.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/open_file.dart';
 import 'package:nushi/palette.dart';
-import 'package:nushi/preview.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_link_dialog.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/rewind_picker.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/settings_nav.dart';
 import 'package:nushi/settings_view.dart';
-import 'package:nushi/side_panel.dart';
+import 'package:nushi/side_chat.dart';
 import 'package:nushi/status_bar.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/update_toast.dart';
@@ -44,8 +42,8 @@ enum ActMenu { nushi, file, view, chat }
 /// terminal keeps it for its own find.
 const findKey = SingleActivator(LogicalKeyboardKey.keyF, meta: true);
 
-/// ⇧⌘B: a side question (Claude Code's /btw, "by the way").
-const sideQuestionKey = SingleActivator(
+/// ⇧⌘B: a side chat (Claude Code's /btw, "by the way").
+const sideChatKey = SingleActivator(
   LogicalKeyboardKey.keyB,
   meta: true,
   shift: true,
@@ -66,11 +64,7 @@ enum Act {
   details,
   terminal(keyText: '⌃`'), // TerminalArea's key: it keeps the focus
   rewind(keyText: 'Esc Esc'), // the composer's
-  sideQuestion(
-    key: sideQuestionKey,
-    menu: ActMenu.chat,
-    menuLabel: 'Side Question',
-  ),
+  sideChat(key: sideChatKey, menu: ActMenu.chat, menuLabel: 'Side Chat'),
   sendComments(menu: ActMenu.chat, menuLabel: 'Send Review Comments to Agent'),
   stop(keyText: 'Esc', menu: ActMenu.chat, menuLabel: 'Stop'), // the chat's
   rename(menu: ActMenu.chat, menuLabel: 'Rename'),
@@ -167,16 +161,13 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
     AppAction(
       .openFile,
       'Open file…',
-      enabled: shown != null && d.daemonApi >= previewApi,
+      enabled: shown != null,
       run: () => unawaited(openFile(context, d)),
     ),
     AppAction(
       .artifacts,
       'Artifacts…',
-      enabled:
-          shown != null &&
-          d.daemonApi >= previewApi &&
-          chatFiles(shown.items).isNotEmpty,
+      enabled: shown != null && chatFilesOf(shown).isNotEmpty,
       run: () => revealArtifacts(context, shown!),
     ),
     AppAction(
@@ -231,13 +222,13 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
     AppAction(.settings, 'Settings', run: d.openSettings),
     AppAction(
       .jira,
-      d.jiraOpen ? 'Close Jira' : 'Jira',
-      run: () => d.showJira(open: !d.jiraOpen),
+      d.place is JiraPlace ? 'Close Jira' : 'Jira',
+      run: () => d.toggle(const JiraPlace()),
     ),
     AppAction(
       .github,
-      d.githubOpen ? 'Close GitHub' : 'GitHub',
-      run: () => d.showGitHub(open: !d.githubOpen),
+      d.place is GitHubPlace ? 'Close GitHub' : 'GitHub',
+      run: () => d.toggle(const GitHubPlace()),
     ),
     AppAction(
       .restart,
@@ -269,8 +260,8 @@ List<AppAction> chatActions(
   final comments = chat == null ? 0 : unsentComments(chat.id).length;
   return [
     AppAction(
-      .sideQuestion,
-      'Side question',
+      .sideChat,
+      'Side chat',
       enabled: live && chat.canFork,
       run: () => unawaited(askAside(context, d, chat!)),
     ),

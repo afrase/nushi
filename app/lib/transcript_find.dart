@@ -74,13 +74,24 @@ class TranscriptFind extends ChangeNotifier {
       [for (var i = 0; i < a.length; i++) a[i] == b[i]].every((x) => x);
 }
 
+/// Each item's text and title lowered, once: the find runs over the whole
+/// transcript on every build while it's open, a build per streamed chunk
+/// (a chunk makes a new item, so what's kept is never stale).
+final _lowered = Expando<(String, String)>();
+
 /// Whether an entry of the transcript (an item, a run of tool calls or a
 /// subagent with its steps) has [query] in what it shows: its text, its
 /// title (a command, a path); case aside.
 bool entryHas(Object entry, String query) {
   final q = query.toLowerCase();
-  bool item(Item it) =>
-      it.text.toLowerCase().contains(q) || it.title.toLowerCase().contains(q);
+  bool item(Item it) {
+    final (text, title) = _lowered[it] ??= (
+      it.text.toLowerCase(),
+      it.title.toLowerCase(),
+    );
+    return text.contains(q) || title.contains(q);
+  }
+
   return switch (entry) {
     final List<Item> run => run.any(item),
     final SubagentRun s => item(s.call) || s.items.any(item),

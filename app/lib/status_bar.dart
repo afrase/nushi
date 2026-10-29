@@ -216,8 +216,7 @@ class _MemoryButton extends StatelessWidget {
     return MenuAnchor(
       alignmentOffset: const Offset(0, 4),
       menuChildren: [
-        for (final (c, n) in chats)
-          row(label(c.title.isEmpty ? 'New chat' : c.title), n, chat: c),
+        for (final (c, n) in chats) row(label(c.shownTitle), n, chat: c),
         if (chats.isNotEmpty) const Divider(height: 9),
         row(
           label('Nushi', 'daemon and app'),

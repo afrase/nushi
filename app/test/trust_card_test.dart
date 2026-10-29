@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/place.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/trust_card.dart';
 
@@ -126,14 +127,10 @@ void main() {
       d.select('a');
       final start = d.startChat('/Users/me/site', 'claude');
       await tester.pump();
-      if (open == 'jira') {
-        d.showJira(open: true);
-      } else {
-        d.showGitHub(open: true);
-      }
+      d.go(open == 'jira' ? const JiraPlace() : const GitHubPlace());
       answer.complete(StartChatResponse(chatId: 'a2'));
       await start;
-      expect((d.jiraOpen, d.githubOpen), (open == 'jira', open == 'github'));
+      expect(d.place, open == 'jira' ? const JiraPlace() : const GitHubPlace());
       expect(d.selectedId, 'a');
       d.dispose();
     }

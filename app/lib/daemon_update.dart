@@ -1,6 +1,5 @@
 import 'package:connectrpc/connect.dart' as connect;
 import 'package:flutter/material.dart';
-import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/status_bar.dart';
@@ -85,7 +84,6 @@ class _Waiting extends StatelessWidget {
       for (final h in daemon.restartHolds)
         if (daemon.chats[h.chatId] case final c?) (h, c),
     ];
-    String title(ChatState c) => c.title.isEmpty ? 'New chat' : c.title;
     return Wrap(
       crossAxisAlignment: WrapCrossAlignment.center,
       spacing: 4,
@@ -101,7 +99,7 @@ class _Waiting extends StatelessWidget {
             children: [
               if (h.terminal) Text('a terminal ${h.why} in ', style: style),
               LinkText(
-                title(c),
+                c.shownTitle,
                 size: 12,
                 tooltip: 'Show the chat',
                 onTap: () => daemon.select(c.id),

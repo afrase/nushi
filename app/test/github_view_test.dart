@@ -494,7 +494,7 @@ void main() {
     expect(fake.calls.whereType<GetGitHubPromptRequest>(), isEmpty);
     expect(fake.calls.whereType<SendPromptRequest>(), isEmpty);
     // Again: the same card once.
-    d.showGitHub(open: true);
+    d.go(const GitHubPlace());
     await tester.pumpAndSettle();
     await tester.tap(find.text('Send').first);
     await tester.pumpAndSettle();
@@ -678,8 +678,8 @@ void main() {
     expect((asked.items.single.id, asked.quiet), ('PR_1', false));
     await tester.tap(find.text('#1'));
     expect(
-      (d.githubOpen, d.githubShow?.ref.number, d.githubShow?.pull),
-      (true, 1, true),
+      (d.place, d.githubShow?.ref.number, d.githubShow?.pull),
+      (const GitHubPlace(), 1, true),
     );
     await closeView(tester, d);
   });

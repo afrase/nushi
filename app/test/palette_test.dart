@@ -13,8 +13,6 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/palette.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/settings_nav.dart';
-import 'package:nushi/side_panel.dart';
 import 'package:xterm2/xterm.dart' hide Terminal;
 
 import 'fake_daemon.dart';
@@ -180,7 +178,7 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(find.byType(Palette), findsNothing);
-    expect(d.settings, SettingsSection.general);
+    expect(d.place, const SettingsPlace(SettingsSection.general));
 
     // What ran comes first next time.
     await _keys(tester, LogicalKeyboardKey.keyK, meta: true);
@@ -234,7 +232,7 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
 
-    d.showJira(open: true); // no chat shows: its tabs don't apply
+    d.go(const JiraPlace()); // no chat shows: its tabs don't apply
     await tester.pumpAndSettle();
     await _keys(tester, LogicalKeyboardKey.keyK, meta: true);
     expect(_p('Show changes'), findsNothing);
@@ -244,7 +242,7 @@ void main() {
 
   // UX review, findings 9 and 12: the chat's actions are one list, read
   // by the palette, the Chat menu and ⋯.
-  testWidgets("the chat's actions in the palette: Rename, Side question "
+  testWidgets("the chat's actions in the palette: Rename, Side chat "
       '(⇧⌘B), Reload, Delete…; archived chats last, marked', (tester) async {
     final (d, fake) = await _app(tester, select: 'a');
     d.chats['c']!.archived = true;
@@ -271,7 +269,7 @@ void main() {
     d.chats['a']!.renaming.value = false;
     await tester.pumpAndSettle();
 
-    await pick('side', 'Side question');
+    await pick('side', 'Side chat');
     expect(fake.calls.whereType<ForkChatRequest>().single.chatId, 'a');
 
     // ⇧⌘B, wherever the focus is.
@@ -314,7 +312,7 @@ void main() {
     await tester.tap(find.byTooltip('Chat menu'));
     await tester.pumpAndSettle();
     for (final row in [
-      'Side question   ⇧⌘B',
+      'Side chat   ⇧⌘B',
       'Rename',
       'Sleep',
       'Reload',

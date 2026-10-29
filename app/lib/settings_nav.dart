@@ -1,25 +1,23 @@
 import 'package:flutter/material.dart';
 
+import 'package:nushi/place.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// Settings' sections, in the order the nav lists them.
-enum SettingsSection {
-  general('General', Icons.tune),
-  terminal('Terminal', Icons.terminal),
-  history('Chat history', Icons.history),
-  remote('Remote access', Icons.phone_iphone),
-  agents('Agents', Icons.smart_toy_outlined),
-  mcp('MCP servers', Icons.hub_outlined),
-  skills('Skills', Icons.auto_awesome_outlined),
-  jira('Jira', Icons.task_alt),
-  github('GitHub', Icons.merge_type),
-  logs('Logs & advanced', Icons.receipt_long_outlined);
-
-  new(this.title, this.icon);
-
-  final String title;
-  final IconData icon;
+/// Each section's icon in the nav.
+extension SectionIcon on SettingsSection {
+  IconData get icon => switch (this) {
+    .general => Icons.tune,
+    .terminal => Icons.terminal,
+    .history => Icons.history,
+    .remote => Icons.phone_iphone,
+    .agents => Icons.smart_toy_outlined,
+    .mcp => Icons.hub_outlined,
+    .skills => Icons.auto_awesome_outlined,
+    .jira => Icons.task_alt,
+    .github => Icons.merge_type,
+    .logs => Icons.receipt_long_outlined,
+  };
 }
 
 /// Settings' nav: a row per section, [section] selected.

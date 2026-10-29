@@ -8,7 +8,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/items.dart';
 import 'package:nushi/main.dart';
-import 'package:nushi/settings_nav.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -153,8 +152,10 @@ void main() {
     );
     await tester.tap(find.text('Set up…'));
     await tester.pumpAndSettle();
-    expect(d.settings, SettingsSection.agents);
-    expect(d.markedAgent, 'claude');
+    expect(
+      d.place,
+      const SettingsPlace(SettingsSection.agents, agent: 'claude'),
+    );
     d.dispose();
   });
 

@@ -75,6 +75,19 @@ List<int> _marks(WidgetTester tester) => [
 ];
 
 void main() {
+  test('find sees the text streamed in since it last looked', () {
+    final a = Item(
+      id: 'm',
+      kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
+      text: 'Hello',
+    );
+    expect(entryHas(a, 'world'), isFalse);
+    final b = a.deepCopy()..text = '${a.text} World'; // as a chunk lands
+    expect(entryHas(b, 'world'), isTrue);
+    expect(entryHas(a, 'world'), isFalse);
+    expect(entryHas([a, b], 'WORLD'), isTrue);
+  });
+
   setUpAll(loadFonts);
 
   testWidgets('⌘F in the chat: the entries that have it marked, ⏎ and ⇧⏎ '

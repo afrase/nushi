@@ -37,6 +37,12 @@ class SettingsView extends StatefulWidget {
 class _SettingsViewState extends State<SettingsView> {
   final _focus = FocusNode(debugLabel: 'settings');
   Settings? _set; // the daemon's, once it said
+  bool _connected = false; // the daemon, when last looked
+  bool _asking = false;
+
+  /// The changes being made, one after another: each sends every setting
+  /// (SetSettings), so each starts from what the one before set.
+  Future<void> _changes = Future.value();
 
   Daemon get daemon => widget.daemon;
 
@@ -47,28 +53,52 @@ class _SettingsViewState extends State<SettingsView> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && !_focus.hasFocus) _focus.requestFocus();
     });
+    _connected = daemon.connected;
+    daemon.addListener(_reconnected);
+    _ask();
+  }
+
+  @override
+  void dispose() {
+    daemon.removeListener(_reconnected);
+    _focus.dispose();
+    super.dispose();
+  }
+
+  /// Asks for the daemon's settings; the rows that need them stay out until
+  /// it said.
+  void _ask() {
+    if (_set != null || _asking) return;
+    _asking = true;
     unawaited(
       daemon.client
           .getSettings(GetSettingsRequest())
           .then(
             (r) => mounted ? setState(() => _set = r.settings) : null,
-            onError: (_) {}, // the rows that need them stay out
-          ),
+            onError: (_) {}, // asked again when the daemon is back
+          )
+          .whenComplete(() => _asking = false),
     );
   }
 
-  @override
-  void dispose() {
-    _focus.dispose();
-    super.dispose();
+  /// The daemon is back: the settings it didn't give are asked for again.
+  void _reconnected() {
+    if (daemon.connected && !_connected) _ask();
+    _connected = daemon.connected;
   }
 
-  /// Sets the daemon's settings: [change] applied to them.
-  Future<void> _change(void Function(Settings) change) async {
-    final set = _set!.deepCopy();
-    change(set);
-    await daemon.client.setSettings(SetSettingsRequest(settings: set));
-    if (mounted) setState(() => _set = set);
+  /// Sets the daemon's settings: [change] applied to them, after the
+  /// changes asked before it.
+  Future<void> _change(void Function(Settings) change) {
+    final done = _changes.then((_) async {
+      final set = _set!.deepCopy();
+      change(set);
+      await daemon.client.setSettings(SetSettingsRequest(settings: set));
+      _set = set;
+      if (mounted) setState(() {});
+    });
+    _changes = done.then((_) {}, onError: (_) {}); // a failure is the asker's
+    return done;
   }
 
   /// The folder MCP servers and Skills show when none was picked.
@@ -93,7 +123,15 @@ class _SettingsViewState extends State<SettingsView> {
     ),
     SettingsSection.agents => SettingsPage(
       title: s.title,
-      children: [AgentsPage(daemon.client, marked: daemon.markedAgent)],
+      children: [
+        AgentsPage(
+          daemon.client,
+          marked: switch (daemon.place) {
+            SettingsPlace(:final agent) => agent,
+            _ => null,
+          },
+        ),
+      ],
     ),
     SettingsSection.mcp => McpView(
       daemon: daemon,
@@ -123,11 +161,12 @@ class _SettingsViewState extends State<SettingsView> {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final section = daemon.settings ?? daemon.lastSettings;
+    final place = daemon.place;
+    final section = place is SettingsPlace
+        ? place.section
+        : daemon.lastSettings;
     return CallbackShortcuts(
-      bindings: {
-        const SingleActivator(LogicalKeyboardKey.escape): daemon.closeSettings,
-      },
+      bindings: {const SingleActivator(LogicalKeyboardKey.escape): daemon.back},
       child: Focus(
         focusNode: _focus,
         child: Column(
@@ -150,7 +189,7 @@ class _SettingsViewState extends State<SettingsView> {
                   IconTap(
                     Icons.close,
                     tooltip: 'Close (esc)',
-                    onTap: daemon.closeSettings,
+                    onTap: daemon.back,
                   ),
                 ],
               ),

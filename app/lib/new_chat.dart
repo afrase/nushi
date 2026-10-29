@@ -13,7 +13,6 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/issue_picker.dart';
 import 'package:nushi/new_chat_issue.dart';
 import 'package:nushi/open_session.dart';
-import 'package:nushi/settings_nav.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -78,12 +77,7 @@ class _NewChatState extends State<_NewChat> {
   ];
   late int _at = () {
     final agents = _agents;
-    bool ok(String a) =>
-        knownAgents[a]!.ready && !widget.daemon.cantStart.containsKey(a);
-    final last = max(0, agents.indexOf(lastAgent(widget.daemon.chats.values)));
-    if (agents.isEmpty || ok(agents[last])) return last;
-    final first = agents.indexWhere(ok);
-    return first >= 0 ? first : last;
+    return max(0, agents.indexOf(defaultAgent(widget.daemon, agents)));
   }();
 
   /// The agent whose sessions show, once → was pressed.

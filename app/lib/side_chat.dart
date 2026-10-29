@@ -5,16 +5,16 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/composer_parts.dart';
 import 'package:nushi/daemon.dart';
-import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
 import 'package:nushi/turn_status.dart';
 import 'package:nushi/widgets.dart';
 
-/// A side question: a forked session beside the chat, which knows the
-/// conversation so far but doesn't add to it. Closing it ends it.
-class SidePanel extends StatelessWidget {
+/// A side chat: a forked session beside the chat, which knows the
+/// conversation so far but doesn't add to it; you can go back and forth in
+/// it. Closing it ends it.
+class SideChat extends StatelessWidget {
   const new({
     required this.side,
     required this.daemon,
@@ -46,7 +46,7 @@ class SidePanel extends StatelessWidget {
                   Icon(Icons.forum_outlined, size: 14, color: t.textSecondary),
                   const SizedBox(width: 8),
                   Text(
-                    'Side question',
+                    'Side chat',
                     style: theme.ui(t.text, size: 12, weight: FontWeight.w600),
                   ),
                   const SizedBox(width: 8),
@@ -59,7 +59,7 @@ class SidePanel extends StatelessWidget {
                   ),
                   IconTap(
                     Icons.close,
-                    tooltip: 'End the side question',
+                    tooltip: 'End the side chat',
                     size: 15,
                     onTap: onClose,
                   ),
@@ -75,7 +75,7 @@ class SidePanel extends StatelessWidget {
               ),
             ),
             TurnStatus(side),
-            Composer(chat: side, daemon: daemon, hint: 'Ask a side question'),
+            Composer(chat: side, daemon: daemon, hint: 'Ask in the side chat'),
           ],
         ),
       ),
@@ -83,36 +83,19 @@ class SidePanel extends StatelessWidget {
   }
 }
 
-/// Side questions' end.
-extension SideChats on Daemon {
-  /// Ends [chat]'s side question, if it has one.
-  void closeSide(ChatState chat) {
-    final side = chat.side;
-    if (side == null) return;
-    chat.side = null;
-    sides.remove(side.id);
-    client.closeSideChat(CloseSideChatRequest(chatId: side.id)).ignore();
-  }
-}
-
-/// Opens [chat]'s side question (a fork of it; once at a time), with
-/// [selection] quoted in its box when given: from a selection's "Side
-/// question", the palette or ⇧⌘B (Claude Code's /btw).
+/// Opens [chat]'s side chat ([Daemon.openSide]), with [selection] quoted
+/// in its box when given: from a selection's "Side chat", the palette or
+/// ⇧⌘B (Claude Code's /btw).
 Future<void> askAside(
   BuildContext context,
   Daemon daemon,
   ChatState chat, [
   String selection = '',
 ]) async {
-  if (chat.side == null && !chat.forking.value) {
-    chat.forking.value = true;
-    try {
-      chat.side = await daemon.forkChat(chat);
-    } on Object catch (e) {
-      if (context.mounted) showError(context, e);
-    } finally {
-      chat.forking.value = false; // the chat's view shows the side
-    }
+  try {
+    await daemon.openSide(chat);
+  } on Object catch (e) {
+    if (context.mounted) showError(context, e);
   }
-  if (selection.isNotEmpty) chat.side?.draft.quote.value = selection;
+  if (selection.isNotEmpty) chat.side.value?.draft.quote.value = selection;
 }

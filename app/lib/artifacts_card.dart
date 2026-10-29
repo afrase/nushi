@@ -17,7 +17,7 @@ import 'package:nushi/widgets.dart';
 /// open one's row marked. Collapsed, it counts the pinned and recent. Null
 /// (no card) when there are none.
 PanelCard? artifactsCard(ChatState chat) {
-  if (chatFiles(chat.items).isEmpty) return null;
+  if (chatFilesOf(chat).isEmpty) return null;
   return PanelCard(
     title: 'Artifacts',
     summary: ListenableBuilder(
@@ -54,12 +54,33 @@ class _FileRowsState extends State<FileRows> {
 
   late final Timer _tick;
 
+  /// When each row's file last changed: read again on the minute's tick
+  /// and when the chat's items or folder change, not as text streams in.
+  final _changed = <String, DateTime?>{};
+  (int, String)? _readAt;
+
+  DateTime? _changedOf(String file) {
+    final chat = widget.chat;
+    final at = (chat.revision, chat.folder);
+    if (at != _readAt) {
+      _changed.clear();
+      _readAt = at;
+    }
+    return _changed.putIfAbsent(
+      file,
+      () => fileChanged(absoluteIn(chat.folder, file)),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
     // "2m ago" goes on aging while nothing else changes, and a file opened
     // an hour ago leaves the recent.
-    _tick = Timer.periodic(const Duration(minutes: 1), (_) => setState(() {}));
+    _tick = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => setState(_changed.clear),
+    );
   }
 
   @override
@@ -93,7 +114,7 @@ class _FileRowsState extends State<FileRows> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (final f in [...a.pinned, ...a.recent])
-          _FileRow(widget.chat, f, open: f == open),
+          _FileRow(widget.chat, f, open: f == open, changed: _changedOf(f)),
         if (a.older.isNotEmpty) ...[
           Tap(
             onTap: () => setState(() => _older = !_older),
@@ -113,28 +134,30 @@ class _FileRowsState extends State<FileRows> {
             ),
           ),
           if (_older)
-            for (final f in a.older) _FileRow(widget.chat, f, open: f == open),
+            for (final f in a.older)
+              _FileRow(widget.chat, f, open: f == open, changed: _changedOf(f)),
         ],
       ],
     );
   }
 }
 
-/// A file's row: its name and, muted, its folder and when it changed; its
-/// pin at the right end on hover, or always when pinned.
+/// A file's row: its name and, muted, its folder and when it [changed];
+/// its pin at the right end on hover, or always when pinned.
 class _FileRow extends StatelessWidget {
-  const new(this.chat, this.file, {required this.open});
+  const new(this.chat, this.file, {required this.open, required this.changed});
 
   final ChatState chat;
   final String file;
   final bool open;
+  final DateTime? changed;
 
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final f = file;
-    final detail = fileDetail(f, fileChanged(absoluteIn(chat.folder, f)));
+    final detail = fileDetail(f, changed);
     return Hover(
       builder: (context, {required hover}) => Tap(
         onTap: () => chat.openPreview(f),

@@ -48,11 +48,11 @@ The chat keys work in a terminal too.
 ⌘K (View › Command Palette…) opens the palette. In a terminal ⌘K clears it, so use ⌘⇧P there, which works everywhere.
 
 - **Go to a chat** by its title: the pinned first, then the last opened. Archived chats are listed last, marked.
-- **Run an action**: New chat, Open file…, Artifacts…, Chat, Changes, Pull request, show or hide the details and the terminal, Rewind…; the chat's own: Side question, Send review comments, Stop, Rename, Pin or Unpin, Sleep, Reload, Link pull request…, Archive or Unarchive, MCP servers, Skills, Delete…; and Settings, Jira, GitHub, Restart daemon.
+- **Run an action**: New chat, Open file…, Artifacts…, Chat, Changes, Pull request, show or hide the details and the terminal, Rewind…; the chat's own: Side chat, Send review comments, Stop, Rename, Pin or Unpin, Sleep, Reload, Link pull request…, Archive or Unarchive, MCP servers, Skills, Delete…; and Settings, Jira, GitHub, Restart daemon.
 
 Rows match as you type, each with its key. Actions that don't apply now are left out, and what you picked lately comes first.
 
-**Side question** (⇧⌘B) opens a fork of the chat beside it. It knows the conversation and doesn't add to it.
+**Side chat** (⇧⌘B) opens a fork of the chat beside it. It knows the conversation and doesn't add to it; you can go back and forth in it, and closing it ends it.
 
 The chat's own actions are also in the menu bar's Chat menu, its ⋯ menu, and its sidebar row's right-click.
 

@@ -123,7 +123,7 @@ class _MovableRowsState extends State<MovableRows> {
                     maxSimultaneousDrags: enabled ? null : 0,
                     dragAnchorStrategy: pointerDragAnchorStrategy,
                     feedback: Lifted(
-                      c.title.isEmpty ? 'New chat' : c.title,
+                      c.shownTitle,
                       width: box.maxWidth,
                       weight: FontWeight.w400,
                     ),

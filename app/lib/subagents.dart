@@ -100,7 +100,7 @@ typedef Setting = ({String name, bool inherited});
 ({Setting model, Setting effort}) subagentModel(ChatState chat, SubagentRun s) {
   final call = s.call;
   Setting named(String category, String asked) {
-    final o = chat.config.where((o) => o.category == category).firstOrNull;
+    final o = chat.option(category);
     final value = asked.isEmpty ? o?.current ?? '' : asked;
     final v = o?.values.where((v) => v.value == value).firstOrNull;
     return (name: v?.name ?? value, inherited: asked.isEmpty);
@@ -153,19 +153,36 @@ class LiveText extends StatefulWidget {
 }
 
 class _LiveTextState extends State<LiveText> {
-  late final Timer _tick;
+  // Only while live: every subagent's line stays built (ADR 0026).
+  Timer? _tick;
+
+  void _sync() {
+    if (!widget.live) {
+      _tick?.cancel();
+      _tick = null;
+    } else {
+      _tick ??= Timer.periodic(
+        const Duration(seconds: 1),
+        (_) => setState(() {}),
+      );
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-    _tick = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (widget.live) setState(() {});
-    });
+    _sync();
+  }
+
+  @override
+  void didUpdateWidget(LiveText old) {
+    super.didUpdateWidget(old);
+    _sync();
   }
 
   @override
   void dispose() {
-    _tick.cancel();
+    _tick?.cancel();
     super.dispose();
   }
 

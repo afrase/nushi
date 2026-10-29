@@ -236,7 +236,7 @@ class ChatRow extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      chat.title.isEmpty ? 'New chat' : chat.title,
+                      chat.shownTitle,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: phoneText(context),

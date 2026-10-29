@@ -356,7 +356,7 @@ class _Chats extends StatelessWidget {
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 180),
                   child: Text(
-                    c.title.isEmpty ? 'New chat' : c.title,
+                    c.shownTitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.ui(t.link, size: 12),
