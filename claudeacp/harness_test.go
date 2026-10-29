@@ -54,6 +54,23 @@ func (c *client) of(kind string) []acp.SessionUpdate {
 	return out
 }
 
+// texts are the message and thought chunks so far, as kind:messageId:text.
+func (c *client) texts() []string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	var out []string
+	for _, n := range c.updates {
+		u := n.Update
+		switch {
+		case u.AgentMessageChunk != nil && u.AgentMessageChunk.Content.Text != nil:
+			out = append(out, "text:"+string(u.AgentMessageChunk.MessageID)+":"+u.AgentMessageChunk.Content.Text.Text)
+		case u.AgentThoughtChunk != nil:
+			out = append(out, "thought:"+string(u.AgentThoughtChunk.MessageID)+":"+u.AgentThoughtChunk.Content.Text.Text)
+		}
+	}
+	return out
+}
+
 // start runs an agent whose sessions start the fakes in turn, and
 // initializes it with caps. Ids it makes are id1, id2 and so on.
 func start(t *testing.T, caps *acp.ClientCapabilities, fakes ...*claudetest.Fake) *peer {

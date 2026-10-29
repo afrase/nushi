@@ -1,22 +1,44 @@
 package claudeacp
 
 import (
+	"encoding/json"
+	"strings"
+
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/claudeagent"
 )
 
-// stream is what the reader keeps of claude's stream: the session's
-// context use.
+// stream is what the reader keeps of claude's stream: the message each
+// stream is writing and its text so far, so a completed message sends
+// only what didn't stream; and the session's context use.
 type stream struct {
-	model     string // the model of the last top-level message
-	errorKind string // the API error the last top-level message named
-	used      int    // tokens in the context window
-	window    int    // its size, once a result has said
+	msgs      map[string]*streamed // by parent tool use id; "" at the top
+	model     string               // the model of the last top-level message
+	errorKind string               // the API error the last top-level message named
+	usage     claudeagent.Usage    // the last top-level message's
+	used      int                  // tokens in the context window
+	window    int                  // its size, once a result has said
 }
+
+// streamed is a message being written: its API id, the text and thinking
+// streamed by block index, and how many completed blocks have come.
+type streamed struct {
+	id     string
+	blocks map[int]*strings.Builder
+	done   int
+}
+
+func (st *stream) init() { st.msgs = map[string]*streamed{} }
 
 // handle maps one of claude's messages: to updates, and to turns'
 // starts and ends.
 func (s *session) handle(m claudeagent.Message) {
 	switch m := m.(type) {
+	case *claudeagent.StreamEvent:
+		s.streamEvent(m)
+	case *claudeagent.Assistant:
+		s.assistant(m)
 	case *claudeagent.User:
 		if m.UUID != "" {
 			s.echo(m.UUID)
@@ -35,4 +57,129 @@ func (s *session) handle(m claudeagent.Message) {
 	case *claudeagent.RateLimit:
 		s.usage(nil, map[string]any{"_claude/rateLimit": m.Info})
 	}
+}
+
+func (s *session) streamEvent(m *claudeagent.StreamEvent) {
+	key, ev := m.ParentToolUseID, m.Event
+	switch ev.Type {
+	case "message_start":
+		if ev.Message == nil {
+			return
+		}
+		s.st.msgs[key] = &streamed{id: ev.Message.ID, blocks: map[int]*strings.Builder{}}
+		if key == "" {
+			s.st.model = ev.Message.Model
+			if ev.Message.Usage != nil {
+				s.st.usage = *ev.Message.Usage
+				s.contextUsed()
+			}
+		}
+	case "content_block_delta":
+		msg := s.st.msgs[key]
+		if msg == nil || ev.Delta == nil {
+			return
+		}
+		var kind, text string
+		switch ev.Delta.Type {
+		case "text_delta":
+			kind, text = "agent_message_chunk", ev.Delta.Text
+		case "thinking_delta":
+			kind, text = "agent_thought_chunk", ev.Delta.Thinking
+		default:
+			return
+		}
+		if text == "" {
+			return
+		}
+		b := msg.blocks[ev.Index]
+		if b == nil {
+			b = new(strings.Builder)
+			msg.blocks[ev.Index] = b
+		}
+		b.WriteString(text)
+		s.chunk(kind, key, msg.id, acp.ContentBlock{Text: &acp.TextContent{Text: text}})
+	case "message_delta":
+		if key == "" && ev.Usage != nil {
+			// Its counts are the message's so far; one it leaves out
+			// (zero) stays as it was.
+			u, d := &s.st.usage, ev.Usage
+			for _, f := range []struct{ to, from *int }{
+				{&u.InputTokens, &d.InputTokens}, {&u.OutputTokens, &d.OutputTokens},
+				{&u.CacheReadInputTokens, &d.CacheReadInputTokens}, {&u.CacheCreationInputTokens, &d.CacheCreationInputTokens},
+			} {
+				if *f.from != 0 {
+					*f.to = *f.from
+				}
+			}
+			s.contextUsed()
+		}
+	}
+}
+
+// assistant is a completed block of a message (claude writes one message
+// per block, sharing the message's id): what of its text and thinking
+// didn't stream goes now, which is all of it when nothing streamed.
+func (s *session) assistant(m *claudeagent.Assistant) {
+	key, id := m.ParentToolUseID, m.Message.ID
+	if key == "" {
+		s.st.model, s.st.errorKind = m.Message.Model, m.Error
+	}
+	msg := s.st.msgs[key]
+	if msg == nil || msg.id != id {
+		msg = &streamed{id: id, blocks: map[int]*strings.Builder{}}
+		s.st.msgs[key] = msg
+	}
+	if id == "" {
+		id = m.UUID
+	}
+	for _, b := range m.Message.Content {
+		var sent string
+		if sb := msg.blocks[msg.done]; sb != nil {
+			sent = sb.String()
+		}
+		msg.done++
+		switch b.Type {
+		case "text":
+			if rest, ok := strings.CutPrefix(b.Text, sent); ok && rest != "" {
+				s.chunk("agent_message_chunk", key, id, acp.ContentBlock{Text: &acp.TextContent{Text: rest}})
+			}
+		case "thinking":
+			if rest, ok := strings.CutPrefix(b.Thinking, sent); ok && rest != "" {
+				s.chunk("agent_thought_chunk", key, id, acp.ContentBlock{Text: &acp.TextContent{Text: rest}})
+			}
+		case "image":
+			var src struct {
+				Data      string `json:"data"`
+				URL       string `json:"url"`
+				MediaType string `json:"media_type"`
+			}
+			_ = json.Unmarshal(b.Source, &src)
+			if img := (acp.ImageContent{Data: src.Data, MimeType: src.MediaType, URI: src.URL}); img.Data != "" || img.URI != "" {
+				s.chunk("agent_message_chunk", key, id, acp.ContentBlock{Image: &img})
+			}
+		}
+	}
+}
+
+// chunk sends a message or thought chunk. One of a subagent's says whose
+// (its Agent call's id).
+func (s *session) chunk(kind, parent, msgID string, c acp.ContentBlock) {
+	if parent == "" && kind == "agent_message_chunk" {
+		s.mu.Lock()
+		if s.active != nil {
+			s.active.textSent = true
+		}
+		s.mu.Unlock()
+	}
+	ch := &acp.ContentChunk{Content: c, MessageID: acp.MessageID(msgID)}
+	if parent != "" {
+		ch.Meta = map[string]any{"claudeCode": map[string]any{"parentToolUseId": parent}}
+	}
+	u := acp.SessionUpdate{SessionUpdate: kind}
+	if kind == "agent_thought_chunk" {
+		u.AgentThoughtChunk = ch
+	} else {
+		u.AgentMessageChunk = ch
+	}
+	s.a.update(s.id, u)
 }

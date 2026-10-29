@@ -54,6 +54,7 @@ func (a *agent) NewSession(ctx context.Context, req *acp.NewSessionRequest) (*ac
 // answered initialize.
 func (a *agent) start(ctx context.Context, id string, o claudeagent.Options) (*session, error) {
 	s := &session{a: a, id: id, log: a.log.With("session", id), read: make(chan struct{})}
+	s.st.init()
 	cs, err := claudeagent.Start(ctx, o)
 	if err != nil {
 		return nil, &acp.Error{Code: acp.ErrorCodeInternalError, Message: fmt.Sprintf("Claude didn't start: %v", err)}

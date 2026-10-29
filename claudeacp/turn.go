@@ -26,6 +26,7 @@ type turn struct {
 	sawResult bool // a result came since it became active
 	cancelled bool // the client cancelled it while active
 	held      *outcome
+	textSent  bool // text reached the client during it
 	usage     claudeagent.Usage
 
 	done    chan outcome // its answer, once
