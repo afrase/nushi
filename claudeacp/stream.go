@@ -19,6 +19,7 @@ type stream struct {
 	errorKind string               // the API error the last top-level message named
 	usage     claudeagent.Usage    // the last top-level message's
 	used      int                  // tokens in the context window
+	counted   bool                 // a top-level message said its counts, this turn
 	window    int                  // its size, once a result has said
 	local     bool                 // a slash command claude ran itself printed, this turn
 	refused   string               // why the model refused, this turn

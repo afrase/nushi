@@ -164,7 +164,7 @@ func TestCancel(t *testing.T) {
 		claudetest.Send(`{"type":"system","subtype":"status","status":"requesting"}`), // work of claude's own
 		event(`{"type":"message_start","message":{"id":"msg_2"}}`),
 		delta("0", "text_delta", "text", "own"),
-		claudetest.Send(`{"type":"result","subtype":"success","origin":{"kind":"task-notification"}}`))
+		claudetest.Send(`{"type":"result","subtype":"success","origin":{"kind":"task-notification"},"usage":{"input_tokens":1}}`))
 	p := start(t, nil, f)
 	sid := p.open(t)
 	ws := p.prompts(t, sid, g, "one", "two", "three")
@@ -211,7 +211,7 @@ func TestCancelThenPrompt(t *testing.T) {
 		claudetest.Expect(`{"type":"user","uuid":"id3","priority":"now"}`), signal(steered),
 		user("id4"), signal(g[1]),
 		echo("id2"), result(names("id2", "id3")),
-		claudetest.Send(`{"type":"result","subtype":"success","origin":{"kind":"task-notification"}}`), // so the test knows the last was read
+		claudetest.Send(`{"type":"result","subtype":"success","origin":{"kind":"task-notification"},"usage":{"input_tokens":1}}`), // so the test knows the last was read
 		claudetest.Until(release),
 		echo("id4"), result(names("id4")))
 	p := start(t, nil, f)

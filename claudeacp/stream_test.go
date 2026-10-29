@@ -77,8 +77,9 @@ func TestStream(t *testing.T) {
 }
 
 // A turn that showed no text shows its result's, as for a slash command
-// claude answers itself; such a turn has no echo, and no origin, which
-// is then a person's.
+// claude answers itself; such a turn has no echo, and, with no model
+// call, sends no usage (claude-agent-acp sends none: its counts are
+// zeros).
 func TestResultText(t *testing.T) {
 	f := fake(user("id2"), claudetest.Send(`{"type":"result","subtype":"success","uuid":"r1","result":"Context: 5%","total_cost_usd":0}`), claudetest.Send(idle))
 	p := start(t, nil, f)
@@ -89,7 +90,7 @@ func TestResultText(t *testing.T) {
 	if got := p.texts(); !slices.Equal(got, []string{"text:r1:Context: 5%"}) {
 		t.Errorf("%q", got)
 	}
-	if u := p.of("usage_update"); len(u) != 1 || u[0].UsageUpdate.Meta["_claude/origin"].(map[string]any)["kind"].(string) != "human" {
+	if u := p.of("usage_update"); len(u) != 0 {
 		t.Errorf("%+v", u)
 	}
 }
