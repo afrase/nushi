@@ -99,3 +99,23 @@ func TestTranscriptSettings(t *testing.T) {
 		t.Errorf("kept: keep %v, days %d, sleep %v", s.KeepTranscripts(), s.TranscriptDays(), s.SleepAfter())
 	}
 }
+
+// The settings are read once and kept: a change is kept once it's
+// written, and one that couldn't be written isn't.
+func TestSettingsKept(t *testing.T) {
+	dir := t.TempDir()
+	s := New(dir)
+	noErr(t, s.SetDebugLog(true))
+	noErr(t, os.WriteFile(filepath.Join(dir, "settings.json"), []byte(`{}`), 0o600))
+	if !s.DebugLog() {
+		t.Error("read settings.json again")
+	}
+	noErr(t, os.Chmod(dir, 0o500)) // its new file can't be made
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+	if err := s.SetDebugLog(false); err == nil {
+		t.Fatal("wrote in a folder it can't")
+	}
+	if !s.DebugLog() {
+		t.Error("kept a change it couldn't write")
+	}
+}

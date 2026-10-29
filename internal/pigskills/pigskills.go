@@ -247,11 +247,7 @@ func (p PiG) SetSkillOn(ctx context.Context, folder, source, name string, on boo
 		return json.Marshal(list)
 	}
 	if !project {
-		file := userSettings()
-		if resolved, err := filepath.EvalSymlinks(file); err == nil {
-			file = resolved // your dotfiles' link: change what it points at
-		}
-		_, err := jsonsettings.Edit(file, func(m map[string]json.RawMessage) error {
+		_, err := jsonsettings.Edit(userSettings(), func(m map[string]json.RawMessage) error {
 			b, err := change(m["skills"])
 			m["skills"] = b
 			if string(b) == "[]" {

@@ -23,10 +23,6 @@ func EditSettings(change func(map[string]json.RawMessage) error) error {
 		return err
 	}
 	defer unlock()
-	file := SettingsFile()
-	if resolved, err := filepath.EvalSymlinks(file); err == nil {
-		file = resolved
-	}
-	_, err = jsonsettings.Edit(file, change)
+	_, err = jsonsettings.Edit(SettingsFile(), change)
 	return err
 }

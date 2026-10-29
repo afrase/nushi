@@ -145,10 +145,6 @@ func EditLocal(ctx context.Context, folder string, change func(settings map[stri
 // as EditLocal does; a link there (your dotfiles') is followed, to change
 // the file it points at.
 func EditUser(change func(settings map[string]json.RawMessage) error) error {
-	path := UserSettings()
-	if resolved, err := filepath.EvalSymlinks(path); err == nil {
-		path = resolved
-	}
-	_, err := jsonsettings.Edit(path, change)
+	_, err := jsonsettings.Edit(UserSettings(), change)
 	return err
 }
