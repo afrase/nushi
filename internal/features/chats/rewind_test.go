@@ -38,20 +38,20 @@ func TestRewindForksBeforeTheMessage(t *testing.T) {
 		t.Fatalf("Rewind = %+v, %v", m, err)
 	}
 	fork := agent.forkMeta["jetbrains"].(map[string]any)["air"].(map[string]any)["fork"].(map[string]any)
-	if fork["messageId"] != "m1" || len(c.items) != 2 || c.sid != "fork1" || c.session.SessionID != "fork1" ||
-		len(c.session.Earlier) != 1 || c.session.Earlier[0].ID != "s1" {
-		t.Errorf("fork %v, items %+v, session %+v", fork, c.items, c.session)
+	if fork["messageId"] != "m1" || len(c.items) != 2 || c.sid != "fork1" || c.record.SessionID != "fork1" ||
+		len(c.record.Earlier) != 1 || c.record.Earlier[0].ID != "s1" {
+		t.Errorf("fork %v, items %+v, session %+v", fork, c.items, c.record)
 	}
 
 	// Back to the first message: a new session, a chat without messages.
 	if _, err := svc.Rewind(context.Background(), c.id, c.items[0].ID); err != nil {
 		t.Fatal(err)
 	}
-	if len(c.items) != 0 || c.sid != "s1" || c.session.Title != "" || c.session.HasMessages || len(c.session.Earlier) != 2 {
-		t.Errorf("items %+v, session %+v", c.items, c.session)
+	if len(c.items) != 0 || c.sid != "s1" || c.record.Title != "" || c.record.HasMessages || len(c.record.Earlier) != 2 {
+		t.Errorf("items %+v, session %+v", c.items, c.record)
 	}
-	if c.session.Mode != "plan" || current(c, "mode") != "plan" {
-		t.Errorf("after rewinding, mode %q (stored %q), want plan", current(c, "mode"), c.session.Mode)
+	if c.record.Mode != "plan" || current(c, "mode") != "plan" {
+		t.Errorf("after rewinding, mode %q (stored %q), want plan", current(c, "mode"), c.record.Mode)
 	}
 }
 

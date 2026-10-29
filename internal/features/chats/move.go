@@ -35,7 +35,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 		return err
 	}
 	c.mu.Lock()
-	from, sid, fresh, oldWT, mode, picks := c.session.Folder, c.sid, !c.session.HasMessages, c.session.Worktree, c.session.Mode, c.session.Picks
+	from, sid, fresh, oldWT, mode, picks := c.record.Folder, c.sid, !c.record.HasMessages, c.record.Worktree, c.record.Mode, c.record.Picks
 	// A chat whose reopen failed (its folder gone) has an empty transcript:
 	// the moved session is reopened, which replays it.
 	replay := !fresh && c.agent == nil && !c.kept
@@ -80,7 +80,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 		c.dropPromptsLocked() // what ran on the old agent ends with it
 		c.orphanLocked(true)
 		s.useLocked(c, o)
-		c.saveLocked(func(s *model.Session) {
+		c.saveLocked(func(s *model.ChatRecord) {
 			if !fresh { // an empty session is just dropped, not something the chat had
 				s.Earlier = append(slices.Clip(s.Earlier), model.AgentSession{ID: s.SessionID, Folder: s.Folder})
 			}
@@ -106,7 +106,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 		go s.discard(c, sides) //nolint:gosec // discarding outlives the request
 		if left := oldWT != nil && wt != oldWT && !oldWT.Found; left && (!fresh || s.inUse(c, oldWT.Path) || !s.dropWorktree(oldWT)) {
 			c.mu.Lock()
-			c.saveLocked(func(s *model.Session) { // it stays, with the work in it, until Delete
+			c.saveLocked(func(s *model.ChatRecord) { // it stays, with the work in it, until Delete
 				s.EarlierWorktrees = append(slices.Clip(s.EarlierWorktrees), *oldWT)
 			})
 			c.mu.Unlock()
@@ -142,7 +142,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 // (Found); nil otherwise.
 func (s *Service) foundWorktree(ctx context.Context, c *chat, folder string) *model.Worktree {
 	c.mu.Lock()
-	earlier := slices.Clone(c.session.EarlierWorktrees)
+	earlier := slices.Clone(c.record.EarlierWorktrees)
 	c.mu.Unlock()
 	for _, wt := range earlier {
 		if within(folder, wt.Path) {
@@ -185,5 +185,5 @@ func (s *Service) inUse(c *chat, dir string) bool {
 		return true
 	}
 	stored, _ := s.sessions.Sessions()
-	return slices.ContainsFunc(stored, func(sess model.Session) bool { return sess.ID != c.id && within(sess.Folder, dir) })
+	return slices.ContainsFunc(stored, func(sess model.ChatRecord) bool { return sess.ID != c.id && within(sess.Folder, dir) })
 }

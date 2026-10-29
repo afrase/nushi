@@ -24,9 +24,9 @@ import (
 // title (branch.go). A test of another agent's shape sets its own.
 var testDialect = Dialect{InitMeta: claude.InitMeta, SessionMeta: claude.SessionMeta, UltracodeMeta: claude.UltracodeMeta, TurnDone: claude.TurnDone, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall, Notice: claude.Notice,
 	Background: claude.Background, ReportElsewhere: claude.ReportElsewhere,
-	Shell: claude.Shell, ReadShell: claude.ReadShell,
-	SubagentID: claude.SubagentID, Relay: claude.Relay, Relayed: claude.Relayed, Relaying: claude.Relaying,
-	Subagents: claude.Subagents, StopTask: claude.StopTask, StopRelayed: claude.StopRelayed, Stopped: claude.Stopped, RunsShell: claude.RunsShell,
+	BackgroundCommand: claude.BackgroundCommand, ReadBackgroundCommand: claude.ReadBackgroundCommand,
+	SubagentID: claude.SubagentID, ToSubagent: claude.ToSubagent, ReadToSubagent: claude.ReadToSubagent, PassesToSubagent: claude.PassesToSubagent,
+	Subagents: claude.Subagents, StopTask: claude.StopTask, ReadStopTask: claude.ReadStopTask, Stopped: claude.Stopped, RunsBackgroundCommand: claude.RunsBackgroundCommand,
 	Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle, Compacted: claude.Compacted,
 	ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete}
 
@@ -368,20 +368,20 @@ func (f *fakeAgent) SetSessionMode(_ context.Context, req *acp.SetSessionModeReq
 
 type memSessions struct {
 	mu        sync.Mutex
-	saved     []model.Session
-	stored    []model.Session // what Sessions returns
+	saved     []model.ChatRecord
+	stored    []model.ChatRecord // what Sessions returns
 	deleteErr error
 	deleted   []string
 }
 
-func (m *memSessions) SaveSession(s model.Session) error {
+func (m *memSessions) SaveSession(s model.ChatRecord) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.saved = append(m.saved, s)
 	return nil
 }
 
-func (m *memSessions) Sessions() ([]model.Session, error) {
+func (m *memSessions) Sessions() ([]model.ChatRecord, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return slices.Clone(m.stored), nil
@@ -392,7 +392,7 @@ func (m *memSessions) DeleteSession(id string) error {
 	defer m.mu.Unlock()
 	if m.deleteErr == nil {
 		m.deleted = append(m.deleted, id)
-		m.stored = slices.DeleteFunc(m.stored, func(s model.Session) bool { return s.ID == id })
+		m.stored = slices.DeleteFunc(m.stored, func(s model.ChatRecord) bool { return s.ID == id })
 	}
 	return m.deleteErr
 }

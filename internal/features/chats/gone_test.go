@@ -63,7 +63,7 @@ var errNotFound = &acp.Error{Code: acp.ErrorCodeResourceNotFound, Message: "Reso
 
 // goneService has one stored chat, "c", whose agent answers session/load
 // with loadErr; historyGone is Kind.HistoryGone, o the rest of its Options.
-func goneService(t *testing.T, loadErr error, historyGone func(sid, folder string) bool, sess model.Session, o Options) (*Service, *fakeAgent, *memSessions, *events) {
+func goneService(t *testing.T, loadErr error, historyGone func(sid, folder string) bool, sess model.ChatRecord, o Options) (*Service, *fakeAgent, *memSessions, *events) {
 	t.Helper()
 	agent := &fakeAgent{loadErr: loadErr}
 	sess.ID, sess.SessionID, sess.Agent = "c", "s1", "fake"
@@ -71,7 +71,7 @@ func goneService(t *testing.T, loadErr error, historyGone func(sid, folder strin
 		sess.Folder = t.TempDir()
 	}
 	sess.HasMessages = true
-	sessions := &memSessions{stored: []model.Session{sess}}
+	sessions := &memSessions{stored: []model.ChatRecord{sess}}
 	ev := &events{}
 	k := Kind{Name: "fake", Title: "Fake", Launch: agent.launch, Dialect: testDialect,
 		Gone: NotFound, HistoryGone: historyGone, Expires: "it deletes old ones"}
@@ -88,7 +88,7 @@ func never(string, string) bool  { return false }
 // is forgotten when it reopens: its record goes, and the list of removed
 // chats says so, until dismissed.
 func TestAChatWhoseSessionIsGoneIsRemoved(t *testing.T) {
-	svc, _, sessions, ev := goneService(t, errNotFound, always, model.Session{Title: "Old work"}, Options{})
+	svc, _, sessions, ev := goneService(t, errNotFound, always, model.ChatRecord{Title: "Old work"}, Options{})
 	_, _ = svc.Get("c")
 	if !testcheck.Eventually(func() bool { _, gone := ev.removed(); return len(gone) == 1 }) {
 		t.Fatal("not removed")
@@ -127,7 +127,7 @@ func TestAChatStaysUnlessItsSessionIsSurelyGone(t *testing.T) {
 		"its folder unreachable": {errNotFound, always, false, "/Volumes/not-mounted/x"},
 	} {
 		t.Run(name, func(t *testing.T) {
-			svc, _, sessions, ev := goneService(t, tc.err, tc.historyGone, model.Session{Folder: tc.folder}, Options{})
+			svc, _, sessions, ev := goneService(t, tc.err, tc.historyGone, model.ChatRecord{Folder: tc.folder}, Options{})
 			if tc.fresh {
 				sessions.stored[0].HasMessages = false
 			}
@@ -138,7 +138,7 @@ func TestAChatStaysUnlessItsSessionIsSurelyGone(t *testing.T) {
 			if ids, _ := ev.removed(); len(ids) > 0 || len(sessions.deleted) > 0 {
 				t.Errorf("removed %v", ids)
 			}
-			if st := svc.Status(cc.session); st.SessionGone {
+			if st := svc.Status(cc.record); st.SessionGone {
 				t.Errorf("status %+v", st)
 			}
 		})
@@ -152,13 +152,13 @@ func TestAChatWithWorkStaysWhenItsSessionIsGone(t *testing.T) {
 	wt := &model.Worktree{Path: "/repo/.worktrees/w", Branch: "nushi/w"}
 	for name, tc := range map[string]struct {
 		worktrees stateWorktrees
-		sess      model.Session
+		sess      model.ChatRecord
 		want      string
 	}{
-		"changes":   {stateWorktrees{state: model.WorktreeState{Changed: 2}}, model.Session{Worktree: wt}, "has uncommitted changes"},
-		"commits":   {stateWorktrees{state: model.WorktreeState{Commits: 1}}, model.Session{EarlierWorktrees: []model.Worktree{*wt}}, "has commits its base branch doesn't have"},
-		"unchecked": {stateWorktrees{err: errors.New("git")}, model.Session{Worktree: wt}, "can't be checked"},
-		"scratch":   {stateWorktrees{}, model.Session{Folder: "scratch"}, "its scratch folder has files"},
+		"changes":   {stateWorktrees{state: model.WorktreeState{Changed: 2}}, model.ChatRecord{Worktree: wt}, "has uncommitted changes"},
+		"commits":   {stateWorktrees{state: model.WorktreeState{Commits: 1}}, model.ChatRecord{EarlierWorktrees: []model.Worktree{*wt}}, "has commits its base branch doesn't have"},
+		"unchecked": {stateWorktrees{err: errors.New("git")}, model.ChatRecord{Worktree: wt}, "can't be checked"},
+		"scratch":   {stateWorktrees{}, model.ChatRecord{Folder: "scratch"}, "its scratch folder has files"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			scratch := t.TempDir()
@@ -177,7 +177,7 @@ func TestAChatWithWorkStaysWhenItsSessionIsGone(t *testing.T) {
 			if ids, _ := ev.removed(); len(ids) > 0 || len(sessions.deleted) > 0 {
 				t.Fatalf("removed %v", ids)
 			}
-			if st := svc.Status(c.session); !st.ReopenFailed || !st.SessionGone {
+			if st := svc.Status(c.record); !st.ReopenFailed || !st.SessionGone {
 				t.Errorf("status %+v", st)
 			}
 			launches, _, _ := agent.count()
@@ -206,7 +206,7 @@ func TestAChatWithWorkStaysWhenItsSessionIsGone(t *testing.T) {
 func TestSweepRemovesChatsWhoseHistoryIsGone(t *testing.T) {
 	agent := &fakeAgent{}
 	gone := map[string]bool{"s-gone": true, "s-unreachable": true, "s-fresh": true}
-	sessions := &memSessions{stored: []model.Session{
+	sessions := &memSessions{stored: []model.ChatRecord{
 		{ID: "gone", SessionID: "s-gone", Agent: "fake", Folder: t.TempDir(), HasMessages: true, Archived: true},
 		{ID: "here", SessionID: "s-here", Agent: "fake", Folder: t.TempDir(), HasMessages: true},
 		{ID: "unreachable", SessionID: "s-unreachable", Agent: "fake", Folder: "/Volumes/not-mounted/x", HasMessages: true},

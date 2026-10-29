@@ -26,17 +26,17 @@ func TestMessagesGoToSubagentsThroughTheAgent(t *testing.T) {
 	}
 	eventually(t, c, func() bool { return !c.busy })
 	got, _ := agent.texts()
-	if len(got) != 1 || got[0] != claude.Relay("Explore", "ab59", "and README.md") {
+	if len(got) != 1 || got[0] != claude.ToSubagent("Explore", "ab59", "and README.md") {
 		t.Errorf("prompts = %q", got)
 	}
 	c.mu.Lock()
 	it := c.items[len(c.items)-1]
 	c.mu.Unlock()
-	if it.Kind != model.UserMessage || it.Text != "and README.md" || it.RelayTo != "Explore" {
+	if it.Kind != model.UserMessage || it.Text != "and README.md" || it.ToSubagentName != "Explore" {
 		t.Errorf("message = %+v", it)
 	}
 	// Taken back, it is still for that subagent.
-	if m := messageOf(it); m.To != "a1" || m.Relay == nil || m.Relay.Agent != "Explore" {
+	if m := messageOf(it); m.To != "a1" || m.ToSubagent == nil || m.ToSubagent.Agent != "Explore" {
 		t.Errorf("taken back: %+v", m)
 	}
 
@@ -46,7 +46,7 @@ func TestMessagesGoToSubagentsThroughTheAgent(t *testing.T) {
 	c.mu.Lock()
 	it = c.items[len(c.items)-1]
 	c.mu.Unlock()
-	if it.RelayTo != "Explore" || strings.Contains(it.Text, "Forward") {
+	if it.ToSubagentName != "Explore" || strings.Contains(it.Text, "Forward") {
 		t.Errorf("replayed = %+v", it)
 	}
 
@@ -64,7 +64,7 @@ func TestMessagesGoToSubagentsThroughTheAgent(t *testing.T) {
 // A message for a subagent follows the agent's call that passes it on: sent,
 // then relayed (or failed); one the agent's turn ends without passing on
 // fails.
-func TestARelayFollowsTheAgentsCall(t *testing.T) {
+func TestAMessageToASubagentFollowsTheAgentsCall(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	for _, u := range backgroundSubagent() {
 		update(c, u)
@@ -97,18 +97,18 @@ func TestARelayFollowsTheAgentsCall(t *testing.T) {
 			t.Fatal(err)
 		}
 		eventually(t, c, func() bool { return !c.busy })
-		if it := last(); it.RelayState != tc.want || it.RelayedBy != tc.by {
-			t.Errorf("after %s: %s by %q", tc.calls[len(tc.calls)-1].SessionUpdate, it.RelayState, it.RelayedBy)
+		if it := last(); it.ToSubagentState != tc.want || it.PassedOnBy != tc.by {
+			t.Errorf("after %s: %s by %q", tc.calls[len(tc.calls)-1].SessionUpdate, it.ToSubagentState, it.PassedOnBy)
 		}
 	}
 
 	// Replayed, the message names its subagent again.
 	update(c, acp.SessionUpdate{SessionUpdate: "user_message_chunk", UserMessageChunk: &acp.ContentChunk{MessageID: "u9",
-		Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: claude.Relay("general-purpose", "ab59", "hi")}}}})
+		Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: claude.ToSubagent("general-purpose", "ab59", "hi")}}}})
 	c.mu.Lock()
 	it := c.items[len(c.items)-1]
 	c.mu.Unlock()
-	if it.RelayCall != "a1" || it.RelayState != "" {
+	if it.ToSubagent != "a1" || it.ToSubagentState != "" {
 		t.Errorf("replayed: %+v", it)
 	}
 }

@@ -31,14 +31,14 @@ func (s *Service) Rename(chatID, name string) error {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.saveLocked(func(s *model.Session) { s.Name = strings.TrimSpace(name) })
+	c.saveLocked(func(s *model.ChatRecord) { s.Name = strings.TrimSpace(name) })
 	return nil
 }
 
 // record is what Nushi keeps of a listed chat, as stored has it: the open
 // chat's, or else the stored one's, without opening the chat (its
 // transcript isn't read).
-func (s *Service) record(id string) (model.Session, error) {
+func (s *Service) record(id string) (model.ChatRecord, error) {
 	s.mu.Lock()
 	c := s.chats[id]
 	s.mu.Unlock()
@@ -47,15 +47,15 @@ func (s *Service) record(id string) (model.Session, error) {
 		return sess, err
 	}
 	if c.parent != nil {
-		return model.Session{}, fmt.Errorf("%q is a side chat", id)
+		return model.ChatRecord{}, fmt.Errorf("%q is a side chat", id)
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.session, nil
+	return c.record, nil
 }
 
 // Session is what Nushi keeps of a chat, without reopening it.
-func (s *Service) Session(chatID string) (model.Session, error) {
+func (s *Service) Session(chatID string) (model.ChatRecord, error) {
 	return s.record(chatID)
 }
 
@@ -71,12 +71,12 @@ func (s *Service) LinkPull(chatID string, pull *model.ChatGitHub) error {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	now := c.session.PullLink()
+	now := c.record.PullLink()
 	switch {
 	case pull == nil && now == nil:
 		return nil
 	case pull == nil:
-		c.saveLocked(func(s *model.Session) {
+		c.saveLocked(func(s *model.ChatRecord) {
 			s.NoPull = now.Number
 			if s.GitHub != nil && s.GitHub.Pull {
 				s.GitHub = nil
@@ -86,11 +86,11 @@ func (s *Service) LinkPull(chatID string, pull *model.ChatGitHub) error {
 		})
 		c.logLocked().Info("pull request unlinked")
 		return nil
-	case pull.Branch != "" && (pull.Number == c.session.NoPull || now != nil && now.Branch == ""):
+	case pull.Branch != "" && (pull.Number == c.record.NoPull || now != nil && now.Branch == ""):
 		return nil // linked by hand, or unlinked: kept
 	}
 	p := *pull
-	c.saveLocked(func(s *model.Session) {
+	c.saveLocked(func(s *model.ChatRecord) {
 		s.Pull, s.NoPull = &p, 0
 		if s.GitHub != nil && s.GitHub.Pull {
 			s.GitHub = nil // linked by hand to another
@@ -111,8 +111,8 @@ func (s *Service) DropFoundPull(chatID, branch string) {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if p := c.session.Pull; p != nil && p.Branch != "" && p.Branch != branch {
-		c.saveLocked(func(s *model.Session) { s.Pull = nil })
+	if p := c.record.Pull; p != nil && p.Branch != "" && p.Branch != branch {
+		c.saveLocked(func(s *model.ChatRecord) { s.Pull = nil })
 	}
 }
 
@@ -129,11 +129,11 @@ func (s *Service) Archive(chatID string, archived bool) error {
 		c.mu.Unlock()
 		return errReopening
 	}
-	if !archived && c.session.Archived {
+	if !archived && c.record.Archived {
 		c.kept, c.reopenFailed, c.asleep, c.sessionGone = false, false, false, false // it reopens (its replay merged with the copy), and says again
 	}
-	c.saveLocked(func(s *model.Session) {
-		s.Archived, s.Unseen = archived, s.Unseen && !archived
+	c.saveLocked(func(s *model.ChatRecord) {
+		s.Archived, s.Done = archived, s.Done && !archived
 		if archived {
 			s.Pin = 0
 		}
@@ -262,14 +262,14 @@ func (s *Service) discard(c *chat, ids []string) {
 
 // throwawayLocked adds sessions the agent forked from the chat that nobody
 // will see again to the chat's record of them, or with deleted takes them
-// out of it (model.Session.Throwaway).
+// out of it (model.ChatRecord.Throwaway).
 // Not while the chat is being deleted: its file may be gone, and Delete
 // deletes them anyway.
 func (c *chat) throwawayLocked(ids []string, deleted bool) {
 	if c.halting {
 		return
 	}
-	c.saveLocked(func(s *model.Session) {
+	c.saveLocked(func(s *model.ChatRecord) {
 		if deleted {
 			s.Throwaway = slices.DeleteFunc(slices.Clone(s.Throwaway), func(id string) bool { return slices.Contains(ids, id) })
 		} else {
@@ -303,8 +303,8 @@ func (s *Service) Roots(chatID string) ([]string, error) {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	roots := []string{c.session.Folder}
-	if wt := c.session.Worktree; wt != nil && wt.Path != c.session.Folder {
+	roots := []string{c.record.Folder}
+	if wt := c.record.Worktree; wt != nil && wt.Path != c.record.Folder {
 		roots = append(roots, wt.Path)
 	}
 	return roots, nil
@@ -323,7 +323,7 @@ func (s *Service) Wrote(chatID, path string) bool {
 	path = filepath.Clean(path)
 	abs := func(p string) string {
 		if !filepath.IsAbs(p) {
-			p = filepath.Join(c.session.Folder, p)
+			p = filepath.Join(c.record.Folder, p)
 		}
 		return filepath.Clean(p)
 	}

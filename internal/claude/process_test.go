@@ -29,7 +29,7 @@ func claudeShell(quoted string) []string {
 
 // A shell runs a call's command when its eval unquotes to the command
 // whole, however Claude Code quoted it.
-func TestRunsShell(t *testing.T) {
+func TestRunsBackgroundCommand(t *testing.T) {
 	loop := "until test -f /tmp/made-up/ready; do\n  sleep 60\ndone"
 	quoted := "echo 'it'\"'\"'s' \"$HOME\" a\\\\b; sleep 300"
 	for _, tc := range []struct {
@@ -50,18 +50,18 @@ func TestRunsShell(t *testing.T) {
 		{"no command line", "sleep 300", nil, false},
 		{"a quote left open", "sleep 300", claudeShell("'sleep 300 < /dev/null"), false},
 	} {
-		if got := RunsShell(bashCall(t, tc.command), tc.args); got != tc.want {
-			t.Errorf("%s: RunsShell = %v", tc.name, got)
+		if got := RunsBackgroundCommand(bashCall(t, tc.command), tc.args); got != tc.want {
+			t.Errorf("%s: RunsBackgroundCommand = %v", tc.name, got)
 		}
 	}
 	cut := bashCall(t, loop)
 	cut.Input = cut.Input[:len(cut.Input)/2] + "…"
-	if RunsShell(cut, claudeShell("'"+loop+"' < /dev/null")) {
+	if RunsBackgroundCommand(cut, claudeShell("'"+loop+"' < /dev/null")) {
 		t.Error("matched a cut input")
 	}
 	read := bashCall(t, loop)
 	read.Tool = "Read"
-	if RunsShell(read, claudeShell("'"+loop+"' < /dev/null")) {
+	if RunsBackgroundCommand(read, claudeShell("'"+loop+"' < /dev/null")) {
 		t.Error("matched a call that isn't Bash")
 	}
 }

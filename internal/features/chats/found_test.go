@@ -49,7 +49,7 @@ func TestFindLeavesOutNushisOwn(t *testing.T) {
 		{SessionID: "elsewhere", Cwd: other, Title: "Elsewhere", UpdatedAt: "2026-10-03T10:00:00Z"},
 		{SessionID: "lost", Cwd: gone, Title: "Lost"},
 	}}
-	sessions := &memSessions{stored: []model.Session{{ID: "c0", SessionID: "x", Earlier: []model.AgentSession{{ID: "before-move"}}, Throwaway: []string{"fork"}}}}
+	sessions := &memSessions{stored: []model.ChatRecord{{ID: "c0", SessionID: "x", Earlier: []model.AgentSession{{ID: "before-move"}}, Throwaway: []string{"fork"}}}}
 	f.listed = append(f.listed, acp.SessionInfo{SessionID: "a-fork", Cwd: resolved, UpdatedAt: "2026-10-05T10:00:00Z"})
 	k := Kind{Name: "a", Launch: f.launch, OpenElsewhere: func([]string) map[string]string { return map[string]string{"old": "a terminal"} },
 		Forked: func([]string) map[string]bool { return map[string]bool{"a-fork": true} }}
@@ -120,7 +120,7 @@ func ids(found []Found) string {
 // session; Nushi's own forks aren't opened as chats.
 func TestOpenRefuses(t *testing.T) {
 	f := &fakeAgent{lists: true, loadErr: errors.New("no such session")}
-	sessions := &memSessions{stored: []model.Session{{ID: "c0", SessionID: "x", Agent: "a", Throwaway: []string{"fork"}}}}
+	sessions := &memSessions{stored: []model.ChatRecord{{ID: "c0", SessionID: "x", Agent: "a", Throwaway: []string{"fork"}}}}
 	svc := newService(t, []Kind{{Name: "a", Launch: f.launch}}, Options{Sessions: sessions})
 	ctx, dir := context.Background(), t.TempDir()
 	if _, err := svc.Open(ctx, "a", dir, "gone", "Gone"); err == nil || len(svc.chats) > 0 || len(sessions.saved) > 0 {

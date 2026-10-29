@@ -59,7 +59,7 @@ func TestAPromptPendingAtShutdownEndsCancelled(t *testing.T) {
 			agent.updates = []acp.SessionUpdate{chunk("m1", "a")}
 			turn(t, svc, c, "one")
 			asks(t, c, kind)
-			if !svc.Status(model.Session{ID: c.id}).Waiting {
+			if !svc.Status(model.ChatRecord{ID: c.id}).Waiting {
 				t.Fatal("not waiting on the user")
 			}
 			svc.Close()
@@ -73,7 +73,7 @@ func TestAPromptPendingAtShutdownEndsCancelled(t *testing.T) {
 
 			svc2 := restarted(t, agent, c, store)
 			c2 := reopened(t, svc2, c.id)
-			if svc2.Status(model.Session{ID: c.id}).Waiting {
+			if svc2.Status(model.ChatRecord{ID: c.id}).Waiting {
 				t.Error("needs you after the restart")
 			}
 			if got := shownPrompts(c2); got != want {
@@ -102,8 +102,8 @@ func TestAStuckStoreLoadsClean(t *testing.T) {
 		t.Errorf("copy after start: %s", got)
 	}
 	c2 := reopened(t, svc2, c.id)
-	if got := shownPrompts(c2); got != want || svc2.Status(model.Session{ID: c.id}).Waiting {
-		t.Errorf("reopened: %s, waiting %v", got, svc2.Status(model.Session{ID: c.id}).Waiting)
+	if got := shownPrompts(c2); got != want || svc2.Status(model.ChatRecord{ID: c.id}).Waiting {
+		t.Errorf("reopened: %s, waiting %v", got, svc2.Status(model.ChatRecord{ID: c.id}).Waiting)
 	}
 
 	// A copy that still has one (written meanwhile) is cancelled as the
@@ -112,7 +112,7 @@ func TestAStuckStoreLoadsClean(t *testing.T) {
 	testcheck.NoErr(t, store.Append(c.id, []model.Item{{ID: "item-8", Kind: model.Permission, Status: "pending"}}, []string{"m1"}))
 	var mu sync.Mutex
 	var events []model.Event
-	svc3 := newService(t, []Kind{{Name: "claude", Title: "Claude", Launch: agent.launch, Dialect: testDialect}}, Options{Sessions: &memSessions{stored: []model.Session{c.session}}, Scratch: t.TempDir(), Copies: store, Publish: func(e model.Event) {
+	svc3 := newService(t, []Kind{{Name: "claude", Title: "Claude", Launch: agent.launch, Dialect: testDialect}}, Options{Sessions: &memSessions{stored: []model.ChatRecord{c.record}}, Scratch: t.TempDir(), Copies: store, Publish: func(e model.Event) {
 		mu.Lock()
 		defer mu.Unlock()
 		events = append(events, e)
@@ -148,8 +148,8 @@ func TestAPromptAskedAsTheChatReopensShows(t *testing.T) {
 			asks(t, c2, kind)
 			close(agent.loadGate)
 			eventually(t, c2, func() bool { return !c2.busy && c2.agent != nil })
-			if got := shownPrompts(c2); got != name+":pending" || !svc2.Status(model.Session{ID: c.id}).Waiting {
-				t.Errorf("after the reopen: %q, waiting %v", got, svc2.Status(model.Session{ID: c.id}).Waiting)
+			if got := shownPrompts(c2); got != name+":pending" || !svc2.Status(model.ChatRecord{ID: c.id}).Waiting {
+				t.Errorf("after the reopen: %q, waiting %v", got, svc2.Status(model.ChatRecord{ID: c.id}).Waiting)
 			}
 		})
 	}

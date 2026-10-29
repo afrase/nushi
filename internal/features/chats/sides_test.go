@@ -39,8 +39,8 @@ func TestSideChatKeepsToItself(t *testing.T) {
 	if len(main.Items) != 1 || main.Items[0].Text != "main" || len(aside.Items) != 1 || aside.Items[0].Text != "aside" {
 		t.Errorf("main = %+v, side = %+v", main.Items, aside.Items)
 	}
-	if p := svc.chats[id]; !reflect.DeepEqual(p.session.Throwaway, []string{"fork1"}) {
-		t.Errorf("the chat doesn't keep its side chat's session until it's deleted: %v", p.session.Throwaway)
+	if p := svc.chats[id]; !reflect.DeepEqual(p.record.Throwaway, []string{"fork1"}) {
+		t.Errorf("the chat doesn't keep its side chat's session until it's deleted: %v", p.record.Throwaway)
 	}
 	// Asked something, it isn't stored either; closed mid-turn, the turn stops.
 	sideChat := svc.chats[side]
@@ -128,5 +128,5 @@ func TestClosingASideChatGivesUpOnASilentDelete(t *testing.T) {
 	}
 	close(agent.deleteGate) // the second goes through
 	c := svc.chats[id]
-	eventually(t, c, func() bool { return !slices.Contains(c.session.Throwaway, side) })
+	eventually(t, c, func() bool { return !slices.Contains(c.record.Throwaway, side) })
 }

@@ -165,7 +165,7 @@ func TestCopiesOff(t *testing.T) {
 func TestExpiredChatKeptForItsCopy(t *testing.T) {
 	store, err := transcripts.Open(filepath.Join(t.TempDir(), "transcripts"))
 	testcheck.NoErr(t, err)
-	svc, _, sessions, ev := goneService(t, errNotFound, always, model.Session{Title: "Old work"}, Options{Copies: store})
+	svc, _, sessions, ev := goneService(t, errNotFound, always, model.ChatRecord{Title: "Old work"}, Options{Copies: store})
 	testcheck.NoErr(t, store.Append("c", []model.Item{{ID: "item-1", Kind: model.UserMessage, Text: "one"}, {ID: "m1", Kind: model.AgentMessage, Text: "a"}}, []string{"", "item-1"}))
 
 	_, _ = svc.Get("c")
@@ -200,9 +200,9 @@ func TestListAndClearCopies(t *testing.T) {
 	eventually(t, c, func() bool { return !c.busy })
 	testcheck.NoErr(t, store.Append("ORPHAN", []model.Item{{ID: "x", Kind: model.AgentMessage, Text: "left"}}, []string{""}))
 	c.mu.Lock()
-	sess := c.session
+	sess := c.record
 	c.mu.Unlock()
-	svc.sessions.(*memSessions).stored = []model.Session{sess}
+	svc.sessions.(*memSessions).stored = []model.ChatRecord{sess}
 
 	list, err := svc.ListCopies()
 	testcheck.NoErr(t, err)
@@ -237,7 +237,7 @@ func TestListCopiesAtScale(t *testing.T) {
 	testcheck.NoErr(t, err)
 	svc := newService(t, nil, Options{Scratch: t.TempDir(), Copies: store})
 	const n = 5000
-	var sessions []model.Session
+	var sessions []model.ChatRecord
 	for i := range n {
 		id := fmt.Sprintf("chat-%04d", i)
 		it := model.Item{ID: "m", Kind: model.AgentMessage, Text: strings.Repeat("words ", 50*(1+i%20))}
@@ -245,7 +245,7 @@ func TestListCopiesAtScale(t *testing.T) {
 			it.Images = []model.Image{{MimeType: "image/png", Data: []byte(id)}}
 		}
 		testcheck.NoErr(t, store.Append(id, []model.Item{it}, []string{""}))
-		sessions = append(sessions, model.Session{ID: id, Agent: "claude", Title: "Chat " + id})
+		sessions = append(sessions, model.ChatRecord{ID: id, Agent: "claude", Title: "Chat " + id})
 	}
 	svc.sessions.(*memSessions).stored = sessions
 	start := time.Now()

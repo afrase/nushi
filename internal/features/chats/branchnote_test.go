@@ -56,7 +56,7 @@ func TestBranchNoteChecksOutsideTheLock(t *testing.T) {
 	wts := &heldWorktrees{checking: make(chan struct{}, 1), held: make(chan struct{})}
 	c.mu.Lock()
 	c.worktrees = wts
-	c.session.Worktree = &model.Worktree{Repo: "/r", Path: "/r", Branch: "nushi/new", Told: "nushi/old"}
+	c.record.Worktree = &model.Worktree{Repo: "/r", Path: "/r", Branch: "nushi/new", Told: "nushi/old"}
 	line := c.addLocked(model.Item{Kind: model.Notice, Status: "branch_renamed", Text: "Branch renamed to nushi/new"})
 	c.mu.Unlock()
 	sent := make(chan error, 1)
@@ -84,7 +84,7 @@ func TestBranchNoteChecksOutsideTheLock(t *testing.T) {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if it := c.itemLocked(line); it == nil || !strings.HasSuffix(it.Text, toldSuffix) || c.session.Worktree.Told != "nushi/new" {
-		t.Errorf("line %+v, told %q", it, c.session.Worktree.Told)
+	if it := c.itemLocked(line); it == nil || !strings.HasSuffix(it.Text, toldSuffix) || c.record.Worktree.Told != "nushi/new" {
+		t.Errorf("line %+v, told %q", it, c.record.Worktree.Told)
 	}
 }

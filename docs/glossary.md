@@ -11,7 +11,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Adapter** | The ACP program Nushi sets up for an agent that needs one (Claude's, Codex's), from Nushi's own lockfile, into the data folder. Set up, Update, Remove. | `Adapter`, `SetUpAgent`, `internal/claude/adapter` | 0037 |
 | **Bridge** | Nushi's own ACP translator for an agent without ACP: `nushid ante-acp`, `nushid pig-acp`. | `internal/ante`, `internal/pig` | 0030, 0039 |
 | **ACP** | The Agent Client Protocol, how the daemon talks to agents. | `github.com/afrase/acp-go` | 0041 |
-| **Chat** | A conversation with an agent as Nushi shows it: the agent's session plus what Nushi keeps (title, folder, worktree, picks). | `model.Session` (the record), `model.Chat` (a snapshot), proto `Chat` | 0008 |
+| **Chat** | A conversation with an agent as Nushi shows it: the agent's session plus what Nushi keeps (title, folder, worktree, picks). | `model.ChatRecord` (the record), `model.Chat` (a snapshot), proto `Chat` | 0008 |
 | **Session** | The agent's own record of a conversation, which it keeps and resumes. A chat is on one at a time; a move or a rewind starts another. | `SessionID`, `AgentSession`, ACP `session/*` | 0008 |
 | **Session started elsewhere** | A session begun in a terminal, opened as a chat from New chat's Sessions →. | `ListAgentSessions`, `OpenAgentSession`, `FoundSession` | 0035 |
 | **Turn** | One message and everything the agent does for it, until it ends. Stop (Esc) ends it. | `ChatStatus.busy`, `CancelTurn` | 0044 |
@@ -27,27 +27,27 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Question** | A form the agent asks you to fill in (Claude's AskUserQuestion), as a question card. | `Question` item, `Field`, `QuestionCard`, `AnswerQuestion` | 0009 |
 | **Needs you** | The chat waits on you: a permission prompt or a question. Amber dot, Dock badge, "Needs you ↓". | `waiting` (`ChatStatus`, `ChatPhase`), `WaitingCard` | |
 | **Chat states** | A chat's dot and word: needs you, working, in background, done, asleep, idle, new, expired, couldn't start, archived. | `ChatPhase`, `phaseWord` | |
-| **Done** | A turn ended while nothing showed the chat; showing it clears it. | `Unseen`, `ChatPhase.unseen` | |
+| **Done** | A turn ended while nothing showed the chat; showing it clears it. | `ChatRecord.Done`, `ChatPhase.unseen` | |
 | **Subagent** | A helper the agent starts for a task ("Explore: find the scroll handling"). Its steps show in its row and its pane; it can be stopped alone. | `Subagent`, `Item.Agent`, `SubagentPane` | 0044 |
-| **Message to a subagent** | A message you write to a running subagent; the agent passes it on ("To Explore, through Claude"). | `Relay`, `RelayTo`, proto `to_subagent`, `relay_to` | |
+| **Message to a subagent** | A message you write to a running subagent; the agent passes it on ("To Explore, through Claude"). | `model.ToSubagent`, `Item.ToSubagentName`, `claude/subagents.go`, `to_subagent.go`, proto `to_subagent`, `relay_to` | |
 | **Background task** | A subagent or command still running after the turn that started it ended. The Background tasks widget lists them; each has a Stop. | `ChatStatus.background`, `StopTask` | 0044 |
-| **Background command** | A command the agent left running in the background, its output in a pane. | `Shell`, `ShellPane`, `Item.TaskID` | |
+| **Background command** | A command the agent left running in the background, its output in a pane. | `BackgroundCommand`, `ShellPane`, `Item.TaskID`, `background.go` | |
 | **Queue** | Messages sent while a turn runs (⏎, Queue). Each goes at the agent's next chance: into the running turn when the agent takes steering, else as the next message. Shown as pills over the box. | `QueuedMessage`, `ChatQueue`, `SendPrompt.queue`, `Unqueue`, `QueuePills` | |
 | **Steer** | "Steer: stop and send now" (⌘⏎): stops the running turn and sends at once. Not the agent's steering (Synonyms). | `SendPrompt.now` | |
 | **Side chat** | A fork of the chat, beside it, that knows the conversation but doesn't add to it; you can go back and forth in it, as in Claude Code's side chat. It ends when closed (⇧⌘B). | `ForkChat`, `CloseSideChat`, `sides.go`, `side_chat.dart`, `Daemon.openSide` | |
 | **Rewind** | Go back to just before one of your messages: the session forks there and the message returns to the box. Files aren't rewound. Esc Esc lists them. | `RewindChat`, `Item.ForkAt`, `Rewindable` | 0020 |
 | **Sleep** | An idle chat's agent stops; the chat stays and the next message wakes it. On its own after 30 idle minutes. The chat is then asleep. | `SleepChat`, `ChatStatus.asleep` | 0032 |
-| **Archive** | Put a chat away: its agent stops, it's read-only and listed last. Unarchive reopens it. | `ArchiveChat`, `Session.Archived` | |
+| **Archive** | Put a chat away: its agent stops, it's read-only and listed last. Unarchive reopens it. | `ArchiveChat`, `ChatRecord.Archived` | |
 | **Reload** | Restart the chat's agent on its session, to pick up changed MCP servers. | `ReloadChat` | |
 | **Move** | The chat goes on in another folder or worktree; its session forks there. | `MoveChat` | 0014 |
 | **Delete** | Remove a chat, the agent's history of it, and its worktree and branch if you say so. | `PlanDeleteChat`, `DeleteChat` | 0015 |
 | **Expired** | A chat whose agent deleted its session: read-only, on Nushi's copy, with Start a new chat here. | `session_gone`, `RemovedChat` | 0015, 0047 |
 | **Transcript** | The conversation as shown: your messages as chapter bands, tool rows, subagents, plans. | `transcript.dart`, `items.dart` | 0026 |
 | **Nushi's copy** | Nushi's own read-only copy of each transcript as shown, for what the agent no longer replays. Settings › Chat history. | `internal/transcripts`, `TranscriptCopy` | 0047 |
-| **Mode** | The agent's own permission mode (Auto, Plan…): the only permission control. The picker on the left under the box. | `ConfigOption` category `mode`, `Session.Mode` | 0007 |
+| **Mode** | The agent's own permission mode (Auto, Plan…): the only permission control. The picker on the left under the box. | `ConfigOption` category `mode`, `ChatRecord.Mode` | 0007 |
 | **Model**, **Effort** | The model the agent runs and how hard it thinks; the model menu under the box (Effort ▸, More models ▸). | `ConfigOption` categories `model`, `thought_level` | 0060 |
-| **Picks** | The options you chose for a chat, put back whenever its session opens; an agent's last picks start its new chats. | `Session.Picks` | 0060 |
-| **Ultracode** | Claude Code's standing multi-agent workflows for a chat; in ⋯ under the box, off by default. | `Session.Ultracode`, `ultracodeID` | |
+| **Picks** | The options you chose for a chat, put back whenever its session opens; an agent's last picks start its new chats. | `ChatRecord.Picks` | 0060 |
+| **Ultracode** | Claude Code's standing multi-agent workflows for a chat; in ⋯ under the box, off by default. | `ChatRecord.Ultracode`, `ultracodeID` | |
 | **Fast** | Claude's fast mode: one of the agent's options in ⋯ under the box, named as the agent names it. | `ConfigOption` id `fast` | |
 | **Slash command** | One of the agent's `/` commands, completed in the box. | `Command`, `ChatCommands` | |
 | **Context** | What fills the agent's context window, broken down in the Context widget. | `GetContextUsage`, `ContextUsage` | 0017 |
@@ -64,8 +64,8 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Restart daemon** | Start the daemon again; an older daemon does it on its own once nothing runs. | `RestartWhenIdle`, `features/restart` | 0056 |
 | **Sidebar** | The left column: Pinned, then projects and their chats, archived last; Jira, GitHub and Settings at its foot. | `sidebar.dart`, `sidebar_groups.dart`, `sidebar_rows.dart`, `slide_list.dart` | |
 | **Project** | A group in the sidebar: a folder (a repository with its worktrees) and its chats, in the order they were dragged into. Also the "in this project" scope of MCP servers and skills. | `sidebarGroups`, `sidebarChats` | |
-| **Pinned** | The sidebar's section above the projects, shown while a chat is pinned: Pin chat and Unpin chat (⌘D). A pinned chat leaves its project's list; the daemon keeps which and in what order, so the phone has them too. Not an artifact's pin. | `Chat.pin`, `PinChats`, `PinnedSection`, `chat_pins.dart` | 0064 |
-| **Folder** | Where a chat's agent works. A chat with No folder gets a scratch folder of its own. | `Session.Folder`, `Session.Scratch` | |
+| **Pinned** | The sidebar's section above the projects, shown while a chat is pinned: Pin chat and Unpin chat (⌘D). A pinned chat leaves its project's list; the daemon keeps which and in what order, so the phone has them too. Not an artifact's pin. | `Chat.pin`, `ChatRecord.Pin`, `PinChats`, `PinnedSection`, `chat_pins.dart` | 0064 |
+| **Folder** | Where a chat's agent works. A chat with No folder gets a scratch folder of its own. | `ChatRecord.Folder`, `ChatRecord.Scratch` | |
 | **Worktree** | A git worktree a chat runs in, `.worktrees/<two words>` on `nushi/<two words>`: New worktree, Move. | `Worktree`, `GitWorktree` | 0016 |
 | **Branch** | The branch a chat's folder has out: Rename branch… for a worktree's, the Branch row's menu to switch. | `RenameBranch`, `SwitchBranch`, `GitBranch` | 0016 |
 | **Chat header** | The top bar: title, agent, model, the tabs, the terminal and details buttons, ⋯. | `ChatHeader` | |
@@ -105,7 +105,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Inbox** | The GitHub view's three cards: Review requested, My pull requests, Assigned issues. | `ListGitHubInbox`, `github_inbox.dart` | 0046 |
 | **Item** (GitHub) | A pull request or an issue in the inbox. | `GitHubItem`, `GitHubRef` | |
 | **Start work** | Start a chat on an issue or pull request: pick a folder, then New chat with it, in a worktree. | `StartChatRequest`, `new_chat_issue.dart` | |
-| **Pull request** (a chat's) | The pull request whose head is the chat's branch, found by itself or linked by hand (Link pull request…, Unlink). | `FindChatPull`, `LinkChatPull`, `Session.Pull`, `PullLink` | 0059 |
+| **Pull request** (a chat's) | The pull request whose head is the chat's branch, found by itself or linked by hand (Link pull request…, Unlink). | `FindChatPull`, `LinkChatPull`, `ChatRecord.Pull`, `PullLink` | 0059 |
 | **Pull request tab** | The chat's pull request in the chat's place: its head, the To do list, then conversation, checks, files with review threads. | `PullTab`, `GitHubPullPane` | 0059 |
 | **Status lights** | The Pull request tab's four boxes under its head, Checks, Review, Threads and Branch, each in its state's color; a click goes to its section. | `pullLights`, `PullHeader` | |
 | **Your move** | The sentence over the status lights saying whose move it is: "Your move. 5 things block the merge…", "Waiting on @team.", "Ready to merge." | `moveWords` | |
@@ -156,7 +156,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 
 One line each; the word after the arrow wins.
 
-- side question → **side chat** (the owner, 2026-10-29: "side chat, since you can go back and forth"; a side chat's session title in `sides.go` still says Side question: Renames to do).
+- side question → **side chat** (the owner, 2026-10-29: "side chat, since you can go back and forth").
 - card, for the details panel's parts → **widget** (Context card, Artifacts card, MCP card, Pull request card: all widgets). Older ADRs' titles say card; they stay as written.
 - details pane → **details panel**. Panel is the details panel and the terminals'; pane is the side pane and what's in it.
 - PR → **pull request** in the UI and docs; commit messages may say PR.
@@ -181,10 +181,8 @@ One line each; the word after the arrow wins.
 Code that uses an old word, for the clean-up batch. Proto names stay (the API is additive, ADR 0004); a rename there is a new field or call.
 
 - `PanelCard`, `PanelCards`, `panel_cards.dart`, `collapsedCards` → widget; `artifacts_card.dart`, `mcp_card.dart`, `pull_card.dart` → `*_widget.dart`; `agents_card.dart` holds the Background tasks widget → `background_tasks_widget.dart`. Doc comments that call them cards (`details_panel.dart`, `chat_header.dart`, `app_actions.dart`, `pull_link.dart`, `pull_states.dart`). `CardShell` and `CardList` serve the inbox's and task list's cards too: keep them.
-- A side chat's session title, "Side question" (`sides.go`, the agent's session) → Side chat.
-- `Relay`, `RelayTo`, `RelayCall`, `RelayState`, `RelayedBy`, `RelayStop` (`model.Item`, `model.Message`) and proto `relay_to`, `relay_stop` → a subagent message word (`ToSubagent`…), so relay means the server only.
-- `model.Shell` and `ShellPane` (a background command) → `BackgroundCommand`; `Shell` is easy to take for a terminal's.
-- `model.Session` is a chat's record, beside `model.Chat`, the snapshot → `ChatRecord` or similar.
-- `Unseen` and `ChatPhase.unseen` → `done`, or keep unseen in code and say so here (it is precise: not yet seen).
+- Proto `relay_to`, `relay_call`, `relay_state`, `relayed_by`, `relay_stop` (`Item`, `QueuedMessage`) and the app's uses → `to_subagent…`, as Go's `ToSubagent…` (`model.ToSubagent`, `Item.ToSubagentName`, `ToSubagent`, `ToSubagentState`, `PassedOnBy`, `ToSubagentStop`), so relay means the server only. Their JSON names on disk and the state "relayed" stay.
+- Proto `Shell` and `ShellPane` (a background command) → `BackgroundCommand`, as Go's `model.BackgroundCommand`; `Shell` is easy to take for a terminal's.
+- Proto `Chat.unseen`, the app's `ChatState.unseen` and `ChatPhase.unseen` → `done`, as Go's `ChatRecord.Done` (stored as `Unseen`).
 - `ToolGroupView` → `RunView` (the UI's run).
 - Steer: the button that stops the turn shares its name with the agent's steering, which is what Queue does (proto `SendPromptRequest.queue`'s comment, `composer.dart`'s "steers"). Either rename the button (Stop and send) or always qualify the agent's ("the agent's steering"). A product call: the owner's.

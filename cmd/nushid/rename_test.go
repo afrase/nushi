@@ -33,7 +33,7 @@ func TestMoveData(t *testing.T) {
 		t.Fatal(err)
 	}
 	st := store.New(old)
-	for _, s := range []model.Session{
+	for _, s := range []model.ChatRecord{
 		{ID: "c1", SessionID: "s2", Folder: repo, Earlier: []model.AgentSession{{ID: "s1", Folder: scratch}}},
 		{ID: "c2", SessionID: "s3", Folder: filepath.Join(old, "scratch", "c2")}, // never sent a message
 	} {

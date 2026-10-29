@@ -229,7 +229,7 @@ func (b *bridge) SetSessionConfigOption(ctx context.Context, req *acp.SetSession
 }
 
 // ExtMethod takes the bridge's extensions: steering, and the Context
-// card's ContextMethod.
+// widget's ContextMethod.
 func (b *bridge) ExtMethod(ctx context.Context, method string, params json.RawMessage) (any, error) {
 	switch method {
 	case steering.Method:

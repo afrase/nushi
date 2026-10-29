@@ -174,7 +174,7 @@ func TestABackgroundCommandIsStoppedThroughClaude(t *testing.T) {
 	svc, agent, c := newChat(t, claudeSession, &memModes{})
 	c.mu.Lock()
 	c.addLocked(model.Item{ID: sleeping, Kind: model.ToolCall, Tool: "Bash", Title: "sleep 600; echo slept", Status: "completed",
-		Shell: &model.Shell{ID: "bgu2i75cc", State: "running"}})
+		BackgroundCommand: &model.BackgroundCommand{ID: "bgu2i75cc", State: "running"}})
 	c.mu.Unlock()
 	for _, n := range recorded(t, "stops.jsonl") { // its TaskStop call, as Claude answered
 		if tc := n.Update.ToolCall; tc != nil && tc.Meta["claudeCode"].(map[string]any)["toolName"] == "TaskStop" ||
@@ -190,7 +190,7 @@ func TestABackgroundCommandIsStoppedThroughClaude(t *testing.T) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	i := slices.IndexFunc(c.items, func(it model.Item) bool { return it.Kind == model.UserMessage })
-	if it := c.items[i]; !it.RelayStop || it.RelayCall != sleeping || it.RelayTo != "sleep 600; echo slept" || it.RelayState != "relayed" || it.Text != "" {
+	if it := c.items[i]; !it.ToSubagentStop || it.ToSubagent != sleeping || it.ToSubagentName != "sleep 600; echo slept" || it.ToSubagentState != "relayed" || it.Text != "" {
 		t.Errorf("the message: %+v", it)
 	}
 }
@@ -215,12 +215,12 @@ func TestSubagentsEndOnReopenAfterTheDaemonWent(t *testing.T) {
 	feed(c, recorded(t, "stop_then_start.jsonl"))
 	feed(c, recorded(t, "stops.jsonl"))
 	c.mu.Lock()
-	c.saveLocked(func(s *model.Session) { s.HasMessages = true })
+	c.saveLocked(func(s *model.ChatRecord) { s.HasMessages = true })
 	c.copyLocked(true)
 	c.mu.Unlock()
 
 	// The daemon is killed: the next finds the copy, and Claude replays.
-	sessions.stored = []model.Session{sessions.saved[len(sessions.saved)-1]}
+	sessions.stored = []model.ChatRecord{sessions.saved[len(sessions.saved)-1]}
 	agent.replay = recorded(t, "restart_load.jsonl")
 	svc = newService(t, kinds, Options{Sessions: sessions, Scratch: t.TempDir(), Copies: store, CopiesOn: on.Load})
 	_, err = svc.Get(id)

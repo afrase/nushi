@@ -22,7 +22,7 @@ const pickSession = `{"sessionId":"s1","configOptions":[
 func picksOf(c *chat) map[string]string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return maps.Clone(c.session.Picks)
+	return maps.Clone(c.record.Picks)
 }
 
 // The model, effort and fast picked come back after sleeping (the agent
@@ -55,9 +55,9 @@ func TestPicksComeBack(t *testing.T) {
 
 	agent.set = nil
 	c.mu.Lock()
-	stored := c.session
+	stored := c.record
 	c.mu.Unlock()
-	svc2 := newService(t, []Kind{{Name: "claude", Launch: agent.launch, Dialect: testDialect}}, Options{Sessions: &memSessions{stored: []model.Session{stored}}, Scratch: t.TempDir()})
+	svc2 := newService(t, []Kind{{Name: "claude", Launch: agent.launch, Dialect: testDialect}}, Options{Sessions: &memSessions{stored: []model.ChatRecord{stored}}, Scratch: t.TempDir()})
 	c2 := reopened(t, svc2, c.id)
 	if wantSet := []string{`model="sonnet"`, `effort="high"`, "fast=true"}; !slices.Equal(agent.set, wantSet) || !maps.Equal(picksOf(c2), want) {
 		t.Errorf("restarted: set %v, picks %v", agent.set, picksOf(c2))
@@ -71,7 +71,9 @@ func TestPicksDroppedKeptAndFollowed(t *testing.T) {
 	svc, agent, c := newChat(t, pickSession, &memModes{})
 	turn(t, svc, c, "one")
 	c.mu.Lock()
-	c.saveLocked(func(s *model.Session) { s.Picks = map[string]string{"model": "sonnet", "effort": "max", "gone": "x"} })
+	c.saveLocked(func(s *model.ChatRecord) {
+		s.Picks = map[string]string{"model": "sonnet", "effort": "max", "gone": "x"}
+	})
 	c.mu.Unlock()
 	testcheck.NoErr(t, svc.Sleep(c.id))
 	agent.session.ConfigOptions[1].Select.CurrentValue = "sonnet" // it kept the model

@@ -93,8 +93,8 @@ type Options struct {
 	Scratch    string            // the folder that holds chats' scratch folders
 	Publish    func(model.Event) // nil: events go nowhere
 	Tools      Tools             // Nushi's own tools for chats' sessions
-	Viewers    Viewers           // who shows chats, for unseen turns' ends (seen.go)
-	Processes  Processes         // nil: background commands are stopped only by asking the agent (shells.go)
+	Viewers    Viewers           // who shows chats, for chats done while nobody looked (seen.go)
+	Processes  Processes         // nil: background commands are stopped only by asking the agent (background.go)
 	// Copies keeps copies of chats' transcripts while CopiesOn says so
 	// (nil: always); CopyDays says after how many days unwritten one is
 	// deleted (0: never), looked at now and each hour (copies.go).

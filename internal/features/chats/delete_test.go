@@ -56,9 +56,9 @@ func TestDeleteLeavesAWorktreeAnotherChatWorksIn(t *testing.T) {
 	svc.worktrees = wts
 	w := t.TempDir()
 	c.mu.Lock()
-	c.session.EarlierWorktrees = []model.Worktree{{Path: w}} // it moved out; the other chat started there
+	c.record.EarlierWorktrees = []model.Worktree{{Path: w}} // it moved out; the other chat started there
 	c.mu.Unlock()
-	svc.sessions.(*memSessions).stored = []model.Session{{ID: "other", Title: "Fix the build", Folder: filepath.Join(w, "app")}}
+	svc.sessions.(*memSessions).stored = []model.ChatRecord{{ID: "other", Title: "Fix the build", Folder: filepath.Join(w, "app")}}
 	err := svc.Delete(ctx, c.id, DeleteOptions{w: {RemoveWorktree: true}})
 	if err == nil || !strings.Contains(err.Error(), "Fix the build") {
 		t.Errorf("Delete = %v", err)
@@ -80,7 +80,7 @@ func TestAFailedMoveKeepsAnEarlierWorktree(t *testing.T) {
 	turn(t, svc, c, "one") // with messages, the move forks: this kind can't
 	w := t.TempDir()
 	c.mu.Lock()
-	c.session.EarlierWorktrees = []model.Worktree{{Path: w}}
+	c.record.EarlierWorktrees = []model.Worktree{{Path: w}}
 	c.mu.Unlock()
 	if err := svc.Move(context.Background(), c.id, w, false); err == nil {
 		t.Fatal("moved")
@@ -104,7 +104,7 @@ func TestAChatStaysIfItsWorktreeOrHistoryCantGo(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	svc.worktrees = stuckWorktrees{}
 	c.mu.Lock()
-	c.session.Worktree = &model.Worktree{Path: "/w"}
+	c.record.Worktree = &model.Worktree{Path: "/w"}
 	c.mu.Unlock()
 	err := svc.Delete(ctx, c.id, DeleteOptions{"/w": {RemoveWorktree: true}})
 	stays("the worktree", err, c)

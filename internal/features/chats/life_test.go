@@ -103,8 +103,8 @@ func TestTheModeSurvivesANewSession(t *testing.T) {
 		eventually(t, c, func() bool { return !c.busy })
 		c.mu.Lock()
 		defer c.mu.Unlock()
-		if c.session.Mode != "plan" || current(c, "mode") != "plan" {
-			t.Errorf("%s: mode %q (stored %q), want plan", when, current(c, "mode"), c.session.Mode)
+		if c.record.Mode != "plan" || current(c, "mode") != "plan" {
+			t.Errorf("%s: mode %q (stored %q), want plan", when, current(c, "mode"), c.record.Mode)
 		}
 	}
 	if err := svc.Move(ctx, c.id, t.TempDir(), false); err != nil { // without messages: a new session

@@ -54,7 +54,7 @@ func (c *chat) isGone(err error) bool {
 		return false
 	}
 	c.mu.Lock()
-	sid, sess := c.sid, c.session
+	sid, sess := c.sid, c.record
 	c.mu.Unlock()
 	if !sess.HasMessages || sid == "" || folderGone(sess) != nil {
 		return false
@@ -94,7 +94,7 @@ func (s *Service) expire(ctx context.Context, c *chat, why string) {
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 	c.mu.Lock()
-	sess, halting, running := c.session, c.halting, c.agent != nil || c.busy
+	sess, halting, running := c.record, c.halting, c.agent != nil || c.busy
 	c.mu.Unlock()
 	if halting || running {
 		return // being deleted or expired already, or it opened meanwhile (its session is there after all)
@@ -130,7 +130,7 @@ func (s *Service) expire(ctx context.Context, c *chat, why string) {
 	s.publish(model.Event{RemovedChats: &list})
 }
 
-func cmpTitle(sess model.Session) string {
+func cmpTitle(sess model.ChatRecord) string {
 	if sess.Name != "" {
 		return sess.Name
 	}
@@ -140,7 +140,7 @@ func cmpTitle(sess model.Session) string {
 // keeps says why a chat whose session is gone must stay (its worktrees'
 // changes or commits, its scratch folder's files, or that they can't be
 // told), or "".
-func (s *Service) keeps(ctx context.Context, sess model.Session) string {
+func (s *Service) keeps(ctx context.Context, sess model.ChatRecord) string {
 	for _, wt := range made(sess) {
 		if s.worktrees == nil {
 			return "its worktree " + wt.Path + " can't be checked"

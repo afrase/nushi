@@ -37,7 +37,7 @@ func (s *Service) Open(ctx context.Context, agent, folder, sessionID, listed str
 	}
 	// The folder as the chats already there spell it (/tmp, not the
 	// agent's /private/tmp), so the chat joins them.
-	if i := slices.IndexFunc(stored, func(sess model.Session) bool {
+	if i := slices.IndexFunc(stored, func(sess model.ChatRecord) bool {
 		return sess.Folder != folder && git.RealPath(sess.Folder) == git.RealPath(folder)
 	}); i >= 0 {
 		folder = stored[i].Folder
@@ -71,7 +71,7 @@ func (s *Service) Open(ctx context.Context, agent, folder, sessionID, listed str
 	c.mu.Lock()
 	c.sid, c.busy = sessionID, true // its replay is the transcript, not a turn of the agent's own
 	c.replaying = true
-	c.session = model.Session{ID: c.id, SessionID: sessionID, Agent: k.Name, Folder: folder, Title: listed, Created: time.Now(), HasMessages: true}
+	c.record = model.ChatRecord{ID: c.id, SessionID: sessionID, Agent: k.Name, Folder: folder, Title: listed, Created: time.Now(), HasMessages: true}
 	c.mu.Unlock()
 	o, err := c.openSession(ctx, sessionID, folder, false)
 	c.mu.Lock()
@@ -95,8 +95,8 @@ func (s *Service) Open(ctx context.Context, agent, folder, sessionID, listed str
 	c.childrenSaidLocked()
 	c.orphanLocked(false) // calls whose agent ended before their results
 	c.busy = false
-	if i := slices.IndexFunc(c.items, func(it model.Item) bool { return it.Kind == model.UserMessage }); c.session.Title == "" && i >= 0 {
-		c.session.Title = title(c.items[i].Text) // as for a chat's first prompt
+	if i := slices.IndexFunc(c.items, func(it model.Item) bool { return it.Kind == model.UserMessage }); c.record.Title == "" && i >= 0 {
+		c.record.Title = title(c.items[i].Text) // as for a chat's first prompt
 	}
 	c.storeLocked()
 	c.mu.Unlock()

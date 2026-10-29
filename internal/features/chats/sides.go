@@ -107,7 +107,7 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 		return "", err
 	}
 	p.mu.Lock()
-	agent, sid, folder := p.agent, p.sid, p.session.Folder
+	agent, sid, folder := p.agent, p.sid, p.record.Folder
 	can := p.canFork && p.parent == nil
 	p.mu.Unlock()
 	if agent == nil || !can {
@@ -127,7 +127,7 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 	side := s.newChat(p.kind)
 	side.id, side.agent, side.parent = id, agent, p
 	side.sid, side.canImage = side.id, p.canImage
-	side.session = model.Session{ID: side.id, SessionID: side.sid, Agent: p.kind.Name, Folder: folder, Title: "Side question", Created: time.Now()}
+	side.record = model.ChatRecord{ID: side.id, SessionID: side.sid, Agent: p.kind.Name, Folder: folder, Title: "Side chat", Created: time.Now()}
 	p.mu.Lock()
 	if p.agent != agent { // it ended meanwhile (reload, move, archive): the fork with it
 		p.mu.Unlock()

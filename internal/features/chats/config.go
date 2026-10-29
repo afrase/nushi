@@ -134,7 +134,7 @@ func (s *Service) SetConfig(ctx context.Context, chatID, id, value string) error
 		return s.remembered.SetMode(c.kind.Name, value)
 	}
 	c.mu.Lock()
-	c.saveLocked(func(s *model.Session) { s.Picks = withPick(s.Picks, id, value) })
+	c.saveLocked(func(s *model.ChatRecord) { s.Picks = withPick(s.Picks, id, value) })
 	c.mu.Unlock()
 	return s.remembered.SetPick(c.kind.Name, id, value)
 }
@@ -210,8 +210,8 @@ func (c *chat) setConfig(ctx context.Context, agent Agent, sid, id, value string
 // for the session), except while they're being put back on a session.
 func (c *chat) configChangedLocked() {
 	c.emitLocked(model.Event{ChatID: c.id, Config: slices.Clone(c.config)})
-	if c.session.ID != "" {
-		c.saveLocked(func(s *model.Session) {
+	if c.record.ID != "" {
+		c.saveLocked(func(s *model.ChatRecord) {
 			c.modeLocked(s)
 			if c.agent != nil && !c.reapplying { // not a replay's, nor before reapply
 				s.Picks = c.followedLocked(s.Picks)
@@ -239,7 +239,7 @@ func (c *chat) followedLocked(picks map[string]string) map[string]string {
 }
 
 // modeLocked sets a session's mode to the chat's mode option's.
-func (c *chat) modeLocked(s *model.Session) {
+func (c *chat) modeLocked(s *model.ChatRecord) {
 	if i := modeIndex(c.config); i >= 0 {
 		s.Mode = c.config[i].Current
 	}
@@ -262,7 +262,7 @@ func (c *chat) replaceConfigLocked(opts []acp.SessionConfigOption) {
 func (c *chat) reapply(ctx context.Context, agent Agent, sid, mode string, picks map[string]string) error {
 	kept := c.applyPicks(ctx, agent, sid, picks)
 	c.mu.Lock()
-	c.saveLocked(func(s *model.Session) { s.Picks = kept })
+	c.saveLocked(func(s *model.ChatRecord) { s.Picks = kept })
 	c.mu.Unlock()
 	err := c.startMode(ctx, agent, sid, mode)
 	c.mu.Lock()
@@ -356,7 +356,7 @@ func (s *Service) setUltracode(ctx context.Context, c *chat, on bool) error {
 		return errors.New("Ultracode changes once the agent is done: no turn, background task or side chat running")
 	}
 	c.ultracode.Store(on)
-	c.saveLocked(func(s *model.Session) { s.Ultracode = on })
+	c.saveLocked(func(s *model.ChatRecord) { s.Ultracode = on })
 	if i := slices.IndexFunc(c.config, func(o model.ConfigOption) bool { return o.ID == ultracodeID }); i >= 0 {
 		c.config[i] = c.ultracodeOption()
 	}

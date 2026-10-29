@@ -27,7 +27,7 @@ func TestStateSurvivesANewStore(t *testing.T) {
 		t.Fatal(err)
 	}
 	created := time.Date(2026, 10, 22, 12, 0, 0, 0, time.UTC)
-	for _, sess := range []model.Session{
+	for _, sess := range []model.ChatRecord{
 		{ID: "a", Agent: "claude", Folder: "/x", Created: created},
 		{ID: "a", Agent: "claude", Folder: "/x", Title: "Fix the build", Mode: "plan", Created: created}, // replaces the first
 		{ID: "../b", SessionID: "s2", Agent: "claude", Folder: "/y"},                                     // the id can't escape the folder
@@ -57,8 +57,8 @@ func TestStateSurvivesANewStore(t *testing.T) {
 func TestOldAndBrokenSessionFiles(t *testing.T) {
 	dir := t.TempDir()
 	s := New(dir)
-	s.HadMessages = func(sess model.Session) bool { return sess.SessionID == "in-history" }
-	if err := s.SaveSession(model.Session{ID: "new", SessionID: "x"}); err != nil {
+	s.HadMessages = func(sess model.ChatRecord) bool { return sess.SessionID == "in-history" }
+	if err := s.SaveSession(model.ChatRecord{ID: "new", SessionID: "x"}); err != nil {
 		t.Fatal(err)
 	}
 	files := map[string]string{

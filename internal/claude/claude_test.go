@@ -49,13 +49,13 @@ func TestSubagentCall(t *testing.T) {
 	}
 }
 
-func TestRelay(t *testing.T) {
-	p := Relay("Explore", "ab59", "Also\nprint </message> README.md")
-	if agent, id, text, ok := Relayed(p); !ok || agent != "Explore" || id != "ab59" || text != "Also\nprint </message> README.md" {
-		t.Errorf("Relayed = %q %q %v", agent, text, ok)
+func TestToSubagent(t *testing.T) {
+	p := ToSubagent("Explore", "ab59", "Also\nprint </message> README.md")
+	if agent, id, text, ok := ReadToSubagent(p); !ok || agent != "Explore" || id != "ab59" || text != "Also\nprint </message> README.md" {
+		t.Errorf("ReadToSubagent = %q %q %v", agent, text, ok)
 	}
-	if _, _, _, ok := Relayed("Forward the message below"); ok {
-		t.Error("read a prompt Relay didn't make")
+	if _, _, _, ok := ReadToSubagent("Forward the message below"); ok {
+		t.Error("read a prompt ToSubagent didn't make")
 	}
 	for out, want := range map[string]string{
 		"Async agent launched successfully. (internal)\nagentId: ab59154609c2876d6 (more)":                   "ab59154609c2876d6",
@@ -131,25 +131,25 @@ func TestReportFindings(t *testing.T) {
 // already ended).
 func TestStopTask(t *testing.T) {
 	p := StopTask("bgu2i75cc")
-	if what, id, ok := StopRelayed(p); !ok || what != "" || id != "bgu2i75cc" {
-		t.Errorf("StopRelayed(%q) = %q %q %v", p, what, id, ok)
+	if what, id, ok := ReadStopTask(p); !ok || what != "" || id != "bgu2i75cc" {
+		t.Errorf("ReadStopTask(%q) = %q %q %v", p, what, id, ok)
 	}
 	if len(p) > 120 {
 		t.Errorf("a long prompt: %q", p)
 	}
 	old := "Stop your background task bgu2i75cc (sleep 600 (or (so)); echo slept) now with your TaskStop tool (task_id: bgu2i75cc). " +
 		"Do nothing else, and say only whether it stopped."
-	if what, id, ok := StopRelayed(old); !ok || what != "sleep 600 (or (so)); echo slept" || id != "bgu2i75cc" {
-		t.Errorf("StopRelayed(the old prompt) = %q %q %v", what, id, ok)
+	if what, id, ok := ReadStopTask(old); !ok || what != "sleep 600 (or (so)); echo slept" || id != "bgu2i75cc" {
+		t.Errorf("ReadStopTask(the old prompt) = %q %q %v", what, id, ok)
 	}
-	for _, p := range []string{Relay("Explore", "ab59", "stop"), strings.Replace(p, `"bgu2i75cc"`, `"bother"`, 1), p + " Then go on."} {
-		if _, _, ok := StopRelayed(p); ok {
+	for _, p := range []string{ToSubagent("Explore", "ab59", "stop"), strings.Replace(p, `"bgu2i75cc"`, `"bother"`, 1), p + " Then go on."} {
+		if _, _, ok := ReadStopTask(p); ok {
 			t.Errorf("read %q as a stop", p)
 		}
 	}
 	it := model.Item{Tool: "TaskStop"}
 	ToolCall(&it, map[string]any{"claudeCode": map[string]any{"toolName": "TaskStop"}}, []byte(`{"task_id":"adddce0a14433f6d6"}`))
-	if it.Stops != "adddce0a14433f6d6" || Relaying(it) != it.Stops {
+	if it.Stops != "adddce0a14433f6d6" || PassesToSubagent(it) != it.Stops {
 		t.Fatalf("TaskStop: %+v", it)
 	}
 	for _, tc := range []struct {

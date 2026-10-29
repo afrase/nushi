@@ -170,7 +170,7 @@ func (c *chat) childOfLocked(ch *child, sid string) string {
 // background command tool call callID started. A subagent the agent shows
 // as a session of its own stops when that session is cancelled; a command
 // Nushi can find among the agent's processes, by its process group
-// (stopShell); any other is stopped by asking the agent
+// (stopCommand); any other is stopped by asking the agent
 // (Dialect.StopTask), as a message of the user's that waits for the
 // agent's next chance. Either way it shows as stopped only once the agent
 // says so.
@@ -195,32 +195,32 @@ func (s *Service) StopTask(ctx context.Context, chatID, callID string) error {
 		c.mu.Unlock()
 		return cancelTurn(agent, &acp.CancelNotification{SessionID: acp.SessionID(sid)})
 	}
-	shell := call.Shell != nil
-	if shell && call.Shell.Killed {
+	shell := call.BackgroundCommand != nil
+	if shell && call.BackgroundCommand.Killed {
 		c.mu.Unlock()
 		return nil // being stopped: its group was signalled
 	}
 	c.mu.Unlock()
-	if shell && s.stopShell(c, callID) {
+	if shell && s.stopCommand(c, callID) {
 		return nil
 	}
-	return s.Prompt(ctx, chatID, model.Message{To: callID, Relay: &model.Relay{Stop: true}}, SendQueue)
+	return s.Prompt(ctx, chatID, model.Message{To: callID, ToSubagent: &model.ToSubagent{Stop: true}}, SendQueue)
 }
 
-// stopRelayLocked finds what a message asking the agent to stop the task
+// stopTaskLocked finds what a message asking the agent to stop the task
 // callID started is about: the subagent (its type) or the background
 // command, and the agent's id for it.
-func (c *chat) stopRelayLocked(callID string) (*model.Relay, error) {
+func (c *chat) stopTaskLocked(callID string) (*model.ToSubagent, error) {
 	call := c.itemLocked(callID)
 	switch {
 	case c.dialect.StopTask == nil:
 		return nil, errors.New("the agent can't be asked to stop its tasks")
 	case call == nil:
 		return nil, errors.New("that task is no longer in the chat")
-	case call.Shell != nil:
-		return &model.Relay{Agent: call.Title, AgentID: call.Shell.ID, Stop: true}, nil
+	case call.BackgroundCommand != nil:
+		return &model.ToSubagent{Agent: call.Title, AgentID: call.BackgroundCommand.ID, Stop: true}, nil
 	case call.Agent != "" && call.AgentID != "":
-		return &model.Relay{Agent: call.Agent, AgentID: call.AgentID, Stop: true}, nil
+		return &model.ToSubagent{Agent: call.Agent, AgentID: call.AgentID, Stop: true}, nil
 	}
 	return nil, errors.New("the agent didn't say how to reach that task")
 }

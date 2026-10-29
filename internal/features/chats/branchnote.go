@@ -50,7 +50,7 @@ func moveNote(folder, branch string) string {
 }
 
 // stopNote tells the agent the user stopped its background command id
-// (stopShell): the agent heard only that it failed, with an exit code
+// (stopCommand): the agent heard only that it failed, with an exit code
 // (docs/facts/claude.md). Only an id of noteID's shape is told.
 func stopNote(id string) string {
 	return "[Nushi] The user stopped your background command " + id + "; its exit code was that stop, not a failure."
@@ -97,7 +97,7 @@ type told struct {
 // the lock (blocks), so a slow git doesn't hold up the agent's updates.
 // The turn has started by then: no switch, move or rename comes between.
 type notes struct {
-	sess     model.Session
+	sess     model.ChatRecord
 	git      Worktrees // nil: none
 	log      *slog.Logger
 	renamed  []string // the renames' lines not told yet, when the branch was renamed
@@ -111,7 +111,7 @@ func (c *chat) notesLocked() *notes {
 	if c.parent != nil {
 		return nil
 	}
-	sess := c.session
+	sess := c.record
 	n := &notes{sess: sess, git: c.worktrees, log: c.logLocked(), stopped: c.killed}
 	c.killed = nil
 	if wt := sess.Worktree; wt != nil && wt.Told != "" && wt.Told != wt.Branch {
@@ -208,10 +208,10 @@ func (c *chat) toldLocked(t *told) {
 	if t.placed != nil {
 		c.placedLocked(t.placed)
 	}
-	if wt := c.session.Worktree; wt == nil || wt.Branch != t.branch {
+	if wt := c.record.Worktree; wt == nil || wt.Branch != t.branch {
 		return // moved meanwhile
 	}
-	c.saveLocked(func(s *model.Session) {
+	c.saveLocked(func(s *model.ChatRecord) {
 		wt := *s.Worktree // a copy: the session's is shared with the stored one
 		wt.Told = t.branch
 		s.Worktree = &wt
@@ -225,7 +225,7 @@ func (c *chat) toldLocked(t *told) {
 
 // toldBefore is, for a chat stored before Nushi kept Told, the branch as
 // its agent has it: the worktree's (a rename until then was never told).
-func toldBefore(sess *model.Session) {
+func toldBefore(sess *model.ChatRecord) {
 	if wt := sess.Worktree; wt != nil && wt.Told == "" {
 		w := *wt
 		w.Told = w.Branch

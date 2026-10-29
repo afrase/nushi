@@ -9,22 +9,22 @@ import (
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
-func TestBackgroundShells(t *testing.T) {
+func TestBackgroundCommands(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "tasks")
 	testcheck.NoErr(t, os.Mkdir(dir, 0o700))
 	file := filepath.Join(dir, "b1.output")
 	started := "```console\nCommand running in background with ID: b1. Output is being written to: " + file + ". You will be notified when it completes.\n```"
-	id, got, ok := Shell(model.Item{Tool: "Bash", TaskID: "b1", Text: started})
+	id, got, ok := BackgroundCommand(model.Item{Tool: "Bash", TaskID: "b1", Text: started})
 	if !ok || id != "b1" || got != file {
-		t.Fatalf("Shell = %q %q %v", id, got, ok)
+		t.Fatalf("BackgroundCommand = %q %q %v", id, got, ok)
 	}
 	// Replayed: no task id, but its input asked for the background.
-	if id, _, ok := Shell(model.Item{Tool: "Bash", InBackground: true, Text: started}); !ok || id != "b1" {
+	if id, _, ok := BackgroundCommand(model.Item{Tool: "Bash", InBackground: true, Text: started}); !ok || id != "b1" {
 		t.Error("a replayed background command")
 	}
 	// Moved to the background after its timeout.
 	moved := "Command did not complete within its 120s timeout and was moved to the background (ID: b1). Output is being written to: " + file + "."
-	if _, _, ok := Shell(model.Item{Tool: "Bash", TaskID: "b1", Text: moved}); !ok {
+	if _, _, ok := BackgroundCommand(model.Item{Tool: "Bash", TaskID: "b1", Text: moved}); !ok {
 		t.Error("a command moved to the background")
 	}
 	for _, it := range []model.Item{
@@ -33,7 +33,7 @@ func TestBackgroundShells(t *testing.T) {
 		{Tool: "Bash", TaskID: "b9", Text: started}, // another task's file
 		{Tool: "Bash", TaskID: "b1", Text: "Command running in background with ID: b1. Output is being written to: /etc/b1.output."},
 	} {
-		if _, _, ok := Shell(it); ok {
+		if _, _, ok := BackgroundCommand(it); ok {
 			t.Errorf("followed %+v", it)
 		}
 	}
@@ -48,13 +48,13 @@ func TestBackgroundShells(t *testing.T) {
 		"\n[killed]\nmore\n":             {"\n[killed]\nmore\n", ""},
 	} {
 		testcheck.NoErr(t, os.WriteFile(file, []byte(text), 0o600))
-		if out, end, err := ReadShell("b1", file); err != nil || out != want[0] || end != want[1] {
-			t.Errorf("ReadShell(%q) = %q %q %v", text, out, end, err)
+		if out, end, err := ReadBackgroundCommand("b1", file); err != nil || out != want[0] || end != want[1] {
+			t.Errorf("ReadBackgroundCommand(%q) = %q %q %v", text, out, end, err)
 		}
 	}
 	link := filepath.Join(dir, "b2.output")
 	testcheck.NoErr(t, os.Symlink(file, link))
-	if _, _, err := ReadShell("b2", link); err == nil {
+	if _, _, err := ReadBackgroundCommand("b2", link); err == nil {
 		t.Error("read through a link")
 	}
 }

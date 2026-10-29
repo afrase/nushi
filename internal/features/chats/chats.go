@@ -68,8 +68,8 @@ type Launch func(client acp.Client, log *slog.Logger) (Agent, error)
 
 // Sessions stores what Nushi keeps of each chat.
 type Sessions interface {
-	SaveSession(model.Session) error
-	Sessions() ([]model.Session, error)
+	SaveSession(model.ChatRecord) error
+	Sessions() ([]model.ChatRecord, error)
 	DeleteSession(id string) error
 }
 
@@ -83,7 +83,7 @@ type Service struct {
 	publish    func(model.Event)
 
 	terminals Terminals   // set once at startup, if there are any
-	viewers   Viewers     // Options', for unseen turns' ends (seen.go)
+	viewers   Viewers     // Options', for chats done while nobody looked (seen.go)
 	procs     Processes   // Options', for stopping background commands
 	prefs     SleepPrefs  // Options', if chats sleep
 	copies    Copies      // Options', if chats keep copies of their transcripts
@@ -166,8 +166,8 @@ type chat struct {
 	config       []model.ConfigOption
 	commands     []model.Command
 	usage        model.Usage
-	session      model.Session
-	ultracode    atomic.Bool           // session.Ultracode, read where mu isn't held
+	record       model.ChatRecord
+	ultracode    atomic.Bool           // record.Ultracode, read where mu isn't held
 	canFork      bool                  // the agent can fork the session into side chats
 	canImage     bool                  // the agent takes images in prompts
 	sides        map[string]*chat      // the chat's side chats, by session id
@@ -223,7 +223,7 @@ func (c *chat) emitLocked(e model.Event) {
 	c.publish(e)
 	// A subagent or background command started or ended: the status says
 	// how many run.
-	if e.Item != nil && (e.Item.Shell != nil || e.Item.Subagent != nil) {
+	if e.Item != nil && (e.Item.BackgroundCommand != nil || e.Item.Subagent != nil) {
 		if n := c.runningLocked(); n != c.background {
 			c.background = n
 			c.statusChangedLocked()
@@ -240,7 +240,7 @@ func (s *Service) Get(chatID string) (model.Chat, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return model.Chat{
-		Session:  c.session,
+		Record:   c.record,
 		Items:    slices.Clone(c.items),
 		Config:   slices.Clone(c.config),
 		Commands: slices.Clone(c.commands),
@@ -310,7 +310,7 @@ func (s *Service) StartOn(ctx context.Context, agent, folder string, opts StartO
 	}
 	c.mu.Lock()
 	s.useLocked(c, o)
-	c.session = model.Session{ID: c.id, SessionID: o.sid, Agent: k.Name, Folder: folder, Created: time.Now(), Worktree: wt, Scratch: scratch, Issue: opts.Issue, GitHub: opts.GitHub}
+	c.record = model.ChatRecord{ID: c.id, SessionID: o.sid, Agent: k.Name, Folder: folder, Created: time.Now(), Worktree: wt, Scratch: scratch, Issue: opts.Issue, GitHub: opts.GitHub}
 	c.mu.Unlock()
 	if err := c.reapply(ctx, o.agent, o.sid, s.remembered.Mode(k.Name), s.remembered.Picks(k.Name)); err != nil {
 		c.log().Warn("starting mode", "err", err) // the chat keeps the agent's default
@@ -341,7 +341,7 @@ func (s *Service) newChat(k *kind) *chat {
 }
 
 // List returns every stored chat.
-func (s *Service) List() ([]model.Session, error) {
+func (s *Service) List() ([]model.ChatRecord, error) {
 	list, err := s.sessions.Sessions()
 	for i := range list {
 		list[i].Scratch = s.isScratch(list[i].Folder)
@@ -355,7 +355,7 @@ func (s *Service) isScratch(folder string) bool { return filepath.Dir(folder) ==
 // Status returns whether a chat works or waits on the user, without
 // reopening it. One not opened since the daemon started sleeps, unless it
 // is archived.
-func (s *Service) Status(sess model.Session) model.Status {
+func (s *Service) Status(sess model.ChatRecord) model.Status {
 	s.mu.Lock()
 	c := s.chats[sess.ID]
 	s.mu.Unlock()
@@ -369,25 +369,25 @@ func (s *Service) Status(sess model.Session) model.Status {
 
 // saveLocked applies change (if any) to the chat's session, and stores it
 // if anything changed.
-func (c *chat) saveLocked(change func(*model.Session)) {
-	next := c.session
+func (c *chat) saveLocked(change func(*model.ChatRecord)) {
+	next := c.record
 	if change != nil {
 		change(&next)
 	}
-	if !reflect.DeepEqual(next, c.session) {
-		c.session = next
+	if !reflect.DeepEqual(next, c.record) {
+		c.record = next
 		c.storeLocked()
 	}
 }
 
 func (c *chat) storeLocked() {
 	if c.parent == nil { // side chats aren't stored
-		if err := c.sessions.SaveSession(c.session); err != nil {
+		if err := c.sessions.SaveSession(c.record); err != nil {
 			c.logLocked().Error("saving the chat", "err", err)
 		}
 	}
-	sess := c.session
-	c.emitLocked(model.Event{ChatID: c.id, Session: &sess})
+	sess := c.record
+	c.emitLocked(model.Event{ChatID: c.id, Record: &sess})
 }
 
 func (c *chat) usageChangedLocked() {
@@ -400,7 +400,7 @@ func (c *chat) noticeLocked(reason, text string) {
 }
 
 func (c *chat) statusLocked() model.Status {
-	idle := c.agent == nil && !c.busy && c.parent == nil && !c.session.Archived
+	idle := c.agent == nil && !c.busy && c.parent == nil && !c.record.Archived
 	return model.Status{Busy: c.busy, Started: c.started, Waiting: len(c.waiting)+len(c.questions) > 0, CanFork: c.canFork, Images: c.canImage,
 		CanRewind: c.forkAt != nil, MCPChanged: c.mcpChanged, CanAskContext: !idle && c.canAskContextLocked() == nil,
 		Asleep: idle && !c.reopenFailed, ReopenFailed: idle && c.reopenFailed, SessionGone: idle && c.reopenFailed && c.sessionGone, CanSleep: c.parent == nil && c.canSleepLocked() == nil,
@@ -420,7 +420,7 @@ func (c *chat) runningLocked() int {
 
 // running says whether it is a subagent or background command that runs.
 func running(it model.Item) bool {
-	return it.Shell != nil && it.Shell.State == "running" || it.Subagent != nil && it.Subagent.State == "running"
+	return it.BackgroundCommand != nil && it.BackgroundCommand.State == "running" || it.Subagent != nil && it.Subagent.State == "running"
 }
 
 func (c *chat) statusChangedLocked() {

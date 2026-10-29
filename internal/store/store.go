@@ -29,10 +29,10 @@ type Store struct {
 	// sessMu keeps the sessions apart from mu too: reading them all the
 	// first time doesn't hold up the settings.
 	sessMu   sync.Mutex
-	sessions map[string]model.Session // by file name; nil until read
+	sessions map[string]model.ChatRecord // by file name; nil until read
 	// HadMessages says whether the agent's history of a session stored
 	// before sessions said so has messages.
-	HadMessages func(model.Session) bool
+	HadMessages func(model.ChatRecord) bool
 }
 
 func New(dir string) *Store { return &Store{dir: dir} }
@@ -167,7 +167,7 @@ func writeJSON(path string, v any) error {
 // SaveSession writes a session's file, replacing any earlier one, and
 // keeps it once written. A chat's saves come one at a time (under its
 // lock), so what's kept is what its file has.
-func (s *Store) SaveSession(sess model.Session) error {
+func (s *Store) SaveSession(sess model.ChatRecord) error {
 	dir := filepath.Join(s.dir, "sessions")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
@@ -202,7 +202,7 @@ func sessionFile(id string) string { return url.PathEscape(id) + ".json" }
 // Sessions returns every stored session, in their files' order. The
 // folder is read the first time; after, the sessions are kept as they're
 // saved (nothing else writes it while the daemon runs).
-func (s *Store) Sessions() ([]model.Session, error) {
+func (s *Store) Sessions() ([]model.ChatRecord, error) {
 	s.sessMu.Lock()
 	defer s.sessMu.Unlock()
 	if s.sessions == nil {
@@ -212,7 +212,7 @@ func (s *Store) Sessions() ([]model.Session, error) {
 		}
 		s.sessions = read
 	}
-	var out []model.Session
+	var out []model.ChatRecord
 	for _, name := range slices.Sorted(maps.Keys(s.sessions)) {
 		out = append(out, clone(s.sessions[name]))
 	}
@@ -220,12 +220,12 @@ func (s *Store) Sessions() ([]model.Session, error) {
 }
 
 // readSessions reads every session's file, by its name.
-func (s *Store) readSessions() (map[string]model.Session, error) {
+func (s *Store) readSessions() (map[string]model.ChatRecord, error) {
 	entries, err := os.ReadDir(filepath.Join(s.dir, "sessions")) // not a glob: the folder may hold a pattern's characters
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return nil, err
 	}
-	read := map[string]model.Session{}
+	read := map[string]model.ChatRecord{}
 	for _, e := range entries {
 		if !strings.HasSuffix(e.Name(), ".json") {
 			continue
@@ -234,7 +234,7 @@ func (s *Store) readSessions() (map[string]model.Session, error) {
 		// HasMessages of its own, shallower, takes the file's in place of
 		// the session's: nil says the file has none.
 		var file struct {
-			model.Session
+			model.ChatRecord
 			HasMessages *bool `json:"HasMessages"`
 		}
 		b, err := os.ReadFile(f)
@@ -245,7 +245,7 @@ func (s *Store) readSessions() (map[string]model.Session, error) {
 			slog.Warn("skipping a chat file", "file", f, "err", err)
 			continue
 		}
-		sess := file.Session
+		sess := file.ChatRecord
 		if sess.SessionID == "" { // stored before step 22, when the ids were one
 			sess.SessionID = sess.ID
 		}
@@ -261,7 +261,7 @@ func (s *Store) readSessions() (map[string]model.Session, error) {
 
 // clone is sess sharing nothing with it: a session kept, or handed out,
 // can't be changed through another copy's slice, map or pointer.
-func clone(sess model.Session) model.Session {
+func clone(sess model.ChatRecord) model.ChatRecord {
 	sess.Earlier = slices.Clone(sess.Earlier)
 	sess.Worktree = copyOf(sess.Worktree)
 	sess.EarlierWorktrees = slices.Clone(sess.EarlierWorktrees)

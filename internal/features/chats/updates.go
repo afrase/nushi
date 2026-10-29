@@ -60,18 +60,18 @@ func (c *chat) update(n *acp.SessionNotification, from *child) { //nolint:gocogn
 		c.toolCallLocked(&item, t.Meta, t.RawInput)
 		keepRaw(&item, t.RawInput, t.RawOutput)
 		if it := c.itemLocked(item.ID); it != nil { // a repeated tool_call replaces the call
-			item.Subagent, item.Shell = it.Subagent, it.Shell
+			item.Subagent, item.BackgroundCommand = it.Subagent, it.BackgroundCommand
 			*it = item
 			c.subagentLocked(it)
-			c.shellLocked(it)
+			c.backgroundCommandLocked(it)
 			c.publishLocked(*it)
 		} else {
 			c.subagentLocked(&item)
-			c.shellLocked(&item)
+			c.backgroundCommandLocked(&item)
 			c.addLocked(item)
 		}
 		c.reportedLocked(item)
-		c.relayingLocked(item)
+		c.passedOnLocked(item)
 	case "available_commands_update":
 		c.commands = []model.Command{}
 		for _, a := range u.AvailableCommandsUpdate.AvailableCommands {
@@ -115,9 +115,9 @@ func (c *chat) update(n *acp.SessionNotification, from *child) { //nolint:gocogn
 		if v := u.SessionInfoUpdate.Title.Value; v != nil {
 			t = *v
 		}
-		forkTitle := c.dialect.ForkTitle != nil && c.dialect.ForkTitle(t, c.session.Title)
+		forkTitle := c.dialect.ForkTitle != nil && c.dialect.ForkTitle(t, c.record.Title)
 		if t != "" && !forkTitle {
-			c.saveLocked(func(s *model.Session) { s.Title = t })
+			c.saveLocked(func(s *model.ChatRecord) { s.Title = t })
 			c.titled = true
 			c.nameBranchLocked() // when it came between turns; else at the turn's end
 		}
@@ -144,10 +144,10 @@ func (c *chat) update(n *acp.SessionNotification, from *child) { //nolint:gocogn
 		}
 		keepRaw(it, t.RawInput, t.RawOutput)
 		c.subagentLocked(it)
-		c.shellLocked(it)
+		c.backgroundCommandLocked(it)
 		c.publishLocked(*it)
 		c.reportedLocked(*it)
-		c.relayingLocked(*it)
+		c.passedOnLocked(*it)
 		if t.Status == "completed" || t.Status == "failed" {
 			c.stoppedLocked(*it)
 			c.copyLocked(false)
@@ -240,7 +240,7 @@ func (c *chat) chunkLocked(kind model.ItemKind, m *acp.ContentChunk, parent stri
 	}
 	if it != nil && it.Kind == kind {
 		it.Text += text
-		if noted := c.unnotedLocked(it); c.relayedLocked(it) || noted { // whole now
+		if noted := c.unnotedLocked(it); c.readToSubagentLocked(it) || noted { // whole now
 			c.publishLocked(*it)
 			return
 		}
@@ -249,7 +249,7 @@ func (c *chat) chunkLocked(kind model.ItemKind, m *acp.ContentChunk, parent stri
 	}
 	item := model.Item{ID: id, Kind: kind, Text: text, Images: images, Parent: parent}
 	c.unnotedLocked(&item)
-	c.relayedLocked(&item)
+	c.readToSubagentLocked(&item)
 	c.addLocked(item)
 }
 
@@ -417,7 +417,7 @@ func (c *chat) paths(locs []acp.ToolCallLocation) []string {
 
 // rel makes path relative to the chat's folder when it is inside it.
 func (c *chat) rel(path string) string {
-	if r, err := filepath.Rel(c.session.Folder, path); err == nil && filepath.IsLocal(r) {
+	if r, err := filepath.Rel(c.record.Folder, path); err == nil && filepath.IsLocal(r) {
 		return r
 	}
 	return path

@@ -82,7 +82,7 @@ func (s *Service) Prompt(ctx context.Context, chatID string, m model.Message, ho
 		}
 		c.mu.Lock()
 	}
-	if err := c.relayOfLocked(&m); err != nil {
+	if err := c.toSubagentOfLocked(&m); err != nil {
 		return err
 	}
 	switch {
@@ -114,7 +114,7 @@ func (s *Service) refusesLocked(c *chat) error {
 	if err := c.closedLocked(); err != nil {
 		return err
 	}
-	if err := folderGone(c.session); err != nil {
+	if err := folderGone(c.record); err != nil {
 		return fmt.Errorf("the chat can't go on: %w", err)
 	}
 	if c.sessionGone {
@@ -123,18 +123,18 @@ func (s *Service) refusesLocked(c *chat) error {
 	return nil
 }
 
-// relayOfLocked finds what a message for a subagent (or a stop of a task)
-// goes to, from the tool call it names (Message.To).
-func (c *chat) relayOfLocked(m *model.Message) error {
+// toSubagentOfLocked finds what a message to a subagent (or a stop of a
+// task) goes to, from the tool call it names (Message.To).
+func (c *chat) toSubagentOfLocked(m *model.Message) error {
 	if m.To == "" {
 		return nil
 	}
-	relay := c.relayLocked
-	if m.Relay != nil && m.Relay.Stop {
-		relay = c.stopRelayLocked
+	find := c.toSubagentLocked
+	if m.ToSubagent != nil && m.ToSubagent.Stop {
+		find = c.stopTaskLocked
 	}
-	r, err := relay(m.To)
-	m.Relay = r
+	r, err := find(m.To)
+	m.ToSubagent = r
 	return err
 }
 
@@ -142,7 +142,7 @@ func (c *chat) relayOfLocked(m *model.Message) error {
 // deleted, or its agent is stopping; nil when it takes them.
 func (c *chat) closedLocked() error {
 	switch {
-	case c.session.Archived:
+	case c.record.Archived:
 		return errors.New("the chat is archived")
 	case c.halting:
 		return errors.New("the chat is being deleted")
@@ -155,7 +155,7 @@ func (c *chat) closedLocked() error {
 // sendLocked shows the message in the transcript and starts a turn with it.
 func (c *chat) sendLocked(m model.Message) {
 	c.addLocked(userItem(m))
-	c.saveLocked(func(s *model.Session) {
+	c.saveLocked(func(s *model.ChatRecord) {
 		s.HasMessages = true
 		if s.Title == "" {
 			s.Title = title(m.Text)
@@ -193,7 +193,7 @@ func (c *chat) releaseLocked() {
 	c.logLocked().Info("turn's work ended", "took", time.Since(c.started).Round(time.Millisecond), "held_for", "background subagents")
 	c.released, c.busy, c.started = true, false, time.Time{}
 	close(c.done)
-	c.unrelayedLocked()
+	c.notPassedOnLocked()
 	c.copyLocked(true)
 	c.endedLocked()
 	c.statusChangedLocked()
@@ -210,15 +210,15 @@ func (c *chat) backgroundLocked(from int) bool {
 // and the images.
 func (c *chat) blocks(m model.Message) []acp.ContentBlock {
 	text := m.Text
-	switch r := m.Relay; {
+	switch r := m.ToSubagent; {
 	case r != nil && r.Stop:
 		text = c.dialect.StopTask(r.AgentID)
 	case r != nil:
-		text = c.dialect.Relay(r.Agent, r.AgentID, text)
+		text = c.dialect.ToSubagent(r.Agent, r.AgentID, text)
 	}
 	prompt := []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: text}}}
 	for _, f := range m.Files {
-		path := filepath.Join(c.session.Folder, f)
+		path := filepath.Join(c.record.Folder, f)
 		prompt = append(prompt, acp.ContentBlock{Type: "resource_link", ResourceLink: &acp.ResourceLink{
 			Name: f, URI: (&url.URL{Scheme: "file", Path: path}).String()}})
 	}
@@ -277,7 +277,7 @@ func (c *chat) run(agent Agent, req *acp.PromptRequest, n *notes, sent, done cha
 	}
 	c.busy, c.started = false, time.Time{}
 	close(c.done)
-	c.unrelayedLocked()
+	c.notPassedOnLocked()
 	if err == nil && resp.Usage != nil {
 		u := resp.Usage
 		c.usage.Input, c.usage.Output = int64(u.InputTokens), int64(u.OutputTokens) //nolint:gosec // token counts, far below the limits
@@ -304,7 +304,7 @@ func (c *chat) run(agent Agent, req *acp.PromptRequest, n *notes, sent, done cha
 		c.noticeLocked("max_turn_requests", "The agent stopped: it reached its limit of requests in one turn")
 	}
 	c.nameBranchLocked() // between turns, before the next one starts
-	// Unseen unless stopped or the agent went (watch says so); marked
+	// Done unless stopped or the agent went (watch says so); marked
 	// before the status, so a client has it as the turn ends.
 	if stopped := err == nil && resp.StopReason == "cancelled"; !stopped && (err == nil || !quit) {
 		c.endedLocked()
