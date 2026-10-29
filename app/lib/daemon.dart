@@ -194,7 +194,7 @@ class Daemon extends ChangeNotifier {
   /// [folder] for MCP servers or Skills, an [agent] for Skills (whose
   /// skills) or Agents (the row marked).
   void openSettings({SettingsSection? section, String? folder, String? agent}) {
-    trustAsk?.decide(start: false);
+    _leaveTrust();
     final s = section ?? settings ?? lastSettings;
     if (folder != null && s == SettingsSection.mcp) mcpFolder = folder;
     if (folder != null && s == SettingsSection.skills) skillsFolder = folder;
@@ -239,7 +239,7 @@ class Daemon extends ChangeNotifier {
   bool jiraOpen = false;
 
   void showJira({required bool open}) {
-    trustAsk?.decide(start: false);
+    _leaveTrust();
     jiraOpen = open;
     if (open) {
       settings = null;
@@ -256,7 +256,7 @@ class Daemon extends ChangeNotifier {
   GitHubRef? githubShow;
 
   void showGitHub({required bool open, GitHubRef? item}) {
-    trustAsk?.decide(start: false);
+    _leaveTrust();
     githubOpen = open;
     githubShow = item;
     if (open) {
@@ -272,6 +272,24 @@ class Daemon extends ChangeNotifier {
   /// A folder's code waiting for the user's word before a chat starts or
   /// moves there (see TrustCard).
   TrustAsk? trustAsk;
+
+  /// What a bar over the app says once, until dismissed: a start the
+  /// user walked away from (its trust card answered no).
+  String? notice;
+
+  void dismissNotice() {
+    notice = null;
+    notifyListeners();
+  }
+
+  /// The user went elsewhere while a trust card asked: that's a no, and
+  /// a bar says so, or the chat asked for would just not appear.
+  void _leaveTrust() {
+    final ask = trustAsk;
+    if (ask == null || ask.answer.isCompleted) return;
+    ask.decide(start: false);
+    notice = ask.left;
+  }
 
   /// Whether a chat with [agent] may start or move into [folder] (doing
   /// [action]): when the folder brings code for it to run that nobody trusted,
@@ -682,7 +700,7 @@ class Daemon extends ChangeNotifier {
   }
 
   void select(String chatId) {
-    trustAsk?.decide(start: false);
+    _leaveTrust();
     selectedId = chatId;
     settings = null;
     jiraOpen = githubOpen = false;

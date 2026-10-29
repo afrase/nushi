@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/agents.dart';
+import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/theme/theme.dart';
@@ -160,5 +161,53 @@ class TrustAsk {
 
   void decide({required bool start}) {
     if (!answer.isCompleted) answer.complete(start);
+  }
+
+  /// What didn't happen, said when the user leaves the card unanswered:
+  /// "Didn't start Claude in site: its code wasn't approved."
+  String get left {
+    final where = folderParts(folder).$1;
+    final what = switch (action) {
+      'Move the chat' => "Didn't move the chat to $where",
+      'Open the session' => "Didn't open the session in $where",
+      _ => "Didn't start ${agentTitle(agent)} in $where",
+    };
+    return "$what: its code wasn't approved.";
+  }
+}
+
+/// Over the app, once, what didn't happen ([Daemon.notice]): a start the
+/// user walked away from. Dismissed with ×.
+class NoticeBar extends StatelessWidget {
+  const new(this.daemon, {super.key});
+
+  final Daemon daemon;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    return Container(
+      color: t.raised,
+      padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
+      child: Row(
+        spacing: 10,
+        children: [
+          Icon(Icons.shield_outlined, size: 14, color: t.textMuted),
+          Expanded(
+            child: Text(
+              daemon.notice ?? '',
+              style: theme.ui(t.textSecondary, size: 12),
+            ),
+          ),
+          IconTap(
+            Icons.close,
+            size: 13,
+            tooltip: 'Dismiss',
+            onTap: daemon.dismissNotice,
+          ),
+        ],
+      ),
+    );
   }
 }
