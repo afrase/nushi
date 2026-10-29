@@ -23,6 +23,9 @@ const (
 
 // canUseTool asks the user whether a tool may run.
 func (s *session) canUseTool(ctx context.Context, r claudeagent.PermissionRequest) (claudeagent.PermissionResult, error) {
+	if r.ToolName == "AskUserQuestion" {
+		return s.askUser(ctx, r)
+	}
 	s.mu.Lock()
 	stopped := s.dropTop && r.AgentID == "" // work the user cancelled, still asking
 	s.mu.Unlock()
