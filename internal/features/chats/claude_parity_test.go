@@ -156,7 +156,15 @@ func runGoAgent(t *testing.T, path string, rec []acpLine) []acp.SessionNotificat
 			}
 		}
 	}
-	ids := strings.NewReplacer() // the recorded session's id to the live one
+	ids := map[string]string{} // the recorded sessions' ids to the live ones
+	// sessions is a recorded message with the live sessions' ids.
+	sessions := func(msg json.RawMessage) string {
+		pairs := make([]string, 0, 2*len(ids))
+		for rec, live := range ids {
+			pairs = append(pairs, `"`+rec+`"`, `"`+live+`"`) // whole JSON strings, never part of one
+		}
+		return strings.NewReplacer(pairs...).Replace(string(msg))
+	}
 	cwd := t.TempDir()
 	agentReqs := map[string]string{} // the recorded agent's request ids to the Go agent's
 	for _, l := range rec {
@@ -164,12 +172,11 @@ func runGoAgent(t *testing.T, path string, rec []acpLine) []acp.SessionNotificat
 		testcheck.NoErr(t, json.Unmarshal(l.Msg, &m))
 		switch {
 		case l.Dir == "in":
-			msg := ids.Replace(string(l.Msg))
+			var id json.RawMessage
 			if m.Method == "" { // an answer to the agent's request: under the Go agent's id
-				msg = strings.Replace(msg, `"id":`+string(m.ID), `"id":`+agentReqs[string(m.ID)], 1)
+				id = json.RawMessage(agentReqs[string(m.ID)])
 			}
-			msg = withCwd(t, msg, cwd)
-			_, err := io.WriteString(toAgentW, msg+"\n")
+			_, err := io.WriteString(toAgentW, rewrite(t, sessions(l.Msg), id, cwd)+"\n")
 			testcheck.NoErr(t, err)
 		case m.Method == sessionUpdate: // kept by readACP
 		case m.Method != "": // a request of the agent's
@@ -188,7 +195,7 @@ func runGoAgent(t *testing.T, path string, rec []acpLine) []acp.SessionNotificat
 			}
 			_, _ = json.Unmarshal(m.Result, &recS), json.Unmarshal(got.Result, &liveS)
 			if recS.SessionID != "" && liveS.SessionID != "" {
-				ids = strings.NewReplacer(`"`+recS.SessionID+`"`, `"`+liveS.SessionID+`"`)
+				ids[recS.SessionID] = liveS.SessionID
 			}
 		}
 	}
@@ -206,16 +213,18 @@ func runGoAgent(t *testing.T, path string, rec []acpLine) []acp.SessionNotificat
 	return notes
 }
 
-// withCwd puts cwd for a session request's folder, which must exist here.
-func withCwd(t *testing.T, msg, cwd string) string {
+// rewrite is a recorded message to send the Go agent: under id when given,
+// and with cwd for a session request's folder, which must exist here.
+func rewrite(t *testing.T, msg string, id json.RawMessage, cwd string) string {
 	t.Helper()
 	var m map[string]any
 	testcheck.NoErr(t, json.Unmarshal([]byte(msg), &m))
-	p, _ := m["params"].(map[string]any)
-	if _, ok := p["cwd"]; !ok {
-		return msg
+	if id != nil {
+		m["id"] = id
 	}
-	p["cwd"] = cwd
+	if p, _ := m["params"].(map[string]any); p["cwd"] != nil {
+		p["cwd"] = cwd
+	}
 	b, err := json.Marshal(m)
 	testcheck.NoErr(t, err)
 	return string(b)
