@@ -106,7 +106,11 @@ void main() {
       ]).connect(tester);
       await tester.pumpWidget(NushiApp(daemon: d));
       await tester.pumpAndSettle();
-      final button = find.widgetWithText(Button, 'New chat');
+      // The sidebar's (the empty pane has one too).
+      final button = find.descendant(
+        of: find.byType(Sidebar),
+        matching: find.widgetWithText(Button, 'New chat'),
+      );
       final box = tester.getRect(button);
       final icon = tester.getRect(
         find.descendant(of: button, matching: find.byIcon(Icons.add)),

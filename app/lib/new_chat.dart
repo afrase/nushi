@@ -10,7 +10,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/issue_picker.dart';
-import 'package:nushi/logo.dart';
 import 'package:nushi/new_chat_issue.dart';
 import 'package:nushi/open_session.dart';
 import 'package:nushi/settings_nav.dart';
@@ -262,7 +261,7 @@ class _NewChatState extends State<_NewChat> {
                       if (agents.isEmpty)
                         Padding(
                           padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
-                          child: _SetUpLine(
+                          child: SetUpLine(
                             'No agents found. ',
                             onTap: () =>
                                 Navigator.pop(context, ('', null, null)),
@@ -362,8 +361,8 @@ final _step = RegExp(r'^(start agent|initialize|session/\w+|acp error -?\d+)$');
 
 /// "[before]Settings › Agents" with the second part a link, for when no
 /// agent can start yet.
-class _SetUpLine extends StatelessWidget {
-  const new(this.before, {required this.onTap});
+class SetUpLine extends StatelessWidget {
+  const new(this.before, {required this.onTap, super.key});
 
   final String before;
   final VoidCallback onTap;
@@ -378,41 +377,6 @@ class _SetUpLine extends StatelessWidget {
         Text(before, style: theme.ui(t.textMuted)),
         LinkText('Settings › Agents', onTap: onTap),
       ],
-    );
-  }
-}
-
-/// The pane with no chat open: "Start a chat", or, while no agent can
-/// start, where to set one up.
-class NothingOpen extends StatelessWidget {
-  const new(this.daemon, {super.key});
-
-  final Daemon daemon;
-
-  @override
-  Widget build(BuildContext context) => ValueListenableBuilder(
-    valueListenable: agentList,
-    builder: (context, agents, _) => _pane(context, agents),
-  );
-
-  Widget _pane(BuildContext context, Map<String, Agent> agents) {
-    final theme = NushiTheme.of(context);
-    final none = agents.isNotEmpty && !agents.values.any((a) => a.ready);
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Logo(color: theme.t.borderStrong),
-          const SizedBox(height: 16),
-          if (none)
-            _SetUpLine(
-              'Set up an agent in ',
-              onTap: () => daemon.openSettings(section: SettingsSection.agents),
-            )
-          else
-            Text('Start a chat', style: theme.ui(theme.t.textMuted)),
-        ],
-      ),
     );
   }
 }

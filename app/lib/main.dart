@@ -19,7 +19,7 @@ import 'package:nushi/details_panel.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/github_view.dart';
 import 'package:nushi/jira_view.dart';
-import 'package:nushi/new_chat.dart';
+import 'package:nushi/nothing_open.dart';
 import 'package:nushi/palette.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/pull_link.dart';

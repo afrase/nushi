@@ -246,7 +246,7 @@ void main() {
     await tester.pumpWidget(NushiApp(daemon: d));
     await tester.pump();
     // Keys go where the focus is: somewhere in the window.
-    Focus.of(tester.element(find.text('New chat'))).requestFocus();
+    Focus.of(tester.element(find.text('New chat').first)).requestFocus();
     await tester.pump();
     await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
     await tester.sendKeyEvent(LogicalKeyboardKey.keyN);
