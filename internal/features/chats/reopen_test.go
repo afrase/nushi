@@ -49,7 +49,7 @@ func TestAChatReopensOnceItsAgentIsReady(t *testing.T) {
 		}
 		return agent.launch(h, log)
 	}
-	sessions := &memSessions{stored: []model.Session{
+	sessions := &memSessions{stored: []model.ChatRecord{
 		{ID: "shown", SessionID: "s1", Agent: "fake", Folder: t.TempDir(), HasMessages: true},
 		{ID: "hidden", SessionID: "s2", Agent: "fake", Folder: t.TempDir(), HasMessages: true},
 	}}
@@ -67,7 +67,7 @@ func TestAChatReopensOnceItsAgentIsReady(t *testing.T) {
 	if got := notices(shown); !slices.Equal(got, want) {
 		t.Errorf("notices %q", got)
 	}
-	if st := svc.Status(shown.session); !st.ReopenFailed || st.Asleep {
+	if st := svc.Status(shown.record); !st.ReopenFailed || st.Asleep {
 		t.Errorf("status %+v: not asleep, but failed", st)
 	}
 
@@ -81,7 +81,7 @@ func TestAChatReopensOnceItsAgentIsReady(t *testing.T) {
 	mu.Unlock()
 	svc.AgentReady("fake")
 	for _, c := range []*chat{shown, hidden} {
-		if st := svc.Status(c.session); st.ReopenFailed || !st.Asleep {
+		if st := svc.Status(c.record); st.ReopenFailed || !st.Asleep {
 			t.Errorf("%s once the agent is ready: %+v", c.id, st)
 		}
 	}
@@ -143,7 +143,7 @@ func TestAChatWhoseFolderIsGone(t *testing.T) {
 	turn(t, svc, c, "one")
 	agent.quit()
 	eventually(t, c, func() bool { return c.agent == nil })
-	folder := c.session.Folder
+	folder := c.record.Folder
 	testcheck.NoErr(t, os.Remove(folder))
 	_, _ = svc.Get(c.id)
 	eventually(t, c, func() bool { return !c.busy && c.reopenFailed })

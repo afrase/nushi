@@ -43,7 +43,7 @@ func TestSendNowRechecksTheChatAfterWaiting(t *testing.T) {
 	go func() { now <- svc.Prompt(t.Context(), c.id, model.Message{Text: "now"}, SendNow) }()
 	archived := make(chan error)
 	go func() { archived <- svc.Archive(c.id, true) }()
-	eventually(t, c, func() bool { return c.session.Archived && c.stopping })
+	eventually(t, c, func() bool { return c.record.Archived && c.stopping })
 	agent.release()
 	if err := <-now; err == nil {
 		t.Error("an archived chat took a message")
@@ -214,7 +214,7 @@ func TestAFailedDeleteLeavesTheChatAsItWas(t *testing.T) {
 	}
 	sessions.mu.Lock()
 	defer sessions.mu.Unlock()
-	if slices.ContainsFunc(sessions.saved, func(s model.Session) bool { return s.Archived }) || c.halting {
+	if slices.ContainsFunc(sessions.saved, func(s model.ChatRecord) bool { return s.Archived }) || c.halting {
 		t.Errorf("after a failed delete: halting %v, saved %+v", c.halting, sessions.saved)
 	}
 }

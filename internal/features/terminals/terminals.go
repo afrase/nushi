@@ -234,7 +234,7 @@ func (s *Service) Close(id string) error {
 
 // Follow takes every event: a chat archived or deleted ends its terminals.
 func (s *Service) Follow(e model.Event) {
-	if e.Removed || e.Session != nil && e.Session.Archived {
+	if e.Removed || e.Record != nil && e.Record.Archived {
 		s.CloseChat(e.ChatID)
 	}
 }

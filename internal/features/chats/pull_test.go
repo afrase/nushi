@@ -45,7 +45,7 @@ func TestLinkPull(t *testing.T) {
 		t.Fatalf("its branch left: %+v", p)
 	}
 	c.mu.Lock()
-	c.saveLocked(func(s *model.Session) { s.GitHub = found(3, "") })
+	c.saveLocked(func(s *model.ChatRecord) { s.GitHub = found(3, "") })
 	c.mu.Unlock()
 	testcheck.NoErr(t, svc.LinkPull(c.id, found(4, "sub")))
 	if p := pull(); p.Number != 3 {

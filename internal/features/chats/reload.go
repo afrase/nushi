@@ -16,7 +16,7 @@ func (s *Service) MCPChanged(agent string, affected func(folder string) bool) {
 	s.mu.Unlock()
 	for _, c := range open {
 		c.mu.Lock()
-		folder, running := c.session.Folder, c.agent != nil && c.parent == nil && c.kind.MCP && c.kind.Name == agent
+		folder, running := c.record.Folder, c.agent != nil && c.parent == nil && c.kind.MCP && c.kind.Name == agent
 		c.mu.Unlock()
 		if running && affected(folder) {
 			c.mu.Lock()

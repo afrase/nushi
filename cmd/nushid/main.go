@@ -125,7 +125,7 @@ func run() error {
 	known := knownagents.All(projects)
 	agentSvc := newAgents(dir, known)
 	st := store.New(dir)
-	st.HadMessages = func(s model.Session) bool { return claudehistory.Has(projects, s.SessionID, s.Folder) }
+	st.HadMessages = func(s model.ChatRecord) bool { return claudehistory.Has(projects, s.SessionID, s.Folder) }
 	copies, err := transcripts.Open(filepath.Join(dir, "transcripts"))
 	if err != nil {
 		return err

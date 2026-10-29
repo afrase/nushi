@@ -71,7 +71,7 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 			return errors.New("the agent can't rewind to this message")
 		}
 		msg = messageOf(c.items[i])
-		agent, sid, folder, at, forkAt = c.agent, c.sid, c.session.Folder, c.items[i].ForkAt, c.forkAt
+		agent, sid, folder, at, forkAt = c.agent, c.sid, c.record.Folder, c.items[i].ForkAt, c.forkAt
 		c.busy = true
 		c.statusChangedLocked()
 		return nil
@@ -121,14 +121,14 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 		c.items = c.items[:i]
 		c.cutCopyLocked(cut)
 		c.emitLocked(model.Event{ChatID: c.id, Config: slices.Clone(config)})
-		c.saveLocked(func(s *model.Session) {
+		c.saveLocked(func(s *model.ChatRecord) {
 			s.Earlier = append(slices.Clip(s.Earlier), model.AgentSession{ID: s.SessionID, Folder: s.Folder})
 			s.SessionID = next
 			if first { // a chat without messages again
 				s.Title, s.HasMessages = "", false
 			}
 		})
-		return c.session.Mode, c.session.Picks, nil
+		return c.record.Mode, c.record.Picks, nil
 	}()
 	if err == nil {
 		if _, err := agent.CloseSession(ctx, &acp.CloseSessionRequest{SessionID: acp.SessionID(sid)}); err != nil {

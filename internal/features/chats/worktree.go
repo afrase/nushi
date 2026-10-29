@@ -100,7 +100,7 @@ func (s *Service) addWorktree(ctx context.Context, folder, branch, from string) 
 
 // made is the worktrees Nushi made for a chat (the one it runs in first),
 // which Delete offers to remove: never one it found there.
-func made(sess model.Session) []model.Worktree {
+func made(sess model.ChatRecord) []model.Worktree {
 	wts := slices.Clone(sess.EarlierWorktrees)
 	if wt := sess.Worktree; wt != nil && !wt.Found {
 		wts = append([]model.Worktree{*wt}, wts...)

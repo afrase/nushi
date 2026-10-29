@@ -38,7 +38,7 @@ func (s *Service) ContextUsage(ctx context.Context, chatID string) (model.Contex
 	if err == nil && (c.busy || c.agent == nil) {
 		err = errors.New("the chat is busy")
 	}
-	agent, sid, folder, cmd := c.agent, c.sid, c.session.Folder, c.dialect.ContextCommand
+	agent, sid, folder, cmd := c.agent, c.sid, c.record.Folder, c.dialect.ContextCommand
 	c.mu.Unlock()
 	if err != nil {
 		return model.ContextUsage{}, err
@@ -90,7 +90,7 @@ func (c *chat) canAskContextLocked() error {
 		return errors.New("the agent can't say what fills its context")
 	case !c.canFork || c.parent != nil:
 		return errors.New("the agent can't fork this chat to ask")
-	case !c.session.HasMessages:
+	case !c.record.HasMessages:
 		return errors.New("the chat has no messages yet")
 	}
 	return nil

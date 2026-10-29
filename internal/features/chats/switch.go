@@ -29,7 +29,7 @@ type Switched struct {
 
 // SwitchBranch checks out branch in a chat's folder (git switch), or a new
 // branch from HEAD with create, as the user asked from the Environment
-// card. Refused for a worktree chat (it moves to another worktree instead)
+// widget. Refused for a worktree chat (it moves to another worktree instead)
 // and while this chat or another in the same checkout works; returned
 // without switching when the branch is another worktree's, the folder has
 // uncommitted changes (not for a new branch: they go along), or, unless
@@ -42,7 +42,7 @@ func (s *Service) SwitchBranch(ctx context.Context, chatID, branch string, creat
 		return none, err
 	}
 	c.mu.Lock()
-	folder, wt := c.session.Folder, c.session.Worktree
+	folder, wt := c.record.Folder, c.record.Worktree
 	switch err = c.closedLocked(); {
 	case err != nil:
 	case !c.quietLocked():
@@ -112,7 +112,7 @@ func (s *Service) inCheckout(c *chat, list []model.WorktreeEntry, folder string)
 			return nil, nil, err
 		}
 		o.mu.Lock()
-		quiet, title := o.quietLocked(), cmp.Or(o.session.Name, o.session.Title, "a chat without a title")
+		quiet, title := o.quietLocked(), cmp.Or(o.record.Name, o.record.Title, "a chat without a title")
 		o.mu.Unlock()
 		if !quiet {
 			return nil, nil, fmt.Errorf("“%s” is working in this folder: switch the branch once it's done", title)
@@ -129,7 +129,7 @@ func (s *Service) inCheckout(c *chat, list []model.WorktreeEntry, folder string)
 // to: its transcript's line, and the agent told with the next prompt
 // (from the branch it last had, which several switches keep).
 func (c *chat) switchedLocked(from, to string) {
-	c.saveLocked(func(s *model.Session) { s.BranchFrom = cmp.Or(s.BranchFrom, from) })
+	c.saveLocked(func(s *model.ChatRecord) { s.BranchFrom = cmp.Or(s.BranchFrom, from) })
 	c.noticeLocked("branch_switched", "Switched to branch "+to)
 	c.copyLocked(false)
 }
@@ -184,7 +184,7 @@ func (n *notes) place() (*acp.ContentBlock, *placed) {
 // its note's lines are marked as told. No switch or move comes between
 // the note and this: both wait for the turn's end.
 func (c *chat) placedLocked(p *placed) {
-	c.saveLocked(func(s *model.Session) { s.Moved, s.BranchFrom = false, "" })
+	c.saveLocked(func(s *model.ChatRecord) { s.Moved, s.BranchFrom = false, "" })
 	c.markToldLocked(p.notices)
 	if len(p.notices) > 0 {
 		c.copyLocked(false)

@@ -53,8 +53,8 @@ func TestPromptStreamsTheReply(t *testing.T) {
 	}
 
 	c := svc.chats[id]
-	if c.session.Title != "hi" || !c.session.HasMessages {
-		t.Errorf("title = %q, want the first prompt (has messages: %v)", c.session.Title, c.session.HasMessages)
+	if c.record.Title != "hi" || !c.record.HasMessages {
+		t.Errorf("title = %q, want the first prompt (has messages: %v)", c.record.Title, c.record.HasMessages)
 	}
 	if c.items[0].Sent.IsZero() {
 		t.Error("the message has no time sent")
@@ -78,7 +78,7 @@ func TestPromptStreamsTheReply(t *testing.T) {
 		switch {
 		case e.Item != nil:
 			items++
-		case e.Session != nil:
+		case e.Record != nil:
 			sessions++
 		}
 	}
@@ -91,7 +91,7 @@ func TestToolCallUpdatesMergeIntoOneItem(t *testing.T) {
 	text := func(s string) []acp.ToolCallContent {
 		return []acp.ToolCallContent{{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: s}}}}}
 	}
-	c := &chat{id: "s1", sid: "s1", publish: func(model.Event) {}, session: model.Session{Folder: "/w"}}
+	c := &chat{id: "s1", sid: "s1", publish: func(model.Event) {}, record: model.ChatRecord{Folder: "/w"}}
 	for _, u := range []acp.SessionUpdate{
 		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "Terminal", Kind: "execute", Status: "pending"}},
 		{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Title: "ls -la", Content: text("List files")}},
@@ -115,7 +115,7 @@ func TestToolCallUpdatesMergeIntoOneItem(t *testing.T) {
 func TestToolCallKeepsItsRawInputAndOutput(t *testing.T) {
 	text := []acp.ToolCallContent{{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: "found 1"}}}}}
 	long := `{"jql": "` + strings.Repeat("é", 6000) + `"}`
-	c := &chat{id: "s1", sid: "s1", publish: func(model.Event) {}, session: model.Session{Folder: "/w"}}
+	c := &chat{id: "s1", sid: "s1", publish: func(model.Event) {}, record: model.ChatRecord{Folder: "/w"}}
 	for _, u := range []acp.SessionUpdate{
 		// Claude's MCP call: an empty input first, then the whole of it; its
 		// result both as content and as rawOutput.
@@ -306,7 +306,7 @@ func TestImagesJoinTheirMessageOrToolCall(t *testing.T) {
 }
 
 func TestSubagentUpdatesGoUnderTheirToolCall(t *testing.T) {
-	c := &chat{id: "s1", sid: "s1", dialect: testDialect, publish: func(model.Event) {}, session: model.Session{Folder: "/w"}}
+	c := &chat{id: "s1", sid: "s1", dialect: testDialect, publish: func(model.Event) {}, record: model.ChatRecord{Folder: "/w"}}
 	under := func(parent string) map[string]any {
 		return map[string]any{"claudeCode": map[string]any{"parentToolUseId": parent}}
 	}
@@ -371,16 +371,16 @@ func TestSubagentUpdatesGoUnderTheirToolCall(t *testing.T) {
 	}
 }
 
-func TestBackgroundShellsAreFollowed(t *testing.T) {
-	defer func(d time.Duration) { shellPoll = d }(shellPoll)
-	shellPoll = 10 * time.Millisecond
+func TestBackgroundCommandsAreFollowed(t *testing.T) {
+	defer func(d time.Duration) { commandPoll = d }(commandPoll)
+	commandPoll = 10 * time.Millisecond
 	dir := filepath.Join(t.TempDir(), "tasks")
 	testcheck.NoErr(t, os.Mkdir(dir, 0o700))
 	file := filepath.Join(dir, "b1.output")
 	testcheck.NoErr(t, os.WriteFile(file, []byte("half"), 0o600))
 	events := make(chan model.Event, 100)
 	var counts []int // how many run in the background, as each status said (under c.mu)
-	c := &chat{id: "s1", sid: "s1", dialect: testDialect, agent: &fakeAgent{}, ctx: t.Context(), session: model.Session{Folder: "/w"},
+	c := &chat{id: "s1", sid: "s1", dialect: testDialect, agent: &fakeAgent{}, ctx: t.Context(), record: model.ChatRecord{Folder: "/w"},
 		publish: func(e model.Event) {
 			if e.Status != nil {
 				counts = append(counts, e.Status.Background)
@@ -399,11 +399,11 @@ func TestBackgroundShellsAreFollowed(t *testing.T) {
 	} {
 		_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: u})
 	}
-	shell := func(want string) model.Shell {
+	shell := func(want string) model.BackgroundCommand {
 		t.Helper()
 		for deadline := time.After(2 * time.Second); ; {
 			c.mu.Lock()
-			sh := *c.items[0].Shell
+			sh := *c.items[0].BackgroundCommand
 			c.mu.Unlock()
 			if sh.State == want && sh.Output != "" {
 				return sh
@@ -432,7 +432,7 @@ func TestBackgroundShellsAreFollowed(t *testing.T) {
 	// Its agent gone without a word of its end: only that it started.
 	testcheck.NoErr(t, os.WriteFile(file, []byte("again"), 0o600))
 	c.mu.Lock()
-	c.items[0].Shell = nil
+	c.items[0].BackgroundCommand = nil
 	c.mu.Unlock()
 	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call_update",
 		ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed"}}})
@@ -446,23 +446,23 @@ func TestBackgroundShellsAreFollowed(t *testing.T) {
 // A line that reads as the end, which the command printed itself, isn't
 // its end: the file goes on growing after it.
 func TestAnEndLineTheCommandPrintedIsntItsEnd(t *testing.T) {
-	defer func(d time.Duration) { shellPoll = d }(shellPoll)
-	shellPoll = time.Millisecond
+	defer func(d time.Duration) { commandPoll = d }(commandPoll)
+	commandPoll = time.Millisecond
 	reads := [][2]string{{"[killed]", "killed"}, {"[killed] and on", ""}, {"[killed] and on", "exited with code 0"}, {"[killed] and on", "exited with code 0"}}
 	var states []string
 	dialect := testDialect
-	dialect.ReadShell = func(string, string) (string, string, error) {
+	dialect.ReadBackgroundCommand = func(string, string) (string, string, error) {
 		r := reads[min(len(states), len(reads)-1)]
 		return r[0], r[1], nil
 	}
 	c := &chat{id: "s1", dialect: dialect, publish: func(e model.Event) {
-		if e.Item != nil && e.Item.Shell != nil {
-			states = append(states, e.Item.Shell.State)
+		if e.Item != nil && e.Item.BackgroundCommand != nil {
+			states = append(states, e.Item.BackgroundCommand.State)
 		}
-	}, agent: &fakeAgent{}, ctx: t.Context(), items: []model.Item{{ID: "t1", Shell: &model.Shell{State: "running"}}}}
-	c.followShell("t1", "b1", "f", c.agent)
-	if c.items[0].Shell.State != "done" || slices.Contains(states, "stopped") {
-		t.Errorf("states %q, the end %+v", states, c.items[0].Shell)
+	}, agent: &fakeAgent{}, ctx: t.Context(), items: []model.Item{{ID: "t1", BackgroundCommand: &model.BackgroundCommand{State: "running"}}}}
+	c.followCommand("t1", "b1", "f", c.agent)
+	if c.items[0].BackgroundCommand.State != "done" || slices.Contains(states, "stopped") {
+		t.Errorf("states %q, the end %+v", states, c.items[0].BackgroundCommand)
 	}
 }
 
@@ -492,7 +492,7 @@ func TestToolsForAChatOnAnIssue(t *testing.T) {
 	if len(agent.mcp) != 1 || agent.mcp[0].Stdio.Name != "nushi" || len(asked) != 1 || asked[0] != id+" fake ACME-12" {
 		t.Errorf("session/new got %v; asked %v", agent.mcp, asked)
 	}
-	if s := svc.chats[id].session; s.Issue == nil || s.Issue.Key != "ACME-12" {
+	if s := svc.chats[id].record; s.Issue == nil || s.Issue.Key != "ACME-12" {
 		t.Errorf("the chat doesn't remember its issue: %+v", s.Issue)
 	}
 }
@@ -501,7 +501,7 @@ func TestToolsForAChatOnAnIssue(t *testing.T) {
 // folder or not (an agent's notes in its own folder); others don't.
 func TestWroteIsWhatTheChatsToolCallsWorkedOn(t *testing.T) {
 	svc := newService(t, nil, Options{})
-	svc.chats = map[string]*chat{"c": {id: "c", session: model.Session{ID: "c", Folder: "/work/app"}, items: []model.Item{
+	svc.chats = map[string]*chat{"c": {id: "c", record: model.ChatRecord{ID: "c", Folder: "/work/app"}, items: []model.Item{
 		{ID: "w", Kind: model.ToolCall, Paths: []string{"docs/report.md"}},
 		{ID: "m", Kind: model.ToolCall, Parent: "a1", Diffs: []model.FileChange{{Path: "/home/me/.claude/memory/MEMORY.md"}}},
 		{ID: "u", Kind: model.UserMessage, Files: []string{"/etc/hosts"}},

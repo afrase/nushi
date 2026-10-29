@@ -8,7 +8,7 @@ import (
 
 // Viewers say which chats a client shows now: the Mac's window or a
 // phone's screen (internal/features/remote's views). Without them
-// (Options.Viewers) no turn's end is marked unseen.
+// (Options.Viewers) no chat is marked done (ChatRecord.Done).
 type Viewers interface {
 	Shown(chatID string) bool
 }
@@ -25,7 +25,7 @@ func (s *Service) Seen(chatID string) error {
 		if err != nil {
 			return err
 		}
-		if !slices.ContainsFunc(stored, func(sess model.Session) bool { return sess.ID == chatID && sess.Unseen }) {
+		if !slices.ContainsFunc(stored, func(sess model.ChatRecord) bool { return sess.ID == chatID && sess.Done }) {
 			return nil
 		}
 		if c, err = s.stored(chatID); err != nil {
@@ -34,16 +34,16 @@ func (s *Service) Seen(chatID string) error {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.saveLocked(func(s *model.Session) { s.Unseen = false })
+	c.saveLocked(func(s *model.ChatRecord) { s.Done = false })
 	return nil
 }
 
-// endedLocked marks the turn that just ended unseen, unless a client shows
+// endedLocked marks the chat done as its turn ends, unless a client shows
 // the chat or it was stopped: one the user stopped, or whose agent is
 // being stopped (sleep, archive, the daemon closing), they know of.
 func (c *chat) endedLocked() {
 	if c.parent != nil || c.stopped || c.stopping || c.halting || c.viewers == nil || c.viewers.Shown(c.id) {
 		return
 	}
-	c.saveLocked(func(s *model.Session) { s.Unseen = true })
+	c.saveLocked(func(s *model.ChatRecord) { s.Done = true })
 }

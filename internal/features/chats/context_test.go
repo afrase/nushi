@@ -26,7 +26,7 @@ func TestContextUsageLeavesNoTrace(t *testing.T) {
 	if _, err := svc.ContextUsage(context.Background(), id); err == nil {
 		t.Error("ran /context in a chat without messages")
 	}
-	c.session.HasMessages = true
+	c.record.HasMessages = true
 	before := events
 	md, err := svc.ContextUsage(context.Background(), id)
 	if err != nil || md.Markdown != "## Context Usage" {

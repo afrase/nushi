@@ -77,8 +77,8 @@ func TestOneModePickerAndTheModeIsRemembered(t *testing.T) {
 	}
 
 	// The chat's stored mode follows, whoever changed it.
-	if c.session.Mode != "default" {
-		t.Errorf("stored mode = %q, want default", c.session.Mode)
+	if c.record.Mode != "default" {
+		t.Errorf("stored mode = %q, want default", c.record.Mode)
 	}
 
 	// The next chat starts in the remembered mode, on the remembered model.
@@ -129,8 +129,8 @@ func TestUltracode(t *testing.T) {
 	agent.mu.Lock()
 	meta := agent.loadMeta
 	agent.mu.Unlock()
-	if again != launches+1 || !ultracodeOn(meta) || !c.session.Ultracode || current(c, ultracodeID) != "true" {
-		t.Errorf("turned on: %d launches (was %d), load _meta %v, stored %v", again, launches, meta, c.session.Ultracode)
+	if again != launches+1 || !ultracodeOn(meta) || !c.record.Ultracode || current(c, ultracodeID) != "true" {
+		t.Errorf("turned on: %d launches (was %d), load _meta %v, stored %v", again, launches, meta, c.record.Ultracode)
 	}
 	if current(c, "model") != "sonnet" {
 		t.Errorf("the model after: %s", current(c, "model"))
@@ -143,7 +143,7 @@ func TestUltracode(t *testing.T) {
 	agent.gate = make(chan struct{})
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendIdle))
 	eventually(t, c, func() bool { return c.busy })
-	if err := svc.SetConfig(context.Background(), c.id, ultracodeID, "false"); err == nil || !c.session.Ultracode {
+	if err := svc.SetConfig(context.Background(), c.id, ultracodeID, "false"); err == nil || !c.record.Ultracode {
 		t.Errorf("during a turn: %v", err)
 	}
 	agent.release()
@@ -152,7 +152,7 @@ func TestUltracode(t *testing.T) {
 	// Asleep: kept, the agent left asleep until something needs it.
 	testcheck.NoErr(t, svc.Sleep(c.id))
 	testcheck.NoErr(t, svc.SetConfig(context.Background(), c.id, ultracodeID, "false"))
-	if c.agent != nil || c.session.Ultracode {
-		t.Errorf("asleep: agent %v, stored %v", c.agent, c.session.Ultracode)
+	if c.agent != nil || c.record.Ultracode {
+		t.Errorf("asleep: agent %v, stored %v", c.agent, c.record.Ultracode)
 	}
 }

@@ -42,7 +42,7 @@ func (s *session) stats(ctx context.Context) (stats, error) {
 	return st, err
 }
 
-// Context asks the bridge what a session holds, for the Context card:
+// Context asks the bridge what a session holds, for the Context widget:
 // PiG has no breakdown of its context, but counts the session's messages,
 // tool calls and tokens.
 func Context(ctx context.Context, call func(ctx context.Context, method string, params, result any) error, sessionID string) (model.ContextUsage, error) {

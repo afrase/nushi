@@ -52,7 +52,7 @@ func (s *Service) PlanDelete(ctx context.Context, chatID string) (DeletePlan, er
 		return DeletePlan{}, err
 	}
 	c.mu.Lock()
-	sess := c.session
+	sess := c.record
 	c.mu.Unlock()
 	p := DeletePlan{Sessions: append(slices.Clone(sess.Earlier), model.AgentSession{ID: sess.SessionID, Folder: sess.Folder})}
 	// Only the folder Nushi made for the chat, never one the user picked.
@@ -121,7 +121,7 @@ func (s *Service) Delete(ctx context.Context, chatID string, opts DeleteOptions)
 	}
 	if err == nil && p.History {
 		c.mu.Lock()
-		ids, gone := slices.Clone(c.session.Throwaway), c.sessionGone
+		ids, gone := slices.Clone(c.record.Throwaway), c.sessionGone
 		c.mu.Unlock()
 		for i, sess := range p.Sessions {
 			if !gone || i < len(p.Sessions)-1 { // a session the agent deleted has nothing left to delete

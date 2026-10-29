@@ -75,9 +75,9 @@ func All(projects string) []Agent {
 			Chats: chats.Kind{Resume: "claude --resume", Gone: chats.NotFound, Expires: "Claude Code deletes sessions after 30 days by default",
 				Dialect: chats.Dialect{InitMeta: claude.InitMeta, SessionMeta: claude.SessionMeta, UltracodeMeta: claude.UltracodeMeta, TurnDone: claude.TurnDone, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall, Notice: claude.Notice,
 					Background: claude.Background, ReportElsewhere: claude.ReportElsewhere,
-					Shell: claude.Shell, ReadShell: claude.ReadShell,
-					SubagentID: claude.SubagentID, Relay: claude.Relay, Relayed: claude.Relayed, Relaying: claude.Relaying,
-					Subagents: claude.Subagents, StopTask: claude.StopTask, StopRelayed: claude.StopRelayed, Stopped: claude.Stopped, RunsShell: claude.RunsShell,
+					BackgroundCommand: claude.BackgroundCommand, ReadBackgroundCommand: claude.ReadBackgroundCommand,
+					SubagentID: claude.SubagentID, ToSubagent: claude.ToSubagent, ReadToSubagent: claude.ReadToSubagent, PassesToSubagent: claude.PassesToSubagent,
+					Subagents: claude.Subagents, StopTask: claude.StopTask, ReadStopTask: claude.ReadStopTask, Stopped: claude.Stopped, RunsBackgroundCommand: claude.RunsBackgroundCommand,
 					Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle, Compacted: claude.Compacted,
 					ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete, NamesSessions: true}},
 			Local: func(k *chats.Kind) {

@@ -59,9 +59,9 @@ const (
 	agentPid = 4000
 )
 
-// shellFixture is a chat whose agent (agentPid) runs waitLoop in the
+// commandFixture is a chat whose agent (agentPid) runs waitLoop in the
 // background, the processes below it, and the command's output file.
-type shellFixture struct {
+type commandFixture struct {
 	svc   *Service
 	agent *fakeAgent
 	c     *chat
@@ -69,13 +69,13 @@ type shellFixture struct {
 	file  string
 }
 
-// shellChat makes a shellFixture, the command followed through its file
+// commandChat makes a shellFixture, the command followed through its file
 // if follow.
-func shellChat(t *testing.T, follow bool, below ...model.Process) shellFixture {
+func commandChat(t *testing.T, follow bool, below ...model.Process) commandFixture {
 	t.Helper()
-	poll := shellPoll
-	t.Cleanup(func() { shellPoll = poll }) // last: after the service closed, and its following with it
-	shellPoll = 5 * time.Millisecond
+	poll := commandPoll
+	t.Cleanup(func() { commandPoll = poll }) // last: after the service closed, and its following with it
+	commandPoll = 5 * time.Millisecond
 	agent := &fakeAgent{pid: agentPid}
 	testcheck.NoErr(t, json.Unmarshal([]byte(claudeSession), &agent.session))
 	procs := &fakeProcesses{below: map[int][]model.Process{agentPid: below}}
@@ -90,18 +90,18 @@ func shellChat(t *testing.T, follow bool, below ...model.Process) shellFixture {
 	testcheck.NoErr(t, err)
 	c.mu.Lock()
 	c.addLocked(model.Item{ID: waitCall, Kind: model.ToolCall, Tool: "Bash", Title: waitLoop, Status: "completed", Input: string(in),
-		Shell: &model.Shell{ID: waitTask, State: "running", Started: time.Now()}})
+		BackgroundCommand: &model.BackgroundCommand{ID: waitTask, State: "running", Started: time.Now()}})
 	if follow {
-		go c.followShell(waitCall, waitTask, file, c.agent)
+		go c.followCommand(waitCall, waitTask, file, c.agent)
 	}
 	c.mu.Unlock()
-	return shellFixture{svc, agent, c, procs, file}
+	return commandFixture{svc, agent, c, procs, file}
 }
 
-func shellOf(c *chat) model.Shell {
+func commandOf(c *chat) model.BackgroundCommand {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return *c.itemLocked(waitCall).Shell
+	return *c.itemLocked(waitCall).BackgroundCommand
 }
 
 // The one shell below the agent that leads its group and runs the
@@ -111,7 +111,7 @@ func shellOf(c *chat) model.Shell {
 // transcript when replayed.
 func TestABackgroundCommandIsStoppedByItsProcessGroup(t *testing.T) {
 	shell := model.Process{Pid: 4100, Pgid: 4100, Args: zshRunning(waitLoop)}
-	f := shellChat(t, true,
+	f := commandChat(t, true,
 		model.Process{Pid: 4001, Pgid: 4000, Args: []string{"claude"}},
 		shell,
 		model.Process{Pid: 4101, Pgid: 4100, Args: zshRunning(waitLoop)}, // a subshell of it: the same command line, not its group's leader
@@ -125,7 +125,7 @@ func TestABackgroundCommandIsStoppedByItsProcessGroup(t *testing.T) {
 	if len(procs.stopped) != 1 || procs.stopped[0].Pid != shell.Pid {
 		t.Fatalf("stopped %+v", procs.stopped)
 	}
-	if sh := shellOf(c); sh.State != "running" || !sh.Killed {
+	if sh := commandOf(c); sh.State != "running" || !sh.Killed {
 		t.Errorf("before Claude says it ended: %+v", sh)
 	}
 	testcheck.NoErr(t, svc.StopTask(t.Context(), c.id, waitCall)) // Stop again while it ends: nothing more
@@ -133,8 +133,8 @@ func TestABackgroundCommandIsStoppedByItsProcessGroup(t *testing.T) {
 		t.Errorf("a second Stop asked %q, stopped %+v", prompts, procs.stopped)
 	}
 	testcheck.NoErr(t, os.WriteFile(file, []byte("waiting\n\n[exited with code 144]\n"), 0o600))
-	eventually(t, c, func() bool { return c.itemLocked(waitCall).Shell.State == "stopped" })
-	if sh := shellOf(c); sh.End != "exited with code 144" || sh.Ended.IsZero() {
+	eventually(t, c, func() bool { return c.itemLocked(waitCall).BackgroundCommand.State == "stopped" })
+	if sh := commandOf(c); sh.End != "exited with code 144" || sh.Ended.IsZero() {
 		t.Errorf("ended: %+v", sh)
 	}
 
@@ -167,7 +167,7 @@ func TestABackgroundCommandFallsBackToTaskStop(t *testing.T) {
 		"signal refused": {below: []model.Process{leader(4100, zshRunning(waitLoop))}, err: errors.New("gone")},
 	} {
 		t.Run(name, func(t *testing.T) {
-			f := shellChat(t, false, tc.below...)
+			f := commandChat(t, false, tc.below...)
 			svc, agent, c, procs := f.svc, f.agent, f.c, f.procs
 			procs.err = tc.err
 			testcheck.NoErr(t, svc.StopTask(t.Context(), c.id, waitCall))
@@ -178,7 +178,7 @@ func TestABackgroundCommandFallsBackToTaskStop(t *testing.T) {
 			if len(procs.stopped) != 0 {
 				t.Errorf("stopped %+v", procs.stopped)
 			}
-			if sh := shellOf(c); sh.Killed {
+			if sh := commandOf(c); sh.Killed {
 				t.Errorf("marked as Nushi's stop: %+v", sh)
 			}
 		})
@@ -188,14 +188,14 @@ func TestABackgroundCommandFallsBackToTaskStop(t *testing.T) {
 // Claude's replay of a stop it was asked for, today's (the id only) or one
 // from before (with what it names), reads back as a stop of that call.
 func TestReplayedStopsReadBack(t *testing.T) {
-	c := shellChat(t, false).c
+	c := commandChat(t, false).c
 	for _, text := range []string{claude.StopTask(waitTask),
 		"Stop your background task " + waitTask + " (until test -f /tmp/made-up/ready; do) now with your TaskStop tool (task_id: " + waitTask + "). Do nothing else, and say only whether it stopped."} {
 		it := model.Item{Kind: model.UserMessage, Text: text}
 		c.mu.Lock()
-		ok := c.relayedLocked(&it)
+		ok := c.readToSubagentLocked(&it)
 		c.mu.Unlock()
-		if !ok || !it.RelayStop || it.RelayCall != waitCall || it.Text != "" || !strings.HasPrefix(it.RelayTo, "until test -f /tmp/made-up/ready; do") {
+		if !ok || !it.ToSubagentStop || it.ToSubagent != waitCall || it.Text != "" || !strings.HasPrefix(it.ToSubagentName, "until test -f /tmp/made-up/ready; do") {
 			t.Errorf("%q read back as %+v", text, it)
 		}
 	}

@@ -56,10 +56,10 @@ func ended(it *model.Item) {
 		sa.State, sa.Said = "failed", ""
 		it.Subagent = &sa
 	}
-	if it.Shell != nil && it.Shell.State == "running" {
-		sh := *it.Shell
+	if it.BackgroundCommand != nil && it.BackgroundCommand.State == "running" {
+		sh := *it.BackgroundCommand
 		sh.State = "started"
-		it.Shell = &sh
+		it.BackgroundCommand = &sh
 	}
 }
 

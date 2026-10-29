@@ -231,7 +231,7 @@ func (s *server) GetChat(_ context.Context, req *connect.Request[nushiv1.GetChat
 	if n := int(req.Msg.Recent); n > 0 {
 		start = pageStart(c.Items, len(c.Items), n)
 	}
-	resp := &nushiv1.GetChatResponse{Chat: chatProto(c.Session), Config: configProto(c.Config),
+	resp := &nushiv1.GetChatResponse{Chat: chatProto(c.Record), Config: configProto(c.Config),
 		Status: statusProto(c.Status), Seq: c.Seq, Commands: commandsProto(c.Commands), Usage: usageProto(c.Usage),
 		Queue: queueProto(c.Queue), Older: int32(start)}
 	for _, it := range c.Items[start:] {

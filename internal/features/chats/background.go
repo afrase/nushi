@@ -7,49 +7,49 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-// shellLocked notices a tool call that left its command running in the
-// background (see model.Shell) and follows it: through its output file
+// backgroundCommandLocked notices a tool call that left its command running in the
+// background (see model.BackgroundCommand) and follows it: through its output file
 // while the agent that runs it lives, else once, for how it ended.
-func (c *chat) shellLocked(it *model.Item) {
-	if it.Shell != nil || it.Status != "completed" || c.dialect.Shell == nil {
+func (c *chat) backgroundCommandLocked(it *model.Item) {
+	if it.BackgroundCommand != nil || it.Status != "completed" || c.dialect.BackgroundCommand == nil {
 		return
 	}
-	id, file, ok := c.dialect.Shell(*it)
+	id, file, ok := c.dialect.BackgroundCommand(*it)
 	if !ok {
 		return
 	}
-	it.Shell = &model.Shell{ID: id, State: "started"}
+	it.BackgroundCommand = &model.BackgroundCommand{ID: id, State: "started"}
 	var agent Agent // none: the end is read once
 	if !c.reopeningLocked() {
-		it.Shell.State, it.Shell.Started, agent = "running", time.Now(), c.agent
+		it.BackgroundCommand.State, it.BackgroundCommand.Started, agent = "running", time.Now(), c.agent
 	}
-	go c.followShell(it.ID, id, file, agent)
+	go c.followCommand(it.ID, id, file, agent)
 }
 
-// shellPoll is how often a running background command's output is read.
-var shellPoll = time.Second
+// commandPoll is how often a running background command's output is read.
+var commandPoll = time.Second
 
 // A command can print a line that reads as Claude's end line, so an end is
 // taken only once the file stops growing after it (while the command's
 // agent runs: else there's nothing more to wait for).
-func (c *chat) followShell(callID, id, file string, agent Agent) {
+func (c *chat) followCommand(callID, id, file string, agent Agent) {
 	var endAt *string // the output an end was first seen after
 	for {
-		out, end, err := c.dialect.ReadShell(id, file)
+		out, end, err := c.dialect.ReadBackgroundCommand(id, file)
 		c.mu.Lock()
 		it := c.itemLocked(callID)
-		if it == nil || it.Shell == nil {
+		if it == nil || it.BackgroundCommand == nil {
 			c.mu.Unlock()
 			return // the chat went, or was rewound past the call
 		}
-		sh := *it.Shell
+		sh := *it.BackgroundCommand
 		if err == nil {
 			sh.Output = out
 		}
 		gone := agent == nil || c.agent != agent || err != nil
 		switch {
 		case end != "" && (gone || endAt != nil && *endAt == out):
-			sh.State, sh.End = shellState(end, sh.Killed), end
+			sh.State, sh.End = commandState(end, sh.Killed), end
 			if !sh.Started.IsZero() && sh.Ended.IsZero() {
 				sh.Ended = time.Now()
 			}
@@ -58,8 +58,8 @@ func (c *chat) followShell(callID, id, file string, agent Agent) {
 		case gone:
 			sh.State = "started" // no word of its end, and nothing says it still runs
 		}
-		if sh != *it.Shell {
-			it.Shell = &sh
+		if sh != *it.BackgroundCommand {
+			it.BackgroundCommand = &sh
 			c.publishLocked(*it)
 		}
 		c.mu.Unlock()
@@ -67,17 +67,17 @@ func (c *chat) followShell(callID, id, file string, agent Agent) {
 			return
 		}
 		select {
-		case <-time.After(shellPoll):
+		case <-time.After(commandPoll):
 		case <-c.ctx.Done():
 			return // the service closed: its agents end, and nobody is left to tell
 		}
 	}
 }
 
-// shellState is a background command's state from how the agent says it
-// ended; one Nushi killed (model.Shell's Killed) reads "stopped" though
+// commandState is a background command's state from how the agent says it
+// ended; one Nushi killed (model.BackgroundCommand's Killed) reads "stopped" though
 // Claude Code gives it an exit code (144 for SIGTERM).
-func shellState(end string, killed bool) string {
+func commandState(end string, killed bool) string {
 	switch {
 	case strings.HasSuffix(end, " 0"):
 		return "done"
@@ -97,19 +97,19 @@ type Processes interface {
 	StopGroup(root int, p model.Process) error
 }
 
-// stopShell stops a command the agent left running in the background
+// stopCommand stops a command the agent left running in the background
 // itself, without a turn or a word to the agent: the one process below the
 // agent's that leads a process group and is the shell running the call's
-// command (Dialect.RunsShell), by its group. Its row ends "stopped" once
-// the agent's own record says it ended (followShell); the agent hears it
+// command (Dialect.RunsBackgroundCommand), by its group. Its row ends "stopped" once
+// the agent's own record says it ended (followCommand); the agent hears it
 // failed, and the next prompt tells it why (stopNote). False when that one
 // process can't be told (none, two alike, a command line Nushi can't read
 // whole): the agent is asked instead.
-func (s *Service) stopShell(c *chat, callID string) bool {
+func (s *Service) stopCommand(c *chat, callID string) bool {
 	c.mu.Lock()
-	agent, runs, log := c.agent, c.dialect.RunsShell, c.logLocked()
+	agent, runs, log := c.agent, c.dialect.RunsBackgroundCommand, c.logLocked()
 	call := c.itemLocked(callID)
-	if s.procs == nil || runs == nil || agent == nil || agent.Pid() <= 0 || call == nil || call.Shell == nil {
+	if s.procs == nil || runs == nil || agent == nil || agent.Pid() <= 0 || call == nil || call.BackgroundCommand == nil {
 		c.mu.Unlock()
 		return false
 	}
@@ -136,25 +136,25 @@ func (s *Service) stopShell(c *chat, callID string) bool {
 		return false
 	}
 	log.Info("background command stopped", "call", callID, "pid", found[0].Pid)
-	if noteID.MatchString(cp.Shell.ID) {
+	if noteID.MatchString(cp.BackgroundCommand.ID) {
 		c.mu.Lock()
-		c.killed = append(c.killed, cp.Shell.ID)
+		c.killed = append(c.killed, cp.BackgroundCommand.ID)
 		c.mu.Unlock()
 	}
 	return true
 }
 
 // markKilled marks the background command callID started as stopped by
-// Nushi (model.Shell's Killed), or not, while it still runs under agent.
+// Nushi (model.BackgroundCommand's Killed), or not, while it still runs under agent.
 func (c *chat) markKilled(callID string, agent Agent, killed bool) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	it := c.itemLocked(callID)
-	if it == nil || it.Shell == nil || it.Shell.State != "running" || c.agent != agent {
+	if it == nil || it.BackgroundCommand == nil || it.BackgroundCommand.State != "running" || c.agent != agent {
 		return false
 	}
-	sh := *it.Shell
+	sh := *it.BackgroundCommand
 	sh.Killed = killed
-	it.Shell = &sh
+	it.BackgroundCommand = &sh
 	return true
 }

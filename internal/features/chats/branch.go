@@ -31,15 +31,15 @@ const branchSlug = 40
 //
 //nolint:contextcheck // between turns, after the request that started the turn (or the agent's update) is gone
 func (c *chat) nameBranchLocked() {
-	wt := c.session.Worktree
+	wt := c.record.Worktree
 	if wt == nil || !wt.AutoName || c.parent != nil || c.worktrees == nil || c.busy || c.ownTurn || c.backgroundLocked(0) {
 		return
 	}
-	if c.dialect.NamesSessions && !c.titled && c.session.Name == "" && !c.waitedTitle {
+	if c.dialect.NamesSessions && !c.titled && c.record.Name == "" && !c.waitedTitle {
 		c.waitedTitle = true // its title comes soon (or after the next turn, without it)
 		return
 	}
-	slug := model.Slug(cmp.Or(c.session.Name, c.session.Title), branchSlug)
+	slug := model.Slug(cmp.Or(c.record.Name, c.record.Title), branchSlug)
 	if slug == "" {
 		return // no title yet, or none of its words: Nushi's name stays until one comes
 	}
@@ -78,7 +78,7 @@ func (c *chat) nameBranchLocked() {
 // branchNamedLocked records the worktree's branch as named for good: on
 // name, if given.
 func (c *chat) branchNamedLocked(name string) {
-	c.saveLocked(func(s *model.Session) {
+	c.saveLocked(func(s *model.ChatRecord) {
 		wt := *s.Worktree // a copy: the session's is shared with the stored one
 		wt.Branch, wt.AutoName = cmp.Or(name, wt.Branch), false
 		s.Worktree = &wt
@@ -114,7 +114,7 @@ func (c *chat) branchTakenLocked(ctx context.Context, wt model.Worktree) (string
 
 // usesBranch says whether a chat has wt's branch: it runs in wt's folder,
 // or has (or had) a worktree on that branch.
-func usesBranch(s model.Session, wt model.Worktree) bool {
+func usesBranch(s model.ChatRecord, wt model.Worktree) bool {
 	if within(s.Folder, wt.Path) {
 		return true
 	}
@@ -142,7 +142,7 @@ func (s *Service) RenameBranch(ctx context.Context, chatID, name string) error {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	wt := c.session.Worktree
+	wt := c.record.Worktree
 	switch {
 	case wt == nil:
 		return errors.New("the chat has no worktree of its own")

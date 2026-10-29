@@ -48,41 +48,42 @@ type Dialect struct {
 	// ReportElsewhere says a subagent call's output only points at its
 	// report, which then isn't its result.
 	ReportElsewhere func(output string) bool
-	// Shell says a tool call left its command running in the background:
-	// the task's id and the file its output goes to;
-	// ReadShell reads that file: the output so far, and how the command
-	// ended ("" while it runs).
-	Shell     func(it model.Item) (id, file string, ok bool)
-	ReadShell func(id, file string) (output, end string, err error)
+	// BackgroundCommand says a tool call left its command running in the
+	// background: the task's id and the file its output goes to;
+	// ReadBackgroundCommand reads that file: the output so far, and how the
+	// command ended ("" while it runs).
+	BackgroundCommand     func(it model.Item) (id, file string, ok bool)
+	ReadBackgroundCommand func(id, file string) (output, end string, err error)
 	// SubagentID reads the agent's id for a subagent from its call's output
 	// (Claude's ToolCall sets it while the call runs; a replayed call has
-	// only its output). Relay wraps a message for a subagent into a prompt
-	// that asks the agent to pass it on unchanged; Relayed reads such a
-	// prompt back: the subagent's type and id, and the message. Relaying
-	// says a tool call is the agent passing a message on, to the subagent
-	// with that id.
-	SubagentID func(output string) string
-	Relay      func(agent, agentID, text string) string
-	Relayed    func(prompt string) (agent, agentID, text string, ok bool)
-	Relaying   func(call model.Item) (agentID string)
+	// only its output). ToSubagent wraps a message to a subagent into a
+	// prompt that asks the agent to pass it on unchanged; ReadToSubagent
+	// reads such a prompt back: the subagent's type and id, and the
+	// message. PassesToSubagent says a tool call is the agent passing a
+	// message on, to the subagent with that id.
+	SubagentID       func(output string) string
+	ToSubagent       func(agent, agentID, text string) string
+	ReadToSubagent   func(prompt string) (agent, agentID, text string, ok bool)
+	PassesToSubagent func(call model.Item) (agentID string)
 	// Subagents says the agent can show its subagents as sessions of
 	// their own (ACP's subagents RFD, which initialize advertises): it then
 	// says when each ends, and stops one when its session is cancelled.
 	Subagents bool
 	// StopTask asks the agent to stop one of its background tasks (a
 	// subagent, or a command it left running), by the agent's id for it,
-	// when Nushi can't stop it itself; StopRelayed reads such a prompt
+	// when Nushi can't stop it itself; ReadStopTask reads such a prompt
 	// back (label is what it names the task, "" when only its id). Stopped
 	// says a tool call stopped one of the agent's tasks, or found it
 	// already ended: the task's id.
-	StopTask    func(taskID string) string
-	StopRelayed func(prompt string) (label, taskID string, ok bool)
-	Stopped     func(call model.Item) string
-	// RunsShell says a process the agent runs (its command line) is the
-	// shell running the command of call, a tool call that left it running
-	// in the background (see Shell): Nushi then stops the command itself,
-	// by its process group, without a turn (children.go).
-	RunsShell func(call model.Item, args []string) bool
+	StopTask     func(taskID string) string
+	ReadStopTask func(prompt string) (label, taskID string, ok bool)
+	Stopped      func(call model.Item) string
+	// RunsBackgroundCommand says a process the agent runs (its command
+	// line) is the shell running the command of call, a tool call that left
+	// it running in the background (see BackgroundCommand): Nushi then stops
+	// the command itself, by its process group, without a turn
+	// (children.go).
+	RunsBackgroundCommand func(call model.Item, args []string) bool
 	// Other says a form field is the free-text "Other" answer of the field
 	// before it.
 	Other func(field, before model.Field) bool

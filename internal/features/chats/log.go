@@ -4,7 +4,7 @@ import "log/slog"
 
 // logLocked is the chat's logger (ADR 0038): its id, agent, session and
 // folder on each line; a side chat's name its chat too.
-func (c *chat) logLocked() *slog.Logger { return c.logger(c.sid, c.session.Folder) }
+func (c *chat) logLocked() *slog.Logger { return c.logger(c.sid, c.record.Folder) }
 
 // log is logLocked, taking the lock.
 func (c *chat) log() *slog.Logger {

@@ -34,13 +34,13 @@ func TestSleepAndWakeOnSend(t *testing.T) {
 	launches, _, _ := agent.count()
 	_, _ = svc.Get(c.id) // what it does to the agent is what's tested
 	time.Sleep(10 * time.Millisecond)
-	if again, _, _ := agent.count(); again != launches || c.agent != nil || !svc.Status(c.session).Asleep || len(c.items) != 2 {
-		t.Fatalf("after Sleep and Get: %d launches (was %d), status %+v, %d items", again, launches, svc.Status(c.session), len(c.items))
+	if again, _, _ := agent.count(); again != launches || c.agent != nil || !svc.Status(c.record).Asleep || len(c.items) != 2 {
+		t.Fatalf("after Sleep and Get: %d launches (was %d), status %+v, %d items", again, launches, svc.Status(c.record), len(c.items))
 	}
 	agent.set, agent.updates = nil, []acp.SessionUpdate{chunk("m2", "ok")}
 	turn(t, svc, c, "two")
-	if again, _, _ := agent.count(); again != launches+1 || svc.Status(c.session).Asleep || !slices.Equal(texts(c), []string{"user:one", "agent:ok", "user:two", "agent:ok"}) {
-		t.Errorf("after a message: %d launches, status %+v, %q", again, svc.Status(c.session), texts(c))
+	if again, _, _ := agent.count(); again != launches+1 || svc.Status(c.record).Asleep || !slices.Equal(texts(c), []string{"user:one", "agent:ok", "user:two", "agent:ok"}) {
+		t.Errorf("after a message: %d launches, status %+v, %q", again, svc.Status(c.record), texts(c))
 	}
 	if !slices.Equal(agent.set, []string{`model="sonnet"`}) || current(c, "model") != "sonnet" {
 		t.Errorf("set %v, model %s", agent.set, current(c, "model"))
@@ -66,8 +66,8 @@ func TestNoSleepWithoutLoad(t *testing.T) {
 		t.Fatal(err)
 	}
 	c := svc.chats[id]
-	if err := svc.Sleep(c.id); err == nil || svc.Status(c.session).CanSleep {
-		t.Errorf("Sleep = %v, status %+v", err, svc.Status(c.session))
+	if err := svc.Sleep(c.id); err == nil || svc.Status(c.record).CanSleep {
+		t.Errorf("Sleep = %v, status %+v", err, svc.Status(c.record))
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -107,7 +107,7 @@ func TestAutoSleep(t *testing.T) {
 			return func() { delete(c.questions, "q") }
 		},
 		"a background command": func(c *chat) func() {
-			c.items = append(c.items, model.Item{ID: "sh", Shell: &model.Shell{State: "running"}})
+			c.items = append(c.items, model.Item{ID: "sh", BackgroundCommand: &model.BackgroundCommand{State: "running"}})
 			return func() { c.items = c.items[:len(c.items)-1] }
 		},
 		"a subagent": func(c *chat) func() {
@@ -161,7 +161,7 @@ func TestSleepAgent(t *testing.T) {
 		t.Fatal("another agent's chat slept")
 	}
 	svc.SleepAgent("claude")
-	if c.agent != nil || !svc.Status(c.session).Asleep || svc.Awake("claude") != 0 {
-		t.Errorf("after SleepAgent: %+v", svc.Status(c.session))
+	if c.agent != nil || !svc.Status(c.record).Asleep || svc.Awake("claude") != 0 {
+		t.Errorf("after SleepAgent: %+v", svc.Status(c.record))
 	}
 }

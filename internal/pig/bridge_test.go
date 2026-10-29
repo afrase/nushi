@@ -514,7 +514,7 @@ func TestCompactAndName(t *testing.T) {
 	}
 }
 
-// The Context card's lines: PiG's session stats and the compactions.
+// The Context widget's lines: PiG's session stats and the compactions.
 func TestContext(t *testing.T) {
 	c := start(t, &pigtest.Store{Sessions: t.TempDir()}, io.Discard)
 	s := openNew(t, c, t.TempDir())

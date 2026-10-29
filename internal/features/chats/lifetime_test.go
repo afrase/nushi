@@ -97,7 +97,7 @@ func TestARedeleteAfterTheAgentWent(t *testing.T) {
 	agent.quit()
 	c := svc.chats[id]
 	eventually(t, c, func() bool { _, _, deleted := agent.count(); return len(deleted) == 2 })
-	eventually(t, c, func() bool { return len(c.session.Throwaway) == 0 })
+	eventually(t, c, func() bool { return len(c.record.Throwaway) == 0 })
 }
 
 // A fork that ends as its agent does is thrown away, not left registered
@@ -134,8 +134,8 @@ func TestARewindOutlivesTheApp(t *testing.T) {
 	turn(t, svc, c, "one")
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // gone already
-	if _, err := svc.Rewind(ctx, c.id, c.items[0].ID); err != nil || len(c.session.Earlier) != 1 {
-		t.Errorf("Rewind = %v, session %+v", err, c.session)
+	if _, err := svc.Rewind(ctx, c.id, c.items[0].ID); err != nil || len(c.record.Earlier) != 1 {
+		t.Errorf("Rewind = %v, session %+v", err, c.record)
 	}
 }
 
@@ -143,11 +143,11 @@ func TestARewindOutlivesTheApp(t *testing.T) {
 // command its agent still runs is no longer read once the ctx New was
 // given ends, and Close leaves no side chats' timer behind.
 func TestTheServicesOwnWorkEndsWithIt(t *testing.T) {
-	defer func(d time.Duration) { shellPoll = d }(shellPoll)
-	shellPoll = time.Millisecond
+	defer func(d time.Duration) { commandPoll = d }(commandPoll)
+	commandPoll = time.Millisecond
 	reads := make(chan struct{}, 1)
 	dialect := testDialect
-	dialect.ReadShell = func(string, string) (string, string, error) {
+	dialect.ReadBackgroundCommand = func(string, string) (string, string, error) {
 		select {
 		case reads <- struct{}{}:
 		default:
@@ -161,11 +161,11 @@ func TestTheServicesOwnWorkEndsWithIt(t *testing.T) {
 	testcheck.NoErr(t, err)
 	c := svc.chats[id]
 	c.mu.Lock()
-	c.items = append(c.items, model.Item{ID: "t1", Shell: &model.Shell{State: "running"}})
+	c.items = append(c.items, model.Item{ID: "t1", BackgroundCommand: &model.BackgroundCommand{State: "running"}})
 	running := c.agent
 	c.mu.Unlock()
 	followed := make(chan struct{})
-	go func() { c.followShell("t1", "b1", "f", running); close(followed) }()
+	go func() { c.followCommand("t1", "b1", "f", running); close(followed) }()
 	<-reads
 	end()
 	select {

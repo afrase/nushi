@@ -3,9 +3,9 @@ package model
 
 import "time"
 
-// Session is what Nushi keeps of a chat, to list and reopen it. The agent
-// keeps the rest.
-type Session struct {
+// ChatRecord is what Nushi keeps of a chat, to list and reopen it (Chat is
+// a snapshot of it with its items). The agent keeps the rest, its session.
+type ChatRecord struct {
 	ID string // Nushi's id for the chat
 	// SessionID is the agent's session id. It changes when a chat without
 	// messages moves to another folder (a new session starts there).
@@ -60,10 +60,11 @@ type Session struct {
 	// Nushi switched the folder to another since (SwitchBranch); the next
 	// prompt tells the agent, if the branch is still another, and clears it.
 	BranchFrom string `json:",omitempty"`
-	// Unseen says a turn ended (it finished, or failed with an error to
-	// read; not one the user stopped) while no client showed the chat; a
-	// client showing it clears it, and so does archiving.
-	Unseen bool `json:",omitempty"`
+	// Done says a turn ended (it finished, or failed with an error to
+	// read; not one the user stopped) while no client showed the chat: the
+	// chat state done. A client showing it clears it, and so does
+	// archiving. Kept under its old name, Unseen.
+	Done bool `json:"Unseen,omitempty"`
 	// Pin is the chat's place among the pinned chats, from 1 (the top); 0
 	// when it isn't pinned. Archiving unpins.
 	Pin int `json:",omitempty"`
@@ -74,7 +75,7 @@ type Session struct {
 
 // PullLink is the chat's pull request: the one it was started from, else
 // the one of its branch; nil when it has none.
-func (s Session) PullLink() *ChatGitHub {
+func (s ChatRecord) PullLink() *ChatGitHub {
 	if s.GitHub != nil && s.GitHub.Pull {
 		return s.GitHub
 	}
@@ -228,20 +229,25 @@ type Item struct {
 	// RanModel the model it ran on, once the agent says.
 	Agent, Prompt, Model, Effort, RanModel string
 	// AgentID is the agent's id for the subagent, when it can pass it
-	// messages; for a call that passes one a message (Dialect.Relaying),
+	// messages; for a call that passes one a message (Dialect.PassesToSubagent),
 	// that subagent's.
 	AgentID string
-	// RelayTo is, for a user message, the type of the subagent the agent
-	// was asked to pass it to, and RelayCall that subagent's tool call
-	// (Message.To; after a replay, when the agent's id for it is known).
-	// RelayState says how the relay goes: "sending", "relayed" once the
-	// agent's call that passes it on (RelayedBy) completes, "failed" when
-	// that call fails or the turn ends without one; "" unknown (replayed).
-	RelayTo, RelayCall, RelayState, RelayedBy string
-	// RelayStop says the message asked the agent to stop that subagent or
-	// background command (RelayTo names it), not to pass anything on.
-	RelayStop bool
-	Files     []string // a user message's mentioned files (Message.Files)
+	// A message to a subagent is a user message the agent was asked to pass
+	// on: ToSubagentName is the subagent's type, and ToSubagent its tool
+	// call (Message.To; after a replay, when the agent's id for it is
+	// known). ToSubagentState says how it goes: "sending", "relayed" once
+	// the agent's call that passes it on (PassedOnBy) completes, "failed"
+	// when that call fails or the turn ends without one; "" unknown
+	// (replayed). ToSubagentStop says it asked the agent to stop that
+	// subagent or background command (ToSubagentName names it), not to pass
+	// anything on. Their JSON names, and the state "relayed", are from
+	// before the glossary's word (Nushi's copies keep them).
+	ToSubagentName  string   `json:"RelayTo"`
+	ToSubagent      string   `json:"RelayCall"`
+	ToSubagentState string   `json:"RelayState"`
+	PassedOnBy      string   `json:"RelayedBy"`
+	ToSubagentStop  bool     `json:"RelayStop"`
+	Files           []string // a user message's mentioned files (Message.Files)
 	// Tool is a tool call's tool, when the agent names it ("Read").
 	Tool string
 	// TaskID is the agent's id for the command a tool call left running in
@@ -251,7 +257,7 @@ type Item struct {
 	InBackground bool
 	// Stops is, for a call that stops one of the agent's background tasks
 	// (Claude's TaskStop), the task's id: a subagent's AgentID or a
-	// background command's Shell.ID.
+	// background command's BackgroundCommand.ID.
 	Stops string
 	// ForkAt is, for a user message, the agent's message the conversation
 	// before it ends with: where a rewind to it forks the session.
@@ -266,8 +272,9 @@ type Item struct {
 	// Report says the tool call is a subagent's report to its chat: the
 	// subagent's result, not one of its steps.
 	Report bool
-	// Shell is the command a tool call left running in the background.
-	Shell *Shell
+	// BackgroundCommand is the command a tool call left running in the
+	// background (its JSON name from before the glossary's word).
+	BackgroundCommand *BackgroundCommand `json:"Shell"`
 	// Findings is a code review's result, for a tool call that reports one.
 	Findings *Findings
 	// Output is a command's output as the agent streams it in its _meta,
@@ -275,15 +282,15 @@ type Item struct {
 	Output string `json:"-"`
 }
 
-// Shell is a command the agent runs in the background. State is "running"
-// while the daemon sees it run, then "done", "failed" or "stopped";
+// BackgroundCommand is a command the agent runs in the background. State is
+// "running" while the daemon sees it run, then "done", "failed" or "stopped";
 // "started" when its end can't be known (its agent is gone, or it started
 // before the chat reopened, and it hasn't said it ended). Started and Ended
 // are when the daemon saw that; Output is what it wrote (the end of it),
 // End how it ended, in the agent's words ("exited with code 0"). Killed
 // says Nushi stopped it itself, at the user's Stop: an end other than
 // success then reads "stopped", whatever exit code the agent gives it.
-type Shell struct {
+type BackgroundCommand struct {
 	ID, State      string
 	Started, Ended time.Time
 	Output, End    string
@@ -376,31 +383,32 @@ type Message struct {
 	Files  []string
 	Images []Image
 	// To is the tool call of a subagent the message is for: the agent is
-	// asked to pass it on. Relay is that subagent, once the chat found it.
-	To    string
-	Relay *Relay
+	// asked to pass it on. ToSubagent is that subagent, once the chat found
+	// it.
+	To         string
+	ToSubagent *ToSubagent
 }
 
-// Relay is a subagent a message goes to through the agent: its type and the
-// agent's id for it. With Stop, the message asks the agent to stop it, or
+// ToSubagent is a subagent a message goes to through the agent: its type
+// and the agent's id for it. With Stop, the message asks the agent to stop it, or
 // the background command it names (Agent is the command then, AgentID its
 // task's id).
-type Relay struct {
+type ToSubagent struct {
 	Agent, AgentID string
 	Stop           bool
 }
 
 // Event is a change to one chat, or, with ChatID "", to remote access, the
-// chats removed or the update check. Exactly one of Session, Item, Status,
+// chats removed or the update check. Exactly one of Record, Item, Status,
 // Config, Commands, Removed, Usage, Queue, Cut, Dropped, Terminals, Remote,
 // RemovedChats and Update is set.
 type Event struct {
 	ChatID string
 	// Seq numbers the chat's events from 1; a Chat snapshot says which
 	// events it already includes.
-	Seq     int64
-	Session *Session // the chat was opened, or its title or mode changed
-	Item    *Item
+	Seq    int64
+	Record *ChatRecord // the chat was opened, or its title or mode changed
+	Item   *Item
 	// Append means Item.Text continues the item's text rather than replacing it.
 	Append bool
 	// Index is the item's place in the chat (not with Append).
@@ -495,7 +503,7 @@ type ConfigValue struct {
 
 // Chat is a snapshot of a chat: everything its events have built so far.
 type Chat struct {
-	Session  Session
+	Record   ChatRecord
 	Items    []Item
 	Config   []ConfigOption
 	Commands []Command

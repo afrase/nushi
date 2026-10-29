@@ -13,7 +13,7 @@ import (
 // Close stops every chat's agent, all at once, as stop does: a running turn
 // is cancelled and gets a few seconds to end, so the agent records how it
 // ended. Their side chats are deleted from the agent's history the next
-// time each chat opens (model.Session.Throwaway). What the service started
+// time each chat opens (model.ChatRecord.Throwaway). What the service started
 // on its own ends first (its ctx).
 func (s *Service) Close() {
 	s.cancel()

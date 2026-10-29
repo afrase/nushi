@@ -34,7 +34,7 @@ func TestChatsKeepTheirAgent(t *testing.T) {
 	if a.launches != 1 || b.launches != 1 {
 		t.Fatalf("launches: a %d, b %d; want one each", a.launches, b.launches)
 	}
-	if got := svc.chats[first].session.Agent + svc.chats[second].session.Agent; got != "ab" {
+	if got := svc.chats[first].record.Agent + svc.chats[second].record.Agent; got != "ab" {
 		t.Errorf("agents = %q, want the default (a), then b", got)
 	}
 	if err := svc.SetConfig(ctx, second, "mode", "plan"); err != nil {

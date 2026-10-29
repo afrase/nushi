@@ -36,7 +36,7 @@ func (s *Service) CleanUpOf(ctx context.Context, chatID string) (CleanUp, error)
 		return out, err
 	}
 	c.mu.Lock()
-	wt := c.session.Worktree
+	wt := c.record.Worktree
 	c.mu.Unlock()
 	if wt == nil || s.worktrees == nil {
 		return out, nil
@@ -80,7 +80,7 @@ func (s *Service) RemoveWorktree(ctx context.Context, chatID string, force bool)
 		return err
 	}
 	c.mu.Lock()
-	wt, quiet, running := c.session.Worktree, c.quietLocked(), c.agent != nil
+	wt, quiet, running := c.record.Worktree, c.quietLocked(), c.agent != nil
 	c.mu.Unlock()
 	switch {
 	case wt == nil:
@@ -129,7 +129,7 @@ func (s *Service) DeleteBranch(ctx context.Context, chatID string, force bool) e
 		return err
 	}
 	c.mu.Lock()
-	wt := c.session.Worktree
+	wt := c.record.Worktree
 	c.mu.Unlock()
 	if wt == nil || s.worktrees == nil {
 		return errors.New("this chat has no worktree")

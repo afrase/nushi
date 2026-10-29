@@ -8,15 +8,15 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-// RunsShell says a process is Claude Code's shell running a Bash call's
-// command (the call's input's, whole): Claude Code 2.1.312 runs one as
+// RunsBackgroundCommand says a process is Claude Code's shell running a
+// Bash call's command (the call's input's, whole): Claude Code 2.1.312 runs one as
 // [shell, "-c", ("-l",) script], the script's last two steps
 // "eval <the command, shell-quoted> [< /dev/null] && pwd -P >| <file>"
 // (docs/facts/claude.md, Background shells). The command is compared after
 // unquoting, so a quoting Nushi doesn't foresee matches all the same; a
 // command Claude Code changes before it runs (`>NUL` made `>/dev/null`),
 // or whose input Nushi kept cut or masked, matches nothing.
-func RunsShell(call model.Item, args []string) bool {
+func RunsBackgroundCommand(call model.Item, args []string) bool {
 	var in struct {
 		Command string `json:"command"`
 	}

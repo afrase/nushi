@@ -16,9 +16,9 @@ import (
 func restarted(t *testing.T, agent *fakeAgent, c *chat, store *transcripts.Store) *Service {
 	t.Helper()
 	c.mu.Lock()
-	sess := c.session
+	sess := c.record
 	c.mu.Unlock()
-	svc := newService(t, []Kind{{Name: "claude", Title: "Claude", Launch: agent.launch, Dialect: testDialect}}, Options{Sessions: &memSessions{stored: []model.Session{sess}}, Scratch: t.TempDir(), Copies: store})
+	svc := newService(t, []Kind{{Name: "claude", Title: "Claude", Launch: agent.launch, Dialect: testDialect}}, Options{Sessions: &memSessions{stored: []model.ChatRecord{sess}}, Scratch: t.TempDir(), Copies: store})
 	return svc
 }
 
@@ -161,7 +161,7 @@ func TestLookupReadsTheCopyOutsideTheServiceLock(t *testing.T) {
 	testcheck.NoErr(t, err)
 	testcheck.NoErr(t, store.Append("slow", []model.Item{{ID: "m1", Kind: model.AgentMessage, Text: "kept"}}, []string{""}))
 	copies := &slowCopies{Copies: store, chat: "slow", reading: make(chan struct{}), held: make(chan struct{})}
-	stored := []model.Session{{ID: "slow", Agent: "claude", Archived: true}, {ID: "fast", Agent: "claude", Archived: true}}
+	stored := []model.ChatRecord{{ID: "slow", Agent: "claude", Archived: true}, {ID: "fast", Agent: "claude", Archived: true}}
 	svc := newService(t, []Kind{{Name: "claude", Dialect: testDialect}}, Options{Sessions: &memSessions{stored: stored}, Scratch: t.TempDir(), Copies: copies})
 	first := make(chan *chat)
 	go func() {
@@ -198,7 +198,7 @@ func TestLookupReadsTheCopyOutsideTheServiceLock(t *testing.T) {
 func TestRecordOpensNothing(t *testing.T) {
 	folder := t.TempDir()
 	wt := &model.Worktree{Repo: folder, Path: folder, Branch: "nushi/a"} // stored before Told
-	stored := []model.Session{{ID: "c1", SessionID: "s1", Agent: "claude", Folder: folder, Worktree: wt}, {ID: "c2", Agent: "claude", Archived: true}}
+	stored := []model.ChatRecord{{ID: "c1", SessionID: "s1", Agent: "claude", Folder: folder, Worktree: wt}, {ID: "c2", Agent: "claude", Archived: true}}
 	svc := newService(t, []Kind{{Name: "claude", Dialect: testDialect}}, Options{Sessions: &memSessions{stored: stored}, Scratch: t.TempDir()})
 	sess, err := svc.Session("c1")
 	testcheck.NoErr(t, err)
@@ -220,7 +220,7 @@ func TestRecordOpensNothing(t *testing.T) {
 	c, err := svc.lookup("c1")
 	testcheck.NoErr(t, err)
 	c.mu.Lock()
-	c.session.Title = "open"
+	c.record.Title = "open"
 	c.mu.Unlock()
 	if sess, err := svc.Session("c1"); err != nil || sess.Title != "open" {
 		t.Errorf("an open chat's record: %+v, %v", sess, err)

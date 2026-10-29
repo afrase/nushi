@@ -16,7 +16,7 @@ import (
 )
 
 // A chat in a repository's own folder switches its branch from the
-// Environment card, with the guards: not to a branch another worktree
+// Environment widget, with the guards: not to a branch another worktree
 // has (it opens that worktree instead), not with uncommitted changes, not
 // while a chat in the folder works, and only once the user knows the
 // folder's other chats go along. Every chat there is told with its next

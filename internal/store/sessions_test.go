@@ -28,12 +28,12 @@ func TestSessionsKept(t *testing.T) {
 		}
 		return out
 	}
-	testcheck.NoErr(t, s.SaveSession(model.Session{ID: "b", Title: "B"})) // before the first read
+	testcheck.NoErr(t, s.SaveSession(model.ChatRecord{ID: "b", Title: "B"})) // before the first read
 	if got := titles(); !slices.Equal(got, []string{"b:B"}) {
 		t.Fatalf("read: %q", got)
 	}
-	testcheck.NoErr(t, s.SaveSession(model.Session{ID: "a", Title: "A"}))
-	testcheck.NoErr(t, s.SaveSession(model.Session{ID: "b", Title: "B2"}))
+	testcheck.NoErr(t, s.SaveSession(model.ChatRecord{ID: "a", Title: "A"}))
+	testcheck.NoErr(t, s.SaveSession(model.ChatRecord{ID: "b", Title: "B2"}))
 	testcheck.NoErr(t, os.WriteFile(filepath.Join(dir, "sessions", "c.json"), []byte(`{"ID":"c"}`), 0o600))
 	if got := titles(); !slices.Equal(got, []string{"a:A", "b:B2"}) {
 		t.Errorf("saved: %q", got)
@@ -44,7 +44,7 @@ func TestSessionsKept(t *testing.T) {
 	}
 	testcheck.NoErr(t, os.Chmod(filepath.Join(dir, "sessions"), 0o500)) // its new file can't be made
 	t.Cleanup(func() { _ = os.Chmod(filepath.Join(dir, "sessions"), 0o700) })
-	if err := s.SaveSession(model.Session{ID: "b", Title: "B3"}); err == nil {
+	if err := s.SaveSession(model.ChatRecord{ID: "b", Title: "B3"}); err == nil {
 		t.Fatal("wrote in a folder it can't")
 	}
 	if got := titles(); !slices.Equal(got, []string{"b:B2"}) {
@@ -61,7 +61,7 @@ func TestSessionsKept(t *testing.T) {
 func TestSessionsHasMessages(t *testing.T) {
 	dir := t.TempDir()
 	s := New(dir)
-	s.HadMessages = func(model.Session) bool { return true }
+	s.HadMessages = func(model.ChatRecord) bool { return true }
 	if err := os.MkdirAll(filepath.Join(dir, "sessions"), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func TestSessionsHasMessages(t *testing.T) {
 // A session handed out or saved shares nothing with what's kept, so a
 // caller changing its copy in place changes nobody else's.
 func TestSessionsShareNothing(t *testing.T) {
-	var sess model.Session
+	var sess model.ChatRecord
 	v := reflect.ValueOf(&sess).Elem()
 	var shared []int // the fields clone copies
 	for field := range v.Type().Fields() {
@@ -112,7 +112,7 @@ func TestSessionsShareNothing(t *testing.T) {
 			t.Errorf("%s is shared (or lost)", v.Type().Field(i).Name)
 		}
 	}
-	if !reflect.DeepEqual(clone(model.Session{}), model.Session{}) {
+	if !reflect.DeepEqual(clone(model.ChatRecord{}), model.ChatRecord{}) {
 		t.Error("an empty session's clone isn't empty")
 	}
 }

@@ -149,7 +149,7 @@ func (s *Service) ListCopies() ([]CopyEntry, error) {
 		return nil, err
 	}
 	// By id: thousands of chats would make a search per copy quadratic.
-	byID := make(map[string]model.Session, len(stored))
+	byID := make(map[string]model.ChatRecord, len(stored))
 	for _, sess := range stored {
 		byID[sess.ID] = sess
 	}

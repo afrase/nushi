@@ -29,7 +29,7 @@ func (s *Service) lookup(id string) (*chat, error) {
 		return nil, err
 	}
 	c := s.newChat(k)
-	c.id, c.sid, c.session, c.issue = id, sess.SessionID, sess, sess.Issue
+	c.id, c.sid, c.record, c.issue = id, sess.SessionID, sess, sess.Issue
 	c.ultracode.Store(sess.Ultracode)
 	c.mu.Lock() // a new chat's: nobody waits on it
 	defer c.mu.Unlock()
@@ -41,18 +41,18 @@ func (s *Service) lookup(id string) (*chat, error) {
 
 // storedSession is a stored chat's session, as its chat starts with it,
 // and its agent's kind.
-func (s *Service) storedSession(id string) (model.Session, *kind, error) {
+func (s *Service) storedSession(id string) (model.ChatRecord, *kind, error) {
 	stored, err := s.sessions.Sessions()
 	if err != nil {
-		return model.Session{}, nil, err
+		return model.ChatRecord{}, nil, err
 	}
-	i := slices.IndexFunc(stored, func(sess model.Session) bool { return sess.ID == id })
+	i := slices.IndexFunc(stored, func(sess model.ChatRecord) bool { return sess.ID == id })
 	if i < 0 {
-		return model.Session{}, nil, fmt.Errorf("no chat %q", id)
+		return model.ChatRecord{}, nil, fmt.Errorf("no chat %q", id)
 	}
 	k, err := s.kindOf(stored[i].Agent)
 	if err != nil {
-		return model.Session{}, nil, err
+		return model.ChatRecord{}, nil, err
 	}
 	sess := stored[i]
 	sess.Scratch = s.isScratch(sess.Folder)
@@ -79,7 +79,7 @@ func (s *Service) open(id string) (*chat, error) {
 // the last try failed, or the agent quit), unless it is archived, going or
 // asleep.
 func (s *Service) reopenLocked(c *chat) {
-	if c.agent == nil && !c.busy && !c.session.Archived && !c.halting && c.parent == nil && !c.reopenFailed && !c.asleep && !c.sessionGone {
+	if c.agent == nil && !c.busy && !c.record.Archived && !c.halting && c.parent == nil && !c.reopenFailed && !c.asleep && !c.sessionGone {
 		c.busy, c.woke = true, make(chan struct{})
 		c.statusChangedLocked()
 		go s.resume(c)
@@ -94,7 +94,7 @@ func (s *Service) chat(id string) (*chat, error) {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.session.Archived || c.halting {
+	if c.record.Archived || c.halting {
 		return nil, c.closedLocked()
 	}
 	return c, nil
@@ -142,7 +142,7 @@ func (s *Service) resume(c *chat) {
 func (c *chat) failedLocked(err error) {
 	c.reopenFailed = true
 	reason := "reopen_failed"
-	if gone := folderGone(c.session); gone != nil {
+	if gone := folderGone(c.record); gone != nil {
 		reason, err = "folder_gone", gone
 	} else if ready := c.kind.ready(); ready != nil {
 		reason, err = "not_ready", ready
@@ -168,7 +168,7 @@ func (s *Service) Reopen(id string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.reopenFailed && c.agent == nil && !c.busy && !c.sessionGone {
-		if err := cmp.Or(folderGone(c.session), c.kind.ready()); err != nil {
+		if err := cmp.Or(folderGone(c.record), c.kind.ready()); err != nil {
 			c.failedLocked(err)
 			return nil
 		}
@@ -204,7 +204,7 @@ func (s *Service) AgentReady(agent string) {
 // has one): it gets a new session instead.
 func (s *Service) load(ctx context.Context, c *chat) error {
 	c.mu.Lock()
-	sid, folder, fresh, gone := c.sid, c.session.Folder, !c.session.HasMessages, folderGone(c.session)
+	sid, folder, fresh, gone := c.sid, c.record.Folder, !c.record.HasMessages, folderGone(c.record)
 	retired := c.retired
 	c.retired = nil
 	// A transcript that outlived its agent stays; else the replay is merged
@@ -245,9 +245,9 @@ func (s *Service) load(ctx context.Context, c *chat) error {
 	}
 	c.orphanLocked(false) // replayed calls whose agent died before their results
 	if o.sid != sid {
-		c.saveLocked(func(s *model.Session) { s.SessionID = o.sid })
+		c.saveLocked(func(s *model.ChatRecord) { s.SessionID = o.sid })
 	}
-	mode, picks, throwaway := c.session.Mode, c.session.Picks, slices.Clone(c.session.Throwaway)
+	mode, picks, throwaway := c.record.Mode, c.record.Picks, slices.Clone(c.record.Throwaway)
 	c.mu.Unlock()
 	go s.discard(c, throwaway) //nolint:gosec // discarding outlives the request; left by an agent that stopped before it could
 	return c.reapply(ctx, o.agent, o.sid, mode, picks)
@@ -255,7 +255,7 @@ func (s *Service) load(ctx context.Context, c *chat) error {
 
 // folderGone says why a chat can't run when its folder no longer exists
 // (removed outside Nushi), or returns nil.
-func folderGone(sess model.Session) error {
+func folderGone(sess model.ChatRecord) error {
 	if _, err := os.Stat(sess.Folder); !errors.Is(err, fs.ErrNotExist) {
 		return nil
 	}

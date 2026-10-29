@@ -12,8 +12,8 @@ import (
 
 func messageProto(m model.Message) *nushiv1.QueuedMessage {
 	out := &nushiv1.QueuedMessage{Id: m.ID, Text: m.Text, Files: m.Files, ToSubagent: m.To}
-	if m.Relay != nil {
-		out.RelayTo, out.RelayStop = m.Relay.Agent, m.Relay.Stop
+	if m.ToSubagent != nil {
+		out.RelayTo, out.RelayStop = m.ToSubagent.Agent, m.ToSubagent.Stop
 	}
 	for _, img := range m.Images {
 		out.Images = append(out.Images, &nushiv1.ImageData{MimeType: img.MimeType, Data: img.Data})
@@ -54,8 +54,8 @@ func toProto(e model.Event) *nushiv1.EventsResponse {
 	switch {
 	case e.Item != nil:
 		out.Kind = &nushiv1.EventsResponse_Item{Item: &nushiv1.ItemEvent{Item: itemProto(e.Item), Append: e.Append, Index: int32(e.Index)}}
-	case e.Session != nil:
-		out.Kind = &nushiv1.EventsResponse_Chat{Chat: chatProto(*e.Session)}
+	case e.Record != nil:
+		out.Kind = &nushiv1.EventsResponse_Chat{Chat: chatProto(*e.Record)}
 	case e.Config != nil:
 		out.Kind = &nushiv1.EventsResponse_Config{Config: &nushiv1.ChatConfig{Options: configProto(e.Config)}}
 	case e.Status != nil:
@@ -87,11 +87,11 @@ func toProto(e model.Event) *nushiv1.EventsResponse {
 func itemProto(it *model.Item) *nushiv1.Item {
 	out := &nushiv1.Item{Id: it.ID, Kind: itemKinds[it.Kind], Text: it.Text,
 		Title: it.Title, ToolKind: it.ToolKind, Status: it.Status, Answer: it.Answer, Parent: it.Parent, Agent: it.Agent, Tool: it.Tool, ForkAt: it.ForkAt,
-		Prompt: it.Prompt, Model: it.Model, Effort: it.Effort, RanModel: it.RanModel, AgentId: it.AgentID, RelayTo: it.RelayTo,
-		RelayCall: it.RelayCall, RelayState: it.RelayState, RelayedBy: it.RelayedBy, RelayStop: it.RelayStop,
+		Prompt: it.Prompt, Model: it.Model, Effort: it.Effort, RanModel: it.RanModel, AgentId: it.AgentID, RelayTo: it.ToSubagentName,
+		RelayCall: it.ToSubagent, RelayState: it.ToSubagentState, RelayedBy: it.PassedOnBy, RelayStop: it.ToSubagentStop,
 		Rewindable: it.Rewindable, Report: it.Report, Sent: unixMs(it.Sent),
 		Input: it.Input, RawOutput: it.RawOutput}
-	if sh := it.Shell; sh != nil {
+	if sh := it.BackgroundCommand; sh != nil {
 		out.Shell = &nushiv1.Shell{Id: sh.ID, State: sh.State, Started: unixMs(sh.Started), Ended: unixMs(sh.Ended), Output: sh.Output, End: sh.End}
 	}
 	if sa := it.Subagent; sa != nil {
@@ -179,9 +179,9 @@ func configProto(opts []model.ConfigOption) []*nushiv1.ConfigOption {
 	return out
 }
 
-func chatProto(s model.Session) *nushiv1.Chat {
+func chatProto(s model.ChatRecord) *nushiv1.Chat {
 	out := &nushiv1.Chat{Id: s.ID, Agent: s.Agent, Folder: s.Folder, Title: cmp.Or(s.Name, s.Title), Mode: s.Mode,
-		CreatedUnixMs: s.Created.UnixMilli(), Archived: s.Archived, SessionId: s.SessionID, Scratch: s.Scratch, Unseen: s.Unseen, Pin: int32(s.Pin)}
+		CreatedUnixMs: s.Created.UnixMilli(), Archived: s.Archived, SessionId: s.SessionID, Scratch: s.Scratch, Unseen: s.Done, Pin: int32(s.Pin)}
 	out.Worktree = worktreeProto(s.Worktree)
 	if is := s.Issue; is != nil {
 		out.JiraSite, out.JiraKey = is.Site, is.Key

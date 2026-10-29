@@ -7,7 +7,7 @@ import (
 )
 
 // Pin sets the pinned chats, top first: each of chatIDs is pinned at its
-// place (Session.Pin, from 1), every other chat unpinned. An archived
+// place (ChatRecord.Pin, from 1), every other chat unpinned. An archived
 // chat, one not known, a side chat and a repeat are left out, without an
 // error. Each chat whose place changed is saved, which tells the clients.
 func (s *Service) Pin(chatIDs []string) error {
@@ -19,7 +19,7 @@ func (s *Service) Pin(chatIDs []string) error {
 	}
 	place := map[string]int{}
 	for _, id := range chatIDs {
-		i := slices.IndexFunc(stored, func(sess model.Session) bool { return sess.ID == id })
+		i := slices.IndexFunc(stored, func(sess model.ChatRecord) bool { return sess.ID == id })
 		if _, seen := place[id]; !seen && i >= 0 && !stored[i].Archived {
 			place[id] = len(place) + 1
 		}
@@ -33,7 +33,7 @@ func (s *Service) Pin(chatIDs []string) error {
 			continue // gone meanwhile
 		}
 		c.mu.Lock()
-		c.saveLocked(func(s *model.Session) {
+		c.saveLocked(func(s *model.ChatRecord) {
 			if !s.Archived || place[s.ID] == 0 {
 				s.Pin = place[s.ID]
 			}
