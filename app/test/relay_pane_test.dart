@@ -31,10 +31,10 @@ final _items = [
     id: 'u1',
     kind: ItemKind.ITEM_KIND_USER_MESSAGE,
     text: 'Look at auth/session.go too',
-    relayTo: 'Explore',
-    relayCall: 'a',
-    relayState: 'relayed',
-    relayedBy: 'sm1',
+    toSubagentName: 'Explore',
+    toSubagent: 'a',
+    toSubagentState: 'relayed',
+    passedOnBy: 'sm1',
   ),
   Item(
     id: 'sm1',
@@ -48,9 +48,9 @@ final _items = [
     id: 'u2',
     kind: ItemKind.ITEM_KIND_USER_MESSAGE,
     text: 'And the tests',
-    relayTo: 'Explore',
-    relayCall: 'a',
-    relayState: 'failed',
+    toSubagentName: 'Explore',
+    toSubagent: 'a',
+    toSubagentState: 'failed',
   ),
 ];
 

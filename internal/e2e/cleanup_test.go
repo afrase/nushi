@@ -78,6 +78,9 @@ func TestCleanUp(t *testing.T) {
 	if u := cleanUp(id); len(u.Others) != 1 {
 		t.Fatalf("another chat: %v", u)
 	}
+	if p := must(a.c.PlanDeleteChat(ctx, connect.NewRequest(&nushiv1.PlanDeleteChatRequest{ChatId: id}))); len(p.Worktrees) != 1 || len(p.Worktrees[0].Others) != 1 {
+		t.Fatalf("deleting, another chat: %v", p.Worktrees)
+	}
 	refused("another chat", remove(id, true), "works in this worktree too")
 	must(a.c.ArchiveChat(ctx, connect.NewRequest(&nushiv1.ArchiveChatRequest{ChatId: other, Archived: true})))
 

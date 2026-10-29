@@ -322,7 +322,7 @@ const Chat$json = {
       '6': '.nushi.v1.GitHubLink',
       '10': 'github'
     },
-    {'1': 'unseen', '3': 15, '4': 1, '5': 8, '10': 'unseen'},
+    {'1': 'done', '3': 15, '4': 1, '5': 8, '10': 'done'},
     {
       '1': 'pull',
       '3': 16,
@@ -344,9 +344,9 @@ final $typed_data.Uint8List chatDescriptor = $convert.base64Decode(
     'ZWQSHQoKc2Vzc2lvbl9pZBgJIAEoCVIJc2Vzc2lvbklkEi4KCHdvcmt0cmVlGAogASgLMhIubn'
     'VzaGkudjEuV29ya3RyZWVSCHdvcmt0cmVlEhgKB3NjcmF0Y2gYCyABKAhSB3NjcmF0Y2gSGwoJ'
     'amlyYV9zaXRlGAwgASgJUghqaXJhU2l0ZRIZCghqaXJhX2tleRgNIAEoCVIHamlyYUtleRIsCg'
-    'ZnaXRodWIYDiABKAsyFC5udXNoaS52MS5HaXRIdWJMaW5rUgZnaXRodWISFgoGdW5zZWVuGA8g'
-    'ASgIUgZ1bnNlZW4SKAoEcHVsbBgQIAEoCzIULm51c2hpLnYxLkdpdEh1YkxpbmtSBHB1bGwSEA'
-    'oDcGluGBEgASgFUgNwaW4=');
+    'ZnaXRodWIYDiABKAsyFC5udXNoaS52MS5HaXRIdWJMaW5rUgZnaXRodWISEgoEZG9uZRgPIAEo'
+    'CFIEZG9uZRIoCgRwdWxsGBAgASgLMhQubnVzaGkudjEuR2l0SHViTGlua1IEcHVsbBIQCgNwaW'
+    '4YESABKAVSA3Bpbg==');
 
 @$core.Deprecated('Use worktreeDescriptor instead')
 const Worktree$json = {
@@ -936,9 +936,9 @@ const QueuedMessage$json = {
       '6': '.nushi.v1.ImageData',
       '10': 'images'
     },
-    {'1': 'relay_to', '3': 5, '4': 1, '5': 9, '10': 'relayTo'},
+    {'1': 'to_subagent_name', '3': 5, '4': 1, '5': 9, '10': 'toSubagentName'},
     {'1': 'to_subagent', '3': 6, '4': 1, '5': 9, '10': 'toSubagent'},
-    {'1': 'relay_stop', '3': 7, '4': 1, '5': 8, '10': 'relayStop'},
+    {'1': 'to_subagent_stop', '3': 7, '4': 1, '5': 8, '10': 'toSubagentStop'},
   ],
 };
 
@@ -946,8 +946,9 @@ const QueuedMessage$json = {
 final $typed_data.Uint8List queuedMessageDescriptor = $convert.base64Decode(
     'Cg1RdWV1ZWRNZXNzYWdlEg4KAmlkGAEgASgJUgJpZBISCgR0ZXh0GAIgASgJUgR0ZXh0EhQKBW'
     'ZpbGVzGAMgAygJUgVmaWxlcxIrCgZpbWFnZXMYBCADKAsyEy5udXNoaS52MS5JbWFnZURhdGFS'
-    'BmltYWdlcxIZCghyZWxheV90bxgFIAEoCVIHcmVsYXlUbxIfCgt0b19zdWJhZ2VudBgGIAEoCV'
-    'IKdG9TdWJhZ2VudBIdCgpyZWxheV9zdG9wGAcgASgIUglyZWxheVN0b3A=');
+    'BmltYWdlcxIoChB0b19zdWJhZ2VudF9uYW1lGAUgASgJUg50b1N1YmFnZW50TmFtZRIfCgt0b1'
+    '9zdWJhZ2VudBgGIAEoCVIKdG9TdWJhZ2VudBIoChB0b19zdWJhZ2VudF9zdG9wGAcgASgIUg50'
+    'b1N1YmFnZW50U3RvcA==');
 
 @$core.Deprecated('Use chatQueueDescriptor instead')
 const ChatQueue$json = {
@@ -1673,13 +1674,15 @@ const WorktreePlan$json = {
       '6': '.nushi.v1.WorktreeState',
       '10': 'state'
     },
+    {'1': 'others', '3': 3, '4': 3, '5': 9, '10': 'others'},
   ],
 };
 
 /// Descriptor for `WorktreePlan`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List worktreePlanDescriptor = $convert.base64Decode(
     'CgxXb3JrdHJlZVBsYW4SLgoId29ya3RyZWUYASABKAsyEi5udXNoaS52MS5Xb3JrdHJlZVIId2'
-    '9ya3RyZWUSLQoFc3RhdGUYAiABKAsyFy5udXNoaS52MS5Xb3JrdHJlZVN0YXRlUgVzdGF0ZQ==');
+    '9ya3RyZWUSLQoFc3RhdGUYAiABKAsyFy5udXNoaS52MS5Xb3JrdHJlZVN0YXRlUgVzdGF0ZRIW'
+    'CgZvdGhlcnMYAyADKAlSBm90aGVycw==');
 
 @$core.Deprecated('Use worktreeStateDescriptor instead')
 const WorktreeState$json = {
@@ -3011,18 +3014,24 @@ const Item$json = {
     {'1': 'effort', '3': 23, '4': 1, '5': 9, '10': 'effort'},
     {'1': 'ran_model', '3': 24, '4': 1, '5': 9, '10': 'ranModel'},
     {
-      '1': 'shell',
+      '1': 'background_command',
       '3': 25,
       '4': 1,
       '5': 11,
-      '6': '.nushi.v1.Shell',
-      '10': 'shell'
+      '6': '.nushi.v1.BackgroundCommand',
+      '10': 'backgroundCommand'
     },
     {'1': 'agent_id', '3': 26, '4': 1, '5': 9, '10': 'agentId'},
-    {'1': 'relay_to', '3': 27, '4': 1, '5': 9, '10': 'relayTo'},
-    {'1': 'relay_call', '3': 28, '4': 1, '5': 9, '10': 'relayCall'},
-    {'1': 'relay_state', '3': 29, '4': 1, '5': 9, '10': 'relayState'},
-    {'1': 'relayed_by', '3': 30, '4': 1, '5': 9, '10': 'relayedBy'},
+    {'1': 'to_subagent_name', '3': 27, '4': 1, '5': 9, '10': 'toSubagentName'},
+    {'1': 'to_subagent', '3': 28, '4': 1, '5': 9, '10': 'toSubagent'},
+    {
+      '1': 'to_subagent_state',
+      '3': 29,
+      '4': 1,
+      '5': 9,
+      '10': 'toSubagentState'
+    },
+    {'1': 'passed_on_by', '3': 30, '4': 1, '5': 9, '10': 'passedOnBy'},
     {
       '1': 'findings',
       '3': 31,
@@ -3031,7 +3040,7 @@ const Item$json = {
       '6': '.nushi.v1.Findings',
       '10': 'findings'
     },
-    {'1': 'relay_stop', '3': 32, '4': 1, '5': 8, '10': 'relayStop'},
+    {'1': 'to_subagent_stop', '3': 32, '4': 1, '5': 8, '10': 'toSubagentStop'},
     {'1': 'sent', '3': 33, '4': 1, '5': 3, '10': 'sent'},
     {'1': 'input', '3': 34, '4': 1, '5': 9, '10': 'input'},
     {'1': 'raw_output', '3': 35, '4': 1, '5': 9, '10': 'rawOutput'},
@@ -3052,13 +3061,15 @@ final $typed_data.Uint8List itemDescriptor = $convert.base64Decode(
     'gJUgZmb3JrQXQSHgoKcmV3aW5kYWJsZRgSIAEoCFIKcmV3aW5kYWJsZRIuCghzdWJhZ2VudBgT'
     'IAEoCzISLm51c2hpLnYxLlN1YmFnZW50UghzdWJhZ2VudBIWCgZyZXBvcnQYFCABKAhSBnJlcG'
     '9ydBIWCgZwcm9tcHQYFSABKAlSBnByb21wdBIUCgVtb2RlbBgWIAEoCVIFbW9kZWwSFgoGZWZm'
-    'b3J0GBcgASgJUgZlZmZvcnQSGwoJcmFuX21vZGVsGBggASgJUghyYW5Nb2RlbBIlCgVzaGVsbB'
-    'gZIAEoCzIPLm51c2hpLnYxLlNoZWxsUgVzaGVsbBIZCghhZ2VudF9pZBgaIAEoCVIHYWdlbnRJ'
-    'ZBIZCghyZWxheV90bxgbIAEoCVIHcmVsYXlUbxIdCgpyZWxheV9jYWxsGBwgASgJUglyZWxheU'
-    'NhbGwSHwoLcmVsYXlfc3RhdGUYHSABKAlSCnJlbGF5U3RhdGUSHQoKcmVsYXllZF9ieRgeIAEo'
-    'CVIJcmVsYXllZEJ5Ei4KCGZpbmRpbmdzGB8gASgLMhIubnVzaGkudjEuRmluZGluZ3NSCGZpbm'
-    'RpbmdzEh0KCnJlbGF5X3N0b3AYICABKAhSCXJlbGF5U3RvcBISCgRzZW50GCEgASgDUgRzZW50'
-    'EhQKBWlucHV0GCIgASgJUgVpbnB1dBIdCgpyYXdfb3V0cHV0GCMgASgJUglyYXdPdXRwdXQ=');
+    'b3J0GBcgASgJUgZlZmZvcnQSGwoJcmFuX21vZGVsGBggASgJUghyYW5Nb2RlbBJKChJiYWNrZ3'
+    'JvdW5kX2NvbW1hbmQYGSABKAsyGy5udXNoaS52MS5CYWNrZ3JvdW5kQ29tbWFuZFIRYmFja2dy'
+    'b3VuZENvbW1hbmQSGQoIYWdlbnRfaWQYGiABKAlSB2FnZW50SWQSKAoQdG9fc3ViYWdlbnRfbm'
+    'FtZRgbIAEoCVIOdG9TdWJhZ2VudE5hbWUSHwoLdG9fc3ViYWdlbnQYHCABKAlSCnRvU3ViYWdl'
+    'bnQSKgoRdG9fc3ViYWdlbnRfc3RhdGUYHSABKAlSD3RvU3ViYWdlbnRTdGF0ZRIgCgxwYXNzZW'
+    'Rfb25fYnkYHiABKAlSCnBhc3NlZE9uQnkSLgoIZmluZGluZ3MYHyABKAsyEi5udXNoaS52MS5G'
+    'aW5kaW5nc1IIZmluZGluZ3MSKAoQdG9fc3ViYWdlbnRfc3RvcBggIAEoCFIOdG9TdWJhZ2VudF'
+    'N0b3ASEgoEc2VudBghIAEoA1IEc2VudBIUCgVpbnB1dBgiIAEoCVIFaW5wdXQSHQoKcmF3X291'
+    'dHB1dBgjIAEoCVIJcmF3T3V0cHV0');
 
 @$core.Deprecated('Use findingsDescriptor instead')
 const Findings$json = {
@@ -3104,9 +3115,9 @@ final $typed_data.Uint8List findingDescriptor = $convert.base64Decode(
     'kYBiABKAlSCGNhdGVnb3J5EhgKB3ZlcmRpY3QYByABKAlSB3ZlcmRpY3QSGAoHb3V0Y29tZRgI'
     'IAEoCVIHb3V0Y29tZQ==');
 
-@$core.Deprecated('Use shellDescriptor instead')
-const Shell$json = {
-  '1': 'Shell',
+@$core.Deprecated('Use backgroundCommandDescriptor instead')
+const BackgroundCommand$json = {
+  '1': 'BackgroundCommand',
   '2': [
     {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
     {'1': 'state', '3': 2, '4': 1, '5': 9, '10': 'state'},
@@ -3117,11 +3128,11 @@ const Shell$json = {
   ],
 };
 
-/// Descriptor for `Shell`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List shellDescriptor = $convert.base64Decode(
-    'CgVTaGVsbBIOCgJpZBgBIAEoCVICaWQSFAoFc3RhdGUYAiABKAlSBXN0YXRlEhgKB3N0YXJ0ZW'
-    'QYAyABKANSB3N0YXJ0ZWQSFAoFZW5kZWQYBCABKANSBWVuZGVkEhYKBm91dHB1dBgFIAEoCVIG'
-    'b3V0cHV0EhAKA2VuZBgGIAEoCVIDZW5k');
+/// Descriptor for `BackgroundCommand`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List backgroundCommandDescriptor = $convert.base64Decode(
+    'ChFCYWNrZ3JvdW5kQ29tbWFuZBIOCgJpZBgBIAEoCVICaWQSFAoFc3RhdGUYAiABKAlSBXN0YX'
+    'RlEhgKB3N0YXJ0ZWQYAyABKANSB3N0YXJ0ZWQSFAoFZW5kZWQYBCABKANSBWVuZGVkEhYKBm91'
+    'dHB1dBgFIAEoCVIGb3V0cHV0EhAKA2VuZBgGIAEoCVIDZW5k');
 
 @$core.Deprecated('Use subagentDescriptor instead')
 const Subagent$json = {
@@ -6804,7 +6815,7 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.PlanEntry': PlanEntry$json,
   '.nushi.v1.ImageData': ImageData$json,
   '.nushi.v1.Subagent': Subagent$json,
-  '.nushi.v1.Shell': Shell$json,
+  '.nushi.v1.BackgroundCommand': BackgroundCommand$json,
   '.nushi.v1.Findings': Findings$json,
   '.nushi.v1.Finding': Finding$json,
   '.nushi.v1.ConfigOption': ConfigOption$json,

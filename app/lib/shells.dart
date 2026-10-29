@@ -15,16 +15,16 @@ import 'package:nushi/widgets.dart';
 /// The tool calls that left a command running in the background, in order.
 List<Item> shellsOf(List<Item> items) => [
   for (final it in items)
-    if (it.hasShell()) it,
+    if (it.hasBackgroundCommand()) it,
 ];
 
-bool shellRunning(Item it) => it.shell.state == 'running';
+bool shellRunning(Item it) => it.backgroundCommand.state == 'running';
 
 /// A background command's state in a few words: "running · 12s", "done ·
 /// exited with code 0 · 15s", "stopped", or "started" (and how
 /// long ago, when the daemon saw it) when its end can't be known.
 String shellState(Item it) {
-  final sh = it.shell;
+  final sh = it.backgroundCommand;
   final since = msTime(sh.started.toInt());
   final end = shellRunning(it) ? DateTime.now() : msTime(sh.ended.toInt());
   return switch (sh.state) {
@@ -41,11 +41,12 @@ String shellState(Item it) {
 }
 
 /// The command's last line of output, if it wrote any.
-String lastLine(Item it) => it.shell.output.trimRight().split('\n').last.trim();
+String lastLine(Item it) =>
+    it.backgroundCommand.output.trimRight().split('\n').last.trim();
 
 /// The command's [TaskMark]: room while it runs (its words shine), a check
 /// that draws as it's done, a red mark when it failed.
-Widget shellMark(Item it) => TaskMark(it.shell.state);
+Widget shellMark(Item it) => TaskMark(it.backgroundCommand.state);
 
 /// [shellState] in [style], red once it failed, ticking and shining while
 /// it runs.
@@ -56,7 +57,7 @@ Widget shellStateText(BuildContext context, Item it, TextStyle style) => Align(
     child: LiveText(
       () => shellState(it),
       live: shellRunning(it),
-      style: it.shell.state == 'failed'
+      style: it.backgroundCommand.state == 'failed'
           ? style.copyWith(color: NushiTheme.of(context).t.crashed)
           : style,
     ),
@@ -146,7 +147,7 @@ class ShellPane extends StatelessWidget {
                               shellMark(it),
                             ],
                           ),
-                          if (it.shell.state == 'started')
+                          if (it.backgroundCommand.state == 'started')
                             Padding(
                               padding: const EdgeInsets.only(top: 6),
                               child: Text(
@@ -168,12 +169,14 @@ class ShellPane extends StatelessWidget {
                             padding: const EdgeInsets.all(10),
                             decoration: box(t.borderSubtle, fill: t.base),
                             child: Text(
-                              it.shell.output.isNotEmpty
-                                  ? it.shell.output
+                              it.backgroundCommand.output.isNotEmpty
+                                  ? it.backgroundCommand.output
                                   : shellRunning(it)
                                   ? 'None yet.'
                                   : 'None.',
-                              style: it.shell.output.isEmpty ? small : code,
+                              style: it.backgroundCommand.output.isEmpty
+                                  ? small
+                                  : code,
                             ),
                           ),
                         ],

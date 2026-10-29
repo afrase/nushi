@@ -19,12 +19,12 @@ final Map<String, Chat> _chats = {
     'N',
     status: ChatStatus(busy: true, waiting: true),
   ),
-  'done': chat('u', 'claude', 'U')..unseen = true,
+  'done': chat('u', 'claude', 'U')..done = true,
   // A turn's end while subagents or commands run on: not "idle", nor
   // "done" while unseen.
   'in background': chat('b', 'claude', 'B', status: ChatStatus(background: 2))
-    ..unseen = true,
-  'idle': chat('i', 'ante', 'I')..unseen = false,
+    ..done = true,
+  'idle': chat('i', 'ante', 'I')..done = false,
   'asleep': chat('s', 'omp', 'S', status: ChatStatus(asleep: true)),
   "couldn't start": chat(
     'c',
@@ -38,7 +38,7 @@ final Map<String, Chat> _chats = {
     'claude',
     'E',
     status: ChatStatus(reopenFailed: true, sessionGone: true),
-  )..unseen = true,
+  )..done = true,
 };
 
 void main() {

@@ -83,7 +83,7 @@ void main() {
       id: 's',
       kind: ItemKind.ITEM_KIND_TOOL_CALL,
       title: 'go test ./...',
-      shell: Shell(state: state),
+      backgroundCommand: BackgroundCommand(state: state),
     );
     Widget row(Item it) => Builder(
       builder: (context) => Row(

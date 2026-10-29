@@ -11,6 +11,9 @@ void main() {
     expect(WorktreeChoices.defaults(plan()), (true, true));
     expect(WorktreeChoices.defaults(plan(commits: 1)), (true, false));
     expect(WorktreeChoices.defaults(plan(changed: 1)), (false, false));
+    // Another chat works in it: the daemon would refuse.
+    final shared = plan()..others.add('Fix the build');
+    expect(WorktreeChoices.defaults(shared), (false, false));
 
     final c = WorktreeChoices.choice(
       plan(changed: 2, commits: 1),

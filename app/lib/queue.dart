@@ -56,13 +56,13 @@ class QueuePills extends StatelessWidget {
                         children: [
                           Icon(Icons.schedule, size: 13, color: t.textMuted),
                           Flexible(
-                            child: m.relayStop
+                            child: m.toSubagentStop
                                 ? Text.rich(
                                     stopLabel(
                                       theme,
                                       t.textSecondary,
                                       chat,
-                                      relayTo: m.relayTo,
+                                      name: m.toSubagentName,
                                       call: m.toSubagent,
                                     ),
                                     maxLines: 1,
@@ -80,7 +80,7 @@ class QueuePills extends StatelessWidget {
                     ),
                   ),
                   if (onSendNow case final now?
-                      when chat.started != null && !m.relayStop)
+                      when chat.started != null && !m.toSubagentStop)
                     IconTap(
                       Icons.fast_forward,
                       size: 13,
@@ -109,7 +109,7 @@ String _label(QueuedMessage m) {
       .replaceAll(RegExp(r'\s+'), ' ')
       .trim();
   if (line.isNotEmpty) {
-    return m.relayTo.isEmpty ? line : 'To ${m.relayTo}: $line';
+    return m.toSubagentName.isEmpty ? line : 'To ${m.toSubagentName}: $line';
   }
   if (replies.isNotEmpty) return 'Reply';
   return m.images.length == 1 ? 'An image' : '${m.images.length} images';

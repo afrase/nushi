@@ -57,10 +57,10 @@ final _items = <Item>[
   Item(
     id: 'u3',
     kind: ItemKind.ITEM_KIND_USER_MESSAGE,
-    relayTo: 'general-purpose',
-    relayCall: 'a',
-    relayState: 'relayed',
-    relayStop: true,
+    toSubagentName: 'general-purpose',
+    toSubagent: 'a',
+    toSubagentState: 'relayed',
+    toSubagentStop: true,
   ),
   Item(
     id: 'b',
@@ -94,7 +94,11 @@ final _items = <Item>[
     title: 'make watch',
     toolKind: 'execute',
     status: 'completed',
-    shell: Shell(id: 'bgu2i75cc', state: 'running', output: 'watching…\n'),
+    backgroundCommand: BackgroundCommand(
+      id: 'bgu2i75cc',
+      state: 'running',
+      output: 'watching…\n',
+    ),
   ),
   Item(
     id: 'm',

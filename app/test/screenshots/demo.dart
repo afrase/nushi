@@ -37,7 +37,7 @@ Chat demoChat(
   createdUnixMs: ago(Duration(minutes: age)),
   status: status ?? ChatStatus(canFork: true, canRewind: true),
   pin: pin,
-  unseen: unseen,
+  done: unseen,
   worktree: worktree,
   pull: pull,
   jiraSite: jiraSite,
@@ -90,7 +90,7 @@ List<Chat> demoChats() => [
     status: ChatStatus(waiting: true, canFork: true),
   ),
   demoChat('img', 'claude', 'Resize images at build time', age: 95)
-    ..unseen = true,
+    ..done = true,
   demoChat(
     'theme',
     'pig',

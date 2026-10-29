@@ -67,7 +67,7 @@ class ItemView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: 6,
               children: [
-                if (item.relayTo.isNotEmpty) _Relayed(item, chat),
+                if (item.toSubagentName.isNotEmpty) _Relayed(item, chat),
                 if (item.images.isNotEmpty) Thumbnails(item.images),
                 if (item.text.isNotEmpty) UserMessageText(item.text),
               ],
@@ -227,8 +227,8 @@ class _Relayed extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final agent = chat.agentName;
-    final stop = item.relayStop;
-    final (state, color) = switch (item.relayState) {
+    final stop = item.toSubagentStop;
+    final (state, color) = switch (item.toSubagentState) {
       'sending' when stop => ('waiting for $agent to stop it', t.userBandMuted),
       'relayed' when stop => ('stopped', t.userBandMuted),
       'failed' when stop => ('$agent didn’t stop it', t.crashed),
@@ -247,8 +247,8 @@ class _Relayed extends StatelessWidget {
                   theme,
                   t.userBandMuted,
                   chat,
-                  relayTo: item.relayTo,
-                  call: item.relayCall,
+                  name: item.toSubagentName,
+                  call: item.toSubagent,
                 ),
                 if (state.isNotEmpty)
                   TextSpan(text: ' · $state', style: theme.ui(color, size: 12)),
@@ -261,7 +261,7 @@ class _Relayed extends StatelessWidget {
             TextSpan(
               children: [
                 TextSpan(
-                  text: '→ ${item.relayTo}',
+                  text: '→ ${item.toSubagentName}',
                   style: theme.ui(
                     t.userBandMuted,
                     size: 12,
@@ -275,12 +275,12 @@ class _Relayed extends StatelessWidget {
               ],
             ),
           );
-    if (item.relayCall.isEmpty) return label;
+    if (item.toSubagent.isEmpty) return label;
     return Align(
       alignment: Alignment.centerLeft,
       child: Tap(
-        onTap: () => chat.pane.value = item.relayCall,
-        tooltip: 'Open ${stopCommand(item.relayTo)}’s steps',
+        onTap: () => chat.pane.value = item.toSubagent,
+        tooltip: 'Open ${stopCommand(item.toSubagentName)}’s steps',
         child: label,
       ),
     );

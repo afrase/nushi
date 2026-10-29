@@ -34,20 +34,25 @@ ChatState _chat() => ChatState('c', '/Users/me/made-up')
         title: command,
         toolKind: 'execute',
         status: 'completed',
-        shell: Shell(id: task, state: 'running'),
+        backgroundCommand: BackgroundCommand(id: task, state: 'running'),
       ),
   ])
   ..queue = [
-    QueuedMessage(id: 'q1', relayTo: _long, toSubagent: 's2', relayStop: true),
+    QueuedMessage(
+      id: 'q1',
+      toSubagentName: _long,
+      toSubagent: 's2',
+      toSubagentStop: true,
+    ),
   ];
 
 final _sent = Item(
   id: 'u1',
   kind: ItemKind.ITEM_KIND_USER_MESSAGE,
-  relayTo: _loop,
-  relayCall: 's1',
-  relayState: 'relayed',
-  relayStop: true,
+  toSubagentName: _loop,
+  toSubagent: 's1',
+  toSubagentState: 'relayed',
+  toSubagentStop: true,
 );
 
 Future<void> _pump(

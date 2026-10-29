@@ -30,7 +30,7 @@ PanelCard? agentsCard(ChatState chat, Daemon daemon) {
       _ShellRow(chat, daemon, it),
   ];
   // A command whose end isn't known didn't finish, as far as Nushi knows.
-  final unknown = shells.any((it) => it.shell.state == 'started');
+  final unknown = shells.any((it) => it.backgroundCommand.state == 'started');
   final more = '${rest.length} ${unknown ? 'earlier' : 'finished'}';
   return PanelCard(
     title: 'Background tasks',

@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
-/// The daemon API that keeps each chat's unseen turn's end (Chat.unseen)
+/// The daemon API that keeps each chat's unseen turn's end (Chat.done)
 /// and takes the Mac's view (SetDeviceView on the socket).
 const unseenApi = 76;
 

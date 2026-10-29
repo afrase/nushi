@@ -14,11 +14,11 @@ import 'harness.dart';
 List<Chat> _chats() => [
   chat('w', 'claude', 'Working', status: ChatStatus(busy: true)),
   chat('n', 'codex', 'Needs you', age: 1, status: ChatStatus(waiting: true)),
-  chat('u', 'claude', 'Unseen', age: 2)..unseen = true,
+  chat('u', 'claude', 'Unseen', age: 2)..done = true,
   chat('i', 'ante', 'Idle', age: 3),
   chat('c', 'pig', 'Crashed', age: 4, status: ChatStatus(reopenFailed: true)),
   chat('s', 'omp', 'Asleep, unseen', age: 5, status: ChatStatus(asleep: true))
-    ..unseen = true,
+    ..done = true,
 ];
 
 const Tokens _t = Tokens.dark;
@@ -124,7 +124,7 @@ void main() {
       ..emit(
         EventsResponse(
           chatId: 'a',
-          chat: chat('a', 'claude', 'A')..unseen = true,
+          chat: chat('a', 'claude', 'A')..done = true,
         ),
       )
       ..emit(EventsResponse(chatId: 'a', status: ChatStatus()));
@@ -147,7 +147,7 @@ void main() {
   });
 
   testWidgets('an older daemon: no mark, and no view told', (tester) async {
-    final fake = FakeDaemon([chat('a', 'claude', 'A')..unseen = true])
+    final fake = FakeDaemon([chat('a', 'claude', 'A')..done = true])
       ..answer = (input) =>
           input is PingRequest ? PingResponse(apiVersion: 75) : null;
     final d = await fake.connect(tester);
