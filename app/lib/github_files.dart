@@ -10,6 +10,7 @@ import 'package:nushi/github_comment.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_review.dart';
 import 'package:nushi/markdown.dart';
+import 'package:nushi/pull_todo_items.dart';
 import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -495,7 +496,10 @@ class _ThreadCardState extends State<ThreadCard> {
                   if (SendToAgent.maybeOf(context) case final to?)
                     SendButton(
                       label: 'Send to agent',
-                      onPressed: () => to.onSend(threadReply(x)),
+                      onPressed: () => to.send(
+                        threadReply(x),
+                        'the thread on ${threadPlace(x)}',
+                      ),
                     ),
                 ],
               ),

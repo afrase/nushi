@@ -5,6 +5,7 @@ import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_settings.dart';
 import 'package:nushi/github_text.dart';
 import 'package:nushi/markdown.dart';
+import 'package:nushi/review_findings.dart';
 import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -104,7 +105,12 @@ class _CommentEntryState extends State<CommentEntry> {
         if (!folds || _open) const Spacer(),
         if (folds) ...[const SizedBox(width: 10), toggle],
         if (widget.sendable && c.body.isNotEmpty)
-          SendIcon(() async => commentReply(c)),
+          SendIcon(
+            () async => commentReply(c),
+            what:
+                "${possessive('@${c.author}')} "
+                "${c.review.isEmpty ? 'comment' : 'review'}",
+          ),
         if (c.url.isNotEmpty)
           IconTap(
             Icons.open_in_new,

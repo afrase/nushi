@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/daemon.dart';
@@ -9,19 +10,30 @@ import 'package:nushi/widgets.dart';
 /// Where the pull request's parts send what's picked to the agent: a chat's
 /// Pull request tab puts each into the chat's box as a reply card (the
 /// quote, and a line asking the agent to act on it), for the user to send;
-/// several wait there together. Without one (the GitHub view) the parts
-/// show no Send to agent.
+/// several wait there together, and a toast says what went ([onSend]'s
+/// `what` names it: "CI / rubocop"). [box] is that box, for what's in it.
+/// Without one (the GitHub view) the parts show no Send to agent.
 class SendToAgent extends InheritedWidget {
-  const new({required this.onSend, required super.child, super.key});
+  const new({required this.onSend, required super.child, super.key, this.box});
 
-  final ValueChanged<Reply> onSend;
+  final void Function(List<Reply> replies, String what) onSend;
+  final ValueListenable<List<Reply>>? box;
+
+  /// Sends [r], named [what].
+  void send(Reply r, String what) => onSend([r], what);
 
   static SendToAgent? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<SendToAgent>();
 
   @override
-  bool updateShouldNotify(SendToAgent old) => old.onSend != onSend;
+  bool updateShouldNotify(SendToAgent old) =>
+      old.onSend != onSend || old.box != box;
 }
+
+/// Whether [box] holds [r]'s card (its quote and request; the lead line
+/// is the box's own).
+bool inBox(List<Reply> box, Reply r) =>
+    box.any((b) => b.quote == r.quote && b.text == r.text);
 
 /// GitHub's text is anyone's who can push or comment: the reply says so,
 /// outside the quote, as the daemon's Fix checks does.
@@ -226,10 +238,13 @@ Future<Reply> checkReply(Daemon daemon, GitHubRef ref, GitHubCheck c) async {
 
 /// A small Send to agent button, where a [SendToAgent] is.
 class SendIcon extends StatelessWidget {
-  const new(this.reply, {super.key});
+  const new(this.reply, {required this.what, super.key});
 
   /// What it sends, built when clicked.
   final Future<Reply> Function() reply;
+
+  /// What it is, as the toast names it.
+  final String what;
 
   @override
   Widget build(BuildContext context) {
@@ -239,7 +254,7 @@ class SendIcon extends StatelessWidget {
       Icons.subdirectory_arrow_right,
       size: 14,
       tooltip: "Send to the agent: a reply card in the chat's box, to send",
-      onTap: () async => to.onSend(await reply()),
+      onTap: () async => to.send(await reply(), what),
     );
   }
 }

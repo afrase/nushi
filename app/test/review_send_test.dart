@@ -147,14 +147,17 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Send to agent (2)'), findsNothing);
     expect(
-      find.text("2 replies wait in the chat's box, to send to the agent"),
+      find.text(
+        "2 waiting in the chat's box. They go with your next message.",
+        findRichText: true,
+      ),
       findsOne,
     );
     await expectLater(
       find.byType(NushiApp),
       matchesGoldenFile('goldens/review_changes_720_dark.png'),
     );
-    await tester.tap(find.text('Show the chat'));
+    await tester.tap(find.text('Go to chat'));
     await tester.pumpAndSettle();
     expect(d.chats['c']!.tab.value.name, 'chat');
     d.dispose();

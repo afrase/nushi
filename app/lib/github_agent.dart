@@ -23,6 +23,7 @@ Future<void> toAgent(
   GitHubItem item, {
   required Future<List<Reply>> Function() replies,
   ChatState? chat,
+  String what = '',
 }) async {
   if (chat case final mine?) {
     await tryOrShow(context, () async {
@@ -42,10 +43,7 @@ Future<void> toAgent(
     return;
   }
   if (context.getInheritedWidgetOfExactType<SendToAgent>() case final here?) {
-    await tryOrShow(
-      context,
-      () async => (await replies()).forEach(here.onSend),
-    );
+    await tryOrShow(context, () async => here.onSend(await replies(), what));
     return;
   }
   var chats = chatsOnItem(daemon, item.ref);

@@ -22,11 +22,12 @@ class Draft extends ChangeNotifier {
   final images = Attachments();
 
   /// Adds [r] as a card, unless it's there already (the same comment,
-  /// thread or check sent twice).
-  void addReply(Reply r) {
+  /// thread or check sent twice); whether it was added.
+  bool addReply(Reply r) {
     final now = replies.value;
-    if (now.contains(r)) return;
+    if (now.contains(r)) return false;
     replies.value = [...now, r];
+    return true;
   }
 
   /// Text to quote in the box (a side question's start), taken by the box.
