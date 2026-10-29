@@ -61,3 +61,45 @@ func TestHookCallback(t *testing.T) {
 		t.Errorf("Raw %s", in.Raw)
 	}
 }
+
+// A callback's deadline_ms ends the hook's ctx, since claude goes on
+// without the answer rather than withdrawing the call; what the hook
+// returns then isn't sent. A deadline still to come is the ctx's, and a
+// call without one has none.
+func TestHookDeadline(t *testing.T) {
+	overran := make(chan error, 1)
+	slow := func(ctx context.Context, _ claudeagent.HookInput) (claudeagent.HookOutput, error) {
+		<-ctx.Done()
+		overran <- ctx.Err()
+		return claudeagent.HookOutput{Reason: "late"}, nil
+	}
+	deadlines := make(chan bool, 2)
+	fast := func(ctx context.Context, _ claudeagent.HookInput) (claudeagent.HookOutput, error) {
+		_, ok := ctx.Deadline()
+		deadlines <- ok
+		return claudeagent.HookOutput{}, nil
+	}
+	call := func(id, hook, deadline string) claudetest.Step {
+		return claudetest.Send(`{"type":"control_request","request_id":"` + id + `","request":{"subtype":"hook_callback","callback_id":"` + hook + `"` +
+			deadline + `,"input":{"hook_event_name":"Stop"}}}`)
+	}
+	answered := func(id string) claudetest.Step {
+		return claudetest.Expect(`{"type":"control_response","response":{"subtype":"success","request_id":"` + id + `","response":{}}}`)
+	}
+	s, f := start(t, claudeagent.Options{Hooks: map[claudeagent.HookEvent][]claudeagent.HookMatcher{
+		claudeagent.HookStop: {{Fn: slow}, {Fn: fast}},
+	}},
+		call("c1", "hook_0", `,"deadline_ms":1`),
+		call("c2", "hook_1", `,"deadline_ms":600000`),
+		answered("c2"),
+		call("c3", "hook_1", ""),
+		answered("c3"),
+	)
+	if err := <-overran; !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("the overrunning hook's ctx ended with %v", err)
+	}
+	finish(t, s, f) // the fake fails on an answer to c1, in the script or after it
+	if a, b := <-deadlines, <-deadlines; !a || b {
+		t.Errorf("deadlines seen: with deadline_ms %v, without %v", a, b)
+	}
+}

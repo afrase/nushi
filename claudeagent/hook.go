@@ -35,8 +35,10 @@ const (
 	HookPermissionRequest  HookEvent = "PermissionRequest"
 )
 
-// HookFunc is a hook. Its ctx ends when claude gives up on it or the
-// session closes.
+// HookFunc is a hook. Its ctx ends when claude withdraws the call, when
+// the call's deadline passes, if claude gave one, or when the session
+// closes. An answer returned after that isn't sent: claude has gone on
+// without it.
 type HookFunc func(ctx context.Context, in HookInput) (HookOutput, error)
 
 // HookMatcher is a hook and when it runs.
@@ -128,6 +130,7 @@ func (s *Session) hookCallback(ctx context.Context, raw json.RawMessage) (any, e
 		CallbackID string          `json:"callback_id"`
 		Input      json.RawMessage `json:"input"`
 		ToolUseID  string          `json:"tool_use_id"`
+		DeadlineMS int64           `json:"deadline_ms"` // optional; claude goes on without the answer after it
 	}
 	if err := json.Unmarshal(raw, &r); err != nil {
 		return nil, fmt.Errorf("claudeagent: a hook callback that doesn't decode: %w", err)
@@ -146,7 +149,18 @@ func (s *Session) hookCallback(ctx context.Context, raw json.RawMessage) (any, e
 	if in.ToolUseID == "" {
 		in.ToolUseID = r.ToolUseID
 	}
-	out, err := fn(ctx, in)
+	// claude doesn't withdraw a call whose deadline passes, it just stops
+	// waiting; so the hook is stopped here, timed from when the call came.
+	hctx := ctx
+	if r.DeadlineMS > 0 {
+		var cancel context.CancelFunc
+		hctx, cancel = context.WithTimeout(ctx, time.Duration(r.DeadlineMS)*time.Millisecond)
+		defer cancel()
+	}
+	out, err := fn(hctx, in)
+	if hctx.Err() != nil && ctx.Err() == nil {
+		return nil, errNoReply // too late: nobody waits for it
+	}
 	if err != nil {
 		return nil, err
 	}
