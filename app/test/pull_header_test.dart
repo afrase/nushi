@@ -83,20 +83,22 @@ void main() {
     expect(blockers(fixturePull()), 5);
   });
 
-  testWidgets('a light jumps to its section', (tester) async {
-    final (d, _) = await openPullTab(tester, fixturePull());
-    expect(find.byType(GitHubChecks), findsNothing);
-    await tester.tap(find.text('3 failing'));
-    await tester.pumpAndSettle();
-    expect(find.byType(GitHubChecks), findsOneWidget);
-    await tester.tap(find.text('No conflicts'));
-    await tester.pumpAndSettle();
-    expect(find.byType(GitHubFiles), findsOneWidget);
-    // Scrolled to it: the files fill the tab under the section's tabs.
-    final files = tester.getRect(find.byType(GitHubFiles));
-    expect(files.top, lessThan(100));
-    d.dispose();
-  }, variant: _mac);
+  for (final (light, section) in [
+    ('3 failing', GitHubChecks),
+    ('No conflicts', GitHubFiles),
+  ]) {
+    testWidgets('a light jumps to its section: $light', (tester) async {
+      final (d, _) = await openPullTab(tester, fixturePull());
+      expect(find.byType(section), findsNothing);
+      await tester.tap(find.text(light));
+      await tester.pumpAndSettle();
+      expect(find.byType(section), findsOneWidget);
+      // Scrolled to it: the section's tabs as near the top as it goes.
+      final tabs = tester.getRect(find.text('Files 12')).top;
+      expect(tabs, lessThan(section == GitHubFiles ? 100 : 450));
+      d.dispose();
+    }, variant: _mac);
+  }
 
   testWidgets('narrow: the buttons go under the branches', (tester) async {
     // Opened wide (narrow, the tabs fold into a menu), then narrowed.

@@ -54,6 +54,8 @@ void main() {
   testWidgets("a bot's comment folds to one line; a long review shows its "
       'start, and whole on Show', (tester) async {
     final (d, _) = await openPullTab(tester, fixturePull());
+    await tester.tap(find.text('Conversation 3')); // scrolled to it
+    await tester.pumpAndSettle();
     // Danger's table: its first row, on one line, until Show.
     expect(find.textContaining('Review App Links · Notes'), findsOneWidget);
     expect(find.byType(Table), findsNothing);
@@ -77,6 +79,8 @@ void main() {
 
   testWidgets('the text reads in 860 points, centred, at 1440', (tester) async {
     final (d, _) = await openPullTab(tester, fixturePull());
+    await tester.tap(find.text('Conversation 3'));
+    await tester.pumpAndSettle();
     final pane = tester.getRect(find.byType(GitHubPullPane));
     final text = tester.getRect(
       find.text(
@@ -95,6 +99,8 @@ void main() {
     final p = fixturePull();
     p.conversation.first.bot = false; // shown whole
     final (d, _) = await openPullTab(tester, p, size: const Size(1100, 900));
+    await tester.tap(find.text('Conversation 3'));
+    await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     final pane = tester.getRect(find.byType(GitHubPullPane));
     final table = tester.getRect(find.byType(Table).first);

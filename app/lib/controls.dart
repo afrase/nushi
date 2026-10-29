@@ -251,6 +251,65 @@ class Button extends StatelessWidget {
   }
 }
 
+/// Send to agent's button, wherever something goes into the chat's box
+/// as a reply card (Send, Fix checks, Address): its arrow and [label] in
+/// the accent's ink on its tint; [primary], the accent's fill (Send all).
+class SendButton extends StatelessWidget {
+  const new({
+    required this.label,
+    required this.onPressed,
+    super.key,
+    this.tooltip = '',
+    this.primary = false,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final String tooltip;
+  final bool primary;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    final fg = primary ? t.onAccent : t.accentInk;
+    final fill = primary ? t.accent : t.accentSoft;
+    return Pressable(
+      onTap: onPressed,
+      tooltip: tooltip,
+      builder: (context, look) => _faded(
+        look,
+        Container(
+          height: controlHeight,
+          padding: const EdgeInsets.fromLTRB(7, 0, 9, 0),
+          decoration: BoxDecoration(
+            color: look.hover
+                ? Color.alphaBlend(fg.withValues(alpha: 0.12), fill)
+                : fill,
+            borderRadius: BorderRadius.circular(NushiTheme.control),
+          ),
+          foregroundDecoration: focusRing(t, look),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.subdirectory_arrow_right, size: 14, color: fg),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.ui(fg, size: 12.5, weight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Says the compact [MenuField]s below end flush with their room: a
 /// panel card's values, so a menu's ▾ lines up with the text values'
 /// right edge.

@@ -103,7 +103,11 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Item** (GitHub) | A pull request or an issue in the inbox. | `GitHubItem`, `GitHubRef` | |
 | **Start work** | Start a chat on an issue or pull request: pick a folder, then New chat with it, in a worktree. | `StartChatRequest`, `new_chat_issue.dart` | |
 | **Pull request** (a chat's) | The pull request whose head is the chat's branch, found by itself or linked by hand (Link pull request…, Unlink). | `FindChatPull`, `LinkChatPull`, `Session.Pull`, `PullLink` | 0059 |
-| **Pull request tab** | The chat's pull request in the chat's place: conversation, checks, files with review threads. | `PullTab` | 0059 |
+| **Pull request tab** | The chat's pull request in the chat's place: its head, the To do list, then conversation, checks, files with review threads. | `PullTab`, `GitHubPullPane` | 0059 |
+| **Status lights** | The Pull request tab's four boxes under its head, Checks, Review, Threads and Branch, each in its state's color; a click goes to its section. | `pullLights`, `PullHeader` | |
+| **Your move** | The sentence over the status lights saying whose move it is: "Your move. 5 things block the merge…", "Waiting on @team.", "Ready to merge." | `moveWords` | |
+| **To do** | The Pull request tab's list of what blocks the merge: failing checks, review threads not resolved and a review bot's findings to address, each with Send; Send picked, Send all to agent. | `PullTodo`, `todoItems` | |
+| **Finding** (a review bot's) | An item a review bot's comment lists under a heading such as "Must address", found by its Markdown's shape (a guess); one on a thread's lines joins that thread. | `reviewFindings`, `ReviewFinding` | |
 | **Pull request widget** | The details panel's sum-up of the chat's pull request: state, checks, review, mergeability, new comments. | `pull_card.dart` | 0059 |
 | **Review thread** | A GitHub inline comment and its replies at a line: Reply, Resolve, Unresolve. | `GitHubThread` | |
 | **Your review** | Inline comments you wrote on a pull request, not sent until Review… (comment, approve, request changes). | `GitHubDraft`, `SubmitGitHubReview` | |

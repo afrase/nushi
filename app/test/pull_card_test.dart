@@ -352,8 +352,9 @@ void main() {
     ); // the panel goes, as for Changes
     expect(find.text('Add Sub and Neg', findRichText: true), findsWidgets);
     expect(find.text('Start work'), findsNothing);
-    expect(find.text('Fix checks'), findsOneWidget);
-    expect(find.text('Should this check for overflow?'), findsNothing);
+    expect(find.text('To do'), findsOneWidget);
+    // A thread's first words in To do; the conversation under it.
+    expect(find.text('Should this check for overflow?'), findsOneWidget);
     expect(find.text('A first look.'), findsOneWidget);
     expect(pullSeen.value['c'], greaterThan(0));
     await tester.tap(find.text('Checks · 1 failed'));

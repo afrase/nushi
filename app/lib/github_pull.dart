@@ -6,13 +6,14 @@ import 'package:nushi/agent_mark.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/github_agent.dart';
 import 'package:nushi/github_checks.dart';
 import 'package:nushi/github_comment.dart';
 import 'package:nushi/github_files.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_review.dart';
 import 'package:nushi/pull_header.dart';
+import 'package:nushi/pull_todo.dart';
+import 'package:nushi/pull_todo_items.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -55,6 +56,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
   PullSection _tab = PullSection.activity;
   final _scroll = ScrollController();
   final GlobalKey _tabs = GlobalKey();
+  final GlobalKey _todo = GlobalKey();
 
   @override
   void initState() {
@@ -90,16 +92,19 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
 
   /// Shows [s]: its tab picked, scrolled to the top.
   void _jump(PullSection s) {
-    if (s != PullSection.todo) setState(() => _tab = s);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final to = _tabs.currentContext;
+    void show() {
+      final to = (s == PullSection.todo ? _todo : _tabs).currentContext;
       if (to == null || !to.mounted) return;
       Scrollable.ensureVisible(
         to,
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,
       );
-    });
+    }
+
+    if (s == PullSection.todo) return show();
+    setState(() => _tab = s);
+    WidgetsBinding.instance.addPostFrameCallback((_) => show());
   }
 
   @override
@@ -117,6 +122,8 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
     }
     final failed = p.checks.where((c) => c.failed).length;
     final now = widget.now ?? clock();
+    final items = todoItems(p);
+    final open = p.item.state == 'open';
     // The text reads in a column of [readableWidth] at most, centred; the
     // files' diff takes the whole width.
     return LayoutBuilder(
@@ -134,12 +141,25 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
               PullHeader(
                 pull: p,
                 now: now,
-                todo: blockers(p),
+                todo: items.length + (p.mergeable == 'conflicting' ? 1 : 0),
                 onJump: _jump,
+                threadsTo: open ? PullSection.todo : PullSection.activity,
                 actions: _actions(context, p),
               ),
               top: 14,
             ),
+            if (open)
+              column(
+                PullTodo(
+                  key: _todo,
+                  daemon: widget.daemon,
+                  pull: p,
+                  items: items,
+                  now: now,
+                  onChanged: _load,
+                ),
+                top: 16,
+              ),
             if (!widget.inChat) column(_Chats(widget.daemon, p), top: 10),
             if (_error case final e?)
               column(
@@ -165,10 +185,8 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
                       ),
                       (PullSection.files, 'Files ${p.changedFiles}'),
                     ],
-                    // The files fill the window: scrolled up to them.
-                    onChanged: (v) => v == PullSection.files
-                        ? _jump(v)
-                        : setState(() => _tab = v),
+                    // Scrolled up to the section picked.
+                    onChanged: _jump,
                   ),
                 ],
               ),
@@ -209,47 +227,14 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
     );
   }
 
-  /// The head's buttons: Start work (the GitHub view), Fix checks and
-  /// Address comments, Review…, Open on GitHub.
+  /// The head's buttons: Start work (the GitHub view), Review…, Open on
+  /// GitHub.
   List<Widget> _actions(BuildContext context, GitHubPull p) {
     final it = p.item;
     final daemon = widget.daemon;
     final pending = p.pendingComments + reviewDrafts(it.ref).length;
-    final unresolved = p.threads.where((x) => !x.resolved).length;
     return [
       if (!widget.inChat) StartWork(daemon: daemon, item: it, button: true),
-      if (p.checks.any((c) => c.failed))
-        Button(
-          label: 'Fix checks',
-          icon: Icons.build_outlined,
-          tooltip:
-              "Each failed check as a reply card in the chat's box, to send",
-          onPressed: () => toAgent(
-            context,
-            daemon,
-            it,
-            replies: () => checkReplies(daemon, it.ref, p),
-          ),
-        ),
-      if (unresolved > 0)
-        Button(
-          label: 'Address comments',
-          icon: Icons.forum_outlined,
-          tooltip: "Each thread as a reply card in the chat's box, to send",
-          onPressed: () async {
-            final picked = unresolved == 1
-                ? null
-                : await pickThreads(context, p);
-            if (unresolved > 1 && picked == null) return;
-            if (!context.mounted) return;
-            await toAgent(
-              context,
-              daemon,
-              it,
-              replies: () async => threadReplies(p, picked),
-            );
-          },
-        ),
       Button(
         label: pending > 0 ? 'Review ($pending)…' : 'Review…',
         onPressed: () => submitReview(context, daemon, p, onDone: _load),
