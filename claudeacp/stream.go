@@ -93,6 +93,8 @@ func (s *session) handle(m claudeagent.Message) {
 		s.memoryRecall(m)
 	case *claudeagent.LocalCommandOutput:
 		s.localOutput(m)
+	case *claudeagent.ElicitationComplete:
+		s.elicitationDone(m)
 	case *claudeagent.CompactBoundary:
 		s.compacted(m)
 		if post := m.CompactMetadata.PostTokens; post > 0 {
