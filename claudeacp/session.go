@@ -39,10 +39,11 @@ type session struct {
 
 	tools tools // the tool calls shown
 
-	cwd   string
-	cfg   config // its modes and options
-	cmds  commands
-	title titles
+	cwd     string
+	cfg     config     // its modes and options
+	setting sync.Mutex // one change of them at a time
+	cmds    commands
+	title   titles
 
 	st   stream        // the reader's own
 	read chan struct{} // closed once the reader is done
