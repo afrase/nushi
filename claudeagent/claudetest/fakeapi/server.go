@@ -73,9 +73,13 @@ func (s *Server) Left() int {
 }
 
 // Start serves the fake API on addr, which must be on loopback
-// ("127.0.0.1:0" picks a port), until stop; ctx is for starting only.
-// url is its base URL, for ANTHROPIC_BASE_URL.
+// ("127.0.0.1:0" picks a port), until stop; ctx is for starting only,
+// and a done one starts nothing. url is its base URL, for
+// ANTHROPIC_BASE_URL.
 func (s *Server) Start(ctx context.Context, addr string) (url string, stop func() error, err error) {
+	if err := ctx.Err(); err != nil { // Listen doesn't look at it once it has an address
+		return "", nil, err
+	}
 	host, _, err := net.SplitHostPort(addr)
 	if err != nil {
 		return "", nil, err
