@@ -37,10 +37,6 @@ import (
 // session Nushi opened, a subagent's session going with its parent's
 // (claude_chats_test.go). The chats' items, usage and status must match:
 // the JSON may differ where Nushi doesn't look.
-//
-// "hello", "permission" and "question" are written by hand, in the shapes
-// of claude 2.1.312 and the adapter 0.94.0, until they are recorded with
-// a fake Messages API (the README says what each assumes).
 func TestClaudeParity(t *testing.T) {
 	for _, dir := range scenarios(t) {
 		t.Run(filepath.Base(dir), func(t *testing.T) {

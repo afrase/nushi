@@ -4,9 +4,9 @@
     {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "Made dir-a."}]},
     {"match": {"lastUserText": "make file b"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"command": "mkdir -v dir-b", "description": "Make dir-b"}}]},
     {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "I won't, then."}]},
-    {"match": {"lastUserText": "make file c"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"command": "mkdir -v dir-c", "description": "Make dir-c"}}]},
-    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "Made dir-c."}]},
-    {"match": {"lastUserText": "make file d"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"command": "mkdir -v dir-d", "description": "Make dir-d"}}]},
-    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "Made dir-d, without asking."}]}
+    {"match": {"lastUserText": "print c"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"command": "perl -e 'print \"c\"'", "description": "Print c"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "Printed c."}]},
+    {"match": {"lastUserText": "print c again"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"command": "perl -e 'print \"c\"'", "description": "Print c again"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "Printed c again, without asking."}]}
   ]
 }

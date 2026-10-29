@@ -8,9 +8,9 @@
     {"prompt": "make file b", "session": "s1", "async": "p2"},
     {"answer": "session/request_permission", "option": "reject_once"},
     {"await": "p2"},
-    {"prompt": "make file c", "session": "s1", "async": "p3"},
+    {"prompt": "print c", "session": "s1", "async": "p3"},
     {"answer": "session/request_permission", "option": "allow_always"},
     {"await": "p3"},
-    {"prompt": "make file d", "session": "s1"}
+    {"prompt": "print c again", "session": "s1"}
   ]
 }
