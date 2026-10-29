@@ -69,16 +69,36 @@ func slowFake(t *testing.T) (*fake, time.Duration, *inflight) {
 }
 
 // inflight counts the requests being answered, and the most at once.
+// With a gate set, a request waits (up to 2 s) for that many to be in,
+// so calls made together are counted together on a slow runner too.
 type inflight struct {
-	mu       sync.Mutex
-	now, max int
+	mu             sync.Mutex
+	now, max, gate int
 }
 
 func (n *inflight) add(d int) {
 	n.mu.Lock()
-	defer n.mu.Unlock()
 	n.now += d
 	n.max = max(n.max, n.now)
+	gate := n.gate
+	n.mu.Unlock()
+	if d < 0 || gate == 0 {
+		return
+	}
+	for end := time.Now().Add(2 * time.Second); time.Now().Before(end); time.Sleep(time.Millisecond) {
+		n.mu.Lock()
+		in := n.now >= gate
+		n.mu.Unlock()
+		if in {
+			return
+		}
+	}
+}
+
+func (n *inflight) setGate(g int) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	n.gate = g
 }
 
 func (n *inflight) reset() int {
@@ -125,10 +145,12 @@ func TestTiming(t *testing.T) {
 		return cmp.Or(err, err2)
 	})
 	timed("issue, first", func() error { _, err := c.Issue(ctx, "SCRUM-5"); return err })
-	in.reset()
-	timed("issue, again", func() error { _, err := c.Issue(ctx, "SCRUM-5"); return err })
 	// The issue's three calls go together: its fields, comments and
 	// remote links.
+	in.reset()
+	in.setGate(3)
+	timed("issue, again", func() error { _, err := c.Issue(ctx, "SCRUM-5"); return err })
+	in.setGate(0)
 	if n := in.reset(); n != 3 {
 		t.Errorf("%d of the issue's calls at once, want 3", n)
 	}
