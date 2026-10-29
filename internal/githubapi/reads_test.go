@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 const repo = "afrase/nushi-gh-test"
@@ -360,5 +361,37 @@ func TestInboxOlder(t *testing.T) {
 	}
 	if _, err := f.client().Inbox(t.Context(), InboxFilter{Hide: []string{"a/b is:closed"}}); err == nil || f.count("graphql Inbox") != 1 {
 		t.Fatal("asked with a bad filter")
+	}
+}
+
+// TestTailEndsAtTheLastError: what follows a failed step's last error is
+// the job's clean-up (a service container's own log), not why it failed.
+func TestTailEndsAtTheLastError(t *testing.T) {
+	log := "Run bundle exec rspec\n1 example, 1 failure\n##[error]Process completed with exit code 1.\n" +
+		"Post job cleanup.\nStop containers\n" + strings.Repeat(`{"log.level": "INFO", "message":"adding index lifecycle policy"}`+"\n", 400)
+	if got := Tail(log, 70); got != "1 example, 1 failure\n##[error]Process completed with exit code 1." {
+		t.Fatalf("%q", got)
+	}
+	if got := Tail("no marks\nat all", 100); got != "no marks\nat all" {
+		t.Fatalf("%q", got)
+	}
+}
+
+// TestBrief: an RSpec annotation's backtrace loses its gems' frames.
+func TestBrief(t *testing.T) {
+	msg := "expected X, got Y with backtrace:\n  # ./app/services/notes_service.rb:43:in 'publish_note'\n" +
+		strings.Repeat("  # ./vendor/bundle/ruby/4.0.0/gems/rspec-core-3.13.6/lib/rspec/core/example.rb:263:in 'run'\n", 20) +
+		"  # ./spec/support/output_warnings_for_spec_outputs.rb:33:in 'block'"
+	want := "expected X, got Y with backtrace:\n  # ./app/services/notes_service.rb:43:in 'publish_note'\n" +
+		"  … 20 library frames\n  # ./spec/support/output_warnings_for_spec_outputs.rb:33:in 'block'"
+	if got := Brief(msg); got != want {
+		t.Fatalf("%q", got)
+	}
+	long := Brief(strings.Repeat("line\n", 50))
+	if n := strings.Count(long, "\n"); n != 30 || !strings.HasSuffix(long, "… 21 more lines") {
+		t.Fatalf("%d lines: %q", n, long[len(long)-20:])
+	}
+	if got := Brief(strings.Repeat("é", 2000)); len(got) > 3000+len("…") || !utf8.ValidString(got) {
+		t.Fatalf("%d bytes, valid %v", len(got), utf8.ValidString(got))
 	}
 }
