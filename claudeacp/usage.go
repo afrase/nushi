@@ -12,6 +12,7 @@ import (
 // contextUsed sends the context's use when the last top-level message's
 // counts change it.
 func (s *session) contextUsed() {
+	s.st.counted = true
 	u := s.st.usage
 	if used := u.InputTokens + u.OutputTokens + u.CacheReadInputTokens + u.CacheCreationInputTokens; used != s.st.used {
 		s.st.used = used
@@ -48,11 +49,15 @@ func (s *session) size() int {
 	return 200_000
 }
 
-// result is the end of one of claude's turns. Every result sends the
-// session's cost, with the turn's origin under _claude/origin (a
-// prompt's turn says "human" when claude didn't say), which clients read
-// as the end of the user's turn. A prompt's turn that showed no text
-// shows the result's. Then the turn engine ends the turn.
+// result is the end of one of claude's turns. A result after a model
+// call sends the session's cost, with the turn's origin under
+// _claude/origin (a prompt's turn says "human" when claude didn't say),
+// which clients read as the end of the user's turn. One with none (no
+// top-level message's counts and no tokens: a slash command claude
+// answered itself, /context, /compact) sends no usage, as
+// claude-agent-acp sends none, so a session not yet counted isn't shown
+// at zero. A prompt's turn that showed no text shows the result's. Then
+// the turn engine ends the turn.
 func (s *session) result(r *claudeagent.Result) {
 	if mu, ok := r.ModelUsage[s.st.model]; ok && mu.ContextWindow > 0 {
 		s.st.window = mu.ContextWindow
@@ -79,7 +84,9 @@ func (s *session) result(r *claudeagent.Result) {
 	case user:
 		meta["_claude/origin"] = claudeagent.Origin{Kind: "human"}
 	}
-	s.usage(&acp.Cost{Amount: r.TotalCostUSD, Currency: "USD"}, meta)
+	if u := r.Usage; s.st.counted || u.InputTokens+u.OutputTokens+u.CacheReadInputTokens+u.CacheCreationInputTokens > 0 {
+		s.usage(&acp.Cost{Amount: r.TotalCostUSD, Currency: "USD"}, meta)
+	}
 	if fallback {
 		s.chunk("agent_message_chunk", "", r.UUID, acp.ContentBlock{Text: &acp.TextContent{Text: r.Result}})
 	}
@@ -88,7 +95,7 @@ func (s *session) result(r *claudeagent.Result) {
 	}
 	end := ending{errorKind: s.st.errorKind, incomplete: incomplete,
 		login: s.st.login || r.IsError && strings.Contains(r.Result, "Please run /login")}
-	s.st.local, s.st.refused, s.st.login = false, "", false
+	s.st.local, s.st.refused, s.st.login, s.st.counted = false, "", false, false
 	if s.fastState(r.FastModeState, r.FastModeDisabledReason) {
 		s.sendOptions()
 	}
