@@ -205,6 +205,7 @@ func run() error {
 	}
 	chatSvc.UseCopies(copies, st.KeepTranscripts)
 	chatSvc.AutoClearCopies(st.TranscriptDays)
+	go chatSvc.EndStalePrompts() // what a daemon that stopped left pending
 	termSvc := terminals.New(startShell, filepath.Base(loginShell), chatSvc, hub.Publish)
 	chatSvc.UseTerminals(termSvc)
 	go follow(hub, termSvc.Follow)

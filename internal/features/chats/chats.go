@@ -425,14 +425,7 @@ func (c *chat) cancelLocked() error {
 		return nil // no turn runs
 	}
 	c.stopped = !own
-	for _, answer := range c.waiting {
-		answer <- ""
-	}
-	for _, answer := range c.questions {
-		close(answer)
-	}
-	clear(c.waiting)
-	clear(c.questions)
+	c.dropPromptsLocked()
 	agent, cancel := c.agent, &acp.CancelNotification{SessionID: acp.SessionID(c.sid)}
 	if own {
 		c.ownTurn = false

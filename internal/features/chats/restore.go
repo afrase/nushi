@@ -97,6 +97,18 @@ func (c *chat) restoreLocked(replayed []model.Item) {
 			it.Text, differs = c.kind.Title+"'s history differs from Nushi's copy from here on", true
 		}
 	}
+	// A prompt the copy has pending was left by an agent that stopped; one
+	// the agent asked while it replayed waits on the user still.
+	for i := range items {
+		if asking(items[i]) && !c.liveLocked(items[i].ID) {
+			items[i].Status = "cancelled"
+		}
+	}
+	for _, it := range c.items {
+		if c.liveLocked(it.ID) && !slices.ContainsFunc(items, func(o model.Item) bool { return o.ID == it.ID }) {
+			items = append(items, it)
+		}
+	}
 	c.showLocked(items)
 	clear(c.unsaved)
 	c.saveCopyLocked(copied, items)

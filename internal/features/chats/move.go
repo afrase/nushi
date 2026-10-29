@@ -77,7 +77,8 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 	if err == nil {
 		c.mu.Lock()
 		old := c.agent
-		c.orphanLocked(true) // what ran on the old agent ends with it
+		c.dropPromptsLocked() // what ran on the old agent ends with it
+		c.orphanLocked(true)
 		s.useLocked(c, o)
 		c.saveLocked(func(s *model.Session) {
 			if !fresh { // an empty session is just dropped, not something the chat had
