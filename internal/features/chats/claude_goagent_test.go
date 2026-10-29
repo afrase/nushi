@@ -76,6 +76,44 @@ func (r *replays) Spawn(ctx context.Context, s claudeagent.Spec) (*claudeagent.P
 	return r.fakes[r.next-1].Spawn(ctx, s)
 }
 
+// awaiting is closed once one of the claudes' scripts waits for a line
+// like match (claudetest.Fake.Awaiting), or ctx ends.
+func (r *replays) awaiting(ctx context.Context, match string) <-chan struct{} {
+	out := make(chan struct{})
+	var once sync.Once
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, f := range r.fakes {
+		ch := f.Awaiting(match)
+		go func() {
+			select {
+			case <-ch:
+				once.Do(func() { close(out) })
+			case <-ctx.Done():
+			}
+		}()
+	}
+	return out
+}
+
+// midTurn is the line claude's script must wait for before the Go agent
+// is sent a client's request that writes claude one mid-turn: a steer, a
+// cancel, a prompt queued while another runs. The recorded client sent
+// it at that point of claude's run, which the replay plays at its own
+// pace; sent sooner, the line would reach claude out of the recorded
+// order (a steer ahead of the tool's hook answer, a cancel's interrupt
+// ahead of the prompt queued just before). "" for the rest, which follow
+// an answer the replay waits for anyway.
+func midTurn(method string, prompting bool) string {
+	switch {
+	case method == "_session/steering", method == "session/prompt" && prompting:
+		return `{"type":"user"}`
+	case method == "session/cancel":
+		return `{"type":"control_request"}`
+	}
+	return ""
+}
+
 // Err is what went wrong with the claudes' scripts.
 func (r *replays) Err() error {
 	r.mu.Lock()
@@ -181,12 +219,32 @@ func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 			}
 		}
 	}
+	// until reads the Go agent's messages until ch is closed, as sent
+	// does, so it goes on meanwhile.
+	until := func(ch <-chan struct{}, what string) {
+		for {
+			select {
+			case <-ch:
+				return
+			case m, ok := <-msgs:
+				if !ok {
+					t.Fatalf("the Go agent ended before %s (claude's script: %v)", what, fake.Err())
+				}
+				if !keep(m) {
+					held = append(held, m)
+				}
+			case <-time.After(5 * time.Second): // bounds a hang, orders nothing
+				t.Fatalf("never %s (claude's script: %v)", what, fake.Err())
+			}
+		}
+	}
 	pending := ""              // the mark of the adapter's last marked update since the client's last line
 	ids := map[string]string{} // the recorded sessions' ids to the live ones
 	// sessions is a recorded message with the live sessions' ids.
 	sessions := func(msg json.RawMessage) string { return liveIDs(ids).Replace(string(msg)) }
 	agentReqs := map[string]agentReq{} // the agent's requests, by the recorded id
 	asked := map[string]event{}        // the marked requests, by recorded id
+	prompting := map[string]bool{}     // the prompts not answered yet, by recorded id
 	reads := 0                         // the requests that read claude's history so far
 	// waitLast waits for what the recording's client waited for before it
 	// went (a turn claude ran on its own after a background command
@@ -223,6 +281,12 @@ func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 			if pending != "" {
 				sent(pending)
 				pending = ""
+			}
+			if match := midTurn(m.Method, len(prompting) > 0); match != "" {
+				until(fake.awaiting(t.Context(), match), fmt.Sprintf("claude's script waiting for %s, which %s makes", match, m.Method))
+			}
+			if m.Method == "session/prompt" {
+				prompting[string(m.ID)] = true
 			}
 			if slices.Contains([]string{"session/load", "session/resume", "session/fork"}, m.Method) {
 				reads++
@@ -270,6 +334,7 @@ func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 				SessionID string `json:"sessionId"`
 			}
 			_, _ = json.Unmarshal(m.Result, &recS), json.Unmarshal(got.Result, &liveS)
+			delete(prompting, string(m.ID))
 			if recS.SessionID != "" && liveS.SessionID != "" {
 				ids[recS.SessionID] = liveS.SessionID
 			}
