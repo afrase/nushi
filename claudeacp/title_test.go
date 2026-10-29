@@ -50,7 +50,7 @@ func TestTitle(t *testing.T) {
 			p := start(t, nil, f)
 			sid := p.open(t)
 			stopReason(p.prompt(t, sid, "Fix the login page"))
-			eventually(t, "the ask", func() bool { return len(f.Responded()) == 1 })
+			eventually(t, "the ask", func() bool { return len(responded(f)) == 1 })
 			stopReason(p.prompt(t, sid, "and the logout one"))
 			wait(t, done, "the script")
 			if _, err := p.CloseSession(context.Background(), &acp.CloseSessionRequest{SessionID: sid}); err != nil {
@@ -63,7 +63,7 @@ func TestTitle(t *testing.T) {
 			if got := p.titles(); !slices.Equal(got, want) {
 				t.Errorf("titles %q", got)
 			}
-			if got := f.Responded(); len(got) != 1 {
+			if got := responded(f); len(got) != 1 {
 				t.Fatalf("asked %q", got)
 			}
 			var ask struct {
@@ -72,7 +72,7 @@ func TestTitle(t *testing.T) {
 					Persist     bool   `json:"persist"`
 				} `json:"request"`
 			}
-			if err := json.Unmarshal([]byte(f.Responded()[0]), &ask); err != nil {
+			if err := json.Unmarshal([]byte(responded(f)[0]), &ask); err != nil {
 				t.Fatal(err)
 			}
 			if ask.Request.Description != "Fix the login page\nSure.\n" || !ask.Request.Persist {
@@ -114,7 +114,7 @@ func TestTitleFromTranscript(t *testing.T) {
 	if got := p.titles(); !slices.Equal(got, []string{"Login"}) {
 		t.Errorf("titles %q", got)
 	}
-	if got := f.Responded(); len(got) != 0 {
+	if got := responded(f); len(got) != 0 {
 		t.Errorf("asked %q", got)
 	}
 }

@@ -117,6 +117,8 @@ func (s *session) setModel(ctx context.Context, value string) error {
 		c.effort = defaultValue
 	}
 	c.mu.Unlock()
+	// Last, as claude-agent-acp asks, so the change's own requests come first.
+	defer s.seedWindow(200_000)
 	if unpin {
 		if err := s.cs.ApplyFlagSettings(ctx, s.effortSettings(defaultValue)); err != nil {
 			s.log.Info("putting the effort back to the default", "err", err)

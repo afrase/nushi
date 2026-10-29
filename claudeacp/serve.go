@@ -49,6 +49,8 @@ type agent struct {
 	caps      clientCaps
 	sessions  map[string]*session
 	reopening map[string]*sync.Mutex // by session id: one load or resume of each at a time
+
+	windows windows // the context windows results have said (window.go)
 }
 
 // clientCaps is what the client said it handles, of what changes how a

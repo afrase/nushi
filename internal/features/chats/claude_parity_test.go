@@ -47,26 +47,10 @@ func TestClaudeParity(t *testing.T) {
 			if len(want) == 0 || len(want[0].Items) == 0 {
 				t.Fatal("the recording shows nothing to compare")
 			}
-			noWindowYet(want)
-			noWindowYet(got)
 			if !reflect.DeepEqual(got, want) {
 				t.Errorf("the Go agent's chats differ from the adapter's:\n%s", differences(got, want))
 			}
 		})
-	}
-}
-
-// noWindowYet leaves out the context window of a chat no result has
-// reached (it has no cost yet), so the agents may differ there: the
-// adapter asks claude for the window as the session starts
-// (get_context_usage), and the Go agent takes it from claude's results,
-// guessing until the first (claudeacp/usage.go). A recording that ends
-// mid-turn shows it (eof-mid-tool).
-func noWindowYet(chats []parity) {
-	for i := range chats {
-		if chats[i].Usage.Currency == "" {
-			chats[i].Usage.Size = 0
-		}
 	}
 }
 

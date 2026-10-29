@@ -143,6 +143,17 @@ func (c *clock) fire(t *testing.T, d time.Duration) {
 // initializes it with caps. Ids it makes are id1, id2 and so on.
 func start(t *testing.T, caps *acp.ClientCapabilities, fakes ...*claudetest.Fake) *peer {
 	t.Helper()
+	for _, f := range fakes {
+		// Each session asks for its context window as it starts
+		// (window.go); a test that doesn't care answers it with nothing.
+		// One that does responds first, or has its script answer
+		// (windowScripted).
+		if _, ok := windowScripted.Load(f); ok {
+			continue
+		}
+		f.Respond(`{"type":"control_request","request":{"subtype":"get_context_usage"}}`,
+			`{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":{}}}`)
+	}
 	var spawned atomic.Int32
 	a := newAgent(Config{CLIPath: "/claude", ConfigDir: t.TempDir(), Spawn: func(ctx context.Context, s claudeagent.Spec) (*claudeagent.Proc, error) {
 		n := int(spawned.Add(1)) - 1
@@ -257,7 +268,13 @@ func withTitle(f *claudetest.Fake, title string) *claudetest.Fake {
 // asked are the requests f answered of its own, but for asks for a
 // title, which come after any turn of the user's.
 func asked(f *claudetest.Fake) []string {
-	return slices.DeleteFunc(f.Responded(), func(l string) bool { return strings.Contains(l, `"generate_session_title"`) })
+	return slices.DeleteFunc(responded(f), func(l string) bool { return strings.Contains(l, `"generate_session_title"`) })
+}
+
+// responded are the requests f answered of its own, but for the ask for
+// the context window each session makes as it starts.
+func responded(f *claudetest.Fake) []string {
+	return slices.DeleteFunc(f.Responded(), func(l string) bool { return strings.Contains(l, `"get_context_usage"`) })
 }
 
 // user expects a prompt's user message, by its uuid.
