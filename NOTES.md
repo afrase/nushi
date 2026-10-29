@@ -12,6 +12,15 @@ A chat has a transcript (your messages as chapter bands, tool rows, subagents, b
 
 The decisions are in `docs/adr/` (`docs/adr/README.md` is the index); the README says how to use each part.
 
+## Names (the owner's words; use them in docs, prompts and the UI)
+
+- **Sidebar**: the left column, projects and their chats.
+- **Chat header**: the top bar: title, agent, the **tabs** (Chat, Changes, Pull request), ⋯.
+- **Transcript**: the conversation. **Composer**: the message box and its pickers.
+- **Side pane**: what opens beside the transcript: a subagent, or the **preview** of an artifact.
+- **Details panel**: the right column, made of **widgets** (the Environment, Context, Changes, Pull request, Artifacts, MCP and Background tasks widgets). The code still says card (`PanelCard`, `panel_cards.dart`); new code and all prose say widget.
+- **Status bar**: the bottom strip. **Palette**: ⌘K.
+
 ## Build, run, test, install
 
 - **Tools**: Go (the `go` line in `go.mod`) and Flutter on `PATH`; `make gen` needs `dart pub global activate protoc_plugin` and `connectrpc`; buf, golangci-lint and govulncheck come pinned (nothing to install). The daemon builds with cgo (Xcode's command-line tools: `internal/keychain`).
