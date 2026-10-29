@@ -74,6 +74,21 @@ func (p *peer) writeHistory(t *testing.T, cwd, sid string, records ...rec) {
 	writeRecords(t, filepath.Join(sessions.ProjectDir(p.agent.cfg.ConfigDir, cwd), sid+".jsonl"), sid, records...)
 }
 
+// writeSubagent writes the transcript of session sid's subagent agent,
+// and its sidecar naming the call that started it ("" for none).
+func (p *peer) writeSubagent(t *testing.T, cwd, sid, agent, call string, records ...rec) {
+	t.Helper()
+	dir := filepath.Join(sessions.ProjectDir(p.agent.cfg.ConfigDir, cwd), sid, "subagents")
+	writeRecords(t, filepath.Join(dir, "agent-"+agent+".jsonl"), sid, records...)
+	meta := `{"agentType":"general-purpose"}`
+	if call != "" {
+		meta = `{"agentType":"general-purpose","toolUseId":"` + call + `"}`
+	}
+	if err := os.WriteFile(filepath.Join(dir, "agent-"+agent+".meta.json"), []byte(meta), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
 // replayed is the notifications so far in short: each session's
 // messages with their ids and text, calls and their ends, subagents'
 // announcements and states, and the commands.
@@ -102,7 +117,9 @@ func (c *client) replayed() []string {
 			line += "update " + string(u.ToolCallUpdate.ToolCallID) + " " + string(u.ToolCallUpdate.Status)
 		case u.SubagentUpdate != nil:
 			b, _ := json.Marshal(u.SubagentUpdate)
-			line += "subagent " + string(b)
+			// acp-go v0.2.0 encodes an idle state with no reason, as it
+			// decoded it, with its tag twice.
+			line += "subagent " + strings.ReplaceAll(string(b), `"state":"idle","state":"idle"`, `"state":"idle"`)
 		case u.SessionMessage != nil:
 			line += "message " + string(u.SessionMessage.MessageID)
 		case u.AvailableCommandsUpdate != nil:

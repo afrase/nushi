@@ -154,6 +154,8 @@ type launch struct {
 	SubagentType string `json:"subagent_type"`
 	Prompt       string `json:"prompt"`
 	Message      string `json:"message"` // a SendMessage's
+	Background   bool   `json:"run_in_background"`
+	TaskID       string `json:"task_id"` // a TaskStop's
 }
 
 // callInput is the input of the call id as the client was last shown it,
@@ -197,7 +199,15 @@ func (s *session) taskStarted(m *claudeagent.TaskStarted) {
 	if p := cmp.Or(k.byID[m.ParentTaskID], k.byCall[stream]); p != nil && p.shown {
 		sa.on = p.id
 	}
-	role := cmp.Or(in.SubagentType, m.SubagentType)
+	s.announceLocked(sa, in, m.SubagentType, m.Description)
+	s.delegatedLocked(sa, sa.call, cmp.Or(in.Prompt, m.Prompt))
+}
+
+// announceLocked tells the client of the subagent sa, on the session
+// sa.on: its role and description from in, the input of the call that
+// started it, else role and description.
+func (s *session) announceLocked(sa *subagent, in launch, role, description string) {
+	role = cmp.Or(in.SubagentType, role)
 	title := role
 	if in.Name != "" && role != "" {
 		title = in.Name + " (" + role + ")"
@@ -210,12 +220,11 @@ func (s *session) taskStarted(m *claudeagent.TaskStarted) {
 	if title != "" {
 		su.Title = acp.Nullable[string]{Value: &title, Present: true}
 	}
-	if d := cmp.Or(in.Description, m.Description); d != "" {
+	if d := cmp.Or(in.Description, description); d != "" {
 		su.Description = acp.Nullable[string]{Value: &d, Present: true}
 	}
 	s.a.update(sa.on, acp.SessionUpdate{SessionUpdate: "subagent_update", SubagentUpdate: su})
 	sa.shown = true
-	s.delegatedLocked(sa, sa.call, cmp.Or(in.Prompt, m.Prompt))
 }
 
 // againLocked is the subagent sa running again for call (a SendMessage's,
