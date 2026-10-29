@@ -200,18 +200,22 @@ void main() {
     tester.daemonOf().dispose();
   }, variant: macOS);
 
-  testWidgets('a chat’s row opens the chat; its project’s chats first', (
+  testWidgets('a chat’s row opens the chat; the last opened first', (
     tester,
   ) async {
+    addTearDown(() => chatOpened.value = {});
     final (d, _) = await _app(tester, select: 'a');
+    // c (site) was opened after b (nushi): it comes first, whatever the
+    // project; a, the one showing, isn't offered.
+    chatOpened.value = {...chatOpened.value, 'b': 1000, 'c': 2000};
     await _keys(tester, LogicalKeyboardKey.keyK, meta: true);
     double y(String text) => tester.getCenter(_p(text)).dy;
-    // a shows: b (nushi) before c (site); a itself isn't offered.
-    expect(y('Bump the API version'), lessThan(y('Release notes')));
+    expect(y('Release notes'), lessThan(y('Bump the API version')));
     expect(_p('Fix the login redirect'), findsNothing);
     await tester.tap(_p('Release notes'));
     await tester.pumpAndSettle();
     expect(d.selectedId, 'c');
+    expect(chatOpened.value['c'], greaterThan(2000), reason: 'opened now');
     tester.daemonOf().dispose();
   }, variant: macOS);
 
