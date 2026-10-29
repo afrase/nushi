@@ -133,13 +133,13 @@ func TestUnfinishedTools(t *testing.T) {
 		stop   string
 	}{
 		{"never ran", []claudetest.Step{started, result(names("id2"))}, false,
-			"Claude stopped this tool call before it ran.", "end_turn"},
+			"The model stopped before finishing this call; it never ran.", "end_turn"},
 		{"no result", []claudetest.Step{started, assistant(`{"type":"tool_use","id":"toolu_1","name":"Read","input":{}}`), result(names("id2"))}, false,
-			"Claude ended the turn without returning a result for this tool.", "error: Claude ended the turn without a tool's result."},
+			"The turn ended with no result for this call.", "error: Claude ended the turn without a tool's result."},
 		{"cancelled", []claudetest.Step{started, claudetest.Expect(`{"type":"control_request","request":{"subtype":"interrupt"}}`),
 			claudetest.Send(`{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":{}}}`),
 			claudetest.Send(idle)}, true,
-			"The turn was cancelled before this tool call returned a result.", "cancelled"},
+			"The turn was cancelled before this call had a result.", "cancelled"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			at := make(chan struct{})
