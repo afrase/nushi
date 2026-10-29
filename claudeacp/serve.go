@@ -165,6 +165,11 @@ func (a *agent) Prompt(ctx context.Context, req *acp.PromptRequest) (*acp.Prompt
 	if err != nil {
 		return nil, err
 	}
+	for _, b := range req.Prompt {
+		if b.Text != nil {
+			s.heard("", b.Text.Text)
+		}
+	}
 	select {
 	case o := <-t.done:
 		return o.resp, o.err

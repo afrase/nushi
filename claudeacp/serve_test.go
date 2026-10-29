@@ -164,8 +164,8 @@ func TestClose(t *testing.T) {
 		t.Errorf("the prompt: %s", got)
 	}
 	<-f.Exited()
-	if f.Err() != nil || len(f.Responded()) != 1 || !strings.Contains(f.Responded()[0], "interrupt") {
-		t.Errorf("%v %q", f.Err(), f.Responded())
+	if f.Err() != nil || len(asked(f)) != 1 || !strings.Contains(asked(f)[0], "interrupt") {
+		t.Errorf("%v %q", f.Err(), asked(f))
 	}
 	if _, err := p.CloseSession(context.Background(), &acp.CloseSessionRequest{SessionID: sid}); err != nil {
 		t.Error(err)

@@ -189,8 +189,8 @@ func TestCancel(t *testing.T) {
 	if got := p.texts(); !slices.Equal(got, []string{"text:msg_s:kept", "text:msg_2:own"}) {
 		t.Errorf("%q", got)
 	}
-	eventually(t, "drops and an interrupt", func() bool { return len(f.Responded()) == 3 })
-	all := strings.Join(f.Responded(), "\n")
+	eventually(t, "drops and an interrupt", func() bool { return len(asked(f)) == 3 })
+	all := strings.Join(asked(f), "\n")
 	for _, want := range []string{`"message_uuid":"id3"`, `"message_uuid":"id4"`, `"subtype":"interrupt"`} {
 		if !strings.Contains(all, want) {
 			t.Errorf("no %s in\n%s", want, all)
@@ -228,8 +228,8 @@ func TestCancelThenPrompt(t *testing.T) {
 	if got := stopReason(one); got != "cancelled" {
 		t.Errorf("one: %s", got)
 	}
-	eventually(t, "drops and an interrupt", func() bool { return len(f.Responded()) == 3 })
-	all := strings.Join(f.Responded(), "\n")
+	eventually(t, "drops and an interrupt", func() bool { return len(asked(f)) == 3 })
+	all := strings.Join(asked(f), "\n")
 	for _, want := range []string{`"message_uuid":"id2"`, `"message_uuid":"id3"`, `"subtype":"interrupt"`} {
 		if !strings.Contains(all, want) {
 			t.Errorf("no %s in\n%s", want, all)

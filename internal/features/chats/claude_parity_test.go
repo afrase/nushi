@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -108,7 +109,12 @@ func runGoAgent(t *testing.T, path string, rec []acpLine) []acp.SessionNotificat
 	c, err := claudetest.ReadCassette(f)
 	_ = f.Close()
 	testcheck.NoErr(t, err)
-	fake := claudetest.Replay(c)
+	// The Go agent asks claude for a title after a turn, on a goroutine
+	// of its own, so when it asks isn't in a cassette's order: it is
+	// answered (with none) whenever it comes, and a recording's ask isn't
+	// expected.
+	fake := claudetest.Replay(withoutTitles(c)).Respond(`{"type":"control_request","request":{"subtype":"generate_session_title"}}`,
+		`{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":{"title":null}}}`)
 	toAgentR, toAgentW := io.Pipe()
 	fromAgentR, fromAgentW := io.Pipe()
 	served := make(chan struct{})
@@ -265,4 +271,28 @@ func parityView(t *testing.T, notes []acp.SessionNotification) parity {
 		p.Items = append(p.Items, it)
 	}
 	return p
+}
+
+// withoutTitles is c without claude's asks for a title and its answers.
+func withoutTitles(c *claudetest.Cassette) *claudetest.Cassette {
+	asks := map[string]bool{}
+	out := *c
+	out.Frames = slices.DeleteFunc(slices.Clone(c.Frames), func(f claudetest.Frame) bool {
+		var fr struct {
+			RequestID string `json:"request_id"`
+			Request   struct {
+				Subtype string `json:"subtype"`
+			} `json:"request"`
+			Response struct {
+				RequestID string `json:"request_id"`
+			} `json:"response"`
+		}
+		_ = json.Unmarshal(f.Frame, &fr)
+		if f.Dir == "in" && fr.Request.Subtype == "generate_session_title" {
+			asks[fr.RequestID] = true
+			return true
+		}
+		return f.Dir == "out" && fr.Response.RequestID != "" && asks[fr.Response.RequestID]
+	})
+	return &out
 }

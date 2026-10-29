@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -143,7 +144,7 @@ func (c *clock) fire(t *testing.T, d time.Duration) {
 func start(t *testing.T, caps *acp.ClientCapabilities, fakes ...*claudetest.Fake) *peer {
 	t.Helper()
 	var spawned atomic.Int32
-	a := newAgent(Config{CLIPath: "/claude", Spawn: func(ctx context.Context, s claudeagent.Spec) (*claudeagent.Proc, error) {
+	a := newAgent(Config{CLIPath: "/claude", ConfigDir: t.TempDir(), Spawn: func(ctx context.Context, s claudeagent.Spec) (*claudeagent.Proc, error) {
 		n := int(spawned.Add(1)) - 1
 		if n >= len(fakes) {
 			return nil, fmt.Errorf("no fake claude %d", n)
@@ -231,12 +232,32 @@ const (
 )
 
 // fake is a claude that answers initialize, then plays steps; it answers
-// interrupts and drops of queued messages whenever they come.
-func fake(steps ...claudetest.Step) *claudetest.Fake {
+// interrupts, drops of queued messages and asks for a title (it has none)
+// whenever they come.
+func fake(steps ...claudetest.Step) *claudetest.Fake { return started(`{}`, `null`, steps...) }
+
+// started is fake with init as its answer to initialize, and title (JSON)
+// as the title it makes.
+func started(init, title string, steps ...claudetest.Step) *claudetest.Fake {
 	ok := `{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":{}}}`
-	return claudetest.New(append([]claudetest.Step{claudetest.Expect(initRequest), claudetest.Send(ok)}, steps...)...).
+	initOK := `{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":` + init + `}}`
+	f := claudetest.New(append([]claudetest.Step{claudetest.Expect(initRequest), claudetest.Send(initOK)}, steps...)...).
 		Respond(`{"type":"control_request","request":{"subtype":"interrupt"}}`, ok).
 		Respond(`{"type":"control_request","request":{"subtype":"cancel_async_message"}}`, ok)
+	return withTitle(f, title)
+}
+
+// withTitle has f answer asks for a title with title (JSON), whenever they
+// come: after any turn of the user's.
+func withTitle(f *claudetest.Fake, title string) *claudetest.Fake {
+	return f.Respond(`{"type":"control_request","request":{"subtype":"generate_session_title"}}`,
+		`{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":{"title":`+title+`}}}`)
+}
+
+// asked are the requests f answered of its own, but for asks for a
+// title, which come after any turn of the user's.
+func asked(f *claudetest.Fake) []string {
+	return slices.DeleteFunc(f.Responded(), func(l string) bool { return strings.Contains(l, `"generate_session_title"`) })
 }
 
 // user expects a prompt's user message, by its uuid.
