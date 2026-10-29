@@ -69,13 +69,16 @@ func stderrSuffix(s string) string {
 }
 
 // Exec starts s as a process in a group of its own, so a signal reaches
-// what claude started too (its tools' processes). Once claude has exited,
-// Wait kills what it left in the group.
+// what claude started in that group too (its stdio MCP servers, its
+// hooks). Claude Code runs each Bash command detached, leading a group of
+// its own, so no signal to claude's group reaches those. Once claude has
+// exited, Wait kills what it left in the group.
 //
 // With s.SharedGroup claude stays in this process's group instead: what
-// kills that group kills claude and its tools too, even when this process
-// is killed first. Signal then reaches claude alone, and what claude
-// leaves running is left to that kill.
+// kills that group kills claude and what stays in its group too, even
+// when this process is killed first, but not claude's Bash commands.
+// Signal then reaches claude alone, and what claude leaves running is
+// left to that kill.
 func Exec(ctx context.Context, s Spec) (*Proc, error) {
 	// The process outlives the start, so ctx's end mustn't kill it.
 	cmd := exec.CommandContext(context.WithoutCancel(ctx), s.Path, s.Args...) //nolint:gosec // running the user's claude is the point
