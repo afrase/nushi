@@ -88,6 +88,9 @@ func TestPull(t *testing.T) {
 	if strings.Contains(p.Body, "template comment") || !strings.Contains(p.Body, "- [x] tests") {
 		t.Fatalf("body %q", p.Body)
 	}
+	if p.Commits != 2 || len(p.Reviewers) == 0 || !p.Reviewers[0].CodeOwner || !p.Reviewers[0].Team || p.Reviewers[0].Login != "core" {
+		t.Fatalf("commits %d, reviewers %+v", p.Commits, p.Reviewers)
+	}
 	if len(p.Threads) != 4 {
 		t.Fatalf("threads %+v", p.Threads)
 	}

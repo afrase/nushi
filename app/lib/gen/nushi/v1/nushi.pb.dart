@@ -23792,11 +23792,13 @@ class GitHubReviewer extends $pb.GeneratedMessage {
     $core.String? login,
     $core.String? state,
     $core.bool? team,
+    $core.bool? codeOwner,
   }) {
     final result = GitHubReviewer._();
     if (login != null) result.login = login;
     if (state != null) result.state = state;
     if (team != null) result.team = team;
+    if (codeOwner != null) result.codeOwner = codeOwner;
     return result;
   }
 
@@ -23816,6 +23818,7 @@ class GitHubReviewer extends $pb.GeneratedMessage {
     ..aOS(1, _omitFieldNames ? '' : 'login')
     ..aOS(2, _omitFieldNames ? '' : 'state')
     ..aOB(3, _omitFieldNames ? '' : 'team')
+    ..aOB(4, _omitFieldNames ? '' : 'codeOwner')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -23866,6 +23869,16 @@ class GitHubReviewer extends $pb.GeneratedMessage {
   $core.bool hasTeam() => $_has(2);
   @$pb.TagNumber(3)
   void clearTeam() => $_clearField(3);
+
+  /// Asked as a code owner of what the pull request changes.
+  @$pb.TagNumber(4)
+  $core.bool get codeOwner => $_getBF(3);
+  @$pb.TagNumber(4)
+  set codeOwner($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasCodeOwner() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearCodeOwner() => $_clearField(4);
 }
 
 class GitHubPull extends $pb.GeneratedMessage {
@@ -23891,6 +23904,7 @@ class GitHubPull extends $pb.GeneratedMessage {
     $core.Iterable<GitHubCheck>? checks,
     $core.String? pendingReview,
     $core.int? pendingComments,
+    $core.int? commits,
   }) {
     final result = GitHubPull._();
     if (item != null) result.item = item;
@@ -23914,6 +23928,7 @@ class GitHubPull extends $pb.GeneratedMessage {
     if (checks != null) result.checks.addAll(checks);
     if (pendingReview != null) result.pendingReview = pendingReview;
     if (pendingComments != null) result.pendingComments = pendingComments;
+    if (commits != null) result.commits = commits;
     return result;
   }
 
@@ -23956,6 +23971,7 @@ class GitHubPull extends $pb.GeneratedMessage {
         subBuilder: GitHubCheck.$_createMessage)
     ..aOS(20, _omitFieldNames ? '' : 'pendingReview')
     ..aI(21, _omitFieldNames ? '' : 'pendingComments')
+    ..aI(22, _omitFieldNames ? '' : 'commits')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -24151,6 +24167,16 @@ class GitHubPull extends $pb.GeneratedMessage {
   $core.bool hasPendingComments() => $_has(20);
   @$pb.TagNumber(21)
   void clearPendingComments() => $_clearField(21);
+
+  /// Its commits.
+  @$pb.TagNumber(22)
+  $core.int get commits => $_getIZ(21);
+  @$pb.TagNumber(22)
+  set commits($core.int value) => $_setSignedInt32(21, value);
+  @$pb.TagNumber(22)
+  $core.bool hasCommits() => $_has(21);
+  @$pb.TagNumber(22)
+  void clearCommits() => $_clearField(22);
 }
 
 class GetGitHubPullRequest extends $pb.GeneratedMessage {

@@ -79,6 +79,7 @@ type GitHubAnnotation struct {
 type GitHubReviewer struct {
 	Login, State string
 	Team         bool
+	CodeOwner    bool // asked as a code owner of what the pull request changes
 }
 
 // GitHubPull is a pull request whole.
@@ -94,6 +95,7 @@ type GitHubPull struct {
 	Mergeable                          string // "mergeable", "conflicting" or "unknown"
 	MergeState                         string // "clean", "blocked", "behind", "dirty", "unstable", "has_hooks", "unknown"
 	Additions, Deletions, ChangedFiles int
+	Commits                            int
 	Reviewers                          []GitHubReviewer
 	// Conversation is the comments and the reviews that said something,
 	// oldest first (the latest 100 comments).

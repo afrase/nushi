@@ -18327,10 +18327,12 @@ func (x *GitHubCheck) GetCompletedMs() int64 {
 // Someone asked to review ("requested"), or who did ("approved",
 // "changes_requested", "commented", "dismissed"); a team asked has team.
 type GitHubReviewer struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Login         string                 `protobuf:"bytes,1,opt,name=login,proto3" json:"login,omitempty"`
-	State         string                 `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty"`
-	Team          bool                   `protobuf:"varint,3,opt,name=team,proto3" json:"team,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Login string                 `protobuf:"bytes,1,opt,name=login,proto3" json:"login,omitempty"`
+	State string                 `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty"`
+	Team  bool                   `protobuf:"varint,3,opt,name=team,proto3" json:"team,omitempty"`
+	// Asked as a code owner of what the pull request changes.
+	CodeOwner     bool `protobuf:"varint,4,opt,name=code_owner,json=codeOwner,proto3" json:"code_owner,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -18386,6 +18388,13 @@ func (x *GitHubReviewer) GetTeam() bool {
 	return false
 }
 
+func (x *GitHubReviewer) GetCodeOwner() bool {
+	if x != nil {
+		return x.CodeOwner
+	}
+	return false
+}
+
 type GitHubPull struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
 	Item        *GitHubItem            `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty"`
@@ -18416,8 +18425,10 @@ type GitHubPull struct {
 	// submitted here joins, and its comments' count.
 	PendingReview   string `protobuf:"bytes,20,opt,name=pending_review,json=pendingReview,proto3" json:"pending_review,omitempty"`
 	PendingComments int32  `protobuf:"varint,21,opt,name=pending_comments,json=pendingComments,proto3" json:"pending_comments,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Its commits.
+	Commits       int32 `protobuf:"varint,22,opt,name=commits,proto3" json:"commits,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GitHubPull) Reset() {
@@ -18593,6 +18604,13 @@ func (x *GitHubPull) GetPendingReview() string {
 func (x *GitHubPull) GetPendingComments() int32 {
 	if x != nil {
 		return x.PendingComments
+	}
+	return 0
+}
+
+func (x *GitHubPull) GetCommits() int32 {
+	if x != nil {
+		return x.Commits
 	}
 	return 0
 }
@@ -20963,11 +20981,13 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\vannotations\x18\v \x03(\v2\x1a.nushi.v1.GitHubAnnotationR\vannotations\x12\x1d\n" +
 	"\n" +
 	"started_ms\x18\f \x01(\x03R\tstartedMs\x12!\n" +
-	"\fcompleted_ms\x18\r \x01(\x03R\vcompletedMs\"P\n" +
+	"\fcompleted_ms\x18\r \x01(\x03R\vcompletedMs\"o\n" +
 	"\x0eGitHubReviewer\x12\x14\n" +
 	"\x05login\x18\x01 \x01(\tR\x05login\x12\x14\n" +
 	"\x05state\x18\x02 \x01(\tR\x05state\x12\x12\n" +
-	"\x04team\x18\x03 \x01(\bR\x04team\"\xe8\x05\n" +
+	"\x04team\x18\x03 \x01(\bR\x04team\x12\x1d\n" +
+	"\n" +
+	"code_owner\x18\x04 \x01(\bR\tcodeOwner\"\x82\x06\n" +
 	"\n" +
 	"GitHubPull\x12(\n" +
 	"\x04item\x18\x01 \x01(\v2\x14.nushi.v1.GitHubItemR\x04item\x12\x12\n" +
@@ -20993,7 +21013,8 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\athreads\x18\x12 \x03(\v2\x16.nushi.v1.GitHubThreadR\athreads\x12-\n" +
 	"\x06checks\x18\x13 \x03(\v2\x15.nushi.v1.GitHubCheckR\x06checks\x12%\n" +
 	"\x0epending_review\x18\x14 \x01(\tR\rpendingReview\x12)\n" +
-	"\x10pending_comments\x18\x15 \x01(\x05R\x0fpendingComments\"S\n" +
+	"\x10pending_comments\x18\x15 \x01(\x05R\x0fpendingComments\x12\x18\n" +
+	"\acommits\x18\x16 \x01(\x05R\acommits\"S\n" +
 	"\x14GetGitHubPullRequest\x12%\n" +
 	"\x03ref\x18\x01 \x01(\v2\x13.nushi.v1.GitHubRefR\x03ref\x12\x14\n" +
 	"\x05quiet\x18\x02 \x01(\bR\x05quiet\"A\n" +

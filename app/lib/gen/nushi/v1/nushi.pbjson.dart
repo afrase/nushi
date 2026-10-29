@@ -5458,13 +5458,14 @@ const GitHubReviewer$json = {
     {'1': 'login', '3': 1, '4': 1, '5': 9, '10': 'login'},
     {'1': 'state', '3': 2, '4': 1, '5': 9, '10': 'state'},
     {'1': 'team', '3': 3, '4': 1, '5': 8, '10': 'team'},
+    {'1': 'code_owner', '3': 4, '4': 1, '5': 8, '10': 'codeOwner'},
   ],
 };
 
 /// Descriptor for `GitHubReviewer`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List gitHubReviewerDescriptor = $convert.base64Decode(
     'Cg5HaXRIdWJSZXZpZXdlchIUCgVsb2dpbhgBIAEoCVIFbG9naW4SFAoFc3RhdGUYAiABKAlSBX'
-    'N0YXRlEhIKBHRlYW0YAyABKAhSBHRlYW0=');
+    'N0YXRlEhIKBHRlYW0YAyABKAhSBHRlYW0SHQoKY29kZV9vd25lchgEIAEoCFIJY29kZU93bmVy');
 
 @$core.Deprecated('Use gitHubPullDescriptor instead')
 const GitHubPull$json = {
@@ -5526,6 +5527,7 @@ const GitHubPull$json = {
     },
     {'1': 'pending_review', '3': 20, '4': 1, '5': 9, '10': 'pendingReview'},
     {'1': 'pending_comments', '3': 21, '4': 1, '5': 5, '10': 'pendingComments'},
+    {'1': 'commits', '3': 22, '4': 1, '5': 5, '10': 'commits'},
   ],
 };
 
@@ -5544,7 +5546,7 @@ final $typed_data.Uint8List gitHubPullDescriptor = $convert.base64Decode(
     'bnZlcnNhdGlvbhIwCgd0aHJlYWRzGBIgAygLMhYubnVzaGkudjEuR2l0SHViVGhyZWFkUgd0aH'
     'JlYWRzEi0KBmNoZWNrcxgTIAMoCzIVLm51c2hpLnYxLkdpdEh1YkNoZWNrUgZjaGVja3MSJQoO'
     'cGVuZGluZ19yZXZpZXcYFCABKAlSDXBlbmRpbmdSZXZpZXcSKQoQcGVuZGluZ19jb21tZW50cx'
-    'gVIAEoBVIPcGVuZGluZ0NvbW1lbnRz');
+    'gVIAEoBVIPcGVuZGluZ0NvbW1lbnRzEhgKB2NvbW1pdHMYFiABKAVSB2NvbW1pdHM=');
 
 @$core.Deprecated('Use getGitHubPullRequestDescriptor instead')
 const GetGitHubPullRequest$json = {

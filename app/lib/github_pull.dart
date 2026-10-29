@@ -12,16 +12,19 @@ import 'package:nushi/github_comment.dart';
 import 'package:nushi/github_files.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_review.dart';
+import 'package:nushi/pull_header.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// How often an open pull request is asked for again (quietly).
 const pullPoll = Duration(seconds: 30);
 
-/// A pull request's details: its header (state, draft, base ← head,
-/// author, reviewers and their states, whether it can merge), Start work,
-/// Fix checks and Address comments, its chats; then its conversation, its
-/// checks, or its files with the review threads at their lines.
+/// A pull request's page: its head ([PullHeader]: state, title, branches,
+/// whose move it is, the status lights), then its activity (the
+/// description, comments and reviews), its checks, or its files with the
+/// review threads at their lines, in one scroll; the text in a column of
+/// [readableWidth] at most, the files' diff the whole width and the
+/// window's height.
 ///
 /// In a chat's Pull request tab ([inChat]) it has no Start work or chats'
 /// links (the chat is the one); [onLoad] gets each answer.
@@ -45,13 +48,13 @@ class GitHubPullPane extends StatefulWidget {
   State<GitHubPullPane> createState() => _GitHubPullPaneState();
 }
 
-enum _Tab { conversation, checks, files }
-
 class _GitHubPullPaneState extends State<GitHubPullPane> {
   GitHubPull? _pull;
   String? _error;
   Timer? _poll;
-  _Tab _tab = _Tab.conversation;
+  PullSection _tab = PullSection.activity;
+  final _scroll = ScrollController();
+  final GlobalKey _tabs = GlobalKey();
 
   @override
   void initState() {
@@ -63,6 +66,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
   @override
   void dispose() {
     _poll?.cancel();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -82,6 +86,20 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
       // A failed poll keeps what shows, and says why.
       if (mounted) setState(() => _error = errorText(e));
     }
+  }
+
+  /// Shows [s]: its tab picked, scrolled to the top.
+  void _jump(PullSection s) {
+    if (s != PullSection.todo) setState(() => _tab = s);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final to = _tabs.currentContext;
+      if (to == null || !to.mounted) return;
+      Scrollable.ensureVisible(
+        to,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+      );
+    });
   }
 
   @override
@@ -104,82 +122,197 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
     return LayoutBuilder(
       builder: (context, box) {
         final pad = readablePad(box.maxWidth);
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: pad - 20),
-              child: _Header(
-                daemon: widget.daemon,
-                inChat: widget.inChat,
+        Widget column(Widget child, {double top = 0, double bottom = 0}) =>
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(pad, top, pad, bottom),
+              sliver: SliverToBoxAdapter(child: child),
+            );
+        return CustomScrollView(
+          controller: _scroll,
+          slivers: [
+            column(
+              PullHeader(
                 pull: p,
                 now: now,
-                error: _error,
-                onReview: () =>
-                    submitReview(context, widget.daemon, p, onDone: _load),
+                todo: blockers(p),
+                onJump: _jump,
+                actions: _actions(context, p),
               ),
+              top: 14,
             ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(pad, 10, pad, 6),
-              child: Row(
+            if (!widget.inChat) column(_Chats(widget.daemon, p), top: 10),
+            if (_error case final e?)
+              column(
+                Text('Not current: $e', style: theme.ui(t.needs, size: 12)),
+                top: 6,
+              ),
+            column(
+              Row(
+                key: _tabs,
                 children: [
                   Segmented(
                     value: _tab,
                     segments: [
                       (
-                        _Tab.conversation,
+                        PullSection.activity,
                         'Conversation ${p.conversation.length}',
                       ),
                       (
-                        _Tab.checks,
+                        PullSection.checks,
                         failed > 0
                             ? 'Checks · $failed failed'
                             : 'Checks ${p.checks.length}',
                       ),
-                      (_Tab.files, 'Files ${p.changedFiles}'),
+                      (PullSection.files, 'Files ${p.changedFiles}'),
                     ],
-                    onChanged: (v) => setState(() => _tab = v),
+                    // The files fill the window: scrolled up to them.
+                    onChanged: (v) => v == PullSection.files
+                        ? _jump(v)
+                        : setState(() => _tab = v),
                   ),
                 ],
               ),
+              top: 18,
+              bottom: 6,
             ),
-            Expanded(
-              child: switch (_tab) {
-                _Tab.conversation => _Conversation(
+            switch (_tab) {
+              PullSection.checks => column(
+                GitHubChecks(daemon: widget.daemon, pull: p),
+                bottom: 20,
+              ),
+              PullSection.files => SliverToBoxAdapter(
+                // The window's height, under the tabs: the list and the
+                // diff scroll in it.
+                child: SizedBox(
+                  height: box.maxHeight - 40,
+                  child: GitHubFiles(
+                    daemon: widget.daemon,
+                    pull: p,
+                    now: widget.now,
+                    onChanged: _load,
+                  ),
+                ),
+              ),
+              _ => column(
+                _Conversation(
                   daemon: widget.daemon,
                   pull: p,
                   now: now,
-                  pad: pad,
                   onPosted: _load,
                 ),
-                _Tab.checks => GitHubChecks(
-                  daemon: widget.daemon,
-                  pull: p,
-                  pad: pad - 8,
-                ),
-                _Tab.files => GitHubFiles(
-                  daemon: widget.daemon,
-                  pull: p,
-                  now: widget.now,
-                  onChanged: _load,
-                ),
-              },
-            ),
+                bottom: 20,
+              ),
+            },
           ],
         );
       },
     );
   }
+
+  /// The head's buttons: Start work (the GitHub view), Fix checks and
+  /// Address comments, Review…, Open on GitHub.
+  List<Widget> _actions(BuildContext context, GitHubPull p) {
+    final it = p.item;
+    final daemon = widget.daemon;
+    final pending = p.pendingComments + reviewDrafts(it.ref).length;
+    final unresolved = p.threads.where((x) => !x.resolved).length;
+    return [
+      if (!widget.inChat) StartWork(daemon: daemon, item: it, button: true),
+      if (p.checks.any((c) => c.failed))
+        Button(
+          label: 'Fix checks',
+          icon: Icons.build_outlined,
+          tooltip:
+              "Each failed check as a reply card in the chat's box, to send",
+          onPressed: () => toAgent(
+            context,
+            daemon,
+            it,
+            replies: () => checkReplies(daemon, it.ref, p),
+          ),
+        ),
+      if (unresolved > 0)
+        Button(
+          label: 'Address comments',
+          icon: Icons.forum_outlined,
+          tooltip: "Each thread as a reply card in the chat's box, to send",
+          onPressed: () async {
+            final picked = unresolved == 1
+                ? null
+                : await pickThreads(context, p);
+            if (unresolved > 1 && picked == null) return;
+            if (!context.mounted) return;
+            await toAgent(
+              context,
+              daemon,
+              it,
+              replies: () async => threadReplies(p, picked),
+            );
+          },
+        ),
+      Button(
+        label: pending > 0 ? 'Review ($pending)…' : 'Review…',
+        onPressed: () => submitReview(context, daemon, p, onDone: _load),
+      ),
+      Button(
+        label: 'Open on GitHub',
+        icon: Icons.open_in_new,
+        onPressed: it.url.isEmpty ? null : () => openWeb(it.url),
+      ),
+    ];
+  }
 }
 
-/// A reviewer's state as an icon and its color.
-(IconData, Color) reviewerIcon(Tokens t, String state) => switch (state) {
-  'approved' => (Icons.check_circle_outline, t.done),
-  'changes_requested' => (Icons.cancel_outlined, t.crashed),
-  'commented' => (Icons.chat_bubble_outline, t.textSecondary),
-  'dismissed' => (Icons.remove_circle_outline, t.textMuted),
-  _ => (Icons.schedule, t.textMuted), // asked, not reviewed yet
-};
+/// The chats on the pull request, in the GitHub view: each a link to it.
+class _Chats extends StatelessWidget {
+  const new(this.daemon, this.pull);
+
+  final Daemon daemon;
+  final GitHubPull pull;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    final chats = chatsOnItem(daemon, pull.item.ref);
+    if (chats.isEmpty) return const SizedBox.shrink();
+    return Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Text('Chats:', style: theme.ui(t.textMuted, size: 12)),
+        for (final c in chats.take(4))
+          Tap(
+            onTap: () => daemon.select(c.id),
+            tooltip: 'Open the chat',
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AgentMark(c.agent, size: 13, color: t.textSecondary),
+                const SizedBox(width: 4),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 180),
+                  child: Text(
+                    c.title.isEmpty ? 'New chat' : c.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.ui(t.link, size: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        if (chats.length > 4)
+          Text(
+            '+${chats.length - 4} chats',
+            style: theme.ui(t.textMuted, size: 12),
+          ),
+      ],
+    );
+  }
+}
 
 /// Whether the pull request can merge, in a few words.
 (String, Color) mergeWords(Tokens t, GitHubPull p) {
@@ -198,250 +331,6 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
   };
 }
 
-class _Header extends StatelessWidget {
-  const new({
-    required this.daemon,
-    required this.inChat,
-    required this.pull,
-    required this.now,
-    required this.error,
-    required this.onReview,
-  });
-
-  final Daemon daemon;
-  final bool inChat;
-  final GitHubPull pull;
-  final DateTime now;
-  final String? error;
-  final VoidCallback onReview;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final p = pull;
-    final it = p.item;
-    final small = theme.ui(t.textSecondary, size: 12);
-    final merge = mergeWords(t, p);
-    final review = reviewWords(t, it.review);
-    final pending = p.pendingComments + reviewDrafts(it.ref).length;
-    final chats = inChat ? const <ChatState>[] : chatsOnItem(daemon, it.ref);
-    final unresolved = p.threads.where((x) => !x.resolved).length;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 16, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: SelectableText.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(text: it.title),
-                      TextSpan(
-                        text: '  ${it.ref.repo}#${it.ref.number}',
-                        style: theme.code(t.textMuted, size: 12.5),
-                      ),
-                    ],
-                  ),
-                  style: theme.ui(t.text, size: 16, weight: FontWeight.w600),
-                ),
-              ),
-              IconTap(
-                Icons.open_in_new,
-                tooltip: 'Open on GitHub',
-                onTap: it.url.isEmpty ? null : () => openWeb(it.url),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Wrap(
-            spacing: 10,
-            runSpacing: 4,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              _Pill(itemState(it), itemColor(t, it)),
-              Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: it.author,
-                      style: theme.ui(t.text, size: 12),
-                    ),
-                    if (p.outside)
-                      TextSpan(
-                        text: ' (outside the repository)',
-                        style: theme.ui(t.needs, size: 12),
-                      ),
-                    const TextSpan(text: ' wants '),
-                    TextSpan(
-                      text: p.base,
-                      style: theme.code(t.text, size: 11.5),
-                    ),
-                    const TextSpan(text: ' ← '),
-                    TextSpan(
-                      text: p.crossRepo ? '${p.headRepo}:${p.head}' : p.head,
-                      style: theme.code(t.text, size: 11.5),
-                    ),
-                  ],
-                ),
-                style: small,
-              ),
-              Text(
-                '+${p.additions} −${p.deletions} in ${p.changedFiles} files',
-                style: small,
-              ),
-              Text(merge.$1, style: theme.ui(merge.$2, size: 12)),
-              if (review != null)
-                Text(review.$1, style: theme.ui(review.$2, size: 12)),
-            ],
-          ),
-          if (p.reviewers.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Wrap(
-              spacing: 10,
-              children: [
-                for (final r in p.reviewers)
-                  Tooltip(
-                    message: switch (r.state) {
-                      'requested' => 'Asked to review',
-                      'approved' => 'Approved',
-                      'changes_requested' => 'Requested changes',
-                      'commented' => 'Commented',
-                      _ => r.state,
-                    },
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          reviewerIcon(t, r.state).$1,
-                          size: 13,
-                          color: reviewerIcon(t, r.state).$2,
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          r.team ? '@${r.login}' : r.login,
-                          style: theme.ui(t.textSecondary, size: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ],
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              if (!inChat) StartWork(daemon: daemon, item: it, button: true),
-              if (p.checks.any((c) => c.failed))
-                Button(
-                  label: 'Fix checks',
-                  icon: Icons.build_outlined,
-                  tooltip:
-                      "Each failed check as a reply card in the chat's box, "
-                      'to send',
-                  onPressed: () => toAgent(
-                    context,
-                    daemon,
-                    it,
-                    replies: () => checkReplies(daemon, it.ref, p),
-                  ),
-                ),
-              if (unresolved > 0)
-                Button(
-                  label: 'Address comments',
-                  icon: Icons.forum_outlined,
-                  tooltip:
-                      "Each thread as a reply card in the chat's box, to send",
-                  onPressed: () async {
-                    final picked = unresolved == 1
-                        ? null
-                        : await pickThreads(context, p);
-                    if (unresolved > 1 && picked == null) return;
-                    if (!context.mounted) return;
-                    await toAgent(
-                      context,
-                      daemon,
-                      it,
-                      replies: () async => threadReplies(p, picked),
-                    );
-                  },
-                ),
-              Button(
-                label: pending > 0 ? 'Review ($pending)…' : 'Review…',
-                onPressed: onReview,
-              ),
-              for (final c in chats.take(4))
-                Tap(
-                  onTap: () => daemon.select(c.id),
-                  tooltip: 'Open the chat',
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 3,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      AgentMark(c.agent, size: 13, color: t.textSecondary),
-                      const SizedBox(width: 4),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 180),
-                        child: Text(
-                          c.title.isEmpty ? 'New chat' : c.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.ui(t.link, size: 12),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              if (chats.length > 4)
-                Text(
-                  '+${chats.length - 4} chats',
-                  style: theme.ui(t.textMuted, size: 12),
-                ),
-            ],
-          ),
-          if (error case final e?)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(
-                'Not current: $e',
-                style: theme.ui(t.needs, size: 12),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Pill extends StatelessWidget {
-  const new(this.text, this.color);
-
-  final String text;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-      decoration: box(color, radius: NushiTheme.control),
-      child: Text(
-        text,
-        style: theme.ui(color, size: 12, weight: FontWeight.w500),
-      ),
-    );
-  }
-}
-
 /// The description, then the comments and reviews, oldest first, and a
 /// box for a comment (Markdown; ⌘⏎ posts it).
 class _Conversation extends StatelessWidget {
@@ -449,16 +338,12 @@ class _Conversation extends StatelessWidget {
     required this.daemon,
     required this.pull,
     required this.now,
-    required this.pad,
     required this.onPosted,
   });
 
   final Daemon daemon;
   final GitHubPull pull;
   final DateTime now;
-
-  /// Its sides' padding, which centres it.
-  final double pad;
   final Future<void> Function() onPosted;
 
   @override
@@ -467,8 +352,8 @@ class _Conversation extends StatelessWidget {
     final t = theme.t;
     final p = pull;
     return SelectionArea(
-      child: ListView(
-        padding: EdgeInsets.fromLTRB(pad, 4, pad, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           CommentEntry(
             GitHubComment(
