@@ -19,7 +19,9 @@ import (
 // taken (a line a message kind: its type, subtype or request_subtype,
 // and its top-level fields, as testdata/schemas-2.1.312.jsonl has them),
 // and reports the kinds the schemas don't have and the fields they don't
-// list; with -missing, also the fields they list that no frame had. It
+// list; with -missing, also the fields they list that no frame had. The
+// schemas checked in have the CLI's public kinds only, so a frame of an
+// internal one shows as a new kind. It
 // is a report, not a check: it exits 0 whatever it finds, and non-zero
 // only when it can't read its files.
 func schemaDiff(args []string, stdout, stderr io.Writer) int {
