@@ -18,10 +18,11 @@ import (
 // session is an ACP session: one claude, its turns, and what its stream
 // has shown so far.
 type session struct {
-	a   *agent
-	id  string // claude's session id too
-	cs  *claudeagent.Session
-	log *slog.Logger
+	a      *agent
+	id     string // claude's session id too
+	cs     *claudeagent.Session
+	log    *slog.Logger
+	stderr *stderrLog // claude's
 
 	// wmu orders the user messages written with the turns they join: the
 	// queue's order is claude's.
@@ -85,6 +86,8 @@ func (a *agent) start(ctx context.Context, id string, o claudeagent.Options) (*s
 		claudeagent.HookPostToolUse: {{Fn: s.postToolUse}},
 	}
 	o.CanUseTool, o.OnElicitation = s.canUseTool, s.elicit
+	s.stderr = newStderrLog(s.log, time.Now)
+	o.Stderr = s.stderr.line
 	cs, err := claudeagent.Start(ctx, o)
 	if err != nil {
 		return nil, startError(o.Resume, err)
@@ -113,7 +116,8 @@ func (s *session) reader() {
 		s.tick = make(chan struct{})
 		s.hmu.Unlock()
 	}
-	err := s.cs.Wait()
+	err := s.cs.Wait() // and its stderr read through
+	s.stderr.flush()
 	_ = s.cs.Close()
 	s.endTools(endedExit)
 	s.subagentsGone()
