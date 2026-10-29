@@ -296,6 +296,21 @@ func TestSubagentAgain(t *testing.T) {
 			"a1 message toolu_m to a1",
 			"a1 call toolu_2 Bash pending parent=toolu_m",
 		}},
+		// The result can come after the run it started has ended: then it
+		// runs nothing.
+		{"SendMessage ended", []claudetest.Step{sendMessage[0],
+			sendf(`{"type":"system","subtype":"task_started","task_id":"a1","run_id":"r2","tool_use_id":"toolu_m","task_type":"local_agent"}`),
+			subagentCall("toolu_m", "toolu_2"),
+			sendf(`{"type":"system","subtype":"task_notification","task_id":"a1","run_id":"r2","tool_use_id":"toolu_m","status":"completed"}`),
+			sendMessage[1]}, []string{
+			"s1 call toolu_m SendMessage pending",
+			`s1 subagent {"sessionId":"a1","state":{"state":"running"}}`,
+			"a1 message toolu_m to a1",
+			"a1 call toolu_2 Bash pending parent=toolu_m",
+			`s1 subagent {"sessionId":"a1","state":{"state":"idle","stopReason":"end_turn"}}`,
+			"a1 update toolu_2 failed parent=toolu_m",
+			"s1 update toolu_m completed",
+		}},
 		{"running", []claudetest.Step{sendf(`{"type":"system","subtype":"task_updated","task_id":"a1","patch":{"status":"running"}}`)}, []string{
 			`s1 subagent {"sessionId":"a1","state":{"state":"running"}}`,
 		}},
