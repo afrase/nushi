@@ -119,7 +119,7 @@ linters:
           disabled: true
         - name: function-result-limit
           disabled: true
-        - name: file-length-limit # the ~400-line tripwire is in NOTES.md, not a gate
+        - name: file-length-limit # the ~400-line tripwire is in AGENTS.md, not a gate
           disabled: true
         - name: banned-characters
           disabled: true
