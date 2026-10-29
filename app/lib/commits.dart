@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import 'package:nushi/clock.dart';
 import 'package:nushi/file_tree.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/theme/theme.dart';
@@ -29,7 +30,7 @@ class CommitList extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final now = DateTime.now();
+    final now = clock();
     return ListView.builder(
       itemExtent: rowHeight,
       padding: const EdgeInsets.symmetric(horizontal: 6),

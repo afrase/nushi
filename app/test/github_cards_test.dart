@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/gestures.dart';
@@ -15,7 +14,8 @@ import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'github_inbox_test.dart' show inboxForTests;
-import 'github_view_test.dart' show closeView, openView;
+import 'github_view_test.dart' show openView;
+import 'harness.dart';
 
 /// The cards' titles, top to bottom.
 List<String> _cards(WidgetTester tester) {
@@ -31,10 +31,6 @@ List<String> _cards(WidgetTester tester) {
       (e.widget as Text).data!.split('  ').first,
   ];
 }
-
-Map<String, Object?> _appJson() =>
-    jsonDecode(File('$dataDir/app.json').readAsStringSync())
-        as Map<String, Object?>;
 
 void main() {
   setUpAll(() async {
@@ -69,7 +65,7 @@ void main() {
     final order = ['Assigned issues', 'Review requested', 'My pull requests'];
     expect(_cards(tester), order);
     expect(githubCardOrder.value, ['assigned', 'review', 'mine']);
-    expect(_appJson()['githubCards'], ['assigned', 'review', 'mine']);
+    expect(readSaved()['githubCards'], ['assigned', 'review', 'mine']);
     await closeView(tester, d);
     // Opened again: as left; the first row is the issue's, and ↓ goes to
     // Review requested's.
@@ -92,7 +88,7 @@ void main() {
     expect(find.text('Add Sub and Neg'), findsNothing);
     expect(find.text('My pull requests  2'), findsOneWidget);
     expect(githubCollapsed.value, {'mine'});
-    expect(_appJson()['githubCollapsed'], ['mine']);
+    expect(readSaved()['githubCollapsed'], ['mine']);
     // From Review requested's row, ↓ goes past it to the issue.
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);

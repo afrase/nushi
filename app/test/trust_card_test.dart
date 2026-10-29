@@ -8,6 +8,7 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/trust_card.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 void main() {
   testWidgets('the card shows what runs, by file, and waits for a word', (
@@ -48,12 +49,7 @@ void main() {
   // and the app says so, where the start just didn't happen before.
   testWidgets("leaving the card unanswered says what didn't start; × "
       'dismisses it', (tester) async {
-    tester.view
-      ..devicePixelRatio = 1
-      ..physicalSize = const Size(1200, 600);
-    addTearDown(tester.view.reset);
-    tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
-    addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+    viewport(tester, const Size(1200, 600), brightness: Brightness.dark);
     await loadFonts();
     final fake = FakeDaemon([chat('a', 'claude', 'Other')])
       ..answer = (input) => input is CheckFolderRequest

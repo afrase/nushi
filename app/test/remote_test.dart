@@ -9,6 +9,7 @@ import 'package:nushi/remote.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart' show loadFonts;
+import 'harness.dart';
 
 /// A daemon that records the pairing answers and test pushes it gets.
 class _Daemon implements Transport {
@@ -117,10 +118,7 @@ void main() {
         home: Scaffold(body: RemoteSection(NushiServiceClient(_Daemon()))),
       ),
     );
-    tester.view
-      ..devicePixelRatio = 1
-      ..physicalSize = const Size(720, 560);
-    addTearDown(tester.view.reset);
+    viewport(tester, const Size(720, 560));
     await tester.tap(find.text('Pair a phone'));
     await tester.pumpAndSettle();
     await expectLater(
@@ -143,10 +141,7 @@ void main() {
     testWidgets('paired devices, kinds and notifications ($name)', (
       tester,
     ) async {
-      tester.view
-        ..devicePixelRatio = 1
-        ..physicalSize = Size(width, 320);
-      addTearDown(tester.view.reset);
+      viewport(tester, Size(width, 320));
       final daemon = _Daemon();
       remoteState.value = Remote(
         on: true,
@@ -164,9 +159,9 @@ void main() {
           Device(
             id: 'a',
             name: 'Test phone',
-            // 3h ago, whenever the test runs.
+            // 3h before the tests' clock.
             lastSeen: Int64(
-              DateTime.now()
+              fixtureNow
                   .subtract(const Duration(hours: 3))
                   .millisecondsSinceEpoch,
             ),

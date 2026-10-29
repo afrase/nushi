@@ -16,6 +16,7 @@ import 'package:nushi/question_card.dart';
 import 'package:nushi/remote.dart' show keyFingerprint, remoteState;
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 final List<Chat> _chats = [
   chat(
@@ -50,15 +51,6 @@ final Int64 _started = Int64(
 const _vapid =
     'BP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIg'
     'Dll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A8';
-
-/// A paired browser: what IndexedDB would hold.
-Map<String, Object?> _paired() => {
-  'key': Uint8List(32)..[0] = 7,
-  'name': 'iPhone',
-  'relay': 'wss://nushi.aaronfrase.com',
-  'daemon': 'ArJKFXeGeF5z4WCydMz-dOXinj4sE99eMxmb-oJ3qLE',
-  'daemonKey': Uint8List(32)..[0] = 9,
-};
 
 /// The question chat "b" waits on.
 GetChatResponse _question() => GetChatResponse(
@@ -105,18 +97,12 @@ Future<(Phone, PhonePlatform)> _app(
   Size size = const Size(390, 760),
   Map<String, Object?>? record,
 }) async {
-  tester.view
-    ..devicePixelRatio = 2
-    ..physicalSize = size * 2;
-  tester.platformDispatcher
-    ..platformBrightnessTestValue = brightness
-    ..accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(
-      disableAnimations: true,
-    );
-  addTearDown(tester.view.reset);
-  addTearDown(tester.platformDispatcher.clearAllTestValues);
+  viewport(tester, size, ratio: 2, brightness: brightness);
+  tester.platformDispatcher.accessibilityFeaturesTestValue =
+      const FakeAccessibilityFeatures(disableAnimations: true);
+  addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
   final platform = PhonePlatform()
-    ..saved = record ?? (paired ? _paired() : null);
+    ..saved = record ?? (paired ? pairedRecord() : null);
   final phone = Phone(
     platform,
     connectTo: (_) => Daemon(transport: fake, remote: true),
@@ -127,13 +113,6 @@ Future<(Phone, PhonePlatform)> _app(
     await tester.pump();
   }
   return (phone, platform);
-}
-
-/// Ends the phone's link, and its timers, before the test ends.
-Future<void> _end(WidgetTester tester, Phone phone) async {
-  await phone.close();
-  await tester.pumpWidget(const SizedBox());
-  await tester.pump(const Duration(seconds: 5));
 }
 
 void main() {
@@ -154,7 +133,7 @@ void main() {
         find.byType(PhoneApp),
         matchesGoldenFile('goldens/phone_chats_$name.png'),
       );
-      await _end(tester, phone);
+      await endPhone(tester, phone);
     });
 
     testWidgets('a chat with its question card ($name)', (tester) async {
@@ -195,7 +174,7 @@ void main() {
       await tester.tap(find.bySemanticsLabel('Back').first);
       await tester.pumpAndSettle();
       expect(fake.calls.whereType<SetDeviceViewRequest>().last.chatId, '');
-      await _end(tester, phone);
+      await endPhone(tester, phone);
     });
 
     testWidgets('pairing: the link, then the code ($name)', (tester) async {
@@ -221,7 +200,7 @@ void main() {
         find.byType(PhoneApp),
         matchesGoldenFile('goldens/phone_pair_code_$name.png'),
       );
-      await _end(tester, phone);
+      await endPhone(tester, phone);
     });
 
     testWidgets('Settings ($name)', (tester) async {
@@ -235,7 +214,7 @@ void main() {
         find.byType(PhoneApp),
         matchesGoldenFile('goldens/phone_settings_$name.png'),
       );
-      await _end(tester, phone);
+      await endPhone(tester, phone);
     });
   }
 
@@ -269,7 +248,7 @@ void main() {
         find.byType(PhoneApp),
         matchesGoldenFile('goldens/phone_question_at_$name.png'),
       );
-      await _end(tester, phone);
+      await endPhone(tester, phone);
     });
   }
 
@@ -282,7 +261,7 @@ void main() {
     expect(heading.top, lessThan(waiting.top));
     expect(waiting.top, lessThan(working.top));
     expect(find.text('Review the Noise channel'), findsOne); // moved, once
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 
   testWidgets("a permission's long option wraps on the phone, whole; a "
@@ -324,7 +303,7 @@ void main() {
       find.byType(PhoneApp),
       matchesGoldenFile('goldens/phone_permission_390.png'),
     );
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 
   testWidgets('an expired chat is read-only, with a new chat in its folder', (
@@ -371,7 +350,7 @@ void main() {
             .top,
       ),
     );
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 
   testWidgets("a folder's code: the trust question shows each command, and "
@@ -412,7 +391,7 @@ void main() {
     expect(fake.calls.whereType<TrustFolderRequest>(), isEmpty);
     expect(fake.started, isEmpty);
     expect(phone.daemon!.starting, isNull);
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 
   // UX review, finding 19.
@@ -463,7 +442,7 @@ void main() {
     await tester.tap(find.text('Archive'));
     await tester.pumpAndSettle();
     expect(fake.calls.whereType<ArchiveChatRequest>().single.chatId, 'a');
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 
   testWidgets('notifications on and off: the subscription to the daemon', (
@@ -493,7 +472,7 @@ void main() {
       '',
     );
     expect(phone.push, PushState.off);
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 
   testWidgets('a link that isn’t a pairing link is refused', (tester) async {
@@ -510,7 +489,7 @@ void main() {
     await tester.pump();
     expect(find.textContaining("isn't a Nushi pairing link"), findsOneWidget);
     expect(phone.paired, isNull);
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 
   testWidgets('a link for another relay is refused, saying so', (tester) async {
@@ -529,7 +508,7 @@ void main() {
     await tester.pump();
     expect(find.textContaining('for the relay at evil.example.com'), findsOne);
     expect(phone.paired, isNull);
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 
   testWidgets('a subscription made with an old VAPID key is turned off', (
@@ -539,7 +518,7 @@ void main() {
       ..answer = (input) =>
           input is GetPushKeyRequest ? GetPushKeyResponse(key: _vapid) : null;
     final platform = PhonePlatform()
-      ..saved = _paired()
+      ..saved = pairedRecord()
       ..push = PushState.on
       ..subscribedKey = Uint8List(65);
     final phone = Phone(
@@ -552,7 +531,7 @@ void main() {
       await tester.pump();
     }
     expect(phone.push, PushState.off);
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 
   testWidgets('Forget this Mac forgets the key and the pairing', (
@@ -578,7 +557,7 @@ void main() {
     expect(find.text('Pair with a Mac'), findsOneWidget);
     // Pairing is the root again: nothing to go back to.
     expect(find.bySemanticsLabel('Back'), findsNothing);
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 
   testWidgets('Forget this Mac that fails on the way keeps the pairing', (
@@ -589,7 +568,7 @@ void main() {
       tester,
       FakeDaemon(_chats),
       record: {
-        ..._paired(),
+        ...pairedRecord(),
         'key': Uint8List(32)
           ..[0] = 8
           ..[31] = 64,
@@ -604,7 +583,7 @@ void main() {
       await tester.pump();
     }
     expect(platform.saved?['daemon'], 'moved');
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 
   testWidgets('Forget this Mac runs once, and a Mac that never answers '
@@ -625,7 +604,7 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
     expect(done, isTrue);
     expect((phone.forgetting, platform.saved), (false, null));
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 
   testWidgets('a notification for a chat that is gone opens nothing', (
@@ -649,7 +628,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Chats'), findsNothing);
     expect(phone.opening.value, isNull);
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 
   testWidgets('paired, the chats are the root: no back, whatever comes', (
@@ -663,7 +642,7 @@ void main() {
     );
     expect(find.text('Pair with a Mac'), findsOneWidget);
     // Paired (as pair() ends): the chats take pairing's place.
-    phone.platform.saved = _paired();
+    phone.platform.saved = pairedRecord();
     await phone.start();
     for (var i = 0; i < 8; i++) {
       await tester.pump();
@@ -685,7 +664,7 @@ void main() {
       find.byType(PhoneApp),
       matchesGoldenFile('goldens/phone_root_390.png'),
     );
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 
   testWidgets('a newer version waits: Reload brings it in', (tester) async {
@@ -696,7 +675,7 @@ void main() {
     expect(find.text('Nushi was updated'), findsOneWidget);
     await tester.tap(find.text('Reload'));
     expect(platform.updated, isTrue);
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 
   testWidgets('Scan: the camera reads the Mac’s code, then pairing starts', (
@@ -729,7 +708,7 @@ void main() {
     );
     expect(phone.daemon, isNull);
     expect(platform.saved?['daemon'], isNull);
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 
   testWidgets('Scan: the camera refused says so', (tester) async {
@@ -742,7 +721,7 @@ void main() {
     await tester.tap(find.bySemanticsLabel('Back').first);
     await tester.pumpAndSettle();
     expect(Scanner.last!.stopped, isTrue);
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 
   testWidgets('back from a chat: the chats have no back button', (
@@ -760,6 +739,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Chats'), findsOneWidget);
     expect(find.bySemanticsLabel('Back'), findsNothing);
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 }

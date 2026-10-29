@@ -12,6 +12,7 @@ import 'package:nushi/settings_view.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 /// Shows Settings at [section] on [d], alone in a window of [size] (no
 /// sidebar), in [tokens]; "closed" once it closes. [agent] marks an
@@ -59,7 +60,7 @@ final List<Chat> settingsChats = [
 /// minutes, copies kept 90 days, MCP servers, skills, a Jira site, a
 /// GitHub host, a paired phone.
 FakeDaemon settingsFake({List<TranscriptCopy>? copies}) {
-  final now = DateTime.now().millisecondsSinceEpoch;
+  final now = fixtureNow.millisecondsSinceEpoch;
   final list =
       copies ??
       [
@@ -181,12 +182,7 @@ Future<Daemon> pumpSettingsApp(
         const MethodChannel('nushi/fonts'),
         (_) async => <String>['Menlo', 'SF Mono'],
       );
-  tester.view
-    ..devicePixelRatio = 1
-    ..physicalSize = size;
-  tester.platformDispatcher.platformBrightnessTestValue = brightness;
-  addTearDown(tester.view.reset);
-  addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+  viewport(tester, size, brightness: brightness);
   final d = await fake.connect(tester);
   await tester.pumpWidget(NushiApp(daemon: d));
   await tester.pumpAndSettle();

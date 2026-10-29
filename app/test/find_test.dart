@@ -9,6 +9,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/transcript_find.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 // UX review, finding 23: ⌘F in a transcript and in Changes.
 
@@ -20,12 +21,7 @@ Item _msg(String id, ItemKind kind, String text) =>
 /// The app on chat c, its transcript four messages, two naming the relay;
 /// its Changes two files, one with Sub in it.
 Future<Daemon> _app(WidgetTester tester) async {
-  tester.view
-    ..devicePixelRatio = 1
-    ..physicalSize = const Size(1700, 700);
-  addTearDown(tester.view.reset);
-  tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
-  addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+  viewport(tester, const Size(1700, 700), brightness: Brightness.dark);
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .setMockMethodCallHandler(
         const MethodChannel('nushi/fonts'),

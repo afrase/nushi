@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -143,7 +144,7 @@ class _GitHubPageState extends State<GitHubPage> {
             for (final h in hosts)
               _HostRow(
                 h,
-                now: widget.now ?? DateTime.now(),
+                now: widget.now ?? clock(),
                 onAllow: () => _allow(h),
                 onRemove: () => _remove(h),
               ),

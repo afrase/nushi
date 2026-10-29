@@ -1,7 +1,6 @@
 // The phone's on-screen keyboard (iOS shrinks the visual viewport, not the
 // app's box): its height comes in as the bottom view inset, and the
 // composer, the transcript and every text field keep clear of it.
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,6 +12,7 @@ import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/phone/platform.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 final Chat _chat = chat('a', 'claude', 'Fix the flaky relay test');
 
@@ -40,23 +40,11 @@ Future<(Phone, PhonePlatform)> _app(
   Size size, {
   bool paired = true,
 }) async {
-  tester.view
-    ..devicePixelRatio = 3
-    ..physicalSize = size * 3;
+  viewport(tester, size, ratio: 3);
   tester.platformDispatcher.accessibilityFeaturesTestValue =
       const FakeAccessibilityFeatures(disableAnimations: true);
-  addTearDown(tester.view.reset);
   addTearDown(tester.platformDispatcher.clearAllTestValues);
-  final platform = PhonePlatform()
-    ..saved = !paired
-        ? null
-        : {
-            'key': Uint8List(32)..[0] = 7,
-            'name': 'iPhone',
-            'relay': 'wss://nushi.aaronfrase.com',
-            'daemon': 'ArJKFXeGeF5z4WCydMz-dOXinj4sE99eMxmb-oJ3qLE',
-            'daemonKey': Uint8List(32)..[0] = 9,
-          };
+  final platform = PhonePlatform()..saved = !paired ? null : pairedRecord();
   // Chats in more folders: New chat's folder field comes low on the screen.
   final fake = FakeDaemon([
     _chat,
@@ -75,15 +63,9 @@ Future<(Phone, PhonePlatform)> _app(
   return (phone, platform);
 }
 
-Future<void> _end(WidgetTester tester, Phone phone) async {
-  await phone.close();
-  await tester.pumpWidget(const SizedBox());
-  await tester.pump(const Duration(seconds: 5));
-}
-
 /// The visual viewport shrinking to [visible] over a [height] tall app, as
 /// keyboard_web.dart reports it.
-void _viewport(PhonePlatform p, double height, double visible) =>
+void _visualViewport(PhonePlatform p, double height, double visible) =>
     p.keyboard.value = keyboardInset(
       appBottom: height,
       viewportTop: 0,
@@ -118,7 +100,7 @@ void main() {
     await tester.pump();
 
     // The keyboard (and its form bar) take the bottom 336 points.
-    _viewport(platform, size.height, size.height - 336);
+    _visualViewport(platform, size.height, size.height - 336);
     await tester.pumpAndSettle();
     final top = size.height - 336;
     final box = tester.getRect(field);
@@ -136,13 +118,13 @@ void main() {
     expect(last.top, greaterThan(52));
 
     // Taller (the emoji keyboard), then gone.
-    _viewport(platform, size.height, size.height - 380);
+    _visualViewport(platform, size.height, size.height - 380);
     await tester.pumpAndSettle();
     expect(tester.getRect(field).bottom, lessThanOrEqualTo(size.height - 380));
-    _viewport(platform, size.height, size.height);
+    _visualViewport(platform, size.height, size.height);
     await tester.pumpAndSettle();
     expect(tester.getRect(field).bottom, greaterThan(size.height - 120));
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 
   testWidgets('cramped (landscape), the bar gives way to the field', (
@@ -152,14 +134,14 @@ void main() {
     final (phone, platform) = await _app(tester, size);
     await tester.tap(find.text('Fix the flaky relay test'));
     await tester.pumpAndSettle();
-    _viewport(platform, size.height, 150);
+    _visualViewport(platform, size.height, 150);
     await tester.pumpAndSettle();
     expect(find.bySemanticsLabel('Back'), findsNothing);
     final box = tester.getRect(find.byType(TextField).last);
     expect(box.top, greaterThanOrEqualTo(0));
     expect(box.bottom, lessThanOrEqualTo(150));
     expect(tester.takeException(), isNull);
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 
   testWidgets('New chat: the folder field scrolls above the keyboard', (
@@ -173,12 +155,12 @@ void main() {
     expect(tester.getRect(field).bottom, greaterThan(400), reason: 'low');
     await tester.tap(field);
     await tester.pump();
-    _viewport(platform, size.height, 400);
+    _visualViewport(platform, size.height, 400);
     await tester.pumpAndSettle();
     final box = tester.getRect(field);
     expect(box.top, greaterThan(52), reason: 'below the bar');
     expect(box.bottom, lessThanOrEqualTo(400), reason: 'above the keyboard');
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 
   testWidgets('Pairing: the link field scrolls above the keyboard', (
@@ -190,11 +172,11 @@ void main() {
     expect(tester.getRect(field).bottom, greaterThan(330), reason: 'low');
     await tester.tap(field);
     await tester.pump();
-    _viewport(platform, size.height, 330);
+    _visualViewport(platform, size.height, 330);
     await tester.pumpAndSettle();
     final box = tester.getRect(field);
     expect(box.top, greaterThan(52), reason: 'below the bar');
     expect(box.bottom, lessThanOrEqualTo(330), reason: 'above the keyboard');
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 }

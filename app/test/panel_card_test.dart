@@ -8,6 +8,7 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 void main() {
   setUpAll(loadFonts);
@@ -133,9 +134,7 @@ void _goldens() {
     ('light', Tokens.light),
   ]) {
     testWidgets('golden, a card with its grip on hover, $name', (tester) async {
-      tester.view.devicePixelRatio = 2;
-      tester.view.physicalSize = const Size(300, 190) * 2;
-      addTearDown(tester.view.reset);
+      viewport(tester, const Size(300, 190), ratio: 2);
       collapsedCards.value = {'Context'};
       await tester.pumpWidget(_cards(tokens));
       final mouse = await _pointer(tester);

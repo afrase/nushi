@@ -8,6 +8,7 @@ import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 
@@ -26,12 +27,7 @@ ReviewComment _comment(String id, int line, String quote, String text) =>
 /// The app at [width] on chat c in a repository with sub.go changed, two
 /// review comments made in its Changes view and not sent.
 Future<Daemon> _app(WidgetTester tester, double width) async {
-  tester.view
-    ..devicePixelRatio = 1
-    ..physicalSize = Size(width, 640);
-  addTearDown(tester.view.reset);
-  tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
-  addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+  viewport(tester, Size(width, 640), brightness: Brightness.dark);
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .setMockMethodCallHandler(
         const MethodChannel('nushi/fonts'),

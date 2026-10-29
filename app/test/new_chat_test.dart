@@ -13,6 +13,7 @@ import 'package:nushi/sidebar.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 /// The newest chat is Codex's, so the dialog starts on Codex.
 final List<Chat> _chats = [
@@ -53,49 +54,50 @@ Future<void> _key(WidgetTester tester, LogicalKeyboardKey key) async {
   await tester.pumpAndSettle();
 }
 
-final _now = DateTime.now();
-
 /// Sessions a terminal started, the newest first.
-ListAgentSessionsResponse _found(ListAgentSessionsRequest r) =>
-    switch (r.cursor) {
-      '' => ListAgentSessionsResponse(
-        canList: true,
-        seesOpen: r.agent == 'claude',
-        nextCursor: 'p2',
-        sessions: [
-          FoundSession(
-            sessionId: 's1',
-            title: 'Fix the flaky test',
-            folder: '/Users/me/nushi',
-            updatedUnixMs: Int64(
-              _now.subtract(const Duration(minutes: 5)).millisecondsSinceEpoch,
-            ),
-            messages: 12,
-            openIn: 'a terminal',
-          ),
-          FoundSession(
-            sessionId: 's2',
-            title: 'Rename the relay flags',
-            folder: '/Users/me/relay',
-            updatedUnixMs: Int64(
-              _now.subtract(const Duration(hours: 3)).millisecondsSinceEpoch,
-            ),
-          ),
-          FoundSession(
-            sessionId: 's3',
-            folder: '/Users/me/old',
-            folderGone: true,
-            updatedUnixMs: Int64(
-              _now.subtract(const Duration(days: 4)).millisecondsSinceEpoch,
-            ),
-          ),
-        ],
+ListAgentSessionsResponse _found(
+  ListAgentSessionsRequest r,
+) => switch (r.cursor) {
+  '' => ListAgentSessionsResponse(
+    canList: true,
+    seesOpen: r.agent == 'claude',
+    nextCursor: 'p2',
+    sessions: [
+      FoundSession(
+        sessionId: 's1',
+        title: 'Fix the flaky test',
+        folder: '/Users/me/nushi',
+        updatedUnixMs: Int64(
+          fixtureNow
+              .subtract(const Duration(minutes: 5))
+              .millisecondsSinceEpoch,
+        ),
+        messages: 12,
+        openIn: 'a terminal',
       ),
-      _ => ListAgentSessionsResponse(
-        canList: true,
-        sessions: [FoundSession(sessionId: 's4', title: 'Older one')],
+      FoundSession(
+        sessionId: 's2',
+        title: 'Rename the relay flags',
+        folder: '/Users/me/relay',
+        updatedUnixMs: Int64(
+          fixtureNow.subtract(const Duration(hours: 3)).millisecondsSinceEpoch,
+        ),
       ),
-    };
+      FoundSession(
+        sessionId: 's3',
+        folder: '/Users/me/old',
+        folderGone: true,
+        updatedUnixMs: Int64(
+          fixtureNow.subtract(const Duration(days: 4)).millisecondsSinceEpoch,
+        ),
+      ),
+    ],
+  ),
+  _ => ListAgentSessionsResponse(
+    canList: true,
+    sessions: [FoundSession(sessionId: 's4', title: 'Older one')],
+  ),
+};
 
 /// Claude installed but not set up, oh-my-pi not installed.
 List<Agent> _notAllReady() => [
@@ -450,10 +452,7 @@ void main() {
     ('light', Tokens.light),
   ]) {
     testWidgets('the dialog ($name)', (tester) async {
-      tester.view
-        ..devicePixelRatio = 1
-        ..physicalSize = const Size(700, 400);
-      addTearDown(tester.view.reset);
+      viewport(tester, const Size(700, 400));
       final (fake, d) = await _sidebar(tester, tokens: tokens);
       fake.agents = _notAllReady();
       d.cantStart['ante'] =
@@ -469,10 +468,7 @@ void main() {
       d.dispose();
     });
     testWidgets('the sessions ($name)', (tester) async {
-      tester.view
-        ..devicePixelRatio = 1
-        ..physicalSize = const Size(700, 400);
-      addTearDown(tester.view.reset);
+      viewport(tester, const Size(700, 400));
       final (fake, d) = await _sidebar(tester, tokens: tokens);
       fake.sessions = _found;
       await _open(tester);

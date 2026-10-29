@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fake_daemon.dart';
-import 'github_view_test.dart' show closeView, openView;
+import 'github_view_test.dart' show openView;
+import 'harness.dart';
 
 /// The view in a wide window: the bar's buttons at its right edge, not
 /// where the filters' share of the free width ends.

@@ -10,6 +10,7 @@ import 'package:nushi/preview.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 const _text =
     'Wrote `docs/plan.md` and changed lib/main.dart:12 (see the '
@@ -41,10 +42,7 @@ void main() {
     for (final width in [720.0, 1700.0]) {
       testWidgets('the files a message names that are there open the preview '
           '(${width.round()}, $name)', (tester) async {
-        tester.view
-          ..devicePixelRatio = 1
-          ..physicalSize = Size(width, 220);
-        addTearDown(tester.view.reset);
+        viewport(tester, Size(width, 220));
         final fake = FakeDaemon([])
           ..answer = (input) => switch (input) {
             FindChatFilesRequest() => FindChatFilesResponse(

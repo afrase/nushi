@@ -4,6 +4,7 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 void main() {
   setUpAll(loadFonts);
@@ -14,9 +15,7 @@ void main() {
   ]) {
     // Enlarged, so the corners show: the border's curve over the red fill.
     testWidgets('golden, a failed call, $name', (tester) async {
-      tester.view.devicePixelRatio = 4;
-      tester.view.physicalSize = const Size(240, 56) * 4;
-      addTearDown(tester.view.reset);
+      viewport(tester, const Size(240, 56), ratio: 4);
       await tester.pumpWidget(
         MaterialApp(
           theme: NushiTheme(tokens).toThemeData(),

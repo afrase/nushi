@@ -12,6 +12,7 @@ import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'github_view_test.dart' show pull;
+import 'harness.dart';
 
 const _repo = 'afrase/nushi-gh-test';
 
@@ -67,10 +68,7 @@ void main() {
 
   testWidgets("send to agent: a comment and a failed check go to the chat's "
       'box as reply cards, together', (tester) async {
-    tester.view
-      ..devicePixelRatio = 1
-      ..physicalSize = const Size(1500, 900);
-    addTearDown(tester.view.reset);
+    viewport(tester, const Size(1500, 900));
     showDetails.value = true;
     pullSeen.value = {};
     final c = chat('c', 'claude', 'Add Sub and Neg');

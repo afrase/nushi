@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
@@ -13,6 +11,7 @@ import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'github_view_test.dart' show item, pull;
+import 'harness.dart';
 
 GitHubLink _link(int n) => GitHubLink(
   host: 'github.com',
@@ -47,10 +46,7 @@ void main() {
 
   testWidgets("the sidebar's rows: a dot for a pull request's checks, red "
       'failing, amber running, none passed', (tester) async {
-    tester.view
-      ..devicePixelRatio = 1
-      ..physicalSize = const Size(1200, 700);
-    addTearDown(tester.view.reset);
+    viewport(tester, const Size(1200, 700));
     final fake = FakeDaemon(_chats())..answer = _states;
     final d = await fake.connect(tester);
     await tester.pumpWidget(NushiApp(daemon: d));
@@ -65,32 +61,21 @@ void main() {
     // Each minute, quietly.
     await tester.pump(const Duration(minutes: 1));
     expect(fake.calls.whereType<GetGitHubStatesRequest>().last.quiet, isTrue);
-    await tester.pumpWidget(const SizedBox());
-    d.dispose();
+    await closeView(tester, d);
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
   for (final size in const [Size(390, 844), Size(430, 932), Size(844, 390)]) {
     testWidgets("the phone: the pull request in the chat's bar, a tap opens "
         'it (${size.width.toInt()}×${size.height.toInt()})', (tester) async {
-      tester.view
-        ..devicePixelRatio = 2
-        ..physicalSize = size * 2;
+      viewport(tester, size, ratio: 2);
       tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
-      addTearDown(tester.view.reset);
       addTearDown(tester.platformDispatcher.clearAllTestValues);
       final fake = FakeDaemon(_chats())
         ..answer = (input) => switch (input) {
           GetChatRequest() => GetChatResponse(chat: _chats().first),
           _ => _states(input),
         };
-      final platform = PhonePlatform()
-        ..saved = {
-          'key': Uint8List(32)..[0] = 7,
-          'name': 'iPhone',
-          'relay': 'wss://nushi.aaronfrase.com',
-          'daemon': 'ArJKFXeGeF5z4WCydMz-dOXinj4sE99eMxmb-oJ3qLE',
-          'daemonKey': Uint8List(32)..[0] = 9,
-        };
+      final platform = PhonePlatform()..saved = pairedRecord();
       final phone = Phone(
         platform,
         connectTo: (_) => Daemon(transport: fake, remote: true),
@@ -114,9 +99,7 @@ void main() {
         lessThanOrEqualTo(size.width),
         reason: 'inside the bar',
       );
-      await phone.close();
-      await tester.pumpWidget(const SizedBox());
-      await tester.pump(const Duration(seconds: 5));
+      await endPhone(tester, phone);
     });
   }
 
@@ -127,11 +110,8 @@ void main() {
     testWidgets("the phone's bar: the PR widget's one-line summary, $name", (
       tester,
     ) async {
-      tester.view
-        ..devicePixelRatio = 2
-        ..physicalSize = const Size(390, 844) * 2;
+      viewport(tester, const Size(390, 844), ratio: 2);
       tester.platformDispatcher.platformBrightnessTestValue = brightness;
-      addTearDown(tester.view.reset);
       addTearDown(tester.platformDispatcher.clearAllTestValues);
       final fake = FakeDaemon(_chats())
         ..answer = (input) => switch (input) {
@@ -141,14 +121,7 @@ void main() {
           ),
           _ => _states(input),
         };
-      final platform = PhonePlatform()
-        ..saved = {
-          'key': Uint8List(32)..[0] = 7,
-          'name': 'iPhone',
-          'relay': 'wss://nushi.aaronfrase.com',
-          'daemon': 'ArJKFXeGeF5z4WCydMz-dOXinj4sE99eMxmb-oJ3qLE',
-          'daemonKey': Uint8List(32)..[0] = 9,
-        };
+      final platform = PhonePlatform()..saved = pairedRecord();
       final phone = Phone(
         platform,
         connectTo: (_) => Daemon(transport: fake, remote: true),
@@ -172,9 +145,7 @@ void main() {
         find.byType(PhoneApp),
         matchesGoldenFile('goldens/pull_phone_bar_$name.png'),
       );
-      await phone.close();
-      await tester.pumpWidget(const SizedBox());
-      await tester.pump(const Duration(seconds: 5));
+      await endPhone(tester, phone);
     });
   }
 
@@ -191,7 +162,6 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byType(PullChip));
     expect(opened, ['https://github.com/afrase/nushi-gh-test/pull/1']);
-    await tester.pumpWidget(const SizedBox());
-    d.dispose();
+    await closeView(tester, d);
   });
 }

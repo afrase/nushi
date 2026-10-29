@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import 'package:nushi/chat.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/folder_button.dart';
@@ -170,7 +171,7 @@ DateTime? _modified(String path) {
 /// it last changed ("docs · 2m ago").
 String fileDetail(String path, DateTime? changed) => [
   folderOf(path),
-  if (changed != null) ago(DateTime.now().difference(changed), changed),
+  if (changed != null) ago(clock().difference(changed), changed),
 ].where((s) => s.isNotEmpty).join(' · ');
 
 /// A menu of [chat]'s artifacts ([chatArtifacts]): the pinned, the recent,

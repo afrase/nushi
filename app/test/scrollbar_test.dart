@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 /// The overlay scrollbar under a mouse, as on a Mac: in a 400×600 window,
 /// a list of 200 rows of 40, so the thumb is 600 × 600/8000 tall at the
@@ -16,10 +17,7 @@ void main() {
     WidgetTester tester, {
     bool selectable = false,
   }) async {
-    tester.view
-      ..devicePixelRatio = 1
-      ..physicalSize = const Size(400, 600);
-    addTearDown(tester.view.reset);
+    viewport(tester, const Size(400, 600));
     final c = ScrollController();
     addTearDown(c.dispose);
     selected = null;
@@ -147,10 +145,7 @@ Widget _selectable(bool on, void Function(String) onSelected, Widget child) =>
 /// Two lists in the app's theme: the left one just scrolled (thin), the
 /// right one with the pointer near its edge (wide, on its track).
 Future<void> _looks(WidgetTester tester, Tokens tokens, String name) async {
-  tester.view
-    ..devicePixelRatio = 1
-    ..physicalSize = const Size(320, 200);
-  addTearDown(tester.view.reset);
+  viewport(tester, const Size(320, 200));
   final left = ScrollController();
   addTearDown(left.dispose);
   final theme = NushiTheme(tokens);

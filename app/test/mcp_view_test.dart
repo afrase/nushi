@@ -9,6 +9,7 @@ import 'package:nushi/panel_cards.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 /// A folder's servers, one of each kind, one user server off.
 List<McpServer> _servers() => [
@@ -99,8 +100,7 @@ void main() {
       (set.folder, set.scope, set.name, set.on),
       ('/Users/me/switch', 'user', 'notes', true),
     );
-    await tester.pumpWidget(const SizedBox());
-    d.dispose();
+    await closeView(tester, d);
   });
 
   testWidgets('the card: a switch a server, and after a change "Applies '
@@ -123,8 +123,7 @@ void main() {
     await tester.tap(find.text('Reload'));
     await tester.pumpAndSettle();
     expect(fake.calls.whereType<ReloadChatRequest>().single.chatId, 'c1');
-    await tester.pumpWidget(const SizedBox());
-    d.dispose();
+    await closeView(tester, d);
   });
 
   for (final (name, tokens) in [
@@ -137,8 +136,7 @@ void main() {
         find.byType(McpView),
         matchesGoldenFile('goldens/mcp_view_$name.png'),
       );
-      await tester.pumpWidget(const SizedBox());
-      d.dispose();
+      await closeView(tester, d);
     });
   }
 }

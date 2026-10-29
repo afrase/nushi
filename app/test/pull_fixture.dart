@@ -1,7 +1,6 @@
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/chat.dart';
 import 'package:nushi/chat_header.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -9,9 +8,7 @@ import 'package:nushi/main.dart';
 import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
-
-/// The time the fixture's ages count from.
-final fixtureNow = DateTime(2026, 10, 29, 12);
+import 'harness.dart';
 
 const fixtureRepo = 'octo/notes';
 
@@ -271,14 +268,7 @@ Future<(Daemon, FakeDaemon)> openPullTab(
   Worktree? worktree,
   bool busy = false,
 }) async {
-  tester.view
-    ..devicePixelRatio = 1
-    ..physicalSize = size;
-  addTearDown(tester.view.reset);
-  tester.platformDispatcher.platformBrightnessTestValue = brightness;
-  addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
-  clock = () => fixtureNow;
-  addTearDown(() => clock = DateTime.now);
+  viewport(tester, size, brightness: brightness);
   showDetails.value = details;
   collapsedCards.value = {};
   cardOrder.value = ['Pull request'];

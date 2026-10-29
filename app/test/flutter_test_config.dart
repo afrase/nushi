@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/agents.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_review.dart';
@@ -14,15 +15,19 @@ import 'package:nushi/remote.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
 
+import 'harness.dart';
+
 /// On CI (GitHub's macOS image draws text a few pixels differently from a
 /// Mac), a golden may differ in up to 1% of its pixels (a card dense with
 /// text, as a review's findings, reaches 0.56% from anti-aliasing alone);
 /// here it must match. Every shine stands still, its band before the text,
 /// and so does every loop on the shared clock that reads `loopPhase` (a
 /// pull request's running ring, a streaming reply's caret), so goldens are
-/// one frame and pumpAndSettle settles while a call runs. No test sees
-/// what another left: the app's prefs as at launch, no pull request read,
-/// no agents, review comments or drafts, remote state or clones known.
+/// one frame and pumpAndSettle settles while a call runs; the app's clock
+/// stands at [fixtureNow], so an age a golden shows never moves. No test
+/// sees what another left: the app's prefs as at launch, no pull request
+/// read, no agents, review comments or drafts, remote state or clones
+/// known.
 /// The test process's data folder goes when its tests end.
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   Shine.stopAt = 0;
@@ -33,6 +38,7 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
     );
   }
   setUp(() {
+    clock = () => fixtureNow;
     resetAppSettings();
     forgetPulls();
     forgetReviews();

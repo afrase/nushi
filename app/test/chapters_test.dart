@@ -10,6 +10,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/transcript.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 /// A small screenshot, as a message's image.
 final Uint8List _shot = base64.decode(
@@ -146,12 +147,7 @@ void main() {
     ('light', Brightness.light),
   ]) {
     testWidgets('the transcript as chapters ($name)', (tester) async {
-      tester.view
-        ..devicePixelRatio = 1
-        ..physicalSize = const Size(1000, 1080);
-      tester.platformDispatcher.platformBrightnessTestValue = brightness;
-      addTearDown(tester.view.reset);
-      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      viewport(tester, const Size(1000, 1080), brightness: brightness);
       showDetails.value = false;
       final c = chat('c', 'claude', 'Fix the login redirect');
       final fake = FakeDaemon([c])
@@ -194,17 +190,13 @@ void main() {
         find.byType(ChatView),
         matchesGoldenFile('goldens/chapters_$name.png'),
       );
-      await tester.pumpWidget(const SizedBox()); // its timers end
-      d.dispose();
+      await closeView(tester, d);
     }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
   }
 
   testWidgets('a band goes edge to edge; the agent’s text keeps its '
       'margins', (tester) async {
-    tester.view
-      ..devicePixelRatio = 1
-      ..physicalSize = const Size(1000, 860);
-    addTearDown(tester.view.reset);
+    viewport(tester, const Size(1000, 860));
     showDetails.value = false;
     final c = chat('c', 'claude', 'Fix the login redirect');
     final fake = FakeDaemon([c])
@@ -230,7 +222,6 @@ void main() {
       find.textContaining('Logout clears', findRichText: true),
     );
     expect(prose.left, view.left + 20);
-    await tester.pumpWidget(const SizedBox());
-    d.dispose();
+    await closeView(tester, d);
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 }

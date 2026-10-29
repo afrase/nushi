@@ -13,6 +13,7 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 const _answer =
     'The timestamp is parsed once when the chat loads and kept as a '
@@ -29,12 +30,7 @@ Future<(FakeDaemon, Future<void> Function())> _open(
   Brightness brightness = Brightness.dark,
   bool low = false,
 }) async {
-  tester.view
-    ..devicePixelRatio = 1
-    ..physicalSize = size;
-  tester.platformDispatcher.platformBrightnessTestValue = brightness;
-  addTearDown(tester.view.reset);
-  addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+  viewport(tester, size, brightness: brightness);
   showDetails.value = false;
   final c = chat('c', 'claude', 'Timestamps in the sidebar');
   final fake = FakeDaemon([c])
@@ -66,8 +62,7 @@ Future<(FakeDaemon, Future<void> Function())> _open(
   return (
     fake,
     () async {
-      await tester.pumpWidget(const SizedBox()); // its timers end
-      d.dispose();
+      await closeView(tester, d);
     },
   );
 }

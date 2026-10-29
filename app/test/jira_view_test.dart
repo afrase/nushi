@@ -11,6 +11,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 final _site = JiraSite(
   id: 'acme.atlassian.net',
@@ -120,12 +121,6 @@ Future<(FakeDaemon, Daemon)> openView(
 /// The issue the view shows.
 String shown(WidgetTester tester) =>
     tester.widget<JiraIssuePane>(find.byType(JiraIssuePane)).issueKey;
-
-/// Ends the view (its poll) and the daemon.
-Future<void> closeView(WidgetTester tester, Daemon d) async {
-  await tester.pumpWidget(const SizedBox());
-  d.dispose();
-}
 
 void main() {
   setUpAll(loadFonts);

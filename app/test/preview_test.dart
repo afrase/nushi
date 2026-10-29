@@ -18,6 +18,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/tool_calls.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 const _report = '''
 # CI and releases, week of Oct 26
@@ -146,10 +147,7 @@ Future<Daemon> _app(
   double width = 1700,
   List<String>? asked,
 }) async {
-  tester.view
-    ..devicePixelRatio = 1
-    ..physicalSize = Size(width, 900);
-  addTearDown(tester.view.reset);
+  viewport(tester, Size(width, 900));
   showDetails.value = false;
   paneWidths.value = {};
   subagentWide.value = false;
@@ -166,22 +164,12 @@ Future<(Phone, PhonePlatform)> _phone(
   WidgetTester tester, {
   int api = apiVersion,
 }) async {
-  tester.view
-    ..devicePixelRatio = 3
-    ..physicalSize = const Size(390, 844) * 3;
+  viewport(tester, const Size(390, 844), ratio: 3);
   tester.platformDispatcher.accessibilityFeaturesTestValue =
       const FakeAccessibilityFeatures(disableAnimations: true);
-  addTearDown(tester.view.reset);
   addTearDown(tester.platformDispatcher.clearAllTestValues);
   Collapsible.opened.clear();
-  final platform = PhonePlatform()
-    ..saved = {
-      'key': Uint8List(32)..[0] = 7,
-      'name': 'iPhone',
-      'relay': 'wss://nushi.aaronfrase.com',
-      'daemon': 'ArJKFXeGeF5z4WCydMz-dOXinj4sE99eMxmb-oJ3qLE',
-      'daemonKey': Uint8List(32)..[0] = 9,
-    };
+  final platform = PhonePlatform()..saved = pairedRecord();
   final fake = _fake(api: api);
   final phone = Phone(
     platform,
@@ -195,12 +183,6 @@ Future<(Phone, PhonePlatform)> _phone(
   await tester.tap(find.text('Write the release report'));
   await tester.pumpAndSettle();
   return (phone, platform);
-}
-
-Future<void> _end(WidgetTester tester, Phone phone) async {
-  await phone.close();
-  await tester.pumpWidget(const SizedBox());
-  await tester.pump(const Duration(seconds: 5));
 }
 
 final _ios = TargetPlatformVariant.only(TargetPlatform.iOS);
@@ -277,7 +259,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(screen, findsNothing);
     expect(find.text('Write the release report'), findsOneWidget);
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   }, variant: _ios);
 
   testWidgets('no Preview with an older daemon (the phone)', (tester) async {
@@ -287,7 +269,7 @@ void main() {
       findsWidgets,
     );
     expect(_buttons, findsNothing);
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   }, variant: _ios);
 
   testWidgets('the pane: rendered, its source, another file, closed', (

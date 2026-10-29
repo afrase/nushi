@@ -12,6 +12,7 @@ import 'package:nushi/jira_issue_parts.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 final _now = DateTime(2026, 10, 25, 12);
 Int64 _ago(Duration d) => Int64(_now.subtract(d).millisecondsSinceEpoch);
@@ -171,11 +172,6 @@ Finder menuRow(String label) => find.ancestor(
   matching: find.byType(MenuItemButton),
 );
 
-Future<void> _close(WidgetTester tester, Daemon d) async {
-  await tester.pumpWidget(const SizedBox());
-  d.dispose();
-}
-
 void main() {
   setUpAll(loadFonts);
 
@@ -226,7 +222,7 @@ void main() {
     await tester.tap(find.text('ACME-13'));
     await tester.tap(find.text('ACME-1'));
     expect(opened, ['ACME-13', 'ACME-1']);
-    await _close(tester, d);
+    await closeView(tester, d);
   });
 
   testWidgets('a move that asks for a field', (tester) async {
@@ -245,7 +241,7 @@ void main() {
     final move = fake.calls.whereType<TransitionJiraIssueRequest>().single;
     expect((move.key, move.transition), ('ACME-12', '31'));
     expect(move.values, {'resolution': '1'});
-    await _close(tester, d);
+    await closeView(tester, d);
   });
 
   testWidgets('a comment in Markdown', (tester) async {
@@ -259,7 +255,7 @@ void main() {
     await tester.pumpAndSettle();
     final c = fake.calls.whereType<AddJiraCommentRequest>().single;
     expect((c.key, c.markdown), ('ACME-12', 'Yes, **Safari** first.'));
-    await _close(tester, d);
+    await closeView(tester, d);
   });
 
   testWidgets('a chat on the issue: the dialog has it picked, a worktree on '
@@ -303,7 +299,7 @@ void main() {
       ),
     );
     expect(d.chats['c1']!.draft.text.text, isEmpty);
-    await _close(tester, d);
+    await closeView(tester, d);
   });
 
   for (final (name, tokens) in [
@@ -316,7 +312,7 @@ void main() {
         find.byType(JiraIssuePane),
         matchesGoldenFile('goldens/jira_issue_$name.png'),
       );
-      await _close(tester, d);
+      await closeView(tester, d);
     });
   }
 }

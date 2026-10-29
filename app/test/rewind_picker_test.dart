@@ -10,6 +10,7 @@ import 'package:nushi/rewind_picker.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 /// A user message sent [minutes] ago, rewindable.
 Item _message(String id, String text, int minutes) => Item(
@@ -18,7 +19,7 @@ Item _message(String id, String text, int minutes) => Item(
   text: text,
   rewindable: true,
   sent: Int64(
-    DateTime.now()
+    fixtureNow
         .subtract(Duration(minutes: minutes, seconds: 5))
         .millisecondsSinceEpoch,
   ),
@@ -42,10 +43,7 @@ Future<(Daemon, List<RewindChatRequest>)> _box(
   WidgetTester tester,
   ChatState chat,
 ) async {
-  tester.view
-    ..devicePixelRatio = 1
-    ..physicalSize = const Size(1200, 700);
-  addTearDown(tester.view.reset);
+  viewport(tester, const Size(1200, 700));
   final rewound = <RewindChatRequest>[];
   final fake = FakeDaemon([])
     ..answer = (input) {

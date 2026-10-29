@@ -2,7 +2,6 @@
 // the stub's history: one entry per screen over the root, the browser's
 // back (iOS's edge swipe) takes a screen away, the app's own back takes
 // the history back with it, and neither answers the other in a loop.
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,6 +12,7 @@ import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/phone/platform.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 final List<Chat> _chats = [
   chat('a', 'claude', 'Fix the flaky relay test'),
@@ -20,21 +20,11 @@ final List<Chat> _chats = [
 ];
 
 Future<(Phone, PhonePlatform)> _app(WidgetTester tester) async {
-  tester.view
-    ..devicePixelRatio = 2
-    ..physicalSize = const Size(390, 844) * 2;
+  viewport(tester, const Size(390, 844), ratio: 2);
   tester.platformDispatcher.accessibilityFeaturesTestValue =
       const FakeAccessibilityFeatures(disableAnimations: true);
-  addTearDown(tester.view.reset);
   addTearDown(tester.platformDispatcher.clearAllTestValues);
-  final platform = PhonePlatform()
-    ..saved = {
-      'key': Uint8List(32)..[0] = 7,
-      'name': 'iPhone',
-      'relay': 'wss://nushi.aaronfrase.com',
-      'daemon': 'ArJKFXeGeF5z4WCydMz-dOXinj4sE99eMxmb-oJ3qLE',
-      'daemonKey': Uint8List(32)..[0] = 9,
-    };
+  final platform = PhonePlatform()..saved = pairedRecord();
   final phone = Phone(
     platform,
     connectTo: (_) => Daemon(transport: FakeDaemon(_chats), remote: true),
@@ -45,12 +35,6 @@ Future<(Phone, PhonePlatform)> _app(WidgetTester tester) async {
     await tester.pump();
   }
   return (phone, platform);
-}
-
-Future<void> _end(WidgetTester tester, Phone phone) async {
-  await phone.close();
-  await tester.pumpWidget(const SizedBox());
-  await tester.pump(const Duration(seconds: 5));
 }
 
 NavigatorState _nav(WidgetTester tester) =>
@@ -88,7 +72,7 @@ void main() {
     expect(find.text('Chats'), findsNothing);
     expect(platform.entries, [0, 1]);
     expect(platform.at, 1);
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 
   testWidgets('the app’s back takes the history back with it, once', (
@@ -110,7 +94,7 @@ void main() {
     expect(platform.entries, [0, 1]);
     expect(platform.at, 1);
     expect(find.text('New chat'), findsWidgets);
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 
   testWidgets('a notification’s chat: back goes to the chats', (tester) async {
@@ -129,7 +113,7 @@ void main() {
     expect(find.text('Chats'), findsOneWidget);
     expect(_nav(tester).canPop(), isFalse);
     expect(platform.at, 0);
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 
   testWidgets('a dialog over a screen goes with it on the browser’s back', (
@@ -149,7 +133,7 @@ void main() {
     expect(find.text('Chats'), findsOneWidget);
     expect(platform.at, 0);
     expect(phone.daemon, isNotNull, reason: 'nothing was forgotten');
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 
   testWidgets('the edge swipe is the browser’s, not Flutter’s', (tester) async {
@@ -164,7 +148,7 @@ void main() {
     expect(find.text('Chats'), findsNothing);
     expect(_nav(tester).userGestureInProgress, isFalse);
     expect(platform.at, 1);
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 
   testWidgets('forward onto a screen that’s gone goes back again', (
@@ -182,6 +166,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(platform.at, 0);
     expect(find.text('Chats'), findsOneWidget);
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   });
 }

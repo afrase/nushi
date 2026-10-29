@@ -8,6 +8,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/transcript.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 const _repo = '/Users/me/nushi';
 const _branch = 'nushi/bump-go-to-1-27-3-and-fix-the-flaky-tests';
@@ -57,12 +58,7 @@ Future<Future<void> Function()> _open(
   required double details,
   Brightness brightness = Brightness.dark,
 }) async {
-  tester.view
-    ..devicePixelRatio = 1
-    ..physicalSize = Size(width, 620);
-  tester.platformDispatcher.platformBrightnessTestValue = brightness;
-  addTearDown(tester.view.reset);
-  addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+  viewport(tester, Size(width, 620), brightness: brightness);
   showDetails.value = true;
   paneWidths.value = {'details': details};
   final c =
@@ -97,8 +93,7 @@ Future<Future<void> Function()> _open(
   FocusManager.instance.primaryFocus?.unfocus(); // no caret blinking
   await tester.pumpAndSettle();
   return () async {
-    await tester.pumpWidget(const SizedBox()); // its timers end
-    d.dispose();
+    await closeView(tester, d);
   };
 }
 

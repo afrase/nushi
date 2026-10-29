@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:nushi/chat.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -116,7 +117,7 @@ class _RewindPickerState extends State<RewindPicker> {
       final chat = widget.chat;
       final shown = _shown;
       _at = _at.clamp(0, shown.isEmpty ? 0 : shown.length - 1);
-      final now = DateTime.now();
+      final now = clock();
       final none = switch (chat) {
         _ when chat.busy && chat.stopping => 'Stopping the turn…',
         _ when chat.busy => 'Stop the turn first',

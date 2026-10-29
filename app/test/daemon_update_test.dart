@@ -8,6 +8,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 /// A fake daemon whose Ping answers [ping] (null: no daemon answers).
 /// Its restart waits for chat c's turn and a command in chat r's
@@ -39,10 +40,7 @@ Future<Daemon> _open(
   FakeDaemon fake, {
   double width = 900,
 }) async {
-  tester.view
-    ..devicePixelRatio = 1
-    ..physicalSize = Size(width, 500);
-  addTearDown(tester.view.reset);
+  viewport(tester, Size(width, 500));
   final d = Daemon(transport: fake)..bundled = '7-2000';
   await tester.pumpWidget(NushiApp(daemon: d));
   await tester.pumpAndSettle();

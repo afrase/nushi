@@ -14,6 +14,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 final String _repo = '${Platform.environment['HOME']}/code/nushi';
 const _long = 'nushi/bump-go-to-1-27-3-and-fix-the-flaky-tests';
@@ -102,10 +103,7 @@ void main() {
       testWidgets('golden, the Environment card ${width.round()} wide, $name', (
         tester,
       ) async {
-        tester.view
-          ..devicePixelRatio = 2
-          ..physicalSize = Size(width, 520) * 2;
-        addTearDown(tester.view.reset);
+        viewport(tester, Size(width, 520), ratio: 2);
         final d = await _panel(
           tester,
           _fake(_long),
@@ -132,10 +130,7 @@ void main() {
     testWidgets('golden, the Rename branch dialog refused, $name', (
       tester,
     ) async {
-      tester.view
-        ..devicePixelRatio = 2
-        ..physicalSize = const Size(720, 420) * 2;
-      addTearDown(tester.view.reset);
+      viewport(tester, const Size(720, 420), ratio: 2);
       final fake = _fake(
         'nushi/bump-go-1-27-3',
         rename: () => throw ConnectException(

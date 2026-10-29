@@ -1,5 +1,6 @@
 import 'package:connectrpc/connect.dart';
 import 'package:flutter/material.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/controls.dart';
 
@@ -417,7 +418,7 @@ class RowsLoading extends StatelessWidget {
 /// once asking failed, "Loading…" with nothing kept.
 String? updatedLine(DateTime? updated, {required bool loading, DateTime? now}) {
   if (updated == null) return loading ? 'Loading…' : null;
-  final when = ago((now ?? DateTime.now()).difference(updated), updated);
+  final when = ago((now ?? clock()).difference(updated), updated);
   return 'Updated $when${loading ? ' · refreshing' : ''}';
 }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:nushi/chat.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/drawn.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -32,7 +33,7 @@ String shellState(Item it) {
   return switch (sh.state) {
     'started' => [
       'started',
-      if (since != null) '${elapsed(DateTime.now().difference(since))} ago',
+      if (since != null) '${elapsed(clock().difference(since))} ago',
     ].join(' '),
     _ => [
       sh.state,

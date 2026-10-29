@@ -8,6 +8,7 @@ import 'package:nushi/menu.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 /// Each control four times: at rest, under the pointer, focused from the
 /// keyboard, disabled; each builds one, pressable or not.
@@ -54,9 +55,7 @@ void main() {
     for (final MapEntry(key: control, value: make) in _controls.entries) {
       testWidgets('golden, $control at rest, hovered, focused, disabled, '
           '$name', (tester) async {
-        tester.view.devicePixelRatio = 2;
-        tester.view.physicalSize = const Size(600, 72) * 2;
-        addTearDown(tester.view.reset);
+        viewport(tester, const Size(600, 72), ratio: 2);
         const states = ['rest', 'hover', 'focused', 'disabled'];
         await tester.pumpWidget(
           _app(

@@ -8,6 +8,7 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 /// Prose and code with emoji, ZWJ sequences, flags, skin tones, CJK
 /// without spaces and combining marks.
@@ -151,7 +152,6 @@ void main() {
     await tester.pumpAndSettle();
     check('ended');
     expect(frames, greaterThan(100));
-    await tester.pumpWidget(const SizedBox());
-    d.dispose();
+    await closeView(tester, d);
   });
 }

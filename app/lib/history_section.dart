@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/history_parts.dart';
@@ -262,7 +263,7 @@ class _HistorySectionState extends State<HistorySection> {
                 ),
               );
             }
-            final now = DateTime.now();
+            final now = clock();
             return DecoratedSliver(
               decoration: box(t.borderSubtle, fill: t.raised, radius: 8),
               sliver: SliverMainAxisGroup(

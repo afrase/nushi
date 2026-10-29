@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/gestures.dart';
@@ -15,6 +14,7 @@ import 'package:nushi/sidebar.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 const _ledger = '/Users/me/ledger-poc';
 
@@ -34,10 +34,7 @@ List<Chat> _chats({Map<String, int> pins = const {}}) => [
 
 /// The sidebar alone, 260 wide, on [chats].
 Future<Daemon> _sidebar(WidgetTester tester, List<Chat> chats) async {
-  tester.view
-    ..devicePixelRatio = 1
-    ..physicalSize = const Size(400, 600);
-  addTearDown(tester.view.reset);
+  viewport(tester, const Size(400, 600));
   final d = await FakeDaemon(chats).connect(tester);
   await tester.pumpWidget(
     MaterialApp(
@@ -105,10 +102,6 @@ Future<void> _drag(
 
 final Finder _line = find.byKey(const Key('drop line'));
 
-Map<String, Object?> _appJson() =>
-    jsonDecode(File('$dataDir/app.json').readAsStringSync())
-        as Map<String, Object?>;
-
 /// The app on [_chats], [select] shown; archiving answered as the daemon
 /// does (it unpins).
 Future<(Daemon, FakeDaemon)> _app(
@@ -116,10 +109,7 @@ Future<(Daemon, FakeDaemon)> _app(
   String? select,
   Map<String, int> pins = const {},
 }) async {
-  tester.view
-    ..devicePixelRatio = 1
-    ..physicalSize = const Size(1200, 700);
-  addTearDown(tester.view.reset);
+  viewport(tester, const Size(1200, 700));
   final chats = _chats(pins: pins);
   late final FakeDaemon fake;
   fake = FakeDaemon(chats)
@@ -187,7 +177,7 @@ void main() {
     expect(sidebarChats.value, {
       _ledger: ['f', 'a', 'b'],
     });
-    expect((_appJson()['sidebarChats']! as Map)[_ledger], ['f', 'a', 'b']);
+    expect((readSaved()['sidebarChats']! as Map)[_ledger], ['f', 'a', 'b']);
     expect(chatOrder(d).take(3).map((c) => c.id), ['f', 'a', 'b']);
 
     // Cap the rates (cappy) onto ledger-poc's rows: no line, no move.

@@ -18,6 +18,7 @@ import 'package:nushi/side_panel.dart';
 import 'package:xterm2/xterm.dart' hide Terminal;
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 /// Two chats in nushi, one in site; b has a pull request.
 final _pull = GitHubLink(
@@ -40,10 +41,7 @@ Future<(Daemon, FakeDaemon)> _app(
   String? select,
   Size size = const Size(1200, 700),
 }) async {
-  tester.view
-    ..devicePixelRatio = 1
-    ..physicalSize = size;
-  addTearDown(tester.view.reset);
+  viewport(tester, size);
   Object? answer(Object input) => switch (input) {
     ListTerminalsRequest(:final chatId) => ListTerminalsResponse(
       terminals: [

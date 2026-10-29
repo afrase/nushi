@@ -16,6 +16,7 @@ import 'package:nushi/status_bar.dart';
 import 'package:nushi/update_toast.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 final _macOS = TargetPlatformVariant.only(TargetPlatform.macOS);
 const _url = 'https://github.com/afrase/nushi/releases/tag/v0.1.17';
@@ -24,7 +25,7 @@ UpdateCheck _newer(String v) => UpdateCheck(
   version: v,
   url: _url,
   latest: v,
-  checkedMs: Int64(DateTime.now().millisecondsSinceEpoch),
+  checkedMs: Int64(fixtureNow.millisecondsSinceEpoch),
 );
 
 /// A daemon (0.1.16) whose check found [found]; Check for updates finds
@@ -50,12 +51,7 @@ Future<Daemon> _open(
   double width = 1700,
   Brightness brightness = Brightness.dark,
 }) async {
-  tester.view
-    ..devicePixelRatio = 1
-    ..physicalSize = Size(width, 700);
-  tester.platformDispatcher.platformBrightnessTestValue = brightness;
-  addTearDown(tester.view.reset);
-  addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+  viewport(tester, Size(width, 700), brightness: brightness);
   final d = await fake.connect(tester);
   await tester.pumpWidget(NushiApp(daemon: d));
   await tester.pumpAndSettle();

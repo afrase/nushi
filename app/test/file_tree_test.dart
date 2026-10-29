@@ -8,6 +8,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 void main() {
   final files = [
@@ -142,10 +143,7 @@ Future<List<String>> _pane(
   WidgetTester tester, {
   Tokens tokens = Tokens.dark,
 }) async {
-  tester.view
-    ..devicePixelRatio = 1
-    ..physicalSize = const Size(240, 200);
-  addTearDown(tester.view.reset);
+  viewport(tester, const Size(240, 200));
   final picked = <String>[];
   await tester.pumpWidget(
     MaterialApp(

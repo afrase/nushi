@@ -9,6 +9,7 @@ import 'package:nushi/skills_list.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 const _home = '/Users/me';
 
@@ -108,11 +109,6 @@ Future<(FakeDaemon, Daemon)> _view(
   return (fake, d);
 }
 
-Future<void> _close(WidgetTester tester, Daemon d) async {
-  await tester.pumpWidget(const SizedBox());
-  d.dispose();
-}
-
 void main() {
   setUpAll(loadFonts);
 
@@ -162,7 +158,7 @@ void main() {
     await tester.tap(find.text('Ante').last);
     await tester.pumpAndSettle();
     expect(find.text('Nushi doesn’t know where it is.'), findsOneWidget);
-    await _close(tester, d);
+    await closeView(tester, d);
   });
 
   testWidgets('Shared names the agents that load each skill, and the '
@@ -191,7 +187,7 @@ void main() {
       (set.agent, set.source, set.name, set.on),
       ('codex', 'shared', 'review', true),
     );
-    await _close(tester, d);
+    await closeView(tester, d);
   });
 
   testWidgets('a folder PiG doesn’t trust: no switch, and says so', (
@@ -201,7 +197,7 @@ void main() {
     expect(find.text('Loads once the folder is trusted'), findsOneWidget);
     expect(find.text('Not read by PiG here'), findsNWidgets(2));
     expect(find.byType(Switch), findsNothing);
-    await _close(tester, d);
+    await closeView(tester, d);
   });
 
   testWidgets('Delete… of a shared skill names every agent that loses it, '
@@ -229,7 +225,7 @@ void main() {
       (trash.agent, trash.path),
       ('codex', '$_home/app/.agents/skills/review'),
     );
-    await _close(tester, d);
+    await closeView(tester, d);
   });
 
   testWidgets('for Claude, a shared skill offers Link for Claude…, and New '
@@ -263,7 +259,7 @@ void main() {
     await tester.tap(find.text('In .agents/skills'));
     await tester.pumpAndSettle();
     expect(fake.started.single.agent, 'claude');
-    await _close(tester, d);
+    await closeView(tester, d);
   });
 
   for (final (name, tokens) in [
@@ -282,7 +278,7 @@ void main() {
         find.byType(SkillsView),
         matchesGoldenFile('goldens/skills_shared_$name.png'),
       );
-      await _close(tester, d);
+      await closeView(tester, d);
     });
   }
 }

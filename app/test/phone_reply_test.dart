@@ -19,6 +19,7 @@ import 'package:nushi/replies.dart';
 import 'package:nushi/reply_cards.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 final Chat _chat = chat('a', 'claude', 'Fix the flaky relay test');
 
@@ -31,21 +32,11 @@ Future<(Phone, PhonePlatform)> _chatOpen(
   WidgetTester tester, {
   Size size = const Size(390, 844),
 }) async {
-  tester.view
-    ..devicePixelRatio = 3
-    ..physicalSize = size * 3;
+  viewport(tester, size, ratio: 3);
   tester.platformDispatcher.accessibilityFeaturesTestValue =
       const FakeAccessibilityFeatures(disableAnimations: true);
-  addTearDown(tester.view.reset);
   addTearDown(tester.platformDispatcher.clearAllTestValues);
-  final platform = PhonePlatform()
-    ..saved = {
-      'key': Uint8List(32)..[0] = 7,
-      'name': 'iPhone',
-      'relay': 'wss://nushi.aaronfrase.com',
-      'daemon': 'ArJKFXeGeF5z4WCydMz-dOXinj4sE99eMxmb-oJ3qLE',
-      'daemonKey': Uint8List(32)..[0] = 9,
-    };
+  final platform = PhonePlatform()..saved = pairedRecord();
   final fake = FakeDaemon([_chat])
     ..answer = (input) => input is GetChatRequest
         ? GetChatResponse(
@@ -76,12 +67,6 @@ Future<(Phone, PhonePlatform)> _chatOpen(
   await tester.tap(find.text('Fix the flaky relay test'));
   await tester.pumpAndSettle();
   return (phone, platform);
-}
-
-Future<void> _end(WidgetTester tester, Phone phone) async {
-  await phone.close();
-  await tester.pumpWidget(const SizedBox());
-  await tester.pump(const Duration(seconds: 5));
 }
 
 /// The middle of [word] in the agent's answer.
@@ -166,7 +151,7 @@ void main() {
         (quote: 'socket', text: 'Can the fake clock bring it?', from: ''),
       ]);
       expect(tester.takeException(), isNull);
-      await _end(tester, phone);
+      await endPhone(tester, phone);
     }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
   }
 
@@ -193,7 +178,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(copied, 'reconnect');
     expect(find.byType(ReplyBox), findsNothing);
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
   testWidgets('Android: the same menu, Material', (tester) async {
@@ -206,7 +191,7 @@ void main() {
     await tester.tap(find.text('Reply'));
     await tester.pumpAndSettle();
     expect(tester.widget<ReplyBox>(find.byType(ReplyBox)).quote, 'socket');
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
   testWidgets('a mouse gets the toolbar where it went up, no menu', (
@@ -227,6 +212,6 @@ void main() {
     await tester.tap(find.text('Reply'));
     await tester.pumpAndSettle();
     expect(find.byType(ReplyBox), findsOneWidget);
-    await _end(tester, phone);
+    await endPhone(tester, phone);
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 }

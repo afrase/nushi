@@ -6,6 +6,7 @@ import 'package:nushi/skills.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 const _home = '/Users/me';
 
@@ -106,11 +107,6 @@ Future<(FakeDaemon, Daemon)> _view(
   return (fake, d);
 }
 
-Future<void> _close(WidgetTester tester, Daemon d) async {
-  await tester.pumpWidget(const SizedBox());
-  d.dispose();
-}
-
 void main() {
   setUpAll(loadFonts);
 
@@ -134,7 +130,7 @@ void main() {
     await tester.pumpAndSettle();
     final plugin = fake.calls.whereType<SetPluginOnRequest>().single;
     expect((plugin.id, plugin.on), ('team@market', true));
-    await _close(tester, d);
+    await closeView(tester, d);
   });
 
   testWidgets('search keeps the skills and plugins that match', (tester) async {
@@ -147,7 +143,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'nothing like it');
     await tester.pumpAndSettle();
     expect(find.text('No skills or plugins match.'), findsOneWidget);
-    await _close(tester, d);
+    await closeView(tester, d);
   });
 
   testWidgets('Delete… names the folder going to the Trash', (tester) async {
@@ -167,7 +163,7 @@ void main() {
       fake.calls.whereType<TrashSkillRequest>().single.path,
       '$_home/app/.claude/skills/deploy',
     );
-    await _close(tester, d);
+    await closeView(tester, d);
   });
 
   for (final (name, tokens) in [
@@ -180,7 +176,7 @@ void main() {
         find.byType(SkillsView),
         matchesGoldenFile('goldens/skills_view_$name.png'),
       );
-      await _close(tester, d);
+      await closeView(tester, d);
     });
   }
 }
