@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 
 	"github.com/afrase/acp-go/steering"
@@ -14,9 +15,9 @@ import (
 )
 
 // cancel stops the session's work. Prompts claude hasn't taken are
-// answered cancelled at once and dropped from claude's queue; claude is
-// interrupted, and a running prompt answered cancelled at its result or
-// idle, or after the backstop. Until a turn starts again, or claude asks
+// answered cancelled at once and dropped from claude's queue, with the
+// steers that joined them; claude is interrupted, and a running prompt
+// answered cancelled at its result or idle, or after the backstop. Until a turn starts again, or claude asks
 // the API anew, what the stopped work still writes at the top level is
 // dropped; subagents' isn't, as background ones go on.
 func (s *session) cancel() {
@@ -25,7 +26,8 @@ func (s *session) cancel() {
 	for _, t := range slices.Clone(s.turns) {
 		switch {
 		case !t.active:
-			drop = append(drop, t.id)
+			// Its steers wait in claude's queue with it.
+			drop = append(drop, slices.Sorted(maps.Keys(t.ids))...)
 			s.settleLocked(t, cancelled(t))
 		case t.held != nil:
 			s.settleLocked(t, cancelled(t)) // its result came: nothing to wait for

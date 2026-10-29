@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/afrase/acp-go/steering"
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/claudeagent"
@@ -197,6 +198,53 @@ func TestCancel(t *testing.T) {
 	}
 	if ids, _ := p.queue(t, sid); len(ids) != 0 {
 		t.Errorf("queued %q", ids)
+	}
+}
+
+// Cancel drops a prompt claude hasn't taken with the steers that joined
+// it. If claude had taken them after all, their late result ends none of
+// the prompts sent since: the next prompt is answered at its own.
+func TestCancelThenPrompt(t *testing.T) {
+	g := gates(2)
+	steered, release := make(chan struct{}), make(chan struct{})
+	f := fake(user("id2"), signal(g[0]),
+		claudetest.Expect(`{"type":"user","uuid":"id3","priority":"now"}`), signal(steered),
+		user("id4"), signal(g[1]),
+		echo("id2"), result(names("id2", "id3")),
+		claudetest.Send(`{"type":"result","subtype":"success","origin":{"kind":"task-notification"}}`), // so the test knows the last was read
+		claudetest.Until(release),
+		echo("id4"), result(names("id4")))
+	p := start(t, nil, f)
+	sid := p.open(t)
+	one := p.prompt(t, sid, "one")
+	wait(t, g[0], "one read")
+	if outcome, err := steering.Steer(t.Context(), p.AgentConn, string(sid), steerText("also")); err != nil || outcome != steering.Injected {
+		t.Fatalf("%s %v", outcome, err)
+	}
+	wait(t, steered, "the steer read")
+	if err := p.Cancel(t.Context(), &acp.CancelNotification{SessionID: sid}); err != nil {
+		t.Fatal(err)
+	}
+	if got := stopReason(one); got != "cancelled" {
+		t.Errorf("one: %s", got)
+	}
+	eventually(t, "drops and an interrupt", func() bool { return len(f.Responded()) == 3 })
+	all := strings.Join(f.Responded(), "\n")
+	for _, want := range []string{`"message_uuid":"id2"`, `"message_uuid":"id3"`, `"subtype":"interrupt"`} {
+		if !strings.Contains(all, want) {
+			t.Errorf("no %s in\n%s", want, all)
+		}
+	}
+	two := p.prompt(t, sid, "two")
+	wait(t, g[1], "two read")
+	eventually(t, "both results read", func() bool { return len(p.of("usage_update")) == 2 })
+	if ids, a := p.queue(t, sid); !slices.Equal(ids, []string{"id4"}) || a != "" {
+		t.Errorf("after the dropped prompts' result: queued %q, running %q", ids, a)
+	}
+	close(release)
+	r, err := two()
+	if err != nil || r.StopReason != acp.StopReasonEndTurn || r.Usage.InputTokens != 3 {
+		t.Errorf("two: %+v %v", r, err)
 	}
 }
 
