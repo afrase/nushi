@@ -121,16 +121,17 @@ adapters:
 # Records the Claude parity scenarios (SCENARIOS=all, or names with commas)
 # into internal/features/chats/testdata/claude-parity (its README): the
 # Node adapter on CLAUDE_TEE_REAL, the claude to record, which runs on a
-# fake Messages API with a throwaway home and config, no login. Then
-# the drift from claude's schemas, a report only.
+# fake Messages API with a throwaway home and config, no login. Then,
+# when CLAUDE_SCHEMAS names claude's schemas (taken by hand, not in the
+# repo; local.mk can set it), the drift from them, a report only.
 SCENARIOS ?= all
-CLAUDE_SCHEMAS := claudeagent/claudetest/cmd/claude-tee/testdata/schemas-2.1.312.jsonl
+CLAUDE_SCHEMAS ?=
 claude-record:
 	@test -n "$(CLAUDE_TEE_REAL)" || { echo "set CLAUDE_TEE_REAL to the claude to record"; exit 2; }
 	go build -o bin/claude-tee ./claudeagent/claudetest/cmd/claude-tee
 	go build -o bin/mcp-echo ./claudeagent/claudetest/cmd/mcp-echo
 	go run ./tools/claude-record -tee bin/claude-tee -mcp-echo bin/mcp-echo -claude "$(CLAUDE_TEE_REAL)" -only "$(SCENARIOS)"
-	-bin/claude-tee -schema-diff $(CLAUDE_SCHEMAS) internal/features/chats/testdata/claude-parity/*/cli*.jsonl
+	@if [ -f "$(CLAUDE_SCHEMAS)" ]; then bin/claude-tee -schema-diff "$(CLAUDE_SCHEMAS)" internal/features/chats/testdata/claude-parity/*/cli*.jsonl; else echo "no schema drift report: set CLAUDE_SCHEMAS to claude's schemas"; fi
 
 # The API's code from proto/, committed; CI checks it is what this makes.
 # Go's plugins are go.mod's tools; Dart's are pinned in gen-tools, and

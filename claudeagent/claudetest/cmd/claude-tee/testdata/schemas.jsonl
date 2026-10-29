@@ -1,0 +1,7 @@
+{"type":"control_request","fields":["type","request_id","request"]}
+{"type":"control_response","fields":["type","response"]}
+{"request_subtype":"initialize","fields":["subtype","hooks"]}
+{"request_subtype":"success","fields":["subtype","request_id","response"]}
+{"type":"system","subtype":"init","fields":["type","subtype","session_id","cwd","model"]}
+{"type":"result","fields":["type","subtype","is_error","session_id","num_turns"]}
+{"type":"keep_alive","fields":["type"]}
