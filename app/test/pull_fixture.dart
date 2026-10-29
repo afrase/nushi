@@ -268,6 +268,8 @@ Future<(Daemon, FakeDaemon)> openPullTab(
   Brightness brightness = Brightness.dark,
   Object? Function(Object input)? more,
   bool open = true,
+  Worktree? worktree,
+  bool busy = false,
 }) async {
   tester.view
     ..devicePixelRatio = 1
@@ -281,7 +283,17 @@ Future<(Daemon, FakeDaemon)> openPullTab(
   collapsedCards.value = {};
   cardOrder.value = ['Pull request'];
   pullSeen.value = {};
-  final c = chat('c', 'claude', 'Fix malformed q in admin filters');
+  final c = chat(
+    'c',
+    'claude',
+    'Fix malformed q in admin filters',
+    status: busy ? ChatStatus(busy: true) : null,
+  );
+  if (worktree != null) {
+    c
+      ..worktree = worktree
+      ..folder = worktree.path;
+  }
   final fake = FakeDaemon([c])
     ..answer = (input) =>
         more?.call(input) ??

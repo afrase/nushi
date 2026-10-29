@@ -350,6 +350,20 @@ const (
 	// NushiServiceRerunGitHubChecksProcedure is the fully-qualified name of the NushiService's
 	// RerunGitHubChecks RPC.
 	NushiServiceRerunGitHubChecksProcedure = "/nushi.v1.NushiService/RerunGitHubChecks"
+	// NushiServiceGetCleanUpProcedure is the fully-qualified name of the NushiService's GetCleanUp RPC.
+	NushiServiceGetCleanUpProcedure = "/nushi.v1.NushiService/GetCleanUp"
+	// NushiServiceRemoveChatWorktreeProcedure is the fully-qualified name of the NushiService's
+	// RemoveChatWorktree RPC.
+	NushiServiceRemoveChatWorktreeProcedure = "/nushi.v1.NushiService/RemoveChatWorktree"
+	// NushiServiceDeleteChatBranchProcedure is the fully-qualified name of the NushiService's
+	// DeleteChatBranch RPC.
+	NushiServiceDeleteChatBranchProcedure = "/nushi.v1.NushiService/DeleteChatBranch"
+	// NushiServiceDeleteGitHubBranchProcedure is the fully-qualified name of the NushiService's
+	// DeleteGitHubBranch RPC.
+	NushiServiceDeleteGitHubBranchProcedure = "/nushi.v1.NushiService/DeleteGitHubBranch"
+	// NushiServiceRestoreGitHubBranchProcedure is the fully-qualified name of the NushiService's
+	// RestoreGitHubBranch RPC.
+	NushiServiceRestoreGitHubBranchProcedure = "/nushi.v1.NushiService/RestoreGitHubBranch"
 	// NushiServiceFindChatPullProcedure is the fully-qualified name of the NushiService's FindChatPull
 	// RPC.
 	NushiServiceFindChatPullProcedure = "/nushi.v1.NushiService/FindChatPull"
@@ -725,6 +739,22 @@ type NushiServiceClient interface {
 	// Re-runs the failed jobs of the workflow runs that a pull request's
 	// failed Actions jobs belong to. API 88.
 	RerunGitHubChecks(context.Context, *connect.Request[v1.RerunGitHubChecksRequest]) (*connect.Response[v1.RerunGitHubChecksResponse], error)
+	// Cleaning up after a chat's pull request: what the chat's worktree and
+	// branch would lose (GetCleanUp), removing the worktree, deleting its
+	// branch, and the pull request's branch on GitHub deleted or made again.
+	// API 89.
+	GetCleanUp(context.Context, *connect.Request[v1.GetCleanUpRequest]) (*connect.Response[v1.GetCleanUpResponse], error)
+	// Refused mid-turn, while another chat works in the worktree, and with
+	// uncommitted changes unless force. API 89.
+	RemoveChatWorktree(context.Context, *connect.Request[v1.RemoveChatWorktreeRequest]) (*connect.Response[v1.RemoveChatWorktreeResponse], error)
+	// Refused while a worktree has the branch checked out, and with commits
+	// its base doesn't have unless force. API 89.
+	DeleteChatBranch(context.Context, *connect.Request[v1.DeleteChatBranchRequest]) (*connect.Response[v1.DeleteChatBranchResponse], error)
+	// A merged or closed pull request's head branch, only while it points at
+	// the pull request's head; never the default branch. API 89.
+	DeleteGitHubBranch(context.Context, *connect.Request[v1.DeleteGitHubBranchRequest]) (*connect.Response[v1.DeleteGitHubBranchResponse], error)
+	// That branch made again at the pull request's head. API 89.
+	RestoreGitHubBranch(context.Context, *connect.Request[v1.RestoreGitHubBranchRequest]) (*connect.Response[v1.RestoreGitHubBranchResponse], error)
 	// A chat's pull request: the one it was started from, else the one whose
 	// head is its folder's branch, looked for on GitHub (and linked when
 	// found), with the folder's repository and branch. API 81.
@@ -1444,6 +1474,36 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("RerunGitHubChecks")),
 			connect.WithClientOptions(opts...),
 		),
+		getCleanUp: connect.NewClient[v1.GetCleanUpRequest, v1.GetCleanUpResponse](
+			httpClient,
+			baseURL+NushiServiceGetCleanUpProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("GetCleanUp")),
+			connect.WithClientOptions(opts...),
+		),
+		removeChatWorktree: connect.NewClient[v1.RemoveChatWorktreeRequest, v1.RemoveChatWorktreeResponse](
+			httpClient,
+			baseURL+NushiServiceRemoveChatWorktreeProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("RemoveChatWorktree")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteChatBranch: connect.NewClient[v1.DeleteChatBranchRequest, v1.DeleteChatBranchResponse](
+			httpClient,
+			baseURL+NushiServiceDeleteChatBranchProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("DeleteChatBranch")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteGitHubBranch: connect.NewClient[v1.DeleteGitHubBranchRequest, v1.DeleteGitHubBranchResponse](
+			httpClient,
+			baseURL+NushiServiceDeleteGitHubBranchProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("DeleteGitHubBranch")),
+			connect.WithClientOptions(opts...),
+		),
+		restoreGitHubBranch: connect.NewClient[v1.RestoreGitHubBranchRequest, v1.RestoreGitHubBranchResponse](
+			httpClient,
+			baseURL+NushiServiceRestoreGitHubBranchProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("RestoreGitHubBranch")),
+			connect.WithClientOptions(opts...),
+		),
 		findChatPull: connect.NewClient[v1.FindChatPullRequest, v1.FindChatPullResponse](
 			httpClient,
 			baseURL+NushiServiceFindChatPullProcedure,
@@ -1583,6 +1643,11 @@ type nushiServiceClient struct {
 	addGitHubComment    *connect.Client[v1.AddGitHubCommentRequest, v1.AddGitHubCommentResponse]
 	submitGitHubReview  *connect.Client[v1.SubmitGitHubReviewRequest, v1.SubmitGitHubReviewResponse]
 	rerunGitHubChecks   *connect.Client[v1.RerunGitHubChecksRequest, v1.RerunGitHubChecksResponse]
+	getCleanUp          *connect.Client[v1.GetCleanUpRequest, v1.GetCleanUpResponse]
+	removeChatWorktree  *connect.Client[v1.RemoveChatWorktreeRequest, v1.RemoveChatWorktreeResponse]
+	deleteChatBranch    *connect.Client[v1.DeleteChatBranchRequest, v1.DeleteChatBranchResponse]
+	deleteGitHubBranch  *connect.Client[v1.DeleteGitHubBranchRequest, v1.DeleteGitHubBranchResponse]
+	restoreGitHubBranch *connect.Client[v1.RestoreGitHubBranchRequest, v1.RestoreGitHubBranchResponse]
 	findChatPull        *connect.Client[v1.FindChatPullRequest, v1.FindChatPullResponse]
 	linkChatPull        *connect.Client[v1.LinkChatPullRequest, v1.LinkChatPullResponse]
 	events              *connect.Client[v1.EventsRequest, v1.EventsResponse]
@@ -2168,6 +2233,31 @@ func (c *nushiServiceClient) RerunGitHubChecks(ctx context.Context, req *connect
 	return c.rerunGitHubChecks.CallUnary(ctx, req)
 }
 
+// GetCleanUp calls nushi.v1.NushiService.GetCleanUp.
+func (c *nushiServiceClient) GetCleanUp(ctx context.Context, req *connect.Request[v1.GetCleanUpRequest]) (*connect.Response[v1.GetCleanUpResponse], error) {
+	return c.getCleanUp.CallUnary(ctx, req)
+}
+
+// RemoveChatWorktree calls nushi.v1.NushiService.RemoveChatWorktree.
+func (c *nushiServiceClient) RemoveChatWorktree(ctx context.Context, req *connect.Request[v1.RemoveChatWorktreeRequest]) (*connect.Response[v1.RemoveChatWorktreeResponse], error) {
+	return c.removeChatWorktree.CallUnary(ctx, req)
+}
+
+// DeleteChatBranch calls nushi.v1.NushiService.DeleteChatBranch.
+func (c *nushiServiceClient) DeleteChatBranch(ctx context.Context, req *connect.Request[v1.DeleteChatBranchRequest]) (*connect.Response[v1.DeleteChatBranchResponse], error) {
+	return c.deleteChatBranch.CallUnary(ctx, req)
+}
+
+// DeleteGitHubBranch calls nushi.v1.NushiService.DeleteGitHubBranch.
+func (c *nushiServiceClient) DeleteGitHubBranch(ctx context.Context, req *connect.Request[v1.DeleteGitHubBranchRequest]) (*connect.Response[v1.DeleteGitHubBranchResponse], error) {
+	return c.deleteGitHubBranch.CallUnary(ctx, req)
+}
+
+// RestoreGitHubBranch calls nushi.v1.NushiService.RestoreGitHubBranch.
+func (c *nushiServiceClient) RestoreGitHubBranch(ctx context.Context, req *connect.Request[v1.RestoreGitHubBranchRequest]) (*connect.Response[v1.RestoreGitHubBranchResponse], error) {
+	return c.restoreGitHubBranch.CallUnary(ctx, req)
+}
+
 // FindChatPull calls nushi.v1.NushiService.FindChatPull.
 func (c *nushiServiceClient) FindChatPull(ctx context.Context, req *connect.Request[v1.FindChatPullRequest]) (*connect.Response[v1.FindChatPullResponse], error) {
 	return c.findChatPull.CallUnary(ctx, req)
@@ -2548,6 +2638,22 @@ type NushiServiceHandler interface {
 	// Re-runs the failed jobs of the workflow runs that a pull request's
 	// failed Actions jobs belong to. API 88.
 	RerunGitHubChecks(context.Context, *connect.Request[v1.RerunGitHubChecksRequest]) (*connect.Response[v1.RerunGitHubChecksResponse], error)
+	// Cleaning up after a chat's pull request: what the chat's worktree and
+	// branch would lose (GetCleanUp), removing the worktree, deleting its
+	// branch, and the pull request's branch on GitHub deleted or made again.
+	// API 89.
+	GetCleanUp(context.Context, *connect.Request[v1.GetCleanUpRequest]) (*connect.Response[v1.GetCleanUpResponse], error)
+	// Refused mid-turn, while another chat works in the worktree, and with
+	// uncommitted changes unless force. API 89.
+	RemoveChatWorktree(context.Context, *connect.Request[v1.RemoveChatWorktreeRequest]) (*connect.Response[v1.RemoveChatWorktreeResponse], error)
+	// Refused while a worktree has the branch checked out, and with commits
+	// its base doesn't have unless force. API 89.
+	DeleteChatBranch(context.Context, *connect.Request[v1.DeleteChatBranchRequest]) (*connect.Response[v1.DeleteChatBranchResponse], error)
+	// A merged or closed pull request's head branch, only while it points at
+	// the pull request's head; never the default branch. API 89.
+	DeleteGitHubBranch(context.Context, *connect.Request[v1.DeleteGitHubBranchRequest]) (*connect.Response[v1.DeleteGitHubBranchResponse], error)
+	// That branch made again at the pull request's head. API 89.
+	RestoreGitHubBranch(context.Context, *connect.Request[v1.RestoreGitHubBranchRequest]) (*connect.Response[v1.RestoreGitHubBranchResponse], error)
 	// A chat's pull request: the one it was started from, else the one whose
 	// head is its folder's branch, looked for on GitHub (and linked when
 	// found), with the folder's repository and branch. API 81.
@@ -3263,6 +3369,36 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("RerunGitHubChecks")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceGetCleanUpHandler := connect.NewUnaryHandler(
+		NushiServiceGetCleanUpProcedure,
+		svc.GetCleanUp,
+		connect.WithSchema(nushiServiceMethods.ByName("GetCleanUp")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceRemoveChatWorktreeHandler := connect.NewUnaryHandler(
+		NushiServiceRemoveChatWorktreeProcedure,
+		svc.RemoveChatWorktree,
+		connect.WithSchema(nushiServiceMethods.ByName("RemoveChatWorktree")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceDeleteChatBranchHandler := connect.NewUnaryHandler(
+		NushiServiceDeleteChatBranchProcedure,
+		svc.DeleteChatBranch,
+		connect.WithSchema(nushiServiceMethods.ByName("DeleteChatBranch")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceDeleteGitHubBranchHandler := connect.NewUnaryHandler(
+		NushiServiceDeleteGitHubBranchProcedure,
+		svc.DeleteGitHubBranch,
+		connect.WithSchema(nushiServiceMethods.ByName("DeleteGitHubBranch")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceRestoreGitHubBranchHandler := connect.NewUnaryHandler(
+		NushiServiceRestoreGitHubBranchProcedure,
+		svc.RestoreGitHubBranch,
+		connect.WithSchema(nushiServiceMethods.ByName("RestoreGitHubBranch")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceFindChatPullHandler := connect.NewUnaryHandler(
 		NushiServiceFindChatPullProcedure,
 		svc.FindChatPull,
@@ -3515,6 +3651,16 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceSubmitGitHubReviewHandler.ServeHTTP(w, r)
 		case NushiServiceRerunGitHubChecksProcedure:
 			nushiServiceRerunGitHubChecksHandler.ServeHTTP(w, r)
+		case NushiServiceGetCleanUpProcedure:
+			nushiServiceGetCleanUpHandler.ServeHTTP(w, r)
+		case NushiServiceRemoveChatWorktreeProcedure:
+			nushiServiceRemoveChatWorktreeHandler.ServeHTTP(w, r)
+		case NushiServiceDeleteChatBranchProcedure:
+			nushiServiceDeleteChatBranchHandler.ServeHTTP(w, r)
+		case NushiServiceDeleteGitHubBranchProcedure:
+			nushiServiceDeleteGitHubBranchHandler.ServeHTTP(w, r)
+		case NushiServiceRestoreGitHubBranchProcedure:
+			nushiServiceRestoreGitHubBranchHandler.ServeHTTP(w, r)
 		case NushiServiceFindChatPullProcedure:
 			nushiServiceFindChatPullHandler.ServeHTTP(w, r)
 		case NushiServiceLinkChatPullProcedure:
@@ -3992,6 +4138,26 @@ func (UnimplementedNushiServiceHandler) SubmitGitHubReview(context.Context, *con
 
 func (UnimplementedNushiServiceHandler) RerunGitHubChecks(context.Context, *connect.Request[v1.RerunGitHubChecksRequest]) (*connect.Response[v1.RerunGitHubChecksResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.RerunGitHubChecks is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) GetCleanUp(context.Context, *connect.Request[v1.GetCleanUpRequest]) (*connect.Response[v1.GetCleanUpResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetCleanUp is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) RemoveChatWorktree(context.Context, *connect.Request[v1.RemoveChatWorktreeRequest]) (*connect.Response[v1.RemoveChatWorktreeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.RemoveChatWorktree is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) DeleteChatBranch(context.Context, *connect.Request[v1.DeleteChatBranchRequest]) (*connect.Response[v1.DeleteChatBranchResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.DeleteChatBranch is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) DeleteGitHubBranch(context.Context, *connect.Request[v1.DeleteGitHubBranchRequest]) (*connect.Response[v1.DeleteGitHubBranchResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.DeleteGitHubBranch is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) RestoreGitHubBranch(context.Context, *connect.Request[v1.RestoreGitHubBranchRequest]) (*connect.Response[v1.RestoreGitHubBranchResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.RestoreGitHubBranch is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) FindChatPull(context.Context, *connect.Request[v1.FindChatPullRequest]) (*connect.Response[v1.FindChatPullResponse], error) {

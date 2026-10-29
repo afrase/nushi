@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nushi/chat.dart' show clock;
+import 'package:nushi/cleanup_dialog.dart';
+import 'package:nushi/cleanup_job.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_agent.dart';
 import 'package:nushi/github_parts.dart';
@@ -8,6 +10,7 @@ import 'package:nushi/github_settings.dart';
 import 'package:nushi/jira_people.dart';
 import 'package:nushi/pull_header.dart';
 import 'package:nushi/pull_link.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -66,7 +69,18 @@ class PullRows extends StatelessWidget {
           ),
         ),
         if (done)
-          Padding(padding: const EdgeInsets.only(top: 8), child: _Done(p))
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: ListenableBuilder(
+              listenable: Listenable.merge([
+                CleanUpJob.of(cp.chat),
+                cleanUpLater,
+              ]),
+              builder: (context, _) => CleanUpJob.of(cp.chat).started
+                  ? CleanUpProgress(CleanUpJob.of(cp.chat))
+                  : _Done(cp),
+            ),
+          )
         else ...[
           if (p.checks.isNotEmpty) ...[
             const SizedBox(height: 9),
@@ -442,19 +456,24 @@ class _New extends StatelessWidget {
   }
 }
 
-/// A merged or closed pull request: what that means for its branch.
+/// A merged or closed pull request: what that means for its branch, and
+/// Clean up… (Not now hides the offer for this chat; the menu keeps it).
 class _Done extends StatelessWidget {
-  const new(this.pull);
+  const new(this.cp);
 
-  final GitHubPull pull;
+  final ChatPull cp;
 
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final p = pull;
+    final p = cp.pull!;
     final merged = p.item.state == 'merged';
     final code = theme.code(t.text, size: 11.5);
+    final offer =
+        cp.daemon.daemonApi >= cleanUpApi &&
+        !cleanUpLater.value.contains(cp.chat.id);
+    final wt = cp.chat.worktree != null;
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
       decoration: box(
@@ -463,7 +482,7 @@ class _Done extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        spacing: 6,
+        spacing: 8,
         children: [
           Text.rich(
             TextSpan(
@@ -471,7 +490,12 @@ class _Done extends StatelessWidget {
                   ? [
                       const TextSpan(text: 'Merged into '),
                       TextSpan(text: p.base, style: code),
-                      const TextSpan(text: '.'),
+                      TextSpan(
+                        text: offer && wt
+                            ? ". This chat's worktree and branch aren't "
+                                  'needed any more.'
+                            : '.',
+                      ),
                     ]
                   : [
                       const TextSpan(text: 'Closed without merging.'),
@@ -489,12 +513,34 @@ class _Done extends StatelessWidget {
             ),
             style: theme.ui(t.text, size: 12.5),
           ),
-          if (!merged && p.item.url.isNotEmpty)
-            LinkText(
-              'Reopen on GitHub',
-              size: 12,
-              onTap: () => openWeb(p.item.url),
-            ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              if (offer)
+                Button(
+                  label: 'Clean up…',
+                  kind: merged ? ButtonKind.primary : ButtonKind.secondary,
+                  onPressed: () =>
+                      showCleanUp(context, cp.daemon, cp.chat, pull: p),
+                ),
+              if (offer && merged)
+                LinkText(
+                  'Not now',
+                  size: 12,
+                  tooltip: "The widget's menu keeps Clean up…",
+                  onTap: () =>
+                      cleanUpLater.value = {...cleanUpLater.value, cp.chat.id},
+                ),
+              if (!merged && p.item.url.isNotEmpty)
+                LinkText(
+                  'Reopen on GitHub',
+                  size: 12,
+                  onTap: () => openWeb(p.item.url),
+                ),
+            ],
+          ),
         ],
       ),
     );

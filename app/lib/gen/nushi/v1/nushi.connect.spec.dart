@@ -1070,6 +1070,52 @@ abstract final class NushiService {
     nushiv1nushi.RerunGitHubChecksResponse.new,
   );
 
+  /// Cleaning up after a chat's pull request: what the chat's worktree and
+  /// branch would lose (GetCleanUp), removing the worktree, deleting its
+  /// branch, and the pull request's branch on GitHub deleted or made again.
+  /// API 89.
+  static const getCleanUp = connect.Spec(
+    '/$name/GetCleanUp',
+    connect.StreamType.unary,
+    nushiv1nushi.GetCleanUpRequest.new,
+    nushiv1nushi.GetCleanUpResponse.new,
+  );
+
+  /// Refused mid-turn, while another chat works in the worktree, and with
+  /// uncommitted changes unless force. API 89.
+  static const removeChatWorktree = connect.Spec(
+    '/$name/RemoveChatWorktree',
+    connect.StreamType.unary,
+    nushiv1nushi.RemoveChatWorktreeRequest.new,
+    nushiv1nushi.RemoveChatWorktreeResponse.new,
+  );
+
+  /// Refused while a worktree has the branch checked out, and with commits
+  /// its base doesn't have unless force. API 89.
+  static const deleteChatBranch = connect.Spec(
+    '/$name/DeleteChatBranch',
+    connect.StreamType.unary,
+    nushiv1nushi.DeleteChatBranchRequest.new,
+    nushiv1nushi.DeleteChatBranchResponse.new,
+  );
+
+  /// A merged or closed pull request's head branch, only while it points at
+  /// the pull request's head; never the default branch. API 89.
+  static const deleteGitHubBranch = connect.Spec(
+    '/$name/DeleteGitHubBranch',
+    connect.StreamType.unary,
+    nushiv1nushi.DeleteGitHubBranchRequest.new,
+    nushiv1nushi.DeleteGitHubBranchResponse.new,
+  );
+
+  /// That branch made again at the pull request's head. API 89.
+  static const restoreGitHubBranch = connect.Spec(
+    '/$name/RestoreGitHubBranch',
+    connect.StreamType.unary,
+    nushiv1nushi.RestoreGitHubBranchRequest.new,
+    nushiv1nushi.RestoreGitHubBranchResponse.new,
+  );
+
   /// A chat's pull request: the one it was started from, else the one whose
   /// head is its folder's branch, looked for on GitHub (and linked when
   /// found), with the folder's repository and branch. API 81.

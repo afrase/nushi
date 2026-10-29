@@ -39,7 +39,7 @@ final String dataDir =
         : '$support/Nushi');
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 88;
+const apiVersion = 89;
 
 /// The API from which the daemon re-runs a pull request's failed jobs
 /// (RerunGitHubChecks).

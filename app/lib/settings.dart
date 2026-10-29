@@ -125,6 +125,11 @@ final pullSeen = ValueNotifier<Map<String, int>>({
     if (key is String && value is num) key: value.toInt(),
 })..addListener(_save);
 
+/// The chats whose PR widget no longer offers Clean up… (Not now); its
+/// menu still has it.
+final cleanUpLater = ValueNotifier<Set<String>>(_strings('cleanUpLater'))
+  ..addListener(_save);
+
 /// The widths panes were dragged to, by pane (see `Resizable`).
 final paneWidths = ValueNotifier<Map<String, double>>({
   for (final MapEntry(:key, :value)
@@ -237,6 +242,7 @@ void _save() {
         'models': recentModels.value,
         'pins': pinnedFiles.value,
         'pullSeen': pullSeen.value,
+        'cleanUpLater': cleanUpLater.value.toList(),
         'alertNeedsYou': alertNeedsYou.value,
         'alertFinished': alertFinished.value,
         'alertFailed': alertFailed.value,

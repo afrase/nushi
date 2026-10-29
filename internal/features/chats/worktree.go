@@ -51,6 +51,9 @@ type Checkouts interface {
 	Branch(ctx context.Context, folder string) string
 	// Changed counts folder's uncommitted changes to tracked files.
 	Changed(ctx context.Context, folder string) (int, error)
+	// Changes lists folder's first n uncommitted changes, untracked files
+	// included ("M a.go", "?? b.txt").
+	Changes(ctx context.Context, folder string, n int) ([]string, error)
 	// Switch checks out a local branch in folder (git switch), or a new
 	// one from HEAD with create; a branch that isn't there fails with
 	// fs.ErrNotExist, a new one whose name is taken with fs.ErrExist.

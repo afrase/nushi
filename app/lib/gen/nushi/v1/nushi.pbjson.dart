@@ -5830,6 +5830,163 @@ final $typed_data.Uint8List rerunGitHubChecksRequestDescriptor =
         'ChhSZXJ1bkdpdEh1YkNoZWNrc1JlcXVlc3QSJQoDcmVmGAEgASgLMhMubnVzaGkudjEuR2l0SH'
         'ViUmVmUgNyZWYSEgoEam9icxgCIAMoA1IEam9icw==');
 
+@$core.Deprecated('Use getCleanUpRequestDescriptor instead')
+const GetCleanUpRequest$json = {
+  '1': 'GetCleanUpRequest',
+  '2': [
+    {'1': 'chat_id', '3': 1, '4': 1, '5': 9, '10': 'chatId'},
+  ],
+};
+
+/// Descriptor for `GetCleanUpRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getCleanUpRequestDescriptor = $convert.base64Decode(
+    'ChFHZXRDbGVhblVwUmVxdWVzdBIXCgdjaGF0X2lkGAEgASgJUgZjaGF0SWQ=');
+
+@$core.Deprecated('Use getCleanUpResponseDescriptor instead')
+const GetCleanUpResponse$json = {
+  '1': 'GetCleanUpResponse',
+  '2': [
+    {
+      '1': 'worktree',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.Worktree',
+      '10': 'worktree'
+    },
+    {
+      '1': 'state',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.WorktreeState',
+      '10': 'state'
+    },
+    {'1': 'changes', '3': 3, '4': 3, '5': 9, '10': 'changes'},
+    {'1': 'branch_elsewhere', '3': 4, '4': 1, '5': 8, '10': 'branchElsewhere'},
+    {'1': 'others', '3': 5, '4': 3, '5': 9, '10': 'others'},
+  ],
+};
+
+/// Descriptor for `GetCleanUpResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getCleanUpResponseDescriptor = $convert.base64Decode(
+    'ChJHZXRDbGVhblVwUmVzcG9uc2USLgoId29ya3RyZWUYASABKAsyEi5udXNoaS52MS5Xb3JrdH'
+    'JlZVIId29ya3RyZWUSLQoFc3RhdGUYAiABKAsyFy5udXNoaS52MS5Xb3JrdHJlZVN0YXRlUgVz'
+    'dGF0ZRIYCgdjaGFuZ2VzGAMgAygJUgdjaGFuZ2VzEikKEGJyYW5jaF9lbHNld2hlcmUYBCABKA'
+    'hSD2JyYW5jaEVsc2V3aGVyZRIWCgZvdGhlcnMYBSADKAlSBm90aGVycw==');
+
+@$core.Deprecated('Use removeChatWorktreeRequestDescriptor instead')
+const RemoveChatWorktreeRequest$json = {
+  '1': 'RemoveChatWorktreeRequest',
+  '2': [
+    {'1': 'chat_id', '3': 1, '4': 1, '5': 9, '10': 'chatId'},
+    {'1': 'force', '3': 2, '4': 1, '5': 8, '10': 'force'},
+  ],
+};
+
+/// Descriptor for `RemoveChatWorktreeRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List removeChatWorktreeRequestDescriptor =
+    $convert.base64Decode(
+        'ChlSZW1vdmVDaGF0V29ya3RyZWVSZXF1ZXN0EhcKB2NoYXRfaWQYASABKAlSBmNoYXRJZBIUCg'
+        'Vmb3JjZRgCIAEoCFIFZm9yY2U=');
+
+@$core.Deprecated('Use removeChatWorktreeResponseDescriptor instead')
+const RemoveChatWorktreeResponse$json = {
+  '1': 'RemoveChatWorktreeResponse',
+};
+
+/// Descriptor for `RemoveChatWorktreeResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List removeChatWorktreeResponseDescriptor =
+    $convert.base64Decode('ChpSZW1vdmVDaGF0V29ya3RyZWVSZXNwb25zZQ==');
+
+@$core.Deprecated('Use deleteChatBranchRequestDescriptor instead')
+const DeleteChatBranchRequest$json = {
+  '1': 'DeleteChatBranchRequest',
+  '2': [
+    {'1': 'chat_id', '3': 1, '4': 1, '5': 9, '10': 'chatId'},
+    {'1': 'force', '3': 2, '4': 1, '5': 8, '10': 'force'},
+  ],
+};
+
+/// Descriptor for `DeleteChatBranchRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List deleteChatBranchRequestDescriptor =
+    $convert.base64Decode(
+        'ChdEZWxldGVDaGF0QnJhbmNoUmVxdWVzdBIXCgdjaGF0X2lkGAEgASgJUgZjaGF0SWQSFAoFZm'
+        '9yY2UYAiABKAhSBWZvcmNl');
+
+@$core.Deprecated('Use deleteChatBranchResponseDescriptor instead')
+const DeleteChatBranchResponse$json = {
+  '1': 'DeleteChatBranchResponse',
+};
+
+/// Descriptor for `DeleteChatBranchResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List deleteChatBranchResponseDescriptor =
+    $convert.base64Decode('ChhEZWxldGVDaGF0QnJhbmNoUmVzcG9uc2U=');
+
+@$core.Deprecated('Use deleteGitHubBranchRequestDescriptor instead')
+const DeleteGitHubBranchRequest$json = {
+  '1': 'DeleteGitHubBranchRequest',
+  '2': [
+    {
+      '1': 'ref',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubRef',
+      '10': 'ref'
+    },
+  ],
+};
+
+/// Descriptor for `DeleteGitHubBranchRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List deleteGitHubBranchRequestDescriptor =
+    $convert.base64Decode(
+        'ChlEZWxldGVHaXRIdWJCcmFuY2hSZXF1ZXN0EiUKA3JlZhgBIAEoCzITLm51c2hpLnYxLkdpdE'
+        'h1YlJlZlIDcmVm');
+
+@$core.Deprecated('Use deleteGitHubBranchResponseDescriptor instead')
+const DeleteGitHubBranchResponse$json = {
+  '1': 'DeleteGitHubBranchResponse',
+  '2': [
+    {'1': 'deleted', '3': 1, '4': 1, '5': 8, '10': 'deleted'},
+  ],
+};
+
+/// Descriptor for `DeleteGitHubBranchResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List deleteGitHubBranchResponseDescriptor =
+    $convert.base64Decode(
+        'ChpEZWxldGVHaXRIdWJCcmFuY2hSZXNwb25zZRIYCgdkZWxldGVkGAEgASgIUgdkZWxldGVk');
+
+@$core.Deprecated('Use restoreGitHubBranchRequestDescriptor instead')
+const RestoreGitHubBranchRequest$json = {
+  '1': 'RestoreGitHubBranchRequest',
+  '2': [
+    {
+      '1': 'ref',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubRef',
+      '10': 'ref'
+    },
+  ],
+};
+
+/// Descriptor for `RestoreGitHubBranchRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List restoreGitHubBranchRequestDescriptor =
+    $convert.base64Decode(
+        'ChpSZXN0b3JlR2l0SHViQnJhbmNoUmVxdWVzdBIlCgNyZWYYASABKAsyEy5udXNoaS52MS5HaX'
+        'RIdWJSZWZSA3JlZg==');
+
+@$core.Deprecated('Use restoreGitHubBranchResponseDescriptor instead')
+const RestoreGitHubBranchResponse$json = {
+  '1': 'RestoreGitHubBranchResponse',
+};
+
+/// Descriptor for `RestoreGitHubBranchResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List restoreGitHubBranchResponseDescriptor =
+    $convert.base64Decode('ChtSZXN0b3JlR2l0SHViQnJhbmNoUmVzcG9uc2U=');
+
 @$core.Deprecated('Use rerunGitHubChecksResponseDescriptor instead')
 const RerunGitHubChecksResponse$json = {
   '1': 'RerunGitHubChecksResponse',
@@ -6548,6 +6705,31 @@ const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
       '3': '.nushi.v1.RerunGitHubChecksResponse'
     },
     {
+      '1': 'GetCleanUp',
+      '2': '.nushi.v1.GetCleanUpRequest',
+      '3': '.nushi.v1.GetCleanUpResponse'
+    },
+    {
+      '1': 'RemoveChatWorktree',
+      '2': '.nushi.v1.RemoveChatWorktreeRequest',
+      '3': '.nushi.v1.RemoveChatWorktreeResponse'
+    },
+    {
+      '1': 'DeleteChatBranch',
+      '2': '.nushi.v1.DeleteChatBranchRequest',
+      '3': '.nushi.v1.DeleteChatBranchResponse'
+    },
+    {
+      '1': 'DeleteGitHubBranch',
+      '2': '.nushi.v1.DeleteGitHubBranchRequest',
+      '3': '.nushi.v1.DeleteGitHubBranchResponse'
+    },
+    {
+      '1': 'RestoreGitHubBranch',
+      '2': '.nushi.v1.RestoreGitHubBranchRequest',
+      '3': '.nushi.v1.RestoreGitHubBranchResponse'
+    },
+    {
       '1': 'FindChatPull',
       '2': '.nushi.v1.FindChatPullRequest',
       '3': '.nushi.v1.FindChatPullResponse'
@@ -6880,6 +7062,16 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.SubmitGitHubReviewResponse': SubmitGitHubReviewResponse$json,
   '.nushi.v1.RerunGitHubChecksRequest': RerunGitHubChecksRequest$json,
   '.nushi.v1.RerunGitHubChecksResponse': RerunGitHubChecksResponse$json,
+  '.nushi.v1.GetCleanUpRequest': GetCleanUpRequest$json,
+  '.nushi.v1.GetCleanUpResponse': GetCleanUpResponse$json,
+  '.nushi.v1.RemoveChatWorktreeRequest': RemoveChatWorktreeRequest$json,
+  '.nushi.v1.RemoveChatWorktreeResponse': RemoveChatWorktreeResponse$json,
+  '.nushi.v1.DeleteChatBranchRequest': DeleteChatBranchRequest$json,
+  '.nushi.v1.DeleteChatBranchResponse': DeleteChatBranchResponse$json,
+  '.nushi.v1.DeleteGitHubBranchRequest': DeleteGitHubBranchRequest$json,
+  '.nushi.v1.DeleteGitHubBranchResponse': DeleteGitHubBranchResponse$json,
+  '.nushi.v1.RestoreGitHubBranchRequest': RestoreGitHubBranchRequest$json,
+  '.nushi.v1.RestoreGitHubBranchResponse': RestoreGitHubBranchResponse$json,
   '.nushi.v1.FindChatPullRequest': FindChatPullRequest$json,
   '.nushi.v1.FindChatPullResponse': FindChatPullResponse$json,
   '.nushi.v1.LinkChatPullRequest': LinkChatPullRequest$json,
@@ -7065,7 +7257,16 @@ final $typed_data.Uint8List nushiServiceDescriptor = $convert.base64Decode(
     '51c2hpLnYxLlN1Ym1pdEdpdEh1YlJldmlld1JlcXVlc3QaJC5udXNoaS52MS5TdWJtaXRHaXRI'
     'dWJSZXZpZXdSZXNwb25zZRJcChFSZXJ1bkdpdEh1YkNoZWNrcxIiLm51c2hpLnYxLlJlcnVuR2'
     'l0SHViQ2hlY2tzUmVxdWVzdBojLm51c2hpLnYxLlJlcnVuR2l0SHViQ2hlY2tzUmVzcG9uc2US'
-    'TQoMRmluZENoYXRQdWxsEh0ubnVzaGkudjEuRmluZENoYXRQdWxsUmVxdWVzdBoeLm51c2hpLn'
-    'YxLkZpbmRDaGF0UHVsbFJlc3BvbnNlEk0KDExpbmtDaGF0UHVsbBIdLm51c2hpLnYxLkxpbmtD'
-    'aGF0UHVsbFJlcXVlc3QaHi5udXNoaS52MS5MaW5rQ2hhdFB1bGxSZXNwb25zZRI9CgZFdmVudH'
-    'MSFy5udXNoaS52MS5FdmVudHNSZXF1ZXN0GhgubnVzaGkudjEuRXZlbnRzUmVzcG9uc2UwAQ==');
+    'RwoKR2V0Q2xlYW5VcBIbLm51c2hpLnYxLkdldENsZWFuVXBSZXF1ZXN0GhwubnVzaGkudjEuR2'
+    'V0Q2xlYW5VcFJlc3BvbnNlEl8KElJlbW92ZUNoYXRXb3JrdHJlZRIjLm51c2hpLnYxLlJlbW92'
+    'ZUNoYXRXb3JrdHJlZVJlcXVlc3QaJC5udXNoaS52MS5SZW1vdmVDaGF0V29ya3RyZWVSZXNwb2'
+    '5zZRJZChBEZWxldGVDaGF0QnJhbmNoEiEubnVzaGkudjEuRGVsZXRlQ2hhdEJyYW5jaFJlcXVl'
+    'c3QaIi5udXNoaS52MS5EZWxldGVDaGF0QnJhbmNoUmVzcG9uc2USXwoSRGVsZXRlR2l0SHViQn'
+    'JhbmNoEiMubnVzaGkudjEuRGVsZXRlR2l0SHViQnJhbmNoUmVxdWVzdBokLm51c2hpLnYxLkRl'
+    'bGV0ZUdpdEh1YkJyYW5jaFJlc3BvbnNlEmIKE1Jlc3RvcmVHaXRIdWJCcmFuY2gSJC5udXNoaS'
+    '52MS5SZXN0b3JlR2l0SHViQnJhbmNoUmVxdWVzdBolLm51c2hpLnYxLlJlc3RvcmVHaXRIdWJC'
+    'cmFuY2hSZXNwb25zZRJNCgxGaW5kQ2hhdFB1bGwSHS5udXNoaS52MS5GaW5kQ2hhdFB1bGxSZX'
+    'F1ZXN0Gh4ubnVzaGkudjEuRmluZENoYXRQdWxsUmVzcG9uc2USTQoMTGlua0NoYXRQdWxsEh0u'
+    'bnVzaGkudjEuTGlua0NoYXRQdWxsUmVxdWVzdBoeLm51c2hpLnYxLkxpbmtDaGF0UHVsbFJlc3'
+    'BvbnNlEj0KBkV2ZW50cxIXLm51c2hpLnYxLkV2ZW50c1JlcXVlc3QaGC5udXNoaS52MS5FdmVu'
+    'dHNSZXNwb25zZTAB');

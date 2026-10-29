@@ -253,6 +253,16 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.SubmitGitHubReviewRequest request);
   $async.Future<$0.RerunGitHubChecksResponse> rerunGitHubChecks(
       $pb.ServerContext ctx, $0.RerunGitHubChecksRequest request);
+  $async.Future<$0.GetCleanUpResponse> getCleanUp(
+      $pb.ServerContext ctx, $0.GetCleanUpRequest request);
+  $async.Future<$0.RemoveChatWorktreeResponse> removeChatWorktree(
+      $pb.ServerContext ctx, $0.RemoveChatWorktreeRequest request);
+  $async.Future<$0.DeleteChatBranchResponse> deleteChatBranch(
+      $pb.ServerContext ctx, $0.DeleteChatBranchRequest request);
+  $async.Future<$0.DeleteGitHubBranchResponse> deleteGitHubBranch(
+      $pb.ServerContext ctx, $0.DeleteGitHubBranchRequest request);
+  $async.Future<$0.RestoreGitHubBranchResponse> restoreGitHubBranch(
+      $pb.ServerContext ctx, $0.RestoreGitHubBranchRequest request);
   $async.Future<$0.FindChatPullResponse> findChatPull(
       $pb.ServerContext ctx, $0.FindChatPullRequest request);
   $async.Future<$0.LinkChatPullResponse> linkChatPull(
@@ -494,6 +504,16 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.SubmitGitHubReviewRequest();
       case 'RerunGitHubChecks':
         return $0.RerunGitHubChecksRequest();
+      case 'GetCleanUp':
+        return $0.GetCleanUpRequest();
+      case 'RemoveChatWorktree':
+        return $0.RemoveChatWorktreeRequest();
+      case 'DeleteChatBranch':
+        return $0.DeleteChatBranchRequest();
+      case 'DeleteGitHubBranch':
+        return $0.DeleteGitHubBranchRequest();
+      case 'RestoreGitHubBranch':
+        return $0.RestoreGitHubBranchRequest();
       case 'FindChatPull':
         return $0.FindChatPullRequest();
       case 'LinkChatPull':
@@ -745,6 +765,17 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return submitGitHubReview(ctx, request as $0.SubmitGitHubReviewRequest);
       case 'RerunGitHubChecks':
         return rerunGitHubChecks(ctx, request as $0.RerunGitHubChecksRequest);
+      case 'GetCleanUp':
+        return getCleanUp(ctx, request as $0.GetCleanUpRequest);
+      case 'RemoveChatWorktree':
+        return removeChatWorktree(ctx, request as $0.RemoveChatWorktreeRequest);
+      case 'DeleteChatBranch':
+        return deleteChatBranch(ctx, request as $0.DeleteChatBranchRequest);
+      case 'DeleteGitHubBranch':
+        return deleteGitHubBranch(ctx, request as $0.DeleteGitHubBranchRequest);
+      case 'RestoreGitHubBranch':
+        return restoreGitHubBranch(
+            ctx, request as $0.RestoreGitHubBranchRequest);
       case 'FindChatPull':
         return findChatPull(ctx, request as $0.FindChatPullRequest);
       case 'LinkChatPull':

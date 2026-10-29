@@ -25192,6 +25192,642 @@ class RerunGitHubChecksRequest extends $pb.GeneratedMessage {
   $pb.PbList<$fixnum.Int64> get jobs => $_getList(1);
 }
 
+class GetCleanUpRequest extends $pb.GeneratedMessage {
+  factory GetCleanUpRequest({
+    $core.String? chatId,
+  }) {
+    final result = GetCleanUpRequest._();
+    if (chatId != null) result.chatId = chatId;
+    return result;
+  }
+
+  GetCleanUpRequest._();
+
+  factory GetCleanUpRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetCleanUpRequest()..mergeFromBuffer(data, registry);
+  factory GetCleanUpRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetCleanUpRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetCleanUpRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetCleanUpRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetCleanUpRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetCleanUpRequest copyWith(void Function(GetCleanUpRequest) updates) =>
+      super.copyWith((message) => updates(message as GetCleanUpRequest))
+          as GetCleanUpRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GetCleanUpRequest() / GetCleanUpRequest.new instead')
+  static GetCleanUpRequest create() => GetCleanUpRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetCleanUpRequest._();
+  @$core.override
+  GetCleanUpRequest createEmptyInstance() => GetCleanUpRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetCleanUpRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GetCleanUpRequest>(
+          GetCleanUpRequest.$_createMessage);
+  static GetCleanUpRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+}
+
+class GetCleanUpResponse extends $pb.GeneratedMessage {
+  factory GetCleanUpResponse({
+    Worktree? worktree,
+    WorktreeState? state,
+    $core.Iterable<$core.String>? changes,
+    $core.bool? branchElsewhere,
+    $core.Iterable<$core.String>? others,
+  }) {
+    final result = GetCleanUpResponse._();
+    if (worktree != null) result.worktree = worktree;
+    if (state != null) result.state = state;
+    if (changes != null) result.changes.addAll(changes);
+    if (branchElsewhere != null) result.branchElsewhere = branchElsewhere;
+    if (others != null) result.others.addAll(others);
+    return result;
+  }
+
+  GetCleanUpResponse._();
+
+  factory GetCleanUpResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetCleanUpResponse()..mergeFromBuffer(data, registry);
+  factory GetCleanUpResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetCleanUpResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetCleanUpResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetCleanUpResponse.$_createMessage)
+    ..aOM<Worktree>(1, _omitFieldNames ? '' : 'worktree',
+        subBuilder: Worktree.$_createMessage)
+    ..aOM<WorktreeState>(2, _omitFieldNames ? '' : 'state',
+        subBuilder: WorktreeState.$_createMessage)
+    ..pPS(3, _omitFieldNames ? '' : 'changes')
+    ..aOB(4, _omitFieldNames ? '' : 'branchElsewhere')
+    ..pPS(5, _omitFieldNames ? '' : 'others')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetCleanUpResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetCleanUpResponse copyWith(void Function(GetCleanUpResponse) updates) =>
+      super.copyWith((message) => updates(message as GetCleanUpResponse))
+          as GetCleanUpResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GetCleanUpResponse() / GetCleanUpResponse.new instead')
+  static GetCleanUpResponse create() => GetCleanUpResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetCleanUpResponse._();
+  @$core.override
+  GetCleanUpResponse createEmptyInstance() => GetCleanUpResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetCleanUpResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetCleanUpResponse>(
+          GetCleanUpResponse.$_createMessage);
+  static GetCleanUpResponse? _defaultInstance;
+
+  /// The chat's worktree; unset when it has none.
+  @$pb.TagNumber(1)
+  Worktree get worktree => $_getN(0);
+  @$pb.TagNumber(1)
+  set worktree(Worktree value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasWorktree() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearWorktree() => $_clearField(1);
+  @$pb.TagNumber(1)
+  Worktree ensureWorktree() => $_ensure(0);
+
+  @$pb.TagNumber(2)
+  WorktreeState get state => $_getN(1);
+  @$pb.TagNumber(2)
+  set state(WorktreeState value) => $_setField(2, value);
+  @$pb.TagNumber(2)
+  $core.bool hasState() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearState() => $_clearField(2);
+  @$pb.TagNumber(2)
+  WorktreeState ensureState() => $_ensure(1);
+
+  /// Its first uncommitted changes, as git status says them ("M a.go").
+  @$pb.TagNumber(3)
+  $pb.PbList<$core.String> get changes => $_getList(2);
+
+  /// Another worktree has its branch checked out.
+  @$pb.TagNumber(4)
+  $core.bool get branchElsewhere => $_getBF(3);
+  @$pb.TagNumber(4)
+  set branchElsewhere($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasBranchElsewhere() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearBranchElsewhere() => $_clearField(4);
+
+  /// The other chats (not archived) working in it, by title.
+  @$pb.TagNumber(5)
+  $pb.PbList<$core.String> get others => $_getList(4);
+}
+
+class RemoveChatWorktreeRequest extends $pb.GeneratedMessage {
+  factory RemoveChatWorktreeRequest({
+    $core.String? chatId,
+    $core.bool? force,
+  }) {
+    final result = RemoveChatWorktreeRequest._();
+    if (chatId != null) result.chatId = chatId;
+    if (force != null) result.force = force;
+    return result;
+  }
+
+  RemoveChatWorktreeRequest._();
+
+  factory RemoveChatWorktreeRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemoveChatWorktreeRequest()..mergeFromBuffer(data, registry);
+  factory RemoveChatWorktreeRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemoveChatWorktreeRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RemoveChatWorktreeRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RemoveChatWorktreeRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOB(2, _omitFieldNames ? '' : 'force')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemoveChatWorktreeRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemoveChatWorktreeRequest copyWith(
+          void Function(RemoveChatWorktreeRequest) updates) =>
+      super.copyWith((message) => updates(message as RemoveChatWorktreeRequest))
+          as RemoveChatWorktreeRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RemoveChatWorktreeRequest() / RemoveChatWorktreeRequest.new instead')
+  static RemoveChatWorktreeRequest create() => RemoveChatWorktreeRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      RemoveChatWorktreeRequest._();
+  @$core.override
+  RemoveChatWorktreeRequest createEmptyInstance() =>
+      RemoveChatWorktreeRequest._();
+  @$core.pragma('dart2js:noInline')
+  static RemoveChatWorktreeRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RemoveChatWorktreeRequest>(
+          RemoveChatWorktreeRequest.$_createMessage);
+  static RemoveChatWorktreeRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  /// Remove it with its uncommitted changes.
+  @$pb.TagNumber(2)
+  $core.bool get force => $_getBF(1);
+  @$pb.TagNumber(2)
+  set force($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasForce() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearForce() => $_clearField(2);
+}
+
+class RemoveChatWorktreeResponse extends $pb.GeneratedMessage {
+  factory RemoveChatWorktreeResponse() => RemoveChatWorktreeResponse._();
+
+  RemoveChatWorktreeResponse._();
+
+  factory RemoveChatWorktreeResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemoveChatWorktreeResponse()..mergeFromBuffer(data, registry);
+  factory RemoveChatWorktreeResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RemoveChatWorktreeResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RemoveChatWorktreeResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RemoveChatWorktreeResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemoveChatWorktreeResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RemoveChatWorktreeResponse copyWith(
+          void Function(RemoveChatWorktreeResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as RemoveChatWorktreeResponse))
+          as RemoveChatWorktreeResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RemoveChatWorktreeResponse() / RemoveChatWorktreeResponse.new instead')
+  static RemoveChatWorktreeResponse create() => RemoveChatWorktreeResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      RemoveChatWorktreeResponse._();
+  @$core.override
+  RemoveChatWorktreeResponse createEmptyInstance() =>
+      RemoveChatWorktreeResponse._();
+  @$core.pragma('dart2js:noInline')
+  static RemoveChatWorktreeResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RemoveChatWorktreeResponse>(
+          RemoveChatWorktreeResponse.$_createMessage);
+  static RemoveChatWorktreeResponse? _defaultInstance;
+}
+
+class DeleteChatBranchRequest extends $pb.GeneratedMessage {
+  factory DeleteChatBranchRequest({
+    $core.String? chatId,
+    $core.bool? force,
+  }) {
+    final result = DeleteChatBranchRequest._();
+    if (chatId != null) result.chatId = chatId;
+    if (force != null) result.force = force;
+    return result;
+  }
+
+  DeleteChatBranchRequest._();
+
+  factory DeleteChatBranchRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DeleteChatBranchRequest()..mergeFromBuffer(data, registry);
+  factory DeleteChatBranchRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DeleteChatBranchRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'DeleteChatBranchRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: DeleteChatBranchRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOB(2, _omitFieldNames ? '' : 'force')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DeleteChatBranchRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DeleteChatBranchRequest copyWith(
+          void Function(DeleteChatBranchRequest) updates) =>
+      super.copyWith((message) => updates(message as DeleteChatBranchRequest))
+          as DeleteChatBranchRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use DeleteChatBranchRequest() / DeleteChatBranchRequest.new instead')
+  static DeleteChatBranchRequest create() => DeleteChatBranchRequest._();
+  static $pb.GeneratedMessage $_createMessage() => DeleteChatBranchRequest._();
+  @$core.override
+  DeleteChatBranchRequest createEmptyInstance() => DeleteChatBranchRequest._();
+  @$core.pragma('dart2js:noInline')
+  static DeleteChatBranchRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<DeleteChatBranchRequest>(
+          DeleteChatBranchRequest.$_createMessage);
+  static DeleteChatBranchRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  /// Delete it with commits its base doesn't have (a squash merge's).
+  @$pb.TagNumber(2)
+  $core.bool get force => $_getBF(1);
+  @$pb.TagNumber(2)
+  set force($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasForce() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearForce() => $_clearField(2);
+}
+
+class DeleteChatBranchResponse extends $pb.GeneratedMessage {
+  factory DeleteChatBranchResponse() => DeleteChatBranchResponse._();
+
+  DeleteChatBranchResponse._();
+
+  factory DeleteChatBranchResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DeleteChatBranchResponse()..mergeFromBuffer(data, registry);
+  factory DeleteChatBranchResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DeleteChatBranchResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'DeleteChatBranchResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: DeleteChatBranchResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DeleteChatBranchResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DeleteChatBranchResponse copyWith(
+          void Function(DeleteChatBranchResponse) updates) =>
+      super.copyWith((message) => updates(message as DeleteChatBranchResponse))
+          as DeleteChatBranchResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use DeleteChatBranchResponse() / DeleteChatBranchResponse.new instead')
+  static DeleteChatBranchResponse create() => DeleteChatBranchResponse._();
+  static $pb.GeneratedMessage $_createMessage() => DeleteChatBranchResponse._();
+  @$core.override
+  DeleteChatBranchResponse createEmptyInstance() =>
+      DeleteChatBranchResponse._();
+  @$core.pragma('dart2js:noInline')
+  static DeleteChatBranchResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<DeleteChatBranchResponse>(
+          DeleteChatBranchResponse.$_createMessage);
+  static DeleteChatBranchResponse? _defaultInstance;
+}
+
+class DeleteGitHubBranchRequest extends $pb.GeneratedMessage {
+  factory DeleteGitHubBranchRequest({
+    GitHubRef? ref,
+  }) {
+    final result = DeleteGitHubBranchRequest._();
+    if (ref != null) result.ref = ref;
+    return result;
+  }
+
+  DeleteGitHubBranchRequest._();
+
+  factory DeleteGitHubBranchRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DeleteGitHubBranchRequest()..mergeFromBuffer(data, registry);
+  factory DeleteGitHubBranchRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DeleteGitHubBranchRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'DeleteGitHubBranchRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: DeleteGitHubBranchRequest.$_createMessage)
+    ..aOM<GitHubRef>(1, _omitFieldNames ? '' : 'ref',
+        subBuilder: GitHubRef.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DeleteGitHubBranchRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DeleteGitHubBranchRequest copyWith(
+          void Function(DeleteGitHubBranchRequest) updates) =>
+      super.copyWith((message) => updates(message as DeleteGitHubBranchRequest))
+          as DeleteGitHubBranchRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use DeleteGitHubBranchRequest() / DeleteGitHubBranchRequest.new instead')
+  static DeleteGitHubBranchRequest create() => DeleteGitHubBranchRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      DeleteGitHubBranchRequest._();
+  @$core.override
+  DeleteGitHubBranchRequest createEmptyInstance() =>
+      DeleteGitHubBranchRequest._();
+  @$core.pragma('dart2js:noInline')
+  static DeleteGitHubBranchRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<DeleteGitHubBranchRequest>(
+          DeleteGitHubBranchRequest.$_createMessage);
+  static DeleteGitHubBranchRequest? _defaultInstance;
+
+  /// The pull request.
+  @$pb.TagNumber(1)
+  GitHubRef get ref => $_getN(0);
+  @$pb.TagNumber(1)
+  set ref(GitHubRef value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasRef() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRef() => $_clearField(1);
+  @$pb.TagNumber(1)
+  GitHubRef ensureRef() => $_ensure(0);
+}
+
+class DeleteGitHubBranchResponse extends $pb.GeneratedMessage {
+  factory DeleteGitHubBranchResponse({
+    $core.bool? deleted,
+  }) {
+    final result = DeleteGitHubBranchResponse._();
+    if (deleted != null) result.deleted = deleted;
+    return result;
+  }
+
+  DeleteGitHubBranchResponse._();
+
+  factory DeleteGitHubBranchResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DeleteGitHubBranchResponse()..mergeFromBuffer(data, registry);
+  factory DeleteGitHubBranchResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DeleteGitHubBranchResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'DeleteGitHubBranchResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: DeleteGitHubBranchResponse.$_createMessage)
+    ..aOB(1, _omitFieldNames ? '' : 'deleted')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DeleteGitHubBranchResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DeleteGitHubBranchResponse copyWith(
+          void Function(DeleteGitHubBranchResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as DeleteGitHubBranchResponse))
+          as DeleteGitHubBranchResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use DeleteGitHubBranchResponse() / DeleteGitHubBranchResponse.new instead')
+  static DeleteGitHubBranchResponse create() => DeleteGitHubBranchResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      DeleteGitHubBranchResponse._();
+  @$core.override
+  DeleteGitHubBranchResponse createEmptyInstance() =>
+      DeleteGitHubBranchResponse._();
+  @$core.pragma('dart2js:noInline')
+  static DeleteGitHubBranchResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<DeleteGitHubBranchResponse>(
+          DeleteGitHubBranchResponse.$_createMessage);
+  static DeleteGitHubBranchResponse? _defaultInstance;
+
+  /// False: it was gone already.
+  @$pb.TagNumber(1)
+  $core.bool get deleted => $_getBF(0);
+  @$pb.TagNumber(1)
+  set deleted($core.bool value) => $_setBool(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasDeleted() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearDeleted() => $_clearField(1);
+}
+
+class RestoreGitHubBranchRequest extends $pb.GeneratedMessage {
+  factory RestoreGitHubBranchRequest({
+    GitHubRef? ref,
+  }) {
+    final result = RestoreGitHubBranchRequest._();
+    if (ref != null) result.ref = ref;
+    return result;
+  }
+
+  RestoreGitHubBranchRequest._();
+
+  factory RestoreGitHubBranchRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RestoreGitHubBranchRequest()..mergeFromBuffer(data, registry);
+  factory RestoreGitHubBranchRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RestoreGitHubBranchRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RestoreGitHubBranchRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RestoreGitHubBranchRequest.$_createMessage)
+    ..aOM<GitHubRef>(1, _omitFieldNames ? '' : 'ref',
+        subBuilder: GitHubRef.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RestoreGitHubBranchRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RestoreGitHubBranchRequest copyWith(
+          void Function(RestoreGitHubBranchRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as RestoreGitHubBranchRequest))
+          as RestoreGitHubBranchRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RestoreGitHubBranchRequest() / RestoreGitHubBranchRequest.new instead')
+  static RestoreGitHubBranchRequest create() => RestoreGitHubBranchRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      RestoreGitHubBranchRequest._();
+  @$core.override
+  RestoreGitHubBranchRequest createEmptyInstance() =>
+      RestoreGitHubBranchRequest._();
+  @$core.pragma('dart2js:noInline')
+  static RestoreGitHubBranchRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RestoreGitHubBranchRequest>(
+          RestoreGitHubBranchRequest.$_createMessage);
+  static RestoreGitHubBranchRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  GitHubRef get ref => $_getN(0);
+  @$pb.TagNumber(1)
+  set ref(GitHubRef value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasRef() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRef() => $_clearField(1);
+  @$pb.TagNumber(1)
+  GitHubRef ensureRef() => $_ensure(0);
+}
+
+class RestoreGitHubBranchResponse extends $pb.GeneratedMessage {
+  factory RestoreGitHubBranchResponse() => RestoreGitHubBranchResponse._();
+
+  RestoreGitHubBranchResponse._();
+
+  factory RestoreGitHubBranchResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RestoreGitHubBranchResponse()..mergeFromBuffer(data, registry);
+  factory RestoreGitHubBranchResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RestoreGitHubBranchResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RestoreGitHubBranchResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RestoreGitHubBranchResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RestoreGitHubBranchResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RestoreGitHubBranchResponse copyWith(
+          void Function(RestoreGitHubBranchResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as RestoreGitHubBranchResponse))
+          as RestoreGitHubBranchResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RestoreGitHubBranchResponse() / RestoreGitHubBranchResponse.new instead')
+  static RestoreGitHubBranchResponse create() =>
+      RestoreGitHubBranchResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      RestoreGitHubBranchResponse._();
+  @$core.override
+  RestoreGitHubBranchResponse createEmptyInstance() =>
+      RestoreGitHubBranchResponse._();
+  @$core.pragma('dart2js:noInline')
+  static RestoreGitHubBranchResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RestoreGitHubBranchResponse>(
+          RestoreGitHubBranchResponse.$_createMessage);
+  static RestoreGitHubBranchResponse? _defaultInstance;
+}
+
 class RerunGitHubChecksResponse extends $pb.GeneratedMessage {
   factory RerunGitHubChecksResponse({
     $core.int? runs,
@@ -26635,6 +27271,42 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, RerunGitHubChecksRequest request) =>
       _client.invoke<RerunGitHubChecksResponse>(ctx, 'NushiService',
           'RerunGitHubChecks', request, RerunGitHubChecksResponse());
+
+  /// Cleaning up after a chat's pull request: what the chat's worktree and
+  /// branch would lose (GetCleanUp), removing the worktree, deleting its
+  /// branch, and the pull request's branch on GitHub deleted or made again.
+  /// API 89.
+  $async.Future<GetCleanUpResponse> getCleanUp(
+          $pb.ClientContext? ctx, GetCleanUpRequest request) =>
+      _client.invoke<GetCleanUpResponse>(
+          ctx, 'NushiService', 'GetCleanUp', request, GetCleanUpResponse());
+
+  /// Refused mid-turn, while another chat works in the worktree, and with
+  /// uncommitted changes unless force. API 89.
+  $async.Future<RemoveChatWorktreeResponse> removeChatWorktree(
+          $pb.ClientContext? ctx, RemoveChatWorktreeRequest request) =>
+      _client.invoke<RemoveChatWorktreeResponse>(ctx, 'NushiService',
+          'RemoveChatWorktree', request, RemoveChatWorktreeResponse());
+
+  /// Refused while a worktree has the branch checked out, and with commits
+  /// its base doesn't have unless force. API 89.
+  $async.Future<DeleteChatBranchResponse> deleteChatBranch(
+          $pb.ClientContext? ctx, DeleteChatBranchRequest request) =>
+      _client.invoke<DeleteChatBranchResponse>(ctx, 'NushiService',
+          'DeleteChatBranch', request, DeleteChatBranchResponse());
+
+  /// A merged or closed pull request's head branch, only while it points at
+  /// the pull request's head; never the default branch. API 89.
+  $async.Future<DeleteGitHubBranchResponse> deleteGitHubBranch(
+          $pb.ClientContext? ctx, DeleteGitHubBranchRequest request) =>
+      _client.invoke<DeleteGitHubBranchResponse>(ctx, 'NushiService',
+          'DeleteGitHubBranch', request, DeleteGitHubBranchResponse());
+
+  /// That branch made again at the pull request's head. API 89.
+  $async.Future<RestoreGitHubBranchResponse> restoreGitHubBranch(
+          $pb.ClientContext? ctx, RestoreGitHubBranchRequest request) =>
+      _client.invoke<RestoreGitHubBranchResponse>(ctx, 'NushiService',
+          'RestoreGitHubBranch', request, RestoreGitHubBranchResponse());
 
   /// A chat's pull request: the one it was started from, else the one whose
   /// head is its folder's branch, looked for on GitHub (and linked when

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:nushi/cleanup_dialog.dart';
+import 'package:nushi/cleanup_job.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/menu.dart';
@@ -26,7 +28,10 @@ PanelCard? pullCard(ChatPull cp, {VoidCallback? onShow}) {
   return PanelCard(
     title: 'Pull request',
     tooltip: () => cp.checkedText,
-    summary: _seen(() => _Summary(cp)),
+    summary: ListenableBuilder(
+      listenable: Listenable.merge([CleanUpJob.of(cp.chat), cleanUpLater]),
+      builder: (_, _) => _seen(() => _Summary(cp)),
+    ),
     action: _Menu(cp),
     onTap: cp.pull == null ? null : onShow,
     rows: [(null, _seen(() => _Rows(cp)))],
@@ -51,11 +56,20 @@ class _Summary extends StatelessWidget {
     final l = cp.link;
     final p = cp.pull;
     if (l == null) return Text('None', style: theme.ui(t.textMuted, size: 12));
+    final offer =
+        p != null &&
+        p.item.state == 'merged' &&
+        cp.daemon.daemonApi >= cleanUpApi &&
+        !cleanUpLater.value.contains(cp.chat.id) &&
+        !CleanUpJob.of(cp.chat).started;
     return pullSummary(
       theme,
       number: l.number,
       pull: p,
       unread: p == null ? 0 : unreadComments(cp.chat.id, p),
+      onCleanUp: offer
+          ? () => showCleanUp(context, cp.daemon, cp.chat, pull: p)
+          : null,
     );
   }
 }
@@ -71,6 +85,7 @@ Widget pullSummary(
   required GitHubPull? pull,
   int unread = 0,
   double size = 12,
+  VoidCallback? onCleanUp,
 }) {
   final t = theme.t;
   final p = pull;
@@ -186,6 +201,8 @@ Widget pullSummary(
         ),
       ),
       ...parts,
+      if (onCleanUp != null)
+        LinkText('Clean up…', size: size, onTap: onCleanUp),
     ],
   );
 }
@@ -265,6 +282,13 @@ class _Menu extends StatelessWidget {
           l == null ? 'Link pull request…' : 'Link another…',
           onPick: () => linkPull(context, cp),
         ),
+        if (cp.pull case final p?
+            when (p.item.state == 'merged' || p.item.state == 'closed') &&
+                cp.daemon.daemonApi >= cleanUpApi)
+          MenuEntry(
+            'Clean up…',
+            onPick: () => showCleanUp(context, cp.daemon, cp.chat, pull: p),
+          ),
         if (l != null)
           MenuEntry(
             'Unlink',

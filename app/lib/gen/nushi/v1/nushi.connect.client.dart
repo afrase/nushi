@@ -2228,6 +2228,102 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Cleaning up after a chat's pull request: what the chat's worktree and
+  /// branch would lose (GetCleanUp), removing the worktree, deleting its
+  /// branch, and the pull request's branch on GitHub deleted or made again.
+  /// API 89.
+  Future<nushiv1nushi.GetCleanUpResponse> getCleanUp(
+    nushiv1nushi.GetCleanUpRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.getCleanUp,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Refused mid-turn, while another chat works in the worktree, and with
+  /// uncommitted changes unless force. API 89.
+  Future<nushiv1nushi.RemoveChatWorktreeResponse> removeChatWorktree(
+    nushiv1nushi.RemoveChatWorktreeRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.removeChatWorktree,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Refused while a worktree has the branch checked out, and with commits
+  /// its base doesn't have unless force. API 89.
+  Future<nushiv1nushi.DeleteChatBranchResponse> deleteChatBranch(
+    nushiv1nushi.DeleteChatBranchRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.deleteChatBranch,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// A merged or closed pull request's head branch, only while it points at
+  /// the pull request's head; never the default branch. API 89.
+  Future<nushiv1nushi.DeleteGitHubBranchResponse> deleteGitHubBranch(
+    nushiv1nushi.DeleteGitHubBranchRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.deleteGitHubBranch,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// That branch made again at the pull request's head. API 89.
+  Future<nushiv1nushi.RestoreGitHubBranchResponse> restoreGitHubBranch(
+    nushiv1nushi.RestoreGitHubBranchRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.restoreGitHubBranch,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// A chat's pull request: the one it was started from, else the one whose
   /// head is its folder's branch, looked for on GitHub (and linked when
   /// found), with the folder's repository and branch. API 81.

@@ -2,13 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-
 import 'package:nushi/agents.dart';
 import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_files.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/chat_menu.dart';
+import 'package:nushi/cleanup_dialog.dart';
+import 'package:nushi/cleanup_job.dart';
 import 'package:nushi/composer_parts.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/github_view.dart';
@@ -73,6 +74,7 @@ enum Act {
   sleep(menu: ActMenu.chat, menuLabel: 'Sleep'),
   reload(menu: ActMenu.chat, menuLabel: 'Reload'),
   linkPull(menu: ActMenu.chat, menuLabel: 'Link Pull Request…'),
+  cleanUp(menu: ActMenu.chat, menuLabel: 'Clean Up…'),
   archive(menu: ActMenu.chat, menuLabel: 'Archive'),
   unarchive(menu: ActMenu.chat, menuLabel: 'Unarchive'),
   mcp(menu: ActMenu.chat, menuLabel: 'MCP Servers…'),
@@ -317,6 +319,16 @@ List<AppAction> chatActions(
       chat?.pull == null ? 'Link pull request…' : 'Link another pull request…',
       enabled: live && d.daemonApi >= chatPullApi,
       run: () => unawaited(linkPull(context, ChatPull.of(d, chat!))),
+    ),
+    AppAction(
+      .cleanUp,
+      'Clean up the worktree…',
+      short: 'Clean up…',
+      enabled:
+          chat != null && chat.worktree != null && d.daemonApi >= cleanUpApi,
+      run: () => unawaited(
+        showCleanUp(context, d, chat!, pull: ChatPull.of(d, chat).pull),
+      ),
     ),
     AppAction(
       .archive,
