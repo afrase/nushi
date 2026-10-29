@@ -87,6 +87,9 @@ type Options struct {
 	// Hooks run at points in a turn, by event, beside the hooks in
 	// claude's settings.
 	Hooks map[HookEvent][]HookMatcher
+	// OnElicitation answers MCP servers' requests for the user's input;
+	// without it each is declined.
+	OnElicitation func(ctx context.Context, r ElicitationRequest) (ElicitationResult, error)
 	// OnControl answers the requests the package doesn't, by subtype;
 	// its result is the answer's payload. ErrUnsupported, or no
 	// OnControl, tells claude the subtype isn't supported. Requests for

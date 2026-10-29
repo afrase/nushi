@@ -116,7 +116,7 @@ func (s *Session) handle(ctx context.Context, subtype string, req json.RawMessag
 	case "hook_callback":
 		return s.hookCallback(ctx, req)
 	case "elicitation":
-		return map[string]any{"action": "decline"}, nil
+		return s.elicitation(ctx, req)
 	case "request_user_dialog":
 		// The session declares no dialog kinds, so claude shouldn't ask;
 		// an answer would be dropped and leave the dialog open.

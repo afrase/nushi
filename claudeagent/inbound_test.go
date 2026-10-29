@@ -49,6 +49,9 @@ func TestInbound(t *testing.T) {
 	deny := func(context.Context, claudeagent.PermissionRequest) (claudeagent.PermissionResult, error) {
 		return claudeagent.Deny{Interrupt: true}, nil
 	}
+	fill := func(_ context.Context, r claudeagent.ElicitationRequest) (claudeagent.ElicitationResult, error) {
+		return claudeagent.ElicitationResult{Action: claudeagent.ElicitationAccept, Content: map[string]any{"server": r.ServerName}}, nil
+	}
 	for _, tc := range []struct {
 		name       string
 		o          claudeagent.Options
@@ -75,6 +78,11 @@ func TestInbound(t *testing.T) {
 			`{"behavior":"deny","message":"Permission denied","toolUseID":"t2","interrupt":true}`, ""},
 		{"hook_callback", claudeagent.Options{}, `{"subtype":"hook_callback","callback_id":"hook_9"}`, "", `claudeagent: no hook "hook_9"`},
 		{"elicitation", claudeagent.Options{}, `{"subtype":"elicitation","mcp_server_name":"s","message":"m"}`, `{"action":"decline"}`, ""},
+		{"OnElicitation", claudeagent.Options{OnElicitation: fill}, `{"subtype":"elicitation","mcp_server_name":"s","message":"m","mode":"form","requested_schema":{"type":"object"}}`,
+			`{"action":"accept","content":{"server":"s"}}`, ""},
+		{"OnElicitation fails", claudeagent.Options{OnElicitation: func(context.Context, claudeagent.ElicitationRequest) (claudeagent.ElicitationResult, error) {
+			return claudeagent.ElicitationResult{}, errors.New("no form")
+		}}, `{"subtype":"elicitation","mcp_server_name":"s","message":"m"}`, "", "no form"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			s, f := start(t, tc.o, sendRequest(tc.request), expectAnswer(tc.payload, tc.errMessage))
