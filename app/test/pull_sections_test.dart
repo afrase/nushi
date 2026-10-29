@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_checks.dart';
+import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
 import 'pull_fixture.dart';
@@ -14,8 +15,11 @@ void main() {
 
   testWidgets("Activity: a review's findings and threads point at To do; its "
       "resolved threads one line; a bot's numbers muted", (tester) async {
+    addTearDown(() => githubFindings.value = false);
     final (d, _) = await openPullTab(tester, fixturePull());
     await tester.tap(find.text('Activity 4'));
+    await tester.pumpAndSettle();
+    githubFindings.value = true;
     await tester.pumpAndSettle();
     expect(find.text('2 findings to address · in To do'), findsOneWidget);
     expect(find.text('2 unresolved threads · in To do'), findsOneWidget);

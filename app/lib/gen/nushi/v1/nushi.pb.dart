@@ -23216,6 +23216,7 @@ class GitHubComment extends $pb.GeneratedMessage {
     $core.String? url,
     $fixnum.Int64? createdMs,
     $core.String? review,
+    $core.String? commit,
   }) {
     final result = GitHubComment._();
     if (id != null) result.id = id;
@@ -23227,6 +23228,7 @@ class GitHubComment extends $pb.GeneratedMessage {
     if (url != null) result.url = url;
     if (createdMs != null) result.createdMs = createdMs;
     if (review != null) result.review = review;
+    if (commit != null) result.commit = commit;
     return result;
   }
 
@@ -23252,6 +23254,7 @@ class GitHubComment extends $pb.GeneratedMessage {
     ..aOS(7, _omitFieldNames ? '' : 'url')
     ..aInt64(8, _omitFieldNames ? '' : 'createdMs')
     ..aOS(9, _omitFieldNames ? '' : 'review')
+    ..aOS(10, _omitFieldNames ? '' : 'commit')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -23361,6 +23364,16 @@ class GitHubComment extends $pb.GeneratedMessage {
   $core.bool hasReview() => $_has(8);
   @$pb.TagNumber(9)
   void clearReview() => $_clearField(9);
+
+  /// The head commit a review was made on (its oid); empty for a comment.
+  @$pb.TagNumber(10)
+  $core.String get commit => $_getSZ(9);
+  @$pb.TagNumber(10)
+  set commit($core.String value) => $_setString(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasCommit() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearCommit() => $_clearField(10);
 }
 
 /// A review thread on line (from start_line) of path's side ("left", the

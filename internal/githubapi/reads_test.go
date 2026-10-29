@@ -115,7 +115,7 @@ func TestPull(t *testing.T) {
 	}
 	var review, comment bool
 	for _, c := range p.Conversation {
-		review = review || c.Review == "commented" && c.Body == "A first look."
+		review = review || c.Review == "commented" && c.Body == "A first look." && c.Commit == "c0ffee10c4b1a7d2e9f3a6b8c5d4e1f0a9b8c7d6"
 		comment = comment || c.Review == "" && strings.Contains(c.Body, "FAIL")
 	}
 	if !review || !comment {

@@ -96,6 +96,24 @@ Reply commentReply(GitHubComment c) => (
   from: 'A comment from ${_who(c.author)}',
 );
 
+/// A review that requested changes, its text whole, for the agent.
+Reply reviewReply(GitHubComment c) {
+  final who = c.outside ? '${c.author} (outside the repository)' : c.author;
+  return (
+    quote: _cut(
+      c.body.isEmpty
+          ? '$who requested changes, with no text (their review threads '
+                'say what).'
+          : '$who requested changes:\n${c.body}',
+      6000,
+    ),
+    text:
+        'Make the changes this review asks for here; check the current '
+        "code first. Don't reply to it on GitHub. $_asData",
+    from: 'Changes requested by ${_who(c.author)}',
+  );
+}
+
 /// A review thread, its place and every comment, for the agent; with
 /// [also], a review bot's findings on the same lines.
 Reply threadReply(GitHubThread x, {List<ReviewFinding> also = const []}) {
@@ -118,7 +136,7 @@ Reply threadReply(GitHubThread x, {List<ReviewFinding> also = const []}) {
       [
         'Review thread on $where$outdated:',
         for (final c in x.comments) '${who(c)}: ${c.body}',
-        for (final f in also) "${f.from.author}'s review: ${f.text}",
+        for (final f in also) '${possessive(f.from.author)} review: ${f.text}',
       ].join('\n'),
       6000,
     ),
@@ -134,14 +152,14 @@ Reply findingReply(ReviewFinding f) {
   final where = findingPlace(f);
   return (
     quote: _cut(
-      "Finding in ${f.from.author}'s review"
+      'Finding in ${possessive(f.from.author)} review'
       '${where.isEmpty ? '' : ' on $where'}:\n${f.text}',
       6000,
     ),
     text:
         'Address this finding from a review here; check the current code '
         "first. Don't reply to it on GitHub. $_asData",
-    from: "A finding from ${_who(f.from.author)}'s review",
+    from: 'A finding from ${possessive(_who(f.from.author))} review',
   );
 }
 

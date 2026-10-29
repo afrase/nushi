@@ -28,7 +28,7 @@ const pullQuery = `query PullRequest($owner: String!, $name: String!, $number: I
       reviewRequests(first: 30) { nodes { asCodeOwner requestedReviewer { __typename ... on User { login } ... on Bot { login } ... on Mannequin { login } ... on Team { slug } } } }
       latestReviews(first: 30) { nodes { author { login } state } }
       comments(last: 100) { nodes { id url author { login __typename } authorAssociation body createdAt } }
-      reviews(last: 100) { nodes { id url author { login __typename } authorAssociation body state submittedAt } }
+      reviews(last: 100) { nodes { id url author { login __typename } authorAssociation body state submittedAt commit { oid } } }
       pending: reviews(first: 1, states: PENDING) { nodes { id comments { totalCount } } }
       threads: reviewThreads(first: 100) { pageInfo { hasNextPage endCursor } nodes { ...Thread } }
       last: commits(last: 1) { nodes { commit { statusCheckRollup { contexts(first: 100) { nodes {
@@ -58,12 +58,22 @@ type said struct {
 	CreatedAt         time.Time `json:"createdAt"`
 	State             string    `json:"state"`
 	SubmittedAt       time.Time `json:"submittedAt"`
+	Commit            *struct {
+		OID string `json:"oid"`
+	} `json:"commit"`
 }
 
 func (s said) comment() model.GitHubComment {
 	return model.GitHubComment{ID: s.ID, Author: s.Author.name(), Association: s.AuthorAssociation, Body: Markdown(s.Body),
 		URL: webURL(s.URL), Bot: s.Author != nil && s.Author.Typename == "Bot", Created: cmp.Or(s.SubmittedAt, s.CreatedAt),
-		Review: strings.ToLower(s.State)}
+		Review: strings.ToLower(s.State), Commit: s.commit()}
+}
+
+func (s said) commit() string {
+	if s.Commit == nil {
+		return ""
+	}
+	return s.Commit.OID
 }
 
 type thread struct {

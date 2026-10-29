@@ -7,7 +7,6 @@ import 'package:nushi/github_settings.dart';
 import 'package:nushi/jira_people.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/pull_activity_parts.dart';
-import 'package:nushi/review_findings.dart';
 import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -28,11 +27,19 @@ class PullActivity extends StatelessWidget {
     required this.onPosted,
     required this.onTodo,
     super.key,
+    this.findings = const {},
+    this.shown,
   });
 
   final Daemon daemon;
   final GitHubPull pull;
   final DateTime now;
+
+  /// The findings in To do from each review (by its id).
+  final Map<String, int> findings;
+
+  /// A review To do pointed at (its id) and the key it's found by.
+  final (String, GlobalKey)? shown;
 
   /// Who the user is on the pull request's host ('' when not known).
   final String me;
@@ -66,6 +73,8 @@ class PullActivity extends StatelessWidget {
           ),
           for (final c in p.conversation)
             _Entry(
+              key: shown?.$1 == c.id ? shown!.$2 : null,
+              findings: findings[c.id] ?? 0,
               comment: c,
               now: now,
               pull: p,
@@ -165,9 +174,14 @@ class _Entry extends StatefulWidget {
     required this.now,
     required this.pull,
     required this.onTodo,
+    super.key,
     this.what = '',
     this.threads = false,
+    this.findings = 0,
   });
+
+  /// Its findings in To do.
+  final int findings;
 
   final GitHubComment comment;
   final DateTime now;
@@ -203,7 +217,7 @@ class _EntryState extends State<_Entry> {
     final (text, foot) = c.bot ? _splitFoot(c.body) : (c.body, '');
     final long = longText(text);
     final clamped = long && !_open;
-    final findings = reviewFindings(c);
+    final findings = widget.findings;
     final threads = widget.threads
         ? [
             for (final x in widget.pull.threads)
@@ -321,15 +335,15 @@ class _EntryState extends State<_Entry> {
                     Clamped(body)
                   else
                     body,
-                  if (findings.isNotEmpty || open > 0 || long)
+                  if (findings > 0 || open > 0 || long)
                     Wrap(
                       spacing: 6,
                       runSpacing: 6,
                       children: [
-                        if (findings.isNotEmpty)
+                        if (findings > 0)
                           PointerChip(
-                            '${findings.length} '
-                            'finding${findings.length == 1 ? '' : 's'} to '
+                            '$findings '
+                            'finding${findings == 1 ? '' : 's'} to '
                             'address · in To do',
                             icon: Icons.warning_amber_rounded,
                             color: t.findingsAccent,

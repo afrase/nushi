@@ -236,7 +236,7 @@ func ghItemsProto(items []model.GitHubItem) []*nushiv1.GitHubItem {
 
 func ghCommentProto(c model.GitHubComment) *nushiv1.GitHubComment {
 	return &nushiv1.GitHubComment{Id: c.ID, Author: c.Author, Association: c.Association, Outside: github.Outside(c.Association),
-		Bot: c.Bot, Body: c.Body, Url: c.URL, CreatedMs: unixMs(c.Created), Review: c.Review}
+		Bot: c.Bot, Body: c.Body, Url: c.URL, CreatedMs: unixMs(c.Created), Review: c.Review, Commit: c.Commit}
 }
 
 func ghCommentsProto(cs []model.GitHubComment) []*nushiv1.GitHubComment {

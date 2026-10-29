@@ -40,6 +40,9 @@ type GitHubComment struct {
 	// Review is a review's state ("approved", "changes_requested",
 	// "commented", "dismissed"); "" for a comment.
 	Review string
+	// Commit is the head commit a review was made on (its oid); "" for a
+	// comment.
+	Commit string
 }
 
 // GitHubThread is a review thread on a pull request's diff: on Line (from
