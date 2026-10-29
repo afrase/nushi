@@ -65,7 +65,7 @@ func (p *player) play(e event) {
 		if e.done {
 			c.busy, c.started = false, time.Time{}
 		} else {
-			c.busy, c.started = true, time.Now()
+			c.busy, c.started, c.done = true, time.Now(), make(chan struct{}) // done: what a held turn's release closes
 			c.addLocked(model.Item{Kind: model.UserMessage, Text: e.text})
 		}
 		c.mu.Unlock()
