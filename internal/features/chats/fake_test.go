@@ -284,7 +284,7 @@ func (f *fakeAgent) Cancel(_ context.Context, n *acp.CancelNotification) error {
 	f.wire = append(f.wire, "cancel")
 	if f.gate != nil && !f.ignoreCancel {
 		f.cancelled = true
-		close(f.gate)
+		f.openGateLocked()
 	}
 	return nil
 }
@@ -293,7 +293,18 @@ func (f *fakeAgent) Cancel(_ context.Context, n *acp.CancelNotification) error {
 func (f *fakeAgent) release() {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	close(f.gate)
+	f.openGateLocked()
+}
+
+// openGateLocked closes the gate unless a release or a cancel already did
+// and the turn hasn't set the next one yet (the service's Close cancelling
+// right after a test's release).
+func (f *fakeAgent) openGateLocked() {
+	select {
+	case <-f.gate:
+	default:
+		close(f.gate)
+	}
 }
 
 func (f *fakeAgent) CanSteer() bool { return f.steerable }
