@@ -89,6 +89,32 @@ func TestPermission(t *testing.T) {
 	}
 }
 
+// A request about a call the stream showed whole shows it no more: its
+// input is claude's parse of the streamed one, the same but for its
+// keys' order (as the real claude 2.1.312 sends AskUserQuestion's), and
+// the call keeps the input the stream showed, as with claude-agent-acp.
+func TestRequestKeepsStreamedInput(t *testing.T) {
+	streamed := `{"questions":[{"question":"Which?","header":"Pick","multiSelect":false,"options":[{"label":"A"},{"label":"B"}]}]}`
+	parsed := `{"questions":[{"question":"Which?","header":"Pick","options":[{"label":"A"},{"label":"B"}],"multiSelect":false}]}`
+	f := fake(user("id2"), echo("id2"), assistant(`{"type":"tool_use","id":"toolu_q","name":"AskUserQuestion","input":`+streamed+`}`),
+		canUseTool("toolu_q", "AskUserQuestion", parsed, ""),
+		answers("toolu_q", `{"behavior":"allow"}`), result(names("id2")), claudetest.Send(idle))
+	p := start(t, &acp.ClientCapabilities{Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}}}, f)
+	p.elicit = func(context.Context, *acp.CreateElicitationRequest) (*acp.CreateElicitationResponse, error) {
+		return &acp.CreateElicitationResponse{Decline: true}, nil
+	}
+	stopReason(p.prompt(t, p.open(t), "go"))
+	var inputs []string
+	for _, u := range p.toolUpdates() {
+		if strings.Contains(u, `"rawInput":{"questions"`) {
+			inputs = append(inputs, u)
+		}
+	}
+	if len(inputs) != 1 || !strings.Contains(inputs[0], `"multiSelect":false,"options"`) {
+		t.Errorf("%q", inputs)
+	}
+}
+
 // "Don't ask again" is offered only with claude's rules for it, and not
 // when a rule of the user's asks each time; default-to-no puts No first.
 func TestPermissionOptions(t *testing.T) {
@@ -102,6 +128,25 @@ func TestPermissionOptions(t *testing.T) {
 		{claudeagent.PermissionRequest{Suggestions: rules, MatchedAskRule: true}, "allow-once reject"},
 		{claudeagent.PermissionRequest{Suggestions: rules, SuppressAlwaysAllowRule: true}, "allow-once reject"},
 		{claudeagent.PermissionRequest{Suggestions: rules, DefaultToNo: true}, "reject allow-once allow-always"},
+		// A command's rules: "don't ask again" only when that is what they do.
+		{claudeagent.PermissionRequest{ToolName: "Bash", Suggestions: []claudeagent.PermissionUpdate{
+			{Type: "addRules", Behavior: "allow", Rules: []claudeagent.PermissionRule{{ToolName: "Bash", RuleContent: "perl -e 1"}, {ToolName: "Read", RuleContent: "/x/**"}}},
+			{Type: "addDirectories", Destination: "session", Directories: []string{"/x"}},
+		}}, "allow-once allow-always reject"},
+		{claudeagent.PermissionRequest{ToolName: "Bash", Suggestions: []claudeagent.PermissionUpdate{ // claude's for mkdir outside the folder
+			{Type: "addRules", Behavior: "allow", Rules: []claudeagent.PermissionRule{{ToolName: "Bash", RuleContent: "mkdir -v d"}}},
+			{Type: "addDirectories", Destination: "session", Directories: []string{"/x"}},
+			{Type: "setMode", Mode: "acceptEdits", Destination: "session"},
+		}}, "allow-once reject"},
+		{claudeagent.PermissionRequest{ToolName: "PowerShell", Suggestions: []claudeagent.PermissionUpdate{
+			{Type: "addRules", Behavior: "allow", Rules: []claudeagent.PermissionRule{{ToolName: "PowerShell"}}},
+		}}, "allow-once reject"},
+		{claudeagent.PermissionRequest{ToolName: "Bash", Suggestions: []claudeagent.PermissionUpdate{
+			{Type: "addDirectories", Destination: "localSettings", Directories: []string{"/x"}},
+		}}, "allow-once reject"},
+		{claudeagent.PermissionRequest{ToolName: "Write", Suggestions: []claudeagent.PermissionUpdate{
+			{Type: "setMode", Mode: "acceptEdits", Destination: "session"},
+		}}, "allow-once allow-always reject"},
 	} {
 		var got []string
 		for _, o := range permissionOptions(tc.r) {
