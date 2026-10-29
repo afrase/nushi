@@ -112,7 +112,7 @@ func TestToolResults(t *testing.T) {
 		`tool_call_update {"toolCallId":"toolu_e","status":"completed","rawOutput":"ok","_meta":{"claudeCode":{"toolName":"Edit"}}}`,
 		`tool_call {"toolCallId":"toolu_b","title":"go test","name":"Bash","kind":"execute","status":"pending","rawInput":{"command":"go test"},"_meta":{"claudeCode":{"parentToolUseId":"toolu_p","toolName":"Bash"}}}`,
 		`tool_call_update {"toolCallId":"toolu_b","status":"in_progress","_meta":{"claudeCode":{"parentToolUseId":"toolu_p","toolName":"Bash"}}}`,
-		"tool_call_update {\"toolCallId\":\"toolu_b\",\"status\":\"failed\",\"content\":[{\"type\":\"content\",\"content\":{\"type\":\"text\",\"text\":\"```console\\nExit code 1\\nFAIL\\n```\"}}],\"rawOutput\":\"Exit code 1\\nFAIL\",\"_meta\":{\"claudeCode\":{\"parentToolUseId\":\"toolu_p\",\"toolName\":\"Bash\"}}}",
+		"tool_call_update {\"toolCallId\":\"toolu_b\",\"status\":\"failed\",\"content\":[{\"type\":\"content\",\"content\":{\"type\":\"text\",\"text\":\"```\\nExit code 1\\nFAIL\\n```\"}}],\"rawOutput\":\"Exit code 1\\nFAIL\",\"_meta\":{\"claudeCode\":{\"parentToolUseId\":\"toolu_p\",\"toolName\":\"Bash\"}}}",
 		`tool_call {"toolCallId":"toolu_w","title":"Fetch https://x","name":"WebFetch","kind":"fetch","status":"pending","rawInput":{"url":"https://x"},"_meta":{"claudeCode":{"toolName":"WebFetch"}}}`,
 		`tool_call_update {"toolCallId":"toolu_w","status":"failed","content":[{"type":"content","content":{"type":"text","text":"Permission denied: denied by a rule"}}],"_meta":{"claudeCode":{"toolName":"WebFetch","toolResponse":{"decisionReason":"a rule","decisionReasonType":"","message":"denied by a rule"}}}}`,
 	}
