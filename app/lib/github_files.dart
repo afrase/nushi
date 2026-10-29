@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:diff_view/diff_view.dart';
 import 'package:flutter/material.dart';
+import 'package:nushi/chat.dart' show clock;
 import 'package:nushi/daemon.dart';
 import 'package:nushi/diff_box.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -426,11 +427,7 @@ class _ThreadCardState extends State<ThreadCard> {
           ),
           if (_open) ...[
             for (final c in x.comments)
-              CommentEntry(
-                c,
-                now: widget.now ?? DateTime.now(),
-                sendable: false,
-              ),
+              CommentEntry(c, now: widget.now ?? clock(), sendable: false),
             const SizedBox(height: 8),
             if (_replying)
               CommentBox(

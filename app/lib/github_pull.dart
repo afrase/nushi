@@ -107,7 +107,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
           daemon: widget.daemon,
           inChat: widget.inChat,
           pull: p,
-          now: widget.now ?? DateTime.now(),
+          now: widget.now ?? clock(),
           error: _error,
           onReview: () =>
               submitReview(context, widget.daemon, p, onDone: _load),
@@ -138,7 +138,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
             _Tab.conversation => _Conversation(
               daemon: widget.daemon,
               pull: p,
-              now: widget.now ?? DateTime.now(),
+              now: widget.now ?? clock(),
               onPosted: _load,
             ),
             _Tab.checks => GitHubChecks(daemon: widget.daemon, pull: p),
