@@ -191,7 +191,12 @@ func (a *agent) Prompt(ctx context.Context, req *acp.PromptRequest) (*acp.Prompt
 	case o := <-t.done:
 		return o.resp, o.err
 	case <-ctx.Done():
-		s.cancel() // the client withdrew the prompt: a cancel, as it would be in claude's terminal
+		// The client withdrew the prompt: a cancel, as it would be in
+		// claude's terminal. When the client went instead, closing the
+		// session interrupts the turn, once (serve).
+		if a.client.Err() == nil {
+			s.cancel()
+		}
 		return nil, ctx.Err()
 	}
 }
