@@ -4,8 +4,8 @@ import 'package:nushi/replies.dart';
 void main() {
   test('a message with replies, and back', () {
     const replies = [
-      (quote: 'line one\nline two', text: 'why?'),
-      (quote: 'just this', text: ''),
+      (quote: 'line one\nline two', text: 'why?', from: ''),
+      (quote: 'just this', text: '', from: ''),
     ];
     final message = withReplies(replies, 'and the rest');
     expect(
@@ -30,6 +30,7 @@ void main() {
     const lines = (
       quote: 'kept as a DateTime',
       text: 'Why?\nAnd why not a string?',
+      from: '',
     );
     var message = withReplies([lines], 'the rest');
     expect(message, isNot(contains('end of replies')));
@@ -40,6 +41,7 @@ void main() {
     const paragraphs = (
       quote: 'kept as a DateTime',
       text: 'Why?\n\nAnd why not?',
+      from: '',
     );
     for (final text in ['the rest', '']) {
       message = withReplies([lines, paragraphs], text);
@@ -53,5 +55,39 @@ void main() {
       expect(got, [lines, paragraphs]);
       expect(rest, text);
     }
+  });
+
+  // Whose the quoted text is: one lead line per group (the coordinator's
+  // case: Claude took the user's own review comments for a reviewer's).
+  test("a group's lead line once before it, and back to its first reply", () {
+    const mine = 'My review comments on your changes:';
+    const theirs =
+        'Review comments from @octo on PR a/b#1 (GitHub), my pull '
+        'request:';
+    const replies = [
+      (quote: 'a.go, line 1', text: 'Rename it.', from: mine),
+      (quote: 'a.go, line 2', text: 'Drop it.', from: mine),
+      (quote: 'Overflow?', text: 'Address it.', from: theirs),
+      (quote: 'selected text', text: 'why?', from: ''),
+    ];
+    final message = withReplies(replies, 'Thanks.');
+    expect(
+      message,
+      '<!-- from -->\n$mine\n\n'
+      '<!-- reply 1 -->\n> a.go, line 1\n\nRename it.\n\n'
+      '<!-- reply 2 -->\n> a.go, line 2\n\nDrop it.\n\n'
+      '<!-- from -->\n$theirs\n\n'
+      '<!-- reply 3 -->\n> Overflow?\n\nAddress it.\n\n'
+      '<!-- reply 4 -->\n> selected text\n\nwhy?\n\nThanks.',
+    );
+    final (got, rest) = splitReplies(message);
+    expect(rest, 'Thanks.');
+    expect([for (final r in got) r.from], [mine, '', theirs, '']);
+    expect(
+      [for (final r in got) r.text],
+      ['Rename it.', 'Drop it.', 'Address it.', 'why?'],
+    );
+    // Sent again as parsed, the leads are the same.
+    expect(withReplies(got, 'Thanks.'), message);
   });
 }

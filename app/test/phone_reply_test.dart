@@ -163,7 +163,7 @@ void main() {
       expect(find.byType(ReplyBox), findsNothing);
       final cards = tester.widget<ReplyCards>(find.byType(ReplyCards));
       expect(cards.replies.value, [
-        (quote: 'socket', text: 'Can the fake clock bring it?'),
+        (quote: 'socket', text: 'Can the fake clock bring it?', from: ''),
       ]);
       expect(tester.takeException(), isNull);
       await _end(tester, phone);

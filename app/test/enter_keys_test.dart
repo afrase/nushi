@@ -102,7 +102,9 @@ void main() {
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
   testWidgets('the reply dialog: ⌥⏎ starts a line, ⌘⏎ saves', (tester) async {
-    final replies = Replies([(quote: 'kept as a DateTime', text: 'abcd')]);
+    final replies = Replies([
+      (quote: 'kept as a DateTime', text: 'abcd', from: ''),
+    ]);
     await tester.pumpWidget(
       MaterialApp(
         theme: const NushiTheme(Tokens.dark).toThemeData(),
