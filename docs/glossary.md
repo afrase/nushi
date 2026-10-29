@@ -34,7 +34,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Background command** | A command the agent left running in the background, its output in a pane. | `Shell`, `ShellPane`, `Item.TaskID` | |
 | **Queue** | Messages sent while a turn runs (⏎, Queue). Each goes at the agent's next chance: into the running turn when the agent takes steering, else as the next message. Shown as pills over the box. | `QueuedMessage`, `ChatQueue`, `SendPrompt.queue`, `Unqueue`, `QueuePills` | |
 | **Steer** | "Steer: stop and send now" (⌘⏎): stops the running turn and sends at once. Not the agent's steering (Synonyms). | `SendPrompt.now` | |
-| **Side question** | A fork of the chat, beside it, that knows the conversation but doesn't add to it; it ends when closed (⇧⌘B). | `ForkChat`, `CloseSideChat`, "side chat" in Go, `side_panel.dart` | |
+| **Side chat** | A fork of the chat, beside it, that knows the conversation but doesn't add to it; you can go back and forth in it, as in Claude Code's side chat. It ends when closed (⇧⌘B). | `ForkChat`, `CloseSideChat`, `sides.go`, `side_panel.dart` | |
 | **Rewind** | Go back to just before one of your messages: the session forks there and the message returns to the box. Files aren't rewound. Esc Esc lists them. | `RewindChat`, `Item.ForkAt`, `Rewindable` | 0020 |
 | **Sleep** | An idle chat's agent stops; the chat stays and the next message wakes it. On its own after 30 idle minutes. The chat is then asleep. | `SleepChat`, `ChatStatus.asleep` | 0032 |
 | **Archive** | Put a chat away: its agent stops, it's read-only and listed last. Unarchive reopens it. | `ArchiveChat`, `Session.Archived` | |
@@ -73,7 +73,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Composer** | The message box and its pickers under the transcript. "The box" is its text field. | `Composer` | |
 | **Draft** | What you've written in a chat and not sent: the box's text, mentioned files, reply cards and images, and the subagents' boxes. Kept on disk until sent, so a crash or restart doesn't lose it. | `Draft`, `Drafts`, `drafts.json` | 0062 |
 | **Reply card** | A quote put into the box to send with your message: a review thread, a comment, a failed check. | `ReplyCards`, `QuoteBlock` | 0059 |
-| **Side pane** | What opens beside the transcript: a subagent's pane, or the preview of an artifact. A side question opens beside it, apart. | `panes.dart`, `SubagentPane`, `PreviewPane` | |
+| **Side pane** | What opens beside the transcript: a subagent's pane, or the preview of an artifact. A side chat opens beside it, apart. | `panes.dart`, `SubagentPane`, `PreviewPane` | |
 | **Details panel** | The right column, made of widgets. Show details, Hide details. | `details_panel.dart` | |
 | **Widget** | One part of the details panel: Environment, Context, Changes, Pull request, Artifacts, MCP, Background tasks. Each collapses and drags. | `PanelCard`, `panel_cards.dart` | |
 | **Card** | A box in a flow or a list: a question, permission, trust, findings or reply card; the GitHub inbox's and Jira's task list's groups. Never the details panel's parts. | `cards.dart`, `CardShell` | 0009 |
@@ -156,7 +156,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 
 One line each; the word after the arrow wins.
 
-- side chat → **side question** (Go and the API still say side chat: Renames to do).
+- side question → **side chat** (the owner, 2026-10-29: "side chat, since you can go back and forth"; the app's UI and Dart still say side question: Renames to do).
 - card, for the details panel's parts → **widget** (Context card, Artifacts card, MCP card, Pull request card: all widgets). Older ADRs' titles say card; they stay as written.
 - details pane → **details panel**. Panel is the details panel and the terminals'; pane is the side pane and what's in it.
 - PR → **pull request** in the UI and docs; commit messages may say PR.
@@ -181,7 +181,7 @@ One line each; the word after the arrow wins.
 Code that uses an old word, for the clean-up batch. Proto names stay (the API is additive, ADR 0004); a rename there is a new field or call.
 
 - `PanelCard`, `PanelCards`, `panel_cards.dart`, `collapsedCards` → widget; `artifacts_card.dart`, `mcp_card.dart`, `pull_card.dart` → `*_widget.dart`; `agents_card.dart` holds the Background tasks widget → `background_tasks_widget.dart`. Doc comments that call them cards (`details_panel.dart`, `chat_header.dart`, `app_actions.dart`, `pull_link.dart`, `pull_states.dart`). `CardShell` and `CardList` serve the inbox's and task list's cards too: keep them.
-- Side chat in Go (`features/chats`: `sides.go`, `CloseSideChat`'s comments, `Throwaway`, the log's `side` attribute, `remote/push.go`) and Dart (`daemon.dart`'s side chats, `chat.dart`'s `canFork`) → side question. `side_panel.dart` holds the side question → `side_question.dart`.
+- Side question in the app's UI text and Dart comments (`app_actions.dart`, `chat.dart`, `chat_view.dart`, `draft.dart`, `replies.dart`, `side_panel.dart`, `transcript.dart`), `docs/chats.md` and Go comments in `sides.go` → side chat. `side_panel.dart` holds the side chat → `side_chat.dart`.
 - `Relay`, `RelayTo`, `RelayCall`, `RelayState`, `RelayedBy`, `RelayStop` (`model.Item`, `model.Message`) and proto `relay_to`, `relay_stop` → a subagent message word (`ToSubagent`…), so relay means the server only.
 - `model.Shell` and `ShellPane` (a background command) → `BackgroundCommand`; `Shell` is easy to take for a terminal's.
 - `model.Session` is a chat's record, beside `model.Chat`, the snapshot → `ChatRecord` or similar.
