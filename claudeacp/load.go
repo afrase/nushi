@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"strings"
 	"sync"
 
@@ -16,20 +17,33 @@ import (
 
 // Sessions claude kept: load (claude resumes the session and the history
 // is replayed), resume (without the history), and fork (a copy, resumed).
-// A session claude has no transcript of is resourceNotFound, as is one
-// claude quits on before it answers (it says "No conversation found"):
-// clients start a new session then. An open session is answered as it
-// is.
+// A session claude has no transcript of is resourceNotFound: clients
+// start a new session then, and may forget the old one. An open session
+// is answered as it is.
 
-// startError is what a failed start of claude says: for a resume, that
-// the session isn't there when claude ended before it answered.
-func startError(resume string, err error) error {
+// startError is what a failed start of claude says. A resume claude
+// ended on before it answered is resourceNotFound only when the session's
+// transcript is gone by then (claude says "No conversation found"); else
+// claude failed for a reason of its own, which the error carries with the
+// end of its stderr, and the session is still there.
+func (a *agent) startError(resume, cwd string, err error) error {
 	var exit *claudeagent.ExitError
-	if resume != "" && (errors.As(err, &exit) || strings.Contains(err.Error(), "ended before answering") ||
-		strings.Contains(err.Error(), "No conversation found")) {
+	ended := errors.As(err, &exit) || strings.Contains(err.Error(), "ended before answering")
+	if resume != "" && ended && a.transcriptGone(resume, cwd) {
 		return notFound(resume)
 	}
 	return &acp.Error{Code: acp.ErrorCodeInternalError, Message: fmt.Sprintf("Claude didn't start: %v", err)}
+}
+
+// transcriptGone says claude has no transcript of session id, for cwd's
+// folder or any other.
+func (a *agent) transcriptGone(id, cwd string) bool {
+	for _, dir := range []string{cwd, ""} {
+		if _, err := sessions.Messages(a.cfg.ConfigDir, id, dir); !errors.Is(err, fs.ErrNotExist) {
+			return false
+		}
+	}
+	return true
 }
 
 // notFound is the error for a session claude doesn't have.

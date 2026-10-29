@@ -90,7 +90,7 @@ func (a *agent) start(ctx context.Context, id string, o claudeagent.Options) (*s
 	o.Stderr = s.stderr.line
 	cs, err := claudeagent.Start(ctx, o)
 	if err != nil {
-		return nil, startError(o.Resume, err)
+		return nil, a.startError(o.Resume, o.Cwd, err)
 	}
 	s.cs = cs
 	s.cfg.init(o, cs.Init(), a.clientCaps().booleans)
