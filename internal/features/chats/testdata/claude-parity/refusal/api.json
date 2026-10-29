@@ -1,6 +1,7 @@
 {
   "turns": [
     {"match": {"lastUserText": "tell me a story"}, "stop_reason": "refusal", "stop_details": {"type": "refusal", "category": "cyber", "explanation": "This request was flagged by a safety classifier."}, "content": [{"type": "text", "deltas": ["Once ", "upon"]}]},
-    {"stop_reason": "refusal", "stop_details": {"type": "refusal", "category": "cyber", "explanation": "This request was flagged by a safety classifier."}, "content": [{"type": "text", "text": "Again"}]}
+    {"stop_reason": "refusal", "stop_details": {"type": "refusal", "category": "cyber", "explanation": "This request was flagged by a safety classifier."}, "content": [{"type": "text", "text": "Again"}]},
+    {"match": {"model": "claude-opus-4-8"}, "content": [{"type": "text", "text": "A short story, then."}]}
   ]
 }
