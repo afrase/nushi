@@ -13,11 +13,13 @@ import (
 	"os/exec"
 	"slices"
 	"strings"
+	"unicode/utf8"
 
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/agentproc"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/toolcall"
 )
 
 // Start starts the adapter, as claude.Start does Claude's (node, env), running cli,
@@ -105,7 +107,8 @@ func ForkAt(init *acp.InitializeResponse) func(messageID string) map[string]any 
 // without terminals (Nushi) in pieces, as `_meta.terminal_output_delta`,
 // and how it ended, `_meta.terminal_exit`. The call's content is then only
 // a reference to a terminal: its text is the output in a fence, after
-// "Exit code N" when it failed. A call without either is left as it is.
+// "Exit code N" when it failed. Only the output's last MiB is kept, said
+// so above it. A call without either is left as it is.
 func ToolCall(it *model.Item, meta map[string]any, _ json.RawMessage) (ownText bool) {
 	out, _ := meta["terminal_output_delta"].(map[string]any)
 	exit, ok := meta["terminal_exit"].(map[string]any)
@@ -113,8 +116,12 @@ func ToolCall(it *model.Item, meta map[string]any, _ json.RawMessage) (ownText b
 		return false
 	}
 	data, _ := out["data"].(string)
-	it.Output += data
-	it.Text = fence(it.Output)
+	it.Output = keep(it.Output + data)
+	body, cut := strings.CutPrefix(it.Output, notShown+"\n")
+	it.Text = toolcall.Fence(body)
+	if cut {
+		it.Text = notShown + "\n\n" + it.Text
+	}
 	switch code, isCode := exit["exit_code"].(float64); {
 	case isCode && code != 0:
 		it.Text = fmt.Sprintf("Exit code %d\n\n%s", int(code), it.Text)
@@ -124,22 +131,30 @@ func ToolCall(it *model.Item, meta map[string]any, _ json.RawMessage) (ownText b
 	return true
 }
 
-// fence puts output in a code fence longer than any run of backticks in it.
-func fence(output string) string {
-	if output == "" {
-		return ""
+// keptOutput is how much of a command's output a call keeps: a build or
+// a test run can print for an hour, and each piece rewrites the call's
+// text (Claude's shells keep 64 KB).
+const keptOutput = 1 << 20
+
+// notShown is the line output let go of starts with.
+const notShown = "… (earlier output not shown)"
+
+// keep is output's last keptOutput bytes from a line's start (a
+// character's, in a line that long) after notShown's line, or output
+// whole when it's no longer.
+func keep(output string) string {
+	if len(output) <= keptOutput+len(notShown)+1 {
+		return output
 	}
-	longest, run := 0, 0
-	for _, r := range output {
-		if r == '`' {
-			run++
-			longest = max(longest, run)
-		} else {
-			run = 0
+	s := output[len(output)-keptOutput:]
+	if i := strings.IndexByte(s, '\n'); i >= 0 && i < len(s)-1 {
+		s = s[i+1:]
+	} else {
+		for s != "" && !utf8.RuneStart(s[0]) {
+			s = s[1:]
 		}
 	}
-	f := strings.Repeat("`", max(3, longest+1))
-	return f + "\n" + strings.TrimSuffix(output, "\n") + "\n" + f
+	return notShown + "\n" + s
 }
 
 // Other says field is the free-text note that the adapter puts after a

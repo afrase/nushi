@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
+	"unicode/utf8"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -33,6 +35,27 @@ func TestCommandOutput(t *testing.T) {
 	ToolCall(&quiet, map[string]any{"terminal_exit": map[string]any{"exit_code": 0.0}}, nil)
 	if quiet.Text != "" {
 		t.Errorf("a command that printed nothing reads %q", quiet.Text)
+	}
+}
+
+// A command that prints for long keeps its output's last MiB, from a
+// line's start, said so above the fence.
+func TestLongOutput(t *testing.T) {
+	it := model.Item{}
+	line := strings.Repeat("é", 511) + "\n" // 1 KB
+	for i := range 2_000 {                  // 2 MB
+		ToolCall(&it, map[string]any{"terminal_output_delta": map[string]any{"data": fmt.Sprint(i, line)}}, nil)
+	}
+	ToolCall(&it, map[string]any{"terminal_exit": map[string]any{"exit_code": 1.0}}, nil)
+	if len(it.Output) > keptOutput+len(notShown)+1 || len(it.Text) > keptOutput+100 {
+		t.Fatalf("kept %d bytes of output, %d of text", len(it.Output), len(it.Text))
+	}
+	want := "Exit code 1\n\n" + notShown + "\n\n```\n"
+	if !strings.HasPrefix(it.Text, want) || !strings.HasSuffix(it.Text, "1999"+line+"```") {
+		t.Fatalf("text starts %q, ends %q", it.Text[:60], it.Text[len(it.Text)-20:])
+	}
+	if first := strings.TrimPrefix(it.Text, want); !utf8.ValidString(first) || strings.HasPrefix(first, "é") {
+		t.Fatalf("not cut at a line's start: %q", first[:20])
 	}
 }
 

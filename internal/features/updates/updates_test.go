@@ -198,3 +198,31 @@ func TestEveryTwoHours(t *testing.T) {
 		synctest.Wait()
 	})
 }
+
+// Turning the checks off while Run's check waits for GitHub drops what
+// that check finds: no newer release comes back after Off.
+func TestOffDuringACheck(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		asked, answer := make(chan struct{}), make(chan struct{})
+		ask := func(context.Context) (string, time.Time, error) {
+			asked <- struct{}{}
+			<-answer
+			return "v0.1.17", time.Now(), nil
+		}
+		var ev events
+		s := New(ask, &prefs{on: true}, "0.1.16", "https://github.com/afrase/nushi", ev.publish)
+		ctx, cancel := context.WithCancel(t.Context())
+		go s.Run(ctx)
+		<-asked
+		if err := s.SetOn(false); err != nil {
+			t.Fatal(err)
+		}
+		close(answer)
+		synctest.Wait()
+		if s.Get().Version != "" || ev.n() != 1 || ev.got[0].Version != "" {
+			t.Fatalf("off, then the check: %+v, published %+v", s.Get(), ev.got)
+		}
+		cancel()
+		synctest.Wait()
+	})
+}
