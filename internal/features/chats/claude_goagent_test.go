@@ -119,6 +119,7 @@ func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 		}
 	}()
 	var events []event
+	var marks []string // each kept update's mark, in order
 	keep := func(m rpc) bool {
 		if m.Method != sessionUpdate {
 			return false
@@ -126,11 +127,18 @@ func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 		var n acp.SessionNotification
 		testcheck.NoErr(t, json.Unmarshal(m.Params, &n))
 		events = append(events, event{note: &n})
+		marks = append(marks, mark(m.Params))
 		return true
 	}
+	var held []rpc // what sent read past, other than session updates, for next
 	// next is the Go agent's next message other than a session update,
 	// which it keeps.
 	next := func(what string) rpc {
+		if len(held) > 0 {
+			m := held[0]
+			held = held[1:]
+			return m
+		}
 		for {
 			select {
 			case m, ok := <-msgs:
@@ -145,6 +153,33 @@ func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 			}
 		}
 	}
+	// sent waits until the Go agent has sent the update marked want after
+	// the last one waited for: the adapter had sent it before the client's
+	// next line, which may count on it (a cancel once a subagent runs).
+	// If the Go agent never sends it, the chats compared say how it
+	// differs.
+	seen := 0 // the marks waited past
+	sent := func(want string) {
+		deadline := time.After(2 * time.Second)
+		for {
+			if i := slices.Index(marks[seen:], want); i >= 0 {
+				seen += i + 1
+				return
+			}
+			select {
+			case m, ok := <-msgs:
+				if !ok {
+					return
+				}
+				if !keep(m) {
+					held = append(held, m)
+				}
+			case <-deadline:
+				return
+			}
+		}
+	}
+	pending := ""              // the mark of the adapter's last marked update since the client's last line
 	ids := map[string]string{} // the recorded sessions' ids to the live ones
 	// sessions is a recorded message with the live sessions' ids.
 	sessions := func(msg json.RawMessage) string { return liveIDs(ids).Replace(string(msg)) }
@@ -156,6 +191,10 @@ func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 		testcheck.NoErr(t, json.Unmarshal(l.Msg, &m))
 		switch {
 		case l.Dir == "in":
+			if pending != "" {
+				sent(pending)
+				pending = ""
+			}
 			if slices.Contains([]string{"session/load", "session/resume", "session/fork"}, m.Method) {
 				reads++
 				history := strconv.Itoa(reads)
@@ -181,6 +220,9 @@ func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 			_, err := io.WriteString(toAgentW, rewrite(t, sessions(msg), id, cwd)+"\n")
 			testcheck.NoErr(t, err)
 		case m.Method == sessionUpdate: // the adapter's, read by readACP
+			if k := mark(m.Params); k != "" {
+				pending = k
+			}
 		case m.Method != "" && m.ID == nil: // another notification (the adapter's _auth/status_update): Nushi reads none
 		case m.Method != "": // a request of the agent's
 			got := next(m.Method)
@@ -193,7 +235,7 @@ func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 		default: // the agent's answer to the request with this id
 			got := next("the answer to " + string(m.ID))
 			if string(got.ID) != string(m.ID) || (got.Error == nil) != (m.Error == nil) {
-				t.Fatalf("the Go agent answered %s with %s %s, the adapter with %s %s", m.ID, got.Result, got.Error, m.Result, m.Error)
+				t.Fatalf("the Go agent answered %s with %s %s, the adapter with %s %s (claude's script: %v)", m.ID, got.Result, got.Error, m.Result, m.Error, fake.Err())
 			}
 			var recS, liveS struct {
 				SessionID string `json:"sessionId"`
@@ -335,4 +377,43 @@ func rewrite(t *testing.T, msg string, id json.RawMessage, cwd string) string {
 	b, err := json.Marshal(m)
 	testcheck.NoErr(t, err)
 	return string(b)
+}
+
+// mark names a session update that marks a point in a session: a tool
+// call's first report or a status of it, a subagent's state, a message;
+// "" for the rest (usage, commands, a call's fields), which the two
+// agents send at points of their own. Its ids are claude's (calls,
+// messages, subagents), the same in a recording and its replay.
+func mark(params json.RawMessage) string {
+	var p struct {
+		Update struct {
+			Kind      string `json:"sessionUpdate"`
+			ToolCall  string `json:"toolCallId"`
+			Message   string `json:"messageId"`
+			SessionID string `json:"sessionId"`
+			Status    string `json:"status"`
+			State     struct {
+				State string `json:"state"`
+			} `json:"state"`
+		} `json:"update"`
+	}
+	if json.Unmarshal(params, &p) != nil {
+		return ""
+	}
+	u := p.Update
+	switch u.Kind {
+	case "tool_call":
+		return u.Kind + " " + u.ToolCall
+	case "tool_call_update":
+		if u.Status != "" {
+			return u.Kind + " " + u.ToolCall + " " + u.Status
+		}
+	case "subagent_update":
+		return u.Kind + " " + u.SessionID + " " + u.State.State
+	case "session_message", "agent_message_chunk", "agent_thought_chunk":
+		if u.Message != "" {
+			return u.Kind + " " + u.Message
+		}
+	}
+	return ""
 }
