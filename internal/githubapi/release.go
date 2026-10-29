@@ -42,7 +42,7 @@ func (r *Releases) Latest(ctx context.Context) (Release, error) {
 	}
 	base := r.Base
 	if base == "" {
-		base, _, _ = Endpoints("github.com")
+		base, _, _ = endpoints("github.com")
 	}
 	u := base + "/repos/" + url.PathEscape(owner) + "/" + url.PathEscape(name) + "/releases/latest"
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, http.NoBody)

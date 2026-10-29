@@ -61,8 +61,8 @@ type BlobAt struct{ Commit, Path string }
 // blobsAtOnce is how many files one query reads.
 const blobsAtOnce = 25
 
-// MaxBlob is the largest text Nushi reads (the Changes view's limit).
-const MaxBlob = 1 << 20
+// maxBlob is the largest text Nushi reads (the Changes view's limit).
+const maxBlob = 1 << 20
 
 // Blobs reads files' texts at commits, 25 to a query.
 func (c *Client) Blobs(ctx context.Context, repo string, at []BlobAt) (map[BlobAt]Blob, error) {
@@ -99,7 +99,7 @@ func (c *Client) Blobs(ctx context.Context, repo string, at []BlobAt) (map[BlobA
 				out[b] = Blob{}
 			case o.IsBinary:
 				out[b] = Blob{Found: true, Skipped: "binary"}
-			case o.ByteSize > MaxBlob || o.IsTruncated || o.Text == nil:
+			case o.ByteSize > maxBlob || o.IsTruncated || o.Text == nil:
 				out[b] = Blob{Found: true, Skipped: "too large"}
 			default:
 				out[b] = Blob{Found: true, Text: *o.Text}

@@ -101,7 +101,7 @@ func TestToMarkdown(t *testing.T) {
 			if err := json.Unmarshal([]byte(c.adf), &blocks); err != nil {
 				t.Fatal(err)
 			}
-			got := ToMarkdown(Doc(blocks...), nil)
+			got := ToMarkdown(document(blocks...), nil)
 			if got != c.want {
 				t.Errorf("got\n%q\nwant\n%q", got, c.want)
 			}
@@ -148,7 +148,7 @@ func FuzzAttacker(f *testing.F) {
 		p := Node{Type: "paragraph", Content: inline}
 		cell := Node{Type: "tableCell", Content: []Node{p}}
 		item := Node{Type: "listItem", Content: []Node{p, {Type: "bulletList", Content: []Node{{Type: "listItem", Content: []Node{p}}}}}}
-		doc := Doc(p, Node{Type: "heading", Attrs: a, Content: inline}, Node{Type: "codeBlock", Attrs: map[string]any{"language": lang}, Content: []Node{txt()}},
+		doc := document(p, Node{Type: "heading", Attrs: a, Content: inline}, Node{Type: "codeBlock", Attrs: map[string]any{"language": lang}, Content: []Node{txt()}},
 			Node{Type: "blockquote", Content: []Node{p}}, Node{Type: "panel", Attrs: a, Content: []Node{p}},
 			Node{Type: "bulletList", Content: []Node{item}}, Node{Type: "orderedList", Attrs: a, Content: []Node{item}},
 			Node{Type: "taskList", Content: []Node{{Type: "taskItem", Attrs: a, Content: inline}}},

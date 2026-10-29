@@ -47,11 +47,13 @@ type Client interface { //nolint:interfacebloat // the GitHub calls the feature 
 }
 
 // Gh is the gh CLI's login, read in this process through go-gh: a host's
-// token and where it came from ("" when gh has none), and the hosts gh
-// knows.
+// token and where it came from ("" when gh has none), the hosts gh
+// knows, and Reload, which reads gh's config again (Hosts reads what was
+// read last).
 type Gh struct {
-	Token func(host string) (token, source string)
-	Hosts func() []string
+	Token  func(ctx context.Context, host string) (token, source string)
+	Hosts  func() []string
+	Reload func()
 }
 
 // Tokens keeps pasted tokens (internal/keychain), by host. A read without
@@ -102,10 +104,11 @@ type Service struct {
 	Deps
 
 	mu       sync.Mutex
-	clients  map[string]*host // by host, once its token was read
+	clients  map[string]*host     // by host, once its token was read
+	noToken  map[string]time.Time // by host: when gh last had no token for it
 	inboxes  map[string]inboxCache
 	states   map[string]stateCache // by node id
-	logs     map[int64]string      // finished jobs' log tails
+	logs     map[string]string     // finished jobs' log tails, by host, repository and job
 	blobs    *blobCache
 	repos    map[string]repoCache  // by folder
 	branches map[string]headsCache // by host, repository and head
@@ -123,8 +126,8 @@ type host struct {
 
 // New makes the service.
 func New(d Deps) *Service {
-	return &Service{Deps: d, clients: map[string]*host{}, inboxes: map[string]inboxCache{}, states: map[string]stateCache{},
-		logs: map[int64]string{}, blobs: newBlobCache(), repos: map[string]repoCache{}, branches: map[string]headsCache{}}
+	return &Service{Deps: d, clients: map[string]*host{}, noToken: map[string]time.Time{}, inboxes: map[string]inboxCache{},
+		states: map[string]stateCache{}, logs: map[string]string{}, blobs: newBlobCache(), repos: map[string]repoCache{}, branches: map[string]headsCache{}}
 }
 
 // HostState is a host as Settings › GitHub shows it.
@@ -152,6 +155,7 @@ func (s *Service) Hosts(ctx context.Context) ([]HostState, error) {
 		return nil, err
 	}
 	names := slices.Clone(pasted)
+	s.Gh.Reload() // a host signed in to since
 	for _, h := range s.Gh.Hosts() {
 		if !slices.Contains(names, h) {
 			names = append(names, h)
@@ -161,7 +165,7 @@ func (s *Service) Hosts(ctx context.Context) ([]HostState, error) {
 	out := make([]HostState, 0, len(names))
 	for _, name := range names {
 		st := HostState{Host: name, Pasted: slices.Contains(pasted, name)}
-		h, err := s.host(name, false)
+		h, err := s.host(ctx, name, false)
 		if err == nil {
 			err = s.check(ctx, name, h)
 		}
@@ -206,10 +210,10 @@ func (s *Service) check(ctx context.Context, name string, h *host) error {
 // hostRE is a host name, with a port maybe: no user, no path.
 var hostRE = regexp.MustCompile(`^[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?(:\d{1,5})?$`)
 
-// NormalHost is a host's name as Nushi keys it: lowercase, without a
+// normalHost is a host's name as Nushi keys it: lowercase, without a
 // trailing dot or the default port; false for what isn't a host's name
 // (a user, a path, spaces).
-func NormalHost(name string) (string, bool) {
+func normalHost(name string) (string, bool) {
 	h := strings.TrimSuffix(strings.ToLower(strings.TrimSpace(name)), ":443")
 	h = strings.TrimSuffix(h, ".")
 	if !hostRE.MatchString(h) || strings.Contains(h, "..") {
@@ -222,9 +226,10 @@ func NormalHost(name string) (string, bool) {
 // signed in to (its own hosts), or one given a pasted token in Settings.
 // Any other (a host named by a link in someone's text, say) is refused
 // before a token is read, so no token ever goes to a server someone else
-// picked: gh's GH_ENTERPRISE_TOKEN would be given for any.
+// picked: gh's GH_ENTERPRISE_TOKEN would be given for any. A host gh
+// doesn't know has gh's config read again first, for a login since.
 func (s *Service) known(name string) (string, []string, error) {
-	h, ok := NormalHost(name)
+	h, ok := normalHost(name)
 	if !ok {
 		return "", nil, fmt.Errorf("%q isn't a host's name", name)
 	}
@@ -233,17 +238,19 @@ func (s *Service) known(name string) (string, []string, error) {
 		return "", nil, err
 	}
 	if h != "github.com" && !slices.Contains(pasted, h) && !slices.Contains(s.Gh.Hosts(), h) {
-		return "", nil, fmt.Errorf("%s isn't a host gh is signed in to or one given a token in Settings › GitHub", h)
+		if s.Gh.Reload(); !slices.Contains(s.Gh.Hosts(), h) {
+			return "", nil, fmt.Errorf("%s isn't a host gh is signed in to or one given a token in Settings › GitHub", h)
+		}
 	}
 	return h, pasted, nil
 }
 
 // AddToken checks a pasted token on a host and keeps it in the keychain.
 // It's used for the host instead of gh's login, until removed.
-func (s *Service) AddToken(ctx context.Context, name, token string) (githubapi.User, error) {
-	name, ok := NormalHost(name)
+func (s *Service) AddToken(ctx context.Context, given, token string) (githubapi.User, error) {
+	name, ok := normalHost(given)
 	if !ok {
-		return githubapi.User{}, fmt.Errorf("%q isn't a host's name, such as github.com", name)
+		return githubapi.User{}, fmt.Errorf("%q isn't a host's name, such as github.com", given)
 	}
 	if token == "" {
 		return githubapi.User{}, errors.New("a token is needed")
@@ -274,7 +281,7 @@ func (s *Service) AddToken(ctx context.Context, name, token string) (githubapi.U
 // RemoveToken deletes a host's pasted token: the host goes back to gh's
 // login, if gh has one.
 func (s *Service) RemoveToken(name string) error {
-	name, ok := NormalHost(name)
+	name, ok := normalHost(name)
 	if !ok {
 		return errors.New("not a host's name")
 	}
@@ -295,25 +302,32 @@ func (s *Service) RemoveToken(name string) error {
 
 // AllowToken reads a host's pasted token with macOS's prompt, which asks
 // the user to let this build of Nushi read it.
-func (s *Service) AllowToken(name string) error {
-	_, err := s.host(name, true)
+func (s *Service) AllowToken(ctx context.Context, name string) error {
+	_, err := s.host(ctx, name, true)
 	return err
 }
 
+// noTokenFor is how long gh having no token for a host is believed: a
+// host asked for again and again (a chat's pull request, polled) has gh
+// asked (`gh auth token`, maybe) at most this often.
+const noTokenFor = 30 * time.Second
+
 // host is a host's client: its pasted token's (read from the keychain the
 // first time, with macOS's prompt only when asked), else gh's login's.
-// The token stays in the client only.
-func (s *Service) host(name string, prompt bool) (*host, error) {
+// The token stays in the client only. Two asking at once may both read
+// the token; both get the client kept first.
+func (s *Service) host(ctx context.Context, name string, prompt bool) (*host, error) {
 	name, pasted, err := s.known(name)
 	if err != nil {
 		return nil, err
 	}
 	s.mu.Lock()
-	h := s.clients[name]
+	h, missed := s.clients[name], s.noToken[name]
 	s.mu.Unlock()
 	if h != nil {
 		return h, nil
 	}
+	noToken := fmt.Errorf("no token for %s: sign in with gh auth login, or add one in Settings › GitHub", name)
 	var token []byte
 	source := "token"
 	if slices.Contains(pasted, name) {
@@ -330,24 +344,34 @@ func (s *Service) host(name string, prompt bool) (*host, error) {
 			return nil, fmt.Errorf("reading the GitHub token from the keychain: %w", err)
 		}
 	} else {
+		if time.Since(missed) < noTokenFor {
+			return nil, noToken
+		}
 		var t string
-		t, source = s.Gh.Token(name)
+		t, source = s.Gh.Token(ctx, name)
 		if t == "" {
-			return nil, fmt.Errorf("no token for %s: sign in with gh auth login, or add one in Settings › GitHub", name)
+			s.mu.Lock()
+			s.noToken[name] = time.Now()
+			s.mu.Unlock()
+			return nil, noToken
 		}
 		token = []byte(t)
 	}
 	h = &host{c: s.Open(name, string(token)), source: source, kind: githubapi.TokenKind(string(token))}
 	clear(token)
 	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.noToken, name)
+	if kept := s.clients[name]; kept != nil {
+		return kept, nil
+	}
 	s.clients[name] = h
-	s.mu.Unlock()
 	return h, nil
 }
 
 // client is a host's client.
-func (s *Service) client(name string) (Client, error) {
-	h, err := s.host(name, false)
+func (s *Service) client(ctx context.Context, name string) (Client, error) {
+	h, err := s.host(ctx, name, false)
 	if err != nil {
 		return nil, err
 	}

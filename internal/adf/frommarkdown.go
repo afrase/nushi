@@ -22,7 +22,7 @@ var md = goldmark.New(goldmark.WithExtensions(extension.Table, extension.Striket
 func FromMarkdown(src string) Node {
 	source := []byte(src)
 	r := reader{src: source}
-	return Doc(r.blocks(md.Parser().Parse(text.NewReader(source)))...)
+	return document(r.blocks(md.Parser().Parse(text.NewReader(source)))...)
 }
 
 type reader struct {
@@ -76,7 +76,7 @@ func quotable(blocks []Node) []Node {
 		case "heading":
 			out = append(out, Node{Type: "paragraph", Content: withMark(b.Content, Mark{Type: "strong"})})
 		case "rule", "table":
-			out = append(out, Node{Type: "paragraph", Content: textNodes(ToMarkdown(Doc(b), nil))})
+			out = append(out, Node{Type: "paragraph", Content: textNodes(ToMarkdown(document(b), nil))})
 		default:
 			out = append(out, b)
 		}

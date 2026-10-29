@@ -69,16 +69,16 @@ var (
 	pushSuffixes = []string{".push.apple.com", ".notify.windows.com"}
 )
 
-// MaxEndpoint is the longest endpoint taken (Apple's and Google's are a
+// maxEndpoint is the longest endpoint taken (Apple's and Google's are a
 // few hundred bytes).
-const MaxEndpoint = 2048
+const maxEndpoint = 2048
 
 // Check says whether endpoint is an https URL at a known push service,
 // on the default port: a plain host name, no port (not even an empty
 // one), no IP literal or zone.
 func Check(endpoint string) error {
 	u, err := url.Parse(endpoint)
-	if err != nil || len(endpoint) > MaxEndpoint || u.Scheme != "https" || u.User != nil || u.Opaque != "" {
+	if err != nil || len(endpoint) > maxEndpoint || u.Scheme != "https" || u.User != nil || u.Opaque != "" {
 		return errors.New("the push endpoint must be an https URL")
 	}
 	host := strings.ToLower(u.Host)
@@ -111,12 +111,12 @@ func CheckSubscription(s Subscription) error {
 	return nil
 }
 
-// Padded is the size every payload is padded to, so its length doesn't
+// padSize is the size every payload is padded to, so its length doesn't
 // tell the push service what it says.
-const Padded = 256
+const padSize = 256
 
 // Encrypt encrypts plaintext for s as one aes128gcm record (RFC 8291),
-// with a fresh key pair and salt, padded to Padded bytes.
+// with a fresh key pair and salt, padded to padSize bytes.
 func Encrypt(s Subscription, plaintext []byte) ([]byte, error) {
 	as, err := ecdh.P256().GenerateKey(rand.Reader)
 	if err != nil {
@@ -124,7 +124,7 @@ func Encrypt(s Subscription, plaintext []byte) ([]byte, error) {
 	}
 	salt := make([]byte, 16)
 	rand.Read(salt)
-	return encrypt(s, plaintext, max(0, Padded-len(plaintext)-1), as, salt)
+	return encrypt(s, plaintext, max(0, padSize-len(plaintext)-1), as, salt)
 }
 
 // recordSize is the header's rs: the payload is one record, at most this.

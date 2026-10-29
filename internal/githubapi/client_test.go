@@ -120,7 +120,7 @@ func TestEndpoints(t *testing.T) {
 		"git.example.com":    "https://git.example.com/api/v3 https://git.example.com/api/graphql https://git.example.com",
 		"git.example.com:84": "https://git.example.com:84/api/v3 https://git.example.com:84/api/graphql https://git.example.com:84",
 	} {
-		rest, gql, web := Endpoints(host)
+		rest, gql, web := endpoints(host)
 		if got := rest + " " + gql + " " + web; got != want {
 			t.Errorf("%s: %s, want %s", host, got, want)
 		}
@@ -177,6 +177,28 @@ func TestETag(t *testing.T) {
 	}
 	if f.count("GET /user") != 2 {
 		t.Fatal(f.calls)
+	}
+}
+
+// A 304 is the answer kept when the request went, though another dropped
+// it meanwhile.
+func TestETagDroppedMeanwhile(t *testing.T) {
+	f := newFake(t)
+	var c *Client
+	f.route("GET /user", func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("If-None-Match") == `"v1"` {
+			c.etags.keep(c.rest+"/user", "", nil) // as an eviction does
+			w.WriteHeader(http.StatusNotModified)
+			return
+		}
+		w.Header().Set("ETag", `"v1"`)
+		_, _ = w.Write([]byte(`{"login":"octo"}`))
+	})
+	c = f.client()
+	for range 2 {
+		if u, err := c.Viewer(t.Context()); err != nil || u.Login != "octo" {
+			t.Fatalf("%+v %v", u, err)
+		}
 	}
 }
 
@@ -318,6 +340,27 @@ func TestWritesWaitTheirTurn(t *testing.T) {
 	if len(waited) != 1 || waited[0] <= writeGap/2 || waited[0] > writeGap {
 		t.Fatalf("waited %v", waited)
 	}
+}
+
+// A write waiting for another's turn to end stops when its ctx ends.
+func TestWriteWaitEnds(t *testing.T) {
+	l := newLimits()
+	l.sleep = func(context.Context, time.Duration) error { return nil }
+	release, err := l.enter(t.Context(), "graphql", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
+	defer cancel()
+	if _, err := l.enter(ctx, "graphql", true); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("a write waited past its ctx: %v", err)
+	}
+	release()
+	next, err := l.enter(t.Context(), "graphql", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	next()
 }
 
 func TestTokenKind(t *testing.T) {

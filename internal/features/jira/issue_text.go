@@ -1,6 +1,7 @@
 package jira
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"regexp"
@@ -35,7 +36,7 @@ func (s *Service) issueText(ctx context.Context, id, key string) (string, error)
 	}
 	line("Jira issue %s (%s): %s", is.Key, strings.Join(facts, ", "), s.Browse(id, is.Key))
 	if is.Assignee != "" || is.Reporter != "" {
-		line("Assignee: %s · Reporter: %s", or(is.Assignee, "nobody"), or(is.Reporter, "unknown"))
+		line("Assignee: %s · Reporter: %s", cmp.Or(is.Assignee, "nobody"), cmp.Or(is.Reporter, "unknown"))
 	}
 	if len(is.Labels) > 0 {
 		line("Labels: %s", strings.Join(is.Labels, ", "))
@@ -65,12 +66,12 @@ func (s *Service) issueText(ctx context.Context, id, key string) (string, error)
 	}))
 	var remote strings.Builder
 	for _, r := range is.RemoteLinks {
-		fmt.Fprintf(&remote, "- %s\n", adf.Link(or(r.Title, r.URL), r.URL))
+		fmt.Fprintf(&remote, "- %s\n", adf.Link(cmp.Or(r.Title, r.URL), r.URL))
 	}
 	section("Remote links", remote.String())
 	var comments strings.Builder
 	for _, c := range is.Comments[max(0, len(is.Comments)-recentComments):] {
-		fmt.Fprintf(&comments, "**%s** (%s):\n\n%s\n\n", or(c.Author, "someone"), c.Created.Format("2006-01-02"), text(c.Body))
+		fmt.Fprintf(&comments, "**%s** (%s):\n\n%s\n\n", cmp.Or(c.Author, "someone"), c.Created.Format("2006-01-02"), text(c.Body))
 	}
 	section("Recent comments", comments.String())
 	return strings.TrimSpace(b.String()) + "\n", nil
@@ -82,11 +83,4 @@ func refs(rs []model.JiraIssueRef, before func(model.JiraIssueRef) string) strin
 		fmt.Fprintf(&b, "- %s%s %s (%s)\n", before(r), r.Key, r.Summary, r.Status)
 	}
 	return b.String()
-}
-
-func or(s, otherwise string) string {
-	if s == "" {
-		return otherwise
-	}
-	return s
 }

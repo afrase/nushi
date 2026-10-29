@@ -1027,7 +1027,7 @@ class IssueChat {
   final GitHubLink? github;
 }
 
-/// The branch for a chat on GitHub issue [n] (the daemon's IssueBranch):
+/// The branch for a chat on GitHub issue [n]:
 /// its number, then its title's letters and digits, lowercase, words
 /// joined by "-", 40 characters of title at most, cut between words.
 String githubBranch(int n, String title) {

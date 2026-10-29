@@ -83,18 +83,9 @@ func (s *Service) remoteFor(ctx context.Context, folder string, ref model.GitHub
 		names = append([]string{"origin"}, slices.Delete(names, i, i+1)...)
 	}
 	for _, name := range names {
-		if h, r, ok := ParseRemote(remotes[name]); ok && h == ref.Host && strings.EqualFold(r, ref.Repo) {
+		if h, r, ok := parseRemote(remotes[name]); ok && h == ref.Host && strings.EqualFold(r, ref.Repo) {
 			return name, nil
 		}
 	}
 	return "", fmt.Errorf("no remote of this folder is %s on %s", ref.Repo, ref.Host)
-}
-
-// IssueBranch is the branch for a chat on an issue: its number and its
-// title's words ("123-summary-slug"), 40 characters of title at most.
-func IssueBranch(number int, title string) string {
-	if s := model.Slug(title, 40); s != "" {
-		return strconv.Itoa(number) + "-" + s
-	}
-	return strconv.Itoa(number)
 }

@@ -88,7 +88,7 @@ func TestGitHubLogsNoTokenNorText(t *testing.T) {
 	defer logs.SetDebug(false)
 
 	svc := github.New(github.Deps{
-		Gh:     github.Gh{Token: func(string) (string, string) { return "", "" }, Hosts: func() []string { return nil }},
+		Gh:     github.Gh{Token: func(context.Context, string) (string, string) { return "", "" }, Hosts: func() []string { return nil }, Reload: func() {}},
 		Tokens: memTokens{}, Store: &memHosts{Store: store.New(t.TempDir())},
 		Open:    func(h, token string) github.Client { return githubapi.New(h, token, gh.Client().Transport) },
 		NeedsOK: func(error) bool { return false },

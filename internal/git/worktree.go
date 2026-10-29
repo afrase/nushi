@@ -129,7 +129,7 @@ func (Worktrees) Inspect(ctx context.Context, wt model.Worktree) (model.Worktree
 		st.BranchGone = true
 		return st, nil //nolint:nilerr // --verify failing is the answer: the branch is gone
 	}
-	out, err := run(ctx, wt.Repo, "rev-list", "--count", "refs/heads/"+wt.Branch, "--not", BaseOf(ctx, wt))
+	out, err := run(ctx, wt.Repo, "rev-list", "--count", "refs/heads/"+wt.Branch, "--not", baseOf(ctx, wt))
 	if err != nil {
 		return st, err
 	}
@@ -137,10 +137,10 @@ func (Worktrees) Inspect(ctx context.Context, wt model.Worktree) (model.Worktree
 	return st, err
 }
 
-// BaseOf is what a worktree's work is counted from: its base branch, or
+// baseOf is what a worktree's work is counted from: its base branch, or
 // the commit it started from once that branch is gone (merged and
 // deleted, say).
-func BaseOf(ctx context.Context, wt model.Worktree) string {
+func baseOf(ctx context.Context, wt model.Worktree) string {
 	if _, err := run(ctx, wt.Repo, "rev-parse", "--verify", "-q", wt.Base+"^{commit}"); err != nil && wt.BaseCommit != "" {
 		return wt.BaseCommit
 	}

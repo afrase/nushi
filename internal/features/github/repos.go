@@ -25,10 +25,10 @@ type repoCache struct {
 // scpRE is git's scp-like address: [user@]host:owner/name.
 var scpRE = regexp.MustCompile(`^(?:[^@/]+@)?([^:/]+):([^/].*)$`)
 
-// ParseRemote is the host and owner/name of a git remote's URL that names
+// parseRemote is the host and owner/name of a git remote's URL that names
 // a GitHub repository (https, ssh, or git@host:owner/name), whichever
 // host it is on.
-func ParseRemote(remote string) (host, repo string, ok bool) {
+func parseRemote(remote string) (host, repo string, ok bool) {
 	var path string
 	if m := scpRE.FindStringSubmatch(remote); m != nil && !strings.Contains(remote, "://") {
 		host, path = m[1], m[2]
@@ -87,7 +87,7 @@ func (s *Service) remotesOf(ctx context.Context, folder string) [][2]string {
 		}
 		slices.Sort(names)
 		for _, name := range names {
-			h, r, ok := ParseRemote(remotes[name])
+			h, r, ok := parseRemote(remotes[name])
 			if _, _, err := githubapi.SplitRepo(r); ok && err == nil && !slices.Contains(repos, [2]string{h, r}) { // a name GitHub could have
 				repos = append(repos, [2]string{h, r})
 			}

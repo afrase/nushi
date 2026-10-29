@@ -64,8 +64,8 @@ func polling(ctx context.Context) bool { return ctx.Value(pollKey{}) != nil }
 // and the breaker of each bucket GitHub said is spent.
 type limits struct {
 	places chan struct{}
-	writes sync.Mutex // held through a write, so writes go one at a time
-	wrote  time.Time  // when the last write ended
+	writes chan struct{} // the write's turn, held through it: writes go one at a time
+	wrote  time.Time     // when the last write ended (under writes)
 	now    func() time.Time
 	sleep  func(context.Context, time.Duration) error
 
@@ -75,14 +75,14 @@ type limits struct {
 }
 
 func newLimits() *limits {
-	return &limits{places: make(chan struct{}, parallel), now: time.Now, sleep: sleep,
+	return &limits{places: make(chan struct{}, parallel), writes: make(chan struct{}, 1), now: time.Now, sleep: sleep,
 		buckets: map[string]Bucket{}, shut: map[string]time.Time{}}
 }
 
 // enter waits for a place for a request in bucket (a write also for its
-// turn, a second after the last), and returns what gives it back. It
-// refuses at once a request whose bucket is shut, and a poll whose bucket
-// is low.
+// turn, a second after the last), and returns what gives it back; ctx
+// ending stops the wait. It refuses at once a request whose bucket is
+// shut, and a poll whose bucket is low.
 func (l *limits) enter(ctx context.Context, bucket string, write bool) (func(), error) {
 	now := l.now()
 	l.mu.Lock()
@@ -95,10 +95,14 @@ func (l *limits) enter(ctx context.Context, bucket string, write bool) (func(), 
 		return nil, &RateLimitedError{Bucket: bucket, Until: b.Reset, Low: true, Left: b.Remaining}
 	}
 	if write {
-		l.writes.Lock()
+		select {
+		case l.writes <- struct{}{}:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
 		if wait := l.wrote.Add(writeGap).Sub(l.now()); wait > 0 {
 			if err := l.sleep(ctx, wait); err != nil {
-				l.writes.Unlock()
+				<-l.writes
 				return nil, err
 			}
 		}
@@ -107,7 +111,7 @@ func (l *limits) enter(ctx context.Context, bucket string, write bool) (func(), 
 	case l.places <- struct{}{}:
 	case <-ctx.Done():
 		if write {
-			l.writes.Unlock()
+			<-l.writes
 		}
 		return nil, ctx.Err()
 	}
@@ -115,7 +119,7 @@ func (l *limits) enter(ctx context.Context, bucket string, write bool) (func(), 
 		<-l.places
 		if write {
 			l.wrote = l.now()
-			l.writes.Unlock()
+			<-l.writes
 		}
 	}, nil
 }
@@ -211,17 +215,13 @@ const (
 
 func newEtags() *etags { return &etags{m: map[string]etag{}} }
 
-// tag is the ETag to send for u ("" when there's no answer kept).
-func (e *etags) tag(u string) string {
+// get is the answer kept for u, its ETag to send and its body for a 304,
+// taken together: one kept later, or none, can't be decoded in its place
+// (zero when there's none).
+func (e *etags) get(u string) etag {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	return e.m[u].tag
-}
-
-func (e *etags) body(u string) []byte {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	return e.m[u].body
+	return e.m[u]
 }
 
 func (e *etags) keep(u, tag string, body []byte) {

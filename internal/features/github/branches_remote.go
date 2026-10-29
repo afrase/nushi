@@ -42,7 +42,7 @@ func (s *Service) headBranch(ctx context.Context, c Client, ref model.GitHubRef)
 // GitHub while it still points at the pull request's head; it says
 // whether the branch was there (false: deleted already).
 func (s *Service) DeleteHeadBranch(ctx context.Context, ref model.GitHubRef) (bool, error) {
-	c, err := s.writer(ref.Host)
+	c, err := s.writer(ctx, ref.Host)
 	if err != nil {
 		return false, err
 	}
@@ -70,7 +70,7 @@ func (s *Service) DeleteHeadBranch(ctx context.Context, ref model.GitHubRef) (bo
 // RestoreHeadBranch makes a merged or closed pull request's branch on
 // GitHub again, at the pull request's head; one there already stays.
 func (s *Service) RestoreHeadBranch(ctx context.Context, ref model.GitHubRef) error {
-	c, err := s.writer(ref.Host)
+	c, err := s.writer(ctx, ref.Host)
 	if err != nil {
 		return err
 	}

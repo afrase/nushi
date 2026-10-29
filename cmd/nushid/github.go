@@ -2,13 +2,19 @@ package main
 
 import (
 	"context"
+	"os"
+	"os/exec"
+	"strings"
+	"time"
 
 	"github.com/cli/go-gh/v2/pkg/auth"
+	"github.com/cli/go-gh/v2/pkg/config"
 
 	"github.com/afrase/nushi/internal/features/github"
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/githubapi"
 	"github.com/afrase/nushi/internal/keychain"
+	"github.com/afrase/nushi/internal/procgroup"
 	"github.com/afrase/nushi/internal/store"
 )
 
@@ -25,14 +31,9 @@ func newGitHub(st *store.Store, dev bool) *github.Service {
 	transport := proxiedTransport()
 	return github.New(github.Deps{
 		Gh: github.Gh{
-			Token: func(host string) (string, string) {
-				token, source := auth.TokenForHost(host)
-				if source == "oauth_token" || source == "default" {
-					source = "gh" // gh's config, or nothing
-				}
-				return token, source
-			},
-			Hosts: auth.KnownHosts,
+			Token:  ghToken,
+			Hosts:  auth.KnownHosts,
+			Reload: func() { _ = config.Reload(nil) }, // a config gh can't read leaves the last one
 		},
 		Tokens:  keychain.Keychain{Service: service},
 		Store:   st,
@@ -53,4 +54,35 @@ func newGitHub(st *store.Store, dev bool) *github.Service {
 		Head:          git.Head,
 		DefaultBranch: git.DefaultBase,
 	})
+}
+
+// ghToken is go-gh's TokenForHost with gh's config read again (go-gh
+// reads it once a process: a login after the daemon started went unseen)
+// and `gh auth token` given 10 s, its process group killed with it: the
+// environment's token, else gh's config's, else the one gh keeps in the
+// keychain.
+func ghToken(ctx context.Context, host string) (string, string) {
+	_ = config.Reload(nil)
+	if token, source := auth.TokenFromEnvOrConfig(host); token != "" {
+		if source == "oauth_token" {
+			source = "gh" // gh's config
+		}
+		return token, source
+	}
+	gh := os.Getenv("GH_PATH")
+	if gh == "" {
+		gh, _ = exec.LookPath("gh")
+	}
+	if gh == "" {
+		return "", "gh"
+	}
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, gh, "auth", "token", "--secure-storage", "--hostname", host) //nolint:gosec // gh for a known host; the token comes on stdout
+	procgroup.Bound(cmd)
+	out, err := cmd.Output()
+	if err != nil {
+		return "", "gh"
+	}
+	return strings.TrimSpace(string(out)), "gh"
 }

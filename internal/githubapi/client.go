@@ -34,10 +34,10 @@ import (
 // supported until 2028-03-10).
 const Version = "2022-11-28"
 
-// Endpoints are a host's REST base, GraphQL endpoint and web address:
+// endpoints are a host's REST base, GraphQL endpoint and web address:
 // api.github.com for github.com, api.<host> for a GHE.com tenancy, and
 // <host>/api/v3 and /api/graphql for an Enterprise server.
-func Endpoints(host string) (rest, graphql, web string) {
+func endpoints(host string) (rest, graphql, web string) {
 	switch {
 	case host == "github.com":
 		return "https://api.github.com", "https://api.github.com/graphql", "https://github.com"
@@ -64,7 +64,7 @@ type Client struct {
 
 // New makes a client of host for token; transport may be nil.
 func New(host, token string, transport http.RoundTripper) *Client {
-	rest, gql, web := Endpoints(host)
+	rest, gql, web := endpoints(host)
 	noRedirect := func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 	return &Client{
 		Host: host, Web: web, rest: rest, gql: gql,
@@ -107,8 +107,7 @@ func (c *Client) get(ctx context.Context, path string, args []string, query url.
 		return nil, err
 	}
 	switch {
-	case a.status == http.StatusNotModified:
-		a.body = c.etags.body(u)
+	case a.status == http.StatusNotModified: // send's body is the one kept
 	case a.status/100 == 3:
 		return nil, &APIError{Status: a.status, Message: "it moved to " + a.header.Get("Location")}
 	default:
@@ -209,8 +208,12 @@ func (c *Client) send(ctx context.Context, method, what, u, bucket string, paylo
 	if payload != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	if tag := c.etags.tag(u); method == http.MethodGet && tag != "" {
-		req.Header.Set("If-None-Match", tag)
+	var kept etag
+	if method == http.MethodGet {
+		kept = c.etags.get(u)
+	}
+	if kept.tag != "" {
+		req.Header.Set("If-None-Match", kept.tag)
 	}
 	start := time.Now()
 	resp, err := c.http.Do(req)
@@ -227,7 +230,10 @@ func (c *Client) send(ctx context.Context, method, what, u, bucket string, paylo
 	}
 	b := c.lim.saw(bucket, resp.Header)
 	c.log.Debug("github", "method", method, "what", what, "status", resp.StatusCode, "took", took, "bucket", b.Name, "left", b.Remaining)
-	if resp.StatusCode/100 == 2 || resp.StatusCode/100 == 3 { // a 304, or a log's link
+	if resp.StatusCode == http.StatusNotModified && kept.tag != "" {
+		return &answer{status: resp.StatusCode, header: resp.Header, body: kept.body}, nil
+	}
+	if resp.StatusCode/100 == 2 || resp.StatusCode/100 == 3 { // a log's link
 		return &answer{status: resp.StatusCode, header: resp.Header, body: body}, nil
 	}
 	err = c.failure(resp, b.Name, body)

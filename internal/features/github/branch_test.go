@@ -20,7 +20,7 @@ func TestFindPull(t *testing.T) {
 	w.branch["forked"] = [2]string{"sub", "fork"}
 	w.branch["main"] = [2]string{"main", "origin"}
 	w.branch["lab"] = [2]string{"sub", "origin"}
-	if _, err := w.s.client("github.com"); err != nil { // makes gh's client
+	if _, err := w.s.client(t.Context(), "github.com"); err != nil { // makes gh's client
 		t.Fatal(err)
 	}
 	c := w.clients["gho_gh"]
@@ -72,7 +72,7 @@ func TestFindPullNoneNotKept(t *testing.T) {
 	w := newWorld(t)
 	ctx := t.Context()
 	w.branch["other"] = [2]string{"none-yet", ""}
-	if _, err := w.s.client("github.com"); err != nil {
+	if _, err := w.s.client(t.Context(), "github.com"); err != nil {
 		t.Fatal(err)
 	}
 	c := w.clients["gho_gh"]

@@ -243,6 +243,43 @@ func TestSites(t *testing.T) {
 	}
 }
 
+// Ten asking at once for a site not yet read all get the same client.
+func TestClientAtOnce(t *testing.T) {
+	s, tokens, _ := newService(t)
+	if _, err := s.AddSite(t.Context(), "https://e.atlassian.net", "me@e.com", "good", time.Time{}); err != nil {
+		t.Fatal(err)
+	}
+	var mu sync.Mutex
+	n, all := 0, make(chan struct{})
+	s2 := New(Sites{Open: func(_ model.JiraSite, token string) Client {
+		mu.Lock()
+		if n++; n == 10 {
+			close(all)
+		}
+		mu.Unlock()
+		select {
+		case <-all:
+		case <-time.After(5 * time.Second): // opened fewer times: fine too
+		}
+		return &fakeClient{token: token}
+	}}, tokens, s.store, s.keys)
+	site, err := s2.site("e.atlassian.net")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := make([]Client, 10)
+	var wg sync.WaitGroup
+	for i := range got {
+		wg.Go(func() { got[i], _ = s2.client(site, false) })
+	}
+	wg.Wait()
+	for _, c := range got {
+		if c == nil || c != got[0] {
+			t.Fatal("two clients of e.atlassian.net")
+		}
+	}
+}
+
 func TestLists(t *testing.T) {
 	s, _, opened := newService(t)
 	if _, err := s.AddSite(t.Context(), "https://e.atlassian.net", "me@e.com", "good", time.Time{}); err != nil {

@@ -54,8 +54,8 @@ func (s *server) RemoveGitHubToken(_ context.Context, req *connect.Request[nushi
 	return connect.NewResponse(&nushiv1.RemoveGitHubTokenResponse{}), nil
 }
 
-func (s *server) AllowGitHubToken(_ context.Context, req *connect.Request[nushiv1.AllowGitHubTokenRequest]) (*connect.Response[nushiv1.AllowGitHubTokenResponse], error) {
-	if err := s.github.AllowToken(req.Msg.Host); err != nil {
+func (s *server) AllowGitHubToken(ctx context.Context, req *connect.Request[nushiv1.AllowGitHubTokenRequest]) (*connect.Response[nushiv1.AllowGitHubTokenResponse], error) {
+	if err := s.github.AllowToken(ctx, req.Msg.Host); err != nil {
 		return nil, githubErr(err)
 	}
 	return connect.NewResponse(&nushiv1.AllowGitHubTokenResponse{}), nil

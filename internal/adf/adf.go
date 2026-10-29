@@ -40,8 +40,8 @@ func Parse(b []byte) (Node, error) {
 	return n, err
 }
 
-// Doc makes a document of blocks.
-func Doc(blocks ...Node) Node {
+// document makes a document of blocks.
+func document(blocks ...Node) Node {
 	return Node{Type: "doc", Version: 1, Content: blocks}
 }
 
